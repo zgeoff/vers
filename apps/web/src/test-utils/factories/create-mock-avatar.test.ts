@@ -10,6 +10,7 @@ test('it builds an avatar with every field defaulted', () => {
     'level',
     'mode',
     'name',
+    'seed',
     'updatedAt',
     'userID',
     'xp',

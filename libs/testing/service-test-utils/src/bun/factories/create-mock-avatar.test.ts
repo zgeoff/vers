@@ -8,6 +8,7 @@ test('it builds a default avatar row', () => {
     id: expect.toBeString(),
     mode: 'trade',
     name: expect.toBeString(),
+    seed: expect.toBeNumber(),
     userId: expect.toBeString(),
   });
 });
@@ -19,6 +20,7 @@ test('it applies overrides on top of the defaults', () => {
     id: expect.toBeString(),
     mode: 'self_found',
     name: 'Fixedname',
+    seed: expect.toBeNumber(),
     userId: 'user_1',
   });
 });

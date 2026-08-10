@@ -20,6 +20,7 @@ export const AvatarRowSchema = AvatarDataSchema.extend({
   name: z
     .string()
     .default(() => faker.string.alpha({ casing: 'lower', length: { max: 12, min: 6 } })),
+  seed: z.int().default(() => faker.number.int({ max: 2 ** 31 - 1, min: 0 })),
   updatedAt: z.date().default(() => new Date()),
   userID: z.string().default(() => createId()),
   xp: z.int().default(0),

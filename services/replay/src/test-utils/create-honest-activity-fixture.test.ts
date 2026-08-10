@@ -5,6 +5,7 @@ import { buildMockScopeSecret } from '@vers/mock-services/keys';
 import { createTestDB } from '@vers/service-test-utils/bun';
 import { deriveWorldmapContent } from '@vers/worldmap-content';
 import invariant from 'tiny-invariant';
+import { createAvatarRow } from './create-avatar-row';
 import { createHonestActivityFixture } from './create-honest-activity-fixture';
 
 // The fixture publishes the content document it runs the engine against, which opens an
@@ -92,16 +93,98 @@ test('it stamps secretRef/secretVersion and a sealed encounterNode matching real
 
   const scopeSecret = buildMockScopeSecret(fixture.activity.avatarId, 'worldmap', 1);
 
+  const avatarRow = await ctx.db
+    .selectFrom('avatars')
+    .select('seed')
+    .where('id', '=', fixture.activity.avatarId)
+    .executeTakeFirstOrThrow();
+
   const expected = {
     difficulty: 1,
     ...deriveWorldmapContent(document.encounter, {
       coord: [1, 0],
       scopeSecret,
-      userSeed: 0,
+      userSeed: avatarRow.seed,
     }),
   };
 
   expect(fixture.activity.encounterNode).toStrictEqual(expected);
+});
+
+test("it seals the stamped encounterNode under the chain's avatar seed, not a shared placeholder", async () => {
+  await using ctx = await createTestDB({ isolation: 'schema' });
+
+  // a fixed id and seed, verified against this test's two-pool content to pick a different pool
+  // than userSeed 0 would — a fixture that reverted to a pinned zero seed would stamp the other
+  // pool and fail the assertion below, rather than passing by coincidence
+  const avatar = await createAvatarRow(ctx.db, { id: 'avatar_seed_divergent_pool', seed: 700 });
+
+  const document = createMockContentDocument({
+    contentVersion: '849850',
+    encounter: {
+      contentVersion: '849850',
+      archetypes: [
+        {
+          id: 'placeholder-brawler',
+          name: 'World Map Enemy',
+          baseLevel: 1,
+          baseLife: 30,
+          baseXP: 10,
+          attackMin: 1,
+          attackMax: 3,
+          attackSpeed: 0.5,
+        },
+        {
+          id: 'placeholder-skirmisher',
+          name: 'World Map Skirmisher',
+          baseLevel: 1,
+          baseLife: 20,
+          baseXP: 8,
+          attackMin: 1,
+          attackMax: 4,
+          attackSpeed: 0.7,
+        },
+      ],
+      pools: [
+        { id: 'brawler-den', entries: [{ archetypeID: 'placeholder-brawler', weight: 1 }] },
+        { id: 'skirmisher-flock', entries: [{ archetypeID: 'placeholder-skirmisher', weight: 1 }] },
+      ],
+      tuning: {
+        waveCountMin: 3,
+        waveCountMax: 6,
+        waveSizeMin: 3,
+        waveSizeMax: 6,
+        difficultyScalingFactor: 1,
+      },
+    },
+  });
+
+  const fixture = await createHonestActivityFixture(ctx.db, {
+    avatarID: avatar.id,
+    document,
+    duration: 80_000,
+  });
+
+  const scopeSecret = buildMockScopeSecret(avatar.id, 'worldmap', 1);
+
+  const sealedUnderZero = deriveWorldmapContent(document.encounter, {
+    coord: [1, 0],
+    scopeSecret,
+    userSeed: 0,
+  });
+
+  const sealedUnderAvatarSeed = deriveWorldmapContent(document.encounter, {
+    coord: [1, 0],
+    scopeSecret,
+    userSeed: avatar.seed,
+  });
+
+  expect(sealedUnderAvatarSeed.poolID).not.toBe(sealedUnderZero.poolID);
+
+  expect(fixture.activity.encounterNode).toStrictEqual({
+    difficulty: 1,
+    poolID: sealedUnderAvatarSeed.poolID,
+  });
 });
 
 test('it publishes the document it ran the engine against, keyed by the stamped content version', async () => {

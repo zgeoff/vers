@@ -1,3 +1,4 @@
+import { randomInt } from 'node:crypto';
 import { createId } from '@paralleldrive/cuid2';
 import { findLiveActivityAvatar, upsertActiveAvatar } from '@vers/active-avatar';
 import type { AvatarData, AvatarMode } from '@vers/contract-avatar';
@@ -82,6 +83,7 @@ async function runCreateWrites(
       id: createId(),
       mode: opts.input.mode,
       name: opts.input.name,
+      seed: randomInt(0, 2 ** 31),
       userId: actingUserId,
     })
     .returningAll()

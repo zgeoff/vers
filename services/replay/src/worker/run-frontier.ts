@@ -101,11 +101,20 @@ export async function runFrontier(
       },
     );
 
+    const avatarSeed = await trx
+      .selectFrom('avatars')
+      .select('seed')
+      .where('id', '=', segment.activity.avatarID)
+      .executeTakeFirst();
+
+    invariant(avatarSeed !== undefined, 'a stamped activity always has an owning avatar');
+
     const descriptorDivergence = findDescriptorDivergence({
       content: document.encounter,
       scopeID: segment.activity.scopeID,
       scopeSecret,
       stampedEncounterNode: segment.activity.encounterNode,
+      userSeed: avatarSeed.seed,
     });
 
     if (descriptorDivergence !== undefined) {

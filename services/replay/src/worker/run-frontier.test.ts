@@ -11,6 +11,7 @@ import invariant from 'tiny-invariant';
 import { server } from '../mocks/server';
 import { createReplayCache } from '../replay/create-replay-cache';
 import { createActivityRow } from '../test-utils/create-activity-row';
+import { createAvatarRow } from '../test-utils/create-avatar-row';
 import { createHonestActivityFixture } from '../test-utils/create-honest-activity-fixture';
 import { createSnapshotSourceRow } from '../test-utils/create-snapshot-source-row';
 import { runFrontier } from './run-frontier';
@@ -499,6 +500,86 @@ test('it verifies an honest sealed content-version-2 row, matching its stamped p
     typeof stampedNode === 'object' && stampedNode !== null && 'poolID' in stampedNode,
     'a content-version-2 fixture always stamps a poolID',
   );
+
+  const cache = createReplayCache();
+
+  const deps = {
+    db: ctx.db,
+    keysServiceURL: resolveServiceURL('keys'),
+    loadContentDocument: makeContentDocumentLoader(ctx.db),
+    logger: pino({ enabled: false }),
+    privateKey: ctx.privateKey,
+    simVersion: 'test-engine-hash',
+  };
+
+  const outcome = await ctx.db.transaction().execute((trx) =>
+    runFrontier(trx, deps, cache, {
+      activityID: fixture.activity.id,
+      appendedHead: fixture.activity.appendedHead,
+      replayAttempts: 0,
+      startChainIndex: fixture.activity.startChainIndex,
+      status: fixture.activity.status,
+      verifiedHead: 0,
+    }),
+  );
+
+  expect(outcome.kind).toBe('matched');
+});
+
+test("it verifies an honest row sealed under the avatar's own seed, not a shared placeholder", async () => {
+  await using ctx = await setupTest();
+
+  // a fixed id and seed, verified against this test's two-pool content to pick a different pool
+  // than userSeed 0 would — a verify pass that reverted to a pinned zero seed would recompute the
+  // other pool as truth and reject this honest row, rather than matching by coincidence
+  const avatar = await createAvatarRow(ctx.db, { id: 'avatar_seed_divergent_pool', seed: 700 });
+
+  const document = createMockContentDocument({
+    contentVersion: '849851',
+    encounter: {
+      contentVersion: '849851',
+      archetypes: [
+        {
+          id: 'placeholder-brawler',
+          name: 'World Map Enemy',
+          baseLevel: 1,
+          baseLife: 30,
+          baseXP: 10,
+          attackMin: 1,
+          attackMax: 3,
+          attackSpeed: 0.5,
+        },
+        {
+          id: 'placeholder-skirmisher',
+          name: 'World Map Skirmisher',
+          baseLevel: 1,
+          baseLife: 20,
+          baseXP: 8,
+          attackMin: 1,
+          attackMax: 4,
+          attackSpeed: 0.7,
+        },
+      ],
+      pools: [
+        { id: 'brawler-den', entries: [{ archetypeID: 'placeholder-brawler', weight: 1 }] },
+        { id: 'skirmisher-flock', entries: [{ archetypeID: 'placeholder-skirmisher', weight: 1 }] },
+      ],
+      tuning: {
+        waveCountMin: 3,
+        waveCountMax: 6,
+        waveSizeMin: 3,
+        waveSizeMax: 6,
+        difficultyScalingFactor: 1,
+      },
+    },
+  });
+
+  const fixture = await createHonestActivityFixture(ctx.db, {
+    avatarID: avatar.id,
+    document,
+    duration: 80_000,
+    seed: buildStateFromSeed(3_047_525_658),
+  });
 
   const cache = createReplayCache();
 

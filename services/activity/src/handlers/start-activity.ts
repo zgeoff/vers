@@ -153,7 +153,7 @@ export async function startActivity(
     ...deriveWorldmapContent(document.encounter, {
       coord: resolved.coord,
       scopeSecret,
-      userSeed: 0,
+      userSeed: avatar.seed,
     }),
   };
 

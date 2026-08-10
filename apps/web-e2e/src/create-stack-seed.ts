@@ -1,3 +1,4 @@
+import { randomInt } from 'node:crypto';
 import { createDB } from '@vers/db';
 import { DEMO_ACCOUNTS } from '@vers/mock-services';
 import invariant from 'tiny-invariant';
@@ -34,7 +35,12 @@ async function createStackSeed(): Promise<void> {
       if (account.avatarName !== null) {
         const avatar = await db
           .insertInto('avatars')
-          .values({ id: crypto.randomUUID(), name: account.avatarName, userId: user.id })
+          .values({
+            id: crypto.randomUUID(),
+            name: account.avatarName,
+            seed: randomInt(0, 2 ** 31),
+            userId: user.id,
+          })
           .returning('id')
           .executeTakeFirstOrThrow();
 
