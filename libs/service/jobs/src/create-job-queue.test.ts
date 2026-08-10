@@ -178,7 +178,7 @@ test('it retries a failed job after its retry delay', async () => {
 
       return drained;
     },
-    { timeoutMs: 5000 },
+    { timeoutMs: 3000 },
   );
 
   expect(afterDelay).toStrictEqual({ completed: 1, failed: 0 });
@@ -233,7 +233,7 @@ test('it retries a failed job on an exponential backoff schedule when the defini
 
       return drained;
     },
-    { timeoutMs: 5000 },
+    { timeoutMs: 3000 },
   );
 
   expect(afterBackoff).toStrictEqual({ completed: 1, failed: 0 });
@@ -359,7 +359,7 @@ test('it invokes onJobFailed with retriesExhausted reflecting whether this attem
 
       expect(failures).toHaveLength(2);
     },
-    { timeoutMs: 5000 },
+    { timeoutMs: 3000 },
   );
 
   expect(failures).toStrictEqual([

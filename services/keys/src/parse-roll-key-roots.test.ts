@@ -65,6 +65,16 @@ test('it never echoes root material in a rejection message', () => {
 
   expect(() => parseRollKeyRoots(payload)).toThrowWithMessage(
     Error,
-    'invalid ROLL_KEY_ROOTS: population "trade" key version 1 is not 64-character hex',
+    /population "trade" key version 1 is not 64-character hex/,
+  );
+
+  expect(() => parseRollKeyRoots(payload)).not.toThrowWithMessage(
+    Error,
+    /not-hex-but-secret-shaped/,
+  );
+
+  expect(() => parseRollKeyRoots(payload)).not.toThrowWithMessage(
+    Error,
+    new RegExp(SELF_FOUND_ROOT),
   );
 });

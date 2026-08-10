@@ -61,6 +61,11 @@ test('it never echoes root material in a rejection message', () => {
 
   expect(() => parseScopeSecretRoots(payload)).toThrowWithMessage(
     Error,
-    'invalid SCOPE_SECRET_ROOTS: scope "worldmap" secret version 1 is not 64-character hex',
+    /scope "worldmap" secret version 1 is not 64-character hex/,
+  );
+
+  expect(() => parseScopeSecretRoots(payload)).not.toThrowWithMessage(
+    Error,
+    /not-hex-but-secret-shaped/,
   );
 });

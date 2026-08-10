@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { createMockChainRow } from './create-mock-chain-row';
 
-test('it builds a default chain row whose anchors both start at the genesis seed', () => {
+test('it builds a default chain row', () => {
   const row = createMockChainRow();
 
   expect(row).toStrictEqual({
@@ -14,7 +14,7 @@ test('it builds a default chain row whose anchors both start at the genesis seed
   });
 });
 
-test('it keeps explicit overrides', () => {
+test('it applies overrides on top of the defaults', () => {
   const row = createMockChainRow({ appendedNextSeed: 'ff00', avatarId: 'avatar-1' });
 
   expect(row).toMatchObject({ appendedNextSeed: 'ff00', avatarId: 'avatar-1' });

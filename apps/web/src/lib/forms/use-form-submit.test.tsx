@@ -126,10 +126,8 @@ test('it shows no error after a redirect resolves the submission', async () => {
   await user.type(screen.getByPlaceholderText('Password'), 'password123');
   await user.click(screen.getByRole('button', { name: 'Sign in' }));
 
-  const button = await screen.findByRole('button', { name: 'Sign in' });
-
   await waitFor(() => {
-    expect(button).not.toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Sign in' })).not.toBeDisabled();
   });
 
   expect(screen.queryByRole('alert')).not.toBeInTheDocument();

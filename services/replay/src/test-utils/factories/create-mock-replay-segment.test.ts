@@ -36,7 +36,7 @@ test('it builds a default genesis segment', () => {
   });
 });
 
-test('it keeps explicit overrides', () => {
+test('it applies overrides on top of the defaults', () => {
   const segment = createMockReplaySegment({ verifiedHead: 3 });
 
   expect(segment.verifiedHead).toBe(3);

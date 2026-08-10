@@ -1,4 +1,4 @@
-import { expect, onTestFinished, test } from 'bun:test';
+import { expect, test } from 'bun:test';
 import type { UserContract } from '@vers/contract-user';
 import { createAnonymousViewer, createTestDB } from '@vers/service-test-utils/bun';
 import { buildRPCTestClient } from '@vers/test-utils';
@@ -26,8 +26,6 @@ test('it wires an injected db into the router instead of building one from env',
 
 test('it boots from env.DATABASE_URL when no db is injected', async () => {
   const service = await createUserService();
-
-  onTestFinished(() => service.stopTelemetry());
 
   expect(service.env.DATABASE_URL).toStartWith('postgres://');
 });

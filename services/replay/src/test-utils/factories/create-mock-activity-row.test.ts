@@ -23,7 +23,7 @@ test('it builds a default activity row', () => {
   expect(row.seed).toHaveLength(32);
 });
 
-test('it keeps explicit overrides', () => {
+test('it applies overrides on top of the defaults', () => {
   const row = createMockActivityRow({ avatarId: 'avatar-1', scopeId: 'node_9' });
 
   expect(row).toMatchObject({ avatarId: 'avatar-1', scopeId: 'node_9' });
