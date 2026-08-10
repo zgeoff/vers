@@ -65,30 +65,33 @@ interface AdvanceActivityOpts {
 }
 
 /**
- * Bulk mint-and-appends an offline catch-up: each `continuations` entry appends its tail onto
- * whichever row is currently active — `activityID` for the first entry, otherwise the row the
- * previous entry minted — and, once that append lands terminal, mints the entry's own
- * `id`/`startKey`/`buildSnapshot` as the next row, ready for the following entry's tail. Every
- * continuation always ends terminal by construction: the client only ever submits a full attempt,
- * never a partial one, so each entry both closes a row and opens the next.
+ * Bulk mint-and-appends an offline catch-up. Each `continuations` entry appends its tail onto the
+ * currently active row — `activityID` for the first entry, the previous entry's minted row after —
+ * and, once that append lands terminal, mints the entry's own `id`/`startKey`/`buildSnapshot` as
+ * the next row. Every entry both closes a row and opens the next: the client only ever submits a
+ * full attempt, so each continuation ends terminal by construction.
  *
- * `contentVersion`, `keyVersion`, `simVersion`, `encounterNode`, and `secretRef`/`secretVersion` are
- * inherited once from `activityID`'s own row and reused for every mint in this request — never
- * re-resolved from the service's current deploy or the world map — so the whole offline gap
- * replays under the exact engine, content, and encounter the client's own local simulation was
- * pinned to, and every minted row stays eligible for the replay verifier's descriptor check.
+ * `contentVersion`, `keyVersion`, `simVersion`, `encounterNode`, and `secretRef`/`secretVersion`
+ * are inherited once from `activityID`'s own row and reused for every mint in this request —
+ * never re-resolved from the service's current deploy or the world map. The whole offline gap
+ * therefore replays under the exact engine, content, and encounter the client's own local
+ * simulation was pinned to, and every minted row stays eligible for the replay verifier's
+ * descriptor check.
  *
- * Each continuation is its own transaction: append, then (on terminal) mint — reusing
- * `trackActivityProgress`'s head compare-and-swap, meter debit, and terminal anchor advance, and
- * `startActivity`'s chain-seed read and provenance recording. A rejection at either step unwinds
- * the whole transaction, so the confirmed head reported on any bail is always the last fully
- * committed continuation's — never a partial append with no successor. The mint step authors
- * `buildSnapshot` itself server-side; the entry's own `buildSnapshot` is only a cross-check hint,
- * and a mismatch bails with `CHECKPOINT_INVALID` — a client-supplied snapshot the server stored
- * as-is would be direct xp inflation. Mint dedup keys on the entry's own `id` plus a matching
- * `startKey` and scope, never on id and ownership alone, resolved outside any transaction once
- * the insert's unique violation has unwound one; `startActivity`'s own dedup (the active-status
- * row for the avatar) would find nothing and stall forever once a gap has already ended terminal.
+ * Each continuation is its own transaction: append, then — on terminal — mint, through the same
+ * head compare-and-swap, meter debit, terminal anchor advance, chain-seed read, and provenance
+ * recording as live play. A rejection at either step unwinds the whole transaction, so the
+ * confirmed head reported on any bail is always the last fully committed continuation's — never a
+ * partial append with no successor.
+ *
+ * The mint authors `buildSnapshot` itself server-side; the entry's own `buildSnapshot` is only a
+ * cross-check hint, and a mismatch bails with `CHECKPOINT_INVALID`. A client-supplied snapshot
+ * the server stored as-is would be direct xp inflation.
+ *
+ * Mint dedup keys on the entry's own `id` plus a matching `startKey` and scope, never on id and
+ * ownership alone, and resolves outside any transaction once the insert's unique violation has
+ * unwound one. The live start path's dedup — the avatar's active-status row — would find nothing
+ * once a gap has already ended terminal, and a retry resolved against it would stall forever.
  */
 export async function advanceActivity(
   deps: AdvanceActivityDeps,
