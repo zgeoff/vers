@@ -3,7 +3,7 @@ import { renderHook } from '@testing-library/react';
 import { createMockWorldMapEdge } from '../test-utils/factories/create-mock-world-map-edge';
 import { createMockWorldMapNode } from '../test-utils/factories/create-mock-world-map-node';
 import type { WorldGraph } from '../types';
-import { setWorldGraph } from './set-world-graph';
+import { setWorldRegion } from './set-world-region';
 import { useWorldGraph } from './use-world-graph';
 
 test('it returns the current world graph state', () => {
@@ -12,7 +12,7 @@ test('it returns the current world graph state', () => {
     nodes: { node1: createMockWorldMapNode({ id: 'node1', position: [0, 0] }) },
   };
 
-  setWorldGraph(graph);
+  setWorldRegion(201, graph, null);
 
   const hook = renderHook(() => useWorldGraph());
 

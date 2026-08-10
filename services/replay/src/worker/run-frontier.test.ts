@@ -532,7 +532,7 @@ test("it verifies an honest row sealed under the avatar's own seed, not a shared
   // a fixed id and seed, verified against this test's two-pool content to pick a different pool
   // than userSeed 0 would — a verify pass that reverted to a pinned zero seed would recompute the
   // other pool as truth and reject this honest row, rather than matching by coincidence
-  const avatar = await createAvatarRow(ctx.db, { id: 'avatar_test_849_seed', seed: 777 });
+  const avatar = await createAvatarRow(ctx.db, { id: 'avatar_seed_divergent_pool', seed: 700 });
 
   const document = createMockContentDocument({
     contentVersion: '849851',

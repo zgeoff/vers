@@ -117,7 +117,7 @@ test("it seals the stamped encounterNode under the chain's avatar seed, not a sh
   // a fixed id and seed, verified against this test's two-pool content to pick a different pool
   // than userSeed 0 would — a fixture that reverted to a pinned zero seed would stamp the other
   // pool and fail the assertion below, rather than passing by coincidence
-  const avatar = await createAvatarRow(ctx.db, { id: 'avatar_test_849_seed', seed: 777 });
+  const avatar = await createAvatarRow(ctx.db, { id: 'avatar_seed_divergent_pool', seed: 700 });
 
   const document = createMockContentDocument({
     contentVersion: '849850',

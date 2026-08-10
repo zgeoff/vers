@@ -1405,8 +1405,8 @@ test("it seals the stamped poolID under the avatar's own seed, not a shared plac
   // than userSeed 0 would — a start that reverted to a pinned zero seed would stamp the other pool
   // and fail the assertion below, rather than passing by coincidence
   const avatar = await createAvatarRow(ctx.db, {
-    id: 'avatar_test_849_seed',
-    seed: 777,
+    id: 'avatar_seed_divergent_pool',
+    seed: 700,
     userId: viewer.user.id,
   });
 

@@ -28,6 +28,6 @@ export function useAvatarRegionGraph(): void {
     const originNode = worldGraph.nodes[toNodeID(0, 0)];
 
     invariant(originNode, 'the generated region always contains its origin cell');
-    setWorldRegion(worldGraph, originNode);
+    setWorldRegion(seed, worldGraph, originNode);
   }, [seed]);
 }

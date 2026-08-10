@@ -6,7 +6,8 @@ import { sql } from 'kysely';
  * random value per row so the column both backfills existing avatars and stays compatible with a
  * currently-deployed avatar service whose create-avatar insert doesn't yet supply `seed` —
  * required expand/contract behavior for the window between this migration and cutover, and for any
- * later rollback to a pre-#849 image. Purges the activity graph first: every stamped encounter
+ * later rollback to an image whose create-avatar insert predates the column. Purges the activity
+ * graph first: every stamped encounter
  * descriptor was derived with `userSeed` pinned to 0, so replay recomputation against an avatar's
  * new random seed diverges on every row — the game carries ~0 players, so there is nothing worth
  * preserving. `avatar_items` is included because its primary key is the reward coordinate
