@@ -7,7 +7,8 @@ import type { SimVersionAction, SimVersionActionInput } from './types';
  * a fresh hash gets a new per-version provider app, its flycast IP, a
  * machine launched from the fleet's just-deployed tag, and a registry row;
  * an existing app with a machine already running the fleet's resolved digest
- * and a registry row that already points at it needs nothing. A missing
+ * and a registry row that already points at that image and carries the
+ * build's bundled content version needs nothing. A missing
  * provider app is always recreated, an app that lost its machine gets a
  * fresh machine, a machine running any other digest or sitting in any other
  * region is replaced, and every
@@ -26,7 +27,10 @@ export function planSimVersionActions(
 
   const providerApp = buildProviderAppName(input.engineHash);
   const imageRef = `${input.fleetImage.repository}@${input.fleetImage.digest}`;
-  const rowIsCurrent = input.registryRow?.imageRef === imageRef;
+
+  const rowIsCurrent =
+    input.registryRow?.imageRef === imageRef &&
+    input.registryRow?.maxContentVersion === input.maxContentVersion;
 
   const machineIsCurrent =
     input.providerMachineImageDigest === input.fleetImage.digest &&
@@ -70,6 +74,7 @@ export function planSimVersionActions(
       bunVersion: input.bunVersion,
       engineHash: input.engineHash,
       imageRef,
+      maxContentVersion: input.maxContentVersion,
       providerURL: `http://${providerApp}.flycast`,
     },
     kind: 'upsert-registry-row',

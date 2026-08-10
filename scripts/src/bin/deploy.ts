@@ -19,6 +19,7 @@ import { checkParkedApp } from '../deploy/check-parked-app';
 import { checkTarget } from '../deploy/check-target';
 import { findStaleReason } from '../deploy/find-stale-reason';
 import { formatMachineTable } from '../deploy/format-machine-table';
+import { loadBundledContentVersion } from '../deploy/load-bundled-content-version';
 import { loadDeployManifest } from '../deploy/load-deploy-manifest';
 import { PINNED_BUN_VERSION, loadEngineHash } from '../deploy/load-engine-hash';
 import { planIPPosture } from '../deploy/plan-ip-posture';
@@ -512,6 +513,7 @@ async function runSimVersionReconcile(target: DeployTarget): Promise<void> {
 
   const fleetImage = await readFleetImage(target.app);
   const engineHash = await loadEngineHashOnce();
+  const maxContentVersion = await loadBundledContentVersion();
 
   const providerApp = buildProviderAppName(engineHash);
 
@@ -524,6 +526,7 @@ async function runSimVersionReconcile(target: DeployTarget): Promise<void> {
     bunVersion: PINNED_BUN_VERSION,
     engineHash,
     fleetImage,
+    maxContentVersion,
     providerAppExists: providerAppState.exists,
     providerMachineExists: providerAppState.hasMachine,
     providerMachineID: providerAppState.machineID,
