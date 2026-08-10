@@ -20,15 +20,15 @@ Every derived value belongs to one of two planes, split by who can compute it.
   the avatar's own seed: per-avatar, so every map differs, but non-secret and safe to ship, so the
   client derives the entire infinite map locally in the SharedWorker — panning is instant and needs
   no round-trip. Public here means non-secret, not shared: shape leaks nothing worth hiding.
-- **Content** — reward profile, encounter family, archetype — is `f(scopeSecret, coord)`, a one-way
-  derivation the server alone can run. `scopeSecret` is a per-avatar secret held server-side and
-  never shipped. A revealed node discloses too little to derive its unrevealed neighbours, and the
-  secret being per-avatar means one player's reveals crack no other player's map and colluders share
-  no secret to triangulate.
+- **Content** — reward profile, encounter family, archetype — is `f(scopeSecret, userSeed, coord)`,
+  a one-way derivation the server alone can run. `scopeSecret` is a per-avatar secret held
+  server-side and never shipped. A revealed node discloses too little to derive its unrevealed
+  neighbours, and the secret being per-avatar means one player's reveals crack no other player's map
+  and colluders share no secret to triangulate.
 
-The disjoint inputs are the whole of the guarantee: geometry and content share no derivable input,
-so map-shape knowledge is worthless for locating loot. Drops stay server-authoritative over a
-client-generated shell.
+`scopeSecret` is the whole of the guarantee: content folds in the same `userSeed` geometry uses, but
+without the secret that shared input derives nothing, so map-shape knowledge is worthless for
+locating loot. Drops stay server-authoritative over a client-generated shell.
 
 ## Geometry generation — chunked hex lattice
 

@@ -12,7 +12,7 @@ test('it returns the current world graph state', () => {
     nodes: { node1: createMockWorldMapNode({ id: 'node1', position: [0, 0] }) },
   };
 
-  setWorldRegion(201, graph, null);
+  setWorldRegion('region-a', graph, null);
 
   const hook = renderHook(() => useWorldGraph());
 

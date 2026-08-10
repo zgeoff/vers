@@ -10,7 +10,7 @@ export const AvatarDataSchema = z.object({
   level: z.int(),
   mode: AvatarModeSchema,
   name: z.string(),
-  seed: z.int(),
+  seed: z.int32(),
   updatedAt: z.date(),
   userID: z.string(),
   xp: z.int(),
