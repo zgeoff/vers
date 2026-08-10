@@ -1,4 +1,4 @@
-import { isDefinedError, safe } from '@orpc/client';
+import { isDefinedError } from '@orpc/client';
 import type { ActivityData } from '@vers/contract-activity';
 import type { Simulation } from '@vers/idle-core';
 import { buildSimulationInput } from '@vers/idle-core';
@@ -9,6 +9,7 @@ import { WorkerMessageType } from '../types';
 import { resetSimulation } from './reset-simulation';
 import { runResyncFlow } from './run-resync-flow';
 import { submitStopIntent } from './submit-stop-intent';
+import { tryStartActivity } from './try-start-activity';
 import type { FlowSignals, WorkerContext } from './types';
 
 /**
@@ -23,9 +24,12 @@ import type { FlowSignals, WorkerContext } from './types';
  * the failure is the activity's, not the connection's. AVATAR_NOT_ACTIVE means the account
  * switched avatars mid-session: nothing is parked, since this avatar's chain has nowhere to
  * continue to, and the tab is told which avatar is now active rather than left on a silently
- * reset runtime. Queued from the tick loop, the entry guard is the staleness check: a turn whose
- * simulation/activity pair lost the runtime while it waited returns untouched. Past the start
- * call only stops can interleave; a row started under one is stopped back durably.
+ * reset runtime. An expired sim version means this build's engine can no longer replay the
+ * current content: nothing is parked, since a reload is the only remedy, and the tab is told to
+ * offer it rather than left on a silently reset runtime. Queued from the tick loop, the entry
+ * guard is the staleness check: a turn whose simulation/activity pair lost the runtime while it
+ * waited returns untouched. Past the start call only stops can interleave; a row started under
+ * one is stopped back durably.
  */
 export async function runContinuation(
   context: WorkerContext,
@@ -38,18 +42,14 @@ export async function runContinuation(
 
   const signals: FlowSignals = { cancel: context.getCancelSignal(), stop: context.getStopSignal() };
 
-  // Runs unsigned — the response is the only handle on the minted row, and the stop-back
-  // compensation needs it. Keyed by the terminal row it succeeds: a retried delivery dedupes onto
-  // the first attempt's row, while the next continuation carries a new key and conflicts as a
-  // distinct intent.
-  const [error, started] = await safe(
-    context.getClient().startActivity({
-      avatarID: activity.avatarID,
-      scopeID: activity.scopeID,
-      scopeType: activity.scopeType,
-      startKey: `continue_${activity.id}`,
-    }),
-  );
+  // Keyed by the terminal row it succeeds: a retried delivery dedupes onto the first attempt's
+  // row, while the next continuation carries a new key and conflicts as a distinct intent.
+  const [error, started] = await tryStartActivity(context, {
+    avatarID: activity.avatarID,
+    scopeID: activity.scopeID,
+    scopeType: activity.scopeType,
+    startKey: `continue_${activity.id}`,
+  });
 
   if (error === null) {
     if (signals.stop.aborted) {
@@ -90,6 +90,20 @@ export async function runContinuation(
         kind: 'avatar-switched',
         levelUps: 0,
       },
+      type: WorkerMessageType.ResyncStatus,
+    });
+
+    return;
+  }
+
+  // expired means the service confirmed this build's engine can't replay the current content —
+  // only a reload delivers a newer one, and nothing is parked: the bundled engine that would
+  // replay the intent is the one refused
+  if (isDefinedError(error) && error.code === 'SIM_VERSION_EXPIRED') {
+    stopAndReset(context, simulation);
+
+    context.broadcast({
+      status: { kind: 'sim-version-expired' },
       type: WorkerMessageType.ResyncStatus,
     });
 

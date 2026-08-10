@@ -6,6 +6,7 @@ import { isAbortError } from './is-abort-error';
 import { reportWorkerFault } from './report-worker-fault';
 import { runResyncFlow } from './run-resync-flow';
 import { submitStopIntent } from './submit-stop-intent';
+import { tryStartActivity } from './try-start-activity';
 import type { FlowSignals, WorkerContext } from './types';
 import { withLifecycleTurn } from './with-lifecycle-turn';
 import type { StartStatus } from './worker-contract';
@@ -72,7 +73,7 @@ async function runStart(
   // a pure unwind: no row has been minted yet, so there is nothing to compensate
   signals.cancel.throwIfAborted();
 
-  const [error, started] = await tryStartActivity(context, input, token);
+  const [error, started] = await tryStartActivity(context, { ...input, startKey: token });
 
   if (error === null) {
     return setLiveStartedRow(context, token, started, signals);
@@ -83,6 +84,10 @@ async function runStart(
       kind: 'failed',
       rejection: { activeAvatarName: error.data.activeAvatarName, reason: 'avatar-not-active' },
     };
+  }
+
+  if (isDefinedError(error) && error.code === 'SIM_VERSION_EXPIRED') {
+    return { kind: 'failed', rejection: { reason: 'sim-version-expired' } };
   }
 
   if (!isDefinedError(error) || error.code !== 'CONFLICT') {
@@ -129,7 +134,7 @@ async function runStart(
     return { kind: 'failed' };
   }
 
-  const [retryError, retried] = await tryStartActivity(context, input, token);
+  const [retryError, retried] = await tryStartActivity(context, { ...input, startKey: token });
 
   if (retryError !== null) {
     if (isDefinedError(retryError) && retryError.code === 'AVATAR_NOT_ACTIVE') {
@@ -140,6 +145,10 @@ async function runStart(
           reason: 'avatar-not-active',
         },
       };
+    }
+
+    if (isDefinedError(retryError) && retryError.code === 'SIM_VERSION_EXPIRED') {
+      return { kind: 'failed', rejection: { reason: 'sim-version-expired' } };
     }
 
     if (!isDefinedError(retryError)) {
@@ -154,25 +163,6 @@ async function runStart(
 
 function isSuperseded(context: WorkerContext, token: string): boolean {
   return context.getStartToken() !== token;
-}
-
-/**
- * One start-activity mint, deliberately unsigned: the response is the only handle on the minted
- * row, and the stop-back compensation needs it.
- */
-function tryStartActivity(
-  context: WorkerContext,
-  input: Readonly<StartActivityInput>,
-  token: string,
-) {
-  return safe(
-    context.getClient().startActivity({
-      avatarID: input.avatarID,
-      scopeID: input.scopeID,
-      scopeType: input.scopeType,
-      startKey: token,
-    }),
-  );
 }
 
 /**

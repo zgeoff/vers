@@ -93,6 +93,42 @@ test('it broadcasts avatar-switched, and reports no worker fault, when the held 
   expect(recorded).toStrictEqual([]);
 });
 
+test('it broadcasts sim-version-expired and runs no pass when the held intent is refused as SIM_VERSION_EXPIRED', async () => {
+  const viewer = await createViewer();
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
+
+  const context = createStubWorkerContext({ client, submitter: createStubSubmitter() });
+
+  const source = await db.activityCollection.create({
+    avatarID: viewer.avatar.id,
+    status: 'stopped',
+  });
+
+  await writePendingStartIntent({
+    activityID: source.id,
+    avatarID: viewer.avatar.id,
+    scopeID: source.scopeID,
+    scopeType: source.scopeType,
+  });
+
+  server.use(
+    mockActivityService.startActivity.handler((opts) => {
+      throw opts.errors.SIM_VERSION_EXPIRED({ data: { currentSimVersion: null } });
+    }),
+  );
+
+  const signals: FlowSignals = {
+    cancel: context.getCancelSignal(),
+    stop: context.getStopSignal(),
+  };
+
+  await runResyncFlow(context, viewer.avatar.id, false, signals);
+
+  expect(context.getBroadcasts()).toStrictEqual([
+    { status: { kind: 'sim-version-expired' }, type: WorkerMessageType.ResyncStatus },
+  ]);
+});
+
 test('it clears the stamped resync avatar when the reported active avatar already matches the one being resynced', async () => {
   const viewer = await createViewer();
   const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
@@ -237,6 +273,54 @@ test('it broadcasts avatar-switched from a blocked intent retry rather than drop
   });
 
   expect(context.getResyncAvatarID()).toBe('avatar_active');
+});
+
+test('it broadcasts sim-version-expired from a blocked intent retry rather than dropping it silently', async () => {
+  const viewer = await createViewer();
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
+
+  const context = createStubWorkerContext({ client, submitter: createStubSubmitter() });
+
+  const source = await db.activityCollection.create({
+    avatarID: viewer.avatar.id,
+    status: 'active',
+  });
+
+  await writePendingStartIntent({
+    activityID: source.id,
+    avatarID: viewer.avatar.id,
+    scopeID: source.scopeID,
+    scopeType: source.scopeType,
+  });
+
+  // The entry delivery finds the source row still active — genuinely blocked, since its terminal
+  // append hasn't landed yet — and the retry after the pass finds the bundled engine refused for
+  // the current content.
+  let deliveryAttempts = 0;
+
+  server.use(
+    mockActivityService.startActivity.handler((opts) => {
+      deliveryAttempts += 1;
+
+      if (deliveryAttempts === 1) {
+        throw opts.errors.CONFLICT({ data: { activity: source } });
+      }
+
+      throw opts.errors.SIM_VERSION_EXPIRED({ data: { currentSimVersion: null } });
+    }),
+  );
+
+  const signals: FlowSignals = {
+    cancel: context.getCancelSignal(),
+    stop: context.getStopSignal(),
+  };
+
+  await runResyncFlow(context, viewer.avatar.id, false, signals);
+
+  expect(context.getBroadcasts()).toPartiallyContain({
+    status: { kind: 'sim-version-expired' },
+    type: WorkerMessageType.ResyncStatus,
+  });
 });
 
 test('it leaves the avatar idle with no live attach after an offline gap aborts on a failure', async () => {

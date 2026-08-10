@@ -13,6 +13,7 @@ import { useSelectedNode } from '@vers/worldmap-client';
 import { Suspense, useEffect, useRef, useState } from 'react';
 import invariant from 'tiny-invariant';
 import { AvatarSwitchedNotice } from '../../components/avatar-switched-notice';
+import { GameUpdatedNotice } from '../../components/game-updated-notice';
 import { WorldMapNodeCodexSlot } from '../../components/world-map-node-codex-slot';
 import { buildActiveAvatarQueryOptions } from '../../lib/avatar/build-active-avatar-query-options';
 import { runIgnoringRejection } from '../../lib/idle/run-ignoring-rejection';
@@ -45,7 +46,9 @@ interface StartAttemptReport {
  * bouncing the player back. A start rejected because the account's active avatar changed renders a
  * distinct notice naming the current one, with a reload action rather than the generic retry — the
  * route's own data still names the stale avatar, and only a reload re-runs every gate against the
- * new one. While an offline catch-up is still fast-forwarding, the panel withholds its start call
+ * new one. A start rejected because the running build's engine no longer supports the current
+ * content renders its own reload notice for the same reason: no in-page recovery can fetch a newer
+ * bundle. While an offline catch-up is still fast-forwarding, the panel withholds its start call
  * — the lockout overlay above it covers the UI, but this keeps a mounted panel from auto-sending a
  * start of its own underneath it.
  */
@@ -183,13 +186,23 @@ export function ExploreCurrentPanel(props: Readonly<ExploreCurrentPanelProps>) {
     void navigate({ to: '/activity' });
   }, [isActivityReady, expectedActivityID, engagedActivityID, navigate]);
 
-  if (reportedStatus?.kind === 'failed' && reportedStatus.rejection !== undefined) {
+  if (
+    reportedStatus?.kind === 'failed' &&
+    reportedStatus.rejection?.reason === 'avatar-not-active'
+  ) {
     return (
       <AvatarSwitchedNotice
         activeAvatarName={reportedStatus.rejection.activeAvatarName}
         testID="start-activity-avatar-not-active"
       />
     );
+  }
+
+  if (
+    reportedStatus?.kind === 'failed' &&
+    reportedStatus.rejection?.reason === 'sim-version-expired'
+  ) {
+    return <GameUpdatedNotice testID="start-activity-sim-version-expired" />;
   }
 
   if (reportedStatus?.kind === 'failed') {

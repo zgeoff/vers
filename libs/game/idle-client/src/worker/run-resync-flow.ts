@@ -55,6 +55,9 @@ import type { ResyncStatus } from './worker-to-client-message-schema';
  * notice and what the catch-up earned; the stamped resync avatar follows the pass onto the
  * reported avatar. When the reported avatar already matches `avatarID`, no pass runs and the
  * stamped resync avatar clears instead, so a dead intent avatar isn't resynced again next cycle.
+ * A held intent the service refuses as stale for the current content broadcasts
+ * `sim-version-expired` and runs no pass — a reload is the only remedy, on the entry drain and the
+ * blocked-intent retry alike.
  */
 export async function runResyncFlow(
   context: WorkerContext,
@@ -101,6 +104,12 @@ export async function runResyncFlow(
 
     if (startFlush.outcome === 'avatar-switched') {
       await runAvatarSwitchedFallback(context, avatarID, claim, signals, startFlush);
+
+      return;
+    }
+
+    if (startFlush.outcome === 'sim-version-expired') {
+      emitResyncStatus(context, { kind: 'sim-version-expired' });
 
       return;
     }
@@ -265,6 +274,8 @@ async function applyStartFlush(
       context.updateConnectivity(false);
     } else if (retryFlush.outcome === 'avatar-switched') {
       await runAvatarSwitchedFallback(context, avatarID, claim, signals, retryFlush);
+    } else if (retryFlush.outcome === 'sim-version-expired') {
+      emitResyncStatus(context, { kind: 'sim-version-expired' });
     }
 
     return;

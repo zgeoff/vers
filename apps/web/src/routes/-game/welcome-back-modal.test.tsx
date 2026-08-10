@@ -127,6 +127,14 @@ test('it offers a reload action when the account switched avatars mid catch-up',
   expect(screen.getByRole('button', { name: 'Reload' })).toBeInTheDocument();
 });
 
+test('it offers a reload action when the running build no longer supports the current content', () => {
+  setResyncStatus({ kind: 'sim-version-expired' });
+  render(<WelcomeBackModal />);
+
+  expect(screen.getByText('The game has been updated — reload to continue.')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Reload' })).toBeInTheDocument();
+});
+
 test('it reports the tallies a fast-forward earned before the account switched avatars', () => {
   setResyncStatus({
     activeAvatarName: 'Someone Else',

@@ -1,3 +1,4 @@
+import { BUNDLED_CONTENT_VERSION } from '@vers/content-version';
 import { createDB } from '@vers/db';
 import type { DB } from '@vers/db';
 import { findLatestRelease, recordRelease } from '@vers/release-registry';
@@ -524,6 +525,7 @@ async function runSimVersionReconcile(target: DeployTarget): Promise<void> {
     bunVersion: PINNED_BUN_VERSION,
     engineHash,
     fleetImage,
+    maxContentVersion: BUNDLED_CONTENT_VERSION,
     providerAppExists: providerAppState.exists,
     providerMachineExists: providerAppState.hasMachine,
     providerMachineID: providerAppState.machineID,

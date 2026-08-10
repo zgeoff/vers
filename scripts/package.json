@@ -13,6 +13,7 @@
   "dependencies": {
     "@dotenvx/dotenvx": "catalog:",
     "@vers/content-registry": "workspace:*",
+    "@vers/content-version": "workspace:*",
     "@vers/contract-activity": "workspace:*",
     "@vers/db": "workspace:*",
     "@vers/release-registry": "workspace:*",
