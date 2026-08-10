@@ -116,7 +116,7 @@ test('it rejects a write that violates a cloned foreign key', async () => {
   expect(
     handle.db
       .insertInto('avatars')
-      .values({ id: 'av_schema_fk_test', name: 'FK Test', userId: 'usr_missing' })
+      .values({ id: 'av_schema_fk_test', name: 'FK Test', seed: 1, userId: 'usr_missing' })
       .execute(),
   ).rejects.toMatchObject({ code: '23503' });
 });
