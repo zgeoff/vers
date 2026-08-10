@@ -234,7 +234,7 @@ exporter. It is the explicit signal that the replay queue may go undrained despi
 appending unverified work.
 
 The `vers slow requests` threshold monitor watches `vers-traces` for any non-probe server span past
-a fixed 30s duration ceiling and notifies `vers alarms`, evaluated on its own schedule rather than
+a fixed 30s duration threshold and notifies `vers alarms`, evaluated on its own schedule rather than
 at span close. Health-probe routes are excluded because their latency tracks scale-to-zero machine
 wake rather than request handling. It is the fleet-wide alarm for a hung or pathologically slow
 request, independent of the per-request slow-request warn log a service's own `slowRequestMs`

@@ -56,7 +56,7 @@ stops gating and detection takes over: an avatar whose results ride the favorabl
 verified history is a behavioural cheat signal, scored offline
 ([game simulation](./game-simulation.md#replay)). Bounded margins keep any single attempt's edge
 small throughout. The residual is a wealthy, motivated actor with a purpose-built tool: defended in
-layers, never zero, the ceiling of anti-cheat in any game.
+layers, never zero, the upper bound of anti-cheat in any game.
 
 ## Rolled rewards and the avatar key
 
