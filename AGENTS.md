@@ -37,20 +37,6 @@ what tooling can't check.
   it starts a name. File names are unaffected: kebab-case lowercases everything (`parse-cli-args.ts`
   exports `parseCLIArgs`).
 
-### Comments
-
-- Comments that document a declaration are JSDoc blocks, always multi-line (`/**` alone, one
-  `*`-prefixed line per point, `*/` alone — never single-line `/** … */`), attached directly to the
-  declaration they describe; `//` is for statement-level commentary inside bodies.
-- Comment a declaration only for what the file doesn't already show — an invariant, cross-file or
-  runtime behavior, or why the choice is necessary. A comment that restates the name or signature is
-  a defect — delete it.
-- Comments describe the code as it is now — no history ("previously", "now uses"), no project state
-  (issue numbers, phase labels, "not wired yet"); those live in the commit message.
-- Comments don't name other declarations — renames strand the reference. State the contract instead:
-  "callers must pass edits sorted last-to-first", not "(buildEditsFromAST's contract)". A
-  declaration's own parameters and signature types are fine to name.
-
 ### Function naming
 
 Every function name starts with a prefix from the closed list below: pick from it, or extend this
@@ -193,6 +179,23 @@ Project-level additions to the shared function-naming taxonomy, under the same r
 | `submit`    | accept a payload into a durable outbound queue and schedule its delivery               | `submit`                |
 | `sweep`     | bulk-remove stale or orphaned resources found by a scan, returning the set removed     | `sweepDevDBs`           |
 | `upgrade`   | hand a structural port to an RPC handler so it starts serving calls over it            | `upgrade`               |
+
+## Comments
+
+- Comments that document a declaration are JSDoc blocks, always multi-line (`/**` alone, one
+  `*`-prefixed line per point, `*/` alone — never single-line `/** … */`), attached directly to the
+  declaration they describe; `//` is for statement-level commentary inside bodies.
+- Comment a declaration only for what the file doesn't already show — an invariant, cross-file or
+  runtime behavior, or why the choice is necessary. A comment that restates the name or signature is
+  a defect — delete it.
+- Comments describe the code as it is now — no history ("previously", "now uses"), no project state
+  (issue numbers, phase labels, "not wired yet"); those live in the commit message.
+- Comments don't name other declarations — renames strand the reference. State the contract instead:
+  "callers must pass edits sorted last-to-first", not "(buildEditsFromAST's contract)". A
+  declaration's own parameters and signature types are fine to name.
+- A comment past a few lines is structured prose: one point per paragraph, led by its topic
+  sentence; one fact per sentence; enumeration-shaped content (an outcome map, a state-to-action
+  table) as a bullet list. Load the `docs-writing` skill before writing or reworking one.
 
 ## Golden values in tests
 
