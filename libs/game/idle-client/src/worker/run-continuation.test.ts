@@ -258,17 +258,41 @@ test('it broadcasts the sim-version-expired status and parks nothing when the bu
   expect(heldIntent).toBeUndefined();
 });
 
-test('it broadcasts the sim-version-expired status when a swept hash is refused as SIM_VERSION_UNKNOWN', async () => {
+test('it continues on the registry-current retry when the bundled hash reads back SIM_VERSION_UNKNOWN', async () => {
+  const viewer = await createViewer();
+  const ctx = await setupTest({ userID: viewer.user.id });
+
+  // the first call's hash misses a registry write still in flight for this deploy; the retry
+  // drops the hash and lands on the registry's current stamp instead of telling the tab to reload
+  const sentSimVersions: Array<string | undefined> = [];
+  const previousActivity = createMockActivityData({ avatarID: viewer.avatar.id });
+
   server.use(
     mockActivityService.startActivity.handler((opts) => {
-      throw opts.errors.SIM_VERSION_UNKNOWN({ data: { currentSimVersion: null } });
+      sentSimVersions.push(opts.input.simVersion);
+
+      if (sentSimVersions.length === 1) {
+        throw opts.errors.SIM_VERSION_UNKNOWN({ data: { currentSimVersion: null } });
+      }
+
+      return db.activityCollection.create({
+        avatarID: viewer.avatar.id,
+        scopeID: previousActivity.scopeID,
+        scopeType: previousActivity.scopeType,
+        status: 'active',
+      });
     }),
   );
 
   const submitter = createStubSubmitter();
-  const context = createStubWorkerContext({ submitter });
+
+  const context = createStubWorkerContext({
+    bundledEngineHash: 'engine_hash_baked',
+    client: ctx.client,
+    submitter,
+  });
+
   const simulation = createSimulation();
-  const previousActivity = createMockActivityData();
 
   context.setSimulation(simulation);
   context.setActivity(previousActivity);
@@ -276,10 +300,20 @@ test('it broadcasts the sim-version-expired status when a swept hash is refused 
 
   await runContinuation(context, simulation, previousActivity);
 
-  expect(context.getBroadcasts()).toPartiallyContain({
+  expect(sentSimVersions).toStrictEqual(['engine_hash_baked', undefined]);
+
+  expect(context.getBroadcasts()).not.toPartiallyContain({
     status: { kind: 'sim-version-expired' },
     type: WorkerMessageType.ResyncStatus,
   });
+
+  const minted = db.activityCollection.findFirst((q) =>
+    q.where({ avatarID: viewer.avatar.id, status: 'active' }),
+  );
+
+  invariant(minted !== undefined, 'expected the retry to mint an active row');
+
+  expect(context.getActivity()).toStrictEqual(minted);
 });
 
 test('it stops the row it started when a stop lands mid-flight', async () => {

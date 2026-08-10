@@ -53,6 +53,12 @@ export interface WorkerContext {
    */
   readonly getActivity: () => ActivityData | null;
 
+  /**
+   * The sim engine hash baked into this build, sent as the pinned `simVersion` on every start
+   * call. Undefined in dev builds, which start against the registry's current stamp instead.
+   */
+  readonly getBundledEngineHash: () => string | undefined;
+
   readonly getClient: () => ActivityServiceClient;
 
   /**

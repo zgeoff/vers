@@ -462,6 +462,7 @@
       "version": "0.0.0",
       "dependencies": {
         "@faker-js/faker": "catalog:",
+        "@vers/content-version": "workspace:*",
         "@vers/db": "workspace:*",
         "kysely": "catalog:",
       },
@@ -714,7 +715,6 @@
         "@noble/hashes": "catalog:",
         "@orpc/client": "catalog:",
         "@orpc/contract": "catalog:",
-        "@vers/content-version": "workspace:*",
         "@vers/contract-keys": "workspace:*",
         "@vers/game-utils": "workspace:*",
         "@vers/service-auth": "workspace:*",

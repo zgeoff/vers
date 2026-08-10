@@ -8,7 +8,9 @@ import { sql } from 'kysely';
  * Every existing row backfills to the live `content_current` pointer rather than a conservative
  * floor: a retained row already serves that content today, so stamping it any lower would refuse
  * the traffic it's already handling the moment the gate goes live. The next deploy-reconcile
- * refreshes the live engine's row with its actual bundled value.
+ * refreshes the live engine's row with its actual bundled value. The default exists only for the
+ * add-column step and is dropped after the backfill — every later writer must state the value, or
+ * a silently defaulted row would be refused on its first start.
  */
 export async function up(db: Kysely<unknown>): Promise<void> {
   await db.schema
@@ -21,6 +23,8 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     SET max_content_version = (SELECT content_version FROM content_current LIMIT 1)
     WHERE EXISTS (SELECT 1 FROM content_current)
   `.execute(db);
+
+  await sql`ALTER TABLE sim_versions ALTER COLUMN max_content_version DROP DEFAULT`.execute(db);
 }
 
 export async function down(db: Kysely<unknown>): Promise<void> {

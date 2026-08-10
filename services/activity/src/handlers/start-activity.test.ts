@@ -1349,15 +1349,15 @@ test('it stamps secretRef and secretVersion on the minted row', async () => {
 test('it stamps a poolID matching the sealed derivation truth for the current content, and folds it into the startHash', async () => {
   await using ctx = await setupTest();
 
-  await createSimVersionRow(ctx.db);
-
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
 
   // publish this test's own document, moving the current pointer onto it, so the derivation truth
-  // asserted below comes from content this test authored rather than the suite's shared seed
+  // asserted below comes from content this test authored rather than the suite's shared seed; the
+  // seeded engine declares it bundled, or the compatibility gate would refuse the start
   const document = createMockContentDocument();
 
+  await createSimVersionRow(ctx.db, { maxContentVersion: document.contentVersion });
   await createContentVersion(ctx.db, document);
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });

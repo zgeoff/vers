@@ -1,12 +1,12 @@
 import type { ORPCError } from '@orpc/client';
 import { isDefinedError, safe } from '@orpc/client';
 import type { ActivityData } from '@vers/contract-activity';
-import { BUNDLED_ENGINE_HASH } from './bundled-engine-hash';
 import { handleSetActivityMessage } from './handle-set-activity-message';
 import { isAbortError } from './is-abort-error';
 import { reportWorkerFault } from './report-worker-fault';
 import { runResyncFlow } from './run-resync-flow';
 import { submitStopIntent } from './submit-stop-intent';
+import { tryStartActivity } from './try-start-activity';
 import type { FlowSignals, WorkerContext } from './types';
 import { withLifecycleTurn } from './with-lifecycle-turn';
 import type { StartStatus } from './worker-contract';
@@ -73,7 +73,7 @@ async function runStart(
   // a pure unwind: no row has been minted yet, so there is nothing to compensate
   signals.cancel.throwIfAborted();
 
-  const [error, started] = await tryStartActivity(context, input, token);
+  const [error, started] = await tryStartActivity(context, { ...input, startKey: token });
 
   if (error === null) {
     return setLiveStartedRow(context, token, started, signals);
@@ -134,7 +134,7 @@ async function runStart(
     return { kind: 'failed' };
   }
 
-  const [retryError, retried] = await tryStartActivity(context, input, token);
+  const [retryError, retried] = await tryStartActivity(context, { ...input, startKey: token });
 
   if (retryError !== null) {
     if (isDefinedError(retryError) && retryError.code === 'AVATAR_NOT_ACTIVE') {
@@ -163,42 +163,6 @@ async function runStart(
 
 function isSuperseded(context: WorkerContext, token: string): boolean {
   return context.getStartToken() !== token;
-}
-
-/**
- * One start-activity mint, deliberately unsigned: the response is the only handle on the minted
- * row, and the stop-back compensation needs it. SIM_VERSION_UNKNOWN on the bundled hash retries
- * once with no hash at all, falling back onto the registry's current stamp rather than treating a
- * deploy's registry-write lag as this build's engine being stale — the documented remedy for the
- * code is to refresh and retry, not to reload.
- */
-async function tryStartActivity(
-  context: WorkerContext,
-  input: Readonly<StartActivityInput>,
-  token: string,
-) {
-  const first = await safe(
-    context.getClient().startActivity({
-      avatarID: input.avatarID,
-      scopeID: input.scopeID,
-      scopeType: input.scopeType,
-      simVersion: BUNDLED_ENGINE_HASH,
-      startKey: token,
-    }),
-  );
-
-  if (!isDefinedError(first[0]) || first[0].code !== 'SIM_VERSION_UNKNOWN') {
-    return first;
-  }
-
-  return safe(
-    context.getClient().startActivity({
-      avatarID: input.avatarID,
-      scopeID: input.scopeID,
-      scopeType: input.scopeType,
-      startKey: token,
-    }),
-  );
 }
 
 /**

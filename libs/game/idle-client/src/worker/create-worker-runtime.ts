@@ -13,6 +13,7 @@ import { WORKER_TO_CLIENT_CHANNEL } from '../transport/constants';
 import { WorkerMessageType } from '../types';
 import type { RewardSlotLedgerEntry } from '../types';
 import { applyEviction } from './apply-eviction';
+import { BUNDLED_ENGINE_HASH } from './bundled-engine-hash';
 import { createWorkerRouter } from './create-worker-router';
 import { registerSimulationListeners } from './register-simulation-listeners';
 import { reportWorkerFault } from './report-worker-fault';
@@ -42,6 +43,12 @@ export interface WorkerRuntime {
 }
 
 interface CreateWorkerRuntimeOptions {
+  /**
+   * Overrides the build's baked engine hash — a test's only way to pin the hash start calls
+   * send, since the production value reads from the bundler's env at module scope.
+   */
+  readonly bundledEngineHash?: string;
+
   /**
    * Overrides the production same-origin proxy client — a test's only way to route the runtime's
    * calls at a mocked backend, since the real client resolves its URL from `self.location.origin`.
@@ -206,6 +213,7 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
     },
     broadcast,
     getActivity: () => activity,
+    getBundledEngineHash: () => options.bundledEngineHash ?? BUNDLED_ENGINE_HASH,
     getCancelSignal: () => cancelSignal,
     getClient: () => client,
     getFailureAction: () => failureAction,

@@ -525,17 +525,21 @@ test('it starts normally when a bundled hash reads back unknown but the registry
   const viewer = await createViewer();
   const ctx = await setupTest({ userID: viewer.user.id });
 
-  const context = createStubWorkerContext({ client: ctx.client, submitter: createStubSubmitter() });
+  const context = createStubWorkerContext({
+    bundledEngineHash: 'engine_hash_baked',
+    client: ctx.client,
+    submitter: createStubSubmitter(),
+  });
 
   // the first call's hash misses a registry write still in flight for this deploy; the retry
   // drops the hash and lands on the registry's current stamp instead
-  let attempts = 0;
+  const sentSimVersions: Array<string | undefined> = [];
 
   server.use(
     mockActivityService.startActivity.handler(async (opts) => {
-      attempts += 1;
+      sentSimVersions.push(opts.input.simVersion);
 
-      if (attempts === 1) {
+      if (sentSimVersions.length === 1) {
         throw opts.errors.SIM_VERSION_UNKNOWN({ data: { currentSimVersion: null } });
       }
 
@@ -556,7 +560,7 @@ test('it starts normally when a bundled hash reads back unknown but the registry
     scopeType: 'world_map_node',
   });
 
-  expect(attempts).toBe(2);
+  expect(sentSimVersions).toStrictEqual(['engine_hash_baked', undefined]);
 
   invariant(result.kind === 'started', 'expected a started status');
 });

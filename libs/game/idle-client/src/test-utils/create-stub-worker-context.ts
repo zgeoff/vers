@@ -13,6 +13,14 @@ import { createStubSubmitter } from './create-stub-submitter';
 
 interface CreateStubWorkerContextOptions {
   readonly broadcast?: (message: WorkerMessage) => void;
+
+  /**
+   * The baked engine hash start calls pin, defaulting to undefined — the dev-build shape, where
+   * starts land on the registry's current stamp. A test asserting the pinned-hash wire contract
+   * passes a value.
+   */
+  readonly bundledEngineHash?: string;
+
   readonly client?: ActivityServiceClient;
   readonly failureAction?: ActivityFailureAction;
   readonly remainingBudgetMs?: number;
@@ -82,6 +90,7 @@ export function createStubWorkerContext(
     },
     getActivity: () => activity,
     getBroadcasts: () => broadcasts,
+    getBundledEngineHash: () => options.bundledEngineHash,
     getCancelSignal: () => cancelSignal,
     getClient: () => client,
     getConnectivityOnline: () => connectivityOnline,
