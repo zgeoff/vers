@@ -92,12 +92,18 @@ test('it stamps secretRef/secretVersion and a sealed encounterNode matching real
 
   const scopeSecret = buildMockScopeSecret(fixture.activity.avatarId, 'worldmap', 1);
 
+  const avatarRow = await ctx.db
+    .selectFrom('avatars')
+    .select('seed')
+    .where('id', '=', fixture.activity.avatarId)
+    .executeTakeFirstOrThrow();
+
   const expected = {
     difficulty: 1,
     ...deriveWorldmapContent(document.encounter, {
       coord: [1, 0],
       scopeSecret,
-      userSeed: 0,
+      userSeed: avatarRow.seed,
     }),
   };
 

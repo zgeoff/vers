@@ -136,12 +136,19 @@ export async function createHonestActivityFixture(
   const secretRef = input.secretRef ?? 'worldmap';
   const secretVersion = input.secretVersion ?? 1;
 
+  const avatarRow = await db
+    .selectFrom('avatars')
+    .select('seed')
+    .where('id', '=', chain.avatarId)
+    .executeTakeFirstOrThrow();
+
   const encounterNode = buildFixtureEncounterNode({
     avatarID: chain.avatarId,
     content: document.encounter,
     scopeID: chain.scopeId,
     secretRef,
     secretVersion,
+    userSeed: avatarRow.seed,
   });
 
   const simulationInput = buildSimulationInput(document.encounter, {
@@ -213,6 +220,7 @@ interface BuildFixtureEncounterNodeInput {
   readonly scopeID: string;
   readonly secretRef: SecretRef;
   readonly secretVersion: number;
+  readonly userSeed: number;
 }
 
 /**
@@ -230,7 +238,7 @@ function buildFixtureEncounterNode(input: Readonly<BuildFixtureEncounterNodeInpu
 
   return {
     difficulty: getDifficulty(coord[0], coord[1]),
-    ...deriveWorldmapContent(input.content, { coord, scopeSecret, userSeed: 0 }),
+    ...deriveWorldmapContent(input.content, { coord, scopeSecret, userSeed: input.userSeed }),
   };
 }
 

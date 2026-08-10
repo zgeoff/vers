@@ -38,6 +38,7 @@ test('it finds no divergence when the stamped fields match the recomputed truth 
     scopeID: '1_0',
     scopeSecret,
     stampedEncounterNode: createMockEncounterNode({ difficulty }),
+    userSeed: 0,
   });
 
   expect(divergence).toBeUndefined();
@@ -111,6 +112,7 @@ test('it finds no divergence when a v2 stamped poolID matches the recomputed tru
     scopeID: '1_0',
     scopeSecret,
     stampedEncounterNode: createMockEncounterNode({ difficulty, poolID: 'brawler-den' }),
+    userSeed: 0,
   });
 
   const otherDivergence = findDescriptorDivergence({
@@ -118,6 +120,7 @@ test('it finds no divergence when a v2 stamped poolID matches the recomputed tru
     scopeID: '1_0',
     scopeSecret,
     stampedEncounterNode: createMockEncounterNode({ difficulty, poolID: 'skirmisher-flock' }),
+    userSeed: 0,
   });
 
   // exactly one of the two pool ids matches the sealed truth for this scope secret and coordinate
@@ -156,6 +159,7 @@ test('it finds a divergence when the stamped difficulty disagrees with the recom
     scopeID: '1_0',
     scopeSecret,
     stampedEncounterNode: createMockEncounterNode({ difficulty: 99 }),
+    userSeed: 0,
   });
 
   expect(divergence).toStrictEqual({
@@ -233,6 +237,7 @@ test('it finds a divergence when the stamped poolID disagrees with the sealed tr
     scopeID: '1_0',
     scopeSecret,
     stampedEncounterNode: createMockEncounterNode({ difficulty, poolID: 'not-a-real-pool' }),
+    userSeed: 0,
   });
 
   expect(divergence).toStrictEqual({
@@ -274,6 +279,7 @@ test('it finds a divergence when the scope id no longer resolves to a coordinate
     scopeID: 'not_a_real_node',
     scopeSecret,
     stampedEncounterNode: createMockEncounterNode({ difficulty: 1 }),
+    userSeed: 0,
   });
 
   expect(divergence).toStrictEqual({
