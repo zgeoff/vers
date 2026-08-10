@@ -120,6 +120,7 @@ export interface SimVersionActionInput {
   readonly bunVersion: string;
   readonly engineHash: string;
   readonly fleetImage: FleetImage | null;
+  readonly maxContentVersion: string;
   readonly providerAppExists: boolean;
   readonly providerMachineExists: boolean;
   readonly providerMachineID: string | null;

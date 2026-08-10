@@ -7,12 +7,14 @@ import type { Selectable } from 'kysely';
 export type SimVersionRow = Selectable<SimVersions>;
 
 /**
- * `retentionDays` defaults to 30 days when omitted.
+ * `retentionDays` defaults to 30 days when omitted. `maxContentVersion` is the newest content
+ * version this engine's code can derive and replay — a stamp above it is unreplayable.
  */
 export interface UpsertSimVersionInput {
   readonly bunVersion: string;
   readonly engineHash: string;
   readonly imageRef: string;
+  readonly maxContentVersion: string;
   readonly providerURL: string;
   readonly retentionDays?: number;
 }

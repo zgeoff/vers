@@ -20,6 +20,7 @@ test('it inserts a new row for an unregistered engine hash', async () => {
     bunVersion: '1.3.10',
     engineHash: 'hash_new',
     imageRef: 'registry.fly.io/vers-sim:new',
+    maxContentVersion: '2',
     providerURL: 'https://sim-new.internal',
   });
 
@@ -27,6 +28,7 @@ test('it inserts a new row for an unregistered engine hash', async () => {
     bunVersion: '1.3.10',
     engineHash: 'hash_new',
     imageRef: 'registry.fly.io/vers-sim:new',
+    maxContentVersion: '2',
     providerUrl: 'https://sim-new.internal',
     status: 'active',
   });
@@ -48,6 +50,7 @@ test('it applies a given retentionDays instead of the default', async () => {
     bunVersion: '1.3.10',
     engineHash: 'hash_short',
     imageRef: 'registry.fly.io/vers-sim:short',
+    maxContentVersion: '2',
     providerURL: 'https://sim-short.internal',
     retentionDays: 3,
   });
@@ -57,7 +60,7 @@ test('it applies a given retentionDays instead of the default', async () => {
   expect(retentionMs).toBeWithin(2 * 24 * 60 * 60 * 1000, 4 * 24 * 60 * 60 * 1000);
 });
 
-test('it refreshes image, provider, bun version, deploy time, retention, and revives a pruned row on conflict', async () => {
+test('it refreshes image, provider, bun version, max content version, deploy time, retention, and revives a pruned row on conflict', async () => {
   await using ctx = await setupTest();
 
   const existing = await createSimVersionRow(ctx.db, {
@@ -65,6 +68,7 @@ test('it refreshes image, provider, bun version, deploy time, retention, and rev
     deployedAt: new Date('2026-01-01T00:00:00Z'),
     engineHash: 'hash_existing',
     imageRef: 'registry.fly.io/vers-sim:old',
+    maxContentVersion: '1',
     providerUrl: 'https://sim-old.internal',
     retainedUntil: new Date('2026-01-31T00:00:00Z'),
     status: 'pruned',
@@ -74,6 +78,7 @@ test('it refreshes image, provider, bun version, deploy time, retention, and rev
     bunVersion: '1.3.10',
     engineHash: 'hash_existing',
     imageRef: 'registry.fly.io/vers-sim:rebuilt',
+    maxContentVersion: '2',
     providerURL: 'https://sim-rebuilt.internal',
   });
 
@@ -81,6 +86,7 @@ test('it refreshes image, provider, bun version, deploy time, retention, and rev
     bunVersion: '1.3.10',
     engineHash: 'hash_existing',
     imageRef: 'registry.fly.io/vers-sim:rebuilt',
+    maxContentVersion: '2',
     providerUrl: 'https://sim-rebuilt.internal',
     status: 'active',
   });
@@ -98,6 +104,7 @@ test('it does not insert a second row on conflict', async () => {
     bunVersion: '1.3.10',
     engineHash: 'hash_existing',
     imageRef: 'registry.fly.io/vers-sim:rebuilt',
+    maxContentVersion: '2',
     providerURL: 'https://sim-rebuilt.internal',
   });
 

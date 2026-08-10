@@ -462,6 +462,7 @@
       "version": "0.0.0",
       "dependencies": {
         "@faker-js/faker": "catalog:",
+        "@vers/content-version": "workspace:*",
         "@vers/db": "workspace:*",
         "kysely": "catalog:",
       },
@@ -527,6 +528,16 @@
       },
       "devDependencies": {
         "@pandacss/dev": "catalog:",
+        "typescript": "catalog:",
+      },
+    },
+    "libs/game/content-version": {
+      "name": "@vers/content-version",
+      "version": "0.0.0",
+      "devDependencies": {
+        "@types/bun": "catalog:",
+        "@types/node": "catalog:",
+        "@zgeoff/bun-test-extended": "catalog:",
         "typescript": "catalog:",
       },
     },
@@ -958,6 +969,7 @@
       "dependencies": {
         "@dotenvx/dotenvx": "catalog:",
         "@vers/content-registry": "workspace:*",
+        "@vers/content-version": "workspace:*",
         "@vers/contract-activity": "workspace:*",
         "@vers/db": "workspace:*",
         "@vers/release-registry": "workspace:*",
@@ -2632,6 +2644,8 @@
     "@vers/client-test-utils": ["@vers/client-test-utils@workspace:libs/testing/client-test-utils"],
 
     "@vers/content-registry": ["@vers/content-registry@workspace:libs/data/content-registry"],
+
+    "@vers/content-version": ["@vers/content-version@workspace:libs/game/content-version"],
 
     "@vers/contract-activity": ["@vers/contract-activity@workspace:contracts/activity"],
 

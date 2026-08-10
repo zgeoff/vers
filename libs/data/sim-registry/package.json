@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@faker-js/faker": "catalog:",
+    "@vers/content-version": "workspace:*",
     "@vers/db": "workspace:*",
     "kysely": "catalog:"
   },

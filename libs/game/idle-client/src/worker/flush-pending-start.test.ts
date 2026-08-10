@@ -349,6 +349,84 @@ test('it stops the minted row back when a stop lands while the start is in fligh
   expect(heldStop).toBeUndefined();
 });
 
+test('it drops the held intent and reports it sim-version-expired when the bundled engine is refused as SIM_VERSION_EXPIRED', async () => {
+  server.use(
+    mockActivityService.startActivity.handler((opts) => {
+      throw opts.errors.SIM_VERSION_EXPIRED({ data: { currentSimVersion: null } });
+    }),
+  );
+
+  const context = createStubWorkerContext({ submitter: createStubSubmitter() });
+
+  await writePendingStartIntent({
+    activityID: 'activity_1',
+    avatarID: 'avatar_1',
+    scopeID: '2_0',
+    scopeType: 'mission',
+  });
+
+  const result = await flushPendingStart(
+    context,
+    { cancel: context.getCancelSignal(), stop: context.getStopSignal() },
+    'avatar_1',
+  );
+
+  expect(result).toStrictEqual({ outcome: 'sim-version-expired' });
+
+  const heldIntent = await readPendingStartIntent();
+
+  expect(heldIntent).toBeUndefined();
+});
+
+test('it delivers on the registry-current retry and keeps the intent deliverable when the bundled hash reads back SIM_VERSION_UNKNOWN', async () => {
+  // the first call's hash misses a registry write still in flight for this deploy; the retry
+  // drops the hash and lands on the registry's current stamp instead of destroying the intent
+  const sentSimVersions: Array<string | undefined> = [];
+
+  server.use(
+    mockActivityService.startActivity.handler((opts) => {
+      sentSimVersions.push(opts.input.simVersion);
+
+      if (sentSimVersions.length === 1) {
+        throw opts.errors.SIM_VERSION_UNKNOWN({ data: { currentSimVersion: null } });
+      }
+
+      return db.activityCollection.create({
+        avatarID: 'avatar_1',
+        scopeID: '2_0',
+        scopeType: 'mission',
+        status: 'active',
+      });
+    }),
+  );
+
+  const context = createStubWorkerContext({
+    bundledEngineHash: 'engine_hash_baked',
+    submitter: createStubSubmitter(),
+  });
+
+  await writePendingStartIntent({
+    activityID: 'activity_1',
+    avatarID: 'avatar_1',
+    scopeID: '2_0',
+    scopeType: 'mission',
+  });
+
+  const result = await flushPendingStart(
+    context,
+    { cancel: context.getCancelSignal(), stop: context.getStopSignal() },
+    'avatar_1',
+  );
+
+  expect(sentSimVersions).toStrictEqual(['engine_hash_baked', undefined]);
+
+  invariant(result.outcome === 'delivered', 'expected the retry to deliver the intent');
+
+  const heldIntent = await readPendingStartIntent();
+
+  expect(heldIntent).toBeUndefined();
+});
+
 test("it drops the held intent and reports it stale when the intent's avatar is no longer active", async () => {
   const viewer = await createViewer({ avatar: { id: 'avatar_active', name: 'Active One' } });
   const targetAvatar = await db.avatarCollection.create({ userID: viewer.user.id });

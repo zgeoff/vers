@@ -531,9 +531,9 @@ test("it rejects a tampered stamped poolID with reason 'descriptor-mismatch'", a
   // two pools, so the tampered stamp below can name a pool the document registers that still
   // differs from the derived truth
   const document = createMockContentDocument({
-    contentVersion: 'two-pools',
+    contentVersion: '777001',
     encounter: {
-      contentVersion: 'two-pools',
+      contentVersion: '777001',
       archetypes: [
         {
           id: 'placeholder-brawler',

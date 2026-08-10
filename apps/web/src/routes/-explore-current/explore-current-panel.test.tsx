@@ -635,3 +635,33 @@ test('it explains a start rejected because another avatar is active, naming that
     expect(rendered.queryByTestId('start-activity-retry')).not.toBeInTheDocument();
   });
 });
+
+test("it explains a start rejected because the running build's engine no longer supports the current content", async () => {
+  const signedIn = await createSignedInUser();
+
+  await createActiveAvatar({ userID: signedIn.userID });
+
+  setSelectedNode(createMockWorldMapNode({ id: '0_0' }));
+
+  const client = createStubWorkerClient({
+    startActivity: () =>
+      Promise.resolve({ kind: 'failed', rejection: { reason: 'sim-version-expired' } }),
+  });
+
+  setIdleWorkerHandle({
+    activity: undefined,
+    client,
+    failureAction: ActivityFailureAction.Abort,
+    initialized: true,
+    writerAbortSignal: new AbortController().signal,
+  });
+
+  await withRequestContext({ cookies: signedIn.cookies }, async () => {
+    const rendered = renderWithRouter(<ExploreCurrentPanel orpc={orpc} />);
+
+    const notice = await rendered.findByTestId('start-activity-sim-version-expired');
+
+    expect(notice).toHaveTextContent('The game has been updated');
+    expect(rendered.queryByTestId('start-activity-retry')).not.toBeInTheDocument();
+  });
+});

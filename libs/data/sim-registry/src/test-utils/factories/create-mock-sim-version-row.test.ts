@@ -1,4 +1,5 @@
 import { expect, test } from 'bun:test';
+import { BUNDLED_CONTENT_VERSION } from '@vers/content-version';
 import { createMockSimVersionRow } from './create-mock-sim-version-row';
 
 test('it builds a default active sim version row', () => {
@@ -10,6 +11,7 @@ test('it builds a default active sim version row', () => {
     deployedAt: expect.toBeValidDate(),
     engineHash: expect.toBeString(),
     imageRef: expect.toBeString(),
+    maxContentVersion: BUNDLED_CONTENT_VERSION,
     providerUrl: expect.toBeString(),
     retainedUntil: expect.toBeValidDate(),
     status: 'active',
@@ -25,6 +27,7 @@ test('it applies overrides on top of the defaults', () => {
     deployedAt: expect.toBeValidDate(),
     engineHash: 'hash_1',
     imageRef: expect.toBeString(),
+    maxContentVersion: BUNDLED_CONTENT_VERSION,
     providerUrl: expect.toBeString(),
     retainedUntil: expect.toBeValidDate(),
     status: 'pruned',

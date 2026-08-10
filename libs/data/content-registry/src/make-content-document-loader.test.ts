@@ -32,12 +32,12 @@ test('it does not cache a miss, so a later publish becomes loadable', async () =
 
   const loadContentDocument = makeContentDocumentLoader(ctx.db);
 
-  expect(loadContentDocument('not-yet-published')).resolves.toBeUndefined();
-  expect(loadContentDocument('not-yet-published')).resolves.toBeUndefined();
+  expect(loadContentDocument('424242')).resolves.toBeUndefined();
+  expect(loadContentDocument('424242')).resolves.toBeUndefined();
 
-  const document = createMockContentDocument({ contentVersion: 'not-yet-published' });
+  const document = createMockContentDocument({ contentVersion: '424242' });
 
   await createContentVersion(ctx.db, document);
 
-  expect(loadContentDocument('not-yet-published')).resolves.toStrictEqual(document);
+  expect(loadContentDocument('424242')).resolves.toStrictEqual(document);
 });
