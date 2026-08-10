@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { expect, onTestFinished, test } from 'bun:test';
 import type { AvatarContract } from '@vers/contract-avatar';
 import { createTestDB, createViewer } from '@vers/service-test-utils/bun';
 import { buildRPCTestClient } from '@vers/test-utils';
@@ -21,6 +21,8 @@ test('it wires an injected db into the router instead of building one from env',
 
 test('it boots from env.DATABASE_URL when no db is injected', async () => {
   const service = await createAvatarService();
+
+  onTestFinished(() => service.stopTelemetry());
 
   expect(service.env.DATABASE_URL).toStartWith('postgres://');
 });

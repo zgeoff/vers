@@ -521,7 +521,7 @@ test('it rejects appending to a stopped activity with ACTIVITY_TERMINAL', async 
   ).rejects.toMatchObject({ code: 'ACTIVITY_TERMINAL', data: { status: 'stopped' } });
 });
 
-test('it rejects a foreign or missing activity id with NOT_FOUND', async () => {
+test('it rejects a missing activity id with NOT_FOUND', async () => {
   await using ctx = await setupTest();
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
@@ -530,6 +530,33 @@ test('it rejects a foreign or missing activity id with NOT_FOUND', async () => {
 
   expect(
     client.trackActivityProgress({ activityID: 'act_missing', checkpoints: [], expectedHead: 0 }),
+  ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+});
+
+test('it rejects a foreign activity id with NOT_FOUND', async () => {
+  await using ctx = await setupTest();
+
+  const owner = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: owner.user.id });
+
+  const ownerClient = buildRPCTestClient<ActivityContract>(ctx.app, { token: owner.token });
+
+  const started = await ownerClient.startActivity({
+    avatarID: avatar.id,
+    scopeID: '0_0',
+    scopeType: 'world_map_node',
+  });
+
+  const other = await createViewer({ audience: 'service-activity', db: ctx.db });
+
+  const otherClient = buildRPCTestClient<ActivityContract>(ctx.app, { token: other.token });
+
+  expect(
+    otherClient.trackActivityProgress({
+      activityID: started.id,
+      checkpoints: [],
+      expectedHead: 0,
+    }),
   ).rejects.toMatchObject({ code: 'NOT_FOUND' });
 });
 

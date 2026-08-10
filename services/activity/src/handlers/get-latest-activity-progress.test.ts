@@ -7,6 +7,7 @@ import {
   createAvatarRow,
   createServiceToken,
   createTestDB,
+  createTestUser,
   createViewer,
   getTestServiceKeyPair,
 } from '@vers/service-test-utils/bun';
@@ -169,6 +170,20 @@ test('it rejects when no activity exists at all with NOT_FOUND', async () => {
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  expect(client.getLatestActivityProgress({ avatarID: avatar.id })).rejects.toMatchObject({
+    code: 'NOT_FOUND',
+  });
+});
+
+test('it rejects a foreign avatar with NOT_FOUND', async () => {
+  await using ctx = await setupTest();
+
+  const owner = await createTestUser(ctx.db);
+  const avatar = await createAvatarRow(ctx.db, { userId: owner.user.id });
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 

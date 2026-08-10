@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { expect, onTestFinished, test } from 'bun:test';
 import { createContentVersion, findContentDocument } from '@vers/content-registry';
 import type { ActivityContract } from '@vers/contract-activity';
 import { createMockContentDocument } from '@vers/contract-activity/test-utils';
@@ -32,6 +32,8 @@ test('it wires an injected db into the router instead of building one from env',
 
 test('it boots from env.DATABASE_URL when no db is injected', async () => {
   const service = await createActivityService();
+
+  onTestFinished(() => service.stopTelemetry());
 
   expect(service.env.DATABASE_URL).toStartWith('postgres://');
 });
