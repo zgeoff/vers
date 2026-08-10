@@ -1,8 +1,8 @@
 ---
 name: docs-writing
 description:
-  Writing rules for repo prose — AGENTS.md and agents/ partials, docs/, README content, and doc
-  comments. Load before writing or editing any of them.
+  Prose rules for everything committed to the repo — docs/, READMEs, AGENTS.md and agents/ partials,
+  and doc comments. Use when writing, editing, or reviewing any repo prose.
 ---
 
 # Docs writing
@@ -11,9 +11,10 @@ Write every sentence as if it had always existed, for a reader who saw none of t
 produced it.
 
 Two passes govern every doc. **Selection** decides which points the doc makes; it is ruthless.
-**Rendering** decides how a surviving point is written — its sentences, its structure, its stance;
-it is generous. Shorten a doc by removing points, never by compressing the sentences that state a
-surviving point. When a draft feels long, return to Selection — Rendering is never the knife.
+**Rendering** decides how a surviving point is written — its sentences, its words, its shape, its
+stance; it is generous. Shorten a doc by removing points, never by compressing the sentences that
+state a surviving point. When a draft feels long, return to Selection — Rendering is never the
+knife.
 
 ## Selection — which points the doc makes
 
@@ -23,11 +24,21 @@ surviving point. When a draft feels long, return to Selection — Rendering is n
   `baseline(#236)` marker) is a fact of the code, not a reference. An external upstream issue
   identifying a defect the tree works around (`turborepo#11007`) is a fact of the workaround, not
   tracking — it stays.
+- **Shed process residue.** The work session leaves no trace in the doc. A date stamp in prose
+  (`Verified 2026-05-26:`) rots — git history records when work happened; date-prefixed filenames
+  and header metadata rows are structural and stay. Investigation framing ("Verified against…", "I
+  checked…") belongs in the commit or PR body — state the finding itself. A citation of an agent's
+  private memory file is a reference no other reader can resolve — cite the source file the memory
+  points at, or omit.
 - **The point test.** A point is a fact plus its rationale, however many sentences it takes to
   state. Cover the point; if a reader with the file open would know and do everything the same,
   delete the whole point. This test judges whole points, never single sentences — a sentence that
   orients, names a referent, or summarizes is kept or cut on how it reads, not on whether it carries
   a point.
+- **No defensive points.** A paragraph defending a decision against unlikely scenarios — enumerated
+  edge cases requiring external tampering, "in case someone", scope-defending re-statements — is a
+  point that fails the point test. A paragraph past 8 lines is the audit trigger: most ballooning is
+  over-explaining decisions that don't need defending.
 - **One owner per fact.** Each fact is explained in one place — its owner — across the whole docs
   tree, not just within one document. Any section that needs a fact it doesn't own states it in at
   most one sentence and links to the owner, and the rationale appears at the owner only. When two
@@ -111,6 +122,41 @@ surviving point. When a draft feels long, return to Selection — Rendering is n
   most one parenthetical per sentence. A consequence is never parenthetical — render it as its own
   sentence or after a colon.
 
+## Words — what to cut on sight
+
+- **Throat-clearing.** Filler that adds no information — find and cull: "naturally", "organically",
+  "cleanly", "honestly", "trivially", "earns its complexity", "lays foundation for", "cheap
+  insurance", "the right level". "Easy", "simple", and "quick" pressure the reader and read as
+  marketing — describe the thing instead ("one command", "on by default"). `Mitigation:` as a label
+  — drop the label, state the mitigation.
+- **Adjective stacks.** Five adjectives deep on one noun reads as marketing copy. Rewrite
+  fact-first.
+  - Bad: "This work introduces continuations — session-scoped, chain-rooted, identity-bearing rows
+    that resume an activity…"
+  - Good: "A continuation is a row minted from a chain coordinate. The session that owns it resumes
+    the activity through it."
+- **Weasel words.** Vague qualifiers where a specific claim belongs: "significantly", "many",
+  "often", "typically", "generally", "near-instant". State the figure and its source, or make the
+  concrete claim the qualifier is dodging. "~28.7KB gzipped on average over a 7-day window" survives
+  review; "artifacts are small" doesn't.
+- **Repeated framing.** The same rhetorical move three times in a row: "X, not Y" (pick the
+  strongest contrast, drop the rest); "no new A, no new B, no new C" (collapse to one line); "means"
+  / "is the" as the spine of every sentence (vary).
+- **Generated-prose tells.** Patterns that mark prose as machine-drafted. Cut or rewrite on sight:
+  - Summary-style transitions recapping the previous paragraph ("With this setup complete…", "Now
+    that we've covered…"). Pivot straight to the next point.
+  - Spec-sheet voice narrating features instead of stating facts ("provides", "is configurable",
+    "offers a flexible way to").
+  - Stop-start fragments splitting one dependent idea ("Previously this was manual. Now it's
+    automatic. This saves time." — one sentence). A short sentence for emphasis is fine.
+  - Personified artifacts performing human actions ("the token hands the browser a session"); state
+    what the system does ("the browser fetches the session"). Errors and status codes are not actors
+    either: "on the 400, the client refetches", never "the 400 refetches".
+  - Template framing not specific to this doc ("The question most teams face is…").
+  - Rhetorical questions setting up the answer the next sentence gives ("So why not cache it?
+    Because…"). State the point.
+- **Banned words.** The AGENTS.md banned-words list applies to all prose; fix a violation on sight.
+
 ## Structure — the shape points take
 
 - **Summary before detail.** A doc opens with three to six plain sentences saying what the system
@@ -142,6 +188,14 @@ surviving point. When a draft feels long, return to Selection — Rendering is n
   multi-paragraph block, so all of them promote. Two shapes stay: one-line inline markers
   (`**Why:**`, `**Depends on:** phase 1.`) and a catalogue's run of same-shape sibling entries,
   which would gain a heading per entry and no navigation.
+- **No label wrappers.** A bold label naming the body's role — `**Design**`, `**Details**`,
+  `**Rationale**`, `**Overview**` — adds nothing: the body already is its design, detail, or
+  rationale. Drop the wrapper; replace a per-section `**Rationale**` block with inline `**Why:**`
+  markers at the specific decisions whose rationale isn't visible. A section heading naming a role
+  instead of a topic (`## Overview`, `## Notes`) is the heading-scale form — fold its content into
+  the doc's intro or name what the section actually covers.
+- **No horizontal rules.** `---` between sections is a heading that lost its name — headings already
+  divide the doc. Delete it; if the break felt necessary, the section below it wants a heading.
 
 ## Stance — how the doc regards its reader and itself
 
@@ -153,81 +207,7 @@ surviving point. When a draft feels long, return to Selection — Rendering is n
   two domain states ("a `pruned` row means expired; a missing row means unknown") is a fact about
   the domain, not positional framing, and stands.
 
-## Anti-patterns — what fails review in practice
-
-Four families: process residue the draft should have shed, bloat, fake structure, and
-cross-reference rot.
-
-### Process residue
-
-- **Inline date stamps.** `(2026-05-26)`, `Verified 2026-05-26:` — any date stamp in committed
-  prose, whatever the format. Git history records when work happened; dates in prose rot.
-  Date-prefixed filenames and header metadata rows are structural, not prose.
-- **"Investigation" / "Verified" framing.** "Verified against…:", "Investigation count…:", "I
-  checked…" belongs in a commit message or PR body, not the doc. State the finding: "Touched in
-  total: 4 entities, 14 services, 3 controllers. Zero frontend references."
-- **Memory-file citations.** An agent-assisted draft that cites the agent's private memory by slug
-  is a reference no other reader can resolve. Cite the source file the memory points at, or omit.
-- **Generated-prose tells.** Patterns that mark prose as machine-drafted and survive into commits.
-  Cut or rewrite on sight:
-  - Summary-style transitions recapping the previous paragraph ("With this setup complete…", "Now
-    that we've covered…"). Pivot straight to the next point.
-  - Spec-sheet voice narrating features instead of stating facts ("provides", "is configurable",
-    "offers a flexible way to").
-  - Stop-start fragments splitting one dependent idea ("Previously this was manual. Now it's
-    automatic. This saves time." — one sentence). A short sentence for emphasis is fine.
-  - Personified artifacts performing human actions ("the token hands the browser a session"); state
-    what the system does ("the browser fetches the session"). Errors and status codes are not actors
-    either: "on the 400, the client refetches", never "the 400 refetches".
-  - Template framing not specific to this doc ("The question most teams face is…").
-  - Rhetorical questions setting up the answer the next sentence gives ("So why not cache it?
-    Because…"). State the point.
-
-### Bloat
-
-- **Throat-clearing.** Filler that adds no information — find and cull: "naturally", "organically",
-  "cleanly", "honestly", "trivially", "earns its complexity", "lays foundation for", "cheap
-  insurance", "the right level". "Easy", "simple", and "quick" pressure the reader and read as
-  marketing — describe the thing instead ("one command", "on by default"). `Mitigation:` as a label
-  — drop the label, state the mitigation.
-- **The adjective stack.** The opener-scale form of throat-clearing: five adjectives deep on one
-  noun reads as marketing copy. Rewrite fact-first.
-  - Bad: "This work introduces continuations — session-scoped, chain-rooted, identity-bearing rows
-    that resume an activity…"
-  - Good: "A continuation is a row minted from a chain coordinate. The session that owns it resumes
-    the activity through it."
-- **Weasel words.** Vague qualifiers where a specific claim belongs: "significantly", "many",
-  "often", "typically", "generally", "near-instant". State the figure and its source, or make the
-  concrete claim the qualifier is dodging. "~28.7KB gzipped on average over a 7-day window" survives
-  review; "artifacts are small" doesn't.
-- **Defensive prose.** Wall-of-text paragraphs defending decisions against unlikely scenarios:
-  enumerated edge cases requiring external tampering, "in case someone", scope-defending
-  re-statements. Budget: a paragraph runs 8 lines at most; over that, audit — most ballooning is
-  over-explaining decisions that don't need defending.
-- **Repeated framing.** The same rhetorical move three times in a row: "X, not Y" (pick the
-  strongest contrast, drop the rest); "no new A, no new B, no new C" (collapse to one line); "means"
-  / "is the" as the spine of every sentence (vary).
-- **Banned words.** The AGENTS.md banned-words list applies to all prose; fix a violation on sight.
-
-### Fake structure
-
-- **Label wrappers.** A bold label naming the body's role — `**Design**`, `**Details**`,
-  `**Rationale**`, `**Overview**` — adds nothing: the body already is its design, detail, or
-  rationale. Drop the wrapper; replace a per-section `**Rationale**` block with inline `**Why:**`
-  markers at the specific decisions whose rationale isn't visible. A section heading naming a role
-  instead of a topic (`## Overview`, `## Notes`) is the heading-scale form — fold its content into
-  the doc's intro or name what the section actually covers.
-- **Horizontal rules.** `---` between sections is a heading that lost its name — headings already
-  divide the doc. Delete it; if the break felt necessary, the section below it wants a heading.
-
-### Cross-reference rot
-
-- **`§` is forbidden** — bare in prose and inside link text. Link the section by its title; the link
-  itself makes the section nature clear.
-- **Restated cross-references.** Linking the same target six times across one section is noise. Link
-  once where it first matters, then refer to the topic by name.
-
-## Formatting
+## Formatting and links
 
 - **Write paragraphs as single long lines.** oxfmt reflows prose on commit (`proseWrap: "always"`,
   100 columns); hand-wrapping creates churn. Code blocks are left untouched — alignment inside
@@ -244,27 +224,27 @@ cross-reference rot.
   `<TOKEN>`.
 - **Anchors are GitHub's kebab-case** (`### Atomic cells` → `#atomic-cells`; `&` and `/` collapse to
   extra hyphens). A cross-doc link goes via a path relative to the linking file.
+- **Link a target once** where it first matters, then refer to the topic by name — linking the same
+  target six times across one section is noise.
+- **`§` is forbidden** — bare in prose and inside link text. Link the section by its title; the link
+  itself makes the section nature clear.
 
-## Pre-commit checklist
+## Review workflow
 
-Scripted checks plus one visual audit, run against the docs you touched before every commit. Don't
-run them against this skill's own file — it documents the forbidden patterns and contains them as
-examples.
+Before committing docs, run this sequence over the files you touched:
 
-````bash
-# Anti-pattern grep. Each match is a violation; fix in place.
-git grep -nP \
-  'Verified 20[0-9]{2}-|Investigation count|\(see memory |\([0-9]{2,4}-[0-9]{2}-[0-9]{2}\)|^Mitigation:|§' \
-  -- <path>
+1. Selection pass: cover each point and apply the point test; check each fact against its owner
+   elsewhere in the tree.
+2. Rendering pass: reread each surviving paragraph against Sentences, Words, Structure, and Stance.
+3. Run the scripted checks from the repo root:
 
-# Banned-word grep. AGENTS.md owns the list — keep the pattern in sync. Judgment-only bans
-# (bites, ceiling, floor) and legitimate markdown-fence mentions need review, not grep.
-git grep -nPi '\bsurfaces?\b|load-bearing|\bseams?\b|\bfenc(e|ed|ing)\b|\bCAS\b' -- <path>
+   ```bash
+   bash .claude/skills/docs-writing/scripts/check-prose.sh <path>...
+   ```
 
-# Untagged code fences. Each match is a violation.
-git ls-files -- '<path>/*.md' | xargs awk \
-  'FNR==1{n=0} /^```/{n++; if (n%2==1 && $0=="```") print FILENAME": "FNR}'
-````
+   The script greps the given paths for process residue, greppable banned words, and untagged code
+   fences, and exits non-zero on any hit. It skips this skill's own directory, which documents the
+   forbidden patterns and contains them as examples.
 
-The visual audit: walk each changed section's links and confirm every link's text still matches its
-target heading.
+4. Visual audit: walk each changed section's links and confirm every link's text still matches its
+   target heading.
