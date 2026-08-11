@@ -12,6 +12,7 @@ import { getAvatarProgression } from './handlers/get-avatar-progression';
 import { getContentDocument } from './handlers/get-content-document';
 import { getCurrentActivity } from './handlers/get-current-activity';
 import { getLatestActivityProgress } from './handlers/get-latest-activity-progress';
+import { getRevealedNodes } from './handlers/get-revealed-nodes';
 import { resumeActivity } from './handlers/resume-activity';
 import { startActivity } from './handlers/start-activity';
 import { stopActivity } from './handlers/stop-activity';
@@ -56,6 +57,19 @@ export function buildActivityRouter(deps: BuildActivityRouterDeps) {
     getCurrentActivity: os.getCurrentActivity.handler((opts) => getCurrentActivity(deps.db, opts)),
     getLatestActivityProgress: os.getLatestActivityProgress.handler((opts) =>
       getLatestActivityProgress(deps.db, opts),
+    ),
+    getRevealedNodes: os.getRevealedNodes.handler((opts) =>
+      getRevealedNodes(
+        {
+          db: deps.db,
+          keysServiceURL: deps.keysServiceURL,
+          loadContentDocument: deps.loadContentDocument,
+          privateKey: deps.privateKey,
+          secretRef: deps.secretRef,
+          secretVersion: deps.secretVersion,
+        },
+        opts,
+      ),
     ),
     resumeActivity: os.resumeActivity.handler((opts) => resumeActivity(deps.db, opts)),
     startActivity: os.startActivity.handler((opts) => startActivity(deps, opts)),

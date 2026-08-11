@@ -158,6 +158,8 @@ in stack state are encrypted by the stack passphrase.
 | `vers.activity.content_incompatible_rejections` | counter         | `{rejection}`    | `path`              | startActivity calls rejected because the resolved engine's max content version falls behind the requested content |
 | `vers.activity.advance_continuations`           | counter         | `{continuation}` | `outcome`           | advanceActivity continuations processed, by mint outcome                                                          |
 | `vers.activity.advance_bailouts`                | counter         | `{bailout}`      | `reason`            | advanceActivity requests that bailed before their continuations' end, by reason                                   |
+| `vers.activity.reveal_cells`                    | histogram       | `{cell}`         | —                   | revealed cells returned per getRevealedNodes query                                                                |
+| `vers.activity.reveal_sources`                  | histogram       | `{grant}`        | —                   | first-clear grant rows scanned per getRevealedNodes query                                                         |
 | `vers.email.delivery_failures`                  | counter         | `{email}`        | —                   | emails that failed to deliver                                                                                     |
 | `vers.session.failed_attempts`                  | counter         | `{attempt}`      | —                   | failed step-up verification attempts                                                                              |
 | `vers.analytics.delivery_failures`              | counter         | `{event}`        | `reason`            | product events that never landed in the Tinybird data source, by reason                                           |
@@ -215,7 +217,10 @@ resolved onto a row a prior, partially committed request already minted at the s
 rising count tracks how often an offline catch-up's outer resync must re-plan, not lost progress.
 `vers.activity.content_incompatible_rejections` splits by `path`: `requested` covers a client-sent
 sim version hash, `fallback` covers the registry-current version resolved for a start that carries
-no hash. `vers.analytics.delivery_failures` splits by `reason`: `rejected` covers a non-2xx response
+no hash. `vers.activity.reveal_cells` and `vers.activity.reveal_sources` record once per
+`getRevealedNodes` call, the returned cell count and the scanned first-clear grant count
+respectively; both track the reveal projection's fan-out as an avatar's completed-node history
+grows. `vers.analytics.delivery_failures` splits by `reason`: `rejected` covers a non-2xx response
 from the Tinybird Events API, `quarantined` covers a row the API accepted but failed schema
 validation on, `unreachable` covers a network failure or the upstream deadline tripping.
 
