@@ -1,9 +1,11 @@
-export { buildRegionGraph } from './build-region-graph';
+export { buildViewportGraph } from './build-viewport-graph';
 export { Scene } from './components-three/scene';
 export { DevTools } from './components-ui/dev-tools';
 export { NodeTooltip } from './components-ui/node-tooltip';
 export { setSelectedNode } from './state/set-selected-node';
+export { setViewport } from './state/set-viewport';
 export { setWorldRegion } from './state/set-world-region';
 export { useWorldGraph } from './state/use-world-graph';
 export { useSelectedNode } from './state/use-selected-node';
+export { useViewport } from './state/use-viewport';
 export type { WorldGraph } from './types';

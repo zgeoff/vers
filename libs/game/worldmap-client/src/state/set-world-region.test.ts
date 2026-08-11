@@ -31,7 +31,7 @@ test('it clears the selection when the region has no node to select', () => {
   expect(useWorldmapStore.getState().selectedObject3D).toBeNull();
 });
 
-test("it skips a write for the key the store already holds, keeping the player's selection", () => {
+test("it refreshes the world graph without resetting the player's selection for the key the store already holds", () => {
   const node = createMockWorldMapNode({ id: 'node1', position: [0, 0] });
 
   const graph: WorldGraph = {
@@ -43,9 +43,11 @@ test("it skips a write for the key the store already holds, keeping the player's
 
   useWorldmapStore.setState({ selectedNode: node });
 
-  setWorldRegion('avatar-a', { edges: {}, nodes: {} }, null);
+  const nextGraph: WorldGraph = { edges: {}, nodes: {} };
 
-  expect(useWorldmapStore.getState().worldGraph).toStrictEqual(graph);
+  setWorldRegion('avatar-a', nextGraph, null);
+
+  expect(useWorldmapStore.getState().worldGraph).toStrictEqual(nextGraph);
   expect(useWorldmapStore.getState().selectedNode).toStrictEqual(node);
 });
 
