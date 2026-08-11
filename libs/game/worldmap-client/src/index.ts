@@ -1,3 +1,4 @@
+export { buildChunkAlignedViewport } from './utils/build-chunk-aligned-viewport';
 export { buildViewportGraph } from './build-viewport-graph';
 export { Scene } from './components-three/scene';
 export { DevTools } from './components-ui/dev-tools';

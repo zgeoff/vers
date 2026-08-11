@@ -1,9 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
-import { useViewport } from '@vers/worldmap-client';
+import { buildChunkAlignedViewport, useViewport } from '@vers/worldmap-client';
 import type { Viewport } from '@vers/worldmap-core';
 import { buildRevealedNodesQueryOptions } from '../../lib/activity/build-revealed-nodes-query-options';
 import { buildActiveAvatarQueryOptions } from '../../lib/avatar/build-active-avatar-query-options';
-import { buildChunkAlignedViewport } from './build-chunk-aligned-viewport';
 
 const EMPTY_VIEWPORT: Viewport = { maxCX: 0, maxCY: 0, minCX: 0, minCY: 0 };
 
