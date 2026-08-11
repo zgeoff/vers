@@ -1,6 +1,11 @@
 export { buildCellNode } from './build-cell-node';
 export { buildChunk } from './build-chunk';
+export { canEncodeMortonKey } from './can-encode-morton-key';
 export { collectNodeEdges } from './collect-node-edges';
+export { collectRevealedCells } from './collect-revealed-cells';
+export { REVEAL_RADIUS, WORLD_COORD_MAX, WORLD_COORD_MIN } from './consts';
+export { decodeMortonKey } from './decode-morton-key';
+export { encodeMortonKey } from './encode-morton-key';
 export { findCellCoord } from './find-cell-coord';
 export { getDifficulty } from './get-difficulty';
 export { getHexDistance } from './get-hex-distance';

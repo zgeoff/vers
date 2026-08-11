@@ -1,4 +1,5 @@
 import { authedRoute, defineErrors } from '@vers/contract-base';
+import { WORLD_COORD_MAX, WORLD_COORD_MIN } from '@vers/worldmap-core';
 import * as z from 'zod';
 import { ActivityDataSchema } from './activity-data-schema';
 import { ActivityFailureActionSchema } from './activity-failure-action-schema';
@@ -8,6 +9,7 @@ import { CheckpointBatchEntrySchema } from './checkpoint-batch-entry-schema';
 import { CheckpointSchema } from './checkpoint-schema';
 import { ContentDocumentSchema } from './content-document-schema';
 import { MAX_CATCH_UP_BATCH_CHECKPOINTS } from './max-catch-up-batch-checkpoints';
+import { REVEAL_VIEWPORT_CELL_CAP } from './reveal-viewport-cell-cap';
 import { RewardItemAffixSchema } from './reward-item-affix-schema';
 import { ScopeIdentifierSchema } from './scope-identifier-schema';
 
@@ -58,6 +60,26 @@ const AvatarProgressionSchema = z.object({
   pending: z.array(PendingXPEntrySchema),
   xp: z.int(),
 });
+
+/**
+ * One cell-coordinate axis value, bounded to the range a world-map cell coordinate packs into. An
+ * axis outside it names a cell the map cannot address at all.
+ */
+const CellAxisSchema = z.int().min(WORLD_COORD_MIN).max(WORLD_COORD_MAX);
+
+const ViewportSchema = z.object({
+  maxCX: CellAxisSchema,
+  maxCY: CellAxisSchema,
+  minCX: CellAxisSchema,
+  minCY: CellAxisSchema,
+});
+
+/**
+ * A revealed cell's disclosed content: expected-value-flat descriptor metadata only, never the raw
+ * descriptor hash, salt, or drops. `poolID` is absent for a legacy content version that predates
+ * sealed content.
+ */
+const RevealedNodeSchema = z.object({ id: z.string(), poolID: z.string().optional() });
 
 /**
  * The activities service's API: every procedure is authed and owner-scoped through the caller's
@@ -208,6 +230,42 @@ export const activityContract = {
     .errors(
       defineErrors({
         NOT_FOUND: { data: z.object({}), message: 'No activity exists for this avatar' },
+      }),
+    ),
+
+  /**
+   * The revealed region is a projection of the avatar's verified first-clear grants, never stored
+   * reveal state — recomputed fresh every call. `viewport` bounds what the response returns, never
+   * what the underlying discs make eligible to disclose: a cell inside the viewport but outside
+   * every disc is never in the response, regardless of viewport size.
+   */
+  getRevealedNodes: authedRoute
+    .route({
+      method: 'GET',
+      path: '/avatars/{avatarID}/revealed-nodes',
+      summary: "Get the disclosed content for an avatar's revealed world-map cells in a viewport",
+    })
+    .input(
+      z
+        .object({ avatarID: z.string(), viewport: ViewportSchema })
+        .refine(
+          (input) =>
+            input.viewport.maxCX >= input.viewport.minCX &&
+            input.viewport.maxCY >= input.viewport.minCY,
+          { error: 'viewport bounds are inverted' },
+        )
+        .refine(
+          (input) =>
+            (input.viewport.maxCX - input.viewport.minCX + 1) *
+              (input.viewport.maxCY - input.viewport.minCY + 1) <=
+            REVEAL_VIEWPORT_CELL_CAP,
+          { error: `viewport area may not exceed ${REVEAL_VIEWPORT_CELL_CAP} cells` },
+        ),
+    )
+    .output(z.object({ contentVersion: z.string(), nodes: z.array(RevealedNodeSchema) }))
+    .errors(
+      defineErrors({
+        NOT_FOUND: { data: z.object({}), message: 'Avatar not found' },
       }),
     ),
 

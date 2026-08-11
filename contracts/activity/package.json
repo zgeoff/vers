@@ -16,6 +16,7 @@
     "@noble/hashes": "catalog:",
     "@orpc/contract": "catalog:",
     "@vers/contract-base": "workspace:*",
+    "@vers/worldmap-core": "workspace:*",
     "zod": "catalog:"
   },
   "devDependencies": {

@@ -4,6 +4,7 @@ import { getAvatarProgression } from './get-avatar-progression';
 import { getContentDocument } from './get-content-document';
 import { getCurrentActivity } from './get-current-activity';
 import { getLatestActivityProgress } from './get-latest-activity-progress';
+import { getRevealedNodes } from './get-revealed-nodes';
 import { resumeActivity } from './resume-activity';
 import { startActivity } from './start-activity';
 import { stopActivity } from './stop-activity';
@@ -17,6 +18,7 @@ export const activityRouter = {
   getContentDocument,
   getCurrentActivity,
   getLatestActivityProgress,
+  getRevealedNodes,
   resumeActivity,
   startActivity,
   stopActivity,
