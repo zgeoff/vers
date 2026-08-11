@@ -14,7 +14,6 @@
   "dependencies": {
     "@faker-js/faker": "catalog:",
     "@react-hookz/web": "catalog:",
-    "@react-spring/three": "catalog:",
     "@react-three/fiber": "catalog:",
     "@vers/client-test-utils": "workspace:*",
     "@vers/design-system": "workspace:*",
@@ -38,6 +37,7 @@
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "@types/three": "catalog:",
+    "@vers/contract-activity": "workspace:*",
     "@zgeoff/bun-test-extended": "catalog:",
     "happy-dom": "catalog:",
     "typescript": "catalog:",

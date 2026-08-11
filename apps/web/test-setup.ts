@@ -3,7 +3,6 @@ import '@zgeoff/bun-test-extended';
 import { afterEach, expect } from 'bun:test';
 import { faker } from '@faker-js/faker';
 import * as jestDOMMatchers from '@testing-library/jest-dom/matchers';
-import { registerZustandReset } from '@vers/client-test-utils';
 import { registerMockDBReset } from '@vers/mock-services/bun';
 import {
   registerBunTestCleanup,
@@ -38,9 +37,8 @@ registerHappyDOM();
 
 expect.extend(jestDOMMatchers);
 
-// installs the zustand `create` wrapper before any store module below imports it, so every
-// package's stores (worldmap selection, idle sync state) reset between tests
-registerZustandReset();
+// the zustand reset wrapper (worldmap selection, idle sync state) is installed by the
+// `register-zustand-reset-early.ts` preload, ahead of this file's own imports below
 registerMSWLifecycle(server);
 registerMockDBReset();
 registerRequestContextMock();

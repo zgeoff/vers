@@ -3,6 +3,8 @@ import { renderHook } from '@testing-library/react';
 import { createMockWorldMapEdge } from '../test-utils/factories/create-mock-world-map-edge';
 import { createMockWorldMapNode } from '../test-utils/factories/create-mock-world-map-node';
 import type { WorldGraph } from '../types';
+import { setSelectedNode } from './set-selected-node';
+import { setViewport } from './set-viewport';
 import { setWorldRegion } from './set-world-region';
 import { useWorldmapStore } from './use-worldmap-store';
 
@@ -31,7 +33,7 @@ test('it clears the selection when the region has no node to select', () => {
   expect(useWorldmapStore.getState().selectedObject3D).toBeNull();
 });
 
-test("it skips a write for the key the store already holds, keeping the player's selection", () => {
+test("it refreshes the world graph without resetting the player's selection or viewport for the key the store already holds", () => {
   const node = createMockWorldMapNode({ id: 'node1', position: [0, 0] });
 
   const graph: WorldGraph = {
@@ -41,15 +43,21 @@ test("it skips a write for the key the store already holds, keeping the player's
 
   setWorldRegion('avatar-a', graph, null);
 
-  useWorldmapStore.setState({ selectedNode: node });
+  const viewport = { maxCX: 8, maxCY: 8, minCX: -8, minCY: -8 };
 
-  setWorldRegion('avatar-a', { edges: {}, nodes: {} }, null);
+  setSelectedNode(node);
+  setViewport(viewport);
 
-  expect(useWorldmapStore.getState().worldGraph).toStrictEqual(graph);
+  const nextGraph: WorldGraph = { edges: {}, nodes: {} };
+
+  setWorldRegion('avatar-a', nextGraph, null);
+
+  expect(useWorldmapStore.getState().worldGraph).toStrictEqual(nextGraph);
   expect(useWorldmapStore.getState().selectedNode).toStrictEqual(node);
+  expect(useWorldmapStore.getState().viewport).toStrictEqual(viewport);
 });
 
-test('it resets the selection for a new key even when the graph is identical', () => {
+test('it resets the selection and viewport for a new key even when the graph is identical', () => {
   const node = createMockWorldMapNode({ id: 'node1', position: [0, 0] });
 
   const graph: WorldGraph = {
@@ -58,11 +66,11 @@ test('it resets the selection for a new key even when the graph is identical', (
   };
 
   setWorldRegion('avatar-a', graph, null);
-
-  useWorldmapStore.setState({ selectedNode: node });
-
+  setSelectedNode(node);
+  setViewport({ maxCX: 8, maxCY: 8, minCX: -8, minCY: -8 });
   setWorldRegion('avatar-b', graph, null);
 
   expect(useWorldmapStore.getState().regionKey).toBe('avatar-b');
   expect(useWorldmapStore.getState().selectedNode).toBeNull();
+  expect(useWorldmapStore.getState().viewport).toBeNull();
 });

@@ -6,8 +6,8 @@ import { useWorldmapStore } from './use-worldmap-store';
 /**
  * Reads the selected node alongside its scene `Object3D`. When the selection was made through the
  * URL, no rendered mesh was stored with it, so the hook builds a synthetic `Object3D` at the node's
- * own scene position instead, giving every consumer of `object3D` (camera targeting, distance-based
- * graph filtering) a real position rather than recentering to the origin.
+ * own scene position instead, giving every consumer of `object3D` — camera targeting above all — a
+ * real position rather than recentering to the origin.
  */
 export function useSelectedNode() {
   const node = useWorldmapStore((state) => state.selectedNode);
