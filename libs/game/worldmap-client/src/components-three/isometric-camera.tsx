@@ -57,7 +57,7 @@ const BOUNDARY_FRICTION = 0.8;
  * Ground covered per pixel of drag, tuned by feel in playtesting — the library default reads
  * sluggish against a map this large.
  */
-const TRUCK_SPEED = 5;
+const TRUCK_SPEED = 10;
 
 const WORLD_CORNER_CELLS: ReadonlyArray<readonly [number, number]> = [
   [WORLD_COORD_MIN, WORLD_COORD_MIN],
