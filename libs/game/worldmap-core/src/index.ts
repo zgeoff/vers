@@ -18,6 +18,7 @@ export { encodeMortonKey } from './encode-morton-key';
 export { findCellCoord } from './find-cell-coord';
 export { getDifficulty } from './get-difficulty';
 export { getHexDistance } from './get-hex-distance';
+export { isNodeSelectable } from './is-node-selectable';
 export { toCellCoord } from './to-cell-coord';
 export { toChunkCoord } from './to-chunk-coord';
 export { toHexPosition } from './to-hex-position';
