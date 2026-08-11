@@ -1,5 +1,4 @@
 import { expect, test } from 'bun:test';
-import { isRedirect } from '@tanstack/react-router';
 import * as db from '@vers/mock-services/db';
 import { createSignedInUser } from '../../test-utils/create-signed-in-user';
 import { withRequestContext } from '../../test-utils/with-request-context';
@@ -10,15 +9,9 @@ test('it redirects to account when 2FA is already enabled', async () => {
 
   await db.verificationCollection.create({ target: signedIn.userID, type: '2fa' });
 
-  const outcome = await withRequestContext({ cookies: signedIn.cookies }, async () => {
-    const redirectHref = await loadTwoFactorSetup()
-      .then(() => null)
-      .catch((error: unknown) => (isRedirect(error) ? error.options.href : null));
+  const promise = withRequestContext({ cookies: signedIn.cookies }, () => loadTwoFactorSetup());
 
-    return redirectHref;
-  });
-
-  expect(outcome.value).toBe('/account');
+  expect(promise).rejects.toMatchObject({ options: { href: '/account' } });
 });
 
 test('it creates a pending 2fa-setup verification and returns its QR data for a fresh caller', async () => {

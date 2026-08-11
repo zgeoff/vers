@@ -62,7 +62,7 @@ test('it answers null active selection when avatars exist but none is selected',
 
   const roster = await client.getAvatars({});
 
-  expect(roster.avatars.map((entry) => entry.id)).toEqual([avatar.id]);
+  expect(roster.avatars.map((entry) => entry.id)).toStrictEqual([avatar.id]);
   expect(roster.activeAvatarID).toBeNull();
 });
 

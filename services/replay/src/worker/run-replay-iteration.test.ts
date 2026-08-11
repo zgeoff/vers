@@ -998,7 +998,7 @@ test('it does not reject a divergence that fails to reproduce on the fresh confi
   expect(cache.get(fixture.activity.id)).toBeUndefined();
 });
 
-test('a user-stopped activity advances the chain verified anchor from its tail, and an honest successor verifies', async () => {
+test("it advances the chain verified anchor from a user-stopped activity's tail, and an honest successor verifies", async () => {
   await using ctx = await setupTest();
 
   const predecessor = await createHonestActivityFixture(ctx.db, {
@@ -1067,7 +1067,7 @@ test('a user-stopped activity advances the chain verified anchor from its tail, 
   expect(successorRow.verifiedHead).toBe(successor.activity.appendedHead);
 });
 
-test('a capped activity advances the chain verified anchor from its tail, and an honest successor verifies', async () => {
+test("it advances the chain verified anchor from a capped activity's tail, and an honest successor verifies", async () => {
   await using ctx = await setupTest();
 
   const predecessor = await createHonestActivityFixture(ctx.db, {
@@ -1136,7 +1136,7 @@ test('a capped activity advances the chain verified anchor from its tail, and an
   expect(successorRow.verifiedHead).toBe(successor.activity.appendedHead);
 });
 
-test('a stream fully verified while still active reconciles the anchor once a successor claims a forward-exited predecessor position', async () => {
+test('it reconciles the anchor once a successor claims a forward-exited predecessor position for a stream fully verified while still active', async () => {
   await using ctx = await setupTest();
 
   // A pinned avatar id keeps the sealed content derivation — and with it both fixtures' checkpoint
@@ -1235,7 +1235,7 @@ test('a stream fully verified while still active reconciles the anchor once a su
   expect(successorRow.verifiedHead).toBe(successor.activity.appendedHead);
 });
 
-test('a stopped activity whose only checkpoint is Started leaves the anchor untouched, and an honest successor verifies from it', async () => {
+test('it leaves the anchor untouched for a stopped activity whose only checkpoint is Started, and an honest successor verifies from it', async () => {
   await using ctx = await setupTest();
 
   const predecessor = await createHonestActivityFixture(ctx.db, {

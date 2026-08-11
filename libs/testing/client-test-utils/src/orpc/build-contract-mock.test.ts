@@ -1,7 +1,6 @@
 import { expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
-import type { ORPCError } from '@orpc/client';
-import { createORPCClient, isDefinedError } from '@orpc/client';
+import { createORPCClient } from '@orpc/client';
 import { RPCLink } from '@orpc/client/fetch';
 import type { ContractRouterClient } from '@orpc/contract';
 import { oc } from '@orpc/contract';
@@ -34,21 +33,6 @@ function resolveContext(request: Request): SecretContext {
   const actingUserId = header.startsWith('Bearer ') ? header.slice('Bearer '.length) : null;
 
   return { actingUserId };
-}
-
-/**
- * Runs a client call expected to reject with a defined oRPC error, and returns it.
- */
-async function runRejectingCall(call: () => Promise<unknown>): Promise<ORPCError<string, unknown>> {
-  try {
-    await call();
-  } catch (error) {
-    assert.ok(isDefinedError(error), `expected a defined ORPCError, got ${String(error)}`);
-
-    return error;
-  }
-
-  throw new Error('expected the call to reject');
 }
 
 function buildBaseHandlers() {
@@ -112,7 +96,7 @@ test('it overrides only the mocked procedure, leaving the rest on the base backe
   expect(other).toStrictEqual({ value: 'base-other' });
 });
 
-test('it surfaces a mock-thrown typed error as a defined ORPCError client-side', async () => {
+test('it surfaces a mock-thrown typed error as a defined ORPCError client-side', () => {
   server.use(...buildBaseHandlers());
 
   const mock = buildContractMock({
@@ -129,9 +113,7 @@ test('it surfaces a mock-thrown typed error as a defined ORPCError client-side',
 
   const client = buildClient('user_3');
 
-  const error = await runRejectingCall(() => client.getSecret({}));
-
-  expect(error.data).toStrictEqual({ reason: 'missing-session' });
+  expect(client.getSecret({})).rejects.toMatchObject({ data: { reason: 'missing-session' } });
 });
 
 test('it overrides a nested-namespace procedure while a sibling top-level call stays on the base backend', async () => {

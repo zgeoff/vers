@@ -1,5 +1,4 @@
 import { expect, spyOn, test } from 'bun:test';
-import { isRedirect } from '@tanstack/react-router';
 import { buildContractMock } from '@vers/client-test-utils/orpc';
 import { verificationContract } from '@vers/contract-verification';
 import * as db from '@vers/mock-services/db';
@@ -45,17 +44,14 @@ test('it flips the verification to 2fa and redirects to account for a correct co
 
   await db.verificationCollection.create({ target: signedIn.userID, type: '2fa-setup' });
 
-  const outcome = await withRequestContext({ cookies: signedIn.cookies }, async () => {
-    const redirectHref = await verifyTwoFactorSetupHandler(
-      buildFormData({ code: '123456', target: signedIn.userID }),
-    )
-      .then(() => null)
-      .catch((error: unknown) => (isRedirect(error) ? error.options.href : null));
+  const promise = withRequestContext({ cookies: signedIn.cookies }, () =>
+    verifyTwoFactorSetupHandler(buildFormData({ code: '123456', target: signedIn.userID })),
+  );
 
-    return redirectHref;
-  });
+  // the db read below must observe the rejected call's verification-flip step settled
+  await promise.catch(() => {});
 
-  expect(outcome.value).toBe('/account');
+  expect(promise).rejects.toMatchObject({ options: { href: '/account' } });
 
   expect(
     db.verificationCollection.findFirst((q) => q.where({ target: signedIn.userID })),

@@ -9,7 +9,12 @@ import type {
 import { buildStartHash } from '@vers/contract-activity';
 import { createMockContentDocument } from '@vers/contract-activity/test-utils';
 import { buildLevelFromXP } from '@vers/idle-core';
-import { createAvatarRow, createTestDB, createViewer } from '@vers/service-test-utils/bun';
+import {
+  createAnonymousViewer,
+  createAvatarRow,
+  createTestDB,
+  createViewer,
+} from '@vers/service-test-utils/bun';
 import { createSimVersionRow } from '@vers/sim-registry/test-utils';
 import { buildRPCTestClient } from '@vers/test-utils';
 import invariant from 'tiny-invariant';
@@ -730,4 +735,47 @@ test('it bails with CHECKPOINT_INVALID on a broken hash chain, leaving the head 
     { appendedHead: 1, id: started.id, status: 'stopped' },
     { appendedHead: 0, id: firstContinuationID, status: 'active' },
   ]);
+});
+
+test('it rejects an activity owned by another caller with NOT_FOUND', async () => {
+  await using ctx = await setupTest();
+
+  const owner = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: owner.user.id });
+
+  const ownerClient = buildRPCTestClient<ActivityContract>(ctx.app, { token: owner.token });
+
+  const started = await ownerClient.startActivity({
+    avatarID: avatar.id,
+    scopeID: '0_0',
+    scopeType: 'world_map_node',
+  });
+
+  const other = await createViewer({ audience: 'service-activity', db: ctx.db });
+
+  const otherClient = buildRPCTestClient<ActivityContract>(ctx.app, { token: other.token });
+
+  expect(
+    otherClient.advanceActivity({
+      activityID: started.id,
+      continuations: [createMockCatchUpContinuation()],
+      expectedHead: 0,
+    }),
+  ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+});
+
+test('it rejects an anonymous acting user with UNAUTHORIZED', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createAnonymousViewer({ audience: 'service-activity' });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  expect(
+    client.advanceActivity({
+      activityID: 'activity_1',
+      continuations: [createMockCatchUpContinuation()],
+      expectedHead: 0,
+    }),
+  ).rejects.toMatchObject({ code: 'UNAUTHORIZED', data: { reason: 'missing-session' } });
 });

@@ -37,7 +37,6 @@
   },
   "devDependencies": {
     "@faker-js/faker": "catalog:",
-    "@opentelemetry/sdk-metrics": "catalog:",
     "@types/bun": "catalog:",
     "@types/node": "catalog:",
     "@vers/mock-services": "workspace:*",
