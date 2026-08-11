@@ -20,7 +20,7 @@ export function ViewportTracker() {
 
     const nextViewport = buildViewportFromCamera(camera);
 
-    if (isSameViewport(useWorldmapStore.getState().viewport, nextViewport)) {
+    if (!nextViewport || isSameViewport(useWorldmapStore.getState().viewport, nextViewport)) {
       return;
     }
 

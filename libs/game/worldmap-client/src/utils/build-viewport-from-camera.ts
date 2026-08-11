@@ -2,7 +2,6 @@ import type { Viewport } from '@vers/worldmap-core';
 import { HEX_SIZE, WORLD_COORD_MAX, WORLD_COORD_MIN } from '@vers/worldmap-core';
 import type { PerspectiveCamera } from 'three';
 import { Plane, Raycaster, Vector2, Vector3 } from 'three';
-import invariant from 'tiny-invariant';
 import { NODE_POSITION_SCALING_FACTOR } from '../consts';
 
 const GROUND_PLANE = new Plane(new Vector3(0, 1, 0), 0);
@@ -32,11 +31,11 @@ const HEX_COLUMN_SPACING = HEX_SIZE * Math.sqrt(3);
 /**
  * Projects `camera`'s frustum corners onto the world's ground plane and converts the resulting
  * footprint to a cell-coordinate viewport, padded by one cell and clamped to the lattice's
- * encodable range. Every corner ray is expected to reach the ground — true for any camera holding
- * the locked isometric tilt, the only shape this is ever called with; a camera pointed away from
- * the ground is a broken invariant elsewhere, not input this function itself validates.
+ * encodable range. Returns null while any corner ray misses the ground — a camera that hasn't yet
+ * been oriented to the isometric tilt (the frames between mount and the controls' first update)
+ * has no ground footprint to report.
  */
-export function buildViewportFromCamera(camera: PerspectiveCamera): Viewport {
+export function buildViewportFromCamera(camera: PerspectiveCamera): null | Viewport {
   let minCX = Infinity;
   let maxCX = -Infinity;
   let minCY = Infinity;
@@ -48,7 +47,9 @@ export function buildViewportFromCamera(camera: PerspectiveCamera): Viewport {
 
     const hit = raycaster.ray.intersectPlane(GROUND_PLANE, hitPoint);
 
-    invariant(hit, 'camera frustum corner ray never reaches the ground plane');
+    if (!hit) {
+      return null;
+    }
 
     const hexX = hit.x / NODE_POSITION_SCALING_FACTOR;
     const hexY = -hit.z / NODE_POSITION_SCALING_FACTOR;
