@@ -9,9 +9,9 @@ const EMPTY_VIEWPORT: Viewport = { maxCX: 0, maxCY: 0, minCX: 0, minCY: 0 };
 
 /**
  * Subscribes to the avatar's revealed-nodes query for whatever chunk the free camera's viewport
- * currently covers, keeping the query cache warm for #133's fog-of-war rendering to read; this hook
- * never reads the result itself. Disabled until the camera reports a viewport, since the reveal
- * query has nothing meaningful to bound before then.
+ * currently covers, warming the query cache for the fog-of-war renderer to read; this hook never
+ * reads the result itself. Disabled until the camera reports a viewport, since the reveal query has
+ * nothing meaningful to bound before then.
  */
 export function useRevealedNodesQuery(): void {
   const avatarQuery = useQuery(buildActiveAvatarQueryOptions());

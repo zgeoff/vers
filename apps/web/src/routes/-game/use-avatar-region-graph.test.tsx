@@ -123,3 +123,50 @@ test('it refreshes the graph without resetting the selection when the viewport m
     expect(hook.result.current.selection.node?.id).toBe(toNodeID(0, 0));
   });
 });
+
+test('it selects the new origin on an avatar switch even when the viewport had panned far from it', async () => {
+  const signedIn = await createSignedInUser();
+
+  await createActiveAvatar({ seed: 333, userID: signedIn.userID });
+
+  const second = await db.avatarCollection.create({ seed: 444, userID: signedIn.userID });
+
+  const secondExpected = buildViewportGraph(second.seed, INITIAL_VIEWPORT);
+  const secondOrigin = secondExpected.nodes[toNodeID(0, 0)];
+
+  invariant(secondOrigin, 'the initial viewport always contains its origin cell');
+
+  await withRequestContext({ cookies: signedIn.cookies }, async () => {
+    const hook = renderHook(() => {
+      useAvatarRegionGraph();
+
+      return { selection: useSelectedNode(), worldGraph: useWorldGraph() };
+    });
+
+    await waitFor(() => {
+      expect(hook.result.current.selection.node?.id).toBe(toNodeID(0, 0));
+    });
+
+    const farViewport = { maxCX: 800, maxCY: 800, minCX: 760, minCY: 760 };
+
+    setViewport(farViewport);
+
+    const active = db.activeAvatarCollection.findFirst((q) => q.where({ userID: signedIn.userID }));
+
+    invariant(active, 'createActiveAvatar seeds an active-avatar row for this user');
+
+    await db.activeAvatarCollection.update(active, {
+      data(record) {
+        record.avatarID = second.id;
+      },
+    });
+
+    await hook.queryClient.invalidateQueries();
+
+    await waitFor(() => {
+      expect(hook.result.current.worldGraph.nodes[toNodeID(0, 0)]).toStrictEqual(secondOrigin);
+    });
+
+    expect(hook.result.current.selection.node).toStrictEqual(secondOrigin);
+  });
+});

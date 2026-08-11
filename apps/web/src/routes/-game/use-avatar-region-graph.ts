@@ -2,12 +2,14 @@ import { useQuery } from '@tanstack/react-query';
 import { buildViewportGraph, setWorldRegion, useViewport } from '@vers/worldmap-client';
 import type { Viewport } from '@vers/worldmap-core';
 import { toNodeID } from '@vers/worldmap-core';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { buildActiveAvatarQueryOptions } from '../../lib/avatar/build-active-avatar-query-options';
 
 /**
  * Cell-coordinate box the region graph builds from before the free camera has reported its own
- * viewport — the moment between an avatar loading and the camera's first frame update.
+ * viewport — the moment between an avatar loading and the camera's first frame update — and on
+ * every avatar switch, so the incoming avatar's origin node is always present to select regardless
+ * of where the outgoing avatar had panned the camera.
  */
 const INITIAL_VIEWPORT: Viewport = { maxCX: 24, maxCY: 24, minCX: -24, minCY: -24 };
 
@@ -24,13 +26,19 @@ export function useAvatarRegionGraph(): void {
   const avatarID = avatarQuery.data?.id;
   const seed = avatarQuery.data?.seed;
   const viewport = useViewport();
+  const previousAvatarIDRef = useRef<string | undefined>(undefined);
 
   useEffect(() => {
     if (avatarID === undefined || seed === undefined) {
       return;
     }
 
-    const worldGraph = buildViewportGraph(seed, viewport ?? INITIAL_VIEWPORT);
+    const isAvatarSwitch = previousAvatarIDRef.current !== avatarID;
+
+    previousAvatarIDRef.current = avatarID;
+
+    const regionViewport = isAvatarSwitch ? INITIAL_VIEWPORT : (viewport ?? INITIAL_VIEWPORT);
+    const worldGraph = buildViewportGraph(seed, regionViewport);
     const originNode = worldGraph.nodes[toNodeID(0, 0)] ?? null;
 
     setWorldRegion(avatarID, worldGraph, originNode);

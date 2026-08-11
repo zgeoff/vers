@@ -1,7 +1,7 @@
 import { useFrame, useThree } from '@react-three/fiber';
 import { WORLD_COORD_MAX, WORLD_COORD_MIN, toHexPosition } from '@vers/worldmap-core';
 import CameraControlsImpl from 'camera-controls';
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { PerspectiveCamera as PerspectiveCameraImpl } from 'three';
 import {
   Box3,
@@ -93,13 +93,10 @@ export function IsometricCamera() {
   const camera = useCamera();
   const isDevCameraActive = useIsDevCameraActive();
   const selectedNode = useSelectedNode();
+  const [controlsVersion, setControlsVersion] = useState(0);
 
   const setCameraRef = useCallback((cameraInstance: null | PerspectiveCameraImpl) => {
     cameraRef.current = cameraInstance;
-
-    if (!cameraInstance) {
-      return;
-    }
 
     setCamera(cameraInstance);
   }, []);
@@ -138,6 +135,8 @@ export function IsometricCamera() {
     void controls.dollyTo(INITIAL_DISTANCE, false);
     controlsRef.current = controls;
 
+    setControlsVersion((version) => version + 1);
+
     return () => {
       controls.disconnect();
       controls.dispose();
@@ -146,8 +145,11 @@ export function IsometricCamera() {
     };
   }, [camera, domElement]);
 
-  // the very first selection (the avatar's origin, on region load) glides too, since its jittered
-  // position sits imperceptibly close to the controls' own starting target
+  // depends on controlsVersion, not just selectedNode, so a controls instance rebuilt by the effect
+  // above (a remount after the scene swaps away and back) reapplies the current selection's target
+  // instead of leaving the rebuilt controls centred on their constructor default; the very first
+  // selection (the avatar's origin, on region load) glides too, since its jittered position sits
+  // imperceptibly close to the controls' own starting target
   useEffect(() => {
     const controls = controlsRef.current;
     const object3D = selectedNode.object3D;
@@ -157,7 +159,7 @@ export function IsometricCamera() {
     }
 
     void controls.moveTo(object3D.position.x, 0, -object3D.position.y, true);
-  }, [selectedNode]);
+  }, [selectedNode, controlsVersion]);
 
   useFrame((state, delta) => {
     if (!camera) {
