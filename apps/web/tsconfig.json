@@ -7,6 +7,7 @@
   "files": [],
   "include": [
     "augment-bun-test.ts",
+    "register-zustand-reset-early.ts",
     "test-setup.ts",
     "panda.config.ts",
     "vite.config.ts",

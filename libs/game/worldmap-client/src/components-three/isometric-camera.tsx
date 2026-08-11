@@ -1,14 +1,26 @@
-import { animated, config, useSpring } from '@react-spring/three';
 import { useFrame, useThree } from '@react-three/fiber';
-import { useCallback, useEffect, useRef } from 'react';
-import type { Group, Object3D, PerspectiveCamera as PerspectiveCameraImpl } from 'three';
-import { CameraHelper, Euler } from 'three';
+import { JITTER, WORLD_COORD_MAX, WORLD_COORD_MIN, toHexPosition } from '@vers/worldmap-core';
+import CameraControlsImpl from 'camera-controls';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type { PerspectiveCamera as PerspectiveCameraImpl } from 'three';
 import {
-  CAMERA_DISTANCE,
+  Box3,
+  CameraHelper,
+  Matrix4,
+  Quaternion,
+  Raycaster,
+  Sphere,
+  Spherical,
+  Vector2,
+  Vector3,
+  Vector4,
+} from 'three';
+import {
   CAMERA_ROTATION_X,
   CAMERA_ROTATION_Y,
-  ISOMETRIC_OFFSET_X,
-  ISOMETRIC_OFFSET_Z,
+  NODE_POSITION_SCALING_FACTOR,
+  ZOOM_MAX_DISTANCE,
+  ZOOM_MIN_DISTANCE,
 } from '../consts';
 import { setCamera } from '../state/set-camera';
 import { useCamera } from '../state/use-camera';
@@ -16,39 +28,97 @@ import { useIsDevCameraActive } from '../state/use-is-dev-camera-active';
 import { useSelectedNode } from '../state/use-selected-node';
 import { useMakeDefaultCamera } from './use-make-default-camera';
 
-const ISOMETRIC_CAMERA_ROTATION = new Euler(CAMERA_ROTATION_X, CAMERA_ROTATION_Y, 0, 'YXZ');
-
-const AnimatedGroup = animated['group'];
+// to allow for tree shaking, only import the subset of three.js camera-controls depends on
+// see https://github.com/yomotsu/camera-controls#important
+CameraControlsImpl.install({
+  THREE: { Box3, Matrix4, Quaternion, Raycaster, Sphere, Spherical, Vector2, Vector3, Vector4 },
+});
 
 /**
- * A perspective camera fixed at an isometric height and rotation; a true orthographic isometric
- * projection reads poorly against the current world layout.
+ * Fixed spherical offset reproducing the rig's original isometric viewing angle: `POLAR_ANGLE` is
+ * the tilt down from directly overhead, `AZIMUTH_ANGLE` the turn around the vertical axis.
+ */
+const POLAR_ANGLE = -CAMERA_ROTATION_X;
+const AZIMUTH_ANGLE = CAMERA_ROTATION_Y;
+
+/**
+ * Starting dolly distance: the closest allowed, so a fresh session opens focused before the player
+ * zooms out to explore.
+ */
+const INITIAL_DISTANCE = ZOOM_MIN_DISTANCE;
+
+/**
+ * Ease-back strength at the world boundary: strong enough that a rest position never reads as past
+ * the edge, soft enough that reaching it doesn't feel like a hard stop.
+ */
+const BOUNDARY_FRICTION = 0.8;
+
+/**
+ * Ground covered per pixel of drag, tuned by feel in playtesting — the library default reads
+ * sluggish against a map this large.
+ */
+const TRUCK_SPEED = 10;
+
+const WORLD_CORNER_CELLS: ReadonlyArray<readonly [number, number]> = [
+  [WORLD_COORD_MIN, WORLD_COORD_MIN],
+  [WORLD_COORD_MIN, WORLD_COORD_MAX],
+  [WORLD_COORD_MAX, WORLD_COORD_MIN],
+  [WORLD_COORD_MAX, WORLD_COORD_MAX],
+];
+
+const worldCornerXs = WORLD_CORNER_CELLS.map(
+  ([cx, cy]) => toHexPosition(cx, cy)[0] * NODE_POSITION_SCALING_FACTOR,
+);
+
+const worldCornerZs = WORLD_CORNER_CELLS.map(
+  ([cx, cy]) => -toHexPosition(cx, cy)[1] * NODE_POSITION_SCALING_FACTOR,
+);
+
+/**
+ * Scene-unit margin folded into every side of the world boundary: node placement jitters each cell
+ * center by up to the per-axis jitter bound, so without the pad a rim node jittered outward would
+ * sit past the boundary and the ease-back would fight the camera trying to center it.
+ */
+const JITTER_MARGIN = JITTER * NODE_POSITION_SCALING_FACTOR;
+
+/**
+ * The box the camera's pan target eases back from at the world's rim: the scene-unit footprint of
+ * every cell coordinate the lattice can encode, padded by the jitter margin so every jittered node
+ * position stays reachable, flattened onto the ground plane. A zero-height box also draws the
+ * target back toward the ground whenever a screen-space drag on the tilted camera would otherwise
+ * push it off-plane, which keeps the frustum's ground-plane footprint (and so the viewport it
+ * drives) tied to the visible zoom range instead of drifting with altitude.
+ */
+const WORLD_BOUNDARY = new Box3(
+  new Vector3(
+    Math.min(...worldCornerXs) - JITTER_MARGIN,
+    0,
+    Math.min(...worldCornerZs) - JITTER_MARGIN,
+  ),
+  new Vector3(
+    Math.max(...worldCornerXs) + JITTER_MARGIN,
+    0,
+    Math.max(...worldCornerZs) + JITTER_MARGIN,
+  ),
+);
+
+/**
+ * A perspective camera fixed at an isometric tilt and turn; a true orthographic isometric
+ * projection reads poorly against the current world layout. `camera-controls` drives pan (truck)
+ * and zoom (dolly) input, with rotation pinned to the fixed angle above and panning eased back at
+ * the world boundary. Selecting a node glides the camera to center it.
  */
 export function IsometricCamera() {
-  const cameraRigRef = useRef<Group | null>(null);
   const cameraRef = useRef<PerspectiveCameraImpl | null>(null);
+  const controlsRef = useRef<CameraControlsImpl | null>(null);
+  const domElement = useThree((state) => state.gl.domElement);
   const camera = useCamera();
   const isDevCameraActive = useIsDevCameraActive();
   const selectedNode = useSelectedNode();
-  const [positionX, positionY, positionZ] = getNodeCameraPosition(selectedNode.object3D);
-
-  const spring = useSpring({
-    config: {
-      ...config.gentle,
-      clamp: true,
-      precision: 0.001,
-    },
-    x: positionX,
-    y: positionY,
-    z: positionZ,
-  });
+  const [controlsVersion, setControlsVersion] = useState(0);
 
   const setCameraRef = useCallback((cameraInstance: null | PerspectiveCameraImpl) => {
     cameraRef.current = cameraInstance;
-
-    if (!cameraInstance) {
-      return;
-    }
 
     setCamera(cameraInstance);
   }, []);
@@ -58,38 +128,83 @@ export function IsometricCamera() {
   useMakeDefaultCamera(cameraRef, !isDevCameraActive);
   useCameraHelper(helperCamera);
 
-  // force our isometric camera rotation and height unless we're using our dev camera, and keep
-  // its aspect ratio and projection matrix in sync with the canvas
-  useFrame((state) => {
-    if (!camera || !cameraRigRef.current) {
+  useEffect(() => {
+    if (!camera) {
+      return () => {};
+    }
+
+    const controls = new CameraControlsImpl(camera);
+
+    controls.connect(domElement);
+
+    controls.minDistance = ZOOM_MIN_DISTANCE;
+    controls.maxDistance = ZOOM_MAX_DISTANCE;
+    controls.minPolarAngle = POLAR_ANGLE;
+    controls.maxPolarAngle = POLAR_ANGLE;
+    controls.minAzimuthAngle = AZIMUTH_ANGLE;
+    controls.maxAzimuthAngle = AZIMUTH_ANGLE;
+    controls.boundaryFriction = BOUNDARY_FRICTION;
+    controls.truckSpeed = TRUCK_SPEED;
+    controls.mouseButtons.left = CameraControlsImpl.ACTION.TRUCK;
+    controls.mouseButtons.right = CameraControlsImpl.ACTION.TRUCK;
+    controls.mouseButtons.middle = CameraControlsImpl.ACTION.NONE;
+    controls.mouseButtons.wheel = CameraControlsImpl.ACTION.DOLLY;
+    controls.touches.one = CameraControlsImpl.ACTION.TOUCH_TRUCK;
+    controls.touches.two = CameraControlsImpl.ACTION.TOUCH_DOLLY_TRUCK;
+    controls.touches.three = CameraControlsImpl.ACTION.NONE;
+
+    controls.setBoundary(WORLD_BOUNDARY);
+    void controls.rotateTo(AZIMUTH_ANGLE, POLAR_ANGLE, false);
+    void controls.dollyTo(INITIAL_DISTANCE, false);
+    controlsRef.current = controls;
+
+    setControlsVersion((version) => version + 1);
+
+    return () => {
+      controls.disconnect();
+      controls.dispose();
+
+      controlsRef.current = null;
+    };
+  }, [camera, domElement]);
+
+  // depends on controlsVersion, not just selectedNode, so a controls instance rebuilt by the effect
+  // above (a remount after the scene swaps away and back) reapplies the current selection's target
+  // instead of leaving the rebuilt controls centred on their constructor default; the very first
+  // selection (the avatar's origin, on region load) glides too, since its jittered position sits
+  // imperceptibly close to the controls' own starting target
+  useEffect(() => {
+    const controls = controlsRef.current;
+    const object3D = selectedNode.object3D;
+
+    if (!controls || !object3D) {
       return;
     }
 
-    cameraRigRef.current.rotation.copy(ISOMETRIC_CAMERA_ROTATION);
+    void controls.moveTo(object3D.position.x, 0, -object3D.position.y, true);
+  }, [selectedNode, controlsVersion]);
 
-    cameraRigRef.current.position.y = CAMERA_DISTANCE;
+  useFrame((state, delta) => {
+    if (!camera) {
+      return;
+    }
+
     camera.aspect = state.size.width / state.size.height;
 
     camera.updateProjectionMatrix();
+
+    const controls = controlsRef.current;
+
+    if (!controls) {
+      return;
+    }
+
+    controls.enabled = !isDevCameraActive;
+
+    controls.update(delta);
   });
 
-  return (
-    <AnimatedGroup position={[spring.x, spring.y, spring.z]} rotation={ISOMETRIC_CAMERA_ROTATION}>
-      <perspectiveCamera ref={setCameraRef} />
-    </AnimatedGroup>
-  );
-}
-
-function getNodeCameraPosition(node: null | Object3D): [number, number, number] {
-  if (!node) {
-    return [0, CAMERA_DISTANCE, 0];
-  }
-
-  return [
-    node.position.x + ISOMETRIC_OFFSET_X,
-    CAMERA_DISTANCE,
-    -(node.position.y - ISOMETRIC_OFFSET_Z),
-  ];
+  return <perspectiveCamera ref={setCameraRef} />;
 }
 
 /**
