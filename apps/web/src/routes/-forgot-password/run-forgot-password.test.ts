@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
-import { isRedirect } from '@tanstack/react-router';
 import * as db from '@vers/mock-services/db';
+import invariant from 'tiny-invariant';
 import { HONEYPOT_FIELD_NAME } from '../../lib/auth/honeypot-field-names';
 import { buildFormData } from '../../test-utils/build-form-data';
 import { withRequestContext } from '../../test-utils/with-request-context';
@@ -21,9 +21,7 @@ test('it rejects a submission with a filled-in honeypot field', async () => {
 
   const outcome = await withRequestContext({}, () => runForgotPassword(formData));
 
-  if (!(outcome.value instanceof Response)) {
-    throw new Error('expected a Response');
-  }
+  invariant(outcome.value instanceof Response, 'expected a Response');
 
   expect(outcome.value.status).toBe(400);
 });
@@ -33,9 +31,7 @@ test('it reports a field error for an invalid email', async () => {
     runForgotPassword(buildFormData({ email: 'not-an-email' })),
   );
 
-  if (outcome.value instanceof Response) {
-    throw new TypeError('expected a submission result');
-  }
+  invariant(!(outcome.value instanceof Response), 'expected a submission result');
 
   expect(outcome.value.error).toStrictEqual({ email: ['Email is invalid'] });
 });
@@ -43,17 +39,14 @@ test('it reports a field error for an invalid email', async () => {
 test('it mints a reset token for a matching account and redirects', async () => {
   const user = await db.userCollection.create({ email: 'forgot-password-existing@vers.test' });
 
-  const outcome = await withRequestContext({}, async () => {
-    const redirectHref = await runForgotPassword(
-      buildFormData({ email: 'forgot-password-existing@vers.test' }),
-    )
-      .then(() => null)
-      .catch((error: unknown) => (isRedirect(error) ? error.options.href : null));
+  const promise = withRequestContext({}, () =>
+    runForgotPassword(buildFormData({ email: 'forgot-password-existing@vers.test' })),
+  );
 
-    return redirectHref;
-  });
+  // the db reads below must observe the rejected call's token/email side effects settled
+  await promise.catch(() => {});
 
-  expect(outcome.value).toBe('/reset-password-started');
+  expect(promise).rejects.toMatchObject({ options: { href: '/reset-password-started' } });
 
   const updated = db.userCollection.findFirst((q) => q.where({ id: user.id }));
 
@@ -73,17 +66,14 @@ test('it mints a reset token for a matching account and redirects', async () => 
 });
 
 test('it redirects the same way for an email with no matching account', async () => {
-  const outcome = await withRequestContext({}, async () => {
-    const redirectHref = await runForgotPassword(
-      buildFormData({ email: 'forgot-password-unknown@vers.test' }),
-    )
-      .then(() => null)
-      .catch((error: unknown) => (isRedirect(error) ? error.options.href : null));
+  const promise = withRequestContext({}, () =>
+    runForgotPassword(buildFormData({ email: 'forgot-password-unknown@vers.test' })),
+  );
 
-    return redirectHref;
-  });
+  // the db read below must observe the rejected call's email-suppression settled
+  await promise.catch(() => {});
 
-  expect(outcome.value).toBe('/reset-password-started');
+  expect(promise).rejects.toMatchObject({ options: { href: '/reset-password-started' } });
 
   expect(
     db.sentEmailCollection.findFirst((q) =>

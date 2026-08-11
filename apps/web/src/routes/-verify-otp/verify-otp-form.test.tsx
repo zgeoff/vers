@@ -86,9 +86,9 @@ test('it shows a generic failure message for a rejected submission', async () =>
     await user.keyboard('123456');
     await user.click(screen.getByRole('button', { name: 'Verify' }));
 
-    await waitFor(() => {
-      expect(screen.getByText('Something went wrong. Please try again.')).toBeVisible();
-    });
+    const error = await screen.findByText('Something went wrong. Please try again.');
+
+    expect(error).toBeVisible();
   });
 });
 
@@ -181,10 +181,9 @@ test('it auto-submits a rejected code only once instead of looping', async () =>
       />,
     );
 
-    await waitFor(() => {
-      expect(screen.getByText('Something went wrong. Please try again.')).toBeVisible();
-    });
+    const error = await screen.findByText('Something went wrong. Please try again.');
 
+    expect(error).toBeVisible();
     expect(action).toHaveBeenCalledOnce();
   });
 });

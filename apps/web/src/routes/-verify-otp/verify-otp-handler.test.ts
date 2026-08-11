@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
-import { isRedirect } from '@tanstack/react-router';
 import * as db from '@vers/mock-services/db';
+import invariant from 'tiny-invariant';
 import { HONEYPOT_FIELD_NAME } from '../../lib/auth/honeypot-field-names';
 import { buildFormData } from '../../test-utils/build-form-data';
 import { createSignedInUser } from '../../test-utils/create-signed-in-user';
@@ -14,9 +14,7 @@ test('it rejects a submission with a filled-in honeypot field', async () => {
 
   const outcome = await withRequestContext({}, () => verifyOTPHandler(formData));
 
-  if (!(outcome.value instanceof Response)) {
-    throw new Error('expected a Response');
-  }
+  invariant(outcome.value instanceof Response, 'expected a Response');
 
   expect(outcome.value.status).toBe(400);
 });
@@ -26,9 +24,7 @@ test('it reports a form error for a code with the wrong length', async () => {
     verifyOTPHandler(buildFormData({ code: '123', target: 'x', type: 'onboarding' })),
   );
 
-  if (outcome.value instanceof Response) {
-    throw new TypeError('expected a submission result');
-  }
+  invariant(!(outcome.value instanceof Response), 'expected a submission result');
 
   expect(outcome.value.error).toStrictEqual({ '': ['Invalid code'] });
 });
@@ -50,9 +46,7 @@ test('it reports a form error for a code that fails verification', async () => {
     ),
   );
 
-  if (outcome.value instanceof Response) {
-    throw new TypeError('expected a submission result');
-  }
+  invariant(!(outcome.value instanceof Response), 'expected a submission result');
 
   expect(outcome.value.error).toStrictEqual({ '': ['Invalid or expired code'] });
 });
@@ -65,20 +59,19 @@ test('it records the verified email and redirects to onboarding', async () => {
   });
 
   const outcome = await withRequestContext({}, async () => {
-    const redirectHref = await verifyOTPHandler(
+    const promise = verifyOTPHandler(
       buildFormData({
         code: '222222',
         target: 'verify-otp-onboarding@vers.test',
         type: 'onboarding',
       }),
-    )
-      .then(() => null)
-      .catch((error: unknown) => (isRedirect(error) ? error.options.href : null));
+    );
 
-    return redirectHref;
+    // the outer cookie read must observe the rejected call's verification side effects settled
+    await promise.catch(() => {});
+
+    expect(promise).rejects.toMatchObject({ options: { href: '/onboarding' } });
   });
-
-  expect(outcome.value).toBe('/onboarding');
 
   expect(outcome.cookies['en_verification']).toStrictEqual({
     'onboarding#email': 'verify-otp-onboarding@vers.test',
@@ -92,21 +85,17 @@ test('it bounces back to login when a 2FA verify has no pending session', async 
     type: '2fa',
   });
 
-  const outcome = await withRequestContext({}, async () => {
-    const redirectHref = await verifyOTPHandler(
+  const promise = withRequestContext({}, () =>
+    verifyOTPHandler(
       buildFormData({
         code: '333333',
         target: 'user_no_pending_session',
         type: '2fa',
       }),
-    )
-      .then(() => null)
-      .catch((error: unknown) => (isRedirect(error) ? error.options.href : null));
+    ),
+  );
 
-    return redirectHref;
-  });
-
-  expect(outcome.value).toBe('/login');
+  expect(promise).rejects.toMatchObject({ options: { href: '/login' } });
 });
 
 test('it completes a pending 2FA login and clears the redirect target', async () => {
@@ -123,22 +112,22 @@ test('it completes a pending 2FA login and clears the redirect target', async ()
       },
     },
     async () => {
-      const redirectHref = await verifyOTPHandler(
+      const promise = verifyOTPHandler(
         buildFormData({
           code: '444444',
           redirect: '/nexus',
           target: user.id,
           type: '2fa',
         }),
-      )
-        .then(() => null)
-        .catch((error: unknown) => (isRedirect(error) ? error.options.href : null));
+      );
 
-      return redirectHref;
+      // the outer cookie reads must observe the rejected call's session side effects settled
+      await promise.catch(() => {});
+
+      expect(promise).rejects.toMatchObject({ options: { href: '/nexus' } });
     },
   );
 
-  expect(outcome.value).toBe('/nexus');
   expect(outcome.cookies['en_session']).toContainKeys(['accessToken', 'refreshToken', 'sessionID']);
   expect(outcome.cookies['en_verification']).toStrictEqual({});
 });
@@ -163,9 +152,7 @@ test('it rejects a 2FA login carrying a target other than the pending session ow
     () => verifyOTPHandler(buildFormData({ code: '777777', target: attacker.id, type: '2fa' })),
   );
 
-  if (outcome.value instanceof Response) {
-    throw new TypeError('expected a submission result');
-  }
+  invariant(!(outcome.value instanceof Response), 'expected a submission result');
 
   expect(outcome.value.error).toStrictEqual({ '': ['Invalid or expired code'] });
 });
@@ -208,9 +195,7 @@ test('it applies a confirmed email change for the signed-in caller', async () =>
     ),
   );
 
-  if (outcome.value instanceof Response) {
-    throw new TypeError('expected a submission result');
-  }
+  invariant(!(outcome.value instanceof Response), 'expected a submission result');
 
   expect(outcome.value.status).toBe('success');
 

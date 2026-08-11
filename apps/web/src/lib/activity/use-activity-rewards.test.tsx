@@ -4,7 +4,6 @@ import { mockActivityService } from '@vers/mock-services/activity';
 import * as db from '@vers/mock-services/db';
 import { server } from '../../mocks/node';
 import { createSignedInUser } from '../../test-utils/create-signed-in-user';
-import { createMockRevealedReward } from '../../test-utils/factories/create-mock-revealed-reward';
 import { renderHook } from '../../test-utils/render-hook';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { useActivityRewards } from './use-activity-rewards';
@@ -19,7 +18,14 @@ test('it is disabled with no activityID', () => {
 test('it fetches the first page, then passes the cursor from the merged cache on the next poll', async () => {
   const signedIn = await createSignedInUser();
   const avatar = await db.avatarCollection.create({ userID: signedIn.userID });
-  const activity = await db.activityCollection.create({ avatarID: avatar.id });
+  const activity = await db.activityCollection.create({ avatarID: avatar.id, verifiedHead: 3 });
+
+  const item = await db.avatarItemCollection.create({
+    avatarID: avatar.id,
+    chainIndex: 3,
+    scopeID: activity.scopeID,
+    scopeType: activity.scopeType,
+  });
 
   const track = mock<(input: unknown) => void>();
 
@@ -29,7 +35,18 @@ test('it fetches the first page, then passes the cursor from the merged cache on
 
       if (track.mock.calls.length === 1) {
         return {
-          items: [createMockRevealedReward({ chainIndex: 3 })],
+          items: [
+            {
+              chainIndex: item.chainIndex,
+              item: {
+                affixes: item.affixes,
+                baseID: item.baseID,
+                contentVersion: item.contentVersion,
+                rarityID: item.rarityID,
+              },
+              ordinal: item.ordinal,
+            },
+          ],
           verifiedHead: 2,
         };
       }

@@ -1,6 +1,5 @@
 import { expect, test } from 'bun:test';
 import { createId } from '@paralleldrive/cuid2';
-import { isRedirect } from '@tanstack/react-router';
 import * as db from '@vers/mock-services/db';
 import { buildFormData } from '../../test-utils/build-form-data';
 import { withRequestContext } from '../../test-utils/with-request-context';
@@ -17,28 +16,24 @@ test('it clears the pending session and redirects home on cancel', async () => {
       },
     },
     async () => {
-      const redirectHref = await runForceLogout(buildFormData({ intent: 'cancel' }))
-        .then(() => null)
-        .catch((error: unknown) => (isRedirect(error) ? error.options.href : null));
+      const promise = runForceLogout(buildFormData({ intent: 'cancel' }));
 
-      return redirectHref;
+      // the outer cookie read must observe the rejected call's cookie-clear step settled
+      await promise.catch(() => {});
+
+      expect(promise).rejects.toMatchObject({ options: { href: '/' } });
     },
   );
 
-  expect(outcome.value).toBe('/');
   expect(outcome.cookies['en_verification']).toStrictEqual({});
 });
 
-test('it redirects home without acting when there is no pending session to confirm', async () => {
-  const outcome = await withRequestContext({}, async () => {
-    const redirectHref = await runForceLogout(buildFormData({ intent: 'confirm' }))
-      .then(() => null)
-      .catch((error: unknown) => (isRedirect(error) ? error.options.href : null));
+test('it redirects home without acting when there is no pending session to confirm', () => {
+  const promise = withRequestContext({}, () =>
+    runForceLogout(buildFormData({ intent: 'confirm' })),
+  );
 
-    return redirectHref;
-  });
-
-  expect(outcome.value).toBe('/');
+  expect(promise).rejects.toMatchObject({ options: { href: '/' } });
 });
 
 test('it signs out every other live session and completes sign-in on confirm', async () => {
@@ -60,15 +55,15 @@ test('it signs out every other live session and completes sign-in on confirm', a
       },
     },
     async () => {
-      const redirectHref = await runForceLogout(buildFormData({ intent: 'confirm' }))
-        .then(() => null)
-        .catch((error: unknown) => (isRedirect(error) ? error.options.href : null));
+      const promise = runForceLogout(buildFormData({ intent: 'confirm' }));
 
-      return redirectHref;
+      // the outer cookie/db reads must observe the rejected call's side effects settled
+      await promise.catch(() => {});
+
+      expect(promise).rejects.toMatchObject({ options: { href: '/respite' } });
     },
   );
 
-  expect(outcome.value).toBe('/respite');
   expect(outcome.cookies['en_verification']).toStrictEqual({});
   expect(outcome.cookies['en_session']).toContainKeys(['accessToken', 'refreshToken', 'sessionID']);
   expect(db.sessionCollection.findFirst((q) => q.where({ id: otherSessionID }))).toBeUndefined();
@@ -81,7 +76,7 @@ test('it honors a stashed redirect target on confirm', async () => {
 
   await db.sessionCollection.create({ id: pendingSessionID, userID, verified: false });
 
-  const outcome = await withRequestContext(
+  const promise = withRequestContext(
     {
       cookies: {
         en_verification: {
@@ -92,14 +87,8 @@ test('it honors a stashed redirect target on confirm', async () => {
         },
       },
     },
-    async () => {
-      const redirectHref = await runForceLogout(buildFormData({ intent: 'confirm' }))
-        .then(() => null)
-        .catch((error: unknown) => (isRedirect(error) ? error.options.href : null));
-
-      return redirectHref;
-    },
+    () => runForceLogout(buildFormData({ intent: 'confirm' })),
   );
 
-  expect(outcome.value).toBe('/nexus');
+  expect(promise).rejects.toMatchObject({ options: { href: '/nexus' } });
 });

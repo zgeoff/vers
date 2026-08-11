@@ -3,6 +3,7 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { setWriterDisplacedActivityID } from '@vers/idle-client';
 import { ActivityFailureAction } from '@vers/idle-core';
+import { buildActiveAvatarQueryOptions } from '../../lib/avatar/build-active-avatar-query-options';
 import { createActiveAvatar } from '../../test-utils/create-active-avatar';
 import { createSignedInUser } from '../../test-utils/create-signed-in-user';
 import { createStubWorkerClient } from '../../test-utils/create-stub-worker-client';
@@ -44,13 +45,19 @@ test('it claims the run back with a claiming report on continue-here', async () 
   setWriterDisplacedActivityID('activity_1');
 
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
-    render(<PlayingElsewhereNotice />);
+    const rendered = render(<PlayingElsewhereNotice />);
 
-    // a click lands only once the avatar id has resolved; an early one leaves the notice open,
-    // so the loop retries exactly as a player would
-    await waitFor(async () => {
-      await user.click(screen.getByRole('button', { name: 'Continue here' }));
+    // a click lands only once the avatar id has resolved; awaiting the cached query result before
+    // clicking, rather than retrying the click itself, keeps the click a single user action
+    await waitFor(() => {
+      expect(
+        rendered.queryClient.getQueryState(buildActiveAvatarQueryOptions().queryKey)?.status,
+      ).toBe('success');
+    });
 
+    await user.click(screen.getByRole('button', { name: 'Continue here' }));
+
+    await waitFor(() => {
       expect(client.reportOnline).toHaveBeenCalledExactlyOnceWith(
         { avatarID: avatar.id, claim: true },
         expect.anything(),
@@ -75,7 +82,7 @@ test('it dismisses by clearing the displaced state, and a fresh displacement re-
   // fresh worker broadcast and re-opens the notice
   setWriterDisplacedActivityID('activity_1');
 
-  await waitFor(() => {
-    expect(screen.getByRole('dialog')).toBeInTheDocument();
-  });
+  const dialog = await screen.findByRole('dialog');
+
+  expect(dialog).toBeInTheDocument();
 });

@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
-import { isRedirect } from '@tanstack/react-router';
 import * as db from '@vers/mock-services/db';
+import invariant from 'tiny-invariant';
 import { HONEYPOT_FIELD_NAME } from '../../lib/auth/honeypot-field-names';
 import { buildFormData } from '../../test-utils/build-form-data';
 import { withRequestContext } from '../../test-utils/with-request-context';
@@ -21,9 +21,7 @@ test('it rejects a submission with a filled-in honeypot field', async () => {
 
   const outcome = await withRequestContext({}, () => runLogin(formData));
 
-  if (!(outcome.value instanceof Response)) {
-    throw new Error('expected a Response');
-  }
+  invariant(outcome.value instanceof Response, 'expected a Response');
 
   expect(outcome.value.status).toBe(400);
 });
@@ -33,9 +31,7 @@ test('it reports field errors for an invalid email and a too-short password', as
     runLogin(buildFormData({ email: 'not-an-email', password: 'short' })),
   );
 
-  if (outcome.value instanceof Response) {
-    throw new TypeError('expected a submission result');
-  }
+  invariant(!(outcome.value instanceof Response), 'expected a submission result');
 
   expect(outcome.value.error).toStrictEqual({
     email: ['Email is invalid'],
@@ -48,9 +44,7 @@ test('it reports a single form-level error for an unknown email', async () => {
     runLogin(buildFormData({ email: 'unknown@vers.test', password: 'password123' })),
   );
 
-  if (outcome.value instanceof Response) {
-    throw new TypeError('expected a submission result');
-  }
+  invariant(!(outcome.value instanceof Response), 'expected a submission result');
 
   expect(outcome.value.error).toStrictEqual({ '': ['Invalid email or password'] });
 });
@@ -65,9 +59,7 @@ test('it reports a single form-level error for the wrong password', async () => 
     runLogin(buildFormData({ email: 'wrong-password@vers.test', password: 'not-it-either' })),
   );
 
-  if (outcome.value instanceof Response) {
-    throw new TypeError('expected a submission result');
-  }
+  invariant(!(outcome.value instanceof Response), 'expected a submission result');
 
   expect(outcome.value.error).toStrictEqual({ '': ['Invalid email or password'] });
 });
@@ -81,16 +73,20 @@ test('it redirects to verify-otp and stores the pending session for a 2FA-enable
   await db.verificationCollection.create({ target: user.id, type: '2fa' });
 
   const outcome = await withRequestContext({}, async () => {
-    const redirectHref = await runLogin(
+    const promise = runLogin(
       buildFormData({ email: 'two-factor@vers.test', password: 'password123' }),
-    )
-      .then(() => null)
-      .catch((error: unknown) => (isRedirect(error) ? error.options.href : null));
+    );
 
-    return redirectHref;
+    // the outer cookie reads must observe the rejected call's session side effects settled
+    await promise.catch(() => {});
+
+    expect(promise).rejects.toMatchObject({
+      options: {
+        href: `/verify-otp?${new URLSearchParams({ target: user.id, type: '2fa' }).toString()}`,
+      },
+    });
   });
 
-  expect(outcome.value).toStartWith('/verify-otp?');
   expect(outcome.cookies['en_verification']).toContainKey('login2FA#sessionID');
   expect(outcome.cookies['en_verification']).toContainEntry(['login2FA#target', user.id]);
 });
@@ -104,16 +100,15 @@ test('it redirects to force-logout and stores the pending session when another s
   await db.sessionCollection.create({ userID: user.id });
 
   const outcome = await withRequestContext({}, async () => {
-    const redirectHref = await runLogin(
+    const promise = runLogin(
       buildFormData({ email: 'force-logout@vers.test', password: 'password123' }),
-    )
-      .then(() => null)
-      .catch((error: unknown) => (isRedirect(error) ? error.options.href : null));
+    );
 
-    return redirectHref;
+    // the outer cookie read must observe the rejected call's session side effects settled
+    await promise.catch(() => {});
+
+    expect(promise).rejects.toMatchObject({ options: { href: '/login/force-logout' } });
   });
-
-  expect(outcome.value).toBe('/login/force-logout');
 
   expect(outcome.cookies['en_verification']).toStrictEqual({
     'loginLogout#email': 'force-logout@vers.test',
@@ -130,17 +125,20 @@ test('it stashes the redirect target alongside the pending force-logout session'
 
   await db.sessionCollection.create({ userID: user.id });
 
-  const outcome = await withRequestContext({}, () =>
-    runLogin(
+  const outcome = await withRequestContext({}, async () => {
+    const promise = runLogin(
       buildFormData({
         email: 'force-logout-redirect@vers.test',
         password: 'password123',
         redirectTo: '/nexus',
       }),
-    )
-      .then(() => null)
-      .catch((error: unknown) => (isRedirect(error) ? error.options.href : null)),
-  );
+    );
+
+    // the outer cookie read must observe the rejected call's session side effects settled
+    await promise.catch(() => {});
+
+    expect(promise).rejects.toMatchObject({ options: { href: '/login/force-logout' } });
+  });
 
   expect(outcome.cookies['en_verification']).toContainEntry(['loginLogout#redirect', '/nexus']);
 });
@@ -149,35 +147,34 @@ test('it signs a first-time caller in directly and clears their redirect target'
   await db.userCollection.create({ email: 'first-login@vers.test', password: 'password123' });
 
   const outcome = await withRequestContext({}, async () => {
-    const redirectHref = await runLogin(
+    const promise = runLogin(
       buildFormData({
         email: 'first-login@vers.test',
         password: 'password123',
         redirectTo: '/nexus',
       }),
-    )
-      .then(() => null)
-      .catch((error: unknown) => (isRedirect(error) ? error.options.href : null));
+    );
 
-    return redirectHref;
+    // the outer cookie read must observe the rejected call's session side effects settled
+    await promise.catch(() => {});
+
+    expect(promise).rejects.toMatchObject({ options: { href: '/nexus' } });
   });
 
-  expect(outcome.value).toBe('/nexus');
   expect(outcome.cookies['en_session']).toContainKeys(['accessToken', 'refreshToken', 'sessionID']);
 });
 
 test('it lands a caller with no redirect target on the avatar roster', async () => {
   await db.userCollection.create({ email: 'default-landing@vers.test', password: 'password123' });
 
-  const outcome = await withRequestContext({}, async () => {
-    const redirectHref = await runLogin(
+  await withRequestContext({}, async () => {
+    const promise = runLogin(
       buildFormData({ email: 'default-landing@vers.test', password: 'password123' }),
-    )
-      .then(() => null)
-      .catch((error: unknown) => (isRedirect(error) ? error.options.href : null));
+    );
 
-    return redirectHref;
+    // nothing follows, but the callback must still settle the promise it constructs
+    await promise.catch(() => {});
+
+    expect(promise).rejects.toMatchObject({ options: { href: '/respite' } });
   });
-
-  expect(outcome.value).toBe('/respite');
 });

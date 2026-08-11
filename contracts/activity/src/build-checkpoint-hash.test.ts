@@ -92,5 +92,7 @@ test('it derives the frozen canonical digest for a known input', () => {
     version: 1,
   });
 
-  expect(hash).toBe('c51bad8035095b3d570dd972bd05c7a686b403b2f7db11dbe0fc83e6e9e4150e');
+  expect(hash).toMatchInlineSnapshot(
+    `"c51bad8035095b3d570dd972bd05c7a686b403b2f7db11dbe0fc83e6e9e4150e"`,
+  );
 });

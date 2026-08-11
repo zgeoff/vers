@@ -1,8 +1,8 @@
 import { expect, test } from 'bun:test';
-import { isRedirect } from '@tanstack/react-router';
 import { buildContractMock } from '@vers/client-test-utils/orpc';
 import { userContract } from '@vers/contract-user';
 import * as db from '@vers/mock-services/db';
+import invariant from 'tiny-invariant';
 import { HONEYPOT_FIELD_NAME } from '../../lib/auth/honeypot-field-names';
 import { SERVICE_URLS } from '../../lib/rpc/service-urls';
 import { server } from '../../mocks/node';
@@ -42,9 +42,7 @@ test('it rejects a submission with a filled-in honeypot field', async () => {
     () => runOnboarding(formData),
   );
 
-  if (!(outcome.value instanceof Response)) {
-    throw new Error('expected a Response');
-  }
+  invariant(outcome.value instanceof Response, 'expected a Response');
 
   expect(outcome.value.status).toBe(400);
 });
@@ -64,9 +62,7 @@ test('it reports field errors for a mismatched password confirmation', async () 
       ),
   );
 
-  if (outcome.value instanceof Response) {
-    throw new TypeError('expected a submission result');
-  }
+  invariant(!(outcome.value instanceof Response), 'expected a submission result');
 
   expect(outcome.value.error).toStrictEqual({ confirmPassword: ['The passwords must match'] });
 });
@@ -88,9 +84,7 @@ test('it reports a field error for a username already in use', async () => {
       ),
   );
 
-  if (outcome.value instanceof Response) {
-    throw new TypeError('expected a submission result');
-  }
+  invariant(!(outcome.value instanceof Response), 'expected a submission result');
 
   expect(outcome.value.error).toStrictEqual({
     username: ['A user with that username already exists'],
@@ -124,9 +118,7 @@ test('it reports a generic form-level error when account creation fails', async 
       ),
   );
 
-  if (outcome.value instanceof Response) {
-    throw new TypeError('expected a submission result');
-  }
+  invariant(!(outcome.value instanceof Response), 'expected a submission result');
 
   expect(outcome.value.error).toStrictEqual({ '': ['Something went wrong. Please try again.'] });
 });
@@ -135,7 +127,7 @@ test('it creates the account, signs the caller in, and clears the onboarding ses
   const outcome = await withRequestContext(
     { cookies: { en_verification: { 'onboarding#email': 'onboard-success@vers.test' } } },
     async () => {
-      const redirectHref = await runOnboarding(
+      const promise = runOnboarding(
         buildFormData({
           agreeToTerms: 'on',
           confirmPassword: 'password123',
@@ -143,15 +135,15 @@ test('it creates the account, signs the caller in, and clears the onboarding ses
           password: 'password123',
           username: 'onboard_success_user',
         }),
-      )
-        .then(() => null)
-        .catch((error: unknown) => (isRedirect(error) ? error.options.href : null));
+      );
 
-      return redirectHref;
+      // the outer cookie/db reads must observe the rejected call's account-creation settled
+      await promise.catch(() => {});
+
+      expect(promise).rejects.toMatchObject({ options: { href: '/respite' } });
     },
   );
 
-  expect(outcome.value).toBe('/respite');
   expect(outcome.cookies['en_session']).toContainKeys(['accessToken', 'refreshToken', 'sessionID']);
   expect(outcome.cookies['en_verification']).toStrictEqual({});
 

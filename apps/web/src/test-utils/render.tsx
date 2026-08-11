@@ -1,3 +1,4 @@
+import type { QueryClient } from '@tanstack/react-query';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { render as renderRTL } from '@testing-library/react';
 import type { ReactElement } from 'react';
@@ -5,6 +6,10 @@ import { cloneElement } from 'react';
 import { buildQueryClient } from '../lib/query/build-query-client';
 
 type RenderResult = ReturnType<typeof renderRTL> & {
+  /**
+   * The query client backing the rendered tree, for non-DOM waits on server-cache state.
+   */
+  readonly queryClient: QueryClient;
   /**
    * Re-renders the same tree in place — a fresh element over the same query client — so effects
    * re-run against updated ambient test state without remounting.
@@ -27,5 +32,5 @@ export function render(ui: Readonly<ReactElement>): RenderResult {
     );
   };
 
-  return Object.assign(rendered, { refresh });
+  return Object.assign(rendered, { queryClient, refresh });
 }

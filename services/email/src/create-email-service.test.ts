@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { expect, onTestFinished, test } from 'bun:test';
 import { createEmailClient } from '@vers/email';
 import { sentEmails } from '@vers/email/mocks';
 import { createDatabaseFromTemplate } from '@vers/service-test-utils/bun';
@@ -7,6 +7,8 @@ import { createEmailService } from './create-email-service';
 
 test('it boots from env.DATABASE_URL when no queue connection string is injected', async () => {
   const emailService = await createEmailService();
+
+  onTestFinished(() => emailService.queue.stop());
 
   expect(emailService.service.env.DATABASE_URL).toStartWith('postgres://');
 });

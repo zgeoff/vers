@@ -29,6 +29,7 @@
     "@types/bun": "catalog:",
     "@types/node": "catalog:",
     "@vers/contract-activity": "workspace:*",
+    "@vers/test-utils": "workspace:*",
     "@zgeoff/bun-test-extended": "catalog:",
     "kysely-codegen": "catalog:",
     "kysely-ctl": "catalog:",

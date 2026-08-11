@@ -1,16 +1,42 @@
 import { expect, test } from 'bun:test';
 import { createMockReplaySegment } from './create-mock-replay-segment';
 
-test('it builds a genesis segment whose activity seed matches the chain genesis', () => {
+test('it builds a default genesis segment', () => {
   const segment = createMockReplaySegment();
 
-  expect(segment.activity.seed).toBe(segment.chain.genesisSeed);
-  expect(segment.activity.seed).toBe(segment.chain.verifiedNextSeed);
-  expect(segment.activity.startChainIndex).toBe(0);
-  expect(segment.checkpoints).toBeEmpty();
+  expect(segment).toStrictEqual({
+    activity: {
+      appendedHead: 0,
+      appendedTimeMs: 0,
+      avatarID: expect.toBeString(),
+      buildSnapshot: { level: 1, xp: 0 },
+      contentVersion: '0.0.0-dev',
+      encounterNode: { difficulty: 1 },
+      id: expect.toStartWith('act_'),
+      keyVersion: 1,
+      scopeID: expect.toBeString(),
+      scopeType: 'world_map_node',
+      secretRef: 'worldmap',
+      secretVersion: 1,
+      seed: expect.toBeString(),
+      settledXP: 0,
+      simVersion: 'test-engine-hash',
+      startChainIndex: 0,
+      status: 'active',
+    },
+    chain: {
+      genesisSeed: segment.activity.seed,
+      verifiedChainIndex: 0,
+      verifiedNextSeed: segment.activity.seed,
+    },
+    checkpoints: [],
+    prevHash: expect.toBeString(),
+    seed: segment.activity.seed,
+    verifiedHead: 0,
+  });
 });
 
-test('it keeps explicit overrides', () => {
+test('it applies overrides on top of the defaults', () => {
   const segment = createMockReplaySegment({ verifiedHead: 3 });
 
   expect(segment.verifiedHead).toBe(3);

@@ -1,32 +1,15 @@
-import { expect, onTestFinished, test } from 'bun:test';
+import { expect, test } from 'bun:test';
+import { updateEnv } from '@vers/test-utils/bun';
 import { requireEnvVar } from './require-env-var';
 
 test('it returns the value of a set environment variable', () => {
-  const previous = process.env['SIM_ENGINE_HASH_TEST_VAR'];
-
-  process.env['SIM_ENGINE_HASH_TEST_VAR'] = 'abc123';
-
-  onTestFinished(() => {
-    if (previous === undefined) {
-      delete process.env['SIM_ENGINE_HASH_TEST_VAR'];
-    } else {
-      process.env['SIM_ENGINE_HASH_TEST_VAR'] = previous;
-    }
-  });
+  updateEnv('SIM_ENGINE_HASH_TEST_VAR', 'abc123');
 
   expect(requireEnvVar('SIM_ENGINE_HASH_TEST_VAR', 'needed for this test')).toBe('abc123');
 });
 
 test('it throws naming the variable and the reason when unset', () => {
-  const previous = process.env['SIM_ENGINE_HASH_TEST_VAR'];
-
-  delete process.env['SIM_ENGINE_HASH_TEST_VAR'];
-
-  onTestFinished(() => {
-    if (previous !== undefined) {
-      process.env['SIM_ENGINE_HASH_TEST_VAR'] = previous;
-    }
-  });
+  updateEnv('SIM_ENGINE_HASH_TEST_VAR', undefined);
 
   expect(() =>
     requireEnvVar('SIM_ENGINE_HASH_TEST_VAR', 'needed for this test'),
@@ -34,17 +17,7 @@ test('it throws naming the variable and the reason when unset', () => {
 });
 
 test('it throws for an empty-string value', () => {
-  const previous = process.env['SIM_ENGINE_HASH_TEST_VAR'];
-
-  process.env['SIM_ENGINE_HASH_TEST_VAR'] = '';
-
-  onTestFinished(() => {
-    if (previous === undefined) {
-      delete process.env['SIM_ENGINE_HASH_TEST_VAR'];
-    } else {
-      process.env['SIM_ENGINE_HASH_TEST_VAR'] = previous;
-    }
-  });
+  updateEnv('SIM_ENGINE_HASH_TEST_VAR', '');
 
   expect(() => requireEnvVar('SIM_ENGINE_HASH_TEST_VAR', 'needed for this test')).toThrow();
 });

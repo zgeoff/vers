@@ -1,5 +1,4 @@
 import { expect, test } from 'bun:test';
-import assert from 'node:assert/strict';
 import { parseScopeSecretRoots } from './parse-scope-secret-roots';
 
 const WORLDMAP_ROOT = '11'.repeat(32);
@@ -60,15 +59,13 @@ test('it never echoes root material in a rejection message', () => {
     worldmap: { current: 1, roots: { 1: 'not-hex-but-secret-shaped' } },
   });
 
-  let thrown: unknown;
+  expect(() => parseScopeSecretRoots(payload)).toThrowWithMessage(
+    Error,
+    /scope "worldmap" secret version 1 is not 64-character hex/,
+  );
 
-  try {
-    parseScopeSecretRoots(payload);
-  } catch (error) {
-    thrown = error;
-  }
-
-  assert.ok(thrown instanceof Error);
-
-  expect(thrown.message).not.toInclude('not-hex-but-secret-shaped');
+  expect(() => parseScopeSecretRoots(payload)).not.toThrowWithMessage(
+    Error,
+    /not-hex-but-secret-shaped/,
+  );
 });
