@@ -1,3 +1,4 @@
+// oxlint-disable-next-line no-restricted-imports -- the one sanctioned async_hooks import: the namespace form defers the browser stub's throwing property access to the accessor's first call
 import * as asyncHooks from 'node:async_hooks';
 import type { TraceContext } from '@vers/trace';
 
