@@ -1,8 +1,7 @@
 import { expect, test } from 'bun:test';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import CameraControlsImpl from 'camera-controls';
 import { act } from 'react';
-import { Object3D, PerspectiveCamera } from 'three';
+import { Object3D, Spherical } from 'three';
 import invariant from 'tiny-invariant';
 import {
   CAMERA_ROTATION_X,
@@ -15,25 +14,6 @@ import { useWorldmapStore } from '../state/use-worldmap-store';
 import { createMockWorldMapNode } from '../test-utils/factories/create-mock-world-map-node';
 import { IsometricCamera } from './isometric-camera';
 
-const POLAR_ANGLE = -CAMERA_ROTATION_X;
-const AZIMUTH_ANGLE = CAMERA_ROTATION_Y;
-
-/**
- * The camera position an isolated `camera-controls` instance settles at when pinned to the rig's
- * fixed isometric angle and dollied to `distance`, computed through the same real library
- * `IsometricCamera` drives rather than hand-derived trigonometry.
- */
-function buildRestPosition(distance: number) {
-  const camera = new PerspectiveCamera();
-  const controls = new CameraControlsImpl(camera);
-
-  void controls.rotateTo(AZIMUTH_ANGLE, POLAR_ANGLE, false);
-  void controls.dollyTo(distance, false);
-  controls.update(1 / 60);
-
-  return camera.position.clone();
-}
-
 test('it mounts the camera pinned to the isometric angle at the minimum zoom distance', async () => {
   const renderer = await ReactThreeTestRenderer.create(<IsometricCamera />);
 
@@ -43,11 +23,13 @@ test('it mounts the camera pinned to the isometric angle at the minimum zoom dis
 
   invariant(camera, 'the camera mounts synchronously with the component');
 
-  const expected = buildRestPosition(ZOOM_MIN_DISTANCE);
+  // the controls' target starts at the origin, so the camera's position in spherical terms is its
+  // dolly distance plus the two pinned angles: phi the tilt down from overhead, theta the turn
+  const spherical = new Spherical().setFromVector3(camera.position);
 
-  expect(camera.position.x).toBeCloseTo(expected.x, 5);
-  expect(camera.position.y).toBeCloseTo(expected.y, 5);
-  expect(camera.position.z).toBeCloseTo(expected.z, 5);
+  expect(spherical.radius).toBeCloseTo(ZOOM_MIN_DISTANCE, 5);
+  expect(spherical.phi).toBeCloseTo(-CAMERA_ROTATION_X, 5);
+  expect(spherical.theta).toBeCloseTo(CAMERA_ROTATION_Y, 5);
 });
 
 test("it glides the camera to center a newly selected node's ground position", async () => {
@@ -138,9 +120,11 @@ test('it settles at the maximum zoom distance when a wheel dolly pushes far past
 
   invariant(camera, 'the camera mounts synchronously with the component');
 
-  const expected = buildRestPosition(ZOOM_MAX_DISTANCE);
+  // the dolly moves the camera along its view axis, so the target stays at the origin and the
+  // settled position's spherical radius is the effective dolly distance
+  const spherical = new Spherical().setFromVector3(camera.position);
 
-  expect(camera.position.x).toBeCloseTo(expected.x, 1);
-  expect(camera.position.y).toBeCloseTo(expected.y, 1);
-  expect(camera.position.z).toBeCloseTo(expected.z, 1);
+  expect(spherical.radius).toBeCloseTo(ZOOM_MAX_DISTANCE, 1);
+  expect(spherical.phi).toBeCloseTo(-CAMERA_ROTATION_X, 5);
+  expect(spherical.theta).toBeCloseTo(CAMERA_ROTATION_Y, 5);
 });
