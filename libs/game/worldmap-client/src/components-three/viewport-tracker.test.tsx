@@ -6,19 +6,13 @@ import { useWorldmapStore } from '../state/use-worldmap-store';
 import { buildViewportFromCamera } from '../utils/build-viewport-from-camera';
 import { ViewportTracker } from './viewport-tracker';
 
-function createGroundCamera() {
+test('it writes the viewport once when a positioned camera first reports its bounds', async () => {
   const camera = new PerspectiveCamera(90, 1, 0.1, 1000);
 
   camera.position.set(0, 10, 0);
   camera.rotation.set(-Math.PI / 2, 0, 0);
   camera.updateProjectionMatrix();
   camera.updateMatrixWorld(true);
-
-  return camera;
-}
-
-test('it writes the viewport once when a positioned camera first reports its bounds', async () => {
-  const camera = createGroundCamera();
 
   setCamera(camera);
 
@@ -41,7 +35,12 @@ test('it writes the viewport once when a positioned camera first reports its bou
 });
 
 test('it writes nothing when the camera moves within the same quantized cell bounds', async () => {
-  const camera = createGroundCamera();
+  const camera = new PerspectiveCamera(90, 1, 0.1, 1000);
+
+  camera.position.set(0, 10, 0);
+  camera.rotation.set(-Math.PI / 2, 0, 0);
+  camera.updateProjectionMatrix();
+  camera.updateMatrixWorld(true);
 
   setCamera(camera);
 
@@ -71,7 +70,12 @@ test('it writes nothing when the camera moves within the same quantized cell bou
 });
 
 test('it writes again once the camera crosses into new quantized cell bounds', async () => {
-  const camera = createGroundCamera();
+  const camera = new PerspectiveCamera(90, 1, 0.1, 1000);
+
+  camera.position.set(0, 10, 0);
+  camera.rotation.set(-Math.PI / 2, 0, 0);
+  camera.updateProjectionMatrix();
+  camera.updateMatrixWorld(true);
 
   setCamera(camera);
 

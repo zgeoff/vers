@@ -1,40 +1,153 @@
 import { expect, test } from 'bun:test';
+import type { WorldEdge } from '@vers/worldmap-core';
 import { toNodeID } from '@vers/worldmap-core';
+import invariant from 'tiny-invariant';
 import { buildViewportGraph } from './build-viewport-graph';
 
-const SEED = 7;
+test('it pins the frozen golden graph for a hand-written viewport', () => {
+  expect(buildViewportGraph(7, { maxCX: 1, maxCY: 1, minCX: 0, minCY: 0 })).toMatchInlineSnapshot(`
+    {
+      "edges": {
+        "0_0|0_1": {
+          "end": [
+            0.8552083996961262,
+            1.3166931894607843,
+          ],
+          "id": "0_0|0_1",
+          "start": [
+            0.1343020571395755,
+            0.044972253870219,
+          ],
+        },
+        "0_0|1_0": {
+          "end": [
+            1.5949877538529031,
+            0.15777481151744724,
+          ],
+          "id": "0_0|1_0",
+          "start": [
+            0.1343020571395755,
+            0.044972253870219,
+          ],
+        },
+        "0_1|1_0": {
+          "end": [
+            0.8552083996961262,
+            1.3166931894607843,
+          ],
+          "id": "0_1|1_0",
+          "start": [
+            1.5949877538529031,
+            0.15777481151744724,
+          ],
+        },
+        "0_1|1_1": {
+          "end": [
+            2.563182204188331,
+            1.6971185925416647,
+          ],
+          "id": "0_1|1_1",
+          "start": [
+            0.8552083996961262,
+            1.3166931894607843,
+          ],
+        },
+        "1_0|1_1": {
+          "end": [
+            2.563182204188331,
+            1.6971185925416647,
+          ],
+          "id": "1_0|1_1",
+          "start": [
+            1.5949877538529031,
+            0.15777481151744724,
+          ],
+        },
+      },
+      "nodes": {
+        "0_0": {
+          "coord": [
+            0,
+            0,
+          ],
+          "difficulty": 0,
+          "id": "0_0",
+          "position": [
+            0.1343020571395755,
+            0.044972253870219,
+          ],
+        },
+        "0_1": {
+          "coord": [
+            0,
+            1,
+          ],
+          "difficulty": 1,
+          "id": "0_1",
+          "position": [
+            0.8552083996961262,
+            1.3166931894607843,
+          ],
+        },
+        "1_0": {
+          "coord": [
+            1,
+            0,
+          ],
+          "difficulty": 1,
+          "id": "1_0",
+          "position": [
+            1.5949877538529031,
+            0.15777481151744724,
+          ],
+        },
+        "1_1": {
+          "coord": [
+            1,
+            1,
+          ],
+          "difficulty": 2,
+          "id": "1_1",
+          "position": [
+            2.563182204188331,
+            1.6971185925416647,
+          ],
+        },
+      },
+    }
+  `);
+});
 
 test('it carries every cell inside the viewport as a node', () => {
-  const graph = buildViewportGraph(SEED, { maxCX: 2, maxCY: 2, minCX: -2, minCY: -2 });
+  const graph = buildViewportGraph(7, { maxCX: 2, maxCY: 2, minCX: -2, minCY: -2 });
 
   expect(Object.keys(graph.nodes)).toHaveLength(25);
 });
 
 test('it excludes a cell outside the viewport', () => {
-  const graph = buildViewportGraph(SEED, { maxCX: 2, maxCY: 2, minCX: -2, minCY: -2 });
+  const graph = buildViewportGraph(7, { maxCX: 2, maxCY: 2, minCX: -2, minCY: -2 });
 
   expect(graph.nodes[toNodeID(3, 0)]).toBeUndefined();
 });
 
 test('it includes the origin node when the viewport covers it', () => {
-  const graph = buildViewportGraph(SEED, { maxCX: 2, maxCY: 2, minCX: -2, minCY: -2 });
+  const graph = buildViewportGraph(7, { maxCX: 2, maxCY: 2, minCX: -2, minCY: -2 });
 
   expect(graph.nodes[toNodeID(0, 0)]).toBeDefined();
 });
 
 test('it lands every edge on two rendered nodes', () => {
-  const graph = buildViewportGraph(SEED, { maxCX: 3, maxCY: 3, minCX: -3, minCY: -3 });
+  const graph = buildViewportGraph(7, { maxCX: 3, maxCY: 3, minCX: -3, minCY: -3 });
 
-  for (const edge of Object.values(graph.edges)) {
+  expect(Object.values(graph.edges)).toSatisfyAll((edge: WorldEdge) => {
     const [aID = '', bID = ''] = edge.id.split('|');
 
-    expect(graph.nodes[aID]).toBeDefined();
-    expect(graph.nodes[bID]).toBeDefined();
-  }
+    return graph.nodes[aID] !== undefined && graph.nodes[bID] !== undefined;
+  });
 });
 
 test('it connects the origin to at least one neighbour', () => {
-  const graph = buildViewportGraph(SEED, { maxCX: 3, maxCY: 3, minCX: -3, minCY: -3 });
+  const graph = buildViewportGraph(7, { maxCX: 3, maxCY: 3, minCX: -3, minCY: -3 });
   const originID = toNodeID(0, 0);
 
   const incident = Object.values(graph.edges).filter((edge) =>
@@ -47,28 +160,30 @@ test('it connects the origin to at least one neighbour', () => {
 test('it is deterministic for a seed and viewport', () => {
   const viewport = { maxCX: 2, maxCY: 2, minCX: -2, minCY: -2 };
 
-  expect(buildViewportGraph(SEED, viewport)).toStrictEqual(buildViewportGraph(SEED, viewport));
+  expect(buildViewportGraph(7, viewport)).toStrictEqual(buildViewportGraph(7, viewport));
 });
 
 test('it lays nodes out differently under a different seed', () => {
   const id = toNodeID(1, 0);
   const viewport = { maxCX: 2, maxCY: 2, minCX: -2, minCY: -2 };
+  const first = buildViewportGraph(7, viewport).nodes[id];
+  const second = buildViewportGraph(8, viewport).nodes[id];
 
-  expect(buildViewportGraph(SEED, viewport).nodes[id]?.position).not.toStrictEqual(
-    buildViewportGraph(SEED + 1, viewport).nodes[id]?.position,
-  );
+  invariant(first && second, 'both seeds generate the cell inside the viewport');
+
+  expect(first.position).not.toStrictEqual(second.position);
 });
 
 test('it carries the same node whether a viewport crosses a chunk boundary or not', () => {
   const id = toNodeID(15, 15);
-  const withinChunk = buildViewportGraph(SEED, { maxCX: 15, maxCY: 15, minCX: 0, minCY: 0 });
-  const acrossChunks = buildViewportGraph(SEED, { maxCX: 20, maxCY: 20, minCX: 10, minCY: 10 });
+  const withinChunk = buildViewportGraph(7, { maxCX: 15, maxCY: 15, minCX: 0, minCY: 0 });
+  const acrossChunks = buildViewportGraph(7, { maxCX: 20, maxCY: 20, minCX: 10, minCY: 10 });
 
   expect(withinChunk.nodes[id]).toStrictEqual(acrossChunks.nodes[id]);
 });
 
 test('it carries a viewport entirely inside a single negative chunk', () => {
-  const graph = buildViewportGraph(SEED, { maxCX: -10, maxCY: -10, minCX: -12, minCY: -12 });
+  const graph = buildViewportGraph(7, { maxCX: -10, maxCY: -10, minCX: -12, minCY: -12 });
 
   expect(Object.keys(graph.nodes)).toHaveLength(9);
 });

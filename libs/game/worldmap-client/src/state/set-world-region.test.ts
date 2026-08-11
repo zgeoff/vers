@@ -3,6 +3,8 @@ import { renderHook } from '@testing-library/react';
 import { createMockWorldMapEdge } from '../test-utils/factories/create-mock-world-map-edge';
 import { createMockWorldMapNode } from '../test-utils/factories/create-mock-world-map-node';
 import type { WorldGraph } from '../types';
+import { setSelectedNode } from './set-selected-node';
+import { setViewport } from './set-viewport';
 import { setWorldRegion } from './set-world-region';
 import { useWorldmapStore } from './use-worldmap-store';
 
@@ -43,7 +45,8 @@ test("it refreshes the world graph without resetting the player's selection or v
 
   const viewport = { maxCX: 8, maxCY: 8, minCX: -8, minCY: -8 };
 
-  useWorldmapStore.setState({ selectedNode: node, viewport });
+  setSelectedNode(node);
+  setViewport(viewport);
 
   const nextGraph: WorldGraph = { edges: {}, nodes: {} };
 
@@ -63,12 +66,8 @@ test('it resets the selection and viewport for a new key even when the graph is 
   };
 
   setWorldRegion('avatar-a', graph, null);
-
-  useWorldmapStore.setState({
-    selectedNode: node,
-    viewport: { maxCX: 8, maxCY: 8, minCX: -8, minCY: -8 },
-  });
-
+  setSelectedNode(node);
+  setViewport({ maxCX: 8, maxCY: 8, minCX: -8, minCY: -8 });
   setWorldRegion('avatar-b', graph, null);
 
   expect(useWorldmapStore.getState().regionKey).toBe('avatar-b');

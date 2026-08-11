@@ -17,13 +17,17 @@ import { renderHook } from '../../test-utils/render-hook';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { useAvatarRegionGraph } from './use-avatar-region-graph';
 
-const INITIAL_VIEWPORT = { maxCX: 24, maxCY: 24, minCX: -24, minCY: -24 };
-
 test("it builds the active avatar's region graph and selects its origin node", async () => {
   const signedIn = await createSignedInUser();
   const avatar = await createActiveAvatar({ seed: 111, userID: signedIn.userID });
 
-  const expected = buildViewportGraph(avatar.seed, INITIAL_VIEWPORT);
+  const expected = buildViewportGraph(avatar.seed, {
+    maxCX: 24,
+    maxCY: 24,
+    minCX: -24,
+    minCY: -24,
+  });
+
   const expectedOrigin = expected.nodes[toNodeID(0, 0)];
 
   invariant(expectedOrigin, 'the initial viewport always contains its origin cell');
@@ -42,7 +46,7 @@ test("it builds the active avatar's region graph and selects its origin node", a
     });
 
     expect(hook.result.current.worldGraph).toStrictEqual(expected);
-    expect(hook.result.current.selection.node?.id).toBe(toNodeID(0, 0));
+    expect(hook.result.current.selection.node).toMatchObject({ id: toNodeID(0, 0) });
   });
 });
 
@@ -51,8 +55,20 @@ test('it rebuilds the graph and resets the selection when the active avatar chan
   const first = await createActiveAvatar({ seed: 333, userID: signedIn.userID });
   const second = await db.avatarCollection.create({ seed: 444, userID: signedIn.userID });
 
-  const firstExpected = buildViewportGraph(first.seed, INITIAL_VIEWPORT);
-  const secondExpected = buildViewportGraph(second.seed, INITIAL_VIEWPORT);
+  const firstExpected = buildViewportGraph(first.seed, {
+    maxCX: 24,
+    maxCY: 24,
+    minCX: -24,
+    minCY: -24,
+  });
+
+  const secondExpected = buildViewportGraph(second.seed, {
+    maxCX: 24,
+    maxCY: 24,
+    minCX: -24,
+    minCY: -24,
+  });
+
   const firstOrigin = firstExpected.nodes[toNodeID(0, 0)];
   const secondOrigin = secondExpected.nodes[toNodeID(0, 0)];
 
@@ -110,7 +126,7 @@ test('it refreshes the graph without resetting the selection when the viewport m
     });
 
     await waitFor(() => {
-      expect(hook.result.current.selection.node?.id).toBe(toNodeID(0, 0));
+      expect(hook.result.current.selection.node).toMatchObject({ id: toNodeID(0, 0) });
     });
 
     const movedViewport = { maxCX: 40, maxCY: 10, minCX: 20, minCY: -10 };
@@ -133,7 +149,7 @@ test('it refreshes the graph without resetting the selection when the viewport m
     });
 
     expect(hook.result.current.worldGraph).toStrictEqual(expectedMovedGraph);
-    expect(hook.result.current.selection.node?.id).toBe(toNodeID(0, 0));
+    expect(hook.result.current.selection.node).toMatchObject({ id: toNodeID(0, 0) });
   });
 });
 
@@ -141,9 +157,12 @@ test('it keeps the same graph across a viewport move inside the same chunks', as
   const signedIn = await createSignedInUser();
   const avatar = await createActiveAvatar({ seed: 666, userID: signedIn.userID });
 
-  const expectedInitialOrigin = buildViewportGraph(avatar.seed, INITIAL_VIEWPORT).nodes[
-    toNodeID(0, 0)
-  ];
+  const expectedInitialOrigin = buildViewportGraph(avatar.seed, {
+    maxCX: 24,
+    maxCY: 24,
+    minCX: -24,
+    minCY: -24,
+  }).nodes[toNodeID(0, 0)];
 
   invariant(expectedInitialOrigin, 'the initial viewport always contains its origin cell');
 
@@ -199,7 +218,13 @@ test('it selects the new origin on an avatar switch even when the viewport had p
 
   const second = await db.avatarCollection.create({ seed: 444, userID: signedIn.userID });
 
-  const secondExpected = buildViewportGraph(second.seed, INITIAL_VIEWPORT);
+  const secondExpected = buildViewportGraph(second.seed, {
+    maxCX: 24,
+    maxCY: 24,
+    minCX: -24,
+    minCY: -24,
+  });
+
   const secondOrigin = secondExpected.nodes[toNodeID(0, 0)];
 
   invariant(secondOrigin, 'the initial viewport always contains its origin cell');
@@ -212,7 +237,7 @@ test('it selects the new origin on an avatar switch even when the viewport had p
     });
 
     await waitFor(() => {
-      expect(hook.result.current.selection.node?.id).toBe(toNodeID(0, 0));
+      expect(hook.result.current.selection.node).toMatchObject({ id: toNodeID(0, 0) });
     });
 
     const farViewport = { maxCX: 800, maxCY: 800, minCX: 760, minCY: 760 };
