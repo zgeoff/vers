@@ -58,6 +58,7 @@ interface RevealedNode {
 }
 
 interface GetRevealedNodesResult {
+  readonly completedNodeIDs: Array<string>;
   readonly contentVersion: string;
   readonly nodes: Array<RevealedNode>;
 }
@@ -71,7 +72,9 @@ interface GetRevealedNodesResult {
  *
  * A grant key that names no addressable world-map cell contributes no source rather than failing the
  * query — a grant kind sharing the table with an unrelated future feature, or a row written before
- * the coordinate bounds existed.
+ * the coordinate bounds existed. `completedNodeIDs` carries every addressable grant key regardless
+ * of viewport, the set the client mirrors `startActivity`'s own selectable-node gate against — only
+ * `nodes` is bounded by the viewport.
  */
 export async function getRevealedNodes(
   deps: GetRevealedNodesDeps,
@@ -100,12 +103,14 @@ export async function getRevealedNodes(
     .execute();
 
   const sources: Array<RevealSource> = [];
+  const completedNodeIDs: Array<string> = [];
 
   for (const grant of grants) {
     const coord = findCellCoord(grant.key);
 
     if (coord !== undefined && canEncodeMortonKey(coord)) {
       sources.push({ coord, radius: REVEAL_RADIUS });
+      completedNodeIDs.push(grant.key);
     }
   }
 
@@ -116,11 +121,12 @@ export async function getRevealedNodes(
   invariant(contentVersion !== undefined, 'content registry has no current version');
 
   // a viewport the discs never reach needs neither the content document nor the avatar's scope
-  // secret, so a fog-only query costs one grants read and no keys-service round trip
+  // secret, so a fog-only query costs one grants read and no keys-service round trip; the
+  // completed set is never viewport-clipped, so it is still returned in full
   if (revealedCells.length === 0) {
     recordRevealQuery({ cellCount: 0, sourceCount: grants.length });
 
-    return { contentVersion, nodes: [] };
+    return { completedNodeIDs, contentVersion, nodes: [] };
   }
 
   const document = await deps.loadContentDocument(contentVersion);
@@ -152,5 +158,5 @@ export async function getRevealedNodes(
 
   recordRevealQuery({ cellCount: nodes.length, sourceCount: grants.length });
 
-  return { contentVersion, nodes };
+  return { completedNodeIDs, contentVersion, nodes };
 }

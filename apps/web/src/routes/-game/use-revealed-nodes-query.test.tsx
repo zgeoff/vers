@@ -20,7 +20,7 @@ test('it queries revealed nodes for a chunk-aligned viewport once the camera rep
     mockActivityService.getRevealedNodes.handler((opts) => {
       track(opts.input);
 
-      return { contentVersion: 'v1', nodes: [] };
+      return { completedNodeIDs: [], contentVersion: 'v1', nodes: [] };
     }),
   );
 
@@ -51,7 +51,7 @@ test('it queries nothing before the camera has reported a viewport', async () =>
     mockActivityService.getRevealedNodes.handler((opts) => {
       track(opts.input);
 
-      return { contentVersion: 'v1', nodes: [] };
+      return { completedNodeIDs: [], contentVersion: 'v1', nodes: [] };
     }),
   );
 

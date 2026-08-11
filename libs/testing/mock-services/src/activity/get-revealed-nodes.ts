@@ -22,5 +22,5 @@ export const getRevealedNodes = os.getRevealedNodes.handler((opts) => {
     throw opts.errors.NOT_FOUND({ data: {} });
   }
 
-  return { contentVersion: db.MOCK_CURRENT_CONTENT_VERSION, nodes: [] };
+  return { completedNodeIDs: [], contentVersion: db.MOCK_CURRENT_CONTENT_VERSION, nodes: [] };
 });
