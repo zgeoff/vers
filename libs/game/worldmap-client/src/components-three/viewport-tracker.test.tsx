@@ -24,8 +24,10 @@ test('it writes the viewport once when a positioned camera first reports its bou
 
   let writeCount = 0;
 
-  const unsubscribe = useWorldmapStore.subscribe(() => {
-    writeCount += 1;
+  const unsubscribe = useWorldmapStore.subscribe((state, previousState) => {
+    if (state.viewport !== previousState.viewport) {
+      writeCount += 1;
+    }
   });
 
   const renderer = await ReactThreeTestRenderer.create(<ViewportTracker />);
@@ -50,8 +52,10 @@ test('it writes nothing when the camera moves within the same quantized cell bou
   const writtenViewport = useWorldmapStore.getState().viewport;
   let writeCount = 0;
 
-  const unsubscribe = useWorldmapStore.subscribe(() => {
-    writeCount += 1;
+  const unsubscribe = useWorldmapStore.subscribe((state, previousState) => {
+    if (state.viewport !== previousState.viewport) {
+      writeCount += 1;
+    }
   });
 
   camera.position.x += 0.001;
@@ -77,8 +81,10 @@ test('it writes again once the camera crosses into new quantized cell bounds', a
 
   let writeCount = 0;
 
-  const unsubscribe = useWorldmapStore.subscribe(() => {
-    writeCount += 1;
+  const unsubscribe = useWorldmapStore.subscribe((state, previousState) => {
+    if (state.viewport !== previousState.viewport) {
+      writeCount += 1;
+    }
   });
 
   camera.position.x += 100;

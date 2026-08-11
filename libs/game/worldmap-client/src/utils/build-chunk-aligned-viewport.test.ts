@@ -1,4 +1,5 @@
 import { expect, test } from 'bun:test';
+import { REVEAL_VIEWPORT_CELL_CAP } from '@vers/contract-activity';
 import { WORLD_COORD_MAX, WORLD_COORD_MIN } from '@vers/worldmap-core';
 import { buildChunkAlignedViewport } from './build-chunk-aligned-viewport';
 
@@ -46,4 +47,35 @@ test('it clamps the aligned viewport to the negative coordinate range', () => {
 
   expect(viewport.minCX).toBe(WORLD_COORD_MIN);
   expect(viewport.minCY).toBe(WORLD_COORD_MIN);
+});
+
+test('it shrinks an absurdly wide viewport to fit the cell cap centered on the original box', () => {
+  // the footprint a pathologically wide canvas aspect would produce: enormous on one axis only
+  const viewport = { maxCX: 600, maxCY: 8, minCX: -600, minCY: -8 };
+  const aligned = buildChunkAlignedViewport(viewport);
+  const capped = buildChunkAlignedViewport(viewport, REVEAL_VIEWPORT_CELL_CAP);
+  const cellArea = (capped.maxCX - capped.minCX + 1) * (capped.maxCY - capped.minCY + 1);
+
+  expect(cellArea).toBeLessThanOrEqual(REVEAL_VIEWPORT_CELL_CAP);
+  expect(capped.minCX + capped.maxCX).toBe(aligned.minCX + aligned.maxCX);
+  expect(capped.minCY + capped.maxCY).toBe(aligned.minCY + aligned.maxCY);
+});
+
+test('it shrinks an absurdly tall viewport to fit the cell cap centered on the original box', () => {
+  const viewport = { maxCX: 8, maxCY: 600, minCX: -8, minCY: -600 };
+  const aligned = buildChunkAlignedViewport(viewport);
+  const capped = buildChunkAlignedViewport(viewport, REVEAL_VIEWPORT_CELL_CAP);
+  const cellArea = (capped.maxCX - capped.minCX + 1) * (capped.maxCY - capped.minCY + 1);
+
+  expect(cellArea).toBeLessThanOrEqual(REVEAL_VIEWPORT_CELL_CAP);
+  expect(capped.minCX + capped.maxCX).toBe(aligned.minCX + aligned.maxCX);
+  expect(capped.minCY + capped.maxCY).toBe(aligned.minCY + aligned.maxCY);
+});
+
+test('it leaves a viewport already under the cell cap unshrunk', () => {
+  const viewport = { maxCX: 17, maxCY: 20, minCX: 1, minCY: -1 };
+
+  expect(buildChunkAlignedViewport(viewport, REVEAL_VIEWPORT_CELL_CAP)).toStrictEqual(
+    buildChunkAlignedViewport(viewport),
+  );
 });

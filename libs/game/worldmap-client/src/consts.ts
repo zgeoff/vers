@@ -16,7 +16,8 @@ export const NODE_POSITION_SCALING_FACTOR = 10;
 export const ZOOM_MIN_DISTANCE = 25;
 
 /**
- * Farthest the free camera may dolly out. Playtest-tunable on feel, within the bound that every
- * viewport it produces still fits the reveal query's single-request cell cap.
+ * Farthest the free camera may dolly out. Playtest-tunable on feel: the reveal query independently
+ * shrinks its chunk-aligned viewport to its per-request cell cap, so no zoom distance or canvas
+ * aspect can push a single request past that cap.
  */
 export const ZOOM_MAX_DISTANCE = 120;

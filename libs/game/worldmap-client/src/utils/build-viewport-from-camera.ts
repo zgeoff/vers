@@ -14,6 +14,13 @@ const NDC_CORNERS: ReadonlyArray<readonly [number, number]> = [
   [-1, 1],
 ];
 
+// scratch objects reused across calls: the camera tracker calls this every frame, and per-call
+// construction (a Raycaster allocates its own internal ray and vectors) would churn the frame loop
+// with garbage
+const raycaster = new Raycaster();
+const cornerNDC = new Vector2();
+const hitPoint = new Vector3();
+
 /**
  * Extra cell of margin folded into every side, absorbing per-avatar jitter and the rounding a
  * fractional cell at the frustum's edge takes.
@@ -30,16 +37,14 @@ const HEX_COLUMN_SPACING = HEX_SIZE * Math.sqrt(3);
  * the ground is a broken invariant elsewhere, not input this function itself validates.
  */
 export function buildViewportFromCamera(camera: PerspectiveCamera): Viewport {
-  const raycaster = new Raycaster();
-  const hitPoint = new Vector3();
-
   let minCX = Infinity;
   let maxCX = -Infinity;
   let minCY = Infinity;
   let maxCY = -Infinity;
 
   for (const [ndcX, ndcY] of NDC_CORNERS) {
-    raycaster.setFromCamera(new Vector2(ndcX, ndcY), camera);
+    cornerNDC.set(ndcX, ndcY);
+    raycaster.setFromCamera(cornerNDC, camera);
 
     const hit = raycaster.ray.intersectPlane(GROUND_PLANE, hitPoint);
 

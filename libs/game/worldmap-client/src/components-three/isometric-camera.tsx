@@ -1,5 +1,5 @@
 import { useFrame, useThree } from '@react-three/fiber';
-import { WORLD_COORD_MAX, WORLD_COORD_MIN, toHexPosition } from '@vers/worldmap-core';
+import { JITTER, WORLD_COORD_MAX, WORLD_COORD_MIN, toHexPosition } from '@vers/worldmap-core';
 import CameraControlsImpl from 'camera-controls';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { PerspectiveCamera as PerspectiveCameraImpl } from 'three';
@@ -69,15 +69,31 @@ const worldCornerZs = WORLD_CORNER_CELLS.map(
 );
 
 /**
+ * Scene-unit margin folded into every side of the world boundary: node placement jitters each cell
+ * center by up to the per-axis jitter bound, so without the pad a rim node jittered outward would
+ * sit past the boundary and the ease-back would fight the camera trying to center it.
+ */
+const JITTER_MARGIN = JITTER * NODE_POSITION_SCALING_FACTOR;
+
+/**
  * The box the camera's pan target eases back from at the world's rim: the scene-unit footprint of
- * every cell coordinate the lattice can encode, flattened onto the ground plane. A zero-height box
- * also draws the target back toward the ground whenever a screen-space drag on the tilted camera
- * would otherwise push it off-plane, which keeps the frustum's ground-plane footprint (and so the
- * viewport it drives) tied to the visible zoom range instead of drifting with altitude.
+ * every cell coordinate the lattice can encode, padded by the jitter margin so every jittered node
+ * position stays reachable, flattened onto the ground plane. A zero-height box also draws the
+ * target back toward the ground whenever a screen-space drag on the tilted camera would otherwise
+ * push it off-plane, which keeps the frustum's ground-plane footprint (and so the viewport it
+ * drives) tied to the visible zoom range instead of drifting with altitude.
  */
 const WORLD_BOUNDARY = new Box3(
-  new Vector3(Math.min(...worldCornerXs), 0, Math.min(...worldCornerZs)),
-  new Vector3(Math.max(...worldCornerXs), 0, Math.max(...worldCornerZs)),
+  new Vector3(
+    Math.min(...worldCornerXs) - JITTER_MARGIN,
+    0,
+    Math.min(...worldCornerZs) - JITTER_MARGIN,
+  ),
+  new Vector3(
+    Math.max(...worldCornerXs) + JITTER_MARGIN,
+    0,
+    Math.max(...worldCornerZs) + JITTER_MARGIN,
+  ),
 );
 
 /**

@@ -4,7 +4,12 @@ import CameraControlsImpl from 'camera-controls';
 import { act } from 'react';
 import { Object3D, PerspectiveCamera } from 'three';
 import invariant from 'tiny-invariant';
-import { CAMERA_ROTATION_X, CAMERA_ROTATION_Y, ZOOM_MIN_DISTANCE } from '../consts';
+import {
+  CAMERA_ROTATION_X,
+  CAMERA_ROTATION_Y,
+  ZOOM_MAX_DISTANCE,
+  ZOOM_MIN_DISTANCE,
+} from '../consts';
 import { setSelectedNode } from '../state/set-selected-node';
 import { useWorldmapStore } from '../state/use-worldmap-store';
 import { createMockWorldMapNode } from '../test-utils/factories/create-mock-world-map-node';
@@ -15,15 +20,15 @@ const AZIMUTH_ANGLE = CAMERA_ROTATION_Y;
 
 /**
  * The camera position an isolated `camera-controls` instance settles at when pinned to the rig's
- * fixed isometric angle and dollied to `ZOOM_MIN_DISTANCE`, computed through the same real library
+ * fixed isometric angle and dollied to `distance`, computed through the same real library
  * `IsometricCamera` drives rather than hand-derived trigonometry.
  */
-function buildRestPosition() {
+function buildRestPosition(distance: number) {
   const camera = new PerspectiveCamera();
   const controls = new CameraControlsImpl(camera);
 
   void controls.rotateTo(AZIMUTH_ANGLE, POLAR_ANGLE, false);
-  void controls.dollyTo(ZOOM_MIN_DISTANCE, false);
+  void controls.dollyTo(distance, false);
   controls.update(1 / 60);
 
   return camera.position.clone();
@@ -38,7 +43,7 @@ test('it mounts the camera pinned to the isometric angle at the minimum zoom dis
 
   invariant(camera, 'the camera mounts synchronously with the component');
 
-  const expected = buildRestPosition();
+  const expected = buildRestPosition(ZOOM_MIN_DISTANCE);
 
   expect(camera.position.x).toBeCloseTo(expected.x, 5);
   expect(camera.position.y).toBeCloseTo(expected.y, 5);
@@ -106,4 +111,36 @@ test('it re-centers the camera on the current selection once the scene remounts'
   expect(remountedCamera.position.x).toBeCloseTo(targetedPosition.x, 1);
   expect(remountedCamera.position.y).toBeCloseTo(targetedPosition.y, 1);
   expect(remountedCamera.position.z).toBeCloseTo(targetedPosition.z, 1);
+});
+
+test('it settles at the maximum zoom distance when a wheel dolly pushes far past it', async () => {
+  const canvasRef: { current: HTMLCanvasElement | null } = { current: null };
+
+  const renderer = await ReactThreeTestRenderer.create(<IsometricCamera />, {
+    beforeReturn: (canvas) => {
+      canvasRef.current = canvas;
+    },
+  });
+
+  await renderer.advanceFrames(1, 1 / 60);
+
+  const domElement = canvasRef.current;
+
+  invariant(domElement, 'the test renderer hands its canvas to beforeReturn before rendering');
+
+  // one enormous wheel step dollies to several times the maximum distance in a single gesture;
+  // positive deltaY is zoom-out under the wheel-to-dolly binding
+  domElement.dispatchEvent(new WheelEvent('wheel', { cancelable: true, deltaY: 1_000_000 }));
+
+  await renderer.advanceFrames(600, 1 / 60);
+
+  const camera = useWorldmapStore.getState().camera;
+
+  invariant(camera, 'the camera mounts synchronously with the component');
+
+  const expected = buildRestPosition(ZOOM_MAX_DISTANCE);
+
+  expect(camera.position.x).toBeCloseTo(expected.x, 1);
+  expect(camera.position.y).toBeCloseTo(expected.y, 1);
+  expect(camera.position.z).toBeCloseTo(expected.z, 1);
 });

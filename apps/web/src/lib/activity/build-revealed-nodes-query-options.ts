@@ -9,9 +9,11 @@ import { orpc } from '../rpc/orpc';
 const REVEALED_NODES_STALE_TIME_MS = 30_000;
 
 /**
- * Query options for an avatar's revealed world-map cells inside a viewport. Callers pass an already
- * chunk-aligned viewport, so the query key changes only when the player pans across a chunk
- * boundary rather than on every frame's cell-granular move.
+ * Query options for an avatar's revealed world-map cells inside a viewport. The query key carries
+ * both inputs: the avatar id, so no avatar ever reads another's cached reveal data, and the
+ * viewport. Callers pass an already chunk-aligned viewport, so for a given avatar the key changes
+ * only when the player pans across a chunk boundary rather than on every frame's cell-granular
+ * move.
  */
 export function buildRevealedNodesQueryOptions(avatarID: string, viewport: Viewport) {
   return orpc.activity.getRevealedNodes.queryOptions({

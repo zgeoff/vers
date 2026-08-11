@@ -31,7 +31,7 @@ test('it clears the selection when the region has no node to select', () => {
   expect(useWorldmapStore.getState().selectedObject3D).toBeNull();
 });
 
-test("it refreshes the world graph without resetting the player's selection for the key the store already holds", () => {
+test("it refreshes the world graph without resetting the player's selection or viewport for the key the store already holds", () => {
   const node = createMockWorldMapNode({ id: 'node1', position: [0, 0] });
 
   const graph: WorldGraph = {
@@ -41,7 +41,9 @@ test("it refreshes the world graph without resetting the player's selection for 
 
   setWorldRegion('avatar-a', graph, null);
 
-  useWorldmapStore.setState({ selectedNode: node });
+  const viewport = { maxCX: 8, maxCY: 8, minCX: -8, minCY: -8 };
+
+  useWorldmapStore.setState({ selectedNode: node, viewport });
 
   const nextGraph: WorldGraph = { edges: {}, nodes: {} };
 
@@ -49,9 +51,10 @@ test("it refreshes the world graph without resetting the player's selection for 
 
   expect(useWorldmapStore.getState().worldGraph).toStrictEqual(nextGraph);
   expect(useWorldmapStore.getState().selectedNode).toStrictEqual(node);
+  expect(useWorldmapStore.getState().viewport).toStrictEqual(viewport);
 });
 
-test('it resets the selection for a new key even when the graph is identical', () => {
+test('it resets the selection and viewport for a new key even when the graph is identical', () => {
   const node = createMockWorldMapNode({ id: 'node1', position: [0, 0] });
 
   const graph: WorldGraph = {
@@ -61,10 +64,14 @@ test('it resets the selection for a new key even when the graph is identical', (
 
   setWorldRegion('avatar-a', graph, null);
 
-  useWorldmapStore.setState({ selectedNode: node });
+  useWorldmapStore.setState({
+    selectedNode: node,
+    viewport: { maxCX: 8, maxCY: 8, minCX: -8, minCY: -8 },
+  });
 
   setWorldRegion('avatar-b', graph, null);
 
   expect(useWorldmapStore.getState().regionKey).toBe('avatar-b');
   expect(useWorldmapStore.getState().selectedNode).toBeNull();
+  expect(useWorldmapStore.getState().viewport).toBeNull();
 });
