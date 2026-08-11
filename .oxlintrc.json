@@ -393,6 +393,28 @@
   },
   "overrides": [
     {
+      // the trace storage constructs AsyncLocalStorage lazily through a
+      // namespace import, so browser bundles reaching it through the orpc
+      // barrel never touch node:async_hooks at module evaluation; a named
+      // import moves that access back to module scope under bundlers that
+      // stub the builtin, silently reintroducing the browser throw
+      "files": ["**/libs/service/service-utils/src/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "importNames": ["AsyncLocalStorage"],
+                "message": "Import the node:async_hooks namespace (import * as asyncHooks) and construct lazily inside a function — a named import evaluates the browser stub at module scope.",
+                "name": "node:async_hooks"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
       "files": ["**/schema.generated.ts"],
       // kysely-codegen column overrides emit inline `import()` type annotations; the file is
       // generated, so the style rule has nothing to teach it
