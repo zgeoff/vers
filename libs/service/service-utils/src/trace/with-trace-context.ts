@@ -1,10 +1,10 @@
 import type { TraceContext } from '@vers/trace';
-import { traceStorage } from './trace-storage';
+import { getTraceStorage } from './get-trace-storage';
 
 /**
  * Runs the given scope with the trace context active, making it visible to `findTraceContext`
  * across every await inside it.
  */
 export function withTraceContext<T>(trace: Readonly<TraceContext>, scope: () => T): T {
-  return traceStorage.run(trace, scope);
+  return getTraceStorage().run(trace, scope);
 }
