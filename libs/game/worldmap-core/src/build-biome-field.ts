@@ -1,4 +1,5 @@
-import { buildBiomeSample } from './build-biome-sample';
+import invariant from 'tiny-invariant';
+import { getBiome } from './get-biome';
 import type { BiomeField, Viewport } from './types';
 
 export interface BuildBiomeFieldOptions {
@@ -10,13 +11,13 @@ export interface BuildBiomeFieldOptions {
 }
 
 /**
- * Builds the biome texel grid a terrain-tint presentation samples, one `buildBiomeSample` draw per
+ * Builds the biome texel grid a terrain-tint presentation samples, one terrain-plane sample per
  * texel. Texels are laid out row-major over the viewport's cell box inflated by half a cell on each
  * side, the same convention `buildRevealDistanceField` uses: texel `(i, j)` samples axial `(minCX -
  * 0.5 + (i + 0.5) / resolution, minCY - 0.5 + (j + 0.5) / resolution)`, the mapping a quad spanning
  * that box with corner-anchored uvs interpolates. At `resolution` 1 a texel center lands exactly on
  * every integer cell coordinate, so the field agrees with `getBiome` called directly on that cell —
- * both draw from the same pure function of `(userSeed, cx, cy)`, so no chunk or sampling order ever
+ * both draw the same pure function of `(userSeed, cx, cy)`, so no chunk or sampling order ever
  * moves a shared cell's result.
  */
 export function buildBiomeField(
@@ -24,6 +25,11 @@ export function buildBiomeField(
   viewport: Readonly<Viewport>,
   options: Readonly<BuildBiomeFieldOptions>,
 ): BiomeField {
+  invariant(
+    Number.isInteger(options.resolution) && options.resolution > 0,
+    'resolution must be a positive integer',
+  );
+
   const cols = (viewport.maxCX - viewport.minCX + 1) * options.resolution;
   const rows = (viewport.maxCY - viewport.minCY + 1) * options.resolution;
 
@@ -37,7 +43,7 @@ export function buildBiomeField(
 
     for (let i = 0; i < cols; i++) {
       const cx = viewport.minCX - 0.5 + (i + 0.5) / options.resolution;
-      const sample = buildBiomeSample(userSeed, cx, cy);
+      const sample = getBiome(userSeed, cx, cy);
       const index = j * cols + i;
 
       baseIDs[index] = sample.baseID;

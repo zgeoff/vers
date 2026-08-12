@@ -190,9 +190,10 @@ preference.
   `collectNodeEdges(userSeed, cx, cy) → WorldEdge[]`, `toNodeID(cx, cy) → CanonicalID`,
   `getBiome(userSeed, cx, cy) → BiomeSample`,
   `buildBiomeField(userSeed, viewport, options) → BiomeField`, `getDifficulty(cx, cy) → number`, and
-  `collectRevealedCells(sources, viewport) → RevealedCells`. `buildChunk` takes chunk coordinates
-  and `collectRevealedCells` takes reveal sources and a viewport; the rest take cell coordinates.
-  Edges are computed, not stored; `id` is the canonical cell coordinate.
+  `collectRevealedCells(sources, viewport) → RevealedCells`. `buildChunk` takes chunk coordinates,
+  `collectRevealedCells` takes reveal sources and a viewport, and `buildBiomeField` takes a viewport
+  and sampling options; the rest take cell coordinates. Edges are computed, not stored; `id` is the
+  canonical cell coordinate.
 - **Server-only content module** — content derivation keyed by `scopeSecret`, never bundled to the
   client. Its functions (`deriveContent`, `buildEncounterTable`, `getRewardTier`) live here and
   nowhere the client can reach.

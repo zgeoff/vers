@@ -12,6 +12,18 @@ test('it lays texels out on the same grid as the reveal distance field for the s
   expect(biomeField.rows).toBe(revealField.rows);
 });
 
+test('it rejects a resolution that is not a positive integer', () => {
+  const viewport = { maxCX: 1, maxCY: 1, minCX: -1, minCY: -1 };
+
+  expect(() => buildBiomeField(7, viewport, { resolution: 0 })).toThrow(
+    'resolution must be a positive integer',
+  );
+
+  expect(() => buildBiomeField(7, viewport, { resolution: 1.5 })).toThrow(
+    'resolution must be a positive integer',
+  );
+});
+
 test('it produces the same field for the same input', () => {
   const viewport = { maxCX: 3, maxCY: 3, minCX: -3, minCY: -3 };
 

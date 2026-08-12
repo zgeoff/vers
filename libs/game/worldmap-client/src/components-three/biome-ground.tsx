@@ -1,6 +1,6 @@
 import { sceneColors } from '@vers/design-system';
 import type { BiomeField, Viewport } from '@vers/worldmap-core';
-import { buildBiomeField, toHexPosition } from '@vers/worldmap-core';
+import { BIOME_ROSTER, buildBiomeField, toHexPosition } from '@vers/worldmap-core';
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import {
   BufferAttribute,
@@ -14,32 +14,10 @@ import {
 import { texture } from 'three/tsl';
 import type { Node } from 'three/webgpu';
 import { MeshBasicNodeMaterial } from 'three/webgpu';
+import invariant from 'tiny-invariant';
 import { NODE_POSITION_SCALING_FACTOR } from '../consts';
 import { useFogViewport } from '../state/use-fog-viewport';
 import { useUserSeed } from '../state/use-user-seed';
-
-/**
- * Fallback and roster-id-0 base-biome tint, held separately so a missing roster id never needs a
- * non-null assertion to fall back onto it.
- */
-const FALLBACK_TINT = new Color(sceneColors.biome1);
-
-/**
- * Base-biome placeholder tints, indexed by roster id.
- */
-const BASE_TINTS: ReadonlyArray<Color> = [
-  FALLBACK_TINT,
-  new Color(sceneColors.biome2),
-  new Color(sceneColors.biome3),
-  new Color(sceneColors.biome4),
-];
-
-const MODIFIER_TINT = new Color(sceneColors.modifierOverlay);
-
-/**
- * Blend strength the modifier tint overlays at where the modifier layer draws non-`none`.
- */
-const MODIFIER_OVERLAY_ALPHA = 0.35;
 
 /**
  * Biome texels per axial cell unit. Modest by design: each texel walks the full Worley/value-noise
@@ -52,12 +30,6 @@ const BIOME_TEXELS_PER_CELL = 2;
  * fast pan and the next chunk-boundary rebuild.
  */
 const BIOME_VIEWPORT_MARGIN_CELLS = 2;
-
-/**
- * The ground plane sits between the floor (`y = -0.1`) and the node/edge/fog plane (`y = 0`), inside
- * the scene's rotated group where a local z maps directly to world y.
- */
-const BIOME_GROUND_ELEVATION = -0.05;
 
 /**
  * Draws the placeholder biome terrain tint over the world map: one viewport-covering plane whose
@@ -102,6 +74,41 @@ interface BiomeGroundPlaneProps {
 }
 
 /**
+ * The byte buffer behind the live ground texture, kept beside its dimensions so a same-size rebuild
+ * can rewrite the pixels in place.
+ */
+interface GroundBuffer {
+  bytes: Uint8Array;
+  cols: number;
+  rows: number;
+}
+
+/**
+ * Minimal structural view of a runtime TSL texture node, standing in for three's own node types:
+ * every node there carries thousands of conditionally typed overloads and swizzle getters, and
+ * touching the real type sends the native compiler's inference into a multi-gigabyte runaway that
+ * OOMs the machine. Only the mutable value slot this module touches appears here; the object behind
+ * it is the real TSL texture node throughout, so the runtime graph is unchanged.
+ */
+interface GroundTextureNode {
+  value: DataTexture;
+}
+
+interface BiomeGroundResources {
+  applied: { field: BiomeField; viewport: Viewport };
+  readonly buffer: GroundBuffer;
+  readonly geometry: BufferGeometry;
+  readonly material: MeshBasicNodeMaterial;
+  readonly textureNode: GroundTextureNode;
+}
+
+/**
+ * The ground plane sits between the floor (`y = -0.1`) and the node/edge/fog plane (`y = 0`), inside
+ * the scene's rotated group where a local z maps directly to world y.
+ */
+const BIOME_GROUND_ELEVATION = -0.05;
+
+/**
  * The geometry, material, and texture node live for the whole mount: a field change swaps the
  * texture node's value and rewrites the quad in place, never rebuilding the material — the same
  * discipline `FogOfWar` follows, for the same reason: a fresh material recompiles its shader
@@ -133,27 +140,6 @@ function BiomeGroundPlane(props: Readonly<BiomeGroundPlaneProps>) {
   );
 }
 
-/**
- * The byte buffer behind the live ground texture, kept beside its dimensions so a same-size rebuild
- * can rewrite the pixels in place.
- */
-interface GroundBuffer {
-  bytes: Uint8Array;
-  cols: number;
-  rows: number;
-}
-
-/**
- * Minimal structural view of a runtime TSL texture node, standing in for three's own node types:
- * every node there carries thousands of conditionally typed overloads and swizzle getters, and
- * touching the real type sends the native compiler's inference into a multi-gigabyte runaway that
- * OOMs the machine. Only the mutable value slot this module touches appears here; the object behind
- * it is the real TSL texture node throughout, so the runtime graph is unchanged.
- */
-interface GroundTextureNode {
-  value: DataTexture;
-}
-
 interface GroundTSL {
   readonly texture: (map: DataTexture) => GroundTextureNode;
   readonly toNode: (node: Readonly<GroundTextureNode>) => Node<'vec4'>;
@@ -170,14 +156,6 @@ const groundTSLValues = {
  */
 // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the values are untouched runtime TSL builders; only the static view narrows
 const groundTSL = groundTSLValues as unknown as GroundTSL;
-
-interface BiomeGroundResources {
-  applied: { field: BiomeField; viewport: Viewport };
-  readonly buffer: GroundBuffer;
-  readonly geometry: BufferGeometry;
-  readonly material: MeshBasicNodeMaterial;
-  readonly textureNode: GroundTextureNode;
-}
 
 function buildBiomeGroundResources(
   field: BiomeField,
@@ -246,6 +224,35 @@ function updateBiomeGroundPlane(
   updateBiomeGroundGeometry(plane.geometry, viewport);
 }
 
+const BASE_TINT_HEXES: ReadonlyArray<string> = [
+  sceneColors.biome1,
+  sceneColors.biome2,
+  sceneColors.biome3,
+  sceneColors.biome4,
+];
+
+/**
+ * Base-biome placeholder tints keyed by roster id, one entry per roster entry: growing the roster
+ * without pairing the new biome with a tint fails loudly at module load, never by silently painting
+ * the new biome with another biome's color.
+ */
+const BASE_TINTS: ReadonlyMap<number, Color> = new Map(
+  BIOME_ROSTER.map((entry, index) => {
+    const hex = BASE_TINT_HEXES[index];
+
+    invariant(hex !== undefined, 'every base-biome roster entry carries a placeholder tint');
+
+    return [entry.id, new Color(hex)];
+  }),
+);
+
+const MODIFIER_TINT = new Color(sceneColors.modifierOverlay);
+
+/**
+ * Blend strength the modifier tint overlays at where the modifier layer draws non-`none`.
+ */
+const MODIFIER_OVERLAY_ALPHA = 0.35;
+
 /**
  * CPU-mixes each texel's RGBA byte: the base tint blended toward the border neighbour's tint by
  * half `blendT`, then the modifier tint overlaid at `MODIFIER_OVERLAY_ALPHA` where the modifier
@@ -256,8 +263,8 @@ function updateGroundBytes(bytes: Uint8Array, field: BiomeField): void {
   const count = field.cols * field.rows;
 
   for (let index = 0; index < count; index++) {
-    const base = BASE_TINTS[field.baseIDs[index] ?? 0] ?? FALLBACK_TINT;
-    const neighbour = BASE_TINTS[field.neighbourBaseIDs[index] ?? 0] ?? FALLBACK_TINT;
+    const base = getBaseTint(field.baseIDs[index] ?? 0);
+    const neighbour = getBaseTint(field.neighbourBaseIDs[index] ?? 0);
     const mixT = 0.5 * (field.blendTs[index] ?? 0);
     let r = base.r + (neighbour.r - base.r) * mixT;
     let g = base.g + (neighbour.g - base.g) * mixT;
@@ -276,6 +283,14 @@ function updateGroundBytes(bytes: Uint8Array, field: BiomeField): void {
     bytes[offset + 2] = Math.round(b * 255);
     bytes[offset + 3] = 255;
   }
+}
+
+function getBaseTint(id: number): Color {
+  const tint = BASE_TINTS.get(id);
+
+  invariant(tint, 'every biome id the field draws appears in the roster tint table');
+
+  return tint;
 }
 
 // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- the buffer is mutable by design: it backs the live texture's pixel storage

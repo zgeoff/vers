@@ -2,12 +2,7 @@ import { expect, test } from 'bun:test';
 import { BIOME_ROSTER, MODIFIER_ROSTER } from './consts';
 import { getBiome } from './get-biome';
 
-const BASE_IDS = new Set(BIOME_ROSTER.map((entry) => entry.id));
-const MODIFIER_IDS = new Set(MODIFIER_ROSTER.map((entry) => entry.id));
-
-const DEEP_ONLY_ID = 2;
-
-test('it is a pure function of the seed and cell coordinates alone', () => {
+test('it draws identical samples for repeated calls with the same seed and cell', () => {
   expect(getBiome(42, 7, -3)).toStrictEqual(getBiome(42, 7, -3));
 });
 
@@ -60,6 +55,9 @@ test('it draws a stable field for a fixed seed', () => {
   `);
 });
 
+const BASE_IDS = new Set(BIOME_ROSTER.map((entry) => entry.id));
+const MODIFIER_IDS = new Set(MODIFIER_ROSTER.map((entry) => entry.id));
+
 test('it always returns a roster base id, neighbour id, and modifier id', () => {
   for (let cx = -20; cx <= 20; cx += 4) {
     for (let cy = -20; cy <= 20; cy += 4) {
@@ -83,6 +81,8 @@ test('it keeps blendT within the unit interval', () => {
   }
 });
 
+const DEEP_ONLY_ID = 2;
+
 test('it never draws the deep-only biome near the origin', () => {
   for (let cx = -5; cx <= 5; cx++) {
     for (let cy = -5; cy <= 5; cy++) {
@@ -104,4 +104,16 @@ test('it draws at least three distinct base biomes in a far band', () => {
   }
 
   expect(seen.size).toBeGreaterThanOrEqual(3);
+});
+
+test('it draws a non-none modifier somewhere across a wide sweep', () => {
+  const seen = new Set<number>();
+
+  for (let cx = -60; cx <= 60; cx += 2) {
+    for (let cy = -60; cy <= 60; cy += 2) {
+      seen.add(getBiome(5, cx, cy).modifierID);
+    }
+  }
+
+  expect(seen.size).toBeGreaterThanOrEqual(2);
 });
