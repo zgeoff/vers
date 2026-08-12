@@ -14,52 +14,37 @@ import {
 } from './consts';
 import { getHexDistance } from './get-hex-distance';
 import { toHexPosition } from './to-hex-position';
-import type { BiomeContext, BiomeRosterEntry, BiomeSample } from './types';
+import type { BiomeRosterEntry, BiomeSample } from './types';
 
 const SQRT_3 = Math.sqrt(3);
 
 /**
  * The terrain-plane sample core `getBiome` and `buildBiomeField` both drive: a base biome, the
  * neighbour it blends toward near a patch border, a border-proximity `blendT`, and an independent
- * modifier layer — a low-frequency hybrid Worley/value-noise field, `f(context.userSeed, cx, cy)`
- * alone. Public geometry: every client derives the identical sample from the same seed and
- * position, and `cx`/`cy` may be any real number, not only an integer cell coordinate, so a texel
- * field can sample between cell centers.
+ * modifier layer — a low-frequency hybrid Worley/value-noise field, `f(userSeed, cx, cy)` alone.
+ * Public geometry: every client derives the identical sample from the same seed and position, and
+ * `cx`/`cy` may be any real number, not only an integer cell coordinate, so a texel field can sample
+ * between cell centers.
  *
- * `context` carries this build's coarse-cell memoization: a fresh context makes this call
- * self-contained, and a context shared across many calls (`buildBiomeField`'s texel loop) lets the
- * many texels landing in the same coarse cell resolve its feature point and roster draw once.
+ * The base layer tracks its nearest and second-nearest feature point for `blendT` and
+ * `neighbourBaseID`; the modifier layer's border blend is never read, so it tracks only its nearest.
  *
  * A hidden per-node reward that clusters by biome is permanently forbidden — it would turn
  * client-visible terrain into a treasure map for sealed loot, the exact sniping fog exists to deny.
  * Biome may only ever touch reward through a public, biome-uniform function of the public biome id,
  * constant across every node the id covers; it may never ride hidden per-node variance.
  */
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- the context's feature-point and roster-id maps are mutable by design: caching a coarse cell's result across every texel that visits it is how a shared context avoids repeating the same Worley and roster work per texel
-export function buildBiomeSample(context: BiomeContext, cx: number, cy: number): BiomeSample {
+export function buildBiomeSample(userSeed: number, cx: number, cy: number): BiomeSample {
   const [hexX, hexY] = toHexPosition(cx, cy);
   const wobbleSampleX = hexX * BIOME_EDGE_WOBBLE_FREQUENCY;
   const wobbleSampleY = hexY * BIOME_EDGE_WOBBLE_FREQUENCY;
-
-  const wobbleX = buildValueNoise(
-    context.userSeed,
-    wobbleSampleX,
-    wobbleSampleY,
-    HASH_CHANNEL.wobbleX,
-  );
-
-  const wobbleY = buildValueNoise(
-    context.userSeed,
-    wobbleSampleX,
-    wobbleSampleY,
-    HASH_CHANNEL.wobbleY,
-  );
-
+  const wobbleX = buildValueNoise(userSeed, wobbleSampleX, wobbleSampleY, HASH_CHANNEL.wobbleX);
+  const wobbleY = buildValueNoise(userSeed, wobbleSampleX, wobbleSampleY, HASH_CHANNEL.wobbleY);
   const warpedX = hexX + BIOME_EDGE_WOBBLE_AMPLITUDE * (wobbleX - 0.5);
   const warpedY = hexY + BIOME_EDGE_WOBBLE_AMPLITUDE * (wobbleY - 0.5);
 
   const base = buildNearestFeaturePoints(
-    context,
+    userSeed,
     warpedX,
     warpedY,
     BIOME_PATCH_SIZE,
@@ -67,8 +52,8 @@ export function buildBiomeSample(context: BiomeContext, cx: number, cy: number):
     HASH_CHANNEL.worleyFeatureY,
   );
 
-  const modifier = buildNearestFeaturePoints(
-    context,
+  const modifier = buildNearestFeaturePoint(
+    userSeed,
     warpedX,
     warpedY,
     MODIFIER_PATCH_SIZE,
@@ -77,7 +62,7 @@ export function buildBiomeSample(context: BiomeContext, cx: number, cy: number):
   );
 
   const baseID = pickRosterID(
-    context,
+    userSeed,
     base.nearestCellX,
     base.nearestCellY,
     BIOME_PATCH_SIZE,
@@ -86,7 +71,7 @@ export function buildBiomeSample(context: BiomeContext, cx: number, cy: number):
   );
 
   const neighbourBaseID = pickRosterID(
-    context,
+    userSeed,
     base.secondCellX,
     base.secondCellY,
     BIOME_PATCH_SIZE,
@@ -95,9 +80,9 @@ export function buildBiomeSample(context: BiomeContext, cx: number, cy: number):
   );
 
   const modifierID = pickRosterID(
-    context,
-    modifier.nearestCellX,
-    modifier.nearestCellY,
+    userSeed,
+    modifier.cellX,
+    modifier.cellY,
     MODIFIER_PATCH_SIZE,
     HASH_CHANNEL.modifierDraw,
     MODIFIER_ROSTER,
@@ -122,14 +107,13 @@ interface NearestFeaturePoints {
 
 /**
  * Scatters one jittered feature point per coarse cell of `patchSize` and scans the 3×3 neighbourhood
- * around `(x, y)` for the nearest and second-nearest, the Worley step every biome layer shares. A
- * patch this coarse never needs a wider scan: the nearest point to any position inside a cell always
- * falls within its own cell or one ring out. Candidate coordinates stay plain numbers throughout the
- * scan — no tuple is allocated until a feature point itself is cached.
+ * around `(x, y)` for the nearest and second-nearest, the Worley step the base biome layer needs for
+ * its border blend. A patch this coarse never needs a wider scan: the nearest point to any position
+ * inside a cell always falls within its own cell or one ring out. Candidate coordinates and feature
+ * points stay plain numbers throughout the scan — nothing is allocated per candidate.
  */
 function buildNearestFeaturePoints(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- the context's feature-point and roster-id maps are mutable by design: caching a coarse cell's result across every texel that visits it is how a shared context avoids repeating the same Worley and roster work per texel
-  context: BiomeContext,
+  userSeed: number,
   x: number,
   y: number,
   patchSize: number,
@@ -149,16 +133,10 @@ function buildNearestFeaturePoints(
     for (let dx = -1; dx <= 1; dx++) {
       const cellX = baseCellX + dx;
       const cellY = baseCellY + dy;
-
-      const [featureX, featureY] = getFeaturePoint(
-        context,
-        cellX,
-        cellY,
-        patchSize,
-        featureXChannel,
-        featureYChannel,
-      );
-
+      const jitterX = buildCoordHashUnit(userSeed, cellX, cellY, featureXChannel);
+      const jitterY = buildCoordHashUnit(userSeed, cellX, cellY, featureYChannel);
+      const featureX = (cellX + jitterX) * patchSize;
+      const featureY = (cellY + jitterY) * patchSize;
       const distance = Math.hypot(x - featureX, y - featureY);
 
       if (distance < nearestDistance) {
@@ -186,93 +164,90 @@ function buildNearestFeaturePoints(
   };
 }
 
-/**
- * A coarse cell's jittered Worley feature point, cached by hash channel and coordinate: the same
- * coarse cell falls inside the 3×3 scan of every texel near it, so caching turns a field build's
- * repeated hash-and-jitter work into one lookup per distinct coarse cell.
- */
-function getFeaturePoint(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- the context's feature-point and roster-id maps are mutable by design: caching a coarse cell's result across every texel that visits it is how a shared context avoids repeating the same Worley and roster work per texel
-  context: BiomeContext,
-  cellX: number,
-  cellY: number,
-  patchSize: number,
-  featureXChannel: number,
-  featureYChannel: number,
-): readonly [number, number] {
-  const key = `${featureXChannel}:${cellX}:${cellY}`;
-  const cached = context.featurePoints.get(key);
-
-  if (cached) {
-    return cached;
-  }
-
-  const jitterX = buildCoordHashUnit(context.userSeed, cellX, cellY, featureXChannel);
-  const jitterY = buildCoordHashUnit(context.userSeed, cellX, cellY, featureYChannel);
-
-  const point: readonly [number, number] = [
-    (cellX + jitterX) * patchSize,
-    (cellY + jitterY) * patchSize,
-  ];
-
-  context.featurePoints.set(key, point);
-
-  return point;
+interface NearestFeaturePoint {
+  readonly cellX: number;
+  readonly cellY: number;
 }
 
 /**
- * Selects a coarse cell's roster id, cached by draw channel and coordinate: each entry's weight
- * curve is evaluated at the cell's hex distance from the origin, and a single hash draw keyed by the
- * cell's own coordinates picks proportionally among the resulting weights. Every side computing a
- * coarse cell's biome reads this same draw, so a patch's assignment never depends on which
- * neighbouring cell asked first — the cache follows that same invariant, keyed by coordinate alone.
+ * The single-winner form of `buildNearestFeaturePoints`: scans the same 3×3 coarse-cell
+ * neighbourhood but tracks only the nearest feature point, for a layer whose border blend is never
+ * read.
+ */
+function buildNearestFeaturePoint(
+  userSeed: number,
+  x: number,
+  y: number,
+  patchSize: number,
+  featureXChannel: number,
+  featureYChannel: number,
+): NearestFeaturePoint {
+  const baseCellX = Math.floor(x / patchSize);
+  const baseCellY = Math.floor(y / patchSize);
+  let nearestDistance = Number.POSITIVE_INFINITY;
+  let cellX = baseCellX;
+  let cellY = baseCellY;
+
+  for (let dy = -1; dy <= 1; dy++) {
+    for (let dx = -1; dx <= 1; dx++) {
+      const candidateX = baseCellX + dx;
+      const candidateY = baseCellY + dy;
+      const jitterX = buildCoordHashUnit(userSeed, candidateX, candidateY, featureXChannel);
+      const jitterY = buildCoordHashUnit(userSeed, candidateX, candidateY, featureYChannel);
+      const featureX = (candidateX + jitterX) * patchSize;
+      const featureY = (candidateY + jitterY) * patchSize;
+      const distance = Math.hypot(x - featureX, y - featureY);
+
+      if (distance < nearestDistance) {
+        nearestDistance = distance;
+        cellX = candidateX;
+        cellY = candidateY;
+      }
+    }
+  }
+
+  return { cellX, cellY };
+}
+
+/**
+ * Selects a coarse cell's roster id: each entry's weight curve is evaluated at the cell's hex
+ * distance from the origin exactly once, and a single hash draw keyed by the cell's own coordinates
+ * picks proportionally among the resulting weights. Every side computing a coarse cell's biome reads
+ * this same draw, so a patch's assignment never depends on which neighbouring cell asked first.
  */
 function pickRosterID(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- the context's feature-point and roster-id maps are mutable by design: caching a coarse cell's result across every texel that visits it is how a shared context avoids repeating the same Worley and roster work per texel
-  context: BiomeContext,
+  userSeed: number,
   cellX: number,
   cellY: number,
   patchSize: number,
   drawChannel: number,
   roster: ReadonlyArray<BiomeRosterEntry>,
 ): number {
-  const key = `${drawChannel}:${cellX}:${cellY}`;
-  const cached = context.rosterIDs.get(key);
-
-  if (cached !== undefined) {
-    return cached;
-  }
-
   invariant(roster.length > 0, 'a biome roster must carry at least one alternative');
 
   const anchor = toAxialPosition((cellX + 0.5) * patchSize, (cellY + 0.5) * patchSize);
   const distance = getHexDistance(anchor, ORIGIN_CELL);
-  let total = 0;
-
-  for (const entry of roster) {
-    total += getWeightAtDistance(entry.weights, distance);
-  }
+  const weights = roster.map((entry) => getWeightAtDistance(entry.weights, distance));
+  const total = weights.reduce((sum, weight) => sum + weight, 0);
 
   invariant(total > 0, 'a biome roster must carry positive weight at every distance');
 
-  const draw = buildCoordHashUnit(context.userSeed, cellX, cellY, drawChannel) * total;
+  const draw = buildCoordHashUnit(userSeed, cellX, cellY, drawChannel) * total;
   let cumulative = 0;
-  let id = roster.at(-1)?.id;
 
-  for (const entry of roster) {
-    cumulative += getWeightAtDistance(entry.weights, distance);
+  for (const [index, entry] of roster.entries()) {
+    cumulative += weights[index] ?? 0;
 
     if (draw < cumulative) {
-      id = entry.id;
-      break;
+      return entry.id;
     }
   }
 
-  invariant(id !== undefined, 'a non-empty roster always has a last entry');
+  const last = roster.at(-1);
 
-  context.rosterIDs.set(key, id);
+  invariant(last, 'a non-empty roster always has a last entry');
 
-  return id;
+  return last.id;
 }
 
 /**

@@ -1,4 +1,3 @@
-import { buildBiomeContext } from './build-biome-context';
 import { buildBiomeSample } from './build-biome-sample';
 import type { BiomeSample } from './types';
 
@@ -14,10 +13,9 @@ import type { BiomeSample } from './types';
  * Biome may only ever touch reward through a public, biome-uniform function of the public biome id,
  * constant across every node the id covers; it may never ride hidden per-node variance.
  *
- * A one-off wrapper over `buildBiomeSample`: this call builds a fresh, single-sample context, so
- * repeat calls never share a coarse-cell cache with each other. `buildBiomeField` drives
- * `buildBiomeSample` directly with one context reused across its whole texel grid instead.
+ * A thin wrapper over `buildBiomeSample`, the shared core `buildBiomeField` also drives directly
+ * per texel.
  */
 export function getBiome(userSeed: number, cx: number, cy: number): BiomeSample {
-  return buildBiomeSample(buildBiomeContext(userSeed), cx, cy);
+  return buildBiomeSample(userSeed, cx, cy);
 }
