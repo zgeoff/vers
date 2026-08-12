@@ -9,6 +9,7 @@ import { buildLevelFromXP } from '@vers/idle-core';
 import type { SimVersionRow } from '@vers/sim-registry';
 import { findCurrentSimVersion, findSimVersion } from '@vers/sim-registry';
 import { deriveWorldmapContent, readScopeSecret } from '@vers/worldmap-content';
+import { ORIGIN_CELL, isNodeSelectable, toNodeID } from '@vers/worldmap-core';
 import type { CryptoKey } from 'jose';
 import { sql } from 'kysely';
 import type { Kysely } from 'kysely';
@@ -17,6 +18,7 @@ import { getOptimisticBuild } from '../get-optimistic-build';
 import { isUniqueViolation } from '../is-unique-violation';
 import { recordAvatarNotActiveRejection } from '../metrics/record-avatar-not-active-rejection';
 import { recordContentIncompatibleRejection } from '../metrics/record-content-incompatible-rejection';
+import { recordNodeUnreachableRejection } from '../metrics/record-node-unreachable-rejection';
 import { resolveEncounterNode } from '../resolve-encounter-node';
 import type {
   ActiveActivityConflictPayload,
@@ -56,6 +58,7 @@ interface StartActivityOpts {
     readonly CHAIN_QUARANTINED: (payload: EmptyErrorPayload) => Error;
     readonly CONFLICT: (payload: ActiveActivityConflictPayload) => Error;
     readonly NODE_UNKNOWN: (payload: EmptyErrorPayload) => Error;
+    readonly NODE_UNREACHABLE: (payload: EmptyErrorPayload) => Error;
     readonly NOT_FOUND: (payload: EmptyErrorPayload) => Error;
     readonly SIM_VERSION_EXPIRED: (payload: SimVersionProblemPayload) => Error;
     readonly SIM_VERSION_UNKNOWN: (payload: SimVersionProblemPayload) => Error;
@@ -79,7 +82,9 @@ interface StartActivityOpts {
  * parked or quarantined — contributes nothing, since it has no path back to verification on its
  * own and its xp would otherwise ride in this snapshot and every later one permanently. Resolves the scope
  * node's encounter params server-side and freezes them on the new row, throwing NODE_UNKNOWN when
- * the scope doesn't resolve to a known node. The partial unique index serializes concurrent starts;
+ * the scope doesn't resolve to a known node and NODE_UNREACHABLE when it resolves but sits outside
+ * the avatar's selectable set — the origin, a completed node, or a neighbour of one, evaluated
+ * against the avatar's own `first_clear` grants. The partial unique index serializes concurrent starts;
  * a duplicate delivery — same key, same scope, never appended, caller already the writer or none
  * stamped — succeeds with the existing row, and every other conflict throws CONFLICT carrying it. A
  * chain whose replay frontier is quarantined admits no new starts until it is adjudicated.
@@ -125,6 +130,26 @@ export async function startActivity(
 
   if (resolved === undefined) {
     throw opts.errors.NODE_UNKNOWN({ data: {} });
+  }
+
+  // the origin is unconditionally selectable, so a start there needs no grants read to decide
+  if (
+    opts.input.scopeType === 'world_map_node' &&
+    opts.input.scopeID !== toNodeID(ORIGIN_CELL[0], ORIGIN_CELL[1])
+  ) {
+    const grants = await deps.db
+      .selectFrom('avatarGrants')
+      .select('key')
+      .where('avatarId', '=', avatar.id)
+      .where('kind', '=', 'first_clear')
+      .execute();
+
+    const completedNodeIDs = new Set(grants.map((grant) => grant.key));
+
+    if (!isNodeSelectable(avatar.seed, completedNodeIDs, opts.input.scopeID)) {
+      recordNodeUnreachableRejection();
+      throw opts.errors.NODE_UNREACHABLE({ data: {} });
+    }
   }
 
   const contentVersion = await findCurrentContentVersion(deps.db);

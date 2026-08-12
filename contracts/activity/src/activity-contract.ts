@@ -82,6 +82,12 @@ const ViewportSchema = z.object({
 const RevealedNodeSchema = z.object({ id: z.string(), poolID: z.string().optional() });
 
 /**
+ * Every addressable `first_clear` grant key the avatar holds, regardless of viewport — the
+ * completed set `startActivity`'s selectable-node gate and its client mirror both evaluate against.
+ */
+const CompletedNodeIDsSchema = z.array(z.string());
+
+/**
  * The activities service's API: every procedure is authed and owner-scoped through the caller's
  * avatars.
  */
@@ -262,7 +268,13 @@ export const activityContract = {
           { error: `viewport area may not exceed ${REVEAL_VIEWPORT_CELL_CAP} cells` },
         ),
     )
-    .output(z.object({ contentVersion: z.string(), nodes: z.array(RevealedNodeSchema) }))
+    .output(
+      z.object({
+        completedNodeIDs: CompletedNodeIDsSchema,
+        contentVersion: z.string(),
+        nodes: z.array(RevealedNodeSchema),
+      }),
+    )
     .errors(
       defineErrors({
         NOT_FOUND: { data: z.object({}), message: 'Avatar not found' },
@@ -325,6 +337,11 @@ export const activityContract = {
           data: z.object({}),
           message: 'The scope node is not registered on the world map',
           status: 404,
+        },
+        NODE_UNREACHABLE: {
+          data: z.object({}),
+          message: "The scope node is outside the avatar's selectable set",
+          status: 409,
         },
         NOT_FOUND: { data: z.object({}), message: 'Avatar not found' },
         SIM_VERSION_EXPIRED: {

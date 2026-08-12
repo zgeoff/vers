@@ -109,6 +109,7 @@ test('it discloses content pinned to the sealed derivation for every cell a veri
   });
 
   expect(result.contentVersion).toBe('2');
+  expect(result.completedNodeIDs).toStrictEqual(['0_0']);
 
   // distinct cells landing on distinct pools, rather than every cell echoing the same pool id,
   // is what proves the coordinate actually reaches the sealed derivation
@@ -242,6 +243,9 @@ test('it excludes a cell inside the viewport but outside every reveal disc', asy
 
   expect(result.contentVersion).toBe('2');
   expect(result.nodes).toBeEmpty();
+
+  // completedNodeIDs is never viewport-clipped, unlike nodes
+  expect(result.completedNodeIDs).toStrictEqual(['0_0']);
 });
 
 test('it unions discs from more than one first-clear grant, leaving the gap between them unrevealed', async () => {
@@ -295,6 +299,7 @@ test('it ignores a grant whose kind is not first_clear', async () => {
   });
 
   expect(result.nodes).toBeEmpty();
+  expect(result.completedNodeIDs).toBeEmpty();
 });
 
 test('it skips a first-clear grant key that is not a world-map node id', async () => {
@@ -319,9 +324,10 @@ test('it skips a first-clear grant key that is not a world-map node id', async (
   });
 
   expect(result.nodes.map((node) => node.id)).toStrictEqual(['0_0']);
+  expect(result.completedNodeIDs).toStrictEqual(['0_0']);
 });
 
-test('it skips a first-clear grant naming a cell past the packable coordinate range', async () => {
+test('it reveals nothing around a grant past the packable coordinate range while still counting it completed', async () => {
   await using ctx = await setupTest();
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
@@ -341,6 +347,7 @@ test('it skips a first-clear grant naming a cell past the packable coordinate ra
   });
 
   expect(result.nodes).toBeEmpty();
+  expect(result.completedNodeIDs).toStrictEqual([`${WORLD_COORD_MAX + 1}_0`]);
 });
 
 test('it reveals nothing for a second avatar of the same user that holds no first-clear grant', async () => {

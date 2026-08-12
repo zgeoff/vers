@@ -1,16 +1,19 @@
-import { expect, test } from 'bun:test';
+import { expect, mock, test } from 'bun:test';
 import { waitFor } from '@testing-library/react';
+import { mockActivityService } from '@vers/mock-services/activity';
 import * as db from '@vers/mock-services/db';
 import {
   buildChunkAlignedViewport,
   buildViewportGraph,
   setViewport,
+  useSelectableNodeIDs,
   useSelectedNode,
   useViewport,
   useWorldGraph,
 } from '@vers/worldmap-client';
-import { toNodeID } from '@vers/worldmap-core';
+import { collectNodeEdges, toNodeID } from '@vers/worldmap-core';
 import invariant from 'tiny-invariant';
+import { server } from '../../mocks/node';
 import { createActiveAvatar } from '../../test-utils/create-active-avatar';
 import { createSignedInUser } from '../../test-utils/create-signed-in-user';
 import { renderHook } from '../../test-utils/render-hook';
@@ -265,5 +268,280 @@ test('it selects the new origin on an avatar switch even when the viewport had p
     // the switch also clears the outgoing avatar's camera footprint, so nothing can query the new
     // avatar with the far-panned coordinates before the camera reports a fresh viewport
     expect(hook.result.current.viewport).toBeNull();
+  });
+});
+
+test('it queries revealed nodes for a chunk-aligned, cap-shrunk viewport once the camera reports one', async () => {
+  const signedIn = await createSignedInUser();
+  const avatar = await createActiveAvatar({ userID: signedIn.userID });
+
+  const track = mock<(input: unknown) => void>();
+
+  server.use(
+    mockActivityService.getRevealedNodes.handler((opts) => {
+      track(opts.input);
+
+      return { completedNodeIDs: [], contentVersion: 'v1', nodes: [] };
+    }),
+  );
+
+  await withRequestContext({ cookies: signedIn.cookies }, async () => {
+    const hook = renderHook(() => {
+      useAvatarRegionGraph();
+
+      return { selection: useSelectedNode() };
+    });
+
+    // the mount's own region build resets the stored viewport, so the camera viewport that enables
+    // the revealed-nodes query is set only once the selection settles
+    await waitFor(() => {
+      expect(hook.result.current.selection.node).toMatchObject({ id: toNodeID(0, 0) });
+    });
+
+    setViewport({ maxCX: 17, maxCY: 20, minCX: 1, minCY: -1 });
+
+    await waitFor(() => {
+      expect(track).toHaveBeenCalledExactlyOnceWith({
+        avatarID: avatar.id,
+        viewport: { maxCX: 31, maxCY: 31, minCX: 0, minCY: -16 },
+      });
+    });
+  });
+});
+
+test('it queries no revealed nodes before the camera has reported a viewport', async () => {
+  const signedIn = await createSignedInUser();
+
+  await createActiveAvatar({ userID: signedIn.userID });
+
+  const track = mock<(input: unknown) => void>();
+
+  server.use(
+    mockActivityService.getRevealedNodes.handler((opts) => {
+      track(opts.input);
+
+      return { completedNodeIDs: [], contentVersion: 'v1', nodes: [] };
+    }),
+  );
+
+  await withRequestContext({ cookies: signedIn.cookies }, async () => {
+    const hook = renderHook(() => {
+      useAvatarRegionGraph();
+
+      return { selection: useSelectedNode() };
+    });
+
+    // the settled selection proves the region build ran, the window a would-be-enabled reveal
+    // query had to fire in
+    await waitFor(() => {
+      expect(hook.result.current.selection.node).toMatchObject({ id: toNodeID(0, 0) });
+    });
+
+    expect(track).not.toHaveBeenCalled();
+  });
+});
+
+test('it limits the selectable set to the origin while the avatar holds no completed nodes', async () => {
+  const signedIn = await createSignedInUser();
+
+  await createActiveAvatar({ seed: 777, userID: signedIn.userID });
+
+  await withRequestContext({ cookies: signedIn.cookies }, async () => {
+    const hook = renderHook(() => {
+      useAvatarRegionGraph();
+
+      return { selectable: useSelectableNodeIDs() };
+    });
+
+    await waitFor(() => {
+      expect(hook.result.current.selectable).toStrictEqual(new Set([toNodeID(0, 0)]));
+    });
+  });
+});
+
+test('it extends the selectable set to a real neighbour once the revealed-nodes query resolves a completed grant', async () => {
+  const signedIn = await createSignedInUser();
+  const avatar = await createActiveAvatar({ seed: 888, userID: signedIn.userID });
+
+  const originID = toNodeID(0, 0);
+  const [edge] = collectNodeEdges(avatar.seed, 0, 0);
+
+  invariant(edge, 'the origin connects to at least one neighbour');
+
+  const [aID = '', bID = ''] = edge.id.split('|');
+  const neighbourID = aID === originID ? bID : aID;
+
+  server.use(
+    mockActivityService.getRevealedNodes.handler(() => ({
+      completedNodeIDs: [originID],
+      contentVersion: 'v1',
+      nodes: [],
+    })),
+  );
+
+  await withRequestContext({ cookies: signedIn.cookies }, async () => {
+    const hook = renderHook(() => {
+      useAvatarRegionGraph();
+
+      return { selectable: useSelectableNodeIDs() };
+    });
+
+    // the mount's own region build resets the stored viewport, so the camera viewport that
+    // enables the revealed-nodes query is set only once that settles
+    await waitFor(() => {
+      expect(hook.result.current.selectable).toStrictEqual(new Set([originID]));
+    });
+
+    setViewport({ maxCX: 5, maxCY: 5, minCX: -5, minCY: -5 });
+
+    await waitFor(() => {
+      expect(hook.result.current.selectable.has(neighbourID)).toBe(true);
+    });
+  });
+});
+
+test("it keeps a completed node's neighbour selectable while a chunk-crossing pan re-keys the revealed-nodes query", async () => {
+  const signedIn = await createSignedInUser();
+  const avatar = await createActiveAvatar({ seed: 999, userID: signedIn.userID });
+
+  const originID = toNodeID(0, 0);
+  const [edge] = collectNodeEdges(avatar.seed, 0, 0);
+
+  invariant(edge, 'the origin connects to at least one neighbour');
+
+  const [aID = '', bID = ''] = edge.id.split('|');
+  const neighbourID = aID === originID ? bID : aID;
+  let fetchCount = 0;
+  let resolveSecondFetch: (() => void) | undefined;
+
+  server.use(
+    mockActivityService.getRevealedNodes.handler(async () => {
+      fetchCount += 1;
+
+      if (fetchCount === 2) {
+        await new Promise<void>((resolve) => {
+          resolveSecondFetch = resolve;
+        });
+      }
+
+      return { completedNodeIDs: [originID], contentVersion: 'v1', nodes: [] };
+    }),
+  );
+
+  await withRequestContext({ cookies: signedIn.cookies }, async () => {
+    const hook = renderHook(() => {
+      useAvatarRegionGraph();
+
+      return { selectable: useSelectableNodeIDs() };
+    });
+
+    // the mount's own region build resets the stored viewport, so the camera viewport that enables
+    // the revealed-nodes query is set only once that settles
+    await waitFor(() => {
+      expect(hook.result.current.selectable).toStrictEqual(new Set([originID]));
+    });
+
+    setViewport({ maxCX: 5, maxCY: 5, minCX: -5, minCY: -5 });
+
+    await waitFor(() => {
+      expect(hook.result.current.selectable.has(neighbourID)).toBe(true);
+    });
+
+    // a chunk-crossing pan re-keys the revealed-nodes query into a fresh, unresolved fetch, dropping
+    // its data back to undefined
+    setViewport({ maxCX: 40, maxCY: 5, minCX: 30, minCY: -5 });
+
+    await waitFor(() => {
+      expect(fetchCount).toBe(2);
+    });
+
+    // the held completed set keeps the previously resolved ids alive while the re-keyed query's
+    // data is still undefined, so the neighbour must not drop back out of the selectable set here
+    expect(hook.result.current.selectable.has(neighbourID)).toBe(true);
+
+    invariant(resolveSecondFetch, 'the chunk-crossing pan started the second fetch');
+    resolveSecondFetch();
+
+    // the resolved fetch settles the re-keyed query in place: no further round trip fires and the
+    // neighbour stays selectable
+    await waitFor(() => {
+      expect(hook.queryClient.isFetching()).toBe(0);
+    });
+
+    expect(fetchCount).toBe(2);
+    expect(hook.result.current.selectable.has(neighbourID)).toBe(true);
+  });
+});
+
+test("it drops the selectable set to origin-only on an avatar switch, not carrying the outgoing avatar's completed neighbours", async () => {
+  const signedIn = await createSignedInUser();
+  const first = await createActiveAvatar({ seed: 123, userID: signedIn.userID });
+  const second = await db.avatarCollection.create({ seed: 456, userID: signedIn.userID });
+
+  const originID = toNodeID(0, 0);
+  const [edge] = collectNodeEdges(first.seed, 0, 0);
+
+  invariant(edge, 'the origin connects to at least one neighbour');
+
+  const [aID = '', bID = ''] = edge.id.split('|');
+  const firstNeighbourID = aID === originID ? bID : aID;
+  const requestedAvatarIDs: Array<string> = [];
+
+  server.use(
+    mockActivityService.getRevealedNodes.handler((opts) => {
+      requestedAvatarIDs.push(opts.input.avatarID);
+
+      return {
+        completedNodeIDs: [originID],
+        contentVersion: 'v1',
+        nodes: [],
+      };
+    }),
+  );
+
+  await withRequestContext({ cookies: signedIn.cookies }, async () => {
+    const hook = renderHook(() => {
+      useAvatarRegionGraph();
+
+      return { selectable: useSelectableNodeIDs(), viewport: useViewport() };
+    });
+
+    // the mount's own region build resets the stored viewport, so the camera viewport that enables
+    // the revealed-nodes query is set only once that settles
+    await waitFor(() => {
+      expect(hook.result.current.selectable).toStrictEqual(new Set([originID]));
+    });
+
+    setViewport({ maxCX: 5, maxCY: 5, minCX: -5, minCY: -5 });
+
+    await waitFor(() => {
+      expect(hook.result.current.selectable.has(firstNeighbourID)).toBe(true);
+    });
+
+    const active = db.activeAvatarCollection.findFirst((q) => q.where({ userID: signedIn.userID }));
+
+    invariant(active, 'createActiveAvatar seeds an active-avatar row for this user');
+
+    await db.activeAvatarCollection.update(active, {
+      data(record) {
+        record.avatarID = second.id;
+      },
+    });
+
+    await hook.queryClient.invalidateQueries();
+
+    // the switch resets the store's viewport to null, so the revealed-nodes query for the incoming
+    // avatar stays disabled and can never resolve a completed set of its own during this assertion
+    await waitFor(() => {
+      expect(hook.result.current.viewport).toBeNull();
+    });
+
+    expect(hook.result.current.selectable).toStrictEqual(new Set([originID]));
+    expect(hook.result.current.selectable.has(firstNeighbourID)).toBe(false);
+
+    // the query stays gated on the store's region key, so the render window between the avatar
+    // flipping and the region switch committing never sends a request for the incoming avatar at
+    // the outgoing avatar's camera footprint
+    expect(requestedAvatarIDs).not.toContain(second.id);
   });
 });

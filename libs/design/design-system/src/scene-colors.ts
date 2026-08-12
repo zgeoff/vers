@@ -8,6 +8,7 @@ export const sceneColors = {
   fog: '#000000',
   ground: '#3d424d',
   nodeBase: '#cbd5e1',
+  nodeDimmed: '#475569',
   nodeSelected: '#7dd3fc',
   respiteBlock: '#8fa0c2',
   worldmapEdge: '#64748b',

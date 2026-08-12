@@ -58,6 +58,7 @@ interface RevealedNode {
 }
 
 interface GetRevealedNodesResult {
+  readonly completedNodeIDs: Array<string>;
   readonly contentVersion: string;
   readonly nodes: Array<RevealedNode>;
 }
@@ -69,9 +70,15 @@ interface GetRevealedNodesResult {
  * on every call from the grants table alone. Only cells that union actually covers can appear in the
  * response; the viewport bounds what is returned, never what is eligible to be revealed.
  *
- * A grant key that names no addressable world-map cell contributes no source rather than failing the
+ * A grant key that names no addressable world-map cell contributes nothing rather than failing the
  * query — a grant kind sharing the table with an unrelated future feature, or a row written before
- * the coordinate bounds existed.
+ * the coordinate bounds existed. An addressable key outside the Morton-packable coordinate range
+ * still counts as completed but contributes no reveal source: packing bounds only the reveal
+ * encoding, never completion. The activity start gate evaluates the raw grant keys instead, where
+ * a non-addressable key is inert — it can never equal a start target that resolved to a cell, and
+ * selectability expansion skips it — so the two sets agree on every node selectability can
+ * observe. `completedNodeIDs` carries every addressable grant key regardless of viewport, the set
+ * the client mirrors that gate against — only `nodes` is bounded by the viewport.
  */
 export async function getRevealedNodes(
   deps: GetRevealedNodesDeps,
@@ -100,11 +107,18 @@ export async function getRevealedNodes(
     .execute();
 
   const sources: Array<RevealSource> = [];
+  const completedNodeIDs: Array<string> = [];
 
   for (const grant of grants) {
     const coord = findCellCoord(grant.key);
 
-    if (coord !== undefined && canEncodeMortonKey(coord)) {
+    if (coord === undefined) {
+      continue;
+    }
+
+    completedNodeIDs.push(grant.key);
+
+    if (canEncodeMortonKey(coord)) {
       sources.push({ coord, radius: REVEAL_RADIUS });
     }
   }
@@ -116,11 +130,12 @@ export async function getRevealedNodes(
   invariant(contentVersion !== undefined, 'content registry has no current version');
 
   // a viewport the discs never reach needs neither the content document nor the avatar's scope
-  // secret, so a fog-only query costs one grants read and no keys-service round trip
+  // secret, so a fog-only query costs one grants read and no keys-service round trip; the
+  // completed set is never viewport-clipped, so it is still returned in full
   if (revealedCells.length === 0) {
     recordRevealQuery({ cellCount: 0, sourceCount: grants.length });
 
-    return { contentVersion, nodes: [] };
+    return { completedNodeIDs, contentVersion, nodes: [] };
   }
 
   const document = await deps.loadContentDocument(contentVersion);
@@ -152,5 +167,5 @@ export async function getRevealedNodes(
 
   recordRevealQuery({ cellCount: nodes.length, sourceCount: grants.length });
 
-  return { contentVersion, nodes };
+  return { completedNodeIDs, contentVersion, nodes };
 }
