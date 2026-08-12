@@ -44,6 +44,8 @@ How the platform is built — system design, data flows, and operational wiring.
   and secrets
 - [Observability](./architecture/platform/observability.md) — OpenTelemetry metrics and traces, the
   instrument registry, and what the monitors watch
+- [Chrome DevTools MCP](./architecture/platform/chrome-devtools-mcp.md) — agent access to a real
+  Windows Chrome from WSL, and the port bridge that makes it reachable
 
 ### Game
 
