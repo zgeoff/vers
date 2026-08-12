@@ -5,11 +5,11 @@ import type { WorldGraph } from '@vers/worldmap-client';
 import { createMockWorldMapNode } from '@vers/worldmap-client/test-utils';
 import { ExploreNodeFocus } from './explore-node-focus';
 
-test('it selects the graph node matching the route param', () => {
+test('it selects the graph node matching the route param when it is selectable', () => {
   const node1 = createMockWorldMapNode({ id: 'node1' });
   const graph: WorldGraph = { edges: {}, nodes: { node1 } };
 
-  setWorldRegion('region-a', graph, null, new Set());
+  setWorldRegion('region-a', graph, null, new Set(['node1']));
   render(<ExploreNodeFocus nodeID="node1" />);
 
   const hook = renderHook(() => useSelectedNode());
@@ -17,11 +17,23 @@ test('it selects the graph node matching the route param', () => {
   expect(hook.result.current.node).toStrictEqual(node1);
 });
 
+test('it leaves selection untouched for a graph node outside the selectable set', () => {
+  const node1 = createMockWorldMapNode({ id: 'node1' });
+  const graph: WorldGraph = { edges: {}, nodes: { node1 } };
+
+  setWorldRegion('region-c', graph, null, new Set());
+  render(<ExploreNodeFocus nodeID="node1" />);
+
+  const hook = renderHook(() => useSelectedNode());
+
+  expect(hook.result.current.node).toBeNull();
+});
+
 test('it renders nothing and leaves selection untouched for an unknown node id', () => {
   const node1 = createMockWorldMapNode({ id: 'node1' });
   const graph: WorldGraph = { edges: {}, nodes: { node1 } };
 
-  setWorldRegion('region-b', graph, null, new Set());
+  setWorldRegion('region-b', graph, null, new Set(['missing-node']));
 
   const rendered = render(<ExploreNodeFocus nodeID="missing-node" />);
 

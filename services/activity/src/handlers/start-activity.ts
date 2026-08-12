@@ -9,7 +9,7 @@ import { buildLevelFromXP } from '@vers/idle-core';
 import type { SimVersionRow } from '@vers/sim-registry';
 import { findCurrentSimVersion, findSimVersion } from '@vers/sim-registry';
 import { deriveWorldmapContent, readScopeSecret } from '@vers/worldmap-content';
-import { isNodeSelectable } from '@vers/worldmap-core';
+import { ORIGIN_CELL, isNodeSelectable, toNodeID } from '@vers/worldmap-core';
 import type { CryptoKey } from 'jose';
 import { sql } from 'kysely';
 import type { Kysely } from 'kysely';
@@ -132,7 +132,11 @@ export async function startActivity(
     throw opts.errors.NODE_UNKNOWN({ data: {} });
   }
 
-  if (opts.input.scopeType === 'world_map_node') {
+  // the origin is unconditionally selectable, so a start there needs no grants read to decide
+  if (
+    opts.input.scopeType === 'world_map_node' &&
+    opts.input.scopeID !== toNodeID(ORIGIN_CELL[0], ORIGIN_CELL[1])
+  ) {
     const grants = await deps.db
       .selectFrom('avatarGrants')
       .select('key')

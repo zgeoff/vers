@@ -3,11 +3,13 @@ export { buildChunk } from './build-chunk';
 export { canEncodeMortonKey } from './can-encode-morton-key';
 export { collectNodeEdges } from './collect-node-edges';
 export { collectRevealedCells } from './collect-revealed-cells';
+export { collectSelectableNodeIDs } from './collect-selectable-node-ids';
 
 export {
   CHUNK_SIZE,
   HEX_SIZE,
   JITTER,
+  ORIGIN_CELL,
   REVEAL_RADIUS,
   WORLD_COORD_MAX,
   WORLD_COORD_MIN,

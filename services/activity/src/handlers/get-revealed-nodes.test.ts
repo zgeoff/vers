@@ -327,7 +327,7 @@ test('it skips a first-clear grant key that is not a world-map node id', async (
   expect(result.completedNodeIDs).toStrictEqual(['0_0']);
 });
 
-test('it skips a first-clear grant naming a cell past the packable coordinate range', async () => {
+test('it reveals nothing around a grant past the packable coordinate range while still counting it completed', async () => {
   await using ctx = await setupTest();
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
@@ -347,7 +347,7 @@ test('it skips a first-clear grant naming a cell past the packable coordinate ra
   });
 
   expect(result.nodes).toBeEmpty();
-  expect(result.completedNodeIDs).toBeEmpty();
+  expect(result.completedNodeIDs).toStrictEqual([`${WORLD_COORD_MAX + 1}_0`]);
 });
 
 test('it reveals nothing for a second avatar of the same user that holds no first-clear grant', async () => {

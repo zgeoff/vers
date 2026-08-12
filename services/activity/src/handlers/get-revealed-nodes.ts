@@ -70,11 +70,13 @@ interface GetRevealedNodesResult {
  * on every call from the grants table alone. Only cells that union actually covers can appear in the
  * response; the viewport bounds what is returned, never what is eligible to be revealed.
  *
- * A grant key that names no addressable world-map cell contributes no source rather than failing the
+ * A grant key that names no addressable world-map cell contributes nothing rather than failing the
  * query — a grant kind sharing the table with an unrelated future feature, or a row written before
- * the coordinate bounds existed. `completedNodeIDs` carries every addressable grant key regardless
- * of viewport, the set the client mirrors `startActivity`'s own selectable-node gate against — only
- * `nodes` is bounded by the viewport.
+ * the coordinate bounds existed. An addressable key outside the Morton-packable coordinate range
+ * still counts as completed but contributes no reveal source: packing bounds only the reveal
+ * encoding, never completion, so the completed set here matches the one the activity start gate
+ * evaluates. `completedNodeIDs` carries every addressable grant key regardless of viewport, the set
+ * the client mirrors that gate against — only `nodes` is bounded by the viewport.
  */
 export async function getRevealedNodes(
   deps: GetRevealedNodesDeps,
@@ -108,9 +110,14 @@ export async function getRevealedNodes(
   for (const grant of grants) {
     const coord = findCellCoord(grant.key);
 
-    if (coord !== undefined && canEncodeMortonKey(coord)) {
+    if (coord === undefined) {
+      continue;
+    }
+
+    completedNodeIDs.push(grant.key);
+
+    if (canEncodeMortonKey(coord)) {
       sources.push({ coord, radius: REVEAL_RADIUS });
-      completedNodeIDs.push(grant.key);
     }
   }
 

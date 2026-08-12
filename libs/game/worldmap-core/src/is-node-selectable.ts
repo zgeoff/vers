@@ -1,6 +1,7 @@
 import { collectNodeEdges } from './collect-node-edges';
 import { ORIGIN_CELL } from './consts';
 import { findCellCoord } from './find-cell-coord';
+import { findEdgeNeighbourID } from './find-edge-neighbour-id';
 import { toNodeID } from './to-node-id';
 
 /**
@@ -36,9 +37,8 @@ export function isNodeSelectable(
   const edges = collectNodeEdges(userSeed, coord[0], coord[1]);
 
   return edges.some((edge) => {
-    const [aID = '', bID = ''] = edge.id.split('|');
-    const otherID = aID === targetID ? bID : aID;
+    const otherID = findEdgeNeighbourID(edge, targetID);
 
-    return completedNodeIDs.has(otherID);
+    return otherID !== undefined && completedNodeIDs.has(otherID);
   });
 }
