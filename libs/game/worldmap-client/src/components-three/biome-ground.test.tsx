@@ -1,10 +1,22 @@
 import { expect, test } from 'bun:test';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
+import type { Viewport } from '@vers/worldmap-core';
+import { DataTexture } from 'three';
 import type { Mesh, Object3D } from 'three';
 import invariant from 'tiny-invariant';
 import { setViewport } from '../state/set-viewport';
 import { setWorldRegion } from '../state/set-world-region';
+import { buildChunkAlignedViewport } from '../utils/build-chunk-aligned-viewport';
 import { BiomeGround } from './biome-ground';
+
+/**
+ * Mirrors BiomeGround's own private `BIOME_TEXELS_PER_CELL` and `BIOME_VIEWPORT_MARGIN_CELLS`. The
+ * dimension assertions below apply this inflation on top of `buildChunkAlignedViewport` — the same
+ * chunk-rounding `useFogViewport` applies before BiomeGround ever sees a viewport — so the expected
+ * texel counts match what the component actually builds from, not the raw store viewport.
+ */
+const TEXELS_PER_CELL = 2;
+const VIEWPORT_MARGIN_CELLS = 2;
 
 test('it renders nothing until a seed and a viewport exist', async () => {
   const renderer = await ReactThreeTestRenderer.create(<BiomeGround />);
@@ -14,7 +26,7 @@ test('it renders nothing until a seed and a viewport exist', async () => {
   await renderer.unmount();
 });
 
-test('it covers the viewport with one biome ground plane', async () => {
+test('it builds a texture sized to the inflated viewport', async () => {
   setWorldRegion('avatar-a', 42, { edges: {}, nodes: {} }, null, new Set(), []);
   setViewport({ maxCX: 2, maxCY: 2, minCX: -2, minCY: -2 });
 
@@ -30,10 +42,16 @@ test('it covers the viewport with one biome ground plane', async () => {
   expect(plane.geometry.getAttribute('position').count).toBe(4);
   expect(plane.geometry.index?.count).toBe(6);
 
+  const texture = getGroundTexture(plane);
+  const aligned = buildChunkAlignedViewport({ maxCX: 2, maxCY: 2, minCX: -2, minCY: -2 });
+
+  expect(texture.image.width).toBe(buildExpectedCols(aligned));
+  expect(texture.image.height).toBe(buildExpectedRows(aligned));
+
   await renderer.unmount();
 });
 
-test('it keeps one mesh and one material across pans so the shader never recompiles', async () => {
+test('it keeps one mesh and one material across pans, rebuilding the texture to the new size', async () => {
   setWorldRegion('avatar-a', 42, { edges: {}, nodes: {} }, null, new Set(), []);
   setViewport({ maxCX: 2, maxCY: 2, minCX: -2, minCY: -2 });
 
@@ -44,15 +62,34 @@ test('it keeps one mesh and one material across pans so the shader never recompi
   invariant(isMesh(plane), 'the sole child is the biome ground plane');
 
   const material = plane.material;
+  const previousTexture = getGroundTexture(plane);
+  const previousData = previousTexture.image.data;
+
+  invariant(previousData, 'the ground texture carries a byte buffer');
+
+  const previousBytes = Uint8Array.from(previousData);
+  const nextViewport: Viewport = { maxCX: 50, maxCY: 50, minCX: -50, minCY: -50 };
 
   await ReactThreeTestRenderer.act(() => {
-    setViewport({ maxCX: 40, maxCY: 3, minCX: 24, minCY: -1 });
+    setViewport(nextViewport);
 
     return Promise.resolve();
   });
 
   expect(renderer.scene.children[0]!.instance).toBe(plane);
   expect(plane.material).toBe(material);
+
+  const nextTexture = getGroundTexture(plane);
+  const nextData = nextTexture.image.data;
+
+  invariant(nextData, 'the rebuilt ground texture carries a byte buffer');
+
+  const nextAligned = buildChunkAlignedViewport(nextViewport);
+
+  expect(nextTexture.image.width).toBe(buildExpectedCols(nextAligned));
+  expect(nextTexture.image.height).toBe(buildExpectedRows(nextAligned));
+  expect(nextTexture).not.toBe(previousTexture);
+  expect(Uint8Array.from(nextData)).not.toEqual(previousBytes);
 
   await renderer.unmount();
 });
@@ -63,4 +100,31 @@ test('it keeps one mesh and one material across pans so the shader never recompi
  */
 function isMesh(object: Object3D): object is Mesh {
   return 'isMesh' in object && object.isMesh === true;
+}
+
+/**
+ * Structural view of the mesh material's TSL color node, narrowing only the mutable texture value
+ * slot `BiomeGround` itself reads and writes — the same untyped-node boundary its own facade type
+ * exists to cross, so the test reads the identical `DataTexture` the material actually samples.
+ */
+interface ColorTextureNode {
+  readonly value?: unknown;
+}
+
+function getGroundTexture(mesh: Mesh): DataTexture {
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the material's real type is three's heavily generic node-material type; only this narrow, mutable-by-design slot is read
+  const colorNode = (mesh.material as { colorNode?: ColorTextureNode }).colorNode;
+  const value = colorNode?.value;
+
+  invariant(value instanceof DataTexture, 'the ground plane material carries a live DataTexture');
+
+  return value;
+}
+
+function buildExpectedCols(viewport: Readonly<Viewport>): number {
+  return (viewport.maxCX - viewport.minCX + 1 + 2 * VIEWPORT_MARGIN_CELLS) * TEXELS_PER_CELL;
+}
+
+function buildExpectedRows(viewport: Readonly<Viewport>): number {
+  return (viewport.maxCY - viewport.minCY + 1 + 2 * VIEWPORT_MARGIN_CELLS) * TEXELS_PER_CELL;
 }

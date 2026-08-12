@@ -39,3 +39,19 @@ test('it agrees with getBiome called directly on the same cell at resolution 1',
   // 64-bit number getBiome returns for the same sample
   expect(field.blendTs[index]).toBeCloseTo(direct.blendT, 5);
 });
+
+test('it agrees with getBiome across every texel of a viewport spanning many coarse cells', () => {
+  const viewport = { maxCX: 20, maxCY: 20, minCX: -20, minCY: -20 };
+  const field = buildBiomeField(31, viewport, { resolution: 1 });
+
+  for (let cy = viewport.minCY; cy <= viewport.maxCY; cy++) {
+    for (let cx = viewport.minCX; cx <= viewport.maxCX; cx++) {
+      const index = (cy - viewport.minCY) * field.cols + (cx - viewport.minCX);
+      const direct = getBiome(31, cx, cy);
+
+      expect(field.baseIDs[index]).toBe(direct.baseID);
+      expect(field.neighbourBaseIDs[index]).toBe(direct.neighbourBaseID);
+      expect(field.modifierIDs[index]).toBe(direct.modifierID);
+    }
+  }
+});

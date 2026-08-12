@@ -109,6 +109,19 @@ export interface BiomeSample {
 }
 
 /**
+ * Per-build memoization for `buildBiomeSample`'s coarse-cell lookups: a Worley feature point and a
+ * roster draw, each cached by hash channel and coarse-cell coordinate so the many texels sharing a
+ * coarse cell resolve it once instead of repeating the same hash draws and roster weighing on every
+ * visit. `getBiome` builds a fresh, single-sample context per call; `buildBiomeField` builds one and
+ * reuses it across the whole texel grid.
+ */
+export interface BiomeContext {
+  readonly featurePoints: Map<string, readonly [number, number]>;
+  readonly rosterIDs: Map<string, number>;
+  readonly userSeed: number;
+}
+
+/**
  * A biome texel grid over a viewport, row-major with `cols * rows` samples, laid out identically to
  * `RevealDistanceField` so a quad spanning the same viewport lines up with both.
  */
