@@ -2,11 +2,11 @@
 
 The `chrome-devtools` MCP server, registered in [`.mcp.json`](../../../.mcp.json), gives an agent
 DevTools-protocol access to a real Chrome on the Windows host: script evaluation, screenshots,
-synthetic input, and console and network capture, against the GPU and browser build the app actually
-ships to. Chrome binds its debugging port to the Windows loopback only, and a NAT-mode WSL
-distribution cannot reach that loopback, so a port proxy on the Windows side bridges the gap. The
-server resolves the Windows host through the WSL default gateway at launch, so a reboot-reassigned
-gateway needs no reconfiguration.
+synthetic input, and console and network capture, against the GPU and browser build the app ships
+to. Chrome binds its debugging port to the Windows loopback only, and a NAT-mode WSL distribution
+cannot reach that loopback, so a port proxy on the Windows side bridges the gap. The server resolves
+the Windows host through the WSL default gateway at launch, so a reboot-reassigned gateway needs no
+reconfiguration.
 
 Under mirrored networking (`wslinfo --networking-mode` prints `mirrored`), WSL shares the Windows
 loopback: skip the bridge and point the server's `--browser-url` at `http://127.0.0.1:9222`.
