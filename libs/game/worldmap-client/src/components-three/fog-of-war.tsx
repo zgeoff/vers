@@ -1,16 +1,22 @@
 import { extend } from '@react-three/fiber';
 import { sceneColors } from '@vers/design-system';
-import type { FrontierEdge, Viewport } from '@vers/worldmap-core';
+import type { FrontierEdge, RevealDistanceField, Viewport } from '@vers/worldmap-core';
 import {
-  HEX_SIZE,
+  buildRevealDistanceField,
   collectFrontierEdges,
   collectRevealedCells,
-  collectUnrevealedCells,
   toHexPosition,
 } from '@vers/worldmap-core';
-import { useLayoutEffect, useMemo, useRef } from 'react';
-import type { BufferGeometry, InstancedMesh } from 'three';
-import { BufferAttribute, Matrix4 } from 'three';
+import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
+import {
+  BufferAttribute,
+  BufferGeometry,
+  DataTexture,
+  LinearFilter,
+  RedFormat,
+  UnsignedByteType,
+} from 'three';
+import { texture } from 'three/tsl';
 import { LineBasicNodeMaterial, MeshBasicNodeMaterial } from 'three/webgpu';
 import { NODE_POSITION_SCALING_FACTOR } from '../consts';
 import { useRevealSources } from '../state/use-reveal-sources';
@@ -20,31 +26,31 @@ const SHROUD_COLOR = sceneColors.fogShroud;
 const FRONTIER_COLOR = sceneColors.fogFrontier;
 
 /**
- * Shroud tiles and the frontier line float just above the node plane so fog hides the nodes and
- * edges underneath it, with the line a step higher so it never z-fights its own tiles.
+ * Hex hops over which fog density eases from clear to fully opaque. Wider reads softer; the reveal
+ * projection is inflated by this plus one cell so the gradient never hardens at the viewport edge.
  */
-const SHROUD_ELEVATION = 0.2;
-const FRONTIER_ELEVATION = 0.3;
-const SHROUD_RADIUS = HEX_SIZE * NODE_POSITION_SCALING_FACTOR;
-const SHROUD_SEGMENTS = 6;
+const FOG_FALLOFF_CELLS = 2;
 
 /**
- * Rotates the shroud hexagon's first vertex to +30° so its corners land on the pointy-top lattice
- * corners and adjacent tiles share edges exactly.
+ * How strongly the frontier accent line reads against the fog gradient it sits inside.
  */
-const SHROUD_THETA_START = Math.PI / 6;
-const ShroudMaterial = extend(MeshBasicNodeMaterial);
+const FRONTIER_OPACITY = 0.35;
+
+/**
+ * The fog plane and the frontier line float just above the node plane so dense fog hides the nodes
+ * and edges underneath it, with the line a step higher so it never z-fights the plane.
+ */
+const FOG_ELEVATION = 0.2;
+const FRONTIER_ELEVATION = 0.3;
 const FrontierMaterial = extend(LineBasicNodeMaterial);
 
-const instanceMatrix = new Matrix4();
-
 /**
- * Draws fog of war over the world map: an opaque hex tile on every unrevealed viewport cell, and a
- * line tracing the frontier where revealed cells border unrevealed ones. Purely presentational — it
- * projects the revealed region from the store's reveal sources on every viewport change and stores
- * nothing itself. The projection runs over the viewport inflated by one cell so frontier sides at
- * the viewport edge classify their outside neighbours correctly, and renders nothing until both a
- * viewport and reveal sources exist.
+ * Draws soft fog of war over the world map: one viewport-covering plane whose per-fragment opacity
+ * samples a fog-density texture — 0 over revealed ground, easing to 1 past the falloff distance —
+ * plus a faint line tracing the frontier where revealed cells border unrevealed ones. Purely
+ * presentational: it projects the revealed region from the store's reveal sources on every
+ * viewport change and stores nothing itself. It renders nothing until both a viewport and reveal
+ * sources exist.
  */
 export function FogOfWar() {
   const revealSources = useRevealSources();
@@ -56,17 +62,18 @@ export function FogOfWar() {
     }
 
     const inflated: Viewport = {
-      maxCX: viewport.maxCX + 1,
-      maxCY: viewport.maxCY + 1,
-      minCX: viewport.minCX - 1,
-      minCY: viewport.minCY - 1,
+      maxCX: viewport.maxCX + FOG_FALLOFF_CELLS + 1,
+      maxCY: viewport.maxCY + FOG_FALLOFF_CELLS + 1,
+      minCX: viewport.minCX - FOG_FALLOFF_CELLS - 1,
+      minCY: viewport.minCY - FOG_FALLOFF_CELLS - 1,
     };
 
     const revealedCells = collectRevealedCells(revealSources, inflated);
 
     return {
+      field: buildRevealDistanceField(revealedCells, inflated, FOG_FALLOFF_CELLS),
+      fieldViewport: inflated,
       frontierEdges: collectFrontierEdges(revealedCells, viewport),
-      shroudedCells: collectUnrevealedCells(revealedCells, viewport),
     };
   }, [revealSources, viewport]);
 
@@ -76,52 +83,91 @@ export function FogOfWar() {
 
   return (
     <>
-      <ShroudTiles cells={fog.shroudedCells} />
+      <FogPlane field={fog.field} viewport={fog.fieldViewport} />
       <FrontierLine edges={fog.frontierEdges} />
     </>
   );
 }
 
-interface ShroudTilesProps {
-  readonly cells: ReadonlyArray<readonly [number, number]>;
+interface FogPlaneProps {
+  readonly field: RevealDistanceField;
+  readonly viewport: Viewport;
 }
 
-function ShroudTiles(props: Readonly<ShroudTilesProps>) {
-  const meshRef = useRef<InstancedMesh | null>(null);
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- RevealDistanceField carries a Float32Array, which has no readonly form
+function FogPlane(props: Readonly<FogPlaneProps>) {
+  const plane = useMemo(() => {
+    const bytes = new Uint8Array(props.field.values.length);
 
-  // rebuild every instance's transform whenever the shrouded-cell list changes: a fresh
-  // `InstancedMesh` (its `args`-derived count changed) has no prior state to preserve
-  useLayoutEffect(() => {
-    const mesh = meshRef.current;
-
-    if (!mesh) {
-      return;
+    for (let index = 0; index < bytes.length; index++) {
+      bytes[index] = Math.round((props.field.values[index] ?? 0) * 255);
     }
 
-    for (const [index, cell] of props.cells.entries()) {
-      const [x, y] = toHexPosition(cell[0], cell[1]);
+    const map = new DataTexture(
+      bytes,
+      props.field.cols,
+      props.field.rows,
+      RedFormat,
+      UnsignedByteType,
+    );
 
-      mesh.setMatrixAt(
-        index,
-        instanceMatrix.makeTranslation(
-          x * NODE_POSITION_SCALING_FACTOR,
-          y * NODE_POSITION_SCALING_FACTOR,
-          SHROUD_ELEVATION,
-        ),
-      );
-    }
+    // bilinear sampling between texel centers is what turns the per-cell density grid into a
+    // continuous gradient across each cell
+    map.magFilter = LinearFilter;
+    map.minFilter = LinearFilter;
+    map.needsUpdate = true;
 
-    mesh.instanceMatrix.needsUpdate = true;
+    const material = new MeshBasicNodeMaterial({
+      color: SHROUD_COLOR,
+      depthWrite: false,
+      transparent: true,
+    });
 
-    mesh.computeBoundingSphere();
-  }, [props.cells]);
+    material.opacityNode = texture(map).r;
 
-  return (
-    <instancedMesh ref={meshRef} args={[undefined, undefined, props.cells.length]}>
-      <circleGeometry args={[SHROUD_RADIUS, SHROUD_SEGMENTS, SHROUD_THETA_START]} />
-      <ShroudMaterial color={SHROUD_COLOR} />
-    </instancedMesh>
+    return { geometry: buildFogPlaneGeometry(props.viewport), map, material };
+  }, [props.field, props.viewport]);
+
+  useEffect(
+    () => () => {
+      plane.geometry.dispose();
+      plane.material.dispose();
+      plane.map.dispose();
+    },
+    [plane],
   );
+
+  return <mesh geometry={plane.geometry} material={plane.material} />;
+}
+
+/**
+ * One parallelogram quad covering the viewport's cell box in scene space. The axial-to-scene
+ * mapping is linear, so the quad's uv interpolation lands each density texel's center exactly on
+ * its cell's center; the half-cell margin puts the quad edge on the outermost cells' rims.
+ */
+function buildFogPlaneGeometry(viewport: Readonly<Viewport>): BufferGeometry {
+  const corners = [
+    toHexPosition(viewport.minCX - 0.5, viewport.minCY - 0.5),
+    toHexPosition(viewport.maxCX + 0.5, viewport.minCY - 0.5),
+    toHexPosition(viewport.minCX - 0.5, viewport.maxCY + 0.5),
+    toHexPosition(viewport.maxCX + 0.5, viewport.maxCY + 0.5),
+  ];
+
+  const positions = new Float32Array(
+    corners.flatMap(([x, y]) => [
+      x * NODE_POSITION_SCALING_FACTOR,
+      y * NODE_POSITION_SCALING_FACTOR,
+      FOG_ELEVATION,
+    ]),
+  );
+
+  const geometry = new BufferGeometry();
+
+  geometry.setAttribute('position', new BufferAttribute(positions, 3));
+  geometry.setAttribute('uv', new BufferAttribute(new Float32Array([0, 0, 1, 0, 0, 1, 1, 1]), 2));
+  geometry.setIndex([0, 1, 2, 2, 1, 3]);
+
+  return geometry;
 }
 
 interface FrontierLineProps {
@@ -166,7 +212,7 @@ function FrontierLine(props: Readonly<FrontierLineProps>) {
   return (
     <lineSegments>
       <bufferGeometry ref={geometryRef} />
-      <FrontierMaterial color={FRONTIER_COLOR} />
+      <FrontierMaterial color={FRONTIER_COLOR} opacity={FRONTIER_OPACITY} transparent />
     </lineSegments>
   );
 }

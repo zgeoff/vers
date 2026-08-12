@@ -60,3 +60,14 @@ export type RevealedCells = ReadonlyArray<number>;
  * neighbour — as two scene-space endpoints in unit-hex coordinates.
  */
 export type FrontierEdge = readonly [readonly [number, number], readonly [number, number]];
+
+/**
+ * A fog-density grid over a viewport. `values` is row-major,
+ * `values[(cy - minCY) * cols + (cx - minCX)]`: 0 over revealed cells, easing up to 1 at the
+ * falloff distance from the nearest revealed cell.
+ */
+export interface RevealDistanceField {
+  readonly cols: number;
+  readonly rows: number;
+  readonly values: Float32Array;
+}

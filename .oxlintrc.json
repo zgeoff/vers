@@ -493,6 +493,7 @@
               "scale",
               "intensity",
               "geometry",
+              "material",
               "far",
               "near",
               "aspect",
