@@ -5,7 +5,7 @@ import type { WorldMapNode } from '@vers/worldmap-core';
 import type { InstancedMesh, Object3D } from 'three';
 import { Color } from 'three';
 import invariant from 'tiny-invariant';
-import { setSelectableNodeIDs } from '../state/set-selectable-node-ids';
+import { setCompletedNodeProjections } from '../state/set-completed-node-projections';
 import { useWorldmapStore } from '../state/use-worldmap-store';
 import { createMockWorldMapNode } from '../test-utils/factories/create-mock-world-map-node';
 import { WorldMapNodes } from './world-map-nodes';
@@ -50,7 +50,7 @@ test('it sets the selected node when a selectable node instance is clicked', asy
   const nodeA = createMockWorldMapNode({ id: 'nodeA' });
   const nodeB = createMockWorldMapNode({ id: 'nodeB' });
 
-  setSelectableNodeIDs(new Set([nodeA.id]));
+  setCompletedNodeProjections(new Set([nodeA.id]), []);
 
   const renderer = await setupTest([nodeA, nodeB]);
 
@@ -65,7 +65,7 @@ test('it leaves the selection untouched when a non-selectable node instance is c
   const nodeA = createMockWorldMapNode({ id: 'nodeA' });
   const nodeB = createMockWorldMapNode({ id: 'nodeB' });
 
-  setSelectableNodeIDs(new Set([nodeA.id]));
+  setCompletedNodeProjections(new Set([nodeA.id]), []);
 
   const renderer = await setupTest([nodeA, nodeB]);
 
@@ -80,7 +80,7 @@ test('it colors a non-selectable node instance dimmed and a selectable one at re
   const nodeA = createMockWorldMapNode({ id: 'nodeA' });
   const nodeB = createMockWorldMapNode({ id: 'nodeB' });
 
-  setSelectableNodeIDs(new Set([nodeA.id]));
+  setCompletedNodeProjections(new Set([nodeA.id]), []);
 
   const renderer = await setupTest([nodeA, nodeB]);
 

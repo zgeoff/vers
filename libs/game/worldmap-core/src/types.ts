@@ -54,3 +54,23 @@ export interface Viewport {
  * entry's cell coordinate.
  */
 export type RevealedCells = ReadonlyArray<number>;
+
+/**
+ * Read-only structural view of a typed float array. A real `Float32Array` satisfies it directly,
+ * and consumers typed against it stay deeply readonly — the typed array itself has no readonly
+ * form.
+ */
+export interface ReadonlyFloatArray {
+  readonly length: number;
+  readonly [index: number]: number;
+}
+
+/**
+ * A fog-density texel grid over a viewport, row-major with `cols * rows` samples: 0 over revealed
+ * ground, easing up to 1 a falloff past the nearest reveal disc's edge.
+ */
+export interface RevealDistanceField {
+  readonly cols: number;
+  readonly rows: number;
+  readonly values: ReadonlyFloatArray;
+}
