@@ -149,6 +149,8 @@
           // a live three.js geometry handle: attribute buffers rewritten in place, no readonly
           // form
           { "from": "package", "name": "BufferGeometry", "package": "three" },
+          // a live three.js renderer handle: GPU backend and canvas state, no readonly form
+          { "from": "package", "name": "WebGPURenderer", "package": "three" },
           // a query-log event: its `query` field is Kysely's internal operation-node AST, built
           // and read by Kysely itself with no readonly form
           { "from": "package", "name": "LogEvent", "package": "kysely" },

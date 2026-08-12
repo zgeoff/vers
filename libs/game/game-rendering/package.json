@@ -30,6 +30,7 @@
     "@zgeoff/bun-test-extended": "catalog:",
     "happy-dom": "catalog:",
     "react-dom": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "vite": "catalog:"
   }
 }

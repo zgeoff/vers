@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { WebGPURenderer } from 'three/webgpu';
 import type { WebGPURendererParameters } from 'three/webgpu';
 import { GameLoopDriver } from './game-loop-driver';
+import { registerRendererDiagnostics } from './register-renderer-diagnostics';
 import { toFrameloop } from './to-frameloop';
 import { useSceneStateStore } from './use-scene-state-store';
 
@@ -31,6 +32,10 @@ export function GameCanvas(props: Readonly<GameCanvasProps>): ReactNode {
         const renderer = new WebGPURenderer(parameters as WebGPURendererParameters);
 
         await renderer.init();
+
+        if (import.meta.env.DEV) {
+          registerRendererDiagnostics(renderer);
+        }
 
         return renderer;
       }}

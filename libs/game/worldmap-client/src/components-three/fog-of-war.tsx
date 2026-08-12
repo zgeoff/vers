@@ -173,7 +173,18 @@ const fogTSLValues = { mx_noise_float, positionWorld, texture, time };
 // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the values are untouched runtime TSL builders; only the static view narrows
 const fogTSL = fogTSLValues as unknown as FogTSL;
 
+/**
+ * The byte buffer behind the live density texture, kept beside its dimensions so a same-size
+ * rebuild can rewrite the pixels in place.
+ */
+interface DensityBuffer {
+  bytes: Uint8Array;
+  cols: number;
+  rows: number;
+}
+
 interface FogPlaneResources {
+  readonly density: DensityBuffer;
   readonly geometry: BufferGeometry;
   readonly material: MeshBasicNodeMaterial;
   readonly textureNode: FogTextureNode;
@@ -184,7 +195,15 @@ function buildFogPlaneResources(
   field: RevealDistanceField,
   viewport: Readonly<Viewport>,
 ): FogPlaneResources {
-  const textureNode = fogTSL.texture(buildDensityTexture(field));
+  const density: DensityBuffer = {
+    bytes: new Uint8Array(field.values.length),
+    cols: field.cols,
+    rows: field.rows,
+  };
+
+  updateDensityBytes(density.bytes, field);
+
+  const textureNode = fogTSL.texture(buildDensityTexture(density));
 
   const material = new MeshBasicNodeMaterial({
     color: SHROUD_COLOR,
@@ -199,34 +218,64 @@ function buildFogPlaneResources(
 
   updateFogPlaneGeometry(geometry, viewport);
 
-  return { geometry, material, textureNode };
+  return { density, geometry, material, textureNode };
 }
 
+/**
+ * A same-size field — every pan; only a zoom changes the texel dimensions — rewrites the live
+ * texture's pixels in place: no new GPU texture and, above all, no disposal, since destroying a
+ * texture a queued frame still binds is a device loss on the WebGPU backend and a silently blank
+ * canvas. Only a resize allocates a replacement, and the old texture is released only after the
+ * node stops referencing it.
+ */
 function updateFogPlane(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- the texture node's value slot is mutable by design: swapping it is how a rebuilt field reaches the live material
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- the resources' density buffer and texture-node value slot are mutable by design: rewriting them is how a rebuilt field reaches the live material
   plane: FogPlaneResources,
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- RevealDistanceField carries a Float32Array, which has no readonly form
   field: RevealDistanceField,
   viewport: Readonly<Viewport>,
 ): void {
-  const previous = plane.textureNode.value;
+  if (field.cols === plane.density.cols && field.rows === plane.density.rows) {
+    updateDensityBytes(plane.density.bytes, field);
 
-  plane.textureNode.value = buildDensityTexture(field);
+    plane.textureNode.value.needsUpdate = true;
+  } else {
+    plane.density.bytes = new Uint8Array(field.values.length);
 
-  previous.dispose();
+    plane.density.cols = field.cols;
+    plane.density.rows = field.rows;
+
+    updateDensityBytes(plane.density.bytes, field);
+
+    const previous = plane.textureNode.value;
+
+    plane.textureNode.value = buildDensityTexture(plane.density);
+
+    previous.dispose();
+  }
 
   updateFogPlaneGeometry(plane.geometry, viewport);
 }
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- RevealDistanceField carries a Float32Array, which has no readonly form
-function buildDensityTexture(field: RevealDistanceField): DataTexture {
-  const bytes = new Uint8Array(field.values.length);
-
+function updateDensityBytes(
+  bytes: Uint8Array,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- RevealDistanceField carries a Float32Array, which has no readonly form
+  field: RevealDistanceField,
+): void {
   for (let index = 0; index < bytes.length; index++) {
     bytes[index] = Math.round((field.values[index] ?? 0) * 255);
   }
+}
 
-  const map = new DataTexture(bytes, field.cols, field.rows, RedFormat, UnsignedByteType);
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- the density buffer is mutable by design: it backs the live texture's pixel storage
+function buildDensityTexture(density: DensityBuffer): DataTexture {
+  const map = new DataTexture(
+    density.bytes,
+    density.cols,
+    density.rows,
+    RedFormat,
+    UnsignedByteType,
+  );
 
   // bilinear sampling between texel centers is what turns the texel grid into a continuous
   // gradient
