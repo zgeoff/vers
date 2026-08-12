@@ -54,6 +54,12 @@ export function WorldMapNodes(props: Readonly<WorldMapNodesProps>) {
       mesh.instanceColor.needsUpdate = true;
     }
 
+    // three derives an InstancedMesh's bounding sphere once, lazily, and a matrix rewrite doesn't
+    // invalidate it — without this recompute, a reused mesh (same instance count, new node list)
+    // keeps the sphere anchored over the previous region, so the frustum culls every node once the
+    // camera pans away and raycasting's sphere gate stops pointer events with it
+    mesh.computeBoundingSphere();
+
     appliedSelectedNodeIDRef.current = selectedNodeID;
   }, [props.nodes]);
 
