@@ -403,8 +403,16 @@ test('it extends the selectable set to a real neighbour once the revealed-nodes 
 
 test('it publishes the origin reveal disc on the region build and extends it once the revealed-nodes query resolves a completed grant', async () => {
   const signedIn = await createSignedInUser();
+  const avatar = await createActiveAvatar({ seed: 1212, userID: signedIn.userID });
 
-  await createActiveAvatar({ seed: 555, userID: signedIn.userID });
+  const expectedOrigin = buildViewportGraph(avatar.seed, {
+    maxCX: 24,
+    maxCY: 24,
+    minCX: -24,
+    minCY: -24,
+  }).nodes[toNodeID(0, 0)];
+
+  invariant(expectedOrigin, 'the initial viewport always contains its origin cell');
 
   server.use(
     mockActivityService.getRevealedNodes.handler(() => ({
@@ -418,16 +426,20 @@ test('it publishes the origin reveal disc on the region build and extends it onc
     const hook = renderHook(() => {
       useAvatarRegionGraph();
 
-      return { revealSources: useRevealSources() };
+      return { revealSources: useRevealSources(), worldGraph: useWorldGraph() };
+    });
+
+    // poll this avatar's seed-specific origin: the region build resets the stored viewport, so a
+    // camera viewport set before that build lands would be wiped by it
+    await waitFor(() => {
+      expect(hook.result.current.worldGraph.nodes[toNodeID(0, 0)]).toStrictEqual(expectedOrigin);
     });
 
     // the region build publishes the origin disc before any query resolves, so a fresh avatar sees
     // its starting area instead of a fully fogged map
-    await waitFor(() => {
-      expect(hook.result.current.revealSources).toStrictEqual([
-        { coord: [0, 0], radius: REVEAL_RADIUS },
-      ]);
-    });
+    expect(hook.result.current.revealSources).toStrictEqual([
+      { coord: [0, 0], radius: REVEAL_RADIUS },
+    ]);
 
     setViewport({ maxCX: 5, maxCY: 5, minCX: -5, minCY: -5 });
 
