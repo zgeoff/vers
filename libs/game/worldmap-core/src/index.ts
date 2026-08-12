@@ -3,7 +3,6 @@ export { buildChunk } from './build-chunk';
 export { buildRevealDistanceField } from './build-reveal-distance-field';
 export { buildRevealSources } from './build-reveal-sources';
 export { canEncodeMortonKey } from './can-encode-morton-key';
-export { collectFrontierEdges } from './collect-frontier-edges';
 export { collectNodeEdges } from './collect-node-edges';
 export { collectRevealedCells } from './collect-revealed-cells';
 export { collectSelectableNodeIDs } from './collect-selectable-node-ids';

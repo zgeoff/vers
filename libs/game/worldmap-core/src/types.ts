@@ -56,15 +56,8 @@ export interface Viewport {
 export type RevealedCells = ReadonlyArray<number>;
 
 /**
- * One hex side on the reveal frontier — the boundary between a revealed cell and an unrevealed
- * neighbour — as two scene-space endpoints in unit-hex coordinates.
- */
-export type FrontierEdge = readonly [readonly [number, number], readonly [number, number]];
-
-/**
- * A fog-density grid over a viewport. `values` is row-major,
- * `values[(cy - minCY) * cols + (cx - minCX)]`: 0 over revealed cells, easing up to 1 at the
- * falloff distance from the nearest revealed cell.
+ * A fog-density texel grid over a viewport, row-major with `cols * rows` samples: 0 over revealed
+ * ground, easing up to 1 a falloff past the nearest reveal disc's edge.
  */
 export interface RevealDistanceField {
   readonly cols: number;
