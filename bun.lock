@@ -566,6 +566,7 @@
         "happy-dom": "catalog:",
         "react-dom": "catalog:",
         "typescript": "catalog:",
+        "vite": "catalog:",
       },
     },
     "libs/game/game-utils": {

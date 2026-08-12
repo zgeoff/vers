@@ -1,5 +1,7 @@
 export { buildCellNode } from './build-cell-node';
 export { buildChunk } from './build-chunk';
+export { buildRevealDistanceField } from './build-reveal-distance-field';
+export { buildRevealSources } from './build-reveal-sources';
 export { canEncodeMortonKey } from './can-encode-morton-key';
 export { collectNodeEdges } from './collect-node-edges';
 export { collectRevealedCells } from './collect-revealed-cells';

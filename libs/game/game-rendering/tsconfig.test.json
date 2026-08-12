@@ -1,7 +1,7 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "types": ["node", "bun", "@zgeoff/bun-test-extended"]
+    "types": ["node", "bun", "vite/client", "@zgeoff/bun-test-extended"]
   },
   "files": [],
   "include": ["test-setup.ts", "augment-bun-test.ts", "src/**/*.test.ts", "src/**/*.test.tsx"],
