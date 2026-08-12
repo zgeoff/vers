@@ -11,6 +11,12 @@ gateway needs no reconfiguration.
 Under mirrored networking (`wslinfo --networking-mode` prints `mirrored`), WSL shares the Windows
 loopback: skip the bridge and point the server's `--browser-url` at `http://127.0.0.1:9222`.
 
+The debugging protocol fully drives the browser it reaches — script evaluation, input, screenshots —
+and `--remote-allow-origins=*` waives the DevTools origin check, so the bridge grants that control
+to anything that can reach port 9223 from the firewall rule's private range. The debug browser runs
+a dedicated empty profile and never the daily one, and the bridge is torn down when a debugging
+session ends.
+
 ## Bridge the debug port (one-time)
 
 1. Forward a WSL-reachable port to Chrome's loopback-bound one — PowerShell as administrator:
