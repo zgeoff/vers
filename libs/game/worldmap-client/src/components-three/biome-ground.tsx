@@ -156,7 +156,7 @@ interface GroundTextureNode {
 
 interface GroundTSL {
   readonly texture: (map: DataTexture) => GroundTextureNode;
-  readonly toNode: (node: GroundTextureNode) => Node<'vec4'>;
+  readonly toNode: (node: Readonly<GroundTextureNode>) => Node<'vec4'>;
 }
 
 const groundTSLValues = {
