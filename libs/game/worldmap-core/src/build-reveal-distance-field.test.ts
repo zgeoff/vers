@@ -1,5 +1,6 @@
 import { expect, test } from 'bun:test';
 import { buildRevealDistanceField } from './build-reveal-distance-field';
+import type { ReadonlyFloatArray } from './types';
 
 test('it reads 0 over a disc and 1 past its falloff', () => {
   const field = buildRevealDistanceField(
@@ -25,7 +26,7 @@ test('it eases density monotonically outward from a disc', () => {
 
   // density along the half-row leading away from the disc never decreases: the tail equals its
   // own ascending sort
-  const tail = [...field.values].slice(Math.floor(field.values.length / 2));
+  const tail = toNumbers(field.values).slice(Math.floor(field.values.length / 2));
 
   expect(field.rows).toBe(1);
   expect(tail).toStrictEqual([...tail].toSorted((a, b) => a - b));
@@ -51,7 +52,7 @@ test('it saturates the whole field when no disc reaches the viewport', () => {
     { falloff: 2, resolution: 1 },
   );
 
-  expect([...field.values]).toStrictEqual([1, 1, 1, 1]);
+  expect(toNumbers(field.values)).toStrictEqual([1, 1, 1, 1]);
 });
 
 test('it renders the union of overlapping discs without a seam between them', () => {
@@ -65,5 +66,9 @@ test('it renders the union of overlapping discs without a seam between them', ()
   );
 
   // every sample on the row between the two disc centers sits inside the union's clear region
-  expect([...field.values]).toStrictEqual([0, 0, 0, 0, 0]);
+  expect(toNumbers(field.values)).toStrictEqual([0, 0, 0, 0, 0]);
 });
+
+function toNumbers(values: ReadonlyFloatArray): Array<number> {
+  return Array.from({ length: values.length }, (_, index) => values[index] ?? 0);
+}

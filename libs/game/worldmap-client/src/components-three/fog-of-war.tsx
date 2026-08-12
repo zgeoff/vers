@@ -111,7 +111,6 @@ interface FogPlaneProps {
  * material per change would recompile its shader pipeline on every rebuild, and that churn is
  * enough to lose the GPU context mid-pan — the canvas goes irrecoverably blank.
  */
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- RevealDistanceField carries a Float32Array, which has no readonly form
 function FogPlane(props: Readonly<FogPlaneProps>) {
   const planeRef = useRef<FogPlaneResources | null>(null);
   const plane = (planeRef.current ??= buildFogPlaneResources(props.field, props.viewport));
@@ -161,9 +160,16 @@ interface FogTSL {
   readonly positionWorld: { readonly xz: FogMathNode };
   readonly texture: (map: DataTexture) => FogTextureNode;
   readonly time: FogMathNode;
+  readonly toNode: (node: FogMathNode) => Node;
 }
 
-const fogTSLValues = { mx_noise_float, positionWorld, texture, time };
+const fogTSLValues = {
+  mx_noise_float,
+  positionWorld,
+  texture,
+  time,
+  toNode: (node: unknown) => node,
+};
 
 /**
  * The one boundary between three's node types and the minimal view above: everything the shader
@@ -192,7 +198,6 @@ interface FogPlaneResources {
 }
 
 function buildFogPlaneResources(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- RevealDistanceField carries a Float32Array, which has no readonly form
   field: RevealDistanceField,
   viewport: Readonly<Viewport>,
 ): FogPlaneResources {
@@ -212,8 +217,7 @@ function buildFogPlaneResources(
     transparent: true,
   });
 
-  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the finished graph leaves the minimal node view; the value is a real runtime TSL node
-  material.opacityNode = buildBillowedOpacity(textureNode.r) as unknown as Node;
+  material.opacityNode = fogTSL.toNode(buildBillowedOpacity(textureNode.r));
 
   return {
     applied: { field, viewport },
@@ -234,7 +238,6 @@ function buildFogPlaneResources(
 function updateFogPlane(
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- the resources' density buffer and texture-node value slot are mutable by design: rewriting them is how a rebuilt field reaches the live material
   plane: FogPlaneResources,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- RevealDistanceField carries a Float32Array, which has no readonly form
   field: RevealDistanceField,
   viewport: Readonly<Viewport>,
 ): void {
@@ -267,11 +270,7 @@ function updateFogPlane(
   updateFogPlaneGeometry(plane.geometry, viewport);
 }
 
-function updateDensityBytes(
-  bytes: Uint8Array,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- RevealDistanceField carries a Float32Array, which has no readonly form
-  field: RevealDistanceField,
-): void {
+function updateDensityBytes(bytes: Uint8Array, field: RevealDistanceField): void {
   for (let index = 0; index < bytes.length; index++) {
     bytes[index] = Math.round((field.values[index] ?? 0) * 255);
   }
