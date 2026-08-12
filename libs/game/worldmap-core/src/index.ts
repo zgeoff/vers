@@ -1,9 +1,12 @@
 export { buildCellNode } from './build-cell-node';
 export { buildChunk } from './build-chunk';
+export { buildRevealSources } from './build-reveal-sources';
 export { canEncodeMortonKey } from './can-encode-morton-key';
+export { collectFrontierEdges } from './collect-frontier-edges';
 export { collectNodeEdges } from './collect-node-edges';
 export { collectRevealedCells } from './collect-revealed-cells';
 export { collectSelectableNodeIDs } from './collect-selectable-node-ids';
+export { collectUnrevealedCells } from './collect-unrevealed-cells';
 
 export {
   CHUNK_SIZE,

@@ -6,12 +6,13 @@ import {
   buildChunkAlignedViewport,
   buildViewportGraph,
   setViewport,
+  useRevealSources,
   useSelectableNodeIDs,
   useSelectedNode,
   useViewport,
   useWorldGraph,
 } from '@vers/worldmap-client';
-import { collectNodeEdges, toNodeID } from '@vers/worldmap-core';
+import { REVEAL_RADIUS, collectNodeEdges, toNodeID } from '@vers/worldmap-core';
 import invariant from 'tiny-invariant';
 import { server } from '../../mocks/node';
 import { createActiveAvatar } from '../../test-utils/create-active-avatar';
@@ -396,6 +397,45 @@ test('it extends the selectable set to a real neighbour once the revealed-nodes 
 
     await waitFor(() => {
       expect(hook.result.current.selectable.has(neighbourID)).toBe(true);
+    });
+  });
+});
+
+test('it publishes the origin reveal disc on the region build and extends it once the revealed-nodes query resolves a completed grant', async () => {
+  const signedIn = await createSignedInUser();
+
+  await createActiveAvatar({ seed: 555, userID: signedIn.userID });
+
+  server.use(
+    mockActivityService.getRevealedNodes.handler(() => ({
+      completedNodeIDs: ['1_0'],
+      contentVersion: 'v1',
+      nodes: [],
+    })),
+  );
+
+  await withRequestContext({ cookies: signedIn.cookies }, async () => {
+    const hook = renderHook(() => {
+      useAvatarRegionGraph();
+
+      return { revealSources: useRevealSources() };
+    });
+
+    // the region build publishes the origin disc before any query resolves, so a fresh avatar sees
+    // its starting area instead of a fully fogged map
+    await waitFor(() => {
+      expect(hook.result.current.revealSources).toStrictEqual([
+        { coord: [0, 0], radius: REVEAL_RADIUS },
+      ]);
+    });
+
+    setViewport({ maxCX: 5, maxCY: 5, minCX: -5, minCY: -5 });
+
+    await waitFor(() => {
+      expect(hook.result.current.revealSources).toStrictEqual([
+        { coord: [0, 0], radius: REVEAL_RADIUS },
+        { coord: [1, 0], radius: REVEAL_RADIUS },
+      ]);
     });
   });
 });

@@ -3,7 +3,7 @@ import { useWorldGraph } from '../state/use-world-graph';
 import { AxesHelper } from './axes-helper';
 import { DevCamera } from './dev-camera';
 import { Floor } from './floor';
-import { Fog } from './fog';
+import { FogOfWar } from './fog-of-war';
 import { IsometricCamera } from './isometric-camera';
 import { ViewportTracker } from './viewport-tracker';
 import { WorldEdges } from './world-edges';
@@ -23,9 +23,9 @@ export function Scene() {
       <group rotation={[-Math.PI / 2, 0, 0]}>
         <WorldMapNodes nodes={nodes} />
         <WorldEdges edges={edges} />
+        <FogOfWar />
       </group>
 
-      <Fog />
       <Floor />
 
       {import.meta.env.DEV && (

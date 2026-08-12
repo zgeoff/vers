@@ -3,13 +3,13 @@ import { REVEAL_VIEWPORT_CELL_CAP } from '@vers/contract-activity';
 import {
   buildChunkAlignedViewport,
   buildViewportGraph,
-  setSelectableNodeIDs,
+  setCompletedNodeProjections,
   setWorldRegion,
   useRegionKey,
   useViewport,
 } from '@vers/worldmap-client';
 import type { Viewport } from '@vers/worldmap-core';
-import { collectSelectableNodeIDs, toNodeID } from '@vers/worldmap-core';
+import { buildRevealSources, collectSelectableNodeIDs, toNodeID } from '@vers/worldmap-core';
 import { useEffect, useRef, useState } from 'react';
 import { buildRevealedNodesQueryOptions } from '../../lib/activity/build-revealed-nodes-query-options';
 import { buildActiveAvatarQueryOptions } from '../../lib/avatar/build-active-avatar-query-options';
@@ -45,15 +45,17 @@ interface HeldCompletedNodeIDs {
  * and a switch between them must still reset the selection. A missing active avatar leaves the
  * store untouched rather than clearing it.
  *
- * Alongside the graph, every region-touching update recomputes the store's selectable-node set —
- * the origin, every completed node, and every node an edge connects to a completed node, the same
- * reachability rule the activity service gates starts against — over the full topology, never over
- * the viewport-filtered graph edges, so the client and server always agree at a viewport boundary.
- * The recompute only runs when the region or the completed set actually changes, not on every
- * cell-granular viewport update the free camera reports while panning.
+ * Alongside the graph, every region-touching update recomputes the store's two completed-set
+ * projections: the selectable-node set — the origin, every completed node, and every node an edge
+ * connects to a completed node, the same reachability rule the activity service gates starts
+ * against — over the full topology, never over the viewport-filtered graph edges, so the client
+ * and server always agree at a viewport boundary; and the reveal sources the fog-of-war renderer
+ * projects the revealed region from. The recompute only runs when the region or the completed set
+ * actually changes, not on every cell-granular viewport update the free camera reports while
+ * panning.
  *
  * The completed set comes from the avatar's revealed-nodes query, which this hook alone subscribes
- * to — the subscription also warms the query cache the fog-of-war renderer reads. The query stays
+ * to. The query stays
  * disabled until the camera reports a viewport and the store's region belongs to the active avatar
  * — a viewport held by another avatar's region is that avatar's camera footprint, and the region
  * switch clears it before the incoming avatar may issue a request. The chunk-aligned viewport
@@ -131,7 +133,10 @@ export function useAvatarRegionGraph(): void {
 
       previousCompletedNodeIDsRef.current = completedNodeIDs;
 
-      setSelectableNodeIDs(collectSelectableNodeIDs(seed, completedNodeIDs));
+      setCompletedNodeProjections(
+        collectSelectableNodeIDs(seed, completedNodeIDs),
+        buildRevealSources(completedNodeIDs),
+      );
 
       return;
     }
@@ -147,6 +152,7 @@ export function useAvatarRegionGraph(): void {
       worldGraph,
       originNode,
       collectSelectableNodeIDs(seed, completedNodeIDs),
+      buildRevealSources(completedNodeIDs),
     );
   }, [avatarID, seed, viewport, completedNodeIDs]);
 }

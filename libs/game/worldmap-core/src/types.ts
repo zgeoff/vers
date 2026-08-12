@@ -54,3 +54,9 @@ export interface Viewport {
  * entry's cell coordinate.
  */
 export type RevealedCells = ReadonlyArray<number>;
+
+/**
+ * One hex side on the reveal frontier — the boundary between a revealed cell and an unrevealed
+ * neighbour — as two scene-space endpoints in unit-hex coordinates.
+ */
+export type FrontierEdge = readonly [readonly [number, number], readonly [number, number]];

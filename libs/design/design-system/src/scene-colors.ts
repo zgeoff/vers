@@ -5,7 +5,8 @@
  */
 export const sceneColors = {
   avatarPlaceholder: '#D8A56E',
-  fog: '#000000',
+  fogFrontier: '#94a3b8',
+  fogShroud: '#282d38',
   ground: '#3d424d',
   nodeBase: '#cbd5e1',
   nodeDimmed: '#475569',
