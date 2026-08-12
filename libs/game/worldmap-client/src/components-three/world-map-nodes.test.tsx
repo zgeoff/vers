@@ -59,15 +59,22 @@ test('it moves the bounding sphere with the nodes when the list is replaced at t
 
   const renderer = await setupTest([nearA, nearB]);
 
+  const mesh = renderer.scene.children[0]!.instance;
+
+  invariant(isInstancedMesh(mesh), 'the component renders an instanced mesh');
+
+  // the renderer computes the sphere lazily on first cull; forcing it here reproduces that state,
+  // so a stale sphere after the update reads as the old center rather than a missing sphere
+  mesh.computeBoundingSphere();
+
   const farA = createMockWorldMapNode({ position: [100, 100] });
   const farB = createMockWorldMapNode({ position: [101, 100] });
 
   await renderer.update(<WorldMapNodes nodes={[farA, farB]} />);
 
-  const mesh = renderer.scene.children[0]!.instance;
+  expect(renderer.scene.children[0]!.instance).toBe(mesh);
 
-  invariant(isInstancedMesh(mesh), 'the component renders an instanced mesh');
-  invariant(mesh.boundingSphere, 'the layout effect computes the sphere before paint');
+  invariant(mesh.boundingSphere, 'the sphere was computed before the update');
 
   expect(mesh.boundingSphere.center.x).toBeCloseTo(1005);
   expect(mesh.boundingSphere.center.y).toBeCloseTo(1000);
