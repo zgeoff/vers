@@ -1,4 +1,4 @@
-import { setSelectedNode, useWorldGraph } from '@vers/worldmap-client';
+import { setSelectedNode, useSelectableNodeIDs, useWorldGraph } from '@vers/worldmap-client';
 import { useEffect } from 'react';
 
 interface ExploreNodeFocusProps {
@@ -6,14 +6,15 @@ interface ExploreNodeFocusProps {
 }
 
 /**
- * Selects the graph node named by the route param through the same store write a node click
- * makes, so the persistent canvas's existing selection/camera-focus flow carries the deep link the
- * rest of the way. An id with no match in the graph is a plain miss: nothing renders and no
- * selection changes.
+ * Selects the graph node named by the route param, gated on the store's selectable-node set the
+ * same way a node click is, so a deep link can never select — and auto-start — a node the avatar
+ * cannot reach. An id missing from the graph or outside the selectable set is a plain miss:
+ * nothing renders and no selection changes.
  */
 export function ExploreNodeFocus(props: ExploreNodeFocusProps) {
   const graph = useWorldGraph();
-  const node = graph.nodes[props.nodeID];
+  const selectableNodeIDs = useSelectableNodeIDs();
+  const node = selectableNodeIDs.has(props.nodeID) ? graph.nodes[props.nodeID] : undefined;
 
   useEffect(() => {
     if (node !== undefined) {

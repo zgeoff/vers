@@ -19,6 +19,7 @@ const RADIUS = 0.8;
 const NODE_SEGMENTS = 24;
 
 const BASE_COLOR = new Color(sceneColors.nodeBase);
+const DIMMED_COLOR = new Color(sceneColors.nodeDimmed);
 const SELECTED_COLOR = new Color(sceneColors.nodeSelected);
 
 const WorldMapNodeMaterial = extend(MeshStandardNodeMaterial);
@@ -28,6 +29,7 @@ const instanceMatrix = new Matrix4();
 export function WorldMapNodes(props: Readonly<WorldMapNodesProps>) {
   const meshRef = useRef<InstancedMesh | null>(null);
   const appliedSelectedNodeIDRef = useRef<null | string>(null);
+  const appliedSelectableNodeIDsRef = useRef<null | ReadonlySet<string>>(null);
 
   // rebuild every instance's transform and base color whenever the node list changes: a fresh
   // `InstancedMesh` (its `args`-derived count changed) has no prior state to preserve
@@ -39,10 +41,11 @@ export function WorldMapNodes(props: Readonly<WorldMapNodesProps>) {
     }
 
     const selectedNodeID = useWorldmapStore.getState().selectedNode?.id ?? null;
+    const selectableNodeIDs = useWorldmapStore.getState().selectableNodeIDs;
 
     for (const [index, node] of props.nodes.entries()) {
       const [x, y, z] = getScenePosition(node.position);
-      const color = node.id === selectedNodeID ? SELECTED_COLOR : BASE_COLOR;
+      const color = buildRestingColor(node.id, selectedNodeID, selectableNodeIDs);
 
       mesh.setMatrixAt(index, instanceMatrix.makeTranslation(x, y, z));
       mesh.setColorAt(index, color);
@@ -61,10 +64,12 @@ export function WorldMapNodes(props: Readonly<WorldMapNodesProps>) {
     mesh.computeBoundingSphere();
 
     appliedSelectedNodeIDRef.current = selectedNodeID;
+    appliedSelectableNodeIDsRef.current = selectableNodeIDs;
   }, [props.nodes]);
 
-  // selection highlight is driven imperatively from the store rather than a reactive selector, so
-  // a hover/selection change never forces this component to re-render
+  // selection and dimming highlights are driven imperatively from the store rather than a
+  // reactive selector, so neither a hover/selection change nor a completed-set change ever forces
+  // this component to re-render
   useFrame(() => {
     const mesh = meshRef.current;
 
@@ -73,17 +78,37 @@ export function WorldMapNodes(props: Readonly<WorldMapNodesProps>) {
     }
 
     const selectedNodeID = useWorldmapStore.getState().selectedNode?.id ?? null;
+    const selectableNodeIDs = useWorldmapStore.getState().selectableNodeIDs;
+
+    if (selectableNodeIDs !== appliedSelectableNodeIDsRef.current) {
+      for (const [index, node] of props.nodes.entries()) {
+        if (node.id === selectedNodeID) {
+          continue;
+        }
+
+        const restingColor = selectableNodeIDs.has(node.id) ? BASE_COLOR : DIMMED_COLOR;
+
+        mesh.setColorAt(index, restingColor);
+      }
+
+      appliedSelectableNodeIDsRef.current = selectableNodeIDs;
+
+      if (mesh.instanceColor) {
+        mesh.instanceColor.needsUpdate = true;
+      }
+    }
 
     if (selectedNodeID === appliedSelectedNodeIDRef.current) {
       return;
     }
 
-    const previousIndex = props.nodes.findIndex(
-      (node) => node.id === appliedSelectedNodeIDRef.current,
-    );
+    const previousID = appliedSelectedNodeIDRef.current;
+    const previousIndex = props.nodes.findIndex((node) => node.id === previousID);
 
-    if (previousIndex !== -1) {
-      mesh.setColorAt(previousIndex, BASE_COLOR);
+    if (previousIndex !== -1 && previousID !== null) {
+      const previousRestingColor = selectableNodeIDs.has(previousID) ? BASE_COLOR : DIMMED_COLOR;
+
+      mesh.setColorAt(previousIndex, previousRestingColor);
     }
 
     const nextIndex = props.nodes.findIndex((node) => node.id === selectedNodeID);
@@ -114,7 +139,7 @@ export function WorldMapNodes(props: Readonly<WorldMapNodesProps>) {
 
     const node = props.nodes[event.instanceId];
 
-    if (!node) {
+    if (!node || !useWorldmapStore.getState().selectableNodeIDs.has(node.id)) {
       return;
     }
 
@@ -133,6 +158,22 @@ export function WorldMapNodes(props: Readonly<WorldMapNodesProps>) {
       <WorldMapNodeMaterial />
     </instancedMesh>
   );
+}
+
+/**
+ * The color a node instance takes outside a pointer-driven transition: selected, then selectable
+ * base, then dimmed for a node outside the avatar's selectable set.
+ */
+function buildRestingColor(
+  nodeID: string,
+  selectedNodeID: null | string,
+  selectableNodeIDs: ReadonlySet<string>,
+): Color {
+  if (nodeID === selectedNodeID) {
+    return SELECTED_COLOR;
+  }
+
+  return selectableNodeIDs.has(nodeID) ? BASE_COLOR : DIMMED_COLOR;
 }
 
 function handlePointerLeave() {

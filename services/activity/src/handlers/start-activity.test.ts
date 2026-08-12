@@ -17,7 +17,7 @@ import {
 import { createSimVersionRow } from '@vers/sim-registry/test-utils';
 import { buildRPCTestClient, waitFor } from '@vers/test-utils';
 import { deriveWorldmapContent } from '@vers/worldmap-content';
-import { findCellCoord, getDifficulty } from '@vers/worldmap-core';
+import { collectNodeEdges, findCellCoord, getDifficulty } from '@vers/worldmap-core';
 import { sql } from 'kysely';
 import invariant from 'tiny-invariant';
 import { createActivityService } from '../create-activity-service';
@@ -101,6 +101,11 @@ test("it stamps the row's encounterNode from the static world map's node for the
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
 
+  await ctx.db
+    .insertInto('avatarGrants')
+    .values({ avatarId: avatar.id, key: '1_0', kind: 'first_clear' })
+    .execute();
+
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
   const activity = await client.startActivity({
@@ -126,6 +131,11 @@ test('it derives a startHash that folds in the resolved encounter node', async (
   const current = await createSimVersionRow(ctx.db);
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  await ctx.db
+    .insertInto('avatarGrants')
+    .values({ avatarId: avatar.id, key: '1_0', kind: 'first_clear' })
+    .execute();
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
@@ -163,6 +173,100 @@ test('it rejects starting an activity on an unregistered scope id with NODE_UNKN
       scopeType: 'world_map_node',
     }),
   ).rejects.toMatchObject({ code: 'NODE_UNKNOWN' });
+});
+
+test('it starts an activity at the origin for an avatar with no grants at all', async () => {
+  await using ctx = await setupTest();
+
+  await createSimVersionRow(ctx.db);
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const activity = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: '0_0',
+    scopeType: 'world_map_node',
+  });
+
+  expect(activity.scopeID).toBe('0_0');
+});
+
+test('it rejects starting at a node outside the origin, completed set, and their neighbours with NODE_UNREACHABLE', async () => {
+  await using ctx = await setupTest();
+
+  await createSimVersionRow(ctx.db);
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  expect(
+    client.startActivity({ avatarID: avatar.id, scopeID: '50_50', scopeType: 'world_map_node' }),
+  ).rejects.toMatchObject({ code: 'NODE_UNREACHABLE' });
+});
+
+test('it starts an activity on a node the avatar already holds a first-clear grant for', async () => {
+  await using ctx = await setupTest();
+
+  await createSimVersionRow(ctx.db);
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  await ctx.db
+    .insertInto('avatarGrants')
+    .values({ avatarId: avatar.id, key: '50_50', kind: 'first_clear' })
+    .execute();
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const activity = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: '50_50',
+    scopeType: 'world_map_node',
+  });
+
+  expect(activity.scopeID).toBe('50_50');
+});
+
+test('it starts an activity on a neighbour of a node the avatar holds a first-clear grant for', async () => {
+  await using ctx = await setupTest();
+
+  await createSimVersionRow(ctx.db);
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  const grantedID = '50_50';
+  const grantedCoord = findCellCoord(grantedID);
+
+  invariant(grantedCoord, 'grantedID must resolve to a valid cell coordinate');
+
+  const [edge] = collectNodeEdges(avatar.seed, grantedCoord[0], grantedCoord[1]);
+
+  invariant(edge, 'every cell connects to at least one neighbour');
+
+  const [aID = '', bID = ''] = edge.id.split('|');
+  const neighbourID = aID === grantedID ? bID : aID;
+
+  await ctx.db
+    .insertInto('avatarGrants')
+    .values({ avatarId: avatar.id, key: grantedID, kind: 'first_clear' })
+    .execute();
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const activity = await client.startActivity({
+    avatarID: avatar.id,
+    scopeID: neighbourID,
+    scopeType: 'world_map_node',
+  });
+
+  expect(activity.scopeID).toBe(neighbourID);
 });
 
 test('it mints a chain row on a node visited for the first time, with the activity seeded from its genesis', async () => {
@@ -217,6 +321,11 @@ test('it mints independent genesis seeds for different nodes visited by the same
     .where('id', '=', first.id)
     .execute();
 
+  await ctx.db
+    .insertInto('avatarGrants')
+    .values({ avatarId: avatar.id, key: '1_0', kind: 'first_clear' })
+    .execute();
+
   const second = await client.startActivity({
     avatarID: avatar.id,
     scopeID: '1_0',
@@ -268,6 +377,11 @@ test('it rejects a second start with CONFLICT carrying the already-active activi
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  await ctx.db
+    .insertInto('avatarGrants')
+    .values({ avatarId: avatar.id, key: '1_0', kind: 'first_clear' })
+    .execute();
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
@@ -824,6 +938,11 @@ test('it conflicts a keyed duplicate naming a different scope', async () => {
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
 
+  await ctx.db
+    .insertInto('avatarGrants')
+    .values({ avatarId: avatar.id, key: '1_0', kind: 'first_clear' })
+    .execute();
+
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
   const first = await client.startActivity({
@@ -1021,6 +1140,11 @@ test('it records the unverified run a new build snapshot borrowed its xp from', 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { level: 1, userId: viewer.user.id, xp: 0 });
 
+  await ctx.db
+    .insertInto('avatarGrants')
+    .values({ avatarId: avatar.id, key: '1_0', kind: 'first_clear' })
+    .execute();
+
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
   const first = await client.startActivity({
@@ -1059,6 +1183,11 @@ test('it records no borrowed run for an unsettled run that moved the total by no
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { level: 1, userId: viewer.user.id, xp: 0 });
+
+  await ctx.db
+    .insertInto('avatarGrants')
+    .values({ avatarId: avatar.id, key: '1_0', kind: 'first_clear' })
+    .execute();
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
@@ -1099,6 +1228,11 @@ test('it records a borrowed run whose death penalty lowered the total', async ()
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { level: 2, userId: viewer.user.id, xp: 200 });
+
+  await ctx.db
+    .insertInto('avatarGrants')
+    .values({ avatarId: avatar.id, key: '1_0', kind: 'first_clear' })
+    .execute();
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
@@ -1164,6 +1298,11 @@ test('it records no borrowed run for a parked activity left out of the build sna
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { level: 1, userId: viewer.user.id, xp: 0 });
+
+  await ctx.db
+    .insertInto('avatarGrants')
+    .values({ avatarId: avatar.id, key: '1_0', kind: 'first_clear' })
+    .execute();
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
@@ -1282,6 +1421,11 @@ test('it refuses to adopt while another avatar holds a live run', async () => {
   const liveAvatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
   const otherAvatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
 
+  await ctx.db
+    .insertInto('avatarGrants')
+    .values({ avatarId: otherAvatar.id, key: '1_0', kind: 'first_clear' })
+    .execute();
+
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
   // no active_avatars row exists yet; this start's own adopt claims the slot for liveAvatar
@@ -1352,6 +1496,11 @@ test('it stamps a poolID matching the sealed derivation truth for the current co
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
 
+  await ctx.db
+    .insertInto('avatarGrants')
+    .values({ avatarId: avatar.id, key: '1_0', kind: 'first_clear' })
+    .execute();
+
   // publish this test's own document, moving the current pointer onto it, so the derivation truth
   // asserted below comes from content this test authored rather than the suite's shared seed; the
   // seeded engine declares it bundled, or the compatibility gate would refuse the start
@@ -1409,6 +1558,11 @@ test("it seals the stamped poolID under the avatar's own seed, not a shared plac
     seed: 700,
     userId: viewer.user.id,
   });
+
+  await ctx.db
+    .insertInto('avatarGrants')
+    .values({ avatarId: avatar.id, key: '1_0', kind: 'first_clear' })
+    .execute();
 
   const contentVersion = '849849';
 
