@@ -48,15 +48,14 @@ const AZIMUTH_ANGLE = CAMERA_ROTATION_Y;
 const INITIAL_DISTANCE = ZOOM_MIN_DISTANCE;
 
 /**
- * Ground covered per pixel of drag, tuned by feel in playtesting — the library default reads
- * sluggish against a map this large. Tuned against a zero boundary friction: the old friction
- * ease scaled every drag offset down, so a speed tuned alongside it reads far too fast without it.
+ * Ground covered per pixel of drag, tuned by feel in playtesting against zero boundary friction —
+ * the library default reads sluggish against a map this large.
  */
 const TRUCK_SPEED = 4;
 
 /**
  * Seconds of easing after input stops. Playtest-tunable on feel: lower reads planted, higher
- * reads floaty — the boundary clamp no longer absorbs any drag motion, so glide is tamed here.
+ * reads floaty — with the boundary clamp absorbing no drag motion, glide is tamed here alone.
  */
 const SMOOTH_TIME = 0.12;
 
@@ -108,10 +107,12 @@ const WORLD_BOUNDARY = new Box3(
   ),
 );
 
+const targetScratch = new Vector3();
+
 /**
  * A perspective camera fixed at an isometric tilt and turn; a true orthographic isometric
  * projection reads poorly against the current world layout. `camera-controls` drives pan (truck)
- * and zoom (dolly) input, with rotation pinned to the fixed angle above and panning eased back at
+ * and zoom (dolly) input, with rotation pinned to the fixed angle above and panning clamped at
  * the world boundary. Selecting a node glides the camera to center it.
  */
 export function IsometricCamera() {
@@ -123,6 +124,7 @@ export function IsometricCamera() {
   const isDevCameraActive = useIsDevCameraActive();
   const selectedNode = useSelectedNode();
   const [controlsVersion, setControlsVersion] = useState(0);
+  const [controlsGeneration, setControlsGeneration] = useState(0);
 
   const setCameraRef = useCallback((cameraInstance: null | PerspectiveCameraImpl) => {
     cameraRef.current = cameraInstance;
@@ -178,7 +180,9 @@ export function IsometricCamera() {
 
       controlsRef.current = null;
     };
-  }, [camera, domElement]);
+    // controlsGeneration re-runs this effect after a non-finite-pose recovery: the restored camera
+    // is finite again, but the discarded controls instance may hold poisoned damping velocities
+  }, [camera, domElement, controlsGeneration]);
 
   // depends on controlsVersion, not just selectedNode, so a controls instance rebuilt by the effect
   // above (a remount after the scene swaps away and back) reapplies the current selection's target
@@ -217,19 +221,23 @@ export function IsometricCamera() {
 
     // a non-finite transform draws nothing and throws nothing — without this restore the canvas
     // would blank permanently and silently, so every healthy frame banks a pose to fall back to
-    if (isFinitePose(camera)) {
+    controls.getTarget(targetScratch);
+
+    if (isFinitePose(camera) && isFiniteVector(targetScratch)) {
       const lastGoodPose = (lastGoodPoseRef.current ??= {
         position: new Vector3(),
         target: new Vector3(),
       });
 
       lastGoodPose.position.copy(camera.position);
-      controls.getTarget(lastGoodPose.target);
+      lastGoodPose.target.copy(targetScratch);
     } else if (lastGoodPoseRef.current) {
       const lastGoodPose = lastGoodPoseRef.current;
 
       console.error('[isometric-camera] non-finite camera transform; restoring last good pose');
 
+      // the restore rights the camera itself, and the rebuild replaces the controls instance,
+      // whose internal damping velocities the same corruption may have poisoned
       void controls.setLookAt(
         lastGoodPose.position.x,
         lastGoodPose.position.y,
@@ -239,6 +247,8 @@ export function IsometricCamera() {
         lastGoodPose.target.z,
         false,
       );
+
+      setControlsGeneration((generation) => generation + 1);
     }
   });
 
@@ -247,11 +257,16 @@ export function IsometricCamera() {
 
 function isFinitePose(camera: PerspectiveCameraImpl): boolean {
   return (
-    Number.isFinite(camera.position.x) &&
-    Number.isFinite(camera.position.y) &&
-    Number.isFinite(camera.position.z) &&
+    isFiniteVector(camera.position) &&
+    Number.isFinite(camera.quaternion.x) &&
+    Number.isFinite(camera.quaternion.y) &&
+    Number.isFinite(camera.quaternion.z) &&
     Number.isFinite(camera.quaternion.w)
   );
+}
+
+function isFiniteVector(vector: Readonly<Vector3>): boolean {
+  return Number.isFinite(vector.x) && Number.isFinite(vector.y) && Number.isFinite(vector.z);
 }
 
 /**

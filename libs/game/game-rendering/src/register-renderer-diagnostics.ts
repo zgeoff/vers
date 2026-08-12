@@ -20,6 +20,9 @@ export function registerRendererDiagnostics(renderer: WebGPURenderer): void {
   (globalThis as unknown as { __versRenderer: WebGPURenderer }).__versRenderer = renderer;
 
   renderer.domElement.addEventListener('webglcontextlost', (event) => {
+    // preventDefault marks the context eligible for browser-driven restoration; without it the
+    // loss is always permanent
+    event.preventDefault();
     console.error('[game-canvas] WebGL context lost', event);
   });
 
@@ -31,7 +34,9 @@ export function registerRendererDiagnostics(renderer: WebGPURenderer): void {
 async function waitForDeviceLoss(backend: LossyBackend): Promise<void> {
   const report = await backend.device?.lost;
 
-  if (report !== undefined) {
+  // a 'destroyed' reason is an intentional teardown — a disposed renderer, a dev remount — not a
+  // fault worth alarming over
+  if (report !== undefined && report.reason !== 'destroyed') {
     console.error(`[game-canvas] WebGPU device lost: ${report.reason} ${report.message}`);
   }
 }

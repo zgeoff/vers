@@ -23,3 +23,9 @@ test('it skips a completed id that names no addressable cell', () => {
 
   expect(sources).toStrictEqual([{ coord: ORIGIN_CELL, radius: REVEAL_RADIUS }]);
 });
+
+test('it emits one origin disc when the origin itself is completed', () => {
+  const sources = buildRevealSources(new Set(['0_0']));
+
+  expect(sources).toStrictEqual([{ coord: ORIGIN_CELL, radius: REVEAL_RADIUS }]);
+});

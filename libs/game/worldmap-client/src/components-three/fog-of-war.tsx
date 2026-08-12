@@ -184,6 +184,7 @@ interface DensityBuffer {
 }
 
 interface FogPlaneResources {
+  applied: { field: RevealDistanceField; viewport: Viewport };
   readonly density: DensityBuffer;
   readonly geometry: BufferGeometry;
   readonly material: MeshBasicNodeMaterial;
@@ -214,11 +215,13 @@ function buildFogPlaneResources(
   // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the finished graph leaves the minimal node view; the value is a real runtime TSL node
   material.opacityNode = buildBillowedOpacity(textureNode.r) as unknown as Node;
 
-  const geometry = new BufferGeometry();
-
-  updateFogPlaneGeometry(geometry, viewport);
-
-  return { density, geometry, material, textureNode };
+  return {
+    applied: { field, viewport },
+    density,
+    geometry: buildFogPlaneGeometry(viewport),
+    material,
+    textureNode,
+  };
 }
 
 /**
@@ -235,6 +238,13 @@ function updateFogPlane(
   field: RevealDistanceField,
   viewport: Readonly<Viewport>,
 ): void {
+  // the field and viewport already applied — the effect run straight after mount — costs nothing
+  if (plane.applied.field === field && plane.applied.viewport === viewport) {
+    return;
+  }
+
+  plane.applied = { field, viewport };
+
   if (field.cols === plane.density.cols && field.rows === plane.density.rows) {
     updateDensityBytes(plane.density.bytes, field);
 
@@ -287,10 +297,26 @@ function buildDensityTexture(density: DensityBuffer): DataTexture {
 }
 
 /**
- * Rewrites the quad as one parallelogram covering the viewport's cell box in scene space. The
- * axial-to-scene mapping is linear, so the quad's uv interpolation lands each density texel's
- * center exactly on the axial coordinate it was sampled at; the half-cell margin matches the
- * field's texel layout.
+ * One parallelogram quad whose attribute buffers live as long as the geometry: the position
+ * attribute is rewritten in place on every later viewport change, since replacing an attribute
+ * object strands its GPU buffer until the whole geometry is disposed.
+ */
+function buildFogPlaneGeometry(viewport: Readonly<Viewport>): BufferGeometry {
+  const geometry = new BufferGeometry();
+
+  geometry.setAttribute('position', new BufferAttribute(new Float32Array(12), 3));
+  geometry.setAttribute('uv', new BufferAttribute(new Float32Array([0, 0, 1, 0, 0, 1, 1, 1]), 2));
+  geometry.setIndex([0, 1, 2, 2, 1, 3]);
+
+  updateFogPlaneGeometry(geometry, viewport);
+
+  return geometry;
+}
+
+/**
+ * Rewrites the quad's corners to cover the viewport's cell box in scene space. The axial-to-scene
+ * mapping is linear, so the quad's uv interpolation lands each density texel's center exactly on
+ * the axial coordinate it was sampled at; the half-cell margin matches the field's texel layout.
  */
 function updateFogPlaneGeometry(geometry: BufferGeometry, viewport: Readonly<Viewport>): void {
   const corners = [
@@ -300,17 +326,19 @@ function updateFogPlaneGeometry(geometry: BufferGeometry, viewport: Readonly<Vie
     toHexPosition(viewport.maxCX + 0.5, viewport.maxCY + 0.5),
   ];
 
-  const positions = new Float32Array(
-    corners.flatMap(([x, y]) => [
+  const position = geometry.getAttribute('position');
+
+  for (const [index, [x, y]] of corners.entries()) {
+    position.setXYZ(
+      index,
       x * NODE_POSITION_SCALING_FACTOR,
       y * NODE_POSITION_SCALING_FACTOR,
       FOG_ELEVATION,
-    ]),
-  );
+    );
+  }
 
-  geometry.setAttribute('position', new BufferAttribute(positions, 3));
-  geometry.setAttribute('uv', new BufferAttribute(new Float32Array([0, 0, 1, 0, 0, 1, 1, 1]), 2));
-  geometry.setIndex([0, 1, 2, 2, 1, 3]);
+  position.needsUpdate = true;
+
   geometry.computeBoundingSphere();
 }
 
