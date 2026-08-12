@@ -8,6 +8,7 @@ export { setSelectedNode } from './state/set-selected-node';
 export { setViewport } from './state/set-viewport';
 export { setWorldRegion } from './state/set-world-region';
 export { useWorldGraph } from './state/use-world-graph';
+export { useRegionKey } from './state/use-region-key';
 export { useSelectableNodeIDs } from './state/use-selectable-node-ids';
 export { useSelectedNode } from './state/use-selected-node';
 export { useViewport } from './state/use-viewport';

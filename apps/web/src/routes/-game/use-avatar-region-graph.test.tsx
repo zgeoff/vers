@@ -485,13 +485,18 @@ test("it drops the selectable set to origin-only on an avatar switch, not carryi
 
   const [aID = '', bID = ''] = edge.id.split('|');
   const firstNeighbourID = aID === originID ? bID : aID;
+  const requestedAvatarIDs: Array<string> = [];
 
   server.use(
-    mockActivityService.getRevealedNodes.handler(() => ({
-      completedNodeIDs: [originID],
-      contentVersion: 'v1',
-      nodes: [],
-    })),
+    mockActivityService.getRevealedNodes.handler((opts) => {
+      requestedAvatarIDs.push(opts.input.avatarID);
+
+      return {
+        completedNodeIDs: [originID],
+        contentVersion: 'v1',
+        nodes: [],
+      };
+    }),
   );
 
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
@@ -533,5 +538,10 @@ test("it drops the selectable set to origin-only on an avatar switch, not carryi
 
     expect(hook.result.current.selectable).toStrictEqual(new Set([originID]));
     expect(hook.result.current.selectable.has(firstNeighbourID)).toBe(false);
+
+    // the query stays gated on the store's region key, so the render window between the avatar
+    // flipping and the region switch committing never sends a request for the incoming avatar at
+    // the outgoing avatar's camera footprint
+    expect(requestedAvatarIDs).not.toContain(second.id);
   });
 });

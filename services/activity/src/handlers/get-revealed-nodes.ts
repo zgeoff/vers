@@ -74,8 +74,10 @@ interface GetRevealedNodesResult {
  * query — a grant kind sharing the table with an unrelated future feature, or a row written before
  * the coordinate bounds existed. An addressable key outside the Morton-packable coordinate range
  * still counts as completed but contributes no reveal source: packing bounds only the reveal
- * encoding, never completion, so the completed set here matches the one the activity start gate
- * evaluates. `completedNodeIDs` carries every addressable grant key regardless of viewport, the set
+ * encoding, never completion. The activity start gate evaluates the raw grant keys instead, where
+ * a non-addressable key is inert — it can never equal a start target that resolved to a cell, and
+ * selectability expansion skips it — so the two sets agree on every node selectability can
+ * observe. `completedNodeIDs` carries every addressable grant key regardless of viewport, the set
  * the client mirrors that gate against — only `nodes` is bounded by the viewport.
  */
 export async function getRevealedNodes(

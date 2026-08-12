@@ -5,6 +5,7 @@ import {
   buildViewportGraph,
   setSelectableNodeIDs,
   setWorldRegion,
+  useRegionKey,
   useViewport,
 } from '@vers/worldmap-client';
 import type { Viewport } from '@vers/worldmap-core';
@@ -53,8 +54,11 @@ interface HeldCompletedNodeIDs {
  *
  * The completed set comes from the avatar's revealed-nodes query, which this hook alone subscribes
  * to — the subscription also warms the query cache the fog-of-war renderer reads. The query stays
- * disabled until the camera reports a viewport, and the chunk-aligned viewport keying it is shrunk
- * to the reveal cell cap so no canvas aspect can produce a request the service would reject. The
+ * disabled until the camera reports a viewport and the store's region belongs to the active avatar
+ * — a viewport held by another avatar's region is that avatar's camera footprint, and the region
+ * switch clears it before the incoming avatar may issue a request. The chunk-aligned viewport
+ * keying the query is shrunk to the reveal cell cap so no canvas aspect can produce a request the
+ * service would reject. The
  * completed set itself is viewport-independent, but the viewport-carrying key means a pan across a
  * chunk boundary re-keys the query and drops its data back to `undefined` for a moment, so the
  * last resolved set is held in state beside the avatar it belongs to and reused until the new
@@ -67,6 +71,7 @@ export function useAvatarRegionGraph(): void {
   const avatarID = avatarQuery.data?.id;
   const seed = avatarQuery.data?.seed;
   const viewport = useViewport();
+  const regionKey = useRegionKey();
   const previousAvatarIDRef = useRef<string | undefined>(undefined);
   const previousViewportRef = useRef<null | Viewport>(null);
   const previousCompletedNodeIDsRef = useRef<null | ReadonlySet<string>>(null);
@@ -82,7 +87,7 @@ export function useAvatarRegionGraph(): void {
 
   const revealedNodesQuery = useQuery({
     ...buildRevealedNodesQueryOptions(avatarID ?? '', revealedViewport ?? EMPTY_VIEWPORT),
-    enabled: avatarID !== undefined && revealedViewport !== null,
+    enabled: avatarID !== undefined && revealedViewport !== null && regionKey === avatarID,
   });
 
   const resolvedNodeIDs = revealedNodesQuery.data?.completedNodeIDs;
