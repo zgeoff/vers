@@ -143,6 +143,9 @@
         "ignoreInferredTypes": true,
         "allow": [
           { "from": "package", "name": "Kysely", "package": "kysely" },
+          // a live three.js GPU texture handle: upload state and dispose lifecycle, no readonly
+          // form
+          { "from": "package", "name": "DataTexture", "package": "three" },
           // a query-log event: its `query` field is Kysely's internal operation-node AST, built
           // and read by Kysely itself with no readonly form
           { "from": "package", "name": "LogEvent", "package": "kysely" },

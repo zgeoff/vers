@@ -10,7 +10,8 @@ import {
   RedFormat,
   UnsignedByteType,
 } from 'three';
-import { texture } from 'three/tsl';
+import { mx_noise_float, positionWorld, texture, time } from 'three/tsl';
+import type { Node } from 'three/webgpu';
 import { MeshBasicNodeMaterial } from 'three/webgpu';
 import { NODE_POSITION_SCALING_FACTOR } from '../consts';
 import { useRevealSources } from '../state/use-reveal-sources';
@@ -41,6 +42,23 @@ const FOG_VIEWPORT_MARGIN_CELLS = 2;
  * it.
  */
 const FOG_ELEVATION = 0.2;
+
+/**
+ * Spatial frequency of the billow noise in world units — wavelengths around one to two cells read
+ * as rolling fog banks rather than shimmer.
+ */
+const FOG_BILLOW_SCALE = 0.045;
+
+/**
+ * Peak opacity wobble in the middle of the frontier band. Higher makes the edge roil further.
+ */
+const FOG_BILLOW_EDGE = 0.35;
+
+/**
+ * Opacity wobble deep inside the fog, where the band term is 0 — a faint internal churn that keeps
+ * dense fog from reading flat without ever clearing it.
+ */
+const FOG_BILLOW_DEEP = 0.08;
 
 /**
  * Draws soft fog of war over the world map: one viewport-covering plane whose per-fragment opacity
@@ -115,7 +133,8 @@ function FogPlane(props: Readonly<FogPlaneProps>) {
       transparent: true,
     });
 
-    material.opacityNode = texture(map).r;
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the finished graph leaves the minimal node view; the value is a real runtime TSL node
+    material.opacityNode = buildBillowedOpacity(map) as unknown as Node;
 
     return { geometry: buildFogPlaneGeometry(props.viewport), map, material };
   }, [props.field, props.viewport]);
@@ -130,6 +149,61 @@ function FogPlane(props: Readonly<FogPlaneProps>) {
   );
 
   return <mesh geometry={plane.geometry} material={plane.material} />;
+}
+
+/**
+ * Minimal structural view of a runtime TSL node, standing in for three's own operator types: every
+ * operator there carries thousands of conditionally typed overloads and swizzle getters, and one
+ * call sends the native compiler's inference into a multi-gigabyte runaway that OOMs the machine.
+ * Only the operations this module's shader math uses appear here; the objects behind it are real
+ * TSL nodes throughout, so the runtime graph is unchanged.
+ */
+interface FogMathNode {
+  readonly add: (other: FogMathNode | number) => FogMathNode;
+  readonly clamp: (min: number, max: number) => FogMathNode;
+  readonly mul: (other: FogMathNode | number) => FogMathNode;
+  readonly oneMinus: () => FogMathNode;
+  readonly sub: (other: FogMathNode | number) => FogMathNode;
+}
+
+interface FogTSL {
+  readonly mx_noise_float: (coord: FogMathNode) => FogMathNode;
+  readonly positionWorld: { readonly xz: FogMathNode };
+  readonly texture: (map: DataTexture) => { readonly r: FogMathNode };
+  readonly time: FogMathNode;
+}
+
+const fogTSLValues = { mx_noise_float, positionWorld, texture, time };
+
+/**
+ * The one boundary between three's node types and the minimal view above: everything the shader
+ * math touches enters through this facade already narrowed, so the math itself carries no
+ * assertions and the checker never opens three's operator types.
+ */
+// oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the values are untouched runtime TSL builders; only the static view narrows
+const fogTSL = fogTSLValues as unknown as FogTSL;
+
+/**
+ * Two octaves of world-anchored noise drifting in opposite directions, so the fog reads as a
+ * living volume rather than a static gradient. The billow is strongest in the frontier band —
+ * `density * (1 - density)` peaks mid-gradient and vanishes at both ends — with a small
+ * density-proportional term so deep fog keeps a faint internal churn; clamping restores the 0..1
+ * opacity range. Noise coordinates come from world position, not uv, so drifting the camera never
+ * drags the billow along with the quad; the time term broadcast onto both axes blows the noise
+ * field diagonally, like wind.
+ */
+function buildBillowedOpacity(map: DataTexture): FogMathNode {
+  const density = fogTSL.texture(map).r;
+  const ground = fogTSL.positionWorld.xz;
+  const clock = fogTSL.time;
+  const band = density.mul(density.oneMinus()).mul(4);
+  const drift = ground.mul(FOG_BILLOW_SCALE);
+  const coarse = fogTSL.mx_noise_float(drift.add(clock.mul(0.24)));
+  const fine = fogTSL.mx_noise_float(drift.mul(2.3).sub(clock.mul(0.31)));
+  const billow = coarse.mul(0.7).add(fine.mul(0.3));
+  const amplitude = band.mul(FOG_BILLOW_EDGE).add(density.mul(FOG_BILLOW_DEEP));
+
+  return density.add(billow.mul(amplitude)).clamp(0, 1);
 }
 
 /**
