@@ -8,7 +8,7 @@ import { setViewport } from './set-viewport';
 import { setWorldRegion } from './set-world-region';
 import { useWorldmapStore } from './use-worldmap-store';
 
-test('it replaces the region key, world graph, and selected node together', () => {
+test('it replaces the region key, world graph, selectable set, and selected node together', () => {
   const node = createMockWorldMapNode({ id: 'node1', position: [0, 0] });
 
   const graph: WorldGraph = {
@@ -16,7 +16,7 @@ test('it replaces the region key, world graph, and selected node together', () =
     nodes: { node1: node },
   };
 
-  setWorldRegion('avatar-a', graph, node);
+  setWorldRegion('avatar-a', graph, node, new Set(['node1']));
 
   const hook = renderHook(() => useWorldmapStore((state) => state.worldGraph));
 
@@ -24,16 +24,17 @@ test('it replaces the region key, world graph, and selected node together', () =
   expect(useWorldmapStore.getState().regionKey).toBe('avatar-a');
   expect(useWorldmapStore.getState().selectedNode).toStrictEqual(node);
   expect(useWorldmapStore.getState().selectedObject3D).toBeNull();
+  expect(useWorldmapStore.getState().selectableNodeIDs).toStrictEqual(new Set(['node1']));
 });
 
 test('it clears the selection when the region has no node to select', () => {
-  setWorldRegion('avatar-a', { edges: {}, nodes: {} }, null);
+  setWorldRegion('avatar-a', { edges: {}, nodes: {} }, null, new Set());
 
   expect(useWorldmapStore.getState().selectedNode).toBeNull();
   expect(useWorldmapStore.getState().selectedObject3D).toBeNull();
 });
 
-test("it refreshes the world graph without resetting the player's selection or viewport for the key the store already holds", () => {
+test("it refreshes the world graph and selectable set without resetting the player's selection or viewport for the key the store already holds", () => {
   const node = createMockWorldMapNode({ id: 'node1', position: [0, 0] });
 
   const graph: WorldGraph = {
@@ -41,7 +42,7 @@ test("it refreshes the world graph without resetting the player's selection or v
     nodes: { node1: node },
   };
 
-  setWorldRegion('avatar-a', graph, null);
+  setWorldRegion('avatar-a', graph, null, new Set(['node1']));
 
   const viewport = { maxCX: 8, maxCY: 8, minCX: -8, minCY: -8 };
 
@@ -50,9 +51,10 @@ test("it refreshes the world graph without resetting the player's selection or v
 
   const nextGraph: WorldGraph = { edges: {}, nodes: {} };
 
-  setWorldRegion('avatar-a', nextGraph, null);
+  setWorldRegion('avatar-a', nextGraph, null, new Set());
 
   expect(useWorldmapStore.getState().worldGraph).toStrictEqual(nextGraph);
+  expect(useWorldmapStore.getState().selectableNodeIDs).toStrictEqual(new Set());
   expect(useWorldmapStore.getState().selectedNode).toStrictEqual(node);
   expect(useWorldmapStore.getState().viewport).toStrictEqual(viewport);
 });
@@ -65,10 +67,10 @@ test('it resets the selection and viewport for a new key even when the graph is 
     nodes: { node1: node },
   };
 
-  setWorldRegion('avatar-a', graph, null);
+  setWorldRegion('avatar-a', graph, null, new Set());
   setSelectedNode(node);
   setViewport({ maxCX: 8, maxCY: 8, minCX: -8, minCY: -8 });
-  setWorldRegion('avatar-b', graph, null);
+  setWorldRegion('avatar-b', graph, null, new Set());
 
   expect(useWorldmapStore.getState().regionKey).toBe('avatar-b');
   expect(useWorldmapStore.getState().selectedNode).toBeNull();

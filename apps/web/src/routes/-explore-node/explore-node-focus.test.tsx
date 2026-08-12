@@ -9,7 +9,7 @@ test('it selects the graph node matching the route param', () => {
   const node1 = createMockWorldMapNode({ id: 'node1' });
   const graph: WorldGraph = { edges: {}, nodes: { node1 } };
 
-  setWorldRegion('region-a', graph, null);
+  setWorldRegion('region-a', graph, null, new Set());
   render(<ExploreNodeFocus nodeID="node1" />);
 
   const hook = renderHook(() => useSelectedNode());
@@ -21,7 +21,7 @@ test('it renders nothing and leaves selection untouched for an unknown node id',
   const node1 = createMockWorldMapNode({ id: 'node1' });
   const graph: WorldGraph = { edges: {}, nodes: { node1 } };
 
-  setWorldRegion('region-b', graph, null);
+  setWorldRegion('region-b', graph, null, new Set());
 
   const rendered = render(<ExploreNodeFocus nodeID="missing-node" />);
 

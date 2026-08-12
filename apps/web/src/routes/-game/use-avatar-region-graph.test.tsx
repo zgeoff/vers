@@ -1,16 +1,19 @@
 import { expect, test } from 'bun:test';
 import { waitFor } from '@testing-library/react';
+import { mockActivityService } from '@vers/mock-services/activity';
 import * as db from '@vers/mock-services/db';
 import {
   buildChunkAlignedViewport,
   buildViewportGraph,
   setViewport,
+  useSelectableNodeIDs,
   useSelectedNode,
   useViewport,
   useWorldGraph,
 } from '@vers/worldmap-client';
-import { toNodeID } from '@vers/worldmap-core';
+import { collectNodeEdges, toNodeID } from '@vers/worldmap-core';
 import invariant from 'tiny-invariant';
+import { server } from '../../mocks/node';
 import { createActiveAvatar } from '../../test-utils/create-active-avatar';
 import { createSignedInUser } from '../../test-utils/create-signed-in-user';
 import { renderHook } from '../../test-utils/render-hook';
@@ -265,5 +268,64 @@ test('it selects the new origin on an avatar switch even when the viewport had p
     // the switch also clears the outgoing avatar's camera footprint, so nothing can query the new
     // avatar with the far-panned coordinates before the camera reports a fresh viewport
     expect(hook.result.current.viewport).toBeNull();
+  });
+});
+
+test('it limits the selectable set to the origin while the avatar holds no completed nodes', async () => {
+  const signedIn = await createSignedInUser();
+
+  await createActiveAvatar({ seed: 777, userID: signedIn.userID });
+
+  await withRequestContext({ cookies: signedIn.cookies }, async () => {
+    const hook = renderHook(() => {
+      useAvatarRegionGraph();
+
+      return { selectable: useSelectableNodeIDs() };
+    });
+
+    await waitFor(() => {
+      expect(hook.result.current.selectable).toStrictEqual(new Set([toNodeID(0, 0)]));
+    });
+  });
+});
+
+test('it extends the selectable set to a real neighbour once the revealed-nodes query resolves a completed grant', async () => {
+  const signedIn = await createSignedInUser();
+  const avatar = await createActiveAvatar({ seed: 888, userID: signedIn.userID });
+
+  const originID = toNodeID(0, 0);
+  const [edge] = collectNodeEdges(avatar.seed, 0, 0);
+
+  invariant(edge, 'the origin connects to at least one neighbour');
+
+  const [aID = '', bID = ''] = edge.id.split('|');
+  const neighbourID = aID === originID ? bID : aID;
+
+  server.use(
+    mockActivityService.getRevealedNodes.handler(() => ({
+      completedNodeIDs: [originID],
+      contentVersion: 'v1',
+      nodes: [],
+    })),
+  );
+
+  await withRequestContext({ cookies: signedIn.cookies }, async () => {
+    const hook = renderHook(() => {
+      useAvatarRegionGraph();
+
+      return { selectable: useSelectableNodeIDs() };
+    });
+
+    // the mount's own region build resets the stored viewport, so the camera viewport that
+    // enables the revealed-nodes query is set only once that settles
+    await waitFor(() => {
+      expect(hook.result.current.selectable).toStrictEqual(new Set([originID]));
+    });
+
+    setViewport({ maxCX: 5, maxCY: 5, minCX: -5, minCY: -5 });
+
+    await waitFor(() => {
+      expect(hook.result.current.selectable.has(neighbourID)).toBe(true);
+    });
   });
 });
