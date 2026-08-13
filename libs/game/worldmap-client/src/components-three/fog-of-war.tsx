@@ -1,7 +1,7 @@
 import { sceneColors } from '@vers/design-system';
 import type { RevealDistanceField, Viewport } from '@vers/worldmap-core';
 import { buildRevealDistanceField, toHexPosition } from '@vers/worldmap-core';
-import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
+import { useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import {
   BufferAttribute,
   BufferGeometry,
@@ -70,7 +70,7 @@ const FOG_BILLOW_DEEP = 0.08;
  */
 export function FogOfWar() {
   const revealSources = useRevealSources();
-  const viewport = useFogViewport();
+  const viewport = useDeferredValue(useFogViewport());
 
   const fog = useMemo(() => {
     if (revealSources === null || viewport === null) {
@@ -84,11 +84,16 @@ export function FogOfWar() {
       minCY: viewport.minCY - FOG_VIEWPORT_MARGIN_CELLS,
     };
 
+    const started = performance.now();
+    const field = buildRevealDistanceField(revealSources, inflated, {
+      falloff: FOG_FALLOFF,
+      resolution: FOG_TEXELS_PER_CELL,
+    });
+
+    console.log(`[perf] fog field ${(performance.now() - started).toFixed(0)}ms`);
+
     return {
-      field: buildRevealDistanceField(revealSources, inflated, {
-        falloff: FOG_FALLOFF,
-        resolution: FOG_TEXELS_PER_CELL,
-      }),
+      field,
       fieldViewport: inflated,
     };
   }, [revealSources, viewport]);

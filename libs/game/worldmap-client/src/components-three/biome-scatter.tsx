@@ -12,7 +12,7 @@ import {
   getBiome,
   toHexPosition,
 } from '@vers/worldmap-core';
-import { useLayoutEffect, useMemo, useRef } from 'react';
+import { useDeferredValue, useLayoutEffect, useMemo, useRef } from 'react';
 import type { InstancedMesh } from 'three';
 import { Color, Matrix4, Quaternion, Vector3 } from 'three';
 import { extend } from '@react-three/fiber';
@@ -92,7 +92,7 @@ export const scatterStats = { buildMs: 0, glow: 0, parts: 0 };
 
 export function BiomeScatter() {
   const userSeed = useUserSeed();
-  const viewport = useFogViewport();
+  const viewport = useDeferredValue(useFogViewport());
   const isVisible = useIsScatterVisible();
 
   const build = useMemo(() => {
@@ -106,6 +106,8 @@ export function BiomeScatter() {
     scatterStats.buildMs = performance.now() - started;
     scatterStats.parts = built.count;
     scatterStats.glow = built.glowCount;
+
+    console.log(`[perf] scatter ${scatterStats.buildMs.toFixed(0)}ms (${built.count} parts)`);
 
     return built;
   }, [userSeed, viewport]);

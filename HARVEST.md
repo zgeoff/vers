@@ -72,6 +72,15 @@ re-builds the keepers properly against these notes.
 - Dev perf HUD (fps / worst frame / part counts / build ms) proved immediately necessary; a real
   version belongs in the dev tools panel. three's WebGPU renderer doesn't expose draw/triangle
   counts through `renderer.info.render` the WebGL way — needs its own counter source.
+- **The 500ms hitch anatomy**: consecutive chunk crossings during a continuous pan/zoom each fired
+  a full synchronous rebuild, doubled by dev StrictMode, stacking into half-second freezes.
+  **`useDeferredValue` on the chunk-aligned viewport fixed it almost entirely** (500ms → 21ms peak
+  frame gap, measured): rebuilds become interruptible transitions and stale intermediate viewports
+  coalesce away. This belongs in the production implementation regardless of the worker move — it
+  is one line per consumer and removes the freeze class outright. Residual worst-frame equals the
+  longest single memo, which only the worker/incremental ladder removes.
+- Timing instrumentation inside memos misreads under concurrent rendering (interrupted renders
+  yield nonsense durations like 96s) — production metrics need effect-side timestamps instead.
 
 ## Parked questions
 

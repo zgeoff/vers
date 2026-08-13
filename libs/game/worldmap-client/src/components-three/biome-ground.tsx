@@ -5,7 +5,7 @@
 import { sceneColors } from '@vers/design-system';
 import type { BiomeField, Viewport } from '@vers/worldmap-core';
 import { BIOME_ROSTER, buildBiomeField, getBiome, toHexPosition } from '@vers/worldmap-core';
-import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
+import { useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import {
   BufferAttribute,
   BufferGeometry,
@@ -34,7 +34,9 @@ const MAX_GRID_VERTS = 160;
 
 export function BiomeGround() {
   const userSeed = useUserSeed();
-  const viewport = useFogViewport();
+  // deferred: world rebuilds run as interruptible transitions, and rapid pans coalesce — React
+  // skips intermediate viewports instead of stacking a rebuild per chunk crossing
+  const viewport = useDeferredValue(useFogViewport());
 
   const sampler = useMemo(
     () => (userSeed === null ? null : makeGroundHeightSampler(userSeed)),
@@ -53,8 +55,13 @@ export function BiomeGround() {
       minCY: viewport.minCY - BIOME_VIEWPORT_MARGIN_CELLS,
     };
 
+    const started = performance.now();
+    const field = buildBiomeField(userSeed, inflated, { resolution: BIOME_TEXELS_PER_CELL });
+
+    console.log(`[perf] biome field ${(performance.now() - started).toFixed(0)}ms (${field.cols}x${field.rows})`);
+
     return {
-      field: buildBiomeField(userSeed, inflated, { resolution: BIOME_TEXELS_PER_CELL }),
+      field,
       fieldViewport: inflated,
       sampler,
       userSeed,
@@ -103,10 +110,14 @@ function BiomeGroundPlane(props: Readonly<BiomeGroundPlaneProps>) {
 
   // geometry derives in render so the mesh and its geometry swap atomically on a pan — an
   // effect-time swap leaves one frame draping the new area's texture over the old area's grid
-  const geometry = useMemo(
-    () => buildReliefGeometry(props.userSeed, props.sampler, props.viewport),
-    [props.userSeed, props.sampler, props.viewport],
-  );
+  const geometry = useMemo(() => {
+    const started = performance.now();
+    const built = buildReliefGeometry(props.userSeed, props.sampler, props.viewport);
+
+    console.log(`[perf] relief grid ${(performance.now() - started).toFixed(0)}ms`);
+
+    return built;
+  }, [props.userSeed, props.sampler, props.viewport]);
 
   useEffect(() => () => geometry.dispose(), [geometry]);
 
