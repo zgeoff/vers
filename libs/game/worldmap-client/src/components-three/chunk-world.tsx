@@ -467,7 +467,7 @@ export function ChunkScatter() {
 
 /** dark derelict ground palette — committed unnatural art direction, overriding the pastel scene
  * colors for the spike */
-const BASE_TINT_HEXES: ReadonlyArray<string> = ['#303a52', '#2b3d34', '#2e2839', '#413127'];
+const BASE_TINT_HEXES: ReadonlyArray<string> = ['#3f3e44', '#2b3d34', '#2e2839', '#413127'];
 
 const BASE_TINTS: ReadonlyMap<number, Color> = new Map(
   BIOME_ROSTER.map((entry, index) => {
@@ -487,7 +487,14 @@ function buildTileTexture(field: ReturnType<typeof buildBiomeField>): DataTextur
   const bytes = new Uint8Array(field.cols * field.rows * 4);
   const count = field.cols * field.rows;
 
+  // deck-plate seams: a darker line every two cells on both axes — the ground reads as built
+  // plating up close and the 1-texel lines dissolve at distance, a free level-of-detail
+  const seamPeriod = TEXELS_PER_CELL * 2;
+
   for (let index = 0; index < count; index++) {
+    const i = index % field.cols;
+    const j = Math.floor(index / field.cols);
+    const isSeam = i % seamPeriod === 0 || j % seamPeriod === 0;
     const base = getBaseTint(field.baseIDs[index] ?? 0);
     const neighbour = getBaseTint(field.neighbourBaseIDs[index] ?? 0);
     const mixT = 0.5 * (field.blendTs[index] ?? 0);
@@ -499,6 +506,12 @@ function buildTileTexture(field: ReturnType<typeof buildBiomeField>): DataTextur
       r += (MODIFIER_TINT.r - r) * MODIFIER_OVERLAY_ALPHA;
       g += (MODIFIER_TINT.g - g) * MODIFIER_OVERLAY_ALPHA;
       b += (MODIFIER_TINT.b - b) * MODIFIER_OVERLAY_ALPHA;
+    }
+
+    if (isSeam) {
+      r *= 0.78;
+      g *= 0.78;
+      b *= 0.78;
     }
 
     const offset = index * 4;

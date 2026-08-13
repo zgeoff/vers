@@ -547,6 +547,22 @@ function buildAntennaTree(
     0.8 + draw(5) * 0.35,
   );
 
+  // crown housing at the top: the silhouette mass that makes a clustered grove read as canopy
+  // from map distance, where the thin masts alone dissolve
+  pushPart(
+    sink,
+    x,
+    y,
+    height,
+    mastW * 3.2,
+    mastW * 3.2,
+    mastW * 2.6,
+    draw(60) * Math.PI,
+    0,
+    base,
+    0.55 + draw(61) * 0.3,
+  );
+
   const tiers = 2 + Math.floor(draw(6) * 2);
   const baseAngle = draw(7) * Math.PI;
 
@@ -560,7 +576,7 @@ function buildAntennaTree(
     pushPart(sink, x, y, tierZ, span, armW, armW, angle, 0, base, 0.75 + draw(20 + t) * 0.35);
   }
 
-  if (draw(50) > 0.8 && height > 1 * PROP_SCALE) {
+  if (draw(50) > 0.65 && height > 1 * PROP_SCALE) {
     pushGlow(sink, x, y, height + 0.02, 0.028 * PROP_SCALE * 2, getAccent(1));
   }
 }

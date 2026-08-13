@@ -140,6 +140,12 @@ re-builds the keepers properly against these notes.
 - Biome identity/naming is #272's design pass; everything here is placeholder vocabulary.
 - Fog vs revealed-content interplay: does structure glow beyond the frontier leak "earned sight"?
   (Current stance: geometry is public plane, so no security issue — purely a design-feel call.)
+- Panel-line wear: deck-plate seam grid drawn CPU-side into the tile texture (darker line every
+  two cells, one texel wide) — reads as built plating up close, dissolves at distance (free LOD).
+  Structure-level panel wear still needs per-instance shader work; parked for production.
+- Grove readability at distance: crown housings atop each machine-tree mast give clustered groves
+  canopy mass; tip lights back up in frequency. Maintained ground moved off cold navy to neutral
+  concrete so cold now unambiguously means dead (blackout).
 - TSL surface detail tier proven viable through the narrow facade: world-anchored noise grime
   multiplying the tile tint (two octaves, ~0.86-1.06 range) kills the vector-fill flatness, and a
   shared `time`-driven sine pulse breathes all emissives. Each new shader op is one passthrough
