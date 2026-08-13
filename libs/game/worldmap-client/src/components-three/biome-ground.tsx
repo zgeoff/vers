@@ -275,10 +275,10 @@ function buildReliefGeometry(
 ): BufferGeometry {
   const spanX = viewport.maxCX - viewport.minCX + 1;
   const spanY = viewport.maxCY - viewport.minCY + 1;
-  const strideX = Math.max(1, Math.ceil(spanX / MAX_GRID_VERTS));
-  const strideY = Math.max(1, Math.ceil(spanY / MAX_GRID_VERTS));
-  const cols = Math.floor(spanX / strideX) + 1;
-  const rows = Math.floor(spanY / strideY) + 1;
+  const cols = Math.min(spanX * 2 + 1, MAX_GRID_VERTS);
+  const rows = Math.min(spanY * 2 + 1, MAX_GRID_VERTS);
+  const strideX = spanX / (cols - 1);
+  const strideY = spanY / (rows - 1);
   const f = NODE_POSITION_SCALING_FACTOR;
 
   const positions = new Float32Array(cols * rows * 3);

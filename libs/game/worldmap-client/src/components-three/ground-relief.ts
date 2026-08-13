@@ -13,10 +13,10 @@ const CH_FINE = 3001;
 const RELIEF_AMP = [0.06, 0.14, 0.4, 0.2];
 
 /** scene-space distance over which terrain ramps from road-level to full relief */
-const GRADE_RAMP = 0.55;
+const GRADE_RAMP = 0.9;
 
 /** road corridor half-width held dead flat */
-const GRADE_FLAT = 0.2;
+const GRADE_FLAT = 0.3;
 
 export type GroundHeightSampler = (x: number, y: number, biome: number) => number;
 

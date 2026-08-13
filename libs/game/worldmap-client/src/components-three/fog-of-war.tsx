@@ -41,7 +41,7 @@ const FOG_VIEWPORT_MARGIN_CELLS = 2;
  * The fog plane floats just above the node plane so dense fog hides the nodes and edges underneath
  * it.
  */
-const FOG_ELEVATION = 0.2;
+const FOG_ELEVATION = 2.6;
 
 /**
  * Spatial frequency of the billow noise in world units — wavelengths around one to two cells read
