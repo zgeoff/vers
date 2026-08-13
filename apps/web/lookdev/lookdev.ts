@@ -1,10 +1,10 @@
 /**
  * Respite style probes — spike only, never merged to a shipping path.
  *
- * One composition: standing at the open end of the town square, buildings ringing the plaza,
- * the terraced mass of Respite climbing into haze behind the far side. Two variants differing
- * in sky value and lit-window density, both in the A×C color world (sodium warmth at street
- * level, teal/violet signals above).
+ * The town square, irregular plan: four nav buildings (market, stash, codex, avatar hall) carry
+ * the light and the eye; filler buildings sit dim and inactive; the explore gate breaks the ring
+ * on the far side, glowing world-teal toward the outside. Variant 2 layers dusk-colored fog
+ * banks through the same night scene.
  */
 import { bloom } from 'three/addons/tsl/display/BloomNode.js';
 import { pass } from 'three/tsl';
@@ -13,6 +13,7 @@ import {
   BoxGeometry,
   Color,
   DirectionalLight,
+  DoubleSide,
   Fog,
   HemisphereLight,
   InstancedMesh,
@@ -21,8 +22,8 @@ import {
   MeshStandardNodeMaterial,
   Object3D,
   PerspectiveCamera,
-  PointLight,
   PlaneGeometry,
+  PointLight,
   PostProcessing,
   Scene,
   WebGPURenderer,
@@ -37,6 +38,7 @@ interface ProbeConfig {
   readonly buildingLit: string;
   readonly dirColor: string;
   readonly dirIntensity: number;
+  readonly duskFogBanks: boolean;
   readonly fog: string;
   readonly fogFar: number;
   readonly fogNear: number;
@@ -48,60 +50,71 @@ interface ProbeConfig {
   readonly windowDark: string;
 }
 
+const DUSK_FOG = '#2e3a5e';
+
 const PROBES: ReadonlyArray<ProbeConfig> = [
   {
     ambient: '#39406b',
     ambientIntensity: 1,
-    backgroundLitChance: 0.3,
-    bloomStrength: 0.6,
+    backgroundLitChance: 0.14,
+    bloomStrength: 0.55,
     bloomThreshold: 0.45,
     buildingLit: '#6a7794',
     dirColor: '#5a6aa8',
     dirIntensity: 1.2,
+    duskFogBanks: false,
     fog: '#151a2c',
     fogFar: 72,
     fogNear: 20,
     ground: '#141927',
-    key: 'square-night',
-    litChance: 0.52,
+    key: 'night',
+    litChance: 0.3,
     name: '1 · Plaza · night',
     sky: '#0a0e18',
     windowDark: '#131826',
   },
   {
-    ambient: '#42507a',
-    ambientIntensity: 1.05,
-    backgroundLitChance: 0.24,
-    bloomStrength: 0.5,
-    bloomThreshold: 0.5,
-    buildingLit: '#8291b3',
-    dirColor: '#6d7fb8',
-    dirIntensity: 1.4,
-    fog: '#2e3a5e',
-    fogFar: 75,
-    fogNear: 22,
-    ground: '#2a3247',
-    key: 'square-dusk',
-    litChance: 0.4,
-    name: '2 · Plaza · dusk',
-    sky: '#252f52',
-    windowDark: '#1a2133',
+    ambient: '#39406b',
+    ambientIntensity: 1,
+    backgroundLitChance: 0.12,
+    bloomStrength: 0.55,
+    bloomThreshold: 0.45,
+    buildingLit: '#6a7794',
+    dirColor: '#5a6aa8',
+    dirIntensity: 1.1,
+    duskFogBanks: true,
+    fog: '#232c48',
+    fogFar: 64,
+    fogNear: 16,
+    ground: '#141927',
+    key: 'dusk-fog',
+    litChance: 0.3,
+    name: '2 · Plaza · dusk fog',
+    sky: '#0a0e18',
+    windowDark: '#131826',
   },
 ];
 
-/** Which side of the box carries windows: the face turned toward the plaza (or the camera). */
+/** Which side of the box carries windows, in the building's local frame before yaw. */
 type Facing = 'nx' | 'px' | 'pz';
+
+type Role = 'avatar' | 'back' | 'codex' | 'filler' | 'fore' | 'market' | 'stash';
 
 interface BuildingSpec {
   readonly d: number;
   readonly facing: Facing;
   readonly h: number;
-  readonly kind: 'back' | 'fore' | 'plaza';
   readonly mast: boolean;
+  readonly role: Role;
+  readonly ry: number;
   readonly w: number;
   readonly x: number;
   readonly y: number;
   readonly z: number;
+}
+
+function isNavRole(role: Role): boolean {
+  return role === 'avatar' || role === 'codex' || role === 'market' || role === 'stash';
 }
 
 /**
@@ -123,30 +136,25 @@ function buildMassing(): Array<BuildingSpec> {
   const random = makeRandom(1337);
 
   const specs: Array<BuildingSpec> = [
-    // far side of the square: the authority tall and centered, mid neighbours flanking
-    { d: 4, facing: 'pz', h: 10.5, kind: 'plaza', mast: true, w: 3.6, x: 0, y: 0, z: -14 },
-    { d: 4.5, facing: 'pz', h: 6, kind: 'plaza', mast: false, w: 5.5, x: -7.5, y: 0, z: -13 },
-    { d: 4.5, facing: 'pz', h: 7.5, kind: 'plaza', mast: false, w: 5, x: 7.2, y: 0, z: -13.5 },
+    // far side: the codex tower off-center left; the explore gate breaks the ring to its right
+    { d: 4, facing: 'pz', h: 10.5, mast: true, role: 'codex', ry: 0.06, w: 3.6, x: -2, y: 0, z: -14.5 },
+    { d: 4.2, facing: 'pz', h: 5, mast: false, role: 'filler', ry: 0.11, w: 4.8, x: -8.5, y: 0, z: -13.2 },
+    { d: 4, facing: 'pz', h: 6, mast: false, role: 'filler', ry: -0.14, w: 3.8, x: 11.8, y: 0, z: -12.6 },
 
-    // left row: the market wide and low, a neighbour beside it
-    { d: 8, facing: 'px', h: 4.5, kind: 'plaza', mast: false, w: 4.5, x: -15, y: 0, z: -3 },
-    { d: 5.5, facing: 'px', h: 6.5, kind: 'plaza', mast: false, w: 4.5, x: -15.5, y: 0, z: -10 },
+    // left row: the market wide and angled inward, the stash a heavy low block behind it
+    { d: 8, facing: 'px', h: 4.5, mast: false, role: 'market', ry: 0.16, w: 4.5, x: -14, y: 0, z: -2.5 },
+    { d: 5.5, facing: 'px', h: 3.6, mast: false, role: 'stash', ry: -0.07, w: 5, x: -13.6, y: 0, z: -9.2 },
 
-    // right row: the industry with its stack, a neighbour beside it
-    { d: 6.5, facing: 'nx', h: 7, kind: 'plaza', mast: true, w: 4.5, x: 15, y: 0, z: -4.5 },
-    { d: 5, facing: 'nx', h: 5, kind: 'plaza', mast: false, w: 4.5, x: 15.5, y: 0, z: -10.5 },
-
-    // corners closing the ring between the side rows and the far side
-    { d: 4, facing: 'pz', h: 5.5, kind: 'plaza', mast: false, w: 3.5, x: -12.5, y: 0, z: -13 },
-    { d: 4, facing: 'pz', h: 6, kind: 'plaza', mast: false, w: 3.5, x: 12.2, y: 0, z: -13.2 },
+    // right row: the avatar hall with its mast, one dim filler beside it
+    { d: 6.5, facing: 'nx', h: 7, mast: true, role: 'avatar', ry: -0.13, w: 4.5, x: 14.6, y: 0, z: -4 },
+    { d: 5, facing: 'nx', h: 4.6, mast: false, role: 'filler', ry: 0.09, w: 4.5, x: 15.8, y: 0, z: -10.5 },
 
     // near flanks cropping the frame edges, dark
-    { d: 6, facing: 'px', h: 5.5, kind: 'fore', mast: false, w: 6, x: -18, y: 0, z: 12 },
-    { d: 6, facing: 'nx', h: 4.5, kind: 'fore', mast: false, w: 6, x: 18, y: 0, z: 13 },
+    { d: 6, facing: 'px', h: 5.5, mast: false, role: 'fore', ry: 0.1, w: 6, x: -18, y: 0, z: 12 },
+    { d: 6, facing: 'nx', h: 4.5, mast: false, role: 'fore', ry: -0.08, w: 6, x: 18, y: 0, z: 13 },
   ];
 
-  // terraced mass climbing behind the far side, fading into haze — kept low enough that sky
-  // stays visible above it
+  // terraced mass climbing behind the far side, fading into haze
   const rows = [
     { count: 6, y: 2, z: -27 },
     { count: 7, y: 4.5, z: -35 },
@@ -165,8 +173,9 @@ function buildMassing(): Array<BuildingSpec> {
         d,
         facing: 'pz',
         h: h + row.y,
-        kind: 'back',
         mast: random() < 0.16,
+        role: 'back',
+        ry: (random() - 0.5) * 0.3,
         w,
         x,
         y: 0,
@@ -189,6 +198,7 @@ const WARM_WINDOW = '#ffc082';
 const WARM_WINDOW_SOFT = '#e5c79c';
 const SIGNAL_TEAL = '#5eead4';
 const SIGNAL_VIOLET = '#a78bfa';
+const GATE_TEAL = '#2dd4bf';
 
 /**
  * Sodium warmth owns street level; teal/violet signals only join above it, so the square reads
@@ -216,26 +226,38 @@ function pickWindowColor(config: ProbeConfig, random: () => number, worldY: numb
   return new Color(signal).multiplyScalar(2);
 }
 
+/** Rotate a local offset by the building's yaw and translate it to world space. */
+function toWorldOffset(spec: BuildingSpec, lx: number, lz: number): { x: number; z: number } {
+  const cos = Math.cos(spec.ry);
+  const sin = Math.sin(spec.ry);
+
+  return { x: spec.x + lx * cos + lz * sin, z: spec.z - lx * sin + lz * cos };
+}
+
 function buildWindows(specs: ReadonlyArray<BuildingSpec>, config: ProbeConfig): Array<EmissiveInstance> {
   const random = makeRandom(9001);
   const windows: Array<EmissiveInstance> = [];
 
   for (const spec of specs) {
-    if (spec.kind === 'fore') {
+    if (spec.role === 'fore') {
       continue;
     }
 
-    const litChance = spec.kind === 'plaza' ? config.litChance : config.backgroundLitChance;
+    const roleLitChance = isNavRole(spec.role)
+      ? config.litChance * 1.9
+      : spec.role === 'filler'
+        ? config.litChance * 0.35
+        : config.backgroundLitChance;
 
-    // side-row buildings also carry windows on their camera-facing front, at lower density,
+    // nav side-row buildings also carry windows on their camera-facing front, at lower density,
     // so they read as buildings rather than dark slabs
     const faces: Array<{ facing: Facing; litChance: number }> =
-      spec.kind === 'plaza' && spec.facing !== 'pz'
+      isNavRole(spec.role) && spec.facing !== 'pz'
         ? [
-            { facing: spec.facing, litChance },
-            { facing: 'pz', litChance: litChance * 0.55 },
+            { facing: spec.facing, litChance: roleLitChance },
+            { facing: 'pz', litChance: roleLitChance * 0.55 },
           ]
-        : [{ facing: spec.facing, litChance }];
+        : [{ facing: spec.facing, litChance: roleLitChance }];
 
     for (const face of faces) {
       const faceExtent = face.facing === 'pz' ? spec.w : spec.d;
@@ -247,25 +269,35 @@ function buildWindows(specs: ReadonlyArray<BuildingSpec>, config: ProbeConfig): 
         for (let row = 0; row < rowCount; row += 1) {
           const along = -(faceExtent - 0.9) / 2 + col * step;
           const y = spec.y + spec.h - 0.6 - row * 0.7;
+          const color = pickWindowColor(config, random, y, face.litChance);
 
           if (face.facing === 'pz') {
-            windows.push({
-              color: pickWindowColor(config, random, y, face.litChance),
-              x: spec.x + along,
-              y,
-              z: spec.z + spec.d / 2 + 0.03,
-            });
-          } else {
-            const x = face.facing === 'px' ? spec.x + spec.w / 2 + 0.03 : spec.x - spec.w / 2 - 0.03;
+            const world = toWorldOffset(spec, along, spec.d / 2 + 0.03);
 
-            windows.push({
-              color: pickWindowColor(config, random, y, face.litChance),
-              x,
-              y,
-              z: spec.z + along,
-            });
+            windows.push({ color, x: world.x, y, z: world.z });
+          } else {
+            const lx = face.facing === 'px' ? spec.w / 2 + 0.03 : -spec.w / 2 - 0.03;
+            const world = toWorldOffset(spec, lx, along);
+
+            windows.push({ color, x: world.x, y, z: world.z });
           }
         }
+      }
+    }
+
+    // a lit entrance at the base of each nav building, facing the plaza
+    if (isNavRole(spec.role)) {
+      const doorColor = new Color(WARM_WINDOW).multiplyScalar(2.6);
+
+      if (spec.facing === 'pz') {
+        const world = toWorldOffset(spec, 0, spec.d / 2 + 0.05);
+
+        windows.push({ color: doorColor, x: world.x, y: 0.75, z: world.z });
+      } else {
+        const lx = spec.facing === 'px' ? spec.w / 2 + 0.05 : -spec.w / 2 - 0.05;
+        const world = toWorldOffset(spec, lx, 0);
+
+        windows.push({ color: doorColor, x: world.x, y: 0.75, z: world.z });
       }
     }
   }
@@ -273,22 +305,34 @@ function buildWindows(specs: ReadonlyArray<BuildingSpec>, config: ProbeConfig): 
   return windows;
 }
 
-/**
- * Warm lamp posts ringing the plaza, plus one cold instrument light on the central monument —
- * the one meaningful light in the F register.
- */
+interface LampSpec {
+  readonly x: number;
+  readonly z: number;
+}
+
+/** Hand-scattered lamp posts — deliberately off-grid so the square doesn't read master-planned. */
+const LAMPS: ReadonlyArray<LampSpec> = [
+  { x: -10.5, z: 3.5 },
+  { x: -11.8, z: -4 },
+  { x: -8, z: -10 },
+  { x: -2.5, z: -12 },
+  { x: 3, z: -11 },
+  { x: 10.2, z: -8.5 },
+  { x: 11.5, z: 0.5 },
+  { x: 9, z: 6 },
+  { x: -4, z: 6.5 },
+];
+
 function buildPlazaLights(): Array<EmissiveInstance> {
   const lamp = new Color(WARM_WINDOW).multiplyScalar(2.6);
-  const lights: Array<EmissiveInstance> = [];
+  const lights: Array<EmissiveInstance> = LAMPS.map((spec) => ({
+    color: lamp,
+    x: spec.x,
+    y: 1.15,
+    z: spec.z,
+  }));
 
-  for (let z = -9; z <= 7; z += 4) {
-    lights.push({ color: lamp, x: -11.5, y: 1.15, z }, { color: lamp, x: 11.5, y: 1.15, z });
-  }
-
-  for (let x = -8; x <= 8; x += 4) {
-    lights.push({ color: lamp, x, y: 1.15, z: -10.5 });
-  }
-
+  // the monument's single cold instrument light, in the F register
   lights.push({ color: new Color('#7dd3fc').multiplyScalar(2.4), x: 4.5, y: 3.7, z: 1.5 });
 
   return lights;
@@ -331,9 +375,9 @@ function buildScene(config: ProbeConfig): Scene {
   ground.position.y = -0.01;
   scene.add(ground);
 
-  // the paved plaza itself, a step lighter than the surrounding ground so the square reads
+  // the paved plaza, skewed off the world axes so the square doesn't read as a perfect rectangle
   const plazaFloor = new Mesh(
-    new PlaneGeometry(24, 20),
+    new PlaneGeometry(25, 21),
     new MeshStandardNodeMaterial({
       color: new Color(config.ground).multiplyScalar(2.4),
       roughness: 0.45,
@@ -341,22 +385,33 @@ function buildScene(config: ProbeConfig): Scene {
   );
 
   plazaFloor.rotation.x = -Math.PI / 2;
-  plazaFloor.position.set(0, 0.005, -1.5);
+  plazaFloor.rotation.z = 0.07;
+  plazaFloor.position.set(0.8, 0.005, -1.5);
   scene.add(plazaFloor);
 
+  // a smaller apron spilling toward the gate, breaking the plaza's outline further
+  const apron = new Mesh(
+    new PlaneGeometry(9, 10),
+    new MeshStandardNodeMaterial({
+      color: new Color(config.ground).multiplyScalar(2.1),
+      roughness: 0.5,
+    }),
+  );
+
+  apron.rotation.x = -Math.PI / 2;
+  apron.rotation.z = -0.12;
+  apron.position.set(5.5, 0.004, -11);
+  scene.add(apron);
+
   // warm pools of lamp light on the pavement — the square's stage lighting
-  const lampGlow = new Color(WARM_WINDOW);
+  for (const lamp of [LAMPS[1], LAMPS[4], LAMPS[6], LAMPS[8]]) {
+    if (!lamp) {
+      continue;
+    }
 
-  for (const position of [
-    [-9, 4],
-    [9, 4],
-    [-9, -8],
-    [9, -8],
-    [0, -2],
-  ] as const) {
-    const light = new PointLight(lampGlow, 26, 14, 2);
+    const light = new PointLight(new Color(WARM_WINDOW), 16, 14, 2);
 
-    light.position.set(position[0], 2.4, position[1]);
+    light.position.set(lamp.x, 2.9, lamp.z);
     scene.add(light);
   }
 
@@ -368,16 +423,29 @@ function buildScene(config: ProbeConfig): Scene {
     specs.length,
   );
   const litColor = new Color(config.buildingLit);
-  const foreColor = new Color(config.buildingLit).multiplyScalar(0.35);
+  const navColor = litColor.clone().multiplyScalar(1.15);
+  const fillerColor = litColor.clone().multiplyScalar(0.6);
+  const foreColor = litColor.clone().multiplyScalar(0.35);
 
   for (const [index, spec] of specs.entries()) {
     dummy.position.set(spec.x, spec.y + spec.h / 2, spec.z);
+    dummy.rotation.set(0, spec.ry, 0);
     dummy.scale.set(spec.w, spec.h, spec.d);
     dummy.updateMatrix();
     buildings.setMatrixAt(index, dummy.matrix);
-    buildings.setColorAt(index, spec.kind === 'fore' ? foreColor : litColor);
+
+    const color = isNavRole(spec.role)
+      ? navColor
+      : spec.role === 'filler'
+        ? fillerColor
+        : spec.role === 'fore'
+          ? foreColor
+          : litColor;
+
+    buildings.setColorAt(index, color);
   }
 
+  dummy.rotation.set(0, 0, 0);
   buildings.instanceMatrix.needsUpdate = true;
   buildings.computeBoundingSphere();
   scene.add(buildings);
@@ -400,7 +468,25 @@ function buildScene(config: ProbeConfig): Scene {
   mastMesh.computeBoundingSphere();
   scene.add(mastMesh);
 
-  // the central monument the plaza's instrument light sits on
+  // the explore gate: two pylons in the far-side gap, world-teal edges, teal glow beyond
+  const pylonMaterial = new MeshStandardNodeMaterial({
+    color: litColor.clone().multiplyScalar(0.5),
+    roughness: 0.8,
+  });
+
+  for (const px of [4.2, 8.2]) {
+    const pylon = new Mesh(new BoxGeometry(0.9, 6.2, 1.1), pylonMaterial);
+
+    pylon.position.set(px, 3.1, -14);
+    scene.add(pylon);
+  }
+
+  const gateGlow = new PointLight(new Color(GATE_TEAL), 30, 20, 2);
+
+  gateGlow.position.set(6.2, 2.5, -17.5);
+  scene.add(gateGlow);
+
+  // the monument the plaza's instrument light sits on, off the square's center line
   const monument = new Mesh(
     new BoxGeometry(0.8, 3.4, 0.8),
     new MeshStandardNodeMaterial({ color: litColor.clone().multiplyScalar(0.55), roughness: 0.8 }),
@@ -410,15 +496,14 @@ function buildScene(config: ProbeConfig): Scene {
   scene.add(monument);
 
   // lamp posts under the plaza lights
-  const lampSpecs = buildPlazaLights().filter((light) => light.y < 2);
   const postMesh = new InstancedMesh(
     boxGeometry,
     new MeshStandardNodeMaterial({ color: new Color('#1c2333'), roughness: 0.9 }),
-    lampSpecs.length,
+    LAMPS.length,
   );
 
-  for (const [index, light] of lampSpecs.entries()) {
-    dummy.position.set(light.x, 0.5, light.z);
+  for (const [index, lamp] of LAMPS.entries()) {
+    dummy.position.set(lamp.x, 0.5, lamp.z);
     dummy.scale.set(0.1, 1, 0.1);
     dummy.updateMatrix();
     postMesh.setMatrixAt(index, dummy.matrix);
@@ -429,6 +514,19 @@ function buildScene(config: ProbeConfig): Scene {
   scene.add(postMesh);
 
   const emissives = [...buildWindows(specs, config), ...buildPlazaLights(), ...buildInstruments(specs)];
+
+  // gate edge strips join the emissive set: vertical teal lines on the pylons' inner edges
+  for (const px of [4.7, 7.7]) {
+    for (let index = 0; index < 8; index += 1) {
+      emissives.push({
+        color: new Color(GATE_TEAL).multiplyScalar(1.9),
+        x: px,
+        y: 0.7 + index * 0.72,
+        z: -13.4,
+      });
+    }
+  }
+
   const emissiveMesh = new InstancedMesh(
     new BoxGeometry(0.13, 0.2, 0.05),
     new MeshBasicNodeMaterial(),
@@ -447,7 +545,39 @@ function buildScene(config: ProbeConfig): Scene {
   emissiveMesh.computeBoundingSphere();
   scene.add(emissiveMesh);
 
+  if (config.duskFogBanks) {
+    addDuskFogBanks(scene);
+  }
+
   return scene;
+}
+
+/**
+ * Translucent dusk-colored planes at staggered depths: the dusk palette as rolling atmosphere
+ * layered through the night scene rather than a time of day.
+ */
+function addDuskFogBanks(scene: Scene) {
+  const banks = [
+    { opacity: 0.1, y: 2.5, z: -10 },
+    { opacity: 0.16, y: 3.5, z: -18 },
+    { opacity: 0.24, y: 5, z: -26 },
+  ];
+
+  for (const bank of banks) {
+    const plane = new Mesh(
+      new PlaneGeometry(90, 11),
+      new MeshBasicNodeMaterial({
+        color: new Color(DUSK_FOG),
+        depthWrite: false,
+        opacity: bank.opacity,
+        side: DoubleSide,
+        transparent: true,
+      }),
+    );
+
+    plane.position.set(0, bank.y, bank.z);
+    scene.add(plane);
+  }
 }
 
 async function main() {
@@ -494,6 +624,12 @@ async function main() {
 
   const hud = document.getElementById('hud');
 
+  const selectProbe = (config: ProbeConfig) => {
+    postProcessing = buildPost(config, buildScene(config));
+    activeKey = config.key;
+    renderHUD();
+  };
+
   const renderHUD = () => {
     if (!hud) {
       return;
@@ -509,12 +645,6 @@ async function main() {
       button.addEventListener('click', () => selectProbe(config));
       hud.appendChild(button);
     }
-  };
-
-  const selectProbe = (config: ProbeConfig) => {
-    postProcessing = buildPost(config, buildScene(config));
-    activeKey = config.key;
-    renderHUD();
   };
 
   renderHUD();
