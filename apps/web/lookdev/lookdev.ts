@@ -12,6 +12,7 @@ import {
   AmbientLight,
   BoxGeometry,
   Color,
+  CylinderGeometry,
   DirectionalLight,
   DoubleSide,
   Fog,
@@ -26,6 +27,7 @@ import {
   PointLight,
   PostProcessing,
   Scene,
+  SphereGeometry,
   WebGPURenderer,
 } from 'three/webgpu';
 
@@ -580,6 +582,231 @@ function addDuskFogBanks(scene: Scene) {
   }
 }
 
+interface SilhouettePart {
+  readonly g: 'box' | 'cyl' | 'sphere';
+  readonly rx?: number;
+  readonly rz?: number;
+  readonly sx: number;
+  readonly sy: number;
+  readonly sz: number;
+  readonly x: number;
+  readonly y: number;
+  readonly z: number;
+}
+
+interface LineupElement {
+  readonly camZ: number;
+  readonly candidates: ReadonlyArray<ReadonlyArray<SilhouettePart>>;
+  readonly key: string;
+  readonly lookY: number;
+  readonly name: string;
+  readonly spacing: number;
+}
+
+/**
+ * Three silhouette candidates per nav element, judged as backlit dark profiles. Candidate order
+ * is A, B, C left to right.
+ */
+const LINEUP_ELEMENTS: ReadonlyArray<LineupElement> = [
+  {
+    camZ: 30,
+    key: 'lineup-market',
+    lookY: 2.6,
+    name: 'S · market',
+    spacing: 18,
+    candidates: [
+      // A — canopy teeth: low hall, tilted canopy bays along the front
+      [
+        { g: 'box', sx: 13, sy: 2.4, sz: 5, x: 0, y: 1.2, z: 0 },
+        { g: 'box', sx: 9, sy: 1.6, sz: 3, x: -0.5, y: 3.2, z: -0.8 },
+        { g: 'box', rz: 0.16, sx: 2.3, sy: 0.35, sz: 2.6, x: -5.2, y: 2.75, z: 1.5 },
+        { g: 'box', rz: 0.16, sx: 2.3, sy: 0.35, sz: 2.6, x: -2.6, y: 2.75, z: 1.5 },
+        { g: 'box', rz: 0.16, sx: 2.3, sy: 0.35, sz: 2.6, x: 0, y: 2.75, z: 1.5 },
+        { g: 'box', rz: 0.16, sx: 2.3, sy: 0.35, sz: 2.6, x: 2.6, y: 2.75, z: 1.5 },
+        { g: 'box', rz: 0.16, sx: 2.3, sy: 0.35, sz: 2.6, x: 5.2, y: 2.75, z: 1.5 },
+        { g: 'box', sx: 0.5, sy: 1.8, sz: 0.5, x: 4.6, y: 3.3, z: -1 },
+      ],
+      // B — stacked bazaar: offset slabs with accreted roof clutter
+      [
+        { g: 'box', sx: 12, sy: 2, sz: 4.6, x: 0, y: 1, z: 0 },
+        { g: 'box', sx: 9, sy: 1.7, sz: 3.8, x: 1.6, y: 2.85, z: -0.3 },
+        { g: 'box', sx: 2, sy: 1, sz: 2, x: -3.4, y: 2.5, z: 0 },
+        { g: 'box', sx: 1.4, sy: 1.4, sz: 1.4, x: 0.8, y: 4.4, z: -0.6 },
+        { g: 'box', sx: 2.6, sy: 0.8, sz: 1.8, x: 3.8, y: 4.1, z: 0.2 },
+        { g: 'box', sx: 0.12, sy: 2, sz: 0.12, x: -3.2, y: 4, z: 0 },
+        { g: 'box', sx: 0.12, sy: 2, sz: 0.12, x: 4.2, y: 4.7, z: 0 },
+      ],
+      // C — big shed: one hall with a clerestory spine and a side awning
+      [
+        { g: 'box', sx: 11, sy: 3.8, sz: 5, x: 0, y: 1.9, z: 0 },
+        { g: 'box', sx: 7, sy: 1.1, sz: 2, x: 0, y: 4.35, z: 0 },
+        { g: 'box', sx: 4.2, sy: 0.35, sz: 2.4, x: -7.2, y: 2.4, z: 0.8 },
+        { g: 'cyl', sx: 0.9, sy: 1.7, sz: 0.9, x: 5.9, y: 0.85, z: -0.4 },
+      ],
+    ],
+  },
+  {
+    camZ: 22,
+    key: 'lineup-stash',
+    lookY: 2.2,
+    name: 'S · stash',
+    spacing: 12,
+    candidates: [
+      // A — ziggurat: three battered steps
+      [
+        { g: 'box', sx: 8, sy: 1.8, sz: 6, x: 0, y: 0.9, z: 0 },
+        { g: 'box', sx: 6.2, sy: 1.2, sz: 5, x: 0, y: 2.4, z: 0 },
+        { g: 'box', sx: 4.4, sy: 0.9, sz: 4, x: 0, y: 3.45, z: 0 },
+      ],
+      // B — bunker vault: low block under a barrel roof
+      [
+        { g: 'box', sx: 7.5, sy: 2.2, sz: 5.5, x: 0, y: 1.1, z: 0 },
+        { g: 'cyl', rz: 1.5708, sx: 1.9, sy: 6.8, sz: 1.9, x: 0, y: 2.1, z: 0 },
+        { g: 'box', sx: 0.4, sy: 0.7, sz: 0.4, x: -1.6, y: 4.2, z: 0 },
+        { g: 'box', sx: 0.4, sy: 0.7, sz: 0.4, x: 1.4, y: 4.3, z: 0 },
+      ],
+      // C — gantry stash: heavy block under a straddling crane frame
+      [
+        { g: 'box', sx: 6, sy: 2.6, sz: 5, x: 0, y: 1.3, z: 0 },
+        { g: 'box', sx: 0.28, sy: 4.6, sz: 0.28, x: -3.5, y: 2.3, z: 0 },
+        { g: 'box', sx: 0.28, sy: 4.6, sz: 0.28, x: 3.5, y: 2.3, z: 0 },
+        { g: 'box', sx: 7.8, sy: 0.35, sz: 0.5, x: 0, y: 4.75, z: 0 },
+      ],
+    ],
+  },
+  {
+    camZ: 24,
+    key: 'lineup-codex',
+    lookY: 5.5,
+    name: 'S · codex',
+    spacing: 8.5,
+    candidates: [
+      // A — spire and dish: slim tower, setback crown, tilted dish
+      [
+        { g: 'box', sx: 2.8, sy: 8, sz: 2.8, x: 0, y: 4, z: 0 },
+        { g: 'box', sx: 2, sy: 2.6, sz: 2, x: 0, y: 9.3, z: 0 },
+        { g: 'box', sx: 0.1, sy: 2.4, sz: 0.1, x: -0.6, y: 11.6, z: 0 },
+        { g: 'box', sx: 0.1, sy: 2.4, sz: 0.1, x: 0.6, y: 11.6, z: 0 },
+        { g: 'cyl', rx: 1.15, sx: 1.2, sy: 0.12, sz: 1.2, x: 0.95, y: 11.3, z: 0.3 },
+      ],
+      // B — split tower: two unequal verticals joined by a bridge
+      [
+        { g: 'box', sx: 2.2, sy: 10.5, sz: 2.2, x: -1.6, y: 5.25, z: 0 },
+        { g: 'box', sx: 2.2, sy: 7.5, sz: 2.2, x: 1.8, y: 3.75, z: 0 },
+        { g: 'box', sx: 3.4, sy: 0.8, sz: 1.6, x: 0.1, y: 5.6, z: 0 },
+        { g: 'box', sx: 0.1, sy: 2.2, sz: 0.1, x: -1.6, y: 11.6, z: 0 },
+      ],
+      // C — telescoping instrument: setbacks under a hanging crown array
+      [
+        { g: 'box', sx: 4, sy: 4, sz: 4, x: 0, y: 2, z: 0 },
+        { g: 'box', sx: 3, sy: 3.4, sz: 3, x: 0, y: 5.7, z: 0 },
+        { g: 'box', sx: 2.1, sy: 2.8, sz: 2.1, x: 0, y: 8.8, z: 0 },
+        { g: 'box', sx: 3.2, sy: 0.22, sz: 0.22, x: 0, y: 10.6, z: 0 },
+        { g: 'box', sx: 0.4, sy: 0.7, sz: 0.4, x: -1.2, y: 10.05, z: 0 },
+        { g: 'box', sx: 0.4, sy: 0.7, sz: 0.4, x: 1.2, y: 10.1, z: 0 },
+        { g: 'box', sx: 0.1, sy: 1.8, sz: 0.1, x: 0, y: 11.4, z: 0 },
+      ],
+    ],
+  },
+  {
+    camZ: 22,
+    key: 'lineup-avatar',
+    lookY: 3,
+    name: 'S · avatar',
+    spacing: 11,
+    candidates: [
+      // A — drum: stacked cylinders, the square's only round tower
+      [
+        { g: 'cyl', sx: 3, sy: 5, sz: 3, x: 0, y: 2.5, z: 0 },
+        { g: 'cyl', sx: 2, sy: 1.4, sz: 2, x: 0, y: 5.7, z: 0 },
+        { g: 'box', sx: 0.1, sy: 2, sz: 0.1, x: 0, y: 7.3, z: 0 },
+        { g: 'box', sx: 1.6, sy: 1.2, sz: 1.6, x: 3.4, y: 0.6, z: 0 },
+      ],
+      // B — capsule: horizontal tube with domed ends on a plinth
+      [
+        { g: 'box', sx: 6, sy: 1, sz: 4.5, x: 0, y: 0.5, z: 0 },
+        { g: 'cyl', rz: 1.5708, sx: 1.9, sy: 5, sz: 1.9, x: 0, y: 2.9, z: 0 },
+        { g: 'sphere', sx: 1.9, sy: 1.9, sz: 1.9, x: -2.5, y: 2.9, z: 0 },
+        { g: 'sphere', sx: 1.9, sy: 1.9, sz: 1.9, x: 2.5, y: 2.9, z: 0 },
+        { g: 'box', sx: 0.4, sy: 1.5, sz: 0.4, x: 1.8, y: 5.5, z: 0 },
+      ],
+      // C — dome: half-buried sphere on a plinth
+      [
+        { g: 'box', sx: 5.5, sy: 1.6, sz: 5.5, x: 0, y: 0.8, z: 0 },
+        { g: 'sphere', sx: 3, sy: 3, sz: 3, x: 0, y: 1.6, z: 0 },
+        { g: 'box', sx: 0.12, sy: 2.6, sz: 0.12, x: 0, y: 5.9, z: 0 },
+      ],
+    ],
+  },
+  {
+    camZ: 22,
+    key: 'lineup-gate',
+    lookY: 3.2,
+    name: 'S · gate',
+    spacing: 12,
+    candidates: [
+      // A — portal frame: slender pylons under an overhanging lintel
+      [
+        { g: 'box', sx: 0.9, sy: 6, sz: 1.1, x: -3.4, y: 3, z: 0 },
+        { g: 'box', sx: 0.9, sy: 6, sz: 1.1, x: 3.4, y: 3, z: 0 },
+        { g: 'box', sx: 8.6, sy: 0.9, sz: 1.2, x: 0, y: 6.45, z: 0 },
+      ],
+      // B — broken pair: unequal pylons leaning in, tied by a cable
+      [
+        { g: 'box', rz: 0.07, sx: 1, sy: 6.5, sz: 1.1, x: -3.2, y: 3.25, z: 0 },
+        { g: 'box', rz: -0.09, sx: 1, sy: 5, sz: 1.1, x: 3.4, y: 2.5, z: 0 },
+        { g: 'box', rz: -0.21, sx: 6.4, sy: 0.07, sz: 0.07, x: 0.2, y: 5.5, z: 0 },
+      ],
+      // C — slot wall: massive flanks squeezing a narrow opening
+      [
+        { g: 'box', sx: 3.4, sy: 5, sz: 1.6, x: -3.5, y: 2.5, z: 0 },
+        { g: 'box', sx: 3.4, sy: 5, sz: 1.6, x: 3.5, y: 2.5, z: 0 },
+        { g: 'box', sx: 10.4, sy: 1.2, sz: 1.6, x: 0, y: 5.6, z: 0 },
+        { g: 'box', sx: 0.1, sy: 1.6, sz: 0.1, x: -4.8, y: 7, z: 0 },
+        { g: 'box', sx: 0.1, sy: 1.6, sz: 0.1, x: 4.9, y: 6.7, z: 0 },
+      ],
+    ],
+  },
+];
+
+const SILHOUETTE_SKY = '#3a4670';
+
+function buildLineupScene(element: LineupElement): Scene {
+  const scene = new Scene();
+
+  scene.background = new Color(SILHOUETTE_SKY);
+
+  // ground barely darker than the sky: the base line reads without swallowing the profiles
+  const ground = new Mesh(
+    new PlaneGeometry(300, 120),
+    new MeshBasicNodeMaterial({ color: new Color('#323d61') }),
+  );
+
+  ground.rotation.x = -Math.PI / 2;
+  scene.add(ground);
+
+  const material = new MeshBasicNodeMaterial({ color: new Color('#0b0e16') });
+  const box = new BoxGeometry(1, 1, 1);
+  const cyl = new CylinderGeometry(1, 1, 1, 32);
+  const sphere = new SphereGeometry(1, 32, 20);
+
+  for (const [index, candidate] of element.candidates.entries()) {
+    const offsetX = (index - 1) * element.spacing;
+
+    for (const part of candidate) {
+      const geometry = part.g === 'box' ? box : part.g === 'cyl' ? cyl : sphere;
+      const mesh = new Mesh(geometry, material);
+
+      mesh.position.set(offsetX + part.x, part.y, part.z);
+      mesh.rotation.set(part.rx ?? 0, 0, part.rz ?? 0);
+      mesh.scale.set(part.sx, part.sy, part.sz);
+      scene.add(mesh);
+    }
+  }
+
+  return scene;
+}
+
 async function main() {
   // bun's dev-server HMR can re-execute the module; a second renderer + loop fights the first
   const globalState = globalThis as { __lookdevBooted?: boolean };
@@ -602,10 +829,10 @@ async function main() {
   camera.position.set(0, 9, 26);
   camera.lookAt(0, 3, -7);
 
-  const buildPost = (config: ProbeConfig, scene: Scene): PostProcessing => {
+  const buildPost = (scene: Scene, strength: number, threshold: number): PostProcessing => {
     const scenePass = pass(scene, camera);
     const scenePassColor = scenePass.getTextureNode();
-    const bloomPass = bloom(scenePassColor, config.bloomStrength, 0.4, config.bloomThreshold);
+    const bloomPass = bloom(scenePassColor, strength, 0.4, threshold);
     const post = new PostProcessing(renderer);
 
     post.outputNode = scenePassColor.add(bloomPass);
@@ -613,20 +840,47 @@ async function main() {
     return post;
   };
 
-  const first = PROBES[0];
+  interface View {
+    readonly key: string;
+    readonly name: string;
+    readonly select: () => PostProcessing;
+  }
+
+  const views: Array<View> = [
+    ...PROBES.map((config) => ({
+      key: config.key,
+      name: config.name,
+      select: () => {
+        camera.position.set(0, 9, 26);
+        camera.lookAt(0, 3, -7);
+        return buildPost(buildScene(config), config.bloomStrength, config.bloomThreshold);
+      },
+    })),
+    ...LINEUP_ELEMENTS.map((element) => ({
+      key: element.key,
+      name: element.name,
+      select: () => {
+        camera.position.set(0, element.lookY + 0.8, element.camZ);
+        camera.lookAt(0, element.lookY, 0);
+        return buildPost(buildLineupScene(element), 0.15, 0.95);
+      },
+    })),
+  ];
+
+  const first = views[0];
 
   if (!first) {
     return;
   }
 
   let activeKey = first.key;
-  let postProcessing = buildPost(first, buildScene(first));
+  let postProcessing = first.select();
 
   const hud = document.getElementById('hud');
 
-  const selectProbe = (config: ProbeConfig) => {
-    postProcessing = buildPost(config, buildScene(config));
-    activeKey = config.key;
+  const selectView = (view: View) => {
+    postProcessing = view.select();
+    activeKey = view.key;
     renderHUD();
   };
 
@@ -637,12 +891,12 @@ async function main() {
 
     hud.innerHTML = '';
 
-    for (const config of PROBES) {
+    for (const view of views) {
       const button = document.createElement('button');
 
-      button.textContent = config.name;
-      button.className = config.key === activeKey ? 'active' : '';
-      button.addEventListener('click', () => selectProbe(config));
+      button.textContent = view.name;
+      button.className = view.key === activeKey ? 'active' : '';
+      button.addEventListener('click', () => selectView(view));
       hud.appendChild(button);
     }
   };
@@ -651,18 +905,18 @@ async function main() {
 
   globalThis.addEventListener('keydown', (event) => {
     const index = Number(event.key) - 1;
-    const config = PROBES[index];
+    const view = views[index];
 
-    if (config) {
-      selectProbe(config);
+    if (view) {
+      selectView(view);
     }
   });
 
   const params = new URLSearchParams(globalThis.location.search);
-  const initial = PROBES.find((config) => config.key === params.get('v'));
+  const initial = views.find((view) => view.key === params.get('v'));
 
   if (initial) {
-    selectProbe(initial);
+    selectView(initial);
   }
 
   globalThis.addEventListener('resize', () => {
