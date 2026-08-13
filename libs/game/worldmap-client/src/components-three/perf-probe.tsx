@@ -34,19 +34,27 @@ interface RollingFrameWindow {
  * rendering can interrupt and replay a memo, which would misreport the elapsed time between two
  * unrelated renders as a frame duration.
  *
- * The renderer never resets `info.render` on its own here: that reset lives in an internal
- * animation loop this app never starts, since R3F drives its own `requestAnimationFrame` loop and
- * calls `renderer.render()` directly. This probe owns the reset instead, exactly as three's own
- * `Info` docs prescribe for an app managing its own loop — reading each tick's counts one frame
- * after the render they describe, then zeroing them so the next read covers only the frame after
- * that.
+ * three's own internal animation loop would reset `info.render` on its own rAF cadence, but that
+ * loop races R3F's separate `requestAnimationFrame` loop, which is what actually drives
+ * `renderer.render()` here — a reset on the wrong cadence would zero counts between this probe's
+ * read and the frame they describe. While mounted, this probe takes ownership of the reset
+ * instead: reading each tick's counts one frame after the render they describe, then zeroing them
+ * so the next read covers only the frame after that. The renderer persists across scene swaps, so
+ * the effect restores `autoReset` on cleanup — otherwise every other scene would keep accumulating
+ * counts three's own loop never gets a chance to clear.
  */
 export function PerfProbe() {
   const renderer = useRenderer();
   const frameWindow = useRef<RollingFrameWindow>({ count: 0, elapsedMs: 0, worstFrameMs: 0 });
 
   useEffect(() => {
+    const previousAutoReset = renderer.info.autoReset;
+
     renderer.info.autoReset = false;
+
+    return () => {
+      renderer.info.autoReset = previousAutoReset;
+    };
   }, [renderer]);
 
   useFrame((_state, delta) => {
