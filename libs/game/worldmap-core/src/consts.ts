@@ -18,8 +18,9 @@ export const HEX_SIZE = 1;
  * cell's area.
  *
  * Past about 0.22 the two constants pinch: the distance cap can no longer sit both above the
- * widest jittered nearest-neighbour pair and below the narrowest second-ring pair. Second-ring
- * cells then enter the candidate pool, and the Gabriel witness test is what prunes them.
+ * widest jittered nearest-neighbour pair and below the narrowest second-ring pair. Some
+ * second-ring pairs then fall within the cap, and for those the Gabriel witness test — not the
+ * distance — decides.
  */
 export const JITTER = 0.4;
 
@@ -29,9 +30,10 @@ export const JITTER = 0.4;
  * displacement, 2√2 times the per-axis jitter bound, or about 2.86. The cap sits above that, so
  * every adjacent pair stays a candidate and the Gabriel backbone spans the lattice.
  *
- * Second-ring pairs also fall inside the cap at the current jitter. The Gabriel witness test, not
- * this distance, is what prunes them: such a pair connects only where no third node lies inside the
- * circle whose diameter is the pair, which leaves a handful of long routes across emptier ground.
+ * Some second-ring pairs fall inside the cap at the current jitter — the unjittered second-ring
+ * spacing of 3 sits above it, so distance alone still excludes most. The Gabriel witness test
+ * decides the remainder: a pair connects only where no third node lies inside the circle whose
+ * diameter is the pair, which leaves a handful of long routes across emptier ground.
  */
 export const EDGE_DISTANCE_CAP = 2.9;
 

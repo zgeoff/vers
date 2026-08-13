@@ -1,7 +1,9 @@
 import { expect, test } from 'bun:test';
 import { buildBiomeField } from './build-biome-field';
+import { buildCellNode } from './build-cell-node';
 import { buildRevealDistanceField } from './build-reveal-distance-field';
 import { getBiome } from './get-biome';
+import { toHexPosition } from './to-hex-position';
 
 test('it lays texels out on the same grid as the reveal distance field for the same viewport and resolution', () => {
   const viewport = { maxCX: 4, maxCY: 4, minCX: -4, minCY: -4 };
@@ -64,3 +66,44 @@ test('it keeps blendT inside the unit interval and raises it only across a real 
     }
   }
 });
+
+test('it matches a wide brute-force nearest-node scan at the current jitter', () => {
+  // the field's 3x3 territory scan holds only while per-axis jitter stays below ~0.43; this
+  // comparison against a 7x7 scan fails loudly if a future jitter bump crosses that bound
+  const seed = 90_210;
+  const resolution = 4;
+  const viewport = { maxCX: 5, maxCY: 5, minCX: 0, minCY: 0 };
+  const field = buildBiomeField(seed, viewport, { resolution });
+
+  for (let j = 0; j < field.rows; j++) {
+    const cy = viewport.minCY - 0.5 + (j + 0.5) / resolution;
+
+    for (let i = 0; i < field.cols; i++) {
+      const cx = viewport.minCX - 0.5 + (i + 0.5) / resolution;
+
+      expect(field.baseIDs[j * field.cols + i]).toBe(getNearestBaseIDByWideScan(seed, cx, cy));
+    }
+  }
+});
+
+function getNearestBaseIDByWideScan(seed: number, cx: number, cy: number): number {
+  const [sceneX, sceneY] = toHexPosition(cx, cy);
+  let nearestBaseID = -1;
+  let nearestDistanceSq = Number.POSITIVE_INFINITY;
+
+  for (let dy = -3; dy <= 3; dy++) {
+    for (let dx = -3; dx <= 3; dx++) {
+      const cellX = Math.round(cx) + dx;
+      const cellY = Math.round(cy) + dy;
+      const [nodeX, nodeY] = buildCellNode(seed, cellX, cellY).position;
+      const distanceSq = (nodeX - sceneX) ** 2 + (nodeY - sceneY) ** 2;
+
+      if (distanceSq < nearestDistanceSq) {
+        nearestDistanceSq = distanceSq;
+        nearestBaseID = getBiome(seed, cellX, cellY).baseID;
+      }
+    }
+  }
+
+  return nearestBaseID;
+}
