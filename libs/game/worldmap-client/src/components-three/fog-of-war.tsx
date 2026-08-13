@@ -128,7 +128,7 @@ function FogPlane(props: Readonly<FogPlaneProps>) {
     [plane],
   );
 
-  return <mesh geometry={plane.geometry} material={plane.material} />;
+  return <mesh geometry={plane.geometry} material={plane.material} renderOrder={999} />;
 }
 
 /**
@@ -165,6 +165,7 @@ function buildFogPlaneResources(
 
   const material = new MeshBasicNodeMaterial({
     color: SHROUD_COLOR,
+    depthTest: false,
     depthWrite: false,
     transparent: true,
   });

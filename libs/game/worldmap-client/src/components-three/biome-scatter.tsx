@@ -301,6 +301,8 @@ function buildScatter(userSeed: number, viewport: Readonly<Viewport>): ScatterBu
 
         if (biome === 1) {
           buildAntennaTree(draw, x, y, sink);
+        } else if (biome === 2) {
+          buildBuriedWreck(draw, x, y, sink);
         } else {
           buildStack(draw, x, y, biome, sink, isClear);
         }
@@ -326,6 +328,19 @@ function buildScatter(userSeed: number, viewport: Readonly<Viewport>): ScatterBu
         buildDebris(draw, x, y, biome, sink);
       }
 
+      if (biome === 3 && cellDraw(9) < 0.05) {
+        const draw = (salt: number) => buildCoordHashUnit(userSeed, cx, cy, CH + 1500 + salt);
+        const [hexX, hexY] = toHexPosition(cx, cy);
+        const x = hexX + (draw(0) - 0.5) * 1.2;
+        const y = hexY + (draw(1) - 0.5) * 1.2;
+
+        if (isClear(x, y)) {
+          sink.baseZ = ground(x, y, biome);
+
+          buildFallenGiant(draw, x, y, sink, isClear);
+        }
+      }
+
       if (cellDraw(5) < LANDMARK_CHANCE) {
         const draw = (salt: number) => buildCoordHashUnit(userSeed, cx, cy, CH + 900 + salt);
         const [hexX, hexY] = toHexPosition(cx, cy);
@@ -336,6 +351,37 @@ function buildScatter(userSeed: number, viewport: Readonly<Viewport>): ScatterBu
           sink.baseZ = ground(x, y, biome);
 
           buildLandmark(draw, x, y, biome, sink);
+        }
+      }
+
+      // maintained cells light their roads: lamps at regular intervals along owned edges
+      if (biome === 0) {
+        const owned = collectNodeEdges(userSeed, cx, cy);
+
+        for (const [e, edge] of owned.entries()) {
+          if (edge.start[0] !== cx || edge.start[1] !== cy) {
+            continue;
+          }
+
+          const start = getNode(edge.start[0], edge.start[1]).position;
+          const end = getNode(edge.end[0], edge.end[1]).position;
+          const dx = end[0] - start[0];
+          const dy = end[1] - start[1];
+          const len = Math.hypot(dx, dy);
+          const px = -dy / len;
+          const py = dx / len;
+          const side = buildCoordHashUnit(userSeed, cx, cy, CH + 700 + e) > 0.5 ? 1 : -1;
+
+          for (const t of [0.3, 0.7]) {
+            const lx = start[0] + dx * t + px * 0.24 * side;
+            const ly = start[1] + dy * t + py * 0.24 * side;
+            const h = 0.22;
+
+            sink.baseZ = 0;
+
+            pushPart(sink, lx, ly, h / 2, 0.018, 0.018, h, 0, 0, PALETTE[0]!, 1);
+            pushGlow(sink, lx, ly, h + 0.015, 0.03);
+          }
         }
       }
 
@@ -714,4 +760,88 @@ function buildDebris(
   const h = (0.08 + draw(5) * 0.15) * PROP_SCALE;
 
   pushPart(sink, x, y, h / 2, w, w, h, draw(6) * Math.PI, 0, base, 0.65 + draw(7) * 0.3);
+}
+
+/**
+ * The Quiet's whisper: a single hull slab pitched into the ground, mostly buried — evidence
+ * something came down here long ago.
+ */
+function buildBuriedWreck(
+  draw: (salt: number) => number,
+  x: number,
+  y: number,
+  sink: PartsSink,
+): void {
+  const base = PALETTE[2]!;
+  const w = (0.25 + draw(3) * 0.35) * PROP_SCALE;
+  const l = w * (1.6 + draw(4) * 1.2);
+  const t = w * 0.22;
+  const pitch = 0.5 + draw(5) * 0.5;
+
+  // sink it: center below grade so only a corner shoulder emerges
+  pushPart(sink, x, y, -l * 0.18, w, l, t, draw(6) * Math.PI, pitch, base, 0.5 + draw(7) * 0.2);
+
+  if (draw(8) > 0.6) {
+    // a snapped fragment beside the hull
+    pushPart(
+      sink,
+      x + (draw(9) - 0.5) * 0.4,
+      y + (draw(10) - 0.5) * 0.4,
+      0.015,
+      w * 0.4,
+      w * 0.5,
+      0.03,
+      draw(11) * Math.PI,
+      0,
+      base,
+      0.45,
+    );
+  }
+}
+
+/**
+ * Ruinfall's drama piece: a collapsed superstructure — an arc of massive tilted slabs falling in
+ * one direction, each clearance-checked so the giant breaks around roads.
+ */
+function buildFallenGiant(
+  draw: (salt: number) => number,
+  x: number,
+  y: number,
+  sink: PartsSink,
+  isClear: (x: number, y: number) => boolean,
+): void {
+  const base = PALETTE[3]!;
+  const heading = draw(2) * Math.PI * 2;
+  const slabs = 3 + Math.floor(draw(3) * 3);
+  const slabW = (0.35 + draw(4) * 0.25) * PROP_SCALE * 1.8;
+  const step = slabW * 1.15;
+
+  for (let i = 0; i < slabs; i++) {
+    const along = i * step;
+    const px = x + Math.cos(heading) * along;
+    const py = y + Math.sin(heading) * along;
+
+    if (!isClear(px, py)) {
+      break;
+    }
+
+    // slabs fall progressively flatter along the arc, sinking deeper as they flatten
+    const fall = i / Math.max(1, slabs - 1);
+    const tilt = 0.25 + fall * 1.2;
+    const h = slabW * (2.2 - fall * 1.4);
+
+    pushPart(
+      sink,
+      px,
+      py,
+      h * 0.32 * (1 - fall * 0.7),
+      slabW,
+      slabW * 0.5,
+      h,
+      heading + (draw(10 + i) - 0.5) * 0.3,
+      tilt,
+      base,
+      0.7 + draw(20 + i) * 0.25,
+    );
+  }
 }

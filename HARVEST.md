@@ -1,0 +1,81 @@
+# Biome procgen spike — harvest notes
+
+Running log of what this spike proved, decided, and parked. The spike branch
+(`spike/biome-scatter-grammar`) is reference material, never merged; a fresh implementation pass
+re-builds the keepers properly against these notes.
+
+## What the spike proved
+
+- **Silhouette grammars carry biome identity with zero art assets.** Instanced box/primitive
+  assemblies + palette + density read as distinct terrains from the isometric camera. Thin
+  verticals need clustering or glow to survive map-scale zoom.
+- **Three-layer model**: roads (edges) / places (nodes) / wilderness (scatter). Each layer has
+  different placement rules. This framing came from Geoff and everything downstream clicked once
+  adopted.
+- **Clearance-aware placement**: scatter keeps out of node discs and edge corridors
+  (point-to-segment distance against the 3×3 cell neighbourhood's Gabriel edges). Multi-part
+  assemblies must clearance-check per part, not per anchor (toppled column trains taught this).
+- **Node structures are their own system**: per-node archetype hash draw (plain / post ring /
+  pylon pair / spire) — deliberate placement tied to the node, distinct from ambient scatter.
+  Matches the worldmap doc's "node archetypes by low-probability hash". Visual archetypes must
+  never correlate with sealed content (B-constraints apply to geometry exactly as to tint).
+- **Cluster dispersion**: low-frequency value-noise density field (per-biome frequency + contrast
+  exponent) × per-cell draws + min-separation + rare cluster-independent landmarks. Turned even
+  sprinkle into composition — districts, voids, horizon points.
+- **Debris ground layer**: high-count tiny shards/chips/stubs with a cluster-independent
+  background term. Fixes "dead floor" everywhere; the environmental equivalent of grass.
+- **Terrain relief**: 2-octave value-noise heightfield, biome-tuned amplitude, displacing a
+  subdivided lit ground grid that the tint texture drapes over. Key idea: **terrain grades flat
+  near roads and nodes** (smoothstep on distance to nearest lattice feature) — solves every
+  structure/lattice interaction and reads as engineered causeways. The Quiet gets the largest
+  amplitude: emptiness textured by landform instead of props.
+- **Props seat on terrain** by sharing the height sampler (baseZ added at push time).
+- **Scale taste**: props at ~55% of first-draft size, densities ~2×. Props are texture between
+  nodes, never monuments competing with node spacing. Node structures ~75% (grander than ambient).
+- **Emissive accents** (unlit bright instanced boxes) are the cheapest mood win. Glow through fog
+  reads as "the machines are still on".
+
+## Rendering lessons (bugs the real implementation must not repeat)
+
+- **Atomic pan swaps**: ground geometry must derive in render (memo on seed+viewport), never be
+  swapped inside an effect — an effect-time swap drapes the new area's texture over the old
+  area's grid for a frame+ ("biomes stacked on biomes" while scrolling). Dispose old geometry
+  only after unreference.
+- **Elevation interactions**: fog plane vs terrain height vs floor plane vs flat lattice all
+  couple. Spike answers: fog raised above max swell, floor dropped below max dip, ground grid at
+  2 verts/cell minimum so the road-grade band resolves (1 vert/cell interpolates terrain across
+  roads). Production should consider terrain-aware fog/lattice instead of constant juggling.
+  Fog switched to a depth-independent veil (depthTest off, renderOrder last) to stop tall props
+  poking through — evaluate which look design wants.
+
+## Current biome parameter identities (placeholder roster biome_1..4)
+
+| id | working name | grammar | cluster | relief |
+|----|--------------|---------|---------|--------|
+| 0 | Maintained | upright intact stacks, slate palette; road lights | mid freq, mild | near-flat (0.06) |
+| 1 | Grown Works | thin antenna-trees, branch tiers, glow tips | groves | gentle (0.14) |
+| 2 | The Quiet | almost nothing; rare half-buried wreck | sparse | biggest swells (0.4) |
+| 3 | Ruinfall | tapered columns, lean, toppled trains, fallen giants | broad clumps | rough (0.2) |
+
+## Parked questions
+
+- Biome identity/naming is #272's design pass; everything here is placeholder vocabulary.
+- Fog vs revealed-content interplay: does structure glow beyond the frontier leak "earned sight"?
+  (Current stance: geometry is public plane, so no security issue — purely a design-feel call.)
+- TSL surface detail tier (panel lines, wear) — unexplored.
+- Sump / Verdant Decks grammars — need roster entries first.
+- Heightfield vs gameplay: does relief ever affect traversal, or stay purely visual?
+- Perf: spike rebuilds whole scatter per chunk-crossing pan on main thread; production wants
+  chunked incremental builds (likely in the SharedWorker) and LOD (debris culled at far zoom).
+
+## Cleanup-agent notes
+
+- Everything in `biome-scatter.tsx`, `ground-relief.ts`, and the biome-ground relief variant is
+  spike-grade: string-keyed caches, magic channel numbers (100/500/900/2000/3000 blocks), inline
+  palettes, no tests. Re-implement, don't merge.
+- Hash channels must move into the `HASH_CHANNEL` registry with proper names.
+- `buildCoordHash`/`buildValueNoise` exports from worldmap-core were added ad hoc — decide the
+  real public API.
+- The fog toggle and scatter toggle dev-tools additions are keepable patterns (match dev-slice
+  conventions; add tests).
+- Spike signup OTP log in `run-signup.ts` must never merge.
