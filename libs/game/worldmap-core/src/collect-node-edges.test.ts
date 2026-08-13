@@ -41,6 +41,19 @@ test('it leaves no cell in a patch isolated', () => {
   }
 });
 
+const CONNECTIVITY_BOX_SPAN = 40;
+
+test.each([{ seed: 2024 }, { seed: 90_210 }, { seed: 573_294 }])(
+  'it leaves no cell isolated across a 40x40 box for seed $seed',
+  (data) => {
+    for (let cx = 0; cx < CONNECTIVITY_BOX_SPAN; cx++) {
+      for (let cy = 0; cy < CONNECTIVITY_BOX_SPAN; cy++) {
+        expect(collectNodeEdges(data.seed, cx, cy).length).toBeGreaterThan(0);
+      }
+    }
+  },
+);
+
 test('it collects a stable edge set for the origin', () => {
   const ids = collectNodeEdges(SEED, 0, 0).map((edge) => edge.id);
 
@@ -61,7 +74,6 @@ test('it collects a stable edge set for a cell far from the origin', () => {
 
   expect(ids).toMatchInlineSnapshot(`
     [
-      "11_-5|12_-5",
       "11_-4|12_-5",
       "12_-5|12_-6",
       "12_-4|12_-5",

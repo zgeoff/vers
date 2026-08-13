@@ -13,19 +13,27 @@ export const CHUNK_SIZE = 16;
 export const HEX_SIZE = 1;
 
 /**
- * Maximum per-axis position offset applied to a cell's center. Bounded below half the nearest-cell
- * spacing so a jittered node never leaves its own cell and the edge cap still clears every
- * nearest-neighbour pair.
+ * Maximum per-axis position offset applied to a cell's center. A node's worst-case displacement is
+ * √2 times this bound, which stays inside its own hex, so a node never lands in a neighbouring
+ * cell's area.
+ *
+ * Past about 0.22 the two constants pinch: the distance cap can no longer sit both above the
+ * widest jittered nearest-neighbour pair and below the narrowest second-ring pair. Second-ring
+ * cells then enter the candidate pool, and the Gabriel witness test is what prunes them.
  */
-export const JITTER = 0.2;
+export const JITTER = 0.4;
 
 /**
- * Two nodes connect only when their jittered centers fall within this distance. Set above the
- * maximum jittered nearest-neighbour distance so every minimum-spanning-tree edge survives, and
- * below the nearest second-ring distance so only the six adjacent cells are ever candidates — the
- * bound that keeps the Gabriel backbone connected.
+ * Two nodes connect only when their jittered centers fall within this distance. The widest a
+ * nearest-neighbour pair can stretch is the lattice spacing of √3 plus both endpoints' worst-case
+ * displacement, 2√2 times the per-axis jitter bound, or about 2.86. The cap sits above that, so
+ * every adjacent pair stays a candidate and the Gabriel backbone spans the lattice.
+ *
+ * Second-ring pairs also fall inside the cap at the current jitter. The Gabriel witness test, not
+ * this distance, is what prunes them: such a pair connects only where no third node lies inside the
+ * circle whose diameter is the pair, which leaves a handful of long routes across emptier ground.
  */
-export const EDGE_DISTANCE_CAP = 2.35;
+export const EDGE_DISTANCE_CAP = 2.9;
 
 /**
  * Hex-distance span mapped to one difficulty step. Difficulty climbs one level every `DIFFICULTY_STEP`
