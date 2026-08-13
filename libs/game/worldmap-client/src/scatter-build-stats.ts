@@ -1,10 +1,10 @@
 import type { ScatterBuildStats } from './types';
 
 /**
- * Mutable scatter-build telemetry the perf HUD samples every frame. A per-build write must never
- * route through the Zustand store, since that would re-render every store subscriber on every
- * chunk rebuild — so the scatter build pipeline writes its latest counts and duration here
- * directly instead.
+ * Mutable scatter-build telemetry the perf HUD samples from the frame loop. This stays out of the
+ * Zustand store because of write cadence: the scatter build pipeline writes on every chunk rebuild
+ * — not a React state transition — and the one consumer reads imperatively each frame, so a store
+ * subscription would add churn without buying any reactivity.
  */
 export const scatterBuildStats: ScatterBuildStats = {
   buildMs: 0,

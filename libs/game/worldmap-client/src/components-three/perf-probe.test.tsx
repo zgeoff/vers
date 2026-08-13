@@ -1,8 +1,11 @@
 import { expect, onTestFinished, test } from 'bun:test';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
+import { useRenderer } from '@vers/game-rendering';
 import { scatterBuildStats } from '../scatter-build-stats';
 import { useWorldmapStore } from '../state/use-worldmap-store';
 import { PerfProbe } from './perf-probe';
+
+type Renderer = ReturnType<typeof useRenderer>;
 
 test('it samples fps, worst-frame timing, and scatter build stats once the sample window elapses', async () => {
   scatterBuildStats.buildMs = 12;
@@ -38,3 +41,34 @@ test('it writes nothing to the store before the sample window elapses', async ()
 
   expect(useWorldmapStore.getState().perfStats).toBeNull();
 });
+
+test('it disables the renderer info auto-reset while mounted and restores it on unmount', async () => {
+  const captured: { renderer: Renderer | null } = { renderer: null };
+
+  const renderer = await ReactThreeTestRenderer.create(
+    <>
+      <CaptureRenderer
+        onRenderer={(value) => {
+          captured.renderer = value;
+        }}
+      />
+      <PerfProbe />
+    </>,
+  );
+
+  if (captured.renderer === null) {
+    throw new Error('the capture component never received the renderer');
+  }
+
+  expect(captured.renderer.info.autoReset).toBe(false);
+
+  await renderer.unmount();
+
+  expect(captured.renderer.info.autoReset).toBe(true);
+});
+
+function CaptureRenderer(props: Readonly<{ onRenderer: (renderer: Renderer) => void }>) {
+  props.onRenderer(useRenderer());
+
+  return null;
+}

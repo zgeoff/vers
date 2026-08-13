@@ -3,10 +3,12 @@ import { expect, test } from '../src/test';
 import { waitForHoneypotWindow } from '../src/wait-for-honeypot-window';
 
 /**
- * How many drag legs to walk. Each leg is a full-canvas-width mouse drag, generously more ground
- * than one generation chunk covers at any zoom level — enough legs in a row cross many chunk
- * boundaries without reading the client's internal chunk-size constants, which would couple this
- * black-box benchmark to worldmap-client's geometry.
+ * How many drag legs to walk. Each leg drags 60% of the canvas width in the same direction, so
+ * travel accumulates leg over leg — enough total ground to cross many chunk boundaries without
+ * reading the client's internal chunk-size constants, which would couple this black-box benchmark
+ * to worldmap-client's geometry. Direction never alternates: a there-and-back oscillation would
+ * revisit the same chunks, and once chunk generation is cached the benchmark would measure cache
+ * replays instead of the generation cost it exists to track.
  */
 const DRAG_LEG_COUNT = 12;
 
@@ -38,6 +40,13 @@ const STABLE_FRAME_GAP_THRESHOLD_MS = 20;
 const STABLE_FRAME_COUNT = 5;
 
 /**
+ * How long the scene-readiness gate keeps trying before the run fails with an explicit message. A
+ * machine whose scene never settles (software WebGPU, heavy contention) would otherwise hang the
+ * gate silently until the whole test times out, hiding which step hung.
+ */
+const STABLE_GATE_BUDGET_MS = 60 * 1000;
+
+/**
  * The frame-gap sampler's state, parked on the page's own `globalThis` so it survives across the
  * two separate `page.evaluate` round trips that start and read it.
  */
@@ -47,17 +56,17 @@ interface DragPanWindow {
 }
 
 /**
- * Repeatable drag-pan performance probe for the explore map, standing in for the spike's manual
- * benchmark (HARVEST.md, "Performance model"; spike baseline: 409ms peak / 16 dropped frames before
- * chunked scatter builds, 7ms / 0 dropped after). Reports peak frame gap and dropped-frame count
- * for a multi-leg drag across the world map to `console.log` and a test annotation; it makes no
- * pass/fail claim about specific numbers, since headless-GPU throughput varies by machine.
+ * Repeatable drag-pan performance probe for the explore map. Reports peak frame gap and
+ * dropped-frame count for a multi-leg one-way drag across the world map to `console.log` and a
+ * test annotation; it makes no pass/fail claim about specific numbers, since headless-GPU
+ * throughput varies by machine.
  *
  * Excluded from every default run: this config's `testDir` is `./benchmarks`, never scanned by
- * `playwright.config.ts`'s `./specs`, so neither `bun run e2e` nor CI ever picks it up. Run it
- * on demand:
+ * `playwright.config.ts`'s `./specs`, so neither `bun run e2e` nor CI ever picks it up. The app
+ * server serves the prebuilt artifact, so build first, then run on demand:
  *
  * ```sh
+ * bun run build --filter=@vers/web
  * bun run --cwd apps/web-e2e e2e:bench -- --headed
  * ```
  *
@@ -127,12 +136,12 @@ test('it drag-pans across the explore map and reports peak frame gap and dropped
     dragPanWindow.__dragPanFrameLoopID = requestAnimationFrame(advanceFrame);
   });
 
+  // every measured leg drags the same direction, so the camera travels across fresh world; the
+  // button-up return to the start point moves only the cursor, never the camera
   for (let leg = 0; leg < DRAG_LEG_COUNT; leg++) {
-    const [startX, endX] = leg % 2 === 0 ? [rightX, leftX] : [leftX, rightX];
-
-    await page.mouse.move(startX, centerY);
+    await page.mouse.move(rightX, centerY);
     await page.mouse.down();
-    await page.mouse.move(endX, centerY, { steps: DRAG_STEPS_PER_LEG });
+    await page.mouse.move(leftX, centerY, { steps: DRAG_STEPS_PER_LEG });
     await page.mouse.up();
   }
 
@@ -147,6 +156,9 @@ test('it drag-pans across the explore map and reports peak frame gap and dropped
 
   // the first sample is the gap from the sampler's own setup, not a rendered frame
   const renderedGaps = frameGaps.slice(1);
+
+  expect(renderedGaps.length).toBeGreaterThan(0);
+
   const peakGapMs = Math.max(...renderedGaps);
   const droppedFrameCount = renderedGaps.filter((gap) => gap > DROPPED_FRAME_THRESHOLD_MS).length;
 
@@ -162,8 +174,6 @@ test('it drag-pans across the explore map and reports peak frame gap and dropped
       `peak gap ${peakGapMs.toFixed(1)}ms, ${droppedFrameCount} dropped ` +
       `(>${DROPPED_FRAME_THRESHOLD_MS}ms)`,
   );
-
-  expect(renderedGaps.length).toBeGreaterThan(0);
 });
 
 /**
@@ -174,9 +184,10 @@ test('it drag-pans across the explore map and reports peak frame gap and dropped
  * gaps from that mount cost would otherwise dominate the reported peak.
  */
 async function waitForStableFrames(page: Page): Promise<void> {
-  await page.evaluate(
-    ({ stableFrameCount, thresholdMs }) =>
-      new Promise<void>((resolve) => {
+  const settled = await page.evaluate(
+    ({ budgetMs, stableFrameCount, thresholdMs }) =>
+      new Promise<boolean>((resolve) => {
+        const startedAt = performance.now();
         let consecutiveStableFrames = 0;
         let last = performance.now();
 
@@ -188,7 +199,13 @@ async function waitForStableFrames(page: Page): Promise<void> {
           consecutiveStableFrames = gap < thresholdMs ? consecutiveStableFrames + 1 : 0;
 
           if (consecutiveStableFrames >= stableFrameCount) {
-            resolve();
+            resolve(true);
+
+            return;
+          }
+
+          if (now - startedAt > budgetMs) {
+            resolve(false);
 
             return;
           }
@@ -198,6 +215,17 @@ async function waitForStableFrames(page: Page): Promise<void> {
 
         requestAnimationFrame(advanceFrame);
       }),
-    { stableFrameCount: STABLE_FRAME_COUNT, thresholdMs: STABLE_FRAME_GAP_THRESHOLD_MS },
+    {
+      budgetMs: STABLE_GATE_BUDGET_MS,
+      stableFrameCount: STABLE_FRAME_COUNT,
+      thresholdMs: STABLE_FRAME_GAP_THRESHOLD_MS,
+    },
   );
+
+  if (!settled) {
+    throw new Error(
+      `the explore scene never settled within ${STABLE_GATE_BUDGET_MS}ms — ` +
+        `no run of ${STABLE_FRAME_COUNT} consecutive frames under ${STABLE_FRAME_GAP_THRESHOLD_MS}ms`,
+    );
+  }
 }
