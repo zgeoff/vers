@@ -22,7 +22,7 @@ export function Scene() {
     <>
       <IsometricCamera />
       <ViewportTracker />
-      <ambientLight intensity={0.8} />
+      <ambientLight intensity={1.05} />
 
       <group rotation={[-Math.PI / 2, 0, 0]}>
         <ChunkGround />

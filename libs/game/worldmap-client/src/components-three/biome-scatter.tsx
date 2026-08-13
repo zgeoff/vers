@@ -60,10 +60,10 @@ const DEBRIS_BASE = 2.5;
 
 /** base part color per biome — crusted dark metals, no naturalism */
 const PALETTE = [
-  new Color('#46536e'),
-  new Color('#39463e'),
-  new Color('#37333f'),
-  new Color('#5c4433'),
+  new Color('#7286ab'),
+  new Color('#5d7264'),
+  new Color('#585267'),
+  new Color('#96714f'),
 ];
 
 /** per-biome neon accent for emissives — the unnatural highlight against the dark world */
@@ -440,7 +440,7 @@ function buildStack(
         break;
       }
 
-      pushPart(sink, px, py, w / 2, w, w, h, spin, Math.PI / 2, base, 0.7 + draw(30 + s) * 0.3);
+      pushPart(sink, px, py, w / 2, w, w, h, spin, Math.PI / 2, base, 0.55 + draw(30 + s) * 0.55);
     }
 
     return;
@@ -464,7 +464,7 @@ function buildStack(
       spin + (draw(5) - 0.5) * 0.5 * s,
       lean,
       base,
-      0.8 + draw(30 + s) * 0.4,
+      0.6 + draw(30 + s) * 0.75,
     );
 
     z += h;
@@ -472,7 +472,8 @@ function buildStack(
 }
 
 /**
- * Grown Works antenna-tree: a thin mast with recursive branch tiers and a glowing tip.
+ * Grown Works machine-tree: a tapered mast carrying symmetric crossbars that rotate tier by tier —
+ * power-pole bones, antenna soul. A rare tip light marks the tallest.
  */
 function buildAntennaTree(
   draw: (salt: number) => number,
@@ -484,37 +485,36 @@ function buildAntennaTree(
   const height = (0.9 + draw(2) * 1.4) * PROP_SCALE;
   const mastW = (0.05 + draw(3) * 0.04) * PROP_SCALE;
 
-  pushPart(sink, x, y, height / 2, mastW, mastW, height, 0, 0, base, 0.75 + draw(4) * 0.3);
+  pushPart(sink, x, y, height * 0.3, mastW, mastW, height * 0.6, 0, 0, base, 0.7 + draw(4) * 0.4);
+  pushPart(
+    sink,
+    x,
+    y,
+    height * 0.6 + height * 0.2,
+    mastW * 0.65,
+    mastW * 0.65,
+    height * 0.4,
+    0,
+    0,
+    base,
+    0.8 + draw(5) * 0.35,
+  );
 
-  const tiers = 1 + Math.floor(draw(5) * 3);
+  const tiers = 2 + Math.floor(draw(6) * 2);
+  const baseAngle = draw(7) * Math.PI;
 
   for (let t = 0; t < tiers; t++) {
-    const tierZ = height * (0.45 + 0.5 * (t / Math.max(1, tiers)));
-    const arms = 2 + Math.floor(draw(10 + t) * 3);
+    const tierZ = height * (0.5 + 0.42 * (t / Math.max(1, tiers - 1)));
+    const angle = baseAngle + t * 1.1;
+    const span = (0.34 + draw(10 + t) * 0.2) * PROP_SCALE * (1 - t * 0.18);
+    const armW = mastW * 0.55;
 
-    for (let a = 0; a < arms; a++) {
-      const angle = draw(20 + t * 5 + a) * Math.PI * 2;
-      const len = (0.15 + draw(30 + t * 5 + a) * 0.3) * PROP_SCALE;
-      const armW = mastW * 0.6;
-
-      pushPart(
-        sink,
-        x + Math.cos(angle) * (len / 2),
-        y + Math.sin(angle) * (len / 2),
-        tierZ,
-        len,
-        armW,
-        armW,
-        angle,
-        0,
-        base,
-        0.7 + draw(40 + t) * 0.3,
-      );
-    }
+    // one box through the mast — a symmetric crossbar, not a floating arm
+    pushPart(sink, x, y, tierZ, span, armW, armW, angle, 0, base, 0.75 + draw(20 + t) * 0.35);
   }
 
-  if (draw(50) > 0.35) {
-    pushGlow(sink, x, y, height + 0.03, (0.05 + draw(51) * 0.04) * PROP_SCALE, getAccent(1));
+  if (draw(50) > 0.8 && height > 1 * PROP_SCALE) {
+    pushGlow(sink, x, y, height + 0.02, 0.028 * PROP_SCALE * 2, getAccent(1));
   }
 }
 
@@ -588,7 +588,9 @@ function buildNodeStructure(
         base,
         1,
       );
-      pushGlow(sink, x + Math.cos(angle + side) * radius, y + Math.sin(angle + side) * radius, h + 0.03, 0.045 * NODE_STRUCT_SCALE, getAccent(biome));
+      if (draw(30) > 0.5) {
+        pushGlow(sink, x + Math.cos(angle + side) * radius, y + Math.sin(angle + side) * radius, h + 0.03, 0.032 * NODE_STRUCT_SCALE, getAccent(biome));
+      }
     }
 
     return;
@@ -610,7 +612,7 @@ function buildNodeStructure(
     z += h;
   }
 
-  pushGlow(sink, sx, sy, z + 0.04, 0.07 * NODE_STRUCT_SCALE, getAccent(biome));
+  pushGlow(sink, sx, sy, z + 0.04, 0.05 * NODE_STRUCT_SCALE, getAccent(biome));
 }
 
 /**
@@ -639,7 +641,7 @@ function buildLandmark(
   const mastH = (1.6 + draw(3) * 1.2) * PROP_SCALE;
 
   pushPart(sink, x, y, z + mastH / 2, 0.09 * PROP_SCALE, 0.09 * PROP_SCALE, mastH, 0, 0, base, 1);
-  pushGlow(sink, x, y, z + mastH + 0.05, 0.09 * PROP_SCALE, getAccent(biome));
+  pushGlow(sink, x, y, z + mastH + 0.05, 0.065 * PROP_SCALE, getAccent(biome));
 }
 
 /**
@@ -662,7 +664,7 @@ function buildDebris(
     const d = (0.06 + draw(4) * 0.12) * PROP_SCALE * 2;
     const h = 0.015 + draw(5) * 0.02;
 
-    pushPart(sink, x, y, h / 2, w, d, h, draw(6) * Math.PI, 0, base, 0.55 + draw(7) * 0.3);
+    pushPart(sink, x, y, h / 2, w, d, h, draw(6) * Math.PI, 0, base, 0.45 + draw(7) * 0.6);
 
     return;
   }
@@ -672,7 +674,7 @@ function buildDebris(
     const w = (0.03 + draw(3) * 0.06) * PROP_SCALE * 2;
     const h = w * (0.6 + draw(5) * 0.8);
 
-    pushPart(sink, x, y, h / 2, w, w, h, draw(6) * Math.PI, (draw(8) - 0.5) * 0.6, base, 0.5 + draw(7) * 0.3);
+    pushPart(sink, x, y, h / 2, w, w, h, draw(6) * Math.PI, (draw(8) - 0.5) * 0.6, base, 0.4 + draw(7) * 0.65);
 
     return;
   }
@@ -681,7 +683,7 @@ function buildDebris(
   const w = (0.08 + draw(3) * 0.1) * PROP_SCALE;
   const h = (0.08 + draw(5) * 0.15) * PROP_SCALE;
 
-  pushPart(sink, x, y, h / 2, w, w, h, draw(6) * Math.PI, 0, base, 0.65 + draw(7) * 0.3);
+  pushPart(sink, x, y, h / 2, w, w, h, draw(6) * Math.PI, 0, base, 0.55 + draw(7) * 0.55);
 }
 
 /**
@@ -827,8 +829,8 @@ function buildEdgeFurniture(
       0.6,
     );
 
-    if (draw(5) > 0.5) {
-      pushGlow(sink, gx + px * 0.22, gy + py * 0.22, standH + 0.02, 0.022, accent);
+    if (draw(5) > 0.75) {
+      pushGlow(sink, gx + px * 0.22, gy + py * 0.22, standH + 0.02, 0.02, accent);
     }
 
     return;

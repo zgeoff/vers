@@ -51,7 +51,7 @@ const GLOW_COLOR = new Color('#7dd3fc');
 
 /** all emissives breathe together on scene time — a slow shared pulse, not per-instance blink */
 const glowPulse = {
-  opacityNode: sceneTSL.toNode(sceneTSL.time.mul(1.6).sin().mul(0.22).add(0.78)),
+  opacityNode: sceneTSL.toNode(sceneTSL.time.mul(1.6).sin().mul(0.16).add(0.55)),
 };
 
 /** spike perf stats, read by the dev HUD */
@@ -347,7 +347,7 @@ export function ChunkScatter() {
 
   return (
     <>
-      <directionalLight intensity={1.4} position={[30, -40, 80]} />
+      <directionalLight intensity={2.4} position={[30, -40, 80]} />
       <instancedMesh args={[undefined, undefined, CONCAT_PARTS]} frustumCulled={false} ref={meshRef}>
         <boxGeometry args={[1, 1, 1]} />
         <ScatterMaterial roughness={0.85} />
@@ -362,7 +362,7 @@ export function ChunkScatter() {
 
 /** dark derelict ground palette — committed unnatural art direction, overriding the pastel scene
  * colors for the spike */
-const BASE_TINT_HEXES: ReadonlyArray<string> = ['#252b3b', '#1f2b26', '#211d28', '#2e2320'];
+const BASE_TINT_HEXES: ReadonlyArray<string> = ['#303a52', '#2b3d34', '#2e2839', '#413127'];
 
 const BASE_TINTS: ReadonlyMap<number, Color> = new Map(
   BIOME_ROSTER.map((entry, index) => {
