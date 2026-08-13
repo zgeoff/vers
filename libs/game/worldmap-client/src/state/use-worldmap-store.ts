@@ -7,6 +7,8 @@ import type { GraphSlice } from './create-graph-slice';
 import { createGraphSlice } from './create-graph-slice';
 import type { InteractionSlice } from './create-interaction-slice';
 import { createInteractionSlice } from './create-interaction-slice';
+import type { PerfSlice } from './create-perf-slice';
+import { createPerfSlice } from './create-perf-slice';
 import type { RevealSlice } from './create-reveal-slice';
 import { createRevealSlice } from './create-reveal-slice';
 import type { ViewportSlice } from './create-viewport-slice';
@@ -16,6 +18,7 @@ type WorldmapStore = CameraSlice &
   DevSlice &
   GraphSlice &
   InteractionSlice &
+  PerfSlice &
   RevealSlice &
   ViewportSlice;
 
@@ -24,6 +27,7 @@ export const useWorldmapStore = create<WorldmapStore>()(() => ({
   ...createDevSlice(),
   ...createGraphSlice(),
   ...createInteractionSlice(),
+  ...createPerfSlice(),
   ...createRevealSlice(),
   ...createViewportSlice(),
 }));

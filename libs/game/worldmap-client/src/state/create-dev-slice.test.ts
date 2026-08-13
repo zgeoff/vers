@@ -6,5 +6,6 @@ test('it builds the default dev-tool state', () => {
     isAxesHelperVisible: false,
     isDevCameraActive: false,
     isFogOfWarVisible: true,
+    isScatterVisible: true,
   });
 });
