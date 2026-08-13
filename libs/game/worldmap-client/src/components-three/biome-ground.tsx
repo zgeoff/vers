@@ -1,6 +1,10 @@
+/**
+ * SPIKE VARIANT: the biome tint ground, displaced by the shared terrain-height sampler — a lit,
+ * subdivided grid instead of the flat quad, so relief shades and the tint texture drapes over it.
+ */
 import { sceneColors } from '@vers/design-system';
 import type { BiomeField, Viewport } from '@vers/worldmap-core';
-import { BIOME_ROSTER, buildBiomeField, toHexPosition } from '@vers/worldmap-core';
+import { BIOME_ROSTER, buildBiomeField, getBiome, toHexPosition } from '@vers/worldmap-core';
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import {
   BufferAttribute,
@@ -11,40 +15,34 @@ import {
   RGBAFormat,
   UnsignedByteType,
 } from 'three';
-import { MeshBasicNodeMaterial } from 'three/webgpu';
+import { MeshStandardNodeMaterial } from 'three/webgpu';
 import invariant from 'tiny-invariant';
 import { NODE_POSITION_SCALING_FACTOR } from '../consts';
 import { useFogViewport } from '../state/use-fog-viewport';
 import { useUserSeed } from '../state/use-user-seed';
+import type { GroundHeightSampler } from './ground-relief';
+import { makeGroundHeightSampler } from './ground-relief';
 import type { TSLTextureNode } from './scene-tsl';
 import { sceneTSL } from './scene-tsl';
 
-/**
- * Biome texels per axial cell unit. Modest by design: each texel walks the full Worley/value-noise
- * sample, so the resolution trades border smoothness against per-pan rebuild cost.
- */
 const BIOME_TEXELS_PER_CELL = 4;
 
-/**
- * Cells the ground quad extends past the chunk-aligned viewport, covering the screen edge between a
- * fast pan and the next chunk-boundary rebuild.
- */
 const BIOME_VIEWPORT_MARGIN_CELLS = 2;
 
-/**
- * Draws the placeholder biome terrain tint over the world map: one viewport-covering plane whose
- * per-fragment color samples a CPU-mixed RGBA texture — the base biome blended toward its border
- * neighbour by `blendT`, with the modifier tint overlaid at low alpha where the modifier layer draws
- * non-`none`. Purely presentational flavour: it projects the biome field from the current region's
- * seed and stores nothing itself, rebuilding only when a pan crosses a chunk boundary. It renders
- * nothing until both a seed and a viewport exist.
- */
+/** target ground-grid vertices per axis before striding kicks in on huge viewports */
+const MAX_GRID_VERTS = 160;
+
 export function BiomeGround() {
   const userSeed = useUserSeed();
   const viewport = useFogViewport();
 
+  const sampler = useMemo(
+    () => (userSeed === null ? null : makeGroundHeightSampler(userSeed)),
+    [userSeed],
+  );
+
   const biome = useMemo(() => {
-    if (userSeed === null || viewport === null) {
+    if (userSeed === null || viewport === null || sampler === null) {
       return null;
     }
 
@@ -58,25 +56,32 @@ export function BiomeGround() {
     return {
       field: buildBiomeField(userSeed, inflated, { resolution: BIOME_TEXELS_PER_CELL }),
       fieldViewport: inflated,
+      sampler,
+      userSeed,
     };
-  }, [userSeed, viewport]);
+  }, [userSeed, viewport, sampler]);
 
   if (biome === null) {
     return null;
   }
 
-  return <BiomeGroundPlane field={biome.field} viewport={biome.fieldViewport} />;
+  return (
+    <BiomeGroundPlane
+      field={biome.field}
+      sampler={biome.sampler}
+      userSeed={biome.userSeed}
+      viewport={biome.fieldViewport}
+    />
+  );
 }
 
 interface BiomeGroundPlaneProps {
   readonly field: BiomeField;
+  readonly sampler: GroundHeightSampler;
+  readonly userSeed: number;
   readonly viewport: Viewport;
 }
 
-/**
- * The byte buffer behind the live ground texture, kept beside its dimensions so a same-size rebuild
- * can rewrite the pixels in place.
- */
 interface GroundBuffer {
   bytes: Uint8Array;
   cols: number;
@@ -86,30 +91,25 @@ interface GroundBuffer {
 interface BiomeGroundResources {
   applied: { field: BiomeField; viewport: Viewport };
   readonly buffer: GroundBuffer;
-  readonly geometry: BufferGeometry;
-  readonly material: MeshBasicNodeMaterial;
+  geometry: BufferGeometry;
+  readonly material: MeshStandardNodeMaterial;
   readonly textureNode: TSLTextureNode;
 }
 
-/**
- * The ground plane sits between the floor (`y = -0.1`) and the node/edge/fog plane (`y = 0`), inside
- * the scene's rotated group where a local z maps directly to world y.
- */
 const BIOME_GROUND_ELEVATION = -0.05;
 
-/**
- * The geometry, material, and texture node live for the whole mount: a field change swaps the
- * texture node's value and rewrites the quad in place, never rebuilding the material — the same
- * discipline `FogOfWar` follows, for the same reason: a fresh material recompiles its shader
- * pipeline, and that churn is enough to lose the GPU context mid-pan.
- */
 function BiomeGroundPlane(props: Readonly<BiomeGroundPlaneProps>) {
   const planeRef = useRef<BiomeGroundResources | null>(null);
-  const plane = (planeRef.current ??= buildBiomeGroundResources(props.field, props.viewport));
+  const plane = (planeRef.current ??= buildBiomeGroundResources(
+    props.userSeed,
+    props.sampler,
+    props.field,
+    props.viewport,
+  ));
 
   useLayoutEffect(() => {
-    updateBiomeGroundPlane(plane, props.field, props.viewport);
-  }, [plane, props.field, props.viewport]);
+    updateBiomeGroundPlane(plane, props.userSeed, props.sampler, props.field, props.viewport);
+  }, [plane, props.userSeed, props.sampler, props.field, props.viewport]);
 
   useEffect(
     () => () => {
@@ -130,6 +130,8 @@ function BiomeGroundPlane(props: Readonly<BiomeGroundPlaneProps>) {
 }
 
 function buildBiomeGroundResources(
+  userSeed: number,
+  sampler: GroundHeightSampler,
   field: BiomeField,
   viewport: Readonly<Viewport>,
 ): BiomeGroundResources {
@@ -143,28 +145,24 @@ function buildBiomeGroundResources(
 
   const textureNode = sceneTSL.texture(buildGroundTexture(buffer));
 
-  const material = new MeshBasicNodeMaterial();
+  const material = new MeshStandardNodeMaterial({ roughness: 0.95 });
 
   material.colorNode = sceneTSL.toNode(textureNode);
 
   return {
     applied: { field, viewport },
     buffer,
-    geometry: buildBiomeGroundGeometry(viewport),
+    geometry: buildReliefGeometry(userSeed, sampler, viewport),
     material,
     textureNode,
   };
 }
 
-/**
- * A same-size field — every pan; only a zoom changes the texel dimensions — rewrites the live
- * texture's pixels in place: no new GPU texture, and no disposal of one a queued frame still binds.
- * Only a resize allocates a replacement, and the old texture is released only after the node stops
- * referencing it.
- */
 function updateBiomeGroundPlane(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- the resources' buffer and texture-node value slot are mutable by design: rewriting them is how a rebuilt field reaches the live material
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- spike: mutable render resources
   plane: BiomeGroundResources,
+  userSeed: number,
+  sampler: GroundHeightSampler,
   field: BiomeField,
   viewport: Readonly<Viewport>,
 ): void {
@@ -193,7 +191,11 @@ function updateBiomeGroundPlane(
     previous.dispose();
   }
 
-  updateBiomeGroundGeometry(plane.geometry, viewport);
+  const previousGeometry = plane.geometry;
+
+  plane.geometry = buildReliefGeometry(userSeed, sampler, viewport);
+
+  previousGeometry.dispose();
 }
 
 const BASE_TINT_HEXES: ReadonlyArray<string> = [
@@ -203,11 +205,6 @@ const BASE_TINT_HEXES: ReadonlyArray<string> = [
   sceneColors.biome4,
 ];
 
-/**
- * Base-biome placeholder tints keyed by roster id, one entry per roster entry: growing the roster
- * without pairing the new biome with a tint fails loudly at module load, never by silently painting
- * the new biome with another biome's color.
- */
 const BASE_TINTS: ReadonlyMap<number, Color> = new Map(
   BIOME_ROSTER.map((entry, index) => {
     const hex = BASE_TINT_HEXES[index];
@@ -220,17 +217,8 @@ const BASE_TINTS: ReadonlyMap<number, Color> = new Map(
 
 const MODIFIER_TINT = new Color(sceneColors.modifierOverlay);
 
-/**
- * Blend strength the modifier tint overlays at where the modifier layer draws non-`none`.
- */
 const MODIFIER_OVERLAY_ALPHA = 0.35;
 
-/**
- * CPU-mixes each texel's RGBA byte: the base tint blended toward the border neighbour's tint by
- * half `blendT`, then the modifier tint overlaid at `MODIFIER_OVERLAY_ALPHA` where the modifier
- * layer drew non-`none`. Alpha is always opaque — the ground plane replaces the floor's color
- * within its footprint outright, it never shows the floor through.
- */
 function updateGroundBytes(bytes: Uint8Array, field: BiomeField): void {
   const count = field.cols * field.rows;
 
@@ -265,7 +253,7 @@ function getBaseTint(id: number): Color {
   return tint;
 }
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- the buffer is mutable by design: it backs the live texture's pixel storage
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- spike: mutable texture backing store
 function buildGroundTexture(buffer: GroundBuffer): DataTexture {
   const map = new DataTexture(buffer.bytes, buffer.cols, buffer.rows, RGBAFormat, UnsignedByteType);
 
@@ -277,41 +265,63 @@ function buildGroundTexture(buffer: GroundBuffer): DataTexture {
 }
 
 /**
- * One parallelogram quad whose attribute buffers live as long as the geometry: the position
- * attribute is rewritten in place on every later viewport change, since replacing an attribute
- * object strands its GPU buffer until the whole geometry is disposed.
+ * Subdivided grid over the viewport's cell box, displaced by the terrain sampler and lit, with uvs
+ * spanning the box so the biome tint texture drapes over the relief.
  */
-function buildBiomeGroundGeometry(viewport: Readonly<Viewport>): BufferGeometry {
-  const geometry = new BufferGeometry();
+function buildReliefGeometry(
+  userSeed: number,
+  sampler: GroundHeightSampler,
+  viewport: Readonly<Viewport>,
+): BufferGeometry {
+  const spanX = viewport.maxCX - viewport.minCX + 1;
+  const spanY = viewport.maxCY - viewport.minCY + 1;
+  const strideX = Math.max(1, Math.ceil(spanX / MAX_GRID_VERTS));
+  const strideY = Math.max(1, Math.ceil(spanY / MAX_GRID_VERTS));
+  const cols = Math.floor(spanX / strideX) + 1;
+  const rows = Math.floor(spanY / strideY) + 1;
+  const f = NODE_POSITION_SCALING_FACTOR;
 
-  geometry.setAttribute('position', new BufferAttribute(new Float32Array(12), 3));
-  geometry.setAttribute('uv', new BufferAttribute(new Float32Array([0, 0, 1, 0, 0, 1, 1, 1]), 2));
-  geometry.setIndex([0, 1, 2, 2, 1, 3]);
+  const positions = new Float32Array(cols * rows * 3);
+  const uvs = new Float32Array(cols * rows * 2);
 
-  updateBiomeGroundGeometry(geometry, viewport);
+  for (let j = 0; j < rows; j++) {
+    const cy = viewport.minCY - 0.5 + j * strideY;
 
-  return geometry;
-}
+    for (let i = 0; i < cols; i++) {
+      const cx = viewport.minCX - 0.5 + i * strideX;
+      const [x, y] = toHexPosition(cx, cy);
+      const biome = getBiome(userSeed, Math.round(cx), Math.round(cy)).baseID;
+      const z = sampler(x, y, biome);
+      const index = j * cols + i;
 
-/**
- * Rewrites the quad's corners to cover the viewport's cell box in scene space, the same axial-to-uv
- * mapping `buildBiomeField` samples its texels from.
- */
-function updateBiomeGroundGeometry(geometry: BufferGeometry, viewport: Readonly<Viewport>): void {
-  const corners = [
-    toHexPosition(viewport.minCX - 0.5, viewport.minCY - 0.5),
-    toHexPosition(viewport.maxCX + 0.5, viewport.minCY - 0.5),
-    toHexPosition(viewport.minCX - 0.5, viewport.maxCY + 0.5),
-    toHexPosition(viewport.maxCX + 0.5, viewport.maxCY + 0.5),
-  ];
-
-  const position = geometry.getAttribute('position');
-
-  for (const [index, [x, y]] of corners.entries()) {
-    position.setXYZ(index, x * NODE_POSITION_SCALING_FACTOR, y * NODE_POSITION_SCALING_FACTOR, 0);
+      positions[index * 3] = x * f;
+      positions[index * 3 + 1] = y * f;
+      positions[index * 3 + 2] = z * f;
+      uvs[index * 2] = i / (cols - 1);
+      uvs[index * 2 + 1] = j / (rows - 1);
+    }
   }
 
-  position.needsUpdate = true;
+  const indices: Array<number> = [];
 
+  for (let j = 0; j < rows - 1; j++) {
+    for (let i = 0; i < cols - 1; i++) {
+      const a = j * cols + i;
+      const b = a + 1;
+      const c = a + cols;
+      const d = c + 1;
+
+      indices.push(a, b, c, c, b, d);
+    }
+  }
+
+  const geometry = new BufferGeometry();
+
+  geometry.setAttribute('position', new BufferAttribute(positions, 3));
+  geometry.setAttribute('uv', new BufferAttribute(uvs, 2));
+  geometry.setIndex(indices);
+  geometry.computeVertexNormals();
   geometry.computeBoundingSphere();
+
+  return geometry;
 }

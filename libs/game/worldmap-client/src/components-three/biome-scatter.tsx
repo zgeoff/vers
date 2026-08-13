@@ -21,6 +21,7 @@ import { NODE_POSITION_SCALING_FACTOR } from '../consts';
 import { useFogViewport } from '../state/use-fog-viewport';
 import { useIsScatterVisible } from '../state/use-is-scatter-visible';
 import { useUserSeed } from '../state/use-user-seed';
+import { makeGroundHeightSampler } from './ground-relief';
 
 const ScatterMaterial = extend(MeshStandardNodeMaterial);
 const GlowMaterial = extend(MeshBasicNodeMaterial);
@@ -60,6 +61,12 @@ const MIN_SEPARATION = 0.18;
 
 /** chance per cell of an isolated landmark assembly, independent of clustering */
 const LANDMARK_CHANCE = 0.012;
+
+/** ground-layer debris pieces per cell at a cluster hotspot, by biome */
+const DEBRIS_DENSITY = [4, 3, 1, 8];
+
+/** cluster-independent background debris per cell, so voids read quiet rather than dead */
+const DEBRIS_BASE = 1.5;
 
 /** base part color per biome */
 const PALETTE = [
@@ -170,6 +177,7 @@ interface EdgeSegment {
 }
 
 interface PartsSink {
+  baseZ: number;
   colors: Float32Array;
   count: number;
   glowCount: number;
@@ -194,12 +202,15 @@ function buildScatter(userSeed: number, viewport: Readonly<Viewport>): ScatterBu
   const maxCY = Math.min(viewport.maxCY, centerY + WINDOW);
 
   const sink: PartsSink = {
+    baseZ: 0,
     colors: new Float32Array(MAX_PARTS * 3),
     count: 0,
     glowCount: 0,
     glowMatrices: new Float32Array(MAX_GLOW * 16),
     matrices: new Float32Array(MAX_PARTS * 16),
   };
+
+  const ground = makeGroundHeightSampler(userSeed);
 
   const nodes = new Map<string, WorldMapNode>();
 
@@ -286,11 +297,33 @@ function buildScatter(userSeed: number, viewport: Readonly<Viewport>): ScatterBu
 
         placed.push([x, y]);
 
+        sink.baseZ = ground(x, y, biome);
+
         if (biome === 1) {
           buildAntennaTree(draw, x, y, sink);
         } else {
           buildStack(draw, x, y, biome, sink, isClear);
         }
+      }
+
+      const debris = Math.floor(
+        cellDraw(7) * (DEBRIS_BASE + (DEBRIS_DENSITY[biome] ?? 4) * cluster),
+      );
+
+      for (let d = 0; d < debris; d++) {
+        const draw = (salt: number) =>
+          buildCoordHashUnit(userSeed, cx, cy, CH + 2000 + d * 20 + salt);
+        const [hexX, hexY] = toHexPosition(cx, cy);
+        const x = hexX + (draw(0) - 0.5) * 1.7;
+        const y = hexY + (draw(1) - 0.5) * 1.7;
+
+        if (!isClear(x, y)) {
+          continue;
+        }
+
+        sink.baseZ = ground(x, y, biome);
+
+        buildDebris(draw, x, y, biome, sink);
       }
 
       if (cellDraw(5) < LANDMARK_CHANCE) {
@@ -300,11 +333,15 @@ function buildScatter(userSeed: number, viewport: Readonly<Viewport>): ScatterBu
         const y = hexY + (draw(1) - 0.5) * 0.9;
 
         if (isClear(x, y)) {
+          sink.baseZ = ground(x, y, biome);
+
           buildLandmark(draw, x, y, biome, sink);
         }
       }
 
       // node structure: a deliberate assembly tied to the cell's node, drawn per archetype
+      sink.baseZ = 0;
+
       buildNodeStructure(userSeed, cx, cy, getNode(cx, cy), biome, sink);
     }
   }
@@ -366,7 +403,7 @@ function pushPart(
 
   const f = NODE_POSITION_SCALING_FACTOR;
 
-  tempPosition.set(x * f, y * f, z * f);
+  tempPosition.set(x * f, y * f, (z + sink.baseZ) * f);
   tempQuaternion.setFromAxisAngle(UP, spin);
 
   if (tilt !== 0) {
@@ -392,7 +429,7 @@ function pushGlow(sink: PartsSink, x: number, y: number, z: number, size: number
 
   const f = NODE_POSITION_SCALING_FACTOR;
 
-  tempPosition.set(x * f, y * f, z * f);
+  tempPosition.set(x * f, y * f, (z + sink.baseZ) * f);
   tempQuaternion.identity();
   tempScale.set(size * f, size * f, size * f);
   tempMatrix.compose(tempPosition, tempQuaternion, tempScale);
@@ -635,4 +672,46 @@ function buildLandmark(
 
   pushPart(sink, x, y, z + mastH / 2, 0.09 * PROP_SCALE, 0.09 * PROP_SCALE, mastH, 0, 0, base, 1);
   pushGlow(sink, x, y, z + mastH + 0.05, 0.09 * PROP_SCALE);
+}
+
+/**
+ * Ground-layer filler: low plating shards, rubble chips, and stub blocks. High count, tiny
+ * silhouette — it textures the floor without competing with structures.
+ */
+function buildDebris(
+  draw: (salt: number) => number,
+  x: number,
+  y: number,
+  biome: number,
+  sink: PartsSink,
+): void {
+  const base = PALETTE[biome] ?? PALETTE[0]!;
+  const kind = draw(2);
+
+  if (kind < 0.5) {
+    // flat plating shard
+    const w = (0.06 + draw(3) * 0.12) * PROP_SCALE * 2;
+    const d = (0.06 + draw(4) * 0.12) * PROP_SCALE * 2;
+    const h = 0.015 + draw(5) * 0.02;
+
+    pushPart(sink, x, y, h / 2, w, d, h, draw(6) * Math.PI, 0, base, 0.55 + draw(7) * 0.3);
+
+    return;
+  }
+
+  if (kind < 0.85) {
+    // rubble chip
+    const w = (0.03 + draw(3) * 0.06) * PROP_SCALE * 2;
+    const h = w * (0.6 + draw(5) * 0.8);
+
+    pushPart(sink, x, y, h / 2, w, w, h, draw(6) * Math.PI, (draw(8) - 0.5) * 0.6, base, 0.5 + draw(7) * 0.3);
+
+    return;
+  }
+
+  // stub block — a structure that barely started or barely remains
+  const w = (0.08 + draw(3) * 0.1) * PROP_SCALE;
+  const h = (0.08 + draw(5) * 0.15) * PROP_SCALE;
+
+  pushPart(sink, x, y, h / 2, w, w, h, draw(6) * Math.PI, 0, base, 0.65 + draw(7) * 0.3);
 }
