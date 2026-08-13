@@ -49,6 +49,13 @@ const CACHE_CAP = 280;
 
 const GLOW_COLOR = new Color('#7dd3fc');
 
+const CONCAT_PILLARS = 64;
+
+/** beams render above the fog veil — the one thing the fog never hides */
+const pillarProps = {
+  opacityNode: sceneTSL.toNode(sceneTSL.time.mul(0.9).sin().mul(0.08).add(0.3)),
+};
+
 /** all emissives breathe together on scene time — a slow shared pulse, not per-instance blink */
 const glowPulse = {
   opacityNode: sceneTSL.toNode(sceneTSL.time.mul(1.6).sin().mul(0.16).add(0.55)),
@@ -131,6 +138,12 @@ function buildChunkEntry(userSeed: number, chunkX: number, chunkY: number): Chun
 function useChunkWorld(userSeed: number | null, viewport: Viewport | null): Array<ChunkEntry> {
   const [tick, setTick] = useState(0);
   const pending = useRef<Array<string>>([]);
+  const previousBox = useRef<{
+    maxChunkX: number;
+    maxChunkY: number;
+    minChunkX: number;
+    minChunkY: number;
+  } | null>(null);
 
   // computed per render — the progressive builder ticks renders as chunks land, and cache lookups
   // are cheap enough that memoizing (and going stale against the mutable cache) isn't worth it
@@ -161,6 +174,40 @@ function useChunkWorld(userSeed: number | null, viewport: Viewport | null): Arra
       }
     }
 
+    // predictive prefetch: when the chunk box moved since last render, queue the strip one chunk
+    // beyond the leading edge so terrain exists before the pan arrives
+    const previous = previousBox.current;
+
+    if (previous !== null) {
+      const movedX = minChunkX > previous.minChunkX ? 1 : maxChunkX < previous.maxChunkX ? 0 : minChunkX < previous.minChunkX ? -1 : 0;
+      const movedY = minChunkY > previous.minChunkY ? 1 : maxChunkY < previous.maxChunkY ? 0 : minChunkY < previous.minChunkY ? -1 : 0;
+
+      if (movedX !== 0) {
+        const edge = movedX > 0 ? maxChunkX + 1 : minChunkX - 1;
+
+        for (let chunkY = minChunkY; chunkY <= maxChunkY; chunkY++) {
+          const key = `${edge}_${chunkY}`;
+
+          if (!cache.has(key)) {
+            misses.push(key);
+          }
+        }
+      }
+
+      if (movedY !== 0) {
+        const edge = movedY > 0 ? maxChunkY + 1 : minChunkY - 1;
+
+        for (let chunkX = minChunkX; chunkX <= maxChunkX; chunkX++) {
+          const key = `${chunkX}_${edge}`;
+
+          if (!cache.has(key)) {
+            misses.push(key);
+          }
+        }
+      }
+    }
+
+    previousBox.current = { maxChunkX, maxChunkY, minChunkX, minChunkY };
     pending.current = misses;
   }
 
@@ -250,6 +297,7 @@ export function ChunkScatter() {
   const entries = useChunkWorld(userSeed, viewport);
   const meshRef = useRef<InstancedMesh | null>(null);
   const glowRef = useRef<InstancedMesh | null>(null);
+  const pillarRef = useRef<InstancedMesh | null>(null);
 
   // concat scatter from the chunks near the viewport center — cheap memcpy, no generation
   const windowed = useMemo(() => {
@@ -322,9 +370,44 @@ export function ChunkScatter() {
 
     glow.computeBoundingSphere();
 
+    const pillar = pillarRef.current;
+
+    if (pillar !== null) {
+      let pillars = 0;
+
+      // pillars concat from every visible chunk, not just the scatter window — they are horizon
+      // objects, meant to be seen from far away
+      for (const entry of entries) {
+        const take = Math.min(entry.scatter.pillarCount, CONCAT_PILLARS - pillars);
+
+        pillar.instanceMatrix.array.set(
+          entry.scatter.pillarMatrices.subarray(0, take * 16),
+          pillars * 16,
+        );
+
+        if (pillar.instanceColor) {
+          pillar.instanceColor.array.set(
+            entry.scatter.pillarColors.subarray(0, take * 3),
+            pillars * 3,
+          );
+        }
+
+        pillars += take;
+      }
+
+      pillar.count = pillars;
+      pillar.instanceMatrix.needsUpdate = true;
+
+      if (pillar.instanceColor) {
+        pillar.instanceColor.needsUpdate = true;
+      }
+
+      pillar.computeBoundingSphere();
+    }
+
     scatterStats.parts = parts;
     scatterStats.glow = glows;
-  }, [windowed]);
+  }, [windowed, entries]);
 
   // instanceColor must exist before the first concat writes into it
   useLayoutEffect(() => {
@@ -338,6 +421,12 @@ export function ChunkScatter() {
 
     if (glow && glow.instanceColor === null) {
       glow.setColorAt(0, GLOW_COLOR);
+    }
+
+    const pillar = pillarRef.current;
+
+    if (pillar && pillar.instanceColor === null) {
+      pillar.setColorAt(0, GLOW_COLOR);
     }
   }, []);
 
@@ -355,6 +444,21 @@ export function ChunkScatter() {
       <instancedMesh args={[undefined, undefined, CONCAT_GLOW]} frustumCulled={false} ref={glowRef}>
         <boxGeometry args={[1, 1, 1]} />
         <GlowMaterial color={'#ffffff'} transparent={true} {...glowPulse} />
+      </instancedMesh>
+      <instancedMesh
+        args={[undefined, undefined, CONCAT_PILLARS]}
+        frustumCulled={false}
+        ref={pillarRef}
+        renderOrder={1000}
+      >
+        <boxGeometry args={[1, 1, 1]} />
+        <GlowMaterial
+          color={'#ffffff'}
+          depthTest={false}
+          depthWrite={false}
+          transparent={true}
+          {...pillarProps}
+        />
       </instancedMesh>
     </>
   );

@@ -107,6 +107,19 @@ re-builds the keepers properly against these notes.
 - Density push held 240fps trivially (~7k parts on screen, capacity for 90k). Budget is nowhere
   near a constraint; depth/fidelity can go much further.
 
+## Round: canon landmarks, modifier identity, prefetch
+
+- **Pillars of light shipped** (canon: "rare distance-scaled landmarks visible as pillars of
+  light in the fog"): landmark sites project a slim beam in the biome accent, height scaling with
+  hex distance from origin, rendered above the fog veil (depth-independent, renderOrder above
+  fog) with a slow independent pulse — the one thing fog never hides. Immediate exploration draw:
+  the horizon asks a question.
+- **Modifier layer earned its first visual identity**: modifier != none renders as a blacked-out
+  district — every glow suppressed, every surface dimmed ~45%. Whole patches of grid gone quiet;
+  eerie against lit neighbours; proves the base-x-modifier combinatorics visually.
+- **Predictive prefetch**: chunk box movement queues the strip one chunk beyond the leading edge
+  into the progressive builder, so pans arrive on generated ground.
+
 ## Parked questions
 
 - Biome identity/naming is #272's design pass; everything here is placeholder vocabulary.

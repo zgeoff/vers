@@ -5,11 +5,13 @@
  */
 import type { Viewport, WorldMapNode } from '@vers/worldmap-core';
 import {
+  ORIGIN_CELL,
   buildCellNode,
   buildCoordHashUnit,
   buildValueNoise,
   collectNodeEdges,
   getBiome,
+  getHexDistance,
   toHexPosition,
 } from '@vers/worldmap-core';
 import { Color, Matrix4, Quaternion, Vector3 } from 'three';
@@ -20,6 +22,7 @@ const CH = 100;
 
 const MAX_PARTS = 12288;
 const MAX_GLOW = 2048;
+const MAX_PILLARS = 8;
 
 /** capacity of the persistent viewport-concat meshes, spanning many chunks */
 export const CONCAT_PARTS = 90000;
@@ -86,6 +89,9 @@ export interface ScatterBuild {
   glowMatrices: Float32Array;
   id: string;
   matrices: Float32Array;
+  pillarColors: Float32Array;
+  pillarCount: number;
+  pillarMatrices: Float32Array;
 }
 
 interface EdgeSegment {
@@ -103,6 +109,10 @@ interface PartsSink {
   glowCount: number;
   glowMatrices: Float32Array;
   matrices: Float32Array;
+  mute: boolean;
+  pillarColors: Float32Array;
+  pillarCount: number;
+  pillarMatrices: Float32Array;
 }
 
 const tempMatrix = new Matrix4();
@@ -131,6 +141,10 @@ export function buildScatterForBox(
     glowCount: 0,
     glowMatrices: new Float32Array(MAX_GLOW * 16),
     matrices: new Float32Array(MAX_PARTS * 16),
+    mute: false,
+    pillarColors: new Float32Array(MAX_PILLARS * 3),
+    pillarCount: 0,
+    pillarMatrices: new Float32Array(MAX_PILLARS * 16),
   };
 
   const nodes = new Map<string, WorldMapNode>();
@@ -195,7 +209,13 @@ export function buildScatterForBox(
 
   for (let cy = minCY; cy <= maxCY; cy++) {
     for (let cx = minCX; cx <= maxCX; cx++) {
-      const biome = getBiome(userSeed, cx, cy).baseID;
+      const cellSample = getBiome(userSeed, cx, cy);
+      const biome = cellSample.baseID;
+
+      // the modifier layer's first visual identity: a blacked-out district — every light dead,
+      // every surface dimmer, whole patches of the grid gone quiet
+      sink.mute = cellSample.modifierID !== 0;
+
       const cellDraw = (salt: number) => buildCoordHashUnit(userSeed, cx, cy, CH + salt);
       const freq = CLUSTER_FREQ[biome] ?? 0.3;
       const cluster = Math.pow(
@@ -272,6 +292,28 @@ export function buildScatterForBox(
           sink.baseZ = ground(x, y, biome);
 
           buildLandmark(draw, x, y, biome, sink);
+
+          // canon: rare distance-scaled landmarks visible as pillars of light in the fog — the
+          // beam grows with distance from origin, an exploration draw on the horizon
+          const distance = getHexDistance([cx, cy], ORIGIN_CELL);
+          const pillarH = Math.min(2.2 + distance / 30, 8);
+
+          if (sink.pillarCount < MAX_PILLARS) {
+            const f = NODE_POSITION_SCALING_FACTOR;
+            const accent = getAccent(biome);
+
+            tempPosition.set(x * f, y * f, (sink.baseZ + pillarH / 2) * f);
+            tempQuaternion.identity();
+            tempScale.set(0.05 * f, 0.05 * f, pillarH * f);
+            tempMatrix.compose(tempPosition, tempQuaternion, tempScale);
+            tempMatrix.toArray(sink.pillarMatrices, sink.pillarCount * 16);
+
+            sink.pillarColors[sink.pillarCount * 3] = accent.r;
+            sink.pillarColors[sink.pillarCount * 3 + 1] = accent.g;
+            sink.pillarColors[sink.pillarCount * 3 + 2] = accent.b;
+
+            sink.pillarCount += 1;
+          }
         }
       }
 
@@ -310,6 +352,9 @@ export function buildScatterForBox(
     glowMatrices: sink.glowMatrices.slice(0, sink.glowCount * 16),
     id: `${userSeed}:${minCX}:${minCY}:${maxCX}:${maxCY}`,
     matrices: sink.matrices.slice(0, sink.count * 16),
+    pillarColors: sink.pillarColors.slice(0, sink.pillarCount * 3),
+    pillarCount: sink.pillarCount,
+    pillarMatrices: sink.pillarMatrices.slice(0, sink.pillarCount * 16),
   };
 }
 
@@ -372,9 +417,11 @@ function pushPart(
   tempMatrix.compose(tempPosition, tempQuaternion, tempScale);
   tempMatrix.toArray(sink.matrices, sink.count * 16);
 
-  sink.colors[sink.count * 3] = color.r * shade;
-  sink.colors[sink.count * 3 + 1] = color.g * shade;
-  sink.colors[sink.count * 3 + 2] = color.b * shade;
+  const dim = sink.mute ? 0.55 : 1;
+
+  sink.colors[sink.count * 3] = color.r * shade * dim;
+  sink.colors[sink.count * 3 + 1] = color.g * shade * dim;
+  sink.colors[sink.count * 3 + 2] = color.b * shade * dim;
 
   sink.count += 1;
 }
@@ -387,7 +434,7 @@ function pushGlow(
   size: number,
   accent: Readonly<Color>,
 ): void {
-  if (sink.glowCount >= MAX_GLOW) {
+  if (sink.glowCount >= MAX_GLOW || sink.mute) {
     return;
   }
 
