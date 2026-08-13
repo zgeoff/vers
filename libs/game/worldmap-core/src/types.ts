@@ -74,3 +74,51 @@ export interface RevealDistanceField {
   readonly rows: number;
   readonly values: ReadonlyFloatArray;
 }
+
+/**
+ * Read-only structural view of a typed byte array. A real `Uint8Array` satisfies it directly, and
+ * consumers typed against it stay deeply readonly — the typed array itself has no readonly form.
+ */
+export interface ReadonlyUint8Array {
+  readonly length: number;
+  readonly [index: number]: number;
+}
+
+/**
+ * One roster alternative a biome or modifier draw can land on: a numeric id, a dev-facing
+ * placeholder name that must never appear in a contract schema, analytics event, or DB column, and
+ * a piecewise-linear weight-vs-hex-distance curve giving its distance-banded rarity. A curve's
+ * points hold ascending distance; the weight holds flat before the first point and after the last.
+ */
+export interface BiomeRosterEntry {
+  readonly id: number;
+  readonly name: string;
+  readonly weights: ReadonlyArray<readonly [distance: number, weight: number]>;
+}
+
+/**
+ * The terrain-plane sample at one position: a base biome blended toward `neighbourBaseID` by
+ * `blendT` near a patch border, plus an independent modifier layer. Pure flavour — every field is
+ * public geometry, computed from `userSeed` and position alone.
+ */
+export interface BiomeSample {
+  readonly baseID: number;
+  readonly blendT: number;
+  readonly modifierID: number;
+  readonly neighbourBaseID: number;
+}
+
+/**
+ * A biome texel grid over a viewport, row-major with `cols * rows` samples, laid out identically to
+ * `RevealDistanceField` so a quad spanning the same viewport lines up with both. Ownership is
+ * node-anchored: a texel carries its nearest jittered node's biome, `blendT` its proximity to the
+ * nearest differently-biomed territory, and `neighbourBaseID` that territory's biome.
+ */
+export interface BiomeField {
+  readonly baseIDs: ReadonlyUint8Array;
+  readonly blendTs: ReadonlyFloatArray;
+  readonly cols: number;
+  readonly modifierIDs: ReadonlyUint8Array;
+  readonly neighbourBaseIDs: ReadonlyUint8Array;
+  readonly rows: number;
+}

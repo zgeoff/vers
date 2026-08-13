@@ -149,6 +149,7 @@ export function useAvatarRegionGraph(): void {
 
     setWorldRegion(
       avatarID,
+      seed,
       worldGraph,
       originNode,
       collectSelectableNodeIDs(seed, completedNodeIDs),

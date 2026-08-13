@@ -5,5 +5,6 @@ test('it builds the default dev-tool state', () => {
   expect(createDevSlice()).toStrictEqual({
     isAxesHelperVisible: false,
     isDevCameraActive: false,
+    isFogOfWarVisible: true,
   });
 });

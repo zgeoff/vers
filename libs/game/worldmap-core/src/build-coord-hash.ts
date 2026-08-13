@@ -1,10 +1,20 @@
 /**
- * Distinct draw channels for a single cell, so independent decisions (x jitter, y jitter) read from
- * uncorrelated streams rather than reusing one hash.
+ * Distinct draw channels for a single cell, so independent decisions (x jitter, y jitter, biome
+ * geometry) read from uncorrelated streams rather than reusing one hash. The biome channels form
+ * their own domain, independent from placement's jitter channels, so terrain geometry and node
+ * placement never correlate.
  */
 export const HASH_CHANNEL = {
   jitterX: 0,
   jitterY: 1,
+  worleyFeatureX: 2,
+  worleyFeatureY: 3,
+  biomeDraw: 4,
+  modifierFeatureX: 5,
+  modifierFeatureY: 6,
+  modifierDraw: 7,
+  wobbleX: 8,
+  wobbleY: 9,
 } as const;
 
 /**
