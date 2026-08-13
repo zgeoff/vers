@@ -33,8 +33,6 @@ interface LoadE2EEnvironmentOptions {
  * drift apart.
  */
 export function loadE2EEnvironment(options: Readonly<LoadE2EEnvironmentOptions>): E2EEnvironment {
-  const baseURL = process.env['BASE_URL'] ?? 'http://localhost:3000';
-
   // resolve the project root without relying on `__dirname`, which is unreliable when a config is
   // parsed for the task graph rather than run from its own directory
   const projectRoot = process.cwd().includes('web-e2e')
@@ -43,12 +41,19 @@ export function loadE2EEnvironment(options: Readonly<LoadE2EEnvironmentOptions>)
 
   const appWebRoot = path.resolve(projectRoot, '..', 'web');
 
+  // the .env load runs before any env read below, so a BASE_URL defined in the file is honored the
+  // same as every other key
   try {
     process.loadEnvFile(path.join(projectRoot, '.env'));
-  } catch {
-    // no .env locally (CI writes one from a secret) — the smoke spec that runs without a .env
-    // needs no secrets
+  } catch (error) {
+    // only a missing .env is fine (CI writes one from a secret; the smoke spec needs no secrets) —
+    // a present-but-unreadable file is a real configuration fault and must not be swallowed
+    if (!(error instanceof Error) || !('code' in error) || error.code !== 'ENOENT') {
+      throw error;
+    }
   }
+
+  const baseURL = process.env['BASE_URL'] ?? 'http://localhost:3000';
 
   return {
     baseURL,

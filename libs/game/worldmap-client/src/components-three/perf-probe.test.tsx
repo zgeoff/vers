@@ -20,6 +20,8 @@ test('it samples fps, worst-frame timing, and scatter build stats once the sampl
 
   const renderer = await ReactThreeTestRenderer.create(<PerfProbe />);
 
+  onTestFinished(() => renderer.unmount());
+
   // 30 frames at a constant 1/60s delta cross the 500ms sample window on the 30th frame
   await renderer.advanceFrames(30, 1 / 60);
 
@@ -36,6 +38,8 @@ test('it samples fps, worst-frame timing, and scatter build stats once the sampl
 
 test('it writes nothing to the store before the sample window elapses', async () => {
   const renderer = await ReactThreeTestRenderer.create(<PerfProbe />);
+
+  onTestFinished(() => renderer.unmount());
 
   await renderer.advanceFrames(10, 1 / 60);
 
