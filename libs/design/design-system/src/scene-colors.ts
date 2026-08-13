@@ -5,8 +5,13 @@
  */
 export const sceneColors = {
   avatarPlaceholder: '#D8A56E',
+  biome1: '#4b5a4e',
+  biome2: '#5a5440',
+  biome3: '#3f4a57',
+  biome4: '#54474f',
   fogShroud: '#282d38',
   ground: '#3d424d',
+  modifierOverlay: '#c9a86a',
   nodeBase: '#cbd5e1',
   nodeDimmed: '#475569',
   nodeSelected: '#7dd3fc',

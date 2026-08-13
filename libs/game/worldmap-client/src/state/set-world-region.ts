@@ -15,17 +15,19 @@ import { useWorldmapStore } from './use-worldmap-store';
  * viewport alone — the shape a caller re-deriving the graph from a moved viewport, or the
  * completed set changing, takes for the same avatar, distinct from an avatar switch.
  * `selectableNodeIDs` is always recomputed alongside `graph` by the caller, since a graph rebuild
- * can bring nodes into or out of view.
+ * can bring nodes into or out of view. `userSeed` moves with the region so the biome ground layer
+ * can derive its own field client-side, the same seed the graph itself came from.
  */
 export function setWorldRegion(
   regionKey: string,
+  userSeed: number,
   graph: WorldGraph,
   selectedNode: WorldMapNode | null,
   selectableNodeIDs: ReadonlySet<string>,
   revealSources: ReadonlyArray<RevealSource>,
 ) {
   if (useWorldmapStore.getState().regionKey === regionKey) {
-    useWorldmapStore.setState({ revealSources, selectableNodeIDs, worldGraph: graph });
+    useWorldmapStore.setState({ revealSources, selectableNodeIDs, userSeed, worldGraph: graph });
 
     return;
   }
@@ -36,6 +38,7 @@ export function setWorldRegion(
     selectableNodeIDs,
     selectedNode,
     selectedObject3D: null,
+    userSeed,
     viewport: null,
     worldGraph: graph,
   });

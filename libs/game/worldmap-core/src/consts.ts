@@ -1,3 +1,5 @@
+import type { BiomeRosterEntry } from './types';
+
 /**
  * Cells per side of a generation chunk — the unit a chunk is generated in, and the block a cell maps
  * back to.
@@ -68,3 +70,98 @@ export const WORLD_COORD_MAX = 2 ** (MORTON_AXIS_BITS - 1) - 1;
  * bound trades security margin for reveal depth.
  */
 export const REVEAL_RADIUS = 2;
+
+/**
+ * Side length, in scene units, of a coarse Worley grid cell the base-biome layer scatters one
+ * feature point per cell into. Targets patches roughly 4 to 8 hexes across.
+ */
+export const BIOME_PATCH_SIZE = 6;
+
+/**
+ * Side length, in scene units, of the coarse Worley grid the modifier layer scatters its feature
+ * points into. Spans several base-biome patches, so a modifier overlay reads as a rarer, broader
+ * variation layered on top of the base terrain.
+ */
+export const MODIFIER_PATCH_SIZE = 18;
+
+/**
+ * Peak per-axis offset the edge-wobble domain warp displaces a sample position by, in scene units.
+ * Keeps patch borders from reading as straight Worley-cell edges.
+ */
+export const BIOME_EDGE_WOBBLE_AMPLITUDE = 0;
+
+/**
+ * Spatial frequency, in inverse scene units, the edge-wobble value-noise field is sampled at.
+ * Higher wobbles the border on a shorter wavelength.
+ */
+export const BIOME_EDGE_WOBBLE_FREQUENCY = 0.25;
+
+/**
+ * Scene-unit width of the border blend zone around a Worley cell boundary: `blendT` ramps from 0 to
+ * 1 over this span of nearest/second-nearest distance difference.
+ */
+export const BIOME_BLEND_BAND = 1;
+
+/**
+ * Scene-unit width of the tint crossfade along a territory border in the rendered biome field:
+ * a texel's `blendT` ramps from 0 to 1 as its nearest and second-nearest nodes' distances converge
+ * across this span, and only where the two nodes wear different biomes.
+ */
+export const BIOME_TERRITORY_BLEND_BAND = 0.75;
+
+/**
+ * Base-biome alternatives and their distance-banded rarity, placeholder and tunable. Every name is
+ * dev-facing flavour text — it must never reach a contract schema, an analytics event, or a DB
+ * column. `biome_1` is common at every distance; `biome_2` is absent until distance ~20 and fades
+ * in by ~80; `biome_3` is deep-only, absent until distance ~60 and fading in by ~140; `biome_4` is
+ * common near the origin and rarer far out. Every curve converges to a roughly equal weight by
+ * distance 200.
+ */
+export const BIOME_ROSTER: ReadonlyArray<BiomeRosterEntry> = [
+  {
+    id: 0,
+    name: 'biome_1',
+    weights: [
+      [0, 2],
+      [200, 1],
+    ],
+  },
+  {
+    id: 1,
+    name: 'biome_2',
+    weights: [
+      [0, 0],
+      [20, 0],
+      [80, 1],
+      [200, 1],
+    ],
+  },
+  {
+    id: 2,
+    name: 'biome_3',
+    weights: [
+      [0, 0],
+      [60, 0],
+      [140, 1],
+      [200, 1],
+    ],
+  },
+  {
+    id: 3,
+    name: 'biome_4',
+    weights: [
+      [0, 4],
+      [100, 1.5],
+      [200, 1],
+    ],
+  },
+];
+
+/**
+ * Modifier alternatives layered over the base biome: `none` dominates every draw, `modifier_1` is a
+ * rare overlay. Flat weights — no distance banding for modifiers yet.
+ */
+export const MODIFIER_ROSTER: ReadonlyArray<BiomeRosterEntry> = [
+  { id: 0, name: 'none', weights: [[0, 9]] },
+  { id: 1, name: 'modifier_1', weights: [[0, 1]] },
+];

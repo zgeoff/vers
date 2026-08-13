@@ -1,3 +1,4 @@
+export { buildBiomeField } from './build-biome-field';
 export { buildCellNode } from './build-cell-node';
 export { buildChunk } from './build-chunk';
 export { buildRevealDistanceField } from './build-reveal-distance-field';
@@ -8,9 +9,11 @@ export { collectRevealedCells } from './collect-revealed-cells';
 export { collectSelectableNodeIDs } from './collect-selectable-node-ids';
 
 export {
+  BIOME_ROSTER,
   CHUNK_SIZE,
   HEX_SIZE,
   JITTER,
+  MODIFIER_ROSTER,
   ORIGIN_CELL,
   REVEAL_RADIUS,
   WORLD_COORD_MAX,
@@ -20,6 +23,7 @@ export {
 export { decodeMortonKey } from './decode-morton-key';
 export { encodeMortonKey } from './encode-morton-key';
 export { findCellCoord } from './find-cell-coord';
+export { getBiome } from './get-biome';
 export { getDifficulty } from './get-difficulty';
 export { getHexDistance } from './get-hex-distance';
 export { isNodeSelectable } from './is-node-selectable';
