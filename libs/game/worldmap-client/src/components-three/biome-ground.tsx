@@ -11,13 +11,13 @@ import {
   RGBAFormat,
   UnsignedByteType,
 } from 'three';
-import { texture } from 'three/tsl';
-import type { Node } from 'three/webgpu';
 import { MeshBasicNodeMaterial } from 'three/webgpu';
 import invariant from 'tiny-invariant';
 import { NODE_POSITION_SCALING_FACTOR } from '../consts';
 import { useFogViewport } from '../state/use-fog-viewport';
 import { useUserSeed } from '../state/use-user-seed';
+import type { TSLTextureNode } from './scene-tsl';
+import { sceneTSL } from './scene-tsl';
 
 /**
  * Biome texels per axial cell unit. Modest by design: each texel walks the full Worley/value-noise
@@ -83,23 +83,12 @@ interface GroundBuffer {
   rows: number;
 }
 
-/**
- * Minimal structural view of a runtime TSL texture node, standing in for three's own node types:
- * every node there carries thousands of conditionally typed overloads and swizzle getters, and
- * touching the real type sends the native compiler's inference into a multi-gigabyte runaway that
- * OOMs the machine. Only the mutable value slot this module touches appears here; the object behind
- * it is the real TSL texture node throughout, so the runtime graph is unchanged.
- */
-interface GroundTextureNode {
-  value: DataTexture;
-}
-
 interface BiomeGroundResources {
   applied: { field: BiomeField; viewport: Viewport };
   readonly buffer: GroundBuffer;
   readonly geometry: BufferGeometry;
   readonly material: MeshBasicNodeMaterial;
-  readonly textureNode: GroundTextureNode;
+  readonly textureNode: TSLTextureNode;
 }
 
 /**
@@ -140,23 +129,6 @@ function BiomeGroundPlane(props: Readonly<BiomeGroundPlaneProps>) {
   );
 }
 
-interface GroundTSL {
-  readonly texture: (map: DataTexture) => GroundTextureNode;
-  readonly toNode: (node: Readonly<GroundTextureNode>) => Node<'vec4'>;
-}
-
-const groundTSLValues = {
-  texture,
-  toNode: (node: unknown) => node,
-};
-
-/**
- * The one boundary between three's node types and the minimal view above: `texture` is the
- * untouched runtime TSL builder; only the static view narrows what tsc ever elaborates.
- */
-// oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the values are untouched runtime TSL builders; only the static view narrows
-const groundTSL = groundTSLValues as unknown as GroundTSL;
-
 function buildBiomeGroundResources(
   field: BiomeField,
   viewport: Readonly<Viewport>,
@@ -169,11 +141,11 @@ function buildBiomeGroundResources(
 
   updateGroundBytes(buffer.bytes, field);
 
-  const textureNode = groundTSL.texture(buildGroundTexture(buffer));
+  const textureNode = sceneTSL.texture(buildGroundTexture(buffer));
 
   const material = new MeshBasicNodeMaterial();
 
-  material.colorNode = groundTSL.toNode(textureNode);
+  material.colorNode = sceneTSL.toNode(textureNode);
 
   return {
     applied: { field, viewport },

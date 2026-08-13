@@ -10,12 +10,12 @@ import {
   RedFormat,
   UnsignedByteType,
 } from 'three';
-import { mx_noise_float, positionWorld, texture, time } from 'three/tsl';
-import type { Node } from 'three/webgpu';
 import { MeshBasicNodeMaterial } from 'three/webgpu';
 import { NODE_POSITION_SCALING_FACTOR } from '../consts';
 import { useFogViewport } from '../state/use-fog-viewport';
 import { useRevealSources } from '../state/use-reveal-sources';
+import type { TSLMathNode, TSLTextureNode } from './scene-tsl';
+import { sceneTSL } from './scene-tsl';
 
 const SHROUD_COLOR = sceneColors.fogShroud;
 
@@ -132,54 +132,6 @@ function FogPlane(props: Readonly<FogPlaneProps>) {
 }
 
 /**
- * Minimal structural view of a runtime TSL node, standing in for three's own operator types: every
- * operator there carries thousands of conditionally typed overloads and swizzle getters, and one
- * call sends the native compiler's inference into a multi-gigabyte runaway that OOMs the machine.
- * Only the operations this module's shader math uses appear here; the objects behind it are real
- * TSL nodes throughout, so the runtime graph is unchanged.
- */
-interface FogMathNode {
-  readonly add: (other: FogMathNode | number) => FogMathNode;
-  readonly clamp: (min: number, max: number) => FogMathNode;
-  readonly mul: (other: FogMathNode | number) => FogMathNode;
-  readonly oneMinus: () => FogMathNode;
-  readonly sub: (other: FogMathNode | number) => FogMathNode;
-}
-
-/**
- * The texture node keeps its sampled channel beside the mutable value slot: assigning a new
- * texture rebinds the sampler on the next frame without touching the compiled shader.
- */
-interface FogTextureNode {
-  readonly r: FogMathNode;
-  value: DataTexture;
-}
-
-interface FogTSL {
-  readonly mx_noise_float: (coord: FogMathNode) => FogMathNode;
-  readonly positionWorld: { readonly xz: FogMathNode };
-  readonly texture: (map: DataTexture) => FogTextureNode;
-  readonly time: FogMathNode;
-  readonly toNode: (node: FogMathNode) => Node;
-}
-
-const fogTSLValues = {
-  mx_noise_float,
-  positionWorld,
-  texture,
-  time,
-  toNode: (node: unknown) => node,
-};
-
-/**
- * The one boundary between three's node types and the minimal view above: everything the shader
- * math touches enters through this facade already narrowed, so the math itself carries no
- * assertions and the checker never opens three's operator types.
- */
-// oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the values are untouched runtime TSL builders; only the static view narrows
-const fogTSL = fogTSLValues as unknown as FogTSL;
-
-/**
  * The byte buffer behind the live density texture, kept beside its dimensions so a same-size
  * rebuild can rewrite the pixels in place.
  */
@@ -194,7 +146,7 @@ interface FogPlaneResources {
   readonly density: DensityBuffer;
   readonly geometry: BufferGeometry;
   readonly material: MeshBasicNodeMaterial;
-  readonly textureNode: FogTextureNode;
+  readonly textureNode: TSLTextureNode;
 }
 
 function buildFogPlaneResources(
@@ -209,7 +161,7 @@ function buildFogPlaneResources(
 
   updateDensityBytes(density.bytes, field);
 
-  const textureNode = fogTSL.texture(buildDensityTexture(density));
+  const textureNode = sceneTSL.texture(buildDensityTexture(density));
 
   const material = new MeshBasicNodeMaterial({
     color: SHROUD_COLOR,
@@ -217,7 +169,7 @@ function buildFogPlaneResources(
     transparent: true,
   });
 
-  material.opacityNode = fogTSL.toNode(buildBillowedOpacity(textureNode.r));
+  material.opacityNode = sceneTSL.toNode(buildBillowedOpacity(textureNode.r));
 
   return {
     applied: { field, viewport },
@@ -350,13 +302,13 @@ function updateFogPlaneGeometry(geometry: BufferGeometry, viewport: Readonly<Vie
  * drags the billow along with the quad; the time term broadcast onto both axes blows the noise
  * field diagonally, like wind.
  */
-function buildBillowedOpacity(density: FogMathNode): FogMathNode {
-  const ground = fogTSL.positionWorld.xz;
-  const clock = fogTSL.time;
+function buildBillowedOpacity(density: TSLMathNode): TSLMathNode {
+  const ground = sceneTSL.positionWorld.xz;
+  const clock = sceneTSL.time;
   const band = density.mul(density.oneMinus()).mul(4);
   const drift = ground.mul(FOG_BILLOW_SCALE);
-  const coarse = fogTSL.mx_noise_float(drift.add(clock.mul(0.24)));
-  const fine = fogTSL.mx_noise_float(drift.mul(2.3).sub(clock.mul(0.31)));
+  const coarse = sceneTSL.mx_noise_float(drift.add(clock.mul(0.24)));
+  const fine = sceneTSL.mx_noise_float(drift.mul(2.3).sub(clock.mul(0.31)));
   const billow = coarse.mul(0.7).add(fine.mul(0.3));
   const amplitude = band.mul(FOG_BILLOW_EDGE).add(density.mul(FOG_BILLOW_DEEP));
 
