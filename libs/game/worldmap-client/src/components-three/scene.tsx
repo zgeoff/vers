@@ -7,6 +7,7 @@ import { BiomeScatter } from './biome-scatter';
 import { DevCamera } from './dev-camera';
 import { Floor } from './floor';
 import { FogOfWar } from './fog-of-war';
+import { PerfProbe } from './perf-probe';
 import { IsometricCamera } from './isometric-camera';
 import { ViewportTracker } from './viewport-tracker';
 import { WorldEdges } from './world-edges';
@@ -38,6 +39,7 @@ export function Scene() {
         <>
           <DevCamera />
           <AxesHelper />
+          <PerfProbe />
         </>
       )}
     </>

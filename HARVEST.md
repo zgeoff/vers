@@ -57,6 +57,22 @@ re-builds the keepers properly against these notes.
 | 2 | The Quiet | almost nothing; rare half-buried wreck | sparse | biggest swells (0.4) |
 | 3 | Ruinfall | tapered columns, lean, toppled trains, fallen giants | broad clumps | rough (0.2) |
 
+## Performance model (measured in-spike)
+
+- Per-frame rendering is a non-problem: the whole scatter system is two persistent instanced
+  draws; 5k+ parts idle at 240fps with 5ms worst frames. Instancing scales to 100k+ parts.
+- The cost is **rebuild spikes at chunk-crossing pans**, all main-thread: scatter build (~24ms
+  measured), biome field texels, and relief grid. Spike fixes: persistent instanced meshes with
+  capacity counts (no remount, no pipeline recompile), per-cell biome caches in the relief grid.
+- Production scaling ladder, in order: (1) incremental chunk generation — build only
+  newly-entered chunks, evict departed ones, never rebuild the whole viewport; (2) generation in
+  the SharedWorker (already the architecture's home for map derivation) with transferable
+  buffers; (3) LOD — debris and small props culled beyond a zoom threshold; (4) capacity-bounded
+  persistent GPU resources (done in spike).
+- Dev perf HUD (fps / worst frame / part counts / build ms) proved immediately necessary; a real
+  version belongs in the dev tools panel. three's WebGPU renderer doesn't expose draw/triangle
+  counts through `renderer.info.render` the WebGL way — needs its own counter source.
+
 ## Parked questions
 
 - Biome identity/naming is #272's design pass; everything here is placeholder vocabulary.

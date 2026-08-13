@@ -87,6 +87,9 @@ interface ScatterBuild {
   matrices: Float32Array;
 }
 
+/** spike perf stats, read by the dev HUD */
+export const scatterStats = { buildMs: 0, glow: 0, parts: 0 };
+
 export function BiomeScatter() {
   const userSeed = useUserSeed();
   const viewport = useFogViewport();
@@ -97,7 +100,14 @@ export function BiomeScatter() {
       return null;
     }
 
-    return buildScatter(userSeed, viewport);
+    const started = performance.now();
+    const built = buildScatter(userSeed, viewport);
+
+    scatterStats.buildMs = performance.now() - started;
+    scatterStats.parts = built.count;
+    scatterStats.glow = built.glowCount;
+
+    return built;
   }, [userSeed, viewport]);
 
   if (!isVisible || build === null || build.count === 0) {
@@ -107,7 +117,7 @@ export function BiomeScatter() {
   return (
     <>
       <directionalLight intensity={1.4} position={[30, -40, 80]} />
-      <ScatterParts key={build.id} build={build} />
+      <ScatterParts build={build} />
     </>
   );
 }
@@ -127,6 +137,7 @@ function ScatterParts({ build }: Readonly<{ build: ScatterBuild }>) {
         mesh.setColorAt(i, tempColor.fromArray(build.colors, i * 3));
       }
 
+      mesh.count = build.count;
       mesh.instanceMatrix.needsUpdate = true;
 
       if (mesh.instanceColor) {
@@ -138,33 +149,30 @@ function ScatterParts({ build }: Readonly<{ build: ScatterBuild }>) {
 
     const glow = glowRef.current;
 
-    if (glow !== null && build.glowCount > 0) {
+    if (glow !== null) {
       for (let i = 0; i < build.glowCount; i++) {
         glow.instanceMatrix.array.set(build.glowMatrices.subarray(i * 16, i * 16 + 16), i * 16);
       }
 
+      glow.count = build.glowCount;
       glow.instanceMatrix.needsUpdate = true;
 
       glow.computeBoundingSphere();
     }
   }, [build]);
 
+  // meshes allocate MAX capacity once and persist across pans — only count and buffers change, so
+  // the GPU pipeline never recompiles (the discipline the fog plane taught)
   return (
     <>
-      <instancedMesh args={[undefined, undefined, build.count]} frustumCulled={false} ref={meshRef}>
+      <instancedMesh args={[undefined, undefined, MAX_PARTS]} frustumCulled={false} ref={meshRef}>
         <boxGeometry args={[1, 1, 1]} />
         <ScatterMaterial roughness={0.85} />
       </instancedMesh>
-      {build.glowCount > 0 && (
-        <instancedMesh
-          args={[undefined, undefined, build.glowCount]}
-          frustumCulled={false}
-          ref={glowRef}
-        >
-          <boxGeometry args={[1, 1, 1]} />
-          <GlowMaterial color={GLOW_COLOR} />
-        </instancedMesh>
-      )}
+      <instancedMesh args={[undefined, undefined, MAX_GLOW]} frustumCulled={false} ref={glowRef}>
+        <boxGeometry args={[1, 1, 1]} />
+        <GlowMaterial color={GLOW_COLOR} />
+      </instancedMesh>
     </>
   );
 }

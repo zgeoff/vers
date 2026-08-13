@@ -271,6 +271,19 @@ function buildReliefGeometry(
 
   const positions = new Float32Array(cols * rows * 3);
   const uvs = new Float32Array(cols * rows * 2);
+  const biomes = new Map<string, number>();
+
+  const getCellBiome = (cellX: number, cellY: number): number => {
+    const key = `${cellX}_${cellY}`;
+    let biome = biomes.get(key);
+
+    if (biome === undefined) {
+      biome = getBiome(userSeed, cellX, cellY).baseID;
+      biomes.set(key, biome);
+    }
+
+    return biome;
+  };
 
   for (let j = 0; j < rows; j++) {
     const cy = viewport.minCY - 0.5 + j * strideY;
@@ -278,7 +291,7 @@ function buildReliefGeometry(
     for (let i = 0; i < cols; i++) {
       const cx = viewport.minCX - 0.5 + i * strideX;
       const [x, y] = toHexPosition(cx, cy);
-      const biome = getBiome(userSeed, Math.round(cx), Math.round(cy)).baseID;
+      const biome = getCellBiome(Math.round(cx), Math.round(cy));
       const z = sampler(x, y, biome);
       const index = j * cols + i;
 
