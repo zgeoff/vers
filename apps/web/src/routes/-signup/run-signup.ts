@@ -45,6 +45,9 @@ export async function runSignup(formData: FormData): Promise<Response | Submissi
       type: 'onboarding',
     });
 
+    // spike-only: print the OTP so the agent-driven browser can complete signup
+    console.log('[spike-otp]', verification.otp);
+
     const origin = new URL(getRequest().url).origin;
 
     const verificationURL = `${origin}/verify-otp?${new URLSearchParams({ code: verification.otp, target: email, type: 'onboarding' }).toString()}`;

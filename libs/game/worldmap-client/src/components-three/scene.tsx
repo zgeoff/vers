@@ -3,6 +3,7 @@ import { useIsFogOfWarVisible } from '../state/use-is-fog-of-war-visible';
 import { useWorldGraph } from '../state/use-world-graph';
 import { AxesHelper } from './axes-helper';
 import { BiomeGround } from './biome-ground';
+import { BiomeScatter } from './biome-scatter';
 import { DevCamera } from './dev-camera';
 import { Floor } from './floor';
 import { FogOfWar } from './fog-of-war';
@@ -25,6 +26,7 @@ export function Scene() {
 
       <group rotation={[-Math.PI / 2, 0, 0]}>
         <BiomeGround />
+        <BiomeScatter />
         <WorldMapNodes nodes={nodes} />
         <WorldEdges edges={edges} />
         {isFogOfWarVisible && <FogOfWar />}

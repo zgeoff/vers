@@ -1,5 +1,7 @@
 export { buildBiomeField } from './build-biome-field';
 export { buildCellNode } from './build-cell-node';
+export { buildCoordHash, buildCoordHashUnit } from './build-coord-hash';
+export { buildValueNoise } from './build-value-noise';
 export { buildChunk } from './build-chunk';
 export { buildRevealDistanceField } from './build-reveal-distance-field';
 export { buildRevealSources } from './build-reveal-sources';
