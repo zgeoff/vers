@@ -110,7 +110,9 @@ export interface BiomeSample {
 
 /**
  * A biome texel grid over a viewport, row-major with `cols * rows` samples, laid out identically to
- * `RevealDistanceField` so a quad spanning the same viewport lines up with both.
+ * `RevealDistanceField` so a quad spanning the same viewport lines up with both. Ownership is
+ * node-anchored: a texel carries its nearest jittered node's biome, `blendT` its proximity to the
+ * nearest differently-biomed territory, and `neighbourBaseID` that territory's biome.
  */
 export interface BiomeField {
   readonly baseIDs: ReadonlyUint8Array;

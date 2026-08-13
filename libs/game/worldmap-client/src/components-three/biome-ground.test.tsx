@@ -151,7 +151,7 @@ function getGroundTexture(mesh: Mesh): DataTexture {
  * chunk-rounding `useFogViewport` applies before BiomeGround ever sees a viewport — so the expected
  * texel counts match what the component actually builds from, not the raw store viewport.
  */
-const TEXELS_PER_CELL = 2;
+const TEXELS_PER_CELL = 4;
 const VIEWPORT_MARGIN_CELLS = 2;
 
 function buildExpectedCols(viewport: Readonly<Viewport>): number {

@@ -23,7 +23,7 @@ test('it draws a stable field for a fixed seed', () => {
     [
       {
         "baseID": 3,
-        "blendT": 0.19260909295962514,
+        "blendT": 0.2562528820559893,
         "modifierID": 0,
         "neighbourBaseID": 0,
       },
@@ -35,7 +35,7 @@ test('it draws a stable field for a fixed seed', () => {
       },
       {
         "baseID": 3,
-        "blendT": 0.2015950673273217,
+        "blendT": 0.8364022641365576,
         "modifierID": 0,
         "neighbourBaseID": 3,
       },

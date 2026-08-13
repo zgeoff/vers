@@ -32,27 +32,9 @@ test('it produces the same field for the same input', () => {
   );
 });
 
-test('it agrees with getBiome called directly on the same cell at resolution 1', () => {
-  const viewport = { maxCX: 5, maxCY: 5, minCX: -5, minCY: -5 };
-  const field = buildBiomeField(23, viewport, { resolution: 1 });
-
-  // texel (i, j) at resolution 1 lands exactly on axial (minCX + i, minCY + j) — probe the cell at
-  // viewport-relative offset (3, 4)
-  const cx = viewport.minCX + 3;
-  const cy = viewport.minCY + 4;
-  const index = 4 * field.cols + 3;
-  const direct = getBiome(23, cx, cy);
-
-  expect(field.baseIDs[index]).toBe(direct.baseID);
-  expect(field.neighbourBaseIDs[index]).toBe(direct.neighbourBaseID);
-  expect(field.modifierIDs[index]).toBe(direct.modifierID);
-
-  // the field stores blendT in a Float32Array, so it carries less precision than the plain
-  // 64-bit number getBiome returns for the same sample
-  expect(field.blendTs[index]).toBeCloseTo(direct.blendT, 5);
-});
-
-test('it agrees with getBiome across every texel of a viewport spanning many coarse cells', () => {
+test('it wears each node cell its own biome across a viewport spanning many coarse cells', () => {
+  // texel (i, j) at resolution 1 lands exactly on axial (minCX + i, minCY + j) — a cell's own
+  // texel, whose nearest jittered node is always the cell's own since jitter stays inside the cell
   const viewport = { maxCX: 20, maxCY: 20, minCX: -20, minCY: -20 };
   const field = buildBiomeField(31, viewport, { resolution: 1 });
 
@@ -62,8 +44,23 @@ test('it agrees with getBiome across every texel of a viewport spanning many coa
       const direct = getBiome(31, cx, cy);
 
       expect(field.baseIDs[index]).toBe(direct.baseID);
-      expect(field.neighbourBaseIDs[index]).toBe(direct.neighbourBaseID);
       expect(field.modifierIDs[index]).toBe(direct.modifierID);
+    }
+  }
+});
+
+test('it keeps blendT inside the unit interval and raises it only across a real biome border', () => {
+  const viewport = { maxCX: 12, maxCY: 12, minCX: -12, minCY: -12 };
+  const field = buildBiomeField(23, viewport, { resolution: 2 });
+
+  for (let index = 0; index < field.cols * field.rows; index++) {
+    const blendT = field.blendTs[index] ?? 0;
+
+    expect(blendT).toBeGreaterThanOrEqual(0);
+    expect(blendT).toBeLessThanOrEqual(1);
+
+    if (blendT > 0) {
+      expect(field.baseIDs[index]).not.toBe(field.neighbourBaseIDs[index]);
     }
   }
 });

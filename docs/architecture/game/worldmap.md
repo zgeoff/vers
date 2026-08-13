@@ -152,6 +152,11 @@ Biome is how the terrain looks, so it renders, so it belongs on the public geome
 through fog like distant landscape. Its constraints keep it from becoming a predictor of sealed
 reward magnitude.
 
+Biome is a per-node property, and terrain renders as node territories: every point of ground wears
+the biome of its nearest jittered node, so a biome patch is the union of its nodes' territories,
+borders weave between nodes, and no node ever sits on a border. The low-frequency noise field below
+assigns each node's biome; node jitter alone gives the drawn borders their organic wander.
+
 - **Independent hash domain** — biome is a low-frequency
   [value](https://en.wikipedia.org/wiki/Value_noise)/[Worley](https://en.wikipedia.org/wiki/Worley_noise)
   field over position — smooth noise functions of a coordinate that paint organic regional patches,

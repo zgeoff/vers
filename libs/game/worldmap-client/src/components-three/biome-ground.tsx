@@ -23,7 +23,7 @@ import { useUserSeed } from '../state/use-user-seed';
  * Biome texels per axial cell unit. Modest by design: each texel walks the full Worley/value-noise
  * sample, so the resolution trades border smoothness against per-pan rebuild cost.
  */
-const BIOME_TEXELS_PER_CELL = 2;
+const BIOME_TEXELS_PER_CELL = 4;
 
 /**
  * Cells the ground quad extends past the chunk-aligned viewport, covering the screen edge between a

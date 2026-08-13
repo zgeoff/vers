@@ -88,7 +88,7 @@ export const MODIFIER_PATCH_SIZE = 18;
  * Peak per-axis offset the edge-wobble domain warp displaces a sample position by, in scene units.
  * Keeps patch borders from reading as straight Worley-cell edges.
  */
-export const BIOME_EDGE_WOBBLE_AMPLITUDE = 1.5;
+export const BIOME_EDGE_WOBBLE_AMPLITUDE = 0;
 
 /**
  * Spatial frequency, in inverse scene units, the edge-wobble value-noise field is sampled at.
@@ -101,6 +101,13 @@ export const BIOME_EDGE_WOBBLE_FREQUENCY = 0.25;
  * 1 over this span of nearest/second-nearest distance difference.
  */
 export const BIOME_BLEND_BAND = 1;
+
+/**
+ * Scene-unit width of the tint crossfade along a territory border in the rendered biome field:
+ * a texel's `blendT` ramps from 0 to 1 as its nearest and second-nearest nodes' distances converge
+ * across this span, and only where the two nodes wear different biomes.
+ */
+export const BIOME_TERRITORY_BLEND_BAND = 0.75;
 
 /**
  * Base-biome alternatives and their distance-banded rarity, placeholder and tunable. Every name is
