@@ -34,14 +34,14 @@ import { sceneTSL } from './scene-tsl';
 const ScatterMaterial = extend(MeshStandardNodeMaterial);
 const GlowMaterial = extend(MeshBasicNodeMaterial);
 
-const TEXELS_PER_CELL = 4;
+const TEXELS_PER_CELL = 8;
 const GRID_VERTS_PER_CELL = 2;
 
 /** chunks the scatter concat spans around the viewport center (ground tiles render everywhere) */
 const SCATTER_CHUNK_RADIUS = 2;
 
 /** chunk builds allowed per progressive tick */
-const BUILDS_PER_TICK = 2;
+const BUILDS_PER_TICK = 1;
 
 /** cached chunks kept before evicting least-recently-used off-screen entries */
 const CACHE_CAP = 280;
@@ -487,14 +487,15 @@ function buildTileTexture(field: ReturnType<typeof buildBiomeField>): DataTextur
   const bytes = new Uint8Array(field.cols * field.rows * 4);
   const count = field.cols * field.rows;
 
-  // deck-plate seams: a darker line every two cells on both axes — the ground reads as built
-  // plating up close and the 1-texel lines dissolve at distance, a free level-of-detail
-  const seamPeriod = TEXELS_PER_CELL * 2;
+  // district grid, maintained ground only: seams every half cell — at ~500m-1km per cell that
+  // reads as city blocks around civilization, not floor tiling across wilderness
+  const seamPeriod = TEXELS_PER_CELL / 2;
 
   for (let index = 0; index < count; index++) {
     const i = index % field.cols;
     const j = Math.floor(index / field.cols);
-    const isSeam = i % seamPeriod === 0 || j % seamPeriod === 0;
+    const isSeam =
+      (field.baseIDs[index] ?? 0) === 0 && (i % seamPeriod === 0 || j % seamPeriod === 0);
     const base = getBaseTint(field.baseIDs[index] ?? 0);
     const neighbour = getBaseTint(field.neighbourBaseIDs[index] ?? 0);
     const mixT = 0.5 * (field.blendTs[index] ?? 0);

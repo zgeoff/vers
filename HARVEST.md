@@ -48,6 +48,14 @@ re-builds the keepers properly against these notes.
   Fog switched to a depth-independent veil (depthTest off, renderOrder last) to stop tall props
   poking through — evaluate which look design wants.
 
+## World scale canon (Geoff, in-spike)
+
+- **Node spacing is ~500m-1km.** One cell ≈ one settlement-to-settlement leg; one world unit
+  (spacing/17.3) ≈ 30-60m. Consequences: props are arcology-scale ruin fragments (coherent with
+  habitat fiction), ground texture at sub-cell scale means districts/blocks, never floor tiles,
+  and any future texture detail must be sanity-checked against this scale. Nothing else in the
+  spike had this written down — check every size against it in the production pass.
+
 ## Current biome parameter identities (placeholder roster biome_1..4)
 
 | id | working name | grammar | cluster | relief |
