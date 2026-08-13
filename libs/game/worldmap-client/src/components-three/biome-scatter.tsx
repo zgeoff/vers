@@ -990,45 +990,46 @@ function buildViaduct(
   const step = usable / segments;
   const gapChance = biome === 3 ? 0.12 : 0;
 
-  for (let k = 0; k < segments; k++) {
-    const t = (margin + step * (k + 0.5)) / len;
-    const px = start[0] + dx * t;
-    const py = start[1] + dy * t;
+  // one continuous ribbon per run: the near-top-down camera erases elevation cues, so a road
+  // must read as an unbroken band — ruin gaps split the ribbon into separate runs
+  let runStart = 0;
 
-    if (draw(100 + k) < gapChance) {
-      // the span fell: its slab lies skewed on the ground beside the line
-      if (draw(140 + k) > 0.4) {
-        pushPart(
-          sink,
-          px + (draw(160 + k) - 0.5) * 0.24,
-          py + (draw(180 + k) - 0.5) * 0.24,
-          DECK_THICKNESS,
-          step * 1.02,
-          DECK_WIDTH,
-          DECK_THICKNESS,
-          spin + (draw(200 + k) - 0.5) * 1.2,
-          0,
-          base,
-          0.5,
-        );
-      }
+  for (let k = 0; k <= segments; k++) {
+    const gap = k === segments || draw(100 + k) < gapChance;
 
+    if (!gap) {
       continue;
     }
 
-    const shade = 0.9 + draw(120 + k) * 0.25;
+    if (k > runStart) {
+      const t0 = (margin + step * runStart) / len;
+      const t1 = (margin + step * k) / len;
+      const cx = start[0] + dx * (t0 + t1) / 2;
+      const cy = start[1] + dy * (t0 + t1) / 2;
+      const runLen = (t1 - t0) * len;
 
-    pushPart(sink, px, py, DECK_Z, step * 1.04, DECK_WIDTH, DECK_THICKNESS, spin, 0, DECK_COLOR, shade);
+      pushPart(sink, cx, cy, DECK_Z, runLen, DECK_WIDTH, DECK_THICKNESS, spin, 0, DECK_COLOR, 1);
+    }
 
-    // guardrail lips give the ribbon its edge definition from the isometric camera
-    const railOffset = (DECK_WIDTH / 2) * 0.92;
-    const nx = -Math.sin(spin) * railOffset;
-    const ny = Math.cos(spin) * railOffset;
+    if (k < segments && draw(140 + k) > 0.4) {
+      // the fallen span lies skewed beside the break
+      const t = (margin + step * (k + 0.5)) / len;
 
-    pushPart(sink, px + nx, py + ny, DECK_Z + 0.02, step * 1.04, 0.018, 0.04, spin, 0, DECK_COLOR, shade * 0.7);
-    pushPart(sink, px - nx, py - ny, DECK_Z + 0.02, step * 1.04, 0.018, 0.04, spin, 0, DECK_COLOR, shade * 0.7);
+      pushPart(
+        sink,
+        start[0] + dx * t + (draw(160 + k) - 0.5) * 0.24,
+        start[1] + dy * t + (draw(180 + k) - 0.5) * 0.24,
+        DECK_THICKNESS,
+        step * 1.02,
+        DECK_WIDTH,
+        DECK_THICKNESS,
+        spin + (draw(200 + k) - 0.5) * 1.2,
+        0,
+        base,
+        0.5,
+      );
+    }
 
-    // pier under every standing segment
-    pushPart(sink, px, py, DECK_Z / 2, 0.032, 0.032, DECK_Z, spin, 0, DECK_COLOR, shade * 0.55);
+    runStart = k + 1;
   }
 }

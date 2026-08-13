@@ -408,6 +408,22 @@ export function ChunkScatter() {
 
     scatterStats.parts = parts;
     scatterStats.glow = glows;
+
+    // TEMP(debug): expose buffer truth for remote diagnosis
+    let deckish = 0;
+
+    for (let i = 0; i < parts; i++) {
+      const z = mesh.instanceMatrix.array[i * 16 + 14] ?? 0;
+
+      if (z > 0.55 && z < 0.9) deckish += 1;
+    }
+
+    (window as unknown as Record<string, unknown>)['__scatterDebug'] = {
+      chunks: windowed.length,
+      deckish,
+      parts,
+      sample: Array.from(mesh.instanceMatrix.array.slice(0, 16)),
+    };
   }, [windowed, entries]);
 
   // instanceColor must exist before the first concat writes into it

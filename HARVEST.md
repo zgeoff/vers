@@ -160,6 +160,24 @@ re-builds the keepers properly against these notes.
   "build 0ms". Fix: restart the dev server. Headless `bun` execution of the same module proved
   the code was correct while the browser lied.
 
+## OPEN MYSTERY for the next agent (highest priority)
+
+Viaduct decks generate but do not visibly render, and the scatter buffer census is byte-identical
+(11599 parts / 2424 deck-height) across four different deck implementations (segmented+rails,
+segmented+stripes, the pre-stripe commit, continuous ribbons) — including in fresh tabs with a
+module-load canary proving current code executes. Forensics so far:
+
+- Headless bun execution of `buildScatterForBox` produces correct, version-varying output
+  (590 deck parts for a chunk, changing with code) — the generator is right.
+- The page-side concat effect reports the same frozen numbers regardless of code version.
+- Deck parts sit at z≈0.7 world inside the rotated group; other geometry at similar z renders.
+- Suspects not yet eliminated: a second, stale copy of the worldmap-client module graph feeding
+  the actual rendered meshes (vite dep-optimization of workspace source under bun's isolated
+  linker?), the SharedWorker holding a pinned module graph, or the debug-read effect reading a
+  different mesh than the one rendered. The fix likely explains tonight's whole staleness saga.
+- Repro: spike branch, `bun run dev:app-web`, explore page; compare `window.__scatterDebug`
+  against a headless `buildScatterForBox` run for the same seed/chunks.
+
 ## Parked questions
 
 - Biome identity/naming is #272's design pass; everything here is placeholder vocabulary.
