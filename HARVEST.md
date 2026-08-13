@@ -145,10 +145,13 @@ re-builds the keepers properly against these notes.
 
 ## Round: physical infrastructure (Geoff's freeway idea)
 
-- **Viaducts**: every edge carries an elevated deck — segments on piers with guardrail lips, in a
-  cool concrete color deliberately outside all biome palettes so infrastructure reads as its own
-  civilization layer. Ruin routes lose ~12% of spans (gap-toothed freeway, fallen slab below);
-  the quiet has no built path. The nav line stays as UI above the physical deck.
+- **Viaducts**: every edge carries an elevated deck — segments on piers with guardrail lips. Ruin
+  routes lose ~12% of spans (gap-toothed freeway, fallen slab below); the quiet has no built path.
+  The nav line stays as UI above the physical deck. The original "concrete outside all biome
+  palettes" color call was made before decks ever rendered (see the resolved mystery) and reversed
+  on first sight: decks tint per biome (palette lerped 0.35 toward pale concrete), so regions read
+  from their road network alone. Per-edge gauge (0.7–1.04× width) and elevation (0.65–1.35×)
+  variation breaks the printed-circuit uniformity; each route stays consistent along its length.
 - **Node sites**: every node gets a foundation pad; most get a compound of 1-3 buildings —
   destinations read as places. Pad first cut was 4x too large (billboard effect) — foundation
   elements want to be modest.
@@ -160,23 +163,44 @@ re-builds the keepers properly against these notes.
   "build 0ms". Fix: restart the dev server. Headless `bun` execution of the same module proved
   the code was correct while the browser lied.
 
-## OPEN MYSTERY for the next agent (highest priority)
+## MYSTERY RESOLVED: the edge-ownership guard never matched
 
-Viaduct decks generate but do not visibly render, and the scatter buffer census is byte-identical
-(11599 parts / 2424 deck-height) across four different deck implementations (segmented+rails,
-segmented+stripes, the pre-stripe commit, continuous ribbons) — including in fresh tabs with a
-module-load canary proving current code executes. Forensics so far:
+The viaduct mystery was a plain data-shape bug, present since the road-lights commit — no
+staleness, no second module graph, no SharedWorker involvement.
 
-- Headless bun execution of `buildScatterForBox` produces correct, version-varying output
-  (590 deck parts for a chunk, changing with code) — the generator is right.
-- The page-side concat effect reports the same frozen numbers regardless of code version.
-- Deck parts sit at z≈0.7 world inside the rotated group; other geometry at similar z renders.
-- Suspects not yet eliminated: a second, stale copy of the worldmap-client module graph feeding
-  the actual rendered meshes (vite dep-optimization of workspace source under bun's isolated
-  linker?), the SharedWorker holding a pinned module graph, or the debug-read effect reading a
-  different mesh than the one rendered. The fix likely explains tonight's whole staleness saga.
-- Repro: spike branch, `bun run dev:app-web`, explore page; compare `window.__scatterDebug`
-  against a headless `buildScatterForBox` run for the same seed/chunks.
+- `WorldEdge.start`/`end` are node **positions** (floats), not cell coordinates, and `start` is
+  always the queried cell's own node. The ownership guard
+  `edge.start[0] !== cx || edge.start[1] !== cy` compared floats to integer cell coords — never
+  true — so the whole owned-edge block was dead code: **no edge furniture, road lights, or
+  viaduct ever rendered in any version of the spike.** The byte-identical census across four deck
+  implementations was this, not staleness.
+- Both diagnostics that "proved" decks existed were wrong the same way: the deckish census
+  counted a z-window (0.55–0.9 world) that stack segments also occupy, and the headless "590 deck
+  parts" run counted the same proxy. A color-keyed census (flash decks magenta, count exact RGB
+  in the instance buffer) found zero in browser AND headless — that was the pivot.
+- Same misuse poisoned two more systems: `isClear`'s edge corridors and ground-relief's road
+  grading both fed `edge.start` positions into `buildCellNode` as cell coords, producing garbage
+  segments — edge clearance and road-flattening ran on phantom roads all spike (node clearance
+  was correct, which carried the illusion).
+- Fix (in-spike): ownership dedupe via `edge.id.startsWith(\`${cx}_${cy}|\`)` (node ids are
+  `cx_cy`, edge ids sorted `a|b`); endpoints used directly as positions. Every prior art
+  verdict predates roads-as-objects — densities, deck width, lamp frequency all untuned against
+  the real render.
+- Lesson for production: census by exact signature (color key), never by geometric proxy; and a
+  positions-vs-cells type distinction (branded types or named fields `startPosition`) would have
+  made this bug unrepresentable.
+
+## Round: lattice de-uniforming (post-mystery)
+
+- **Node jitter doubled to 0.4** (from 0.2), edge distance cap widened 2.35 → 2.9. The old 0.2 was
+  the provable maximum under the "only the six adjacent cells ever connect" bound — the two
+  constants pinch at jitter ≈ 0.22. Past it, the Gabriel witness test prunes second-ring edges
+  instead of the cap, and a few survive (~20 per 1600 cells): long organic hauls, a feature not a
+  defect. Audit across 3 seeds × 1600 cells: zero isolated nodes, average degree ~5.8 (uniform
+  lattice gives ~6). No storage or sync implications — positions are derived everywhere from
+  `buildCellNode`, ids stay cell-keyed.
+- Production adopting bigger jitter re-derives worldmap-core's golden test values (they encode
+  0.2-jitter positions) and accepts second-ring edges as canon.
 
 ## Parked questions
 
@@ -209,3 +233,5 @@ module-load canary proving current code executes. Forensics so far:
 - The fog toggle and scatter toggle dev-tools additions are keepable patterns (match dev-slice
   conventions; add tests).
 - Spike signup OTP log in `run-signup.ts` must never merge.
+- `worldmap-core/src/consts.ts` carries SPIKE-marked JITTER/EDGE_DISTANCE_CAP overrides; the core
+  package's golden tests are stale against them on this branch.

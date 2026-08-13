@@ -17,7 +17,9 @@ export const HEX_SIZE = 1;
  * spacing so a jittered node never leaves its own cell and the edge cap still clears every
  * nearest-neighbour pair.
  */
-export const JITTER = 0.2;
+// SPIKE: pushed past the 0.22 bound that kept ring-exclusivity provable; the Gabriel witness test
+// now prunes second-ring edges instead of the distance cap
+export const JITTER = 0.4;
 
 /**
  * Two nodes connect only when their jittered centers fall within this distance. Set above the
@@ -25,7 +27,8 @@ export const JITTER = 0.2;
  * below the nearest second-ring distance so only the six adjacent cells are ever candidates — the
  * bound that keeps the Gabriel backbone connected.
  */
-export const EDGE_DISTANCE_CAP = 2.35;
+// SPIKE: widened to cover the worst jittered nearest-neighbour stretch (1.732 + 2√2·0.4 ≈ 2.86)
+export const EDGE_DISTANCE_CAP = 2.9;
 
 /**
  * Hex-distance span mapped to one difficulty step. Difficulty climbs one level every `DIFFICULTY_STEP`

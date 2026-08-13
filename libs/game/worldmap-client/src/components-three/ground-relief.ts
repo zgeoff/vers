@@ -53,12 +53,13 @@ export function makeGroundHeightSampler(userSeed: number): GroundHeightSampler {
     let segments = edges.get(key);
 
     if (segments === undefined) {
-      segments = collectNodeEdges(userSeed, cx, cy).map((edge) => {
-        const start = getNode(edge.start[0], edge.start[1]).position;
-        const end = getNode(edge.end[0], edge.end[1]).position;
-
-        return { ex: end[0], ey: end[1], sx: start[0], sy: start[1] };
-      });
+      // edge.start/end are node positions already, never cell coordinates
+      segments = collectNodeEdges(userSeed, cx, cy).map((edge) => ({
+        ex: edge.end[0],
+        ey: edge.end[1],
+        sx: edge.start[0],
+        sy: edge.start[1],
+      }));
       edges.set(key, segments);
     }
 

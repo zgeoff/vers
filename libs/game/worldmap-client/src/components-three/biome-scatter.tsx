@@ -81,6 +81,10 @@ function getAccent(biome: number): Color {
   return ACCENTS[biome] ?? ACCENTS[0]!;
 }
 
+function getDeckColor(biome: number): Color {
+  return DECK_COLORS[biome] ?? DECK_COLORS[0]!;
+}
+
 export interface ScatterBuild {
   colors: Float32Array;
   count: number;
@@ -168,12 +172,13 @@ export function buildScatterForBox(
     let segments = edgeCache.get(key);
 
     if (segments === undefined) {
-      segments = collectNodeEdges(userSeed, cx, cy).map((edge) => {
-        const start = getNode(edge.start[0], edge.start[1]).position;
-        const end = getNode(edge.end[0], edge.end[1]).position;
-
-        return { ex: end[0], ey: end[1], sx: start[0], sy: start[1] };
-      });
+      // edge.start/end are node positions already, never cell coordinates
+      segments = collectNodeEdges(userSeed, cx, cy).map((edge) => ({
+        ex: edge.end[0],
+        ey: edge.end[1],
+        sx: edge.start[0],
+        sy: edge.start[1],
+      }));
       edgeCache.set(key, segments);
     }
 
@@ -322,12 +327,14 @@ export function buildScatterForBox(
         const owned = collectNodeEdges(userSeed, cx, cy);
 
         for (const [e, edge] of owned.entries()) {
-          if (edge.start[0] !== cx || edge.start[1] !== cy) {
+          // both endpoints derive the same undirected edge; the cell whose node id leads the
+          // sorted edge id builds its furniture, so each edge dresses exactly once
+          if (!edge.id.startsWith(`${cx}_${cy}|`)) {
             continue;
           }
 
-          const start = getNode(edge.start[0], edge.start[1]).position;
-          const end = getNode(edge.end[0], edge.end[1]).position;
+          const start = edge.start;
+          const end = edge.end;
           const edgeDraw = (salt: number) =>
             buildCoordHashUnit(userSeed, cx, cy, CH + 700 + e * 8 + salt);
 
@@ -959,9 +966,9 @@ const DECK_WIDTH = 0.2;
 const DECK_THICKNESS = 0.03;
 const DECK_SEGMENT = 0.3;
 
-/** cool concrete, deliberately outside every biome palette — infrastructure reads as its own
- * civilization layer against the warm world */
-const DECK_COLOR = new Color('#9aa3b8');
+/** deck plating per biome: the biome palette pulled partway toward pale concrete, so routes
+ * belong to the terrain they cross while still reading as built infrastructure */
+const DECK_COLORS = PALETTE.map((base) => base.clone().lerp(new Color('#9aa3b8'), 0.35));
 
 /**
  * The physical travel path under the navigation line: an elevated viaduct of deck segments on
@@ -990,6 +997,11 @@ function buildViaduct(
   const step = usable / segments;
   const gapChance = biome === 3 ? 0.12 : 0;
 
+  // per-edge build variation: routes differ in gauge and elevation, each route consistent
+  const deckW = DECK_WIDTH * (0.7 + draw(90) * 0.34);
+  const deckZ = DECK_Z * (0.65 + draw(91) * 0.7);
+  const deckT = DECK_THICKNESS * (0.8 + draw(92) * 0.5);
+
   // one continuous ribbon per run: the near-top-down camera erases elevation cues, so a road
   // must read as an unbroken band — ruin gaps split the ribbon into separate runs
   let runStart = 0;
@@ -1008,7 +1020,7 @@ function buildViaduct(
       const cy = start[1] + dy * (t0 + t1) / 2;
       const runLen = (t1 - t0) * len;
 
-      pushPart(sink, cx, cy, DECK_Z, runLen, DECK_WIDTH, DECK_THICKNESS, spin, 0, DECK_COLOR, 1);
+      pushPart(sink, cx, cy, deckZ, runLen, deckW, deckT, spin, 0, getDeckColor(biome), 1);
     }
 
     if (k < segments && draw(140 + k) > 0.4) {
@@ -1019,10 +1031,10 @@ function buildViaduct(
         sink,
         start[0] + dx * t + (draw(160 + k) - 0.5) * 0.24,
         start[1] + dy * t + (draw(180 + k) - 0.5) * 0.24,
-        DECK_THICKNESS,
+        deckT,
         step * 1.02,
-        DECK_WIDTH,
-        DECK_THICKNESS,
+        deckW,
+        deckT,
         spin + (draw(200 + k) - 0.5) * 1.2,
         0,
         base,
