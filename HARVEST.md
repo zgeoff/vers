@@ -143,6 +143,23 @@ re-builds the keepers properly against these notes.
 - Watch-out: the Maintained biome's navy ground sits near the blackout tint family — differentiate
   before both ship, or cold-dead and cold-maintained will blur.
 
+## Round: physical infrastructure (Geoff's freeway idea)
+
+- **Viaducts**: every edge carries an elevated deck — segments on piers with guardrail lips, in a
+  cool concrete color deliberately outside all biome palettes so infrastructure reads as its own
+  civilization layer. Ruin routes lose ~12% of spans (gap-toothed freeway, fallen slab below);
+  the quiet has no built path. The nav line stays as UI above the physical deck.
+- **Node sites**: every node gets a foundation pad; most get a compound of 1-3 buildings —
+  destinations read as places. Pad first cut was 4x too large (billboard effect) — foundation
+  elements want to be modest.
+- Verdict from first full render: the three-layer model completes — sites, transit, wilderness —
+  and the map reads as a derelict megacity network from orbit.
+- **Debug war story**: two edit rounds silently never reached the browser — vite's file watcher
+  died (WSL failure mode), serving stale transforms through hard reloads. Symptom signature:
+  pixel-identical renders and frozen part counts across code changes that must change them, plus
+  "build 0ms". Fix: restart the dev server. Headless `bun` execution of the same module proved
+  the code was correct while the browser lied.
+
 ## Parked questions
 
 - Biome identity/naming is #272's design pass; everything here is placeholder vocabulary.

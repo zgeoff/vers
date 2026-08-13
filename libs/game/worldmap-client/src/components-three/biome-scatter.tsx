@@ -334,6 +334,7 @@ export function buildScatterForBox(
           sink.baseZ = 0;
 
           buildEdgeFurniture(edgeDraw, start, end, biome, sink);
+          buildViaduct(edgeDraw, start, end, biome, sink);
         }
       }
 
@@ -582,6 +583,35 @@ function buildNodeStructure(
   const archetype = draw(0);
   const [x, y] = node.position;
   const base = PALETTE[biome] ?? PALETTE[0]!;
+
+  // every node is a site: a modest foundation pad under the disc, so destinations read as places
+  pushPart(sink, x, y, 0.006, 0.3, 0.3, 0.012, draw(90) * Math.PI, 0, base, 0.55);
+
+  // compound buildings ring most sites — the settlement the node represents
+  if (archetype > 0.2) {
+    const buildings = 1 + Math.floor(draw(91) * 3);
+
+    for (let b = 0; b < buildings; b++) {
+      const angle = draw(92 + b) * Math.PI * 2;
+      const radius = 0.34 + draw(95 + b) * 0.14;
+      const w = 0.07 + draw(98 + b) * 0.08;
+      const h = 0.05 + draw(101 + b) * 0.12;
+
+      pushPart(
+        sink,
+        x + Math.cos(angle) * radius,
+        y + Math.sin(angle) * radius,
+        h / 2,
+        w,
+        w * (0.8 + draw(104 + b) * 0.6),
+        h,
+        angle,
+        0,
+        base,
+        0.75 + draw(107 + b) * 0.3,
+      );
+    }
+  }
 
   if (archetype < 0.55) {
     return;
@@ -920,5 +950,85 @@ function buildEdgeFurniture(
 
     pushPart(sink, gx, gy, h / 2, 0.02, 0.02, h, 0, 0, base, 0.8);
     pushGlow(sink, gx, gy, h + 0.012, 0.018, accent);
+  }
+}
+
+/** deck height above grade — an elevated transit spine, not paint on the ground */
+const DECK_Z = 0.07;
+const DECK_WIDTH = 0.2;
+const DECK_THICKNESS = 0.03;
+const DECK_SEGMENT = 0.3;
+
+/** cool concrete, deliberately outside every biome palette — infrastructure reads as its own
+ * civilization layer against the warm world */
+const DECK_COLOR = new Color('#9aa3b8');
+
+/**
+ * The physical travel path under the navigation line: an elevated viaduct of deck segments on
+ * piers. Maintained routes run intact; ruin routes lose segments — the gap-toothed freeway, its
+ * fallen span lying below; the quiet has no built path at all, only the line.
+ */
+function buildViaduct(
+  draw: (salt: number) => number,
+  start: readonly [number, number],
+  end: readonly [number, number],
+  biome: number,
+  sink: PartsSink,
+): void {
+  if (biome === 2) {
+    return;
+  }
+
+  const dx = end[0] - start[0];
+  const dy = end[1] - start[1];
+  const len = Math.hypot(dx, dy);
+  const spin = Math.atan2(dy, dx);
+  const base = PALETTE[biome] ?? PALETTE[0]!;
+  const margin = 0.3;
+  const usable = len - margin * 2;
+  const segments = Math.max(2, Math.round(usable / DECK_SEGMENT));
+  const step = usable / segments;
+  const gapChance = biome === 3 ? 0.12 : 0;
+
+  for (let k = 0; k < segments; k++) {
+    const t = (margin + step * (k + 0.5)) / len;
+    const px = start[0] + dx * t;
+    const py = start[1] + dy * t;
+
+    if (draw(100 + k) < gapChance) {
+      // the span fell: its slab lies skewed on the ground beside the line
+      if (draw(140 + k) > 0.4) {
+        pushPart(
+          sink,
+          px + (draw(160 + k) - 0.5) * 0.24,
+          py + (draw(180 + k) - 0.5) * 0.24,
+          DECK_THICKNESS,
+          step * 1.02,
+          DECK_WIDTH,
+          DECK_THICKNESS,
+          spin + (draw(200 + k) - 0.5) * 1.2,
+          0,
+          base,
+          0.5,
+        );
+      }
+
+      continue;
+    }
+
+    const shade = 0.9 + draw(120 + k) * 0.25;
+
+    pushPart(sink, px, py, DECK_Z, step * 1.04, DECK_WIDTH, DECK_THICKNESS, spin, 0, DECK_COLOR, shade);
+
+    // guardrail lips give the ribbon its edge definition from the isometric camera
+    const railOffset = (DECK_WIDTH / 2) * 0.92;
+    const nx = -Math.sin(spin) * railOffset;
+    const ny = Math.cos(spin) * railOffset;
+
+    pushPart(sink, px + nx, py + ny, DECK_Z + 0.02, step * 1.04, 0.018, 0.04, spin, 0, DECK_COLOR, shade * 0.7);
+    pushPart(sink, px - nx, py - ny, DECK_Z + 0.02, step * 1.04, 0.018, 0.04, spin, 0, DECK_COLOR, shade * 0.7);
+
+    // pier under every standing segment
+    pushPart(sink, px, py, DECK_Z / 2, 0.032, 0.032, DECK_Z, spin, 0, DECK_COLOR, shade * 0.55);
   }
 }
