@@ -23,6 +23,15 @@ const DRAG_STEPS_PER_LEG = 20;
 const DROPPED_FRAME_THRESHOLD_MS = 32;
 
 /**
+ * The frame-gap sampler's state, parked on the page's own `globalThis` so it survives across the
+ * two separate `page.evaluate` round trips that start and read it.
+ */
+interface DragPanWindow {
+  __dragPanFrameGaps: Array<number>;
+  __dragPanFrameLoopID: number;
+}
+
+/**
  * Repeatable drag-pan performance probe for the explore map, standing in for the spike's manual
  * benchmark (HARVEST.md, "Performance model"; spike baseline: 409ms peak / 16 dropped frames before
  * chunked scatter builds, 7ms / 0 dropped after). Reports peak frame gap and dropped-frame count
@@ -70,6 +79,8 @@ test('it drag-pans across the explore map and reports peak frame gap and dropped
   }
 
   await page.evaluate(() => {
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the sampler's state lives on the page's own globalThis with no declared type; DragPanWindow names the two fields this benchmark parks there
+    const dragPanWindow = globalThis as unknown as DragPanWindow;
     const gaps: Array<number> = [];
     let last = performance.now();
 
@@ -79,15 +90,11 @@ test('it drag-pans across the explore map and reports peak frame gap and dropped
       gaps.push(now - last);
 
       last = now;
-
-      (globalThis as unknown as { __dragPanFrameLoopID: number }).__dragPanFrameLoopID =
-        requestAnimationFrame(advanceFrame);
+      dragPanWindow.__dragPanFrameLoopID = requestAnimationFrame(advanceFrame);
     };
 
-    (globalThis as unknown as { __dragPanFrameGaps: Array<number> }).__dragPanFrameGaps = gaps;
-
-    (globalThis as unknown as { __dragPanFrameLoopID: number }).__dragPanFrameLoopID =
-      requestAnimationFrame(advanceFrame);
+    dragPanWindow.__dragPanFrameGaps = gaps;
+    dragPanWindow.__dragPanFrameLoopID = requestAnimationFrame(advanceFrame);
   });
 
   const centerY = box.y + box.height / 2;
@@ -104,11 +111,12 @@ test('it drag-pans across the explore map and reports peak frame gap and dropped
   }
 
   const frameGaps = await page.evaluate(() => {
-    cancelAnimationFrame(
-      (globalThis as unknown as { __dragPanFrameLoopID: number }).__dragPanFrameLoopID,
-    );
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see the setup evaluate above
+    const dragPanWindow = globalThis as unknown as DragPanWindow;
 
-    return (globalThis as unknown as { __dragPanFrameGaps: Array<number> }).__dragPanFrameGaps;
+    cancelAnimationFrame(dragPanWindow.__dragPanFrameLoopID);
+
+    return dragPanWindow.__dragPanFrameGaps;
   });
 
   // the first sample is the gap from the sampler's own setup, not a rendered frame

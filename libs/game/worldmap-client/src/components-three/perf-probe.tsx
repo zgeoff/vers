@@ -50,9 +50,7 @@ export function PerfProbe() {
   }, [renderer]);
 
   useFrame((_state, delta) => {
-    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- three's WebGPURenderer type
-    // claims `info.render` always carries `drawCalls`, but the classic `WebGLRenderer` some test
-    // harnesses construct by default carries `calls` in its place; RenderInfo reflects both
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- WebGPURenderer's type claims info.render always carries drawCalls, but the classic WebGLRenderer some test harnesses construct by default carries calls in its place; RenderInfo reflects both
     const render = renderer.info.render as unknown as RenderInfo;
     const drawCalls = render.drawCalls ?? render.calls ?? 0;
     const triangleCount = render.triangles ?? 0;
