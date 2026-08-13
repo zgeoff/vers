@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Respite look-dev probes</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+        background: #05070f;
+        font-family: 'IBM Plex Mono', 'Cascadia Mono', monospace;
+      }
+      canvas {
+        display: block;
+      }
+      #hud {
+        position: fixed;
+        top: 12px;
+        left: 12px;
+        display: flex;
+        gap: 6px;
+        z-index: 10;
+      }
+      #hud button {
+        background: rgba(10, 14, 24, 0.85);
+        color: #8fa0c2;
+        border: 1px solid rgba(94, 234, 212, 0.18);
+        border-radius: 3px;
+        font: inherit;
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        padding: 6px 10px;
+        cursor: pointer;
+      }
+      #hud button.active {
+        color: #5eead4;
+        border-color: rgba(94, 234, 212, 0.6);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="hud"></div>
+    <script type="module" src="./lookdev.ts"></script>
+  </body>
+</html>
