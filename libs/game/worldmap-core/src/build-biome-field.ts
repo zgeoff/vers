@@ -64,13 +64,30 @@ export function buildBiomeField(
     return sample;
   };
 
+  const nodePositions = new Map<string, readonly [number, number]>();
+
+  const getNodePosition = (cellX: number, cellY: number): readonly [number, number] => {
+    const key = `${cellX}_${cellY}`;
+    const cached = nodePositions.get(key);
+
+    if (cached !== undefined) {
+      return cached;
+    }
+
+    const position = buildCellNode(userSeed, cellX, cellY).position;
+
+    nodePositions.set(key, position);
+
+    return position;
+  };
+
   for (let j = 0; j < rows; j++) {
     const cy = viewport.minCY - 0.5 + (j + 0.5) / options.resolution;
 
     for (let i = 0; i < cols; i++) {
       const cx = viewport.minCX - 0.5 + (i + 0.5) / options.resolution;
       const index = j * cols + i;
-      const territory = buildNearestNodeCells(userSeed, cx, cy);
+      const territory = buildNearestNodeCells(getNodePosition, cx, cy);
       const sample = getSample(territory.nearestCellX, territory.nearestCellY);
       const neighbour = getSample(territory.secondCellX, territory.secondCellY);
       const gap = territory.secondDistance - territory.nearestDistance;
@@ -98,11 +115,15 @@ interface NearestNodeCells {
 
 /**
  * Scans the 3×3 cell box around an axial position for the cells whose jittered nodes are nearest
- * and second-nearest in scene space. The box always contains both winners: node jitter is bounded
- * well under half the lattice spacing, so a position's nearest nodes are its own cell's and its hex
- * neighbours' — all inside the box.
+ * and second-nearest in scene space, reading each candidate's position through the caller's lookup.
+ * The box always contains both winners: node jitter is bounded well under half the lattice spacing,
+ * so a position's nearest nodes are its own cell's and its hex neighbours' — all inside the box.
  */
-function buildNearestNodeCells(userSeed: number, cx: number, cy: number): NearestNodeCells {
+function buildNearestNodeCells(
+  getNodePosition: (cellX: number, cellY: number) => readonly [number, number],
+  cx: number,
+  cy: number,
+): NearestNodeCells {
   const [sceneX, sceneY] = toHexPosition(cx, cy);
   const cellX = Math.round(cx);
   const cellY = Math.round(cy);
@@ -115,8 +136,8 @@ function buildNearestNodeCells(userSeed: number, cx: number, cy: number): Neares
 
   for (let dy = -1; dy <= 1; dy++) {
     for (let dx = -1; dx <= 1; dx++) {
-      const node = buildCellNode(userSeed, cellX + dx, cellY + dy);
-      const distance = Math.hypot(sceneX - node.position[0], sceneY - node.position[1]);
+      const [nodeX, nodeY] = getNodePosition(cellX + dx, cellY + dy);
+      const distance = Math.hypot(sceneX - nodeX, sceneY - nodeY);
 
       if (distance < nearestDistance) {
         secondDistance = nearestDistance;

@@ -97,7 +97,7 @@ test('it keeps one mesh and one material across pans, rebuilding the texture to 
 
   const material = plane.material;
   const previousTexture = getGroundTexture(plane);
-  const nextViewport: Viewport = { maxCX: 50, maxCY: 50, minCX: -50, minCY: -50 };
+  const nextViewport: Viewport = { maxCX: 20, maxCY: 20, minCX: -20, minCY: -20 };
 
   await ReactThreeTestRenderer.act(() => {
     setViewport(nextViewport);
