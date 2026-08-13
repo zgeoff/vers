@@ -92,6 +92,21 @@ re-builds the keepers properly against these notes.
 - Timing instrumentation inside memos misreads under concurrent rendering (interrupted renders
   yield nonsense durations like 96s) — production metrics need effect-side timestamps instead.
 
+## Art direction (decided in-spike)
+
+- **Committed unnatural**: full procgen means naturalism ("green trees") always loses — the style
+  is crusted dark dereliction (rust/navy/charcoal grounds and metals) with neon accents. Geoff's
+  call; repainted in-spike and it lands immediately.
+- **Per-biome neon signature**: maintained cyan, grown works acid green, quiet dim violet, ruin
+  amber. Doubles as distance legibility — a biome is identifiable by its lights alone. Glow
+  instances carry per-instance color.
+- **Edge furniture layer** (Geoff's idea): roads carry biome-vocabulary structures along them —
+  lit lamp pairs (maintained), gates missing their lintels (ruin), leaning tap-masts over the
+  route (grown), lone waymarkers (quiet). Completes the three-layer model: places, journeys,
+  wilderness all have vocabulary.
+- Density push held 240fps trivially (~7k parts on screen, capacity for 90k). Budget is nowhere
+  near a constraint; depth/fidelity can go much further.
+
 ## Parked questions
 
 - Biome identity/naming is #272's design pass; everything here is placeholder vocabulary.

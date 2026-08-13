@@ -39,7 +39,7 @@ const TEXELS_PER_CELL = 4;
 const GRID_VERTS_PER_CELL = 2;
 
 /** chunks the scatter concat spans around the viewport center (ground tiles render everywhere) */
-const SCATTER_CHUNK_RADIUS = 1;
+const SCATTER_CHUNK_RADIUS = 2;
 
 /** chunk builds allowed per progressive tick */
 const BUILDS_PER_TICK = 2;
@@ -297,6 +297,10 @@ export function ChunkScatter() {
         glows * 16,
       );
 
+      if (glow.instanceColor) {
+        glow.instanceColor.array.set(entry.scatter.glowColors.subarray(0, takeGlow * 3), glows * 3);
+      }
+
       glows += takeGlow;
     }
 
@@ -312,6 +316,10 @@ export function ChunkScatter() {
     glow.count = glows;
     glow.instanceMatrix.needsUpdate = true;
 
+    if (glow.instanceColor) {
+      glow.instanceColor.needsUpdate = true;
+    }
+
     glow.computeBoundingSphere();
 
     scatterStats.parts = parts;
@@ -324,6 +332,12 @@ export function ChunkScatter() {
 
     if (mesh && mesh.instanceColor === null) {
       mesh.setColorAt(0, GLOW_COLOR);
+    }
+
+    const glow = glowRef.current;
+
+    if (glow && glow.instanceColor === null) {
+      glow.setColorAt(0, GLOW_COLOR);
     }
   }, []);
 
@@ -340,18 +354,15 @@ export function ChunkScatter() {
       </instancedMesh>
       <instancedMesh args={[undefined, undefined, CONCAT_GLOW]} frustumCulled={false} ref={glowRef}>
         <boxGeometry args={[1, 1, 1]} />
-        <GlowMaterial color={GLOW_COLOR} transparent={true} {...glowPulse} />
+        <GlowMaterial color={'#ffffff'} transparent={true} {...glowPulse} />
       </instancedMesh>
     </>
   );
 }
 
-const BASE_TINT_HEXES: ReadonlyArray<string> = [
-  sceneColors.biome1,
-  sceneColors.biome2,
-  sceneColors.biome3,
-  sceneColors.biome4,
-];
+/** dark derelict ground palette — committed unnatural art direction, overriding the pastel scene
+ * colors for the spike */
+const BASE_TINT_HEXES: ReadonlyArray<string> = ['#252b3b', '#1f2b26', '#211d28', '#2e2320'];
 
 const BASE_TINTS: ReadonlyMap<number, Color> = new Map(
   BIOME_ROSTER.map((entry, index) => {

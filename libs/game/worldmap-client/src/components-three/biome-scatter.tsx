@@ -18,12 +18,12 @@ import { NODE_POSITION_SCALING_FACTOR } from '../consts';
 /** hash-channel base for all scatter draws — far above the registered channels */
 const CH = 100;
 
-const MAX_PARTS = 8192;
-const MAX_GLOW = 1024;
+const MAX_PARTS = 12288;
+const MAX_GLOW = 2048;
 
 /** capacity of the persistent viewport-concat meshes, spanning many chunks */
-export const CONCAT_PARTS = 40000;
-export const CONCAT_GLOW = 8000;
+export const CONCAT_PARTS = 90000;
+export const CONCAT_GLOW = 18000;
 
 /** keep-out radius around a node's jittered position, hex units */
 const NODE_CLEARANCE = 0.42;
@@ -38,7 +38,7 @@ const PROP_SCALE = 0.55;
 const NODE_STRUCT_SCALE = 0.75;
 
 /** peak props per cell by base biome id, reached only inside a cluster hotspot */
-const PEAK_DENSITY = [5, 16, 1, 9];
+const PEAK_DENSITY = [7, 22, 1, 12];
 
 /** cluster-field frequency per biome — lower = broader clumps and wider voids */
 const CLUSTER_FREQ = [0.4, 0.28, 0.5, 0.22];
@@ -53,22 +53,35 @@ const MIN_SEPARATION = 0.18;
 const LANDMARK_CHANCE = 0.012;
 
 /** ground-layer debris pieces per cell at a cluster hotspot, by biome */
-const DEBRIS_DENSITY = [4, 3, 1, 8];
+const DEBRIS_DENSITY = [7, 5, 2, 12];
 
 /** cluster-independent background debris per cell, so voids read quiet rather than dead */
-const DEBRIS_BASE = 1.5;
+const DEBRIS_BASE = 2.5;
 
-/** base part color per biome */
+/** base part color per biome — crusted dark metals, no naturalism */
 const PALETTE = [
-  new Color('#8fa0c2'),
-  new Color('#6f8f6f'),
-  new Color('#5a5f6a'),
-  new Color('#9a8f84'),
+  new Color('#46536e'),
+  new Color('#39463e'),
+  new Color('#37333f'),
+  new Color('#5c4433'),
 ];
+
+/** per-biome neon accent for emissives — the unnatural highlight against the dark world */
+const ACCENTS = [
+  new Color('#7dd3fc'),
+  new Color('#a3ff6b'),
+  new Color('#b78cff'),
+  new Color('#ffb545'),
+];
+
+function getAccent(biome: number): Color {
+  return ACCENTS[biome] ?? ACCENTS[0]!;
+}
 
 export interface ScatterBuild {
   colors: Float32Array;
   count: number;
+  glowColors: Float32Array;
   glowCount: number;
   glowMatrices: Float32Array;
   id: string;
@@ -86,6 +99,7 @@ interface PartsSink {
   baseZ: number;
   colors: Float32Array;
   count: number;
+  glowColors: Float32Array;
   glowCount: number;
   glowMatrices: Float32Array;
   matrices: Float32Array;
@@ -113,6 +127,7 @@ export function buildScatterForBox(
     baseZ: 0,
     colors: new Float32Array(MAX_PARTS * 3),
     count: 0,
+    glowColors: new Float32Array(MAX_GLOW * 3),
     glowCount: 0,
     glowMatrices: new Float32Array(MAX_GLOW * 16),
     matrices: new Float32Array(MAX_PARTS * 16),
@@ -260,8 +275,8 @@ export function buildScatterForBox(
         }
       }
 
-      // maintained cells light their roads: lamps at regular intervals along owned edges
-      if (biome === 0) {
+      // edge furniture: every biome dresses the roads its cells own, in its own vocabulary
+      {
         const owned = collectNodeEdges(userSeed, cx, cy);
 
         for (const [e, edge] of owned.entries()) {
@@ -271,23 +286,12 @@ export function buildScatterForBox(
 
           const start = getNode(edge.start[0], edge.start[1]).position;
           const end = getNode(edge.end[0], edge.end[1]).position;
-          const dx = end[0] - start[0];
-          const dy = end[1] - start[1];
-          const len = Math.hypot(dx, dy);
-          const px = -dy / len;
-          const py = dx / len;
-          const side = buildCoordHashUnit(userSeed, cx, cy, CH + 700 + e) > 0.5 ? 1 : -1;
+          const edgeDraw = (salt: number) =>
+            buildCoordHashUnit(userSeed, cx, cy, CH + 700 + e * 8 + salt);
 
-          for (const t of [0.3, 0.7]) {
-            const lx = start[0] + dx * t + px * 0.24 * side;
-            const ly = start[1] + dy * t + py * 0.24 * side;
-            const h = 0.22;
+          sink.baseZ = 0;
 
-            sink.baseZ = 0;
-
-            pushPart(sink, lx, ly, h / 2, 0.018, 0.018, h, 0, 0, PALETTE[0]!, 1);
-            pushGlow(sink, lx, ly, h + 0.015, 0.03);
-          }
+          buildEdgeFurniture(edgeDraw, start, end, biome, sink);
         }
       }
 
@@ -301,6 +305,7 @@ export function buildScatterForBox(
   return {
     colors: sink.colors.slice(0, sink.count * 3),
     count: sink.count,
+    glowColors: sink.glowColors.slice(0, sink.glowCount * 3),
     glowCount: sink.glowCount,
     glowMatrices: sink.glowMatrices.slice(0, sink.glowCount * 16),
     id: `${userSeed}:${minCX}:${minCY}:${maxCX}:${maxCY}`,
@@ -374,7 +379,14 @@ function pushPart(
   sink.count += 1;
 }
 
-function pushGlow(sink: PartsSink, x: number, y: number, z: number, size: number): void {
+function pushGlow(
+  sink: PartsSink,
+  x: number,
+  y: number,
+  z: number,
+  size: number,
+  accent: Readonly<Color>,
+): void {
   if (sink.glowCount >= MAX_GLOW) {
     return;
   }
@@ -386,6 +398,10 @@ function pushGlow(sink: PartsSink, x: number, y: number, z: number, size: number
   tempScale.set(size * f, size * f, size * f);
   tempMatrix.compose(tempPosition, tempQuaternion, tempScale);
   tempMatrix.toArray(sink.glowMatrices, sink.glowCount * 16);
+
+  sink.glowColors[sink.glowCount * 3] = accent.r;
+  sink.glowColors[sink.glowCount * 3 + 1] = accent.g;
+  sink.glowColors[sink.glowCount * 3 + 2] = accent.b;
 
   sink.glowCount += 1;
 }
@@ -498,7 +514,7 @@ function buildAntennaTree(
   }
 
   if (draw(50) > 0.35) {
-    pushGlow(sink, x, y, height + 0.03, (0.05 + draw(51) * 0.04) * PROP_SCALE);
+    pushGlow(sink, x, y, height + 0.03, (0.05 + draw(51) * 0.04) * PROP_SCALE, getAccent(1));
   }
 }
 
@@ -572,7 +588,7 @@ function buildNodeStructure(
         base,
         1,
       );
-      pushGlow(sink, x + Math.cos(angle + side) * radius, y + Math.sin(angle + side) * radius, h + 0.03, 0.045 * NODE_STRUCT_SCALE);
+      pushGlow(sink, x + Math.cos(angle + side) * radius, y + Math.sin(angle + side) * radius, h + 0.03, 0.045 * NODE_STRUCT_SCALE, getAccent(biome));
     }
 
     return;
@@ -594,7 +610,7 @@ function buildNodeStructure(
     z += h;
   }
 
-  pushGlow(sink, sx, sy, z + 0.04, 0.07 * NODE_STRUCT_SCALE);
+  pushGlow(sink, sx, sy, z + 0.04, 0.07 * NODE_STRUCT_SCALE, getAccent(biome));
 }
 
 /**
@@ -623,7 +639,7 @@ function buildLandmark(
   const mastH = (1.6 + draw(3) * 1.2) * PROP_SCALE;
 
   pushPart(sink, x, y, z + mastH / 2, 0.09 * PROP_SCALE, 0.09 * PROP_SCALE, mastH, 0, 0, base, 1);
-  pushGlow(sink, x, y, z + mastH + 0.05, 0.09 * PROP_SCALE);
+  pushGlow(sink, x, y, z + mastH + 0.05, 0.09 * PROP_SCALE, getAccent(biome));
 }
 
 /**
@@ -749,5 +765,111 @@ function buildFallenGiant(
       base,
       0.7 + draw(20 + i) * 0.25,
     );
+  }
+}
+
+/**
+ * Structures living along a road, in the owning biome's vocabulary: lit lamp pairs on maintained
+ * routes, gate remnants in the ruins, leaning tap-masts in the grown works, rare waymarkers in the
+ * quiet. Offsets sit just outside the road corridor, so the route stays walkable.
+ */
+function buildEdgeFurniture(
+  draw: (salt: number) => number,
+  start: readonly [number, number],
+  end: readonly [number, number],
+  biome: number,
+  sink: PartsSink,
+): void {
+  const dx = end[0] - start[0];
+  const dy = end[1] - start[1];
+  const len = Math.hypot(dx, dy);
+  const px = -dy / len;
+  const py = dx / len;
+  const base = PALETTE[biome] ?? PALETTE[0]!;
+  const accent = getAccent(biome);
+
+  if (biome === 0) {
+    // maintained: paired lamps, both verges, still lit
+    const side = draw(0) > 0.5 ? 1 : -1;
+
+    for (const t of [0.3, 0.7]) {
+      const lx = start[0] + dx * t + px * 0.24 * side;
+      const ly = start[1] + dy * t + py * 0.24 * side;
+      const h = 0.22;
+
+      pushPart(sink, lx, ly, h / 2, 0.018, 0.018, h, 0, 0, base, 1);
+      pushGlow(sink, lx, ly, h + 0.015, 0.03, accent);
+    }
+
+    return;
+  }
+
+  if (biome === 3 && draw(1) < 0.4) {
+    // ruin: a gate that lost its lintel — one post standing, one stump, the beam in the verge
+    const t = 0.35 + draw(2) * 0.3;
+    const gx = start[0] + dx * t;
+    const gy = start[1] + dy * t;
+    const standH = 0.28 + draw(3) * 0.12;
+
+    pushPart(sink, gx + px * 0.22, gy + py * 0.22, standH / 2, 0.03, 0.03, standH, 0, 0, base, 0.9);
+    pushPart(sink, gx - px * 0.22, gy - py * 0.22, 0.05, 0.035, 0.035, 0.1, 0, 0, base, 0.7);
+    pushPart(
+      sink,
+      gx - px * 0.34,
+      gy - py * 0.34,
+      0.02,
+      0.04,
+      0.34,
+      0.04,
+      Math.atan2(dy, dx) + (draw(4) - 0.5) * 0.6,
+      Math.PI / 2,
+      base,
+      0.6,
+    );
+
+    if (draw(5) > 0.5) {
+      pushGlow(sink, gx + px * 0.22, gy + py * 0.22, standH + 0.02, 0.022, accent);
+    }
+
+    return;
+  }
+
+  if (biome === 1 && draw(1) < 0.35) {
+    // grown works: a tap — two thin masts leaning in over the route from opposite verges
+    const t = 0.4 + draw(2) * 0.2;
+    const gx = start[0] + dx * t;
+    const gy = start[1] + dy * t;
+
+    for (const side of [1, -1]) {
+      const h = 0.3 + draw(side > 0 ? 3 : 4) * 0.15;
+
+      pushPart(
+        sink,
+        gx + px * 0.26 * side,
+        gy + py * 0.26 * side,
+        h / 2,
+        0.014,
+        0.014,
+        h,
+        Math.atan2(py, px),
+        -side * 0.35,
+        base,
+        0.85,
+      );
+      pushGlow(sink, gx + px * 0.18 * side, gy + py * 0.18 * side, h * 0.92, 0.02, accent);
+    }
+
+    return;
+  }
+
+  if (biome === 2 && draw(1) < 0.15) {
+    // quiet: a lone dim waymarker
+    const t = 0.3 + draw(2) * 0.4;
+    const h = 0.14;
+    const gx = start[0] + dx * t + px * 0.22;
+    const gy = start[1] + dy * t + py * 0.22;
+
+    pushPart(sink, gx, gy, h / 2, 0.02, 0.02, h, 0, 0, base, 0.8);
+    pushGlow(sink, gx, gy, h + 0.012, 0.018, accent);
   }
 }
