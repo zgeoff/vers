@@ -97,7 +97,10 @@ re-builds the keepers properly against these notes.
 - Biome identity/naming is #272's design pass; everything here is placeholder vocabulary.
 - Fog vs revealed-content interplay: does structure glow beyond the frontier leak "earned sight"?
   (Current stance: geometry is public plane, so no security issue — purely a design-feel call.)
-- TSL surface detail tier (panel lines, wear) — unexplored.
+- TSL surface detail tier proven viable through the narrow facade: world-anchored noise grime
+  multiplying the tile tint (two octaves, ~0.86-1.06 range) kills the vector-fill flatness, and a
+  shared `time`-driven sine pulse breathes all emissives. Each new shader op is one passthrough
+  facade member — the type-OOM constraint never reopens. Panel lines/hard wear still unexplored.
 - Sump / Verdant Decks grammars — need roster entries first.
 - Heightfield vs gameplay: does relief ever affect traversal, or stay purely visual?
 - Perf: spike rebuilds whole scatter per chunk-crossing pan on main thread; production wants

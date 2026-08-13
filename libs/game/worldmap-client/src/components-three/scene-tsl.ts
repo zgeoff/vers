@@ -14,6 +14,7 @@ export interface TSLMathNode {
   readonly clamp: (min: number, max: number) => TSLMathNode;
   readonly mul: (other: TSLMathNode | number) => TSLMathNode;
   readonly oneMinus: () => TSLMathNode;
+  readonly sin: () => TSLMathNode;
   readonly sub: (other: TSLMathNode | number) => TSLMathNode;
 }
 
@@ -29,6 +30,7 @@ export interface TSLTextureNode {
 interface SceneTSL {
   readonly mx_noise_float: (coord: TSLMathNode) => TSLMathNode;
   readonly positionWorld: { readonly xz: TSLMathNode };
+  readonly shade: (map: Readonly<TSLTextureNode>, factor: TSLMathNode) => Node<'vec4'>;
   readonly texture: (map: DataTexture) => TSLTextureNode;
   readonly time: TSLMathNode;
   readonly toNode: (node: Readonly<TSLTextureNode> | TSLMathNode) => Node<'vec4'>;
@@ -37,6 +39,7 @@ interface SceneTSL {
 const sceneTSLValues = {
   mx_noise_float,
   positionWorld,
+  shade: (map: { mul: (factor: unknown) => unknown }, factor: unknown) => map.mul(factor),
   texture,
   time,
   toNode: (node: unknown) => node,

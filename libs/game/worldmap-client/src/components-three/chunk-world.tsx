@@ -49,6 +49,11 @@ const CACHE_CAP = 280;
 
 const GLOW_COLOR = new Color('#7dd3fc');
 
+/** all emissives breathe together on scene time — a slow shared pulse, not per-instance blink */
+const glowPulse = {
+  opacityNode: sceneTSL.toNode(sceneTSL.time.mul(1.6).sin().mul(0.22).add(0.78)),
+};
+
 /** spike perf stats, read by the dev HUD */
 export const scatterStats = { buildMs: 0, glow: 0, parts: 0 };
 
@@ -99,7 +104,14 @@ function buildChunkEntry(userSeed: number, chunkX: number, chunkY: number): Chun
   const texture = buildTileTexture(field);
   const material = new MeshStandardNodeMaterial({ roughness: 0.95 });
 
-  material.colorNode = sceneTSL.toNode(sceneTSL.texture(texture));
+  // patchy world-anchored grime over the tint: two noise octaves darken the ground unevenly, so
+  // flat color reads as worn surface instead of vector fill
+  const ground = sceneTSL.positionWorld.xz;
+  const grimeCoarse = sceneTSL.mx_noise_float(ground.mul(0.045));
+  const grimeFine = sceneTSL.mx_noise_float(ground.mul(0.24));
+  const grime = grimeCoarse.mul(0.12).add(grimeFine.mul(0.08)).add(0.86);
+
+  material.colorNode = sceneTSL.shade(sceneTSL.texture(texture), grime);
 
   return {
     chunkX,
@@ -328,7 +340,7 @@ export function ChunkScatter() {
       </instancedMesh>
       <instancedMesh args={[undefined, undefined, CONCAT_GLOW]} frustumCulled={false} ref={glowRef}>
         <boxGeometry args={[1, 1, 1]} />
-        <GlowMaterial color={GLOW_COLOR} />
+        <GlowMaterial color={GLOW_COLOR} transparent={true} {...glowPulse} />
       </instancedMesh>
     </>
   );
