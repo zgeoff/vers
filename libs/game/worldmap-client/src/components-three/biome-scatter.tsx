@@ -12,28 +12,18 @@ import {
   getBiome,
   toHexPosition,
 } from '@vers/worldmap-core';
-import { useDeferredValue, useLayoutEffect, useMemo, useRef } from 'react';
-import type { InstancedMesh } from 'three';
 import { Color, Matrix4, Quaternion, Vector3 } from 'three';
-import { extend } from '@react-three/fiber';
-import { MeshBasicNodeMaterial, MeshStandardNodeMaterial } from 'three/webgpu';
 import { NODE_POSITION_SCALING_FACTOR } from '../consts';
-import { useFogViewport } from '../state/use-fog-viewport';
-import { useIsScatterVisible } from '../state/use-is-scatter-visible';
-import { useUserSeed } from '../state/use-user-seed';
-import { makeGroundHeightSampler } from './ground-relief';
-
-const ScatterMaterial = extend(MeshStandardNodeMaterial);
-const GlowMaterial = extend(MeshBasicNodeMaterial);
 
 /** hash-channel base for all scatter draws — far above the registered channels */
 const CH = 100;
 
-/** half-width of the scatter window around the viewport center, in cells */
-const WINDOW = 24;
+const MAX_PARTS = 8192;
+const MAX_GLOW = 1024;
 
-const MAX_PARTS = 30000;
-const MAX_GLOW = 6000;
+/** capacity of the persistent viewport-concat meshes, spanning many chunks */
+export const CONCAT_PARTS = 40000;
+export const CONCAT_GLOW = 8000;
 
 /** keep-out radius around a node's jittered position, hex units */
 const NODE_CLEARANCE = 0.42;
@@ -76,107 +66,13 @@ const PALETTE = [
   new Color('#9a8f84'),
 ];
 
-const GLOW_COLOR = new Color('#7dd3fc');
-
-interface ScatterBuild {
+export interface ScatterBuild {
   colors: Float32Array;
   count: number;
   glowCount: number;
   glowMatrices: Float32Array;
   id: string;
   matrices: Float32Array;
-}
-
-/** spike perf stats, read by the dev HUD */
-export const scatterStats = { buildMs: 0, glow: 0, parts: 0 };
-
-export function BiomeScatter() {
-  const userSeed = useUserSeed();
-  const viewport = useDeferredValue(useFogViewport());
-  const isVisible = useIsScatterVisible();
-
-  const build = useMemo(() => {
-    if (userSeed === null || viewport === null) {
-      return null;
-    }
-
-    const started = performance.now();
-    const built = buildScatter(userSeed, viewport);
-
-    scatterStats.buildMs = performance.now() - started;
-    scatterStats.parts = built.count;
-    scatterStats.glow = built.glowCount;
-
-    console.log(`[perf] scatter ${scatterStats.buildMs.toFixed(0)}ms (${built.count} parts)`);
-
-    return built;
-  }, [userSeed, viewport]);
-
-  if (!isVisible || build === null || build.count === 0) {
-    return null;
-  }
-
-  return (
-    <>
-      <directionalLight intensity={1.4} position={[30, -40, 80]} />
-      <ScatterParts build={build} />
-    </>
-  );
-}
-
-const tempColor = new Color();
-
-function ScatterParts({ build }: Readonly<{ build: ScatterBuild }>) {
-  const meshRef = useRef<InstancedMesh | null>(null);
-  const glowRef = useRef<InstancedMesh | null>(null);
-
-  useLayoutEffect(() => {
-    const mesh = meshRef.current;
-
-    if (mesh !== null) {
-      for (let i = 0; i < build.count; i++) {
-        mesh.instanceMatrix.array.set(build.matrices.subarray(i * 16, i * 16 + 16), i * 16);
-        mesh.setColorAt(i, tempColor.fromArray(build.colors, i * 3));
-      }
-
-      mesh.count = build.count;
-      mesh.instanceMatrix.needsUpdate = true;
-
-      if (mesh.instanceColor) {
-        mesh.instanceColor.needsUpdate = true;
-      }
-
-      mesh.computeBoundingSphere();
-    }
-
-    const glow = glowRef.current;
-
-    if (glow !== null) {
-      for (let i = 0; i < build.glowCount; i++) {
-        glow.instanceMatrix.array.set(build.glowMatrices.subarray(i * 16, i * 16 + 16), i * 16);
-      }
-
-      glow.count = build.glowCount;
-      glow.instanceMatrix.needsUpdate = true;
-
-      glow.computeBoundingSphere();
-    }
-  }, [build]);
-
-  // meshes allocate MAX capacity once and persist across pans — only count and buffers change, so
-  // the GPU pipeline never recompiles (the discipline the fog plane taught)
-  return (
-    <>
-      <instancedMesh args={[undefined, undefined, MAX_PARTS]} frustumCulled={false} ref={meshRef}>
-        <boxGeometry args={[1, 1, 1]} />
-        <ScatterMaterial roughness={0.85} />
-      </instancedMesh>
-      <instancedMesh args={[undefined, undefined, MAX_GLOW]} frustumCulled={false} ref={glowRef}>
-        <boxGeometry args={[1, 1, 1]} />
-        <GlowMaterial color={GLOW_COLOR} />
-      </instancedMesh>
-    </>
-  );
 }
 
 interface EdgeSegment {
@@ -203,13 +99,15 @@ const tempScale = new Vector3();
 const UP = new Vector3(0, 0, 1);
 const TILT_AXIS = new Vector3(1, 0, 0);
 
-function buildScatter(userSeed: number, viewport: Readonly<Viewport>): ScatterBuild {
-  const centerX = Math.round((viewport.minCX + viewport.maxCX) / 2);
-  const centerY = Math.round((viewport.minCY + viewport.maxCY) / 2);
-  const minCX = Math.max(viewport.minCX, centerX - WINDOW);
-  const maxCX = Math.min(viewport.maxCX, centerX + WINDOW);
-  const minCY = Math.max(viewport.minCY, centerY - WINDOW);
-  const maxCY = Math.min(viewport.maxCY, centerY + WINDOW);
+export function buildScatterForBox(
+  userSeed: number,
+  viewport: Readonly<Viewport>,
+  ground: (x: number, y: number, biome: number) => number,
+): ScatterBuild {
+  const minCX = viewport.minCX;
+  const maxCX = viewport.maxCX;
+  const minCY = viewport.minCY;
+  const maxCY = viewport.maxCY;
 
   const sink: PartsSink = {
     baseZ: 0,
@@ -219,8 +117,6 @@ function buildScatter(userSeed: number, viewport: Readonly<Viewport>): ScatterBu
     glowMatrices: new Float32Array(MAX_GLOW * 16),
     matrices: new Float32Array(MAX_PARTS * 16),
   };
-
-  const ground = makeGroundHeightSampler(userSeed);
 
   const nodes = new Map<string, WorldMapNode>();
 
@@ -403,12 +299,12 @@ function buildScatter(userSeed: number, viewport: Readonly<Viewport>): ScatterBu
   }
 
   return {
-    colors: sink.colors,
+    colors: sink.colors.slice(0, sink.count * 3),
     count: sink.count,
     glowCount: sink.glowCount,
-    glowMatrices: sink.glowMatrices,
+    glowMatrices: sink.glowMatrices.slice(0, sink.glowCount * 16),
     id: `${userSeed}:${minCX}:${minCY}:${maxCX}:${maxCY}`,
-    matrices: sink.matrices,
+    matrices: sink.matrices.slice(0, sink.count * 16),
   };
 }
 

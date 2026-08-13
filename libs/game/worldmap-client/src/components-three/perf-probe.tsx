@@ -4,7 +4,7 @@
  */
 import { useFrame } from '@react-three/fiber';
 import { useEffect, useRef } from 'react';
-import { scatterStats } from './biome-scatter';
+import { scatterStats } from './chunk-world';
 
 const HUD_ID = 'spike-perf-hud';
 

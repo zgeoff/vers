@@ -69,6 +69,16 @@ re-builds the keepers properly against these notes.
   the SharedWorker (already the architecture's home for map derivation) with transferable
   buffers; (3) LOD — debris and small props culled beyond a zoom threshold; (4) capacity-bounded
   persistent GPU resources (done in spike).
+- **Rung 1 proved in-spike**: chunk-keyed LRU cache (ground tile geometry+texture+material and
+  scatter part arrays per 16-cell chunk), misses built progressively 2 per animation frame,
+  viewport scatter assembled by concatenating cached chunk arrays into persistent instanced
+  buffers. Drag-pan benchmark (simulated pointer drags, ~25 chunks of travel): **409ms peak /
+  16 dropped frames → 7ms / 0 dropped**; a 6-drag spiral storm peaks at 38ms with zero drops.
+  The remaining rungs (worker, LOD) are optimization headroom, not necessity, at current content
+  density.
+- Chunk-cache gotcha: entries must be resolved per render against the mutable cache (the
+  progressive builder ticks re-renders) — a memo keyed on viewport goes permanently stale and
+  renders an empty world.
 - Dev perf HUD (fps / worst frame / part counts / build ms) proved immediately necessary; a real
   version belongs in the dev tools panel. three's WebGPU renderer doesn't expose draw/triangle
   counts through `renderer.info.render` the WebGL way — needs its own counter source.
