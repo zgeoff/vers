@@ -120,6 +120,21 @@ re-builds the keepers properly against these notes.
 - **Predictive prefetch**: chunk box movement queues the strip one chunk beyond the leading edge
   into the progressive builder, so pans arrive on generated ground.
 
+## Blackout-district legibility (debug story worth keeping)
+
+- First treatment (darken ground + dim props) was invisible: darker-dark reads as nothing on an
+  already-dark world under fog. **On a dark palette, difference must come from temperature, not
+  brightness** — blackout ground now runs cold blue-grey against the warm rust world and reads
+  instantly.
+- Debug technique that settled it: flash the layer hot magenta for one render. Confirmed the data
+  was everywhere (a third of some chunks) and only the color was failing. Cheap and decisive —
+  recommended for any "is this layer even on?" question.
+- Modifier patches render far larger than the nominal 18-cell patch size (adjacent modifier-
+  positive Worley cells clump); coverage ~9% globally but very uneven. Patch size and roster
+  weights are design levers, currently untuned.
+- Watch-out: the Maintained biome's navy ground sits near the blackout tint family — differentiate
+  before both ship, or cold-dead and cold-maintained will blur.
+
 ## Parked questions
 
 - Biome identity/naming is #272's design pass; everything here is placeholder vocabulary.

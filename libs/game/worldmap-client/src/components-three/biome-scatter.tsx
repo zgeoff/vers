@@ -417,7 +417,7 @@ function pushPart(
   tempMatrix.compose(tempPosition, tempQuaternion, tempScale);
   tempMatrix.toArray(sink.matrices, sink.count * 16);
 
-  const dim = sink.mute ? 0.55 : 1;
+  const dim = sink.mute ? 0.32 : 1;
 
   sink.colors[sink.count * 3] = color.r * shade * dim;
   sink.colors[sink.count * 3 + 1] = color.g * shade * dim;

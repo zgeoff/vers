@@ -20,7 +20,6 @@ import {
 import { extend } from '@react-three/fiber';
 import { MeshBasicNodeMaterial, MeshStandardNodeMaterial } from 'three/webgpu';
 import invariant from 'tiny-invariant';
-import { sceneColors } from '@vers/design-system';
 import { BIOME_ROSTER } from '@vers/worldmap-core';
 import { NODE_POSITION_SCALING_FACTOR } from '../consts';
 import { useFogViewport } from '../state/use-fog-viewport';
@@ -136,7 +135,7 @@ function buildChunkEntry(userSeed: number, chunkX: number, chunkY: number): Chun
  * following frames.
  */
 function useChunkWorld(userSeed: number | null, viewport: Viewport | null): Array<ChunkEntry> {
-  const [tick, setTick] = useState(0);
+  const [, setTick] = useState(0);
   const pending = useRef<Array<string>>([]);
   const previousBox = useRef<{
     maxChunkX: number;
@@ -266,7 +265,9 @@ function useChunkWorld(userSeed: number | null, viewport: Viewport | null): Arra
       cancelled = true;
       cancelAnimationFrame(frame);
     };
-  }, [userSeed, viewport, tick]);
+    // no dep array: runs after every render and exits early when nothing is pending — the builder
+    // can never be stranded by memo/HMR staleness
+  });
 
   return entries;
 }
@@ -478,8 +479,9 @@ const BASE_TINTS: ReadonlyMap<number, Color> = new Map(
   }),
 );
 
-const MODIFIER_TINT = new Color(sceneColors.modifierOverlay);
-const MODIFIER_OVERLAY_ALPHA = 0.35;
+/** blackout districts run cold against the warm world — dead blue-grey ground, not darker dark */
+const MODIFIER_TINT = new Color('#1a2233');
+const MODIFIER_OVERLAY_ALPHA = 0.72;
 
 function buildTileTexture(field: ReturnType<typeof buildBiomeField>): DataTexture {
   const bytes = new Uint8Array(field.cols * field.rows * 4);
