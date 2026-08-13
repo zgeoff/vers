@@ -91,7 +91,6 @@ interface GroundBuffer {
 interface BiomeGroundResources {
   applied: { field: BiomeField; viewport: Viewport };
   readonly buffer: GroundBuffer;
-  geometry: BufferGeometry;
   readonly material: MeshStandardNodeMaterial;
   readonly textureNode: TSLTextureNode;
 }
@@ -100,20 +99,23 @@ const BIOME_GROUND_ELEVATION = -0.05;
 
 function BiomeGroundPlane(props: Readonly<BiomeGroundPlaneProps>) {
   const planeRef = useRef<BiomeGroundResources | null>(null);
-  const plane = (planeRef.current ??= buildBiomeGroundResources(
-    props.userSeed,
-    props.sampler,
-    props.field,
-    props.viewport,
-  ));
+  const plane = (planeRef.current ??= buildBiomeGroundResources(props.field, props.viewport));
+
+  // geometry derives in render so the mesh and its geometry swap atomically on a pan — an
+  // effect-time swap leaves one frame draping the new area's texture over the old area's grid
+  const geometry = useMemo(
+    () => buildReliefGeometry(props.userSeed, props.sampler, props.viewport),
+    [props.userSeed, props.sampler, props.viewport],
+  );
+
+  useEffect(() => () => geometry.dispose(), [geometry]);
 
   useLayoutEffect(() => {
-    updateBiomeGroundPlane(plane, props.userSeed, props.sampler, props.field, props.viewport);
-  }, [plane, props.userSeed, props.sampler, props.field, props.viewport]);
+    updateBiomeGroundPlane(plane, props.field, props.viewport);
+  }, [plane, props.field, props.viewport]);
 
   useEffect(
     () => () => {
-      plane.geometry.dispose();
       plane.material.dispose();
       plane.textureNode.value.dispose();
     },
@@ -121,17 +123,11 @@ function BiomeGroundPlane(props: Readonly<BiomeGroundPlaneProps>) {
   );
 
   return (
-    <mesh
-      geometry={plane.geometry}
-      material={plane.material}
-      position={[0, 0, BIOME_GROUND_ELEVATION]}
-    />
+    <mesh geometry={geometry} material={plane.material} position={[0, 0, BIOME_GROUND_ELEVATION]} />
   );
 }
 
 function buildBiomeGroundResources(
-  userSeed: number,
-  sampler: GroundHeightSampler,
   field: BiomeField,
   viewport: Readonly<Viewport>,
 ): BiomeGroundResources {
@@ -152,7 +148,6 @@ function buildBiomeGroundResources(
   return {
     applied: { field, viewport },
     buffer,
-    geometry: buildReliefGeometry(userSeed, sampler, viewport),
     material,
     textureNode,
   };
@@ -161,8 +156,6 @@ function buildBiomeGroundResources(
 function updateBiomeGroundPlane(
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- spike: mutable render resources
   plane: BiomeGroundResources,
-  userSeed: number,
-  sampler: GroundHeightSampler,
   field: BiomeField,
   viewport: Readonly<Viewport>,
 ): void {
@@ -191,11 +184,6 @@ function updateBiomeGroundPlane(
     previous.dispose();
   }
 
-  const previousGeometry = plane.geometry;
-
-  plane.geometry = buildReliefGeometry(userSeed, sampler, viewport);
-
-  previousGeometry.dispose();
 }
 
 const BASE_TINT_HEXES: ReadonlyArray<string> = [
