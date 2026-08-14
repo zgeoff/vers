@@ -8,6 +8,7 @@ import { CatchUpContinuationSchema } from './catch-up-continuation-schema';
 import { CheckpointBatchEntrySchema } from './checkpoint-batch-entry-schema';
 import { CheckpointSchema } from './checkpoint-schema';
 import { ContentDocumentSchema } from './content-document-schema';
+import { EncounterNodeSchema } from './encounter-node-schema';
 import { MAX_CATCH_UP_BATCH_CHECKPOINTS } from './max-catch-up-batch-checkpoints';
 import { MAX_REVEAL_BATCH_NODES } from './max-reveal-batch-nodes';
 import { REVEAL_VIEWPORT_CELL_CAP } from './reveal-viewport-cell-cap';
@@ -83,10 +84,29 @@ const ViewportSchema = z.object({
 const RevealedNodeSchema = z.object({ id: z.string(), poolID: z.string().optional() });
 
 /**
- * One node's freshly minted or previously minted genesis seed, `revealNodes`'s per-node output —
- * the seed a later `startActivity` at the same scope roots its chain against.
+ * One node's freshly minted or previously minted genesis seed, alongside its derived encounter and
+ * the content version it was derived against — `revealNodes`'s per-node output. `genesisSeed` is
+ * the seed a later `startActivity` at the same scope roots its chain against; `encounterNode` and
+ * `contentVersion` are the remaining inputs `buildStartHash` needs to synthesize that start's hash
+ * offline, since the encounter is derived against a specific content version.
  */
-const NodeGenesisSchema = z.object({ genesisSeed: z.string(), nodeID: z.string() });
+const NodeGenesisSchema = z.object({
+  contentVersion: z.string(),
+  encounterNode: EncounterNodeSchema,
+  genesisSeed: z.string(),
+  nodeID: z.string(),
+});
+
+/**
+ * `revealNodes`'s avatar- and account-global crypto stamps: the key version its avatar's activity
+ * starts stamp, and the scope-secret ref/version its encounter derivation reads — the same stamps
+ * every node in the batch was derived against, carried once rather than repeated per node.
+ */
+const RevealStampsSchema = z.object({
+  keyVersion: z.int().min(1),
+  secretRef: z.string(),
+  secretVersion: z.int().min(1),
+});
 
 /**
  * Every addressable `first_clear` grant key the avatar holds, regardless of viewport — the
@@ -304,11 +324,13 @@ export const activityContract = {
 
   /**
    * Mints (or re-affirms) the genesis chain row for each given world-map node, on the avatar's
-   * behalf, so a later `startActivity` at the same scope has a chain to root against. Idempotent
-   * per node: a repeat reveal self-assigns the existing row's `genesisSeed` rather than rolling a
-   * new one, so the same node reveals to the same seed regardless of how many times or how many
-   * concurrent callers reveal it. Authorization is ownership of the avatar only — whether a given
-   * node is one this avatar may legitimately reveal is a separate, not-yet-enforced concern.
+   * behalf, so a later `startActivity` at the same scope has a chain to root against, and derives
+   * that node's encounter alongside the crypto stamps a start needs — every input an offline-open
+   * start synthesizes a valid activity start from without the server. Idempotent per node: a
+   * repeat reveal self-assigns the existing row's `genesisSeed` rather than rolling a new one, so
+   * the same node reveals to the same seed regardless of how many times or how many concurrent
+   * callers reveal it. Authorization is ownership of the avatar only — whether a given node is one
+   * this avatar may legitimately reveal is a separate, not-yet-enforced concern.
    */
   revealNodes: authedRoute
     .route({
@@ -322,7 +344,7 @@ export const activityContract = {
         nodeIDs: z.array(ScopeIdentifierSchema).max(MAX_REVEAL_BATCH_NODES),
       }),
     )
-    .output(z.array(NodeGenesisSchema))
+    .output(RevealStampsSchema.extend({ nodes: z.array(NodeGenesisSchema) }))
     .errors(
       defineErrors({
         AVATAR_NOT_ACTIVE: {
