@@ -34,9 +34,10 @@ export const CHECKPOINT_QUEUE_STORE_NAME = 'pending-checkpoints';
 export const CONTENT_DOCUMENT_STORE_NAME = 'content-documents';
 
 /**
- * The object store caching a revealed world-map node's genesis seed by `nodeID`, so the worker
- * holds a seed on-device for every node the player can already see before an offline-open start
- * needs one.
+ * The object store caching a revealed world-map node's genesis seed by its `[avatarID, nodeID]`
+ * pair, so the worker holds a seed on-device for every node the player can already see before an
+ * offline-open start needs one. The compound key scopes each seed to its avatar — a seed is per
+ * avatar, so two avatars sharing a coordinate keep separate rows.
  */
 export const NODE_SEEDS_STORE_NAME = 'node-seeds';
 

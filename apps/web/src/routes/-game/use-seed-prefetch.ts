@@ -60,26 +60,38 @@ export function useSeedPrefetch(revealedNodeIDs: ReadonlySet<string>): void {
 
 /**
  * Reveals a node-id delta in batches capped at the server's per-request limit, relaying each
- * batch's minted seeds to the worker before marking that batch's ids revealed — so a batch that
- * fails partway leaves only its own ids eligible for the next retry, never the ones already cached.
+ * batch's minted seeds to the worker scoped to the active avatar. The whole delta is marked in the
+ * session set before the first reveal awaits, so a frontier change mid-flight never re-issues a
+ * request for an id already being fetched. A batch that fails — a genuine fault or an abort as the
+ * effect re-runs — removes that batch's ids and every still-unfetched id after it from the session
+ * set, so nothing stays marked as done that this device never cached and the next frontier change
+ * retries them.
  */
 async function runSeedReveal(
   client: WorkerClient,
   avatarID: string,
   delta: ReadonlyArray<string>,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- mutated in place, marking each revealed batch so a failed later batch leaves earlier ones cached
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- mutated in place: the delta is marked up front and a failed batch's still-unfetched tail is unmarked
   sessionNodeIDs: Set<string>,
   signal: AbortSignal,
 ): Promise<void> {
+  for (const nodeID of delta) {
+    sessionNodeIDs.add(nodeID);
+  }
+
   for (let start = 0; start < delta.length; start += MAX_REVEAL_BATCH_NODES) {
     const batch = delta.slice(start, start + MAX_REVEAL_BATCH_NODES);
 
-    const seeds = await orpc.activity.revealNodes.call({ avatarID, nodeIDs: batch }, { signal });
+    try {
+      const seeds = await orpc.activity.revealNodes.call({ avatarID, nodeIDs: batch }, { signal });
 
-    await sendIdleCacheNodeSeeds(client, { seeds }, signal);
+      await sendIdleCacheNodeSeeds(client, { avatarID, seeds }, signal);
+    } catch {
+      for (const nodeID of delta.slice(start)) {
+        sessionNodeIDs.delete(nodeID);
+      }
 
-    for (const nodeID of batch) {
-      sessionNodeIDs.add(nodeID);
+      return;
     }
   }
 }

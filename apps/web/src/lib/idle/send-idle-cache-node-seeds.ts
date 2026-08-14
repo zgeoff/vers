@@ -1,12 +1,13 @@
-import type { NodeSeed, WorkerClient } from '@vers/idle-client';
+import type { RevealedNodeSeed, WorkerClient } from '@vers/idle-client';
 
 interface SendIdleCacheNodeSeedsInput {
-  readonly seeds: ReadonlyArray<NodeSeed>;
+  readonly avatarID: string;
+  readonly seeds: ReadonlyArray<RevealedNodeSeed>;
 }
 
 /**
- * Relays a batch of freshly revealed genesis seeds to the worker, which persists them to its
- * durable on-device cache.
+ * Relays a batch of one avatar's freshly revealed genesis seeds to the worker, which persists them
+ * to its durable on-device cache scoped to that avatar.
  */
 export async function sendIdleCacheNodeSeeds(
   client: WorkerClient,

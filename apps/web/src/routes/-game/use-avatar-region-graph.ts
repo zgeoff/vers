@@ -173,7 +173,10 @@ export function useAvatarRegionGraph(): ReadonlySet<string> {
     setRevealedNodeIDs(collectRevealedNodeIDs(sources, regionViewport));
   }, [avatarID, seed, viewport, completedNodeIDs]);
 
-  return revealedNodeIDs;
+  // the frontier state still holds the outgoing avatar's nodes until the effect republishes for the
+  // incoming avatar; gating on the projection's avatar keeps a switch from prefetching the wrong
+  // avatar's coordinates during the transition render
+  return avatarID === previousAvatarIDRef.current ? revealedNodeIDs : EMPTY_NODE_ID_SET;
 }
 
 function isSameNodeIDSet(a: ReadonlySet<string>, b: ReadonlySet<string>): boolean {

@@ -1,15 +1,17 @@
-import type { NodeSeed } from '../submission/types';
+import type { RevealedNodeSeed } from '../submission/types';
 import { writeNodeSeeds } from '../submission/write-node-seeds';
 
 interface CacheNodeSeedsInput {
-  readonly seeds: ReadonlyArray<NodeSeed>;
+  readonly avatarID: string;
+  readonly seeds: ReadonlyArray<RevealedNodeSeed>;
 }
 
 /**
- * Persists a tab-relayed batch of revealed world-map node seeds to the worker's durable cache.
+ * Persists a tab-relayed batch of one avatar's revealed world-map node seeds to the worker's
+ * durable cache, scoping every row to the batch's avatar.
  */
 export async function handleCacheNodeSeedsMessage(
   input: Readonly<CacheNodeSeedsInput>,
 ): Promise<void> {
-  await writeNodeSeeds(input.seeds);
+  await writeNodeSeeds(input.avatarID, input.seeds);
 }

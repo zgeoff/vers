@@ -4,6 +4,7 @@ import { renderHook, waitFor } from '@testing-library/react';
 import { MAX_REVEAL_BATCH_NODES } from '@vers/contract-activity';
 import { ActivityFailureAction } from '@vers/idle-core';
 import { mockActivityService } from '@vers/mock-services/activity';
+import invariant from 'tiny-invariant';
 import { buildQueryClient } from '../../lib/query/build-query-client';
 import { server } from '../../mocks/node';
 import { createActiveAvatar } from '../../test-utils/create-active-avatar';
@@ -163,8 +164,7 @@ test('it chunks a delta larger than the server-side reveal batch cap', async () 
 
 test('it relays the seeds revealNodes returns to the worker client', async () => {
   const signedIn = await createSignedInUser();
-
-  await createActiveAvatar({ userID: signedIn.userID });
+  const avatar = await createActiveAvatar({ userID: signedIn.userID });
 
   const client = createStubWorkerClient();
 
@@ -188,6 +188,7 @@ test('it relays the seeds revealNodes returns to the worker client', async () =>
     await waitFor(() => {
       expect(client.cacheNodeSeeds).toHaveBeenCalledExactlyOnceWith(
         {
+          avatarID: avatar.id,
           seeds: [
             { genesisSeed: 'seed-0_0', nodeID: '0_0' },
             { genesisSeed: 'seed-1_0', nodeID: '1_0' },
@@ -196,5 +197,57 @@ test('it relays the seeds revealNodes returns to the worker client', async () =>
         expect.anything(),
       );
     });
+  });
+});
+
+test('it does not re-request an in-flight id when the frontier grows mid-batch', async () => {
+  const signedIn = await createSignedInUser();
+  const avatar = await createActiveAvatar({ userID: signedIn.userID });
+
+  setIdleWorkerHandle({
+    activity: undefined,
+    client: createStubWorkerClient(),
+    failureAction: ActivityFailureAction.Abort,
+    initialized: true,
+    writerAbortSignal: new AbortController().signal,
+  });
+
+  const track = mock<(input: unknown) => void>();
+  let releaseFirstReveal: (() => void) | undefined;
+
+  server.use(
+    mockActivityService.revealNodes.handler(async (opts) => {
+      track(opts.input);
+
+      // hold the first batch in flight so the frontier can grow before it resolves
+      if (opts.input.nodeIDs.includes('0_0')) {
+        await new Promise<void>((resolve) => {
+          releaseFirstReveal = resolve;
+        });
+      }
+
+      return opts.input.nodeIDs.map((nodeID) => ({ genesisSeed: `seed-${nodeID}`, nodeID }));
+    }),
+  );
+
+  await withRequestContext({ cookies: signedIn.cookies }, async () => {
+    const hook = renderSeedPrefetch(new Set(['0_0']));
+
+    await waitFor(() => {
+      expect(track).toHaveBeenCalledExactlyOnceWith({ avatarID: avatar.id, nodeIDs: ['0_0'] });
+    });
+
+    hook.rerender(new Set(['0_0', '1_0']));
+
+    // the grown frontier reveals only the new id: the in-flight 0_0 stays marked, so it is never
+    // re-requested while its first reveal is still pending
+    await waitFor(() => {
+      expect(track).toHaveBeenCalledTimes(2);
+    });
+
+    expect(track).toHaveBeenLastCalledWith({ avatarID: avatar.id, nodeIDs: ['1_0'] });
+
+    invariant(releaseFirstReveal, 'the first reveal call registered its release gate');
+    releaseFirstReveal();
   });
 });

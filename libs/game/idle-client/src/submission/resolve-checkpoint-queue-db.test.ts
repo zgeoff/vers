@@ -1,12 +1,16 @@
 import { expect, test } from 'bun:test';
-import type { DBSchema } from 'idb';
+import { ActivityFailureAction } from '@vers/idle-core';
+import type { IDBPDatabase } from 'idb';
 import { deleteDB, openDB } from 'idb';
 import {
   CHECKPOINT_QUEUE_STORE_NAME,
   CONTENT_DOCUMENT_STORE_NAME,
+  FAILURE_ACTION_PREFERENCE_KEY,
   NODE_SEEDS_STORE_NAME,
   PREFERENCES_STORE_NAME,
 } from './constants';
+import type { CheckpointQueueSchema } from './types';
+import { upgradeCheckpointQueueDB } from './upgrade-checkpoint-queue-db';
 
 /**
  * A database identity distinct from the worker's real `CHECKPOINT_QUEUE_DB_NAME`/
@@ -16,75 +20,54 @@ import {
  */
 const UPGRADE_TEST_DB_NAME = 'vers-idle-checkpoint-queue-upgrade-test';
 
-interface UpgradeTestSchema extends DBSchema {
-  'content-documents': {
-    key: string;
-    value: unknown;
-  };
-  'node-seeds': {
-    key: string;
-    value: unknown;
-  };
-  'pending-checkpoints': {
-    key: [string, number];
-    value: unknown;
-  };
-  preferences: {
-    key: string;
-    value: { dirty: boolean };
-  };
-}
-
 test('it creates the node-seeds store on an upgrade from v3 without dropping the existing stores or their rows', async () => {
-  const v3 = await openDB<UpgradeTestSchema>(UPGRADE_TEST_DB_NAME, 3, {
-    upgrade(database) {
-      database.createObjectStore(CHECKPOINT_QUEUE_STORE_NAME, {
-        keyPath: ['activityID', 'version'],
-      });
+  const preference = {
+    avatarID: 'avatar-upgrade',
+    dirty: false,
+    failureAction: ActivityFailureAction.Abort,
+  } as const;
 
-      database.createObjectStore(PREFERENCES_STORE_NAME);
-      database.createObjectStore(CONTENT_DOCUMENT_STORE_NAME, { keyPath: 'contentVersion' });
-    },
-  });
+  // a prior run that threw before its own cleanup could leave a v4 database behind, which would
+  // block this run's open at v3 with a version error — drop any leftover before opening
+  await deleteDB(UPGRADE_TEST_DB_NAME);
 
-  await v3.put(PREFERENCES_STORE_NAME, { dirty: false }, 'existing-preference');
+  let v3: IDBPDatabase<CheckpointQueueSchema> | undefined;
+  let v4: IDBPDatabase<CheckpointQueueSchema> | undefined;
 
-  v3.close();
-
-  const v4 = await openDB<UpgradeTestSchema>(UPGRADE_TEST_DB_NAME, 4, {
-    upgrade(database) {
-      if (!database.objectStoreNames.contains(CHECKPOINT_QUEUE_STORE_NAME)) {
+  try {
+    v3 = await openDB<CheckpointQueueSchema>(UPGRADE_TEST_DB_NAME, 3, {
+      upgrade(database) {
         database.createObjectStore(CHECKPOINT_QUEUE_STORE_NAME, {
           keyPath: ['activityID', 'version'],
         });
-      }
 
-      if (!database.objectStoreNames.contains(PREFERENCES_STORE_NAME)) {
         database.createObjectStore(PREFERENCES_STORE_NAME);
-      }
-
-      if (!database.objectStoreNames.contains(CONTENT_DOCUMENT_STORE_NAME)) {
         database.createObjectStore(CONTENT_DOCUMENT_STORE_NAME, { keyPath: 'contentVersion' });
-      }
+      },
+    });
 
-      if (!database.objectStoreNames.contains(NODE_SEEDS_STORE_NAME)) {
-        database.createObjectStore(NODE_SEEDS_STORE_NAME, { keyPath: 'nodeID' });
-      }
-    },
-  });
+    await v3.put(PREFERENCES_STORE_NAME, preference, FAILURE_ACTION_PREFERENCE_KEY);
 
-  const existingPreference = await v4.get(PREFERENCES_STORE_NAME, 'existing-preference');
+    v3.close();
 
-  expect([...v4.objectStoreNames]).toIncludeAllMembers([
-    CHECKPOINT_QUEUE_STORE_NAME,
-    PREFERENCES_STORE_NAME,
-    CONTENT_DOCUMENT_STORE_NAME,
-    NODE_SEEDS_STORE_NAME,
-  ]);
+    v4 = await openDB<CheckpointQueueSchema>(UPGRADE_TEST_DB_NAME, 4, {
+      upgrade: upgradeCheckpointQueueDB,
+    });
 
-  expect(existingPreference).toStrictEqual({ dirty: false });
+    const existingPreference = await v4.get(PREFERENCES_STORE_NAME, FAILURE_ACTION_PREFERENCE_KEY);
 
-  v4.close();
+    expect([...v4.objectStoreNames]).toIncludeAllMembers([
+      CHECKPOINT_QUEUE_STORE_NAME,
+      PREFERENCES_STORE_NAME,
+      CONTENT_DOCUMENT_STORE_NAME,
+      NODE_SEEDS_STORE_NAME,
+    ]);
 
-  await deleteDB(UPGRADE_TEST_DB_NAME);
+    expect(existingPreference).toStrictEqual(preference);
+  } finally {
+    v3?.close();
+    v4?.close();
+
+    await deleteDB(UPGRADE_TEST_DB_NAME);
+  }
 });

@@ -16,7 +16,7 @@ interface IdleCheckpointDBSchema {
     value: unknown;
   };
   'node-seeds': {
-    key: string;
+    key: [string, string];
     value: unknown;
   };
   'pending-checkpoints': {
@@ -57,7 +57,7 @@ export async function resolveIdleCheckpointDB(): Promise<IDBPDatabase<IdleCheckp
         }
 
         if (!database.objectStoreNames.contains('node-seeds')) {
-          database.createObjectStore('node-seeds', { keyPath: 'nodeID' });
+          database.createObjectStore('node-seeds', { keyPath: ['avatarID', 'nodeID'] });
         }
       },
     },
