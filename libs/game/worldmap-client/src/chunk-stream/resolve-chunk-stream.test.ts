@@ -1,4 +1,6 @@
 import { expect, test } from 'bun:test';
+import { CHUNK_SIZE, WORLD_COORD_MAX } from '@vers/worldmap-core';
+import { buildChunkKey } from './build-chunk-key';
 import { createChunkCache } from './create-chunk-cache';
 import type { ChunkRange } from './resolve-chunk-stream';
 import { resolveChunkStream } from './resolve-chunk-stream';
@@ -107,4 +109,28 @@ test('it never re-queues a leading-edge chunk the cache already holds', () => {
   );
 
   expect(resolved.misses).toHaveLength(0);
+});
+
+test('it stops the prefetch strip at the world chunk boundary rather than queuing an ungeneratable chunk', () => {
+  const cache = createChunkCache<string>({ capacity: 8, dispose: () => {} });
+
+  // the last in-bounds chunk on the +X axis, reached by a pan that just advanced east
+  const maxChunk = Math.floor(WORLD_COORD_MAX / CHUNK_SIZE);
+  const edgeOrigin = maxChunk * CHUNK_SIZE;
+
+  const previousRange: ChunkRange = {
+    maxChunkX: maxChunk - 1,
+    maxChunkY: 0,
+    minChunkX: maxChunk - 1,
+    minChunkY: 0,
+  };
+
+  const resolved = resolveChunkStream(
+    cache,
+    { maxCX: edgeOrigin + CHUNK_SIZE - 1, maxCY: CHUNK_SIZE - 1, minCX: edgeOrigin, minCY: 0 },
+    previousRange,
+  );
+
+  // only the entered chunk itself is a miss; the strip one beyond it lies past the world edge
+  expect(resolved.misses).toStrictEqual([buildChunkKey(maxChunk, 0)]);
 });

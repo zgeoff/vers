@@ -19,9 +19,9 @@ const ONE_CHUNK_VIEWPORT = { maxCX: CHUNK_SIZE - 1, maxCY: CHUNK_SIZE - 1, minCX
 test('it renders nothing until a seed and a viewport exist', async () => {
   const renderer = await ReactThreeTestRenderer.create(<BiomeGround />);
 
-  expect(renderer.scene.children).toHaveLength(0);
+  onTestFinished(() => renderer.unmount());
 
-  await renderer.unmount();
+  expect(renderer.scene.children).toHaveLength(0);
 });
 
 test('it renders a chunk mesh once its tile finishes its progressive build', async () => {
@@ -33,6 +33,8 @@ test('it renders a chunk mesh once its tile finishes its progressive build', asy
   setViewport(ONE_CHUNK_VIEWPORT);
 
   const renderer = await ReactThreeTestRenderer.create(<BiomeGround />);
+
+  onTestFinished(() => renderer.unmount());
 
   await ReactThreeTestRenderer.waitFor(() => renderer.scene.children.length === 1);
 
@@ -49,8 +51,6 @@ test('it renders a chunk mesh once its tile finishes its progressive build', asy
 
   expect(texture.image.width).toBe(expectedTexels);
   expect(texture.image.height).toBe(expectedTexels);
-
-  await renderer.unmount();
 });
 
 test('it drops a chunk mesh once a pan carries it out of view and streams in the entered chunk', async () => {
@@ -62,6 +62,8 @@ test('it drops a chunk mesh once a pan carries it out of view and streams in the
   setViewport(ONE_CHUNK_VIEWPORT);
 
   const renderer = await ReactThreeTestRenderer.create(<BiomeGround />);
+
+  onTestFinished(() => renderer.unmount());
 
   await ReactThreeTestRenderer.waitFor(() => renderer.scene.children.length === 1);
 
@@ -91,8 +93,6 @@ test('it drops a chunk mesh once a pan carries it out of view and streams in the
   invariant(isMesh(secondPlane), 'the rendered child is the entered chunk tile mesh');
 
   expect(secondPlane).not.toBe(firstPlane);
-
-  await renderer.unmount();
 });
 
 /**

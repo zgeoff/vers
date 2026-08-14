@@ -3,7 +3,7 @@ import { useDeferredValue, useEffect, useReducer, useRef } from 'react';
 import { createChunkCache } from './create-chunk-cache';
 import { parseChunkKey } from './parse-chunk-key';
 import type { ChunkRange } from './resolve-chunk-stream';
-import { resolveChunkStream } from './resolve-chunk-stream';
+import { collectCachedEntries, resolveChunkStream } from './resolve-chunk-stream';
 
 export interface UseChunkStreamOptions<TEntry> {
   /**
@@ -49,10 +49,13 @@ const BUILDS_PER_TICK = 1;
  * that will need it. `viewport` is wrapped in `useDeferredValue` here, once, so every layer this
  * hook drives gets an interruptible transition on a chunk-crossing pan without wrapping it itself.
  *
- * Entries resolve fresh against the mutable cache on every render rather than through a memo: the
- * progressive builder's own re-renders are what deliver a freshly built chunk to the returned
- * array, and a memo keyed on the viewport would never observe a build that lands without the
- * viewport changing.
+ * The render body only reads the cache — it shows whatever chunks are already built and touches no
+ * shared state, so a concurrent render React starts and abandons never disposes or queues against
+ * the committed scene. Every write — invalidating the cache on a seed change, recording the range
+ * the prefetch compares against, queuing the misses to build — happens in a committed effect, which
+ * also keeps the predictive prefetch working under React's development double-render. Newly built
+ * chunks reach the returned array through the progressive builder's own re-renders: a memo keyed on
+ * the viewport would never observe a build that lands without the viewport changing.
  */
 export function useChunkStream<TEntry>(
   options: Readonly<UseChunkStreamOptions<TEntry>>,
@@ -69,6 +72,7 @@ export function useChunkStream<TEntry>(
   });
 
   const cache = cacheRef.current;
+  const userSeed = options.userSeed;
 
   useEffect(
     () => () => {
@@ -77,23 +81,31 @@ export function useChunkStream<TEntry>(
     [cache],
   );
 
-  let entries: ReadonlyArray<TEntry> = [];
-  const userSeed = options.userSeed;
+  // committed write pass: invalidate the cache when the seed changes, then record the range and the
+  // miss queue the builder drains. Deferred to an effect so neither a discarded concurrent render
+  // nor development's double-invoked render body ever runs these writes.
+  useEffect(() => {
+    if (userSeed === null || deferredViewport === null) {
+      pendingRef.current = [];
 
-  if (userSeed !== null && deferredViewport !== null) {
+      return;
+    }
+
     cache.syncSeed(userSeed);
 
     const resolved = resolveChunkStream(cache, deferredViewport, previousRangeRef.current);
 
-    entries = resolved.entries;
-
-    // read by both the progressive-build effect below and this branch's next resolve — see the
-    // hook's own doc comment for why this is a direct render-body write rather than a memo
     previousRangeRef.current = resolved.range;
     pendingRef.current = resolved.misses;
-  } else {
-    pendingRef.current = [];
-  }
+
+    // surface any chunks already cached for this viewport, and kick the builder for the misses
+    forceUpdate();
+  }, [cache, userSeed, deferredViewport]);
+
+  const entries =
+    userSeed !== null && deferredViewport !== null && cache.isSyncedTo(userSeed)
+      ? collectCachedEntries(cache, deferredViewport)
+      : [];
 
   useEffect(() => {
     if (userSeed === null || pendingRef.current.length === 0) {

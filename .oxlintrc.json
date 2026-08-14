@@ -54,11 +54,7 @@
           "replaySegment",
           "resumeActivity",
           "trackActivityProgress",
-          "wake",
-          // LRUMap extends the built-in Map and must keep its exact method
-          // names to remain a drop-in Map subclass
-          "clear",
-          "delete"
+          "wake"
         ]
       }
     ],

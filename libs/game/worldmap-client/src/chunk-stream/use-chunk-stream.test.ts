@@ -1,11 +1,21 @@
 import { expect, test } from 'bun:test';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import type { Viewport } from '@vers/worldmap-core';
+import { StrictMode, createElement } from 'react';
+import type { ReactNode } from 'react';
 import { useChunkStream } from './use-chunk-stream';
 
 interface StubEntry {
   readonly chunkX: number;
   readonly chunkY: number;
+}
+
+interface ViewportProps {
+  readonly viewport: Viewport;
+}
+
+interface WrapperProps {
+  readonly children: ReactNode;
 }
 
 const ONE_CHUNK_VIEWPORT: Viewport = { maxCX: 15, maxCY: 15, minCX: 0, minCY: 0 };
@@ -181,5 +191,45 @@ test('it reports each build tick to onBuildTick with the chunk count it built', 
 
   await waitFor(() => {
     expect(ticks).toStrictEqual([{ builtChunkCount: 1 }]);
+  });
+});
+
+test('it still prefetches the leading-edge chunk under development double-rendering', async () => {
+  const built: Array<string> = [];
+
+  const hook = renderHook(
+    (props: ViewportProps) =>
+      useChunkStream<StubEntry>({
+        build: (_userSeed, chunkX, chunkY) => {
+          built.push(`${chunkX}_${chunkY}`);
+
+          return { chunkX, chunkY };
+        },
+        cacheCapacity: 32,
+        dispose: () => {},
+        userSeed: 1,
+        viewport: props.viewport,
+      }),
+    {
+      initialProps: { viewport: ONE_CHUNK_VIEWPORT },
+      wrapper: (props: WrapperProps) => createElement(StrictMode, null, props.children),
+    },
+  );
+
+  await waitFor(() => {
+    expect(built).toContain('0_0');
+  });
+
+  // pan one chunk east: the entered chunk 1_0 streams in, and the prefetch strip one beyond the
+  // leading edge queues chunk 2_0 — a movement the write-in-render version silently missed here,
+  // because StrictMode's second render read the range the first render already advanced
+  await act(() => {
+    hook.rerender({ viewport: { maxCX: 31, maxCY: 15, minCX: 16, minCY: 0 } });
+
+    return Promise.resolve();
+  });
+
+  await waitFor(() => {
+    expect(built).toContain('2_0');
   });
 });

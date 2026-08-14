@@ -6,13 +6,17 @@ import invariant from 'tiny-invariant';
  * module didn't write.
  */
 export function parseChunkKey(key: string): readonly [chunkX: number, chunkY: number] {
-  const [rawX, rawY] = key.split('_');
+  const parts = key.split('_');
+  const [rawX, rawY] = parts;
   const chunkX = Number(rawX);
   const chunkY = Number(rawY);
 
+  // reject anything `buildChunkKey` could not have minted: a wrong component count, or an empty
+  // component `Number` would silently coerce to 0 (`Number('') === 0`)
   invariant(
-    rawX !== undefined &&
-      rawY !== undefined &&
+    parts.length === 2 &&
+      rawX !== '' &&
+      rawY !== '' &&
       Number.isInteger(chunkX) &&
       Number.isInteger(chunkY),
     'a chunk key always encodes two integer coordinates',

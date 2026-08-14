@@ -4,11 +4,12 @@
  * keys survive eviction. A stored `undefined` value is indistinguishable from a miss and gets no
  * recency refresh.
  *
- * An optional `onEvict` callback fires for every entry a caller loses access to through this map's
- * own operations — a capacity eviction, an explicit `delete`, or a `clear` — so a map holding
- * resources that must be released (a GPU texture, a subscription) never leaks one. It never fires
- * for an overwrite: `set` on an existing key replaces its value without severing the map's hold on
- * the key, so the caller decides whether the old value needs releasing.
+ * An optional `onEvict` callback fires for every held entry a caller loses access to through this
+ * map's own operations — a capacity eviction, an explicit `delete`, or a `clear` — so a map holding
+ * resources that must be released (a GPU texture, a subscription) never leaks one. A stored
+ * `undefined` is not a held entry (it reads as a miss and takes no recency slot), so it never
+ * evicts. It never fires for an overwrite: `set` on an existing key replaces its value without
+ * severing the map's hold on the key, so the caller decides whether the old value needs releasing.
  */
 export class LRUMap<K, V> extends Map<K, V> {
   readonly #capacity: number;
@@ -52,6 +53,7 @@ export class LRUMap<K, V> extends Map<K, V> {
     return super.set(key, value);
   }
 
+  // oxlint-disable-next-line zgeoff/function-verb -- overrides Map.prototype.delete; the built-in name is the contract this subclass must keep
   override delete(key: K): boolean {
     const value = super.get(key);
     const deleted = super.delete(key);
@@ -63,6 +65,7 @@ export class LRUMap<K, V> extends Map<K, V> {
     return deleted;
   }
 
+  // oxlint-disable-next-line zgeoff/function-verb -- overrides Map.prototype.clear; the built-in name is the contract this subclass must keep
   override clear(): void {
     if (this.#onEvict) {
       for (const [key, value] of super.entries()) {

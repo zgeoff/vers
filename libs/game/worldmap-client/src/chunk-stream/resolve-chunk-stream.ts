@@ -1,7 +1,14 @@
 import type { Viewport } from '@vers/worldmap-core';
-import { CHUNK_SIZE } from '@vers/worldmap-core';
+import { CHUNK_SIZE, WORLD_COORD_MAX, WORLD_COORD_MIN } from '@vers/worldmap-core';
 import { buildChunkKey } from './build-chunk-key';
 import type { ChunkCache } from './create-chunk-cache';
+
+/**
+ * Chunk indices past these hold cells outside the world coordinate range, so the prefetch strip
+ * stops here rather than queuing a chunk whose cells can never generate.
+ */
+const MIN_WORLD_CHUNK = Math.floor(WORLD_COORD_MIN / CHUNK_SIZE);
+const MAX_WORLD_CHUNK = Math.floor(WORLD_COORD_MAX / CHUNK_SIZE);
 
 export interface ChunkRange {
   readonly maxChunkX: number;
@@ -62,6 +69,36 @@ export function resolveChunkStream<TEntry>(
 }
 
 /**
+ * Reads the cached entries a chunk-aligned viewport currently covers, refreshing each hit's recency
+ * but building and queuing nothing. This is the read a render performs to show whatever the cache
+ * already holds, leaving every write — seed invalidation, miss queuing, the range the prefetch
+ * compares against — to a committed effect, so an abandoned concurrent render never disposes or
+ * queues against state the committed scene still depends on.
+ */
+export function collectCachedEntries<TEntry>(
+  cache: Readonly<ChunkCache<TEntry>>,
+  viewport: Readonly<Viewport>,
+): ReadonlyArray<TEntry> {
+  const entries: Array<TEntry> = [];
+  const minChunkY = Math.floor(viewport.minCY / CHUNK_SIZE);
+  const maxChunkY = Math.floor(viewport.maxCY / CHUNK_SIZE);
+  const minChunkX = Math.floor(viewport.minCX / CHUNK_SIZE);
+  const maxChunkX = Math.floor(viewport.maxCX / CHUNK_SIZE);
+
+  for (let chunkY = minChunkY; chunkY <= maxChunkY; chunkY++) {
+    for (let chunkX = minChunkX; chunkX <= maxChunkX; chunkX++) {
+      const entry = cache.get(buildChunkKey(chunkX, chunkY));
+
+      if (entry !== undefined) {
+        entries.push(entry);
+      }
+    }
+  }
+
+  return entries;
+}
+
+/**
  * Collects the chunk strip one step beyond whichever edge the range advanced past since
  * `previousRange`, per axis, skipping a chunk the main scan above already queued. The range's own
  * minimum corner is the movement signal: a genuine pan holds the range's span constant while both
@@ -81,11 +118,15 @@ function collectLeadingEdgeMisses<TEntry>(
   if (movedX !== 0) {
     const edgeX = movedX > 0 ? range.maxChunkX + 1 : range.minChunkX - 1;
 
-    for (let chunkY = range.minChunkY; chunkY <= range.maxChunkY; chunkY++) {
-      const key = buildChunkKey(edgeX, chunkY);
+    if (edgeX >= MIN_WORLD_CHUNK && edgeX <= MAX_WORLD_CHUNK) {
+      for (let chunkY = range.minChunkY; chunkY <= range.maxChunkY; chunkY++) {
+        const key = buildChunkKey(edgeX, chunkY);
 
-      if (!cache.has(key)) {
-        misses.push(key);
+        // resolve through `get`, not `has`, so an already-cached prefetch chunk refreshes its
+        // recency and survives eviction until the pan that queued it arrives
+        if (cache.get(key) === undefined) {
+          misses.push(key);
+        }
       }
     }
   }
@@ -93,11 +134,13 @@ function collectLeadingEdgeMisses<TEntry>(
   if (movedY !== 0) {
     const edgeY = movedY > 0 ? range.maxChunkY + 1 : range.minChunkY - 1;
 
-    for (let chunkX = range.minChunkX; chunkX <= range.maxChunkX; chunkX++) {
-      const key = buildChunkKey(chunkX, edgeY);
+    if (edgeY >= MIN_WORLD_CHUNK && edgeY <= MAX_WORLD_CHUNK) {
+      for (let chunkX = range.minChunkX; chunkX <= range.maxChunkX; chunkX++) {
+        const key = buildChunkKey(chunkX, edgeY);
 
-      if (!cache.has(key)) {
-        misses.push(key);
+        if (cache.get(key) === undefined) {
+          misses.push(key);
+        }
       }
     }
   }

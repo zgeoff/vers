@@ -21,6 +21,7 @@ export interface ChunkCache<TEntry> {
   readonly clear: () => void;
   readonly get: (key: string) => TEntry | undefined;
   readonly has: (key: string) => boolean;
+  readonly isSyncedTo: (userSeed: number) => boolean;
   readonly set: (key: string, entry: TEntry) => void;
   readonly size: number;
   readonly syncSeed: (userSeed: number) => void;
@@ -58,6 +59,8 @@ export function createChunkCache<TEntry>(
     get: (key) => map.get(key),
 
     has: (key) => map.has(key),
+
+    isSyncedTo: (userSeed) => syncedSeed === userSeed,
 
     set: (key, entry) => {
       map.set(key, entry);
