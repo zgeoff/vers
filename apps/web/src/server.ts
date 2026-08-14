@@ -49,10 +49,11 @@ const clientAssets = serveStatic({ dir: CLIENT_ASSETS_DIRECTORY });
 
 /**
  * Serves the built client assets, falling through to `next` for anything that isn't a file on
- * disk (every SSR page and server function). Wrapped so its srvx-flavored signature — which
- * permits a synchronous `Response` — normalizes to this file's own `Middleware` return type.
+ * disk (every SSR page and server function).
  */
 function serveClientAssets(request: Request, next: () => Promise<Response>): Promise<Response> {
+  // srvx's `clientAssets` permits a synchronous `Response`; wrapping normalizes its return to
+  // this file's own `Middleware` return type.
   return Promise.resolve(clientAssets(request, next));
 }
 

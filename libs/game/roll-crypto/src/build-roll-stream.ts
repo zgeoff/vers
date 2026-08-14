@@ -7,15 +7,11 @@ import type { RollStream, WeightedEntry } from './types';
 const BLOCK_SIZE = 32;
 
 /**
- * Builds a roll stream over a lazily unbounded byte tape: block `i` is
- * `HKDF-SHA256(ikm: seed, salt: none, info: utf8('${domain}|${i}'), 32)`, so the tape has no
- * length ceiling and every draw derives from `(seed, domain)` alone. The expansion layout and each
- * draw's byte consumption are frozen — changing either forks every consumer's outcomes.
- *
- * `rollRange` is unbiased via rejection sampling over the smallest big-endian byte width covering
- * the span (span ≤ 2^32, so number arithmetic stays exact); a degenerate range returns `min`
- * consuming no bytes. `pickWeighted` draws one `rollRange` over the total weight and walks the
- * entries in given order — callers own deterministic entry ordering.
+ * Builds a roll stream over a lazily unbounded byte tape: every draw derives from `(seed, domain)`
+ * alone, with no limit on how many draws the stream can serve. The expansion layout and each draw's
+ * byte consumption are frozen — changing either forks every consumer's outcomes; the exact
+ * HKDF-SHA256 expansion formula is pinned by `build-roll-stream.test.ts`'s golden snapshots.
+ * `pickWeighted` walks its entries in the order given — callers own deterministic entry ordering.
  */
 export function buildRollStream(seed: Uint8Array, domain: string): RollStream {
   // Snapshot the seed so a caller mutating its array cannot fork draws already promised.
@@ -52,9 +48,12 @@ export function buildRollStream(seed: Uint8Array, domain: string): RollStream {
     invariant(span <= 2 ** 32, 'range span must not exceed 2^32');
 
     if (span === 1) {
+      // A degenerate range returns min consuming no bytes.
       return min;
     }
 
+    // Rejection-sample over the smallest big-endian byte width covering the span (span <= 2^32,
+    // so number arithmetic stays exact).
     let width = 1;
 
     while (256 ** width < span) {

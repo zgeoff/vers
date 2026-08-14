@@ -48,14 +48,6 @@ const BUILDS_PER_TICK = 1;
  * stalls, and the strip one chunk beyond the pan's leading edge prefetches ahead of the viewport
  * that will need it. `viewport` is wrapped in `useDeferredValue` here, once, so every layer this
  * hook drives gets an interruptible transition on a chunk-crossing pan without wrapping it itself.
- *
- * The render body only reads the cache — it shows whatever chunks are already built and touches no
- * shared state, so a concurrent render React starts and abandons never disposes or queues against
- * the committed scene. Every write — invalidating the cache on a seed change, recording the range
- * the prefetch compares against, queuing the misses to build — happens in a committed effect, which
- * also keeps the predictive prefetch working under React's development double-render. Newly built
- * chunks reach the returned array through the progressive builder's own re-renders: a memo keyed on
- * the viewport would never observe a build that lands without the viewport changing.
  */
 export function useChunkStream<TEntry>(
   options: Readonly<UseChunkStreamOptions<TEntry>>,

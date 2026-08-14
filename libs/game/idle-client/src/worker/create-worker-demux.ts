@@ -42,13 +42,11 @@ const DEFAULT_EVICT_AFTER_MS = 5 * 60 * 1000;
 /**
  * Bridges every tab on the web-locks path to the runtime's router: no real `MessagePort` exists
  * between a tab and the elected writer, so each tab's frames — enveloped with its id by
- * `createBroadcastPort` — are demultiplexed onto a virtual port built the moment an unseen tab id
- * first appears. The virtual port delivers synchronously: `upgrade` registers the router's message
- * listener before this handler relays the same frame to it, so no buffering or `start()` concept
- * is needed for correct delivery ordering. Idle tabs are swept on a timer so a tab that never sends
- * an explicit disconnect — there is no such signal over `BroadcastChannel` — does not leak forever.
- * Removing a tab, by sweep or by its own disconnect, fires the virtual port's close listeners, so
- * the RPC handler aborts that tab's in-flight calls and drops its per-connection state.
+ * `createBroadcastPort` — are demultiplexed onto a virtual port per tab. Idle tabs are swept on a
+ * timer so a tab that never sends an explicit disconnect — there is no such signal over
+ * `BroadcastChannel` — does not leak forever. Removing a tab, by sweep or by its own disconnect,
+ * fires the virtual port's close listeners, so the RPC handler aborts that tab's in-flight calls
+ * and drops its per-connection state.
  */
 export function createWorkerDemux(options: Readonly<CreateWorkerDemuxOptions>): WorkerDemux {
   const evictAfterMs = options.evictAfterMs ?? DEFAULT_EVICT_AFTER_MS;
@@ -58,6 +56,10 @@ export function createWorkerDemux(options: Readonly<CreateWorkerDemuxOptions>): 
   const outgoing = new BroadcastChannel(RPC_WORKER_TO_CLIENT_CHANNEL);
   const tabs = new Map<string, Tab>();
 
+  // The returned virtual port is built the moment an unseen tab id first appears, and delivers
+  // synchronously: `upgrade` registers the router's message listener before the incoming-channel
+  // handler below relays the same frame to it, so no buffering or `start()` concept is needed for
+  // correct delivery ordering.
   const buildVirtualPort = (
     tabID: string,
 

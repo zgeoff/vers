@@ -41,11 +41,9 @@ const BIOME_GROUND_ELEVATION = -0.05;
 
 /**
  * Streams the placeholder biome terrain tint over the world map as a chunk-keyed mosaic: each
- * `CHUNK_SIZE`-cell chunk builds once — a quad whose per-fragment color samples a CPU-mixed RGBA
- * texture, the base biome blended toward its border neighbour by `blendT`, with the modifier tint
- * overlaid at low alpha where the modifier layer draws non-`none` — and persists in the chunk-stream
- * cache so a pan across already-visited ground re-mounts the cached tiles instantly. It renders
- * nothing until both a seed and a viewport exist.
+ * `CHUNK_SIZE`-cell chunk builds once and persists in the chunk-stream cache, so a pan across
+ * already-visited ground re-mounts the cached tiles instantly. It renders nothing until both a
+ * seed and a viewport exist.
  */
 export function BiomeGround() {
   const userSeed = useUserSeed();
@@ -170,10 +168,8 @@ function buildGroundTexture(field: Readonly<BiomeField>): DataTexture {
 }
 
 /**
- * CPU-mixes each texel's RGBA byte: the base tint blended toward the border neighbour's tint by
- * half `blendT`, then the modifier tint overlaid at `MODIFIER_OVERLAY_ALPHA` where the modifier
- * layer drew non-`none`. Alpha is always opaque — the ground plane replaces the floor's color
- * within its footprint outright, it never shows the floor through.
+ * CPU-mixes each texel's RGBA byte. Alpha is always opaque — the ground plane replaces the floor's
+ * color within its footprint outright, it never shows the floor through.
  */
 function updateGroundBytes(bytes: Uint8Array, field: Readonly<BiomeField>): void {
   const count = field.cols * field.rows;
@@ -182,11 +178,13 @@ function updateGroundBytes(bytes: Uint8Array, field: Readonly<BiomeField>): void
     const base = getBaseTint(field.baseIDs[index] ?? 0);
     const neighbour = getBaseTint(field.neighbourBaseIDs[index] ?? 0);
     const mixT = 0.5 * (field.blendTs[index] ?? 0);
+    // The base tint blends toward the border neighbour's tint by half `blendT`.
     let r = base.r + (neighbour.r - base.r) * mixT;
     let g = base.g + (neighbour.g - base.g) * mixT;
     let b = base.b + (neighbour.b - base.b) * mixT;
 
     if ((field.modifierIDs[index] ?? 0) !== 0) {
+      // The modifier tint overlays at `MODIFIER_OVERLAY_ALPHA` where the modifier layer drew non-`none`.
       r += (MODIFIER_TINT.r - r) * MODIFIER_OVERLAY_ALPHA;
       g += (MODIFIER_TINT.g - g) * MODIFIER_OVERLAY_ALPHA;
       b += (MODIFIER_TINT.b - b) * MODIFIER_OVERLAY_ALPHA;

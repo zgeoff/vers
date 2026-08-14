@@ -122,8 +122,7 @@ const DEAD_LETTER_SUFFIX = '.dead';
 
 /**
  * Idempotent: `pg-boss`'s `createQueue` upserts, so calling `start` again against an already
- * migrated database is safe. A dead-letter queue is created before the queue that references it,
- * since pg-boss enforces the reference with a foreign key.
+ * migrated database is safe.
  */
 async function startQueues(boss: PgBoss, defs: JobDefs): Promise<void> {
   await boss.start();
@@ -131,6 +130,8 @@ async function startQueues(boss: PgBoss, defs: JobDefs): Promise<void> {
   for (const [name, def] of Object.entries(defs)) {
     const deadLetterName = def.deadLetter === true ? `${name}${DEAD_LETTER_SUFFIX}` : undefined;
 
+    // pg-boss enforces the dead-letter reference with a foreign key, so the referenced queue
+    // must exist before the queue that points at it is created.
     if (deadLetterName !== undefined) {
       await boss.createQueue(deadLetterName);
     }
@@ -176,10 +177,6 @@ interface FetchedJob {
   readonly retryLimit: number;
 }
 
-/**
- * One-shot fetch/handle/complete loop: batches until a queue is empty, then moves to the next
- * queue.
- */
 async function drainJobs(
   boss: PgBoss,
   defs: JobDefs,

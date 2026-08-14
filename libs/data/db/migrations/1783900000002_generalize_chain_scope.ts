@@ -3,10 +3,7 @@ import type { Kysely } from 'kysely';
 /**
  * Generalizes the seed chain's key from `(avatar, node)` to `(avatar, chain scope)`, a
  * `(scope_type, scope_id)` pair identifying a stable, returnable target; `world_map_node` is the
- * scope for world-map nodes. Renames `node_id` to `scope_id` on `activity_chains` and `activities`,
- * adds `scope_type` to both (backfilled to `world_map_node` for existing rows, NOT NULL with no
- * default thereafter), and re-keys `activity_chains`' primary key on
- * `(avatar_id, scope_type, scope_id)`.
+ * scope for world-map nodes.
  */
 export async function up(db: Kysely<unknown>): Promise<void> {
   await db.schema.alterTable('activity_chains').renameColumn('node_id', 'scope_id').execute();

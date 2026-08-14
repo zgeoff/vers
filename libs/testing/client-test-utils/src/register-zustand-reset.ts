@@ -4,13 +4,13 @@ import * as actualZustand from 'zustand';
 /**
  * Wires automatic zustand store resets into the current bun-test run: wraps zustand's `create` so
  * every store built through it registers a reset to its initial state, replayed in a global
- * `afterEach`. Call once from a bunfig preload, as early as possible — `bun test` runs every file
- * in one process with no per-file isolation, so a store mutated in one file otherwise leaks into
- * the next, and the wrapping must be installed before any module under test imports `zustand`.
- * `mock.module` swaps the live `zustand` namespace binding retroactively, so the real `create` is
- * captured into a const before it runs, or calling it from inside the wrapper recurses.
+ * `afterEach`. Call once from a bunfig preload, before any module under test imports `zustand` —
+ * `bun test` runs every file in one process with no per-file isolation, so a store mutated in one
+ * file otherwise leaks into the next.
  */
 export function registerZustandReset(): void {
+  // Captured before mock.module swaps the live `zustand` namespace binding; calling
+  // actualZustand.create from inside the wrapper below would recurse.
   const actualCreate = actualZustand.create;
 
   const storeResetFns = new Set<() => void>();
@@ -33,6 +33,8 @@ export function registerZustandReset(): void {
       : createTrackedStore;
   }) as typeof actualZustand.create;
 
+  // Swaps the live `zustand` namespace binding retroactively, so every already-imported consumer
+  // picks up the tracked `create`.
   void mock.module('zustand', () => ({ ...actualZustand, create }));
 
   afterEach(() => {

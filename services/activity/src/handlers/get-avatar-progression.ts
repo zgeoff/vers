@@ -130,10 +130,6 @@ interface PendingCandidateRow {
   readonly settledXp: null | number;
 }
 
-/**
- * Builds a pending entry from a candidate row, or nothing when the row carries no pending activity
- * — a null activity id from the left join, or an activity whose unsettled xp comes to nothing.
- */
 function findPendingEntry(row: Readonly<PendingCandidateRow>): Array<PendingXPEntry> {
   if (row.id === null) {
     return [];

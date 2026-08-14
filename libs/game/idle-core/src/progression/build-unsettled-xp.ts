@@ -23,18 +23,18 @@ interface UnsettledXPInput {
 
 /**
  * The xp an activity has earned but not yet settled — what a display adds on top of the avatar's
- * settled row, and the exact inverse of what verification will pay for the same checkpoints. A
- * terminal tail carries the run's final total, so what remains is that total less whatever earlier
- * segments already settled; every other tail carries per-checkpoint deltas, so what remains is
- * their sum past the verified cursor. Reading the two rules apart is what keeps a run's displayed
- * total steady as verification advances underneath it.
+ * settled row, and the exact inverse of what verification will pay for the same checkpoints.
  */
 export function buildUnsettledXP(input: Readonly<UnsettledXPInput>): number {
   const terminalTotal = parseTerminalCheckpointXP(input.tailPayload);
 
   if (terminalTotal === undefined) {
+    // Every non-terminal tail carries per-checkpoint deltas, so what remains is their sum past
+    // the verified cursor.
     return input.unverifiedDeltaSum;
   }
 
+  // A terminal tail carries the run's final total, so what remains is that total less whatever
+  // earlier segments already settled.
   return terminalTotal - input.settledXP;
 }

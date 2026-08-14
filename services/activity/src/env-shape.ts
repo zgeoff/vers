@@ -1,10 +1,5 @@
 import * as z from 'zod';
 
-/**
- * Environment the activity service needs beyond the base service env: the checkpoint-store
- * database, the replay origin committed appends poke, the keys origin a start reads its scope
- * secret from, and the key its wake-poke and s2s tokens are signed with.
- */
 export const envShape = {
   DATABASE_URL: z.string().describe('Postgres connection string for the activity checkpoint store'),
   KEYS_SERVICE_URL: z

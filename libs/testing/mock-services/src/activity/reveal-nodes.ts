@@ -17,13 +17,13 @@ const MOCK_SECRET_REF = 'worldmap';
 const MOCK_SECRET_VERSION = 1;
 
 /**
- * Mints a genesis seed per requested node, hashed from the avatar and node id so the same pair
- * always reveals to the same seed across calls — mirroring the real service's idempotent reveal
- * without a persisted chain collection to key off of. Each node's encounter mirrors
- * `startActivity`'s own mock derivation: difficulty from its coordinate alone, no sealed pool
- * pick. Mirrors the real handler's other checks: NODE_UNKNOWN for a scope id that doesn't resolve
- * to a world-map node, and admission gated to the account's active avatar, adopting an absent
- * selection unless a different avatar already holds a live run.
+ * Mints a genesis seed per requested node so the same avatar-and-node pair always reveals to the
+ * same seed across calls — mirroring the real service's idempotent reveal without a persisted
+ * chain collection to key off of. Each node's encounter mirrors `startActivity`'s own mock
+ * derivation: difficulty from its coordinate alone, no sealed pool pick. Mirrors the real
+ * handler's other checks: NODE_UNKNOWN for a scope id that doesn't resolve to a world-map node,
+ * and admission gated to the account's active avatar, adopting an absent selection unless a
+ * different avatar already holds a live run.
  */
 export const revealNodes = os.revealNodes.handler(async (opts) => {
   const actingUserId = opts.context.actingUserId;
@@ -71,6 +71,7 @@ export const revealNodes = os.revealNodes.handler(async (opts) => {
   }
 
   const nodes = opts.input.nodeIDs.map((nodeID) => {
+    // Hashed from the avatar and node id, so the same pair always derives the same seed.
     const hash = sha256(utf8ToBytes(`vers-mock-genesis|${opts.input.avatarID}|${nodeID}`));
     const encounterNode = resolveEncounterNode('world_map_node', nodeID);
 

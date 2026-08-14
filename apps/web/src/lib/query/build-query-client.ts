@@ -9,8 +9,7 @@ import { MutationCache, QueryCache, QueryClient } from '@tanstack/react-query';
  * errors and 5xx — retry twice, and errors born in the client itself are reported once per error
  * at the cache layer, where no per-hook handler can shadow the report. On the browser it also wires
  * cross-tab cache sync over `BroadcastChannel`, so a cache change in one tab invalidates the same
- * query in every other open tab; this module also runs on the server during SSR, where
- * `BroadcastChannel` doesn't exist, so that wiring is guarded to the client only.
+ * query in every other open tab.
  */
 export function buildQueryClient(): QueryClient {
   const queryClient = new QueryClient({
@@ -21,6 +20,8 @@ export function buildQueryClient(): QueryClient {
     queryCache: new QueryCache({ onError: reportUnexpectedError }),
   });
 
+  // This module also runs on the server during SSR, where `BroadcastChannel` doesn't exist, so
+  // cross-tab sync is guarded to the client only.
   if (globalThis.window !== undefined && typeof BroadcastChannel !== 'undefined') {
     broadcastQueryClient({ broadcastChannel: 'vers-query', queryClient });
   }

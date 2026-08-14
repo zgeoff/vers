@@ -46,14 +46,10 @@ export interface PlanOfflineContinuationsResult {
 }
 
 /**
- * Simulates an entire offline gap locally: no network call, no submitter. Attempt by attempt, it
- * reconstructs the confirmed row's own remaining tail for free — the already-appended prefix
- * costs nothing against the budget. While budget remains and the failure policy allows it, each
- * further attempt's seed, client id, and predicted build snapshot derive from the chain position
- * alone, exactly as the server reproduces them when it applies the catch-up. Prediction depends
- * on the single-active-run invariant: no other scope accrues unsettled xp during the gap, so the
- * confirmed row's own snapshot is the correct baseline for every later attempt's fold, and the
- * only sources this loop must add are the gap's own continuations as they close.
+ * Simulates an entire offline gap locally: no network call, no submitter. While budget remains
+ * and the failure policy allows it, each further attempt's seed, client id, and predicted build
+ * snapshot derive from the chain position alone, exactly as the server reproduces them when it
+ * applies the catch-up.
  *
  * A failure under the abort policy stops planning after that continuation's own tail — the same
  * policy live play applies after a terminal checkpoint. The wire format still mints that
@@ -117,6 +113,8 @@ export async function planOfflineContinuations(
       return { planned, reason: 'budget-exhausted' };
     }
 
+    // Attempt by attempt, this reconstructs the confirmed row's own remaining tail for free — the
+    // already-appended prefix costs nothing against the budget.
     const tail = attempt.checkpoints.slice(appendedHead);
 
     if (tail.length === 0) {
@@ -142,6 +140,10 @@ export async function planOfflineContinuations(
       unverifiedDeltaSum: 0,
     });
 
+    // Prediction depends on the single-active-run invariant: no other scope accrues unsettled xp
+    // during the gap, so the confirmed row's own snapshot is the correct baseline for every later
+    // attempt's fold, and the only sources this loop must add are the gap's own continuations as
+    // they close.
     const optimistic = foldOptimisticBuild(baselineXP, localSources);
 
     const nextBuildSnapshot = {

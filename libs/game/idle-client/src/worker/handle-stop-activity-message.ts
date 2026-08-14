@@ -11,9 +11,7 @@ interface StopActivityInput {
 }
 
 /**
- * Ends a run entirely inside the worker: the local halt lands first and needs no network — the
- * simulation stops, the runtime resets to its idle state, and every tab sees a cleared snapshot —
- * then the durable intent is written and its delivery attempted.
+ * Ends a run entirely inside the worker.
  */
 export async function handleStopActivityMessage(
   context: WorkerContext,
@@ -27,6 +25,8 @@ export async function handleStopActivityMessage(
     return;
   }
 
+  // The local halt lands first and needs no network — the simulation stops, the runtime resets to
+  // its idle state, and every tab sees a cleared snapshot.
   context.advanceStopScope();
   context.getSimulation().stopActivity();
 
@@ -41,6 +41,7 @@ export async function handleStopActivityMessage(
 
   context.broadcast(message);
 
+  // The durable intent is written and its delivery attempted only after the local halt completes.
   // unconditional: whatever continuation was outstanding died with the run the player ended
   await removePendingStartIntent();
   await submitStopIntent(context, { avatarID: input.avatarID, id: input.activityID });

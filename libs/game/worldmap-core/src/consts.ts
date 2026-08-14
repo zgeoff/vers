@@ -122,10 +122,7 @@ export const BIOME_TERRITORY_BLEND_BAND = 0.75;
 /**
  * Base-biome alternatives and their distance-banded rarity, placeholder and tunable. Every name is
  * dev-facing flavour text — it must never reach a contract schema, an analytics event, or a DB
- * column. `biome_1` is common at every distance; `biome_2` is absent until distance ~20 and fades
- * in by ~80; `biome_3` is deep-only, absent until distance ~60 and fading in by ~140; `biome_4` is
- * common near the origin and rarer far out. Every curve converges to a roughly equal weight by
- * distance 200.
+ * column.
  */
 export const BIOME_ROSTER: ReadonlyArray<BiomeRosterEntry> = [
   {
