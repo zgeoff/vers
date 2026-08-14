@@ -2,10 +2,8 @@ import invariant from 'tiny-invariant';
 import type { AffixConstraints, AffixDef, AffixPool } from './types';
 
 /**
- * Applies a constraint set to an affix table in the canonical order — occupancy and protection
- * filters, then reweights (factor 0 removes; an id absent from the pool is a no-op), then a sort
- * by affix id — so equal inputs always yield an identical pool. Forced affixes bypass the filters;
- * only their existence in the table is asserted.
+ * Applies a constraint set to an affix table so equal inputs always yield an identical pool.
+ * Forced affixes bypass the filters; only their existence in the table is asserted.
  */
 export function buildAffixPool(
   affixes: ReadonlyArray<AffixDef>,
@@ -17,11 +15,17 @@ export function buildAffixPool(
   const reweights = constraints.reweights ?? {};
 
   const entries = affixes
+
+    // excludes occupied-group affixes when the constraint requests it
     .filter(
       (affix) =>
         !(constraints.excludeOccupiedGroups === true && occupiedGroupIDs.has(affix.groupID)),
     )
+
+    // excludes protected groups
     .filter((affix) => !protectedGroupIDs.has(affix.groupID))
+
+    // reweights: an id absent from the pool is a no-op
     .map((affix) => {
       const factor = Object.hasOwn(reweights, affix.id) ? reweights[affix.id] : undefined;
 
@@ -42,7 +46,11 @@ export function buildAffixPool(
         valueMax: affix.valueMax,
       };
     })
+
+    // factor 0 removes the affix from the pool
     .filter((affix) => affix.weight > 0)
+
+    // sorts by affix id for a canonical, order-independent pool
     .toSorted((a, b) => (a.id < b.id ? -1 : 1));
 
   const forced = (constraints.forceAffixIDs ?? []).toSorted().map((affixID) => {

@@ -4,12 +4,12 @@ export type DeriveRejectionReason = 'unknown-key-version' | 'unknown-scope-secre
 
 /**
  * Counts one derivation call — an avatar roll key or a scope secret — that refused to derive,
- * split by reason. The counter is resolved through the global metrics API on every call — the SDK
- * returns the same instrument for an identical registration, and resolving late keeps the counter
- * bound to whichever meter provider the process registered at boot; without one it is the API's
- * no-op.
+ * split by reason.
  */
 export function recordDeriveRejection(reason: DeriveRejectionReason): void {
+  // Resolved through the global metrics API on every call: the SDK returns the same instrument
+  // for an identical registration, and resolving late keeps the counter bound to whichever meter
+  // provider the process registered at boot; without one it is the API's no-op.
   const counter = metrics
     .getMeter('@vers/service-keys')
     .createCounter('vers.keys.derive_rejections', {

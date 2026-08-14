@@ -30,9 +30,7 @@ export interface StartErrorReportingOptions {
  * loads the SDK. Never rejects: a bootstrap failure leaves reporting off with a console warning,
  * since an unhandled rejection from the reporting path itself is the one fault nothing can
  * capture. The SDK's default global handlers stay on in production, netting any throw the
- * explicit capture sites miss. Tracing lives on the OpenTelemetry path; the error backend drops
- * transaction envelopes. Client reports are off: the error backend discards them, and their
- * periodic flush would keep an idle worker chattering.
+ * explicit capture sites miss.
  */
 export async function startErrorReporting(
   dsn: string | undefined,
@@ -52,7 +50,12 @@ export async function startErrorReporting(
       // HTTP body type — and a failed checkpoint submission's body carries the session token, so
       // body capture is switched off wholesale
       dataCollection: { httpBodies: [], userInfo: true },
+
+      // Tracing lives on the OpenTelemetry path; the error backend drops transaction envelopes.
       tracesSampleRate: 0,
+
+      // The error backend discards client reports, and their periodic flush would keep an idle
+      // worker chattering.
       sendClientReports: false,
       ...(options.beforeSend !== undefined && { beforeSend: options.beforeSend }),
       ...(options.disableDefaultIntegrations === true && { defaultIntegrations: false }),

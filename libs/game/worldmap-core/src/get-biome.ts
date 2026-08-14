@@ -23,9 +23,6 @@ import type { BiomeRosterEntry, BiomeSample } from './types';
  * derives the identical sample from the same seed and position, and `cx`/`cy` may be any real
  * number, not only an integer cell coordinate, so a texel field can sample between cell centers.
  *
- * The base layer reads its nearest and second-nearest feature point for `blendT` and
- * `neighbourBaseID`; the modifier layer's border blend is never read, so it reads only its nearest.
- *
  * A hidden per-node reward that clusters by biome is permanently forbidden — it would turn
  * client-visible terrain into a treasure map for sealed loot, the exact sniping fog exists to deny.
  * Biome may only ever touch reward through a public, biome-uniform function of the public biome id,
@@ -40,6 +37,8 @@ export function getBiome(userSeed: number, cx: number, cy: number): BiomeSample 
   const warpedX = hexX + BIOME_EDGE_WOBBLE_AMPLITUDE * (wobbleX - 0.5);
   const warpedY = hexY + BIOME_EDGE_WOBBLE_AMPLITUDE * (wobbleY - 0.5);
 
+  // Reads both nearest and second-nearest feature points: blendT and neighbourBaseID need the
+  // second-nearest for the border blend.
   const base = buildNearestFeaturePoints(
     userSeed,
     warpedX,
@@ -49,6 +48,7 @@ export function getBiome(userSeed: number, cx: number, cy: number): BiomeSample 
     HASH_CHANNEL.worleyFeatureY,
   );
 
+  // The modifier layer has no border blend, so only its nearest feature point is read.
   const modifier = buildNearestFeaturePoints(
     userSeed,
     warpedX,
@@ -102,16 +102,6 @@ interface NearestFeaturePoints {
   readonly secondDistance: number;
 }
 
-/**
- * Scatters one jittered feature point per coarse cell of `patchSize` and scans the 5×5
- * neighbourhood around `(x, y)` for the nearest and second-nearest, the Worley step behind the
- * border blend. Feature points jitter anywhere inside their cell, so a sample near a cell corner
- * can sit closer to a feature two rings out than to every feature in the 3×3 window. 5×5 is always
- * enough: the sample's own cell and its corner-adjacent cell each hold a candidate within √2 patch
- * units, while every cell three or more rings out lies at least 2 patch units away, so both winners
- * fall inside the window. Candidate coordinates and feature points stay plain numbers throughout
- * the scan — nothing is allocated per candidate.
- */
 function buildNearestFeaturePoints(
   userSeed: number,
   x: number,
@@ -129,6 +119,12 @@ function buildNearestFeaturePoints(
   let secondCellX = baseCellX;
   let secondCellY = baseCellY;
 
+  // Scatters one jittered feature point per coarse cell of patchSize and scans the 5×5
+  // neighbourhood around (x, y) for the nearest and second-nearest. Feature points jitter anywhere
+  // inside their cell, so a sample near a cell corner can sit closer to a feature two rings out
+  // than to every feature in the 3×3 window. 5×5 is always enough: the sample's own cell and its
+  // corner-adjacent cell each hold a candidate within √2 patch units, while every cell three or
+  // more rings out lies at least 2 patch units away, so both winners fall inside the window.
   for (let dy = -2; dy <= 2; dy++) {
     for (let dx = -2; dx <= 2; dx++) {
       const cellX = baseCellX + dx;

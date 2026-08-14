@@ -10,11 +10,9 @@ import { resolveSceneStateForLocation } from './lib/scene/resolve-scene-state-fo
 import { routeTree } from './routeTree.gen';
 import { CSP_NONCE_HEADER } from './server/csp-nonce-header';
 
-/**
- * The secure-headers middleware stamps this onto the request before the SSR handler runs; reading
- * it back is the only way this isomorphic factory can recover a per-request value, since it has
- * no other channel into request middleware context.
- */
+// The secure-headers middleware stamps this onto the request before the SSR handler runs; reading
+// it back is the only way this isomorphic factory can recover a per-request value, since it has
+// no other channel into request middleware context.
 const getCSPNonce = createIsomorphicFn()
   .server(() => getRequestHeader(CSP_NONCE_HEADER))
   .client(() => {

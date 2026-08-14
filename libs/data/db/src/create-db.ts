@@ -11,27 +11,8 @@ interface CreateDBConfig {
 }
 
 /**
- * Builds a `Kysely` client over the shared postgres.js dialect with
- * camelCase-mapped columns. Callers own env parsing — this never reads
- * `process.env` itself.
- *
- * Both session-level timeouts below bound how long a single statement or an
- * idle-in-transaction connection can hold a lock: no future code path that
- * opens a transaction can leave orphaned transaction state alive past 30s,
- * even across a serverless process kill.
- *
- * `idle_timeout` (seconds, unlike the millisecond session timeouts) closes a
- * pooled connection from the client side before the managed Postgres endpoint
- * suspends on its own idle timeout and drops the socket server-side. Without
- * it the pool hands a caller a connection the endpoint already closed, and the
- * first write fails with CONNECTION_CLOSED; the value stays under the
- * endpoint's suspend timeout so the client always closes first.
- *
- * `connect_timeout` (also seconds) bounds connection acquisition itself, a
- * phase neither `statement_timeout` nor `idle_timeout` covers: a suspended
- * managed Postgres endpoint that stalls on wake fails in 10s instead of
- * hanging for minutes, while 10s leaves headroom for a normal cold wake
- * (roughly 1-5s).
+ * Builds a `Kysely` client over the shared postgres.js dialect with camelCase-mapped columns.
+ * Callers own env parsing — this never reads `process.env` itself.
  */
 export function createDB(config: CreateDBConfig): Kysely<DB> {
   const sql = postgres(config.databaseURL, buildPostgresOptions(config));
@@ -50,12 +31,26 @@ export function createDB(config: CreateDBConfig): Kysely<DB> {
  */
 export function buildPostgresOptions(config: CreateDBConfig) {
   return {
+    // Bounds connection acquisition itself, a phase neither `statement_timeout` nor
+    // `idle_timeout` covers: a suspended managed Postgres endpoint that stalls on wake fails in
+    // 10s instead of hanging for minutes, while 10s leaves headroom for a normal cold wake
+    // (roughly 1-5s).
     connect_timeout: 10,
     connection: {
+      // Both session-level timeouts below bound how long a single statement or an
+      // idle-in-transaction connection can hold a lock: no future code path that opens a
+      // transaction can leave orphaned transaction state alive past 30s, even across a
+      // serverless process kill.
       idle_in_transaction_session_timeout: 30_000,
       statement_timeout: 30_000,
       ...(config.searchPath === undefined ? {} : { search_path: config.searchPath }),
     },
+
+    // Seconds, unlike the millisecond session timeouts above. Closes a pooled connection from
+    // the client side before the managed Postgres endpoint suspends on its own idle timeout and
+    // drops the socket server-side. Without it the pool hands a caller a connection the endpoint
+    // already closed, and the first write fails with CONNECTION_CLOSED; the value stays under
+    // the endpoint's suspend timeout so the client always closes first.
     idle_timeout: 240,
   };
 }

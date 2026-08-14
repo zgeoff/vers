@@ -15,9 +15,7 @@ export interface DeriveWorldmapDescriptorInput {
  * always yields an identical descriptor, and it is uncorrelated with public node geometry — no
  * client can reproduce it without the scope secret.
  *
- * The `v1` segment is scheme versioning, frozen alongside the byte layout. The coordinate and user
- * seed are decimal-formatted before joining, so distinct integers can never collide through digit
- * concatenation.
+ * The exact byte layout is frozen and enforced by the golden-descriptor test.
  */
 export function deriveWorldmapDescriptor(
   input: Readonly<DeriveWorldmapDescriptorInput>,

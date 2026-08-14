@@ -100,11 +100,7 @@ export function collectCachedEntries<TEntry>(
 
 /**
  * Collects the chunk strip one step beyond whichever edge the range advanced past since
- * `previousRange`, per axis, skipping a chunk the main scan above already queued. The range's own
- * minimum corner is the movement signal: a genuine pan holds the range's span constant while both
- * corners shift together, so a change on the minimum alone unambiguously names the direction: a
- * span change with no shift (a zoom) reports no movement on that axis and collects no strip, since
- * the zoom's own newly visible area already came from the main scan above.
+ * `previousRange`, per axis, skipping a chunk the main scan above already queued.
  */
 function collectLeadingEdgeMisses<TEntry>(
   cache: Readonly<ChunkCache<TEntry>>,
@@ -112,6 +108,12 @@ function collectLeadingEdgeMisses<TEntry>(
   previousRange: Readonly<ChunkRange>,
 ): Array<string> {
   const misses: Array<string> = [];
+
+  // The range's own minimum corner is the movement signal: a genuine pan holds the range's span
+  // constant while both corners shift together, so a change on the minimum alone unambiguously
+  // names the direction. A span change with no shift (a zoom) reports no movement on that axis and
+  // collects no strip, since the zoom's own newly visible area already came from the main scan
+  // above.
   const movedX = Math.sign(range.minChunkX - previousRange.minChunkX);
   const movedY = Math.sign(range.minChunkY - previousRange.minChunkY);
 

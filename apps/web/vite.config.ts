@@ -91,15 +91,15 @@ function findNonEmptyEnv(name: string): string | undefined {
 
 /**
  * Starts the shared MSW server for `vite dev` only — `configureServer` never fires for
- * `vite build` — so dev boot runs entirely against the mock backend. Goes through `ssrLoadModule`
- * rather than a plain top-level import: this config file loads outside Vite's own resolver, and
- * this app's workspace packages (`@vers/contract-*`) are extensionless-TS source that only that
- * resolver handles.
+ * `vite build` — so dev boot runs entirely against the mock backend.
  */
 function buildMockBackendPlugin(): Plugin {
   return {
     name: 'vers:mock-backend',
     async configureServer(viteServer) {
+      // Goes through `ssrLoadModule` rather than a plain top-level import: this config file loads
+      // outside Vite's own resolver, and this app's workspace packages (`@vers/contract-*`) are
+      // extensionless-TS source that only that resolver handles.
       const mocks: Record<string, unknown> = await viteServer.ssrLoadModule('/src/mocks/node.ts');
 
       if (!isMockBackendServer(mocks['server'])) {

@@ -13,11 +13,6 @@ import { requireActiveAvatar } from '../require-active-avatar';
 import { resolveEncounterNode } from '../resolve-encounter-node';
 import type { AvatarNotActivePayload, EmptyErrorPayload, MissingSessionPayload } from '../types';
 
-/**
- * Db handle plus the memoized content-document loader, the key version every revealed node's
- * encounter is stamped against, and the keys dispatch a reveal reads its scope secret over — the
- * same encounter-derivation inputs `startActivity` closes over.
- */
 interface RevealNodesDeps {
   readonly db: Kysely<DB>;
   readonly keysServiceURL: string;
@@ -194,11 +189,6 @@ interface EncounterInputs {
   readonly scopeSecret: Uint8Array;
 }
 
-/**
- * Loads the current content document and the avatar's scope secret, after the mint transaction has
- * run its active-avatar gate — an owned-but-inactive avatar rejects before this reveal contacts the
- * content registry or the keys service, and pays for neither round trip.
- */
 async function loadEncounterInputs(
   deps: RevealNodesDeps,
   avatarID: string,

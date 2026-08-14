@@ -39,20 +39,16 @@ interface OptimisticProgression {
 
 /**
  * Derives the level/xp a screen renders from the settled progression read: the settled total plus
- * every pending entry's delta, plus the live sim's own running delta on top — deduped by activity
- * id against the pending list so a just-terminal run's own entry, once its refetch lands, is never
- * counted twice. The live overlay is net of whatever the settled total already carries for that
- * same run, so a settled row that tracks a run in flight never double-counts its verified part;
- * checkpoints still queued client-side only widen that remainder, never invert it. The level is
- * recomputed from the resulting total whenever anything is projected — a pending entry can carry
- * xp from a run the live sim never drove, so only the aggregate total derives a trustworthy level;
- * the settled row's own level is exact only once nothing projects on top of it.
+ * every pending entry's delta, plus a live-sim overlay, net of whatever the settled total already
+ * carries for that run.
  */
 export function buildOptimisticProgression(
   input: Readonly<BuildOptimisticProgressionInput>,
 ): OptimisticProgression {
   const pendingXP = input.progression.pending.reduce((total, entry) => total + entry.xpDelta, 0);
 
+  // Dedupe by activity id: once a just-terminal run's own entry lands in the pending list via
+  // refetch, the overlay below must stop counting it, or it counts twice.
   const simIsPending = input.progression.pending.some(
     (entry) => entry.activityID === input.simActivity?.id,
   );
@@ -77,6 +73,10 @@ export function buildOptimisticProgression(
 
   return {
     isSettling,
+
+    // Recompute the level from the aggregate total whenever anything is projected: a pending
+    // entry can carry xp from a run the live sim never drove, so the settled row's own level is
+    // exact only once nothing projects on top of it.
     level: isSettling ? buildLevelFromXP(displayXP) : input.progression.level,
     xp: displayXP,
   };

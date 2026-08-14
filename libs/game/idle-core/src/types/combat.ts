@@ -3,8 +3,6 @@ export interface ActivityExecutorSnapshot {
 }
 
 /**
- * The lifecycle every activity type's executor implements: report elapsed time,
- * project a serializable snapshot, reset for a fresh run, and advance by a delta.
  * Each activity type supplies its own executor — combat is the world map encounter's.
  */
 export interface ActivityExecutor {

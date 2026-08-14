@@ -44,35 +44,16 @@ interface HeldCompletedNodeIDs {
  * Rebuilds the worldmap store's region graph from the active avatar's seed and the store's current
  * viewport, and resets the selection and viewport to the avatar's origin whenever the active
  * avatar itself changes — a fresh avatar or a switch between avatars — while otherwise leaving the
- * selection alone across a moved viewport, a re-render, or a remount. The graph is built from the
- * chunk-aligned viewport and kept by reference while that alignment holds, so the rendered node
- * and edge lists change only when a pan crosses a chunk boundary, not on every cell-granular
- * camera move. The region is keyed by the avatar id, not the seed: two avatars can share a seed,
- * and a switch between them must still reset the selection. A missing active avatar leaves the
- * store untouched rather than clearing it.
+ * selection alone across a moved viewport, a re-render, or a remount. The region is keyed by the
+ * avatar id, not the seed: two avatars can share a seed, and a switch between them must still
+ * reset the selection. A missing active avatar leaves the store untouched rather than clearing it.
  *
  * Alongside the graph, every region-touching update recomputes the store's two completed-set
  * projections: the selectable-node set — the origin, every completed node, and every node an edge
  * connects to a completed node, the same reachability rule the activity service gates starts
  * against — over the full topology, never over the viewport-filtered graph edges, so the client
  * and server always agree at a viewport boundary; and the reveal sources the fog-of-war renderer
- * projects the revealed region from. The recompute only runs when the region or the completed set
- * actually changes, not on every cell-granular viewport update the free camera reports while
- * panning.
- *
- * The completed set comes from the avatar's revealed-nodes query, which this hook alone subscribes
- * to. The query stays
- * disabled until the camera reports a viewport and the store's region belongs to the active avatar
- * — a viewport held by another avatar's region is that avatar's camera footprint, and the region
- * switch clears it before the incoming avatar may issue a request. The chunk-aligned viewport
- * keying the query is shrunk to the reveal cell cap so no canvas aspect can produce a request the
- * service would reject. The
- * completed set itself is viewport-independent, but the viewport-carrying key means a pan across a
- * chunk boundary re-keys the query and drops its data back to `undefined` for a moment, so the
- * last resolved set is held in state beside the avatar it belongs to and reused until the new
- * key's fetch lands, rather than collapsing selectability to the origin alone on every such
- * crossing. An avatar switch drops that held set immediately, so the incoming avatar never briefly
- * inherits the outgoing avatar's completed nodes.
+ * projects the revealed region from.
  *
  * Returns the fog-revealed node id set projected over the loaded region — the same reveal sources
  * published to the store, expanded to the individual node ids their discs cover inside the region
@@ -89,6 +70,12 @@ export function useAvatarRegionGraph(): ReadonlySet<string> {
   const previousViewportRef = useRef<null | Viewport>(null);
   const previousCompletedNodeIDsRef = useRef<null | ReadonlySet<string>>(null);
 
+  // The completed set is viewport-independent, but the viewport-carrying query key below means a
+  // pan across a chunk boundary re-keys the query and drops its data back to `undefined` for a
+  // moment. The last resolved set is held here beside the avatar it belongs to and reused until
+  // the new key's fetch lands, rather than collapsing selectability to the origin alone on every
+  // such crossing. An avatar switch drops the held set immediately, so the incoming avatar never
+  // briefly inherits the outgoing avatar's completed nodes.
   const [heldCompleted, setHeldCompleted] = useState<HeldCompletedNodeIDs>({
     avatarID: undefined,
     nodeIDs: EMPTY_NODE_ID_SET,
@@ -96,10 +83,16 @@ export function useAvatarRegionGraph(): ReadonlySet<string> {
 
   const [revealedNodeIDs, setRevealedNodeIDs] = useState<ReadonlySet<string>>(EMPTY_NODE_ID_SET);
 
+  // The chunk-aligned viewport keying the query is shrunk to the reveal cell cap so no canvas
+  // aspect can produce a request the service would reject.
   const revealedViewport = viewport
     ? buildChunkAlignedViewport(viewport, REVEAL_VIEWPORT_CELL_CAP)
     : null;
 
+  // This hook is the sole subscriber to the avatar's revealed-nodes query. It stays disabled
+  // until the camera reports a viewport and the store's region belongs to the active avatar — a
+  // viewport held by another avatar's region is that avatar's camera footprint, and the region
+  // switch clears it before the incoming avatar may issue a request.
   const revealedNodesQuery = useQuery({
     ...buildRevealedNodesQueryOptions(avatarID ?? '', revealedViewport ?? EMPTY_VIEWPORT),
     enabled: avatarID !== undefined && revealedViewport !== null && regionKey === avatarID,
@@ -133,12 +126,18 @@ export function useAvatarRegionGraph(): ReadonlySet<string> {
 
     previousAvatarIDRef.current = avatarID;
 
+    // The region rebuilds from the chunk-aligned viewport and is kept by reference while that
+    // alignment holds, so the rendered node and edge lists change only when a pan crosses a chunk
+    // boundary, not on every cell-granular camera move.
     const regionViewport =
       isAvatarSwitch || viewport === null ? INITIAL_VIEWPORT : buildChunkAlignedViewport(viewport);
 
     const regionUnchanged =
       !isAvatarSwitch && isSameViewport(previousViewportRef.current, regionViewport);
 
+    // When the region itself hasn't moved, only recompute the completed-set projections, and only
+    // when the completed set actually changed — not on every cell-granular viewport update the
+    // free camera reports while panning.
     if (regionUnchanged) {
       if (completedNodeIDs === previousCompletedNodeIDsRef.current) {
         return;

@@ -127,12 +127,8 @@ const serverErrorsMonitor = new axiom.Monitor(
 );
 
 /**
- * Fleet-wide alarm for a hung or pathologically slow request, evaluated on the monitor's own
- * schedule rather than at span close, and independent of the per-request slow-request warn log a
- * service emits against its own configurable threshold. It fires on any non-probe server span past
- * a fixed ceiling regardless of which service or route it came from. Health-probe routes are
- * excluded: their latency tracks scale-to-zero machine wake, not request handling, so they would
- * fire the alarm continuously without indicating a real fault.
+ * Health-probe routes are excluded: their latency tracks scale-to-zero machine wake, not request
+ * handling, so they would fire the alarm continuously without indicating a real fault.
  */
 const slowRequestsMonitor = new axiom.Monitor(
   'vers-slow-requests',
@@ -154,12 +150,8 @@ const slowRequestsMonitor = new axiom.Monitor(
 );
 
 /**
- * alertOnNoData stays false: the counter emits only when a wake delivery
- * exhausts its retries, so a quiet dataset is the healthy default, never a
- * down exporter. The metric is an OTLP cumulative counter (the exporter sets no
- * delta temporality), so `map increase` reduces each window's aligned maximum to
- * the number of new failures inside it — the threshold fires when that climbs by
- * at least one.
+ * alertOnNoData stays false: the counter emits only when a wake delivery exhausts its retries, so a
+ * quiet dataset is the healthy default, never a down exporter.
  */
 const replayPokeFailedMonitor = new axiom.Monitor(
   'vers-replay-poke-failed',
@@ -168,6 +160,10 @@ const replayPokeFailedMonitor = new axiom.Monitor(
     type: 'Threshold',
     description:
       'A wake poke to service-replay exhausted its retries without delivering. The optimistic client hides verifier failure, so this counter is the explicit signal that the replay queue may go undrained despite an activity appending unverified work.',
+
+    // The metric is an OTLP cumulative counter (the exporter sets no delta temporality), so `map
+    // increase` reduces each window's aligned maximum to the number of new failures inside it —
+    // the threshold fires when that climbs by at least one.
     mplQuery:
       '`vers-metrics`:`vers.activity.replay_poke_failed` | align to 5m using max | group using max | map increase',
     intervalMinutes: 5,

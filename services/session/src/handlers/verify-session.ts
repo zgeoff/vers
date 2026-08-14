@@ -63,17 +63,15 @@ export async function verifySession(
   return { accessToken: tokenPair[1], refreshToken: tokenPair[0] };
 }
 
-/**
- * Runs the verify-and-evict statement, retrying once on a deadlock. Two different pending
- * sessions of the same user verifying concurrently can deadlock (SQLSTATE 40P01: each statement's
- * update locks its own row while its delete waits on the other's); the retry's update finds its
- * row already evicted by the winner and fails cleanly into an empty result, never a raw 500.
- */
 async function runVerifyAndEvict(
   db: Kysely<DB>,
   sessionId: string,
   refreshToken: string,
 ): Promise<Array<{ readonly id: string }>> {
+  // Two different pending sessions of the same user verifying concurrently can deadlock
+  // (SQLSTATE 40P01: each statement's update locks its own row while its delete waits on the
+  // other's). The retry's update finds its row already evicted by the winner and fails cleanly
+  // into an empty result, never a raw 500.
   try {
     return await runVerifyAndEvictStatement(db, sessionId, refreshToken);
   } catch (error: unknown) {

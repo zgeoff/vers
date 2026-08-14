@@ -32,12 +32,6 @@ interface BuildActivityRouterDeps {
   readonly simTimeCapMs: number;
 }
 
-/**
- * Assembles the activities service's oRPC router, closing each handler over the shared db client
- * (and, for `startActivity`, the memoized content-document loader new activities are minted
- * against, the key version, the keys origin, s2s signing key, and scope secret ref/version its
- * sealed content read uses; for `trackActivityProgress`, the offline-progress budget ceiling).
- */
 export function buildActivityRouter(deps: BuildActivityRouterDeps) {
   const os = implement(activityContract).$context<ServiceContext>();
 

@@ -12,11 +12,7 @@ import { workerContract } from './worker-contract';
 const ACK = { ok: true as const };
 
 /**
- * Implements the worker contract against one runtime's context, closing every procedure over the
- * same domain state a raw client message used to route into by hand. `ready` gates every
- * procedure the same way every message handler used to: a call arriving before the device-local
- * failure-action cache finishes seeding waits for it, so it never plans against the enum's default
- * while the real cached preference is still in flight.
+ * Implements the worker contract, closing every procedure over one runtime's context.
  */
 export function createWorkerRouter(context: WorkerContext, ready: Readonly<Promise<void>>) {
   const os = implement(workerContract).$context<WorkerCallContext>();

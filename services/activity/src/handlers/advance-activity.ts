@@ -78,12 +78,6 @@ interface AdvanceActivityOpts {
  * simulation was pinned to, and every minted row stays eligible for the replay verifier's
  * descriptor check.
  *
- * Each continuation is its own transaction: append, then — on terminal — mint, through the same
- * head compare-and-swap, meter debit, terminal anchor advance, chain-seed read, and provenance
- * recording as live play. A rejection at either step unwinds the whole transaction, so the
- * confirmed head reported on any bail is always the last fully committed continuation's — never a
- * partial append with no successor.
- *
  * The mint authors `buildSnapshot` itself server-side; the entry's own `buildSnapshot` is only a
  * cross-check hint, and a mismatch bails with `CHECKPOINT_INVALID`. A client-supplied snapshot
  * the server stored as-is would be direct xp inflation.
@@ -323,19 +317,18 @@ interface RunContinuationInput {
 
 /**
  * Runs one continuation: append its tail onto the target row, then — because every tail ends
- * terminal by construction — mint its own id as the next row. The target read and its structural
- * validation run outside any transaction, matching `trackActivityProgress`'s own shape, so a
- * rejection found there needs no rollback. The cap decision and the append-and-mint each open
- * their own top-level transaction. A cap commits on its own: its terminal transition is honest
- * progress independent of this continuation's fate, exactly as `trackActivityProgress` commits it
- * apart from the append it rejects. An append and its following mint share one transaction, so a
- * rejected mint rolls the append back with it.
+ * terminal by construction — mint its own id as the next row. The cap decision and the
+ * append-and-mint each open their own top-level transaction. A cap commits on its own: its
+ * terminal transition is honest progress independent of this continuation's fate. An append and
+ * its following mint share one transaction, so a rejected mint rolls the append back with it.
  */
 async function runContinuation(
   deps: AdvanceActivityDeps,
   pinned: Readonly<PinnedActivityContext>,
   input: Readonly<RunContinuationInput>,
 ): Promise<MintedContinuation> {
+  // The target read and its structural validation run outside any transaction, matching
+  // trackActivityProgress's own shape, so a rejection found here needs no rollback.
   const target = await deps.db
     .selectFrom('activities')
     .innerJoin('avatars', 'avatars.id', 'activities.avatarId')

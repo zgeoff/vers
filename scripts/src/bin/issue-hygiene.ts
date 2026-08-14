@@ -40,10 +40,8 @@ const repo = process.env['GITHUB_REPOSITORY'] ?? repoResult.trim();
 
 const existingCommentID = await findStickyCommentID(repo, issueNumber);
 
-/**
- * A clean issue that never earned a sticky comment needs none — only issues the bot has already
- * commented on get their comment flipped to the all-clear rendering.
- */
+// a clean issue that never earned a sticky comment needs none — only issues the bot has already
+// commented on get their comment flipped to the all-clear rendering
 if (findings.length === 0 && existingCommentID === null) {
   console.log(`#${issueNumber} is clean`);
   process.exit(0);

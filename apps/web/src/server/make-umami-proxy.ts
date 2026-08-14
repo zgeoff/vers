@@ -61,10 +61,7 @@ interface RelayInit {
 const UPSTREAM_DEADLINE_MS = 15_000;
 
 /**
- * Fetches the upstream target and rewraps the result. fetch responses carry immutable headers,
- * which the server framework must still be able to finalize — and the body arrives already
- * decoded, so the upstream encoding headers no longer describe it. Copy entry by entry: passing
- * another runtime's Headers instance to the constructor can yield an empty copy.
+ * Fetches the upstream target and rewraps the result.
  */
 async function sendUpstream(target: URL, init?: RelayInit): Promise<Response> {
   let response: Response;
@@ -93,8 +90,12 @@ async function sendUpstream(target: URL, init?: RelayInit): Promise<Response> {
     clearTimeout(timer);
   }
 
+  // fetch responses carry immutable headers, which the server framework must still be able to
+  // finalize. Copy entry by entry: passing another runtime's Headers instance to the constructor
+  // can yield an empty copy.
   const headers = new Headers([...response.headers]);
 
+  // the body arrives already decoded, so the upstream encoding headers no longer describe it
   headers.delete('content-encoding');
   headers.delete('content-length');
 

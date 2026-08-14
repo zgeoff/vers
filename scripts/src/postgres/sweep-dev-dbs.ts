@@ -9,8 +9,6 @@ interface SweepConfig {
 
 /**
  * Drops this machine's orphaned dev databases and returns their names.
- * DROP ... WITH (FORCE) disconnects lingering sessions first, so a sweep
- * never fails on a stale connection left by a closed agent session.
  */
 export async function sweepDevDBs(config: Readonly<SweepConfig>): Promise<Array<string>> {
   const pg = postgres(config.maintenanceDSN, { max: 1 });
@@ -29,6 +27,8 @@ export async function sweepDevDBs(config: Readonly<SweepConfig>): Promise<Array<
     });
 
     for (const name of orphans) {
+      // WITH (FORCE) disconnects lingering sessions first, so the drop never fails on a stale
+      // connection left by a closed agent session.
       await pg.unsafe(`DROP DATABASE ${name} WITH (FORCE)`);
     }
 

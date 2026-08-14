@@ -11,8 +11,7 @@ interface SweepTestTemplatesConfig {
  * Drops the local test container's orphaned branch-scoped test-template
  * databases and returns their names, or `null` when the container isn't
  * reachable — a sweep is a no-op on a machine with no running test
- * container. `DROP ... WITH (FORCE)` disconnects lingering sessions first,
- * so a sweep never fails on a connection a closed test run left open.
+ * container.
  */
 export async function sweepTestTemplates(
   config: Readonly<SweepTestTemplatesConfig>,
@@ -34,6 +33,8 @@ export async function sweepTestTemplates(
     });
 
     for (const name of orphans) {
+      // WITH (FORCE) disconnects lingering sessions first, so a drop never fails on a connection
+      // a closed test run left open.
       await pg.unsafe(`DROP DATABASE "${name}" WITH (FORCE)`);
     }
 
