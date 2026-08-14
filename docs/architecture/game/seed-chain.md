@@ -79,8 +79,8 @@ the position this device has actually reached — never the reveal's original, n
 
 Every synthesized root is written to a durable `pending-roots` IndexedDB store, keyed by its own
 activity id, before it installs onto the live simulation: a crash between mint and install still
-leaves a recoverable root. That store is the surface a later reconcile drains to give each
-client-minted root its server round trip.
+leaves a recoverable root. That store is what a later reconcile drains to give each client-minted
+root its server round trip.
 
 ## Advancing the chain
 

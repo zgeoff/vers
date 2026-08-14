@@ -16,10 +16,11 @@ interface BuildStartRowInput {
 /**
  * Synthesizes a full `ActivityData` root row for a start, entirely from this device's cached
  * inputs — `null` when any of them is missing, since no local mint is possible without every one:
- * the scope's cached node seed (never revealed on this device, or revealed for a different
- * avatar), the account's cached crypto stamps, or the build's bundled engine hash (undefined in a
- * dev build, which has no local fallback). The chain roots at the node's cached head rather than
- * its genesis, so a revisited node's start continues from where play actually left off.
+ * the scope's cached node seed (never revealed on this device, revealed for a different avatar, or
+ * cached before `head` existed), the account's cached crypto stamps, or the build's bundled engine
+ * hash (undefined in a dev build, which has no local fallback). The chain roots at the node's
+ * cached head rather than its genesis, so a revisited node's start continues from where play
+ * actually left off.
  * `buildSnapshot` is a client-side optimistic guess — a hint the server re-authors and
  * exact-match-rejects at submission time, never a value this mint depends on for its own
  * correctness.
@@ -30,7 +31,7 @@ export async function buildStartRow(
 ): Promise<ActivityData | null> {
   const nodeSeed = await readNodeSeed(input.avatarID, input.scopeID);
 
-  if (nodeSeed === undefined) {
+  if (nodeSeed === undefined || nodeSeed.head === undefined) {
     return null;
   }
 

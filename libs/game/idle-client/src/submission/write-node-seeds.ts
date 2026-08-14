@@ -24,7 +24,7 @@ export async function writeNodeSeeds(
       const existing = await tx.store.get([avatarID, seed.nodeID]);
 
       const head =
-        existing !== undefined && existing.head.chainIndex > seed.head.chainIndex
+        existing?.head !== undefined && existing.head.chainIndex > seed.head.chainIndex
           ? existing.head
           : seed.head;
 

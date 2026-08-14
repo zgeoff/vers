@@ -4,7 +4,7 @@ import { resolveCheckpointQueueDB } from './resolve-checkpoint-queue-db';
 
 /**
  * Reads every local start's client-minted root row this device holds, across every avatar and
- * activity — a later reconcile's drain surface.
+ * activity — the set of rows a later reconcile drains.
  */
 export async function readAllStartRows(): Promise<ReadonlyArray<ActivityData>> {
   const db = await resolveCheckpointQueueDB();
