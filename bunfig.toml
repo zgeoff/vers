@@ -11,7 +11,7 @@ minimumReleaseAge = 604800
 # an exclude lives only as long as its pinned version is younger than the gate —
 # once the version ages past it, the entry is dead weight; remove it
 # hono 4.13.0 (published 2026-08-03, patches GHSA-8j4g-w8fx-2239) ages past the gate ~2026-08-10 — remove then (#837)
-# nanoid 3.3.17 (published 2026-08-03, patches GHSA-2v37-7h3g-55p8) ages past the gate ~2026-08-10 — remove then (#839)
+# nanoid 3.3.18 (published 2026-08-07, patches the revised GHSA-2v37-7h3g-55p8) ages past the gate ~2026-08-14 — remove then (#839)
 minimumReleaseAgeExcludes = ["hono", "nanoid"]
 
 [test]
