@@ -95,8 +95,8 @@ grant table `(avatarId, landmarkId)`.
   result, but the completion table stays the source of truth.
 - Reveal discloses only after the predecessor completion verifies, never on optimistic completion.
   Disclosure carries expected-value-flat descriptor metadata alone — never salt or drops — and the
-  server caps its fan-out independent of node degree. An on-demand priority bump keeps the online path
-  responsive.
+  server caps its fan-out independent of node degree. An on-demand priority bump keeps the online
+  path responsive.
 
 ## Selection and the offline horizon
 

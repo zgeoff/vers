@@ -12,8 +12,8 @@ consumer.
 it.
 
 - `defineJobs` declares a record mapping each job name to its
-  `{ schema, retryLimit, retryDelay, retryBackoff, deadLetter }`. The schema is a zod schema, and the
-  job name doubles as the queue name.
+  `{ schema, retryLimit, retryDelay, retryBackoff, deadLetter }`. The schema is a zod schema, and
+  the job name doubles as the queue name.
 - `createJobQueue(defs, config)` returns `start`, `stop`, `send`, and `drain`. The `config` carries
   the connection string, the per-job `handlers`, and optional `onError` and `onJobFailed` reporting
   callbacks. Every defined job needs a handler, and the handler receives the schema-parsed payload
@@ -23,8 +23,8 @@ it.
   rolls back with the domain write it belongs to.
 - `drain(name?)` runs one fetch/handle/complete loop and returns `{ completed, failed }`. When a
   stored payload no longer parses, the drain fails it without ever reaching the handler.
-- pg-boss owns the `pgboss` schema in the shared database and migrates it itself at `start()`, so the
-  `@vers/db` migrations never touch it.
+- pg-boss owns the `pgboss` schema in the shared database and migrates it itself at `start()`, so
+  the `@vers/db` migrations never touch it.
 
 ## Delivery model: drains, not resident workers
 

@@ -83,7 +83,7 @@ const os = implement(userContract).$context<ServiceContext>();
 
 const getCurrentUser = os.getCurrentUser.handler(({ context, errors }) => {
   if (context.actingUserId === null) {
-    throw errors.UNAUTHORIZED({ data: { reason: "missing-session" } });
+    throw errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
   }
   // …
 });
@@ -104,7 +104,7 @@ Clients are typed by a single annotation against the contract:
 
 ```ts
 export const userClient: ContractRouterClient<typeof userContract, ServiceLinkContext> =
-  createORPCClient(buildServiceLink("user"));
+  createORPCClient(buildServiceLink('user'));
 ```
 
 In app-web the link is isomorphic (`buildServiceLink`). On the server it mints a short-lived
@@ -146,7 +146,8 @@ runtime's per-request infrastructure ([error handling](./error-handling.md#trace
 When a session expires, the edge itself replies with the contract-shaped
 `UNAUTHORIZED { reason: 'expired-session' }` without calling the service at all. Services themselves
 only ever throw `missing-session`, as defense in depth when a caller reaches an authed procedure
-without an acting user. The shared enum is caller-facing vocabulary, not an inventory of who throws what.
+without an acting user. The shared enum is caller-facing vocabulary, not an inventory of who throws
+what.
 
 `FORBIDDEN` is declared with an empty `data` payload: no permission model exists, and any fields a
 permission model needs arrive additively.

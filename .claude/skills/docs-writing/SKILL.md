@@ -9,20 +9,20 @@ description:
 
 Write for a cold reader: someone with none of the conversation, ticket, or diff that produced the
 doc, reading every sentence as if it had always existed. When a sentence needs that missing context
-to resolve, it fails review however clean it reads to you — as the author, your resolved mental model
-binds every referent, so the failure is invisible from the writing seat and you check for it
+to resolve, it fails review however clean it reads to you — as the author, your resolved mental
+model binds every referent, so the failure is invisible from the writing seat and you check for it
 deliberately.
 
 Aim for plain sentences with actors and verbs. Not telegraphic — keep the articles and the
 connective clauses — and not florid. The rules below make that register checkable. When a sentence
 fails one, redraft it from the facts it contains rather than patching it word by word; patching
-preserves the failed structure. The same holds at doc scale: when a doc fails, list what each section
-must say and rewrite the sections fresh.
+preserves the failed structure. The same holds at doc scale: when a doc fails, list what each
+section must say and rewrite the sections fresh.
 
 > **Note:** these docs are written by AI and read by humans. The rules are written to be executable
-> by the writer, so some phrasing is more precise than a human reader needs — line budgets, greppable
-> patterns, exact placeholder shapes. That precision is what makes a rule checkable rather than
-> aspirational.
+> by the writer, so some phrasing is more precise than a human reader needs — line budgets,
+> greppable patterns, exact placeholder shapes. That precision is what makes a rule checkable rather
+> than aspirational.
 
 Two passes govern every doc. **Selection** decides which points the doc makes; it is ruthless.
 **Rendering** decides how a surviving point is written — its sentences, its words, its shape, its
@@ -104,8 +104,8 @@ knife.
   State the abstraction alone only when no single instance can carry it.
 - **Address the reader in how-to prose.** Instructions say "you" and use imperatives ("seed it
   yourself", "call `seed()` if you'd rather not create data per test"). A how-to written without a
-  reader reads as a spec. Reference and design prose stay declarative — there the doc states what the
-  system is, not what the reader does.
+  reader reads as a spec. Reference and design prose stay declarative — there the doc states what
+  the system is, not what the reader does.
 - **Name the actor.** "The sweep drops each stranded machine and records the set removed", not
   "stranded machines are dropped and the removed set is recorded". Two shapes hide the actor: the
   passive — append "by monkeys" and a sentence that still parses is passive — and the disguised
@@ -193,8 +193,8 @@ knife.
 - **Delta-framing.** "Also", "as well as", "in addition", "now", "still" assert an addition or a
   change against a baseline. With the baseline stated in the same doc the framing is legal; with the
   baseline in the conversation, a prior draft, or the diff, the sentence documents the edit instead
-  of the system — write the resulting state. "New" qualifying a component ("the new endpoint") is the
-  word-scale form: it stales the moment the change merges, so name the component.
+  of the system — write the resulting state. "New" qualifying a component ("the new endpoint") is
+  the word-scale form: it stales the moment the change merges, so name the component.
 - **Banned words.** The AGENTS.md banned-words list applies to all prose; fix a violation on sight.
 
 ## Structure — the shape points take

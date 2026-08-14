@@ -53,9 +53,9 @@ a list of today's features:
 - No container crosses the boundary — stashes, banks, prize pools — including between one account's
   own avatars.
 - Self-found ladders rank on server-verifiable play — depth, level, clear speed. Those outcomes are
-  gear-influenced, and a device-held key rolls that gear locally, so self-found standing leans harder
-  on reroll detection than a trade avatar's. The same appended, verified record defends it, though
-  the design does not treat that record as tamper-proof.
+  gear-influenced, and a device-held key rolls that gear locally, so self-found standing leans
+  harder on reroll detection than a trade avatar's. The same appended, verified record defends it,
+  though the design does not treat that record as tamper-proof.
 - Avatars are league-scoped, so league resets contain self-found holdings with no extra rule.
 
 ## Reward Classes
@@ -97,14 +97,13 @@ while players sleep. The economy-loop note owns both.
 Juice is spending to modify an activity. Where its randomness lives follows the tail rule, not the
 mechanic:
 
-- **Tiers and activity modifiers** — the player chooses a tier, then rolls and rerolls the activity's
-  flavour modifiers before locking them in. The chosen tier sets any modifier that scales a
-  market-grade quantity — yield, roll or pack count — at a published scalar, never rolled, so it
-  reveals nothing to select.
-  The modifiers that may be rolled are normalized: bounded scalars, no jackpot combinations, never
-  coupled to a reward tail. A tail-free distribution is client-trustable and works anywhere, offline
-  included, rerolls and all. Keeping rolled modifiers tail-free is a standing content constraint,
-  the same obligation as roll density.
+- **Tiers and activity modifiers** — the player chooses a tier, then rolls and rerolls the
+  activity's flavour modifiers before locking them in. The chosen tier sets any modifier that scales
+  a market-grade quantity — yield, roll or pack count — at a published scalar, never rolled, so it
+  reveals nothing to select. The modifiers that may be rolled are normalized: bounded scalars, no
+  jackpot combinations, never coupled to a reward tail. A tail-free distribution is client-trustable
+  and works anywhere, offline included, rerolls and all. Keeping rolled modifiers tail-free is a
+  standing content constraint, the same obligation as roll density.
 - **Item crafting** — affix rolls are the tail; shaping items is the point. Crafting rolls draw
   sealed server entropy behind the preview flow, online. Self-found avatars craft against their own
   key — nothing is sealed from them, and nothing they make can leave.
