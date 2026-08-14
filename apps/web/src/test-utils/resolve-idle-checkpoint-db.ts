@@ -8,7 +8,7 @@ import { openDB } from 'idb';
  * drift from the worker's real values fails the seeded-intent read test loudly.
  */
 const IDLE_CHECKPOINT_DB_NAME = 'vers-idle-checkpoint-queue';
-const IDLE_CHECKPOINT_DB_VERSION = 4;
+const IDLE_CHECKPOINT_DB_VERSION = 5;
 
 interface IdleCheckpointDBSchema {
   'content-documents': {

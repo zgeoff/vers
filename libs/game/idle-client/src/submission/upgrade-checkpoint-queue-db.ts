@@ -1,4 +1,4 @@
-import type { IDBPDatabase } from 'idb';
+import type { IDBPDatabase, IDBPTransaction, StoreNames } from 'idb';
 import {
   CHECKPOINT_QUEUE_STORE_NAME,
   CONTENT_DOCUMENT_STORE_NAME,
@@ -13,12 +13,26 @@ import type { CheckpointQueueSchema } from './types';
  * order and a compound read/delete addresses either a single checkpoint or an activity's whole
  * range; `preferences` caches device-local settings — a SharedWorker has no `localStorage` — as the
  * offline outbox for a server source of truth; `content-documents` caches published content by
- * `contentVersion`; `node-seeds` caches a revealed world-map node's genesis seed by its
- * `[avatarID, nodeID]` pair. Each store is created only if missing, so an upgrade from an earlier
- * version adds the stores that version lacks without dropping the ones it already holds or their
- * rows.
+ * `contentVersion`; `node-seeds` caches a revealed world-map node's start inputs — genesis seed,
+ * encounter, and content version — by its `[avatarID, nodeID]` pair. Each store is created only if
+ * missing, so an upgrade from an earlier version adds the stores that version lacks without dropping
+ * the ones it already holds or their rows.
+ *
+ * The one exception is `node-seeds`: an upgrade from a version predating v5 clears it. Its earlier
+ * rows carried only a genesis seed, missing the encounter and content version a v5 row declares, so
+ * clearing the rebuildable cache leaves only full-shape rows behind — the prefetch re-reveals and
+ * repopulates them.
  */
-export function upgradeCheckpointQueueDB(database: IDBPDatabase<CheckpointQueueSchema>): void {
+export function upgradeCheckpointQueueDB(
+  database: IDBPDatabase<CheckpointQueueSchema>,
+  oldVersion: number,
+  _newVersion: number | null,
+  transaction: IDBPTransaction<
+    CheckpointQueueSchema,
+    Array<StoreNames<CheckpointQueueSchema>>,
+    'versionchange'
+  >,
+): void {
   if (!database.objectStoreNames.contains(CHECKPOINT_QUEUE_STORE_NAME)) {
     database.createObjectStore(CHECKPOINT_QUEUE_STORE_NAME, {
       keyPath: ['activityID', 'version'],
@@ -35,5 +49,7 @@ export function upgradeCheckpointQueueDB(database: IDBPDatabase<CheckpointQueueS
 
   if (!database.objectStoreNames.contains(NODE_SEEDS_STORE_NAME)) {
     database.createObjectStore(NODE_SEEDS_STORE_NAME, { keyPath: ['avatarID', 'nodeID'] });
+  } else if (oldVersion < 5) {
+    void transaction.objectStore(NODE_SEEDS_STORE_NAME).clear();
   }
 }

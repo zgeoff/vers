@@ -23,7 +23,7 @@ export const RETRY_BACKOFF_CAP_MS = 300_000;
  */
 export const FLUSH_STALL_THRESHOLD = 3;
 export const CHECKPOINT_QUEUE_DB_NAME = 'vers-idle-checkpoint-queue';
-export const CHECKPOINT_QUEUE_DB_VERSION = 4;
+export const CHECKPOINT_QUEUE_DB_VERSION = 5;
 export const CHECKPOINT_QUEUE_STORE_NAME = 'pending-checkpoints';
 
 /**
@@ -34,12 +34,20 @@ export const CHECKPOINT_QUEUE_STORE_NAME = 'pending-checkpoints';
 export const CONTENT_DOCUMENT_STORE_NAME = 'content-documents';
 
 /**
- * The object store caching a revealed world-map node's genesis seed by its `[avatarID, nodeID]`
- * pair, so the worker holds a seed on-device for every node the player can already see before an
- * offline-open start needs one. The compound key scopes each seed to its avatar — a seed is per
- * avatar, so two avatars sharing a coordinate keep separate rows.
+ * The object store caching a revealed world-map node's start inputs — genesis seed, encounter, and
+ * content version — by its `[avatarID, nodeID]` pair, so the worker holds every input on-device for
+ * every node the player can already see before an offline-open start needs one. The compound key
+ * scopes each row to its avatar — a genesis seed is per avatar, so two avatars sharing a coordinate
+ * keep separate rows.
  */
 export const NODE_SEEDS_STORE_NAME = 'node-seeds';
+
+/**
+ * The `preferences` record holding `revealNodes`'s avatar- and account-global crypto stamps. A
+ * worker drives one avatar's simulation at a time, so a single record suffices: a newer reveal
+ * overwrites the stamps in place with the account's current ones.
+ */
+export const START_STAMPS_KEY = 'start-stamps';
 
 /**
  * The `preferences` object store's one record key. A worker drives one avatar's simulation at a

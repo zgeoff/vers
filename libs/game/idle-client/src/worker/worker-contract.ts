@@ -1,5 +1,5 @@
 import { oc } from '@orpc/contract';
-import { ActivityDataSchema } from '@vers/contract-activity';
+import { ActivityDataSchema, EncounterNodeSchema } from '@vers/contract-activity';
 import { ActivityFailureAction } from '@vers/idle-core';
 import * as z from 'zod';
 import { simulationSnapshotSchema } from './simulation-snapshot-schema';
@@ -41,7 +41,23 @@ const startStatusSchema = z.discriminatedUnion('kind', [
 ]);
 
 const ackSchema = z.object({ ok: z.literal(true) }).readonly();
-const nodeSeedSchema = z.object({ genesisSeed: z.string(), nodeID: z.string() }).readonly();
+
+const nodeSeedSchema = z
+  .object({
+    contentVersion: z.string(),
+    encounterNode: EncounterNodeSchema,
+    genesisSeed: z.string(),
+    nodeID: z.string(),
+  })
+  .readonly();
+
+/**
+ * `revealNodes`'s avatar- and account-global crypto stamps, relayed alongside a `cacheNodeSeeds`
+ * batch so the worker's durable cache holds every input an offline-open start needs.
+ */
+const startStampsSchema = z
+  .object({ keyVersion: z.int().min(1), secretRef: z.string(), secretVersion: z.int().min(1) })
+  .readonly();
 
 /**
  * The worker's in-page RPC surface, called over a `MessagePort` (a real `SharedWorker` port, or a
@@ -51,7 +67,15 @@ const nodeSeedSchema = z.object({ genesisSeed: z.string(), nodeID: z.string() })
  */
 export const workerContract = {
   cacheNodeSeeds: oc
-    .input(z.object({ avatarID: z.string(), seeds: z.array(nodeSeedSchema).readonly() }).readonly())
+    .input(
+      z
+        .object({
+          avatarID: z.string(),
+          seeds: z.array(nodeSeedSchema).readonly(),
+          stamps: startStampsSchema,
+        })
+        .readonly(),
+    )
     .output(ackSchema),
 
   disconnect: oc.input(z.object({}).readonly()).output(ackSchema),

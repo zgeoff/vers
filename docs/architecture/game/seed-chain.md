@@ -56,12 +56,17 @@ client-side, or never revealed at all, cannot be started. The seed needs no re-d
 verifier reads the stored value, and a restored device fetches it. A client cannot compute it and
 cannot steer it, since the scope and the avatar are both fixed before the mint.
 
+`revealNodes` also derives each node's `encounterNode` and returns the content version it was
+derived against, alongside the key version and scope-secret ref/version the derivation read —
+together, every input `buildStartHash` needs besides the sim version the client already holds.
 app-web calls `revealNodes` for every node the fog-of-war projection currently reveals, relaying the
-returned seeds and the active avatar to the idle worker. The worker caches each by its
-`[avatarID, nodeID]` pair in its `node-seeds` IndexedDB store, so a seed is held on-device for every
-node the player can see ahead of an offline-open start needing one. The compound key scopes a seed
-to its avatar: two avatars sharing a coordinate root distinct chains against distinct seeds, so
-neither overwrites the other's cached value.
+returned seeds, encounters, and stamps to the idle worker along with the active avatar. The worker
+caches each node's seed, encounter, and content version by its `[avatarID, nodeID]` pair in its
+`node-seeds` IndexedDB store, and the key-version/scope-secret stamps in its `preferences` store, so
+every node the player can see carries what an offline-open start needs to synthesize a valid start
+without the server. The compound node key scopes a seed to its avatar: two avatars sharing a
+coordinate root distinct chains against distinct seeds, so neither overwrites the other's cached
+value.
 
 ## Advancing the chain
 
