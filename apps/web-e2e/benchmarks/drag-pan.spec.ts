@@ -1,6 +1,6 @@
-import type { Page } from '@playwright/test';
 import { expect, test } from '../src/test';
 import { waitForHoneypotWindow } from '../src/wait-for-honeypot-window';
+import { waitForStableFrames } from '../src/wait-for-stable-frames';
 
 /**
  * How many drag legs to walk. Each leg drags 60% of the canvas width in the same direction, so
@@ -24,27 +24,6 @@ const DRAG_STEPS_PER_LEG = 20;
  * dropped frame.
  */
 const DROPPED_FRAME_THRESHOLD_MS = 32;
-
-/**
- * A frame gap under this many milliseconds counts as settled for the scene-readiness gate — loose
- * enough that a single fast frame during mount doesn't pass it, tight enough that the still-loading
- * scene's own long frames keep failing it.
- */
-const STABLE_FRAME_GAP_THRESHOLD_MS = 20;
-
-/**
- * Consecutive settled frames required before the explore scene counts as ready. One fast frame can
- * land by chance while world data is still loading, the biome field is still building, or the
- * first-frame WebGPU pipelines are still compiling; a run of them can't.
- */
-const STABLE_FRAME_COUNT = 5;
-
-/**
- * How long the scene-readiness gate keeps trying before the run fails with an explicit message. A
- * machine whose scene never settles (software WebGPU, heavy contention) would otherwise hang the
- * gate silently until the whole test times out, hiding which step hung.
- */
-const STABLE_GATE_BUDGET_MS = 60 * 1000;
 
 /**
  * The frame-gap sampler's state, parked on the page's own `globalThis` so it survives across the
@@ -175,57 +154,3 @@ test('it drag-pans across the explore map and reports peak frame gap and dropped
       `(>${DROPPED_FRAME_THRESHOLD_MS}ms)`,
   );
 });
-
-/**
- * Waits for the explore scene to settle into steady rendering, rather than starting the benchmark
- * the instant its canvas mounts. The canvas locator resolves to the persistent world canvas, which
- * is already visible on the previous route, so `toBeVisible()` alone returns before the scene has
- * loaded world data, built its biome field, or compiled its first-frame WebGPU pipelines — frame
- * gaps from that mount cost would otherwise dominate the reported peak.
- */
-async function waitForStableFrames(page: Page): Promise<void> {
-  const settled = await page.evaluate(
-    ({ budgetMs, stableFrameCount, thresholdMs }) =>
-      new Promise<boolean>((resolve) => {
-        const startedAt = performance.now();
-        let consecutiveStableFrames = 0;
-        let last = performance.now();
-
-        const advanceFrame = () => {
-          const now = performance.now();
-          const gap = now - last;
-
-          last = now;
-          consecutiveStableFrames = gap < thresholdMs ? consecutiveStableFrames + 1 : 0;
-
-          if (consecutiveStableFrames >= stableFrameCount) {
-            resolve(true);
-
-            return;
-          }
-
-          if (now - startedAt > budgetMs) {
-            resolve(false);
-
-            return;
-          }
-
-          requestAnimationFrame(advanceFrame);
-        };
-
-        requestAnimationFrame(advanceFrame);
-      }),
-    {
-      budgetMs: STABLE_GATE_BUDGET_MS,
-      stableFrameCount: STABLE_FRAME_COUNT,
-      thresholdMs: STABLE_FRAME_GAP_THRESHOLD_MS,
-    },
-  );
-
-  if (!settled) {
-    throw new Error(
-      `the explore scene never settled within ${STABLE_GATE_BUDGET_MS}ms — ` +
-        `no run of ${STABLE_FRAME_COUNT} consecutive frames under ${STABLE_FRAME_GAP_THRESHOLD_MS}ms`,
-    );
-  }
-}
