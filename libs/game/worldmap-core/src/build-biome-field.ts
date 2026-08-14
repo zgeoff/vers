@@ -116,8 +116,10 @@ interface NearestNodeCells {
 /**
  * Scans the 3×3 cell box around an axial position for the cells whose jittered nodes are nearest
  * and second-nearest in scene space, reading each candidate's position through the caller's lookup.
- * The box always contains both winners: node jitter is bounded well under half the lattice spacing,
- * so a position's nearest nodes are its own cell's and its hex neighbours' — all inside the box.
+ * The box always contains both winners while the per-axis jitter bound stays below about 0.43: up
+ * to there a position's nearest and second-nearest nodes are its own cell's and its hex
+ * neighbours', all inside the box. Past that bound the second-nearest can fall outside the box and
+ * biome borders would mis-render — the co-located wide-scan comparison test fails loudly first.
  */
 function buildNearestNodeCells(
   getNodePosition: (cellX: number, cellY: number) => readonly [number, number],
