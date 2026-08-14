@@ -9,6 +9,7 @@ import { CheckpointBatchEntrySchema } from './checkpoint-batch-entry-schema';
 import { CheckpointSchema } from './checkpoint-schema';
 import { ContentDocumentSchema } from './content-document-schema';
 import { MAX_CATCH_UP_BATCH_CHECKPOINTS } from './max-catch-up-batch-checkpoints';
+import { MAX_REVEAL_BATCH_NODES } from './max-reveal-batch-nodes';
 import { REVEAL_VIEWPORT_CELL_CAP } from './reveal-viewport-cell-cap';
 import { RewardItemAffixSchema } from './reward-item-affix-schema';
 import { ScopeIdentifierSchema } from './scope-identifier-schema';
@@ -315,7 +316,12 @@ export const activityContract = {
       path: '/avatars/{avatarID}/revealed-nodes',
       summary: "Mint genesis chains for an avatar's newly revealed world-map nodes",
     })
-    .input(z.object({ avatarID: z.string(), nodeIDs: z.array(ScopeIdentifierSchema) }))
+    .input(
+      z.object({
+        avatarID: z.string(),
+        nodeIDs: z.array(ScopeIdentifierSchema).max(MAX_REVEAL_BATCH_NODES),
+      }),
+    )
     .output(z.array(NodeGenesisSchema))
     .errors(
       defineErrors({

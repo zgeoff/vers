@@ -1,11 +1,11 @@
 import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex, utf8ToBytes } from '@noble/hashes/utils.js';
+import { canEncodeMortonKey, findCellCoord } from '@vers/worldmap-core';
 import invariant from 'tiny-invariant';
 import { findLiveActivityAvatar } from '../avatar/find-live-activity-avatar';
 import { upsertActiveAvatar } from '../avatar/upsert-active-avatar';
 import * as db from '../db';
 import { os } from './os';
-import { resolveEncounterNode } from './resolve-encounter-node';
 
 /**
  * Mints a genesis seed per requested node, hashed from the avatar and node id so the same pair
@@ -31,7 +31,9 @@ export const revealNodes = os.revealNodes.handler(async (opts) => {
   }
 
   for (const nodeID of opts.input.nodeIDs) {
-    if (resolveEncounterNode('world_map_node', nodeID) === undefined) {
+    const coord = findCellCoord(nodeID);
+
+    if (coord === undefined || !canEncodeMortonKey(coord)) {
       throw opts.errors.NODE_UNKNOWN({ data: {} });
     }
   }

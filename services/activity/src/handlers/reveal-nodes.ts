@@ -1,27 +1,14 @@
-import type { ContentDocument } from '@vers/contract-activity';
 import { createGenesisSeed } from '@vers/contract-activity';
-import type { SecretRef } from '@vers/contract-keys';
 import type { DB } from '@vers/db';
 import { canEncodeMortonKey, findCellCoord } from '@vers/worldmap-core';
-import type { CryptoKey } from 'jose';
 import type { Kysely } from 'kysely';
 import invariant from 'tiny-invariant';
 import { recordRevealMint } from '../metrics/record-reveal-mint';
 import { requireActiveAvatar } from '../require-active-avatar';
 import type { AvatarNotActivePayload, EmptyErrorPayload, MissingSessionPayload } from '../types';
 
-/**
- * Db handle plus the memoized content-document loader and keys dispatch a reveal query reads its
- * scope secret over — the same dependency shape `getRevealedNodes` closes over, minus the key
- * version and signing inputs a read never stamps.
- */
 interface RevealNodesDeps {
   readonly db: Kysely<DB>;
-  readonly keysServiceURL: string;
-  readonly loadContentDocument: (contentVersion: string) => Promise<ContentDocument | undefined>;
-  readonly privateKey: CryptoKey;
-  readonly secretRef: SecretRef;
-  readonly secretVersion: number;
 }
 
 /**
@@ -55,7 +42,9 @@ interface NodeGenesis {
  * included, still gets one result entry. Rejects with NODE_UNKNOWN before minting anything when any
  * node id doesn't resolve to a coordinate the world map can address. Authorization is ownership of
  * the avatar, gated to the account's active avatar under the same advisory lock `startActivity`
- * takes — which nodes this avatar may legitimately reveal is a separate, not-yet-enforced concern.
+ * takes — the active-avatar check runs even for an empty batch, so an owned-but-inactive avatar is
+ * rejected regardless of how many nodes it reveals. Which nodes this avatar may legitimately reveal
+ * is a separate, not-yet-enforced concern.
  */
 export async function revealNodes(
   deps: RevealNodesDeps,
@@ -86,14 +75,14 @@ export async function revealNodes(
     }
   }
 
-  if (opts.input.nodeIDs.length === 0) {
-    return [];
-  }
-
   const uniqueNodeIDs = [...new Set(opts.input.nodeIDs)];
 
   const minted = await deps.db.transaction().execute(async (trx) => {
     await requireActiveAvatar(trx, actingUserID, opts.input.avatarID, opts.errors);
+
+    if (uniqueNodeIDs.length === 0) {
+      return [];
+    }
 
     return trx
       .insertInto('activityChains')
@@ -119,6 +108,10 @@ export async function revealNodes(
       .returning(['scopeId', 'genesisSeed'])
       .execute();
   });
+
+  if (uniqueNodeIDs.length === 0) {
+    return [];
+  }
 
   recordRevealMint(uniqueNodeIDs.length);
 

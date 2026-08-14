@@ -73,19 +73,7 @@ export function buildActivityRouter(deps: BuildActivityRouterDeps) {
       ),
     ),
     resumeActivity: os.resumeActivity.handler((opts) => resumeActivity(deps.db, opts)),
-    revealNodes: os.revealNodes.handler((opts) =>
-      revealNodes(
-        {
-          db: deps.db,
-          keysServiceURL: deps.keysServiceURL,
-          loadContentDocument: deps.loadContentDocument,
-          privateKey: deps.privateKey,
-          secretRef: deps.secretRef,
-          secretVersion: deps.secretVersion,
-        },
-        opts,
-      ),
-    ),
+    revealNodes: os.revealNodes.handler((opts) => revealNodes({ db: deps.db }, opts)),
     startActivity: os.startActivity.handler((opts) => startActivity(deps, opts)),
     stopActivity: os.stopActivity.handler((opts) =>
       stopActivity({ db: deps.db, sendReplayWake: deps.sendReplayWake }, opts),

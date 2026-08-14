@@ -66,7 +66,7 @@ test('it returns one entry per input node', async () => {
     nodeIDs: ['0_0', '1_0', '-1_0'],
   });
 
-  expect(result.map((entry) => entry.nodeID).toSorted()).toStrictEqual(['-1_0', '0_0', '1_0']);
+  expect(result.map((entry) => entry.nodeID)).toStrictEqual(['0_0', '1_0', '-1_0']);
 
   const distinctSeeds = new Set(result.map((entry) => entry.genesisSeed));
 
@@ -129,6 +129,37 @@ test('it self-assigns a stable genesis seed across repeat reveals of the same no
   invariant(entry, 'revealNodes must return one entry per input node');
 
   expect(entry.genesisSeed).toMatch(/^[0-9a-f]{32}$/);
+
+  const rows = await ctx.db
+    .selectFrom('activityChains')
+    .selectAll()
+    .where('avatarId', '=', avatar.id)
+    .where('scopeType', '=', 'world_map_node')
+    .where('scopeId', '=', '0_0')
+    .execute();
+
+  expect(rows).toHaveLength(1);
+});
+
+test('it converges two concurrent reveals of the same node on one genesis seed', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const [first, second] = await Promise.all([
+    client.revealNodes({ avatarID: avatar.id, nodeIDs: ['0_0'] }),
+    client.revealNodes({ avatarID: avatar.id, nodeIDs: ['0_0'] }),
+  ]);
+
+  const [firstEntry] = first;
+  const [secondEntry] = second;
+
+  invariant(firstEntry && secondEntry, 'revealNodes must return one entry per input node');
+
+  expect(firstEntry.genesisSeed).toBe(secondEntry.genesisSeed);
 
   const rows = await ctx.db
     .selectFrom('activityChains')
