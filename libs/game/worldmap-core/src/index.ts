@@ -28,6 +28,7 @@ export { findCellCoord } from './find-cell-coord';
 export { getBiome } from './get-biome';
 export { getDifficulty } from './get-difficulty';
 export { getHexDistance } from './get-hex-distance';
+export { isEdgeOwner } from './is-edge-owner';
 export { isNodeSelectable } from './is-node-selectable';
 export { toCellCoord } from './to-cell-coord';
 export { toChunkCoord } from './to-chunk-coord';

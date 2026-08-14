@@ -94,7 +94,7 @@ function hasWitnessInside(
 function buildEdge(a: WorldMapNode, b: WorldMapNode): WorldEdge {
   const id = a.id < b.id ? `${a.id}|${b.id}` : `${b.id}|${a.id}`;
 
-  return { end: b.position, id, start: a.position };
+  return { endPosition: b.position, id, startPosition: a.position };
 }
 
 function getDistanceSquared(a: readonly [number, number], b: readonly [number, number]): number {

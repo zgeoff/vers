@@ -32,7 +32,7 @@ export function WorldEdges(props: Readonly<WorldEdgesProps>) {
 
     for (const [index, edge] of props.edges.entries()) {
       positions.set(
-        [...getScenePosition(edge.start), ...getScenePosition(edge.end)],
+        [...getScenePosition(edge.startPosition), ...getScenePosition(edge.endPosition)],
         index * POSITION_COMPONENTS_PER_EDGE,
       );
     }
