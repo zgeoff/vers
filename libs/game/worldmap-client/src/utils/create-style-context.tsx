@@ -9,14 +9,6 @@ type StyleSlotRecipe<R extends StyleRecipe> = ReturnType<R>;
 
 type StyleSlot<R extends StyleRecipe> = keyof ReturnType<R>;
 
-/**
- * Creates a style context for a given slot recipe and returns a pair of HOCs for
- * applying slot styles to a component. Useful for creating slot-based compound
- * components.
- *
- * @param recipe - The recipe to create a style context for.
- * @returns An object with two functions: `withContext` and `withProvider`.
- */
 export function createStyleContext<R extends StyleRecipe>(recipe: R) {
   const StyleContext = React.createContext<null | StyleSlotRecipe<R>>(null);
 

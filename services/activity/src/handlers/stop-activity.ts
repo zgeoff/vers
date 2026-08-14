@@ -35,8 +35,7 @@ interface StopActivityOpts {
  * `NOT_FOUND` means the row doesn't exist for this caller — so a stop delivered late or twice
  * from a durable client queue can neither fail spuriously nor kill a newer run. A still-active
  * row whose stamped writer is another session rejects with SESSION_EVICTED: the stop intent
- * predates a writer take-over, and honoring it would kill the run the new writer is driving. The
- * ownership check folds into each statement — a foreign or missing avatar matches no row.
+ * predates a writer take-over, and honoring it would kill the run the new writer is driving.
  */
 export async function stopActivity(
   deps: StopActivityDeps,
@@ -58,6 +57,8 @@ export async function stopActivity(
       .selectFrom('activities')
       .selectAll()
       .where('avatarId', '=', opts.input.avatarID)
+
+      // Folds the ownership check into the query: a foreign or missing avatar matches no row.
       .where('avatarId', 'in', (subquery) =>
         subquery.selectFrom('avatars').select('id').where('userId', '=', actingUserID),
       );

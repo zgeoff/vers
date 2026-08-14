@@ -80,10 +80,6 @@ const labels = new github.IssueLabels(
   { protect: true },
 );
 
-/**
- * Branch protection for main: squash-only PRs gated on the aggregate `checks`
- * status, no deletions, no force pushes, no bypass actors.
- */
 const mainProtectionRuleset = new github.RepositoryRuleset('main-protection', {
   name: 'main protection',
   repository,

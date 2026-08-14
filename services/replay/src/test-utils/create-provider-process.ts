@@ -18,12 +18,6 @@ interface ProviderProcess {
  * full ambient env and mask a missing env-wiring bug, which is the regression this fixture exists
  * to catch. `PORT=0` binds an OS-assigned port, read back from the boot log; the process is killed
  * via `onTestFinished`.
- *
- * Readiness is event-driven, not polled: the boot resolves on the log's bound-port announcement,
- * and a process that exits first rejects immediately with its captured output, so a crashing boot
- * reports its real error instead of running out the clock. The deadline only catches a boot that
- * hangs without exiting. Both pipes keep draining for the process's whole life so a full pipe can
- * never block the child.
  */
 export async function createProviderProcess(engineHash: string): Promise<ProviderProcess> {
   const keyPair = await getTestServiceKeyPair();

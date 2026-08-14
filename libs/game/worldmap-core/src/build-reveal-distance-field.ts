@@ -33,10 +33,6 @@ export interface RevealFieldOptions {
  * A disc's clear radius is its hex-hop radius times √3 — the farthest scene distance of any cell
  * inside its hex disc — plus the jitter margin, so every genuinely revealed cell sits fully inside
  * the clear region even when its node is jittered outward, and fog never hides opened ground.
- *
- * Texels are laid out row-major over the viewport's cell box inflated by half a cell on each side:
- * texel `(i, j)` samples axial `(minCX - 0.5 + (i + 0.5) / resolution, minCY - 0.5 + (j + 0.5) /
- * resolution)`, the same mapping a quad spanning that box with corner-anchored uvs interpolates.
  */
 export function buildRevealDistanceField(
   sources: ReadonlyArray<RevealSource>,
@@ -50,6 +46,10 @@ export function buildRevealDistanceField(
 
   const discs = collectReachingDiscs(sources, viewport, options.falloff);
 
+  // Texels are laid out row-major over the viewport's cell box inflated by half a cell on each
+  // side: texel (i, j) samples axial (minCX - 0.5 + (i + 0.5) / resolution, minCY - 0.5 + (j +
+  // 0.5) / resolution), the same mapping a quad spanning that box with corner-anchored uvs
+  // interpolates.
   for (let j = 0; j < rows; j++) {
     const b = viewport.minCY - 0.5 + (j + 0.5) / options.resolution;
 

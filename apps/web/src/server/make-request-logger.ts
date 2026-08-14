@@ -15,10 +15,8 @@ interface RequestLoggerSink {
  * Builds the request-lifecycle logging middleware: one structured line per request on completion,
  * carrying method, path, status, and duration as queryable fields — data never rides in the
  * message text. The query string never reaches the line: query params carry emailed tokens and
- * auth codes, and a log stream is no place for either. Severity follows outcome: 5xx at error, 4xx
- * at warn, everything else at info — except a served static asset (a pathname with a file
- * extension), which logs at debug to keep asset traffic out of the shipped stream. A handler that
- * throws still logs, at error with the thrown value, before the throw continues to the runtime.
+ * auth codes, and a log stream is no place for either. A handler that throws still logs, at error
+ * with the thrown value, before the throw continues to the runtime.
  */
 export function makeRequestLogger(logger: RequestLoggerSink): Middleware {
   return async (request, next) => {

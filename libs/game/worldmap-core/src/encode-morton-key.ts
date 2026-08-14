@@ -10,9 +10,6 @@ import { MORTON_AXIS_BITS } from './consts';
  *
  * A coordinate outside the packable range, or one carrying a fractional axis, is a caller bug:
  * callers holding unbounded coordinates filter them out before packing.
- *
- * Built from plain arithmetic rather than bitwise operators, since JS's bitwise operators truncate
- * to 32 bits and the interleaved result runs past that width.
  */
 export function encodeMortonKey(coord: readonly [number, number]): number {
   invariant(
@@ -24,6 +21,8 @@ export function encodeMortonKey(coord: readonly [number, number]): number {
   const zy = toZigzag(coord[1]);
   let key = 0;
 
+  // Built from plain arithmetic rather than bitwise operators, since JS's bitwise operators
+  // truncate to 32 bits and the interleaved result runs past that width.
   for (let bit = 0; bit < MORTON_AXIS_BITS; bit++) {
     const xBit = Math.floor(zx / 2 ** bit) % 2;
     const yBit = Math.floor(zy / 2 ** bit) % 2;

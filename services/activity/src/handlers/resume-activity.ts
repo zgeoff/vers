@@ -24,9 +24,8 @@ interface ResumeActivityOpts {
  * Takes over as an active activity's writer session: after this call the acting session is the
  * only one whose appends are accepted, and the displaced writer's in-flight submissions
  * fail fatally. Taking the writer is the whole of resuming server-side — the caller rebuilds its
- * simulation from the verified anchor and appends from the current head. The ownership check
- * folds into the same statement, so a foreign or missing activity is the same NOT_FOUND as a
- * terminal one.
+ * simulation from the verified anchor and appends from the current head. A foreign, missing, or
+ * terminal activity all fail the same NOT_FOUND.
  */
 export async function resumeActivity(
   db: Kysely<DB>,
@@ -44,6 +43,9 @@ export async function resumeActivity(
     .set({ writerSessionId: actingSessionID })
     .where('id', '=', opts.input.activityID)
     .where('status', '=', 'active')
+
+    // the ownership check folds into this statement, so a foreign activity fails the same
+    // NOT_FOUND path as a missing or terminal one
     .where('avatarId', 'in', (subquery) =>
       subquery.selectFrom('avatars').select('id').where('userId', '=', actingUserID),
     )

@@ -159,10 +159,6 @@ function getInitialState(data: AvatarData): AvatarState {
   };
 }
 
-/**
- * Writes a behaviour's state into the serializable snapshot under its id, keeping the id and value
- * types aligned.
- */
 function updateBehaviourSnapshot<K extends BehaviourID>(
   state: AvatarBehaviourSnapshot,
   id: K,

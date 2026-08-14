@@ -61,12 +61,9 @@ const FOG_BILLOW_EDGE = 0.35;
 const FOG_BILLOW_DEEP = 0.08;
 
 /**
- * Draws soft fog of war over the world map: one viewport-covering plane whose per-fragment opacity
- * samples a fog-density texture — the smootherstep-eased euclidean distance to the nearest reveal
- * disc, 0 over revealed ground and 1 a falloff past the frontier — modulated by drifting billow
- * noise. Purely presentational: it projects the density field from the store's reveal sources and
- * stores nothing itself, rebuilding only when a pan crosses a chunk boundary. It renders nothing
- * until both a viewport and reveal sources exist.
+ * Draws soft fog of war over the world map. Purely presentational: it projects the density field
+ * from the store's reveal sources and stores nothing itself, rebuilding only when a pan crosses a
+ * chunk boundary. It renders nothing until both a viewport and reveal sources exist.
  */
 export function FogOfWar() {
   const revealSources = useRevealSources();
@@ -107,12 +104,12 @@ interface FogPlaneProps {
 
 /**
  * The geometry, material, and texture node live for the whole mount: a field change swaps the
- * texture node's value and rewrites the quad in place, never rebuilding the material. A fresh
- * material per change would recompile its shader pipeline on every rebuild, and that churn is
- * enough to lose the GPU context mid-pan — the canvas goes irrecoverably blank.
+ * texture node's value and rewrites the quad in place, never rebuilding the material.
  */
 function FogPlane(props: Readonly<FogPlaneProps>) {
   const planeRef = useRef<FogPlaneResources | null>(null);
+  // a fresh material per change would recompile its shader pipeline on every rebuild, and that
+  // churn is enough to lose the GPU context mid-pan — the canvas goes irrecoverably blank
   const plane = (planeRef.current ??= buildFogPlaneResources(props.field, props.viewport));
 
   useLayoutEffect(() => {
@@ -161,6 +158,9 @@ function buildFogPlaneResources(
 
   updateDensityBytes(density.bytes, field);
 
+  // the density texture's red channel is the smootherstep-eased euclidean distance to the
+  // nearest reveal disc — 0 over revealed ground, 1 a falloff past the frontier; the opacity
+  // node samples it and modulates the result with drifting billow noise
   const textureNode = sceneTSL.texture(buildDensityTexture(density));
 
   const material = new MeshBasicNodeMaterial({
@@ -181,11 +181,9 @@ function buildFogPlaneResources(
 }
 
 /**
- * A same-size field — every pan; only a zoom changes the texel dimensions — rewrites the live
- * texture's pixels in place: no new GPU texture and, above all, no disposal, since destroying a
- * texture a queued frame still binds is a device loss on the WebGPU backend and a silently blank
- * canvas. Only a resize allocates a replacement, and the old texture is released only after the
- * node stops referencing it.
+ * Never dispose a texture a queued frame still binds — destroying it is a device loss on the
+ * WebGPU backend and a silently blank canvas. Only a resize allocates a replacement, and the old
+ * texture is released only after the node stops referencing it.
  */
 function updateFogPlane(
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- the resources' density buffer and texture-node value slot are mutable by design: rewriting them is how a rebuilt field reaches the live material
@@ -201,10 +199,14 @@ function updateFogPlane(
   plane.applied = { field, viewport };
 
   if (field.cols === plane.density.cols && field.rows === plane.density.rows) {
+    // a pan without a zoom keeps the texel dimensions — rewrite the live texture's pixels in
+    // place, no new GPU texture
     updateDensityBytes(plane.density.bytes, field);
 
     plane.textureNode.value.needsUpdate = true;
   } else {
+    // a zoom changes the texel dimensions — allocate a replacement texture and release the old
+    // one only once the node stops referencing it
     plane.density.bytes = new Uint8Array(field.values.length);
 
     plane.density.cols = field.cols;
@@ -293,23 +295,22 @@ function updateFogPlaneGeometry(geometry: BufferGeometry, viewport: Readonly<Vie
   geometry.computeBoundingSphere();
 }
 
-/**
- * Two octaves of world-anchored noise drifting in opposite directions, so the fog reads as a
- * living volume rather than a static gradient. The billow is strongest in the frontier band —
- * `density * (1 - density)` peaks mid-gradient and vanishes at both ends — with a small
- * density-proportional term so deep fog keeps a faint internal churn; clamping restores the 0..1
- * opacity range. Noise coordinates come from world position, not uv, so drifting the camera never
- * drags the billow along with the quad; the time term broadcast onto both axes blows the noise
- * field diagonally, like wind.
- */
 function buildBillowedOpacity(density: TSLMathNode): TSLMathNode {
   const ground = sceneTSL.positionWorld.xz;
   const clock = sceneTSL.time;
+  // strongest in the frontier band: `density * (1 - density)` peaks mid-gradient and vanishes at
+  // both ends
   const band = density.mul(density.oneMinus()).mul(4);
+  // noise coordinates come from world position, not uv, so drifting the camera never drags the
+  // billow along with the quad
   const drift = ground.mul(FOG_BILLOW_SCALE);
   const coarse = sceneTSL.mx_noise_float(drift.add(clock.mul(0.24)));
+  // two octaves drifting in opposite directions, with the time term broadcast onto both axes
+  // blowing the noise field diagonally, like wind
   const fine = sceneTSL.mx_noise_float(drift.mul(2.3).sub(clock.mul(0.31)));
   const billow = coarse.mul(0.7).add(fine.mul(0.3));
+  // a small density-proportional term added to the band term so deep fog keeps a faint internal
+  // churn
   const amplitude = band.mul(FOG_BILLOW_EDGE).add(density.mul(FOG_BILLOW_DEEP));
 
   return density.add(billow.mul(amplitude)).clamp(0, 1);

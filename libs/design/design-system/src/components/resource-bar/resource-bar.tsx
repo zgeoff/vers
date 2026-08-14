@@ -40,10 +40,8 @@ const fill = cva({
     left: '[0]',
     position: 'absolute',
     top: '[0]',
-    /**
-     * A vital only steps on discrete combat events, so easing the width change reads as the pool
-     * draining rather than teleporting.
-     */
+    // A vital only steps on discrete combat events, so easing the width change reads as the pool
+    // draining rather than teleporting.
     transition: '[width 120ms linear]',
   },
   variants: {

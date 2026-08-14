@@ -1,17 +1,23 @@
 import type { ActivityCheckpoint, ActivityInput, AvatarData } from '../types';
 import { createSimulationDriver } from './create-simulation-driver';
 
-/**
- * @property duration - derive from the checkpoint data submitted by the
- * cient, or if simulating offline progress the duration since the last checkpoint (if any)
- * @property expectedCheckpointCount - when the caller knows exactly how many checkpoints the run should
- * produce (a replay), the primary halt condition; `duration` is only the safety cap behind it.
- * @property stopAtState - if a final rng state is provided we will stop processing once we've reached it. useful for
- * verifying client progress.
- */
 interface SimulationConfig {
+  /**
+   * Derived from the checkpoint data submitted by the client, or — when simulating offline
+   * progress — the duration since the last checkpoint, if any.
+   */
   readonly duration: number;
+
+  /**
+   * When the caller knows exactly how many checkpoints the run should produce (a replay), the
+   * primary halt condition; `duration` is only the safety cap behind it.
+   */
   readonly expectedCheckpointCount?: number;
+
+  /**
+   * When a final rng state is provided, processing stops once it's reached — useful for verifying
+   * client progress.
+   */
   readonly stopAtState?: string;
 }
 
