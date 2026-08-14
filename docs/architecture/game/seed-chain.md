@@ -68,6 +68,15 @@ without the server. The compound node key scopes a seed to its avatar: two avata
 coordinate root distinct chains against distinct seeds, so neither overwrites the other's cached
 value.
 
+An offline-open start — the game open, the server unreachable — mints an activity root entirely from
+this cache, computing the same `buildStartHash` the server would have stamped from the cached seed,
+encounter, content version, and stamps, then installing the row through the same path a
+server-authored one takes. The worker persists the synthesized row in its own `offline-starts`
+IndexedDB store, keyed by the activity's id, before installing it, so a crash between mint and
+install still leaves a recoverable root. `buildSnapshot` is a settled-xp guess sourced from the last
+activity row the worker installed for the avatar: a hint a later reconcile re-authors against the
+server's own record, never an attempt to reproduce the server's optimistic total.
+
 ## Advancing the chain
 
 The chain advances on an activity's transition out of `active`. Which cursor moves depends on
