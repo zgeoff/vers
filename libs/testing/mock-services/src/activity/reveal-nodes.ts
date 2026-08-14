@@ -6,14 +6,24 @@ import { findLiveActivityAvatar } from '../avatar/find-live-activity-avatar';
 import { upsertActiveAvatar } from '../avatar/upsert-active-avatar';
 import * as db from '../db';
 import { os } from './os';
+import { resolveEncounterNode } from './resolve-encounter-node';
+
+/**
+ * The stamps every mock reveal carries, matching the fixed values `startActivity`'s own mock
+ * stamps on every activity it mints.
+ */
+const MOCK_KEY_VERSION = 1;
+const MOCK_SECRET_REF = 'worldmap';
+const MOCK_SECRET_VERSION = 1;
 
 /**
  * Mints a genesis seed per requested node, hashed from the avatar and node id so the same pair
  * always reveals to the same seed across calls — mirroring the real service's idempotent reveal
- * without a persisted chain collection to key off of. Mirrors the real handler's other checks:
- * NODE_UNKNOWN for a scope id that doesn't resolve to a world-map node, and admission gated to the
- * account's active avatar, adopting an absent selection unless a different avatar already holds a
- * live run.
+ * without a persisted chain collection to key off of. Each node's encounter mirrors
+ * `startActivity`'s own mock derivation: difficulty from its coordinate alone, no sealed pool
+ * pick. Mirrors the real handler's other checks: NODE_UNKNOWN for a scope id that doesn't resolve
+ * to a world-map node, and admission gated to the account's active avatar, adopting an absent
+ * selection unless a different avatar already holds a live run.
  */
 export const revealNodes = os.revealNodes.handler(async (opts) => {
   const actingUserId = opts.context.actingUserId;
@@ -60,9 +70,24 @@ export const revealNodes = os.revealNodes.handler(async (opts) => {
     });
   }
 
-  return opts.input.nodeIDs.map((nodeID) => {
+  const nodes = opts.input.nodeIDs.map((nodeID) => {
     const hash = sha256(utf8ToBytes(`vers-mock-genesis|${opts.input.avatarID}|${nodeID}`));
+    const encounterNode = resolveEncounterNode('world_map_node', nodeID);
 
-    return { genesisSeed: bytesToHex(hash.slice(0, 16)), nodeID };
+    invariant(encounterNode !== undefined, 'nodeID already validated against a world-map cell');
+
+    return {
+      contentVersion: db.MOCK_CURRENT_CONTENT_VERSION,
+      encounterNode,
+      genesisSeed: bytesToHex(hash.slice(0, 16)),
+      nodeID,
+    };
   });
+
+  return {
+    keyVersion: MOCK_KEY_VERSION,
+    nodes,
+    secretRef: MOCK_SECRET_REF,
+    secretVersion: MOCK_SECRET_VERSION,
+  };
 });

@@ -36,14 +36,17 @@ export { useWriterAbortSignal } from './state/use-writer-abort-signal';
 export { useWriterDisplacedActivityID } from './state/use-writer-displaced-activity-id';
 export { useWriterGeneration } from './state/use-writer-generation';
 export { readCachedNodeIDs } from './submission/read-cached-node-ids';
+export type { CachedNodeSeed } from './submission/read-node-seed';
 export { readNodeSeed } from './submission/read-node-seed';
 export { readPendingStartIntent } from './submission/read-pending-start-intent';
+export { readStartStamps } from './submission/read-start-stamps';
 
 export type {
   ActivitySubmissionContext,
   NodeSeed,
   PendingStartIntent,
   RevealedNodeSeed,
+  StartStampsPreference,
 } from './submission/types';
 
 export type { WorkerClient } from './transport/types';

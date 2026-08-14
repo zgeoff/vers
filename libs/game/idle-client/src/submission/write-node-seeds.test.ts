@@ -1,10 +1,11 @@
 import { expect, test } from 'bun:test';
+import invariant from 'tiny-invariant';
 import { createMockNodeSeed } from '../test-utils/factories/create-mock-node-seed';
 import { readCachedNodeIDs } from './read-cached-node-ids';
 import { readNodeSeed } from './read-node-seed';
 import { writeNodeSeeds } from './write-node-seeds';
 
-test("it persists a batch of one avatar's seeds retrievable by node id", async () => {
+test("it persists a batch of one avatar's start inputs retrievable by node id", async () => {
   const avatarID = 'avatar-write-batch';
   const first = createMockNodeSeed({ nodeID: '1_0' });
   const second = createMockNodeSeed({ nodeID: '2_0' });
@@ -14,8 +15,17 @@ test("it persists a batch of one avatar's seeds retrievable by node id", async (
   const firstSeed = await readNodeSeed(avatarID, first.nodeID);
   const secondSeed = await readNodeSeed(avatarID, second.nodeID);
 
-  expect(firstSeed).toBe(first.genesisSeed);
-  expect(secondSeed).toBe(second.genesisSeed);
+  expect(firstSeed).toStrictEqual({
+    contentVersion: first.contentVersion,
+    encounterNode: first.encounterNode,
+    genesisSeed: first.genesisSeed,
+  });
+
+  expect(secondSeed).toStrictEqual({
+    contentVersion: second.contentVersion,
+    encounterNode: second.encounterNode,
+    genesisSeed: second.genesisSeed,
+  });
 });
 
 test('it keeps one row with the same seed when the same node is cached again', async () => {
@@ -32,7 +42,11 @@ test('it keeps one row with the same seed when the same node is cached again', a
     seed.nodeID,
   ]);
 
-  expect(cachedSeed).toBe(seed.genesisSeed);
+  expect(cachedSeed).toStrictEqual({
+    contentVersion: seed.contentVersion,
+    encounterNode: seed.encounterNode,
+    genesisSeed: seed.genesisSeed,
+  });
 });
 
 test('it scopes a shared node id to each avatar so one never overwrites the other', async () => {
@@ -46,6 +60,8 @@ test('it scopes a shared node id to each avatar so one never overwrites the othe
   const firstSeed = await readNodeSeed('avatar-one', nodeID);
   const secondSeed = await readNodeSeed('avatar-two', nodeID);
 
-  expect(firstSeed).toBe('seed-first');
-  expect(secondSeed).toBe('seed-second');
+  invariant(firstSeed && secondSeed, 'both avatars must have a cached node seed');
+
+  expect(firstSeed.genesisSeed).toBe('seed-first');
+  expect(secondSeed.genesisSeed).toBe('seed-second');
 });

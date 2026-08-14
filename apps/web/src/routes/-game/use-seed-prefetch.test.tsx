@@ -31,7 +31,17 @@ test('it calls revealNodes only for the delta beyond what a prior reveal already
     mockActivityService.revealNodes.handler((opts) => {
       track(opts.input);
 
-      return opts.input.nodeIDs.map((nodeID) => ({ genesisSeed: `seed-${nodeID}`, nodeID }));
+      return {
+        keyVersion: 1,
+        nodes: opts.input.nodeIDs.map((nodeID) => ({
+          contentVersion: '2',
+          encounterNode: { difficulty: 1 },
+          genesisSeed: `seed-${nodeID}`,
+          nodeID,
+        })),
+        secretRef: 'worldmap',
+        secretVersion: 1,
+      };
     }),
   );
 
@@ -76,7 +86,17 @@ test('it does not repeat a reveal for a node already cached this session', async
     mockActivityService.revealNodes.handler((opts) => {
       track(opts.input);
 
-      return opts.input.nodeIDs.map((nodeID) => ({ genesisSeed: `seed-${nodeID}`, nodeID }));
+      return {
+        keyVersion: 1,
+        nodes: opts.input.nodeIDs.map((nodeID) => ({
+          contentVersion: '2',
+          encounterNode: { difficulty: 1 },
+          genesisSeed: `seed-${nodeID}`,
+          nodeID,
+        })),
+        secretRef: 'worldmap',
+        secretVersion: 1,
+      };
     }),
   );
 
@@ -130,7 +150,17 @@ test('it chunks a delta larger than the server-side reveal batch cap', async () 
     mockActivityService.revealNodes.handler((opts) => {
       track(opts.input);
 
-      return opts.input.nodeIDs.map((nodeID) => ({ genesisSeed: `seed-${nodeID}`, nodeID }));
+      return {
+        keyVersion: 1,
+        nodes: opts.input.nodeIDs.map((nodeID) => ({
+          contentVersion: '2',
+          encounterNode: { difficulty: 1 },
+          genesisSeed: `seed-${nodeID}`,
+          nodeID,
+        })),
+        secretRef: 'worldmap',
+        secretVersion: 1,
+      };
     }),
   );
 
@@ -159,7 +189,7 @@ test('it chunks a delta larger than the server-side reveal batch cap', async () 
   });
 });
 
-test('it relays the seeds revealNodes returns to the worker client', async () => {
+test('it relays the seeds and stamps revealNodes returns to the worker client', async () => {
   const signedIn = await createSignedInUser();
   const avatar = await createActiveAvatar({ userID: signedIn.userID });
 
@@ -174,9 +204,17 @@ test('it relays the seeds revealNodes returns to the worker client', async () =>
   });
 
   server.use(
-    mockActivityService.revealNodes.handler((opts) =>
-      opts.input.nodeIDs.map((nodeID) => ({ genesisSeed: `seed-${nodeID}`, nodeID })),
-    ),
+    mockActivityService.revealNodes.handler((opts) => ({
+      keyVersion: 1,
+      nodes: opts.input.nodeIDs.map((nodeID) => ({
+        contentVersion: '2',
+        encounterNode: { difficulty: 1 },
+        genesisSeed: `seed-${nodeID}`,
+        nodeID,
+      })),
+      secretRef: 'worldmap',
+      secretVersion: 1,
+    })),
   );
 
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
@@ -191,9 +229,20 @@ test('it relays the seeds revealNodes returns to the worker client', async () =>
         {
           avatarID: avatar.id,
           seeds: [
-            { genesisSeed: 'seed-0_0', nodeID: '0_0' },
-            { genesisSeed: 'seed-1_0', nodeID: '1_0' },
+            {
+              contentVersion: '2',
+              encounterNode: { difficulty: 1 },
+              genesisSeed: 'seed-0_0',
+              nodeID: '0_0',
+            },
+            {
+              contentVersion: '2',
+              encounterNode: { difficulty: 1 },
+              genesisSeed: 'seed-1_0',
+              nodeID: '1_0',
+            },
           ],
+          stamps: { keyVersion: 1, secretRef: 'worldmap', secretVersion: 1 },
         },
         expect.anything(),
       );
@@ -227,7 +276,17 @@ test('it does not re-request an in-flight id when the frontier grows mid-batch',
         });
       }
 
-      return opts.input.nodeIDs.map((nodeID) => ({ genesisSeed: `seed-${nodeID}`, nodeID }));
+      return {
+        keyVersion: 1,
+        nodes: opts.input.nodeIDs.map((nodeID) => ({
+          contentVersion: '2',
+          encounterNode: { difficulty: 1 },
+          genesisSeed: `seed-${nodeID}`,
+          nodeID,
+        })),
+        secretRef: 'worldmap',
+        secretVersion: 1,
+      };
     }),
   );
 
@@ -287,7 +346,17 @@ test('it completes an in-flight reveal batch the frontier growth overlaps, cachi
         });
       }
 
-      return opts.input.nodeIDs.map((nodeID) => ({ genesisSeed: `seed-${nodeID}`, nodeID }));
+      return {
+        keyVersion: 1,
+        nodes: opts.input.nodeIDs.map((nodeID) => ({
+          contentVersion: '2',
+          encounterNode: { difficulty: 1 },
+          genesisSeed: `seed-${nodeID}`,
+          nodeID,
+        })),
+        secretRef: 'worldmap',
+        secretVersion: 1,
+      };
     }),
   );
 
@@ -320,7 +389,15 @@ test('it completes an in-flight reveal batch the frontier growth overlaps, cachi
       expect(client.cacheNodeSeeds).toHaveBeenCalledWith(
         {
           avatarID: avatar.id,
-          seeds: [{ genesisSeed: 'seed-0_0', nodeID: '0_0' }],
+          seeds: [
+            {
+              contentVersion: '2',
+              encounterNode: { difficulty: 1 },
+              genesisSeed: 'seed-0_0',
+              nodeID: '0_0',
+            },
+          ],
+          stamps: { keyVersion: 1, secretRef: 'worldmap', secretVersion: 1 },
         },
         expect.anything(),
       );
