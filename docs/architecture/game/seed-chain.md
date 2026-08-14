@@ -56,6 +56,11 @@ client-side, or never revealed at all, cannot be started. The seed needs no re-d
 verifier reads the stored value, and a restored device fetches it. A client cannot compute it and
 cannot steer it, since the scope and the avatar are both fixed before the mint.
 
+app-web calls `revealNodes` for every node the fog-of-war projection currently reveals, relaying the
+returned seeds to the idle worker. The worker caches each by node id in its `node-seeds` IndexedDB
+store, so a seed is held on-device for every node the player can see ahead of an offline-open start
+needing one.
+
 ## Advancing the chain
 
 The chain advances on an activity's transition out of `active`. Which cursor moves depends on
