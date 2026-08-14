@@ -36,20 +36,34 @@ Project-level additions to the shared function-naming taxonomy, under the same r
 
 ## Comments
 
-- Comments that document a declaration are JSDoc blocks, always multi-line (`/**` alone, one
-  `*`-prefixed line per point, `*/` alone — never single-line `/** … */`), attached directly to the
-  declaration they describe; `//` is for statement-level commentary inside bodies.
-- Comment a declaration only for what the file doesn't already show — an invariant, cross-file or
-  runtime behavior, or why the choice is necessary. A comment that restates the name or signature is
-  a defect — delete it.
+Two comment jobs, two locations. A JSDoc block on a declaration carries the caller-facing contract:
+what a reader needs to use the thing without opening its body — the guarantee, the invariants a
+caller must uphold, the failure modes. A `//` at a statement carries the implementation note: why
+that line does the non-obvious thing. A body's mechanism — how the algorithm walks, which step does
+what — is never narrated from the top; it lives at the lines, or nowhere when the code already shows
+it.
+
+- Prefer the enforceable form. Before writing a comment, put the fact where a machine holds it:
+  encode an outcome set as a discriminated union, a bound as a named constant, a caller rule as a
+  type; protect a frozen wire or draw layout with a golden test. Comment only the residue neither a
+  type nor a test can hold, and where a test enforces an invariant, point at it rather than restating
+  the consequence.
+- Comment the decision, not the code. A comment states an invariant, cross-file or runtime behavior,
+  or why a non-obvious choice was made. One that restates the name, the signature, or the next line's
+  mechanics is a defect — delete it.
+- A long JSDoc block is a placement smell, not a prose exercise. When a declaration's comment runs
+  long because it narrates the body, relocate: the mechanism to `//` at the lines, the enforceable
+  parts into types or tests, leaving the block at the contract. A genuinely irreducible multi-point
+  contract stays — render it as structured prose (one point per paragraph, led by its topic sentence;
+  one fact per sentence; an outcome map or state-to-action table as a bullet list) and load the
+  `docs-writing` skill for its wording.
+- JSDoc blocks are always multi-line (`/**` alone, one `*`-prefixed line per point, `*/` alone —
+  never single-line `/** … */`), attached directly to the declaration they describe.
 - Comments describe the code as it is now — no history ("previously", "now uses"), no project state
   (issue numbers, phase labels, "not wired yet"); those live in the commit message.
 - Comments don't name other declarations — renames strand the reference. State the contract instead:
   "callers must pass edits sorted last-to-first", not "(buildEditsFromAST's contract)". A
   declaration's own parameters and signature types are fine to name.
-- A comment past a few lines is structured prose: one point per paragraph, led by its topic
-  sentence; one fact per sentence; enumeration-shaped content (an outcome map, a state-to-action
-  table) as a bullet list. Load the `docs-writing` skill before writing or reworking one.
 
 ## Golden values in tests
 
