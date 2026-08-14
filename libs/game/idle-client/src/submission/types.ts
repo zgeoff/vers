@@ -52,10 +52,24 @@ export interface PendingStartIntent {
   readonly scopeType: string;
 }
 
+/**
+ * A world-map node's genesis seed as the worker's durable cache holds it, keyed by `nodeID`.
+ * Revealing an already-cached node writes the same seed back in place — the server mint it comes
+ * from is idempotent per node, so the cache write is too.
+ */
+export interface NodeSeed {
+  readonly genesisSeed: string;
+  readonly nodeID: string;
+}
+
 export interface CheckpointQueueSchema extends DBSchema {
   'content-documents': {
     key: string;
     value: ContentDocument;
+  };
+  'node-seeds': {
+    key: string;
+    value: NodeSeed;
   };
   'pending-checkpoints': {
     key: [string, number];

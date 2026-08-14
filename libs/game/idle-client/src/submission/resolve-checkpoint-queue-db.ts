@@ -5,6 +5,7 @@ import {
   CHECKPOINT_QUEUE_DB_VERSION,
   CHECKPOINT_QUEUE_STORE_NAME,
   CONTENT_DOCUMENT_STORE_NAME,
+  NODE_SEEDS_STORE_NAME,
   PREFERENCES_STORE_NAME,
 } from './constants';
 import type { CheckpointQueueSchema } from './types';
@@ -16,8 +17,9 @@ let queueDB: null | Promise<IDBPDatabase<CheckpointQueueSchema>> = null;
  * `[activityID, version]`, so an activity's rows sort in submission order and a compound
  * read/delete addresses either a single checkpoint or an activity's whole range; `preferences`
  * caches device-local settings — a SharedWorker has no `localStorage` — as the offline outbox for
- * a server source of truth. Each store is created only if missing, so an upgrade from an earlier
- * version never re-creates a store an existing install already has.
+ * a server source of truth; `node-seeds` caches a revealed world-map node's genesis seed by
+ * `nodeID`. Each store is created only if missing, so an upgrade from an earlier version never
+ * re-creates a store an existing install already has.
  */
 export function resolveCheckpointQueueDB(): Promise<IDBPDatabase<CheckpointQueueSchema>> {
   queueDB ??= openDB<CheckpointQueueSchema>(CHECKPOINT_QUEUE_DB_NAME, CHECKPOINT_QUEUE_DB_VERSION, {
@@ -34,6 +36,10 @@ export function resolveCheckpointQueueDB(): Promise<IDBPDatabase<CheckpointQueue
 
       if (!database.objectStoreNames.contains(CONTENT_DOCUMENT_STORE_NAME)) {
         database.createObjectStore(CONTENT_DOCUMENT_STORE_NAME, { keyPath: 'contentVersion' });
+      }
+
+      if (!database.objectStoreNames.contains(NODE_SEEDS_STORE_NAME)) {
+        database.createObjectStore(NODE_SEEDS_STORE_NAME, { keyPath: 'nodeID' });
       }
     },
   });
