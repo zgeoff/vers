@@ -8,7 +8,9 @@ import { useWorldGraph } from './use-world-graph';
 
 test('it returns the current world graph state', () => {
   const graph: WorldGraph = {
-    edges: { edge1: createMockWorldMapEdge({ end: [0, 0], id: 'edge1', start: [0, 0] }) },
+    edges: {
+      edge1: createMockWorldMapEdge({ endPosition: [0, 0], id: 'edge1', startPosition: [0, 0] }),
+    },
     nodes: { node1: createMockWorldMapNode({ id: 'node1', position: [0, 0] }) },
   };
 
