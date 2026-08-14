@@ -47,7 +47,7 @@ that owns it.
   straight from its coordinates without generating any neighbour first, so regions load in any
   order. Nothing is baked; nothing is read from disk.
 - **Placement** — a hex grid carries one jittered node per cell. Every cell holds a node; visible
-  sparseness is a rendering choice, not an absence. Probabilistic existence is rejected: it
+  sparseness is a rendering choice, not an absence. The design rejects probabilistic existence: it
   reintroduces "does this id exist?" ambiguity and risks a fragmented graph.
 - **Connectivity** — a distance-capped [Gabriel graph](https://en.wikipedia.org/wiki/Gabriel_graph).
   Both sides of a chunk border evaluate the same predicate from the same hash inputs, so borders
@@ -94,8 +94,8 @@ grant table `(avatarId, landmarkId)`.
   sort order, so a 2D box reads as one 1D range. A per-chunk run-length reveal bitmask may cache the
   result, but the completion table stays the source of truth.
 - Reveal discloses only after the predecessor completion verifies, never on optimistic completion.
-  Disclosure carries expected-value-flat descriptor metadata alone — never salt or drops — and its
-  fan-out is capped independent of node degree. An on-demand priority bump keeps the online path
+  Disclosure carries expected-value-flat descriptor metadata alone — never salt or drops — and the
+  server caps its fan-out independent of node degree. An on-demand priority bump keeps the online path
   responsive.
 
 ## Selection and the offline horizon
@@ -167,9 +167,10 @@ assigns each node's biome; node jitter alone gives the drawn borders their organ
 - **Public biome-uniform term only** — biome touches reward only through a pure function of the
   public biome id, constant across every node in the biome, computable by every client. Biome may
   set a mean, publicly; it never rides hidden per-node variance.
-- **No hidden per-node reward** — a hidden per-node reward that clusters by biome is forbidden, and
-  the ban carries a permanent code comment. It would make client-visible terrain a treasure map for
-  sealed loot — the exact sniping fog prevents — and it is the cheapest form to build, so it tempts.
+- **No hidden per-node reward** — the design forbids a hidden per-node reward that clusters by
+  biome, and the ban carries a permanent code comment. It would make client-visible terrain a
+  treasure map for sealed loot — the exact sniping fog prevents — and it is the cheapest form to
+  build, so it tempts.
 - **Reroll defeated by progression cost** — the seed-selection attack (rerolling `userSeed` or
   spinning throwaway avatars for a favourable layout) is defeated by progression cost, not
   expected-value neutrality: a rerolled character starts at level 1, and using a fished

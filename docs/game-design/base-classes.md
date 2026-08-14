@@ -87,7 +87,7 @@ output. That resource, how it accrues, and what it amplifies are the entire base
 on its own.
 
 One of its specializations routes that resource through another universal system. Each of its three
-tiers is a fork: at one tier the avatar takes either a passive that scales the resource's ceiling
+tiers is a fork: at one tier the avatar takes either a passive that scales the resource's cap
 with the coupled system or a passive that converts the coupled system's recovery into resource gain
 — passives that pull toward different builds, so the pick commits a direction rather than stacking a
 number. Later tiers deepen that direction without deleting the earlier passive.

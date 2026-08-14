@@ -78,7 +78,7 @@ seals each node's content behind a per-avatar secret, so map shape reveals nothi
   carries a short-lived signed service token minted at the edge with the acting user's ID, and the
   runtime plugin in `@vers/service-runtime` verifies it before any handler runs
   ([auth](./services/auth.md)).
-- **Contracts** — each service's API is declared in its own `@vers/contract-*` package, oRPC
+- **Contracts** — each service declares its API in its own `@vers/contract-*` package, oRPC
   contract-first with Zod schemas owned by the declaring contract
   ([service contracts](./services/service-contracts.md)).
 - **Atomic release** — contracts are unversioned workspace source packages, and the repo deploys as
@@ -86,8 +86,8 @@ seals each node's content behind a per-avatar secret, so map shape reveals nothi
   divergence cannot land on `main`. There is no version matrix; the monorepo is the compatibility
   mechanism ([deployment](./platform/deployment.md)).
 - **Observability** — OpenTelemetry sends traces and logs to Axiom; the Sentry SDK sends errors to
-  Bugsink. Both are wired into every service by `@vers/service-runtime`, and request IDs propagate
-  from edge to service ([observability](./platform/observability.md)).
+  Bugsink. `@vers/service-runtime` wires both into every service, and request IDs propagate from
+  edge to service ([observability](./platform/observability.md)).
 
 ## Core technology
 

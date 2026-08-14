@@ -17,10 +17,10 @@ connection after a suspend pays a resume cost.
 | Compute         | autoscaling 0.25–8 CU, scale-to-zero          |
 | Suspend timeout | 300s (Neon's default; `suspend_timeout` 0)    |
 
-The project, branches, compute endpoints, and roles are declared in the vers-infra Pulumi program
-(`infra/neon.ts`), applied with `pulumi up` from `infra/` and drift-checked by the infra-drift
-workflow. Databases, schemas, and migrations stay with the migration pipeline, and each role's
-in-database grants are SQL — the Neon API models role existence, not privileges.
+The vers-infra Pulumi program (`infra/neon.ts`) declares the project, branches, compute endpoints,
+and roles; `pulumi up` from `infra/` applies them, and the infra-drift workflow drift-checks them.
+Databases, schemas, and migrations stay with the migration pipeline, and each role's in-database
+grants are SQL — the Neon API models role existence, not privileges.
 
 Idle compute resumes on the next connection. A resume runs ~0.6–1.1s, observed from a Fly Sydney
 machine; once warm, queries run ~2ms and fresh connections ~55–70ms. Fly's idle-stop timing must not
@@ -103,7 +103,7 @@ A branch is a full copy-on-write postgres. Run migrations against it, introspect
 
 The `postgres` entry in `.mcp.json` runs `scripts/src/bin/pg-mcp-launch.ts`. That launcher renders a
 per-session dbhub config — DSNs read from 1Password, the dev source pinned to the worktree's
-database — and hands stdio to `@zgeoff/dbhub`. Both sources are lazy: a session that never queries
+database — and passes stdio to `@zgeoff/dbhub`. Both sources are lazy: a session that never queries
 postgres never opens a connection, and Neon stays suspended.
 
 - The `prod` source queries `vers` on the `main` branch as `mcp_ro`. Read-only holds at two

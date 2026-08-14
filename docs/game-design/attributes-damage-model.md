@@ -41,7 +41,7 @@ memory pressure, and other effects that harm through thought, control, or unders
 ### Null
 
 Null damage is absence and impossibility: entropy, erasure, unreality, and forces that do not fit
-cleanly into the known material systems.
+into the known material systems.
 
 ## Damage Events
 
@@ -66,7 +66,7 @@ an investable defensive answer — circumstantial heavy crits are designed threa
 preparing for them.
 
 Baseline content is tuned so an unattended avatar's defeat is predictable from its build rather than
-from unlucky sequences — max-hit ceilings against expected defensive pools, not hard caps. Players
+from unlucky sequences — max-hit limits against expected defensive pools, not hard caps. Players
 who juice an instance deliberately trade that safety for yield; the appetite to go deeper should
 never hit a wall. Exact numbers belong to the progression and enemy notes.
 
