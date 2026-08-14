@@ -1,4 +1,5 @@
 export { createActiveAvatarRow } from './composites/create-active-avatar-row';
+export { createActivityChainRow } from './composites/create-activity-chain-row';
 export { createActivityRow } from './composites/create-activity-row';
 export { createAnonymousViewer } from './composites/create-anonymous-viewer';
 export { createAvatarRow } from './composites/create-avatar-row';
@@ -8,6 +9,7 @@ export { createServiceToken } from './create-service-token';
 export { createTestDB } from './create-test-db';
 export { createTestUser } from './create-test-user';
 export { createMockActivity } from './factories/create-mock-activity';
+export { createMockActivityChain } from './factories/create-mock-activity-chain';
 export { createMockAvatar } from './factories/create-mock-avatar';
 export { getTestServiceKeyPair } from './get-test-service-key-pair';
 export type { Isolation } from './make-test-db';
