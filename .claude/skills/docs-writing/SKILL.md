@@ -7,8 +7,22 @@ description:
 
 # Docs writing
 
-Write every sentence as if it had always existed, for a reader who saw none of the work that
-produced it.
+Write for a cold reader: someone with none of the conversation, ticket, or diff that produced the
+doc, reading every sentence as if it had always existed. When a sentence needs that missing context
+to resolve, it fails review however clean it reads to you — as the author, your resolved mental model
+binds every referent, so the failure is invisible from the writing seat and you check for it
+deliberately.
+
+Aim for plain sentences with actors and verbs. Not telegraphic — keep the articles and the
+connective clauses — and not florid. The rules below make that register checkable. When a sentence
+fails one, redraft it from the facts it contains rather than patching it word by word; patching
+preserves the failed structure. The same holds at doc scale: when a doc fails, list what each section
+must say and rewrite the sections fresh.
+
+> **Note:** these docs are written by AI and read by humans. The rules are written to be executable
+> by the writer, so some phrasing is more precise than a human reader needs — line budgets, greppable
+> patterns, exact placeholder shapes. That precision is what makes a rule checkable rather than
+> aspirational.
 
 Two passes govern every doc. **Selection** decides which points the doc makes; it is ruthless.
 **Rendering** decides how a surviving point is written — its sentences, its words, its shape, its
@@ -82,10 +96,23 @@ knife.
   sentence supports that point, and a sentence starting a new point starts a new paragraph. The
   test: reading only first sentences yields a correct coarse version of the doc.
 - **Lead with the fact.** The answer first, framing never — "Reuses the existing bucket", not "What
-  we want to do here is…".
-- **Active over passive.** "The sweep drops each stranded machine and records the set removed", not
-  "stranded machines are dropped and the removed set is recorded". The test: append "by monkeys" — a
-  sentence that still parses is passive.
+  we want to do here is…". An orientation clause ("To detect a stale artifact, …") is not
+  throat-clearing — it tells the reader where they are before the payload lands, so it stays.
+- **Show the rule in an instance.** When one concrete example carries a general rule, lead with the
+  example: "a request to `/admin/api/2026-07/graphql.json` is intercepted even though the schema is
+  pinned to `2026-01`" beats "handlers match any version segment and answer from the pinned schema".
+  State the abstraction alone only when no single instance can carry it.
+- **Address the reader in how-to prose.** Instructions say "you" and use imperatives ("seed it
+  yourself", "call `seed()` if you'd rather not create data per test"). A how-to written without a
+  reader reads as a spec. Reference and design prose stay declarative — there the doc states what the
+  system is, not what the reader does.
+- **Name the actor.** "The sweep drops each stranded machine and records the set removed", not
+  "stranded machines are dropped and the removed set is recorded". Two shapes hide the actor: the
+  passive — append "by monkeys" and a sentence that still parses is passive — and the disguised
+  activity, a copular sentence whose subject is really a verb someone performs ("a voice review is a
+  redraft" hides "when you review voice, you redraft"). A sentence stating a state or definition
+  ("the field is optional", "a point is a fact plus its rationale") has no actor — the copula is
+  correct there.
 - **Decisions read as decisions.** A made call never reads "may", "should", or "might" — hedged
   modals mark genuinely open options only. A conditional that defines criteria ("a change may be
   treated as standard-risk when…") is a definition, not a hedge.
@@ -114,6 +141,14 @@ knife.
   not "no drain delivers entries out of order" — a negated subject garden-paths. Noun stacks
   garden-path too: three bare nouns in a row unstack. A reduced relative clause appended after a
   dash takes "that" or "which".
+- **Unstack abstract nouns.** A chain of abstract nouns with nobody doing anything ("the escalation
+  path for consumers on diverging versions") stays opaque however precise it is. Rewrite it as a
+  clause with a subject and a verb ("what to do when a consuming repo needs a version the mock isn't
+  on").
+- **One verb per mechanism.** Joining unlike things under one vague verb ("carries", "handles",
+  "covers") makes them read as a matched pair sharing one mechanism, and the reader goes looking for
+  it. Where two things act differently, give each its own clause and verb: "the worker drops the
+  machine and records the removal", never "the worker handles the machine and the removal".
 - **Attribution takes a verb.** Name the owning doc or component as the subject: "the overview owns
   the boundaries", never "the boundaries are the overview's". A possessive on a markdown link ("the
   [sweep](url)'s seven readers") garden-paths twice over — put the link in a prepositional phrase
@@ -155,6 +190,11 @@ knife.
   - Template framing not specific to this doc ("The question most teams face is…").
   - Rhetorical questions setting up the answer the next sentence gives ("So why not cache it?
     Because…"). State the point.
+- **Delta-framing.** "Also", "as well as", "in addition", "now", "still" assert an addition or a
+  change against a baseline. With the baseline stated in the same doc the framing is legal; with the
+  baseline in the conversation, a prior draft, or the diff, the sentence documents the edit instead
+  of the system — write the resulting state. "New" qualifying a component ("the new endpoint") is the
+  word-scale form: it stales the moment the change merges, so name the component.
 - **Banned words.** The AGENTS.md banned-words list applies to all prose; fix a violation on sight.
 
 ## Structure — the shape points take
