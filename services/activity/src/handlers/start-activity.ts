@@ -1,8 +1,7 @@
 import { createId } from '@paralleldrive/cuid2';
-import { findActiveAvatar, findLiveActivityAvatar, upsertActiveAvatar } from '@vers/active-avatar';
 import { findCurrentContentVersion } from '@vers/content-registry';
 import type { ActivityData, BuildSnapshot, ContentDocument } from '@vers/contract-activity';
-import { buildStartHash, createGenesisSeed } from '@vers/contract-activity';
+import { buildStartHash } from '@vers/contract-activity';
 import type { SecretRef } from '@vers/contract-keys';
 import type { DB } from '@vers/db';
 import { buildLevelFromXP } from '@vers/idle-core';
@@ -11,14 +10,13 @@ import { findCurrentSimVersion, findSimVersion } from '@vers/sim-registry';
 import { deriveWorldmapContent, readScopeSecret } from '@vers/worldmap-content';
 import { ORIGIN_CELL, isNodeSelectable, toNodeID } from '@vers/worldmap-core';
 import type { CryptoKey } from 'jose';
-import { sql } from 'kysely';
 import type { Kysely } from 'kysely';
 import invariant from 'tiny-invariant';
 import { getOptimisticBuild } from '../get-optimistic-build';
 import { isUniqueViolation } from '../is-unique-violation';
-import { recordAvatarNotActiveRejection } from '../metrics/record-avatar-not-active-rejection';
 import { recordContentIncompatibleRejection } from '../metrics/record-content-incompatible-rejection';
 import { recordNodeUnreachableRejection } from '../metrics/record-node-unreachable-rejection';
+import { requireActiveAvatar } from '../require-active-avatar';
 import { resolveEncounterNode } from '../resolve-encounter-node';
 import type {
   ActiveActivityConflictPayload,
@@ -57,6 +55,7 @@ interface StartActivityOpts {
     readonly AVATAR_NOT_ACTIVE: (payload: AvatarNotActivePayload) => Error;
     readonly CHAIN_QUARANTINED: (payload: EmptyErrorPayload) => Error;
     readonly CONFLICT: (payload: ActiveActivityConflictPayload) => Error;
+    readonly NODE_NOT_REVEALED: (payload: EmptyErrorPayload) => Error;
     readonly NODE_UNKNOWN: (payload: EmptyErrorPayload) => Error;
     readonly NODE_UNREACHABLE: (payload: EmptyErrorPayload) => Error;
     readonly NOT_FOUND: (payload: EmptyErrorPayload) => Error;
@@ -84,7 +83,9 @@ interface StartActivityOpts {
  * node's encounter params server-side and freezes them on the new row, throwing NODE_UNKNOWN when
  * the scope doesn't resolve to a known node and NODE_UNREACHABLE when it resolves but sits outside
  * the avatar's selectable set — the origin, a completed node, or a neighbour of one, evaluated
- * against the avatar's own `first_clear` grants. The partial unique index serializes concurrent starts;
+ * against the avatar's own `first_clear` grants. The chain it roots against must already exist —
+ * `revealNodes` mints it at reveal time — so a scope with no chain row throws NODE_NOT_REVEALED
+ * rather than minting one here. The partial unique index serializes concurrent starts;
  * a duplicate delivery — same key, same scope, never appended, caller already the writer or none
  * stamped — succeeds with the existing row, and every other conflict throws CONFLICT carrying it. A
  * chain whose replay frontier is quarantined admits no new starts until it is adjudicated.
@@ -190,36 +191,30 @@ export async function startActivity(
   );
 
   const id = `act_${createId()}`;
-  const genesisSeed = createGenesisSeed();
 
   try {
     // One transaction, per-user advisory lock first, chain row second: the advisory lock
     // serializes this against the avatar service's own selection and creation calls so
-    // start-vs-switch is atomic, and the chain upsert's write lock is held until commit, so a
-    // forward exit advancing this chain's anchor either commits before the anchor is read here or
-    // waits behind it — a new activity always roots at the anchor current at insert time. Every
-    // writer that touches both rows acquires the chain row before the activity row, and the
+    // start-vs-switch is atomic, and the chain row's SELECT FOR UPDATE lock is held until commit,
+    // so a forward exit advancing this chain's anchor either commits before the anchor is read
+    // here or waits behind it — a new activity always roots at the anchor current at read time.
+    // Every writer that touches both rows acquires the chain row before the activity row, and the
     // advisory lock is taken before either, so no interleaving admits a lock cycle.
     const row = await deps.db.transaction().execute(async (trx) => {
       await requireActiveAvatar(trx, actingUserID, opts.input.avatarID, opts.errors);
 
       const chain = await trx
-        .insertInto('activityChains')
-        .values({
-          appendedNextSeed: genesisSeed,
-          avatarId: opts.input.avatarID,
-          genesisSeed,
-          scopeId: opts.input.scopeID,
-          scopeType: opts.input.scopeType,
-          verifiedNextSeed: genesisSeed,
-        })
-        .onConflict((oc) =>
-          oc
-            .columns(['avatarId', 'scopeType', 'scopeId'])
-            .doUpdateSet({ genesisSeed: (eb) => eb.ref('activityChains.genesisSeed') }),
-        )
-        .returning(['appendedNextSeed', 'appendedChainIndex'])
-        .executeTakeFirstOrThrow();
+        .selectFrom('activityChains')
+        .select(['appendedNextSeed', 'appendedChainIndex'])
+        .where('avatarId', '=', opts.input.avatarID)
+        .where('scopeType', '=', opts.input.scopeType)
+        .where('scopeId', '=', opts.input.scopeID)
+        .forUpdate()
+        .executeTakeFirst();
+
+      if (chain === undefined) {
+        throw opts.errors.NODE_NOT_REVEALED({ data: {} });
+      }
 
       const seed = chain.appendedNextSeed;
 
@@ -391,57 +386,4 @@ function isContentVersionSupported(row: SimVersionRow, contentVersion: string): 
   );
 
   return requested <= supported;
-}
-
-/**
- * Errors thrown when the account's active avatar doesn't match the requested one — a subset of
- * the handler's full error map.
- */
-interface RequireActiveAvatarErrors {
-  readonly AVATAR_NOT_ACTIVE: (payload: AvatarNotActivePayload) => Error;
-}
-
-/**
- * Throws AVATAR_NOT_ACTIVE unless `avatarID` is the account's active avatar, naming whichever
- * avatar actually is. An account with no selection row — predating the active-avatar migration, or
- * left without one because its prior selection's avatar was deleted — adopts `avatarID` as active,
- * unless a different avatar already holds a live run; adopting past a live run would mint a second
- * one for the account, so that start is refused and the live run's avatar named instead. Takes
- * the same per-user advisory lock the avatar service's select and create take, so the read and the
- * adopt-or-refuse it decides on are atomic against a concurrent selection change, avatar creation,
- * or another activity start for the same user.
- */
-async function requireActiveAvatar(
-  trx: Kysely<DB>,
-  userID: string,
-  avatarID: string,
-  errors: RequireActiveAvatarErrors,
-): Promise<void> {
-  await sql`select pg_advisory_xact_lock(hashtext(${userID}))`.execute(trx);
-
-  const selection = await findActiveAvatar(trx, userID);
-
-  if (selection === undefined) {
-    const liveAvatar = await findLiveActivityAvatar(trx, userID);
-
-    if (liveAvatar !== null && liveAvatar.id !== avatarID) {
-      recordAvatarNotActiveRejection();
-
-      throw errors.AVATAR_NOT_ACTIVE({
-        data: { activeAvatarID: liveAvatar.id, activeAvatarName: liveAvatar.name },
-      });
-    }
-
-    await upsertActiveAvatar(trx, userID, avatarID);
-
-    return;
-  }
-
-  if (selection.id !== avatarID) {
-    recordAvatarNotActiveRejection();
-
-    throw errors.AVATAR_NOT_ACTIVE({
-      data: { activeAvatarID: selection.id, activeAvatarName: selection.name },
-    });
-  }
 }

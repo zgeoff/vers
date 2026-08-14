@@ -47,10 +47,14 @@ The server validates each checkpoint's `chainIndex` against `start_chain_index +
 ## Genesis
 
 A chain scope's genesis seed is a server CSPRNG mint: sixteen random bytes as hex, re-rolled off the
-degenerate all-zero xoroshiro state. The server writes it to the chain row when the row is first
-created for the pair. It needs no re-derivation: the verifier reads the stored value, and a restored
-device fetches it. A client cannot compute it and cannot steer it, since the scope and the avatar
-are both fixed before the mint.
+degenerate all-zero xoroshiro state. `revealNodes` mints it at reveal time, one chain row per
+revealed `(avatar, scope)` pair, self-assigning the row's own `genesis_seed` to itself on a repeat
+reveal so the mint stays idempotent regardless of how many times, or how many concurrent callers,
+reveal the same node. `startActivity` never mints: it reads the scope's existing chain row and roots
+the new activity there, throwing `NODE_NOT_REVEALED` when no row exists — a node revealed only
+client-side, or never revealed at all, cannot be started. The seed needs no re-derivation: the
+verifier reads the stored value, and a restored device fetches it. A client cannot compute it and
+cannot steer it, since the scope and the avatar are both fixed before the mint.
 
 ## Advancing the chain
 

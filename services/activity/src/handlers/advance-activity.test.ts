@@ -10,6 +10,7 @@ import { buildStartHash } from '@vers/contract-activity';
 import { createMockContentDocument } from '@vers/contract-activity/test-utils';
 import { buildLevelFromXP } from '@vers/idle-core';
 import {
+  createActivityChainRow,
   createAnonymousViewer,
   createAvatarRow,
   createTestDB,
@@ -83,6 +84,8 @@ test('it mint-and-appends a two-continuation chain, returning the final freshly 
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id, xp: 0 });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
@@ -175,6 +178,8 @@ test('it carries the closing row secretRef/secretVersion forward onto a minted c
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id, xp: 0 });
 
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
   const started = await client.startActivity({
@@ -226,6 +231,8 @@ test('it rejects a continuation whose predicted buildSnapshot mismatches the ser
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id, xp: 0 });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
@@ -282,6 +289,8 @@ test('it converges a resubmit of an already-minted continuation onto the same ro
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id, xp: 0 });
 
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
   const started = await client.startActivity({
@@ -334,6 +343,8 @@ test('it conflicts a mint whose client id already belongs to another avatar', as
   const viewerA = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatarA = await createAvatarRow(ctx.db, { userId: viewerA.user.id, xp: 0 });
 
+  await createActivityChainRow(ctx.db, { avatarId: avatarA.id, scopeId: '0_0' });
+
   const clientA = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewerA.token });
 
   const startedA = await clientA.startActivity({
@@ -344,6 +355,8 @@ test('it conflicts a mint whose client id already belongs to another avatar', as
 
   const viewerB = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatarB = await createAvatarRow(ctx.db, { userId: viewerB.user.id, xp: 0 });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatarB.id, scopeId: '0_0' });
 
   const clientB = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewerB.token });
 
@@ -406,6 +419,8 @@ test('it conflicts a mint whose client id collides with an unrelated row for the
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id, xp: 0 });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
@@ -494,6 +509,8 @@ test('it caps a continuation whose tail exceeds the accrued offline budget', asy
     xp: 0,
   });
 
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
   const started = await client.startActivity({
@@ -553,6 +570,8 @@ test('it evicts a session that is no longer the writer', async () => {
 
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id, xp: 0 });
 
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
   const started = await client.startActivity({
@@ -598,6 +617,8 @@ test('it bails with CHAIN_QUARANTINED when the scope already carries a quarantin
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id, xp: 0 });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
@@ -664,6 +685,8 @@ test('it bails with CHECKPOINT_INVALID on a broken hash chain, leaving the head 
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id, xp: 0 });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
@@ -742,6 +765,8 @@ test('it rejects an activity owned by another caller with NOT_FOUND', async () =
 
   const owner = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: owner.user.id });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
 
   const ownerClient = buildRPCTestClient<ActivityContract>(ctx.app, { token: owner.token });
 

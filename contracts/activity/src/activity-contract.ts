@@ -9,6 +9,7 @@ import { CheckpointBatchEntrySchema } from './checkpoint-batch-entry-schema';
 import { CheckpointSchema } from './checkpoint-schema';
 import { ContentDocumentSchema } from './content-document-schema';
 import { MAX_CATCH_UP_BATCH_CHECKPOINTS } from './max-catch-up-batch-checkpoints';
+import { MAX_REVEAL_BATCH_NODES } from './max-reveal-batch-nodes';
 import { REVEAL_VIEWPORT_CELL_CAP } from './reveal-viewport-cell-cap';
 import { RewardItemAffixSchema } from './reward-item-affix-schema';
 import { ScopeIdentifierSchema } from './scope-identifier-schema';
@@ -80,6 +81,12 @@ const ViewportSchema = z.object({
  * sealed content.
  */
 const RevealedNodeSchema = z.object({ id: z.string(), poolID: z.string().optional() });
+
+/**
+ * One node's freshly minted or previously minted genesis seed, `revealNodes`'s per-node output —
+ * the seed a later `startActivity` at the same scope roots its chain against.
+ */
+const NodeGenesisSchema = z.object({ genesisSeed: z.string(), nodeID: z.string() });
 
 /**
  * Every addressable `first_clear` grant key the avatar holds, regardless of viewport — the
@@ -295,6 +302,43 @@ export const activityContract = {
       }),
     ),
 
+  /**
+   * Mints (or re-affirms) the genesis chain row for each given world-map node, on the avatar's
+   * behalf, so a later `startActivity` at the same scope has a chain to root against. Idempotent
+   * per node: a repeat reveal self-assigns the existing row's `genesisSeed` rather than rolling a
+   * new one, so the same node reveals to the same seed regardless of how many times or how many
+   * concurrent callers reveal it. Authorization is ownership of the avatar only — whether a given
+   * node is one this avatar may legitimately reveal is a separate, not-yet-enforced concern.
+   */
+  revealNodes: authedRoute
+    .route({
+      method: 'POST',
+      path: '/avatars/{avatarID}/revealed-nodes',
+      summary: "Mint genesis chains for an avatar's newly revealed world-map nodes",
+    })
+    .input(
+      z.object({
+        avatarID: z.string(),
+        nodeIDs: z.array(ScopeIdentifierSchema).max(MAX_REVEAL_BATCH_NODES),
+      }),
+    )
+    .output(z.array(NodeGenesisSchema))
+    .errors(
+      defineErrors({
+        AVATAR_NOT_ACTIVE: {
+          data: AvatarNotActiveDataSchema,
+          message: "The account's active avatar is not the one revealing",
+          status: 409,
+        },
+        NODE_UNKNOWN: {
+          data: z.object({}),
+          message: 'The scope node is not registered on the world map',
+          status: 404,
+        },
+        NOT_FOUND: { data: z.object({}), message: 'Avatar not found' },
+      }),
+    ),
+
   startActivity: authedRoute
     .route({
       method: 'POST',
@@ -332,6 +376,11 @@ export const activityContract = {
         CONFLICT: {
           data: z.object({ activity: ActivityDataSchema }),
           message: 'An activity is already active for this avatar',
+        },
+        NODE_NOT_REVEALED: {
+          data: z.object({}),
+          message: 'The scope node has no revealed chain to start',
+          status: 409,
         },
         NODE_UNKNOWN: {
           data: z.object({}),

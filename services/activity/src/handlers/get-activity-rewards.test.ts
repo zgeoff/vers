@@ -3,6 +3,7 @@ import { createContentVersion } from '@vers/content-registry';
 import type { ActivityContract } from '@vers/contract-activity';
 import { createMockContentDocument } from '@vers/contract-activity/test-utils';
 import {
+  createActivityChainRow,
   createAnonymousViewer,
   createAvatarRow,
   createTestDB,
@@ -33,6 +34,8 @@ test('it returns only the minted rows at or below the verified anchor', async ()
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
@@ -98,6 +101,8 @@ test('it orders multiple slots within a chain position by ordinal', async () => 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
 
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
   const started = await client.startActivity({
@@ -152,6 +157,8 @@ test('it returns only rows above the afterChainIndex cursor', async () => {
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
@@ -211,6 +218,8 @@ test('it returns the identical response on a repeated call', async () => {
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
 
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
   const started = await client.startActivity({
@@ -252,6 +261,8 @@ test('it rejects an activity owned by another caller with NOT_FOUND', async () =
 
   const owner = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: owner.user.id });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
 
   const ownerClient = buildRPCTestClient<ActivityContract>(ctx.app, { token: owner.token });
 
@@ -300,6 +311,8 @@ test('it omits an unverified tail row above the verified anchor', async () => {
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
