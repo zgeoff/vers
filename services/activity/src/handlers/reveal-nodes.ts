@@ -1,14 +1,30 @@
+import { findCurrentContentVersion } from '@vers/content-registry';
+import type { ContentDocument, EncounterNode } from '@vers/contract-activity';
 import { createGenesisSeed } from '@vers/contract-activity';
+import type { SecretRef } from '@vers/contract-keys';
 import type { DB } from '@vers/db';
-import { canEncodeMortonKey, findCellCoord } from '@vers/worldmap-core';
+import { deriveWorldmapContent, readScopeSecret } from '@vers/worldmap-content';
+import { canEncodeMortonKey, findCellCoord, getDifficulty } from '@vers/worldmap-core';
+import type { CryptoKey } from 'jose';
 import type { Kysely } from 'kysely';
 import invariant from 'tiny-invariant';
 import { recordRevealMint } from '../metrics/record-reveal-mint';
 import { requireActiveAvatar } from '../require-active-avatar';
 import type { AvatarNotActivePayload, EmptyErrorPayload, MissingSessionPayload } from '../types';
 
+/**
+ * Db handle plus the memoized content-document loader, the key version every revealed node's
+ * encounter is stamped against, and the keys dispatch a reveal reads its scope secret over — the
+ * same encounter-derivation inputs `startActivity` closes over.
+ */
 interface RevealNodesDeps {
   readonly db: Kysely<DB>;
+  readonly keysServiceURL: string;
+  readonly keyVersion: number;
+  readonly loadContentDocument: (contentVersion: string) => Promise<ContentDocument | undefined>;
+  readonly privateKey: CryptoKey;
+  readonly secretRef: SecretRef;
+  readonly secretVersion: number;
 }
 
 /**
@@ -28,28 +44,40 @@ interface RevealNodesOpts {
   };
 }
 
-interface NodeGenesis {
+interface RevealedNode {
+  readonly contentVersion: string;
+  readonly encounterNode: EncounterNode;
   readonly genesisSeed: string;
   readonly nodeID: string;
 }
 
+interface RevealNodesResult {
+  readonly keyVersion: number;
+  readonly nodes: Array<RevealedNode>;
+  readonly secretRef: SecretRef;
+  readonly secretVersion: number;
+}
+
 /**
  * Mints (or re-affirms) the genesis chain row for each given world-map node, on behalf of an
- * avatar owned by the acting user. Idempotent per node: a repeat reveal self-assigns the existing
- * row's `genesisSeed` in place of rolling a new one, so a node reveals to the same seed regardless
- * of how many times, or how many concurrent callers, reveal it — the property `startActivity`
- * later roots against. A duplicate node id within one call mints once; every requested id, repeats
- * included, still gets one result entry. Rejects with NODE_UNKNOWN before minting anything when any
- * node id doesn't resolve to a coordinate the world map can address. Authorization is ownership of
- * the avatar, gated to the account's active avatar under the same advisory lock `startActivity`
- * takes — the active-avatar check runs even for an empty batch, so an owned-but-inactive avatar is
- * rejected regardless of how many nodes it reveals. Which nodes this avatar may legitimately reveal
- * is a separate, not-yet-enforced concern.
+ * avatar owned by the acting user, and derives that node's encounter alongside the current content
+ * version — every crypto stamp a later offline-open `startActivity` needs to synthesize a valid
+ * start without the server. Idempotent per node: a repeat reveal self-assigns the existing row's
+ * `genesisSeed` in place of rolling a new one, so a node reveals to the same seed regardless of how
+ * many times, or how many concurrent callers, reveal it — the property `startActivity` later roots
+ * against. A duplicate node id within one call mints once; every requested id, repeats included,
+ * still gets one result entry. The stamps (`keyVersion`, `secretRef`, `secretVersion`) are avatar-
+ * and account-global, so the response carries them once rather than per node. Rejects with
+ * NODE_UNKNOWN before minting anything when any node id doesn't resolve to a coordinate the world
+ * map can address. Authorization is ownership of the avatar, gated to the account's active avatar
+ * under the same advisory lock `startActivity` takes — the active-avatar check runs even for an
+ * empty batch, so an owned-but-inactive avatar is rejected regardless of how many nodes it reveals.
+ * Which nodes this avatar may legitimately reveal is a separate, not-yet-enforced concern.
  */
 export async function revealNodes(
   deps: RevealNodesDeps,
   opts: RevealNodesOpts,
-): Promise<Array<NodeGenesis>> {
+): Promise<RevealNodesResult> {
   const actingUserID = opts.context.actingUserId;
 
   if (actingUserID === null) {
@@ -58,7 +86,7 @@ export async function revealNodes(
 
   const avatar = await deps.db
     .selectFrom('avatars')
-    .select('id')
+    .select(['id', 'seed'])
     .where('id', '=', opts.input.avatarID)
     .where('userId', '=', actingUserID)
     .executeTakeFirst();
@@ -67,15 +95,24 @@ export async function revealNodes(
     throw opts.errors.NOT_FOUND({ data: {} });
   }
 
+  const coordsByNodeID = new Map<string, readonly [number, number]>();
+
   for (const nodeID of opts.input.nodeIDs) {
     const coord = findCellCoord(nodeID);
 
     if (coord === undefined || !canEncodeMortonKey(coord)) {
       throw opts.errors.NODE_UNKNOWN({ data: {} });
     }
+
+    coordsByNodeID.set(nodeID, coord);
   }
 
   const uniqueNodeIDs = [...new Set(opts.input.nodeIDs)];
+
+  // an empty batch needs neither the content document nor the avatar's scope secret — only the
+  // active-avatar gate below, still enforced regardless of batch size
+  const encounterInputs =
+    uniqueNodeIDs.length === 0 ? undefined : await loadEncounterInputs(deps, avatar.id);
 
   const minted = await deps.db.transaction().execute(async (trx) => {
     await requireActiveAvatar(trx, actingUserID, opts.input.avatarID, opts.errors);
@@ -110,18 +147,79 @@ export async function revealNodes(
   });
 
   if (uniqueNodeIDs.length === 0) {
-    return [];
+    return {
+      keyVersion: deps.keyVersion,
+      nodes: [],
+      secretRef: deps.secretRef,
+      secretVersion: deps.secretVersion,
+    };
   }
 
+  invariant(encounterInputs !== undefined, 'a non-empty batch always loads its encounter inputs');
   recordRevealMint(uniqueNodeIDs.length);
 
   const genesisByNodeID = new Map(minted.map((row) => [row.scopeId, row.genesisSeed]));
 
-  return opts.input.nodeIDs.map((nodeID) => {
+  const nodes = opts.input.nodeIDs.map((nodeID): RevealedNode => {
     const genesisSeed = genesisByNodeID.get(nodeID);
 
     invariant(genesisSeed !== undefined, 'minted chain row missing for a requested node');
 
-    return { genesisSeed, nodeID };
+    const coord = coordsByNodeID.get(nodeID);
+
+    invariant(coord !== undefined, 'validated node id missing its resolved coordinate');
+
+    const encounterNode = {
+      difficulty: getDifficulty(coord[0], coord[1]),
+      ...deriveWorldmapContent(encounterInputs.document.encounter, {
+        coord,
+        scopeSecret: encounterInputs.scopeSecret,
+        userSeed: avatar.seed,
+      }),
+    };
+
+    return { contentVersion: encounterInputs.contentVersion, encounterNode, genesisSeed, nodeID };
   });
+
+  return {
+    keyVersion: deps.keyVersion,
+    nodes,
+    secretRef: deps.secretRef,
+    secretVersion: deps.secretVersion,
+  };
+}
+
+interface EncounterInputs {
+  readonly contentVersion: string;
+  readonly document: ContentDocument;
+  readonly scopeSecret: Uint8Array;
+}
+
+/**
+ * Loads the current content document and the avatar's scope secret once, ahead of the mint
+ * transaction so the advisory-lock window it holds stays small — mirroring `startActivity`'s own
+ * read-before-transaction ordering.
+ */
+async function loadEncounterInputs(
+  deps: RevealNodesDeps,
+  avatarID: string,
+): Promise<EncounterInputs> {
+  const contentVersion = await findCurrentContentVersion(deps.db);
+
+  invariant(contentVersion !== undefined, 'content registry has no current version');
+
+  const document = await deps.loadContentDocument(contentVersion);
+
+  invariant(document, `current content version ${contentVersion} is not published`);
+
+  const scopeSecret = await readScopeSecret(
+    {
+      issuer: 'service-activity',
+      keysServiceURL: deps.keysServiceURL,
+      privateKey: deps.privateKey,
+    },
+    { avatarID, secretRef: deps.secretRef, secretVersion: deps.secretVersion },
+  );
+
+  return { contentVersion, document, scopeSecret };
 }
