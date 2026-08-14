@@ -774,6 +774,55 @@ test('it answers failed and persists nothing when offline and the build carries 
   expect(rows).toStrictEqual([]);
 });
 
+test('it answers failed without reporting a fault when offline and the content document is not cached', async () => {
+  const previousHandle = sentryHandle.current;
+  const recorded: Array<Readonly<ErrorEvent>> = [];
+
+  onTestFinished(() => {
+    sentryHandle.current = previousHandle;
+  });
+
+  await startErrorReporting('https://testpublickey@o0.ingest.sentry.io/1', {
+    beforeSend: (event) => {
+      recorded.push(event);
+
+      return null;
+    },
+    disableDefaultIntegrations: true,
+  });
+
+  const context = createStubWorkerContext({
+    bundledEngineHash: 'engine_hash_offline_no_doc',
+    submitter: createStubSubmitter(),
+  });
+
+  context.updateConnectivity(false);
+
+  // seeded on a fresh device: the node's start inputs are cached by reveal, but no activity has
+  // ever installed at this content version here, so the content document itself never cached
+  const seed = createMockNodeSeed({
+    avatarID: 'avatar_offline_no_content_doc',
+    nodeID: '2_1',
+  });
+
+  await writeNodeSeeds(seed.avatarID, [seed]);
+  await writeStartStamps({ keyVersion: 3, secretRef: 'worldmap', secretVersion: 1 });
+
+  const result = await handleStartActivityMessage(context, {
+    avatarID: seed.avatarID,
+    scopeID: seed.nodeID,
+    scopeType: 'world_map_node',
+  });
+
+  expect(result).toStrictEqual({ kind: 'failed' });
+  expect(context.getSimulation().activity).toBeNull();
+  expect(recorded).toStrictEqual([]);
+
+  const rows = await readAllOfflineStartRows();
+
+  expect(rows).toStrictEqual([]);
+});
+
 test('it still starts through the service when connectivity reads online, even with offline start inputs cached', async () => {
   const viewer = await createViewer();
   const ctx = await setupTest({ userID: viewer.user.id });

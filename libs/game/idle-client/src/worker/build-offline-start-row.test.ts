@@ -1,7 +1,11 @@
 import { expect, test } from 'bun:test';
 import { buildStartHash } from '@vers/contract-activity';
-import { createMockActivityData } from '@vers/contract-activity/test-utils';
+import {
+  createMockActivityData,
+  createMockContentDocument,
+} from '@vers/contract-activity/test-utils';
 import invariant from 'tiny-invariant';
+import { writeContentDocumentCache } from '../content/write-content-document-cache';
 import { writeNodeSeeds } from '../submission/write-node-seeds';
 import { writeStartStamps } from '../submission/write-start-stamps';
 import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
@@ -13,6 +17,10 @@ test('it synthesizes a row whose start hash matches buildStartHash for the same 
 
   await writeNodeSeeds(seed.avatarID, [seed]);
   await writeStartStamps({ keyVersion: 4, secretRef: 'worldmap', secretVersion: 2 });
+
+  await writeContentDocumentCache(
+    createMockContentDocument({ contentVersion: seed.contentVersion }),
+  );
 
   const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_1' });
 
@@ -80,6 +88,10 @@ test('it returns null when no start stamps are cached', async () => {
 
   await writeNodeSeeds(seed.avatarID, [seed]);
 
+  await writeContentDocumentCache(
+    createMockContentDocument({ contentVersion: seed.contentVersion }),
+  );
+
   const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_1' });
 
   const row = await buildOfflineStartRow(context, {
@@ -98,7 +110,29 @@ test('it returns null when the build carries no bundled engine hash', async () =
   await writeNodeSeeds(seed.avatarID, [seed]);
   await writeStartStamps({ keyVersion: 1, secretRef: 'worldmap', secretVersion: 1 });
 
+  await writeContentDocumentCache(
+    createMockContentDocument({ contentVersion: seed.contentVersion }),
+  );
+
   const context = createStubWorkerContext();
+
+  const row = await buildOfflineStartRow(context, {
+    avatarID: seed.avatarID,
+    scopeID: seed.nodeID,
+    scopeType: 'world_map_node',
+    startKey: 'start_key_1',
+  });
+
+  expect(row).toBeNull();
+});
+
+test('it returns null when the content document is not cached', async () => {
+  const seed = createMockNodeSeed({ avatarID: 'avatar_no_content_doc', nodeID: '1_0' });
+
+  await writeNodeSeeds(seed.avatarID, [seed]);
+  await writeStartStamps({ keyVersion: 1, secretRef: 'worldmap', secretVersion: 1 });
+
+  const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_1' });
 
   const row = await buildOfflineStartRow(context, {
     avatarID: seed.avatarID,
@@ -115,6 +149,10 @@ test('it sources the build snapshot from the last activity this worker installed
 
   await writeNodeSeeds(seed.avatarID, [seed]);
   await writeStartStamps({ keyVersion: 1, secretRef: 'worldmap', secretVersion: 1 });
+
+  await writeContentDocumentCache(
+    createMockContentDocument({ contentVersion: seed.contentVersion }),
+  );
 
   const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_1' });
 
@@ -139,6 +177,10 @@ test("it starts a fresh avatar's build snapshot at zero xp when the worker holds
 
   await writeNodeSeeds(seed.avatarID, [seed]);
   await writeStartStamps({ keyVersion: 1, secretRef: 'worldmap', secretVersion: 1 });
+
+  await writeContentDocumentCache(
+    createMockContentDocument({ contentVersion: seed.contentVersion }),
+  );
 
   const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_1' });
 
