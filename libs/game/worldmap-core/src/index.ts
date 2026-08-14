@@ -1,8 +1,10 @@
 export { buildBiomeField } from './build-biome-field';
 export { buildCellNode } from './build-cell-node';
 export { buildChunk } from './build-chunk';
+export { buildCoordHash, buildCoordHashUnit, HASH_CHANNEL } from './build-coord-hash';
 export { buildRevealDistanceField } from './build-reveal-distance-field';
 export { buildRevealSources } from './build-reveal-sources';
+export { buildValueNoise } from './build-value-noise';
 export { canEncodeMortonKey } from './can-encode-morton-key';
 export { collectNodeEdges } from './collect-node-edges';
 export { collectRevealedCells } from './collect-revealed-cells';
@@ -26,6 +28,7 @@ export { findCellCoord } from './find-cell-coord';
 export { getBiome } from './get-biome';
 export { getDifficulty } from './get-difficulty';
 export { getHexDistance } from './get-hex-distance';
+export { isEdgeOwner } from './is-edge-owner';
 export { isNodeSelectable } from './is-node-selectable';
 export { toCellCoord } from './to-cell-coord';
 export { toChunkCoord } from './to-chunk-coord';
