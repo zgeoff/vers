@@ -41,6 +41,7 @@ const startStatusSchema = z.discriminatedUnion('kind', [
 ]);
 
 const ackSchema = z.object({ ok: z.literal(true) }).readonly();
+const nodeSeedSchema = z.object({ genesisSeed: z.string(), nodeID: z.string() }).readonly();
 
 /**
  * The worker's in-page RPC surface, called over a `MessagePort` (a real `SharedWorker` port, or a
@@ -49,6 +50,10 @@ const ackSchema = z.object({ ok: z.literal(true) }).readonly();
  * and a worker-side fault reports rather than rejecting the caller.
  */
 export const workerContract = {
+  cacheNodeSeeds: oc
+    .input(z.object({ seeds: z.array(nodeSeedSchema).readonly() }).readonly())
+    .output(ackSchema),
+
   disconnect: oc.input(z.object({}).readonly()).output(ackSchema),
 
   initialize: oc.input(z.object({}).readonly()).output(initializeOutputSchema),
