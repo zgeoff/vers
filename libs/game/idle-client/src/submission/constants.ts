@@ -23,7 +23,7 @@ export const RETRY_BACKOFF_CAP_MS = 300_000;
  */
 export const FLUSH_STALL_THRESHOLD = 3;
 export const CHECKPOINT_QUEUE_DB_NAME = 'vers-idle-checkpoint-queue';
-export const CHECKPOINT_QUEUE_DB_VERSION = 5;
+export const CHECKPOINT_QUEUE_DB_VERSION = 6;
 export const CHECKPOINT_QUEUE_STORE_NAME = 'pending-checkpoints';
 
 /**
@@ -34,13 +34,21 @@ export const CHECKPOINT_QUEUE_STORE_NAME = 'pending-checkpoints';
 export const CONTENT_DOCUMENT_STORE_NAME = 'content-documents';
 
 /**
- * The object store caching a revealed world-map node's start inputs — genesis seed, encounter, and
- * content version — by its `[avatarID, nodeID]` pair, so the worker holds every input on-device for
- * every node the player can already see before an offline-open start needs one. The compound key
- * scopes each row to its avatar — a genesis seed is per avatar, so two avatars sharing a coordinate
- * keep separate rows.
+ * The object store caching a revealed world-map node's start inputs — genesis seed, current head,
+ * encounter, and content version — by its `[avatarID, nodeID]` pair, so the worker holds every
+ * input on-device for every node the player can already see before a start needs one. The compound
+ * key scopes each row to its avatar — a genesis seed is per avatar, so two avatars sharing a
+ * coordinate keep separate rows.
  */
 export const NODE_SEEDS_STORE_NAME = 'node-seeds';
+
+/**
+ * The object store holding the full `ActivityData` a local start mints, keyed by its own `id`.
+ * This is the client-minted root row a later reconcile drains and verifies against the server; it
+ * is written durably before the row installs, so a crash between mint and install still leaves a
+ * recoverable root.
+ */
+export const PENDING_ROOTS_STORE_NAME = 'pending-roots';
 
 /**
  * The `preferences` record holding `revealNodes`'s avatar- and account-global crypto stamps. A

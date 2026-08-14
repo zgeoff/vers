@@ -1,12 +1,10 @@
-import type { ORPCError } from '@orpc/client';
-import { isDefinedError, safe } from '@orpc/client';
 import type { ActivityData } from '@vers/contract-activity';
+import { writeStartRow } from '../submission/write-start-row';
+import { buildStartRow } from './build-start-row';
 import { handleSetActivityMessage } from './handle-set-activity-message';
 import { isAbortError } from './is-abort-error';
 import { reportWorkerFault } from './report-worker-fault';
-import { runResyncFlow } from './run-resync-flow';
 import { submitStopIntent } from './submit-stop-intent';
-import { tryStartActivity } from './try-start-activity';
 import type { FlowSignals, WorkerContext } from './types';
 import { withLifecycleTurn } from './with-lifecycle-turn';
 import type { StartStatus } from './worker-contract';
@@ -18,13 +16,15 @@ interface StartActivityInput {
 }
 
 /**
- * Begins a run entirely inside the worker, answering with the outcome directly. A same-scope
- * `CONFLICT` resyncs onto the running row, answering `attached` only once the runtime holds it; a
- * different-scope `CONFLICT` flushes that row, stops it targeted, and retries. The call mints a
- * fresh worker-internal token at entry and re-checks it after every await — a fresher call can
- * land while this turn runs, and a superseded flow answers `failed`, leaving its minted row to the
- * fresher flow's recovery. A stop landing mid-start stops the minted row back durably. An abort
- * settles as `failed` without a fault report.
+ * Begins a run entirely inside the worker, resolving the single-active-run invariant locally
+ * rather than by round-tripping the server: a request naming the scope already live here answers
+ * `attached` without minting anything; a request naming a different scope stops the live run
+ * first, then mints. A start is always a local client mint (`buildStartRow`), persisted durably
+ * before it installs so a crash between mint and install still leaves a recoverable root. The
+ * call mints a fresh worker-internal token at entry and re-checks it after every await — a fresher
+ * call can land while this turn runs, and a superseded flow answers `failed`, leaving its minted
+ * row to the fresher flow's recovery. A stop landing mid-start stops the minted row back durably.
+ * An abort settles as `failed` without a fault report.
  */
 export async function handleStartActivityMessage(
   context: WorkerContext,
@@ -65,168 +65,57 @@ async function runStart(
   token: string,
   signals: Readonly<FlowSignals>,
 ): Promise<StartStatus> {
-  // a queued flow may be stale before it ever runs
+  // a pure unwind: no row has been minted yet, so there is nothing to compensate
   if (isSuperseded(context, token)) {
     return { kind: 'failed' };
   }
 
-  // a pure unwind: no row has been minted yet, so there is nothing to compensate
   signals.cancel.throwIfAborted();
 
-  const [error, started] = await tryStartActivity(context, { ...input, startKey: token });
+  const live = context.getActivity();
 
-  if (error === null) {
-    return setLiveStartedRow(context, token, started, signals);
+  // already running here — the player's request is already satisfied, and re-minting would fork
+  // the chain the live simulation is already advancing
+  if (live !== null && live.scopeType === input.scopeType && live.scopeID === input.scopeID) {
+    return { activityID: live.id, kind: 'attached' };
   }
 
-  if (isDefinedError(error) && error.code === 'AVATAR_NOT_ACTIVE') {
-    return {
-      kind: 'failed',
-      rejection: { activeAvatarName: error.data.activeAvatarName, reason: 'avatar-not-active' },
-    };
-  }
+  if (live !== null) {
+    // silences the old simulation's ticking immediately, rather than waiting for the new row's
+    // eventual install to displace it — `simulation.startActivity` auto-stops a live generator on
+    // its own, but only once this flow reaches it, and every await between here and there is a
+    // window the old run would otherwise keep advancing in
+    context.getSimulation().stopActivity();
 
-  if (isDefinedError(error) && error.code === 'SIM_VERSION_EXPIRED') {
-    return { kind: 'failed', rejection: { reason: 'sim-version-expired' } };
-  }
+    // submitStopIntent flushes the row's earned checkpoints before the stop lands, so they reach
+    // the server ahead of the row closing to further appends
+    await submitStopIntent(context, { avatarID: live.avatarID, id: live.id });
 
-  if (!isDefinedError(error) || error.code !== 'CONFLICT') {
-    // a defined rejection is the service answering; anything else belongs in the error backend
-    if (!isDefinedError(error)) {
-      reportWorkerFault('start', error);
-    }
+    context.resetRewardSlotLedger();
 
-    return { kind: 'failed' };
-  }
-
-  const row = error.data.activity;
-
-  // the requested scope is already running — a resync attaches its confirmed stream, claiming
-  // the writer since the player's start is a deliberate attach; called inner-to-inner, since
-  // queueing a turn from inside this turn would deadlock the mailbox
-  if (row.scopeType === input.scopeType && row.scopeID === input.scopeID) {
-    await runResyncFlow(context, input.avatarID, true, signals);
-
-    // a resync can be skipped, gated, or abandoned without installing; reporting attached anyway
-    // would leave the tab waiting forever on a run that never arrives
-    if (context.getSimulation().activity?.id !== row.id) {
+    if (isSuperseded(context, token)) {
       return { kind: 'failed' };
     }
-
-    return { activityID: row.id, kind: 'attached' };
   }
 
-  // a superseded call must not stop a row the fresher selection may be attaching to
+  const row = await buildStartRow(context, { ...input, startKey: token });
+
+  if (row === null) {
+    return { kind: 'failed' };
+  }
+
+  // written before install: a crash here still leaves a recoverable root for a later reconcile
+  await writeStartRow(row);
+
   if (isSuperseded(context, token)) {
     return { kind: 'failed' };
   }
 
-  // replace flow: earned checkpoints land before the stop closes the row to appends
-  await context.getSubmitter().flushNow(row.id);
-
-  // the flush yields — a fresher call landing during it may be attaching to this very row, so
-  // the stop must not proceed on a stale claim
-  if (isSuperseded(context, token)) {
-    return { kind: 'failed' };
-  }
-
-  if (!(await stopConflictingRow(context, row.id, input.avatarID))) {
-    return { kind: 'failed' };
-  }
-
-  const [retryError, retried] = await tryStartActivity(context, { ...input, startKey: token });
-
-  if (retryError !== null) {
-    if (isDefinedError(retryError) && retryError.code === 'AVATAR_NOT_ACTIVE') {
-      return {
-        kind: 'failed',
-        rejection: {
-          activeAvatarName: retryError.data.activeAvatarName,
-          reason: 'avatar-not-active',
-        },
-      };
-    }
-
-    if (isDefinedError(retryError) && retryError.code === 'SIM_VERSION_EXPIRED') {
-      return { kind: 'failed', rejection: { reason: 'sim-version-expired' } };
-    }
-
-    if (!isDefinedError(retryError)) {
-      reportWorkerFault('start', retryError);
-    }
-
-    return { kind: 'failed' };
-  }
-
-  return setLiveStartedRow(context, token, retried, signals);
+  return setLiveStartedRow(context, token, row, signals);
 }
 
 function isSuperseded(context: WorkerContext, token: string): boolean {
   return context.getStartToken() !== token;
-}
-
-/**
- * Whether a stop attempt achieved all a stop can: the call succeeded, or `NOT_FOUND` says the row
- * already left `active`.
- */
-function isStopSettled(error: Error | null | ORPCError<string, unknown>): boolean {
-  return error === null || (isDefinedError(error) && error.code === 'NOT_FOUND');
-}
-
-/**
- * Stops the different-scope row a replace-flow start conflicts with, reporting whether the row is
- * closed to further appends. A stop rejected with SESSION_EVICTED means another session's writer
- * owns the run — the player's start here is a deliberate act that supersedes it, so this session
- * claims the writer and retries the stop once. A claim answering NOT_FOUND means the row already
- * left `active`, which is all a stop could have achieved. Its stop and claim calls further the
- * stop's own goal, so none of them take the signal — aborting would help nothing.
- */
-async function stopConflictingRow(
-  context: WorkerContext,
-  activityID: string,
-  avatarID: string,
-): Promise<boolean> {
-  const [stopError] = await safe(context.getClient().stopActivity({ activityID, avatarID }));
-
-  if (isStopSettled(stopError)) {
-    return true;
-  }
-
-  if (!isDefinedError(stopError)) {
-    reportWorkerFault('start', stopError);
-
-    return false;
-  }
-
-  if (stopError.code !== 'SESSION_EVICTED') {
-    return false;
-  }
-
-  const [claimError] = await safe(context.getClient().resumeActivity({ activityID }));
-
-  if (claimError !== null) {
-    if (isDefinedError(claimError) && claimError.code === 'NOT_FOUND') {
-      return true;
-    }
-
-    if (!isDefinedError(claimError)) {
-      reportWorkerFault('start', claimError);
-    }
-
-    return false;
-  }
-
-  const [retryError] = await safe(context.getClient().stopActivity({ activityID, avatarID }));
-
-  if (isStopSettled(retryError)) {
-    return true;
-  }
-
-  if (!isDefinedError(retryError)) {
-    reportWorkerFault('start', retryError);
-  }
-
-  return false;
 }
 
 async function setLiveStartedRow(

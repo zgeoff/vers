@@ -8,7 +8,7 @@ import { openDB } from 'idb';
  * drift from the worker's real values fails the seeded-intent read test loudly.
  */
 const IDLE_CHECKPOINT_DB_NAME = 'vers-idle-checkpoint-queue';
-const IDLE_CHECKPOINT_DB_VERSION = 5;
+const IDLE_CHECKPOINT_DB_VERSION = 6;
 
 interface IdleCheckpointDBSchema {
   'content-documents': {
@@ -21,6 +21,10 @@ interface IdleCheckpointDBSchema {
   };
   'pending-checkpoints': {
     key: [string, number];
+    value: unknown;
+  };
+  'pending-roots': {
+    key: string;
     value: unknown;
   };
   preferences: {
@@ -58,6 +62,10 @@ export async function resolveIdleCheckpointDB(): Promise<IDBPDatabase<IdleCheckp
 
         if (!database.objectStoreNames.contains('node-seeds')) {
           database.createObjectStore('node-seeds', { keyPath: ['avatarID', 'nodeID'] });
+        }
+
+        if (!database.objectStoreNames.contains('pending-roots')) {
+          database.createObjectStore('pending-roots', { keyPath: 'id' });
         }
       },
     },
