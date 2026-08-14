@@ -194,17 +194,17 @@ it.
 - Prefer the enforceable form. Before writing a comment, put the fact where a machine holds it:
   encode an outcome set as a discriminated union, a bound as a named constant, a caller rule as a
   type; protect a frozen wire or draw layout with a golden test. Comment only the residue neither a
-  type nor a test can hold, and where a test enforces an invariant, point at it rather than restating
-  the consequence.
+  type nor a test can hold, and where a test enforces an invariant, point at it rather than
+  restating the consequence.
 - Comment the decision, not the code. A comment states an invariant, cross-file or runtime behavior,
-  or why a non-obvious choice was made. One that restates the name, the signature, or the next line's
-  mechanics is a defect — delete it.
+  or why a non-obvious choice was made. One that restates the name, the signature, or the next
+  line's mechanics is a defect — delete it.
 - A long JSDoc block is a placement smell, not a prose exercise. When a declaration's comment runs
   long because it narrates the body, relocate: the mechanism to `//` at the lines, the enforceable
   parts into types or tests, leaving the block at the contract. A genuinely irreducible multi-point
-  contract stays — render it as structured prose (one point per paragraph, led by its topic sentence;
-  one fact per sentence; an outcome map or state-to-action table as a bullet list) and load the
-  `docs-writing` skill for its wording.
+  contract stays — render it as structured prose (one point per paragraph, led by its topic
+  sentence; one fact per sentence; an outcome map or state-to-action table as a bullet list) and
+  load the `docs-writing` skill for its wording.
 - JSDoc blocks are always multi-line (`/**` alone, one `*`-prefixed line per point, `*/` alone —
   never single-line `/** … */`), attached directly to the declaration they describe.
 - Comments describe the code as it is now — no history ("previously", "now uses"), no project state
