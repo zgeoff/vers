@@ -267,6 +267,7 @@ test('revealNodes round-trips a valid stamps-and-nodes output through its output
         contentVersion: '2',
         encounterNode: { difficulty: 3, poolID: 'pool_alpha' },
         genesisSeed: '0123456789abcdef0123456789abcdef',
+        head: { chainIndex: 0, nextSeed: '0123456789abcdef0123456789abcdef' },
         nodeID: '1_0',
       },
     ],

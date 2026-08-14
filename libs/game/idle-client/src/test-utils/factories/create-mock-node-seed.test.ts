@@ -9,6 +9,7 @@ test('it builds a default node seed', () => {
     contentVersion: expect.toBeString(),
     encounterNode: expect.toBeObject(),
     genesisSeed: expect.toBeString(),
+    head: { chainIndex: 0, nextSeed: seed.genesisSeed },
     nodeID: expect.toBeString(),
   });
 });
@@ -17,6 +18,7 @@ test('it applies overrides on top of the defaults', () => {
   const seed = createMockNodeSeed({
     contentVersion: '3',
     encounterNode: { difficulty: 5 },
+    head: { chainIndex: 4, nextSeed: 'seed-advanced' },
     nodeID: '5_5',
   });
 
@@ -25,6 +27,7 @@ test('it applies overrides on top of the defaults', () => {
     contentVersion: '3',
     encounterNode: { difficulty: 5 },
     genesisSeed: expect.toBeString(),
+    head: { chainIndex: 4, nextSeed: 'seed-advanced' },
     nodeID: '5_5',
   });
 });

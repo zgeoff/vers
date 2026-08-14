@@ -84,16 +84,26 @@ const ViewportSchema = z.object({
 const RevealedNodeSchema = z.object({ id: z.string(), poolID: z.string().optional() });
 
 /**
+ * A chain's current append position: `nextSeed` is the seed a start rooting here derives its
+ * first checkpoint from, and `chainIndex` is that checkpoint's position in the chain. Equal to
+ * `{ genesisSeed, 0 }` for a node never yet played; advances as the avatar plays the node's chain
+ * further, so a revisited node's start roots at where play actually left off rather than genesis.
+ */
+const NodeGenesisHeadSchema = z.object({ chainIndex: z.int().min(0), nextSeed: z.string() });
+
+/**
  * One node's freshly minted or previously minted genesis seed, alongside its derived encounter and
  * the content version it was derived against — `revealNodes`'s per-node output. `genesisSeed` is
- * the seed a later `startActivity` at the same scope roots its chain against; `encounterNode` and
- * `contentVersion` are the remaining inputs `buildStartHash` needs to synthesize that start's hash
- * offline, since the encounter is derived against a specific content version.
+ * the chain's origin seed, kept for reference; `head` is the position a start at this scope must
+ * actually root against. `encounterNode` and `contentVersion` are the remaining inputs
+ * `buildStartHash` needs to synthesize that start's hash offline, since the encounter is derived
+ * against a specific content version.
  */
 const NodeGenesisSchema = z.object({
   contentVersion: z.string(),
   encounterNode: EncounterNodeSchema,
   genesisSeed: z.string(),
+  head: NodeGenesisHeadSchema,
   nodeID: z.string(),
 });
 
