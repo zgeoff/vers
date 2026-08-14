@@ -331,11 +331,6 @@ export function createCheckpointSubmitter(
     });
   };
 
-  /**
-   * Delivers an activity's queued checkpoints now, superseding its shared progress-window timer,
-   * by sending its child a `FLUSH_NOW` and waiting until it leaves `flushing` — out any attempt
-   * already in flight, then exactly one attempt of its own. A no-op for an unregistered activity.
-   */
   const flushNow = async (activityID: string): Promise<void> => {
     const child = findChild(activityID);
 

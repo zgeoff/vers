@@ -10,13 +10,14 @@ import invariant from 'tiny-invariant';
  * every activity that ended and still awaits its verifier — beside the runs that xp came from. A
  * `parked` or `quarantined` activity is left out: both are holds with no path back to verification
  * on their own, so counting them would stamp xp that never settles into this run's snapshot and
- * every later one's. One statement reads the settled row and the unsettled set together, so a
- * concurrent verifier commit can't land its delta between two separate reads.
+ * every later one's.
  */
 export async function getOptimisticBuild(
   trx: Kysely<DB>,
   avatarID: string,
 ): Promise<OptimisticBuild> {
+  // One statement reads the settled row and the unsettled set together, so a concurrent verifier
+  // commit can't land its delta between two separate reads.
   const rows = await trx
     .selectFrom('avatars')
     .leftJoin('activities', (join) =>

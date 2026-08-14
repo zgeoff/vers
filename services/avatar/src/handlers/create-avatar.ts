@@ -33,9 +33,8 @@ interface CreateAvatarOpts {
  * Creates an avatar owned by the acting user and makes it the active one, unless a live activity
  * holds the selection — then the new avatar lands unselected, since taking the slot would steal
  * it from the running avatar. Throws CONFLICT when the name is already taken and LIMIT_REACHED at
- * the per-mode cap; the per-user advisory lock serializes the count against concurrent creates
- * (a row lock can't fence inserts that don't exist yet). Runs inside the caller's transaction
- * when given one, or opens its own otherwise.
+ * the per-mode cap. Runs inside the caller's transaction when given one, or opens its own
+ * otherwise.
  */
 export async function createAvatar(db: Kysely<DB>, opts: CreateAvatarOpts): Promise<AvatarData> {
   const actingUserId = opts.context.actingUserId;
@@ -62,6 +61,8 @@ async function runCreateWrites(
   actingUserId: string,
   opts: CreateAvatarOpts,
 ): Promise<AvatarData> {
+  // the per-user advisory lock serializes the count against concurrent creates; a row lock can't
+  // apply to inserts that don't exist yet
   await sql`select pg_advisory_xact_lock(hashtext(${actingUserId}))`.execute(trx);
 
   const counted = await trx

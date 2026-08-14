@@ -4,12 +4,6 @@ import { decodeState } from './decode-state';
 import { encodeState } from './encode-state';
 import type { RNG } from './types';
 
-/**
- * thin wrapper around pure-rand as it's interface is verbose and we don't need
- * most of it
- *
- * @param state - the 128-bit xoroshiro128+ state to rehydrate, as a 32-character hex string
- */
 export function createRNG(state: string): RNG {
   const gen = xoroshiro128plusFromState(decodeState(state));
   const getInt = (min: number, max: number) => uniformInt(gen, min, max);

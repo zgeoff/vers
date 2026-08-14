@@ -13,13 +13,11 @@ const rpcUnauthorizedReply = z.object({
 
 /**
  * Fleet manifest for the deploy CLI (`bun run deploy`): which Fly apps exist,
- * what makes each one stale, and how a deploy is verified. Staleness compares
- * HEAD against the `GIT_SHA` each deploy stamps into machine env, so a
- * skipped or cancelled rollout self-heals on the next push. The anonymous RPC
- * probe must round-trip the contract's typed UNAUTHORIZED through
- * app-web → flycast → service-user, which no /health check can see.
+ * what makes each one stale, and how a deploy is verified.
  */
 export default defineDeployManifest({
+  // Staleness compares HEAD against the `GIT_SHA` each deploy stamps into machine env, so a
+  // skipped or cancelled rollout self-heals on the next push.
   apps: [
     {
       app: 'vers-service-activity',
@@ -99,6 +97,9 @@ export default defineDeployManifest({
       dockerfile: 'apps/web/Dockerfile',
       exposure: 'public',
       minStartedMachines: 1,
+
+      // The anonymous RPC probe must round-trip the contract's typed UNAUTHORIZED through
+      // app-web → flycast → service-user, which no /health check can see.
       probes: [
         { expectStatus: 200, kind: 'http', url: 'https://vers-app-web.fly.dev/health' },
         {

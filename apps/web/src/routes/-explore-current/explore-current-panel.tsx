@@ -41,10 +41,7 @@ interface StartAttemptReport {
  * panel awaits the call directly and renders its own outcome, so another tab's run never reads as
  * this one's. A failed start renders a retry action.
  *
- * Once the start goes live the panel navigates to the engagement screen, once per activity —
- * latched in `@vers/idle-client`'s store rather than a component ref, so a remount (the browser
- * back button, re-drilling the same node) that re-fires the start call and finds the same
- * activity already live reads it as already engaged rather than bouncing the player back.
+ * Once the start goes live the panel navigates to the engagement screen, once per activity.
  *
  * Two rejections render a reload notice instead of the generic retry. A start refused because
  * the account's active avatar changed names the current avatar: the route's own data still names
@@ -180,6 +177,10 @@ export function ExploreCurrentPanel(props: Readonly<ExploreCurrentPanelProps>) {
     attemptScopeID === selectedNode?.id &&
     idleWorkerHandle.activity?.id === expectedActivityID;
 
+  // The engaged activity is latched in `@vers/idle-client`'s store rather than a component ref, so
+  // a remount (the browser back button, re-drilling the same node) that re-fires the start call
+  // and finds the same activity already live reads it as already engaged rather than bouncing the
+  // player back.
   useEffect(() => {
     if (!isActivityReady || expectedActivityID === engagedActivityID) {
       return;

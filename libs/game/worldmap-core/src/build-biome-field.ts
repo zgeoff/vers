@@ -20,11 +20,6 @@ export interface BuildBiomeFieldOptions {
  * border. Node jitter stays within its own cell, so the texel at a cell's own coordinate always
  * agrees with `getBiome` on that cell.
  *
- * Texels are laid out row-major over the viewport's cell box inflated by half a cell on each side,
- * the same convention `buildRevealDistanceField` uses: texel `(i, j)` samples axial `(minCX - 0.5 +
- * (i + 0.5) / resolution, minCY - 0.5 + (j + 0.5) / resolution)`, the mapping a quad spanning that
- * box with corner-anchored uvs interpolates.
- *
  * `blendTs` carries cross-territory border proximity: 0 through a patch interior — including every
  * internal territory boundary between same-biome nodes — ramping to 1 where two differently-biomed
  * territories meet, over `BIOME_TERRITORY_BLEND_BAND` scene units. `neighbourBaseIDs` names the
@@ -81,6 +76,10 @@ export function buildBiomeField(
     return position;
   };
 
+  // Texels are laid out row-major over the viewport's cell box inflated by half a cell on each
+  // side, the same convention `buildRevealDistanceField` uses: texel `(i, j)` samples axial
+  // `(minCX - 0.5 + (i + 0.5) / resolution, minCY - 0.5 + (j + 0.5) / resolution)`, the mapping
+  // a quad spanning that box with corner-anchored uvs interpolates.
   for (let j = 0; j < rows; j++) {
     const cy = viewport.minCY - 0.5 + (j + 0.5) / options.resolution;
 

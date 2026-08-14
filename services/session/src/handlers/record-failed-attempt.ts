@@ -17,12 +17,7 @@ interface RecordFailedAttemptOpts {
 
 /**
  * Records a failed step-up verification attempt — called only after a failed verification, never
- * before one, so a pre-verify tracking call can't purge attempts ahead of the real check. A
- * pending transaction must never be observable sitting at the attempt cap, so this deletes the row
- * directly once it has reached the cap-1 attempt rather than incrementing into the cap and
- * deleting as a separate step. The two conditional statements (delete-at-cap, then
- * increment-below-cap) each re-validate their predicate against the row under its row lock, so
- * concurrent failures on the same transaction serialize instead of racing a read-then-write.
+ * before one, so a pre-verify tracking call can't purge attempts ahead of the real check.
  */
 export async function recordFailedAttempt(
   db: Kysely<DB>,
@@ -30,12 +25,18 @@ export async function recordFailedAttempt(
 ): Promise<{ attemptsRemaining: number }> {
   recordFailedAttemptMetric();
 
+  // a pending transaction must never be observable sitting at the attempt cap, so this deletes
+  // the row directly once it has reached the cap-1 attempt rather than incrementing into the cap
+  // and deleting as a separate step
   const removedAtCap = await removeIfAtCap(db, opts.input.id);
 
   if (removedAtCap) {
     return { attemptsRemaining: 0 };
   }
 
+  // this update and the delete-at-cap above each re-validate their predicate against the row
+  // under its row lock, so concurrent failures on the same transaction serialize instead of
+  // racing a read-then-write
   const incremented = await db
     .updateTable('pendingTransactions')
     .set({ attempts: sql`attempts + 1` })

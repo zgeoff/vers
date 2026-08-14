@@ -5,12 +5,12 @@ export type TerminalTransitionStatus = 'capped' | 'stopped';
 /**
  * Counts one activity that claimed a terminal transition, split by status: `stopped` covers a
  * completed or failed last checkpoint, `capped` covers a batch rejected whole because it exceeded
- * the avatar's accrued simulated-time budget. The counter is resolved through the global metrics
- * API on every call — the SDK returns the same instrument for an identical registration, and
- * resolving late keeps the counter bound to whichever meter provider the process registered at
- * boot; without one it is the API's no-op.
+ * the avatar's accrued simulated-time budget.
  */
 export function recordTerminalTransition(status: TerminalTransitionStatus): void {
+  // resolved through the global metrics API on every call — the SDK returns the same instrument
+  // for an identical registration, and resolving late keeps the counter bound to whichever meter
+  // provider the process registered at boot; without one it is the API's no-op
   const counter = metrics
     .getMeter('@vers/service-activity')
     .createCounter('vers.activity.terminal_transitions', {

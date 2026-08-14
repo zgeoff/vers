@@ -62,10 +62,8 @@ interface SettledTailRow {
 
 /**
  * Reports whether a checkpoint batch, replayed from scratch, recomputes onto a settled activity's
- * recorded tail: the last entry's version lands on `settled.appendedHead`, and every entry's hash —
- * recomputed from each payload, never trusted from the submitted `hash` field — chains onto
- * the previous entry's rebuilt hash and the final one reproduces `settled.lastHash`. A match proves
- * the recorded tail is this exact batch: the original submit landed and only the ack was lost.
+ * recorded tail. A match proves the recorded tail is this exact batch: the original submit landed
+ * and only the ack was lost.
  */
 function isSettledResubmit(
   checkpoints: ReadonlyArray<CheckpointBatchEntry>,
@@ -73,12 +71,15 @@ function isSettledResubmit(
 ): boolean {
   const lastCheckpoint = checkpoints.at(-1);
 
+  // The last entry's version must land on `settled.appendedHead`.
   if (lastCheckpoint === undefined || lastCheckpoint.version !== settled.appendedHead) {
     return false;
   }
 
   let previousHash: string | undefined;
 
+  // Every entry's hash is recomputed from its payload, never trusted from the submitted `hash`
+  // field, and must chain onto the previous entry's rebuilt hash.
   for (const checkpoint of checkpoints) {
     if (previousHash !== undefined && checkpoint.prevHash !== previousHash) {
       return false;
@@ -87,5 +88,6 @@ function isSettledResubmit(
     previousHash = buildCheckpointHashFromEntry(checkpoint);
   }
 
+  // The final rebuilt hash must reproduce `settled.lastHash`.
   return previousHash === settled.lastHash;
 }

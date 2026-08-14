@@ -305,13 +305,9 @@ async function withReleaseDB(run: (db: Kysely<DB>) => Promise<void>): Promise<vo
 
 /**
  * One rollout from an already-built image (null for targets that deploy their fly.toml stock
- * image): sweep any machines stranded on a second image by an aborted rollout, ensure the target's
- * IP posture, cut the fleet over, reconcile, probe. Probes passing records the release as the app's
- * next rollback target; probes failing rolls the fleet back to the previous recorded release and
- * leaves the run red either way, so the failure ships forward on a later push instead of a broken
- * release serving meanwhile. A sweep the planner can't resolve unambiguously fails the leg before
- * flyctl ever runs, rather than let its own "found multiple image versions" preflight fail it with
- * no path to recovery but a manual machine destroy.
+ * image). Probes passing records the release as the app's next rollback target; probes failing
+ * rolls the fleet back to the previous recorded release and leaves the run red either way, so the
+ * failure ships forward on a later push instead of a broken release serving meanwhile.
  */
 async function runRollout(
   db: Kysely<DB>,
@@ -325,6 +321,9 @@ async function runRollout(
   const recordedRelease = previous === undefined ? null : { gitSHA: previous.gitSha };
   const sweepPlan = planMachineSweep(fleet.machines, recordedRelease);
 
+  // A sweep the planner can't resolve unambiguously fails the leg before flyctl ever runs, rather
+  // than let its own "found multiple image versions" preflight fail it with no path to recovery but
+  // a manual machine destroy.
   if (sweepPlan.kind === 'ambiguous') {
     console.error(`✗ ${target.app} — ${sweepPlan.reason}`);
     console.error(formatMachineTable(fleet.machines));
