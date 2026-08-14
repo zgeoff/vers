@@ -216,6 +216,7 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
     getBundledEngineHash: () => options.bundledEngineHash ?? BUNDLED_ENGINE_HASH,
     getCancelSignal: () => cancelSignal,
     getClient: () => client,
+    getConnectivity: () => connectivityOnline,
     getFailureAction: () => failureAction,
     getRemainingBudgetMs: () => OFFLINE_PROGRESS_CAP_MS - (Date.now() - lastAckAt),
     getResyncAvatarID: () => resyncAvatarID,

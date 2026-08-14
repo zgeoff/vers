@@ -1,6 +1,8 @@
 import type { ORPCError } from '@orpc/client';
 import { isDefinedError, safe } from '@orpc/client';
 import type { ActivityData } from '@vers/contract-activity';
+import { writeOfflineStartRow } from '../submission/write-offline-start-row';
+import { buildOfflineStartRow } from './build-offline-start-row';
 import { handleSetActivityMessage } from './handle-set-activity-message';
 import { isAbortError } from './is-abort-error';
 import { reportWorkerFault } from './report-worker-fault';
@@ -18,7 +20,10 @@ interface StartActivityInput {
 }
 
 /**
- * Begins a run entirely inside the worker, answering with the outcome directly. A same-scope
+ * Begins a run entirely inside the worker, answering with the outcome directly. Offline, the
+ * start mints a row locally from this device's cached start inputs rather than calling
+ * `startActivity` — the tracked connectivity flag decides the branch, never a try-then-fallback,
+ * since a fallback risks minting twice if an in-flight RPC actually lands. Online, a same-scope
  * `CONFLICT` resyncs onto the running row, answering `attached` only once the runtime holds it; a
  * different-scope `CONFLICT` flushes that row, stops it targeted, and retries. The call mints a
  * fresh worker-internal token at entry and re-checks it after every await — a fresher call can
@@ -72,6 +77,21 @@ async function runStart(
 
   // a pure unwind: no row has been minted yet, so there is nothing to compensate
   signals.cancel.throwIfAborted();
+
+  // branches on the tracked connectivity flag rather than trying the RPC and falling back on
+  // failure: a fallback risks minting twice if the RPC actually landed server-side before the
+  // transport reported it unreachable
+  if (!context.getConnectivity()) {
+    const offlineRow = await buildOfflineStartRow(context, { ...input, startKey: token });
+
+    if (offlineRow === null) {
+      return { kind: 'failed' };
+    }
+
+    await writeOfflineStartRow(offlineRow);
+
+    return setLiveStartedRow(context, token, offlineRow, signals);
+  }
 
   const [error, started] = await tryStartActivity(context, { ...input, startKey: token });
 

@@ -62,6 +62,13 @@ export interface WorkerContext {
   readonly getClient: () => ActivityServiceClient;
 
   /**
+   * The worker's tracked connectivity: `true` until an outage is detected, `false` from then
+   * until a reconnect recovers it. Backs the offline-open start branch's decision to synthesize a
+   * local row instead of calling `startActivity`.
+   */
+  readonly getConnectivity: () => boolean;
+
+  /**
    * The avatar's failure-action preference: the in-session source of truth every simulation input
    * derivation reads from. Seeded from the device-local cache at worker boot, then held here for
    * the worker's lifetime — a live simulation mirrors it, it never reads back from one.

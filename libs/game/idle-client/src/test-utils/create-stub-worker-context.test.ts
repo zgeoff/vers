@@ -55,6 +55,16 @@ test('it returns the injected submitter', () => {
   expect(context.getSubmitter()).toBe(submitter);
 });
 
+test('it reflects updateConnectivity on getConnectivity', () => {
+  const context = createStubWorkerContext();
+
+  expect(context.getConnectivity()).toBeTrue();
+
+  context.updateConnectivity(false);
+
+  expect(context.getConnectivity()).toBeFalse();
+});
+
 test('it reflects an externally aborted shutdown controller on the cancel signal', () => {
   const shutdownController = new AbortController();
 

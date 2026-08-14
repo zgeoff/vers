@@ -1,17 +1,24 @@
 import { expect, mock, onTestFinished, test } from 'bun:test';
 import type { ErrorEvent } from '@sentry/browser';
+import { createMockContentDocument } from '@vers/contract-activity/test-utils';
 import { createSimulation } from '@vers/idle-core';
 import { createAuthedServiceClient, createViewer } from '@vers/mock-services';
 import { mockActivityService } from '@vers/mock-services/activity';
 import * as db from '@vers/mock-services/db';
 import { HttpResponse } from 'msw';
 import invariant from 'tiny-invariant';
+import { writeContentDocumentCache } from '../content/write-content-document-cache';
 import { server } from '../mocks/node';
 import type { CheckpointSubmitter } from '../submission/create-checkpoint-submitter';
+import { readAllOfflineStartRows } from '../submission/read-all-offline-start-rows';
+import { readOfflineStartRow } from '../submission/read-offline-start-row';
 import { readPendingStopIntent } from '../submission/read-pending-stop-intent';
 import type { ActivityServiceClient } from '../submission/types';
+import { writeNodeSeeds } from '../submission/write-node-seeds';
+import { writeStartStamps } from '../submission/write-start-stamps';
 import { createStubSubmitter } from '../test-utils/create-stub-submitter';
 import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
+import { createMockNodeSeed } from '../test-utils/factories/create-mock-node-seed';
 import { WorkerMessageType } from '../types';
 import { handleStartActivityMessage } from './handle-start-activity-message';
 import { sentryHandle } from './sentry-handle';
@@ -653,4 +660,150 @@ test('it reports no worker fault for a start rejected because the avatar is not 
   });
 
   expect(recorded).toStrictEqual([]);
+});
+
+test('it starts locally from cached inputs and persists the row durably when offline', async () => {
+  const submitter = createStubSubmitter();
+  const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_offline', submitter });
+
+  context.setSimulation(createSimulation());
+  context.updateConnectivity(false);
+
+  const seed = createMockNodeSeed({
+    avatarID: 'avatar_offline_start',
+    encounterNode: { difficulty: 1 },
+    genesisSeed: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaa6072',
+    nodeID: '2_1',
+  });
+
+  await writeNodeSeeds(seed.avatarID, [seed]);
+  await writeStartStamps({ keyVersion: 3, secretRef: 'worldmap', secretVersion: 1 });
+
+  await writeContentDocumentCache(
+    createMockContentDocument({ contentVersion: seed.contentVersion }),
+  );
+
+  const result = await handleStartActivityMessage(context, {
+    avatarID: seed.avatarID,
+    scopeID: seed.nodeID,
+    scopeType: 'world_map_node',
+  });
+
+  invariant(result.kind === 'started', 'expected a started status');
+
+  expect(context.getSimulation().activity?.id).toBe(result.activity.id);
+  expect(context.getActivity()?.id).toBe(result.activity.id);
+
+  expect(submitter.registerActivity).toHaveBeenCalledExactlyOnceWith({
+    activityID: result.activity.id,
+    appendedHead: 0,
+    lastHash: result.activity.lastHash,
+    startChainIndex: 0,
+  });
+
+  const persisted = await readOfflineStartRow(result.activity.id);
+
+  expect(persisted).toStrictEqual(result.activity);
+
+  const minted = db.activityCollection.findFirst((q) => q.where({ id: result.activity.id }));
+
+  expect(minted).toBeUndefined();
+});
+
+test('it answers failed and persists nothing when offline and the scope was never cached', async () => {
+  const context = createStubWorkerContext({ submitter: createStubSubmitter() });
+
+  context.updateConnectivity(false);
+
+  const result = await handleStartActivityMessage(context, {
+    avatarID: 'avatar_offline_never_cached',
+    scopeID: '0_0',
+    scopeType: 'world_map_node',
+  });
+
+  expect(result).toStrictEqual({ kind: 'failed' });
+  expect(context.getSimulation().activity).toBeNull();
+
+  const rows = await readAllOfflineStartRows();
+
+  expect(rows).toStrictEqual([]);
+});
+
+test('it answers failed and persists nothing when offline and no start stamps are cached', async () => {
+  const context = createStubWorkerContext({ submitter: createStubSubmitter() });
+
+  context.updateConnectivity(false);
+
+  const seed = createMockNodeSeed({ avatarID: 'avatar_offline_no_stamps', nodeID: '1_0' });
+
+  await writeNodeSeeds(seed.avatarID, [seed]);
+
+  const result = await handleStartActivityMessage(context, {
+    avatarID: seed.avatarID,
+    scopeID: seed.nodeID,
+    scopeType: 'world_map_node',
+  });
+
+  expect(result).toStrictEqual({ kind: 'failed' });
+
+  const rows = await readAllOfflineStartRows();
+
+  expect(rows).toStrictEqual([]);
+});
+
+test('it answers failed and persists nothing when offline and the build carries no bundled engine hash', async () => {
+  const context = createStubWorkerContext({ submitter: createStubSubmitter() });
+
+  context.updateConnectivity(false);
+
+  const seed = createMockNodeSeed({ avatarID: 'avatar_offline_no_hash', nodeID: '1_0' });
+
+  await writeNodeSeeds(seed.avatarID, [seed]);
+  await writeStartStamps({ keyVersion: 1, secretRef: 'worldmap', secretVersion: 1 });
+
+  const result = await handleStartActivityMessage(context, {
+    avatarID: seed.avatarID,
+    scopeID: seed.nodeID,
+    scopeType: 'world_map_node',
+  });
+
+  expect(result).toStrictEqual({ kind: 'failed' });
+
+  const rows = await readAllOfflineStartRows();
+
+  expect(rows).toStrictEqual([]);
+});
+
+test('it still starts through the service when connectivity reads online, even with offline start inputs cached', async () => {
+  const viewer = await createViewer();
+  const ctx = await setupTest({ userID: viewer.user.id });
+
+  const context = createStubWorkerContext({
+    bundledEngineHash: 'engine_hash_online',
+    client: ctx.client,
+    submitter: createStubSubmitter(),
+  });
+
+  context.setSimulation(createSimulation());
+
+  const seed = createMockNodeSeed({ avatarID: viewer.avatar.id, nodeID: '0_0' });
+
+  await writeNodeSeeds(seed.avatarID, [seed]);
+  await writeStartStamps({ keyVersion: 1, secretRef: 'worldmap', secretVersion: 1 });
+
+  const result = await handleStartActivityMessage(context, {
+    avatarID: viewer.avatar.id,
+    scopeID: '0_0',
+    scopeType: 'world_map_node',
+  });
+
+  invariant(result.kind === 'started', 'expected a started status');
+
+  const minted = db.activityCollection.findFirst((q) => q.where({ id: result.activity.id }));
+
+  expect(minted).toBeDefined();
+
+  const offlineRow = await readOfflineStartRow(result.activity.id);
+
+  expect(offlineRow).toBeUndefined();
 });

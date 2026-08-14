@@ -93,6 +93,7 @@ export function createStubWorkerContext(
     getBundledEngineHash: () => options.bundledEngineHash,
     getCancelSignal: () => cancelSignal,
     getClient: () => client,
+    getConnectivity: () => connectivityOnline,
     getConnectivityOnline: () => connectivityOnline,
     getFailureAction: () => failureAction,
     getRemainingBudgetMs: () => options.remainingBudgetMs ?? Number.MAX_SAFE_INTEGER,
