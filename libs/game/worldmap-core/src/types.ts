@@ -21,7 +21,8 @@ export interface WorldMapNode {
  * An undirected connection between two nodes. `id` is the two endpoint ids in ascending order joined
  * by `|`, so the same edge derived from either endpoint carries one identity. `startPosition` and
  * `endPosition` are the endpoints' jittered scene positions, not their cell coordinates — a caller
- * that needs an endpoint's cell decodes it from `id`, never from these fields.
+ * that needs an endpoint's cell splits `id` at `|` and decodes one endpoint, never reads these
+ * fields as cells and never decodes the whole `id`.
  */
 export interface WorldEdge {
   readonly endPosition: readonly [number, number];
