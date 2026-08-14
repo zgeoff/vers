@@ -2,6 +2,7 @@ import { expect, test } from 'bun:test';
 import { buildBiomeField } from './build-biome-field';
 import { buildRevealDistanceField } from './build-reveal-distance-field';
 import { getBiome } from './get-biome';
+import { getNearestBaseIDByWideScan } from './test-utils/get-nearest-base-id-by-wide-scan';
 
 test('it lays texels out on the same grid as the reveal distance field for the same viewport and resolution', () => {
   const viewport = { maxCX: 4, maxCY: 4, minCX: -4, minCY: -4 };
@@ -61,6 +62,25 @@ test('it keeps blendT inside the unit interval and raises it only across a real 
 
     if (blendT > 0) {
       expect(field.baseIDs[index]).not.toBe(field.neighbourBaseIDs[index]);
+    }
+  }
+});
+
+test('it matches a wide brute-force nearest-node scan at the current jitter', () => {
+  // the field's 3x3 territory scan holds only while per-axis jitter stays below ~0.43; this
+  // comparison against a 7x7 scan fails loudly if a future jitter bump crosses that bound
+  const seed = 90_210;
+  const resolution = 4;
+  const viewport = { maxCX: 5, maxCY: 5, minCX: 0, minCY: 0 };
+  const field = buildBiomeField(seed, viewport, { resolution });
+
+  for (let j = 0; j < field.rows; j++) {
+    const cy = viewport.minCY - 0.5 + (j + 0.5) / resolution;
+
+    for (let i = 0; i < field.cols; i++) {
+      const cx = viewport.minCX - 0.5 + (i + 0.5) / resolution;
+
+      expect(field.baseIDs[j * field.cols + i]).toBe(getNearestBaseIDByWideScan(seed, cx, cy));
     }
   }
 });
