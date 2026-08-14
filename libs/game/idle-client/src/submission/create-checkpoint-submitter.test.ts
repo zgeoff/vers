@@ -1657,6 +1657,14 @@ test('it never persists a node head when the registration carries no scope', asy
 
   server.use(mockActivityService.trackActivityProgress.handler(() => ({ appendedHead: 1 })));
 
+  const seed = createMockNodeSeed({
+    avatarID: 'avatar-no-scope',
+    head: { chainIndex: 2, nextSeed: 'seed-untouched' },
+    nodeID: '0_0',
+  });
+
+  await writeNodeSeeds(seed.avatarID, [seed]);
+
   await ctx.submitter.registerActivity({
     activityID: 'no-scope-activity',
     appendedHead: 0,
@@ -1666,7 +1674,8 @@ test('it never persists a node head when the registration carries no scope', asy
 
   await ctx.submitter.submit('no-scope-activity', createMockCompletedCheckpoint());
 
-  const cached = await readNodeSeed('avatar-no-scope', '0_0');
+  // the seeded head is left exactly as written: a scope-less registration advances no node head
+  const cached = await readNodeSeed(seed.avatarID, seed.nodeID);
 
-  expect(cached).toBeUndefined();
+  expect(cached?.head).toStrictEqual({ chainIndex: 2, nextSeed: 'seed-untouched' });
 });

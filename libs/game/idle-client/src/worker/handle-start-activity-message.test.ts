@@ -179,6 +179,43 @@ test('it stops the live run and starts the new one when the request names a diff
   expect(context.getSimulation().activity?.id).toBe(result.activity.id);
 });
 
+test('it leaves the live run intact when a different-scope switch cannot mint the new scope', async () => {
+  const submitter = createStubSubmitter();
+  const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_switch', submitter });
+  const simulation = createSimulation();
+
+  const previous = createMockActivityData({
+    avatarID: 'avatar_switch_no_cache',
+    id: 'act_switch_no_cache_previous',
+    scopeID: '5_0',
+    scopeType: 'world_map_node',
+  });
+
+  simulation.startActivity(createMockAvatarData(), createMockActivityInput({ id: previous.id }));
+  context.setSimulation(simulation);
+  context.setActivity(previous);
+
+  // the account stamps are cached, but the target scope's node seed is not — so the mint fails
+  // only for the missing cache, and the switch must abandon it without touching the live run
+  await writeStartStamps({ keyVersion: 1, secretRef: 'worldmap', secretVersion: 1 });
+
+  const result = await handleStartActivityMessage(context, {
+    avatarID: 'avatar_switch_no_cache',
+    scopeID: '0_0',
+    scopeType: 'world_map_node',
+  });
+
+  expect(result).toStrictEqual({ kind: 'failed' });
+  expect(context.getActivity()?.id).toBe(previous.id);
+  expect(context.getSimulation().activity?.id).toBe(previous.id);
+  expect(submitter.flushNow).not.toHaveBeenCalled();
+  expect(submitter.registerActivity).not.toHaveBeenCalled();
+
+  const rows = await readAllStartRows();
+
+  expect(rows).toStrictEqual([]);
+});
+
 test('it answers failed and persists nothing when the scope was never cached', async () => {
   const context = createStubWorkerContext({ submitter: createStubSubmitter() });
 
@@ -286,6 +323,14 @@ test('it abandons a superseded different-scope switch without touching the live 
 
 test('it stops a freshly minted row back durably when a stop lands mid-switch', async () => {
   const stopEffect = { current: () => {} };
+  const stopTargets: Array<string> = [];
+
+  server.use(
+    mockActivityService.stopActivity.handler((opts) => {
+      stopTargets.push(opts.input.activityID ?? '');
+      throw opts.errors.NOT_FOUND({ data: {} });
+    }),
+  );
 
   const submitter: CheckpointSubmitter = {
     ...createStubSubmitter(),
@@ -330,4 +375,17 @@ test('it stops a freshly minted row back durably when a stop lands mid-switch', 
   expect(result).toStrictEqual({ kind: 'failed' });
   expect(context.getActivity()?.id).toBe(previous.id);
   expect(submitter.registerActivity).not.toHaveBeenCalled();
+
+  // the minted row was persisted as a recoverable root before the mid-switch stop landed, and its
+  // stop-back was delivered durably rather than dropped
+  const rows = await readAllStartRows();
+
+  expect(rows).toHaveLength(1);
+
+  const [minted] = rows;
+
+  invariant(minted !== undefined, 'expected the minted row to be persisted');
+
+  expect(minted.scopeID).toBe('0_0');
+  expect(stopTargets).toContain(minted.id);
 });

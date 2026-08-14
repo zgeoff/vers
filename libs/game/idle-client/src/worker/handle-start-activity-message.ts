@@ -17,14 +17,16 @@ interface StartActivityInput {
 
 /**
  * Begins a run entirely inside the worker, resolving the single-active-run invariant locally
- * rather than by round-tripping the server: a request naming the scope already live here answers
- * `attached` without minting anything; a request naming a different scope stops the live run
- * first, then mints. A start is always a local client mint (`buildStartRow`), persisted durably
- * before it installs so a crash between mint and install still leaves a recoverable root. The
- * call mints a fresh worker-internal token at entry and re-checks it after every await — a fresher
- * call can land while this turn runs, and a superseded flow answers `failed`, leaving its minted
- * row to the fresher flow's recovery. A stop landing mid-start stops the minted row back durably.
- * An abort settles as `failed` without a fault report.
+ * rather than by round-tripping the server: a request naming the avatar, scope, and simulation
+ * already live here answers `attached` without minting anything; any other request mints a fresh
+ * local row (`buildStartRow`) and installs it, stopping a genuinely running live run back first
+ * only once the mint has succeeded — a mint that fails leaves the current run untouched rather
+ * than stranding the worker with no live run and a stale stopped one. The minted row is persisted
+ * durably before it installs, so a crash between mint and install still leaves a recoverable root.
+ * The call mints a fresh worker-internal token at entry and re-checks it after every await — a
+ * fresher call can land while this turn runs, and a superseded flow answers `failed`, leaving its
+ * minted row to the fresher flow's recovery. A stop landing mid-start stops the minted row back
+ * durably. An abort settles as `failed` without a fault report.
  */
 export async function handleStartActivityMessage(
   context: WorkerContext,
@@ -74,34 +76,45 @@ async function runStart(
 
   const live = context.getActivity();
 
+  // the live run this flow must stop back before installing: an installed row whose simulation is
+  // the one actually ticking, not a stopped remnant or a row left by another avatar's turn
+  const running = live !== null && context.getSimulation().activity?.id === live.id ? live : null;
+
   // already running here — the player's request is already satisfied, and re-minting would fork
   // the chain the live simulation is already advancing
-  if (live !== null && live.scopeType === input.scopeType && live.scopeID === input.scopeID) {
-    return { activityID: live.id, kind: 'attached' };
+  if (
+    running !== null &&
+    running.avatarID === input.avatarID &&
+    running.scopeType === input.scopeType &&
+    running.scopeID === input.scopeID
+  ) {
+    return { activityID: running.id, kind: 'attached' };
   }
 
-  if (live !== null) {
-    // silences the old simulation's ticking immediately, rather than waiting for the new row's
-    // eventual install to displace it — `simulation.startActivity` auto-stops a live generator on
-    // its own, but only once this flow reaches it, and every await between here and there is a
-    // window the old run would otherwise keep advancing in
+  // the mint is attempted before the live run is stopped: a mint that fails (a missing cache)
+  // leaves the current run intact rather than stranding the worker with no live run and a stale
+  // stopped one
+  const row = await buildStartRow(context, { ...input, startKey: token });
+
+  if (row === null) {
+    return { kind: 'failed' };
+  }
+
+  if (running !== null) {
+    // silences the old simulation's ticking before the new row installs — `simulation.startActivity`
+    // auto-stops a live generator on its own, but only once this flow reaches it, and every await
+    // between here and there is a window the old run would otherwise keep advancing in
     context.getSimulation().stopActivity();
 
     // submitStopIntent flushes the row's earned checkpoints before the stop lands, so they reach
     // the server ahead of the row closing to further appends
-    await submitStopIntent(context, { avatarID: live.avatarID, id: live.id });
+    await submitStopIntent(context, { avatarID: running.avatarID, id: running.id });
 
     context.resetRewardSlotLedger();
 
     if (isSuperseded(context, token)) {
       return { kind: 'failed' };
     }
-  }
-
-  const row = await buildStartRow(context, { ...input, startKey: token });
-
-  if (row === null) {
-    return { kind: 'failed' };
   }
 
   // written before install: a crash here still leaves a recoverable root for a later reconcile

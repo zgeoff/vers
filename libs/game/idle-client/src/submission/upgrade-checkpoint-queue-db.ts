@@ -13,12 +13,11 @@ import type { CheckpointQueueSchema } from './types';
  * upgrade. Each store is created only if missing, so an upgrade from an earlier version adds the
  * stores that version lacks without dropping the ones it already holds or their rows.
  *
- * The one exception is `node-seeds`: an upgrade from a version predating v5 clears it, since its
- * earlier rows carried only a genesis seed and miss the encounter and content version a v5 row
- * declares — clearing the rebuildable cache leaves only full-shape rows behind, and the prefetch
- * re-reveals and repopulates them. A version predating v6 needs no such clear: its rows still
- * parse, just without a `head` — a start reading one back treats the missing field as an uncached
- * node and fails, self-healing on the node's next reveal.
+ * The one exception is `node-seeds`: an upgrade from a version predating v6 clears it. A pre-v5 row
+ * carried only a genesis seed and misses the encounter and content version a v5 row declares; a
+ * pre-v6 row misses the `head` that `readNodeSeed`'s type declares non-optional, so leaving it
+ * would let a headless row re-enter typed code. Clearing the rebuildable cache leaves only
+ * full-shape rows behind, and the prefetch re-reveals and repopulates them.
  */
 export function upgradeCheckpointQueueDB(
   database: IDBPDatabase<CheckpointQueueSchema>,
@@ -54,7 +53,7 @@ export function upgradeCheckpointQueueDB(
   // content version — by its `[avatarID, nodeID]` pair.
   if (!database.objectStoreNames.contains(NODE_SEEDS_STORE_NAME)) {
     database.createObjectStore(NODE_SEEDS_STORE_NAME, { keyPath: ['avatarID', 'nodeID'] });
-  } else if (oldVersion < 5) {
+  } else if (oldVersion < 6) {
     void transaction.objectStore(NODE_SEEDS_STORE_NAME).clear();
   }
 

@@ -5,11 +5,14 @@ import type { NodeSeedHead } from './types';
 /**
  * Advances a cached node's head in place as the client appends further into its chain, so a later
  * start at the same scope roots against the position this device has actually reached rather than
- * the node's genesis. Best-effort and non-throwing: a write failure is swallowed rather than
- * propagated, since losing this cache update must never interrupt checkpoint submission — the
- * node simply falls back to a stale head until its next reveal. A no-op when the node was never
- * cached for this avatar, which a caller submitting against a registered activity should not be
- * able to reach in practice.
+ * the node's genesis. The advance is monotonic: an incoming head at least as far along as the
+ * cached one wins, an earlier one is discarded, so an out-of-order or delayed lower-index write
+ * never regresses the cache to an already-consumed position. The read, compare, and write run in
+ * one transaction, so concurrent advances serialize rather than racing on a stale read.
+ * Best-effort and non-throwing: a write failure is swallowed rather than propagated, since losing
+ * this cache update must never interrupt checkpoint submission — the node simply falls back to a
+ * stale head until its next reveal. A no-op when the node was never cached for this avatar, which
+ * a caller submitting against a registered activity should not be able to reach in practice.
  */
 export async function writeNodeHead(
   avatarID: string,
@@ -23,7 +26,7 @@ export async function writeNodeHead(
 
     const existing = await tx.store.get([avatarID, nodeID]);
 
-    if (existing === undefined) {
+    if (existing === undefined || existing.head.chainIndex > head.chainIndex) {
       return;
     }
 

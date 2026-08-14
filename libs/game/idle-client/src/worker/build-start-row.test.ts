@@ -3,12 +3,11 @@ import { buildStartHash } from '@vers/contract-activity';
 import { createMockActivityData } from '@vers/contract-activity/test-utils';
 import { buildLevelFromXP } from '@vers/idle-core';
 import invariant from 'tiny-invariant';
-import { NODE_SEEDS_STORE_NAME } from '../submission/constants';
-import { resolveCheckpointQueueDB } from '../submission/resolve-checkpoint-queue-db';
-import type { NodeSeed } from '../submission/types';
 import { writeNodeSeeds } from '../submission/write-node-seeds';
+import { writeQueuedCheckpoint } from '../submission/write-queued-checkpoint';
 import { writeStartStamps } from '../submission/write-start-stamps';
 import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
+import { createMockCheckpointBatchEntry } from '../test-utils/factories/create-mock-checkpoint-batch-entry';
 import { createMockNodeSeed } from '../test-utils/factories/create-mock-node-seed';
 import { buildStartRow } from './build-start-row';
 
@@ -104,34 +103,6 @@ test('it returns null when the scope was never cached for the avatar', async () 
   expect(row).toBeNull();
 });
 
-test('it returns null when the cached node row predates the head field', async () => {
-  const seed = createMockNodeSeed({ avatarID: 'avatar_legacy_row', nodeID: '1_0' });
-
-  const db = await resolveCheckpointQueueDB();
-
-  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- simulates a pre-v6 row that predates the `head` field, which the current `NodeSeed` type can no longer express
-  await db.put(NODE_SEEDS_STORE_NAME, {
-    avatarID: seed.avatarID,
-    contentVersion: seed.contentVersion,
-    encounterNode: seed.encounterNode,
-    genesisSeed: seed.genesisSeed,
-    nodeID: seed.nodeID,
-  } as unknown as NodeSeed);
-
-  await writeStartStamps({ keyVersion: 1, secretRef: 'worldmap', secretVersion: 1 });
-
-  const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_1' });
-
-  const row = await buildStartRow(context, {
-    avatarID: seed.avatarID,
-    scopeID: seed.nodeID,
-    scopeType: 'world_map_node',
-    startKey: 'start_key_1',
-  });
-
-  expect(row).toBeNull();
-});
-
 test('it returns null when no start stamps are cached', async () => {
   const seed = createMockNodeSeed({ avatarID: 'avatar_no_stamps', nodeID: '1_0' });
 
@@ -190,6 +161,51 @@ test('it sources the build snapshot from the last activity this worker installed
 
   // the level is recomputed from the carried-forward xp rather than trusted from the source row
   expect(row.buildSnapshot).toStrictEqual({ level: buildLevelFromXP(8450), xp: 8450 });
+});
+
+test("it folds the previous run's locally queued checkpoint xp onto its start baseline", async () => {
+  const seed = createMockNodeSeed({ avatarID: 'avatar_switch_earned', nodeID: '2_2' });
+
+  await writeNodeSeeds(seed.avatarID, [seed]);
+  await writeStartStamps({ keyVersion: 1, secretRef: 'worldmap', secretVersion: 1 });
+
+  const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_1' });
+
+  const previous = createMockActivityData({
+    avatarID: seed.avatarID,
+    buildSnapshot: { level: buildLevelFromXP(1000), xp: 1000 },
+    id: 'act_earned_previous',
+  });
+
+  context.setActivity(previous);
+
+  await writeQueuedCheckpoint(
+    previous.id,
+    createMockCheckpointBatchEntry({
+      payload: { rewards: { xp: 120 }, type: 'progress' },
+      version: 1,
+    }),
+  );
+
+  await writeQueuedCheckpoint(
+    previous.id,
+    createMockCheckpointBatchEntry({
+      payload: { rewards: { xp: 80 }, type: 'progress' },
+      version: 2,
+    }),
+  );
+
+  const row = await buildStartRow(context, {
+    avatarID: seed.avatarID,
+    scopeID: seed.nodeID,
+    scopeType: 'world_map_node',
+    startKey: 'start_key_earned',
+  });
+
+  invariant(row !== null, 'expected the cached inputs to synthesize a row');
+
+  // the 1000-xp start baseline plus the 120 + 80 earned across the previous run's queued deltas
+  expect(row.buildSnapshot).toStrictEqual({ level: buildLevelFromXP(1200), xp: 1200 });
 });
 
 test("it starts a fresh avatar's build snapshot at zero xp when the worker holds no prior activity row for it", async () => {

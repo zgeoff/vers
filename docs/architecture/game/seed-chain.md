@@ -54,14 +54,15 @@ reveal the same node. The seed needs no re-derivation: the verifier reads the st
 restored device fetches it. A client cannot compute it and cannot steer it, since the scope and the
 avatar are both fixed before the mint.
 
-A start is always a local client mint: the worker synthesizes the activity's full root row entirely
-from this device's cached inputs, never by calling the service. `revealNodes` delivers, alongside
-each node's genesis seed, its current `head` — `{ nextSeed, chainIndex }`, the chain row's own
-appended anchor — so a start roots at wherever play on this node last left off rather than always at
-genesis. A node never yet played reveals a head equal to `{ genesisSeed, 0 }`. The service's
-`startActivity` handler still exists and still mints from a chain row's head the same way, but no
-client path calls it; a client-minted root does not yet round-trip into the server's own copy of the
-chain row.
+An interactive start is a local client mint: the worker synthesizes the activity's full root row
+entirely from this device's cached inputs, never by calling the service. `revealNodes` delivers,
+alongside each node's genesis seed, its current `head` — `{ nextSeed, chainIndex }`, the chain row's
+own appended anchor — so a start roots at wherever play on this node last left off rather than
+always at genesis. A node never yet played reveals a head equal to `{ genesisSeed, 0 }`. The
+service's `startActivity` handler still exists and still mints from a chain row's head the same way.
+The interactive start no longer calls it; auto-continuation after a terminal checkpoint still does,
+until that path folds onto a local mint too. A client-minted root does not yet round-trip into the
+server's own copy of the chain row.
 
 `revealNodes` also derives each node's `encounterNode` and returns the content version it was
 derived against, alongside the key version and scope-secret ref/version the derivation read —
