@@ -4,12 +4,13 @@ import { createGenesisSeed } from '@vers/contract-activity';
 import type { SecretRef } from '@vers/contract-keys';
 import type { DB } from '@vers/db';
 import { deriveWorldmapContent, readScopeSecret } from '@vers/worldmap-content';
-import { canEncodeMortonKey, findCellCoord, getDifficulty } from '@vers/worldmap-core';
+import { canEncodeMortonKey } from '@vers/worldmap-core';
 import type { CryptoKey } from 'jose';
 import type { Kysely } from 'kysely';
 import invariant from 'tiny-invariant';
 import { recordRevealMint } from '../metrics/record-reveal-mint';
 import { requireActiveAvatar } from '../require-active-avatar';
+import { resolveEncounterNode } from '../resolve-encounter-node';
 import type { AvatarNotActivePayload, EmptyErrorPayload, MissingSessionPayload } from '../types';
 
 /**
@@ -95,24 +96,19 @@ export async function revealNodes(
     throw opts.errors.NOT_FOUND({ data: {} });
   }
 
-  const coordsByNodeID = new Map<string, readonly [number, number]>();
+  const resolvedByNodeID = new Map<string, { coord: [number, number]; difficulty: number }>();
 
   for (const nodeID of opts.input.nodeIDs) {
-    const coord = findCellCoord(nodeID);
+    const resolved = resolveEncounterNode('world_map_node', nodeID);
 
-    if (coord === undefined || !canEncodeMortonKey(coord)) {
+    if (resolved === undefined || !canEncodeMortonKey(resolved.coord)) {
       throw opts.errors.NODE_UNKNOWN({ data: {} });
     }
 
-    coordsByNodeID.set(nodeID, coord);
+    resolvedByNodeID.set(nodeID, resolved);
   }
 
   const uniqueNodeIDs = [...new Set(opts.input.nodeIDs)];
-
-  // an empty batch needs neither the content document nor the avatar's scope secret — only the
-  // active-avatar gate below, still enforced regardless of batch size
-  const encounterInputs =
-    uniqueNodeIDs.length === 0 ? undefined : await loadEncounterInputs(deps, avatar.id);
 
   const minted = await deps.db.transaction().execute(async (trx) => {
     await requireActiveAvatar(trx, actingUserID, opts.input.avatarID, opts.errors);
@@ -155,8 +151,11 @@ export async function revealNodes(
     };
   }
 
-  invariant(encounterInputs !== undefined, 'a non-empty batch always loads its encounter inputs');
   recordRevealMint(uniqueNodeIDs.length);
+
+  // Loaded only after the mint transaction's active-avatar gate, so an owned-but-inactive avatar
+  // rejects before this reveal pays for the content-registry read or the keys round trip.
+  const encounterInputs = await loadEncounterInputs(deps, avatar.id);
 
   const genesisByNodeID = new Map(minted.map((row) => [row.scopeId, row.genesisSeed]));
 
@@ -165,14 +164,14 @@ export async function revealNodes(
 
     invariant(genesisSeed !== undefined, 'minted chain row missing for a requested node');
 
-    const coord = coordsByNodeID.get(nodeID);
+    const resolved = resolvedByNodeID.get(nodeID);
 
-    invariant(coord !== undefined, 'validated node id missing its resolved coordinate');
+    invariant(resolved !== undefined, 'validated node id missing its resolved encounter');
 
     const encounterNode = {
-      difficulty: getDifficulty(coord[0], coord[1]),
+      difficulty: resolved.difficulty,
       ...deriveWorldmapContent(encounterInputs.document.encounter, {
-        coord,
+        coord: resolved.coord,
         scopeSecret: encounterInputs.scopeSecret,
         userSeed: avatar.seed,
       }),
@@ -196,9 +195,9 @@ interface EncounterInputs {
 }
 
 /**
- * Loads the current content document and the avatar's scope secret once, ahead of the mint
- * transaction so the advisory-lock window it holds stays small — mirroring `startActivity`'s own
- * read-before-transaction ordering.
+ * Loads the current content document and the avatar's scope secret, after the mint transaction has
+ * run its active-avatar gate — an owned-but-inactive avatar rejects before this reveal contacts the
+ * content registry or the keys service, and pays for neither round trip.
  */
 async function loadEncounterInputs(
   deps: RevealNodesDeps,

@@ -2,6 +2,7 @@ import { expect, test } from 'bun:test';
 import { ActivityFailureAction } from '@vers/idle-core';
 import type { IDBPDatabase } from 'idb';
 import { deleteDB, openDB } from 'idb';
+import { createMockNodeSeed } from '../test-utils/factories/create-mock-node-seed';
 import {
   CHECKPOINT_QUEUE_STORE_NAME,
   CONTENT_DOCUMENT_STORE_NAME,
@@ -72,7 +73,7 @@ test('it creates the node-seeds store on an upgrade from v3 without dropping the
   }
 });
 
-test('it upgrades from v4 to v5 without dropping the existing stores or their rows', async () => {
+test('it clears the node-seeds cache on the v4-to-v5 upgrade while preserving the other stores and their rows', async () => {
   const upgradeTestV5DBName = 'vers-idle-checkpoint-queue-upgrade-v5-test';
 
   const preference = {
@@ -80,6 +81,8 @@ test('it upgrades from v4 to v5 without dropping the existing stores or their ro
     dirty: false,
     failureAction: ActivityFailureAction.Abort,
   } as const;
+
+  const nodeSeed = createMockNodeSeed({ avatarID: 'avatar-upgrade-v5', nodeID: '1_0' });
 
   // a prior run that threw before its own cleanup could leave a v5 database behind, which would
   // block this run's open at v4 with a version error — drop any leftover before opening
@@ -94,6 +97,7 @@ test('it upgrades from v4 to v5 without dropping the existing stores or their ro
     });
 
     await v4.put(PREFERENCES_STORE_NAME, preference, FAILURE_ACTION_PREFERENCE_KEY);
+    await v4.put(NODE_SEEDS_STORE_NAME, nodeSeed);
 
     v4.close();
 
@@ -103,6 +107,11 @@ test('it upgrades from v4 to v5 without dropping the existing stores or their ro
 
     const existingPreference = await v5.get(PREFERENCES_STORE_NAME, FAILURE_ACTION_PREFERENCE_KEY);
 
+    const clearedNodeSeed = await v5.get(NODE_SEEDS_STORE_NAME, [
+      nodeSeed.avatarID,
+      nodeSeed.nodeID,
+    ]);
+
     expect([...v5.objectStoreNames]).toIncludeAllMembers([
       CHECKPOINT_QUEUE_STORE_NAME,
       PREFERENCES_STORE_NAME,
@@ -111,6 +120,7 @@ test('it upgrades from v4 to v5 without dropping the existing stores or their ro
     ]);
 
     expect(existingPreference).toStrictEqual(preference);
+    expect(clearedNodeSeed).toBeUndefined();
   } finally {
     v4?.close();
     v5?.close();

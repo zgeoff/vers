@@ -217,6 +217,9 @@
           { "from": "package", "name": "Clock", "package": "xstate" },
           // a live IndexedDB handle: createObjectStore/transaction mutate it, no readonly form
           { "from": "package", "name": "IDBPDatabase", "package": "idb" },
+          // a live IndexedDB versionchange transaction handle: clears and rewrites stores in place,
+          // no readonly form
+          { "from": "package", "name": "IDBPTransaction", "package": "idb" },
           {
             "from": "package",
             "name": ["CryptoKey", "Request", "Response", "AbortSignal"],

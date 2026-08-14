@@ -259,6 +259,45 @@ test('it declares a bespoke NODE_UNKNOWN with an explicit status on revealNodes'
   expect(errorMap.NODE_UNKNOWN?.status).toBe(404);
 });
 
+test('revealNodes round-trips a valid stamps-and-nodes output through its output schema', () => {
+  const output = {
+    keyVersion: 1,
+    nodes: [
+      {
+        contentVersion: '2',
+        encounterNode: { difficulty: 3, poolID: 'pool_alpha' },
+        genesisSeed: '0123456789abcdef0123456789abcdef',
+        nodeID: '1_0',
+      },
+    ],
+    secretRef: 'worldmap',
+    secretVersion: 1,
+  };
+
+  expect(activityContract.revealNodes['~orpc'].outputSchema?.parse(output)).toStrictEqual(output);
+});
+
+test('revealNodes rejects an output whose node is missing its genesis seed', () => {
+  const output = {
+    keyVersion: 1,
+    nodes: [
+      {
+        contentVersion: '2',
+        encounterNode: { difficulty: 3, poolID: 'pool_alpha' },
+        nodeID: '1_0',
+      },
+    ],
+    secretRef: 'worldmap',
+    secretVersion: 1,
+  };
+
+  const result = activityContract.revealNodes['~orpc'].outputSchema?.safeParse(output);
+
+  expect(result?.error?.issues).toPartiallyContain(
+    expect.objectContaining({ path: ['nodes', 0, 'genesisSeed'] }),
+  );
+});
+
 test('it generates a valid OpenAPI document from the activity contract', async () => {
   const generator = new OpenAPIGenerator({
     schemaConverters: [new ZodToJsonSchemaConverter()],
