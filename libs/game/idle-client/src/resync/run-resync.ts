@@ -223,7 +223,9 @@ async function drainQueuedCheckpoints(
   await submitter.registerActivity({
     activityID: progress.activity.id,
     appendedHead: progress.appendedHead,
+    avatarID: progress.activity.avatarID,
     lastHash: progress.activity.lastHash,
+    scopeID: progress.activity.scopeID,
     startChainIndex: progress.activity.startChainIndex,
   });
 

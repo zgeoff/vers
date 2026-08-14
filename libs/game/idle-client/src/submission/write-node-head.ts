@@ -1,0 +1,34 @@
+import { NODE_SEEDS_STORE_NAME } from './constants';
+import { resolveCheckpointQueueDB } from './resolve-checkpoint-queue-db';
+import type { NodeSeedHead } from './types';
+
+/**
+ * Advances a cached node's head in place as the client appends further into its chain, so a later
+ * start at the same scope roots against the position this device has actually reached rather than
+ * the node's genesis. Best-effort and non-throwing: a write failure is swallowed rather than
+ * propagated, since losing this cache update must never interrupt checkpoint submission — the
+ * node simply falls back to a stale head until its next reveal. A no-op when the node was never
+ * cached for this avatar, which a caller submitting against a registered activity should not be
+ * able to reach in practice.
+ */
+export async function writeNodeHead(
+  avatarID: string,
+  nodeID: string,
+  head: Readonly<NodeSeedHead>,
+): Promise<void> {
+  try {
+    const db = await resolveCheckpointQueueDB();
+
+    const tx = db.transaction(NODE_SEEDS_STORE_NAME, 'readwrite');
+
+    const existing = await tx.store.get([avatarID, nodeID]);
+
+    if (existing === undefined) {
+      return;
+    }
+
+    await Promise.all([tx.store.put({ ...existing, head }), tx.done]);
+  } catch {
+    // best-effort: a lost head update self-heals on the node's next reveal
+  }
+}

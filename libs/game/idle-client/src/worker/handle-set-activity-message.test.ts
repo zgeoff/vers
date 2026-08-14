@@ -32,8 +32,10 @@ test('it registers the row against the submitter, seeded from its own chain-link
 
   const activity = createMockActivityData({
     appendedHead: 2,
+    avatarID: 'avatar_1',
     id: 'activity_1',
     lastHash: 'head_hash',
+    scopeID: '0_0',
     startChainIndex: 3,
   });
 
@@ -42,7 +44,9 @@ test('it registers the row against the submitter, seeded from its own chain-link
   expect(submitter.registerActivity).toHaveBeenCalledExactlyOnceWith({
     activityID: 'activity_1',
     appendedHead: 2,
+    avatarID: 'avatar_1',
     lastHash: 'head_hash',
+    scopeID: '0_0',
     startChainIndex: 3,
   });
 });
