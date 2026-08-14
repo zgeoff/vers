@@ -2,6 +2,7 @@ import type { ContractRouterClient } from '@orpc/contract';
 import type {
   CheckpointBatchEntry,
   ContentDocument,
+  EncounterNode,
   activityContract,
 } from '@vers/contract-activity';
 import type { ActivityFailureAction } from '@vers/idle-core';
@@ -53,27 +54,48 @@ export interface PendingStartIntent {
 }
 
 /**
- * A world-map node's genesis seed as the worker's durable cache holds it, keyed by the
- * `[avatarID, nodeID]` pair. A node's genesis seed is per avatar — two avatars sharing a coordinate
- * root distinct chains against distinct seeds — so the cache scopes every row to its avatar rather
- * than letting one avatar's reveal overwrite another's. Revealing an already-cached node writes the
- * same seed back in place: the server mint it comes from is idempotent per avatar and node, so the
- * cache write is too.
+ * A world-map node's revealed start inputs as the worker's durable cache holds them, keyed by the
+ * `[avatarID, nodeID]` pair: the genesis seed a chain at that scope roots against, plus the
+ * encounter and content version `buildStartHash` needs alongside it — every per-node input an
+ * offline-open start synthesizes a valid activity start from, short of the avatar- and account-
+ * global stamps `readStartStamps` holds separately. A node's genesis seed is per avatar — two
+ * avatars sharing a coordinate root distinct chains against distinct seeds — so the cache scopes
+ * every row to its avatar rather than letting one avatar's reveal overwrite another's. Revealing an
+ * already-cached node writes the same seed back in place: the server mint it comes from is
+ * idempotent per avatar and node, so the cache write is too.
  */
 export interface NodeSeed {
   readonly avatarID: string;
+  readonly contentVersion: string;
+  readonly encounterNode: EncounterNode;
   readonly genesisSeed: string;
   readonly nodeID: string;
 }
 
 /**
- * A revealed node's genesis seed as it arrives over the worker message and off the reveal round
- * trip, before the avatar it belongs to is threaded onto it. The relayed batch carries one
- * avatarID for every seed in it, so a seed on the wire holds only its node id and seed.
+ * A revealed node's start inputs as they arrive over the worker message and off the reveal round
+ * trip, before the avatar they belong to is threaded onto them. The relayed batch carries one
+ * avatarID for every entry in it, so an entry on the wire holds only its node id and the fields
+ * `NodeSeed` scopes by avatar.
  */
 export interface RevealedNodeSeed {
+  readonly contentVersion: string;
+  readonly encounterNode: EncounterNode;
   readonly genesisSeed: string;
   readonly nodeID: string;
+}
+
+/**
+ * `revealNodes`'s avatar- and account-global crypto stamps, cached device-local so an
+ * offline-open start can synthesize a valid start hash without the server: the key version an
+ * activity start stamps, and the scope-secret ref/version every cached node's encounter was
+ * derived against. A newer reveal overwrites the record in place — the stamps are the account's
+ * current ones, never versioned per node.
+ */
+export interface StartStampsPreference {
+  readonly keyVersion: number;
+  readonly secretRef: string;
+  readonly secretVersion: number;
 }
 
 export interface CheckpointQueueSchema extends DBSchema {
@@ -91,7 +113,7 @@ export interface CheckpointQueueSchema extends DBSchema {
   };
   preferences: {
     key: string;
-    value: FailureActionPreference | PendingStartIntent | PendingStopIntent;
+    value: FailureActionPreference | PendingStartIntent | PendingStopIntent | StartStampsPreference;
   };
 }
 
