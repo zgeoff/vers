@@ -81,8 +81,8 @@ Interception spends a charge to reduce a connecting hit. **Block** intercepts st
 Both forms draw on one shared charge pool. Pool capacity and refill rate are shared investment;
 trigger chance and the amount mitigated are invested per form. Trigger chance is smoothed like
 avoidance, and a charge is consumed only when interception triggers — an eligible hit that passes
-untriggered spends nothing. Interception reduces at baseline — full negation is the ceiling of deep
-investment, not the default.
+untriggered spends nothing. Interception reduces at baseline — full negation is the upper bound of
+deep investment, not the default.
 
 Charge supply bounds interception without a cap: refill rate against enemy hit rate limits how much
 of a stream can be intercepted. Sparse heavy hitters meet a charge on every swing; dense fast
@@ -94,19 +94,19 @@ charge per intercept, so refill remains the binding limit.
 ## Armour
 
 Armour is Physical mitigation. Its reduction scales inversely with the size of the incoming hit:
-small hits are mostly absorbed, massive hits punch through. Armour erases chaff and fades against
-giants — the mirror of interception, and the pairing that lets a committed defender cover the full
-hit-size spectrum.
+Armour mostly absorbs small hits, and massive hits punch through it. Armour erases chaff and fades
+against giants — the mirror of interception, and the pairing that lets a committed defender cover
+the full hit-size spectrum.
 
 ## Resistances
 
-Resistances are the six type-specific mitigations, capped, specced against a region's damage mix.
+Resistances are the six type-specific mitigations, capped and specced against a region's damage mix.
 Armour, Resistances, and Life are the dependable core: baseline content is tuned so they alone
 survive it, and every avoidance and interception stat is extra safety a build chooses. Direct and
 area hits are answered here.
 
-The hardest case is a large Physical area hit — nothing avoids or intercepts it, no resistance
-applies, and Armour fades against it. Max-hit tuning is bound by that case.
+The hardest case is a large Physical area hit — avoidance and interception do not apply to it, no
+resistance applies, and Armour fades against it. Max-hit tuning is bound by that case.
 
 ## Barrier
 

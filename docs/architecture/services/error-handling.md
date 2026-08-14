@@ -49,8 +49,8 @@ Clients narrow on `code` (via `isDefinedError`/`safe`) and `data`, never on `mes
 
 ### Registry
 
-Every bespoke code in the system, its status, and its meaning. A new bespoke code lands with its row
-in this table in the same PR.
+This table lists every bespoke code in the system, its status, and its meaning. A new bespoke code
+lands with its row in this table in the same PR.
 
 Status assignment follows the failure's nature:
 
@@ -93,12 +93,12 @@ Status assignment follows the failure's nature:
   runs. The response is not contract-shaped by design ([service contracts](./service-contracts.md)).
 - **Central error interceptor.** One `onError` client-interceptor on the RPC handler classifies
   everything a procedure throws. A defined contract error or any 4xx passes through untouched: no
-  log, no report, it is the caller's outcome. Everything else is logged at error level with the
-  trace id and captured to the error backend, then encoded by oRPC as a bare
+  log, no report, it is the caller's outcome. For everything else, the interceptor logs at error
+  level with the trace id, captures it to the error backend, then oRPC encodes it as a bare
   `INTERNAL_SERVER_ERROR`. Internals never reach the wire.
 - **Wire protocol.** Services speak the oRPC RPC protocol at `/rpc` only. Contracts keep their
-  `.route()` metadata and stay OpenAPI-generatable, which the conformance suite asserts. No OpenAPI
-  endpoint is served.
+  `.route()` metadata and stay OpenAPI-generatable, which the conformance suite asserts. Services
+  serve no OpenAPI endpoint.
 
 ## Reporting
 
@@ -153,8 +153,8 @@ trace. The RPC path reports exactly once per unexpected throw.
 One W3C trace id follows a request from the browser through app-web into whichever service it lands
 on, and shows up in three places: every pino log line the request writes, the Bugsink event if one
 fires, and the `x-trace-id` header on every service response. The log-line mixin and the response
-header are telemetry the [observability](../platform/observability.md) doc owns. A trace id from an
-error screen or a support report greps straight to the logs and the event.
+header are telemetry the [observability](../platform/observability.md) doc owns. Grepping a trace id
+from an error screen or a support report finds it directly in the logs and the event.
 
 - The browser mints a fresh `traceparent` per RPC call from the `@vers/trace` primitives.
 - app-web's server-side service links continue the ambient request's trace when it carries one, and

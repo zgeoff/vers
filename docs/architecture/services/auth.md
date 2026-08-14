@@ -40,23 +40,22 @@ valid, unused transaction token on the resubmission, the mutation proceeds. Othe
 creates a pending transaction and challenges the caller for a code.
 
 The challenge submits to `verifyStepUpHandler`, shared by every gated mutation. `verifyCode` checks
-the submitted TOTP. An invalid code counts a failed attempt against the pending transaction, and the
-transaction is abandoned after 5 (`recordFailedAttempt`). A valid code atomically consumes the
-pending transaction and mints a transaction token.
+the submitted TOTP. An invalid code counts a failed attempt against the pending transaction, and
+`recordFailedAttempt` abandons it after 5. A valid code atomically consumes the pending transaction
+and mints a transaction token.
 
 State that outlives a request lives in postgres, in the `pending_transactions` table. A pending
-transaction holds its action, target, IP, and owning session, cascade-deleted with the session, and
-expires after 5 minutes. `consumePendingTransaction` rejects a request whose action, IP, session, or
-target does not match the stored row.
+transaction holds its action, target, IP, and owning session; postgres cascade-deletes it with the
+session, and it expires after 5 minutes. `consumePendingTransaction` rejects a request whose action,
+IP, session, or target does not match the stored row.
 
 The transaction token is an RS256 JWT minted and verified only inside the edge process
 (`create-step-up-transaction-token.ts`). It is proof a code check passed, redeemable once by the
 mutation it names. It carries `action`, `target`, `sessionID`, and a `jti`, and lives 5 minutes. It
-signs against a per-process in-memory keypair, since it never leaves the process that issued it.
-Single use is enforced by the `consumed_transaction_tokens` ledger: `consumeTransactionToken`
-records the `jti`, and a token whose `jti` is already recorded is rejected. `checkStepUp` also
-matches the token's `sessionID` before consuming it, so a token minted under one session cannot
-redeem under another.
+signs against a per-process in-memory keypair, since it never leaves the process that issued it. The
+`consumed_transaction_tokens` ledger enforces single use: `consumeTransactionToken` records the
+`jti` and rejects a token whose `jti` is already recorded. `checkStepUp` also matches the token's
+`sessionID` before consuming it, so a token minted under one session cannot redeem under another.
 
 ## TOTP verification
 
@@ -64,17 +63,17 @@ redeem under another.
 target and type (`2fa`, `2fa-setup`, `change-email`, `onboarding`):
 
 - `createVerification` generates a code and returns the OTP.
-- `verifyCode` checks it. `change-email` and `onboarding` codes are consumed on success and the row
-  deleted; `2fa` and `2fa-setup` codes stay, marked verified, each guarded so a replay matches zero
+- `verifyCode` checks it, consuming `change-email` and `onboarding` codes on success and deleting
+  the row; `2fa` and `2fa-setup` codes stay, marked verified, each guarded so a replay matches zero
   rows.
 - `get2FAVerificationURI` returns the authenticator-app URI for a pending 2FA setup.
 
 ## Password reset
 
 `service-user` owns the credential path: `verifyPassword` gates login, while `changePassword` and
-`resetPassword` rewrite the hash and sign the user out of every session. A reset token is stored as
-its sha256 hash and reaches the user only through the URL in the reset email. `resetPassword`
-matches it in constant time.
+`resetPassword` rewrite the hash and sign the user out of every session. `service-user` stores a
+reset token as its sha256 hash, and the token reaches the user only through the URL in the reset
+email. `resetPassword` matches it in constant time.
 
 ## Service-to-service tokens
 
@@ -94,4 +93,5 @@ Each service verifies inbound tokens in its runtime middleware before any handle
 `SERVICE_AUTH_JWKS` — a JWKS registering every issuer's public key under its `kid`. A token's
 claimed `iss` must be a known issuer and equal its `kid`, and the signature only validates against
 that issuer's registered key, so a leaked minting key lets its holder impersonate only that one
-service. A bad token is rejected with a plain 401 ([service contracts](./service-contracts.md)).
+service. Each service rejects a bad token with a plain 401
+([service contracts](./service-contracts.md)).

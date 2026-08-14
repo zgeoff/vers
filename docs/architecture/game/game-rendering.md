@@ -85,8 +85,8 @@ R3F is pinned to the v9 line, and three of its edges are walled off:
   container strands the children under React 19.
 
 drei and tunnel-rat are reference material, not dependencies. drei trails R3F majors and carries
-GLSL-era helpers the fallback can't run, and tunnel-rat is unmaintained. A helper that earns its
-keep is vendored or reimplemented. Camera controls come from `yomotsu/camera-controls` directly.
+GLSL-era helpers the fallback can't run, and tunnel-rat is unmaintained. The project vendors or
+reimplements a helper worth keeping. Camera controls come from `yomotsu/camera-controls` directly.
 
 ## Scene ↔ DOM bridge
 

@@ -8,22 +8,23 @@ consumer.
 
 ## The wrapper
 
-`@vers/jobs` is the only module that imports pg-boss.
+`@vers/jobs` is the only module that imports pg-boss, so every other package reaches queues through
+it.
 
-- `defineJobs` declares a record of job name →
-  `{ schema, retryLimit, retryDelay, retryBackoff, deadLetter }`. The schema is zod. The job name
-  doubles as the queue name.
-- `createJobQueue(defs, config)` returns `start`, `stop`, `send`, and `drain`. `config` carries the
-  connection string, the per-job `handlers`, and optional `onError` and `onJobFailed` reporting
-  callbacks. Every defined job requires a handler, which receives the schema-parsed payload and a
-  `{ jobID }` context.
-- `send` validates the payload before enqueue and returns the pg-boss job id. Its `trx` option
-  routes the insert through the caller's Kysely transaction, so job creation commits or rolls back
-  with the domain write it belongs to.
-- `drain(name?)` is a one-shot fetch/handle/complete loop returning `{ completed, failed }`. A
-  stored payload that no longer parses is failed without reaching the handler.
-- pg-boss owns the `pgboss` schema in the shared database and migrates it itself at `start()`.
-  `@vers/db` migrations never touch it.
+- `defineJobs` declares a record mapping each job name to its
+  `{ schema, retryLimit, retryDelay, retryBackoff, deadLetter }`. The schema is a zod schema, and
+  the job name doubles as the queue name.
+- `createJobQueue(defs, config)` returns `start`, `stop`, `send`, and `drain`. The `config` carries
+  the connection string, the per-job `handlers`, and optional `onError` and `onJobFailed` reporting
+  callbacks. Every defined job needs a handler, and the handler receives the schema-parsed payload
+  alongside a `{ jobID }` context.
+- `send` validates the payload before it enqueues and returns the pg-boss job id. Pass its `trx`
+  option to route the insert through the caller's Kysely transaction, so job creation commits or
+  rolls back with the domain write it belongs to.
+- `drain(name?)` runs one fetch/handle/complete loop and returns `{ completed, failed }`. When a
+  stored payload no longer parses, the drain fails it without ever reaching the handler.
+- pg-boss owns the `pgboss` schema in the shared database and migrates it itself at `start()`, so
+  the `@vers/db` migrations never touch it.
 
 ## Delivery model: drains, not resident workers
 
