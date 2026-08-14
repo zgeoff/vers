@@ -94,9 +94,18 @@ async function runSeedReveal(
     const batch = delta.slice(start, start + MAX_REVEAL_BATCH_NODES);
 
     try {
-      const seeds = await orpc.activity.revealNodes.call({ avatarID, nodeIDs: batch }, { signal });
+      const revealed = await orpc.activity.revealNodes.call(
+        { avatarID, nodeIDs: batch },
+        { signal },
+      );
 
-      await sendIdleCacheNodeSeeds(client, { avatarID, seeds }, signal);
+      const stamps = {
+        keyVersion: revealed.keyVersion,
+        secretRef: revealed.secretRef,
+        secretVersion: revealed.secretVersion,
+      };
+
+      await sendIdleCacheNodeSeeds(client, { avatarID, seeds: revealed.nodes, stamps }, signal);
     } catch {
       for (const nodeID of delta.slice(start)) {
         sessionNodeIDs.delete(nodeID);
