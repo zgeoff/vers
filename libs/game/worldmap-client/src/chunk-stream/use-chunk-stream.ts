@@ -1,0 +1,155 @@
+import type { Viewport } from '@vers/worldmap-core';
+import { useDeferredValue, useEffect, useReducer, useRef } from 'react';
+import { createChunkCache } from './create-chunk-cache';
+import { parseChunkKey } from './parse-chunk-key';
+import type { ChunkRange } from './resolve-chunk-stream';
+import { resolveChunkStream } from './resolve-chunk-stream';
+
+export interface UseChunkStreamOptions<TEntry> {
+  /**
+   * Builds one chunk's entry from the seed and its coordinate. Only ever called with the seed
+   * `userSeed` currently holds — a miss never reaches this while `userSeed` is `null`.
+   */
+  readonly build: (userSeed: number, chunkX: number, chunkY: number) => TEntry;
+
+  readonly cacheCapacity: number;
+
+  /**
+   * Releases an entry's resources. Called for an entry evicted past capacity, for every entry a
+   * seed change drops, and for every entry still cached when the hook unmounts.
+   */
+  readonly dispose: (entry: TEntry) => void;
+
+  /**
+   * Reports one progressive-build tick's wall time and how many chunks it built, for the caller to
+   * fold into its own perf telemetry.
+   */
+  readonly onBuildTick?: (buildMs: number, builtChunkCount: number) => void;
+
+  readonly userSeed: number | null;
+
+  /**
+   * A chunk-aligned viewport — `buildChunkAlignedViewport`'s output, or `null` before one exists.
+   */
+  readonly viewport: Viewport | null;
+}
+
+/**
+ * Chunk builds allowed per animation frame. Bounding it to the single biggest build a frame can
+ * absorb is what keeps a pan interruptible: a multi-chunk batch on one frame reintroduces the
+ * synchronous stall this hook exists to remove, while still draining a large miss set within a
+ * handful of frames.
+ */
+const BUILDS_PER_TICK = 1;
+
+/**
+ * Streams a chunk-keyed content layer over a chunk-aligned viewport: cached chunks resolve
+ * instantly on every render, a bounded number of misses build per animation frame so a pan never
+ * stalls, and the strip one chunk beyond the pan's leading edge prefetches ahead of the viewport
+ * that will need it. `viewport` is wrapped in `useDeferredValue` here, once, so every layer this
+ * hook drives gets an interruptible transition on a chunk-crossing pan without wrapping it itself.
+ *
+ * Entries resolve fresh against the mutable cache on every render rather than through a memo: the
+ * progressive builder's own re-renders are what deliver a freshly built chunk to the returned
+ * array, and a memo keyed on the viewport would never observe a build that lands without the
+ * viewport changing.
+ */
+export function useChunkStream<TEntry>(
+  options: Readonly<UseChunkStreamOptions<TEntry>>,
+): ReadonlyArray<TEntry> {
+  const deferredViewport = useDeferredValue(options.viewport);
+  const cacheRef = useRef<ReturnType<typeof createChunkCache<TEntry>> | null>(null);
+  const previousRangeRef = useRef<ChunkRange | null>(null);
+  const pendingRef = useRef<ReadonlyArray<string>>([]);
+  const [, forceUpdate] = useReducer((tick: number) => tick + 1, 0);
+
+  cacheRef.current ??= createChunkCache<TEntry>({
+    capacity: options.cacheCapacity,
+    dispose: options.dispose,
+  });
+
+  const cache = cacheRef.current;
+
+  useEffect(
+    () => () => {
+      cache.clear();
+    },
+    [cache],
+  );
+
+  let entries: ReadonlyArray<TEntry> = [];
+  const userSeed = options.userSeed;
+
+  if (userSeed !== null && deferredViewport !== null) {
+    cache.syncSeed(userSeed);
+
+    const resolved = resolveChunkStream(cache, deferredViewport, previousRangeRef.current);
+
+    entries = resolved.entries;
+
+    // read by both the progressive-build effect below and this branch's next resolve — see the
+    // hook's own doc comment for why this is a direct render-body write rather than a memo
+    previousRangeRef.current = resolved.range;
+    pendingRef.current = resolved.misses;
+  } else {
+    pendingRef.current = [];
+  }
+
+  useEffect(() => {
+    if (userSeed === null || pendingRef.current.length === 0) {
+      return () => {};
+    }
+
+    let cancelled = false;
+
+    const advanceBuildQueue = () => {
+      if (cancelled || pendingRef.current.length === 0) {
+        return;
+      }
+
+      const batch = pendingRef.current.slice(0, BUILDS_PER_TICK);
+
+      pendingRef.current = pendingRef.current.slice(BUILDS_PER_TICK);
+
+      const startedAt = performance.now();
+      let builtChunkCount = 0;
+
+      for (const key of batch) {
+        if (cache.has(key)) {
+          continue;
+        }
+
+        const [chunkX, chunkY] = parseChunkKey(key);
+
+        cache.set(key, options.build(userSeed, chunkX, chunkY));
+
+        builtChunkCount += 1;
+      }
+
+      options.onBuildTick?.(performance.now() - startedAt, builtChunkCount);
+
+      // schedules the render that surfaces this tick's builds; the effect above re-derives
+      // `pendingRef.current` from that render's own resolve, so an emptied queue here is never
+      // stale against work a viewport change queued in the meantime
+      forceUpdate();
+
+      if (pendingRef.current.length > 0) {
+        requestAnimationFrame(advanceBuildQueue);
+      }
+    };
+
+    const frame = requestAnimationFrame(advanceBuildQueue);
+
+    return () => {
+      cancelled = true;
+
+      cancelAnimationFrame(frame);
+    };
+
+    // no dependency array: runs after every render and exits immediately once nothing is pending,
+    // so the progressive builder always drains the render body's latest queue and never strands
+    // itself on a stale closure
+  });
+
+  return entries;
+}

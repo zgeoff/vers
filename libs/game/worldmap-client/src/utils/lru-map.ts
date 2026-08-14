@@ -3,14 +3,23 @@
  * capacity removes the map's oldest entry, and a `get` hit re-inserts its entry so recently read
  * keys survive eviction. A stored `undefined` value is indistinguishable from a miss and gets no
  * recency refresh.
+ *
+ * An optional `onEvict` callback fires for every entry a caller loses access to through this map's
+ * own operations — a capacity eviction, an explicit `delete`, or a `clear` — so a map holding
+ * resources that must be released (a GPU texture, a subscription) never leaks one. It never fires
+ * for an overwrite: `set` on an existing key replaces its value without severing the map's hold on
+ * the key, so the caller decides whether the old value needs releasing.
  */
 export class LRUMap<K, V> extends Map<K, V> {
   readonly #capacity: number;
 
-  constructor(capacity: number) {
+  readonly #onEvict: ((value: V, key: K) => void) | undefined;
+
+  constructor(capacity: number, onEvict?: (value: V, key: K) => void) {
     super();
 
     this.#capacity = capacity;
+    this.#onEvict = onEvict;
   }
 
   override get(key: K): undefined | V {
@@ -30,13 +39,37 @@ export class LRUMap<K, V> extends Map<K, V> {
     if (super.has(key)) {
       super.delete(key);
     } else if (this.size >= this.#capacity) {
-      const oldestKey = super.keys().next().value;
+      const oldestEntry = super.entries().next().value;
 
-      if (oldestKey !== undefined) {
+      if (oldestEntry !== undefined) {
+        const [oldestKey, oldestValue] = oldestEntry;
+
         super.delete(oldestKey);
+        this.#onEvict?.(oldestValue, oldestKey);
       }
     }
 
     return super.set(key, value);
+  }
+
+  override delete(key: K): boolean {
+    const value = super.get(key);
+    const deleted = super.delete(key);
+
+    if (deleted && value !== undefined) {
+      this.#onEvict?.(value, key);
+    }
+
+    return deleted;
+  }
+
+  override clear(): void {
+    if (this.#onEvict) {
+      for (const [key, value] of super.entries()) {
+        this.#onEvict(value, key);
+      }
+    }
+
+    super.clear();
   }
 }
