@@ -4,5 +4,12 @@
     "lib": ["ES2024", "DOM"],
     "types": ["node", "bun"]
   },
-  "include": ["playwright.config.ts", "playwright.stack.config.ts", "src/**/*.ts", "specs/**/*.ts"]
+  "include": [
+    "playwright.bench.config.ts",
+    "playwright.config.ts",
+    "playwright.stack.config.ts",
+    "src/**/*.ts",
+    "specs/**/*.ts",
+    "benchmarks/**/*.ts"
+  ]
 }

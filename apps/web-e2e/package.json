@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "e2e": "playwright test",
+    "e2e:bench": "playwright test --config playwright.bench.config.ts",
     "e2e:stack": "playwright test --config playwright.stack.config.ts",
     "stack:seed": "bun src/create-stack-seed.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"

@@ -684,6 +684,7 @@
         "@react-three/fiber": "catalog:",
         "@vers/client-test-utils": "workspace:*",
         "@vers/design-system": "workspace:*",
+        "@vers/game-rendering": "workspace:*",
         "@vers/styled-system": "workspace:*",
         "@vers/worldmap-core": "workspace:*",
         "camera-controls": "catalog:",

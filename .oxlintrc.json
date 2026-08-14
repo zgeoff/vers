@@ -463,7 +463,11 @@
       // playwright resolves fixtures by statically parsing the destructure
       // pattern in a test callback's first parameter — a plain parameter
       // fails at collection, so the framework convention wins here
-      "files": ["**/apps/web-e2e/src/**", "**/apps/web-e2e/specs/**"],
+      "files": [
+        "**/apps/web-e2e/src/**",
+        "**/apps/web-e2e/specs/**",
+        "**/apps/web-e2e/benchmarks/**"
+      ],
       "rules": {
         "zgeoff/no-destructured-params": "off"
       }

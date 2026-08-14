@@ -61,4 +61,11 @@ export const DEMO_ACCOUNTS: ReadonlyArray<DemoAccount> = [
     password: 'password123',
     username: 'e2e-avatar-roster',
   },
+  {
+    avatarName: 'Drag Pan Test Avatar',
+    email: 'e2e-drag-pan@vers.test',
+    name: 'Drag Pan Demo Account',
+    password: 'password123',
+    username: 'e2e-drag-pan',
+  },
 ];
