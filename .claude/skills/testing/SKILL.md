@@ -78,13 +78,12 @@ The rules below decide most situations; where they don't, these do:
   opaque baseline doesn't.
 - A test file declares no function other than a local `setupTest()`, and no module-level fixture or
   baseline shared between tests. Any other helper — a data or baseline builder, an assertion
-  wrapper, a render or mount wrapper — is inlined at the call site, replaced by a registered matcher,
-  or extracted to `test-utils/` with its own test; shared data is written inline at each call site,
-  not hoisted to a module const. A shared mount
-  goes through the project render utils (`render`/`renderHook`), never a per-file `render<Thing>`; a
-  hook whose reactive input changes between renders is driven by a closure over a mutable local
-  re-passed to the project `renderHook` with a no-arg `hook.rerender()`, not a bespoke wrapper that
-  reaches for RTL `initialProps`.
+  wrapper, a render or mount wrapper — is inlined at the call site, replaced by a registered
+  matcher, or extracted to `test-utils/` with its own test; shared data is written inline at each
+  call site, not hoisted to a module const. A shared mount goes through the project render utils
+  (`render`/`renderHook`), never a per-file `render<Thing>`; a hook whose reactive input changes
+  between renders is driven by a closure over a mutable local re-passed to the project `renderHook`
+  with a no-arg `hook.rerender()`, not a bespoke wrapper that reaches for RTL `initialProps`.
 - A factory is called in the test that uses its value, never through a helper that pre-configures
   overrides — a second layer of defaults is a shadow factory the test site can't see.
 - `test-utils/factories/` holds only faker-defaulted plain-data `create-mock-*` factories. Runtime
