@@ -31,7 +31,9 @@ The rules below decide most situations; where they don't, these do:
   private helper, restructuring a loop — breaks no test.
 - Every mock is a divergence from reality: mock only what is genuinely out of reach, and keep it
   high-fidelity — correct codes, realistic shapes, shared types.
-- Test utilities are production code, extracted and tested with the same rigour.
+- Test utilities are production code: anything a test file would grow beyond a local `setupTest()`
+  moves to `test-utils/` with its own test, or it doesn't exist — an untested helper inside a test
+  file can be wrong in a way no test reports.
 - Assertions are the contract: one loose assertion makes the rest of the test theatre.
 
 ## Everywhere
@@ -73,8 +75,14 @@ The rules below decide most situations; where they don't, these do:
   a payload invalid for any reason passes the bare boolean.
 - An input that is neither a domain object nor a DTO — a plain argument, an options bag, a config —
   is written inline at the call site, even when tests repeat the literal; repeated data reads, an
-  opaque baseline doesn't. Test files declare no baseline-builder helpers and no module-level
-  fixtures shared between tests.
+  opaque baseline doesn't.
+- A test file declares no function other than a local `setupTest()`. Any other helper — a data or
+  baseline builder, an assertion wrapper, a render or mount wrapper — is inlined at the call site,
+  replaced by a registered matcher, or extracted to `test-utils/` with its own test. A shared mount
+  goes through the project render utils (`render`/`renderHook`), never a per-file `render<Thing>`; a
+  hook whose reactive input changes between renders is driven by a closure over a mutable local
+  re-passed to the project `renderHook` with a no-arg `hook.rerender()`, not a bespoke wrapper that
+  reaches for RTL `initialProps`.
 - A factory is called in the test that uses its value, never through a helper that pre-configures
   overrides — a second layer of defaults is a shadow factory the test site can't see.
 - `test-utils/factories/` holds only faker-defaulted plain-data `create-mock-*` factories. Runtime
