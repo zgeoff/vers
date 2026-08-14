@@ -1,4 +1,5 @@
 import { implement } from '@orpc/server';
+import { handleCacheNodeSeedsMessage } from './handle-cache-node-seeds-message';
 import { handleDisconnectMessage } from './handle-disconnect-message';
 import { handleInitializeMessage } from './handle-initialize-message';
 import { handleReportOnlineMessage } from './handle-report-online-message';
@@ -21,6 +22,13 @@ export function createWorkerRouter(context: WorkerContext, ready: Readonly<Promi
   const os = implement(workerContract).$context<WorkerCallContext>();
 
   return {
+    cacheNodeSeeds: os.cacheNodeSeeds.handler(async (opts) => {
+      await ready;
+      await handleCacheNodeSeedsMessage(opts.input);
+
+      return ACK;
+    }),
+
     disconnect: os.disconnect.handler(async (opts) => {
       await ready;
 

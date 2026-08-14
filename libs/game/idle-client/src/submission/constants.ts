@@ -23,7 +23,7 @@ export const RETRY_BACKOFF_CAP_MS = 300_000;
  */
 export const FLUSH_STALL_THRESHOLD = 3;
 export const CHECKPOINT_QUEUE_DB_NAME = 'vers-idle-checkpoint-queue';
-export const CHECKPOINT_QUEUE_DB_VERSION = 3;
+export const CHECKPOINT_QUEUE_DB_VERSION = 4;
 export const CHECKPOINT_QUEUE_STORE_NAME = 'pending-checkpoints';
 
 /**
@@ -32,6 +32,14 @@ export const CHECKPOINT_QUEUE_STORE_NAME = 'pending-checkpoints';
  * parse.
  */
 export const CONTENT_DOCUMENT_STORE_NAME = 'content-documents';
+
+/**
+ * The object store caching a revealed world-map node's genesis seed by its `[avatarID, nodeID]`
+ * pair, so the worker holds a seed on-device for every node the player can already see before an
+ * offline-open start needs one. The compound key scopes each seed to its avatar — a seed is per
+ * avatar, so two avatars sharing a coordinate keep separate rows.
+ */
+export const NODE_SEEDS_STORE_NAME = 'node-seeds';
 
 /**
  * The `preferences` object store's one record key. A worker drives one avatar's simulation at a

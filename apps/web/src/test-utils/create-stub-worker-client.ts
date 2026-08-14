@@ -28,6 +28,7 @@ export function createStubWorkerClient(
   options: Readonly<StubWorkerClientOptions> = {},
 ): WorkerClient {
   const client: WorkerClient = {
+    cacheNodeSeeds: mock(() => Promise.resolve({ ok: true as const })),
     disconnect: mock(() => Promise.resolve({ ok: true as const })),
     initialize: mock(() => Promise.resolve(DEFAULT_INITIALIZE_RESULT)),
     reportOnline: mock(() => Promise.resolve({ ok: true as const })),

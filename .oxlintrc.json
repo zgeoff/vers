@@ -215,6 +215,8 @@
           { "from": "package", "name": "ActorRef", "package": "xstate" },
           // an actor clock handle: its setTimeout/clearTimeout methods are behaviour, not data
           { "from": "package", "name": "Clock", "package": "xstate" },
+          // a live IndexedDB handle: createObjectStore/transaction mutate it, no readonly form
+          { "from": "package", "name": "IDBPDatabase", "package": "idb" },
           {
             "from": "package",
             "name": ["CryptoKey", "Request", "Response", "AbortSignal"],

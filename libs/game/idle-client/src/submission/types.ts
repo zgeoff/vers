@@ -52,10 +52,38 @@ export interface PendingStartIntent {
   readonly scopeType: string;
 }
 
+/**
+ * A world-map node's genesis seed as the worker's durable cache holds it, keyed by the
+ * `[avatarID, nodeID]` pair. A node's genesis seed is per avatar — two avatars sharing a coordinate
+ * root distinct chains against distinct seeds — so the cache scopes every row to its avatar rather
+ * than letting one avatar's reveal overwrite another's. Revealing an already-cached node writes the
+ * same seed back in place: the server mint it comes from is idempotent per avatar and node, so the
+ * cache write is too.
+ */
+export interface NodeSeed {
+  readonly avatarID: string;
+  readonly genesisSeed: string;
+  readonly nodeID: string;
+}
+
+/**
+ * A revealed node's genesis seed as it arrives over the worker message and off the reveal round
+ * trip, before the avatar it belongs to is threaded onto it. The relayed batch carries one
+ * avatarID for every seed in it, so a seed on the wire holds only its node id and seed.
+ */
+export interface RevealedNodeSeed {
+  readonly genesisSeed: string;
+  readonly nodeID: string;
+}
+
 export interface CheckpointQueueSchema extends DBSchema {
   'content-documents': {
     key: string;
     value: ContentDocument;
+  };
+  'node-seeds': {
+    key: [string, string];
+    value: NodeSeed;
   };
   'pending-checkpoints': {
     key: [string, number];
