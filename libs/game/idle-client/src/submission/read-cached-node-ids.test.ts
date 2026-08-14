@@ -11,8 +11,8 @@ test('it returns an empty set with nothing cached for the avatar', async () => {
 
 test('it returns every cached node id for the avatar', async () => {
   const avatarID = 'avatar-cached';
-  const first = createMockNodeSeed();
-  const second = createMockNodeSeed();
+  const first = createMockNodeSeed({ nodeID: '1_0' });
+  const second = createMockNodeSeed({ nodeID: '2_0' });
 
   await writeNodeSeeds(avatarID, [first, second]);
 

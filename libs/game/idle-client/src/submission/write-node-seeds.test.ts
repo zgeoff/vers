@@ -6,8 +6,8 @@ import { writeNodeSeeds } from './write-node-seeds';
 
 test("it persists a batch of one avatar's seeds retrievable by node id", async () => {
   const avatarID = 'avatar-write-batch';
-  const first = createMockNodeSeed();
-  const second = createMockNodeSeed();
+  const first = createMockNodeSeed({ nodeID: '1_0' });
+  const second = createMockNodeSeed({ nodeID: '2_0' });
 
   await writeNodeSeeds(avatarID, [first, second]);
 

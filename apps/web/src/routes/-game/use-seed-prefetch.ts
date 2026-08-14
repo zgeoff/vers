@@ -33,28 +33,39 @@ export function useSeedPrefetch(revealedNodeIDs: ReadonlySet<string>): void {
   const avatarID = avatarQuery.data?.id;
   const client = useIdleWorkerHandle().client;
   const sessionRef = useRef<SessionRevealed>({ avatarID: undefined, nodeIDs: new Set() });
+  const controllerRef = useRef<AbortController>(new AbortController());
 
+  // The abort lifecycle is keyed on the avatar and worker client alone, so an in-flight reveal
+  // batch is cancelled only by an avatar switch, the client changing, or unmount — never by the
+  // frontier growing, which must let a running batch finish caching its seeds. This effect is
+  // declared before the reveal effect so its fresh controller is in place when the reveal fires.
   useEffect(() => {
     const controller = new AbortController();
 
-    if (avatarID !== undefined && client !== undefined) {
-      if (sessionRef.current.avatarID !== avatarID) {
-        sessionRef.current = { avatarID, nodeIDs: new Set() };
-      }
-
-      const session = sessionRef.current;
-      const delta = [...revealedNodeIDs].filter((nodeID) => !session.nodeIDs.has(nodeID));
-
-      if (delta.length > 0) {
-        runIgnoringRejection(
-          runSeedReveal(client, avatarID, delta, session.nodeIDs, controller.signal),
-        );
-      }
-    }
+    controllerRef.current = controller;
 
     return () => {
       controller.abort();
     };
+  }, [avatarID, client]);
+
+  useEffect(() => {
+    if (avatarID === undefined || client === undefined) {
+      return;
+    }
+
+    if (sessionRef.current.avatarID !== avatarID) {
+      sessionRef.current = { avatarID, nodeIDs: new Set() };
+    }
+
+    const session = sessionRef.current;
+    const delta = [...revealedNodeIDs].filter((nodeID) => !session.nodeIDs.has(nodeID));
+
+    if (delta.length > 0) {
+      runIgnoringRejection(
+        runSeedReveal(client, avatarID, delta, session.nodeIDs, controllerRef.current.signal),
+      );
+    }
   }, [avatarID, client, revealedNodeIDs]);
 }
 
@@ -62,10 +73,10 @@ export function useSeedPrefetch(revealedNodeIDs: ReadonlySet<string>): void {
  * Reveals a node-id delta in batches capped at the server's per-request limit, relaying each
  * batch's minted seeds to the worker scoped to the active avatar. The whole delta is marked in the
  * session set before the first reveal awaits, so a frontier change mid-flight never re-issues a
- * request for an id already being fetched. A batch that fails — a genuine fault or an abort as the
- * effect re-runs — removes that batch's ids and every still-unfetched id after it from the session
- * set, so nothing stays marked as done that this device never cached and the next frontier change
- * retries them.
+ * request for an id already being fetched. A batch that fails — a genuine fault or an abort on an
+ * avatar switch or unmount — removes that batch's ids and every still-unfetched id after it from
+ * the session set, so nothing stays marked as done that this device never cached and the next
+ * frontier change retries them.
  */
 async function runSeedReveal(
   client: WorkerClient,
