@@ -3,6 +3,7 @@ import { createContentVersion } from '@vers/content-registry';
 import type { ActivityContract } from '@vers/contract-activity';
 import { createMockContentDocument } from '@vers/contract-activity/test-utils';
 import {
+  createActivityChainRow,
   createAnonymousViewer,
   createAvatarRow,
   createTestDB,
@@ -34,6 +35,8 @@ test('it returns the active activity for an avatar owned by the acting user', as
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
 
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
   const started = await client.startActivity({
@@ -53,6 +56,8 @@ test('it returns null when the avatar has no active activity', async () => {
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
 
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
   const current = await client.getCurrentActivity({ avatarID: avatar.id });
@@ -65,6 +70,9 @@ test('it returns null for a foreign avatar', async () => {
 
   const owner = await createTestUser(ctx.db);
   const avatar = await createAvatarRow(ctx.db, { userId: owner.user.id });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });

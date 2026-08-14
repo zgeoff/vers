@@ -3,6 +3,7 @@ import { createContentVersion } from '@vers/content-registry';
 import type { ActivityContract } from '@vers/contract-activity';
 import { createMockContentDocument } from '@vers/contract-activity/test-utils';
 import {
+  createActivityChainRow,
   createAvatarRow,
   createServiceToken,
   createTestDB,
@@ -39,6 +40,8 @@ test('it stamps the acting session as the writer', async () => {
   });
 
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
@@ -83,6 +86,8 @@ test('it reports NOT_FOUND for a stopped activity', async () => {
 
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
 
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
   const started = await client.startActivity({
@@ -108,6 +113,8 @@ test("it reports NOT_FOUND for another user's activity", async () => {
   });
 
   const avatar = await createAvatarRow(ctx.db, { userId: owner.user.id });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
 
   const ownerClient = buildRPCTestClient<ActivityContract>(ctx.app, { token: owner.token });
 
@@ -135,6 +142,8 @@ test('it rejects a session-less caller with UNAUTHORIZED', async () => {
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 

@@ -6,6 +6,7 @@ import { createMockContentDocument } from '@vers/contract-activity/test-utils';
 import { buildMockScopeSecret, mockKeysService } from '@vers/mock-services/keys';
 import {
   createActiveAvatarRow,
+  createActivityChainRow,
   createAnonymousViewer,
   createAvatarRow,
   createServiceToken,
@@ -54,6 +55,8 @@ test('it starts an activity for an avatar owned by the acting user', async () =>
     xp: 42,
   });
 
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
   const activity = await client.startActivity({
@@ -101,6 +104,8 @@ test("it stamps the row's encounterNode from the static world map's node for the
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
 
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '1_0' });
+
   await ctx.db
     .insertInto('avatarGrants')
     .values({ avatarId: avatar.id, key: '1_0', kind: 'first_clear' })
@@ -131,6 +136,8 @@ test('it derives a startHash that folds in the resolved encounter node', async (
   const current = await createSimVersionRow(ctx.db);
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '1_0' });
 
   await ctx.db
     .insertInto('avatarGrants')
@@ -164,6 +171,8 @@ test('it rejects starting an activity on an unregistered scope id with NODE_UNKN
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
 
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: 'not_a_real_node' });
+
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
   expect(
@@ -182,6 +191,8 @@ test('it starts an activity at the origin for an avatar with no grants at all', 
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
@@ -202,6 +213,8 @@ test('it rejects starting at a node outside the origin, completed set, and their
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
 
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '50_50' });
+
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
   expect(
@@ -216,6 +229,8 @@ test('it starts an activity on a node the avatar already holds a first-clear gra
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '50_50' });
 
   await ctx.db
     .insertInto('avatarGrants')
@@ -253,6 +268,8 @@ test('it starts an activity on a neighbour of a node the avatar holds a first-cl
   const [aID = '', bID = ''] = edge.id.split('|');
   const neighbourID = aID === grantedID ? bID : aID;
 
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: neighbourID });
+
   await ctx.db
     .insertInto('avatarGrants')
     .values({ avatarId: avatar.id, key: grantedID, kind: 'first_clear' })
@@ -269,13 +286,15 @@ test('it starts an activity on a neighbour of a node the avatar holds a first-cl
   expect(activity.scopeID).toBe(neighbourID);
 });
 
-test('it mints a chain row on a node visited for the first time, with the activity seeded from its genesis', async () => {
+test('it roots the first activity on a revealed node at the chain row genesis', async () => {
   await using ctx = await setupTest();
 
   await createSimVersionRow(ctx.db);
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
@@ -299,13 +318,31 @@ test('it mints a chain row on a node visited for the first time, with the activi
   expect(chain.appendedChainIndex).toBe(0);
 });
 
-test('it mints independent genesis seeds for different nodes visited by the same avatar', async () => {
+test('it rejects starting on a node with no revealed chain with NODE_NOT_REVEALED', async () => {
   await using ctx = await setupTest();
 
   await createSimVersionRow(ctx.db);
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  expect(
+    client.startActivity({ avatarID: avatar.id, scopeID: '0_0', scopeType: 'world_map_node' }),
+  ).rejects.toMatchObject({ code: 'NODE_NOT_REVEALED' });
+});
+
+test('it roots activities at independent genesis seeds for different revealed nodes', async () => {
+  await using ctx = await setupTest();
+
+  await createSimVersionRow(ctx.db);
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '1_0' });
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
@@ -345,6 +382,8 @@ test('it reads the existing chain anchor for a second activity on an already-cha
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
 
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
   const first = await client.startActivity({
@@ -378,6 +417,9 @@ test('it rejects a second start with CONFLICT carrying the already-active activi
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
 
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '1_0' });
+
   await ctx.db
     .insertInto('avatarGrants')
     .values({ avatarId: avatar.id, key: '1_0', kind: 'first_clear' })
@@ -404,6 +446,9 @@ test('it rejects starting an activity on a foreign avatar with NOT_FOUND', async
 
   const owner = await createTestUser(ctx.db);
   const avatar = await createAvatarRow(ctx.db, { userId: owner.user.id });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
@@ -438,6 +483,8 @@ test('it blocks a new start while the chain is quarantined', async () => {
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
 
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
   const started = await client.startActivity({
@@ -470,6 +517,8 @@ test('it stamps the acting session as the new activity writer', async () => {
 
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
 
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
   const started = await client.startActivity({
@@ -496,6 +545,8 @@ test('it stamps a new activity with the registry current version when the client
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
 
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
   const activity = await client.startActivity({
@@ -512,6 +563,8 @@ test('it rejects a start with SIM_VERSION_UNKNOWN carrying a null current versio
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
@@ -534,6 +587,8 @@ test('it echoes the client-stamped sim version when its row is active and retain
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
 
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
   const activity = await client.startActivity({
@@ -552,6 +607,8 @@ test('it rejects an unrecognized stamped version with SIM_VERSION_UNKNOWN carryi
   const current = await createSimVersionRow(ctx.db);
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
@@ -580,6 +637,8 @@ test('it rejects a pruned stamped version with SIM_VERSION_EXPIRED', async () =>
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
@@ -610,6 +669,8 @@ test('it rejects an active stamped version past its retention deadline with SIM_
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
 
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
   expect(
@@ -637,6 +698,8 @@ test('it rejects a client-requested version whose engine predates the current co
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
 
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
   expect(
@@ -659,6 +722,8 @@ test('it rejects a hash-less start with SIM_VERSION_EXPIRED when the registry-cu
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
 
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
   expect(
@@ -675,6 +740,8 @@ test('it stamps a new activity when the resolved engine supports the current con
   const current = await createSimVersionRow(ctx.db, { maxContentVersion: '2' });
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
@@ -694,6 +761,8 @@ test('it roots a new activity at the anchor a concurrent forward exit commits', 
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
@@ -765,6 +834,8 @@ test('it stamps the start key on the minted row', async () => {
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
 
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
   const started = await client.startActivity({
@@ -784,6 +855,8 @@ test('it answers a duplicate start carrying the same key with the row already mi
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
@@ -812,6 +885,8 @@ test('it conflicts a keyed start when the active row carries a different key', a
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
 
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
   const first = await client.startActivity({
@@ -839,6 +914,8 @@ test('it conflicts an unkeyed duplicate start as before', async () => {
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
 
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
   const first = await client.startActivity({
@@ -859,6 +936,8 @@ test('it conflicts a keyed duplicate once the row has appended progress', async 
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
@@ -900,6 +979,8 @@ test('it conflicts a keyed duplicate arriving from a different session', async (
 
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
 
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
   const writerClient = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
   const first = await writerClient.startActivity({
@@ -938,6 +1019,9 @@ test('it conflicts a keyed duplicate naming a different scope', async () => {
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
 
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '1_0' });
+
   await ctx.db
     .insertInto('avatarGrants')
     .values({ avatarId: avatar.id, key: '1_0', kind: 'first_clear' })
@@ -969,6 +1053,8 @@ test("it includes a stopped-but-unverified terminal activity's xp in a new build
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { level: 1, userId: viewer.user.id, xp: 0 });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
@@ -1002,6 +1088,8 @@ test("it excludes a rejected activity's xp from a new build snapshot", async () 
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { level: 1, userId: viewer.user.id, xp: 0 });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
@@ -1042,6 +1130,8 @@ test("it excludes a parked activity's xp from a new build snapshot", async () =>
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { level: 1, userId: viewer.user.id, xp: 0 });
 
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
   const first = await client.startActivity({
@@ -1080,6 +1170,8 @@ test("it includes a stopped run's unsettled progress xp in a new build snapshot"
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { level: 1, userId: viewer.user.id, xp: 0 });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
@@ -1121,6 +1213,8 @@ test('it stamps the build snapshot from settled xp/level alone when the avatar c
     xp: 500,
   });
 
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
   const activity = await client.startActivity({
@@ -1139,6 +1233,9 @@ test('it records the unverified run a new build snapshot borrowed its xp from', 
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { level: 1, userId: viewer.user.id, xp: 0 });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '1_0' });
 
   await ctx.db
     .insertInto('avatarGrants')
@@ -1183,6 +1280,9 @@ test('it records no borrowed run for an unsettled run that moved the total by no
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { level: 1, userId: viewer.user.id, xp: 0 });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '1_0' });
 
   await ctx.db
     .insertInto('avatarGrants')
@@ -1229,6 +1329,9 @@ test('it records a borrowed run whose death penalty lowered the total', async ()
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { level: 2, userId: viewer.user.id, xp: 200 });
 
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '1_0' });
+
   await ctx.db
     .insertInto('avatarGrants')
     .values({ avatarId: avatar.id, key: '1_0', kind: 'first_clear' })
@@ -1274,6 +1377,8 @@ test('it records no borrowed run when the avatar carries no pending work', async
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { level: 3, userId: viewer.user.id, xp: 500 });
 
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
   const activity = await client.startActivity({
@@ -1298,6 +1403,9 @@ test('it records no borrowed run for a parked activity left out of the build sna
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { level: 1, userId: viewer.user.id, xp: 0 });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '1_0' });
 
   await ctx.db
     .insertInto('avatarGrants')
@@ -1349,6 +1457,7 @@ test("it starts an activity when the starting avatar is the account's active one
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
 
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
   await createActiveAvatarRow(ctx.db, { avatarId: avatar.id, userId: viewer.user.id });
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
@@ -1371,6 +1480,7 @@ test('it rejects a start from an avatar that is not the active one, naming the a
   const activeAvatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
   const otherAvatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
 
+  await createActivityChainRow(ctx.db, { avatarId: otherAvatar.id, scopeId: '0_0' });
   await createActiveAvatarRow(ctx.db, { avatarId: activeAvatar.id, userId: viewer.user.id });
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
@@ -1394,6 +1504,8 @@ test('it makes the starting avatar active when the account holds no selection', 
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
@@ -1419,7 +1531,12 @@ test('it refuses to adopt while another avatar holds a live run', async () => {
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const liveAvatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  await createActivityChainRow(ctx.db, { avatarId: liveAvatar.id, scopeId: '0_0' });
+
   const otherAvatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  await createActivityChainRow(ctx.db, { avatarId: otherAvatar.id, scopeId: '1_0' });
 
   await ctx.db
     .insertInto('avatarGrants')
@@ -1478,6 +1595,8 @@ test('it stamps secretRef and secretVersion on the minted row', async () => {
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
 
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
   const activity = await client.startActivity({
@@ -1495,6 +1614,8 @@ test('it stamps a poolID matching the sealed derivation truth for the current co
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '1_0' });
 
   await ctx.db
     .insertInto('avatarGrants')
@@ -1558,6 +1679,8 @@ test("it seals the stamped poolID under the avatar's own seed, not a shared plac
     seed: 700,
     userId: viewer.user.id,
   });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '1_0' });
 
   await ctx.db
     .insertInto('avatarGrants')
@@ -1650,6 +1773,8 @@ test('it fails a start with a 500 when the keys dispatch fails', async () => {
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
