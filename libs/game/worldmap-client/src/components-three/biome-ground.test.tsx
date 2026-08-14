@@ -1,14 +1,20 @@
-import { expect, test } from 'bun:test';
+import { expect, onTestFinished, test } from 'bun:test';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
-import type { Viewport } from '@vers/worldmap-core';
 import { CHUNK_SIZE } from '@vers/worldmap-core';
 import { DataTexture } from 'three';
 import type { Mesh, Object3D } from 'three';
 import invariant from 'tiny-invariant';
+import { scatterBuildStats } from '../scatter-build-stats';
 import { setViewport } from '../state/set-viewport';
 import { setWorldRegion } from '../state/set-world-region';
-import { buildChunkAlignedViewport } from '../utils/build-chunk-aligned-viewport';
 import { BiomeGround } from './biome-ground';
+
+/**
+ * A single chunk's cell box — the smallest viewport `useFogViewport`'s chunk-alignment ever
+ * produces, and the fastest a mounted `BiomeGround` reaches its first rendered mesh: one miss, one
+ * progressive-build tick.
+ */
+const ONE_CHUNK_VIEWPORT = { maxCX: CHUNK_SIZE - 1, maxCY: CHUNK_SIZE - 1, minCX: 0, minCY: 0 };
 
 test('it renders nothing until a seed and a viewport exist', async () => {
   const renderer = await ReactThreeTestRenderer.create(<BiomeGround />);
@@ -18,102 +24,73 @@ test('it renders nothing until a seed and a viewport exist', async () => {
   await renderer.unmount();
 });
 
-test('it builds a texture sized to the inflated viewport', async () => {
+test('it renders a chunk mesh once its tile finishes its progressive build', async () => {
+  onTestFinished(() => {
+    scatterBuildStats.buildMs = 0;
+  });
+
   setWorldRegion('avatar-a', 42, { edges: {}, nodes: {} }, null, new Set(), []);
-  setViewport({ maxCX: 2, maxCY: 2, minCX: -2, minCY: -2 });
+  setViewport(ONE_CHUNK_VIEWPORT);
 
   const renderer = await ReactThreeTestRenderer.create(<BiomeGround />);
 
-  expect(renderer.scene.children).toHaveLength(1);
+  await ReactThreeTestRenderer.waitFor(() => renderer.scene.children.length === 1);
 
   const plane = renderer.scene.children[0]!.instance;
 
-  invariant(isMesh(plane), 'the sole child is the biome ground plane');
+  invariant(isMesh(plane), 'the rendered child is the chunk tile mesh');
 
-  // one parallelogram quad — two triangles over four vertices — carries the whole field
+  // one parallelogram quad — two triangles over four vertices — carries the chunk's tile
   expect(plane.geometry.getAttribute('position').count).toBe(4);
   expect(plane.geometry.index?.count).toBe(6);
 
   const texture = getGroundTexture(plane);
-  const aligned = buildChunkAlignedViewport({ maxCX: 2, maxCY: 2, minCX: -2, minCY: -2 });
+  const expectedTexels = CHUNK_SIZE * 4;
 
-  expect(texture.image.width).toBe(buildExpectedCols(aligned));
-  expect(texture.image.height).toBe(buildExpectedRows(aligned));
-
-  await renderer.unmount();
-});
-
-test('it rewrites the texture bytes in place on a same-size pan', async () => {
-  setWorldRegion('avatar-a', 42, { edges: {}, nodes: {} }, null, new Set(), []);
-  setViewport({ maxCX: 2, maxCY: 2, minCX: -2, minCY: -2 });
-
-  const renderer = await ReactThreeTestRenderer.create(<BiomeGround />);
-
-  const plane = renderer.scene.children[0]!.instance;
-
-  invariant(isMesh(plane), 'the sole child is the biome ground plane');
-
-  const previousTexture = getGroundTexture(plane);
-  const previousData = previousTexture.image.data;
-
-  invariant(previousData, 'the ground texture carries a byte buffer');
-
-  const previousBytes = Uint8Array.from(previousData);
-
-  // translate by whole chunks so the aligned viewport moves without changing its span, keeping the
-  // byte buffers the same length for a content comparison
-  const shift = CHUNK_SIZE * 4;
-
-  await ReactThreeTestRenderer.act(() => {
-    setViewport({ maxCX: 2 + shift, maxCY: 2 + shift, minCX: -2 + shift, minCY: -2 + shift });
-
-    return Promise.resolve();
-  });
-
-  const nextTexture = getGroundTexture(plane);
-  const nextData = nextTexture.image.data;
-
-  invariant(nextData, 'the panned ground texture carries a byte buffer');
-
-  expect(nextTexture).toBe(previousTexture);
-
-  const nextBytes = Uint8Array.from(nextData);
-
-  expect(nextBytes).toHaveLength(previousBytes.length);
-  expect(nextBytes).not.toEqual(previousBytes);
+  expect(texture.image.width).toBe(expectedTexels);
+  expect(texture.image.height).toBe(expectedTexels);
 
   await renderer.unmount();
 });
 
-test('it keeps one mesh and one material across pans, rebuilding the texture to the new size', async () => {
+test('it drops a chunk mesh once a pan carries it out of view and streams in the entered chunk', async () => {
+  onTestFinished(() => {
+    scatterBuildStats.buildMs = 0;
+  });
+
   setWorldRegion('avatar-a', 42, { edges: {}, nodes: {} }, null, new Set(), []);
-  setViewport({ maxCX: 2, maxCY: 2, minCX: -2, minCY: -2 });
+  setViewport(ONE_CHUNK_VIEWPORT);
 
   const renderer = await ReactThreeTestRenderer.create(<BiomeGround />);
 
-  const plane = renderer.scene.children[0]!.instance;
+  await ReactThreeTestRenderer.waitFor(() => renderer.scene.children.length === 1);
 
-  invariant(isMesh(plane), 'the sole child is the biome ground plane');
+  const firstPlane = renderer.scene.children[0]!.instance;
 
-  const material = plane.material;
-  const previousTexture = getGroundTexture(plane);
-  const nextViewport: Viewport = { maxCX: 20, maxCY: 20, minCX: -20, minCY: -20 };
+  invariant(isMesh(firstPlane), 'the rendered child is the first chunk tile mesh');
+
+  // several chunks away — outside the predictive-prefetch strip — so the departed chunk is never
+  // still cached under the new viewport
+  const farChunkOrigin = CHUNK_SIZE * 10;
 
   await ReactThreeTestRenderer.act(() => {
-    setViewport(nextViewport);
+    setViewport({
+      maxCX: farChunkOrigin + CHUNK_SIZE - 1,
+      maxCY: farChunkOrigin + CHUNK_SIZE - 1,
+      minCX: farChunkOrigin,
+      minCY: farChunkOrigin,
+    });
 
     return Promise.resolve();
   });
 
-  expect(renderer.scene.children[0]!.instance).toBe(plane);
-  expect(plane.material).toBe(material);
+  await ReactThreeTestRenderer.waitFor(() => renderer.scene.children.length === 1);
 
-  const nextTexture = getGroundTexture(plane);
-  const nextAligned = buildChunkAlignedViewport(nextViewport);
+  const secondPlane = renderer.scene.children[0]!.instance;
 
-  expect(nextTexture.image.width).toBe(buildExpectedCols(nextAligned));
-  expect(nextTexture.image.height).toBe(buildExpectedRows(nextAligned));
-  expect(nextTexture).not.toBe(previousTexture);
+  invariant(isMesh(secondPlane), 'the rendered child is the entered chunk tile mesh');
+
+  expect(secondPlane).not.toBe(firstPlane);
 
   await renderer.unmount();
 });
@@ -143,21 +120,4 @@ function getGroundTexture(mesh: Mesh): DataTexture {
   invariant(value instanceof DataTexture, 'the ground plane material carries a live DataTexture');
 
   return value;
-}
-
-/**
- * Mirrors BiomeGround's own private `BIOME_TEXELS_PER_CELL` and `BIOME_VIEWPORT_MARGIN_CELLS`. The
- * dimension assertions above apply this inflation on top of `buildChunkAlignedViewport` — the same
- * chunk-rounding `useFogViewport` applies before BiomeGround ever sees a viewport — so the expected
- * texel counts match what the component actually builds from, not the raw store viewport.
- */
-const TEXELS_PER_CELL = 4;
-const VIEWPORT_MARGIN_CELLS = 2;
-
-function buildExpectedCols(viewport: Readonly<Viewport>): number {
-  return (viewport.maxCX - viewport.minCX + 1 + 2 * VIEWPORT_MARGIN_CELLS) * TEXELS_PER_CELL;
-}
-
-function buildExpectedRows(viewport: Readonly<Viewport>): number {
-  return (viewport.maxCY - viewport.minCY + 1 + 2 * VIEWPORT_MARGIN_CELLS) * TEXELS_PER_CELL;
 }
