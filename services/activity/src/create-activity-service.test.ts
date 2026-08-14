@@ -2,7 +2,12 @@ import { expect, test } from 'bun:test';
 import { createContentVersion, findContentDocument } from '@vers/content-registry';
 import type { ActivityContract } from '@vers/contract-activity';
 import { createMockContentDocument } from '@vers/contract-activity/test-utils';
-import { createAvatarRow, createTestDB, createViewer } from '@vers/service-test-utils/bun';
+import {
+  createActivityChainRow,
+  createAvatarRow,
+  createTestDB,
+  createViewer,
+} from '@vers/service-test-utils/bun';
 import { createSimVersionRow } from '@vers/sim-registry/test-utils';
 import { buildRPCTestClient } from '@vers/test-utils';
 import { createActivityService } from './create-activity-service';
@@ -16,6 +21,8 @@ test('it wires an injected db into the router instead of building one from env',
   const service = await createActivityService({ db: db.db });
   const viewer = await createViewer({ audience: 'service-activity', db: db.db });
   const avatar = await createAvatarRow(db.db, { userId: viewer.user.id });
+
+  await createActivityChainRow(db.db, { avatarId: avatar.id, scopeId: '0_0' });
 
   const client = buildRPCTestClient<ActivityContract>(service.app, { token: viewer.token });
 
@@ -46,6 +53,8 @@ test('it defaults the content and key versions when none are injected', async ()
   const viewer = await createViewer({ audience: 'service-activity', db: db.db });
   const avatar = await createAvatarRow(db.db, { userId: viewer.user.id });
 
+  await createActivityChainRow(db.db, { avatarId: avatar.id, scopeId: '0_0' });
+
   const client = buildRPCTestClient<ActivityContract>(service.app, { token: viewer.token });
 
   const activity = await client.startActivity({
@@ -67,6 +76,8 @@ test('it stamps a content version whose document the registry can load', async (
   const viewer = await createViewer({ audience: 'service-activity', db: db.db });
   const avatar = await createAvatarRow(db.db, { userId: viewer.user.id });
 
+  await createActivityChainRow(db.db, { avatarId: avatar.id, scopeId: '0_0' });
+
   const client = buildRPCTestClient<ActivityContract>(service.app, { token: viewer.token });
 
   const activity = await client.startActivity({
@@ -87,6 +98,8 @@ test('it uses an injected key version when given', async () => {
   const service = await createActivityService({ db: db.db, keyVersion: 7 });
   const viewer = await createViewer({ audience: 'service-activity', db: db.db });
   const avatar = await createAvatarRow(db.db, { userId: viewer.user.id });
+
+  await createActivityChainRow(db.db, { avatarId: avatar.id, scopeId: '0_0' });
 
   const client = buildRPCTestClient<ActivityContract>(service.app, { token: viewer.token });
 

@@ -140,32 +140,33 @@ in stack state are encrypted by the stack passphrase.
 
 ## Instrument registry
 
-| Instrument                                      | Type            | Unit             | Attributes          | Meaning                                                                                                           |
-| ----------------------------------------------- | --------------- | ---------------- | ------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `vers.replay.verification_lag`                  | histogram       | `s`              | —                   | seconds between an append landing and a drain cycle confirming it                                                 |
-| `vers.replay.wake`                              | counter         | `{wake}`         | —                   | wake requests received                                                                                            |
-| `vers.replay.drain_duration`                    | histogram       | `s`              | —                   | wall-clock duration of one drain cycle                                                                            |
-| `vers.replay.backlog_claimed`                   | histogram       | `{chain}`        | —                   | chains claimed and adjudicated in one drain cycle                                                                 |
-| `vers.verification.rejections`                  | counter         | `{rejection}`    | `reason`            | adjudications that rejected or parked an activity, by reason                                                      |
-| `vers.replay.iteration_failures`                | counter         | `{iteration}`    | `outcome`           | worker iterations that failed to replay a claimed chain, by outcome                                               |
-| `vers.replay.settled_xp`                        | up-down counter | `{xp}`           | `source`            | xp verified segments settled to avatars, by how the amount was derived                                            |
-| `vers.replay.clamped_settlements`               | counter         | `{settlement}`   | —                   | settlements whose debit was floored at zero, paying less than recorded                                            |
-| `vers.keys.derive_rejections`                   | counter         | `{rejection}`    | `reason`            | derivation calls that refused to derive a roll key or scope secret, by reason                                     |
-| `vers.activity.terminal_transitions`            | counter         | `{activity}`     | `status`            | activities that claimed a terminal transition, by status                                                          |
-| `vers.activity.writer_takeovers`                | counter         | `{takeover}`     | —                   | successful writer-session claims on active activities                                                             |
-| `vers.activity.replay_poke_failed`              | counter         | `{poke}`         | —                   | replay wake pokes that never delivered after exhausting retries                                                   |
-| `vers.activity.avatar_not_active_rejections`    | counter         | `{rejection}`    | —                   | startActivity calls rejected because the starting avatar is not active                                            |
-| `vers.activity.node_unreachable_rejections`     | counter         | `{rejection}`    | —                   | startActivity calls rejected because the scope node is outside the avatar's selectable set                        |
-| `vers.activity.content_incompatible_rejections` | counter         | `{rejection}`    | `path`              | startActivity calls rejected because the resolved engine's max content version falls behind the requested content |
-| `vers.activity.advance_continuations`           | counter         | `{continuation}` | `outcome`           | advanceActivity continuations processed, by mint outcome                                                          |
-| `vers.activity.advance_bailouts`                | counter         | `{bailout}`      | `reason`            | advanceActivity requests that bailed before their continuations' end, by reason                                   |
-| `vers.activity.reveal_cells`                    | histogram       | `{cell}`         | —                   | revealed cells returned per getRevealedNodes query                                                                |
-| `vers.activity.reveal_sources`                  | histogram       | `{grant}`        | —                   | first-clear grant rows scanned per getRevealedNodes query                                                         |
-| `vers.email.delivery_failures`                  | counter         | `{email}`        | —                   | emails that failed to deliver                                                                                     |
-| `vers.session.failed_attempts`                  | counter         | `{attempt}`      | —                   | failed step-up verification attempts                                                                              |
-| `vers.analytics.delivery_failures`              | counter         | `{event}`        | `reason`            | product events that never landed in the Tinybird data source, by reason                                           |
-| `vers.web.service_call_retries`                 | counter         | `{retry}`        | `service`           | retry attempts against an outbound service call that failed its previous attempt                                  |
-| `vers.web.service_call_failures`                | counter         | `{call}`         | `service`, `reason` | outbound service calls that never delivered, by service and reason                                                |
+| Instrument                                      | Type            | Unit             | Attributes          | Meaning                                                                                                                                         |
+| ----------------------------------------------- | --------------- | ---------------- | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `vers.replay.verification_lag`                  | histogram       | `s`              | —                   | seconds between an append landing and a drain cycle confirming it                                                                               |
+| `vers.replay.wake`                              | counter         | `{wake}`         | —                   | wake requests received                                                                                                                          |
+| `vers.replay.drain_duration`                    | histogram       | `s`              | —                   | wall-clock duration of one drain cycle                                                                                                          |
+| `vers.replay.backlog_claimed`                   | histogram       | `{chain}`        | —                   | chains claimed and adjudicated in one drain cycle                                                                                               |
+| `vers.verification.rejections`                  | counter         | `{rejection}`    | `reason`            | adjudications that rejected or parked an activity, by reason                                                                                    |
+| `vers.replay.iteration_failures`                | counter         | `{iteration}`    | `outcome`           | worker iterations that failed to replay a claimed chain, by outcome                                                                             |
+| `vers.replay.settled_xp`                        | up-down counter | `{xp}`           | `source`            | xp verified segments settled to avatars, by how the amount was derived                                                                          |
+| `vers.replay.clamped_settlements`               | counter         | `{settlement}`   | —                   | settlements whose debit was floored at zero, paying less than recorded                                                                          |
+| `vers.keys.derive_rejections`                   | counter         | `{rejection}`    | `reason`            | derivation calls that refused to derive a roll key or scope secret, by reason                                                                   |
+| `vers.activity.terminal_transitions`            | counter         | `{activity}`     | `status`            | activities that claimed a terminal transition, by status                                                                                        |
+| `vers.activity.writer_takeovers`                | counter         | `{takeover}`     | —                   | successful writer-session claims on active activities                                                                                           |
+| `vers.activity.replay_poke_failed`              | counter         | `{poke}`         | —                   | replay wake pokes that never delivered after exhausting retries                                                                                 |
+| `vers.activity.avatar_not_active_rejections`    | counter         | `{rejection}`    | —                   | active-avatar-gated calls the shared `requireActiveAvatar` helper rejected because the acting avatar is not active (startActivity, revealNodes) |
+| `vers.activity.node_unreachable_rejections`     | counter         | `{rejection}`    | —                   | startActivity calls rejected because the scope node is outside the avatar's selectable set                                                      |
+| `vers.activity.content_incompatible_rejections` | counter         | `{rejection}`    | `path`              | startActivity calls rejected because the resolved engine's max content version falls behind the requested content                               |
+| `vers.activity.advance_continuations`           | counter         | `{continuation}` | `outcome`           | advanceActivity continuations processed, by mint outcome                                                                                        |
+| `vers.activity.advance_bailouts`                | counter         | `{bailout}`      | `reason`            | advanceActivity requests that bailed before their continuations' end, by reason                                                                 |
+| `vers.activity.reveal_cells`                    | histogram       | `{cell}`         | —                   | revealed cells returned per getRevealedNodes query                                                                                              |
+| `vers.activity.reveal_sources`                  | histogram       | `{grant}`        | —                   | first-clear grant rows scanned per getRevealedNodes query                                                                                       |
+| `vers.activity.reveal_mints`                    | counter         | `{node}`         | —                   | activity-chain rows minted or re-affirmed per revealNodes call                                                                                  |
+| `vers.email.delivery_failures`                  | counter         | `{email}`        | —                   | emails that failed to deliver                                                                                                                   |
+| `vers.session.failed_attempts`                  | counter         | `{attempt}`      | —                   | failed step-up verification attempts                                                                                                            |
+| `vers.analytics.delivery_failures`              | counter         | `{event}`        | `reason`            | product events that never landed in the Tinybird data source, by reason                                                                         |
+| `vers.web.service_call_retries`                 | counter         | `{retry}`        | `service`           | retry attempts against an outbound service call that failed its previous attempt                                                                |
+| `vers.web.service_call_failures`                | counter         | `{call}`         | `service`, `reason` | outbound service calls that never delivered, by service and reason                                                                              |
 
 `service-activity` pokes `service-replay`'s `POST /wake` each time an append advances an activity
 past its verified cursor. The handler drains the queue — claiming and adjudicating chains until none
@@ -221,9 +222,12 @@ sim version hash, `fallback` covers the registry-current version resolved for a 
 no hash. `vers.activity.reveal_cells` and `vers.activity.reveal_sources` record once per
 `getRevealedNodes` call, the returned cell count and the scanned first-clear grant count
 respectively; both track the reveal projection's fan-out as an avatar's completed-node history
-grows. `vers.analytics.delivery_failures` splits by `reason`: `rejected` covers a non-2xx response
-from the Tinybird Events API, `quarantined` covers a row the API accepted but failed schema
-validation on, `unreachable` covers a network failure or the upstream deadline tripping.
+grows. `vers.activity.reveal_mints` records once per `revealNodes` call, the number of distinct
+nodes it minted or re-affirmed a chain row for — a repeat reveal of an already-minted node still
+counts, since the call re-affirms that row's `genesisSeed` rather than skipping it.
+`vers.analytics.delivery_failures` splits by `reason`: `rejected` covers a non-2xx response from the
+Tinybird Events API, `quarantined` covers a row the API accepted but failed schema validation on,
+`unreachable` covers a network failure or the upstream deadline tripping.
 
 `vers.web.service_call_retries` and `vers.web.service_call_failures` cover app-web's bounded
 outbound service calls: `service_call_retries` records each retry attempt against a call that failed

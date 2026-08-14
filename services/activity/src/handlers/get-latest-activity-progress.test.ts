@@ -3,6 +3,7 @@ import { createContentVersion } from '@vers/content-registry';
 import type { ActivityContract } from '@vers/contract-activity';
 import { createMockContentDocument } from '@vers/contract-activity/test-utils';
 import {
+  createActivityChainRow,
   createAnonymousViewer,
   createAvatarRow,
   createServiceToken,
@@ -37,6 +38,8 @@ test('it returns a fresh activity with a null anchor at verifiedHead 0', async (
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
 
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
   const started = await client.startActivity({
@@ -68,6 +71,8 @@ test("it returns the avatar's persisted failure action", async () => {
     userId: viewer.user.id,
   });
 
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
   await client.startActivity({
@@ -86,6 +91,8 @@ test('it returns the server clock beside the resume cursors', async () => {
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
@@ -108,6 +115,8 @@ test('it returns the activity anchored to its verified checkpoint once verifiedH
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
@@ -148,6 +157,8 @@ test('it returns the newest activity regardless of status', async () => {
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
 
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
   const started = await client.startActivity({
@@ -170,6 +181,8 @@ test('it rejects when no activity exists at all with NOT_FOUND', async () => {
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
 
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
   expect(client.getLatestActivityProgress({ avatarID: avatar.id })).rejects.toMatchObject({
@@ -182,6 +195,8 @@ test('it rejects a foreign avatar with NOT_FOUND', async () => {
 
   const owner = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: owner.user.id });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
 
   const ownerClient = buildRPCTestClient<ActivityContract>(ctx.app, { token: owner.token });
 
@@ -218,6 +233,9 @@ test('it reports isWriter false to a session another writer displaced', async ()
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
   const keyPair = await getTestServiceKeyPair();
 
   const tokenA = await createServiceToken({
@@ -260,6 +278,8 @@ test('it reports isWriter true for an unstamped stream whatever the session', as
   // the session-less token leaves the started row's writer unstamped
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
 
   const sessionlessClient = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 

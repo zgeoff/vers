@@ -53,6 +53,7 @@
           "consumeTransactionToken",
           "replaySegment",
           "resumeActivity",
+          "revealNodes",
           "trackActivityProgress",
           "wake"
         ]

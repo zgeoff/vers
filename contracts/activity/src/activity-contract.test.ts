@@ -13,19 +13,27 @@ test('it declares UNAUTHORIZED and FORBIDDEN on every owner-scoped procedure', (
   ]);
 });
 
-test('it declares CONFLICT, NOT_FOUND, NODE_UNKNOWN, NODE_UNREACHABLE, CHAIN_QUARANTINED, and AVATAR_NOT_ACTIVE on startActivity', () => {
+test('it declares CONFLICT, NOT_FOUND, NODE_NOT_REVEALED, NODE_UNKNOWN, NODE_UNREACHABLE, CHAIN_QUARANTINED, and AVATAR_NOT_ACTIVE on startActivity', () => {
   expect(activityContract.startActivity['~orpc'].errorMap).toContainAllKeys([
     'UNAUTHORIZED',
     'FORBIDDEN',
     'AVATAR_NOT_ACTIVE',
     'CHAIN_QUARANTINED',
     'CONFLICT',
+    'NODE_NOT_REVEALED',
     'NODE_UNKNOWN',
     'NODE_UNREACHABLE',
     'NOT_FOUND',
     'SIM_VERSION_EXPIRED',
     'SIM_VERSION_UNKNOWN',
   ]);
+});
+
+test('it declares a bespoke NODE_NOT_REVEALED with an explicit status on startActivity', () => {
+  const errorMap = activityContract.startActivity['~orpc'].errorMap;
+
+  expect(errorMap).toContainKey('NODE_NOT_REVEALED');
+  expect(errorMap.NODE_NOT_REVEALED?.status).toBe(409);
 });
 
 test('it declares SIM_VERSION_EXPIRED and SIM_VERSION_UNKNOWN with explicit statuses on startActivity', () => {
@@ -232,6 +240,23 @@ test('getRevealedNodes accepts a viewport at the edge of the packable coordinate
   expect(activityContract.getRevealedNodes['~orpc'].inputSchema?.safeParse(input).success).toBe(
     true,
   );
+});
+
+test('it declares AVATAR_NOT_ACTIVE, NODE_UNKNOWN, and NOT_FOUND on revealNodes', () => {
+  expect(activityContract.revealNodes['~orpc'].errorMap).toContainAllKeys([
+    'UNAUTHORIZED',
+    'FORBIDDEN',
+    'AVATAR_NOT_ACTIVE',
+    'NODE_UNKNOWN',
+    'NOT_FOUND',
+  ]);
+});
+
+test('it declares a bespoke NODE_UNKNOWN with an explicit status on revealNodes', () => {
+  const errorMap = activityContract.revealNodes['~orpc'].errorMap;
+
+  expect(errorMap).toContainKey('NODE_UNKNOWN');
+  expect(errorMap.NODE_UNKNOWN?.status).toBe(404);
 });
 
 test('it generates a valid OpenAPI document from the activity contract', async () => {

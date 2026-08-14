@@ -4,6 +4,7 @@ import type { ActivityContract } from '@vers/contract-activity';
 import { createMockContentDocument } from '@vers/contract-activity/test-utils';
 import { mockReplayService } from '@vers/mock-services/replay';
 import {
+  createActivityChainRow,
   createAnonymousViewer,
   createAvatarRow,
   createTestDB,
@@ -37,6 +38,8 @@ test('it returns the settled xp and level with no pending entries for an avatar 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { level: 3, userId: viewer.user.id, xp: 450 });
 
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
   const result = await client.getAvatarProgression({ avatarID: avatar.id });
@@ -49,6 +52,8 @@ test("it includes a pending entry carrying the terminal checkpoint's rewards.xp 
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id, xp: 0 });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
@@ -85,6 +90,8 @@ test('it excludes a verified activity from pending', async () => {
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id, xp: 0 });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
@@ -123,6 +130,8 @@ test('it excludes a rejected activity from pending', async () => {
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id, xp: 0 });
 
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
   const started = await client.startActivity({
@@ -160,6 +169,8 @@ test('it excludes an active activity from pending', async () => {
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id, xp: 0 });
 
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
   const started = await client.startActivity({
@@ -192,6 +203,8 @@ test('it reports how much of the live run the settled total already carries', as
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id, xp: 90 });
 
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
   const started = await client.startActivity({
@@ -221,6 +234,8 @@ test('it includes the unsettled xp of a run stopped before its encounter finishe
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id, xp: 0 });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
@@ -260,6 +275,8 @@ test('it reports unsettled xp that sums past what a database integer holds', asy
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id, xp: 0 });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
@@ -311,6 +328,8 @@ test('it skips a pending entry whose tail checkpoint carries no terminal rewards
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id, xp: 0 });
 
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
   const started = await client.startActivity({
@@ -341,6 +360,9 @@ test('it returns null for an avatar owned by another caller', async () => {
 
   const owner = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: owner.user.id });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
   const otherViewer = await createViewer({ audience: 'service-activity', db: ctx.db });
 
   const otherClient = buildRPCTestClient<ActivityContract>(ctx.app, { token: otherViewer.token });
@@ -381,6 +403,8 @@ test('it attempts a wake delivery when a pending entry is present', async () => 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id, xp: 0 });
 
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
   const started = await client.startActivity({
@@ -420,6 +444,8 @@ test('it attempts no wake delivery when pending is empty', async () => {
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { level: 3, userId: viewer.user.id, xp: 450 });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
   const wakeHandler = mock(() => ({ drained: 0 }));
