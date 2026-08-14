@@ -3,6 +3,7 @@ import {
   CHECKPOINT_QUEUE_STORE_NAME,
   CONTENT_DOCUMENT_STORE_NAME,
   NODE_SEEDS_STORE_NAME,
+  OFFLINE_STARTS_STORE_NAME,
   PREFERENCES_STORE_NAME,
 } from './constants';
 import type { CheckpointQueueSchema } from './types';
@@ -52,5 +53,11 @@ export function upgradeCheckpointQueueDB(
     database.createObjectStore(NODE_SEEDS_STORE_NAME, { keyPath: ['avatarID', 'nodeID'] });
   } else if (oldVersion < 5) {
     void transaction.objectStore(NODE_SEEDS_STORE_NAME).clear();
+  }
+
+  // `offline-starts` caches the full `ActivityData` an offline-open start mints locally, keyed by
+  // its own `id`.
+  if (!database.objectStoreNames.contains(OFFLINE_STARTS_STORE_NAME)) {
+    database.createObjectStore(OFFLINE_STARTS_STORE_NAME, { keyPath: 'id' });
   }
 }

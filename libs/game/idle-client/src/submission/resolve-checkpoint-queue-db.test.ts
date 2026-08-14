@@ -1,4 +1,5 @@
 import { expect, test } from 'bun:test';
+import { createMockActivityData } from '@vers/contract-activity/test-utils';
 import { ActivityFailureAction } from '@vers/idle-core';
 import type { IDBPDatabase } from 'idb';
 import { deleteDB, openDB } from 'idb';
@@ -8,6 +9,7 @@ import {
   CONTENT_DOCUMENT_STORE_NAME,
   FAILURE_ACTION_PREFERENCE_KEY,
   NODE_SEEDS_STORE_NAME,
+  OFFLINE_STARTS_STORE_NAME,
   PREFERENCES_STORE_NAME,
 } from './constants';
 import type { CheckpointQueueSchema } from './types';
@@ -126,5 +128,59 @@ test('it clears the node-seeds cache on the v4-to-v5 upgrade while preserving th
     v5?.close();
 
     await deleteDB(upgradeTestV5DBName);
+  }
+});
+
+test('it adds the offline-starts store on the v5-to-v6 upgrade without dropping the existing stores or their rows', async () => {
+  const upgradeTestV6DBName = 'vers-idle-checkpoint-queue-upgrade-v6-test';
+
+  const preference = {
+    avatarID: 'avatar-upgrade-v6',
+    dirty: false,
+    failureAction: ActivityFailureAction.Abort,
+  } as const;
+
+  const offlineStart = createMockActivityData();
+
+  // a prior run that threw before its own cleanup could leave a v6 database behind, which would
+  // block this run's open at v5 with a version error — drop any leftover before opening
+  await deleteDB(upgradeTestV6DBName);
+
+  let v5: IDBPDatabase<CheckpointQueueSchema> | undefined;
+  let v6: IDBPDatabase<CheckpointQueueSchema> | undefined;
+
+  try {
+    v5 = await openDB<CheckpointQueueSchema>(upgradeTestV6DBName, 5, {
+      upgrade: upgradeCheckpointQueueDB,
+    });
+
+    await v5.put(PREFERENCES_STORE_NAME, preference, FAILURE_ACTION_PREFERENCE_KEY);
+
+    v5.close();
+
+    v6 = await openDB<CheckpointQueueSchema>(upgradeTestV6DBName, 6, {
+      upgrade: upgradeCheckpointQueueDB,
+    });
+
+    await v6.put(OFFLINE_STARTS_STORE_NAME, offlineStart);
+
+    const existingPreference = await v6.get(PREFERENCES_STORE_NAME, FAILURE_ACTION_PREFERENCE_KEY);
+    const storedOfflineStart = await v6.get(OFFLINE_STARTS_STORE_NAME, offlineStart.id);
+
+    expect([...v6.objectStoreNames]).toIncludeAllMembers([
+      CHECKPOINT_QUEUE_STORE_NAME,
+      PREFERENCES_STORE_NAME,
+      CONTENT_DOCUMENT_STORE_NAME,
+      NODE_SEEDS_STORE_NAME,
+      OFFLINE_STARTS_STORE_NAME,
+    ]);
+
+    expect(existingPreference).toStrictEqual(preference);
+    expect(storedOfflineStart).toStrictEqual(offlineStart);
+  } finally {
+    v5?.close();
+    v6?.close();
+
+    await deleteDB(upgradeTestV6DBName);
   }
 });

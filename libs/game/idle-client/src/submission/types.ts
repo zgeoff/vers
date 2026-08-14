@@ -1,5 +1,6 @@
 import type { ContractRouterClient } from '@orpc/contract';
 import type {
+  ActivityData,
   CheckpointBatchEntry,
   ContentDocument,
   EncounterNode,
@@ -106,6 +107,10 @@ export interface CheckpointQueueSchema extends DBSchema {
   'node-seeds': {
     key: [string, string];
     value: NodeSeed;
+  };
+  'offline-starts': {
+    key: string;
+    value: ActivityData;
   };
   'pending-checkpoints': {
     key: [string, number];

@@ -23,7 +23,7 @@ export const RETRY_BACKOFF_CAP_MS = 300_000;
  */
 export const FLUSH_STALL_THRESHOLD = 3;
 export const CHECKPOINT_QUEUE_DB_NAME = 'vers-idle-checkpoint-queue';
-export const CHECKPOINT_QUEUE_DB_VERSION = 5;
+export const CHECKPOINT_QUEUE_DB_VERSION = 6;
 export const CHECKPOINT_QUEUE_STORE_NAME = 'pending-checkpoints';
 
 /**
@@ -41,6 +41,14 @@ export const CONTENT_DOCUMENT_STORE_NAME = 'content-documents';
  * keep separate rows.
  */
 export const NODE_SEEDS_STORE_NAME = 'node-seeds';
+
+/**
+ * The object store holding the full `ActivityData` an offline-open start mints locally, keyed by
+ * its own `id`. This is the client-minted root row a later reconcile drains and verifies against
+ * the server; it is written durably before the row installs, so a crash between mint and install
+ * still leaves a recoverable root.
+ */
+export const OFFLINE_STARTS_STORE_NAME = 'offline-starts';
 
 /**
  * The `preferences` record holding `revealNodes`'s avatar- and account-global crypto stamps. A
