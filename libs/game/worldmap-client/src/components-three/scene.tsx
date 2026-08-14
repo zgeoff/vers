@@ -7,6 +7,7 @@ import { DevCamera } from './dev-camera';
 import { Floor } from './floor';
 import { FogOfWar } from './fog-of-war';
 import { IsometricCamera } from './isometric-camera';
+import { PerfProbe } from './perf-probe';
 import { ViewportTracker } from './viewport-tracker';
 import { WorldEdges } from './world-edges';
 import { WorldMapNodes } from './world-map-nodes';
@@ -36,6 +37,7 @@ export function Scene() {
         <>
           <DevCamera />
           <AxesHelper />
+          <PerfProbe />
         </>
       )}
     </>

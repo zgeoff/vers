@@ -42,6 +42,7 @@ testem.log
 /coverage
 **/.test-results
 **/.stack-test-results
+**/.bench-test-results
 
 # System Files
 .DS_Store
