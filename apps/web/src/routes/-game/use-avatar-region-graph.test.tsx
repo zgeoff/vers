@@ -525,6 +525,42 @@ test("it keeps a completed node's neighbour selectable while a chunk-crossing pa
   });
 });
 
+test('it returns the fog-revealed node id set, growing it once a completed grant extends the reveal disc', async () => {
+  const signedIn = await createSignedInUser();
+
+  await createActiveAvatar({ seed: 1313, userID: signedIn.userID });
+
+  // a completed node far outside the origin's reveal disc, so only its own disc can reveal its
+  // cell — exercising the growth path rather than a cell the origin disc already covers
+  const completedID = toNodeID(6, 0);
+
+  server.use(
+    mockActivityService.getRevealedNodes.handler(() => ({
+      completedNodeIDs: [completedID],
+      contentVersion: 'v1',
+      nodes: [],
+    })),
+  );
+
+  await withRequestContext({ cookies: signedIn.cookies }, async () => {
+    const hook = renderHook(() => useAvatarRegionGraph());
+
+    // the origin disc is published on the region build, but the far node's cell sits well beyond it
+    // until the revealed-nodes query resolves the grant and adds its disc
+    await waitFor(() => {
+      expect(hook.result.current.has(toNodeID(0, 0))).toBe(true);
+    });
+
+    expect(hook.result.current.has(completedID)).toBe(false);
+
+    setViewport({ maxCX: 20, maxCY: 20, minCX: -20, minCY: -20 });
+
+    await waitFor(() => {
+      expect(hook.result.current.has(completedID)).toBe(true);
+    });
+  });
+});
+
 test("it drops the selectable set to origin-only on an avatar switch, not carrying the outgoing avatar's completed neighbours", async () => {
   const signedIn = await createSignedInUser();
   const first = await createActiveAvatar({ seed: 123, userID: signedIn.userID });
@@ -595,5 +631,71 @@ test("it drops the selectable set to origin-only on an avatar switch, not carryi
     // flipping and the region switch committing never sends a request for the incoming avatar at
     // the outgoing avatar's camera footprint
     expect(requestedAvatarIDs).not.toContain(second.id);
+  });
+});
+
+test("it returns an empty frontier through an avatar switch, never the outgoing avatar's revealed nodes", async () => {
+  const signedIn = await createSignedInUser();
+  const first = await createActiveAvatar({ seed: 123, userID: signedIn.userID });
+  const second = await db.avatarCollection.create({ seed: 456, userID: signedIn.userID });
+
+  // a far completed node grows the first avatar's frontier to a cell the second avatar's
+  // origin-only frontier never covers, so the cell distinguishes the two avatars' frontiers
+  const firstOnlyID = toNodeID(6, 0);
+
+  server.use(
+    mockActivityService.getRevealedNodes.handler((opts) => ({
+      completedNodeIDs: opts.input.avatarID === first.id ? [firstOnlyID] : [],
+      contentVersion: 'v1',
+      nodes: [],
+    })),
+  );
+
+  await withRequestContext({ cookies: signedIn.cookies }, async () => {
+    const frontiers: Array<ReadonlySet<string>> = [];
+
+    const hook = renderHook(() => {
+      const revealed = useAvatarRegionGraph();
+
+      frontiers.push(revealed);
+
+      return revealed;
+    });
+
+    await waitFor(() => {
+      expect(hook.result.current.has(toNodeID(0, 0))).toBe(true);
+    });
+
+    setViewport({ maxCX: 20, maxCY: 20, minCX: -20, minCY: -20 });
+
+    await waitFor(() => {
+      expect(hook.result.current.has(firstOnlyID)).toBe(true);
+    });
+
+    const active = db.activeAvatarCollection.findFirst((q) => q.where({ userID: signedIn.userID }));
+
+    invariant(active, 'createActiveAvatar seeds an active-avatar row for this user');
+
+    await db.activeAvatarCollection.update(active, {
+      data(record) {
+        record.avatarID = second.id;
+      },
+    });
+
+    frontiers.length = 0;
+
+    await hook.queryClient.invalidateQueries();
+
+    await waitFor(() => {
+      expect(hook.result.current.has(toNodeID(0, 0))).toBe(true);
+    });
+
+    // the incoming avatar settles to its own origin-only frontier
+    expect(hook.result.current.has(firstOnlyID)).toBe(false);
+
+    // the transition render returns an empty set rather than the outgoing avatar's held frontier,
+    // so the far cell never appears under the incoming avatar while the switch commits
+    expect(frontiers.some((frontier) => frontier.size === 0)).toBe(true);
+    expect(frontiers.some((frontier) => frontier.has(firstOnlyID))).toBe(false);
   });
 });
