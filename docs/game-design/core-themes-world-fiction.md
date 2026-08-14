@@ -9,7 +9,7 @@ notes inherit.
 Vers is an idle ARPG/MMO where you shape your avatar, send them into dangerous regions, turn loot
 into power, and push farther into harder, stranger parts of the world.
 
-Shape your avatar. Send them into the world. Recover power. Push deeper. Compete.
+Shape your avatar, send them into the world, recover power, push deeper, and compete.
 
 ## Decisions
 
@@ -32,8 +32,8 @@ regions that most people cannot safely enter.
 The world was never destroyed; it stopped answering. Civilization built on itself for so long that
 most of the world now runs on its own accumulated logic — infrastructure that no longer recognizes
 anyone's authority, ecologies that were designed once and have since gone their own way, and human
-societies that broke from Respite and became something stranger. Respite is simply the largest place
-that still answers to the people living inside it. A region's danger is a measure of how far it has
+societies that broke from Respite and became something stranger. Respite is the largest place that
+still answers to the people living inside it. A region's danger is a measure of how far it has
 drifted — mechanical, ecological, or human; its value is what it still produces, protects, or knows.
 
 Those regions are the world map: real places and systems that can be entered, cleared, revisited,
@@ -57,7 +57,7 @@ An avatar is an enhanced human shaped by the player and capable of entering regi
 people cannot survive. "Avatar" is the worn remnant of a longer phrase — avatar _of_ something — and
 what filled the blank is lost; rival accounts contest what it was. What is known: the capacity is
 inborn, appearing by chance in some and not others, and no institution can manufacture it. The
-player-facing fantasy stays simple: shape your avatar, send them into danger, recover power, push
+player-facing fantasy stays direct: shape your avatar, send them into danger, recover power, push
 deeper — the contract, embodied in one person.
 
 Avatars are embodied people, not disposable drones. They can be augmented, equipped, specialized,
@@ -122,8 +122,8 @@ recovered, never permanently lost.
 Defeat costs progress, not the avatar: experience toward the next level is lost but levels are never
 removed; yield from the run that was not already extracted is lost; and any investment in the
 activity instance is lost — the instance resets to baseline. Extraction is the player's mid-run
-banking decision: yield stays at risk until it is pulled out. Extraction is set as policy, not
-performed by hand — automated rules (extract at a yield threshold, or when defenses degrade) let
+banking decision: yield stays at risk until it is pulled out. The player sets extraction as policy,
+not by hand — automated rules (extract at a yield threshold, or when defenses degrade) let
 unattended runs bank deliberately.
 
 Exact loss rates, floors, and extraction mechanics belong to the progression and economy notes.

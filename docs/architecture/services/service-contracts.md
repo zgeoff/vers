@@ -145,8 +145,9 @@ runtime's per-request infrastructure ([error handling](./error-handling.md#trace
 
 When a session expires, the edge itself replies with the contract-shaped
 `UNAUTHORIZED { reason: 'expired-session' }` without calling the service at all. Services themselves
-only ever throw `missing-session`, as defense in depth when an authed procedure is reached without
-an acting user. The shared enum is caller-facing vocabulary, not an inventory of who throws what.
+only ever throw `missing-session`, as defense in depth when a caller reaches an authed procedure
+without an acting user. The shared enum is caller-facing vocabulary, not an inventory of who throws
+what.
 
 `FORBIDDEN` is declared with an empty `data` payload: no permission model exists, and any fields a
 permission model needs arrive additively.
@@ -165,9 +166,10 @@ Two layers cover a contract, per the repo's mock-free testing rules:
 
 - **Conformance** (generic, one call per service). `collectConformanceCases` (`@vers/test-utils`)
   walks a contract and runs the mechanical cases every procedure must satisfy against the real
-  Elysia app in-process via `app.handle(request)` — no network, no mocks. Malformed input is
-  rejected with `BAD_REQUEST`, an anonymous call to an authed procedure is rejected with
-  `UNAUTHORIZED { reason: 'missing-session' }`, and the contract generates a valid OpenAPI document.
+  Elysia app in-process via `app.handle(request)` — no network, no mocks. The app rejects malformed
+  input with `BAD_REQUEST`, rejects an anonymous call to an authed procedure with
+  `UNAUTHORIZED { reason: 'missing-session' }`, and generates a valid OpenAPI document from the
+  contract.
 - **Behavioural** (hand-written, per service): what the service actually does, with test data
   declared inline.
 

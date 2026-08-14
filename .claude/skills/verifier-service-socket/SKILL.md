@@ -50,9 +50,9 @@ issuer's public key under an issuer-named `kid` (`app-web`, `service-activity`, 
 Mint a throwaway keypair + tokens with a scratchpad script using `jose`: `generateKeyPair('EdDSA')`
 → `exportJWK`, wrap as `{"keys":[{...jwk, kid: "app-web"}]}`, then `SignJWT` with protected header
 `{ alg: 'EdDSA', kid: 'app-web' }`, issuer equal to the `kid`, audience = service name
-(`service-user`), and `sub` for an acting user (omit `sub` for anonymous). A token whose `iss` isn't
-a registered issuer, doesn't equal its `kid`, or is signed by a different issuer's key is rejected
-with a 401.
+(`service-user`), and `sub` for an acting user (omit `sub` for anonymous). The service rejects a
+token with a 401 when its `iss` isn't a registered issuer, doesn't equal its `kid`, or a different
+issuer's key signs it.
 
 ## Boot and drive
 

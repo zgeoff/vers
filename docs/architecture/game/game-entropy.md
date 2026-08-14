@@ -12,8 +12,8 @@ and the [economy modes note](../../game-design/economy-modes.md) owns the reward
 
 The client is untrusted and holds the complete simulation. Any entropy the client can compute, the
 player can peek: simulate the future, inspect the outcome, and choose whether and where to play it.
-Look-ahead cannot be prevented in a deterministic client-simulated game: anything the client can
-describe, it can pre-compute. The design denies look-ahead its payoff instead of chasing it.
+A deterministic client-simulated game cannot prevent look-ahead: anything the client can describe,
+it can pre-compute. The design denies look-ahead its payoff instead of chasing it.
 
 A scanner does not play the average future. It simulates the future on every reachable node, across
 the whole offline window, and plays only the best one. Out of twenty thousand simulated futures the
@@ -44,7 +44,7 @@ the edge a re-attempt buys is bounded by the cost of reaching the position rathe
 The peek is free; the position is not:
 
 - An entry-gated target burns a non-refundable entry on every attempt, abandons included, so walking
-  the chain toward a favorable seed is paid for in resources.
+  the chain toward a favorable seed costs real resources.
 - A second competitive avatar is a full endgame build's worth of investment.
 - The counted attempt is always played in full.
 
@@ -94,8 +94,8 @@ positions — is [item generation](./item-generation.md).
 
 Key custody is the economy boundary:
 
-- **Server-held key** (trade avatars): the key never leaves the server, and a coordinate's content
-  is revealed only once the verifier settles its checkpoint, never at bare append
+- **Server-held key** (trade avatars): the key never leaves the server, and the verifier reveals a
+  coordinate's content only once it settles the checkpoint, never at bare append
   ([seed chain](./seed-chain.md)). A synced-but-unverified roll holds client-side as pending until
   then. Connected play settles a kill's rewards within a batch cadence; a return from offline
   settles the window's at once. No connectivity state changes what a committed reward is worth.
@@ -127,9 +127,9 @@ this design has.
 
 ### Version pinning
 
-Every roll is pinned by its activity's `Started` snapshot. `keyVersion` is stamped there beside the
-engine and content versions, and `f` resolves content under the pinned versions rather than the live
-deploy. So reveal, replay, and mint agree across deploys and root rotations.
+The activity's `Started` snapshot pins every roll, stamping `keyVersion` there beside the engine and
+content versions, and `f` resolves content under the pinned versions rather than the live deploy. So
+reveal, replay, and mint agree across deploys and root rotations.
 
 ## Sealed pre-commit salt
 
@@ -146,9 +146,9 @@ bounds how much the projection may reveal. Every decision happens against this m
 client never holds computable entropy while a decision is open.
 
 **Release.** The server resolves the outcome under the salt and returns the result; under server
-custody the salt itself never reaches the client. Release is commitment: a released position the
-client never resolves is force-resolved as forfeited — the bundle is lost — at a server-side
-deadline inside the replay-retention window.
+custody the salt itself never reaches the client. Release is commitment: at a server-side deadline
+inside the replay-retention window, the server force-resolves as forfeited any released position the
+client never resolves, and the bundle is lost.
 
 ### Keeping the seal honest
 
@@ -157,9 +157,9 @@ Three rules keep the seal honest, independent of what consumes it:
 - The salt's keying material is a server-held secret. Domain-separation labels alone are
   insufficient: salt derived from client-visible state under a different label is still
   client-computable, and the sealing property collapses.
-- Salt is minted once per position and re-fetch is idempotent. A client that loses the response
-  retries and receives the same salt, so a lost packet cannot fork the timeline; until the release
-  arrives, nothing resolves.
+- The server mints salt once per position, and re-fetch is idempotent. A client that loses the
+  response retries and receives the same salt, so a lost packet cannot fork the timeline; until the
+  release arrives, nothing resolves.
 - Every input the outcome depends on pins at mint, so deferring resolution cannot improve it.
 
 ### What the seal admits
