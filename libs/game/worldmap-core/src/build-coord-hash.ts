@@ -3,6 +3,14 @@
  * geometry) read from uncorrelated streams rather than reusing one hash. The biome channels form
  * their own domain, independent from placement's jitter channels, so terrain geometry and node
  * placement never correlate.
+ *
+ * The procgen render domains (`scatterProps` through `reliefFine`) each reserve a wide numeric
+ * block starting at their listed channel: a consumer offsets from the block's base by a per-draw
+ * salt (an instance index times a fixed stride, plus a local field index) to decorrelate every
+ * part of one assembly without colliding with the next domain's block. Block widths below are
+ * sized generously past their known salt usage, so a domain may grow its per-instance draw count
+ * without auditing its neighbours. `reliefCoarse`/`reliefFine` are the one exception: relief
+ * samples a value-noise field directly on those two channels with no further offsetting.
  */
 export const HASH_CHANNEL = {
   jitterX: 0,
@@ -15,6 +23,46 @@ export const HASH_CHANNEL = {
   modifierDraw: 7,
   wobbleX: 8,
   wobbleY: 9,
+
+  /**
+   * Block base for ambient wilderness scatter — clustered props and their placement draws.
+   */
+  scatterProps: 100,
+
+  /**
+   * Block base for deliberate per-node structure assemblies, archetype-drawn per node.
+   */
+  nodeStructures: 500,
+
+  /**
+   * Block base for per-edge road furniture (lamps, gates, masts, waymarkers) and viaduct decks.
+   */
+  edgeFurniture: 700,
+
+  /**
+   * Block base for rare cluster-independent landmark assemblies and their light pillars.
+   */
+  landmarks: 900,
+
+  /**
+   * Block base for rare fallen-giant assemblies (toppled column trains).
+   */
+  fallenGiants: 1500,
+
+  /**
+   * Block base for high-count ground-layer debris (shards, chips, stubs).
+   */
+  debris: 2000,
+
+  /**
+   * Coarse-frequency octave of the terrain relief heightfield.
+   */
+  reliefCoarse: 3000,
+
+  /**
+   * Fine-frequency octave of the terrain relief heightfield.
+   */
+  reliefFine: 3001,
 } as const;
 
 /**
