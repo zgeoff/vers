@@ -8,8 +8,14 @@ import {
   useRegionKey,
   useViewport,
 } from '@vers/worldmap-client';
-import type { Viewport } from '@vers/worldmap-core';
-import { buildRevealSources, collectSelectableNodeIDs, toNodeID } from '@vers/worldmap-core';
+import type { RevealSource, Viewport } from '@vers/worldmap-core';
+import {
+  buildRevealSources,
+  collectRevealedCells,
+  collectSelectableNodeIDs,
+  decodeMortonKey,
+  toNodeID,
+} from '@vers/worldmap-core';
 import { useEffect, useRef, useState } from 'react';
 import { buildRevealedNodesQueryOptions } from '../../lib/activity/build-revealed-nodes-query-options';
 import { buildActiveAvatarQueryOptions } from '../../lib/avatar/build-active-avatar-query-options';
@@ -67,8 +73,13 @@ interface HeldCompletedNodeIDs {
  * key's fetch lands, rather than collapsing selectability to the origin alone on every such
  * crossing. An avatar switch drops that held set immediately, so the incoming avatar never briefly
  * inherits the outgoing avatar's completed nodes.
+ *
+ * Returns the fog-revealed node id set projected over the loaded region — the same reveal sources
+ * published to the store, expanded to the individual node ids their discs cover inside the region
+ * viewport — for a caller that keeps the worker's on-device genesis-seed cache filled for whatever
+ * the player can already see.
  */
-export function useAvatarRegionGraph(): void {
+export function useAvatarRegionGraph(): ReadonlySet<string> {
   const avatarQuery = useQuery(buildActiveAvatarQueryOptions());
   const avatarID = avatarQuery.data?.id;
   const seed = avatarQuery.data?.seed;
@@ -82,6 +93,8 @@ export function useAvatarRegionGraph(): void {
     avatarID: undefined,
     nodeIDs: EMPTY_NODE_ID_SET,
   });
+
+  const [revealedNodeIDs, setRevealedNodeIDs] = useState<ReadonlySet<string>>(EMPTY_NODE_ID_SET);
 
   const revealedViewport = viewport
     ? buildChunkAlignedViewport(viewport, REVEAL_VIEWPORT_CELL_CAP)
@@ -133,10 +146,10 @@ export function useAvatarRegionGraph(): void {
 
       previousCompletedNodeIDsRef.current = completedNodeIDs;
 
-      setCompletedNodeProjections(
-        collectSelectableNodeIDs(seed, completedNodeIDs),
-        buildRevealSources(completedNodeIDs),
-      );
+      const sources = buildRevealSources(completedNodeIDs);
+
+      setCompletedNodeProjections(collectSelectableNodeIDs(seed, completedNodeIDs), sources);
+      setRevealedNodeIDs(collectRevealedNodeIDs(sources, regionViewport));
 
       return;
     }
@@ -146,6 +159,7 @@ export function useAvatarRegionGraph(): void {
 
     const worldGraph = buildViewportGraph(seed, regionViewport);
     const originNode = worldGraph.nodes[toNodeID(0, 0)] ?? null;
+    const sources = buildRevealSources(completedNodeIDs);
 
     setWorldRegion(
       avatarID,
@@ -153,9 +167,13 @@ export function useAvatarRegionGraph(): void {
       worldGraph,
       originNode,
       collectSelectableNodeIDs(seed, completedNodeIDs),
-      buildRevealSources(completedNodeIDs),
+      sources,
     );
+
+    setRevealedNodeIDs(collectRevealedNodeIDs(sources, regionViewport));
   }, [avatarID, seed, viewport, completedNodeIDs]);
+
+  return revealedNodeIDs;
 }
 
 function isSameNodeIDSet(a: ReadonlySet<string>, b: ReadonlySet<string>): boolean {
@@ -180,4 +198,24 @@ function isSameViewport(previous: null | Viewport, next: Viewport): boolean {
     previous.minCY === next.minCY &&
     previous.maxCY === next.maxCY
   );
+}
+
+/**
+ * Expands reveal sources to the individual node ids their discs cover inside a viewport — the same
+ * cell-level projection the fog-of-war renderer draws from, addressed as node ids instead of scene
+ * cells.
+ */
+function collectRevealedNodeIDs(
+  sources: ReadonlyArray<RevealSource>,
+  viewport: Viewport,
+): ReadonlySet<string> {
+  const nodeIDs = new Set<string>();
+
+  for (const key of collectRevealedCells(sources, viewport)) {
+    const [cx, cy] = decodeMortonKey(key);
+
+    nodeIDs.add(toNodeID(cx, cy));
+  }
+
+  return nodeIDs;
 }

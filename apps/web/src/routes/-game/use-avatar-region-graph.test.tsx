@@ -525,6 +525,40 @@ test("it keeps a completed node's neighbour selectable while a chunk-crossing pa
   });
 });
 
+test('it returns the fog-revealed node id set, growing it once a completed grant extends the reveal disc', async () => {
+  const signedIn = await createSignedInUser();
+  const avatar = await createActiveAvatar({ seed: 1313, userID: signedIn.userID });
+
+  const [edge] = collectNodeEdges(avatar.seed, 0, 0);
+
+  invariant(edge, 'the origin connects to at least one neighbour');
+
+  const [aID = '', bID = ''] = edge.id.split('|');
+  const neighbourID = aID === toNodeID(0, 0) ? bID : aID;
+
+  server.use(
+    mockActivityService.getRevealedNodes.handler(() => ({
+      completedNodeIDs: [toNodeID(0, 0)],
+      contentVersion: 'v1',
+      nodes: [],
+    })),
+  );
+
+  await withRequestContext({ cookies: signedIn.cookies }, async () => {
+    const hook = renderHook(() => useAvatarRegionGraph());
+
+    await waitFor(() => {
+      expect(hook.result.current.has(toNodeID(0, 0))).toBe(true);
+    });
+
+    setViewport({ maxCX: 5, maxCY: 5, minCX: -5, minCY: -5 });
+
+    await waitFor(() => {
+      expect(hook.result.current.has(neighbourID)).toBe(true);
+    });
+  });
+});
+
 test("it drops the selectable set to origin-only on an avatar switch, not carrying the outgoing avatar's completed neighbours", async () => {
   const signedIn = await createSignedInUser();
   const first = await createActiveAvatar({ seed: 123, userID: signedIn.userID });
