@@ -11,26 +11,28 @@ Project-level additions to the shared function-naming taxonomy, under the same r
 
 **Effectful** — touches the world (filesystem, streams, processes, registries):
 
-| Prefix      | Contract                                                                               | Example                 |
-| ----------- | -------------------------------------------------------------------------------------- | ----------------------- |
-| `advance`   | step a stateful cursor, clock, or simulation forward in place, optionally to a target  | `advanceToDuration`     |
-| `broadcast` | post one message to every connected client on whichever transport carries it           | `broadcast`             |
-| `flush`     | attempt delivery of the durable outbound backlog, removing entries confirmed received  | `flush`                 |
-| `mint`      | create and persist a new identity-bearing row rooted in a chain or coordinate          | `mintContinuation`      |
-| `park`      | set a work item aside in a parked status for later resumption                          | `parkActivity`          |
-| `record`    | durably note that an event occurred (counter, log, audit row)                          | `recordFailedAttempt`   |
-| `redirect`  | return a redirect response for a request failing a gate, else defer                    | `redirectToHTTPS`       |
-| `refresh`   | rebuild a derived resource in place from its current source, discarding prior contents | `refreshDevBase`        |
-| `reject`    | mark a work item refused and apply the consequences                                    | `rejectActivity`        |
-| `report`    | forward a fault to the error backend                                                   | `reportUnexpectedError` |
-| `restart`   | return a long-running resource to service from its initial state                       | `restartActivity`       |
-| `roll`      | consume typed draws from a roll stream to produce an outcome, advancing its cursor     | `rollItemFromStream`    |
-| `schedule`  | enqueue an event or callback for deferred execution                                    | `scheduleEvent`         |
-| `select`    | persist the caller's choice among owned alternatives as the new state                  | `selectAvatar`          |
-| `serve`     | answer a request for a static resource, else defer                                     | `serveClientAssets`     |
-| `submit`    | accept a payload into a durable outbound queue and schedule its delivery               | `submit`                |
-| `sweep`     | bulk-remove stale or orphaned resources found by a scan, returning the set removed     | `sweepDevDBs`           |
-| `upgrade`   | hand a structural port to an RPC handler so it starts serving calls over it            | `upgrade`               |
+| Prefix      | Contract                                                                                    | Example                  |
+| ----------- | ------------------------------------------------------------------------------------------- | ------------------------ |
+| `advance`   | step a stateful cursor, clock, or simulation forward in place, optionally to a target       | `advanceToDuration`      |
+| `broadcast` | post one message to every connected client on whichever transport carries it                | `broadcast`              |
+| `dispose`   | release the resources a built entry holds (a GPU buffer, texture, or subscription)          | `disposeBiomeChunkEntry` |
+| `flush`     | attempt delivery of the durable outbound backlog, removing entries confirmed received       | `flush`                  |
+| `mint`      | create and persist a new identity-bearing row rooted in a chain or coordinate               | `mintContinuation`       |
+| `park`      | set a work item aside in a parked status for later resumption                               | `parkActivity`           |
+| `record`    | durably note that an event occurred (counter, log, audit row)                               | `recordFailedAttempt`    |
+| `redirect`  | return a redirect response for a request failing a gate, else defer                         | `redirectToHTTPS`        |
+| `refresh`   | rebuild a derived resource in place from its current source, discarding prior contents      | `refreshDevBase`         |
+| `reject`    | mark a work item refused and apply the consequences                                         | `rejectActivity`         |
+| `report`    | forward a fault to the error backend                                                        | `reportUnexpectedError`  |
+| `restart`   | return a long-running resource to service from its initial state                            | `restartActivity`        |
+| `roll`      | consume typed draws from a roll stream to produce an outcome, advancing its cursor          | `rollItemFromStream`     |
+| `schedule`  | enqueue an event or callback for deferred execution                                         | `scheduleEvent`          |
+| `select`    | persist the caller's choice among owned alternatives as the new state                       | `selectAvatar`           |
+| `serve`     | answer a request for a static resource, else defer                                          | `serveClientAssets`      |
+| `submit`    | accept a payload into a durable outbound queue and schedule its delivery                    | `submit`                 |
+| `sweep`     | bulk-remove stale or orphaned resources found by a scan, returning the set removed          | `sweepDevDBs`            |
+| `sync`      | reconcile cached state to an external source, clearing it the first time the source changes | `syncSeed`               |
+| `upgrade`   | hand a structural port to an RPC handler so it starts serving calls over it                 | `upgrade`                |
 
 ## Comments
 

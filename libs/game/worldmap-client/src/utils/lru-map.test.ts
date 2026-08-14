@@ -49,3 +49,74 @@ test('it overwrites an existing key without evicting another entry', () => {
   expect(map.get('b')).toBe(2);
   expect(map.size).toBe(2);
 });
+
+test('it calls onEvict with the value and key a capacity eviction drops', () => {
+  const evicted: Array<[string, number]> = [];
+
+  const map = new LRUMap<string, number>(2, (value, key) => {
+    evicted.push([key, value]);
+  });
+
+  map.set('a', 1);
+  map.set('b', 2);
+  map.set('c', 3);
+
+  expect(evicted).toStrictEqual([['a', 1]]);
+});
+
+test('it never calls onEvict for an overwrite of an existing key', () => {
+  const evicted: Array<[string, number]> = [];
+
+  const map = new LRUMap<string, number>(2, (value, key) => {
+    evicted.push([key, value]);
+  });
+
+  map.set('a', 1);
+  map.set('a', 2);
+
+  expect(evicted).toHaveLength(0);
+});
+
+test('it calls onEvict for every remaining entry when cleared', () => {
+  const evicted: Array<[string, number]> = [];
+
+  const map = new LRUMap<string, number>(4, (value, key) => {
+    evicted.push([key, value]);
+  });
+
+  map.set('a', 1);
+  map.set('b', 2);
+  map.clear();
+
+  expect(evicted).toIncludeSameMembers([
+    ['a', 1],
+    ['b', 2],
+  ]);
+
+  expect(map.size).toBe(0);
+});
+
+test('it calls onEvict when an entry is explicitly deleted', () => {
+  const evicted: Array<[string, number]> = [];
+
+  const map = new LRUMap<string, number>(4, (value, key) => {
+    evicted.push([key, value]);
+  });
+
+  map.set('a', 1);
+  map.delete('a');
+
+  expect(evicted).toStrictEqual([['a', 1]]);
+});
+
+test('it never calls onEvict for a delete that misses', () => {
+  const evicted: Array<[string, number]> = [];
+
+  const map = new LRUMap<string, number>(4, (value, key) => {
+    evicted.push([key, value]);
+  });
+
+  map.delete('missing');
+
+  expect(evicted).toHaveLength(0);
+});

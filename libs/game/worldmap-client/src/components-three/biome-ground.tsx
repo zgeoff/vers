@@ -1,7 +1,6 @@
 import { sceneColors } from '@vers/design-system';
 import type { BiomeField, Viewport } from '@vers/worldmap-core';
-import { BIOME_ROSTER, buildBiomeField, toHexPosition } from '@vers/worldmap-core';
-import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
+import { BIOME_ROSTER, CHUNK_SIZE, buildBiomeField, toHexPosition } from '@vers/worldmap-core';
 import {
   BufferAttribute,
   BufferGeometry,
@@ -13,83 +12,26 @@ import {
 } from 'three';
 import { MeshBasicNodeMaterial } from 'three/webgpu';
 import invariant from 'tiny-invariant';
+import { buildChunkKey } from '../chunk-stream/build-chunk-key';
+import { useChunkStream } from '../chunk-stream/use-chunk-stream';
 import { NODE_POSITION_SCALING_FACTOR } from '../consts';
+import { scatterBuildStats } from '../scatter-build-stats';
 import { useFogViewport } from '../state/use-fog-viewport';
 import { useUserSeed } from '../state/use-user-seed';
-import type { TSLTextureNode } from './scene-tsl';
 import { sceneTSL } from './scene-tsl';
 
 /**
  * Biome texels per axial cell unit. Modest by design: each texel walks the full Worley/value-noise
- * sample, so the resolution trades border smoothness against per-pan rebuild cost.
+ * sample, so the resolution trades border smoothness against per-chunk build cost.
  */
 const BIOME_TEXELS_PER_CELL = 4;
 
 /**
- * Cells the ground quad extends past the chunk-aligned viewport, covering the screen edge between a
- * fast pan and the next chunk-boundary rebuild.
+ * Chunk tiles kept cached before evicting the least-recently-used one — several screens' worth of
+ * recently visited ground at the default zoom, small enough that a long free pan never grows the
+ * tab's GPU memory without bound.
  */
-const BIOME_VIEWPORT_MARGIN_CELLS = 2;
-
-/**
- * Draws the placeholder biome terrain tint over the world map: one viewport-covering plane whose
- * per-fragment color samples a CPU-mixed RGBA texture — the base biome blended toward its border
- * neighbour by `blendT`, with the modifier tint overlaid at low alpha where the modifier layer draws
- * non-`none`. Purely presentational flavour: it projects the biome field from the current region's
- * seed and stores nothing itself, rebuilding only when a pan crosses a chunk boundary. It renders
- * nothing until both a seed and a viewport exist.
- */
-export function BiomeGround() {
-  const userSeed = useUserSeed();
-  const viewport = useFogViewport();
-
-  const biome = useMemo(() => {
-    if (userSeed === null || viewport === null) {
-      return null;
-    }
-
-    const inflated: Viewport = {
-      maxCX: viewport.maxCX + BIOME_VIEWPORT_MARGIN_CELLS,
-      maxCY: viewport.maxCY + BIOME_VIEWPORT_MARGIN_CELLS,
-      minCX: viewport.minCX - BIOME_VIEWPORT_MARGIN_CELLS,
-      minCY: viewport.minCY - BIOME_VIEWPORT_MARGIN_CELLS,
-    };
-
-    return {
-      field: buildBiomeField(userSeed, inflated, { resolution: BIOME_TEXELS_PER_CELL }),
-      fieldViewport: inflated,
-    };
-  }, [userSeed, viewport]);
-
-  if (biome === null) {
-    return null;
-  }
-
-  return <BiomeGroundPlane field={biome.field} viewport={biome.fieldViewport} />;
-}
-
-interface BiomeGroundPlaneProps {
-  readonly field: BiomeField;
-  readonly viewport: Viewport;
-}
-
-/**
- * The byte buffer behind the live ground texture, kept beside its dimensions so a same-size rebuild
- * can rewrite the pixels in place.
- */
-interface GroundBuffer {
-  bytes: Uint8Array;
-  cols: number;
-  rows: number;
-}
-
-interface BiomeGroundResources {
-  applied: { field: BiomeField; viewport: Viewport };
-  readonly buffer: GroundBuffer;
-  readonly geometry: BufferGeometry;
-  readonly material: MeshBasicNodeMaterial;
-  readonly textureNode: TSLTextureNode;
-}
+const BIOME_CHUNK_CACHE_CAPACITY = 256;
 
 /**
  * The ground plane sits between the floor (`y = -0.1`) and the node/edge/fog plane (`y = 0`), inside
@@ -98,102 +40,90 @@ interface BiomeGroundResources {
 const BIOME_GROUND_ELEVATION = -0.05;
 
 /**
- * The geometry, material, and texture node live for the whole mount: a field change swaps the
- * texture node's value and rewrites the quad in place, never rebuilding the material — the same
- * discipline `FogOfWar` follows, for the same reason: a fresh material recompiles its shader
- * pipeline, and that churn is enough to lose the GPU context mid-pan.
+ * Streams the placeholder biome terrain tint over the world map as a chunk-keyed mosaic: each
+ * `CHUNK_SIZE`-cell chunk builds once — a quad whose per-fragment color samples a CPU-mixed RGBA
+ * texture, the base biome blended toward its border neighbour by `blendT`, with the modifier tint
+ * overlaid at low alpha where the modifier layer draws non-`none` — and persists in the chunk-stream
+ * cache so a pan across already-visited ground re-mounts the cached tiles instantly. It renders
+ * nothing until both a seed and a viewport exist.
  */
-function BiomeGroundPlane(props: Readonly<BiomeGroundPlaneProps>) {
-  const planeRef = useRef<BiomeGroundResources | null>(null);
-  const plane = (planeRef.current ??= buildBiomeGroundResources(props.field, props.viewport));
+export function BiomeGround() {
+  const userSeed = useUserSeed();
+  const viewport = useFogViewport();
 
-  useLayoutEffect(() => {
-    updateBiomeGroundPlane(plane, props.field, props.viewport);
-  }, [plane, props.field, props.viewport]);
-
-  useEffect(
-    () => () => {
-      plane.geometry.dispose();
-      plane.material.dispose();
-      plane.textureNode.value.dispose();
+  const entries = useChunkStream<BiomeChunkEntry>({
+    build: buildBiomeChunkEntry,
+    cacheCapacity: BIOME_CHUNK_CACHE_CAPACITY,
+    dispose: disposeBiomeChunkEntry,
+    onBuildTick: (buildMs) => {
+      scatterBuildStats.buildMs = buildMs;
     },
-    [plane],
-  );
+    userSeed,
+    viewport,
+  });
 
   return (
-    <mesh
-      geometry={plane.geometry}
-      material={plane.material}
-      position={[0, 0, BIOME_GROUND_ELEVATION]}
-    />
+    <>
+      {entries.map((entry) => (
+        <mesh
+          geometry={entry.geometry}
+          key={buildChunkKey(entry.chunkX, entry.chunkY)}
+          material={entry.material}
+          position={[0, 0, BIOME_GROUND_ELEVATION]}
+        />
+      ))}
+    </>
   );
-}
-
-function buildBiomeGroundResources(
-  field: BiomeField,
-  viewport: Readonly<Viewport>,
-): BiomeGroundResources {
-  const buffer: GroundBuffer = {
-    bytes: new Uint8Array(field.cols * field.rows * 4),
-    cols: field.cols,
-    rows: field.rows,
-  };
-
-  updateGroundBytes(buffer.bytes, field);
-
-  const textureNode = sceneTSL.texture(buildGroundTexture(buffer));
-
-  const material = new MeshBasicNodeMaterial();
-
-  material.colorNode = sceneTSL.toNode(textureNode);
-
-  return {
-    applied: { field, viewport },
-    buffer,
-    geometry: buildBiomeGroundGeometry(viewport),
-    material,
-    textureNode,
-  };
 }
 
 /**
- * A same-size field — every pan; only a zoom changes the texel dimensions — rewrites the live
- * texture's pixels in place: no new GPU texture, and no disposal of one a queued frame still binds.
- * Only a resize allocates a replacement, and the old texture is released only after the node stops
- * referencing it.
+ * One chunk's built ground content: the biome tint texture, its quad geometry, and the material
+ * binding them, sized and positioned to the chunk's own cell box. Built once and never mutated —
+ * unlike the single whole-viewport plane this layer replaced, a chunk tile never needs to rewrite
+ * itself in place, since a pan changes which chunks are on screen rather than any one chunk's
+ * content. `chunkX`/`chunkY` ride along so a rendered entry can key its mesh without re-deriving
+ * the coordinate the cache already resolved it by.
+ *
+ * A relief or scatter layer streamed from the same chunk grid extends this shape with its own
+ * fields — `useChunkStream`'s cache is generic over the entry type precisely so that extension
+ * needs no change here.
  */
-function updateBiomeGroundPlane(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- the resources' buffer and texture-node value slot are mutable by design: rewriting them is how a rebuilt field reaches the live material
-  plane: BiomeGroundResources,
-  field: BiomeField,
-  viewport: Readonly<Viewport>,
-): void {
-  if (plane.applied.field === field && plane.applied.viewport === viewport) {
-    return;
-  }
+interface BiomeChunkEntry {
+  readonly chunkX: number;
+  readonly chunkY: number;
+  readonly geometry: BufferGeometry;
+  readonly material: MeshBasicNodeMaterial;
+  readonly texture: DataTexture;
+}
 
-  plane.applied = { field, viewport };
+function buildBiomeChunkEntry(userSeed: number, chunkX: number, chunkY: number): BiomeChunkEntry {
+  const box: Viewport = {
+    maxCX: chunkX * CHUNK_SIZE + CHUNK_SIZE - 1,
+    maxCY: chunkY * CHUNK_SIZE + CHUNK_SIZE - 1,
+    minCX: chunkX * CHUNK_SIZE,
+    minCY: chunkY * CHUNK_SIZE,
+  };
 
-  if (field.cols === plane.buffer.cols && field.rows === plane.buffer.rows) {
-    updateGroundBytes(plane.buffer.bytes, field);
+  const field = buildBiomeField(userSeed, box, { resolution: BIOME_TEXELS_PER_CELL });
+  const texture = buildGroundTexture(field);
 
-    plane.textureNode.value.needsUpdate = true;
-  } else {
-    plane.buffer.bytes = new Uint8Array(field.cols * field.rows * 4);
+  const material = new MeshBasicNodeMaterial();
 
-    plane.buffer.cols = field.cols;
-    plane.buffer.rows = field.rows;
+  material.colorNode = sceneTSL.toNode(sceneTSL.texture(texture));
 
-    updateGroundBytes(plane.buffer.bytes, field);
+  return {
+    chunkX,
+    chunkY,
+    geometry: buildBiomeChunkGeometry(box),
+    material,
+    texture,
+  };
+}
 
-    const previous = plane.textureNode.value;
-
-    plane.textureNode.value = buildGroundTexture(plane.buffer);
-
-    previous.dispose();
-  }
-
-  updateBiomeGroundGeometry(plane.geometry, viewport);
+function disposeBiomeChunkEntry(entry: Readonly<BiomeChunkEntry>): void {
+  entry.geometry.dispose();
+  entry.material.dispose();
+  entry.texture.dispose();
 }
 
 const BASE_TINT_HEXES: ReadonlyArray<string> = [
@@ -225,13 +155,27 @@ const MODIFIER_TINT = new Color(sceneColors.modifierOverlay);
  */
 const MODIFIER_OVERLAY_ALPHA = 0.35;
 
+function buildGroundTexture(field: Readonly<BiomeField>): DataTexture {
+  const bytes = new Uint8Array(field.cols * field.rows * 4);
+
+  updateGroundBytes(bytes, field);
+
+  const map = new DataTexture(bytes, field.cols, field.rows, RGBAFormat, UnsignedByteType);
+
+  map.magFilter = LinearFilter;
+  map.minFilter = LinearFilter;
+  map.needsUpdate = true;
+
+  return map;
+}
+
 /**
  * CPU-mixes each texel's RGBA byte: the base tint blended toward the border neighbour's tint by
  * half `blendT`, then the modifier tint overlaid at `MODIFIER_OVERLAY_ALPHA` where the modifier
  * layer drew non-`none`. Alpha is always opaque — the ground plane replaces the floor's color
  * within its footprint outright, it never shows the floor through.
  */
-function updateGroundBytes(bytes: Uint8Array, field: BiomeField): void {
+function updateGroundBytes(bytes: Uint8Array, field: Readonly<BiomeField>): void {
   const count = field.cols * field.rows;
 
   for (let index = 0; index < count; index++) {
@@ -265,53 +209,33 @@ function getBaseTint(id: number): Color {
   return tint;
 }
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- the buffer is mutable by design: it backs the live texture's pixel storage
-function buildGroundTexture(buffer: GroundBuffer): DataTexture {
-  const map = new DataTexture(buffer.bytes, buffer.cols, buffer.rows, RGBAFormat, UnsignedByteType);
-
-  map.magFilter = LinearFilter;
-  map.minFilter = LinearFilter;
-  map.needsUpdate = true;
-
-  return map;
-}
-
 /**
- * One parallelogram quad whose attribute buffers live as long as the geometry: the position
- * attribute is rewritten in place on every later viewport change, since replacing an attribute
- * object strands its GPU buffer until the whole geometry is disposed.
+ * One parallelogram quad covering the chunk's cell box in scene space, the same axial-to-uv mapping
+ * `buildBiomeField` samples its texels from — built once, since a chunk entry's box never changes
+ * after the entry is built.
  */
-function buildBiomeGroundGeometry(viewport: Readonly<Viewport>): BufferGeometry {
-  const geometry = new BufferGeometry();
-
-  geometry.setAttribute('position', new BufferAttribute(new Float32Array(12), 3));
-  geometry.setAttribute('uv', new BufferAttribute(new Float32Array([0, 0, 1, 0, 0, 1, 1, 1]), 2));
-  geometry.setIndex([0, 1, 2, 2, 1, 3]);
-
-  updateBiomeGroundGeometry(geometry, viewport);
-
-  return geometry;
-}
-
-/**
- * Rewrites the quad's corners to cover the viewport's cell box in scene space, the same axial-to-uv
- * mapping `buildBiomeField` samples its texels from.
- */
-function updateBiomeGroundGeometry(geometry: BufferGeometry, viewport: Readonly<Viewport>): void {
+function buildBiomeChunkGeometry(box: Readonly<Viewport>): BufferGeometry {
   const corners = [
-    toHexPosition(viewport.minCX - 0.5, viewport.minCY - 0.5),
-    toHexPosition(viewport.maxCX + 0.5, viewport.minCY - 0.5),
-    toHexPosition(viewport.minCX - 0.5, viewport.maxCY + 0.5),
-    toHexPosition(viewport.maxCX + 0.5, viewport.maxCY + 0.5),
+    toHexPosition(box.minCX - 0.5, box.minCY - 0.5),
+    toHexPosition(box.maxCX + 0.5, box.minCY - 0.5),
+    toHexPosition(box.minCX - 0.5, box.maxCY + 0.5),
+    toHexPosition(box.maxCX + 0.5, box.maxCY + 0.5),
   ];
 
-  const position = geometry.getAttribute('position');
+  const positions = new Float32Array(12);
 
   for (const [index, [x, y]] of corners.entries()) {
-    position.setXYZ(index, x * NODE_POSITION_SCALING_FACTOR, y * NODE_POSITION_SCALING_FACTOR, 0);
+    positions[index * 3] = x * NODE_POSITION_SCALING_FACTOR;
+    positions[index * 3 + 1] = y * NODE_POSITION_SCALING_FACTOR;
+    positions[index * 3 + 2] = 0;
   }
 
-  position.needsUpdate = true;
+  const geometry = new BufferGeometry();
 
+  geometry.setAttribute('position', new BufferAttribute(positions, 3));
+  geometry.setAttribute('uv', new BufferAttribute(new Float32Array([0, 0, 1, 0, 0, 1, 1, 1]), 2));
+  geometry.setIndex([0, 1, 2, 2, 1, 3]);
   geometry.computeBoundingSphere();
+
+  return geometry;
 }

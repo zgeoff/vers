@@ -24,6 +24,7 @@
           "advance",
           "broadcast",
           "compare",
+          "dispose",
           "flush",
           "fold",
           "mint",
@@ -40,6 +41,7 @@
           "serve",
           "submit",
           "sweep",
+          "sync",
           "upgrade"
         ],
         "exemptNames": [
@@ -149,6 +151,9 @@
           // a live three.js geometry handle: attribute buffers rewritten in place, no readonly
           // form
           { "from": "package", "name": "BufferGeometry", "package": "three" },
+          // a live three.js WebGPU node-material handle: shader graph and GPU pipeline state, no
+          // readonly form
+          { "from": "package", "name": "MeshBasicNodeMaterial", "package": "three" },
           // a live three.js renderer handle: GPU backend and canvas state, no readonly form
           { "from": "package", "name": "WebGPURenderer", "package": "three" },
           // a query-log event: its `query` field is Kysely's internal operation-node AST, built
