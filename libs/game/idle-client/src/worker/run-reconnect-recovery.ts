@@ -1,13 +1,15 @@
 import { readPendingStartIntent } from '../submission/read-pending-start-intent';
+import { drainStartRows } from './drain-start-rows';
 import { flushPendingStop } from './flush-pending-stop';
 import { runResyncTurn } from './run-resync-turn';
 import type { WorkerContext } from './types';
 
 /**
  * The worker's one decision point for self-scheduled catch-ups, run on every connectivity proof:
- * resends whatever the submitter held, delivers a stop raised offline, then — once the held tail
- * is drained, so a resync never reads a stale appended head — resyncs while no run is live. The
- * avatar comes from the durable start intent first (recorded at the most recent boundary
+ * drains the reporting or last-resynced avatar's reload-orphaned client-minted roots, resends
+ * whatever the submitter held, delivers a stop raised offline, then — once the held tail is
+ * drained, so a resync never reads a stale appended head — resyncs while no run is live. The
+ * resync's avatar comes from the durable start intent first (recorded at the most recent boundary
  * failure), else the reporting tab's session avatar, else the last avatar a resync ran for; with
  * none of the three, there is nothing to catch up. An intent's avatar can be stale — the account
  * switched away from it while the intent was held — but the resync flow discovers that itself
@@ -21,6 +23,14 @@ export async function runReconnectRecovery(
   signalAvatarID?: string,
   claim = false,
 ): Promise<void> {
+  const drainAvatarID = signalAvatarID ?? context.getResyncAvatarID() ?? undefined;
+
+  // must precede flushHeld: an orphan's checkpoints would otherwise NOT_FOUND-discard on the
+  // held flush before this ingests the root they chain onto
+  if (drainAvatarID !== undefined) {
+    await drainStartRows(context, drainAvatarID);
+  }
+
   await context.getSubmitter().flushHeld();
 
   // A stop raised offline delivers here even when no resync will follow — the self-resync below
