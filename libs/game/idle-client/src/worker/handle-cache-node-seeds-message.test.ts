@@ -22,12 +22,14 @@ test('it routes the relayed batch into the durable cache under the message avata
     contentVersion: first.contentVersion,
     encounterNode: first.encounterNode,
     genesisSeed: first.genesisSeed,
+    head: first.head,
   });
 
   expect(secondSeed).toStrictEqual({
     contentVersion: second.contentVersion,
     encounterNode: second.encounterNode,
     genesisSeed: second.genesisSeed,
+    head: second.head,
   });
 });
 

@@ -40,10 +40,16 @@ interface RevealNodesOpts {
   };
 }
 
+interface RevealedNodeHead {
+  readonly chainIndex: number;
+  readonly nextSeed: string;
+}
+
 interface RevealedNode {
   readonly contentVersion: string;
   readonly encounterNode: EncounterNode;
   readonly genesisSeed: string;
+  readonly head: RevealedNodeHead;
   readonly nodeID: string;
 }
 
@@ -133,7 +139,7 @@ export async function revealNodes(
           .columns(['avatarId', 'scopeType', 'scopeId'])
           .doUpdateSet({ genesisSeed: (eb) => eb.ref('activityChains.genesisSeed') }),
       )
-      .returning(['scopeId', 'genesisSeed'])
+      .returning(['scopeId', 'genesisSeed', 'appendedNextSeed', 'appendedChainIndex'])
       .execute();
   });
 
@@ -152,12 +158,12 @@ export async function revealNodes(
   // rejects before this reveal pays for the content-registry read or the keys round trip.
   const encounterInputs = await loadEncounterInputs(deps, avatar.id);
 
-  const genesisByNodeID = new Map(minted.map((row) => [row.scopeId, row.genesisSeed]));
+  const mintedByNodeID = new Map(minted.map((row) => [row.scopeId, row]));
 
   const nodes = opts.input.nodeIDs.map((nodeID): RevealedNode => {
-    const genesisSeed = genesisByNodeID.get(nodeID);
+    const chain = mintedByNodeID.get(nodeID);
 
-    invariant(genesisSeed !== undefined, 'minted chain row missing for a requested node');
+    invariant(chain !== undefined, 'minted chain row missing for a requested node');
 
     const resolved = resolvedByNodeID.get(nodeID);
 
@@ -172,7 +178,13 @@ export async function revealNodes(
       }),
     };
 
-    return { contentVersion: encounterInputs.contentVersion, encounterNode, genesisSeed, nodeID };
+    return {
+      contentVersion: encounterInputs.contentVersion,
+      encounterNode,
+      genesisSeed: chain.genesisSeed,
+      head: { chainIndex: chain.appendedChainIndex, nextSeed: chain.appendedNextSeed },
+      nodeID,
+    };
   });
 
   return {

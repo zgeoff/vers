@@ -25,5 +25,6 @@ export async function readNodeSeed(
         contentVersion: record.contentVersion,
         encounterNode: record.encounterNode,
         genesisSeed: record.genesisSeed,
+        head: record.head,
       };
 }

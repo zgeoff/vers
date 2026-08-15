@@ -153,7 +153,9 @@ async function startContinuationFrom(
   await context.getSubmitter().registerActivity({
     activityID: row.id,
     appendedHead: 0,
+    avatarID: row.avatarID,
     lastHash: row.startHash,
+    scopeID: row.scopeID,
     startChainIndex: row.startChainIndex,
   });
 }
