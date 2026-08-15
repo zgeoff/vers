@@ -159,6 +159,30 @@ test('it accepts an advanceActivity request carrying a root submission', () => {
   );
 });
 
+test('it accepts a root-only advanceActivity request with no continuations', () => {
+  const input = {
+    activityID: 'act_root_only',
+    continuations: [],
+    expectedHead: 0,
+    root: {
+      avatarID: 'avatar_1',
+      buildSnapshot: { level: 1, xp: 0 },
+      contentVersion: '2',
+      scopeID: '0_0',
+      scopeType: 'world_map_node',
+      seed: '0123456789abcdef0123456789abcdef',
+      simVersion: 'engine_hash',
+      startChainIndex: 0,
+      startHash: 'start_hash',
+      startKey: 'root_act_root_only',
+    },
+  };
+
+  expect(activityContract.advanceActivity['~orpc'].inputSchema?.safeParse(input).success).toBe(
+    true,
+  );
+});
+
 test('it rejects an advanceActivity request whose checkpoints exceed the cap across continuations', () => {
   const half = Math.ceil(MAX_CATCH_UP_BATCH_CHECKPOINTS / 2);
 

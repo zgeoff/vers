@@ -140,9 +140,11 @@ export const activityContract = {
       z
         .object({
           activityID: z.string(),
+
+          // Empty when `root` carries the whole request: a root-only ingest mints the row and
+          // appends nothing.
           continuations: z
             .array(CatchUpContinuationSchema)
-            .min(1)
             .max(MAX_CATCH_UP_BATCH_CHECKPOINTS)
             .readonly(),
           expectedHead: z.int().min(0),
