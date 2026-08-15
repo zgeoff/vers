@@ -1,6 +1,7 @@
 import { readPendingStartIntent } from '../submission/read-pending-start-intent';
 import { drainStartRows } from './drain-start-rows';
 import { flushPendingStop } from './flush-pending-stop';
+import { reportWorkerFault } from './report-worker-fault';
 import { runResyncTurn } from './run-resync-turn';
 import type { WorkerContext } from './types';
 
@@ -31,7 +32,13 @@ export async function runReconnectRecovery(
   // must precede flushHeld: an orphan's checkpoints would otherwise NOT_FOUND-discard on the
   // held flush before this ingests the root they chain onto
   if (avatarID !== undefined) {
-    await drainStartRows(context, avatarID);
+    try {
+      await drainStartRows(context, avatarID);
+    } catch (error) {
+      // a drain failure must not strand the held checkpoints and offline stop the steps below
+      // deliver; the orphan rows persist for the next recovery to retry
+      reportWorkerFault('reconnect', error);
+    }
   }
 
   await context.getSubmitter().flushHeld();

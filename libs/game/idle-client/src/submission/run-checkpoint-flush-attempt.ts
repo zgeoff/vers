@@ -154,21 +154,24 @@ export const runCheckpointFlushAttempt = fromPromise<FlushOutcome, FlushAttemptI
 
         const ingestOutcome = await input.ingestRoot(input.activityID);
 
+        // the server answered NOT_FOUND — a defined reply, so `onServerContact` fires — but the
+        // root cannot ingest yet: a transport failure, a session lapse, or an inactive avatar. Hold
+        // the queue for retry without feeding the transport-stall counter a genuinely unanswered
+        // flush owns.
         if (ingestOutcome === 'deferred') {
-          return {
-            reason: 'offline-root-pending',
-            traceID: trace.traceID,
-            type: 'transport-failure',
-          };
+          return { type: 'held-defined-error' };
         }
 
-        if (ingestOutcome === 'rejected' || ingestOutcome === 'absent') {
+        if (ingestOutcome === 'rejected') {
           await removeQueuedCheckpoints(input.activityID);
 
           return { type: 'not-found' };
         }
 
-        // ingested: the root now exists at head 0 server-side — loop back for the one retry
+        // ingested or absent: the row exists at head 0 server-side now — this device just minted it,
+        // or a concurrent drain minted and removed the pending copy — so retry the same batch once
+        // against the now-present row. A genuinely gone activity NOT_FOUNDs again and discards under
+        // the `retriedAfterIngest` guard, never ingesting twice.
         retriedAfterIngest = true;
       }
     } catch (error) {

@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { expect, mock, test } from 'bun:test';
 import { createORPCClient } from '@orpc/client';
 import { RPCLink } from '@orpc/client/fetch';
 import { createMockActivityData } from '@vers/contract-activity/test-utils';
@@ -84,6 +84,31 @@ test('it defers and keeps the root when the avatar reads temporarily inactive', 
   const stored = await readStartRow(row.id);
 
   expect(stored).toStrictEqual(row);
+});
+
+test('it rejects and removes a row with no start key without reaching the server', async () => {
+  const ctx = setupTest();
+  const row = createMockActivityData({ id: 'act_ingest_no_key', startKey: null });
+  const track = mock<() => void>();
+
+  server.use(
+    mockActivityService.advanceActivity.handler(() => {
+      track();
+
+      return { activity: row, appendedHead: 0 };
+    }),
+  );
+
+  await writeStartRow(row);
+
+  const outcome = await ingestStartRow(ctx.client, row.id);
+
+  expect(outcome).toBe('rejected');
+  expect(track).not.toHaveBeenCalled();
+
+  const stored = await readStartRow(row.id);
+
+  expect(stored).toBeUndefined();
 });
 
 test('it rejects and removes the root once the server refuses it with CONFLICT', async () => {

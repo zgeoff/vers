@@ -47,6 +47,14 @@ export async function ingestStartRow(
     return 'absent';
   }
 
+  // a client-minted root always carries its start key; a row missing one can never be projected
+  // into a submission, so drop it rather than let the projection throw and abort a multi-row drain
+  if (row.startKey === null) {
+    await removeStartRow(activityID);
+
+    return 'rejected';
+  }
+
   const root = buildOfflineRootSubmission(row);
 
   const [error] = await safe(

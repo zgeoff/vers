@@ -489,6 +489,45 @@ test('it ingests a pending root and re-flushes once on NOT_FOUND, succeeding wit
   expect(ctx.onAcked).toHaveBeenCalledExactlyOnceWith('not-found-ingested-activity', 1);
 });
 
+test('it re-flushes on an absent ingest, delivering against a root a concurrent drain minted', async () => {
+  const track = mock<() => void>();
+
+  const ingestRoot = mock<(activityID: string) => Promise<IngestStartRowOutcome>>(async () => {
+    await Promise.resolve();
+
+    return 'absent';
+  });
+
+  const ctx = setupTest({ activityID: 'not-found-absent-activity', ingestRoot });
+
+  server.use(
+    mockActivityService.trackActivityProgress.handler((opts) => {
+      track();
+
+      if (track.mock.calls.length === 1) {
+        throw opts.errors.NOT_FOUND({ data: {} });
+      }
+
+      return { appendedHead: 1 };
+    }),
+  );
+
+  await writeQueuedCheckpoint(
+    'not-found-absent-activity',
+    createMockCheckpointBatchEntry({ payload: { type: 'completed' }, version: 1 }),
+  );
+
+  ctx.actor.send({ isTerminal: true, type: 'QUEUED', version: 1 });
+
+  await waitFor(() => {
+    expect(ctx.actor.getSnapshot().matches('evicted')).toBeTrue();
+  });
+
+  expect(track).toHaveBeenCalledTimes(2);
+  expect(ingestRoot).toHaveBeenCalledExactlyOnceWith('not-found-absent-activity');
+  expect(ctx.onAcked).toHaveBeenCalledExactlyOnceWith('not-found-absent-activity', 1);
+});
+
 test('it discards the queue after a second NOT_FOUND on the post-ingest retry, ingesting only once', async () => {
   const track = mock<() => void>();
 
