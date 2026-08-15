@@ -17,6 +17,7 @@ Project-level additions to the shared function-naming taxonomy, under the same r
 | `broadcast` | post one message to every connected client on whichever transport carries it                | `broadcast`              |
 | `dispose`   | release the resources a built entry holds (a GPU buffer, texture, or subscription)          | `disposeBiomeChunkEntry` |
 | `flush`     | attempt delivery of the durable outbound backlog, removing entries confirmed received       | `flush`                  |
+| `ingest`    | submit a locally held record into an external system, settling its local copy by the answer | `ingestStartRow`         |
 | `mint`      | create and persist a new identity-bearing row rooted in a chain or coordinate               | `mintContinuation`       |
 | `park`      | set a work item aside in a parked status for later resumption                               | `parkActivity`           |
 | `record`    | durably note that an event occurred (counter, log, audit row)                               | `recordFailedAttempt`    |

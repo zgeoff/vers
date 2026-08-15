@@ -8,6 +8,7 @@ export type { ActivityStatus } from './activity-status-schema';
 export { ActivityStatusSchema } from './activity-status-schema';
 export { buildCheckpointHash } from './build-checkpoint-hash';
 export { buildCheckpointHashFromEntry } from './build-checkpoint-hash-from-entry';
+export { buildOfflineRootSubmission } from './build-offline-root-submission';
 export { buildStartHash } from './build-start-hash';
 export type { BuildSnapshot } from './build-snapshot-schema';
 export { BuildSnapshotSchema } from './build-snapshot-schema';

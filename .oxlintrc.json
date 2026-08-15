@@ -27,6 +27,7 @@
           "dispose",
           "flush",
           "fold",
+          "ingest",
           "mint",
           "park",
           "record",

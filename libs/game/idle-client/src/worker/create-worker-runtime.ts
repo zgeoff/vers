@@ -7,6 +7,7 @@ import { ActivityFailureAction, SIMULATION_TIMESTEP_MS, createSimulation } from 
 import invariant from 'tiny-invariant';
 import { createActivityServiceClient } from '../submission/create-activity-service-client';
 import { createCheckpointSubmitter } from '../submission/create-checkpoint-submitter';
+import { ingestStartRow } from '../submission/ingest-start-row';
 import { readFailureActionCache } from '../submission/read-failure-action-cache';
 import type { ActivityServiceClient } from '../submission/types';
 import { WORKER_TO_CLIENT_CHANNEL } from '../transport/constants';
@@ -144,6 +145,7 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
 
   const submitter = createCheckpointSubmitter({
     client,
+    ingestRoot: (activityID) => ingestStartRow(client, activityID),
     onAcked: () => {
       lastAckAt = Date.now();
     },
