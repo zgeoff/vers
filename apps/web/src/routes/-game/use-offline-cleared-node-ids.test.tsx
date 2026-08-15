@@ -71,6 +71,31 @@ test('it re-derives once a fresh offline clear reports through lastCompletedActi
   });
 });
 
+test('it reads empty across an avatar switch rather than inheriting the outgoing set', async () => {
+  const outgoing = 'avatar-switch-outgoing';
+  const row = createMockActivityData({ avatarID: outgoing, scopeID: '5_0' });
+
+  await writeStartRow(row);
+
+  await writeQueuedCheckpoint(
+    row.id,
+    createMockCheckpointBatchEntry({ payload: { type: ActivityCheckpointType.Completed } }),
+  );
+
+  let currentAvatarID = outgoing;
+  const hook = renderHook(() => useOfflineClearedNodeIDs(currentAvatarID));
+
+  await waitFor(() => {
+    expect(hook.result.current).toStrictEqual(new Set(['5_0']));
+  });
+
+  currentAvatarID = 'avatar-switch-incoming';
+
+  hook.rerender();
+
+  expect(hook.result.current).toStrictEqual(new Set());
+});
+
 test('it returns the empty set while no avatar id is given', () => {
   const hook = renderHook(() => useOfflineClearedNodeIDs(undefined));
 

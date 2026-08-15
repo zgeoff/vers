@@ -10,8 +10,9 @@ const COMPLETED_CHECKPOINT_TYPE: string = ActivityCheckpointType.Completed;
  * The avatar's world-map nodes cleared offline but not yet server-verified, derived from the
  * durable offline outbox: a pending root scoped to a `world_map_node` whose queued checkpoints
  * hold a completed terminal. Empty once nothing is pending, so the call stays cheap on the common
- * online path, and it shrinks on its own as ingest drains the outbox — a verified clear needs no
- * removal here, only a re-derive.
+ * online path. A node drops from the result once its root ingests and drains the outbox, which can
+ * precede the server-verified set gaining it — a re-derive in that reconnect window briefly omits
+ * the node until verification lands.
  */
 export async function readOfflineClearedNodeIDs(avatarID: string): Promise<ReadonlySet<string>> {
   const rows = await readAllStartRows();

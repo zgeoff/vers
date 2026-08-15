@@ -8,13 +8,27 @@ import { useEffect, useState } from 'react';
 const EMPTY_NODE_ID_SET: ReadonlySet<string> = new Set();
 
 /**
+ * The last derived cleared-node set paired with the avatar it was derived for, so the held set is
+ * never read across an avatar switch before the incoming avatar's own derive lands.
+ */
+interface DerivedClearedNodeIDs {
+  readonly avatarID: string | undefined;
+  readonly nodeIDs: ReadonlySet<string>;
+}
+
+/**
  * The active avatar's world-map nodes cleared offline but not yet server-verified, re-derived from
  * the durable offline outbox on a fresh offline clear and on a reconnect that settles the outbox —
  * an ingest, verification, or rejection. `undefined` returns the empty set, matching an avatar not
- * yet loaded.
+ * yet loaded; an avatar switch reads empty until the incoming avatar's derive lands, so the new
+ * avatar never briefly inherits the outgoing avatar's cleared nodes.
  */
 export function useOfflineClearedNodeIDs(avatarID: string | undefined): ReadonlySet<string> {
-  const [clearedNodeIDs, setClearedNodeIDs] = useState<ReadonlySet<string>>(EMPTY_NODE_ID_SET);
+  const [derived, setDerived] = useState<DerivedClearedNodeIDs>({
+    avatarID: undefined,
+    nodeIDs: EMPTY_NODE_ID_SET,
+  });
+
   const lastCompletedActivityID = useLastCompletedActivityID();
   const resyncStatus = useResyncStatus();
 
@@ -23,14 +37,18 @@ export function useOfflineClearedNodeIDs(avatarID: string | undefined): Readonly
     let ignore = false;
 
     if (avatarID === undefined) {
-      setClearedNodeIDs(EMPTY_NODE_ID_SET);
+      setDerived({ avatarID: undefined, nodeIDs: EMPTY_NODE_ID_SET });
     } else {
       const derive = async (id: string) => {
         try {
-          const derived = await readOfflineClearedNodeIDs(id);
+          const nodeIDs = await readOfflineClearedNodeIDs(id);
 
           if (!ignore) {
-            setClearedNodeIDs((current) => (isSameNodeIDSet(current, derived) ? current : derived));
+            setDerived((current) =>
+              current.avatarID === id && isSameNodeIDSet(current.nodeIDs, nodeIDs)
+                ? current
+                : { avatarID: id, nodeIDs },
+            );
           }
         } catch {
           // a failed local read leaves the previously derived set in place, retried on the next
@@ -46,7 +64,7 @@ export function useOfflineClearedNodeIDs(avatarID: string | undefined): Readonly
     };
   }, [avatarID, lastCompletedActivityID, resyncStatus]);
 
-  return avatarID === undefined ? EMPTY_NODE_ID_SET : clearedNodeIDs;
+  return derived.avatarID === avatarID ? derived.nodeIDs : EMPTY_NODE_ID_SET;
 }
 
 function isSameNodeIDSet(a: ReadonlySet<string>, b: ReadonlySet<string>): boolean {
