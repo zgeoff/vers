@@ -1077,6 +1077,60 @@ test('it rejects a root whose scope has no chain row with NODE_NOT_REVEALED', as
   ).rejects.toMatchObject({ code: 'NODE_NOT_REVEALED' });
 });
 
+test('it rejects a root submitted against a quarantined chain with CHAIN_QUARANTINED', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id, xp: 0 });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
+  await ctx.db
+    .insertInto('activities')
+    .values(
+      createMockActivity({
+        avatarId: avatar.id,
+        scopeId: '0_0',
+        scopeType: 'world_map_node',
+        status: 'quarantined',
+      }),
+    )
+    .execute();
+
+  const activityID = `act_${createId()}`;
+
+  const root = createMockOfflineRootSubmission({
+    avatarID: avatar.id,
+    scopeID: '0_0',
+    scopeType: 'world_map_node',
+  });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const request = client.advanceActivity({
+    activityID,
+    continuations: [createMockCatchUpContinuation()],
+    expectedHead: 0,
+    root,
+  });
+
+  await request.catch(() => {});
+
+  expect(request).rejects.toMatchObject({
+    code: 'CHAIN_QUARANTINED',
+    data: { activityID, appendedHead: 0 },
+  });
+
+  // the root mint rolled back entirely — no row was left occupying the avatar's active-run slot
+  const row = await ctx.db
+    .selectFrom('activities')
+    .select('id')
+    .where('id', '=', activityID)
+    .executeTakeFirst();
+
+  expect(row).toBeUndefined();
+});
+
 test('it rejects a root at an unselectable node with NODE_UNREACHABLE', async () => {
   await using ctx = await setupTest();
 

@@ -22,6 +22,7 @@ import type {
  */
 interface MintRootErrors {
   readonly AVATAR_NOT_ACTIVE: (payload: AvatarNotActivePayload) => Error;
+  readonly CHAIN_QUARANTINED: (payload: AdvanceBailPayload) => Error;
   readonly CHECKPOINT_INVALID: (payload: AdvanceCheckpointInvalidPayload) => Error;
   readonly CONFLICT: (payload: AdvanceBailPayload) => Error;
   readonly NODE_NOT_REVEALED: (payload: EmptyErrorPayload) => Error;
@@ -37,8 +38,10 @@ interface MintRootErrors {
  * live chain anchor before inserting it. Ownership of `root.avatarID` is the caller's
  * responsibility: this runs only once the caller has confirmed the acting user owns it. Throws
  * AVATAR_NOT_ACTIVE unless the avatar is the account's active one, NODE_NOT_REVEALED when the scope
- * has no chain row to root against, NODE_UNKNOWN when the scope doesn't resolve to a known node, and
- * NODE_UNREACHABLE when it resolves but sits outside the avatar's selectable set. Validates the
+ * has no chain row to root against, CHAIN_QUARANTINED when the scope already carries a quarantined
+ * row (a quarantine blocks new activity starts on the pair, root mints included), NODE_UNKNOWN when
+ * the scope doesn't resolve to a known node, and NODE_UNREACHABLE when it resolves but sits outside
+ * the avatar's selectable set. Validates the
  * stamped sim version exactly as a fresh start would (SIM_VERSION_UNKNOWN/SIM_VERSION_EXPIRED), then
  * requires `root.startChainIndex`/`root.seed` to equal the chain's live appended anchor exactly —
  * a mismatch means the client rooted against a stale head, and the row is refused with CONFLICT
@@ -73,6 +76,21 @@ export async function mintRoot(
 
   if (chain === undefined) {
     throw errors.NODE_NOT_REVEALED({ data: {} });
+  }
+
+  const quarantined = await trx
+    .selectFrom('activities')
+    .select('id')
+    .where('avatarId', '=', input.root.avatarID)
+    .where('scopeType', '=', input.root.scopeType)
+    .where('scopeId', '=', input.root.scopeID)
+    .where('status', '=', 'quarantined')
+    .executeTakeFirst();
+
+  if (quarantined !== undefined) {
+    throw errors.CHAIN_QUARANTINED({
+      data: { activityID: input.activityID, appendedHead: 0 },
+    });
   }
 
   const resolved = resolveEncounterNode(input.root.scopeType, input.root.scopeID);
