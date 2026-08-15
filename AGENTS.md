@@ -299,9 +299,9 @@ enough that a dependency costs more than it saves.
 
 ## Architecture docs
 
-The system is documented under `docs/architecture/`, indexed by `docs/architecture/overview.md`. A
-subsystem's doc is the authoritative account of its invariants — grep locates code, it does not
-teach a subsystem's rules.
+The system is documented under `docs/architecture/`, with `docs/architecture/overview.md` as its
+narrative entry point. A subsystem's doc is the authoritative account of its invariants — grep
+locates code, it does not teach a subsystem's rules.
 
 - Before substantial work in a subsystem, read its doc in full first, not after reasoning from code
   fragments. Mandatory reads by area:
