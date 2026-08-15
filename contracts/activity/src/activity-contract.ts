@@ -11,6 +11,7 @@ import { ContentDocumentSchema } from './content-document-schema';
 import { EncounterNodeSchema } from './encounter-node-schema';
 import { MAX_CATCH_UP_BATCH_CHECKPOINTS } from './max-catch-up-batch-checkpoints';
 import { MAX_REVEAL_BATCH_NODES } from './max-reveal-batch-nodes';
+import { OfflineRootSubmissionSchema } from './offline-root-submission-schema';
 import { REVEAL_VIEWPORT_CELL_CAP } from './reveal-viewport-cell-cap';
 import { RewardItemAffixSchema } from './reward-item-affix-schema';
 import { ScopeIdentifierSchema } from './scope-identifier-schema';
@@ -145,6 +146,14 @@ export const activityContract = {
             .max(MAX_CATCH_UP_BATCH_CHECKPOINTS)
             .readonly(),
           expectedHead: z.int().min(0),
+
+          /**
+           * A client-minted root the server has never seen — offline-first ingest. Present only
+           * when `activityID` names a row this request itself mints, under the same gates
+           * `startActivity` runs, before the continuation loop appends onto it. Absent for the
+           * ordinary case: `activityID` names a row the server already minted.
+           */
+          root: OfflineRootSubmissionSchema.optional(),
         })
 
         // The per-array caps alone still admit continuations × checkpoints work; the aggregate
@@ -172,6 +181,11 @@ export const activityContract = {
           message: 'A continuation targets an activity that already reached a terminal status',
           status: 409,
         },
+        AVATAR_NOT_ACTIVE: {
+          data: AvatarNotActiveDataSchema,
+          message: "A root mint's avatar is not the account's active one",
+          status: 409,
+        },
         CHAIN_QUARANTINED: {
           data: AdvanceBailDataSchema,
           message: 'The chain is quarantined pending replay adjudication',
@@ -186,11 +200,36 @@ export const activityContract = {
           data: AdvanceBailDataSchema,
           message: "A continuation's mint or append is stale for the chain's current state",
         },
+        NODE_NOT_REVEALED: {
+          data: z.object({}),
+          message: "A root mint's scope has no revealed chain to root against",
+          status: 409,
+        },
+        NODE_UNKNOWN: {
+          data: z.object({}),
+          message: "A root mint's scope node is not registered on the world map",
+          status: 404,
+        },
+        NODE_UNREACHABLE: {
+          data: z.object({}),
+          message: "A root mint's scope node is outside the avatar's selectable set",
+          status: 409,
+        },
         NOT_FOUND: { data: z.object({}), message: 'No activity with that id' },
         SESSION_EVICTED: {
           data: AdvanceBailDataSchema,
           message: "The submitting session is no longer the activity's writer",
           status: 403,
+        },
+        SIM_VERSION_EXPIRED: {
+          data: SimVersionProblemDataSchema,
+          message: "A root mint's stamped sim version is past retention",
+          status: 410,
+        },
+        SIM_VERSION_UNKNOWN: {
+          data: SimVersionProblemDataSchema,
+          message: "A root mint's stamped sim version is not registered",
+          status: 409,
         },
       }),
     ),

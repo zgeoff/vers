@@ -31,6 +31,8 @@ export { LootTablesSchema } from './loot-tables-schema';
 export { MAX_CATCH_UP_BATCH_CHECKPOINTS } from './max-catch-up-batch-checkpoints';
 export { MAX_REVEAL_BATCH_NODES } from './max-reveal-batch-nodes';
 export { OFFLINE_PROGRESS_CAP_MS } from './offline-progress-cap-ms';
+export type { OfflineRootSubmission } from './offline-root-submission-schema';
+export { OfflineRootSubmissionSchema } from './offline-root-submission-schema';
 export { REVEAL_VIEWPORT_CELL_CAP } from './reveal-viewport-cell-cap';
 export type { RewardItemAffix } from './reward-item-affix-schema';
 export { RewardItemAffixSchema } from './reward-item-affix-schema';
