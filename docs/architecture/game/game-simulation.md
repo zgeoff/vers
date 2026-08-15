@@ -100,6 +100,16 @@ The client predicts that same snapshot locally so its offline simulation runs ag
 build; `advanceActivity` cross-checks the prediction against what it derived and rejects the
 continuation on a mismatch.
 
+`advanceActivity` accepts a client-minted root the server has never seen, when `activityID` names no
+existing row and the caller supplies its full start context — the same computation `startActivity`
+would have made, done offline. The mint runs the admission gates `startActivity` runs — node
+selectability, sim-version validity — then validates the client's `seed` and `startChainIndex`
+against the chain's live appended anchor: a mismatch means the client rooted against a stale head,
+and the mint is refused rather than accepted off a moving target. `buildSnapshot` and the start hash
+are cross-checked the same way a continuation's own mint cross-checks its hint, rejecting a mismatch
+rather than trusting the client's prediction. The minted row stores the same columns a
+`startActivity` mint would, so the replay verifier reproduces it unchanged.
+
 The `Started` snapshot pins every version a replay needs — the engine and content versions, the roll
 `keyVersion` ([game entropy](./game-entropy.md#version-pinning)), and `start_chain_index`
 ([seed chain](./seed-chain.md#seeds-and-chainindex)) — so replay resolves each under the code that
