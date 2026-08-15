@@ -1238,32 +1238,68 @@ test('it rejects a root submitted against a quarantined chain with CHAIN_QUARANT
   expect(row).toBeUndefined();
 });
 
-test('it rejects a root at an unselectable node with NODE_UNREACHABLE', async () => {
+test('it mints a root at a node unconnected to any completed node — reachability is a replay concern, not an admission one', async () => {
   await using ctx = await setupTest();
 
+  const current = await createSimVersionRow(ctx.db);
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id, xp: 0 });
-
-  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '50_50' });
+  const chain = await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '50_50' });
 
   const activityID = `act_${createId()}`;
+  const document = createMockContentDocument({ contentVersion: '2' });
+
+  const derived = deriveRootStart({
+    avatarID: avatar.id,
+    avatarSeed: avatar.seed,
+    contentVersion: '2',
+    document,
+    scopeID: '50_50',
+    seed: chain.appendedNextSeed,
+    simVersion: current.engineHash,
+  });
 
   const root = createMockOfflineRootSubmission({
     avatarID: avatar.id,
+    buildSnapshot: { level: buildLevelFromXP(0), xp: 0 },
+    contentVersion: '2',
     scopeID: '50_50',
     scopeType: 'world_map_node',
+    seed: chain.appendedNextSeed,
+    simVersion: current.engineHash,
+    startChainIndex: 0,
+    startHash: derived.startHash,
+  });
+
+  const tail = createMockCheckpointBatch({
+    finalPayloadOverrides: { rewards: { xp: 40 }, type: 'completed' },
+    startChainIndex: root.startChainIndex,
+    startPrevHash: root.startHash,
+    startVersion: 1,
+  });
+
+  const continuation = createMockCatchUpContinuation({
+    buildSnapshot: { level: buildLevelFromXP(40), xp: 40 },
+    checkpoints: tail,
+    startKey: `continue_${activityID}`,
   });
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  expect(
-    client.advanceActivity({
-      activityID,
-      continuations: [createMockCatchUpContinuation()],
-      expectedHead: 0,
-      root,
-    }),
-  ).rejects.toMatchObject({ code: 'NODE_UNREACHABLE' });
+  await client.advanceActivity({
+    activityID,
+    continuations: [continuation],
+    expectedHead: 0,
+    root,
+  });
+
+  const rootRow = await ctx.db
+    .selectFrom('activities')
+    .select('id')
+    .where('id', '=', activityID)
+    .executeTakeFirstOrThrow();
+
+  expect(rootRow.id).toBe(activityID);
 });
 
 test("it rejects a root minted for an avatar that is not the account's active one", async () => {

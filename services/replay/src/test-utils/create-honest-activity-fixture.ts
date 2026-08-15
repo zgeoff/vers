@@ -14,7 +14,13 @@ import { buildSimulationInput } from '@vers/idle-core';
 import { runSimulation } from '@vers/idle-core/replay';
 import { buildMockScopeSecret } from '@vers/mock-services/keys';
 import { deriveWorldmapContent } from '@vers/worldmap-content';
-import { findCellCoord, getDifficulty } from '@vers/worldmap-core';
+import {
+  ORIGIN_CELL,
+  collectNodeEdges,
+  findCellCoord,
+  getDifficulty,
+  toNodeID,
+} from '@vers/worldmap-core';
 import type { Insertable, Kysely, Selectable } from 'kysely';
 import invariant from 'tiny-invariant';
 import { TERMINAL_CHECKPOINT_TYPES } from '../replay/types';
@@ -67,6 +73,15 @@ interface CreateHonestActivityFixtureInput {
   readonly avatarID?: string;
   readonly buildSnapshot?: { readonly level: number; readonly xp: number };
   readonly chain?: Readonly<Partial<Insertable<ActivityChains>>>;
+
+  /**
+   * First-clear grants to seed for the fixture's avatar before the row is built, so replay's
+   * reachability check finds the scope connected. Defaults to a node actually adjacent to a
+   * `world_map_node` chain's own scope under the avatar's seed; pass `[]` to build a fixture
+   * reachability rejects.
+   */
+  readonly completedNodeIDs?: ReadonlyArray<string>;
+
   readonly contentVersion?: string;
   readonly document?: ContentDocument;
   readonly duration?: number;
@@ -142,6 +157,20 @@ export async function createHonestActivityFixture(
     .where('id', '=', chain.avatarId)
     .executeTakeFirstOrThrow();
 
+  const completedNodeIDs =
+    input.completedNodeIDs ??
+    resolveDefaultCompletedNodeIDs(avatarRow.seed, chain.scopeType, chain.scopeId);
+
+  if (completedNodeIDs.length > 0) {
+    await db
+      .insertInto('avatarGrants')
+      .values(
+        completedNodeIDs.map((key) => ({ avatarId: chain.avatarId, key, kind: 'first_clear' })),
+      )
+      .onConflict((oc) => oc.doNothing())
+      .execute();
+  }
+
   const encounterNode = buildFixtureEncounterNode({
     avatarID: chain.avatarId,
     content: document.encounter,
@@ -212,6 +241,43 @@ export async function createHonestActivityFixture(
   }
 
   return { activity, chain, checkpoints, encounterNode, engineCheckpoints };
+}
+
+/**
+ * The default reachability grant a `world_map_node` fixture needs so replay's frontier check finds
+ * its scope connected: a node genuinely adjacent to it under this avatar's own seed, so the grant
+ * holds regardless of how jitter placed the scope's neighbours. Falls back to the scope's own id
+ * when the topology gives it no edge at all, and grants nothing for the origin (unconditionally
+ * selectable) or a non-`world_map_node` scope (outside the reachability rule).
+ */
+function resolveDefaultCompletedNodeIDs(
+  userSeed: number,
+  scopeType: string,
+  scopeID: string,
+): Array<string> {
+  const originID = toNodeID(ORIGIN_CELL[0], ORIGIN_CELL[1]);
+
+  if (scopeType !== 'world_map_node' || scopeID === originID) {
+    return [];
+  }
+
+  const coord = findCellCoord(scopeID);
+
+  if (coord === undefined) {
+    return [scopeID];
+  }
+
+  const [neighbourEdge] = collectNodeEdges(userSeed, coord[0], coord[1]);
+
+  if (neighbourEdge === undefined) {
+    return [scopeID];
+  }
+
+  const [aID, bID] = neighbourEdge.id.split('|');
+
+  invariant(aID !== undefined && bID !== undefined, 'an edge id always encodes two endpoints');
+
+  return [aID === scopeID ? bID : aID];
 }
 
 interface BuildFixtureEncounterNodeInput {
