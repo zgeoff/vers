@@ -120,6 +120,16 @@ Pre-disclosing content into that shell is safe only because the base is flat —
 peeking buys nothing, since all reward magnitude lives in juice salt minted per-run and online. A
 player farms the known offline and ventures into fog online.
 
+Traversal, not just farming, also extends offline: clearing a node offline opens its neighbours for
+selection before the server verifies the clear. The client derives this widened selectable set from
+its durable offline outbox — the client-minted root and queued checkpoints a completed clear leaves
+behind — so the opened neighbours survive an offline restart rather than resetting to the
+last-verified frontier. The widened set only ever adds to selection; reveal stays gated on
+verification, so an offline clear opens ground the player can already see without disclosing any new
+fog. The client-side widening is a convenience, never the boundary: the server's own frontier check
+still rejects a start beyond the avatar's verified first-clear frontier, so an unearned offline jump
+settles nothing it cannot back up once the device reconnects.
+
 ## Content sealing & verification
 
 Every `activities` row carries `secretRef`/`secretVersion`, so the verifier runs the descriptor
