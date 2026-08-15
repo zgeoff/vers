@@ -149,6 +149,26 @@ recommend one whenever it covers the need. Hand-roll only when no candidate is b
 focused on the problem, when a Bun or Node builtin already covers it, or when the logic is small
 enough that a dependency costs more than it saves.
 
+## Architecture docs
+
+The system is documented under `docs/architecture/`, with `docs/architecture/overview.md` as its
+narrative entry point. A subsystem's doc is the authoritative account of its invariants — grep
+locates code, it does not teach a subsystem's rules.
+
+- Before substantial work in a subsystem, read its doc in full first, not after reasoning from code
+  fragments. Mandatory reads by area:
+  - activities, the seed chain, verification, replay, or reconcile —
+    `docs/architecture/game/game-simulation.md` and `docs/architecture/game/seed-chain.md`
+  - world-map generation, reveal, or fog of war — `docs/architecture/game/worldmap.md`
+  - item and reward rolls, or content entropy — `docs/architecture/game/item-generation.md` and
+    `docs/architecture/game/game-entropy.md`
+
+  The error-handling, metrics, analytics, deployment, and database sections carry their own
+  mandatory read.
+
+- A behavior change to a documented subsystem updates that subsystem's doc in the same PR. The doc
+  states current behavior, so a change that leaves it stale is incomplete.
+
 ## Error handling
 
 Read `docs/architecture/services/error-handling.md` before adding or changing a failure path — it
