@@ -19,6 +19,7 @@ import {
 import { useEffect, useRef, useState } from 'react';
 import { buildRevealedNodesQueryOptions } from '../../lib/activity/build-revealed-nodes-query-options';
 import { buildActiveAvatarQueryOptions } from '../../lib/avatar/build-active-avatar-query-options';
+import { useOfflineClearedNodeIDs } from './use-offline-cleared-node-ids';
 
 /**
  * Cell-coordinate box the region graph builds from before the free camera has reported its own
@@ -53,7 +54,9 @@ interface HeldCompletedNodeIDs {
  * connects to a completed node, the same reachability rule the activity service gates starts
  * against — over the full topology, never over the viewport-filtered graph edges, so the client
  * and server always agree at a viewport boundary; and the reveal sources the fog-of-war renderer
- * projects the revealed region from.
+ * projects the revealed region from. The selectable set additionally extends over the avatar's
+ * locally-cleared-but-unverified nodes, so an offline clear opens its neighbours before the server
+ * confirms it; the reveal sources stay verified-only, since fog discloses only after verification.
  *
  * Returns the fog-revealed node id set projected over the loaded region — the same reveal sources
  * published to the store, expanded to the individual node ids their discs cover inside the region
@@ -66,9 +69,11 @@ export function useAvatarRegionGraph(): ReadonlySet<string> {
   const seed = avatarQuery.data?.seed;
   const viewport = useViewport();
   const regionKey = useRegionKey();
+  const optimisticClearedNodeIDs = useOfflineClearedNodeIDs(avatarID);
   const previousAvatarIDRef = useRef<string | undefined>(undefined);
   const previousViewportRef = useRef<null | Viewport>(null);
   const previousCompletedNodeIDsRef = useRef<null | ReadonlySet<string>>(null);
+  const previousOptimisticClearedNodeIDsRef = useRef<null | ReadonlySet<string>>(null);
 
   // The completed set is viewport-independent, but the viewport-carrying query key below means a
   // pan across a chunk boundary re-keys the query and drops its data back to `undefined` for a
@@ -136,18 +141,23 @@ export function useAvatarRegionGraph(): ReadonlySet<string> {
       !isAvatarSwitch && isSameViewport(previousViewportRef.current, regionViewport);
 
     // When the region itself hasn't moved, only recompute the completed-set projections, and only
-    // when the completed set actually changed — not on every cell-granular viewport update the
-    // free camera reports while panning.
+    // when the completed set or the optimistic-cleared set actually changed — not on every
+    // cell-granular viewport update the free camera reports while panning.
     if (regionUnchanged) {
-      if (completedNodeIDs === previousCompletedNodeIDsRef.current) {
+      if (
+        completedNodeIDs === previousCompletedNodeIDsRef.current &&
+        optimisticClearedNodeIDs === previousOptimisticClearedNodeIDsRef.current
+      ) {
         return;
       }
 
       previousCompletedNodeIDsRef.current = completedNodeIDs;
+      previousOptimisticClearedNodeIDsRef.current = optimisticClearedNodeIDs;
 
       const sources = buildRevealSources(completedNodeIDs);
+      const selectableSource = buildSelectableSource(completedNodeIDs, optimisticClearedNodeIDs);
 
-      setCompletedNodeProjections(collectSelectableNodeIDs(seed, completedNodeIDs), sources);
+      setCompletedNodeProjections(collectSelectableNodeIDs(seed, selectableSource), sources);
       setRevealedNodeIDs(collectRevealedNodeIDs(sources, regionViewport));
 
       return;
@@ -155,22 +165,24 @@ export function useAvatarRegionGraph(): ReadonlySet<string> {
 
     previousViewportRef.current = regionViewport;
     previousCompletedNodeIDsRef.current = completedNodeIDs;
+    previousOptimisticClearedNodeIDsRef.current = optimisticClearedNodeIDs;
 
     const worldGraph = buildViewportGraph(seed, regionViewport);
     const originNode = worldGraph.nodes[toNodeID(0, 0)] ?? null;
     const sources = buildRevealSources(completedNodeIDs);
+    const selectableSource = buildSelectableSource(completedNodeIDs, optimisticClearedNodeIDs);
 
     setWorldRegion(
       avatarID,
       seed,
       worldGraph,
       originNode,
-      collectSelectableNodeIDs(seed, completedNodeIDs),
+      collectSelectableNodeIDs(seed, selectableSource),
       sources,
     );
 
     setRevealedNodeIDs(collectRevealedNodeIDs(sources, regionViewport));
-  }, [avatarID, seed, viewport, completedNodeIDs]);
+  }, [avatarID, seed, viewport, completedNodeIDs, optimisticClearedNodeIDs]);
 
   // the frontier state still holds the outgoing avatar's nodes until the effect republishes for the
   // incoming avatar; gating on the projection's avatar keeps a switch from prefetching the wrong
@@ -200,6 +212,21 @@ function isSameViewport(previous: null | Viewport, next: Viewport): boolean {
     previous.minCY === next.minCY &&
     previous.maxCY === next.maxCY
   );
+}
+
+/**
+ * The selectable-set input: the server-verified completed set widened by whatever the avatar has
+ * cleared offline but not yet had verified. Reuses `completedNodeIDs` by reference while nothing is
+ * optimistically cleared, so an unchanged region skips a rebuild the same as before this set
+ * existed.
+ */
+function buildSelectableSource(
+  completedNodeIDs: ReadonlySet<string>,
+  optimisticClearedNodeIDs: ReadonlySet<string>,
+): ReadonlySet<string> {
+  return optimisticClearedNodeIDs.size === 0
+    ? completedNodeIDs
+    : new Set([...completedNodeIDs, ...optimisticClearedNodeIDs]);
 }
 
 /**
