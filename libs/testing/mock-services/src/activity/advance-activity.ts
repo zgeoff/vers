@@ -15,12 +15,11 @@ import { os } from './os';
  * rejecting a lost-response retry outright. Hash-chain validation, the offline-progress cap, and
  * writer eviction need state the mock doesn't track — those rejections are per-test overrides.
  *
- * When `activityID` names no row and `root` is present, mints it from `root`'s submitted fields —
- * trusted wholesale, mirroring `startActivity`'s mock — after the same avatar-ownership and
- * active-avatar checks `startActivity`'s mock runs. The encounter and key/secret stamps the real
- * endpoint derives server-side default in the collection, since `root` no longer carries them. The
- * node-selectable, sim-version, and live-anchor gates need state the mock doesn't track — those
- * rejections are per-test overrides too.
+ * When `activityID` names no row and `root` is present, mints it from `root`'s submitted fields
+ * wholesale — no server derivation — after checking avatar ownership and the active-avatar
+ * selection. The encounter and key/secret stamps the real endpoint derives default in the
+ * collection, since `root` doesn't carry them. The node-selectable, sim-version, and live-anchor
+ * gates need state this mock doesn't track — those rejections are per-test overrides too.
  */
 export const advanceActivity = os.advanceActivity.handler(async (opts) => {
   const actingUserId = opts.context.actingUserId;
@@ -130,22 +129,16 @@ export const advanceActivity = os.advanceActivity.handler(async (opts) => {
   return { activity, appendedHead: activity.appendedHead };
 });
 
-/**
- * Payload shape for `mintRootActivity`'s AVATAR_NOT_ACTIVE.
- */
 interface MintRootAvatarNotActivePayload {
   readonly data: { readonly activeAvatarID: string; readonly activeAvatarName: string };
 }
 
-/**
- * Payload shape for a data-less contract error (`mintRootActivity`'s NOT_FOUND).
- */
 interface EmptyErrorPayload {
   readonly data: Record<never, never>;
 }
 
 /**
- * Errors `mintRootActivity` throws directly — a subset of `advanceActivity`'s full error map.
+ * The typed error constructors the mock's root mint throws.
  */
 interface MintRootErrors {
   readonly AVATAR_NOT_ACTIVE: (payload: MintRootAvatarNotActivePayload) => Error;
@@ -153,12 +146,11 @@ interface MintRootErrors {
 }
 
 /**
- * Mints `root` as a fresh active row at `activityID`, mirroring `startActivity`'s mock: ownership
- * of `root.avatarID` and the account's active-avatar selection are checked exactly as a fresh start
- * would, and every submitted field is trusted from `root` wholesale rather than re-derived. The
- * encounter and key/secret stamps `root` no longer carries default in the collection, and
- * `lastHash` anchors to `root.startHash` exactly as the real mint does. The node-selectable,
- * sim-version, and live-anchor gates the real endpoint runs need state this mock doesn't track.
+ * Mints `root` as a fresh active row at `activityID`, checking ownership of `root.avatarID` and the
+ * account's active-avatar selection, then storing every submitted field wholesale rather than
+ * re-deriving any. The encounter and key/secret stamps `root` doesn't carry default in the
+ * collection, and `lastHash` anchors to `root.startHash`. The node-selectable, sim-version, and
+ * live-anchor gates the real endpoint runs need state this mock doesn't track.
  */
 async function mintRootActivity(
   activityID: string,

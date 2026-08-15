@@ -7,7 +7,7 @@ import { recordContentIncompatibleRejection } from './metrics/record-content-inc
 import type { SimVersionProblemPayload } from './types';
 
 /**
- * Errors `resolveSimVersionStamp` can throw — a subset of a handler's full error map.
+ * The typed error constructors sim-version resolution throws.
  */
 interface SimVersionStampErrors {
   readonly SIM_VERSION_EXPIRED: (payload: SimVersionProblemPayload) => Error;

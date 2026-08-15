@@ -107,16 +107,12 @@ interface AdvanceActivityOpts {
  * unwound one. The live start path's dedup — the avatar's active-status row — would find nothing
  * once a gap has already ended terminal, and a retry resolved against it would stall forever.
  *
- * When `activityID` names no row and `root` is present, mints it first under the same gates
- * `startActivity` runs — AVATAR_NOT_ACTIVE, NODE_NOT_REVEALED, NODE_UNKNOWN, NODE_UNREACHABLE,
- * SIM_VERSION_UNKNOWN, SIM_VERSION_EXPIRED — validated against the chain's live appended anchor
- * rather than trusted as a fresh mint's own derivation: `root.startChainIndex`/`root.seed` must
- * equal the anchor exactly, or the client rooted against a stale head and the row is refused with
- * CONFLICT. `root.buildSnapshot` and `root.startHash` are cross-checked the same way a
- * continuation's own mint cross-checks its hint, both rejecting with CHECKPOINT_INVALID on a
- * mismatch. A retry naming a row that already exists — this same root, already minted — mints
- * nothing again and proceeds straight to the continuation loop against it. When `activityID`
- * names no row and `root` is absent, behaves exactly as before: NOT_FOUND.
+ * When `activityID` names no row, `root` — a client-minted root the server has never seen — is
+ * minted onto that id first and the continuations append onto it; absent `root`, the missing row is
+ * NOT_FOUND. The root is validated against server truth, not trusted: it clears the same gates a
+ * fresh start does, must root against the chain's live head, and its build snapshot and start hash
+ * must reconcile with the server's own derivation. A retry whose root was already minted skips
+ * straight to the append.
  */
 export async function advanceActivity(
   deps: AdvanceActivityDeps,
@@ -201,16 +197,12 @@ export async function advanceActivity(
 }
 
 /**
- * Resolves the row `opts.input.continuations` appends onto: `opts.input.activityID`'s own row when
- * it already exists, or — when it doesn't — `opts.input.root` minted onto that id under its own
- * top-level transaction, separate from the continuation loop's own per-step transactions. Throws
- * NOT_FOUND when the row is absent and `root` is absent too (the ordinary case: `activityID` names
- * a row `startActivity` already minted), when `root.avatarID` isn't owned by the acting user, or
- * when `activityID` already names a row owned by another user — a foreign id stays owner-scoped
- * NOT_FOUND rather than leaking its existence through the mint's own unique-violation CONFLICT. A
- * concurrent duplicate mint's unique violation resolves outside any transaction, exactly as a
- * continuation's own mint-id collision resolves: converging on the row when it is genuinely this
- * same root retried, and CONFLICT otherwise.
+ * Resolves the row the request's continuations append onto: the existing row at
+ * `opts.input.activityID`, or `opts.input.root` freshly minted onto that id. A missing row with no
+ * `root` to mint is NOT_FOUND, as is a `root` the acting user's avatars don't include or an id that
+ * already belongs to another user — a foreign id stays owner-scoped NOT_FOUND rather than leaking
+ * its existence. On a concurrent duplicate mint it converges on the already-minted row when the id
+ * is genuinely this same root retried, and CONFLICT otherwise.
  */
 async function resolveRootRow(
   deps: AdvanceActivityDeps,
@@ -300,11 +292,10 @@ async function resolveRootRow(
 }
 
 /**
- * Resolves a root mint's unique violation, from a fresh connection once the transaction that hit it
- * has rolled back: an existing row at `activityID` converges only when it is genuinely this same
- * root retried — owned by `root.avatarID`, minted from the same `startKey`, and scoped to the same
- * chain — mirroring a continuation's own mint-id dedup. Anything short of that full match, including
- * no row at all, is `undefined`.
+ * Resolves a root mint's unique violation from a fresh connection, once the transaction that hit it
+ * has rolled back. Returns the existing row at `activityID` only when it is genuinely this same root
+ * retried — same avatar, `startKey`, and scope; anything short of that full match, a foreign row or
+ * no row, is `undefined`.
  */
 async function resolveRootMintCollision(
   db: Kysely<DB>,

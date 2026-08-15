@@ -26,8 +26,8 @@ import type {
 } from '../types';
 
 /**
- * The content-document loader and the keys/signing inputs a root mint derives its authoritative
- * encounter and stamps from — the same dependencies a fresh `startActivity` closes over.
+ * The content loader and key and secret material a root mint derives its authoritative encounter
+ * and stamps from.
  */
 interface MintRootDeps {
   readonly keysServiceURL: string;
@@ -39,7 +39,7 @@ interface MintRootDeps {
 }
 
 /**
- * Errors `mintRoot` throws directly — a subset of `advanceActivity`'s full error map.
+ * The typed error constructors a root mint throws.
  */
 interface MintRootErrors {
   readonly AVATAR_NOT_ACTIVE: (payload: AvatarNotActivePayload) => Error;
@@ -54,36 +54,16 @@ interface MintRootErrors {
 }
 
 /**
- * Mints a client-submitted root — an activity `advanceActivity`'s caller minted locally and the
- * server has never seen — under the exact gates `startActivity` runs, deriving every authoritative
- * input from server truth rather than trusting the client's payload. Ownership of `root.avatarID`
- * is the caller's responsibility: this runs only once the caller has confirmed the acting user owns
- * it.
+ * Mints a client-submitted activity root — one the caller minted offline and the server has never
+ * seen — validating it against server truth rather than trusting its payload. Every authoritative
+ * input, the encounter node and the key and secret stamps, is derived server-side, and the client's
+ * seed, versions, build snapshot, and start hash must reconcile with what the server derives. The
+ * caller must confirm the acting user owns `root.avatarID` before calling.
  *
- * The scope resolves before the chain-presence check, matching `startActivity`'s classification
- * order: an unknown avatar throws AVATAR_NOT_ACTIVE, a quarantined chain throws CHAIN_QUARANTINED, a
- * scope that resolves to no known node throws NODE_UNKNOWN, one that resolves but sits outside the
- * avatar's selectable set throws NODE_UNREACHABLE, and a scope with no chain row to root against
- * throws NODE_NOT_REVEALED. The stamped sim version is validated exactly as a fresh start would
- * (SIM_VERSION_UNKNOWN/SIM_VERSION_EXPIRED), and a content version the registry no longer publishes
- * throws SIM_VERSION_EXPIRED rather than failing the derivation below.
- *
- * `root.startChainIndex`/`root.seed` must equal the chain's live appended anchor exactly — a
- * mismatch means the client rooted against a stale head, refused with CONFLICT. `buildSnapshot` is
- * re-authored from the avatar's own settled-plus-unsettled progression and a mismatch against the
- * client's prediction bails CHECKPOINT_INVALID, exactly as a continuation's own mint does.
- *
- * The encounter node and the key/secret stamps are derived server-side: the encounter from the
- * content document, scope secret, and avatar seed via `deriveWorldmapContent`, and
- * `keyVersion`/`secretRef`/`secretVersion` from the mint's own deps. `startHash` is recomputed from
- * those server-derived inputs and the client's `seed`/`contentVersion`/`simVersion`, and the
- * client's submitted `startHash` must equal it or the mint bails CHECKPOINT_INVALID — proof the
- * client simulated against the same content and encounter the server derives from its own truth.
- * The row stores the server-derived encounter and stamps.
- *
- * The insert itself carries no dedup of its own — the caller resolves a concurrent mint's unique
- * violation once this transaction has rolled back, mirroring how a continuation's own mint-id
- * collision resolves.
+ * Throws AVATAR_NOT_ACTIVE, CHAIN_QUARANTINED, NODE_UNKNOWN, NODE_UNREACHABLE, NODE_NOT_REVEALED,
+ * SIM_VERSION_UNKNOWN, or SIM_VERSION_EXPIRED for a root that fails a start gate; CONFLICT when it
+ * roots against a stale chain head; CHECKPOINT_INVALID when its build snapshot or start hash
+ * disagree with the server's own derivation.
  */
 export async function mintRoot(
   deps: Readonly<MintRootDeps>,
@@ -115,6 +95,8 @@ export async function mintRoot(
     });
   }
 
+  // resolve the scope before the chain lookup below: a scope no node maps to classifies NODE_UNKNOWN,
+  // distinct from the NODE_NOT_REVEALED a valid-but-unrevealed scope earns when its chain row is absent
   const resolved = resolveEncounterNode(root.scopeType, root.scopeID);
 
   if (resolved === undefined) {
@@ -167,6 +149,8 @@ export async function mintRoot(
     errors,
   );
 
+  // the root must sit on the chain's live appended head exactly; any other index or seed means the
+  // client built on a stale head that a concurrent append has already moved past
   if (root.startChainIndex !== chain.appendedChainIndex || root.seed !== chain.appendedNextSeed) {
     throw errors.CONFLICT({ data: { activityID: input.activityID, appendedHead: 0 } });
   }
@@ -204,6 +188,8 @@ export async function mintRoot(
     { avatarID: root.avatarID, secretRef: deps.secretRef, secretVersion: deps.secretVersion },
   );
 
+  // derive the encounter and stamps from the server's own content and scope secret, never the client
+  // payload, so a poisoned encounter or forged stamp can never enter the row
   const encounterNode = {
     difficulty: resolved.difficulty,
     ...deriveWorldmapContent(document.encounter, {
@@ -221,12 +207,16 @@ export async function mintRoot(
     simVersion,
   });
 
+  // equality proves the client folded its hash over the same content and encounter the server just
+  // derived; a mismatch means it simulated against something else and cannot be rooted
   if (startHash !== root.startHash) {
     throw errors.CHECKPOINT_INVALID({
       data: { activityID: input.activityID, appendedHead: 0, reason: 'start-hash-mismatch' },
     });
   }
 
+  // no dedup here; a concurrent mint's unique violation is resolved by the caller once this
+  // transaction has rolled back
   const row = await trx
     .insertInto('activities')
     .values({

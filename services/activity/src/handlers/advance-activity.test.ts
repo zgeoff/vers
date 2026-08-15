@@ -994,9 +994,8 @@ test('it converges a sequential root retry onto the existing row without double-
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
   const request = { activityID, continuations: [continuation], expectedHead: 0, root };
 
-  // Sequential retry: the second call returns the row from its owned-row lookup and never re-enters
-  // the mint. The concurrent-insert race, where two callers both miss that lookup and one loses the
-  // unique violation, is what `resolveRootMintCollision` converges instead.
+  // a sequential resubmit of the same root converges on the minted row instead of double-minting;
+  // the concurrent-insert race that loses a unique violation is a separate case
   const first = await client.advanceActivity(request);
   const second = await client.advanceActivity(request);
 
