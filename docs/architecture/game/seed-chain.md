@@ -96,6 +96,14 @@ equal `appendedChainIndex` and its seed must equal `appendedNextSeed` — so a r
 head the chain has since moved past is refused rather than layered onto a position that no longer
 exists.
 
+The client ingests each pending root into the server on first server contact: a `NOT_FOUND` answer
+to its checkpoint flush triggers a one-shot ingest-and-retry of that same batch rather than an
+immediate discard. A root orphaned by a worker reload — no live simulation left to drive its flush —
+ingests on reconnect instead, ahead of the held-checkpoint flush it would otherwise NOT_FOUND
+against. Either path removes the durable `pending-roots` entry once the server has answered
+definitively; a server-refused root is dropped and its queued checkpoints discarded, the same as any
+other stream the server refuses to recognize.
+
 ## Advancing the chain
 
 The chain advances on an activity's transition out of `active`. Which cursor moves depends on
