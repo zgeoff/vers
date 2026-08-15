@@ -10,12 +10,15 @@ import { SimulatedClock } from 'xstate';
 import { server } from '../mocks/node';
 import { createMockCheckpointBatchEntry } from '../test-utils/factories/create-mock-checkpoint-batch-entry';
 import { createMockCompletedCheckpoint } from '../test-utils/factories/create-mock-completed-checkpoint';
+import { createMockNodeSeed } from '../test-utils/factories/create-mock-node-seed';
 import { createMockProgressCheckpoint } from '../test-utils/factories/create-mock-progress-checkpoint';
 import { createMockStartedCheckpoint } from '../test-utils/factories/create-mock-started-checkpoint';
 import { RETRY_BACKOFF_CAP_MS } from './constants';
 import { createCheckpointSubmitter } from './create-checkpoint-submitter';
+import { readNodeSeed } from './read-node-seed';
 import { readQueuedCheckpoints } from './read-queued-checkpoints';
 import type { ActivityServiceClient } from './types';
+import { writeNodeSeeds } from './write-node-seeds';
 import { writeQueuedCheckpoint } from './write-queued-checkpoint';
 
 function setupTest(
@@ -1606,4 +1609,73 @@ test('it reports server contact only after the answered flush settles the local 
   const rowsAtContact = await queueAtContact;
 
   expect(rowsAtContact).toStrictEqual([]);
+});
+
+test("it persists the registered node's cached head as the write cursor advances", async () => {
+  const ctx = setupTest();
+
+  server.use(mockActivityService.trackActivityProgress.handler(() => ({ appendedHead: 2 })));
+
+  const seed = createMockNodeSeed({
+    avatarID: 'avatar-head-persist',
+    head: { chainIndex: 5, nextSeed: 'seed-start' },
+    nodeID: '3_1',
+  });
+
+  await writeNodeSeeds(seed.avatarID, [seed]);
+
+  await ctx.submitter.registerActivity({
+    activityID: 'head-persist-activity',
+    appendedHead: 0,
+    avatarID: seed.avatarID,
+    lastHash: 'start_hash',
+    scopeID: seed.nodeID,
+    startChainIndex: 5,
+  });
+
+  await ctx.submitter.submit(
+    'head-persist-activity',
+    createMockStartedCheckpoint({ nextSeed: 'seed-after-first' }),
+  );
+
+  const afterFirst = await readNodeSeed(seed.avatarID, seed.nodeID);
+
+  expect(afterFirst?.head).toStrictEqual({ chainIndex: 6, nextSeed: 'seed-after-first' });
+
+  await ctx.submitter.submit(
+    'head-persist-activity',
+    createMockCompletedCheckpoint({ nextSeed: 'seed-after-second' }),
+  );
+
+  const afterSecond = await readNodeSeed(seed.avatarID, seed.nodeID);
+
+  expect(afterSecond?.head).toStrictEqual({ chainIndex: 7, nextSeed: 'seed-after-second' });
+});
+
+test('it never persists a node head when the registration carries no scope', async () => {
+  const ctx = setupTest();
+
+  server.use(mockActivityService.trackActivityProgress.handler(() => ({ appendedHead: 1 })));
+
+  const seed = createMockNodeSeed({
+    avatarID: 'avatar-no-scope',
+    head: { chainIndex: 2, nextSeed: 'seed-untouched' },
+    nodeID: '0_0',
+  });
+
+  await writeNodeSeeds(seed.avatarID, [seed]);
+
+  await ctx.submitter.registerActivity({
+    activityID: 'no-scope-activity',
+    appendedHead: 0,
+    lastHash: 'start_hash',
+    startChainIndex: 0,
+  });
+
+  await ctx.submitter.submit('no-scope-activity', createMockCompletedCheckpoint());
+
+  // the seeded head is left exactly as written: a scope-less registration advances no node head
+  const cached = await readNodeSeed(seed.avatarID, seed.nodeID);
+
+  expect(cached?.head).toStrictEqual({ chainIndex: 2, nextSeed: 'seed-untouched' });
 });

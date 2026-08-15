@@ -12,8 +12,10 @@ import { readPendingStartIntent } from '../submission/read-pending-start-intent'
 import { readPendingStopIntent } from '../submission/read-pending-stop-intent';
 import type { ActivityServiceClient } from '../submission/types';
 import { writeFailureActionCache } from '../submission/write-failure-action-cache';
+import { writeNodeSeeds } from '../submission/write-node-seeds';
 import { writePendingStartIntent } from '../submission/write-pending-start-intent';
 import { writePendingStopIntent } from '../submission/write-pending-stop-intent';
+import { writeStartStamps } from '../submission/write-start-stamps';
 import { createFastClock } from '../test-utils/create-fast-clock';
 import { createTestClient } from '../test-utils/create-test-client';
 import { makeFailFirstMatchHandler } from '../test-utils/make-fail-first-match-handler';
@@ -121,7 +123,22 @@ test('it broadcasts a simulation update once a started run installs', async () =
   const viewer = await createViewer();
   const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
 
-  using runtime = createWorkerRuntime({ client });
+  // a start is always a local mint, so the node's start inputs must already be cached — as
+  // useSeedPrefetch would have relayed them from a real revealNodes round trip — and the content
+  // document its encounter derived against must be published for the install's own load to find
+  await db.contentDocumentCollection.create({ contentVersion: '2' });
+
+  const revealed = await client.revealNodes({ avatarID: viewer.avatar.id, nodeIDs: ['1_0'] });
+
+  await writeNodeSeeds(viewer.avatar.id, revealed.nodes);
+
+  await writeStartStamps({
+    keyVersion: revealed.keyVersion,
+    secretRef: revealed.secretRef,
+    secretVersion: revealed.secretVersion,
+  });
+
+  using runtime = createWorkerRuntime({ bundledEngineHash: 'test_engine_hash', client });
 
   const broadcasts = collectBroadcasts();
   const testClient = createConnectedTestClient(runtime);

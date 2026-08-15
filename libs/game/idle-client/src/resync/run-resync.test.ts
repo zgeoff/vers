@@ -142,7 +142,9 @@ test('it rebases from the stop index without simulating when the activity is cap
     context: {
       activityID: activity.id,
       appendedHead: 5,
+      avatarID: activity.avatarID,
       lastHash: activity.lastHash,
+      scopeID: activity.scopeID,
       startChainIndex: activity.startChainIndex,
     },
     kind: 'rebase',

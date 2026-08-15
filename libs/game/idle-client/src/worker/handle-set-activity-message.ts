@@ -35,7 +35,9 @@ export async function handleSetActivityMessage(
   const registration = context.getSubmitter().registerActivity({
     activityID: message.activity.id,
     appendedHead: message.activity.appendedHead,
+    avatarID: message.activity.avatarID,
     lastHash: message.activity.lastHash,
+    scopeID: message.activity.scopeID,
     startChainIndex: message.activity.startChainIndex,
   });
 

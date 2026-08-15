@@ -77,10 +77,13 @@ export const revealNodes = os.revealNodes.handler(async (opts) => {
 
     invariant(encounterNode !== undefined, 'nodeID already validated against a world-map cell');
 
+    const genesisSeed = bytesToHex(hash.slice(0, 16));
+
     return {
       contentVersion: db.MOCK_CURRENT_CONTENT_VERSION,
       encounterNode,
-      genesisSeed: bytesToHex(hash.slice(0, 16)),
+      genesisSeed,
+      head: { chainIndex: 0, nextSeed: genesisSeed },
       nodeID,
     };
   });

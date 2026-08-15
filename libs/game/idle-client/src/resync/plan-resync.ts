@@ -30,7 +30,9 @@ export function planResync(input: Readonly<PlanResyncInput>): ResyncPlan {
   const context: ActivitySubmissionContext = {
     activityID: activity.id,
     appendedHead: input.progress.appendedHead,
+    avatarID: activity.avatarID,
     lastHash: activity.lastHash,
+    scopeID: activity.scopeID,
     startChainIndex: activity.startChainIndex,
   };
 

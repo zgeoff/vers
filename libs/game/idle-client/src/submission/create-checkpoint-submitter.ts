@@ -13,6 +13,7 @@ import {
 } from './constants';
 import { readQueuedCheckpoints } from './read-queued-checkpoints';
 import type { ActivityServiceClient, ActivitySubmissionContext } from './types';
+import { writeNodeHead } from './write-node-head';
 import { writeQueuedCheckpoint } from './write-queued-checkpoint';
 
 export interface CheckpointSubmitter {
@@ -162,12 +163,15 @@ interface CreateCheckpointSubmitterOptions {
  * an activity's submission state this adapter keeps for itself; flush sequencing, backoff, and
  * eviction live in the spawned `checkpointActivityMachine` child this activity's registration
  * spawns. The chain fields advance in place as each accepted submission links onto the last, so
- * they are deliberately not `readonly`.
+ * they are deliberately not `readonly`. `avatarID` and `scopeID`, when the registration carried
+ * them, name the node whose cached head each advance persists back to (`writeNodeHead`).
  */
 interface WriteCursor {
+  readonly avatarID: string | undefined;
   nextVersion: number;
   prevHash: string;
   previousNextSeed: string;
+  readonly scopeID: string | undefined;
   readonly startChainIndex: number;
 }
 
@@ -270,9 +274,11 @@ export function createCheckpointSubmitter(
     const lastRow = rows.at(-1);
 
     const cursor: WriteCursor = {
+      avatarID: context.avatarID,
       nextVersion: context.appendedHead + 1,
       prevHash: context.lastHash,
       previousNextSeed: context.previousNextSeed ?? '',
+      scopeID: context.scopeID,
       startChainIndex: context.startChainIndex,
     };
 
@@ -398,6 +404,13 @@ export function createCheckpointSubmitter(
     cursor.prevHash = entry.hash;
     cursor.previousNextSeed = entry.payload.nextSeed;
     cursor.nextVersion += 1;
+
+    if (cursor.avatarID !== undefined && cursor.scopeID !== undefined) {
+      await writeNodeHead(cursor.avatarID, cursor.scopeID, {
+        chainIndex: cursor.startChainIndex + cursor.nextVersion - 1,
+        nextSeed: cursor.previousNextSeed,
+      });
+    }
 
     const isTerminal = TERMINAL_CHECKPOINT_TYPES.has(checkpoint.type);
 

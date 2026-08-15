@@ -12,7 +12,9 @@ test('it rebases from the stop index when the activity is capped', () => {
     context: {
       activityID: activity.id,
       appendedHead: 7,
+      avatarID: activity.avatarID,
       lastHash: activity.lastHash,
+      scopeID: activity.scopeID,
       startChainIndex: activity.startChainIndex,
     },
     kind: 'rebase',

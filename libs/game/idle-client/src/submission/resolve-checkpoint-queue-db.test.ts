@@ -8,9 +8,10 @@ import {
   CONTENT_DOCUMENT_STORE_NAME,
   FAILURE_ACTION_PREFERENCE_KEY,
   NODE_SEEDS_STORE_NAME,
+  PENDING_ROOTS_STORE_NAME,
   PREFERENCES_STORE_NAME,
 } from './constants';
-import type { CheckpointQueueSchema } from './types';
+import type { CheckpointQueueSchema, NodeSeed } from './types';
 import { upgradeCheckpointQueueDB } from './upgrade-checkpoint-queue-db';
 
 /**
@@ -126,5 +127,78 @@ test('it clears the node-seeds cache on the v4-to-v5 upgrade while preserving th
     v5?.close();
 
     await deleteDB(upgradeTestV5DBName);
+  }
+});
+
+test('it creates pending-roots and clears the head-less node-seeds rows on the v5-to-v6 upgrade while preserving the other stores and their rows', async () => {
+  const upgradeTestV6DBName = 'vers-idle-checkpoint-queue-upgrade-v6-test';
+
+  const preference = {
+    avatarID: 'avatar-upgrade-v6',
+    dirty: false,
+    failureAction: ActivityFailureAction.Abort,
+  } as const;
+
+  // the real v5 schema: node-seeds rows carried no `head`, and `pending-roots` did not exist yet.
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- a genuine pre-v6 node-seeds row predating the `head` field, which the current `NodeSeed` type can no longer express
+  const legacyNodeSeed = {
+    avatarID: 'avatar-upgrade-v6',
+    contentVersion: '1',
+    encounterNode: { difficulty: 1, poolID: 'pool_legacy' },
+    genesisSeed: 'seed-legacy',
+    nodeID: '1_0',
+  } as unknown as NodeSeed;
+
+  // a prior run that threw before its own cleanup could leave a v6 database behind, which would
+  // block this run's open at v5 with a version error — drop any leftover before opening
+  await deleteDB(upgradeTestV6DBName);
+
+  let v5: IDBPDatabase<CheckpointQueueSchema> | undefined;
+  let v6: IDBPDatabase<CheckpointQueueSchema> | undefined;
+
+  try {
+    v5 = await openDB<CheckpointQueueSchema>(upgradeTestV6DBName, 5, {
+      upgrade(database) {
+        database.createObjectStore(CHECKPOINT_QUEUE_STORE_NAME, {
+          keyPath: ['activityID', 'version'],
+        });
+
+        database.createObjectStore(PREFERENCES_STORE_NAME);
+        database.createObjectStore(CONTENT_DOCUMENT_STORE_NAME, { keyPath: 'contentVersion' });
+        database.createObjectStore(NODE_SEEDS_STORE_NAME, { keyPath: ['avatarID', 'nodeID'] });
+      },
+    });
+
+    await v5.put(PREFERENCES_STORE_NAME, preference, FAILURE_ACTION_PREFERENCE_KEY);
+    await v5.put(NODE_SEEDS_STORE_NAME, legacyNodeSeed);
+
+    v5.close();
+
+    v6 = await openDB<CheckpointQueueSchema>(upgradeTestV6DBName, 6, {
+      upgrade: upgradeCheckpointQueueDB,
+    });
+
+    const existingPreference = await v6.get(PREFERENCES_STORE_NAME, FAILURE_ACTION_PREFERENCE_KEY);
+
+    const clearedNodeSeed = await v6.get(NODE_SEEDS_STORE_NAME, [
+      legacyNodeSeed.avatarID,
+      legacyNodeSeed.nodeID,
+    ]);
+
+    expect([...v6.objectStoreNames]).toIncludeAllMembers([
+      CHECKPOINT_QUEUE_STORE_NAME,
+      PREFERENCES_STORE_NAME,
+      CONTENT_DOCUMENT_STORE_NAME,
+      NODE_SEEDS_STORE_NAME,
+      PENDING_ROOTS_STORE_NAME,
+    ]);
+
+    expect(existingPreference).toStrictEqual(preference);
+    expect(clearedNodeSeed).toBeUndefined();
+  } finally {
+    v5?.close();
+    v6?.close();
+
+    await deleteDB(upgradeTestV6DBName);
   }
 });

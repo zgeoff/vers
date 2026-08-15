@@ -60,7 +60,9 @@ test('it adopts a fresh server-started row for the same scope and registers from
   expect(submitter.registerActivity).toHaveBeenCalledExactlyOnceWith({
     activityID: minted.id,
     appendedHead: 0,
+    avatarID: minted.avatarID,
     lastHash: minted.startHash,
+    scopeID: minted.scopeID,
     startChainIndex: minted.startChainIndex,
   });
 });
@@ -100,7 +102,9 @@ test('it hands a foreign-claim CONFLICT to a resync that attaches the conflictin
   expect(submitter.registerActivity).toHaveBeenCalledExactlyOnceWith({
     activityID: conflictingActivity.id,
     appendedHead: 0,
+    avatarID: conflictingActivity.avatarID,
     lastHash: conflictingActivity.lastHash,
+    scopeID: conflictingActivity.scopeID,
     startChainIndex: conflictingActivity.startChainIndex,
   });
 });
