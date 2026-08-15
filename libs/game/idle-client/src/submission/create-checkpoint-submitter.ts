@@ -11,6 +11,7 @@ import {
   PROGRESS_FLUSH_INTERVAL_MS,
   RETRY_BACKOFF_CAP_MS,
 } from './constants';
+import type { IngestStartRowOutcome } from './ingest-start-row';
 import { readQueuedCheckpoints } from './read-queued-checkpoints';
 import type { ActivityServiceClient, ActivitySubmissionContext } from './types';
 import { writeNodeHead } from './write-node-head';
@@ -76,6 +77,13 @@ export interface CheckpointSubmitter {
 
 interface CreateCheckpointSubmitterOptions {
   readonly client: Pick<ActivityServiceClient, 'trackActivityProgress'>;
+
+  /**
+   * Ingests an activity's still-pending client-minted root into the server, tried once against a
+   * `NOT_FOUND` checkpoint-flush answer before the stream discards its queue — undefined for a
+   * caller with no offline-first roots to self-heal from.
+   */
+  readonly ingestRoot?: (activityID: string) => Promise<IngestStartRowOutcome>;
 
   /**
    * Called after every successful flush with the server's fresh appended head — the caller's
@@ -188,7 +196,10 @@ const TERMINAL_CHECKPOINT_TYPES: ReadonlySet<string> = new Set([
  *
  * - a fresh head on success or `CONFLICT` advances the cursor and confirms the queue up to it
  * - `CHECKPOINT_INVALID` stops the stream and keeps its queue rows
- * - `NOT_FOUND` stops the stream and discards its queue rows
+ * - `NOT_FOUND` stops the stream and discards its queue rows — unless an `ingestRoot` hook is
+ *   configured and the activity still has a pending client-minted root, in which case the flush
+ *   ingests that root into the server and retries the same batch once before falling back to the
+ *   discard
  * - `ACTIVITY_CAPPED`, `ACTIVITY_TERMINAL`, and `SESSION_EVICTED` stop the stream and discard its
  *   queue rows — the server accepts nothing further for it
  * - anything else — `UNAUTHORIZED` or a transport failure — holds the queue untouched and starts
@@ -299,6 +310,7 @@ export function createCheckpointSubmitter(
       activityID: context.activityID,
       client: options.client,
       expectedHead: context.appendedHead,
+      ingestRoot: options.ingestRoot,
       latestQueuedVersion,
       onAcked: options.onAcked,
       onCapped: options.onCapped,

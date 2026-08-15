@@ -1,6 +1,7 @@
 import { ORPCError, isDefinedError, safe } from '@orpc/client';
 import { buildTraceparent, createTraceContext } from '@vers/trace';
 import { fromPromise } from 'xstate';
+import type { IngestStartRowOutcome } from './ingest-start-row';
 import { readQueuedCheckpoints } from './read-queued-checkpoints';
 import { removeConfirmedCheckpoints } from './remove-confirmed-checkpoints';
 import { removeQueuedCheckpoints } from './remove-queued-checkpoints';
@@ -34,6 +35,14 @@ interface FlushAttemptInput {
   readonly activityID: string;
   readonly client: Pick<ActivityServiceClient, 'trackActivityProgress'>;
   readonly expectedHead: number;
+
+  /**
+   * Ingests this activity's still-pending client-minted root, tried once against a `NOT_FOUND`
+   * answer before it discards the queue — undefined for a caller with no offline-first root to
+   * self-heal from, which keeps a `NOT_FOUND` an unconditional discard.
+   */
+  readonly ingestRoot: ((activityID: string) => Promise<IngestStartRowOutcome>) | undefined;
+
   readonly onAcked: ((activityID: string, appendedHead: number) => void) | undefined;
   readonly onCapped: ((activityID: string, appendedHead: number) => void) | undefined;
   readonly onEvicted: ((activityID: string) => void) | undefined;
@@ -62,79 +71,106 @@ export const runCheckpointFlushAttempt = fromPromise<FlushOutcome, FlushAttemptI
       }
 
       const trace = createTraceContext();
+      let retriedAfterIngest = false;
 
-      const [error, result] = await safe(
-        input.client.trackActivityProgress(
-          { activityID: input.activityID, checkpoints: rows, expectedHead: input.expectedHead },
-          { context: { traceparent: buildTraceparent(trace) } },
-        ),
-      );
+      // The body sends the same batch again only once, after a NOT_FOUND ingests the activity's
+      // still-pending client-minted root — `retriedAfterIngest` turns a second NOT_FOUND into an
+      // unconditional discard rather than ingesting again.
+      while (true) {
+        const [error, result] = await safe(
+          input.client.trackActivityProgress(
+            { activityID: input.activityID, checkpoints: rows, expectedHead: input.expectedHead },
+            { context: { traceparent: buildTraceparent(trace) } },
+          ),
+        );
 
-      if (error === null) {
-        serverAnswered = true;
+        if (error === null) {
+          serverAnswered = true;
 
-        await removeConfirmedCheckpoints(input.activityID, result.appendedHead);
+          await removeConfirmedCheckpoints(input.activityID, result.appendedHead);
 
-        settledHead = result.appendedHead;
-        input.onAcked?.(input.activityID, result.appendedHead);
+          settledHead = result.appendedHead;
+          input.onAcked?.(input.activityID, result.appendedHead);
 
-        return { appendedHead: result.appendedHead, type: 'success' };
-      }
-
-      if (!isDefinedError(error)) {
-        const reason =
-          error instanceof ORPCError ? `${error.code}: ${error.message}` : String(error);
-
-        return { reason, traceID: trace.traceID, type: 'transport-failure' };
-      }
-
-      serverAnswered = true;
-
-      if (error.code === 'ACTIVITY_CAPPED') {
-        await removeQueuedCheckpoints(input.activityID);
-
-        input.onCapped?.(input.activityID, error.data.appendedHead);
-
-        return { appendedHead: error.data.appendedHead, type: 'capped' };
-      }
-
-      if (error.code === 'ACTIVITY_TERMINAL') {
-        await removeQueuedCheckpoints(input.activityID);
-
-        if (error.data.status === 'capped') {
-          input.onCapped?.(input.activityID, error.data.appendedHead);
+          return { appendedHead: result.appendedHead, type: 'success' };
         }
 
-        return { type: 'terminal' };
+        if (!isDefinedError(error)) {
+          const reason =
+            error instanceof ORPCError ? `${error.code}: ${error.message}` : String(error);
+
+          return { reason, traceID: trace.traceID, type: 'transport-failure' };
+        }
+
+        serverAnswered = true;
+
+        if (error.code === 'ACTIVITY_CAPPED') {
+          await removeQueuedCheckpoints(input.activityID);
+
+          input.onCapped?.(input.activityID, error.data.appendedHead);
+
+          return { appendedHead: error.data.appendedHead, type: 'capped' };
+        }
+
+        if (error.code === 'ACTIVITY_TERMINAL') {
+          await removeQueuedCheckpoints(input.activityID);
+
+          if (error.data.status === 'capped') {
+            input.onCapped?.(input.activityID, error.data.appendedHead);
+          }
+
+          return { type: 'terminal' };
+        }
+
+        if (error.code === 'SESSION_EVICTED') {
+          await removeQueuedCheckpoints(input.activityID);
+
+          input.onEvicted?.(input.activityID);
+
+          return { type: 'session-evicted' };
+        }
+
+        if (error.code === 'CONFLICT') {
+          await removeConfirmedCheckpoints(input.activityID, error.data.appendedHead);
+
+          return { appendedHead: error.data.appendedHead, type: 'conflict' };
+        }
+
+        if (error.code === 'CHECKPOINT_INVALID') {
+          input.onInvalid(input.activityID, error.data.reason, trace.traceID);
+
+          return { reason: error.data.reason, type: 'invalid' };
+        }
+
+        if (error.code !== 'NOT_FOUND') {
+          return { type: 'held-defined-error' };
+        }
+
+        if (retriedAfterIngest || input.ingestRoot === undefined) {
+          await removeQueuedCheckpoints(input.activityID);
+
+          return { type: 'not-found' };
+        }
+
+        const ingestOutcome = await input.ingestRoot(input.activityID);
+
+        if (ingestOutcome === 'deferred') {
+          return {
+            reason: 'offline-root-pending',
+            traceID: trace.traceID,
+            type: 'transport-failure',
+          };
+        }
+
+        if (ingestOutcome === 'rejected' || ingestOutcome === 'absent') {
+          await removeQueuedCheckpoints(input.activityID);
+
+          return { type: 'not-found' };
+        }
+
+        // ingested: the root now exists at head 0 server-side — loop back for the one retry
+        retriedAfterIngest = true;
       }
-
-      if (error.code === 'SESSION_EVICTED') {
-        await removeQueuedCheckpoints(input.activityID);
-
-        input.onEvicted?.(input.activityID);
-
-        return { type: 'session-evicted' };
-      }
-
-      if (error.code === 'CONFLICT') {
-        await removeConfirmedCheckpoints(input.activityID, error.data.appendedHead);
-
-        return { appendedHead: error.data.appendedHead, type: 'conflict' };
-      }
-
-      if (error.code === 'CHECKPOINT_INVALID') {
-        input.onInvalid(input.activityID, error.data.reason, trace.traceID);
-
-        return { reason: error.data.reason, type: 'invalid' };
-      }
-
-      if (error.code === 'NOT_FOUND') {
-        await removeQueuedCheckpoints(input.activityID);
-
-        return { type: 'not-found' };
-      }
-
-      return { type: 'held-defined-error' };
     } catch (error) {
       return { appendedHead: settledHead, error, type: 'callback-failed' };
     } finally {
