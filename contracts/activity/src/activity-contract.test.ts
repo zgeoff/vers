@@ -79,6 +79,86 @@ test('it declares a bespoke ACTIVITY_CAPPED with an explicit status on trackActi
   expect(errorMap.ACTIVITY_CAPPED?.status).toBe(409);
 });
 
+test('it declares the start gates alongside its own continuation errors on advanceActivity', () => {
+  expect(activityContract.advanceActivity['~orpc'].errorMap).toContainAllKeys([
+    'UNAUTHORIZED',
+    'FORBIDDEN',
+    'ACTIVITY_CAPPED',
+    'ACTIVITY_TERMINAL',
+    'AVATAR_NOT_ACTIVE',
+    'CHAIN_QUARANTINED',
+    'CHECKPOINT_INVALID',
+    'CONFLICT',
+    'NODE_NOT_REVEALED',
+    'NODE_UNKNOWN',
+    'NODE_UNREACHABLE',
+    'NOT_FOUND',
+    'SESSION_EVICTED',
+    'SIM_VERSION_EXPIRED',
+    'SIM_VERSION_UNKNOWN',
+  ]);
+});
+
+test('it declares the same bespoke statuses on advanceActivity as their startActivity counterparts', () => {
+  const errorMap = activityContract.advanceActivity['~orpc'].errorMap;
+
+  expect(errorMap.AVATAR_NOT_ACTIVE?.status).toBe(409);
+  expect(errorMap.NODE_NOT_REVEALED?.status).toBe(409);
+  expect(errorMap.NODE_UNKNOWN?.status).toBe(404);
+  expect(errorMap.NODE_UNREACHABLE?.status).toBe(409);
+  expect(errorMap.SIM_VERSION_EXPIRED?.status).toBe(410);
+  expect(errorMap.SIM_VERSION_UNKNOWN?.status).toBe(409);
+});
+
+test('it accepts an advanceActivity request carrying a root submission', () => {
+  const input = {
+    activityID: 'act_root',
+    continuations: [
+      {
+        buildSnapshot: { level: 1, xp: 0 },
+        checkpoints: [
+          {
+            hash: 'hash',
+            payload: {
+              chainIndex: 1,
+              entropySource: 'server-key',
+              nextSeed: 'seed',
+              seed: 'seed',
+              time: 0,
+              type: 'completed',
+            },
+            prevHash: 'prev',
+            version: 1,
+          },
+        ],
+        id: 'act_continuation_1',
+        startKey: 'continue_1',
+      },
+    ],
+    expectedHead: 0,
+    root: {
+      avatarID: 'avatar_1',
+      buildSnapshot: { level: 1, xp: 0 },
+      contentVersion: '2',
+      encounterNode: { difficulty: 1 },
+      keyVersion: 1,
+      scopeID: '0_0',
+      scopeType: 'world_map_node',
+      secretRef: 'worldmap',
+      secretVersion: 1,
+      seed: '0123456789abcdef0123456789abcdef',
+      simVersion: 'engine_hash',
+      startChainIndex: 0,
+      startHash: 'start_hash',
+      startKey: 'root_act_root',
+    },
+  };
+
+  expect(activityContract.advanceActivity['~orpc'].inputSchema?.safeParse(input).success).toBe(
+    true,
+  );
+});
+
 test('it rejects an advanceActivity request whose checkpoints exceed the cap across continuations', () => {
   const half = Math.ceil(MAX_CATCH_UP_BATCH_CHECKPOINTS / 2);
 
