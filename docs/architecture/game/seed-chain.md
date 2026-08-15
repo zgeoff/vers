@@ -63,7 +63,8 @@ head of `{ genesisSeed, 0 }`.
 
 The service's `startActivity` handler still mints a root from the chain head the same way, but the
 interactive start no longer calls it. Auto-continuation after a terminal checkpoint still calls it.
-A locally minted root is not submitted to the server's copy of the chain.
+An interactive start's locally minted root is never round-tripped to the server ahead of its own
+checkpoints; `advanceActivity` accepts one directly only for the offline-first ingest below.
 
 `revealNodes` also returns each node's `encounterNode`, the content version it was derived against,
 and the key version and scope-secret ref and version the derivation read. With the sim version the
@@ -85,6 +86,15 @@ device has reached, not the reveal's original head.
 Every synthesized root is written to the durable `pending-roots` IndexedDB store, keyed by its
 activity id, before it installs onto the live simulation. A crash between mint and install still
 leaves a recoverable root.
+
+`advanceActivity` accepts such a root directly when the caller reconnects with one still
+unsubmitted. The client submits the `seed`, versions, `startChainIndex`, build snapshot, and start
+hash it computed offline; the server re-derives the encounter and the key and secret stamps from its
+own content document and scope secret rather than trusting the payload, then requires the client's
+start hash to equal its own recompute. The anchor check is exact — the root's `startChainIndex` must
+equal `appendedChainIndex` and its seed must equal `appendedNextSeed` — so a root computed against a
+head the chain has since moved past is refused rather than layered onto a position that no longer
+exists.
 
 ## Advancing the chain
 

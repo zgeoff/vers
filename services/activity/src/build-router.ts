@@ -38,7 +38,17 @@ export function buildActivityRouter(deps: BuildActivityRouterDeps) {
   return {
     advanceActivity: os.advanceActivity.handler((opts) =>
       advanceActivity(
-        { db: deps.db, sendReplayWake: deps.sendReplayWake, simTimeCapMs: deps.simTimeCapMs },
+        {
+          db: deps.db,
+          keyVersion: deps.keyVersion,
+          keysServiceURL: deps.keysServiceURL,
+          loadContentDocument: deps.loadContentDocument,
+          privateKey: deps.privateKey,
+          secretRef: deps.secretRef,
+          secretVersion: deps.secretVersion,
+          sendReplayWake: deps.sendReplayWake,
+          simTimeCapMs: deps.simTimeCapMs,
+        },
         opts,
       ),
     ),
