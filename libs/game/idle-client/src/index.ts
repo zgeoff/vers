@@ -15,6 +15,7 @@ export type {
 export { advanceWriterGeneration } from './state/advance-writer-generation';
 export { setEngagedActivityID } from './state/set-engaged-activity-id';
 export { setFailureAction } from './state/set-failure-action';
+export { setLastCompletedActivityID } from './state/set-last-completed-activity-id';
 export { setOfflineCapStatus } from './state/set-offline-cap-status';
 export { setResyncStatus } from './state/set-resync-status';
 export { setRewardSlotLedger } from './state/set-reward-slot-ledger';
@@ -38,8 +39,11 @@ export { useWriterGeneration } from './state/use-writer-generation';
 export { readCachedNodeIDs } from './submission/read-cached-node-ids';
 export type { CachedNodeSeed } from './submission/read-node-seed';
 export { readNodeSeed } from './submission/read-node-seed';
+export { readOfflineClearedNodeIDs } from './submission/read-offline-cleared-node-ids';
 export { readPendingStartIntent } from './submission/read-pending-start-intent';
 export { readStartStamps } from './submission/read-start-stamps';
+export { writeQueuedCheckpoint } from './submission/write-queued-checkpoint';
+export { writeStartRow } from './submission/write-start-row';
 
 export type {
   ActivitySubmissionContext,

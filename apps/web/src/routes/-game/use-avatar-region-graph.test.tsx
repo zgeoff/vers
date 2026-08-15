@@ -1,5 +1,12 @@
 import { expect, mock, test } from 'bun:test';
 import { waitFor } from '@testing-library/react';
+import { createMockActivityData } from '@vers/contract-activity/test-utils';
+import {
+  setLastCompletedActivityID,
+  writeQueuedCheckpoint,
+  writeStartRow,
+} from '@vers/idle-client';
+import { ActivityCheckpointType } from '@vers/idle-core';
 import { mockActivityService } from '@vers/mock-services/activity';
 import * as db from '@vers/mock-services/db';
 import {
@@ -12,10 +19,11 @@ import {
   useViewport,
   useWorldGraph,
 } from '@vers/worldmap-client';
-import { REVEAL_RADIUS, collectNodeEdges, toNodeID } from '@vers/worldmap-core';
+import { REVEAL_RADIUS, collectNodeEdges, toCellCoord, toNodeID } from '@vers/worldmap-core';
 import invariant from 'tiny-invariant';
 import { server } from '../../mocks/node';
 import { createActiveAvatar } from '../../test-utils/create-active-avatar';
+import { createMockCheckpointBatchEntry } from '../../test-utils/create-mock-checkpoint-batch-entry';
 import { createSignedInUser } from '../../test-utils/create-signed-in-user';
 import { renderHook } from '../../test-utils/render-hook';
 import { withRequestContext } from '../../test-utils/with-request-context';
@@ -697,5 +705,63 @@ test("it returns an empty frontier through an avatar switch, never the outgoing 
     // so the far cell never appears under the incoming avatar while the switch commits
     expect(frontiers.some((frontier) => frontier.size === 0)).toBe(true);
     expect(frontiers.some((frontier) => frontier.has(firstOnlyID))).toBe(false);
+  });
+});
+
+test('it extends the selectable set past a node cleared offline without extending reveal past it', async () => {
+  const signedIn = await createSignedInUser();
+  const avatar = await createActiveAvatar({ seed: 1414, userID: signedIn.userID });
+
+  const originID = toNodeID(0, 0);
+  const [originEdge] = collectNodeEdges(avatar.seed, 0, 0);
+
+  invariant(originEdge, 'the origin connects to at least one neighbour');
+
+  const [oaID = '', obID = ''] = originEdge.id.split('|');
+  const clearedID = oaID === originID ? obID : oaID;
+  const [clearedCX, clearedCY] = toCellCoord(clearedID);
+  const clearedEdges = collectNodeEdges(avatar.seed, clearedCX, clearedCY);
+
+  // a neighbour of the cleared node other than the origin, so its selectability can only follow
+  // from the cleared node opening its own neighbours, never from the origin's own edge set
+  const extendedID = clearedEdges
+    .flatMap((edge) => edge.id.split('|'))
+    .find((id) => id !== clearedID && id !== originID);
+
+  invariant(extendedID !== undefined, 'the cleared node connects to a neighbour beyond the origin');
+
+  await withRequestContext({ cookies: signedIn.cookies }, async () => {
+    const hook = renderHook(() => {
+      useAvatarRegionGraph();
+
+      return { revealSources: useRevealSources(), selectable: useSelectableNodeIDs() };
+    });
+
+    await waitFor(() => {
+      expect(hook.result.current.selectable).toStrictEqual(new Set([originID]));
+    });
+
+    setViewport({ maxCX: 10, maxCY: 10, minCX: -10, minCY: -10 });
+
+    const row = createMockActivityData({ avatarID: avatar.id, scopeID: clearedID });
+
+    await writeStartRow(row);
+
+    await writeQueuedCheckpoint(
+      row.id,
+      createMockCheckpointBatchEntry({ payload: { type: ActivityCheckpointType.Completed } }),
+    );
+
+    setLastCompletedActivityID(row.id);
+
+    await waitFor(() => {
+      expect(hook.result.current.selectable.has(extendedID)).toBe(true);
+    });
+
+    // the offline clear is unverified, so it must never widen the fog reveal — only the origin
+    // disc a server-verified completed set would extend
+    expect(hook.result.current.revealSources).toStrictEqual([
+      { coord: [0, 0], radius: REVEAL_RADIUS },
+    ]);
   });
 });
