@@ -489,6 +489,39 @@ test('it ingests a pending root and re-flushes once on NOT_FOUND, succeeding wit
   expect(ctx.onAcked).toHaveBeenCalledExactlyOnceWith('not-found-ingested-activity', 1);
 });
 
+test('it discards the queue after a second NOT_FOUND on the post-ingest retry, ingesting only once', async () => {
+  const track = mock<() => void>();
+
+  const ingestRoot = mock<(activityID: string) => Promise<IngestStartRowOutcome>>(async () => {
+    await Promise.resolve();
+
+    return 'ingested';
+  });
+
+  const ctx = setupTest({ activityID: 'not-found-twice-activity', ingestRoot });
+
+  server.use(
+    mockActivityService.trackActivityProgress.handler((opts) => {
+      track();
+      throw opts.errors.NOT_FOUND({ data: {} });
+    }),
+  );
+
+  await writeQueuedCheckpoint(
+    'not-found-twice-activity',
+    createMockCheckpointBatchEntry({ payload: { type: 'completed' }, version: 1 }),
+  );
+
+  ctx.actor.send({ isTerminal: true, type: 'QUEUED', version: 1 });
+
+  await waitFor(() => {
+    expect(ctx.actor.getSnapshot().matches('evicted')).toBeTrue();
+  });
+
+  expect(track).toHaveBeenCalledTimes(2);
+  expect(ingestRoot).toHaveBeenCalledExactlyOnceWith('not-found-twice-activity');
+});
+
 test('it holds the queue and retries on NOT_FOUND when ingestRoot defers', async () => {
   const track = mock<() => void>();
 

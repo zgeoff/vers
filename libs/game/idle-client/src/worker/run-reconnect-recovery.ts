@@ -6,29 +6,32 @@ import type { WorkerContext } from './types';
 
 /**
  * The worker's one decision point for self-scheduled catch-ups, run on every connectivity proof:
- * drains the reporting or last-resynced avatar's reload-orphaned client-minted roots, resends
- * whatever the submitter held, delivers a stop raised offline, then — once the held tail is
- * drained, so a resync never reads a stale appended head — resyncs while no run is live. The
- * resync's avatar comes from the durable start intent first (recorded at the most recent boundary
- * failure), else the reporting tab's session avatar, else the last avatar a resync ran for; with
- * none of the three, there is nothing to catch up. An intent's avatar can be stale — the account
- * switched away from it while the intent was held — but the resync flow discovers that itself
- * from the service's own rejection and catches up the account's real active avatar in the same
- * call, so nothing needs deriving here. `claim` carries a reporting tab's deliberate presence into
- * the resync so it may take an active run's writer; the worker's own triggers — a reconnect, a
- * flush answer — never claim.
+ * drains the recovery avatar's reload-orphaned client-minted roots, resends whatever the submitter
+ * held, delivers a stop raised offline, then — once the held tail is drained, so a resync never
+ * reads a stale appended head — resyncs while no run is live. The recovery avatar comes from the
+ * durable start intent first (recorded at the most recent boundary failure), else the reporting
+ * tab's session avatar, else the last avatar a resync ran for; with none of the three, there is
+ * nothing to catch up, and both the drain and the resync are skipped. An intent's avatar can be
+ * stale — the account switched away from it while the intent was held — but the resync flow
+ * discovers that itself from the service's own rejection and catches up the account's real active
+ * avatar in the same call, so nothing needs deriving here. `claim` carries a reporting tab's
+ * deliberate presence into the resync so it may take an active run's writer; the worker's own
+ * triggers — a reconnect, a flush answer — never claim.
  */
 export async function runReconnectRecovery(
   context: WorkerContext,
   signalAvatarID?: string,
   claim = false,
 ): Promise<void> {
-  const drainAvatarID = signalAvatarID ?? context.getResyncAvatarID() ?? undefined;
+  const heldIntent = await readPendingStartIntent();
+
+  const avatarID =
+    heldIntent?.avatarID ?? signalAvatarID ?? context.getResyncAvatarID() ?? undefined;
 
   // must precede flushHeld: an orphan's checkpoints would otherwise NOT_FOUND-discard on the
   // held flush before this ingests the root they chain onto
-  if (drainAvatarID !== undefined) {
-    await drainStartRows(context, drainAvatarID);
+  if (avatarID !== undefined) {
+    await drainStartRows(context, avatarID);
   }
 
   await context.getSubmitter().flushHeld();
@@ -36,11 +39,6 @@ export async function runReconnectRecovery(
   // A stop raised offline delivers here even when no resync will follow — the self-resync below
   // runs only while no run is live.
   await flushPendingStop(context);
-
-  const heldIntent = await readPendingStartIntent();
-
-  const avatarID =
-    heldIntent?.avatarID ?? signalAvatarID ?? context.getResyncAvatarID() ?? undefined;
 
   if (context.getActivity() === null && avatarID !== undefined) {
     await runResyncTurn(context, avatarID, claim);

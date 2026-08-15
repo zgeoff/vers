@@ -4,13 +4,12 @@ import type { WorkerContext } from './types';
 
 /**
  * Drains this avatar's reload-orphaned client-minted roots — a root whose live simulation was
- * lost to a worker reload, so nothing is registered to drive its checkpoint flush. Each pending
- * row for the avatar is ingested in turn, sequentially and awaited, one activity's ingest failure
- * never blocking the next: an `ingested` outcome registers the activity so its durably queued
- * checkpoints seed and flush; `deferred` leaves the row for a later recovery; `rejected` and
- * `absent` need nothing further, the row already gone. A row for a different avatar this device
- * also owns is left untouched — it drains on that avatar's own recovery, since minting its root
- * needs it as the active avatar.
+ * lost to a worker reload, so nothing is registered to drive its checkpoint flush. Per pending row
+ * for the avatar, the ingest outcome decides the action: `ingested` registers the activity so its
+ * durably queued checkpoints seed and flush; `deferred` leaves the row for a later recovery;
+ * `rejected` and `absent` need nothing further, the row already gone. A row for a different avatar
+ * this device also owns is left untouched — it drains on that avatar's own recovery, since minting
+ * its root needs it as the active avatar.
  */
 export async function drainStartRows(context: WorkerContext, avatarID: string): Promise<void> {
   const rows = await readAllStartRows();
