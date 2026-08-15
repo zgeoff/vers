@@ -140,9 +140,11 @@ export const activityContract = {
       z
         .object({
           activityID: z.string(),
+
+          // Empty when `root` carries the whole request: a root-only ingest mints the row and
+          // appends nothing.
           continuations: z
             .array(CatchUpContinuationSchema)
-            .min(1)
             .max(MAX_CATCH_UP_BATCH_CHECKPOINTS)
             .readonly(),
           expectedHead: z.int().min(0),
@@ -166,7 +168,14 @@ export const activityContract = {
           {
             error: `a request carries at most ${MAX_CATCH_UP_BATCH_CHECKPOINTS} checkpoints across all continuations`,
           },
-        ),
+        )
+
+        // Every request mints or appends something: an empty `continuations` is legal only when
+        // `root` carries the whole request, never a root-less no-op that would return the head
+        // unchanged.
+        .refine((input) => input.root !== undefined || input.continuations.length > 0, {
+          error: 'a request with no continuations must carry a root to mint',
+        }),
     )
     .output(z.object({ activity: ActivityDataSchema, appendedHead: z.int() }))
     .errors(

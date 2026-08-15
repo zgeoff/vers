@@ -11,12 +11,14 @@ import { createMockCheckpointBatchEntry } from '../test-utils/factories/create-m
 import type { CheckpointActivityEmittedEvent } from './checkpoint-activity-machine';
 import { checkpointActivityMachine } from './checkpoint-activity-machine';
 import { PROGRESS_FLUSH_INTERVAL_MS, RETRY_BACKOFF_CAP_MS } from './constants';
+import type { IngestStartRowOutcome } from './ingest-start-row';
 import type { ActivityServiceClient } from './types';
 import { writeQueuedCheckpoint } from './write-queued-checkpoint';
 
 function setupTest(
   config: Readonly<{
     activityID?: string;
+    ingestRoot?: (activityID: string) => Promise<IngestStartRowOutcome>;
     latestQueuedVersion?: number;
     onAcked?: (activityID: string, appendedHead: number) => void;
     signal?: AbortSignal;
@@ -38,6 +40,7 @@ function setupTest(
       activityID: config.activityID ?? 'activity-machine-test',
       client,
       expectedHead: 0,
+      ingestRoot: config.ingestRoot,
       latestQueuedVersion: config.latestQueuedVersion,
       onAcked,
       onCapped: undefined,
@@ -445,4 +448,202 @@ test('it resets the backoff attempt counter once a retried batch lands, so a lat
   });
 
   expect(ctx.actor.getSnapshot().context.retryAttempt).toBe(0);
+});
+
+test('it ingests a pending root and re-flushes once on NOT_FOUND, succeeding without discarding the queue', async () => {
+  const track = mock<() => void>();
+
+  const ingestRoot = mock<(activityID: string) => Promise<IngestStartRowOutcome>>(async () => {
+    await Promise.resolve();
+
+    return 'ingested';
+  });
+
+  const ctx = setupTest({ activityID: 'not-found-ingested-activity', ingestRoot });
+
+  server.use(
+    mockActivityService.trackActivityProgress.handler((opts) => {
+      track();
+
+      if (track.mock.calls.length === 1) {
+        throw opts.errors.NOT_FOUND({ data: {} });
+      }
+
+      return { appendedHead: 1 };
+    }),
+  );
+
+  await writeQueuedCheckpoint(
+    'not-found-ingested-activity',
+    createMockCheckpointBatchEntry({ payload: { type: 'completed' }, version: 1 }),
+  );
+
+  ctx.actor.send({ isTerminal: true, type: 'QUEUED', version: 1 });
+
+  await waitFor(() => {
+    expect(ctx.actor.getSnapshot().matches('evicted')).toBeTrue();
+  });
+
+  expect(track).toHaveBeenCalledTimes(2);
+  expect(ingestRoot).toHaveBeenCalledExactlyOnceWith('not-found-ingested-activity');
+  expect(ctx.onAcked).toHaveBeenCalledExactlyOnceWith('not-found-ingested-activity', 1);
+});
+
+test('it re-flushes on an absent ingest, delivering against a root a concurrent drain minted', async () => {
+  const track = mock<() => void>();
+
+  const ingestRoot = mock<(activityID: string) => Promise<IngestStartRowOutcome>>(async () => {
+    await Promise.resolve();
+
+    return 'absent';
+  });
+
+  const ctx = setupTest({ activityID: 'not-found-absent-activity', ingestRoot });
+
+  server.use(
+    mockActivityService.trackActivityProgress.handler((opts) => {
+      track();
+
+      if (track.mock.calls.length === 1) {
+        throw opts.errors.NOT_FOUND({ data: {} });
+      }
+
+      return { appendedHead: 1 };
+    }),
+  );
+
+  await writeQueuedCheckpoint(
+    'not-found-absent-activity',
+    createMockCheckpointBatchEntry({ payload: { type: 'completed' }, version: 1 }),
+  );
+
+  ctx.actor.send({ isTerminal: true, type: 'QUEUED', version: 1 });
+
+  await waitFor(() => {
+    expect(ctx.actor.getSnapshot().matches('evicted')).toBeTrue();
+  });
+
+  expect(track).toHaveBeenCalledTimes(2);
+  expect(ingestRoot).toHaveBeenCalledExactlyOnceWith('not-found-absent-activity');
+  expect(ctx.onAcked).toHaveBeenCalledExactlyOnceWith('not-found-absent-activity', 1);
+});
+
+test('it discards the queue after a second NOT_FOUND on the post-ingest retry, ingesting only once', async () => {
+  const track = mock<() => void>();
+
+  const ingestRoot = mock<(activityID: string) => Promise<IngestStartRowOutcome>>(async () => {
+    await Promise.resolve();
+
+    return 'ingested';
+  });
+
+  const ctx = setupTest({ activityID: 'not-found-twice-activity', ingestRoot });
+
+  server.use(
+    mockActivityService.trackActivityProgress.handler((opts) => {
+      track();
+      throw opts.errors.NOT_FOUND({ data: {} });
+    }),
+  );
+
+  await writeQueuedCheckpoint(
+    'not-found-twice-activity',
+    createMockCheckpointBatchEntry({ payload: { type: 'completed' }, version: 1 }),
+  );
+
+  ctx.actor.send({ isTerminal: true, type: 'QUEUED', version: 1 });
+
+  await waitFor(() => {
+    expect(ctx.actor.getSnapshot().matches('evicted')).toBeTrue();
+  });
+
+  expect(track).toHaveBeenCalledTimes(2);
+  expect(ingestRoot).toHaveBeenCalledExactlyOnceWith('not-found-twice-activity');
+});
+
+test('it holds the queue and retries on NOT_FOUND when ingestRoot defers', async () => {
+  const track = mock<() => void>();
+
+  const ingestRoot = mock<(activityID: string) => Promise<IngestStartRowOutcome>>(async () => {
+    await Promise.resolve();
+
+    return 'deferred';
+  });
+
+  const ctx = setupTest({ activityID: 'not-found-deferred-activity', ingestRoot });
+
+  server.use(
+    mockActivityService.trackActivityProgress.handler((opts) => {
+      track();
+      throw opts.errors.NOT_FOUND({ data: {} });
+    }),
+  );
+
+  await writeQueuedCheckpoint(
+    'not-found-deferred-activity',
+    createMockCheckpointBatchEntry({ payload: { type: 'completed' }, version: 1 }),
+  );
+
+  ctx.actor.send({ isTerminal: true, type: 'QUEUED', version: 1 });
+
+  await waitFor(() => {
+    expect(ctx.actor.getSnapshot().matches('retrying')).toBeTrue();
+  });
+
+  expect(track).toHaveBeenCalledOnce();
+  expect(ctx.emitted).toStrictEqual([{ activityID: 'not-found-deferred-activity', type: 'held' }]);
+});
+
+test('it discards the queue on NOT_FOUND when ingestRoot reports the root rejected', async () => {
+  const ingestRoot = mock<(activityID: string) => Promise<IngestStartRowOutcome>>(async () => {
+    await Promise.resolve();
+
+    return 'rejected';
+  });
+
+  const ctx = setupTest({ activityID: 'not-found-rejected-activity', ingestRoot });
+
+  server.use(
+    mockActivityService.trackActivityProgress.handler((opts) => {
+      throw opts.errors.NOT_FOUND({ data: {} });
+    }),
+  );
+
+  await writeQueuedCheckpoint(
+    'not-found-rejected-activity',
+    createMockCheckpointBatchEntry({ payload: { type: 'completed' }, version: 1 }),
+  );
+
+  ctx.actor.send({ isTerminal: true, type: 'QUEUED', version: 1 });
+
+  await waitFor(() => {
+    expect(ctx.actor.getSnapshot().matches('evicted')).toBeTrue();
+  });
+
+  expect(ingestRoot).toHaveBeenCalledExactlyOnceWith('not-found-rejected-activity');
+});
+
+test('it discards the queue on NOT_FOUND with no ingestRoot hook configured', async () => {
+  const track = mock<() => void>();
+  const ctx = setupTest({ activityID: 'not-found-no-hook-activity' });
+
+  server.use(
+    mockActivityService.trackActivityProgress.handler((opts) => {
+      track();
+      throw opts.errors.NOT_FOUND({ data: {} });
+    }),
+  );
+
+  await writeQueuedCheckpoint(
+    'not-found-no-hook-activity',
+    createMockCheckpointBatchEntry({ payload: { type: 'completed' }, version: 1 }),
+  );
+
+  ctx.actor.send({ isTerminal: true, type: 'QUEUED', version: 1 });
+
+  await waitFor(() => {
+    expect(ctx.actor.getSnapshot().matches('evicted')).toBeTrue();
+  });
+
+  expect(track).toHaveBeenCalledOnce();
 });
