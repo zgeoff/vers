@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { createContentVersion, makeContentDocumentLoader } from '@vers/content-registry';
 import { createMockContentDocument } from '@vers/contract-activity/test-utils';
 import { buildStateFromSeed } from '@vers/game-utils';
-import { buildLevelFromXP } from '@vers/idle-core';
+import { ActivityCheckpointType, buildLevelFromXP } from '@vers/idle-core';
 import { resolveServiceURL } from '@vers/mock-services';
 import { mockKeysService } from '@vers/mock-services/keys';
 import { createTestDB, getTestServiceKeyPair } from '@vers/service-test-utils/bun';
@@ -769,4 +769,315 @@ test("it rejects a tampered stamped encounter node on a continuation row, not ju
     .executeTakeFirstOrThrow();
 
   expect(activity.status).toBe('rejected');
+});
+
+test('it grants a first_clear keyed by the node when a verified segment completes a world-map-node run', async () => {
+  await using ctx = await setupTest();
+
+  // a high build level outlives the default weak content regardless of seed, so this run
+  // deterministically reaches a completed terminal rather than a failed one
+  const fixture = await createHonestActivityFixture(ctx.db, {
+    buildSnapshot: { level: 50, xp: 0 },
+    duration: 80_000,
+    seed: buildStateFromSeed(3_047_525_658),
+  });
+
+  const terminal = fixture.engineCheckpoints.at(-1);
+
+  invariant(terminal !== undefined, 'the fixture always ends on a checkpoint');
+
+  expect(terminal.type).toBe(ActivityCheckpointType.Completed);
+  expect(fixture.chain.scopeType).toBe('world_map_node');
+
+  const cache = createReplayCache();
+
+  const deps = {
+    db: ctx.db,
+    keysServiceURL: resolveServiceURL('keys'),
+    loadContentDocument: makeContentDocumentLoader(ctx.db),
+    logger: pino({ enabled: false }),
+    privateKey: ctx.privateKey,
+    simVersion: 'test-engine-hash',
+  };
+
+  const outcome = await ctx.db.transaction().execute((trx) =>
+    runFrontier(trx, deps, cache, {
+      activityID: fixture.activity.id,
+      appendedHead: fixture.activity.appendedHead,
+      replayAttempts: 0,
+      startChainIndex: fixture.activity.startChainIndex,
+      status: fixture.activity.status,
+      verifiedHead: 0,
+    }),
+  );
+
+  expect(outcome.kind).toBe('matched');
+
+  const grants = await ctx.db
+    .selectFrom('avatarGrants')
+    .selectAll()
+    .where('avatarId', '=', fixture.activity.avatarId)
+    .execute();
+
+  expect(grants).toStrictEqual([
+    {
+      avatarId: fixture.activity.avatarId,
+      createdAt: expect.toBeValidDate(),
+      key: fixture.activity.scopeId,
+      kind: 'first_clear',
+    },
+  ]);
+});
+
+test('it lands no grant when a verified segment ends on a failed terminal', async () => {
+  await using ctx = await setupTest();
+
+  const document = createMockContentDocument({
+    contentVersion: '868001',
+    encounter: {
+      contentVersion: '868001',
+      archetypes: [
+        {
+          id: 'overwhelming-brute',
+          name: 'Overwhelming Brute',
+          baseLevel: 1,
+          baseLife: 30,
+          baseXP: 10,
+          attackMin: 500,
+          attackMax: 500,
+          attackSpeed: 5,
+        },
+      ],
+      pools: [{ id: 'default', entries: [{ archetypeID: 'overwhelming-brute', weight: 1 }] }],
+      tuning: {
+        waveCountMin: 3,
+        waveCountMax: 6,
+        waveSizeMin: 3,
+        waveSizeMax: 6,
+        difficultyScalingFactor: 1,
+      },
+    },
+  });
+
+  const fixture = await createHonestActivityFixture(ctx.db, {
+    document,
+    duration: 80_000,
+    seed: buildStateFromSeed(3_047_525_658),
+  });
+
+  const terminal = fixture.engineCheckpoints.at(-1);
+
+  invariant(terminal !== undefined, 'the fixture always ends on a checkpoint');
+
+  expect(terminal.type).toBe(ActivityCheckpointType.Failed);
+
+  const cache = createReplayCache();
+
+  const deps = {
+    db: ctx.db,
+    keysServiceURL: resolveServiceURL('keys'),
+    loadContentDocument: makeContentDocumentLoader(ctx.db),
+    logger: pino({ enabled: false }),
+    privateKey: ctx.privateKey,
+    simVersion: 'test-engine-hash',
+  };
+
+  const outcome = await ctx.db.transaction().execute((trx) =>
+    runFrontier(trx, deps, cache, {
+      activityID: fixture.activity.id,
+      appendedHead: fixture.activity.appendedHead,
+      replayAttempts: 0,
+      startChainIndex: fixture.activity.startChainIndex,
+      status: fixture.activity.status,
+      verifiedHead: 0,
+    }),
+  );
+
+  expect(outcome.kind).toBe('matched');
+
+  const grants = await ctx.db
+    .selectFrom('avatarGrants')
+    .selectAll()
+    .where('avatarId', '=', fixture.activity.avatarId)
+    .execute();
+
+  expect(grants).toBeEmpty();
+});
+
+test('it lands no grant when a stop forward-exits the chain without a completed terminal', async () => {
+  await using ctx = await setupTest();
+
+  const fixture = await createHonestActivityFixture(ctx.db, {
+    activity: { status: 'stopped' },
+    duration: 80_000,
+    seed: buildStateFromSeed(3_047_525_658),
+  });
+
+  const totalCheckpoints = fixture.checkpoints.length;
+  const midRunCount = totalCheckpoints - 1;
+
+  expect(midRunCount).toBeGreaterThan(0);
+
+  await ctx.db
+    .deleteFrom('activityCheckpoints')
+    .where('activityId', '=', fixture.activity.id)
+    .where('version', '>', midRunCount)
+    .execute();
+
+  await ctx.db
+    .updateTable('activities')
+    .set({ appendedHead: midRunCount, lastHash: fixture.checkpoints[midRunCount - 1]?.hash })
+    .where('id', '=', fixture.activity.id)
+    .execute();
+
+  const cache = createReplayCache();
+
+  const deps = {
+    db: ctx.db,
+    keysServiceURL: resolveServiceURL('keys'),
+    loadContentDocument: makeContentDocumentLoader(ctx.db),
+    logger: pino({ enabled: false }),
+    privateKey: ctx.privateKey,
+    simVersion: 'test-engine-hash',
+  };
+
+  const outcome = await ctx.db.transaction().execute((trx) =>
+    runFrontier(trx, deps, cache, {
+      activityID: fixture.activity.id,
+      appendedHead: midRunCount,
+      replayAttempts: 0,
+      startChainIndex: fixture.activity.startChainIndex,
+      status: fixture.activity.status,
+      verifiedHead: 0,
+    }),
+  );
+
+  expect(outcome.kind).toBe('matched');
+
+  const grants = await ctx.db
+    .selectFrom('avatarGrants')
+    .selectAll()
+    .where('avatarId', '=', fixture.activity.avatarId)
+    .execute();
+
+  expect(grants).toBeEmpty();
+});
+
+test('it lands no grant when a completed terminal verifies on a non-map-node scope', async () => {
+  await using ctx = await setupTest();
+
+  // a high build level outlives the default weak content regardless of seed, so this run
+  // deterministically reaches a completed terminal rather than a failed one
+  const fixture = await createHonestActivityFixture(ctx.db, {
+    buildSnapshot: { level: 50, xp: 0 },
+    chain: { scopeType: 'encounter' },
+    duration: 80_000,
+    seed: buildStateFromSeed(3_047_525_658),
+  });
+
+  const terminal = fixture.engineCheckpoints.at(-1);
+
+  invariant(terminal !== undefined, 'the fixture always ends on a checkpoint');
+
+  expect(terminal.type).toBe(ActivityCheckpointType.Completed);
+  expect(fixture.activity.scopeType).toBe('encounter');
+
+  const cache = createReplayCache();
+
+  const deps = {
+    db: ctx.db,
+    keysServiceURL: resolveServiceURL('keys'),
+    loadContentDocument: makeContentDocumentLoader(ctx.db),
+    logger: pino({ enabled: false }),
+    privateKey: ctx.privateKey,
+    simVersion: 'test-engine-hash',
+  };
+
+  const outcome = await ctx.db.transaction().execute((trx) =>
+    runFrontier(trx, deps, cache, {
+      activityID: fixture.activity.id,
+      appendedHead: fixture.activity.appendedHead,
+      replayAttempts: 0,
+      startChainIndex: fixture.activity.startChainIndex,
+      status: fixture.activity.status,
+      verifiedHead: 0,
+    }),
+  );
+
+  expect(outcome.kind).toBe('matched');
+
+  const grants = await ctx.db
+    .selectFrom('avatarGrants')
+    .selectAll()
+    .where('avatarId', '=', fixture.activity.avatarId)
+    .execute();
+
+  expect(grants).toBeEmpty();
+});
+
+test('it grants a first_clear exactly once across a re-verification of an already-granted node', async () => {
+  await using ctx = await setupTest();
+
+  // a high build level outlives the default weak content regardless of seed, so this run
+  // deterministically reaches a completed terminal rather than a failed one
+  const fixture = await createHonestActivityFixture(ctx.db, {
+    buildSnapshot: { level: 50, xp: 0 },
+    duration: 80_000,
+    seed: buildStateFromSeed(3_047_525_658),
+  });
+
+  const terminal = fixture.engineCheckpoints.at(-1);
+
+  invariant(terminal !== undefined, 'the fixture always ends on a checkpoint');
+
+  expect(terminal.type).toBe(ActivityCheckpointType.Completed);
+
+  const cache = createReplayCache();
+
+  const deps = {
+    db: ctx.db,
+    keysServiceURL: resolveServiceURL('keys'),
+    loadContentDocument: makeContentDocumentLoader(ctx.db),
+    logger: pino({ enabled: false }),
+    privateKey: ctx.privateKey,
+    simVersion: 'test-engine-hash',
+  };
+
+  const staleFrontier = {
+    activityID: fixture.activity.id,
+    appendedHead: fixture.activity.appendedHead,
+    replayAttempts: 0,
+    startChainIndex: fixture.activity.startChainIndex,
+    status: fixture.activity.status,
+    verifiedHead: 0,
+  };
+
+  const first = await ctx.db
+    .transaction()
+    .execute((trx) => runFrontier(trx, deps, cache, staleFrontier));
+
+  expect(first.kind).toBe('matched');
+
+  // replays the same stale frontier, whose `verifiedHead` no longer matches the cursor the first
+  // apply already advanced
+  const second = await ctx.db
+    .transaction()
+    .execute((trx) => runFrontier(trx, deps, cache, staleFrontier));
+
+  expect(second.kind).toBe('matched');
+
+  const grants = await ctx.db
+    .selectFrom('avatarGrants')
+    .selectAll()
+    .where('avatarId', '=', fixture.activity.avatarId)
+    .execute();
+
+  expect(grants).toStrictEqual([
+    {
+      avatarId: fixture.activity.avatarId,
+      createdAt: expect.toBeValidDate(),
+      key: fixture.activity.scopeId,
+      kind: 'first_clear',
+    },
+  ]);
 });
