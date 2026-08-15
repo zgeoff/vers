@@ -337,6 +337,14 @@ async function applyMatch(
   const forwardExited = isForwardExited(lastReplayed.type, segment.activity.status);
   const advanceChain = forwardExited && lastStored.version === segment.activity.appendedHead;
 
+  // A first clear is a verified completed terminal on a map node; a fail, stop, or cap forward-
+  // exits the chain without clearing it, and a non-`world_map_node` scope has no completion
+  // frontier.
+  const clearedNodeID =
+    lastReplayed.type === 'completed' && segment.activity.scopeType === 'world_map_node'
+      ? segment.activity.scopeID
+      : undefined;
+
   const items = await rollRewardItems(
     { keysServiceURL: deps.keysServiceURL, privateKey: deps.privateKey },
     {
@@ -353,6 +361,9 @@ async function applyMatch(
     activityID: segment.activity.id,
     avatarID: segment.activity.avatarID,
     expectedVerifiedHead: segment.verifiedHead,
+    ...(clearedNodeID !== undefined && {
+      grants: [{ key: clearedNodeID, kind: 'first_clear' }],
+    }),
     ...(items.length > 0 && { items }),
     settledXP: settlement.settledXP,
     verifiedHead: lastStored.version,
