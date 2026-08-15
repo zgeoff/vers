@@ -6,6 +6,7 @@ import type { SimulationDriver } from '@vers/idle-core';
 import { buildSimulationInput } from '@vers/idle-core';
 import { createSimulationDriver } from '@vers/idle-core/replay';
 import { readScopeSecret } from '@vers/worldmap-content';
+import { ORIGIN_CELL, isNodeSelectable, toNodeID } from '@vers/worldmap-core';
 import type { Transaction } from 'kysely';
 import invariant from 'tiny-invariant';
 import { applyVerifiedSegment } from '../apply/apply-verified-segment';
@@ -85,9 +86,17 @@ export async function runFrontier(
     return rejectSegment(trx, deps, cache, segment, seedDivergence, 'seed-validation-failed');
   }
 
-  // Only a segment's first pass needs the descriptor check — a later pass over the same activity
-  // has already verified its sealed fields once, and a stamped row never changes them afterward.
+  // Only a segment's first pass needs the descriptor and reachability checks — a later pass over
+  // the same activity has already verified them once, and a stamped row never changes afterward.
   if (segment.verifiedHead === 0) {
+    const avatarSeed = await trx
+      .selectFrom('avatars')
+      .select('seed')
+      .where('id', '=', segment.activity.avatarID)
+      .executeTakeFirst();
+
+    invariant(avatarSeed !== undefined, 'a stamped activity always has an owning avatar');
+
     const scopeSecret = await readScopeSecret(
       {
         issuer: 'service-replay',
@@ -100,14 +109,6 @@ export async function runFrontier(
         secretVersion: segment.activity.secretVersion,
       },
     );
-
-    const avatarSeed = await trx
-      .selectFrom('avatars')
-      .select('seed')
-      .where('id', '=', segment.activity.avatarID)
-      .executeTakeFirst();
-
-    invariant(avatarSeed !== undefined, 'a stamped activity always has an owning avatar');
 
     const descriptorDivergence = findDescriptorDivergence({
       content: document.encounter,
@@ -126,6 +127,26 @@ export async function runFrontier(
         descriptorDivergence,
         'descriptor-validation-failed',
       );
+    }
+
+    // Reachability is validated once at a run's first verified pass, against the frontier its
+    // predecessors have by then established; a later pass over the same run never re-checks.
+    if (
+      segment.activity.scopeType === 'world_map_node' &&
+      segment.activity.scopeID !== toNodeID(ORIGIN_CELL[0], ORIGIN_CELL[1])
+    ) {
+      const grants = await trx
+        .selectFrom('avatarGrants')
+        .select('key')
+        .where('avatarId', '=', segment.activity.avatarID)
+        .where('kind', '=', 'first_clear')
+        .execute();
+
+      const completedNodeIDs = new Set(grants.map((grant) => grant.key));
+
+      if (!isNodeSelectable(avatarSeed.seed, completedNodeIDs, segment.activity.scopeID)) {
+        return rejectUnreachableNode(trx, deps, cache, segment);
+      }
     }
   }
 
@@ -482,6 +503,42 @@ async function rejectUnbackedSnapshot(
   );
 
   recordRejection('unbacked-snapshot');
+
+  await rejectActivity(trx, {
+    activityID: segment.activity.id,
+    avatarID: segment.activity.avatarID,
+    scopeID: segment.activity.scopeID,
+    scopeType: segment.activity.scopeType,
+  });
+
+  cache.remove(segment.activity.id);
+
+  return { kind: 'rejected' };
+}
+
+/**
+ * Refuses a `world_map_node` activity whose scope is not connected to the avatar's verified
+ * first-clear frontier. Rejecting through the same single-chain path voids this activity's own
+ * successors, exactly as the unbacked-snapshot rejection does.
+ */
+async function rejectUnreachableNode(
+  trx: Transaction<DB>,
+  deps: Readonly<ReplayWorkerDeps>,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- a mutable cache handle whose remove/get/set are its whole point; no readonly form is useful
+  cache: ReplayCache,
+  segment: Readonly<ReplaySegment>,
+): Promise<ReplayIterationOutcome> {
+  deps.logger.error(
+    {
+      activityID: segment.activity.id,
+      appendedHead: segment.activity.appendedHead,
+      scopeID: segment.activity.scopeID,
+      verifiedHead: segment.verifiedHead,
+    },
+    'replay node reachability check failed; rejecting activity',
+  );
+
+  recordRejection('node-unreachable');
 
   await rejectActivity(trx, {
     activityID: segment.activity.id,

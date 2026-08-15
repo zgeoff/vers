@@ -189,6 +189,9 @@ timestamp to the moment the drain confirms it.
   propagates through an avatar's later runs.
 - `descriptor-mismatch` — a sealed node's stamped content fields failed to reproduce against a
   freshly read scope secret, on the segment's first verification pass.
+- `node-unreachable` — a `world_map_node` run's scope was not connected to any verified completed
+  node on the segment's first verification pass, the authoritative reachability gate for both online
+  and offline traversal.
 
 Each recording's log line carries the raw numbers behind it (heads, checkpoint counts, sim version).
 

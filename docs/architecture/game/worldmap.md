@@ -106,11 +106,15 @@ and their immediate neighbours. Sight running ahead of reach is the intended exp
 leak — a bounded local horizon cannot compute the global-best jackpot, which is the exploit fog
 exists to deny.
 
-Enforcement is server-side, not the cache. Every activity start and every replay checks the target
-against the avatar's verified first-clear frontier and rejects anything beyond it, so cached
-descriptors and offline movement — both client-controlled — buy no reach a fresh server check would
-deny. `REVEAL_RADIUS > SELECTION_RADIUS` is a cache and pacing bound on top of that check, not the
-boundary itself.
+Enforcement is server-side, not the cache. Replay is the authoritative reachability gate: on a
+world-map-node run's first verified pass it checks the run's scope against the avatar's verified
+first-clear frontier and rejects — voiding every dependent that borrowed from it — anything beyond
+it, so cached descriptors and offline movement, both client-controlled, buy no reach replay would
+deny. An online start also checks the target against the frontier, fast-rejecting where the frontier
+is already current; an offline-reconciled root skips that admission check, since a predecessor's
+clear may not yet be verified when the successor's root is ingested, and is adjudicated at replay
+instead, ordered so the predecessor verifies first. `REVEAL_RADIUS > SELECTION_RADIUS` is a cache
+and pacing bound on top of that check, not the boundary itself.
 
 Within it, the server returns descriptors for the whole revealed disc, which extends past the
 selectable frontier, and the client caches them. Offline, a player farms revealed nodes and pushes
@@ -126,9 +130,9 @@ its durable offline outbox — the client-minted root and queued checkpoints a c
 behind — so the opened neighbours survive an offline restart rather than resetting to the
 last-verified frontier. The widened set only ever adds to selection; reveal stays gated on
 verification, so an offline clear opens ground the player can already see without disclosing any new
-fog. The client-side widening is a convenience, never the boundary: the server's own frontier check
-still rejects a start beyond the avatar's verified first-clear frontier, so an unearned offline jump
-settles nothing it cannot back up once the device reconnects.
+fog. The client-side widening is a convenience, never the boundary: replay's own frontier check
+still rejects and voids anything beyond the avatar's verified first-clear frontier, so an unearned
+offline jump settles nothing it cannot back up once the device reconnects and replay adjudicates it.
 
 ## Content sealing & verification
 
