@@ -48,40 +48,43 @@ The server validates each checkpoint's `chainIndex` against `start_chain_index +
 
 A chain scope's genesis seed is a server CSPRNG mint: sixteen random bytes as hex, re-rolled off the
 degenerate all-zero xoroshiro state. `revealNodes` mints it at reveal time, one chain row per
-revealed `(avatar, scope)` pair, self-assigning the row's own `genesis_seed` to itself on a repeat
-reveal so the mint stays idempotent regardless of how many times, or how many concurrent callers,
-reveal the same node. The seed needs no re-derivation: the verifier reads the stored value, and a
-restored device fetches it. A client cannot compute it and cannot steer it, since the scope and the
-avatar are both fixed before the mint.
+revealed `(avatar, scope)` pair. A repeat reveal self-assigns the row's own `genesis_seed`, so the
+mint stays idempotent under any number of concurrent callers. The seed needs no re-derivation: the
+verifier reads the stored value, and a restored device fetches it. A client cannot compute the seed
+or steer it, because the scope and the avatar are both fixed before the mint.
 
-An interactive start is a local client mint: the worker synthesizes the activity's full root row
-entirely from this device's cached inputs, never by calling the service. `revealNodes` delivers,
-alongside each node's genesis seed, its current `head` — `{ nextSeed, chainIndex }`, the chain row's
-own appended anchor — so a start roots at wherever play on this node last left off rather than
-always at genesis. A node never yet played reveals a head equal to `{ genesisSeed, 0 }`. The
-service's `startActivity` handler still exists and still mints from a chain row's head the same way.
-The interactive start no longer calls it; auto-continuation after a terminal checkpoint still does,
-until that path folds onto a local mint too. A client-minted root does not yet round-trip into the
-server's own copy of the chain row.
+The interactive start is a local client mint. The worker synthesizes the activity's full root row
+from this device's cached inputs, without calling the service.
 
-`revealNodes` also derives each node's `encounterNode` and returns the content version it was
-derived against, alongside the key version and scope-secret ref/version the derivation read —
-together, every input `buildStartHash` needs besides the sim version the client already holds.
-app-web calls `revealNodes` for every node the fog-of-war projection currently reveals, relaying the
-returned seeds, heads, encounters, and stamps to the idle worker along with the active avatar. The
-worker caches each node's seed, head, encounter, and content version by its `[avatarID, nodeID]`
-pair in its `node-seeds` IndexedDB store, and the key-version/scope-secret stamps in its
-`preferences` store, so every node the player can see carries what a start needs to synthesize a
-valid root without the server. The compound node key scopes a seed to its avatar: two avatars
-sharing a coordinate root distinct chains against distinct seeds, so neither overwrites the other's
-cached value. As the client plays a chain forward, the checkpoint submitter's write cursor persists
-the node's advancing head back to the same cache row, so a later start at that node roots against
-the position this device has actually reached — never the reveal's original, now-stale head.
+`revealNodes` returns each node's current `head` alongside its genesis seed. The head is the chain
+row's appended anchor, `{ nextSeed, chainIndex }`. A start roots at the head, so it resumes where
+play on the node last left off rather than restarting from genesis. A node never yet played has a
+head of `{ genesisSeed, 0 }`.
 
-Every synthesized root is written to a durable `pending-roots` IndexedDB store, keyed by its own
-activity id, before it installs onto the live simulation: a crash between mint and install still
-leaves a recoverable root. That store is what a later reconcile drains to give each client-minted
-root its server round trip.
+The service's `startActivity` handler still mints a root from the chain head the same way, but the
+interactive start no longer calls it. Auto-continuation after a terminal checkpoint still calls it.
+A locally minted root is not submitted to the server's copy of the chain.
+
+`revealNodes` also returns each node's `encounterNode`, the content version it was derived against,
+and the key version and scope-secret ref and version the derivation read. With the sim version the
+client already holds, these are every input `buildStartHash` needs.
+
+app-web calls `revealNodes` for every node the fog-of-war projection reveals and relays the seeds,
+heads, encounters, and stamps to the idle worker with the active avatar. The worker caches each
+node's seed, head, encounter, and content version under its `[avatarID, nodeID]` key in the
+`node-seeds` IndexedDB store, and the stamps in the `preferences` store. Every node the player can
+see then carries what a start needs to synthesize a valid root without the server.
+
+The node key scopes a seed to its avatar. Two avatars sharing a coordinate root distinct chains
+against distinct seeds, so neither overwrites the other's cached value.
+
+The checkpoint submitter's write cursor persists a node's advancing head back to its cache row as
+the client plays the chain forward. A later start at that node then roots against the position this
+device has reached, not the reveal's original head.
+
+Every synthesized root is written to the durable `pending-roots` IndexedDB store, keyed by its
+activity id, before it installs onto the live simulation. A crash between mint and install still
+leaves a recoverable root.
 
 ## Advancing the chain
 
