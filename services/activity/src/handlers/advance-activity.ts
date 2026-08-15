@@ -3,6 +3,7 @@ import type {
   BuildSnapshot,
   CatchUpContinuation,
   EncounterNode,
+  OfflineRootSubmission,
 } from '@vers/contract-activity';
 import { EncounterNodeSchema, buildStartHash } from '@vers/contract-activity';
 import type { Activities, ActivityStatus, DB } from '@vers/db';
@@ -22,9 +23,12 @@ import type {
   AdvanceBailPayload,
   AdvanceCheckpointInvalidPayload,
   AdvanceTerminalPayload,
+  AvatarNotActivePayload,
   EmptyErrorPayload,
   MissingSessionPayload,
+  SimVersionProblemPayload,
 } from '../types';
+import { mintRoot } from './mint-root';
 import { toActivityData } from './to-activity-data';
 import { updateAppendedAnchorFromTail } from './update-appended-anchor-from-tail';
 
@@ -50,17 +54,24 @@ interface AdvanceActivityOpts {
   readonly errors: {
     readonly ACTIVITY_CAPPED: (payload: AdvanceBailPayload) => Error;
     readonly ACTIVITY_TERMINAL: (payload: AdvanceTerminalPayload) => Error;
+    readonly AVATAR_NOT_ACTIVE: (payload: AvatarNotActivePayload) => Error;
     readonly CHAIN_QUARANTINED: (payload: AdvanceBailPayload) => Error;
     readonly CHECKPOINT_INVALID: (payload: AdvanceCheckpointInvalidPayload) => Error;
     readonly CONFLICT: (payload: AdvanceBailPayload) => Error;
+    readonly NODE_NOT_REVEALED: (payload: EmptyErrorPayload) => Error;
+    readonly NODE_UNKNOWN: (payload: EmptyErrorPayload) => Error;
+    readonly NODE_UNREACHABLE: (payload: EmptyErrorPayload) => Error;
     readonly NOT_FOUND: (payload: EmptyErrorPayload) => Error;
     readonly SESSION_EVICTED: (payload: AdvanceBailPayload) => Error;
+    readonly SIM_VERSION_EXPIRED: (payload: SimVersionProblemPayload) => Error;
+    readonly SIM_VERSION_UNKNOWN: (payload: SimVersionProblemPayload) => Error;
     readonly UNAUTHORIZED: (payload: MissingSessionPayload) => Error;
   };
   readonly input: {
     readonly activityID: string;
     readonly continuations: ReadonlyArray<CatchUpContinuation>;
     readonly expectedHead: number;
+    readonly root?: OfflineRootSubmission | undefined;
   };
 }
 
@@ -86,6 +97,17 @@ interface AdvanceActivityOpts {
  * ownership alone, and resolves outside any transaction once the insert's unique violation has
  * unwound one. The live start path's dedup — the avatar's active-status row — would find nothing
  * once a gap has already ended terminal, and a retry resolved against it would stall forever.
+ *
+ * When `activityID` names no row and `root` is present, mints it first under the same gates
+ * `startActivity` runs — AVATAR_NOT_ACTIVE, NODE_NOT_REVEALED, NODE_UNKNOWN, NODE_UNREACHABLE,
+ * SIM_VERSION_UNKNOWN, SIM_VERSION_EXPIRED — validated against the chain's live appended anchor
+ * rather than trusted as a fresh mint's own derivation: `root.startChainIndex`/`root.seed` must
+ * equal the anchor exactly, or the client rooted against a stale head and the row is refused with
+ * CONFLICT. `root.buildSnapshot` and `root.startHash` are cross-checked the same way a
+ * continuation's own mint cross-checks its hint, both rejecting with CHECKPOINT_INVALID on a
+ * mismatch. A retry naming a row that already exists — this same root, already minted — mints
+ * nothing again and proceeds straight to the continuation loop against it. When `activityID`
+ * names no row and `root` is absent, behaves exactly as before: NOT_FOUND.
  */
 export async function advanceActivity(
   deps: AdvanceActivityDeps,
@@ -99,33 +121,23 @@ export async function advanceActivity(
 
   const actingSessionID = opts.context.actingSessionId;
 
-  const initial = await deps.db
-    .selectFrom('activities')
-    .innerJoin('avatars', 'avatars.id', 'activities.avatarId')
-    .selectAll('activities')
-    .where('activities.id', '=', opts.input.activityID)
-    .where('avatars.userId', '=', actingUserID)
-    .executeTakeFirst();
-
-  if (initial === undefined) {
-    throw opts.errors.NOT_FOUND({ data: {} });
-  }
+  const rootRow = await resolveRootRow(deps, opts, actingUserID, actingSessionID);
 
   const pinned: PinnedActivityContext = {
-    avatarId: initial.avatarId,
-    contentVersion: initial.contentVersion,
-    encounterNode: EncounterNodeSchema.parse(initial.encounterNode),
-    keyVersion: initial.keyVersion,
-    scopeId: initial.scopeId,
-    scopeType: initial.scopeType,
-    secretRef: initial.secretRef,
-    secretVersion: initial.secretVersion,
-    simVersion: initial.simVersion,
+    avatarId: rootRow.avatarId,
+    contentVersion: rootRow.contentVersion,
+    encounterNode: EncounterNodeSchema.parse(rootRow.encounterNode),
+    keyVersion: rootRow.keyVersion,
+    scopeId: rootRow.scopeId,
+    scopeType: rootRow.scopeType,
+    secretRef: rootRow.secretRef,
+    secretVersion: rootRow.secretVersion,
+    simVersion: rootRow.simVersion,
   };
 
   let targetActivityID = opts.input.activityID;
   let targetExpectedHead = opts.input.expectedHead;
-  let finalRow: Selectable<Activities> = initial;
+  let finalRow: Selectable<Activities> = rootRow;
 
   for (const continuation of opts.input.continuations) {
     const stepActivityID = targetActivityID;
@@ -177,6 +189,115 @@ export async function advanceActivity(
   }
 
   return { activity: toActivityData(finalRow), appendedHead: finalRow.appendedHead };
+}
+
+/**
+ * Resolves the row `opts.input.continuations` appends onto: `opts.input.activityID`'s own row when
+ * it already exists, or — when it doesn't — `opts.input.root` minted onto that id under its own
+ * top-level transaction, separate from the continuation loop's own per-step transactions. Throws
+ * NOT_FOUND when the row is absent and `root` is absent too (the ordinary case: `activityID` names
+ * a row `startActivity` already minted), or when `root.avatarID` isn't owned by the acting user. A
+ * concurrent duplicate mint's unique violation resolves outside any transaction, exactly as a
+ * continuation's own mint-id collision resolves: converging on the row when it is genuinely this
+ * same root retried, and CONFLICT otherwise.
+ */
+async function resolveRootRow(
+  deps: AdvanceActivityDeps,
+  opts: AdvanceActivityOpts,
+  actingUserID: string,
+  actingSessionID: null | string,
+): Promise<Selectable<Activities>> {
+  const initial = await deps.db
+    .selectFrom('activities')
+    .innerJoin('avatars', 'avatars.id', 'activities.avatarId')
+    .selectAll('activities')
+    .where('activities.id', '=', opts.input.activityID)
+    .where('avatars.userId', '=', actingUserID)
+    .executeTakeFirst();
+
+  if (initial !== undefined) {
+    return initial;
+  }
+
+  const root = opts.input.root;
+
+  if (root === undefined) {
+    throw opts.errors.NOT_FOUND({ data: {} });
+  }
+
+  const avatar = await deps.db
+    .selectFrom('avatars')
+    .select('id')
+    .where('id', '=', root.avatarID)
+    .where('userId', '=', actingUserID)
+    .executeTakeFirst();
+
+  if (avatar === undefined) {
+    throw opts.errors.NOT_FOUND({ data: {} });
+  }
+
+  try {
+    return await deps.db
+      .transaction()
+      .execute((trx) =>
+        mintRoot(
+          trx,
+          actingUserID,
+          { activityID: opts.input.activityID, actingSessionID, root },
+          opts.errors,
+        ),
+      );
+  } catch (error: unknown) {
+    if (!isUniqueViolation(error)) {
+      throw error;
+    }
+
+    // The mint's insert lost to another row already minted at this client id — resolved here,
+    // outside any transaction, since the one that just rolled back cannot run another statement
+    // once a constraint violation has poisoned it.
+    const recovered = await resolveRootMintCollision(deps.db, root, opts.input.activityID);
+
+    if (recovered === undefined) {
+      recordAdvanceBailout('conflict');
+
+      throw opts.errors.CONFLICT({
+        data: { activityID: opts.input.activityID, appendedHead: 0 },
+      });
+    }
+
+    return recovered;
+  }
+}
+
+/**
+ * Resolves a root mint's unique violation, from a fresh connection once the transaction that hit it
+ * has rolled back: an existing row at `activityID` converges only when it is genuinely this same
+ * root retried — owned by `root.avatarID`, minted from the same `startKey`, and scoped to the same
+ * chain — mirroring a continuation's own mint-id dedup. Anything short of that full match, including
+ * no row at all, is `undefined`.
+ */
+async function resolveRootMintCollision(
+  db: Kysely<DB>,
+  root: Readonly<OfflineRootSubmission>,
+  activityID: string,
+): Promise<Selectable<Activities> | undefined> {
+  const existing = await db
+    .selectFrom('activities')
+    .selectAll()
+    .where('id', '=', activityID)
+    .executeTakeFirst();
+
+  if (
+    existing === undefined ||
+    existing.avatarId !== root.avatarID ||
+    existing.startKey !== root.startKey ||
+    existing.scopeType !== root.scopeType ||
+    existing.scopeId !== root.scopeID
+  ) {
+    return undefined;
+  }
+
+  return existing;
 }
 
 /**

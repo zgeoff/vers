@@ -10,6 +10,7 @@ import { buildStartHash } from '@vers/contract-activity';
 import { createMockContentDocument } from '@vers/contract-activity/test-utils';
 import { buildLevelFromXP } from '@vers/idle-core';
 import {
+  createActiveAvatarRow,
   createActivityChainRow,
   createAnonymousViewer,
   createAvatarRow,
@@ -23,6 +24,7 @@ import { createActivityService } from '../create-activity-service';
 import { createMockActivity } from '../test-utils/factories/create-mock-activity';
 import { createMockCatchUpContinuation } from '../test-utils/factories/create-mock-catch-up-continuation';
 import { createMockCheckpointBatch } from '../test-utils/factories/create-mock-checkpoint-batch';
+import { createMockOfflineRootSubmission } from '../test-utils/factories/create-mock-offline-root-submission';
 
 /**
  * `advanceActivity` opens its own `db.transaction()` per continuation, which can't nest under the
@@ -803,4 +805,441 @@ test('it rejects an anonymous acting user with UNAUTHORIZED', async () => {
       expectedHead: 0,
     }),
   ).rejects.toMatchObject({ code: 'UNAUTHORIZED', data: { reason: 'missing-session' } });
+});
+
+test('it mints a client-minted root under a valid client head and persists its fields verbatim', async () => {
+  await using ctx = await setupTest();
+
+  const current = await createSimVersionRow(ctx.db);
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id, xp: 0 });
+  const chain = await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
+  const activityID = `act_${createId()}`;
+
+  const root = createMockOfflineRootSubmission({
+    avatarID: avatar.id,
+    buildSnapshot: { level: buildLevelFromXP(0), xp: 0 },
+    contentVersion: '2',
+    encounterNode: { difficulty: 3, poolID: 'custom_pool' },
+    keyVersion: 7,
+    scopeID: '0_0',
+    scopeType: 'world_map_node',
+    secretRef: 'custom_secret_ref',
+    secretVersion: 3,
+    seed: chain.appendedNextSeed,
+    simVersion: current.engineHash,
+    startChainIndex: 0,
+  });
+
+  const tail = createMockCheckpointBatch({
+    finalPayloadOverrides: { rewards: { xp: 40 }, type: 'completed' },
+    startChainIndex: root.startChainIndex,
+    startPrevHash: root.startHash,
+    startVersion: 1,
+  });
+
+  const continuation = createMockCatchUpContinuation({
+    buildSnapshot: { level: buildLevelFromXP(40), xp: 40 },
+    checkpoints: tail,
+    startKey: `continue_${activityID}`,
+  });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const result = await client.advanceActivity({
+    activityID,
+    continuations: [continuation],
+    expectedHead: 0,
+    root,
+  });
+
+  expect(result.activity.id).toBe(continuation.id);
+
+  const rootRow = await ctx.db
+    .selectFrom('activities')
+    .selectAll()
+    .where('id', '=', activityID)
+    .executeTakeFirstOrThrow();
+
+  expect(rootRow).toMatchObject({
+    avatarId: avatar.id,
+    buildSnapshot: root.buildSnapshot,
+    contentVersion: root.contentVersion,
+    encounterNode: root.encounterNode,
+    keyVersion: root.keyVersion,
+    scopeId: root.scopeID,
+    scopeType: root.scopeType,
+    secretRef: root.secretRef,
+    secretVersion: root.secretVersion,
+    seed: root.seed,
+    simVersion: root.simVersion,
+    startChainIndex: root.startChainIndex,
+    startHash: root.startHash,
+    startKey: root.startKey,
+    status: 'stopped',
+  });
+});
+
+test('it does not double-mint a root retried with the same id and startKey', async () => {
+  await using ctx = await setupTest();
+
+  const current = await createSimVersionRow(ctx.db);
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id, xp: 0 });
+  const chain = await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
+  const activityID = `act_${createId()}`;
+
+  const root = createMockOfflineRootSubmission({
+    avatarID: avatar.id,
+    buildSnapshot: { level: buildLevelFromXP(0), xp: 0 },
+    contentVersion: '2',
+    scopeID: '0_0',
+    scopeType: 'world_map_node',
+    seed: chain.appendedNextSeed,
+    simVersion: current.engineHash,
+    startChainIndex: 0,
+  });
+
+  const tail = createMockCheckpointBatch({
+    finalPayloadOverrides: { rewards: { xp: 40 }, type: 'completed' },
+    startChainIndex: root.startChainIndex,
+    startPrevHash: root.startHash,
+    startVersion: 1,
+  });
+
+  const continuation = createMockCatchUpContinuation({
+    buildSnapshot: { level: buildLevelFromXP(40), xp: 40 },
+    checkpoints: tail,
+    startKey: `continue_${activityID}`,
+  });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+  const request = { activityID, continuations: [continuation], expectedHead: 0, root };
+
+  const first = await client.advanceActivity(request);
+  const second = await client.advanceActivity(request);
+
+  expect(second).toStrictEqual(first);
+
+  const rows = await ctx.db
+    .selectFrom('activities')
+    .select(['id'])
+    .where('avatarId', '=', avatar.id)
+    .execute();
+
+  // no duplicate root and no duplicate continuation row were minted by the resubmit
+  expect(rows).toHaveLength(2);
+});
+
+test("it conflicts a root whose startChainIndex/seed is behind the chain's live anchor", async () => {
+  await using ctx = await setupTest();
+
+  const current = await createSimVersionRow(ctx.db);
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id, xp: 0 });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
+  // a concurrent forward exit already advanced the chain past the root's stale head
+  await ctx.db
+    .updateTable('activityChains')
+    .set({ appendedChainIndex: 5, appendedNextSeed: 'a'.repeat(32) })
+    .where('avatarId', '=', avatar.id)
+    .where('scopeType', '=', 'world_map_node')
+    .where('scopeId', '=', '0_0')
+    .execute();
+
+  const activityID = `act_${createId()}`;
+
+  const root = createMockOfflineRootSubmission({
+    avatarID: avatar.id,
+    buildSnapshot: { level: buildLevelFromXP(0), xp: 0 },
+    contentVersion: '2',
+    scopeID: '0_0',
+    scopeType: 'world_map_node',
+    simVersion: current.engineHash,
+    startChainIndex: 0,
+  });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  expect(
+    client.advanceActivity({
+      activityID,
+      continuations: [createMockCatchUpContinuation()],
+      expectedHead: 0,
+      root,
+    }),
+  ).rejects.toMatchObject({
+    code: 'CONFLICT',
+    data: { activityID, appendedHead: 0 },
+  });
+});
+
+test('it rejects a root whose buildSnapshot the server re-authors differently with CHECKPOINT_INVALID', async () => {
+  await using ctx = await setupTest();
+
+  const current = await createSimVersionRow(ctx.db);
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id, xp: 0 });
+  const chain = await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
+  const activityID = `act_${createId()}`;
+
+  const root = createMockOfflineRootSubmission({
+    avatarID: avatar.id,
+    buildSnapshot: { level: 5, xp: 9999 },
+    contentVersion: '2',
+    scopeID: '0_0',
+    scopeType: 'world_map_node',
+    seed: chain.appendedNextSeed,
+    simVersion: current.engineHash,
+    startChainIndex: 0,
+  });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  expect(
+    client.advanceActivity({
+      activityID,
+      continuations: [createMockCatchUpContinuation()],
+      expectedHead: 0,
+      root,
+    }),
+  ).rejects.toMatchObject({
+    code: 'CHECKPOINT_INVALID',
+    data: { activityID, appendedHead: 0, reason: 'build-snapshot-mismatch' },
+  });
+});
+
+test('it rejects a root whose startHash does not match the server recompute', async () => {
+  await using ctx = await setupTest();
+
+  const current = await createSimVersionRow(ctx.db);
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id, xp: 0 });
+  const chain = await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
+  const activityID = `act_${createId()}`;
+
+  const root = createMockOfflineRootSubmission({
+    avatarID: avatar.id,
+    buildSnapshot: { level: buildLevelFromXP(0), xp: 0 },
+    contentVersion: '2',
+    scopeID: '0_0',
+    scopeType: 'world_map_node',
+    seed: chain.appendedNextSeed,
+    simVersion: current.engineHash,
+    startChainIndex: 0,
+    startHash: 'a'.repeat(64),
+  });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  expect(
+    client.advanceActivity({
+      activityID,
+      continuations: [createMockCatchUpContinuation()],
+      expectedHead: 0,
+      root,
+    }),
+  ).rejects.toMatchObject({
+    code: 'CHECKPOINT_INVALID',
+    data: { activityID, appendedHead: 0, reason: 'start-hash-mismatch' },
+  });
+});
+
+test('it rejects a root whose scope has no chain row with NODE_NOT_REVEALED', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id, xp: 0 });
+
+  const activityID = `act_${createId()}`;
+
+  const root = createMockOfflineRootSubmission({
+    avatarID: avatar.id,
+    scopeID: '0_0',
+    scopeType: 'world_map_node',
+  });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  expect(
+    client.advanceActivity({
+      activityID,
+      continuations: [createMockCatchUpContinuation()],
+      expectedHead: 0,
+      root,
+    }),
+  ).rejects.toMatchObject({ code: 'NODE_NOT_REVEALED' });
+});
+
+test('it rejects a root at an unselectable node with NODE_UNREACHABLE', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id, xp: 0 });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '50_50' });
+
+  const activityID = `act_${createId()}`;
+
+  const root = createMockOfflineRootSubmission({
+    avatarID: avatar.id,
+    scopeID: '50_50',
+    scopeType: 'world_map_node',
+  });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  expect(
+    client.advanceActivity({
+      activityID,
+      continuations: [createMockCatchUpContinuation()],
+      expectedHead: 0,
+      root,
+    }),
+  ).rejects.toMatchObject({ code: 'NODE_UNREACHABLE' });
+});
+
+test("it rejects a root minted for an avatar that is not the account's active one", async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const activeAvatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+  const otherAvatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  await createActiveAvatarRow(ctx.db, { avatarId: activeAvatar.id, userId: viewer.user.id });
+
+  const activityID = `act_${createId()}`;
+  const root = createMockOfflineRootSubmission({ avatarID: otherAvatar.id });
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  expect(
+    client.advanceActivity({
+      activityID,
+      continuations: [createMockCatchUpContinuation()],
+      expectedHead: 0,
+      root,
+    }),
+  ).rejects.toMatchObject({
+    code: 'AVATAR_NOT_ACTIVE',
+    data: { activeAvatarID: activeAvatar.id, activeAvatarName: activeAvatar.name },
+  });
+});
+
+test('it rejects a root whose stamped sim version is past retention with SIM_VERSION_EXPIRED', async () => {
+  await using ctx = await setupTest();
+
+  const pruned = await createSimVersionRow(ctx.db, {
+    retainedUntil: new Date('2099-01-01'),
+    status: 'pruned',
+  });
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
+  const activityID = `act_${createId()}`;
+
+  const root = createMockOfflineRootSubmission({
+    avatarID: avatar.id,
+    contentVersion: '2',
+    scopeID: '0_0',
+    scopeType: 'world_map_node',
+    simVersion: pruned.engineHash,
+  });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  expect(
+    client.advanceActivity({
+      activityID,
+      continuations: [createMockCatchUpContinuation()],
+      expectedHead: 0,
+      root,
+    }),
+  ).rejects.toMatchObject({ code: 'SIM_VERSION_EXPIRED' });
+});
+
+test('it conflicts a root mint while another run is already active for the avatar', async () => {
+  await using ctx = await setupTest();
+
+  const current = await createSimVersionRow(ctx.db);
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id, xp: 0 });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
+  const chain = await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '1_0' });
+
+  await ctx.db
+    .insertInto('avatarGrants')
+    .values({ avatarId: avatar.id, key: '1_0', kind: 'first_clear' })
+    .execute();
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  // an already-active run at a different scope occupies the avatar's single-active-run slot
+  await client.startActivity({ avatarID: avatar.id, scopeID: '0_0', scopeType: 'world_map_node' });
+
+  const activityID = `act_${createId()}`;
+
+  const root = createMockOfflineRootSubmission({
+    avatarID: avatar.id,
+    buildSnapshot: { level: buildLevelFromXP(0), xp: 0 },
+    contentVersion: '2',
+    scopeID: '1_0',
+    scopeType: 'world_map_node',
+    seed: chain.appendedNextSeed,
+    simVersion: current.engineHash,
+    startChainIndex: 0,
+  });
+
+  const request = client.advanceActivity({
+    activityID,
+    continuations: [createMockCatchUpContinuation()],
+    expectedHead: 0,
+    root,
+  });
+
+  await request.catch(() => {});
+
+  expect(request).rejects.toMatchObject({
+    code: 'CONFLICT',
+    data: { activityID, appendedHead: 0 },
+  });
+});
+
+test("it rejects a caller minting a root on another caller's avatar with NOT_FOUND", async () => {
+  await using ctx = await setupTest();
+
+  const owner = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: owner.user.id });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
+  const other = await createViewer({ audience: 'service-activity', db: ctx.db });
+
+  const otherClient = buildRPCTestClient<ActivityContract>(ctx.app, { token: other.token });
+  const activityID = `act_${createId()}`;
+
+  const root = createMockOfflineRootSubmission({
+    avatarID: avatar.id,
+    scopeID: '0_0',
+    scopeType: 'world_map_node',
+  });
+
+  expect(
+    otherClient.advanceActivity({
+      activityID,
+      continuations: [createMockCatchUpContinuation()],
+      expectedHead: 0,
+      root,
+    }),
+  ).rejects.toMatchObject({ code: 'NOT_FOUND' });
 });
