@@ -7,13 +7,9 @@ test('it builds a default root submission', () => {
   expect(root).toStrictEqual({
     avatarID: expect.toBeString(),
     buildSnapshot: { level: 1, xp: 0 },
-    contentVersion: '0.0.0-dev',
-    encounterNode: { difficulty: expect.toBeNumber() },
-    keyVersion: 1,
+    contentVersion: '2',
     scopeID: expect.toBeString(),
     scopeType: 'world_map_node',
-    secretRef: 'worldmap',
-    secretVersion: 1,
     seed: expect.toBeString(),
     simVersion: '0.0.0-dev',
     startChainIndex: 0,
@@ -22,9 +18,9 @@ test('it builds a default root submission', () => {
   });
 });
 
-test('it defaults startHash to the real start hash of its own fields', () => {
+test('it defaults startHash to the real start hash of the client-cached inputs', () => {
   const root = createMockOfflineRootSubmission({
-    contentVersion: 'content_1',
+    contentVersion: '3',
     keyVersion: 7,
     seed: 'seed_fixed',
     simVersion: 'sim_1',

@@ -15,10 +15,12 @@ import { os } from './os';
  * rejecting a lost-response retry outright. Hash-chain validation, the offline-progress cap, and
  * writer eviction need state the mock doesn't track — those rejections are per-test overrides.
  *
- * When `activityID` names no row and `root` is present, mints it from `root`'s own fields —
+ * When `activityID` names no row and `root` is present, mints it from `root`'s submitted fields —
  * trusted wholesale, mirroring `startActivity`'s mock — after the same avatar-ownership and
- * active-avatar checks `startActivity`'s mock runs. The node-selectable, sim-version, and
- * live-anchor gates need state the mock doesn't track — those rejections are per-test overrides too.
+ * active-avatar checks `startActivity`'s mock runs. The encounter and key/secret stamps the real
+ * endpoint derives server-side default in the collection, since `root` no longer carries them. The
+ * node-selectable, sim-version, and live-anchor gates need state the mock doesn't track — those
+ * rejections are per-test overrides too.
  */
 export const advanceActivity = os.advanceActivity.handler(async (opts) => {
   const actingUserId = opts.context.actingUserId;
@@ -153,9 +155,10 @@ interface MintRootErrors {
 /**
  * Mints `root` as a fresh active row at `activityID`, mirroring `startActivity`'s mock: ownership
  * of `root.avatarID` and the account's active-avatar selection are checked exactly as a fresh start
- * would, and every other pinned field is trusted from `root` wholesale rather than re-derived —
- * the node-selectable, sim-version, and live-anchor gates the real endpoint runs need state this
- * mock doesn't track.
+ * would, and every submitted field is trusted from `root` wholesale rather than re-derived. The
+ * encounter and key/secret stamps `root` no longer carries default in the collection, and
+ * `lastHash` anchors to `root.startHash` exactly as the real mint does. The node-selectable,
+ * sim-version, and live-anchor gates the real endpoint runs need state this mock doesn't track.
  */
 async function mintRootActivity(
   activityID: string,
@@ -201,13 +204,10 @@ async function mintRootActivity(
     avatarID: root.avatarID,
     buildSnapshot: root.buildSnapshot,
     contentVersion: root.contentVersion,
-    encounterNode: root.encounterNode,
     id: activityID,
-    keyVersion: root.keyVersion,
+    lastHash: root.startHash,
     scopeID: root.scopeID,
     scopeType: root.scopeType,
-    secretRef: root.secretRef,
-    secretVersion: root.secretVersion,
     seed: root.seed,
     simVersion: root.simVersion,
     startChainIndex: root.startChainIndex,

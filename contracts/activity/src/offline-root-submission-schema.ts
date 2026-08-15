@@ -1,28 +1,30 @@
 import * as z from 'zod';
 import { BuildSnapshotSchema } from './build-snapshot-schema';
-import { EncounterNodeSchema } from './encounter-node-schema';
 import { ScopeIdentifierSchema } from './scope-identifier-schema';
 
 /**
  * `advanceActivity`'s ingest of a client-minted activity root the server has never seen — the
- * offline-first accept path. Carries the same start context `startActivity` would have resolved
- * from server truth, computed instead by the client from its cached reveal data and submitted for
- * validation under the exact gates `startActivity` runs: the node must be selectable and the sim
- * version registered, `buildSnapshot` must match what the server re-authors from the avatar's own
- * progression, and `startChainIndex`/`seed` must match the chain's live anchor exactly — a mismatch
- * means the client rooted against a stale head. `startHash` is the client's own recomputation,
- * cross-checked against the server's rather than trusted as the stored value on its own.
+ * offline-first accept path. Carries the start context the client computed offline from its cached
+ * reveal data, submitted for validation under the exact gates `startActivity` runs.
+ *
+ * The client submits only what it alone holds: the chain `seed`, the content and sim versions it
+ * simulated under, the `startChainIndex` it rooted at, its predicted `buildSnapshot`, and the
+ * `startHash` it folded from them. The encounter node and the key/secret stamps are never
+ * submitted — the server re-derives them from its own content document and scope secret exactly as
+ * a fresh start does, so a poisoned encounter or stamp can never enter the row.
+ *
+ * `startHash` is the client's own recomputation, required to equal the hash the server folds from
+ * its server-derived inputs rather than trusted as the stored value on its own — proof the client
+ * simulated against the same content and encounter the server derives from its own truth.
+ * `contentVersion` is a numeric string, the form the content registry publishes, so a nonnumeric
+ * version is a typed schema rejection rather than a downstream failure.
  */
 export const OfflineRootSubmissionSchema = z.object({
   avatarID: z.string(),
   buildSnapshot: BuildSnapshotSchema,
-  contentVersion: z.string(),
-  encounterNode: EncounterNodeSchema,
-  keyVersion: z.int().min(1),
+  contentVersion: z.string().regex(/^\d+$/),
   scopeID: ScopeIdentifierSchema,
   scopeType: ScopeIdentifierSchema,
-  secretRef: z.string(),
-  secretVersion: z.int().min(1),
   seed: z.string(),
   simVersion: z.string(),
   startChainIndex: z.int().min(0),

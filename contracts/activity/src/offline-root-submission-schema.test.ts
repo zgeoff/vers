@@ -6,12 +6,8 @@ test('it accepts a well-formed root submission', () => {
     avatarID: 'avatar_1',
     buildSnapshot: { level: 1, xp: 0 },
     contentVersion: '2',
-    encounterNode: { difficulty: 1 },
-    keyVersion: 1,
     scopeID: '0_0',
     scopeType: 'world_map_node',
-    secretRef: 'worldmap',
-    secretVersion: 1,
     seed: '0123456789abcdef0123456789abcdef',
     simVersion: 'engine_hash',
     startChainIndex: 0,
@@ -27,12 +23,8 @@ test('it rejects a root submission missing its startKey', () => {
     avatarID: 'avatar_1',
     buildSnapshot: { level: 1, xp: 0 },
     contentVersion: '2',
-    encounterNode: { difficulty: 1 },
-    keyVersion: 1,
     scopeID: '0_0',
     scopeType: 'world_map_node',
-    secretRef: 'worldmap',
-    secretVersion: 1,
     seed: '0123456789abcdef0123456789abcdef',
     simVersion: 'engine_hash',
     startChainIndex: 0,
@@ -41,4 +33,25 @@ test('it rejects a root submission missing its startKey', () => {
 
   expect(result.success).toBeFalse();
   expect(result.error?.issues).toPartiallyContain(expect.objectContaining({ path: ['startKey'] }));
+});
+
+test('it rejects a nonnumeric contentVersion', () => {
+  const result = OfflineRootSubmissionSchema.safeParse({
+    avatarID: 'avatar_1',
+    buildSnapshot: { level: 1, xp: 0 },
+    contentVersion: '0.0.0-dev',
+    scopeID: '0_0',
+    scopeType: 'world_map_node',
+    seed: '0123456789abcdef0123456789abcdef',
+    simVersion: 'engine_hash',
+    startChainIndex: 0,
+    startHash: 'start_hash',
+    startKey: 'root_act_1',
+  });
+
+  expect(result.success).toBeFalse();
+
+  expect(result.error?.issues).toPartiallyContain(
+    expect.objectContaining({ path: ['contentVersion'] }),
+  );
 });

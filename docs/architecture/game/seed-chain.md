@@ -88,11 +88,13 @@ activity id, before it installs onto the live simulation. A crash between mint a
 leaves a recoverable root.
 
 `advanceActivity` accepts such a root directly when the caller reconnects with one still
-unsubmitted: the same client-computed start context, ingested under `startActivity`'s own admission
-gates and validated against the chain's live appended anchor rather than trusted as fresh. The
-anchor check is exact — the root's `startChainIndex` must equal `appendedChainIndex` and its seed
-must equal `appendedNextSeed` — so a root computed against a head the chain has since moved past is
-refused rather than layered onto a position that no longer exists.
+unsubmitted. The client submits the `seed`, versions, `startChainIndex`, build snapshot, and start
+hash it computed offline; the server re-derives the encounter and the key and secret stamps from its
+own content document and scope secret rather than trusting the payload, then requires the client's
+start hash to equal its own recompute. The anchor check is exact — the root's `startChainIndex` must
+equal `appendedChainIndex` and its seed must equal `appendedNextSeed` — so a root computed against a
+head the chain has since moved past is refused rather than layered onto a position that no longer
+exists.
 
 ## Advancing the chain
 

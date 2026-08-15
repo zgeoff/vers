@@ -101,13 +101,17 @@ build; `advanceActivity` cross-checks the prediction against what it derived and
 continuation on a mismatch.
 
 `advanceActivity` accepts a client-minted root the server has never seen, when `activityID` names no
-existing row and the caller supplies its full start context — the same computation `startActivity`
-would have made, done offline. The mint runs the admission gates `startActivity` runs — node
-selectability, sim-version validity — then validates the client's `seed` and `startChainIndex`
-against the chain's live appended anchor: a mismatch means the client rooted against a stale head,
-and the mint is refused rather than accepted off a moving target. `buildSnapshot` and the start hash
-are cross-checked the same way a continuation's own mint cross-checks its hint, rejecting a mismatch
-rather than trusting the client's prediction. The minted row stores the same columns a
+existing row and the caller supplies the start context it computed offline: the `seed`, the content
+and sim versions, the `startChainIndex`, its predicted `buildSnapshot`, and the `startHash`. The
+mint derives every authoritative input from server truth, never the payload. It runs the admission
+gates `startActivity` runs — node selectability, sim-version validity — and derives the encounter
+node and the key and secret stamps from its own content document and scope secret, exactly as a
+fresh start does. It validates the client's `seed` and `startChainIndex` against the chain's live
+appended anchor: a mismatch means the client rooted against a stale head, and the mint is refused
+rather than accepted off a moving target. `buildSnapshot` is re-authored from the avatar's own
+progression, and the `startHash` is recomputed from the server-derived encounter and stamps; the
+client's submitted hash must equal that recompute, proving its offline simulation ran against the
+same content and encounter the server derives. The minted row stores the same columns a
 `startActivity` mint would, so the replay verifier reproduces it unchanged.
 
 The `Started` snapshot pins every version a replay needs — the engine and content versions, the roll

@@ -2,13 +2,16 @@ import type {
   ActivityData,
   BuildSnapshot,
   CatchUpContinuation,
+  ContentDocument,
   EncounterNode,
   OfflineRootSubmission,
 } from '@vers/contract-activity';
 import { EncounterNodeSchema, buildStartHash } from '@vers/contract-activity';
+import type { SecretRef } from '@vers/contract-keys';
 import type { Activities, ActivityStatus, DB } from '@vers/db';
 import { toJSON } from '@vers/db';
 import { buildLevelFromXP, isTerminalCheckpointType } from '@vers/idle-core';
+import type { CryptoKey } from 'jose';
 import { sql } from 'kysely';
 import type { Kysely, Selectable } from 'kysely';
 import invariant from 'tiny-invariant';
@@ -34,6 +37,12 @@ import { updateAppendedAnchorFromTail } from './update-appended-anchor-from-tail
 
 interface AdvanceActivityDeps {
   readonly db: Kysely<DB>;
+  readonly keysServiceURL: string;
+  readonly keyVersion: number;
+  readonly loadContentDocument: (contentVersion: string) => Promise<ContentDocument | undefined>;
+  readonly privateKey: CryptoKey;
+  readonly secretRef: SecretRef;
+  readonly secretVersion: number;
   readonly sendReplayWake: () => void;
 
   /**
@@ -196,7 +205,9 @@ export async function advanceActivity(
  * it already exists, or — when it doesn't — `opts.input.root` minted onto that id under its own
  * top-level transaction, separate from the continuation loop's own per-step transactions. Throws
  * NOT_FOUND when the row is absent and `root` is absent too (the ordinary case: `activityID` names
- * a row `startActivity` already minted), or when `root.avatarID` isn't owned by the acting user. A
+ * a row `startActivity` already minted), when `root.avatarID` isn't owned by the acting user, or
+ * when `activityID` already names a row owned by another user — a foreign id stays owner-scoped
+ * NOT_FOUND rather than leaking its existence through the mint's own unique-violation CONFLICT. A
  * concurrent duplicate mint's unique violation resolves outside any transaction, exactly as a
  * continuation's own mint-id collision resolves: converging on the row when it is genuinely this
  * same root retried, and CONFLICT otherwise.
@@ -236,17 +247,36 @@ async function resolveRootRow(
     throw opts.errors.NOT_FOUND({ data: {} });
   }
 
+  // The owner-scoped `initial` read misses a row at this id owned by another user; a row present
+  // here is exactly that, so it stays NOT_FOUND rather than reaching the mint and surfacing as the
+  // unique-violation CONFLICT — which would tell a caller the foreign id exists.
+  const foreign = await deps.db
+    .selectFrom('activities')
+    .select('id')
+    .where('id', '=', opts.input.activityID)
+    .executeTakeFirst();
+
+  if (foreign !== undefined) {
+    throw opts.errors.NOT_FOUND({ data: {} });
+  }
+
   try {
-    return await deps.db
-      .transaction()
-      .execute((trx) =>
-        mintRoot(
-          trx,
-          actingUserID,
-          { activityID: opts.input.activityID, actingSessionID, root },
-          opts.errors,
-        ),
-      );
+    return await deps.db.transaction().execute((trx) =>
+      mintRoot(
+        {
+          keyVersion: deps.keyVersion,
+          keysServiceURL: deps.keysServiceURL,
+          loadContentDocument: deps.loadContentDocument,
+          privateKey: deps.privateKey,
+          secretRef: deps.secretRef,
+          secretVersion: deps.secretVersion,
+        },
+        trx,
+        actingUserID,
+        { activityID: opts.input.activityID, actingSessionID, root },
+        opts.errors,
+      ),
+    );
   } catch (error: unknown) {
     if (!isUniqueViolation(error)) {
       throw error;
