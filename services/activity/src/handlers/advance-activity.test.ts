@@ -1638,14 +1638,14 @@ test("it refuses a kicked writer session's undelivered offline root with the sin
   ).rejects.toMatchObject({ code: 'CONFLICT' });
 });
 
-// Target — #892 (blocked by #918), offline-reconcile doc §"Losing offline navigation across
+// Target — #927 (blocked by #918), offline-reconcile doc §"Losing offline navigation across
 // sessions": an avatar has one active session, so a session that takes over kicks the previous one
 // off and the kicked session's undelivered offline work is discarded rather than delivered. Today
 // root admission has no acting-session gate — a kicked session's offline root is refused, if at all,
 // by the incidental active-run and chain-anchor guards, never on session grounds. This asserts the
 // doc's guarantee: the kicked session's delivery is refused because it lost the writer, a
 // session-scoped verdict distinct from the generic CONFLICT the same delivery earns today. Unskip
-// once #892 adds the session-scoped discard.
+// once #927 adds the session-scoped discard.
 test.skip("it discards a kicked writer session's undelivered offline root on session grounds after a takeover", async () => {
   await using ctx = await setupTest();
 
