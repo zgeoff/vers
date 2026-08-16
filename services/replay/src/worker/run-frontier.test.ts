@@ -6,6 +6,8 @@ import { ActivityCheckpointType, buildLevelFromXP } from '@vers/idle-core';
 import { resolveServiceURL } from '@vers/mock-services';
 import { mockKeysService } from '@vers/mock-services/keys';
 import { createTestDB, getTestServiceKeyPair } from '@vers/service-test-utils/bun';
+import { createInMemoryMetrics } from '@vers/test-utils/bun';
+import { ORIGIN_CELL, toNodeID } from '@vers/worldmap-core';
 import pino from 'pino';
 import invariant from 'tiny-invariant';
 import { server } from '../mocks/server';
@@ -813,10 +815,13 @@ test('it grants a first_clear keyed by the node when a verified segment complete
 
   expect(outcome.kind).toBe('matched');
 
+  // the fixture itself seeds a first-clear grant for a node adjacent to its own scope, so
+  // this query isolates the grant this run's own completion earns
   const grants = await ctx.db
     .selectFrom('avatarGrants')
     .selectAll()
     .where('avatarId', '=', fixture.activity.avatarId)
+    .where('key', '=', fixture.activity.scopeId)
     .execute();
 
   expect(grants).toStrictEqual([
@@ -895,10 +900,13 @@ test('it lands no grant when a verified segment ends on a failed terminal', asyn
 
   expect(outcome.kind).toBe('matched');
 
+  // the fixture itself seeds a first-clear grant for a node adjacent to its own scope, so
+  // this query isolates whether this run's own completion earned one
   const grants = await ctx.db
     .selectFrom('avatarGrants')
     .selectAll()
     .where('avatarId', '=', fixture.activity.avatarId)
+    .where('key', '=', fixture.activity.scopeId)
     .execute();
 
   expect(grants).toBeEmpty();
@@ -954,10 +962,13 @@ test('it lands no grant when a stop forward-exits the chain without a completed 
 
   expect(outcome.kind).toBe('matched');
 
+  // the fixture itself seeds a first-clear grant for a node adjacent to its own scope, so
+  // this query isolates whether this run's own completion earned one
   const grants = await ctx.db
     .selectFrom('avatarGrants')
     .selectAll()
     .where('avatarId', '=', fixture.activity.avatarId)
+    .where('key', '=', fixture.activity.scopeId)
     .execute();
 
   expect(grants).toBeEmpty();
@@ -1066,10 +1077,13 @@ test('it grants a first_clear exactly once across a re-verification of an alread
 
   expect(second.kind).toBe('matched');
 
+  // the fixture itself seeds a first-clear grant for a node adjacent to its own scope, so this
+  // query isolates the grant this run's own completion earns
   const grants = await ctx.db
     .selectFrom('avatarGrants')
     .selectAll()
     .where('avatarId', '=', fixture.activity.avatarId)
+    .where('key', '=', fixture.activity.scopeId)
     .execute();
 
   expect(grants).toStrictEqual([
@@ -1082,20 +1096,13 @@ test('it grants a first_clear exactly once across a re-verification of an alread
   ]);
 });
 
-// Target — #892 (blocked by #918), offline-reconcile doc §"Settlement in order" / §"Jump to an
-// unreachable node": reachability is re-validated at replay against the settled frontier, so an
-// activity whose node no earlier settled clear made reachable is rejected during the ordered drain,
-// not accepted here and stopped only at a later admission. runFrontier today verifies the segment
-// and grants a first_clear, but never checks reachability — the default fixture roots at '1_0' with
-// no first_clear granting the origin, and still settles `matched`. This asserts the guarantee that
-// delta violates; unskip once #892 adds the replay-time reachability check that shares
-// `isNodeSelectable` with #507's admission-time authorization.
-test.skip('it rejects a settled activity whose node no earlier settled clear made reachable', async () => {
+test('it rejects a settled activity whose node no earlier settled clear made reachable', async () => {
   await using ctx = await setupTest();
 
   // a completed terminal at '1_0' with no grant making the origin — and thus '1_0' — reachable
   const fixture = await createHonestActivityFixture(ctx.db, {
     buildSnapshot: { level: 50, xp: 0 },
+    completedNodeIDs: [],
     duration: 80_000,
     seed: buildStateFromSeed(3_047_525_658),
   });
@@ -1131,4 +1138,249 @@ test.skip('it rejects a settled activity whose node no earlier settled clear mad
     .execute();
 
   expect(grants).toStrictEqual([]);
+});
+
+test('it verifies a world-map-node run whose scope is connected to a verified first-clear grant, still granting its own completion', async () => {
+  await using ctx = await setupTest();
+
+  // the default fixture already seeds a first-clear grant for a node adjacent to its own scope —
+  // this asserts that setup directly before proving replay accepts a run built on top of it
+  const fixture = await createHonestActivityFixture(ctx.db, {
+    buildSnapshot: { level: 50, xp: 0 },
+    duration: 80_000,
+    seed: buildStateFromSeed(3_047_525_658),
+  });
+
+  const seededGrants = await ctx.db
+    .selectFrom('avatarGrants')
+    .selectAll()
+    .where('avatarId', '=', fixture.activity.avatarId)
+    .execute();
+
+  expect(seededGrants).not.toBeEmpty();
+
+  const cache = createReplayCache();
+
+  const deps = {
+    db: ctx.db,
+    keysServiceURL: resolveServiceURL('keys'),
+    loadContentDocument: makeContentDocumentLoader(ctx.db),
+    logger: pino({ enabled: false }),
+    privateKey: ctx.privateKey,
+    simVersion: 'test-engine-hash',
+  };
+
+  const outcome = await ctx.db.transaction().execute((trx) =>
+    runFrontier(trx, deps, cache, {
+      activityID: fixture.activity.id,
+      appendedHead: fixture.activity.appendedHead,
+      replayAttempts: 0,
+      startChainIndex: fixture.activity.startChainIndex,
+      status: fixture.activity.status,
+      verifiedHead: 0,
+    }),
+  );
+
+  expect(outcome.kind).toBe('matched');
+
+  const activity = await ctx.db
+    .selectFrom('activities')
+    .select('status')
+    .where('id', '=', fixture.activity.id)
+    .executeTakeFirstOrThrow();
+
+  expect(activity.status).not.toBe('rejected');
+});
+
+test('it rejects a world-map-node run whose scope is not connected to any completed node', async () => {
+  await using ctx = await setupTest();
+
+  const inMemoryMetrics = createInMemoryMetrics();
+
+  const fixture = await createHonestActivityFixture(ctx.db, {
+    buildSnapshot: { level: 50, xp: 0 },
+    chain: { scopeId: '40_40' },
+    completedNodeIDs: [],
+    duration: 80_000,
+    seed: buildStateFromSeed(3_047_525_658),
+  });
+
+  const cache = createReplayCache();
+
+  const deps = {
+    db: ctx.db,
+    keysServiceURL: resolveServiceURL('keys'),
+    loadContentDocument: makeContentDocumentLoader(ctx.db),
+    logger: pino({ enabled: false }),
+    privateKey: ctx.privateKey,
+    simVersion: 'test-engine-hash',
+  };
+
+  const outcome = await ctx.db.transaction().execute((trx) =>
+    runFrontier(trx, deps, cache, {
+      activityID: fixture.activity.id,
+      appendedHead: fixture.activity.appendedHead,
+      replayAttempts: 0,
+      startChainIndex: fixture.activity.startChainIndex,
+      status: fixture.activity.status,
+      verifiedHead: 0,
+    }),
+  );
+
+  expect(outcome).toStrictEqual({ kind: 'rejected' });
+
+  const activity = await ctx.db
+    .selectFrom('activities')
+    .select('status')
+    .where('id', '=', fixture.activity.id)
+    .executeTakeFirstOrThrow();
+
+  expect(activity.status).toBe('rejected');
+
+  const rejections = await inMemoryMetrics.readCounterDataPoints('vers.verification.rejections');
+
+  expect(rejections).toContainEqual({ attributes: { reason: 'node-unreachable' }, value: 1 });
+});
+
+test('it cascade-voids a successor whose build snapshot borrowed xp from a run rejected for unreachability', async () => {
+  await using ctx = await setupTest();
+
+  const fixture = await createHonestActivityFixture(ctx.db, {
+    buildSnapshot: { level: 50, xp: 0 },
+    chain: { scopeId: '41_41' },
+    completedNodeIDs: [],
+    duration: 80_000,
+    seed: buildStateFromSeed(3_047_525_658),
+  });
+
+  const cache = createReplayCache();
+
+  const deps = {
+    db: ctx.db,
+    keysServiceURL: resolveServiceURL('keys'),
+    loadContentDocument: makeContentDocumentLoader(ctx.db),
+    logger: pino({ enabled: false }),
+    privateKey: ctx.privateKey,
+    simVersion: 'test-engine-hash',
+  };
+
+  const rejected = await ctx.db.transaction().execute((trx) =>
+    runFrontier(trx, deps, cache, {
+      activityID: fixture.activity.id,
+      appendedHead: fixture.activity.appendedHead,
+      replayAttempts: 0,
+      startChainIndex: fixture.activity.startChainIndex,
+      status: fixture.activity.status,
+      verifiedHead: 0,
+    }),
+  );
+
+  expect(rejected).toStrictEqual({ kind: 'rejected' });
+
+  const successor = await createHonestActivityFixture(ctx.db, {
+    avatarID: fixture.activity.avatarId,
+    buildSnapshot: { level: 50, xp: 0 },
+    duration: 80_000,
+    seed: buildStateFromSeed(1_616_267_014),
+  });
+
+  await createSnapshotSourceRow(ctx.db, {
+    activityID: successor.activity.id,
+    sourceActivityID: fixture.activity.id,
+  });
+
+  const successorOutcome = await ctx.db.transaction().execute((trx) =>
+    runFrontier(trx, deps, cache, {
+      activityID: successor.activity.id,
+      appendedHead: successor.activity.appendedHead,
+      replayAttempts: 0,
+      startChainIndex: successor.activity.startChainIndex,
+      status: successor.activity.status,
+      verifiedHead: 0,
+    }),
+  );
+
+  expect(successorOutcome).toStrictEqual({ kind: 'rejected' });
+
+  const successorRow = await ctx.db
+    .selectFrom('activities')
+    .select('status')
+    .where('id', '=', successor.activity.id)
+    .executeTakeFirstOrThrow();
+
+  expect(successorRow.status).toBe('rejected');
+});
+
+test('it never rejects a world-map-node run at the origin for reachability, even with no grants', async () => {
+  await using ctx = await setupTest();
+
+  const originID = toNodeID(ORIGIN_CELL[0], ORIGIN_CELL[1]);
+
+  const fixture = await createHonestActivityFixture(ctx.db, {
+    buildSnapshot: { level: 50, xp: 0 },
+    chain: { scopeId: originID },
+    completedNodeIDs: [],
+    duration: 80_000,
+    seed: buildStateFromSeed(3_047_525_658),
+  });
+
+  const cache = createReplayCache();
+
+  const deps = {
+    db: ctx.db,
+    keysServiceURL: resolveServiceURL('keys'),
+    loadContentDocument: makeContentDocumentLoader(ctx.db),
+    logger: pino({ enabled: false }),
+    privateKey: ctx.privateKey,
+    simVersion: 'test-engine-hash',
+  };
+
+  const outcome = await ctx.db.transaction().execute((trx) =>
+    runFrontier(trx, deps, cache, {
+      activityID: fixture.activity.id,
+      appendedHead: fixture.activity.appendedHead,
+      replayAttempts: 0,
+      startChainIndex: fixture.activity.startChainIndex,
+      status: fixture.activity.status,
+      verifiedHead: 0,
+    }),
+  );
+
+  expect(outcome.kind).toBe('matched');
+});
+
+test('it never rejects a non-world_map_node scope for reachability', async () => {
+  await using ctx = await setupTest();
+
+  const fixture = await createHonestActivityFixture(ctx.db, {
+    buildSnapshot: { level: 50, xp: 0 },
+    chain: { scopeType: 'encounter' },
+    completedNodeIDs: [],
+    duration: 80_000,
+    seed: buildStateFromSeed(3_047_525_658),
+  });
+
+  const cache = createReplayCache();
+
+  const deps = {
+    db: ctx.db,
+    keysServiceURL: resolveServiceURL('keys'),
+    loadContentDocument: makeContentDocumentLoader(ctx.db),
+    logger: pino({ enabled: false }),
+    privateKey: ctx.privateKey,
+    simVersion: 'test-engine-hash',
+  };
+
+  const outcome = await ctx.db.transaction().execute((trx) =>
+    runFrontier(trx, deps, cache, {
+      activityID: fixture.activity.id,
+      appendedHead: fixture.activity.appendedHead,
+      replayAttempts: 0,
+      startChainIndex: fixture.activity.startChainIndex,
+      status: fixture.activity.status,
+      verifiedHead: 0,
+    }),
+  );
+
+  expect(outcome.kind).toBe('matched');
 });
