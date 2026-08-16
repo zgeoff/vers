@@ -30,8 +30,8 @@ export function WelcomeBackModal() {
     return null;
   }
 
-  // a catch-up ended by another device taking the run resolves in the playing-elsewhere notice,
-  // which carries the take-back action — a second dialog saying the same thing helps nobody
+  // a catch-up ended by another device taking the run resolves in the playing-elsewhere notice —
+  // a second dialog saying the same thing helps nobody
   if (resyncStatus.kind === 'active-elsewhere') {
     return null;
   }
