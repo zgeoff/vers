@@ -127,6 +127,10 @@ knife.
   is. The same rule covers definite nouns: where the doc has more than one cap, filter, or budget,
   the bare form ("the cap") is legal only after the qualified form ("the cardinality cap") earlier
   in the same paragraph.
+- **Name what a noun is part of.** A domain noun for a part, record, or position of something
+  carries that something in the phrase: `activity start`, never `start`; `chain head`, never `head`.
+  This holds on every use, the first included — the writer knows what the bare noun belongs to, the
+  reader does not.
 - **First use defines.** Spell an acronym out where it first appears ("Content Security Policy
   (CSP)"); a term of art gets a one-line definition or a link to its owner.
 - **Same term for the same thing.** Varying a term to dodge repetition ("the runner… the executor…
