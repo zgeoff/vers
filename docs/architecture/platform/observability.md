@@ -196,9 +196,10 @@ timestamp to the moment the drain confirms it.
 - `provider-unavailable` — a cross-version dispatch's provider timed out, refused the connection, or
   answered with an undefined error; repeated occurrences distinguish a dead provider deploy from
   normal cold-boot latency.
-- `unbacked-snapshot` — the activity's build snapshot borrowed xp from a run that has since been
-  rejected, so the level and life it plays at were never proven; a rise tracks how far one rejection
-  propagates through an avatar's later runs.
+- `build-mismatch` — the activity's pinned start build does not match the avatar's settled xp total,
+  typically because it banked a since-rejected ancestor's optimistic xp, so the level and life it
+  plays at were never proven; a rise tracks how far one rejection propagates through an avatar's
+  later runs.
 - `descriptor-mismatch` — a sealed node's stamped content fields failed to reproduce against a
   freshly read scope secret, on the segment's first verification pass.
 - `node-unreachable` — a `world_map_node` run's scope was not connected to any verified completed

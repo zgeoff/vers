@@ -122,11 +122,16 @@ This is why ordering waits on an earlier activity settling, not clearing. A fail
 settled, so it releases the wait — but it opened no node, so the reachability check still rejects a
 later activity that had no cleared neighbour. Settling sequences; the check adjudicates.
 
-The order comes from the client, so the server does not settle on it blindly. The server derives
-each activity's XP sources itself — the earlier runs whose unsettled XP fed its avatar build — and
-never settles an activity before those sources, whatever order the client declared. A client that
-reordered a run ahead of its XP sources to bank unconfirmed XP gains nothing. Reachability needs no
-such guard: a jump is adjacent to nothing cleared, so no declared order lets it pass.
+The order comes from the client, so the server does not settle on it blindly — reachability is one
+of two guards a declared order alone can never satisfy. The other is the avatar's build: at claim
+time, every activity's predecessor is already settled or rejected, so the server re-derives the
+expected starting build straight from the avatar's settled XP total and requires the activity's own
+pinned build to match it exactly. A build is a pure function of total XP, so this one check catches
+a run that banked XP from a predecessor a rejection later erased, whatever order the client declared
+it in. Reachability needs the identical guard, not a lighter one: it too reads state — the settled
+first-clear grants — that only exists once the runs ahead of it have themselves settled or rejected.
+A client that reordered a run ahead of its true predecessor gains nothing from either check: each
+reads whatever the avatar has actually settled by the time the check runs, honest order or not.
 
 The order covers revisits. A player who walks node A, its neighbour B, back to A, and to B again
 makes four activities, and the server settles them in that same sequence — A₁, B₂, A₃, B₄.
@@ -135,9 +140,17 @@ makes four activities, and the server settles them in that same sequence — A�
 
 The server cannot recover the play order from its own clocks: an activity's real start happened
 offline, and the activities arrive together at reconnect in no meaningful order. So the client
-declares the order — it alone witnessed the play — and the server settles in it. Declaring a false
-order buys nothing: the reachability check rejects a jump under any order, and the server never
-settles an activity ahead of the runs its avatar build drew XP from.
+declares the order — it alone witnessed the play — as a hard predecessor reference: each activity
+carries `predecessorActivityId`, the avatar's immediately-prior activity across every chain, null
+only for the avatar's first-ever activity. The client stamps it at start, alongside `playedAt`, an
+advisory wall-clock timestamp for operator and analytics queries — never read by the claim or either
+check. The predecessor and its successor are minted together in the same device session, so an
+out-of-order or reload-orphaned delivery only delays a successor until its named predecessor lands;
+it can never point the server at the wrong run.
+
+Declaring a false order buys nothing: the reachability and build checks each read state that exists
+only once the runs actually ahead of an activity have themselves settled or rejected, so reordering
+a run ahead of its true predecessor changes nothing about what those checks find.
 
 ## What an activity's outcome produces
 

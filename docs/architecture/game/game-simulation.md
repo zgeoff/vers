@@ -174,12 +174,18 @@ treated as cheating. Enforcement lands at a session boundary, never mid-session.
 quarantines a stream that fails replay repeatedly and alerts operators rather than retrying it
 forever.
 
-Replay also checks reachability. On a run's first verified pass at a world-map node, the verifier
-confirms the node borders a node the avatar has already cleared; the origin always counts as
-reachable. A node with no cleared neighbour is rejected. Activities settle in play order
-([offline reconcile](./offline-reconcile.md#settlement-in-order)), so the clear that opened an
-honest node has settled by the time its successor is checked and its grant is present. An unearned
-jump reaches a node no clear opened, so the verifier finds no grant and refuses it.
+Replay also checks reachability and the pinned build. Activities settle in play order
+([offline reconcile](./offline-reconcile.md#settlement-in-order)): the queue claims an avatar's next
+activity only once its predecessor — the immediately-prior activity the client stamped at start — is
+itself settled or rejected, so both checks below always read fully-settled state. On a run's first
+verified pass at a world-map node, the verifier confirms the node borders a node the avatar has
+already cleared; the origin always counts as reachable. A node with no cleared neighbour is rejected
+— the clear that opened an honest node has settled by the time its successor is checked, so its
+grant is present, while an unearned jump reaches a node no clear opened and finds none. The same
+first pass re-derives the run's expected starting build from the avatar's settled XP total and
+rejects a pinned build that doesn't match exactly — a build is a pure function of total XP, so this
+catches a run that banked XP from a predecessor a rejection later erased, and the rejection
+cascades: any further successor chained onto the mismatched run fails the identical check in turn.
 
 Replay divergence is not the only cheat signal. Because every attempt at a node is a link in the
 append-only, server-verified chain, **reroll-scanning** — repeatedly attempting a node and
