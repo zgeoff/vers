@@ -2,8 +2,8 @@
 
 Every service exposes its API through a contract package: a standalone declaration of the service's
 operations that holds no implementation. The service implements the contract; every caller
-constructs a typed client from it, and neither imports the other. The one distinction to carry
-throughout: a contract describes what a caller can receive, never what the service emits internally.
+constructs a typed client from it, and neither imports the other. A contract describes what a caller
+can receive, never what the service emits internally.
 
 ## Contract-first
 

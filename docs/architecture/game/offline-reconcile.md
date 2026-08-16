@@ -7,9 +7,8 @@ The client runs every real-time simulation and records it as append-only checkpo
 never simulates on the request path. So progress an avatar makes while the server is out of contact
 lives only on the device until it reconnects. Reconcile is the act of bringing that progress back:
 delivering the activities the device holds, replaying them to decide whether to trust them, and
-settling their rewards in order. The distinction the rest of this page rests on is whether the
-simulation was running while the server was out of contact — because that decides whether reconcile
-delivers work that genuinely happened or reconstructs work that never did.
+settling their rewards in order. Whether the simulation was running while the server was out of
+contact decides which it is: real work to deliver, or an idle gap to reconstruct.
 
 ## Three connectivity states
 

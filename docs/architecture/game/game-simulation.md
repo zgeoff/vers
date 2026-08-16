@@ -5,9 +5,9 @@ How the client computes and records gameplay, and how server replay decides to t
 The client runs every real-time simulation as a pure function of a fixed set of inputs and a seeded
 random stream, writing each step to an append-only checkpoint stream. The server never simulates on
 the request path: a queue-fed verifier re-runs the submitted checkpoints later and decides whether
-to trust them. The one distinction the rest of this page rests on is determinism — the same inputs
-re-run to byte-identical results. That reproducibility is what lets the verifier check a stream it
-did not compute, and what lets a returning client rebuild simulation state it no longer holds.
+to trust them. Determinism is what makes that possible: the same inputs re-run to byte-identical
+results. That reproducibility is what lets the verifier check a stream it did not compute, and what
+lets a returning client rebuild simulation state it no longer holds.
 
 This page owns the simulation, the checkpoint stream, and the trust decision. The reconcile that
 delivers offline progress on reconnect, and the worker lifecycle that drives it, live in
