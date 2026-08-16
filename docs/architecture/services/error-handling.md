@@ -3,8 +3,9 @@
 Every failure in the fleet is classified, declared, transported, retried, reported, and traced by
 one set of rules, uniform across the services, app-web, and the idle worker. The spine is a
 three-class taxonomy: a domain error the caller acts on, an invariant violation only a bug produces,
-or an infrastructure fault. Handler bodies stay thin — a handler throws only its typed domain errors
-or an invariant, and central machinery classifies, reports, and encodes everything else.
+or an infrastructure fault. Handler bodies stay thin — a handler explicitly throws only its typed
+domain errors or an invariant, and lets any other exception propagate to central machinery, which
+classifies, reports, and encodes it.
 
 ## Taxonomy
 
@@ -63,29 +64,29 @@ as the single call its meaning names. On that path an append error's `data` carr
 naming the request's last fully committed row. It also carries `appendedHead` where the single-call
 `data` omits it.
 
-| Domain       | Code                   | Status | Meaning                                                                                                      | data                                   |
-| ------------ | ---------------------- | ------ | ------------------------------------------------------------------------------------------------------------ | -------------------------------------- |
-| activity     | `ACTIVITY_CAPPED`      | 409    | Append exceeds the avatar's accrued offline budget; the activity lands terminal `capped`.                    | `{ appendedHead }`                     |
-| activity     | `ACTIVITY_TERMINAL`    | 409    | Append against a terminal activity status; fatal for the stream.                                             | `{ status, appendedHead }`             |
-| activity     | `AVATAR_NOT_ACTIVE`    | 409    | Start, reveal, or mint refused: the acting avatar is not the account's active one.                           | `{ activeAvatarID, activeAvatarName }` |
-| activity     | `CHAIN_QUARANTINED`    | 409    | New start or mint refused while the chain is quarantined.                                                    | —                                      |
-| activity     | `CHECKPOINT_INVALID`   | 422    | Checkpoint batch fails structural or cross-check validation; `reason` names the failed check.                | `{ reason }`                           |
-| activity     | `NODE_NOT_REVEALED`    | 409    | Scope has no chain row — `revealNodes` was never called for it.                                              | —                                      |
-| activity     | `NODE_UNKNOWN`         | 404    | Scope id doesn't resolve to a node on the current world map.                                                 | —                                      |
-| activity     | `NODE_UNREACHABLE`     | 409    | Scope node resolves but sits outside the avatar's selectable set.                                            | —                                      |
-| activity     | `SESSION_EVICTED`      | 403    | Append or stop from a session that is no longer the activity's writer; fatal for that stream.                | —                                      |
-| activity     | `SIM_VERSION_EXPIRED`  | 410    | Stamped or current sim version is past retention, or its engine trails the content the activity would stamp. | `{ currentSimVersion }`                |
-| activity     | `SIM_VERSION_UNKNOWN`  | 409    | Stamped or current sim version isn't registered.                                                             | `{ currentSimVersion }`                |
-| replay       | `SIM_VERSION_MISMATCH` | 409    | Request `simVersion` doesn't match this provider's baked engine hash; a dispatch misroute guard.             | `{ providerSimVersion }`               |
-| user         | `INVALID_RESET_TOKEN`  | 422    | Reset token doesn't match the one on record.                                                                 | —                                      |
-| user         | `PASSWORD_NOT_SET`     | 409    | Operation presumes a password; the account has none.                                                         | —                                      |
-| user         | `RESET_TOKEN_EXPIRED`  | 410    | Reset token was valid but its window has passed.                                                             | —                                      |
-| session      | `REFRESH_TOKEN_REUSED` | 401    | Refresh token replayed — rotation-theft signal, session revoked.                                             | —                                      |
-| session      | `SESSION_EXPIRED`      | 401    | Session exists but its lifetime has passed.                                                                  | —                                      |
-| session      | `TRANSACTION_MISMATCH` | 422    | Step-up consume request doesn't match the pending transaction.                                               | `{ field }`                            |
-| verification | `CODE_ALREADY_USED`    | 410    | One-time code already consumed.                                                                              | —                                      |
-| verification | `CODE_EXPIRED`         | 410    | Code was valid but its window has passed.                                                                    | —                                      |
-| verification | `INVALID_CODE`         | 422    | Code doesn't verify against the secret.                                                                      | —                                      |
+| Domain       | Code                   | Status | Meaning                                                                                                                                      | data                                   |
+| ------------ | ---------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
+| activity     | `ACTIVITY_CAPPED`      | 409    | Append exceeds the avatar's accrued offline budget; the activity lands terminal `capped`.                                                    | `{ appendedHead }`                     |
+| activity     | `ACTIVITY_TERMINAL`    | 409    | Append against a terminal activity status; fatal for the stream.                                                                             | `{ status, appendedHead }`             |
+| activity     | `AVATAR_NOT_ACTIVE`    | 409    | Start, reveal, or mint refused: the acting avatar is not the account's active one.                                                           | `{ activeAvatarID, activeAvatarName }` |
+| activity     | `CHAIN_QUARANTINED`    | 409    | New start or mint refused while the chain is quarantined.                                                                                    | —                                      |
+| activity     | `CHECKPOINT_INVALID`   | 422    | Checkpoint batch fails structural or cross-check validation; `reason` names the failed check.                                                | `{ reason }`                           |
+| activity     | `NODE_NOT_REVEALED`    | 409    | Scope has no chain row — `revealNodes` was never called for it.                                                                              | —                                      |
+| activity     | `NODE_UNKNOWN`         | 404    | Scope id doesn't resolve to a node on the current world map.                                                                                 | —                                      |
+| activity     | `NODE_UNREACHABLE`     | 409    | Scope node resolves but sits outside the avatar's selectable set.                                                                            | —                                      |
+| activity     | `SESSION_EVICTED`      | 403    | Append or stop from a session that is no longer the activity's writer; fatal for that stream.                                                | —                                      |
+| activity     | `SIM_VERSION_EXPIRED`  | 410    | Stamped or current sim version is past retention, or its engine trails the content the activity would stamp.                                 | `{ currentSimVersion }`                |
+| activity     | `SIM_VERSION_UNKNOWN`  | 409    | Stamped or current sim version isn't registered; on a pinned hash the client retries once without it, landing on the registry-current stamp. | `{ currentSimVersion }`                |
+| replay       | `SIM_VERSION_MISMATCH` | 409    | Request `simVersion` doesn't match this provider's baked engine hash; a dispatch misroute guard.                                             | `{ providerSimVersion }`               |
+| user         | `INVALID_RESET_TOKEN`  | 422    | Reset token doesn't match the one on record.                                                                                                 | —                                      |
+| user         | `PASSWORD_NOT_SET`     | 409    | Operation presumes a password; the account has none.                                                                                         | —                                      |
+| user         | `RESET_TOKEN_EXPIRED`  | 410    | Reset token was valid but its window has passed.                                                                                             | —                                      |
+| session      | `REFRESH_TOKEN_REUSED` | 401    | Refresh token replayed — rotation-theft signal, session revoked.                                                                             | —                                      |
+| session      | `SESSION_EXPIRED`      | 401    | Session exists but its lifetime has passed.                                                                                                  | —                                      |
+| session      | `TRANSACTION_MISMATCH` | 422    | Step-up consume request doesn't match the pending transaction.                                                                               | `{ field }`                            |
+| verification | `CODE_ALREADY_USED`    | 410    | One-time code already consumed.                                                                                                              | —                                      |
+| verification | `CODE_EXPIRED`         | 410    | Code was valid but its window has passed.                                                                                                    | —                                      |
+| verification | `INVALID_CODE`         | 422    | Code doesn't verify against the secret.                                                                                                      | —                                      |
 
 `CHECKPOINT_INVALID`'s `reason` names the failed check: contiguity, chain index, chain link, time
 monotonicity, or hash. On `advanceActivity` it can also be a predicted-build-snapshot mismatch, or a

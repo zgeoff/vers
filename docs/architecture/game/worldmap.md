@@ -8,9 +8,11 @@ layout.
 
 The map splits into shape and contents: geometry is public and client-computable, content is sealed
 and server-only, and the two derive from disjoint inputs. Knowing the shape of the map therefore
-reveals nothing about where reward concentrates. This is the map-layer statement of the flatness the
-[entropy model](./game-entropy.md) prices: a client that can compute the whole map still cannot
-compute which node pays, so scanning the map for a jackpot returns nothing.
+reveals nothing about where its sealed reward concentrates. This is the map-layer statement of the
+flatness the [entropy model](./game-entropy.md) prices: a client that can compute the whole map
+still cannot compute which node hides a jackpot, so scanning the map for one returns nothing. (Biome
+sets a public, per-biome reward mean, covered below; the sealed per-node residual it can never
+predict.)
 
 ## Two planes
 
@@ -29,7 +31,7 @@ Every derived value belongs to one of two planes, split by who can compute it.
 
 `scopeSecret` is the whole of the guarantee. Content folds in the same `userSeed` geometry uses, but
 without the secret that shared input derives nothing. Map-shape knowledge is therefore worthless for
-locating loot, and drops stay server-authoritative over a client-generated shell.
+locating the sealed loot, and drops stay server-authoritative over a client-generated shell.
 
 ## Geometry generation
 
@@ -54,8 +56,9 @@ that owns it.
   Both sides of a chunk border evaluate the same predicate from the same hash inputs, so borders
   agree with no stitching pass — the geometry already joins itself. Agreement needs a one-chunk
   halo: evaluating a border cell's edges reads the neighbouring chunk's nodes, so each side sees the
-  same candidates. The rule connects two nodes when nothing sits between them and they fall within
-  the distance cap — a local, deterministic test both neighbours compute identically.
+  same candidates. The rule connects two nodes when the open disk with the candidate edge as its
+  diameter contains no other node, and the edge falls within the distance cap — a local,
+  deterministic test both neighbours compute identically.
 - **Difficulty** — `clamp(floor(hexDistance(cell, origin) / k), 0, 100)`. It is O(1), needs no
   traversal, and the server recomputes it from the coordinate alone.
 
@@ -86,22 +89,23 @@ from identical inputs, so they never disagree on which nodes are reachable.
 
 Reveal is the projection of what a player has earned sight of; fog is the boundary between that and
 what stays hidden. It costs nothing to maintain because it is derived, not stored. The revealed
-region is `⋃ disc(position(N), REVEAL_RADIUS)` over the avatar's completed nodes `N`, plus a small
-landmark grant table `(avatarID, landmarkID)`.
+region is `⋃ disc(position(N), REVEAL_RADIUS)` over the avatar's verified first-clear nodes `N`,
+plus a small landmark grant table `(avatarID, landmarkID)`.
 
 - There is no reveal event stream and no stored reveal state; the projection is idempotent by
   construction. Storage is O(nodes completed) — roughly path length — not O(area visible). A player
-  a million nodes deep pays for a few thousand completion rows while the enormous visible region
-  recomputes on demand.
+  deep in the map pays for completion rows on the order of their path length, not the enormous
+  visible area, which recomputes on demand.
 - The hex grid is itself the spatial index, because a node maps structurally to its cell. A viewport
-  query is a [Morton/z-order](https://en.wikipedia.org/wiki/Z-order_curve) range scan over packed
-  coordinates: interleaving a cell's x and y bits into one number keeps nearby cells adjacent in
-  sort order, so a 2D box reads as one 1D range. A per-chunk run-length reveal bitmask is a
-  permitted cache over the projection; the completion table stays the source of truth.
+  query interleaves a cell's x and y bits into one
+  [Morton/z-order](https://en.wikipedia.org/wiki/Z-order_curve) number, which keeps nearby cells
+  adjacent in sort order, so the box covers a handful of 1D ranges that a final filter clips to the
+  exact rectangle. A per-chunk run-length reveal bitmask is a permitted cache over the projection;
+  the completion table stays the source of truth.
 - Reveal discloses only after the predecessor completion verifies, never on optimistic completion.
   Disclosure carries expected-value-flat descriptor metadata alone — never salt or drops — and the
-  server caps its fan-out independent of node degree. A live request for a specific node jumps the
-  background disclosure queue, keeping the online path responsive.
+  server caps its fan-out independent of node degree. A live reveal request for a specific node is
+  served ahead of the bulk fan-out, keeping the online path responsive.
 
 ## Selection and the offline horizon
 
@@ -225,16 +229,16 @@ preference.
 
 ## Glossary
 
-| Term             | Meaning                                                                                                          |
-| ---------------- | ---------------------------------------------------------------------------------------------------------------- |
-| geometry plane   | Everything `f(userSeed, coord)`: positions, edges, difficulty, biome — public and client-computable.             |
-| content plane    | Everything `f(scopeSecret, userSeed, coord)`: reward profile, encounter family, archetype — sealed, server-only. |
-| `userSeed`       | The avatar's own per-avatar seed; non-secret, shipped, and the shared input to both planes.                      |
-| `scopeSecret`    | The per-avatar secret held server-side and never shipped; without it the shared `userSeed` derives no content.   |
-| chunk coordinate | `(chunkX, chunkY)`, a fixed block of hex cells and the unit of generation.                                       |
-| cell coordinate  | `(cx, cy)`, one hex cell; a node's stable id.                                                                    |
-| cleared frontier | The set of nodes whose first-clear has verified; the boundary the reachability check reads.                      |
-| reveal           | The derived projection of the region a player has earned sight of, a union of discs over completed nodes.        |
-| selection        | The narrower set a player may travel to: completed nodes and their immediate neighbours.                         |
-| descriptor       | The expected-value-flat content metadata the server discloses for a revealed node — never salt or drops.         |
-| landmark         | A rare, distance-scaled node granted into a table and visible as a pillar of light through fog.                  |
+| Term             | Meaning                                                                                                              |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------- |
+| geometry plane   | Everything `f(userSeed, coord)`: positions, edges, difficulty, biome — public and client-computable.                 |
+| content plane    | Everything `f(scopeSecret, userSeed, coord)`: reward profile, encounter family, archetype — sealed, server-only.     |
+| `userSeed`       | The avatar's own per-avatar seed; non-secret, shipped, and the shared input to both planes.                          |
+| `scopeSecret`    | The per-avatar secret held server-side and never shipped; without it the shared `userSeed` derives no content.       |
+| chunk coordinate | `(chunkX, chunkY)`, a fixed block of hex cells and the unit of generation.                                           |
+| cell coordinate  | `(cx, cy)`, one hex cell; a node's stable id.                                                                        |
+| cleared frontier | The set of nodes whose first-clear has verified; the boundary the reachability check reads.                          |
+| reveal           | The derived projection of the region a player has earned sight of, a union of discs over verified first-clear nodes. |
+| selection        | The narrower set a player may travel to: completed nodes and their immediate neighbours.                             |
+| descriptor       | The expected-value-flat content metadata the server discloses for a revealed node — never salt or drops.             |
+| landmark         | A rare, distance-scaled node granted into a table and visible as a pillar of light through fog.                      |
