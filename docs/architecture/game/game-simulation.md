@@ -88,7 +88,9 @@ whenever the server is next reachable.
 `advanceActivity` is the server's authority over a client-authored start. It re-derives every
 authoritative input from its own truth and trusts none of the payload:
 
-- It runs the same admission checks a start must pass — node selectability, sim-version validity.
+- It runs the same sim-version admission check a start must pass; node reachability is not an
+  admission check here, since an offline gap can legitimately reach a neighbour the server has not
+  yet verified the clear that opens it — [replay](#replay) adjudicates reachability instead.
 - It derives the encounter node and its hashed stamps from the server's own content document, never
   the payload.
 - It re-authors the `buildSnapshot` from the avatar's progression, and rejects a start whose
