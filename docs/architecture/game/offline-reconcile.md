@@ -75,15 +75,16 @@ Resuming at full fidelity needs the device's own durable outbox — the pending 
 queued checkpoints that offline play left behind. Whether that outbox is present splits resume into
 two outcomes.
 
-A **same-device reopen** has the outbox, because device storage persists across a close. The real
-offline traversal is delivered activity by activity, and any idle gap on top of it fast-forwards.
-Nothing is lost.
+A **same-device reopen** has the outbox, because device storage persists across a close — and so
+does a writer handoff within the same browser profile, when a tab dies and a new worker takes over.
+The real offline traversal is delivered activity by activity, and any idle gap on top of it
+fast-forwards. Nothing is lost.
 
-**Another session, device, or writer** has no access to that outbox. It knows only the last position
-the server confirmed, before the offline play, so it fast-forwards a counterfactual idle grind of
-that confirmed node. The offline navigation — the nodes the player actually walked — is lost. The
-gap between the position the device reached and the position the server confirmed is exactly what is
-lost.
+**A different device or browser profile** has no access to that outbox, because it reads a different
+store. It knows only the last position the server confirmed, before the offline play, so it
+fast-forwards a counterfactual idle grind of that confirmed node. The offline navigation — the nodes
+the player actually walked — is lost. The gap between the position the device reached and the
+position the server confirmed is exactly what is lost.
 
 This loss is mechanical, not a policy choice. While the original device is offline or closed,
 nothing can reach its outbox — it sits in that device's own local storage. An avatar has one active
