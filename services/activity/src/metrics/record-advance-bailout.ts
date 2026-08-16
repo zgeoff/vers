@@ -5,7 +5,6 @@ export type AdvanceBailoutReason =
   | 'chain_quarantined'
   | 'checkpoint_invalid'
   | 'conflict'
-  | 'predecessor_pending'
   | 'session_evicted'
   | 'terminal';
 

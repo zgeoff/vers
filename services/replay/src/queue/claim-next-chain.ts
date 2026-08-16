@@ -20,10 +20,14 @@ export async function claimNextChain(trx: Transaction<DB>): Promise<ClaimedActiv
       (eb) =>
         eb
           .selectFrom('activities')
-          .leftJoin(
-            'activities as predecessor',
-            'predecessor.id',
-            'activities.predecessorActivityId',
+
+          // Scoped to the same avatar: a predecessor naming another avatar's activity finds no row
+          // here, so it reads as absent and the claim waits rather than coupling this avatar's
+          // order to a foreign one.
+          .leftJoin('activities as predecessor', (join) =>
+            join
+              .onRef('predecessor.id', '=', 'activities.predecessorActivityId')
+              .onRef('predecessor.avatarId', '=', 'activities.avatarId'),
           )
           .select([
             'activities.id',

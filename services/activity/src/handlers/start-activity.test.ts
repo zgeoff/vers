@@ -24,7 +24,6 @@ import { sql } from 'kysely';
 import invariant from 'tiny-invariant';
 import { createActivityService } from '../create-activity-service';
 import { server } from '../mocks/server';
-import { createMockActivity } from '../test-utils/factories/create-mock-activity';
 import { createMockCheckpointBatch } from '../test-utils/factories/create-mock-checkpoint-batch';
 
 /**
@@ -1570,7 +1569,7 @@ test('it fails a start with a 500 when the keys dispatch fails', async () => {
   ).rejects.toMatchObject({ code: 'INTERNAL_SERVER_ERROR' });
 });
 
-test('it bails with PREDECESSOR_PENDING on a start naming a predecessor not yet on the server, then succeeds once the predecessor lands', async () => {
+test('it accepts a start naming a predecessor not yet on the server, stamping the reference as-is', async () => {
   await using ctx = await setupTest();
 
   await createSimVersionRow(ctx.db);
@@ -1583,42 +1582,8 @@ test('it bails with PREDECESSOR_PENDING on a start naming a predecessor not yet 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
   const predecessorID = `act_${createId()}`;
 
-  const pendingStart = client.startActivity({
-    avatarID: avatar.id,
-    predecessorActivityID: predecessorID,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
-  });
-
-  // drain the rejection so its transaction settles before the read-back below observes it
-  await pendingStart.catch(() => {});
-
-  expect(pendingStart).rejects.toMatchObject({ code: 'PREDECESSOR_PENDING' });
-
-  // the FK-violating insert rolled back entirely — no half-minted row is left behind
-  const rowsBeforePredecessor = await ctx.db
-    .selectFrom('activities')
-    .select('id')
-    .where('avatarId', '=', avatar.id)
-    .execute();
-
-  expect(rowsBeforePredecessor).toHaveLength(0);
-
-  // the predecessor reaches the server, exactly as it would from the same device's own outbox
-  // delivery
-  await ctx.db
-    .insertInto('activities')
-    .values(
-      createMockActivity({
-        avatarId: avatar.id,
-        id: predecessorID,
-        scopeId: '0_0',
-        scopeType: 'world_map_node',
-        status: 'stopped',
-      }),
-    )
-    .execute();
-
+  // an absent predecessor is not rejected at admission — the replay claim waits on it, so an
+  // out-of-order or reload-orphaned delivery settles once the predecessor lands
   const started = await client.startActivity({
     avatarID: avatar.id,
     predecessorActivityID: predecessorID,

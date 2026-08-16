@@ -168,7 +168,6 @@ in stack state are encrypted by the stack passphrase.
 | `vers.activity.replay_poke_failed`              | counter         | `{poke}`         | —                   | replay wake pokes that never delivered after exhausting retries                                                                                 |
 | `vers.activity.avatar_not_active_rejections`    | counter         | `{rejection}`    | —                   | active-avatar-gated calls the shared `requireActiveAvatar` helper rejected because the acting avatar is not active (startActivity, revealNodes) |
 | `vers.activity.node_unreachable_rejections`     | counter         | `{rejection}`    | —                   | startActivity calls rejected because the scope node is outside the avatar's selectable set                                                      |
-| `vers.activity.predecessor_pending_rejections`  | counter         | `{rejection}`    | —                   | startActivity calls rejected because the stamped predecessor activity has not reached the server yet                                            |
 | `vers.activity.content_incompatible_rejections` | counter         | `{rejection}`    | `path`              | startActivity calls rejected because the resolved engine's max content version falls behind the requested content                               |
 | `vers.activity.advance_continuations`           | counter         | `{continuation}` | `outcome`           | advanceActivity continuations processed, by mint outcome                                                                                        |
 | `vers.activity.advance_bailouts`                | counter         | `{bailout}`      | `reason`            | advanceActivity requests that bailed before their continuations' end, by reason                                                                 |
@@ -235,9 +234,8 @@ The remaining split instruments enumerate their attribute values:
   already minted at the same client id.
 - `vers.activity.advance_bailouts` by `reason`, one per `advanceActivity` rejection code
   (`conflict`, `checkpoint_invalid`, `activity_capped`, `session_evicted`, `chain_quarantined`,
-  `predecessor_pending`, `terminal`). A bailout always leaves the confirmed head advanced past the
-  committed prefix, so a rising count tracks how often an offline catch-up's outer resync must
-  re-plan, not lost progress.
+  `terminal`). A bailout always leaves the confirmed head advanced past the committed prefix, so a
+  rising count tracks how often an offline catch-up's outer resync must re-plan, not lost progress.
 - `vers.activity.content_incompatible_rejections` by `path`: `requested` is a client-sent
   sim-version hash; `fallback` is the registry-current version resolved for a start that carries no
   hash.

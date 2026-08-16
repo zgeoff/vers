@@ -220,11 +220,6 @@ export const activityContract = {
           status: 404,
         },
         NOT_FOUND: { data: z.object({}), message: 'No activity with that id' },
-        PREDECESSOR_PENDING: {
-          data: AdvanceBailDataSchema,
-          message: "A root mint's stamped predecessor activity has not reached the server yet",
-          status: 409,
-        },
         SESSION_EVICTED: {
           data: AdvanceBailDataSchema,
           message: "The submitting session is no longer the activity's writer",
@@ -487,11 +482,6 @@ export const activityContract = {
           status: 409,
         },
         NOT_FOUND: { data: z.object({}), message: 'Avatar not found' },
-        PREDECESSOR_PENDING: {
-          data: z.object({}),
-          message: 'The stamped predecessor activity has not reached the server yet',
-          status: 409,
-        },
         SIM_VERSION_EXPIRED: {
           data: SimVersionProblemDataSchema,
           message: 'The stamped or current sim version is past retention',

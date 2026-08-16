@@ -68,7 +68,7 @@ test('it discards the queued checkpoints of a refused root without registering i
 
   server.use(
     mockActivityService.advanceActivity.handler((opts) => {
-      throw opts.errors.CONFLICT({ data: { activityID: row.id, appendedHead: 4 } });
+      throw opts.errors.NODE_NOT_REVEALED({ data: {} });
     }),
   );
 

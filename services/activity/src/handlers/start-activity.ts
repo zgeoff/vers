@@ -11,10 +11,8 @@ import type { CryptoKey } from 'jose';
 import type { Kysely } from 'kysely';
 import invariant from 'tiny-invariant';
 import { getOptimisticBuild } from '../get-optimistic-build';
-import { isPredecessorForeignKeyViolation } from '../is-predecessor-foreign-key-violation';
 import { isUniqueViolation } from '../is-unique-violation';
 import { recordNodeUnreachableRejection } from '../metrics/record-node-unreachable-rejection';
-import { recordPredecessorPendingRejection } from '../metrics/record-predecessor-pending-rejection';
 import { requireActiveAvatar } from '../require-active-avatar';
 import { resolveEncounterNode } from '../resolve-encounter-node';
 import { resolveSimVersionStamp } from '../resolve-sim-version-stamp';
@@ -59,7 +57,6 @@ interface StartActivityOpts {
     readonly NODE_UNKNOWN: (payload: EmptyErrorPayload) => Error;
     readonly NODE_UNREACHABLE: (payload: EmptyErrorPayload) => Error;
     readonly NOT_FOUND: (payload: EmptyErrorPayload) => Error;
-    readonly PREDECESSOR_PENDING: (payload: EmptyErrorPayload) => Error;
     readonly SIM_VERSION_EXPIRED: (payload: SimVersionProblemPayload) => Error;
     readonly SIM_VERSION_UNKNOWN: (payload: SimVersionProblemPayload) => Error;
     readonly UNAUTHORIZED: (payload: MissingSessionPayload) => Error;
@@ -96,10 +93,9 @@ interface StartActivityOpts {
  * lock the avatar service's selection and creation endpoints take, so the pair serializes; a start
  * for any other avatar throws AVATAR_NOT_ACTIVE naming the account's actual active avatar. Persists
  * the caller's `predecessorActivityID`/`playedAt` as-is: the client alone witnessed the play order,
- * and the server trusts the reference for sequencing only, never for legality. A
- * `predecessorActivityID` naming a row absent from the server fails the row's self-FK and throws
- * PREDECESSOR_PENDING rather than an unexpected 500, since the client retries once its predecessor
- * lands.
+ * and the server trusts the reference for sequencing only, never for legality. An absent predecessor
+ * is not rejected here — the replay claim waits on it, so an out-of-order or reload-orphaned delivery
+ * settles once the predecessor lands.
  */
 export async function startActivity(
   deps: StartActivityDeps,
@@ -272,14 +268,6 @@ export async function startActivity(
 
     return toActivityData(row);
   } catch (error: unknown) {
-    // The caller's stamped predecessor hasn't reached the server yet — the successor and its
-    // predecessor share one device's outbox, so this is an ordinary out-of-order or
-    // reload-orphaned delivery, not a cheat: the client retries once its predecessor lands.
-    if (isPredecessorForeignKeyViolation(error)) {
-      recordPredecessorPendingRejection();
-      throw opts.errors.PREDECESSOR_PENDING({ data: {} });
-    }
-
     if (!isUniqueViolation(error)) {
       throw error;
     }

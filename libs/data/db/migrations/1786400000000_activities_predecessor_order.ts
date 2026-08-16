@@ -1,9 +1,12 @@
+import { sql } from 'kysely';
 import type { Kysely } from 'kysely';
 
 /**
- * Adds `predecessor_activity_id`, a self-referencing foreign key naming the avatar's
- * immediately-prior activity, and `played_at`, an advisory client-stamped timestamp. Both columns
- * are nullable and unbackfilled. Drops `activity_snapshot_sources`.
+ * Adds `predecessor_activity_id`, a plain nullable reference to the avatar's immediately-prior
+ * activity, and `played_at`, an advisory client-stamped timestamp. Both columns are unbackfilled.
+ * The reference carries no foreign key: the replay claim treats a predecessor row that is absent
+ * the same as one not yet settled, so it waits rather than rejecting, and a check keeps a row from
+ * naming itself. Drops `activity_snapshot_sources`.
  */
 export async function up(db: Kysely<unknown>): Promise<void> {
   await db.schema
@@ -12,17 +15,11 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     .addColumn('played_at', 'timestamptz')
     .execute();
 
-  // `set null` rather than `cascade`: an avatar delete cascades every one of its activities in the
-  // same statement, and nulling a soon-to-be-deleted row's predecessor avoids any ordering
-  // requirement on how postgres resolves the self-referencing FK mid-cascade.
   await db.schema
     .alterTable('activities')
-    .addForeignKeyConstraint(
-      'activities_predecessor_activity_id_activities_id_fk',
-      ['predecessor_activity_id'],
-      'activities',
-      ['id'],
-      (fk) => fk.onDelete('set null').onUpdate('cascade'),
+    .addCheckConstraint(
+      'activities_predecessor_activity_id_not_self',
+      sql`predecessor_activity_id <> id`,
     )
     .execute();
 

@@ -97,13 +97,12 @@ export async function buildStartRow(
 
 /**
  * The avatar's durably tracked last-started activity id, `null` when this device has never started
- * one for it — the avatar's own first-ever activity, or a switch to an avatar this device has no
- * history for.
+ * one for it — the avatar's own first-ever activity, or an avatar this device has no history for.
  */
 async function readPredecessorActivityID(avatarID: string): Promise<null | string> {
-  const record = await readLastStartedActivity();
+  const record = await readLastStartedActivity(avatarID);
 
-  return record !== undefined && record.avatarID === avatarID ? record.lastActivityID : null;
+  return record?.lastActivityID ?? null;
 }
 
 /**

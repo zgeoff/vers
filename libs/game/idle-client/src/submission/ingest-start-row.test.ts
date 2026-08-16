@@ -111,13 +111,13 @@ test('it rejects and removes a row with no start key without reaching the server
   expect(stored).toBeUndefined();
 });
 
-test('it rejects and removes the root once the server refuses it with CONFLICT', async () => {
+test('it rejects and removes the root once the server refuses it with NODE_NOT_REVEALED', async () => {
   const ctx = setupTest();
-  const row = createMockActivityData({ id: 'act_ingest_conflict', startKey: 'start_key_c' });
+  const row = createMockActivityData({ id: 'act_ingest_rejected', startKey: 'start_key_c' });
 
   server.use(
     mockActivityService.advanceActivity.handler((opts) => {
-      throw opts.errors.CONFLICT({ data: { activityID: row.id, appendedHead: 3 } });
+      throw opts.errors.NODE_NOT_REVEALED({ data: {} });
     }),
   );
 
@@ -130,4 +130,25 @@ test('it rejects and removes the root once the server refuses it with CONFLICT',
   const stored = await readStartRow(row.id);
 
   expect(stored).toBeUndefined();
+});
+
+test('it defers an order-sensitive CONFLICT, keeping the root for a later retry', async () => {
+  const ctx = setupTest();
+  const row = createMockActivityData({ id: 'act_ingest_conflict', startKey: 'start_key_d' });
+
+  server.use(
+    mockActivityService.advanceActivity.handler((opts) => {
+      throw opts.errors.CONFLICT({ data: { activityID: row.id, appendedHead: 3 } });
+    }),
+  );
+
+  await writeStartRow(row);
+
+  const outcome = await ingestStartRow(ctx.client, row.id);
+
+  expect(outcome).toBe('deferred');
+
+  const stored = await readStartRow(row.id);
+
+  expect(stored).toBeDefined();
 });
