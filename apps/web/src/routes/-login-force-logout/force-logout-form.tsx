@@ -43,10 +43,10 @@ export function ForceLogoutForm(props: ForceLogoutFormProps) {
         </Link>
         <Heading level={2}>You are logged in elsewhere</Heading>
         <Text className={infoText}>
-          You are currently logged in somewhere else. To ensure your account can be properly
-          synchronized, we need to log you out there, before we can log you in here.
+          Logging in here picks your run up from the last activity you&rsquo;d started. Any progress
+          the other device made offline and hasn&rsquo;t synced yet may be lost.
         </Text>
-        <Text>Would you like to logout your other sessions?</Text>
+        <Text>Would you like to log out your other session?</Text>
       </section>
 
       <form {...getFormProps(form)} className={buttonContainer} method="post">
