@@ -226,10 +226,8 @@ it.
 
 ## Review bots
 
-cubic reviews every PR automatically. CodeRabbit's auto-review is off for repositories under ten
-stars, so its review is requested by commenting `@coderabbitai review` on the PR — post that comment
-exactly once, right after the PR opens, and never again on the same PR. Both bots are configured by
-`.coderabbit.yaml` and `cubic.yaml` at the repo root; CodeRabbit reads this file as its guidelines.
+CodeRabbit and cubic review every PR, configured by `.coderabbit.yaml` and `cubic.yaml` at the repo
+root; CodeRabbit reads this file as its guidelines.
 
 - A PR is ready only after both bot reviews are read and every finding is answered on its own
   thread: a fixed finding's reply cites the commit that fixed it; a declined finding's reply states
@@ -239,11 +237,10 @@ exactly once, right after the PR opens, and never again on the same PR. Both bot
 - Resolve a thread once its reply is posted, fixed and declined alike (GraphQL
   `resolveReviewThread`). A finding the agent cannot confidently judge is escalation, not
   disposition: reply saying so and leave the thread open for a human.
-- The one chat command an agent posts is the `@coderabbitai review` trigger above. Never teach a bot
-  through chat otherwise (`@coderabbitai` learnings and the like) — a correction to bot behaviour is
-  an edit to `.coderabbit.yaml` or `cubic.yaml`, reviewed in a PR.
-- Bots review a PR once, at open; an agent invokes a re-review — a second `@coderabbitai review`, a
-  `@coderabbitai full review`, or any equivalent — only when asked, never on its own initiative.
+- Never teach a bot through chat (`@coderabbitai` learnings and the like) — a correction to bot
+  behaviour is an edit to `.coderabbit.yaml` or `cubic.yaml`, reviewed in a PR.
+- Bots review a PR once, at open; an agent invokes a re-review only when asked, never on its own
+  initiative.
 
 ## Issue hygiene
 
