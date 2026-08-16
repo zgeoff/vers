@@ -2,6 +2,7 @@ import { isDefinedError } from '@orpc/client';
 import type { ActivityData } from '@vers/contract-activity';
 import { readPendingStartIntent } from '../submission/read-pending-start-intent';
 import { removePendingStartIntent } from '../submission/remove-pending-start-intent';
+import { writeLastStartedActivity } from '../submission/write-last-started-activity';
 import { submitStopIntent } from './submit-stop-intent';
 import { tryStartActivity } from './try-start-activity';
 import type { FlowSignals, WorkerContext } from './types';
@@ -58,12 +59,17 @@ export async function flushPendingStart(
 
   const [error, started] = await tryStartActivity(context, {
     avatarID: intent.avatarID,
+    predecessorActivityID: intent.activityID,
     scopeID: intent.scopeID,
     scopeType: intent.scopeType,
     startKey: `continue_${intent.activityID}`,
   });
 
   if (error === null) {
+    // durable so the row's own predecessor reference stays recoverable across a worker reload,
+    // regardless of what the stop-signal check below does with the row itself
+    await writeLastStartedActivity({ avatarID: started.avatarID, lastActivityID: started.id });
+
     if (signals.stop.aborted) {
       await submitStopIntent(context, started);
       await removePendingStartIntent(intent.activityID);

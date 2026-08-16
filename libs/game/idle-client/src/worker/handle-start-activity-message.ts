@@ -1,4 +1,5 @@
 import type { ActivityData } from '@vers/contract-activity';
+import { writeLastStartedActivity } from '../submission/write-last-started-activity';
 import { writeStartRow } from '../submission/write-start-row';
 import { buildStartRow } from './build-start-row';
 import { handleSetActivityMessage } from './handle-set-activity-message';
@@ -119,6 +120,10 @@ async function runStart(
 
   // written before install: a crash here still leaves a recoverable root for a later reconcile
   await writeStartRow(row);
+
+  // durable so the row's own predecessor reference stays recoverable across a worker reload; a
+  // later start for this avatar reads it back as its own predecessor
+  await writeLastStartedActivity({ avatarID: row.avatarID, lastActivityID: row.id });
 
   if (isSuperseded(context, token)) {
     return { kind: 'failed' };

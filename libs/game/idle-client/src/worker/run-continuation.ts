@@ -4,6 +4,7 @@ import type { Simulation } from '@vers/idle-core';
 import { buildSimulationInput } from '@vers/idle-core';
 import { loadContentDocument } from '../content/load-content-document';
 import { removePendingStartIntent } from '../submission/remove-pending-start-intent';
+import { writeLastStartedActivity } from '../submission/write-last-started-activity';
 import { writePendingStartIntent } from '../submission/write-pending-start-intent';
 import { WorkerMessageType } from '../types';
 import { resetSimulation } from './reset-simulation';
@@ -44,15 +45,21 @@ export async function runContinuation(
   const signals: FlowSignals = { cancel: context.getCancelSignal(), stop: context.getStopSignal() };
 
   // Keyed by the terminal row it succeeds: a retried delivery dedupes onto the first attempt's
-  // row, while the next continuation carries a new key and conflicts as a distinct intent.
+  // row, while the next continuation carries a new key and conflicts as a distinct intent. Its
+  // predecessor is exactly the row it succeeds.
   const [error, started] = await tryStartActivity(context, {
     avatarID: activity.avatarID,
+    predecessorActivityID: activity.id,
     scopeID: activity.scopeID,
     scopeType: activity.scopeType,
     startKey: `continue_${activity.id}`,
   });
 
   if (error === null) {
+    // durable so the row's own predecessor reference stays recoverable across a worker reload,
+    // regardless of what the stop-signal check below does with the row itself
+    await writeLastStartedActivity({ avatarID: started.avatarID, lastActivityID: started.id });
+
     if (signals.stop.aborted) {
       await submitStopIntent(context, started);
 
