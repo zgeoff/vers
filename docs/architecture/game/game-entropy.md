@@ -10,10 +10,10 @@ and the [economy modes note](../../game-design/economy-modes.md) owns the reward
 
 ## Threat model
 
-The client is untrusted and holds the complete simulation. Any entropy the client can compute, the
-player can peek: simulate the future, inspect the outcome, and choose whether and where to play it.
-A deterministic client-simulated game cannot prevent look-ahead: anything the client can describe,
-it can pre-compute. The design denies look-ahead its payoff instead of chasing it.
+The client is untrusted and holds the complete simulation. The player can peek at any entropy the
+client can compute: simulate the future, inspect the outcome, and choose whether and where to play
+it. A deterministic client-simulated game cannot prevent look-ahead: anything the client can
+describe, it can pre-compute. The design denies look-ahead its payoff instead of chasing it.
 
 A scanner does not play the average future. It simulates the future on every reachable node, across
 the whole offline window, and plays only the best one. Out of twenty thousand simulated futures the
@@ -31,32 +31,32 @@ attempt advances the chain, a failed or abandoned one exactly as a completed one
 after a failure is a fresh continuation rather than a replay. Steering the chain toward a favorable
 seed therefore spends real attempts.
 
-The chain seeds the trajectory only: enemies, timing, survival, experience, and which kills commit
+The chain seeds only the trajectory — enemies, timing, survival, experience, and which kills commit
 rolled rewards. Rolled content resolves separately, at a coordinate fixed by the kill that commits
-it. In reward terms one continuation is worth no more than another. Steady rewards are published,
-rolled-reward density varies only within bounded margins, and each roll's content carries equal
-expected value regardless of position. So steering the chain for a better tradeable reward returns
-less than the attempts it costs.
+it. In reward terms, one continuation is worth no more than another. The steady, non-rolled rewards
+are public knowledge; rolled-reward density varies only within bounded margins; and each roll's
+content carries equal expected value regardless of position. So steering the chain for a better
+tradeable reward returns less than the attempts it costs.
 
 Competition scores the trajectory itself (depth, boss-kill speed), which is client-computable and
 varies across attempts, so reward-flatness does not cover it. Meaningful competition is endgame, and
 the edge a re-attempt buys is bounded by the cost of reaching the position rather than by hiding it.
-The peek is free; the position is not:
+Looking ahead is free; reaching the position is not:
 
-- An entry-gated target burns a non-refundable entry on every attempt, abandons included, so walking
-  the chain toward a favorable seed costs real resources.
+- An entry-gated target burns a non-refundable entry on every attempt, including abandoned ones, so
+  walking the chain toward a favorable seed costs real resources.
 - A second competitive avatar is a full endgame build's worth of investment.
 - The counted attempt is always played in full.
 
 Depth self-limits, because difficulty scales with depth until a build can no longer clear regardless
 of re-attempts.
 
-Where a metric is open enough that near-free abandoned attempts can churn the chain forward, cost
-stops gating and detection takes over: an avatar whose results ride the favorable tail of its
+Some metrics are open enough that near-free abandoned attempts can churn the chain forward. There,
+cost stops gating and detection takes over: an avatar whose results ride the favorable tail of its
 verified history is a behavioural cheat signal, scored offline
 ([game simulation](./game-simulation.md#replay)). Bounded margins keep any single attempt's edge
-small throughout. The residual is a wealthy, motivated actor with a purpose-built tool: defended in
-layers, never zero, the upper bound of anti-cheat in any game.
+small throughout. The residual threat is a wealthy, motivated actor with a purpose-built tool,
+defended in layers rather than eliminated.
 
 ## Rolled rewards and the avatar key
 
@@ -76,19 +76,19 @@ reproduces every coordinate exactly.
 ### Reveal safety
 
 A failed or abandoned attempt advances the chain past its spent indices, so the next attempt rolls
-at fresh coordinates rather than re-reaching the old ones. The reveal needs no replay-identity to
-stay safe. Content resolves at equal expected value regardless of position, and under server custody
-a coordinate's content is not revealed until the verifier settles its checkpoint. So re-reaching a
-position trades one blind roll for an independent roll of equal worth. Device custody lets a
-self-found avatar read its own rolls before committing, but its loot never reaches a market, and any
-standing it earns rides the same appended, verifiable record.
+at fresh coordinates rather than re-reaching the old ones. Reveal safety does not depend on a roll
+having a unique replay identity. Content resolves at equal expected value regardless of position,
+and under server custody a coordinate's content is not revealed until the verifier settles its
+checkpoint. So re-reaching a position trades one blind roll for an independent roll of equal worth.
+Device custody lets a self-found avatar read its own rolls before committing, but its loot never
+reaches a market, and any standing it earns rides the same appended, verifiable record.
 
 Rolled content is `f(key, coordinate)`, where `f` is a keyed PRF: a pseudorandom function whose
 revealed outputs carry no predictive power over unrevealed coordinates. The property matters because
-every reveal hands the client a known input/output pair. The reward's identity is its coordinate, so
-minting is idempotent and re-verification can neither duplicate nor re-roll a reward. The machinery
-that turns a digest into item content — the shared interpreter, draw-order versioning, and craft
-positions — is [item generation](./item-generation.md).
+the client obtains a known input/output pair at every reveal. The reward's identity is its
+coordinate, so minting is idempotent and re-verification can neither duplicate nor re-roll a reward.
+The machinery that turns a digest into item content — the shared interpreter, draw-order versioning,
+and craft positions — is [item generation](./item-generation.md).
 
 ### Key custody
 
@@ -133,8 +133,9 @@ reveal, replay, and mint agree across deploys and root rotations.
 
 ## Sealed pre-commit salt
 
-Some outcomes carry a tail worth selecting; item affix rolls are the concrete case. Their entropy
-stays sealed while the decision is open and reveals in two committing moves, commit then release.
+Some outcomes are a random draw with a heavy upper tail — a rare, large result a scanner would
+select for. Item affix rolls are the concrete case. Their entropy stays sealed while the player's
+decision is still open, and it reveals in two committing steps: commit, then release.
 
 ### Commit and release
 
@@ -147,8 +148,8 @@ client never holds computable entropy while a decision is open.
 
 **Release.** The server resolves the outcome under the salt and returns the result; under server
 custody the salt itself never reaches the client. Release is commitment: at a server-side deadline
-inside the replay-retention window, the server force-resolves as forfeited any released position the
-client never resolves, and the bundle is lost.
+inside the replay-retention window, the server force-resolves any released position the client never
+resolves as forfeited, losing its sealed reward bundle.
 
 ### Keeping the seal honest
 
@@ -160,7 +161,8 @@ Three rules keep the seal honest, independent of what consumes it:
 - The server mints salt once per position, and re-fetch is idempotent. A client that loses the
   response retries and receives the same salt, so a lost packet cannot fork the timeline; until the
   release arrives, nothing resolves.
-- Every input the outcome depends on pins at mint, so deferring resolution cannot improve it.
+- Every input the outcome depends on is fixed when the salt is minted, so deferring resolution
+  cannot improve it.
 
 ### What the seal admits
 
@@ -177,12 +179,13 @@ appears.
 
 ### What must be sealed
 
-Only a rolled tail needs the seal. A chosen tier at a published scalar carries no tail worth
-selecting and rides client-computable entropy anywhere, interactive selection included. A rolled
-magnitude does carry a tail: bounded is not flat, and best-of-N selects the maximum of a bounded
-spread as readily as an unbounded one. So any modifier that rolls a market-grade quantity (yield,
-roll or pack count, density) is a rolled reward under the tail rule and must be sealed or forbidden.
-The [economy modes note](../../game-design/economy-modes.md) owns the content rule.
+Sealing is required only for an outcome whose value is rolled and carries that heavy tail. A value
+the player sets by choosing a tier at a published number is not rolled, so it has no tail to select
+and can ride client-computable entropy anywhere, interactive selection included. A rolled amount
+always carries a tail: bounded is not flat, and best-of-N selects the maximum of a bounded spread as
+readily as an unbounded one. So any modifier that rolls a market-grade quantity — yield, roll or
+pack count, density — is a rolled reward under the tail rule, and must be sealed or forbidden. The
+[economy modes note](../../game-design/economy-modes.md) owns the content rule.
 
 For self-found avatars no entropy is sealable at all, because the player holds the key. That is
 consistent with their earnings never reaching the market.
@@ -191,11 +194,11 @@ consistent with their earnings never reaching the market.
 
 Every checkpoint's hashed subset carries an `entropySource` tag naming which source rolled its
 outcomes, frozen into the subset from the first row ever written ([seed chain](./seed-chain.md)).
-The two values today are `server-key` for a server-custody roll and `device-key` for a
-device-custody roll. The tag is what lets further sources join without a migration, whether a
-verifiable-randomness beacon or a rotated key generation. Replay validates the tag against the
-avatar's server-recorded mode, and a mismatch is divergence. Settlement stamps an outcome's
-provenance from server records and the tag, never from a client claim.
+The two values are `server-key` for a server-custody roll and `device-key` for a device-custody
+roll. The tag is what lets further sources join without a migration, whether a verifiable-randomness
+beacon or a rotated key generation. Replay validates the tag against the avatar's server-recorded
+mode, and a mismatch is divergence. Settlement stamps an outcome's provenance from server records
+and the tag, never from a client claim.
 
 Tradeability keys on the security property: entropy unpredictable at the moment the outcome was
 committed, and provably tied to the party that minted it. Server-custody rolls and sealed salt have
@@ -206,3 +209,18 @@ the property; device-custody rolls do not. The delivery channel is irrelevant.
 An avatar's economy mode (the [economy modes note](../../game-design/economy-modes.md) owns the
 choice) fixes its key custody at creation, permanently. No path converts one custody into the other,
 and a device-held key is never repatriated into market eligibility.
+
+## Glossary
+
+| Term                   | Meaning                                                                                                                                                                                     |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| entropy source         | A source of random outcomes — the seed chain, an avatar key, sealed salt — whose security properties decide whether its rewards may be tradeable.                                           |
+| look-ahead             | Simulating a reachable future offline to inspect its outcome before committing to play it.                                                                                                  |
+| best-of-N selection    | The value a scanner extracts by simulating many futures and playing only the best; the quantity these rules price.                                                                          |
+| reward tail            | The rare, large upper end of a reward distribution; where best-of-N selection extracts its value, so tail-bearing entropy must be sealed.                                                   |
+| rolled reward          | A reward whose value lives in its roll, committed at a coordinate and revealed later under a key; an item drop is the concrete case.                                                        |
+| reward coordinate      | `(avatarID, scopeType, scopeID, chainIndex, ordinal)`, the deterministic position a rolled reward commits at.                                                                               |
+| keyed PRF              | A pseudorandom function `f(key, coordinate)` whose revealed outputs carry no predictive power over unrevealed coordinates.                                                                  |
+| avatar key             | The per-avatar key rolled content derives under; server-held for trade avatars, device-held for self-found ones.                                                                            |
+| sealed pre-commit salt | Server-minted entropy kept sealed while a decision is open and revealed in a commit-then-release pair; used for tail-bearing outcomes like affix rolls.                                     |
+| provenance             | An outcome's recorded security property — its entropy unpredictable at commit and tied to the minter — which decides tradeability; stamped from server records and the `entropySource` tag. |

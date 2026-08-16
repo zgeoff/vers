@@ -22,13 +22,13 @@ app-web carries no Elysia plugin — its `server.ts` boots the same trace and me
 through `startTraceExport`/`startMetricsExport`. A process with the endpoint unset emits nothing,
 and every instrument stays the OpenTelemetry API's no-op.
 
-`createService` boots the Elysia OTel plugin before the Sentry SDK: the OpenTelemetry API keeps only
-the first global tracer, context manager, and propagator registration per process, and Sentry's own
-OpenTelemetry bootstrap registers unconditionally — going second, its registration silently no-ops
-and the plugin's W3C propagation and OTLP export stay in effect. Reversed, Sentry's
-`sentry-trace`-only propagator would shadow `traceparent` and no service span would ever reach the
-OTLP exporter. app-web's `server.ts` awaits its own trace/metrics boot before starting Sentry for
-the same reason.
+`createService` boots the Elysia OTel plugin before the Sentry SDK, and the order matters. The
+OpenTelemetry API keeps only the first global tracer, context manager, and propagator registration
+per process. Sentry's own OpenTelemetry bootstrap registers unconditionally, so going second its
+registration silently no-ops and the plugin's W3C propagation and OTLP export stay in effect.
+Reversed, Sentry's `sentry-trace`-only propagator would shadow `traceparent`, and no service span
+would reach the OTLP exporter. app-web's `server.ts` awaits its own trace and metrics boot before
+starting Sentry for the same reason.
 
 Each exporter configures itself from the standard `OTEL_EXPORTER_OTLP_*` environment variables. The
 per-signal headers carry the ingest token and dataset routing. Metrics route by the
@@ -41,31 +41,43 @@ query.
 
 ## Traces
 
-Every service's Elysia app carries the `@elysiajs/opentelemetry` plugin, which opens one SERVER span
-per request from the inbound `traceparent` and keeps it active across every await inside the handler
-— a Kysely query, an RPC client call, a manual span all read it through `context.active()`. app-web
-carries no such plugin; `withRequestTrace` (`apps/web/src/server/with-request-trace.ts`) opens the
-same SERVER span itself, skipping a served static asset or the `/health` probe. Every `Kysely`
-client (`createDB`, `@vers/db`) emits a retroactively timed CLIENT span per compiled query from its
-`log` callback, named `db.<operation>` from the compiled query's root node kind and carrying the
-compiled SQL (never its parameters). A `db.connect` CLIENT span wraps each connection acquired from
-the driver's pool, covering the phase neither the query span nor a session timeout observes. Every
-service-to-service `RPCLink` carries `buildTracingInterceptor` (`@vers/service-utils/orpc`) in its
-`clientInterceptors`, minting a CLIENT span per call named by the procedure path. A worker
-iteration, a boot drain, a scheduled sweep, or a queued job — anything with no inbound request to
-continue — opens its own root span through `withRootSpan` (`@vers/service-utils`).
+One span opens per unit of work and stays active across every await inside it, so a query, an RPC
+call, or a manual span nests under the work that caused it. Where the work originates decides which
+site opens the span.
 
-Boundary span sites — the server plugins and outbound clients — inject or extract `traceparent`
-through the OpenTelemetry API's global propagator, never `@vers/trace` directly: outbound calls
-carry `traceparent` from the active span, continuing the caller's trace across every hop. A root
-span opened through `withRootSpan` starts a fresh trace with no inbound context — a worker iteration
-or queued job has no caller's trace to continue. app-web's RPC proxy re-injects `traceparent` from
-its own active context rather than forwarding the browser's raw header, so the service span parents
-to app-web's server span instead of becoming its sibling. `@vers/trace`'s
-`parseTraceparent`/`buildTraceparent` stay the wire-format utilities and the fallback path: a
-process with no tracer provider registered, or a request outside any span (a served asset,
-`/health`), derives its trace id by parsing the inbound header directly and minting a fresh one when
-none arrives — the same trace-continuation guarantee a request normally gets from its active span.
+- **Inbound request, a service** — every service's Elysia app carries the `@elysiajs/opentelemetry`
+  plugin, which opens one SERVER span per request from the inbound `traceparent` and keeps it active
+  across every await. A Kysely query, an RPC client call, or a manual span reads it through
+  `context.active()`.
+- **Inbound request, app-web** — app-web carries no such plugin. `withRequestTrace`
+  (`apps/web/src/server/with-request-trace.ts`) opens the same SERVER span itself, skipping a served
+  static asset or the `/health` probe.
+- **Database query** — every `Kysely` client (`createDB`, `@vers/db`) emits a retroactively timed
+  CLIENT span per compiled query from its `log` callback, named `db.<operation>` from the query's
+  root node kind and carrying the compiled SQL, never its parameters.
+- **Database connect** — a `db.connect` CLIENT span wraps each connection acquired from the driver's
+  pool, covering the phase neither the query span nor a session timeout observes.
+- **Service-to-service call** — every `RPCLink` carries `buildTracingInterceptor`
+  (`@vers/service-utils/orpc`) in its `clientInterceptors`, minting a CLIENT span per call named by
+  the procedure path.
+- **No inbound request** — a worker iteration, a boot drain, a scheduled sweep, or a queued job
+  opens its own root span through `withRootSpan` (`@vers/service-utils`).
+
+Trace context crosses process boundaries through the OpenTelemetry API's global propagator, never
+`@vers/trace` directly:
+
+- At a boundary span site — the server plugins and outbound clients — an outbound call carries
+  `traceparent` from the active span, continuing the caller's trace across every hop.
+- A root span opened through `withRootSpan` starts a fresh trace, because a worker iteration or
+  queued job has no caller's trace to continue.
+- app-web's RPC proxy re-injects `traceparent` from its own active context rather than forwarding
+  the browser's raw header, so the service span parents to app-web's server span instead of becoming
+  its sibling.
+- `@vers/trace`'s `parseTraceparent`/`buildTraceparent` are the wire-format utilities and the
+  fallback path. A process with no tracer provider registered, or a request outside any span (a
+  served asset, `/health`), derives its trace id by parsing the inbound header directly and minting
+  a fresh one when none arrives — the same trace-continuation guarantee an active span normally
+  provides.
 
 Wherever a span is active, it is the source of truth for the request's identity:
 `findSpanTraceContext` (`@vers/service-utils`) reads the active span's own trace and span ids, and
@@ -148,8 +160,8 @@ in stack state are encrypted by the stack passphrase.
 | `vers.replay.backlog_claimed`                   | histogram       | `{chain}`        | —                   | chains claimed and adjudicated in one drain cycle                                                                                               |
 | `vers.verification.rejections`                  | counter         | `{rejection}`    | `reason`            | adjudications that rejected or parked an activity, by reason                                                                                    |
 | `vers.replay.iteration_failures`                | counter         | `{iteration}`    | `outcome`           | worker iterations that failed to replay a claimed chain, by outcome                                                                             |
-| `vers.replay.settled_xp`                        | up-down counter | `{xp}`           | `source`            | xp verified segments settled to avatars, by how the amount was derived                                                                          |
-| `vers.replay.clamped_settlements`               | counter         | `{settlement}`   | —                   | settlements whose debit was floored at zero, paying less than recorded                                                                          |
+| `vers.replay.settled_xp`                        | up-down counter | `{xp}`           | `source`            | XP that verified segments settled to avatars, by how the amount was derived                                                                     |
+| `vers.replay.clamped_settlements`               | counter         | `{settlement}`   | —                   | settlements whose debit was clamped to a minimum of zero, paying less than recorded                                                             |
 | `vers.keys.derive_rejections`                   | counter         | `{rejection}`    | `reason`            | derivation calls that refused to derive a roll key or scope secret, by reason                                                                   |
 | `vers.activity.terminal_transitions`            | counter         | `{activity}`     | `status`            | activities that claimed a terminal transition, by status                                                                                        |
 | `vers.activity.writer_takeovers`                | counter         | `{takeover}`     | —                   | successful writer-session claims on active activities                                                                                           |
@@ -201,33 +213,37 @@ negative, is a contribution-rule defect.
 
 `vers.replay.clamped_settlements` stays at zero while the penalty and the settled total are computed
 against the same base: the engine clamps a failure penalty to the progress made into the current
-level, so a debit cannot exceed an avatar's settled xp. A non-zero count means they have diverged,
+level, so a debit cannot exceed an avatar's settled XP. A non-zero count means they have diverged,
 and the shortfall is silent everywhere else.
 
-`vers.replay.iteration_failures` splits by `outcome`: `quarantined` covers an activity that
-exhausted its replay attempts, `errored` covers every other failed iteration.
-`vers.keys.derive_rejections` splits by `reason`: `unknown-key-version` covers an avatar roll key
-version absent from the population's custodied roots, `unknown-scope-secret-version` covers the same
-for a scope secret. `vers.activity.terminal_transitions` splits by `status`: `stopped` covers a
-completed or failed last checkpoint, `capped` covers a batch rejected whole because it exceeded the
-avatar's accrued simulated-time budget. `vers.activity.advance_continuations` splits by `outcome`:
-`minted` covers a continuation whose mint step landed a fresh row, `converged` covers one that
-resolved onto a row a prior, partially committed request already minted at the same client id.
-`vers.activity.advance_bailouts` splits by `reason`, one per `advanceActivity` rejection code
-(`conflict`, `checkpoint_invalid`, `activity_capped`, `session_evicted`, `chain_quarantined`,
-`terminal`); a bailout always leaves the confirmed head advanced past the committed prefix, so a
-rising count tracks how often an offline catch-up's outer resync must re-plan, not lost progress.
-`vers.activity.content_incompatible_rejections` splits by `path`: `requested` covers a client-sent
-sim version hash, `fallback` covers the registry-current version resolved for a start that carries
-no hash. `vers.activity.reveal_cells` and `vers.activity.reveal_sources` record once per
-`getRevealedNodes` call, the returned cell count and the scanned first-clear grant count
-respectively; both track the reveal projection's fan-out as an avatar's completed-node history
-grows. `vers.activity.reveal_mints` records once per `revealNodes` call, the number of distinct
-nodes it minted or re-affirmed a chain row for — a repeat reveal of an already-minted node still
-counts, since the call re-affirms that row's `genesisSeed` rather than skipping it.
-`vers.analytics.delivery_failures` splits by `reason`: `rejected` covers a non-2xx response from the
-Tinybird Events API, `quarantined` covers a row the API accepted but failed schema validation on,
-`unreachable` covers a network failure or the upstream deadline tripping.
+The remaining split instruments enumerate their attribute values:
+
+- `vers.replay.iteration_failures` by `outcome`: `quarantined` is an activity that exhausted its
+  replay attempts; `errored` is every other failed iteration.
+- `vers.keys.derive_rejections` by `reason`: `unknown-key-version` is an avatar roll-key version
+  absent from the population's custodied roots; `unknown-scope-secret-version` is the same for a
+  scope secret.
+- `vers.activity.terminal_transitions` by `status`: `stopped` is a completed or failed last
+  checkpoint; `capped` is a batch rejected whole for exceeding the avatar's accrued offline budget.
+- `vers.activity.advance_continuations` by `outcome`: `minted` is a continuation whose mint landed a
+  fresh row; `converged` is one that resolved onto a row a prior, partially committed request
+  already minted at the same client id.
+- `vers.activity.advance_bailouts` by `reason`, one per `advanceActivity` rejection code
+  (`conflict`, `checkpoint_invalid`, `activity_capped`, `session_evicted`, `chain_quarantined`,
+  `terminal`). A bailout always leaves the confirmed head advanced past the committed prefix, so a
+  rising count tracks how often an offline catch-up's outer resync must re-plan, not lost progress.
+- `vers.activity.content_incompatible_rejections` by `path`: `requested` is a client-sent
+  sim-version hash; `fallback` is the registry-current version resolved for a start that carries no
+  hash.
+- `vers.activity.reveal_cells` and `vers.activity.reveal_sources` record once per `getRevealedNodes`
+  call — the returned cell count and the scanned first-clear grant count. Both track the reveal
+  projection's fan-out as an avatar's completed-node history grows.
+- `vers.activity.reveal_mints` records once per `revealNodes` call — the number of distinct nodes it
+  minted or re-affirmed a chain row for. A repeat reveal of an already-minted node still counts,
+  since the call re-affirms that row's `genesisSeed` rather than skipping it.
+- `vers.analytics.delivery_failures` by `reason`: `rejected` is a non-2xx response from the Tinybird
+  Events API; `quarantined` is a row the API accepted but failed schema validation; `unreachable` is
+  a network failure or the upstream deadline tripping.
 
 `vers.web.service_call_retries` and `vers.web.service_call_failures` cover app-web's bounded
 outbound service calls: `service_call_retries` records each retry attempt against a call that failed
