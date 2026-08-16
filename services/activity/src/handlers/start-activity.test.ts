@@ -1583,14 +1583,17 @@ test('it bails with PREDECESSOR_PENDING on a start naming a predecessor not yet 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
   const predecessorID = `act_${createId()}`;
 
-  expect(
-    client.startActivity({
-      avatarID: avatar.id,
-      predecessorActivityID: predecessorID,
-      scopeID: '0_0',
-      scopeType: 'world_map_node',
-    }),
-  ).rejects.toMatchObject({ code: 'PREDECESSOR_PENDING' });
+  const pendingStart = client.startActivity({
+    avatarID: avatar.id,
+    predecessorActivityID: predecessorID,
+    scopeID: '0_0',
+    scopeType: 'world_map_node',
+  });
+
+  // drain the rejection so its transaction settles before the read-back below observes it
+  await pendingStart.catch(() => {});
+
+  expect(pendingStart).rejects.toMatchObject({ code: 'PREDECESSOR_PENDING' });
 
   // the FK-violating insert rolled back entirely — no half-minted row is left behind
   const rowsBeforePredecessor = await ctx.db

@@ -1,5 +1,6 @@
 import { ingestStartRow } from '../submission/ingest-start-row';
 import { readAllStartRows } from '../submission/read-all-start-rows';
+import { removePendingStartIntent } from '../submission/remove-pending-start-intent';
 import { removeQueuedCheckpoints } from '../submission/remove-queued-checkpoints';
 import type { WorkerContext } from './types';
 
@@ -26,6 +27,10 @@ export async function drainStartRows(context: WorkerContext, avatarID: string): 
       // the server refused the root; its durably queued checkpoints can never chain onto a row
       // that will not exist, so drop them here as the flush path drops a refused stream's
       await removeQueuedCheckpoints(row.id);
+
+      // a held start intent for the refused root would retry forever against a predecessor that
+      // never lands, so drop it too
+      await removePendingStartIntent(row.id);
 
       continue;
     }
