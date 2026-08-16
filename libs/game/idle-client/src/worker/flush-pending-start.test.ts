@@ -349,6 +349,40 @@ test('it stops the minted row back when a stop lands while the start is in fligh
   expect(heldStop).toBeUndefined();
 });
 
+test('it keeps the intent and reports predecessor-pending when the stamped predecessor has not reached the server', async () => {
+  server.use(
+    mockActivityService.startActivity.handler((opts) => {
+      throw opts.errors.PREDECESSOR_PENDING({ data: {} });
+    }),
+  );
+
+  const context = createStubWorkerContext({ submitter: createStubSubmitter() });
+
+  await writePendingStartIntent({
+    activityID: 'activity_1',
+    avatarID: 'avatar_1',
+    scopeID: '2_0',
+    scopeType: 'mission',
+  });
+
+  const result = await flushPendingStart(
+    context,
+    { cancel: context.getCancelSignal(), stop: context.getStopSignal() },
+    'avatar_1',
+  );
+
+  expect(result).toStrictEqual({ outcome: 'predecessor-pending' });
+
+  const heldIntent = await readPendingStartIntent();
+
+  expect(heldIntent).toStrictEqual({
+    activityID: 'activity_1',
+    avatarID: 'avatar_1',
+    scopeID: '2_0',
+    scopeType: 'mission',
+  });
+});
+
 test('it drops the held intent and reports it sim-version-expired when the bundled engine is refused as SIM_VERSION_EXPIRED', async () => {
   server.use(
     mockActivityService.startActivity.handler((opts) => {

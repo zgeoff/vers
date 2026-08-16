@@ -488,6 +488,11 @@ export const activityContract = {
           status: 409,
         },
         NOT_FOUND: { data: z.object({}), message: 'Avatar not found' },
+        PREDECESSOR_PENDING: {
+          data: z.object({}),
+          message: 'The stamped predecessor activity has not reached the server yet',
+          status: 409,
+        },
         SIM_VERSION_EXPIRED: {
           data: SimVersionProblemDataSchema,
           message: 'The stamped or current sim version is past retention',

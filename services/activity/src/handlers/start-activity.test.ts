@@ -1,4 +1,5 @@
 import { expect, test } from 'bun:test';
+import { createId } from '@paralleldrive/cuid2';
 import { createContentVersion } from '@vers/content-registry';
 import type { ActivityContract } from '@vers/contract-activity';
 import { buildStartHash } from '@vers/contract-activity';
@@ -23,6 +24,7 @@ import { sql } from 'kysely';
 import invariant from 'tiny-invariant';
 import { createActivityService } from '../create-activity-service';
 import { server } from '../mocks/server';
+import { createMockActivity } from '../test-utils/factories/create-mock-activity';
 import { createMockCheckpointBatch } from '../test-utils/factories/create-mock-checkpoint-batch';
 
 /**
@@ -1566,4 +1568,60 @@ test('it fails a start with a 500 when the keys dispatch fails', async () => {
   expect(
     client.startActivity({ avatarID: avatar.id, scopeID: '0_0', scopeType: 'world_map_node' }),
   ).rejects.toMatchObject({ code: 'INTERNAL_SERVER_ERROR' });
+});
+
+test('it bails with PREDECESSOR_PENDING on a start naming a predecessor not yet on the server, then succeeds once the predecessor lands', async () => {
+  await using ctx = await setupTest();
+
+  await createSimVersionRow(ctx.db);
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+  const predecessorID = `act_${createId()}`;
+
+  expect(
+    client.startActivity({
+      avatarID: avatar.id,
+      predecessorActivityID: predecessorID,
+      scopeID: '0_0',
+      scopeType: 'world_map_node',
+    }),
+  ).rejects.toMatchObject({ code: 'PREDECESSOR_PENDING' });
+
+  // the FK-violating insert rolled back entirely — no half-minted row is left behind
+  const rowsBeforePredecessor = await ctx.db
+    .selectFrom('activities')
+    .select('id')
+    .where('avatarId', '=', avatar.id)
+    .execute();
+
+  expect(rowsBeforePredecessor).toHaveLength(0);
+
+  // the predecessor reaches the server, exactly as it would from the same device's own outbox
+  // delivery
+  await ctx.db
+    .insertInto('activities')
+    .values(
+      createMockActivity({
+        avatarId: avatar.id,
+        id: predecessorID,
+        scopeId: '0_0',
+        scopeType: 'world_map_node',
+        status: 'stopped',
+      }),
+    )
+    .execute();
+
+  const started = await client.startActivity({
+    avatarID: avatar.id,
+    predecessorActivityID: predecessorID,
+    scopeID: '0_0',
+    scopeType: 'world_map_node',
+  });
+
+  expect(started.predecessorActivityID).toBe(predecessorID);
 });

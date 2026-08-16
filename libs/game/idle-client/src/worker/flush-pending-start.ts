@@ -13,6 +13,7 @@ export type PendingStartFlushResult =
         | 'blocked'
         | 'capped'
         | 'none'
+        | 'predecessor-pending'
         | 'sim-version-expired'
         | 'stale'
         | 'stopped'
@@ -37,7 +38,9 @@ export type PendingStartFlushResult =
  * account's actual active avatar's id and name (`avatar-switched`) — the caller's authoritative
  * recovery target, not a value it must derive itself. `SIM_VERSION_EXPIRED` means the service
  * confirmed this build's engine no longer replays the current content: the intent is dropped,
- * since only a reload can deliver it (`sim-version-expired`). An auth rejection keeps
+ * since only a reload can deliver it (`sim-version-expired`). `PREDECESSOR_PENDING` means the
+ * stamped predecessor hasn't reached the server yet: the intent survives for a later retry once it
+ * lands (`predecessor-pending`). An auth rejection keeps
  * the intent — the session lapsing says nothing about the continuation — while any other defined
  * rejection is the service declaring it dead; both rethrow into the caller's failure handling. A
  * stop landing mid-call has the minted row stopped back durably (`stopped`).
@@ -106,6 +109,13 @@ export async function flushPendingStart(
     await removePendingStartIntent(intent.activityID);
 
     return { outcome: 'sim-version-expired' };
+  }
+
+  // the successor and its predecessor share this device's own outbox, so an absent predecessor is
+  // an ordinary out-of-order or reload-orphaned delivery, not a cheat — the intent survives for a
+  // later resync cycle to retry once the predecessor lands
+  if (error.code === 'PREDECESSOR_PENDING') {
+    return { outcome: 'predecessor-pending' };
   }
 
   if (error.code !== 'CONFLICT') {
