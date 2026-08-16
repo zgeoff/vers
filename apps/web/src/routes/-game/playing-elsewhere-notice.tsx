@@ -1,24 +1,14 @@
-import { useQuery } from '@tanstack/react-query';
-import { Button, Dialog, Text } from '@vers/design-system';
+import { Dialog, Text } from '@vers/design-system';
 import { setWriterDisplacedActivityID, useWriterDisplacedActivityID } from '@vers/idle-client';
-import { buildActiveAvatarQueryOptions } from '../../lib/avatar/build-active-avatar-query-options';
-import { runIgnoringRejection } from '../../lib/idle/run-ignoring-rejection';
-import { sendIdleReportOnline } from '../../lib/idle/send-idle-report-online';
-import { useIdleWorkerHandle } from '../../lib/idle/use-idle-worker-handle';
 
 /**
- * Tells the player their run is being played on another device: this device's simulation stopped
- * and nothing it submits persists. "Continue here" claims the run back through a claiming report;
- * dismissing leaves the run to the other device. Both clear the tab's displaced state while the
- * worker keeps its own record, whose transition-only broadcast never re-raises an unchanged
- * displacement — but a fresh one (the same run displaced again after a take-back) transitions
- * through null and re-opens the notice.
+ * The terminal notice shown when another device has taken over this avatar's run. This device's
+ * simulation has stopped and nothing it submits will persist, so the notice only informs the
+ * player — it offers no way to take the run back. Closing it clears this tab's copy of the
+ * displaced state; the notice reopens only if the run is taken over again.
  */
 export function PlayingElsewhereNotice() {
   const displacedActivityID = useWriterDisplacedActivityID();
-  const idleWorkerHandle = useIdleWorkerHandle();
-  const avatarQuery = useQuery(buildActiveAvatarQueryOptions());
-  const avatarID = avatarQuery.data?.id;
 
   if (displacedActivityID === null) {
     return null;
@@ -34,33 +24,7 @@ export function PlayingElsewhereNotice() {
       open
       title="Playing on another device"
     >
-      <Text>
-        Your run picked up on another device, so it&rsquo;s paused here. Everything you earn over
-        there is saved.
-      </Text>
-      <Button
-        onClick={() => {
-          // The displaced state clears only once the claim is actually sent — clearing without
-          // sending would dismiss the player's one recovery notice with nothing claimed. A click
-          // before the worker or avatar id resolves leaves the notice open for the next try.
-          if (idleWorkerHandle.client === undefined || avatarID === undefined) {
-            return;
-          }
-
-          runIgnoringRejection(
-            sendIdleReportOnline(
-              idleWorkerHandle.client,
-              avatarID,
-              true,
-              idleWorkerHandle.writerAbortSignal,
-            ),
-          );
-
-          setWriterDisplacedActivityID(null);
-        }}
-      >
-        Continue here
-      </Button>
+      <Text>Your run has been picked up on another device.</Text>
     </Dialog>
   );
 }
