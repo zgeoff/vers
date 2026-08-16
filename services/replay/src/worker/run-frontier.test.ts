@@ -1081,3 +1081,54 @@ test('it grants a first_clear exactly once across a re-verification of an alread
     },
   ]);
 });
+
+// Target — #892 (blocked by #918), offline-reconcile doc §"Settlement in order" / §"Jump to an
+// unreachable node": reachability is re-validated at replay against the settled frontier, so an
+// activity whose node no earlier settled clear made reachable is rejected during the ordered drain,
+// not accepted here and stopped only at a later admission. runFrontier today verifies the segment
+// and grants a first_clear, but never checks reachability — the default fixture roots at '1_0' with
+// no first_clear granting the origin, and still settles `matched`. This asserts the guarantee that
+// delta violates; unskip once #892 adds the replay-time reachability check that shares
+// `isNodeSelectable` with #507's admission-time authorization.
+test.skip('it rejects a settled activity whose node no earlier settled clear made reachable', async () => {
+  await using ctx = await setupTest();
+
+  // a completed terminal at '1_0' with no grant making the origin — and thus '1_0' — reachable
+  const fixture = await createHonestActivityFixture(ctx.db, {
+    buildSnapshot: { level: 50, xp: 0 },
+    duration: 80_000,
+    seed: buildStateFromSeed(3_047_525_658),
+  });
+
+  const cache = createReplayCache();
+
+  const deps = {
+    db: ctx.db,
+    keysServiceURL: resolveServiceURL('keys'),
+    loadContentDocument: makeContentDocumentLoader(ctx.db),
+    logger: pino({ enabled: false }),
+    privateKey: ctx.privateKey,
+    simVersion: 'test-engine-hash',
+  };
+
+  const outcome = await ctx.db.transaction().execute((trx) =>
+    runFrontier(trx, deps, cache, {
+      activityID: fixture.activity.id,
+      appendedHead: fixture.activity.appendedHead,
+      replayAttempts: 0,
+      startChainIndex: fixture.activity.startChainIndex,
+      status: fixture.activity.status,
+      verifiedHead: 0,
+    }),
+  );
+
+  expect(outcome).toStrictEqual({ kind: 'rejected' });
+
+  const grants = await ctx.db
+    .selectFrom('avatarGrants')
+    .selectAll()
+    .where('avatarId', '=', fixture.activity.avatarId)
+    .execute();
+
+  expect(grants).toStrictEqual([]);
+});
