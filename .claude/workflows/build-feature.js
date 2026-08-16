@@ -292,6 +292,7 @@ const pr = await agent(
 1. Bring the branch up to date: \`git -C ${worktree} fetch origin\` then \`git -C ${worktree} rebase origin/main\`. If the rebase hits conflicts, resolve them faithfully to both sides' intent (rerun \`bun install\` in the worktree if dependency manifests changed) and return resolvedConflicts=true; if it was clean or a no-op, return resolvedConflicts=false.
 2. Push with \`git -C ${worktree} push -u origin ${branch}\`, adding \`--force-with-lease\` only if the rebase rewrote commits that were already pushed.
 3. ${prAction}
+4. CodeRabbit's auto-review is off for this repo (under ten stars), so trigger its review exactly once with \`gh pr comment <number> --body "@coderabbitai review"\`. Post this on a freshly opened PR${prNumber ? ', and also when readying the existing PR if no `@coderabbitai review` comment is already present on it (check with `gh pr view <number> --comments` first — never post a second trigger)' : ''}. cubic reviews automatically; do not tag it.
 
 ${prBodySpec}`,
   {
