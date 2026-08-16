@@ -947,6 +947,102 @@ test('it mints a client-minted root under a valid client head, deriving its enco
   });
 });
 
+test('it bails with PREDECESSOR_PENDING on a root naming a predecessor not yet on the server, then mints once the predecessor lands', async () => {
+  await using ctx = await setupTest();
+
+  const current = await createSimVersionRow(ctx.db);
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id, xp: 0 });
+  const chain = await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
+  const activityID = `act_${createId()}`;
+  const predecessorID = `act_${createId()}`;
+  const document = createMockContentDocument({ contentVersion: '2' });
+
+  const derived = deriveRootStart({
+    avatarID: avatar.id,
+    avatarSeed: avatar.seed,
+    contentVersion: '2',
+    document,
+    scopeID: '0_0',
+    seed: chain.appendedNextSeed,
+    simVersion: current.engineHash,
+  });
+
+  // the missing predecessor earned zero xp, so the mint-time optimistic-build check still matches
+  // this root's own zero-xp snapshot and nothing else rejects the request ahead of the
+  // FK-violating insert
+  const root = createMockOfflineRootSubmission({
+    avatarID: avatar.id,
+    buildSnapshot: { level: buildLevelFromXP(0), xp: 0 },
+    contentVersion: '2',
+    predecessorActivityID: predecessorID,
+    scopeID: '0_0',
+    scopeType: 'world_map_node',
+    seed: chain.appendedNextSeed,
+    simVersion: current.engineHash,
+    startChainIndex: 0,
+    startHash: derived.startHash,
+  });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const request = client.advanceActivity({
+    activityID,
+    continuations: [],
+    expectedHead: 0,
+    root,
+  });
+
+  await request.catch(() => {});
+
+  expect(request).rejects.toMatchObject({
+    code: 'PREDECESSOR_PENDING',
+    data: { activityID, appendedHead: 0 },
+  });
+
+  // the FK-violating insert rolled back entirely — no half-minted row is left behind
+  const rowsBeforePredecessor = await ctx.db
+    .selectFrom('activities')
+    .select('id')
+    .where('avatarId', '=', avatar.id)
+    .execute();
+
+  expect(rowsBeforePredecessor).toHaveLength(0);
+
+  // the predecessor reaches the server, exactly as it would from the same device's own
+  // outbox delivery
+  await ctx.db
+    .insertInto('activities')
+    .values(
+      createMockActivity({
+        avatarId: avatar.id,
+        id: predecessorID,
+        scopeId: '0_0',
+        scopeType: 'world_map_node',
+        status: 'stopped',
+      }),
+    )
+    .execute();
+
+  const retried = await client.advanceActivity({
+    activityID,
+    continuations: [],
+    expectedHead: 0,
+    root,
+  });
+
+  expect(retried.activity.id).toBe(activityID);
+
+  const mintedRow = await ctx.db
+    .selectFrom('activities')
+    .select('predecessorActivityId')
+    .where('id', '=', activityID)
+    .executeTakeFirstOrThrow();
+
+  expect(mintedRow.predecessorActivityId).toBe(predecessorID);
+});
+
 test('it converges a sequential root retry onto the existing row without double-minting', async () => {
   await using ctx = await setupTest();
 

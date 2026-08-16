@@ -17,6 +17,7 @@ import type { Kysely, Selectable } from 'kysely';
 import invariant from 'tiny-invariant';
 import { findCheckpointBatchInvalidReason } from '../find-checkpoint-batch-invalid-reason';
 import { getOptimisticBuild } from '../get-optimistic-build';
+import { isPredecessorForeignKeyViolation } from '../is-predecessor-foreign-key-violation';
 import { isUniqueViolation } from '../is-unique-violation';
 import { recordAdvanceBailout } from '../metrics/record-advance-bailout';
 import { recordAdvanceContinuation } from '../metrics/record-advance-continuation';
@@ -70,6 +71,7 @@ interface AdvanceActivityOpts {
     readonly NODE_NOT_REVEALED: (payload: EmptyErrorPayload) => Error;
     readonly NODE_UNKNOWN: (payload: EmptyErrorPayload) => Error;
     readonly NOT_FOUND: (payload: EmptyErrorPayload) => Error;
+    readonly PREDECESSOR_PENDING: (payload: AdvanceBailPayload) => Error;
     readonly SESSION_EVICTED: (payload: AdvanceBailPayload) => Error;
     readonly SIM_VERSION_EXPIRED: (payload: SimVersionProblemPayload) => Error;
     readonly SIM_VERSION_UNKNOWN: (payload: SimVersionProblemPayload) => Error;
@@ -159,6 +161,16 @@ export async function advanceActivity(
       if (error instanceof ContinuationBailError) {
         recordAdvanceBailout(BAILOUT_REASONS[error.outcome.kind]);
         throw buildBailError(opts.errors, error.outcome);
+      }
+
+      if (isPredecessorForeignKeyViolation(error)) {
+        recordAdvanceBailout('predecessor_pending');
+
+        throw buildBailError(opts.errors, {
+          activityID: stepActivityID,
+          appendedHead: stepExpectedHead,
+          kind: 'predecessor-pending',
+        });
       }
 
       if (!isUniqueViolation(error)) {
@@ -269,6 +281,17 @@ async function resolveRootRow(
       ),
     );
   } catch (error: unknown) {
+    // The predecessor this root names hasn't reached the server yet — the successor and its
+    // predecessor share one device's outbox, so this is an ordinary out-of-order or
+    // reload-orphaned delivery, not a cheat: the client retries once its predecessor lands.
+    if (isPredecessorForeignKeyViolation(error)) {
+      recordAdvanceBailout('predecessor_pending');
+
+      throw opts.errors.PREDECESSOR_PENDING({
+        data: { activityID: opts.input.activityID, appendedHead: 0 },
+      });
+    }
+
     if (!isUniqueViolation(error)) {
       throw error;
     }
@@ -355,6 +378,11 @@ type BailOutcome =
       readonly reason: string;
     }
   | { readonly activityID: string; readonly appendedHead: number; readonly kind: 'conflict' }
+  | {
+      readonly activityID: string;
+      readonly appendedHead: number;
+      readonly kind: 'predecessor-pending';
+    }
   | { readonly activityID: string; readonly appendedHead: number; readonly kind: 'session-evicted' }
   | {
       readonly activityID: string;
@@ -385,6 +413,7 @@ const BAILOUT_REASONS = {
   'chain-quarantined': 'chain_quarantined',
   'checkpoint-invalid': 'checkpoint_invalid',
   conflict: 'conflict',
+  'predecessor-pending': 'predecessor_pending',
   'session-evicted': 'session_evicted',
   terminal: 'terminal',
 } as const;
@@ -421,6 +450,12 @@ function buildBailError(
 
     case 'conflict': {
       return errors.CONFLICT({
+        data: { activityID: outcome.activityID, appendedHead: outcome.appendedHead },
+      });
+    }
+
+    case 'predecessor-pending': {
+      return errors.PREDECESSOR_PENDING({
         data: { activityID: outcome.activityID, appendedHead: outcome.appendedHead },
       });
     }

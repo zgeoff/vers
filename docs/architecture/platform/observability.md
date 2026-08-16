@@ -234,8 +234,9 @@ The remaining split instruments enumerate their attribute values:
   already minted at the same client id.
 - `vers.activity.advance_bailouts` by `reason`, one per `advanceActivity` rejection code
   (`conflict`, `checkpoint_invalid`, `activity_capped`, `session_evicted`, `chain_quarantined`,
-  `terminal`). A bailout always leaves the confirmed head advanced past the committed prefix, so a
-  rising count tracks how often an offline catch-up's outer resync must re-plan, not lost progress.
+  `predecessor_pending`, `terminal`). A bailout always leaves the confirmed head advanced past the
+  committed prefix, so a rising count tracks how often an offline catch-up's outer resync must
+  re-plan, not lost progress.
 - `vers.activity.content_incompatible_rejections` by `path`: `requested` is a client-sent
   sim-version hash; `fallback` is the registry-current version resolved for a start that carries no
   hash.

@@ -92,6 +92,7 @@ test('it declares the start gates alongside its own continuation errors on advan
     'NODE_NOT_REVEALED',
     'NODE_UNKNOWN',
     'NOT_FOUND',
+    'PREDECESSOR_PENDING',
     'SESSION_EVICTED',
     'SIM_VERSION_EXPIRED',
     'SIM_VERSION_UNKNOWN',
