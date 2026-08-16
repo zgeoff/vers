@@ -122,16 +122,13 @@ This is why ordering waits on an earlier activity settling, not clearing. A fail
 settled, so it releases the wait — but it opened no node, so the reachability check still rejects a
 later activity that had no cleared neighbour. Settling sequences; the check adjudicates.
 
-The order comes from the client, so the server does not settle on it blindly — reachability is one
-of two guards a declared order alone can never satisfy. The other is the avatar's build: at claim
-time, every activity's predecessor is already settled or rejected, so the server re-derives the
-expected starting build straight from the avatar's settled XP total and requires the activity's own
-pinned build to match it exactly. A build is a pure function of total XP, so this one check catches
-a run that banked XP from a predecessor a rejection later erased, whatever order the client declared
-it in. Reachability needs the identical guard, not a lighter one: it too reads state — the settled
-first-clear grants — that only exists once the runs ahead of it have themselves settled or rejected.
-A client that reordered a run ahead of its true predecessor gains nothing from either check: each
-reads whatever the avatar has actually settled by the time the check runs, honest order or not.
+The order comes from the client, so the server does not settle on it blindly. Two per-activity
+checks are the boundary, and each reads only what the avatar has already settled. The build check
+re-derives an activity's expected starting build from the settled XP total and requires its pinned
+build to match; a build is a pure function of total XP, so a run that banked XP a later rejection
+erased fails it. The reachability check reads the settled first-clear grants, so it too passes only
+once the clear that opens a node has settled. Neither check can be fooled by a declared order: each
+sees only settled state, whatever order the client sent.
 
 The order covers revisits. A player who walks node A, its neighbour B, back to A, and to B again
 makes four activities, and the server settles them in that same sequence — A₁, B₂, A₃, B₄.
@@ -140,17 +137,15 @@ makes four activities, and the server settles them in that same sequence — A�
 
 The server cannot recover the play order from its own clocks: an activity's real start happened
 offline, and the activities arrive together at reconnect in no meaningful order. So the client
-declares the order — it alone witnessed the play — as a hard predecessor reference: each activity
-carries `predecessorActivityId`, the avatar's immediately-prior activity across every chain, null
-only for the avatar's first-ever activity. The client stamps it at start, alongside `playedAt`, an
-advisory wall-clock timestamp for operator and analytics queries — never read by the claim or either
-check. The predecessor and its successor are minted together in the same device session, so an
-out-of-order or reload-orphaned delivery only delays a successor until its named predecessor lands;
-it can never point the server at the wrong run.
+declares the order — it alone witnessed the play. Each activity carries a `predecessorActivityId`:
+the avatar's immediately-prior activity across every chain, null only for its first-ever activity.
+The client stamps it at start, next to `playedAt`, an advisory wall-clock timestamp the claim and
+the checks never read — it serves operator and analytics queries only. A predecessor and its
+successor are minted in the same device session, so an out-of-order or reload-orphaned delivery only
+delays a successor until its named predecessor lands; it never points the server at the wrong run.
 
-Declaring a false order buys nothing: the reachability and build checks each read state that exists
-only once the runs actually ahead of an activity have themselves settled or rejected, so reordering
-a run ahead of its true predecessor changes nothing about what those checks find.
+Declaring a false order buys nothing: the checks read only settled state, so reordering a run ahead
+of its true predecessor changes nothing they find.
 
 ## What an activity's outcome produces
 
