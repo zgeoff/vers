@@ -13,17 +13,19 @@ import type { CheckpointQueueSchema } from './types';
  * upgrade. Each store is created only if missing, so an upgrade from an earlier version adds the
  * stores that version lacks without dropping the ones it already holds or their rows.
  *
- * The one exception is `node-seeds`: an upgrade from a version predating v6 clears it. A pre-v5 row
- * carried only a genesis seed and misses the encounter and content version a v5 row declares; a
- * pre-v6 row misses the `head` that `readNodeSeed`'s type declares non-optional, so leaving it
- * would let a headless row re-enter typed code. Clearing the rebuildable cache leaves only
- * full-shape rows behind, and the prefetch re-reveals and repopulates them.
+ * The stores split by durability. `content-documents` and `node-seeds` are caches: a row that no
+ * longer matches its current contract schema self-heals on read — the read boundary
+ * (`findCachedContentDocument`, `readNodeSeed`) deletes the row and reads it as a miss, and the
+ * next fetch or reveal repopulates it — so neither store carries a version-specific migration here.
+ * `pending-checkpoints` and `pending-roots` are the outbox: un-synced local progress a device has
+ * not yet delivered to the server, which a cache-style miss would silently drop, so a shape change
+ * to either needs a real versioned migration in this function instead.
  */
 export function upgradeCheckpointQueueDB(
   database: IDBPDatabase<CheckpointQueueSchema>,
-  oldVersion: number,
+  _oldVersion: number,
   _newVersion: number | null,
-  transaction: IDBPTransaction<
+  _transaction: IDBPTransaction<
     CheckpointQueueSchema,
     Array<StoreNames<CheckpointQueueSchema>>,
     'versionchange'
@@ -53,8 +55,6 @@ export function upgradeCheckpointQueueDB(
   // content version — by its `[avatarID, nodeID]` pair.
   if (!database.objectStoreNames.contains(NODE_SEEDS_STORE_NAME)) {
     database.createObjectStore(NODE_SEEDS_STORE_NAME, { keyPath: ['avatarID', 'nodeID'] });
-  } else if (oldVersion < 6) {
-    void transaction.objectStore(NODE_SEEDS_STORE_NAME).clear();
   }
 
   if (!database.objectStoreNames.contains(PENDING_ROOTS_STORE_NAME)) {
