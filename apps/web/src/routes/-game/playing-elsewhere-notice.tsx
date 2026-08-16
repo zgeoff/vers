@@ -2,12 +2,10 @@ import { Dialog, Text } from '@vers/design-system';
 import { setWriterDisplacedActivityID, useWriterDisplacedActivityID } from '@vers/idle-client';
 
 /**
- * Tells the player their run has been picked up on another device: this device's simulation
- * stopped and nothing it submits persists. The notice is terminal — there is no in-app way to
- * take the run back; dismissing it only clears the tab's displaced state, which the worker keeps
- * its own record of. The worker's transition-only broadcast never re-raises an unchanged
- * displacement, but a fresh one (the same run displaced again after the player signs back in)
- * transitions through null and re-opens the notice.
+ * The terminal notice shown when another device has taken over this avatar's run. This device's
+ * simulation has stopped and nothing it submits will persist, so the notice only informs the
+ * player — it offers no way to take the run back. Closing it clears this tab's copy of the
+ * displaced state; the notice reopens only if the run is taken over again.
  */
 export function PlayingElsewhereNotice() {
   const displacedActivityID = useWriterDisplacedActivityID();
