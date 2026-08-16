@@ -166,8 +166,10 @@ from an error screen or a support report finds it directly in the logs and the e
 
 - The browser mints a fresh `traceparent` per RPC call from the `@vers/trace` primitives.
 - app-web's server-side service links continue the ambient request's trace when it carries one, and
-  start a fresh trace otherwise. The browser-lane RPC proxy forwards headers wholesale, so browser
-  traces pass through untouched.
+  start a fresh trace otherwise. The browser-lane `/api/rpc/$service` proxy re-injects `traceparent`
+  from its own request span rather than forwarding the browser's header, so the trace continues but
+  the service's span parents to app-web's server span
+  ([observability](../platform/observability.md)).
 - Services parse inbound `traceparent`, mint their hop's span id, and run the whole request inside
   `withTraceContext` (`@vers/service-utils`), which the pino mixin and Sentry tag read.
 
