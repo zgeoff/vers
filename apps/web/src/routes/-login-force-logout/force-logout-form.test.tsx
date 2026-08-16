@@ -57,5 +57,6 @@ test('it renders the informational copy explaining why a force logout is needed'
     });
 
     expect(infoText).toBeVisible();
+    expect(screen.getByText('synced yet may be lost', { exact: false })).toBeVisible();
   });
 });
