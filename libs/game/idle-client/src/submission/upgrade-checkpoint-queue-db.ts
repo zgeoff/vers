@@ -19,7 +19,9 @@ import type { CheckpointQueueSchema } from './types';
  * version-specific migration here. `pending-checkpoints` and `pending-roots` are the outbox:
  * un-synced local progress a device has not yet delivered to the server, which a cache-style miss
  * would silently drop, so a shape change to either needs a real versioned migration in this function
- * instead.
+ * instead. Cache self-healing catches shape drift only: a row whose meaning changed while its shape
+ * still satisfies its schema reads as a hit, so a semantic change to a cached value needs an
+ * explicit version bump too.
  */
 export function upgradeCheckpointQueueDB(
   database: IDBPDatabase<CheckpointQueueSchema>,

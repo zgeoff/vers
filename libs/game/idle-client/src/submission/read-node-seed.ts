@@ -20,9 +20,17 @@ export async function readNodeSeed(
   nodeID: string,
 ): Promise<CachedNodeSeed | undefined> {
   const db = await resolveCheckpointQueueDB();
-  const record = await db.get(NODE_SEEDS_STORE_NAME, [avatarID, nodeID]);
+
+  // Read, validate, and delete a mismatched row inside one readwrite transaction so a concurrent
+  // reveal that repopulates the row can't have its fresh value deleted between a separate read and
+  // delete.
+  const tx = db.transaction(NODE_SEEDS_STORE_NAME, 'readwrite');
+
+  const record = await tx.store.get([avatarID, nodeID]);
 
   if (record === undefined) {
+    await tx.done;
+
     return undefined;
   }
 
@@ -32,10 +40,14 @@ export async function readNodeSeed(
   const result = NodeSeedSchema.safeParse(record);
 
   if (!result.success) {
-    await db.delete(NODE_SEEDS_STORE_NAME, [avatarID, nodeID]);
+    await tx.store.delete([avatarID, nodeID]);
+
+    await tx.done;
 
     return undefined;
   }
+
+  await tx.done;
 
   return {
     contentVersion: result.data.contentVersion,
