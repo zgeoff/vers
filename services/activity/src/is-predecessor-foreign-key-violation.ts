@@ -1,6 +1,6 @@
 /**
- * postgres.js reports the activities table's self-referencing predecessor foreign key's violation
- * as SQLSTATE 23503, naming the constraint.
+ * True when the error is the activities predecessor self-FK violation. postgres.js raises it as
+ * SQLSTATE 23503, naming the constraint.
  */
 export function isPredecessorForeignKeyViolation(error: unknown): boolean {
   return (

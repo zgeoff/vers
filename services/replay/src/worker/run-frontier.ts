@@ -93,15 +93,15 @@ export async function runFrontier(
 
     invariant(avatarState !== undefined, 'a stamped activity always has an owning avatar');
 
-    // A build is a pure function of settled xp, and by claim time this activity's predecessor is
-    // settled or rejected — so the pinned start build must match the avatar's settled total
-    // exactly. This is what catches a rejected ancestor's xp shortfall: a successor that banked a
-    // now-rejected ancestor's optimistic xp stamped a build the settled total never backs, and
-    // fails here. Gated on this activity's own `settledXP` reading zero, not on the caller's
-    // frontier's own `verifiedHead` — a stale duplicate redelivery of an already-matched segment
-    // can still carry a stale `verifiedHead` of 0, but its `settledXP` is fresh off the row and
-    // already reflects the earlier apply, so the check runs at most once, on the genuine first
-    // pass, and never re-fires against an avatar total this same activity already moved.
+    // A build is a pure function of settled xp, so the pinned start build must match the avatar's
+    // settled total exactly. This catches a rejected ancestor's xp shortfall: a successor that
+    // banked a now-rejected ancestor's optimistic xp stamped a build the settled total never
+    // backs.
+    //
+    // Gated on this activity's own `settledXP` reading zero, not on the frontier's `verifiedHead`:
+    // a stale duplicate redelivery can still carry a stale `verifiedHead` of 0, but its
+    // `settledXP` already reflects the earlier apply, so the check runs at most once, on the
+    // genuine first pass.
     if (segment.activity.settledXP === 0) {
       const expectedBuild = {
         level: buildLevelFromXP(avatarState.xp),

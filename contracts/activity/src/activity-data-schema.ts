@@ -19,16 +19,14 @@ export const ActivityDataSchema = z.object({
   lastHash: z.string(),
 
   /**
-   * An advisory client-stamped wall-clock timestamp for operator and analytics queries only —
-   * never read by the claim or any legality check. Null for a row minted before this field
-   * existed.
+   * An advisory client-stamped wall-clock timestamp for operator and analytics queries only,
+   * never read by the claim or any check. Nullable.
    */
   playedAt: z.date().nullable(),
 
   /**
-   * The avatar's immediately-prior activity across every chain, in the order the client played
-   * them — null for the avatar's first-ever activity. The client stamps it at start; the server
-   * trusts it for settlement sequencing only, never for legality.
+   * The avatar's immediately-prior activity across every chain, null for its first-ever activity.
+   * Client-stamped; trusted for sequencing only, never for legality.
    */
   predecessorActivityID: z.string().nullable(),
 

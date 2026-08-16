@@ -95,11 +95,11 @@ interface StartActivityOpts {
  * Admission is additionally gated to the account's active avatar under the same per-user advisory
  * lock the avatar service's selection and creation endpoints take, so the pair serializes; a start
  * for any other avatar throws AVATAR_NOT_ACTIVE naming the account's actual active avatar. Persists
- * the caller's `predecessorActivityID`/`playedAt` as-is — the client alone witnessed the play order,
- * and the server trusts the reference for settlement sequencing only, never for legality. A
- * `predecessorActivityID` naming a row absent from the server — an out-of-order or reload-orphaned
- * delivery from the same device's outbox — fails the row's self-FK and throws PREDECESSOR_PENDING
- * rather than an unexpected 500, since the client retries once its predecessor lands.
+ * the caller's `predecessorActivityID`/`playedAt` as-is: the client alone witnessed the play order,
+ * and the server trusts the reference for sequencing only, never for legality. A
+ * `predecessorActivityID` naming a row absent from the server fails the row's self-FK and throws
+ * PREDECESSOR_PENDING rather than an unexpected 500, since the client retries once its predecessor
+ * lands.
  */
 export async function startActivity(
   deps: StartActivityDeps,

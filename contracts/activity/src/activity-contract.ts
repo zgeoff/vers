@@ -431,15 +431,14 @@ export const activityContract = {
 
         /**
          * An advisory client-stamped wall-clock timestamp for operator and analytics queries
-         * only — never read by the claim or any legality check.
+         * only, never read by the claim or any check.
          */
         playedAt: z.date().nullable().optional(),
 
         /**
-         * The avatar's immediately-prior activity across every chain, in the order the client
-         * played them — absent or null only for the avatar's first-ever activity. Trusted for
-         * settlement sequencing only; the reachability and build-derivation checks are the
-         * legality boundary regardless of what order the client declares.
+         * The avatar's immediately-prior activity across every chain, absent or null only for
+         * its first-ever activity. Client-stamped; trusted for sequencing only, never for
+         * legality.
          */
         predecessorActivityID: z.string().nullable().optional(),
 

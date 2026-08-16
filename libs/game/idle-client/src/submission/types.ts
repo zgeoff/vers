@@ -43,9 +43,8 @@ export interface PendingStopIntent {
 
 /**
  * The avatar's last-started activity id, the predecessor a fresh local mint stamps onto its own
- * root — durable so it survives a worker reload, unlike the in-memory `getActivity()` handle. A
- * worker drives one avatar's simulation at a time, so a single record suffices: `avatarID` scopes
- * it, and a mint for a different avatar reads no predecessor from a stale record.
+ * root. Durable so it survives a worker reload. A worker drives one avatar's simulation at a
+ * time, so a single record suffices, scoped by `avatarID`.
  */
 export interface LastStartedActivityPreference {
   readonly avatarID: string;

@@ -26,10 +26,8 @@ interface BuildStartRowInput {
  * its genesis, so a revisited node's start continues from where play actually left off.
  * `buildSnapshot` is a client-side optimistic guess — a hint the server re-authors and
  * exact-match-rejects at submission time, never a value this mint depends on for its own
- * correctness. `predecessorActivityID` stamps the avatar's durably tracked last-started activity —
- * null for this device's first start for the avatar — and `playedAt` stamps the wall clock now;
- * both are the server's settlement-order primitive, trusted for sequencing only, never for
- * legality.
+ * correctness. `predecessorActivityID` stamps the avatar's durably tracked last-started activity,
+ * null for this device's first start for the avatar. `playedAt` stamps the wall clock now.
  */
 export async function buildStartRow(
   context: WorkerContext,

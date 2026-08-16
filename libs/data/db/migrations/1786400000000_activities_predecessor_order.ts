@@ -1,15 +1,9 @@
 import type { Kysely } from 'kysely';
 
 /**
- * Adds the avatar-scoped settlement-order primitive: `predecessor_activity_id`, the avatar's
- * immediately-prior activity across every chain (null for its first-ever activity), and
- * `played_at`, an advisory client-stamped timestamp for operator and analytics queries only —
- * never read by the claim or any legality check. Both are nullable and unbackfilled: the game
- * carries ~0 players, so there is nothing to reconstruct for rows minted before this column
- * existed. Drops `activity_snapshot_sources`, the XP-source-edge proxy this column replaces —
- * settlement order is now a hard reference the client stamps at start, and the replay verifier
- * adjudicates each activity against fully-settled prior state instead of walking borrowed-xp
- * edges.
+ * Adds `predecessor_activity_id`, a self-referencing foreign key naming the avatar's
+ * immediately-prior activity, and `played_at`, an advisory client-stamped timestamp. Both columns
+ * are nullable and unbackfilled. Drops `activity_snapshot_sources`.
  */
 export async function up(db: Kysely<unknown>): Promise<void> {
   await db.schema
@@ -42,8 +36,8 @@ export async function up(db: Kysely<unknown>): Promise<void> {
 }
 
 /**
- * Recreates `activity_snapshot_sources` exactly as it was created, then drops the predecessor-order
- * columns; unbackfilled forward, so a rollback recovers the table shape but not its rows.
+ * Recreates `activity_snapshot_sources`, then drops the predecessor-order columns; unbackfilled
+ * forward, so a rollback recovers the table shape but not its rows.
  */
 export async function down(db: Kysely<unknown>): Promise<void> {
   await db.schema

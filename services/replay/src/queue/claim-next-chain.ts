@@ -3,22 +3,15 @@ import type { Transaction } from 'kysely';
 import type { ClaimedActivity } from '../types';
 
 /**
- * Claims an avatar's next-in-order activity for replay: the oldest of its activities, across every
- * chain, with appends past its verified cursor and a predecessor that is either settled (no appends
- * left past its own verified cursor) or rejected (final adjudication, so its own successors must be
- * claimed to be refused rather than waiting on it forever) — the avatar's whole activity history is
- * one predecessor-linked order, so at most one activity can ever satisfy this at a time. A null
- * predecessor (the avatar's first-ever activity) is always claimable. Locked with
- * `FOR UPDATE SKIP LOCKED` on the claimed activity's own chain row, so concurrent workers each claim
- * a different avatar's work without waiting — the single linked order per avatar means two workers
- * can never find two different chains simultaneously ready for the same avatar.
+ * Claims an avatar's next-in-order activity for replay: the oldest activity, across every chain,
+ * with appends past its verified cursor. A predecessor that is settled or rejected qualifies its
+ * successor; a null predecessor (the avatar's first-ever activity) always qualifies. A quarantined
+ * or parked activity is excluded, and blocks every activity after it, exactly as a held
+ * predecessor does. At most one activity per avatar is ever claimable at a time.
  *
- * A claimed activity whose own status is quarantined or parked is excluded: it already sits held for
- * an operator, so replaying it again is not work — the whole avatar stays blocked until the hold
- * clears, exactly as a held predecessor blocks everything after it. Must run inside the caller's
- * transaction — the claim is the row lock, and it releases on commit or rollback. The lock only
- * prevents duplicated effort: exactly-once application is the verified-cursor guard's job, not this
- * lock's.
+ * Must run inside the caller's transaction: the claim is a row lock (`FOR UPDATE SKIP LOCKED`) that
+ * releases on commit or rollback. The lock only prevents duplicated effort — exactly-once
+ * application is the verified-cursor guard's job, not this lock's.
  */
 export async function claimNextChain(trx: Transaction<DB>): Promise<ClaimedActivity | undefined> {
   const row = await trx

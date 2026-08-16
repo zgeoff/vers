@@ -45,8 +45,7 @@ export async function runContinuation(
   const signals: FlowSignals = { cancel: context.getCancelSignal(), stop: context.getStopSignal() };
 
   // Keyed by the terminal row it succeeds: a retried delivery dedupes onto the first attempt's
-  // row, while the next continuation carries a new key and conflicts as a distinct intent. Its
-  // predecessor is exactly the row it succeeds.
+  // row, while the next continuation carries a new key and conflicts as a distinct intent.
   const [error, started] = await tryStartActivity(context, {
     avatarID: activity.avatarID,
     predecessorActivityID: activity.id,

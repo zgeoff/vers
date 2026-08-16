@@ -16,16 +16,14 @@ export const OfflineRootSubmissionSchema = z.object({
   contentVersion: z.string().regex(/^\d+$/),
 
   /**
-   * An advisory client-stamped wall-clock timestamp for operator and analytics queries only —
-   * never read by the claim or any legality check.
+   * An advisory client-stamped wall-clock timestamp for operator and analytics queries only,
+   * never read by the claim or any check.
    */
   playedAt: z.date().nullable(),
 
   /**
-   * The avatar's immediately-prior activity across every chain, in the order the client played
-   * them — null for the avatar's first-ever activity. Trusted for settlement sequencing only;
-   * the reachability and build-derivation checks are the legality boundary regardless of what
-   * order the client declares.
+   * The avatar's immediately-prior activity across every chain, null for its first-ever activity.
+   * Trusted for sequencing only, never for legality.
    */
   predecessorActivityID: z.string().nullable(),
 

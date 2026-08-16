@@ -80,10 +80,8 @@ export const PENDING_STOP_INTENT_KEY = 'pending-stop';
 export const PENDING_START_INTENT_KEY = 'pending-start';
 
 /**
- * The `preferences` record holding the avatar's last-started activity id — the predecessor a fresh
- * local mint stamps onto its own root, durably, so it survives a worker reload. A worker drives one
- * avatar's simulation at a time, so a single record suffices: the record's own `avatarID` decides
- * whether it names this avatar's true predecessor or a different avatar's stale one.
+ * The `preferences` record holding the avatar's last-started activity id. A worker drives one
+ * avatar's simulation at a time, so a single record suffices, scoped by `avatarID`.
  */
 export const LAST_STARTED_ACTIVITY_KEY = 'last-started-activity';
 export const PREFERENCES_STORE_NAME = 'preferences';
