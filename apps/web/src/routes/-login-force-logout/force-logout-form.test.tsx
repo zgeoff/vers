@@ -52,7 +52,7 @@ test('it renders the informational copy explaining why a force logout is needed'
   await withRequestContext({}, async () => {
     renderWithRouter(<ForceLogoutForm />);
 
-    const infoText = await screen.findByText('You are currently logged in somewhere else.', {
+    const infoText = await screen.findByText('Logging in here picks your run up', {
       exact: false,
     });
 
