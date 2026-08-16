@@ -71,11 +71,12 @@ and which edges leave it, never that the cell exists or what its id is. First-cl
 
 Coordinates make the node server-recomputable, which random per-node ids cannot: a coordinate feeds
 straight back into the derivation, so the server reconstructs any node for verification without
-having stored it. Reachability is a server invariant at activity start — an activity seed mints only
+having stored it. Reachability is a server invariant verified at replay — an activity settles only
 for a node reachable from the avatar's verified first-clear frontier under that avatar's own
 topology, the same edges the generator derives from its `userSeed`, recomputed server-side — not a
-client-side filter. Client and server derive paths from identical inputs, so they never disagree on
-which nodes are reachable.
+client-side filter. The check runs after the clear that opened the node settles, so the frontier it
+reads is current ([offline reconcile](./offline-reconcile.md#settlement-in-order)). Client and
+server derive paths from identical inputs, so they never disagree on which nodes are reachable.
 
 ## Reveal — a projection, not stored state
 
@@ -106,10 +107,10 @@ and their immediate neighbours. Sight running ahead of reach is the intended exp
 leak — a bounded local horizon cannot compute the global-best jackpot, which is the exploit fog
 exists to deny.
 
-Enforcement is server-side, not the cache. Every activity start and every replay checks the target
-against the avatar's verified first-clear frontier and rejects anything beyond it, so cached
-descriptors and offline movement — both client-controlled — buy no reach a fresh server check would
-deny. `REVEAL_RADIUS > SELECTION_RADIUS` is a cache and pacing bound on top of that check, not the
+Enforcement is server-side, not the cache. Replay checks each activity's node against the avatar's
+verified first-clear frontier and rejects anything beyond it, so cached descriptors and offline
+movement — both client-controlled — buy no reach the settlement check would deny.
+`REVEAL_RADIUS > SELECTION_RADIUS` is a cache and pacing bound on top of that check, not the
 boundary itself.
 
 Within it, the server returns descriptors for the whole revealed disc, which extends past the
@@ -126,9 +127,9 @@ its durable offline outbox — the client-minted root and queued checkpoints a c
 behind — so the opened neighbours survive an offline restart rather than resetting to the
 last-verified frontier. The widened set only ever adds to selection; reveal stays gated on
 verification, so an offline clear opens ground the player can already see without disclosing any new
-fog. The client-side widening is a convenience, never the boundary: the server's own frontier check
-still rejects a start beyond the avatar's verified first-clear frontier, so an unearned offline jump
-settles nothing it cannot back up once the device reconnects.
+fog. The client-side widening is a convenience, never the boundary: the reachability check at replay
+still rejects a node beyond the avatar's verified first-clear frontier, so an unearned offline jump
+settles nothing once the device reconnects.
 
 ## Content sealing & verification
 
