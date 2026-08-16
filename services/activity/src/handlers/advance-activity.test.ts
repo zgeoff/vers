@@ -17,13 +17,15 @@ import {
   createActivityChainRow,
   createAnonymousViewer,
   createAvatarRow,
+  createServiceToken,
   createTestDB,
   createViewer,
+  getTestServiceKeyPair,
 } from '@vers/service-test-utils/bun';
 import { createSimVersionRow } from '@vers/sim-registry/test-utils';
 import { buildRPCTestClient } from '@vers/test-utils';
 import { deriveWorldmapContent } from '@vers/worldmap-content';
-import { findCellCoord, getDifficulty } from '@vers/worldmap-core';
+import { collectNodeEdges, findCellCoord, getDifficulty } from '@vers/worldmap-core';
 import invariant from 'tiny-invariant';
 import { createActivityService } from '../create-activity-service';
 import { createMockActivity } from '../test-utils/factories/create-mock-activity';
@@ -1457,4 +1459,259 @@ test("it keeps a root at another user's activity id owner-scoped NOT_FOUND", asy
       root,
     }),
   ).rejects.toMatchObject({ code: 'NOT_FOUND' });
+});
+
+test('it refuses the offline successor of a just-cleared node with NODE_UNREACHABLE, because admission reads verified grants and the clear is unverified', async () => {
+  await using ctx = await setupTest();
+
+  const current = await createSimVersionRow(ctx.db);
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id, xp: 0 });
+
+  // origin node A and a neighbour B its clear opens, both revealed; the avatar holds no grant yet
+  const originID = '0_0';
+  const originCoord = findCellCoord(originID);
+
+  invariant(originCoord, 'origin must resolve to a valid cell coordinate');
+
+  const [edge] = collectNodeEdges(avatar.seed, originCoord[0], originCoord[1]);
+
+  invariant(edge, 'every cell connects to at least one neighbour');
+
+  const [firstID = '', secondID = ''] = edge.id.split('|');
+  const neighbourID = firstID === originID ? secondID : firstID;
+
+  const originChain = await createActivityChainRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: originID,
+  });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: neighbourID });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  // A clears offline: its root roots at the origin (always reachable), and a terminal continuation
+  // delivers the clear. Admission accepts it — the origin needs no grant.
+  const derivedA = deriveRootStart({
+    avatarID: avatar.id,
+    avatarSeed: avatar.seed,
+    contentVersion: '2',
+    document: createMockContentDocument({ contentVersion: '2' }),
+    scopeID: originID,
+    seed: originChain.appendedNextSeed,
+    simVersion: current.engineHash,
+  });
+
+  const rootA = createMockOfflineRootSubmission({
+    avatarID: avatar.id,
+    buildSnapshot: { level: buildLevelFromXP(0), xp: 0 },
+    contentVersion: '2',
+    scopeID: originID,
+    scopeType: 'world_map_node',
+    seed: originChain.appendedNextSeed,
+    simVersion: current.engineHash,
+    startChainIndex: 0,
+    startHash: derivedA.startHash,
+  });
+
+  const clearTail = createMockCheckpointBatch({
+    finalPayloadOverrides: { rewards: { xp: 40 }, type: 'completed' },
+    startChainIndex: 0,
+    startPrevHash: derivedA.startHash,
+    startVersion: 1,
+  });
+
+  await client.advanceActivity({
+    activityID: `act_${createId()}`,
+    continuations: [
+      {
+        buildSnapshot: { level: buildLevelFromXP(40), xp: 40 },
+        checkpoints: clearTail,
+        id: `act_${createId()}`,
+        startKey: `continue_act_${createId()}`,
+      },
+    ],
+    expectedHead: 0,
+    root: rootA,
+  });
+
+  // admission appended the clear but recorded no first-clear grant — that waits on replay, so the
+  // cleared frontier the reachability check reads still excludes the origin
+  const grant = await ctx.db
+    .selectFrom('avatarGrants')
+    .select('key')
+    .where('avatarId', '=', avatar.id)
+    .where('kind', '=', 'first_clear')
+    .executeTakeFirst();
+
+  expect(grant).toBeUndefined();
+
+  // B is the neighbour A's clear opened, delivered next in the same reconcile. Its root is refused:
+  // the grant that would make it reachable is not yet written.
+  const rootB = createMockOfflineRootSubmission({
+    avatarID: avatar.id,
+    scopeID: neighbourID,
+    scopeType: 'world_map_node',
+  });
+
+  expect(
+    client.advanceActivity({
+      activityID: `act_${createId()}`,
+      continuations: [createMockCatchUpContinuation()],
+      expectedHead: 0,
+      root: rootB,
+    }),
+  ).rejects.toMatchObject({ code: 'NODE_UNREACHABLE' });
+});
+
+test("it refuses a kicked writer session's undelivered offline root with the single-active-run CONFLICT, because root admission carries no acting-session gate", async () => {
+  await using ctx = await setupTest();
+
+  const current = await createSimVersionRow(ctx.db);
+
+  const viewer = await createViewer({
+    audience: 'service-activity',
+    db: ctx.db,
+    sessionID: 'session-a',
+  });
+
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id, xp: 0 });
+  const chain = await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
+  const clientA = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  // session A starts the avatar's live run and becomes its writer
+  const started = await clientA.startActivity({
+    avatarID: avatar.id,
+    scopeID: '0_0',
+    scopeType: 'world_map_node',
+  });
+
+  // session B takes over the same run, kicking session A off as its writer
+  const keyPair = await getTestServiceKeyPair();
+
+  const tokenB = await createServiceToken({
+    actingSessionId: 'session-b',
+    actingUserId: viewer.user.id,
+    audience: 'service-activity',
+    privateKey: keyPair.privateKey,
+  });
+
+  const clientB = buildRPCTestClient<ActivityContract>(ctx.app, { token: tokenB });
+
+  await clientB.resumeActivity({ activityID: started.id });
+
+  // session A, now kicked, delivers a valid offline root it minted before the takeover. The root
+  // mint reads no acting-session gate, so the kicked session is not singled out: the root is refused
+  // only because the avatar's single active-run slot is still occupied — a generic CONFLICT, never
+  // a session-scoped SESSION_EVICTED. The kicked session's undelivered work is not discarded on
+  // session grounds; its drop, when it happens, is incidental to the active-run and chain guards.
+  const derived = deriveRootStart({
+    avatarID: avatar.id,
+    avatarSeed: avatar.seed,
+    contentVersion: '2',
+    document: createMockContentDocument({ contentVersion: '2' }),
+    scopeID: '0_0',
+    seed: chain.appendedNextSeed,
+    simVersion: current.engineHash,
+  });
+
+  const root = createMockOfflineRootSubmission({
+    avatarID: avatar.id,
+    buildSnapshot: { level: buildLevelFromXP(0), xp: 0 },
+    contentVersion: '2',
+    scopeID: '0_0',
+    scopeType: 'world_map_node',
+    seed: chain.appendedNextSeed,
+    simVersion: current.engineHash,
+    startChainIndex: 0,
+    startHash: derived.startHash,
+  });
+
+  expect(
+    clientA.advanceActivity({
+      activityID: `act_${createId()}`,
+      continuations: [createMockCatchUpContinuation()],
+      expectedHead: 0,
+      root,
+    }),
+  ).rejects.toMatchObject({ code: 'CONFLICT' });
+});
+
+// Target — #892 (blocked by #918), offline-reconcile doc §"Losing offline navigation across
+// sessions": an avatar has one active session, so a session that takes over kicks the previous one
+// off and the kicked session's undelivered offline work is discarded rather than delivered. Today
+// root admission has no acting-session gate — a kicked session's offline root is refused, if at all,
+// by the incidental active-run and chain-anchor guards, never on session grounds. This asserts the
+// doc's guarantee: the kicked session's delivery is refused because it lost the writer, a
+// session-scoped verdict distinct from the generic CONFLICT the same delivery earns today. Unskip
+// once #892 adds the session-scoped discard.
+test.skip("it discards a kicked writer session's undelivered offline root on session grounds after a takeover", async () => {
+  await using ctx = await setupTest();
+
+  const current = await createSimVersionRow(ctx.db);
+
+  const viewer = await createViewer({
+    audience: 'service-activity',
+    db: ctx.db,
+    sessionID: 'session-a',
+  });
+
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id, xp: 0 });
+  const chain = await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
+  const clientA = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const started = await clientA.startActivity({
+    avatarID: avatar.id,
+    scopeID: '0_0',
+    scopeType: 'world_map_node',
+  });
+
+  const keyPair = await getTestServiceKeyPair();
+
+  const tokenB = await createServiceToken({
+    actingSessionId: 'session-b',
+    actingUserId: viewer.user.id,
+    audience: 'service-activity',
+    privateKey: keyPair.privateKey,
+  });
+
+  const clientB = buildRPCTestClient<ActivityContract>(ctx.app, { token: tokenB });
+
+  // session B takes over and then stops the run, freeing the avatar's active-run slot
+  await clientB.resumeActivity({ activityID: started.id });
+  await clientB.stopActivity({ avatarID: avatar.id });
+
+  // session A lost the writer at the takeover, so its delivery must be refused on session grounds
+  const derived = deriveRootStart({
+    avatarID: avatar.id,
+    avatarSeed: avatar.seed,
+    contentVersion: '2',
+    document: createMockContentDocument({ contentVersion: '2' }),
+    scopeID: '0_0',
+    seed: chain.appendedNextSeed,
+    simVersion: current.engineHash,
+  });
+
+  const root = createMockOfflineRootSubmission({
+    avatarID: avatar.id,
+    buildSnapshot: { level: buildLevelFromXP(0), xp: 0 },
+    contentVersion: '2',
+    scopeID: '0_0',
+    scopeType: 'world_map_node',
+    seed: chain.appendedNextSeed,
+    simVersion: current.engineHash,
+    startChainIndex: 0,
+    startHash: derived.startHash,
+  });
+
+  expect(
+    clientA.advanceActivity({
+      activityID: `act_${createId()}`,
+      continuations: [createMockCatchUpContinuation()],
+      expectedHead: 0,
+      root,
+    }),
+  ).rejects.toMatchObject({ code: 'SESSION_EVICTED' });
 });
