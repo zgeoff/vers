@@ -1592,8 +1592,9 @@ test('it mints the offline successor of a just-cleared node at admission, deferr
 
   // B is the neighbour A's clear opened, delivered next in the same reconcile. Its root mints:
   // admission runs no reachability check, only the same sim-version and hash gates every root
-  // clears. A's unsettled xp already folds into B's optimistic build snapshot through the
-  // activitySnapshotSources edge the mint records, ahead of either activity's own verification.
+  // clears. A's unsettled xp already folds into B's optimistic build snapshot at mint time, ahead
+  // of either activity's own verification — replay re-derives it from the settled total once A
+  // settles or rejects.
   const derivedB = deriveRootStart({
     avatarID: avatar.id,
     avatarSeed: avatar.seed,

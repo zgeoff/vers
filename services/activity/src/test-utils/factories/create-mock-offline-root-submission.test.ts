@@ -8,6 +8,8 @@ test('it builds a default root submission', () => {
     avatarID: expect.toBeString(),
     buildSnapshot: { level: 1, xp: 0 },
     contentVersion: '2',
+    playedAt: null,
+    predecessorActivityID: null,
     scopeID: expect.toBeString(),
     scopeType: 'world_map_node',
     seed: expect.toBeString(),

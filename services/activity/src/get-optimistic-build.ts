@@ -67,7 +67,6 @@ export async function getOptimisticBuild(
   const sources = rows
     .filter((row): row is typeof row & { id: string } => row.id !== null)
     .map((row) => ({
-      id: row.id,
       settledXP: row.settledXp ?? 0,
       tailPayload: row.payload,
       unverifiedDeltaSum: Number(row.deltaSum ?? 0),

@@ -766,13 +766,15 @@ async function resolveLostRace(
 }
 
 /**
- * Mints a continuation's own id as the row appended onto in this request's next step.
- * Server-authors `buildSnapshot` from the avatar's settled-plus-unsettled progression and rejects
- * with `CHECKPOINT_INVALID` on a mismatch against the continuation's hint. The insert's own unique
- * violation — an id already minted by an earlier attempt at this same continuation — propagates
- * uncaught: this transaction is about to commit everything before it, so a caught-and-recovered
- * duplicate here would need a second statement in a connection Postgres has already poisoned. The
- * caller resolves that collision instead, once this transaction's rollback has landed.
+ * Mints a continuation's own id as the row appended onto in this request's next step, stamping the
+ * row it just closed as its `predecessorActivityId` — the request's own continuations are a linear
+ * chain of custody, so no client-declared order is needed here. Server-authors `buildSnapshot` from
+ * the avatar's settled-plus-unsettled progression and rejects with `CHECKPOINT_INVALID` on a
+ * mismatch against the continuation's hint. The insert's own unique violation — an id already
+ * minted by an earlier attempt at this same continuation — propagates uncaught: this transaction is
+ * about to commit everything before it, so a caught-and-recovered duplicate here would need a
+ * second statement in a connection Postgres has already poisoned. The caller resolves that
+ * collision instead, once this transaction's rollback has landed.
  */
 async function mintContinuation(
   trx: Kysely<DB>,
@@ -845,6 +847,7 @@ async function mintContinuation(
       id: continuation.id,
       keyVersion: pinned.keyVersion,
       lastHash: startHash,
+      predecessorActivityId: input.targetActivityID,
       scopeId: pinned.scopeId,
       scopeType: pinned.scopeType,
       secretRef: pinned.secretRef,
@@ -858,18 +861,6 @@ async function mintContinuation(
     })
     .returningAll()
     .executeTakeFirstOrThrow();
-
-  if (optimistic.sourceIDs.length > 0) {
-    await trx
-      .insertInto('activitySnapshotSources')
-      .values(
-        optimistic.sourceIDs.map((sourceID) => ({
-          activityId: continuation.id,
-          sourceActivityId: sourceID,
-        })),
-      )
-      .execute();
-  }
 
   return { mintOutcome: 'minted', row };
 }
