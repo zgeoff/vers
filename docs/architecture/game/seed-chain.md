@@ -8,9 +8,9 @@ stopped attempt advances the chain alike, so a re-attempt is a fresh continuatio
 
 The chain's whole state is two cursors: an **appended anchor** the next activity seeds from, and a
 **verified anchor** that progress settles behind. The appended anchor moves the instant an
-activity's tail is written; the verified anchor moves only once the server has replayed that tail
-and trusted it. That gap — appended ahead, verified behind — is what offline play and settlement
-both turn on.
+activity's tail is written; the verified anchor advances only as the server replays that tail and
+trusts it, one segment at a time. That gap — appended ahead, verified behind — is what offline play
+and settlement both turn on.
 
 The [entropy model](./game-entropy.md#the-seed-chain) covers why the chain takes this shape and how
 its flatness prices look-ahead. The [checkpoint stream](./game-simulation.md#checkpoint-streams)
@@ -65,10 +65,9 @@ auto-continuations after a terminal checkpoint, and offline catch-up alike (see
 [game simulation](./game-simulation.md#authoring-and-verifying-inputs)). The server authors no
 start; it verifies the one the client submits.
 
-`revealNodes` returns each node's current appended anchor — the chain row's `head`,
-`{ nextSeed, chainIndex }` — alongside its genesis seed. A start begins from that anchor, so it
-resumes where play on the node last left off rather than restarting from genesis. A node never yet
-played has an anchor of `{ genesisSeed, 0 }`.
+`revealNodes` returns each node's current appended anchor, `{ nextSeed, chainIndex }`, alongside its
+genesis seed. A start begins from that anchor, so it resumes where play on the node last left off
+rather than restarting from genesis. A node never yet played has an anchor of `{ genesisSeed, 0 }`.
 
 `revealNodes` also returns each node's `encounterNode`, the content version it was derived against,
 the key version, the scope-secret ref, and the scope-secret version the derivation read. With the
