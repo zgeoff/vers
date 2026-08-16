@@ -91,7 +91,6 @@ test('it declares the start gates alongside its own continuation errors on advan
     'CONFLICT',
     'NODE_NOT_REVEALED',
     'NODE_UNKNOWN',
-    'NODE_UNREACHABLE',
     'NOT_FOUND',
     'SESSION_EVICTED',
     'SIM_VERSION_EXPIRED',
@@ -105,7 +104,6 @@ test('it declares the same bespoke statuses on advanceActivity as their startAct
   expect(errorMap.AVATAR_NOT_ACTIVE?.status).toBe(409);
   expect(errorMap.NODE_NOT_REVEALED?.status).toBe(409);
   expect(errorMap.NODE_UNKNOWN?.status).toBe(404);
-  expect(errorMap.NODE_UNREACHABLE?.status).toBe(409);
   expect(errorMap.SIM_VERSION_EXPIRED?.status).toBe(410);
   expect(errorMap.SIM_VERSION_UNKNOWN?.status).toBe(409);
 });

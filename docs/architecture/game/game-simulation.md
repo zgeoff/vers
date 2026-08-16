@@ -174,6 +174,13 @@ treated as cheating. Enforcement lands at a session boundary, never mid-session.
 quarantines a stream that fails replay repeatedly and alerts operators rather than retrying it
 forever.
 
+Replay also adjudicates traversal legality. On a world-map-node stream's first verified pass, the
+verifier checks the node is connected to one the avatar's verified first-clear frontier already
+cleared; the origin is always reachable. A node no earlier verified clear made reachable is
+rejected, and the single-chain cascade voids the entries that depended on it. Because a total order
+settles each opener before the activity that borrows its clear, an honest offline traversal always
+finds its opener already granted while an unearned jump is refused.
+
 Replay divergence is not the only cheat signal. Because every attempt at a node is a link in the
 append-only, server-verified chain, **reroll-scanning** — repeatedly attempting a node and
 discarding the unfavorable results to keep a favorable roll — leaves a record. An avatar whose
