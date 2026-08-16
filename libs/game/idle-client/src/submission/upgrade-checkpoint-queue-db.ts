@@ -14,12 +14,12 @@ import type { CheckpointQueueSchema } from './types';
  * stores that version lacks without dropping the ones it already holds or their rows.
  *
  * The stores split by durability. `content-documents` and `node-seeds` are caches: a row that no
- * longer matches its current contract schema self-heals on read — the read boundary
- * (`findCachedContentDocument`, `readNodeSeed`) deletes the row and reads it as a miss, and the
- * next fetch or reveal repopulates it — so neither store carries a version-specific migration here.
- * `pending-checkpoints` and `pending-roots` are the outbox: un-synced local progress a device has
- * not yet delivered to the server, which a cache-style miss would silently drop, so a shape change
- * to either needs a real versioned migration in this function instead.
+ * longer matches its current contract schema self-heals on read — its read boundary deletes the row
+ * and reads it as a miss, and the next fetch or reveal repopulates it — so neither store carries a
+ * version-specific migration here. `pending-checkpoints` and `pending-roots` are the outbox:
+ * un-synced local progress a device has not yet delivered to the server, which a cache-style miss
+ * would silently drop, so a shape change to either needs a real versioned migration in this function
+ * instead.
  */
 export function upgradeCheckpointQueueDB(
   database: IDBPDatabase<CheckpointQueueSchema>,
