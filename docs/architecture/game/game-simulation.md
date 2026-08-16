@@ -96,7 +96,7 @@ authoritative input from its own truth and trusts none of the payload:
 - It recomputes the `startHash` from the server-derived encounter and stamps, and requires the
   submitted hash to equal it. The match proves the client simulated against the same content and
   encounter the server derives.
-- It validates the submitted `seed` and `startChainIndex` against the chain's live appended head,
+- It validates the submitted `seed` and `startChainIndex` against the chain's live appended anchor,
   and refuses a start computed against a position the chain has moved past.
 
 A single `advanceActivity` request carries a whole chain of continuations, so an offline gap the
