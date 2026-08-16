@@ -10,7 +10,7 @@ import { toJSON } from '@vers/db';
 import { buildStateFromSeed } from '@vers/game-utils';
 import type { EncounterContent } from '@vers/game-utils';
 import type { ActivityCheckpoint } from '@vers/idle-core';
-import { buildSimulationInput } from '@vers/idle-core';
+import { buildLevelFromXP, buildSimulationInput } from '@vers/idle-core';
 import { runSimulation } from '@vers/idle-core/replay';
 import { buildMockScopeSecret } from '@vers/mock-services/keys';
 import { deriveWorldmapContent } from '@vers/worldmap-content';
@@ -150,6 +150,15 @@ export async function createHonestActivityFixture(
 
   const secretRef = input.secretRef ?? 'worldmap';
   const secretVersion = input.secretVersion ?? 1;
+
+  // An honest run's pinned build always equals the avatar's settled xp at start — replay's build
+  // re-derivation check compares against exactly this, so a fixture whose caller boosted the build
+  // for combat power must carry a matching settled total or that check would reject it.
+  await db
+    .updateTable('avatars')
+    .set({ level: buildLevelFromXP(buildSnapshot.xp), xp: buildSnapshot.xp })
+    .where('id', '=', chain.avatarId)
+    .execute();
 
   const avatarRow = await db
     .selectFrom('avatars')

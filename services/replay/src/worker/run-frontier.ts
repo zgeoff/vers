@@ -3,7 +3,7 @@ import { SecretRefSchema } from '@vers/contract-keys';
 import type { DB } from '@vers/db';
 import type { EncounterContent } from '@vers/game-utils';
 import type { SimulationDriver } from '@vers/idle-core';
-import { buildSimulationInput } from '@vers/idle-core';
+import { buildLevelFromXP, buildSimulationInput } from '@vers/idle-core';
 import { createSimulationDriver } from '@vers/idle-core/replay';
 import { readScopeSecret } from '@vers/worldmap-content';
 import { ORIGIN_CELL, isNodeSelectable, toNodeID } from '@vers/worldmap-core';
@@ -18,7 +18,6 @@ import type { RejectionReason } from '../metrics/record-rejection';
 import { recordSettledXP } from '../metrics/record-settled-xp';
 import { recordVerificationLag } from '../metrics/record-verification-lag';
 import { rollRewardItems } from '../mint/roll-reward-items';
-import { hasRejectedSnapshotSource } from '../queue/has-rejected-snapshot-source';
 import { updateReplayAttempts } from '../queue/update-replay-attempts';
 import { buildSegmentDuration } from '../replay/build-segment-duration';
 import { compareReplaySegment } from '../replay/compare-replay-segment';
@@ -35,12 +34,14 @@ import type { PendingCacheEffect, ReplayIterationOutcome, ReplayWorkerDeps } fro
 import { updateVerifiedAnchorFromPredecessor } from './update-verified-anchor-from-predecessor';
 
 /**
- * Adjudicates one claimed chain's replay frontier: loads its segment, refuses it outright when a
- * run its build snapshot borrowed xp from has been rejected, catches the chain's verified anchor up
- * to a forward-exited predecessor it missed, re-derives the activity's seed on its first verified
- * batch, then dispatches by `simVersion` — the in-process incremental cache for this deploy's own
- * engine, the cross-version provider registry for everything else — and turns the resulting verdict
- * into a cursor-only apply, a confirmed rejection, or a park. Runs inside the caller's transaction,
+ * Adjudicates one claimed activity's replay frontier: loads its segment, catches the chain's
+ * verified anchor up to a forward-exited predecessor it missed, re-derives the activity's seed on
+ * its first verified batch, then dispatches by `simVersion` — the in-process incremental cache for
+ * this deploy's own engine, the cross-version provider registry for everything else — and turns the
+ * resulting verdict into a cursor-only apply, a confirmed rejection, or a park. By claim time the
+ * activity's predecessor is settled or rejected, so the descriptor, reachability, and build checks
+ * below read only fully-settled state and are the legality boundary — the claim itself never decides
+ * legality, only sequences when each activity's checks run. Runs inside the caller's transaction,
  * alongside the chain claim it composes with.
  */
 export async function runFrontier(
@@ -59,12 +60,6 @@ export async function runFrontier(
   const document = await deps.loadContentDocument(loaded.activity.contentVersion);
 
   invariant(document, `unknown content version: ${loaded.activity.contentVersion}`);
-
-  const unbackedSnapshot = await hasRejectedSnapshotSource(trx, loaded.activity.id);
-
-  if (unbackedSnapshot) {
-    return rejectUnbackedSnapshot(trx, deps, cache, loaded);
-  }
 
   const reconciledAnchor = await updateVerifiedAnchorFromPredecessor(trx, loaded);
 
@@ -86,16 +81,40 @@ export async function runFrontier(
     return rejectSegment(trx, deps, cache, segment, seedDivergence, 'seed-validation-failed');
   }
 
-  // Only a segment's first pass needs the descriptor and reachability checks — a later pass over
-  // the same activity has already verified them once, and a stamped row never changes afterward.
+  // Only a segment's first pass needs the descriptor, build, and reachability checks — a later
+  // pass over the same activity has already verified them once, and a stamped row never changes
+  // afterward.
   if (segment.verifiedHead === 0) {
-    const avatarSeed = await trx
+    const avatarState = await trx
       .selectFrom('avatars')
-      .select('seed')
+      .select(['seed', 'xp'])
       .where('id', '=', segment.activity.avatarID)
       .executeTakeFirst();
 
-    invariant(avatarSeed !== undefined, 'a stamped activity always has an owning avatar');
+    invariant(avatarState !== undefined, 'a stamped activity always has an owning avatar');
+
+    // A build is a pure function of settled xp, and by claim time this activity's predecessor is
+    // settled or rejected — so the pinned start build must match the avatar's settled total
+    // exactly. This is what catches a rejected ancestor's xp shortfall: a successor that banked a
+    // now-rejected ancestor's optimistic xp stamped a build the settled total never backs, and
+    // fails here. Gated on this activity's own `settledXP` reading zero, not on the caller's
+    // frontier's own `verifiedHead` — a stale duplicate redelivery of an already-matched segment
+    // can still carry a stale `verifiedHead` of 0, but its `settledXP` is fresh off the row and
+    // already reflects the earlier apply, so the check runs at most once, on the genuine first
+    // pass, and never re-fires against an avatar total this same activity already moved.
+    if (segment.activity.settledXP === 0) {
+      const expectedBuild = {
+        level: buildLevelFromXP(avatarState.xp),
+        xp: avatarState.xp,
+      };
+
+      if (
+        expectedBuild.level !== segment.activity.buildSnapshot.level ||
+        expectedBuild.xp !== segment.activity.buildSnapshot.xp
+      ) {
+        return rejectBuildMismatch(trx, deps, cache, segment);
+      }
+    }
 
     const scopeSecret = await readScopeSecret(
       {
@@ -115,7 +134,7 @@ export async function runFrontier(
       scopeID: segment.activity.scopeID,
       scopeSecret,
       stampedEncounterNode: segment.activity.encounterNode,
-      userSeed: avatarSeed.seed,
+      userSeed: avatarState.seed,
     });
 
     if (descriptorDivergence !== undefined) {
@@ -144,7 +163,7 @@ export async function runFrontier(
 
       const completedNodeIDs = new Set(grants.map((grant) => grant.key));
 
-      if (!isNodeSelectable(avatarSeed.seed, completedNodeIDs, segment.activity.scopeID)) {
+      if (!isNodeSelectable(avatarState.seed, completedNodeIDs, segment.activity.scopeID)) {
         return rejectUnreachableNode(trx, deps, cache, segment);
       }
     }
@@ -478,14 +497,16 @@ function pickRejectMessage(cause: RejectionCause): string {
 }
 
 /**
- * Refuses an activity whose build snapshot borrowed xp from a run that has since been rejected.
- * The borrowed total is gone, so there is nothing to replay the stream against and no divergence
- * to confirm — the rejection follows from the snapshot's foundation rather than from anything the
- * stream itself did. Rejecting through the same single-chain path voids this activity's own
- * successors, and every activity that borrowed from this one fails this check in turn, so the
- * refusal reaches the whole dependency graph without any writer reaching across chains.
+ * Refuses an activity whose pinned start build does not match the avatar's settled xp total. By
+ * claim time this activity's predecessor is settled or rejected, so a mismatch here means the
+ * pinned build banked optimistic xp from an ancestor a rejection later erased — there is nothing to
+ * replay the stream against and no divergence to confirm, since the rejection follows from the
+ * build's own foundation rather than from anything the stream itself did. Rejecting through the
+ * same single-chain path voids this activity's own successors, and every activity that banked this
+ * one's now-erased xp fails this same check in turn, so the refusal cascades through the whole
+ * dependency graph without any writer reaching across chains.
  */
-async function rejectUnbackedSnapshot(
+async function rejectBuildMismatch(
   trx: Transaction<DB>,
   deps: Readonly<ReplayWorkerDeps>,
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- a mutable cache handle whose remove/get/set are its whole point; no readonly form is useful
@@ -499,10 +520,10 @@ async function rejectUnbackedSnapshot(
       buildSnapshotXP: segment.activity.buildSnapshot.xp,
       verifiedHead: segment.verifiedHead,
     },
-    'build snapshot borrowed xp from a rejected run; rejecting activity',
+    'pinned build does not match the settled xp total; rejecting activity',
   );
 
-  recordRejection('unbacked-snapshot');
+  recordRejection('build-mismatch');
 
   await rejectActivity(trx, {
     activityID: segment.activity.id,
@@ -519,7 +540,7 @@ async function rejectUnbackedSnapshot(
 /**
  * Refuses a `world_map_node` activity whose scope is not connected to the avatar's verified
  * first-clear frontier. Rejecting through the same single-chain path voids this activity's own
- * successors, exactly as the unbacked-snapshot rejection does.
+ * successors, exactly as the build-mismatch rejection does.
  */
 async function rejectUnreachableNode(
   trx: Transaction<DB>,
