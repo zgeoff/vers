@@ -69,7 +69,6 @@ interface AdvanceActivityOpts {
     readonly CONFLICT: (payload: AdvanceBailPayload) => Error;
     readonly NODE_NOT_REVEALED: (payload: EmptyErrorPayload) => Error;
     readonly NODE_UNKNOWN: (payload: EmptyErrorPayload) => Error;
-    readonly NODE_UNREACHABLE: (payload: EmptyErrorPayload) => Error;
     readonly NOT_FOUND: (payload: EmptyErrorPayload) => Error;
     readonly SESSION_EVICTED: (payload: AdvanceBailPayload) => Error;
     readonly SIM_VERSION_EXPIRED: (payload: SimVersionProblemPayload) => Error;

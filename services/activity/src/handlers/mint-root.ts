@@ -9,11 +9,9 @@ import type { Activities, DB } from '@vers/db';
 import { buildLevelFromXP } from '@vers/idle-core';
 import { findCurrentSimVersion } from '@vers/sim-registry';
 import { deriveWorldmapContent, readScopeSecret } from '@vers/worldmap-content';
-import { ORIGIN_CELL, isNodeSelectable, toNodeID } from '@vers/worldmap-core';
 import type { CryptoKey } from 'jose';
 import type { Kysely, Selectable } from 'kysely';
 import { getOptimisticBuild } from '../get-optimistic-build';
-import { recordNodeUnreachableRejection } from '../metrics/record-node-unreachable-rejection';
 import { requireActiveAvatar } from '../require-active-avatar';
 import { resolveEncounterNode } from '../resolve-encounter-node';
 import { resolveSimVersionStamp } from '../resolve-sim-version-stamp';
@@ -48,7 +46,6 @@ interface MintRootErrors {
   readonly CONFLICT: (payload: AdvanceBailPayload) => Error;
   readonly NODE_NOT_REVEALED: (payload: EmptyErrorPayload) => Error;
   readonly NODE_UNKNOWN: (payload: EmptyErrorPayload) => Error;
-  readonly NODE_UNREACHABLE: (payload: EmptyErrorPayload) => Error;
   readonly SIM_VERSION_EXPIRED: (payload: SimVersionProblemPayload) => Error;
   readonly SIM_VERSION_UNKNOWN: (payload: SimVersionProblemPayload) => Error;
 }
@@ -60,7 +57,7 @@ interface MintRootErrors {
  * seed, versions, build snapshot, and start hash must reconcile with what the server derives. The
  * caller must confirm the acting user owns `root.avatarID` before calling.
  *
- * Throws AVATAR_NOT_ACTIVE, CHAIN_QUARANTINED, NODE_UNKNOWN, NODE_UNREACHABLE, NODE_NOT_REVEALED,
+ * Throws AVATAR_NOT_ACTIVE, CHAIN_QUARANTINED, NODE_UNKNOWN, NODE_NOT_REVEALED,
  * SIM_VERSION_UNKNOWN, or SIM_VERSION_EXPIRED for a root that fails a start gate; CONFLICT when it
  * roots against a stale chain head; CHECKPOINT_INVALID when its build snapshot or start hash
  * disagree with the server's own derivation.
@@ -108,26 +105,6 @@ export async function mintRoot(
     .select('seed')
     .where('id', '=', root.avatarID)
     .executeTakeFirstOrThrow();
-
-  // the origin is unconditionally selectable, so a root there needs no grants read to decide
-  if (
-    root.scopeType === 'world_map_node' &&
-    root.scopeID !== toNodeID(ORIGIN_CELL[0], ORIGIN_CELL[1])
-  ) {
-    const grants = await trx
-      .selectFrom('avatarGrants')
-      .select('key')
-      .where('avatarId', '=', root.avatarID)
-      .where('kind', '=', 'first_clear')
-      .execute();
-
-    const completedNodeIDs = new Set(grants.map((grant) => grant.key));
-
-    if (!isNodeSelectable(avatar.seed, completedNodeIDs, root.scopeID)) {
-      recordNodeUnreachableRejection();
-      throw errors.NODE_UNREACHABLE({ data: {} });
-    }
-  }
 
   const chain = await trx
     .selectFrom('activityChains')
