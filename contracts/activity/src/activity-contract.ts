@@ -219,11 +219,6 @@ export const activityContract = {
           message: "A root mint's scope node is not registered on the world map",
           status: 404,
         },
-        NODE_UNREACHABLE: {
-          data: z.object({}),
-          message: "A root mint's scope node is outside the avatar's selectable set",
-          status: 409,
-        },
         NOT_FOUND: { data: z.object({}), message: 'No activity with that id' },
         SESSION_EVICTED: {
           data: AdvanceBailDataSchema,

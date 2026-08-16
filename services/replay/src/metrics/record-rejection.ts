@@ -4,6 +4,7 @@ export type RejectionReason =
   | 'descriptor-mismatch'
   | 'elapsed-time'
   | 'integrity-mismatch'
+  | 'node-unreachable'
   | 'provider-unavailable'
   | 'unbacked-snapshot'
   | 'version-park';
@@ -11,11 +12,12 @@ export type RejectionReason =
 /**
  * Counts one adjudication that refused or held a stream, split by reason: `integrity-mismatch`
  * covers confirmed divergence and seed validation, `descriptor-mismatch` covers a sealed node's
- * content fields failing to reproduce against a freshly read scope secret, `version-park` covers
- * version-registry holds (unknown or retention-expired sim versions), `elapsed-time` covers
- * duration-cap trips, `provider-unavailable` covers a cross-version dispatch whose provider timed
- * out, refused the connection, or answered with an undefined error, and `unbacked-snapshot` covers
- * a build snapshot that borrowed xp from a run since rejected.
+ * content fields failing to reproduce against a freshly read scope secret, `node-unreachable`
+ * covers a run whose scope node was not connected to any verified completed node at replay,
+ * `version-park` covers version-registry holds (unknown or retention-expired sim versions),
+ * `elapsed-time` covers duration-cap trips, `provider-unavailable` covers a cross-version dispatch
+ * whose provider timed out, refused the connection, or answered with an undefined error, and
+ * `unbacked-snapshot` covers a build snapshot that borrowed xp from a run since rejected.
  */
 export function recordRejection(reason: RejectionReason): void {
   // Resolved through the global metrics API on every call — the SDK returns the same instrument

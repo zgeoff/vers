@@ -1240,32 +1240,68 @@ test('it rejects a root submitted against a quarantined chain with CHAIN_QUARANT
   expect(row).toBeUndefined();
 });
 
-test('it rejects a root at an unselectable node with NODE_UNREACHABLE', async () => {
+test('it mints a root at a node unconnected to any completed node — reachability is a replay concern, not an admission one', async () => {
   await using ctx = await setupTest();
 
+  const current = await createSimVersionRow(ctx.db);
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id, xp: 0 });
-
-  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '50_50' });
+  const chain = await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '50_50' });
 
   const activityID = `act_${createId()}`;
+  const document = createMockContentDocument({ contentVersion: '2' });
+
+  const derived = deriveRootStart({
+    avatarID: avatar.id,
+    avatarSeed: avatar.seed,
+    contentVersion: '2',
+    document,
+    scopeID: '50_50',
+    seed: chain.appendedNextSeed,
+    simVersion: current.engineHash,
+  });
 
   const root = createMockOfflineRootSubmission({
     avatarID: avatar.id,
+    buildSnapshot: { level: buildLevelFromXP(0), xp: 0 },
+    contentVersion: '2',
     scopeID: '50_50',
     scopeType: 'world_map_node',
+    seed: chain.appendedNextSeed,
+    simVersion: current.engineHash,
+    startChainIndex: 0,
+    startHash: derived.startHash,
+  });
+
+  const tail = createMockCheckpointBatch({
+    finalPayloadOverrides: { rewards: { xp: 40 }, type: 'completed' },
+    startChainIndex: root.startChainIndex,
+    startPrevHash: root.startHash,
+    startVersion: 1,
+  });
+
+  const continuation = createMockCatchUpContinuation({
+    buildSnapshot: { level: buildLevelFromXP(40), xp: 40 },
+    checkpoints: tail,
+    startKey: `continue_${activityID}`,
   });
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  expect(
-    client.advanceActivity({
-      activityID,
-      continuations: [createMockCatchUpContinuation()],
-      expectedHead: 0,
-      root,
-    }),
-  ).rejects.toMatchObject({ code: 'NODE_UNREACHABLE' });
+  await client.advanceActivity({
+    activityID,
+    continuations: [continuation],
+    expectedHead: 0,
+    root,
+  });
+
+  const rootRow = await ctx.db
+    .selectFrom('activities')
+    .select('id')
+    .where('id', '=', activityID)
+    .executeTakeFirstOrThrow();
+
+  expect(rootRow.id).toBe(activityID);
 });
 
 test("it rejects a root minted for an avatar that is not the account's active one", async () => {
@@ -1461,7 +1497,7 @@ test("it keeps a root at another user's activity id owner-scoped NOT_FOUND", asy
   ).rejects.toMatchObject({ code: 'NOT_FOUND' });
 });
 
-test('it refuses the offline successor of a just-cleared node with NODE_UNREACHABLE, because admission reads verified grants and the clear is unverified', async () => {
+test('it mints the offline successor of a just-cleared node at admission, deferring reachability to replay since the clear is unverified', async () => {
   await using ctx = await setupTest();
 
   const current = await createSimVersionRow(ctx.db);
@@ -1486,7 +1522,10 @@ test('it refuses the offline successor of a just-cleared node with NODE_UNREACHA
     scopeId: originID,
   });
 
-  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: neighbourID });
+  const neighbourChain = await createActivityChainRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: neighbourID,
+  });
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
@@ -1536,7 +1575,7 @@ test('it refuses the offline successor of a just-cleared node with NODE_UNREACHA
   });
 
   // admission appended the clear but recorded no first-clear grant — that waits on replay, so the
-  // cleared frontier the reachability check reads still excludes the origin
+  // cleared frontier a reachability check would read still excludes the origin
   const grant = await ctx.db
     .selectFrom('avatarGrants')
     .select('key')
@@ -1546,22 +1585,50 @@ test('it refuses the offline successor of a just-cleared node with NODE_UNREACHA
 
   expect(grant).toBeUndefined();
 
-  // B is the neighbour A's clear opened, delivered next in the same reconcile. Its root is refused:
-  // the grant that would make it reachable is not yet written.
-  const rootB = createMockOfflineRootSubmission({
+  // The clear's own continuation auto-opened a fresh attempt at A, occupying the avatar's single
+  // active-run slot; the player instead walked to B, so the device stops that dangling attempt the
+  // same way it stops any run it navigates away from, before B's root can mint into the freed slot.
+  await client.stopActivity({ avatarID: avatar.id });
+
+  // B is the neighbour A's clear opened, delivered next in the same reconcile. Its root mints:
+  // admission runs no reachability check, only the same sim-version and hash gates every root
+  // clears. A's unsettled xp already folds into B's optimistic build snapshot through the
+  // activitySnapshotSources edge the mint records, ahead of either activity's own verification.
+  const derivedB = deriveRootStart({
     avatarID: avatar.id,
+    avatarSeed: avatar.seed,
+    contentVersion: '2',
+    document: createMockContentDocument({ contentVersion: '2' }),
     scopeID: neighbourID,
-    scopeType: 'world_map_node',
+    seed: neighbourChain.appendedNextSeed,
+    simVersion: current.engineHash,
   });
 
-  expect(
-    client.advanceActivity({
-      activityID: `act_${createId()}`,
-      continuations: [createMockCatchUpContinuation()],
-      expectedHead: 0,
-      root: rootB,
-    }),
-  ).rejects.toMatchObject({ code: 'NODE_UNREACHABLE' });
+  const rootB = createMockOfflineRootSubmission({
+    avatarID: avatar.id,
+    buildSnapshot: { level: buildLevelFromXP(40), xp: 40 },
+    contentVersion: '2',
+    scopeID: neighbourID,
+    scopeType: 'world_map_node',
+    seed: neighbourChain.appendedNextSeed,
+    simVersion: current.engineHash,
+    startChainIndex: 0,
+    startHash: derivedB.startHash,
+  });
+
+  const activityID = `act_${createId()}`;
+
+  await client.advanceActivity({ activityID, continuations: [], expectedHead: 0, root: rootB });
+
+  // the mint committed and stays unconfirmed — replay adjudicates reachability once it runs, and
+  // rejects this run for the still-missing origin grant, cascading through anything built on it
+  const rootRow = await ctx.db
+    .selectFrom('activities')
+    .select(['id', 'status'])
+    .where('id', '=', activityID)
+    .executeTakeFirstOrThrow();
+
+  expect(rootRow).toMatchObject({ id: activityID, status: 'active' });
 });
 
 test("it refuses a kicked writer session's undelivered offline root with the single-active-run CONFLICT, because root admission carries no acting-session gate", async () => {
