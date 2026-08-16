@@ -88,9 +88,9 @@ whenever the server is next reachable.
 `advanceActivity` is the server's authority over a client-authored start. It re-derives every
 authoritative input from its own truth and trusts none of the payload:
 
-- It runs the same sim-version admission check a start must pass; node reachability is not an
-  admission check here, since an offline gap can legitimately reach a neighbour the server has not
-  yet verified the clear that opens it — [replay](#replay) adjudicates reachability instead.
+- It runs the same sim-version admission check an online start does. It does not check node
+  reachability at admission: an offline gap can legitimately reach a neighbour whose opening clear
+  the server has not yet verified, so [replay](#replay) adjudicates reachability instead.
 - It derives the encounter node and its hashed stamps from the server's own content document, never
   the payload.
 - It re-authors the `buildSnapshot` from the avatar's progression, and rejects a start whose
@@ -174,12 +174,12 @@ treated as cheating. Enforcement lands at a session boundary, never mid-session.
 quarantines a stream that fails replay repeatedly and alerts operators rather than retrying it
 forever.
 
-Replay also adjudicates traversal legality. On a world-map-node stream's first verified pass, the
-verifier checks the node is connected to one the avatar's verified first-clear frontier already
-cleared; the origin is always reachable. A node no earlier verified clear made reachable is
-rejected, and the single-chain cascade voids the entries that depended on it. Because a total order
-settles each opener before the activity that borrows its clear, an honest offline traversal always
-finds its opener already granted while an unearned jump is refused.
+Replay also checks reachability. On a run's first verified pass at a world-map node, the verifier
+confirms the node borders a node the avatar has already cleared; the origin always counts as
+reachable. A node with no cleared neighbour is rejected. Activities settle in play order
+([offline reconcile](./offline-reconcile.md#settlement-in-order)), so the clear that opened an
+honest node has settled by the time its successor is checked and its grant is present. An unearned
+jump reaches a node no clear opened, so the verifier finds no grant and refuses it.
 
 Replay divergence is not the only cheat signal. Because every attempt at a node is a link in the
 append-only, server-verified chain, **reroll-scanning** — repeatedly attempting a node and
