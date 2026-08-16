@@ -7,10 +7,10 @@ each place holds, so an infinite world ships almost nothing over the wire and no
 layout.
 
 The map splits into shape and contents: geometry is public and client-computable, content is sealed
-and server-only, and the two derive from disjoint inputs. Knowing the shape of the map
-therefore reveals nothing about where reward concentrates. This is the map-layer statement of the
-flatness the [entropy model](./game-entropy.md) prices: a client that can compute the whole map
-still cannot compute which node pays, so scanning the map for a jackpot returns nothing.
+and server-only, and the two derive from disjoint inputs. Knowing the shape of the map therefore
+reveals nothing about where reward concentrates. This is the map-layer statement of the flatness the
+[entropy model](./game-entropy.md) prices: a client that can compute the whole map still cannot
+compute which node pays, so scanning the map for a jackpot returns nothing.
 
 ## Two planes
 
@@ -96,8 +96,8 @@ landmark grant table `(avatarID, landmarkID)`.
 - The hex grid is itself the spatial index, because a node maps structurally to its cell. A viewport
   query is a [Morton/z-order](https://en.wikipedia.org/wiki/Z-order_curve) range scan over packed
   coordinates: interleaving a cell's x and y bits into one number keeps nearby cells adjacent in
-  sort order, so a 2D box reads as one 1D range. A per-chunk run-length reveal bitmask is a permitted
-  cache over the projection; the completion table stays the source of truth.
+  sort order, so a 2D box reads as one 1D range. A per-chunk run-length reveal bitmask is a
+  permitted cache over the projection; the completion table stays the source of truth.
 - Reveal discloses only after the predecessor completion verifies, never on optimistic completion.
   Disclosure carries expected-value-flat descriptor metadata alone — never salt or drops — and the
   server caps its fan-out independent of node degree. A live request for a specific node jumps the
@@ -107,16 +107,15 @@ landmark grant table `(avatarID, landmarkID)`.
 
 Reveal and selection are two boundaries at deliberately different widths. Reveal is wide: a player
 sees content within `REVEAL_RADIUS`. Selection is narrow: a player travels only to completed nodes
-and their immediate neighbours, one hop out (`SELECTION_RADIUS`). Sight running ahead of reach is the
-intended exploration feel, not a
-leak — a bounded local horizon cannot compute the global-best jackpot, which is the exploit fog
-exists to deny.
+and their immediate neighbours, one hop out (`SELECTION_RADIUS`). Sight running ahead of reach is
+the intended exploration feel, not a leak — a bounded local horizon cannot compute the global-best
+jackpot, which is the exploit fog exists to deny.
 
 Enforcement is server-side, not the cache. Replay checks each activity's node against the avatar's
 cleared frontier and rejects anything beyond it, so cached descriptors and offline movement — both
 client-controlled — buy no reach that the settlement check would deny.
-`REVEAL_RADIUS > SELECTION_RADIUS`
-is a cache and pacing bound on top of that check, not the boundary itself.
+`REVEAL_RADIUS > SELECTION_RADIUS` is a cache and pacing bound on top of that check, not the
+boundary itself.
 
 Within that bound, the server returns descriptors for the whole revealed disc, which extends past
 the selectable edge, and the client caches them. Offline, a player farms revealed nodes and pushes
@@ -131,11 +130,11 @@ Traversal, not just farming, also extends offline. Clearing a node offline opens
 selection before the server verifies the clear. The client derives this widened selectable set from
 its durable offline outbox — the client-minted start and queued checkpoints a completed clear leaves
 behind — so the opened neighbours survive an offline restart rather than resetting to the cleared
-frontier. The widening only ever adds to selection; reveal stays gated on
-verification, so an offline clear opens ground the player can already see without disclosing any new
-fog. The widening is a convenience, never the boundary: the reachability check at replay still
-rejects a node beyond the avatar's cleared frontier, so an unearned offline jump settles nothing
-once the device reconnects.
+frontier. The widening only ever adds to selection; reveal stays gated on verification, so an
+offline clear opens ground the player can already see without disclosing any new fog. The widening
+is a convenience, never the boundary: the reachability check at replay still rejects a node beyond
+the avatar's cleared frontier, so an unearned offline jump settles nothing once the device
+reconnects.
 
 ## Content sealing and verification
 

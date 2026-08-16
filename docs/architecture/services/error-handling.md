@@ -65,7 +65,7 @@ naming the request's last fully committed row. It also carries `appendedHead` wh
 
 | Domain       | Code                   | Status | Meaning                                                                                                      | data                                   |
 | ------------ | ---------------------- | ------ | ------------------------------------------------------------------------------------------------------------ | -------------------------------------- |
-| activity     | `ACTIVITY_CAPPED`      | 409    | Append exceeds the avatar's accrued offline budget; the activity lands terminal `capped`.           | `{ appendedHead }`                     |
+| activity     | `ACTIVITY_CAPPED`      | 409    | Append exceeds the avatar's accrued offline budget; the activity lands terminal `capped`.                    | `{ appendedHead }`                     |
 | activity     | `ACTIVITY_TERMINAL`    | 409    | Append against a terminal activity status; fatal for the stream.                                             | `{ status, appendedHead }`             |
 | activity     | `AVATAR_NOT_ACTIVE`    | 409    | Start, reveal, or mint refused: the acting avatar is not the account's active one.                           | `{ activeAvatarID, activeAvatarName }` |
 | activity     | `CHAIN_QUARANTINED`    | 409    | New start or mint refused while the chain is quarantined.                                                    | —                                      |
@@ -95,8 +95,9 @@ start-hash recomputation mismatch on a mint.
 
 `createService` (`@vers/service-runtime`) owns the whole failure path outside handler bodies:
 
-- **Trust boundary.** An invalid service-to-service (s2s) token short-circuits with a plain 401 before any oRPC handler
-  runs. The response is not contract-shaped by design ([service contracts](./service-contracts.md)).
+- **Trust boundary.** An invalid service-to-service (s2s) token short-circuits with a plain 401
+  before any oRPC handler runs. The response is not contract-shaped by design
+  ([service contracts](./service-contracts.md)).
 - **Central error interceptor.** One `onError` client-interceptor on the RPC handler classifies
   everything a procedure throws. A defined contract error or any 4xx passes through untouched: no
   log, no report, it is the caller's outcome. For everything else, the interceptor logs at error

@@ -60,8 +60,8 @@ site opens the span.
 - **Service-to-service call** — every `RPCLink` carries `buildTracingInterceptor`
   (`@vers/service-utils/orpc`) in its `clientInterceptors`, minting a CLIENT span per call named by
   the procedure path.
-- **No inbound request** — a worker iteration, a boot drain, a scheduled sweep, or a queued job opens
-  its own root span through `withRootSpan` (`@vers/service-utils`).
+- **No inbound request** — a worker iteration, a boot drain, a scheduled sweep, or a queued job
+  opens its own root span through `withRootSpan` (`@vers/service-utils`).
 
 Trace context crosses process boundaries through the OpenTelemetry API's global propagator, never
 `@vers/trace` directly:
@@ -70,13 +70,13 @@ Trace context crosses process boundaries through the OpenTelemetry API's global 
   `traceparent` from the active span, continuing the caller's trace across every hop.
 - A root span opened through `withRootSpan` starts a fresh trace, because a worker iteration or
   queued job has no caller's trace to continue.
-- app-web's RPC proxy re-injects `traceparent` from its own active context rather than forwarding the
-  browser's raw header, so the service span parents to app-web's server span instead of becoming its
-  sibling.
+- app-web's RPC proxy re-injects `traceparent` from its own active context rather than forwarding
+  the browser's raw header, so the service span parents to app-web's server span instead of becoming
+  its sibling.
 - `@vers/trace`'s `parseTraceparent`/`buildTraceparent` are the wire-format utilities and the
   fallback path. A process with no tracer provider registered, or a request outside any span (a
-  served asset, `/health`), derives its trace id by parsing the inbound header directly and minting a
-  fresh one when none arrives — the same trace-continuation guarantee an active span normally
+  served asset, `/health`), derives its trace id by parsing the inbound header directly and minting
+  a fresh one when none arrives — the same trace-continuation guarantee an active span normally
   provides.
 
 Wherever a span is active, it is the source of truth for the request's identity:
@@ -161,7 +161,7 @@ in stack state are encrypted by the stack passphrase.
 | `vers.verification.rejections`                  | counter         | `{rejection}`    | `reason`            | adjudications that rejected or parked an activity, by reason                                                                                    |
 | `vers.replay.iteration_failures`                | counter         | `{iteration}`    | `outcome`           | worker iterations that failed to replay a claimed chain, by outcome                                                                             |
 | `vers.replay.settled_xp`                        | up-down counter | `{xp}`           | `source`            | XP that verified segments settled to avatars, by how the amount was derived                                                                     |
-| `vers.replay.clamped_settlements`               | counter         | `{settlement}`   | —                   | settlements whose debit was clamped to a minimum of zero, paying less than recorded                                                            |
+| `vers.replay.clamped_settlements`               | counter         | `{settlement}`   | —                   | settlements whose debit was clamped to a minimum of zero, paying less than recorded                                                             |
 | `vers.keys.derive_rejections`                   | counter         | `{rejection}`    | `reason`            | derivation calls that refused to derive a roll key or scope secret, by reason                                                                   |
 | `vers.activity.terminal_transitions`            | counter         | `{activity}`     | `status`            | activities that claimed a terminal transition, by status                                                                                        |
 | `vers.activity.writer_takeovers`                | counter         | `{takeover}`     | —                   | successful writer-session claims on active activities                                                                                           |
@@ -226,14 +226,15 @@ The remaining split instruments enumerate their attribute values:
 - `vers.activity.terminal_transitions` by `status`: `stopped` is a completed or failed last
   checkpoint; `capped` is a batch rejected whole for exceeding the avatar's accrued offline budget.
 - `vers.activity.advance_continuations` by `outcome`: `minted` is a continuation whose mint landed a
-  fresh row; `converged` is one that resolved onto a row a prior, partially committed request already
-  minted at the same client id.
-- `vers.activity.advance_bailouts` by `reason`, one per `advanceActivity` rejection code (`conflict`,
-  `checkpoint_invalid`, `activity_capped`, `session_evicted`, `chain_quarantined`, `terminal`). A
-  bailout always leaves the confirmed head advanced past the committed prefix, so a rising count
-  tracks how often an offline catch-up's outer resync must re-plan, not lost progress.
-- `vers.activity.content_incompatible_rejections` by `path`: `requested` is a client-sent sim-version
-  hash; `fallback` is the registry-current version resolved for a start that carries no hash.
+  fresh row; `converged` is one that resolved onto a row a prior, partially committed request
+  already minted at the same client id.
+- `vers.activity.advance_bailouts` by `reason`, one per `advanceActivity` rejection code
+  (`conflict`, `checkpoint_invalid`, `activity_capped`, `session_evicted`, `chain_quarantined`,
+  `terminal`). A bailout always leaves the confirmed head advanced past the committed prefix, so a
+  rising count tracks how often an offline catch-up's outer resync must re-plan, not lost progress.
+- `vers.activity.content_incompatible_rejections` by `path`: `requested` is a client-sent
+  sim-version hash; `fallback` is the registry-current version resolved for a start that carries no
+  hash.
 - `vers.activity.reveal_cells` and `vers.activity.reveal_sources` record once per `getRevealedNodes`
   call — the returned cell count and the scanned first-clear grant count. Both track the reveal
   projection's fan-out as an avatar's completed-node history grows.

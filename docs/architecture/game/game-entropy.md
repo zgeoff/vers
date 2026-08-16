@@ -85,10 +85,10 @@ reaches a market, and any standing it earns rides the same appended, verifiable 
 
 Rolled content is `f(key, coordinate)`, where `f` is a keyed PRF: a pseudorandom function whose
 revealed outputs carry no predictive power over unrevealed coordinates. The property matters because
-the client obtains a known input/output pair at every reveal. The reward's identity is its coordinate, so
-minting is idempotent and re-verification can neither duplicate nor re-roll a reward. The machinery
-that turns a digest into item content — the shared interpreter, draw-order versioning, and craft
-positions — is [item generation](./item-generation.md).
+the client obtains a known input/output pair at every reveal. The reward's identity is its
+coordinate, so minting is idempotent and re-verification can neither duplicate nor re-roll a reward.
+The machinery that turns a digest into item content — the shared interpreter, draw-order versioning,
+and craft positions — is [item generation](./item-generation.md).
 
 ### Key custody
 
@@ -195,10 +195,10 @@ consistent with their earnings never reaching the market.
 Every checkpoint's hashed subset carries an `entropySource` tag naming which source rolled its
 outcomes, frozen into the subset from the first row ever written ([seed chain](./seed-chain.md)).
 The two values are `server-key` for a server-custody roll and `device-key` for a device-custody
-roll. The tag is what lets further sources join without a migration, whether a
-verifiable-randomness beacon or a rotated key generation. Replay validates the tag against the
-avatar's server-recorded mode, and a mismatch is divergence. Settlement stamps an outcome's
-provenance from server records and the tag, never from a client claim.
+roll. The tag is what lets further sources join without a migration, whether a verifiable-randomness
+beacon or a rotated key generation. Replay validates the tag against the avatar's server-recorded
+mode, and a mismatch is divergence. Settlement stamps an outcome's provenance from server records
+and the tag, never from a client claim.
 
 Tradeability keys on the security property: entropy unpredictable at the moment the outcome was
 committed, and provably tied to the party that minted it. Server-custody rolls and sealed salt have
