@@ -2,11 +2,15 @@ import { expect, test } from 'bun:test';
 import { buildOfflineRootSubmission } from './build-offline-root-submission';
 import { createMockActivityData } from './test-utils/factories/create-mock-activity-data';
 
-test('it projects a client-minted root row down to the ten wire fields advanceActivity accepts', () => {
+test('it projects a client-minted root row down to the twelve wire fields advanceActivity accepts', () => {
+  const playedAt = new Date();
+
   const row = createMockActivityData({
     avatarID: 'avatar_1',
     buildSnapshot: { level: 3, xp: 120 },
     contentVersion: '2',
+    playedAt,
+    predecessorActivityID: 'act_predecessor',
     scopeID: '0_0',
     scopeType: 'world_map_node',
     seed: 'a'.repeat(32),
@@ -20,6 +24,8 @@ test('it projects a client-minted root row down to the ten wire fields advanceAc
     avatarID: 'avatar_1',
     buildSnapshot: { level: 3, xp: 120 },
     contentVersion: '2',
+    playedAt,
+    predecessorActivityID: 'act_predecessor',
     scopeID: '0_0',
     scopeType: 'world_map_node',
     seed: 'a'.repeat(32),

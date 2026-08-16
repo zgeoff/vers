@@ -48,6 +48,8 @@ export interface Activities {
   keyVersion: Generated<number>;
   lastHash: string;
   parkedFrom: ActivityStatus | null;
+  playedAt: Timestamp | null;
+  predecessorActivityId: string | null;
   replayAttempts: Generated<number>;
   scopeId: string;
   scopeType: string;
@@ -88,11 +90,6 @@ export interface ActivityCheckpoints {
   payload: import('./types').Json;
   prevHash: string;
   version: number;
-}
-
-export interface ActivitySnapshotSources {
-  activityId: string;
-  sourceActivityId: string;
 }
 
 export interface AvatarGrants {
@@ -227,7 +224,6 @@ export interface DB {
   activities: Activities;
   activityChains: ActivityChains;
   activityCheckpoints: ActivityCheckpoints;
-  activitySnapshotSources: ActivitySnapshotSources;
   avatarGrants: AvatarGrants;
   avatarItems: AvatarItems;
   avatars: Avatars;

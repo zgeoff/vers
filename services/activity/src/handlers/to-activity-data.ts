@@ -20,6 +20,8 @@ export function toActivityData(row: Readonly<Selectable<Activities>>): ActivityD
     id: row.id,
     keyVersion: row.keyVersion,
     lastHash: row.lastHash,
+    playedAt: row.playedAt,
+    predecessorActivityID: row.predecessorActivityId,
     scopeID: row.scopeId,
     scopeType: row.scopeType,
     secretRef: row.secretRef,

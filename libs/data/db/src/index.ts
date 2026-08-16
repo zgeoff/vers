@@ -7,7 +7,6 @@ export type {
   Activities,
   ActivityChains,
   ActivityCheckpoints,
-  ActivitySnapshotSources,
   ActivityStatus,
   AvatarGrants,
   AvatarItems,
