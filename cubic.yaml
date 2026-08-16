@@ -14,6 +14,13 @@ reviews:
     bunfig.toml preload (@zgeoff/bun-test-extended), so tests use matchers
     beyond Bun's built-in expect API — an unknown matcher name is caught by
     typecheck, not a runtime bug.
+
+    In libs/game/idle-client, the node-seeds and content-documents IndexedDB
+    stores are caches: a row that fails its current contract schema self-heals
+    on read (the row is deleted and the read reports a miss), so do not request
+    a per-version cache-migration test for either store. Only the outbox stores
+    — pending-checkpoints and pending-roots — hold un-synced local progress and
+    keep real versioned migrations.
   ignore:
     files:
       - bun.lock

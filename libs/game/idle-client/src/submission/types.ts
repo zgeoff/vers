@@ -4,6 +4,7 @@ import type {
   CheckpointBatchEntry,
   ContentDocument,
   EncounterNode,
+  NodeSeed,
   activityContract,
 } from '@vers/contract-activity';
 import type { ActivityFailureAction } from '@vers/idle-core';
@@ -67,26 +68,6 @@ export interface NodeSeedHead {
 }
 
 /**
- * A world-map node's revealed start inputs as the worker's durable cache holds them, keyed by the
- * `[avatarID, nodeID]` pair: the genesis seed the chain originated from, its current head, plus the
- * encounter and content version `buildStartHash` needs alongside it — every per-node input a local
- * start synthesizes a valid activity start from, short of the avatar- and account-global stamps
- * `readStartStamps` holds separately. A node's genesis seed is per avatar — two avatars sharing a
- * coordinate root distinct chains against distinct seeds — so the cache scopes every row to its
- * avatar rather than letting one avatar's reveal overwrite another's. Revealing an already-cached
- * node writes the server's current head back in place: the reveal round trip is idempotent per
- * avatar and node, so the cache write is too.
- */
-export interface NodeSeed {
-  readonly avatarID: string;
-  readonly contentVersion: string;
-  readonly encounterNode: EncounterNode;
-  readonly genesisSeed: string;
-  readonly head: NodeSeedHead;
-  readonly nodeID: string;
-}
-
-/**
  * A revealed node's start inputs as they arrive over the worker message and off the reveal round
  * trip, before the avatar they belong to is threaded onto them. The relayed batch carries one
  * avatarID for every entry in it, so an entry on the wire holds only its node id and the fields
@@ -112,6 +93,8 @@ export interface StartStampsPreference {
   readonly secretRef: string;
   readonly secretVersion: number;
 }
+
+export type { NodeSeed } from '@vers/contract-activity';
 
 export interface CheckpointQueueSchema extends DBSchema {
   'content-documents': {
