@@ -31,6 +31,8 @@ export { EntropySourceSchema } from './entropy-source-schema';
 export { LootTablesSchema } from './loot-tables-schema';
 export { MAX_CATCH_UP_BATCH_CHECKPOINTS } from './max-catch-up-batch-checkpoints';
 export { MAX_REVEAL_BATCH_NODES } from './max-reveal-batch-nodes';
+export type { NodeSeed } from './node-seed-schema';
+export { NodeSeedSchema } from './node-seed-schema';
 export { OFFLINE_PROGRESS_CAP_MS } from './offline-progress-cap-ms';
 export type { OfflineRootSubmission } from './offline-root-submission-schema';
 export { OfflineRootSubmissionSchema } from './offline-root-submission-schema';
