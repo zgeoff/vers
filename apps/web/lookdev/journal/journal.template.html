@@ -155,25 +155,49 @@
   </p>
 
   <div class="howto">
-    <h2>Round 18 · how to respond</h2>
+    <h2>Round 19 · how to respond</h2>
     <p>
-      Unification opens with the grade: the same locked scene under three treatments. Baseline
-      (round 17, untonemapped) vs <b>6 · Grade</b> (AgX filmic tone mapping + vignette + gentle
-      warm lean) vs <b>7 · Grade+AO</b> (the same plus grounding occlusion — ambient light falls
-      off toward every structure's base, faking contact shadow). The AO is deliberately gentle;
-      it can be pushed. Rank the three, and note whether the warm lean is right or the grade
-      should sit cooler.
+      Surfaces: the flat blocks gain shader-side material variation — broad tonal patches, faint
+      vertical weather streaks, horizontal panel seams — on the focal buildings and pavement
+      only; background blocks stay flat by design (fog and distance carry them). Compare
+      <b>7 · Grade+AO</b> against <b>8 · Surfaces</b>, and orbit up close: is the wear amount
+      right per building? The gate wears it heaviest by nature of its big faces — say if it
+      should differ per building (it can: each building can get its own recipe).
     </p>
     <p>
-      Live at <span style="font-family: var(--mono)">localhost:4599</span> (buttons 3, 6, 7),
-      branch <span style="font-family: var(--mono)">spike/respite-lookdev</span>.
+      Live at <span style="font-family: var(--mono)">localhost:4599</span> (buttons 7, 8), branch
+      <span style="font-family: var(--mono)">spike/respite-lookdev</span>.
     </p>
   </div>
 
   <section class="round">
     <div class="round-head">
+      <h2>Round 19 · surfaces break the flat-block read</h2>
+      <span class="status open">open — judge the wear, per building</span>
+    </div>
+    <p>
+      Answering round 18's verdict directly: the blocks stop being blank. All of it is TSL — no
+      texture assets — driven by world position, so it survives any camera and costs almost
+      nothing. This is the first half of materials; per-building differentiation (metal drums vs
+      the hall's severe finish vs the gate's stone register) is the follow-up once the base wear
+      level is agreed.
+    </p>
+    <div class="shots pair">
+      <figure>
+        <img src="data:image/png;base64,{{R18_GRADE_AO_REF}}" alt="The graded scene with flat surfaces" />
+        <figcaption>7 · grade + AO (flat surfaces)</figcaption>
+      </figure>
+      <figure>
+        <img src="data:image/png;base64,{{R19_SURFACES}}" alt="The same scene with tonal patches, weather streaks, and panel seams on the focal buildings" />
+        <figcaption>8 · surfaces — patina, streaks, seams</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="round">
+    <div class="round-head">
       <h2>Round 18 · the grade</h2>
-      <span class="status open">open — rank the three treatments</span>
+      <span class="status">resolved</span>
     </div>
     <p>
       The biggest wow-per-effort step on the unification ladder: tone mapping and grading over
@@ -195,6 +219,11 @@
         <figcaption>7 · grade + grounding occlusion</figcaption>
       </figure>
     </div>
+    <p class="verdict">
+      <b>Verdict:</b> 7 adopted provisionally, clearly better than baseline — with the correct
+      observation that grading is hard to judge over flat blocks. The grade gets its final tune
+      after materials land; surfaces became round 19.
+    </p>
   </section>
 
   <section class="round">

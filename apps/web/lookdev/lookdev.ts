@@ -6,7 +6,7 @@
  * the plaza to judge the silhouettes in context.
  */
 import { bloom } from 'three/addons/tsl/display/BloomNode.js';
-import { pass, positionWorld, screenUV, vec3 } from 'three/tsl';
+import { color, mx_noise_float, pass, positionWorld, screenUV, vec3 } from 'three/tsl';
 import {
   AgXToneMapping,
   AmbientLight,
@@ -1006,7 +1006,37 @@ function applyGrounding(material: MeshStandardNodeMaterial) {
   material.aoNode = groundingNode;
 }
 
-function buildScene(config: ProbeConfig, useParts: boolean, grounding = false): Scene {
+/**
+ * Stylized surface variation: broad tonal patches, faint vertical weather streaks, and
+ * horizontal panel seams — enough to break the flat-block read without any texture assets.
+ */
+function buildSurfaceVariation() {
+  const macro = mx_noise_float(positionWorld.mul(0.5)).mul(0.5).add(0.5).mul(0.55).add(0.68);
+  const streaks = mx_noise_float(
+    vec3(positionWorld.x.mul(2.4), positionWorld.y.mul(0.2), positionWorld.z.mul(2.4)),
+  )
+    .mul(0.5)
+    .add(0.5)
+    .mul(0.2);
+  const bandY = positionWorld.y.mul(0.85).fract();
+  const seamDistance = bandY.min(bandY.oneMinus());
+  const seam = seamDistance.smoothstep(0.0, 0.06).oneMinus().mul(0.22);
+
+  return macro.sub(streaks).sub(seam).clamp(0.5, 1.2);
+}
+
+function applySurface(material: MeshStandardNodeMaterial, base: Color) {
+  material.colorNode = color(base).mul(buildSurfaceVariation());
+}
+
+/** Ground mottling: larger, softer patches than the walls, so pavement reads worn rather than paneled. */
+function applyGroundSurface(material: MeshStandardNodeMaterial, base: Color) {
+  const mottle = mx_noise_float(positionWorld.mul(0.3)).mul(0.5).add(0.5).mul(0.32).add(0.82);
+
+  material.colorNode = color(base).mul(mottle);
+}
+
+function buildScene(config: ProbeConfig, useParts: boolean, grounding = false, surfaces = false): Scene {
   const scene = new Scene();
 
   scene.background = new Color(config.sky);
@@ -1019,23 +1049,27 @@ function buildScene(config: ProbeConfig, useParts: boolean, grounding = false): 
   directional.position.set(-30, 42, 26);
   scene.add(ambient, directional, bounce);
 
-  const ground = new Mesh(
-    new PlaneGeometry(220, 220),
-    new MeshStandardNodeMaterial({ color: new Color(config.ground), roughness: 0.6 }),
-  );
+  const groundMaterial = new MeshStandardNodeMaterial({ color: new Color(config.ground), roughness: 0.6 });
+  const ground = new Mesh(new PlaneGeometry(220, 220), groundMaterial);
+
+  if (surfaces) {
+    applyGroundSurface(groundMaterial, new Color(config.ground));
+  }
 
   ground.rotation.x = -Math.PI / 2;
   ground.position.y = -0.01;
   scene.add(ground);
 
   // the paved plaza, skewed off the world axes so the square doesn't read as a perfect rectangle
-  const plazaFloor = new Mesh(
-    new PlaneGeometry(25, 21),
-    new MeshStandardNodeMaterial({
-      color: new Color(config.ground).multiplyScalar(2.4),
-      roughness: 0.45,
-    }),
-  );
+  const plazaMaterial = new MeshStandardNodeMaterial({
+    color: new Color(config.ground).multiplyScalar(2.4),
+    roughness: 0.45,
+  });
+  const plazaFloor = new Mesh(new PlaneGeometry(25, 21), plazaMaterial);
+
+  if (surfaces) {
+    applyGroundSurface(plazaMaterial, new Color(config.ground).multiplyScalar(2.4));
+  }
 
   plazaFloor.rotation.x = -Math.PI / 2;
   plazaFloor.rotation.z = 0.07;
@@ -1140,6 +1174,11 @@ function buildScene(config: ProbeConfig, useParts: boolean, grounding = false): 
     if (grounding) {
       applyGrounding(partMaterial);
       applyGrounding(furnitureMaterial);
+    }
+
+    if (surfaces) {
+      applySurface(partMaterial, navColor);
+      applySurface(furnitureMaterial, litColor.clone().multiplyScalar(0.55));
     }
 
     for (const placement of placements) {
@@ -1710,6 +1749,24 @@ async function main() {
         selectPlazaCamera();
         renderer.toneMapping = AgXToneMapping;
         return buildPost(buildScene(NIGHT, true, true), camera, NIGHT.bloomStrength, NIGHT.bloomThreshold, true);
+      },
+    },
+    {
+      key: 'surfaces',
+      name: '8 · Surfaces',
+      select: () => {
+        planActive = false;
+        orbitActive = false;
+        updateInfo();
+        selectPlazaCamera();
+        renderer.toneMapping = AgXToneMapping;
+        return buildPost(
+          buildScene(NIGHT, true, true, true),
+          camera,
+          NIGHT.bloomStrength,
+          NIGHT.bloomThreshold,
+          true,
+        );
       },
     },
     ...LINEUP_ELEMENTS.map((element) => ({
