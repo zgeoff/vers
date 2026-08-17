@@ -9,8 +9,6 @@ import { createActor } from 'xstate';
 import type { CheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import type { ActivityServiceClient } from '../submission/types';
 import type { RewardSlotLedgerEntry } from '../types';
-import { buildDeferred } from '../worker/build-deferred';
-import type { WorkerFaultSite } from '../worker/report-worker-fault';
 import type { WorkerContext } from '../worker/types';
 import { workerLifecycleMachine } from '../worker/worker-lifecycle-machine';
 import type { WorkerMessage } from '../worker/worker-to-client-message-schema';
@@ -44,15 +42,6 @@ export interface StubWorkerContext extends WorkerContext {
    * Every message `broadcast` recorded, in arrival order.
    */
   readonly getBroadcasts: () => ReadonlyArray<WorkerMessage>;
-
-  /**
-   * A test-only escape hatch onto the same lifecycle actor's queue: `runTurn` occupies the active
-   * flow slot with an arbitrary body, exactly as a real flow would, so a test can model "another
-   * flow is currently in progress" without driving one of the real entry points.
-   */
-  readonly getMailbox: () => {
-    readonly runTurn: (site: WorkerFaultSite, fn: () => Promise<void>) => Promise<void>;
-  };
 }
 
 export function createStubWorkerContext(
@@ -95,15 +84,6 @@ export function createStubWorkerContext(
     getConnectivityOnline: () => connectivityOnline,
     getFailureAction: () => failureAction,
     getLifecycle,
-    getMailbox: () => ({
-      runTurn: async (site, fn) => {
-        const deferred = buildDeferred<void>();
-
-        getLifecycle().send({ deferred, run: fn, site, type: 'RUN_INLINE_TURN' });
-
-        await deferred.promise;
-      },
-    }),
     getRemainingBudgetMs: () => options.remainingBudgetMs ?? Number.MAX_SAFE_INTEGER,
     getResyncAvatarID: () => resyncAvatarID,
     getRewardSlotLedger: () => ({

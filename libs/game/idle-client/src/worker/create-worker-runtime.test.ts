@@ -545,3 +545,55 @@ test('it cancels an in-flight resync read on stop() without stopping the row bac
 
   expect(pendingStop).toBeUndefined();
 });
+
+test('it resets the displaced simulation and broadcasts WriterDisplaced on a session eviction', async () => {
+  const viewer = await createViewer();
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
+
+  // this seed's placeholder encounter completes in exactly 60s of simulated time; the fast clock
+  // below collapses that wait into a single tick-loop frame, so its terminal checkpoint flushes
+  // immediately rather than waiting on the progress window — the flush this evicts
+  const activity = await db.activityCollection.create({
+    avatarID: viewer.avatar.id,
+    encounterNode: { difficulty: 1 },
+    seed: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaa6072',
+    startedAt: new Date(),
+  });
+
+  server.use(
+    mockActivityService.trackActivityProgress.handler((opts) => {
+      throw opts.errors.SESSION_EVICTED({ data: {} });
+    }),
+  );
+
+  const clock = createFastClock();
+  const broadcasts = collectBroadcasts();
+
+  using runtime = createWorkerRuntime({ client, now: clock.now });
+
+  const testClient = createConnectedTestClient(runtime);
+
+  await testClient.initialize({});
+  await testClient.reportOnline({ avatarID: viewer.avatar.id, claim: false });
+
+  await waitFor(
+    () => {
+      // re-armed every poll: a jump that lands before the tick loop installs the simulation is an
+      // idle frame, so the wait just re-arms the next one until it lands on a live tick
+      clock.jump(65_000);
+
+      expect(broadcasts.received).toPartiallyContain({
+        activityID: activity.id,
+        type: WorkerMessageType.WriterDisplaced,
+      });
+    },
+
+    // the tick loop paces itself on real timers between each of the many timesteps this jump
+    // spans, so a loaded runner can need several times the default budget to land a live tick
+    { timeoutMs: 5000 },
+  );
+
+  const result = await testClient.initialize({});
+
+  expect(result.writerDisplacedActivityID).toBe(activity.id);
+});

@@ -10,6 +10,7 @@ import { mockActivityService } from '@vers/mock-services/activity';
 import { waitFor } from '@vers/test-utils';
 import { writeContentDocumentCache } from '../content/write-content-document-cache';
 import { server } from '../mocks/node';
+import type { ActivitySubmissionContext } from '../submission/types';
 import { writeNodeSeeds } from '../submission/write-node-seeds';
 import { writeStartStamps } from '../submission/write-start-stamps';
 import { createStubSubmitter } from '../test-utils/create-stub-submitter';
@@ -33,6 +34,22 @@ function collectBroadcasts(context: StubWorkerContext) {
       });
     },
   };
+}
+
+/**
+ * Seeds the local caches a real start flow needs to mint a fresh row for the given avatar at
+ * node `0_0` — the minimal setup `handleStartActivityMessage` needs to occupy the lifecycle
+ * queue as a real flow, the way a test can otherwise only fake with an arbitrary body.
+ */
+async function setupStartableNode(avatarID: string): Promise<void> {
+  const seed = createMockNodeSeed({ avatarID, encounterNode: { difficulty: 1 }, nodeID: '0_0' });
+
+  await writeNodeSeeds(avatarID, [seed]);
+  await writeStartStamps({ keyVersion: 1, secretRef: 'worldmap', secretVersion: 1 });
+
+  await writeContentDocumentCache(
+    createMockContentDocument({ contentVersion: seed.contentVersion }),
+  );
 }
 
 test('it sits in idle with no activity', () => {
@@ -234,8 +251,7 @@ test('it queues a start arriving during a resync and runs it after', async () =>
   expect(startIndex).toBeGreaterThan(resyncIndex);
 });
 
-test('it runs queued turns strictly one at a time in queue order', async () => {
-  const context = createStubWorkerContext();
+test('it runs queued starts strictly one at a time in queue order', async () => {
   const order: Array<string> = [];
   let releaseFirst: (() => void) | undefined;
 
@@ -243,95 +259,160 @@ test('it runs queued turns strictly one at a time in queue order', async () => {
     releaseFirst = resolve;
   });
 
-  const first = context.getMailbox().runTurn('start', async () => {
-    order.push('first:enter');
+  const submitter = createStubSubmitter();
 
-    await firstGate;
+  submitter.registerActivity = mock((input: Readonly<ActivitySubmissionContext>) => {
+    order.push(input.avatarID ?? 'unknown');
 
-    order.push('first:exit');
+    return input.avatarID === 'avatar_queue_order_first' ? firstGate : Promise.resolve();
   });
 
-  const second = context.getMailbox().runTurn('start', () => {
-    order.push('second:enter');
+  const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_test', submitter });
 
-    return Promise.resolve();
+  await setupStartableNode('avatar_queue_order_first');
+  await setupStartableNode('avatar_queue_order_second');
+
+  const first = handleStartActivityMessage(context, {
+    avatarID: 'avatar_queue_order_first',
+    scopeID: '0_0',
+    scopeType: 'world_map_node',
   });
 
+  await waitFor(() => {
+    expect(submitter.registerActivity).toHaveBeenCalledTimes(1);
+  });
+
+  const second = handleStartActivityMessage(context, {
+    avatarID: 'avatar_queue_order_second',
+    scopeID: '0_0',
+    scopeType: 'world_map_node',
+  });
+
+  // the second start is accepted onto the queue while the first is still installing — its own
+  // registration doesn't run until the first's own flow settles
+  expect(context.getLifecycle().getSnapshot().value).toBe('starting');
+  expect(order).toStrictEqual(['avatar_queue_order_first']);
   releaseFirst?.();
 
   await Promise.all([first, second]);
 
-  expect(order).toStrictEqual(['first:enter', 'first:exit', 'second:enter']);
+  expect(order).toStrictEqual(['avatar_queue_order_first', 'avatar_queue_order_second']);
 });
 
-test('it serializes turns queued from different sites on the one actor', async () => {
-  const context = createStubWorkerContext();
-  const order: Array<string> = [];
+test('it serializes flows queued from different kinds on the one actor', async () => {
   let releaseFirst: (() => void) | undefined;
 
   const firstGate = new Promise<void>((resolve) => {
     releaseFirst = resolve;
   });
 
-  const first = context.getMailbox().runTurn('start', async () => {
-    order.push('first:enter');
+  const submitter = createStubSubmitter();
 
-    await firstGate;
+  submitter.registerActivity = mock(() => firstGate);
 
-    order.push('first:exit');
+  const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_test', submitter });
+
+  await setupStartableNode('avatar_mixed_kinds');
+
+  const seen: Array<unknown> = [];
+
+  const subscription = context.getLifecycle().subscribe((snapshot) => {
+    seen.push(snapshot.value);
   });
 
-  const second = context.getMailbox().runTurn('resync', () => {
-    order.push('second:enter');
-
-    return Promise.resolve();
+  onTestFinished(() => {
+    subscription.unsubscribe();
   });
 
-  const third = context.getMailbox().runTurn('continuation', () => {
-    order.push('third:enter');
+  const start = handleStartActivityMessage(context, {
+    avatarID: 'avatar_mixed_kinds',
+    scopeID: '0_0',
+    scopeType: 'world_map_node',
+  });
 
-    return Promise.resolve();
+  await waitFor(() => {
+    expect(context.getLifecycle().getSnapshot().value).toBe('starting');
+  });
+
+  const resync = runResyncTurn(context, 'avatar_mixed_kinds_resync', false);
+
+  // a fresh simulation/activity pair the machine's own state never installs — its continuation
+  // is a real queued flow whose own body no-ops on the mismatch, exactly proving the machine
+  // still occupies the 'continuing' state for it in turn
+  const deferred = buildDeferred<void>();
+
+  context.getLifecycle().send({
+    activity: createMockActivityData(),
+    deferred,
+    simulation: createSimulation(),
+    type: 'CONTINUATION',
   });
 
   releaseFirst?.();
 
-  await Promise.all([first, second, third]);
+  await Promise.all([start, resync, deferred.promise]);
 
-  expect(order).toStrictEqual(['first:enter', 'first:exit', 'second:enter', 'third:enter']);
+  const startIndex = seen.indexOf('starting');
+  const resyncIndex = seen.indexOf('resyncing');
+  const continuingIndex = seen.indexOf('continuing');
+
+  expect(startIndex).toBeGreaterThanOrEqual(0);
+  expect(resyncIndex).toBeGreaterThan(startIndex);
+  expect(continuingIndex).toBeGreaterThan(resyncIndex);
 });
 
-test('it keeps the queue alive past a turn that throws', async () => {
-  const context = createStubWorkerContext();
+test('it keeps the queue alive past a start that throws', async () => {
+  const submitter = createStubSubmitter();
 
-  await expect(
-    context.getMailbox().runTurn('start', () => Promise.reject(new Error('turn exploded'))),
-  ).toResolve();
+  submitter.registerActivity = mock(() => Promise.reject(new Error('turn exploded')));
 
-  let ran = false;
+  const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_test', submitter });
 
-  await context.getMailbox().runTurn('start', () => {
-    ran = true;
+  await setupStartableNode('avatar_throws');
 
-    return Promise.resolve();
-  });
+  const input = {
+    avatarID: 'avatar_throws',
+    scopeID: '0_0',
+    scopeType: 'world_map_node',
+  } as const;
 
-  expect(ran).toBeTrue();
+  const first = await handleStartActivityMessage(context, input);
+
+  expect(first.kind).toBe('failed');
+
+  submitter.registerActivity = mock(() => Promise.resolve());
+
+  // the same avatar and scope the first call already installed — the fast "already attached"
+  // path, proving the queue accepted and ran this call rather than staying stuck behind the throw
+  const second = await handleStartActivityMessage(context, input);
+
+  expect(second.kind).toBe('attached');
 });
 
-test('it resolves the caller only once its own turn settles', async () => {
-  const context = createStubWorkerContext();
-  let settled = false;
+test('it resolves the caller only once its own flow settles', async () => {
+  let registrationSettled = false;
+  const submitter = createStubSubmitter();
 
-  await context.getMailbox().runTurn('start', async () => {
+  submitter.registerActivity = mock(async () => {
     await Promise.resolve();
 
-    settled = true;
+    registrationSettled = true;
   });
 
-  expect(settled).toBeTrue();
+  const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_test', submitter });
+
+  await setupStartableNode('avatar_settle_order');
+
+  await handleStartActivityMessage(context, {
+    avatarID: 'avatar_settle_order',
+    scopeID: '0_0',
+    scopeType: 'world_map_node',
+  });
+
+  expect(registrationSettled).toBeTrue();
 });
 
-test('it reports an escaping turn error as a fault under its site', async () => {
+test('it reports an escaping flow error as a fault under its site', async () => {
   const previousHandle = sentryHandle.current;
   const recorded: Array<Readonly<ErrorEvent>> = [];
 
@@ -348,32 +429,54 @@ test('it reports an escaping turn error as a fault under its site', async () => 
     disableDefaultIntegrations: true,
   });
 
-  const context = createStubWorkerContext();
+  const submitter = createStubSubmitter();
 
-  await context
-    .getMailbox()
-    .runTurn('continuation', () => Promise.reject(new Error('turn exploded')));
+  submitter.registerActivity = mock(() => Promise.reject(new Error('turn exploded')));
+
+  const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_test', submitter });
+
+  await setupStartableNode('avatar_reports_fault');
+
+  await handleStartActivityMessage(context, {
+    avatarID: 'avatar_reports_fault',
+    scopeID: '0_0',
+    scopeType: 'world_map_node',
+  });
 
   await waitFor(() => {
     expect(recorded).toHaveLength(1);
   });
 
-  expect(recorded[0]?.tags).toMatchObject({ site: 'continuation' });
+  expect(recorded[0]?.tags).toMatchObject({ site: 'start' });
 });
 
 test('it drops a non-claiming resync while one is queued', async () => {
-  const context = createStubWorkerContext();
-  const connection = collectBroadcasts(context);
+  const submitter = createStubSubmitter();
   let releaseBlocking: (() => void) | undefined;
 
   const blockingGate = new Promise<void>((resolve) => {
     releaseBlocking = resolve;
   });
 
-  const blocking = context.getMailbox().runTurn('start', () => blockingGate);
+  submitter.registerActivity = mock(() => blockingGate);
+
+  const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_test', submitter });
+  const connection = collectBroadcasts(context);
+
+  await setupStartableNode('avatar_blocking_start');
+
+  const blocking = handleStartActivityMessage(context, {
+    avatarID: 'avatar_blocking_start',
+    scopeID: '0_0',
+    scopeType: 'world_map_node',
+  });
+
+  await waitFor(() => {
+    expect(context.getLifecycle().getSnapshot().value).toBe('starting');
+  });
 
   // the ticket is set the instant this is accepted, even though its own run is still waiting
-  // behind the blocking turn above — so the drop below still applies
+  // behind the blocking start above — so the drop below still applies
   const first = runResyncTurn(context, 'avatar_a', false);
 
   await expect(runResyncTurn(context, 'avatar_b', false)).toResolve();
@@ -544,33 +647,116 @@ test('it keeps only the latest claiming avatar when two arrive', async () => {
 });
 
 test('it runs a resync arriving during a non-resync turn after that turn rather than dropping it', async () => {
-  const context = createStubWorkerContext();
-  const order: Array<string> = [];
-  let releaseStart: (() => void) | undefined;
+  const submitter = createStubSubmitter();
+  let releaseBlocking: (() => void) | undefined;
 
-  const startGate = new Promise<void>((resolve) => {
-    releaseStart = resolve;
+  const blockingGate = new Promise<void>((resolve) => {
+    releaseBlocking = resolve;
   });
 
-  const start = context.getMailbox().runTurn('start', async () => {
-    order.push('start:enter');
+  submitter.registerActivity = mock(() => blockingGate);
 
-    await startGate;
+  const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_test', submitter });
 
-    order.push('start:exit');
+  await setupStartableNode('avatar_blocks_resync');
+
+  const seen: Array<unknown> = [];
+
+  const subscription = context.getLifecycle().subscribe((snapshot) => {
+    seen.push(snapshot.value);
   });
 
-  // arrives while 'start:enter' still holds the queue — accepted and queued behind it
-  // synchronously, before any turn has a chance to run
-  const resync = (async () => {
-    await runResyncTurn(context, 'avatar_never_cached', false);
+  onTestFinished(() => {
+    subscription.unsubscribe();
+  });
 
-    order.push('resync:run');
-  })();
+  // arrives while the start is still installing — accepted and queued behind it synchronously,
+  // before any flow has a chance to run
+  const blocking = handleStartActivityMessage(context, {
+    avatarID: 'avatar_blocks_resync',
+    scopeID: '0_0',
+    scopeType: 'world_map_node',
+  });
 
-  releaseStart?.();
+  await waitFor(() => {
+    expect(context.getLifecycle().getSnapshot().value).toBe('starting');
+  });
 
-  await Promise.all([start, resync]);
+  const resync = runResyncTurn(context, 'avatar_never_cached', false);
 
-  expect(order).toStrictEqual(['start:enter', 'start:exit', 'resync:run']);
+  releaseBlocking?.();
+
+  await Promise.all([blocking, resync]);
+
+  const startingIndex = seen.indexOf('starting');
+  const resyncingIndex = seen.indexOf('resyncing');
+
+  expect(startingIndex).toBeGreaterThanOrEqual(0);
+  expect(resyncingIndex).toBeGreaterThan(startingIndex);
+});
+
+test('it runs a start queued during an in-flight resync before a held claim requeues', async () => {
+  let releaseFlush: (() => void) | undefined;
+
+  const heldFlush = new Promise<void>((resolve) => {
+    releaseFlush = resolve;
+  });
+
+  const context = createStubWorkerContext({
+    bundledEngineHash: 'engine_hash_test',
+    submitter: {
+      flushHeld: () => heldFlush,
+      flushNow: () => Promise.resolve(),
+      registerActivity: () => Promise.resolve(),
+      submit: () => Promise.resolve(undefined),
+      isEvicted: () => false,
+      removeEviction: () => {},
+    },
+  });
+
+  await setupStartableNode('avatar_held_claim_order');
+
+  const seen: Array<unknown> = [];
+
+  const subscription = context.getLifecycle().subscribe((snapshot) => {
+    seen.push(snapshot.value);
+  });
+
+  onTestFinished(() => {
+    subscription.unsubscribe();
+  });
+
+  const resync = runResyncTurn(context, 'avatar_order_a', false);
+
+  await waitFor(() => {
+    expect(context.getLifecycle().getSnapshot().value).toBe('resyncing');
+  });
+
+  // queued behind the in-flight resync above — its own run must land before the held claim
+  // below requeues, preserving the arrival order between the two
+  const start = handleStartActivityMessage(context, {
+    avatarID: 'avatar_held_claim_order',
+    scopeID: '0_0',
+    scopeType: 'world_map_node',
+  });
+
+  // a claiming resync arrives while the first is still in flight — held one deep rather than
+  // queued, its own caller resolving immediately without waiting on its eventual run
+  await runResyncTurn(context, 'avatar_order_claim', true);
+
+  releaseFlush?.();
+
+  await start;
+  await resync;
+
+  await waitFor(() => {
+    expect(context.getLifecycle().getSnapshot().value).toBe('idle');
+  });
+
+  const firstResyncIndex = seen.indexOf('resyncing');
+  const startIndex = seen.indexOf('starting');
+  const heldClaimIndex = seen.lastIndexOf('resyncing');
+
+  expect(startIndex).toBeGreaterThan(firstResyncIndex);
+  expect(heldClaimIndex).toBeGreaterThan(startIndex);
 });

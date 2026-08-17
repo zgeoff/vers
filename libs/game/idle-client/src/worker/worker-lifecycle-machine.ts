@@ -1,7 +1,8 @@
 import type { ActivityData } from '@vers/contract-activity';
 import type { Simulation } from '@vers/idle-core';
+import invariant from 'tiny-invariant';
 import type { ActorRefFromLogic } from 'xstate';
-import { assign, createActor, fromPromise, setup } from 'xstate';
+import { assign, fromPromise, setup } from 'xstate';
 import { buildMachineTypes } from '../submission/build-machine-types';
 import { checkpointSubmitterMachine } from '../submission/checkpoint-submitter-machine';
 import { removePendingStartIntent } from '../submission/remove-pending-start-intent';
@@ -26,8 +27,7 @@ import type { StartStatus } from './worker-contract';
  * is accepted, not when its turn to run arrives, so a stop or shutdown raised while it waits still
  * cancels its installs and in-flight reads once it does run. A resync's `carryOverDeferreds`
  * accumulates the deferred of every earlier caller a chain of held claims displaced — each settles
- * once the requeued claim that superseded it finally does. `inline` exists only for tests that
- * need to occupy the queue with an arbitrary body, the way a real flow does.
+ * once the requeued claim that superseded it finally does.
  */
 export type PendingFlowRequest =
   | {
@@ -52,28 +52,14 @@ export type PendingFlowRequest =
       readonly signals: Readonly<FlowSignals>;
       readonly deferred: Deferred<void>;
     }
-  | { readonly kind: 'eviction'; readonly activityID: string }
-  | {
-      readonly kind: 'inline';
-      readonly site: WorkerFaultSite;
-      readonly run: () => Promise<void>;
-      readonly deferred: Deferred<void>;
-    };
+  | { readonly kind: 'eviction'; readonly activityID: string };
 
 type PendingFlowRequestOf<K extends PendingFlowRequest['kind']> = Extract<
   PendingFlowRequest,
   { readonly kind: K }
 >;
 
-type Phase =
-  | 'continuing'
-  | 'evicting'
-  | 'idle'
-  | 'inline'
-  | 'resyncing'
-  | 'running'
-  | 'starting'
-  | 'stopping';
+type Phase = 'continuing' | 'evicting' | 'idle' | 'resyncing' | 'running' | 'starting' | 'stopping';
 
 interface ResyncTicket {
   readonly pendingClaimAvatarID: string | null;
@@ -118,12 +104,6 @@ type WorkerLifecycleEvent =
       readonly claim: boolean;
       readonly deferred: Deferred<void>;
     }
-  | {
-      readonly type: 'RUN_INLINE_TURN';
-      readonly site: WorkerFaultSite;
-      readonly run: () => Promise<void>;
-      readonly deferred: Deferred<void>;
-    }
   | { readonly type: 'SET_START_TOKEN'; readonly token: string }
   | { readonly type: 'SET_WRITER_DISPLACED'; readonly activityID: string | null }
   | {
@@ -160,11 +140,9 @@ function getExpectedRequest<K extends PendingFlowRequest['kind']>(
   request: PendingFlowRequest | null,
   kind: K,
 ): PendingFlowRequestOf<K> {
-  if (request === null || request.kind !== kind) {
-    throw new Error(`expected a queued ${kind} request`);
-  }
+  invariant(request !== null && request.kind === kind, `expected a queued ${kind} request`);
 
-  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- narrowing a generic type parameter's own literal value against a runtime check is a TS limitation control flow analysis cannot bridge; the check just above is what makes this safe
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- narrowing a generic type parameter's own literal value against a runtime check is a TS limitation control flow analysis cannot bridge; the invariant just above is what makes this safe
   return request as PendingFlowRequestOf<K>;
 }
 
@@ -205,8 +183,7 @@ function isFlowActive(args: ContextArg): boolean {
     args.context.phase === 'starting' ||
     args.context.phase === 'resyncing' ||
     args.context.phase === 'continuing' ||
-    args.context.phase === 'evicting' ||
-    args.context.phase === 'inline'
+    args.context.phase === 'evicting'
   );
 }
 
@@ -233,7 +210,7 @@ function findNextRequestKind(
  * an eviction, which no caller awaits.
  */
 // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- WorkerLifecycleContext embeds a live xstate ActorRef and AbortController/AbortSignal handles with no further readonly form
-function resolveSettledRequest(context: WorkerLifecycleContext, output: unknown): void {
+function applySettledRequest(context: WorkerLifecycleContext, output: unknown): void {
   const request = context.currentRequest;
 
   if (request === null || request.kind === 'eviction') {
@@ -263,6 +240,77 @@ function buildPendingPop(
   return { currentRequest: context.pending[0] ?? null, pending: context.pending.slice(1) };
 }
 
+/**
+ * The pending queue as the resync state's own `onDone` transition reads it: a still-held claiming
+ * ticket's fresh requeue appends onto the tail before anything decides what runs next, so whatever
+ * arrived and queued behind the in-flight resync still runs ahead of the requeued claim, exactly
+ * as its own arrival order requires.
+ */
+function foldHeldResyncClaim(
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- WorkerLifecycleContext embeds a live xstate ActorRef and AbortController/AbortSignal handles with no further readonly form
+  context: WorkerLifecycleContext,
+): ReadonlyArray<PendingFlowRequest> {
+  const ticket = context.resyncTicket;
+  const current = context.currentRequest;
+
+  if (
+    ticket === null ||
+    ticket.pendingClaimAvatarID === null ||
+    current === null ||
+    current.kind !== 'resync'
+  ) {
+    return context.pending;
+  }
+
+  return [
+    ...context.pending,
+    buildResyncRequest(context, ticket.pendingClaimAvatarID, true, buildDeferred<void>(), [
+      ...current.carryOverDeferreds,
+      current.deferred,
+    ]),
+  ];
+}
+
+function findResyncSettleRequestKind(
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- WorkerLifecycleContext embeds a live xstate ActorRef and AbortController/AbortSignal handles with no further readonly form
+  context: WorkerLifecycleContext,
+): PendingFlowRequest['kind'] | undefined {
+  return foldHeldResyncClaim(context)[0]?.kind;
+}
+
+/**
+ * Settles the just-finished resync's own deferred — unless a held claim is about to requeue in
+ * its place, in which case that deferred instead carries over onto the requeued request, per the
+ * coalescing contract's first-caller-awaits-held-follow-up rule.
+ */
+function applyResyncSettlement(
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- WorkerLifecycleContext embeds a live xstate ActorRef and AbortController/AbortSignal handles with no further readonly form
+  context: WorkerLifecycleContext,
+  output: unknown,
+): void {
+  const ticket = context.resyncTicket;
+  const current = context.currentRequest;
+
+  const hasHeldClaim =
+    ticket !== null &&
+    ticket.pendingClaimAvatarID !== null &&
+    current !== null &&
+    current.kind === 'resync';
+
+  if (!hasHeldClaim) {
+    applySettledRequest(context, output);
+  }
+}
+
+function buildResyncSettlePop(
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- WorkerLifecycleContext embeds a live xstate ActorRef and AbortController/AbortSignal handles with no further readonly form
+  context: WorkerLifecycleContext,
+): Pick<WorkerLifecycleContext, 'currentRequest' | 'pending' | 'resyncTicket'> {
+  const pending = foldHeldResyncClaim(context);
+
+  return { currentRequest: pending[0] ?? null, pending: pending.slice(1), resyncTicket: null };
+}
+
 async function runStopDelivery(
   runtime: WorkerContext,
   input: Readonly<StopActivityInput>,
@@ -280,10 +328,11 @@ function scheduleStopDelivery(
   void (async () => {
     try {
       await runStopDelivery(runtime, input);
-    } catch (error) {
-      reportWorkerFault('stop', error);
-    } finally {
+
       deferred.resolve();
+    } catch (error) {
+      deferred.reject(error);
+    } finally {
       self.send({ type: 'STOP_DELIVERY_DONE' });
     }
   })();
@@ -310,7 +359,7 @@ function scheduleReconnectRecovery(
  * currently reading the old signal observes the abort while a flow accepted afterward captures the
  * new scope instead.
  */
-function buildStopScopeAdvance(
+function advanceStopScope(
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- WorkerLifecycleContext embeds a live xstate ActorRef and AbortController/AbortSignal handles with no further readonly form
   context: WorkerLifecycleContext,
 ): Pick<WorkerLifecycleContext, 'cancelSignal' | 'stopController'> {
@@ -381,19 +430,24 @@ const runContinuationActor = fromPromise<
   ),
 );
 
+function waitForMacrotask(): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, 0);
+  });
+}
+
 const runEvictionActor = fromPromise<
   void,
   { readonly context: WorkerContext; readonly request: PendingFlowRequestOf<'eviction'> }
 >((args) =>
-  runFlowBody('eviction', () => {
+  runFlowBody('eviction', async () => {
+    // SUBMITTER_EVICTED can land synchronously inside the submitter's own flush callback, ahead
+    // of the child settlement that records the eviction on the submitter — waiting a macrotask
+    // lets every microtask that settlement rides land first, so the guard below reads it
+    await waitForMacrotask();
+
     applyEviction(args.input.context, args.input.request.activityID);
-
-    return Promise.resolve();
   }),
-);
-
-const runInlineActor = fromPromise<void, { readonly request: PendingFlowRequestOf<'inline'> }>(
-  (args) => runFlowBody(args.input.request.site, args.input.request.run),
 );
 
 /**
@@ -411,9 +465,10 @@ const runInlineActor = fromPromise<void, { readonly request: PendingFlowRequestO
  * covering both an active run and one still waiting its queue slot — is dropped, since the run
  * already resyncs against the freshest server state a retry could see. A claiming request in that
  * window is held one deep instead, latest avatar winning, and its own caller resolves immediately;
- * once the in-flight resync settles, the held claim requeues ahead of anything else queued, with a
- * fresh ticket and fresh signals, and the original caller's own promise settles only once that
- * requeued run does too.
+ * once the in-flight resync settles, the held claim requeues onto the tail of `context.pending`
+ * with fresh signals and a fresh deferred, preserving the arrival order of whatever else queued
+ * behind the in-flight run, and the original caller's own promise settles only once that requeued
+ * run does too.
  *
  * A stop is handled in every state: a live activity naming a different id is a no-op, otherwise the
  * local halt (advancing the stop scope, stopping and resetting the simulation, broadcasting the
@@ -424,9 +479,9 @@ const runInlineActor = fromPromise<void, { readonly request: PendingFlowRequestO
  */
 export const workerLifecycleMachine = setup({
   actors: {
+    checkpointSubmitterMachine,
     runContinuationActor,
     runEvictionActor,
-    runInlineActor,
     runResyncActor,
     runStartActor,
   },
@@ -451,17 +506,17 @@ export const workerLifecycleMachine = setup({
       startToken: null,
       stopController,
 
-      // not spawned through the actor system: the submitter's own registration events (flush
-      // sequencing, backoff, eviction marking) are unrelated to this machine's own state, and a
-      // plain child actor avoids constraining every other invoked service to its narrower type
-      submitterRef: createActor(checkpointSubmitterMachine).start(),
+      // spawned through the actor system rather than invoked, so it survives every invoked
+      // flow's own service: the submitter's own registration events (flush sequencing, backoff,
+      // eviction marking) are unrelated to this machine's declared states
+      submitterRef: args.spawn('checkpointSubmitterMachine'),
       writerDisplacedActivityID: null,
     };
   },
   id: 'workerLifecycle',
   initial: 'idle',
   on: {
-    ADVANCE_STOP_SCOPE: { actions: assign((args) => buildStopScopeAdvance(args.context)) },
+    ADVANCE_STOP_SCOPE: { actions: assign((args) => advanceStopScope(args.context)) },
     CONTINUATION: [
       {
         actions: assign((args) => ({
@@ -552,33 +607,6 @@ export const workerLifecycleMachine = setup({
         target: '.resyncing',
       },
     ],
-    RUN_INLINE_TURN: [
-      {
-        actions: assign((args) => ({
-          pending: [
-            ...args.context.pending,
-            {
-              deferred: args.event.deferred,
-              kind: 'inline' as const,
-              run: args.event.run,
-              site: args.event.site,
-            },
-          ],
-        })),
-        guard: isFlowActive,
-      },
-      {
-        actions: assign((args) => ({
-          currentRequest: {
-            deferred: args.event.deferred,
-            kind: 'inline' as const,
-            run: args.event.run,
-            site: args.event.site,
-          },
-        })),
-        target: '.inline',
-      },
-    ],
     SET_START_TOKEN: { actions: assign({ startToken: (args) => args.event.token }) },
     SET_WRITER_DISPLACED: {
       actions: assign({ writerDisplacedActivityID: (args) => args.event.activityID }),
@@ -635,7 +663,7 @@ export const workerLifecycleMachine = setup({
       },
       {
         actions: [
-          assign((args) => buildStopScopeAdvance(args.context)),
+          assign((args) => advanceStopScope(args.context)),
           (args) => {
             applyStopHalt(args.context);
           },
@@ -653,7 +681,7 @@ export const workerLifecycleMachine = setup({
       },
       {
         actions: [
-          assign((args) => buildStopScopeAdvance(args.context)),
+          assign((args) => advanceStopScope(args.context)),
           (args) => {
             applyStopHalt(args.context);
           },
@@ -731,7 +759,7 @@ export const workerLifecycleMachine = setup({
         onDone: [
           {
             actions: assign((args) => {
-              resolveSettledRequest(args.context, args.event.output);
+              applySettledRequest(args.context, args.event.output);
 
               return { ...buildPendingPop(args.context) };
             }),
@@ -740,7 +768,7 @@ export const workerLifecycleMachine = setup({
           },
           {
             actions: assign((args) => {
-              resolveSettledRequest(args.context, args.event.output);
+              applySettledRequest(args.context, args.event.output);
 
               return { ...buildPendingPop(args.context) };
             }),
@@ -749,7 +777,7 @@ export const workerLifecycleMachine = setup({
           },
           {
             actions: assign((args) => {
-              resolveSettledRequest(args.context, args.event.output);
+              applySettledRequest(args.context, args.event.output);
 
               return { ...buildPendingPop(args.context) };
             }),
@@ -759,7 +787,7 @@ export const workerLifecycleMachine = setup({
           },
           {
             actions: assign((args) => {
-              resolveSettledRequest(args.context, args.event.output);
+              applySettledRequest(args.context, args.event.output);
 
               return { ...buildPendingPop(args.context) };
             }),
@@ -768,16 +796,7 @@ export const workerLifecycleMachine = setup({
           },
           {
             actions: assign((args) => {
-              resolveSettledRequest(args.context, args.event.output);
-
-              return { ...buildPendingPop(args.context) };
-            }),
-            guard: (args) => findNextRequestKind(args.context) === 'inline',
-            target: '#workerLifecycle.inline',
-          },
-          {
-            actions: assign((args) => {
-              resolveSettledRequest(args.context, args.event.output);
+              applySettledRequest(args.context, args.event.output);
 
               return { ...buildPendingPop(args.context) };
             }),
@@ -786,7 +805,7 @@ export const workerLifecycleMachine = setup({
           },
           {
             actions: assign((args) => {
-              resolveSettledRequest(args.context, args.event.output);
+              applySettledRequest(args.context, args.event.output);
 
               return { ...buildPendingPop(args.context) };
             }),
@@ -806,7 +825,7 @@ export const workerLifecycleMachine = setup({
         onDone: [
           {
             actions: assign((args) => {
-              resolveSettledRequest(args.context, args.event.output);
+              applySettledRequest(args.context, args.event.output);
 
               return { ...buildPendingPop(args.context) };
             }),
@@ -815,7 +834,7 @@ export const workerLifecycleMachine = setup({
           },
           {
             actions: assign((args) => {
-              resolveSettledRequest(args.context, args.event.output);
+              applySettledRequest(args.context, args.event.output);
 
               return { ...buildPendingPop(args.context) };
             }),
@@ -824,7 +843,7 @@ export const workerLifecycleMachine = setup({
           },
           {
             actions: assign((args) => {
-              resolveSettledRequest(args.context, args.event.output);
+              applySettledRequest(args.context, args.event.output);
 
               return { ...buildPendingPop(args.context) };
             }),
@@ -833,7 +852,7 @@ export const workerLifecycleMachine = setup({
           },
           {
             actions: assign((args) => {
-              resolveSettledRequest(args.context, args.event.output);
+              applySettledRequest(args.context, args.event.output);
 
               return { ...buildPendingPop(args.context) };
             }),
@@ -843,16 +862,7 @@ export const workerLifecycleMachine = setup({
           },
           {
             actions: assign((args) => {
-              resolveSettledRequest(args.context, args.event.output);
-
-              return { ...buildPendingPop(args.context) };
-            }),
-            guard: (args) => findNextRequestKind(args.context) === 'inline',
-            target: '#workerLifecycle.inline',
-          },
-          {
-            actions: assign((args) => {
-              resolveSettledRequest(args.context, args.event.output);
+              applySettledRequest(args.context, args.event.output);
 
               return { ...buildPendingPop(args.context) };
             }),
@@ -861,7 +871,7 @@ export const workerLifecycleMachine = setup({
           },
           {
             actions: assign((args) => {
-              resolveSettledRequest(args.context, args.event.output);
+              applySettledRequest(args.context, args.event.output);
 
               return { ...buildPendingPop(args.context) };
             }),
@@ -872,78 +882,6 @@ export const workerLifecycleMachine = setup({
       },
     },
     idle: { entry: assign({ phase: 'idle' as const }) },
-    inline: {
-      entry: assign({ phase: 'inline' as const }),
-      invoke: {
-        input: (args) => ({ request: getExpectedRequest(args.context.currentRequest, 'inline') }),
-        onDone: [
-          {
-            actions: assign((args) => {
-              resolveSettledRequest(args.context, args.event.output);
-
-              return { ...buildPendingPop(args.context) };
-            }),
-            guard: (args) => findNextRequestKind(args.context) === 'start',
-            target: '#workerLifecycle.starting',
-          },
-          {
-            actions: assign((args) => {
-              resolveSettledRequest(args.context, args.event.output);
-
-              return { ...buildPendingPop(args.context) };
-            }),
-            guard: (args) => findNextRequestKind(args.context) === 'resync',
-            target: '#workerLifecycle.resyncing',
-          },
-          {
-            actions: assign((args) => {
-              resolveSettledRequest(args.context, args.event.output);
-
-              return { ...buildPendingPop(args.context) };
-            }),
-            guard: (args) => findNextRequestKind(args.context) === 'continuation',
-            target: '#workerLifecycle.continuing',
-          },
-          {
-            actions: assign((args) => {
-              resolveSettledRequest(args.context, args.event.output);
-
-              return { ...buildPendingPop(args.context) };
-            }),
-            guard: (args) => findNextRequestKind(args.context) === 'eviction',
-            target: '#workerLifecycle.evicting',
-          },
-          {
-            actions: assign((args) => {
-              resolveSettledRequest(args.context, args.event.output);
-
-              return { ...buildPendingPop(args.context) };
-            }),
-            guard: (args) => findNextRequestKind(args.context) === 'inline',
-            reenter: true,
-            target: '#workerLifecycle.inline',
-          },
-          {
-            actions: assign((args) => {
-              resolveSettledRequest(args.context, args.event.output);
-
-              return { ...buildPendingPop(args.context) };
-            }),
-            guard: hasLiveActivity,
-            target: '#workerLifecycle.running',
-          },
-          {
-            actions: assign((args) => {
-              resolveSettledRequest(args.context, args.event.output);
-
-              return { ...buildPendingPop(args.context) };
-            }),
-            target: '#workerLifecycle.idle',
-          },
-        ],
-        src: 'runInlineActor',
-      },
-    },
     resyncing: {
       entry: assign({ phase: 'resyncing' as const }),
       invoke: {
@@ -954,96 +892,55 @@ export const workerLifecycleMachine = setup({
         onDone: [
           {
             actions: assign((args) => {
-              const ticket = args.context.resyncTicket;
-              const current = args.context.currentRequest;
+              applyResyncSettlement(args.context, args.event.output);
 
-              if (
-                ticket === null ||
-                ticket.pendingClaimAvatarID === null ||
-                current === null ||
-                current.kind !== 'resync'
-              ) {
-                return {};
-              }
-
-              return {
-                currentRequest: buildResyncRequest(
-                  args.context,
-                  ticket.pendingClaimAvatarID,
-                  true,
-                  buildDeferred<void>(),
-                  [...current.carryOverDeferreds, current.deferred],
-                ),
-                resyncTicket: { pendingClaimAvatarID: null },
-              };
+              return buildResyncSettlePop(args.context);
             }),
-            // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- WorkerLifecycleContext embeds a live xstate ActorRef and AbortController/AbortSignal handles with no further readonly form
-            guard: (args: ContextArg) =>
-              args.context.resyncTicket !== null &&
-              args.context.resyncTicket.pendingClaimAvatarID !== null,
-            reenter: true,
-            target: '#workerLifecycle.resyncing',
-          },
-          {
-            actions: assign((args) => {
-              resolveSettledRequest(args.context, args.event.output);
-
-              return { resyncTicket: null, ...buildPendingPop(args.context) };
-            }),
-            guard: (args) => findNextRequestKind(args.context) === 'start',
+            guard: (args) => findResyncSettleRequestKind(args.context) === 'start',
             target: '#workerLifecycle.starting',
           },
           {
             actions: assign((args) => {
-              resolveSettledRequest(args.context, args.event.output);
+              applyResyncSettlement(args.context, args.event.output);
 
-              return { resyncTicket: null, ...buildPendingPop(args.context) };
+              return buildResyncSettlePop(args.context);
             }),
-            guard: (args) => findNextRequestKind(args.context) === 'resync',
+            guard: (args) => findResyncSettleRequestKind(args.context) === 'resync',
             reenter: true,
             target: '#workerLifecycle.resyncing',
           },
           {
             actions: assign((args) => {
-              resolveSettledRequest(args.context, args.event.output);
+              applyResyncSettlement(args.context, args.event.output);
 
-              return { resyncTicket: null, ...buildPendingPop(args.context) };
+              return buildResyncSettlePop(args.context);
             }),
-            guard: (args) => findNextRequestKind(args.context) === 'continuation',
+            guard: (args) => findResyncSettleRequestKind(args.context) === 'continuation',
             target: '#workerLifecycle.continuing',
           },
           {
             actions: assign((args) => {
-              resolveSettledRequest(args.context, args.event.output);
+              applyResyncSettlement(args.context, args.event.output);
 
-              return { resyncTicket: null, ...buildPendingPop(args.context) };
+              return buildResyncSettlePop(args.context);
             }),
-            guard: (args) => findNextRequestKind(args.context) === 'eviction',
+            guard: (args) => findResyncSettleRequestKind(args.context) === 'eviction',
             target: '#workerLifecycle.evicting',
           },
           {
             actions: assign((args) => {
-              resolveSettledRequest(args.context, args.event.output);
+              applyResyncSettlement(args.context, args.event.output);
 
-              return { resyncTicket: null, ...buildPendingPop(args.context) };
-            }),
-            guard: (args) => findNextRequestKind(args.context) === 'inline',
-            target: '#workerLifecycle.inline',
-          },
-          {
-            actions: assign((args) => {
-              resolveSettledRequest(args.context, args.event.output);
-
-              return { resyncTicket: null, ...buildPendingPop(args.context) };
+              return buildResyncSettlePop(args.context);
             }),
             guard: hasLiveActivity,
             target: '#workerLifecycle.running',
           },
           {
             actions: assign((args) => {
-              resolveSettledRequest(args.context, args.event.output);
+              applyResyncSettlement(args.context, args.event.output);
 
-              return { resyncTicket: null, ...buildPendingPop(args.context) };
+              return buildResyncSettlePop(args.context);
             }),
             target: '#workerLifecycle.idle',
           },
@@ -1062,7 +959,7 @@ export const workerLifecycleMachine = setup({
         onDone: [
           {
             actions: assign((args) => {
-              resolveSettledRequest(args.context, args.event.output);
+              applySettledRequest(args.context, args.event.output);
 
               return { ...buildPendingPop(args.context) };
             }),
@@ -1072,7 +969,7 @@ export const workerLifecycleMachine = setup({
           },
           {
             actions: assign((args) => {
-              resolveSettledRequest(args.context, args.event.output);
+              applySettledRequest(args.context, args.event.output);
 
               return { ...buildPendingPop(args.context) };
             }),
@@ -1081,7 +978,7 @@ export const workerLifecycleMachine = setup({
           },
           {
             actions: assign((args) => {
-              resolveSettledRequest(args.context, args.event.output);
+              applySettledRequest(args.context, args.event.output);
 
               return { ...buildPendingPop(args.context) };
             }),
@@ -1090,7 +987,7 @@ export const workerLifecycleMachine = setup({
           },
           {
             actions: assign((args) => {
-              resolveSettledRequest(args.context, args.event.output);
+              applySettledRequest(args.context, args.event.output);
 
               return { ...buildPendingPop(args.context) };
             }),
@@ -1099,16 +996,7 @@ export const workerLifecycleMachine = setup({
           },
           {
             actions: assign((args) => {
-              resolveSettledRequest(args.context, args.event.output);
-
-              return { ...buildPendingPop(args.context) };
-            }),
-            guard: (args) => findNextRequestKind(args.context) === 'inline',
-            target: '#workerLifecycle.inline',
-          },
-          {
-            actions: assign((args) => {
-              resolveSettledRequest(args.context, args.event.output);
+              applySettledRequest(args.context, args.event.output);
 
               return { ...buildPendingPop(args.context) };
             }),
@@ -1117,7 +1005,7 @@ export const workerLifecycleMachine = setup({
           },
           {
             actions: assign((args) => {
-              resolveSettledRequest(args.context, args.event.output);
+              applySettledRequest(args.context, args.event.output);
 
               return { ...buildPendingPop(args.context) };
             }),
