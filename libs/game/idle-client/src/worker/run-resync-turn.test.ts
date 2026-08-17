@@ -1570,6 +1570,13 @@ test('it queues an external resync behind a turn that ran an inline one, rather 
     await turnGate;
   });
 
+  // wait for the inline resync's own broadcast before the external arrival, so it genuinely
+  // lands while the turn above is still running its own remainder rather than before the inline
+  // resync has even started — runTurn's own queueing defers `fn` a microtask past this call
+  await waitFor(() => {
+    expect(connection.received.length).toBeGreaterThanOrEqual(1);
+  });
+
   // arrives while the turn above is still running its own remainder, after its inline resync
   // already broadcast and settled
   const external = runResyncTurn(context, 'avatar_external', false);

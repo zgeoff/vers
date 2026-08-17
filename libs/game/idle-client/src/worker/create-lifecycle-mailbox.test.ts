@@ -202,15 +202,15 @@ test('it holds a claiming resync and runs it after the in-flight one settles', a
     releaseFirst = resolve;
   });
 
+  const gates: Record<string, Promise<void>> = { avatar_a: firstGate, avatar_b: Promise.resolve() };
+
   // one plan, reused for both calls — the mailbox re-runs a held claim with whichever plan its
   // own triggering call carried, so a plan reads its avatarID argument rather than closing over
   // a fixed identity, exactly as the real binder's does
   const planResyncBody = (avatarID: string) => async () => {
     order.push(`${avatarID}:enter`);
 
-    if (avatarID === 'avatar_a') {
-      await firstGate;
-    }
+    await gates[avatarID];
 
     order.push(`${avatarID}:exit`);
   };
@@ -278,12 +278,12 @@ test('it resolves a claiming arrival immediately while the first caller awaits t
     releaseFirst = resolve;
   });
 
+  const gates: Record<string, Promise<void>> = { avatar_a: firstGate, avatar_b: Promise.resolve() };
+
   // one plan, reused for both calls — see the note in the previous test on why the recursive
   // re-run needs a single avatarID-parameterized plan rather than one closure per call
   const planResyncBody = (avatarID: string) => async () => {
-    if (avatarID === 'avatar_a') {
-      await firstGate;
-    }
+    await gates[avatarID];
 
     order.push(`${avatarID}:ran`);
   };
@@ -317,10 +317,14 @@ test('it invokes prepare synchronously at accept and again at requeue', async ()
     releaseFirst = resolve;
   });
 
+  const gates: Record<string, Promise<void>> = { avatar_a: firstGate, avatar_b: Promise.resolve() };
+
   const planResyncBody = (avatarID: string, claim: boolean) => {
     prepareCalls.push({ avatarID, claim });
 
-    return () => (avatarID === 'avatar_a' ? firstGate : Promise.resolve());
+    return async () => {
+      await gates[avatarID];
+    };
   };
 
   const first = mailbox.runResyncTurn('avatar_a', false, planResyncBody);
