@@ -1359,6 +1359,19 @@ const motionKnobs = makeKnobGroup('motion', {
   streaks: [1, 0, 2],
 });
 
+const motionState = { streakSpeed: 1 };
+
+registerKnob(
+  'motion.streakSpeed',
+  1,
+  0.2,
+  3,
+  (value) => {
+    motionState.streakSpeed = value;
+  },
+  0.05,
+);
+
 /** Per-frame updaters for the current scene's animated meshes; rebuilt with each view select. */
 const sceneAnimations: Array<(elapsed: number) => void> = [];
 
@@ -1794,9 +1807,11 @@ function buildScene(config: ProbeConfig, useParts: boolean, grounding = false, s
   if (surfaces) {
     // distant light shafts pulsing out of phase among the far towers — broad ambience, not a siren
     for (const ray of RAY_SPECS) {
+      // fog would swallow the shaft color at this distance — these are sky, not scenery
       const rayMaterial = new MeshBasicNodeMaterial({
         blending: AdditiveBlending,
         depthWrite: false,
+        fog: false,
         side: DoubleSide,
         transparent: true,
       });
@@ -1816,7 +1831,8 @@ function buildScene(config: ProbeConfig, useParts: boolean, grounding = false, s
     // the skybox layer: bright streaks crossing the far skyline — distant shooting stars
     const streakGeometry = new BoxGeometry(3.4, 0.16, 0.16);
     const streakMaterials = ['#a78bfa', '#5eead4', '#e5c79c', '#dbeafe'].map((streakColor) => {
-      const material = new MeshBasicNodeMaterial();
+      // beyond the fog far distance every fogged material flattens to fog color — exempt these
+      const material = new MeshBasicNodeMaterial({ fog: false });
 
       material.colorNode = color(streakColor).mul(3.2).mul(motionKnobs.streaks);
 
@@ -1845,7 +1861,7 @@ function buildScene(config: ProbeConfig, useParts: boolean, grounding = false, s
       streak.visible = false;
       scene.add(streak);
       sceneAnimations.push((elapsed) => {
-        const phase = (elapsed + offset) % period;
+        const phase = (elapsed * motionState.streakSpeed + offset) % period;
         const progress = phase / travel;
         const crossing = progress < 1;
 
