@@ -1544,9 +1544,19 @@ test('it clears a moot displacement once the fetched run is no longer active', a
 });
 
 test('it queues an external resync behind a turn that ran an inline one, rather than dropping it', async () => {
+  let releaseFlush: (() => void) | undefined;
+
+  const heldFlush = new Promise<void>((_resolve, reject) => {
+    releaseFlush = () => {
+      reject(new Error('held flush exploded'));
+    };
+  });
+
+  const flushHeld = mock(() => heldFlush);
+
   const context = createStubWorkerContext({
     submitter: {
-      flushHeld: () => Promise.reject(new Error('held flush exploded')),
+      flushHeld,
       flushNow: () => Promise.resolve(),
       registerActivity: () => Promise.resolve(),
       submit: () => Promise.resolve(undefined),
@@ -1570,17 +1580,17 @@ test('it queues an external resync behind a turn that ran an inline one, rather 
     await turnGate;
   });
 
-  // wait for the inline resync's own broadcast before the external arrival, so it genuinely
-  // lands while the turn above is still running its own remainder rather than before the inline
-  // resync has even started — runTurn's own queueing defers `fn` a microtask past this call
+  // wait for the inline resync to reach its held flush before the external arrival, so it
+  // genuinely lands mid-flow — the flush stays held until released below, so this is the
+  // window during which a regression that leaves the drop window open would wrongly drop it
   await waitFor(() => {
-    expect(connection.received.length).toBeGreaterThanOrEqual(1);
+    expect(flushHeld).toHaveBeenCalled();
   });
 
-  // arrives while the turn above is still running its own remainder, after its inline resync
-  // already broadcast and settled
+  // arrives while the inline resync is still parked on its held flush
   const external = runResyncTurn(context, 'avatar_external', false);
 
+  releaseFlush?.();
   releaseTurn?.();
 
   await Promise.all([inlineTurn, external]);
