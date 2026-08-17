@@ -42,8 +42,8 @@ interface ResyncTicket {
 }
 
 /**
- * Builds one mailbox instance. A runtime constructs exactly one and shares it through
- * `WorkerContext.getMailbox` for its whole lifetime.
+ * Builds one mailbox instance. A runtime constructs exactly one and shares it through the worker
+ * context for its whole lifetime.
  */
 export function createLifecycleMailbox(): LifecycleMailbox {
   let tail: Readonly<Promise<void>> = Promise.resolve();
@@ -84,11 +84,13 @@ export function createLifecycleMailbox(): LifecycleMailbox {
 
     resyncTicket = ticket;
 
-    const body = prepare(avatarID, claim);
-
-    await runTurn('resync', body);
-
-    resyncTicket = null;
+    // the ticket must clear on any escape — prepare is caller-supplied and runs while the ticket
+    // is set; a throw that left it standing would drop every later resync for the worker's lifetime
+    try {
+      await runTurn('resync', prepare(avatarID, claim));
+    } finally {
+      resyncTicket = null;
+    }
 
     if (ticket.pendingClaimAvatarID !== null) {
       await runResyncTurn(ticket.pendingClaimAvatarID, true, prepare);

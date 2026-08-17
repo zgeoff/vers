@@ -344,6 +344,26 @@ test('it invokes prepare synchronously at accept and again at requeue', async ()
   ]);
 });
 
+test('it accepts a later resync after a plan call that throws', async () => {
+  const mailbox = createLifecycleMailbox();
+
+  expect(
+    mailbox.runResyncTurn('avatar_a', false, () => {
+      throw new Error('plan exploded');
+    }),
+  ).rejects.toThrowWithMessage(Error, 'plan exploded');
+
+  let ran = false;
+
+  await mailbox.runResyncTurn('avatar_a', false, () => () => {
+    ran = true;
+
+    return Promise.resolve();
+  });
+
+  expect(ran).toBeTrue();
+});
+
 test('it runs a resync arriving during a non-resync turn after that turn rather than dropping it', async () => {
   const mailbox = createLifecycleMailbox();
   const order: Array<string> = [];
