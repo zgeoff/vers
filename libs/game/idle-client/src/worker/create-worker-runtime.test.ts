@@ -15,9 +15,11 @@ import { writeFailureActionCache } from '../submission/write-failure-action-cach
 import { writeNodeSeeds } from '../submission/write-node-seeds';
 import { writePendingStartIntent } from '../submission/write-pending-start-intent';
 import { writePendingStopIntent } from '../submission/write-pending-stop-intent';
+import { writeQueuedCheckpoint } from '../submission/write-queued-checkpoint';
 import { writeStartStamps } from '../submission/write-start-stamps';
 import { createFastClock } from '../test-utils/create-fast-clock';
 import { createTestClient } from '../test-utils/create-test-client';
+import { createMockCheckpointBatchEntry } from '../test-utils/factories/create-mock-checkpoint-batch-entry';
 import { makeFailFirstMatchHandler } from '../test-utils/make-fail-first-match-handler';
 import { WORKER_TO_CLIENT_CHANNEL } from '../transport/constants';
 import { WorkerMessageType } from '../types';
@@ -550,9 +552,8 @@ test('it resets the displaced simulation and broadcasts WriterDisplaced on a ses
   const viewer = await createViewer();
   const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
 
-  // this seed's placeholder encounter completes in exactly 60s of simulated time; the fast clock
-  // below collapses that wait into a single tick-loop frame, so its terminal checkpoint flushes
-  // immediately rather than waiting on the progress window — the flush this evicts
+  // a zero-gap active row, so the first reconnect's resync attaches it live without any
+  // simulated time elapsing
   const activity = await db.activityCollection.create({
     avatarID: viewer.avatar.id,
     encounterNode: { difficulty: 1 },
@@ -560,38 +561,42 @@ test('it resets the displaced simulation and broadcasts WriterDisplaced on a ses
     startedAt: new Date(),
   });
 
+  const broadcasts = collectBroadcasts();
+
+  using runtime = createWorkerRuntime({ client });
+
+  const testClient = createConnectedTestClient(runtime);
+
+  await testClient.initialize({});
+
+  // the report awaits the recovery it triggers, so the resync's attach has fully settled by the
+  // time it answers — the run is genuinely installed before the takeover happens
+  await testClient.reportOnline({ avatarID: viewer.avatar.id, claim: false });
+
+  const installed = await testClient.initialize({});
+
+  expect(installed.state.activity).toMatchObject({ id: activity.id });
+
+  // the takeover: from here every append is refused as another session's, and a checkpoint is
+  // already queued for the reconnect drain below to deliver into that refusal
   server.use(
     mockActivityService.trackActivityProgress.handler((opts) => {
       throw opts.errors.SESSION_EVICTED({ data: {} });
     }),
   );
 
-  const clock = createFastClock();
-  const broadcasts = collectBroadcasts();
+  await writeQueuedCheckpoint(activity.id, createMockCheckpointBatchEntry({ version: 1 }));
 
-  using runtime = createWorkerRuntime({ client, now: clock.now });
-
-  const testClient = createConnectedTestClient(runtime);
-
-  await testClient.initialize({});
+  // the second connectivity report drains the held queue; its flush answers the eviction, and the
+  // displacement settles as its own lifecycle flow
   await testClient.reportOnline({ avatarID: viewer.avatar.id, claim: false });
 
-  await waitFor(
-    () => {
-      // re-armed every poll: a jump that lands before the tick loop installs the simulation is an
-      // idle frame, so the wait just re-arms the next one until it lands on a live tick
-      clock.jump(65_000);
-
-      expect(broadcasts.received).toPartiallyContain({
-        activityID: activity.id,
-        type: WorkerMessageType.WriterDisplaced,
-      });
-    },
-
-    // the tick loop paces itself on real timers between each of the many timesteps this jump
-    // spans, so a loaded runner can need several times the default budget to land a live tick
-    { timeoutMs: 5000 },
-  );
+  await waitFor(() => {
+    expect(broadcasts.received).toPartiallyContain({
+      activityID: activity.id,
+      type: WorkerMessageType.WriterDisplaced,
+    });
+  });
 
   const result = await testClient.initialize({});
 
