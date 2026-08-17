@@ -1007,55 +1007,99 @@ function applyGrounding(material: MeshStandardNodeMaterial) {
 }
 
 /**
- * Manufactured cladding, not camouflage: world space quantized into panel cells, each cell a
- * crisp constant tonal step, with thin seam lines between courses and a fine material grain.
- * Smooth mid-frequency noise is deliberately absent — it reads as blotch.
+ * Surface toolbox. Both texture tools survive — organic noise and quantized cells — but neither
+ * is ever applied uniformly: each building's recipe composes them selectively, anchored to its
+ * architecture, with large areas of rest. Contributions are centered on zero and added to 1.
  */
-function buildSurfaceVariation() {
-  // per-panel tone: noise sampled at the cell's quantized coordinate is constant across the cell
+function buildGrain(amp = 0.04) {
+  return mx_noise_float(positionWorld.mul(16)).mul(amp);
+}
+
+function buildOrganic(scale: number, amp: number) {
+  return mx_noise_float(positionWorld.mul(scale)).mul(amp);
+}
+
+/** Constant tone per quantized cell — the paneling tool. */
+function buildPanels(cellX: number, cellY: number, cellZ: number, amp: number) {
   const cell = vec3(
-    positionWorld.x.mul(0.9).floor(),
-    positionWorld.y.mul(1.4).floor(),
-    positionWorld.z.mul(0.9).floor(),
+    positionWorld.x.mul(cellX).floor(),
+    positionWorld.y.mul(cellY).floor(),
+    positionWorld.z.mul(cellZ).floor(),
   );
-  const panel = mx_noise_float(cell.mul(0.37)).mul(0.5).add(0.5).mul(0.12).add(0.94);
 
-  // thin horizontal course seams
-  const bandY = positionWorld.y.mul(1.4).fract();
-  const seamY = bandY.min(bandY.oneMinus()).smoothstep(0.0, 0.05).oneMinus().mul(0.1);
-
-  // shallow vertical joints on both wall axes; on the constant axis this degrades to a mild
-  // whole-face tone shift, which reads as panel variance rather than a defect
-  const bandX = positionWorld.x.mul(0.9).fract();
-  const bandZ = positionWorld.z.mul(0.9).fract();
-  const seamX = bandX.min(bandX.oneMinus()).smoothstep(0.0, 0.03).oneMinus().mul(0.05);
-  const seamZ = bandZ.min(bandZ.oneMinus()).smoothstep(0.0, 0.03).oneMinus().mul(0.05);
-
-  // fine grain so faces feel like material rather than fill color
-  const grain = mx_noise_float(positionWorld.mul(16)).mul(0.04);
-
-  return panel.sub(seamY).sub(seamX).sub(seamZ).add(grain).clamp(0.8, 1.1);
+  return mx_noise_float(cell.mul(0.37)).mul(amp);
 }
 
-function applySurface(material: MeshStandardNodeMaterial, base: Color) {
-  material.colorNode = color(base).mul(buildSurfaceVariation());
+/** A single darker shadow line at one architectural height — under a cornice, along a course. */
+function buildCourseShadow(height: number, halfWidth: number, depth: number) {
+  return positionWorld.y.sub(height).abs().smoothstep(0, halfWidth).oneMinus().mul(depth);
 }
 
-/** Pavement: large paver cells with crisp joints on both axes, plus the same fine grain. */
+/** Weathering that belongs low on a wall: organic noise faded out above the given band. */
+function buildLowWear(scale: number, amp: number, fadeFrom: number, fadeTo: number) {
+  const mask = positionWorld.y.smoothstep(fadeFrom, fadeTo).oneMinus();
+
+  return mx_noise_float(positionWorld.mul(scale)).mul(amp).mul(mask);
+}
+
+const SURFACE_RECIPES: Record<string, () => ReturnType<typeof buildGrain>> = {
+  // retrofit paneling suits the market: coarse quantized steps plus grain
+  market: () => buildPanels(0.7, 0.95, 0.7, 0.14).add(buildGrain()).add(1).clamp(0.86, 1.12),
+
+  // metal drums: horizontal sheet banding, rail stains bleeding down from the collar bands
+  stash: () =>
+    buildPanels(0.001, 1.7, 0.001, 0.1)
+      .add(buildLowWear(2.2, 0.16, 0.8, 3.2))
+      .add(buildGrain())
+      .add(1)
+      .clamp(0.84, 1.1),
+
+  // the authority keeps its hall severe: near-clean, one shadow line under the cornice
+  codex: () =>
+    buildOrganic(0.3, 0.05)
+      .sub(buildCourseShadow(3.68, 0.14, 0.1))
+      .add(buildGrain())
+      .add(1)
+      .clamp(0.9, 1.08),
+
+  // worn slab: heavy organic weathering low on the walls, darkened strata at the course heights
+  gate: () =>
+    buildLowWear(0.45, 0.22, 1.2, 4.6)
+      .sub(buildCourseShadow(2.2, 0.32, 0.09))
+      .sub(buildCourseShadow(4.15, 0.3, 0.09))
+      .add(buildGrain())
+      .add(1)
+      .clamp(0.76, 1.1),
+
+  avatar: () => buildPanels(0.001, 1.4, 0.001, 0.08).add(buildGrain()).add(1).clamp(0.88, 1.1),
+
+  fountain: () => buildOrganic(0.8, 0.08).add(buildGrain()).add(1).clamp(0.88, 1.1),
+};
+
+function applySurface(material: MeshStandardNodeMaterial, base: Color, key: string) {
+  const recipe = SURFACE_RECIPES[key];
+
+  if (recipe) {
+    material.colorNode = color(base).mul(recipe());
+  }
+}
+
+/** Pavement: broad quiet pavers, soft wear mottle, crisp joints — calm underfoot, not graph paper. */
 function applyGroundSurface(material: MeshStandardNodeMaterial, base: Color) {
-  const cell = vec3(positionWorld.x.mul(0.55).floor(), 0, positionWorld.z.mul(0.55).floor());
-  const paver = mx_noise_float(cell.mul(0.41)).mul(0.5).add(0.5).mul(0.1).add(0.93);
-  const jointX = positionWorld.x.mul(0.55).fract();
-  const jointZ = positionWorld.z.mul(0.55).fract();
+  const paver = buildPanels(0.3, 0.001, 0.3, 0.07);
+  const jointX = positionWorld.x.mul(0.3).fract();
+  const jointZ = positionWorld.z.mul(0.3).fract();
   const joints = jointX
     .min(jointX.oneMinus())
     .min(jointZ.min(jointZ.oneMinus()))
-    .smoothstep(0.0, 0.03)
+    .smoothstep(0.0, 0.02)
     .oneMinus()
-    .mul(0.12);
-  const grain = mx_noise_float(positionWorld.mul(14)).mul(0.03);
+    .mul(0.08);
+  const wear = buildOrganic(0.22, 0.08);
 
-  material.colorNode = color(base).mul(paver.sub(joints).add(grain).clamp(0.78, 1.08));
+  material.colorNode = color(base).mul(
+    paver.sub(joints).add(wear).add(buildGrain(0.03)).add(1).clamp(0.82, 1.08),
+  );
 }
 
 function buildScene(config: ProbeConfig, useParts: boolean, grounding = false, surfaces = false): Scene {
@@ -1187,24 +1231,20 @@ function buildScene(config: ProbeConfig, useParts: boolean, grounding = false, s
   const fountainZ = fountain?.z ?? 1.5;
 
   if (useParts) {
-    const partMaterial = new MeshStandardNodeMaterial({ color: navColor, roughness: 0.85 });
-    const furnitureMaterial = new MeshStandardNodeMaterial({
-      color: litColor.clone().multiplyScalar(0.55),
-      roughness: 0.7,
-    });
-
-    if (grounding) {
-      applyGrounding(partMaterial);
-      applyGrounding(furnitureMaterial);
-    }
-
-    if (surfaces) {
-      applySurface(partMaterial, navColor);
-      applySurface(furnitureMaterial, litColor.clone().multiplyScalar(0.55));
-    }
-
     for (const placement of placements) {
-      const material = placement.key === 'fountain' ? furnitureMaterial : partMaterial;
+      const base = placement.key === 'fountain' ? litColor.clone().multiplyScalar(0.55) : navColor;
+      const material = new MeshStandardNodeMaterial({
+        color: base,
+        roughness: placement.key === 'stash' ? 0.55 : 0.85,
+      });
+
+      if (grounding) {
+        applyGrounding(material);
+      }
+
+      if (surfaces) {
+        applySurface(material, base, placement.key);
+      }
 
       renderPartSet(scene, placement.parts, material, placement.x, placement.z, placement.ry);
     }
