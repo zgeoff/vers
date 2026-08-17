@@ -9,6 +9,7 @@ import {
   registerHappyDOM,
   registerMSWLifecycle,
 } from '@vers/test-utils/bun';
+import { resetZustandStores } from './register-zustand-reset-early';
 import { server } from './src/mocks/node';
 import { registerAvatarViewerMock } from './src/test-utils/register-avatar-viewer-mock';
 import { registerGameCanvasMock } from './src/test-utils/register-game-canvas-mock';
@@ -59,5 +60,12 @@ registerWorldMapNodeCodexSlotMock();
 // own tests, `bun test` running every file's module graph in one process.
 const reactTestingLibrary = await import('@testing-library/react');
 
-afterEach(reactTestingLibrary.cleanup);
+afterEach(() => {
+  // unmount before the store reset: a reset under a still-mounted tree re-renders it against the
+  // fresh stores, and its effects write the outgoing test's state right back
+  reactTestingLibrary.cleanup();
+
+  resetZustandStores();
+});
+
 registerBunTestCleanup();
