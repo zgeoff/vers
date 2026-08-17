@@ -363,6 +363,13 @@ const AVATAR_PARTS: ReadonlyArray<SilhouettePart> = [
   { g: 'box', sx: 1.4, sy: 1.1, sz: 1.4, x: 2.9, y: 0.55, z: 0 },
 ];
 
+/** Avatar C — the half-sunk dome on a plinth, stageable in place of the drums for comparison. */
+const AVATAR_DOME_PARTS: ReadonlyArray<SilhouettePart> = [
+  { g: 'box', sx: 5.5, sy: 1.6, sz: 5.5, x: 0, y: 0.8, z: 0 },
+  { g: 'sphere', sx: 3, sy: 3, sz: 3, x: 0, y: 1.6, z: 0 },
+  { g: 'box', sx: 0.12, sy: 2.6, sz: 0.12, x: 0, y: 5.9, z: 0 },
+];
+
 /** Stash new-A — the bunker vault evolved: circular door face, buttress hips. */
 const STASH_VAULT_FACE: ReadonlyArray<SilhouettePart> = [
   { g: 'box', sx: 7.5, sy: 2.2, sz: 5.5, x: 0, y: 1.1, z: 0 },
@@ -372,6 +379,31 @@ const STASH_VAULT_FACE: ReadonlyArray<SilhouettePart> = [
   { g: 'box', sx: 0.4, sy: 0.7, sz: 0.4, x: 1.4, y: 4.3, z: 0 },
   { g: 'box', sx: 1.4, sy: 1.4, sz: 3, x: -3.9, y: 0.7, z: 0 },
   { g: 'box', sx: 1.4, sy: 1.4, sz: 3, x: 3.9, y: 0.7, z: 0 },
+];
+
+/**
+ * The market's mid-scale form pass: the picked stacked-bazaar massing gains canopy bays over a
+ * row of stalls, a roof vent and pipe run, and a projecting sign fin. Front is local +z.
+ */
+const MARKET_FORM_PARTS: ReadonlyArray<SilhouettePart> = [
+  { g: 'box', sx: 12, sy: 2, sz: 4.6, x: 0, y: 1, z: 0 },
+  { g: 'box', sx: 9, sy: 1.7, sz: 3.8, x: 1.6, y: 2.85, z: -0.3 },
+  { g: 'box', sx: 2, sy: 1, sz: 2, x: -3.4, y: 2.5, z: 0 },
+  { g: 'box', sx: 1.4, sy: 1.4, sz: 1.4, x: 0.8, y: 4.4, z: -0.6 },
+  { g: 'box', sx: 2.6, sy: 0.8, sz: 1.8, x: 3.8, y: 4.1, z: 0.2 },
+  { g: 'box', sx: 0.12, sy: 2, sz: 0.12, x: 4.2, y: 4.7, z: 0 },
+  { g: 'box', rx: -0.32, sx: 2.1, sy: 0.25, sz: 1.9, x: -4.8, y: 2.15, z: 2.6 },
+  { g: 'box', rx: -0.32, sx: 2.1, sy: 0.25, sz: 1.9, x: -2.4, y: 2.2, z: 2.55 },
+  { g: 'box', rx: -0.32, sx: 2.1, sy: 0.25, sz: 1.9, x: 0, y: 2.15, z: 2.6 },
+  { g: 'box', rx: -0.32, sx: 2.1, sy: 0.25, sz: 1.9, x: 2.4, y: 2.18, z: 2.58 },
+  { g: 'box', rx: -0.32, sx: 2.1, sy: 0.25, sz: 1.9, x: 4.8, y: 2.15, z: 2.6 },
+  { g: 'box', sx: 1.7, sy: 1.05, sz: 1.3, x: -3.7, y: 0.53, z: 2.7 },
+  { g: 'box', sx: 1.6, sy: 1.1, sz: 1.3, x: -1.2, y: 0.55, z: 2.8 },
+  { g: 'box', sx: 1.7, sy: 1, sz: 1.3, x: 1.4, y: 0.5, z: 2.65 },
+  { g: 'box', sx: 1.6, sy: 1.1, sz: 1.3, x: 3.9, y: 0.55, z: 2.75 },
+  { g: 'cyl', sx: 0.55, sy: 0.9, sz: 0.55, x: -1.6, y: 4.15, z: -0.5 },
+  { g: 'box', sx: 6, sy: 0.18, sz: 0.18, x: 0.5, y: 2.15, z: -2.35 },
+  { g: 'box', sx: 0.3, sy: 2.6, sz: 1.2, x: -6.15, y: 2.6, z: 1.6 },
 ];
 
 /** Stash pick — the double drum made asymmetric: one large tank, one small, sharing a collar. */
@@ -471,67 +503,12 @@ interface LineupElement {
  */
 const LINEUP_ELEMENTS: ReadonlyArray<LineupElement> = [
   {
-    camZ: 22,
-    key: 'lineup-stash',
-    lookY: 2.4,
-    name: 'S · stash',
-    spacing: 12,
-    candidates: [
-      STASH_VAULT_FACE,
-      // B — double drum: two squat tanks sharing a collar
-      [
-        { g: 'cyl', sx: 2.2, sy: 2.8, sz: 2.2, x: -2.3, y: 1.4, z: 0 },
-        { g: 'cyl', sx: 2.2, sy: 2.8, sz: 2.2, x: 2.3, y: 1.4, z: 0 },
-        { g: 'box', sx: 3.4, sy: 1.6, sz: 3, x: 0, y: 0.8, z: 0 },
-        { g: 'box', sx: 1, sy: 0.5, sz: 1, x: -2.3, y: 3.05, z: 0 },
-        { g: 'box', sx: 1, sy: 0.5, sz: 1, x: 2.3, y: 3.05, z: 0 },
-        { g: 'box', sx: 0.15, sy: 1.2, sz: 0.15, x: 0, y: 2.2, z: 0 },
-      ],
-      // C — clamp: a monolithic block locked under a heavy brace
-      [
-        { g: 'box', sx: 6, sy: 2.8, sz: 5, x: 0, y: 1.4, z: 0 },
-        { g: 'box', sx: 0.8, sy: 4.2, sz: 1.2, x: -3.4, y: 2.1, z: 0 },
-        { g: 'box', sx: 0.8, sy: 4.2, sz: 1.2, x: 3.4, y: 2.1, z: 0 },
-        { g: 'box', sx: 7.6, sy: 1, sz: 1.4, x: 0, y: 4.7, z: 0 },
-        { g: 'box', sx: 1.2, sy: 0.6, sz: 1.6, x: -3.4, y: 0.3, z: 0 },
-        { g: 'box', sx: 1.2, sy: 0.6, sz: 1.6, x: 3.4, y: 0.3, z: 0 },
-      ],
-    ],
-  },
-  {
-    camZ: 24,
-    key: 'lineup-codex',
-    lookY: 3,
-    name: 'S · codex',
-    spacing: 12,
-    candidates: [CODEX_ARCHIVE_HALL, CODEX_LISTENING_BOWL, CODEX_PRECINCT],
-  },
-  {
-    camZ: 24,
-    key: 'lineup-gate',
-    lookY: 4,
-    name: 'S · gate',
-    spacing: 14,
-    candidates: [
-      GATE_BASTION_SLOT,
-      // B — twin bastions: flanking towers, double-deck connection
-      [
-        { g: 'box', sx: 2.8, sy: 6.5, sz: 2.6, x: -4, y: 3.25, z: 0 },
-        { g: 'box', sx: 2.8, sy: 6.5, sz: 2.6, x: 4, y: 3.25, z: 0 },
-        { g: 'box', sx: 5.6, sy: 1, sz: 1.6, x: 0, y: 6.6, z: 0 },
-        { g: 'box', sx: 5.4, sy: 0.5, sz: 1.4, x: 0, y: 4.6, z: 0 },
-        { g: 'box', sx: 0.12, sy: 1.8, sz: 0.12, x: -4, y: 7.4, z: 0 },
-        { g: 'box', sx: 0.12, sy: 1.8, sz: 0.12, x: 4, y: 7.4, z: 0 },
-      ],
-      // C — maw: symmetric walls leaning in, the opening narrowing toward the header
-      [
-        { g: 'box', rz: -0.15, sx: 3, sy: 5.4, sz: 1.8, x: -3.4, y: 2.7, z: 0 },
-        { g: 'box', rz: 0.15, sx: 3, sy: 5.4, sz: 1.8, x: 3.4, y: 2.7, z: 0 },
-        { g: 'box', sx: 8, sy: 1.6, sz: 1.8, x: 0, y: 6.3, z: 0 },
-        { g: 'box', sx: 6, sy: 0.4, sz: 3, x: 0, y: 0.2, z: 1.6 },
-        { g: 'box', sx: 0.12, sy: 2, sz: 0.12, x: 0, y: 8.1, z: 0 },
-      ],
-    ],
+    camZ: 26,
+    key: 'lineup-market-form',
+    lookY: 2.8,
+    name: 'S · market form',
+    spacing: 18,
+    candidates: [MARKET_PARTS, MARKET_FORM_PARTS],
   },
 ];
 
@@ -581,8 +558,8 @@ function buildLineupScene(element: LineupElement): Scene {
   scene.add(ground);
 
   // shaded profiles: dark faces under a soft key, so form separates while silhouette dominates
-  const ambient = new AmbientLight(new Color('#39406b'), 0.9);
-  const key = new DirectionalLight(new Color('#8fa0c2'), 1.1);
+  const ambient = new AmbientLight(new Color('#39406b'), 1.2);
+  const key = new DirectionalLight(new Color('#8fa0c2'), 1.7);
 
   key.position.set(-18, 26, 34);
   scene.add(ambient, key);
@@ -590,7 +567,9 @@ function buildLineupScene(element: LineupElement): Scene {
   const material = new MeshStandardNodeMaterial({ color: new Color('#1a2032'), roughness: 0.85 });
 
   for (const [index, candidate] of element.candidates.entries()) {
-    renderPartSet(scene, candidate, material, (index - 1) * element.spacing, 0, 0);
+    const offset = (index - (element.candidates.length - 1) / 2) * element.spacing;
+
+    renderPartSet(scene, candidate, material, offset, 0, 0);
   }
 
   return scene;
@@ -604,7 +583,7 @@ interface AssemblyPlacement {
   readonly litAllBoxes?: boolean;
   /** A threshold or furniture piece, not an occupied building — no window grid. */
   readonly noWindows?: boolean;
-  readonly parts: ReadonlyArray<SilhouettePart>;
+  parts: ReadonlyArray<SilhouettePart>;
   ry: number;
   x: number;
   z: number;
@@ -1259,6 +1238,15 @@ async function main() {
   // programmatic access for agent-driven layout iteration: set positions, read the overlap check
   (globalThis as { __lookdevCheck?: () => Array<string> }).__lookdevCheck = findOverlaps;
   (globalThis as { __lookdevPlacements?: Array<AssemblyPlacement> }).__lookdevPlacements = placements;
+  (globalThis as { __lookdevSetAvatar?: (kind: string) => string }).__lookdevSetAvatar = (kind) => {
+    const avatar = placements.find((placement) => placement.key === 'avatar');
+
+    if (avatar) {
+      avatar.parts = kind === 'dome' ? AVATAR_DOME_PARTS : AVATAR_PARTS;
+    }
+
+    return kind;
+  };
 
   const renderer = new WebGPURenderer({ antialias: true });
 
