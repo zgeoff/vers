@@ -1333,10 +1333,11 @@ const SPILL_FIXTURES: ReadonlyArray<SpillFixture> = [
 ];
 
 const atmoKnobs = makeKnobGroup('atmo', {
-  bankOpacity: [0.16, 0, 0.6],
-  mistOpacity: [0.08, 0, 0.5],
-  hazeOpacity: [0.3, 0, 1],
-  drift: [0.03, 0, 0.2, 0.005],
+  bankOpacity: [0.26, 0, 0.8],
+  mistOpacity: [0.18, 0, 0.8],
+  hazeOpacity: [0.4, 0, 1],
+  smokeOpacity: [0.45, 0, 1],
+  drift: [0.06, 0, 0.3, 0.005],
 });
 
 const gradeKnobs = makeKnobGroup('grade', {
@@ -1776,9 +1777,11 @@ function addDuskFogBanks(scene: Scene) {
 }
 
 /**
- * The treatment atmosphere: drifting dusk-fog banks between the far buildings, a low ground
- * mist toward the gate end of the plaza, and a teal haze breathing in the gate slot. Opacity is
- * animated TSL noise driven by the atmo knobs; no plane writes depth.
+ * The treatment atmosphere. Every layer is domain-warped noise thresholded into distinct
+ * shapes — wisps with gaps between them, whose form changes as they move — never a uniform
+ * sheet whose alpha wobbles. Banks drift between the far towers, mist rolls low across the
+ * gate end, the gate slot's teal haze streams upward and pulses, and vent plumes rise off the
+ * market and stash. No plane writes depth.
  */
 function addAtmosphere(scene: Scene) {
   // fades every plane to nothing at its own edges so no rectangle outline ever shows
@@ -1797,15 +1800,15 @@ function addAtmosphere(scene: Scene) {
       side: DoubleSide,
       transparent: true,
     });
-    const body = mx_noise_float(
-      vec3(
-        positionWorld.x.mul(0.045).add(time.mul(atmoKnobs.drift.mul(2))),
-        positionWorld.y.mul(0.16),
-        bank.seed,
-      ),
-    )
-      .add(1)
-      .mul(0.5);
+    const coord = vec3(
+      positionWorld.x.mul(0.12).add(time.mul(atmoKnobs.drift.mul(3))),
+      positionWorld.y.mul(0.28),
+      bank.seed,
+    );
+    // the warp curls the wisps; the fine octave scuds past faster than the body
+    const warp = mx_noise_float(coord.mul(0.5).add(time.mul(atmoKnobs.drift))).mul(1.2);
+    const detail = mx_noise_float(coord.mul(2.3).sub(time.mul(atmoKnobs.drift.mul(5)))).mul(0.5);
+    const body = mx_noise_float(coord.add(warp)).add(detail).add(0.75).mul(0.5).smoothstep(0.45, 0.95);
 
     material.opacityNode = body.mul(edgeFade).mul(atmoKnobs.bankOpacity);
 
@@ -1815,32 +1818,35 @@ function addAtmosphere(scene: Scene) {
     scene.add(plane);
   }
 
-  // low mist drifting across the gate end of the plaza
-  const mistMaterial = new MeshBasicNodeMaterial({
-    color: new Color(DUSK_FOG),
-    depthWrite: false,
-    side: DoubleSide,
-    transparent: true,
-  });
-  const mistBody = mx_noise_float(
-    vec3(
-      positionWorld.x.mul(0.09).add(time.mul(atmoKnobs.drift)),
-      positionWorld.z.mul(0.09).sub(time.mul(atmoKnobs.drift.mul(0.6))),
-      17,
-    ),
-  )
-    .add(1)
-    .mul(0.5);
+  // two stacked mist layers rolling at different speeds across the gate end of the plaza
+  for (const layer of [
+    { scale: 0.16, seed: 17, speed: 1, y: 0.7 },
+    { scale: 0.11, seed: 29, speed: 0.55, y: 1.5 },
+  ]) {
+    const material = new MeshBasicNodeMaterial({
+      color: new Color(DUSK_FOG),
+      depthWrite: false,
+      side: DoubleSide,
+      transparent: true,
+    });
+    const coord = vec3(
+      positionWorld.x.mul(layer.scale).add(time.mul(atmoKnobs.drift.mul(layer.speed * 2))),
+      positionWorld.z.mul(layer.scale).sub(time.mul(atmoKnobs.drift.mul(layer.speed))),
+      layer.seed,
+    );
+    const warp = mx_noise_float(coord.mul(0.45).add(time.mul(atmoKnobs.drift.mul(0.7)))).mul(1.3);
+    const body = mx_noise_float(coord.add(warp)).add(1).mul(0.5).smoothstep(0.42, 0.9);
 
-  mistMaterial.opacityNode = mistBody.mul(edgeFade).mul(atmoKnobs.mistOpacity);
+    material.opacityNode = body.mul(edgeFade).mul(atmoKnobs.mistOpacity);
 
-  const mist = new Mesh(new PlaneGeometry(56, 34), mistMaterial);
+    const mist = new Mesh(new PlaneGeometry(56, 34), material);
 
-  mist.rotation.x = -Math.PI / 2;
-  mist.position.set(1, 0.9, -9);
-  scene.add(mist);
+    mist.rotation.x = -Math.PI / 2;
+    mist.position.set(1, layer.y, -9);
+    scene.add(mist);
+  }
 
-  // teal haze breathing in the gate slot, rising slowly — the way out is alive
+  // teal haze streaming up the gate slot, pulsing slowly — the way out is alive
   const gate = placements.find((placement) => placement.key === 'gate');
 
   if (gate) {
@@ -1851,13 +1857,12 @@ function addAtmosphere(scene: Scene) {
       side: DoubleSide,
       transparent: true,
     });
-    const hazeBody = mx_noise_float(
-      vec3(positionWorld.x.mul(0.5), positionWorld.y.mul(0.35).sub(time.mul(0.12)), 23),
-    )
-      .add(1)
-      .mul(0.5);
+    const coord = vec3(positionWorld.x.mul(0.7), positionWorld.y.mul(0.45).sub(time.mul(0.25)), 23);
+    const warp = mx_noise_float(coord.mul(0.6)).mul(0.8);
+    const body = mx_noise_float(coord.add(warp)).add(1).mul(0.5).smoothstep(0.25, 0.9);
+    const pulse = time.mul(0.6).sin().mul(0.15).add(0.9);
 
-    hazeMaterial.opacityNode = hazeBody.mul(edgeFade).mul(atmoKnobs.hazeOpacity);
+    hazeMaterial.opacityNode = body.mul(edgeFade).mul(atmoKnobs.hazeOpacity).mul(pulse);
 
     const haze = new Mesh(new PlaneGeometry(4.6, 6.4), hazeMaterial);
     const cos = Math.cos(gate.ry);
@@ -1868,7 +1873,66 @@ function addAtmosphere(scene: Scene) {
     haze.rotation.y = gate.ry;
     scene.add(haze);
   }
+
+  // vent plumes: ragged smoke columns rising off the rooftop machinery
+  for (const source of SMOKE_SOURCES) {
+    const placement = placements.find((entry) => entry.key === source.key);
+
+    if (!placement) {
+      continue;
+    }
+
+    const cos = Math.cos(placement.ry);
+    const sin = Math.sin(placement.ry);
+    const worldX = source.x * cos + source.z * sin + placement.x;
+    const worldZ = -source.x * sin + source.z * cos + placement.z;
+    const material = new MeshBasicNodeMaterial({
+      color: new Color(SMOKE_BLUE),
+      depthWrite: false,
+      side: DoubleSide,
+      transparent: true,
+    });
+    const coord = vec3(
+      positionWorld.x.mul(0.9).add(source.seed),
+      positionWorld.y.mul(0.55).sub(time.mul(source.rise)),
+      source.seed,
+    );
+    const warp = mx_noise_float(coord.mul(0.6).add(time.mul(0.06))).mul(1.1);
+    const body = mx_noise_float(coord.add(warp)).add(1).mul(0.5).smoothstep(0.3, 0.88);
+    // solid at the vent mouth, ragged and gone by the top
+    const taper = uv()
+      .x.mul(uv().x.oneMinus())
+      .mul(4)
+      .mul(uv().y.smoothstep(0, 0.12))
+      .mul(uv().y.oneMinus().pow(1.4));
+
+    material.opacityNode = body.mul(taper).mul(atmoKnobs.smokeOpacity);
+
+    const plume = new Mesh(new PlaneGeometry(source.width, source.height), material);
+
+    plume.position.set(worldX, source.y + source.height / 2, worldZ);
+    scene.add(plume);
+  }
 }
+
+const SMOKE_BLUE = '#7d879f';
+
+interface SmokeSource {
+  readonly height: number;
+  readonly key: string;
+  readonly rise: number;
+  readonly seed: number;
+  readonly width: number;
+  readonly x: number;
+  readonly y: number;
+  readonly z: number;
+}
+
+/** Local-frame vent mouths: the market roof vent and the stash's small drum cap. */
+const SMOKE_SOURCES: ReadonlyArray<SmokeSource> = [
+  { height: 5, key: 'market', rise: 0.3, seed: 31, width: 2.6, x: -1.6, y: 4.6, z: -0.5 },
+  { height: 4, key: 'stash', rise: 0.24, seed: 37, width: 2, x: 2.6, y: 2.7, z: 0 },
+];
 
 interface PlanGroup {
   readonly baseColor: string;
