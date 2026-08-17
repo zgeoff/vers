@@ -5,6 +5,7 @@
  * designed (stash, codex, gate), and a draft assembly placing the current best part sets into
  * the plaza to judge the silhouettes in context.
  */
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { bloom } from 'three/addons/tsl/display/BloomNode.js';
 import {
   color,
@@ -660,6 +661,103 @@ const partGeometries = {
   cyl: new CylinderGeometry(1, 1, 1, 32),
   sphere: new SphereGeometry(1, 32, 20),
 };
+
+/**
+ * The gate's final-fidelity build — the pilot for taking a building past the box blockout.
+ * Same silhouette and footprint as its form parts, but constructed the way the fiction says it
+ * was: chamfered stone throughout, walls as stacked strata layers with per-layer erosion
+ * jitter, a threshold of separate worn slabs, broken stub caps sitting slightly askew, and
+ * carved glyph channels flanking the slot. All jitter is deterministic — the ruin never
+ * reshuffles between builds.
+ */
+function renderGateHiFi(
+  scene: Scene,
+  material: MeshStandardNodeMaterial,
+  grooveMaterial: MeshStandardNodeMaterial,
+  anchorX: number,
+  anchorZ: number,
+  ry: number,
+) {
+  const group = new Group();
+  const chamfer = (w: number, h: number, d: number, radius: number) =>
+    new RoundedBoxGeometry(w, h, d, 2, radius);
+  const add = (geometry: RoundedBoxGeometry, px: number, py: number, pz: number, rx = 0, rz = 0, yaw = 0) => {
+    const mesh = new Mesh(geometry, material);
+
+    mesh.position.set(px, py, pz);
+    mesh.rotation.set(rx, yaw, rz, 'YXZ');
+    group.add(mesh);
+  };
+
+  // plinths with a proud top course
+  for (const side of [-1, 1]) {
+    add(chamfer(4.4, 1.4, 2.2, 0.08), side * 3.9, 0.7, 0);
+    add(chamfer(4, 0.28, 2.36, 0.05), side * 3.7, 1.34, 0);
+  }
+
+  // walls as strata: six layers each, two layers proud, all jittered deterministically
+  for (const side of [-1, 1]) {
+    let layerBase = 1.4;
+
+    for (let layer = 0; layer < 6; layer += 1) {
+      const seed = layer * 13 + (side > 0 ? 7 : 0);
+      const height = 0.74 + ((seed * 31) % 11 - 5) * 0.012;
+      const proud = layer === 1 || layer === 4;
+      const depth = (proud ? 2.02 : 1.78) + ((seed * 17) % 7 - 3) * 0.02;
+      const width = 3.6 - layer * 0.02 + ((seed * 23) % 9 - 4) * 0.02;
+      const xJitter = ((seed * 29) % 9 - 4) * 0.015;
+      const zJitter = ((seed * 19) % 5 - 2) * 0.015;
+
+      add(chamfer(width, height, depth, 0.06), side * 3.7 + xJitter, layerBase + height / 2, zJitter);
+      layerBase += height;
+    }
+  }
+
+  // under-lintel, lintel, crown
+  add(chamfer(9.6, 0.5, 1.5, 0.05), 0, 5.95, 0.1);
+  add(chamfer(11, 1.4, 1.8, 0.09), 0, 6.7, 0);
+  add(chamfer(1.6, 1, 1.2, 0.07), 0, 7.9, 0);
+
+  // threshold: three separate worn slabs, each seated at its own slight angle
+  add(chamfer(1.7, 0.28, 2.5, 0.06), -1.35, 0.14, 0.62, 0, 0, 0.04);
+  add(chamfer(1.5, 0.3, 2.6, 0.06), 0.25, 0.15, 0.58, 0, 0, -0.03);
+  add(chamfer(1.4, 0.26, 2.45, 0.06), 1.75, 0.13, 0.66, 0, 0, 0.05);
+
+  // corner stubs: two stacked courses, the cap sitting slightly off-square
+  const stubs = [
+    { h: 1.6, x: -6.1, z: 1.1 },
+    { h: 1.1, x: 6.1, z: 1.1 },
+    { h: 1.4, x: -6.1, z: -1.1 },
+    { h: 1, x: 6.1, z: -1.1 },
+  ];
+
+  for (const [index, stub] of stubs.entries()) {
+    const baseHeight = stub.h * 0.55;
+    const capHeight = stub.h * 0.45;
+
+    add(chamfer(0.9, baseHeight, 0.9, 0.06), stub.x, baseHeight / 2, stub.z);
+    add(
+      chamfer(0.78, capHeight, 0.78, 0.06),
+      stub.x + 0.03,
+      baseHeight + capHeight / 2 - 0.02,
+      stub.z - 0.02,
+      index % 2 === 0 ? -0.05 : 0.06,
+      index % 3 === 0 ? 0.06 : -0.04,
+    );
+  }
+
+  // carved glyph channels flanking the slot on the plaza face
+  for (const side of [-1, 1]) {
+    const strip = new Mesh(new BoxGeometry(0.2, 4, 0.08), grooveMaterial);
+
+    strip.position.set(side * 2.35, 3.6, 0.94);
+    group.add(strip);
+  }
+
+  group.position.set(anchorX, 0, anchorZ);
+  group.rotation.y = ry;
+  scene.add(group);
+}
 
 function renderPartSet(
   scene: Scene,
@@ -1639,7 +1737,20 @@ function buildScene(config: ProbeConfig, useParts: boolean, grounding = false, s
         liveRefs.materials[placement.key] = material;
       }
 
-      renderPartSet(scene, placement.parts, material, placement.x, placement.z, placement.ry);
+      if (placement.key === 'gate') {
+        const grooveMaterial = new MeshStandardNodeMaterial({
+          color: base.clone().multiplyScalar(0.35),
+          roughness: 0.95,
+        });
+
+        if (grounding) {
+          applyGrounding(grooveMaterial);
+        }
+
+        renderGateHiFi(scene, material, grooveMaterial, placement.x, placement.z, placement.ry);
+      } else {
+        renderPartSet(scene, placement.parts, material, placement.x, placement.z, placement.ry);
+      }
     }
 
     for (const fixture of SPILL_FIXTURES) {
