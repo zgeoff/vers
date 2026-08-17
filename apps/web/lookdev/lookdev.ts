@@ -63,7 +63,7 @@ const DUSK_FOG = '#2e3a5e';
 
 const NIGHT: ProbeConfig = {
   ambient: '#39406b',
-  ambientIntensity: 1.45,
+  ambientIntensity: 1.2,
   backgroundLitChance: 0.14,
   bloomStrength: 0.55,
   bloomThreshold: 0.45,
@@ -1096,6 +1096,8 @@ const liveRefs = {
   keyLight: null as DirectionalLight | null,
   lamps: [] as Array<PointLight>,
   materials: {} as Record<string, MeshStandardNodeMaterial>,
+  spills: [] as Array<{ base: number; light: PointLight }>,
+  washes: [] as Array<{ base: number; light: PointLight }>,
 };
 
 const groundingKnobs = makeKnobGroup('grounding', {
@@ -1284,6 +1286,50 @@ registerKnob(
   },
   0.5,
 );
+registerKnob('light.entranceSpill', 1, 0, 3, (value) => {
+  for (const spill of liveRefs.spills) {
+    spill.light.intensity = spill.base * value;
+  }
+});
+registerKnob('light.gateWash', 1, 0, 3, (value) => {
+  for (const wash of liveRefs.washes) {
+    wash.light.intensity = wash.base * value;
+  }
+});
+
+/**
+ * The lighting-cohesion fixtures: every entrance carries a warm wall-mounted light throwing
+ * sodium onto its own facade — the entrance rule doubled as the lighting logic — and the gate
+ * gets low teal uplights grazing its worn slab faces. Positions are in each building's local
+ * frame (front is +z), transformed by its placement at build time.
+ */
+interface SpillFixture {
+  readonly color: string;
+  readonly distance: number;
+  readonly intensity: number;
+  readonly key: string;
+  readonly kind: 'spill' | 'wash';
+  readonly x: number;
+  readonly y: number;
+  readonly z: number;
+}
+
+const SPILL_FIXTURES: ReadonlyArray<SpillFixture> = [
+  // market: under-canopy lights over the stall row
+  { color: WARM_WINDOW, distance: 6, intensity: 7, key: 'market', kind: 'spill', x: -2.4, y: 1.75, z: 2.5 },
+  { color: WARM_WINDOW, distance: 6, intensity: 7, key: 'market', kind: 'spill', x: 2.4, y: 1.75, z: 2.5 },
+  { color: WARM_WINDOW, distance: 5, intensity: 5, key: 'market', kind: 'spill', x: -4.8, y: 1.75, z: 2.5 },
+  // stash: one lamp over the vestibule lintel
+  { color: WARM_WINDOW, distance: 5, intensity: 6, key: 'stash', kind: 'spill', x: -1.4, y: 1.95, z: 3.15 },
+  // codex: a pair flanking the entrance block, inside the banner fins
+  { color: WARM_WINDOW, distance: 6, intensity: 4.5, key: 'codex', kind: 'spill', x: -1, y: 2.7, z: 2.8 },
+  { color: WARM_WINDOW, distance: 6, intensity: 4.5, key: 'codex', kind: 'spill', x: 1, y: 2.7, z: 2.8 },
+  // avatar: one over the entrance kiosk beside the drum
+  { color: WARM_WINDOW, distance: 5, intensity: 5, key: 'avatar', kind: 'spill', x: 2.9, y: 1.4, z: 0.9 },
+  // gate: teal uplights a step out from each wall so the throw climbs the slab face
+  { color: GATE_TEAL, distance: 9, intensity: 8, key: 'gate', kind: 'wash', x: -3.7, y: 0.3, z: 1.7 },
+  { color: GATE_TEAL, distance: 9, intensity: 8, key: 'gate', kind: 'wash', x: 3.7, y: 0.3, z: 1.7 },
+];
 
 const gradeKnobs = makeKnobGroup('grade', {
   vignette: [0.4, 0, 1],
@@ -1399,6 +1445,8 @@ function buildScene(config: ProbeConfig, useParts: boolean, grounding = false, s
   liveRefs.gateGlow = null;
   liveRefs.lamps = [];
   liveRefs.materials = {};
+  liveRefs.spills = [];
+  liveRefs.washes = [];
 
   const groundMaterial = new MeshStandardNodeMaterial({ color: new Color(config.ground), roughness: 0.6 });
   const ground = new Mesh(new PlaneGeometry(220, 220), groundMaterial);
@@ -1537,6 +1585,48 @@ function buildScene(config: ProbeConfig, useParts: boolean, grounding = false, s
       }
 
       renderPartSet(scene, placement.parts, material, placement.x, placement.z, placement.ry);
+    }
+
+    for (const fixture of SPILL_FIXTURES) {
+      const placement = placements.find((entry) => entry.key === fixture.key);
+
+      if (!placement) {
+        continue;
+      }
+
+      const cos = Math.cos(placement.ry);
+      const sin = Math.sin(placement.ry);
+      const worldX = fixture.x * cos + fixture.z * sin + placement.x;
+      const worldZ = -fixture.x * sin + fixture.z * cos + placement.z;
+      const light = new PointLight(new Color(fixture.color), fixture.intensity, fixture.distance, 2);
+
+      light.position.set(worldX, fixture.y, worldZ);
+      scene.add(light);
+
+      // the fixture housing: a small lit block so the light has a visible source on the wall
+      const housing = new Mesh(
+        partGeometries.box,
+        new MeshBasicNodeMaterial({ color: new Color(fixture.color) }),
+      );
+
+      // wall spills hang their bracket above the bulb; washes sit as pucks on the ground
+      if (fixture.kind === 'wash') {
+        housing.scale.set(0.24, 0.16, 0.24);
+        housing.position.set(worldX, 0.08, worldZ);
+      } else {
+        housing.scale.set(0.26, 0.09, 0.16);
+        housing.position.set(worldX, fixture.y + 0.12, worldZ);
+      }
+
+      housing.rotation.y = placement.ry;
+      scene.add(housing);
+
+      if (surfaces) {
+        (fixture.kind === 'wash' ? liveRefs.washes : liveRefs.spills).push({
+          base: fixture.intensity,
+          light,
+        });
+      }
     }
   } else {
     // the explore gate placeholder: two pylons in the far-side gap
@@ -1888,6 +1978,19 @@ async function main() {
       orbitTarget.z + orbitRadius * sinPhi * Math.cos(orbitTheta),
     );
     camera.lookAt(orbitTarget);
+  };
+
+  // programmatic close-ups for agent-driven screenshot rounds
+  (
+    globalThis as {
+      __lookdevOrbit?: (tx: number, ty: number, tz: number, radius: number, theta: number, phi: number) => void;
+    }
+  ).__lookdevOrbit = (tx, ty, tz, radius, theta, phi) => {
+    orbitTarget.set(tx, ty, tz);
+    orbitRadius = radius;
+    orbitTheta = theta;
+    orbitPhi = phi;
+    applyOrbit();
   };
 
   // ---- plan editor state ----
