@@ -466,29 +466,19 @@ const CODEX_HALL_FORM_PARTS: ReadonlyArray<SilhouettePart> = [
 ];
 
 /**
- * The gate's mid-scale form pass, in the worn-slab register: strata courses and etched grooves on
- * the wall faces, an under-lintel, a threshold slab, and broken stubs of an older gate flanking
- * the opening.
+ * The gate massing per concept B1.6i — civic bastion checkpoint: two light towers flanking a
+ * tall aperture under an emblem band, a dark accreted service crown behind, warm kiosks at the
+ * bases. This box set is the plan-editor / footprint representation; the rendered building is
+ * the hi-fi construction.
  */
 const GATE_FORM_PARTS: ReadonlyArray<SilhouettePart> = [
-  { g: 'box', sx: 4.4, sy: 1.4, sz: 2.2, x: -3.9, y: 0.7, z: 0 },
-  { g: 'box', sx: 4.4, sy: 1.4, sz: 2.2, x: 3.9, y: 0.7, z: 0 },
-  { g: 'box', sx: 3.6, sy: 4.6, sz: 1.8, x: -3.7, y: 3.7, z: 0 },
-  { g: 'box', sx: 3.6, sy: 4.6, sz: 1.8, x: 3.7, y: 3.7, z: 0 },
-  { g: 'box', sx: 11, sy: 1.4, sz: 1.8, x: 0, y: 6.7, z: 0 },
-  { g: 'box', sx: 9.6, sy: 0.5, sz: 1.5, x: 0, y: 5.95, z: 0.1 },
-  { g: 'box', sx: 1.6, sy: 1, sz: 1.2, x: 0, y: 7.9, z: 0 },
-  // strata courses wrap the walls fully, slightly proud on both faces
-  { g: 'box', sx: 3.7, sy: 0.45, sz: 1.9, x: -3.7, y: 2.2, z: 0 },
-  { g: 'box', sx: 3.7, sy: 0.45, sz: 1.9, x: 3.7, y: 2.2, z: 0 },
-  { g: 'box', sx: 3.65, sy: 0.4, sz: 1.85, x: -3.7, y: 4.15, z: 0 },
-  { g: 'box', sx: 3.65, sy: 0.4, sz: 1.85, x: 3.7, y: 4.15, z: 0 },
-  { g: 'box', sx: 4.2, sy: 0.3, sz: 2.6, x: 0, y: 0.15, z: 0.6 },
-  // broken corner stubs of the older gate, one centered on each outer plinth corner
-  { g: 'box', sx: 0.9, sy: 1.6, sz: 0.9, x: -6.1, y: 0.8, z: 1.1 },
-  { g: 'box', sx: 0.9, sy: 1.1, sz: 0.9, x: 6.1, y: 0.55, z: 1.1 },
-  { g: 'box', sx: 0.9, sy: 1.4, sz: 0.9, x: -6.1, y: 0.7, z: -1.1 },
-  { g: 'box', sx: 0.9, sy: 1, sz: 0.9, x: 6.1, y: 0.5, z: -1.1 },
+  { g: 'box', sx: 4.6, sy: 11, sz: 3, x: -4.4, y: 5.5, z: 0 },
+  { g: 'box', sx: 4.6, sy: 11, sz: 3, x: 4.4, y: 5.5, z: 0 },
+  { g: 'box', sx: 13.6, sy: 3.7, sz: 2.9, x: 0, y: 9.15, z: 0 },
+  { g: 'box', sx: 3.2, sy: 2.8, sz: 2.2, x: -4.5, y: 12.8, z: -0.6 },
+  { g: 'box', sx: 3.6, sy: 3.6, sz: 2.4, x: 4.3, y: 13.2, z: -0.7 },
+  { g: 'box', sx: 2.2, sy: 1.9, sz: 1.6, x: -5.6, y: 0.95, z: 1.9 },
+  { g: 'box', sx: 2.2, sy: 1.9, sz: 1.6, x: 5.6, y: 0.95, z: 1.9 },
 ];
 
 /**
@@ -663,17 +653,17 @@ const partGeometries = {
 };
 
 /**
- * The gate's final-fidelity build — the pilot for taking a building past the box blockout.
- * Same silhouette and footprint as its form parts, but constructed the way the fiction says it
- * was: chamfered stone throughout, walls as stacked strata layers with per-layer erosion
- * jitter, a threshold of separate worn slabs, broken stub caps sitting slightly askew, and
- * carved glyph channels flanking the slot. All jitter is deterministic — the ruin never
- * reshuffles between builds.
+ * The gate's final-fidelity build per concept B1.6i. Light civic-concrete towers and emblem
+ * band frame a tall aperture traced by a thin inset teal system-light frame; a dark accreted
+ * service crown stacks behind and above with sparse ordered amber markers; warm-lit guard
+ * kiosks shelter at the bases; three worn slabs floor the threshold. All placement jitter is
+ * deterministic.
  */
 function renderGateHiFi(
   scene: Scene,
-  material: MeshStandardNodeMaterial,
-  grooveMaterial: MeshStandardNodeMaterial,
+  civic: MeshStandardNodeMaterial,
+  core: MeshStandardNodeMaterial,
+  trim: MeshStandardNodeMaterial,
   anchorX: number,
   anchorZ: number,
   ry: number,
@@ -681,7 +671,16 @@ function renderGateHiFi(
   const group = new Group();
   const chamfer = (w: number, h: number, d: number, radius: number) =>
     new RoundedBoxGeometry(w, h, d, 2, radius);
-  const add = (geometry: RoundedBoxGeometry, px: number, py: number, pz: number, rx = 0, rz = 0, yaw = 0) => {
+  const add = (
+    material: MeshStandardNodeMaterial | MeshBasicNodeMaterial,
+    geometry: RoundedBoxGeometry | BoxGeometry,
+    px: number,
+    py: number,
+    pz: number,
+    rx = 0,
+    rz = 0,
+    yaw = 0,
+  ) => {
     const mesh = new Mesh(geometry, material);
 
     mesh.position.set(px, py, pz);
@@ -689,70 +688,77 @@ function renderGateHiFi(
     group.add(mesh);
   };
 
-  // plinths with a proud top course
+  // civic towers: plinth, two shaft slabs (upper slightly inset), cap course
   for (const side of [-1, 1]) {
-    add(chamfer(4.4, 1.4, 2.2, 0.08), side * 3.9, 0.7, 0);
-    add(chamfer(4, 0.28, 2.36, 0.05), side * 3.7, 1.34, 0);
+    add(civic, chamfer(5, 1.2, 3.4, 0.07), side * 4.4, 0.6, 0);
+    add(civic, chamfer(4.6, 4.9, 3, 0.08), side * 4.4, 3.65, 0);
+    add(civic, chamfer(4.5, 4.8, 2.9, 0.08), side * 4.42, 8.5, 0.02);
+    add(civic, chamfer(4.8, 0.5, 3.15, 0.05), side * 4.4, 11.15, 0);
   }
 
-  // walls as strata: six layers each, two layers proud, all jittered deterministically
-  for (const side of [-1, 1]) {
-    let layerBase = 1.4;
+  // emblem band spanning the towers above the aperture, face recessed behind the tower faces
+  add(civic, chamfer(13.6, 3.7, 2.9, 0.08), 0, 9.15, 0);
 
-    for (let layer = 0; layer < 6; layer += 1) {
-      const seed = layer * 13 + (side > 0 ? 7 : 0);
-      const height = 0.74 + ((seed * 31) % 11 - 5) * 0.012;
-      const proud = layer === 1 || layer === 4;
-      const depth = (proud ? 2.02 : 1.78) + ((seed * 17) % 7 - 3) * 0.02;
-      const width = 3.6 - layer * 0.02 + ((seed * 23) % 9 - 4) * 0.02;
-      const xJitter = ((seed * 29) % 9 - 4) * 0.015;
-      const zJitter = ((seed * 19) % 5 - 2) * 0.015;
+  // emblem: dark plate proud of the band, carrying the authority glyph in trim relief
+  add(core, chamfer(2.7, 2.7, 0.24, 0.03), 0, 9.15, 1.5);
+  add(trim, chamfer(0.2, 1.4, 0.14, 0.02), -0.62, 8.75, 1.66);
+  add(trim, chamfer(0.2, 1.4, 0.14, 0.02), 0.62, 8.75, 1.66);
+  add(trim, chamfer(0.2, 1.5, 0.14, 0.02), -0.35, 9.72, 1.66, 0, -0.52);
+  add(trim, chamfer(0.2, 1.5, 0.14, 0.02), 0.35, 9.72, 1.66, 0, 0.52);
 
-      add(chamfer(width, height, depth, 0.06), side * 3.7 + xJitter, layerBase + height / 2, zJitter);
-      layerBase += height;
-    }
-  }
+  // teal system-light frame tracing the aperture, inset from the tower faces
+  const frameMaterial = new MeshBasicNodeMaterial({ color: new Color(GATE_TEAL).multiplyScalar(1.7) });
 
-  // under-lintel, lintel, crown
-  add(chamfer(9.6, 0.5, 1.5, 0.05), 0, 5.95, 0.1);
-  add(chamfer(11, 1.4, 1.8, 0.09), 0, 6.7, 0);
-  add(chamfer(1.6, 1, 1.2, 0.07), 0, 7.9, 0);
+  add(frameMaterial, new BoxGeometry(0.14, 7.3, 0.14), -2.17, 3.65, 1.3);
+  add(frameMaterial, new BoxGeometry(0.14, 7.3, 0.14), 2.17, 3.65, 1.3);
+  add(frameMaterial, new BoxGeometry(4.62, 0.14, 0.14), 0, 7.37, 1.3);
 
-  // threshold: three separate worn slabs, each seated at its own slight angle
-  add(chamfer(1.7, 0.28, 2.5, 0.06), -1.35, 0.14, 0.62, 0, 0, 0.04);
-  add(chamfer(1.5, 0.3, 2.6, 0.06), 0.25, 0.15, 0.58, 0, 0, -0.03);
-  add(chamfer(1.4, 0.26, 2.45, 0.06), 1.75, 0.13, 0.66, 0, 0, 0.05);
-
-  // corner stubs: two stacked courses, the cap sitting slightly off-square
-  const stubs = [
-    { h: 1.6, x: -6.1, z: 1.1 },
-    { h: 1.1, x: 6.1, z: 1.1 },
-    { h: 1.4, x: -6.1, z: -1.1 },
-    { h: 1, x: 6.1, z: -1.1 },
+  // dark service crown: asymmetric accreted stacks behind and above, modules clinging to flanks
+  const coreModules = [
+    { h: 1.6, w: 3.2, x: -4.5, y: 12.25, z: -0.5, d: 2.2 },
+    { h: 1.1, w: 2.1, x: -4.9, y: 13.6, z: -0.8, d: 1.7 },
+    { h: 2, w: 3.6, x: 4.3, y: 12.45, z: -0.5, d: 2.4 },
+    { h: 1.4, w: 2.4, x: 4.7, y: 14.15, z: -0.9, d: 1.9 },
+    { h: 0.9, w: 1.4, x: 4.2, y: 15.25, z: -0.6, d: 1.3 },
+    { h: 1.3, w: 2.6, x: 0.3, y: 11.65, z: -0.9, d: 2 },
+    { h: 2.2, w: 1.5, x: -7.3, y: 7.6, z: -0.3, d: 1.9 },
+    { h: 1.7, w: 1.3, x: 7.25, y: 5.9, z: 0.2, d: 1.6 },
   ];
 
-  for (const [index, stub] of stubs.entries()) {
-    const baseHeight = stub.h * 0.55;
-    const capHeight = stub.h * 0.45;
-
-    add(chamfer(0.9, baseHeight, 0.9, 0.06), stub.x, baseHeight / 2, stub.z);
-    add(
-      chamfer(0.78, capHeight, 0.78, 0.06),
-      stub.x + 0.03,
-      baseHeight + capHeight / 2 - 0.02,
-      stub.z - 0.02,
-      index % 2 === 0 ? -0.05 : 0.06,
-      index % 3 === 0 ? 0.06 : -0.04,
-    );
+  for (const module of coreModules) {
+    add(core, chamfer(module.w, module.h, module.d, 0.05), module.x, module.y, module.z);
   }
 
-  // carved glyph channels flanking the slot on the plaza face
+  // slim masts crown the service stacks
+  add(trim, chamfer(0.12, 2.4, 0.12, 0.02), 4.7, 16.05, -0.9);
+  add(trim, chamfer(0.1, 1.7, 0.1, 0.02), -4.9, 15, -0.8);
+
+  // ordered amber service markers, sparse, seated at module corners
+  const markerMaterial = new MeshBasicNodeMaterial({ color: new Color('#ffb04d').multiplyScalar(1.2) });
+
+  for (const marker of [
+    { x: -4.5, y: 12.9, z: 0.65 },
+    { x: 4.3, y: 13.3, z: 0.75 },
+    { x: 4.7, y: 14.75, z: 0.1 },
+    { x: -7.3, y: 8.6, z: 0.7 },
+    { x: 7.25, y: 6.65, z: 1.05 },
+  ]) {
+    add(markerMaterial, new BoxGeometry(0.09, 0.09, 0.09), marker.x, marker.y, marker.z);
+  }
+
+  // guard kiosks: civic body, dark canopy, warm-lit window — the inhabited base
+  const kioskGlow = new MeshBasicNodeMaterial({ color: new Color(WARM_WINDOW).multiplyScalar(1.5) });
+
   for (const side of [-1, 1]) {
-    const strip = new Mesh(new BoxGeometry(0.2, 4, 0.08), grooveMaterial);
-
-    strip.position.set(side * 2.35, 3.6, 0.94);
-    group.add(strip);
+    add(civic, chamfer(2.2, 1.9, 1.6, 0.06), side * 5.6, 0.95, 1.9);
+    add(core, chamfer(2.7, 0.16, 2.1, 0.03), side * 5.6, 2.02, 2.05);
+    add(kioskGlow, new BoxGeometry(1.3, 0.55, 0.06), side * 5.6, 1.1, 2.72);
   }
+
+  // threshold: three separate worn slabs, each seated at its own slight angle
+  add(civic, chamfer(1.7, 0.28, 2.5, 0.06), -1.35, 0.14, 0.62, 0, 0, 0.04);
+  add(civic, chamfer(1.5, 0.3, 2.6, 0.06), 0.25, 0.15, 0.58, 0, 0, -0.03);
+  add(civic, chamfer(1.4, 0.26, 2.45, 0.06), 1.75, 0.13, 0.66, 0, 0, 0.05);
 
   group.position.set(anchorX, 0, anchorZ);
   group.rotation.y = ry;
@@ -837,7 +843,7 @@ const placements: Array<AssemblyPlacement> = [
   { key: 'market', parts: MARKET_FORM_PARTS, ry: 1.631, x: -14.3, z: 2.2 },
   { key: 'stash', parts: STASH_FORM_PARTS, ry: 1.063, x: -12.7, z: -10.6 },
   { key: 'codex', litAllBoxes: true, parts: CODEX_HALL_FORM_PARTS, ry: 0.06, x: -4.6, z: -14.7 },
-  { key: 'gate', noWindows: true, parts: GATE_FORM_PARTS, ry: 0.05, x: 5.9, z: -16.4 },
+  { key: 'gate', noWindows: true, parts: GATE_FORM_PARTS, ry: 0.05, x: 6.4, z: -16.4 },
   { key: 'avatar', parts: AVATAR_PARTS, ry: -1.451, x: 16.1, z: -5.3 },
   { key: 'fountain', noWindows: true, parts: FOUNTAIN_FORM_PARTS, ry: 0, x: -3.9, z: 0.7 },
 ];
@@ -1301,18 +1307,18 @@ const codexKnobs = makeKnobGroup('codex', {
 });
 
 const gateKnobs = makeKnobGroup('gate', {
-  wearScale: [0.45, 0.05, 3, 0.05],
-  wearAmp: [0.5, 0, 1.5],
-  wearFadeFrom: [1.2, 0, 6, 0.1],
-  wearFadeTo: [4.6, 0, 9, 0.1],
-  courseWidth: [0.3, 0.02, 1],
-  course1Height: [2.2, 0, 8, 0.02],
-  course1Depth: [0.18, 0, 1],
-  course2Height: [4.15, 0, 8, 0.02],
-  course2Depth: [0.18, 0, 1],
-  grainAmp: [0.07, 0, 0.3, 0.005],
-  clampLo: [0.5, 0, 1],
-  clampHi: [1.18, 1, 2],
+  civicCellX: [0.9, 0.1, 3, 0.05],
+  civicCellY: [0.55, 0.1, 3, 0.05],
+  civicPanelAmp: [0.14, 0, 1],
+  civicWearAmp: [0.18, 0, 1],
+  civicWearFadeTo: [3.5, 0.5, 9, 0.1],
+  civicClampLo: [0.78, 0, 1],
+  civicClampHi: [1.12, 1, 2],
+  coreBandCellY: [1.9, 0.1, 4, 0.05],
+  coreBandAmp: [0.3, 0, 1],
+  coreClampLo: [0.6, 0, 1],
+  coreClampHi: [1.15, 1, 2],
+  grainAmp: [0.06, 0, 0.3, 0.005],
 });
 
 const avatarKnobs = makeKnobGroup('avatar', {
@@ -1525,15 +1531,6 @@ const SURFACE_RECIPES: Record<string, () => ReturnType<typeof buildGrain>> = {
       .add(1)
       .clamp(codexKnobs.clampLo, codexKnobs.clampHi),
 
-  // worn slab: heavy organic weathering low on the walls, darkened strata at the course heights
-  gate: () =>
-    buildLowWear(gateKnobs.wearScale, gateKnobs.wearAmp, gateKnobs.wearFadeFrom, gateKnobs.wearFadeTo)
-      .sub(buildCourseShadow(gateKnobs.course1Height, gateKnobs.courseWidth, gateKnobs.course1Depth))
-      .sub(buildCourseShadow(gateKnobs.course2Height, gateKnobs.courseWidth, gateKnobs.course2Depth))
-      .add(buildGrain(gateKnobs.grainAmp))
-      .add(1)
-      .clamp(gateKnobs.clampLo, gateKnobs.clampHi),
-
   avatar: () =>
     buildPanels(0.001, avatarKnobs.bandCellY, 0.001, avatarKnobs.bandAmp)
       .add(buildGrain(avatarKnobs.grainAmp))
@@ -1546,6 +1543,23 @@ const SURFACE_RECIPES: Record<string, () => ReturnType<typeof buildGrain>> = {
       .add(1)
       .clamp(fountainKnobs.clampLo, fountainKnobs.clampHi),
 };
+
+/** The gate's civic concrete: large ordered panels, faint grain, grime pulled down low. */
+function buildGateCivicSurface() {
+  return buildPanels(gateKnobs.civicCellX, gateKnobs.civicCellY, gateKnobs.civicCellX, gateKnobs.civicPanelAmp)
+    .sub(buildLowWear(0.8, gateKnobs.civicWearAmp, 1, gateKnobs.civicWearFadeTo))
+    .add(buildGrain(gateKnobs.grainAmp))
+    .add(1)
+    .clamp(gateKnobs.civicClampLo, gateKnobs.civicClampHi);
+}
+
+/** The gate's service/core metal: tight horizontal sheet banding, kept dark. */
+function buildGateCoreSurface() {
+  return buildPanels(0.001, gateKnobs.coreBandCellY, 0.001, gateKnobs.coreBandAmp)
+    .add(buildGrain(gateKnobs.grainAmp))
+    .add(1)
+    .clamp(gateKnobs.coreClampLo, gateKnobs.coreClampHi);
+}
 
 function applySurface(material: MeshStandardNodeMaterial, base: Color, key: string) {
   const recipe = SURFACE_RECIPES[key];
@@ -1738,16 +1752,26 @@ function buildScene(config: ProbeConfig, useParts: boolean, grounding = false, s
       }
 
       if (placement.key === 'gate') {
-        const grooveMaterial = new MeshStandardNodeMaterial({
-          color: base.clone().multiplyScalar(0.35),
-          roughness: 0.95,
-        });
+        // concept B1.6i's two-material story: light civic concrete against dark service metal
+        const civicBase = new Color('#b9bdc6');
+        const coreBase = new Color('#2d323e');
+        const civicMaterial = new MeshStandardNodeMaterial({ color: civicBase, roughness: 0.8 });
+        const coreMaterial = new MeshStandardNodeMaterial({ color: coreBase, roughness: 0.55 });
+        const trimMaterial = new MeshStandardNodeMaterial({ color: new Color('#3a4150'), roughness: 0.7 });
 
         if (grounding) {
-          applyGrounding(grooveMaterial);
+          applyGrounding(civicMaterial);
+          applyGrounding(coreMaterial);
+          applyGrounding(trimMaterial);
         }
 
-        renderGateHiFi(scene, material, grooveMaterial, placement.x, placement.z, placement.ry);
+        if (surfaces) {
+          civicMaterial.colorNode = color(civicBase).mul(buildGateCivicSurface());
+          coreMaterial.colorNode = color(coreBase).mul(buildGateCoreSurface());
+          liveRefs.materials[placement.key] = civicMaterial;
+        }
+
+        renderGateHiFi(scene, civicMaterial, coreMaterial, trimMaterial, placement.x, placement.z, placement.ry);
       } else {
         renderPartSet(scene, placement.parts, material, placement.x, placement.z, placement.ry);
       }
@@ -1860,19 +1884,20 @@ function buildScene(config: ProbeConfig, useParts: boolean, grounding = false, s
     }
   }
 
-  // gate edge strips join the emissive set: vertical teal lines flanking the opening, anchored
-  // to wherever the gate sits
-  for (const offset of [-1.7, 1.7]) {
-    const px = (useParts ? gateX : 6.2) + offset;
-    const pz = (useParts ? gateZ : -14.2) + 0.8;
+  // box-mode gate placeholder keeps its teal edge strips; the hi-fi gate carries its own frame
+  if (!useParts) {
+    for (const offset of [-1.7, 1.7]) {
+      const px = 6.2 + offset;
+      const pz = -14.2 + 0.8;
 
-    for (let index = 0; index < 8; index += 1) {
-      otherEmissives.push({
-        color: new Color(GATE_TEAL).multiplyScalar(1.9),
-        x: px,
-        y: 0.7 + index * 0.72,
-        z: pz,
-      });
+      for (let index = 0; index < 8; index += 1) {
+        otherEmissives.push({
+          color: new Color(GATE_TEAL).multiplyScalar(1.9),
+          x: px,
+          y: 0.7 + index * 0.72,
+          z: pz,
+        });
+      }
     }
   }
 
@@ -2131,12 +2156,12 @@ function addAtmosphere(scene: Scene) {
 
     hazeMaterial.opacityNode = body.mul(edgeFade).mul(atmoKnobs.hazeOpacity).mul(pulse);
 
-    const haze = new Mesh(new PlaneGeometry(4.6, 6.4), hazeMaterial);
+    const haze = new Mesh(new PlaneGeometry(4.2, 7.2), hazeMaterial);
     const cos = Math.cos(gate.ry);
     const sin = Math.sin(gate.ry);
     const localZ = -1.2;
 
-    haze.position.set(localZ * sin + gate.x, 3.4, localZ * cos + gate.z);
+    haze.position.set(localZ * sin + gate.x, 3.65, localZ * cos + gate.z);
     haze.rotation.y = gate.ry;
     scene.add(haze);
   }
