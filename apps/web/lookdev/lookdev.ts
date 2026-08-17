@@ -422,6 +422,42 @@ const CODEX_ARCHIVE_STACK: ReadonlyArray<SilhouettePart> = [
   { g: 'box', sx: 0.1, sy: 1.6, sz: 0.1, x: 0, y: 11.2, z: 0 },
 ];
 
+/** Codex non-tower A — archive hall: long severe symmetric hall, finned facade, roof instruments. */
+const CODEX_ARCHIVE_HALL: ReadonlyArray<SilhouettePart> = [
+  { g: 'box', sx: 8, sy: 3.6, sz: 4.5, x: 0, y: 1.8, z: 0 },
+  { g: 'box', sx: 3, sy: 5, sz: 4.8, x: 0, y: 2.5, z: 0.2 },
+  { g: 'box', sx: 0.35, sy: 3.2, sz: 0.5, x: -3.3, y: 1.6, z: 2.3 },
+  { g: 'box', sx: 0.35, sy: 3.2, sz: 0.5, x: -2.2, y: 1.6, z: 2.3 },
+  { g: 'box', sx: 0.35, sy: 3.2, sz: 0.5, x: 2.2, y: 1.6, z: 2.3 },
+  { g: 'box', sx: 0.35, sy: 3.2, sz: 0.5, x: 3.3, y: 1.6, z: 2.3 },
+  { g: 'box', sx: 0.1, sy: 1.8, sz: 0.1, x: 0.9, y: 5.9, z: 0 },
+  { g: 'cyl', rx: 1.1, sx: 0.7, sy: 0.1, sz: 0.7, x: -0.9, y: 5.6, z: 0.2 },
+];
+
+/** Codex non-tower B — listening bowl: a large tilted dish cradled on a low drum plinth. */
+const CODEX_LISTENING_BOWL: ReadonlyArray<SilhouettePart> = [
+  { g: 'cyl', sx: 3.2, sy: 2, sz: 3.2, x: 0, y: 1, z: 0 },
+  { g: 'cyl', sx: 2.2, sy: 0.8, sz: 2.2, x: 0, y: 2.4, z: 0 },
+  { g: 'cyl', rx: 0.95, sx: 3.1, sy: 0.22, sz: 3.1, x: 0, y: 4, z: -0.4 },
+  { g: 'box', rz: 0.5, sx: 0.5, sy: 2.6, sz: 0.7, x: -2.2, y: 3, z: 0 },
+  { g: 'box', rz: -0.5, sx: 0.5, sy: 2.6, sz: 0.7, x: 2.2, y: 3, z: 0 },
+  { g: 'box', sx: 1.8, sy: 1.4, sz: 1.8, x: 3.6, y: 0.7, z: 1 },
+];
+
+/** Codex non-tower C — records precinct: a walled compound, record blocks rising above the wall. */
+const CODEX_PRECINCT: ReadonlyArray<SilhouettePart> = [
+  { g: 'box', sx: 2.8, sy: 2.4, sz: 0.6, x: -2.4, y: 1.2, z: 2.2 },
+  { g: 'box', sx: 2.8, sy: 2.4, sz: 0.6, x: 2.4, y: 1.2, z: 2.2 },
+  { g: 'box', sx: 0.6, sy: 2.4, sz: 5, x: -3.8, y: 1.2, z: 0 },
+  { g: 'box', sx: 0.6, sy: 2.4, sz: 5, x: 3.8, y: 1.2, z: 0 },
+  { g: 'box', sx: 8.2, sy: 2.4, sz: 0.6, x: 0, y: 1.2, z: -2.4 },
+  { g: 'box', sx: 2.6, sy: 0.5, sz: 0.8, x: 0, y: 2.7, z: 2.2 },
+  { g: 'box', sx: 2.2, sy: 3.4, sz: 2, x: -1.8, y: 1.7, z: -0.6 },
+  { g: 'box', sx: 2, sy: 4, sz: 1.8, x: 1.6, y: 2, z: -1 },
+  { g: 'box', sx: 1.6, sy: 2.8, sz: 1.6, x: 0.1, y: 1.4, z: 0.6 },
+  { g: 'box', sx: 0.1, sy: 1.8, sz: 0.1, x: 1.6, y: 4.9, z: -1 },
+];
+
 /** Gate new-A — bastion slot: battered symmetric walls, deep header, centered beacon. */
 const GATE_BASTION_SLOT: ReadonlyArray<SilhouettePart> = [
   { g: 'box', sx: 4.4, sy: 1.4, sz: 2.2, x: -3.9, y: 0.7, z: 0 },
@@ -477,24 +513,12 @@ const LINEUP_ELEMENTS: ReadonlyArray<LineupElement> = [
     ],
   },
   {
-    camZ: 26,
+    camZ: 24,
     key: 'lineup-codex',
-    lookY: 6,
+    lookY: 3,
     name: 'S · codex',
-    spacing: 10,
-    candidates: [
-      CODEX_PLINTH_SPIRE,
-      // B — buttressed tower: sloped fins bracing the shaft into a wide stance
-      [
-        { g: 'box', sx: 5.5, sy: 1.2, sz: 4.5, x: 0, y: 0.6, z: 0 },
-        { g: 'box', sx: 3, sy: 10.5, sz: 3, x: 0, y: 5.25, z: 0 },
-        { g: 'box', rz: 0.35, sx: 1.2, sy: 5, sz: 2.6, x: -2.2, y: 2.2, z: 0 },
-        { g: 'box', rz: -0.35, sx: 1.2, sy: 5, sz: 2.6, x: 2.2, y: 2.2, z: 0 },
-        { g: 'cyl', rx: 1.2, sx: 1.3, sy: 0.14, sz: 1.3, x: 0, y: 11.4, z: 0.2 },
-        { g: 'box', sx: 0.1, sy: 2.2, sz: 0.1, x: -0.8, y: 11.9, z: 0 },
-      ],
-      CODEX_ARCHIVE_STACK,
-    ],
+    spacing: 12,
+    candidates: [CODEX_ARCHIVE_HALL, CODEX_LISTENING_BOWL, CODEX_PRECINCT],
   },
   {
     camZ: 24,
@@ -602,8 +626,8 @@ interface AssemblyPlacement {
  * set's authored front (+z) toward the plaza.
  */
 const ASSEMBLY: ReadonlyArray<AssemblyPlacement> = [
-  { parts: MARKET_PARTS, ry: HALF_PI + 0.16, x: -14.5, z: -3 },
-  { parts: STASH_DOUBLE_DRUM, ry: HALF_PI - 0.07, x: -13.6, z: -9.2 },
+  { parts: MARKET_PARTS, ry: HALF_PI + 0.16, x: -14.5, z: -1.6 },
+  { parts: STASH_DOUBLE_DRUM, ry: HALF_PI, x: -13.8, z: -11.8 },
   { litAllBoxes: true, parts: CODEX_ARCHIVE_STACK, ry: 0.06, x: -2, z: -14.5 },
   { parts: GATE_BASTION_SLOT, ry: 0, x: 6.2, z: -14.2 },
   { parts: AVATAR_PARTS, ry: -HALF_PI - 0.13, x: 14.6, z: -4 },
