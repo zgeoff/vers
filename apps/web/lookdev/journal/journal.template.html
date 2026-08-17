@@ -1,0 +1,330 @@
+<title>Respite Style Probes</title>
+<style>
+  :root {
+    --bg: #05070f;
+    --panel: #0a0e18;
+    --panel-2: #171b28;
+    --border: rgba(94, 234, 212, 0.12);
+    --border-subtle: rgba(94, 234, 212, 0.07);
+    --text: #c3cee0;
+    --text-heading: #eef2fa;
+    --text-emphasis: #cfe9e3;
+    --text-muted: #8fa0c2;
+    --text-faint: #66738c;
+    --accent-world: #5eead4;
+    --accent-self: #e5c79c;
+    --display: 'Chakra Petch', 'Avenir Next Condensed', 'Bahnschrift', system-ui, sans-serif;
+    --body: 'Manrope', 'Segoe UI', system-ui, sans-serif;
+    --mono: 'IBM Plex Mono', 'Cascadia Mono', 'Menlo', monospace;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--body);
+    line-height: 1.6;
+    margin: 0;
+    padding: 3rem 1.5rem 5rem;
+  }
+
+  main { max-width: 70rem; margin: 0 auto; }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 0.6875rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent-world);
+    margin: 0 0 0.75rem;
+  }
+
+  h1 {
+    font-family: var(--display);
+    font-size: clamp(2rem, 5vw, 2.75rem);
+    font-weight: 600;
+    color: var(--text-heading);
+    margin: 0 0 0.75rem;
+    text-wrap: balance;
+  }
+
+  .lede { max-width: 48rem; color: var(--text-muted); margin: 0 0 3rem; }
+  .lede strong { color: var(--text-emphasis); font-weight: 600; }
+
+  .round {
+    border: 1px solid var(--border-subtle);
+    border-radius: 6px;
+    background: var(--panel);
+    padding: 1.75rem;
+    margin-bottom: 3rem;
+  }
+
+  .round-head {
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.4rem;
+  }
+
+  .round h2 {
+    font-family: var(--display);
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--text-heading);
+    margin: 0;
+  }
+
+  .round .status {
+    font-family: var(--mono);
+    font-size: 0.6875rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .round .status.open { color: var(--accent-world); }
+
+  .round > p { max-width: 52rem; margin: 0.4rem 0 1rem; font-size: 0.9375rem; }
+  .round > p b { color: var(--accent-self); font-weight: 600; }
+
+  .shots { display: grid; gap: 1rem; margin: 1.25rem 0 0.5rem; }
+
+  figure { margin: 0; }
+  figure img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+  }
+  figcaption {
+    font-family: var(--mono);
+    font-size: 0.6875rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    margin-top: 0.45rem;
+  }
+
+  .verdict {
+    border-top: 1px solid var(--border-subtle);
+    margin-top: 1.25rem;
+    padding-top: 1rem;
+    font-size: 0.8125rem;
+    color: var(--text-muted);
+    max-width: 52rem;
+  }
+  .verdict b { color: var(--text-emphasis); font-weight: 600; }
+
+  .howto {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1.5rem 1.75rem;
+    margin: 0 0 3rem;
+  }
+  .howto h2 {
+    font-family: var(--display);
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text-emphasis);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin: 0 0 0.5rem;
+  }
+  .howto p { margin: 0 0 0.5rem; max-width: 48rem; font-size: 0.9375rem; }
+  .howto p:last-child { margin-bottom: 0; }
+
+  @media (min-width: 900px) {
+    .shots.pair { grid-template-columns: 1fr 1fr; }
+    .shots.trio { grid-template-columns: 1fr 1fr 1fr; }
+  }
+</style>
+
+<main>
+  <p class="eyebrow">Vers · Respite · style direction · journal</p>
+  <h1>Respite Style Probes</h1>
+  <p class="lede">
+    The running record of finding Respite's look, newest round first. All shots are in-engine:
+    WebGPU, TSL bloom, instanced massing — the shipping stack. The palette round that preceded
+    these lives in the <strong>Respite Anchor Sheet</strong> artifact. Settled so far: dark and
+    warm beats daylight; the A×C color world (sodium warmth at street level, teal/violet signals
+    above); the composition is a town square seen from its open end, deliberately irregular;
+    market and avatar silhouettes chosen.
+  </p>
+
+  <div class="howto">
+    <h2>Round 6 · how to respond</h2>
+    <p>
+      Two things. The revision lineups — stash, codex, gate reinvented per your round-5 notes, now
+      shaded instead of flat black: pick per row, same protocol as ever. And the first draft
+      assembly — current best guesses placed in the plaza (market B refined, stash vault-face,
+      codex plinth spire, gate bastion slot, avatar drums): does anything read wrong
+      <em>in context</em> that looked fine in isolation? Known issue already logged: the codex
+      spire merges with the background terraces and needs separation (height, a background gap, or
+      fog).
+    </p>
+    <p>
+      Live at <span style="font-family: var(--mono)">localhost:4599</span> (button 3 + S·
+      buttons), branch <span style="font-family: var(--mono)">spike/respite-lookdev</span>.
+    </p>
+  </div>
+
+  <section class="round">
+    <div class="round-head">
+      <h2>Round 6 · revisions and the first assembly</h2>
+      <span class="status open">open — pick per row, react to the draft</span>
+    </div>
+    <p>
+      From round 5: <b>market B locked</b> (lower mast dropped), <b>avatar A and C both alive</b>.
+      Stash rebuilt around B's bunker-vault lean; codex reinvented with the chunky base you asked
+      for; gate recooked symmetric with more mass to work with. Lineups now render shaded — your
+      "maybe much better without the flat black" hunch, applied.
+    </p>
+    <div class="shots">
+      <figure>
+        <img src="data:image/png;base64,{{ASSEMBLY}}" alt="The night plaza with the draft part sets assembled: market slabs left, stash vault behind it, codex spire and teal gate on the far side, drum-shaped avatar hall right" />
+        <figcaption>draft assembly — all current picks in place, night mood</figcaption>
+      </figure>
+      <figure>
+        <img src="data:image/png;base64,{{L2_STASH}}" alt="Three shaded stash profiles: a barrel vault with a circular door face; two squat drums sharing a collar; a block locked under a heavy clamp" />
+        <figcaption>stash — A vault face · B double drum · C clamp</figcaption>
+      </figure>
+      <figure>
+        <img src="data:image/png;base64,{{L2_CODEX}}" alt="Three shaded codex profiles: a two-tier plinth carrying a spire and dish; a shaft braced by sloped fins; offset slabs stacked on a heavy plinth" />
+        <figcaption>codex — A plinth spire · B buttressed · C archive stack</figcaption>
+      </figure>
+      <figure>
+        <img src="data:image/png;base64,{{L2_GATE}}" alt="Three shaded gate profiles: battered walls with a slot and beacon; twin towers with a double-deck link; symmetric walls leaning inward over an apron" />
+        <figcaption>gate — A bastion slot · B twin bastions · C maw</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="round">
+    <div class="round-head">
+      <h2>Round 5 · silhouette lineups</h2>
+      <span class="status">resolved</span>
+    </div>
+    <p>
+      Three flat-black profiles per element, testing shape grammar: <b>market</b> horizontal and
+      open, <b>stash</b> mass and closure, <b>codex</b> vertical and listening, <b>avatar hall</b>
+      the square's only curved geometry, <b>gate</b> a threshold whose feature is the opening.
+    </p>
+    <div class="shots">
+      <figure>
+        <img src="data:image/png;base64,{{R5_MARKET}}" alt="Three market silhouettes: canopy teeth over a low hall; stacked offset slabs with roof clutter; one big shed with a side awning" />
+        <figcaption>market — A canopy teeth · B stacked bazaar · C big shed</figcaption>
+      </figure>
+      <figure>
+        <img src="data:image/png;base64,{{R5_STASH}}" alt="Three stash silhouettes: a stepped ziggurat; a bunker under a barrel vault; a heavy block under a straddling gantry frame" />
+        <figcaption>stash — A ziggurat · B bunker vault · C gantry</figcaption>
+      </figure>
+      <figure>
+        <img src="data:image/png;base64,{{R5_CODEX}}" alt="Three codex tower silhouettes: a spire with a tilted dish; two unequal towers joined by a bridge; telescoping setbacks under a hanging crown array" />
+        <figcaption>codex — A spire &amp; dish · B split tower · C telescoping crown</figcaption>
+      </figure>
+      <figure>
+        <img src="data:image/png;base64,{{R5_AVATAR}}" alt="Three avatar hall silhouettes: stacked drums; a horizontal capsule on a plinth; a dome half-sunk into a plinth" />
+        <figcaption>avatar — A drum · B capsule · C dome</figcaption>
+      </figure>
+      <figure>
+        <img src="data:image/png;base64,{{R5_GATE}}" alt="Three gate silhouettes: a slender portal frame; two unequal leaning pylons tied by a cable; a massive wall with a narrow slot opening" />
+        <figcaption>gate — A portal frame · B broken pair · C slot wall</figcaption>
+      </figure>
+    </div>
+    <p class="verdict">
+      <b>Verdict:</b> market B best-in-class (minus its lower mast); avatar A and C both strong,
+      undecided; stash A read "aztec", B worth cooking; codex direction missed — wants a chunkier
+      base; gate undercooked, symmetric preferred, C's mass appealing. Flat black itself suspected
+      of hiding quality → round 6 lineups went shaded.
+    </p>
+  </section>
+
+  <section class="round">
+    <div class="round-head">
+      <h2>Round 4 · the square loosens, the nav set arrives</h2>
+      <span class="status">resolved</span>
+    </div>
+    <p>
+      From round 3 feedback: buildings individually rotated off-axis with varied setbacks, plaza
+      floor skewed with an apron spilling toward the gate, lamps scattered off-grid, all lights
+      halved. The five destinations took shape: <b>market</b>, <b>stash</b>, <b>codex</b>,
+      <b>avatar hall</b>, and <b>explore as the gate</b> — the one break in the ring, world-teal
+      edges. Only nav buildings carry dense warm windows and a lit entrance; fillers sit dim.
+    </p>
+    <div class="shots pair">
+      <figure>
+        <img src="data:image/png;base64,{{R4_NIGHT}}" alt="Irregular night plaza: four brightly lit nav buildings and a teal-edged gate among dim inactive neighbours" />
+        <figcaption>1 · night</figcaption>
+      </figure>
+      <figure>
+        <img src="data:image/png;base64,{{R4_DUSKFOG}}" alt="The same plaza with dusk-colored fog banks layered through the background towers" />
+        <figcaption>2 · dusk fog banks (static first pass)</figcaption>
+      </figure>
+    </div>
+    <p class="verdict">
+      <b>Verdict:</b> the de-stiffening worked — composition settled. Dusk-as-fog is worth
+      developing but parked: individual elements block out first, then fog, lighting, and motion
+      arrive together as the unification pass.
+    </p>
+  </section>
+
+  <section class="round">
+    <div class="round-head">
+      <h2>Round 3 · the town square</h2>
+      <span class="status">resolved</span>
+    </div>
+    <p>
+      Your reframe from round 2: not a district seen from above — an old-timey town square you
+      look into. Camera at the plaza's open end, ring of buildings, lamp light pooling, terraced
+      mass climbing behind. Night vs dusk variants on the toned A×C palette.
+    </p>
+    <div class="shots pair">
+      <figure>
+        <img src="data:image/png;base64,{{R3_NIGHT}}" alt="Rectangular night plaza ringed by buildings, lamps pooling warm light" />
+        <figcaption>1 · night</figcaption>
+      </figure>
+      <figure>
+        <img src="data:image/png;base64,{{R3_DUSK}}" alt="The same plaza under a lighter dusk sky" />
+        <figcaption>2 · dusk</figcaption>
+      </figure>
+    </div>
+    <p class="verdict">
+      <b>Verdict:</b> composition direction confirmed, but too stiff — a perfect rectangle with
+      nine equally lit fronts and no hierarchy. Both palettes liked; too many lights in both;
+      night preferred, dusk reborn as atmosphere. All of that became round 4.
+    </p>
+  </section>
+
+  <section class="round">
+    <div class="round-head">
+      <h2>Round 2 · three moods, one skyline</h2>
+      <span class="status">resolved</span>
+    </div>
+    <p>
+      First in-engine round, testing the anchor-sheet ranking (A &gt; F &gt; C) as one fixed
+      elevated composition in three moods: A pure, A×F, A×C.
+    </p>
+    <div class="shots trio">
+      <figure>
+        <img src="data:image/png;base64,{{R2_A}}" alt="Dusk skyline dense with warm sodium windows" />
+        <figcaption>sodium terrace (A)</figcaption>
+      </figure>
+      <figure>
+        <img src="data:image/png;base64,{{R2_AF}}" alt="Deep night skyline with sparse warm windows and cold instrument lights" />
+        <figcaption>sodium quiet (A×F)</figcaption>
+      </figure>
+      <figure>
+        <img src="data:image/png;base64,{{R2_AC}}" alt="Dense night skyline saturated with warm, teal, and violet lights" />
+        <figcaption>sodium canyon (A×C)</figcaption>
+      </figure>
+    </div>
+    <p class="verdict">
+      <b>Verdict:</b> A too flat, A×F too dark, A×C's colors right but too bright. And the real
+      finding: the composition read as a skyline elevation from a helicopter, not a place — which
+      forced the town-square reframe.
+    </p>
+  </section>
+</main>

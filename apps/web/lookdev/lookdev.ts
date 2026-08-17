@@ -1,10 +1,9 @@
 /**
  * Respite style probes — spike only, never merged to a shipping path.
  *
- * The town square, irregular plan: four nav buildings (market, stash, codex, avatar hall) carry
- * the light and the eye; filler buildings sit dim and inactive; the explore gate breaks the ring
- * on the far side, glowing world-teal toward the outside. Variant 2 layers dusk-colored fog
- * banks through the same night scene.
+ * Views: the two plaza mood probes, shaded silhouette lineups for the elements still being
+ * designed (stash, codex, gate), and a draft assembly placing the current best part sets into
+ * the plaza to judge the silhouettes in context.
  */
 import { bloom } from 'three/addons/tsl/display/BloomNode.js';
 import { pass } from 'three/tsl';
@@ -54,48 +53,40 @@ interface ProbeConfig {
 
 const DUSK_FOG = '#2e3a5e';
 
-const PROBES: ReadonlyArray<ProbeConfig> = [
-  {
-    ambient: '#39406b',
-    ambientIntensity: 1,
-    backgroundLitChance: 0.14,
-    bloomStrength: 0.55,
-    bloomThreshold: 0.45,
-    buildingLit: '#6a7794',
-    dirColor: '#5a6aa8',
-    dirIntensity: 1.2,
-    duskFogBanks: false,
-    fog: '#151a2c',
-    fogFar: 72,
-    fogNear: 20,
-    ground: '#141927',
-    key: 'night',
-    litChance: 0.3,
-    name: '1 · Plaza · night',
-    sky: '#0a0e18',
-    windowDark: '#131826',
-  },
-  {
-    ambient: '#39406b',
-    ambientIntensity: 1,
-    backgroundLitChance: 0.12,
-    bloomStrength: 0.55,
-    bloomThreshold: 0.45,
-    buildingLit: '#6a7794',
-    dirColor: '#5a6aa8',
-    dirIntensity: 1.1,
-    duskFogBanks: true,
-    fog: '#232c48',
-    fogFar: 64,
-    fogNear: 16,
-    ground: '#141927',
-    key: 'dusk-fog',
-    litChance: 0.3,
-    name: '2 · Plaza · dusk fog',
-    sky: '#0a0e18',
-    windowDark: '#131826',
-  },
-];
+const NIGHT: ProbeConfig = {
+  ambient: '#39406b',
+  ambientIntensity: 1,
+  backgroundLitChance: 0.14,
+  bloomStrength: 0.55,
+  bloomThreshold: 0.45,
+  buildingLit: '#6a7794',
+  dirColor: '#5a6aa8',
+  dirIntensity: 1.2,
+  duskFogBanks: false,
+  fog: '#151a2c',
+  fogFar: 72,
+  fogNear: 20,
+  ground: '#141927',
+  key: 'night',
+  litChance: 0.3,
+  name: '1 · Plaza · night',
+  sky: '#0a0e18',
+  windowDark: '#131826',
+};
+
+const DUSK_FOG_PROBE: ProbeConfig = {
+  ...NIGHT,
+  backgroundLitChance: 0.12,
+  dirIntensity: 1.1,
+  duskFogBanks: true,
+  fog: '#232c48',
+  fogFar: 64,
+  fogNear: 16,
+  key: 'dusk-fog',
+  name: '2 · Plaza · dusk fog',
+};
+
+const PROBES: ReadonlyArray<ProbeConfig> = [NIGHT, DUSK_FOG_PROBE];
 
 /** Which side of the box carries windows, in the building's local frame before yaw. */
 type Facing = 'nx' | 'px' | 'pz';
@@ -120,7 +111,7 @@ function isNavRole(role: Role): boolean {
 }
 
 /**
- * Deterministic RNG so both variants share one massing and window pattern.
+ * Deterministic RNG so every view shares one massing and window pattern.
  */
 function makeRandom(seed: number): () => number {
   let state = seed;
@@ -228,20 +219,24 @@ function pickWindowColor(config: ProbeConfig, random: () => number, worldY: numb
   return new Color(signal).multiplyScalar(2);
 }
 
-/** Rotate a local offset by the building's yaw and translate it to world space. */
-function toWorldOffset(spec: BuildingSpec, lx: number, lz: number): { x: number; z: number } {
-  const cos = Math.cos(spec.ry);
-  const sin = Math.sin(spec.ry);
+/** Rotate a local offset by a yaw and translate it to the anchor's world position. */
+function toWorldOffset(anchorX: number, anchorZ: number, ry: number, lx: number, lz: number): { x: number; z: number } {
+  const cos = Math.cos(ry);
+  const sin = Math.sin(ry);
 
-  return { x: spec.x + lx * cos + lz * sin, z: spec.z - lx * sin + lz * cos };
+  return { x: anchorX + lx * cos + lz * sin, z: anchorZ - lx * sin + lz * cos };
 }
 
-function buildWindows(specs: ReadonlyArray<BuildingSpec>, config: ProbeConfig): Array<EmissiveInstance> {
+function buildWindows(
+  specs: ReadonlyArray<BuildingSpec>,
+  config: ProbeConfig,
+  includeNav: boolean,
+): Array<EmissiveInstance> {
   const random = makeRandom(9001);
   const windows: Array<EmissiveInstance> = [];
 
   for (const spec of specs) {
-    if (spec.role === 'fore') {
+    if (spec.role === 'fore' || (!includeNav && isNavRole(spec.role))) {
       continue;
     }
 
@@ -274,12 +269,12 @@ function buildWindows(specs: ReadonlyArray<BuildingSpec>, config: ProbeConfig): 
           const color = pickWindowColor(config, random, y, face.litChance);
 
           if (face.facing === 'pz') {
-            const world = toWorldOffset(spec, along, spec.d / 2 + 0.03);
+            const world = toWorldOffset(spec.x, spec.z, spec.ry, along, spec.d / 2 + 0.03);
 
             windows.push({ color, x: world.x, y, z: world.z });
           } else {
             const lx = face.facing === 'px' ? spec.w / 2 + 0.03 : -spec.w / 2 - 0.03;
-            const world = toWorldOffset(spec, lx, along);
+            const world = toWorldOffset(spec.x, spec.z, spec.ry, lx, along);
 
             windows.push({ color, x: world.x, y, z: world.z });
           }
@@ -287,20 +282,13 @@ function buildWindows(specs: ReadonlyArray<BuildingSpec>, config: ProbeConfig): 
       }
     }
 
-    // a lit entrance at the base of each nav building, facing the plaza
     if (isNavRole(spec.role)) {
       const doorColor = new Color(WARM_WINDOW).multiplyScalar(2.6);
+      const lx = spec.facing === 'pz' ? 0 : spec.facing === 'px' ? spec.w / 2 + 0.05 : -spec.w / 2 - 0.05;
+      const lz = spec.facing === 'pz' ? spec.d / 2 + 0.05 : 0;
+      const world = toWorldOffset(spec.x, spec.z, spec.ry, lx, lz);
 
-      if (spec.facing === 'pz') {
-        const world = toWorldOffset(spec, 0, spec.d / 2 + 0.05);
-
-        windows.push({ color: doorColor, x: world.x, y: 0.75, z: world.z });
-      } else {
-        const lx = spec.facing === 'px' ? spec.w / 2 + 0.05 : -spec.w / 2 - 0.05;
-        const world = toWorldOffset(spec, lx, 0);
-
-        windows.push({ color: doorColor, x: world.x, y: 0.75, z: world.z });
-      }
+      windows.push({ color: doorColor, x: world.x, y: 0.75, z: world.z });
     }
   }
 
@@ -340,12 +328,12 @@ function buildPlazaLights(): Array<EmissiveInstance> {
   return lights;
 }
 
-function buildInstruments(specs: ReadonlyArray<BuildingSpec>): Array<EmissiveInstance> {
+function buildInstruments(specs: ReadonlyArray<BuildingSpec>, includeNav: boolean): Array<EmissiveInstance> {
   const cold = new Color('#7dd3fc').multiplyScalar(2);
   const points: Array<EmissiveInstance> = [];
 
   for (const spec of specs) {
-    if (spec.mast) {
+    if (spec.mast && (includeNav || !isNavRole(spec.role))) {
       points.push({ color: cold, x: spec.x, y: spec.y + spec.h + 2.1, z: spec.z });
     }
   }
@@ -353,9 +341,319 @@ function buildInstruments(specs: ReadonlyArray<BuildingSpec>): Array<EmissiveIns
   return points;
 }
 
+interface SilhouettePart {
+  readonly g: 'box' | 'cyl' | 'sphere';
+  readonly rx?: number;
+  readonly rz?: number;
+  readonly sx: number;
+  readonly sy: number;
+  readonly sz: number;
+  readonly x: number;
+  readonly y: number;
+  readonly z: number;
+}
+
+/** Market B, refined per feedback: the lower mast dropped. */
+const MARKET_PARTS: ReadonlyArray<SilhouettePart> = [
+  { g: 'box', sx: 12, sy: 2, sz: 4.6, x: 0, y: 1, z: 0 },
+  { g: 'box', sx: 9, sy: 1.7, sz: 3.8, x: 1.6, y: 2.85, z: -0.3 },
+  { g: 'box', sx: 2, sy: 1, sz: 2, x: -3.4, y: 2.5, z: 0 },
+  { g: 'box', sx: 1.4, sy: 1.4, sz: 1.4, x: 0.8, y: 4.4, z: -0.6 },
+  { g: 'box', sx: 2.6, sy: 0.8, sz: 1.8, x: 3.8, y: 4.1, z: 0.2 },
+  { g: 'box', sx: 0.12, sy: 2, sz: 0.12, x: 4.2, y: 4.7, z: 0 },
+];
+
+/** Avatar A — stacked drums; C (the dome) stays a live alternative for the in-scene check. */
+const AVATAR_PARTS: ReadonlyArray<SilhouettePart> = [
+  { g: 'cyl', sx: 2.4, sy: 4.6, sz: 2.4, x: 0, y: 2.3, z: 0 },
+  { g: 'cyl', sx: 1.6, sy: 1.3, sz: 1.6, x: 0, y: 5.25, z: 0 },
+  { g: 'box', sx: 0.1, sy: 2, sz: 0.1, x: 0, y: 6.9, z: 0 },
+  { g: 'box', sx: 1.4, sy: 1.1, sz: 1.4, x: 2.9, y: 0.55, z: 0 },
+];
+
+/** Stash new-A — the bunker vault evolved: circular door face, buttress hips. */
+const STASH_VAULT_FACE: ReadonlyArray<SilhouettePart> = [
+  { g: 'box', sx: 7.5, sy: 2.2, sz: 5.5, x: 0, y: 1.1, z: 0 },
+  { g: 'cyl', rz: 1.5708, sx: 1.9, sy: 6.8, sz: 1.9, x: 0, y: 2.1, z: 0 },
+  { g: 'cyl', rx: 1.5708, sx: 1.5, sy: 0.3, sz: 1.5, x: 0, y: 1.6, z: 2.7 },
+  { g: 'box', sx: 0.4, sy: 0.7, sz: 0.4, x: -1.6, y: 4.2, z: 0 },
+  { g: 'box', sx: 0.4, sy: 0.7, sz: 0.4, x: 1.4, y: 4.3, z: 0 },
+  { g: 'box', sx: 1.4, sy: 1.4, sz: 3, x: -3.9, y: 0.7, z: 0 },
+  { g: 'box', sx: 1.4, sy: 1.4, sz: 3, x: 3.9, y: 0.7, z: 0 },
+];
+
+/** Codex new-A — plinth spire: a broad two-tier base carrying a slimmer instrument shaft. */
+const CODEX_PLINTH_SPIRE: ReadonlyArray<SilhouettePart> = [
+  { g: 'box', sx: 6, sy: 3, sz: 5, x: 0, y: 1.5, z: 0 },
+  { g: 'box', sx: 4.5, sy: 2.5, sz: 4, x: 0, y: 4.25, z: 0 },
+  { g: 'box', sx: 2.6, sy: 5.5, sz: 2.6, x: 0, y: 8.25, z: 0 },
+  { g: 'box', sx: 1.8, sy: 1, sz: 1.8, x: 0, y: 11.5, z: 0 },
+  { g: 'box', sx: 0.1, sy: 2, sz: 0.1, x: -0.5, y: 13, z: 0 },
+  { g: 'box', sx: 0.1, sy: 2, sz: 0.1, x: 0.5, y: 13, z: 0 },
+  { g: 'cyl', rx: 1.1, sx: 0.55, sy: 0.1, sz: 0.55, x: 0.75, y: 12.4, z: 0.25 },
+];
+
+/** Gate new-A — bastion slot: battered symmetric walls, deep header, centered beacon. */
+const GATE_BASTION_SLOT: ReadonlyArray<SilhouettePart> = [
+  { g: 'box', sx: 4.4, sy: 1.4, sz: 2.2, x: -3.9, y: 0.7, z: 0 },
+  { g: 'box', sx: 4.4, sy: 1.4, sz: 2.2, x: 3.9, y: 0.7, z: 0 },
+  { g: 'box', sx: 3.6, sy: 4.6, sz: 1.8, x: -3.7, y: 3.7, z: 0 },
+  { g: 'box', sx: 3.6, sy: 4.6, sz: 1.8, x: 3.7, y: 3.7, z: 0 },
+  { g: 'box', sx: 11, sy: 1.4, sz: 1.8, x: 0, y: 6.7, z: 0 },
+  { g: 'box', sx: 1.6, sy: 1, sz: 1.2, x: 0, y: 7.9, z: 0 },
+  { g: 'box', sx: 0.1, sy: 1.5, sz: 0.1, x: -4.9, y: 8, z: 0 },
+  { g: 'box', sx: 0.1, sy: 1.5, sz: 0.1, x: 4.9, y: 8, z: 0 },
+];
+
+interface LineupElement {
+  readonly camZ: number;
+  readonly candidates: ReadonlyArray<ReadonlyArray<SilhouettePart>>;
+  readonly key: string;
+  readonly lookY: number;
+  readonly name: string;
+  readonly spacing: number;
+}
+
+/**
+ * Revision lineups for the elements still being designed. Candidate order is A, B, C left to
+ * right.
+ */
+const LINEUP_ELEMENTS: ReadonlyArray<LineupElement> = [
+  {
+    camZ: 22,
+    key: 'lineup-stash',
+    lookY: 2.4,
+    name: 'S · stash',
+    spacing: 12,
+    candidates: [
+      STASH_VAULT_FACE,
+      // B — double drum: two squat tanks sharing a collar
+      [
+        { g: 'cyl', sx: 2.2, sy: 2.8, sz: 2.2, x: -2.3, y: 1.4, z: 0 },
+        { g: 'cyl', sx: 2.2, sy: 2.8, sz: 2.2, x: 2.3, y: 1.4, z: 0 },
+        { g: 'box', sx: 3.4, sy: 1.6, sz: 3, x: 0, y: 0.8, z: 0 },
+        { g: 'box', sx: 1, sy: 0.5, sz: 1, x: -2.3, y: 3.05, z: 0 },
+        { g: 'box', sx: 1, sy: 0.5, sz: 1, x: 2.3, y: 3.05, z: 0 },
+        { g: 'box', sx: 0.15, sy: 1.2, sz: 0.15, x: 0, y: 2.2, z: 0 },
+      ],
+      // C — clamp: a monolithic block locked under a heavy brace
+      [
+        { g: 'box', sx: 6, sy: 2.8, sz: 5, x: 0, y: 1.4, z: 0 },
+        { g: 'box', sx: 0.8, sy: 4.2, sz: 1.2, x: -3.4, y: 2.1, z: 0 },
+        { g: 'box', sx: 0.8, sy: 4.2, sz: 1.2, x: 3.4, y: 2.1, z: 0 },
+        { g: 'box', sx: 7.6, sy: 1, sz: 1.4, x: 0, y: 4.7, z: 0 },
+        { g: 'box', sx: 1.2, sy: 0.6, sz: 1.6, x: -3.4, y: 0.3, z: 0 },
+        { g: 'box', sx: 1.2, sy: 0.6, sz: 1.6, x: 3.4, y: 0.3, z: 0 },
+      ],
+    ],
+  },
+  {
+    camZ: 26,
+    key: 'lineup-codex',
+    lookY: 6,
+    name: 'S · codex',
+    spacing: 10,
+    candidates: [
+      CODEX_PLINTH_SPIRE,
+      // B — buttressed tower: sloped fins bracing the shaft into a wide stance
+      [
+        { g: 'box', sx: 5.5, sy: 1.2, sz: 4.5, x: 0, y: 0.6, z: 0 },
+        { g: 'box', sx: 3, sy: 10.5, sz: 3, x: 0, y: 5.25, z: 0 },
+        { g: 'box', rz: 0.35, sx: 1.2, sy: 5, sz: 2.6, x: -2.2, y: 2.2, z: 0 },
+        { g: 'box', rz: -0.35, sx: 1.2, sy: 5, sz: 2.6, x: 2.2, y: 2.2, z: 0 },
+        { g: 'cyl', rx: 1.2, sx: 1.3, sy: 0.14, sz: 1.3, x: 0, y: 11.4, z: 0.2 },
+        { g: 'box', sx: 0.1, sy: 2.2, sz: 0.1, x: -0.8, y: 11.9, z: 0 },
+      ],
+      // C — archive stack: offset slabs piled on a heavy plinth, like bound records
+      [
+        { g: 'box', sx: 7, sy: 2.5, sz: 5.5, x: 0, y: 1.25, z: 0 },
+        { g: 'box', sx: 4, sy: 1.3, sz: 3.6, x: 0.3, y: 3.15, z: 0 },
+        { g: 'box', sx: 3.8, sy: 1.3, sz: 3.5, x: -0.3, y: 4.45, z: 0 },
+        { g: 'box', sx: 3.7, sy: 1.3, sz: 3.4, x: 0.25, y: 5.75, z: 0 },
+        { g: 'box', sx: 3.5, sy: 1.3, sz: 3.3, x: -0.25, y: 7.05, z: 0 },
+        { g: 'box', sx: 3.4, sy: 1.3, sz: 3.2, x: 0.15, y: 8.35, z: 0 },
+        { g: 'box', sx: 3.2, sy: 1.3, sz: 3.1, x: -0.15, y: 9.65, z: 0 },
+        { g: 'box', sx: 2.6, sy: 0.2, sz: 0.2, x: 0, y: 10.6, z: 0 },
+        { g: 'box', sx: 0.1, sy: 1.6, sz: 0.1, x: 0, y: 11.2, z: 0 },
+      ],
+    ],
+  },
+  {
+    camZ: 24,
+    key: 'lineup-gate',
+    lookY: 4,
+    name: 'S · gate',
+    spacing: 14,
+    candidates: [
+      GATE_BASTION_SLOT,
+      // B — twin bastions: flanking towers, double-deck connection
+      [
+        { g: 'box', sx: 2.8, sy: 6.5, sz: 2.6, x: -4, y: 3.25, z: 0 },
+        { g: 'box', sx: 2.8, sy: 6.5, sz: 2.6, x: 4, y: 3.25, z: 0 },
+        { g: 'box', sx: 5.6, sy: 1, sz: 1.6, x: 0, y: 6.6, z: 0 },
+        { g: 'box', sx: 5.4, sy: 0.5, sz: 1.4, x: 0, y: 4.6, z: 0 },
+        { g: 'box', sx: 0.12, sy: 1.8, sz: 0.12, x: -4, y: 7.4, z: 0 },
+        { g: 'box', sx: 0.12, sy: 1.8, sz: 0.12, x: 4, y: 7.4, z: 0 },
+      ],
+      // C — maw: symmetric walls leaning in, the opening narrowing toward the header
+      [
+        { g: 'box', rz: -0.15, sx: 3, sy: 5.4, sz: 1.8, x: -3.4, y: 2.7, z: 0 },
+        { g: 'box', rz: 0.15, sx: 3, sy: 5.4, sz: 1.8, x: 3.4, y: 2.7, z: 0 },
+        { g: 'box', sx: 8, sy: 1.6, sz: 1.8, x: 0, y: 6.3, z: 0 },
+        { g: 'box', sx: 6, sy: 0.4, sz: 3, x: 0, y: 0.2, z: 1.6 },
+        { g: 'box', sx: 0.12, sy: 2, sz: 0.12, x: 0, y: 8.1, z: 0 },
+      ],
+    ],
+  },
+];
+
+const SILHOUETTE_SKY = '#3a4670';
+
+const partGeometries = {
+  box: new BoxGeometry(1, 1, 1),
+  cyl: new CylinderGeometry(1, 1, 1, 32),
+  sphere: new SphereGeometry(1, 32, 20),
+};
+
+function renderPartSet(
+  scene: Scene,
+  parts: ReadonlyArray<SilhouettePart>,
+  material: MeshStandardNodeMaterial | MeshBasicNodeMaterial,
+  anchorX: number,
+  anchorZ: number,
+  ry: number,
+) {
+  const cos = Math.cos(ry);
+  const sin = Math.sin(ry);
+
+  for (const part of parts) {
+    const mesh = new Mesh(partGeometries[part.g], material);
+    const x = anchorX + part.x * cos + part.z * sin;
+    const z = anchorZ - part.x * sin + part.z * cos;
+
+    mesh.position.set(x, part.y, z);
+    mesh.rotation.set(part.rx ?? 0, ry, part.rz ?? 0);
+    mesh.scale.set(part.sx, part.sy, part.sz);
+    scene.add(mesh);
+  }
+}
+
+function buildLineupScene(element: LineupElement): Scene {
+  const scene = new Scene();
+
+  scene.background = new Color(SILHOUETTE_SKY);
+
+  // ground barely darker than the sky: the base line reads without swallowing the profiles
+  const ground = new Mesh(
+    new PlaneGeometry(300, 120),
+    new MeshStandardNodeMaterial({ color: new Color('#323d61'), roughness: 1 }),
+  );
+
+  ground.rotation.x = -Math.PI / 2;
+  scene.add(ground);
+
+  // shaded profiles: dark faces under a soft key, so form separates while silhouette dominates
+  const ambient = new AmbientLight(new Color('#39406b'), 0.9);
+  const key = new DirectionalLight(new Color('#8fa0c2'), 1.1);
+
+  key.position.set(-18, 26, 34);
+  scene.add(ambient, key);
+
+  const material = new MeshStandardNodeMaterial({ color: new Color('#1a2032'), roughness: 0.85 });
+
+  for (const [index, candidate] of element.candidates.entries()) {
+    renderPartSet(scene, candidate, material, (index - 1) * element.spacing, 0, 0);
+  }
+
+  return scene;
+}
+
+const HALF_PI = 1.5708;
+
+interface AssemblyPlacement {
+  readonly parts: ReadonlyArray<SilhouettePart>;
+  readonly ry: number;
+  readonly x: number;
+  readonly z: number;
+}
+
+/**
+ * The current best part set for each element, placed at its round-4 plaza anchor. Yaw turns each
+ * set's authored front (+z) toward the plaza.
+ */
+const ASSEMBLY: ReadonlyArray<AssemblyPlacement> = [
+  { parts: MARKET_PARTS, ry: HALF_PI + 0.16, x: -14.5, z: -3 },
+  { parts: STASH_VAULT_FACE, ry: HALF_PI - 0.07, x: -13.6, z: -9.2 },
+  { parts: CODEX_PLINTH_SPIRE, ry: 0.06, x: -2, z: -14.5 },
+  { parts: GATE_BASTION_SLOT, ry: 0, x: 6.2, z: -14.2 },
+  { parts: AVATAR_PARTS, ry: -HALF_PI - 0.13, x: 14.6, z: -4 },
+];
+
+/** Windows for an assembled part set: a lit grid on the front face of its largest box. */
+function buildPartSetWindows(placement: AssemblyPlacement, config: ProbeConfig, seed: number): Array<EmissiveInstance> {
+  const random = makeRandom(seed);
+  const windows: Array<EmissiveInstance> = [];
+  const largest = [...placement.parts].sort((a, b) => b.sx * b.sy - a.sx * a.sy)[0];
+
+  // a cylinder-bodied building gets a radial window ring instead of a facade grid
+  if (largest && largest.g === 'cyl') {
+    const radius = largest.sx + 0.08;
+    const litChance = Math.min(0.92, config.litChance * 1.9);
+
+    for (const y of [largest.y - largest.sy * 0.3, largest.y + largest.sy * 0.15]) {
+      for (let step = 0; step < 10; step += 1) {
+        const angle = (step / 10) * Math.PI * 2;
+        const world = toWorldOffset(
+          placement.x,
+          placement.z,
+          placement.ry,
+          largest.x + Math.cos(angle) * radius,
+          largest.z + Math.sin(angle) * radius,
+        );
+
+        windows.push({ color: pickWindowColor(config, random, y, litChance), x: world.x, y, z: world.z });
+      }
+    }
+
+    const door = toWorldOffset(placement.x, placement.z, placement.ry, largest.x, largest.z + radius);
+
+    windows.push({ color: new Color(WARM_WINDOW).multiplyScalar(2.6), x: door.x, y: 0.75, z: door.z });
+
+    return windows;
+  }
+
+  const boxes = placement.parts.filter((part) => part.g === 'box');
+  const main = boxes.toSorted((a, b) => b.sx * b.sy - a.sx * a.sy)[0];
+
+  if (!main) {
+    return windows;
+  }
+
+  const cols = Math.max(1, Math.floor((main.sx - 0.6) / 0.6));
+  const rowCount = Math.max(1, Math.floor((main.sy - 0.5) / 0.7));
+  const step = cols > 1 ? (main.sx - 0.9) / (cols - 1) : 0;
+  const litChance = Math.min(0.92, config.litChance * 1.9);
+
+  for (let col = 0; col < cols; col += 1) {
+    for (let row = 0; row < rowCount; row += 1) {
+      const lx = main.x - (main.sx - 0.9) / 2 + col * step;
+      const y = main.y + main.sy / 2 - 0.5 - row * 0.7;
+      const world = toWorldOffset(placement.x, placement.z, placement.ry, lx, main.z + main.sz / 2 + 0.04);
+
+      windows.push({ color: pickWindowColor(config, random, y, litChance), x: world.x, y, z: world.z });
+    }
+  }
+
+  const door = toWorldOffset(placement.x, placement.z, placement.ry, main.x, main.z + main.sz / 2 + 0.06);
+
+  windows.push({ color: new Color(WARM_WINDOW).multiplyScalar(2.6), x: door.x, y: 0.75, z: door.z });
+
+  return windows;
+}
+
 const dummy = new Object3D();
 
-function buildScene(config: ProbeConfig): Scene {
+function buildScene(config: ProbeConfig, useParts: boolean): Scene {
   const scene = new Scene();
 
   scene.background = new Color(config.sky);
@@ -418,18 +716,19 @@ function buildScene(config: ProbeConfig): Scene {
   }
 
   const specs = buildMassing();
-  const boxGeometry = new BoxGeometry(1, 1, 1);
+  const boxSpecs = useParts ? specs.filter((spec) => !isNavRole(spec.role)) : specs;
+  const boxGeometry = partGeometries.box;
   const buildings = new InstancedMesh(
     boxGeometry,
     new MeshStandardNodeMaterial({ roughness: 0.85 }),
-    specs.length,
+    boxSpecs.length,
   );
   const litColor = new Color(config.buildingLit);
   const navColor = litColor.clone().multiplyScalar(1.15);
   const fillerColor = litColor.clone().multiplyScalar(0.6);
   const foreColor = litColor.clone().multiplyScalar(0.35);
 
-  for (const [index, spec] of specs.entries()) {
+  for (const [index, spec] of boxSpecs.entries()) {
     dummy.position.set(spec.x, spec.y + spec.h / 2, spec.z);
     dummy.rotation.set(0, spec.ry, 0);
     dummy.scale.set(spec.w, spec.h, spec.d);
@@ -452,7 +751,7 @@ function buildScene(config: ProbeConfig): Scene {
   buildings.computeBoundingSphere();
   scene.add(buildings);
 
-  const masts = specs.filter((spec) => spec.mast);
+  const masts = boxSpecs.filter((spec) => spec.mast);
   const mastMesh = new InstancedMesh(
     boxGeometry,
     new MeshStandardNodeMaterial({ color: litColor.clone().multiplyScalar(0.7), roughness: 0.9 }),
@@ -470,17 +769,25 @@ function buildScene(config: ProbeConfig): Scene {
   mastMesh.computeBoundingSphere();
   scene.add(mastMesh);
 
-  // the explore gate: two pylons in the far-side gap, world-teal edges, teal glow beyond
-  const pylonMaterial = new MeshStandardNodeMaterial({
-    color: litColor.clone().multiplyScalar(0.5),
-    roughness: 0.8,
-  });
+  if (useParts) {
+    const partMaterial = new MeshStandardNodeMaterial({ color: navColor, roughness: 0.85 });
 
-  for (const px of [4.2, 8.2]) {
-    const pylon = new Mesh(new BoxGeometry(0.9, 6.2, 1.1), pylonMaterial);
+    for (const placement of ASSEMBLY) {
+      renderPartSet(scene, placement.parts, partMaterial, placement.x, placement.z, placement.ry);
+    }
+  } else {
+    // the explore gate placeholder: two pylons in the far-side gap
+    const pylonMaterial = new MeshStandardNodeMaterial({
+      color: litColor.clone().multiplyScalar(0.5),
+      roughness: 0.8,
+    });
 
-    pylon.position.set(px, 3.1, -14);
-    scene.add(pylon);
+    for (const px of [4.2, 8.2]) {
+      const pylon = new Mesh(new BoxGeometry(0.9, 6.2, 1.1), pylonMaterial);
+
+      pylon.position.set(px, 3.1, -14);
+      scene.add(pylon);
+    }
   }
 
   const gateGlow = new PointLight(new Color(GATE_TEAL), 30, 20, 2);
@@ -515,10 +822,27 @@ function buildScene(config: ProbeConfig): Scene {
   postMesh.computeBoundingSphere();
   scene.add(postMesh);
 
-  const emissives = [...buildWindows(specs, config), ...buildPlazaLights(), ...buildInstruments(specs)];
+  const emissives = [
+    ...buildWindows(specs, config, !useParts),
+    ...buildPlazaLights(),
+    ...buildInstruments(specs, !useParts),
+  ];
 
-  // gate edge strips join the emissive set: vertical teal lines on the pylons' inner edges
-  for (const px of [4.7, 7.7]) {
+  if (useParts) {
+    for (const [index, placement] of ASSEMBLY.entries()) {
+      // the gate is a threshold, not an occupied building — its light is the teal edge strips
+      if (placement.parts === GATE_BASTION_SLOT) {
+        continue;
+      }
+
+      emissives.push(...buildPartSetWindows(placement, config, 4200 + index));
+    }
+  }
+
+  // gate edge strips join the emissive set: vertical teal lines flanking the opening
+  const stripXs = useParts ? [4.5, 7.9] : [4.7, 7.7];
+
+  for (const px of stripXs) {
     for (let index = 0; index < 8; index += 1) {
       emissives.push({
         color: new Color(GATE_TEAL).multiplyScalar(1.9),
@@ -582,231 +906,6 @@ function addDuskFogBanks(scene: Scene) {
   }
 }
 
-interface SilhouettePart {
-  readonly g: 'box' | 'cyl' | 'sphere';
-  readonly rx?: number;
-  readonly rz?: number;
-  readonly sx: number;
-  readonly sy: number;
-  readonly sz: number;
-  readonly x: number;
-  readonly y: number;
-  readonly z: number;
-}
-
-interface LineupElement {
-  readonly camZ: number;
-  readonly candidates: ReadonlyArray<ReadonlyArray<SilhouettePart>>;
-  readonly key: string;
-  readonly lookY: number;
-  readonly name: string;
-  readonly spacing: number;
-}
-
-/**
- * Three silhouette candidates per nav element, judged as backlit dark profiles. Candidate order
- * is A, B, C left to right.
- */
-const LINEUP_ELEMENTS: ReadonlyArray<LineupElement> = [
-  {
-    camZ: 30,
-    key: 'lineup-market',
-    lookY: 2.6,
-    name: 'S · market',
-    spacing: 18,
-    candidates: [
-      // A — canopy teeth: low hall, tilted canopy bays along the front
-      [
-        { g: 'box', sx: 13, sy: 2.4, sz: 5, x: 0, y: 1.2, z: 0 },
-        { g: 'box', sx: 9, sy: 1.6, sz: 3, x: -0.5, y: 3.2, z: -0.8 },
-        { g: 'box', rz: 0.16, sx: 2.3, sy: 0.35, sz: 2.6, x: -5.2, y: 2.75, z: 1.5 },
-        { g: 'box', rz: 0.16, sx: 2.3, sy: 0.35, sz: 2.6, x: -2.6, y: 2.75, z: 1.5 },
-        { g: 'box', rz: 0.16, sx: 2.3, sy: 0.35, sz: 2.6, x: 0, y: 2.75, z: 1.5 },
-        { g: 'box', rz: 0.16, sx: 2.3, sy: 0.35, sz: 2.6, x: 2.6, y: 2.75, z: 1.5 },
-        { g: 'box', rz: 0.16, sx: 2.3, sy: 0.35, sz: 2.6, x: 5.2, y: 2.75, z: 1.5 },
-        { g: 'box', sx: 0.5, sy: 1.8, sz: 0.5, x: 4.6, y: 3.3, z: -1 },
-      ],
-      // B — stacked bazaar: offset slabs with accreted roof clutter
-      [
-        { g: 'box', sx: 12, sy: 2, sz: 4.6, x: 0, y: 1, z: 0 },
-        { g: 'box', sx: 9, sy: 1.7, sz: 3.8, x: 1.6, y: 2.85, z: -0.3 },
-        { g: 'box', sx: 2, sy: 1, sz: 2, x: -3.4, y: 2.5, z: 0 },
-        { g: 'box', sx: 1.4, sy: 1.4, sz: 1.4, x: 0.8, y: 4.4, z: -0.6 },
-        { g: 'box', sx: 2.6, sy: 0.8, sz: 1.8, x: 3.8, y: 4.1, z: 0.2 },
-        { g: 'box', sx: 0.12, sy: 2, sz: 0.12, x: -3.2, y: 4, z: 0 },
-        { g: 'box', sx: 0.12, sy: 2, sz: 0.12, x: 4.2, y: 4.7, z: 0 },
-      ],
-      // C — big shed: one hall with a clerestory spine and a side awning
-      [
-        { g: 'box', sx: 11, sy: 3.8, sz: 5, x: 0, y: 1.9, z: 0 },
-        { g: 'box', sx: 7, sy: 1.1, sz: 2, x: 0, y: 4.35, z: 0 },
-        { g: 'box', sx: 4.2, sy: 0.35, sz: 2.4, x: -7.2, y: 2.4, z: 0.8 },
-        { g: 'cyl', sx: 0.9, sy: 1.7, sz: 0.9, x: 5.9, y: 0.85, z: -0.4 },
-      ],
-    ],
-  },
-  {
-    camZ: 22,
-    key: 'lineup-stash',
-    lookY: 2.2,
-    name: 'S · stash',
-    spacing: 12,
-    candidates: [
-      // A — ziggurat: three battered steps
-      [
-        { g: 'box', sx: 8, sy: 1.8, sz: 6, x: 0, y: 0.9, z: 0 },
-        { g: 'box', sx: 6.2, sy: 1.2, sz: 5, x: 0, y: 2.4, z: 0 },
-        { g: 'box', sx: 4.4, sy: 0.9, sz: 4, x: 0, y: 3.45, z: 0 },
-      ],
-      // B — bunker vault: low block under a barrel roof
-      [
-        { g: 'box', sx: 7.5, sy: 2.2, sz: 5.5, x: 0, y: 1.1, z: 0 },
-        { g: 'cyl', rz: 1.5708, sx: 1.9, sy: 6.8, sz: 1.9, x: 0, y: 2.1, z: 0 },
-        { g: 'box', sx: 0.4, sy: 0.7, sz: 0.4, x: -1.6, y: 4.2, z: 0 },
-        { g: 'box', sx: 0.4, sy: 0.7, sz: 0.4, x: 1.4, y: 4.3, z: 0 },
-      ],
-      // C — gantry stash: heavy block under a straddling crane frame
-      [
-        { g: 'box', sx: 6, sy: 2.6, sz: 5, x: 0, y: 1.3, z: 0 },
-        { g: 'box', sx: 0.28, sy: 4.6, sz: 0.28, x: -3.5, y: 2.3, z: 0 },
-        { g: 'box', sx: 0.28, sy: 4.6, sz: 0.28, x: 3.5, y: 2.3, z: 0 },
-        { g: 'box', sx: 7.8, sy: 0.35, sz: 0.5, x: 0, y: 4.75, z: 0 },
-      ],
-    ],
-  },
-  {
-    camZ: 24,
-    key: 'lineup-codex',
-    lookY: 5.5,
-    name: 'S · codex',
-    spacing: 8.5,
-    candidates: [
-      // A — spire and dish: slim tower, setback crown, tilted dish
-      [
-        { g: 'box', sx: 2.8, sy: 8, sz: 2.8, x: 0, y: 4, z: 0 },
-        { g: 'box', sx: 2, sy: 2.6, sz: 2, x: 0, y: 9.3, z: 0 },
-        { g: 'box', sx: 0.1, sy: 2.4, sz: 0.1, x: -0.6, y: 11.6, z: 0 },
-        { g: 'box', sx: 0.1, sy: 2.4, sz: 0.1, x: 0.6, y: 11.6, z: 0 },
-        { g: 'cyl', rx: 1.15, sx: 1.2, sy: 0.12, sz: 1.2, x: 0.95, y: 11.3, z: 0.3 },
-      ],
-      // B — split tower: two unequal verticals joined by a bridge
-      [
-        { g: 'box', sx: 2.2, sy: 10.5, sz: 2.2, x: -1.6, y: 5.25, z: 0 },
-        { g: 'box', sx: 2.2, sy: 7.5, sz: 2.2, x: 1.8, y: 3.75, z: 0 },
-        { g: 'box', sx: 3.4, sy: 0.8, sz: 1.6, x: 0.1, y: 5.6, z: 0 },
-        { g: 'box', sx: 0.1, sy: 2.2, sz: 0.1, x: -1.6, y: 11.6, z: 0 },
-      ],
-      // C — telescoping instrument: setbacks under a hanging crown array
-      [
-        { g: 'box', sx: 4, sy: 4, sz: 4, x: 0, y: 2, z: 0 },
-        { g: 'box', sx: 3, sy: 3.4, sz: 3, x: 0, y: 5.7, z: 0 },
-        { g: 'box', sx: 2.1, sy: 2.8, sz: 2.1, x: 0, y: 8.8, z: 0 },
-        { g: 'box', sx: 3.2, sy: 0.22, sz: 0.22, x: 0, y: 10.6, z: 0 },
-        { g: 'box', sx: 0.4, sy: 0.7, sz: 0.4, x: -1.2, y: 10.05, z: 0 },
-        { g: 'box', sx: 0.4, sy: 0.7, sz: 0.4, x: 1.2, y: 10.1, z: 0 },
-        { g: 'box', sx: 0.1, sy: 1.8, sz: 0.1, x: 0, y: 11.4, z: 0 },
-      ],
-    ],
-  },
-  {
-    camZ: 22,
-    key: 'lineup-avatar',
-    lookY: 3,
-    name: 'S · avatar',
-    spacing: 11,
-    candidates: [
-      // A — drum: stacked cylinders, the square's only round tower
-      [
-        { g: 'cyl', sx: 3, sy: 5, sz: 3, x: 0, y: 2.5, z: 0 },
-        { g: 'cyl', sx: 2, sy: 1.4, sz: 2, x: 0, y: 5.7, z: 0 },
-        { g: 'box', sx: 0.1, sy: 2, sz: 0.1, x: 0, y: 7.3, z: 0 },
-        { g: 'box', sx: 1.6, sy: 1.2, sz: 1.6, x: 3.4, y: 0.6, z: 0 },
-      ],
-      // B — capsule: horizontal tube with domed ends on a plinth
-      [
-        { g: 'box', sx: 6, sy: 1, sz: 4.5, x: 0, y: 0.5, z: 0 },
-        { g: 'cyl', rz: 1.5708, sx: 1.9, sy: 5, sz: 1.9, x: 0, y: 2.9, z: 0 },
-        { g: 'sphere', sx: 1.9, sy: 1.9, sz: 1.9, x: -2.5, y: 2.9, z: 0 },
-        { g: 'sphere', sx: 1.9, sy: 1.9, sz: 1.9, x: 2.5, y: 2.9, z: 0 },
-        { g: 'box', sx: 0.4, sy: 1.5, sz: 0.4, x: 1.8, y: 5.5, z: 0 },
-      ],
-      // C — dome: half-buried sphere on a plinth
-      [
-        { g: 'box', sx: 5.5, sy: 1.6, sz: 5.5, x: 0, y: 0.8, z: 0 },
-        { g: 'sphere', sx: 3, sy: 3, sz: 3, x: 0, y: 1.6, z: 0 },
-        { g: 'box', sx: 0.12, sy: 2.6, sz: 0.12, x: 0, y: 5.9, z: 0 },
-      ],
-    ],
-  },
-  {
-    camZ: 22,
-    key: 'lineup-gate',
-    lookY: 3.2,
-    name: 'S · gate',
-    spacing: 12,
-    candidates: [
-      // A — portal frame: slender pylons under an overhanging lintel
-      [
-        { g: 'box', sx: 0.9, sy: 6, sz: 1.1, x: -3.4, y: 3, z: 0 },
-        { g: 'box', sx: 0.9, sy: 6, sz: 1.1, x: 3.4, y: 3, z: 0 },
-        { g: 'box', sx: 8.6, sy: 0.9, sz: 1.2, x: 0, y: 6.45, z: 0 },
-      ],
-      // B — broken pair: unequal pylons leaning in, tied by a cable
-      [
-        { g: 'box', rz: 0.07, sx: 1, sy: 6.5, sz: 1.1, x: -3.2, y: 3.25, z: 0 },
-        { g: 'box', rz: -0.09, sx: 1, sy: 5, sz: 1.1, x: 3.4, y: 2.5, z: 0 },
-        { g: 'box', rz: -0.21, sx: 6.4, sy: 0.07, sz: 0.07, x: 0.2, y: 5.5, z: 0 },
-      ],
-      // C — slot wall: massive flanks squeezing a narrow opening
-      [
-        { g: 'box', sx: 3.4, sy: 5, sz: 1.6, x: -3.5, y: 2.5, z: 0 },
-        { g: 'box', sx: 3.4, sy: 5, sz: 1.6, x: 3.5, y: 2.5, z: 0 },
-        { g: 'box', sx: 10.4, sy: 1.2, sz: 1.6, x: 0, y: 5.6, z: 0 },
-        { g: 'box', sx: 0.1, sy: 1.6, sz: 0.1, x: -4.8, y: 7, z: 0 },
-        { g: 'box', sx: 0.1, sy: 1.6, sz: 0.1, x: 4.9, y: 6.7, z: 0 },
-      ],
-    ],
-  },
-];
-
-const SILHOUETTE_SKY = '#3a4670';
-
-function buildLineupScene(element: LineupElement): Scene {
-  const scene = new Scene();
-
-  scene.background = new Color(SILHOUETTE_SKY);
-
-  // ground barely darker than the sky: the base line reads without swallowing the profiles
-  const ground = new Mesh(
-    new PlaneGeometry(300, 120),
-    new MeshBasicNodeMaterial({ color: new Color('#323d61') }),
-  );
-
-  ground.rotation.x = -Math.PI / 2;
-  scene.add(ground);
-
-  const material = new MeshBasicNodeMaterial({ color: new Color('#0b0e16') });
-  const box = new BoxGeometry(1, 1, 1);
-  const cyl = new CylinderGeometry(1, 1, 1, 32);
-  const sphere = new SphereGeometry(1, 32, 20);
-
-  for (const [index, candidate] of element.candidates.entries()) {
-    const offsetX = (index - 1) * element.spacing;
-
-    for (const part of candidate) {
-      const geometry = part.g === 'box' ? box : part.g === 'cyl' ? cyl : sphere;
-      const mesh = new Mesh(geometry, material);
-
-      mesh.position.set(offsetX + part.x, part.y, part.z);
-      mesh.rotation.set(part.rx ?? 0, 0, part.rz ?? 0);
-      mesh.scale.set(part.sx, part.sy, part.sz);
-      scene.add(mesh);
-    }
-  }
-
-  return scene;
-}
-
 async function main() {
   // bun's dev-server HMR can re-execute the module; a second renderer + loop fights the first
   const globalState = globalThis as { __lookdevBooted?: boolean };
@@ -846,16 +945,28 @@ async function main() {
     readonly select: () => PostProcessing;
   }
 
+  const selectPlazaCamera = () => {
+    camera.position.set(0, 9, 26);
+    camera.lookAt(0, 3, -7);
+  };
+
   const views: Array<View> = [
     ...PROBES.map((config) => ({
       key: config.key,
       name: config.name,
       select: () => {
-        camera.position.set(0, 9, 26);
-        camera.lookAt(0, 3, -7);
-        return buildPost(buildScene(config), config.bloomStrength, config.bloomThreshold);
+        selectPlazaCamera();
+        return buildPost(buildScene(config, false), config.bloomStrength, config.bloomThreshold);
       },
     })),
+    {
+      key: 'assembly',
+      name: '3 · Assembly draft',
+      select: () => {
+        selectPlazaCamera();
+        return buildPost(buildScene(NIGHT, true), NIGHT.bloomStrength, NIGHT.bloomThreshold);
+      },
+    },
     ...LINEUP_ELEMENTS.map((element) => ({
       key: element.key,
       name: element.name,
