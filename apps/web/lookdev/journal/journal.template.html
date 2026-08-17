@@ -155,28 +155,59 @@
   </p>
 
   <div class="howto">
-    <h2>Round 22 · how to respond</h2>
+    <h2>Round 23 · how to respond</h2>
     <p>
-      The tuner is yours — no verdict needed this round, just play. Open
-      <span style="font-family: var(--mono)">localhost:4599</span>, view <b>4 · Inspect</b> (orbit
-      while you tune) or <b>8 · Surfaces</b> (the fixed camera). The panel on the right has a
-      section per building plus <b>ground</b>, <b>light</b>, <b>grade</b>, and <b>grounding</b>
-      (the contact-shadow falloff). Every slider updates the live scene instantly — no reload, no
-      rebuild. <b>reset</b> restores the committed defaults, so there are no wrong moves.
+      First unification pass proper: <b>light on the walls</b>. Judge the wide shot for cohesion —
+      does the plaza now read as one place lit by its own fixtures? — and the close-ups for
+      whether the entrances feel inhabited. The verdict wanted: which fixtures earn their place,
+      which are too hot or too dim, and whether the darker overall night (ambient pulled back from
+      1.45 to 1.2 now that deliberate light carries legibility) is the right trade.
     </p>
     <p>
-      When a look lands — for one building or the whole set — hit <b>copy json</b> and paste the
-      JSON into chat; it gets baked as the new defaults. Tip from round 21: texture only reads
-      where light lands, so raising <b>light → ambient / lamps</b> while judging a recipe is fair
-      play — the light section exists precisely so you can separate "recipe is wrong" from "wall
-      is dark".
+      Two new knobs in <b>light</b>: <b>entrance spill</b> scales every warm fixture at once,
+      <b>gate wash</b> scales the teal uplights. Tune live in views 4/8 and paste copy json if you
+      land somewhere; the fixture positions themselves are mine to move on your notes.
     </p>
   </div>
 
   <section class="round">
     <div class="round-head">
+      <h2>Round 23 · light on the walls</h2>
+      <span class="status open">open — judge cohesion</span>
+    </div>
+    <p>
+      Round 21's diagnosis, acted on: albedo can't read on an unlit face, so the scene now lights
+      its own walls. Every entrance carries a warm wall-mounted fixture throwing sodium onto its
+      facade — the entrance rule doubled as the lighting logic: under-canopy lights over the
+      market's stall row, a lamp on the stash vestibule lintel, a pair flanking the codex
+      entrance inside the banner fins, one over the avatar kiosk. The gate stays teal-owned: two
+      low uplights a step out from each wall climb the worn slab. Each fixture renders its
+      housing (a lit block on the wall, a puck at the gate's feet) so light has a visible source.
+      Flat ambient pulled back from 1.45 to 1.2 — the deliberate fixtures now carry local
+      legibility, and the night gets its contrast back.
+    </p>
+    <div class="shots">
+      <figure>
+        <img src="data:image/png;base64,{{R23_SPILL}}" alt="The plaza wide shot with warm entrance fixtures on every building and teal uplights washing the gate slab" />
+        <figcaption>8 · surfaces — sodium fixtures at street level, teal owning the gate</figcaption>
+      </figure>
+    </div>
+    <div class="shots pair">
+      <figure>
+        <img src="data:image/png;base64,{{R23_GATE_CLOSE}}" alt="Close orbit at the gate: teal uplight pools at the foot of each wall, wash climbing the slab faces, threshold and slot glowing" />
+        <figcaption>close orbit — gate wash grazing the worn slab</figcaption>
+      </figure>
+      <figure>
+        <img src="data:image/png;base64,{{R23_MARKET_CLOSE}}" alt="Close orbit at the market: warm pools under the canopy bays over the stall row, upper massing left dark" />
+        <figcaption>close orbit — market under-canopy spill over the stalls</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="round">
+    <div class="round-head">
       <h2>Round 22 · the tuner — armed with technology</h2>
-      <span class="status open">open — tune at will</span>
+      <span class="status">resolved</span>
     </div>
     <p>
       Round 21's real verdict wasn't about amplitudes — it was that the loop itself was wrong:
@@ -201,6 +232,11 @@
         <figcaption>8 · surfaces — the tuner panel, gate section open, reset and copy-json at the head</figcaption>
       </figure>
     </div>
+    <p class="verdict">
+      <b>Verdict:</b> "sliders are great, can iterate deeper later." Tuner adopted as standing
+      infrastructure; deep texture iteration deferred to the final-fidelity phase per the agreed
+      roadmap. On to the unification passes.
+    </p>
   </section>
 
   <section class="round">

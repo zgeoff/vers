@@ -52,6 +52,9 @@ const MAP: Record<string, string> = {
   R21_RECIPES: 'r21-recipes',
   R21_RECIPES_CLOSE: 'r21-recipes-close',
   R22_TUNER: 'r22-tuner',
+  R23_SPILL: 'r23-spill',
+  R23_GATE_CLOSE: 'r23-gate-close',
+  R23_MARKET_CLOSE: 'r23-market-close',
 };
 
 let html = await Bun.file(`${import.meta.dir}/journal.template.html`).text();
