@@ -6,6 +6,7 @@ import { removeLastStartedActivity } from '../submission/remove-last-started-act
 import { removePendingStartIntent } from '../submission/remove-pending-start-intent';
 import { removeQueuedCheckpoints } from '../submission/remove-queued-checkpoints';
 import { removeStartRow } from '../submission/remove-start-row';
+import { writeLastStartedActivity } from '../submission/write-last-started-activity';
 import type { WorkerContext } from './types';
 
 /**
@@ -52,6 +53,10 @@ export async function drainStartRows(context: WorkerContext, avatarID: string): 
     if (outcome !== 'ingested') {
       continue;
     }
+
+    // repair the durable predecessor a reload orphaned: record this drained root as the avatar's
+    // last-started, so the next start stamps it rather than a stale or absent predecessor
+    await writeLastStartedActivity({ avatarID: row.avatarID, lastActivityID: row.id });
 
     await context.getSubmitter().registerActivity({
       activityID: row.id,

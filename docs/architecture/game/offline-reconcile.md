@@ -139,10 +139,12 @@ The server cannot recover the play order from its own clocks: an activity's real
 offline, and the activities arrive together at reconnect in no meaningful order. So the client
 declares the order — it alone witnessed the play. Each activity carries a `predecessorActivityId`:
 the avatar's immediately-prior activity across every chain, null only for its first-ever activity.
-The client stamps it at start, next to `playedAt`, an advisory wall-clock timestamp the claim and
-the checks never read — it serves operator and analytics queries only. A predecessor and its
-successor are minted in the same device session, so an out-of-order or reload-orphaned delivery only
-delays a successor until its named predecessor lands; it never points the server at the wrong run.
+The client stamps it at start from a durable per-avatar record of the avatar's last-started
+activity, which survives a worker reload, so the reference the client stamps stays consistent across
+one. It stamps `playedAt` beside it, an advisory wall-clock timestamp the claim and the checks never
+read — it serves operator and analytics queries only. An out-of-order or reload-orphaned delivery
+only delays a successor until its named predecessor lands; it never points the server at the wrong
+run.
 
 Declaring a false order buys nothing: the checks read only settled state, so reordering a run ahead
 of its true predecessor changes nothing they find.

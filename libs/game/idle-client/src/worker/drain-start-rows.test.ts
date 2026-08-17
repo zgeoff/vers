@@ -3,7 +3,9 @@ import { createMockActivityData } from '@vers/contract-activity/test-utils';
 import { mockActivityService } from '@vers/mock-services/activity';
 import { server } from '../mocks/node';
 import { readAllStartRows } from '../submission/read-all-start-rows';
+import { readPendingStartIntent } from '../submission/read-pending-start-intent';
 import { readQueuedCheckpoints } from '../submission/read-queued-checkpoints';
+import { writePendingStartIntent } from '../submission/write-pending-start-intent';
 import { writeQueuedCheckpoint } from '../submission/write-queued-checkpoint';
 import { writeStartRow } from '../submission/write-start-row';
 import { createStubSubmitter } from '../test-utils/create-stub-submitter';
@@ -80,6 +82,72 @@ test('it discards the queued checkpoints of a refused root without registering i
   expect(remaining).toStrictEqual([]);
   expect(queued).toStrictEqual([]);
   expect(submitter.registerActivity).not.toHaveBeenCalled();
+});
+
+test('it drops a held start intent naming the refused root', async () => {
+  const context = createStubWorkerContext({ submitter: createStubSubmitter() });
+
+  const row = createMockActivityData({
+    avatarID: 'avatar_recovering',
+    id: 'act_drain_intent',
+    scopeID: '1_0',
+    startKey: 'start_key_intent',
+  });
+
+  await writeStartRow(row);
+
+  await writePendingStartIntent({
+    activityID: row.id,
+    avatarID: 'avatar_recovering',
+    scopeID: '1_0',
+    scopeType: 'world_map_node',
+  });
+
+  server.use(
+    mockActivityService.advanceActivity.handler((opts) => {
+      throw opts.errors.NODE_NOT_REVEALED({ data: {} });
+    }),
+  );
+
+  await drainStartRows(context, 'avatar_recovering');
+
+  const heldIntent = await readPendingStartIntent();
+
+  expect(heldIntent).toBeUndefined();
+});
+
+test('it leaves a held start intent naming a different row when a root is refused', async () => {
+  const context = createStubWorkerContext({ submitter: createStubSubmitter() });
+
+  const row = createMockActivityData({
+    avatarID: 'avatar_recovering',
+    id: 'act_drain_refused_other',
+    scopeID: '1_0',
+    startKey: 'start_key_refused_other',
+  });
+
+  await writeStartRow(row);
+
+  const intent = {
+    activityID: 'act_unrelated',
+    avatarID: 'avatar_recovering',
+    scopeID: '2_0',
+    scopeType: 'world_map_node',
+  } as const;
+
+  await writePendingStartIntent(intent);
+
+  server.use(
+    mockActivityService.advanceActivity.handler((opts) => {
+      throw opts.errors.NODE_NOT_REVEALED({ data: {} });
+    }),
+  );
+
+  await drainStartRows(context, 'avatar_recovering');
+
+  const heldIntent = await readPendingStartIntent();
+
+  expect(heldIntent).toStrictEqual(intent);
 });
 
 test('it drains nothing when this device holds no pending root', async () => {

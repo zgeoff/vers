@@ -38,13 +38,20 @@ export async function claimNextChain(trx: Transaction<DB>): Promise<ClaimedActiv
           .whereRef('activities.avatarId', '=', 'avatars.id')
           .where((eb2) => eb2('activities.appendedHead', '>', eb2.ref('activities.verifiedHead')))
           .where('activities.status', '!=', 'rejected')
-          .where((eb2) =>
-            eb2.or([
+          .where((eb2) => {
+            // settled: verified to its head and not held — a parked or quarantined predecessor,
+            // even one with no appends past its cursor, still blocks everything after it
+            const settledAndUnheld = eb2.and([
+              eb2('predecessor.verifiedHead', '>=', eb2.ref('predecessor.appendedHead')),
+              eb2('predecessor.status', 'not in', ['parked', 'quarantined']),
+            ]);
+
+            return eb2.or([
               eb2('activities.predecessorActivityId', 'is', null),
               eb2('predecessor.status', '=', 'rejected'),
-              eb2('predecessor.verifiedHead', '>=', eb2.ref('predecessor.appendedHead')),
-            ]),
-          )
+              settledAndUnheld,
+            ]);
+          })
           .orderBy('activities.startChainIndex')
           .limit(1)
           .as('frontier'),
