@@ -14,6 +14,19 @@ export const OfflineRootSubmissionSchema = z.object({
   avatarID: z.string(),
   buildSnapshot: BuildSnapshotSchema,
   contentVersion: z.string().regex(/^\d+$/),
+
+  /**
+   * An advisory client-stamped wall-clock timestamp for operator and analytics queries only,
+   * never read by the claim or any check.
+   */
+  playedAt: z.date().nullable(),
+
+  /**
+   * The avatar's immediately-prior activity across every chain, null for its first-ever activity.
+   * Trusted for sequencing only, never for legality.
+   */
+  predecessorActivityID: z.string().nullable(),
+
   scopeID: ScopeIdentifierSchema,
   scopeType: ScopeIdentifierSchema,
   seed: z.string(),

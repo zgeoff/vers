@@ -15,6 +15,8 @@ export function createMockActivityData(overrides: Partial<ActivityData> = {}): A
     id: faker.string.alphanumeric({ casing: 'lower', length: 24 }),
     keyVersion: 1,
     lastHash: faker.string.hexadecimal({ casing: 'lower', length: 64, prefix: '' }),
+    playedAt: null,
+    predecessorActivityID: null,
     scopeID: '0_0',
     scopeType: 'world_map_node',
     seed: faker.string.hexadecimal({ casing: 'lower', length: 32, prefix: '' }),

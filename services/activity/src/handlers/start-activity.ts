@@ -63,6 +63,8 @@ interface StartActivityOpts {
   };
   readonly input: {
     readonly avatarID: string;
+    readonly playedAt?: Date | null | undefined;
+    readonly predecessorActivityID?: null | string | undefined;
     readonly scopeID: string;
     readonly scopeType: string;
     readonly simVersion?: string | undefined;
@@ -89,7 +91,11 @@ interface StartActivityOpts {
  * chain whose replay frontier is quarantined admits no new starts until it is adjudicated.
  * Admission is additionally gated to the account's active avatar under the same per-user advisory
  * lock the avatar service's selection and creation endpoints take, so the pair serializes; a start
- * for any other avatar throws AVATAR_NOT_ACTIVE naming the account's actual active avatar.
+ * for any other avatar throws AVATAR_NOT_ACTIVE naming the account's actual active avatar. Persists
+ * the caller's `predecessorActivityID`/`playedAt` as-is: the client alone witnessed the play order,
+ * and the server trusts the reference for sequencing only, never for legality. An absent predecessor
+ * is not rejected here — the replay claim waits on it, so an out-of-order or reload-orphaned delivery
+ * settles once the predecessor lands.
  */
 export async function startActivity(
   deps: StartActivityDeps,
@@ -241,6 +247,8 @@ export async function startActivity(
           id,
           keyVersion: deps.keyVersion,
           lastHash: startHash,
+          playedAt: opts.input.playedAt ?? null,
+          predecessorActivityId: opts.input.predecessorActivityID ?? null,
           scopeId: opts.input.scopeID,
           scopeType: opts.input.scopeType,
           secretRef: deps.secretRef,
@@ -254,18 +262,6 @@ export async function startActivity(
         })
         .returningAll()
         .executeTakeFirstOrThrow();
-
-      if (optimistic.sourceIDs.length > 0) {
-        await trx
-          .insertInto('activitySnapshotSources')
-          .values(
-            optimistic.sourceIDs.map((sourceID) => ({
-              activityId: id,
-              sourceActivityId: sourceID,
-            })),
-          )
-          .execute();
-      }
 
       return inserted;
     });

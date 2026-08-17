@@ -1,21 +1,16 @@
 import type { ActivityStatus } from '@vers/db';
 
 /**
- * The identity of one `(avatar, chain scope)` seed chain — the unit the replay queue claims and
- * serializes on.
+ * An avatar's next-in-order activity claimed for replay: the activity id itself, the chain scope it
+ * belongs to, and the queue priority it was picked at. The claim is a row lock on that chain — it
+ * lasts until the claiming transaction commits or rolls back.
  */
-export interface ChainKey {
+export interface ClaimedActivity {
+  readonly activityID: string;
   readonly avatarID: string;
+  readonly priority: number;
   readonly scopeID: string;
   readonly scopeType: string;
-}
-
-/**
- * A chain claimed for replay: its key plus the queue priority it was picked at. The claim is a row
- * lock — it lasts until the claiming transaction commits or rolls back.
- */
-export interface ClaimedChain extends ChainKey {
-  readonly priority: number;
 }
 
 /**

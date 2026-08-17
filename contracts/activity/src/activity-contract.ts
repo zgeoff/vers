@@ -423,6 +423,20 @@ export const activityContract = {
     .input(
       z.object({
         avatarID: z.string(),
+
+        /**
+         * An advisory client-stamped wall-clock timestamp for operator and analytics queries
+         * only, never read by the claim or any check.
+         */
+        playedAt: z.date().nullable().optional(),
+
+        /**
+         * The avatar's immediately-prior activity across every chain, absent or null only for
+         * its first-ever activity. Client-stamped; trusted for sequencing only, never for
+         * legality.
+         */
+        predecessorActivityID: z.string().nullable().optional(),
+
         scopeID: ScopeIdentifierSchema,
         scopeType: ScopeIdentifierSchema,
         simVersion: z.string().optional(),

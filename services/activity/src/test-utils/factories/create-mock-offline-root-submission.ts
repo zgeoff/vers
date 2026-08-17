@@ -45,6 +45,8 @@ export function createMockOfflineRootSubmission(
     avatarID: createId(),
     buildSnapshot: { level: 1, xp: 0 },
     contentVersion,
+    playedAt: null,
+    predecessorActivityID: null,
     scopeID: `${faker.number.int({ max: 99, min: -99 })}_${faker.number.int({ max: 99, min: -99 })}`,
     scopeType: 'world_map_node',
     seed,

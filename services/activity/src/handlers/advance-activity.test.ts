@@ -947,6 +947,63 @@ test('it mints a client-minted root under a valid client head, deriving its enco
   });
 });
 
+test('it mints a root naming a predecessor not yet on the server, stamping the reference as-is', async () => {
+  await using ctx = await setupTest();
+
+  const current = await createSimVersionRow(ctx.db);
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id, xp: 0 });
+  const chain = await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
+  const activityID = `act_${createId()}`;
+  const predecessorID = `act_${createId()}`;
+  const document = createMockContentDocument({ contentVersion: '2' });
+
+  const derived = deriveRootStart({
+    avatarID: avatar.id,
+    avatarSeed: avatar.seed,
+    contentVersion: '2',
+    document,
+    scopeID: '0_0',
+    seed: chain.appendedNextSeed,
+    simVersion: current.engineHash,
+  });
+
+  const root = createMockOfflineRootSubmission({
+    avatarID: avatar.id,
+    buildSnapshot: { level: buildLevelFromXP(0), xp: 0 },
+    contentVersion: '2',
+    predecessorActivityID: predecessorID,
+    scopeID: '0_0',
+    scopeType: 'world_map_node',
+    seed: chain.appendedNextSeed,
+    simVersion: current.engineHash,
+    startChainIndex: 0,
+    startHash: derived.startHash,
+  });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  // an absent predecessor is not rejected — the root mints and the replay claim waits on the
+  // predecessor, so an out-of-order or reload-orphaned delivery settles once it lands
+  const minted = await client.advanceActivity({
+    activityID,
+    continuations: [],
+    expectedHead: 0,
+    root,
+  });
+
+  expect(minted.activity.id).toBe(activityID);
+
+  const mintedRow = await ctx.db
+    .selectFrom('activities')
+    .select('predecessorActivityId')
+    .where('id', '=', activityID)
+    .executeTakeFirstOrThrow();
+
+  expect(mintedRow.predecessorActivityId).toBe(predecessorID);
+});
+
 test('it converges a sequential root retry onto the existing row without double-minting', async () => {
   await using ctx = await setupTest();
 
@@ -1592,8 +1649,9 @@ test('it mints the offline successor of a just-cleared node at admission, deferr
 
   // B is the neighbour A's clear opened, delivered next in the same reconcile. Its root mints:
   // admission runs no reachability check, only the same sim-version and hash gates every root
-  // clears. A's unsettled xp already folds into B's optimistic build snapshot through the
-  // activitySnapshotSources edge the mint records, ahead of either activity's own verification.
+  // clears. A's unsettled xp already folds into B's optimistic build snapshot at mint time, ahead
+  // of either activity's own verification — replay re-derives it from the settled total once A
+  // settles or rejects.
   const derivedB = deriveRootStart({
     avatarID: avatar.id,
     avatarSeed: avatar.seed,

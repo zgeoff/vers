@@ -3,6 +3,7 @@ import { buildStartHash } from '@vers/contract-activity';
 import { createMockActivityData } from '@vers/contract-activity/test-utils';
 import { buildLevelFromXP } from '@vers/idle-core';
 import invariant from 'tiny-invariant';
+import { writeLastStartedActivity } from '../submission/write-last-started-activity';
 import { writeNodeSeeds } from '../submission/write-node-seeds';
 import { writeQueuedCheckpoint } from '../submission/write-queued-checkpoint';
 import { writeStartStamps } from '../submission/write-start-stamps';
@@ -47,6 +48,8 @@ test('it synthesizes a row whose start hash matches buildStartHash for the same 
     id: expect.toStartWith('act_'),
     keyVersion: 4,
     lastHash: expectedHash,
+    playedAt: expect.toBeValidDate(),
+    predecessorActivityID: null,
     scopeID: seed.nodeID,
     scopeType: 'world_map_node',
     secretRef: 'worldmap',
@@ -228,4 +231,54 @@ test("it starts a fresh avatar's build snapshot at zero xp when the worker holds
   invariant(row !== null, 'expected the cached inputs to synthesize a row');
 
   expect(row.buildSnapshot).toStrictEqual({ level: 1, xp: 0 });
+});
+
+test("it stamps the avatar's durably tracked last-started activity as the predecessor", async () => {
+  const seed = createMockNodeSeed({ avatarID: 'avatar_with_predecessor', nodeID: '1_0' });
+
+  await writeNodeSeeds(seed.avatarID, [seed]);
+  await writeStartStamps({ keyVersion: 1, secretRef: 'worldmap', secretVersion: 1 });
+
+  await writeLastStartedActivity({
+    avatarID: seed.avatarID,
+    lastActivityID: 'act_predecessor',
+  });
+
+  const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_1' });
+
+  const row = await buildStartRow(context, {
+    avatarID: seed.avatarID,
+    scopeID: seed.nodeID,
+    scopeType: 'world_map_node',
+    startKey: 'start_key_1',
+  });
+
+  invariant(row !== null, 'expected the cached inputs to synthesize a row');
+
+  expect(row.predecessorActivityID).toBe('act_predecessor');
+});
+
+test('it stamps a null predecessor when the durable record belongs to a different avatar', async () => {
+  const seed = createMockNodeSeed({ avatarID: 'avatar_switching', nodeID: '1_0' });
+
+  await writeNodeSeeds(seed.avatarID, [seed]);
+  await writeStartStamps({ keyVersion: 1, secretRef: 'worldmap', secretVersion: 1 });
+
+  await writeLastStartedActivity({
+    avatarID: 'a-different-avatar',
+    lastActivityID: 'act_other_avatar',
+  });
+
+  const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_1' });
+
+  const row = await buildStartRow(context, {
+    avatarID: seed.avatarID,
+    scopeID: seed.nodeID,
+    scopeType: 'world_map_node',
+    startKey: 'start_key_1',
+  });
+
+  invariant(row !== null, 'expected the cached inputs to synthesize a row');
+
+  expect(row.predecessorActivityID).toBeNull();
 });

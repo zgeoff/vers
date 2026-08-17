@@ -307,7 +307,10 @@ test('it rejects a checkpoint with a forged continuation seed, rewinds the chain
 test('it settles no xp and drops the rejected activity from the pending anchor when a checkpoint is forged', async () => {
   await using ctx = await setupTest();
 
+  // a non-zero baseline proves rejection preserves legitimately settled progression rather than
+  // passing because there was nothing to lose
   const fixture = await createHonestActivityFixture(ctx.db, {
+    buildSnapshot: { level: buildLevelFromXP(500), xp: 500 },
     duration: 80_000,
     seed: buildStateFromSeed(3_047_525_658),
   });
@@ -335,14 +338,6 @@ test('it settles no xp and drops the rejected activity from the pending anchor w
     .set({ hash: tamperedHash, payload: toJSON(tamperedPayload) })
     .where('activityId', '=', fixture.activity.id)
     .where('version', '=', targetVersion)
-    .execute();
-
-  // a non-zero baseline proves rejection preserves legitimately settled progression rather than
-  // passing because there was nothing to lose
-  await ctx.db
-    .updateTable('avatars')
-    .set({ level: buildLevelFromXP(500), xp: 500 })
-    .where('id', '=', fixture.activity.avatarId)
     .execute();
 
   const deps = {
