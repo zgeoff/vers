@@ -536,8 +536,9 @@ function renderPartSet(
     const x = anchorX + part.x * cos + part.z * sin;
     const z = anchorZ - part.x * sin + part.z * cos;
 
+    // yaw must compose before the part's local tilts, matching the plan editor's group nesting
     mesh.position.set(x, part.y, z);
-    mesh.rotation.set(part.rx ?? 0, ry, part.rz ?? 0);
+    mesh.rotation.set(part.rx ?? 0, ry, part.rz ?? 0, 'YXZ');
     mesh.scale.set(part.sx, part.sy, part.sz);
     scene.add(mesh);
   }
