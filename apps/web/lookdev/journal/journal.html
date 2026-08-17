@@ -155,25 +155,25 @@
   </p>
 
   <div class="howto">
-    <h2>Round 30 · how to respond</h2>
+    <h2>Status · on hold — the Blender era</h2>
     <p>
-      The realignment round. The target is now named: <b>Townscaper register</b> — relatively
-      simple geometry that is never raw blocks, lots of simple graphic textures, soft light,
-      chunky charm. This probe is one small test building in that language, in its own view
-      (<b>9 · Style probe</b>, orbitable) with its own soft-dusk light and real screen-space
-      occlusion. Orbit it and gut-check: is <em>this</em> the direction — the shapes, the color
-      blocking, the softness? Don't judge it as a finished building; judge it as a rendering
-      language. If it's right (or right-ish), the next rounds port the whole town into it,
-      building by building, keeping our locked composition, layout, palette accents, and night
-      ambience. If it's off, say which part — form, color, softness — and the probe iterates
-      before anything else moves.
+      The spike pauses here, thirty rounds in. The composition, layout, night lighting,
+      atmosphere, motion layer, and tuner are all settled and waiting; the buildings themselves
+      are going to be modeled by hand in Blender. The handoff — one GLB per building, scale and
+      origin and facing conventions, the glow-material naming that wires windows into the bloom
+      and flicker systems, per-building size targets, live placements, and what the fixed camera
+      actually sees — is written up in
+      <span style="font-family: var(--mono)">apps/web/lookdev/MODELING.md</span> on branch
+      <span style="font-family: var(--mono)">spike/respite-lookdev</span>. Suggested first
+      export: the fountain — smallest building, validates the whole pipeline. When the first
+      model lands, the next round wires the loader and drops it into the plaza.
     </p>
   </div>
 
   <section class="round">
     <div class="round-head">
       <h2>Round 30 · the style probe</h2>
-      <span class="status open">open — gut-check the language</span>
+      <span class="status">resolved — spike on hold</span>
     </div>
     <p>
       Twenty-nine rounds locked palette, composition, layout, silhouettes, lighting, and motion —
@@ -191,6 +191,16 @@
         <figcaption>9 · style probe — the Townscaper register: shaped geometry, graphic color, soft light</figcaption>
       </figure>
     </div>
+    <p class="verdict">
+      <b>Verdict:</b> "that ain't it. man, i don't know how to articulate." The probe missed, and
+      the honest conclusion followed: the missing ingredient is authored models with human taste
+      in them. <b>The spike is on hold</b> while the user learns Blender and models the six focal
+      buildings by hand. Everything else stands ready for their return — camera, layout, night
+      rig, atmosphere, motion, tuner, and this journal. The handoff conventions (one GLB per
+      building, scale, origin, facing, glow-material naming, size and placement tables, what the
+      fixed camera actually sees) live in <span style="font-family: var(--mono)">apps/web/lookdev/MODELING.md</span>
+      on the spike branch.
+    </p>
   </section>
 
   <section class="round">
