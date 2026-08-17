@@ -8,6 +8,8 @@ import { createSimulation } from '@vers/idle-core';
 import { createMockActivityInput, createMockAvatarData } from '@vers/idle-core/test-utils';
 import { mockActivityService } from '@vers/mock-services/activity';
 import { waitFor } from '@vers/test-utils';
+import invariant from 'tiny-invariant';
+import { createActor, fromPromise } from 'xstate';
 import { writeContentDocumentCache } from '../content/write-content-document-cache';
 import { server } from '../mocks/node';
 import type { ActivitySubmissionContext } from '../submission/types';
@@ -24,6 +26,7 @@ import { handleStopActivityMessage } from './handle-stop-activity-message';
 import { runResyncTurn } from './run-resync-turn';
 import { sentryHandle } from './sentry-handle';
 import { startErrorReporting } from './start-error-reporting';
+import { workerLifecycleMachine } from './worker-lifecycle-machine';
 
 function collectBroadcasts(context: StubWorkerContext) {
   return {
@@ -657,6 +660,209 @@ test('it keeps only the latest claiming avatar when two arrive', async () => {
       type: WorkerMessageType.ResyncStatus,
     },
   ]);
+});
+
+test('it settles the first caller only after the held follow-up runs', async () => {
+  const gates: Record<string, { readonly promise: Promise<void>; readonly release: () => void }> =
+    {};
+
+  for (const avatarID of ['avatar_a', 'avatar_b']) {
+    let release: (() => void) | undefined;
+
+    const promise = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+
+    gates[avatarID] = { promise, release: () => release?.() };
+  }
+
+  let currentAvatarID = 'avatar_a';
+
+  const context = createStubWorkerContext({
+    submitter: {
+      flushHeld: () => gates[currentAvatarID]!.promise,
+      flushNow: () => Promise.resolve(),
+      registerActivity: () => Promise.resolve(),
+      submit: () => Promise.resolve(undefined),
+      isEvicted: () => false,
+      removeEviction: () => {},
+    },
+  });
+
+  const connection = collectBroadcasts(context);
+  const first = runResyncTurn(context, 'avatar_a', false);
+
+  await waitFor(() => {
+    expect(context.getLifecycle().getSnapshot().value).toBe('resyncing');
+  });
+
+  currentAvatarID = 'avatar_b';
+
+  await runResyncTurn(context, 'avatar_b', true);
+
+  // both runs broadcast their status before their flow settles, so the count observed the moment
+  // the first caller resolves proves the held follow-up had already run by then
+  const receivedCountAtFirstSettle = (async () => {
+    await first;
+
+    return connection.received.length;
+  })();
+
+  gates['avatar_a']!.release();
+  gates['avatar_b']!.release();
+
+  expect(receivedCountAtFirstSettle).resolves.toBe(2);
+});
+
+test('it captures a requeued claim signals at requeue rather than at its arrival', async () => {
+  const gates: Record<string, { readonly promise: Promise<void>; readonly release: () => void }> =
+    {};
+
+  for (const avatarID of ['avatar_a', 'avatar_b']) {
+    let release: (() => void) | undefined;
+
+    const promise = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+
+    gates[avatarID] = { promise, release: () => release?.() };
+  }
+
+  let currentAvatarID = 'avatar_a';
+
+  const context = createStubWorkerContext({
+    submitter: {
+      flushHeld: () => gates[currentAvatarID]!.promise,
+      flushNow: () => Promise.resolve(),
+      registerActivity: () => Promise.resolve(),
+      submit: () => Promise.resolve(undefined),
+      isEvicted: () => false,
+      removeEviction: () => {},
+    },
+  });
+
+  const first = runResyncTurn(context, 'avatar_a', false);
+
+  await waitFor(() => {
+    expect(context.getLifecycle().getSnapshot().value).toBe('resyncing');
+  });
+
+  const firstRequest = context.getLifecycle().getSnapshot().context.currentRequest;
+
+  invariant(
+    firstRequest !== null && firstRequest.kind === 'resync',
+    'expected the in-flight resync as the active request',
+  );
+
+  currentAvatarID = 'avatar_b';
+
+  await runResyncTurn(context, 'avatar_b', true);
+
+  // a stop scope advanced while the claim is held aborts the first run's captured signals; the
+  // requeued run must capture the fresh scope at requeue rather than inherit these
+  context.advanceStopScope();
+
+  expect(firstRequest.signals.stop.aborted).toBeTrue();
+
+  gates['avatar_a']!.release();
+
+  await waitForActiveResync(context, 'avatar_b');
+
+  const requeuedRequest = context.getLifecycle().getSnapshot().context.currentRequest;
+
+  invariant(
+    requeuedRequest !== null && requeuedRequest.kind === 'resync',
+    'expected the requeued claim as the active request',
+  );
+
+  expect(requeuedRequest.signals.stop.aborted).toBeFalse();
+
+  gates['avatar_b']!.release();
+
+  await first;
+});
+
+test('it accepts a later resync after a resync flow faults', async () => {
+  let flushCalls = 0;
+
+  const context = createStubWorkerContext({
+    submitter: {
+      // handler scripting: the first resync's flush fails so its flow settles through the fault
+      // path, and the follow-up's succeeds
+      flushHeld: () => {
+        flushCalls += 1;
+
+        return flushCalls === 1 ? Promise.reject(new Error('flush exploded')) : Promise.resolve();
+      },
+      flushNow: () => Promise.resolve(),
+      registerActivity: () => Promise.resolve(),
+      submit: () => Promise.resolve(undefined),
+      isEvicted: () => false,
+      removeEviction: () => {},
+    },
+  });
+
+  const connection = collectBroadcasts(context);
+
+  await runResyncTurn(context, 'avatar_a', false);
+  await runResyncTurn(context, 'avatar_b', false);
+
+  await connection.waitForMessages(2);
+
+  expect(connection.received).toStrictEqual([
+    {
+      status: { avatarID: 'avatar_a', kind: 'failed' },
+      type: WorkerMessageType.ResyncStatus,
+    },
+    {
+      status: { avatarID: 'avatar_b', kind: 'session-expired' },
+      type: WorkerMessageType.ResyncStatus,
+    },
+  ]);
+});
+
+test('it recovers the queue when a resync service itself rejects', async () => {
+  const runtime = createStubWorkerContext();
+  let serviceCalls = 0;
+
+  const machine = workerLifecycleMachine.provide({
+    actors: {
+      runResyncActor: fromPromise((): Promise<void> => {
+        serviceCalls += 1;
+
+        return Promise.reject(new Error('service exploded'));
+      }),
+    },
+  });
+
+  const actor = createActor(machine, {
+    input: {
+      failureActionSeeded: Promise.resolve(),
+      runtime,
+      shutdownSignal: new AbortController().signal,
+    },
+  }).start();
+
+  onTestFinished(() => {
+    actor.stop();
+  });
+
+  const first = buildDeferred<void>();
+
+  actor.send({ avatarID: 'avatar_a', claim: false, deferred: first, type: 'RESYNC' });
+
+  await first.promise;
+
+  const second = buildDeferred<void>();
+
+  actor.send({ avatarID: 'avatar_a', claim: false, deferred: second, type: 'RESYNC' });
+
+  await second.promise;
+
+  // a dropped call would resolve without invoking the service — two invocations prove the second
+  // call was accepted after the first escaped
+  expect(serviceCalls).toBe(2);
+  expect(actor.getSnapshot().value).toBe('idle');
 });
 
 test('it runs a resync arriving during a non-resync turn after that turn rather than dropping it', async () => {
