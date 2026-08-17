@@ -30,7 +30,9 @@ import { workerLifecycleMachine } from './worker-lifecycle-machine';
 
 function collectBroadcasts(context: StubWorkerContext) {
   return {
-    received: context.getBroadcasts(),
+    get received() {
+      return context.getBroadcasts();
+    },
     waitForMessages: async (count: number) => {
       await waitFor(() => {
         expect(context.getBroadcasts().length).toBeGreaterThanOrEqual(count);
@@ -711,7 +713,9 @@ test('it settles the first caller only after the held follow-up runs', async () 
   gates['avatar_a']!.release();
   gates['avatar_b']!.release();
 
-  expect(receivedCountAtFirstSettle).resolves.toBe(2);
+  const observedCount = await receivedCountAtFirstSettle;
+
+  expect(observedCount).toBe(2);
 });
 
 test('it captures a requeued claim signals at requeue rather than at its arrival', async () => {

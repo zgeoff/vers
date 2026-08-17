@@ -2,7 +2,7 @@ import type { ActivityData } from '@vers/contract-activity';
 import type { Simulation } from '@vers/idle-core';
 import invariant from 'tiny-invariant';
 import type { ActorRefFromLogic } from 'xstate';
-import { assign, fromPromise, setup } from 'xstate';
+import { assign, enqueueActions, fromPromise, setup } from 'xstate';
 import { buildMachineTypes } from '../submission/build-machine-types';
 import { checkpointSubmitterMachine } from '../submission/checkpoint-submitter-machine';
 import { removePendingStartIntent } from '../submission/remove-pending-start-intent';
@@ -222,6 +222,29 @@ const runEvictionActor = fromPromise<
  * install through the stop signal it captured.
  */
 export const workerLifecycleMachine = setup({
+  actions: {
+    // ordered: the old scope aborts, the fresh scope installs, the local halt runs against it,
+    // and the durable delivery schedules concurrently — xstate runs declared actions in order
+    runStopHalt: enqueueActions((args) => {
+      const event = args.event;
+
+      invariant(event.type === 'STOP_ACTIVITY', 'the stop halt runs only for a stop event');
+
+      args.enqueue((enqueued) => {
+        applyStopScopeAbort(enqueued.context);
+      });
+
+      args.enqueue.assign((enqueued) => buildFreshStopScope(enqueued.context));
+
+      args.enqueue((enqueued) => {
+        applyStopHalt(enqueued.context);
+      });
+
+      args.enqueue((enqueued) => {
+        scheduleStopDelivery(enqueued.context.runtime, enqueued.self, event.input, event.deferred);
+      });
+    }),
+  },
   actors: {
     checkpointSubmitterMachine,
     runContinuationActor,
@@ -257,10 +280,23 @@ export const workerLifecycleMachine = setup({
       writerDisplacedActivityID: null,
     };
   },
+
+  // the actor can stop while requests are queued or running — settling every outstanding deferred
+  // here keeps entry points awaiting them from hanging past teardown
+  exit: (args) => {
+    applyTeardownSettlement(args.context);
+  },
   id: 'workerLifecycle',
   initial: 'idle',
   on: {
-    ADVANCE_STOP_SCOPE: { actions: assign((args) => advanceStopScope(args.context)) },
+    ADVANCE_STOP_SCOPE: {
+      actions: [
+        (args) => {
+          applyStopScopeAbort(args.context);
+        },
+        assign((args) => buildFreshStopScope(args.context)),
+      ],
+    },
     CONTINUATION: [
       {
         actions: assign((args) => ({
@@ -402,39 +438,11 @@ export const workerLifecycleMachine = setup({
         },
       },
       {
-        actions: [
-          assign((args) => advanceStopScope(args.context)),
-          (args) => {
-            applyStopHalt(args.context);
-          },
-          (args) => {
-            scheduleStopDelivery(
-              args.context.runtime,
-              args.self,
-              args.event.input,
-              args.event.deferred,
-            );
-          },
-        ],
+        actions: 'runStopHalt',
         guard: isIdleOrRunning,
         target: '.stopping',
       },
-      {
-        actions: [
-          assign((args) => advanceStopScope(args.context)),
-          (args) => {
-            applyStopHalt(args.context);
-          },
-          (args) => {
-            scheduleStopDelivery(
-              args.context.runtime,
-              args.self,
-              args.event.input,
-              args.event.deferred,
-            );
-          },
-        ],
-      },
+      { actions: 'runStopHalt' },
     ],
     STOP_DELIVERY_DONE: {
       guard: (args) => args.context.phase === 'stopping',
@@ -776,15 +784,15 @@ function buildPendingPop(
 }
 
 /**
- * The pending queue as the resync state's own `onDone` transition reads it: a still-held claiming
- * ticket's fresh requeue appends onto the tail before anything decides what runs next, so whatever
- * arrived and queued behind the in-flight resync still runs ahead of the requeued claim, exactly
- * as its own arrival order requires.
+ * The held claim a settling resync must requeue, when there is one: the ticket's held avatar plus
+ * the finishing resync request whose deferred carries over onto the requeue. Null when the
+ * finishing run holds no claim — the single answer every settle-time decision keys on, so the
+ * settle, the pop, and the requeue can never disagree about whether a claim is held.
  */
-function foldHeldResyncClaim(
+function findHeldResyncClaim(
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- WorkerLifecycleContext embeds a live xstate ActorRef and AbortController/AbortSignal handles with no further readonly form
   context: WorkerLifecycleContext,
-): ReadonlyArray<PendingFlowRequest> {
+): { readonly avatarID: string; readonly current: PendingFlowRequestOf<'resync'> } | null {
   const ticket = context.resyncTicket;
   const current = context.currentRequest;
 
@@ -794,14 +802,33 @@ function foldHeldResyncClaim(
     current === null ||
     current.kind !== 'resync'
   ) {
+    return null;
+  }
+
+  return { avatarID: ticket.pendingClaimAvatarID, current };
+}
+
+/**
+ * The pending queue as the resync state's own settle transition reads it: a still-held claiming
+ * ticket's fresh requeue appends onto the tail before anything decides what runs next, so whatever
+ * arrived and queued behind the in-flight resync still runs ahead of the requeued claim, exactly
+ * as its own arrival order requires.
+ */
+function foldHeldResyncClaim(
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- WorkerLifecycleContext embeds a live xstate ActorRef and AbortController/AbortSignal handles with no further readonly form
+  context: WorkerLifecycleContext,
+): ReadonlyArray<PendingFlowRequest> {
+  const heldClaim = findHeldResyncClaim(context);
+
+  if (heldClaim === null) {
     return context.pending;
   }
 
   return [
     ...context.pending,
-    buildResyncRequest(context, ticket.pendingClaimAvatarID, true, buildDeferred<void>(), [
-      ...current.carryOverDeferreds,
-      current.deferred,
+    buildResyncRequest(context, heldClaim.avatarID, true, buildDeferred<void>(), [
+      ...heldClaim.current.carryOverDeferreds,
+      heldClaim.current.deferred,
     ]),
   ];
 }
@@ -816,22 +843,13 @@ function applyResyncSettlement(
   context: WorkerLifecycleContext,
   output: unknown,
 ): void {
-  const ticket = context.resyncTicket;
-  const current = context.currentRequest;
-
-  const hasHeldClaim =
-    ticket !== null &&
-    ticket.pendingClaimAvatarID !== null &&
-    current !== null &&
-    current.kind === 'resync';
-
-  if (!hasHeldClaim) {
+  if (findHeldResyncClaim(context) === null) {
     applySettledRequest(context, output);
   }
 }
 
 /**
- * Pops the next request the resync state's `onDone` transition runs. A requeued held claim keeps
+ * Pops the next request the resync state's settle transition runs. A requeued held claim keeps
  * the window open: `resyncTicket` re-arms with no pending claim rather than clearing, since the
  * requeued run is itself now active or queued and a coalescing decision arriving before it
  * settles must still see a resync in progress.
@@ -840,21 +858,13 @@ function buildResyncSettlePop(
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- WorkerLifecycleContext embeds a live xstate ActorRef and AbortController/AbortSignal handles with no further readonly form
   context: WorkerLifecycleContext,
 ): Pick<WorkerLifecycleContext, 'currentRequest' | 'pending' | 'resyncTicket'> {
-  const ticket = context.resyncTicket;
-  const current = context.currentRequest;
-
-  const hasHeldClaim =
-    ticket !== null &&
-    ticket.pendingClaimAvatarID !== null &&
-    current !== null &&
-    current.kind === 'resync';
-
+  const heldClaim = findHeldResyncClaim(context);
   const pending = foldHeldResyncClaim(context);
 
   return {
     currentRequest: pending[0] ?? null,
     pending: pending.slice(1),
-    resyncTicket: hasHeldClaim ? { pendingClaimAvatarID: null } : null,
+    resyncTicket: heldClaim === null ? null : { pendingClaimAvatarID: null },
   };
 }
 
@@ -900,22 +910,56 @@ function scheduleReconnectRecovery(
 }
 
 /**
- * Rotates the stop scope: aborts the current controller and installs a fresh one, so a flow
- * currently reading the old signal observes the abort while a flow accepted afterward captures the
- * new scope instead.
+ * Aborts the current stop scope, so a flow reading the old signal observes the abort. The paired
+ * assign installs the fresh scope a flow accepted afterward captures instead — kept apart because
+ * an abort is an effect and an assigner must stay a pure context producer.
  */
-function advanceStopScope(
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- WorkerLifecycleContext embeds a live xstate ActorRef and AbortController/AbortSignal handles with no further readonly form
+function applyStopScopeAbort(context: WorkerLifecycleContext): void {
+  context.stopController.abort();
+}
+
+function buildFreshStopScope(
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- WorkerLifecycleContext embeds a live xstate ActorRef and AbortController/AbortSignal handles with no further readonly form
   context: WorkerLifecycleContext,
 ): Pick<WorkerLifecycleContext, 'cancelSignal' | 'stopController'> {
-  context.stopController.abort();
-
   const stopController = new AbortController();
 
   return {
     cancelSignal: AbortSignal.any([stopController.signal, context.shutdownSignal]),
     stopController,
   };
+}
+
+/**
+ * Settles every request the stopping actor still holds — the running one and the whole pending
+ * queue — so no entry point awaiting a deferred hangs past teardown. A start settles as failed;
+ * nothing here reports a fault, since teardown is deliberate.
+ */
+function applyTeardownSettlement(
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- WorkerLifecycleContext embeds a live xstate ActorRef and AbortController/AbortSignal handles with no further readonly form
+  context: WorkerLifecycleContext,
+): void {
+  const requests = [context.currentRequest, ...context.pending];
+
+  for (const request of requests) {
+    if (request === null || request.kind === 'eviction') {
+      continue;
+    }
+
+    if (request.kind === 'start') {
+      request.deferred.resolve({ kind: 'failed' });
+      continue;
+    }
+
+    request.deferred.resolve();
+
+    if (request.kind === 'resync') {
+      for (const carryOver of request.carryOverDeferreds) {
+        carryOver.resolve();
+      }
+    }
+  }
 }
 
 // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- WorkerLifecycleContext embeds a live xstate ActorRef and AbortController/AbortSignal handles with no further readonly form

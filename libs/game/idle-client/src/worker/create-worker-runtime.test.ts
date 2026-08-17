@@ -596,4 +596,8 @@ test('it resets the displaced simulation and broadcasts WriterDisplaced on a ses
   const result = await testClient.initialize({});
 
   expect(result.writerDisplacedActivityID).toBe(activity.id);
+
+  // the displaced run's simulation is cleared, not just announced — the fresh snapshot carries no
+  // activity
+  expect(result.state.activity).toBeUndefined();
 });

@@ -79,7 +79,8 @@ interface CreateCheckpointSubmitterOptions {
   /**
    * A running `checkpointSubmitterMachine` actor to adopt instead of starting a new one — the
    * lifecycle machine's own spawned child, so the submitter shares its actor system and clock.
-   * Omitted by every standalone caller, which gets its own actor exactly as before.
+   * A standalone caller omits it and gets its own actor. Mutually exclusive with `clock`: an
+   * adopted actor already carries its own system's clock, so an injected one is not consulted.
    */
   readonly actor?: ActorRefFromLogic<typeof checkpointSubmitterMachine>;
 
@@ -162,7 +163,8 @@ interface CreateCheckpointSubmitterOptions {
   /**
    * Overrides the actor clock driving every retry-backoff delay — test-only, so a suite advances
    * a simulated clock explicitly instead of waiting out real backoff windows. Spawned per-activity
-   * children inherit it through the actor system.
+   * children inherit it through the actor system. Mutually exclusive with `actor` — an adopted
+   * actor's own system clock applies.
    */
   readonly clock?: ActorOptions<AnyActorLogic>['clock'];
 
