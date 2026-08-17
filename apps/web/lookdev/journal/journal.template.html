@@ -155,23 +155,44 @@
   </p>
 
   <div class="howto">
-    <h2>Round 24 · how to respond</h2>
+    <h2>Round 25 · how to respond</h2>
     <p>
-      The atmosphere pass is <b>animated</b> — stills can't carry it, so judge this one live:
-      views 4/8 at <span style="font-family: var(--mono)">localhost:4599</span>. Three layers,
-      each on its own knob in the new <b>atmo</b> section: <b>bank opacity</b> (the dusk-fog
-      banks drifting between the far towers), <b>mist opacity</b> (low ground fog rolling across
-      the gate end of the plaza), <b>haze opacity</b> (the teal glow breathing and rising inside
-      the gate slot), plus <b>drift</b> for the speed of all of it. The verdict wanted: does the
-      motion make the square feel alive without stealing attention, and is the gate slot's
-      breathing haze the right read for "the way out"?
+      Round 24's answer, live in views 4/8: the atmosphere is no longer a sheet whose alpha
+      wobbles. Every layer is now <b>thresholded, domain-warped noise</b> — distinct wisps with
+      gaps between them, whose shapes curl and change as they travel, not just translate. The
+      gate slot streams upward and pulses on a slow cycle; two <b>vent plumes</b> rise off the
+      market roof vent and the stash's small drum (new <b>smoke opacity</b> knob). Defaults are
+      also brighter and faster. The question: does it feel like air and habitation now, or does
+      it need to go further — more plumes, faster drift, bolder wisps?
     </p>
   </div>
 
   <section class="round">
     <div class="round-head">
+      <h2>Round 25 · wisps, not sheets</h2>
+      <span class="status open">open — judge it live</span>
+    </div>
+    <p>
+      The fix for "adjusting opacity rather than life": structure in motion. Each fog layer's
+      noise is pushed through a threshold so it breaks into separate shapes, and the sampling
+      coordinate is warped by a second noise so those shapes curl and evolve rather than slide
+      rigidly. The banks gained a fast-scudding fine octave over the slow body; the mist became
+      two stacked layers rolling at different speeds; the gate haze streams upward at double
+      speed and pulses; and the first motion elements landed early — ragged smoke columns off
+      the rooftop machinery, solid at the vent mouth and gone by the top.
+    </p>
+    <div class="shots">
+      <figure>
+        <img src="data:image/png;base64,{{R25_LIFE}}" alt="The plaza with the gate slot swirling with aurora-like teal wisps, smoke streaking off the market and stash roofs, and structured fog between the towers" />
+        <figcaption>8 · surfaces — the slot swirls, the roofs smoke, the fog has shape</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="round">
+    <div class="round-head">
       <h2>Round 24 · the air moves</h2>
-      <span class="status open">open — judge it live, it's animated</span>
+      <span class="status">resolved</span>
     </div>
     <p>
       The dusk-fog concept from round 2, finally developed and folded into the treatment: three
@@ -192,6 +213,13 @@
         <figcaption>close orbit — the way out, breathing</figcaption>
       </figure>
     </div>
+    <p class="verdict">
+      <b>Verdict:</b> "might be too subtle at the moment. even fiddling with the knobs it makes
+      me feel like i'm more or less adjusting opacity of lighting rather than having any life."
+      Diagnosis accepted: single-octave noise at giant scale reads as a translucent sheet, not
+      air. Round 25 rebuilds every layer as thresholded, domain-warped wisps and brings the
+      first smoke plumes forward from the motion phase.
+    </p>
   </section>
 
   <section class="round">

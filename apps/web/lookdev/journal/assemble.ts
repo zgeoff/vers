@@ -57,6 +57,7 @@ const MAP: Record<string, string> = {
   R23_MARKET_CLOSE: 'r23-market-close',
   R24_ATMO: 'r24-atmo',
   R24_GATE_HAZE: 'r24-gate-haze',
+  R25_LIFE: 'r25-life',
 };
 
 let html = await Bun.file(`${import.meta.dir}/journal.template.html`).text();
