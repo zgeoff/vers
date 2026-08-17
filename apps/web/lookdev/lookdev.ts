@@ -6,7 +6,20 @@
  * the plaza to judge the silhouettes in context.
  */
 import { bloom } from 'three/addons/tsl/display/BloomNode.js';
-import { color, mix, mx_noise_float, pass, positionWorld, screenUV, time, uniform, uv, vec3 } from 'three/tsl';
+import {
+  color,
+  float,
+  materialColor,
+  mix,
+  mx_noise_float,
+  pass,
+  positionWorld,
+  screenUV,
+  time,
+  uniform,
+  uv,
+  vec3,
+} from 'three/tsl';
 import {
   AdditiveBlending,
   AgXToneMapping,
@@ -1340,6 +1353,21 @@ const atmoKnobs = makeKnobGroup('atmo', {
   drift: [0.06, 0, 0.3, 0.005],
 });
 
+const motionKnobs = makeKnobGroup('motion', {
+  flicker: [0.85, 0, 1],
+  sweep: [0.28, 0, 1],
+  shuttle: [1, 0, 1],
+});
+
+const motionState = { sweepSpeed: 0.3 };
+
+registerKnob('motion.sweepSpeed', 0.3, 0, 1.5, (value) => {
+  motionState.sweepSpeed = value;
+});
+
+/** Per-frame updaters for the current scene's animated meshes; rebuilt with each view select. */
+const sceneAnimations: Array<(elapsed: number) => void> = [];
+
 const gradeKnobs = makeKnobGroup('grade', {
   vignette: [0.4, 0, 1],
   vignetteMin: [0.55, 0, 1],
@@ -1687,8 +1715,8 @@ function buildScene(config: ProbeConfig, useParts: boolean, grounding = false, s
   postMesh.computeBoundingSphere();
   scene.add(postMesh);
 
-  const emissives = [
-    ...buildWindows(specs, config, !useParts),
+  const windowEmissives = [...buildWindows(specs, config, !useParts)];
+  const otherEmissives = [
     ...buildPlazaLights(useParts ? fountainX : 4.5, useParts ? fountainZ : 1.5),
     ...buildInstruments(specs, !useParts),
   ];
@@ -1699,7 +1727,7 @@ function buildScene(config: ProbeConfig, useParts: boolean, grounding = false, s
         continue;
       }
 
-      emissives.push(...buildPartSetWindows(placement, config, 4200 + index));
+      windowEmissives.push(...buildPartSetWindows(placement, config, 4200 + index));
     }
   }
 
@@ -1710,7 +1738,7 @@ function buildScene(config: ProbeConfig, useParts: boolean, grounding = false, s
     const pz = (useParts ? gateZ : -14.2) + 0.8;
 
     for (let index = 0; index < 8; index += 1) {
-      emissives.push({
+      otherEmissives.push({
         color: new Color(GATE_TEAL).multiplyScalar(1.9),
         x: px,
         y: 0.7 + index * 0.72,
@@ -1719,13 +1747,17 @@ function buildScene(config: ProbeConfig, useParts: boolean, grounding = false, s
     }
   }
 
-  const emissiveMesh = new InstancedMesh(
-    new BoxGeometry(0.13, 0.2, 0.05),
-    new MeshBasicNodeMaterial(),
-    emissives.length,
-  );
+  // in treatment builds a slice of the windows flickers; everything else stays steady
+  const isFlickerWindow = (index: number) => surfaces && index % 7 === 3;
+  const flickerWindows = windowEmissives.filter((_, index) => isFlickerWindow(index));
+  const steadyEmissives = [
+    ...windowEmissives.filter((_, index) => !isFlickerWindow(index)),
+    ...otherEmissives,
+  ];
+  const windowGeometry = new BoxGeometry(0.13, 0.2, 0.05);
+  const emissiveMesh = new InstancedMesh(windowGeometry, new MeshBasicNodeMaterial(), steadyEmissives.length);
 
-  for (const [index, emissive] of emissives.entries()) {
+  for (const [index, emissive] of steadyEmissives.entries()) {
     dummy.position.set(emissive.x, emissive.y, emissive.z);
     dummy.scale.set(1, 1, 1);
     dummy.updateMatrix();
@@ -1736,6 +1768,72 @@ function buildScene(config: ProbeConfig, useParts: boolean, grounding = false, s
   emissiveMesh.instanceMatrix.needsUpdate = true;
   emissiveMesh.computeBoundingSphere();
   scene.add(emissiveMesh);
+
+  if (flickerWindows.length > 0) {
+    // one shared node graph: each window's world position seeds its own waver and rare deep drop
+    const flickerBase = new MeshBasicNodeMaterial();
+    const slow = mx_noise_float(
+      vec3(positionWorld.x.mul(3.1), positionWorld.y.mul(3.1).add(positionWorld.z.mul(2.7)), time.mul(0.7)),
+    )
+      .mul(0.5)
+      .add(0.5);
+    const drop = mx_noise_float(vec3(positionWorld.x.mul(1.7), positionWorld.z.mul(1.9), time.mul(0.2)))
+      .mul(0.5)
+      .add(0.5)
+      .smoothstep(0.8, 0.88);
+    const flick = slow.mul(0.35).add(0.75).mul(drop.oneMinus().mul(0.9).add(0.1));
+
+    flickerBase.colorNode = materialColor.mul(mix(float(1), flick, motionKnobs.flicker));
+
+    for (const emissive of flickerWindows) {
+      const material = flickerBase.clone();
+
+      material.color.set(emissive.color);
+
+      const windowMesh = new Mesh(windowGeometry, material);
+
+      windowMesh.position.set(emissive.x, emissive.y, emissive.z);
+      scene.add(windowMesh);
+    }
+  }
+
+  if (surfaces) {
+    // beacon sweep: a faint teal shaft turning slowly from the gate's crown
+    const sweepMaterial = new MeshBasicNodeMaterial({
+      blending: AdditiveBlending,
+      depthWrite: false,
+      side: DoubleSide,
+      transparent: true,
+    });
+
+    sweepMaterial.colorNode = color(GATE_TEAL);
+    sweepMaterial.opacityNode = uv().x.oneMinus().pow(1.6).mul(motionKnobs.sweep);
+
+    const sweep = new Mesh(new PlaneGeometry(9, 0.55).translate(4.5, 0, 0), sweepMaterial);
+
+    sweep.position.set(gateX, 8.75, gateZ);
+    scene.add(sweep);
+    sceneAnimations.push((elapsed) => {
+      sweep.rotation.y = elapsed * motionState.sweepSpeed;
+    });
+
+    // the rare event: a shuttle light crossing the skyline behind the mid towers
+    const shuttleMaterial = new MeshBasicNodeMaterial();
+
+    shuttleMaterial.colorNode = color('#a78bfa').mul(3).mul(motionKnobs.shuttle);
+
+    const shuttle = new Mesh(new BoxGeometry(1.3, 0.2, 0.2), shuttleMaterial);
+
+    shuttle.position.set(0, 13.5, -21);
+    scene.add(shuttle);
+    sceneAnimations.push((elapsed) => {
+      const phase = elapsed % 37;
+      const crossing = phase < 9;
+
+      shuttle.visible = crossing;
+      shuttle.position.x = crossing ? -48 + (phase / 9) * 96 : 0;
+    });
+  }
 
   if (config.duskFogBanks) {
     addDuskFogBanks(scene);
@@ -2559,6 +2657,7 @@ async function main() {
   const selectView = (view: View) => {
     // grade views opt back in; everything else renders untonemapped
     renderer.toneMapping = NoToneMapping;
+    sceneAnimations.length = 0;
     postProcessing = view.select();
     activeKey = view.key;
 
@@ -2655,6 +2754,12 @@ async function main() {
   });
 
   renderer.setAnimationLoop(() => {
+    const elapsed = performance.now() / 1000;
+
+    for (const animation of sceneAnimations) {
+      animation(elapsed);
+    }
+
     postProcessing.render();
   });
 }
