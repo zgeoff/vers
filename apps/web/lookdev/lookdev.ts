@@ -132,64 +132,38 @@ function makeRandom(seed: number): () => number {
 }
 
 function buildMassing(): Array<BuildingSpec> {
-  const random = makeRandom(1337);
-
-  const specs: Array<BuildingSpec> = [
-    // far side: the codex tower off-center left; the explore gate breaks the ring to its right
+  return [
+    // nav placeholder boxes: only the legacy box-mode probe views render these; the assembly and
+    // plan views use the part-set placements instead
     { d: 4, facing: 'pz', h: 10.5, mast: true, role: 'codex', ry: 0.06, w: 3.6, x: -2, y: 0, z: -14.5 },
-    { d: 3.6, facing: 'pz', h: 5, mast: false, role: 'filler', ry: 0.11, w: 4, x: -11, y: 0, z: -18.6 },
-    { d: 4, facing: 'pz', h: 6, mast: false, role: 'filler', ry: -0.14, w: 3.8, x: 14, y: 0, z: -20 },
-
-    // left row: the market wide and angled inward, the stash a heavy low block behind it
     { d: 8, facing: 'px', h: 4.5, mast: false, role: 'market', ry: 0.16, w: 4.5, x: -14, y: 0, z: -2.5 },
     { d: 5.5, facing: 'px', h: 3.6, mast: false, role: 'stash', ry: -0.07, w: 5, x: -13.6, y: 0, z: -9.2 },
-
-    // right row: the avatar hall with its mast, one dim filler beside it
     { d: 6.5, facing: 'nx', h: 7, mast: true, role: 'avatar', ry: -0.13, w: 4.5, x: 14.6, y: 0, z: -4 },
-    { d: 5, facing: 'nx', h: 4.6, mast: false, role: 'filler', ry: 0.09, w: 4.5, x: 15.8, y: 0, z: -10.5 },
 
-    // near flanks cropping the frame edges, dark
-    { d: 6, facing: 'px', h: 5.5, mast: false, role: 'fore', ry: 0.1, w: 6, x: -18, y: 0, z: 12 },
-    { d: 6, facing: 'nx', h: 4.5, mast: false, role: 'fore', ry: -0.08, w: 6, x: 18, y: 0, z: 13 },
+    // the fixed massing, laid out by hand in the plan editor
+    { d: 3.6, facing: 'pz', h: 5, mast: false, role: 'filler', ry: 0.06, w: 4, x: -11.4, y: 0, z: -18.9 },
+    { d: 4, facing: 'pz', h: 6, mast: false, role: 'filler', ry: 0.06, w: 3.8, x: 15.3, y: 0, z: -18.4 },
+    { d: 5, facing: 'nx', h: 4.6, mast: false, role: 'filler', ry: 0.04, w: 4.5, x: 15.5, y: 0, z: -11.1 },
+    { d: 6, facing: 'px', h: 5.5, mast: false, role: 'fore', ry: 0.05, w: 6, x: -20.2, y: 0, z: -9.2 },
+    { d: 6, facing: 'nx', h: 4.5, mast: false, role: 'fore', ry: 0.07, w: 6, x: 13.8, y: 0, z: -23.9 },
+    { d: 3.94, facing: 'pz', h: 11.81, mast: false, role: 'back', ry: 0.064, w: 3.08, x: -8.2, y: 0, z: -24.7 },
+    { d: 2.89, facing: 'pz', h: 8.57, mast: false, role: 'back', ry: 0.07, w: 4.04, x: -17.3, y: 0, z: -20.8 },
+    { d: 2.9, facing: 'pz', h: 7.05, mast: false, role: 'back', ry: 0.037, w: 2.71, x: -4.3, y: 0, z: -19.6 },
+    { d: 2.69, facing: 'pz', h: 6.99, mast: false, role: 'back', ry: -1.495, w: 5.02, x: 19.9, y: 0, z: -15.4 },
+    { d: 3.75, facing: 'pz', h: 5.77, mast: false, role: 'back', ry: 0.066, w: 5.29, x: -13.9, y: 0, z: -25.9 },
+    { d: 3.18, facing: 'pz', h: 10.25, mast: false, role: 'back', ry: -0.062, w: 2.91, x: -26.19, y: 0, z: -34.82 },
+    { d: 3.02, facing: 'pz', h: 9.42, mast: true, role: 'back', ry: -0.111, w: 2.56, x: 9.93, y: 0, z: -35.6 },
+    { d: 2.78, facing: 'pz', h: 9.39, mast: false, role: 'back', ry: 0.012, w: 3.22, x: -9.17, y: 0, z: -34.94 },
+    { d: 2.82, facing: 'pz', h: 8.48, mast: false, role: 'back', ry: 0.1, w: 4.45, x: 5.28, y: 0, z: -35.69 },
+    { d: 3.84, facing: 'pz', h: 13.38, mast: false, role: 'back', ry: 0.106, w: 4.29, x: -11.65, y: 0, z: -35.9 },
+    { d: 3.35, facing: 'pz', h: 10.79, mast: false, role: 'back', ry: 0.101, w: 4.72, x: 19.69, y: 0, z: -33.83 },
+    { d: 3.23, facing: 'pz', h: 15.86, mast: true, role: 'back', ry: -0.037, w: 4.5, x: 8.24, y: 0, z: -42.66 },
+    { d: 2.85, facing: 'pz', h: 17.16, mast: false, role: 'back', ry: -0.003, w: 3.62, x: 23.02, y: 0, z: -42.2 },
+    { d: 3.57, facing: 'pz', h: 11.31, mast: false, role: 'back', ry: 0.014, w: 2.62, x: 24.1, y: 0, z: -42.54 },
+    { d: 2.54, facing: 'pz', h: 18.28, mast: true, role: 'back', ry: -0.025, w: 2.78, x: 10.13, y: 0, z: -42.53 },
+    { d: 4.06, facing: 'pz', h: 12.63, mast: false, role: 'back', ry: 0.082, w: 4.5, x: 5.88, y: 0, z: -43.61 },
+    { d: 4.54, facing: 'pz', h: 17.98, mast: false, role: 'back', ry: 0.105, w: 4, x: -16.34, y: 0, z: -43.34 },
   ];
-
-  // terraced mass climbing behind the far side, fading into haze
-  const rows = [
-    { count: 6, y: 2, z: -27 },
-    { count: 7, y: 4.5, z: -35 },
-    { count: 8, y: 7.5, z: -43 },
-  ];
-
-  for (const row of rows) {
-    for (let index = 0; index < row.count; index += 1) {
-      const spread = 36 + Math.abs(row.z) * 0.5;
-      const x = (random() - 0.5) * spread;
-      const w = 2.4 + random() * 3.6;
-      const h = 3.5 + random() * (4 + Math.abs(row.z) * 0.14);
-      const d = 2.4 + random() * 2.4;
-
-      // every background row keeps a gap behind the codex hall, so its roofline reads against sky
-      // instead of merging into the terraces
-      if (x > -9 && x < 2.5) {
-        continue;
-      }
-
-      specs.push({
-        d,
-        facing: 'pz',
-        h: h + row.y,
-        mast: random() < 0.16,
-        role: 'back',
-        ry: (random() - 0.5) * 0.3,
-        w,
-        x,
-        y: 0,
-        z: row.z + (random() - 0.5) * 2.5,
-      });
-    }
-  }
-
-  return specs;
 }
 
 /**
@@ -648,11 +622,11 @@ const FOUNTAIN_PARTS: ReadonlyArray<SilhouettePart> = [
  * front (+z) toward the plaza. Mutated by the plan editor; the assembly view rebuilds from it.
  */
 const placements: Array<AssemblyPlacement> = [
-  { key: 'market', parts: MARKET_PARTS, ry: 1.631, x: -13.9, z: 2.1 },
-  { key: 'stash', parts: STASH_DOUBLE_DRUM, ry: -2.129, x: -12.1, z: -9.8 },
+  { key: 'market', parts: MARKET_PARTS, ry: 1.631, x: -14.3, z: 2.2 },
+  { key: 'stash', parts: STASH_DOUBLE_DRUM, ry: -2.079, x: -12.7, z: -10.6 },
   { key: 'codex', litAllBoxes: true, parts: CODEX_ARCHIVE_HALL, ry: 0.06, x: -4.6, z: -14.7 },
   { key: 'gate', noWindows: true, parts: GATE_BASTION_SLOT, ry: 0.05, x: 5.9, z: -16.4 },
-  { key: 'avatar', parts: AVATAR_PARTS, ry: -1.501, x: 15.1, z: -4.8 },
+  { key: 'avatar', parts: AVATAR_PARTS, ry: -1.451, x: 16.1, z: -5.3 },
   { key: 'fountain', noWindows: true, parts: FOUNTAIN_PARTS, ry: 0, x: -3.9, z: 0.7 },
 ];
 
