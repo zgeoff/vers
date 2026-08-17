@@ -105,11 +105,11 @@ interface BuildingSpec {
   readonly h: number;
   readonly mast: boolean;
   readonly role: Role;
-  readonly ry: number;
+  ry: number;
   readonly w: number;
-  readonly x: number;
+  x: number;
   readonly y: number;
-  readonly z: number;
+  z: number;
 }
 
 function isNavRole(role: Role): boolean {
@@ -138,7 +138,7 @@ function buildMassing(): Array<BuildingSpec> {
     // far side: the codex tower off-center left; the explore gate breaks the ring to its right
     { d: 4, facing: 'pz', h: 10.5, mast: true, role: 'codex', ry: 0.06, w: 3.6, x: -2, y: 0, z: -14.5 },
     { d: 3.6, facing: 'pz', h: 5, mast: false, role: 'filler', ry: 0.11, w: 4, x: -11, y: 0, z: -18.6 },
-    { d: 4, facing: 'pz', h: 6, mast: false, role: 'filler', ry: -0.14, w: 3.8, x: 14.8, y: 0, z: -13.4 },
+    { d: 4, facing: 'pz', h: 6, mast: false, role: 'filler', ry: -0.14, w: 3.8, x: 14, y: 0, z: -20 },
 
     // left row: the market wide and angled inward, the stash a heavy low block behind it
     { d: 8, facing: 'px', h: 4.5, mast: false, role: 'market', ry: 0.16, w: 4.5, x: -14, y: 0, z: -2.5 },
@@ -191,6 +191,12 @@ function buildMassing(): Array<BuildingSpec> {
 
   return specs;
 }
+
+/**
+ * The live fixed-massing state, materialized once so the plan editor can drag any block and
+ * every consumer reads the same coordinates.
+ */
+const massing: Array<BuildingSpec> = buildMassing();
 
 interface EmissiveInstance {
   readonly color: Color;
@@ -642,12 +648,12 @@ const FOUNTAIN_PARTS: ReadonlyArray<SilhouettePart> = [
  * front (+z) toward the plaza. Mutated by the plan editor; the assembly view rebuilds from it.
  */
 const placements: Array<AssemblyPlacement> = [
-  { key: 'market', parts: MARKET_PARTS, ry: HALF_PI + 0.16, x: -14.5, z: -1.6 },
-  { key: 'stash', parts: STASH_DOUBLE_DRUM, ry: HALF_PI - 0.55, x: -11.9, z: -11.8 },
-  { key: 'codex', litAllBoxes: true, parts: CODEX_ARCHIVE_HALL, ry: 0.06, x: -4, z: -14.5 },
-  { key: 'gate', noWindows: true, parts: GATE_BASTION_SLOT, ry: 0, x: 6.2, z: -14.2 },
-  { key: 'avatar', parts: AVATAR_PARTS, ry: -HALF_PI - 0.13, x: 14.6, z: -4 },
-  { key: 'fountain', noWindows: true, parts: FOUNTAIN_PARTS, ry: 0, x: 4.5, z: 1.5 },
+  { key: 'market', parts: MARKET_PARTS, ry: 1.631, x: -13.9, z: 2.1 },
+  { key: 'stash', parts: STASH_DOUBLE_DRUM, ry: -2.129, x: -12.1, z: -9.8 },
+  { key: 'codex', litAllBoxes: true, parts: CODEX_ARCHIVE_HALL, ry: 0.06, x: -4.6, z: -14.7 },
+  { key: 'gate', noWindows: true, parts: GATE_BASTION_SLOT, ry: 0.05, x: 5.9, z: -16.4 },
+  { key: 'avatar', parts: AVATAR_PARTS, ry: -1.501, x: 15.1, z: -4.8 },
+  { key: 'fountain', noWindows: true, parts: FOUNTAIN_PARTS, ry: 0, x: -3.9, z: 0.7 },
 ];
 
 interface Footprint {
@@ -656,6 +662,7 @@ interface Footprint {
   readonly cz: number;
   readonly hd: number;
   readonly hw: number;
+  readonly kind: 'circle' | 'rect';
   readonly label: string;
 }
 
@@ -673,17 +680,18 @@ function collectFootprints(): Array<Footprint> {
       const round = part.g !== 'box';
 
       footprints.push({
-        angle: placement.ry,
+        angle: round ? 0 : placement.ry,
         cx: world.x,
         cz: world.z,
-        hd: round ? part.sz : part.sz / 2,
+        hd: round ? part.sx : part.sz / 2,
         hw: round ? part.sx : part.sx / 2,
+        kind: round ? 'circle' : 'rect',
         label: placement.key,
       });
     }
   }
 
-  for (const [index, spec] of buildMassing().entries()) {
+  for (const [index, spec] of massing.entries()) {
     if (isNavRole(spec.role)) {
       continue;
     }
@@ -694,6 +702,7 @@ function collectFootprints(): Array<Footprint> {
       cz: spec.z,
       hd: spec.d / 2,
       hw: spec.w / 2,
+      kind: 'rect',
       label: `${spec.role}${index}`,
     });
   }
@@ -749,7 +758,33 @@ function isSeparatedOnAxis(
   return maxA < minB || maxB < minA;
 }
 
+function isCircleRectOverlap(circle: Footprint, rect: Footprint): boolean {
+  // rotate the circle center into the rect's local frame, then clamp to the half extents
+  const cos = Math.cos(rect.angle);
+  const sin = Math.sin(rect.angle);
+  const dx = circle.cx - rect.cx;
+  const dz = circle.cz - rect.cz;
+  const lx = dx * cos - dz * sin;
+  const lz = dx * sin + dz * cos;
+  const nx = Math.max(-rect.hw, Math.min(rect.hw, lx));
+  const nz = Math.max(-rect.hd, Math.min(rect.hd, lz));
+
+  return (lx - nx) ** 2 + (lz - nz) ** 2 < circle.hw ** 2;
+}
+
 function isFootprintOverlap(a: Footprint, b: Footprint): boolean {
+  if (a.kind === 'circle' && b.kind === 'circle') {
+    return (a.cx - b.cx) ** 2 + (a.cz - b.cz) ** 2 < (a.hw + b.hw) ** 2;
+  }
+
+  if (a.kind === 'circle') {
+    return isCircleRectOverlap(a, b);
+  }
+
+  if (b.kind === 'circle') {
+    return isCircleRectOverlap(b, a);
+  }
+
   const cornersA = buildCorners(a);
   const cornersB = buildCorners(b);
 
@@ -786,9 +821,9 @@ function findOverlaps(): Array<string> {
         continue;
       }
 
-      // static-static contact is the overbuilt accretion look, by design; only pairs involving a
-      // movable element are defects
-      if (!movable.has(fa.label) && !movable.has(fb.label)) {
+      // background-on-background contact is the overbuilt accretion look, by design; everything
+      // else counts as a defect
+      if (!movable.has(fa.label) && !movable.has(fb.label) && fa.label.startsWith('back') && fb.label.startsWith('back')) {
         continue;
       }
 
@@ -936,7 +971,7 @@ function buildScene(config: ProbeConfig, useParts: boolean): Scene {
     scene.add(light);
   }
 
-  const specs = buildMassing();
+  const specs = massing;
   const boxSpecs = useParts ? specs.filter((spec) => !isNavRole(spec.role)) : specs;
   const boxGeometry = partGeometries.box;
   const buildings = new InstancedMesh(
@@ -1141,17 +1176,25 @@ function addDuskFogBanks(scene: Scene) {
 }
 
 interface PlanGroup {
+  readonly baseColor: string;
   readonly group: Group;
+  readonly label: string;
   readonly material: MeshStandardNodeMaterial;
-  readonly state: AssemblyPlacement;
+  readonly target: { ry: number; x: number; z: number };
 }
 
 const PLAN_ELEMENT_COLOR = '#8fa0c2';
 const PLAN_SELECTED_COLOR = '#5eead4';
 
+const PLAN_ROLE_COLORS: Record<string, string> = {
+  back: '#333e58',
+  filler: '#4d5975',
+  fore: '#3a465f',
+};
+
 /**
- * The top-down layout editor's scene: flat-lit, fog-free, each movable element in its own group
- * so dragging repositions it without a rebuild.
+ * The top-down layout editor's scene: flat-lit, fog-free, every element and every fixed block in
+ * its own group so dragging repositions it without a rebuild.
  */
 function buildPlanScene(): { groups: Array<PlanGroup>; scene: Scene } {
   const scene = new Scene();
@@ -1183,22 +1226,6 @@ function buildPlanScene(): { groups: Array<PlanGroup>; scene: Scene } {
   plazaFloor.position.set(0.8, -0.01, -1.5);
   scene.add(plazaFloor);
 
-  // fixed massing as flat context the elements are arranged against
-  const staticMaterial = new MeshStandardNodeMaterial({ color: new Color('#39445e'), roughness: 1 });
-
-  for (const spec of buildMassing()) {
-    if (isNavRole(spec.role)) {
-      continue;
-    }
-
-    const block = new Mesh(partGeometries.box, staticMaterial);
-
-    block.position.set(spec.x, spec.h / 2, spec.z);
-    block.rotation.y = spec.ry;
-    block.scale.set(spec.w, spec.h, spec.d);
-    scene.add(block);
-  }
-
   const groups: Array<PlanGroup> = [];
 
   for (const state of placements) {
@@ -1220,7 +1247,26 @@ function buildPlanScene(): { groups: Array<PlanGroup>; scene: Scene } {
     group.position.set(state.x, 0, state.z);
     group.rotation.y = state.ry;
     scene.add(group);
-    groups.push({ group, material, state });
+    groups.push({ baseColor: PLAN_ELEMENT_COLOR, group, label: state.key, material, target: state });
+  }
+
+  for (const [index, spec] of massing.entries()) {
+    if (isNavRole(spec.role)) {
+      continue;
+    }
+
+    const baseColor = PLAN_ROLE_COLORS[spec.role] ?? '#39445e';
+    const material = new MeshStandardNodeMaterial({ color: new Color(baseColor), roughness: 1 });
+    const group = new Group();
+    const block = new Mesh(partGeometries.box, material);
+
+    block.position.set(0, spec.h / 2, 0);
+    block.scale.set(spec.w, spec.h, spec.d);
+    group.add(block);
+    group.position.set(spec.x, 0, spec.z);
+    group.rotation.y = spec.ry;
+    scene.add(group);
+    groups.push({ baseColor, group, label: `${spec.role}${index}`, material, target: spec });
   }
 
   return { groups, scene };
@@ -1319,7 +1365,7 @@ async function main() {
 
     (globalThis as { __lookdevOverlaps?: Array<string> }).__lookdevOverlaps = overlaps;
     info.textContent = planActive
-      ? `${flash ?? (selected ? `selected: ${selected.state.key}` : 'click an element')} · drag to move · Q/E rotate · P copy layout · overlaps: ${overlapReport}`
+      ? `${flash ?? (selected ? `selected: ${selected.label}` : 'click an element')} · drag to move · Q/E rotate · P copy layout · overlaps: ${overlapReport}`
       : '';
     info.style.display = planActive ? 'block' : 'none';
   };
@@ -1348,7 +1394,7 @@ async function main() {
       .find((entry) => entry !== undefined);
 
     for (const entry of planGroups) {
-      entry.material.color.set(new Color(PLAN_ELEMENT_COLOR));
+      entry.material.color.set(new Color(entry.baseColor));
     }
 
     selected = hitGroup ?? null;
@@ -1357,7 +1403,7 @@ async function main() {
       selected.material.color.set(new Color(PLAN_SELECTED_COLOR));
 
       if (raycaster.ray.intersectPlane(groundPlane, dragPoint)) {
-        grabOffset.set(dragPoint.x - selected.state.x, dragPoint.z - selected.state.z);
+        grabOffset.set(dragPoint.x - selected.target.x, dragPoint.z - selected.target.z);
         dragging = true;
       }
     }
@@ -1374,9 +1420,9 @@ async function main() {
     raycaster.setFromCamera(pointer, planCamera);
 
     if (raycaster.ray.intersectPlane(groundPlane, dragPoint)) {
-      selected.state.x = Math.round((dragPoint.x - grabOffset.x) * 10) / 10;
-      selected.state.z = Math.round((dragPoint.z - grabOffset.y) * 10) / 10;
-      selected.group.position.set(selected.state.x, 0, selected.state.z);
+      selected.target.x = Math.round((dragPoint.x - grabOffset.x) * 10) / 10;
+      selected.target.z = Math.round((dragPoint.z - grabOffset.y) * 10) / 10;
+      selected.group.position.set(selected.target.x, 0, selected.target.z);
     }
   });
 
@@ -1476,19 +1522,33 @@ async function main() {
 
   globalThis.addEventListener('keydown', (event) => {
     if (planActive && selected && (event.key === 'q' || event.key === 'e')) {
-      selected.state.ry += event.key === 'q' ? 0.05 : -0.05;
-      selected.group.rotation.y = selected.state.ry;
+      selected.target.ry += event.key === 'q' ? 0.05 : -0.05;
+      selected.group.rotation.y = selected.target.ry;
       updateInfo();
       return;
     }
 
     if (planActive && event.key === 'p') {
-      const layout = placements.map(({ key, ry, x, z }) => ({
-        key,
-        ry: Math.round(ry * 1000) / 1000,
-        x,
-        z,
-      }));
+      const layout = {
+        massing: massing
+          .filter((spec) => !isNavRole(spec.role))
+          .map(({ d, h, mast, role, ry, w, x, z }) => ({
+            d,
+            h: Math.round(h * 100) / 100,
+            mast,
+            role,
+            ry: Math.round(ry * 1000) / 1000,
+            w,
+            x,
+            z,
+          })),
+        placements: placements.map(({ key, ry, x, z }) => ({
+          key,
+          ry: Math.round(ry * 1000) / 1000,
+          x,
+          z,
+        })),
+      };
       const serialized = JSON.stringify(layout, null, 2);
 
       console.log(serialized);

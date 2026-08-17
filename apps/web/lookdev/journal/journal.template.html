@@ -155,27 +155,45 @@
   </p>
 
   <div class="howto">
-    <h2>Round 10 · how to respond</h2>
+    <h2>Round 11 · how to respond</h2>
     <p>
-      The layout is now machine-checked: every element and every fixed block projects an oriented
-      footprint, and a live collision check reports any intersecting pair — the current layout
-      reports <b>none</b>. And your idea is built: view <b>4 · Plan (drag)</b> is a top-down
-      editor. Click an element to select (it highlights teal), drag to move, <b>Q/E</b> rotates,
-      <b>P</b> copies the whole layout as JSON to your clipboard and console — paste it in chat
-      and I bake it in. The overlap readout updates live in the bottom bar as you drag.
+      Your dragged layout is baked in, and the editor now covers <b>everything</b>: fillers, the
+      near flanks, and all the background terraces are draggable alongside the five buildings and
+      fountain (dimmer blocks = fixed massing; same controls — drag, Q/E rotate, P copies both
+      lists). Arrange the rest of the town to taste and paste the JSON. Background-on-background
+      contact stays unflagged on purpose — merged blocks read as the overbuilt accretion look.
+      Avatar A drums vs C dome remains open.
     </p>
     <p>
-      So: rearrange the plaza to taste if you like, or bless the current arrangement as-is. Avatar
-      A drums vs C dome also still open. Live at
-      <span style="font-family: var(--mono)">localhost:4599</span>, branch
+      Live at <span style="font-family: var(--mono)">localhost:4599</span> (button 4), branch
       <span style="font-family: var(--mono)">spike/respite-lookdev</span>.
     </p>
   </div>
 
   <section class="round">
     <div class="round-head">
+      <h2>Round 11 · your layout, baked and verified</h2>
+      <span class="status open">open — massing pass, avatar call</span>
+    </div>
+    <p>
+      The plaza as you dragged it: market swung near-parallel along the left, stash tucked behind
+      it, gate pushed deeper so it reads as a passage, fountain off-center left. The checker was
+      also upgraded to exact circle tests for drums and domes — its one complaint about your
+      layout turned out to be my rotated-square approximation inflating drum reach, not your
+      placement. With that fixed: <b>zero overlaps</b>.
+    </p>
+    <div class="shots">
+      <figure>
+        <img src="data:image/png;base64,{{R11_ASSEMBLY}}" alt="The night plaza in the user-dragged arrangement: market angled along the left, stash drums behind it, archive hall and deep-set teal gate on the far side, avatar drum right, fountain left of center" />
+        <figcaption>assembly — the dragged layout, machine-verified clean</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="round">
+    <div class="round-head">
       <h2>Round 10 · the plan editor and the clean layout</h2>
-      <span class="status open">open — drag to taste or bless as-is</span>
+      <span class="status">resolved</span>
     </div>
     <p>
       Round 9's "still intersecting" observation became tooling: an oriented-footprint overlap
@@ -195,6 +213,10 @@
         <figcaption>assembly — zero overlaps, machine-verified</figcaption>
       </figure>
     </div>
+    <p class="verdict">
+      <b>Verdict:</b> "worked amazingly" — the layout was dragged to taste and exported, and the
+      editor was asked to cover the fixed blocks too. Both landed in round 11.
+    </p>
   </section>
 
   <section class="round">
