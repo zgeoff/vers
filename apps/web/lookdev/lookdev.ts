@@ -1007,33 +1007,55 @@ function applyGrounding(material: MeshStandardNodeMaterial) {
 }
 
 /**
- * Stylized surface variation: broad tonal patches, faint vertical weather streaks, and
- * horizontal panel seams — enough to break the flat-block read without any texture assets.
+ * Manufactured cladding, not camouflage: world space quantized into panel cells, each cell a
+ * crisp constant tonal step, with thin seam lines between courses and a fine material grain.
+ * Smooth mid-frequency noise is deliberately absent — it reads as blotch.
  */
 function buildSurfaceVariation() {
-  const macro = mx_noise_float(positionWorld.mul(0.5)).mul(0.5).add(0.5).mul(0.55).add(0.68);
-  const streaks = mx_noise_float(
-    vec3(positionWorld.x.mul(2.4), positionWorld.y.mul(0.2), positionWorld.z.mul(2.4)),
-  )
-    .mul(0.5)
-    .add(0.5)
-    .mul(0.2);
-  const bandY = positionWorld.y.mul(0.85).fract();
-  const seamDistance = bandY.min(bandY.oneMinus());
-  const seam = seamDistance.smoothstep(0.0, 0.06).oneMinus().mul(0.22);
+  // per-panel tone: noise sampled at the cell's quantized coordinate is constant across the cell
+  const cell = vec3(
+    positionWorld.x.mul(0.9).floor(),
+    positionWorld.y.mul(1.4).floor(),
+    positionWorld.z.mul(0.9).floor(),
+  );
+  const panel = mx_noise_float(cell.mul(0.37)).mul(0.5).add(0.5).mul(0.12).add(0.94);
 
-  return macro.sub(streaks).sub(seam).clamp(0.5, 1.2);
+  // thin horizontal course seams
+  const bandY = positionWorld.y.mul(1.4).fract();
+  const seamY = bandY.min(bandY.oneMinus()).smoothstep(0.0, 0.05).oneMinus().mul(0.1);
+
+  // shallow vertical joints on both wall axes; on the constant axis this degrades to a mild
+  // whole-face tone shift, which reads as panel variance rather than a defect
+  const bandX = positionWorld.x.mul(0.9).fract();
+  const bandZ = positionWorld.z.mul(0.9).fract();
+  const seamX = bandX.min(bandX.oneMinus()).smoothstep(0.0, 0.03).oneMinus().mul(0.05);
+  const seamZ = bandZ.min(bandZ.oneMinus()).smoothstep(0.0, 0.03).oneMinus().mul(0.05);
+
+  // fine grain so faces feel like material rather than fill color
+  const grain = mx_noise_float(positionWorld.mul(16)).mul(0.04);
+
+  return panel.sub(seamY).sub(seamX).sub(seamZ).add(grain).clamp(0.8, 1.1);
 }
 
 function applySurface(material: MeshStandardNodeMaterial, base: Color) {
   material.colorNode = color(base).mul(buildSurfaceVariation());
 }
 
-/** Ground mottling: larger, softer patches than the walls, so pavement reads worn rather than paneled. */
+/** Pavement: large paver cells with crisp joints on both axes, plus the same fine grain. */
 function applyGroundSurface(material: MeshStandardNodeMaterial, base: Color) {
-  const mottle = mx_noise_float(positionWorld.mul(0.3)).mul(0.5).add(0.5).mul(0.32).add(0.82);
+  const cell = vec3(positionWorld.x.mul(0.55).floor(), 0, positionWorld.z.mul(0.55).floor());
+  const paver = mx_noise_float(cell.mul(0.41)).mul(0.5).add(0.5).mul(0.1).add(0.93);
+  const jointX = positionWorld.x.mul(0.55).fract();
+  const jointZ = positionWorld.z.mul(0.55).fract();
+  const joints = jointX
+    .min(jointX.oneMinus())
+    .min(jointZ.min(jointZ.oneMinus()))
+    .smoothstep(0.0, 0.03)
+    .oneMinus()
+    .mul(0.12);
+  const grain = mx_noise_float(positionWorld.mul(14)).mul(0.03);
 
-  material.colorNode = color(base).mul(mottle);
+  material.colorNode = color(base).mul(paver.sub(joints).add(grain).clamp(0.78, 1.08));
 }
 
 function buildScene(config: ProbeConfig, useParts: boolean, grounding = false, surfaces = false): Scene {
@@ -1708,7 +1730,10 @@ async function main() {
         orbitPhi = 1.42;
         applyOrbit();
         updateInfo();
-        return buildPost(buildScene(NIGHT, true), camera, NIGHT.bloomStrength, NIGHT.bloomThreshold);
+
+        // the inspector always shows the full current treatment
+        renderer.toneMapping = AgXToneMapping;
+        return buildPost(buildScene(NIGHT, true, true, true), camera, NIGHT.bloomStrength, NIGHT.bloomThreshold, true);
       },
     },
     {

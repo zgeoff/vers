@@ -155,25 +155,49 @@
   </p>
 
   <div class="howto">
-    <h2>Round 19 · how to respond</h2>
+    <h2>Round 20 · how to respond</h2>
     <p>
-      Surfaces: the flat blocks gain shader-side material variation — broad tonal patches, faint
-      vertical weather streaks, horizontal panel seams — on the focal buildings and pavement
-      only; background blocks stay flat by design (fog and distance carry them). Compare
-      <b>7 · Grade+AO</b> against <b>8 · Surfaces</b>, and orbit up close: is the wear amount
-      right per building? The gate wears it heaviest by nature of its big faces — say if it
-      should differ per building (it can: each building can get its own recipe).
+      The surface recipe rebuilt after round 19's verdict: quantized <b>panel cells</b> — each a
+      crisp constant tonal step — with thin course seams, shallow vertical joints, paver grids on
+      the pavement, and a fine material grain. No smooth blotch noise anywhere. The inspect view
+      (button 4) now always shows the full current treatment, so orbit close: does this read as
+      manufactured cladding? Amounts per element still tunable, and per-building material
+      differentiation (metal drums, severe hall, stone gate) is the next layer once this base
+      reads right.
     </p>
     <p>
-      Live at <span style="font-family: var(--mono)">localhost:4599</span> (buttons 7, 8), branch
-      <span style="font-family: var(--mono)">spike/respite-lookdev</span>.
+      Live at <span style="font-family: var(--mono)">localhost:4599</span> (buttons 4, 7, 8),
+      branch <span style="font-family: var(--mono)">spike/respite-lookdev</span>.
     </p>
   </div>
 
   <section class="round">
     <div class="round-head">
+      <h2>Round 20 · cladding, not camouflage</h2>
+      <span class="status open">open — orbit close and judge</span>
+    </div>
+    <p>
+      Same idea, opposite execution: instead of smooth noise interpolating across faces, world
+      space is quantized into cells and each cell holds one flat tone — the difference between
+      blotch and paneling. Seam lines run between courses and joints; pavement gets large paver
+      cells with crisp joints on both axes.
+    </p>
+    <div class="shots pair">
+      <figure>
+        <img src="data:image/png;base64,{{R20_CLADDING}}" alt="The plaza with quantized panel cladding replacing the blotchy noise" />
+        <figcaption>8 · surfaces, rebuilt — panel cells and seams</figcaption>
+      </figure>
+      <figure>
+        <img src="data:image/png;base64,{{R20_CLADDING_CLOSE}}" alt="Close orbit view of the codex hall and gate wall showing crisp seam grids and per-panel tonal steps" />
+        <figcaption>close orbit — seam grid and panel steps at the codex hall and gate</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="round">
+    <div class="round-head">
       <h2>Round 19 · surfaces break the flat-block read</h2>
-      <span class="status open">open — judge the wear, per building</span>
+      <span class="status">resolved</span>
     </div>
     <p>
       Answering round 18's verdict directly: the blocks stop being blank. All of it is TSL — no
@@ -192,6 +216,11 @@
         <figcaption>8 · surfaces — patina, streaks, seams</figcaption>
       </figure>
     </div>
+    <p class="verdict">
+      <b>Verdict:</b> proof of concept accepted, look rejected — "blurry camouflage on each
+      building." Correct: smooth mid-frequency albedo noise is the textbook camo mistake. Round
+      20 replaced it with quantized panel cladding.
+    </p>
   </section>
 
   <section class="round">
