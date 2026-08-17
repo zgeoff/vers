@@ -7,12 +7,16 @@
  */
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { bloom } from 'three/addons/tsl/display/BloomNode.js';
+import { ao } from 'three/addons/tsl/display/GTAONode.js';
 import {
   color,
   float,
   materialColor,
   mix,
+  mrt,
   mx_noise_float,
+  normalView,
+  output,
   pass,
   positionWorld,
   screenUV,
@@ -24,6 +28,9 @@ import {
 import {
   AdditiveBlending,
   AgXToneMapping,
+  CircleGeometry,
+  ExtrudeGeometry,
+  Shape,
   AmbientLight,
   BoxGeometry,
   Color,
@@ -2265,6 +2272,151 @@ const PLAN_ROLE_COLORS: Record<string, string> = {
  * The top-down layout editor's scene: flat-lit, fog-free, every element and every fixed block in
  * its own group so dragging repositions it without a rebuild.
  */
+/**
+ * The render-style probe: one small Respite building in the Townscaper register — shaped but
+ * simple geometry (gabled extrusions, arches, bevels — never raw boxes), flat graphic color
+ * blocking with a few very simple patterns, soft dusk light. Screen-space occlusion is added by
+ * the view's post chain; nothing here reuses the town's night rig.
+ */
+function buildStyleProbeScene(): Scene {
+  const scene = new Scene();
+
+  scene.background = new Color('#454f78');
+
+  const hemisphere = new HemisphereLight(new Color('#8d97c4'), new Color('#6e5a45'), 1.6);
+  const sun = new DirectionalLight(new Color('#ffd9a8'), 2.2);
+  const fill = new AmbientLight(new Color('#45507a'), 0.5);
+
+  sun.position.set(-18, 24, 14);
+  scene.add(hemisphere, sun, fill);
+
+  const plaster = new Color('#cfc4b2');
+  const plasterShade = new Color('#b9ad9c');
+  const slate = new Color('#46506b');
+  const trim = new Color('#59b3a5');
+  const doorTeal = new Color('#2f6f68');
+
+  const plasterMaterial = new MeshStandardNodeMaterial({ color: plaster, roughness: 0.9 });
+
+  plasterMaterial.colorNode = color(plaster).mul(buildGrain(0.025).add(1));
+
+  const shadeMaterial = new MeshStandardNodeMaterial({ color: plasterShade, roughness: 0.9 });
+  const slateMaterial = new MeshStandardNodeMaterial({ color: slate, roughness: 0.75 });
+
+  // roof courses: soft horizontal banding, low contrast — a simple texture, not noise
+  slateMaterial.colorNode = color(slate).mul(
+    buildPanels(0.001, 3.2, 0.001, 0.1).add(buildGrain(0.02)).add(1).clamp(0.85, 1.12),
+  );
+
+  const trimMaterial = new MeshStandardNodeMaterial({ color: trim, roughness: 0.7 });
+  const doorMaterial = new MeshStandardNodeMaterial({ color: doorTeal, roughness: 0.7 });
+  const paneMaterial = new MeshBasicNodeMaterial({ color: new Color(WARM_WINDOW).multiplyScalar(1.35) });
+
+  const put = (
+    mesh: Mesh,
+    px: number,
+    py: number,
+    pz: number,
+    ry = 0,
+    rz = 0,
+  ) => {
+    mesh.position.set(px, py, pz);
+    mesh.rotation.set(0, ry, rz, 'YXZ');
+    scene.add(mesh);
+    return mesh;
+  };
+
+  // gabled main mass: a house profile extruded with a chunky bevel
+  const buildGableGeometry = (width: number, wallHeight: number, peak: number, depth: number) => {
+    const half = width / 2;
+    const profile = new Shape();
+
+    profile.moveTo(-half, 0);
+    profile.lineTo(half, 0);
+    profile.lineTo(half, wallHeight);
+    profile.lineTo(0, peak);
+    profile.lineTo(-half, wallHeight);
+    profile.closePath();
+
+    const geometry = new ExtrudeGeometry(profile, {
+      bevelEnabled: true,
+      bevelSegments: 2,
+      bevelSize: 0.06,
+      bevelThickness: 0.06,
+      depth,
+    });
+
+    geometry.translate(0, 0, -depth / 2);
+
+    return geometry;
+  };
+
+  put(new Mesh(buildGableGeometry(4.6, 2.6, 3.9, 3.5), plasterMaterial), 0, 0, 0);
+
+  // side annex: a smaller gable turned across the main ridge
+  put(new Mesh(buildGableGeometry(2.4, 1.9, 2.7, 2.3), plasterMaterial), 2.9, 0, 0.3, Math.PI / 2);
+
+  // roof shells overhanging the slopes
+  const roofPitch = Math.atan2(1.3, 2.3);
+
+  put(new Mesh(new RoundedBoxGeometry(2.85, 0.16, 4.1, 2, 0.05), slateMaterial), -1.2, 3.28, 0, 0, roofPitch);
+  put(new Mesh(new RoundedBoxGeometry(2.85, 0.16, 4.1, 2, 0.05), slateMaterial), 1.2, 3.28, 0, 0, -roofPitch);
+  put(new Mesh(new RoundedBoxGeometry(1.6, 0.14, 2.9, 2, 0.05), slateMaterial), 2.9, 2.36, 1, Math.PI / 2, roofPitch);
+  put(new Mesh(new RoundedBoxGeometry(1.6, 0.14, 2.9, 2, 0.05), slateMaterial), 2.9, 2.36, -0.4, Math.PI / 2, -roofPitch);
+
+  // base skirt and eave trim band
+  put(new Mesh(new RoundedBoxGeometry(4.9, 0.36, 3.8, 2, 0.06), shadeMaterial), 0, 0.18, 0);
+  put(new Mesh(new RoundedBoxGeometry(4.78, 0.16, 3.68, 2, 0.04), trimMaterial), 0, 2.62, 0);
+
+  // arched door: trim surround, half-round arch, recessed teal leaf
+  put(new Mesh(new RoundedBoxGeometry(1.04, 2.1, 0.14, 2, 0.04), trimMaterial), -1.15, 1.05, 1.78);
+
+  const archGeometry = new CylinderGeometry(0.52, 0.52, 0.14, 24, 1, false, 0, Math.PI);
+
+  archGeometry.rotateX(Math.PI / 2);
+  put(new Mesh(archGeometry, trimMaterial), -1.15, 2.1, 1.78);
+  put(new Mesh(new RoundedBoxGeometry(0.84, 1.9, 0.12, 2, 0.03), doorMaterial), -1.15, 0.95, 1.82);
+
+  // windows: chunky trim frames with warm panes
+  const putWindow = (px: number, py: number, pz: number, ry = 0) => {
+    const frame = new Mesh(new RoundedBoxGeometry(0.72, 0.92, 0.12, 2, 0.03), trimMaterial);
+    const pane = new Mesh(new BoxGeometry(0.5, 0.7, 0.1), paneMaterial);
+
+    put(frame, px, py, pz, ry);
+    pane.position.set(px, py, pz);
+    pane.rotation.y = ry;
+    pane.translateZ(0.03);
+    scene.add(pane);
+  };
+
+  putWindow(0.4, 1.9, 1.78);
+  putWindow(1.35, 1.9, 1.78);
+  putWindow(-0.6, 3.1, 1.4);
+  putWindow(2.9, 1.5, 1.55);
+  putWindow(-1.6, 1.9, -1.78);
+  putWindow(0.9, 1.9, -1.78);
+
+  // chimney stack with a cap, and a small teal vent
+  put(new Mesh(new RoundedBoxGeometry(0.52, 1.3, 0.52, 2, 0.05), shadeMaterial), 1.15, 4.15, -0.7);
+  put(new Mesh(new RoundedBoxGeometry(0.66, 0.14, 0.66, 2, 0.04), slateMaterial), 1.15, 4.85, -0.7);
+  put(new Mesh(new CylinderGeometry(0.12, 0.12, 0.5, 12), trimMaterial), -1.7, 3.1, -0.4);
+
+  // paver disc underfoot: coarse flat cells, faint joints — graphic, not noisy
+  const groundMaterial = new MeshStandardNodeMaterial({ color: new Color('#787d90'), roughness: 0.85 });
+
+  groundMaterial.colorNode = color(new Color('#787d90')).mul(
+    buildPanels(0.55, 0.001, 0.55, 0.07).add(buildGrain(0.02)).add(1).clamp(0.88, 1.1),
+  );
+
+  const disc = new Mesh(new CircleGeometry(9, 48), groundMaterial);
+
+  disc.rotation.x = -Math.PI / 2;
+  disc.position.y = -0.01;
+  scene.add(disc);
+
+  return scene;
+}
+
 function buildPlanScene(): { groups: Array<PlanGroup>; scene: Scene } {
   const scene = new Scene();
 
@@ -2719,6 +2871,37 @@ async function main() {
           NIGHT.bloomThreshold,
           true,
         );
+      },
+    },
+    {
+      key: 'style',
+      name: '9 · Style probe',
+      select: () => {
+        planActive = false;
+        orbitActive = true;
+        orbitTarget.set(0.6, 2, 0);
+        orbitRadius = 12;
+        orbitTheta = 0.35;
+        orbitPhi = 1.25;
+        applyOrbit();
+        updateInfo();
+        renderer.toneMapping = AgXToneMapping;
+
+        // the probe's own post chain: screen-space occlusion is part of the style being judged
+        const scene = buildStyleProbeScene();
+        const scenePass = pass(scene, camera);
+
+        scenePass.setMRT(mrt({ normal: normalView, output }));
+
+        const scenePassColor = scenePass.getTextureNode('output');
+        const aoPass = ao(scenePass.getTextureNode('depth'), scenePass.getTextureNode('normal'), camera);
+        // the AO target is single-channel — broadcast its red channel, don't tint with it
+        const lit = scenePassColor.mul(aoPass.getTextureNode().x);
+        const post = new PostProcessing(renderer);
+
+        post.outputNode = lit.add(bloom(lit, 0.12, 0.4, 0.9));
+
+        return post;
       },
     },
     ...LINEUP_ELEMENTS.map((element) => ({
