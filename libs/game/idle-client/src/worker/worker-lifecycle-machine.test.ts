@@ -37,6 +37,19 @@ function collectBroadcasts(context: StubWorkerContext) {
 }
 
 /**
+ * Waits until the given avatar's resync is the machine's own active request — a requeued held
+ * claim has landed and its invoked service has started, not merely accepted into the ticket.
+ */
+async function waitForActiveResync(context: StubWorkerContext, avatarID: string): Promise<void> {
+  await waitFor(() => {
+    expect(context.getLifecycle().getSnapshot().context.currentRequest).toMatchObject({
+      avatarID,
+      kind: 'resync',
+    });
+  });
+}
+
+/**
  * Seeds the local caches a real start flow needs to mint a fresh row for the given avatar at
  * node `0_0` — the minimal setup `handleStartActivityMessage` needs to occupy the lifecycle
  * queue as a real flow, the way a test can otherwise only fake with an arbitrary body.
@@ -759,4 +772,145 @@ test('it runs a start queued during an in-flight resync before a held claim requ
 
   expect(startIndex).toBeGreaterThan(firstResyncIndex);
   expect(heldClaimIndex).toBeGreaterThan(startIndex);
+});
+
+test('it drops a non-claiming resync arriving while a requeued claim is running', async () => {
+  const gates: Record<string, { readonly promise: Promise<void>; readonly release: () => void }> =
+    {};
+
+  for (const avatarID of ['avatar_a', 'avatar_b']) {
+    let release: (() => void) | undefined;
+
+    const promise = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+
+    gates[avatarID] = { promise, release: () => release?.() };
+  }
+
+  let currentAvatarID = 'avatar_a';
+
+  const context = createStubWorkerContext({
+    submitter: {
+      flushHeld: () => gates[currentAvatarID]!.promise,
+      flushNow: () => Promise.resolve(),
+      registerActivity: () => Promise.resolve(),
+      submit: () => Promise.resolve(undefined),
+      isEvicted: () => false,
+      removeEviction: () => {},
+    },
+  });
+
+  const connection = collectBroadcasts(context);
+  const first = runResyncTurn(context, 'avatar_a', false);
+
+  await waitFor(() => {
+    expect(context.getLifecycle().getSnapshot().value).toBe('resyncing');
+  });
+
+  // held one deep while avatar_a's run is in flight
+  await runResyncTurn(context, 'avatar_b', true);
+
+  currentAvatarID = 'avatar_b';
+
+  gates['avatar_a']!.release();
+
+  // avatar_a settles and the held claim's requeued run is now the active flow — still inside
+  // the coalescing window this requeue reopens
+  await waitForActiveResync(context, 'avatar_b');
+
+  await expect(runResyncTurn(context, 'avatar_c', false)).toResolve();
+
+  gates['avatar_b']!.release();
+
+  await first;
+
+  await connection.waitForMessages(2);
+
+  // avatar_c never reaches a resync status — dropped rather than queued behind avatar_b's
+  // requeued run
+  expect(connection.received).toStrictEqual([
+    {
+      status: { avatarID: 'avatar_a', kind: 'session-expired' },
+      type: WorkerMessageType.ResyncStatus,
+    },
+    {
+      status: { avatarID: 'avatar_b', kind: 'session-expired' },
+      type: WorkerMessageType.ResyncStatus,
+    },
+  ]);
+});
+
+test('it holds a claiming resync arriving while a requeued claim is running', async () => {
+  const gates: Record<string, { readonly promise: Promise<void>; readonly release: () => void }> =
+    {};
+
+  for (const avatarID of ['avatar_a', 'avatar_b', 'avatar_d']) {
+    let release: (() => void) | undefined;
+
+    const promise = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+
+    gates[avatarID] = { promise, release: () => release?.() };
+  }
+
+  let currentAvatarID = 'avatar_a';
+
+  const context = createStubWorkerContext({
+    submitter: {
+      flushHeld: () => gates[currentAvatarID]!.promise,
+      flushNow: () => Promise.resolve(),
+      registerActivity: () => Promise.resolve(),
+      submit: () => Promise.resolve(undefined),
+      isEvicted: () => false,
+      removeEviction: () => {},
+    },
+  });
+
+  const connection = collectBroadcasts(context);
+  const first = runResyncTurn(context, 'avatar_a', false);
+
+  await waitFor(() => {
+    expect(context.getLifecycle().getSnapshot().value).toBe('resyncing');
+  });
+
+  // held one deep while avatar_a's run is in flight
+  await runResyncTurn(context, 'avatar_b', true);
+
+  currentAvatarID = 'avatar_b';
+
+  gates['avatar_a']!.release();
+
+  // avatar_a settles and the held claim's requeued run is now the active flow — still inside
+  // the coalescing window this requeue reopens
+  await waitForActiveResync(context, 'avatar_b');
+
+  // a second claiming resync arrives in that same window — held one deep rather than queued as
+  // its own request, its own caller resolving immediately without waiting on its eventual run
+  await runResyncTurn(context, 'avatar_d', true);
+
+  currentAvatarID = 'avatar_d';
+
+  gates['avatar_b']!.release();
+  gates['avatar_d']!.release();
+
+  await first;
+
+  await connection.waitForMessages(3);
+
+  expect(connection.received).toStrictEqual([
+    {
+      status: { avatarID: 'avatar_a', kind: 'session-expired' },
+      type: WorkerMessageType.ResyncStatus,
+    },
+    {
+      status: { avatarID: 'avatar_b', kind: 'session-expired' },
+      type: WorkerMessageType.ResyncStatus,
+    },
+    {
+      status: { avatarID: 'avatar_d', kind: 'session-expired' },
+      type: WorkerMessageType.ResyncStatus,
+    },
+  ]);
 });

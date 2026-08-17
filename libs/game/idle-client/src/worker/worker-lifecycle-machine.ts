@@ -302,13 +302,32 @@ function applyResyncSettlement(
   }
 }
 
+/**
+ * Pops the next request the resync state's `onDone` transition runs. A requeued held claim keeps
+ * the window open: `resyncTicket` re-arms with no pending claim rather than clearing, since the
+ * requeued run is itself now active or queued and a coalescing decision arriving before it
+ * settles must still see a resync in progress.
+ */
 function buildResyncSettlePop(
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- WorkerLifecycleContext embeds a live xstate ActorRef and AbortController/AbortSignal handles with no further readonly form
   context: WorkerLifecycleContext,
 ): Pick<WorkerLifecycleContext, 'currentRequest' | 'pending' | 'resyncTicket'> {
+  const ticket = context.resyncTicket;
+  const current = context.currentRequest;
+
+  const hasHeldClaim =
+    ticket !== null &&
+    ticket.pendingClaimAvatarID !== null &&
+    current !== null &&
+    current.kind === 'resync';
+
   const pending = foldHeldResyncClaim(context);
 
-  return { currentRequest: pending[0] ?? null, pending: pending.slice(1), resyncTicket: null };
+  return {
+    currentRequest: pending[0] ?? null,
+    pending: pending.slice(1),
+    resyncTicket: hasHeldClaim ? { pendingClaimAvatarID: null } : null,
+  };
 }
 
 async function runStopDelivery(
