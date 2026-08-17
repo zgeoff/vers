@@ -427,6 +427,74 @@ const CODEX_PLINTH_SPIRE: ReadonlyArray<SilhouettePart> = [
   { g: 'cyl', rx: 1.1, sx: 0.55, sy: 0.1, sz: 0.55, x: 0.75, y: 12.4, z: 0.25 },
 ];
 
+/**
+ * The codex hall's mid-scale form pass: cornices on hall and entrance, steps up to the door,
+ * banner fins flanking it, a mounted dish, and an asymmetric annex — accreted growth on a severe
+ * symmetric body.
+ */
+const CODEX_HALL_FORM_PARTS: ReadonlyArray<SilhouettePart> = [
+  { g: 'box', sx: 8, sy: 3.6, sz: 4.5, x: 0, y: 1.8, z: 0 },
+  { g: 'box', sx: 3, sy: 5, sz: 4.8, x: 0, y: 2.5, z: 0.2 },
+  { g: 'box', sx: 0.35, sy: 3.2, sz: 0.5, x: -3.3, y: 1.6, z: 2.3 },
+  { g: 'box', sx: 0.35, sy: 3.2, sz: 0.5, x: -2.2, y: 1.6, z: 2.3 },
+  { g: 'box', sx: 0.35, sy: 3.2, sz: 0.5, x: 2.2, y: 1.6, z: 2.3 },
+  { g: 'box', sx: 0.35, sy: 3.2, sz: 0.5, x: 3.3, y: 1.6, z: 2.3 },
+  { g: 'box', sx: 0.1, sy: 1.8, sz: 0.1, x: 0.9, y: 5.9, z: 0 },
+  { g: 'cyl', rx: 1.1, sx: 0.7, sy: 0.1, sz: 0.7, x: -0.9, y: 5.6, z: 0.2 },
+  { g: 'box', sx: 0.5, sy: 0.6, sz: 0.5, x: -0.9, y: 5.25, z: 0.2 },
+  { g: 'box', sx: 8.3, sy: 0.4, sz: 4.8, x: 0, y: 3.8, z: 0 },
+  { g: 'box', sx: 3.3, sy: 0.4, sz: 5.1, x: 0, y: 5.15, z: 0.2 },
+  { g: 'box', sx: 3.4, sy: 0.35, sz: 1, x: 0, y: 0.17, z: 2.9 },
+  { g: 'box', sx: 2.8, sy: 0.7, sz: 0.6, x: 0, y: 0.35, z: 2.6 },
+  { g: 'box', sx: 0.18, sy: 2.2, sz: 0.7, x: -1.35, y: 3.4, z: 2.5 },
+  { g: 'box', sx: 0.18, sy: 2.2, sz: 0.7, x: 1.35, y: 3.4, z: 2.5 },
+  { g: 'box', sx: 2, sy: 2.2, sz: 3, x: 4.9, y: 1.1, z: -0.4 },
+];
+
+/**
+ * The gate's mid-scale form pass, in the worn-slab register: strata courses and etched grooves on
+ * the wall faces, an under-lintel, a threshold slab, and broken stubs of an older gate flanking
+ * the opening.
+ */
+const GATE_FORM_PARTS: ReadonlyArray<SilhouettePart> = [
+  { g: 'box', sx: 4.4, sy: 1.4, sz: 2.2, x: -3.9, y: 0.7, z: 0 },
+  { g: 'box', sx: 4.4, sy: 1.4, sz: 2.2, x: 3.9, y: 0.7, z: 0 },
+  { g: 'box', sx: 3.6, sy: 4.6, sz: 1.8, x: -3.7, y: 3.7, z: 0 },
+  { g: 'box', sx: 3.6, sy: 4.6, sz: 1.8, x: 3.7, y: 3.7, z: 0 },
+  { g: 'box', sx: 11, sy: 1.4, sz: 1.8, x: 0, y: 6.7, z: 0 },
+  { g: 'box', sx: 9.6, sy: 0.5, sz: 1.5, x: 0, y: 5.95, z: 0.1 },
+  { g: 'box', sx: 1.6, sy: 1, sz: 1.2, x: 0, y: 7.9, z: 0 },
+  { g: 'box', sx: 0.1, sy: 1.5, sz: 0.1, x: -4.9, y: 8, z: 0 },
+  { g: 'box', sx: 0.1, sy: 1.5, sz: 0.1, x: 4.9, y: 8, z: 0 },
+  { g: 'box', sx: 3.3, sy: 0.5, sz: 0.16, x: -3.7, y: 2.2, z: 0.95 },
+  { g: 'box', sx: 3.3, sy: 0.5, sz: 0.16, x: 3.7, y: 2.2, z: 0.95 },
+  { g: 'box', sx: 3.1, sy: 0.4, sz: 0.13, x: -3.7, y: 4.1, z: 0.93 },
+  { g: 'box', sx: 3.1, sy: 0.4, sz: 0.13, x: 3.7, y: 4.1, z: 0.93 },
+  { g: 'box', sx: 0.18, sy: 3.2, sz: 0.1, x: -3, y: 3.4, z: 0.96 },
+  { g: 'box', sx: 0.18, sy: 3, sz: 0.1, x: -4.4, y: 3.2, z: 0.96 },
+  { g: 'box', sx: 0.18, sy: 3.2, sz: 0.1, x: 3.1, y: 3.5, z: 0.96 },
+  { g: 'box', sx: 0.18, sy: 2.8, sz: 0.1, x: 4.3, y: 3.1, z: 0.96 },
+  { g: 'box', sx: 4.2, sy: 0.3, sz: 2.6, x: 0, y: 0.15, z: 0.6 },
+  { g: 'box', sx: 0.9, sy: 1.6, sz: 0.9, x: -6.3, y: 0.8, z: 1.4 },
+  { g: 'box', sx: 0.9, sy: 1.1, sz: 0.9, x: 6.2, y: 0.55, z: 1.2 },
+];
+
+/**
+ * The fountain's mid-scale form pass: a rim lip on the basin, four radial spout stubs, and a
+ * band on the hub the instrument light sits over.
+ */
+const FOUNTAIN_FORM_PARTS: ReadonlyArray<SilhouettePart> = [
+  { g: 'cyl', sx: 2, sy: 0.45, sz: 2, x: 0, y: 0.22, z: 0 },
+  { g: 'cyl', sx: 1.35, sy: 0.4, sz: 1.35, x: 0, y: 0.62, z: 0 },
+  { g: 'cyl', sx: 0.5, sy: 0.85, sz: 0.5, x: 0, y: 1.05, z: 0 },
+  { g: 'cyl', sx: 2.15, sy: 0.16, sz: 2.15, x: 0, y: 0.5, z: 0 },
+  { g: 'box', sx: 0.25, sy: 0.3, sz: 0.6, x: 1.35, y: 0.72, z: 0 },
+  { g: 'box', sx: 0.25, sy: 0.3, sz: 0.6, x: -1.35, y: 0.72, z: 0 },
+  { g: 'box', sx: 0.6, sy: 0.3, sz: 0.25, x: 0, y: 0.72, z: 1.35 },
+  { g: 'box', sx: 0.6, sy: 0.3, sz: 0.25, x: 0, y: 0.72, z: -1.35 },
+  { g: 'cyl', sx: 0.62, sy: 0.2, sz: 0.62, x: 0, y: 1.32, z: 0 },
+];
+
 /** Codex pick — archive stack: offset slabs piled on a heavy plinth, like bound records. */
 const CODEX_ARCHIVE_STACK: ReadonlyArray<SilhouettePart> = [
   { g: 'box', sx: 7, sy: 2.5, sz: 5.5, x: 0, y: 1.25, z: 0 },
@@ -438,6 +506,34 @@ const CODEX_ARCHIVE_STACK: ReadonlyArray<SilhouettePart> = [
   { g: 'box', sx: 3.2, sy: 1.3, sz: 3.1, x: -0.15, y: 9.65, z: 0 },
   { g: 'box', sx: 2.6, sy: 0.2, sz: 0.2, x: 0, y: 10.6, z: 0 },
   { g: 'box', sx: 0.1, sy: 1.6, sz: 0.1, x: 0, y: 11.2, z: 0 },
+];
+
+/** The plaza fountain as a part set, so the plan editor can move it like any other element. */
+const FOUNTAIN_PARTS: ReadonlyArray<SilhouettePart> = [
+  { g: 'cyl', sx: 2, sy: 0.45, sz: 2, x: 0, y: 0.22, z: 0 },
+  { g: 'cyl', sx: 1.35, sy: 0.4, sz: 1.35, x: 0, y: 0.62, z: 0 },
+  { g: 'cyl', sx: 0.5, sy: 0.85, sz: 0.5, x: 0, y: 1.05, z: 0 },
+];
+
+/**
+ * The stash's mid-scale form pass: the asymmetric drums gain collar bands, a connecting pipe run,
+ * a surface pipe with a valve wheel, a door frame toward the plaza, and a maintenance ladder.
+ */
+const STASH_FORM_PARTS: ReadonlyArray<SilhouettePart> = [
+  { g: 'cyl', sx: 2.6, sy: 3.2, sz: 2.6, x: -1.4, y: 1.6, z: 0 },
+  { g: 'cyl', sx: 1.7, sy: 2.3, sz: 1.7, x: 2.6, y: 1.15, z: 0 },
+  { g: 'box', sx: 3.4, sy: 1.4, sz: 3, x: 0.6, y: 0.7, z: 0 },
+  { g: 'box', sx: 1.1, sy: 0.5, sz: 1.1, x: -1.4, y: 3.45, z: 0 },
+  { g: 'box', sx: 0.8, sy: 0.4, sz: 0.8, x: 2.6, y: 2.5, z: 0 },
+  { g: 'box', sx: 0.15, sy: 1.1, sz: 0.15, x: 0.6, y: 1.9, z: 0 },
+  { g: 'cyl', sx: 2.7, sy: 0.32, sz: 2.7, x: -1.4, y: 2.85, z: 0 },
+  { g: 'cyl', sx: 2.7, sy: 0.28, sz: 2.7, x: -1.4, y: 0.35, z: 0 },
+  { g: 'cyl', sx: 1.78, sy: 0.26, sz: 1.78, x: 2.6, y: 1.85, z: 0 },
+  { g: 'box', sx: 2.4, sy: 0.22, sz: 0.22, x: 0.6, y: 2.35, z: 0.3 },
+  { g: 'box', sx: 0.2, sy: 2.8, sz: 0.2, x: -3.95, y: 1.4, z: 0 },
+  { g: 'cyl', rz: 1.5708, sx: 0.35, sy: 0.12, sz: 0.35, x: -4.15, y: 1.7, z: 0 },
+  { g: 'box', sx: 1.2, sy: 1.6, sz: 0.2, x: -1.4, y: 0.85, z: 2.52 },
+  { g: 'box', sx: 0.35, sy: 2.2, sz: 0.08, x: 2.6, y: 1.1, z: 1.72 },
 ];
 
 /** Codex non-tower A — archive hall: long severe symmetric hall, finned facade, roof instruments. */
@@ -506,9 +602,41 @@ const LINEUP_ELEMENTS: ReadonlyArray<LineupElement> = [
     camZ: 26,
     key: 'lineup-market-form',
     lookY: 2.8,
-    name: 'S · market form',
+    name: 'S · market',
     spacing: 18,
     candidates: [MARKET_PARTS, MARKET_FORM_PARTS],
+  },
+  {
+    camZ: 27,
+    key: 'lineup-stash-form',
+    lookY: 2.2,
+    name: 'S · stash',
+    spacing: 12,
+    candidates: [STASH_DOUBLE_DRUM, STASH_FORM_PARTS],
+  },
+  {
+    camZ: 24,
+    key: 'lineup-codex-form',
+    lookY: 3,
+    name: 'S · codex',
+    spacing: 14,
+    candidates: [CODEX_ARCHIVE_HALL, CODEX_HALL_FORM_PARTS],
+  },
+  {
+    camZ: 24,
+    key: 'lineup-gate-form',
+    lookY: 4,
+    name: 'S · gate',
+    spacing: 16,
+    candidates: [GATE_BASTION_SLOT, GATE_FORM_PARTS],
+  },
+  {
+    camZ: 13,
+    key: 'lineup-fountain-form',
+    lookY: 1,
+    name: 'S · fountain',
+    spacing: 7,
+    candidates: [FOUNTAIN_PARTS, FOUNTAIN_FORM_PARTS],
   },
 ];
 
@@ -590,24 +718,17 @@ interface AssemblyPlacement {
   z: number;
 }
 
-/** The plaza fountain as a part set, so the plan editor can move it like any other element. */
-const FOUNTAIN_PARTS: ReadonlyArray<SilhouettePart> = [
-  { g: 'cyl', sx: 2, sy: 0.45, sz: 2, x: 0, y: 0.22, z: 0 },
-  { g: 'cyl', sx: 1.35, sy: 0.4, sz: 1.35, x: 0, y: 0.62, z: 0 },
-  { g: 'cyl', sx: 0.5, sy: 0.85, sz: 0.5, x: 0, y: 1.05, z: 0 },
-];
-
 /**
  * The live layout: each element's part set at its plaza anchor. Yaw turns each set's authored
  * front (+z) toward the plaza. Mutated by the plan editor; the assembly view rebuilds from it.
  */
 const placements: Array<AssemblyPlacement> = [
   { key: 'market', parts: MARKET_FORM_PARTS, ry: 1.631, x: -14.3, z: 2.2 },
-  { key: 'stash', parts: STASH_DOUBLE_DRUM, ry: -2.079, x: -12.7, z: -10.6 },
-  { key: 'codex', litAllBoxes: true, parts: CODEX_ARCHIVE_HALL, ry: 0.06, x: -4.6, z: -14.7 },
-  { key: 'gate', noWindows: true, parts: GATE_BASTION_SLOT, ry: 0.05, x: 5.9, z: -16.4 },
+  { key: 'stash', parts: STASH_FORM_PARTS, ry: -2.079, x: -12.7, z: -10.6 },
+  { key: 'codex', litAllBoxes: true, parts: CODEX_HALL_FORM_PARTS, ry: 0.06, x: -4.6, z: -14.7 },
+  { key: 'gate', noWindows: true, parts: GATE_FORM_PARTS, ry: 0.05, x: 5.9, z: -16.4 },
   { key: 'avatar', parts: AVATAR_PARTS, ry: -1.451, x: 16.1, z: -5.3 },
-  { key: 'fountain', noWindows: true, parts: FOUNTAIN_PARTS, ry: 0, x: -3.9, z: 0.7 },
+  { key: 'fountain', noWindows: true, parts: FOUNTAIN_FORM_PARTS, ry: 0, x: -3.9, z: 0.7 },
 ];
 
 interface Footprint {
