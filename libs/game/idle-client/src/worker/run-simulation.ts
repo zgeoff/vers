@@ -1,9 +1,9 @@
 import type { Simulation } from '@vers/idle-core';
 import { ActivityCheckpointType } from '@vers/idle-core';
 import { WorkerMessageType } from '../types';
+import { buildDeferred } from './build-deferred';
 import { OFFLINE_CAP_WARNING_MS } from './offline-cap-warning-ms';
 import { pickPostTerminalAction } from './pick-post-terminal-action';
-import { runContinuation } from './run-continuation';
 import type { WorkerContext } from './types';
 
 /**
@@ -83,9 +83,11 @@ export async function runSimulation(
     return;
   }
 
-  await context
-    .getMailbox()
-    .runTurn('continuation', () => runContinuation(context, simulation, activity));
+  const deferred = buildDeferred<void>();
+
+  context.getLifecycle().send({ activity, deferred, simulation, type: 'CONTINUATION' });
+
+  await deferred.promise;
 }
 
 function emitActivityCompleted(context: WorkerContext, activityID: string) {

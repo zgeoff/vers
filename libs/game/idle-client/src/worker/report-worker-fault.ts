@@ -11,6 +11,7 @@ export type WorkerFaultSite =
   | 'reconnect'
   | 'resync'
   | 'start'
+  | 'stop'
   | 'tick-loop';
 
 /**

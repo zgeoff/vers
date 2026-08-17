@@ -5,6 +5,8 @@ import { OFFLINE_PROGRESS_CAP_MS } from '@vers/contract-activity';
 import type { Simulation } from '@vers/idle-core';
 import { ActivityFailureAction, SIMULATION_TIMESTEP_MS, createSimulation } from '@vers/idle-core';
 import invariant from 'tiny-invariant';
+import type { ActorRefFromLogic } from 'xstate';
+import { createActor } from 'xstate';
 import { createActivityServiceClient } from '../submission/create-activity-service-client';
 import { createCheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import { ingestStartRow } from '../submission/ingest-start-row';
@@ -13,15 +15,13 @@ import type { ActivityServiceClient } from '../submission/types';
 import { WORKER_TO_CLIENT_CHANNEL } from '../transport/constants';
 import { WorkerMessageType } from '../types';
 import type { RewardSlotLedgerEntry } from '../types';
-import { applyEviction } from './apply-eviction';
 import { BUNDLED_ENGINE_HASH } from './bundled-engine-hash';
-import { createLifecycleMailbox } from './create-lifecycle-mailbox';
 import { createWorkerRouter } from './create-worker-router';
 import { registerSimulationListeners } from './register-simulation-listeners';
 import { reportWorkerFault } from './report-worker-fault';
-import { runReconnectRecovery } from './run-reconnect-recovery';
 import { runSimulation } from './run-simulation';
 import type { WorkerCallContext, WorkerContext } from './types';
+import { workerLifecycleMachine } from './worker-lifecycle-machine';
 import type { WorkerMessage } from './worker-to-client-message-schema';
 
 export interface WorkerRuntime {
@@ -91,15 +91,7 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
   let failureActionDirty = false;
   let failureActionPushInFlight = false;
 
-  // the cancel composite is rebuilt once per stop scope, never per read — each `AbortSignal.any`
-  // registers a dependent on the long-lived shutdown signal that only collects with it
   const shutdownController = new AbortController();
-  let stopController = new AbortController();
-
-  let cancelSignal = AbortSignal.any([stopController.signal, shutdownController.signal]);
-  let startToken: null | string = null;
-  const mailbox = createLifecycleMailbox();
-  let writerDisplacedActivityID: null | string = null;
 
   // Online until proven otherwise: a fresh worker's first ack must not read as a reconnect, or
   // every boot would fire a spurious recovery.
@@ -141,82 +133,23 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
     connectivityOnline = online;
   };
 
-  const submitter = createCheckpointSubmitter({
-    client,
-    ingestRoot: (activityID) => ingestStartRow(client, activityID),
-    onAcked: () => {
-      lastAckAt = Date.now();
-    },
-    onCapped: () => {
-      broadcast({ halted: true, remainingMs: 0, type: WorkerMessageType.OfflineCapStatus });
-    },
-
-    // Deferred to a lifecycle turn rather than acted on inline: the callback fires from inside a
-    // flush at an arbitrary point, and clearing the simulation mid-install would race the
-    // lifecycle flow that owns it.
-    onEvicted: (activityID) => {
-      void context.getMailbox().runTurn('eviction', () => {
-        applyEviction(context, activityID);
-
-        return Promise.resolve();
-      });
-    },
-    onHeld: () => {
-      updateConnectivity(false);
-    },
-
-    // The submitter's backoff retries double as a reconnect probe: the first answer after an
-    // outage — an ack or a stream-ending rejection, which may be the activity's last traffic —
-    // flips the tracked state and recovers without waiting on any tab event.
-    onServerContact: () => {
-      if (connectivityOnline) {
-        return;
-      }
-
-      updateConnectivity(true);
-      scheduleReconnectRecovery();
-    },
-    onFlushStalled: (activityID, reason, traceID) => {
-      reportWorkerFault(
-        'checkpoint-flush',
-        new Error(`checkpoint flush stalled for activity ${activityID}: ${reason}`),
-        { traceID },
-      );
-    },
-    onRetryFailed: (activityID, error) => {
-      reportWorkerFault(
-        'checkpoint-flush',
-        new Error(`checkpoint retry loop failed for activity ${activityID}`, { cause: error }),
-      );
-    },
-    onInvalid: (activityID, reason, traceID) => {
-      const tags = traceID === undefined ? undefined : { traceID };
-
-      reportWorkerFault(
-        'checkpoint-stream',
-        new Error(`checkpoint stream rejected for activity ${activityID}: ${reason}`),
-        tags,
-      );
-
-      broadcast({ activityID, type: WorkerMessageType.CheckpointStreamInvalid });
-    },
-    signal: shutdownController.signal,
-  });
+  // `context`'s accessors below close over these before their own `const` declarations run,
+  // safe only because nothing calls either accessor until after both are assigned further down
+  const getLifecycle = (): ActorRefFromLogic<typeof workerLifecycleMachine> => lifecycleActor;
+  const getSubmitter = (): ReturnType<typeof createCheckpointSubmitter> => submitter;
 
   const context: WorkerContext = {
     advanceStopScope: () => {
-      stopController.abort();
-
-      stopController = new AbortController();
-
-      cancelSignal = AbortSignal.any([stopController.signal, shutdownController.signal]);
+      getLifecycle().send({ type: 'ADVANCE_STOP_SCOPE' });
     },
     broadcast,
     getActivity: () => activity,
     getBundledEngineHash: () => options.bundledEngineHash ?? BUNDLED_ENGINE_HASH,
-    getCancelSignal: () => cancelSignal,
+    getCancelSignal: () => getLifecycle().getSnapshot().context.cancelSignal,
     getClient: () => client,
+    getConnectivityOnline: () => connectivityOnline,
     getFailureAction: () => failureAction,
+    getLifecycle,
     getRemainingBudgetMs: () => OFFLINE_PROGRESS_CAP_MS - (Date.now() - lastAckAt),
     getResyncAvatarID: () => resyncAvatarID,
     getRewardSlotLedger: () => ({
@@ -224,11 +157,11 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
       entries: rewardSlotLedger,
     }),
     getSimulation: () => simulation,
-    getMailbox: () => mailbox,
-    getStartToken: () => startToken,
-    getStopSignal: () => stopController.signal,
-    getSubmitter: () => submitter,
-    getWriterDisplacedActivityID: () => writerDisplacedActivityID,
+    getStartToken: () => getLifecycle().getSnapshot().context.startToken,
+    getStopSignal: () => getLifecycle().getSnapshot().context.stopController.signal,
+    getSubmitter,
+    getWriterDisplacedActivityID: () =>
+      getLifecycle().getSnapshot().context.writerDisplacedActivityID,
     isFailureActionDirty: () => failureActionDirty,
     isFailureActionPushInFlight: () => failureActionPushInFlight,
     recordRewardSlots: (activityID, entry) => {
@@ -257,41 +190,87 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
     setFailureActionPushInFlight: (inFlight) => {
       failureActionPushInFlight = inFlight;
     },
+    setLastAckAt: (timestamp) => {
+      lastAckAt = timestamp;
+    },
     setResyncAvatarID: (avatarID) => {
       resyncAvatarID = avatarID;
-    },
-    setStartToken: (token) => {
-      startToken = token;
     },
     setSimulation: (newSimulation) => {
       simulation = newSimulation;
     },
+    setStartToken: (token) => {
+      getLifecycle().send({ token, type: 'SET_START_TOKEN' });
+    },
     setWriterDisplacedActivityID: (activityID) => {
-      writerDisplacedActivityID = activityID;
+      getLifecycle().send({ activityID, type: 'SET_WRITER_DISPLACED' });
     },
     updateConnectivity,
   };
+
+  const lifecycleActor = createActor(workerLifecycleMachine, {
+    input: { failureActionSeeded, runtime: context, shutdownSignal: shutdownController.signal },
+  }).start();
+
+  const submitter = createCheckpointSubmitter({
+    actor: lifecycleActor.getSnapshot().context.submitterRef,
+    client,
+    ingestRoot: (activityID) => ingestStartRow(client, activityID),
+    onAcked: () => {
+      getLifecycle().send({ type: 'SUBMITTER_ACKED' });
+    },
+    onCapped: () => {
+      getLifecycle().send({ type: 'SUBMITTER_CAPPED' });
+    },
+
+    // Deferred to a lifecycle turn rather than acted on inline: the callback fires from inside a
+    // flush at an arbitrary point, and clearing the simulation mid-install would race the
+    // lifecycle flow that owns it.
+    onEvicted: (activityID) => {
+      getLifecycle().send({ activityID, type: 'SUBMITTER_EVICTED' });
+    },
+    onHeld: () => {
+      getLifecycle().send({ type: 'SUBMITTER_HELD' });
+    },
+
+    // The submitter's backoff retries double as a reconnect probe: the first answer after an
+    // outage — an ack or a stream-ending rejection, which may be the activity's last traffic —
+    // flips the tracked state and recovers without waiting on any tab event.
+    onServerContact: () => {
+      getLifecycle().send({ type: 'SUBMITTER_SERVER_CONTACT' });
+    },
+    onFlushStalled: (activityID, reason, traceID) => {
+      reportWorkerFault(
+        'checkpoint-flush',
+        new Error(`checkpoint flush stalled for activity ${activityID}: ${reason}`),
+        { traceID },
+      );
+    },
+    onRetryFailed: (activityID, error) => {
+      reportWorkerFault(
+        'checkpoint-flush',
+        new Error(`checkpoint retry loop failed for activity ${activityID}`, { cause: error }),
+      );
+    },
+    onInvalid: (activityID, reason, traceID) => {
+      const tags = traceID === undefined ? undefined : { traceID };
+
+      reportWorkerFault(
+        'checkpoint-stream',
+        new Error(`checkpoint stream rejected for activity ${activityID}: ${reason}`),
+        tags,
+      );
+
+      broadcast({ activityID, type: WorkerMessageType.CheckpointStreamInvalid });
+    },
+    signal: shutdownController.signal,
+  });
 
   registerSimulationListeners(context, simulation);
 
   const router = createWorkerRouter(context, failureActionSeeded);
 
   const handler = new RPCHandler(router);
-
-  // Fire-and-forget so event callbacks stay synchronous; the preference seed gates every
-  // recovery so a relaunch-while-offline never plans against the enum default. The submitter's
-  // server-contact callback closes over this before it exists — safe only because the submitter
-  // fires no callbacks during construction, before this declaration runs.
-  const scheduleReconnectRecovery = () => {
-    void (async () => {
-      try {
-        await failureActionSeeded;
-        await runReconnectRecovery(context);
-      } catch (error) {
-        reportWorkerFault('reconnect', error);
-      }
-    })();
-  };
 
   const upgrade = (port: SupportedMessagePort, callContext: WorkerCallContext) => {
     handler.upgrade(port, { context: callContext });
@@ -352,12 +331,11 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
   // The platform's own reconnect trigger where online events reach workers; Chromium never
   // delivers them here, so tabs relay theirs as messages into the same recovery.
   const handleOnline = () => {
-    updateConnectivity(true);
-    scheduleReconnectRecovery();
+    getLifecycle().send({ type: 'ONLINE' });
   };
 
   const handleOffline = () => {
-    updateConnectivity(false);
+    getLifecycle().send({ type: 'OFFLINE' });
   };
 
   self.addEventListener('online', handleOnline);
@@ -366,6 +344,10 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
   const stop = () => {
     stopped = true;
 
+    // the lifecycle actor itself keeps running rather than stopping here: a flow already queued
+    // behind an in-flight one must still get its turn and answer through its own entry check,
+    // which observes the now-permanently-aborted cancel signal and fails cleanly — stopping the
+    // actor would instead strand that queued flow's caller awaiting a deferred nothing settles
     shutdownController.abort();
     self.removeEventListener('online', handleOnline);
     self.removeEventListener('offline', handleOffline);

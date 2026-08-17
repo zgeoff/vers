@@ -213,7 +213,7 @@
           { "from": "package", "name": "Collection", "package": "@msw/data" },
           // a live actor handle: subscription and mailbox state xstate mutates internally, no
           // readonly form
-          { "from": "package", "name": "ActorRef", "package": "xstate" },
+          { "from": "package", "name": ["ActorRef", "ActorRefFromLogic"], "package": "xstate" },
           // an actor clock handle: its setTimeout/clearTimeout methods are behaviour, not data
           { "from": "package", "name": "Clock", "package": "xstate" },
           // a live IndexedDB handle: createObjectStore/transaction mutate it, no readonly form
@@ -253,7 +253,10 @@
               // genuinely immutable, but its members are method signatures, which the
               // rule's default settings treat as mutable (typescript-eslint#8013)
               "ReadonlySet",
-              "ReadonlyMap"
+              "ReadonlyMap",
+              // settles exactly once and exposes only method signatures — the same
+              // typescript-eslint#8013 limitation as ReadonlySet/ReadonlyMap above
+              "Promise"
             ]
           },
           // zustand's own generic callback type; it has no readonly form

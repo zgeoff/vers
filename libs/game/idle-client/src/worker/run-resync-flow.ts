@@ -35,11 +35,13 @@ import { updateWriterDisplacedStatus } from './update-writer-displaced-status';
 import type { ResyncStatus } from './worker-to-client-message-schema';
 
 /**
- * Runs one resync end to end — the mailbox-inner body. The reconnect recovery queues it as a
- * turn; the start flow and continuations call it directly from inside their own turns, where
- * queueing would deadlock. Every install re-checks `signals.stop`, the caller's entry-captured
- * stop signal, so a stop raised after the caller began — including during a queue wait — aborts
- * the install; the cancel composite additionally cancels in-flight reads on a worker shutdown.
+ * Runs one resync end to end — the data-plane body a public entry point reaches only through the
+ * lifecycle actor's queue. A resync a continuation's own recovery needs mid-flow calls this
+ * directly instead, as an inner sub-flow running within that flow's own active turn — never as a
+ * new event, which would wait behind the very turn it's running inside of. Every install
+ * re-checks `signals.stop`, the caller's entry-captured stop signal, so a stop raised after the
+ * caller began — including during a queue wait — aborts the install; the cancel composite
+ * additionally cancels in-flight reads on a worker shutdown.
  *
  * Only a plan covering a real away period broadcasts a `ResyncStatus` progression ending on
  * `done` or `capped`, so a tab's welcome-back UI always resolves. Zero-gap outcomes stay silent,

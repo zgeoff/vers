@@ -1,7 +1,7 @@
 import type { ActivityCheckpoint } from '@vers/idle-core';
 import { ActivityCheckpointType } from '@vers/idle-core';
 import invariant from 'tiny-invariant';
-import type { ActorOptions, AnyActorLogic } from 'xstate';
+import type { ActorOptions, ActorRefFromLogic, AnyActorLogic } from 'xstate';
 import { createActor, waitFor } from 'xstate';
 import { buildCheckpointBatchEntry } from './build-checkpoint-batch-entry';
 import type { CheckpointActivityChildRef } from './checkpoint-submitter-machine';
@@ -76,6 +76,13 @@ export interface CheckpointSubmitter {
 }
 
 interface CreateCheckpointSubmitterOptions {
+  /**
+   * A running `checkpointSubmitterMachine` actor to adopt instead of starting a new one — the
+   * lifecycle machine's own spawned child, so the submitter shares its actor system and clock.
+   * Omitted by every standalone caller, which gets its own actor exactly as before.
+   */
+  readonly actor?: ActorRefFromLogic<typeof checkpointSubmitterMachine>;
+
   readonly client: Pick<ActivityServiceClient, 'trackActivityProgress'>;
 
   /**
@@ -222,7 +229,9 @@ export function createCheckpointSubmitter(
   // an options object carrying `clock: undefined` clobbers the actor system's default clock, so
   // the option is only forwarded when a caller actually injected one
   const actorOptions = options.clock === undefined ? undefined : { clock: options.clock };
-  const parentActor = createActor(checkpointSubmitterMachine, actorOptions).start();
+
+  const parentActor =
+    options.actor ?? createActor(checkpointSubmitterMachine, actorOptions).start();
 
   const retryTimings = {
     maxTimeout: RETRY_BACKOFF_CAP_MS,
