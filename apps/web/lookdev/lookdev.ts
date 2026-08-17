@@ -627,8 +627,8 @@ interface AssemblyPlacement {
  */
 const ASSEMBLY: ReadonlyArray<AssemblyPlacement> = [
   { parts: MARKET_PARTS, ry: HALF_PI + 0.16, x: -14.5, z: -1.6 },
-  { parts: STASH_DOUBLE_DRUM, ry: HALF_PI, x: -13.8, z: -11.8 },
-  { litAllBoxes: true, parts: CODEX_ARCHIVE_STACK, ry: 0.06, x: -2, z: -14.5 },
+  { parts: STASH_DOUBLE_DRUM, ry: HALF_PI - 0.55, x: -11.9, z: -11.8 },
+  { litAllBoxes: true, parts: CODEX_ARCHIVE_HALL, ry: 0.06, x: -2, z: -14.5 },
   { parts: GATE_BASTION_SLOT, ry: 0, x: 6.2, z: -14.2 },
   { parts: AVATAR_PARTS, ry: -HALF_PI - 0.13, x: 14.6, z: -4 },
 ];
