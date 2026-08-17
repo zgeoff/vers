@@ -3,6 +3,7 @@ import type { ActivityFailureAction, Simulation } from '@vers/idle-core';
 import type { CheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import type { ActivityServiceClient } from '../submission/types';
 import type { RewardSlotLedgerEntry, RewardSlotLedgerSnapshot } from '../types';
+import type { LifecycleMailbox } from './create-lifecycle-mailbox';
 import type { WorkerMessage } from './worker-to-client-message-schema';
 
 /**
@@ -89,11 +90,13 @@ export interface WorkerContext {
   readonly getSimulation: () => Simulation;
 
   /**
-   * The lifecycle mailbox's tail. Starts, resyncs, and continuations queue behind it and run one
-   * at a time — interleaved, a stale flow could stop a row a fresher one just attached. Stops
-   * stay concurrent; they advance the stop scope queued flows re-check.
+   * The single owner of lifecycle serialization: starts, resyncs, and continuations run strictly
+   * one at a time through it — interleaved, a stale flow could stop a row a fresher one just
+   * attached. It also coalesces resyncs, dropping a non-claiming call while one is queued or
+   * running and holding at most one claiming call, latest wins. Stops stay concurrent — they
+   * advance the stop scope a queued flow re-checks — and never queue.
    */
-  readonly getLifecycleTail: () => Readonly<Promise<void>>;
+  readonly getMailbox: () => LifecycleMailbox;
 
   /**
    * The most recent start call's token, minted fresh by the worker on every `startActivity` call —
@@ -101,13 +104,6 @@ export interface WorkerContext {
    * install, leaving any row it minted for the fresher flow's own recovery.
    */
   readonly getStartToken: () => null | string;
-
-  /**
-   * The avatar of the claiming resync that arrived while another resync was in flight, held so it
-   * runs once the in-flight one settles — dropping it would swallow a deliberate take-over (the
-   * player's continue action) behind an automatic resync. `null` when none is held.
-   */
-  readonly getQueuedClaimResync: () => null | string;
 
   /**
    * The composite of the current stop scope's signal and the runtime-lifetime shutdown signal,
@@ -146,12 +142,6 @@ export interface WorkerContext {
   readonly isFailureActionPushInFlight: () => boolean;
 
   /**
-   * Whether a resync is currently running — the orchestrator's single-flight guard; a request
-   * that arrives while one is in flight is dropped rather than queued.
-   */
-  readonly isResyncInFlight: () => boolean;
-
-  /**
    * Appends one checkpoint's reward-slot count to the retained ledger, resetting it first when the
    * activity differs from the one the retained entries belong to.
    */
@@ -161,10 +151,7 @@ export interface WorkerContext {
   readonly setFailureAction: (action: ActivityFailureAction) => void;
   readonly setFailureActionDirty: (dirty: boolean) => void;
   readonly setFailureActionPushInFlight: (inFlight: boolean) => void;
-  readonly setQueuedClaimResync: (avatarID: null | string) => void;
   readonly setResyncAvatarID: (avatarID: null | string) => void;
-  readonly setResyncInFlight: (inFlight: boolean) => void;
-  readonly setLifecycleTail: (flow: Readonly<Promise<void>>) => void;
   readonly setStartToken: (token: string) => void;
   readonly setSimulation: (simulation: Simulation) => void;
   readonly setWriterDisplacedActivityID: (activityID: null | string) => void;

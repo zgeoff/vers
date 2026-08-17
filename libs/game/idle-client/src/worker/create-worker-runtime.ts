@@ -15,13 +15,13 @@ import { WorkerMessageType } from '../types';
 import type { RewardSlotLedgerEntry } from '../types';
 import { applyEviction } from './apply-eviction';
 import { BUNDLED_ENGINE_HASH } from './bundled-engine-hash';
+import { createLifecycleMailbox } from './create-lifecycle-mailbox';
 import { createWorkerRouter } from './create-worker-router';
 import { registerSimulationListeners } from './register-simulation-listeners';
 import { reportWorkerFault } from './report-worker-fault';
 import { runReconnectRecovery } from './run-reconnect-recovery';
 import { runSimulation } from './run-simulation';
 import type { WorkerCallContext, WorkerContext } from './types';
-import { withLifecycleTurn } from './with-lifecycle-turn';
 import type { WorkerMessage } from './worker-to-client-message-schema';
 
 export interface WorkerRuntime {
@@ -87,7 +87,6 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
   let lastFrameTime = now();
   let accumulator = 0;
   let resyncAvatarID: string | null = null;
-  let resyncInFlight = false;
   let failureAction: ActivityFailureAction = ActivityFailureAction.Abort;
   let failureActionDirty = false;
   let failureActionPushInFlight = false;
@@ -99,8 +98,7 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
 
   let cancelSignal = AbortSignal.any([stopController.signal, shutdownController.signal]);
   let startToken: null | string = null;
-  let lifecycleTail: Readonly<Promise<void>> = Promise.resolve();
-  let queuedClaimResync: null | string = null;
+  const mailbox = createLifecycleMailbox();
   let writerDisplacedActivityID: null | string = null;
 
   // Online until proven otherwise: a fresh worker's first ack must not read as a reconnect, or
@@ -157,7 +155,7 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
     // flush at an arbitrary point, and clearing the simulation mid-install would race the
     // lifecycle flow that owns it.
     onEvicted: (activityID) => {
-      void withLifecycleTurn(context, 'eviction', () => {
+      void context.getMailbox().runTurn('eviction', () => {
         applyEviction(context, activityID);
 
         return Promise.resolve();
@@ -226,15 +224,13 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
       entries: rewardSlotLedger,
     }),
     getSimulation: () => simulation,
-    getLifecycleTail: () => lifecycleTail,
-    getQueuedClaimResync: () => queuedClaimResync,
+    getMailbox: () => mailbox,
     getStartToken: () => startToken,
     getStopSignal: () => stopController.signal,
     getSubmitter: () => submitter,
     getWriterDisplacedActivityID: () => writerDisplacedActivityID,
     isFailureActionDirty: () => failureActionDirty,
     isFailureActionPushInFlight: () => failureActionPushInFlight,
-    isResyncInFlight: () => resyncInFlight,
     recordRewardSlots: (activityID, entry) => {
       if (rewardSlotLedgerActivityID === activityID) {
         rewardSlotLedger = [...rewardSlotLedger, entry];
@@ -261,17 +257,8 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
     setFailureActionPushInFlight: (inFlight) => {
       failureActionPushInFlight = inFlight;
     },
-    setQueuedClaimResync: (avatarID) => {
-      queuedClaimResync = avatarID;
-    },
     setResyncAvatarID: (avatarID) => {
       resyncAvatarID = avatarID;
-    },
-    setResyncInFlight: (inFlight) => {
-      resyncInFlight = inFlight;
-    },
-    setLifecycleTail: (flow) => {
-      lifecycleTail = flow;
     },
     setStartToken: (token) => {
       startToken = token;

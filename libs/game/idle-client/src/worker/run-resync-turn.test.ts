@@ -34,10 +34,11 @@ import { createStubWorkerContext } from '../test-utils/create-stub-worker-contex
 import { createMockCheckpointBatchEntry } from '../test-utils/factories/create-mock-checkpoint-batch-entry';
 import { createMockStartedCheckpoint } from '../test-utils/factories/create-mock-started-checkpoint';
 import { WorkerMessageType } from '../types';
+import { runResyncFlow } from './run-resync-flow';
 import { runResyncTurn } from './run-resync-turn';
 import { sentryHandle } from './sentry-handle';
 import { startErrorReporting } from './start-error-reporting';
-import type { WorkerContext } from './types';
+import type { FlowSignals, WorkerContext } from './types';
 import type { WorkerMessage } from './worker-to-client-message-schema';
 
 /**
@@ -1092,7 +1093,24 @@ test('it reports a fault to the error backend and broadcasts a failed status whe
   });
 
   expect(recorded[0]?.tags).toMatchObject({ site: 'resync' });
-  expect(context.isResyncInFlight()).toBe(false);
+
+  // the drop window closed once the first turn settled: a follow-up non-claiming call for the
+  // same avatar actually runs rather than being dropped, broadcasting its own failed status
+  await runResyncTurn(context, 'avatar-with-held-tail', false);
+
+  await connection.waitForMessages(3);
+
+  expect(connection.received).toStrictEqual([
+    {
+      status: { avatarID: 'avatar-with-held-tail', kind: 'failed' },
+      type: WorkerMessageType.ResyncStatus,
+    },
+    { type: WorkerMessageType.WriterReady },
+    {
+      status: { avatarID: 'avatar-with-held-tail', kind: 'failed' },
+      type: WorkerMessageType.ResyncStatus,
+    },
+  ]);
 });
 
 test('it broadcasts session-expired without a fault report when the session is no longer valid', async () => {
@@ -1133,7 +1151,23 @@ test('it broadcasts session-expired without a fault report when the session is n
   ]);
 
   expect(recorded).toStrictEqual([]);
-  expect(ctx.context.isResyncInFlight()).toBe(false);
+
+  // the drop window closed once the first turn settled: a follow-up non-claiming call for the
+  // same avatar actually runs rather than being dropped, broadcasting its own session-expired
+  await runResyncTurn(ctx.context, viewer.avatar.id, false);
+
+  await ctx.connection.waitForMessages(2);
+
+  expect(ctx.connection.received).toStrictEqual([
+    {
+      status: { avatarID: viewer.avatar.id, kind: 'session-expired' },
+      type: WorkerMessageType.ResyncStatus,
+    },
+    {
+      status: { avatarID: viewer.avatar.id, kind: 'session-expired' },
+      type: WorkerMessageType.ResyncStatus,
+    },
+  ]);
 });
 
 test('it fails the resync while a raised stop is undelivered', async () => {
@@ -1237,11 +1271,15 @@ test('it settles silently, broadcasting neither a failed status nor a fault, whe
 
   await db.activityCollection.create({ avatarID: viewer.avatar.id, status: 'active' });
 
+  const track = mock<() => void>();
+
   // the stop lands while the progress fetch is in flight, aborting the cancel signal the fetch
   // carries — unlike the deviation above, the handler never answers, so the fetch itself rejects
   // rather than the flow noticing the stop only after a normal reply
   server.use(
     mockActivityService.getLatestActivityProgress.handler(() => {
+      track();
+
       ctx.context.advanceStopScope();
 
       return new Promise(() => {});
@@ -1253,7 +1291,13 @@ test('it settles silently, broadcasting neither a failed status nor a fault, whe
   expect(ctx.context.getSimulation().activity).toBeNull();
   expect(ctx.connection.received).toStrictEqual([]);
   expect(recorded).toStrictEqual([]);
-  expect(ctx.context.isResyncInFlight()).toBe(false);
+  expect(track).toHaveBeenCalledOnce();
+
+  // the drop window closed once the first turn settled: a follow-up non-claiming call for the
+  // same avatar actually reaches the progress fetch again rather than being dropped
+  await runResyncTurn(ctx.context, viewer.avatar.id, false);
+
+  expect(track).toHaveBeenCalledTimes(2);
 });
 
 test('it stops back a drain-minted row when a stop lands during its attach', async () => {
@@ -1497,4 +1541,56 @@ test('it clears a moot displacement once the fetched run is no longer active', a
 
   expect(ctx.context.getWriterDisplacedActivityID()).toBeNull();
   expect(ctx.context.getSubmitter().isEvicted(activity.id)).toBeFalse();
+});
+
+test('it queues an external resync behind a turn that ran an inline one, rather than dropping it', async () => {
+  const context = createStubWorkerContext({
+    submitter: {
+      flushHeld: () => Promise.reject(new Error('held flush exploded')),
+      flushNow: () => Promise.resolve(),
+      registerActivity: () => Promise.resolve(),
+      submit: () => Promise.resolve(undefined),
+      isEvicted: () => false,
+      removeEviction: () => {},
+    },
+  });
+
+  const connection = collectBroadcasts(context);
+  const signals: FlowSignals = { cancel: context.getCancelSignal(), stop: context.getStopSignal() };
+  let releaseTurn: (() => void) | undefined;
+
+  const turnGate = new Promise<void>((resolve) => {
+    releaseTurn = resolve;
+  });
+
+  const inlineTurn = context.getMailbox().runTurn('continuation', async () => {
+    // called inner-to-inner, exactly as a continuation's own conflict recovery does — this must
+    // never touch the mailbox's resync-coalescing state
+    await runResyncFlow(context, 'avatar_inline', false, signals);
+    await turnGate;
+  });
+
+  // arrives while the turn above is still running its own remainder, after its inline resync
+  // already broadcast and settled
+  const external = runResyncTurn(context, 'avatar_external', false);
+
+  releaseTurn?.();
+
+  await Promise.all([inlineTurn, external]);
+
+  connection.port.postMessage({ type: WorkerMessageType.WriterReady });
+
+  await connection.waitForMessages(3);
+
+  expect(connection.received).toStrictEqual([
+    {
+      status: { avatarID: 'avatar_inline', kind: 'failed' },
+      type: WorkerMessageType.ResyncStatus,
+    },
+    {
+      status: { avatarID: 'avatar_external', kind: 'failed' },
+      type: WorkerMessageType.ResyncStatus,
+    },
+    { type: WorkerMessageType.WriterReady },
+  ]);
 });

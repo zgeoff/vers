@@ -5,7 +5,6 @@ import { OFFLINE_CAP_WARNING_MS } from './offline-cap-warning-ms';
 import { pickPostTerminalAction } from './pick-post-terminal-action';
 import { runContinuation } from './run-continuation';
 import type { WorkerContext } from './types';
-import { withLifecycleTurn } from './with-lifecycle-turn';
 
 /**
  * Advances the simulation one tick, submits any checkpoint it yields, and resolves what follows a
@@ -84,9 +83,9 @@ export async function runSimulation(
     return;
   }
 
-  await withLifecycleTurn(context, 'continuation', () =>
-    runContinuation(context, simulation, activity),
-  );
+  await context
+    .getMailbox()
+    .runTurn('continuation', () => runContinuation(context, simulation, activity));
 }
 
 function emitActivityCompleted(context: WorkerContext, activityID: string) {
