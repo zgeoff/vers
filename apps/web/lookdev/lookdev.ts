@@ -1354,18 +1354,18 @@ const atmoKnobs = makeKnobGroup('atmo', {
 });
 
 const motionKnobs = makeKnobGroup('motion', {
-  flicker: [1, 0, 1],
-  rays: [0.5, 0, 1],
-  streaks: [1, 0, 2],
+  flicker: [0.5, 0, 1],
+  rays: [0.01, 0, 1],
+  streaks: [0.03, 0, 2],
 });
 
-const motionState = { streakDistance: 1, streakSpeed: 1 };
+const motionState = { streakDistance: 3, streakSpeed: 5 };
 
 registerKnob(
   'motion.streakSpeed',
-  1,
+  5,
   0.2,
-  3,
+  8,
   (value) => {
     motionState.streakSpeed = value;
   },
@@ -1374,7 +1374,7 @@ registerKnob(
 // 3 is the safe maximum: the deepest base streak times 3 stays inside the camera far plane
 registerKnob(
   'motion.streakDistance',
-  1,
+  3,
   0.5,
   3,
   (value) => {
