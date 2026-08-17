@@ -1354,15 +1354,9 @@ const atmoKnobs = makeKnobGroup('atmo', {
 });
 
 const motionKnobs = makeKnobGroup('motion', {
-  flicker: [0.85, 0, 1],
-  sweep: [0.28, 0, 1],
-  shuttle: [1, 0, 1],
-});
-
-const motionState = { sweepSpeed: 0.3 };
-
-registerKnob('motion.sweepSpeed', 0.3, 0, 1.5, (value) => {
-  motionState.sweepSpeed = value;
+  flicker: [1, 0, 1],
+  rays: [0.5, 0, 1],
+  streaks: [1, 0, 2],
 });
 
 /** Per-frame updaters for the current scene's animated meshes; rebuilt with each view select. */
@@ -1748,7 +1742,7 @@ function buildScene(config: ProbeConfig, useParts: boolean, grounding = false, s
   }
 
   // in treatment builds a slice of the windows flickers; everything else stays steady
-  const isFlickerWindow = (index: number) => surfaces && index % 7 === 3;
+  const isFlickerWindow = (index: number) => surfaces && index % 4 === 1;
   const flickerWindows = windowEmissives.filter((_, index) => isFlickerWindow(index));
   const steadyEmissives = [
     ...windowEmissives.filter((_, index) => !isFlickerWindow(index)),
@@ -1773,15 +1767,15 @@ function buildScene(config: ProbeConfig, useParts: boolean, grounding = false, s
     // one shared node graph: each window's world position seeds its own waver and rare deep drop
     const flickerBase = new MeshBasicNodeMaterial();
     const slow = mx_noise_float(
-      vec3(positionWorld.x.mul(3.1), positionWorld.y.mul(3.1).add(positionWorld.z.mul(2.7)), time.mul(0.7)),
+      vec3(positionWorld.x.mul(3.1), positionWorld.y.mul(3.1).add(positionWorld.z.mul(2.7)), time.mul(1.6)),
     )
       .mul(0.5)
       .add(0.5);
-    const drop = mx_noise_float(vec3(positionWorld.x.mul(1.7), positionWorld.z.mul(1.9), time.mul(0.2)))
+    const drop = mx_noise_float(vec3(positionWorld.x.mul(1.7), positionWorld.z.mul(1.9), time.mul(0.35)))
       .mul(0.5)
       .add(0.5)
-      .smoothstep(0.8, 0.88);
-    const flick = slow.mul(0.35).add(0.75).mul(drop.oneMinus().mul(0.9).add(0.1));
+      .smoothstep(0.7, 0.78);
+    const flick = slow.mul(0.55).add(0.6).mul(drop.oneMinus().mul(0.95).add(0.05));
 
     flickerBase.colorNode = materialColor.mul(mix(float(1), flick, motionKnobs.flicker));
 
@@ -1798,41 +1792,71 @@ function buildScene(config: ProbeConfig, useParts: boolean, grounding = false, s
   }
 
   if (surfaces) {
-    // beacon sweep: a faint teal shaft turning slowly from the gate's crown
-    const sweepMaterial = new MeshBasicNodeMaterial({
-      blending: AdditiveBlending,
-      depthWrite: false,
-      side: DoubleSide,
-      transparent: true,
+    // distant light shafts pulsing out of phase among the far towers — broad ambience, not a siren
+    for (const ray of RAY_SPECS) {
+      const rayMaterial = new MeshBasicNodeMaterial({
+        blending: AdditiveBlending,
+        depthWrite: false,
+        side: DoubleSide,
+        transparent: true,
+      });
+      const vertical = uv().y.oneMinus().pow(1.6);
+      const sideFade = uv().x.mul(uv().x.oneMinus()).mul(4);
+      const pulse = time.mul(0.25).add(ray.phase).sin().mul(0.35).add(0.65);
+
+      rayMaterial.colorNode = color(ray.color);
+      rayMaterial.opacityNode = vertical.mul(sideFade).mul(pulse).mul(motionKnobs.rays);
+
+      const shaft = new Mesh(new PlaneGeometry(ray.width, ray.height), rayMaterial);
+
+      shaft.position.set(ray.x, 4 + ray.height / 2, ray.z);
+      scene.add(shaft);
+    }
+
+    // the skybox layer: bright streaks crossing the far skyline — distant shooting stars
+    const streakGeometry = new BoxGeometry(3.4, 0.16, 0.16);
+    const streakMaterials = ['#a78bfa', '#5eead4', '#e5c79c', '#dbeafe'].map((streakColor) => {
+      const material = new MeshBasicNodeMaterial();
+
+      material.colorNode = color(streakColor).mul(3.2).mul(motionKnobs.streaks);
+
+      return material;
     });
 
-    sweepMaterial.colorNode = color(GATE_TEAL);
-    sweepMaterial.opacityNode = uv().x.oneMinus().pow(1.6).mul(motionKnobs.sweep);
+    for (let index = 0; index < 18; index += 1) {
+      const material = streakMaterials[index % streakMaterials.length];
 
-    const sweep = new Mesh(new PlaneGeometry(9, 0.55).translate(4.5, 0, 0), sweepMaterial);
+      if (!material) {
+        continue;
+      }
 
-    sweep.position.set(gateX, 8.75, gateZ);
-    scene.add(sweep);
-    sceneAnimations.push((elapsed) => {
-      sweep.rotation.y = elapsed * motionState.sweepSpeed;
-    });
+      const streak = new Mesh(streakGeometry, material);
+      const streakY = 13 + ((index * 37) % 20);
+      const streakZ = -60 - ((index * 13) % 25);
+      const period = 9 + ((index * 7) % 19);
+      const travel = 3.5 + ((index * 5) % 5);
+      const offset = index * 7.7;
+      const direction = index % 2 === 0 ? 1 : -1;
+      // each streak sinks a little as it crosses, like a slow shooting star
+      const sink = 1 + ((index * 11) % 3);
 
-    // the rare event: a shuttle light crossing the skyline behind the mid towers
-    const shuttleMaterial = new MeshBasicNodeMaterial();
+      streak.scale.x = 0.8 + ((index * 3) % 4) * 0.3;
+      streak.position.set(0, streakY, streakZ);
+      streak.visible = false;
+      scene.add(streak);
+      sceneAnimations.push((elapsed) => {
+        const phase = (elapsed + offset) % period;
+        const progress = phase / travel;
+        const crossing = progress < 1;
 
-    shuttleMaterial.colorNode = color('#a78bfa').mul(3).mul(motionKnobs.shuttle);
+        streak.visible = crossing;
 
-    const shuttle = new Mesh(new BoxGeometry(1.3, 0.2, 0.2), shuttleMaterial);
-
-    shuttle.position.set(0, 13.5, -21);
-    scene.add(shuttle);
-    sceneAnimations.push((elapsed) => {
-      const phase = elapsed % 37;
-      const crossing = phase < 9;
-
-      shuttle.visible = crossing;
-      shuttle.position.x = crossing ? -48 + (phase / 9) * 96 : 0;
-    });
+        if (crossing) {
+          streak.position.x = direction * (progress * 150 - 75);
+          streak.position.y = streakY - progress * sink;
+        }
+      });
+    }
   }
 
   if (config.duskFogBanks) {
@@ -2014,6 +2038,24 @@ function addAtmosphere(scene: Scene) {
 }
 
 const SMOKE_BLUE = '#7d879f';
+
+interface RaySpec {
+  readonly color: string;
+  readonly height: number;
+  readonly phase: number;
+  readonly width: number;
+  readonly x: number;
+  readonly z: number;
+}
+
+/** Far light shafts: bases hidden behind the skyline, tops pulsing above it out of phase. */
+const RAY_SPECS: ReadonlyArray<RaySpec> = [
+  { color: GATE_TEAL, height: 16, phase: 0, width: 2.2, x: -26, z: -38 },
+  { color: '#a78bfa', height: 20, phase: 1.7, width: 3.2, x: -12, z: -44 },
+  { color: GATE_TEAL, height: 14, phase: 3.1, width: 1.8, x: 3, z: -40 },
+  { color: '#a78bfa', height: 22, phase: 4.4, width: 2.6, x: 16, z: -46 },
+  { color: GATE_TEAL, height: 17, phase: 5.6, width: 2, x: 30, z: -38 },
+];
 
 interface SmokeSource {
   readonly height: number;
