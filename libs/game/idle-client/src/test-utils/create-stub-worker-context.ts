@@ -7,6 +7,7 @@ import { resolveServiceURL } from '@vers/mock-services';
 import type { CheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import type { ActivityServiceClient } from '../submission/types';
 import type { RewardSlotLedgerEntry } from '../types';
+import { createLifecycleMailbox } from '../worker/create-lifecycle-mailbox';
 import type { WorkerContext } from '../worker/types';
 import type { WorkerMessage } from '../worker/worker-to-client-message-schema';
 import { createStubSubmitter } from './create-stub-submitter';
@@ -58,7 +59,6 @@ export function createStubWorkerContext(
   let simulation: Simulation = createSimulation();
   let activity: ActivityData | null = null;
   let resyncAvatarID: string | null = null;
-  let resyncInFlight = false;
   let rewardSlotLedgerActivityID: null | string = null;
   let rewardSlotLedger: ReadonlyArray<RewardSlotLedgerEntry> = [];
   let failureAction: ActivityFailureAction = options.failureAction ?? ActivityFailureAction.Abort;
@@ -70,8 +70,7 @@ export function createStubWorkerContext(
 
   let cancelSignal = AbortSignal.any([stopController.signal, shutdownController.signal]);
   let startToken: null | string = null;
-  let lifecycleTail: Readonly<Promise<void>> = Promise.resolve();
-  let queuedClaimResync: null | string = null;
+  const mailbox = createLifecycleMailbox();
   let writerDisplacedActivityID: null | string = null;
   let connectivityOnline = true;
   const broadcasts: Array<WorkerMessage> = [];
@@ -102,15 +101,13 @@ export function createStubWorkerContext(
       entries: rewardSlotLedger,
     }),
     getSimulation: () => simulation,
-    getLifecycleTail: () => lifecycleTail,
-    getQueuedClaimResync: () => queuedClaimResync,
+    getMailbox: () => mailbox,
     getStartToken: () => startToken,
     getStopSignal: () => stopController.signal,
     getSubmitter: () => submitter,
     getWriterDisplacedActivityID: () => writerDisplacedActivityID,
     isFailureActionDirty: () => failureActionDirty,
     isFailureActionPushInFlight: () => failureActionPushInFlight,
-    isResyncInFlight: () => resyncInFlight,
     recordRewardSlots: (activityID, entry) => {
       if (rewardSlotLedgerActivityID === activityID) {
         rewardSlotLedger = [...rewardSlotLedger, entry];
@@ -137,17 +134,8 @@ export function createStubWorkerContext(
     setFailureActionPushInFlight: (inFlight) => {
       failureActionPushInFlight = inFlight;
     },
-    setQueuedClaimResync: (avatarID) => {
-      queuedClaimResync = avatarID;
-    },
     setResyncAvatarID: (avatarID) => {
       resyncAvatarID = avatarID;
-    },
-    setResyncInFlight: (inFlight) => {
-      resyncInFlight = inFlight;
-    },
-    setLifecycleTail: (flow) => {
-      lifecycleTail = flow;
     },
     setStartToken: (token) => {
       startToken = token;

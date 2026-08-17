@@ -7,7 +7,6 @@ import { isAbortError } from './is-abort-error';
 import { reportWorkerFault } from './report-worker-fault';
 import { submitStopIntent } from './submit-stop-intent';
 import type { FlowSignals, WorkerContext } from './types';
-import { withLifecycleTurn } from './with-lifecycle-turn';
 import type { StartStatus } from './worker-contract';
 
 interface StartActivityInput {
@@ -37,11 +36,11 @@ export async function handleStartActivityMessage(
 
   context.setStartToken(token);
 
-  // withLifecycleTurn discards its callback's return value, so the outcome is captured here and
+  // the queued turn discards its callback's return value, so the outcome is captured here and
   // returned once the turn settles rather than threaded through it
   let status: StartStatus = { kind: 'failed' };
 
-  await withLifecycleTurn(context, 'start', async () => {
+  await context.getMailbox().runTurn('start', async () => {
     const signals: FlowSignals = {
       cancel: context.getCancelSignal(),
       stop: context.getStopSignal(),
