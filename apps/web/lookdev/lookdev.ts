@@ -15,18 +15,24 @@ import {
   DirectionalLight,
   DoubleSide,
   Fog,
+  Group,
   HemisphereLight,
   InstancedMesh,
   Mesh,
   MeshBasicNodeMaterial,
   MeshStandardNodeMaterial,
   Object3D,
+  OrthographicCamera,
   PerspectiveCamera,
+  Plane,
   PlaneGeometry,
   PointLight,
   PostProcessing,
+  Raycaster,
   Scene,
   SphereGeometry,
+  Vector2,
+  Vector3,
   WebGPURenderer,
 } from 'three/webgpu';
 
@@ -131,8 +137,8 @@ function buildMassing(): Array<BuildingSpec> {
   const specs: Array<BuildingSpec> = [
     // far side: the codex tower off-center left; the explore gate breaks the ring to its right
     { d: 4, facing: 'pz', h: 10.5, mast: true, role: 'codex', ry: 0.06, w: 3.6, x: -2, y: 0, z: -14.5 },
-    { d: 4.2, facing: 'pz', h: 5, mast: false, role: 'filler', ry: 0.11, w: 4.8, x: -8.5, y: 0, z: -13.2 },
-    { d: 4, facing: 'pz', h: 6, mast: false, role: 'filler', ry: -0.14, w: 3.8, x: 11.8, y: 0, z: -12.6 },
+    { d: 3.6, facing: 'pz', h: 5, mast: false, role: 'filler', ry: 0.11, w: 4, x: -11, y: 0, z: -18.6 },
+    { d: 4, facing: 'pz', h: 6, mast: false, role: 'filler', ry: -0.14, w: 3.8, x: 14.8, y: 0, z: -13.4 },
 
     // left row: the market wide and angled inward, the stash a heavy low block behind it
     { d: 8, facing: 'px', h: 4.5, mast: false, role: 'market', ry: 0.16, w: 4.5, x: -14, y: 0, z: -2.5 },
@@ -162,9 +168,9 @@ function buildMassing(): Array<BuildingSpec> {
       const h = 3.5 + random() * (4 + Math.abs(row.z) * 0.14);
       const d = 2.4 + random() * 2.4;
 
-      // every background row keeps a gap behind the codex tower, so its crown reads against sky
+      // every background row keeps a gap behind the codex hall, so its roofline reads against sky
       // instead of merging into the terraces
-      if (x > -7.5 && x < 3.5) {
+      if (x > -9 && x < 2.5) {
         continue;
       }
 
@@ -319,7 +325,7 @@ const LAMPS: ReadonlyArray<LampSpec> = [
   { x: -4, z: 6.5 },
 ];
 
-function buildPlazaLights(): Array<EmissiveInstance> {
+function buildPlazaLights(fountainX: number, fountainZ: number): Array<EmissiveInstance> {
   const lamp = new Color(WARM_WINDOW).multiplyScalar(2.6);
   const lights: Array<EmissiveInstance> = LAMPS.map((spec) => ({
     color: lamp,
@@ -329,7 +335,7 @@ function buildPlazaLights(): Array<EmissiveInstance> {
   }));
 
   // the fountain's single cold instrument light, in the F register, on its low central hub
-  lights.push({ color: new Color('#7dd3fc').multiplyScalar(2.4), x: 4.5, y: 1.6, z: 1.5 });
+  lights.push({ color: new Color('#7dd3fc').multiplyScalar(2.4), x: fountainX, y: 1.6, z: fountainZ });
 
   return lights;
 }
@@ -613,25 +619,189 @@ function buildLineupScene(element: LineupElement): Scene {
 const HALF_PI = 1.5708;
 
 interface AssemblyPlacement {
+  readonly key: string;
   /** Light a window grid on every substantial box, not only the largest — for stacked-slab forms. */
   readonly litAllBoxes?: boolean;
+  /** A threshold or furniture piece, not an occupied building — no window grid. */
+  readonly noWindows?: boolean;
   readonly parts: ReadonlyArray<SilhouettePart>;
-  readonly ry: number;
-  readonly x: number;
-  readonly z: number;
+  ry: number;
+  x: number;
+  z: number;
+}
+
+/** The plaza fountain as a part set, so the plan editor can move it like any other element. */
+const FOUNTAIN_PARTS: ReadonlyArray<SilhouettePart> = [
+  { g: 'cyl', sx: 2, sy: 0.45, sz: 2, x: 0, y: 0.22, z: 0 },
+  { g: 'cyl', sx: 1.35, sy: 0.4, sz: 1.35, x: 0, y: 0.62, z: 0 },
+  { g: 'cyl', sx: 0.5, sy: 0.85, sz: 0.5, x: 0, y: 1.05, z: 0 },
+];
+
+/**
+ * The live layout: each element's part set at its plaza anchor. Yaw turns each set's authored
+ * front (+z) toward the plaza. Mutated by the plan editor; the assembly view rebuilds from it.
+ */
+const placements: Array<AssemblyPlacement> = [
+  { key: 'market', parts: MARKET_PARTS, ry: HALF_PI + 0.16, x: -14.5, z: -1.6 },
+  { key: 'stash', parts: STASH_DOUBLE_DRUM, ry: HALF_PI - 0.55, x: -11.9, z: -11.8 },
+  { key: 'codex', litAllBoxes: true, parts: CODEX_ARCHIVE_HALL, ry: 0.06, x: -4, z: -14.5 },
+  { key: 'gate', noWindows: true, parts: GATE_BASTION_SLOT, ry: 0, x: 6.2, z: -14.2 },
+  { key: 'avatar', parts: AVATAR_PARTS, ry: -HALF_PI - 0.13, x: 14.6, z: -4 },
+  { key: 'fountain', noWindows: true, parts: FOUNTAIN_PARTS, ry: 0, x: 4.5, z: 1.5 },
+];
+
+interface Footprint {
+  readonly angle: number;
+  readonly cx: number;
+  readonly cz: number;
+  readonly hd: number;
+  readonly hw: number;
+  readonly label: string;
+}
+
+function collectFootprints(): Array<Footprint> {
+  const footprints: Array<Footprint> = [];
+
+  for (const placement of placements) {
+    for (const part of placement.parts) {
+      // masts and other whisker-thin parts can't meaningfully collide
+      if (part.sx < 0.3 && part.sz < 0.3) {
+        continue;
+      }
+
+      const world = toWorldOffset(placement.x, placement.z, placement.ry, part.x, part.z);
+      const round = part.g !== 'box';
+
+      footprints.push({
+        angle: placement.ry,
+        cx: world.x,
+        cz: world.z,
+        hd: round ? part.sz : part.sz / 2,
+        hw: round ? part.sx : part.sx / 2,
+        label: placement.key,
+      });
+    }
+  }
+
+  for (const [index, spec] of buildMassing().entries()) {
+    if (isNavRole(spec.role)) {
+      continue;
+    }
+
+    footprints.push({
+      angle: spec.ry,
+      cx: spec.x,
+      cz: spec.z,
+      hd: spec.d / 2,
+      hw: spec.w / 2,
+      label: `${spec.role}${index}`,
+    });
+  }
+
+  return footprints;
+}
+
+function buildCorners(footprint: Footprint): Array<[number, number]> {
+  const cos = Math.cos(footprint.angle);
+  const sin = Math.sin(footprint.angle);
+  const corners: Array<[number, number]> = [];
+
+  for (const [sx, sz] of [
+    [-1, -1],
+    [1, -1],
+    [1, 1],
+    [-1, 1],
+  ] as const) {
+    const lx = sx * footprint.hw;
+    const lz = sz * footprint.hd;
+
+    corners.push([footprint.cx + lx * cos + lz * sin, footprint.cz - lx * sin + lz * cos]);
+  }
+
+  return corners;
+}
+
+function isSeparatedOnAxis(
+  a: ReadonlyArray<[number, number]>,
+  b: ReadonlyArray<[number, number]>,
+  axisX: number,
+  axisZ: number,
+): boolean {
+  let minA = Infinity;
+  let maxA = -Infinity;
+  let minB = Infinity;
+  let maxB = -Infinity;
+
+  for (const [x, z] of a) {
+    const projection = x * axisX + z * axisZ;
+
+    minA = Math.min(minA, projection);
+    maxA = Math.max(maxA, projection);
+  }
+
+  for (const [x, z] of b) {
+    const projection = x * axisX + z * axisZ;
+
+    minB = Math.min(minB, projection);
+    maxB = Math.max(maxB, projection);
+  }
+
+  return maxA < minB || maxB < minA;
+}
+
+function isFootprintOverlap(a: Footprint, b: Footprint): boolean {
+  const cornersA = buildCorners(a);
+  const cornersB = buildCorners(b);
+
+  for (const angle of [a.angle, b.angle]) {
+    const cos = Math.cos(angle);
+    const sin = Math.sin(angle);
+
+    if (
+      isSeparatedOnAxis(cornersA, cornersB, cos, -sin) ||
+      isSeparatedOnAxis(cornersA, cornersB, sin, cos)
+    ) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 /**
- * The current best part set for each element, placed at its round-4 plaza anchor. Yaw turns each
- * set's authored front (+z) toward the plaza.
+ * Every pair of intersecting footprints across placements and the fixed massing, as
+ * "market×stash"-style labels — the machine check that replaces eyeballing the render.
  */
-const ASSEMBLY: ReadonlyArray<AssemblyPlacement> = [
-  { parts: MARKET_PARTS, ry: HALF_PI + 0.16, x: -14.5, z: -1.6 },
-  { parts: STASH_DOUBLE_DRUM, ry: HALF_PI - 0.55, x: -11.9, z: -11.8 },
-  { litAllBoxes: true, parts: CODEX_ARCHIVE_HALL, ry: 0.06, x: -2, z: -14.5 },
-  { parts: GATE_BASTION_SLOT, ry: 0, x: 6.2, z: -14.2 },
-  { parts: AVATAR_PARTS, ry: -HALF_PI - 0.13, x: 14.6, z: -4 },
-];
+function findOverlaps(): Array<string> {
+  const footprints = collectFootprints();
+  const movable = new Set(placements.map((placement) => placement.key));
+  const seen = new Set<string>();
+
+  for (let a = 0; a < footprints.length; a += 1) {
+    for (let b = a + 1; b < footprints.length; b += 1) {
+      const fa = footprints[a];
+      const fb = footprints[b];
+
+      if (!fa || !fb || fa.label === fb.label) {
+        continue;
+      }
+
+      // static-static contact is the overbuilt accretion look, by design; only pairs involving a
+      // movable element are defects
+      if (!movable.has(fa.label) && !movable.has(fb.label)) {
+        continue;
+      }
+
+      const pair = [fa.label, fb.label].sort().join('×');
+
+      if (!seen.has(pair) && isFootprintOverlap(fa, fb)) {
+        seen.add(pair);
+      }
+    }
+  }
+
+  return [...seen].sort();
+}
 
 /** Windows for an assembled part set: a lit grid on the front face of its largest box. */
 function buildPartSetWindows(placement: AssemblyPlacement, config: ProbeConfig, seed: number): Array<EmissiveInstance> {
@@ -820,11 +990,24 @@ function buildScene(config: ProbeConfig, useParts: boolean): Scene {
   mastMesh.computeBoundingSphere();
   scene.add(mastMesh);
 
+  const gate = placements.find((placement) => placement.key === 'gate');
+  const fountain = placements.find((placement) => placement.key === 'fountain');
+  const gateX = gate?.x ?? 6.2;
+  const gateZ = gate?.z ?? -14.2;
+  const fountainX = fountain?.x ?? 4.5;
+  const fountainZ = fountain?.z ?? 1.5;
+
   if (useParts) {
     const partMaterial = new MeshStandardNodeMaterial({ color: navColor, roughness: 0.85 });
+    const furnitureMaterial = new MeshStandardNodeMaterial({
+      color: litColor.clone().multiplyScalar(0.55),
+      roughness: 0.7,
+    });
 
-    for (const placement of ASSEMBLY) {
-      renderPartSet(scene, placement.parts, partMaterial, placement.x, placement.z, placement.ry);
+    for (const placement of placements) {
+      const material = placement.key === 'fountain' ? furnitureMaterial : partMaterial;
+
+      renderPartSet(scene, placement.parts, material, placement.x, placement.z, placement.ry);
     }
   } else {
     // the explore gate placeholder: two pylons in the far-side gap
@@ -839,31 +1022,20 @@ function buildScene(config: ProbeConfig, useParts: boolean): Scene {
       pylon.position.set(px, 3.1, -14);
       scene.add(pylon);
     }
+
+    // in box mode the fountain keeps its fixed spot
+    const fountainMaterial = new MeshStandardNodeMaterial({
+      color: litColor.clone().multiplyScalar(0.55),
+      roughness: 0.7,
+    });
+
+    renderPartSet(scene, FOUNTAIN_PARTS, fountainMaterial, 4.5, 1.5, 0);
   }
 
   const gateGlow = new PointLight(new Color(GATE_TEAL), 30, 20, 2);
 
-  gateGlow.position.set(6.2, 2.5, -17.5);
+  gateGlow.position.set(useParts ? gateX : 6.2, 2.5, (useParts ? gateZ : -14.2) - 3.3);
   scene.add(gateGlow);
-
-  // the plaza fountain: flat stacked disks off the square's center line, the instrument light
-  // on its low central hub
-  const fountainMaterial = new MeshStandardNodeMaterial({
-    color: litColor.clone().multiplyScalar(0.55),
-    roughness: 0.7,
-  });
-
-  for (const disk of [
-    { r: 2, h: 0.45, y: 0.22 },
-    { r: 1.35, h: 0.4, y: 0.62 },
-    { r: 0.5, h: 0.85, y: 1.05 },
-  ]) {
-    const tier = new Mesh(partGeometries.cyl, fountainMaterial);
-
-    tier.position.set(4.5, disk.y, 1.5);
-    tier.scale.set(disk.r, disk.h, disk.r);
-    scene.add(tier);
-  }
 
   // lamp posts under the plaza lights
   const postMesh = new InstancedMesh(
@@ -885,14 +1057,13 @@ function buildScene(config: ProbeConfig, useParts: boolean): Scene {
 
   const emissives = [
     ...buildWindows(specs, config, !useParts),
-    ...buildPlazaLights(),
+    ...buildPlazaLights(useParts ? fountainX : 4.5, useParts ? fountainZ : 1.5),
     ...buildInstruments(specs, !useParts),
   ];
 
   if (useParts) {
-    for (const [index, placement] of ASSEMBLY.entries()) {
-      // the gate is a threshold, not an occupied building — its light is the teal edge strips
-      if (placement.parts === GATE_BASTION_SLOT) {
+    for (const [index, placement] of placements.entries()) {
+      if (placement.noWindows) {
         continue;
       }
 
@@ -900,16 +1071,18 @@ function buildScene(config: ProbeConfig, useParts: boolean): Scene {
     }
   }
 
-  // gate edge strips join the emissive set: vertical teal lines flanking the opening
-  const stripXs = useParts ? [4.5, 7.9] : [4.7, 7.7];
+  // gate edge strips join the emissive set: vertical teal lines flanking the opening, anchored
+  // to wherever the gate sits
+  for (const offset of [-1.7, 1.7]) {
+    const px = (useParts ? gateX : 6.2) + offset;
+    const pz = (useParts ? gateZ : -14.2) + 0.8;
 
-  for (const px of stripXs) {
     for (let index = 0; index < 8; index += 1) {
       emissives.push({
         color: new Color(GATE_TEAL).multiplyScalar(1.9),
         x: px,
         y: 0.7 + index * 0.72,
-        z: -13.4,
+        z: pz,
       });
     }
   }
@@ -967,6 +1140,92 @@ function addDuskFogBanks(scene: Scene) {
   }
 }
 
+interface PlanGroup {
+  readonly group: Group;
+  readonly material: MeshStandardNodeMaterial;
+  readonly state: AssemblyPlacement;
+}
+
+const PLAN_ELEMENT_COLOR = '#8fa0c2';
+const PLAN_SELECTED_COLOR = '#5eead4';
+
+/**
+ * The top-down layout editor's scene: flat-lit, fog-free, each movable element in its own group
+ * so dragging repositions it without a rebuild.
+ */
+function buildPlanScene(): { groups: Array<PlanGroup>; scene: Scene } {
+  const scene = new Scene();
+
+  scene.background = new Color('#181d2c');
+
+  const ambient = new AmbientLight(new Color('#aab6d0'), 1.6);
+  const key = new DirectionalLight(new Color('#8fa0c2'), 0.9);
+
+  key.position.set(-14, 40, 20);
+  scene.add(ambient, key);
+
+  const ground = new Mesh(
+    new PlaneGeometry(220, 220),
+    new MeshStandardNodeMaterial({ color: new Color('#10141f'), roughness: 1 }),
+  );
+
+  ground.rotation.x = -Math.PI / 2;
+  ground.position.y = -0.02;
+  scene.add(ground);
+
+  const plazaFloor = new Mesh(
+    new PlaneGeometry(25, 21),
+    new MeshStandardNodeMaterial({ color: new Color('#232b40'), roughness: 1 }),
+  );
+
+  plazaFloor.rotation.x = -Math.PI / 2;
+  plazaFloor.rotation.z = 0.07;
+  plazaFloor.position.set(0.8, -0.01, -1.5);
+  scene.add(plazaFloor);
+
+  // fixed massing as flat context the elements are arranged against
+  const staticMaterial = new MeshStandardNodeMaterial({ color: new Color('#39445e'), roughness: 1 });
+
+  for (const spec of buildMassing()) {
+    if (isNavRole(spec.role)) {
+      continue;
+    }
+
+    const block = new Mesh(partGeometries.box, staticMaterial);
+
+    block.position.set(spec.x, spec.h / 2, spec.z);
+    block.rotation.y = spec.ry;
+    block.scale.set(spec.w, spec.h, spec.d);
+    scene.add(block);
+  }
+
+  const groups: Array<PlanGroup> = [];
+
+  for (const state of placements) {
+    const material = new MeshStandardNodeMaterial({
+      color: new Color(PLAN_ELEMENT_COLOR),
+      roughness: 0.9,
+    });
+    const group = new Group();
+
+    for (const part of state.parts) {
+      const mesh = new Mesh(partGeometries[part.g], material);
+
+      mesh.position.set(part.x, part.y, part.z);
+      mesh.rotation.set(part.rx ?? 0, 0, part.rz ?? 0);
+      mesh.scale.set(part.sx, part.sy, part.sz);
+      group.add(mesh);
+    }
+
+    group.position.set(state.x, 0, state.z);
+    group.rotation.y = state.ry;
+    scene.add(group);
+    groups.push({ group, material, state });
+  }
+
+  return { groups, scene };
+}
+
 async function main() {
   // bun's dev-server HMR can re-execute the module; a second renderer + loop fights the first
   const globalState = globalThis as { __lookdevBooted?: boolean };
@@ -976,6 +1235,10 @@ async function main() {
   }
 
   globalState.__lookdevBooted = true;
+
+  // programmatic access for agent-driven layout iteration: set positions, read the overlap check
+  (globalThis as { __lookdevCheck?: () => Array<string> }).__lookdevCheck = findOverlaps;
+  (globalThis as { __lookdevPlacements?: Array<AssemblyPlacement> }).__lookdevPlacements = placements;
 
   const renderer = new WebGPURenderer({ antialias: true });
 
@@ -989,8 +1252,31 @@ async function main() {
   camera.position.set(0, 9, 26);
   camera.lookAt(0, 3, -7);
 
-  const buildPost = (scene: Scene, strength: number, threshold: number): PostProcessing => {
-    const scenePass = pass(scene, camera);
+  const planCamera = new OrthographicCamera(-1, 1, 1, -1, 0.1, 200);
+
+  const updatePlanCamera = () => {
+    const aspect = globalThis.innerWidth / globalThis.innerHeight;
+    const halfHeight = 26;
+
+    planCamera.left = -halfHeight * aspect;
+    planCamera.right = halfHeight * aspect;
+    planCamera.top = halfHeight;
+    planCamera.bottom = -halfHeight;
+    planCamera.position.set(0, 80, -4);
+    planCamera.up.set(0, 0, -1);
+    planCamera.lookAt(0, 0, -4);
+    planCamera.updateProjectionMatrix();
+  };
+
+  updatePlanCamera();
+
+  const buildPost = (
+    scene: Scene,
+    viewCamera: OrthographicCamera | PerspectiveCamera,
+    strength: number,
+    threshold: number,
+  ): PostProcessing => {
+    const scenePass = pass(scene, viewCamera);
     const scenePassColor = scenePass.getTextureNode();
     const bloomPass = bloom(scenePassColor, strength, 0.4, threshold);
     const post = new PostProcessing(renderer);
@@ -1011,30 +1297,143 @@ async function main() {
     camera.lookAt(0, 3, -7);
   };
 
+  // ---- plan editor state ----
+  let planGroups: Array<PlanGroup> = [];
+  let planActive = false;
+  let selected: PlanGroup | null = null;
+  let dragging = false;
+  const raycaster = new Raycaster();
+  const pointer = new Vector2();
+  const groundPlane = new Plane(new Vector3(0, 1, 0), 0);
+  const dragPoint = new Vector3();
+  const grabOffset = new Vector2();
+  const info = document.getElementById('info');
+
+  const updateInfo = (flash?: string) => {
+    if (!info) {
+      return;
+    }
+
+    const overlaps = findOverlaps();
+    const overlapReport = overlaps.length === 0 ? 'none' : overlaps.join(', ');
+
+    (globalThis as { __lookdevOverlaps?: Array<string> }).__lookdevOverlaps = overlaps;
+    info.textContent = planActive
+      ? `${flash ?? (selected ? `selected: ${selected.state.key}` : 'click an element')} · drag to move · Q/E rotate · P copy layout · overlaps: ${overlapReport}`
+      : '';
+    info.style.display = planActive ? 'block' : 'none';
+  };
+
+  const toPointerNDC = (event: PointerEvent) => {
+    pointer.set(
+      (event.clientX / globalThis.innerWidth) * 2 - 1,
+      -(event.clientY / globalThis.innerHeight) * 2 + 1,
+    );
+  };
+
+  renderer.domElement.addEventListener('pointerdown', (event) => {
+    if (!planActive) {
+      return;
+    }
+
+    toPointerNDC(event);
+    raycaster.setFromCamera(pointer, planCamera);
+
+    const hits = raycaster.intersectObjects(
+      planGroups.map((entry) => entry.group),
+      true,
+    );
+    const hitGroup = hits
+      .map((hit) => planGroups.find((entry) => entry.group === hit.object.parent))
+      .find((entry) => entry !== undefined);
+
+    for (const entry of planGroups) {
+      entry.material.color.set(new Color(PLAN_ELEMENT_COLOR));
+    }
+
+    selected = hitGroup ?? null;
+
+    if (selected) {
+      selected.material.color.set(new Color(PLAN_SELECTED_COLOR));
+
+      if (raycaster.ray.intersectPlane(groundPlane, dragPoint)) {
+        grabOffset.set(dragPoint.x - selected.state.x, dragPoint.z - selected.state.z);
+        dragging = true;
+      }
+    }
+
+    updateInfo();
+  });
+
+  renderer.domElement.addEventListener('pointermove', (event) => {
+    if (!planActive || !dragging || !selected) {
+      return;
+    }
+
+    toPointerNDC(event);
+    raycaster.setFromCamera(pointer, planCamera);
+
+    if (raycaster.ray.intersectPlane(groundPlane, dragPoint)) {
+      selected.state.x = Math.round((dragPoint.x - grabOffset.x) * 10) / 10;
+      selected.state.z = Math.round((dragPoint.z - grabOffset.y) * 10) / 10;
+      selected.group.position.set(selected.state.x, 0, selected.state.z);
+    }
+  });
+
+  renderer.domElement.addEventListener('pointerup', () => {
+    if (!planActive) {
+      return;
+    }
+
+    dragging = false;
+    updateInfo();
+  });
+
   const views: Array<View> = [
     ...PROBES.map((config) => ({
       key: config.key,
       name: config.name,
       select: () => {
+        planActive = false;
+        updateInfo();
         selectPlazaCamera();
-        return buildPost(buildScene(config, false), config.bloomStrength, config.bloomThreshold);
+        return buildPost(buildScene(config, false), camera, config.bloomStrength, config.bloomThreshold);
       },
     })),
     {
       key: 'assembly',
       name: '3 · Assembly draft',
       select: () => {
+        planActive = false;
+        updateInfo();
         selectPlazaCamera();
-        return buildPost(buildScene(NIGHT, true), NIGHT.bloomStrength, NIGHT.bloomThreshold);
+        return buildPost(buildScene(NIGHT, true), camera, NIGHT.bloomStrength, NIGHT.bloomThreshold);
+      },
+    },
+    {
+      key: 'plan',
+      name: '4 · Plan (drag)',
+      select: () => {
+        planActive = true;
+        selected = null;
+        updatePlanCamera();
+
+        const plan = buildPlanScene();
+
+        planGroups = plan.groups;
+        updateInfo();
+        return buildPost(plan.scene, planCamera, 0, 1);
       },
     },
     ...LINEUP_ELEMENTS.map((element) => ({
       key: element.key,
       name: element.name,
       select: () => {
+        planActive = false;
+        updateInfo();
         camera.position.set(0, element.lookY + 0.8, element.camZ);
         camera.lookAt(0, element.lookY, 0);
-        return buildPost(buildLineupScene(element), 0.15, 0.95);
+        return buildPost(buildLineupScene(element), camera, 0.15, 0.95);
       },
     })),
   ];
@@ -1076,6 +1475,28 @@ async function main() {
   renderHUD();
 
   globalThis.addEventListener('keydown', (event) => {
+    if (planActive && selected && (event.key === 'q' || event.key === 'e')) {
+      selected.state.ry += event.key === 'q' ? 0.05 : -0.05;
+      selected.group.rotation.y = selected.state.ry;
+      updateInfo();
+      return;
+    }
+
+    if (planActive && event.key === 'p') {
+      const layout = placements.map(({ key, ry, x, z }) => ({
+        key,
+        ry: Math.round(ry * 1000) / 1000,
+        x,
+        z,
+      }));
+      const serialized = JSON.stringify(layout, null, 2);
+
+      console.log(serialized);
+      void navigator.clipboard.writeText(serialized).catch(() => {});
+      updateInfo('layout copied to clipboard + console');
+      return;
+    }
+
     const index = Number(event.key) - 1;
     const view = views[index];
 

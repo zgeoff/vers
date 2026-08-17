@@ -155,24 +155,52 @@
   </p>
 
   <div class="howto">
-    <h2>Round 9 · how to respond</h2>
+    <h2>Round 10 · how to respond</h2>
     <p>
-      The archive hall is in place and the full silhouette set is now assembled without defects.
-      One question decides whether blockout closes: does this set hold? Plus the long-open avatar
-      choice — A drums (placed) vs C dome; say swap to stage the dome. When the set locks, the
-      next phase is mid-scale form per building (canopy bays, drum collars, the hall's fins, the
-      gate's worn face), then the unification pass — fog, lighting, motion.
+      The layout is now machine-checked: every element and every fixed block projects an oriented
+      footprint, and a live collision check reports any intersecting pair — the current layout
+      reports <b>none</b>. And your idea is built: view <b>4 · Plan (drag)</b> is a top-down
+      editor. Click an element to select (it highlights teal), drag to move, <b>Q/E</b> rotates,
+      <b>P</b> copies the whole layout as JSON to your clipboard and console — paste it in chat
+      and I bake it in. The overlap readout updates live in the bottom bar as you drag.
     </p>
     <p>
-      Live at <span style="font-family: var(--mono)">localhost:4599</span> (button 3), branch
+      So: rearrange the plaza to taste if you like, or bless the current arrangement as-is. Avatar
+      A drums vs C dome also still open. Live at
+      <span style="font-family: var(--mono)">localhost:4599</span>, branch
       <span style="font-family: var(--mono)">spike/respite-lookdev</span>.
     </p>
   </div>
 
   <section class="round">
     <div class="round-head">
+      <h2>Round 10 · the plan editor and the clean layout</h2>
+      <span class="status open">open — drag to taste or bless as-is</span>
+    </div>
+    <p>
+      Round 9's "still intersecting" observation became tooling: an oriented-footprint overlap
+      checker (separating-axis tests over every part and fixed block, exposed as data — no more
+      eyeballing) and a top-down drag editor. The checker immediately caught three real
+      intersections the renders hid: codex×gate, stash×filler, gate×filler. Fixed by shifting the
+      codex hall left, and moving two filler blocks that were crowding the ring — the layout now
+      verifies clean.
+    </p>
+    <div class="shots pair">
+      <figure>
+        <img src="data:image/png;base64,{{R10_PLAN}}" alt="Top-down plan view of the plaza: pale movable elements around the skewed plaza slab, dark fixed blocks, an overlaps-none readout at the bottom" />
+        <figcaption>plan editor — drag · Q/E rotate · P copy layout · live overlap check</figcaption>
+      </figure>
+      <figure>
+        <img src="data:image/png;base64,{{R10_ASSEMBLY}}" alt="The night plaza assembly with all elements verified non-intersecting" />
+        <figcaption>assembly — zero overlaps, machine-verified</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="round">
+    <div class="round-head">
       <h2>Round 9 · the archive hall takes its place</h2>
-      <span class="status open">open — confirm the set, settle the avatar</span>
+      <span class="status">resolved</span>
     </div>
     <p>
       Round 8's pick applied: the <b>archive hall</b> sits on the far side with lit hall and
@@ -186,6 +214,10 @@
         <figcaption>assembly — market B · stash drums (angled) · codex archive hall · gate bastion slot · avatar drums</figcaption>
       </figure>
     </div>
+    <p class="verdict">
+      <b>Verdict:</b> set and composition shape confirmed — but elements still interpenetrated,
+      and hand-eyeballing placement was declared unreliable. Round 10 answered with tooling.
+    </p>
   </section>
 
   <section class="round">
