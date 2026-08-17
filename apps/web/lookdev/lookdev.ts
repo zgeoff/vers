@@ -63,7 +63,7 @@ const DUSK_FOG = '#2e3a5e';
 
 const NIGHT: ProbeConfig = {
   ambient: '#39406b',
-  ambientIntensity: 1,
+  ambientIntensity: 1.45,
   backgroundLitChance: 0.14,
   bloomStrength: 0.55,
   bloomThreshold: 0.45,
@@ -1044,36 +1044,36 @@ function buildLowWear(scale: number, amp: number, fadeFrom: number, fadeTo: numb
 
 const SURFACE_RECIPES: Record<string, () => ReturnType<typeof buildGrain>> = {
   // retrofit paneling suits the market: coarse quantized steps plus grain
-  market: () => buildPanels(0.7, 0.95, 0.7, 0.14).add(buildGrain()).add(1).clamp(0.86, 1.12),
+  market: () => buildPanels(0.7, 0.95, 0.7, 0.34).add(buildGrain(0.07)).add(1).clamp(0.6, 1.25),
 
   // metal drums: horizontal sheet banding, rail stains bleeding down from the collar bands
   stash: () =>
-    buildPanels(0.001, 1.7, 0.001, 0.1)
-      .add(buildLowWear(2.2, 0.16, 0.8, 3.2))
-      .add(buildGrain())
+    buildPanels(0.001, 1.7, 0.001, 0.24)
+      .add(buildLowWear(2.2, 0.34, 0.8, 3.2))
+      .add(buildGrain(0.06))
       .add(1)
-      .clamp(0.84, 1.1),
+      .clamp(0.55, 1.2),
 
   // the authority keeps its hall severe: near-clean, one shadow line under the cornice
   codex: () =>
-    buildOrganic(0.3, 0.05)
-      .sub(buildCourseShadow(3.68, 0.14, 0.1))
-      .add(buildGrain())
+    buildOrganic(0.3, 0.12)
+      .sub(buildCourseShadow(3.68, 0.16, 0.2))
+      .add(buildGrain(0.06))
       .add(1)
-      .clamp(0.9, 1.08),
+      .clamp(0.72, 1.14),
 
   // worn slab: heavy organic weathering low on the walls, darkened strata at the course heights
   gate: () =>
-    buildLowWear(0.45, 0.22, 1.2, 4.6)
-      .sub(buildCourseShadow(2.2, 0.32, 0.09))
-      .sub(buildCourseShadow(4.15, 0.3, 0.09))
-      .add(buildGrain())
+    buildLowWear(0.45, 0.5, 1.2, 4.6)
+      .sub(buildCourseShadow(2.2, 0.32, 0.18))
+      .sub(buildCourseShadow(4.15, 0.3, 0.18))
+      .add(buildGrain(0.07))
       .add(1)
-      .clamp(0.76, 1.1),
+      .clamp(0.5, 1.18),
 
-  avatar: () => buildPanels(0.001, 1.4, 0.001, 0.08).add(buildGrain()).add(1).clamp(0.88, 1.1),
+  avatar: () => buildPanels(0.001, 1.4, 0.001, 0.2).add(buildGrain(0.06)).add(1).clamp(0.66, 1.18),
 
-  fountain: () => buildOrganic(0.8, 0.08).add(buildGrain()).add(1).clamp(0.88, 1.1),
+  fountain: () => buildOrganic(0.8, 0.18).add(buildGrain(0.06)).add(1).clamp(0.72, 1.16),
 };
 
 function applySurface(material: MeshStandardNodeMaterial, base: Color, key: string) {
@@ -1086,7 +1086,7 @@ function applySurface(material: MeshStandardNodeMaterial, base: Color, key: stri
 
 /** Pavement: broad quiet pavers, soft wear mottle, crisp joints — calm underfoot, not graph paper. */
 function applyGroundSurface(material: MeshStandardNodeMaterial, base: Color) {
-  const paver = buildPanels(0.3, 0.001, 0.3, 0.07);
+  const paver = buildPanels(0.3, 0.001, 0.3, 0.16);
   const jointX = positionWorld.x.mul(0.3).fract();
   const jointZ = positionWorld.z.mul(0.3).fract();
   const joints = jointX
@@ -1094,11 +1094,11 @@ function applyGroundSurface(material: MeshStandardNodeMaterial, base: Color) {
     .min(jointZ.min(jointZ.oneMinus()))
     .smoothstep(0.0, 0.02)
     .oneMinus()
-    .mul(0.08);
-  const wear = buildOrganic(0.22, 0.08);
+    .mul(0.16);
+  const wear = buildOrganic(0.22, 0.16);
 
   material.colorNode = color(base).mul(
-    paver.sub(joints).add(wear).add(buildGrain(0.03)).add(1).clamp(0.82, 1.08),
+    paver.sub(joints).add(wear).add(buildGrain(0.05)).add(1).clamp(0.62, 1.14),
   );
 }
 
@@ -1110,7 +1110,7 @@ function buildScene(config: ProbeConfig, useParts: boolean, grounding = false, s
 
   const ambient = new AmbientLight(new Color(config.ambient), config.ambientIntensity * 0.7);
   const directional = new DirectionalLight(new Color(config.dirColor), config.dirIntensity * 1.6);
-  const bounce = new HemisphereLight(new Color(config.ambient), new Color('#54402e'), 0.75);
+  const bounce = new HemisphereLight(new Color(config.ambient), new Color('#54402e'), 1.05);
 
   directional.position.set(-30, 42, 26);
   scene.add(ambient, directional, bounce);
