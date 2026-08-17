@@ -1,2 +1,2 @@
 [test]
-preload = ["@zgeoff/bun-test-extended", "./register-zustand-reset-early.ts", "./test-setup.ts"]
+preload = ["@zgeoff/bun-test-extended", "./reset-zustand-stores.ts", "./test-setup.ts"]

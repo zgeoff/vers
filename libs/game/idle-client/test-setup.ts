@@ -38,10 +38,13 @@ const reactTestingLibrary = await import('@testing-library/react');
 
 afterEach(async () => {
   // unmount before the store reset: a reset under a still-mounted tree re-renders it against the
-  // fresh stores, and its effects write the outgoing test's state right back
-  reactTestingLibrary.cleanup();
-
-  resetZustandStores();
+  // fresh stores, and its effects write the outgoing test's state right back; the finally keeps
+  // the reset from being skipped when an unmount cleanup throws
+  try {
+    reactTestingLibrary.cleanup();
+  } finally {
+    resetZustandStores();
+  }
 
   mock.restore();
 

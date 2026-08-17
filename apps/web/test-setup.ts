@@ -9,7 +9,7 @@ import {
   registerHappyDOM,
   registerMSWLifecycle,
 } from '@vers/test-utils/bun';
-import { resetZustandStores } from './register-zustand-reset-early';
+import { resetZustandStores } from './reset-zustand-stores';
 import { server } from './src/mocks/node';
 import { registerAvatarViewerMock } from './src/test-utils/register-avatar-viewer-mock';
 import { registerGameCanvasMock } from './src/test-utils/register-game-canvas-mock';
@@ -39,7 +39,7 @@ registerHappyDOM();
 expect.extend(jestDOMMatchers);
 
 // the zustand reset wrapper (worldmap selection, idle sync state) is installed by the
-// `register-zustand-reset-early.ts` preload, ahead of this file's own imports below
+// `reset-zustand-stores.ts` preload, ahead of this file's own imports below
 registerMSWLifecycle(server);
 registerMockDBReset();
 registerRequestContextMock();
