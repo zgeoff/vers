@@ -6,8 +6,9 @@
  * the plaza to judge the silhouettes in context.
  */
 import { bloom } from 'three/addons/tsl/display/BloomNode.js';
-import { pass } from 'three/tsl';
+import { pass, positionWorld, screenUV, vec3 } from 'three/tsl';
 import {
+  AgXToneMapping,
   AmbientLight,
   BoxGeometry,
   Color,
@@ -21,6 +22,7 @@ import {
   Mesh,
   MeshBasicNodeMaterial,
   MeshStandardNodeMaterial,
+  NoToneMapping,
   Object3D,
   OrthographicCamera,
   PerspectiveCamera,
@@ -994,7 +996,17 @@ function buildPartSetWindows(placement: AssemblyPlacement, config: ProbeConfig, 
 
 const dummy = new Object3D();
 
-function buildScene(config: ProbeConfig, useParts: boolean): Scene {
+/**
+ * Grounding occlusion: ambient light falls off toward the base of every structure, faking
+ * contact shadow where buildings meet the pavement. Applied via aoNode so emissives stay clean.
+ */
+const groundingNode = positionWorld.y.mul(0.25).clamp(0, 1).mul(0.68).add(0.32);
+
+function applyGrounding(material: MeshStandardNodeMaterial) {
+  material.aoNode = groundingNode;
+}
+
+function buildScene(config: ProbeConfig, useParts: boolean, grounding = false): Scene {
   const scene = new Scene();
 
   scene.background = new Color(config.sky);
@@ -1059,11 +1071,12 @@ function buildScene(config: ProbeConfig, useParts: boolean): Scene {
   const specs = massing;
   const boxSpecs = useParts ? specs.filter((spec) => !isNavRole(spec.role)) : specs;
   const boxGeometry = partGeometries.box;
-  const buildings = new InstancedMesh(
-    boxGeometry,
-    new MeshStandardNodeMaterial({ roughness: 0.85 }),
-    boxSpecs.length,
-  );
+  const buildingMaterial = new MeshStandardNodeMaterial({ roughness: 0.85 });
+  const buildings = new InstancedMesh(boxGeometry, buildingMaterial, boxSpecs.length);
+
+  if (grounding) {
+    applyGrounding(buildingMaterial);
+  }
   const litColor = new Color(config.buildingLit);
   const navColor = litColor.clone().multiplyScalar(1.15);
   const fillerColor = litColor.clone().multiplyScalar(0.6);
@@ -1123,6 +1136,11 @@ function buildScene(config: ProbeConfig, useParts: boolean): Scene {
       color: litColor.clone().multiplyScalar(0.55),
       roughness: 0.7,
     });
+
+    if (grounding) {
+      applyGrounding(partMaterial);
+      applyGrounding(furnitureMaterial);
+    }
 
     for (const placement of placements) {
       const material = placement.key === 'fountain' ? furnitureMaterial : partMaterial;
@@ -1415,13 +1433,22 @@ async function main() {
     viewCamera: OrthographicCamera | PerspectiveCamera,
     strength: number,
     threshold: number,
+    grade = false,
   ): PostProcessing => {
     const scenePass = pass(scene, viewCamera);
     const scenePassColor = scenePass.getTextureNode();
     const bloomPass = bloom(scenePassColor, strength, 0.4, threshold);
     const post = new PostProcessing(renderer);
+    let output = scenePassColor.add(bloomPass);
 
-    post.outputNode = scenePassColor.add(bloomPass);
+    if (grade) {
+      // vignette plus a gentle warm lean — the grading half of the treatment
+      const vignette = screenUV.sub(0.5).length().mul(1.25).pow(2).mul(0.4).oneMinus().clamp(0.55, 1);
+
+      output = output.mul(vignette).mul(vec3(1.05, 1.0, 0.94));
+    }
+
+    post.outputNode = output;
 
     return post;
   };
@@ -1661,6 +1688,30 @@ async function main() {
         return buildPost(plan.scene, planCamera, 0, 1);
       },
     },
+    {
+      key: 'grade',
+      name: '6 · Grade',
+      select: () => {
+        planActive = false;
+        orbitActive = false;
+        updateInfo();
+        selectPlazaCamera();
+        renderer.toneMapping = AgXToneMapping;
+        return buildPost(buildScene(NIGHT, true), camera, NIGHT.bloomStrength, NIGHT.bloomThreshold, true);
+      },
+    },
+    {
+      key: 'grade-ground',
+      name: '7 · Grade+AO',
+      select: () => {
+        planActive = false;
+        orbitActive = false;
+        updateInfo();
+        selectPlazaCamera();
+        renderer.toneMapping = AgXToneMapping;
+        return buildPost(buildScene(NIGHT, true, true), camera, NIGHT.bloomStrength, NIGHT.bloomThreshold, true);
+      },
+    },
     ...LINEUP_ELEMENTS.map((element) => ({
       key: element.key,
       name: element.name,
@@ -1693,6 +1744,8 @@ async function main() {
   const hud = document.getElementById('hud');
 
   const selectView = (view: View) => {
+    // grade views opt back in; everything else renders untonemapped
+    renderer.toneMapping = NoToneMapping;
     postProcessing = view.select();
     activeKey = view.key;
     renderHUD();

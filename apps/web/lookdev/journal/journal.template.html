@@ -155,19 +155,47 @@
   </p>
 
   <div class="howto">
-    <h2>Round 17 · what happens next</h2>
+    <h2>Round 18 · how to respond</h2>
     <p>
-      Mid-fidelity blockout is <b>closed</b>: palette, composition, layout, silhouettes, and form
-      are all locked. The unification phase begins — materials and weathering (where the gate's
-      worn-slab register gets its surface), the dusk-fog atmosphere development, lighting
-      cohesion, and motion (smoke, beacon sweeps, drifting haze). Expect the next rounds to
-      compare material and atmosphere treatments over this fixed geometry.
+      Unification opens with the grade: the same locked scene under three treatments. Baseline
+      (round 17, untonemapped) vs <b>6 · Grade</b> (AgX filmic tone mapping + vignette + gentle
+      warm lean) vs <b>7 · Grade+AO</b> (the same plus grounding occlusion — ambient light falls
+      off toward every structure's base, faking contact shadow). The AO is deliberately gentle;
+      it can be pushed. Rank the three, and note whether the warm lean is right or the grade
+      should sit cooler.
     </p>
     <p>
-      Live at <span style="font-family: var(--mono)">localhost:4599</span>, branch
-      <span style="font-family: var(--mono)">spike/respite-lookdev</span>.
+      Live at <span style="font-family: var(--mono)">localhost:4599</span> (buttons 3, 6, 7),
+      branch <span style="font-family: var(--mono)">spike/respite-lookdev</span>.
     </p>
   </div>
+
+  <section class="round">
+    <div class="round-head">
+      <h2>Round 18 · the grade</h2>
+      <span class="status open">open — rank the three treatments</span>
+    </div>
+    <p>
+      The biggest wow-per-effort step on the unification ladder: tone mapping and grading over
+      untouched geometry. AgX rolls off the clipped emissive whites into filmic highlights, the
+      vignette pulls the eye centerward, and the warm lean nudges the sodium story. Grounding
+      occlusion seats every structure into the pavement.
+    </p>
+    <div class="shots">
+      <figure>
+        <img src="data:image/png;base64,{{R17_ASSEMBLY_REF}}" alt="Baseline: the locked blockout untonemapped" />
+        <figcaption>baseline — no tone mapping (round 17)</figcaption>
+      </figure>
+      <figure>
+        <img src="data:image/png;base64,{{R18_GRADE}}" alt="The same scene under AgX tone mapping with vignette and warm lean" />
+        <figcaption>6 · grade — AgX + vignette + warm lean</figcaption>
+      </figure>
+      <figure>
+        <img src="data:image/png;base64,{{R18_GRADE_AO}}" alt="The graded scene with grounding occlusion darkening structure bases" />
+        <figcaption>7 · grade + grounding occlusion</figcaption>
+      </figure>
+    </div>
+  </section>
 
   <section class="round">
     <div class="round-head">
