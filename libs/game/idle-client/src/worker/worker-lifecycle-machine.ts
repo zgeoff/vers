@@ -31,7 +31,7 @@ import type { StartStatus } from './worker-contract';
  * deferred of every earlier caller a chain of held claims displaced — each settles once the requeued
  * claim that superseded it finally does.
  */
-export type PendingFlowRequest =
+type PendingFlowRequest =
   | {
       readonly kind: 'start';
       readonly input: Readonly<StartActivityInput>;
@@ -65,8 +65,6 @@ interface ResyncTicket {
   readonly pendingClaimAvatarID: string | null;
 }
 
-type CheckpointSubmitterChildRef = ActorRefFromLogic<typeof checkpointSubmitterMachine>;
-
 interface WorkerLifecycleContext {
   readonly cancelSignal: AbortSignal;
   readonly currentRequest: PendingFlowRequest | null;
@@ -78,7 +76,10 @@ interface WorkerLifecycleContext {
   readonly shutdownSignal: AbortSignal;
   readonly startToken: string | null;
   readonly stopController: AbortController;
-  readonly submitterRef: CheckpointSubmitterChildRef;
+
+  // written inline rather than behind a local alias: the readonly-parameters lint exempts the
+  // xstate ref by its own name, and an alias would hide it from that match
+  readonly submitterRef: ActorRefFromLogic<typeof checkpointSubmitterMachine>;
   readonly writerDisplacedActivityID: string | null;
 }
 
@@ -500,14 +501,21 @@ export const workerLifecycleMachine = setup({
     continuing: {
       entry: assign({ phase: 'continuing' as const }),
       invoke: {
-        input: (args) => ({
-          context: args.context.runtime,
-          request: getExpectedRequest(args.context.currentRequest, 'continuation'),
-        }),
+        input: (args) => {
+          const request = args.context.currentRequest;
+
+          invariant(request?.kind === 'continuation', 'expected a queued continuation request');
+
+          return { context: args.context.runtime, request };
+        },
         onDone: {
           actions: [
             (args) => {
-              applySettledRequest(args.context, args.event.output);
+              const request = args.context.currentRequest;
+
+              invariant(request?.kind === 'continuation', 'expected a queued continuation request');
+
+              request.deferred.resolve();
             },
             assign((args) => buildPendingPop(args.context)),
           ],
@@ -554,17 +562,17 @@ export const workerLifecycleMachine = setup({
     evicting: {
       entry: assign({ phase: 'evicting' as const }),
       invoke: {
-        input: (args) => ({
-          context: args.context.runtime,
-          request: getExpectedRequest(args.context.currentRequest, 'eviction'),
-        }),
+        input: (args) => {
+          const request = args.context.currentRequest;
+
+          invariant(request?.kind === 'eviction', 'expected a queued eviction request');
+
+          return { context: args.context.runtime, request };
+        },
+
+        // no deferred settles here — no caller awaits an eviction
         onDone: {
-          actions: [
-            (args) => {
-              applySettledRequest(args.context, args.event.output);
-            },
-            assign((args) => buildPendingPop(args.context)),
-          ],
+          actions: assign((args) => buildPendingPop(args.context)),
           target: '#workerLifecycle.dispatching',
         },
         onError: {
@@ -583,14 +591,17 @@ export const workerLifecycleMachine = setup({
     resyncing: {
       entry: assign({ phase: 'resyncing' as const }),
       invoke: {
-        input: (args) => ({
-          context: args.context.runtime,
-          request: getExpectedRequest(args.context.currentRequest, 'resync'),
-        }),
+        input: (args) => {
+          const request = args.context.currentRequest;
+
+          invariant(request?.kind === 'resync', 'expected a queued resync request');
+
+          return { context: args.context.runtime, request };
+        },
         onDone: {
           actions: [
             (args) => {
-              applyResyncSettlement(args.context, args.event.output);
+              applyResyncSettlement(args.context);
             },
             assign((args) => buildResyncSettlePop(args.context)),
           ],
@@ -617,15 +628,25 @@ export const workerLifecycleMachine = setup({
       invoke: {
         // signals are built here, at flow start, not at accept — a stop scope advanced while the
         // request waited its queue slot must not pre-abort the run it asked for
-        input: (args) => ({
-          context: args.context.runtime,
-          request: getExpectedRequest(args.context.currentRequest, 'start'),
-          signals: buildFlowSignals(args.context),
-        }),
+        input: (args) => {
+          const request = args.context.currentRequest;
+
+          invariant(request?.kind === 'start', 'expected a queued start request');
+
+          return {
+            context: args.context.runtime,
+            request,
+            signals: buildFlowSignals(args.context),
+          };
+        },
         onDone: {
           actions: [
             (args) => {
-              applySettledRequest(args.context, args.event.output);
+              const request = args.context.currentRequest;
+
+              invariant(request?.kind === 'start', 'expected a queued start request');
+
+              request.deferred.resolve(args.event.output);
             },
             assign((args) => buildPendingPop(args.context)),
           ],
@@ -647,21 +668,6 @@ export const workerLifecycleMachine = setup({
   },
 });
 
-/**
- * Narrows the currently claimed request to the kind its state's own invoked service expects — the
- * accept-or-enqueue transitions only ever route a request into the state matching its own kind, so
- * a mismatch here can only mean that invariant broke.
- */
-function getExpectedRequest<K extends PendingFlowRequest['kind']>(
-  request: PendingFlowRequest | null,
-  kind: K,
-): PendingFlowRequestOf<K> {
-  invariant(request !== null && request.kind === kind, `expected a queued ${kind} request`);
-
-  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- narrowing a generic type parameter's own literal value against a runtime check is a TS limitation control flow analysis cannot bridge; the invariant just above is what makes this safe
-  return request as PendingFlowRequestOf<K>;
-}
-
 async function runFlowBody(site: WorkerFaultSite, body: () => Promise<void>): Promise<void> {
   try {
     await body();
@@ -670,13 +676,11 @@ async function runFlowBody(site: WorkerFaultSite, body: () => Promise<void>): Pr
   }
 }
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- WorkerLifecycleContext embeds a live xstate ActorRef and AbortController/AbortSignal handles with no further readonly form
 function buildFlowSignals(context: WorkerLifecycleContext): FlowSignals {
   return { cancel: context.cancelSignal, stop: context.stopController.signal };
 }
 
 function buildResyncRequest(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- WorkerLifecycleContext embeds a live xstate ActorRef and AbortController/AbortSignal handles with no further readonly form
   context: WorkerLifecycleContext,
   avatarID: string,
   claim: boolean,
@@ -693,7 +697,6 @@ function buildResyncRequest(
   };
 }
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- WorkerLifecycleContext embeds a live xstate ActorRef and AbortController/AbortSignal handles with no further readonly form
 function isFlowActive(args: ContextArg): boolean {
   return (
     args.context.phase === 'starting' ||
@@ -703,43 +706,12 @@ function isFlowActive(args: ContextArg): boolean {
   );
 }
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- WorkerLifecycleContext embeds a live xstate ActorRef and AbortController/AbortSignal handles with no further readonly form
 function isIdleOrRunning(args: ContextArg): boolean {
   return args.context.phase === 'idle' || args.context.phase === 'running';
 }
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- WorkerLifecycleContext embeds a live xstate ActorRef and AbortController/AbortSignal handles with no further readonly form
 function hasLiveActivity(args: ContextArg): boolean {
   return args.context.runtime.getActivity() !== null;
-}
-
-/**
- * Resolves the request whose invoked service just settled — the started status for a start, void
- * for a resync or continuation (plus every deferred a chain of held claims displaced), nothing for
- * an eviction, which no caller awaits.
- */
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- WorkerLifecycleContext embeds a live xstate ActorRef and AbortController/AbortSignal handles with no further readonly form
-function applySettledRequest(context: WorkerLifecycleContext, output: unknown): void {
-  const request = context.currentRequest;
-
-  if (request === null || request.kind === 'eviction') {
-    return;
-  }
-
-  if (request.kind === 'start') {
-    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the 'starting' state's own invoked service is the only caller of this branch, and it always produces a StartStatus
-    request.deferred.resolve(output as StartStatus);
-
-    return;
-  }
-
-  request.deferred.resolve();
-
-  if (request.kind === 'resync') {
-    for (const carryOver of request.carryOverDeferreds) {
-      carryOver.resolve();
-    }
-  }
 }
 
 /**
@@ -748,7 +720,6 @@ function applySettledRequest(context: WorkerLifecycleContext, output: unknown): 
  * caller resolves (a start as failed) so nothing awaiting the queue hangs, and the queue advances.
  */
 function applyEscapedRequest(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- WorkerLifecycleContext embeds a live xstate ActorRef and AbortController/AbortSignal handles with no further readonly form
   context: WorkerLifecycleContext,
   site: WorkerFaultSite,
   error: unknown,
@@ -777,7 +748,6 @@ function applyEscapedRequest(
 }
 
 function buildPendingPop(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- WorkerLifecycleContext embeds a live xstate ActorRef and AbortController/AbortSignal handles with no further readonly form
   context: WorkerLifecycleContext,
 ): Pick<WorkerLifecycleContext, 'currentRequest' | 'pending'> {
   return { currentRequest: context.pending[0] ?? null, pending: context.pending.slice(1) };
@@ -790,7 +760,6 @@ function buildPendingPop(
  * settle, the pop, and the requeue can never disagree about whether a claim is held.
  */
 function findHeldResyncClaim(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- WorkerLifecycleContext embeds a live xstate ActorRef and AbortController/AbortSignal handles with no further readonly form
   context: WorkerLifecycleContext,
 ): { readonly avatarID: string; readonly current: PendingFlowRequestOf<'resync'> } | null {
   const ticket = context.resyncTicket;
@@ -814,10 +783,7 @@ function findHeldResyncClaim(
  * arrived and queued behind the in-flight resync still runs ahead of the requeued claim, exactly
  * as its own arrival order requires.
  */
-function foldHeldResyncClaim(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- WorkerLifecycleContext embeds a live xstate ActorRef and AbortController/AbortSignal handles with no further readonly form
-  context: WorkerLifecycleContext,
-): ReadonlyArray<PendingFlowRequest> {
+function foldHeldResyncClaim(context: WorkerLifecycleContext): ReadonlyArray<PendingFlowRequest> {
   const heldClaim = findHeldResyncClaim(context);
 
   if (heldClaim === null) {
@@ -838,13 +804,19 @@ function foldHeldResyncClaim(
  * its place, in which case that deferred instead carries over onto the requeued request, per the
  * coalescing contract's first-caller-awaits-held-follow-up rule.
  */
-function applyResyncSettlement(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- WorkerLifecycleContext embeds a live xstate ActorRef and AbortController/AbortSignal handles with no further readonly form
-  context: WorkerLifecycleContext,
-  output: unknown,
-): void {
-  if (findHeldResyncClaim(context) === null) {
-    applySettledRequest(context, output);
+function applyResyncSettlement(context: WorkerLifecycleContext): void {
+  if (findHeldResyncClaim(context) !== null) {
+    return;
+  }
+
+  const current = context.currentRequest;
+
+  invariant(current?.kind === 'resync', 'expected a queued resync request');
+
+  current.deferred.resolve();
+
+  for (const carryOver of current.carryOverDeferreds) {
+    carryOver.resolve();
   }
 }
 
@@ -855,7 +827,6 @@ function applyResyncSettlement(
  * settles must still see a resync in progress.
  */
 function buildResyncSettlePop(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- WorkerLifecycleContext embeds a live xstate ActorRef and AbortController/AbortSignal handles with no further readonly form
   context: WorkerLifecycleContext,
 ): Pick<WorkerLifecycleContext, 'currentRequest' | 'pending' | 'resyncTicket'> {
   const heldClaim = findHeldResyncClaim(context);
@@ -895,10 +866,7 @@ function scheduleStopDelivery(
   })();
 }
 
-function scheduleReconnectRecovery(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- WorkerLifecycleContext embeds a live xstate ActorRef and AbortController/AbortSignal handles with no further readonly form
-  context: WorkerLifecycleContext,
-): void {
+function scheduleReconnectRecovery(context: WorkerLifecycleContext): void {
   void (async () => {
     try {
       await context.failureActionSeeded;
@@ -914,13 +882,11 @@ function scheduleReconnectRecovery(
  * assign installs the fresh scope a flow accepted afterward captures instead — kept apart because
  * an abort is an effect and an assigner must stay a pure context producer.
  */
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- WorkerLifecycleContext embeds a live xstate ActorRef and AbortController/AbortSignal handles with no further readonly form
 function applyStopScopeAbort(context: WorkerLifecycleContext): void {
   context.stopController.abort();
 }
 
 function buildFreshStopScope(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- WorkerLifecycleContext embeds a live xstate ActorRef and AbortController/AbortSignal handles with no further readonly form
   context: WorkerLifecycleContext,
 ): Pick<WorkerLifecycleContext, 'cancelSignal' | 'stopController'> {
   const stopController = new AbortController();
@@ -936,10 +902,7 @@ function buildFreshStopScope(
  * queue — so no entry point awaiting a deferred hangs past teardown. A start settles as failed;
  * nothing here reports a fault, since teardown is deliberate.
  */
-function applyTeardownSettlement(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- WorkerLifecycleContext embeds a live xstate ActorRef and AbortController/AbortSignal handles with no further readonly form
-  context: WorkerLifecycleContext,
-): void {
+function applyTeardownSettlement(context: WorkerLifecycleContext): void {
   const requests = [context.currentRequest, ...context.pending];
 
   for (const request of requests) {
@@ -962,7 +925,6 @@ function applyTeardownSettlement(
   }
 }
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- WorkerLifecycleContext embeds a live xstate ActorRef and AbortController/AbortSignal handles with no further readonly form
 function applyStopHalt(context: WorkerLifecycleContext): void {
   context.runtime.getSimulation().stopActivity();
 
