@@ -62,6 +62,8 @@ const MAP: Record<string, string> = {
   R27_SKYLINE: 'r27-skyline',
   R28_GATE_HIFI: 'r28-gate-hifi',
   R28_GATE_CONTEXT: 'r28-gate-context',
+  R29_GATE_CONCEPT: 'r29-gate-concept',
+  R29_GATE_CONTEXT: 'r29-gate-context',
 };
 
 let html = await Bun.file(`${import.meta.dir}/journal.template.html`).text();
