@@ -162,6 +162,12 @@ function buildMassing(): Array<BuildingSpec> {
       const h = 3.5 + random() * (4 + Math.abs(row.z) * 0.14);
       const d = 2.4 + random() * 2.4;
 
+      // every background row keeps a gap behind the codex tower, so its crown reads against sky
+      // instead of merging into the terraces
+      if (x > -7.5 && x < 3.5) {
+        continue;
+      }
+
       specs.push({
         d,
         facing: 'pz',
@@ -322,8 +328,8 @@ function buildPlazaLights(): Array<EmissiveInstance> {
     z: spec.z,
   }));
 
-  // the monument's single cold instrument light, in the F register
-  lights.push({ color: new Color('#7dd3fc').multiplyScalar(2.4), x: 4.5, y: 3.7, z: 1.5 });
+  // the fountain's single cold instrument light, in the F register, on its low central hub
+  lights.push({ color: new Color('#7dd3fc').multiplyScalar(2.4), x: 4.5, y: 1.6, z: 1.5 });
 
   return lights;
 }
@@ -382,6 +388,16 @@ const STASH_VAULT_FACE: ReadonlyArray<SilhouettePart> = [
   { g: 'box', sx: 1.4, sy: 1.4, sz: 3, x: 3.9, y: 0.7, z: 0 },
 ];
 
+/** Stash pick — the double drum made asymmetric: one large tank, one small, sharing a collar. */
+const STASH_DOUBLE_DRUM: ReadonlyArray<SilhouettePart> = [
+  { g: 'cyl', sx: 2.6, sy: 3.2, sz: 2.6, x: -1.4, y: 1.6, z: 0 },
+  { g: 'cyl', sx: 1.7, sy: 2.3, sz: 1.7, x: 2.6, y: 1.15, z: 0 },
+  { g: 'box', sx: 3.4, sy: 1.4, sz: 3, x: 0.6, y: 0.7, z: 0 },
+  { g: 'box', sx: 1.1, sy: 0.5, sz: 1.1, x: -1.4, y: 3.45, z: 0 },
+  { g: 'box', sx: 0.8, sy: 0.4, sz: 0.8, x: 2.6, y: 2.5, z: 0 },
+  { g: 'box', sx: 0.15, sy: 1.1, sz: 0.15, x: 0.6, y: 1.9, z: 0 },
+];
+
 /** Codex new-A — plinth spire: a broad two-tier base carrying a slimmer instrument shaft. */
 const CODEX_PLINTH_SPIRE: ReadonlyArray<SilhouettePart> = [
   { g: 'box', sx: 6, sy: 3, sz: 5, x: 0, y: 1.5, z: 0 },
@@ -391,6 +407,19 @@ const CODEX_PLINTH_SPIRE: ReadonlyArray<SilhouettePart> = [
   { g: 'box', sx: 0.1, sy: 2, sz: 0.1, x: -0.5, y: 13, z: 0 },
   { g: 'box', sx: 0.1, sy: 2, sz: 0.1, x: 0.5, y: 13, z: 0 },
   { g: 'cyl', rx: 1.1, sx: 0.55, sy: 0.1, sz: 0.55, x: 0.75, y: 12.4, z: 0.25 },
+];
+
+/** Codex pick — archive stack: offset slabs piled on a heavy plinth, like bound records. */
+const CODEX_ARCHIVE_STACK: ReadonlyArray<SilhouettePart> = [
+  { g: 'box', sx: 7, sy: 2.5, sz: 5.5, x: 0, y: 1.25, z: 0 },
+  { g: 'box', sx: 4, sy: 1.3, sz: 3.6, x: 0.3, y: 3.15, z: 0 },
+  { g: 'box', sx: 3.8, sy: 1.3, sz: 3.5, x: -0.3, y: 4.45, z: 0 },
+  { g: 'box', sx: 3.7, sy: 1.3, sz: 3.4, x: 0.25, y: 5.75, z: 0 },
+  { g: 'box', sx: 3.5, sy: 1.3, sz: 3.3, x: -0.25, y: 7.05, z: 0 },
+  { g: 'box', sx: 3.4, sy: 1.3, sz: 3.2, x: 0.15, y: 8.35, z: 0 },
+  { g: 'box', sx: 3.2, sy: 1.3, sz: 3.1, x: -0.15, y: 9.65, z: 0 },
+  { g: 'box', sx: 2.6, sy: 0.2, sz: 0.2, x: 0, y: 10.6, z: 0 },
+  { g: 'box', sx: 0.1, sy: 1.6, sz: 0.1, x: 0, y: 11.2, z: 0 },
 ];
 
 /** Gate new-A — bastion slot: battered symmetric walls, deep header, centered beacon. */
@@ -464,18 +493,7 @@ const LINEUP_ELEMENTS: ReadonlyArray<LineupElement> = [
         { g: 'cyl', rx: 1.2, sx: 1.3, sy: 0.14, sz: 1.3, x: 0, y: 11.4, z: 0.2 },
         { g: 'box', sx: 0.1, sy: 2.2, sz: 0.1, x: -0.8, y: 11.9, z: 0 },
       ],
-      // C — archive stack: offset slabs piled on a heavy plinth, like bound records
-      [
-        { g: 'box', sx: 7, sy: 2.5, sz: 5.5, x: 0, y: 1.25, z: 0 },
-        { g: 'box', sx: 4, sy: 1.3, sz: 3.6, x: 0.3, y: 3.15, z: 0 },
-        { g: 'box', sx: 3.8, sy: 1.3, sz: 3.5, x: -0.3, y: 4.45, z: 0 },
-        { g: 'box', sx: 3.7, sy: 1.3, sz: 3.4, x: 0.25, y: 5.75, z: 0 },
-        { g: 'box', sx: 3.5, sy: 1.3, sz: 3.3, x: -0.25, y: 7.05, z: 0 },
-        { g: 'box', sx: 3.4, sy: 1.3, sz: 3.2, x: 0.15, y: 8.35, z: 0 },
-        { g: 'box', sx: 3.2, sy: 1.3, sz: 3.1, x: -0.15, y: 9.65, z: 0 },
-        { g: 'box', sx: 2.6, sy: 0.2, sz: 0.2, x: 0, y: 10.6, z: 0 },
-        { g: 'box', sx: 0.1, sy: 1.6, sz: 0.1, x: 0, y: 11.2, z: 0 },
-      ],
+      CODEX_ARCHIVE_STACK,
     ],
   },
   {
@@ -571,6 +589,8 @@ function buildLineupScene(element: LineupElement): Scene {
 const HALF_PI = 1.5708;
 
 interface AssemblyPlacement {
+  /** Light a window grid on every substantial box, not only the largest — for stacked-slab forms. */
+  readonly litAllBoxes?: boolean;
   readonly parts: ReadonlyArray<SilhouettePart>;
   readonly ry: number;
   readonly x: number;
@@ -583,8 +603,8 @@ interface AssemblyPlacement {
  */
 const ASSEMBLY: ReadonlyArray<AssemblyPlacement> = [
   { parts: MARKET_PARTS, ry: HALF_PI + 0.16, x: -14.5, z: -3 },
-  { parts: STASH_VAULT_FACE, ry: HALF_PI - 0.07, x: -13.6, z: -9.2 },
-  { parts: CODEX_PLINTH_SPIRE, ry: 0.06, x: -2, z: -14.5 },
+  { parts: STASH_DOUBLE_DRUM, ry: HALF_PI - 0.07, x: -13.6, z: -9.2 },
+  { litAllBoxes: true, parts: CODEX_ARCHIVE_STACK, ry: 0.06, x: -2, z: -14.5 },
   { parts: GATE_BASTION_SLOT, ry: 0, x: 6.2, z: -14.2 },
   { parts: AVATAR_PARTS, ry: -HALF_PI - 0.13, x: 14.6, z: -4 },
 ];
@@ -629,18 +649,25 @@ function buildPartSetWindows(placement: AssemblyPlacement, config: ProbeConfig, 
     return windows;
   }
 
-  const cols = Math.max(1, Math.floor((main.sx - 0.6) / 0.6));
-  const rowCount = Math.max(1, Math.floor((main.sy - 0.5) / 0.7));
-  const step = cols > 1 ? (main.sx - 0.9) / (cols - 1) : 0;
-  const litChance = Math.min(0.92, config.litChance * 1.9);
+  const litBoxes = placement.litAllBoxes
+    ? boxes.filter((box) => box.sx >= 2 && box.sy >= 1.2)
+    : [main];
 
-  for (let col = 0; col < cols; col += 1) {
-    for (let row = 0; row < rowCount; row += 1) {
-      const lx = main.x - (main.sx - 0.9) / 2 + col * step;
-      const y = main.y + main.sy / 2 - 0.5 - row * 0.7;
-      const world = toWorldOffset(placement.x, placement.z, placement.ry, lx, main.z + main.sz / 2 + 0.04);
+  for (const box of litBoxes) {
+    const cols = Math.max(1, Math.floor((box.sx - 0.6) / 0.6));
+    const rowCount = Math.max(1, Math.floor((box.sy - 0.5) / 0.7));
+    const step = cols > 1 ? (box.sx - 0.9) / (cols - 1) : 0;
+    const chanceScale = box === main ? 1.9 : 1.1;
+    const litChance = Math.min(0.92, config.litChance * chanceScale);
 
-      windows.push({ color: pickWindowColor(config, random, y, litChance), x: world.x, y, z: world.z });
+    for (let col = 0; col < cols; col += 1) {
+      for (let row = 0; row < rowCount; row += 1) {
+        const lx = box.x - (box.sx - 0.9) / 2 + col * step;
+        const y = box.y + box.sy / 2 - 0.5 - row * 0.7;
+        const world = toWorldOffset(placement.x, placement.z, placement.ry, lx, box.z + box.sz / 2 + 0.04);
+
+        windows.push({ color: pickWindowColor(config, random, y, litChance), x: world.x, y, z: world.z });
+      }
     }
   }
 
@@ -795,14 +822,24 @@ function buildScene(config: ProbeConfig, useParts: boolean): Scene {
   gateGlow.position.set(6.2, 2.5, -17.5);
   scene.add(gateGlow);
 
-  // the monument the plaza's instrument light sits on, off the square's center line
-  const monument = new Mesh(
-    new BoxGeometry(0.8, 3.4, 0.8),
-    new MeshStandardNodeMaterial({ color: litColor.clone().multiplyScalar(0.55), roughness: 0.8 }),
-  );
+  // the plaza fountain: flat stacked disks off the square's center line, the instrument light
+  // on its low central hub
+  const fountainMaterial = new MeshStandardNodeMaterial({
+    color: litColor.clone().multiplyScalar(0.55),
+    roughness: 0.7,
+  });
 
-  monument.position.set(4.5, 1.7, 1.5);
-  scene.add(monument);
+  for (const disk of [
+    { r: 2, h: 0.45, y: 0.22 },
+    { r: 1.35, h: 0.4, y: 0.62 },
+    { r: 0.5, h: 0.85, y: 1.05 },
+  ]) {
+    const tier = new Mesh(partGeometries.cyl, fountainMaterial);
+
+    tier.position.set(4.5, disk.y, 1.5);
+    tier.scale.set(disk.r, disk.h, disk.r);
+    scene.add(tier);
+  }
 
   // lamp posts under the plaza lights
   const postMesh = new InstancedMesh(
