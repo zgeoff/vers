@@ -1359,7 +1359,7 @@ const motionKnobs = makeKnobGroup('motion', {
   streaks: [1, 0, 2],
 });
 
-const motionState = { streakSpeed: 1 };
+const motionState = { streakDistance: 1, streakSpeed: 1 };
 
 registerKnob(
   'motion.streakSpeed',
@@ -1368,6 +1368,17 @@ registerKnob(
   3,
   (value) => {
     motionState.streakSpeed = value;
+  },
+  0.05,
+);
+// 3 is the safe maximum: the deepest base streak times 3 stays inside the camera far plane
+registerKnob(
+  'motion.streakDistance',
+  1,
+  0.5,
+  3,
+  (value) => {
+    motionState.streakDistance = value;
   },
   0.05,
 );
@@ -1849,8 +1860,9 @@ function buildScene(config: ProbeConfig, useParts: boolean, grounding = false, s
       const streak = new Mesh(streakGeometry, material);
       const streakY = 13 + ((index * 37) % 20);
       const streakZ = -60 - ((index * 13) % 25);
-      const period = 9 + ((index * 7) % 19);
-      const travel = 3.5 + ((index * 5) % 5);
+      const period = 8 + ((index * 7.1) % 26);
+      // wide per-streak speed spread: crossings from darting (~2.5s) to drifting (~11.5s)
+      const travel = 2.5 + ((index * 5.3) % 9);
       const offset = index * 7.7;
       const direction = index % 2 === 0 ? 1 : -1;
       // each streak sinks a little as it crosses, like a slow shooting star
@@ -1868,8 +1880,14 @@ function buildScene(config: ProbeConfig, useParts: boolean, grounding = false, s
         streak.visible = crossing;
 
         if (crossing) {
-          streak.position.x = direction * (progress * 150 - 75);
-          streak.position.y = streakY - progress * sink;
+          // distance scales depth, height, and crossing span together so the fleet still
+          // spans the whole sky however far back it sits
+          const distance = motionState.streakDistance;
+          const spanHalf = (26 + Math.abs(streakZ) * distance) * 0.66;
+
+          streak.position.x = direction * (progress * 2 * spanHalf - spanHalf);
+          streak.position.y = (streakY - progress * sink) * (0.75 + 0.25 * distance);
+          streak.position.z = streakZ * distance;
         }
       });
     }
