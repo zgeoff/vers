@@ -155,26 +155,58 @@
   </p>
 
   <div class="howto">
-    <h2>Round 21 · how to respond</h2>
+    <h2>Round 22 · how to respond</h2>
     <p>
-      Per-building recipes, composed from both texture tools per your note: <b>market</b> —
-      coarse retrofit paneling; <b>stash</b> — horizontal metal sheet banding, tighter
-      reflectance, stains bleeding down from the collar bands; <b>codex</b> — severe near-clean
-      faces with one shadow line under the cornice; <b>gate</b> — organic weathering low on the
-      walls fading upward, darkened strata aligned to the geometric course heights, no grid
-      anywhere; <b>avatar</b> — soft drum banding; <b>pavement</b> — broad quiet pavers with wear
-      mottle. Everything else is rest. Orbit each building and judge the recipes individually.
+      The tuner is yours — no verdict needed this round, just play. Open
+      <span style="font-family: var(--mono)">localhost:4599</span>, view <b>4 · Inspect</b> (orbit
+      while you tune) or <b>8 · Surfaces</b> (the fixed camera). The panel on the right has a
+      section per building plus <b>ground</b>, <b>light</b>, <b>grade</b>, and <b>grounding</b>
+      (the contact-shadow falloff). Every slider updates the live scene instantly — no reload, no
+      rebuild. <b>reset</b> restores the committed defaults, so there are no wrong moves.
     </p>
     <p>
-      Live at <span style="font-family: var(--mono)">localhost:4599</span> (buttons 4, 8), branch
-      <span style="font-family: var(--mono)">spike/respite-lookdev</span>.
+      When a look lands — for one building or the whole set — hit <b>copy json</b> and paste the
+      JSON into chat; it gets baked as the new defaults. Tip from round 21: texture only reads
+      where light lands, so raising <b>light → ambient / lamps</b> while judging a recipe is fair
+      play — the light section exists precisely so you can separate "recipe is wrong" from "wall
+      is dark".
     </p>
   </div>
 
   <section class="round">
     <div class="round-head">
+      <h2>Round 22 · the tuner — armed with technology</h2>
+      <span class="status open">open — tune at will</span>
+    </div>
+    <p>
+      Round 21's real verdict wasn't about amplitudes — it was that the loop itself was wrong:
+      the machine kept guessing at taste it doesn't have. This round ships the control layer
+      instead of another guess. Every constant in every surface recipe is now a <b>live knob</b>:
+      panel cells and amplitudes, wear scales and fade bands, course-shadow heights and depths,
+      grain, clamps, per-building roughness — plus the light rig (ambient, bounce, key, lamps,
+      gate glow), the grade (vignette, warmth, bloom), and the grounding occlusion. Knobs are
+      TSL uniforms, so sliders edit the material graph in place at frame rate. <b>copy json</b>
+      exports the whole configuration for baking — the exact workflow that settled the layout,
+      applied to surfaces.
+    </p>
+    <p>
+      Roadmap note agreed alongside: the broad-strokes phases continue next — lighting cohesion,
+      then atmosphere, then motion — and the deep texture exploration moves to the
+      final-fidelity phase, where one pilot building goes ground-up through every pass with
+      these tools in hand.
+    </p>
+    <div class="shots">
+      <figure>
+        <img src="data:image/png;base64,{{R22_TUNER}}" alt="The surfaces view with the tuner panel open on the right: collapsible sections per building, the gate section expanded showing wear, course, grain, clamp, and roughness sliders" />
+        <figcaption>8 · surfaces — the tuner panel, gate section open, reset and copy-json at the head</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="round">
+    <div class="round-head">
       <h2>Round 21 · recipes, not wallpaper</h2>
-      <span class="status open">open — judge per building</span>
+      <span class="status">resolved</span>
     </div>
     <p>
       The lesson from rounds 19 and 20, applied: neither tool was wrong — <b>uniform
@@ -196,6 +228,13 @@
         <figcaption>close orbit — market panels and drum banding, reading where light lands</figcaption>
       </figure>
     </div>
+    <p class="verdict">
+      <b>Verdict:</b> "way too subtle" — and after the amplitude boost, the deeper one: "i don't
+      think you're a good judge of textures. i think that requires human in the loop
+      configuration/refinement, i just need to be armed with technology." Texture refinement is
+      now human-in-the-loop by design; round 22 builds the arms, and the deep texture exploration
+      itself moves to the final-fidelity phase.
+    </p>
   </section>
 
   <section class="round">
