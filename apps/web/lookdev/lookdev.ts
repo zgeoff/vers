@@ -528,8 +528,8 @@ const STASH_FORM_PARTS: ReadonlyArray<SilhouettePart> = [
   { g: 'box', sx: 0.2, sy: 2.8, sz: 0.2, x: -3.95, y: 1.4, z: 0 },
   { g: 'cyl', rz: 1.5708, sx: 0.35, sy: 0.12, sz: 0.35, x: -4.15, y: 1.7, z: 0 },
   // the entrance vestibule: extruded out past the collar bands so the way in reads
-  { g: 'box', sx: 1.7, sy: 2.1, sz: 1.5, x: -1.4, y: 1.05, z: 3 },
-  { g: 'box', sx: 2, sy: 0.35, sz: 1.7, x: -1.4, y: 2.25, z: 3 },
+  { g: 'box', sx: 1.2, sy: 1.5, sz: 0.9, x: -1.4, y: 0.75, z: 2.85 },
+  { g: 'box', sx: 1.4, sy: 0.25, sz: 1.1, x: -1.4, y: 1.62, z: 2.85 },
   { g: 'box', sx: 0.35, sy: 2.2, sz: 0.08, x: 2.6, y: 1.1, z: 1.72 },
 ];
 
@@ -721,7 +721,7 @@ interface AssemblyPlacement {
  */
 const placements: Array<AssemblyPlacement> = [
   { key: 'market', parts: MARKET_FORM_PARTS, ry: 1.631, x: -14.3, z: 2.2 },
-  { key: 'stash', parts: STASH_FORM_PARTS, ry: -2.079, x: -12.7, z: -10.6 },
+  { key: 'stash', parts: STASH_FORM_PARTS, ry: 1.063, x: -12.7, z: -10.6 },
   { key: 'codex', litAllBoxes: true, parts: CODEX_HALL_FORM_PARTS, ry: 0.06, x: -4.6, z: -14.7 },
   { key: 'gate', noWindows: true, parts: GATE_FORM_PARTS, ry: 0.05, x: 5.9, z: -16.4 },
   { key: 'avatar', parts: AVATAR_PARTS, ry: -1.451, x: 16.1, z: -5.3 },
@@ -948,7 +948,7 @@ function buildPartSetWindows(placement: AssemblyPlacement, config: ProbeConfig, 
     }
 
     // the stash's door sits on its extruded vestibule face, past the drum radius
-    const doorLz = largest.z + radius + (placement.key === 'stash' ? 1.2 : 0);
+    const doorLz = largest.z + radius + (placement.key === 'stash' ? 0.68 : 0);
     const door = toWorldOffset(placement.x, placement.z, placement.ry, largest.x, doorLz);
 
     windows.push({ color: new Color(WARM_WINDOW).multiplyScalar(2.6), x: door.x, y: 0.75, z: door.z });
