@@ -439,16 +439,13 @@ const CODEX_HALL_FORM_PARTS: ReadonlyArray<SilhouettePart> = [
   { g: 'box', sx: 0.35, sy: 3.2, sz: 0.5, x: -2.2, y: 1.6, z: 2.3 },
   { g: 'box', sx: 0.35, sy: 3.2, sz: 0.5, x: 2.2, y: 1.6, z: 2.3 },
   { g: 'box', sx: 0.35, sy: 3.2, sz: 0.5, x: 3.3, y: 1.6, z: 2.3 },
-  { g: 'box', sx: 0.1, sy: 1.8, sz: 0.1, x: 0.9, y: 5.9, z: 0 },
-  { g: 'cyl', rx: 1.1, sx: 0.7, sy: 0.1, sz: 0.7, x: -0.9, y: 5.6, z: 0.2 },
-  { g: 'box', sx: 0.5, sy: 0.6, sz: 0.5, x: -0.9, y: 5.25, z: 0.2 },
   { g: 'box', sx: 8.3, sy: 0.4, sz: 4.8, x: 0, y: 3.8, z: 0 },
   { g: 'box', sx: 3.3, sy: 0.4, sz: 5.1, x: 0, y: 5.15, z: 0.2 },
   { g: 'box', sx: 3.4, sy: 0.35, sz: 1, x: 0, y: 0.17, z: 2.9 },
   { g: 'box', sx: 2.8, sy: 0.7, sz: 0.6, x: 0, y: 0.35, z: 2.6 },
   { g: 'box', sx: 0.18, sy: 2.2, sz: 0.7, x: -1.35, y: 3.4, z: 2.5 },
   { g: 'box', sx: 0.18, sy: 2.2, sz: 0.7, x: 1.35, y: 3.4, z: 2.5 },
-  { g: 'box', sx: 2, sy: 2.2, sz: 3, x: 4.9, y: 1.1, z: -0.4 },
+  { g: 'box', sx: 2, sy: 2.2, sz: 2.6, x: -2.6, y: 1.1, z: -3.3 },
 ];
 
 /**
@@ -464,19 +461,17 @@ const GATE_FORM_PARTS: ReadonlyArray<SilhouettePart> = [
   { g: 'box', sx: 11, sy: 1.4, sz: 1.8, x: 0, y: 6.7, z: 0 },
   { g: 'box', sx: 9.6, sy: 0.5, sz: 1.5, x: 0, y: 5.95, z: 0.1 },
   { g: 'box', sx: 1.6, sy: 1, sz: 1.2, x: 0, y: 7.9, z: 0 },
-  { g: 'box', sx: 0.1, sy: 1.5, sz: 0.1, x: -4.9, y: 8, z: 0 },
-  { g: 'box', sx: 0.1, sy: 1.5, sz: 0.1, x: 4.9, y: 8, z: 0 },
-  { g: 'box', sx: 3.3, sy: 0.5, sz: 0.16, x: -3.7, y: 2.2, z: 0.95 },
-  { g: 'box', sx: 3.3, sy: 0.5, sz: 0.16, x: 3.7, y: 2.2, z: 0.95 },
-  { g: 'box', sx: 3.1, sy: 0.4, sz: 0.13, x: -3.7, y: 4.1, z: 0.93 },
-  { g: 'box', sx: 3.1, sy: 0.4, sz: 0.13, x: 3.7, y: 4.1, z: 0.93 },
-  { g: 'box', sx: 0.18, sy: 3.2, sz: 0.1, x: -3, y: 3.4, z: 0.96 },
-  { g: 'box', sx: 0.18, sy: 3, sz: 0.1, x: -4.4, y: 3.2, z: 0.96 },
-  { g: 'box', sx: 0.18, sy: 3.2, sz: 0.1, x: 3.1, y: 3.5, z: 0.96 },
-  { g: 'box', sx: 0.18, sy: 2.8, sz: 0.1, x: 4.3, y: 3.1, z: 0.96 },
+  // strata courses wrap the walls fully, slightly proud on both faces
+  { g: 'box', sx: 3.7, sy: 0.45, sz: 1.9, x: -3.7, y: 2.2, z: 0 },
+  { g: 'box', sx: 3.7, sy: 0.45, sz: 1.9, x: 3.7, y: 2.2, z: 0 },
+  { g: 'box', sx: 3.65, sy: 0.4, sz: 1.85, x: -3.7, y: 4.15, z: 0 },
+  { g: 'box', sx: 3.65, sy: 0.4, sz: 1.85, x: 3.7, y: 4.15, z: 0 },
   { g: 'box', sx: 4.2, sy: 0.3, sz: 2.6, x: 0, y: 0.15, z: 0.6 },
-  { g: 'box', sx: 0.9, sy: 1.6, sz: 0.9, x: -6.3, y: 0.8, z: 1.4 },
-  { g: 'box', sx: 0.9, sy: 1.1, sz: 0.9, x: 6.2, y: 0.55, z: 1.2 },
+  // broken corner stubs of the older gate, one centered on each outer plinth corner
+  { g: 'box', sx: 0.9, sy: 1.6, sz: 0.9, x: -6.1, y: 0.8, z: 1.1 },
+  { g: 'box', sx: 0.9, sy: 1.1, sz: 0.9, x: 6.1, y: 0.55, z: 1.1 },
+  { g: 'box', sx: 0.9, sy: 1.4, sz: 0.9, x: -6.1, y: 0.7, z: -1.1 },
+  { g: 'box', sx: 0.9, sy: 1, sz: 0.9, x: 6.1, y: 0.5, z: -1.1 },
 ];
 
 /**
@@ -532,7 +527,9 @@ const STASH_FORM_PARTS: ReadonlyArray<SilhouettePart> = [
   { g: 'box', sx: 2.4, sy: 0.22, sz: 0.22, x: 0.6, y: 2.35, z: 0.3 },
   { g: 'box', sx: 0.2, sy: 2.8, sz: 0.2, x: -3.95, y: 1.4, z: 0 },
   { g: 'cyl', rz: 1.5708, sx: 0.35, sy: 0.12, sz: 0.35, x: -4.15, y: 1.7, z: 0 },
-  { g: 'box', sx: 1.2, sy: 1.6, sz: 0.2, x: -1.4, y: 0.85, z: 2.52 },
+  // the entrance vestibule: extruded out past the collar bands so the way in reads
+  { g: 'box', sx: 1.7, sy: 2.1, sz: 1.5, x: -1.4, y: 1.05, z: 3 },
+  { g: 'box', sx: 2, sy: 0.35, sz: 1.7, x: -1.4, y: 2.25, z: 3 },
   { g: 'box', sx: 0.35, sy: 2.2, sz: 0.08, x: 2.6, y: 1.1, z: 1.72 },
 ];
 
@@ -739,6 +736,9 @@ interface Footprint {
   readonly hw: number;
   readonly kind: 'circle' | 'rect';
   readonly label: string;
+  /** Vertical extent, so an overhang doesn't false-flag against a low block beneath it. */
+  readonly y0: number;
+  readonly y1: number;
 }
 
 function collectFootprints(): Array<Footprint> {
@@ -762,6 +762,8 @@ function collectFootprints(): Array<Footprint> {
         hw: round ? part.sx : part.sx / 2,
         kind: round ? 'circle' : 'rect',
         label: placement.key,
+        y0: part.y - part.sy / 2,
+        y1: part.y + part.sy / 2,
       });
     }
   }
@@ -779,6 +781,8 @@ function collectFootprints(): Array<Footprint> {
       hw: spec.w / 2,
       kind: 'rect',
       label: `${spec.role}${index}`,
+      y0: 0,
+      y1: spec.h,
     });
   }
 
@@ -848,6 +852,10 @@ function isCircleRectOverlap(circle: Footprint, rect: Footprint): boolean {
 }
 
 function isFootprintOverlap(a: Footprint, b: Footprint): boolean {
+  if (a.y1 <= b.y0 || b.y1 <= a.y0) {
+    return false;
+  }
+
   if (a.kind === 'circle' && b.kind === 'circle') {
     return (a.cx - b.cx) ** 2 + (a.cz - b.cz) ** 2 < (a.hw + b.hw) ** 2;
   }
@@ -939,7 +947,9 @@ function buildPartSetWindows(placement: AssemblyPlacement, config: ProbeConfig, 
       }
     }
 
-    const door = toWorldOffset(placement.x, placement.z, placement.ry, largest.x, largest.z + radius);
+    // the stash's door sits on its extruded vestibule face, past the drum radius
+    const doorLz = largest.z + radius + (placement.key === 'stash' ? 1.2 : 0);
+    const door = toWorldOffset(placement.x, placement.z, placement.ry, largest.x, doorLz);
 
     windows.push({ color: new Color(WARM_WINDOW).multiplyScalar(2.6), x: door.x, y: 0.75, z: door.z });
 
