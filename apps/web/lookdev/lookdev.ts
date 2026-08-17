@@ -601,7 +601,7 @@ const FOUNTAIN_PARTS: ReadonlyArray<SilhouettePart> = [
  * front (+z) toward the plaza. Mutated by the plan editor; the assembly view rebuilds from it.
  */
 const placements: Array<AssemblyPlacement> = [
-  { key: 'market', parts: MARKET_PARTS, ry: 1.631, x: -14.3, z: 2.2 },
+  { key: 'market', parts: MARKET_FORM_PARTS, ry: 1.631, x: -14.3, z: 2.2 },
   { key: 'stash', parts: STASH_DOUBLE_DRUM, ry: -2.079, x: -12.7, z: -10.6 },
   { key: 'codex', litAllBoxes: true, parts: CODEX_ARCHIVE_HALL, ry: 0.06, x: -4.6, z: -14.7 },
   { key: 'gate', noWindows: true, parts: GATE_BASTION_SLOT, ry: 0.05, x: 5.9, z: -16.4 },
@@ -1305,6 +1305,28 @@ async function main() {
     camera.lookAt(0, 3, -7);
   };
 
+  // ---- orbit inspect state ----
+  const orbitTarget = new Vector3(0, 4, -7);
+  let orbitActive = false;
+  let orbitDragging = false;
+  let orbitPanning = false;
+  let orbitRadius = 33.5;
+  let orbitTheta = 0;
+  let orbitPhi = 1.42;
+  let lastPointerX = 0;
+  let lastPointerY = 0;
+
+  const applyOrbit = () => {
+    const sinPhi = Math.sin(orbitPhi);
+
+    camera.position.set(
+      orbitTarget.x + orbitRadius * sinPhi * Math.sin(orbitTheta),
+      orbitTarget.y + orbitRadius * Math.cos(orbitPhi),
+      orbitTarget.z + orbitRadius * sinPhi * Math.cos(orbitTheta),
+    );
+    camera.lookAt(orbitTarget);
+  };
+
   // ---- plan editor state ----
   let planGroups: Array<PlanGroup> = [];
   let planActive = false;
@@ -1328,8 +1350,10 @@ async function main() {
     (globalThis as { __lookdevOverlaps?: Array<string> }).__lookdevOverlaps = overlaps;
     info.textContent = planActive
       ? `${flash ?? (selected ? `selected: ${selected.label}` : 'click an element')} · drag to move · Q/E rotate · P copy layout · overlaps: ${overlapReport}`
-      : '';
-    info.style.display = planActive ? 'block' : 'none';
+      : orbitActive
+        ? 'drag to orbit · shift-drag to pan · wheel to zoom'
+        : '';
+    info.style.display = planActive || orbitActive ? 'block' : 'none';
   };
 
   const toPointerNDC = (event: PointerEvent) => {
@@ -1340,6 +1364,14 @@ async function main() {
   };
 
   renderer.domElement.addEventListener('pointerdown', (event) => {
+    if (orbitActive) {
+      orbitDragging = true;
+      orbitPanning = event.shiftKey || event.button === 2;
+      lastPointerX = event.clientX;
+      lastPointerY = event.clientY;
+      return;
+    }
+
     if (!planActive) {
       return;
     }
@@ -1374,6 +1406,34 @@ async function main() {
   });
 
   renderer.domElement.addEventListener('pointermove', (event) => {
+    if (orbitActive) {
+      if (!orbitDragging) {
+        return;
+      }
+
+      const dx = event.clientX - lastPointerX;
+      const dy = event.clientY - lastPointerY;
+
+      lastPointerX = event.clientX;
+      lastPointerY = event.clientY;
+
+      if (orbitPanning) {
+        // pan the target along the camera's screen axes
+        const scale = orbitRadius * 0.0012;
+        const right = new Vector3().setFromMatrixColumn(camera.matrix, 0);
+        const up = new Vector3().setFromMatrixColumn(camera.matrix, 1);
+
+        orbitTarget.addScaledVector(right, -dx * scale);
+        orbitTarget.addScaledVector(up, dy * scale);
+      } else {
+        orbitTheta -= dx * 0.005;
+        orbitPhi = Math.min(1.52, Math.max(0.12, orbitPhi - dy * 0.005));
+      }
+
+      applyOrbit();
+      return;
+    }
+
     if (!planActive || !dragging || !selected) {
       return;
     }
@@ -1389,6 +1449,8 @@ async function main() {
   });
 
   renderer.domElement.addEventListener('pointerup', () => {
+    orbitDragging = false;
+
     if (!planActive) {
       return;
     }
@@ -1397,12 +1459,29 @@ async function main() {
     updateInfo();
   });
 
+  renderer.domElement.addEventListener('wheel', (event) => {
+    if (!orbitActive) {
+      return;
+    }
+
+    event.preventDefault();
+    orbitRadius = Math.min(90, Math.max(7, orbitRadius * (1 + event.deltaY * 0.001)));
+    applyOrbit();
+  });
+
+  renderer.domElement.addEventListener('contextmenu', (event) => {
+    if (orbitActive) {
+      event.preventDefault();
+    }
+  });
+
   const views: Array<View> = [
     ...PROBES.map((config) => ({
       key: config.key,
       name: config.name,
       select: () => {
         planActive = false;
+        orbitActive = false;
         updateInfo();
         selectPlazaCamera();
         return buildPost(buildScene(config, false), camera, config.bloomStrength, config.bloomThreshold);
@@ -1413,16 +1492,33 @@ async function main() {
       name: '3 · Assembly draft',
       select: () => {
         planActive = false;
+        orbitActive = false;
         updateInfo();
         selectPlazaCamera();
         return buildPost(buildScene(NIGHT, true), camera, NIGHT.bloomStrength, NIGHT.bloomThreshold);
       },
     },
     {
+      key: 'inspect',
+      name: '4 · Inspect (orbit)',
+      select: () => {
+        planActive = false;
+        orbitActive = true;
+        orbitTarget.set(0, 4, -7);
+        orbitRadius = 33.5;
+        orbitTheta = 0;
+        orbitPhi = 1.42;
+        applyOrbit();
+        updateInfo();
+        return buildPost(buildScene(NIGHT, true), camera, NIGHT.bloomStrength, NIGHT.bloomThreshold);
+      },
+    },
+    {
       key: 'plan',
-      name: '4 · Plan (drag)',
+      name: '5 · Plan (drag)',
       select: () => {
         planActive = true;
+        orbitActive = false;
         selected = null;
         updatePlanCamera();
 
@@ -1438,9 +1534,16 @@ async function main() {
       name: element.name,
       select: () => {
         planActive = false;
+
+        // model-inspector views are orbitable: start at the straight-on framing, then walk
+        // around the candidates freely
+        orbitActive = true;
+        orbitTarget.set(0, element.lookY, 0);
+        orbitRadius = element.camZ;
+        orbitTheta = 0;
+        orbitPhi = Math.acos(Math.min(1, 0.8 / element.camZ));
+        applyOrbit();
         updateInfo();
-        camera.position.set(0, element.lookY + 0.8, element.camZ);
-        camera.lookAt(0, element.lookY, 0);
         return buildPost(buildLineupScene(element), camera, 0.15, 0.95);
       },
     })),
