@@ -6,7 +6,7 @@
  * the plaza to judge the silhouettes in context.
  */
 import { bloom } from 'three/addons/tsl/display/BloomNode.js';
-import { color, mx_noise_float, pass, positionWorld, screenUV, vec3 } from 'three/tsl';
+import { color, mix, mx_noise_float, pass, positionWorld, screenUV, uniform, vec3 } from 'three/tsl';
 import {
   AgXToneMapping,
   AmbientLight,
@@ -997,10 +997,121 @@ function buildPartSetWindows(placement: AssemblyPlacement, config: ProbeConfig, 
 const dummy = new Object3D();
 
 /**
+ * Tuner: every surface/grade/light constant is a knob the panel can drive live. Uniform-backed
+ * knobs update their TSL node in place (no rebuild); setter knobs re-apply onto whatever live
+ * scene objects the latest build registered in liveRefs.
+ */
+type UniformKnob = ReturnType<typeof uniform<number>>;
+
+type Knob = number | UniformKnob;
+
+interface TunerKnob {
+  readonly apply: (value: number) => void;
+  readonly defaultValue: number;
+  readonly label: string;
+  readonly max: number;
+  readonly min: number;
+  readonly path: string;
+  readonly step: number;
+  value: number;
+}
+
+const tunerKnobs: Array<TunerKnob> = [];
+
+function toKnobLabel(path: string): string {
+  return (path.split('.')[1] ?? path).replaceAll(/([A-Z\d])/g, ' $1').toLowerCase();
+}
+
+function makeKnob(path: string, value: number, min: number, max: number, step = 0.01): UniformKnob {
+  const node = uniform(value);
+
+  tunerKnobs.push({
+    apply: (next) => {
+      node.value = next;
+    },
+    defaultValue: value,
+    label: toKnobLabel(path),
+    max,
+    min,
+    path,
+    step,
+    value,
+  });
+
+  return node;
+}
+
+function registerKnob(
+  path: string,
+  value: number,
+  min: number,
+  max: number,
+  apply: (value: number) => void,
+  step = 0.01,
+) {
+  tunerKnobs.push({ apply, defaultValue: value, label: toKnobLabel(path), max, min, path, step, value });
+}
+
+function applyTunerKnobs() {
+  for (const knob of tunerKnobs) {
+    knob.apply(knob.value);
+  }
+}
+
+function buildTunerConfig(): Record<string, Record<string, number>> {
+  const config: Record<string, Record<string, number>> = {};
+
+  for (const knob of tunerKnobs) {
+    const [section = 'misc', name = knob.path] = knob.path.split('.');
+
+    (config[section] ??= {})[name] = Math.round(knob.value * 1000) / 1000;
+  }
+
+  return config;
+}
+
+type KnobSpec = readonly [value: number, min: number, max: number, step?: number];
+
+function makeKnobGroup<K extends string>(
+  section: string,
+  specs: Readonly<Record<K, KnobSpec>>,
+): Record<K, UniformKnob> {
+  const group = {} as Record<K, UniformKnob>;
+
+  for (const key of Object.keys(specs) as Array<K>) {
+    const [value, min, max, step] = specs[key];
+
+    group[key] = makeKnob(`${section}.${key}`, value, min, max, step);
+  }
+
+  return group;
+}
+
+/** Live scene objects the current view registered for setter knobs; null outside tuned views. */
+const liveRefs = {
+  ambient: null as AmbientLight | null,
+  bloom: null as { strength: { value: number }; threshold: { value: number } } | null,
+  bounce: null as HemisphereLight | null,
+  gateGlow: null as PointLight | null,
+  keyLight: null as DirectionalLight | null,
+  lamps: [] as Array<PointLight>,
+  materials: {} as Record<string, MeshStandardNodeMaterial>,
+};
+
+const groundingKnobs = makeKnobGroup('grounding', {
+  falloff: [0.25, 0.05, 1],
+  depth: [0.68, 0, 1],
+});
+
+/**
  * Grounding occlusion: ambient light falls off toward the base of every structure, faking
  * contact shadow where buildings meet the pavement. Applied via aoNode so emissives stay clean.
  */
-const groundingNode = positionWorld.y.mul(0.25).clamp(0, 1).mul(0.68).add(0.32);
+const groundingNode = positionWorld.y
+  .mul(groundingKnobs.falloff)
+  .clamp(0, 1)
+  .mul(groundingKnobs.depth)
+  .add(groundingKnobs.depth.oneMinus());
 
 function applyGrounding(material: MeshStandardNodeMaterial) {
   material.aoNode = groundingNode;
@@ -1011,16 +1122,16 @@ function applyGrounding(material: MeshStandardNodeMaterial) {
  * is ever applied uniformly: each building's recipe composes them selectively, anchored to its
  * architecture, with large areas of rest. Contributions are centered on zero and added to 1.
  */
-function buildGrain(amp = 0.04) {
+function buildGrain(amp: Knob = 0.04) {
   return mx_noise_float(positionWorld.mul(16)).mul(amp);
 }
 
-function buildOrganic(scale: number, amp: number) {
+function buildOrganic(scale: Knob, amp: Knob) {
   return mx_noise_float(positionWorld.mul(scale)).mul(amp);
 }
 
 /** Constant tone per quantized cell — the paneling tool. */
-function buildPanels(cellX: number, cellY: number, cellZ: number, amp: number) {
+function buildPanels(cellX: Knob, cellY: Knob, cellZ: Knob, amp: Knob) {
   const cell = vec3(
     positionWorld.x.mul(cellX).floor(),
     positionWorld.y.mul(cellY).floor(),
@@ -1031,49 +1142,210 @@ function buildPanels(cellX: number, cellY: number, cellZ: number, amp: number) {
 }
 
 /** A single darker shadow line at one architectural height — under a cornice, along a course. */
-function buildCourseShadow(height: number, halfWidth: number, depth: number) {
+function buildCourseShadow(height: Knob, halfWidth: Knob, depth: Knob) {
   return positionWorld.y.sub(height).abs().smoothstep(0, halfWidth).oneMinus().mul(depth);
 }
 
 /** Weathering that belongs low on a wall: organic noise faded out above the given band. */
-function buildLowWear(scale: number, amp: number, fadeFrom: number, fadeTo: number) {
+function buildLowWear(scale: Knob, amp: Knob, fadeFrom: Knob, fadeTo: Knob) {
   const mask = positionWorld.y.smoothstep(fadeFrom, fadeTo).oneMinus();
 
   return mx_noise_float(positionWorld.mul(scale)).mul(amp).mul(mask);
 }
 
+const marketKnobs = makeKnobGroup('market', {
+  cellX: [0.7, 0.05, 3, 0.05],
+  cellY: [0.95, 0.05, 3, 0.05],
+  cellZ: [0.7, 0.05, 3, 0.05],
+  panelAmp: [0.34, 0, 1],
+  grainAmp: [0.07, 0, 0.3, 0.005],
+  clampLo: [0.6, 0, 1],
+  clampHi: [1.25, 1, 2],
+});
+
+const stashKnobs = makeKnobGroup('stash', {
+  bandCellY: [1.7, 0.05, 4, 0.05],
+  bandAmp: [0.24, 0, 1],
+  wearScale: [2.2, 0.05, 6, 0.05],
+  wearAmp: [0.34, 0, 1],
+  wearFadeFrom: [0.8, 0, 6, 0.1],
+  wearFadeTo: [3.2, 0, 8, 0.1],
+  grainAmp: [0.06, 0, 0.3, 0.005],
+  clampLo: [0.55, 0, 1],
+  clampHi: [1.2, 1, 2],
+});
+
+const codexKnobs = makeKnobGroup('codex', {
+  mottleScale: [0.3, 0.05, 3, 0.05],
+  mottleAmp: [0.12, 0, 1],
+  courseHeight: [3.68, 0, 8, 0.02],
+  courseWidth: [0.16, 0.02, 1],
+  courseDepth: [0.2, 0, 1],
+  grainAmp: [0.06, 0, 0.3, 0.005],
+  clampLo: [0.72, 0, 1],
+  clampHi: [1.14, 1, 2],
+});
+
+const gateKnobs = makeKnobGroup('gate', {
+  wearScale: [0.45, 0.05, 3, 0.05],
+  wearAmp: [0.5, 0, 1.5],
+  wearFadeFrom: [1.2, 0, 6, 0.1],
+  wearFadeTo: [4.6, 0, 9, 0.1],
+  courseWidth: [0.3, 0.02, 1],
+  course1Height: [2.2, 0, 8, 0.02],
+  course1Depth: [0.18, 0, 1],
+  course2Height: [4.15, 0, 8, 0.02],
+  course2Depth: [0.18, 0, 1],
+  grainAmp: [0.07, 0, 0.3, 0.005],
+  clampLo: [0.5, 0, 1],
+  clampHi: [1.18, 1, 2],
+});
+
+const avatarKnobs = makeKnobGroup('avatar', {
+  bandCellY: [1.4, 0.05, 4, 0.05],
+  bandAmp: [0.2, 0, 1],
+  grainAmp: [0.06, 0, 0.3, 0.005],
+  clampLo: [0.66, 0, 1],
+  clampHi: [1.18, 1, 2],
+});
+
+const fountainKnobs = makeKnobGroup('fountain', {
+  mottleScale: [0.8, 0.05, 3, 0.05],
+  mottleAmp: [0.18, 0, 1],
+  grainAmp: [0.06, 0, 0.3, 0.005],
+  clampLo: [0.72, 0, 1],
+  clampHi: [1.16, 1, 2],
+});
+
+const groundKnobs = makeKnobGroup('ground', {
+  paverCell: [0.3, 0.05, 1.5],
+  paverAmp: [0.16, 0, 1],
+  jointDepth: [0.16, 0, 1],
+  wearScale: [0.22, 0.05, 3],
+  wearAmp: [0.16, 0, 1],
+  grainAmp: [0.05, 0, 0.3, 0.005],
+  clampLo: [0.62, 0, 1],
+  clampHi: [1.14, 1, 2],
+});
+
+for (const [buildingKey, roughness] of [
+  ['market', 0.85],
+  ['stash', 0.55],
+  ['codex', 0.85],
+  ['gate', 0.85],
+  ['avatar', 0.85],
+  ['fountain', 0.85],
+] as const) {
+  registerKnob(`${buildingKey}.roughness`, roughness, 0, 1, (value) => {
+    const material = liveRefs.materials[buildingKey];
+
+    if (material) {
+      material.roughness = value;
+    }
+  });
+}
+
+registerKnob('light.ambient', NIGHT.ambientIntensity * 0.7, 0, 4, (value) => {
+  if (liveRefs.ambient) {
+    liveRefs.ambient.intensity = value;
+  }
+});
+registerKnob('light.bounce', 1.05, 0, 4, (value) => {
+  if (liveRefs.bounce) {
+    liveRefs.bounce.intensity = value;
+  }
+});
+registerKnob('light.keyLight', NIGHT.dirIntensity * 1.6, 0, 6, (value) => {
+  if (liveRefs.keyLight) {
+    liveRefs.keyLight.intensity = value;
+  }
+});
+registerKnob(
+  'light.lamps',
+  16,
+  0,
+  60,
+  (value) => {
+    for (const lamp of liveRefs.lamps) {
+      lamp.intensity = value;
+    }
+  },
+  0.5,
+);
+registerKnob(
+  'light.gateGlow',
+  30,
+  0,
+  80,
+  (value) => {
+    if (liveRefs.gateGlow) {
+      liveRefs.gateGlow.intensity = value;
+    }
+  },
+  0.5,
+);
+
+const gradeKnobs = makeKnobGroup('grade', {
+  vignette: [0.4, 0, 1],
+  vignetteMin: [0.55, 0, 1],
+  warmth: [1, 0, 2],
+});
+
+registerKnob('grade.bloomStrength', NIGHT.bloomStrength, 0, 2, (value) => {
+  if (liveRefs.bloom) {
+    liveRefs.bloom.strength.value = value;
+  }
+});
+registerKnob('grade.bloomThreshold', NIGHT.bloomThreshold, 0, 1, (value) => {
+  if (liveRefs.bloom) {
+    liveRefs.bloom.threshold.value = value;
+  }
+});
+
 const SURFACE_RECIPES: Record<string, () => ReturnType<typeof buildGrain>> = {
   // retrofit paneling suits the market: coarse quantized steps plus grain
-  market: () => buildPanels(0.7, 0.95, 0.7, 0.34).add(buildGrain(0.07)).add(1).clamp(0.6, 1.25),
+  market: () =>
+    buildPanels(marketKnobs.cellX, marketKnobs.cellY, marketKnobs.cellZ, marketKnobs.panelAmp)
+      .add(buildGrain(marketKnobs.grainAmp))
+      .add(1)
+      .clamp(marketKnobs.clampLo, marketKnobs.clampHi),
 
   // metal drums: horizontal sheet banding, rail stains bleeding down from the collar bands
   stash: () =>
-    buildPanels(0.001, 1.7, 0.001, 0.24)
-      .add(buildLowWear(2.2, 0.34, 0.8, 3.2))
-      .add(buildGrain(0.06))
+    buildPanels(0.001, stashKnobs.bandCellY, 0.001, stashKnobs.bandAmp)
+      .add(buildLowWear(stashKnobs.wearScale, stashKnobs.wearAmp, stashKnobs.wearFadeFrom, stashKnobs.wearFadeTo))
+      .add(buildGrain(stashKnobs.grainAmp))
       .add(1)
-      .clamp(0.55, 1.2),
+      .clamp(stashKnobs.clampLo, stashKnobs.clampHi),
 
   // the authority keeps its hall severe: near-clean, one shadow line under the cornice
   codex: () =>
-    buildOrganic(0.3, 0.12)
-      .sub(buildCourseShadow(3.68, 0.16, 0.2))
-      .add(buildGrain(0.06))
+    buildOrganic(codexKnobs.mottleScale, codexKnobs.mottleAmp)
+      .sub(buildCourseShadow(codexKnobs.courseHeight, codexKnobs.courseWidth, codexKnobs.courseDepth))
+      .add(buildGrain(codexKnobs.grainAmp))
       .add(1)
-      .clamp(0.72, 1.14),
+      .clamp(codexKnobs.clampLo, codexKnobs.clampHi),
 
   // worn slab: heavy organic weathering low on the walls, darkened strata at the course heights
   gate: () =>
-    buildLowWear(0.45, 0.5, 1.2, 4.6)
-      .sub(buildCourseShadow(2.2, 0.32, 0.18))
-      .sub(buildCourseShadow(4.15, 0.3, 0.18))
-      .add(buildGrain(0.07))
+    buildLowWear(gateKnobs.wearScale, gateKnobs.wearAmp, gateKnobs.wearFadeFrom, gateKnobs.wearFadeTo)
+      .sub(buildCourseShadow(gateKnobs.course1Height, gateKnobs.courseWidth, gateKnobs.course1Depth))
+      .sub(buildCourseShadow(gateKnobs.course2Height, gateKnobs.courseWidth, gateKnobs.course2Depth))
+      .add(buildGrain(gateKnobs.grainAmp))
       .add(1)
-      .clamp(0.5, 1.18),
+      .clamp(gateKnobs.clampLo, gateKnobs.clampHi),
 
-  avatar: () => buildPanels(0.001, 1.4, 0.001, 0.2).add(buildGrain(0.06)).add(1).clamp(0.66, 1.18),
+  avatar: () =>
+    buildPanels(0.001, avatarKnobs.bandCellY, 0.001, avatarKnobs.bandAmp)
+      .add(buildGrain(avatarKnobs.grainAmp))
+      .add(1)
+      .clamp(avatarKnobs.clampLo, avatarKnobs.clampHi),
 
-  fountain: () => buildOrganic(0.8, 0.18).add(buildGrain(0.06)).add(1).clamp(0.72, 1.16),
+  fountain: () =>
+    buildOrganic(fountainKnobs.mottleScale, fountainKnobs.mottleAmp)
+      .add(buildGrain(fountainKnobs.grainAmp))
+      .add(1)
+      .clamp(fountainKnobs.clampLo, fountainKnobs.clampHi),
 };
 
 function applySurface(material: MeshStandardNodeMaterial, base: Color, key: string) {
@@ -1086,19 +1358,24 @@ function applySurface(material: MeshStandardNodeMaterial, base: Color, key: stri
 
 /** Pavement: broad quiet pavers, soft wear mottle, crisp joints — calm underfoot, not graph paper. */
 function applyGroundSurface(material: MeshStandardNodeMaterial, base: Color) {
-  const paver = buildPanels(0.3, 0.001, 0.3, 0.16);
-  const jointX = positionWorld.x.mul(0.3).fract();
-  const jointZ = positionWorld.z.mul(0.3).fract();
+  const paver = buildPanels(groundKnobs.paverCell, 0.001, groundKnobs.paverCell, groundKnobs.paverAmp);
+  const jointX = positionWorld.x.mul(groundKnobs.paverCell).fract();
+  const jointZ = positionWorld.z.mul(groundKnobs.paverCell).fract();
   const joints = jointX
     .min(jointX.oneMinus())
     .min(jointZ.min(jointZ.oneMinus()))
     .smoothstep(0.0, 0.02)
     .oneMinus()
-    .mul(0.16);
-  const wear = buildOrganic(0.22, 0.16);
+    .mul(groundKnobs.jointDepth);
+  const wear = buildOrganic(groundKnobs.wearScale, groundKnobs.wearAmp);
 
   material.colorNode = color(base).mul(
-    paver.sub(joints).add(wear).add(buildGrain(0.05)).add(1).clamp(0.62, 1.14),
+    paver
+      .sub(joints)
+      .add(wear)
+      .add(buildGrain(groundKnobs.grainAmp))
+      .add(1)
+      .clamp(groundKnobs.clampLo, groundKnobs.clampHi),
   );
 }
 
@@ -1114,6 +1391,14 @@ function buildScene(config: ProbeConfig, useParts: boolean, grounding = false, s
 
   directional.position.set(-30, 42, 26);
   scene.add(ambient, directional, bounce);
+
+  // register live objects for the tuner only when this build carries the full treatment
+  liveRefs.ambient = surfaces ? ambient : null;
+  liveRefs.bounce = surfaces ? bounce : null;
+  liveRefs.keyLight = surfaces ? directional : null;
+  liveRefs.gateGlow = null;
+  liveRefs.lamps = [];
+  liveRefs.materials = {};
 
   const groundMaterial = new MeshStandardNodeMaterial({ color: new Color(config.ground), roughness: 0.6 });
   const ground = new Mesh(new PlaneGeometry(220, 220), groundMaterial);
@@ -1166,6 +1451,10 @@ function buildScene(config: ProbeConfig, useParts: boolean, grounding = false, s
 
     light.position.set(lamp.x, 2.9, lamp.z);
     scene.add(light);
+
+    if (surfaces) {
+      liveRefs.lamps.push(light);
+    }
   }
 
   const specs = massing;
@@ -1244,6 +1533,7 @@ function buildScene(config: ProbeConfig, useParts: boolean, grounding = false, s
 
       if (surfaces) {
         applySurface(material, base, placement.key);
+        liveRefs.materials[placement.key] = material;
       }
 
       renderPartSet(scene, placement.parts, material, placement.x, placement.z, placement.ry);
@@ -1275,6 +1565,10 @@ function buildScene(config: ProbeConfig, useParts: boolean, grounding = false, s
 
   gateGlow.position.set(useParts ? gateX : 6.2, 2.5, (useParts ? gateZ : -14.2) - 3.3);
   scene.add(gateGlow);
+
+  if (surfaces) {
+    liveRefs.gateGlow = gateGlow;
+  }
 
   // lamp posts under the plaza lights
   const postMesh = new InstancedMesh(
@@ -1542,11 +1836,20 @@ async function main() {
     const post = new PostProcessing(renderer);
     let output = scenePassColor.add(bloomPass);
 
+    liveRefs.bloom = grade ? bloomPass : null;
+
     if (grade) {
       // vignette plus a gentle warm lean — the grading half of the treatment
-      const vignette = screenUV.sub(0.5).length().mul(1.25).pow(2).mul(0.4).oneMinus().clamp(0.55, 1);
+      const vignette = screenUV
+        .sub(0.5)
+        .length()
+        .mul(1.25)
+        .pow(2)
+        .mul(gradeKnobs.vignette)
+        .oneMinus()
+        .clamp(gradeKnobs.vignetteMin, 1);
 
-      output = output.mul(vignette).mul(vec3(1.05, 1.0, 0.94));
+      output = output.mul(vignette).mul(mix(vec3(1), vec3(1.05, 1.0, 0.94), gradeKnobs.warmth));
     }
 
     post.outputNode = output;
@@ -1864,12 +2167,134 @@ async function main() {
   let postProcessing = first.select();
 
   const hud = document.getElementById('hud');
+  const tuner = document.getElementById('tuner');
+
+  const renderTuner = () => {
+    if (!tuner) {
+      return;
+    }
+
+    // a re-render (reset) keeps whichever sections the user had open
+    const openSections = new Set(
+      [...tuner.querySelectorAll('details[open] > summary')].map((summary) => summary.textContent ?? ''),
+    );
+
+    tuner.innerHTML = '';
+
+    const head = document.createElement('div');
+
+    head.className = 'tuner-head';
+
+    const title = document.createElement('span');
+
+    title.textContent = 'surface tuner';
+
+    const copy = document.createElement('button');
+
+    copy.textContent = 'copy json';
+    copy.addEventListener('click', () => {
+      const serialized = JSON.stringify(buildTunerConfig(), null, 2);
+
+      console.log(serialized);
+      void navigator.clipboard.writeText(serialized).catch(() => {});
+      copy.textContent = 'copied';
+      setTimeout(() => {
+        copy.textContent = 'copy json';
+      }, 1200);
+    });
+
+    const reset = document.createElement('button');
+
+    reset.textContent = 'reset';
+    reset.addEventListener('click', () => {
+      for (const knob of tunerKnobs) {
+        knob.value = knob.defaultValue;
+        knob.apply(knob.value);
+      }
+
+      renderTuner();
+    });
+
+    head.append(title, reset, copy);
+    tuner.appendChild(head);
+
+    const sections = new Map<string, HTMLElement>();
+
+    for (const knob of tunerKnobs) {
+      const [sectionKey = 'misc'] = knob.path.split('.');
+      let body = sections.get(sectionKey);
+
+      if (!body) {
+        const details = document.createElement('details');
+        const summary = document.createElement('summary');
+
+        summary.textContent = sectionKey;
+        details.open = openSections.has(sectionKey);
+        details.appendChild(summary);
+        body = document.createElement('div');
+        details.appendChild(body);
+        tuner.appendChild(details);
+        sections.set(sectionKey, body);
+      }
+
+      const row = document.createElement('div');
+
+      row.className = 'tuner-row';
+
+      const label = document.createElement('label');
+
+      label.textContent = knob.label;
+      label.title = knob.path;
+
+      const range = document.createElement('input');
+
+      range.type = 'range';
+      range.min = String(knob.min);
+      range.max = String(knob.max);
+      range.step = String(knob.step);
+      range.value = String(knob.value);
+
+      const number = document.createElement('input');
+
+      number.type = 'number';
+      number.step = String(knob.step);
+      number.value = String(knob.value);
+
+      const commit = (raw: string) => {
+        const value = Number(raw);
+
+        if (!Number.isFinite(value)) {
+          return;
+        }
+
+        knob.value = value;
+        knob.apply(value);
+        range.value = String(value);
+        number.value = String(value);
+      };
+
+      range.addEventListener('input', () => commit(range.value));
+      number.addEventListener('change', () => commit(number.value));
+      row.append(label, range, number);
+      body.appendChild(row);
+    }
+  };
+
+  renderTuner();
 
   const selectView = (view: View) => {
     // grade views opt back in; everything else renders untonemapped
     renderer.toneMapping = NoToneMapping;
     postProcessing = view.select();
     activeKey = view.key;
+
+    // re-impose tuned values onto the freshly built scene's lights/materials/bloom
+    applyTunerKnobs();
+
+    if (tuner) {
+      tuner.style.display = view.key === 'inspect' || view.key === 'surfaces' ? 'block' : 'none';
+    }
+
     renderHUD();
   };
 
@@ -1893,6 +2318,11 @@ async function main() {
   renderHUD();
 
   globalThis.addEventListener('keydown', (event) => {
+    // typing in a tuner input must not switch views
+    if (event.target instanceof HTMLInputElement) {
+      return;
+    }
+
     if (planActive && selected && (event.key === 'q' || event.key === 'e')) {
       selected.target.ry += event.key === 'q' ? 0.05 : -0.05;
       selected.group.rotation.y = selected.target.ry;
