@@ -6,8 +6,9 @@
  * the plaza to judge the silhouettes in context.
  */
 import { bloom } from 'three/addons/tsl/display/BloomNode.js';
-import { color, mix, mx_noise_float, pass, positionWorld, screenUV, uniform, vec3 } from 'three/tsl';
+import { color, mix, mx_noise_float, pass, positionWorld, screenUV, time, uniform, uv, vec3 } from 'three/tsl';
 import {
+  AdditiveBlending,
   AgXToneMapping,
   AmbientLight,
   BoxGeometry,
@@ -1331,6 +1332,13 @@ const SPILL_FIXTURES: ReadonlyArray<SpillFixture> = [
   { color: GATE_TEAL, distance: 9, intensity: 8, key: 'gate', kind: 'wash', x: 3.7, y: 0.3, z: 1.7 },
 ];
 
+const atmoKnobs = makeKnobGroup('atmo', {
+  bankOpacity: [0.16, 0, 0.6],
+  mistOpacity: [0.08, 0, 0.5],
+  hazeOpacity: [0.3, 0, 1],
+  drift: [0.03, 0, 0.2, 0.005],
+});
+
 const gradeKnobs = makeKnobGroup('grade', {
   vignette: [0.4, 0, 1],
   vignetteMin: [0.55, 0, 1],
@@ -1732,6 +1740,10 @@ function buildScene(config: ProbeConfig, useParts: boolean, grounding = false, s
     addDuskFogBanks(scene);
   }
 
+  if (surfaces) {
+    addAtmosphere(scene);
+  }
+
   return scene;
 }
 
@@ -1760,6 +1772,101 @@ function addDuskFogBanks(scene: Scene) {
 
     plane.position.set(0, bank.y, bank.z);
     scene.add(plane);
+  }
+}
+
+/**
+ * The treatment atmosphere: drifting dusk-fog banks between the far buildings, a low ground
+ * mist toward the gate end of the plaza, and a teal haze breathing in the gate slot. Opacity is
+ * animated TSL noise driven by the atmo knobs; no plane writes depth.
+ */
+function addAtmosphere(scene: Scene) {
+  // fades every plane to nothing at its own edges so no rectangle outline ever shows
+  const edgeFade = uv().x.mul(uv().x.oneMinus()).mul(uv().y).mul(uv().y.oneMinus()).mul(16);
+
+  const banks = [
+    { seed: 3, y: 2.5, z: -10 },
+    { seed: 7, y: 3.5, z: -18 },
+    { seed: 11, y: 5, z: -26 },
+  ];
+
+  for (const bank of banks) {
+    const material = new MeshBasicNodeMaterial({
+      color: new Color(DUSK_FOG),
+      depthWrite: false,
+      side: DoubleSide,
+      transparent: true,
+    });
+    const body = mx_noise_float(
+      vec3(
+        positionWorld.x.mul(0.045).add(time.mul(atmoKnobs.drift.mul(2))),
+        positionWorld.y.mul(0.16),
+        bank.seed,
+      ),
+    )
+      .add(1)
+      .mul(0.5);
+
+    material.opacityNode = body.mul(edgeFade).mul(atmoKnobs.bankOpacity);
+
+    const plane = new Mesh(new PlaneGeometry(90, 11), material);
+
+    plane.position.set(0, bank.y, bank.z);
+    scene.add(plane);
+  }
+
+  // low mist drifting across the gate end of the plaza
+  const mistMaterial = new MeshBasicNodeMaterial({
+    color: new Color(DUSK_FOG),
+    depthWrite: false,
+    side: DoubleSide,
+    transparent: true,
+  });
+  const mistBody = mx_noise_float(
+    vec3(
+      positionWorld.x.mul(0.09).add(time.mul(atmoKnobs.drift)),
+      positionWorld.z.mul(0.09).sub(time.mul(atmoKnobs.drift.mul(0.6))),
+      17,
+    ),
+  )
+    .add(1)
+    .mul(0.5);
+
+  mistMaterial.opacityNode = mistBody.mul(edgeFade).mul(atmoKnobs.mistOpacity);
+
+  const mist = new Mesh(new PlaneGeometry(56, 34), mistMaterial);
+
+  mist.rotation.x = -Math.PI / 2;
+  mist.position.set(1, 0.9, -9);
+  scene.add(mist);
+
+  // teal haze breathing in the gate slot, rising slowly — the way out is alive
+  const gate = placements.find((placement) => placement.key === 'gate');
+
+  if (gate) {
+    const hazeMaterial = new MeshBasicNodeMaterial({
+      blending: AdditiveBlending,
+      color: new Color(GATE_TEAL),
+      depthWrite: false,
+      side: DoubleSide,
+      transparent: true,
+    });
+    const hazeBody = mx_noise_float(
+      vec3(positionWorld.x.mul(0.5), positionWorld.y.mul(0.35).sub(time.mul(0.12)), 23),
+    )
+      .add(1)
+      .mul(0.5);
+
+    hazeMaterial.opacityNode = hazeBody.mul(edgeFade).mul(atmoKnobs.hazeOpacity);
+
+    const haze = new Mesh(new PlaneGeometry(4.6, 6.4), hazeMaterial);
+    const cos = Math.cos(gate.ry);
+    const sin = Math.sin(gate.ry);
+    const localZ = -1.2;
+
+    haze.position.set(localZ * sin + gate.x, 3.4, localZ * cos + gate.z);
+    haze.rotation.y = gate.ry;
+    scene.add(haze);
   }
 }
 
