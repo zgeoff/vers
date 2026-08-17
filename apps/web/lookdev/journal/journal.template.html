@@ -155,22 +155,44 @@
   </p>
 
   <div class="howto">
-    <h2>Round 25 · how to respond</h2>
+    <h2>Round 26 · how to respond</h2>
     <p>
-      Round 24's answer, live in views 4/8: the atmosphere is no longer a sheet whose alpha
-      wobbles. Every layer is now <b>thresholded, domain-warped noise</b> — distinct wisps with
-      gaps between them, whose shapes curl and change as they travel, not just translate. The
-      gate slot streams upward and pulses on a slow cycle; two <b>vent plumes</b> rise off the
-      market roof vent and the stash's small drum (new <b>smoke opacity</b> knob). Defaults are
-      also brighter and faster. The question: does it feel like air and habitation now, or does
-      it need to go further — more plumes, faster drift, bolder wisps?
+      The motion pass — the last unification phase. Three elements, live in views 4/8, all in the
+      new <b>motion</b> knob section: <b>flicker</b> (a slice of the windows wavers, and rarely
+      one drops dark and recovers — each window's world position seeds its own rhythm),
+      <b>sweep</b> + <b>sweep speed</b> (a faint teal shaft turning slowly from the gate's
+      crown), and <b>shuttle</b> (every 37 seconds a violet light crosses the skyline behind the
+      towers for ~9 seconds, glimpsed through the gaps). Watch for at least one full shuttle
+      cycle. The verdict wanted: which of the three earn their place, and at what strength — then
+      the unification queue is done and the whole treatment goes into a settle-and-tune round.
     </p>
   </div>
 
   <section class="round">
     <div class="round-head">
+      <h2>Round 26 · the town keeps living</h2>
+      <span class="status open">open — watch a full cycle</span>
+    </div>
+    <p>
+      Habitation is rhythm, not just haze: windows that waver like real interiors, one
+      occasionally dropping dark; the gate's crown turning a slow teal beacon over the rooftops;
+      and a rare event — a shuttle light crossing the skyline behind the towers, easy to miss,
+      rewarding to catch. Flicker rides a shared shader seeded by each window's position, the
+      sweep and shuttle are the first true animation-loop elements, and everything scales from
+      the motion knobs.
+    </p>
+    <div class="shots">
+      <figure>
+        <img src="data:image/png;base64,{{R26_MOTION}}" alt="The plaza at night with the teal beacon shaft sweeping from the gate crown over the rooftops" />
+        <figcaption>8 · surfaces — beacon mid-sweep; flicker and shuttle only read live</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="round">
+    <div class="round-head">
       <h2>Round 25 · wisps, not sheets</h2>
-      <span class="status open">open — judge it live</span>
+      <span class="status">resolved</span>
     </div>
     <p>
       The fix for "adjusting opacity rather than life": structure in motion. Each fog layer's
@@ -187,6 +209,10 @@
         <figcaption>8 · surfaces — the slot swirls, the roofs smoke, the fog has shape</figcaption>
       </figure>
     </div>
+    <p class="verdict">
+      <b>Verdict:</b> "it needs tuning, but that's a good start." Direction adopted — wisp
+      structure stays; fine values remain knob work for the settle-and-tune round.
+    </p>
   </section>
 
   <section class="round">
