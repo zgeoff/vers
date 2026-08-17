@@ -17,6 +17,8 @@ export function buildOfflineRootSubmission(row: Readonly<ActivityData>): Offline
     avatarID: row.avatarID,
     buildSnapshot: row.buildSnapshot,
     contentVersion: row.contentVersion,
+    playedAt: row.playedAt,
+    predecessorActivityID: row.predecessorActivityID,
     scopeID: row.scopeID,
     scopeType: row.scopeType,
     seed: row.seed,

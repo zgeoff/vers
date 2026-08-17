@@ -27,6 +27,8 @@ const ActivityRowSchema = z.object({
   id: z.string().default(() => `act_${createId()}`),
   keyVersion: z.int().min(1).default(1),
   lastHash: z.string().default(() => buildMockHash()),
+  playedAt: z.date().nullable().default(null),
+  predecessorActivityID: z.string().nullable().default(null),
   scopeID: z.string().default('1_0'),
   scopeType: z.string().default('world_map_node'),
   seed: z.string().default(() => buildMockHash().slice(0, 32)),

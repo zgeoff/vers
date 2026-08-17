@@ -17,6 +17,19 @@ export const ActivityDataSchema = z.object({
   id: z.string(),
   keyVersion: z.int().min(1),
   lastHash: z.string(),
+
+  /**
+   * An advisory client-stamped wall-clock timestamp for operator and analytics queries only,
+   * never read by the claim or any check. Nullable.
+   */
+  playedAt: z.date().nullable(),
+
+  /**
+   * The avatar's immediately-prior activity across every chain, null for its first-ever activity.
+   * Client-stamped; trusted for sequencing only, never for legality.
+   */
+  predecessorActivityID: z.string().nullable(),
+
   scopeID: z.string(),
   scopeType: z.string(),
   seed: z.string(),

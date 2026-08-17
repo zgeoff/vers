@@ -1,12 +1,12 @@
 import { metrics } from '@opentelemetry/api';
 
 export type RejectionReason =
+  | 'build-mismatch'
   | 'descriptor-mismatch'
   | 'elapsed-time'
   | 'integrity-mismatch'
   | 'node-unreachable'
   | 'provider-unavailable'
-  | 'unbacked-snapshot'
   | 'version-park';
 
 /**
@@ -17,7 +17,8 @@ export type RejectionReason =
  * `version-park` covers version-registry holds (unknown or retention-expired sim versions),
  * `elapsed-time` covers duration-cap trips, `provider-unavailable` covers a cross-version dispatch
  * whose provider timed out, refused the connection, or answered with an undefined error, and
- * `unbacked-snapshot` covers a build snapshot that borrowed xp from a run since rejected.
+ * `build-mismatch` covers a pinned start build that does not match the avatar's settled xp total —
+ * typically a build that banked a since-rejected ancestor's optimistic xp.
  */
 export function recordRejection(reason: RejectionReason): void {
   // Resolved through the global metrics API on every call — the SDK returns the same instrument

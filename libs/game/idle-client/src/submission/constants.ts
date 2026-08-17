@@ -78,4 +78,10 @@ export const PENDING_STOP_INTENT_KEY = 'pending-stop';
  * overwrites an older intent, whose target the newer run already superseded.
  */
 export const PENDING_START_INTENT_KEY = 'pending-start';
+
+/**
+ * The `preferences` record holding the avatar's last-started activity id. A worker drives one
+ * avatar's simulation at a time, so a single record suffices, scoped by `avatarID`.
+ */
+export const LAST_STARTED_ACTIVITY_KEY = 'last-started-activity';
 export const PREFERENCES_STORE_NAME = 'preferences';

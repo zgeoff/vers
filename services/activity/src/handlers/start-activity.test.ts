@@ -1,4 +1,5 @@
 import { expect, test } from 'bun:test';
+import { createId } from '@paralleldrive/cuid2';
 import { createContentVersion } from '@vers/content-registry';
 import type { ActivityContract } from '@vers/contract-activity';
 import { buildStartHash } from '@vers/contract-activity';
@@ -76,6 +77,8 @@ test('it starts an activity for an avatar owned by the acting user', async () =>
     id: expect.toBeString(),
     keyVersion: 1,
     lastHash: expect.toBeString(),
+    playedAt: null,
+    predecessorActivityID: null,
     scopeID: '0_0',
     scopeType: 'world_map_node',
     secretRef: 'worldmap',
@@ -1226,229 +1229,6 @@ test('it stamps the build snapshot from settled xp/level alone when the avatar c
   expect(activity.buildSnapshot).toStrictEqual({ level: 3, xp: 500 });
 });
 
-test('it records the unverified run a new build snapshot borrowed its xp from', async () => {
-  await using ctx = await setupTest();
-
-  await createSimVersionRow(ctx.db);
-
-  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
-  const avatar = await createAvatarRow(ctx.db, { level: 1, userId: viewer.user.id, xp: 0 });
-
-  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
-  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '1_0' });
-
-  await ctx.db
-    .insertInto('avatarGrants')
-    .values({ avatarId: avatar.id, key: '1_0', kind: 'first_clear' })
-    .execute();
-
-  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
-
-  const first = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
-  });
-
-  const batch = createMockCheckpointBatch({
-    finalPayloadOverrides: { rewards: { xp: 150 }, type: 'completed' },
-    startPrevHash: first.startHash,
-    startVersion: 1,
-  });
-
-  await client.trackActivityProgress({ activityID: first.id, checkpoints: batch, expectedHead: 0 });
-
-  const second = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '1_0',
-    scopeType: 'world_map_node',
-  });
-
-  const sources = await ctx.db
-    .selectFrom('activitySnapshotSources')
-    .select('sourceActivityId')
-    .where('activityId', '=', second.id)
-    .execute();
-
-  expect(sources).toStrictEqual([{ sourceActivityId: first.id }]);
-});
-
-test('it records no borrowed run for an unsettled run that moved the total by nothing', async () => {
-  await using ctx = await setupTest();
-
-  await createSimVersionRow(ctx.db);
-
-  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
-  const avatar = await createAvatarRow(ctx.db, { level: 1, userId: viewer.user.id, xp: 0 });
-
-  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
-  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '1_0' });
-
-  await ctx.db
-    .insertInto('avatarGrants')
-    .values({ avatarId: avatar.id, key: '1_0', kind: 'first_clear' })
-    .execute();
-
-  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
-
-  const first = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
-  });
-
-  const batch = createMockCheckpointBatch({
-    finalPayloadOverrides: { rewards: { xp: 0 }, type: 'completed' },
-    startPrevHash: first.startHash,
-    startVersion: 1,
-  });
-
-  await client.trackActivityProgress({ activityID: first.id, checkpoints: batch, expectedHead: 0 });
-
-  const second = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '1_0',
-    scopeType: 'world_map_node',
-  });
-
-  const sources = await ctx.db
-    .selectFrom('activitySnapshotSources')
-    .select('sourceActivityId')
-    .where('activityId', '=', second.id)
-    .execute();
-
-  expect(sources).toBeEmpty();
-  expect(second.buildSnapshot).toStrictEqual({ level: 1, xp: 0 });
-});
-
-test('it records a borrowed run whose death penalty lowered the total', async () => {
-  await using ctx = await setupTest();
-
-  await createSimVersionRow(ctx.db);
-
-  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
-  const avatar = await createAvatarRow(ctx.db, { level: 2, userId: viewer.user.id, xp: 200 });
-
-  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
-  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '1_0' });
-
-  await ctx.db
-    .insertInto('avatarGrants')
-    .values({ avatarId: avatar.id, key: '1_0', kind: 'first_clear' })
-    .execute();
-
-  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
-
-  const first = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
-  });
-
-  const batch = createMockCheckpointBatch({
-    finalPayloadOverrides: { rewards: { xp: -50 }, type: 'failed' },
-    startPrevHash: first.startHash,
-    startVersion: 1,
-  });
-
-  await client.trackActivityProgress({ activityID: first.id, checkpoints: batch, expectedHead: 0 });
-
-  const second = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '1_0',
-    scopeType: 'world_map_node',
-  });
-
-  const sources = await ctx.db
-    .selectFrom('activitySnapshotSources')
-    .select('sourceActivityId')
-    .where('activityId', '=', second.id)
-    .execute();
-
-  expect(sources).toStrictEqual([{ sourceActivityId: first.id }]);
-  expect(second.buildSnapshot).toStrictEqual({ level: 2, xp: 150 });
-});
-
-test('it records no borrowed run when the avatar carries no pending work', async () => {
-  await using ctx = await setupTest();
-
-  await createSimVersionRow(ctx.db);
-
-  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
-  const avatar = await createAvatarRow(ctx.db, { level: 3, userId: viewer.user.id, xp: 500 });
-
-  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
-
-  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
-
-  const activity = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
-  });
-
-  const sources = await ctx.db
-    .selectFrom('activitySnapshotSources')
-    .select('sourceActivityId')
-    .where('activityId', '=', activity.id)
-    .execute();
-
-  expect(sources).toBeEmpty();
-});
-
-test('it records no borrowed run for a parked activity left out of the build snapshot', async () => {
-  await using ctx = await setupTest();
-
-  await createSimVersionRow(ctx.db);
-
-  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
-  const avatar = await createAvatarRow(ctx.db, { level: 1, userId: viewer.user.id, xp: 0 });
-
-  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
-  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '1_0' });
-
-  await ctx.db
-    .insertInto('avatarGrants')
-    .values({ avatarId: avatar.id, key: '1_0', kind: 'first_clear' })
-    .execute();
-
-  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
-
-  const first = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
-  });
-
-  const batch = createMockCheckpointBatch({
-    finalPayloadOverrides: { rewards: { xp: 150 }, type: 'completed' },
-    startPrevHash: first.startHash,
-    startVersion: 1,
-  });
-
-  await client.trackActivityProgress({ activityID: first.id, checkpoints: batch, expectedHead: 0 });
-
-  await ctx.db
-    .updateTable('activities')
-    .set({ parkedFrom: 'stopped', status: 'parked' })
-    .where('id', '=', first.id)
-    .execute();
-
-  const second = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '1_0',
-    scopeType: 'world_map_node',
-  });
-
-  const sources = await ctx.db
-    .selectFrom('activitySnapshotSources')
-    .select('sourceActivityId')
-    .where('activityId', '=', second.id)
-    .execute();
-
-  expect(sources).toBeEmpty();
-});
-
 test("it starts an activity when the starting avatar is the account's active one", async () => {
   await using ctx = await setupTest();
 
@@ -1787,4 +1567,29 @@ test('it fails a start with a 500 when the keys dispatch fails', async () => {
   expect(
     client.startActivity({ avatarID: avatar.id, scopeID: '0_0', scopeType: 'world_map_node' }),
   ).rejects.toMatchObject({ code: 'INTERNAL_SERVER_ERROR' });
+});
+
+test('it accepts a start naming a predecessor not yet on the server, stamping the reference as-is', async () => {
+  await using ctx = await setupTest();
+
+  await createSimVersionRow(ctx.db);
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+  const predecessorID = `act_${createId()}`;
+
+  // an absent predecessor is not rejected at admission — the replay claim waits on it, so an
+  // out-of-order or reload-orphaned delivery settles once the predecessor lands
+  const started = await client.startActivity({
+    avatarID: avatar.id,
+    predecessorActivityID: predecessorID,
+    scopeID: '0_0',
+    scopeType: 'world_map_node',
+  });
+
+  expect(started.predecessorActivityID).toBe(predecessorID);
 });

@@ -2,7 +2,6 @@ import { expect, test } from 'bun:test';
 import { createTestDB } from '@vers/service-test-utils/bun';
 import { createActivityRow } from '../test-utils/create-activity-row';
 import { createChainRow } from '../test-utils/create-chain-row';
-import { createSnapshotSourceRow } from '../test-utils/create-snapshot-source-row';
 import { claimNextChain } from './claim-next-chain';
 
 /**
@@ -16,12 +15,12 @@ async function setupTest() {
   return { db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
 }
 
-test('it claims a chain with appends past the verified cursor', async () => {
+test('it claims an avatar with appends past the verified cursor', async () => {
   await using ctx = await setupTest();
 
   const chain = await createChainRow(ctx.db);
 
-  await createActivityRow(ctx.db, {
+  const activity = await createActivityRow(ctx.db, {
     appendedHead: 3,
     avatarId: chain.avatarId,
     scopeId: chain.scopeId,
@@ -30,6 +29,7 @@ test('it claims a chain with appends past the verified cursor', async () => {
   const claimed = await ctx.db.transaction().execute((trx) => claimNextChain(trx));
 
   expect(claimed).toStrictEqual({
+    activityID: activity.id,
     avatarID: chain.avatarId,
     priority: 0,
     scopeID: chain.scopeId,
@@ -54,7 +54,7 @@ test('it reports an empty queue as undefined', async () => {
   expect(claimed).toBeUndefined();
 });
 
-test('it claims the highest-priority chain first', async () => {
+test('it claims the highest-priority avatar first', async () => {
   await using ctx = await setupTest();
 
   const routine = await createChainRow(ctx.db);
@@ -78,7 +78,7 @@ test('it claims the highest-priority chain first', async () => {
   expect(claimed).toMatchObject({ avatarID: bumped.avatarId, priority: 10 });
 });
 
-test('it skips a chain another worker holds', async () => {
+test('it skips an avatar another worker holds', async () => {
   await using ctx = await setupTest();
 
   const chain = await createChainRow(ctx.db);
@@ -100,7 +100,7 @@ test('it skips a chain another worker holds', async () => {
   expect(outcome.contender).toBeUndefined();
 });
 
-test('it skips a chain whose replay frontier is quarantined', async () => {
+test('it skips an avatar whose claimable activity is quarantined', async () => {
   await using ctx = await setupTest();
 
   const chain = await createChainRow(ctx.db);
@@ -113,24 +113,17 @@ test('it skips a chain whose replay frontier is quarantined', async () => {
     status: 'quarantined',
   });
 
-  await createActivityRow(ctx.db, {
-    appendedHead: 2,
-    avatarId: chain.avatarId,
-    scopeId: chain.scopeId,
-    startChainIndex: 3,
-  });
-
   const claimed = await ctx.db.transaction().execute((trx) => claimNextChain(trx));
 
   expect(claimed).toBeUndefined();
 });
 
-test('it skips a rejected frontier and claims an honest activity behind it', async () => {
+test('it skips a rejected predecessor and claims the honest activity behind it', async () => {
   await using ctx = await setupTest();
 
   const chain = await createChainRow(ctx.db);
 
-  await createActivityRow(ctx.db, {
+  const predecessor = await createActivityRow(ctx.db, {
     appendedHead: 3,
     avatarId: chain.avatarId,
     scopeId: chain.scopeId,
@@ -138,9 +131,10 @@ test('it skips a rejected frontier and claims an honest activity behind it', asy
     status: 'rejected',
   });
 
-  await createActivityRow(ctx.db, {
+  const successor = await createActivityRow(ctx.db, {
     appendedHead: 2,
     avatarId: chain.avatarId,
+    predecessorActivityId: predecessor.id,
     scopeId: chain.scopeId,
     startChainIndex: 3,
     status: 'active',
@@ -149,6 +143,7 @@ test('it skips a rejected frontier and claims an honest activity behind it', asy
   const claimed = await ctx.db.transaction().execute((trx) => claimNextChain(trx));
 
   expect(claimed).toStrictEqual({
+    activityID: successor.id,
     avatarID: chain.avatarId,
     priority: 0,
     scopeID: chain.scopeId,
@@ -156,7 +151,7 @@ test('it skips a rejected frontier and claims an honest activity behind it', asy
   });
 });
 
-test('it does not re-claim a chain whose only pending work is a rejected activity', async () => {
+test('it does not re-claim an avatar whose only pending work is a rejected activity', async () => {
   await using ctx = await setupTest();
 
   const chain = await createChainRow(ctx.db);
@@ -174,7 +169,7 @@ test('it does not re-claim a chain whose only pending work is a rejected activit
   expect(claimed).toBeUndefined();
 });
 
-test('it skips a chain whose replay frontier is parked', async () => {
+test('it skips an avatar whose claimable activity is parked', async () => {
   await using ctx = await setupTest();
 
   const chain = await createChainRow(ctx.db);
@@ -187,74 +182,71 @@ test('it skips a chain whose replay frontier is parked', async () => {
     status: 'parked',
   });
 
-  await createActivityRow(ctx.db, {
-    appendedHead: 2,
-    avatarId: chain.avatarId,
-    scopeId: chain.scopeId,
-    startChainIndex: 3,
-  });
-
   const claimed = await ctx.db.transaction().execute((trx) => claimNextChain(trx));
 
   expect(claimed).toBeUndefined();
 });
 
-test('it skips a chain whose frontier borrowed xp from a run still awaiting its verifier', async () => {
+test('it blocks a successor whose predecessor still has appends past its verified cursor', async () => {
   await using ctx = await setupTest();
 
-  const chain = await createChainRow(ctx.db);
+  const predecessorChain = await createChainRow(ctx.db, { scopeId: 'scope_predecessor' });
 
-  const source = await createActivityRow(ctx.db, {
+  const predecessor = await createActivityRow(ctx.db, {
     appendedHead: 4,
-    avatarId: chain.avatarId,
-    scopeId: 'scope_lender',
+    avatarId: predecessorChain.avatarId,
+    scopeId: 'scope_predecessor',
     status: 'stopped',
     verifiedHead: 1,
   });
 
-  const borrower = await createActivityRow(ctx.db, {
-    appendedHead: 3,
-    avatarId: chain.avatarId,
-    scopeId: chain.scopeId,
-  });
+  const successorChain = await createChainRow(ctx.db, { avatarId: predecessorChain.avatarId });
 
-  await createSnapshotSourceRow(ctx.db, {
-    activityID: borrower.id,
-    sourceActivityID: source.id,
+  await createActivityRow(ctx.db, {
+    appendedHead: 3,
+    avatarId: predecessorChain.avatarId,
+    predecessorActivityId: predecessor.id,
+    scopeId: successorChain.scopeId,
   });
 
   const claimed = await ctx.db.transaction().execute((trx) => claimNextChain(trx));
 
-  expect(claimed).toBeUndefined();
+  // the predecessor's own chain is the one activity ready to claim; the successor stays blocked
+  expect(claimed).toStrictEqual({
+    activityID: predecessor.id,
+    avatarID: predecessorChain.avatarId,
+    priority: 0,
+    scopeID: 'scope_predecessor',
+    scopeType: 'world_map_node',
+  });
 });
 
-test('it claims a chain whose frontier borrowed xp from a fully verified run', async () => {
+test('it claims a successor once its predecessor has fully verified', async () => {
   await using ctx = await setupTest();
 
   const chain = await createChainRow(ctx.db);
 
-  const source = await createActivityRow(ctx.db, {
+  await createChainRow(ctx.db, { avatarId: chain.avatarId, scopeId: 'scope_predecessor' });
+
+  const predecessor = await createActivityRow(ctx.db, {
     appendedHead: 4,
     avatarId: chain.avatarId,
-    scopeId: 'scope_lender',
+    scopeId: 'scope_predecessor',
     status: 'stopped',
     verifiedHead: 4,
   });
 
-  const borrower = await createActivityRow(ctx.db, {
+  const successor = await createActivityRow(ctx.db, {
     appendedHead: 3,
     avatarId: chain.avatarId,
+    predecessorActivityId: predecessor.id,
     scopeId: chain.scopeId,
-  });
-
-  await createSnapshotSourceRow(ctx.db, {
-    activityID: borrower.id,
-    sourceActivityID: source.id,
   });
 
   const claimed = await ctx.db.transaction().execute((trx) => claimNextChain(trx));
 
   expect(claimed).toStrictEqual({
+    activityID: successor.id,
     avatarID: chain.avatarId,
     priority: 0,
     scopeID: chain.scopeId,
@@ -262,65 +254,48 @@ test('it claims a chain whose frontier borrowed xp from a fully verified run', a
   });
 });
 
-test('it claims a chain whose frontier borrowed xp from a rejected run, so the refusal can be applied', async () => {
+test('it blocks a successor whose predecessor is held by an operator', async () => {
   await using ctx = await setupTest();
 
   const chain = await createChainRow(ctx.db);
 
-  const source = await createActivityRow(ctx.db, {
+  await createChainRow(ctx.db, { avatarId: chain.avatarId, scopeId: 'scope_predecessor' });
+
+  const predecessor = await createActivityRow(ctx.db, {
     appendedHead: 4,
     avatarId: chain.avatarId,
-    scopeId: 'scope_lender',
-    status: 'rejected',
-    verifiedHead: 1,
-  });
-
-  const borrower = await createActivityRow(ctx.db, {
-    appendedHead: 3,
-    avatarId: chain.avatarId,
-    scopeId: chain.scopeId,
-  });
-
-  await createSnapshotSourceRow(ctx.db, {
-    activityID: borrower.id,
-    sourceActivityID: source.id,
-  });
-
-  const claimed = await ctx.db.transaction().execute((trx) => claimNextChain(trx));
-
-  expect(claimed).toStrictEqual({
-    avatarID: chain.avatarId,
-    priority: 0,
-    scopeID: chain.scopeId,
-    scopeType: chain.scopeType,
-  });
-});
-
-test('it skips a chain whose frontier borrowed xp from a run an operator parked', async () => {
-  await using ctx = await setupTest();
-
-  const chain = await createChainRow(ctx.db);
-
-  const source = await createActivityRow(ctx.db, {
-    appendedHead: 4,
-    avatarId: chain.avatarId,
-    scopeId: 'scope_lender',
+    scopeId: 'scope_predecessor',
     status: 'parked',
     verifiedHead: 1,
   });
 
-  const borrower = await createActivityRow(ctx.db, {
+  await createActivityRow(ctx.db, {
     appendedHead: 3,
     avatarId: chain.avatarId,
+    predecessorActivityId: predecessor.id,
     scopeId: chain.scopeId,
-  });
-
-  await createSnapshotSourceRow(ctx.db, {
-    activityID: borrower.id,
-    sourceActivityID: source.id,
   });
 
   const claimed = await ctx.db.transaction().execute((trx) => claimNextChain(trx));
 
+  // the predecessor's own status excludes it from claiming, and the held predecessor blocks the
+  // successor behind it — the whole avatar stops
   expect(claimed).toBeUndefined();
+});
+
+test("it claims the avatar's origin activity with a null predecessor", async () => {
+  await using ctx = await setupTest();
+
+  const chain = await createChainRow(ctx.db);
+
+  const activity = await createActivityRow(ctx.db, {
+    appendedHead: 1,
+    avatarId: chain.avatarId,
+    predecessorActivityId: null,
+    scopeId: chain.scopeId,
+  });
+
+  const claimed = await ctx.db.transaction().execute((trx) => claimNextChain(trx));
+
+  expect(claimed).toMatchObject({ activityID: activity.id });
 });

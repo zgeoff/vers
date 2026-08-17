@@ -3,6 +3,14 @@ import type { WorkerContext } from './types';
 
 interface TryStartActivityInput {
   readonly avatarID: string;
+
+  /**
+   * The avatar's immediately-prior activity — the terminal row this start continues from. Absent
+   * only when no such row exists (an origin start through this online path); every continuation
+   * start names it.
+   */
+  readonly predecessorActivityID?: string | undefined;
+
   readonly scopeID: string;
   readonly scopeType: string;
   readonly startKey: string;
@@ -14,6 +22,8 @@ interface TryStartActivityInput {
  * SIM_VERSION_UNKNOWN on the bundled hash retries once with no hash at all, falling back onto the
  * registry's current stamp — during a deploy the app bundle can bake a hash whose registry row
  * the replay rollout hasn't written yet, and that lag is not this build's engine being stale.
+ * Stamps `playedAt` fresh on every attempt, including the retry — an advisory timestamp, not a
+ * value replay ever checks.
  */
 export async function tryStartActivity(
   context: WorkerContext,
@@ -22,6 +32,8 @@ export async function tryStartActivity(
   const first = await safe(
     context.getClient().startActivity({
       avatarID: input.avatarID,
+      playedAt: new Date(),
+      predecessorActivityID: input.predecessorActivityID ?? null,
       scopeID: input.scopeID,
       scopeType: input.scopeType,
       simVersion: context.getBundledEngineHash(),
@@ -36,6 +48,8 @@ export async function tryStartActivity(
   return safe(
     context.getClient().startActivity({
       avatarID: input.avatarID,
+      playedAt: new Date(),
+      predecessorActivityID: input.predecessorActivityID ?? null,
       scopeID: input.scopeID,
       scopeType: input.scopeType,
       startKey: input.startKey,

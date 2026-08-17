@@ -9,12 +9,12 @@ import { runFrontier } from './run-frontier';
 import type { ReplayIterationOutcome, ReplayWorkerDeps } from './types';
 
 /**
- * Runs one claim-replay-adjudicate cycle: opens a transaction, claims the highest-priority chain
- * with replay work (`idle` when none), loads its frontier, and adjudicates it. A frontier that
- * throws mid-adjudication rolls the whole attempt back — including the claim — and counts one
- * failed attempt against the activity in a fresh statement outside the rolled-back transaction, so
- * a poisoned transaction never blocks the bookkeeping that quarantines a repeatedly failing
- * stream.
+ * Runs one claim-replay-adjudicate cycle: opens a transaction, claims the highest-priority avatar's
+ * next-in-order activity with replay work (`idle` when none), loads its frontier, and adjudicates
+ * it. A frontier that throws mid-adjudication rolls the whole attempt back — including the claim —
+ * and counts one failed attempt against the activity in a fresh statement outside the rolled-back
+ * transaction, so a poisoned transaction never blocks the bookkeeping that quarantines a repeatedly
+ * failing stream.
  */
 export async function runReplayIteration(
   deps: Readonly<ReplayWorkerDeps>,
@@ -25,13 +25,13 @@ export async function runReplayIteration(
 
   try {
     const outcome = await deps.db.transaction().execute(async (trx) => {
-      const chain = await claimNextChain(trx);
+      const claimed = await claimNextChain(trx);
 
-      if (chain === undefined) {
+      if (claimed === undefined) {
         return { kind: 'idle' } as const;
       }
 
-      const frontier = await findReplayFrontier(trx, chain);
+      const frontier = await findReplayFrontier(trx, claimed.activityID);
 
       if (frontier === undefined) {
         return { kind: 'idle' } as const;

@@ -14,19 +14,21 @@ import type { ActivityServiceClient } from './types';
 export type IngestStartRowOutcome = 'absent' | 'deferred' | 'ingested' | 'rejected';
 
 /**
- * A defined `advanceActivity` error naming the root itself invalid, never the caller's session or
- * account state — the server's refusal is final, so the pending row is dropped along with the
- * checkpoints that would have chained onto it.
+ * A defined `advanceActivity` error naming the root permanently invalid — a scope that resolves to
+ * no node, a chain that was never revealed, or a sim version past retention. The server will refuse
+ * it under any order, so the pending row is dropped along with the checkpoints that would have
+ * chained onto it. The order-sensitive refusals — `CONFLICT` (the predecessor's terminal has not
+ * advanced the chain head yet), `CHECKPOINT_INVALID` (the predecessor's xp is not in the server's
+ * total yet), `SIM_VERSION_UNKNOWN` (a version registration this deploy has not caught up to), and
+ * `CHAIN_QUARANTINED` (an operator hold) — are absent here on purpose: each resolves once the
+ * predecessor lands or the hold clears, so the row defers and retries rather than dropping honest
+ * progress.
  */
 const REJECTED_CODES: ReadonlySet<string> = new Set([
-  'CHAIN_QUARANTINED',
-  'CHECKPOINT_INVALID',
-  'CONFLICT',
   'NODE_NOT_REVEALED',
   'NODE_UNKNOWN',
   'NOT_FOUND',
   'SIM_VERSION_EXPIRED',
-  'SIM_VERSION_UNKNOWN',
 ]);
 
 /**

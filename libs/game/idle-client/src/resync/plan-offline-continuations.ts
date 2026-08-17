@@ -134,7 +134,6 @@ export async function planOfflineContinuations(
     const nextStartKey = `continue_${cursor.id}`;
 
     localSources.push({
-      id: cursor.id,
       settledXP: 0,
       tailPayload: lastEntry.payload,
       unverifiedDeltaSum: 0,
@@ -199,7 +198,6 @@ interface OfflineRowCursor {
 }
 
 interface OfflineOptimisticSource {
-  readonly id: string;
   readonly settledXP: number;
   readonly tailPayload: unknown;
   readonly unverifiedDeltaSum: number;

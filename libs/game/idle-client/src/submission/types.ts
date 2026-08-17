@@ -42,6 +42,16 @@ export interface PendingStopIntent {
 }
 
 /**
+ * The avatar's last-started activity id, the predecessor a fresh local mint stamps onto its own
+ * root. Durable so it survives a worker reload. A worker drives one avatar's simulation at a
+ * time, so a single record suffices, scoped by `avatarID`.
+ */
+export interface LastStartedActivityPreference {
+  readonly avatarID: string;
+  readonly lastActivityID: string;
+}
+
+/**
  * A continuation the worker wanted to start but couldn't complete, held durably so it survives a
  * worker reload; a resync's entry drain retries it with the idempotent start key
  * `continue_<activityID>`. `activityID` names the source row, so the drain can tell that row
@@ -115,7 +125,12 @@ export interface CheckpointQueueSchema extends DBSchema {
   };
   preferences: {
     key: string;
-    value: FailureActionPreference | PendingStartIntent | PendingStopIntent | StartStampsPreference;
+    value:
+      | FailureActionPreference
+      | LastStartedActivityPreference
+      | PendingStartIntent
+      | PendingStopIntent
+      | StartStampsPreference;
   };
 }
 

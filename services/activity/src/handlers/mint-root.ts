@@ -204,6 +204,8 @@ export async function mintRoot(
       id: input.activityID,
       keyVersion: deps.keyVersion,
       lastHash: startHash,
+      playedAt: root.playedAt,
+      predecessorActivityId: root.predecessorActivityID,
       scopeId: root.scopeID,
       scopeType: root.scopeType,
       secretRef: deps.secretRef,
@@ -217,18 +219,6 @@ export async function mintRoot(
     })
     .returningAll()
     .executeTakeFirstOrThrow();
-
-  if (optimistic.sourceIDs.length > 0) {
-    await trx
-      .insertInto('activitySnapshotSources')
-      .values(
-        optimistic.sourceIDs.map((sourceID) => ({
-          activityId: input.activityID,
-          sourceActivityId: sourceID,
-        })),
-      )
-      .execute();
-  }
 
   return row;
 }

@@ -4,6 +4,7 @@ import { buildStartHash } from '@vers/contract-activity';
 import type { OptimisticBuildSource } from '@vers/idle-core';
 import { buildLevelFromXP, foldOptimisticBuild, parseTerminalCheckpointXP } from '@vers/idle-core';
 import * as z from 'zod';
+import { readLastStartedActivity } from '../submission/read-last-started-activity';
 import { readNodeSeed } from '../submission/read-node-seed';
 import { readQueuedCheckpoints } from '../submission/read-queued-checkpoints';
 import { readStartStamps } from '../submission/read-start-stamps';
@@ -25,7 +26,8 @@ interface BuildStartRowInput {
  * its genesis, so a revisited node's start continues from where play actually left off.
  * `buildSnapshot` is a client-side optimistic guess — a hint the server re-authors and
  * exact-match-rejects at submission time, never a value this mint depends on for its own
- * correctness.
+ * correctness. `predecessorActivityID` stamps the avatar's durably tracked last-started activity,
+ * null for this device's first start for the avatar. `playedAt` stamps the wall clock now.
  */
 export async function buildStartRow(
   context: WorkerContext,
@@ -50,6 +52,7 @@ export async function buildStartRow(
   }
 
   const buildSnapshot = await buildOptimisticBuildSnapshot(context, input.avatarID);
+  const predecessorActivityID = await readPredecessorActivityID(input.avatarID);
 
   const startHash = buildStartHash({
     contentVersion: nodeSeed.contentVersion,
@@ -72,6 +75,8 @@ export async function buildStartRow(
     id: `act_${createId()}`,
     keyVersion: stamps.keyVersion,
     lastHash: startHash,
+    playedAt: now,
+    predecessorActivityID,
     scopeID: input.scopeID,
     scopeType: input.scopeType,
     secretRef: stamps.secretRef,
@@ -88,6 +93,16 @@ export async function buildStartRow(
     verifiedAt: null,
     verifiedHead: 0,
   };
+}
+
+/**
+ * The avatar's durably tracked last-started activity id, `null` when this device has never started
+ * one for it — the avatar's own first-ever activity, or an avatar this device has no history for.
+ */
+async function readPredecessorActivityID(avatarID: string): Promise<null | string> {
+  const record = await readLastStartedActivity(avatarID);
+
+  return record?.lastActivityID ?? null;
 }
 
 /**
@@ -140,7 +155,7 @@ async function buildPreviousRunSources(
     0,
   );
 
-  return [{ id: activity.id, settledXP: 0, tailPayload: tail.payload, unverifiedDeltaSum }];
+  return [{ settledXP: 0, tailPayload: tail.payload, unverifiedDeltaSum }];
 }
 
 const CheckpointXPSchema = z.object({ rewards: z.object({ xp: z.number() }) });

@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { createContentVersion, makeContentDocumentLoader } from '@vers/content-registry';
 import { createMockContentDocument } from '@vers/contract-activity/test-utils';
 import { buildStateFromSeed } from '@vers/game-utils';
-import { ActivityCheckpointType, buildLevelFromXP } from '@vers/idle-core';
+import { ActivityCheckpointType, buildLevelFromXP, buildXPThreshold } from '@vers/idle-core';
 import { resolveServiceURL } from '@vers/mock-services';
 import { mockKeysService } from '@vers/mock-services/keys';
 import { createTestDB, getTestServiceKeyPair } from '@vers/service-test-utils/bun';
@@ -15,7 +15,6 @@ import { createReplayCache } from '../replay/create-replay-cache';
 import { createActivityRow } from '../test-utils/create-activity-row';
 import { createAvatarRow } from '../test-utils/create-avatar-row';
 import { createHonestActivityFixture } from '../test-utils/create-honest-activity-fixture';
-import { createSnapshotSourceRow } from '../test-utils/create-snapshot-source-row';
 import { runFrontier } from './run-frontier';
 
 async function setupTest() {
@@ -114,7 +113,9 @@ test('it reports idle rather than throwing when the claimed activity row is gone
 test('it settles the terminal checkpoint reward into the avatar xp and level on a matched terminal segment', async () => {
   await using ctx = await setupTest();
 
+  // a non-zero baseline distinguishes the delta add from an absolute overwrite
   const fixture = await createHonestActivityFixture(ctx.db, {
+    buildSnapshot: { level: buildLevelFromXP(500), xp: 500 },
     duration: 80_000,
     seed: buildStateFromSeed(3_047_525_658),
   });
@@ -124,13 +125,6 @@ test('it settles the terminal checkpoint reward into the avatar xp and level on 
   invariant(terminal !== undefined, 'the fixture always ends on a checkpoint');
 
   expect(terminal.rewards.xp).toBeGreaterThan(0);
-
-  // a non-zero baseline distinguishes the delta add from an absolute overwrite
-  await ctx.db
-    .updateTable('avatars')
-    .set({ level: buildLevelFromXP(500), xp: 500 })
-    .where('id', '=', fixture.activity.avatarId)
-    .execute();
 
   const cache = createReplayCache();
 
@@ -376,24 +370,28 @@ test('it settles no additional xp when a stale duplicate frontier misses the alr
   expect(afterSecond.xp).toBe(afterFirst.xp);
 });
 
-test('it refuses an activity whose build snapshot borrowed xp from a rejected run', async () => {
+test("it rejects an activity whose pinned build does not match the avatar's settled xp total", async () => {
   await using ctx = await setupTest();
 
+  const source = await createActivityRow(ctx.db, { status: 'rejected' });
+
   const fixture = await createHonestActivityFixture(ctx.db, {
+    activity: { predecessorActivityId: source.id },
+    avatarID: source.avatarId,
+    buildSnapshot: { level: buildLevelFromXP(150), xp: 150 },
     duration: 80_000,
     seed: buildStateFromSeed(3_047_525_658),
   });
 
-  const source = await createActivityRow(ctx.db, {
-    avatarId: fixture.activity.avatarId,
-    scopeId: 'scope_lender',
-    status: 'rejected',
-  });
+  // the predecessor's rejection erased the xp this build banked; the avatar's real settled total
+  // never reached the pinned build's claim
+  await ctx.db
+    .updateTable('avatars')
+    .set({ xp: 100 })
+    .where('id', '=', fixture.activity.avatarId)
+    .execute();
 
-  await createSnapshotSourceRow(ctx.db, {
-    activityID: fixture.activity.id,
-    sourceActivityID: source.id,
-  });
+  const inMemoryMetrics = createInMemoryMetrics();
 
   const deps = {
     db: ctx.db,
@@ -431,7 +429,11 @@ test('it refuses an activity whose build snapshot borrowed xp from a rejected ru
     .where('id', '=', fixture.activity.avatarId)
     .executeTakeFirstOrThrow();
 
-  expect(avatar.xp).toBe(0);
+  expect(avatar.xp).toBe(100);
+
+  const rejections = await inMemoryMetrics.readCounterDataPoints('vers.verification.rejections');
+
+  expect(rejections).toContainEqual({ attributes: { reason: 'build-mismatch' }, value: 1 });
 });
 
 test('it makes no keys dispatch when the frontier has already verified part of the run', async () => {
@@ -779,7 +781,7 @@ test('it grants a first_clear keyed by the node when a verified segment complete
   // a high build level outlives the default weak content regardless of seed, so this run
   // deterministically reaches a completed terminal rather than a failed one
   const fixture = await createHonestActivityFixture(ctx.db, {
-    buildSnapshot: { level: 50, xp: 0 },
+    buildSnapshot: { level: 50, xp: buildXPThreshold(50) },
     duration: 80_000,
     seed: buildStateFromSeed(3_047_525_658),
   });
@@ -980,7 +982,7 @@ test('it lands no grant when a completed terminal verifies on a non-map-node sco
   // a high build level outlives the default weak content regardless of seed, so this run
   // deterministically reaches a completed terminal rather than a failed one
   const fixture = await createHonestActivityFixture(ctx.db, {
-    buildSnapshot: { level: 50, xp: 0 },
+    buildSnapshot: { level: 50, xp: buildXPThreshold(50) },
     chain: { scopeType: 'encounter' },
     duration: 80_000,
     seed: buildStateFromSeed(3_047_525_658),
@@ -1032,7 +1034,7 @@ test('it grants a first_clear exactly once across a re-verification of an alread
   // a high build level outlives the default weak content regardless of seed, so this run
   // deterministically reaches a completed terminal rather than a failed one
   const fixture = await createHonestActivityFixture(ctx.db, {
-    buildSnapshot: { level: 50, xp: 0 },
+    buildSnapshot: { level: 50, xp: buildXPThreshold(50) },
     duration: 80_000,
     seed: buildStateFromSeed(3_047_525_658),
   });
@@ -1101,7 +1103,7 @@ test('it rejects a settled activity whose node no earlier settled clear made rea
 
   // a completed terminal at '1_0' with no grant making the origin — and thus '1_0' — reachable
   const fixture = await createHonestActivityFixture(ctx.db, {
-    buildSnapshot: { level: 50, xp: 0 },
+    buildSnapshot: { level: 50, xp: buildXPThreshold(50) },
     completedNodeIDs: [],
     duration: 80_000,
     seed: buildStateFromSeed(3_047_525_658),
@@ -1146,7 +1148,7 @@ test('it verifies a world-map-node run whose scope is connected to a verified fi
   // the default fixture already seeds a first-clear grant for a node adjacent to its own scope —
   // this asserts that setup directly before proving replay accepts a run built on top of it
   const fixture = await createHonestActivityFixture(ctx.db, {
-    buildSnapshot: { level: 50, xp: 0 },
+    buildSnapshot: { level: 50, xp: buildXPThreshold(50) },
     duration: 80_000,
     seed: buildStateFromSeed(3_047_525_658),
   });
@@ -1198,7 +1200,7 @@ test('it rejects a world-map-node run whose scope is not connected to any comple
   const inMemoryMetrics = createInMemoryMetrics();
 
   const fixture = await createHonestActivityFixture(ctx.db, {
-    buildSnapshot: { level: 50, xp: 0 },
+    buildSnapshot: { level: 50, xp: buildXPThreshold(50) },
     chain: { scopeId: '40_40' },
     completedNodeIDs: [],
     duration: 80_000,
@@ -1242,11 +1244,89 @@ test('it rejects a world-map-node run whose scope is not connected to any comple
   expect(rejections).toContainEqual({ attributes: { reason: 'node-unreachable' }, value: 1 });
 });
 
-test('it cascade-voids a successor whose build snapshot borrowed xp from a run rejected for unreachability', async () => {
+test('it cascades a build mismatch through a chain of successors, once the run they banked xp from rejects', async () => {
   await using ctx = await setupTest();
 
-  const fixture = await createHonestActivityFixture(ctx.db, {
-    buildSnapshot: { level: 50, xp: 0 },
+  const rejected = await createActivityRow(ctx.db, { status: 'rejected' });
+
+  // each successor's pinned build optimistically banked more of the rejected run's xp than the
+  // avatar's settled total actually carries; both are stopped rather than active so they can
+  // coexist with each other under the avatar's single-active-run index
+  const successorA = await createHonestActivityFixture(ctx.db, {
+    activity: { predecessorActivityId: rejected.id, status: 'stopped' },
+    avatarID: rejected.avatarId,
+    buildSnapshot: { level: buildLevelFromXP(80), xp: 80 },
+    duration: 80_000,
+    seed: buildStateFromSeed(1_616_267_014),
+  });
+
+  const successorB = await createHonestActivityFixture(ctx.db, {
+    activity: { predecessorActivityId: successorA.activity.id, status: 'stopped' },
+    avatarID: rejected.avatarId,
+    buildSnapshot: { level: buildLevelFromXP(120), xp: 120 },
+    chain: { scopeId: '55_55' },
+    duration: 80_000,
+    seed: buildStateFromSeed(2_222_222_222),
+  });
+
+  // the fixtures each synced the avatar's settled xp to their own claim in turn; restore it to what
+  // it actually is once the borrowed run never settled anything
+  await ctx.db.updateTable('avatars').set({ xp: 0 }).where('id', '=', rejected.avatarId).execute();
+
+  const cache = createReplayCache();
+
+  const deps = {
+    db: ctx.db,
+    keysServiceURL: resolveServiceURL('keys'),
+    loadContentDocument: makeContentDocumentLoader(ctx.db),
+    logger: pino({ enabled: false }),
+    privateKey: ctx.privateKey,
+    simVersion: 'test-engine-hash',
+  };
+
+  const outcomeA = await ctx.db.transaction().execute((trx) =>
+    runFrontier(trx, deps, cache, {
+      activityID: successorA.activity.id,
+      appendedHead: successorA.activity.appendedHead,
+      replayAttempts: 0,
+      startChainIndex: successorA.activity.startChainIndex,
+      status: successorA.activity.status,
+      verifiedHead: 0,
+    }),
+  );
+
+  expect(outcomeA).toStrictEqual({ kind: 'rejected' });
+
+  const outcomeB = await ctx.db.transaction().execute((trx) =>
+    runFrontier(trx, deps, cache, {
+      activityID: successorB.activity.id,
+      appendedHead: successorB.activity.appendedHead,
+      replayAttempts: 0,
+      startChainIndex: successorB.activity.startChainIndex,
+      status: successorB.activity.status,
+      verifiedHead: 0,
+    }),
+  );
+
+  expect(outcomeB).toStrictEqual({ kind: 'rejected' });
+
+  const rows = await ctx.db
+    .selectFrom('activities')
+    .select(['id', 'status'])
+    .where('id', 'in', [successorA.activity.id, successorB.activity.id])
+    .execute();
+
+  expect(rows).toIncludeSameMembers([
+    { id: successorA.activity.id, status: 'rejected' },
+    { id: successorB.activity.id, status: 'rejected' },
+  ]);
+});
+
+test('it settles an unrelated successor once its zero-xp predecessor rejects', async () => {
+  await using ctx = await setupTest();
+
+  const predecessor = await createHonestActivityFixture(ctx.db, {
+    buildSnapshot: { level: 1, xp: 0 },
     chain: { scopeId: '41_41' },
     completedNodeIDs: [],
     duration: 80_000,
@@ -1264,32 +1344,38 @@ test('it cascade-voids a successor whose build snapshot borrowed xp from a run r
     simVersion: 'test-engine-hash',
   };
 
-  const rejected = await ctx.db.transaction().execute((trx) =>
+  const predecessorOutcome = await ctx.db.transaction().execute((trx) =>
     runFrontier(trx, deps, cache, {
-      activityID: fixture.activity.id,
-      appendedHead: fixture.activity.appendedHead,
+      activityID: predecessor.activity.id,
+      appendedHead: predecessor.activity.appendedHead,
       replayAttempts: 0,
-      startChainIndex: fixture.activity.startChainIndex,
-      status: fixture.activity.status,
+      startChainIndex: predecessor.activity.startChainIndex,
+      status: predecessor.activity.status,
       verifiedHead: 0,
     }),
   );
 
-  expect(rejected).toStrictEqual({ kind: 'rejected' });
+  expect(predecessorOutcome).toStrictEqual({ kind: 'rejected' });
 
+  const avatarAfterReject = await ctx.db
+    .selectFrom('avatars')
+    .select('xp')
+    .where('id', '=', predecessor.activity.avatarId)
+    .executeTakeFirstOrThrow();
+
+  expect(avatarAfterReject.xp).toBe(0);
+
+  // the successor is an unrelated, honest run that banked none of the rejected predecessor's xp —
+  // it settles cleanly despite chaining off a rejected run
   const successor = await createHonestActivityFixture(ctx.db, {
-    avatarID: fixture.activity.avatarId,
-    buildSnapshot: { level: 50, xp: 0 },
+    activity: { predecessorActivityId: predecessor.activity.id },
+    avatarID: predecessor.activity.avatarId,
+    buildSnapshot: { level: 1, xp: 0 },
     duration: 80_000,
     seed: buildStateFromSeed(1_616_267_014),
   });
 
-  await createSnapshotSourceRow(ctx.db, {
-    activityID: successor.activity.id,
-    sourceActivityID: fixture.activity.id,
-  });
-
-  const successorOutcome = await ctx.db.transaction().execute((trx) =>
+  const outcome = await ctx.db.transaction().execute((trx) =>
     runFrontier(trx, deps, cache, {
       activityID: successor.activity.id,
       appendedHead: successor.activity.appendedHead,
@@ -1300,15 +1386,7 @@ test('it cascade-voids a successor whose build snapshot borrowed xp from a run r
     }),
   );
 
-  expect(successorOutcome).toStrictEqual({ kind: 'rejected' });
-
-  const successorRow = await ctx.db
-    .selectFrom('activities')
-    .select('status')
-    .where('id', '=', successor.activity.id)
-    .executeTakeFirstOrThrow();
-
-  expect(successorRow.status).toBe('rejected');
+  expect(outcome.kind).toBe('matched');
 });
 
 test('it never rejects a world-map-node run at the origin for reachability, even with no grants', async () => {
@@ -1317,7 +1395,7 @@ test('it never rejects a world-map-node run at the origin for reachability, even
   const originID = toNodeID(ORIGIN_CELL[0], ORIGIN_CELL[1]);
 
   const fixture = await createHonestActivityFixture(ctx.db, {
-    buildSnapshot: { level: 50, xp: 0 },
+    buildSnapshot: { level: 50, xp: buildXPThreshold(50) },
     chain: { scopeId: originID },
     completedNodeIDs: [],
     duration: 80_000,
@@ -1353,7 +1431,7 @@ test('it never rejects a non-world_map_node scope for reachability', async () =>
   await using ctx = await setupTest();
 
   const fixture = await createHonestActivityFixture(ctx.db, {
-    buildSnapshot: { level: 50, xp: 0 },
+    buildSnapshot: { level: 50, xp: buildXPThreshold(50) },
     chain: { scopeType: 'encounter' },
     completedNodeIDs: [],
     duration: 80_000,
