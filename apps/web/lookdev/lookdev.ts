@@ -94,15 +94,15 @@ const NIGHT: ProbeConfig = {
   ambient: '#39406b',
   ambientIntensity: 1.2,
   backgroundLitChance: 0.14,
-  bloomStrength: 0.55,
-  bloomThreshold: 0.45,
+  bloomStrength: 0.46,
+  bloomThreshold: 0.62,
   buildingLit: '#6a7794',
   dirColor: '#5a6aa8',
   dirIntensity: 1.2,
   duskFogBanks: false,
   fog: '#151a2c',
-  fogFar: 150,
-  fogNear: 45,
+  fogFar: 136,
+  fogNear: 26,
   ground: '#141927',
   key: 'night',
   litChance: 0.3,
@@ -1219,6 +1219,15 @@ function makeKnobGroup<K extends string>(
   return group;
 }
 
+/**
+ * Hover interactivity: the five nav buildings are the menu. Pick boxes are invisible raycast
+ * volumes built from each placement's footprint parts; the materials map is what a hover lifts.
+ */
+const NAV_HOVER_KEYS = ['market', 'stash', 'codex', 'gate', 'avatar'];
+
+const hoverPickBoxes: Array<Mesh> = [];
+const hoverMaterials: Record<string, Array<{ emissive: Color }>> = {};
+
 /** Live scene objects the current view registered for setter knobs; null outside tuned views. */
 const liveRefs = {
   ambient: null as AmbientLight | null,
@@ -1234,8 +1243,8 @@ const liveRefs = {
 };
 
 const groundingKnobs = makeKnobGroup('grounding', {
-  falloff: [0.25, 0.05, 1],
-  depth: [0.68, 0, 1],
+  falloff: [0.67, 0.05, 1],
+  depth: [0.1, 0, 1],
 });
 
 /**
@@ -1322,9 +1331,9 @@ const codexKnobs = makeKnobGroup('codex', {
 });
 
 const gateKnobs = makeKnobGroup('gate', {
-  civicCellX: [0.9, 0.1, 3, 0.05],
+  civicCellX: [1.6, 0.1, 3, 0.05],
   civicCellY: [0.55, 0.1, 3, 0.05],
-  civicPanelAmp: [0.14, 0, 1],
+  civicPanelAmp: [0.55, 0, 1],
   civicWearAmp: [0.18, 0, 1],
   civicWearFadeTo: [3.5, 0.5, 9, 0.1],
   civicClampLo: [0.78, 0, 1],
@@ -1333,7 +1342,7 @@ const gateKnobs = makeKnobGroup('gate', {
   coreBandAmp: [0.3, 0, 1],
   coreClampLo: [0.6, 0, 1],
   coreClampHi: [1.15, 1, 2],
-  grainAmp: [0.06, 0, 0.3, 0.005],
+  grainAmp: [0.205, 0, 0.3, 0.005],
 });
 
 const avatarKnobs = makeKnobGroup('avatar', {
@@ -1353,13 +1362,13 @@ const fountainKnobs = makeKnobGroup('fountain', {
 });
 
 const groundKnobs = makeKnobGroup('ground', {
-  paverCell: [0.3, 0.05, 1.5],
-  paverAmp: [0.16, 0, 1],
-  jointDepth: [0.16, 0, 1],
+  paverCell: [0.05, 0.05, 1.5],
+  paverAmp: [0.37, 0, 1],
+  jointDepth: [0.07, 0, 1],
   wearScale: [0.22, 0.05, 3],
   wearAmp: [0.16, 0, 1],
   grainAmp: [0.05, 0, 0.3, 0.005],
-  clampLo: [0.62, 0, 1],
+  clampLo: [0.77, 0, 1],
   clampHi: [1.14, 1, 2],
 });
 
@@ -1367,7 +1376,7 @@ for (const [buildingKey, roughness] of [
   ['market', 0.85],
   ['stash', 0.55],
   ['codex', 0.85],
-  ['gate', 0.85],
+  ['gate', 0.34],
   ['avatar', 0.85],
   ['fountain', 0.85],
 ] as const) {
@@ -1494,14 +1503,14 @@ const GATE_MODEL_SCALE = 0.38;
 const GATE_MODEL_YAW = 0;
 
 const atmoKnobs = makeKnobGroup('atmo', {
-  bankOpacity: [0.26, 0, 0.8],
-  mistOpacity: [0.18, 0, 0.8],
-  hazeOpacity: [0.4, 0, 1],
-  smokeOpacity: [0.45, 0, 1],
-  fogWall: [0.55, 0, 1],
-  fogSea: [0.5, 0, 1],
-  fogRadius: [18, 5, 45, 0.5],
-  drift: [0.06, 0, 0.3, 0.005],
+  bankOpacity: [0.23, 0, 0.8],
+  mistOpacity: [0.26, 0, 0.8],
+  hazeOpacity: [0.56, 0, 1],
+  smokeOpacity: [0.16, 0, 1],
+  fogWall: [0.31, 0, 1],
+  fogSea: [0.7, 0, 1],
+  fogRadius: [23, 5, 45, 0.5],
+  drift: [0.07, 0, 0.3, 0.005],
 });
 
 const motionKnobs = makeKnobGroup('motion', {
@@ -1538,9 +1547,9 @@ registerKnob(
 const sceneAnimations: Array<(elapsed: number) => void> = [];
 
 const gradeKnobs = makeKnobGroup('grade', {
-  vignette: [0.4, 0, 1],
-  vignetteMin: [0.55, 0, 1],
-  warmth: [1, 0, 2],
+  vignette: [0.53, 0, 1],
+  vignetteMin: [0.4, 0, 1],
+  warmth: [2, 0, 2],
 });
 
 registerKnob('grade.bloomStrength', NIGHT.bloomStrength, 0, 2, (value) => {
@@ -1662,6 +1671,11 @@ function buildScene(config: ProbeConfig, useParts: boolean, grounding = false, s
   liveRefs.materials = {};
   liveRefs.spills = [];
   liveRefs.washes = [];
+  hoverPickBoxes.length = 0;
+
+  for (const key of Object.keys(hoverMaterials)) {
+    delete hoverMaterials[key];
+  }
 
   const groundMaterial = new MeshStandardNodeMaterial({ color: new Color(config.ground), roughness: 0.6 });
   // large enough that its edges sit past full fog from any camera the spike uses
@@ -1792,6 +1806,21 @@ function buildScene(config: ProbeConfig, useParts: boolean, grounding = false, s
         model.position.set(placement.x, 0, placement.z);
         model.rotation.y = placement.ry + GATE_MODEL_YAW;
         scene.add(model);
+
+        const gateHoverMaterials: Array<{ emissive: Color }> = [];
+
+        model.traverse((child) => {
+          const mesh = child as Mesh;
+
+          if (mesh.isMesh) {
+            const meshMaterial = mesh.material as { emissive?: Color };
+
+            if (meshMaterial.emissive) {
+              gateHoverMaterials.push(meshMaterial as { emissive: Color });
+            }
+          }
+        });
+        hoverMaterials[placement.key] = gateHoverMaterials;
       } else if (placement.key === 'gate') {
         // concept B1.6i's two-material story: light civic concrete against dark service metal
         const civicBase = new Color('#b9bdc6');
@@ -1813,9 +1842,56 @@ function buildScene(config: ProbeConfig, useParts: boolean, grounding = false, s
         }
 
         renderGateHiFi(scene, civicMaterial, coreMaterial, trimMaterial, placement.x, placement.z, placement.ry);
+        hoverMaterials[placement.key] = [civicMaterial, coreMaterial, trimMaterial];
       } else {
         renderPartSet(scene, placement.parts, material, placement.x, placement.z, placement.ry);
+
+        if (NAV_HOVER_KEYS.includes(placement.key)) {
+          hoverMaterials[placement.key] = [material];
+        }
       }
+    }
+
+    // invisible raycast volumes for hover: one box per nav building, from its footprint parts
+    const pickMaterial = new MeshBasicNodeMaterial({ colorWrite: false, depthWrite: false });
+
+    for (const placement of placements) {
+      if (!NAV_HOVER_KEYS.includes(placement.key)) {
+        continue;
+      }
+
+      let minX = Infinity;
+      let minY = Infinity;
+      let minZ = Infinity;
+      let maxX = -Infinity;
+      let maxY = -Infinity;
+      let maxZ = -Infinity;
+
+      for (const part of placement.parts) {
+        minX = Math.min(minX, part.x - part.sx / 2);
+        maxX = Math.max(maxX, part.x + part.sx / 2);
+        minY = Math.min(minY, part.y - part.sy / 2);
+        maxY = Math.max(maxY, part.y + part.sy / 2);
+        minZ = Math.min(minZ, part.z - part.sz / 2);
+        maxZ = Math.max(maxZ, part.z + part.sz / 2);
+      }
+
+      const centerX = (minX + maxX) / 2;
+      const centerY = (minY + maxY) / 2;
+      const centerZ = (minZ + maxZ) / 2;
+      const cos = Math.cos(placement.ry);
+      const sin = Math.sin(placement.ry);
+      const pick = new Mesh(new BoxGeometry(maxX - minX, maxY - minY, maxZ - minZ), pickMaterial);
+
+      pick.position.set(
+        centerX * cos + centerZ * sin + placement.x,
+        centerY,
+        -centerX * sin + centerZ * cos + placement.z,
+      );
+      pick.rotation.y = placement.ry;
+      pick.userData.hoverKey = placement.key;
+      scene.add(pick);
+      hoverPickBoxes.push(pick);
     }
 
     for (const fixture of SPILL_FIXTURES) {
@@ -2095,6 +2171,8 @@ function addDuskFogBanks(scene: Scene) {
  * gate end, the gate slot's teal haze streams upward and pulses, and vent plumes rise off the
  * market and stash. No plane writes depth.
  */
+const ATMO_LAYER = 1;
+
 function addAtmosphere(scene: Scene) {
   // fades every plane to nothing at its own edges so no rectangle outline ever shows
   const edgeFade = uv().x.mul(uv().x.oneMinus()).mul(uv().y).mul(uv().y.oneMinus()).mul(16);
@@ -2126,6 +2204,7 @@ function addAtmosphere(scene: Scene) {
 
     const plane = new Mesh(new PlaneGeometry(90, 11), material);
 
+    plane.layers.set(ATMO_LAYER);
     plane.position.set(0, bank.y, bank.z);
     scene.add(plane);
   }
@@ -2153,6 +2232,7 @@ function addAtmosphere(scene: Scene) {
 
     const mist = new Mesh(new PlaneGeometry(56, 34), material);
 
+    mist.layers.set(ATMO_LAYER);
     mist.rotation.x = -Math.PI / 2;
     mist.position.set(1, layer.y, -9);
     scene.add(mist);
@@ -2177,6 +2257,8 @@ function addAtmosphere(scene: Scene) {
     hazeMaterial.opacityNode = body.mul(edgeFade).mul(atmoKnobs.hazeOpacity).mul(pulse);
 
     const haze = new Mesh(new PlaneGeometry(4.2, 7.2), hazeMaterial);
+
+    haze.layers.set(ATMO_LAYER);
     const cos = Math.cos(gate.ry);
     const sin = Math.sin(gate.ry);
     const localZ = -1.2;
@@ -2215,6 +2297,7 @@ function addAtmosphere(scene: Scene) {
 
     const sea = new Mesh(new PlaneGeometry(320, 320), material);
 
+    sea.layers.set(ATMO_LAYER);
     sea.rotation.x = -Math.PI / 2;
     sea.position.set(-1, layer.y, -5);
     scene.add(sea);
@@ -2238,8 +2321,9 @@ function addAtmosphere(scene: Scene) {
 
   wallMaterial.opacityNode = wallBody.mul(0.75).add(0.25).mul(wallFade).mul(atmoKnobs.fogWall);
 
-  const wall = new Mesh(new CylinderGeometry(30, 30, 14, 64, 1, true), wallMaterial);
+  const wall = new Mesh(new CylinderGeometry(27, 27, 14, 64, 1, true), wallMaterial);
 
+  wall.layers.set(ATMO_LAYER);
   wall.position.set(-1, 7, -5);
   scene.add(wall);
   sceneAnimations.push((elapsed) => {
@@ -2282,6 +2366,7 @@ function addAtmosphere(scene: Scene) {
 
     const plume = new Mesh(new PlaneGeometry(source.width, source.height), material);
 
+    plume.layers.set(ATMO_LAYER);
     plume.position.set(worldX, source.y + source.height / 2, worldZ);
     scene.add(plume);
   }
@@ -2628,6 +2713,9 @@ async function main() {
 
   const camera = new PerspectiveCamera(36, globalThis.innerWidth / globalThis.innerHeight, 0.1, 300);
 
+  // the main camera sees the atmosphere layer; the ink edge camera never enables it
+  camera.layers.enable(1);
+
   camera.position.set(35.82, 29.77, 41.11);
   camera.lookAt(0, 4, -7);
 
@@ -2657,10 +2745,7 @@ async function main() {
     grade = false,
   ): PostProcessing => {
     const scenePass = pass(scene, viewCamera);
-
-    scenePass.setMRT(mrt({ normal: normalView, output }));
-
-    const scenePassColor = scenePass.getTextureNode('output');
+    const scenePassColor = scenePass.getTextureNode();
     const bloomPass = bloom(scenePassColor, strength, 0.4, threshold);
     const post = new PostProcessing(renderer);
     let composite = scenePassColor.add(bloomPass);
@@ -2669,9 +2754,22 @@ async function main() {
 
     if (grade) {
       // the ink pass: thick dark edges wherever depth or normals break — the illustrated read.
-      // Depth deltas are relative to the center sample so the nonlinear buffer stays usable.
-      const depthTex = scenePass.getTextureNode('depth');
-      const normalTex = scenePass.getTextureNode('normal');
+      // Edges come from a second pass whose camera skips the atmosphere layer, so fog never
+      // gets outlined while buildings behind it keep their ink. Depth deltas are relative to
+      // the center sample so the nonlinear buffer stays usable.
+      const edgeCamera = new PerspectiveCamera();
+
+      sceneAnimations.push(() => {
+        edgeCamera.copy(viewCamera as PerspectiveCamera);
+        edgeCamera.layers.set(0);
+      });
+
+      const edgePass = pass(scene, edgeCamera);
+
+      edgePass.setMRT(mrt({ normal: normalView, output }));
+
+      const depthTex = edgePass.getTextureNode('depth');
+      const normalTex = edgePass.getTextureNode('normal');
       const texel = inkKnobs.width.div(screenSize);
       const sampleDepth = (ox: number, oy: number) =>
         depthTex.sample(screenUV.add(texel.mul(vec2(ox, oy)))).x;
@@ -2794,6 +2892,28 @@ async function main() {
     info.style.display = planActive || orbitActive ? 'block' : 'none';
   };
 
+  // hover glow: the nav buildings are the menu — pointer-over lifts their emissive into bloom
+  const HOVER_LIFT = new Color(0.07, 0.12, 0.11);
+  const hoverRestore: Array<[{ emissive: Color }, Color]> = [];
+  let hoveredKey: string | null = null;
+
+  const applyHoverGlow = (key: string | null) => {
+    for (const [hoverMaterial, previous] of hoverRestore) {
+      hoverMaterial.emissive.copy(previous);
+    }
+
+    hoverRestore.length = 0;
+    hoveredKey = key;
+    renderer.domElement.style.cursor = key ? 'pointer' : '';
+
+    if (key) {
+      for (const hoverMaterial of new Set(hoverMaterials[key] ?? [])) {
+        hoverRestore.push([hoverMaterial, hoverMaterial.emissive.clone()]);
+        hoverMaterial.emissive.add(HOVER_LIFT);
+      }
+    }
+  };
+
   const toPointerNDC = (event: PointerEvent) => {
     pointer.set(
       (event.clientX / globalThis.innerWidth) * 2 - 1,
@@ -2844,6 +2964,18 @@ async function main() {
   });
 
   renderer.domElement.addEventListener('pointermove', (event) => {
+    if (!planActive) {
+      toPointerNDC(event);
+      raycaster.setFromCamera(pointer, camera);
+
+      const hoverHits = raycaster.intersectObjects(hoverPickBoxes, false);
+      const hoverHitKey = (hoverHits[0]?.object.userData['hoverKey'] as string | undefined) ?? null;
+
+      if (hoverHitKey !== hoveredKey) {
+        applyHoverGlow(hoverHitKey);
+      }
+    }
+
     if (orbitActive) {
       if (!orbitDragging) {
         return;
@@ -3192,6 +3324,7 @@ async function main() {
     // grade views opt back in; everything else renders untonemapped
     renderer.toneMapping = NoToneMapping;
     sceneAnimations.length = 0;
+    applyHoverGlow(null);
     postProcessing = view.select();
     activeKey = view.key;
 
