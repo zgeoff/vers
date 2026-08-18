@@ -176,9 +176,10 @@
     <p>
       The spike's original purpose surfaces at last: this scene is a landing screen whose
       buildings navigate to menus, and now they behave like it. Invisible pick volumes derived
-      from each nav building's true footprint catch the pointer; a hover lifts every material of
-      that building — the authored gate's thirty meshes included — into a soft teal-white glow
-      that the bloom pass picks up, and the cursor turns pointer. Alongside: the user's full
+      from each nav building's true footprint catch the pointer; a hover gives the building a
+      subtle emissive lift plus an <b>outer glow</b> — an inverted-hull shell in additive teal
+      traced behind the silhouette, spread soft by the bloom pass — and the cursor turns
+      pointer. Alongside: the user's full
       settle-tune baked as defaults, the fog wall trimmed to radius 27, and the ink pass rebuilt
       to read edges from an atmosphere-free second render — fog no longer gets outlined, while
       the buildings behind it keep the inked-silhouette look that made the background sing.
