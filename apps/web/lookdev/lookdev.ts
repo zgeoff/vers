@@ -8,6 +8,7 @@
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { bloom } from 'three/addons/tsl/display/BloomNode.js';
+import { fxaa } from 'three/addons/tsl/display/FXAANode.js';
 import { ao } from 'three/addons/tsl/display/GTAONode.js';
 import {
   color,
@@ -33,6 +34,7 @@ import gateModelURL from './models/respite-gate.glb';
 import {
   AdditiveBlending,
   AgXToneMapping,
+  Box3,
   CircleGeometry,
   ExtrudeGeometry,
   Shape,
@@ -1462,10 +1464,10 @@ const SPILL_FIXTURES: ReadonlyArray<SpillFixture> = [
 ];
 
 const inkKnobs = makeKnobGroup('ink', {
-  width: [1.6, 0, 6, 0.1],
-  depthThreshold: [0.02, 0.001, 0.2, 0.001],
-  normalThreshold: [0.6, 0.05, 3, 0.05],
-  strength: [0.85, 0, 1],
+  width: [1, 0, 6, 0.1],
+  depthThreshold: [0.015, 0.001, 0.2, 0.001],
+  normalThreshold: [0.35, 0.05, 3, 0.05],
+  strength: [0.55, 0, 1],
 });
 
 /**
@@ -2557,6 +2559,27 @@ async function main() {
     const gltf = await new GLTFLoader().loadAsync(gateModelURL as string);
 
     gateModel = gltf.scene;
+
+    // swap the gate's plan/footprint boxes for the model's true scaled bounds so the plan
+    // editor drags the real shape and the overlap checker tests reality
+    const bounds = new Box3().setFromObject(gateModel);
+    const size = bounds.getSize(new Vector3()).multiplyScalar(GATE_MODEL_SCALE);
+    const boundsCenter = bounds.getCenter(new Vector3()).multiplyScalar(GATE_MODEL_SCALE);
+    const gatePlacement = placements.find((placement) => placement.key === 'gate');
+
+    if (gatePlacement) {
+      gatePlacement.parts = [
+        {
+          g: 'box',
+          sx: size.x,
+          sy: size.y,
+          sz: size.z,
+          x: boundsCenter.x,
+          y: boundsCenter.y,
+          z: boundsCenter.z,
+        },
+      ];
+    }
   } catch (error) {
     console.error('gate model failed to load — falling back to the procedural gate', error);
   }
@@ -2648,7 +2671,8 @@ async function main() {
       composite = composite.mul(vignette).mul(mix(vec3(1), vec3(1.05, 1.0, 0.94), gradeKnobs.warmth));
     }
 
-    post.outputNode = composite;
+    // final FXAA smooths the ink lines — edge detection is per-pixel and jaggy without it
+    post.outputNode = fxaa(composite);
 
     return post;
   };
@@ -2723,7 +2747,7 @@ async function main() {
     info.textContent = planActive
       ? `${flash ?? (selected ? `selected: ${selected.label}` : 'click an element')} · drag to move · Q/E rotate · P copy layout · overlaps: ${overlapReport}`
       : orbitActive
-        ? 'drag to orbit · shift-drag to pan · wheel to zoom'
+        ? (flash ?? 'drag to orbit · shift-drag to pan · wheel to zoom · C copy camera')
         : '';
     info.style.display = planActive || orbitActive ? 'block' : 'none';
   };
@@ -3168,6 +3192,31 @@ async function main() {
       selected.target.ry += event.key === 'q' ? 0.05 : -0.05;
       selected.group.rotation.y = selected.target.ry;
       updateInfo();
+      return;
+    }
+
+    // C copies the live camera as JSON — orbit to a framing, dump it, bake it as the default
+    if (event.key === 'c') {
+      const cameraState = {
+        fov: camera.fov,
+        position: {
+          x: Math.round(camera.position.x * 100) / 100,
+          y: Math.round(camera.position.y * 100) / 100,
+          z: Math.round(camera.position.z * 100) / 100,
+        },
+        target: orbitActive
+          ? {
+              x: Math.round(orbitTarget.x * 100) / 100,
+              y: Math.round(orbitTarget.y * 100) / 100,
+              z: Math.round(orbitTarget.z * 100) / 100,
+            }
+          : { x: 0, y: 3, z: -7 },
+      };
+      const serialized = JSON.stringify(cameraState, null, 2);
+
+      console.log(serialized);
+      void navigator.clipboard.writeText(serialized).catch(() => {});
+      updateInfo('camera copied to clipboard + console');
       return;
     }
 
