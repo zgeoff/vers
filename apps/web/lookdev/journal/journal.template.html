@@ -155,25 +155,52 @@
   </p>
 
   <div class="howto">
-    <h2>Status · on hold — the Blender era</h2>
+    <h2>Round 31 · how to respond</h2>
     <p>
-      The spike pauses here, thirty rounds in. The composition, layout, night lighting,
-      atmosphere, motion layer, and tuner are all settled and waiting; the buildings themselves
-      are going to be modeled by hand in Blender. The handoff — one GLB per building, scale and
-      origin and facing conventions, the glow-material naming that wires windows into the bloom
-      and flicker systems, per-building size targets, live placements, and what the fixed camera
-      actually sees — is written up in
-      <span style="font-family: var(--mono)">apps/web/lookdev/MODELING.md</span> on branch
-      <span style="font-family: var(--mono)">spike/respite-lookdev</span>. Suggested first
-      export: the fountain — smallest building, validates the whole pipeline. When the first
-      model lands, the next round wires the loader and drops it into the plaza.
+      The Blender era delivers: your authored gate stands in the warm sodium night, and the
+      first heavy-stylization layer is on — a screen-space <b>ink pass</b> drawing dark edges
+      wherever depth or normals break, across the entire scene. Judge live in views 4/8. The new
+      <b>ink</b> tuner section is yours: <b>width</b> (line thickness in pixels), <b>normal
+      threshold</b> (lower = more interior edges get inked — push it down and your chamfer facets
+      start catching lines), <b>depth threshold</b> (silhouette sensitivity), <b>strength</b>
+      (0 = off). Two verdicts wanted: does the model sit right at this scale and position, and
+      does the ink direction land — too subtle, too much, or worth pushing toward the full
+      illustrated look? Cel shading (quantized paint-band lighting) is the next layer either way.
     </p>
   </div>
 
   <section class="round">
     <div class="round-head">
+      <h2>Round 31 · the authored gate, inked</h2>
+      <span class="status open">open — judge model and ink</span>
+    </div>
+    <p>
+      Two firsts in one frame. The gate is now the <b>hand-modeled Blender export</b> — 30 named
+      meshes, real chamfers, authored emissives (teal system ring, amber markers, warm
+      habitation) — loaded from glTF, scaled 0.38× from its real-world 42 m onto the
+      composition's gate height, dropped onto the placement, zero overlaps. The night rig,
+      atmosphere, and motion carry it unchanged: its emissives bloom, the haze breathes in its
+      tunnel mouth, the sodium world glows around it. And the whole scene now runs through an
+      <b>ink pass</b> — screen-space edge detection on depth and normal breaks, drawing thick
+      dark illustrated lines on every silhouette and hard edge, thickness and sensitivity and
+      strength all live knobs. First step toward the painted look; cel-band lighting is next.
+    </p>
+    <div class="shots pair">
+      <figure>
+        <img src="data:image/png;base64,{{R31_MODEL_INK}}" alt="The plaza at night with the authored gate model standing at the far side, teal ring glowing, and dark ink outlines on every building" />
+        <figcaption>8 · surfaces — the authored gate in the sodium night, scene-wide ink lines</figcaption>
+      </figure>
+      <figure>
+        <img src="data:image/png;base64,{{R31_GATE_MODEL}}" alt="Close orbit of the authored gate: rounded chamfered towers with amber emissive slots flanking the teal-ringed tunnel mouth" />
+        <figcaption>close orbit — the Blender gate: chamfered shoulders, amber slots, teal ring</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="round">
+    <div class="round-head">
       <h2>Round 30 · the style probe</h2>
-      <span class="status">resolved — spike on hold</span>
+      <span class="status">resolved — spike resumed at round 31</span>
     </div>
     <p>
       Twenty-nine rounds locked palette, composition, layout, silhouettes, lighting, and motion —

@@ -65,6 +65,8 @@ const MAP: Record<string, string> = {
   R29_GATE_CONCEPT: 'r29-gate-concept',
   R29_GATE_CONTEXT: 'r29-gate-context',
   R30_STYLE_PROBE: 'r30-style-probe',
+  R31_MODEL_INK: 'r31-model-ink',
+  R31_GATE_MODEL: 'r31-gate-model',
 };
 
 let html = await Bun.file(`${import.meta.dir}/journal.template.html`).text();
