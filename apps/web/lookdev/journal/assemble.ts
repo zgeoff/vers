@@ -67,6 +67,7 @@ const MAP: Record<string, string> = {
   R30_STYLE_PROBE: 'r30-style-probe',
   R31_MODEL_INK: 'r31-model-ink',
   R31_GATE_MODEL: 'r31-gate-model',
+  R32_FOG_SEA: 'r32-fog-sea',
 };
 
 let html = await Bun.file(`${import.meta.dir}/journal.template.html`).text();
