@@ -39,6 +39,7 @@ import {
   BackSide,
   Box3,
   CircleGeometry,
+  DataTexture,
   ExtrudeGeometry,
   Shape,
   AmbientLight,
@@ -54,6 +55,8 @@ import {
   Mesh,
   MeshBasicNodeMaterial,
   MeshStandardNodeMaterial,
+  MeshToonNodeMaterial,
+  NearestFilter,
   NoToneMapping,
   Object3D,
   OrthographicCamera,
@@ -63,6 +66,7 @@ import {
   PointLight,
   PostProcessing,
   Raycaster,
+  RedFormat,
   Scene,
   SphereGeometry,
   Vector2,
@@ -1135,6 +1139,14 @@ function buildPartSetWindows(placement: AssemblyPlacement, config: ProbeConfig, 
 
 const dummy = new Object3D();
 
+/** Four flat paint bands; nearest filtering keeps the steps hard — the cel ramp. */
+const toonGradient = new DataTexture(new Uint8Array([70, 135, 200, 255]), 4, 1, RedFormat);
+
+toonGradient.minFilter = NearestFilter;
+toonGradient.magFilter = NearestFilter;
+toonGradient.needsUpdate = true;
+
+
 /**
  * Tuner: every surface/grade/light constant is a knob the panel can drive live. Uniform-backed
  * knobs update their TSL node in place (no rebuild); setter knobs re-apply onto whatever live
@@ -1683,7 +1695,13 @@ function applyGroundSurface(material: MeshStandardNodeMaterial, base: Color) {
   );
 }
 
-function buildScene(config: ProbeConfig, useParts: boolean, grounding = false, surfaces = false): Scene {
+function buildScene(
+  config: ProbeConfig,
+  useParts: boolean,
+  grounding = false,
+  surfaces = false,
+  cel = false,
+): Scene {
   const scene = new Scene();
 
   scene.background = new Color(config.sky);
@@ -1716,7 +1734,13 @@ function buildScene(config: ProbeConfig, useParts: boolean, grounding = false, s
     delete hoverHulls[key];
   }
 
-  const groundMaterial = new MeshStandardNodeMaterial({ color: new Color(config.ground), roughness: 0.6 });
+  // cel swaps every lit material for a toon material quantized by the shared ramp
+  const makeLitMaterial = (params: { color?: Color; roughness: number }) =>
+    (cel
+      ? new MeshToonNodeMaterial({ ...(params.color ? { color: params.color } : {}), gradientMap: toonGradient })
+      : new MeshStandardNodeMaterial(params)) as MeshStandardNodeMaterial;
+
+  const groundMaterial = makeLitMaterial({ color: new Color(config.ground), roughness: 0.6 });
   // large enough that its edges sit past full fog from any camera the spike uses
   const ground = new Mesh(new PlaneGeometry(800, 800), groundMaterial);
 
@@ -1729,7 +1753,7 @@ function buildScene(config: ProbeConfig, useParts: boolean, grounding = false, s
   scene.add(ground);
 
   // the paved plaza, skewed off the world axes so the square doesn't read as a perfect rectangle
-  const plazaMaterial = new MeshStandardNodeMaterial({
+  const plazaMaterial = makeLitMaterial({
     color: new Color(config.ground).multiplyScalar(2.4),
     roughness: 0.45,
   });
@@ -1762,7 +1786,7 @@ function buildScene(config: ProbeConfig, useParts: boolean, grounding = false, s
   const specs = massing;
   const boxSpecs = useParts ? specs.filter((spec) => !isNavRole(spec.role)) : specs;
   const boxGeometry = partGeometries.box;
-  const buildingMaterial = new MeshStandardNodeMaterial({ roughness: 0.85 });
+  const buildingMaterial = makeLitMaterial({ roughness: 0.85 });
   const buildings = new InstancedMesh(boxGeometry, buildingMaterial, boxSpecs.length);
 
   if (grounding) {
@@ -1824,7 +1848,7 @@ function buildScene(config: ProbeConfig, useParts: boolean, grounding = false, s
   if (useParts) {
     for (const placement of placements) {
       const base = placement.key === 'fountain' ? litColor.clone().multiplyScalar(0.55) : navColor;
-      const material = new MeshStandardNodeMaterial({
+      const material = makeLitMaterial({
         color: base,
         roughness: placement.key === 'stash' ? 0.55 : 0.85,
       });
@@ -1844,6 +1868,33 @@ function buildScene(config: ProbeConfig, useParts: boolean, grounding = false, s
         model.scale.setScalar(GATE_MODEL_SCALE);
         model.position.set(placement.x, 0, placement.z);
         model.rotation.y = placement.ry + GATE_MODEL_YAW;
+
+        if (cel) {
+          // quantize the authored materials too, but keep the glow materials as authored
+          const toonCache = new Map<unknown, MeshToonNodeMaterial>();
+
+          model.traverse((child) => {
+            const mesh = child as Mesh;
+
+            if (mesh.isMesh) {
+              const original = mesh.material as { color?: Color; emissive?: Color };
+
+              if (original.emissive && original.emissive.getHex() !== 0) {
+                return;
+              }
+
+              let toon = toonCache.get(mesh.material);
+
+              if (!toon) {
+                toon = new MeshToonNodeMaterial({ color: original.color, gradientMap: toonGradient });
+                toonCache.set(mesh.material, toon);
+              }
+
+              mesh.material = toon;
+            }
+          });
+        }
+
         scene.add(model);
 
         const gateHoverMaterials: Array<{ emissive: Color }> = [];
@@ -3213,6 +3264,24 @@ async function main() {
         renderer.toneMapping = AgXToneMapping;
         return buildPost(
           buildScene(NIGHT, true, true, true),
+          camera,
+          NIGHT.bloomStrength,
+          NIGHT.bloomThreshold,
+          true,
+        );
+      },
+    },
+    {
+      key: 'cel',
+      name: '✏ · Cel',
+      select: () => {
+        planActive = false;
+        orbitActive = false;
+        updateInfo();
+        selectPlazaCamera();
+        renderer.toneMapping = AgXToneMapping;
+        return buildPost(
+          buildScene(NIGHT, true, true, true, true),
           camera,
           NIGHT.bloomStrength,
           NIGHT.bloomThreshold,
