@@ -1,5 +1,6 @@
 import { expect, onTestFinished, test } from 'bun:test';
 import type { ErrorEvent } from '@sentry/browser';
+import { createMockActivityData } from '@vers/contract-activity/test-utils';
 import { ActivityFailureAction } from '@vers/idle-core';
 import { createAuthedServiceClient, createViewer, resolveServiceURL } from '@vers/mock-services';
 import { mockActivityService } from '@vers/mock-services/activity';
@@ -15,9 +16,12 @@ import { writeFailureActionCache } from '../submission/write-failure-action-cach
 import { writeNodeSeeds } from '../submission/write-node-seeds';
 import { writePendingStartIntent } from '../submission/write-pending-start-intent';
 import { writePendingStopIntent } from '../submission/write-pending-stop-intent';
+import { writeQueuedCheckpoint } from '../submission/write-queued-checkpoint';
 import { writeStartStamps } from '../submission/write-start-stamps';
 import { createFastClock } from '../test-utils/create-fast-clock';
 import { createTestClient } from '../test-utils/create-test-client';
+import { createMockCheckpointBatchEntry } from '../test-utils/factories/create-mock-checkpoint-batch-entry';
+import { createMockLatestActivityProgress } from '../test-utils/factories/create-mock-latest-activity-progress';
 import { makeFailFirstMatchHandler } from '../test-utils/make-fail-first-match-handler';
 import { WORKER_TO_CLIENT_CHANNEL } from '../transport/constants';
 import { WorkerMessageType } from '../types';
@@ -544,4 +548,72 @@ test('it cancels an in-flight resync read on stop() without stopping the row bac
   const pendingStop = await readPendingStopIntent();
 
   expect(pendingStop).toBeUndefined();
+});
+
+test('it resets the displaced simulation and broadcasts WriterDisplaced on a session eviction', async () => {
+  const viewer = await createViewer();
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
+
+  // a zero-gap active row, so the first reconnect's resync attaches it live without any
+  // simulated time elapsing
+  const activity = await db.activityCollection.create({
+    avatarID: viewer.avatar.id,
+    encounterNode: { difficulty: 1 },
+    seed: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaa6072',
+    startedAt: new Date(),
+  });
+
+  const broadcasts = collectBroadcasts();
+
+  using runtime = createWorkerRuntime({ client });
+
+  const testClient = createConnectedTestClient(runtime);
+
+  await testClient.initialize({});
+
+  // the report awaits the recovery it triggers, so the resync's attach has fully settled by the
+  // time it answers — the run is genuinely installed before the takeover happens
+  await testClient.reportOnline({ avatarID: viewer.avatar.id, claim: false });
+
+  const installed = await testClient.initialize({});
+
+  expect(installed.state.activity).toMatchObject({ id: activity.id });
+
+  // the takeover, modeled consistently: every append is refused as another session's, AND the
+  // fetched progress reports this session no longer holds the writer — so a resync the recovery
+  // may run afterward plans active-elsewhere and preserves the displacement rather than
+  // re-attaching a row the server would refuse. A checkpoint is already queued for the reconnect
+  // drain below to deliver into that refusal.
+  server.use(
+    mockActivityService.trackActivityProgress.handler((opts) => {
+      throw opts.errors.SESSION_EVICTED({ data: {} });
+    }),
+    mockActivityService.getLatestActivityProgress.handler(() =>
+      createMockLatestActivityProgress({
+        activity: { ...createMockActivityData(), avatarID: viewer.avatar.id, id: activity.id },
+        isWriter: false,
+      }),
+    ),
+  );
+
+  await writeQueuedCheckpoint(activity.id, createMockCheckpointBatchEntry({ version: 1 }));
+
+  // the second connectivity report drains the held queue; its flush answers the eviction, and the
+  // displacement settles as its own lifecycle flow
+  await testClient.reportOnline({ avatarID: viewer.avatar.id, claim: false });
+
+  await waitFor(() => {
+    expect(broadcasts.received).toPartiallyContain({
+      activityID: activity.id,
+      type: WorkerMessageType.WriterDisplaced,
+    });
+  });
+
+  const result = await testClient.initialize({});
+
+  expect(result.writerDisplacedActivityID).toBe(activity.id);
+
+  // the displaced run's simulation is cleared, not just announced — the fresh snapshot carries no
+  // activity
+  expect(result.state.activity).toBeUndefined();
 });
