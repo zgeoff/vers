@@ -17,9 +17,11 @@ import {
   mix,
   mrt,
   mx_noise_float,
+  normalLocal,
   normalView,
   output,
   pass,
+  positionLocal,
   positionWorld,
   screenSize,
   screenUV,
@@ -34,6 +36,7 @@ import gateModelURL from './models/respite-gate.glb';
 import {
   AdditiveBlending,
   AgXToneMapping,
+  BackSide,
   Box3,
   CircleGeometry,
   ExtrudeGeometry,
@@ -789,6 +792,7 @@ function renderPartSet(
 ) {
   const cos = Math.cos(ry);
   const sin = Math.sin(ry);
+  const meshes: Array<Mesh> = [];
 
   for (const part of parts) {
     const mesh = new Mesh(partGeometries[part.g], material);
@@ -800,7 +804,10 @@ function renderPartSet(
     mesh.rotation.set(part.rx ?? 0, ry, part.rz ?? 0, 'YXZ');
     mesh.scale.set(part.sx, part.sy, part.sz);
     scene.add(mesh);
+    meshes.push(mesh);
   }
+
+  return meshes;
 }
 
 function buildLineupScene(element: LineupElement): Scene {
@@ -1227,6 +1234,34 @@ const NAV_HOVER_KEYS = ['market', 'stash', 'codex', 'gate', 'avatar'];
 
 const hoverPickBoxes: Array<Mesh> = [];
 const hoverMaterials: Record<string, Array<{ emissive: Color }>> = {};
+const hoverHulls: Record<string, Group> = {};
+
+/**
+ * The hover halo: an inverted-hull shell of the hovered building, additive teal behind the
+ * silhouette, spread into an outer glow by the bloom pass. Procedural parts inflate by scaling
+ * their centered unit geometry; the authored model pushes along its normals instead, because
+ * its mesh origins sit at the model root where center-scaling would displace the shell.
+ */
+const hoverHullPartsMaterial = new MeshBasicNodeMaterial({
+  blending: AdditiveBlending,
+  depthWrite: false,
+  opacity: 0.5,
+  side: BackSide,
+  transparent: true,
+});
+
+hoverHullPartsMaterial.colorNode = color(GATE_TEAL).mul(1.6);
+
+const hoverHullModelMaterial = new MeshBasicNodeMaterial({
+  blending: AdditiveBlending,
+  depthWrite: false,
+  opacity: 0.5,
+  side: BackSide,
+  transparent: true,
+});
+
+hoverHullModelMaterial.colorNode = color(GATE_TEAL).mul(1.6);
+hoverHullModelMaterial.positionNode = positionLocal.add(normalLocal.mul(0.28));
 
 /** Live scene objects the current view registered for setter knobs; null outside tuned views. */
 const liveRefs = {
@@ -1677,6 +1712,10 @@ function buildScene(config: ProbeConfig, useParts: boolean, grounding = false, s
     delete hoverMaterials[key];
   }
 
+  for (const key of Object.keys(hoverHulls)) {
+    delete hoverHulls[key];
+  }
+
   const groundMaterial = new MeshStandardNodeMaterial({ color: new Color(config.ground), roughness: 0.6 });
   // large enough that its edges sit past full fog from any camera the spike uses
   const ground = new Mesh(new PlaneGeometry(800, 800), groundMaterial);
@@ -1821,6 +1860,23 @@ function buildScene(config: ProbeConfig, useParts: boolean, grounding = false, s
           }
         });
         hoverMaterials[placement.key] = gateHoverMaterials;
+
+        const hull = gateModel.clone(true);
+
+        hull.traverse((child) => {
+          const mesh = child as Mesh;
+
+          if (mesh.isMesh) {
+            mesh.material = hoverHullModelMaterial;
+            mesh.layers.set(1);
+          }
+        });
+        hull.scale.setScalar(GATE_MODEL_SCALE);
+        hull.position.copy(model.position);
+        hull.rotation.copy(model.rotation);
+        hull.visible = false;
+        scene.add(hull);
+        hoverHulls[placement.key] = hull;
       } else if (placement.key === 'gate') {
         // concept B1.6i's two-material story: light civic concrete against dark service metal
         const civicBase = new Color('#b9bdc6');
@@ -1844,10 +1900,26 @@ function buildScene(config: ProbeConfig, useParts: boolean, grounding = false, s
         renderGateHiFi(scene, civicMaterial, coreMaterial, trimMaterial, placement.x, placement.z, placement.ry);
         hoverMaterials[placement.key] = [civicMaterial, coreMaterial, trimMaterial];
       } else {
-        renderPartSet(scene, placement.parts, material, placement.x, placement.z, placement.ry);
+        const meshes = renderPartSet(scene, placement.parts, material, placement.x, placement.z, placement.ry);
 
         if (NAV_HOVER_KEYS.includes(placement.key)) {
           hoverMaterials[placement.key] = [material];
+
+          const hull = new Group();
+
+          for (const source of meshes) {
+            const hullMesh = new Mesh(source.geometry, hoverHullPartsMaterial);
+
+            hullMesh.position.copy(source.position);
+            hullMesh.rotation.copy(source.rotation);
+            hullMesh.scale.copy(source.scale).multiplyScalar(1.05);
+            hullMesh.layers.set(1);
+            hull.add(hullMesh);
+          }
+
+          hull.visible = false;
+          scene.add(hull);
+          hoverHulls[placement.key] = hull;
         }
       }
     }
@@ -2893,7 +2965,7 @@ async function main() {
   };
 
   // hover glow: the nav buildings are the menu — pointer-over lifts their emissive into bloom
-  const HOVER_LIFT = new Color(0.07, 0.12, 0.11);
+  const HOVER_LIFT = new Color(0.025, 0.045, 0.04);
   const hoverRestore: Array<[{ emissive: Color }, Color]> = [];
   let hoveredKey: string | null = null;
 
@@ -2905,6 +2977,10 @@ async function main() {
     hoverRestore.length = 0;
     hoveredKey = key;
     renderer.domElement.style.cursor = key ? 'pointer' : '';
+
+    for (const [hullKey, hull] of Object.entries(hoverHulls)) {
+      hull.visible = hullKey === key;
+    }
 
     if (key) {
       for (const hoverMaterial of new Set(hoverMaterials[key] ?? [])) {
