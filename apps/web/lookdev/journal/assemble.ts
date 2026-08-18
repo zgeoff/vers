@@ -69,6 +69,7 @@ const MAP: Record<string, string> = {
   R31_GATE_MODEL: 'r31-gate-model',
   R32_FOG_SEA: 'r32-fog-sea',
   R33_HOVER_GLOW: 'r33-hover-glow',
+  R34_CEL: 'r34-cel',
 };
 
 let html = await Bun.file(`${import.meta.dir}/journal.template.html`).text();
