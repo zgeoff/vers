@@ -213,7 +213,8 @@ check; the check is the boundary.
 One [writer worker](./game-simulation.md#writer-election) per browser profile owns every activity
 transition; the tabs express intent and read the worker's outcome, so no tab drives the activity
 service itself. The worker moves through a small set of states, and its flows — a start, a resync, a
-continuation — run strictly one at a time through a mailbox, so two flows never install over each
+continuation, and an eviction settlement — run strictly one at a time: the lifecycle owner is an
+explicit state machine that processes one flow at a time, so two flows never install over each
 other.
 
 | State          | Meaning                                                                   |
@@ -223,12 +224,13 @@ other.
 | **running**    | ticking the live simulation and submitting its checkpoints                |
 | **resyncing**  | fetching confirmed server state and deciding what to catch up             |
 | **continuing** | delivering an offline traversal or reconstructing a closed-period gap     |
+| **evicting**   | clearing a run another session took the writer for                        |
 | **stopping**   | ending the running activity and delivering the durable stop request       |
 
-The player can stop the running activity. Unlike a start or a resync, stopping does not queue in the
-mailbox — it halts the local simulation at once and needs no network. The client then tells the
-server durably: it flushes the activity's earned checkpoints, then sends an idempotent request to
-stop the activity, retried at every reconnect until the server confirms it stopped. Until that
+The player can stop the running activity. Unlike a start or a resync, stopping does not queue behind
+the active flow — it halts the local simulation at once and needs no network. The client then tells
+the server durably: it flushes the activity's earned checkpoints, then sends an idempotent request
+to stop the activity, retried at every reconnect until the server confirms it stopped. Until that
 request lands, the client holds back its next resync, so a catch-up never revives an activity the
 player already stopped.
 

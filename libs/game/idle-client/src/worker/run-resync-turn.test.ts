@@ -10,6 +10,7 @@ import {
   createSimulation,
   runAttempt,
 } from '@vers/idle-core';
+import { createMockActivityInput, createMockAvatarData } from '@vers/idle-core/test-utils';
 import { createAuthedServiceClient, createViewer } from '@vers/mock-services';
 import { mockActivityService } from '@vers/mock-services/activity';
 import * as db from '@vers/mock-services/db';
@@ -34,11 +35,11 @@ import { createStubWorkerContext } from '../test-utils/create-stub-worker-contex
 import { createMockCheckpointBatchEntry } from '../test-utils/factories/create-mock-checkpoint-batch-entry';
 import { createMockStartedCheckpoint } from '../test-utils/factories/create-mock-started-checkpoint';
 import { WorkerMessageType } from '../types';
-import { runResyncFlow } from './run-resync-flow';
+import { buildDeferred } from './build-deferred';
 import { runResyncTurn } from './run-resync-turn';
 import { sentryHandle } from './sentry-handle';
 import { startErrorReporting } from './start-error-reporting';
-import type { FlowSignals, WorkerContext } from './types';
+import type { WorkerContext } from './types';
 import type { WorkerMessage } from './worker-to-client-message-schema';
 
 /**
@@ -1543,7 +1544,17 @@ test('it clears a moot displacement once the fetched run is no longer active', a
   expect(ctx.context.getSubmitter().isEvicted(activity.id)).toBeFalse();
 });
 
-test('it queues an external resync behind a turn that ran an inline one, rather than dropping it', async () => {
+test('it queues an external resync behind a continuation that ran an inline one, rather than dropping it', async () => {
+  const viewer = await createViewer();
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
+
+  // an already-active row for this avatar, so the continuation's own start call below races back
+  // a foreign-claim CONFLICT and hands off into its own inline resync — the carve-out this covers
+  const conflictingActivity = await db.activityCollection.create({
+    avatarID: viewer.avatar.id,
+    status: 'active',
+  });
+
   let releaseFlush: (() => void) | undefined;
 
   const heldFlush = new Promise<void>((_resolve, reject) => {
@@ -1555,6 +1566,7 @@ test('it queues an external resync behind a turn that ran an inline one, rather 
   const flushHeld = mock(() => heldFlush);
 
   const context = createStubWorkerContext({
+    client,
     submitter: {
       flushHeld,
       flushNow: () => Promise.resolve(),
@@ -1566,18 +1578,23 @@ test('it queues an external resync behind a turn that ran an inline one, rather 
   });
 
   const connection = collectBroadcasts(context);
-  const signals: FlowSignals = { cancel: context.getCancelSignal(), stop: context.getStopSignal() };
-  let releaseTurn: (() => void) | undefined;
+  const simulation = createSimulation();
+  const previousActivity = createMockActivityData({ avatarID: viewer.avatar.id });
 
-  const turnGate = new Promise<void>((resolve) => {
-    releaseTurn = resolve;
-  });
+  context.setSimulation(simulation);
+  context.setActivity(previousActivity);
+  simulation.startActivity(createMockAvatarData(), createMockActivityInput());
 
-  const inlineTurn = context.getMailbox().runTurn('continuation', async () => {
-    // called inner-to-inner, exactly as a continuation's own conflict recovery does — this must
-    // never touch the mailbox's resync-coalescing state
-    await runResyncFlow(context, 'avatar_inline', false, signals);
-    await turnGate;
+  const deferred = buildDeferred<void>();
+
+  // sent as a real machine event, occupying the queue exactly as the tick loop's own
+  // continuation call does — its own CONFLICT recovery calls runResyncFlow directly,
+  // inner-to-inner, and this must never touch the coalescing ticket
+  context.getLifecycle().send({
+    activity: previousActivity,
+    deferred,
+    simulation,
+    type: 'CONTINUATION',
   });
 
   // wait for the inline resync to reach its held flush before the external arrival, so it
@@ -1591,9 +1608,8 @@ test('it queues an external resync behind a turn that ran an inline one, rather 
   const external = runResyncTurn(context, 'avatar_external', false);
 
   releaseFlush?.();
-  releaseTurn?.();
 
-  await Promise.all([inlineTurn, external]);
+  await Promise.all([deferred.promise, external]);
 
   connection.port.postMessage({ type: WorkerMessageType.WriterReady });
 
@@ -1601,7 +1617,7 @@ test('it queues an external resync behind a turn that ran an inline one, rather 
 
   expect(connection.received).toStrictEqual([
     {
-      status: { avatarID: 'avatar_inline', kind: 'failed' },
+      status: { avatarID: conflictingActivity.avatarID, kind: 'failed' },
       type: WorkerMessageType.ResyncStatus,
     },
     {

@@ -79,9 +79,9 @@ export async function runContinuation(
 
     stopAndReset(context, simulation);
 
-    // called inner-to-inner: this flow already holds the mailbox turn, and queueing a resync
-    // behind itself would deadlock. An automatic continuation never claims the writer — the
-    // conflicting row may be another device's live run
+    // an inner sub-flow, run within this flow's own active turn rather than sent as a new event —
+    // only a public entry point sends the lifecycle actor an event. An automatic continuation never
+    // claims the writer — the conflicting row may be another device's live run
     await runResyncFlow(context, row.avatarID, false, signals);
 
     return;

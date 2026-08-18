@@ -30,7 +30,6 @@ export function registerRendererDiagnostics(renderer: WebGPURenderer): void {
   void waitForDeviceLoss(renderer.backend as LossyBackend);
 }
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- the backend's loss promise has no readonly form
 async function waitForDeviceLoss(backend: LossyBackend): Promise<void> {
   const report = await backend.device?.lost;
 

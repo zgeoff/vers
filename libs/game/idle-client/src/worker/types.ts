@@ -1,9 +1,10 @@
 import type { ActivityData } from '@vers/contract-activity';
 import type { ActivityFailureAction, Simulation } from '@vers/idle-core';
+import type { ActorRefFromLogic } from 'xstate';
 import type { CheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import type { ActivityServiceClient } from '../submission/types';
 import type { RewardSlotLedgerEntry, RewardSlotLedgerSnapshot } from '../types';
-import type { LifecycleMailbox } from './create-lifecycle-mailbox';
+import type { workerLifecycleMachine } from './worker-lifecycle-machine';
 import type { WorkerMessage } from './worker-to-client-message-schema';
 
 /**
@@ -24,6 +25,17 @@ export interface WorkerCallContext {
 export interface FlowSignals {
   readonly cancel: AbortSignal;
   readonly stop: AbortSignal;
+}
+
+export interface StartActivityInput {
+  readonly avatarID: string;
+  readonly scopeID: string;
+  readonly scopeType: string;
+}
+
+export interface StopActivityInput {
+  readonly activityID: string;
+  readonly avatarID: string;
 }
 
 /**
@@ -63,6 +75,13 @@ export interface WorkerContext {
   readonly getClient: () => ActivityServiceClient;
 
   /**
+   * The worker's tracked connectivity, driving the reconnect-recovery decision alone — nothing is
+   * broadcast to tabs from a read of it. `true` until a flush or a native offline event proves
+   * otherwise, so a fresh worker's first ack never reads as a reconnect.
+   */
+  readonly getConnectivityOnline: () => boolean;
+
+  /**
    * The avatar's failure-action preference: the in-session source of truth every simulation input
    * derivation reads from. Seeded from the device-local cache at worker boot, then held here for
    * the worker's lifetime — a live simulation mirrors it, it never reads back from one.
@@ -90,13 +109,14 @@ export interface WorkerContext {
   readonly getSimulation: () => Simulation;
 
   /**
-   * The single owner of lifecycle serialization: starts, resyncs, and continuations run strictly
-   * one at a time through it — interleaved, a stale flow could stop a row a fresher one just
-   * attached. It also coalesces resyncs, dropping a non-claiming call while one is queued or
-   * running and holding at most one claiming call, latest wins. Stops stay concurrent — they
-   * advance the stop scope a queued flow re-checks — and never queue.
+   * The running lifecycle actor: the single owner of flow serialization. Starts, resyncs,
+   * continuations, and evictions run strictly one at a time through its queue — interleaved, a
+   * stale flow could stop a row a fresher one just attached. It also coalesces resyncs, dropping a
+   * non-claiming call while one is queued or running and holding at most one claiming call, latest
+   * wins. A stop is handled in every declared state and never waits behind the queue. An entry
+   * point sends it an event; a test reads its declared state directly off the snapshot.
    */
-  readonly getMailbox: () => LifecycleMailbox;
+  readonly getLifecycle: () => ActorRefFromLogic<typeof workerLifecycleMachine>;
 
   /**
    * The most recent start call's token, minted fresh by the worker on every `startActivity` call —
@@ -151,6 +171,14 @@ export interface WorkerContext {
   readonly setFailureAction: (action: ActivityFailureAction) => void;
   readonly setFailureActionDirty: (dirty: boolean) => void;
   readonly setFailureActionPushInFlight: (inFlight: boolean) => void;
+
+  /**
+   * Re-anchors the offline-progress budget to the given instant — called once per acknowledged
+   * submission, so `getRemainingBudgetMs` measures forward from the worker's last confirmed
+   * contact rather than draining across a session that never lost connectivity.
+   */
+  readonly setLastAckAt: (timestamp: number) => void;
+
   readonly setResyncAvatarID: (avatarID: null | string) => void;
   readonly setStartToken: (token: string) => void;
   readonly setSimulation: (simulation: Simulation) => void;

@@ -1,7 +1,7 @@
 import type { ActivityCheckpoint } from '@vers/idle-core';
 import { ActivityCheckpointType } from '@vers/idle-core';
 import invariant from 'tiny-invariant';
-import type { ActorOptions, AnyActorLogic } from 'xstate';
+import type { ActorOptions, ActorRefFromLogic, AnyActorLogic } from 'xstate';
 import { createActor, waitFor } from 'xstate';
 import { buildCheckpointBatchEntry } from './build-checkpoint-batch-entry';
 import type { CheckpointActivityChildRef } from './checkpoint-submitter-machine';
@@ -76,6 +76,14 @@ export interface CheckpointSubmitter {
 }
 
 interface CreateCheckpointSubmitterOptions {
+  /**
+   * A running `checkpointSubmitterMachine` actor to adopt instead of starting a new one — the
+   * lifecycle machine's own spawned child, so the submitter shares its actor system and clock.
+   * A standalone caller omits it and gets its own actor. Mutually exclusive with `clock`: an
+   * adopted actor already carries its own system's clock, so an injected one is not consulted.
+   */
+  readonly actor?: ActorRefFromLogic<typeof checkpointSubmitterMachine>;
+
   readonly client: Pick<ActivityServiceClient, 'trackActivityProgress'>;
 
   /**
@@ -155,7 +163,8 @@ interface CreateCheckpointSubmitterOptions {
   /**
    * Overrides the actor clock driving every retry-backoff delay — test-only, so a suite advances
    * a simulated clock explicitly instead of waiting out real backoff windows. Spawned per-activity
-   * children inherit it through the actor system.
+   * children inherit it through the actor system. Mutually exclusive with `actor` — an adopted
+   * actor's own system clock applies.
    */
   readonly clock?: ActorOptions<AnyActorLogic>['clock'];
 
@@ -222,7 +231,9 @@ export function createCheckpointSubmitter(
   // an options object carrying `clock: undefined` clobbers the actor system's default clock, so
   // the option is only forwarded when a caller actually injected one
   const actorOptions = options.clock === undefined ? undefined : { clock: options.clock };
-  const parentActor = createActor(checkpointSubmitterMachine, actorOptions).start();
+
+  const parentActor =
+    options.actor ?? createActor(checkpointSubmitterMachine, actorOptions).start();
 
   const retryTimings = {
     maxTimeout: RETRY_BACKOFF_CAP_MS,
