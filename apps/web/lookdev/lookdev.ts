@@ -172,16 +172,16 @@ function buildMassing(): Array<BuildingSpec> {
     { d: 6.5, facing: 'nx', h: 7, mast: true, role: 'avatar', ry: -0.13, w: 4.5, x: 14.6, y: 0, z: -4 },
 
     // the fixed massing, laid out by hand in the plan editor
-    { d: 3.6, facing: 'pz', h: 5, mast: false, role: 'filler', ry: 0.06, w: 4, x: -11.4, y: 0, z: -18.9 },
-    { d: 4, facing: 'pz', h: 6, mast: false, role: 'filler', ry: 0.06, w: 3.8, x: 15.3, y: 0, z: -18.4 },
-    { d: 5, facing: 'nx', h: 4.6, mast: false, role: 'filler', ry: 0.04, w: 4.5, x: 15.5, y: 0, z: -11.1 },
-    { d: 6, facing: 'px', h: 5.5, mast: false, role: 'fore', ry: 0.05, w: 6, x: -20.2, y: 0, z: -9.2 },
-    { d: 6, facing: 'nx', h: 4.5, mast: false, role: 'fore', ry: 0.07, w: 6, x: 13.8, y: 0, z: -23.9 },
-    { d: 3.94, facing: 'pz', h: 11.81, mast: false, role: 'back', ry: 0.064, w: 3.08, x: -8.2, y: 0, z: -24.7 },
-    { d: 2.89, facing: 'pz', h: 8.57, mast: false, role: 'back', ry: 0.07, w: 4.04, x: -17.3, y: 0, z: -20.8 },
-    { d: 2.9, facing: 'pz', h: 7.05, mast: false, role: 'back', ry: 0.037, w: 2.71, x: -4.3, y: 0, z: -19.6 },
-    { d: 2.69, facing: 'pz', h: 6.99, mast: false, role: 'back', ry: -1.495, w: 5.02, x: 19.9, y: 0, z: -15.4 },
-    { d: 3.75, facing: 'pz', h: 5.77, mast: false, role: 'back', ry: 0.066, w: 5.29, x: -13.9, y: 0, z: -25.9 },
+    { d: 3.6, facing: 'pz', h: 5, mast: false, role: 'filler', ry: 0.06, w: 4, x: -41.3, y: 0, z: -18.3 },
+    { d: 4, facing: 'pz', h: 6, mast: false, role: 'filler', ry: 0.06, w: 3.8, x: -34, y: 0, z: 6.8 },
+    { d: 5, facing: 'nx', h: 4.6, mast: false, role: 'filler', ry: 0.04, w: 4.5, x: -34.9, y: 0, z: 0.8 },
+    { d: 6, facing: 'px', h: 5.5, mast: false, role: 'fore', ry: 0.05, w: 6, x: -39.7, y: 0, z: -4.9 },
+    { d: 6, facing: 'nx', h: 4.5, mast: false, role: 'fore', ry: 0.07, w: 6, x: -39.4, y: 0, z: 5.6 },
+    { d: 3.94, facing: 'pz', h: 11.81, mast: false, role: 'back', ry: 0.064, w: 3.08, x: -37.4, y: 0, z: -19.4 },
+    { d: 2.89, facing: 'pz', h: 8.57, mast: false, role: 'back', ry: 0.07, w: 4.04, x: -40.1, y: 0, z: -10.4 },
+    { d: 2.9, facing: 'pz', h: 7.05, mast: false, role: 'back', ry: 0.037, w: 2.71, x: -41.1, y: 0, z: 0.9 },
+    { d: 2.69, facing: 'pz', h: 6.99, mast: false, role: 'back', ry: -1.495, w: 5.02, x: -35.1, y: 0, z: -11.7 },
+    { d: 3.75, facing: 'pz', h: 5.77, mast: false, role: 'back', ry: 0.066, w: 5.29, x: -40.6, y: 0, z: -14.1 },
     { d: 3.18, facing: 'pz', h: 10.25, mast: false, role: 'back', ry: -0.062, w: 2.91, x: -26.19, y: 0, z: -34.82 },
     { d: 3.02, facing: 'pz', h: 9.42, mast: true, role: 'back', ry: -0.111, w: 2.56, x: 9.93, y: 0, z: -35.6 },
     { d: 2.78, facing: 'pz', h: 9.39, mast: false, role: 'back', ry: 0.012, w: 3.22, x: -9.17, y: 0, z: -34.94 },
@@ -854,12 +854,12 @@ interface AssemblyPlacement {
  * front (+z) toward the plaza. Mutated by the plan editor; the assembly view rebuilds from it.
  */
 const placements: Array<AssemblyPlacement> = [
-  { key: 'market', parts: MARKET_FORM_PARTS, ry: 1.631, x: -14.3, z: 2.2 },
-  { key: 'stash', parts: STASH_FORM_PARTS, ry: 1.063, x: -12.7, z: -10.6 },
-  { key: 'codex', litAllBoxes: true, parts: CODEX_HALL_FORM_PARTS, ry: 0.06, x: -4.6, z: -14.7 },
-  { key: 'gate', noWindows: true, parts: GATE_FORM_PARTS, ry: 0.05, x: 6.4, z: -16.4 },
-  { key: 'avatar', parts: AVATAR_PARTS, ry: -1.451, x: 16.1, z: -5.3 },
-  { key: 'fountain', noWindows: true, parts: FOUNTAIN_FORM_PARTS, ry: 0, x: -3.9, z: 0.7 },
+  { key: 'market', parts: MARKET_FORM_PARTS, ry: 8.631, x: -9, z: 15.5 },
+  { key: 'stash', parts: STASH_FORM_PARTS, ry: 7.913, x: -15, z: -5.3 },
+  { key: 'codex', litAllBoxes: true, parts: CODEX_HALL_FORM_PARTS, ry: 0.36, x: -10.9, z: -14.9 },
+  { key: 'gate', noWindows: true, parts: GATE_FORM_PARTS, ry: -0.15, x: 7.4, z: -17.7 },
+  { key: 'avatar', parts: AVATAR_PARTS, ry: -1.501, x: -14.2, z: 3.9 },
+  { key: 'fountain', noWindows: true, parts: FOUNTAIN_FORM_PARTS, ry: 0, x: -1.1, z: -4.2 },
 ];
 
 interface Footprint {
@@ -1396,18 +1396,6 @@ registerKnob('light.keyLight', NIGHT.dirIntensity * 1.6, 0, 6, (value) => {
   }
 });
 registerKnob(
-  'light.lamps',
-  16,
-  0,
-  60,
-  (value) => {
-    for (const lamp of liveRefs.lamps) {
-      lamp.intensity = value;
-    }
-  },
-  0.5,
-);
-registerKnob(
   'light.gateGlow',
   30,
   0,
@@ -1510,6 +1498,9 @@ const atmoKnobs = makeKnobGroup('atmo', {
   mistOpacity: [0.18, 0, 0.8],
   hazeOpacity: [0.4, 0, 1],
   smokeOpacity: [0.45, 0, 1],
+  fogWall: [0.55, 0, 1],
+  fogSea: [0.5, 0, 1],
+  fogRadius: [18, 5, 45, 0.5],
   drift: [0.06, 0, 0.3, 0.005],
 });
 
@@ -1673,7 +1664,8 @@ function buildScene(config: ProbeConfig, useParts: boolean, grounding = false, s
   liveRefs.washes = [];
 
   const groundMaterial = new MeshStandardNodeMaterial({ color: new Color(config.ground), roughness: 0.6 });
-  const ground = new Mesh(new PlaneGeometry(220, 220), groundMaterial);
+  // large enough that its edges sit past full fog from any camera the spike uses
+  const ground = new Mesh(new PlaneGeometry(800, 800), groundMaterial);
 
   if (surfaces) {
     applyGroundSurface(groundMaterial, new Color(config.ground));
@@ -1713,21 +1705,6 @@ function buildScene(config: ProbeConfig, useParts: boolean, grounding = false, s
   apron.position.set(5.5, 0.004, -11);
   scene.add(apron);
 
-  // warm pools of lamp light on the pavement — the square's stage lighting
-  for (const lamp of [LAMPS[1], LAMPS[4], LAMPS[6], LAMPS[8]]) {
-    if (!lamp) {
-      continue;
-    }
-
-    const light = new PointLight(new Color(WARM_WINDOW), 16, 14, 2);
-
-    light.position.set(lamp.x, 2.9, lamp.z);
-    scene.add(light);
-
-    if (surfaces) {
-      liveRefs.lamps.push(light);
-    }
-  }
 
   const specs = massing;
   const boxSpecs = useParts ? specs.filter((spec) => !isNavRole(spec.role)) : specs;
@@ -1914,29 +1891,8 @@ function buildScene(config: ProbeConfig, useParts: boolean, grounding = false, s
     liveRefs.gateGlow = gateGlow;
   }
 
-  // lamp posts under the plaza lights
-  const postMesh = new InstancedMesh(
-    boxGeometry,
-    new MeshStandardNodeMaterial({ color: new Color('#1c2333'), roughness: 0.9 }),
-    LAMPS.length,
-  );
-
-  for (const [index, lamp] of LAMPS.entries()) {
-    dummy.position.set(lamp.x, 0.5, lamp.z);
-    dummy.scale.set(0.1, 1, 0.1);
-    dummy.updateMatrix();
-    postMesh.setMatrixAt(index, dummy.matrix);
-  }
-
-  postMesh.instanceMatrix.needsUpdate = true;
-  postMesh.computeBoundingSphere();
-  scene.add(postMesh);
-
   const windowEmissives = [...buildWindows(specs, config, !useParts)];
-  const otherEmissives = [
-    ...buildPlazaLights(useParts ? fountainX : 4.5, useParts ? fountainZ : 1.5),
-    ...buildInstruments(specs, !useParts),
-  ];
+  const otherEmissives = [...buildInstruments(specs, !useParts)];
 
   if (useParts) {
     for (const [index, placement] of placements.entries()) {
@@ -2229,6 +2185,66 @@ function addAtmosphere(scene: Scene) {
     haze.rotation.y = gate.ry;
     scene.add(haze);
   }
+
+  // the fog sea: ground fog surrounding the plaza, creeping inward as thresholded wisps.
+  // Radial distance from the plaza center gates the opacity so the square itself stays clear.
+  const plazaCenter = vec2(-1, -5);
+  const radial = positionWorld.xz.sub(plazaCenter).length();
+  const creep = radial.smoothstep(atmoKnobs.fogRadius, atmoKnobs.fogRadius.add(14));
+
+  for (const layer of [
+    { scale: 0.1, seed: 41, speed: 0.8, y: 0.8 },
+    { scale: 0.07, seed: 47, speed: 0.5, y: 2 },
+  ]) {
+    const material = new MeshBasicNodeMaterial({
+      color: new Color(DUSK_FOG),
+      depthWrite: false,
+      side: DoubleSide,
+      transparent: true,
+    });
+    const coord = vec3(
+      positionWorld.x.mul(layer.scale).add(time.mul(atmoKnobs.drift.mul(layer.speed))),
+      positionWorld.z.mul(layer.scale).sub(time.mul(atmoKnobs.drift.mul(layer.speed * 0.7))),
+      layer.seed,
+    );
+    const warp = mx_noise_float(coord.mul(0.5).add(time.mul(atmoKnobs.drift.mul(0.4)))).mul(1.2);
+    const body = mx_noise_float(coord.add(warp)).add(1).mul(0.5).smoothstep(0.3, 0.75);
+
+    // near-opaque in its heart, wispy at the creeping inner edge
+    material.opacityNode = creep.mul(body.mul(0.7).add(0.3)).mul(atmoKnobs.fogSea);
+
+    const sea = new Mesh(new PlaneGeometry(320, 320), material);
+
+    sea.rotation.x = -Math.PI / 2;
+    sea.position.set(-1, layer.y, -5);
+    scene.add(sea);
+  }
+
+  // the fog wall: a slowly turning cylinder of wisps encircling the plaza, dense low, gone high
+  const wallMaterial = new MeshBasicNodeMaterial({
+    color: new Color(DUSK_FOG),
+    depthWrite: false,
+    side: DoubleSide,
+    transparent: true,
+  });
+  const wallCoord = vec3(
+    positionWorld.x.mul(0.08).add(time.mul(atmoKnobs.drift.mul(0.6))),
+    positionWorld.y.mul(0.16),
+    positionWorld.z.mul(0.08),
+  );
+  const wallWarp = mx_noise_float(wallCoord.mul(0.5).add(time.mul(atmoKnobs.drift.mul(0.3)))).mul(1.3);
+  const wallBody = mx_noise_float(wallCoord.add(wallWarp)).add(1).mul(0.5).smoothstep(0.28, 0.8);
+  const wallFade = positionWorld.y.smoothstep(3, 13).oneMinus();
+
+  wallMaterial.opacityNode = wallBody.mul(0.75).add(0.25).mul(wallFade).mul(atmoKnobs.fogWall);
+
+  const wall = new Mesh(new CylinderGeometry(30, 30, 14, 64, 1, true), wallMaterial);
+
+  wall.position.set(-1, 7, -5);
+  scene.add(wall);
+  sceneAnimations.push((elapsed) => {
+    wall.rotation.y = elapsed * 0.004;
+  });
 
   // vent plumes: ragged smoke columns rising off the rooftop machinery
   for (const source of SMOKE_SOURCES) {
