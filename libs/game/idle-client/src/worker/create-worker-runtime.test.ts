@@ -1,5 +1,6 @@
 import { expect, onTestFinished, test } from 'bun:test';
 import type { ErrorEvent } from '@sentry/browser';
+import { createMockActivityData } from '@vers/contract-activity/test-utils';
 import { ActivityFailureAction } from '@vers/idle-core';
 import { createAuthedServiceClient, createViewer, resolveServiceURL } from '@vers/mock-services';
 import { mockActivityService } from '@vers/mock-services/activity';
@@ -20,6 +21,7 @@ import { writeStartStamps } from '../submission/write-start-stamps';
 import { createFastClock } from '../test-utils/create-fast-clock';
 import { createTestClient } from '../test-utils/create-test-client';
 import { createMockCheckpointBatchEntry } from '../test-utils/factories/create-mock-checkpoint-batch-entry';
+import { createMockLatestActivityProgress } from '../test-utils/factories/create-mock-latest-activity-progress';
 import { makeFailFirstMatchHandler } from '../test-utils/make-fail-first-match-handler';
 import { WORKER_TO_CLIENT_CHANNEL } from '../transport/constants';
 import { WorkerMessageType } from '../types';
@@ -577,12 +579,21 @@ test('it resets the displaced simulation and broadcasts WriterDisplaced on a ses
 
   expect(installed.state.activity).toMatchObject({ id: activity.id });
 
-  // the takeover: from here every append is refused as another session's, and a checkpoint is
-  // already queued for the reconnect drain below to deliver into that refusal
+  // the takeover, modeled consistently: every append is refused as another session's, AND the
+  // fetched progress reports this session no longer holds the writer — so a resync the recovery
+  // may run afterward plans active-elsewhere and preserves the displacement rather than
+  // re-attaching a row the server would refuse. A checkpoint is already queued for the reconnect
+  // drain below to deliver into that refusal.
   server.use(
     mockActivityService.trackActivityProgress.handler((opts) => {
       throw opts.errors.SESSION_EVICTED({ data: {} });
     }),
+    mockActivityService.getLatestActivityProgress.handler(() =>
+      createMockLatestActivityProgress({
+        activity: { ...createMockActivityData(), avatarID: viewer.avatar.id, id: activity.id },
+        isWriter: false,
+      }),
+    ),
   );
 
   await writeQueuedCheckpoint(activity.id, createMockCheckpointBatchEntry({ version: 1 }));
