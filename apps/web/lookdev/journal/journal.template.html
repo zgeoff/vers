@@ -155,23 +155,46 @@
   </p>
 
   <div class="howto">
-    <h2>Round 32 · how to respond</h2>
+    <h2>Round 33 · how to respond</h2>
     <p>
-      The fog round. A <b>fog sea</b> now surrounds the plaza — two layers of ground fog,
-      near-opaque in their heart, breaking into creeping wisps at the inner edge — plus a slowly
-      turning <b>fog wall</b> encircling everything, dense low and gone by rooftop height. Three
-      new atmo knobs: <b>fog sea</b>, <b>fog wall</b>, <b>fog radius</b> (how close the fog
-      creeps to the square — pull it in and the plaza shrinks to an island of clear air). Also
-      this round: your re-dragged layout is baked, the matchstick plaza lamps are gone, the
-      ground runs past every horizon, and FXAA smooths the ink. Judge live, tune, copy json.
-      Cel shading remains the queued next layer.
+      The overnight round, built to be found in the morning. Your settle-tuning is baked as the
+      defaults (fog sea 0.7, warmth at maximum, tighter bloom, everything from the pasted json).
+      The fog wall's radius is trimmed 10%. The visible fog outlines are gone — the ink now
+      reads edges from a second render that skips the atmosphere layer, so fog is invisible to
+      the ink while the buildings looming behind it keep their outlines. And the buildings are
+      now <b>the menu</b>: mouse over any of the five nav buildings in views 4/8 and it lifts
+      into a soft glow with a pointer cursor — the first real product interaction. Judge the
+      hover strength and color; one constant tunes it. Cel shading remains queued.
     </p>
   </div>
 
   <section class="round">
     <div class="round-head">
+      <h2>Round 33 · the buildings become the menu</h2>
+      <span class="status open">open — hover them</span>
+    </div>
+    <p>
+      The spike's original purpose surfaces at last: this scene is a landing screen whose
+      buildings navigate to menus, and now they behave like it. Invisible pick volumes derived
+      from each nav building's true footprint catch the pointer; a hover lifts every material of
+      that building — the authored gate's thirty meshes included — into a soft teal-white glow
+      that the bloom pass picks up, and the cursor turns pointer. Alongside: the user's full
+      settle-tune baked as defaults, the fog wall trimmed to radius 27, and the ink pass rebuilt
+      to read edges from an atmosphere-free second render — fog no longer gets outlined, while
+      the buildings behind it keep the inked-silhouette look that made the background sing.
+    </p>
+    <div class="shots">
+      <figure>
+        <img src="data:image/png;base64,{{R33_HOVER_GLOW}}" alt="The fog-ringed plaza with the gate lifted into a pale glow under the pointer — the hover state of the building menu" />
+        <figcaption>8 · surfaces — the gate under the pointer: the menu, glowing</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="round">
+    <div class="round-head">
       <h2>Round 32 · the fog closes in</h2>
-      <span class="status open">open — tune the encirclement</span>
+      <span class="status">resolved</span>
     </div>
     <p>
       "True, thick fog creeping in, almost encircling the plaza" — built. A radial gate keyed to
@@ -190,6 +213,12 @@
         <figcaption>8 · surfaces — the fog sea encircling the plaza, city looming beyond</figcaption>
       </figure>
     </div>
+    <p class="verdict">
+      <b>Verdict:</b> "i think it's coming together. honestly the buildings in the background
+      look MUCH BETTER as just obscure shapes in the fog with their outlines now. i think the
+      mood is getting close to right." Full tuning json baked; requested fixes — trim the fog
+      wall radius 10%, hide the fog geometry's own visible edges — delivered in round 33.
+    </p>
   </section>
 
   <section class="round">
