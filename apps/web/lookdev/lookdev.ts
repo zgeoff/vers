@@ -6,6 +6,7 @@
  * the plaza to judge the silhouettes in context.
  */
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { bloom } from 'three/addons/tsl/display/BloomNode.js';
 import { ao } from 'three/addons/tsl/display/GTAONode.js';
 import {
@@ -19,12 +20,16 @@ import {
   output,
   pass,
   positionWorld,
+  screenSize,
   screenUV,
   time,
   uniform,
   uv,
+  vec2,
   vec3,
 } from 'three/tsl';
+// @ts-expect-error bun's file loader turns the asset import into a served URL string
+import gateModelURL from './models/respite-gate.glb';
 import {
   AdditiveBlending,
   AgXToneMapping,
@@ -1456,6 +1461,23 @@ const SPILL_FIXTURES: ReadonlyArray<SpillFixture> = [
   { color: GATE_TEAL, distance: 9, intensity: 8, key: 'gate', kind: 'wash', x: 3.7, y: 0.3, z: 1.7 },
 ];
 
+const inkKnobs = makeKnobGroup('ink', {
+  width: [1.6, 0, 6, 0.1],
+  depthThreshold: [0.02, 0.001, 0.2, 0.001],
+  normalThreshold: [0.6, 0.05, 3, 0.05],
+  strength: [0.85, 0, 1],
+});
+
+/**
+ * The authored gate model, loaded once at boot; scale maps its real-world 42 m down onto the
+ * composition's 16-unit gate height. Yaw corrects the export's forward axis onto the
+ * placement's plaza-facing +z once verified visually.
+ */
+let gateModel: Group | null = null;
+
+const GATE_MODEL_SCALE = 0.38;
+const GATE_MODEL_YAW = 0;
+
 const atmoKnobs = makeKnobGroup('atmo', {
   bankOpacity: [0.26, 0, 0.8],
   mistOpacity: [0.18, 0, 0.8],
@@ -1758,7 +1780,14 @@ function buildScene(config: ProbeConfig, useParts: boolean, grounding = false, s
         liveRefs.materials[placement.key] = material;
       }
 
-      if (placement.key === 'gate') {
+      if (placement.key === 'gate' && gateModel) {
+        const model = gateModel.clone(true);
+
+        model.scale.setScalar(GATE_MODEL_SCALE);
+        model.position.set(placement.x, 0, placement.z);
+        model.rotation.y = placement.ry + GATE_MODEL_YAW;
+        scene.add(model);
+      } else if (placement.key === 'gate') {
         // concept B1.6i's two-material story: light civic concrete against dark service metal
         const civicBase = new Color('#b9bdc6');
         const coreBase = new Color('#2d323e');
@@ -2523,6 +2552,15 @@ async function main() {
   document.body.appendChild(renderer.domElement);
   await renderer.init();
 
+  // the authored gate must be in hand before the first scene builds
+  try {
+    const gltf = await new GLTFLoader().loadAsync(gateModelURL as string);
+
+    gateModel = gltf.scene;
+  } catch (error) {
+    console.error('gate model failed to load — falling back to the procedural gate', error);
+  }
+
   const camera = new PerspectiveCamera(36, globalThis.innerWidth / globalThis.innerHeight, 0.1, 300);
 
   camera.position.set(0, 9, 26);
@@ -2554,14 +2592,49 @@ async function main() {
     grade = false,
   ): PostProcessing => {
     const scenePass = pass(scene, viewCamera);
-    const scenePassColor = scenePass.getTextureNode();
+
+    scenePass.setMRT(mrt({ normal: normalView, output }));
+
+    const scenePassColor = scenePass.getTextureNode('output');
     const bloomPass = bloom(scenePassColor, strength, 0.4, threshold);
     const post = new PostProcessing(renderer);
-    let output = scenePassColor.add(bloomPass);
+    let composite = scenePassColor.add(bloomPass);
 
     liveRefs.bloom = grade ? bloomPass : null;
 
     if (grade) {
+      // the ink pass: thick dark edges wherever depth or normals break — the illustrated read.
+      // Depth deltas are relative to the center sample so the nonlinear buffer stays usable.
+      const depthTex = scenePass.getTextureNode('depth');
+      const normalTex = scenePass.getTextureNode('normal');
+      const texel = inkKnobs.width.div(screenSize);
+      const sampleDepth = (ox: number, oy: number) =>
+        depthTex.sample(screenUV.add(texel.mul(vec2(ox, oy)))).x;
+      const sampleNormal = (ox: number, oy: number) =>
+        normalTex.sample(screenUV.add(texel.mul(vec2(ox, oy)))).xyz;
+      const depthCenter = sampleDepth(0, 0);
+      const depthDelta = sampleDepth(1, 0)
+        .sub(depthCenter)
+        .abs()
+        .add(sampleDepth(-1, 0).sub(depthCenter).abs())
+        .add(sampleDepth(0, 1).sub(depthCenter).abs())
+        .add(sampleDepth(0, -1).sub(depthCenter).abs());
+      const depthEdge = depthDelta
+        .div(float(1).sub(depthCenter).add(0.0005))
+        .smoothstep(inkKnobs.depthThreshold, inkKnobs.depthThreshold.mul(2));
+      const normalCenter = sampleNormal(0, 0);
+      const normalAgreement = normalCenter
+        .dot(sampleNormal(1, 0))
+        .add(normalCenter.dot(sampleNormal(-1, 0)))
+        .add(normalCenter.dot(sampleNormal(0, 1)))
+        .add(normalCenter.dot(sampleNormal(0, -1)));
+      const normalEdge = float(4)
+        .sub(normalAgreement)
+        .smoothstep(inkKnobs.normalThreshold, inkKnobs.normalThreshold.mul(1.6));
+      const ink = depthEdge.max(normalEdge).mul(inkKnobs.strength);
+
+      composite = scenePassColor.mul(ink.oneMinus()).add(bloomPass);
+
       // vignette plus a gentle warm lean — the grading half of the treatment
       const vignette = screenUV
         .sub(0.5)
@@ -2572,10 +2645,10 @@ async function main() {
         .oneMinus()
         .clamp(gradeKnobs.vignetteMin, 1);
 
-      output = output.mul(vignette).mul(mix(vec3(1), vec3(1.05, 1.0, 0.94), gradeKnobs.warmth));
+      composite = composite.mul(vignette).mul(mix(vec3(1), vec3(1.05, 1.0, 0.94), gradeKnobs.warmth));
     }
 
-    post.outputNode = output;
+    post.outputNode = composite;
 
     return post;
   };
