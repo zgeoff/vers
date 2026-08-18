@@ -101,8 +101,8 @@ const NIGHT: ProbeConfig = {
   dirIntensity: 1.2,
   duskFogBanks: false,
   fog: '#151a2c',
-  fogFar: 72,
-  fogNear: 20,
+  fogFar: 150,
+  fogNear: 45,
   ground: '#141927',
   key: 'night',
   litChance: 0.3,
@@ -1226,6 +1226,7 @@ const liveRefs = {
   bounce: null as HemisphereLight | null,
   gateGlow: null as PointLight | null,
   keyLight: null as DirectionalLight | null,
+  fog: null as Fog | null,
   lamps: [] as Array<PointLight>,
   materials: {} as Record<string, MeshStandardNodeMaterial>,
   spills: [] as Array<{ base: number; light: PointLight }>,
@@ -1417,6 +1418,30 @@ registerKnob(
     }
   },
   0.5,
+);
+registerKnob(
+  'light.fogNear',
+  NIGHT.fogNear,
+  5,
+  200,
+  (value) => {
+    if (liveRefs.fog) {
+      liveRefs.fog.near = value;
+    }
+  },
+  1,
+);
+registerKnob(
+  'light.fogFar',
+  NIGHT.fogFar,
+  20,
+  400,
+  (value) => {
+    if (liveRefs.fog) {
+      liveRefs.fog.far = value;
+    }
+  },
+  1,
 );
 registerKnob('light.entranceSpill', 1, 0, 3, (value) => {
   for (const spill of liveRefs.spills) {
@@ -1637,6 +1662,7 @@ function buildScene(config: ProbeConfig, useParts: boolean, grounding = false, s
   scene.add(ambient, directional, bounce);
 
   // register live objects for the tuner only when this build carries the full treatment
+  liveRefs.fog = surfaces ? (scene.fog as Fog) : null;
   liveRefs.ambient = surfaces ? ambient : null;
   liveRefs.bounce = surfaces ? bounce : null;
   liveRefs.keyLight = surfaces ? directional : null;
@@ -2586,8 +2612,8 @@ async function main() {
 
   const camera = new PerspectiveCamera(36, globalThis.innerWidth / globalThis.innerHeight, 0.1, 300);
 
-  camera.position.set(0, 9, 26);
-  camera.lookAt(0, 3, -7);
+  camera.position.set(35.82, 29.77, 41.11);
+  camera.lookAt(0, 4, -7);
 
   const planCamera = new OrthographicCamera(-1, 1, 1, -1, 0.1, 200);
 
@@ -2684,8 +2710,8 @@ async function main() {
   }
 
   const selectPlazaCamera = () => {
-    camera.position.set(0, 9, 26);
-    camera.lookAt(0, 3, -7);
+    camera.position.set(35.82, 29.77, 41.11);
+    camera.lookAt(0, 4, -7);
   };
 
   // ---- orbit inspect state ----
@@ -3210,7 +3236,7 @@ async function main() {
               y: Math.round(orbitTarget.y * 100) / 100,
               z: Math.round(orbitTarget.z * 100) / 100,
             }
-          : { x: 0, y: 3, z: -7 },
+          : { x: 0, y: 4, z: -7 },
       };
       const serialized = JSON.stringify(cameraState, null, 2);
 
