@@ -7,6 +7,8 @@
  */
 import { AgXToneMapping, Color, NoToneMapping } from 'three/webgpu';
 import {
+  type Mesh,
+  type MeshStandardNodeMaterial,
   OrthographicCamera,
   PerspectiveCamera,
   Plane,
@@ -697,6 +699,40 @@ async function main() {
   (globalThis as { __viewerCheck?: () => Array<string> }).__viewerCheck = () => findOverlaps(placements);
   (globalThis as { __viewerPlacements?: PlacementsFile }).__viewerPlacements = placements;
   (globalThis as { __viewerModels?: () => Array<string> }).__viewerModels = listModels;
+  // what each authored material actually asks the renderer for — the first thing to check when a
+  // surface renders darker or flatter than it looked in Blender
+  (globalThis as { __viewerMaterials?: (name: string) => unknown }).__viewerMaterials = (name) => {
+    const entry = getModel(name);
+
+    if (!entry) {
+      return null;
+    }
+
+    const seen = new Map<string, unknown>();
+
+    entry.group.traverse((child) => {
+      const mesh = child as Mesh;
+
+      if (!mesh.isMesh) {
+        return;
+      }
+
+      for (const material of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) {
+        const standard = material as MeshStandardNodeMaterial;
+
+        seen.set(standard.name || '(unnamed)', {
+          color: `#${standard.color?.getHexString() ?? '?'}`,
+          emissive: `#${standard.emissive?.getHexString() ?? '?'}`,
+          emissiveIntensity: standard.emissiveIntensity,
+          map: standard.map ? 'yes' : 'no',
+          metalness: standard.metalness,
+          roughness: standard.roughness,
+        });
+      }
+    });
+
+    return Object.fromEntries(seen);
+  };
   (globalThis as { __viewerBounds?: (name: string) => unknown }).__viewerBounds = (name) => {
     const entry = getModel(name);
 
