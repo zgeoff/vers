@@ -1,0 +1,327 @@
+{
+  "models": [
+    {
+      "key": "gate",
+      "file": "respite-gate.glb",
+      "nav": true,
+      "scale": 0.38,
+      "ry": -0.15,
+      "x": 7.4,
+      "z": -17.7
+    },
+    {
+      "key": "market",
+      "file": null,
+      "nav": true,
+      "scale": 1,
+      "size": [
+        12,
+        5,
+        5
+      ],
+      "ry": 8.631,
+      "x": -9,
+      "z": 15.5
+    },
+    {
+      "key": "stash",
+      "file": null,
+      "nav": true,
+      "scale": 1,
+      "size": [
+        7,
+        3.5,
+        5
+      ],
+      "ry": 7.913,
+      "x": -15,
+      "z": -5.3
+    },
+    {
+      "key": "codex",
+      "file": null,
+      "nav": true,
+      "scale": 1,
+      "size": [
+        8,
+        5.5,
+        5
+      ],
+      "ry": 0.36,
+      "x": -10.9,
+      "z": -14.9
+    },
+    {
+      "key": "avatar",
+      "file": null,
+      "nav": true,
+      "scale": 1,
+      "size": [
+        5,
+        6,
+        5
+      ],
+      "ry": -1.501,
+      "x": -14.2,
+      "z": 3.9
+    },
+    {
+      "key": "fountain",
+      "file": null,
+      "nav": false,
+      "scale": 1,
+      "size": [
+        4,
+        1.4,
+        4
+      ],
+      "ry": 0,
+      "x": -1.1,
+      "z": -4.2
+    }
+  ],
+  "blocks": [
+    {
+      "d": 3.6,
+      "facing": "pz",
+      "h": 5,
+      "mast": false,
+      "role": "filler",
+      "ry": 0.06,
+      "w": 4,
+      "x": -41.3,
+      "z": -18.3
+    },
+    {
+      "d": 4,
+      "facing": "pz",
+      "h": 6,
+      "mast": false,
+      "role": "filler",
+      "ry": 0.06,
+      "w": 3.8,
+      "x": -34,
+      "z": 6.8
+    },
+    {
+      "d": 5,
+      "facing": "nx",
+      "h": 4.6,
+      "mast": false,
+      "role": "filler",
+      "ry": 0.04,
+      "w": 4.5,
+      "x": -34.9,
+      "z": 0.8
+    },
+    {
+      "d": 6,
+      "facing": "px",
+      "h": 5.5,
+      "mast": false,
+      "role": "fore",
+      "ry": 0.05,
+      "w": 6,
+      "x": -39.7,
+      "z": -4.9
+    },
+    {
+      "d": 6,
+      "facing": "nx",
+      "h": 4.5,
+      "mast": false,
+      "role": "fore",
+      "ry": 0.07,
+      "w": 6,
+      "x": -39.4,
+      "z": 5.6
+    },
+    {
+      "d": 3.94,
+      "facing": "pz",
+      "h": 11.81,
+      "mast": false,
+      "role": "back",
+      "ry": 0.064,
+      "w": 3.08,
+      "x": -37.4,
+      "z": -19.4
+    },
+    {
+      "d": 2.89,
+      "facing": "pz",
+      "h": 8.57,
+      "mast": false,
+      "role": "back",
+      "ry": 0.07,
+      "w": 4.04,
+      "x": -40.1,
+      "z": -10.4
+    },
+    {
+      "d": 2.9,
+      "facing": "pz",
+      "h": 7.05,
+      "mast": false,
+      "role": "back",
+      "ry": 0.037,
+      "w": 2.71,
+      "x": -41.1,
+      "z": 0.9
+    },
+    {
+      "d": 2.69,
+      "facing": "pz",
+      "h": 6.99,
+      "mast": false,
+      "role": "back",
+      "ry": -1.495,
+      "w": 5.02,
+      "x": -35.1,
+      "z": -11.7
+    },
+    {
+      "d": 3.75,
+      "facing": "pz",
+      "h": 5.77,
+      "mast": false,
+      "role": "back",
+      "ry": 0.066,
+      "w": 5.29,
+      "x": -40.6,
+      "z": -14.1
+    },
+    {
+      "d": 3.18,
+      "facing": "pz",
+      "h": 10.25,
+      "mast": false,
+      "role": "back",
+      "ry": -0.062,
+      "w": 2.91,
+      "x": -26.19,
+      "z": -34.82
+    },
+    {
+      "d": 3.02,
+      "facing": "pz",
+      "h": 9.42,
+      "mast": true,
+      "role": "back",
+      "ry": -0.111,
+      "w": 2.56,
+      "x": 9.93,
+      "z": -35.6
+    },
+    {
+      "d": 2.78,
+      "facing": "pz",
+      "h": 9.39,
+      "mast": false,
+      "role": "back",
+      "ry": 0.012,
+      "w": 3.22,
+      "x": -9.17,
+      "z": -34.94
+    },
+    {
+      "d": 2.82,
+      "facing": "pz",
+      "h": 8.48,
+      "mast": false,
+      "role": "back",
+      "ry": 0.1,
+      "w": 4.45,
+      "x": 5.28,
+      "z": -35.69
+    },
+    {
+      "d": 3.84,
+      "facing": "pz",
+      "h": 13.38,
+      "mast": false,
+      "role": "back",
+      "ry": 0.106,
+      "w": 4.29,
+      "x": -11.65,
+      "z": -35.9
+    },
+    {
+      "d": 3.35,
+      "facing": "pz",
+      "h": 10.79,
+      "mast": false,
+      "role": "back",
+      "ry": 0.101,
+      "w": 4.72,
+      "x": 19.69,
+      "z": -33.83
+    },
+    {
+      "d": 3.23,
+      "facing": "pz",
+      "h": 15.86,
+      "mast": true,
+      "role": "back",
+      "ry": -0.037,
+      "w": 4.5,
+      "x": 8.24,
+      "z": -42.66
+    },
+    {
+      "d": 2.85,
+      "facing": "pz",
+      "h": 17.16,
+      "mast": false,
+      "role": "back",
+      "ry": -0.003,
+      "w": 3.62,
+      "x": 23.02,
+      "z": -42.2
+    },
+    {
+      "d": 3.57,
+      "facing": "pz",
+      "h": 11.31,
+      "mast": false,
+      "role": "back",
+      "ry": 0.014,
+      "w": 2.62,
+      "x": 24.1,
+      "z": -42.54
+    },
+    {
+      "d": 2.54,
+      "facing": "pz",
+      "h": 18.28,
+      "mast": true,
+      "role": "back",
+      "ry": -0.025,
+      "w": 2.78,
+      "x": 10.13,
+      "z": -42.53
+    },
+    {
+      "d": 4.06,
+      "facing": "pz",
+      "h": 12.63,
+      "mast": false,
+      "role": "back",
+      "ry": 0.082,
+      "w": 4.5,
+      "x": 5.88,
+      "z": -43.61
+    },
+    {
+      "d": 4.54,
+      "facing": "pz",
+      "h": 17.98,
+      "mast": false,
+      "role": "back",
+      "ry": 0.105,
+      "w": 4,
+      "x": -16.34,
+      "z": -43.34
+    }
+  ]
+}

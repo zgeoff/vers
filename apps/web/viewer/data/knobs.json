@@ -1,0 +1,54 @@
+{
+  "grounding": {
+    "falloff": 0.67,
+    "depth": 0.1
+  },
+  "ground": {
+    "paverCell": 0.05,
+    "paverAmp": 0.37,
+    "jointDepth": 0.07,
+    "wearScale": 0.22,
+    "wearAmp": 0.16,
+    "grainAmp": 0.05,
+    "clampLo": 0.77,
+    "clampHi": 1.14
+  },
+  "ink": {
+    "width": 1,
+    "depthThreshold": 0.015,
+    "normalThreshold": 0.35,
+    "strength": 0.55
+  },
+  "atmo": {
+    "bankOpacity": 0.23,
+    "mistOpacity": 0.26,
+    "hazeOpacity": 0.56,
+    "smokeOpacity": 0.16,
+    "fogWall": 0.31,
+    "fogSea": 0.7,
+    "fogRadius": 23,
+    "drift": 0.07
+  },
+  "motion": {
+    "flicker": 0.5,
+    "rays": 0.01,
+    "streaks": 0.03,
+    "streakSpeed": 5,
+    "streakDistance": 3
+  },
+  "grade": {
+    "vignette": 0.53,
+    "vignetteMin": 0.4,
+    "warmth": 2,
+    "bloomStrength": 0.46,
+    "bloomThreshold": 0.62
+  },
+  "light": {
+    "ambient": 0.84,
+    "bounce": 1.05,
+    "keyLight": 1.92,
+    "gateGlow": 30,
+    "fogNear": 26,
+    "fogFar": 136
+  }
+}
