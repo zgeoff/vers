@@ -14,6 +14,19 @@ Bun.serve({
       return new Response('bad name', { status: 400 });
     }
 
+    // the asset-gym watcher polls this listing to hot-load every .glb in the directory
+    if (name === 'index.json') {
+      const entries: Array<{ mtime: number; name: string }> = [];
+
+      for await (const file of new Bun.Glob('*.glb').scan(modelsDir)) {
+        entries.push({ mtime: Bun.file(modelsDir + file).lastModified, name: file });
+      }
+
+      return Response.json(entries, {
+        headers: { 'Access-Control-Allow-Origin': '*', 'Cache-Control': 'no-store' },
+      });
+    }
+
     const file = Bun.file(modelsDir + name);
 
     if (!(await file.exists())) {
