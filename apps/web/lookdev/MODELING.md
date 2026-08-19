@@ -18,8 +18,15 @@ stable across re-exports.
 
 To put a new asset into the town, open it in the viewer's gym and press the placement button —
 no JSON editing. **Name the file after the slot it belongs to** (`respite-market.glb` for the
-`market` slot) and it drops straight into the position already composed for that building;
-anything else joins the town as a new slot near the plaza, ready to drag into place.
+`market` slot; the `respite-` prefix is optional) and it drops straight into the position
+already composed for that building; anything else joins the town as a new slot near the plaza,
+ready to drag into place.
+
+That rule doubles as the kit's filing discipline: a file named for a slot **is** that building,
+and anything else is a module or a prop. The distinction shows up at the filesystem level before
+it exists anywhere in the data.
+
+Slot keys: `market`, `stash`, `codex`, `gate`, `avatar`, `fountain`.
 
 ## Conventions
 
