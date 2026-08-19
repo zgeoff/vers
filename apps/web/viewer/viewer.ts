@@ -237,6 +237,63 @@ async function main() {
     }
   };
 
+  /**
+   * What placing the gym's current asset would do, or null when it already sits in the town.
+   * An asset whose name matches a waiting slot fills that slot in place, keeping the position
+   * already composed for it; anything else joins the town as a new slot near the plaza.
+   */
+  interface PendingPlacement {
+    readonly file: string;
+    readonly kind: 'add' | 'fill';
+    readonly slot: string;
+  }
+
+  const planPlacementFor = (file: string | null): PendingPlacement | null => {
+    if (!file) {
+      return null;
+    }
+
+    if (placements.models.some((slot) => slot.file === file)) {
+      return null;
+    }
+
+    const key = file.replace(/\.glb$/, '').replace(/^respite-/, '');
+    const waiting = placements.models.find((slot) => slot.key === key && slot.file === null);
+
+    return { file, kind: waiting ? 'fill' : 'add', slot: waiting ? waiting.key : key };
+  };
+
+  const applyPlacement = (pending: PendingPlacement) => {
+    const waiting = placements.models.find((slot) => slot.key === pending.slot && slot.file === null);
+
+    if (waiting) {
+      // the slot keeps its composed position, and its placeholder size stays on record so
+      // dropping the asset again restores the box it stood in for
+      placements.models[placements.models.indexOf(waiting)] = {
+        file: pending.file,
+        key: waiting.key,
+        nav: waiting.nav,
+        ry: waiting.ry,
+        scale: 1,
+        ...(waiting.size ? { size: waiting.size } : {}),
+        x: waiting.x,
+        z: waiting.z,
+      };
+
+      return;
+    }
+
+    placements.models.push({
+      file: pending.file,
+      key: pending.slot,
+      nav: false,
+      ry: 0,
+      scale: 1,
+      x: 0,
+      z: 4,
+    });
+  };
+
   const renderHUD = () => {
     if (!hud) {
       return;
@@ -269,6 +326,23 @@ async function main() {
         selectView();
       });
       hud.appendChild(toggle);
+
+      const placement = planPlacementFor(gymModel);
+
+      if (placement) {
+        const place = document.createElement('button');
+
+        place.textContent = placement.kind === 'fill' ? `fill ${placement.slot} slot` : 'add to town';
+        place.addEventListener('click', () => {
+          applyPlacement(placement);
+          void savePlacements(placements).then(() => {
+            activeView = 'plan';
+            selectView();
+            updateInfo(`${gymModel ?? ''} placed as ${placement.slot}`);
+          });
+        });
+        hud.appendChild(place);
+      }
     }
 
     if (activeView === 'plan') {

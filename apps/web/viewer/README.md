@@ -22,7 +22,10 @@ Then open `localhost:4599`. `?v=stage|gym|plan` opens straight into a view.
   the menu.
 - **Gym** (`2`) — one asset alone, orbitable, beside a 1.8 m reference figure. `L` or the HUD
   button toggles the canon night rig against a neutral inspection rig. Every `.glb` in the
-  watched directory is listed down the left; click to switch subject.
+  watched directory is listed down the left; click to switch subject. An asset that isn't in the
+  town yet gets a placement button: an asset whose name matches a waiting slot (`respite-market.glb`
+  → the `market` slot) fills that slot at the position already composed for it, and anything else
+  joins the town as a new slot near the plaza. Either way it saves and drops you into the plan.
 - **Plan** (`3`) — the entity placer. Drag to move, `Q`/`E` to rotate, shift-drag to pan, wheel
   to zoom, `S` or the HUD button to save. Footprints come from the loaded model's real bounds,
   so the plan shows the shape that will actually be there. The overlap check runs live in the

@@ -16,8 +16,10 @@ second or so. No registration step and no code change — adding a building is a
 One `.glb` per building, whole building per file. The file's name is its identity, so keep it
 stable across re-exports.
 
-To place a new asset in the town, add its slot to `apps/web/viewer/data/placements.json`
-(`file` names the `.glb`), then drag it into position in the viewer's plan view and save.
+To put a new asset into the town, open it in the viewer's gym and press the placement button —
+no JSON editing. **Name the file after the slot it belongs to** (`respite-market.glb` for the
+`market` slot) and it drops straight into the position already composed for that building;
+anything else joins the town as a new slot near the plaza, ready to drag into place.
 
 ## Conventions
 
