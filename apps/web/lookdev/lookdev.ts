@@ -2804,15 +2804,12 @@ async function main() {
   document.body.appendChild(renderer.domElement);
   await renderer.init();
 
-  // the authored gate must be in hand before the first scene builds
-  try {
-    const gltf = await new GLTFLoader().loadAsync(gateModelURL as string);
+  // swaps in a freshly loaded gate model and refreshes the plan/footprint boxes to its true
+  // scaled bounds so the plan editor drags the real shape and the overlap checker tests reality
+  const applyGateModel = (loaded: Group) => {
+    gateModel = loaded;
 
-    gateModel = gltf.scene;
-
-    // swap the gate's plan/footprint boxes for the model's true scaled bounds so the plan
-    // editor drags the real shape and the overlap checker tests reality
-    const bounds = new Box3().setFromObject(gateModel);
+    const bounds = new Box3().setFromObject(loaded);
     const size = bounds.getSize(new Vector3()).multiplyScalar(GATE_MODEL_SCALE);
     const boundsCenter = bounds.getCenter(new Vector3()).multiplyScalar(GATE_MODEL_SCALE);
     const gatePlacement = placements.find((placement) => placement.key === 'gate');
@@ -2830,6 +2827,13 @@ async function main() {
         },
       ];
     }
+  };
+
+  // the authored gate must be in hand before the first scene builds
+  try {
+    const gltf = await new GLTFLoader().loadAsync(gateModelURL as string);
+
+    applyGateModel(gltf.scene);
   } catch (error) {
     console.error('gate model failed to load — falling back to the procedural gate', error);
   }
@@ -3589,6 +3593,50 @@ async function main() {
     camera.updateProjectionMatrix();
     renderer.setSize(globalThis.innerWidth, globalThis.innerHeight);
   });
+
+  // hot reload: Blender re-exports the .glb into models/, the side server (serve-models.ts)
+  // exposes it, and a stamp change here swaps the model and rebuilds the active view
+  const GATE_MODEL_DEV_URL = 'http://localhost:4601/respite-gate.glb';
+  let gateModelStamp = '';
+
+  setInterval(() => {
+    void (async () => {
+      try {
+        const head = await fetch(GATE_MODEL_DEV_URL, { cache: 'no-store', method: 'HEAD' });
+
+        if (!head.ok) {
+          return;
+        }
+
+        const stamp = head.headers.get('last-modified') ?? head.headers.get('content-length') ?? '';
+
+        if (!gateModelStamp) {
+          gateModelStamp = stamp;
+          return;
+        }
+
+        if (stamp === gateModelStamp) {
+          return;
+        }
+
+        gateModelStamp = stamp;
+
+        const gltf = await new GLTFLoader().loadAsync(`${GATE_MODEL_DEV_URL}?t=${Date.now()}`);
+
+        applyGateModel(gltf.scene);
+
+        const active = views.find((view) => view.key === activeKey);
+
+        if (active) {
+          selectView(active);
+        }
+
+        console.log('gate model hot-swapped');
+      } catch {
+        // side server down or export mid-write — retry on the next tick
+      }
+    })();
+  }, 1500);
 
   renderer.setAnimationLoop(() => {
     const elapsed = performance.now() / 1000;
