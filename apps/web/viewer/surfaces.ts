@@ -25,7 +25,7 @@ export function applyGrounding(material: MeshStandardNodeMaterial) {
 }
 
 export function buildGrain(amp: Knob = 0.04) {
-  return mx_noise_float(positionWorld.mul(16)).mul(amp);
+  return mx_noise_float(positionWorld.mul(6.4)).mul(amp);
 }
 
 export function buildOrganic(scale: Knob, amp: Knob) {

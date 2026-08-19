@@ -29,11 +29,11 @@ interface RaySpec {
 
 /** Far light shafts: bases hidden behind the skyline, tops pulsing above it out of phase. */
 const RAY_SPECS: ReadonlyArray<RaySpec> = [
-  { color: GATE_TEAL, height: 16, phase: 0, width: 2.2, x: -26, z: -38 },
-  { color: SIGNAL_VIOLET, height: 20, phase: 1.7, width: 3.2, x: -12, z: -44 },
-  { color: GATE_TEAL, height: 14, phase: 3.1, width: 1.8, x: 3, z: -40 },
-  { color: SIGNAL_VIOLET, height: 22, phase: 4.4, width: 2.6, x: 16, z: -46 },
-  { color: GATE_TEAL, height: 17, phase: 5.6, width: 2, x: 30, z: -38 },
+  { color: GATE_TEAL, height: 40, phase: 0, width: 5.5, x: -65, z: -95 },
+  { color: SIGNAL_VIOLET, height: 50, phase: 1.7, width: 8, x: -30, z: -110 },
+  { color: GATE_TEAL, height: 35, phase: 3.1, width: 4.5, x: 7.5, z: -100 },
+  { color: SIGNAL_VIOLET, height: 55, phase: 4.4, width: 6.5, x: 40, z: -115 },
+  { color: GATE_TEAL, height: 42.5, phase: 5.6, width: 5, x: 75, z: -95 },
 ];
 
 export function addRays(scene: Scene) {
@@ -55,13 +55,13 @@ export function addRays(scene: Scene) {
 
     const shaft = new Mesh(new PlaneGeometry(ray.width, ray.height), rayMaterial);
 
-    shaft.position.set(ray.x, 4 + ray.height / 2, ray.z);
+    shaft.position.set(ray.x, 10 + ray.height / 2, ray.z);
     scene.add(shaft);
   }
 }
 
 export function addStreaks(scene: Scene) {
-  const streakGeometry = new BoxGeometry(3.4, 0.16, 0.16);
+  const streakGeometry = new BoxGeometry(8.5, 0.4, 0.4);
   const streakMaterials = [SIGNAL_VIOLET, GATE_TEAL, WARM_WINDOW_SOFT, '#dbeafe'].map((streakColor) => {
     // beyond the fog far distance every fogged material flattens to fog color — exempt these
     const material = new MeshBasicNodeMaterial({ fog: false });
@@ -79,15 +79,15 @@ export function addStreaks(scene: Scene) {
     }
 
     const streak = new Mesh(streakGeometry, material);
-    const streakY = 13 + ((index * 37) % 20);
-    const streakZ = -60 - ((index * 13) % 25);
+    const streakY = 32.5 + ((index * 37) % 50);
+    const streakZ = -150 - ((index * 13) % 62.5);
     const period = 8 + ((index * 7.1) % 26);
     // wide per-streak speed spread: crossings from darting (~2.5s) to drifting (~11.5s)
     const travel = 2.5 + ((index * 5.3) % 9);
     const offset = index * 7.7;
     const direction = index % 2 === 0 ? 1 : -1;
     // each streak sinks a little as it crosses, like a slow shooting star
-    const sink = 1 + ((index * 11) % 3);
+    const sink = 2.5 + ((index * 11) % 7.5);
 
     streak.scale.x = 0.8 + ((index * 3) % 4) * 0.3;
     streak.position.set(0, streakY, streakZ);
@@ -104,7 +104,7 @@ export function addStreaks(scene: Scene) {
         // distance scales depth, height, and crossing span together so the fleet still spans
         // the whole sky however far back it sits
         const distance = motionState.streakDistance;
-        const spanHalf = (26 + Math.abs(streakZ) * distance) * 0.66;
+        const spanHalf = (65 + Math.abs(streakZ) * distance) * 0.66;
 
         streak.position.x = direction * (progress * 2 * spanHalf - spanHalf);
         streak.position.y = (streakY - progress * sink) * (0.75 + 0.25 * distance);
@@ -121,11 +121,11 @@ export function addStreaks(scene: Scene) {
 export function makeFlickerMaterialBase(): MeshBasicNodeMaterial {
   const flickerBase = new MeshBasicNodeMaterial();
   const slow = mx_noise_float(
-    vec3(positionWorld.x.mul(3.1), positionWorld.y.mul(3.1).add(positionWorld.z.mul(2.7)), time.mul(1.6)),
+    vec3(positionWorld.x.mul(1.24), positionWorld.y.mul(1.24).add(positionWorld.z.mul(1.08)), time.mul(1.6)),
   )
     .mul(0.5)
     .add(0.5);
-  const drop = mx_noise_float(vec3(positionWorld.x.mul(1.7), positionWorld.z.mul(1.9), time.mul(0.35)))
+  const drop = mx_noise_float(vec3(positionWorld.x.mul(0.68), positionWorld.z.mul(0.76), time.mul(0.35)))
     .mul(0.5)
     .add(0.5)
     .smoothstep(0.7, 0.78);

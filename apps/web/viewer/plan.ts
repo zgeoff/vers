@@ -60,7 +60,7 @@ export function buildPlanScene(placements: PlacementsFile): {
   scene.add(ambient, key);
 
   const ground = new Mesh(
-    new PlaneGeometry(220, 220),
+    new PlaneGeometry(550, 550),
     new MeshStandardNodeMaterial({ color: new Color('#10141f'), roughness: 1 }),
   );
 
@@ -69,13 +69,13 @@ export function buildPlanScene(placements: PlacementsFile): {
   scene.add(ground);
 
   const plazaFloor = new Mesh(
-    new PlaneGeometry(25, 21),
+    new PlaneGeometry(62.5, 52.5),
     new MeshStandardNodeMaterial({ color: new Color('#232b40'), roughness: 1 }),
   );
 
   plazaFloor.rotation.x = -Math.PI / 2;
   plazaFloor.rotation.z = 0.07;
-  plazaFloor.position.set(0.8, -0.01, -1.5);
+  plazaFloor.position.set(2, -0.025, -3.75);
   scene.add(plazaFloor);
 
   const groups: Array<PlanGroup> = [];

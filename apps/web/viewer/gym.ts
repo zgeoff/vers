@@ -59,7 +59,7 @@ export function buildGymScene(modelName: string | null, lighting: GymLighting): 
 
   groundMaterial.colorNode = color(groundBase).mul(buildGrain(0.03).add(1));
 
-  const disc = new Mesh(new CircleGeometry(60, 64), groundMaterial);
+  const disc = new Mesh(new CircleGeometry(150, 64), groundMaterial);
 
   disc.rotation.x = -Math.PI / 2;
   disc.position.y = -0.01;

@@ -27,15 +27,15 @@ export const motionState = { streakDistance: 3, streakSpeed: 5 };
 export const pixelRatio = uniform(1);
 
 export const groundingKnobs = makeKnobGroup('grounding', {
-  falloff: [0.67, 0.05, 1],
+  falloff: [0.268, 0.02, 0.4],
   depth: [0.1, 0, 1],
 });
 
 export const groundKnobs = makeKnobGroup('ground', {
-  paverCell: [0.05, 0.05, 1.5],
+  paverCell: [0.02, 0.02, 0.6],
   paverAmp: [0.37, 0, 1],
   jointDepth: [0.07, 0, 1],
-  wearScale: [0.22, 0.05, 3],
+  wearScale: [0.088, 0.02, 1.2],
   wearAmp: [0.16, 0, 1],
   grainAmp: [0.05, 0, 0.3, 0.005],
   clampLo: [0.77, 0, 1],
@@ -56,7 +56,7 @@ export const atmoKnobs = makeKnobGroup('atmo', {
   smokeOpacity: [0.16, 0, 1],
   fogWall: [0.31, 0, 1],
   fogSea: [0.7, 0, 1],
-  fogRadius: [23, 5, 45, 0.5],
+  fogRadius: [57.5, 12, 112, 0.5],
   drift: [0.07, 0, 0.3, 0.005],
 });
 
@@ -89,9 +89,9 @@ registerKnob('light.keyLight', 1.92, 0, 6, (value) => {
 });
 registerKnob(
   'light.gateGlow',
-  30,
+  187,
   0,
-  80,
+  500,
   (value) => {
     if (liveRefs.gateGlow) {
       liveRefs.gateGlow.intensity = value;
@@ -101,9 +101,9 @@ registerKnob(
 );
 registerKnob(
   'light.fogNear',
-  26,
-  5,
-  200,
+  65,
+  12,
+  500,
   (value) => {
     if (liveRefs.fog) {
       liveRefs.fog.near = value;
@@ -113,9 +113,9 @@ registerKnob(
 );
 registerKnob(
   'light.fogFar',
-  136,
-  20,
-  400,
+  340,
+  50,
+  1000,
   (value) => {
     if (liveRefs.fog) {
       liveRefs.fog.far = value;

@@ -30,7 +30,9 @@ Slot keys: `market`, `stash`, `codex`, `gate`, `avatar`, `fountain`.
 
 ## Conventions
 
-- **Scale**: 1 Blender unit = 1 scene unit (roughly 1 m). Model at real size.
+- **Scale**: 1 Blender unit = 1 scene unit = **1 metre**, exactly. Model at real size and place
+  it at scale 1 — there are no correction factors anywhere in the pipeline, and reintroducing one
+  would be a bug.
 - **Origin**: at the building's ground center — the point that lands on the placement (x, z).
   Ground plane is y = 0; nothing below it except intentionally sunken detail.
 - **Facing**: the entrance faces **−Y in Blender** (the exporter's default mapping turns that
@@ -88,12 +90,16 @@ growing or shrinking an asset costs nothing.
 
 | Building | Footprint (w × d) | Height | Notes |
 | -------- | ----------------- | ------ | ----- |
-| market   | ~12 × 5           | ~5     | stacked bazaar; canopy bays and a stall row on the front |
-| stash    | ~7 × 5            | ~3.5   | asymmetric double drum; vestibule entrance |
-| codex    | ~8 × 5            | ~5.5   | severe archive hall; steps and banner fins at the entrance |
-| gate     | 27 × 10.6 scaled  | ~14    | built; the widest thing in the composition |
-| avatar   | ~5 × 5            | ~6     | stacked drums |
-| fountain | ~4 ⌀              | ~1.4   | tiers and a hub; instrument light on the hub (`glow-teal`) |
+| market   | ~30 × 12 m        | ~12 m  | stacked bazaar; canopy bays and a stall row on the front |
+| stash    | ~18 × 12 m        | ~9 m   | asymmetric double drum; vestibule entrance |
+| codex    | ~20 × 12 m        | ~14 m  | severe archive hall; steps and banner fins at the entrance |
+| gate     | 39 × 31 m         | 27 m   | in progress; monumental by intent — the tallest thing in the plaza |
+| avatar   | ~12 × 12 m        | ~15 m  | stacked drums |
+| fountain | ~10 m ⌀           | ~3.5 m | tiers and a hub; instrument light on the hub (`glow-teal`) |
+
+For scale sense: the plaza is about 62 × 52 m, the nav buildings are three to five storeys, and
+the background city runs 11–46 m. The gate at 27 m stands roughly twice the height of the
+buildings around it, which is what makes it read as monumental.
 
 Background massing and the skyline stay procedural boxes — the fidelity gradient holds: only the
 focal buildings deserve authored models.
@@ -106,10 +112,11 @@ plaza reads as an island of light with shapes looming out of the fog.
 
 ## What the camera sees
 
-The stage camera sits at (35.82, 29.77, 41.11), fov 36, looking at (0, 4, −7) — a high
-three-quarter view from the plaza's open end. Front faces and rooflines carry almost everything;
+The stage camera sits at (89.55, 74.43, 102.78), fov 36, looking at (0, 10, −17.5) — a high
+three-quarter view from the plaza's open end, about 140 m out. Front faces and rooflines carry almost everything;
 backs are never seen. Silhouette first, front detail second, roofs third, flanks fourth, backs
 never.
 
-Fog closes off distance: the fog sea and wall ring the plaza at radius ~23–27, so anything past
-it reads as an inked silhouette rather than a surface. Detail spent out there is wasted.
+Fog closes off distance: the fog sea and wall ring the plaza at a radius of about 57–67 m, so
+anything past that reads as an inked silhouette rather than a surface. Detail spent out there is
+wasted.

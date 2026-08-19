@@ -37,7 +37,7 @@ export const hoverHullModelMaterial = new MeshBasicNodeMaterial({
 });
 
 hoverHullModelMaterial.colorNode = color(GATE_TEAL).mul(1.6);
-hoverHullModelMaterial.positionNode = positionLocal.add(normalLocal.mul(0.28));
+hoverHullModelMaterial.positionNode = positionLocal.add(normalLocal.mul(0.7));
 persistentResources.add(hoverHullPartsMaterial);
 persistentResources.add(hoverHullModelMaterial);
 

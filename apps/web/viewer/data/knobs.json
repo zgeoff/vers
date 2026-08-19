@@ -1,13 +1,13 @@
 {
   "grounding": {
-    "falloff": 0.67,
+    "falloff": 0.268,
     "depth": 0.1
   },
   "ground": {
-    "paverCell": 0.05,
+    "paverCell": 0.02,
     "paverAmp": 0.37,
     "jointDepth": 0.07,
-    "wearScale": 0.22,
+    "wearScale": 0.088,
     "wearAmp": 0.16,
     "grainAmp": 0.05,
     "clampLo": 0.77,
@@ -26,7 +26,7 @@
     "smokeOpacity": 0.16,
     "fogWall": 0.31,
     "fogSea": 0.7,
-    "fogRadius": 23,
+    "fogRadius": 57.5,
     "drift": 0.07
   },
   "motion": {
@@ -47,11 +47,11 @@
     "ambient": 0.84,
     "bounce": 1.05,
     "keyLight": 1.92,
-    "gateGlow": 30,
-    "fogNear": 26,
-    "fogFar": 136
+    "gateGlow": 187.5,
+    "fogNear": 65,
+    "fogFar": 340
   },
   "render": {
-    "pixelRatio": 1
+    "pixelRatio": 2
   }
 }

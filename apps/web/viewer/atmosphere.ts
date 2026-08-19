@@ -43,9 +43,9 @@ export function addAtmosphere(scene: Scene, options: AtmosphereOptions = {}) {
   const edgeFade = uv().x.mul(uv().x.oneMinus()).mul(uv().y).mul(uv().y.oneMinus()).mul(16);
 
   const banks = [
-    { seed: 3, y: 2.5, z: -10 },
-    { seed: 7, y: 3.5, z: -18 },
-    { seed: 11, y: 5, z: -26 },
+    { seed: 3, y: 6.25, z: -25 },
+    { seed: 7, y: 8.75, z: -45 },
+    { seed: 11, y: 12.5, z: -65 },
   ];
 
   for (const bank of banks) {
@@ -56,8 +56,8 @@ export function addAtmosphere(scene: Scene, options: AtmosphereOptions = {}) {
       transparent: true,
     });
     const coord = vec3(
-      positionWorld.x.mul(0.12).add(time.mul(atmoKnobs.drift.mul(3))),
-      positionWorld.y.mul(0.28),
+      positionWorld.x.mul(0.048).add(time.mul(atmoKnobs.drift.mul(3))),
+      positionWorld.y.mul(0.112),
       bank.seed,
     );
     // the warp curls the wisps; the fine octave scuds past faster than the body
@@ -67,7 +67,7 @@ export function addAtmosphere(scene: Scene, options: AtmosphereOptions = {}) {
 
     material.opacityNode = body.mul(edgeFade).mul(atmoKnobs.bankOpacity);
 
-    const plane = new Mesh(new PlaneGeometry(90, 11), material);
+    const plane = new Mesh(new PlaneGeometry(225, 27.5), material);
 
     plane.layers.set(ATMO_LAYER);
     plane.position.set(0, bank.y, bank.z);
@@ -76,8 +76,8 @@ export function addAtmosphere(scene: Scene, options: AtmosphereOptions = {}) {
 
   // two stacked mist layers rolling at different speeds across the gate end of the plaza
   for (const layer of [
-    { scale: 0.16, seed: 17, speed: 1, y: 0.7 },
-    { scale: 0.11, seed: 29, speed: 0.55, y: 1.5 },
+    { scale: 0.064, seed: 17, speed: 1, y: 1.75 },
+    { scale: 0.044, seed: 29, speed: 0.55, y: 3.75 },
   ]) {
     const material = new MeshBasicNodeMaterial({
       color: new Color(DUSK_FOG),
@@ -95,11 +95,11 @@ export function addAtmosphere(scene: Scene, options: AtmosphereOptions = {}) {
 
     material.opacityNode = body.mul(edgeFade).mul(atmoKnobs.mistOpacity);
 
-    const mist = new Mesh(new PlaneGeometry(56, 34), material);
+    const mist = new Mesh(new PlaneGeometry(140, 85), material);
 
     mist.layers.set(ATMO_LAYER);
     mist.rotation.x = -Math.PI / 2;
-    mist.position.set(1, layer.y, -9);
+    mist.position.set(2.5, layer.y, -22.5);
     scene.add(mist);
   }
 
@@ -113,35 +113,35 @@ export function addAtmosphere(scene: Scene, options: AtmosphereOptions = {}) {
       side: DoubleSide,
       transparent: true,
     });
-    const coord = vec3(positionWorld.x.mul(0.7), positionWorld.y.mul(0.45).sub(time.mul(0.25)), 23);
+    const coord = vec3(positionWorld.x.mul(0.28), positionWorld.y.mul(0.18).sub(time.mul(0.25)), 23);
     const warp = mx_noise_float(coord.mul(0.6)).mul(0.8);
     const body = mx_noise_float(coord.add(warp)).add(1).mul(0.5).smoothstep(0.25, 0.9);
     const pulse = time.mul(0.6).sin().mul(0.15).add(0.9);
 
     hazeMaterial.opacityNode = body.mul(edgeFade).mul(atmoKnobs.hazeOpacity).mul(pulse);
 
-    const haze = new Mesh(new PlaneGeometry(4.2, 7.2), hazeMaterial);
+    const haze = new Mesh(new PlaneGeometry(10.5, 18), hazeMaterial);
 
     haze.layers.set(ATMO_LAYER);
 
     const cos = Math.cos(gate.ry);
     const sin = Math.sin(gate.ry);
-    const localZ = -1.2;
+    const localZ = -3;
 
-    haze.position.set(localZ * sin + gate.x, 3.65, localZ * cos + gate.z);
+    haze.position.set(localZ * sin + gate.x, 9.13, localZ * cos + gate.z);
     haze.rotation.y = gate.ry;
     scene.add(haze);
   }
 
   // the fog sea: ground fog surrounding the plaza, creeping inward as thresholded wisps.
   // Radial distance from the plaza center gates the opacity so the square itself stays clear.
-  const plazaCenter = vec2(-1, -5);
+  const plazaCenter = vec2(-2.5, -12.5);
   const radial = positionWorld.xz.sub(plazaCenter).length();
-  const creep = radial.smoothstep(atmoKnobs.fogRadius, atmoKnobs.fogRadius.add(14));
+  const creep = radial.smoothstep(atmoKnobs.fogRadius, atmoKnobs.fogRadius.add(35));
 
   for (const layer of [
-    { scale: 0.1, seed: 41, speed: 0.8, y: 0.8 },
-    { scale: 0.07, seed: 47, speed: 0.5, y: 2 },
+    { scale: 0.04, seed: 41, speed: 0.8, y: 2 },
+    { scale: 0.028, seed: 47, speed: 0.5, y: 5 },
   ]) {
     const material = new MeshBasicNodeMaterial({
       color: new Color(DUSK_FOG),
@@ -160,11 +160,11 @@ export function addAtmosphere(scene: Scene, options: AtmosphereOptions = {}) {
     // near-opaque in its heart, wispy at the creeping inner edge
     material.opacityNode = creep.mul(body.mul(0.7).add(0.3)).mul(atmoKnobs.fogSea);
 
-    const sea = new Mesh(new PlaneGeometry(320, 320), material);
+    const sea = new Mesh(new PlaneGeometry(800, 800), material);
 
     sea.layers.set(ATMO_LAYER);
     sea.rotation.x = -Math.PI / 2;
-    sea.position.set(-1, layer.y, -5);
+    sea.position.set(-2.5, layer.y, -12.5);
     scene.add(sea);
   }
 
@@ -176,20 +176,20 @@ export function addAtmosphere(scene: Scene, options: AtmosphereOptions = {}) {
     transparent: true,
   });
   const wallCoord = vec3(
-    positionWorld.x.mul(0.08).add(time.mul(atmoKnobs.drift.mul(0.6))),
-    positionWorld.y.mul(0.16),
-    positionWorld.z.mul(0.08),
+    positionWorld.x.mul(0.032).add(time.mul(atmoKnobs.drift.mul(0.6))),
+    positionWorld.y.mul(0.064),
+    positionWorld.z.mul(0.032),
   );
   const wallWarp = mx_noise_float(wallCoord.mul(0.5).add(time.mul(atmoKnobs.drift.mul(0.3)))).mul(1.3);
   const wallBody = mx_noise_float(wallCoord.add(wallWarp)).add(1).mul(0.5).smoothstep(0.28, 0.8);
-  const wallFade = positionWorld.y.smoothstep(3, 13).oneMinus();
+  const wallFade = positionWorld.y.smoothstep(7.5, 32.5).oneMinus();
 
   wallMaterial.opacityNode = wallBody.mul(0.75).add(0.25).mul(wallFade).mul(atmoKnobs.fogWall);
 
-  const wall = new Mesh(new CylinderGeometry(27, 27, 14, 64, 1, true), wallMaterial);
+  const wall = new Mesh(new CylinderGeometry(67.5, 67.5, 35, 64, 1, true), wallMaterial);
 
   wall.layers.set(ATMO_LAYER);
-  wall.position.set(-1, 7, -5);
+  wall.position.set(-2.5, 17.5, -12.5);
   scene.add(wall);
   sceneAnimations.push((elapsed) => {
     wall.rotation.y = elapsed * 0.004;
@@ -204,8 +204,8 @@ export function addAtmosphere(scene: Scene, options: AtmosphereOptions = {}) {
       transparent: true,
     });
     const coord = vec3(
-      positionWorld.x.mul(0.9).add(source.seed),
-      positionWorld.y.mul(0.55).sub(time.mul(source.rise)),
+      positionWorld.x.mul(0.36).add(source.seed),
+      positionWorld.y.mul(0.22).sub(time.mul(source.rise)),
       source.seed,
     );
     const warp = mx_noise_float(coord.mul(0.6).add(time.mul(0.06))).mul(1.1);

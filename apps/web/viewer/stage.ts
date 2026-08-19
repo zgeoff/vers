@@ -62,8 +62,8 @@ persistentResources.add(boxGeometry);
 
 /** Local-frame vent mouths on the slots that carry rooftop machinery. */
 const SMOKE_SOURCES = [
-  { height: 5, key: 'market', rise: 0.3, seed: 31, width: 2.6, x: -1.6, z: -0.5 },
-  { height: 4, key: 'stash', rise: 0.24, seed: 37, width: 2, x: 2.6, z: 0 },
+  { height: 12.5, key: 'market', rise: 0.3, seed: 31, width: 6.5, x: -4, z: -1.25 },
+  { height: 10, key: 'stash', rise: 0.24, seed: 37, width: 5, x: 6.5, z: 0 },
 ];
 
 export function buildStageScene(placements: PlacementsFile): Scene {
@@ -72,13 +72,13 @@ export function buildStageScene(placements: PlacementsFile): Scene {
   trackBuiltScene(scene);
   resetHoverRegistry();
   scene.background = new Color(NIGHT_SKY);
-  scene.fog = new Fog(new Color(NIGHT_FOG), 26, 136);
+  scene.fog = new Fog(new Color(NIGHT_FOG), 65, 340);
 
   const ambient = new AmbientLight(new Color(NIGHT_AMBIENT), 0.84);
   const key = new DirectionalLight(new Color(NIGHT_KEY), 1.92);
   const bounce = new HemisphereLight(new Color(NIGHT_AMBIENT), new Color('#54402e'), 1.05);
 
-  key.position.set(-30, 42, 26);
+  key.position.set(-75, 105, 65);
   scene.add(ambient, key, bounce);
   liveRefs.fog = scene.fog as Fog;
   liveRefs.ambient = ambient;
@@ -132,7 +132,7 @@ function slotHeight(slot: ModelPlacement): number {
     return (entry.bounds.max.y - entry.bounds.min.y) * slot.scale;
   }
 
-  return slot.size?.[1] ?? 4;
+  return slot.size?.[1] ?? 10;
 }
 
 function addGroundPlanes(scene: Scene) {
@@ -142,10 +142,10 @@ function addGroundPlanes(scene: Scene) {
   applyGroundSurface(groundMaterial, groundBase);
 
   // large enough that its edges sit past full fog from any camera the viewer uses
-  const ground = new Mesh(new PlaneGeometry(800, 800), groundMaterial);
+  const ground = new Mesh(new PlaneGeometry(2000, 2000), groundMaterial);
 
   ground.rotation.x = -Math.PI / 2;
-  ground.position.y = -0.01;
+  ground.position.y = -0.025;
   scene.add(ground);
 
   // the paved plaza, skewed off the world axes so the square doesn't read as a perfect rectangle
@@ -154,16 +154,16 @@ function addGroundPlanes(scene: Scene) {
 
   applyGroundSurface(plazaMaterial, plazaBase);
 
-  const plazaFloor = new Mesh(new PlaneGeometry(25, 21), plazaMaterial);
+  const plazaFloor = new Mesh(new PlaneGeometry(62.5, 52.5), plazaMaterial);
 
   plazaFloor.rotation.x = -Math.PI / 2;
   plazaFloor.rotation.z = 0.07;
-  plazaFloor.position.set(0.8, 0.005, -1.5);
+  plazaFloor.position.set(2, 0.0125, -3.75);
   scene.add(plazaFloor);
 
   // a smaller apron spilling toward the gate, breaking the plaza's outline further
   const apron = new Mesh(
-    new PlaneGeometry(9, 10),
+    new PlaneGeometry(22.5, 25),
     new MeshStandardNodeMaterial({
       color: new Color(NIGHT_GROUND).multiplyScalar(2.1),
       roughness: 0.5,
@@ -172,7 +172,7 @@ function addGroundPlanes(scene: Scene) {
 
   apron.rotation.x = -Math.PI / 2;
   apron.rotation.z = -0.12;
-  apron.position.set(5.5, 0.004, -11);
+  apron.position.set(13.75, 0.01, -27.5);
   scene.add(apron);
 }
 
@@ -211,8 +211,8 @@ function addBlocks(scene: Scene, blocks: ReadonlyArray<BlockPlacement>) {
   );
 
   for (const [index, block] of masts.entries()) {
-    dummy.position.set(block.x, block.h + 1, block.z);
-    dummy.scale.set(0.12, 2.2, 0.12);
+    dummy.position.set(block.x, block.h + 2.5, block.z);
+    dummy.scale.set(0.3, 5.5, 0.3);
     dummy.updateMatrix();
     mastMesh.setMatrixAt(index, dummy.matrix);
   }
@@ -271,7 +271,7 @@ function addModelSlots(scene: Scene, models: ReadonlyArray<ModelPlacement>) {
       }
     } else {
       // no asset yet: a placeholder box keeps the slot visible, hoverable, and draggable
-      const [width, height, depth] = slot.size ?? [6, 4, 6];
+      const [width, height, depth] = slot.size ?? [15, 10, 15];
       const material = new MeshStandardNodeMaterial({
         color: new Color(BUILDING_LIT).multiplyScalar(slot.key === 'fountain' ? 0.55 : 1.15),
         roughness: 0.85,
@@ -333,7 +333,7 @@ function buildPickBox(slot: ModelPlacement, material: MeshBasicNodeMaterial): Me
     return pick;
   }
 
-  const [width, height, depth] = slot.size ?? [6, 4, 6];
+  const [width, height, depth] = slot.size ?? [15, 10, 15];
   const pick = new Mesh(new BoxGeometry(width, height, depth), material);
 
   pick.position.set(slot.x, height / 2, slot.z);
@@ -351,9 +351,9 @@ function addGateGlow(scene: Scene, models: ReadonlyArray<ModelPlacement>) {
     return;
   }
 
-  const gateGlow = new PointLight(new Color(GATE_TEAL), 30, 20, 2);
+  const gateGlow = new PointLight(new Color(GATE_TEAL), 187, 50, 2);
 
-  gateGlow.position.set(gate.x, 2.5, gate.z - 3.3);
+  gateGlow.position.set(gate.x, 6.25, gate.z - 8.25);
   scene.add(gateGlow);
   liveRefs.gateGlow = gateGlow;
 }
@@ -376,7 +376,7 @@ function pickWindowColor(random: () => number, worldY: number, litChance: number
 
   const roll = random();
 
-  if (worldY < 4.5) {
+  if (worldY < 11.25) {
     const warm = roll < 0.85 ? WARM_WINDOW : WARM_WINDOW_SOFT;
 
     return new Color(warm).multiplyScalar(2.2);
@@ -402,22 +402,22 @@ function collectBlockWindows(blocks: ReadonlyArray<BlockPlacement>): Array<Emiss
 
     const litChance = block.role === 'filler' ? 0.105 : 0.14;
     const faceExtent = block.facing === 'pz' ? block.w : block.d;
-    const cols = Math.max(1, Math.floor((faceExtent - 0.6) / 0.6));
-    const rowCount = Math.max(1, Math.floor((block.h - 0.8) / 0.7));
-    const step = cols > 1 ? (faceExtent - 0.9) / (cols - 1) : 0;
+    const cols = Math.max(1, Math.floor((faceExtent - 1.5) / 1.5));
+    const rowCount = Math.max(1, Math.floor((block.h - 2) / 1.75));
+    const step = cols > 1 ? (faceExtent - 2.25) / (cols - 1) : 0;
 
     for (let col = 0; col < cols; col += 1) {
       for (let row = 0; row < rowCount; row += 1) {
-        const along = -(faceExtent - 0.9) / 2 + col * step;
-        const y = block.h - 0.6 - row * 0.7;
+        const along = -(faceExtent - 2.25) / 2 + col * step;
+        const y = block.h - 1.5 - row * 1.75;
         const windowColor = pickWindowColor(random, y, litChance);
 
         if (block.facing === 'pz') {
-          const world = toWorldOffset(block.x, block.z, block.ry, along, block.d / 2 + 0.03);
+          const world = toWorldOffset(block.x, block.z, block.ry, along, block.d / 2 + 0.08);
 
           windows.push({ color: windowColor, x: world.x, y, z: world.z });
         } else {
-          const lx = block.facing === 'px' ? block.w / 2 + 0.03 : -block.w / 2 - 0.03;
+          const lx = block.facing === 'px' ? block.w / 2 + 0.08 : -block.w / 2 - 0.08;
           const world = toWorldOffset(block.x, block.z, block.ry, lx, along);
 
           windows.push({ color: windowColor, x: world.x, y, z: world.z });
@@ -438,7 +438,7 @@ function addWindowEmissives(scene: Scene, blocks: ReadonlyArray<BlockPlacement>)
     .map((block) => ({
       color: new Color(COLD_INSTRUMENT).multiplyScalar(2),
       x: block.x,
-      y: block.h + 2.1,
+      y: block.h + 5.25,
       z: block.z,
     }));
 
@@ -446,7 +446,7 @@ function addWindowEmissives(scene: Scene, blocks: ReadonlyArray<BlockPlacement>)
   const isFlickerWindow = (index: number) => index % 4 === 1;
   const flickerWindows = windows.filter((_, index) => isFlickerWindow(index));
   const steady = [...windows.filter((_, index) => !isFlickerWindow(index)), ...instruments];
-  const windowGeometry = new BoxGeometry(0.13, 0.2, 0.05);
+  const windowGeometry = new BoxGeometry(0.33, 0.5, 0.13);
   const emissiveMesh = new InstancedMesh(windowGeometry, new MeshBasicNodeMaterial(), steady.length);
 
   for (const [index, emissive] of steady.entries()) {

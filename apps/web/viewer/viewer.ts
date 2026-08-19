@@ -37,8 +37,8 @@ import type { PlacementsFile } from './types';
 
 /** The composition's baked framing — the distance the town is meant to be read from. */
 const STAGE_CAMERA = {
-  position: { x: 35.82, y: 29.77, z: 41.11 },
-  target: { x: 0, y: 4, z: -7 },
+  position: { x: 89.55, y: 74.43, z: 102.78 },
+  target: { x: 0, y: 10, z: -17.5 },
 };
 
 type ViewKey = 'gym' | 'plan' | 'stage';
@@ -95,16 +95,16 @@ async function main() {
     readout.style.display = 'block';
   }
 
-  const camera = new PerspectiveCamera(36, globalThis.innerWidth / globalThis.innerHeight, 0.1, 300);
+  const camera = new PerspectiveCamera(36, globalThis.innerWidth / globalThis.innerHeight, 0.25, 750);
 
   // the main camera sees the atmosphere layer; the ink edge camera never enables it
   camera.layers.enable(1);
 
-  const planCamera = new OrthographicCamera(-1, 1, 1, -1, 0.1, 200);
+  const planCamera = new OrthographicCamera(-1, 1, 1, -1, 0.25, 500);
 
-  // the plan's own framing: half-height in world units, plus the point it centers on
-  let planHalfHeight = 30;
-  const planCenter = new Vector2(-6, -12);
+  // the plan's own framing: half-height in metres, plus the point it centers on
+  let planHalfHeight = 75;
+  const planCenter = new Vector2(-15, -30);
 
   const updatePlanCamera = () => {
     const aspect = globalThis.innerWidth / globalThis.innerHeight;
@@ -113,7 +113,7 @@ async function main() {
     planCamera.right = planHalfHeight * aspect;
     planCamera.top = planHalfHeight;
     planCamera.bottom = -planHalfHeight;
-    planCamera.position.set(planCenter.x, 80, planCenter.y);
+    planCamera.position.set(planCenter.x, 200, planCenter.y);
     planCamera.up.set(0, 0, -1);
     planCamera.lookAt(planCenter.x, 0, planCenter.y);
     planCamera.updateProjectionMatrix();
@@ -122,11 +122,11 @@ async function main() {
   updatePlanCamera();
 
   // ---- orbit state ----
-  const orbitTarget = new Vector3(0, 4, -7);
+  const orbitTarget = new Vector3(0, 10, -17.5);
   let orbitActive = false;
   let orbitDragging = false;
   let orbitPanning = false;
-  let orbitRadius = 33.5;
+  let orbitRadius = 83.75;
   let orbitTheta = 0;
   let orbitPhi = 1.42;
   let lastPointerX = 0;
@@ -610,14 +610,14 @@ async function main() {
     event.preventDefault();
 
     if (activeView === 'plan') {
-      planHalfHeight = Math.min(140, Math.max(6, planHalfHeight * (1 + event.deltaY * 0.001)));
+      planHalfHeight = Math.min(350, Math.max(15, planHalfHeight * (1 + event.deltaY * 0.001)));
       updatePlanCamera();
 
       return;
     }
 
     if (orbitActive) {
-      orbitRadius = Math.min(160, Math.max(2, orbitRadius * (1 + event.deltaY * 0.001)));
+      orbitRadius = Math.min(400, Math.max(5, orbitRadius * (1 + event.deltaY * 0.001)));
       applyOrbit();
     }
   });
