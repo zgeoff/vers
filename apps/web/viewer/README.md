@@ -45,7 +45,12 @@ layout survive a reload with no copy-paste step.
 
 The side server watches `../lookdev/models/` — the directory Blender's auto-export already
 targets. Re-export and the running page reloads the file, rebuilds the live view, and frees the
-replaced model's GPU resources. Export conventions are in `../lookdev/MODELING.md`.
+replaced model's GPU resources. Export conventions and per-asset state are in
+`../lookdev/MODELING.md`.
+
+The gate is the only authored asset so far, and the panel texture on its concrete is
+script-generated placeholder art — it proved that drawn surface detail survives the night grade,
+which is all it was for. Don't read it as the intended look.
 
 ## Notes for changing this code
 
