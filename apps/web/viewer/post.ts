@@ -15,7 +15,7 @@ import {
   type Scene,
   type WebGPURenderer,
 } from 'three/webgpu';
-import { gradeKnobs, inkKnobs, liveRefs } from './knobs';
+import { gradeKnobs, inkKnobs, liveRefs, pixelRatio } from './knobs';
 import { sceneAnimations, trackBuiltNodes } from './lifecycle';
 
 interface PostOptions {
@@ -56,7 +56,9 @@ export function buildPost(
 
     const depthTex = edgePass.getTextureNode('depth');
     const normalTex = edgePass.getTextureNode('normal');
-    const texel = inkKnobs.width.div(screenSize);
+    // width is in display pixels; scaling by the pixel ratio keeps line weight constant as the
+    // buffer grows, so raising resolution smooths the ink instead of thinning it away
+    const texel = inkKnobs.width.mul(pixelRatio).div(screenSize);
     const sampleDepth = (ox: number, oy: number) =>
       depthTex.sample(screenUV.add(texel.mul(vec2(ox, oy)))).x;
     const sampleNormal = (ox: number, oy: number) =>

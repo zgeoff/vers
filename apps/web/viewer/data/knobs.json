@@ -15,9 +15,9 @@
   },
   "ink": {
     "width": 1,
-    "depthThreshold": 0.015,
-    "normalThreshold": 0.35,
-    "strength": 0.55
+    "depthThreshold": 0.029,
+    "normalThreshold": 0.65,
+    "strength": 1
   },
   "atmo": {
     "bankOpacity": 0.23,
@@ -50,5 +50,8 @@
     "gateGlow": 30,
     "fogNear": 26,
     "fogFar": 136
+  },
+  "render": {
+    "pixelRatio": 1
   }
 }

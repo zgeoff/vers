@@ -3,6 +3,7 @@
  * TSL graphs directly; setter knobs write onto whatever live objects the latest build put in
  * liveRefs. Saved overrides from knobs.json layer on top at boot.
  */
+import { uniform } from 'three/tsl';
 import type { AmbientLight, DirectionalLight, Fog, HemisphereLight, PointLight } from 'three/webgpu';
 import { makeKnobGroup, registerKnob } from './tuner';
 
@@ -17,6 +18,13 @@ export const liveRefs = {
 };
 
 export const motionState = { streakDistance: 3, streakSpeed: 5 };
+
+/**
+ * The live pixel ratio, mirrored into a uniform. The ink pass measures its sample offset in
+ * buffer pixels, so without this a larger buffer would silently thin every outline until the
+ * lines broke into dots — this keeps ink width meaning display pixels at any resolution.
+ */
+export const pixelRatio = uniform(1);
 
 export const groundingKnobs = makeKnobGroup('grounding', {
   falloff: [0.67, 0.05, 1],

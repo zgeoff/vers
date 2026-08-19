@@ -19,6 +19,7 @@ import {
 import { loadKnobValues, loadPlacements, saveKnobValues, savePlacements } from './data';
 import { buildGymScene, type GymLighting } from './gym';
 import { applyHoverGlow, getHoveredKey, hoverPickBoxes } from './hover';
+import { pixelRatio } from './knobs';
 import { disposeBuiltScene, getBuilt, sceneAnimations } from './lifecycle';
 import { getModel, listModels, startModelWatch, subscribeModels } from './models';
 import { buildPlanScene, findOverlaps, type PlanGroup, PLAN_SELECTED_COLOR } from './plan';
@@ -28,6 +29,7 @@ import {
   applyKnobValues,
   applyTunerKnobs,
   buildTunerConfig,
+  registerKnob,
   renderTunerPanel,
   subscribeTunerChange,
 } from './tuner';
@@ -54,11 +56,44 @@ async function main() {
   const placements: PlacementsFile = await loadPlacements();
 
   const renderer = new WebGPURenderer({ antialias: true });
+  const displayPixelRatio = Math.min(2, globalThis.devicePixelRatio);
 
   renderer.setSize(globalThis.innerWidth, globalThis.innerHeight);
-  renderer.setPixelRatio(Math.min(2, globalThis.devicePixelRatio));
+  renderer.setPixelRatio(displayPixelRatio);
   document.body.appendChild(renderer.domElement);
   await renderer.init();
+
+  // Supersampling, and the only anti-aliasing the ink outlines respond to: they are drawn per
+  // output pixel in the post chain, after the multisample resolve, so raising this renders them
+  // larger and shrinks them down rather than filtering them after the fact. Cost rises with the
+  // square of the value.
+  registerKnob(
+    'render.pixelRatio',
+    displayPixelRatio,
+    0.5,
+    3,
+    (value) => {
+      renderer.setPixelRatio(value);
+      pixelRatio.value = value;
+      updatePixelReadout();
+    },
+    0.05,
+  );
+
+  // the knob's real units are pixels, so report the buffer it produces; the next view select or
+  // pointer move restores the normal status line
+  function updatePixelReadout() {
+    const readout = document.getElementById('info');
+
+    if (!readout) {
+      return;
+    }
+
+    const size = renderer.getDrawingBufferSize(new Vector2());
+
+    readout.textContent = `pixel ratio ${renderer.getPixelRatio().toFixed(2)} · buffer ${Math.round(size.x)} × ${Math.round(size.y)}`;
+    readout.style.display = 'block';
+  }
 
   const camera = new PerspectiveCamera(36, globalThis.innerWidth / globalThis.innerHeight, 0.1, 300);
 
