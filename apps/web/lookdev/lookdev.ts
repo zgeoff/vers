@@ -687,6 +687,12 @@ for (const geometry of Object.values(partGeometries)) {
 /** The most recent scene a builder produced; the next view select disposes it. */
 let lastBuiltScene: Scene | null = null;
 
+/**
+ * Pass and effect nodes of the most recent build. They own render targets and must be disposed
+ * explicitly — the post-processing wrapper has no dispose of its own.
+ */
+let lastBuiltNodes: Array<{ dispose?: () => void }> = [];
+
 function disposeBuiltScene(scene: Scene) {
   scene.traverse((object) => {
     const mesh = object as Mesh;
@@ -2948,6 +2954,8 @@ async function main() {
     const post = new PostProcessing(renderer);
     let composite = scenePassColor.add(bloomPass);
 
+    lastBuiltNodes = [scenePass, bloomPass];
+
     liveRefs.bloom = grade ? bloomPass : null;
 
     if (grade) {
@@ -2964,6 +2972,7 @@ async function main() {
 
       const edgePass = pass(scene, edgeCamera);
 
+      lastBuiltNodes.push(edgePass);
       edgePass.setMRT(mrt({ normal: normalView, output }));
 
       const depthTex = edgePass.getTextureNode('depth');
@@ -3010,7 +3019,19 @@ async function main() {
     }
 
     // final FXAA smooths the ink lines — edge detection is per-pixel and jaggy without it
-    post.outputNode = fxaa(composite);
+    const fxaaNode = fxaa(composite);
+
+    // the fxaa wrapper renders its input into an internal RTT node whose RenderTarget has no
+    // dispose of its own — free the target directly or it leaks ~40MB per rebuild
+    lastBuiltNodes.push({
+      dispose: () => {
+        const rtt = (fxaaNode as unknown as { textureNode?: { renderTarget?: { dispose: () => void } } })
+          .textureNode;
+
+        rtt?.renderTarget?.dispose();
+      },
+    });
+    post.outputNode = fxaaNode;
 
     return post;
   };
@@ -3047,6 +3068,12 @@ async function main() {
     );
     camera.lookAt(orbitTarget);
   };
+
+  // GPU health probe: renderer resource counters for leak diagnosis
+  (globalThis as { __lookdevGPU?: () => unknown }).__lookdevGPU = () => ({
+    memory: { ...renderer.info.memory },
+    render: { ...renderer.info.render },
+  });
 
   // programmatic close-ups for agent-driven screenshot rounds
   (
@@ -3389,8 +3416,10 @@ async function main() {
         // the AO target is single-channel — broadcast its red channel, don't tint with it
         const lit = scenePassColor.mul(aoPass.getTextureNode().x);
         const post = new PostProcessing(renderer);
+        const bloomPass = bloom(lit, 0.12, 0.4, 0.9);
 
-        post.outputNode = lit.add(bloom(lit, 0.12, 0.4, 0.9));
+        lastBuiltNodes = [scenePass, aoPass, bloomPass];
+        post.outputNode = lit.add(bloomPass);
 
         return post;
       },
@@ -3548,7 +3577,7 @@ async function main() {
 
     // tear down the outgoing build's GPU resources before the new one takes over
     const staleScene = lastBuiltScene;
-    const stalePost = postProcessing;
+    const staleNodes = lastBuiltNodes;
 
     postProcessing = view.select();
 
@@ -3556,8 +3585,10 @@ async function main() {
       disposeBuiltScene(staleScene);
     }
 
-    if (stalePost !== postProcessing) {
-      (stalePost as Partial<PostProcessing>).dispose?.();
+    if (staleNodes !== lastBuiltNodes) {
+      for (const node of staleNodes) {
+        node.dispose?.();
+      }
     }
     activeKey = view.key;
 
