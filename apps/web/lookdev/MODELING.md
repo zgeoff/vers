@@ -40,8 +40,15 @@ Slot keys: `market`, `stash`, `codex`, `gate`, `avatar`, `fountain`.
   backwards, one constant flips it — don't sweat it.
 - **Apply transforms** before export (Ctrl+A → All Transforms). Export with the default glTF
   settings (+Y up), no Draco.
-- **Emissive by material name**: any material whose name starts with a glow prefix is treated as
-  scene light — it joins the bloom pass, and warm windows can flicker:
+- **Materials pass through exactly as authored.** The viewer never inspects material names — base
+  color, roughness, metallic, emission, and textures arrive as the glTF carries them. Palette-texture
+  and vertex-color workflows both survive fine; embed textures when texturing starts.
+- **Light comes from Emission, not from naming.** A part glows because its material has an emission
+  color and strength, which glTF carries natively (including
+  `KHR_materials_emissive_strength` above 1). Anything emissive joins the bloom pass automatically.
+- **Glow naming is a human convention**, useful for keeping the palette straight and for finding
+  every light in a file — it does nothing on its own, so a material named `glow-teal` with no
+  emission stays dark:
   - `glow-warm` — sodium interior light (windows, kiosks, lanterns)
   - `glow-teal` — system light (the gate frame, instruments)
   - `glow-violet` — high signals
@@ -49,14 +56,33 @@ Slot keys: `market`, `stash`, `codex`, `gate`, `avatar`, `fountain`.
 
   Model the pane or strip as its own small face carrying that material, and author its albedo as
   roughly the glow color so it previews sensibly in Blender.
-- Everything non-glow ships exactly as authored. Palette-texture and vertex-color workflows both
-  survive glTF fine; embed textures when texturing starts.
 - **Flat authored albedo, no baked directional light.** Painted ambient shading is fine; a baked
   sun direction fights the scene's sodium rig.
 - **Judge albedo in the viewer, not the Blender viewport.** Under the night rig plus AgX tone
   mapping, everything reads darker and warmer than it looks while modeling. The gym's neutral
   lighting toggle is for reading the asset's true color; the night toggle is for judging how it
   will actually appear.
+
+### Color and accents
+
+Color lives in materials. To make one part darker or accented — accent concrete, a painted band,
+a rusted panel — add a material, assign it to those faces, and set its base color. Each distinct
+material on a mesh becomes its own glTF primitive, which costs a draw call and nothing else at
+this scale.
+
+Prefer a small shared palette reused across every piece over one-off materials per object. A kit
+reads as one town because its pieces draw from the same handful of surfaces, and a shared palette
+means re-coloring the whole town later is one edit per material rather than a hunt.
+
+Two things worth knowing before picking accent colors:
+
+The ink outlines come from depth and normals, never from color. Two color zones meeting on a flat
+face produce no line at all. If an accent needs an edge around it, that edge has to exist as
+geometry — an inset, a step, a chamfer — or be painted into the texture.
+
+Night plus AgX compresses the dark end hard, so an accent that reads as clearly darker in the
+Blender viewport can disappear in the scene. Judge accents in the gym with the night rig on, and
+lean on stronger contrast than feels right while modeling.
 
 ## Asset state
 
