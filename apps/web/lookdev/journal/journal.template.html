@@ -155,18 +155,74 @@
   </p>
 
   <div class="howto">
-    <h2>Round 33 · how to respond</h2>
+    <h2>Round 35 · how to respond</h2>
     <p>
-      The overnight round, built to be found in the morning. Your settle-tuning is baked as the
-      defaults (fog sea 0.7, warmth at maximum, tighter bloom, everything from the pasted json).
-      The fog wall's radius is trimmed 10%. The visible fog outlines are gone — the ink now
-      reads edges from a second render that skips the atmosphere layer, so fog is invisible to
-      the ink while the buildings looming behind it keep their outlines. And the buildings are
-      now <b>the menu</b>: mouse over any of the five nav buildings in views 4/8 and it lifts
-      into a soft glow with a pointer cursor — the first real product interaction. Judge the
-      hover strength and color; one constant tunes it. Cel shading remains queued.
+      No look change this round — this one is about the tool. The spike is snapshotted and
+      tagged, and the tooling is rebuilt as a focused viewer at
+      <code>localhost:4599</code> (run <code>bun ./serve.ts</code> and
+      <code>BUN_PORT=4599 bun ./index.html</code> from <code>apps/web/viewer/</code>). Three
+      views instead of thirteen: <b>Stage</b>, <b>Gym</b>, <b>Plan</b>. The tuner and the placer
+      both survived, and both now save to disk — no more copying json out of the console. Kick
+      the tires: drag something in Plan and hit S, move a slider, reload, and check it stuck.
+      Then tell me what's missing before the kit lands.
     </p>
   </div>
+
+  <section class="round">
+    <div class="round-head">
+      <h2>Round 35 · the tooling gets rebuilt</h2>
+      <span class="status open">open — kick the tires</span>
+    </div>
+    <p>
+      Thirty-four rounds of accumulated exploration lived in one three-thousand-line file with
+      thirteen views, half of them dead. That was the right shape for finding the look and the
+      wrong shape for building a town. The spike is now tagged <code>spike-lookdev-v1</code> and
+      pushed, and the tooling is rebuilt beside it as a viewer aimed at the next phase: assets
+      arrive from Blender, and the tool exists to judge them.
+    </p>
+    <p>
+      The load-bearing change is that <b>the scene is data now</b>. A placements file describes
+      the layout — asset slots and background blocks — and the viewer builds from it. Nothing is
+      hardcoded, no procedural buildings remain, and assets enter the town only as authored
+      GLBs. A slot whose asset doesn't exist yet renders as a plain placeholder box, which is
+      why four of the five nav buildings are blue blocks in the stage shot: the market, stash,
+      codex, and avatar are waiting on the Blender kit, and the composition stays testable while
+      they're built. Every <code>.glb</code> in the watched directory is picked up automatically
+      and hot-reloads on re-export — no registration step, so the kit can grow without touching
+      code.
+    </p>
+    <p>
+      The three views split the work that the old views blurred together. <b>Stage</b> is the
+      composed town at the baked camera with the full night treatment, and the buildings still
+      glow on hover, because they are still the menu. <b>Gym</b> is one asset alone at real
+      scale beside a 1.8 m reference figure, orbitable, with a toggle between the canon night
+      rig and neutral light — judged in the renderer, since albedo reads darker and warmer here
+      than it does in Blender's viewport. <b>Plan</b> is the placer, now with pan and zoom
+      because the layout outgrew the old fixed frame, and with footprints taken from each
+      model's real bounds — the gate's true footprint is 27 units wide, wider than the plaza it
+      faces, and the plan says so.
+    </p>
+    <p>
+      Everything settled came across intact: the ink outlines, the sodium night rig, the fog sea
+      and wall, the drifting banks and vent plumes, the skyline streaks, the hover halo. So did
+      the disposal lifecycle from the crash fix — sixty view rebuilds leave render targets and
+      texture memory flat, verified, so the browser shouldn't die again.
+    </p>
+    <div class="shots">
+      <figure>
+        <img src="data:image/png;base64,{{R35_STAGE}}" alt="The composed town at night: the authored gate glowing teal at right, placeholder boxes standing in for the unbuilt buildings, fog encircling the plaza" />
+        <figcaption>stage — the town from data; blue boxes are slots awaiting their asset</figcaption>
+      </figure>
+      <figure>
+        <img src="data:image/png;base64,{{R35_GYM}}" alt="The gate alone on a dark disc, lit by the night rig, with a tiny human figure at its base showing the scale" />
+        <figcaption>gym — the gate alone; the speck at its base is a 1.8 m person</figcaption>
+      </figure>
+      <figure>
+        <img src="data:image/png;base64,{{R35_PLAN}}" alt="Top-down plan: pale rectangles for the asset slots, dark ones for the background blocks, the plaza skewed at the center" />
+        <figcaption>plan — pale is a slot you can drag, dark is background massing</figcaption>
+      </figure>
+    </div>
+  </section>
 
   <section class="round">
     <div class="round-head">
@@ -201,7 +257,7 @@
   <section class="round">
     <div class="round-head">
       <h2>Round 33 · the buildings become the menu</h2>
-      <span class="status open">open — hover them</span>
+      <span class="status">resolved</span>
     </div>
     <p>
       The spike's original purpose surfaces at last: this scene is a landing screen whose
@@ -220,6 +276,13 @@
         <figcaption>8 · surfaces — the gate under the pointer: the menu, glowing</figcaption>
       </figure>
     </div>
+    <p class="verdict">
+      <b>Verdict:</b> "ahh, i was hoping for more like a...outer glow. the full building glow
+      should be much more subtle, w/ an outer glow." The first attempt lit the whole building
+      from within; the rework shown here cuts that lift to a fraction and adds the inverted-hull
+      halo behind the silhouette, which is what the bloom pass turns into an outer glow. That
+      shape carried forward into the viewer unchanged.
+    </p>
   </section>
 
   <section class="round">
