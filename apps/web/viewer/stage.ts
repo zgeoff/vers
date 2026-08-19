@@ -18,7 +18,6 @@ import {
   MeshStandardNodeMaterial,
   Object3D,
   PlaneGeometry,
-  PointLight,
   Scene,
 } from 'three/webgpu';
 import { addAtmosphere, type SmokeAnchor } from './atmosphere';
@@ -37,7 +36,6 @@ import { addRays, addStreaks, makeFlickerMaterialBase } from './motion';
 import {
   BUILDING_LIT,
   COLD_INSTRUMENT,
-  GATE_TEAL,
   NIGHT_AMBIENT,
   NIGHT_FOG,
   NIGHT_GROUND,
@@ -88,12 +86,10 @@ export function buildStageScene(placements: PlacementsFile): Scene {
   addGroundPlanes(scene);
   addBlocks(scene, placements.blocks);
   addModelSlots(scene, placements.models);
-  addGateGlow(scene, placements.models);
   addWindowEmissives(scene, placements.blocks);
   addRays(scene);
   addStreaks(scene);
 
-  const gate = placements.models.find((entry) => entry.key === 'gate');
   const smokeAnchors: Array<SmokeAnchor> = [];
 
   for (const source of SMOKE_SOURCES) {
@@ -117,10 +113,7 @@ export function buildStageScene(placements: PlacementsFile): Scene {
     });
   }
 
-  addAtmosphere(scene, {
-    ...(gate ? { gate: { ry: gate.ry, x: gate.x, z: gate.z } } : {}),
-    smokeAnchors,
-  });
+  addAtmosphere(scene, { smokeAnchors });
 
   return scene;
 }
@@ -341,21 +334,6 @@ function buildPickBox(slot: ModelPlacement, material: MeshBasicNodeMaterial): Me
   pick.userData['hoverKey'] = slot.key;
 
   return pick;
-}
-
-function addGateGlow(scene: Scene, models: ReadonlyArray<ModelPlacement>) {
-  const gate = models.find((entry) => entry.key === 'gate');
-
-  if (!gate) {
-    liveRefs.gateGlow = null;
-    return;
-  }
-
-  const gateGlow = new PointLight(new Color(GATE_TEAL), 187, 50, 2);
-
-  gateGlow.position.set(gate.x, 6.25, gate.z - 8.25);
-  scene.add(gateGlow);
-  liveRefs.gateGlow = gateGlow;
 }
 
 interface EmissiveInstance {

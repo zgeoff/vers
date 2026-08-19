@@ -4,7 +4,7 @@
  * liveRefs. Saved overrides from knobs.json layer on top at boot.
  */
 import { uniform } from 'three/tsl';
-import type { AmbientLight, DirectionalLight, Fog, HemisphereLight, PointLight } from 'three/webgpu';
+import type { AmbientLight, DirectionalLight, Fog, HemisphereLight } from 'three/webgpu';
 import { makeKnobGroup, registerKnob } from './tuner';
 
 /** Live scene objects the current build registered for setter knobs; null between builds. */
@@ -13,7 +13,6 @@ export const liveRefs = {
   bloom: null as { strength: { value: number }; threshold: { value: number } } | null,
   bounce: null as HemisphereLight | null,
   fog: null as Fog | null,
-  gateGlow: null as PointLight | null,
   keyLight: null as DirectionalLight | null,
 };
 
@@ -52,7 +51,6 @@ export const inkKnobs = makeKnobGroup('ink', {
 export const atmoKnobs = makeKnobGroup('atmo', {
   bankOpacity: [0.23, 0, 0.8],
   mistOpacity: [0.26, 0, 0.8],
-  hazeOpacity: [0.56, 0, 1],
   smokeOpacity: [0.16, 0, 1],
   fogWall: [0.31, 0, 1],
   fogSea: [0.7, 0, 1],
@@ -87,18 +85,6 @@ registerKnob('light.keyLight', 1.92, 0, 6, (value) => {
     liveRefs.keyLight.intensity = value;
   }
 });
-registerKnob(
-  'light.gateGlow',
-  187,
-  0,
-  500,
-  (value) => {
-    if (liveRefs.gateGlow) {
-      liveRefs.gateGlow.intensity = value;
-    }
-  },
-  0.5,
-);
 registerKnob(
   'light.fogNear',
   65,

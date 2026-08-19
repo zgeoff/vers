@@ -14,15 +14,14 @@
     "clampHi": 1.14
   },
   "ink": {
-    "width": 1,
-    "depthThreshold": 0.029,
-    "normalThreshold": 0.65,
-    "strength": 1
+    "width": 0.3,
+    "depthThreshold": 0.005,
+    "normalThreshold": 0.5,
+    "strength": 0.7
   },
   "atmo": {
     "bankOpacity": 0.23,
     "mistOpacity": 0.26,
-    "hazeOpacity": 0.56,
     "smokeOpacity": 0.16,
     "fogWall": 0.31,
     "fogSea": 0.7,
@@ -47,7 +46,6 @@
     "ambient": 0.84,
     "bounce": 1.05,
     "keyLight": 1.92,
-    "gateGlow": 187.5,
     "fogNear": 65,
     "fogFar": 340
   },
