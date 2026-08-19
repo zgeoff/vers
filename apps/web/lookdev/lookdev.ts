@@ -674,6 +674,42 @@ const partGeometries = {
 };
 
 /**
+ * Resources that outlive a single scene build. Everything else created during a build is
+ * disposed when the next view select tears the old scene down — without this, every rebuild
+ * leaks GPU buffers until the browser's GPU process dies.
+ */
+const persistentResources = new Set<unknown>();
+
+for (const geometry of Object.values(partGeometries)) {
+  persistentResources.add(geometry);
+}
+
+/** The most recent scene a builder produced; the next view select disposes it. */
+let lastBuiltScene: Scene | null = null;
+
+function disposeBuiltScene(scene: Scene) {
+  scene.traverse((object) => {
+    const mesh = object as Mesh;
+
+    if (!mesh.isMesh) {
+      return;
+    }
+
+    if (!persistentResources.has(mesh.geometry)) {
+      mesh.geometry.dispose();
+    }
+
+    for (const material of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) {
+      if (!persistentResources.has(material)) {
+        material.dispose();
+      }
+    }
+
+    (mesh as Partial<InstancedMesh>).dispose?.();
+  });
+}
+
+/**
  * The gate's final-fidelity build per concept B1.6i. Light civic-concrete towers and emblem
  * band frame a tall aperture traced by a thin inset teal system-light frame; a dark accreted
  * service crown stacks behind and above with sparse ordered amber markers; warm-lit guard
@@ -816,6 +852,8 @@ function renderPartSet(
 
 function buildLineupScene(element: LineupElement): Scene {
   const scene = new Scene();
+
+  lastBuiltScene = scene;
 
   scene.background = new Color(SILHOUETTE_SKY);
 
@@ -1274,6 +1312,8 @@ const hoverHullModelMaterial = new MeshBasicNodeMaterial({
 
 hoverHullModelMaterial.colorNode = color(GATE_TEAL).mul(1.6);
 hoverHullModelMaterial.positionNode = positionLocal.add(normalLocal.mul(0.28));
+persistentResources.add(hoverHullPartsMaterial);
+persistentResources.add(hoverHullModelMaterial);
 
 /** Live scene objects the current view registered for setter knobs; null outside tuned views. */
 const liveRefs = {
@@ -1782,6 +1822,8 @@ function buildScene(
   apron.position.set(5.5, 0.004, -11);
   scene.add(apron);
 
+
+  lastBuiltScene = scene;
 
   const specs = massing;
   const boxSpecs = useParts ? specs.filter((spec) => !isNavRole(spec.role)) : specs;
@@ -2562,6 +2604,8 @@ const PLAN_ROLE_COLORS: Record<string, string> = {
 function buildStyleProbeScene(): Scene {
   const scene = new Scene();
 
+  lastBuiltScene = scene;
+
   scene.background = new Color('#454f78');
 
   const hemisphere = new HemisphereLight(new Color('#8d97c4'), new Color('#6e5a45'), 1.6);
@@ -2701,6 +2745,8 @@ function buildStyleProbeScene(): Scene {
 function buildPlanScene(): { groups: Array<PlanGroup>; scene: Scene } {
   const scene = new Scene();
 
+  lastBuiltScene = scene;
+
   scene.background = new Color('#181d2c');
 
   const ambient = new AmbientLight(new Color('#aab6d0'), 1.6);
@@ -2805,8 +2851,31 @@ async function main() {
   await renderer.init();
 
   // swaps in a freshly loaded gate model and refreshes the plan/footprint boxes to its true
-  // scaled bounds so the plan editor drags the real shape and the overlap checker tests reality
+  // scaled bounds so the plan editor drags the real shape and the overlap checker tests reality.
+  // Returns the replaced model's resources; dispose them once no live scene references a clone.
+  let gateModelResources: Array<{ dispose: () => void }> = [];
+
   const applyGateModel = (loaded: Group) => {
+    const stale = gateModelResources;
+
+    for (const resource of stale) {
+      persistentResources.delete(resource);
+    }
+
+    gateModelResources = [];
+    loaded.traverse((child) => {
+      const mesh = child as Mesh;
+
+      if (mesh.isMesh) {
+        for (const resource of [
+          mesh.geometry,
+          ...(Array.isArray(mesh.material) ? mesh.material : [mesh.material]),
+        ]) {
+          persistentResources.add(resource);
+          gateModelResources.push(resource as { dispose: () => void });
+        }
+      }
+    });
     gateModel = loaded;
 
     const bounds = new Box3().setFromObject(loaded);
@@ -2827,6 +2896,8 @@ async function main() {
         },
       ];
     }
+
+    return stale;
   };
 
   // the authored gate must be in hand before the first scene builds
@@ -3474,7 +3545,20 @@ async function main() {
     renderer.toneMapping = NoToneMapping;
     sceneAnimations.length = 0;
     applyHoverGlow(null);
+
+    // tear down the outgoing build's GPU resources before the new one takes over
+    const staleScene = lastBuiltScene;
+    const stalePost = postProcessing;
+
     postProcessing = view.select();
+
+    if (staleScene && staleScene !== lastBuiltScene) {
+      disposeBuiltScene(staleScene);
+    }
+
+    if (stalePost !== postProcessing) {
+      (stalePost as Partial<PostProcessing>).dispose?.();
+    }
     activeKey = view.key;
 
     // re-impose tuned values onto the freshly built scene's lights/materials/bloom
@@ -3622,13 +3706,16 @@ async function main() {
         gateModelStamp = stamp;
 
         const gltf = await new GLTFLoader().loadAsync(`${GATE_MODEL_DEV_URL}?t=${Date.now()}`);
-
-        applyGateModel(gltf.scene);
-
+        const staleResources = applyGateModel(gltf.scene);
         const active = views.find((view) => view.key === activeKey);
 
         if (active) {
           selectView(active);
+        }
+
+        // the rebuild above released the last clone referencing the old model — free it now
+        for (const resource of staleResources) {
+          resource.dispose();
         }
 
         console.log('gate model hot-swapped');
