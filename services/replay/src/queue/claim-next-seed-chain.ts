@@ -13,7 +13,9 @@ import type { ClaimedActivity } from '../types';
  * releases on commit or rollback. The lock only prevents duplicated effort — exactly-once
  * application is the verified-cursor guard's job, not this lock's.
  */
-export async function claimNextChain(trx: Transaction<DB>): Promise<ClaimedActivity | undefined> {
+export async function claimNextSeedChain(
+  trx: Transaction<DB>,
+): Promise<ClaimedActivity | undefined> {
   const row = await trx
     .selectFrom('avatars')
     .innerJoinLateral(
@@ -54,23 +56,23 @@ export async function claimNextChain(trx: Transaction<DB>): Promise<ClaimedActiv
           })
           .orderBy('activities.startChainIndex')
           .limit(1)
-          .as('frontier'),
+          .as('next_activity'),
       (join) => join.onTrue(),
     )
     .innerJoin('activityChains as chain', (join) =>
       join
         .onRef('chain.avatarId', '=', 'avatars.id')
-        .onRef('chain.scopeType', '=', 'frontier.scopeType')
-        .onRef('chain.scopeId', '=', 'frontier.scopeId'),
+        .onRef('chain.scopeType', '=', 'next_activity.scopeType')
+        .onRef('chain.scopeId', '=', 'next_activity.scopeId'),
     )
     .select([
       'avatars.id as avatarId',
       'chain.priority',
-      'frontier.id as activityId',
-      'frontier.scopeId',
-      'frontier.scopeType',
+      'next_activity.id as activityId',
+      'next_activity.scopeId',
+      'next_activity.scopeType',
     ])
-    .where('frontier.status', 'not in', ['quarantined', 'parked'])
+    .where('next_activity.status', 'not in', ['quarantined', 'parked'])
     .orderBy('chain.priority', 'desc')
     .orderBy('chain.createdAt')
     .limit(1)

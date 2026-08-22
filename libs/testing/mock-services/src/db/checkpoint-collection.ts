@@ -7,7 +7,7 @@ import * as z from 'zod';
 /**
  * A stored mock checkpoint row: the public `CheckpointSchema` plus the stream it belongs to, with
  * every field defaulted. Hashes default to random hex — the mock backend stores what callers
- * append without re-deriving the chain.
+ * append without re-deriving the stream.
  */
 const CheckpointRowSchema = CheckpointSchema.extend({
   activityID: z.string().default(() => createId()),

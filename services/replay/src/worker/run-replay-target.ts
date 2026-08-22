@@ -28,30 +28,30 @@ import { isForwardExited } from '../replay/is-forward-exited';
 import { loadReplaySegment } from '../replay/load-replay-segment';
 import { toWireReplaySegmentInput } from '../replay/to-wire-replay-segment-input';
 import type { CompareVerdict, ReplaySegment, ReplayedCheckpoint } from '../replay/types';
-import type { ReplayFrontier } from '../types';
+import type { ReplayTarget } from '../types';
 import { rejectActivity } from './reject-activity';
 import type { PendingCacheEffect, ReplayIterationOutcome, ReplayWorkerDeps } from './types';
 import { updateVerifiedAnchorFromPredecessor } from './update-verified-anchor-from-predecessor';
 
 /**
- * Adjudicates one claimed activity's replay frontier: loads its segment, catches the chain's
- * verified anchor up to a forward-exited predecessor it missed, re-derives the activity's seed on
- * its first verified batch, then dispatches by `simVersion` — the in-process incremental cache for
- * this deploy's own engine, the cross-version provider registry for everything else — and turns the
+ * Adjudicates one claimed activity's replay target: loads its segment, catches the chain's verified
+ * anchor up to a forward-exited predecessor it missed, re-derives the activity's seed on its first
+ * verified batch, then dispatches by `simVersion` — the in-process incremental cache for this
+ * deploy's own engine, the cross-version provider registry for everything else — and turns the
  * resulting verdict into a cursor-only apply, a confirmed rejection, or a park. By claim time the
  * activity's predecessor is settled or rejected, so the descriptor, reachability, and build checks
- * below read only fully-settled state and are the legality boundary — the claim itself never decides
- * legality, only sequences when each activity's checks run. Runs inside the caller's transaction,
- * alongside the chain claim it composes with.
+ * below read only fully-settled state and are the legality boundary — the claim itself never
+ * decides legality, only sequences when each activity's checks run. Runs inside the caller's
+ * transaction, alongside the seed-chain claim it composes with.
  */
-export async function runFrontier(
+export async function runReplayTarget(
   trx: Transaction<DB>,
   deps: Readonly<ReplayWorkerDeps>,
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- a mutable cache handle whose remove/get/set are its whole point; no readonly form is useful
   cache: ReplayCache,
-  frontier: Readonly<ReplayFrontier>,
+  target: Readonly<ReplayTarget>,
 ): Promise<ReplayIterationOutcome> {
-  const loaded = await loadReplaySegment(trx, frontier);
+  const loaded = await loadReplaySegment(trx, target);
 
   if (loaded === undefined) {
     return { kind: 'idle' };
@@ -98,7 +98,7 @@ export async function runFrontier(
     // banked a now-rejected ancestor's optimistic xp stamped a build the settled total never
     // backs.
     //
-    // Gated on this activity's own `settledXP` reading zero, not on the frontier's `verifiedHead`:
+    // Gated on this activity's own `settledXP` reading zero, not on the target's `verifiedHead`:
     // a stale duplicate redelivery can still carry a stale `verifiedHead` of 0, but its
     // `settledXP` already reflects the earlier apply, so the check runs at most once, on the
     // genuine first pass.
@@ -148,7 +148,7 @@ export async function runFrontier(
       );
     }
 
-    // Reachability is validated once at a run's first verified pass, against the frontier its
+    // Reachability is validated once at a run's first verified pass, against the target its
     // predecessors have by then established; a later pass over the same run never re-checks.
     if (
       segment.activity.scopeType === 'world_map_node' &&
@@ -170,10 +170,10 @@ export async function runFrontier(
   }
 
   if (segment.activity.simVersion === deps.simVersion) {
-    return runFrontierInProcess(trx, deps, cache, segment, document);
+    return runReplayTargetInProcess(trx, deps, cache, segment, document);
   }
 
-  return runFrontierCrossVersion(trx, deps, cache, segment, document);
+  return runReplayTargetCrossVersion(trx, deps, cache, segment, document);
 }
 
 interface NextSeedCheckpoint {
@@ -207,7 +207,7 @@ function isCacheCurrent(
   return entry.emittedCount === segment.verifiedHead && entry.lastHash === segment.prevHash;
 }
 
-async function runFrontierInProcess(
+async function runReplayTargetInProcess(
   trx: Transaction<DB>,
   deps: Readonly<ReplayWorkerDeps>,
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- a mutable cache handle whose remove/get/set are its whole point; no readonly form is useful
@@ -262,7 +262,7 @@ async function runFrontierInProcess(
   );
 
   if (confirmAdvance.haltedOnDurationCap) {
-    return parkFrontier(trx, deps, cache, segment, 'durationCapExceeded');
+    return parkReplayTarget(trx, deps, cache, segment, 'durationCapExceeded');
   }
 
   const confirmReplayed = confirmAdvance.checkpoints.slice(segment.verifiedHead);
@@ -277,7 +277,7 @@ async function runFrontierInProcess(
   return rejectSegment(trx, deps, cache, segment, confirmVerdict, 'confirmed-on-fresh-replay');
 }
 
-async function runFrontierCrossVersion(
+async function runReplayTargetCrossVersion(
   trx: Transaction<DB>,
   deps: Readonly<ReplayWorkerDeps>,
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- a mutable cache handle whose remove/get/set are its whole point; no readonly form is useful
@@ -292,7 +292,7 @@ async function runFrontierCrossVersion(
   const outcome = await runReplaySegment(runDeps, job);
 
   if (outcome.kind !== 'replayed') {
-    return parkFrontier(trx, deps, cache, segment, outcome.kind);
+    return parkReplayTarget(trx, deps, cache, segment, outcome.kind);
   }
 
   const compareContext = buildCompareContext(segment);
@@ -312,11 +312,11 @@ async function runFrontierCrossVersion(
   const confirmOutcome = await runReplaySegment(runDeps, job);
 
   if (confirmOutcome.kind !== 'replayed') {
-    return parkFrontier(trx, deps, cache, segment, confirmOutcome.kind);
+    return parkReplayTarget(trx, deps, cache, segment, confirmOutcome.kind);
   }
 
   if (confirmOutcome.output.haltedOnDurationCap === true) {
-    return parkFrontier(trx, deps, cache, segment, 'durationCapExceeded');
+    return parkReplayTarget(trx, deps, cache, segment, 'durationCapExceeded');
   }
 
   const confirmReplayed = confirmOutcome.output.checkpoints.slice(segment.verifiedHead);
@@ -378,8 +378,8 @@ async function applyMatch(
   const advanceChain = forwardExited && lastStored.version === segment.activity.appendedHead;
 
   // A first clear is a verified completed terminal on a map node; a fail, stop, or cap forward-
-  // exits the chain without clearing it, and a non-`world_map_node` scope has no completion
-  // frontier.
+  // exits the seed chain without clearing it, and a non-`world_map_node` scope has no completion
+  // target.
   const clearedNodeID =
     lastReplayed.type === 'completed' && segment.activity.scopeType === 'world_map_node'
       ? segment.activity.scopeID
@@ -539,7 +539,7 @@ async function rejectBuildMismatch(
 
 /**
  * Refuses a `world_map_node` activity whose scope is not connected to the avatar's verified
- * first-clear frontier. Rejecting through the same single-chain path voids this activity's own
+ * first-clear target. Rejecting through the same single-chain path voids this activity's own
  * successors, exactly as the build-mismatch rejection does.
  */
 async function rejectUnreachableNode(
@@ -596,7 +596,7 @@ async function countFailedAttempt(
   return { kind: 'unconfirmedDivergence' };
 }
 
-async function parkFrontier(
+async function parkReplayTarget(
   trx: Transaction<DB>,
   deps: Readonly<ReplayWorkerDeps>,
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- a mutable cache handle whose remove/get/set are its whole point; no readonly form is useful

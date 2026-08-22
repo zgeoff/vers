@@ -11,14 +11,14 @@ import { createMockCheckpointBatchEntry } from '../test-utils/factories/create-m
 import type { CheckpointActivityEmittedEvent } from './checkpoint-activity-machine';
 import { checkpointActivityMachine } from './checkpoint-activity-machine';
 import { PROGRESS_FLUSH_INTERVAL_MS, RETRY_BACKOFF_CAP_MS } from './constants';
-import type { IngestStartRowOutcome } from './ingest-start-row';
+import type { IngestActivityStartOutcome } from './ingest-activity-start';
 import type { ActivityServiceClient } from './types';
 import { writeQueuedCheckpoint } from './write-queued-checkpoint';
 
 function setupTest(
   config: Readonly<{
     activityID?: string;
-    ingestRoot?: (activityID: string) => Promise<IngestStartRowOutcome>;
+    ingestActivityStart?: (activityID: string) => Promise<IngestActivityStartOutcome>;
     latestQueuedVersion?: number;
     onAcked?: (activityID: string, appendedHead: number) => void;
     signal?: AbortSignal;
@@ -40,7 +40,7 @@ function setupTest(
       activityID: config.activityID ?? 'activity-machine-test',
       client,
       expectedHead: 0,
-      ingestRoot: config.ingestRoot,
+      ingestActivityStart: config.ingestActivityStart,
       latestQueuedVersion: config.latestQueuedVersion,
       onAcked,
       onCapped: undefined,
@@ -450,16 +450,18 @@ test('it resets the backoff attempt counter once a retried batch lands, so a lat
   expect(ctx.actor.getSnapshot().context.retryAttempt).toBe(0);
 });
 
-test('it ingests a pending root and re-flushes once on NOT_FOUND, succeeding without discarding the queue', async () => {
+test('it ingests a pending activityStart and re-flushes once on NOT_FOUND, succeeding without discarding the queue', async () => {
   const track = mock<() => void>();
 
-  const ingestRoot = mock<(activityID: string) => Promise<IngestStartRowOutcome>>(async () => {
-    await Promise.resolve();
+  const ingestActivityStart = mock<(activityID: string) => Promise<IngestActivityStartOutcome>>(
+    async () => {
+      await Promise.resolve();
 
-    return 'ingested';
-  });
+      return 'ingested';
+    },
+  );
 
-  const ctx = setupTest({ activityID: 'not-found-ingested-activity', ingestRoot });
+  const ctx = setupTest({ activityID: 'not-found-ingested-activity', ingestActivityStart });
 
   server.use(
     mockActivityService.trackActivityProgress.handler((opts) => {
@@ -485,20 +487,22 @@ test('it ingests a pending root and re-flushes once on NOT_FOUND, succeeding wit
   });
 
   expect(track).toHaveBeenCalledTimes(2);
-  expect(ingestRoot).toHaveBeenCalledExactlyOnceWith('not-found-ingested-activity');
+  expect(ingestActivityStart).toHaveBeenCalledExactlyOnceWith('not-found-ingested-activity');
   expect(ctx.onAcked).toHaveBeenCalledExactlyOnceWith('not-found-ingested-activity', 1);
 });
 
-test('it re-flushes on an absent ingest, delivering against a root a concurrent drain minted', async () => {
+test('it re-flushes on an absent ingest, delivering against an activity start a concurrent drain minted', async () => {
   const track = mock<() => void>();
 
-  const ingestRoot = mock<(activityID: string) => Promise<IngestStartRowOutcome>>(async () => {
-    await Promise.resolve();
+  const ingestActivityStart = mock<(activityID: string) => Promise<IngestActivityStartOutcome>>(
+    async () => {
+      await Promise.resolve();
 
-    return 'absent';
-  });
+      return 'absent';
+    },
+  );
 
-  const ctx = setupTest({ activityID: 'not-found-absent-activity', ingestRoot });
+  const ctx = setupTest({ activityID: 'not-found-absent-activity', ingestActivityStart });
 
   server.use(
     mockActivityService.trackActivityProgress.handler((opts) => {
@@ -524,20 +528,22 @@ test('it re-flushes on an absent ingest, delivering against a root a concurrent 
   });
 
   expect(track).toHaveBeenCalledTimes(2);
-  expect(ingestRoot).toHaveBeenCalledExactlyOnceWith('not-found-absent-activity');
+  expect(ingestActivityStart).toHaveBeenCalledExactlyOnceWith('not-found-absent-activity');
   expect(ctx.onAcked).toHaveBeenCalledExactlyOnceWith('not-found-absent-activity', 1);
 });
 
 test('it discards the queue after a second NOT_FOUND on the post-ingest retry, ingesting only once', async () => {
   const track = mock<() => void>();
 
-  const ingestRoot = mock<(activityID: string) => Promise<IngestStartRowOutcome>>(async () => {
-    await Promise.resolve();
+  const ingestActivityStart = mock<(activityID: string) => Promise<IngestActivityStartOutcome>>(
+    async () => {
+      await Promise.resolve();
 
-    return 'ingested';
-  });
+      return 'ingested';
+    },
+  );
 
-  const ctx = setupTest({ activityID: 'not-found-twice-activity', ingestRoot });
+  const ctx = setupTest({ activityID: 'not-found-twice-activity', ingestActivityStart });
 
   server.use(
     mockActivityService.trackActivityProgress.handler((opts) => {
@@ -558,19 +564,21 @@ test('it discards the queue after a second NOT_FOUND on the post-ingest retry, i
   });
 
   expect(track).toHaveBeenCalledTimes(2);
-  expect(ingestRoot).toHaveBeenCalledExactlyOnceWith('not-found-twice-activity');
+  expect(ingestActivityStart).toHaveBeenCalledExactlyOnceWith('not-found-twice-activity');
 });
 
-test('it holds the queue and retries on NOT_FOUND when ingestRoot defers', async () => {
+test('it holds the queue and retries on NOT_FOUND when ingestActivityStart defers', async () => {
   const track = mock<() => void>();
 
-  const ingestRoot = mock<(activityID: string) => Promise<IngestStartRowOutcome>>(async () => {
-    await Promise.resolve();
+  const ingestActivityStart = mock<(activityID: string) => Promise<IngestActivityStartOutcome>>(
+    async () => {
+      await Promise.resolve();
 
-    return 'deferred';
-  });
+      return 'deferred';
+    },
+  );
 
-  const ctx = setupTest({ activityID: 'not-found-deferred-activity', ingestRoot });
+  const ctx = setupTest({ activityID: 'not-found-deferred-activity', ingestActivityStart });
 
   server.use(
     mockActivityService.trackActivityProgress.handler((opts) => {
@@ -594,14 +602,16 @@ test('it holds the queue and retries on NOT_FOUND when ingestRoot defers', async
   expect(ctx.emitted).toStrictEqual([{ activityID: 'not-found-deferred-activity', type: 'held' }]);
 });
 
-test('it discards the queue on NOT_FOUND when ingestRoot reports the root rejected', async () => {
-  const ingestRoot = mock<(activityID: string) => Promise<IngestStartRowOutcome>>(async () => {
-    await Promise.resolve();
+test('it discards the queue on NOT_FOUND when ingestActivityStart reports the activityStart rejected', async () => {
+  const ingestActivityStart = mock<(activityID: string) => Promise<IngestActivityStartOutcome>>(
+    async () => {
+      await Promise.resolve();
 
-    return 'rejected';
-  });
+      return 'rejected';
+    },
+  );
 
-  const ctx = setupTest({ activityID: 'not-found-rejected-activity', ingestRoot });
+  const ctx = setupTest({ activityID: 'not-found-rejected-activity', ingestActivityStart });
 
   server.use(
     mockActivityService.trackActivityProgress.handler((opts) => {
@@ -620,10 +630,10 @@ test('it discards the queue on NOT_FOUND when ingestRoot reports the root reject
     expect(ctx.actor.getSnapshot().matches('evicted')).toBeTrue();
   });
 
-  expect(ingestRoot).toHaveBeenCalledExactlyOnceWith('not-found-rejected-activity');
+  expect(ingestActivityStart).toHaveBeenCalledExactlyOnceWith('not-found-rejected-activity');
 });
 
-test('it discards the queue on NOT_FOUND with no ingestRoot hook configured', async () => {
+test('it discards the queue on NOT_FOUND with no ingestActivityStart hook configured', async () => {
   const track = mock<() => void>();
   const ctx = setupTest({ activityID: 'not-found-no-hook-activity' });
 

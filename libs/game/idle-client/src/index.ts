@@ -43,7 +43,7 @@ export { readOfflineClearedNodeIDs } from './submission/read-offline-cleared-nod
 export { readPendingStartIntent } from './submission/read-pending-start-intent';
 export { readStartStamps } from './submission/read-start-stamps';
 export { writeQueuedCheckpoint } from './submission/write-queued-checkpoint';
-export { writeStartRow } from './submission/write-start-row';
+export { writeActivityStart } from './submission/write-activity-start';
 
 export type {
   ActivitySubmissionContext,

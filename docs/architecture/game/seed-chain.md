@@ -88,9 +88,9 @@ has reached, not the reveal's original anchor.
 
 ### Ingesting a held start
 
-Every synthesized start row is written to the durable `pending-roots` IndexedDB store, keyed by its
-activity id, before it installs onto the live simulation. A crash between mint and install still
-leaves a recoverable start.
+Every synthesized start row is written to the durable `pending-activity-starts` IndexedDB store,
+keyed by its activity id, before it installs onto the live simulation. A crash between mint and
+install still leaves a recoverable start.
 
 `advanceActivity` ingests such a start when the caller reconnects with one still unsubmitted. The
 client submits the `seed`, versions, `startChainIndex`, build snapshot, and start hash it computed
@@ -105,9 +105,9 @@ The client ingests each pending start into the server on first server contact. A
 to a checkpoint flush triggers a one-shot ingest-and-retry of that same batch rather than an
 immediate discard. A start orphaned by a worker reload — no live simulation left to drive its flush
 — ingests on reconnect instead, ahead of the held-checkpoint flush it would otherwise `NOT_FOUND`
-against. Either path removes the durable `pending-roots` entry once the server has answered
-definitively. A server-refused start is dropped and its queued checkpoints discarded, the same as
-any other stream the server refuses to recognize.
+against. Either path removes the durable `pending-activity-starts` entry once the server has
+answered definitively. A server-refused start is dropped and its queued checkpoints discarded, the
+same as any other stream the server refuses to recognize.
 
 ## Advancing the chain
 

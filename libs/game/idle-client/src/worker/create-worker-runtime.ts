@@ -9,7 +9,7 @@ import type { ActorRefFromLogic } from 'xstate';
 import { createActor } from 'xstate';
 import { createActivityServiceClient } from '../submission/create-activity-service-client';
 import { createCheckpointSubmitter } from '../submission/create-checkpoint-submitter';
-import { ingestStartRow } from '../submission/ingest-start-row';
+import { ingestActivityStart } from '../submission/ingest-activity-start';
 import { readFailureActionCache } from '../submission/read-failure-action-cache';
 import type { ActivityServiceClient } from '../submission/types';
 import { WORKER_TO_CLIENT_CHANNEL } from '../transport/constants';
@@ -215,7 +215,7 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
   const submitter = createCheckpointSubmitter({
     actor: lifecycleActor.getSnapshot().context.submitterRef,
     client,
-    ingestRoot: (activityID) => ingestStartRow(client, activityID),
+    ingestActivityStart: (activityID) => ingestActivityStart(client, activityID),
     onAcked: () => {
       getLifecycle().send({ type: 'SUBMITTER_ACKED' });
     },
@@ -292,7 +292,8 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
     });
   };
 
-  // a fixed timestep keeps updates consistent: the worker isn't tied to UI updates and has no requestAnimationFrame
+  // a fixed timestep keeps updates consistent: the worker isn't tied to UI updates and has no
+  // requestAnimationFrame
   const runTickLoop = async () => {
     if (stopped) {
       return;

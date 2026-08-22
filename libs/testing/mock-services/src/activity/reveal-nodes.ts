@@ -83,7 +83,7 @@ export const revealNodes = os.revealNodes.handler(async (opts) => {
       contentVersion: db.MOCK_CURRENT_CONTENT_VERSION,
       encounterNode,
       genesisSeed,
-      head: { chainIndex: 0, nextSeed: genesisSeed },
+      anchor: { chainIndex: 0, nextSeed: genesisSeed },
       nodeID,
     };
   });

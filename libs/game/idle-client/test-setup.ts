@@ -10,7 +10,7 @@ import {
   CHECKPOINT_QUEUE_STORE_NAME,
   CONTENT_DOCUMENT_STORE_NAME,
   NODE_SEEDS_STORE_NAME,
-  PENDING_ROOTS_STORE_NAME,
+  PENDING_ACTIVITY_STARTS_STORE_NAME,
   PREFERENCES_STORE_NAME,
 } from './src/submission/constants';
 import { resolveCheckpointQueueDB } from './src/submission/resolve-checkpoint-queue-db';
@@ -56,5 +56,5 @@ afterEach(async () => {
   await queueDB.clear(PREFERENCES_STORE_NAME);
   await queueDB.clear(CONTENT_DOCUMENT_STORE_NAME);
   await queueDB.clear(NODE_SEEDS_STORE_NAME);
-  await queueDB.clear(PENDING_ROOTS_STORE_NAME);
+  await queueDB.clear(PENDING_ACTIVITY_STARTS_STORE_NAME);
 });

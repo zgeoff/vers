@@ -3,8 +3,8 @@ import { waitFor } from '@testing-library/react';
 import { createMockActivityData } from '@vers/contract-activity/test-utils';
 import {
   setLastCompletedActivityID,
+  writeActivityStart,
   writeQueuedCheckpoint,
-  writeStartRow,
 } from '@vers/idle-client';
 import { ActivityCheckpointType } from '@vers/idle-core';
 import { createMockCheckpointBatchEntry } from '../../test-utils/create-mock-checkpoint-batch-entry';
@@ -15,7 +15,7 @@ test('it includes a node whose pending root queued a completed terminal', async 
   const avatarID = 'avatar-offline-cleared-completed';
   const row = createMockActivityData({ avatarID, scopeID: '2_0' });
 
-  await writeStartRow(row);
+  await writeActivityStart(row);
 
   await writeQueuedCheckpoint(
     row.id,
@@ -33,7 +33,7 @@ test('it excludes a node whose pending root queued a failed terminal', async () 
   const avatarID = 'avatar-offline-cleared-failed';
   const row = createMockActivityData({ avatarID, scopeID: '3_0' });
 
-  await writeStartRow(row);
+  await writeActivityStart(row);
 
   await writeQueuedCheckpoint(
     row.id,
@@ -57,7 +57,7 @@ test('it re-derives once a fresh offline clear reports through lastCompletedActi
 
   const row = createMockActivityData({ avatarID, scopeID: '4_0' });
 
-  await writeStartRow(row);
+  await writeActivityStart(row);
 
   await writeQueuedCheckpoint(
     row.id,
@@ -75,7 +75,7 @@ test('it reads empty across an avatar switch rather than inheriting the outgoing
   const outgoing = 'avatar-switch-outgoing';
   const row = createMockActivityData({ avatarID: outgoing, scopeID: '5_0' });
 
-  await writeStartRow(row);
+  await writeActivityStart(row);
 
   await writeQueuedCheckpoint(
     row.id,

@@ -11,7 +11,7 @@ import { ContentDocumentSchema } from './content-document-schema';
 import { EncounterNodeSchema } from './encounter-node-schema';
 import { MAX_CATCH_UP_BATCH_CHECKPOINTS } from './max-catch-up-batch-checkpoints';
 import { MAX_REVEAL_BATCH_NODES } from './max-reveal-batch-nodes';
-import { OfflineRootSubmissionSchema } from './offline-root-submission-schema';
+import { OfflineActivityStartSubmissionSchema } from './offline-activity-start-submission-schema';
 import { REVEAL_VIEWPORT_CELL_CAP } from './reveal-viewport-cell-cap';
 import { RewardItemAffixSchema } from './reward-item-affix-schema';
 import { ScopeIdentifierSchema } from './scope-identifier-schema';
@@ -85,26 +85,27 @@ const ViewportSchema = z.object({
 const RevealedNodeSchema = z.object({ id: z.string(), poolID: z.string().optional() });
 
 /**
- * A chain's current append position: `nextSeed` is the seed a start rooting here derives its
- * first checkpoint from, and `chainIndex` is that checkpoint's position in the chain. Equal to
- * `{ genesisSeed, 0 }` for a node never yet played; advances as the avatar plays the node's chain
- * further, so a revisited node's start roots at where play actually left off rather than genesis.
+ * A seed chain's current append position: `nextSeed` is the seed a start anchoring here derives
+ * its first checkpoint from, and `chainIndex` is that checkpoint's position in the seed chain.
+ * Equal to `{ genesisSeed, 0 }` for a node never yet played; advances as the avatar plays the
+ * node's seed chain further, so a revisited node's start anchors where play actually left off
+ * rather than genesis.
  */
-const NodeGenesisHeadSchema = z.object({ chainIndex: z.int().min(0), nextSeed: z.string() });
+const NodeGenesisAnchorSchema = z.object({ chainIndex: z.int().min(0), nextSeed: z.string() });
 
 /**
  * One node's freshly minted or previously minted genesis seed, alongside its derived encounter and
  * the content version it was derived against — `revealNodes`'s per-node output. `genesisSeed` is
- * the chain's origin seed, kept for reference; `head` is the position a start at this scope must
- * actually root against. `encounterNode` and `contentVersion` are the remaining inputs
+ * the seed chain's origin seed, kept for reference; `anchor` is the position a start at this scope
+ * must actually anchor against. `encounterNode` and `contentVersion` are the remaining inputs
  * `buildStartHash` needs to synthesize that start's hash offline, since the encounter is derived
  * against a specific content version.
  */
 const NodeGenesisSchema = z.object({
+  anchor: NodeGenesisAnchorSchema,
   contentVersion: z.string(),
   encounterNode: EncounterNodeSchema,
   genesisSeed: z.string(),
-  head: NodeGenesisHeadSchema,
   nodeID: z.string(),
 });
 
@@ -141,21 +142,21 @@ export const activityContract = {
         .object({
           activityID: z.string(),
 
-          // Empty when `root` carries the whole request: a root-only ingest mints the row and
-          // appends nothing.
+          /**
+           * A client-minted activity start the server has never seen — offline-first ingest.
+           * Present only when `activityID` names a row this request itself mints, under the same
+           * gates `startActivity` runs, before the continuation loop appends onto it. Absent for
+           * the ordinary case: `activityID` names a row the server already minted.
+           */
+          activityStart: OfflineActivityStartSubmissionSchema.optional(),
+
+          // Empty when the activity start carries the whole request: an ingest with no
+          // continuations mints the row and appends nothing.
           continuations: z
             .array(CatchUpContinuationSchema)
             .max(MAX_CATCH_UP_BATCH_CHECKPOINTS)
             .readonly(),
           expectedHead: z.int().min(0),
-
-          /**
-           * A client-minted root the server has never seen — offline-first ingest. Present only
-           * when `activityID` names a row this request itself mints, under the same gates
-           * `startActivity` runs, before the continuation loop appends onto it. Absent for the
-           * ordinary case: `activityID` names a row the server already minted.
-           */
-          root: OfflineRootSubmissionSchema.optional(),
         })
 
         // The per-array caps alone still admit continuations × checkpoints work; the aggregate
@@ -171,10 +172,10 @@ export const activityContract = {
         )
 
         // Every request mints or appends something: an empty `continuations` is legal only when
-        // `root` carries the whole request, never a root-less no-op that would return the head
-        // unchanged.
-        .refine((input) => input.root !== undefined || input.continuations.length > 0, {
-          error: 'a request with no continuations must carry a root to mint',
+        // the activity start carries the whole request, never a no-op carrying neither, which
+        // would return the head unchanged.
+        .refine((input) => input.activityStart !== undefined || input.continuations.length > 0, {
+          error: 'a request with no continuations must carry an activity start to mint',
         }),
     )
     .output(z.object({ activity: ActivityDataSchema, appendedHead: z.int() }))
@@ -192,7 +193,7 @@ export const activityContract = {
         },
         AVATAR_NOT_ACTIVE: {
           data: AvatarNotActiveDataSchema,
-          message: "A root mint's avatar is not the account's active one",
+          message: "An activity start mint's avatar is not the account's active one",
           status: 409,
         },
         CHAIN_QUARANTINED: {
@@ -211,12 +212,12 @@ export const activityContract = {
         },
         NODE_NOT_REVEALED: {
           data: z.object({}),
-          message: "A root mint's scope has no revealed chain to root against",
+          message: "An activity start's scope has no revealed chain to anchor against",
           status: 409,
         },
         NODE_UNKNOWN: {
           data: z.object({}),
-          message: "A root mint's scope node is not registered on the world map",
+          message: "An activity start mint's scope node is not registered on the world map",
           status: 404,
         },
         NOT_FOUND: { data: z.object({}), message: 'No activity with that id' },
@@ -227,12 +228,12 @@ export const activityContract = {
         },
         SIM_VERSION_EXPIRED: {
           data: SimVersionProblemDataSchema,
-          message: "A root mint's stamped sim version is past retention",
+          message: "An activity start mint's stamped sim version is past retention",
           status: 410,
         },
         SIM_VERSION_UNKNOWN: {
           data: SimVersionProblemDataSchema,
-          message: "A root mint's stamped sim version is not registered",
+          message: "An activity start mint's stamped sim version is not registered",
           status: 409,
         },
       }),
@@ -377,7 +378,7 @@ export const activityContract = {
 
   /**
    * Mints (or re-affirms) the genesis chain row for each given world-map node, on the avatar's
-   * behalf, so a later `startActivity` at the same scope has a chain to root against, and derives
+   * behalf, so a later `startActivity` at the same scope has a chain to anchor against, and derives
    * that node's encounter alongside the crypto stamps a start needs — every input an offline-open
    * start synthesizes a valid activity start from without the server. Idempotent per node: a
    * repeat reveal self-assigns the existing row's `genesisSeed` rather than rolling a new one, so

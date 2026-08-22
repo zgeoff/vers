@@ -53,6 +53,6 @@ export async function readNodeSeed(
     contentVersion: result.data.contentVersion,
     encounterNode: result.data.encounterNode,
     genesisSeed: result.data.genesisSeed,
-    head: result.data.head,
+    anchor: result.data.anchor,
   };
 }

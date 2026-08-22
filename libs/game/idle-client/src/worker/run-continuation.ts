@@ -15,13 +15,13 @@ import type { FlowSignals, WorkerContext } from './types';
 
 /**
  * Starts the next continuation after a terminal checkpoint: a fresh server row for the same
- * scope, continuing the RNG chain the terminal checkpoint's `nextSeed` anchors, registered from
+ * scope, continuing the seed chain the terminal checkpoint's `nextSeed` anchors, registered from
  * a zero cursor. Restarting the same row is impossible — the server closed it to appends on the
  * terminal checkpoint.
  *
  * Duplicate deliveries dedupe on the start key, so a `CONFLICT` is a genuinely different claim
  * and is handed to a full resync — adopting a conflicting row from a zero cursor would fork the
- * checkpoint chain. The same-row case (a terminal append still unacknowledged) and a transport
+ * checkpoint stream. The same-row case (a terminal append still unacknowledged) and a transport
  * failure both park a durable start intent for a later resync's drain, surviving a worker reload.
  * Any other rejection parks nothing — the service answered, so the failure is the activity's, not
  * the connection's. Two of those rejections also notify the tab, which would otherwise be left on

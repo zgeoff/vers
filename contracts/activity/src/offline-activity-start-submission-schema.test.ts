@@ -1,8 +1,8 @@
 import { expect, test } from 'bun:test';
-import { OfflineRootSubmissionSchema } from './offline-root-submission-schema';
+import { OfflineActivityStartSubmissionSchema } from './offline-activity-start-submission-schema';
 
-test('it accepts a well-formed root submission', () => {
-  const result = OfflineRootSubmissionSchema.safeParse({
+test('it accepts a well-formed activity-start submission', () => {
+  const result = OfflineActivityStartSubmissionSchema.safeParse({
     avatarID: 'avatar_1',
     buildSnapshot: { level: 1, xp: 0 },
     contentVersion: '2',
@@ -14,14 +14,14 @@ test('it accepts a well-formed root submission', () => {
     simVersion: 'engine_hash',
     startChainIndex: 0,
     startHash: 'start_hash',
-    startKey: 'root_act_1',
+    startKey: 'start_act_1',
   });
 
   expect(result.success).toBeTrue();
 });
 
-test('it rejects a root submission missing its startKey', () => {
-  const result = OfflineRootSubmissionSchema.safeParse({
+test('it rejects an activity-start submission missing its startKey', () => {
+  const result = OfflineActivityStartSubmissionSchema.safeParse({
     avatarID: 'avatar_1',
     buildSnapshot: { level: 1, xp: 0 },
     contentVersion: '2',
@@ -40,7 +40,7 @@ test('it rejects a root submission missing its startKey', () => {
 });
 
 test('it rejects a nonnumeric contentVersion', () => {
-  const result = OfflineRootSubmissionSchema.safeParse({
+  const result = OfflineActivityStartSubmissionSchema.safeParse({
     avatarID: 'avatar_1',
     buildSnapshot: { level: 1, xp: 0 },
     contentVersion: '0.0.0-dev',
@@ -52,7 +52,7 @@ test('it rejects a nonnumeric contentVersion', () => {
     simVersion: 'engine_hash',
     startChainIndex: 0,
     startHash: 'start_hash',
-    startKey: 'root_act_1',
+    startKey: 'start_act_1',
   });
 
   expect(result.success).toBeFalse();

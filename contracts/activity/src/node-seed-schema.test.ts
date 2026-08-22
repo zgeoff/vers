@@ -7,14 +7,14 @@ test('it accepts a well-formed node seed', () => {
     contentVersion: '1',
     encounterNode: { difficulty: 3 },
     genesisSeed: 'seed-a',
-    head: { chainIndex: 0, nextSeed: 'seed-a' },
+    anchor: { chainIndex: 0, nextSeed: 'seed-a' },
     nodeID: '1_0',
   });
 
   expect(result.success).toBeTrue();
 });
 
-test('it rejects a row missing head', () => {
+test('it rejects a row missing anchor', () => {
   const result = NodeSeedSchema.safeParse({
     avatarID: 'avatar-a',
     contentVersion: '1',
@@ -24,7 +24,7 @@ test('it rejects a row missing head', () => {
   });
 
   expect(result.success).toBeFalse();
-  expect(result.error?.issues).toPartiallyContain(expect.objectContaining({ path: ['head'] }));
+  expect(result.error?.issues).toPartiallyContain(expect.objectContaining({ path: ['anchor'] }));
 });
 
 test('it rejects a row whose encounterNode fails its own schema', () => {
@@ -33,7 +33,7 @@ test('it rejects a row whose encounterNode fails its own schema', () => {
     contentVersion: '1',
     encounterNode: { difficulty: 'not-a-number' },
     genesisSeed: 'seed-a',
-    head: { chainIndex: 0, nextSeed: 'seed-a' },
+    anchor: { chainIndex: 0, nextSeed: 'seed-a' },
     nodeID: '1_0',
   });
 

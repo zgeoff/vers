@@ -48,7 +48,7 @@ test('it mints a genesis chain row for a newly revealed node', async () => {
       contentVersion: '2',
       encounterNode: expect.toBeObject(),
       genesisSeed: expect.toBeString(),
-      head: { chainIndex: 0, nextSeed: expect.toBeString() },
+      anchor: { chainIndex: 0, nextSeed: expect.toBeString() },
       nodeID: '0_0',
     },
   ]);
@@ -68,10 +68,10 @@ test('it mints a genesis chain row for a newly revealed node', async () => {
   expect(chain.genesisSeed).toBe(entry.genesisSeed);
   expect(chain.appendedNextSeed).toBe(entry.genesisSeed);
   expect(chain.verifiedNextSeed).toBe(entry.genesisSeed);
-  expect(entry.head).toStrictEqual({ chainIndex: 0, nextSeed: entry.genesisSeed });
+  expect(entry.anchor).toStrictEqual({ chainIndex: 0, nextSeed: entry.genesisSeed });
 });
 
-test("it returns a revisited node's advanced head rather than its genesis", async () => {
+test("it returns a revisited node's advanced anchor rather than its genesis", async () => {
   await using ctx = await setupTest();
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
@@ -100,7 +100,7 @@ test("it returns a revisited node's advanced head rather than its genesis", asyn
   invariant(revisitedEntry, 'revealNodes must return one entry per input node');
 
   expect(revisitedEntry.genesisSeed).toBe(genesisEntry.genesisSeed);
-  expect(revisitedEntry.head).toStrictEqual({ chainIndex: 3, nextSeed: 'advanced_seed' });
+  expect(revisitedEntry.anchor).toStrictEqual({ chainIndex: 3, nextSeed: 'advanced_seed' });
 });
 
 test('it returns one entry per input node', async () => {

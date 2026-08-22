@@ -11,15 +11,15 @@ import {
   PROGRESS_FLUSH_INTERVAL_MS,
   RETRY_BACKOFF_CAP_MS,
 } from './constants';
-import type { IngestStartRowOutcome } from './ingest-start-row';
+import type { IngestActivityStartOutcome } from './ingest-activity-start';
 import { readQueuedCheckpoints } from './read-queued-checkpoints';
 import type { ActivityServiceClient, ActivitySubmissionContext } from './types';
-import { writeNodeHead } from './write-node-head';
+import { writeNodeAnchor } from './write-node-anchor';
 import { writeQueuedCheckpoint } from './write-queued-checkpoint';
 
 export interface CheckpointSubmitter {
   /**
-   * Seeds an activity's chain-link cursor from its head row; the call that first registers the
+   * Seeds an activity's checkpoint-link cursor from its head row; the call that first registers the
    * activity also resends whatever the durable queue still holds pending for it. Idempotent per
    * activity — every call this worker lifetime shares one seeding, so concurrent registrations
    * from separate tabs resolve together and none clobbers an in-progress cursor or piles on
@@ -87,11 +87,11 @@ interface CreateCheckpointSubmitterOptions {
   readonly client: Pick<ActivityServiceClient, 'trackActivityProgress'>;
 
   /**
-   * Ingests an activity's still-pending client-minted root into the server, tried once against a
-   * `NOT_FOUND` checkpoint-flush answer before the stream discards its queue — undefined for a
-   * caller with no offline-first roots to self-heal from.
+   * Ingests an activity's still-pending client-minted activity start into the server, tried once
+   * against a `NOT_FOUND` checkpoint-flush answer before the stream discards its queue — undefined
+   * for a caller with no offline-first activity starts to self-heal from.
    */
-  readonly ingestRoot?: (activityID: string) => Promise<IngestStartRowOutcome>;
+  readonly ingestActivityStart?: (activityID: string) => Promise<IngestActivityStartOutcome>;
 
   /**
    * Called after every successful flush with the server's fresh appended head — the caller's
@@ -179,9 +179,9 @@ interface CreateCheckpointSubmitterOptions {
  * One activity's cursor for building the next `CheckpointBatchEntry` to write — the only piece of
  * an activity's submission state this adapter keeps for itself; flush sequencing, backoff, and
  * eviction live in the spawned `checkpointActivityMachine` child this activity's registration
- * spawns. The chain fields advance in place as each accepted submission links onto the last, so
+ * spawns. The link fields advance in place as each accepted submission links onto the last, so
  * they are deliberately not `readonly`. `avatarID` and `scopeID`, when the registration carried
- * them, name the node whose cached head each advance persists back to (`writeNodeHead`).
+ * them, name the node whose cached anchor each advance persists back to (`writeNodeAnchor`).
  */
 interface WriteCursor {
   readonly avatarID: string | undefined;
@@ -200,19 +200,19 @@ const TERMINAL_CHECKPOINT_TYPES: ReadonlySet<string> = new Set([
 /**
  * Owns a worker's outbound checkpoint submissions: mapping, the durable queue, and one serialized
  * in-flight batch per activity. Each flush rides a freshly minted trace, and a streak of
- * non-defined flush failures reports a stall without stopping the stream. Response handling
- * follows the activity service's response contract:
+ * non-defined flush failures reports a stall without stopping the stream. Response handling follows
+ * the activity service's response contract:
  *
  * - a fresh head on success or `CONFLICT` advances the cursor and confirms the queue up to it
  * - `CHECKPOINT_INVALID` stops the stream and keeps its queue rows
- * - `NOT_FOUND` stops the stream and discards its queue rows — unless an `ingestRoot` hook is
- *   configured and the activity still has a pending client-minted root, in which case the flush
- *   ingests that root into the server and retries the same batch once before falling back to the
- *   discard
+ * - `NOT_FOUND` stops the stream and discards its queue rows — unless an `ingestActivityStart` hook
+ *   is configured and the activity still has a pending client-minted activity start, in which case
+ *   the flush ingests that activity start into the server and retries the same batch once before
+ *   falling back to the discard
  * - `ACTIVITY_CAPPED`, `ACTIVITY_TERMINAL`, and `SESSION_EVICTED` stop the stream and discard its
  *   queue rows — the server accepts nothing further for it
- * - anything else — `UNAUTHORIZED` or a transport failure — holds the queue untouched and starts
- *   a per-activity retry loop
+ * - anything else — `UNAUTHORIZED` or a transport failure — holds the queue untouched and starts a
+ *   per-activity retry loop
  *
  * An activity whose stream stops with its rows discarded has its cursor and registration evicted
  * from both tracking maps, so a later registration re-seeds fresh rather than resolving stale
@@ -321,7 +321,7 @@ export function createCheckpointSubmitter(
       activityID: context.activityID,
       client: options.client,
       expectedHead: context.appendedHead,
-      ingestRoot: options.ingestRoot,
+      ingestActivityStart: options.ingestActivityStart,
       latestQueuedVersion,
       onAcked: options.onAcked,
       onCapped: options.onCapped,
@@ -429,7 +429,7 @@ export function createCheckpointSubmitter(
     cursor.nextVersion += 1;
 
     if (cursor.avatarID !== undefined && cursor.scopeID !== undefined) {
-      await writeNodeHead(cursor.avatarID, cursor.scopeID, {
+      await writeNodeAnchor(cursor.avatarID, cursor.scopeID, {
         chainIndex: cursor.startChainIndex + cursor.nextVersion - 1,
         nextSeed: cursor.previousNextSeed,
       });

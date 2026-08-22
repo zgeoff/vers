@@ -27,10 +27,10 @@ import { server } from '../mocks/server';
 import { createMockCheckpointBatch } from '../test-utils/factories/create-mock-checkpoint-batch';
 
 /**
- * `startActivity` opens its own `db.transaction()` to root the new activity under the chain-row
- * lock, which can't nest under the default rollback-on-dispose isolation — this suite runs
- * against a real, committed schema clone instead. Content is seeded here, once, since every test
- * needs a current version to start against and none of them vary its shape; the sim version is
+ * `startActivity` opens its own `db.transaction()` to activity start the new activity under the
+ * chain-row lock, which can't nest under the default rollback-on-dispose isolation — this suite
+ * runs against a real, committed schema clone instead. Content is seeded here, once, since every
+ * test needs a current version to start against and none of them vary its shape; the sim version is
  * left to each test, since the registry's presence, absence, or pruned state is what several of
  * them are specifically about.
  */
@@ -289,7 +289,7 @@ test('it starts an activity on a neighbour of a node the avatar holds a first-cl
   expect(activity.scopeID).toBe(neighbourID);
 });
 
-test('it roots the first activity on a revealed node at the chain row genesis', async () => {
+test('it activityStarts the first activity on a revealed node at the chain row genesis', async () => {
   await using ctx = await setupTest();
 
   await createSimVersionRow(ctx.db);
@@ -336,7 +336,7 @@ test('it rejects starting on a node with no revealed chain with NODE_NOT_REVEALE
   ).rejects.toMatchObject({ code: 'NODE_NOT_REVEALED' });
 });
 
-test('it roots activities at independent genesis seeds for different revealed nodes', async () => {
+test('it activityStarts activities at independent genesis seeds for different revealed nodes', async () => {
   await using ctx = await setupTest();
 
   await createSimVersionRow(ctx.db);
@@ -757,7 +757,7 @@ test('it stamps a new activity when the resolved engine supports the current con
   expect(activity.simVersion).toBe(current.engineHash);
 });
 
-test('it roots a new activity at the anchor a concurrent forward exit commits', async () => {
+test('it activityStarts a new activity at the anchor a concurrent forward exit commits', async () => {
   await using ctx = await setupTest();
 
   await createSimVersionRow(ctx.db);
@@ -784,7 +784,7 @@ test('it roots a new activity at the anchor a concurrent forward exit commits', 
   // A transaction holding the chain-row lock with an uncommitted anchor advance stands in for a
   // forward exit still in flight. The advance commits only once the concurrent start is observed
   // queued behind the lock, so the blocking interleaving is what actually runs — and a start that
-  // roots without ever taking the lock times the wait out and fails the test.
+  // activity starts without ever taking the lock times the wait out and fails the test.
   const held = await ctx.db.transaction().execute(async (trx) => {
     await trx
       .updateTable('activityChains')

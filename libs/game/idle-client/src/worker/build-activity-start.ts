@@ -10,7 +10,7 @@ import { readQueuedCheckpoints } from '../submission/read-queued-checkpoints';
 import { readStartStamps } from '../submission/read-start-stamps';
 import type { WorkerContext } from './types';
 
-interface BuildStartRowInput {
+interface BuildActivityStartInput {
   readonly avatarID: string;
   readonly scopeID: string;
   readonly scopeType: string;
@@ -18,20 +18,20 @@ interface BuildStartRowInput {
 }
 
 /**
- * Synthesizes a full `ActivityData` root row for a start, entirely from this device's cached
- * inputs — `null` when any of them is missing, since no local mint is possible without every one:
- * the scope's cached node seed (never revealed on this device, or revealed for a different
+ * Synthesizes the full `ActivityData` row for an activity start, entirely from this device's
+ * cached inputs — `null` when any of them is missing, since no local mint is possible without every
+ * one: the scope's cached node seed (never revealed on this device, or revealed for a different
  * avatar), the account's cached crypto stamps, or the build's bundled engine hash (undefined in a
- * dev build, which has no local fallback). The chain roots at the node's cached head rather than
- * its genesis, so a revisited node's start continues from where play actually left off.
+ * dev build, which has no local fallback). The start anchors at the node's cached anchor rather
+ * than its genesis, so a revisited node's start continues from where play actually left off.
  * `buildSnapshot` is a client-side optimistic guess — a hint the server re-authors and
  * exact-match-rejects at submission time, never a value this mint depends on for its own
  * correctness. `predecessorActivityID` stamps the avatar's durably tracked last-started activity,
  * null for this device's first start for the avatar. `playedAt` stamps the wall clock now.
  */
-export async function buildStartRow(
+export async function buildActivityStart(
   context: WorkerContext,
-  input: Readonly<BuildStartRowInput>,
+  input: Readonly<BuildActivityStartInput>,
 ): Promise<ActivityData | null> {
   const nodeSeed = await readNodeSeed(input.avatarID, input.scopeID);
 
@@ -58,7 +58,7 @@ export async function buildStartRow(
     contentVersion: nodeSeed.contentVersion,
     encounterNode: nodeSeed.encounterNode,
     keyVersion: stamps.keyVersion,
-    seed: nodeSeed.head.nextSeed,
+    seed: nodeSeed.anchor.nextSeed,
     simVersion,
   });
 
@@ -81,9 +81,9 @@ export async function buildStartRow(
     scopeType: input.scopeType,
     secretRef: stamps.secretRef,
     secretVersion: stamps.secretVersion,
-    seed: nodeSeed.head.nextSeed,
+    seed: nodeSeed.anchor.nextSeed,
     simVersion,
-    startChainIndex: nodeSeed.head.chainIndex,
+    startChainIndex: nodeSeed.anchor.chainIndex,
     startHash,
     startKey: input.startKey,
     startedAt: now,

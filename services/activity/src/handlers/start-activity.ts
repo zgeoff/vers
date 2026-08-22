@@ -78,24 +78,24 @@ interface StartActivityOpts {
  * avatar's settled xp/level plus the unsettled xp of every run of its own that ended and still
  * awaits its verifier, so a chain of activities started faster than the verifier settles them each
  * builds against the last one's outcome rather than replaying stale progression. A held run —
- * parked or quarantined — contributes nothing, since it has no path back to verification on its
- * own and its xp would otherwise ride in this snapshot and every later one permanently. Resolves the scope
- * node's encounter params server-side and freezes them on the new row, throwing NODE_UNKNOWN when
- * the scope doesn't resolve to a known node and NODE_UNREACHABLE when it resolves but sits outside
- * the avatar's selectable set — the origin, a completed node, or a neighbour of one, evaluated
- * against the avatar's own `first_clear` grants. The chain it roots against must already exist —
- * `revealNodes` mints it at reveal time — so a scope with no chain row throws NODE_NOT_REVEALED
- * rather than minting one here. The partial unique index serializes concurrent starts;
- * a duplicate delivery — same key, same scope, never appended, caller already the writer or none
- * stamped — succeeds with the existing row, and every other conflict throws CONFLICT carrying it. A
- * chain whose replay frontier is quarantined admits no new starts until it is adjudicated.
+ * parked or quarantined — contributes nothing, since it has no path back to verification on its own
+ * and its xp would otherwise ride in this snapshot and every later one permanently. Resolves the
+ * scope node's encounter params server-side and freezes them on the new row, throwing NODE_UNKNOWN
+ * when the scope doesn't resolve to a known node and NODE_UNREACHABLE when it resolves but sits
+ * outside the avatar's selectable set — the origin, a completed node, or a neighbour of one,
+ * evaluated against the avatar's own `first_clear` grants. The chain it anchors against must
+ * already exist — `revealNodes` mints it at reveal time — so a scope with no chain row throws
+ * NODE_NOT_REVEALED rather than minting one here. The partial unique index serializes concurrent
+ * starts; a duplicate delivery — same key, same scope, never appended, caller already the writer or
+ * none stamped — succeeds with the existing row, and every other conflict throws CONFLICT carrying
+ * it. A chain whose replay target is quarantined admits no new starts until it is adjudicated.
  * Admission is additionally gated to the account's active avatar under the same per-user advisory
  * lock the avatar service's selection and creation endpoints take, so the pair serializes; a start
  * for any other avatar throws AVATAR_NOT_ACTIVE naming the account's actual active avatar. Persists
  * the caller's `predecessorActivityID`/`playedAt` as-is: the client alone witnessed the play order,
- * and the server trusts the reference for sequencing only, never for legality. An absent predecessor
- * is not rejected here — the replay claim waits on it, so an out-of-order or reload-orphaned delivery
- * settles once the predecessor lands.
+ * and the server trusts the reference for sequencing only, never for legality. An absent
+ * predecessor is not rejected here — the replay claim waits on it, so an out-of-order or
+ * reload-orphaned delivery settles once the predecessor lands.
  */
 export async function startActivity(
   deps: StartActivityDeps,
@@ -201,7 +201,7 @@ export async function startActivity(
     // serializes this against the avatar service's own selection and creation calls so
     // start-vs-switch is atomic, and the chain row's SELECT FOR UPDATE lock is held until commit,
     // so a forward exit advancing this chain's anchor either commits before the anchor is read
-    // here or waits behind it — a new activity always roots at the anchor current at read time.
+    // here or waits behind it — a new activity always anchors at the anchor current at read time.
     // Every writer that touches both rows acquires the chain row before the activity row, and the
     // advisory lock is taken before either, so no interleaving admits a lock cycle.
     const row = await deps.db.transaction().execute(async (trx) => {

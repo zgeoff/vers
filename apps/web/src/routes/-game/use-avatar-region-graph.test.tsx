@@ -3,8 +3,8 @@ import { waitFor } from '@testing-library/react';
 import { createMockActivityData } from '@vers/contract-activity/test-utils';
 import {
   setLastCompletedActivityID,
+  writeActivityStart,
   writeQueuedCheckpoint,
-  writeStartRow,
 } from '@vers/idle-client';
 import { ActivityCheckpointType } from '@vers/idle-core';
 import { mockActivityService } from '@vers/mock-services/activity';
@@ -507,8 +507,8 @@ test("it keeps a completed node's neighbour selectable while a chunk-crossing pa
       expect(hook.result.current.selectable.has(neighbourID)).toBe(true);
     });
 
-    // a chunk-crossing pan re-keys the revealed-nodes query into a fresh, unresolved fetch, dropping
-    // its data back to undefined
+    // a chunk-crossing pan re-keys the revealed-nodes query into a fresh, unresolved fetch,
+    // dropping its data back to undefined
     setViewport({ maxCX: 40, maxCY: 5, minCX: 30, minCY: -5 });
 
     await waitFor(() => {
@@ -745,7 +745,7 @@ test('it extends the selectable set past a node cleared offline without extendin
 
     const row = createMockActivityData({ avatarID: avatar.id, scopeID: clearedID });
 
-    await writeStartRow(row);
+    await writeActivityStart(row);
 
     await writeQueuedCheckpoint(
       row.id,

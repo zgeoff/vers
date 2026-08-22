@@ -1,6 +1,6 @@
 import type { DB } from '@vers/db';
 import type { Kysely } from 'kysely';
-import type { ReplayFrontier } from '../types';
+import type { ReplayTarget } from '../types';
 
 /**
  * Loads the claimed activity's own replay-relevant fields — the claim itself already identified it
@@ -8,10 +8,10 @@ import type { ReplayFrontier } from '../types';
  * when the row is gone (raced against a concurrent cleanup); the caller treats that as nothing to
  * replay.
  */
-export async function findReplayFrontier(
+export async function findReplayTarget(
   db: Kysely<DB>,
   activityID: string,
-): Promise<ReplayFrontier | undefined> {
+): Promise<ReplayTarget | undefined> {
   const row = await db
     .selectFrom('activities')
     .select(['appendedHead', 'id', 'replayAttempts', 'startChainIndex', 'status', 'verifiedHead'])

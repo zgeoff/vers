@@ -42,7 +42,7 @@ const startStatusSchema = z.discriminatedUnion('kind', [
 
 const ackSchema = z.object({ ok: z.literal(true) }).readonly();
 
-const nodeSeedHeadSchema = z
+const nodeSeedAnchorSchema = z
   .object({ chainIndex: z.int().min(0), nextSeed: z.string() })
   .readonly();
 
@@ -51,7 +51,7 @@ const nodeSeedSchema = z
     contentVersion: z.string(),
     encounterNode: EncounterNodeSchema,
     genesisSeed: z.string(),
-    head: nodeSeedHeadSchema,
+    anchor: nodeSeedAnchorSchema,
     nodeID: z.string(),
   })
   .readonly();

@@ -1,8 +1,8 @@
 import { expect, test } from 'bun:test';
-import { buildOfflineRootSubmission } from './build-offline-root-submission';
+import { buildOfflineActivityStartSubmission } from './build-offline-activity-start-submission';
 import { createMockActivityData } from './test-utils/factories/create-mock-activity-data';
 
-test('it projects a client-minted root row down to the twelve wire fields advanceActivity accepts', () => {
+test('it projects a client-minted activity start down to the twelve wire fields advanceActivity accepts', () => {
   const playedAt = new Date();
 
   const row = createMockActivityData({
@@ -20,7 +20,7 @@ test('it projects a client-minted root row down to the twelve wire fields advanc
     startKey: 'start_key_1',
   });
 
-  expect(buildOfflineRootSubmission(row)).toStrictEqual({
+  expect(buildOfflineActivityStartSubmission(row)).toStrictEqual({
     avatarID: 'avatar_1',
     buildSnapshot: { level: 3, xp: 120 },
     contentVersion: '2',
@@ -39,7 +39,7 @@ test('it projects a client-minted root row down to the twelve wire fields advanc
 test('it never carries the server-derived encounter and key/secret stamps', () => {
   const row = createMockActivityData({ startKey: 'start_key_2' });
 
-  expect(buildOfflineRootSubmission(row)).not.toContainAnyKeys([
+  expect(buildOfflineActivityStartSubmission(row)).not.toContainAnyKeys([
     'encounterNode',
     'keyVersion',
     'secretRef',
@@ -50,5 +50,5 @@ test('it never carries the server-derived encounter and key/secret stamps', () =
 test('it throws when the row carries no start key', () => {
   const row = createMockActivityData({ startKey: null });
 
-  expect(() => buildOfflineRootSubmission(row)).toThrow();
+  expect(() => buildOfflineActivityStartSubmission(row)).toThrow();
 });
