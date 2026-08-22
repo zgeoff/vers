@@ -27,6 +27,10 @@ export async function writeNodeAnchor(
     const existing = await tx.store.get([avatarID, nodeID]);
 
     if (existing === undefined || existing.anchor.chainIndex > anchor.chainIndex) {
+      // settle the transaction inside the try, so an abort rejects where the catch below swallows
+      // it rather than escaping this best-effort call as an unhandled rejection
+      await tx.done;
+
       return;
     }
 
