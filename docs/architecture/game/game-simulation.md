@@ -98,8 +98,8 @@ authoritative input from its own truth and trusts none of the payload:
 - It recomputes the `startHash` from the server-derived encounter and stamps, and requires the
   submitted hash to equal it. The match proves the client simulated against the same content and
   encounter the server derives.
-- It validates the submitted `seed` and `startChainIndex` against the chain's live appended anchor,
-  and refuses a start computed against a position the seed chain has moved past.
+- It validates the submitted `seed` and `startChainIndex` against the seed chain's live appended
+  anchor, and refuses a start computed against a position the seed chain has moved past.
 
 A single `advanceActivity` request carries a whole run of continuations, so an offline gap the
 client simulated locally verifies in one round trip. Every continuation reuses the start's seed
@@ -274,7 +274,7 @@ settles the offline gap is the subject of [offline reconcile](./offline-reconcil
 | writer worker       | The one worker per browser profile that runs the simulation and appends its checkpoints.                                                 |
 | verifier            | The server process that replays a submitted stream to decide whether to trust it.                                                        |
 | checkpoint          | One recorded simulation step: a row keyed `(activity_id, version)` that links the previous checkpoint's hash.                            |
-| head row            | An activity's single row carrying its two cursors, last chain hash, writer session, and status.                                          |
+| head row            | An activity's single row carrying its two cursors, last checkpoint hash, writer session, and status.                                     |
 | appended head       | `appended_head`: how far the client has written the stream.                                                                              |
 | verified head       | `verified_head`: how far the verifier has replayed and trusted the stream.                                                               |
 | sim version         | The engine build's version stamp (`simVersion`); pins which code replays a segment.                                                      |

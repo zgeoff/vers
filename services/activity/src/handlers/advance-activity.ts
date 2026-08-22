@@ -196,7 +196,7 @@ export async function advanceActivity(
 
 /**
  * Resolves the row the request's continuations append onto: the existing row at
- * `opts.input.activityID`, or `opts.input.activity start` freshly minted onto that id. A missing
+ * `opts.input.activityID`, or `opts.input.activityStart` freshly minted onto that id. A missing
  * row with no `activityStart` to mint is NOT_FOUND, as is a `activityStart` the acting user's
  * avatars don't include or an id that already belongs to another user — a foreign id stays
  * owner-scoped NOT_FOUND rather than leaking its existence. On a concurrent duplicate mint it

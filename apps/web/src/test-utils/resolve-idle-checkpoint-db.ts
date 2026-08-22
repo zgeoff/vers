@@ -27,6 +27,15 @@ interface IdleCheckpointDBSchema {
     key: string;
     value: unknown;
   };
+
+  /**
+   * The store name an older database version held the activity-start outbox under, declared only
+   * so the upgrade can name the store it deletes.
+   */
+  'pending-roots': {
+    key: string;
+    value: unknown;
+  };
   preferences: {
     key: string;
     value: unknown;
@@ -47,6 +56,16 @@ export async function resolveIdleCheckpointDB(): Promise<IDBPDatabase<IdleCheckp
     IDLE_CHECKPOINT_DB_VERSION,
     {
       upgrade(database) {
+        // mirrors the worker's own version-7 upgrade: a database still holding the outbox under
+        // its legacy store name has the whole outbox dropped rather than migrated
+        if (database.objectStoreNames.contains('pending-roots')) {
+          database.deleteObjectStore('pending-roots');
+
+          if (database.objectStoreNames.contains('pending-checkpoints')) {
+            database.deleteObjectStore('pending-checkpoints');
+          }
+        }
+
         if (!database.objectStoreNames.contains('pending-checkpoints')) {
           database.createObjectStore('pending-checkpoints', {
             keyPath: ['activityID', 'version'],

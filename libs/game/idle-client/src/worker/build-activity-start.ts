@@ -10,7 +10,7 @@ import { readQueuedCheckpoints } from '../submission/read-queued-checkpoints';
 import { readStartStamps } from '../submission/read-start-stamps';
 import type { WorkerContext } from './types';
 
-interface BuildStartRowInput {
+interface BuildActivityStartInput {
   readonly avatarID: string;
   readonly scopeID: string;
   readonly scopeType: string;
@@ -31,7 +31,7 @@ interface BuildStartRowInput {
  */
 export async function buildActivityStart(
   context: WorkerContext,
-  input: Readonly<BuildStartRowInput>,
+  input: Readonly<BuildActivityStartInput>,
 ): Promise<ActivityData | null> {
   const nodeSeed = await readNodeSeed(input.avatarID, input.scopeID);
 

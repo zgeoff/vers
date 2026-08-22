@@ -55,7 +55,7 @@ interface MintActivityStartErrors {
  * seen — validating it against server truth rather than trusting its payload. Every authoritative
  * input, the encounter node and the key and secret stamps, is derived server-side, and the client's
  * seed, versions, build snapshot, and start hash must reconcile with what the server derives. The
- * caller must confirm the acting user owns `activity start.avatarID` before calling.
+ * caller must confirm the acting user owns `activityStart.avatarID` before calling.
  *
  * Throws AVATAR_NOT_ACTIVE, CHAIN_QUARANTINED, NODE_UNKNOWN, NODE_NOT_REVEALED,
  * SIM_VERSION_UNKNOWN, or SIM_VERSION_EXPIRED for an activity start that fails a start gate;

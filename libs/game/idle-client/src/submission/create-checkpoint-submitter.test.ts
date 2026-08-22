@@ -334,7 +334,7 @@ test('it defers a non-terminal checkpoint to the shared progress window', async 
   expect(track).toHaveBeenCalledOnce();
 });
 
-test('it reports each acknowledged anchor after a successful flush', async () => {
+test('it reports each acknowledged head after a successful flush', async () => {
   const ctx = setupTest();
 
   server.use(mockActivityService.trackActivityProgress.handler(() => ({ appendedHead: 2 })));
@@ -1398,7 +1398,7 @@ test('it evicts the activity once a terminal checkpoint drains fully confirmed',
 
   expect(track).toHaveBeenCalledOnce();
 
-  // a later registration seeded from a deliberately different anchor re-seeds and re-flushes
+  // a later registration seeded from a deliberately different head re-seeds and re-flushes
   // rather than resolving a stale registration, proving the fully confirmed terminal drain
   // evicted it — retained state would keep the old cursor and submit version 3 at expectedHead 2
   await ctx.submitter.registerActivity({
@@ -1454,7 +1454,7 @@ test('it evicts a hydrated terminal row once its resend drains fully confirmed',
 
   expect(drained).toStrictEqual([]);
 
-  // a later registration seeded from a deliberately different anchor re-seeds and re-flushes
+  // a later registration seeded from a deliberately different head re-seeds and re-flushes
   // rather than resolving a stale registration, proving the confirmed hydrated terminal row
   // evicted the activity even though no live submission ever queued it
   await ctx.submitter.registerActivity({

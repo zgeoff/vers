@@ -41,6 +41,24 @@ test('it advances the cached anchor to an incoming anchor at the same or a later
   expect(cached?.anchor).toStrictEqual({ chainIndex: 6, nextSeed: 'seed-at-six' });
 });
 
+test('it overwrites the cached anchor with an incoming anchor at the same index', async () => {
+  // the equal-index boundary is where the guard switches from discarding to overwriting: a resend
+  // of the same position carries the seed the device actually reached, so it must win
+  const avatarID = 'avatar-write-node-anchor-equal';
+
+  const seed = createMockNodeSeed({
+    avatarID,
+    anchor: { chainIndex: 5, nextSeed: 'seed-first-at-five' },
+  });
+
+  await writeNodeSeeds(avatarID, [seed]);
+  await writeNodeAnchor(avatarID, seed.nodeID, { chainIndex: 5, nextSeed: 'seed-second-at-five' });
+
+  const cached = await readNodeSeed(avatarID, seed.nodeID);
+
+  expect(cached?.anchor).toStrictEqual({ chainIndex: 5, nextSeed: 'seed-second-at-five' });
+});
+
 test('it discards an out-of-order lower-index write rather than regressing the cached anchor', async () => {
   const avatarID = 'avatar-write-node-anchor-regress';
 

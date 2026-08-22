@@ -155,7 +155,7 @@ interface MintActivityStartErrors {
  * Mints `activityStart` as a fresh active row at `activityID`, checking ownership of `activity
  * start.avatarID` and the account's active-avatar selection, then storing every submitted field
  * wholesale rather than re-deriving any. The encounter and key/secret stamps `activityStart`
- * doesn't carry default in the collection, and `lastHash` anchors to `activity start.startHash`.
+ * doesn't carry default in the collection, and `lastHash` anchors to `activityStart.startHash`.
  * The node-selectable, sim-version, and live-anchor gates the real endpoint runs need state this
  * mock doesn't track.
  */
