@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { createTestDB } from '@vers/service-test-utils/bun';
 import { createActivityRow } from '../test-utils/create-activity-row';
 import { createChainRow } from '../test-utils/create-chain-row';
-import { claimNextChain } from './claim-next-chain';
+import { claimNextSeedChain } from './claim-next-seed-chain';
 
 /**
  * The claim is a `FOR UPDATE SKIP LOCKED` row lock held across concurrent transactions, which
@@ -26,7 +26,7 @@ test('it claims an avatar with appends past the verified cursor', async () => {
     scopeId: chain.scopeId,
   });
 
-  const claimed = await ctx.db.transaction().execute((trx) => claimNextChain(trx));
+  const claimed = await ctx.db.transaction().execute((trx) => claimNextSeedChain(trx));
 
   expect(claimed).toStrictEqual({
     activityID: activity.id,
@@ -49,7 +49,7 @@ test('it reports an empty queue as undefined', async () => {
     verifiedHead: 3,
   });
 
-  const claimed = await ctx.db.transaction().execute((trx) => claimNextChain(trx));
+  const claimed = await ctx.db.transaction().execute((trx) => claimNextSeedChain(trx));
 
   expect(claimed).toBeUndefined();
 });
@@ -73,7 +73,7 @@ test('it claims the highest-priority avatar first', async () => {
     scopeId: bumped.scopeId,
   });
 
-  const claimed = await ctx.db.transaction().execute((trx) => claimNextChain(trx));
+  const claimed = await ctx.db.transaction().execute((trx) => claimNextSeedChain(trx));
 
   expect(claimed).toMatchObject({ avatarID: bumped.avatarId, priority: 10 });
 });
@@ -90,8 +90,8 @@ test('it skips an avatar another worker holds', async () => {
   });
 
   const outcome = await ctx.db.transaction().execute(async (holder) => {
-    const held = await claimNextChain(holder);
-    const contender = await ctx.db.transaction().execute((trx) => claimNextChain(trx));
+    const held = await claimNextSeedChain(holder);
+    const contender = await ctx.db.transaction().execute((trx) => claimNextSeedChain(trx));
 
     return { contender, held };
   });
@@ -113,7 +113,7 @@ test('it skips an avatar whose claimable activity is quarantined', async () => {
     status: 'quarantined',
   });
 
-  const claimed = await ctx.db.transaction().execute((trx) => claimNextChain(trx));
+  const claimed = await ctx.db.transaction().execute((trx) => claimNextSeedChain(trx));
 
   expect(claimed).toBeUndefined();
 });
@@ -140,7 +140,7 @@ test('it skips a rejected predecessor and claims the honest activity behind it',
     status: 'active',
   });
 
-  const claimed = await ctx.db.transaction().execute((trx) => claimNextChain(trx));
+  const claimed = await ctx.db.transaction().execute((trx) => claimNextSeedChain(trx));
 
   expect(claimed).toStrictEqual({
     activityID: successor.id,
@@ -164,7 +164,7 @@ test('it does not re-claim an avatar whose only pending work is a rejected activ
     status: 'rejected',
   });
 
-  const claimed = await ctx.db.transaction().execute((trx) => claimNextChain(trx));
+  const claimed = await ctx.db.transaction().execute((trx) => claimNextSeedChain(trx));
 
   expect(claimed).toBeUndefined();
 });
@@ -182,7 +182,7 @@ test('it skips an avatar whose claimable activity is parked', async () => {
     status: 'parked',
   });
 
-  const claimed = await ctx.db.transaction().execute((trx) => claimNextChain(trx));
+  const claimed = await ctx.db.transaction().execute((trx) => claimNextSeedChain(trx));
 
   expect(claimed).toBeUndefined();
 });
@@ -209,9 +209,10 @@ test('it blocks a successor whose predecessor still has appends past its verifie
     scopeId: successorChain.scopeId,
   });
 
-  const claimed = await ctx.db.transaction().execute((trx) => claimNextChain(trx));
+  const claimed = await ctx.db.transaction().execute((trx) => claimNextSeedChain(trx));
 
-  // the predecessor's own chain is the one activity ready to claim; the successor stays blocked
+  // the predecessor's own seed chain is the one activity ready to claim; the successor stays
+  // blocked
   expect(claimed).toStrictEqual({
     activityID: predecessor.id,
     avatarID: predecessorChain.avatarId,
@@ -243,7 +244,7 @@ test('it claims a successor once its predecessor has fully verified', async () =
     scopeId: chain.scopeId,
   });
 
-  const claimed = await ctx.db.transaction().execute((trx) => claimNextChain(trx));
+  const claimed = await ctx.db.transaction().execute((trx) => claimNextSeedChain(trx));
 
   expect(claimed).toStrictEqual({
     activityID: successor.id,
@@ -276,7 +277,7 @@ test('it blocks a successor whose predecessor is held by an operator', async () 
     scopeId: chain.scopeId,
   });
 
-  const claimed = await ctx.db.transaction().execute((trx) => claimNextChain(trx));
+  const claimed = await ctx.db.transaction().execute((trx) => claimNextSeedChain(trx));
 
   // the predecessor's own status excludes it from claiming, and the held predecessor blocks the
   // successor behind it — the whole avatar stops
@@ -295,7 +296,7 @@ test("it claims the avatar's origin activity with a null predecessor", async () 
     scopeId: chain.scopeId,
   });
 
-  const claimed = await ctx.db.transaction().execute((trx) => claimNextChain(trx));
+  const claimed = await ctx.db.transaction().execute((trx) => claimNextSeedChain(trx));
 
   expect(claimed).toMatchObject({ activityID: activity.id });
 });

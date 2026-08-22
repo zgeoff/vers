@@ -22,14 +22,14 @@ test("it persists a batch of one avatar's start inputs retrievable by node id", 
     contentVersion: first.contentVersion,
     encounterNode: first.encounterNode,
     genesisSeed: first.genesisSeed,
-    head: first.head,
+    anchor: first.anchor,
   });
 
   expect(secondSeed).toStrictEqual({
     contentVersion: second.contentVersion,
     encounterNode: second.encounterNode,
     genesisSeed: second.genesisSeed,
-    head: second.head,
+    anchor: second.anchor,
   });
 });
 
@@ -51,44 +51,44 @@ test('it keeps one row with the same seed when the same node is cached again', a
     contentVersion: seed.contentVersion,
     encounterNode: seed.encounterNode,
     genesisSeed: seed.genesisSeed,
-    head: seed.head,
+    anchor: seed.anchor,
   });
 });
 
-test("it keeps the cached head when a reveal's head is behind this device's own local advance", async () => {
-  const avatarID = 'avatar-write-head-guard';
-  const seed = createMockNodeSeed({ head: { chainIndex: 4, nextSeed: 'seed-advanced' } });
+test("it keeps the cached anchor when a reveal's anchor is behind this device's own local advance", async () => {
+  const avatarID = 'avatar-write-anchor-guard';
+  const seed = createMockNodeSeed({ anchor: { chainIndex: 4, nextSeed: 'seed-advanced' } });
 
   await writeNodeSeeds(avatarID, [seed]);
 
   await writeNodeSeeds(avatarID, [
-    { ...seed, head: { chainIndex: 0, nextSeed: seed.genesisSeed } },
+    { ...seed, anchor: { chainIndex: 0, nextSeed: seed.genesisSeed } },
   ]);
 
   const cachedSeed = await readNodeSeed(avatarID, seed.nodeID);
 
-  expect(cachedSeed?.head).toStrictEqual({ chainIndex: 4, nextSeed: 'seed-advanced' });
+  expect(cachedSeed?.anchor).toStrictEqual({ chainIndex: 4, nextSeed: 'seed-advanced' });
 });
 
-test("it adopts a reveal's head when it is at least as advanced as the cached one", async () => {
-  const avatarID = 'avatar-write-head-advance';
-  const seed = createMockNodeSeed({ head: { chainIndex: 1, nextSeed: 'seed-one' } });
+test("it adopts a reveal's anchor when it is at least as advanced as the cached one", async () => {
+  const avatarID = 'avatar-write-anchor-advance';
+  const seed = createMockNodeSeed({ anchor: { chainIndex: 1, nextSeed: 'seed-one' } });
 
   await writeNodeSeeds(avatarID, [seed]);
-  await writeNodeSeeds(avatarID, [{ ...seed, head: { chainIndex: 2, nextSeed: 'seed-two' } }]);
+  await writeNodeSeeds(avatarID, [{ ...seed, anchor: { chainIndex: 2, nextSeed: 'seed-two' } }]);
 
   const cachedSeed = await readNodeSeed(avatarID, seed.nodeID);
 
-  expect(cachedSeed?.head).toStrictEqual({ chainIndex: 2, nextSeed: 'seed-two' });
+  expect(cachedSeed?.anchor).toStrictEqual({ chainIndex: 2, nextSeed: 'seed-two' });
 });
 
-test('it adopts a reveal head over a pre-v6 cached row that predates the head field', async () => {
-  const avatarID = 'avatar-write-head-legacy-row';
-  const seed = createMockNodeSeed({ head: { chainIndex: 3, nextSeed: 'seed-legacy-reveal' } });
+test('it adopts a reveal anchor over a pre-v6 cached row that predates the anchor field', async () => {
+  const avatarID = 'avatar-write-anchor-legacy-row';
+  const seed = createMockNodeSeed({ anchor: { chainIndex: 3, nextSeed: 'seed-legacy-reveal' } });
 
   const db = await resolveCheckpointQueueDB();
 
-  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- simulates a pre-v6 row that predates the `head` field, which the current `NodeSeed` type can no longer express
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- simulates a pre-v6 row that predates the `anchor` field, which the current `NodeSeed` type can no longer express
   await db.put(NODE_SEEDS_STORE_NAME, {
     avatarID,
     contentVersion: seed.contentVersion,
@@ -101,7 +101,7 @@ test('it adopts a reveal head over a pre-v6 cached row that predates the head fi
 
   const cachedSeed = await readNodeSeed(avatarID, seed.nodeID);
 
-  expect(cachedSeed?.head).toStrictEqual({ chainIndex: 3, nextSeed: 'seed-legacy-reveal' });
+  expect(cachedSeed?.anchor).toStrictEqual({ chainIndex: 3, nextSeed: 'seed-legacy-reveal' });
 });
 
 test('it scopes a shared node id to each avatar so one never overwrites the other', async () => {

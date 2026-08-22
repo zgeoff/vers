@@ -40,7 +40,7 @@ export type ReplayIterationOutcome =
   | { readonly kind: 'unconfirmedDivergence' };
 
 /**
- * What one worker iteration needs to claim, replay, and adjudicate a chain's frontier.
+ * What one worker iteration needs to claim, replay, and adjudicate a chain's target.
  */
 export interface ReplayWorkerDeps {
   readonly db: Kysely<DB>;
@@ -65,7 +65,7 @@ export interface ReplayWorkerDeps {
   readonly privateKey: CryptoKey;
 
   /**
-   * This deploy's own baked engine hash — a frontier stamped with it replays in-process; any
+   * This deploy's own baked engine hash — a target stamped with it replays in-process; any
    * other stamp routes through the cross-version dispatch.
    */
   readonly simVersion: string;

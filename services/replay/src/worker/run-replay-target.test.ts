@@ -15,7 +15,7 @@ import { createReplayCache } from '../replay/create-replay-cache';
 import { createActivityRow } from '../test-utils/create-activity-row';
 import { createAvatarRow } from '../test-utils/create-avatar-row';
 import { createHonestActivityFixture } from '../test-utils/create-honest-activity-fixture';
-import { runFrontier } from './run-frontier';
+import { runReplayTarget } from './run-replay-target';
 
 async function setupTest() {
   const db = await createTestDB({ isolation: 'schema' });
@@ -63,7 +63,7 @@ test('it defers the cache mutation until the caller applies it, never touching t
   };
 
   const outcome = await ctx.db.transaction().execute((trx) =>
-    runFrontier(trx, deps, cache, {
+    runReplayTarget(trx, deps, cache, {
       activityID: fixture.activity.id,
       appendedHead: firstBatchCount,
       replayAttempts: 0,
@@ -79,7 +79,7 @@ test('it defers the cache mutation until the caller applies it, never touching t
     pendingCache: { activityID: fixture.activity.id, effect: { kind: 'set' } },
   });
 
-  // runFrontier itself never wrote to the cache — only the caller applying the returned
+  // runReplayTarget itself never wrote to the cache — only the caller applying the returned
   // mutation after a successful commit would.
   expect(cache.get(fixture.activity.id)).toBeUndefined();
 });
@@ -97,7 +97,7 @@ test('it reports idle rather than throwing when the claimed activity row is gone
   };
 
   const outcome = await ctx.db.transaction().execute((trx) =>
-    runFrontier(trx, deps, createReplayCache(), {
+    runReplayTarget(trx, deps, createReplayCache(), {
       activityID: 'act_gone',
       appendedHead: 3,
       replayAttempts: 0,
@@ -138,7 +138,7 @@ test('it settles the terminal checkpoint reward into the avatar xp and level on 
   };
 
   const outcome = await ctx.db.transaction().execute((trx) =>
-    runFrontier(trx, deps, cache, {
+    runReplayTarget(trx, deps, cache, {
       activityID: fixture.activity.id,
       appendedHead: fixture.activity.appendedHead,
       replayAttempts: 0,
@@ -189,7 +189,7 @@ test('it settles a run verified in two segments to the terminal total, counting 
   };
 
   const midRun = await ctx.db.transaction().execute((trx) =>
-    runFrontier(trx, deps, cache, {
+    runReplayTarget(trx, deps, cache, {
       activityID: fixture.activity.id,
       appendedHead: midRunCount,
       replayAttempts: 0,
@@ -210,7 +210,7 @@ test('it settles a run verified in two segments to the terminal total, counting 
   expect(settledMidRun.settledXp).toBeGreaterThan(0);
 
   const terminalSegment = await ctx.db.transaction().execute((trx) =>
-    runFrontier(trx, deps, cache, {
+    runReplayTarget(trx, deps, cache, {
       activityID: fixture.activity.id,
       appendedHead: fixture.activity.appendedHead,
       replayAttempts: 0,
@@ -277,7 +277,7 @@ test('it settles a matched mid-run segment onto the avatar before the run ends',
   };
 
   const outcome = await ctx.db.transaction().execute((trx) =>
-    runFrontier(trx, deps, cache, {
+    runReplayTarget(trx, deps, cache, {
       activityID: fixture.activity.id,
       appendedHead: midRunCount,
       replayAttempts: 0,
@@ -313,7 +313,7 @@ test('it settles a matched mid-run segment onto the avatar before the run ends',
   expect(avatar.level).toBe(buildLevelFromXP(midRunXP));
 });
 
-test('it settles no additional xp when a stale duplicate frontier misses the already-advanced cursor', async () => {
+test('it settles no additional xp when a stale duplicate target misses the already-advanced cursor', async () => {
   await using ctx = await setupTest();
 
   const fixture = await createHonestActivityFixture(ctx.db, {
@@ -332,7 +332,7 @@ test('it settles no additional xp when a stale duplicate frontier misses the alr
     simVersion: 'test-engine-hash',
   };
 
-  const staleFrontier = {
+  const staleTarget = {
     activityID: fixture.activity.id,
     appendedHead: fixture.activity.appendedHead,
     replayAttempts: 0,
@@ -343,7 +343,7 @@ test('it settles no additional xp when a stale duplicate frontier misses the alr
 
   const first = await ctx.db
     .transaction()
-    .execute((trx) => runFrontier(trx, deps, cache, staleFrontier));
+    .execute((trx) => runReplayTarget(trx, deps, cache, staleTarget));
 
   expect(first.kind).toBe('matched');
 
@@ -353,11 +353,11 @@ test('it settles no additional xp when a stale duplicate frontier misses the alr
     .where('id', '=', fixture.activity.avatarId)
     .executeTakeFirstOrThrow();
 
-  // replays the same stale frontier, whose `verifiedHead` no longer matches the cursor the first
+  // replays the same stale target, whose `verifiedHead` no longer matches the cursor the first
   // apply already advanced
   const second = await ctx.db
     .transaction()
-    .execute((trx) => runFrontier(trx, deps, cache, staleFrontier));
+    .execute((trx) => runReplayTarget(trx, deps, cache, staleTarget));
 
   expect(second.kind).toBe('matched');
 
@@ -403,7 +403,7 @@ test("it rejects an activity whose pinned build does not match the avatar's sett
   };
 
   const outcome = await ctx.db.transaction().execute((trx) =>
-    runFrontier(trx, deps, createReplayCache(), {
+    runReplayTarget(trx, deps, createReplayCache(), {
       activityID: fixture.activity.id,
       appendedHead: fixture.activity.appendedHead,
       replayAttempts: 0,
@@ -436,7 +436,7 @@ test("it rejects an activity whose pinned build does not match the avatar's sett
   expect(rejections).toContainEqual({ attributes: { reason: 'build-mismatch' }, value: 1 });
 });
 
-test('it makes no keys dispatch when the frontier has already verified part of the run', async () => {
+test('it makes no keys dispatch when the target has already verified part of the run', async () => {
   await using ctx = await setupTest();
 
   const fixture = await createHonestActivityFixture(ctx.db, {
@@ -476,7 +476,7 @@ test('it makes no keys dispatch when the frontier has already verified part of t
   };
 
   const outcome = await ctx.db.transaction().execute((trx) =>
-    runFrontier(trx, deps, cache, {
+    runReplayTarget(trx, deps, cache, {
       activityID: fixture.activity.id,
       appendedHead: totalCheckpoints,
       replayAttempts: 0,
@@ -517,7 +517,7 @@ test('it verifies an honest sealed content-version-2 row, matching its stamped p
   };
 
   const outcome = await ctx.db.transaction().execute((trx) =>
-    runFrontier(trx, deps, cache, {
+    runReplayTarget(trx, deps, cache, {
       activityID: fixture.activity.id,
       appendedHead: fixture.activity.appendedHead,
       replayAttempts: 0,
@@ -597,7 +597,7 @@ test("it verifies an honest row sealed under the avatar's own seed, not a shared
   };
 
   const outcome = await ctx.db.transaction().execute((trx) =>
-    runFrontier(trx, deps, cache, {
+    runReplayTarget(trx, deps, cache, {
       activityID: fixture.activity.id,
       appendedHead: fixture.activity.appendedHead,
       replayAttempts: 0,
@@ -692,7 +692,7 @@ test("it rejects a tampered stamped poolID with reason 'descriptor-mismatch'", a
   };
 
   const outcome = await ctx.db.transaction().execute((trx) =>
-    runFrontier(trx, deps, cache, {
+    runReplayTarget(trx, deps, cache, {
       activityID: fixture.activity.id,
       appendedHead: fixture.activity.appendedHead,
       replayAttempts: 0,
@@ -726,7 +726,7 @@ test("it rejects a tampered stamped encounter node on a continuation row, not ju
 
   const continuation = await createHonestActivityFixture(ctx.db, {
     duration: 80_000,
-    rootChain: genesis.chain,
+    chainRow: genesis.chain,
     seed: buildStateFromSeed(1_616_267_014),
   });
 
@@ -754,7 +754,7 @@ test("it rejects a tampered stamped encounter node on a continuation row, not ju
   };
 
   const outcome = await ctx.db.transaction().execute((trx) =>
-    runFrontier(trx, deps, cache, {
+    runReplayTarget(trx, deps, cache, {
       activityID: continuation.activity.id,
       appendedHead: continuation.activity.appendedHead,
       replayAttempts: 0,
@@ -805,7 +805,7 @@ test('it grants a first_clear keyed by the node when a verified segment complete
   };
 
   const outcome = await ctx.db.transaction().execute((trx) =>
-    runFrontier(trx, deps, cache, {
+    runReplayTarget(trx, deps, cache, {
       activityID: fixture.activity.id,
       appendedHead: fixture.activity.appendedHead,
       replayAttempts: 0,
@@ -890,7 +890,7 @@ test('it lands no grant when a verified segment ends on a failed terminal', asyn
   };
 
   const outcome = await ctx.db.transaction().execute((trx) =>
-    runFrontier(trx, deps, cache, {
+    runReplayTarget(trx, deps, cache, {
       activityID: fixture.activity.id,
       appendedHead: fixture.activity.appendedHead,
       replayAttempts: 0,
@@ -952,7 +952,7 @@ test('it lands no grant when a stop forward-exits the chain without a completed 
   };
 
   const outcome = await ctx.db.transaction().execute((trx) =>
-    runFrontier(trx, deps, cache, {
+    runReplayTarget(trx, deps, cache, {
       activityID: fixture.activity.id,
       appendedHead: midRunCount,
       replayAttempts: 0,
@@ -1007,7 +1007,7 @@ test('it lands no grant when a completed terminal verifies on a non-map-node sco
   };
 
   const outcome = await ctx.db.transaction().execute((trx) =>
-    runFrontier(trx, deps, cache, {
+    runReplayTarget(trx, deps, cache, {
       activityID: fixture.activity.id,
       appendedHead: fixture.activity.appendedHead,
       replayAttempts: 0,
@@ -1056,7 +1056,7 @@ test('it grants a first_clear exactly once across a re-verification of an alread
     simVersion: 'test-engine-hash',
   };
 
-  const staleFrontier = {
+  const staleTarget = {
     activityID: fixture.activity.id,
     appendedHead: fixture.activity.appendedHead,
     replayAttempts: 0,
@@ -1067,15 +1067,15 @@ test('it grants a first_clear exactly once across a re-verification of an alread
 
   const first = await ctx.db
     .transaction()
-    .execute((trx) => runFrontier(trx, deps, cache, staleFrontier));
+    .execute((trx) => runReplayTarget(trx, deps, cache, staleTarget));
 
   expect(first.kind).toBe('matched');
 
-  // replays the same stale frontier, whose `verifiedHead` no longer matches the cursor the first
+  // replays the same stale target, whose `verifiedHead` no longer matches the cursor the first
   // apply already advanced
   const second = await ctx.db
     .transaction()
-    .execute((trx) => runFrontier(trx, deps, cache, staleFrontier));
+    .execute((trx) => runReplayTarget(trx, deps, cache, staleTarget));
 
   expect(second.kind).toBe('matched');
 
@@ -1121,7 +1121,7 @@ test('it rejects a settled activity whose node no earlier settled clear made rea
   };
 
   const outcome = await ctx.db.transaction().execute((trx) =>
-    runFrontier(trx, deps, cache, {
+    runReplayTarget(trx, deps, cache, {
       activityID: fixture.activity.id,
       appendedHead: fixture.activity.appendedHead,
       replayAttempts: 0,
@@ -1173,7 +1173,7 @@ test('it verifies a world-map-node run whose scope is connected to a verified fi
   };
 
   const outcome = await ctx.db.transaction().execute((trx) =>
-    runFrontier(trx, deps, cache, {
+    runReplayTarget(trx, deps, cache, {
       activityID: fixture.activity.id,
       appendedHead: fixture.activity.appendedHead,
       replayAttempts: 0,
@@ -1219,7 +1219,7 @@ test('it rejects a world-map-node run whose scope is not connected to any comple
   };
 
   const outcome = await ctx.db.transaction().execute((trx) =>
-    runFrontier(trx, deps, cache, {
+    runReplayTarget(trx, deps, cache, {
       activityID: fixture.activity.id,
       appendedHead: fixture.activity.appendedHead,
       replayAttempts: 0,
@@ -1285,7 +1285,7 @@ test('it cascades a build mismatch through a chain of successors, once the run t
   };
 
   const outcomeA = await ctx.db.transaction().execute((trx) =>
-    runFrontier(trx, deps, cache, {
+    runReplayTarget(trx, deps, cache, {
       activityID: successorA.activity.id,
       appendedHead: successorA.activity.appendedHead,
       replayAttempts: 0,
@@ -1298,7 +1298,7 @@ test('it cascades a build mismatch through a chain of successors, once the run t
   expect(outcomeA).toStrictEqual({ kind: 'rejected' });
 
   const outcomeB = await ctx.db.transaction().execute((trx) =>
-    runFrontier(trx, deps, cache, {
+    runReplayTarget(trx, deps, cache, {
       activityID: successorB.activity.id,
       appendedHead: successorB.activity.appendedHead,
       replayAttempts: 0,
@@ -1345,7 +1345,7 @@ test('it settles an unrelated successor once its zero-xp predecessor rejects', a
   };
 
   const predecessorOutcome = await ctx.db.transaction().execute((trx) =>
-    runFrontier(trx, deps, cache, {
+    runReplayTarget(trx, deps, cache, {
       activityID: predecessor.activity.id,
       appendedHead: predecessor.activity.appendedHead,
       replayAttempts: 0,
@@ -1376,7 +1376,7 @@ test('it settles an unrelated successor once its zero-xp predecessor rejects', a
   });
 
   const outcome = await ctx.db.transaction().execute((trx) =>
-    runFrontier(trx, deps, cache, {
+    runReplayTarget(trx, deps, cache, {
       activityID: successor.activity.id,
       appendedHead: successor.activity.appendedHead,
       replayAttempts: 0,
@@ -1414,7 +1414,7 @@ test('it never rejects a world-map-node run at the origin for reachability, even
   };
 
   const outcome = await ctx.db.transaction().execute((trx) =>
-    runFrontier(trx, deps, cache, {
+    runReplayTarget(trx, deps, cache, {
       activityID: fixture.activity.id,
       appendedHead: fixture.activity.appendedHead,
       replayAttempts: 0,
@@ -1450,7 +1450,7 @@ test('it never rejects a non-world_map_node scope for reachability', async () =>
   };
 
   const outcome = await ctx.db.transaction().execute((trx) =>
-    runFrontier(trx, deps, cache, {
+    runReplayTarget(trx, deps, cache, {
       activityID: fixture.activity.id,
       appendedHead: fixture.activity.appendedHead,
       replayAttempts: 0,

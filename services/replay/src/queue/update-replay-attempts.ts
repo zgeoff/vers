@@ -12,7 +12,7 @@ interface UpdateReplayAttemptsInput {
   readonly maxAttempts?: number;
 
   /**
-   * Guards the increment to the frontier this iteration actually replayed against: skipped unless
+   * Guards the increment to the target this iteration actually replayed against: skipped unless
    * both are given. A caller counting a failure outside its claim transaction (the transaction
    * already rolled back) supplies the `verifiedHead`/`status` it read at claim time, so a stale
    * failure never lands against an activity another worker meanwhile verified or adjudicated out
@@ -30,7 +30,7 @@ interface UpdateReplayAttemptsResult {
 /**
  * Counts one failed replay against the activity in a single statement: the attempt counter
  * increments, and crossing `maxAttempts` transitions the status to `quarantined` in the same
- * update — the poison-pill exit that takes the chain out of the claim queue. The caller owns
+ * update — the poison-pill exit that takes the seed chain out of the claim queue. The caller owns
  * alerting on a `quarantined: true` result; a successful apply resets the counter.
  */
 export async function updateReplayAttempts(

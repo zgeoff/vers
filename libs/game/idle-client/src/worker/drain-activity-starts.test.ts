@@ -2,16 +2,16 @@ import { expect, test } from 'bun:test';
 import { createMockActivityData } from '@vers/contract-activity/test-utils';
 import { mockActivityService } from '@vers/mock-services/activity';
 import { server } from '../mocks/node';
-import { readAllStartRows } from '../submission/read-all-start-rows';
+import { readAllActivityStarts } from '../submission/read-all-activity-starts';
 import { readPendingStartIntent } from '../submission/read-pending-start-intent';
 import { readQueuedCheckpoints } from '../submission/read-queued-checkpoints';
+import { writeActivityStart } from '../submission/write-activity-start';
 import { writePendingStartIntent } from '../submission/write-pending-start-intent';
 import { writeQueuedCheckpoint } from '../submission/write-queued-checkpoint';
-import { writeStartRow } from '../submission/write-start-row';
 import { createStubSubmitter } from '../test-utils/create-stub-submitter';
 import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
 import { createMockCheckpointBatchEntry } from '../test-utils/factories/create-mock-checkpoint-batch-entry';
-import { drainStartRows } from './drain-start-rows';
+import { drainActivityStarts } from './drain-activity-starts';
 
 test("it ingests and registers the recovery avatar's row, leaving another avatar's row untouched", async () => {
   const submitter = createStubSubmitter();
@@ -30,16 +30,16 @@ test("it ingests and registers the recovery avatar's row, leaving another avatar
     startKey: 'start_key_other',
   });
 
-  await writeStartRow(matching);
-  await writeStartRow(other);
+  await writeActivityStart(matching);
+  await writeActivityStart(other);
 
   server.use(
     mockActivityService.advanceActivity.handler(() => ({ activity: matching, appendedHead: 0 })),
   );
 
-  await drainStartRows(context, 'avatar_recovering');
+  await drainActivityStarts(context, 'avatar_recovering');
 
-  const remaining = await readAllStartRows();
+  const remaining = await readAllActivityStarts();
 
   expect(remaining).toStrictEqual([other]);
 
@@ -54,7 +54,7 @@ test("it ingests and registers the recovery avatar's row, leaving another avatar
   });
 });
 
-test('it discards the queued checkpoints of a refused root without registering it', async () => {
+test('it discards the queued checkpoints of a refused activityStart without registering it', async () => {
   const submitter = createStubSubmitter();
   const context = createStubWorkerContext({ submitter });
 
@@ -65,7 +65,7 @@ test('it discards the queued checkpoints of a refused root without registering i
     startKey: 'start_key_rejected',
   });
 
-  await writeStartRow(row);
+  await writeActivityStart(row);
   await writeQueuedCheckpoint(row.id, createMockCheckpointBatchEntry({ version: 1 }));
 
   server.use(
@@ -74,9 +74,9 @@ test('it discards the queued checkpoints of a refused root without registering i
     }),
   );
 
-  await drainStartRows(context, 'avatar_recovering');
+  await drainActivityStarts(context, 'avatar_recovering');
 
-  const remaining = await readAllStartRows();
+  const remaining = await readAllActivityStarts();
   const queued = await readQueuedCheckpoints(row.id);
 
   expect(remaining).toStrictEqual([]);
@@ -84,7 +84,7 @@ test('it discards the queued checkpoints of a refused root without registering i
   expect(submitter.registerActivity).not.toHaveBeenCalled();
 });
 
-test('it drops a held start intent naming the refused root', async () => {
+test('it drops a held start intent naming the refused activityStart', async () => {
   const context = createStubWorkerContext({ submitter: createStubSubmitter() });
 
   const row = createMockActivityData({
@@ -94,7 +94,7 @@ test('it drops a held start intent naming the refused root', async () => {
     startKey: 'start_key_intent',
   });
 
-  await writeStartRow(row);
+  await writeActivityStart(row);
 
   await writePendingStartIntent({
     activityID: row.id,
@@ -109,14 +109,14 @@ test('it drops a held start intent naming the refused root', async () => {
     }),
   );
 
-  await drainStartRows(context, 'avatar_recovering');
+  await drainActivityStarts(context, 'avatar_recovering');
 
   const heldIntent = await readPendingStartIntent();
 
   expect(heldIntent).toBeUndefined();
 });
 
-test('it leaves a held start intent naming a different row when a root is refused', async () => {
+test('it leaves a held start intent naming a different row when an activity start is refused', async () => {
   const context = createStubWorkerContext({ submitter: createStubSubmitter() });
 
   const row = createMockActivityData({
@@ -126,7 +126,7 @@ test('it leaves a held start intent naming a different row when a root is refuse
     startKey: 'start_key_refused_other',
   });
 
-  await writeStartRow(row);
+  await writeActivityStart(row);
 
   const intent = {
     activityID: 'act_unrelated',
@@ -143,18 +143,18 @@ test('it leaves a held start intent naming a different row when a root is refuse
     }),
   );
 
-  await drainStartRows(context, 'avatar_recovering');
+  await drainActivityStarts(context, 'avatar_recovering');
 
   const heldIntent = await readPendingStartIntent();
 
   expect(heldIntent).toStrictEqual(intent);
 });
 
-test('it drains nothing when this device holds no pending root', async () => {
+test('it drains nothing when this device holds no pending activityStart', async () => {
   const submitter = createStubSubmitter();
   const context = createStubWorkerContext({ submitter });
 
-  await drainStartRows(context, 'avatar_no_rows');
+  await drainActivityStarts(context, 'avatar_no_rows');
 
   expect(submitter.registerActivity).not.toHaveBeenCalled();
 });

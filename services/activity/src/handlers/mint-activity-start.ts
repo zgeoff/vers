@@ -1,7 +1,7 @@
 import type {
   BuildSnapshot,
   ContentDocument,
-  OfflineRootSubmission,
+  OfflineActivityStartSubmission,
 } from '@vers/contract-activity';
 import { buildStartHash } from '@vers/contract-activity';
 import type { SecretRef } from '@vers/contract-keys';
@@ -24,10 +24,10 @@ import type {
 } from '../types';
 
 /**
- * The content loader and key and secret material a root mint derives its authoritative encounter
- * and stamps from.
+ * The content loader and key and secret material an activity start mint derives its authoritative
+ * encounter and stamps from.
  */
-interface MintRootDeps {
+interface MintActivityStartDeps {
   readonly keysServiceURL: string;
   readonly keyVersion: number;
   readonly loadContentDocument: (contentVersion: string) => Promise<ContentDocument | undefined>;
@@ -37,9 +37,9 @@ interface MintRootDeps {
 }
 
 /**
- * The typed error constructors a root mint throws.
+ * The typed error constructors an activity start mint throws.
  */
-interface MintRootErrors {
+interface MintActivityStartErrors {
   readonly AVATAR_NOT_ACTIVE: (payload: AvatarNotActivePayload) => Error;
   readonly CHAIN_QUARANTINED: (payload: AdvanceBailPayload) => Error;
   readonly CHECKPOINT_INVALID: (payload: AdvanceCheckpointInvalidPayload) => Error;
@@ -51,38 +51,38 @@ interface MintRootErrors {
 }
 
 /**
- * Mints a client-submitted activity root — one the caller minted offline and the server has never
+ * Mints a client-submitted activity start — one the caller minted offline and the server has never
  * seen — validating it against server truth rather than trusting its payload. Every authoritative
  * input, the encounter node and the key and secret stamps, is derived server-side, and the client's
  * seed, versions, build snapshot, and start hash must reconcile with what the server derives. The
- * caller must confirm the acting user owns `root.avatarID` before calling.
+ * caller must confirm the acting user owns `activity start.avatarID` before calling.
  *
  * Throws AVATAR_NOT_ACTIVE, CHAIN_QUARANTINED, NODE_UNKNOWN, NODE_NOT_REVEALED,
- * SIM_VERSION_UNKNOWN, or SIM_VERSION_EXPIRED for a root that fails a start gate; CONFLICT when it
- * roots against a stale chain head; CHECKPOINT_INVALID when its build snapshot or start hash
- * disagree with the server's own derivation.
+ * SIM_VERSION_UNKNOWN, or SIM_VERSION_EXPIRED for an activity start that fails a start gate;
+ * CONFLICT when it anchors against a stale chain head; CHECKPOINT_INVALID when its build snapshot
+ * or start hash disagree with the server's own derivation.
  */
-export async function mintRoot(
-  deps: Readonly<MintRootDeps>,
+export async function mintActivityStart(
+  deps: Readonly<MintActivityStartDeps>,
   trx: Kysely<DB>,
   actingUserID: string,
   input: Readonly<{
     activityID: string;
     actingSessionID: null | string;
-    root: Readonly<OfflineRootSubmission>;
+    activityStart: Readonly<OfflineActivityStartSubmission>;
   }>,
-  errors: MintRootErrors,
+  errors: MintActivityStartErrors,
 ): Promise<Selectable<Activities>> {
-  const root = input.root;
+  const activityStart = input.activityStart;
 
-  await requireActiveAvatar(trx, actingUserID, root.avatarID, errors);
+  await requireActiveAvatar(trx, actingUserID, activityStart.avatarID, errors);
 
   const quarantined = await trx
     .selectFrom('activities')
     .select('id')
-    .where('avatarId', '=', root.avatarID)
-    .where('scopeType', '=', root.scopeType)
-    .where('scopeId', '=', root.scopeID)
+    .where('avatarId', '=', activityStart.avatarID)
+    .where('scopeType', '=', activityStart.scopeType)
+    .where('scopeId', '=', activityStart.scopeID)
     .where('status', '=', 'quarantined')
     .executeTakeFirst();
 
@@ -92,9 +92,10 @@ export async function mintRoot(
     });
   }
 
-  // resolve the scope before the chain lookup below: a scope no node maps to classifies NODE_UNKNOWN,
-  // distinct from the NODE_NOT_REVEALED a valid-but-unrevealed scope earns when its chain row is absent
-  const resolved = resolveEncounterNode(root.scopeType, root.scopeID);
+  // resolve the scope before the chain lookup below: a scope no node maps to classifies
+  // NODE_UNKNOWN, distinct from the NODE_NOT_REVEALED a valid-but-unrevealed scope earns when its
+  // chain row is absent
+  const resolved = resolveEncounterNode(activityStart.scopeType, activityStart.scopeID);
 
   if (resolved === undefined) {
     throw errors.NODE_UNKNOWN({ data: {} });
@@ -103,15 +104,15 @@ export async function mintRoot(
   const avatar = await trx
     .selectFrom('avatars')
     .select('seed')
-    .where('id', '=', root.avatarID)
+    .where('id', '=', activityStart.avatarID)
     .executeTakeFirstOrThrow();
 
   const chain = await trx
     .selectFrom('activityChains')
     .select(['appendedNextSeed', 'appendedChainIndex'])
-    .where('avatarId', '=', root.avatarID)
-    .where('scopeType', '=', root.scopeType)
-    .where('scopeId', '=', root.scopeID)
+    .where('avatarId', '=', activityStart.avatarID)
+    .where('scopeType', '=', activityStart.scopeType)
+    .where('scopeId', '=', activityStart.scopeID)
     .forUpdate()
     .executeTakeFirst();
 
@@ -121,18 +122,21 @@ export async function mintRoot(
 
   const simVersion = await resolveSimVersionStamp(
     trx,
-    root.simVersion,
-    root.contentVersion,
+    activityStart.simVersion,
+    activityStart.contentVersion,
     errors,
   );
 
-  // the root must sit on the chain's live appended head exactly; any other index or seed means the
-  // client built on a stale head that a concurrent append has already moved past
-  if (root.startChainIndex !== chain.appendedChainIndex || root.seed !== chain.appendedNextSeed) {
+  // the activity start must sit on the chain's live appended head exactly; any other index or seed
+  // means the client built on a stale head that a concurrent append has already moved past
+  if (
+    activityStart.startChainIndex !== chain.appendedChainIndex ||
+    activityStart.seed !== chain.appendedNextSeed
+  ) {
     throw errors.CONFLICT({ data: { activityID: input.activityID, appendedHead: 0 } });
   }
 
-  const optimistic = await getOptimisticBuild(trx, root.avatarID);
+  const optimistic = await getOptimisticBuild(trx, activityStart.avatarID);
 
   const buildSnapshot: BuildSnapshot = {
     level: buildLevelFromXP(optimistic.totalXP),
@@ -140,15 +144,15 @@ export async function mintRoot(
   };
 
   if (
-    buildSnapshot.level !== root.buildSnapshot.level ||
-    buildSnapshot.xp !== root.buildSnapshot.xp
+    buildSnapshot.level !== activityStart.buildSnapshot.level ||
+    buildSnapshot.xp !== activityStart.buildSnapshot.xp
   ) {
     throw errors.CHECKPOINT_INVALID({
       data: { activityID: input.activityID, appendedHead: 0, reason: 'build-snapshot-mismatch' },
     });
   }
 
-  const document = await deps.loadContentDocument(root.contentVersion);
+  const document = await deps.loadContentDocument(activityStart.contentVersion);
 
   if (document === undefined) {
     const current = await findCurrentSimVersion(trx);
@@ -162,11 +166,15 @@ export async function mintRoot(
       keysServiceURL: deps.keysServiceURL,
       privateKey: deps.privateKey,
     },
-    { avatarID: root.avatarID, secretRef: deps.secretRef, secretVersion: deps.secretVersion },
+    {
+      avatarID: activityStart.avatarID,
+      secretRef: deps.secretRef,
+      secretVersion: deps.secretVersion,
+    },
   );
 
-  // derive the encounter and stamps from the server's own content and scope secret, never the client
-  // payload, so a poisoned encounter or forged stamp can never enter the row
+  // derive the encounter and stamps from the server's own content and scope secret, never the
+  // client payload, so a poisoned encounter or forged stamp can never enter the row
   const encounterNode = {
     difficulty: resolved.difficulty,
     ...deriveWorldmapContent(document.encounter, {
@@ -177,16 +185,16 @@ export async function mintRoot(
   };
 
   const startHash = buildStartHash({
-    contentVersion: root.contentVersion,
+    contentVersion: activityStart.contentVersion,
     encounterNode,
     keyVersion: deps.keyVersion,
-    seed: root.seed,
+    seed: activityStart.seed,
     simVersion,
   });
 
   // equality proves the client folded its hash over the same content and encounter the server just
-  // derived; a mismatch means it simulated against something else and cannot be rooted
-  if (startHash !== root.startHash) {
+  // derived; a mismatch means it simulated against something else and cannot be anchored
+  if (startHash !== activityStart.startHash) {
     throw errors.CHECKPOINT_INVALID({
       data: { activityID: input.activityID, appendedHead: 0, reason: 'start-hash-mismatch' },
     });
@@ -197,24 +205,24 @@ export async function mintRoot(
   const row = await trx
     .insertInto('activities')
     .values({
-      avatarId: root.avatarID,
+      avatarId: activityStart.avatarID,
       buildSnapshot,
-      contentVersion: root.contentVersion,
+      contentVersion: activityStart.contentVersion,
       encounterNode,
       id: input.activityID,
       keyVersion: deps.keyVersion,
       lastHash: startHash,
-      playedAt: root.playedAt,
-      predecessorActivityId: root.predecessorActivityID,
-      scopeId: root.scopeID,
-      scopeType: root.scopeType,
+      playedAt: activityStart.playedAt,
+      predecessorActivityId: activityStart.predecessorActivityID,
+      scopeId: activityStart.scopeID,
+      scopeType: activityStart.scopeType,
       secretRef: deps.secretRef,
       secretVersion: deps.secretVersion,
-      seed: root.seed,
+      seed: activityStart.seed,
       simVersion,
-      startChainIndex: root.startChainIndex,
+      startChainIndex: activityStart.startChainIndex,
       startHash,
-      startKey: root.startKey,
+      startKey: activityStart.startKey,
       writerSessionId: input.actingSessionID,
     })
     .returningAll()

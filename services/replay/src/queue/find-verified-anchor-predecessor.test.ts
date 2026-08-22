@@ -173,7 +173,7 @@ test('it finds the consuming predecessor when a Started-only stopped activity sh
   const consuming = await createHonestActivityFixture(ctx.db, {
     activity: { status: 'stopped' },
     duration: 80_000,
-    rootChain: startedOnly.chain,
+    chainRow: startedOnly.chain,
     seed: buildStateFromSeed(3_047_525_658),
     startChainIndex: startedOnly.activity.startChainIndex,
   });

@@ -1,27 +1,28 @@
 import type { ActivityData } from '@vers/contract-activity';
-import { ingestStartRow } from '../submission/ingest-start-row';
-import { readAllStartRows } from '../submission/read-all-start-rows';
+import { ingestActivityStart } from '../submission/ingest-activity-start';
+import { readAllActivityStarts } from '../submission/read-all-activity-starts';
 import { readLastStartedActivity } from '../submission/read-last-started-activity';
+import { removeActivityStart } from '../submission/remove-activity-start';
 import { removeLastStartedActivity } from '../submission/remove-last-started-activity';
 import { removePendingStartIntent } from '../submission/remove-pending-start-intent';
 import { removeQueuedCheckpoints } from '../submission/remove-queued-checkpoints';
-import { removeStartRow } from '../submission/remove-start-row';
 import { writeLastStartedActivity } from '../submission/write-last-started-activity';
 import type { WorkerContext } from './types';
 
 /**
- * Drains this avatar's reload-orphaned client-minted roots — a root whose live simulation was lost
- * to a worker reload, so nothing is registered to drive its checkpoint flush. Delivers them in
- * predecessor order, so the server always sees a root's predecessor before the root itself and an
- * absent predecessor means the predecessor was refused, never merely late. Per row the ingest
- * outcome decides the action: `ingested` registers the activity so its durably queued checkpoints
- * seed and flush; `deferred` leaves the row for a later recovery; `rejected` drops the row and,
- * because a successor built on a refused root can never verify, its whole dependent subtree. A row
- * for a different avatar this device also owns is left untouched — it drains on that avatar's own
- * recovery, since minting its root needs it as the active avatar.
+ * Drains this avatar's reload-orphaned client-minted activity starts — an activity start whose live
+ * simulation was lost to a worker reload, so nothing is registered to drive its checkpoint flush.
+ * Delivers them in predecessor order, so the server always sees an activity start's predecessor
+ * before the activity start itself and an absent predecessor means the predecessor was refused,
+ * never merely late. Per row the ingest outcome decides the action: `ingested` registers the
+ * activity so its durably queued checkpoints seed and flush; `deferred` leaves the row for a later
+ * recovery; `rejected` drops the row and, because a successor built on a refused activity start can
+ * never verify, its whole dependent subtree. A row for a different avatar this device also owns is
+ * left untouched — it drains on that avatar's own recovery, since minting its activity start needs
+ * it as the active avatar.
  */
-export async function drainStartRows(context: WorkerContext, avatarID: string): Promise<void> {
-  const allRows = await readAllStartRows();
+export async function drainActivityStarts(context: WorkerContext, avatarID: string): Promise<void> {
+  const allRows = await readAllActivityStarts();
 
   const rows = allRows.filter((row) => row.avatarID === avatarID);
   const ordered = sortByPredecessor(rows);
@@ -38,11 +39,12 @@ export async function drainStartRows(context: WorkerContext, avatarID: string): 
       continue;
     }
 
-    const outcome = await ingestStartRow(context.getClient(), row.id);
+    const outcome = await ingestActivityStart(context.getClient(), row.id);
 
     if (outcome === 'rejected') {
       // ingest already removed the pending row; clear the queued checkpoints and held intent that
-      // would otherwise chain onto a root that will never exist, and cascade to its successors
+      // would otherwise build onto an activity start that will never exist, and cascade to its
+      // successors
       await removeQueuedCheckpoints(row.id);
       await removePendingStartIntent(row.id);
 
@@ -54,8 +56,8 @@ export async function drainStartRows(context: WorkerContext, avatarID: string): 
       continue;
     }
 
-    // repair the durable predecessor a reload orphaned: record this drained root as the avatar's
-    // last-started, so the next start stamps it rather than a stale or absent predecessor
+    // repair the durable predecessor a reload orphaned: record this drained activity start as the
+    // avatar's last-started, so the next start stamps it rather than a stale or absent predecessor
     await writeLastStartedActivity({ avatarID: row.avatarID, lastActivityID: row.id });
 
     await context.getSubmitter().registerActivity({
@@ -108,18 +110,19 @@ function sortByPredecessor(rows: ReadonlyArray<ActivityData>): Array<ActivityDat
 }
 
 /**
- * Removes an undelivered successor of a refused root — its pending row, queued checkpoints, and any
- * held start intent — since it can never verify against a predecessor that does not exist.
+ * Removes an undelivered successor of a refused activity start — its pending row, queued
+ * checkpoints, and any held start intent — since it can never verify against a predecessor that
+ * does not exist.
  */
 async function removeUnverifiableStartRow(activityID: string): Promise<void> {
-  await removeStartRow(activityID);
+  await removeActivityStart(activityID);
   await removeQueuedCheckpoints(activityID);
   await removePendingStartIntent(activityID);
 }
 
 /**
- * Removes the avatar's last-started record when it names a dropped root, so a later start stamps no
- * predecessor rather than one that will never exist.
+ * Removes the avatar's last-started record when it names a dropped activity start, so a later start
+ * stamps no predecessor rather than one that will never exist.
  */
 async function removeDroppedLastStarted(
   avatarID: string,

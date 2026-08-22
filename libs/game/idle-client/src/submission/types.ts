@@ -43,8 +43,8 @@ export interface PendingStopIntent {
 
 /**
  * The avatar's last-started activity id, the predecessor a fresh local mint stamps onto its own
- * root. Durable so it survives a worker reload. A worker drives one avatar's simulation at a
- * time, so a single record suffices, scoped by `avatarID`.
+ * activity start. Durable so it survives a worker reload. A worker drives one avatar's simulation
+ * at a time, so a single record suffices, scoped by `avatarID`.
  */
 export interface LastStartedActivityPreference {
   readonly avatarID: string;
@@ -67,12 +67,13 @@ export interface PendingStartIntent {
 
 /**
  * A chain's current append position, cached alongside its node's other start inputs: the seed a
- * start rooting at this scope derives its first checkpoint from, and that checkpoint's position in
- * the chain. Equal to `{ nextSeed: genesisSeed, chainIndex: 0 }` for a node never yet played, and
- * advanced in place as the client submits further checkpoints into the chain (`writeNodeHead`), so
- * a later start at a revisited node roots at where play actually left off rather than genesis.
+ * start anchoring at this scope derives its first checkpoint from, and that checkpoint's position
+ * in the chain. Equal to `{ nextSeed: genesisSeed, chainIndex: 0 }` for a node never yet played,
+ * and advanced in place as the client submits further checkpoints into the chain
+ * (`writeNodeAnchor`), so a later start at a revisited node anchors where play actually left off
+ * rather than genesis.
  */
-export interface NodeSeedHead {
+export interface NodeSeedAnchor {
   readonly chainIndex: number;
   readonly nextSeed: string;
 }
@@ -87,7 +88,7 @@ export interface RevealedNodeSeed {
   readonly contentVersion: string;
   readonly encounterNode: EncounterNode;
   readonly genesisSeed: string;
-  readonly head: NodeSeedHead;
+  readonly anchor: NodeSeedAnchor;
   readonly nodeID: string;
 }
 
@@ -119,6 +120,16 @@ export interface CheckpointQueueSchema extends DBSchema {
     key: [string, number];
     value: QueuedCheckpoint;
   };
+  'pending-activity-starts': {
+    key: string;
+    value: ActivityData;
+  };
+
+  /**
+   * The store name an older database version held the activity-start outbox under. It is declared
+   * only so the upgrade can name the store it deletes; no read or write path addresses it, and a
+   * database this deploy has opened no longer carries it.
+   */
   'pending-roots': {
     key: string;
     value: ActivityData;
@@ -149,14 +160,14 @@ export type ActivityServiceClient = ContractRouterClient<
 >;
 
 /**
- * The chain-link state an activity's stream starts submission from: `appendedHead` seeds the
- * first submission's compare-and-swap, `lastHash` seeds the first entry's `prevHash`, and
+ * The chain-link state an activity's stream starts submission from: `appendedHead` seeds the first
+ * submission's compare-and-swap, `lastHash` seeds the first entry's `prevHash`, and
  * `startChainIndex` anchors every entry's `chainIndex`. A mid-stream resume whose confirmed rows
  * are no longer queued locally also carries `previousNextSeed` — the last appended checkpoint's
  * `nextSeed` — so the next entry's seed continues the chain the server already holds. `avatarID`
- * and `scopeID` name the node the registered activity plays, letting a later cursor advance
- * persist the node's new head back to its cache row (`writeNodeHead`); omitted by a registration
- * with no scope to persist a head against.
+ * and `scopeID` name the node the registered activity plays, letting a later cursor advance persist
+ * the node's new anchor back to its cache row (`writeNodeAnchor`); omitted by a registration with
+ * no scope to persist an anchor against.
  */
 export interface ActivitySubmissionContext {
   readonly activityID: string;

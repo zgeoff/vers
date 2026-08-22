@@ -62,10 +62,10 @@ tab sent.
 
 The granted-lock callback never settles, so the browser releases the lock only when the writer's tab
 dies. The next queued worker then boots exactly as a reloaded worker does, seeding from the same
-durable stores a reload reads — its queued checkpoints and its pending-roots store. A frozen
-background tab holds the lock while paused: the writer stalls until the tab thaws or the browser
-discards it, and the offline reconcile absorbs the stall by reconstructing the gap on the next
-reconnect.
+durable stores a reload reads — its queued checkpoints and its pending-activity-starts store. A
+frozen background tab holds the lock while paused: the writer stalls until the tab thaws or the
+browser discards it, and the offline reconcile absorbs the stall by reconstructing the gap on the
+next reconnect.
 
 The worker lifecycle — the states the writer moves through and how a handoff moves work to a fresh
 worker — lives in [offline reconcile](./offline-reconcile.md#worker-lifecycle).
@@ -79,11 +79,11 @@ the simulation with no server round trip. The same synthesis covers every start,
 player tapping a node, an auto-continuation after a terminal checkpoint, or an offline gap caught up
 on reconnect. The server authors no start on the request path.
 
-The client anchors each start at the chain's current head, which `revealNodes` delivers alongside
-the seed (see [seed chain](./seed-chain.md)). It persists the synthesized start to the durable
-pending-roots store before installing it, so a crash between mint and install loses nothing. It
-queues the activity's checkpoints through the durable checkpoint submitter, which lands them
-whenever the server is next reachable.
+The client anchors each start at the seed chain's current appended anchor, which `revealNodes`
+delivers alongside the seed (see [seed chain](./seed-chain.md)). It persists the synthesized start
+to the durable pending-activity-starts store before installing it, so a crash between mint and
+install loses nothing. It queues the activity's checkpoints through the durable checkpoint
+submitter, which lands them whenever the server is next reachable.
 
 `advanceActivity` is the server's authority over a client-authored start. It re-derives every
 authoritative input from its own truth and trusts none of the payload:
@@ -99,9 +99,9 @@ authoritative input from its own truth and trusts none of the payload:
   submitted hash to equal it. The match proves the client simulated against the same content and
   encounter the server derives.
 - It validates the submitted `seed` and `startChainIndex` against the chain's live appended anchor,
-  and refuses a start computed against a position the chain has moved past.
+  and refuses a start computed against a position the seed chain has moved past.
 
-A single `advanceActivity` request carries a whole chain of continuations, so an offline gap the
+A single `advanceActivity` request carries a whole run of continuations, so an offline gap the
 client simulated locally verifies in one round trip. Every continuation reuses the start's seed
 chain and its pinned encounter and version context, and the server re-derives each continuation's
 build the same way it re-derives the start's. The stored activity row carries the same columns
@@ -119,7 +119,7 @@ The activity's own id carries no cryptographic role. Its `startHash` digests onl
 identifies the stream uniquely. A checkpoint's `version` — its position in the stream — and its link
 to the previous checkpoint's hash, never the activity id, keep one activity's checkpoints from
 crossing into another's. The id is a client-assigned label: `advanceActivity`'s caller mints each
-continuation's id itself, so the client can compute a whole fast-forward chain with no per-row round
+continuation's id itself, so the client can compute a whole fast-forward run with no per-row round
 trip.
 
 A node's encounter parameters are fixed at the content version the start pins and freeze onto the
@@ -134,17 +134,17 @@ exact.
 
 Each activity is one append-only stream: one checkpoint row per step, keyed
 `(activity_id, version)`, where `version` is the row's position in the stream. A single **head row**
-carries the stream's two cursors, its last chain hash, and the activity status. `appended_head`
+carries the stream's two cursors, its last checkpoint hash, and the activity status. `appended_head`
 tracks how far the client has written; `verified_head` tracks how far the verifier has trusted.
 
 - **Each checkpoint links the last.** A checkpoint hashes a frozen set of fields: its position in
-  the chain, its seed and next seed, and its `time`, `type`, and `entropySource`. It also includes
-  the previous checkpoint's hash. The set never gains, loses, or repurposes a field. Its chain
-  position sits inside the hash, so replay reproduces every reward coordinate keyed on it
+  the seed chain, its seed and next seed, and its `time`, `type`, and `entropySource`. It also
+  includes the previous checkpoint's hash. The set never gains, loses, or repurposes a field. Its
+  seed-chain position sits inside the hash, so replay reproduces every reward coordinate keyed on it
   ([seed chain](./seed-chain.md)), and its entropy-source tag makes a checkpoint's provenance
-  derivable from the chain alone.
-- **The hash is a chain link, not an outcome proof.** Rewards ride outside the hashed set as `+`/`-`
-  deltas in an open keyed map, and only a replay validates them.
+  derivable from the stream alone.
+- **The hash links the previous checkpoint, it does not prove an outcome.** Rewards ride outside the
+  hashed set as `+`/`-` deltas in an open keyed map, and only a replay validates them.
 - **An append is a guarded update of the head row.** The append advances `appended_head` only if the
   head still holds its expected value; a stale head returns a retryable conflict carrying the
   current head, and the client resends the tail. Resubmission deduplicates for free —
@@ -250,7 +250,7 @@ and network jitter.
 
 A batch whose delta exceeds the accrued budget is rejected whole, and the activity takes the
 terminal `capped` transition at its current head. The `ACTIVITY_CAPPED` error carries that head as
-the exact index the client rebases its chain cursor from, and resuming requires a resync. An honest
+the exact index the client rebases its stream cursor from, and resuming requires a resync. An honest
 client never trips the cap: it plans its catch-up simulation to stop at the last encounter boundary
 at or under the same bound.
 

@@ -334,7 +334,7 @@ test('it defers a non-terminal checkpoint to the shared progress window', async 
   expect(track).toHaveBeenCalledOnce();
 });
 
-test('it reports each acknowledged head after a successful flush', async () => {
+test('it reports each acknowledged anchor after a successful flush', async () => {
   const ctx = setupTest();
 
   server.use(mockActivityService.trackActivityProgress.handler(() => ({ appendedHead: 2 })));
@@ -1398,7 +1398,7 @@ test('it evicts the activity once a terminal checkpoint drains fully confirmed',
 
   expect(track).toHaveBeenCalledOnce();
 
-  // a later registration seeded from a deliberately different head re-seeds and re-flushes
+  // a later registration seeded from a deliberately different anchor re-seeds and re-flushes
   // rather than resolving a stale registration, proving the fully confirmed terminal drain
   // evicted it — retained state would keep the old cursor and submit version 3 at expectedHead 2
   await ctx.submitter.registerActivity({
@@ -1454,7 +1454,7 @@ test('it evicts a hydrated terminal row once its resend drains fully confirmed',
 
   expect(drained).toStrictEqual([]);
 
-  // a later registration seeded from a deliberately different head re-seeds and re-flushes
+  // a later registration seeded from a deliberately different anchor re-seeds and re-flushes
   // rather than resolving a stale registration, proving the confirmed hydrated terminal row
   // evicted the activity even though no live submission ever queued it
   await ctx.submitter.registerActivity({
@@ -1611,21 +1611,21 @@ test('it reports server contact only after the answered flush settles the local 
   expect(rowsAtContact).toStrictEqual([]);
 });
 
-test("it persists the registered node's cached head as the write cursor advances", async () => {
+test("it persists the registered node's cached anchor as the write cursor advances", async () => {
   const ctx = setupTest();
 
   server.use(mockActivityService.trackActivityProgress.handler(() => ({ appendedHead: 2 })));
 
   const seed = createMockNodeSeed({
-    avatarID: 'avatar-head-persist',
-    head: { chainIndex: 5, nextSeed: 'seed-start' },
+    avatarID: 'avatar-anchor-persist',
+    anchor: { chainIndex: 5, nextSeed: 'seed-start' },
     nodeID: '3_1',
   });
 
   await writeNodeSeeds(seed.avatarID, [seed]);
 
   await ctx.submitter.registerActivity({
-    activityID: 'head-persist-activity',
+    activityID: 'anchor-persist-activity',
     appendedHead: 0,
     avatarID: seed.avatarID,
     lastHash: 'start_hash',
@@ -1634,32 +1634,32 @@ test("it persists the registered node's cached head as the write cursor advances
   });
 
   await ctx.submitter.submit(
-    'head-persist-activity',
+    'anchor-persist-activity',
     createMockStartedCheckpoint({ nextSeed: 'seed-after-first' }),
   );
 
   const afterFirst = await readNodeSeed(seed.avatarID, seed.nodeID);
 
-  expect(afterFirst?.head).toStrictEqual({ chainIndex: 6, nextSeed: 'seed-after-first' });
+  expect(afterFirst?.anchor).toStrictEqual({ chainIndex: 6, nextSeed: 'seed-after-first' });
 
   await ctx.submitter.submit(
-    'head-persist-activity',
+    'anchor-persist-activity',
     createMockCompletedCheckpoint({ nextSeed: 'seed-after-second' }),
   );
 
   const afterSecond = await readNodeSeed(seed.avatarID, seed.nodeID);
 
-  expect(afterSecond?.head).toStrictEqual({ chainIndex: 7, nextSeed: 'seed-after-second' });
+  expect(afterSecond?.anchor).toStrictEqual({ chainIndex: 7, nextSeed: 'seed-after-second' });
 });
 
-test('it never persists a node head when the registration carries no scope', async () => {
+test('it never persists a node anchor when the registration carries no scope', async () => {
   const ctx = setupTest();
 
   server.use(mockActivityService.trackActivityProgress.handler(() => ({ appendedHead: 1 })));
 
   const seed = createMockNodeSeed({
     avatarID: 'avatar-no-scope',
-    head: { chainIndex: 2, nextSeed: 'seed-untouched' },
+    anchor: { chainIndex: 2, nextSeed: 'seed-untouched' },
     nodeID: '0_0',
   });
 
@@ -1674,8 +1674,8 @@ test('it never persists a node head when the registration carries no scope', asy
 
   await ctx.submitter.submit('no-scope-activity', createMockCompletedCheckpoint());
 
-  // the seeded head is left exactly as written: a scope-less registration advances no node head
+  // the seeded anchor is left exactly as written: a scope-less registration advances no node anchor
   const cached = await readNodeSeed(seed.avatarID, seed.nodeID);
 
-  expect(cached?.head).toStrictEqual({ chainIndex: 2, nextSeed: 'seed-untouched' });
+  expect(cached?.anchor).toStrictEqual({ chainIndex: 2, nextSeed: 'seed-untouched' });
 });

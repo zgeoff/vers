@@ -18,11 +18,11 @@ interface VerifiedAnchorPredecessor {
 /**
  * Finds the chain's fully verified, forward-exited activity rooted exactly at the chain's current
  * verified anchor — the only shape a missed verified-anchor advance can take, since per-chain FIFO
- * guarantees everything behind the claimed frontier already verified. Undefined when no such
+ * guarantees everything behind the claimed target already verified. Undefined when no such
  * activity exists, or its tail checkpoint consumed nothing (the Started-only case), meaning there
  * is nothing to reconcile. The row's own tail checkpoint carries the forward-exit filter, so at
  * most one activity can ever match: the `appendedChainIndex` compare-and-swap admits only one
- * activity to advance the anchor from a given chain position.
+ * activity to advance the anchor from a given seed-chain position.
  */
 export async function findVerifiedAnchorPredecessor(
   trx: Kysely<DB>,

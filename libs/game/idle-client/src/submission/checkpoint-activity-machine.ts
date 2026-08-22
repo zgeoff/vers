@@ -2,7 +2,7 @@ import type { ActorRef, Snapshot } from 'xstate';
 import { assign, emit, enqueueActions, raise, setup } from 'xstate';
 import { buildMachineTypes } from './build-machine-types';
 import { FLUSH_STALL_THRESHOLD } from './constants';
-import type { IngestStartRowOutcome } from './ingest-start-row';
+import type { IngestActivityStartOutcome } from './ingest-activity-start';
 import type { FlushOutcome } from './run-checkpoint-flush-attempt';
 import { runCheckpointFlushAttempt } from './run-checkpoint-flush-attempt';
 import { subscribeToShutdownAbort } from './subscribe-to-shutdown-abort';
@@ -14,7 +14,9 @@ interface CheckpointActivityContext {
   readonly consecutiveFlushFailures: number;
   readonly expectedHead: number;
   readonly flushPending: boolean;
-  readonly ingestRoot: ((activityID: string) => Promise<IngestStartRowOutcome>) | undefined;
+  readonly ingestActivityStart:
+    | ((activityID: string) => Promise<IngestActivityStartOutcome>)
+    | undefined;
   readonly latestQueuedVersion: number | undefined;
   readonly onAcked: ((activityID: string, appendedHead: number) => void) | undefined;
   readonly onCapped: ((activityID: string, appendedHead: number) => void) | undefined;
@@ -39,7 +41,9 @@ export interface CheckpointActivityInput {
   readonly activityID: string;
   readonly client: Pick<ActivityServiceClient, 'trackActivityProgress'>;
   readonly expectedHead: number;
-  readonly ingestRoot: ((activityID: string) => Promise<IngestStartRowOutcome>) | undefined;
+  readonly ingestActivityStart:
+    | ((activityID: string) => Promise<IngestActivityStartOutcome>)
+    | undefined;
   readonly latestQueuedVersion: number | undefined;
   readonly onAcked: ((activityID: string, appendedHead: number) => void) | undefined;
   readonly onCapped: ((activityID: string, appendedHead: number) => void) | undefined;
@@ -145,7 +149,7 @@ export const checkpointActivityMachine = setup({
     consecutiveFlushFailures: 0,
     expectedHead: args.input.expectedHead,
     flushPending: false,
-    ingestRoot: args.input.ingestRoot,
+    ingestActivityStart: args.input.ingestActivityStart,
     latestQueuedVersion: args.input.latestQueuedVersion,
     onAcked: args.input.onAcked,
     onCapped: args.input.onCapped,
@@ -173,7 +177,7 @@ export const checkpointActivityMachine = setup({
           activityID: args.context.activityID,
           client: args.context.client,
           expectedHead: args.context.expectedHead,
-          ingestRoot: args.context.ingestRoot,
+          ingestActivityStart: args.context.ingestActivityStart,
           onAcked: args.context.onAcked,
           onCapped: args.context.onCapped,
           onEvicted: args.context.onEvicted,

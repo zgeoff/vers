@@ -6,10 +6,10 @@ import { resolveServiceURL } from '@vers/mock-services';
 import { mockActivityService } from '@vers/mock-services/activity';
 import { HttpResponse } from 'msw';
 import { server } from '../mocks/node';
-import { ingestStartRow } from './ingest-start-row';
-import { readStartRow } from './read-start-row';
+import { ingestActivityStart } from './ingest-activity-start';
+import { readActivityStart } from './read-activity-start';
 import type { ActivityServiceClient } from './types';
-import { writeStartRow } from './write-start-row';
+import { writeActivityStart } from './write-activity-start';
 
 function setupTest() {
   const link = new RPCLink({ url: `${resolveServiceURL('activity')}/rpc` });
@@ -19,7 +19,7 @@ function setupTest() {
   return { client };
 }
 
-test('it ingests a pending root and removes its durable row', async () => {
+test('it ingests a pending activityStart and removes its durable row', async () => {
   const ctx = setupTest();
   const row = createMockActivityData({ id: 'act_ingest_ok', startKey: 'start_key_ok' });
 
@@ -27,43 +27,43 @@ test('it ingests a pending root and removes its durable row', async () => {
     mockActivityService.advanceActivity.handler(() => ({ activity: row, appendedHead: 0 })),
   );
 
-  await writeStartRow(row);
+  await writeActivityStart(row);
 
-  const outcome = await ingestStartRow(ctx.client, row.id);
+  const outcome = await ingestActivityStart(ctx.client, row.id);
 
   expect(outcome).toBe('ingested');
 
-  const stored = await readStartRow(row.id);
+  const stored = await readActivityStart(row.id);
 
   expect(stored).toBeUndefined();
 });
 
-test('it reports absent for an activity id this device holds no pending root for', async () => {
+test('it reports absent for an activity id this device holds no pending activityStart for', async () => {
   const ctx = setupTest();
 
-  const outcome = await ingestStartRow(ctx.client, 'act_ingest_absent');
+  const outcome = await ingestActivityStart(ctx.client, 'act_ingest_absent');
 
   expect(outcome).toBe('absent');
 });
 
-test('it defers and keeps the root on a transport failure', async () => {
+test('it defers and keeps the activityStart on a transport failure', async () => {
   const ctx = setupTest();
   const row = createMockActivityData({ id: 'act_ingest_transport', startKey: 'start_key_t' });
 
   server.use(mockActivityService.advanceActivity.handler(() => HttpResponse.error()));
 
-  await writeStartRow(row);
+  await writeActivityStart(row);
 
-  const outcome = await ingestStartRow(ctx.client, row.id);
+  const outcome = await ingestActivityStart(ctx.client, row.id);
 
   expect(outcome).toBe('deferred');
 
-  const stored = await readStartRow(row.id);
+  const stored = await readActivityStart(row.id);
 
   expect(stored).toStrictEqual(row);
 });
 
-test('it defers and keeps the root when the avatar reads temporarily inactive', async () => {
+test('it defers and keeps the activityStart when the avatar reads temporarily inactive', async () => {
   const ctx = setupTest();
   const row = createMockActivityData({ id: 'act_ingest_inactive', startKey: 'start_key_i' });
 
@@ -75,13 +75,13 @@ test('it defers and keeps the root when the avatar reads temporarily inactive', 
     }),
   );
 
-  await writeStartRow(row);
+  await writeActivityStart(row);
 
-  const outcome = await ingestStartRow(ctx.client, row.id);
+  const outcome = await ingestActivityStart(ctx.client, row.id);
 
   expect(outcome).toBe('deferred');
 
-  const stored = await readStartRow(row.id);
+  const stored = await readActivityStart(row.id);
 
   expect(stored).toStrictEqual(row);
 });
@@ -99,19 +99,19 @@ test('it rejects and removes a row with no start key without reaching the server
     }),
   );
 
-  await writeStartRow(row);
+  await writeActivityStart(row);
 
-  const outcome = await ingestStartRow(ctx.client, row.id);
+  const outcome = await ingestActivityStart(ctx.client, row.id);
 
   expect(outcome).toBe('rejected');
   expect(track).not.toHaveBeenCalled();
 
-  const stored = await readStartRow(row.id);
+  const stored = await readActivityStart(row.id);
 
   expect(stored).toBeUndefined();
 });
 
-test('it rejects and removes the root once the server refuses it with NODE_NOT_REVEALED', async () => {
+test('it rejects and removes the activityStart once the server refuses it with NODE_NOT_REVEALED', async () => {
   const ctx = setupTest();
   const row = createMockActivityData({ id: 'act_ingest_rejected', startKey: 'start_key_c' });
 
@@ -121,18 +121,18 @@ test('it rejects and removes the root once the server refuses it with NODE_NOT_R
     }),
   );
 
-  await writeStartRow(row);
+  await writeActivityStart(row);
 
-  const outcome = await ingestStartRow(ctx.client, row.id);
+  const outcome = await ingestActivityStart(ctx.client, row.id);
 
   expect(outcome).toBe('rejected');
 
-  const stored = await readStartRow(row.id);
+  const stored = await readActivityStart(row.id);
 
   expect(stored).toBeUndefined();
 });
 
-test('it defers an order-sensitive CONFLICT, keeping the root for a later retry', async () => {
+test('it defers an order-sensitive CONFLICT, keeping the activityStart for a later retry', async () => {
   const ctx = setupTest();
   const row = createMockActivityData({ id: 'act_ingest_conflict', startKey: 'start_key_d' });
 
@@ -142,13 +142,13 @@ test('it defers an order-sensitive CONFLICT, keeping the root for a later retry'
     }),
   );
 
-  await writeStartRow(row);
+  await writeActivityStart(row);
 
-  const outcome = await ingestStartRow(ctx.client, row.id);
+  const outcome = await ingestActivityStart(ctx.client, row.id);
 
   expect(outcome).toBe('deferred');
 
-  const stored = await readStartRow(row.id);
+  const stored = await readActivityStart(row.id);
 
   expect(stored).toBeDefined();
 });

@@ -17,9 +17,9 @@ const MOCK_SIM_VERSION = '0.0.0-mock';
 /**
  * Starts an activity for an avatar owned by the acting user, snapshotting the avatar's current
  * progression, mirroring the real service: CONFLICT carries the already-active activity, a
- * quarantined chain for the same avatar and scope admits no new starts, and admission is gated to
- * the account's active avatar — AVATAR_NOT_ACTIVE naming the actual one, with an absent selection
- * adopting the starting avatar unless a different avatar already holds a live run.
+ * quarantined seed chain for the same avatar and scope admits no new starts, and admission is gated
+ * to the account's active avatar — AVATAR_NOT_ACTIVE naming the actual one, with an absent
+ * selection adopting the starting avatar unless a different avatar already holds a live run.
  */
 export const startActivity = os.startActivity.handler(async (opts) => {
   const actingUserId = opts.context.actingUserId;

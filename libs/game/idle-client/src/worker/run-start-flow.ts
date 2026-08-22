@@ -1,24 +1,24 @@
 import type { ActivityData } from '@vers/contract-activity';
+import { writeActivityStart } from '../submission/write-activity-start';
 import { writeLastStartedActivity } from '../submission/write-last-started-activity';
-import { writeStartRow } from '../submission/write-start-row';
-import { buildStartRow } from './build-start-row';
+import { buildActivityStart } from './build-activity-start';
 import { handleSetActivityMessage } from './handle-set-activity-message';
 import { submitStopIntent } from './submit-stop-intent';
 import type { FlowSignals, StartActivityInput, WorkerContext } from './types';
 import type { StartStatus } from './worker-contract';
 
 /**
- * Begins a run entirely inside the worker, resolving the single-active-run invariant locally
- * rather than by round-tripping the server: a request naming the avatar, scope, and simulation
- * already live here answers `attached` without minting anything; any other request mints a fresh
- * local row (`buildStartRow`) and installs it, stopping a genuinely running live run back first
- * only once the mint has succeeded — a mint that fails leaves the current run untouched rather
- * than stranding the worker with no live run and a stale stopped one. The minted row is persisted
- * durably before it installs, so a crash between mint and install still leaves a recoverable root.
- * `token` is this call's own supersession token, re-checked after every await — a fresher call can
- * land while this flow runs, and a superseded flow answers `failed`, leaving its minted row to the
- * fresher flow's own recovery. A stop landing mid-start stops the minted row back durably. An abort
- * settles as `failed` without a fault report.
+ * Begins a run entirely inside the worker, resolving the single-active-run invariant locally rather
+ * than by round-tripping the server: a request naming the avatar, scope, and simulation already
+ * live here answers `attached` without minting anything; any other request mints a fresh local row
+ * (`buildActivityStart`) and installs it, stopping a genuinely running live run back first only
+ * once the mint has succeeded — a mint that fails leaves the current run untouched rather than
+ * stranding the worker with no live run and a stale stopped one. The minted row is persisted
+ * durably before it installs, so a crash between mint and install still leaves a recoverable
+ * activity start. `token` is this call's own supersession token, re-checked after every await — a
+ * fresher call can land while this flow runs, and a superseded flow answers `failed`, leaving its
+ * minted row to the fresher flow's own recovery. A stop landing mid-start stops the minted row back
+ * durably. An abort settles as `failed` without a fault report.
  */
 export async function runStartFlow(
   context: WorkerContext,
@@ -40,7 +40,7 @@ export async function runStartFlow(
   const running = live !== null && context.getSimulation().activity?.id === live.id ? live : null;
 
   // already running here — the player's request is already satisfied, and re-minting would fork
-  // the chain the live simulation is already advancing
+  // the checkpoint stream the live simulation is already advancing
   if (
     running !== null &&
     running.avatarID === input.avatarID &&
@@ -53,16 +53,17 @@ export async function runStartFlow(
   // the mint is attempted before the live run is stopped: a mint that fails (a missing cache)
   // leaves the current run intact rather than stranding the worker with no live run and a stale
   // stopped one
-  const row = await buildStartRow(context, { ...input, startKey: token });
+  const row = await buildActivityStart(context, { ...input, startKey: token });
 
   if (row === null) {
     return { kind: 'failed' };
   }
 
   if (running !== null) {
-    // silences the old simulation's ticking before the new row installs — `simulation.startActivity`
-    // auto-stops a live generator on its own, but only once this flow reaches it, and every await
-    // between here and there is a window the old run would otherwise keep advancing in
+    // silences the old simulation's ticking before the new row installs —
+    // `simulation.startActivity` auto-stops a live generator on its own, but only once this flow
+    // reaches it, and every await between here and there is a window the old run would otherwise
+    // keep advancing in
     context.getSimulation().stopActivity();
 
     // submitStopIntent flushes the row's earned checkpoints before the stop lands, so they reach
@@ -76,8 +77,9 @@ export async function runStartFlow(
     }
   }
 
-  // written before install: a crash here still leaves a recoverable root for a later reconcile
-  await writeStartRow(row);
+  // written before install: a crash here still leaves a recoverable activity start for a later
+  // reconcile
+  await writeActivityStart(row);
 
   // durable so the row's own predecessor reference stays recoverable across a worker reload; a
   // later start for this avatar reads it back as its own predecessor

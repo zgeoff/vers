@@ -5,7 +5,7 @@ export type IterationFailureOutcome = 'errored' | 'quarantined';
 /**
  * Counts one drain iteration that failed to replay a claimed chain, split by outcome:
  * `quarantined` covers an activity that exhausted its replay attempts, `errored` covers every
- * other failed attempt (including one the drain loop itself never got a frontier for).
+ * other failed attempt (including one the drain loop itself never got a target for).
  */
 export function recordIterationFailure(outcome: IterationFailureOutcome): void {
   // The SDK returns the same instrument for an identical registration, and resolving late keeps

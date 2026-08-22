@@ -12,8 +12,8 @@ import invariant from 'tiny-invariant';
 import { writeContentDocumentCache } from '../content/write-content-document-cache';
 import { server } from '../mocks/node';
 import type { CheckpointSubmitter } from '../submission/create-checkpoint-submitter';
-import { readAllStartRows } from '../submission/read-all-start-rows';
-import { readStartRow } from '../submission/read-start-row';
+import { readActivityStart } from '../submission/read-activity-start';
+import { readAllActivityStarts } from '../submission/read-all-activity-starts';
 import { writeNodeSeeds } from '../submission/write-node-seeds';
 import { writeStartStamps } from '../submission/write-start-stamps';
 import { createStubSubmitter } from '../test-utils/create-stub-submitter';
@@ -23,7 +23,7 @@ import { handleStartActivityMessage } from './handle-start-activity-message';
 import { sentryHandle } from './sentry-handle';
 import { startErrorReporting } from './start-error-reporting';
 
-test('it mints a row locally, installs it, and persists the pending root', async () => {
+test('it mints a row locally, installs it, and persists the pending activityStart', async () => {
   const submitter = createStubSubmitter();
   const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_1', submitter });
 
@@ -62,7 +62,7 @@ test('it mints a row locally, installs it, and persists the pending root', async
     startChainIndex: 0,
   });
 
-  const persisted = await readStartRow(result.activity.id);
+  const persisted = await readActivityStart(result.activity.id);
 
   expect(persisted).toStrictEqual(result.activity);
 
@@ -131,7 +131,7 @@ test('it answers attached without re-minting when the request already matches th
   expect(result).toStrictEqual({ activityID: running.id, kind: 'attached' });
   expect(submitter.registerActivity).not.toHaveBeenCalled();
 
-  const rows = await readAllStartRows();
+  const rows = await readAllActivityStarts();
 
   expect(rows).toStrictEqual([]);
 });
@@ -211,7 +211,7 @@ test('it leaves the live run intact when a different-scope switch cannot mint th
   expect(submitter.flushNow).not.toHaveBeenCalled();
   expect(submitter.registerActivity).not.toHaveBeenCalled();
 
-  const rows = await readAllStartRows();
+  const rows = await readAllActivityStarts();
 
   expect(rows).toStrictEqual([]);
 });
@@ -228,7 +228,7 @@ test('it answers failed and persists nothing when the scope was never cached', a
   expect(result).toStrictEqual({ kind: 'failed' });
   expect(context.getSimulation().activity).toBeNull();
 
-  const rows = await readAllStartRows();
+  const rows = await readAllActivityStarts();
 
   expect(rows).toStrictEqual([]);
 });
@@ -270,7 +270,7 @@ test('it answers failed without reporting a fault when a worker shutdown aborts 
   expect(result).toStrictEqual({ kind: 'failed' });
   expect(recorded).toStrictEqual([]);
 
-  const rows = await readAllStartRows();
+  const rows = await readAllActivityStarts();
 
   expect(rows).toStrictEqual([]);
 });
@@ -376,9 +376,9 @@ test('it stops a freshly minted row back durably when a stop lands mid-switch', 
   expect(context.getActivity()?.id).toBe(previous.id);
   expect(submitter.registerActivity).not.toHaveBeenCalled();
 
-  // the minted row was persisted as a recoverable root before the mid-switch stop landed, and its
-  // stop-back was delivered durably rather than dropped
-  const rows = await readAllStartRows();
+  // the minted row was persisted as a recoverable activity start before the mid-switch stop landed,
+  // and its stop-back was delivered durably rather than dropped
+  const rows = await readAllActivityStarts();
 
   expect(rows).toHaveLength(1);
 

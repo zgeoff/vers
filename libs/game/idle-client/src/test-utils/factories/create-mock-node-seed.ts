@@ -1,14 +1,14 @@
 import { faker } from '@faker-js/faker';
 import { createId } from '@paralleldrive/cuid2';
 import type { EncounterNode } from '@vers/contract-activity';
-import type { NodeSeed, NodeSeedHead } from '../../submission/types';
+import type { NodeSeed, NodeSeedAnchor } from '../../submission/types';
 
 interface CreateMockNodeSeedOverrides {
   readonly avatarID?: string;
   readonly contentVersion?: string;
   readonly encounterNode?: EncounterNode;
   readonly genesisSeed?: string;
-  readonly head?: NodeSeedHead;
+  readonly anchor?: NodeSeedAnchor;
   readonly nodeID?: string;
 }
 
@@ -21,7 +21,7 @@ export function createMockNodeSeed(overrides: CreateMockNodeSeedOverrides = {}):
     contentVersion: overrides.contentVersion ?? faker.number.int({ max: 100, min: 1 }).toString(),
     encounterNode: overrides.encounterNode ?? buildEncounterNode(),
     genesisSeed,
-    head: overrides.head ?? { chainIndex: 0, nextSeed: genesisSeed },
+    anchor: overrides.anchor ?? { chainIndex: 0, nextSeed: genesisSeed },
     nodeID: overrides.nodeID ?? buildNodeID(),
   };
 }

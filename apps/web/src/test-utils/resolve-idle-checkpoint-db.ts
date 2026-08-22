@@ -8,7 +8,7 @@ import { openDB } from 'idb';
  * drift from the worker's real values fails the seeded-intent read test loudly.
  */
 const IDLE_CHECKPOINT_DB_NAME = 'vers-idle-checkpoint-queue';
-const IDLE_CHECKPOINT_DB_VERSION = 6;
+const IDLE_CHECKPOINT_DB_VERSION = 7;
 
 interface IdleCheckpointDBSchema {
   'content-documents': {
@@ -23,7 +23,7 @@ interface IdleCheckpointDBSchema {
     key: [string, number];
     value: unknown;
   };
-  'pending-roots': {
+  'pending-activity-starts': {
     key: string;
     value: unknown;
   };
@@ -38,7 +38,8 @@ let idleCheckpointDB: IDBPDatabase<IdleCheckpointDBSchema> | null = null;
 /**
  * Opens the idle worker's durable IndexedDB database under its real name, version, and store
  * layout, so a record this seeds lands where the worker's own read of it looks. Store names are
- * checked against the schema at each call, so a mistyped store fails typecheck rather than drifting.
+ * checked against the schema at each call, so a mistyped store fails typecheck rather than
+ * drifting.
  */
 export async function resolveIdleCheckpointDB(): Promise<IDBPDatabase<IdleCheckpointDBSchema>> {
   idleCheckpointDB ??= await openDB<IdleCheckpointDBSchema>(
@@ -64,8 +65,8 @@ export async function resolveIdleCheckpointDB(): Promise<IDBPDatabase<IdleCheckp
           database.createObjectStore('node-seeds', { keyPath: ['avatarID', 'nodeID'] });
         }
 
-        if (!database.objectStoreNames.contains('pending-roots')) {
-          database.createObjectStore('pending-roots', { keyPath: 'id' });
+        if (!database.objectStoreNames.contains('pending-activity-starts')) {
+          database.createObjectStore('pending-activity-starts', { keyPath: 'id' });
         }
       },
     },

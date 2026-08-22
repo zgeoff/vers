@@ -1,10 +1,10 @@
 import { expect, test } from 'bun:test';
-import { createMockOfflineRootSubmission } from './create-mock-offline-root-submission';
+import { createMockOfflineActivityStartSubmission } from './create-mock-offline-activity-start-submission';
 
-test('it builds a default root submission', () => {
-  const root = createMockOfflineRootSubmission();
+test('it builds a default activity-start submission', () => {
+  const activityStart = createMockOfflineActivityStartSubmission();
 
-  expect(root).toStrictEqual({
+  expect(activityStart).toStrictEqual({
     avatarID: expect.toBeString(),
     buildSnapshot: { level: 1, xp: 0 },
     contentVersion: '2',
@@ -21,18 +21,21 @@ test('it builds a default root submission', () => {
 });
 
 test('it defaults startHash to the real start hash of the client-cached inputs', () => {
-  const root = createMockOfflineRootSubmission({
+  const activityStart = createMockOfflineActivityStartSubmission({
     contentVersion: '3',
     keyVersion: 7,
     seed: 'seed_fixed',
     simVersion: 'sim_1',
   });
 
-  expect(root.startHash).toMatch(/^[a-f0-9]{64}$/);
+  expect(activityStart.startHash).toMatch(/^[a-f0-9]{64}$/);
 });
 
 test('it applies overrides on top of the faker-generated defaults', () => {
-  const root = createMockOfflineRootSubmission({ avatarID: 'avatar_1', scopeID: 'node_1' });
+  const activityStart = createMockOfflineActivityStartSubmission({
+    avatarID: 'avatar_1',
+    scopeID: 'node_1',
+  });
 
-  expect(root).toMatchObject({ avatarID: 'avatar_1', scopeID: 'node_1' });
+  expect(activityStart).toMatchObject({ avatarID: 'avatar_1', scopeID: 'node_1' });
 });
