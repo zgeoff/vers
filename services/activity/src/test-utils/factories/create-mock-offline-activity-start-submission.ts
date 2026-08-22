@@ -1,30 +1,30 @@
 import { faker } from '@faker-js/faker';
 import { createId } from '@paralleldrive/cuid2';
-import type { EncounterNode, OfflineRootSubmission } from '@vers/contract-activity';
+import type { EncounterNode, OfflineActivityStartSubmission } from '@vers/contract-activity';
 import { buildStartHash } from '@vers/contract-activity';
 
 /**
- * The factory's overrides: every `OfflineRootSubmission` field, plus the client-cached
+ * The factory's overrides: every `OfflineActivityStartSubmission` field, plus the client-cached
  * `encounterNode` and `keyVersion` the default `startHash` folds in. Those two are inputs to the
  * hash the client computes locally, never fields of the wire submission the server ingests — the
  * server re-derives them from its own content and scope secret — so they are consumed here and
  * dropped from the returned value.
  */
-interface CreateMockOfflineRootSubmissionOverrides extends Partial<OfflineRootSubmission> {
+interface CreateMockOfflineActivityStartSubmissionOverrides extends Partial<OfflineActivityStartSubmission> {
   readonly encounterNode?: Readonly<EncounterNode>;
   readonly keyVersion?: number;
 }
 
 /**
- * A plain, unpersisted root submission with faker-generated defaults. `avatarID` defaults to a
- * random id, not a real avatar's, and `startHash` defaults to the real start hash of the client's
- * own cached inputs. A test whose root must mint against a real server derivation overrides
- * `startHash` with the hash the server recomputes — the encounter the server derives is not
- * knowable from these defaults alone.
+ * A plain, unpersisted activity start submission with faker-generated defaults. `avatarID` defaults
+ * to a random id, not a real avatar's, and `startHash` defaults to the real start hash of the
+ * client's own cached inputs. A test whose activity start must mint against a real server
+ * derivation overrides `startHash` with the hash the server recomputes — the encounter the server
+ * derives is not knowable from these defaults alone.
  */
-export function createMockOfflineRootSubmission(
-  overrides: Readonly<CreateMockOfflineRootSubmissionOverrides> = {},
-): OfflineRootSubmission {
+export function createMockOfflineActivityStartSubmission(
+  overrides: Readonly<CreateMockOfflineActivityStartSubmissionOverrides> = {},
+): OfflineActivityStartSubmission {
   const {
     encounterNode: encounterNodeInput,
     keyVersion: keyVersionInput,
@@ -53,7 +53,7 @@ export function createMockOfflineRootSubmission(
     simVersion,
     startChainIndex: 0,
     startHash,
-    startKey: `root_act_${createId()}`,
+    startKey: `start_act_${createId()}`,
     ...submission,
   };
 }

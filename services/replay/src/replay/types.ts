@@ -25,7 +25,7 @@ export interface StoredCheckpoint {
 export const TERMINAL_CHECKPOINT_TYPES: ReadonlySet<string> = new Set(['completed', 'failed']);
 
 /**
- * The frontier activity's replay unit: its own row's stamped versions and chain position, the
+ * The target activity's replay unit: its own row's stamped versions and chain position, the
  * chain row's anchors, and every stored checkpoint from version 1 through `appendedHead` — the
  * unverified tail to compare is `checkpoints.slice(verifiedHead)`; the whole array is what a
  * cache-miss rebuild replays through. `prevHash` and `seed` are the hash chain and

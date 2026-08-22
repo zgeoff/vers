@@ -50,7 +50,7 @@ test('it persists a stream whose stored hashes byte-match a fresh recompute', as
   expect(storedRows).toHaveLength(fixture.checkpoints.length);
 });
 
-test('it roots a successor on an already-persisted chain instead of creating a new one', async () => {
+test('it activityStarts a successor on an already-persisted chain instead of creating a new one', async () => {
   await using ctx = await createTestDB({ isolation: 'schema' });
 
   const predecessor = await createHonestActivityFixture(ctx.db, {
@@ -63,7 +63,7 @@ test('it roots a successor on an already-persisted chain instead of creating a n
   invariant(tail, 'the fixture always stores at least one checkpoint');
 
   const successor = await createHonestActivityFixture(ctx.db, {
-    rootChain: predecessor.chain,
+    chainRow: predecessor.chain,
     seed: tail.payload.nextSeed,
     startChainIndex: tail.payload.chainIndex,
   });

@@ -10,7 +10,7 @@ import { writeStartStamps } from '../submission/write-start-stamps';
 import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
 import { createMockCheckpointBatchEntry } from '../test-utils/factories/create-mock-checkpoint-batch-entry';
 import { createMockNodeSeed } from '../test-utils/factories/create-mock-node-seed';
-import { buildStartRow } from './build-start-row';
+import { buildActivityStart } from './build-activity-start';
 
 test('it synthesizes a row whose start hash matches buildStartHash for the same cached inputs', async () => {
   const seed = createMockNodeSeed({ avatarID: 'avatar_1', nodeID: '3_2' });
@@ -20,7 +20,7 @@ test('it synthesizes a row whose start hash matches buildStartHash for the same 
 
   const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_1' });
 
-  const row = await buildStartRow(context, {
+  const row = await buildActivityStart(context, {
     avatarID: seed.avatarID,
     scopeID: seed.nodeID,
     scopeType: 'world_map_node',
@@ -68,10 +68,10 @@ test('it synthesizes a row whose start hash matches buildStartHash for the same 
   });
 });
 
-test("it roots the mint at a revisited node's cached head rather than its genesis", async () => {
+test("it activityStarts the mint at a revisited node's cached anchor rather than its genesis", async () => {
   const seed = createMockNodeSeed({
     avatarID: 'avatar_revisited',
-    head: { chainIndex: 6, nextSeed: 'seed-advanced' },
+    anchor: { chainIndex: 6, nextSeed: 'seed-advanced' },
     nodeID: '1_1',
   });
 
@@ -80,7 +80,7 @@ test("it roots the mint at a revisited node's cached head rather than its genesi
 
   const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_2' });
 
-  const row = await buildStartRow(context, {
+  const row = await buildActivityStart(context, {
     avatarID: seed.avatarID,
     scopeID: seed.nodeID,
     scopeType: 'world_map_node',
@@ -96,7 +96,7 @@ test("it roots the mint at a revisited node's cached head rather than its genesi
 test('it returns null when the scope was never cached for the avatar', async () => {
   const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_1' });
 
-  const row = await buildStartRow(context, {
+  const row = await buildActivityStart(context, {
     avatarID: 'avatar_never_cached',
     scopeID: '0_0',
     scopeType: 'world_map_node',
@@ -113,7 +113,7 @@ test('it returns null when no start stamps are cached', async () => {
 
   const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_1' });
 
-  const row = await buildStartRow(context, {
+  const row = await buildActivityStart(context, {
     avatarID: seed.avatarID,
     scopeID: seed.nodeID,
     scopeType: 'world_map_node',
@@ -131,7 +131,7 @@ test('it returns null when the build carries no bundled engine hash', async () =
 
   const context = createStubWorkerContext();
 
-  const row = await buildStartRow(context, {
+  const row = await buildActivityStart(context, {
     avatarID: seed.avatarID,
     scopeID: seed.nodeID,
     scopeType: 'world_map_node',
@@ -153,7 +153,7 @@ test('it sources the build snapshot from the last activity this worker installed
     createMockActivityData({ avatarID: seed.avatarID, buildSnapshot: { level: 7, xp: 8450 } }),
   );
 
-  const row = await buildStartRow(context, {
+  const row = await buildActivityStart(context, {
     avatarID: seed.avatarID,
     scopeID: seed.nodeID,
     scopeType: 'world_map_node',
@@ -198,7 +198,7 @@ test("it folds the previous run's locally queued checkpoint xp onto its start ba
     }),
   );
 
-  const row = await buildStartRow(context, {
+  const row = await buildActivityStart(context, {
     avatarID: seed.avatarID,
     scopeID: seed.nodeID,
     scopeType: 'world_map_node',
@@ -221,7 +221,7 @@ test("it starts a fresh avatar's build snapshot at zero xp when the worker holds
 
   context.setActivity(createMockActivityData({ avatarID: 'a-different-avatar' }));
 
-  const row = await buildStartRow(context, {
+  const row = await buildActivityStart(context, {
     avatarID: seed.avatarID,
     scopeID: seed.nodeID,
     scopeType: 'world_map_node',
@@ -246,7 +246,7 @@ test("it stamps the avatar's durably tracked last-started activity as the predec
 
   const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_1' });
 
-  const row = await buildStartRow(context, {
+  const row = await buildActivityStart(context, {
     avatarID: seed.avatarID,
     scopeID: seed.nodeID,
     scopeType: 'world_map_node',
@@ -271,7 +271,7 @@ test('it stamps a null predecessor when the durable record belongs to a differen
 
   const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_1' });
 
-  const row = await buildStartRow(context, {
+  const row = await buildActivityStart(context, {
     avatarID: seed.avatarID,
     scopeID: seed.nodeID,
     scopeType: 'world_map_node',

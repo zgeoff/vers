@@ -12,7 +12,7 @@ import {
 /**
  * A stored mock activity row: the public `ActivityDataSchema`'s shape with every field defaulted,
  * so tests state only the fields they assert on. `avatarID` defaults to a random id, not a real
- * avatar's, and hashes default to random hex rather than a real chain digest. Rebuilt from the
+ * avatar's, and hashes default to random hex rather than a real stream digest. Rebuilt from the
  * shape rather than extended because the public schema's own pair refinement blocks key overwrites.
  */
 const ActivityRowSchema = z.object({

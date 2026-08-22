@@ -1,5 +1,5 @@
 import { ActivityCheckpointType } from '@vers/idle-core';
-import { readAllStartRows } from './read-all-start-rows';
+import { readAllActivityStarts } from './read-all-activity-starts';
 import { readQueuedCheckpoints } from './read-queued-checkpoints';
 
 // widened to `string` so the comparison below reads against a checkpoint payload's untyped
@@ -8,14 +8,14 @@ const COMPLETED_CHECKPOINT_TYPE: string = ActivityCheckpointType.Completed;
 
 /**
  * The avatar's world-map nodes cleared offline but not yet server-verified, derived from the
- * durable offline outbox: a pending root scoped to a `world_map_node` whose queued checkpoints
- * hold a completed terminal. Empty once nothing is pending, so the call stays cheap on the common
- * online path. A node drops from the result once its root ingests and drains the outbox, which can
- * precede the server-verified set gaining it — a re-derive in that reconnect window briefly omits
- * the node until verification lands.
+ * durable offline outbox: a pending activity start scoped to a `world_map_node` whose queued
+ * checkpoints hold a completed terminal. Empty once nothing is pending, so the call stays cheap on
+ * the common online path. A node drops from the result once its activity start ingests and drains
+ * the outbox, which can precede the server-verified set gaining it — a re-derive in that reconnect
+ * window briefly omits the node until verification lands.
  */
 export async function readOfflineClearedNodeIDs(avatarID: string): Promise<ReadonlySet<string>> {
-  const rows = await readAllStartRows();
+  const rows = await readAllActivityStarts();
 
   const clearedNodeIDs = new Set<string>();
 

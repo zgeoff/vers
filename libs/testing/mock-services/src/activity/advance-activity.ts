@@ -1,4 +1,4 @@
-import type { CatchUpContinuation, OfflineRootSubmission } from '@vers/contract-activity';
+import type { CatchUpContinuation, OfflineActivityStartSubmission } from '@vers/contract-activity';
 import invariant from 'tiny-invariant';
 import { findLiveActivityAvatar } from '../avatar/find-live-activity-avatar';
 import { upsertActiveAvatar } from '../avatar/upsert-active-avatar';
@@ -7,19 +7,20 @@ import { os } from './os';
 
 /**
  * Bulk mint-and-appends a catch-up, mirroring the real service's per-continuation transitions at
- * the same simplification level `trackActivityProgress`'s mock accepts: each entry appends its
- * tail onto the currently active row, closes it by flipping to `stopped`, and mints the entry's own
- * id as the next active row using its own hint `buildSnapshot` — the mock has no settled-xp state
- * to author it from. A non-active target row converges on an already-minted continuation the same
- * way the real endpoint's mint dedup does — same avatar, `startKey`, and scope — rather than
- * rejecting a lost-response retry outright. Hash-chain validation, the offline-progress cap, and
- * writer eviction need state the mock doesn't track — those rejections are per-test overrides.
+ * the same simplification level `trackActivityProgress`'s mock accepts: each entry appends its tail
+ * onto the currently active row, closes it by flipping to `stopped`, and mints the entry's own id
+ * as the next active row using its own hint `buildSnapshot` — the mock has no settled-xp state to
+ * author it from. A non-active target row converges on an already-minted continuation the same way
+ * the real endpoint's mint dedup does — same avatar, `startKey`, and scope — rather than rejecting
+ * a lost-response retry outright. Hash-chain validation, the offline-progress cap, and writer
+ * eviction need state the mock doesn't track — those rejections are per-test overrides.
  *
- * When `activityID` names no row and `root` is present, mints it from `root`'s submitted fields
- * wholesale — no server derivation — after checking avatar ownership and the active-avatar
- * selection. The encounter and key/secret stamps the real endpoint derives default in the
- * collection, since `root` doesn't carry them. The node-selectable, sim-version, and live-anchor
- * gates need state this mock doesn't track — those rejections are per-test overrides too.
+ * When `activityID` names no row and `activityStart` is present, mints it from `activityStart`'s
+ * submitted fields wholesale — no server derivation — after checking avatar ownership and the
+ * active-avatar selection. The encounter and key/secret stamps the real endpoint derives default in
+ * the collection, since `activityStart` doesn't carry them. The node-selectable, sim-version, and
+ * live-anchor gates need state this mock doesn't track — those rejections are per-test overrides
+ * too.
  */
 export const advanceActivity = os.advanceActivity.handler(async (opts) => {
   const actingUserId = opts.context.actingUserId;
@@ -35,7 +36,12 @@ export const advanceActivity = os.advanceActivity.handler(async (opts) => {
   let activity: NonNullable<typeof initialActivity>;
 
   if (initialActivity === undefined) {
-    activity = await mintRootActivity(opts.input.activityID, opts.input.root, opts, actingUserId);
+    activity = await mintActivityStartRow(
+      opts.input.activityID,
+      opts.input.activityStart,
+      opts,
+      actingUserId,
+    );
   } else {
     const avatar = db.avatarCollection.findFirst((q) =>
       q.where({ id: initialActivity.avatarID, userID: actingUserId }),
@@ -129,7 +135,7 @@ export const advanceActivity = os.advanceActivity.handler(async (opts) => {
   return { activity, appendedHead: activity.appendedHead };
 });
 
-interface MintRootAvatarNotActivePayload {
+interface MintActivityStartAvatarNotActivePayload {
   readonly data: { readonly activeAvatarID: string; readonly activeAvatarName: string };
 }
 
@@ -138,32 +144,33 @@ interface EmptyErrorPayload {
 }
 
 /**
- * The typed error constructors the mock's root mint throws.
+ * The typed error constructors the mock's activity start mint throws.
  */
-interface MintRootErrors {
-  readonly AVATAR_NOT_ACTIVE: (payload: MintRootAvatarNotActivePayload) => Error;
+interface MintActivityStartErrors {
+  readonly AVATAR_NOT_ACTIVE: (payload: MintActivityStartAvatarNotActivePayload) => Error;
   readonly NOT_FOUND: (payload: EmptyErrorPayload) => Error;
 }
 
 /**
- * Mints `root` as a fresh active row at `activityID`, checking ownership of `root.avatarID` and the
- * account's active-avatar selection, then storing every submitted field wholesale rather than
- * re-deriving any. The encounter and key/secret stamps `root` doesn't carry default in the
- * collection, and `lastHash` anchors to `root.startHash`. The node-selectable, sim-version, and
- * live-anchor gates the real endpoint runs need state this mock doesn't track.
+ * Mints `activityStart` as a fresh active row at `activityID`, checking ownership of `activity
+ * start.avatarID` and the account's active-avatar selection, then storing every submitted field
+ * wholesale rather than re-deriving any. The encounter and key/secret stamps `activityStart`
+ * doesn't carry default in the collection, and `lastHash` anchors to `activityStart.startHash`.
+ * The node-selectable, sim-version, and live-anchor gates the real endpoint runs need state this
+ * mock doesn't track.
  */
-async function mintRootActivity(
+async function mintActivityStartRow(
   activityID: string,
-  root: OfflineRootSubmission | undefined,
-  opts: Readonly<{ errors: MintRootErrors }>,
+  activityStart: OfflineActivityStartSubmission | undefined,
+  opts: Readonly<{ errors: MintActivityStartErrors }>,
   actingUserID: string,
 ): Promise<NonNullable<ReturnType<typeof db.activityCollection.findFirst>>> {
-  if (root === undefined) {
+  if (activityStart === undefined) {
     throw opts.errors.NOT_FOUND({ data: {} });
   }
 
   const avatar = db.avatarCollection.findFirst((q) =>
-    q.where({ id: root.avatarID, userID: actingUserID }),
+    q.where({ id: activityStart.avatarID, userID: actingUserID }),
   );
 
   if (avatar === undefined) {
@@ -175,14 +182,14 @@ async function mintRootActivity(
   if (selection === undefined) {
     const liveAvatar = findLiveActivityAvatar(actingUserID);
 
-    if (liveAvatar !== null && liveAvatar.id !== root.avatarID) {
+    if (liveAvatar !== null && liveAvatar.id !== activityStart.avatarID) {
       throw opts.errors.AVATAR_NOT_ACTIVE({
         data: { activeAvatarID: liveAvatar.id, activeAvatarName: liveAvatar.name },
       });
     }
 
-    await upsertActiveAvatar(actingUserID, root.avatarID);
-  } else if (selection.avatarID !== root.avatarID) {
+    await upsertActiveAvatar(actingUserID, activityStart.avatarID);
+  } else if (selection.avatarID !== activityStart.avatarID) {
     const activeAvatar = db.avatarCollection.findFirst((q) => q.where({ id: selection.avatarID }));
 
     invariant(activeAvatar !== undefined, 'active avatar selection must name an existing avatar');
@@ -193,22 +200,22 @@ async function mintRootActivity(
   }
 
   const minted = await db.activityCollection.create({
-    avatarID: root.avatarID,
-    buildSnapshot: root.buildSnapshot,
-    contentVersion: root.contentVersion,
+    avatarID: activityStart.avatarID,
+    buildSnapshot: activityStart.buildSnapshot,
+    contentVersion: activityStart.contentVersion,
     id: activityID,
-    lastHash: root.startHash,
-    scopeID: root.scopeID,
-    scopeType: root.scopeType,
-    seed: root.seed,
-    simVersion: root.simVersion,
-    startChainIndex: root.startChainIndex,
-    startHash: root.startHash,
-    startKey: root.startKey,
+    lastHash: activityStart.startHash,
+    scopeID: activityStart.scopeID,
+    scopeType: activityStart.scopeType,
+    seed: activityStart.seed,
+    simVersion: activityStart.simVersion,
+    startChainIndex: activityStart.startChainIndex,
+    startHash: activityStart.startHash,
+    startKey: activityStart.startKey,
     status: 'active',
   });
 
-  invariant(minted !== undefined, 'a freshly minted mock root row must exist');
+  invariant(minted !== undefined, 'a freshly minted mock activity start must exist');
 
   return minted;
 }

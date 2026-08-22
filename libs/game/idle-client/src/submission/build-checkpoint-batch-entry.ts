@@ -19,9 +19,9 @@ interface BuildCheckpointBatchEntryInput {
 /**
  * Maps one engine checkpoint onto the wire `CheckpointBatchEntry` the activity service validates,
  * computing the same hash digest the server recomputes from the batch. `Started` carries its own
- * `seed`; every other checkpoint's `seed` is the chain position it started from, which the caller
- * threads in as `previousNextSeed` — the prior checkpoint's `nextSeed`, or the activity's own seed
- * for the stream's first entry.
+ * `seed`; every other checkpoint's `seed` is the seed-chain position it started from, which the
+ * caller threads in as `previousNextSeed` — the prior checkpoint's `nextSeed`, or the activity's
+ * own seed for the stream's first entry.
  */
 export function buildCheckpointBatchEntry(
   input: Readonly<BuildCheckpointBatchEntryInput>,

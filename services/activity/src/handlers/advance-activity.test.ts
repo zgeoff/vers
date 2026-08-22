@@ -31,7 +31,7 @@ import { createActivityService } from '../create-activity-service';
 import { createMockActivity } from '../test-utils/factories/create-mock-activity';
 import { createMockCatchUpContinuation } from '../test-utils/factories/create-mock-catch-up-continuation';
 import { createMockCheckpointBatch } from '../test-utils/factories/create-mock-checkpoint-batch';
-import { createMockOfflineRootSubmission } from '../test-utils/factories/create-mock-offline-root-submission';
+import { createMockOfflineActivityStartSubmission } from '../test-utils/factories/create-mock-offline-activity-start-submission';
 
 /**
  * `advanceActivity` opens its own `db.transaction()` per continuation, which can't nest under the
@@ -88,7 +88,7 @@ function buildMintedRowContext(
   return { ...preceding, seed, startChainIndex, startHash };
 }
 
-interface RootDerivationInput {
+interface ActivityStartDerivationInput {
   readonly avatarID: string;
   readonly avatarSeed: number;
   readonly contentVersion: string;
@@ -99,12 +99,12 @@ interface RootDerivationInput {
 }
 
 /**
- * Reproduces the encounter node and start hash `mintRoot` derives server-side for a root at a
- * scope, so a success-path test can submit a `startHash` the server's own recompute matches. The
- * server stamps `keyVersion` 1 and reads the `worldmap` scope secret at version 1 — the activity
- * service's defaults — so those are fixed here too.
+ * Reproduces the encounter node and start hash `mintActivityStart` derives server-side for an
+ * activity start at a scope, so a success-path test can submit a `startHash` the server's own
+ * recompute matches. The server stamps `keyVersion` 1 and reads the `worldmap` scope secret at
+ * version 1 — the activity service's defaults — so those are fixed here too.
  */
-function deriveRootStart(input: Readonly<RootDerivationInput>): {
+function deriveActivityStart(input: Readonly<ActivityStartDerivationInput>): {
   encounterNode: EncounterNode;
   startHash: string;
 } {
@@ -860,7 +860,7 @@ test('it rejects an anonymous acting user with UNAUTHORIZED', async () => {
   ).rejects.toMatchObject({ code: 'UNAUTHORIZED', data: { reason: 'missing-session' } });
 });
 
-test('it mints a client-minted root under a valid client head, deriving its encounter and stamps server-side', async () => {
+test('it mints a client-minted activityStart under a valid client head, deriving its encounter and stamps server-side', async () => {
   await using ctx = await setupTest();
 
   const current = await createSimVersionRow(ctx.db);
@@ -874,7 +874,7 @@ test('it mints a client-minted root under a valid client head, deriving its enco
   // reads the encounter the server derives against
   const document = createMockContentDocument({ contentVersion: '2' });
 
-  const derived = deriveRootStart({
+  const derived = deriveActivityStart({
     avatarID: avatar.id,
     avatarSeed: avatar.seed,
     contentVersion: '2',
@@ -884,7 +884,7 @@ test('it mints a client-minted root under a valid client head, deriving its enco
     simVersion: current.engineHash,
   });
 
-  const root = createMockOfflineRootSubmission({
+  const activityStart = createMockOfflineActivityStartSubmission({
     avatarID: avatar.id,
     buildSnapshot: { level: buildLevelFromXP(0), xp: 0 },
     contentVersion: '2',
@@ -898,8 +898,8 @@ test('it mints a client-minted root under a valid client head, deriving its enco
 
   const tail = createMockCheckpointBatch({
     finalPayloadOverrides: { rewards: { xp: 40 }, type: 'completed' },
-    startChainIndex: root.startChainIndex,
-    startPrevHash: root.startHash,
+    startChainIndex: activityStart.startChainIndex,
+    startPrevHash: activityStart.startHash,
     startVersion: 1,
   });
 
@@ -915,39 +915,39 @@ test('it mints a client-minted root under a valid client head, deriving its enco
     activityID,
     continuations: [continuation],
     expectedHead: 0,
-    root,
+    activityStart,
   });
 
   expect(result.activity.id).toBe(continuation.id);
 
-  const rootRow = await ctx.db
+  const activityStartRow = await ctx.db
     .selectFrom('activities')
     .selectAll()
     .where('id', '=', activityID)
     .executeTakeFirstOrThrow();
 
-  expect(rootRow).toMatchObject({
+  expect(activityStartRow).toMatchObject({
     avatarId: avatar.id,
-    buildSnapshot: root.buildSnapshot,
-    contentVersion: root.contentVersion,
+    buildSnapshot: activityStart.buildSnapshot,
+    contentVersion: activityStart.contentVersion,
 
     // encounter and stamps derived from server truth, never the client payload
     encounterNode: derived.encounterNode,
     keyVersion: 1,
-    scopeId: root.scopeID,
-    scopeType: root.scopeType,
+    scopeId: activityStart.scopeID,
+    scopeType: activityStart.scopeType,
     secretRef: 'worldmap',
     secretVersion: 1,
-    seed: root.seed,
-    simVersion: root.simVersion,
-    startChainIndex: root.startChainIndex,
-    startHash: root.startHash,
-    startKey: root.startKey,
+    seed: activityStart.seed,
+    simVersion: activityStart.simVersion,
+    startChainIndex: activityStart.startChainIndex,
+    startHash: activityStart.startHash,
+    startKey: activityStart.startKey,
     status: 'stopped',
   });
 });
 
-test('it mints a root naming a predecessor not yet on the server, stamping the reference as-is', async () => {
+test('it mints an activity start naming a predecessor not yet on the server, stamping the reference as-is', async () => {
   await using ctx = await setupTest();
 
   const current = await createSimVersionRow(ctx.db);
@@ -959,7 +959,7 @@ test('it mints a root naming a predecessor not yet on the server, stamping the r
   const predecessorID = `act_${createId()}`;
   const document = createMockContentDocument({ contentVersion: '2' });
 
-  const derived = deriveRootStart({
+  const derived = deriveActivityStart({
     avatarID: avatar.id,
     avatarSeed: avatar.seed,
     contentVersion: '2',
@@ -969,7 +969,7 @@ test('it mints a root naming a predecessor not yet on the server, stamping the r
     simVersion: current.engineHash,
   });
 
-  const root = createMockOfflineRootSubmission({
+  const activityStart = createMockOfflineActivityStartSubmission({
     avatarID: avatar.id,
     buildSnapshot: { level: buildLevelFromXP(0), xp: 0 },
     contentVersion: '2',
@@ -984,13 +984,13 @@ test('it mints a root naming a predecessor not yet on the server, stamping the r
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  // an absent predecessor is not rejected — the root mints and the replay claim waits on the
-  // predecessor, so an out-of-order or reload-orphaned delivery settles once it lands
+  // an absent predecessor is not rejected — the activity start mints and the replay claim waits on
+  // the predecessor, so an out-of-order or reload-orphaned delivery settles once it lands
   const minted = await client.advanceActivity({
     activityID,
     continuations: [],
     expectedHead: 0,
-    root,
+    activityStart,
   });
 
   expect(minted.activity.id).toBe(activityID);
@@ -1004,7 +1004,7 @@ test('it mints a root naming a predecessor not yet on the server, stamping the r
   expect(mintedRow.predecessorActivityId).toBe(predecessorID);
 });
 
-test('it converges a sequential root retry onto the existing row without double-minting', async () => {
+test('it converges a sequential activityStart retry onto the existing row without double-minting', async () => {
   await using ctx = await setupTest();
 
   const current = await createSimVersionRow(ctx.db);
@@ -1015,7 +1015,7 @@ test('it converges a sequential root retry onto the existing row without double-
   const activityID = `act_${createId()}`;
   const document = createMockContentDocument({ contentVersion: '2' });
 
-  const derived = deriveRootStart({
+  const derived = deriveActivityStart({
     avatarID: avatar.id,
     avatarSeed: avatar.seed,
     contentVersion: '2',
@@ -1025,7 +1025,7 @@ test('it converges a sequential root retry onto the existing row without double-
     simVersion: current.engineHash,
   });
 
-  const root = createMockOfflineRootSubmission({
+  const activityStart = createMockOfflineActivityStartSubmission({
     avatarID: avatar.id,
     buildSnapshot: { level: buildLevelFromXP(0), xp: 0 },
     contentVersion: '2',
@@ -1039,8 +1039,8 @@ test('it converges a sequential root retry onto the existing row without double-
 
   const tail = createMockCheckpointBatch({
     finalPayloadOverrides: { rewards: { xp: 40 }, type: 'completed' },
-    startChainIndex: root.startChainIndex,
-    startPrevHash: root.startHash,
+    startChainIndex: activityStart.startChainIndex,
+    startPrevHash: activityStart.startHash,
     startVersion: 1,
   });
 
@@ -1051,10 +1051,10 @@ test('it converges a sequential root retry onto the existing row without double-
   });
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
-  const request = { activityID, continuations: [continuation], expectedHead: 0, root };
+  const request = { activityID, continuations: [continuation], expectedHead: 0, activityStart };
 
-  // a sequential resubmit of the same root converges on the minted row instead of double-minting;
-  // the concurrent-insert race that loses a unique violation is a separate case
+  // a sequential resubmit of the same activity start converges on the minted row instead of
+  // double-minting; the concurrent-insert race that loses a unique violation is a separate case
   const first = await client.advanceActivity(request);
   const second = await client.advanceActivity(request);
 
@@ -1066,11 +1066,11 @@ test('it converges a sequential root retry onto the existing row without double-
     .where('avatarId', '=', avatar.id)
     .execute();
 
-  // no duplicate root and no duplicate continuation row were minted by the resubmit
+  // no duplicate activity start and no duplicate continuation row were minted by the resubmit
   expect(rows).toHaveLength(2);
 });
 
-test("it conflicts a root whose startChainIndex/seed is behind the chain's live anchor", async () => {
+test("it conflicts an activity start whose startChainIndex/seed is behind the chain's live anchor", async () => {
   await using ctx = await setupTest();
 
   const current = await createSimVersionRow(ctx.db);
@@ -1079,7 +1079,7 @@ test("it conflicts a root whose startChainIndex/seed is behind the chain's live 
 
   await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
 
-  // a concurrent forward exit already advanced the chain past the root's stale head
+  // a concurrent forward exit already advanced the chain past the activity start's stale head
   await ctx.db
     .updateTable('activityChains')
     .set({ appendedChainIndex: 5, appendedNextSeed: 'a'.repeat(32) })
@@ -1090,7 +1090,7 @@ test("it conflicts a root whose startChainIndex/seed is behind the chain's live 
 
   const activityID = `act_${createId()}`;
 
-  const root = createMockOfflineRootSubmission({
+  const activityStart = createMockOfflineActivityStartSubmission({
     avatarID: avatar.id,
     buildSnapshot: { level: buildLevelFromXP(0), xp: 0 },
     contentVersion: '2',
@@ -1107,7 +1107,7 @@ test("it conflicts a root whose startChainIndex/seed is behind the chain's live 
       activityID,
       continuations: [createMockCatchUpContinuation()],
       expectedHead: 0,
-      root,
+      activityStart,
     }),
   ).rejects.toMatchObject({
     code: 'CONFLICT',
@@ -1115,7 +1115,7 @@ test("it conflicts a root whose startChainIndex/seed is behind the chain's live 
   });
 });
 
-test('it rejects a root whose buildSnapshot the server re-authors differently with CHECKPOINT_INVALID', async () => {
+test('it rejects an activity start whose buildSnapshot the server re-authors differently with CHECKPOINT_INVALID', async () => {
   await using ctx = await setupTest();
 
   const current = await createSimVersionRow(ctx.db);
@@ -1125,7 +1125,7 @@ test('it rejects a root whose buildSnapshot the server re-authors differently wi
 
   const activityID = `act_${createId()}`;
 
-  const root = createMockOfflineRootSubmission({
+  const activityStart = createMockOfflineActivityStartSubmission({
     avatarID: avatar.id,
     buildSnapshot: { level: 5, xp: 9999 },
     contentVersion: '2',
@@ -1143,7 +1143,7 @@ test('it rejects a root whose buildSnapshot the server re-authors differently wi
       activityID,
       continuations: [createMockCatchUpContinuation()],
       expectedHead: 0,
-      root,
+      activityStart,
     }),
   ).rejects.toMatchObject({
     code: 'CHECKPOINT_INVALID',
@@ -1151,7 +1151,7 @@ test('it rejects a root whose buildSnapshot the server re-authors differently wi
   });
 });
 
-test('it rejects a root whose startHash does not match the server recompute', async () => {
+test('it rejects an activity start whose startHash does not match the server recompute', async () => {
   await using ctx = await setupTest();
 
   const current = await createSimVersionRow(ctx.db);
@@ -1161,7 +1161,7 @@ test('it rejects a root whose startHash does not match the server recompute', as
 
   const activityID = `act_${createId()}`;
 
-  const root = createMockOfflineRootSubmission({
+  const activityStart = createMockOfflineActivityStartSubmission({
     avatarID: avatar.id,
     buildSnapshot: { level: buildLevelFromXP(0), xp: 0 },
     contentVersion: '2',
@@ -1180,7 +1180,7 @@ test('it rejects a root whose startHash does not match the server recompute', as
       activityID,
       continuations: [createMockCatchUpContinuation()],
       expectedHead: 0,
-      root,
+      activityStart,
     }),
   ).rejects.toMatchObject({
     code: 'CHECKPOINT_INVALID',
@@ -1188,7 +1188,7 @@ test('it rejects a root whose startHash does not match the server recompute', as
   });
 });
 
-test('it rejects a root whose scope has no chain row with NODE_NOT_REVEALED', async () => {
+test('it rejects an activity start whose scope has no chain row with NODE_NOT_REVEALED', async () => {
   await using ctx = await setupTest();
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
@@ -1196,7 +1196,7 @@ test('it rejects a root whose scope has no chain row with NODE_NOT_REVEALED', as
 
   const activityID = `act_${createId()}`;
 
-  const root = createMockOfflineRootSubmission({
+  const activityStart = createMockOfflineActivityStartSubmission({
     avatarID: avatar.id,
     scopeID: '0_0',
     scopeType: 'world_map_node',
@@ -1209,12 +1209,12 @@ test('it rejects a root whose scope has no chain row with NODE_NOT_REVEALED', as
       activityID,
       continuations: [createMockCatchUpContinuation()],
       expectedHead: 0,
-      root,
+      activityStart,
     }),
   ).rejects.toMatchObject({ code: 'NODE_NOT_REVEALED' });
 });
 
-test('it rejects a root at an unresolvable scope with NODE_UNKNOWN, ahead of the chain-presence check', async () => {
+test('it rejects an activity start at an unresolvable scope with NODE_UNKNOWN, ahead of the chain-presence check', async () => {
   await using ctx = await setupTest();
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
@@ -1225,7 +1225,7 @@ test('it rejects a root at an unresolvable scope with NODE_UNKNOWN, ahead of the
   // a scope id no cell coordinate resolves, with no chain row minted for it either: the scope
   // resolves before the chain lookup, so an invalid scope classifies NODE_UNKNOWN rather than the
   // NODE_NOT_REVEALED a valid-but-unrevealed scope earns
-  const root = createMockOfflineRootSubmission({
+  const activityStart = createMockOfflineActivityStartSubmission({
     avatarID: avatar.id,
     scopeID: 'not_a_real_node',
     scopeType: 'world_map_node',
@@ -1238,12 +1238,12 @@ test('it rejects a root at an unresolvable scope with NODE_UNKNOWN, ahead of the
       activityID,
       continuations: [createMockCatchUpContinuation()],
       expectedHead: 0,
-      root,
+      activityStart,
     }),
   ).rejects.toMatchObject({ code: 'NODE_UNKNOWN' });
 });
 
-test('it rejects a root submitted against a quarantined chain with CHAIN_QUARANTINED', async () => {
+test('it rejects an activity start submitted against a quarantined chain with CHAIN_QUARANTINED', async () => {
   await using ctx = await setupTest();
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
@@ -1265,7 +1265,7 @@ test('it rejects a root submitted against a quarantined chain with CHAIN_QUARANT
 
   const activityID = `act_${createId()}`;
 
-  const root = createMockOfflineRootSubmission({
+  const activityStart = createMockOfflineActivityStartSubmission({
     avatarID: avatar.id,
     scopeID: '0_0',
     scopeType: 'world_map_node',
@@ -1277,7 +1277,7 @@ test('it rejects a root submitted against a quarantined chain with CHAIN_QUARANT
     activityID,
     continuations: [createMockCatchUpContinuation()],
     expectedHead: 0,
-    root,
+    activityStart,
   });
 
   await request.catch(() => {});
@@ -1287,7 +1287,8 @@ test('it rejects a root submitted against a quarantined chain with CHAIN_QUARANT
     data: { activityID, appendedHead: 0 },
   });
 
-  // the root mint rolled back entirely — no row was left occupying the avatar's active-run slot
+  // the activity start mint rolled back entirely — no row was left occupying the avatar's
+  // active-run slot
   const row = await ctx.db
     .selectFrom('activities')
     .select('id')
@@ -1297,7 +1298,7 @@ test('it rejects a root submitted against a quarantined chain with CHAIN_QUARANT
   expect(row).toBeUndefined();
 });
 
-test('it mints a root at a node unconnected to any completed node — reachability is a replay concern, not an admission one', async () => {
+test('it mints an activity start at a node unconnected to any completed node — reachability is a replay concern, not an admission one', async () => {
   await using ctx = await setupTest();
 
   const current = await createSimVersionRow(ctx.db);
@@ -1308,7 +1309,7 @@ test('it mints a root at a node unconnected to any completed node — reachabili
   const activityID = `act_${createId()}`;
   const document = createMockContentDocument({ contentVersion: '2' });
 
-  const derived = deriveRootStart({
+  const derived = deriveActivityStart({
     avatarID: avatar.id,
     avatarSeed: avatar.seed,
     contentVersion: '2',
@@ -1318,7 +1319,7 @@ test('it mints a root at a node unconnected to any completed node — reachabili
     simVersion: current.engineHash,
   });
 
-  const root = createMockOfflineRootSubmission({
+  const activityStart = createMockOfflineActivityStartSubmission({
     avatarID: avatar.id,
     buildSnapshot: { level: buildLevelFromXP(0), xp: 0 },
     contentVersion: '2',
@@ -1332,8 +1333,8 @@ test('it mints a root at a node unconnected to any completed node — reachabili
 
   const tail = createMockCheckpointBatch({
     finalPayloadOverrides: { rewards: { xp: 40 }, type: 'completed' },
-    startChainIndex: root.startChainIndex,
-    startPrevHash: root.startHash,
+    startChainIndex: activityStart.startChainIndex,
+    startPrevHash: activityStart.startHash,
     startVersion: 1,
   });
 
@@ -1349,19 +1350,19 @@ test('it mints a root at a node unconnected to any completed node — reachabili
     activityID,
     continuations: [continuation],
     expectedHead: 0,
-    root,
+    activityStart,
   });
 
-  const rootRow = await ctx.db
+  const activityStartRow = await ctx.db
     .selectFrom('activities')
     .select('id')
     .where('id', '=', activityID)
     .executeTakeFirstOrThrow();
 
-  expect(rootRow.id).toBe(activityID);
+  expect(activityStartRow.id).toBe(activityID);
 });
 
-test("it rejects a root minted for an avatar that is not the account's active one", async () => {
+test("it rejects an activity-start minted for an avatar that is not the account's active one", async () => {
   await using ctx = await setupTest();
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
@@ -1371,7 +1372,7 @@ test("it rejects a root minted for an avatar that is not the account's active on
   await createActiveAvatarRow(ctx.db, { avatarId: activeAvatar.id, userId: viewer.user.id });
 
   const activityID = `act_${createId()}`;
-  const root = createMockOfflineRootSubmission({ avatarID: otherAvatar.id });
+  const activityStart = createMockOfflineActivityStartSubmission({ avatarID: otherAvatar.id });
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
   expect(
@@ -1379,7 +1380,7 @@ test("it rejects a root minted for an avatar that is not the account's active on
       activityID,
       continuations: [createMockCatchUpContinuation()],
       expectedHead: 0,
-      root,
+      activityStart,
     }),
   ).rejects.toMatchObject({
     code: 'AVATAR_NOT_ACTIVE',
@@ -1387,7 +1388,7 @@ test("it rejects a root minted for an avatar that is not the account's active on
   });
 });
 
-test('it rejects a root whose stamped sim version is past retention with SIM_VERSION_EXPIRED', async () => {
+test('it rejects an activity start whose stamped sim version is past retention with SIM_VERSION_EXPIRED', async () => {
   await using ctx = await setupTest();
 
   const pruned = await createSimVersionRow(ctx.db, {
@@ -1402,7 +1403,7 @@ test('it rejects a root whose stamped sim version is past retention with SIM_VER
 
   const activityID = `act_${createId()}`;
 
-  const root = createMockOfflineRootSubmission({
+  const activityStart = createMockOfflineActivityStartSubmission({
     avatarID: avatar.id,
     contentVersion: '2',
     scopeID: '0_0',
@@ -1417,12 +1418,12 @@ test('it rejects a root whose stamped sim version is past retention with SIM_VER
       activityID,
       continuations: [createMockCatchUpContinuation()],
       expectedHead: 0,
-      root,
+      activityStart,
     }),
   ).rejects.toMatchObject({ code: 'SIM_VERSION_EXPIRED' });
 });
 
-test('it conflicts a root mint while another run is already active for the avatar', async () => {
+test('it conflicts an activity-start mint while another run is already active for the avatar', async () => {
   await using ctx = await setupTest();
 
   const current = await createSimVersionRow(ctx.db);
@@ -1445,7 +1446,7 @@ test('it conflicts a root mint while another run is already active for the avata
 
   const activityID = `act_${createId()}`;
 
-  const derived = deriveRootStart({
+  const derived = deriveActivityStart({
     avatarID: avatar.id,
     avatarSeed: avatar.seed,
     contentVersion: '2',
@@ -1455,7 +1456,7 @@ test('it conflicts a root mint while another run is already active for the avata
     simVersion: current.engineHash,
   });
 
-  const root = createMockOfflineRootSubmission({
+  const activityStart = createMockOfflineActivityStartSubmission({
     avatarID: avatar.id,
     buildSnapshot: { level: buildLevelFromXP(0), xp: 0 },
     contentVersion: '2',
@@ -1471,7 +1472,7 @@ test('it conflicts a root mint while another run is already active for the avata
     activityID,
     continuations: [createMockCatchUpContinuation()],
     expectedHead: 0,
-    root,
+    activityStart,
   });
 
   await request.catch(() => {});
@@ -1482,7 +1483,7 @@ test('it conflicts a root mint while another run is already active for the avata
   });
 });
 
-test("it rejects a caller minting a root on another caller's avatar with NOT_FOUND", async () => {
+test("it rejects a caller minting an activity start on another caller's avatar with NOT_FOUND", async () => {
   await using ctx = await setupTest();
 
   const owner = await createViewer({ audience: 'service-activity', db: ctx.db });
@@ -1495,7 +1496,7 @@ test("it rejects a caller minting a root on another caller's avatar with NOT_FOU
   const otherClient = buildRPCTestClient<ActivityContract>(ctx.app, { token: other.token });
   const activityID = `act_${createId()}`;
 
-  const root = createMockOfflineRootSubmission({
+  const activityStart = createMockOfflineActivityStartSubmission({
     avatarID: avatar.id,
     scopeID: '0_0',
     scopeType: 'world_map_node',
@@ -1506,12 +1507,12 @@ test("it rejects a caller minting a root on another caller's avatar with NOT_FOU
       activityID,
       continuations: [createMockCatchUpContinuation()],
       expectedHead: 0,
-      root,
+      activityStart,
     }),
   ).rejects.toMatchObject({ code: 'NOT_FOUND' });
 });
 
-test("it keeps a root at another user's activity id owner-scoped NOT_FOUND", async () => {
+test("it keeps an activity start at another user's activity id owner-scoped NOT_FOUND", async () => {
   await using ctx = await setupTest();
 
   await createSimVersionRow(ctx.db);
@@ -1534,7 +1535,7 @@ test("it keeps a root at another user's activity id owner-scoped NOT_FOUND", asy
 
   await createActivityChainRow(ctx.db, { avatarId: otherAvatar.id, scopeId: '0_0' });
 
-  const root = createMockOfflineRootSubmission({
+  const activityStart = createMockOfflineActivityStartSubmission({
     avatarID: otherAvatar.id,
     scopeID: '0_0',
     scopeType: 'world_map_node',
@@ -1549,7 +1550,7 @@ test("it keeps a root at another user's activity id owner-scoped NOT_FOUND", asy
       activityID: started.id,
       continuations: [createMockCatchUpContinuation()],
       expectedHead: 0,
-      root,
+      activityStart,
     }),
   ).rejects.toMatchObject({ code: 'NOT_FOUND' });
 });
@@ -1586,9 +1587,9 @@ test('it mints the offline successor of a just-cleared node at admission, deferr
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  // A clears offline: its root roots at the origin (always reachable), and a terminal continuation
-  // delivers the clear. Admission accepts it — the origin needs no grant.
-  const derivedA = deriveRootStart({
+  // A clears offline: its activity start anchors at the origin (always reachable), and a terminal
+  // continuation delivers the clear. Admission accepts it — the origin needs no grant.
+  const derivedA = deriveActivityStart({
     avatarID: avatar.id,
     avatarSeed: avatar.seed,
     contentVersion: '2',
@@ -1598,7 +1599,7 @@ test('it mints the offline successor of a just-cleared node at admission, deferr
     simVersion: current.engineHash,
   });
 
-  const rootA = createMockOfflineRootSubmission({
+  const activityStartA = createMockOfflineActivityStartSubmission({
     avatarID: avatar.id,
     buildSnapshot: { level: buildLevelFromXP(0), xp: 0 },
     contentVersion: '2',
@@ -1628,11 +1629,11 @@ test('it mints the offline successor of a just-cleared node at admission, deferr
       },
     ],
     expectedHead: 0,
-    root: rootA,
+    activityStart: activityStartA,
   });
 
   // admission appended the clear but recorded no first-clear grant — that waits on replay, so the
-  // cleared frontier a reachability check would read still excludes the origin
+  // cleared target a reachability check would read still excludes the origin
   const grant = await ctx.db
     .selectFrom('avatarGrants')
     .select('key')
@@ -1644,15 +1645,16 @@ test('it mints the offline successor of a just-cleared node at admission, deferr
 
   // The clear's own continuation auto-opened a fresh attempt at A, occupying the avatar's single
   // active-run slot; the player instead walked to B, so the device stops that dangling attempt the
-  // same way it stops any run it navigates away from, before B's root can mint into the freed slot.
+  // same way it stops any run it navigates away from, before B's activity start can mint into the
+  // freed slot.
   await client.stopActivity({ avatarID: avatar.id });
 
-  // B is the neighbour A's clear opened, delivered next in the same reconcile. Its root mints:
-  // admission runs no reachability check, only the same sim-version and hash gates every root
-  // clears. A's unsettled xp already folds into B's optimistic build snapshot at mint time, ahead
-  // of either activity's own verification — replay re-derives it from the settled total once A
-  // settles or rejects.
-  const derivedB = deriveRootStart({
+  // B is the neighbour A's clear opened, delivered next in the same reconcile. Its activity start
+  // mints: admission runs no reachability check, only the same sim-version and hash gates every
+  // activity start clears. A's unsettled xp already folds into B's optimistic build snapshot at
+  // mint time, ahead of either activity's own verification — replay re-derives it from the settled
+  // total once A settles or rejects.
+  const derivedB = deriveActivityStart({
     avatarID: avatar.id,
     avatarSeed: avatar.seed,
     contentVersion: '2',
@@ -1662,7 +1664,7 @@ test('it mints the offline successor of a just-cleared node at admission, deferr
     simVersion: current.engineHash,
   });
 
-  const rootB = createMockOfflineRootSubmission({
+  const activityStartB = createMockOfflineActivityStartSubmission({
     avatarID: avatar.id,
     buildSnapshot: { level: buildLevelFromXP(40), xp: 40 },
     contentVersion: '2',
@@ -1676,20 +1678,25 @@ test('it mints the offline successor of a just-cleared node at admission, deferr
 
   const activityID = `act_${createId()}`;
 
-  await client.advanceActivity({ activityID, continuations: [], expectedHead: 0, root: rootB });
+  await client.advanceActivity({
+    activityID,
+    continuations: [],
+    expectedHead: 0,
+    activityStart: activityStartB,
+  });
 
   // the mint committed and stays unconfirmed — replay adjudicates reachability once it runs, and
   // rejects this run for the still-missing origin grant, cascading through anything built on it
-  const rootRow = await ctx.db
+  const activityStartRow = await ctx.db
     .selectFrom('activities')
     .select(['id', 'status'])
     .where('id', '=', activityID)
     .executeTakeFirstOrThrow();
 
-  expect(rootRow).toMatchObject({ id: activityID, status: 'active' });
+  expect(activityStartRow).toMatchObject({ id: activityID, status: 'active' });
 });
 
-test("it refuses a kicked writer session's undelivered offline root with the single-active-run CONFLICT, because root admission carries no acting-session gate", async () => {
+test("it refuses a kicked writer session's undelivered offline activityStart with the single-active-run CONFLICT, because activityStart admission carries no acting-session gate", async () => {
   await using ctx = await setupTest();
 
   const current = await createSimVersionRow(ctx.db);
@@ -1726,12 +1733,13 @@ test("it refuses a kicked writer session's undelivered offline root with the sin
 
   await clientB.resumeActivity({ activityID: started.id });
 
-  // session A, now kicked, delivers a valid offline root it minted before the takeover. The root
-  // mint reads no acting-session gate, so the kicked session is not singled out: the root is refused
-  // only because the avatar's single active-run slot is still occupied — a generic CONFLICT, never
-  // a session-scoped SESSION_EVICTED. The kicked session's undelivered work is not discarded on
-  // session grounds; its drop, when it happens, is incidental to the active-run and chain guards.
-  const derived = deriveRootStart({
+  // session A, now kicked, delivers a valid offline activity start it minted before the takeover.
+  // The activity start mint reads no acting-session gate, so the kicked session is not singled out:
+  // the activity start is refused only because the avatar's single active-run slot is still
+  // occupied — a generic CONFLICT, never a session-scoped SESSION_EVICTED. The kicked session's
+  // undelivered work is not discarded on session grounds; its drop, when it happens, is incidental
+  // to the active-run and chain guards.
+  const derived = deriveActivityStart({
     avatarID: avatar.id,
     avatarSeed: avatar.seed,
     contentVersion: '2',
@@ -1741,7 +1749,7 @@ test("it refuses a kicked writer session's undelivered offline root with the sin
     simVersion: current.engineHash,
   });
 
-  const root = createMockOfflineRootSubmission({
+  const activityStart = createMockOfflineActivityStartSubmission({
     avatarID: avatar.id,
     buildSnapshot: { level: buildLevelFromXP(0), xp: 0 },
     contentVersion: '2',
@@ -1758,7 +1766,7 @@ test("it refuses a kicked writer session's undelivered offline root with the sin
       activityID: `act_${createId()}`,
       continuations: [createMockCatchUpContinuation()],
       expectedHead: 0,
-      root,
+      activityStart,
     }),
   ).rejects.toMatchObject({ code: 'CONFLICT' });
 });
@@ -1766,12 +1774,12 @@ test("it refuses a kicked writer session's undelivered offline root with the sin
 // Target — #927 (blocked by #918), offline-reconcile doc §"Losing offline navigation across
 // sessions": an avatar has one active session, so a session that takes over kicks the previous one
 // off and the kicked session's undelivered offline work is discarded rather than delivered. Today
-// root admission has no acting-session gate — a kicked session's offline root is refused, if at all,
-// by the incidental active-run and chain-anchor guards, never on session grounds. This asserts the
-// doc's guarantee: the kicked session's delivery is refused because it lost the writer, a
-// session-scoped verdict distinct from the generic CONFLICT the same delivery earns today. Unskip
-// once #927 adds the session-scoped discard.
-test.skip("it discards a kicked writer session's undelivered offline root on session grounds after a takeover", async () => {
+// activity start admission has no acting-session gate — a kicked session's offline activity start
+// is refused, if at all, by the incidental active-run and chain-anchor guards, never on session
+// grounds. This asserts the doc's guarantee: the kicked session's delivery is refused because it
+// lost the writer, a session-scoped verdict distinct from the generic CONFLICT the same delivery
+// earns today. Unskip once #927 adds the session-scoped discard.
+test.skip("it discards a kicked writer session's undelivered offline activityStart on session grounds after a takeover", async () => {
   await using ctx = await setupTest();
 
   const current = await createSimVersionRow(ctx.db);
@@ -1809,7 +1817,7 @@ test.skip("it discards a kicked writer session's undelivered offline root on ses
   await clientB.stopActivity({ avatarID: avatar.id });
 
   // session A lost the writer at the takeover, so its delivery must be refused on session grounds
-  const derived = deriveRootStart({
+  const derived = deriveActivityStart({
     avatarID: avatar.id,
     avatarSeed: avatar.seed,
     contentVersion: '2',
@@ -1819,7 +1827,7 @@ test.skip("it discards a kicked writer session's undelivered offline root on ses
     simVersion: current.engineHash,
   });
 
-  const root = createMockOfflineRootSubmission({
+  const activityStart = createMockOfflineActivityStartSubmission({
     avatarID: avatar.id,
     buildSnapshot: { level: buildLevelFromXP(0), xp: 0 },
     contentVersion: '2',
@@ -1836,7 +1844,7 @@ test.skip("it discards a kicked writer session's undelivered offline root on ses
       activityID: `act_${createId()}`,
       continuations: [createMockCatchUpContinuation()],
       expectedHead: 0,
-      root,
+      activityStart,
     }),
   ).rejects.toMatchObject({ code: 'SESSION_EVICTED' });
 });

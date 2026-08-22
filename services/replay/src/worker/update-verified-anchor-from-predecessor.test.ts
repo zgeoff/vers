@@ -67,7 +67,7 @@ test('it advances the chain verified anchor from a fully verified, stopped prede
   });
 });
 
-test('it leaves the chain untouched when the frontier is not ahead of the verified anchor', async () => {
+test('it leaves the chain untouched when the target is not ahead of the verified anchor', async () => {
   await using ctx = await setupTest();
 
   const fixture = await createHonestActivityFixture(ctx.db, {

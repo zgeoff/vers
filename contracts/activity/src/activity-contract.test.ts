@@ -108,9 +108,9 @@ test('it declares the same bespoke statuses on advanceActivity as their startAct
   expect(errorMap.SIM_VERSION_UNKNOWN?.status).toBe(409);
 });
 
-test('it accepts an advanceActivity request carrying a root submission', () => {
+test('it accepts an advanceActivity request carrying an activity-start submission', () => {
   const input = {
-    activityID: 'act_root',
+    activityID: 'act_start',
     continuations: [
       {
         buildSnapshot: { level: 1, xp: 0 },
@@ -134,7 +134,7 @@ test('it accepts an advanceActivity request carrying a root submission', () => {
       },
     ],
     expectedHead: 0,
-    root: {
+    activityStart: {
       avatarID: 'avatar_1',
       buildSnapshot: { level: 1, xp: 0 },
       contentVersion: '2',
@@ -150,7 +150,7 @@ test('it accepts an advanceActivity request carrying a root submission', () => {
       simVersion: 'engine_hash',
       startChainIndex: 0,
       startHash: 'start_hash',
-      startKey: 'root_act_root',
+      startKey: 'start_act_start',
     },
   };
 
@@ -159,12 +159,12 @@ test('it accepts an advanceActivity request carrying a root submission', () => {
   );
 });
 
-test('it accepts a root-only advanceActivity request with no continuations', () => {
+test('it accepts an activity-start-only advanceActivity request with no continuations', () => {
   const input = {
-    activityID: 'act_root_only',
+    activityID: 'act_start_only',
     continuations: [],
     expectedHead: 0,
-    root: {
+    activityStart: {
       avatarID: 'avatar_1',
       buildSnapshot: { level: 1, xp: 0 },
       contentVersion: '2',
@@ -176,7 +176,7 @@ test('it accepts a root-only advanceActivity request with no continuations', () 
       simVersion: 'engine_hash',
       startChainIndex: 0,
       startHash: 'start_hash',
-      startKey: 'root_act_root_only',
+      startKey: 'start_act_start_only',
     },
   };
 
@@ -373,7 +373,7 @@ test('revealNodes round-trips a valid stamps-and-nodes output through its output
         contentVersion: '2',
         encounterNode: { difficulty: 3, poolID: 'pool_alpha' },
         genesisSeed: '0123456789abcdef0123456789abcdef',
-        head: { chainIndex: 0, nextSeed: '0123456789abcdef0123456789abcdef' },
+        anchor: { chainIndex: 0, nextSeed: '0123456789abcdef0123456789abcdef' },
         nodeID: '1_0',
       },
     ],

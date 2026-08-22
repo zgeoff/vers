@@ -1,7 +1,7 @@
 import { ORPCError, isDefinedError, safe } from '@orpc/client';
 import { buildTraceparent, createTraceContext } from '@vers/trace';
 import { fromPromise } from 'xstate';
-import type { IngestStartRowOutcome } from './ingest-start-row';
+import type { IngestActivityStartOutcome } from './ingest-activity-start';
 import { readQueuedCheckpoints } from './read-queued-checkpoints';
 import { removeConfirmedCheckpoints } from './remove-confirmed-checkpoints';
 import { removeQueuedCheckpoints } from './remove-queued-checkpoints';
@@ -37,11 +37,13 @@ interface FlushAttemptInput {
   readonly expectedHead: number;
 
   /**
-   * Ingests this activity's still-pending client-minted root, tried once against a `NOT_FOUND`
-   * answer before it discards the queue — undefined for a caller with no offline-first root to
-   * self-heal from, which keeps a `NOT_FOUND` an unconditional discard.
+   * Ingests this activity's still-pending client-minted activity start, tried once against a
+   * `NOT_FOUND` answer before it discards the queue — undefined for a caller with no offline-first
+   * activity start to self-heal from, which keeps a `NOT_FOUND` an unconditional discard.
    */
-  readonly ingestRoot: ((activityID: string) => Promise<IngestStartRowOutcome>) | undefined;
+  readonly ingestActivityStart:
+    | ((activityID: string) => Promise<IngestActivityStartOutcome>)
+    | undefined;
 
   readonly onAcked: ((activityID: string, appendedHead: number) => void) | undefined;
   readonly onCapped: ((activityID: string, appendedHead: number) => void) | undefined;
@@ -74,8 +76,8 @@ export const runCheckpointFlushAttempt = fromPromise<FlushOutcome, FlushAttemptI
       let retriedAfterIngest = false;
 
       // The body sends the same batch again only once, after a NOT_FOUND ingests the activity's
-      // still-pending client-minted root — `retriedAfterIngest` turns a second NOT_FOUND into an
-      // unconditional discard rather than ingesting again.
+      // still-pending client-minted activity start — `retriedAfterIngest` turns a second NOT_FOUND
+      // into an unconditional discard rather than ingesting again.
       while (true) {
         const [error, result] = await safe(
           input.client.trackActivityProgress(
@@ -146,18 +148,18 @@ export const runCheckpointFlushAttempt = fromPromise<FlushOutcome, FlushAttemptI
           return { type: 'held-defined-error' };
         }
 
-        if (retriedAfterIngest || input.ingestRoot === undefined) {
+        if (retriedAfterIngest || input.ingestActivityStart === undefined) {
           await removeQueuedCheckpoints(input.activityID);
 
           return { type: 'not-found' };
         }
 
-        const ingestOutcome = await input.ingestRoot(input.activityID);
+        const ingestOutcome = await input.ingestActivityStart(input.activityID);
 
         // the server answered NOT_FOUND — a defined reply, so `onServerContact` fires — but the
-        // root cannot ingest yet: a transport failure, a session lapse, or an inactive avatar. Hold
-        // the queue for retry without feeding the transport-stall counter a genuinely unanswered
-        // flush owns.
+        // activity start cannot ingest yet: a transport failure, a session lapse, or an inactive
+        // avatar. Hold the queue for retry without feeding the transport-stall counter a genuinely
+        // unanswered flush owns.
         if (ingestOutcome === 'deferred') {
           return { type: 'held-defined-error' };
         }
@@ -168,10 +170,10 @@ export const runCheckpointFlushAttempt = fromPromise<FlushOutcome, FlushAttemptI
           return { type: 'not-found' };
         }
 
-        // ingested or absent: the row exists at head 0 server-side now — this device just minted it,
-        // or a concurrent drain minted and removed the pending copy — so retry the same batch once
-        // against the now-present row. A genuinely gone activity NOT_FOUNDs again and discards under
-        // the `retriedAfterIngest` guard, never ingesting twice.
+        // ingested or absent: the row exists at head 0 server-side now — this device just minted
+        // it, or a concurrent drain minted and removed the pending copy — so retry the same batch
+        // once against the now-present row. A genuinely gone activity NOT_FOUNDs again and discards
+        // under the `retriedAfterIngest` guard, never ingesting twice.
         retriedAfterIngest = true;
       }
     } catch (error) {

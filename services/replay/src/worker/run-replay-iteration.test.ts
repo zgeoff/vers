@@ -860,7 +860,7 @@ test('it counts a replay error as a failed attempt and quarantines at the attemp
   expect(updated.replayAttempts).toBe(MAX_REPLAY_ATTEMPTS);
 });
 
-test('it reports an iteration failure exactly once when a frontier was claimed', async () => {
+test('it reports an iteration failure exactly once when a target was claimed', async () => {
   await using ctx = await setupTest();
 
   const fixture = await createHonestActivityFixture(ctx.db, {
@@ -1044,7 +1044,7 @@ test("it advances the chain verified anchor from a user-stopped activity's tail,
 
   const successor = await createHonestActivityFixture(ctx.db, {
     duration: 80_000,
-    rootChain: predecessor.chain,
+    chainRow: predecessor.chain,
     seed: expectedAnchor.verifiedNextSeed,
     startChainIndex: expectedAnchor.verifiedChainIndex,
   });
@@ -1113,7 +1113,7 @@ test("it advances the chain verified anchor from a capped activity's tail, and a
 
   const successor = await createHonestActivityFixture(ctx.db, {
     duration: 80_000,
-    rootChain: predecessor.chain,
+    chainRow: predecessor.chain,
     seed: expectedAnchor.verifiedNextSeed,
     startChainIndex: expectedAnchor.verifiedChainIndex,
   });
@@ -1182,7 +1182,7 @@ test('it reconciles the anchor once a successor claims a forward-exited predeces
     verifiedNextSeed: predecessor.chain.verifiedNextSeed,
   });
 
-  // Fully verified and still active, the stream is no longer a frontier — nothing revisits it.
+  // Fully verified and still active, the stream is no longer a target — nothing revisits it.
   const idleOutcome = await runReplayIteration(deps, cache);
 
   expect(idleOutcome).toStrictEqual({ kind: 'idle' });
@@ -1203,7 +1203,7 @@ test('it reconciles the anchor once a successor claims a forward-exited predeces
   // the chain, leaving the reconciliation above as the only write to assert against.
   const successor = await createHonestActivityFixture(ctx.db, {
     duration: 60_000,
-    rootChain: predecessor.chain,
+    chainRow: predecessor.chain,
     seed: expectedAnchor.verifiedNextSeed,
     startChainIndex: expectedAnchor.verifiedChainIndex,
   });
@@ -1271,7 +1271,7 @@ test('it leaves the anchor untouched for a stopped activity whose only checkpoin
 
   const successor = await createHonestActivityFixture(ctx.db, {
     duration: 80_000,
-    rootChain: predecessor.chain,
+    chainRow: predecessor.chain,
     seed: predecessor.chain.verifiedNextSeed,
     startChainIndex: predecessor.chain.verifiedChainIndex,
   });

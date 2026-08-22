@@ -3,14 +3,14 @@ import { createMockActivityData } from '@vers/contract-activity/test-utils';
 import { ActivityCheckpointType } from '@vers/idle-core';
 import { createMockCheckpointBatchEntry } from '../test-utils/factories/create-mock-checkpoint-batch-entry';
 import { readOfflineClearedNodeIDs } from './read-offline-cleared-node-ids';
+import { writeActivityStart } from './write-activity-start';
 import { writeQueuedCheckpoint } from './write-queued-checkpoint';
-import { writeStartRow } from './write-start-row';
 
-test('it includes a node whose pending root queued a completed terminal', async () => {
+test('it includes a node whose pending activityStart queued a completed terminal', async () => {
   const avatarID = 'avatar-completed-terminal';
   const row = createMockActivityData({ avatarID, scopeID: '3_1' });
 
-  await writeStartRow(row);
+  await writeActivityStart(row);
 
   await writeQueuedCheckpoint(
     row.id,
@@ -26,7 +26,7 @@ test('it excludes a node whose queue holds only non-terminal checkpoints', async
   const avatarID = 'avatar-progress-only';
   const row = createMockActivityData({ avatarID, scopeID: '4_2' });
 
-  await writeStartRow(row);
+  await writeActivityStart(row);
 
   await writeQueuedCheckpoint(
     row.id,
@@ -38,11 +38,11 @@ test('it excludes a node whose queue holds only non-terminal checkpoints', async
   expect(clearedNodeIDs).toStrictEqual(new Set());
 });
 
-test('it excludes a node whose pending root queued a failed terminal', async () => {
+test('it excludes a node whose pending activityStart queued a failed terminal', async () => {
   const avatarID = 'avatar-failed-terminal';
   const row = createMockActivityData({ avatarID, scopeID: '5_3' });
 
-  await writeStartRow(row);
+  await writeActivityStart(row);
 
   await writeQueuedCheckpoint(
     row.id,
@@ -54,10 +54,10 @@ test('it excludes a node whose pending root queued a failed terminal', async () 
   expect(clearedNodeIDs).toStrictEqual(new Set());
 });
 
-test('it excludes a pending root belonging to a different avatar', async () => {
+test('it excludes a pending activityStart belonging to a different avatar', async () => {
   const row = createMockActivityData({ avatarID: 'avatar-owner', scopeID: '6_4' });
 
-  await writeStartRow(row);
+  await writeActivityStart(row);
 
   await writeQueuedCheckpoint(
     row.id,
@@ -69,7 +69,7 @@ test('it excludes a pending root belonging to a different avatar', async () => {
   expect(clearedNodeIDs).toStrictEqual(new Set());
 });
 
-test('it excludes a pending root outside the world-map-node scope', async () => {
+test('it excludes a pending activityStart outside the world-map-node scope', async () => {
   const avatarID = 'avatar-other-scope';
 
   const row = createMockActivityData({
@@ -78,7 +78,7 @@ test('it excludes a pending root outside the world-map-node scope', async () => 
     scopeType: 'combat_encounter',
   });
 
-  await writeStartRow(row);
+  await writeActivityStart(row);
 
   await writeQueuedCheckpoint(
     row.id,
@@ -90,8 +90,8 @@ test('it excludes a pending root outside the world-map-node scope', async () => 
   expect(clearedNodeIDs).toStrictEqual(new Set());
 });
 
-test('it returns an empty set with no pending root cached', async () => {
-  const clearedNodeIDs = await readOfflineClearedNodeIDs('avatar-no-pending-roots');
+test('it returns an empty set with no pending activityStart cached', async () => {
+  const clearedNodeIDs = await readOfflineClearedNodeIDs('avatar-no-pending-activity-starts');
 
   expect(clearedNodeIDs).toStrictEqual(new Set());
 });

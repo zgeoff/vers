@@ -2,8 +2,8 @@ import type { ActivityStatus } from '@vers/db';
 
 /**
  * An avatar's next-in-order activity claimed for replay: the activity id itself, the chain scope it
- * belongs to, and the queue priority it was picked at. The claim is a row lock on that chain — it
- * lasts until the claiming transaction commits or rolls back.
+ * belongs to, and the queue priority it was picked at. The claim is a row lock on that seed chain —
+ * it lasts until the claiming transaction commits or rolls back.
  */
 export interface ClaimedActivity {
   readonly activityID: string;
@@ -14,10 +14,10 @@ export interface ClaimedActivity {
 }
 
 /**
- * A chain's replay frontier: the oldest activity with appends not yet replayed, and the segment
+ * A seed chain's replay target: the oldest activity with appends not yet replayed, and the segment
  * bounds (`verifiedHead + 1 … appendedHead`) the next replay covers.
  */
-export interface ReplayFrontier {
+export interface ReplayTarget {
   readonly activityID: string;
   readonly appendedHead: number;
   readonly replayAttempts: number;

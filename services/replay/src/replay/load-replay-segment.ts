@@ -6,11 +6,11 @@ import {
 import type { DB } from '@vers/db';
 import type { Kysely } from 'kysely';
 import invariant from 'tiny-invariant';
-import type { ReplayFrontier } from '../types';
+import type { ReplayTarget } from '../types';
 import type { ReplaySegment } from './types';
 
 /**
- * Reads one frontier activity's replay unit: its own row, its chain row, and every stored
+ * Reads one target activity's replay unit: its own row, its chain row, and every stored
  * checkpoint from version 1 through `appendedHead` — the whole stream, not just the unverified
  * tail, because a cache-miss rebuild must replay every earlier local attempt's own boundary to
  * read the stream's later `time` values correctly. Undefined when the activity row is gone (raced
@@ -20,7 +20,7 @@ import type { ReplaySegment } from './types';
  */
 export async function loadReplaySegment(
   db: Kysely<DB>,
-  frontier: Readonly<ReplayFrontier>,
+  target: Readonly<ReplayTarget>,
 ): Promise<ReplaySegment | undefined> {
   const activity = await db
     .selectFrom('activities')
@@ -43,7 +43,7 @@ export async function loadReplaySegment(
       'startHash',
       'status',
     ])
-    .where('id', '=', frontier.activityID)
+    .where('id', '=', target.activityID)
     .executeTakeFirst();
 
   if (activity === undefined) {
@@ -58,13 +58,13 @@ export async function loadReplaySegment(
     .where('scopeId', '=', activity.scopeId)
     .executeTakeFirst();
 
-  invariant(chain !== undefined, 'a frontier activity always has an owning chain row');
+  invariant(chain !== undefined, 'a target activity always has an owning chain row');
 
   const rows = await db
     .selectFrom('activityCheckpoints')
     .select(['appendedAt', 'hash', 'payload', 'prevHash', 'version'])
-    .where('activityId', '=', frontier.activityID)
-    .where('version', '<=', frontier.appendedHead)
+    .where('activityId', '=', target.activityID)
+    .where('version', '<=', target.appendedHead)
     .orderBy('version')
     .execute();
 
@@ -76,17 +76,16 @@ export async function loadReplaySegment(
     version: row.version,
   }));
 
-  const predecessor =
-    frontier.verifiedHead === 0 ? undefined : checkpoints[frontier.verifiedHead - 1];
+  const predecessor = target.verifiedHead === 0 ? undefined : checkpoints[target.verifiedHead - 1];
 
   invariant(
-    frontier.verifiedHead === 0 || predecessor?.version === frontier.verifiedHead,
+    target.verifiedHead === 0 || predecessor?.version === target.verifiedHead,
     'a verified head always has a stored checkpoint row at its own version',
   );
 
   return {
     activity: {
-      appendedHead: frontier.appendedHead,
+      appendedHead: target.appendedHead,
       appendedTimeMs: Number(activity.appendedTimeMs),
       avatarID: activity.avatarId,
       buildSnapshot: BuildSnapshotSchema.parse(activity.buildSnapshot),
@@ -108,6 +107,6 @@ export async function loadReplaySegment(
     checkpoints,
     prevHash: predecessor === undefined ? activity.startHash : predecessor.hash,
     seed: predecessor === undefined ? activity.seed : predecessor.payload.nextSeed,
-    verifiedHead: frontier.verifiedHead,
+    verifiedHead: target.verifiedHead,
   };
 }

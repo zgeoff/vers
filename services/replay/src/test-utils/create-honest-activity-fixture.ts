@@ -28,9 +28,9 @@ import { createActivityRow } from './create-activity-row';
 import { createChainRow } from './create-chain-row';
 
 /**
- * The chain scope id every honest fixture roots on unless the caller overrides it: a real cell
- * coordinate whose difficulty is 1, so sealed and legacy fixtures stamp the same difficulty and
- * stay byte-comparable.
+ * The chain scope id every honest fixture activity starts on unless the caller overrides it: a real
+ * cell coordinate whose difficulty is 1, so sealed and legacy fixtures stamp the same difficulty
+ * and stay byte-comparable.
  */
 const DEFAULT_SCOPE_ID = '1_0';
 
@@ -85,7 +85,7 @@ interface CreateHonestActivityFixtureInput {
   readonly contentVersion?: string;
   readonly document?: ContentDocument;
   readonly duration?: number;
-  readonly rootChain?: Readonly<Selectable<ActivityChains>>;
+  readonly chainRow?: Readonly<Selectable<ActivityChains>>;
   readonly secretRef?: SecretRef;
   readonly secretVersion?: number;
   readonly seed?: string;
@@ -93,20 +93,20 @@ interface CreateHonestActivityFixtureInput {
 }
 
 /**
- * Builds and persists an honest activity by running the real engine — never a hand-crafted stream
- * — and hashing its output the same way the append path does, so the stored rows are
- * byte-identical to what an honest client would have submitted. The engine output is truncated at
- * its first terminal checkpoint: the append path ends an activity's append-ability on the first
+ * Builds and persists an honest activity by running the real engine — never a hand-crafted stream —
+ * and hashing its output the same way the append path does, so the stored rows are byte-identical
+ * to what an honest client would have submitted. The engine output is truncated at its first
+ * terminal checkpoint: the append path ends an activity's append-ability on the first
  * `completed`/`failed` checkpoint it accepts, so a stored stream past that point is a shape the
- * server can never actually hold, however long a duration the engine ran for. `checkpoints` are
- * the stored rows a tamper test mutates; `engineCheckpoints` is the untouched (truncated) engine
- * output. `rootChain` roots this activity on an already-persisted chain instead of creating a
- * fresh one — a successor fixture's own way of sharing its predecessor's chain — and defaults
- * `startChainIndex` to that chain's own `appendedChainIndex`; pass both explicitly for a successor
- * seeded from a predecessor's tail rather than the chain's current appended anchor. Every row is
- * sealed: `secretRef`/`secretVersion` stamped and the encounter node's sealed fields derived
- * through the real content derivation over the mock keys backend's deterministic scope secret, so
- * a caller verifying through that same backend sees identical truth.
+ * server can never actually hold, however long a duration the engine ran for. `checkpoints` are the
+ * stored rows a tamper test mutates; `engineCheckpoints` is the untouched (truncated) engine
+ * output. `chainRow` activity starts this activity on an already-persisted chain instead of
+ * creating a fresh one — a successor fixture's own way of sharing its predecessor's chain — and
+ * defaults `startChainIndex` to that chain's own `appendedChainIndex`; pass both explicitly for a
+ * successor seeded from a predecessor's tail rather than the chain's current appended anchor. Every
+ * row is sealed: `secretRef`/`secretVersion` stamped and the encounter node's sealed fields derived
+ * through the real content derivation over the mock keys backend's deterministic scope secret, so a
+ * caller verifying through that same backend sees identical truth.
  */
 export async function createHonestActivityFixture(
   db: Kysely<DB>,
@@ -115,7 +115,7 @@ export async function createHonestActivityFixture(
   const seed = input.seed ?? buildStateFromSeed(faker.number.int());
   const buildSnapshot = input.buildSnapshot ?? { level: 1, xp: 0 };
   const activityID = input.activity?.id ?? `act_${createId()}`;
-  let chain = input.rootChain;
+  let chain = input.chainRow;
 
   chain ??= await createChainRow(db, {
     appendedNextSeed: seed,
@@ -253,7 +253,7 @@ export async function createHonestActivityFixture(
 }
 
 /**
- * The default reachability grant a `world_map_node` fixture needs so replay's frontier check finds
+ * The default reachability grant a `world_map_node` fixture needs so replay's target check finds
  * its scope connected: a node genuinely adjacent to it under this avatar's own seed, so the grant
  * holds regardless of how jitter placed the scope's neighbours. Falls back to the scope's own id
  * when the topology gives it no edge at all, and grants nothing for the origin (unconditionally

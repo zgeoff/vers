@@ -1,5 +1,5 @@
 import { readPendingStartIntent } from '../submission/read-pending-start-intent';
-import { drainStartRows } from './drain-start-rows';
+import { drainActivityStarts } from './drain-activity-starts';
 import { flushPendingStop } from './flush-pending-stop';
 import { reportWorkerFault } from './report-worker-fault';
 import { runResyncTurn } from './run-resync-turn';
@@ -7,10 +7,10 @@ import type { WorkerContext } from './types';
 
 /**
  * The worker's one decision point for self-scheduled catch-ups, run on every connectivity proof:
- * drains the recovery avatar's reload-orphaned client-minted roots, resends whatever the submitter
- * held, delivers a stop raised offline, then — once the held tail is drained, so a resync never
- * reads a stale appended head — resyncs while no run is live. The recovery avatar comes from the
- * durable start intent first (recorded at the most recent boundary failure), else the reporting
+ * drains the recovery avatar's reload-orphaned client-minted activity starts, resends whatever the
+ * submitter held, delivers a stop raised offline, then — once the held tail is drained, so a resync
+ * never reads a stale appended head — resyncs while no run is live. The recovery avatar comes from
+ * the durable start intent first (recorded at the most recent boundary failure), else the reporting
  * tab's session avatar, else the last avatar a resync ran for; with none of the three, there is
  * nothing to catch up, and both the drain and the resync are skipped. An intent's avatar can be
  * stale — the account switched away from it while the intent was held — but the resync flow
@@ -30,10 +30,10 @@ export async function runReconnectRecovery(
     heldIntent?.avatarID ?? signalAvatarID ?? context.getResyncAvatarID() ?? undefined;
 
   // must precede flushHeld: an orphan's checkpoints would otherwise NOT_FOUND-discard on the
-  // held flush before this ingests the root they chain onto
+  // held flush before this ingests the activity start they build onto
   if (avatarID !== undefined) {
     try {
-      await drainStartRows(context, avatarID);
+      await drainActivityStarts(context, avatarID);
     } catch (error) {
       // a drain failure must not strand the held checkpoints and offline stop the steps below
       // deliver; the orphan rows persist for the next recovery to retry

@@ -23,7 +23,7 @@ export const RETRY_BACKOFF_CAP_MS = 300_000;
  */
 export const FLUSH_STALL_THRESHOLD = 3;
 export const CHECKPOINT_QUEUE_DB_NAME = 'vers-idle-checkpoint-queue';
-export const CHECKPOINT_QUEUE_DB_VERSION = 6;
+export const CHECKPOINT_QUEUE_DB_VERSION = 7;
 export const CHECKPOINT_QUEUE_STORE_NAME = 'pending-checkpoints';
 
 /**
@@ -44,11 +44,11 @@ export const NODE_SEEDS_STORE_NAME = 'node-seeds';
 
 /**
  * The object store holding the full `ActivityData` a local start mints, keyed by its own `id`.
- * This is the client-minted root row a later reconcile drains and verifies against the server; it
- * is written durably before the row installs, so a crash between mint and install still leaves a
- * recoverable root.
+ * This is the client-minted activity start a later reconcile drains and verifies against the
+ * server; it is written durably before the row installs, so a crash between mint and install still
+ * leaves a recoverable activity start.
  */
-export const PENDING_ROOTS_STORE_NAME = 'pending-roots';
+export const PENDING_ACTIVITY_STARTS_STORE_NAME = 'pending-activity-starts';
 
 /**
  * The `preferences` record holding `revealNodes`'s avatar- and account-global crypto stamps. A
@@ -85,3 +85,9 @@ export const PENDING_START_INTENT_KEY = 'pending-start';
  */
 export const LAST_STARTED_ACTIVITY_KEY = 'last-started-activity';
 export const PREFERENCES_STORE_NAME = 'preferences';
+
+/**
+ * The store name an older database version held this same outbox under. The upgrade deletes it, so
+ * a device carrying one keeps no second copy of the outbox.
+ */
+export const LEGACY_PENDING_ACTIVITY_STARTS_STORE_NAME = 'pending-roots';

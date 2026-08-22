@@ -40,7 +40,7 @@ interface RevealNodesOpts {
   };
 }
 
-interface RevealedNodeHead {
+interface RevealedNodeAnchor {
   readonly chainIndex: number;
   readonly nextSeed: string;
 }
@@ -49,7 +49,7 @@ interface RevealedNode {
   readonly contentVersion: string;
   readonly encounterNode: EncounterNode;
   readonly genesisSeed: string;
-  readonly head: RevealedNodeHead;
+  readonly anchor: RevealedNodeAnchor;
   readonly nodeID: string;
 }
 
@@ -61,20 +61,21 @@ interface RevealNodesResult {
 }
 
 /**
- * Mints (or re-affirms) the genesis chain row for each given world-map node, on behalf of an
- * avatar owned by the acting user, and derives that node's encounter alongside the current content
- * version — every crypto stamp a later offline-open `startActivity` needs to synthesize a valid
- * start without the server. Idempotent per node: a repeat reveal self-assigns the existing row's
+ * Mints (or re-affirms) the genesis chain row for each given world-map node, on behalf of an avatar
+ * owned by the acting user, and derives that node's encounter alongside the current content version
+ * — every crypto stamp a later offline-open `startActivity` needs to synthesize a valid start
+ * without the server. Idempotent per node: a repeat reveal self-assigns the existing row's
  * `genesisSeed` in place of rolling a new one, so a node reveals to the same seed regardless of how
- * many times, or how many concurrent callers, reveal it — the property `startActivity` later roots
- * against. A duplicate node id within one call mints once; every requested id, repeats included,
- * still gets one result entry. The stamps (`keyVersion`, `secretRef`, `secretVersion`) are avatar-
- * and account-global, so the response carries them once rather than per node. Rejects with
- * NODE_UNKNOWN before minting anything when any node id doesn't resolve to a coordinate the world
- * map can address. Authorization is ownership of the avatar, gated to the account's active avatar
- * under the same advisory lock `startActivity` takes — the active-avatar check runs even for an
- * empty batch, so an owned-but-inactive avatar is rejected regardless of how many nodes it reveals.
- * Which nodes this avatar may legitimately reveal is a separate, not-yet-enforced concern.
+ * many times, or how many concurrent callers, reveal it — the property `startActivity` later
+ * activity starts against. A duplicate node id within one call mints once; every requested id,
+ * repeats included, still gets one result entry. The stamps (`keyVersion`, `secretRef`,
+ * `secretVersion`) are avatar- and account-global, so the response carries them once rather than
+ * per node. Rejects with NODE_UNKNOWN before minting anything when any node id doesn't resolve to a
+ * coordinate the world map can address. Authorization is ownership of the avatar, gated to the
+ * account's active avatar under the same advisory lock `startActivity` takes — the active-avatar
+ * check runs even for an empty batch, so an owned-but-inactive avatar is rejected regardless of how
+ * many nodes it reveals. Which nodes this avatar may legitimately reveal is a separate,
+ * not-yet-enforced concern.
  */
 export async function revealNodes(
   deps: RevealNodesDeps,
@@ -182,7 +183,7 @@ export async function revealNodes(
       contentVersion: encounterInputs.contentVersion,
       encounterNode,
       genesisSeed: chain.genesisSeed,
-      head: { chainIndex: chain.appendedChainIndex, nextSeed: chain.appendedNextSeed },
+      anchor: { chainIndex: chain.appendedChainIndex, nextSeed: chain.appendedNextSeed },
       nodeID,
     };
   });
