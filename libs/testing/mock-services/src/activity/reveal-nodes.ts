@@ -1,6 +1,11 @@
 import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex, utf8ToBytes } from '@noble/hashes/utils.js';
-import { canEncodeMortonKey, findCellCoord } from '@vers/worldmap-core';
+import {
+  buildRevealSources,
+  canEncodeMortonKey,
+  findCellCoord,
+  isNodeRevealed,
+} from '@vers/worldmap-core';
 import invariant from 'tiny-invariant';
 import { findLiveActivityAvatar } from '../avatar/find-live-activity-avatar';
 import { upsertActiveAvatar } from '../avatar/upsert-active-avatar';
@@ -23,7 +28,10 @@ const MOCK_SECRET_VERSION = 1;
  * derivation: difficulty from its coordinate alone, no sealed pool pick. Mirrors the real
  * handler's other checks: NODE_UNKNOWN for a scope id that doesn't resolve to a world-map node,
  * and admission gated to the account's active avatar, adopting an absent selection unless a
- * different avatar already holds a live run.
+ * different avatar already holds a live run. A node outside the revealed region is dropped from
+ * the response rather than rejected, as the real handler drops it. The mock db carries no
+ * first-clear grant collection, so that region is always the starting area alone — a consumer test
+ * that needs a wider frontier stubs this procedure directly via `server.use(...)`.
  */
 export const revealNodes = os.revealNodes.handler(async (opts) => {
   const actingUserId = opts.context.actingUserId;
@@ -70,23 +78,27 @@ export const revealNodes = os.revealNodes.handler(async (opts) => {
     });
   }
 
-  const nodes = opts.input.nodeIDs.map((nodeID) => {
-    // Hashed from the avatar and node id, so the same pair always derives the same seed.
-    const hash = sha256(utf8ToBytes(`vers-mock-genesis|${opts.input.avatarID}|${nodeID}`));
-    const encounterNode = resolveEncounterNode('world_map_node', nodeID);
+  const sources = buildRevealSources(new Set());
 
-    invariant(encounterNode !== undefined, 'nodeID already validated against a world-map cell');
+  const nodes = opts.input.nodeIDs
+    .filter((nodeID) => isNodeRevealed(sources, nodeID))
+    .map((nodeID) => {
+      // Hashed from the avatar and node id, so the same pair always derives the same seed.
+      const hash = sha256(utf8ToBytes(`vers-mock-genesis|${opts.input.avatarID}|${nodeID}`));
+      const encounterNode = resolveEncounterNode('world_map_node', nodeID);
 
-    const genesisSeed = bytesToHex(hash.slice(0, 16));
+      invariant(encounterNode !== undefined, 'nodeID already validated against a world-map cell');
 
-    return {
-      contentVersion: db.MOCK_CURRENT_CONTENT_VERSION,
-      encounterNode,
-      genesisSeed,
-      anchor: { chainIndex: 0, nextSeed: genesisSeed },
-      nodeID,
-    };
-  });
+      const genesisSeed = bytesToHex(hash.slice(0, 16));
+
+      return {
+        contentVersion: db.MOCK_CURRENT_CONTENT_VERSION,
+        encounterNode,
+        genesisSeed,
+        anchor: { chainIndex: 0, nextSeed: genesisSeed },
+        nodeID,
+      };
+    });
 
   return {
     keyVersion: MOCK_KEY_VERSION,

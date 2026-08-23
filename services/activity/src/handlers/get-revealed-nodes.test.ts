@@ -288,14 +288,14 @@ test('it ignores a grant whose kind is not first_clear', async () => {
 
   await ctx.db
     .insertInto('avatarGrants')
-    .values({ avatarId: avatar.id, key: '0_0', kind: 'cosmetic_unlock' })
+    .values({ avatarId: avatar.id, key: '10_0', kind: 'cosmetic_unlock' })
     .execute();
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
   const result = await client.getRevealedNodes({
     avatarID: avatar.id,
-    viewport: { maxCX: 0, maxCY: 0, minCX: 0, minCY: 0 },
+    viewport: { maxCX: 10, maxCY: 0, minCX: 10, minCY: 0 },
   });
 
   expect(result.nodes).toBeEmpty();
@@ -350,7 +350,7 @@ test('it reveals nothing around a grant past the packable coordinate range while
   expect(result.completedNodeIDs).toStrictEqual([`${WORLD_COORD_MAX + 1}_0`]);
 });
 
-test('it reveals nothing for a second avatar of the same user that holds no first-clear grant', async () => {
+test('it reveals only the starting area for a second avatar of the same user that holds no first-clear grant', async () => {
   await using ctx = await setupTest();
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
@@ -369,7 +369,10 @@ test('it reveals nothing for a second avatar of the same user that holds no firs
   const ungrantedResult = await client.getRevealedNodes({ avatarID: ungranted.id, viewport });
 
   expect(grantedResult.nodes.map((node) => node.id)).toStrictEqual(['0_0']);
-  expect(ungrantedResult.nodes).toBeEmpty();
+
+  // the unconditional origin disc, which every avatar carries before it has cleared anything
+  expect(ungrantedResult.nodes.map((node) => node.id)).toStrictEqual(['0_0']);
+  expect(ungrantedResult.completedNodeIDs).toBeEmpty();
 });
 
 test('it rejects a foreign avatar with NOT_FOUND', async () => {

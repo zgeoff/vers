@@ -106,6 +106,13 @@ plus a small landmark grant table `(avatarID, landmarkID)`.
   Disclosure carries expected-value-flat descriptor metadata alone — never salt or drops — and the
   server caps its fan-out independent of node degree. A live reveal request for a specific node is
   served ahead of the bulk fan-out, keeping the online path responsive.
+- A reveal request names specific nodes, and the server authorizes each one against the projection
+  rather than trusting the list. A node the projection does not cover discloses nothing and mints no
+  seed. The server drops that node from the response rather than rejecting the whole request, so one
+  unauthorized coordinate costs a client nothing beside it. The reachability check at replay bounds
+  what an activity settles; this check bounds what a player is shown, which no later check can take
+  back. Client and server project from the same verified first-clear set, so an honest client never
+  names a refused node, and `vers.activity.reveal_refusals` counts every refusal.
 
 ## Selection and the offline horizon
 
