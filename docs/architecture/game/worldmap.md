@@ -274,4 +274,4 @@ Three packages split along the same line the two planes do.
 | cleared frontier  | The set of nodes whose first clear has verified; the boundary replay's reachability check reads.                                                     |
 | reveal            | The region a player has earned sight of: a union of hex discs over the avatar's verified first-clear nodes and the origin, derived and never stored. |
 | selection         | The set a player may travel to: the origin, cleared nodes, and every node an edge joins to a cleared node.                                           |
-| landmark          | A rare, distance-scaled node granted to an avatar and visible as a pillar of light through fog.                                                      |
+| landmark          | A rare, distance-scaled node an avatar is granted, planned to show as a pillar of light through fog.                                                 |
