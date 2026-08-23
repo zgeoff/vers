@@ -4,14 +4,12 @@ import type { SecretRef } from '@vers/contract-keys';
 import type { DB } from '@vers/db';
 import { deriveWorldmapContent, readScopeSecret } from '@vers/worldmap-content';
 import {
-  REVEAL_RADIUS,
-  canEncodeMortonKey,
+  buildRevealSources,
   collectRevealedCells,
   decodeMortonKey,
   findCellCoord,
   toNodeID,
 } from '@vers/worldmap-core';
-import type { RevealSource } from '@vers/worldmap-core';
 import type { CryptoKey } from 'jose';
 import type { Kysely } from 'kysely';
 import invariant from 'tiny-invariant';
@@ -66,9 +64,11 @@ interface GetRevealedNodesResult {
 /**
  * Returns the disclosed content for every cell the avatar's verified first-clear grants reveal
  * inside the requested viewport. The revealed region is a projection, never stored state: it is the
- * union of the reveal disc around each of the avatar's `first_clear`-kind grants, recomputed fresh
- * on every call from the grants table alone. Only cells that union actually covers can appear in the
- * response; the viewport bounds what is returned, never what is eligible to be revealed.
+ * union of the reveal disc around each of the avatar's `first_clear`-kind grants and around the
+ * origin, recomputed fresh on every call from the grants table alone. The origin disc is
+ * unconditional, so an avatar that has cleared nothing still sees its starting area. Only cells
+ * that union actually covers can appear in the response; the viewport bounds what is returned,
+ * never what is eligible to be revealed.
  *
  * A grant key that names no addressable world-map cell contributes nothing rather than failing the
  * query — a grant kind sharing the table with an unrelated future feature, or a row written before
@@ -106,23 +106,15 @@ export async function getRevealedNodes(
     .where('kind', '=', 'first_clear')
     .execute();
 
-  const sources: Array<RevealSource> = [];
   const completedNodeIDs: Array<string> = [];
 
   for (const grant of grants) {
-    const coord = findCellCoord(grant.key);
-
-    if (coord === undefined) {
-      continue;
-    }
-
-    completedNodeIDs.push(grant.key);
-
-    if (canEncodeMortonKey(coord)) {
-      sources.push({ coord, radius: REVEAL_RADIUS });
+    if (findCellCoord(grant.key) !== undefined) {
+      completedNodeIDs.push(grant.key);
     }
   }
 
+  const sources = buildRevealSources(new Set(completedNodeIDs));
   const revealedCells = collectRevealedCells(sources, opts.input.viewport);
 
   const contentVersion = await findCurrentContentVersion(deps.db);

@@ -366,3 +366,77 @@ test("it rejects revealing an empty batch for an avatar that is not the account'
     data: { activeAvatarID: activeAvatar.id, activeAvatarName: activeAvatar.name },
   });
 });
+
+test("it refuses a node outside the avatar's revealed region", async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const result = await client.revealNodes({ avatarID: avatar.id, nodeIDs: ['10_0'] });
+
+  expect(result.nodes).toBeEmpty();
+
+  const chain = await ctx.db
+    .selectFrom('activityChains')
+    .selectAll()
+    .where('avatarId', '=', avatar.id)
+    .where('scopeId', '=', '10_0')
+    .executeTakeFirst();
+
+  expect(chain).toBeUndefined();
+});
+
+test('it mints the authorized nodes in a call that also names a refused one', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const result = await client.revealNodes({ avatarID: avatar.id, nodeIDs: ['0_0', '10_0'] });
+
+  expect(result.nodes.map((node) => node.nodeID)).toStrictEqual(['0_0']);
+
+  const chains = await ctx.db
+    .selectFrom('activityChains')
+    .select('scopeId')
+    .where('avatarId', '=', avatar.id)
+    .execute();
+
+  expect(chains.map((chain) => chain.scopeId)).toStrictEqual(['0_0']);
+});
+
+test('it reveals the edge of the starting area but refuses the next cell out', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const result = await client.revealNodes({ avatarID: avatar.id, nodeIDs: ['2_0', '3_0'] });
+
+  expect(result.nodes.map((node) => node.nodeID)).toStrictEqual(['2_0']);
+});
+
+test('it reveals a node a verified first-clear brings into sight', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  await ctx.db
+    .insertInto('avatarGrants')
+    .values({ avatarId: avatar.id, key: '10_0', kind: 'first_clear' })
+    .execute();
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const result = await client.revealNodes({ avatarID: avatar.id, nodeIDs: ['11_0'] });
+
+  expect(result.nodes.map((node) => node.nodeID)).toStrictEqual(['11_0']);
+});
