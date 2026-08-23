@@ -142,8 +142,8 @@ seed, the two anchors, and a replay-queue priority.
 The verified anchor is also the rollback target. Settlement trusts positions at or below it, and a
 rejection rewinds the appended anchor onto it.
 
-The `priority` column orders the replay queue. The verifier takes the highest-priority chain first
-and breaks a tie by which chain was minted first.
+The `priority` column feeds the replay queue, which reads it as described in
+[the order the verifier works in](#the-order-the-verifier-works-in).
 
 The row carries no `updated_at` column and no on-update trigger, so a repeat reveal that re-assigns
 its own genesis seed writes no logical change and bumps no timestamp.
@@ -156,10 +156,11 @@ activity's last appended checkpoint. The advance applies only while the anchor s
 the activity started from, so a duplicate transition finds it already moved and writes nothing.
 
 Two cases advance nothing. An activity that appended no checkpoint at all leaves the anchor alone.
-So does one whose only checkpoint is the `Started` one, the sole checkpoint type that consumes no
-position of its own. Every other tail advances the anchor, including a tail whose final seed equals
-the seed it started that segment from — that equality says the last segment happened to roll
-nothing, not that the activity consumed nothing.
+So does one whose only checkpoint is the `Started` one. That checkpoint takes the index one past
+where the activity began, exactly as any other checkpoint takes its own, but it draws nothing from
+the seed and so leaves the anchor where it stands. Every other tail advances the anchor, including a
+tail whose final seed equals the seed it started that segment from — that equality says the last
+segment happened to roll nothing, not that the activity consumed nothing.
 
 **The verified anchor moves only when a proved activity ends.** A segment part way through an
 activity settles what it proved and advances that activity's own verified cursor, but leaves the
@@ -254,10 +255,17 @@ nothing, while stamping them into a build would pin XP that never settles.
 
 ## The order the verifier works in
 
-The verifier claims one activity per avatar at a time. It takes the oldest activity across every one
-of that avatar's chains whose appends run past its verified cursor, and only when that activity's
-predecessor has itself settled or rejected. A parked or quarantined activity is skipped and blocks
-everything after it, exactly as a held predecessor does.
+The verifier claims one activity at a time, choosing it in two stages.
+
+First it finds one candidate per avatar: that avatar's oldest activity, across every one of its
+chains, whose appends run past its verified cursor and whose predecessor has itself settled or
+rejected. A parked or quarantined activity is skipped and blocks everything after it, exactly as a
+held predecessor does.
+
+Then it picks between those candidates by the `priority` on each one's chain row, taking the highest
+and breaking a tie in favour of the older chain. Priority therefore decides which avatar the
+verifier works on next. It never reorders one avatar's own chains against each other — the
+predecessor order alone does that.
 
 The claim is a row lock on the chosen activity's chain row, held for the transaction. It prevents
 duplicated work. It is not what makes application exactly-once — the verified-cursor guard does
