@@ -3,6 +3,8 @@ import { OpenAPIGenerator } from '@orpc/openapi';
 import { ZodToJsonSchemaConverter } from '@orpc/zod/zod4';
 import { WORLD_COORD_MAX, WORLD_COORD_MIN } from '@vers/worldmap-core';
 import { activityContract } from './activity-contract';
+import { AdvanceCheckpointInvalidReasonSchema } from './advance-checkpoint-invalid-reason-schema';
+import { CheckpointInvalidReasonSchema } from './checkpoint-invalid-reason-schema';
 import { MAX_CATCH_UP_BATCH_CHECKPOINTS } from './max-catch-up-batch-checkpoints';
 import { REVEAL_VIEWPORT_CELL_CAP } from './reveal-viewport-cell-cap';
 
@@ -62,6 +64,24 @@ test('it declares a bespoke CHECKPOINT_INVALID with an explicit status on trackA
 
   expect(errorMap).toContainKey('CHECKPOINT_INVALID');
   expect(errorMap.CHECKPOINT_INVALID?.status).toBe(422);
+});
+
+test('it accepts a start-hash mismatch as an advanceActivity checkpoint-invalid reason', () => {
+  expect(AdvanceCheckpointInvalidReasonSchema.parse('start-hash-mismatch')).toBe(
+    'start-hash-mismatch',
+  );
+});
+
+test('it rejects a reason outside the advanceActivity checkpoint-invalid set', () => {
+  const result = AdvanceCheckpointInvalidReasonSchema.safeParse('start-hash-mismatched');
+
+  expect(result.error?.issues).toPartiallyContain(expect.objectContaining({ path: [] }));
+});
+
+test('it carries every batch reason into the advanceActivity checkpoint-invalid set', () => {
+  expect(AdvanceCheckpointInvalidReasonSchema.options).toIncludeAllMembers(
+    CheckpointInvalidReasonSchema.options,
+  );
 });
 
 test('it declares the single-writer errors with explicit statuses on trackActivityProgress', () => {

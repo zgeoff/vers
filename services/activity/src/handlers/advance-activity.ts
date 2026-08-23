@@ -1,5 +1,6 @@
 import type {
   ActivityData,
+  AdvanceCheckpointInvalidReason,
   BuildSnapshot,
   CatchUpContinuation,
   ContentDocument,
@@ -356,7 +357,7 @@ type BailOutcome =
       readonly activityID: string;
       readonly appendedHead: number;
       readonly kind: 'checkpoint-invalid';
-      readonly reason: string;
+      readonly reason: AdvanceCheckpointInvalidReason;
     }
   | { readonly activityID: string; readonly appendedHead: number; readonly kind: 'conflict' }
   | { readonly activityID: string; readonly appendedHead: number; readonly kind: 'session-evicted' }

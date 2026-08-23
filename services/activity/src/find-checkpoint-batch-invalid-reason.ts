@@ -1,4 +1,8 @@
-import type { CheckpointBatchEntry, CheckpointPayload } from '@vers/contract-activity';
+import type {
+  CheckpointBatchEntry,
+  CheckpointInvalidReason,
+  CheckpointPayload,
+} from '@vers/contract-activity';
 import { RewardSlotSchema, buildCheckpointHashFromEntry } from '@vers/contract-activity';
 import { isTerminalCheckpointType } from '@vers/idle-core';
 import * as z from 'zod';
@@ -39,7 +43,7 @@ export interface CheckpointBatchHead {
 export function findCheckpointBatchInvalidReason(
   input: Readonly<CheckpointBatchInput>,
   head: Readonly<CheckpointBatchHead>,
-): string | undefined {
+): CheckpointInvalidReason | undefined {
   const headMatches = input.expectedHead === head.appendedHead;
   let previousTime = headMatches ? head.appendedTimeMs : undefined;
 
@@ -117,7 +121,9 @@ const RewardSlotsSchema = z.array(RewardSlotSchema);
  * checkpoint that dropped nothing carries no key at all. Present, it must parse and its ordinals
  * must run contiguous from 0 in list order.
  */
-function findRewardSlotsInvalidReason(payload: Readonly<CheckpointPayload>): string | undefined {
+function findRewardSlotsInvalidReason(
+  payload: Readonly<CheckpointPayload>,
+): CheckpointInvalidReason | undefined {
   if (!('rewardSlots' in payload)) {
     return undefined;
   }
@@ -142,7 +148,9 @@ const RewardsSchema = z.looseObject({ xp: z.int32().optional() });
  * whole statement on a fractional, non-numeric, or out-of-range value, and the offending
  * checkpoint would keep failing it on every later read.
  */
-function findRewardsInvalidReason(payload: Readonly<CheckpointPayload>): string | undefined {
+function findRewardsInvalidReason(
+  payload: Readonly<CheckpointPayload>,
+): CheckpointInvalidReason | undefined {
   if (!('rewards' in payload)) {
     return undefined;
   }
