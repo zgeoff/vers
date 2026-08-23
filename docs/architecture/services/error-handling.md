@@ -91,7 +91,8 @@ committed row. It also carries `appendedHead` where the single-call `data` omits
 
 `CHECKPOINT_INVALID`'s `reason` names the failed check: contiguity, chain index, chain link, time
 monotonicity, or hash. On `advanceActivity` it can also be a predicted-build-snapshot mismatch, or a
-start-hash recomputation mismatch on a mint.
+start-hash recomputation mismatch on a mint. Each procedure declares `reason` as a closed enum, so a
+client narrows on the value rather than matching a string.
 
 ## Service layer
 

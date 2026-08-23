@@ -3,9 +3,11 @@ import { createMockActivityData } from '@vers/contract-activity/test-utils';
 import { mockActivityService } from '@vers/mock-services/activity';
 import { server } from '../mocks/node';
 import { readAllActivityStarts } from '../submission/read-all-activity-starts';
+import { readLastStartedActivity } from '../submission/read-last-started-activity';
 import { readPendingStartIntent } from '../submission/read-pending-start-intent';
 import { readQueuedCheckpoints } from '../submission/read-queued-checkpoints';
 import { writeActivityStart } from '../submission/write-activity-start';
+import { writeLastStartedActivity } from '../submission/write-last-started-activity';
 import { writePendingStartIntent } from '../submission/write-pending-start-intent';
 import { writeQueuedCheckpoint } from '../submission/write-queued-checkpoint';
 import { createStubSubmitter } from '../test-utils/create-stub-submitter';
@@ -156,5 +158,47 @@ test('it drains nothing when this device holds no pending activityStart', async 
 
   await drainActivityStarts(context, 'avatar_no_rows');
 
+  expect(submitter.registerActivity).not.toHaveBeenCalled();
+});
+
+test('it drops a start the server permanently refuses, its successor, and the last-started record', async () => {
+  const submitter = createStubSubmitter();
+  const context = createStubWorkerContext({ submitter });
+
+  const refused = createMockActivityData({
+    avatarID: 'avatar_recovering',
+    id: 'act_drain_start_hash',
+    predecessorActivityID: null,
+    scopeID: '1_0',
+    startKey: 'start_key_start_hash',
+  });
+
+  const successor = createMockActivityData({
+    avatarID: 'avatar_recovering',
+    id: 'act_drain_start_hash_next',
+    predecessorActivityID: refused.id,
+    scopeID: '1_0',
+    startKey: 'start_key_start_hash_next',
+  });
+
+  await writeActivityStart(refused);
+  await writeActivityStart(successor);
+  await writeLastStartedActivity({ avatarID: successor.avatarID, lastActivityID: successor.id });
+
+  server.use(
+    mockActivityService.advanceActivity.handler((opts) => {
+      throw opts.errors.CHECKPOINT_INVALID({
+        data: { activityID: refused.id, appendedHead: 0, reason: 'start-hash-mismatch' },
+      });
+    }),
+  );
+
+  await drainActivityStarts(context, 'avatar_recovering');
+
+  const remaining = await readAllActivityStarts();
+  const lastStarted = await readLastStartedActivity('avatar_recovering');
+
+  expect(remaining).toStrictEqual([]);
+  expect(lastStarted).toBeUndefined();
   expect(submitter.registerActivity).not.toHaveBeenCalled();
 });

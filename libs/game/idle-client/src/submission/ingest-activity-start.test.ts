@@ -152,3 +152,49 @@ test('it defers an order-sensitive CONFLICT, keeping the activityStart for a lat
 
   expect(stored).toBeDefined();
 });
+
+test('it rejects and removes the activityStart on a permanent start-hash-mismatch', async () => {
+  const ctx = setupTest();
+  const row = createMockActivityData({ id: 'act_ingest_start_hash', startKey: 'start_key_e' });
+
+  server.use(
+    mockActivityService.advanceActivity.handler((opts) => {
+      throw opts.errors.CHECKPOINT_INVALID({
+        data: { activityID: row.id, appendedHead: 0, reason: 'start-hash-mismatch' },
+      });
+    }),
+  );
+
+  await writeActivityStart(row);
+
+  const outcome = await ingestActivityStart(ctx.client, row.id);
+
+  expect(outcome).toBe('rejected');
+
+  const stored = await readActivityStart(row.id);
+
+  expect(stored).toBeUndefined();
+});
+
+test('it defers an order-sensitive build-snapshot-mismatch, keeping the activityStart', async () => {
+  const ctx = setupTest();
+  const row = createMockActivityData({ id: 'act_ingest_build_snapshot', startKey: 'start_key_f' });
+
+  server.use(
+    mockActivityService.advanceActivity.handler((opts) => {
+      throw opts.errors.CHECKPOINT_INVALID({
+        data: { activityID: row.id, appendedHead: 0, reason: 'build-snapshot-mismatch' },
+      });
+    }),
+  );
+
+  await writeActivityStart(row);
+
+  const outcome = await ingestActivityStart(ctx.client, row.id);
+
+  expect(outcome).toBe('deferred');
+
+  const stored = await readActivityStart(row.id);
+
+  expect(stored).toBeDefined();
+});

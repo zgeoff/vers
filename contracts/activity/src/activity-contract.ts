@@ -4,8 +4,10 @@ import * as z from 'zod';
 import { ActivityDataSchema } from './activity-data-schema';
 import { ActivityFailureActionSchema } from './activity-failure-action-schema';
 import { ActivityStatusSchema } from './activity-status-schema';
+import { AdvanceCheckpointInvalidReasonSchema } from './advance-checkpoint-invalid-reason-schema';
 import { CatchUpContinuationSchema } from './catch-up-continuation-schema';
 import { CheckpointBatchEntrySchema } from './checkpoint-batch-entry-schema';
+import { CheckpointInvalidReasonSchema } from './checkpoint-invalid-reason-schema';
 import { CheckpointSchema } from './checkpoint-schema';
 import { ContentDocumentSchema } from './content-document-schema';
 import { EncounterNodeSchema } from './encounter-node-schema';
@@ -22,7 +24,7 @@ const AvatarNotActiveDataSchema = z.object({
 });
 
 const CappedDataSchema = z.object({ appendedHead: z.int() });
-const CheckpointInvalidDataSchema = z.object({ reason: z.string() });
+const CheckpointInvalidDataSchema = z.object({ reason: CheckpointInvalidReasonSchema });
 const SimVersionProblemDataSchema = z.object({ currentSimVersion: z.string().nullable() });
 const StaleHeadDataSchema = z.object({ appendedHead: z.int() });
 const TerminalStatusDataSchema = z.object({ appendedHead: z.int(), status: ActivityStatusSchema });
@@ -32,7 +34,11 @@ const TerminalStatusDataSchema = z.object({ appendedHead: z.int(), status: Activ
  * whatever reason stopped it — the row the client's outer resync re-plans from.
  */
 const AdvanceBailDataSchema = z.object({ activityID: z.string(), appendedHead: z.int() });
-const AdvanceCheckpointInvalidDataSchema = AdvanceBailDataSchema.extend({ reason: z.string() });
+
+const AdvanceCheckpointInvalidDataSchema = AdvanceBailDataSchema.extend({
+  reason: AdvanceCheckpointInvalidReasonSchema,
+});
+
 const AdvanceTerminalDataSchema = AdvanceBailDataSchema.extend({ status: ActivityStatusSchema });
 
 const RewardItemSchema = z.object({
