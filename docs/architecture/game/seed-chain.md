@@ -1,221 +1,301 @@
 # The seed chain
 
-Every `(avatar, chain scope)` pair owns one forward, append-only seed chain. A **chain scope** is a
-`(scope_type, scope_id)` pair naming a stable, returnable target — a world-map node is the
-`world_map_node` scope. Each activity at the scope draws its seed from the chain's current position
-and advances it, so the next activity continues where the last left off. A completed, failed, or
-stopped attempt advances the chain alike, so a re-attempt is a fresh continuation, never a replay.
+Every activity an avatar runs at a node draws its randomness from one place: that node's seed chain.
+The chain is a single sequence of positions running forward. An activity draws the position at the
+front, plays out from it, and leaves the next position for the activity that follows. A position is
+spent once and never drawn twice, so a failed activity costs a position exactly as a completed one
+does. Playing a node again never re-rolls the last result — it plays the next stretch of the chain.
 
-The chain's whole state is two cursors: an **appended anchor** the next activity seeds from, and a
-**verified anchor** that progress settles behind. The appended anchor moves the instant an
-activity's tail is written; the verified anchor advances only as the server replays that tail and
-trusts it, one segment at a time. That gap — appended ahead, verified behind — is what offline play
-and settlement both turn on.
+The chain carries two anchors, and the distance between them is what the rest of this page turns on.
+The **appended anchor** marks how far the player claims to have played. The **verified anchor**
+marks how far the server has proved. Play runs ahead of proof, and payment waits for proof.
 
-The [entropy model](./game-entropy.md#the-seed-chain) covers why the chain takes this shape and how
-its flatness prices look-ahead. The [checkpoint stream](./game-simulation.md#checkpoint-streams)
-covers the per-activity rows this chain spans.
+A chain belongs to one avatar at one **chain scope**: a stable place the avatar can leave and return
+to. A world-map encounter's scope is its map node. Two avatars standing on the same node hold two
+separate chains, and neither can read or disturb the other's.
 
-## The chain row
+This page covers the chain and nothing else: where one starts, how an activity draws a position, how
+the two anchors move, and what a rejection undoes. Three neighbours carry the rest.
+[Game simulation](./game-simulation.md) explains the simulation that produces an activity and the
+replay that proves it. [Offline reconcile](./offline-reconcile.md) sets out the order the server
+settles an avatar's activities in. [Game entropy](./game-entropy.md#the-seed-chain) says why the
+chain is one flat sequence rather than a tree a player could search.
 
-`activity_chains`, keyed `(avatar_id, scope_type, scope_id)`, holds the chain's state as two
-cursors.
+## The journeys the chain must handle
 
-- The **appended anchor** (`appended_next_seed`, `appended_chain_index`) is the derivation source: a
-  new activity seeds from it. It moves the instant an activity's tail is written, ahead of
-  verification, so offline play never waits on the verifier.
-- The **verified anchor** (`verified_next_seed`, `verified_chain_index`) is the settlement watermark
-  and the rollback target. Settlement trusts positions at or below it.
+- **The player attempts a node for the first time.** The server mints the chain when it reveals the
+  node, and the activity draws its opening position.
+- **The player clears the node, then attempts it again.** The second activity begins where the first
+  stopped, on positions nothing has touched.
+- **The player loses, then attempts the node again.** The failed activity keeps every position it
+  spent, and the next one carries on past them.
+- **The player stops part way through.** The chain advances to the point they stopped, and no
+  further.
+- **The player runs a string of activities with no network.** Each draws its position on the device,
+  and all of them reach the server at the next reconnect.
+- **The server refuses an activity.** The appended anchor rewinds onto the verified anchor, and
+  every activity that started past it is rejected.
 
-`genesis_seed` records the origin seed. The row carries no `updated_at` column and no on-update
-trigger, so a reveal that self-assigns `genesis_seed` to keep the mint idempotent writes no logical
-change and bumps no timestamp.
+## Where a chain starts
 
-## Seeds and chainIndex
+A node's chain begins at a **genesis seed** the server mints the first time it reveals the node. It
+draws sixteen random bytes from a CSPRNG (cryptographically secure PRNG) and carries them as hex,
+re-drawing on the one degenerate state the generator cannot use. `revealNodes` writes one chain row
+per revealed avatar-and-node pair.
 
-A seed is a 128-bit xoroshiro128+ state carried as a 32-character hex string. A continuation's seed
-is the previous activity's final checkpoint `nextSeed`, copied verbatim — the derivation is
-identity. The verifier reproduces the seed from the appended chain rather than trusting a submitted
-value.
+The server mints a seed only for a node inside the avatar's revealed region. A node outside it gets
+no chain row and no seed (see [reveal](./worldmap.md#reveal)).
 
-`chainIndex` counts checkpoints along the whole chain, monotonic across activities, so a failed
-attempt's positions are spent, never reused. An activity carries `start_chain_index`, stamped at
-start from the chain's appended anchor. A checkpoint's `chainIndex` is
-`start_chain_index + version`, where `version` is its 1-based position in the activity's stream. The
-`Started` checkpoint sits at `start_chain_index + 1`. Reward coordinates and sealed-salt positions
-key on this value.
+Nothing a client sends can steer the seed, because the avatar and the node are both fixed before the
+draw and no input is left to vary. The server stores the value and never derives it again — the
+verifier reads it, and a restored device fetches it.
 
-`chainIndex` sits in the checkpoint's frozen hashed subset, so replay reproduces every coordinate.
-The server validates each checkpoint's `chainIndex` against `start_chain_index + version`.
+Revealing the same node twice mints nothing new. The second reveal re-assigns the row the genesis
+seed it already holds, so any number of concurrent callers converge on the value the first one
+wrote.
 
-## Genesis
+## Positions on the chain
 
-A chain scope's genesis seed is a server CSPRNG (cryptographically secure PRNG) mint: sixteen random
-bytes as hex, re-rolled off the degenerate all-zero xoroshiro state. `revealNodes` mints it at
-reveal time, one chain row per revealed `(avatar, scope)` pair. The mint is gated on the avatar's
-revealed region: a node outside it gets no chain row and no seed (see
-[reveal](./worldmap.md#reveal)). A repeat reveal self-assigns the row's own `genesis_seed`, so the
-mint stays idempotent under any number of concurrent callers. A client cannot compute or steer the
-seed, because the scope and the avatar are both fixed before the mint. The verifier reads the stored
-value and a restored device fetches it; neither re-derives it.
+A position is a seed and an index.
 
-## Building a start
+The seed is a 128-bit xoroshiro128+ state carried as a 32-character hex string. Moving from one
+position to the next copies a value rather than computing one: an activity's seed is the previous
+activity's final `nextSeed`, verbatim. The verifier never trusts a submitted seed. It reproduces the
+position from the chain row and compares.
 
-Every activity start is a local client synthesis. The worker builds the activity's full start row
-from this device's cached inputs, without calling the service — interactive starts,
-auto-continuations after a terminal checkpoint, and offline catch-up alike (see
-[game simulation](./game-simulation.md#authoring-and-verifying-inputs)). The server authors no
-start; it verifies the one the client submits.
+The index is `chainIndex`, and it counts checkpoints along the whole chain rather than within one
+activity. It never resets, so a failed activity's indices are spent and gone. Each activity records
+the index it started from, and a checkpoint's `chainIndex` is that start index plus the checkpoint's
+own position in the activity's stream. The first checkpoint an activity writes therefore sits one
+past where the activity began.
 
-`revealNodes` returns each node's current appended anchor, `{ nextSeed, chainIndex }`, alongside its
-genesis seed. A start begins from that anchor, so it resumes where play on the node last left off
-rather than restarting from genesis. A node never yet played has an anchor of `{ genesisSeed, 0 }`.
+Reward coordinates key on `chainIndex`. A replay that reproduces the index reproduces the reward
+with it. The index sits inside the frozen set of fields each checkpoint hashes, and the server
+checks every submitted checkpoint's index against the value it derives for that position
+([game simulation](./game-simulation.md#checkpoint-streams)).
 
-`revealNodes` also returns each node's `encounterNode`, the content version it was derived against,
-the key version, the scope-secret ref, and the scope-secret version the derivation read. With the
-sim version the client already holds, these are every input `buildStartHash` needs.
+## Drawing a position
 
-app-web calls `revealNodes` for every node the fog-of-war projection reveals and relays the seeds,
-anchors, encounters, and stamps to the idle worker with the active avatar. The worker caches each
-node's seed, anchor, encounter, and content version under its `[avatarID, nodeID]` key in the
-`node-seeds` IndexedDB store, and the stamps in the `preferences` store. Every node the player can
-see then carries what a start needs to synthesize a valid start row without the server.
+The client draws its position without asking the server. When the player taps a node, the worker
+builds the whole start record from what this device cached at reveal and drops straight into the
+simulation. It builds the same record for a continuation after a terminal checkpoint, and for an
+offline gap it catches up on reconnect. The server authors no activity start; it checks the one the
+client submits.
 
-The node key scopes a seed to its avatar. Two avatars sharing a coordinate hold distinct chains
-against distinct seeds, so neither overwrites the other's cached value.
+`revealNodes` stocks the device. For each node it returns the genesis seed, the node's current
+appended anchor, the encounter, the content version the encounter was derived against, and the key
+and secret stamps the start hash folds in. With the sim version the client already holds, that is
+every input an activity start needs. app-web relays them to the idle worker, which caches each
+node's inputs under its avatar-and-node key and the account-wide stamps beside them.
 
-The checkpoint submitter writes each node's advancing appended anchor back to its cache row as the
-client plays the chain forward. A later start at that node then begins from the position this device
-has reached, not the reveal's original anchor.
+The cache key names the avatar, which is what keeps two avatars on one coordinate apart. Each holds
+its own chain against its own seed, so neither overwrites the other's cached value.
 
-### Ingesting a held start
+An activity begins at the node's appended anchor rather than at genesis, so it resumes where play on
+the node left off. A node never played has an anchor of its genesis seed at index zero. As the
+client plays forward it writes each new position back over the cached one, so a later activity at
+that node begins where this device actually reached — which can sit ahead of the anchor the server
+holds, because the server's anchor waits for the activity to end.
 
-Every synthesized start row is written to the durable `pending-activity-starts` IndexedDB store,
-keyed by its activity id, before it installs onto the live simulation. A crash between mint and
-install still leaves a recoverable start.
+### Handing an activity start to the server
 
-`advanceActivity` ingests such a start when the caller reconnects with one still unsubmitted. The
-client submits the `seed`, versions, `startChainIndex`, build snapshot, and start hash it computed
-offline. The server re-derives the encounter and the key and secret stamps from its own content
-document and scope secret rather than trusting the payload, then requires the client's start hash to
-equal its own recompute. The anchor check is exact: the start's `startChainIndex` must equal
-`appendedChainIndex` and its seed must equal `appendedNextSeed`, so a start computed against an
-anchor the chain has since moved past is refused rather than layered onto a position that no longer
-exists.
+The worker writes every activity start it builds to a durable store before installing it. A crash
+between building one and running it therefore still leaves something to deliver.
 
-The client ingests each pending start into the server on first server contact. A `NOT_FOUND` answer
-to a checkpoint flush triggers a one-shot ingest-and-retry of that same batch rather than an
-immediate discard. A start orphaned by a worker reload — no live simulation left to drive its flush
-— ingests on reconnect instead, ahead of the held-checkpoint flush it would otherwise `NOT_FOUND`
-against. Either path removes the durable `pending-activity-starts` entry once the server has
-answered definitively. A server-refused start is dropped and its queued checkpoints discarded, the
-same as any other stream the server refuses to recognize. One refusal defers instead. A
-build-snapshot mismatch means the start counted xp from a predecessor whose own end has not reached
-the server yet. The client keeps the entry and ingests it again once that predecessor lands.
+When the device next reaches the server, it hands the activity start to `advanceActivity`. It sends
+the seed, the versions, the start index, the build snapshot, and the start hash it computed offline.
+The server re-derives the encounter and the stamps from its own content document and scope secret
+rather than trusting the payload. It re-authors the build snapshot from the avatar's own progression
+and refuses a start whose submitted snapshot differs. It then requires the client's start hash to
+equal the one it just computed itself.
 
-## Advancing the chain
+The server checks the anchor exactly. An activity start's index must equal the chain's appended
+index, and its seed must equal the chain's appended seed. One computed against a position the chain
+has since moved past is refused rather than layered onto a position that no longer exists.
 
-The chain advances when an activity transitions out of `active`. Which cursor moves depends on
-whether the appended tail is trustworthy.
+What the device does next depends on whether the server would refuse the same activity start a
+second time:
 
-### Forward exits
+- **The server would always refuse it, so the device drops it.** A node that resolves to no
+  coordinate, a chain that was never revealed, a sim version past retention, and a simulation that
+  genuinely diverged from the server's own derivation all fail under any order. The device drops the
+  activity start and the checkpoints queued behind it.
+- **The refusal can clear, so the device keeps it.** A stale anchor, a sim version this deploy has
+  not registered yet, an operator hold, and a build snapshot that counted XP from a predecessor
+  still in flight all resolve on their own. The device keeps the activity start and sends it again
+  once the predecessor lands or the hold clears.
 
-A terminal checkpoint (completed or failed), a user stop, and an offline cap all leave honest
-progress. The request path advances `appended_next_seed` and `appended_chain_index` from the last
-appended checkpoint, but only while the chain's anchor still matches the activity's
-`start_chain_index`; a duplicate transition finds it already moved and writes nothing. An activity
-that appended nothing leaves the anchor untouched, as does one whose only checkpoint is `Started`:
-its `nextSeed` equals its seed, so nothing was consumed.
+An activity start reaches the server by one of two routes. A device that still holds its live
+simulation hands it over on first contact, and if that stream's checkpoint flush comes back
+`NOT_FOUND`, the device hands the start over and sends the same batch once more rather than
+discarding it. A worker reload can instead orphan a start, leaving no simulation to drive its flush;
+the next reconnect delivers it, ahead of the checkpoints it would otherwise fail against. The device
+delivers in predecessor order, so a predecessor that is missing was refused rather than merely late,
+and the whole subtree that depended on it goes together.
 
-### Adverse exits
+## The two anchors
 
-Reproducible divergence rejects a stream; repeated ambiguity quarantines it. The appended tail is
-then suspect and never advances the appended anchor.
+The chain row is `activity_chains`, keyed by avatar, scope type, and scope id. It holds the genesis
+seed, the two anchors, and a replay-queue priority.
 
-A rejection rewinds the appended anchor to the verified anchor in one self-referential statement,
-setting `appended_next_seed = verified_next_seed` and `appended_chain_index = verified_chain_index`
-from the row's own columns. A successor that already started past the verified anchor
-(`start_chain_index > verified_chain_index`) is void: its forward-advance can no longer match the
-anchor, and nothing further settles from it. Whatever it settled while verifying stands. A
-quarantine blocks new activity starts on the pair. Every other chain scope proceeds.
+| Anchor   | Columns                                      | What it marks                 | What moves it                           |
+| -------- | -------------------------------------------- | ----------------------------- | --------------------------------------- |
+| appended | `appended_next_seed`, `appended_chain_index` | where a new activity begins   | an activity leaving active play         |
+| verified | `verified_next_seed`, `verified_chain_index` | how far the server has proved | the segment that ends a proved activity |
 
-Session eviction changes the writer, not the activity. The activity stays `active`, and a new
-session resumes it from the verified anchor. The tail is adjudicated on its own merits. Eviction
-advances nothing.
+The verified anchor is also where a rejection rewinds to, and settlement trusts positions at or
+below it.
 
-## Settlement and reward reveal
+The replay queue reads the `priority` column when it chooses what to verify next (see
+[the order the verifier works in](#the-order-the-verifier-works-in)).
 
-Identity settlement and rolled-reward reveal gate on verification, never on the appended anchor, so
-nothing unproven is paid. A synced but unverified reward holds as a pending item on the client until
-the verifier settles it.
+The row carries no `updated_at` column and no on-update trigger, so a repeat reveal that re-assigns
+its own genesis seed writes no logical change and bumps no timestamp.
 
-Verification's unit is the **segment**: a stream is adjudicated in pieces as it arrives, and each
-piece settles what it proved. A run stopped, capped, or held part way through keeps the XP its
-verified prefix earned, and an item minted for a verified segment stays minted. A rejection voids
-the chain's unverified remainder and every successor started past the verified anchor, but reverses
-no payout already made.
+## Moving the anchors forward
 
-The XP a checkpoint carries is read two ways. A non-terminal checkpoint's `rewards.xp` is that
-checkpoint's own delta; a terminal checkpoint's is the run's final total, containing every delta
-before it. A segment therefore settles either the sum of the deltas it verified or, when it ends on
-a terminal, that total less what earlier segments already settled. The per-activity running total
-moves in the same guarded update that advances the verified anchor, so the anchor and the amount can
-never disagree.
+**The appended anchor moves when an activity leaves active play.** A terminal checkpoint, a player
+stop, and an offline cap all leave honest progress behind, and each moves the anchor to the
+activity's last appended checkpoint. The anchor moves only while it still holds the index the
+activity started from, so a duplicate transition finds it already moved and writes nothing.
+
+Two cases move nothing. An activity that appended no checkpoint at all leaves the anchor alone. So
+does one whose only checkpoint is the `Started` one: that checkpoint sits at the index one past
+where the activity began, exactly as any other checkpoint sits at its own, but it draws nothing from
+the seed and so leaves the anchor where it stands. Every other last checkpoint moves the anchor,
+including one whose seed matches the seed its own segment began at — that match says the last
+segment happened to roll nothing, not that the activity consumed nothing.
+
+**The verified anchor moves only when a proved activity ends.** A segment part way through an
+activity settles what it proved and advances that activity's own verified cursor, but leaves the
+chain's anchor where it stands. The anchor moves on the segment that both ends a forward-exited
+activity and reaches its last appended checkpoint. Until then the chain's proved position is the end
+of the last activity the server finished with.
+
+That rule leaves a hole the verifier closes itself. A stream can verify completely while its
+activity is still active, then leave active play with nothing left to revisit it, so nothing remains
+to move the anchor. When the verifier later claims an activity whose start index sits ahead of the
+anchor, it finds the forward-exited predecessor that filled the gap and catches the anchor up before
+it adjudicates anything.
+
+## Pulling the appended anchor back
+
+The verifier rejects a stream whose divergence it can reproduce, and quarantines one that stays
+ambiguous after repeated attempts. In both cases the activity's last checkpoints are suspect, and
+neither case ever moves the appended anchor.
+
+When the verifier rejects a stream, one transaction does three things:
+
+1. It marks the diverging activity rejected, whether it was still active or had already stopped or
+   capped.
+2. It rewinds the appended anchor onto the verified anchor, reading the verified columns inside the
+   update statement rather than through an earlier select, so no concurrent settlement can land
+   between the read and the write.
+3. It rejects every activity on the chain that started past the verified anchor, active and
+   already-exited alike.
+
+Whatever those activities settled while the verifier was still checking them stands. Rejecting a
+stream voids the chain's unproved remainder; it reverses no payout already made.
+
+While a scope holds a quarantined stream, no new activity can start there. Every other chain scope
+carries on.
+
+Evicting a session changes the writer, not the activity. The activity stays active, the new session
+rebuilds from the verified anchor and appends from the current head, and the server judges the new
+checkpoints on their own merits. Neither anchor moves.
+
+## Paying behind the verified anchor
+
+The server pays nothing it has not proved. It discloses a rolled reward only for a position the
+verifier has confirmed, never for one the client has merely appended. A reward that has synced but
+not yet verified waits on the client as a pending item until the verifier settles it.
+
+The verifier judges a stream in pieces as they arrive. Each piece is a **segment**, and each segment
+settles what it proved. An activity stopped, capped, or held part way through keeps the XP its
+proved checkpoints earned, and an item minted for a proved segment stays minted.
+
+The XP a checkpoint carries is read two ways. A non-terminal checkpoint's XP is its own delta. A
+terminal checkpoint's is the activity's final total, containing every delta before it. A segment
+therefore settles either the sum of the deltas it proved or, when it ends on a terminal checkpoint,
+that total less what earlier segments already settled. The activity's running total moves in the
+same guarded update that advances its verified cursor, so the cursor and the amount can never
+disagree.
 
 ### Building against unsettled XP
 
-A consequential read — a new activity's `buildSnapshot`, or anything else feeding a new run —
-includes an ended run's unsettled XP, so a player who finishes one run and immediately starts
-another builds against what they just earned. A held run is excluded: `parked` and `quarantined`
-reach verification only by operator action, so counting one would stamp XP into this run's snapshot,
-and every later one, that never settles.
+A new activity's build snapshot counts the unsettled XP of every activity this avatar has ended that
+still waits for its verifier. A player who finishes one activity and immediately starts another
+therefore builds against what they just earned.
 
-XP is the only quantity a build snapshot draws ahead of verification, since an item mints only for a
-verified segment. Identity is avatar-global while chains are per-scope, so a snapshot can draw from
-a run on another chain.
+A held activity does not count. A parked or quarantined activity reaches verification only when an
+operator intervenes, so counting one would stamp XP into this activity's snapshot, and every later
+one's, that never settles.
 
-Drawing ahead is safe because settlement runs in one per-avatar order rather than per chain. Each
-activity names the avatar's immediately-prior activity, and the verifier adjudicates an activity
-only once that predecessor has settled or rejected, so every check reads a settled total and never a
-drawn one. [Offline reconcile](./offline-reconcile.md#settlement-in-order) owns that order.
+XP is the only quantity a build snapshot draws ahead of proof, because an item mints only for a
+proved segment. Identity is avatar-wide while chains are per-scope, so a snapshot can draw from an
+activity on another chain.
 
-The build re-derivation is what catches a bad draw. On a segment's first verified pass the verifier
-rebuilds the expected starting build from the avatar's settled XP total and rejects a pinned build
-that does not match, so a run that banked XP a later rejection erased fails. A successor chained
-onto it fails the same check in turn.
+Drawing ahead is safe because the server settles in one order per avatar rather than one order per
+chain. Each activity names the avatar's immediately-prior activity, and the verifier adjudicates an
+activity only once that predecessor has settled or rejected, so every check reads a settled total
+and never a drawn one. [Offline reconcile](./offline-reconcile.md#settlement-in-order) owns that
+order.
+
+The verifier catches a bad draw by rebuilding the build itself. On a segment's first proved pass it
+derives the expected starting build from the avatar's settled XP total and rejects a pinned build
+that does not match, so an activity that banked XP a later rejection erased fails. An activity
+chained onto it fails the same check in turn.
 
 ### The progression read
 
-`getAvatarProgression` reads the settled row, its pending projection, and the live run's
-settled-so-far in a single statement, so a client display is never torn between them. The pending
-projection holds one entry per ended-but-unsettled activity, computed as the inverse of what
-verification settles: a settlement moves a delta from the pending set into the settled row without
-changing their sum, and a build snapshot stamped from the settled row plus the unsettled XP it draws
-matches what verification pays. The pending projection itself is display-only.
+`getAvatarProgression` reads three things in one statement: the settled row, one entry per
+ended-but-unsettled activity, and how much of the live activity's XP the settled row already
+carries. Reading them together is what keeps a display from tearing between them. The pending
+entries are the exact inverse of what verification settles, so a settlement moves a delta out of the
+pending set and into the settled row without changing their sum. A non-empty pending set also pokes
+the replay service, which makes a client watching a "Settling…" display the thing that retries a
+poke a crash or a deploy lost.
 
-## Concurrency
+The pending set counts parked and quarantined activities, which the build snapshot leaves out. The
+difference is deliberate: nothing reads the pending set but a display, so showing a held activity's
+earnings costs nothing, where stamping them into a build would pin XP that never settles.
 
-- The verifier serializes a chain's activities on the chain row, adjudicating one at a time in
-  order, so a continuation never confirms against a predecessor that later rejects.
-- An activity waits on its predecessor to settle, ordering an avatar's chains against each other
-  while no writer holds more than the one chain row it claimed.
-- The request-path forward-advance and the verifier both take the chain row before the activity row,
-  one ordering that admits no cycle.
-- The rejection rewind reads the verified columns inline in its update statement, never through a
-  prior select, so a concurrent confirm cannot slip between the read and the write.
+## The order the verifier works in
+
+The verifier claims one activity at a time, and chooses it in two stages.
+
+First it finds one candidate per avatar: that avatar's oldest activity, across every one of its
+chains, whose appends run past its verified cursor and whose predecessor has itself settled or
+rejected. It skips a parked or quarantined activity, which then blocks everything after it exactly
+as a held predecessor does.
+
+Then it picks between those candidates by the `priority` on each one's chain row, taking the highest
+and preferring the older chain on a tie. Priority therefore decides which avatar the verifier works
+on next. It never reorders one avatar's own chains against each other — the predecessor order alone
+does that.
+
+The verifier claims by locking that activity's chain row for the length of the transaction. The lock
+stops two workers duplicating each other. It is not what makes the work land exactly once — the
+verified-cursor guard does that, and applying the same segment twice lands nothing.
+
+Two rules keep the writers from deadlocking. Whoever moves an anchor, the request path or the
+verifier, takes the chain row before the activity row. And when a rejection rewinds the appended
+anchor, it reads the verified columns inside its own update statement rather than through a prior
+select, so a concurrent settlement cannot slip between the two.
 
 ## Glossary
 
-| Term            | Meaning                                                                                                                                         |
-| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| seed chain      | One forward, append-only sequence of seeds per `(avatar, chain scope)` pair; each activity draws one and advances it.                           |
-| chain scope     | A `(scope_type, scope_id)` pair naming a stable, returnable target; a world-map node is the `world_map_node` scope.                             |
-| chain row       | The `activity_chains` row holding a chain's genesis seed and its two anchors.                                                                   |
-| appended anchor | `(appended_next_seed, appended_chain_index)`: the position a new activity seeds from; moves ahead of verification.                              |
-| verified anchor | `(verified_next_seed, verified_chain_index)`: the settlement watermark and rollback target; moves only on trust.                                |
-| genesis seed    | A scope's origin seed, CSPRNG-minted at reveal, from which the chain's first activity derives.                                                  |
-| chainIndex      | A checkpoint's position along the whole chain, `start_chain_index + version`; reward coordinates key on it.                                     |
-| activity start  | An activity's first record — node, seed, and stamps — synthesized locally by the client and verified on ingest.                                 |
-| continuation    | An activity that seeds from a prior attempt's appended position, continuing the same chain.                                                     |
-| segment         | The run of checkpoints the verifier adjudicates as one piece; each segment settles what it proved.                                              |
-| predecessor     | The avatar's immediately-prior activity across every chain, stamped by the client at start; the verifier adjudicates an activity only after it. |
+| Term            | Meaning                                                                                                                                      |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| seed chain      | One forward sequence of positions per avatar per chain scope; each activity draws positions from it and never draws one twice.               |
+| chain scope     | The stable place an avatar leaves and returns to; a world-map encounter's scope is its map node.                                             |
+| chain row       | The `activity_chains` row holding one chain's genesis seed, its two anchors, and its replay priority.                                        |
+| genesis seed    | The seed a chain starts from, which the server mints the first time it reveals the node.                                                     |
+| position        | One point on the chain: a seed and a `chainIndex`.                                                                                           |
+| chainIndex      | A checkpoint's index along the whole chain, counted from the index its activity started at; reward coordinates key on it.                    |
+| appended anchor | The position a new activity begins at, marking how far the player claims to have played.                                                     |
+| verified anchor | The position the server has proved, marking what it may pay for and where a rejection rewinds to.                                            |
+| activity start  | An activity's first record — the node, the position, and the stamps — which the device builds and the server checks when it receives it.     |
+| segment         | The run of checkpoints the verifier adjudicates as one piece; each segment settles what it proved.                                           |
+| forward-exited  | Said of an activity that left active play with honest progress behind it: a terminal checkpoint, a player stop, or an offline cap.           |
+| predecessor     | The avatar's immediately-prior activity across every chain, which the device stamps at start; the verifier waits for it before adjudicating. |

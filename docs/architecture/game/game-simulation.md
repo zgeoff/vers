@@ -111,7 +111,7 @@ whichever path delivered it, so the replay verifier reproduces it unchanged.
 
 The `Started` checkpoint pins every input a replay needs: the sim and content versions, the roll
 `keyVersion` ([game entropy](./game-entropy.md#version-pinning)), and `start_chain_index`
-([seed chain](./seed-chain.md#seeds-and-chainindex)). Each later segment — a run of checkpoints
+([seed chain](./seed-chain.md#positions-on-the-chain)). Each later segment — a run of checkpoints
 under one sim version — replays under the code and content its stamps name.
 
 The activity's own id carries no cryptographic role. Its `startHash` digests only

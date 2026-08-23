@@ -51,8 +51,8 @@ How the platform is built — system design, data flows, and operational wiring.
 
 - [Game simulation](./architecture/game/game-simulation.md) — the deterministic client sim,
   checkpoint streams, and replay verification
-- [Seed chain](./architecture/game/seed-chain.md) — the per-`(avatar, scope)` append-only chain: its
-  row model, seed derivation, and advance/rewind lifecycle
+- [Seed chain](./architecture/game/seed-chain.md) — the forward sequence of positions each activity
+  draws from: where a chain starts, how its two anchors move, and what a rejection undoes
 - [Game entropy](./architecture/game/game-entropy.md) — entropy sources, sealed salt, and reward
   provenance
 - [Item generation](./architecture/game/item-generation.md) — the entropy-agnostic interpreter that
