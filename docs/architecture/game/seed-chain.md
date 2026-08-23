@@ -103,8 +103,9 @@ a start and running it still leaves something to deliver.
 `advanceActivity` takes such a start when the device next reaches the server. The client sends the
 seed, the versions, the start index, the build snapshot, and the start hash it computed offline. The
 server re-derives the encounter and the stamps from its own content document and scope secret rather
-than trusting the payload, then requires the client's start hash to equal the one it just computed
-itself.
+than trusting the payload. It re-authors the build snapshot from the avatar's own progression and
+refuses a start whose submitted snapshot differs. It then requires the client's start hash to equal
+the one it just computed itself.
 
 The anchor check is exact. The start's index must equal the chain's appended index, and its seed
 must equal the chain's appended seed. A start computed against a position the chain has since moved
