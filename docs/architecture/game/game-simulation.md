@@ -9,9 +9,9 @@ to trust them. Determinism is what makes that possible: the same inputs re-run t
 results. That reproducibility is what lets the verifier check a stream it did not compute, and what
 lets a returning client rebuild simulation state it no longer holds.
 
-This page owns the simulation, the checkpoint stream, and the trust decision. The reconcile that
-delivers offline progress on reconnect, and the worker lifecycle that drives it, live in
-[offline reconcile](./offline-reconcile.md).
+This page covers the simulation, the checkpoint stream, and the trust decision.
+[Offline reconcile](./offline-reconcile.md) covers the reconcile that delivers offline progress on
+reconnect, and the worker lifecycle that drives it.
 
 ## Activities and encounters
 

@@ -113,9 +113,9 @@ client narrows on the value rather than matching a string.
 ## Reporting
 
 Error reports and logs travel two separate paths. The Sentry SDK, backed by the self-hosted Bugsink,
-is the only path to the error backend. pino is a log-only sink. The split keeps one error from
-shipping twice: never wire a log transport to the error backend, and never `captureException` in
-code the central hooks already cover.
+is the only path to the error backend. pino is a log-only sink. Keeping them apart stops one error
+from shipping twice: never wire a log transport to the error backend, and never `captureException`
+in code the central hooks already cover.
 
 `@vers/service-runtime` owns the one path a service takes to the error backend, through three
 functions:

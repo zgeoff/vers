@@ -127,9 +127,9 @@ this design has.
 
 ### Version pinning
 
-The activity's `Started` snapshot pins every roll, stamping `keyVersion` there beside the engine and
-content versions, and `f` resolves content under the pinned versions rather than the live deploy. So
-reveal, replay, and mint agree across deploys and root rotations.
+The activity's `Started` checkpoint pins every roll, stamping `keyVersion` there beside the engine
+and content versions, and `f` resolves content under the pinned versions rather than the live
+deploy. So reveal, replay, and mint agree across deploys and root rotations.
 
 ## Sealed pre-commit salt
 
