@@ -37,7 +37,8 @@ const REJECTED_CODES: ReadonlySet<string> = new Set([
 /**
  * What a start ingest does with each `CHECKPOINT_INVALID` reason: keep the durable row for a later
  * retry, or drop it. A permanent reason drops the row, since retrying only resubmits the same
- * refusal.
+ * refusal. A deferral assumes the caller's earlier runs still reach the server, so a row whose
+ * simulation genuinely diverged from the server's retries for the life of the store.
  *
  * The map covers every member of the contract's reason enum. Adding a member there breaks this
  * map's type until the new member gets a disposition.

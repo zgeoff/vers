@@ -5,8 +5,9 @@ import { CheckpointInvalidReasonSchema } from './checkpoint-invalid-reason-schem
  * Why `advanceActivity` refused a request: every checkpoint-batch reason, plus the reasons a mint
  * adds. Every member is permanent under any submission order, with one exception.
  *
- * `build-snapshot-mismatch` is order-sensitive. The predecessor's xp has not reached the server's
- * total yet, and the same request succeeds once it does.
+ * `build-snapshot-mismatch` is order-sensitive. The server counts a run toward the total only once
+ * that run reaches a terminal status, so a caller whose earlier runs are still mid-flush predicts a
+ * higher total than the server reads. The same request succeeds once those runs settle.
  */
 export const AdvanceCheckpointInvalidReasonSchema = z.enum([
   ...CheckpointInvalidReasonSchema.options,
