@@ -44,7 +44,7 @@ re-drawing on the one degenerate state the generator cannot use. `revealNodes` w
 per revealed avatar-and-node pair.
 
 The server mints a seed only for a node inside the avatar's revealed region. A node outside it gets
-no chain row and no seed (see [reveal](./worldmap.md#reveal)).
+no chain row and no seed (see [what a player may see](./worldmap.md#what-a-player-may-see)).
 
 Nothing a client sends can steer the seed, because the avatar and the node are both fixed before the
 draw and no input is left to vary. The server stores the value and never derives it again — the

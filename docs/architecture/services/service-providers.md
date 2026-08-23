@@ -32,7 +32,7 @@ platform: the app owns the pipe, the provider owns one job.
 - **Tinybird** — product analytics. Behavioural events land in managed ClickHouse and are served as
   SQL query endpoints.
 
-The split between web and product analytics lives in [analytics](../analytics.md).
+[Analytics](../analytics.md) explains how web and product analytics divide.
 
 ## Feature flags
 
