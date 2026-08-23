@@ -81,9 +81,9 @@ verification without having stored it.
 
 Spatial queries pack a cell's two axes into one
 [Morton](https://en.wikipedia.org/wiki/Z-order_curve) number by interleaving their bits, which keeps
-nearby cells adjacent in sort order. A viewport box then covers a handful of one-dimensional ranges
-that a final filter clips to the exact rectangle. That packing bounds how far from the origin a cell
-can be addressed, and a cell outside that bound is refused rather than wrapped.
+nearby cells close together in sort order. A viewport box then covers a handful of one-dimensional
+ranges that a final filter clips to the exact rectangle. That packing bounds how far from the origin
+a cell can be addressed, and a cell outside that bound is refused rather than wrapped.
 
 ## What a player may see
 
@@ -132,10 +132,12 @@ cannot compute the globally best jackpot, which is the exploit fog exists to den
 
 ### Playing past the frontier offline
 
-The server discloses the whole revealed region, which extends past what the avatar can travel to,
-and the client caches it. Offline, a player farms the nodes they can already see and pushes outward
-into ground the fog has already lifted from. The rim of the cached region is where an honest client
-stops; the server's frontier check is the real boundary.
+The server discloses every node in the revealed region, which reaches past what the avatar can
+travel to, and the client caches them. Region-wide is not a second disclosure rule: the region is
+the union of discs over clears that have already verified, so every node in it has passed the check
+above. Offline, a player farms the nodes they can already see and pushes outward into ground the fog
+has already lifted from. The rim of the cached region is where an honest client stops; the server's
+frontier check is the real boundary.
 
 Disclosing content into that band is safe only because what it discloses is flat. Every bit of
 reward-magnitude variance lives in sealed entropy the client cannot compute — the node's sealed
@@ -170,12 +172,12 @@ claim that an easy node was secretly a jackpot is refuted by recomputation. Ther
 to forge.
 
 Every activity row carries a scope-secret reference and version, and the verifier re-derives the
-node's difficulty and sealed fields on each stream's first pass and rejects a mismatch. The
-activity's `Started` checkpoint carries that reference and version alongside `contentVersion`, a
-hash of the content derivation. No secret material ever enters the checkpoint stream, because an
-append-only replayable stream is the wrong home for a secret. The pair names only the versioned root
-`service-keys` custodies in `SCOPE_SECRET_ROOTS`, and rotating a secret adds a root version rather
-than rewriting rows.
+node's difficulty and sealed fields on each stream's first pass and rejects a mismatch. The row
+carries `contentVersion` beside them, a hash of the content derivation. All three are columns on the
+activity row that the `Started` checkpoint opens, never fields inside the checkpoint stream — an
+append-only replayable stream is the wrong home for anything naming a secret. The pair names only
+the versioned root `service-keys` custodies in `SCOPE_SECRET_ROOTS`, and rotating a secret adds a
+root version rather than rewriting rows.
 
 ## Biome, the terrain plane
 
@@ -195,17 +197,22 @@ node, a patch is the union of its nodes' territories, and borders weave between 
 ever sits on one. Node jitter alone gives those borders their organic wander, and a tint crossfade
 softens the border where two territories wear different biomes.
 
+A node's reward splits into two parts, and the rules below apply to them separately. The **public
+term** is a function of the public biome id alone. The **sealed component** is everything the
+descriptor decides.
+
 Four rules keep biome flavour rather than information:
 
-- **The content derivation takes no biome input.** Formally, biome and the sealed reward have zero
-  covariance. Content genuinely ignores biome — not merely that no bonus is visible, since a hidden
-  dependence would turn biome into a public prior over hidden magnitude.
-- **Biome touches reward only through a public function of the public biome id.** That term is
-  constant across every node the id covers and every client can compute it. Biome may set a mean,
-  publicly. It never rides hidden per-node variance.
+- **The sealed component's distribution is identical for every biome.** The content derivation takes
+  no biome input at all, so biome cannot shift that distribution in any way, linear or otherwise.
+  Content genuinely ignores biome — not merely that no bonus is visible, since any hidden dependence
+  would turn biome into a public prior over hidden magnitude.
+- **Only the public term varies by biome.** It is constant across every node the id covers and every
+  client can compute it, so biome may set a mean in the open. It never rides hidden per-node
+  variance.
 - **A hidden per-node reward that clusters by biome is permanently forbidden,** and the ban carries
   a code comment saying so. Such a reward would make client-visible terrain a treasure map for
-  sealed loot, which is the sniping fog exists to prevent.
+  sealed loot — the very sniping that fog exists to prevent.
 - **Progression cost defeats seed-fishing.** Rerolling `userSeed` or spinning up throwaway avatars
   for a good layout is beaten by what a reroll costs, not by keeping biomes equal in value. A
   rerolled character starts at level 1, and using a fished high-distance biome demands re-earning
@@ -222,7 +229,7 @@ out. Horizontal variety carries the world past that point:
 
 - biome combinatorics from the two blended noise layers
 - node archetypes picked by a low-probability hash
-- rare distance-scaled landmarks, visible as pillars of light through the fog
+- rare distance-scaled landmarks, planned to show as pillars of light through the fog
 - juice, the deliberate investment a player layers onto an activity
   ([economy modes](../../game-design/economy-modes.md))
 
@@ -231,10 +238,13 @@ and what waits out there.
 
 ## The reveal radius
 
-`REVEAL_RADIUS` sets both how far a player sees ahead and how deep they can explore offline, which
-makes it the one knob worth arguing about. It holds between 2 and 5 hops and never higher.
-Look-ahead value and the map-scanning exploit's return both climb with the radius, so the upper
-bound is a security limit rather than a matter of taste.
+`REVEAL_RADIUS` is a hex distance, and it bounds sight alone. It holds between 2 and 5 hex hops and
+never higher. Look-ahead value and the map-scanning exploit's return both climb with the radius, so
+the upper bound is a security limit rather than a matter of taste.
+
+How far a player travels offline is not this value. It follows from selection: edges out of nodes
+the avatar has cleared, widened by the clears its outbox holds. A wider reveal lets a player see
+further before they get there; it grants no extra reach.
 
 ## Package layout
 
@@ -252,16 +262,16 @@ Three packages split along the same line the two planes do.
 
 ## Glossary
 
-| Term              | Meaning                                                                                                                  |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| geometry plane    | Everything derived from `userSeed` and a coordinate: positions, edges, difficulty, biome. Public and client-computable.  |
-| content plane     | Everything that also needs the scope secret: a node's sealed reward and encounter pool. Server-only.                     |
-| `userSeed`        | The avatar's own seed. Not a secret, shipped to the client, and an input to both planes.                                 |
-| scope secret      | The per-avatar secret the server holds and never ships; without it `userSeed` derives no content.                        |
-| chunk coordinate  | The address of one square of hex cells, and the unit the generator works in.                                             |
-| cell coordinate   | The address of one hex cell, and a node's stable id.                                                                     |
-| sealed descriptor | The keyed digest a node's contents derive from, uncorrelated with anything on the geometry plane.                        |
-| cleared frontier  | The set of nodes whose first clear has verified; the boundary replay's reachability check reads.                         |
-| reveal            | The region a player has earned sight of: a union of hex discs over verified first-clear nodes, derived and never stored. |
-| selection         | The set a player may travel to: the origin, cleared nodes, and every node an edge joins to a cleared node.               |
-| landmark          | A rare, distance-scaled node granted to an avatar and visible as a pillar of light through fog.                          |
+| Term              | Meaning                                                                                                                                              |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| geometry plane    | Everything derived from `userSeed` and a coordinate: positions, edges, difficulty, biome. Public and client-computable.                              |
+| content plane     | Everything that also needs the scope secret: a node's sealed reward and encounter pool. Server-only.                                                 |
+| `userSeed`        | The avatar's own seed. Not a secret, shipped to the client, and an input to both planes.                                                             |
+| scope secret      | The per-avatar secret the server holds and never ships; without it `userSeed` derives no content.                                                    |
+| chunk coordinate  | The address of one square of hex cells, and the unit the generator works in.                                                                         |
+| cell coordinate   | The address of one hex cell, and a node's stable id.                                                                                                 |
+| sealed descriptor | The keyed digest a node's contents derive from, uncorrelated with anything on the geometry plane.                                                    |
+| cleared frontier  | The set of nodes whose first clear has verified; the boundary replay's reachability check reads.                                                     |
+| reveal            | The region a player has earned sight of: a union of hex discs over the avatar's verified first-clear nodes and the origin, derived and never stored. |
+| selection         | The set a player may travel to: the origin, cleared nodes, and every node an edge joins to a cleared node.                                           |
+| landmark          | A rare, distance-scaled node granted to an avatar and visible as a pillar of light through fog.                                                      |
