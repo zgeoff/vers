@@ -53,7 +53,7 @@ The server validates each checkpoint's `chainIndex` against `start_chain_index +
 A chain scope's genesis seed is a server CSPRNG (cryptographically secure PRNG) mint: sixteen random
 bytes as hex, re-rolled off the degenerate all-zero xoroshiro state. `revealNodes` mints it at
 reveal time, one chain row per revealed `(avatar, scope)` pair. The mint is gated on the avatar's
-revealed region, so a node outside it mints no row and returns no seed (see
+revealed region: a node outside it gets no chain row and no seed (see
 [reveal](./worldmap.md#reveal)). A repeat reveal self-assigns the row's own `genesis_seed`, so the
 mint stays idempotent under any number of concurrent callers. A client cannot compute or steer the
 seed, because the scope and the avatar are both fixed before the mint. The verifier reads the stored

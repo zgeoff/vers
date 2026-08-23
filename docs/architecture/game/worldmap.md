@@ -106,21 +106,13 @@ plus a small landmark grant table `(avatarID, landmarkID)`.
   Disclosure carries expected-value-flat descriptor metadata alone — never salt or drops — and the
   server caps its fan-out independent of node degree. A live reveal request for a specific node is
   served ahead of the bulk fan-out, keeping the online path responsive.
-
-A reveal request names the nodes a client asks the server to disclose, and the server authorizes
-each one against the projection rather than trusting the list. A node the projection does not cover
-mints no genesis seed and is absent from the response, while the authorized nodes in the same
-request disclose as normal. The server drops a refused node instead of rejecting the whole request,
-so one bad coordinate never costs a client the disclosures beside it. Client and server run the same
-projection over the same verified first-clear set, so an honest client never names a node the server
-refuses; `vers.activity.reveal_refusals` counts the refusals, and a non-zero rate is a modified
-client that fishes for genesis seeds beyond its own frontier.
-
-Without that gate a client could name any coordinate and read back its genesis seed, then compute
-that node's futures offline and shop the map for a favorable one before traveling to it. The
-settlement check already denies the rewards, since replay rejects an activity outside the cleared
-frontier. What the gate denies is the foresight — knowing which direction pays before spending the
-clears to reach it.
+- A reveal request names specific nodes, and the server authorizes each one against the projection
+  rather than trusting the list. A node the projection does not cover discloses nothing and mints no
+  seed. The server drops that node from the response rather than rejecting the whole request, so one
+  unauthorized coordinate costs a client nothing beside it. The reachability check at replay bounds
+  what an activity settles; this check bounds what a player is shown, which no later check can take
+  back. Client and server project from the same verified first-clear set, so an honest client never
+  names a refused node, and `vers.activity.reveal_refusals` counts every refusal.
 
 ## Selection and the offline horizon
 
