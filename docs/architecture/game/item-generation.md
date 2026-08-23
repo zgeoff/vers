@@ -2,8 +2,8 @@
 
 This is the machinery that turns an entropy source into a concrete item — one interpreter shared by
 every consumer, under every key custody. The [entropy model](./game-entropy.md) fixes where
-randomness comes from and who may compute it; this document picks up once a source exists and
-produces item content from it.
+randomness comes from and who may compute it. This page picks up once a source exists, and turns it
+into item content.
 
 ## The roll stream
 
@@ -44,7 +44,7 @@ market-grade quantity is a published scalar chosen by the player, never a rolled
 A content version pins table data and interpreter behaviour together. Inserting, removing, or
 reordering one draw shifts every draw after it in the sequence, so any change to the draw sequence
 is a new content version. Every shipped version stays loadable: mint, replay, and device rolls all
-resolve under the version pinned in the activity's `Started` snapshot. All three must agree
+resolve under the version pinned in the activity's `Started` checkpoint. All three must agree
 byte-for-byte across deploys and key rotations. The reveal read path resolves nothing itself — it
 returns the content version already stamped on the settlement mint's persisted row.
 
