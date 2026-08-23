@@ -4,11 +4,12 @@ import { createGenesisSeed } from '@vers/contract-activity';
 import type { SecretRef } from '@vers/contract-keys';
 import type { DB } from '@vers/db';
 import { deriveWorldmapContent, readScopeSecret } from '@vers/worldmap-content';
-import { canEncodeMortonKey } from '@vers/worldmap-core';
+import { buildRevealSources, canEncodeMortonKey, isNodeRevealed } from '@vers/worldmap-core';
 import type { CryptoKey } from 'jose';
 import type { Kysely } from 'kysely';
 import invariant from 'tiny-invariant';
 import { recordRevealMint } from '../metrics/record-reveal-mint';
+import { recordRevealRefusal } from '../metrics/record-reveal-refusal';
 import { requireActiveAvatar } from '../require-active-avatar';
 import { resolveEncounterNode } from '../resolve-encounter-node';
 import type { AvatarNotActivePayload, EmptyErrorPayload, MissingSessionPayload } from '../types';
@@ -74,8 +75,11 @@ interface RevealNodesResult {
  * coordinate the world map can address. Authorization is ownership of the avatar, gated to the
  * account's active avatar under the same advisory lock `startActivity` takes — the active-avatar
  * check runs even for an empty batch, so an owned-but-inactive avatar is rejected regardless of how
- * many nodes it reveals. Which nodes this avatar may legitimately reveal is a separate,
- * not-yet-enforced concern.
+ * many nodes it reveals. A node outside the avatar's revealed region — the union of reveal discs
+ * over its verified first-clear nodes, plus the origin — is refused: it mints no chain row and is
+ * absent from the response, while the authorized nodes beside it in the same call still mint. The
+ * refusal is silent by design, so a client whose fog projection runs ahead of the server still
+ * caches every node it is entitled to rather than losing the whole batch to one bad coordinate.
  */
 export async function revealNodes(
   deps: RevealNodesDeps,
@@ -112,17 +116,33 @@ export async function revealNodes(
 
   const uniqueNodeIDs = [...new Set(opts.input.nodeIDs)];
 
-  const minted = await deps.db.transaction().execute(async (trx) => {
+  const revealed = await deps.db.transaction().execute(async (trx) => {
     await requireActiveAvatar(trx, actingUserID, opts.input.avatarID, opts.errors);
 
     if (uniqueNodeIDs.length === 0) {
-      return [];
+      return { authorizedNodeIDs: [], minted: [] };
     }
 
-    return trx
+    // Read inside the mint transaction, so the frontier a reveal authorizes against is the same
+    // snapshot the mint lands on rather than one a concurrently settling clear has already moved.
+    const grants = await trx
+      .selectFrom('avatarGrants')
+      .select('key')
+      .where('avatarId', '=', opts.input.avatarID)
+      .where('kind', '=', 'first_clear')
+      .execute();
+
+    const sources = buildRevealSources(new Set(grants.map((grant) => grant.key)));
+    const authorizedNodeIDs = uniqueNodeIDs.filter((nodeID) => isNodeRevealed(sources, nodeID));
+
+    if (authorizedNodeIDs.length === 0) {
+      return { authorizedNodeIDs, minted: [] };
+    }
+
+    const minted = await trx
       .insertInto('activityChains')
       .values(
-        uniqueNodeIDs.map((nodeID) => {
+        authorizedNodeIDs.map((nodeID) => {
           const genesisSeed = createGenesisSeed();
 
           return {
@@ -142,9 +162,17 @@ export async function revealNodes(
       )
       .returning(['scopeId', 'genesisSeed', 'appendedNextSeed', 'appendedChainIndex'])
       .execute();
+
+    return { authorizedNodeIDs, minted };
   });
 
-  if (uniqueNodeIDs.length === 0) {
+  const refusedCount = uniqueNodeIDs.length - revealed.authorizedNodeIDs.length;
+
+  if (refusedCount > 0) {
+    recordRevealRefusal(refusedCount);
+  }
+
+  if (revealed.authorizedNodeIDs.length === 0) {
     return {
       keyVersion: deps.keyVersion,
       nodes: [],
@@ -153,40 +181,43 @@ export async function revealNodes(
     };
   }
 
-  recordRevealMint(uniqueNodeIDs.length);
+  recordRevealMint(revealed.authorizedNodeIDs.length);
 
   // Loaded only after the mint transaction's active-avatar gate, so an owned-but-inactive avatar
   // rejects before this reveal pays for the content-registry read or the keys round trip.
   const encounterInputs = await loadEncounterInputs(deps, avatar.id);
 
-  const mintedByNodeID = new Map(minted.map((row) => [row.scopeId, row]));
+  const mintedByNodeID = new Map(revealed.minted.map((row) => [row.scopeId, row]));
+  const authorized = new Set(revealed.authorizedNodeIDs);
 
-  const nodes = opts.input.nodeIDs.map((nodeID): RevealedNode => {
-    const chain = mintedByNodeID.get(nodeID);
+  const nodes = opts.input.nodeIDs
+    .filter((nodeID) => authorized.has(nodeID))
+    .map((nodeID): RevealedNode => {
+      const chain = mintedByNodeID.get(nodeID);
 
-    invariant(chain !== undefined, 'minted chain row missing for a requested node');
+      invariant(chain !== undefined, 'minted chain row missing for an authorized node');
 
-    const resolved = resolvedByNodeID.get(nodeID);
+      const resolved = resolvedByNodeID.get(nodeID);
 
-    invariant(resolved !== undefined, 'validated node id missing its resolved encounter');
+      invariant(resolved !== undefined, 'validated node id missing its resolved encounter');
 
-    const encounterNode = {
-      difficulty: resolved.difficulty,
-      ...deriveWorldmapContent(encounterInputs.document.encounter, {
-        coord: resolved.coord,
-        scopeSecret: encounterInputs.scopeSecret,
-        userSeed: avatar.seed,
-      }),
-    };
+      const encounterNode = {
+        difficulty: resolved.difficulty,
+        ...deriveWorldmapContent(encounterInputs.document.encounter, {
+          coord: resolved.coord,
+          scopeSecret: encounterInputs.scopeSecret,
+          userSeed: avatar.seed,
+        }),
+      };
 
-    return {
-      contentVersion: encounterInputs.contentVersion,
-      encounterNode,
-      genesisSeed: chain.genesisSeed,
-      anchor: { chainIndex: chain.appendedChainIndex, nextSeed: chain.appendedNextSeed },
-      nodeID,
-    };
-  });
+      return {
+        contentVersion: encounterInputs.contentVersion,
+        encounterNode,
+        genesisSeed: chain.genesisSeed,
+        anchor: { chainIndex: chain.appendedChainIndex, nextSeed: chain.appendedNextSeed },
+        nodeID,
+      };
+    });
 
   return {
     keyVersion: deps.keyVersion,

@@ -174,6 +174,7 @@ in stack state are encrypted by the stack passphrase.
 | `vers.activity.reveal_cells`                    | histogram       | `{cell}`         | —                   | revealed cells returned per getRevealedNodes query                                                                                              |
 | `vers.activity.reveal_sources`                  | histogram       | `{grant}`        | —                   | first-clear grant rows scanned per getRevealedNodes query                                                                                       |
 | `vers.activity.reveal_mints`                    | counter         | `{node}`         | —                   | activity-chain rows minted or re-affirmed per revealNodes call                                                                                  |
+| `vers.activity.reveal_refusals`                 | counter         | `{node}`         | —                   | nodes refused per revealNodes call for falling outside the revealed region                                                                      |
 | `vers.email.delivery_failures`                  | counter         | `{email}`        | —                   | emails that failed to deliver                                                                                                                   |
 | `vers.session.failed_attempts`                  | counter         | `{attempt}`      | —                   | failed step-up verification attempts                                                                                                            |
 | `vers.analytics.delivery_failures`              | counter         | `{event}`        | `reason`            | product events that never landed in the Tinybird data source, by reason                                                                         |
@@ -245,6 +246,10 @@ The remaining split instruments enumerate their attribute values:
 - `vers.activity.reveal_mints` records once per `revealNodes` call — the number of distinct nodes it
   minted or re-affirmed a chain row for. A repeat reveal of an already-minted node still counts,
   since the call re-affirms that row's `genesisSeed` rather than skipping it.
+- `vers.activity.reveal_refusals` records once per `revealNodes` call that refuses at least one
+  node, carrying the number of distinct nodes it dropped for falling outside the avatar's revealed
+  region. A call that refuses nothing records nothing, so the counter reads zero for every honest
+  client and any non-zero rate is a client asking for ground it has not earned sight of.
 - `vers.analytics.delivery_failures` by `reason`: `rejected` is a non-2xx response from the Tinybird
   Events API; `quarantined` is a row the API accepted but failed schema validation; `unreachable` is
   a network failure or the upstream deadline tripping.
