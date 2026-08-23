@@ -107,7 +107,9 @@ immediate discard. A start orphaned by a worker reload — no live simulation le
 — ingests on reconnect instead, ahead of the held-checkpoint flush it would otherwise `NOT_FOUND`
 against. Either path removes the durable `pending-activity-starts` entry once the server has
 answered definitively. A server-refused start is dropped and its queued checkpoints discarded, the
-same as any other stream the server refuses to recognize.
+same as any other stream the server refuses to recognize. One refusal defers instead: a
+build-snapshot mismatch means the predecessor's xp has not reached the server's total yet, so the
+client keeps the entry and ingests it again once the predecessor lands.
 
 ## Advancing the chain
 

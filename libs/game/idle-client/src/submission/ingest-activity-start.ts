@@ -23,8 +23,9 @@ export type IngestActivityStartOutcome = 'absent' | 'deferred' | 'ingested' | 'r
  * terminal has not advanced the seed chain's anchor yet), `SIM_VERSION_UNKNOWN` (a version
  * registration this deploy has not caught up to), and `CHAIN_QUARANTINED` (an operator hold) — are
  * absent here on purpose: each resolves once the predecessor lands or the hold clears, so the row
- * defers and retries rather than dropping honest progress. `CHECKPOINT_INVALID` carries both
- * dispositions and is split by reason instead.
+ * defers and retries rather than dropping honest progress. `CHECKPOINT_INVALID` is absent for a
+ * different reason: some of its reasons drop the row and some defer it, so each reason carries its
+ * own disposition.
  */
 const REJECTED_CODES: ReadonlySet<string> = new Set([
   'NODE_NOT_REVEALED',
@@ -34,13 +35,12 @@ const REJECTED_CODES: ReadonlySet<string> = new Set([
 ]);
 
 /**
- * Each `CHECKPOINT_INVALID` reason's disposition for a start ingest. `build-snapshot-mismatch` is
- * the sole deferral: the predecessor's xp is not in the server's total yet, and the same submission
- * succeeds once it lands. Every other reason describes bytes the server refuses under any order, so
- * retrying resubmits the same refusal forever and the row is dropped instead.
+ * What a start ingest does with each `CHECKPOINT_INVALID` reason: keep the durable row for a later
+ * retry, or drop it. A permanent reason drops the row, since retrying only resubmits the same
+ * refusal.
  *
- * The map is total over the contract's reason enum, so a reason added to the contract fails to
- * compile here until its disposition is stated.
+ * The map covers every member of the contract's reason enum. Adding a member there breaks this
+ * map's type until the new member gets a disposition.
  */
 const CHECKPOINT_INVALID_DISPOSITIONS: Readonly<
   Record<AdvanceCheckpointInvalidReason, 'deferred' | 'rejected'>

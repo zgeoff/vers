@@ -2,10 +2,11 @@ import * as z from 'zod';
 import { CheckpointInvalidReasonSchema } from './checkpoint-invalid-reason-schema';
 
 /**
- * Why `advanceActivity` refused a request: every batch reason, plus the three the offline-first
- * path adds. `build-snapshot-mismatch` is the one member that is order-sensitive — the predecessor's
- * xp is not in the server's total yet, and the same request succeeds once it lands. The rest are
- * permanent under any order.
+ * Why `advanceActivity` refused a request: every checkpoint-batch reason, plus the reasons a mint
+ * adds. Every member is permanent under any submission order, with one exception.
+ *
+ * `build-snapshot-mismatch` is order-sensitive. The predecessor's xp has not reached the server's
+ * total yet, and the same request succeeds once it does.
  */
 export const AdvanceCheckpointInvalidReasonSchema = z.enum([
   ...CheckpointInvalidReasonSchema.options,
