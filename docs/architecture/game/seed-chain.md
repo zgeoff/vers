@@ -108,9 +108,8 @@ immediate discard. A start orphaned by a worker reload — no live simulation le
 against. Either path removes the durable `pending-activity-starts` entry once the server has
 answered definitively. A server-refused start is dropped and its queued checkpoints discarded, the
 same as any other stream the server refuses to recognize. One refusal defers instead. A
-build-snapshot mismatch means the client counted xp from an earlier run whose checkpoints have not
-flushed through to their terminal, so the server's total is still short of it. The client keeps the
-entry and ingests it again once those checkpoints land.
+build-snapshot mismatch means the start counted xp from a predecessor whose own end has not reached
+the server yet. The client keeps the entry and ingests it again once that predecessor lands.
 
 ## Advancing the chain
 
@@ -169,26 +168,19 @@ another builds against what they just earned. A held run is excluded: `parked` a
 reach verification only by operator action, so counting one would stamp XP into this run's snapshot,
 and every later one, that never settles.
 
-An activity records its **XP sources**: the earlier runs whose unsettled XP fed its build snapshot,
-stored at start. A run that fed it nothing is left out. XP is the only quantity a build snapshot
-draws ahead of verification — an item mints only for a verified segment — so adding a drawn quantity
-to a snapshot is what extends its XP sources. Identity is avatar-global while chains are per-scope,
-so an XP source can lie on another chain, and these sources are what order an avatar's chains
-against each other.
+XP is the only quantity a build snapshot draws ahead of verification, since an item mints only for a
+verified segment. Identity is avatar-global while chains are per-scope, so a snapshot can draw from
+a run on another chain.
 
-The verifier settles an activity only after its XP sources, refusing to settle a chain ahead of the
-runs it drew from:
+Drawing ahead is safe because settlement runs in one per-avatar order rather than per chain. Each
+activity names the avatar's immediately-prior activity, and the verifier adjudicates an activity
+only once that predecessor has settled or rejected, so every check reads a settled total and never a
+drawn one. [Offline reconcile](./offline-reconcile.md#settlement-in-order) owns that order.
 
-- A chain cannot settle while any of its XP sources has appended past that source's own verified
-  anchor. The sources are runs that had already ended when the dependent activity started, so the
-  ordering is acyclic and holds transitively.
-- A chain whose XP source rejected is refused without replaying its own stream, there being no
-  proven total left to replay against. Its own dependents fail the same check in turn, so one
-  rejection reaches every dependent through the single-chain rejection path.
-- An XP source under an operator hold keeps its dependents waiting, since a hold that later rejects
-  would leave the same unproven total in place. The dependent chain stalls until the hold clears.
-- A dependent still running when its source is rejected is refused at its next adjudication, since a
-  chain is inspected only when it has appends to verify.
+The build re-derivation is what catches a bad draw. On a segment's first verified pass the verifier
+rebuilds the expected starting build from the avatar's settled XP total and rejects a pinned build
+that does not match, so a run that banked XP a later rejection erased fails. A successor chained
+onto it fails the same check in turn.
 
 ### The progression read
 
@@ -203,8 +195,8 @@ matches what verification pays. The pending projection itself is display-only.
 
 - The verifier serializes a chain's activities on the chain row, adjudicating one at a time in
   order, so a continuation never confirms against a predecessor that later rejects.
-- A chain waits on its XP sources to settle, ordering an avatar's chains against each other while no
-  writer holds more than the one chain row it claimed.
+- An activity waits on its predecessor to settle, ordering an avatar's chains against each other
+  while no writer holds more than the one chain row it claimed.
 - The request-path forward-advance and the verifier both take the chain row before the activity row,
   one ordering that admits no cycle.
 - The rejection rewind reads the verified columns inline in its update statement, never through a
@@ -212,16 +204,16 @@ matches what verification pays. The pending projection itself is display-only.
 
 ## Glossary
 
-| Term            | Meaning                                                                                                                                       |
-| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| seed chain      | One forward, append-only sequence of seeds per `(avatar, chain scope)` pair; each activity draws one and advances it.                         |
-| chain scope     | A `(scope_type, scope_id)` pair naming a stable, returnable target; a world-map node is the `world_map_node` scope.                           |
-| chain row       | The `activity_chains` row holding a chain's genesis seed and its two anchors.                                                                 |
-| appended anchor | `(appended_next_seed, appended_chain_index)`: the position a new activity seeds from; moves ahead of verification.                            |
-| verified anchor | `(verified_next_seed, verified_chain_index)`: the settlement watermark and rollback target; moves only on trust.                              |
-| genesis seed    | A scope's origin seed, CSPRNG-minted at reveal, from which the chain's first activity derives.                                                |
-| chainIndex      | A checkpoint's position along the whole chain, `start_chain_index + version`; reward coordinates key on it.                                   |
-| activity start  | An activity's first record — node, seed, and stamps — synthesized locally by the client and verified on ingest.                               |
-| continuation    | An activity that seeds from a prior attempt's appended position, continuing the same chain.                                                   |
-| segment         | The run of checkpoints the verifier adjudicates as one piece; each segment settles what it proved.                                            |
-| XP sources      | The earlier runs whose unsettled XP fed an activity's build snapshot, stored at its start; the verifier settles the activity only after them. |
+| Term            | Meaning                                                                                                                                         |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| seed chain      | One forward, append-only sequence of seeds per `(avatar, chain scope)` pair; each activity draws one and advances it.                           |
+| chain scope     | A `(scope_type, scope_id)` pair naming a stable, returnable target; a world-map node is the `world_map_node` scope.                             |
+| chain row       | The `activity_chains` row holding a chain's genesis seed and its two anchors.                                                                   |
+| appended anchor | `(appended_next_seed, appended_chain_index)`: the position a new activity seeds from; moves ahead of verification.                              |
+| verified anchor | `(verified_next_seed, verified_chain_index)`: the settlement watermark and rollback target; moves only on trust.                                |
+| genesis seed    | A scope's origin seed, CSPRNG-minted at reveal, from which the chain's first activity derives.                                                  |
+| chainIndex      | A checkpoint's position along the whole chain, `start_chain_index + version`; reward coordinates key on it.                                     |
+| activity start  | An activity's first record — node, seed, and stamps — synthesized locally by the client and verified on ingest.                                 |
+| continuation    | An activity that seeds from a prior attempt's appended position, continuing the same chain.                                                     |
+| segment         | The run of checkpoints the verifier adjudicates as one piece; each segment settles what it proved.                                              |
+| predecessor     | The avatar's immediately-prior activity across every chain, stamped by the client at start; the verifier adjudicates an activity only after it. |
