@@ -1,4 +1,9 @@
-import type { ActivityData, ActivityStatus } from '@vers/contract-activity';
+import type {
+  ActivityData,
+  ActivityStatus,
+  AdvanceCheckpointInvalidReason,
+  CheckpointInvalidReason,
+} from '@vers/contract-activity';
 
 /**
  * Payload shape for an authed procedure's UNAUTHORIZED error when no acting user is present.
@@ -50,7 +55,7 @@ export interface StaleHeadPayload {
  * Payload shape for `trackActivityProgress`'s CHECKPOINT_INVALID.
  */
 export interface CheckpointInvalidPayload {
-  readonly data: { readonly reason: string };
+  readonly data: { readonly reason: CheckpointInvalidReason };
 }
 
 /**
@@ -86,7 +91,7 @@ export interface AdvanceCheckpointInvalidPayload {
   readonly data: {
     readonly activityID: string;
     readonly appendedHead: number;
-    readonly reason: string;
+    readonly reason: AdvanceCheckpointInvalidReason;
   };
 }
 

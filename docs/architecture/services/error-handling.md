@@ -91,7 +91,13 @@ committed row. It also carries `appendedHead` where the single-call `data` omits
 
 `CHECKPOINT_INVALID`'s `reason` names the failed check: contiguity, chain index, chain link, time
 monotonicity, or hash. On `advanceActivity` it can also be a predicted-build-snapshot mismatch, or a
-start-hash recomputation mismatch on a mint.
+start-hash recomputation mismatch on a mint. Both procedures type `reason` as a closed enum, so a
+client narrows on the value and the compiler rejects a member it has not classified.
+
+A start ingest reads the enum to decide whether its durable row survives. `build-snapshot-mismatch`
+is the one order-sensitive member: the predecessor's xp is not in the server's total yet, and the
+same submission succeeds once it lands. Every other member describes bytes the server refuses under
+any order, so the client drops the row rather than resubmitting the same refusal forever.
 
 ## Service layer
 
