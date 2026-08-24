@@ -1,3 +1,5 @@
+import { buildHeadingPattern } from './build-heading-pattern';
+
 /**
  * Returns the named `##` section of an issue template — its heading through the line before the next
  * `##` heading (or end of file), trailing blank lines trimmed — as a paste-ready block, or null when
@@ -5,9 +7,7 @@
  */
 export function findSectionStub(template: string, title: string): string | null {
   const lines = template.split('\n');
-
-  const headingPattern = new RegExp(`^##\\s+${title}\\s*$`);
-
+  const headingPattern = buildHeadingPattern(title);
   const start = lines.findIndex((line) => headingPattern.test(line));
 
   if (start === -1) {

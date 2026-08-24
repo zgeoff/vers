@@ -3,7 +3,7 @@ import { checkIssue } from './check-issue';
 
 test('it passes a fully triaged feature issue', () => {
   const findings = checkIssue({
-    body: '## Player story\n\nYou log in.\n\n## Scope\n\n- a behavior',
+    body: '## Player story\n\nYou log in.\n\n## Scope\n\n- a behavior\n\n## Approach (unverified)\n\nnone',
     labels: ['feature', 'area/game', 'p2-medium'],
     milestone: 'P3 · World map',
   });
@@ -24,12 +24,21 @@ test('it flags a feature issue without a Scope section', () => {
       stub: { kind: 'section', templatePath: '.github/ISSUE_TEMPLATE/feature.md', title: 'Scope' },
       task: 'Add a `## Scope` section listing the behaviors this delivers',
     },
+    {
+      rule: 'a feature issue separates the mechanism it guesses at from the outcome it contracts for',
+      stub: {
+        kind: 'section',
+        templatePath: '.github/ISSUE_TEMPLATE/feature.md',
+        title: 'Approach (unverified)',
+      },
+      task: 'Add an `## Approach (unverified)` section naming the mechanism you expect, or `none` where you have no candidate',
+    },
   ]);
 });
 
 test('it requires a player story on an area/game feature', () => {
   const findings = checkIssue({
-    body: '## Scope\n\n- a behavior',
+    body: '## Scope\n\n- a behavior\n\n## Approach (unverified)\n\nnone',
     labels: ['feature', 'area/game', 'p2-medium'],
     milestone: 'P3 · World map',
   });
@@ -41,7 +50,7 @@ test('it requires a player story on an area/game feature', () => {
 
 test('it accepts a player story regardless of heading case', () => {
   const findings = checkIssue({
-    body: '## Player Story\n\nYou log in.\n\n## Scope\n\n- a behavior',
+    body: '## Player Story\n\nYou log in.\n\n## Scope\n\n- a behavior\n\n## Approach (unverified)\n\nnone',
     labels: ['feature', 'area/game', 'p2-medium'],
     milestone: 'P3 · World map',
   });
@@ -51,7 +60,7 @@ test('it accepts a player story regardless of heading case', () => {
 
 test('it does not require a player story on a non-game feature', () => {
   const findings = checkIssue({
-    body: '## Scope\n\n- a behavior',
+    body: '## Scope\n\n- a behavior\n\n## Approach (unverified)\n\nnone',
     labels: ['feature', 'area/platform', 'p2-medium'],
     milestone: 'P0 · Tooling',
   });
@@ -72,7 +81,7 @@ test('it flags an untriaged issue once per missing triage field', () => {
 
 test('it rejects a priority label outside the supported set', () => {
   const findings = checkIssue({
-    body: '## Scope\n\n- a behavior',
+    body: '## Scope\n\n- a behavior\n\n## Approach (unverified)\n\nnone',
     labels: ['feature', 'area/platform', 'p9-placeholder'],
     milestone: 'P0 · Tooling',
   });
@@ -146,6 +155,65 @@ test('it exempts the dep-health report issues', () => {
     body: 'generated report',
     labels: ['dep-outdated'],
     milestone: null,
+  });
+
+  expect(findings).toStrictEqual([]);
+});
+
+test('it flags a source path a scope section names', () => {
+  const findings = checkIssue({
+    body: '## Scope\n\n- rewrite `mint-root.ts`\n\n## Approach (unverified)\n\nnone',
+    labels: ['feature', 'area/services', 'p1-high'],
+    milestone: 'P2 · Game backend spine',
+  });
+
+  expect(findings).toStrictEqual([
+    {
+      rule: 'a Scope bullet states an outcome; a file path belongs in Notes as dated orientation',
+      task: 'Move `mint-root.ts` out of `## Scope` and into `## Notes`',
+    },
+  ]);
+});
+
+test('it flags a source path on an issue of any type carrying a scope section', () => {
+  const findings = checkIssue({
+    body: '## Scope\n\n- drop `scripts/src/bin/issue-hygiene.ts`',
+    labels: ['chore', 'area/platform', 'p2-medium'],
+    milestone: 'PL · Platform',
+  });
+
+  expect(findings.map((finding) => finding.task)).toStrictEqual([
+    'Move `scripts/src/bin/issue-hygiene.ts` out of `## Scope` and into `## Notes`',
+  ]);
+});
+
+test('it accepts a source path a notes section names', () => {
+  const findings = checkIssue({
+    body: '## Scope\n\n- refuse the start\n\n## Approach (unverified)\n\nnone\n\n## Notes\n\n- `mint-root.ts`',
+    labels: ['feature', 'area/services', 'p1-high'],
+    milestone: 'P2 · Game backend spine',
+  });
+
+  expect(findings).toStrictEqual([]);
+});
+
+test('it requires an approach section on a feature issue', () => {
+  const findings = checkIssue({
+    body: '## Scope\n\n- a behavior',
+    labels: ['feature', 'area/platform', 'p2-medium'],
+    milestone: 'PL · Platform',
+  });
+
+  expect(findings.map((finding) => finding.task)).toStrictEqual([
+    'Add an `## Approach (unverified)` section naming the mechanism you expect, or `none` where you have no candidate',
+  ]);
+});
+
+test('it does not require an approach section on a bug issue', () => {
+  const findings = checkIssue({
+    body: '## Observed\n\nIt crashes.\n\n## Expected\n\nNo crash.\n\n## Repro\n\n1. run it',
+    labels: ['bug', 'area/web', 'p1-high'],
+    milestone: 'P3 · World map',
   });
 
   expect(findings).toStrictEqual([]);

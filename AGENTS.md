@@ -260,9 +260,17 @@ feature issue whose outcome a player can perceive — every `area/game` feature 
 `## Player story` section: second person, present tense, what the player concretely sees or feels
 once it ships, including what they don't experience (no dupes, no lost progress), closing with a
 one-sentence distillation. The story names no implementation nouns — no table, field, component, or
-service names; machinery belongs in Scope. The issue-hygiene workflow checks each new issue's
-labels, milestone, and required sections (dep-health's generated report issues excepted) and
-comments the defects it finds. After opening or editing an issue, run
+service names; machinery belongs in Scope.
+
+Scope and Approach split the contract from the guess. A Scope bullet states an outcome the work must
+deliver, which stays true however the work is built. The `## Approach (unverified)` section below it
+holds the mechanism the author expects to carry that outcome, and an implementer checks it against
+the tree before building on it. A Scope bullet names no file path either — a rename inside the
+delivery window strands the reference, the same defect the comment rules guard against. Paths belong
+in Notes, written as orientation on the date the issue was opened.
+
+The issue-hygiene workflow checks each new issue's labels, milestone, required sections, and Scope
+paths (dep-health's generated report issues excepted) and comments the defects it finds. After opening or editing an issue, run
 `bun scripts/src/bin/issue-hygiene.ts <n>` and clear every finding before handing it back — it runs
 the workflow's own check locally, so a dropped template section is caught before CI.
 
