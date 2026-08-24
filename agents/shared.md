@@ -8,8 +8,10 @@
 - Perform all work on a branch in a git worktree under `.worktrees/` (e.g.
   `git worktree add .worktrees/<branch> -b <branch>`) — never commit directly on `main`.
 - Use [Conventional Commits](https://www.conventionalcommits.org/) for all commit messages.
+- A squash merge makes the PR title the commit subject, so a PR title is a Conventional Commit too.
+  `feat(#412): add the retry budget` is a title; `add the retry budget` is not.
 - Commit subjects and PR titles use the imperative mood ("add X", never "added X" or a bare noun
-  phrase) — a squash merge makes the PR title the commit subject.
+  phrase).
 - Open PRs against `main` using the PR template (`.github/PULL_REQUEST_TEMPLATE.md`). Descriptions
   are condensed: lead paragraph ≤2 sentences, one-line bullets, ≤150 words — write the short version
   first, don't draft long and trim.
