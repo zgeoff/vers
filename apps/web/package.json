@@ -28,7 +28,6 @@
     "@react-three/fiber": "catalog:",
     "@sentry/node": "catalog:",
     "@sentry/react": "catalog:",
-    "@tanstack/query-broadcast-client-experimental": "catalog:",
     "@tanstack/react-query": "catalog:",
     "@tanstack/react-router": "catalog:",
     "@tanstack/react-router-ssr-query": "catalog:",
