@@ -12,8 +12,6 @@ import { ActivityFailureAction } from '@vers/idle-core';
 import { useSelectedNode } from '@vers/worldmap-client';
 import { Suspense, useEffect, useRef, useState } from 'react';
 import invariant from 'tiny-invariant';
-import { AvatarSwitchedNotice } from '../../components/avatar-switched-notice';
-import { GameUpdatedNotice } from '../../components/game-updated-notice';
 import { WorldMapNodeCodexSlot } from '../../components/world-map-node-codex-slot';
 import { buildActiveAvatarQueryOptions } from '../../lib/avatar/build-active-avatar-query-options';
 import { runIgnoringRejection } from '../../lib/idle/run-ignoring-rejection';
@@ -42,12 +40,6 @@ interface StartAttemptReport {
  * this one's. A failed start renders a retry action.
  *
  * Once the start goes live the panel navigates to the engagement screen, once per activity.
- *
- * Two rejections render a reload notice instead of the generic retry. A start refused because
- * the account's active avatar changed names the current avatar: the route's own data still names
- * the stale one, and only a reload re-runs every gate against the new one. A start refused
- * because the running build's engine no longer supports the current content reloads for its own
- * reason: no in-page recovery can fetch a newer bundle.
  *
  * While an offline catch-up is still fast-forwarding, the panel withholds its start call — the
  * lockout overlay above it covers the UI, but this keeps a mounted panel from auto-sending a
@@ -190,25 +182,6 @@ export function ExploreCurrentPanel(props: Readonly<ExploreCurrentPanelProps>) {
     setEngagedActivityID(expectedActivityID);
     void navigate({ to: '/activity' });
   }, [isActivityReady, expectedActivityID, engagedActivityID, navigate]);
-
-  if (
-    reportedStatus?.kind === 'failed' &&
-    reportedStatus.rejection?.reason === 'avatar-not-active'
-  ) {
-    return (
-      <AvatarSwitchedNotice
-        activeAvatarName={reportedStatus.rejection.activeAvatarName}
-        testID="start-activity-avatar-not-active"
-      />
-    );
-  }
-
-  if (
-    reportedStatus?.kind === 'failed' &&
-    reportedStatus.rejection?.reason === 'sim-version-expired'
-  ) {
-    return <GameUpdatedNotice testID="start-activity-sim-version-expired" />;
-  }
 
   if (reportedStatus?.kind === 'failed') {
     return (
