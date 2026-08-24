@@ -96,43 +96,57 @@ root; CodeRabbit reads this file as its guidelines.
 
 ## Issue hygiene
 
-Triage a GitHub issue the moment it's opened, not in a later pass:
+Triage a GitHub issue the moment it's opened, not in a later pass. An open issue that isn't on the
+board with a milestone and status is a defect.
 
-- assign the delivery-phase milestone and the area, type, and priority labels
-- record blocking edges against the issues it depends on
-- add it to the delivery board and set its board status
+### Triage
 
-An open issue that isn't on the board with a milestone and status is a defect.
+- Assign the delivery-phase milestone, and the area, type, and priority labels.
+- Record blocking edges against the issues it depends on.
+- Add it to the delivery board and set its board status.
 
-The label registry is the vers-infra Pulumi program (`infra/github.ts`): a label change is a PR
+The vers-infra Pulumi program (`infra/github.ts`) owns the label registry, so a label change is a PR
 there, never a console edit. Milestones stay console-managed — they are delivery state, not schema.
 
-A new issue's body follows its type's template in `.github/ISSUE_TEMPLATE` (feature, bug, upkeep). A
-feature issue whose outcome a player can perceive — every `area/game` feature — carries a
-`## Player story` section: second person, present tense, what the player concretely sees or feels
-once it ships, including what they don't experience (no dupes, no lost progress), closing with a
-one-sentence distillation. The story names no implementation nouns — no table, field, component, or
-service names; machinery belongs in Scope.
+### Body
 
-Scope and Approach split the contract from the guess. A Scope bullet states an outcome the work must
-deliver, which stays true however the work is built. The `## Approach (unverified)` section below it
-holds the mechanism the author expects to carry that outcome, and an implementer checks it against
-the tree before building on it. A Scope bullet names no file path either — a rename inside the
-delivery window strands the reference, the same defect the comment rules guard against. Paths belong
-in Notes, written as orientation on the date the issue was opened.
+A new issue's body follows its type's template in `.github/ISSUE_TEMPLATE` (feature, bug, upkeep).
+Three sections of the feature template carry rules the template can't state on its own.
+
+**Player story** — required wherever a player perceives the outcome, which is every `area/game`
+feature. Write it in second person, present tense: what you concretely see or feel once it ships.
+Name what you don't experience too — no dupes, no lost progress. Close with a one-sentence
+distillation. The story names no implementation nouns, so no table, field, component, or service
+names; machinery belongs in Scope.
+
+**Scope** — the outcomes the work delivers, one per bullet. An outcome stays true however the work
+is built. A Scope bullet names no file path: a rename inside the delivery window strands the
+reference. A path belongs in Notes, written as orientation on the date the issue was opened.
+
+**Approach (unverified)** — the mechanism the author expects to carry the Scope. It is a guess, so
+the implementer checks it against the tree before building on it. Write `none` where the author has
+no candidate.
+
+### Checking
 
 The issue-hygiene workflow checks each new issue's labels, milestone, required sections, and Scope
-paths (dep-health's generated report issues excepted) and comments the defects it finds. After
-opening or editing an issue, run `bun scripts/src/bin/issue-hygiene.ts <n>` and clear every finding
-before handing it back — it runs the workflow's own check locally, so a dropped template section is
-caught before CI.
+paths, then comments the defects it finds. It exempts dep-health's generated report issues, whose
+bodies are machine-written.
 
-Upkeep issues are the exception: event- or date-triggered maintenance (dropping a dependency
-override, deleting an audit ignore) carries the `upkeep` label plus an area label, no milestone, and
-stays off the delivery board. The issue body opens with a fenced trigger line —
-`trigger: release <pkg> ><version>` or `trigger: date <YYYY-MM-DD>` — that the weekly dep-health
-sweep evaluates, commenting and marking the issue `upkeep-ready` when the condition holds. An upkeep
-issue without a parseable trigger line fails the sweep.
+After opening or editing an issue, run `bun scripts/src/bin/issue-hygiene.ts <n>` and clear every
+finding before handing it back. The command runs the workflow's own check locally, so a dropped
+section is caught before CI.
+
+### Upkeep issues
+
+An upkeep issue is event- or date-triggered maintenance: dropping a dependency override, deleting an
+audit ignore. It carries the `upkeep` label plus an area label, takes no milestone, and stays off
+the delivery board.
+
+Its body opens with a fenced trigger line — `trigger: date <YYYY-MM-DD>` or
+`trigger: release <pkg> ><version>` — that the weekly dep-health sweep evaluates. The sweep comments
+on the issue and labels it `upkeep-ready` once the condition holds. An upkeep issue whose trigger
+line the sweep can't parse fails it.
 
 ## Type-only modules
 
