@@ -4,6 +4,7 @@ import { useRewardSlotLedger } from '@vers/idle-client';
 import type { RewardSlotLedgerEntry } from '@vers/idle-client';
 import { css } from '@vers/styled-system/css';
 import { buildActivityRewardsQueryOptions } from '../../lib/activity/build-activity-rewards-query-options';
+import { useIsActivityIngested } from '../../lib/activity/use-is-activity-ingested';
 import type { OrpcQueryUtils } from '../../lib/rpc/orpc';
 
 interface ActivityRewardsPanelProps {
@@ -35,16 +36,18 @@ const itemStyles = css({
 /**
  * Shows an activity's settled reward items and, while checkpoints the server hasn't yet verified
  * are still in flight, one ambient line reporting how many rewards are pending — never a per-item
- * placeholder. Renders nothing without an active activity. The reveal itself is already gated
+ * placeholder. Renders nothing without an active activity, and reads no rewards until the worker
+ * has landed the activity's start on the server. The reveal itself is already gated
  * server-side on the verified anchor, so every item this panel receives is settled — it applies no
  * chain-index filtering of its own.
  */
 export function ActivityRewardsPanel(props: ActivityRewardsPanelProps) {
   const rewardSlotLedger = useRewardSlotLedger();
+  const isActivityIngested = useIsActivityIngested(props.activityID);
 
   const query = useQuery({
     ...buildActivityRewardsQueryOptions(props.orpc, props.activityID ?? ''),
-    enabled: props.activityID !== undefined,
+    enabled: props.activityID !== undefined && isActivityIngested,
   });
 
   if (props.activityID === undefined || query.data === undefined) {

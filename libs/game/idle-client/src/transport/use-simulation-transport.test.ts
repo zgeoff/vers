@@ -10,6 +10,7 @@ import { createTestClient } from '../test-utils/create-test-client';
 import { WorkerMessageType } from '../types';
 import type {
   ActivityCompletedMessage,
+  ActivityStartIngestedMessage,
   CheckpointStreamInvalidMessage,
   ResyncStatusMessage,
   RewardSlotsRecordedMessage,
@@ -267,6 +268,27 @@ test('it records the completed activity from a broadcast', async () => {
 
   await waitFor(() => {
     expect(useIdleStore.getState().lastCompletedActivityID).toBe('activity_1');
+  });
+
+  hook.unmount();
+});
+
+test('it records the ingested activity start from a broadcast', async () => {
+  registerSharedWorkerStub();
+
+  const hook = renderHook(() => useSimulationTransport());
+
+  hook.rerender();
+
+  const message: ActivityStartIngestedMessage = {
+    activityID: 'activity_ingested_1',
+    type: WorkerMessageType.ActivityStartIngested,
+  };
+
+  emitWorkerMessage(message);
+
+  await waitFor(() => {
+    expect(useIdleStore.getState().lastIngestedActivityID).toBe('activity_ingested_1');
   });
 
   hook.unmount();

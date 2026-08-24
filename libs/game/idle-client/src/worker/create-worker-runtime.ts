@@ -9,7 +9,6 @@ import type { ActorRefFromLogic } from 'xstate';
 import { createActor } from 'xstate';
 import { createActivityServiceClient } from '../submission/create-activity-service-client';
 import { createCheckpointSubmitter } from '../submission/create-checkpoint-submitter';
-import { ingestActivityStart } from '../submission/ingest-activity-start';
 import { readFailureActionCache } from '../submission/read-failure-action-cache';
 import type { ActivityServiceClient } from '../submission/types';
 import { WORKER_TO_CLIENT_CHANNEL } from '../transport/constants';
@@ -17,6 +16,7 @@ import { WorkerMessageType } from '../types';
 import type { RewardSlotLedgerEntry } from '../types';
 import { BUNDLED_ENGINE_HASH } from './bundled-engine-hash';
 import { createWorkerRouter } from './create-worker-router';
+import { ingestAndBroadcastActivityStart } from './ingest-and-broadcast-activity-start';
 import { registerSimulationListeners } from './register-simulation-listeners';
 import { reportWorkerFault } from './report-worker-fault';
 import { runSimulation } from './run-simulation';
@@ -215,7 +215,7 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
   const submitter = createCheckpointSubmitter({
     actor: lifecycleActor.getSnapshot().context.submitterRef,
     client,
-    ingestActivityStart: (activityID) => ingestActivityStart(client, activityID),
+    ingestActivityStart: (activityID) => ingestAndBroadcastActivityStart(context, activityID),
     onAcked: () => {
       getLifecycle().send({ type: 'SUBMITTER_ACKED' });
     },

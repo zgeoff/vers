@@ -5,6 +5,7 @@ test('it builds the empty sync state', () => {
   expect(createSyncSlice()).toStrictEqual({
     checkpointStreamError: null,
     lastCompletedActivityID: null,
+    lastIngestedActivityID: null,
     offlineCapStatus: null,
     resyncStatus: null,
     rewardSlotLedger: [],
