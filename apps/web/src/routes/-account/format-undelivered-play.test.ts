@@ -20,3 +20,7 @@ test('it rounds a longer span to whole minutes', () => {
     '3 runs, about 12 minutes of play',
   );
 });
+
+test('it names the runs alone when the report holds no queued play', () => {
+  expect(formatUndeliveredPlay({ activityCount: 1, playMs: 0 })).toBe('1 run');
+});

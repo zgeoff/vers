@@ -1,6 +1,6 @@
 import { useServerFn } from '@tanstack/react-start';
 import { Dialog, StatusButton, Text } from '@vers/design-system';
-import type { UndeliveredWork } from '@vers/idle-client';
+import type { UndeliveredWork, WorkerClient } from '@vers/idle-client';
 import { useState } from 'react';
 import { sendIdleReadUndeliveredWork } from '../../lib/idle/send-idle-read-undelivered-work';
 import { sendIdleRemoveUndeliveredWork } from '../../lib/idle/send-idle-remove-undelivered-work';
@@ -16,6 +16,12 @@ interface SignOutFormProps {
  * The account hub's sign-out control. A device holding undelivered offline work is warned before
  * the session ends and told what stands to be lost; confirming clears the work so no later
  * sign-in here delivers it, and cancelling ends nothing, leaving the work where it is.
+ *
+ * The two worker failures resolve opposite ways, because they risk opposite things. A worker that
+ * cannot say what it holds signs the player out anyway — it leaves the outbox exactly as today's
+ * sign-out does, and trapping a player on this screen behind a dead worker is worse. A discard
+ * that fails holds the sign-out back, since ending the session with the work still queued is the
+ * one outcome this control exists to prevent.
  */
 export function SignOutForm(props: Readonly<SignOutFormProps>) {
   const signOutFn = useServerFn(signOut);
@@ -31,24 +37,14 @@ export function SignOutForm(props: Readonly<SignOutFormProps>) {
     setIsPending(true);
 
     try {
-      if (client === undefined) {
-        await action();
+      const work = await tryReadUndeliveredWork(client, idleWorkerHandle.writerAbortSignal);
+
+      if (work !== null && work.activityCount > 0) {
+        setReport(work);
 
         return;
       }
 
-      const work = await sendIdleReadUndeliveredWork(client, idleWorkerHandle.writerAbortSignal);
-
-      if (work.activityCount === 0) {
-        await action();
-
-        return;
-      }
-
-      setReport(work);
-    } catch {
-      // an unreachable worker can't report what it holds, and blocking sign-out on it would be
-      // worse than today's behaviour
       await action();
     } finally {
       setIsPending(false);
@@ -66,9 +62,6 @@ export function SignOutForm(props: Readonly<SignOutFormProps>) {
         try {
           await sendIdleRemoveUndeliveredWork(client, idleWorkerHandle.writerAbortSignal);
         } catch {
-          // the player confirmed losing this work, but a failed discard leaves it queued — signing
-          // out anyway would let a later sign-in here deliver exactly what this dialog exists to
-          // stop, so report the failure and leave the dialog open for a retry instead
           setDiscardFailed(true);
 
           return;
@@ -104,7 +97,8 @@ export function SignOutForm(props: Readonly<SignOutFormProps>) {
           title="Log out and lose this progress?"
         >
           <Text>
-            This device is holding {formatUndeliveredPlay(report)} that the server has never seen.
+            This device is holding {formatUndeliveredPlay(report)} that the server has not
+            confirmed.
           </Text>
           <Text>
             Log out now and you give that progress up for good. Cancel, get back online, and it
@@ -127,6 +121,26 @@ export function SignOutForm(props: Readonly<SignOutFormProps>) {
       )}
     </>
   );
+}
+
+/**
+ * Asks the worker what it is holding, answering null for a device with no worker to ask and for a
+ * worker that fails to answer — both sign the player straight out. Only this read is guarded, so a
+ * rejected sign-out surfaces as its own failure rather than being retried behind a fallback.
+ */
+async function tryReadUndeliveredWork(
+  client: undefined | WorkerClient,
+  signal: AbortSignal,
+): Promise<UndeliveredWork | null> {
+  if (client === undefined) {
+    return null;
+  }
+
+  try {
+    return await sendIdleReadUndeliveredWork(client, signal);
+  } catch {
+    return null;
+  }
 }
 
 function pickConfirmStatus(isPending: boolean, discardFailed: boolean) {
