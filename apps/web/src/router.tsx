@@ -4,6 +4,7 @@ import { createIsomorphicFn } from '@tanstack/react-start';
 import { getRequestHeader } from '@tanstack/react-start/server';
 import { getSceneState } from '@vers/game-rendering';
 import { buildQueryClient } from './lib/query/build-query-client';
+import { subscribeToQueryBroadcast } from './lib/query/subscribe-to-query-broadcast';
 import { orpc } from './lib/rpc/orpc';
 import { buildSceneTransitionTypes } from './lib/scene/build-scene-transition-types';
 import { resolveSceneStateForLocation } from './lib/scene/resolve-scene-state-for-location';
@@ -24,6 +25,11 @@ const getCSPNonce = createIsomorphicFn()
  */
 export function getRouter() {
   const queryClient = buildQueryClient();
+
+  // the browser session owns the cross-tab mirror: one subscription lives as long as the client it
+  // carries, and the SSR call this shares a factory with subscribes to nothing
+  subscribeToQueryBroadcast(queryClient);
+
   const nonce = getCSPNonce();
 
   const router = createRouter({

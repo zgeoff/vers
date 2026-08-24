@@ -185,6 +185,12 @@
           // the router hands the boundary a live error/reset pair; its `info` member is a
           // mutable React structure with no readonly form
           { "from": "package", "name": "ErrorComponentProps", "package": "@tanstack/router-core" },
+          // a live query-cache handle: cache contents and subscriptions the client rewrites
+          // internally, no readonly form
+          { "from": "package", "name": "QueryClient", "package": "@tanstack/query-core" },
+          // one query's cache record: every field is rewritten in place as the query fetches and
+          // resolves, so it has no readonly form
+          { "from": "package", "name": "QueryState", "package": "@tanstack/query-core" },
           {
             "from": "package",
             "name": "StartedPostgreSqlContainer",
