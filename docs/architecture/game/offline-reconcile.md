@@ -93,33 +93,36 @@ session row the account owns ([auth](../services/auth.md#session-lifecycle)). Th
 signs itself out, so no service needs a rule of its own for a caller whose session was taken over.
 app-web re-validates the session against the session service on every server call, and the evicted
 device's next call finds the row gone. app-web clears the cookie and refuses that call itself, so
-the evicted session's undelivered offline work is refused rather than delivered.
+the work that session never delivered never reaches the server.
 
 ### When a session ends
 
-The outbox outlives the session that filled it. How the session ended decides what becomes of the
-work it holds.
+The outbox outlives the session that filled it. What the device does with the work inside it depends
+on how that session ended.
 
-| How the session ended        | Its row         | The outbox |
-| ---------------------------- | --------------- | ---------- |
-| Taken over on another device | deleted at once | discarded  |
-| Signed out on this device    | deleted at once | kept       |
-| Reached its own expiry       | left in place   | kept       |
+| What happened to the session | Its row         | The device's outbox |
+| ---------------------------- | --------------- | ------------------- |
+| Another device took it over  | deleted at once | discarded           |
+| The player signed out here   | deleted at once | kept                |
+| It ran past its expiry       | left in place   | kept                |
 
-A takeover is the one ending the device acts on. app-web marks the refusal it answers, so the worker
-can tell a takeover from an expiry. On that mark the worker clears its pending activity starts, its
-queued checkpoints, and the preferences a recovery steers by. Work held instead would deliver on
-this device's next sign-in and revive play the takeover retired. The player is warned before taking
-over, so the loss is never silent.
+The worker throws work away only when another device takes the account over. app-web answers that
+call itself, and puts a header on the answer saying the session was taken over rather than that it
+ran out. The worker reads that header and clears its pending activity starts, its queued
+checkpoints, and the preferences it would otherwise recover from. A worker that kept that work would
+deliver it the next time the player signs in here, long after the player carried on elsewhere. The
+player is warned before taking the account over, so nothing is lost silently.
 
-An expiry leaves the row in place for the refresh call to judge, which is what lets app-web tell the
-two endings apart. Nothing marks that refusal. A device whose session lapsed while it was closed
-therefore still delivers the offline play it holds once the player signs back in.
+A session that runs past its expiry keeps its row until the next refresh call deletes it and reports
+what happened. app-web can tell a takeover from a lapsed session because of that, and it sends no
+header when a session has simply run out. So a player whose session lapsed while the app was closed
+still delivers the offline play the device holds, once they sign back in.
 
-Signing out deletes the row and clears this device's cookie in one request, so no later call
-observes the deleted row and nothing marks a refusal. The next player to sign in on the device still
-cannot deliver the work left behind. A recovery drains only the acting avatar's activity starts, and
-the server refuses a start naming an avatar the acting user does not own.
+When the player signs out, one request deletes the session row and clears this device's cookie
+together, so no later call ever finds the row gone and app-web never sends the header. The worker
+keeps its outbox. The next player to sign in here still cannot deliver that work: the worker drains
+only the acting avatar's activity starts, and the server refuses a start naming an avatar the acting
+user does not own.
 
 Session eviction and writer ownership are separate mechanisms on separate scopes. The session
 belongs to the account, and evicting it signs a device out of everything. The writer belongs to one
