@@ -2,7 +2,10 @@ import { expect, onTestFinished, test } from 'bun:test';
 import { QueryClient, QueryObserver } from '@tanstack/react-query';
 import { waitFor } from '@testing-library/react';
 import { RSC_QUERY_KEY_PREFIX } from './rsc-query-key-prefix';
-import { subscribeToQueryBroadcast } from './subscribe-to-query-broadcast';
+import {
+  QUERY_BROADCAST_CHANNEL_NAME,
+  subscribeToQueryBroadcast,
+} from './subscribe-to-query-broadcast';
 
 function setupTest() {
   const sender = new QueryClient();
@@ -92,4 +95,78 @@ test('it stops broadcasting once the returned detach runs', async () => {
   });
 
   expect(ctx.peer.getQueryData<string>(['detached'])).toBeUndefined();
+});
+
+test('it ignores an update a peer sent without its key or state', async () => {
+  const ctx = setupTest();
+
+  const peerChannel = new BroadcastChannel(QUERY_BROADCAST_CHANNEL_NAME);
+
+  onTestFinished(() => {
+    peerChannel.close();
+  });
+
+  peerChannel.postMessage({ queryHash: '["malformed"]', type: 'updated' });
+  ctx.sender.setQueryData(['well-formed'], 'landed');
+
+  await waitFor(() => {
+    expect(ctx.peer.getQueryData<string>(['well-formed'])).toBe('landed');
+  });
+
+  expect(ctx.peer.getQueryCache().get('["malformed"]')).toBeUndefined();
+});
+
+test('it keeps a resolve this tab made after the one a peer sends', async () => {
+  const ctx = setupTest();
+
+  ctx.peer.setQueryData(['race'], 'local-later', { updatedAt: 2000 });
+  ctx.sender.setQueryData(['race'], 'peer-earlier', { updatedAt: 1000 });
+  ctx.sender.setQueryData(['race-barrier'], 'sent-after');
+
+  await waitFor(() => {
+    expect(ctx.peer.getQueryData<string>(['race-barrier'])).toBe('sent-after');
+  });
+
+  expect(ctx.peer.getQueryData<string>(['race'])).toBe('local-later');
+});
+
+test('it opens no channel where there is no window to mirror onto', () => {
+  const originalWindow = globalThis.window;
+  const originalBroadcastChannel = globalThis.BroadcastChannel;
+  let constructed = 0;
+
+  globalThis.BroadcastChannel = class extends originalBroadcastChannel {
+    constructor(name: string) {
+      super(name);
+
+      constructed += 1;
+    }
+  };
+
+  Reflect.deleteProperty(globalThis, 'window');
+
+  onTestFinished(() => {
+    globalThis.window = originalWindow;
+    globalThis.BroadcastChannel = originalBroadcastChannel;
+  });
+
+  const detach = subscribeToQueryBroadcast(new QueryClient());
+
+  detach();
+
+  expect(constructed).toBe(0);
+});
+
+test('it opens no channel where BroadcastChannel is absent', () => {
+  const originalBroadcastChannel = globalThis.BroadcastChannel;
+
+  Reflect.deleteProperty(globalThis, 'BroadcastChannel');
+
+  onTestFinished(() => {
+    globalThis.BroadcastChannel = originalBroadcastChannel;
+  });
+
+  const detach = subscribeToQueryBroadcast(new QueryClient());
+
+  expect(detach).not.toThrow();
 });
