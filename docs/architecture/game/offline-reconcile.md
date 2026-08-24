@@ -96,7 +96,19 @@ device's next call the row is gone, so app-web clears the cookie and passes the 
 acting user. A service refuses a call that names no acting user before any activity check runs.
 
 The evicted session's undelivered offline work is therefore refused rather than delivered. The
-player is warned before taking over, so the loss is never silent.
+device discards it rather than holding it for a later retry: on a refusal naming the session
+superseded, the worker clears its pending activity starts, its queued checkpoints, and the
+preferences a recovery steers by. Work held instead would reach the server under whichever account
+signs in next on that device. The player is warned before taking over, so the loss is never silent.
+
+Signing out deletes the session row as well, so a sign-out discards the outbox under the same rule.
+That is what keeps one player's undelivered work from reaching the server under the next player to
+sign in on a shared device.
+
+A session that reaches its own expiry keeps its outbox. app-web tells an eviction from an expiry by
+the session row: an eviction deletes the row, while an expiry leaves it in place for the refresh
+call to judge. Only an eviction marks its refusal, so a device whose session lapsed while it was
+closed still delivers the offline play it holds once the player signs back in.
 
 Session eviction and writer ownership are separate mechanisms on separate scopes. The session
 belongs to the account, and evicting it signs a device out of everything. The writer belongs to one

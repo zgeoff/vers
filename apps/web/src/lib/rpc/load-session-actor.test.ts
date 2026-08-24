@@ -9,10 +9,10 @@ import { withRequestContext } from '../../test-utils/with-request-context';
 import { loadSessionActor } from './load-session-actor';
 import { SERVICE_URLS } from './service-urls';
 
-test('it returns null with no network call when there is no cookie session', async () => {
+test('it signs out with no network call when there is no cookie session', async () => {
   const outcome = await withRequestContext({}, () => loadSessionActor());
 
-  expect(outcome.value).toBeNull();
+  expect(outcome.value).toStrictEqual({ kind: 'signed-out' });
 });
 
 test('it returns the cookie userID unchanged for a fresh access token whose session still exists', async () => {
@@ -33,11 +33,16 @@ test('it returns the cookie userID unchanged for a fresh access token whose sess
     () => loadSessionActor(),
   );
 
-  expect(outcome.value).toStrictEqual({ sessionID: session.id, userID: session.userID });
+  expect(outcome.value).toStrictEqual({
+    kind: 'actor',
+    sessionID: session.id,
+    userID: session.userID,
+  });
+
   expect(outcome.cookies['en_session']).toContainEntry(['accessToken', accessToken]);
 });
 
-test('it clears the cookie and returns null for a fresh access token whose session no longer exists', async () => {
+test('it reports superseded for a fresh access token whose session row is gone', async () => {
   const userID = createId();
 
   const accessToken = await createTestAccessToken(userID);
@@ -56,7 +61,7 @@ test('it clears the cookie and returns null for a fresh access token whose sessi
     () => loadSessionActor(),
   );
 
-  expect(outcome.value).toBeNull();
+  expect(outcome.value).toStrictEqual({ kind: 'superseded' });
   expect(outcome.cookies['en_session']).toBeUndefined();
 });
 
@@ -94,7 +99,7 @@ test('it hits getSession at most once per request for a fresh access token', asy
     () => Promise.all([loadSessionActor(), loadSessionActor()]),
   );
 
-  const actor = { sessionID: session.id, userID: session.userID };
+  const actor = { kind: 'actor', sessionID: session.id, userID: session.userID } as const;
 
   expect(outcome.value).toStrictEqual([actor, actor]);
   expect(callCount).toBe(1);
@@ -152,12 +157,17 @@ test('it refreshes a stale access token once, updates the cookie, and returns th
     () => loadSessionActor(),
   );
 
-  expect(outcome.value).toStrictEqual({ sessionID: session.id, userID: session.userID });
+  expect(outcome.value).toStrictEqual({
+    kind: 'actor',
+    sessionID: session.id,
+    userID: session.userID,
+  });
+
   expect(outcome.cookies['en_session']).not.toContainEntry(['accessToken', staleAccessToken]);
   expect(outcome.cookies['en_session']).not.toContainEntry(['refreshToken', 'refresh-1']);
 });
 
-test('it clears the cookie and returns null when the refresh itself fails', async () => {
+test('it reports superseded when the refresh finds no row to rotate', async () => {
   const staleAccessToken = await createTestAccessToken('some-user', '-1s');
 
   const outcome = await withRequestContext(
@@ -174,7 +184,33 @@ test('it clears the cookie and returns null when the refresh itself fails', asyn
     () => loadSessionActor(),
   );
 
-  expect(outcome.value).toBeNull();
+  expect(outcome.value).toStrictEqual({ kind: 'superseded' });
+  expect(outcome.cookies['en_session']).toBeUndefined();
+});
+
+test('it signs out without superseding when the session reached its own expiry', async () => {
+  const session = await db.sessionCollection.create({
+    expiresAt: new Date(Date.now() - 1000),
+    refreshToken: 'refresh-1',
+  });
+
+  const staleAccessToken = await createTestAccessToken(session.userID, '-1s');
+
+  const outcome = await withRequestContext(
+    {
+      cookies: {
+        en_session: {
+          accessToken: staleAccessToken,
+          refreshToken: 'refresh-1',
+          sessionID: session.id,
+          userID: session.userID,
+        },
+      },
+    },
+    () => loadSessionActor(),
+  );
+
+  expect(outcome.value).toStrictEqual({ kind: 'signed-out' });
   expect(outcome.cookies['en_session']).toBeUndefined();
 });
 
@@ -229,7 +265,7 @@ test('it single-flights concurrent refreshes for the same session', async () => 
     Promise.all([loadSessionActor(), loadSessionActor()]),
   );
 
-  const actor = { sessionID: session.id, userID: session.userID };
+  const actor = { kind: 'actor', sessionID: session.id, userID: session.userID } as const;
 
   expect(outcome.value).toStrictEqual([actor, actor]);
 

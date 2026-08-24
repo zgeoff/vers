@@ -38,7 +38,10 @@ export function buildServiceLink(
     headers: async (options) => {
       // an explicit acting user (login, force-logout) has no cookie session to name, so the token
       // carries no `sid` claim on that path
-      const actor = options.context.actingUserID === undefined ? await loadSessionActor() : null;
+      const outcome =
+        options.context.actingUserID === undefined ? await loadSessionActor() : undefined;
+
+      const actor = outcome?.kind === 'actor' ? outcome : null;
 
       const actingUserID =
         options.context.actingUserID === undefined

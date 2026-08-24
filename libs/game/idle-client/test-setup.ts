@@ -21,7 +21,9 @@ process.env['SERVICE_AUTH_PRIVATE_KEY'] = `-----BEGIN PRIVATE KEY-----
 MC4CAQAwBQYDK2VwBCIEIBMom57erggdVdDCIdRWS+NKMykK+I5BUKpuHziAq+0W
 -----END PRIVATE KEY-----`;
 
-GlobalRegistrator.register();
+// a real origin, not the default `about:blank`: the worker's activity-service client resolves its
+// proxy URL from `self.location.origin`, which a blank document leaves unusable
+GlobalRegistrator.register({ url: 'https://app.test/' });
 
 expect.extend(jestDOMMatchers);
 
