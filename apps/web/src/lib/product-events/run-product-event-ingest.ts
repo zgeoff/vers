@@ -14,7 +14,7 @@ export async function runProductEventIngest(event: ProductEvent): Promise<void> 
 
   const actor = await loadSessionActor();
 
-  if (actor === null) {
+  if (actor.kind !== 'actor') {
     return;
   }
 

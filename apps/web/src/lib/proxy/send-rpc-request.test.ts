@@ -221,3 +221,69 @@ test('it answers an immediate upstream transport failure with a 503 recorded und
     'transport',
   ]);
 });
+
+test('it answers a superseded session itself, marking the response so the caller discards its offline work', async () => {
+  const resolver = mock<HttpResponseResolver>(() => HttpResponse.json({}));
+
+  server.use(http.post('http://localhost:3003/rpc/getCurrentUser', resolver));
+
+  const userID = createId();
+
+  const accessToken = await createTestAccessToken(userID);
+
+  const outcome = await withRequestContext(
+    {
+      cookies: {
+        en_session: {
+          accessToken,
+          refreshToken: 'refresh-1',
+          sessionID: 'session-evicted-by-a-takeover',
+          userID,
+        },
+      },
+    },
+    () =>
+      sendRPCRequest(
+        new Request('http://app.test/api/rpc/user/getCurrentUser', { method: 'POST' }),
+        'user',
+      ),
+  );
+
+  expect(outcome.value.status).toBe(401);
+  expect(outcome.value.headers.get('x-session-superseded')).toBe('1');
+  expect(resolver).not.toHaveBeenCalled();
+});
+
+test('it forwards a call whose session reached its own expiry, leaving the offline work alone', async () => {
+  const resolver = mock<HttpResponseResolver>(() => HttpResponse.json({}));
+
+  server.use(http.post('http://localhost:3003/rpc/getCurrentUser', resolver));
+
+  const session = await db.sessionCollection.create({
+    expiresAt: new Date(Date.now() - 1000),
+    refreshToken: 'refresh-1',
+  });
+
+  const staleAccessToken = await createTestAccessToken(session.userID, '-1s');
+
+  const outcome = await withRequestContext(
+    {
+      cookies: {
+        en_session: {
+          accessToken: staleAccessToken,
+          refreshToken: 'refresh-1',
+          sessionID: session.id,
+          userID: session.userID,
+        },
+      },
+    },
+    () =>
+      sendRPCRequest(
+        new Request('http://app.test/api/rpc/user/getCurrentUser', { method: 'POST' }),
+        'user',
+      ),
+  );
+
+  expect(resolver).toHaveBeenCalledOnce();
+  expect(outcome.value.headers.get('x-session-superseded')).toBeNull();
+});
