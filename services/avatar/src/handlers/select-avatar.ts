@@ -29,9 +29,9 @@ interface SelectAvatarOpts {
  * Persists the caller's active avatar. A live activity locks the selection to the avatar running
  * it: selecting any other avatar throws CONFLICT naming the run's owner, while re-selecting the
  * owner (or the already-active avatar) is a no-op success. The per-user advisory lock serializes
- * this against concurrent creates and against `startActivity`, which takes the same lock before
- * admitting a start — so the pair is atomic, never best-effort. Runs inside the caller's
- * transaction when given one, or opens its own otherwise.
+ * this against concurrent creates and against the activity service's root mint, which takes the
+ * same lock before admitting a start — so the pair is atomic, never best-effort. Runs inside the
+ * caller's transaction when given one, or opens its own otherwise.
  */
 export function selectAvatar(
   db: Kysely<DB>,

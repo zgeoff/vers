@@ -2,64 +2,77 @@ import { expect, test } from 'bun:test';
 import { createMockActivityData } from '@vers/contract-activity/test-utils';
 import { mockActivityService } from '@vers/mock-services/activity';
 import { server } from '../mocks/node';
-import { readActivityStart } from '../submission/read-activity-start';
 import { writeActivityStart } from '../submission/write-activity-start';
 import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
 import { WorkerMessageType } from '../types';
 import { ingestAndBroadcastActivityStart } from './ingest-and-broadcast-activity-start';
 
-test('it announces an activity start the server takes', async () => {
+test('it announces an ingested activity start to connected tabs', async () => {
   const context = createStubWorkerContext();
-  const row = createMockActivityData({ id: 'act_ingest_taken', startKey: 'start_key_taken' });
-
-  await writeActivityStart(row);
+  const row = createMockActivityData({ id: 'act_broadcast_ok', startKey: 'start_key_ok' });
 
   server.use(
     mockActivityService.advanceActivity.handler(() => ({ activity: row, appendedHead: 0 })),
   );
 
+  await writeActivityStart(row);
+
   const outcome = await ingestAndBroadcastActivityStart(context, row.id);
 
   expect(outcome).toBe('ingested');
 
-  expect(context.getBroadcasts()).toStrictEqual([
-    { activityID: row.id, type: WorkerMessageType.ActivityStartIngested },
-  ]);
+  expect(context.getBroadcasts()).toContainEqual({
+    activityID: row.id,
+    type: WorkerMessageType.ActivityStartIngested,
+  });
 });
 
-test('it announces nothing for an activity start the server refuses', async () => {
+test('it broadcasts the avatar-switched notice when the account moved to another avatar', async () => {
   const context = createStubWorkerContext();
-  const row = createMockActivityData({ id: 'act_ingest_refused', startKey: 'start_key_refused' });
-
-  await writeActivityStart(row);
+  const row = createMockActivityData({ id: 'act_broadcast_switch', startKey: 'start_key_switch' });
 
   server.use(
     mockActivityService.advanceActivity.handler((opts) => {
-      throw opts.errors.NODE_NOT_REVEALED({ data: {} });
+      throw opts.errors.AVATAR_NOT_ACTIVE({
+        data: { activeAvatarID: 'avatar_other', activeAvatarName: 'Zetha' },
+      });
     }),
   );
-
-  const outcome = await ingestAndBroadcastActivityStart(context, row.id);
-
-  expect(outcome).toBe('rejected');
-  expect(context.getBroadcasts()).toStrictEqual([]);
-});
-
-test('it announces nothing while the server stays unreachable', async () => {
-  const context = createStubWorkerContext();
-  const row = createMockActivityData({ id: 'act_ingest_held', startKey: 'start_key_held' });
 
   await writeActivityStart(row);
-
-  server.use(
-    mockActivityService.advanceActivity.handler(() => {
-      throw new Error('activity backend unreachable');
-    }),
-  );
 
   const outcome = await ingestAndBroadcastActivityStart(context, row.id);
 
   expect(outcome).toBe('deferred');
-  expect(context.getBroadcasts()).toStrictEqual([]);
-  expect(readActivityStart(row.id)).resolves.toMatchObject({ id: row.id });
+
+  expect(context.getBroadcasts()).toContainEqual({
+    status: { activeAvatarName: 'Zetha', attempts: 0, kind: 'avatar-switched', levelUps: 0 },
+    type: WorkerMessageType.ResyncStatus,
+  });
+});
+
+test('it broadcasts the sim-version-expired notice when this build can no longer replay', async () => {
+  const context = createStubWorkerContext();
+
+  const row = createMockActivityData({
+    id: 'act_broadcast_expired',
+    startKey: 'start_key_expired',
+  });
+
+  server.use(
+    mockActivityService.advanceActivity.handler((opts) => {
+      throw opts.errors.SIM_VERSION_EXPIRED({ data: { currentSimVersion: 'engine_hash_9' } });
+    }),
+  );
+
+  await writeActivityStart(row);
+
+  const outcome = await ingestAndBroadcastActivityStart(context, row.id);
+
+  expect(outcome).toBe('rejected');
+
+  expect(context.getBroadcasts()).toContainEqual({
+    status: { kind: 'sim-version-expired' },
+    type: WorkerMessageType.ResyncStatus,
+  });
 });

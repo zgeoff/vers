@@ -90,9 +90,9 @@ activity until that start lands. A client read keyed on the activity id — the 
 `advanceActivity` is the server's authority over a client-authored start. It re-derives every
 authoritative input from its own truth and trusts none of the payload:
 
-- It runs the same sim-version admission check an online start does. It does not check node
-  reachability at admission: an offline gap can legitimately reach a neighbour whose opening clear
-  the server has not yet verified, so [replay](#replay) adjudicates reachability instead.
+- It runs the sim-version admission check every start passes. It does not check node reachability at
+  admission: an offline gap can legitimately reach a neighbour whose opening clear the server has
+  not yet verified, so [replay](#replay) adjudicates reachability instead.
 - It derives the encounter node and its hashed stamps from the server's own content document, never
   the payload.
 - It re-authors the `buildSnapshot` from the avatar's progression, and rejects a start whose

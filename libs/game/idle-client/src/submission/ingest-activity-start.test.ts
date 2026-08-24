@@ -31,7 +31,7 @@ test('it ingests a pending activityStart and removes its durable row', async () 
 
   const outcome = await ingestActivityStart(ctx.client, row.id);
 
-  expect(outcome).toBe('ingested');
+  expect(outcome.outcome).toBe('ingested');
 
   const stored = await readActivityStart(row.id);
 
@@ -43,7 +43,7 @@ test('it reports absent for an activity id this device holds no pending activity
 
   const outcome = await ingestActivityStart(ctx.client, 'act_ingest_absent');
 
-  expect(outcome).toBe('absent');
+  expect(outcome.outcome).toBe('absent');
 });
 
 test('it defers and keeps the activityStart on a transport failure', async () => {
@@ -56,7 +56,7 @@ test('it defers and keeps the activityStart on a transport failure', async () =>
 
   const outcome = await ingestActivityStart(ctx.client, row.id);
 
-  expect(outcome).toBe('deferred');
+  expect(outcome.outcome).toBe('deferred');
 
   const stored = await readActivityStart(row.id);
 
@@ -79,7 +79,7 @@ test('it defers and keeps the activityStart when the avatar reads temporarily in
 
   const outcome = await ingestActivityStart(ctx.client, row.id);
 
-  expect(outcome).toBe('deferred');
+  expect(outcome.outcome).toBe('deferred');
 
   const stored = await readActivityStart(row.id);
 
@@ -103,7 +103,7 @@ test('it rejects and removes a row with no start key without reaching the server
 
   const outcome = await ingestActivityStart(ctx.client, row.id);
 
-  expect(outcome).toBe('rejected');
+  expect(outcome.outcome).toBe('rejected');
   expect(track).not.toHaveBeenCalled();
 
   const stored = await readActivityStart(row.id);
@@ -125,7 +125,7 @@ test('it rejects and removes the activityStart once the server refuses it with N
 
   const outcome = await ingestActivityStart(ctx.client, row.id);
 
-  expect(outcome).toBe('rejected');
+  expect(outcome.outcome).toBe('rejected');
 
   const stored = await readActivityStart(row.id);
 
@@ -146,7 +146,7 @@ test('it defers an order-sensitive CONFLICT, keeping the activityStart for a lat
 
   const outcome = await ingestActivityStart(ctx.client, row.id);
 
-  expect(outcome).toBe('deferred');
+  expect(outcome.outcome).toBe('deferred');
 
   const stored = await readActivityStart(row.id);
 
@@ -169,7 +169,7 @@ test('it rejects and removes the activityStart on a permanent start-hash-mismatc
 
   const outcome = await ingestActivityStart(ctx.client, row.id);
 
-  expect(outcome).toBe('rejected');
+  expect(outcome.outcome).toBe('rejected');
 
   const stored = await readActivityStart(row.id);
 
@@ -192,9 +192,64 @@ test('it defers an order-sensitive build-snapshot-mismatch, keeping the activity
 
   const outcome = await ingestActivityStart(ctx.client, row.id);
 
-  expect(outcome).toBe('deferred');
+  expect(outcome.outcome).toBe('deferred');
 
   const stored = await readActivityStart(row.id);
 
   expect(stored).toBeDefined();
+});
+
+test('it defers an activityStart the account switched away from, carrying the switch notice', async () => {
+  const ctx = setupTest();
+
+  const row = createMockActivityData({
+    id: 'act_ingest_switched',
+    startKey: 'start_key_switched',
+  });
+
+  server.use(
+    mockActivityService.advanceActivity.handler((opts) => {
+      throw opts.errors.AVATAR_NOT_ACTIVE({
+        data: { activeAvatarID: 'avatar_other', activeAvatarName: 'Zetha' },
+      });
+    }),
+  );
+
+  await writeActivityStart(row);
+
+  const outcome = await ingestActivityStart(ctx.client, row.id);
+
+  expect(outcome).toStrictEqual({
+    notice: { activeAvatarName: 'Zetha', kind: 'avatar-switched' },
+    outcome: 'deferred',
+  });
+
+  // held, not dropped: switching back delivers it
+  const stored = await readActivityStart(row.id);
+
+  expect(stored).toStrictEqual(row);
+});
+
+test('it drops an activityStart this build can no longer replay, carrying the reload notice', async () => {
+  const ctx = setupTest();
+  const row = createMockActivityData({ id: 'act_ingest_expired', startKey: 'start_key_expired' });
+
+  server.use(
+    mockActivityService.advanceActivity.handler((opts) => {
+      throw opts.errors.SIM_VERSION_EXPIRED({ data: { currentSimVersion: 'engine_hash_9' } });
+    }),
+  );
+
+  await writeActivityStart(row);
+
+  const outcome = await ingestActivityStart(ctx.client, row.id);
+
+  expect(outcome).toStrictEqual({
+    notice: { kind: 'sim-version-expired' },
+    outcome: 'rejected',
+  });
+
+  const stored = await readActivityStart(row.id);
+
+  expect(stored).toBeUndefined();
 });

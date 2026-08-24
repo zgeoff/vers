@@ -15,50 +15,6 @@ test('it declares UNAUTHORIZED and FORBIDDEN on every owner-scoped procedure', (
   ]);
 });
 
-test('it declares CONFLICT, NOT_FOUND, NODE_NOT_REVEALED, NODE_UNKNOWN, NODE_UNREACHABLE, CHAIN_QUARANTINED, and AVATAR_NOT_ACTIVE on startActivity', () => {
-  expect(activityContract.startActivity['~orpc'].errorMap).toContainAllKeys([
-    'UNAUTHORIZED',
-    'FORBIDDEN',
-    'AVATAR_NOT_ACTIVE',
-    'CHAIN_QUARANTINED',
-    'CONFLICT',
-    'NODE_NOT_REVEALED',
-    'NODE_UNKNOWN',
-    'NODE_UNREACHABLE',
-    'NOT_FOUND',
-    'SIM_VERSION_EXPIRED',
-    'SIM_VERSION_UNKNOWN',
-  ]);
-});
-
-test('it declares a bespoke NODE_NOT_REVEALED with an explicit status on startActivity', () => {
-  const errorMap = activityContract.startActivity['~orpc'].errorMap;
-
-  expect(errorMap).toContainKey('NODE_NOT_REVEALED');
-  expect(errorMap.NODE_NOT_REVEALED?.status).toBe(409);
-});
-
-test('it declares SIM_VERSION_EXPIRED and SIM_VERSION_UNKNOWN with explicit statuses on startActivity', () => {
-  const errorMap = activityContract.startActivity['~orpc'].errorMap;
-
-  expect(errorMap.SIM_VERSION_EXPIRED?.status).toBe(410);
-  expect(errorMap.SIM_VERSION_UNKNOWN?.status).toBe(409);
-});
-
-test('it declares a bespoke NODE_UNKNOWN with an explicit status on startActivity', () => {
-  const errorMap = activityContract.startActivity['~orpc'].errorMap;
-
-  expect(errorMap).toContainKey('NODE_UNKNOWN');
-  expect(errorMap.NODE_UNKNOWN?.status).toBe(404);
-});
-
-test('it declares a bespoke NODE_UNREACHABLE with an explicit status on startActivity', () => {
-  const errorMap = activityContract.startActivity['~orpc'].errorMap;
-
-  expect(errorMap).toContainKey('NODE_UNREACHABLE');
-  expect(errorMap.NODE_UNREACHABLE?.status).toBe(409);
-});
-
 test('it declares a bespoke CHECKPOINT_INVALID with an explicit status on trackActivityProgress', () => {
   const errorMap = activityContract.trackActivityProgress['~orpc'].errorMap;
 
@@ -118,7 +74,7 @@ test('it declares the start gates alongside its own continuation errors on advan
   ]);
 });
 
-test('it declares the same bespoke statuses on advanceActivity as their startActivity counterparts', () => {
+test('it declares an explicit status on every bespoke advanceActivity error', () => {
   const errorMap = activityContract.advanceActivity['~orpc'].errorMap;
 
   expect(errorMap.AVATAR_NOT_ACTIVE?.status).toBe(409);

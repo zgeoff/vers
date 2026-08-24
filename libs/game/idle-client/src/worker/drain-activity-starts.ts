@@ -3,7 +3,6 @@ import { readAllActivityStarts } from '../submission/read-all-activity-starts';
 import { readLastStartedActivity } from '../submission/read-last-started-activity';
 import { removeActivityStart } from '../submission/remove-activity-start';
 import { removeLastStartedActivity } from '../submission/remove-last-started-activity';
-import { removePendingStartIntent } from '../submission/remove-pending-start-intent';
 import { removeQueuedCheckpoints } from '../submission/remove-queued-checkpoints';
 import { writeLastStartedActivity } from '../submission/write-last-started-activity';
 import { ingestAndBroadcastActivityStart } from './ingest-and-broadcast-activity-start';
@@ -42,11 +41,10 @@ export async function drainActivityStarts(context: WorkerContext, avatarID: stri
     const outcome = await ingestAndBroadcastActivityStart(context, row.id);
 
     if (outcome === 'rejected') {
-      // ingest already removed the pending row; clear the queued checkpoints and held intent that
-      // would otherwise build onto an activity start that will never exist, and cascade to its
+      // ingest already removed the pending row; clear the queued checkpoints that would
+      // otherwise build onto an activity start that will never exist, and cascade to its
       // successors
       await removeQueuedCheckpoints(row.id);
-      await removePendingStartIntent(row.id);
 
       dropped.add(row.id);
       continue;
@@ -110,14 +108,12 @@ function sortByPredecessor(rows: ReadonlyArray<ActivityData>): Array<ActivityDat
 }
 
 /**
- * Removes an undelivered successor of a refused activity start — its pending row, queued
- * checkpoints, and any held start intent — since it can never verify against a predecessor that
- * does not exist.
+ * Removes an undelivered successor of a refused activity start — its pending row and queued
+ * checkpoints — since it can never verify against a predecessor that does not exist.
  */
 async function removeUnverifiableStartRow(activityID: string): Promise<void> {
   await removeActivityStart(activityID);
   await removeQueuedCheckpoints(activityID);
-  await removePendingStartIntent(activityID);
 }
 
 /**

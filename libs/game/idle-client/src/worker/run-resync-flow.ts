@@ -16,14 +16,10 @@ import { runReconstruction } from '../resync/run-reconstruction';
 import { runResync } from '../resync/run-resync';
 import type { FastForwardReport, ResyncPlan, ResyncResult } from '../resync/types';
 import { readFailureActionCache } from '../submission/read-failure-action-cache';
-import { readPendingStartIntent } from '../submission/read-pending-start-intent';
-import { removePendingStartIntent } from '../submission/remove-pending-start-intent';
 import { sweepStaleCheckpoints } from '../submission/sweep-stale-checkpoints';
 import type { ActivitySubmissionContext } from '../submission/types';
 import { writeFailureActionCache } from '../submission/write-failure-action-cache';
 import { WorkerMessageType } from '../types';
-import type { PendingStartFlushResult } from './flush-pending-start';
-import { flushPendingStart } from './flush-pending-start';
 import { flushPendingStop } from './flush-pending-stop';
 import { isAbortError } from './is-abort-error';
 import { registerSimulationListeners } from './register-simulation-listeners';
@@ -36,12 +32,9 @@ import type { ResyncStatus } from './worker-to-client-message-schema';
 
 /**
  * Runs one resync end to end — the data-plane body a public entry point reaches only through the
- * lifecycle actor's queue. A resync a continuation's own recovery needs mid-flow calls this
- * directly instead, as an inner sub-flow running within that flow's own active turn — never as a
- * new event, which would wait behind the very turn it's running inside of. Every install
- * re-checks `signals.stop`, the caller's entry-captured stop signal, so a stop raised after the
- * caller began — including during a queue wait — aborts the install; the cancel composite
- * additionally cancels in-flight reads on a worker shutdown.
+ * lifecycle actor's queue. Every install re-checks `signals.stop`, the caller's entry-captured stop
+ * signal, so a stop raised after the caller began — including during a queue wait — aborts the
+ * install; the cancel composite additionally cancels in-flight reads on a worker shutdown.
  *
  * Only a plan covering a real away period broadcasts a `ResyncStatus` progression ending on
  * `done` or `capped`, so a tab's welcome-back UI always resolves. Zero-gap outcomes stay silent,
@@ -52,19 +45,6 @@ import type { ResyncStatus } from './worker-to-client-message-schema';
  * `session-expired` instead, with no fault report: the only remedy is a fresh sign-in, so the tab
  * renders that rather than a futile retry. An abort settles silently — broadcasting `failed`
  * would flash an error for a deliberate stop.
- *
- * When `avatarID` came from a durable start intent that the account has since switched away from,
- * the service's own rejection names the account's actual active avatar — the authoritative
- * recovery target, never a caller-derived guess that can itself be stale. When the two differ,
- * the reported avatar's own catch-up runs in the dead intent avatar's place, the stamped resync
- * avatar follows the pass onto it, and `avatar-switched` broadcasts afterward as the cycle's
- * terminal status, carrying the pass's tallies — the player sees both the switch notice and what
- * the catch-up earned. When they already match, no pass runs and the stamped resync avatar
- * clears, so a dead intent avatar isn't resynced again next cycle.
- *
- * A held intent the service refuses as stale for the current content broadcasts
- * `sim-version-expired` and runs no pass — a reload is the only remedy, on the entry drain and
- * the blocked-intent retry alike.
  */
 export async function runResyncFlow(
   context: WorkerContext,
@@ -99,31 +79,7 @@ export async function runResyncFlow(
       return;
     }
 
-    // The held continuation-start intent delivers before planning, so the progress fetch finds
-    // the row it minted and the plan attaches it. Offline is the only entry-time signal; every
-    // other outcome resolves after the pass, once fetched progress can tell a live intent from a
-    // stale one.
-    const startFlush = await flushPendingStart(context, signals, avatarID);
-
-    if (startFlush.outcome === 'undelivered') {
-      context.updateConnectivity(false);
-    }
-
-    if (startFlush.outcome === 'avatar-switched') {
-      await runAvatarSwitchedFallback(context, avatarID, claim, signals, startFlush);
-
-      return;
-    }
-
-    if (startFlush.outcome === 'sim-version-expired') {
-      emitResyncStatus(context, { kind: 'sim-version-expired' });
-
-      return;
-    }
-
-    const result = await runResyncPass(context, avatarID, claim, signals);
-
-    await applyStartFlush(context, avatarID, claim, signals, startFlush, result);
+    await runResyncPass(context, avatarID, claim, signals);
   } catch (error) {
     if (isAbortError(error, signals.cancel)) {
       return;
@@ -139,8 +95,7 @@ export async function runResyncFlow(
 }
 
 /**
- * One full fetch → plan → sweep → apply pass. Split out so a delivered start intent can trigger a
- * single bounded second pass that attaches the row the delivery minted.
+ * One full fetch → plan → sweep → apply pass.
  */
 async function runResyncPass(
   context: WorkerContext,
@@ -205,131 +160,6 @@ async function runResyncPass(
   await applyResyncResult(context, result, signals);
 
   return result;
-}
-
-/**
- * Runs the server-reported active avatar's own catch-up in the dead intent avatar's place,
- * whenever the two differ, then broadcasts `avatar-switched` as the terminal status carrying that
- * pass's tallies — so the player sees both the switch notice and what the catch-up earned. The
- * stamped resync avatar follows the pass onto the reported avatar. When the two already match, no
- * pass runs: the reported name broadcasts as-is and the stamped resync avatar clears instead, so a
- * dead intent avatar isn't resynced again next cycle.
- */
-async function runAvatarSwitchedFallback(
-  context: WorkerContext,
-  avatarID: string,
-  claim: boolean,
-  signals: Readonly<FlowSignals>,
-  switched: Extract<PendingStartFlushResult, { readonly outcome: 'avatar-switched' }>,
-): Promise<void> {
-  if (switched.activeAvatarID === avatarID) {
-    context.setResyncAvatarID(null);
-
-    emitResyncStatus(context, {
-      activeAvatarName: switched.activeAvatarName,
-      attempts: 0,
-      kind: 'avatar-switched',
-      levelUps: 0,
-    });
-
-    return;
-  }
-
-  context.setResyncAvatarID(switched.activeAvatarID);
-
-  const result = await runResyncPass(context, switched.activeAvatarID, claim, signals);
-
-  emitResyncStatus(context, {
-    activeAvatarName: switched.activeAvatarName,
-    attempts: result.report?.attempts ?? 0,
-    kind: 'avatar-switched',
-    levelUps: result.report?.levelUps ?? 0,
-  });
-}
-
-/**
- * Settles the entry drain's outcome now that fetched progress can adjudicate it. A delivered
- * row a stop kept from installing is stopped back. A `blocked` intent gets one retry — the
- * pass's own queued-checkpoint drain may have closed the source row — and a delivery there earns
- * one bounded second pass to attach the minted row; an `avatar-switched` retry result runs the
- * same server-reported fallback the entry path would, so the account's switch is never dropped
- * silently. A `capped` intent broadcasts the cap halt only while progress names its source row
- * closed; a still-active source keeps silently, and any other row clears the intent without a
- * broadcast, which would otherwise repeat on every resync forever.
- */
-async function applyStartFlush(
-  context: WorkerContext,
-  avatarID: string,
-  claim: boolean,
-  signals: Readonly<FlowSignals>,
-  startFlush: Readonly<PendingStartFlushResult>,
-  result: Readonly<ResyncResult>,
-): Promise<void> {
-  if (startFlush.outcome === 'delivered') {
-    await stopBackUninstalledRow(context, startFlush.started, signals);
-
-    return;
-  }
-
-  if (startFlush.outcome === 'blocked') {
-    const retryFlush = await flushPendingStart(context, signals, avatarID);
-
-    if (retryFlush.outcome === 'delivered') {
-      await runResyncPass(context, avatarID, claim, signals);
-      await stopBackUninstalledRow(context, retryFlush.started, signals);
-    } else if (retryFlush.outcome === 'undelivered') {
-      context.updateConnectivity(false);
-    } else if (retryFlush.outcome === 'avatar-switched') {
-      await runAvatarSwitchedFallback(context, avatarID, claim, signals, retryFlush);
-    } else if (retryFlush.outcome === 'sim-version-expired') {
-      emitResyncStatus(context, { kind: 'sim-version-expired' });
-    }
-
-    return;
-  }
-
-  if (startFlush.outcome !== 'capped') {
-    return;
-  }
-
-  const intent = await readPendingStartIntent();
-
-  if (intent === undefined) {
-    return;
-  }
-
-  const progressActivity = result.progress?.activity;
-
-  if (progressActivity === undefined || progressActivity.id !== intent.activityID) {
-    await removePendingStartIntent(intent.activityID);
-
-    return;
-  }
-
-  if (progressActivity.status !== 'active') {
-    emitCapStatus(context, 0, true);
-  }
-}
-
-/**
- * Stops a drain-minted row back durably when a stop landed after its delivery and the pass never
- * installed it — active on the server with nothing local driving it, the next resync would
- * otherwise revive the run the player just ended.
- */
-async function stopBackUninstalledRow(
-  context: WorkerContext,
-  started: Readonly<ActivityData>,
-  signals: Readonly<FlowSignals>,
-): Promise<void> {
-  if (!signals.stop.aborted) {
-    return;
-  }
-
-  if (context.getSimulation().activity?.id === started.id) {
-    return;
-  }
-
-  await submitStopIntent(context, started);
 }
 
 function toActivityFailureAction(failureAction: ContractFailureAction): ActivityFailureAction {
@@ -673,8 +503,4 @@ function emitFailureActionStatus(
   failureAction: ActivityFailureAction,
 ): void {
   context.broadcast({ failureAction, type: WorkerMessageType.FailureActionStatus });
-}
-
-function emitCapStatus(context: WorkerContext, remainingMs: number, halted: boolean): void {
-  context.broadcast({ halted, remainingMs, type: WorkerMessageType.OfflineCapStatus });
 }

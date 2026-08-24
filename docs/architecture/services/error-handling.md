@@ -60,12 +60,12 @@ Status assignment follows the failure's nature:
 - **409 Conflict** — an operation whose precondition the resource's current state contradicts.
 
 Every activity code applies to the `advanceActivity` bulk path — a mint or a continuation — as well
-as the single call its meaning names, with one exception: `NODE_UNREACHABLE` checks only
-`startActivity`'s admission; a root mint's reachability is adjudicated at replay instead. On the
-codes that do apply, an append error's `data` carries `activityID`, naming the request's last fully
-committed row. It also carries `appendedHead` where the single-call `data` omits it. An activity
-code also tells a device whether to keep the pending activity start it just submitted or drop it;
-[the seed chain](../game/seed-chain.md#handing-an-activity-start-to-the-server) owns that split.
+as the single call its meaning names. No request-path check rejects an unreachable node:
+reachability is adjudicated at replay. An append error's `data` carries `activityID`, naming the
+request's last fully committed row. It also carries `appendedHead` where the single-call `data`
+omits it. An activity code also tells a device whether to keep the pending activity start it just
+submitted or drop it; [the seed chain](../game/seed-chain.md#handing-an-activity-start-to-the-server)
+owns that split.
 
 | Domain       | Code                   | Status | Meaning                                                                                                                                      | data                                   |
 | ------------ | ---------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
@@ -76,7 +76,6 @@ code also tells a device whether to keep the pending activity start it just subm
 | activity     | `CHECKPOINT_INVALID`   | 422    | Checkpoint batch fails structural or cross-check validation; `reason` names the failed check.                                                | `{ reason }`                           |
 | activity     | `NODE_NOT_REVEALED`    | 409    | Scope has no chain row — `revealNodes` was never called for it.                                                                              | —                                      |
 | activity     | `NODE_UNKNOWN`         | 404    | Scope id doesn't resolve to a node on the current world map.                                                                                 | —                                      |
-| activity     | `NODE_UNREACHABLE`     | 409    | Start's scope node resolves but sits outside the avatar's selectable set.                                                                    | —                                      |
 | activity     | `SESSION_EVICTED`      | 403    | Append or stop from a session that is no longer the activity's writer; fatal for that stream.                                                | —                                      |
 | activity     | `SIM_VERSION_EXPIRED`  | 410    | Stamped or current sim version is past retention, or its engine trails the content the activity would stamp.                                 | `{ currentSimVersion }`                |
 | activity     | `SIM_VERSION_UNKNOWN`  | 409    | Stamped or current sim version isn't registered; on a pinned hash the client retries once without it, landing on the registry-current stamp. | `{ currentSimVersion }`                |

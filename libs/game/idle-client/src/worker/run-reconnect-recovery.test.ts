@@ -5,7 +5,7 @@ import * as db from '@vers/mock-services/db';
 import invariant from 'tiny-invariant';
 import { readPendingStopIntent } from '../submission/read-pending-stop-intent';
 import type { ActivityServiceClient } from '../submission/types';
-import { writePendingStartIntent } from '../submission/write-pending-start-intent';
+import { writeActivityStart } from '../submission/write-activity-start';
 import { writePendingStopIntent } from '../submission/write-pending-stop-intent';
 import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
 import { WorkerMessageType } from '../types';
@@ -19,24 +19,14 @@ async function setupTest(userID: string) {
   return { context };
 }
 
-test('it drops the held start intent as stale and falls back to the reported avatar when the intent avatar is no longer active', async () => {
+test("it resyncs the reporting tab's avatar when an undelivered start names a different one", async () => {
   const viewer = await createViewer();
   const avatar = await db.avatarCollection.create({ userID: viewer.user.id });
   const ctx = await setupTest(viewer.user.id);
 
-  // the intent's source row already reads closed, so the recovery's drain would mint the next
-  // row if the intent's avatar were still active
-  const source = await db.activityCollection.create({
-    avatarID: avatar.id,
-    status: 'stopped',
-  });
-
-  await writePendingStartIntent({
-    activityID: source.id,
-    avatarID: avatar.id,
-    scopeID: source.scopeID,
-    scopeType: source.scopeType,
-  });
+  // an undelivered activity start names this avatar, so the recovery would drain it if the
+  // account were still on that avatar
+  await writeActivityStart(createMockActivityData({ avatarID: avatar.id }));
 
   await db.activityCollection.create({
     appendedHead: 0,

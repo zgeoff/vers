@@ -4,6 +4,7 @@ import type { ActivityContract } from '@vers/contract-activity';
 import { createMockContentDocument } from '@vers/contract-activity/test-utils';
 import {
   createActivityChainRow,
+  createActivityRow,
   createAvatarRow,
   createServiceToken,
   createTestDB,
@@ -15,7 +16,7 @@ import { buildRPCTestClient } from '@vers/test-utils';
 import { createActivityService } from '../create-activity-service';
 
 /**
- * Several tests here drive startActivity, stopActivity, or trackActivityProgress, whose own
+ * Several tests here drive advanceActivity, stopActivity, or trackActivityProgress, whose own
  * `db.transaction()` can't nest under the default rollback-on-dispose isolation — this suite runs
  * against a real, committed schema clone instead.
  */
@@ -43,12 +44,9 @@ test('it stamps the acting session as the writer', async () => {
 
   await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
 
-  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
-
-  const started = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const keyPair = await getTestServiceKeyPair();
@@ -90,10 +88,9 @@ test('it reports NOT_FOUND for a stopped activity', async () => {
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   await client.stopActivity({ avatarID: avatar.id });
@@ -116,12 +113,9 @@ test("it reports NOT_FOUND for another user's activity", async () => {
 
   await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
 
-  const ownerClient = buildRPCTestClient<ActivityContract>(ctx.app, { token: owner.token });
-
-  const started = await ownerClient.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const intruder = await createViewer({
@@ -147,10 +141,9 @@ test('it rejects a session-less caller with UNAUTHORIZED', async () => {
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   expect(client.resumeActivity({ activityID: started.id })).rejects.toMatchObject({

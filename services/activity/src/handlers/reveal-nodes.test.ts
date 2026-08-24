@@ -222,7 +222,7 @@ test('it converges two concurrent reveals of the same node on one genesis seed',
   expect(rows).toHaveLength(1);
 });
 
-test("it derives a node's encounter matching startActivity's own sealed derivation for the same coordinate and avatar", async () => {
+test("it derives a node's encounter matching the root mint's own sealed derivation for the same coordinate and avatar", async () => {
   await using ctx = await setupTest();
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });

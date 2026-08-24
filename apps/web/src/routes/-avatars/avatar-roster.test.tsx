@@ -10,7 +10,6 @@ import { createMockAvatar } from '../../test-utils/factories/create-mock-avatar'
 import { renderWithRouter } from '../../test-utils/render-with-router';
 import { setIdleWorkerHandle } from '../../test-utils/set-idle-worker-handle';
 import { withRequestContext } from '../../test-utils/with-request-context';
-import { writePendingStartIntentRecord } from '../../test-utils/write-pending-start-intent-record';
 import { AvatarRoster } from './avatar-roster';
 
 test('it renders each avatar as a selectable card and offers a create slot', async () => {
@@ -123,24 +122,4 @@ test('it lets a click on the currently-out avatar proceed', async () => {
 
     expect(screen.queryByText(/is out on an activity/)).not.toBeInTheDocument();
   });
-});
-
-test('it blocks a click on a different avatar than the one named by a parked continuation-start intent', async () => {
-  const user = userEvent.setup();
-  const out = createMockAvatar({ name: 'Karnak' });
-  const other = createMockAvatar({ name: 'Zetha' });
-
-  await writePendingStartIntentRecord({
-    activityID: 'activity_1',
-    avatarID: out.id,
-    scopeID: '2_0',
-    scopeType: 'world_map_node',
-  });
-
-  renderWithRouter(<AvatarRoster roster={{ activeAvatarID: null, avatars: [out, other] }} />);
-
-  const otherCard = await screen.findByRole('button', { name: /Zetha/ });
-
-  await user.click(otherCard);
-  await screen.findByText('Karnak is out on an activity — finish or stop it to switch');
 });

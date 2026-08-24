@@ -4,6 +4,7 @@ import type { ActivityContract } from '@vers/contract-activity';
 import { createMockContentDocument } from '@vers/contract-activity/test-utils';
 import {
   createActivityChainRow,
+  createActivityRow,
   createAnonymousViewer,
   createAvatarRow,
   createServiceToken,
@@ -15,9 +16,10 @@ import { createSimVersionRow } from '@vers/sim-registry/test-utils';
 import { buildRPCTestClient } from '@vers/test-utils';
 import { createActivityService } from '../create-activity-service';
 import { createMockCheckpointBatch } from '../test-utils/factories/create-mock-checkpoint-batch';
+import { toActivityData } from './to-activity-data';
 
 /**
- * Several tests here drive startActivity, stopActivity, or trackActivityProgress, whose own
+ * Several tests here drive advanceActivity, stopActivity, or trackActivityProgress, whose own
  * `db.transaction()` can't nest under the default rollback-on-dispose isolation — this suite runs
  * against a real, committed schema clone instead.
  */
@@ -42,16 +44,15 @@ test('it returns a fresh activity with a null anchor at verifiedHead 0', async (
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const progress = await client.getLatestActivityProgress({ avatarID: avatar.id });
 
   expect(progress).toStrictEqual({
-    activity: started,
+    activity: toActivityData(started),
     anchor: null,
     appendedHead: 0,
     failureAction: 'abort',
@@ -75,10 +76,9 @@ test("it returns the avatar's persisted failure action", async () => {
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const progress = await client.getLatestActivityProgress({ avatarID: avatar.id });
@@ -96,10 +96,9 @@ test('it returns the server clock beside the resume cursors', async () => {
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const progress = await client.getLatestActivityProgress({ avatarID: avatar.id });
@@ -120,10 +119,9 @@ test('it returns the activity anchored to its verified checkpoint once verifiedH
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const batch = createMockCheckpointBatch({ startPrevHash: started.startHash, startVersion: 1 });
@@ -161,10 +159,9 @@ test('it returns the newest activity regardless of status', async () => {
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   await client.stopActivity({ avatarID: avatar.id });
@@ -198,12 +195,9 @@ test('it rejects a foreign avatar with NOT_FOUND', async () => {
 
   await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
 
-  const ownerClient = buildRPCTestClient<ActivityContract>(ctx.app, { token: owner.token });
-
-  await ownerClient.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
@@ -247,10 +241,10 @@ test('it reports isWriter false to a session another writer displaced', async ()
 
   const clientA = buildRPCTestClient<ActivityContract>(ctx.app, { token: tokenA });
 
-  const started = await clientA.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
+    writerSessionId: 'session-a',
   });
 
   const tokenB = await createServiceToken({
@@ -275,18 +269,15 @@ test('it reports isWriter false to a session another writer displaced', async ()
 test('it reports isWriter true for an unstamped stream whatever the session', async () => {
   await using ctx = await setupTest();
 
-  // the session-less token leaves the started row's writer unstamped
+  // the seeded row carries no writer session, so the first append claims it
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
   const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
 
   await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
 
-  const sessionlessClient = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
-
-  await sessionlessClient.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const keyPair = await getTestServiceKeyPair();

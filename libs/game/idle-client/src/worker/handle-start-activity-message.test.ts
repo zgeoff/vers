@@ -73,40 +73,6 @@ test('it mints a row locally, installs it, and persists the pending activityStar
   expect(mintedServerSide).toStrictEqual([]);
 });
 
-test('it never calls the activity service to start', async () => {
-  server.use(
-    mockActivityService.startActivity.handler(() => {
-      throw new Error('the local mint path must never call startActivity');
-    }),
-  );
-
-  const context = createStubWorkerContext({
-    bundledEngineHash: 'engine_hash_1',
-    submitter: createStubSubmitter(),
-  });
-
-  const seed = createMockNodeSeed({
-    avatarID: 'avatar_no_rpc',
-    encounterNode: { difficulty: 1 },
-    nodeID: '0_0',
-  });
-
-  await writeNodeSeeds(seed.avatarID, [seed]);
-  await writeStartStamps({ keyVersion: 1, secretRef: 'worldmap', secretVersion: 1 });
-
-  await writeContentDocumentCache(
-    createMockContentDocument({ contentVersion: seed.contentVersion }),
-  );
-
-  const result = await handleStartActivityMessage(context, {
-    avatarID: seed.avatarID,
-    scopeID: seed.nodeID,
-    scopeType: 'world_map_node',
-  });
-
-  expect(result.kind).toBe('started');
-});
-
 test('it answers attached without re-minting when the request already matches the live scope', async () => {
   const submitter = createStubSubmitter();
   const context = createStubWorkerContext({ submitter });

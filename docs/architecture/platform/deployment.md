@@ -270,10 +270,10 @@ digest-pinned image ref, the provider app's flycast URL, and the build's bundled
 build derives and replays. The row refreshes whenever the fleet's resolved digest or the bundled
 content version differs from what's stored, even when the provider app itself needs no change.
 
-`startActivity` refuses to stamp a version whose row's max content version falls behind the content
-registry's current version, answering `SIM_VERSION_EXPIRED` rather than accepting a start it could
-never replay. An engine build must deploy and reconcile its row's max content version before the
-content-registry publish that depends on it goes out — the ordering this refusal assumes.
+An activity-start mint refuses to stamp a version whose row's max content version falls behind the
+content registry's current version, answering `SIM_VERSION_EXPIRED` rather than accepting a start it
+could never replay. An engine build must deploy and reconcile its row's max content version before
+the content-registry publish that depends on it goes out — the ordering this refusal assumes.
 
 Pruning stale provider apps and expired registry rows is a separate sweep's job — the deploy CLI
 only ever creates and refreshes.

@@ -43,7 +43,6 @@ export { readCachedNodeIDs } from './submission/read-cached-node-ids';
 export type { CachedNodeSeed } from './submission/read-node-seed';
 export { readNodeSeed } from './submission/read-node-seed';
 export { readOfflineClearedNodeIDs } from './submission/read-offline-cleared-node-ids';
-export { readPendingStartIntent } from './submission/read-pending-start-intent';
 export { readStartStamps } from './submission/read-start-stamps';
 export { writeQueuedCheckpoint } from './submission/write-queued-checkpoint';
 export { writeActivityStart } from './submission/write-activity-start';
@@ -51,7 +50,6 @@ export { writeActivityStart } from './submission/write-activity-start';
 export type {
   ActivitySubmissionContext,
   NodeSeed,
-  PendingStartIntent,
   RevealedNodeSeed,
   StartStampsPreference,
 } from './submission/types';

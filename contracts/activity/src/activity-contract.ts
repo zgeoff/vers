@@ -128,7 +128,7 @@ const RevealStampsSchema = z.object({
 
 /**
  * Every addressable `first_clear` grant key the avatar holds, regardless of viewport — the
- * completed set `startActivity`'s selectable-node gate and its client mirror both evaluate against.
+ * completed set a client's own selectable-node check evaluates against.
  */
 const CompletedNodeIDsSchema = z.array(z.string());
 
@@ -150,9 +150,9 @@ export const activityContract = {
 
           /**
            * A client-minted activity start the server has never seen — offline-first ingest.
-           * Present only when `activityID` names a row this request itself mints, under the same
-           * gates `startActivity` runs, before the continuation loop appends onto it. Absent for
-           * the ordinary case: `activityID` names a row the server already minted.
+           * Present only when `activityID` names a row this request itself mints, before the
+           * continuation loop appends onto it. Absent for the ordinary case: `activityID` names a
+           * row the server already holds.
            */
           activityStart: OfflineActivityStartSubmissionSchema.optional(),
 
@@ -384,9 +384,9 @@ export const activityContract = {
 
   /**
    * Mints (or re-affirms) the genesis chain row for each given world-map node, on the avatar's
-   * behalf, so a later `startActivity` at the same scope has a chain to anchor against, and derives
-   * that node's encounter alongside the crypto stamps a start needs — every input an offline-open
-   * start synthesizes a valid activity start from without the server. Idempotent per node: a
+   * behalf, so a later activity start at the same scope has a chain to anchor against, and derives
+   * that node's encounter alongside the crypto stamps a start needs — every input a client
+   * synthesizes a valid activity start from without the server. Idempotent per node: a
    * repeat reveal self-assigns the existing row's `genesisSeed` rather than rolling a new one, so
    * the same node reveals to the same seed regardless of how many times or how many concurrent
    * callers reveal it. Authorization is ownership of the avatar only — whether a given node is one
@@ -418,87 +418,6 @@ export const activityContract = {
           status: 404,
         },
         NOT_FOUND: { data: z.object({}), message: 'Avatar not found' },
-      }),
-    ),
-
-  startActivity: authedRoute
-    .route({
-      method: 'POST',
-      path: '/activities',
-      summary: 'Start an activity for an avatar owned by the caller',
-    })
-    .input(
-      z.object({
-        avatarID: z.string(),
-
-        /**
-         * An advisory client-stamped wall-clock timestamp for operator and analytics queries
-         * only, never read by the claim or any check.
-         */
-        playedAt: z.date().nullable().optional(),
-
-        /**
-         * The avatar's immediately-prior activity across every chain, absent or null only for
-         * its first-ever activity. Client-stamped; trusted for sequencing only, never for
-         * legality.
-         */
-        predecessorActivityID: z.string().nullable().optional(),
-
-        scopeID: ScopeIdentifierSchema,
-        scopeType: ScopeIdentifierSchema,
-        simVersion: z.string().optional(),
-
-        /**
-         * Idempotency key stamped on the minted row. A duplicate delivery carrying the same key
-         * succeeds with the existing row while it is never-appended; distinct intents into the
-         * same scope carry distinct keys and still conflict.
-         */
-        startKey: z.string().max(128).optional(),
-      }),
-    )
-    .output(ActivityDataSchema)
-    .errors(
-      defineErrors({
-        AVATAR_NOT_ACTIVE: {
-          data: AvatarNotActiveDataSchema,
-          message: "The account's active avatar is not the one starting",
-          status: 409,
-        },
-        CHAIN_QUARANTINED: {
-          data: z.object({}),
-          message: 'The chain is quarantined pending replay adjudication',
-          status: 409,
-        },
-        CONFLICT: {
-          data: z.object({ activity: ActivityDataSchema }),
-          message: 'An activity is already active for this avatar',
-        },
-        NODE_NOT_REVEALED: {
-          data: z.object({}),
-          message: 'The scope node has no revealed chain to start',
-          status: 409,
-        },
-        NODE_UNKNOWN: {
-          data: z.object({}),
-          message: 'The scope node is not registered on the world map',
-          status: 404,
-        },
-        NODE_UNREACHABLE: {
-          data: z.object({}),
-          message: "The scope node is outside the avatar's selectable set",
-          status: 409,
-        },
-        NOT_FOUND: { data: z.object({}), message: 'Avatar not found' },
-        SIM_VERSION_EXPIRED: {
-          data: SimVersionProblemDataSchema,
-          message: 'The stamped or current sim version is past retention',
-          status: 410,
-        },
-        SIM_VERSION_UNKNOWN: {
-          data: SimVersionProblemDataSchema,
-          message: 'The stamped or current sim version is not registered',
-          status: 409,
-        },
       }),
     ),
 
