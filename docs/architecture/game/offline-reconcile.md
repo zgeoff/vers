@@ -95,8 +95,8 @@ app-web re-validates the session against the session service on every server cal
 device's next call the row is gone, so app-web clears the cookie and passes the call on naming no
 acting user. A service refuses a call that names no acting user before any activity check runs.
 
-The evicted session's undelivered offline work therefore never reaches the server. The player is
-warned before taking over, so the loss is never silent.
+The evicted session's undelivered offline work is therefore refused rather than delivered. The
+player is warned before taking over, so the loss is never silent.
 
 Session eviction and writer ownership are separate mechanisms on separate scopes. The session
 belongs to the account, and evicting it signs a device out of everything. The writer belongs to one
