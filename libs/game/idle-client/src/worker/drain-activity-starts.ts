@@ -1,5 +1,4 @@
 import type { ActivityData } from '@vers/contract-activity';
-import { ingestActivityStart } from '../submission/ingest-activity-start';
 import { readAllActivityStarts } from '../submission/read-all-activity-starts';
 import { readLastStartedActivity } from '../submission/read-last-started-activity';
 import { removeActivityStart } from '../submission/remove-activity-start';
@@ -7,6 +6,7 @@ import { removeLastStartedActivity } from '../submission/remove-last-started-act
 import { removePendingStartIntent } from '../submission/remove-pending-start-intent';
 import { removeQueuedCheckpoints } from '../submission/remove-queued-checkpoints';
 import { writeLastStartedActivity } from '../submission/write-last-started-activity';
+import { ingestAndBroadcastActivityStart } from './ingest-and-broadcast-activity-start';
 import type { WorkerContext } from './types';
 
 /**
@@ -14,8 +14,8 @@ import type { WorkerContext } from './types';
  * simulation was lost to a worker reload, so nothing is registered to drive its checkpoint flush.
  * Delivers them in predecessor order, so the server always sees an activity start's predecessor
  * before the activity start itself and an absent predecessor means the predecessor was refused,
- * never merely late. Per row the ingest outcome decides the action: `ingested` registers the
- * activity so its durably queued checkpoints seed and flush; `deferred` leaves the row for a later
+ * never merely late. Per row the ingest outcome decides the action: `ingested` announces the
+ * activity to connected tabs and registers it so its durably queued checkpoints seed and flush; `deferred` leaves the row for a later
  * recovery; `rejected` drops the row and, because a successor built on a refused activity start can
  * never verify, its whole dependent subtree. A row for a different avatar this device also owns is
  * left untouched — it drains on that avatar's own recovery, since minting its activity start needs
@@ -39,7 +39,7 @@ export async function drainActivityStarts(context: WorkerContext, avatarID: stri
       continue;
     }
 
-    const outcome = await ingestActivityStart(context.getClient(), row.id);
+    const outcome = await ingestAndBroadcastActivityStart(context, row.id);
 
     if (outcome === 'rejected') {
       // ingest already removed the pending row; clear the queued checkpoints and held intent that

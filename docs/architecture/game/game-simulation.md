@@ -83,7 +83,9 @@ The client anchors each start at the seed chain's current appended anchor, which
 delivers alongside the seed (see [seed chain](./seed-chain.md)). It persists the synthesized start
 to the durable pending-activity-starts store before installing it, so a crash between mint and
 install loses nothing. It queues the activity's checkpoints through the durable checkpoint
-submitter, which lands them whenever the server is next reachable.
+submitter, which lands them whenever the server is next reachable. The server holds no row for the
+activity until that start lands. A client read keyed on the activity id — the run's revealed rewards
+— waits for the ingest rather than asking after a run the server has never seen.
 
 `advanceActivity` is the server's authority over a client-authored start. It re-derives every
 authoritative input from its own truth and trusts none of the payload:

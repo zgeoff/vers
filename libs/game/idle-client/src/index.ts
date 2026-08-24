@@ -16,6 +16,7 @@ export { advanceWriterGeneration } from './state/advance-writer-generation';
 export { setEngagedActivityID } from './state/set-engaged-activity-id';
 export { setFailureAction } from './state/set-failure-action';
 export { setLastCompletedActivityID } from './state/set-last-completed-activity-id';
+export { setLastIngestedActivityID } from './state/set-last-ingested-activity-id';
 export { setOfflineCapStatus } from './state/set-offline-cap-status';
 export { setResyncStatus } from './state/set-resync-status';
 export { setRewardSlotLedger } from './state/set-reward-slot-ledger';
@@ -31,11 +32,13 @@ export { useEngagedActivityID } from './state/use-engaged-activity-id';
 export { useAvatar } from './state/use-avatar';
 export { useFailureAction } from './state/use-failure-action';
 export { useLastCompletedActivityID } from './state/use-last-completed-activity-id';
+export { useLastIngestedActivityID } from './state/use-last-ingested-activity-id';
 export { useRewardSlotLedger } from './state/use-reward-slot-ledger';
 export { useSimulationInitialized } from './state/use-simulation-initialized';
 export { useWriterAbortSignal } from './state/use-writer-abort-signal';
 export { useWriterDisplacedActivityID } from './state/use-writer-displaced-activity-id';
 export { useWriterGeneration } from './state/use-writer-generation';
+export { readActivityStart } from './submission/read-activity-start';
 export { readCachedNodeIDs } from './submission/read-cached-node-ids';
 export type { CachedNodeSeed } from './submission/read-node-seed';
 export { readNodeSeed } from './submission/read-node-seed';
@@ -60,6 +63,7 @@ export { useSimulationTransport } from './transport/use-simulation-transport';
 
 export type {
   ActivityCompletedMessage,
+  ActivityStartIngestedMessage,
   CheckpointStreamInvalidMessage,
   FailureActionStatusMessage,
   OfflineCapStatusMessage,
