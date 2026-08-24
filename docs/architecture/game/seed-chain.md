@@ -114,7 +114,8 @@ index, and its seed must equal the chain's appended seed. One computed against a
 has since moved past is refused rather than layered onto a position that no longer exists.
 
 What the device does next depends on whether the server would refuse the same activity start a
-second time:
+second time. The device reads the refusal's error code to tell the two apart
+([error handling](../services/error-handling.md#registry)):
 
 - **The server would always refuse it, so the device drops it.** A node that resolves to no
   coordinate, a chain that was never revealed, a sim version past retention, and a simulation that

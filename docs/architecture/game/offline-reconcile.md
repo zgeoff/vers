@@ -86,10 +86,24 @@ the player actually walked — is lost. The gap between the position the device 
 position the server confirmed is exactly what is lost.
 
 This loss is mechanical, not a policy choice. While the original device is offline or closed,
-nothing can reach its outbox — it sits in that device's own local storage. An avatar has one active
-session at a time, so a session that takes over kicks the previous one off, and the kicked-off
-session's undelivered offline work is discarded rather than delivered. The player is warned before
-taking over, so the loss is never silent.
+nothing can reach its outbox — it sits in that device's own local storage.
+
+An account holds one verified session, so verifying a session on a new device evicts every other
+session row the account owns ([auth](../services/auth.md#session-lifecycle)). The evicted device
+signs itself out, so no service needs a rule of its own for a caller whose session was taken over.
+app-web re-validates the session against the session service on every server call. On the evicted
+device's next call the row is gone, so app-web clears the cookie and passes the call on naming no
+acting user. A service refuses a call that names no acting user before any activity check runs.
+
+The evicted session's undelivered offline work therefore never reaches the server. The player is
+warned before taking over, so the loss is never silent.
+
+Session eviction and writer ownership are separate mechanisms on separate scopes. The session
+belongs to the account, and evicting it signs a device out of everything. The writer belongs to one
+activity: that activity's head row stamps the session allowed to append to it, and resuming the
+activity on another session takes the stamp over
+([game simulation](./game-simulation.md#checkpoint-streams)). An avatar's other activities keep the
+writer they already carry.
 
 ## Settlement in order
 
