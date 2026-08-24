@@ -91,26 +91,35 @@ nothing can reach its outbox — it sits in that device's own local storage.
 An account holds one verified session, so verifying a session on a new device evicts every other
 session row the account owns ([auth](../services/auth.md#session-lifecycle)). The evicted device
 signs itself out, so no service needs a rule of its own for a caller whose session was taken over.
-app-web re-validates the session against the session service on every server call. On the evicted
-device's next call the row is gone, so app-web clears the cookie and passes the call on naming no
-acting user. A service refuses a call that names no acting user before any activity check runs.
+app-web re-validates the session against the session service on every server call, and the evicted
+device's next call finds the row gone. app-web clears the cookie and refuses that call itself, so
+the evicted session's undelivered offline work is refused rather than delivered.
 
-The evicted session's undelivered offline work is therefore refused rather than delivered. The
-device discards it rather than holding it for a later retry: on a refusal naming the session
-superseded, the worker clears its pending activity starts, its queued checkpoints, and the
-preferences a recovery steers by. Work held instead would deliver on this device's next sign-in,
-reviving play the takeover retired. The player is warned before taking over, so the loss is never
-silent.
+### When a session ends
 
-Signing out clears the device's cookie in the same request that deletes the session row, so the
-worker meets no marked refusal and keeps its outbox. The next player to sign in on that device
-cannot deliver that work: a recovery drains only the acting avatar's activity starts, and the server
-refuses a start naming an avatar the acting user does not own.
+The outbox outlives the session that filled it. How the session ended decides what becomes of the
+work it holds.
 
-A session that reaches its own expiry keeps its outbox. app-web tells an eviction from an expiry by
-the session row: an eviction deletes the row, while an expiry leaves it in place for the refresh
-call to judge. Only an eviction marks its refusal, so a device whose session lapsed while it was
-closed still delivers the offline play it holds once the player signs back in.
+| How the session ended        | Its row         | The outbox |
+| ---------------------------- | --------------- | ---------- |
+| Taken over on another device | deleted at once | discarded  |
+| Signed out on this device    | deleted at once | kept       |
+| Reached its own expiry       | left in place   | kept       |
+
+A takeover is the one ending the device acts on. app-web marks the refusal it answers, so the worker
+can tell a takeover from an expiry. On that mark the worker clears its pending activity starts, its
+queued checkpoints, and the preferences a recovery steers by. Work held instead would deliver on
+this device's next sign-in and revive play the takeover retired. The player is warned before taking
+over, so the loss is never silent.
+
+An expiry leaves the row in place for the refresh call to judge, which is what lets app-web tell the
+two endings apart. Nothing marks that refusal. A device whose session lapsed while it was closed
+therefore still delivers the offline play it holds once the player signs back in.
+
+Signing out deletes the row and clears this device's cookie in one request, so no later call
+observes the deleted row and nothing marks a refusal. The next player to sign in on the device still
+cannot deliver the work left behind. A recovery drains only the acting avatar's activity starts, and
+the server refuses a start naming an avatar the acting user does not own.
 
 Session eviction and writer ownership are separate mechanisms on separate scopes. The session
 belongs to the account, and evicting it signs a device out of everything. The writer belongs to one
