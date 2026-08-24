@@ -1,4 +1,6 @@
 import { parseTrigger } from '../upkeep/parse-trigger';
+import { buildHeadingPattern } from './build-heading-pattern';
+import { collectScopePaths } from './collect-scope-paths';
 import type { Finding, IssueShape } from './types';
 
 /**
@@ -20,6 +22,11 @@ const TYPE_LABELS = new Set([
   'spike',
 ]);
 
+/**
+ * Title of the feature template's section for the mechanism its author expects to work. Scope is
+ * the contract a reader can build against; this section is the guess a reader checks first.
+ */
+const APPROACH_TITLE = 'Approach (unverified)';
 const TEMPLATE_DIR = '.github/ISSUE_TEMPLATE';
 const BUG_TEMPLATE = `${TEMPLATE_DIR}/bug.md`;
 const FEATURE_TEMPLATE = `${TEMPLATE_DIR}/feature.md`;
@@ -87,12 +94,29 @@ export function checkIssue(issue: IssueShape): Array<Finding> {
     });
   }
 
+  const scopePaths = collectScopePaths(issue.body);
+
+  if (scopePaths.length > 0) {
+    findings.push({
+      rule: 'a Scope bullet states an outcome; a file path belongs in Notes as dated orientation',
+      task: `Move ${scopePaths.map((path) => `\`${path}\``).join(', ')} out of \`## Scope\` and into \`## Notes\``,
+    });
+  }
+
   if (issue.labels.includes('feature')) {
     if (!hasSection(issue.body, 'Scope')) {
       findings.push({
         rule: 'a feature issue follows its template',
         stub: { kind: 'section', templatePath: FEATURE_TEMPLATE, title: 'Scope' },
         task: 'Add a `## Scope` section listing the behaviors this delivers',
+      });
+    }
+
+    if (!hasSection(issue.body, APPROACH_TITLE)) {
+      findings.push({
+        rule: 'a feature issue separates the mechanism it guesses at from the outcome it contracts for',
+        stub: { kind: 'section', templatePath: FEATURE_TEMPLATE, title: APPROACH_TITLE },
+        task: `Add an \`## ${APPROACH_TITLE}\` section naming the mechanism you expect, or \`none\` where you have no candidate`,
       });
     }
 
@@ -121,5 +145,5 @@ export function checkIssue(issue: IssueShape): Array<Finding> {
 }
 
 function hasSection(body: string, title: string): boolean {
-  return new RegExp(`^##\\s+${title}\\s*$`, 'im').test(body);
+  return buildHeadingPattern(title).test(body);
 }

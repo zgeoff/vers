@@ -20,6 +20,14 @@ story. Delete this section only when nothing a player can perceive changes.
 
 - <!-- the behaviors this delivers, one line each -->
 
+## Approach (unverified)
+
+<!--
+The mechanism you expect to carry the Scope above, and what you have not checked about it. Scope is
+the contract; this is a guess the implementer verifies before building on it. Write `none` when you
+have no candidate mechanism.
+-->
+
 ## Notes
 
 <!-- dependencies (#issue links), design-doc links, interactions with other work, non-goals -->
