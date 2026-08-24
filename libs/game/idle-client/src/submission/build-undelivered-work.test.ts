@@ -11,7 +11,7 @@ test('it counts the union of pending starts, checkpoint activities, and the live
     startIDs: ['act-start'],
   });
 
-  expect(work.activityCount).toBe(3);
+  expect(work).toStrictEqual({ activityCount: 3, playMs: 0 });
 });
 
 test('it counts a live run holding no queued rows', () => {
@@ -21,7 +21,7 @@ test('it counts a live run holding no queued rows', () => {
     startIDs: [],
   });
 
-  expect(work.activityCount).toBe(1);
+  expect(work).toStrictEqual({ activityCount: 1, playMs: 0 });
 });
 
 test('it does not double-count an activity that appears in two inputs', () => {
@@ -33,7 +33,7 @@ test('it does not double-count an activity that appears in two inputs', () => {
     startIDs: ['act-both'],
   });
 
-  expect(work.activityCount).toBe(1);
+  expect(work).toStrictEqual({ activityCount: 1, playMs: 0 });
 });
 
 test('it sums per-activity spans across activities', () => {
@@ -48,7 +48,7 @@ test('it sums per-activity spans across activities', () => {
     startIDs: [],
   });
 
-  expect(work.playMs).toBe(5000);
+  expect(work).toStrictEqual({ activityCount: 2, playMs: 5000 });
 });
 
 test('it returns 0 ms for a single queued row', () => {
@@ -60,5 +60,5 @@ test('it returns 0 ms for a single queued row', () => {
     startIDs: [],
   });
 
-  expect(work.playMs).toBe(0);
+  expect(work).toStrictEqual({ activityCount: 1, playMs: 0 });
 });
