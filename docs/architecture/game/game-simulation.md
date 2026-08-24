@@ -153,10 +153,13 @@ tracks how far the client has written; `verified_head` tracks how far the verifi
   `UNIQUE(activity_id, version)` plus deterministic checkpoint content — and dedupe runs before
   elapsed-time accounting, so a replayed tail never inflates duration.
 - **Each activity has one writer.** The head row stamps the session allowed to append, and resuming
-  on a new session takes the writer over. An append from any other session fails fatally, so a
-  displaced writer's in-flight submissions die rather than interleave. A terminal status — stopped,
-  rejected, capped, quarantined — rejects any later append. Together these resolve every race
-  between logout, forced logout, stop, rejection, and cap.
+  on a new session takes the writer over. Writer ownership is per activity, never per account. The
+  account's single verified session is a separate rule
+  ([auth](../services/auth.md#session-lifecycle)): evicting a session signs its device out entirely
+  rather than demoting it. An append from any other session fails fatally, so a displaced writer's
+  in-flight submissions die rather than interleave. A terminal status — stopped, rejected, capped,
+  quarantined — rejects any later append. Together these resolve every race between logout, forced
+  logout, stop, rejection, and cap.
 
 ## Replay
 
