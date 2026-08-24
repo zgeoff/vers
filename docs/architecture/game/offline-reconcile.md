@@ -110,18 +110,20 @@ the work that session never delivered never reaches the server.
 The outbox outlives the session that filled it. What the device does with the work inside it depends
 on how that session ended.
 
-| What happened to the session | Its row         | The device's outbox |
-| ---------------------------- | --------------- | ------------------- |
-| Another device took it over  | deleted at once | discarded           |
-| The player signed out here   | deleted at once | kept                |
-| It ran past its expiry       | left in place   | kept                |
+| What happened to the session | Its row         | The device's outbox                 |
+| ---------------------------- | --------------- | ----------------------------------- |
+| Another device took it over  | deleted at once | discarded                           |
+| The player signed out here   | deleted at once | discarded, once the player confirms |
+| It ran past its expiry       | left in place   | kept                                |
 
-The worker throws work away only when another device takes the account over. app-web answers that
-call itself, and puts a header on the answer saying the session was taken over rather than that it
-ran out. The worker reads that header and clears its pending activity starts, its queued
-checkpoints, and the preferences it would otherwise recover from. A worker that kept that work would
-deliver it the next time the player signs in here, long after the player carried on elsewhere. The
-player is warned before taking the account over, so nothing is lost silently.
+The worker throws work away on two triggers: another device taking the account over, or the player
+signing out here. On a takeover, app-web answers the call itself and puts a header on the answer
+saying the session was taken over rather than that it ran out; the worker reads that header and
+clears its pending activity starts, its queued checkpoints, and the preferences it would otherwise
+recover from. A worker that kept that work would deliver it the next time the player signs in here,
+long after the player carried on elsewhere. The player is warned before taking the account over, so
+nothing is lost silently. A sign-out clears the outbox only once the player confirms its own
+warning.
 
 A session that runs past its expiry keeps its row until the next refresh call deletes it and reports
 what happened. app-web can tell a takeover from a lapsed session because of that, and it sends no
@@ -129,10 +131,18 @@ header when a session has run out. So a player whose session lapsed while the ap
 delivers the offline play the device holds, once they sign back in.
 
 When the player signs out, one request deletes the session row and clears this device's cookie
-together, so no later call ever finds the row gone and app-web never sends the header. The worker
-keeps its outbox. The next player to sign in here still cannot deliver that work: the worker drains
-only the acting avatar's activity starts, and the server refuses a start naming an avatar the acting
-user does not own.
+together, so no later call ever finds the row gone and app-web never sends the takeover header. The
+server therefore never learns what the device holds, so the browser decides. The sign-out control
+asks the worker what it is holding before it ends the session: a worker holding nothing signs the
+player straight out, and a worker holding runs warns the player first, naming how many runs and how
+much play sit in the outbox, and clears them once the player confirms. Cancelling leaves the outbox
+exactly where it is. A run still in progress counts as undelivered too, since its checkpoints are
+unverified whether or not they have reached the server.
+
+A later sign-in on this device still cannot deliver the outbox's work, even when a cancelled
+sign-out leaves it in place: the worker drains only the acting avatar's activity starts, and the
+server refuses a start naming an avatar the acting user does not own. That protection is a second
+defence, not the reason the warning discards the outbox.
 
 Session eviction and writer ownership are separate mechanisms on separate scopes. The session
 belongs to the account, and evicting it signs a device out of everything. The writer belongs to one
