@@ -165,11 +165,21 @@ test('it reports resyncing while a resync flow is in flight', async () => {
 });
 
 test('it reports continuing while a continuation flow is in flight', async () => {
-  server.use(mockActivityService.startActivity.handler(() => new Promise(() => {})));
+  const seed = createMockNodeSeed({
+    avatarID: 'avatar_continuing',
+    encounterNode: { difficulty: 1 },
+    nodeID: '0_0',
+  });
 
-  const context = createStubWorkerContext();
+  await writeNodeSeeds(seed.avatarID, [seed]);
+  await writeStartStamps({ keyVersion: 1, secretRef: 'worldmap', secretVersion: 1 });
+
+  // the content load past the local mint never settles, holding the flow in its continuing phase
+  server.use(mockActivityService.getContentDocument.handler(() => new Promise(() => {})));
+
+  const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_1' });
   const simulation = createSimulation();
-  const activity = createMockActivityData();
+  const activity = createMockActivityData({ avatarID: seed.avatarID, scopeID: seed.nodeID });
 
   simulation.startActivity(createMockAvatarData(), createMockActivityInput({ id: activity.id }));
   context.setSimulation(simulation);

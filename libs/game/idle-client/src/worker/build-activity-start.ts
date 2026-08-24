@@ -12,6 +12,14 @@ import type { WorkerContext } from './types';
 
 interface BuildActivityStartInput {
   readonly avatarID: string;
+
+  /**
+   * The predecessor to stamp, for a caller that holds the terminal row this start succeeds. Absent
+   * for a caller with no such row, which falls back to the avatar's durably tracked last-started
+   * activity.
+   */
+  readonly predecessorActivityID?: string | undefined;
+
   readonly scopeID: string;
   readonly scopeType: string;
   readonly startKey: string;
@@ -26,8 +34,9 @@ interface BuildActivityStartInput {
  * than its genesis, so a revisited node's start continues from where play actually left off.
  * `buildSnapshot` is a client-side optimistic guess — a hint the server re-authors and
  * exact-match-rejects at submission time, never a value this mint depends on for its own
- * correctness. `predecessorActivityID` stamps the avatar's durably tracked last-started activity,
- * null for this device's first start for the avatar. `playedAt` stamps the wall clock now.
+ * correctness. `predecessorActivityID` stamps the caller's own value when it holds one, else the
+ * avatar's durably tracked last-started activity, null for this device's first start for the
+ * avatar. `playedAt` stamps the wall clock now.
  */
 export async function buildActivityStart(
   context: WorkerContext,
@@ -52,7 +61,9 @@ export async function buildActivityStart(
   }
 
   const buildSnapshot = await buildOptimisticBuildSnapshot(context, input.avatarID);
-  const predecessorActivityID = await readPredecessorActivityID(input.avatarID);
+  const trackedPredecessorID = await readPredecessorActivityID(input.avatarID);
+
+  const predecessorActivityID = input.predecessorActivityID ?? trackedPredecessorID;
 
   const startHash = buildStartHash({
     contentVersion: nodeSeed.contentVersion,

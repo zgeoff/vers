@@ -5,6 +5,7 @@ import { createMockContentDocument } from '@vers/contract-activity/test-utils';
 import { mockReplayService } from '@vers/mock-services/replay';
 import {
   createActivityChainRow,
+  createActivityRow,
   createAnonymousViewer,
   createAvatarRow,
   createServiceToken,
@@ -17,6 +18,7 @@ import { buildRPCTestClient, waitFor } from '@vers/test-utils';
 import { createActivityService } from '../create-activity-service';
 import { server } from '../mocks/server';
 import { createMockCheckpointBatch } from '../test-utils/factories/create-mock-checkpoint-batch';
+import { toActivityData } from './to-activity-data';
 
 /**
  * `stopActivity` opens its own `db.transaction()` for the terminal-status claim and the chain's
@@ -44,16 +46,15 @@ test('it stops the active activity for an avatar owned by the acting user', asyn
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const stopped = await client.stopActivity({ avatarID: avatar.id });
 
   expect(stopped).toStrictEqual({
-    ...started,
+    ...toActivityData(started),
     status: 'stopped',
     stoppedAt: expect.toBeValidDate(),
     updatedAt: expect.toBeValidDate(),
@@ -96,10 +97,9 @@ test('it advances the chain anchor to the last appended checkpoint on stop', asy
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const batch = createMockCheckpointBatch({
@@ -140,10 +140,9 @@ test('it leaves the anchor unchanged when nothing was appended', async () => {
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const chainBefore = await ctx.db
@@ -177,10 +176,9 @@ test('it leaves the anchor unchanged when only the Started checkpoint was append
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const chainBefore = await ctx.db
@@ -226,10 +224,9 @@ test('it rejects a duplicate stop with NOT_FOUND and advances the anchor exactly
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const batch = createMockCheckpointBatch({ startPrevHash: started.startHash, startVersion: 1 });
@@ -275,16 +272,15 @@ test('it stops the targeted row when an activity id is named', async () => {
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const stopped = await client.stopActivity({ activityID: started.id, avatarID: avatar.id });
 
   expect(stopped).toStrictEqual({
-    ...started,
+    ...toActivityData(started),
     status: 'stopped',
     stoppedAt: expect.toBeValidDate(),
     updatedAt: expect.toBeValidDate(),
@@ -301,10 +297,9 @@ test('it succeeds idempotently when the targeted row already left active', async
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const stopped = await client.stopActivity({ activityID: started.id, avatarID: avatar.id });
@@ -323,18 +318,16 @@ test('it never stops a row other than the targeted one', async () => {
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const first = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const first = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   await client.stopActivity({ activityID: first.id, avatarID: avatar.id });
 
-  const second = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const second = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   // a late redelivery of the first row's stop leaves the newer run untouched
@@ -356,12 +349,9 @@ test('it rejects a targeted stop for a row of another user with NOT_FOUND', asyn
 
   await createActivityChainRow(ctx.db, { avatarId: ownerAvatar.id, scopeId: '0_0' });
 
-  const ownerClient = buildRPCTestClient<ActivityContract>(ctx.app, { token: owner.token });
-
-  const started = await ownerClient.startActivity({
-    avatarID: ownerAvatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: ownerAvatar.id,
+    scopeId: '0_0',
   });
 
   const intruder = await createViewer({ audience: 'service-activity', db: ctx.db });
@@ -392,10 +382,9 @@ test('it rejects a stop from a session another writer displaced with SESSION_EVI
 
   const clientA = buildRPCTestClient<ActivityContract>(ctx.app, { token: tokenA });
 
-  const started = await clientA.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const tokenB = await createServiceToken({
@@ -441,10 +430,9 @@ test('it still succeeds idempotently for a displaced session once the row left a
 
   const clientA = buildRPCTestClient<ActivityContract>(ctx.app, { token: tokenA });
 
-  const started = await clientA.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const tokenB = await createServiceToken({
@@ -474,10 +462,9 @@ test('it attempts a wake delivery after a successful stop', async () => {
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const wakeHandler = mock(() => ({ drained: 0 }));

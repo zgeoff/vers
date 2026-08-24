@@ -1,7 +1,7 @@
 import { metrics } from '@opentelemetry/api';
 
 /**
- * Counts one active-avatar-gated call — `startActivity` or `revealNodes` — rejected because the
+ * Counts one active-avatar-gated call — an activity-start mint or a reveal — rejected because the
  * acting avatar is not the account's active one. Attribute-free — the rejection has no dimension
  * worth splitting on.
  */

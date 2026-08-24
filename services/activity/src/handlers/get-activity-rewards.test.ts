@@ -4,6 +4,7 @@ import type { ActivityContract } from '@vers/contract-activity';
 import { createMockContentDocument } from '@vers/contract-activity/test-utils';
 import {
   createActivityChainRow,
+  createActivityRow,
   createAnonymousViewer,
   createAvatarRow,
   createTestDB,
@@ -14,7 +15,7 @@ import { buildRPCTestClient } from '@vers/test-utils';
 import { createActivityService } from '../create-activity-service';
 
 /**
- * `startActivity` opens its own `db.transaction()` for the chain claim, which can't nest under
+ * `advanceActivity` opens its own `db.transaction()` for the chain claim, which can't nest under
  * the default rollback-on-dispose isolation — this suite runs against a real, committed schema
  * clone instead.
  */
@@ -39,10 +40,9 @@ test('it returns only the minted rows at or below the verified anchor', async ()
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   await ctx.db
@@ -105,10 +105,9 @@ test('it orders multiple slots within a chain position by ordinal', async () => 
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   await ctx.db
@@ -162,10 +161,9 @@ test('it returns only rows above the afterChainIndex cursor', async () => {
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   await ctx.db
@@ -222,10 +220,9 @@ test('it returns the identical response on a repeated call', async () => {
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   await ctx.db
@@ -264,12 +261,9 @@ test('it rejects an activity owned by another caller with NOT_FOUND', async () =
 
   await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
 
-  const ownerClient = buildRPCTestClient<ActivityContract>(ctx.app, { token: owner.token });
-
-  const started = await ownerClient.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const otherViewer = await createViewer({ audience: 'service-activity', db: ctx.db });
@@ -316,10 +310,9 @@ test('it omits an unverified tail row above the verified anchor', async () => {
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   await ctx.db

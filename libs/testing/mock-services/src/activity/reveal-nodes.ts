@@ -14,8 +14,8 @@ import { os } from './os';
 import { resolveEncounterNode } from './resolve-encounter-node';
 
 /**
- * The stamps every mock reveal carries, matching the fixed values `startActivity`'s own mock
- * stamps on every activity it mints.
+ * The stamps every mock reveal carries, matching the fixed values the mock activity start
+ * derivation stamps on every row it mints.
  */
 const MOCK_KEY_VERSION = 1;
 const MOCK_SECRET_REF = 'worldmap';
@@ -24,7 +24,7 @@ const MOCK_SECRET_VERSION = 1;
 /**
  * Mints a genesis seed per requested node so the same avatar-and-node pair always reveals to the
  * same seed across calls — mirroring the real service's idempotent reveal without a persisted
- * chain collection to key off of. Each node's encounter mirrors `startActivity`'s own mock
+ * chain collection to key off of. Each node's encounter mirrors the mock activity start's own
  * derivation: difficulty from its coordinate alone, no sealed pool pick. Mirrors the real
  * handler's other checks: NODE_UNKNOWN for a scope id that doesn't resolve to a world-map node,
  * and admission gated to the account's active avatar, adopting an absent selection unless a

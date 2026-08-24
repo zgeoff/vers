@@ -4,6 +4,7 @@ import type { ActivityContract } from '@vers/contract-activity';
 import { createMockContentDocument } from '@vers/contract-activity/test-utils';
 import {
   createActivityChainRow,
+  createActivityRow,
   createAnonymousViewer,
   createAvatarRow,
   createTestDB,
@@ -13,9 +14,10 @@ import {
 import { createSimVersionRow } from '@vers/sim-registry/test-utils';
 import { buildRPCTestClient } from '@vers/test-utils';
 import { createActivityService } from '../create-activity-service';
+import { toActivityData } from './to-activity-data';
 
 /**
- * These tests drive startActivity, whose own `db.transaction()` can't nest under the default
+ * These tests seed committed rows a separate connection then reads back, which the default
  * rollback-on-dispose isolation — this suite runs against a real, committed schema clone instead.
  */
 async function setupTest() {
@@ -39,15 +41,14 @@ test('it returns the active activity for an avatar owned by the acting user', as
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const current = await client.getCurrentActivity({ avatarID: avatar.id });
 
-  expect(current).toStrictEqual(started);
+  expect(current).toStrictEqual(toActivityData(started));
 });
 
 test('it returns null when the avatar has no active activity', async () => {

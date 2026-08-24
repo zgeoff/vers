@@ -4,11 +4,9 @@ import { mockActivityService } from '@vers/mock-services/activity';
 import { server } from '../mocks/node';
 import { readAllActivityStarts } from '../submission/read-all-activity-starts';
 import { readLastStartedActivity } from '../submission/read-last-started-activity';
-import { readPendingStartIntent } from '../submission/read-pending-start-intent';
 import { readQueuedCheckpoints } from '../submission/read-queued-checkpoints';
 import { writeActivityStart } from '../submission/write-activity-start';
 import { writeLastStartedActivity } from '../submission/write-last-started-activity';
-import { writePendingStartIntent } from '../submission/write-pending-start-intent';
 import { writeQueuedCheckpoint } from '../submission/write-queued-checkpoint';
 import { createStubSubmitter } from '../test-utils/create-stub-submitter';
 import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
@@ -108,72 +106,6 @@ test('it discards the queued checkpoints of a refused activityStart without regi
   expect(remaining).toStrictEqual([]);
   expect(queued).toStrictEqual([]);
   expect(submitter.registerActivity).not.toHaveBeenCalled();
-});
-
-test('it drops a held start intent naming the refused activityStart', async () => {
-  const context = createStubWorkerContext({ submitter: createStubSubmitter() });
-
-  const row = createMockActivityData({
-    avatarID: 'avatar_recovering',
-    id: 'act_drain_intent',
-    scopeID: '1_0',
-    startKey: 'start_key_intent',
-  });
-
-  await writeActivityStart(row);
-
-  await writePendingStartIntent({
-    activityID: row.id,
-    avatarID: 'avatar_recovering',
-    scopeID: '1_0',
-    scopeType: 'world_map_node',
-  });
-
-  server.use(
-    mockActivityService.advanceActivity.handler((opts) => {
-      throw opts.errors.NODE_NOT_REVEALED({ data: {} });
-    }),
-  );
-
-  await drainActivityStarts(context, 'avatar_recovering');
-
-  const heldIntent = await readPendingStartIntent();
-
-  expect(heldIntent).toBeUndefined();
-});
-
-test('it leaves a held start intent naming a different row when an activity start is refused', async () => {
-  const context = createStubWorkerContext({ submitter: createStubSubmitter() });
-
-  const row = createMockActivityData({
-    avatarID: 'avatar_recovering',
-    id: 'act_drain_refused_other',
-    scopeID: '1_0',
-    startKey: 'start_key_refused_other',
-  });
-
-  await writeActivityStart(row);
-
-  const intent = {
-    activityID: 'act_unrelated',
-    avatarID: 'avatar_recovering',
-    scopeID: '2_0',
-    scopeType: 'world_map_node',
-  } as const;
-
-  await writePendingStartIntent(intent);
-
-  server.use(
-    mockActivityService.advanceActivity.handler((opts) => {
-      throw opts.errors.NODE_NOT_REVEALED({ data: {} });
-    }),
-  );
-
-  await drainActivityStarts(context, 'avatar_recovering');
-
-  const heldIntent = await readPendingStartIntent();
-
-  expect(heldIntent).toStrictEqual(intent);
 });
 
 test('it drains nothing when this device holds no pending activityStart', async () => {

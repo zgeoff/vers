@@ -5,6 +5,7 @@ import { createMockContentDocument } from '@vers/contract-activity/test-utils';
 import { buildFailureXPLoss } from '@vers/idle-core';
 import {
   createActivityChainRow,
+  createActivityRow,
   createAnonymousViewer,
   createAvatarRow,
   createServiceToken,
@@ -46,10 +47,9 @@ test('it appends a single-entry batch and advances the head', async () => {
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const batch = createMockCheckpointBatch({ startPrevHash: started.startHash, startVersion: 1 });
@@ -77,10 +77,9 @@ test('it advances cursors and lastHash across multiple sequential batches', asyn
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const firstBatch = createMockCheckpointBatch({
@@ -123,10 +122,9 @@ test('it rejects a stale expectedHead with CONFLICT carrying the current head', 
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const batch = createMockCheckpointBatch({ startPrevHash: started.startHash, startVersion: 1 });
@@ -161,10 +159,9 @@ test('it succeeds on a resend of the tail after a stale-head CONFLICT', async ()
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const batch = createMockCheckpointBatch({ startPrevHash: started.startHash, startVersion: 1 });
@@ -199,10 +196,9 @@ test('it rejects a non-contiguous batch with CHECKPOINT_INVALID', async () => {
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const batch = createMockCheckpointBatch({ startPrevHash: started.startHash, startVersion: 2 });
@@ -225,10 +221,9 @@ test('it rejects a broken chain link with CHECKPOINT_INVALID', async () => {
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const batch = createMockCheckpointBatch({
@@ -258,10 +253,9 @@ test('it rejects a hash that does not match its payload with CHECKPOINT_INVALID'
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const batch = createMockCheckpointBatch({ startPrevHash: started.startHash, startVersion: 1 });
@@ -286,10 +280,9 @@ test('it accepts a batch whose reward slots parse with contiguous ordinals', asy
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const batch = createMockCheckpointBatch({
@@ -322,10 +315,9 @@ test('it rejects a batch whose reward slots do not parse with CHECKPOINT_INVALID
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const batch = createMockCheckpointBatch({
@@ -352,10 +344,9 @@ test('it rejects a batch whose reward slot ordinals are not contiguous from 0 wi
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const batch = createMockCheckpointBatch({
@@ -387,10 +378,9 @@ test('it rejects a batch whose xp reward is fractional with CHECKPOINT_INVALID',
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const batch = createMockCheckpointBatch({
@@ -417,10 +407,9 @@ test('it rejects a batch whose xp reward is not a number with CHECKPOINT_INVALID
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const batch = createMockCheckpointBatch({
@@ -447,10 +436,9 @@ test('it rejects a batch whose xp reward exceeds what the database column holds 
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const batch = createMockCheckpointBatch({
@@ -477,10 +465,9 @@ test('it appends a batch whose xp reward sits at the largest value the database 
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const batch = createMockCheckpointBatch({
@@ -508,10 +495,9 @@ test('it appends a batch whose rewards carry fields beside xp', async () => {
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const batch = createMockCheckpointBatch({
@@ -539,10 +525,9 @@ test('it rejects appending to a stopped activity with ACTIVITY_TERMINAL', async 
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   await client.stopActivity({ avatarID: avatar.id });
@@ -574,12 +559,9 @@ test('it rejects a foreign activity id with NOT_FOUND', async () => {
 
   await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
 
-  const ownerClient = buildRPCTestClient<ActivityContract>(ctx.app, { token: owner.token });
-
-  const started = await ownerClient.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const other = await createViewer({ audience: 'service-activity', db: ctx.db });
@@ -617,10 +599,9 @@ test('it leaves the avatar xp and level untouched on a completed terminal checkp
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const batch = createMockCheckpointBatch({
@@ -668,10 +649,9 @@ test('it leaves the avatar xp and level untouched on a failed terminal checkpoin
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const loss = buildFailureXPLoss(startingXP);
@@ -709,10 +689,9 @@ test('it advances the chain anchor to the terminal checkpoint on a completed bat
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const batch = createMockCheckpointBatch({
@@ -751,10 +730,9 @@ test('it advances the chain anchor to the terminal checkpoint on a failed batch'
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const batch = createMockCheckpointBatch({
@@ -793,10 +771,9 @@ test('it ends a run whose last checkpoint carries no rewards payload', async () 
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const batch = createMockCheckpointBatch({
@@ -839,10 +816,9 @@ test('it ends a run whose last checkpoint carries rewards without an xp figure',
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const batch = createMockCheckpointBatch({
@@ -876,10 +852,9 @@ test('it advances the chain anchor when the terminal segment consumed no entropy
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   // A checkpoint's seed is its own segment's origin, so a terminal whose segment rolled nothing
@@ -918,7 +893,7 @@ test('it advances the chain anchor when the terminal segment consumed no entropy
   expect(chain.appendedChainIndex).toBe(terminal.payload.chainIndex);
 });
 
-test('it continues the next activity on the same node from the previous terminal checkpoint', async () => {
+test('it advances the node chain to the terminal checkpoint the next activity anchors at', async () => {
   await using ctx = await setupTest();
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
@@ -928,10 +903,9 @@ test('it continues the next activity on the same node from the previous terminal
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const firstStarted = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const firstStarted = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const firstBatch = createMockCheckpointBatch({
@@ -948,14 +922,17 @@ test('it continues the next activity on the same node from the previous terminal
 
   const terminal = firstBatch[0]!;
 
-  const secondStarted = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
-  });
+  const chain = await ctx.db
+    .selectFrom('activityChains')
+    .select(['appendedNextSeed', 'appendedChainIndex'])
+    .where('avatarId', '=', avatar.id)
+    .where('scopeId', '=', '0_0')
+    .executeTakeFirstOrThrow();
 
-  expect(secondStarted.seed).toBe(terminal.payload.nextSeed);
-  expect(secondStarted.startChainIndex).toBe(terminal.payload.chainIndex);
+  // the next activity at this node anchors here, and an ingest whose start names any other
+  // position is refused
+  expect(chain.appendedNextSeed).toBe(terminal.payload.nextSeed);
+  expect(chain.appendedChainIndex).toBe(terminal.payload.chainIndex);
 });
 
 test('it moves nothing when a stale terminal replays the compare-and-swap at an anchor the chain has already passed', async () => {
@@ -968,10 +945,9 @@ test('it moves nothing when a stale terminal replays the compare-and-swap at an 
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const firstStarted = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const firstStarted = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const firstBatch = createMockCheckpointBatch({
@@ -986,10 +962,9 @@ test('it moves nothing when a stale terminal replays the compare-and-swap at an 
     expectedHead: 0,
   });
 
-  const secondStarted = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const secondStarted = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const secondBatch = createMockCheckpointBatch({
@@ -1044,10 +1019,9 @@ test('it rejects a chainIndex that is not startChainIndex plus version with CHEC
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const batch = createMockCheckpointBatch({ startPrevHash: started.startHash, startVersion: 1 });
@@ -1075,10 +1049,9 @@ test('it rejects a batch that continues past a run-ending checkpoint with CHECKP
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const throughCompletion = createMockCheckpointBatch({
@@ -1119,10 +1092,9 @@ test('it returns the settled head when a terminal batch is resubmitted unchanged
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const batch = createMockCheckpointBatch({
@@ -1192,10 +1164,9 @@ test('it rejects a non-matching batch against a settled activity as terminal', a
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const batch = createMockCheckpointBatch({
@@ -1233,10 +1204,9 @@ test('it returns the settled head when a landed batch is resubmitted after a use
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const batch = createMockCheckpointBatch({ startPrevHash: started.startHash, startVersion: 1 });
@@ -1273,10 +1243,9 @@ test('it rejects an append from a displaced writer session with SESSION_EVICTED'
 
   const clientA = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await clientA.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const keyPair = await getTestServiceKeyPair();
@@ -1316,12 +1285,9 @@ test('it lets the first appending session claim an unstamped stream', async () =
 
   await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
 
-  const sessionlessClient = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
-
-  const started = await sessionlessClient.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const keyPair = await getTestServiceKeyPair();
@@ -1382,10 +1348,9 @@ test('it caps an append whose simulated time exceeds the accrued budget', async 
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const batch = createMockCheckpointBatch({
@@ -1432,10 +1397,9 @@ test('it accepts a batch whose simulated time fits the wall-clock accrued budget
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const batch = createMockCheckpointBatch({
@@ -1477,10 +1441,9 @@ test('it never accrues budget past the configured cap', async () => {
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const overCap = createMockCheckpointBatch({
@@ -1509,10 +1472,9 @@ test('it accepts a batch at the cap after an hour of absence under a shrunken ca
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const atCap = createMockCheckpointBatch({
@@ -1545,10 +1507,9 @@ test('it meters simulated time across consecutive activities on one avatar', asy
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const firstStarted = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const firstStarted = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const firstBatch = createMockCheckpointBatch({
@@ -1564,10 +1525,9 @@ test('it meters simulated time across consecutive activities on one avatar', asy
     expectedHead: 0,
   });
 
-  const secondStarted = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const secondStarted = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const withinRemainder = createMockCheckpointBatch({
@@ -1613,10 +1573,9 @@ test('it sustains a live flush cadence on the default budget grant', async () =>
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   let prevHash = started.startHash;
@@ -1663,10 +1622,9 @@ test('it answers a resubmission after a cap with the terminal status and stop in
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const batch = createMockCheckpointBatch({
@@ -1702,10 +1660,9 @@ test('it consumes no budget and leaves the meter anchor untouched on a cap trip'
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const batch = createMockCheckpointBatch({
@@ -1743,10 +1700,9 @@ test('it leaves the anchor unchanged when a cap trips before anything appended',
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const chainBefore = await ctx.db
@@ -1793,10 +1749,9 @@ test('it advances the chain anchor to the pre-batch tail on a cap trip', async (
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const firstBatch = createMockCheckpointBatch({
@@ -1849,10 +1804,9 @@ test('it rejects a batch whose time regresses within the batch with CHECKPOINT_I
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const batch = createMockCheckpointBatch({
@@ -1882,10 +1836,9 @@ test('it rejects a batch whose time regresses below the already accounted time w
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const firstBatch = createMockCheckpointBatch({
@@ -1925,10 +1878,9 @@ test('it debits the meter on a terminal batch that leaves xp settlement to the v
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const batch = createMockCheckpointBatch({
@@ -1968,10 +1920,9 @@ test('it leaves the meter untouched on an empty batch', async () => {
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const result = await client.trackActivityProgress({

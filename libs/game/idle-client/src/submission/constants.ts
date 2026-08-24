@@ -73,13 +73,6 @@ export const FAILURE_ACTION_PREFERENCE_KEY = 'failure-action';
 export const PENDING_STOP_INTENT_KEY = 'pending-stop';
 
 /**
- * The `preferences` record holding the one outstanding continuation-start intent. A worker drives
- * one avatar's simulation at a time, so a single record suffices: a newer continuation failure
- * overwrites an older intent, whose target the newer run already superseded.
- */
-export const PENDING_START_INTENT_KEY = 'pending-start';
-
-/**
  * The `preferences` record holding the avatar's last-started activity id. A worker drives one
  * avatar's simulation at a time, so a single record suffices, scoped by `avatarID`.
  */

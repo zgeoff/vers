@@ -1,7 +1,6 @@
 import type { ActivityData } from '@vers/contract-activity';
 import { buildSimulationInput } from '@vers/idle-core';
 import { loadContentDocument } from '../content/load-content-document';
-import { removePendingStartIntent } from '../submission/remove-pending-start-intent';
 import type { WorkerContext } from './types';
 
 interface SetActivityMessage {
@@ -45,7 +44,4 @@ export async function handleSetActivityMessage(
   simulation.startActivity(input.avatar, input.activity);
 
   await registration;
-
-  // unconditional: the fresher selection supersedes whatever continuation was outstanding
-  await removePendingStartIntent();
 }
