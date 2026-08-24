@@ -63,7 +63,9 @@ Every activity code applies to the `advanceActivity` bulk path — a mint or a c
 as the single call its meaning names, with one exception: `NODE_UNREACHABLE` checks only
 `startActivity`'s admission; a root mint's reachability is adjudicated at replay instead. On the
 codes that do apply, an append error's `data` carries `activityID`, naming the request's last fully
-committed row. It also carries `appendedHead` where the single-call `data` omits it.
+committed row. It also carries `appendedHead` where the single-call `data` omits it. An activity
+code also tells a device whether to keep the pending activity start it just submitted or drop it;
+[the seed chain](../game/seed-chain.md#handing-an-activity-start-to-the-server) owns that split.
 
 | Domain       | Code                   | Status | Meaning                                                                                                                                      | data                                   |
 | ------------ | ---------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
