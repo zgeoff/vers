@@ -2,11 +2,12 @@ import type { ActivityData } from '@vers/contract-activity';
 import type { Simulation } from '@vers/idle-core';
 import { buildSimulationInput } from '@vers/idle-core';
 import { loadContentDocument } from '../content/load-content-document';
+import { removeActivityStart } from '../submission/remove-activity-start';
+import { removeLastStartedActivity } from '../submission/remove-last-started-activity';
 import { writeActivityStart } from '../submission/write-activity-start';
 import { writeLastStartedActivity } from '../submission/write-last-started-activity';
 import { buildActivityStart } from './build-activity-start';
 import { resetSimulation } from './reset-simulation';
-import { submitStopIntent } from './submit-stop-intent';
 import type { FlowSignals, WorkerContext } from './types';
 
 /**
@@ -60,12 +61,49 @@ export async function runContinuation(
   await writeLastStartedActivity({ avatarID: row.avatarID, lastActivityID: row.id });
 
   if (signals.stop.aborted) {
-    await submitStopIntent(context, row);
+    await removeMintedRow(row);
 
     return;
   }
 
-  await startContinuationFrom(context, simulation, row, signals);
+  // a shutdown aborts the cancel scope without aborting the stop scope, and a cached document
+  // resolves without consulting either — so the install is guarded here rather than only inside it
+  if (signals.cancel.aborted) {
+    return;
+  }
+
+  try {
+    await startContinuationFrom(context, simulation, row, signals);
+  } catch (error) {
+    // the cancel scope composes the stop scope, so a player stop cancels the content load and
+    // throws out of the install; the minted row is discarded rather than left for a drain to
+    // deliver, which would revive the run the player just ended
+    if (!signals.stop.aborted) {
+      throw error;
+    }
+
+    await removeMintedRow(row);
+  }
+}
+
+/**
+ * Removes a minted row the flow never installed, rewinding the avatar's last-started record to the
+ * row it succeeded. The server has never seen the minted row, so there is nothing to stop back —
+ * leaving it durable would have a later drain deliver a run the player ended.
+ */
+async function removeMintedRow(row: Readonly<ActivityData>): Promise<void> {
+  await removeActivityStart(row.id);
+
+  if (row.predecessorActivityID === null) {
+    await removeLastStartedActivity(row.avatarID);
+
+    return;
+  }
+
+  await writeLastStartedActivity({
+    avatarID: row.avatarID,
+    lastActivityID: row.predecessorActivityID,
+  });
 }
 
 /**
@@ -93,11 +131,10 @@ async function startContinuationFrom(
     signals.cancel,
   );
 
-  // the signal only cancels the load's fetch — a cached document resolves without consulting it,
-  // so a stop that landed during the load is re-checked here: installing would revive the run the
-  // player just ended, and the minted row is stopped back durably, as any player stop delivers
+  // a cached document resolves without consulting the signal, so a stop that landed during the
+  // load is re-checked here: installing would revive the run the player just ended
   if (signals.stop.aborted) {
-    await submitStopIntent(context, row);
+    await removeMintedRow(row);
 
     return;
   }

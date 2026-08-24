@@ -47,6 +47,7 @@ test('it stamps the acting session as the writer', async () => {
   const started = await createActivityRow(ctx.db, {
     avatarId: avatar.id,
     scopeId: '0_0',
+    writerSessionId: 'session-a',
   });
 
   const keyPair = await getTestServiceKeyPair();

@@ -7,13 +7,18 @@ import type { ActivityServiceClient } from './types';
 
 /**
  * `ingestActivityStart`'s settled outcome: `ingested` when the server minted the activity start and
- * this device's durable row is gone; `deferred` when the answer says nothing about the activity
- * start's own validity — a transport failure, a session lapse, or a temporarily inactive avatar —
- * and the row stays for a later retry; `rejected` when the server refused the activity start
- * outright and the row is gone; `absent` when this device held no pending activity start for the
- * activity id at all.
+ * this device's durable row is gone; `deferred` when the server answered but said nothing about the
+ * activity start's own validity — a session lapse, a temporarily inactive avatar — and the row stays
+ * for a later retry; `undelivered` when the service never answered at all, which the row also
+ * survives; `rejected` when the server refused the activity start outright and the row is gone;
+ * `absent` when this device held no pending activity start for the activity id at all.
  */
-export type IngestActivityStartOutcome = 'absent' | 'deferred' | 'ingested' | 'rejected';
+export type IngestActivityStartOutcome =
+  | 'absent'
+  | 'deferred'
+  | 'ingested'
+  | 'rejected'
+  | 'undelivered';
 
 /**
  * A refusal the player must be told about, carried out alongside the disposition it earned: the
@@ -118,8 +123,10 @@ export async function ingestActivityStart(
     return { outcome: 'ingested' };
   }
 
+  // the service never answered, so the row keeps and the caller has a connectivity transition to
+  // make that a server-side deferral does not
   if (!isDefinedError(error)) {
-    return { outcome: 'deferred' };
+    return { outcome: 'undelivered' };
   }
 
   if (error.code === 'CHECKPOINT_INVALID') {

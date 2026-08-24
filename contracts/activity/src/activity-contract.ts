@@ -383,14 +383,15 @@ export const activityContract = {
     ),
 
   /**
-   * Mints (or re-affirms) the genesis chain row for each given world-map node, on the avatar's
+   * Mints (or re-affirms) the genesis chain row for each requested world-map node inside the
+   * avatar's revealed region, on the avatar's
    * behalf, so a later activity start at the same scope has a chain to anchor against, and derives
    * that node's encounter alongside the crypto stamps a start needs — every input a client
    * synthesizes a valid activity start from without the server. Idempotent per node: a
    * repeat reveal self-assigns the existing row's `genesisSeed` rather than rolling a new one, so
    * the same node reveals to the same seed regardless of how many times or how many concurrent
-   * callers reveal it. Authorization is ownership of the avatar only — whether a given node is one
-   * this avatar may legitimately reveal is a separate, not-yet-enforced concern.
+   * callers reveal it. A requested node outside the revealed region mints nothing and is absent
+   * from the response rather than rejecting the call.
    */
   revealNodes: authedRoute
     .route({

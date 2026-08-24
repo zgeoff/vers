@@ -1,6 +1,9 @@
 import { expect, onTestFinished, test } from 'bun:test';
 import type { ErrorEvent } from '@sentry/browser';
-import { createMockActivityData } from '@vers/contract-activity/test-utils';
+import {
+  createMockActivityData,
+  createMockContentDocument,
+} from '@vers/contract-activity/test-utils';
 import { ActivityFailureAction } from '@vers/idle-core';
 import { createAuthedServiceClient, createViewer, resolveServiceURL } from '@vers/mock-services';
 import { mockActivityService } from '@vers/mock-services/activity';
@@ -8,7 +11,9 @@ import * as db from '@vers/mock-services/db';
 import { waitFor } from '@vers/test-utils';
 import { http } from 'msw';
 import invariant from 'tiny-invariant';
+import { writeContentDocumentCache } from '../content/write-content-document-cache';
 import { server } from '../mocks/node';
+import { readAllActivityStarts } from '../submission/read-all-activity-starts';
 import { readPendingStopIntent } from '../submission/read-pending-stop-intent';
 import type { ActivityServiceClient } from '../submission/types';
 import { writeFailureActionCache } from '../submission/write-failure-action-cache';
@@ -211,12 +216,17 @@ test('it resumes into a fresh row once a reconnect drains a held terminal append
   await writeNodeSeeds(viewer.avatar.id, [
     createMockNodeSeed({
       avatarID: viewer.avatar.id,
+      contentVersion: '2',
       encounterNode: { difficulty: 1 },
       nodeID: '0_0',
     }),
   ]);
 
   await writeStartStamps({ keyVersion: 1, secretRef: 'worldmap', secretVersion: 1 });
+
+  // the install loads the pinned document; publishing it keeps the test off whatever a cache miss
+  // would fetch
+  await writeContentDocumentCache(createMockContentDocument({ contentVersion: '2' }));
 
   // both this activity's terminal append and its continuation's own startActivity call fail once,
   // standing in for the device going offline right as the run completes; the flag scripts the
@@ -235,10 +245,6 @@ test('it resumes into a fresh row once a reconnect drains a held terminal append
 
         return true;
       }),
-    ),
-    http.post(
-      `${resolveServiceURL('activity')}/rpc/startActivity`,
-      makeFailFirstMatchHandler((input) => input['avatarID'] === viewer.avatar.id),
     ),
   );
 
@@ -271,21 +277,15 @@ test('it resumes into a fresh row once a reconnect drains a held terminal append
 
   globalThis.dispatchEvent(new Event('online'));
 
-  await waitFor(() => {
-    const minted = db.activityCollection.findFirst((q) =>
-      q.where({ avatarID: viewer.avatar.id, status: 'active' }),
-    );
+  await waitFor(async () => {
+    const pending = await readAllActivityStarts();
 
-    invariant(minted !== undefined, 'expected the reconnect resync to mint a fresh row');
+    const minted = pending.find((row) => row.predecessorActivityID === activity.id);
+
+    invariant(minted !== undefined, 'expected the reconnect to mint a fresh row');
 
     expect(minted.id).not.toBe(activity.id);
   });
-
-  const closed = db.activityCollection.findFirst((q) => q.where({ id: activity.id }));
-
-  invariant(closed !== undefined, 'expected the seeded activity to still exist');
-
-  expect(closed.status).toBe('stopped');
 });
 
 test('it recovers a stop parked offline once a flush answer proves the connection returned', async () => {

@@ -64,8 +64,8 @@ as the single call its meaning names. No request-path check rejects an unreachab
 reachability is adjudicated at replay. An append error's `data` carries `activityID`, naming the
 request's last fully committed row. It also carries `appendedHead` where the single-call `data`
 omits it. An activity code also tells a device whether to keep the pending activity start it just
-submitted or drop it; [the seed chain](../game/seed-chain.md#handing-an-activity-start-to-the-server)
-owns that split.
+submitted or drop it;
+[the seed chain](../game/seed-chain.md#handing-an-activity-start-to-the-server) owns that split.
 
 | Domain       | Code                   | Status | Meaning                                                                                                                                      | data                                   |
 | ------------ | ---------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |

@@ -74,7 +74,7 @@ test('it declares the start gates alongside its own continuation errors on advan
   ]);
 });
 
-test('it declares an explicit status on every bespoke advanceActivity error', () => {
+test('it declares an explicit status on every start-related advanceActivity error', () => {
   const errorMap = activityContract.advanceActivity['~orpc'].errorMap;
 
   expect(errorMap.AVATAR_NOT_ACTIVE?.status).toBe(409);

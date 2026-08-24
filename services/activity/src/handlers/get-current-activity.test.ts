@@ -17,7 +17,7 @@ import { createActivityService } from '../create-activity-service';
 import { toActivityData } from './to-activity-data';
 
 /**
- * These tests drive advanceActivity, whose own `db.transaction()` can't nest under the default
+ * These tests seed committed rows a separate connection then reads back, which the default
  * rollback-on-dispose isolation — this suite runs against a real, committed schema clone instead.
  */
 async function setupTest() {

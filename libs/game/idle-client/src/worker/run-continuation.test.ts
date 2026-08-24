@@ -12,6 +12,7 @@ import { writeContentDocumentCache } from '../content/write-content-document-cac
 import { server } from '../mocks/node';
 import { readActivityStart } from '../submission/read-activity-start';
 import { readAllActivityStarts } from '../submission/read-all-activity-starts';
+import { readLastStartedActivity } from '../submission/read-last-started-activity';
 import type { NodeSeed } from '../submission/types';
 import { writeNodeSeeds } from '../submission/write-node-seeds';
 import { writeStartStamps } from '../submission/write-start-stamps';
@@ -210,7 +211,7 @@ test('it returns untouched when the runtime moved on before its turn ran', async
   expect(submitter.registerActivity).not.toHaveBeenCalled();
 });
 
-test('it leaves the minted row durable for a later drain when a stop cancels the content load', async () => {
+test('it discards the minted row when a stop cancels the content load', async () => {
   const avatarID = 'avatar_stopped';
 
   const seed = await setupTest({ avatarID, cacheDocument: false });
@@ -246,17 +247,19 @@ test('it leaves the minted row durable for a later drain when a stop cancels the
   context.advanceStopScope();
   releaseLoad.resolve();
 
-  // the stop scope composes into the cancel signal, so the load is cancelled rather than resumed
-  const settled = await flow.then(
-    () => null,
-    (error: unknown) => error,
-  );
+  // the stop scope composes into the cancel signal, so the load is cancelled and the flow
+  // compensates rather than propagating the abort
+  await flow;
 
-  expect(settled).toMatchObject({ name: 'AbortError' });
   expect(submitter.registerActivity).not.toHaveBeenCalled();
 
-  // the row was written before the install, so the next reconnect's drain still delivers it
+  // the row must not survive: a later drain would deliver the run the player just ended
   const starts = await readAllActivityStarts();
 
-  expect(starts.filter((row) => row.avatarID === avatarID)).toHaveLength(1);
+  expect(starts.filter((row) => row.avatarID === avatarID)).toHaveLength(0);
+
+  // the avatar's predecessor reference rewinds to the row this continuation succeeded
+  const lastStarted = await readLastStartedActivity(avatarID);
+
+  expect(lastStarted?.lastActivityID).toBe(terminal.id);
 });

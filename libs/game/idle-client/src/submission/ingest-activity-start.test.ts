@@ -46,7 +46,7 @@ test('it reports absent for an activity id this device holds no pending activity
   expect(outcome.outcome).toBe('absent');
 });
 
-test('it defers and keeps the activityStart on a transport failure', async () => {
+test('it reports the activityStart undelivered and keeps it on a transport failure', async () => {
   const ctx = setupTest();
   const row = createMockActivityData({ id: 'act_ingest_transport', startKey: 'start_key_t' });
 
@@ -56,7 +56,7 @@ test('it defers and keeps the activityStart on a transport failure', async () =>
 
   const outcome = await ingestActivityStart(ctx.client, row.id);
 
-  expect(outcome.outcome).toBe('deferred');
+  expect(outcome.outcome).toBe('undelivered');
 
   const stored = await readActivityStart(row.id);
 
