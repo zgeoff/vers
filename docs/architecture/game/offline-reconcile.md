@@ -139,10 +139,16 @@ much play sit in the outbox, and clears them once the player confirms. Cancellin
 exactly where it is. A run still in progress counts as undelivered too, since its checkpoints are
 unverified whether or not they have reached the server.
 
-A later sign-in on this device still cannot deliver the outbox's work, even when a cancelled
-sign-out leaves it in place: the worker drains only the acting avatar's activity starts, and the
-server refuses a start naming an avatar the acting user does not own. That protection is a second
-defence, not the reason the warning discards the outbox.
+The control answers a failed worker call two ways, depending on which call failed. A worker that
+cannot say what it holds signs the player out and leaves the outbox where it stands, since a dead
+worker must never trap a player on the settings screen. A discard that fails holds the sign-out back
+and asks the player to try again, since ending the session with the work still queued is what the
+warning exists to prevent.
+
+A different account signing in on this device cannot deliver what the outbox still holds: the worker
+drains only the acting avatar's activity starts, and the server refuses a start naming an avatar the
+acting user does not own. That protection stops at the account boundary. The same account signing
+back in delivers what a cancelled sign-out left in place, which is what cancelling asks for.
 
 Session eviction and writer ownership are separate mechanisms on separate scopes. The session
 belongs to the account, and evicting it signs a device out of everything. The writer belongs to one
