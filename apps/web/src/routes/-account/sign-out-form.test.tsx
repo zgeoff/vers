@@ -104,6 +104,41 @@ test('it discards the undelivered work before signing out when the player confir
   });
 });
 
+test('it reports the failure and stays open when discarding the work fails', async () => {
+  const user = userEvent.setup();
+  const action = mock(() => Promise.resolve(undefined));
+
+  const client = createStubWorkerClient({
+    readUndeliveredWork: () => Promise.resolve({ activityCount: 1, playMs: 5000 }),
+    removeUndeliveredWork: () => Promise.reject(new Error('unreachable')),
+  });
+
+  setIdleWorkerHandle({
+    activity: undefined,
+    client,
+    failureAction: ActivityFailureAction.Abort,
+    initialized: true,
+    writerAbortSignal: new AbortController().signal,
+  });
+
+  await withRequestContext({}, async () => {
+    renderWithRouter(<SignOutForm action={action} />);
+
+    const logoutButton = await screen.findByRole('button', { name: 'Logout' });
+
+    await user.click(logoutButton);
+
+    const confirmButton = await screen.findByRole('button', { name: 'Log out anyway' });
+
+    await user.click(confirmButton);
+    await screen.findByRole('alert');
+
+    expect(action).not.toHaveBeenCalled();
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(confirmButton).not.toBeDisabled();
+  });
+});
+
 test('it neither discards nor signs out when the player cancels, and closes the dialog', async () => {
   const user = userEvent.setup();
   const action = mock(() => Promise.resolve(undefined));

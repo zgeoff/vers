@@ -4,6 +4,7 @@ import { ActivityFailureAction } from '@vers/idle-core';
 
 interface StubWorkerClientOptions {
   readonly readUndeliveredWork?: WorkerClient['readUndeliveredWork'];
+  readonly removeUndeliveredWork?: WorkerClient['removeUndeliveredWork'];
   readonly startActivity?: WorkerClient['startActivity'];
 }
 
@@ -31,7 +32,9 @@ export function createStubWorkerClient(
     readUndeliveredWork: mock(
       options.readUndeliveredWork ?? (() => Promise.resolve(DEFAULT_UNDELIVERED_WORK)),
     ),
-    removeUndeliveredWork: mock(() => Promise.resolve({ ok: true as const })),
+    removeUndeliveredWork: mock(
+      options.removeUndeliveredWork ?? (() => Promise.resolve({ ok: true as const })),
+    ),
     reportOnline: mock(() => Promise.resolve({ ok: true as const })),
     setFailureAction: mock((input: StubSetFailureActionInput) =>
       Promise.resolve({ failureAction: input.failureAction }),

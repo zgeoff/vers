@@ -15,7 +15,7 @@ interface SignOutFormProps {
 /**
  * The account hub's sign-out control. A device holding undelivered offline work is warned before
  * the session ends and told what stands to be lost; confirming clears the work so no later
- * sign-in here delivers it, and cancelling ends the session no differently than today.
+ * sign-in here delivers it, and cancelling ends nothing, leaving the work where it is.
  */
 export function SignOutForm(props: Readonly<SignOutFormProps>) {
   const signOutFn = useServerFn(signOut);
@@ -23,6 +23,7 @@ export function SignOutForm(props: Readonly<SignOutFormProps>) {
   const idleWorkerHandle = useIdleWorkerHandle();
   const [isPending, setIsPending] = useState(false);
   const [report, setReport] = useState<UndeliveredWork | null>(null);
+  const [discardFailed, setDiscardFailed] = useState(false);
 
   const handleLogoutClick = async (): Promise<void> => {
     const client = idleWorkerHandle.client;
@@ -58,10 +59,20 @@ export function SignOutForm(props: Readonly<SignOutFormProps>) {
     const client = idleWorkerHandle.client;
 
     setIsPending(true);
+    setDiscardFailed(false);
 
     try {
       if (client !== undefined) {
-        await sendIdleRemoveUndeliveredWork(client, idleWorkerHandle.writerAbortSignal);
+        try {
+          await sendIdleRemoveUndeliveredWork(client, idleWorkerHandle.writerAbortSignal);
+        } catch {
+          // the player confirmed losing this work, but a failed discard leaves it queued — signing
+          // out anyway would let a later sign-in here deliver exactly what this dialog exists to
+          // stop, so report the failure and leave the dialog open for a retry instead
+          setDiscardFailed(true);
+
+          return;
+        }
       }
 
       await action();
@@ -86,6 +97,7 @@ export function SignOutForm(props: Readonly<SignOutFormProps>) {
           onOpenChange={(open) => {
             if (!open) {
               setReport(null);
+              setDiscardFailed(false);
             }
           }}
           open
@@ -98,10 +110,15 @@ export function SignOutForm(props: Readonly<SignOutFormProps>) {
             Log out now and you give that progress up for good. Cancel, get back online, and it
             delivers instead.
           </Text>
+          {discardFailed && (
+            <Text role="alert">
+              Clearing that progress failed. Check your connection and try again.
+            </Text>
+          )}
           <StatusButton
             disabled={isPending}
             onClick={() => void handleConfirmClick()}
-            status={isPending ? StatusButton.Status.Pending : StatusButton.Status.Idle}
+            status={pickConfirmStatus(isPending, discardFailed)}
             type="button"
           >
             Log out anyway
@@ -110,4 +127,16 @@ export function SignOutForm(props: Readonly<SignOutFormProps>) {
       )}
     </>
   );
+}
+
+function pickConfirmStatus(isPending: boolean, discardFailed: boolean) {
+  if (isPending) {
+    return StatusButton.Status.Pending;
+  }
+
+  if (discardFailed) {
+    return StatusButton.Status.Error;
+  }
+
+  return StatusButton.Status.Idle;
 }
