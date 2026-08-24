@@ -98,12 +98,14 @@ acting user. A service refuses a call that names no acting user before any activ
 The evicted session's undelivered offline work is therefore refused rather than delivered. The
 device discards it rather than holding it for a later retry: on a refusal naming the session
 superseded, the worker clears its pending activity starts, its queued checkpoints, and the
-preferences a recovery steers by. Work held instead would reach the server under whichever account
-signs in next on that device. The player is warned before taking over, so the loss is never silent.
+preferences a recovery steers by. Work held instead would deliver on this device's next sign-in,
+reviving play the takeover retired. The player is warned before taking over, so the loss is never
+silent.
 
-Signing out deletes the session row as well, so a sign-out discards the outbox under the same rule.
-That is what keeps one player's undelivered work from reaching the server under the next player to
-sign in on a shared device.
+Signing out clears the device's cookie in the same request that deletes the session row, so the
+worker meets no marked refusal and keeps its outbox. The next player to sign in on that device
+cannot deliver that work: a recovery drains only the acting avatar's activity starts, and the server
+refuses a start naming an avatar the acting user does not own.
 
 A session that reaches its own expiry keeps its outbox. app-web tells an eviction from an expiry by
 the session row: an eviction deletes the row, while an expiry leaves it in place for the refresh

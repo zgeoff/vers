@@ -26,9 +26,20 @@ const SESSION_SUPERSEDED_HEADER = 'x-session-superseded';
  * and a resync both learn of the takeover from whichever of them happens to run first.
  */
 export function createActivityServiceClient(): ActivityServiceClient {
-  // the one discard this client ever runs: a takeover marks every concurrent call at once, and
-  // clearing the same stores repeatedly would race the transaction against itself for no gain
+  // the discard in flight, shared by every call that observes the marker at once, and reset once it
+  // settles: a takeover marks every concurrent call, and one clear answers all of them, while a
+  // later takeover on this same worker must clear again rather than await a settled promise
   let discard: null | Promise<void> = null;
+
+  const runDiscard = async (): Promise<void> => {
+    try {
+      await removeOfflineWork();
+    } catch {
+      // a failed clear leaves the work in place; the next marked refusal discards again
+    } finally {
+      discard = null;
+    }
+  };
 
   const link = new RPCLink<ActivityCallContext>({
     clientInterceptors: [buildRetryInterceptor({ isRetryable: makeIsRetryable(activityContract) })],
@@ -54,17 +65,4 @@ export function createActivityServiceClient(): ActivityServiceClient {
   });
 
   return createORPCClient(link);
-}
-
-/**
- * Clears the device's undelivered offline work, swallowing a failure. The discard is cleanup the
- * calling procedure cannot act on, and that call must still return the refusal that triggered it,
- * so the flow above renders a signed-out state rather than a fault.
- */
-async function runDiscard(): Promise<void> {
-  try {
-    await removeOfflineWork();
-  } catch {
-    // a failed clear leaves the work in place; the next refused call retries the discard
-  }
 }

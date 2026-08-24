@@ -43,3 +43,25 @@ test('it keeps the undelivered offline work when a refusal carries no superseded
 
   expect(remaining).toStrictEqual([start]);
 });
+
+test('it discards again when a later takeover marks the same worker a second time', async () => {
+  server.use(
+    http.post(`${self.location.origin}/api/rpc/activity/stopActivity`, () =>
+      HttpResponse.json(null, { headers: { 'x-session-superseded': '1' }, status: 401 }),
+    ),
+  );
+
+  const client = createActivityServiceClient();
+
+  await writeActivityStart(createMockActivityData());
+
+  await expect(client.stopActivity({ avatarID: 'avatar-1' })).toReject();
+
+  await writeActivityStart(createMockActivityData());
+
+  await expect(client.stopActivity({ avatarID: 'avatar-2' })).toReject();
+
+  const remaining = await readAllActivityStarts();
+
+  expect(remaining).toStrictEqual([]);
+});
