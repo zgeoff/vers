@@ -18,36 +18,55 @@ interface RefreshedTokens {
 }
 
 /**
+ * Why a refresh did not return a token pair: `expired` for a session that lived out its own
+ * lifetime, `superseded` for one whose row is gone before that — evicted by a sign-in elsewhere,
+ * deleted by a sign-out, or revoked on refresh-token reuse.
+ */
+type RefreshFailure = 'expired' | 'superseded';
+
+/**
  * Concurrent calls for the same session share one in-flight refresh instead of each calling
  * `refreshTokens` — racing that call trips the service's refresh-token reuse detection and revokes
  * the session.
  */
-const inFlightRefreshes = new Map<string, Promise<RefreshedTokens | undefined>>();
+const inFlightRefreshes = new Map<string, Promise<RefreshFailure | RefreshedTokens>>();
 
 /**
- * The validated identity pair a cookie-derived service call acts as: the user for the token's
- * `sub` claim, the session for its `sid` claim (the writer identity activity appends are checked
- * against).
+ * What a cookie-derived service call may act as.
+ *
+ * `actor` carries the validated identity pair: the user for the token's `sub` claim, the session
+ * for its `sid` claim (the writer identity activity appends are checked against).
+ *
+ * `signed-out` covers a caller with no live session to act as, and one whose session reached its
+ * own expiry. The device may keep whatever it has not yet delivered: the same account signing back
+ * in on the same device is entitled to deliver it.
+ *
+ * `superseded` covers a session whose row is gone before its expiry — an account taken over on
+ * another device, a sign-out, or a reuse revocation. The device must discard its undelivered work:
+ * the account is being played elsewhere, or the next sign-in here may be someone else.
  */
-export interface SessionActor {
-  readonly sessionID: string;
-  readonly userID: string;
-}
+export type SessionActorOutcome =
+  | { readonly kind: 'actor'; readonly sessionID: string; readonly userID: string }
+  | { readonly kind: 'signed-out' }
+  | { readonly kind: 'superseded' };
 
 /**
- * Loads the acting user and session ids for a cookie-derived service call, proactively re-validating a
- * near-expired session first: services no longer see the caller's own access token, so nothing
- * else re-checks the underlying session's existence, expiry, or revocation before its identity is
- * trusted to mint an s2s token. Even a fresh access token no longer settles that on its own — this
- * closes the token's own trust window by confirming the session row still exists on every call,
+ * Resolves what a cookie-derived service call acts as, proactively re-validating a near-expired
+ * session first: services no longer see the caller's own access token, so nothing else re-checks
+ * the underlying session's existence, expiry, or revocation before its identity is trusted to mint
+ * an s2s token. Even a fresh access token no longer settles that on its own — this closes the
+ * token's own trust window by confirming the session row still exists on every call,
  * request-scoped-memoized so the repeated calls one SSR request makes hit the session service at
- * most once per session. `null` covers no live session, a definitively rejected refresh, and a
- * session the confirmation found gone — the cookie is cleared in the latter two cases, and the
- * caller's own guard redirects to login on its next request. A session service that can't be
- * reached at all fails the call instead: an unreachable service is never grounds to trust the
- * token or to destroy the cookie.
+ * most once per session.
+ *
+ * The two non-acting outcomes are distinguished rather than collapsed, because they carry opposite
+ * instructions for the device's undelivered offline work — see {@link SessionActorOutcome}. The
+ * cookie is cleared for both, and the caller's own guard redirects to login on its next request.
+ *
+ * A session service that can't be reached at all fails the call instead: an unreachable service is
+ * never grounds to trust the token or to destroy the cookie.
  */
-export async function loadSessionActor(): Promise<SessionActor | null> {
+export async function loadSessionActor(): Promise<SessionActorOutcome> {
   const session = await getAuthSession();
 
   if (
@@ -56,32 +75,37 @@ export async function loadSessionActor(): Promise<SessionActor | null> {
     session.accessToken === undefined ||
     session.refreshToken === undefined
   ) {
-    return null;
+    return { kind: 'signed-out' };
   }
 
   if (!isAccessTokenStale(session.accessToken)) {
     const stillExists = await checkSessionStillExists(session.sessionID, session.userID);
 
+    // the row is gone while the token this call carries is still valid: only a deletion does that,
+    // never an expiry, which leaves the row in place for the refresh path below to judge
     if (!stillExists) {
       await removeAuthSession();
 
-      return null;
+      return { kind: 'superseded' };
     }
 
-    return { sessionID: session.sessionID, userID: session.userID };
+    return { kind: 'actor', sessionID: session.sessionID, userID: session.userID };
   }
 
-  const tokens = await resolveRefreshedTokens(session.sessionID, session.refreshToken);
+  const refreshed = await resolveRefreshedTokens(session.sessionID, session.refreshToken);
 
-  if (tokens === undefined) {
+  if (refreshed === 'expired' || refreshed === 'superseded') {
     await removeAuthSession();
 
-    return null;
+    return refreshed === 'expired' ? { kind: 'signed-out' } : { kind: 'superseded' };
   }
 
-  await updateAuthSession({ accessToken: tokens.accessToken, refreshToken: tokens.refreshToken });
+  await updateAuthSession({
+    accessToken: refreshed.accessToken,
+    refreshToken: refreshed.refreshToken,
+  });
 
-  return { sessionID: session.sessionID, userID: session.userID };
+  return { kind: 'actor', sessionID: session.sessionID, userID: session.userID };
 }
 
 function isAccessTokenStale(accessToken: string): boolean {
@@ -134,7 +158,7 @@ async function readSessionStillExists(sessionID: string, userID: string): Promis
 async function resolveRefreshedTokens(
   sessionID: string,
   refreshToken: string,
-): Promise<RefreshedTokens | undefined> {
+): Promise<RefreshFailure | RefreshedTokens> {
   const existing = inFlightRefreshes.get(sessionID);
 
   if (existing !== undefined) {
@@ -153,15 +177,16 @@ async function resolveRefreshedTokens(
 }
 
 /**
- * Rotates the session's token pair, mapping only the contract's declared rejections (session gone,
- * expired, or token reuse) to `undefined` so the caller signs the session out. A transport failure
- * or unexpected service error stays a throw — it says nothing about the session, so it must not
- * end it.
+ * Rotates the session's token pair, mapping the contract's declared rejections to the failure the
+ * caller signs the session out on. `SESSION_EXPIRED` is the one rejection that says the session
+ * simply ran out; every other declared rejection — the row gone, or reuse revoking it — means it
+ * was ended before its time. A transport failure or unexpected service error stays a throw: it
+ * says nothing about the session, so it must not end it.
  */
 async function runRefresh(
   sessionID: string,
   refreshToken: string,
-): Promise<RefreshedTokens | undefined> {
+): Promise<RefreshFailure | RefreshedTokens> {
   const [error, tokens] = await safe(
     sessionRefreshClient.refreshTokens({ id: sessionID, refreshToken }),
   );
@@ -171,7 +196,7 @@ async function runRefresh(
   }
 
   if (isDefinedError(error)) {
-    return undefined;
+    return error.code === 'SESSION_EXPIRED' ? 'expired' : 'superseded';
   }
 
   throw error;

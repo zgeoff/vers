@@ -53,7 +53,17 @@ export async function sendRPCRequest(
 
   const headers = new Headers(request.headers);
 
-  const actor = await loadSessionActor();
+  const outcome = await loadSessionActor();
+
+  // A session whose row was deleted before its expiry is answered here rather than forwarded: the
+  // service would refuse the unauthenticated call anyway, and only this side can tell a deletion
+  // from an expiry. The header is what tells the caller to discard the offline work it still
+  // holds, so a plain expiry — answered by the service's own 401, with no header — keeps it.
+  if (outcome.kind === 'superseded') {
+    return new Response(null, { headers: { 'x-session-superseded': '1' }, status: 401 });
+  }
+
+  const actor = outcome.kind === 'actor' ? outcome : null;
 
   const token = await createEdgeServiceToken({
     actingSessionID: actor?.sessionID ?? null,
