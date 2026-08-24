@@ -2,14 +2,10 @@ import { expect, test } from 'bun:test';
 import { createContentVersion, findContentDocument } from '@vers/content-registry';
 import type { ActivityContract } from '@vers/contract-activity';
 import { createMockContentDocument } from '@vers/contract-activity/test-utils';
-import {
-  createActivityChainRow,
-  createAvatarRow,
-  createTestDB,
-  createViewer,
-} from '@vers/service-test-utils/bun';
+import { createAvatarRow, createTestDB, createViewer } from '@vers/service-test-utils/bun';
 import { createSimVersionRow } from '@vers/sim-registry/test-utils';
 import { buildRPCTestClient } from '@vers/test-utils';
+import invariant from 'tiny-invariant';
 import { createActivityService } from './create-activity-service';
 
 test('it wires an injected db into the router instead of building one from env', async () => {
@@ -22,17 +18,11 @@ test('it wires an injected db into the router instead of building one from env',
   const viewer = await createViewer({ audience: 'service-activity', db: db.db });
   const avatar = await createAvatarRow(db.db, { userId: viewer.user.id });
 
-  await createActivityChainRow(db.db, { avatarId: avatar.id, scopeId: '0_0' });
-
   const client = buildRPCTestClient<ActivityContract>(service.app, { token: viewer.token });
 
-  await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
-  });
+  await client.revealNodes({ avatarID: avatar.id, nodeIDs: ['0_0'] });
 
-  const rows = await db.db.selectFrom('activities').selectAll().execute();
+  const rows = await db.db.selectFrom('activityChains').selectAll().execute();
 
   expect(rows).toHaveLength(1);
 });
@@ -53,17 +43,12 @@ test('it defaults the content and key versions when none are injected', async ()
   const viewer = await createViewer({ audience: 'service-activity', db: db.db });
   const avatar = await createAvatarRow(db.db, { userId: viewer.user.id });
 
-  await createActivityChainRow(db.db, { avatarId: avatar.id, scopeId: '0_0' });
-
   const client = buildRPCTestClient<ActivityContract>(service.app, { token: viewer.token });
 
-  const activity = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
-  });
+  const revealed = await client.revealNodes({ avatarID: avatar.id, nodeIDs: ['0_0'] });
 
-  expect(activity).toMatchObject({ contentVersion: '2', keyVersion: 1 });
+  expect(revealed).toMatchObject({ keyVersion: 1 });
+  expect(revealed.nodes[0]).toMatchObject({ contentVersion: '2' });
 });
 
 test('it stamps a content version whose document the registry can load', async () => {
@@ -76,17 +61,15 @@ test('it stamps a content version whose document the registry can load', async (
   const viewer = await createViewer({ audience: 'service-activity', db: db.db });
   const avatar = await createAvatarRow(db.db, { userId: viewer.user.id });
 
-  await createActivityChainRow(db.db, { avatarId: avatar.id, scopeId: '0_0' });
-
   const client = buildRPCTestClient<ActivityContract>(service.app, { token: viewer.token });
 
-  const activity = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
-  });
+  const revealed = await client.revealNodes({ avatarID: avatar.id, nodeIDs: ['0_0'] });
 
-  expect(findContentDocument(db.db, activity.contentVersion)).resolves.toBeDefined();
+  const [node] = revealed.nodes;
+
+  invariant(node !== undefined, 'a reveal of one node returns one entry');
+
+  expect(findContentDocument(db.db, node.contentVersion)).resolves.toBeDefined();
 });
 
 test('it uses an injected key version when given', async () => {
@@ -99,15 +82,9 @@ test('it uses an injected key version when given', async () => {
   const viewer = await createViewer({ audience: 'service-activity', db: db.db });
   const avatar = await createAvatarRow(db.db, { userId: viewer.user.id });
 
-  await createActivityChainRow(db.db, { avatarId: avatar.id, scopeId: '0_0' });
-
   const client = buildRPCTestClient<ActivityContract>(service.app, { token: viewer.token });
 
-  const activity = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
-  });
+  const revealed = await client.revealNodes({ avatarID: avatar.id, nodeIDs: ['0_0'] });
 
-  expect(activity).toMatchObject({ keyVersion: 7 });
+  expect(revealed).toMatchObject({ keyVersion: 7 });
 });

@@ -3,7 +3,6 @@ import { readAllActivityStarts } from '../submission/read-all-activity-starts';
 import { readLastStartedActivity } from '../submission/read-last-started-activity';
 import { removeActivityStart } from '../submission/remove-activity-start';
 import { removeLastStartedActivity } from '../submission/remove-last-started-activity';
-import { removePendingStartIntent } from '../submission/remove-pending-start-intent';
 import { removeQueuedCheckpoints } from '../submission/remove-queued-checkpoints';
 import { writeLastStartedActivity } from '../submission/write-last-started-activity';
 import { ingestAndBroadcastActivityStart } from './ingest-and-broadcast-activity-start';
@@ -15,9 +14,11 @@ import type { WorkerContext } from './types';
  * Delivers them in predecessor order, so the server always sees an activity start's predecessor
  * before the activity start itself and an absent predecessor means the predecessor was refused,
  * never merely late. Per row the ingest outcome decides the action: `ingested` announces the
- * activity to connected tabs and registers it so its durably queued checkpoints seed and flush; `deferred` leaves the row for a later
- * recovery; `rejected` drops the row and, because a successor built on a refused activity start can
- * never verify, its whole dependent subtree. A row for a different avatar this device also owns is
+ * activity to connected tabs and registers it so its durably queued checkpoints seed and flush;
+ * `deferred` leaves the row for a later recovery; `undelivered` means the service never answered,
+ * so the drain marks the connection down and stops rather than retrying every remaining row against
+ * the same dead connection; `rejected` drops the row and, because a successor built on a refused
+ * activity start can never verify, its whole dependent subtree. A row for a different avatar this device also owns is
  * left untouched — it drains on that avatar's own recovery, since minting its activity start needs
  * it as the active avatar.
  */
@@ -41,12 +42,18 @@ export async function drainActivityStarts(context: WorkerContext, avatarID: stri
 
     const outcome = await ingestAndBroadcastActivityStart(context, row.id);
 
+    // the service never answered: every later row would fail the same way, so the drain marks the
+    // connection down and leaves the rest for the next recovery
+    if (outcome === 'undelivered') {
+      context.updateConnectivity(false);
+      break;
+    }
+
     if (outcome === 'rejected') {
-      // ingest already removed the pending row; clear the queued checkpoints and held intent that
-      // would otherwise build onto an activity start that will never exist, and cascade to its
+      // ingest already removed the pending row; clear the queued checkpoints that would
+      // otherwise build onto an activity start that will never exist, and cascade to its
       // successors
       await removeQueuedCheckpoints(row.id);
-      await removePendingStartIntent(row.id);
 
       dropped.add(row.id);
       continue;
@@ -110,14 +117,12 @@ function sortByPredecessor(rows: ReadonlyArray<ActivityData>): Array<ActivityDat
 }
 
 /**
- * Removes an undelivered successor of a refused activity start — its pending row, queued
- * checkpoints, and any held start intent — since it can never verify against a predecessor that
- * does not exist.
+ * Removes an undelivered successor of a refused activity start — its pending row and queued
+ * checkpoints — since it can never verify against a predecessor that does not exist.
  */
 async function removeUnverifiableStartRow(activityID: string): Promise<void> {
   await removeActivityStart(activityID);
   await removeQueuedCheckpoints(activityID);
-  await removePendingStartIntent(activityID);
 }
 
 /**

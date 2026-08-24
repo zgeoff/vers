@@ -7,17 +7,42 @@ import type { ActivityServiceClient } from './types';
 
 /**
  * `ingestActivityStart`'s settled outcome: `ingested` when the server minted the activity start and
- * this device's durable row is gone; `deferred` when the answer says nothing about the activity
- * start's own validity — a transport failure, a session lapse, or a temporarily inactive avatar —
- * and the row stays for a later retry; `rejected` when the server refused the activity start
- * outright and the row is gone; `absent` when this device held no pending activity start for the
- * activity id at all.
+ * this device's durable row is gone; `deferred` when the server answered but said nothing about the
+ * activity start's own validity — a session lapse, a temporarily inactive avatar — and the row stays
+ * for a later retry; `undelivered` when the service never answered at all, which the row also
+ * survives; `rejected` when the server refused the activity start outright and the row is gone;
+ * `absent` when this device held no pending activity start for the activity id at all.
  */
-export type IngestActivityStartOutcome = 'absent' | 'deferred' | 'ingested' | 'rejected';
+export type IngestActivityStartOutcome =
+  | 'absent'
+  | 'deferred'
+  | 'ingested'
+  | 'rejected'
+  | 'undelivered';
+
+/**
+ * A refusal the player must be told about, carried out alongside the disposition it earned: the
+ * account switched active avatars while this device held the activity start, or the service
+ * confirmed this build's engine no longer replays the current content. Absent for every other
+ * answer, including the refusals a later retry can clear on its own.
+ */
+export type IngestActivityStartNotice =
+  | { readonly activeAvatarName: string; readonly kind: 'avatar-switched' }
+  | { readonly kind: 'sim-version-expired' };
+
+/**
+ * One ingest's disposition, plus the player-facing notice it owes when the server refused on
+ * grounds a player can act on.
+ */
+export interface IngestActivityStartResult {
+  readonly notice?: IngestActivityStartNotice;
+  readonly outcome: IngestActivityStartOutcome;
+}
 
 /**
  * A defined `advanceActivity` error naming the activity start permanently invalid — a scope that
- * resolves to no node, a seed chain that was never revealed, or a sim version past retention. The
+ * resolves to no node, or a seed chain that was never revealed. A sim version past retention is
+ * equally permanent but answered separately, since it owes the player a notice as well. The
  * server will refuse it under any order, so the pending row is dropped along with the checkpoints
  * that would have chained onto it. The order-sensitive refusals — `CONFLICT` (the predecessor's
  * terminal has not advanced the seed chain's anchor yet), `SIM_VERSION_UNKNOWN` (a version
@@ -31,7 +56,6 @@ const REJECTED_CODES: ReadonlySet<string> = new Set([
   'NODE_NOT_REVEALED',
   'NODE_UNKNOWN',
   'NOT_FOUND',
-  'SIM_VERSION_EXPIRED',
 ]);
 
 /**
@@ -65,16 +89,17 @@ const CHECKPOINT_INVALID_DISPOSITIONS: Readonly<
  * offline-first ingest, an empty `continuations` batch minting the row alone and appending nothing.
  * Removes the durable `pending-activity-starts` row once the server has answered definitively —
  * accepted or refused — and keeps it untouched on anything that says nothing about the activity
- * start's own validity, so a later retry gets another chance.
+ * start's own validity, so a later retry gets another chance. Two refusals also carry a notice for
+ * the player: the account switched active avatars, and this build's engine is past retention.
  */
 export async function ingestActivityStart(
   client: Pick<ActivityServiceClient, 'advanceActivity'>,
   activityID: string,
-): Promise<IngestActivityStartOutcome> {
+): Promise<IngestActivityStartResult> {
   const row = await readActivityStart(activityID);
 
   if (row === undefined) {
-    return 'absent';
+    return { outcome: 'absent' };
   }
 
   // a client-minted activity start always carries its start key; a row missing one can never be
@@ -83,7 +108,7 @@ export async function ingestActivityStart(
   if (row.startKey === null) {
     await removeActivityStart(activityID);
 
-    return 'rejected';
+    return { outcome: 'rejected' };
   }
 
   const activityStart = buildOfflineActivityStartSubmission(row);
@@ -95,28 +120,46 @@ export async function ingestActivityStart(
   if (error === null) {
     await removeActivityStart(activityID);
 
-    return 'ingested';
+    return { outcome: 'ingested' };
   }
 
+  // the service never answered, so the row keeps and the caller has a connectivity transition to
+  // make that a server-side deferral does not
   if (!isDefinedError(error)) {
-    return 'deferred';
+    return { outcome: 'undelivered' };
   }
 
   if (error.code === 'CHECKPOINT_INVALID') {
     if (CHECKPOINT_INVALID_DISPOSITIONS[error.data.reason] === 'deferred') {
-      return 'deferred';
+      return { outcome: 'deferred' };
     }
 
     await removeActivityStart(activityID);
 
-    return 'rejected';
+    return { outcome: 'rejected' };
+  }
+
+  // the account switched avatars while this device held the activity start: the row keeps for a
+  // switch back, and the player is told which avatar the account is on now
+  if (error.code === 'AVATAR_NOT_ACTIVE') {
+    return {
+      notice: { activeAvatarName: error.data.activeAvatarName, kind: 'avatar-switched' },
+      outcome: 'deferred',
+    };
+  }
+
+  // only a reload delivers an engine the service would accept, so the row goes with the notice
+  if (error.code === 'SIM_VERSION_EXPIRED') {
+    await removeActivityStart(activityID);
+
+    return { notice: { kind: 'sim-version-expired' }, outcome: 'rejected' };
   }
 
   if (REJECTED_CODES.has(error.code)) {
     await removeActivityStart(activityID);
 
-    return 'rejected';
+    return { outcome: 'rejected' };
   }
 
-  return 'deferred';
+  return { outcome: 'deferred' };
 }

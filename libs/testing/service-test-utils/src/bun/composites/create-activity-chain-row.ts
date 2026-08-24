@@ -8,7 +8,7 @@ interface CreateActivityChainRowData extends Partial<Insertable<ActivityChains>>
 }
 
 /**
- * Seeds a revealed chain row for an existing avatar and scope — the precondition `startActivity`
+ * Seeds a revealed chain row for an existing avatar and scope — the precondition an activity start
  * requires before it will root a new activity there, mirroring what `revealNodes` mints at reveal
  * time.
  */

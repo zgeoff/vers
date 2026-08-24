@@ -15,6 +15,7 @@ import { buildMockScopeSecret } from '@vers/mock-services/keys';
 import {
   createActiveAvatarRow,
   createActivityChainRow,
+  createActivityRow,
   createAnonymousViewer,
   createAvatarRow,
   createServiceToken,
@@ -32,6 +33,7 @@ import { createMockActivity } from '../test-utils/factories/create-mock-activity
 import { createMockCatchUpContinuation } from '../test-utils/factories/create-mock-catch-up-continuation';
 import { createMockCheckpointBatch } from '../test-utils/factories/create-mock-checkpoint-batch';
 import { createMockOfflineActivityStartSubmission } from '../test-utils/factories/create-mock-offline-activity-start-submission';
+import { toActivityData } from './to-activity-data';
 
 /**
  * `advanceActivity` opens its own `db.transaction()` per continuation, which can't nest under the
@@ -144,10 +146,9 @@ test('it mint-and-appends a two-continuation chain, returning the final freshly 
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const firstTail = createMockCheckpointBatch({
@@ -157,7 +158,7 @@ test('it mint-and-appends a two-continuation chain, returning the final freshly 
     startVersion: 1,
   });
 
-  const rowB = buildMintedRowContext(started, firstTail);
+  const rowB = buildMintedRowContext(toActivityData(started), firstTail);
 
   const secondTail = createMockCheckpointBatch({
     finalPayloadOverrides: { rewards: { xp: 25 }, type: 'completed' },
@@ -237,10 +238,9 @@ test('it carries the closing row secretRef/secretVersion forward onto a minted c
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   expect(started.secretRef).not.toBeNull();
@@ -291,10 +291,9 @@ test('it rejects a continuation whose predicted buildSnapshot mismatches the ser
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const tail = createMockCheckpointBatch({
@@ -348,10 +347,9 @@ test('it converges a resubmit of an already-minted continuation onto the same ro
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const tail = createMockCheckpointBatch({
@@ -402,10 +400,9 @@ test('it conflicts a mint whose client id already belongs to another avatar', as
 
   const clientA = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewerA.token });
 
-  const startedA = await clientA.startActivity({
-    avatarID: avatarA.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const startedA = await createActivityRow(ctx.db, {
+    avatarId: avatarA.id,
+    scopeId: '0_0',
   });
 
   const viewerB = await createViewer({ audience: 'service-activity', db: ctx.db });
@@ -415,10 +412,9 @@ test('it conflicts a mint whose client id already belongs to another avatar', as
 
   const clientB = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewerB.token });
 
-  const startedB = await clientB.startActivity({
-    avatarID: avatarB.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const startedB = await createActivityRow(ctx.db, {
+    avatarId: avatarB.id,
+    scopeId: '0_0',
   });
 
   const tailA = createMockCheckpointBatch({
@@ -479,10 +475,9 @@ test('it conflicts a mint whose client id collides with an unrelated row for the
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const reusedID = `act_${createId()}`;
@@ -568,10 +563,9 @@ test('it caps a continuation whose tail exceeds the accrued offline budget', asy
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const overCapTail = createMockCheckpointBatch({
@@ -629,10 +623,9 @@ test('it evicts a session that is no longer the writer', async () => {
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   await ctx.db
@@ -677,10 +670,9 @@ test('it bails with CHAIN_QUARANTINED when the scope already carries a quarantin
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   await ctx.db
@@ -745,10 +737,9 @@ test('it bails with CHECKPOINT_INVALID on a broken hash chain, leaving the head 
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  const started = await client.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const firstTail = createMockCheckpointBatch({
@@ -758,7 +749,7 @@ test('it bails with CHECKPOINT_INVALID on a broken hash chain, leaving the head 
     startVersion: 1,
   });
 
-  const rowB = buildMintedRowContext(started, firstTail);
+  const rowB = buildMintedRowContext(toActivityData(started), firstTail);
 
   const brokenSecondTail = createMockCheckpointBatch({
     finalPayloadOverrides: { rewards: { xp: 25 }, type: 'completed' },
@@ -823,12 +814,9 @@ test('it rejects an activity owned by another caller with NOT_FOUND', async () =
 
   await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
 
-  const ownerClient = buildRPCTestClient<ActivityContract>(ctx.app, { token: owner.token });
-
-  const started = await ownerClient.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   const other = await createViewer({ audience: 'service-activity', db: ctx.db });
@@ -1442,7 +1430,7 @@ test('it conflicts an activity-start mint while another run is already active fo
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
   // an already-active run at a different scope occupies the avatar's single-active-run slot
-  await client.startActivity({ avatarID: avatar.id, scopeID: '0_0', scopeType: 'world_map_node' });
+  await createActivityRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
 
   const activityID = `act_${createId()}`;
 
@@ -1522,12 +1510,9 @@ test("it keeps an activity start at another user's activity id owner-scoped NOT_
 
   await createActivityChainRow(ctx.db, { avatarId: ownerAvatar.id, scopeId: '0_0' });
 
-  const ownerClient = buildRPCTestClient<ActivityContract>(ctx.app, { token: owner.token });
-
-  const started = await ownerClient.startActivity({
-    avatarID: ownerAvatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: ownerAvatar.id,
+    scopeId: '0_0',
   });
 
   const other = await createViewer({ audience: 'service-activity', db: ctx.db });
@@ -1713,10 +1698,9 @@ test("it refuses a kicked writer session's undelivered offline activityStart wit
   const clientA = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
   // session A starts the avatar's live run and becomes its writer
-  const started = await clientA.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
   });
 
   // session B takes over the same run, kicking session A off as its writer
@@ -1769,82 +1753,4 @@ test("it refuses a kicked writer session's undelivered offline activityStart wit
       activityStart,
     }),
   ).rejects.toMatchObject({ code: 'CONFLICT' });
-});
-
-// Target — #927 (blocked by #918), offline-reconcile doc §"Losing offline navigation across
-// sessions": an avatar has one active session, so a session that takes over kicks the previous one
-// off and the kicked session's undelivered offline work is discarded rather than delivered. Today
-// activity start admission has no acting-session gate — a kicked session's offline activity start
-// is refused, if at all, by the incidental active-run and chain-anchor guards, never on session
-// grounds. This asserts the doc's guarantee: the kicked session's delivery is refused because it
-// lost the writer, a session-scoped verdict distinct from the generic CONFLICT the same delivery
-// earns today. Unskip once #927 adds the session-scoped discard.
-test.skip("it discards a kicked writer session's undelivered offline activityStart on session grounds after a takeover", async () => {
-  await using ctx = await setupTest();
-
-  const current = await createSimVersionRow(ctx.db);
-
-  const viewer = await createViewer({
-    audience: 'service-activity',
-    db: ctx.db,
-    sessionID: 'session-a',
-  });
-
-  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id, xp: 0 });
-  const chain = await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
-
-  const clientA = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
-
-  const started = await clientA.startActivity({
-    avatarID: avatar.id,
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
-  });
-
-  const keyPair = await getTestServiceKeyPair();
-
-  const tokenB = await createServiceToken({
-    actingSessionId: 'session-b',
-    actingUserId: viewer.user.id,
-    audience: 'service-activity',
-    privateKey: keyPair.privateKey,
-  });
-
-  const clientB = buildRPCTestClient<ActivityContract>(ctx.app, { token: tokenB });
-
-  // session B takes over and then stops the run, freeing the avatar's active-run slot
-  await clientB.resumeActivity({ activityID: started.id });
-  await clientB.stopActivity({ avatarID: avatar.id });
-
-  // session A lost the writer at the takeover, so its delivery must be refused on session grounds
-  const derived = deriveActivityStart({
-    avatarID: avatar.id,
-    avatarSeed: avatar.seed,
-    contentVersion: '2',
-    document: createMockContentDocument({ contentVersion: '2' }),
-    scopeID: '0_0',
-    seed: chain.appendedNextSeed,
-    simVersion: current.engineHash,
-  });
-
-  const activityStart = createMockOfflineActivityStartSubmission({
-    avatarID: avatar.id,
-    buildSnapshot: { level: buildLevelFromXP(0), xp: 0 },
-    contentVersion: '2',
-    scopeID: '0_0',
-    scopeType: 'world_map_node',
-    seed: chain.appendedNextSeed,
-    simVersion: current.engineHash,
-    startChainIndex: 0,
-    startHash: derived.startHash,
-  });
-
-  expect(
-    clientA.advanceActivity({
-      activityID: `act_${createId()}`,
-      continuations: [createMockCatchUpContinuation()],
-      expectedHead: 0,
-      activityStart,
-    }),
-  ).rejects.toMatchObject({ code: 'SESSION_EVICTED' });
 });

@@ -15,7 +15,6 @@ import { getLatestActivityProgress } from './handlers/get-latest-activity-progre
 import { getRevealedNodes } from './handlers/get-revealed-nodes';
 import { resumeActivity } from './handlers/resume-activity';
 import { revealNodes } from './handlers/reveal-nodes';
-import { startActivity } from './handlers/start-activity';
 import { stopActivity } from './handlers/stop-activity';
 import { trackActivityProgress } from './handlers/track-activity-progress';
 import { updateFailureAction } from './handlers/update-failure-action';
@@ -91,7 +90,6 @@ export function buildActivityRouter(deps: BuildActivityRouterDeps) {
         opts,
       ),
     ),
-    startActivity: os.startActivity.handler((opts) => startActivity(deps, opts)),
     stopActivity: os.stopActivity.handler((opts) =>
       stopActivity({ db: deps.db, sendReplayWake: deps.sendReplayWake }, opts),
     ),

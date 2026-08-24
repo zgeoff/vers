@@ -7,7 +7,6 @@ import { getLatestActivityProgress } from './get-latest-activity-progress';
 import { getRevealedNodes } from './get-revealed-nodes';
 import { resumeActivity } from './resume-activity';
 import { revealNodes } from './reveal-nodes';
-import { startActivity } from './start-activity';
 import { stopActivity } from './stop-activity';
 import { trackActivityProgress } from './track-activity-progress';
 import { updateFailureAction } from './update-failure-action';
@@ -22,7 +21,6 @@ export const activityRouter = {
   getRevealedNodes,
   resumeActivity,
   revealNodes,
-  startActivity,
   stopActivity,
   trackActivityProgress,
   updateFailureAction,

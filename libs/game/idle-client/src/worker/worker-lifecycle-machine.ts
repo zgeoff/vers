@@ -5,7 +5,6 @@ import type { ActorRefFromLogic } from 'xstate';
 import { assign, enqueueActions, fromPromise, setup } from 'xstate';
 import { buildMachineTypes } from '../submission/build-machine-types';
 import { checkpointSubmitterMachine } from '../submission/checkpoint-submitter-machine';
-import { removePendingStartIntent } from '../submission/remove-pending-start-intent';
 import { WorkerMessageType } from '../types';
 import { applyEviction } from './apply-eviction';
 import type { Deferred } from './build-deferred';
@@ -843,7 +842,6 @@ async function runStopDelivery(
   runtime: WorkerContext,
   input: Readonly<StopActivityInput>,
 ): Promise<void> {
-  await removePendingStartIntent();
   await submitStopIntent(runtime, { avatarID: input.avatarID, id: input.activityID });
 }
 

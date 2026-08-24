@@ -1,4 +1,5 @@
 import { expect, mock, test } from 'bun:test';
+import { createMockContentDocument } from '@vers/contract-activity/test-utils';
 import type { SimulationListener } from '@vers/idle-core';
 import { ActivityFailureAction, createSimulation } from '@vers/idle-core';
 import {
@@ -9,9 +10,13 @@ import {
 import { createAuthedServiceClient, createViewer } from '@vers/mock-services';
 import * as db from '@vers/mock-services/db';
 import invariant from 'tiny-invariant';
+import { writeContentDocumentCache } from '../content/write-content-document-cache';
 import type { CheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import type { ActivityServiceClient } from '../submission/types';
+import { writeNodeSeeds } from '../submission/write-node-seeds';
+import { writeStartStamps } from '../submission/write-start-stamps';
 import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
+import { createMockNodeSeed } from '../test-utils/factories/create-mock-node-seed';
 import { WorkerMessageType } from '../types';
 import { runSimulation } from './run-simulation';
 import type { WorkerContext } from './types';
@@ -43,7 +48,7 @@ async function runSimulationSteps(
   }
 }
 
-test('it continues into a fresh server-started row if it fails and the failure action is retry', async () => {
+test('it continues into a fresh locally minted row if it fails and the failure action is retry', async () => {
   const viewer = await createViewer();
   const ctx = await setupTest({ userID: viewer.user.id });
 
@@ -53,7 +58,25 @@ test('it continues into a fresh server-started row if it fails and the failure a
     status: 'stopped',
   });
 
-  const context = createStubWorkerContext({ client: ctx.client });
+  // the continuation mints from this device's cache, so the scope's inputs must be present
+  const nodeSeed = createMockNodeSeed({
+    avatarID: viewer.avatar.id,
+    encounterNode: { difficulty: 1 },
+    nodeID: sourceRow.scopeID,
+  });
+
+  await writeNodeSeeds(viewer.avatar.id, [nodeSeed]);
+  await writeStartStamps({ keyVersion: 1, secretRef: 'worldmap', secretVersion: 1 });
+
+  await writeContentDocumentCache(
+    createMockContentDocument({ contentVersion: nodeSeed.contentVersion }),
+  );
+
+  const context = createStubWorkerContext({
+    bundledEngineHash: 'engine_hash_1',
+    client: ctx.client,
+  });
+
   const simulation = createSimulation();
   const startedSpy = mock<SimulationListener>();
 
@@ -72,16 +95,14 @@ test('it continues into a fresh server-started row if it fails and the failure a
 
   await runSimulationSteps(context, simulation, 100, 50);
 
-  const minted = db.activityCollection.findFirst((q) =>
-    q.where({ avatarID: viewer.avatar.id, status: 'active' }),
-  );
+  const minted = context.getActivity();
 
-  invariant(minted !== undefined, 'the continuation minted an active row');
+  invariant(minted !== null, 'the continuation installed a fresh row');
 
   expect(startedSpy).toHaveBeenCalled();
   expect(simulation.activity).not.toBeNull();
   expect(minted.scopeID).toBe(sourceRow.scopeID);
-  expect(context.getActivity()).toStrictEqual(minted);
+  expect(minted.predecessorActivityID).toBe(sourceRow.id);
 });
 
 test('it does not continue if it fails and the failure action is abort', async () => {
@@ -106,7 +127,7 @@ test('it does not continue if it fails and the failure action is abort', async (
 });
 
 test.each([[ActivityFailureAction.Abort], [ActivityFailureAction.Retry]])(
-  'it continues into a fresh server-started row if it completes, regardless of the failure action (%s)',
+  'it continues into a fresh locally minted row if it completes, regardless of the failure action (%s)',
   async (failureAction) => {
     const viewer = await createViewer();
     const ctx = await setupTest({ userID: viewer.user.id });
@@ -116,7 +137,24 @@ test.each([[ActivityFailureAction.Abort], [ActivityFailureAction.Retry]])(
       status: 'stopped',
     });
 
-    const context = createStubWorkerContext({ client: ctx.client });
+    const nodeSeed = createMockNodeSeed({
+      avatarID: viewer.avatar.id,
+      encounterNode: { difficulty: 1 },
+      nodeID: sourceRow.scopeID,
+    });
+
+    await writeNodeSeeds(viewer.avatar.id, [nodeSeed]);
+    await writeStartStamps({ keyVersion: 1, secretRef: 'worldmap', secretVersion: 1 });
+
+    await writeContentDocumentCache(
+      createMockContentDocument({ contentVersion: nodeSeed.contentVersion }),
+    );
+
+    const context = createStubWorkerContext({
+      bundledEngineHash: 'engine_hash_1',
+      client: ctx.client,
+    });
+
     const simulation = createSimulation();
     const startedSpy = mock<SimulationListener>();
     const avatarData = createMockAvatarData();
@@ -144,115 +182,15 @@ test.each([[ActivityFailureAction.Abort], [ActivityFailureAction.Retry]])(
 
     await runSimulationSteps(context, simulation, 100, 700);
 
-    const minted = db.activityCollection.findFirst((q) =>
-      q.where({ avatarID: viewer.avatar.id, status: 'active' }),
-    );
+    const minted = context.getActivity();
 
-    invariant(minted !== undefined, 'the continuation minted an active row');
+    invariant(minted !== null, 'the continuation installed a fresh row');
 
     expect(startedSpy).toHaveBeenCalled();
     expect(simulation.activity).not.toBe(startingActivity);
-    expect(context.getActivity()).toStrictEqual(minted);
+    expect(minted.predecessorActivityID).toBe(sourceRow.id);
   },
 );
-
-test('it rebuilds through a resync when a never-appended foreign row owns the avatar', async () => {
-  const viewer = await createViewer();
-  const ctx = await setupTest({ userID: viewer.user.id });
-
-  const sourceRow = await db.activityCollection.create({
-    avatarID: viewer.avatar.id,
-    startedAt: new Date(Date.now() - 60_000),
-    status: 'stopped',
-  });
-
-  // a live never-appended row already owns the avatar, so the start conflicts with it
-  const conflictRow = await db.activityCollection.create({
-    appendedHead: 0,
-    avatarID: viewer.avatar.id,
-    status: 'active',
-  });
-
-  const context = createStubWorkerContext({ client: ctx.client });
-  const simulation = createSimulation();
-
-  // life of 1 dies on the very first hit taken, forcing a failed checkpoint
-  const avatarData = createMockAvatarData({ life: 1 });
-
-  const activity = createMockActivityInput({
-    failureAction: ActivityFailureAction.Retry,
-    id: sourceRow.id,
-  });
-
-  context.setActivity(sourceRow);
-  context.setSimulation(simulation);
-  simulation.startActivity(avatarData, activity);
-
-  await runSimulationSteps(context, simulation, 100, 50);
-
-  expect(simulation.activity).toBeNull();
-
-  const installed = context.getSimulation();
-
-  expect(installed.activity?.id).toBe(conflictRow.id);
-  expect(context.getActivity()).toStrictEqual(conflictRow);
-});
-
-test('it rebuilds through a resync when the conflict row already has confirmed checkpoints', async () => {
-  const viewer = await createViewer();
-  const ctx = await setupTest({ userID: viewer.user.id });
-
-  const sourceRow = await db.activityCollection.create({
-    avatarID: viewer.avatar.id,
-    startedAt: new Date(Date.now() - 60_000),
-    status: 'stopped',
-  });
-
-  // a live progressed row owns the avatar: the conflict must rebuild, never adopt a zero cursor
-  const conflictRow = await db.activityCollection.create({
-    appendedAt: new Date(Date.now() - 2000),
-    appendedHead: 1,
-    avatarID: viewer.avatar.id,
-    status: 'active',
-  });
-
-  const registerActivity = mock<CheckpointSubmitter['registerActivity']>(() => Promise.resolve());
-
-  const submitter: CheckpointSubmitter = {
-    flushHeld: () => Promise.resolve(),
-    flushNow: () => Promise.resolve(),
-    registerActivity,
-    submit: () => Promise.resolve<number | undefined>(undefined),
-    isEvicted: () => false,
-    removeEviction: () => {},
-  };
-
-  const context = createStubWorkerContext({ client: ctx.client, submitter });
-  const simulation = createSimulation();
-
-  // life of 1 dies on the very first hit taken, forcing a failed checkpoint
-  const avatarData = createMockAvatarData({ life: 1 });
-
-  const activity = createMockActivityInput({
-    failureAction: ActivityFailureAction.Retry,
-    id: sourceRow.id,
-  });
-
-  context.setActivity(sourceRow);
-  context.setSimulation(simulation);
-  simulation.startActivity(avatarData, activity);
-
-  await runSimulationSteps(context, simulation, 100, 50);
-
-  // the resync reconstructed the row's confirmed checkpoint and registered its real cursor —
-  // never a zero cursor onto a progressed stream
-  expect(registerActivity).toHaveBeenCalledExactlyOnceWith(
-    expect.objectContaining({ activityID: conflictRow.id, appendedHead: 1 }),
-  );
-
-  expect(context.getSimulation()).not.toBe(simulation);
-  expect(context.getSimulation()?.activity?.id).toBe(conflictRow.id);
-});
 
 test('it skips the continuation when a fresher activity replaced this row mid-submission', async () => {
   const viewer = await createViewer();

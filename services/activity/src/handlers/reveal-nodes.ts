@@ -64,16 +64,15 @@ interface RevealNodesResult {
 /**
  * Mints (or re-affirms) the genesis chain row for each given world-map node, on behalf of an avatar
  * owned by the acting user, and derives that node's encounter alongside the current content version
- * — every crypto stamp a later offline-open `startActivity` needs to synthesize a valid start
- * without the server. Idempotent per node: a repeat reveal self-assigns the existing row's
+ * — every crypto stamp a client needs to synthesize a valid activity start without the server. Idempotent per node: a repeat reveal self-assigns the existing row's
  * `genesisSeed` in place of rolling a new one, so a node reveals to the same seed regardless of how
- * many times, or how many concurrent callers, reveal it — the property `startActivity` later
- * activity starts against. A duplicate node id within one call mints once; every requested id,
+ * many times, or how many concurrent callers, reveal it — the property later activity starts
+ * anchor against. A duplicate node id within one call mints once; every requested id,
  * repeats included, still gets one result entry. The stamps (`keyVersion`, `secretRef`,
  * `secretVersion`) are avatar- and account-global, so the response carries them once rather than
  * per node. Rejects with NODE_UNKNOWN before minting anything when any node id doesn't resolve to a
  * coordinate the world map can address. Authorization is ownership of the avatar, gated to the
- * account's active avatar under the same advisory lock `startActivity` takes — the active-avatar
+ * account's active avatar under the same per-user advisory lock a root mint takes — the active-avatar
  * check runs even for an empty batch, so an owned-but-inactive avatar is rejected regardless of how
  * many nodes it reveals. A node outside the avatar's revealed region — the union of reveal discs
  * over its verified first-clear nodes, plus the origin — is refused: it mints no chain row and is

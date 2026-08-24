@@ -1,6 +1,9 @@
 import { expect, onTestFinished, test } from 'bun:test';
 import type { ErrorEvent } from '@sentry/browser';
-import { createMockActivityData } from '@vers/contract-activity/test-utils';
+import {
+  createMockActivityData,
+  createMockContentDocument,
+} from '@vers/contract-activity/test-utils';
 import { ActivityFailureAction } from '@vers/idle-core';
 import { createAuthedServiceClient, createViewer, resolveServiceURL } from '@vers/mock-services';
 import { mockActivityService } from '@vers/mock-services/activity';
@@ -8,13 +11,13 @@ import * as db from '@vers/mock-services/db';
 import { waitFor } from '@vers/test-utils';
 import { http } from 'msw';
 import invariant from 'tiny-invariant';
+import { writeContentDocumentCache } from '../content/write-content-document-cache';
 import { server } from '../mocks/node';
-import { readPendingStartIntent } from '../submission/read-pending-start-intent';
+import { readAllActivityStarts } from '../submission/read-all-activity-starts';
 import { readPendingStopIntent } from '../submission/read-pending-stop-intent';
 import type { ActivityServiceClient } from '../submission/types';
 import { writeFailureActionCache } from '../submission/write-failure-action-cache';
 import { writeNodeSeeds } from '../submission/write-node-seeds';
-import { writePendingStartIntent } from '../submission/write-pending-start-intent';
 import { writePendingStopIntent } from '../submission/write-pending-stop-intent';
 import { writeQueuedCheckpoint } from '../submission/write-queued-checkpoint';
 import { writeStartStamps } from '../submission/write-start-stamps';
@@ -22,6 +25,7 @@ import { createFastClock } from '../test-utils/create-fast-clock';
 import { createTestClient } from '../test-utils/create-test-client';
 import { createMockCheckpointBatchEntry } from '../test-utils/factories/create-mock-checkpoint-batch-entry';
 import { createMockLatestActivityProgress } from '../test-utils/factories/create-mock-latest-activity-progress';
+import { createMockNodeSeed } from '../test-utils/factories/create-mock-node-seed';
 import { makeFailFirstMatchHandler } from '../test-utils/make-fail-first-match-handler';
 import { WORKER_TO_CLIENT_CHANNEL } from '../transport/constants';
 import { WorkerMessageType } from '../types';
@@ -192,66 +196,6 @@ test('it closes the connection on disconnect so no further call it makes is answ
   expect(raced).toBe('timed-out');
 });
 
-test('it resumes into a fresh row once a same-row CONFLICT resync drains a held terminal append', async () => {
-  const viewer = await createViewer();
-  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
-
-  // this seed's placeholder encounter completes in exactly 60s of simulated time; the fast clock
-  // below collapses that wait into a single tick-loop frame. A zero-gap active row makes the
-  // resync below attach it live — the tab-side install path now that only the worker sets
-  // activities.
-  const activity = await db.activityCollection.create({
-    avatarID: viewer.avatar.id,
-    encounterNode: { difficulty: 1 },
-    seed: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaa6072',
-    startedAt: new Date(),
-  });
-
-  // holds this activity's terminal append once: the row it closes stays active server-side, so
-  // the continuation's own startActivity call races back a same-row CONFLICT
-  server.use(
-    http.post(
-      `${resolveServiceURL('activity')}/rpc/trackActivityProgress`,
-      makeFailFirstMatchHandler((input) => input['activityID'] === activity.id),
-    ),
-  );
-
-  const clock = createFastClock();
-
-  using runtime = createWorkerRuntime({ client, now: clock.now });
-
-  const testClient = createConnectedTestClient(runtime);
-
-  await testClient.initialize({});
-  await testClient.reportOnline({ avatarID: viewer.avatar.id, claim: false });
-
-  await waitFor(
-    () => {
-      // re-armed every poll: a jump that lands before the tick loop installs the simulation is an
-      // idle frame, so the wait just re-arms the next one until it lands on a live tick
-      clock.jump(65_000);
-
-      const minted = db.activityCollection.findFirst((q) =>
-        q.where({ avatarID: viewer.avatar.id, status: 'active' }),
-      );
-
-      invariant(minted !== undefined, 'expected the same-row CONFLICT resync to mint a fresh row');
-
-      expect(minted.id).not.toBe(activity.id);
-    },
-
-    // the tick loop paces itself on real timers between each of the many timesteps this jump
-    // spans, so a loaded runner can need several times the default budget to land a live tick
-    { timeoutMs: 5000 },
-  );
-
-  const closed = db.activityCollection.findFirst((q) => q.where({ id: activity.id }));
-
-  invariant(closed !== undefined, 'expected the seeded activity to still exist');
-
-  expect(closed.status).toBe('stopped');
-});
-
 test('it resumes into a fresh row once a reconnect drains a held terminal append behind an offline continuation', async () => {
   const viewer = await createViewer();
   const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
@@ -263,9 +207,26 @@ test('it resumes into a fresh row once a reconnect drains a held terminal append
   const activity = await db.activityCollection.create({
     avatarID: viewer.avatar.id,
     encounterNode: { difficulty: 1 },
+    scopeID: '0_0',
     seed: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaa6072',
     startedAt: new Date(),
   });
+
+  // the continuation mints from this device's cache, so the scope's inputs must be present
+  await writeNodeSeeds(viewer.avatar.id, [
+    createMockNodeSeed({
+      avatarID: viewer.avatar.id,
+      contentVersion: '2',
+      encounterNode: { difficulty: 1 },
+      nodeID: '0_0',
+    }),
+  ]);
+
+  await writeStartStamps({ keyVersion: 1, secretRef: 'worldmap', secretVersion: 1 });
+
+  // the install loads the pinned document; publishing it keeps the test off whatever a cache miss
+  // would fetch
+  await writeContentDocumentCache(createMockContentDocument({ contentVersion: '2' }));
 
   // both this activity's terminal append and its continuation's own startActivity call fail once,
   // standing in for the device going offline right as the run completes; the flag scripts the
@@ -285,15 +246,15 @@ test('it resumes into a fresh row once a reconnect drains a held terminal append
         return true;
       }),
     ),
-    http.post(
-      `${resolveServiceURL('activity')}/rpc/startActivity`,
-      makeFailFirstMatchHandler((input) => input['avatarID'] === viewer.avatar.id),
-    ),
   );
 
   const clock = createFastClock();
 
-  using runtime = createWorkerRuntime({ client, now: clock.now });
+  using runtime = createWorkerRuntime({
+    bundledEngineHash: 'engine_hash_1',
+    client,
+    now: clock.now,
+  });
 
   const testClient = createConnectedTestClient(runtime);
 
@@ -316,94 +277,15 @@ test('it resumes into a fresh row once a reconnect drains a held terminal append
 
   globalThis.dispatchEvent(new Event('online'));
 
-  await waitFor(() => {
-    const minted = db.activityCollection.findFirst((q) =>
-      q.where({ avatarID: viewer.avatar.id, status: 'active' }),
-    );
+  await waitFor(async () => {
+    const pending = await readAllActivityStarts();
 
-    invariant(minted !== undefined, 'expected the reconnect resync to mint a fresh row');
+    const minted = pending.find((row) => row.predecessorActivityID === activity.id);
+
+    invariant(minted !== undefined, 'expected the reconnect to mint a fresh row');
 
     expect(minted.id).not.toBe(activity.id);
   });
-
-  const closed = db.activityCollection.findFirst((q) => q.where({ id: activity.id }));
-
-  invariant(closed !== undefined, 'expected the seeded activity to still exist');
-
-  expect(closed.status).toBe('stopped');
-});
-
-test('it drops a held start intent as stale on reconnect and resumes the remembered avatar instead', async () => {
-  const viewer = await createViewer();
-  const avatar = await db.avatarCollection.create({ userID: viewer.user.id });
-  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
-
-  // the intent's source row already reads closed; a stale-dropped intent must mint nothing here
-  const source = await db.activityCollection.create({
-    avatarID: avatar.id,
-    status: 'stopped',
-  });
-
-  // a capped row makes each resync's completion observable: it plans a rebase and emits a
-  // capped status, installing nothing — the reconnect gate below still sees no simulation
-  await db.activityCollection.create({
-    appendedHead: 0,
-    avatarID: viewer.avatar.id,
-    status: 'capped',
-  });
-
-  using runtime = createWorkerRuntime({ client });
-
-  const broadcasts = collectBroadcasts();
-  const testClient = createConnectedTestClient(runtime);
-
-  // the worker remembers this avatar as its last resync target once the report's recovery runs
-  await testClient.reportOnline({ avatarID: viewer.avatar.id, claim: false });
-
-  await waitFor(() => {
-    expect(broadcasts.received).toPartiallyContain({
-      status: { kind: 'capped' },
-      type: WorkerMessageType.ResyncStatus,
-    });
-  });
-
-  // parked while offline, for an avatar the account is no longer playing as
-  await writePendingStartIntent({
-    activityID: source.id,
-    avatarID: avatar.id,
-    scopeID: source.scopeID,
-    scopeType: source.scopeType,
-  });
-
-  globalThis.dispatchEvent(new Event('online'));
-
-  // The server names the remembered avatar as the account's real active one, so a fallback pass
-  // runs for it in the same call — its own `capped` status broadcasts first, then
-  // `avatar-switched` broadcasts as the cycle's terminal status, carrying that pass's (zero)
-  // tallies.
-  await waitFor(async () => {
-    const heldIntent = await readPendingStartIntent();
-
-    expect(heldIntent).toBeUndefined();
-  });
-
-  await waitFor(() => {
-    expect(broadcasts.received.at(-1)).toStrictEqual({
-      status: {
-        activeAvatarName: viewer.avatar.name,
-        attempts: 0,
-        kind: 'avatar-switched',
-        levelUps: 0,
-      },
-      type: WorkerMessageType.ResyncStatus,
-    });
-  });
-
-  const minted = db.activityCollection.findFirst((q) =>
-    q.where({ avatarID: avatar.id, status: 'active' }),
-  );
-
-  expect(minted).toBeUndefined();
 });
 
 test('it recovers a stop parked offline once a flush answer proves the connection returned', async () => {

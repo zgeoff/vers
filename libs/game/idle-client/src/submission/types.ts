@@ -52,20 +52,6 @@ export interface LastStartedActivityPreference {
 }
 
 /**
- * A continuation the worker wanted to start but couldn't complete, held durably so it survives a
- * worker reload; a resync's entry drain retries it with the idempotent start key
- * `continue_<activityID>`. `activityID` names the source row, so the drain can tell that row
- * still being open (keep waiting) from a different claim on the avatar (stale). The row it
- * eventually starts takes the failure action current at drain time, not raise time.
- */
-export interface PendingStartIntent {
-  readonly activityID: string;
-  readonly avatarID: string;
-  readonly scopeID: string;
-  readonly scopeType: string;
-}
-
-/**
  * A chain's current append position, cached alongside its node's other start inputs: the seed a
  * start anchoring at this scope derives its first checkpoint from, and that checkpoint's position
  * in the chain. Equal to `{ nextSeed: genesisSeed, chainIndex: 0 }` for a node never yet played,
@@ -139,7 +125,6 @@ export interface CheckpointQueueSchema extends DBSchema {
     value:
       | FailureActionPreference
       | LastStartedActivityPreference
-      | PendingStartIntent
       | PendingStopIntent
       | StartStampsPreference;
   };
