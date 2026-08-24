@@ -10,6 +10,18 @@ const activityCompletedMessageSchema = z
   })
   .readonly();
 
+/**
+ * The server has minted the named activity's client-minted activity start, so the activity is
+ * readable through the activity service from now on. Tabs act on this by enabling the reads they
+ * hold back while an activity exists only on this device.
+ */
+const activityStartIngestedMessageSchema = z
+  .object({
+    activityID: z.string(),
+    type: z.literal(WorkerMessageType.ActivityStartIngested),
+  })
+  .readonly();
+
 const simulationUpdateMessageSchema = z
   .object({
     state: simulationSnapshotSchema,
@@ -105,6 +117,7 @@ const writerReadyMessageSchema = z
  */
 export const workerToClientMessageSchema = z.discriminatedUnion('type', [
   activityCompletedMessageSchema,
+  activityStartIngestedMessageSchema,
   checkpointStreamInvalidMessageSchema,
   failureActionStatusMessageSchema,
   offlineCapStatusMessageSchema,
@@ -118,6 +131,8 @@ export const workerToClientMessageSchema = z.discriminatedUnion('type', [
 export type WorkerMessage = z.infer<typeof workerToClientMessageSchema>;
 
 export type ActivityCompletedMessage = z.infer<typeof activityCompletedMessageSchema>;
+
+export type ActivityStartIngestedMessage = z.infer<typeof activityStartIngestedMessageSchema>;
 
 export type CheckpointStreamInvalidMessage = z.infer<typeof checkpointStreamInvalidMessageSchema>;
 

@@ -13,6 +13,7 @@ import { writeQueuedCheckpoint } from '../submission/write-queued-checkpoint';
 import { createStubSubmitter } from '../test-utils/create-stub-submitter';
 import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
 import { createMockCheckpointBatchEntry } from '../test-utils/factories/create-mock-checkpoint-batch-entry';
+import { WorkerMessageType } from '../types';
 import { drainActivityStarts } from './drain-activity-starts';
 
 test("it ingests and registers the recovery avatar's row, leaving another avatar's row untouched", async () => {
@@ -54,6 +55,29 @@ test("it ingests and registers the recovery avatar's row, leaving another avatar
     scopeID: matching.scopeID,
     startChainIndex: matching.startChainIndex,
   });
+});
+
+test('it announces a drained activity start to connected tabs', async () => {
+  const context = createStubWorkerContext();
+
+  const row = createMockActivityData({
+    avatarID: 'avatar_announcing',
+    id: 'act_drain_announced',
+    scopeID: '1_0',
+    startKey: 'start_key_announced',
+  });
+
+  await writeActivityStart(row);
+
+  server.use(
+    mockActivityService.advanceActivity.handler(() => ({ activity: row, appendedHead: 0 })),
+  );
+
+  await drainActivityStarts(context, 'avatar_announcing');
+
+  expect(context.getBroadcasts()).toStrictEqual([
+    { activityID: row.id, type: WorkerMessageType.ActivityStartIngested },
+  ]);
 });
 
 test('it discards the queued checkpoints of a refused activityStart without registering it', async () => {

@@ -14,6 +14,13 @@ export interface SyncSlice {
    */
   lastCompletedActivityID: null | string;
 
+  /**
+   * The activity whose client-minted start the worker most recently landed on the server. Consumers
+   * read it as a change trigger rather than a set: an activity is ingested once, and what a tab
+   * needs is the moment to re-derive from the durable pending-start store.
+   */
+  lastIngestedActivityID: null | string;
+
   offlineCapStatus: null | OfflineCapStatus;
   resyncStatus: null | ResyncStatus;
 
@@ -36,6 +43,7 @@ export function createSyncSlice(): SyncSlice {
   return {
     checkpointStreamError: null,
     lastCompletedActivityID: null,
+    lastIngestedActivityID: null,
     offlineCapStatus: null,
     resyncStatus: null,
     rewardSlotLedger: [],
