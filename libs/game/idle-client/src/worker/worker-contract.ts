@@ -34,6 +34,17 @@ const startStatusSchema = z.discriminatedUnion('kind', [
 
 const ackSchema = z.object({ ok: z.literal(true) }).readonly();
 
+/**
+ * What this device holds that the server has never verified: how many activities are behind it,
+ * and how much simulated play sits inside them. `activityCount` covers a start with no queued
+ * checkpoint yet as well as one with a full queue. `playMs` covers only the queued span, so an
+ * activity still running counts toward `activityCount` even when its own checkpoints haven't
+ * queued — its play is unverified whether or not it has been delivered.
+ */
+const undeliveredWorkSchema = z
+  .object({ activityCount: z.int().min(0), playMs: z.number().min(0) })
+  .readonly();
+
 const nodeSeedAnchorSchema = z
   .object({ chainIndex: z.int().min(0), nextSeed: z.string() })
   .readonly();
@@ -69,6 +80,10 @@ export const workerContract = {
 
   initialize: oc.input(z.object({}).readonly()).output(initializeOutputSchema),
 
+  readUndeliveredWork: oc.input(z.object({}).readonly()).output(undeliveredWorkSchema),
+
+  removeUndeliveredWork: oc.input(z.object({}).readonly()).output(ackSchema),
+
   reportOnline: oc
     .input(z.object({ avatarID: z.string(), claim: z.boolean() }).readonly())
     .output(ackSchema),
@@ -99,3 +114,5 @@ export type RewardSlotLedgerEntry = z.infer<typeof rewardSlotLedgerEntrySchema>;
 export type RewardSlotLedgerSnapshot = z.infer<typeof rewardSlotLedgerSnapshotSchema>;
 
 export type StartStatus = z.infer<typeof startStatusSchema>;
+
+export type UndeliveredWork = z.infer<typeof undeliveredWorkSchema>;

@@ -2,6 +2,7 @@ export type {
   RewardSlotLedgerEntry,
   RewardSlotLedgerSnapshot,
   StartStatus,
+  UndeliveredWork,
 } from './worker/worker-contract';
 
 export type { ResyncStatus } from './worker/worker-to-client-message-schema';
