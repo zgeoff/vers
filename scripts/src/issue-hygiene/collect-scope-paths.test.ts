@@ -54,3 +54,21 @@ test('it collects nothing from a scope stating outcomes alone', () => {
 
   expect(collectScopePaths(body)).toStrictEqual([]);
 });
+
+test('it leaves a source file under the documentation root alone', () => {
+  expect(collectScopePaths('## Scope\n\n- edit `docs/example.ts`')).toStrictEqual([]);
+});
+
+test('it leaves a workflow file alone', () => {
+  const body = '## Scope\n\n- edit `.github/workflows/issue-hygiene.yml`';
+
+  expect(collectScopePaths(body)).toStrictEqual([]);
+});
+
+test('it leaves a documentation config file alone', () => {
+  expect(collectScopePaths('## Scope\n\n- edit `docs/reference/config.yaml`')).toStrictEqual([]);
+});
+
+test('it does not match a source root inside a longer word', () => {
+  expect(collectScopePaths('## Scope\n\n- move the webapps/thing folder')).toStrictEqual([]);
+});

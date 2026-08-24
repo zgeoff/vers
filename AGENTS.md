@@ -265,7 +265,7 @@ Three sections of the feature template carry rules the template can't state on i
 feature. Write it in second person, present tense: what you concretely see or feel once it ships.
 Name what you don't experience too — no dupes, no lost progress. Close with a one-sentence
 distillation. The story names no implementation nouns, so no table, field, component, or service
-names; machinery belongs in Scope.
+names. The two sections below carry the machinery.
 
 **Scope** — the outcomes the work delivers, one per bullet. An outcome stays true however the work
 is built. A Scope bullet names no file path: a rename inside the delivery window strands the
