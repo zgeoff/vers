@@ -1,15 +1,14 @@
 import { ORPCError } from '@orpc/client';
 import * as Sentry from '@sentry/react';
-import { broadcastQueryClient } from '@tanstack/query-broadcast-client-experimental';
 import { MutationCache, QueryCache, QueryClient } from '@tanstack/react-query';
+import { subscribeToQueryBroadcast } from './subscribe-to-query-broadcast';
 
 /**
  * Builds the app's query client with the shared error policy: declared service errors and other
  * 4xx responses never retry (retrying can't change the outcome), transient failures — network
  * errors and 5xx — retry twice, and errors born in the client itself are reported once per error
  * at the cache layer, where no per-hook handler can shadow the report. On the browser it also wires
- * cross-tab cache sync over `BroadcastChannel`, so a cache change in one tab invalidates the same
- * query in every other open tab.
+ * cross-tab cache sync, so a query that resolves in one tab lands in every other open tab.
  */
 export function buildQueryClient(): QueryClient {
   const queryClient = new QueryClient({
@@ -23,7 +22,7 @@ export function buildQueryClient(): QueryClient {
   // This module also runs on the server during SSR, where `BroadcastChannel` doesn't exist, so
   // cross-tab sync is guarded to the client only.
   if (globalThis.window !== undefined && typeof BroadcastChannel !== 'undefined') {
-    broadcastQueryClient({ broadcastChannel: 'vers-query', queryClient });
+    subscribeToQueryBroadcast(queryClient);
   }
 
   return queryClient;
