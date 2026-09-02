@@ -11,8 +11,10 @@ description:
 
 The client authors every activity and simulates it locally. The server admits what the client
 submits, proves it later by replay, settles one avatar's activities in the order they were played,
-and pays only what it has proved. Most wrong turns in this area come from the conventional
-server-authoritative model, so drop the assumptions below before you open a file.
+and pays only what it has proved. That inverts the conventional model, in which the server creates
+the record and the client submits to it. The list below names each inversion. Read it before you
+open a file, because a file read through the conventional model looks like a contradiction of the
+docs, and the docs are right.
 
 ## Assumptions to drop
 
