@@ -9,6 +9,18 @@ verifier check a stream it did not compute and lets a returning client rebuild s
 no longer holds. [Offline reconcile](./offline-reconcile.md) owns the delivery of offline progress
 on reconnect and the worker lifecycle that drives it.
 
+A checkpoint's path from the client to settled progress runs through four owners.
+
+```mermaid
+flowchart LR
+  W["writer worker<br>simulates, appends checkpoints"] -->|checkpoint batches| A["activity service<br>appends the stream, moves appended_head"]
+  A -->|wake| Q["replay queue<br>claims one activity per avatar in play order"]
+  Q --> V["verifier<br>replays the segment under its pinned sim version"]
+  V -->|match| S["settlement<br>moves verified_head, pays XP and items"]
+  V -->|reproducible divergence| R["rejection<br>rewinds the appended anchor"]
+  V -->|cannot replay yet| P["parked or quarantined<br>waits for an operator"]
+```
+
 ## Activities and encounters
 
 An **activity** is one attempt at a piece of content, recorded as a single append-only checkpoint

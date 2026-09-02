@@ -14,6 +14,20 @@ const GATES: ReadonlyArray<SkillGate> = [
   { matches: (file) => /\.tsx?$/.test(file), skill: 'code-style' },
   { matches: (file) => /\.test\.tsx?$/.test(file), skill: 'testing' },
   { matches: (file) => file.endsWith('.md'), skill: 'docs-writing' },
+  {
+    matches: (file) => LIFECYCLE_ROOTS.some((root) => file.startsWith(root)),
+    skill: 'game-lifecycle',
+  },
+];
+
+// The packages whose lifecycle the game-lifecycle skill orients.
+const LIFECYCLE_ROOTS = [
+  'contracts/activity/',
+  'contracts/replay/',
+  'libs/game/idle-client/',
+  'libs/game/idle-core/',
+  'services/activity/',
+  'services/replay/',
 ];
 
 // Generated output and vendored trees carry no rules of their own.

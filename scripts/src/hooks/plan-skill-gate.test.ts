@@ -17,10 +17,16 @@ test('it allows a source edit once the code-style skill is loaded', () => {
 });
 
 test('it lists every missing skill for a test file in one verdict', () => {
-  expect(planSkillGate(cwd, '/repo/services/activity/src/a.test.ts', new Set())).toStrictEqual({
+  expect(planSkillGate(cwd, '/repo/libs/core/utils/src/a.test.ts', new Set())).toStrictEqual({
     kind: 'deny',
     missing: ['code-style', 'testing'],
   });
+});
+
+test('it gates a lifecycle package on the game-lifecycle skill as well', () => {
+  expect(
+    planSkillGate(cwd, '/repo/services/activity/src/handlers/a.ts', new Set(['code-style'])),
+  ).toStrictEqual({ kind: 'deny', missing: ['game-lifecycle'] });
 });
 
 test('it gates markdown on the docs-writing skill', () => {
