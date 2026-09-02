@@ -972,7 +972,7 @@ test('it mints an activity start naming a predecessor not yet on the server, sta
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  // an absent predecessor is not rejected — the activity start admissions and the replay claim waits on
+  // an absent predecessor is not rejected — the activity start is admitted and the replay claim waits on
   // the predecessor, so an out-of-order or reload-orphaned delivery settles once it lands
   const minted = await client.advanceActivity({
     activityID,
