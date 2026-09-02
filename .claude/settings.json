@@ -9,6 +9,15 @@
             "command": "bun \"$CLAUDE_PROJECT_DIR/scripts/src/bin/skill-gate.ts\""
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun \"$CLAUDE_PROJECT_DIR/scripts/src/bin/retrieval-policy.ts\"",
+            "timeout": 10
+          }
+        ]
       }
     ],
     "SessionStart": [
@@ -18,6 +27,17 @@
           {
             "type": "command",
             "command": "bun \"$CLAUDE_PROJECT_DIR/scripts/src/bin/compact-reminder.ts\""
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun \"$CLAUDE_PROJECT_DIR/scripts/src/bin/retrieval-policy.ts\"",
+            "timeout": 10
           }
         ]
       }

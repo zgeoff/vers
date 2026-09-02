@@ -45,6 +45,17 @@
       "env": {
         "UMAMI_API_BASE": "https://vers-umami.fly.dev/api"
       }
+    },
+    "serena": {
+      "type": "stdio",
+      "command": "serena",
+      "args": [
+        "start-mcp-server",
+        "--context",
+        ".serena/context.claude-code.yml",
+        "--project-from-cwd"
+      ],
+      "env": {}
     }
   }
 }
