@@ -5,12 +5,13 @@
 The rules a task needs are not repeated here. Load the skill for the work before starting it, and
 read the architecture doc for the subsystem in full before reasoning from its code.
 
-| Skill            | Load before                                                                                         |
-| ---------------- | --------------------------------------------------------------------------------------------------- |
-| `code-style`     | writing, reviewing, or renaming any TypeScript — the function-verb taxonomy lives there             |
-| `testing`        | designing, writing, or reviewing tests                                                              |
-| `docs-writing`   | writing or editing any committed prose: `docs/`, READMEs, this file, skills, doc comments           |
-| `game-lifecycle` | any work in the activity, replay, or idle packages — the assumptions to drop and the state machines |
+| Skill            | Load before                                                                                                |
+| ---------------- | ---------------------------------------------------------------------------------------------------------- |
+| `code-style`     | writing, reviewing, or renaming any TypeScript — the function-verb taxonomy lives there                    |
+| `testing`        | designing, writing, or reviewing tests                                                                     |
+| `docs-writing`   | writing or editing any committed prose: `docs/`, READMEs, this file, skills, doc comments                  |
+| `delivery-lead`  | triage, refinement, milestone, board, or "what's next" work — the increment model and the roles live there |
+| `game-lifecycle` | any work in the activity, replay, or idle packages — the assumptions to drop and the state machines        |
 
 The system is documented under `docs/architecture/`, with `docs/architecture/overview.md` as its
 narrative entry point. A subsystem's doc is the authoritative account of its invariants — grep
@@ -83,11 +84,14 @@ root; CodeRabbit reads this file as its guidelines.
 ## Issue hygiene
 
 Triage a GitHub issue the moment it's opened, not in a later pass. An open issue that isn't on the
-board with a milestone and status is a defect.
+board with a status is a defect. The `delivery-lead` skill owns the increment model and the triage
+procedure; the rules below are the ones a PR must satisfy.
 
 ### Triage
 
-- Assign the delivery-phase milestone, and the area, type, and priority labels.
+- Assign the area and type labels.
+- Assign a milestone only when that increment's done test needs the issue; every other issue stays
+  in the backlog with no milestone.
 - Record blocking edges against the issues it depends on.
 - Add it to the delivery board and set its board status.
 
@@ -115,9 +119,9 @@ no candidate.
 
 ### Checking
 
-The issue-hygiene workflow checks each new issue's labels, milestone, required sections, and Scope
-paths, then comments the defects it finds. It exempts dep-health's generated report issues, whose
-bodies are machine-written.
+The issue-hygiene workflow checks each new issue's labels, required sections, and Scope paths, then
+comments the defects it finds. It exempts dep-health's generated report issues, whose bodies are
+machine-written.
 
 After opening or editing an issue, run `bun scripts/src/bin/issue-hygiene.ts <n>` and clear every
 finding before handing it back. The command runs the workflow's own check locally, so a dropped
