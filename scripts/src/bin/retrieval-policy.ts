@@ -26,7 +26,7 @@ const stateSchema = z.object({
   calls: z.number(),
 });
 
-const payload: unknown = await Bun.stdin.json();
+const payload = await readPayload();
 
 const parsed = inputSchema.safeParse(payload);
 
@@ -86,11 +86,29 @@ async function loadState(): Promise<RetrievalState> {
     return INITIAL_RETRIEVAL_STATE;
   }
 
-  const raw: unknown = await stateFile.json();
+  const raw = await readStateFile();
 
   const stored = stateSchema.safeParse(raw);
 
   return stored.success ? stored.data : INITIAL_RETRIEVAL_STATE;
+}
+
+// Malformed JSON on stdin is treated like any other invalid payload: the hook stays silent.
+async function readPayload(): Promise<unknown> {
+  try {
+    return await Bun.stdin.json();
+  } catch {
+    return null;
+  }
+}
+
+// A corrupt state file starts the session's counters over rather than failing the hook.
+async function readStateFile(): Promise<unknown> {
+  try {
+    return await stateFile.json();
+  } catch {
+    return null;
+  }
 }
 
 async function recordFire(): Promise<void> {
