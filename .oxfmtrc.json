@@ -1,11 +1,6 @@
 {
   "$schema": "./node_modules/oxfmt/configuration_schema.json",
-  "ignorePatterns": [
-    "bun.lock",
-    "apps/web/public/mockServiceWorker.js",
-    "agents/shared.md",
-    "AGENTS.md"
-  ],
+  "ignorePatterns": ["bun.lock", "apps/web/public/mockServiceWorker.js"],
   "proseWrap": "always",
   "semi": true,
   "trailingComma": "all",

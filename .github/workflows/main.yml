@@ -53,11 +53,6 @@ jobs:
       - name: Install Dependencies
         run: bun install --frozen-lockfile
 
-      - name: Check AGENTS.md Drift
-        run: |
-          bun run build:agents
-          git diff --exit-code AGENTS.md agents/ scripts/build-agents-md.sh
-
       - name: Setup Turbo cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:

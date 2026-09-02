@@ -1,12 +1,37 @@
-<!-- Generated file — do not edit. Edit agents/project.md here, or agents/shared.md in zgeoff/tools. -->
-
 # Agent Guidelines
+
+## Required reading
+
+The rules a task needs are not repeated here. Load the skill for the work before starting it, and
+read the architecture doc for the subsystem in full before reasoning from its code.
+
+| Skill          | Load before                                                                               |
+| -------------- | ----------------------------------------------------------------------------------------- |
+| `code-style`   | writing, reviewing, or renaming any TypeScript — the function-verb taxonomy lives there   |
+| `testing`      | designing, writing, or reviewing tests                                                    |
+| `docs-writing` | writing or editing any committed prose: `docs/`, READMEs, this file, skills, doc comments |
+
+The system is documented under `docs/architecture/`, with `docs/architecture/overview.md` as its
+narrative entry point. A subsystem's doc is the authoritative account of its invariants — grep
+locates code, it does not teach a subsystem's rules.
+
+- Before substantial work in a subsystem, read its doc in full first, not after reasoning from code
+  fragments. Mandatory reads by area:
+  - activities, the seed chain, verification, replay, or reconcile —
+    `docs/architecture/game/game-simulation.md`, `docs/architecture/game/seed-chain.md`, and
+    `docs/architecture/game/offline-reconcile.md`
+  - world-map generation, reveal, or fog of war — `docs/architecture/game/worldmap.md`
+  - item and reward rolls, or content entropy — `docs/architecture/game/item-generation.md` and
+    `docs/architecture/game/game-entropy.md`
+
+  The error-handling, metrics, analytics, deployment, and database sections carry their own
+  mandatory read.
+
+- A behavior change to a documented subsystem updates that subsystem's doc in the same PR. The doc
+  states current behavior, so a change that leaves it stale is incomplete.
 
 ## Operations
 
-- AGENTS.md is generated from `agents/shared.md` and `agents/project.md` — edit the partials, never
-  AGENTS.md itself. The shared partial is synced from
-  [zgeoff/tools](https://github.com/zgeoff/tools); cross-project rule changes belong there.
 - Perform all work on a branch in a git worktree under `.worktrees/` (e.g.
   `git worktree add .worktrees/<branch> -b <branch>`) — never commit directly on `main`.
 - Use [Conventional Commits](https://www.conventionalcommits.org/) for all commit messages.
@@ -21,201 +46,10 @@
 - A PR is ready only when its checks are green: watch CI (`gh pr checks <n> --watch`) after opening
   or updating, and report a failure with what you're doing about it.
 
-## Code style
-
-Mechanically enforced rules (oxfmt, oxlint, format-codemod) aren't repeated here — this file covers
-what tooling can't check.
-
-- One primary export per file, and the file name kebab-cases that export (`with-jest-context.ts`
-  exports `withJestContext`). Exceptions: `index.ts` entrypoints, `types.ts` for a package's shared
-  types, and side-effect-only modules, which are named for what they do (`augment-bun-test.ts`).
-- Module order: imports, the primary export, then private helpers in composition order (depth-first)
-  — never helpers first. Supporting declarations (consts, interfaces, type aliases) sit directly
-  above their first use, never below it and never leading the file; types for the primary export's
-  signature may sit just above it.
-- Acronyms stay uppercase in identifiers (`runCLI`, `parseCLIArgs`, `ASTNode`, `pkgURL`,
-  `isPackageJSON`) — except when one starts a camelCase name, where it lowercases whole (`cliPath`,
-  `astNode`). ID counts as an acronym: `userID`, `sessionID` — never `userId` — and `idToken` when
-  it starts a name. File names are unaffected: kebab-case lowercases everything (`parse-cli-args.ts`
-  exports `parseCLIArgs`).
-
-### Function naming
-
-Every function name starts with a prefix from the closed list below: pick from it, or extend this
-file in the same PR that introduces the new verb. The prefix is a contract — a reader should know
-the function's shape without opening it.
-
-**Predicates** — return boolean, no side effects:
-
-| Prefix   | Contract                | Example          |
-| -------- | ----------------------- | ---------------- |
-| `is`     | type or state test      | `isVarDecl`      |
-| `has`    | containment, possession | `hasBlankLine`   |
-| `can`    | capability              | `canResize`      |
-| `should` | policy decision         | `shouldSkipFile` |
-| `needs`  | requirement             | `needsBlankLine` |
-
-**Pure producers** — result comes from arguments alone, no side effects:
-
-| Prefix                        | Contract                                                                  | Example             |
-| ----------------------------- | ------------------------------------------------------------------------- | ------------------- |
-| `build<Result>[From<Source>]` | default constructor for values; drop `From<Source>` when no single source | `buildEditsFromAST` |
-| `define<X>`                   | identity; its only job is compile-time constraint of its literal argument | `defineErrors`      |
-| `parse`                       | unstructured input → structure, invalid input reported                    | `parseSource`       |
-| `encode`                      | structure → its defined compact or wire form, reversed by `decode`        | `encodeState`       |
-| `decode`                      | `encode`'s output → the original structure, malformed input reported      | `decodeState`       |
-| `derive`                      | one-way cryptographic derivation from secret material                     | `deriveAvatarKey`   |
-| `plan`                        | compute an action without performing it                                   | `planGapEdit`       |
-| `pick`                        | select among known alternatives                                           | `pickMode`          |
-| `find`                        | search that can miss — null/undefined on miss                             | `findPrevious`      |
-| `get`                         | cheap access that cannot miss (throwing on a broken invariant is fine)    | `getNodeEnd`        |
-| `collect`                     | gather from a traversal or scan                                           | `collectChildNodes` |
-| `count`                       | how many                                                                  | `countNewlines`     |
-| `split`                       | one value → parts                                                         | `splitLines`        |
-| `merge`                       | parts → one value                                                         | `mergeWindows`      |
-| `sort`                        | reorder                                                                   | `sortEdits`         |
-| `format`                      | value → human-readable string                                             | `formatRange`       |
-| `render`                      | structure → output text or markup                                         | `renderHunk`        |
-| `normalize`                   | variant forms → the canonical form                                        | `normalizePath`     |
-| `resolve`                     | follow indirection to a concrete value                                    | `resolveBinPath`    |
-| `expand`                      | compact form → full form                                                  | `expandInputs`      |
-| `compress`                    | value → its reversible compact encoding                                   | `compressGraph`     |
-| `decompress`                  | reverse a `compress` encoding (non-encoded shorthand is `expand`)         | `decompressGraph`   |
-| `to<Result>`                  | cheap representation change                                               | `toPosixPath`       |
-| `transform`                   | a package's own source→source operation                                   | `transform`         |
-
-**Effectful** — touches the world (filesystem, streams, processes, registries):
-
-| Prefix         | Contract                                                                                                                                | Example            |
-| -------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ------------------ |
-| `apply`        | perform previously planned changes                                                                                                      | `applyEdits`       |
-| `create`       | bring a resource into existence (file, directory, process)                                                                              | `createWorkDir`    |
-| `claim`        | atomically take exclusive ownership of a work item or resource; ownership ends at commit or an explicit release                         | `claimNextChain`   |
-| `read`         | pull raw content from filesystem or network into memory                                                                                 | `readSource`       |
-| `load`         | read **and** parse into a ready structure                                                                                               | `loadConfig`       |
-| `write`        | persist to the filesystem                                                                                                               | `writeOutput`      |
-| `remove`       | delete a resource                                                                                                                       | `removeStaleDist`  |
-| `update`       | mutate existing state or resource in place                                                                                              | `updateIndex`      |
-| `upsert`       | single-statement insert-or-update keyed by a natural or composite key, refreshing the conflicting row's columns in place                | `upsertUser`       |
-| `set`          | assign a store's named state slice wholesale — the store-setter idiom; partial mutation is `update`                                     | `setSelectedNode`  |
-| `toggle<Flag>` | invert a boolean state slice                                                                                                            | `toggleDevCamera`  |
-| `reset`        | return state to its initial value                                                                                                       | `resetCombatState` |
-| `print`        | write to stdout/stderr                                                                                                                  | `printHelp`        |
-| `run`          | execute a subprocess, task, or whole pipeline                                                                                           | `runCLI`           |
-| `check`        | evaluate and report findings; effects allowed per mode                                                                                  | `checkFile`        |
-| `try<X>`       | X with failures captured as a value instead of a throw                                                                                  | `tryCheckFile`     |
-| `register`     | add to a registry the caller doesn't own                                                                                                | `registerMatcher`  |
-| `subscribe`    | attach a listener to an event source, returning or enabling detachment                                                                  | `subscribeToTicks` |
-| `unsubscribe`  | detach what `subscribe` attached                                                                                                        | `unsubscribe`      |
-| `assert`       | throw when an invariant doesn't hold                                                                                                    | `assertSpan`       |
-| `require`      | throw unless a runtime condition holds — a guard real input can trip (`assert` covers invariants)                                       | `requireAuth`      |
-| `verify`       | test a claim or credential against evidence, rejecting on mismatch                                                                      | `verifySession`    |
-| `emit`         | dispatch an event or notification                                                                                                       | `emitProgress`     |
-| `send`         | transmit a payload to a remote receiver (fire-and-forget or RPC — no resource semantics; REST mutations are `create`/`update`/`remove`) | `sendWebhook`      |
-| `wait`         | block until an event or condition resolves; may return the awaited value                                                                | `waitForMessage`   |
-| `setup`        | prepare the environment or fixture the following code assumes; `teardown` reverses it                                                   | `setupTest`        |
-| `teardown`     | release what `setup` prepared                                                                                                           | `teardownTest`     |
-| `start`        | put a long-running resource into service (server, worker, poll loop); `stop` reverses it                                                | `startQueues`      |
-| `stop`         | take a long-running resource out of service, releasing what `start` acquired                                                            | `stopWorker`       |
-| `drain`        | consume a pending backlog until empty                                                                                                   | `drainJobs`        |
-
-**Wrappers and factories** — the result is behaviour, not data:
-
-| Prefix    | Contract                                  | Example           |
-| --------- | ----------------------------------------- | ----------------- |
-| `with<X>` | HOF that runs a callback inside a context | `withJestContext` |
-| `make<X>` | factory whose result is itself a function | `makeExcluder`    |
-
-**Framework conventions** — where the ecosystem's prefix is load-bearing, it wins:
-
-| Prefix                   | Contract                                                                                                                | Example          |
-| ------------------------ | ----------------------------------------------------------------------------------------------------------------------- | ---------------- |
-| `use<X>`                 | React hook — the prefix drives rules-of-hooks linting; helpers inside a hook follow the normal taxonomy                 | `useDebounce`    |
-| `on<Event>`              | event-callback prop or parameter                                                                                        | `onRowClick`     |
-| `handle<Event>`          | local implementation passed to an `on<Event>` prop — the idiomatic React pair; the `handle` ban applies everywhere else | `handleRowClick` |
-| `handle<LifecycleEvent>` | implementation of an engine lifecycle callback, keyed by the engine's lifecycle-event enum                              | `handleTick`     |
-
-**Banned** — each is a vaguer or synonymous form of a listed verb; use that one instead: `handle`
-(except the `handle<Event>` framework conventions), `process`, `manage`, `do`, `perform` (say what
-it does), `execute` (→ `run`), `compute` (→ `build`), `fetch` (→ `read`), `save`/`store` (→
-`write`), `delete` (→ `remove`), `search`/`lookup` (→ `find`/`get`).
-
-Algorithm-native vocabulary (`walk`, `backtrack`, `slideDiagonal`) is allowed inside the module
-implementing that algorithm — forcing list verbs onto textbook terms hides the algorithm.
-
 ## Dependencies
 
 - Pin exact versions — no `^`/`~` ranges. (`bun add` saves exact automatically via `exact = true` in
   bunfig.toml — the rule applies to hand-written edits.)
-
-## Function naming: project verbs
-
-Project-level additions to the shared function-naming taxonomy, under the same rules.
-
-**Pure producers** — result comes from arguments alone, no side effects:
-
-| Prefix    | Contract                                                                  | Example                |
-| --------- | ------------------------------------------------------------------------- | ---------------------- |
-| `compare` | aligned structures in, equivalence verdict out                            | `compareReplaySegment` |
-| `fold`    | a baseline value plus a list of items reduced into one accumulated result | `foldOptimisticBuild`  |
-
-**Effectful** — touches the world (filesystem, streams, processes, registries):
-
-| Prefix      | Contract                                                                                    | Example                  |
-| ----------- | ------------------------------------------------------------------------------------------- | ------------------------ |
-| `advance`   | step a stateful cursor, clock, or simulation forward in place, optionally to a target       | `advanceToDuration`      |
-| `admit`     | verify a caller-authored record against server truth and persist it, rejecting on mismatch  | `admitActivityStart`     |
-| `broadcast` | post one message to every connected client on whichever transport carries it                | `broadcast`              |
-| `dispose`   | release the resources a built entry holds (a GPU buffer, texture, or subscription)          | `disposeBiomeChunkEntry` |
-| `flush`     | attempt delivery of the durable outbound backlog, removing entries confirmed received       | `flush`                  |
-| `ingest`    | submit a locally held record into an external system, settling its local copy by the answer | `ingestStartRow`         |
-| `mint`      | create and persist a new identity-bearing row rooted in a chain or coordinate               | `mintContinuation`       |
-| `park`      | set a work item aside in a parked status for later resumption                               | `parkActivity`           |
-| `record`    | durably note that an event occurred (counter, log, audit row)                               | `recordFailedAttempt`    |
-| `redirect`  | return a redirect response for a request failing a gate, else defer                         | `redirectToHTTPS`        |
-| `refresh`   | rebuild a derived resource in place from its current source, discarding prior contents      | `refreshDevBase`         |
-| `reject`    | mark a work item refused and apply the consequences                                         | `rejectActivity`         |
-| `report`    | forward a fault to the error backend                                                        | `reportUnexpectedError`  |
-| `restart`   | return a long-running resource to service from its initial state                            | `restartActivity`        |
-| `roll`      | consume typed draws from a roll stream to produce an outcome, advancing its cursor          | `rollItemFromStream`     |
-| `schedule`  | enqueue an event or callback for deferred execution                                         | `scheduleEvent`          |
-| `select`    | persist the caller's choice among owned alternatives as the new state                       | `selectAvatar`           |
-| `serve`     | answer a request for a static resource, else defer                                          | `serveClientAssets`      |
-| `submit`    | accept a payload into a durable outbound queue and schedule its delivery                    | `submit`                 |
-| `sweep`     | bulk-remove stale or orphaned resources found by a scan, returning the set removed          | `sweepDevDBs`            |
-| `sync`      | reconcile cached state to an external source, clearing it the first time the source changes | `syncSeed`               |
-| `upgrade`   | hand a structural port to an RPC handler so it starts serving calls over it                 | `upgrade`                |
-
-## Comments
-
-Two comment jobs, two locations. A JSDoc block on a declaration carries the caller-facing contract:
-what a reader needs to use the thing without opening its body — the guarantee, the invariants a
-caller must uphold, the failure modes. A `//` at a statement carries the implementation note: why
-that line does the non-obvious thing. A body's mechanism — how the algorithm walks, which step does
-what — is never narrated from the top; it lives at the lines, or nowhere when the code already shows
-it.
-
-- Prefer the enforceable form. Before writing a comment, put the fact where a machine holds it:
-  encode an outcome set as a discriminated union, a bound as a named constant, a caller rule as a
-  type; protect a frozen wire or draw layout with a golden test. Comment only the residue neither a
-  type nor a test can hold, and where a test enforces an invariant, point at it rather than
-  restating the consequence.
-- Comment the decision, not the code. A comment states an invariant, cross-file or runtime behavior,
-  or why a non-obvious choice was made. One that restates the name, the signature, or the next
-  line's mechanics is a defect — delete it.
-- A long JSDoc block is a placement smell, not a prose exercise. When a declaration's comment runs
-  long because it narrates the body, relocate: the mechanism to `//` at the lines, the enforceable
-  parts into types or tests, leaving the block at the contract. A genuinely irreducible multi-point
-  contract stays — render it as structured prose (one point per paragraph, led by its topic
-  sentence; one fact per sentence; an outcome map or state-to-action table as a bullet list) and
-  load the `docs-writing` skill for its wording.
-- JSDoc blocks are always multi-line (`/**` alone, one `*`-prefixed line per point, `*/` alone —
-  never single-line `/** … */`), attached directly to the declaration they describe.
-- Comments describe the code as it is now — no history ("previously", "now uses"), no project state
-  (issue numbers, phase labels, "not wired yet"); those live in the commit message.
-- Comments don't name other declarations — renames strand the reference. State the contract instead:
-  "callers must pass edits sorted last-to-first", not "(buildEditsFromAST's contract)". A
-  declaration's own parameters and signature types are fine to name.
 
 ## Golden values in tests
 
@@ -298,51 +132,6 @@ Its body opens with a fenced trigger line — `trigger: date <YYYY-MM-DD>` or
 `trigger: release <pkg> ><version>` — that the weekly dep-health sweep evaluates. The sweep comments
 on the issue and labels it `upkeep-ready` once the condition holds. An upkeep issue whose trigger
 line the sweep can't parse fails it.
-
-## Type-only modules
-
-A module whose exports are all types or interfaces is a defect: those exports belong in the
-directory's `types.ts`, one per directory, holding every type its files share.
-
-## Invariants
-
-Express a true invariant — a condition only a bug can break — with `tiny-invariant`
-(`invariant(value, 'message')`) rather than a hand-rolled `if`/`throw`. A condition real input can
-trigger is ordinary control flow, not an invariant.
-
-## Untyped column boundaries
-
-An untyped jsonb or text column value re-enters typed code through its contract schema's `.parse` —
-a malformed row fails loudly at the read — or by threading the typed value its author already holds;
-never through a bare `as` cast. A write TypeScript cannot prove assignable to the column's `Json`
-type goes through the one documented converter (`toJSON`, `@vers/db`).
-
-## Third-party packages
-
-Prefer an established, narrowly scoped third-party package over hand-rolling the same logic —
-recommend one whenever it covers the need. Hand-roll only when no candidate is both proven and
-focused on the problem, when a Bun or Node builtin already covers it, or when the logic is small
-enough that a dependency costs more than it saves.
-
-## Architecture docs
-
-The system is documented under `docs/architecture/`, with `docs/architecture/overview.md` as its
-narrative entry point. A subsystem's doc is the authoritative account of its invariants — grep
-locates code, it does not teach a subsystem's rules.
-
-- Before substantial work in a subsystem, read its doc in full first, not after reasoning from code
-  fragments. Mandatory reads by area:
-  - activities, the seed chain, verification, replay, or reconcile —
-    `docs/architecture/game/game-simulation.md` and `docs/architecture/game/seed-chain.md`
-  - world-map generation, reveal, or fog of war — `docs/architecture/game/worldmap.md`
-  - item and reward rolls, or content entropy — `docs/architecture/game/item-generation.md` and
-    `docs/architecture/game/game-entropy.md`
-
-  The error-handling, metrics, analytics, deployment, and database sections carry their own
-  mandatory read.
-
-- A behavior change to a documented subsystem updates that subsystem's doc in the same PR. The doc
-  states current behavior, so a change that leaves it stale is incomplete.
 
 ## Error handling
 
@@ -512,49 +301,6 @@ the mechanics and provisioning.
 - After removing a worktree, `bun run pg:dev:sweep` drops its database;
   `bun run pg:dev:refresh-base` rebuilds the clone template when seed data changes.
 
-## Styling
-
-Panda CSS 2.0 spans `@vers/panda-preset`, `@vers/styled-system`, `@vers/design-system`, and app-web,
-pinned at 2.0.0-beta.8 in the catalog — no stable 2.0 release exists.
-
-- `@vers/panda-preset` composes `presets: [presetBase, presetPanda]` — Panda 2.0 ships no bundled
-  default preset.
-- CSS values that aren't theme tokens need the bracket escape hatch (`cursor: '[pointer]'`,
-  `borderWidth: '[1px]'`) — 2.0's `SystemStyleObject` value types reject arbitrary strings and
-  numbers.
-
-### Screens
-
-Screens and routes are built workable-only:
-
-- Compose existing `@vers/design-system` components and semantic tokens (`bg.*`, `text.*`,
-  `border.*`, `accent.*`) — no bespoke visual styling beyond layout, no one-off
-  colors/fonts/animations, no polish passes.
-- The semantic-token layer is the stable contract: re-skins change token values, never token names,
-  so screens that stick to it adapt for free.
-- A screen needing a component that doesn't exist yet builds the minimal version in its own PR and
-  promotes it into `@vers/design-system` when a second consumer appears.
-
-## Client state (Zustand)
-
-Zustand holds client state; server cache lives in TanStack Query.
-
-- Each package composes its client state into one bound store, built by spreading state-only slice
-  factories (`create-<concern>-slice.ts`, each returning its fields' initial values) inside a single
-  `create<Store>()(() => ({ … }))`. A package with a second genuinely disjoint domain (game-
-  rendering's satellite registry beside its scene state) may hold a second store.
-- Stores hold state only — no colocated actions. Mutation goes through external setter modules
-  (`set-*.ts`, `toggle-*.ts`) calling `setState`, so writers work outside React (workers, engine
-  callbacks). One `setState` per logical event: an event that changes several fields gets one
-  consolidated writer, never a per-field fan-out.
-- `index.ts` exports selector hooks and setters, never raw store handles. A package-external
-  imperative read goes through an exported `get*` reader.
-- `useShallow` wraps only selectors that build a fresh object or array; a selector returning a
-  primitive or a single stored reference goes bare.
-- Middleware wraps only the combined store, never an individual slice.
-- Inside the R3F frame loop, reads are imperative `getState()` calls
-  (`docs/architecture/game/game-rendering.md`); DOM components subscribe through selector hooks.
-
 ## Running things
 
 - `bun install` — whole workspace (`--frozen-lockfile` in CI; `bun.lock` is committed).
@@ -596,9 +342,3 @@ Zustand holds client state; server cache lives in TanStack Query.
   exempted per-type via the rule's `allow` list in `.oxlintrc.json` — never an inline marker. Only a
   genuinely un-`readonly`-able own type (a generic callback-arg object, a `ZodType`-bearing shape)
   carries a single inline directive stating why.
-
-## Testing
-
-Testing conventions — the three regimes by package kind, the mock-free / no-branching / co-location
-rules, isolation levels, factories and composites, and the MSW / RSC / Forms / real-database
-specifics — live in the `testing` skill. Load it before designing, writing, or reviewing tests.

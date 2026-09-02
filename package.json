@@ -154,7 +154,6 @@
   "scripts": {
     "clean": "./scripts/clean.sh",
     "build": "turbo run build",
-    "build:agents": "bash scripts/build-agents-md.sh agents/shared.md agents/project.md AGENTS.md",
     "audit": "bun audit",
     "boundaries": "turbo boundaries",
     "deadcode": "knip",
