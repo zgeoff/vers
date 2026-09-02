@@ -1,9 +1,11 @@
 # Database
 
-Vers runs on one Neon-hosted Postgres. One Neon project holds the identity database, and every
-service and migration points at it. A second Neon branch backs disposable per-worktree databases
-that agent MCP sessions clone on demand. The compute scales to zero when idle, so the first
-connection after a suspend pays a resume cost.
+Vers runs on one Neon project. Its `main` branch holds the shared Neon database, `vers`, which every
+service and migration points at: the identity tables, the activity checkpoint tables, the job queue,
+the release and sim-version registries. The same branch holds the separate `bugsink` and `umami`
+databases those apps own. A second branch, `dev`, backs disposable per-worktree databases that agent
+MCP sessions clone on demand. The compute scales to zero when idle, so the first connection after a
+suspend pays a resume cost.
 
 ## The Neon project
 
@@ -18,30 +20,23 @@ connection after a suspend pays a resume cost.
 | Suspend timeout | 300s (Neon's default; `suspend_timeout` 0)    |
 
 The vers-infra Pulumi program (`infra/neon.ts`) declares the project, branches, compute endpoints,
-and roles; `pulumi up` from `infra/` applies them, and the infra-drift workflow drift-checks them.
-Databases, schemas, and migrations stay with the migration pipeline, and each role's in-database
-grants are SQL — the Neon API models role existence, not privileges.
+and roles. `bun run up` from `infra/` applies them, and the infra-drift workflow checks them for
+drift. Databases, schemas, and migrations stay with the migration pipeline. Each role's in-database
+grants are SQL, because the Neon API models role existence, not privileges.
 
-Idle compute resumes on the next connection. A resume runs ~0.6–1.1s, observed from a Fly Sydney
-machine; once warm, queries run ~2ms and fresh connections ~55–70ms. Fly's idle-stop timing must not
-equal the 300s suspend window: a first request after idle would then pay both cold starts at once.
-Set Fly's idle-stop meaningfully longer or shorter when provisioning apps.
+Idle compute resumes on the next connection. A resume runs 0.6–1.1s, observed from a Fly Sydney
+machine. Once warm, a query runs about 2ms and a fresh connection 55–70ms. Fly's idle-stop timing
+must not equal the 300s suspend window, or a first request after idle pays both cold starts at once.
 
 ## Activity checkpoint store
 
-The activities service owns two tables in this database: `activities` (the per-stream head row) and
-the append-only `activity_checkpoints`. Their cursors and concurrency contract belong to the feature
-— the [checkpoint streams](../game/game-simulation.md#checkpoint-streams) and the
-[overview](../overview.md). The head row timestamps each cursor's last advance in an `appended_at`
-and a `verified_at` column. A partial unique index on `activities` permits one `active` row per
-avatar at a time. An append's checkpoint rows insert only within the transaction whose head-row
-update wins the compare-and-swap, so a losing append inserts nothing.
-
-`activity_checkpoints` stays in Postgres and stays cheap to scale there. Append-heavy submissions,
-point reads for the latest progress off the head row, and full-stream replays by the verifier are a
-natural fit for its indexes. The table carries no inbound foreign keys and no global uniqueness
-constraint, so time-range partitioning with a retention window that cold-archives verified streams
-to object storage is a storage change, not a schema change.
+The activity service owns the activity checkpoint tables: `activities`, the per-stream head row, and
+the append-only `activity_checkpoints`. The cursors those rows carry and the rules that advance them
+belong to [checkpoint streams](../game/game-simulation.md#checkpoint-streams). The storage facts:
+the head row timestamps each cursor's last advance in an `appended_at` and a `verified_at` column,
+and a partial unique index on `activities` permits one `active` row per avatar at a time.
+`activity_checkpoints` carries no inbound foreign keys and no uniqueness constraint beyond
+`(activity_id, version)`.
 
 ## Connection strings
 
@@ -86,8 +81,8 @@ cd libs/data/db
 bun --env-file=.env.local run db:migrate   # also db:seed, db:rollback
 ```
 
-`db:codegen` is broken under the workspace's TypeScript 7. Regenerate through an isolated
-kysely-codegen + TS5 install.
+`db:codegen` does not run under the workspace's TypeScript 7. Regenerate through an isolated
+kysely-codegen install pinned to TypeScript 5.
 
 For isolated experiments, branch the database instead of sharing `main`:
 
@@ -122,8 +117,8 @@ identifier limit is truncated and suffixed with a hash of the raw machine/branch
 
 The first dev tool call of a session provisions the database through dbhub's `init_command`. It
 clones the template (`CREATE DATABASE … TEMPLATE dev_base`), stamps machine, branch, and creation
-time as a database comment, then migrates the clone forward. An existing database thus catches up
-with migrations that landed after the template was last refreshed.
+time as a database comment, then migrates the clone forward. An existing database therefore catches
+up with migrations that landed after the template was last refreshed.
 
 - `dev_base` is the migrated, seeded clone template. `bun run pg:dev:refresh-base` rebuilds it
   (drop, create, migrate, seed) and leaves existing clones untouched. Run it when seed data changes.
@@ -139,13 +134,13 @@ with migrations that landed after the template was last refreshed.
 
 ### Provisioning agent access from nothing
 
-The `dev` branch and both roles come from the Pulumi program; grants, passwords, and vault items
+The `dev` branch and both roles come from the Pulumi program. Grants, passwords, and vault items
 follow by hand.
 
-1. Apply the program — it declares the `dev` branch and the `mcp_ro` and `mcp_dev` roles.
+1. Apply the program. It declares the `dev` branch and the `mcp_ro` and `mcp_dev` roles.
 
    ```sh
-   cd infra && op run --env-file=.env -- pulumi up
+   cd infra && bun run up
    ```
 
 2. Grant the read-only role as `neondb_owner` against `vers` on `main`.
@@ -175,11 +170,11 @@ follow by hand.
 
 ## Re-provisioning from nothing
 
-The Pulumi program creates the Neon layer (project, branches, endpoints, roles); the database and
-its connection string follow with neonctl (authenticated via `neonctl auth`):
+The Pulumi program creates the Neon layer: project, branches, endpoints, roles. The database and its
+connection string follow with neonctl, authenticated through `neonctl auth`:
 
 ```sh
-cd infra && op run --env-file=.env -- pulumi up
+cd infra && bun run up
 neonctl databases create --project-id <new-id> --name vers --owner-name neondb_owner
 neonctl connection-string main --project-id <new-id> --database-name vers
 # then: rewrite sslmode to verify-full, drop channel_binding, and distribute to the consumer stores

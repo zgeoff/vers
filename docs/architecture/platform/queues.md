@@ -1,10 +1,10 @@
 # Queues
 
-Durable background work runs on Postgres-backed job queues: pg-boss under the hood, consumed only
-through `@vers/jobs`. A queue buys three things a request path can't: delivery that survives a
-failed downstream call or a dead process, retries with backoff, and a dead-letter trail. Work that
-needs none of those doesn't belong on a queue. The email service (`services/email`) is the reference
-consumer.
+Durable background work runs on Postgres-backed job queues. pg-boss is the queue engine, and every
+package consumes it only through `@vers/jobs`. A queue buys 3 things a request path cannot: delivery
+that survives a failed downstream call or a dead process, retries with backoff, and a dead-letter
+trail. Work that needs none of those does not belong on a queue. The email service
+(`services/email`) is the reference consumer.
 
 ## The wrapper
 
@@ -23,8 +23,8 @@ it.
   rolls back with the domain write it belongs to.
 - `drain(name?)` runs one fetch/handle/complete loop and returns `{ completed, failed }`. When a
   stored payload no longer parses, the drain fails it without ever reaching the handler.
-- pg-boss owns the `pgboss` schema in the shared database and migrates it itself at `start()`, so
-  the `@vers/db` migrations never touch it.
+- pg-boss owns the `pgboss` schema in the shared Neon database and migrates it itself at `start()`,
+  so the `@vers/db` migrations never touch it.
 
 ## Delivery model: drains, not resident workers
 
@@ -62,5 +62,5 @@ Real postgres, database per test: `createDatabaseFromTemplate()` hands the queue
 string, because pg-boss pools its own connections and cannot run inside an injected transaction
 handle.
 
-Retry and dead-letter timing are `@vers/jobs`'s tested contract. A consumer's suite asserts that a
-failed job survives and stays invisible during backoff, not wall-clock redelivery.
+The tests in `@vers/jobs` own retry and dead-letter timing. A consumer's suite asserts that a failed
+job survives and stays invisible during backoff, never wall-clock redelivery.

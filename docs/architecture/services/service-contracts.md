@@ -7,7 +7,7 @@ can receive, never what the service emits internally.
 
 ## Contract-first
 
-A contract package declares, for one service, every operation it exposes — route, input/output
+A contract package declares, for one service, every operation it exposes: route, input/output
 schemas, and the errors a caller can receive. It contains no implementation. Both sides derive from
 it. The service implements it through oRPC's `implement()`, so an implementation that drifts from
 the declaration fails typecheck. Clients construct a fully typed client from the contract alone,
@@ -23,8 +23,8 @@ contract, neither on each other.
 | `@vers/service-runtime`    | `libs/service/service-runtime` | services only                     |
 
 A `@vers/contract-<service>` package holds one service's API declaration. `@vers/contract-base`
-holds the standard error set and the base route builders every contract shares.
-`@vers/service-runtime` holds the Elysia shell every service composes.
+holds the standard error set and the base route builders every contract shares. The service runtime
+(`@vers/service-runtime`) holds the Elysia app every service composes.
 
 Why one contract package per service rather than a single `@vers/contracts` with subpath exports:
 
@@ -33,7 +33,7 @@ Why one contract package per service rather than a single `@vers/contracts` with
   only the true consumers.
 - **Coupling stays visible.** Inside one package, a contract borrowing another service's schema is
   an innocuous relative import that nothing flags. Across packages, it is an explicit dependency
-  edit in `package.json` — reviewable, and the dependency graph stays honest.
+  edit in `package.json`, reviewable, and the dependency graph stays honest.
 - **Ownership is crisp.** "A service owns its API" maps one-to-one to "a service's PR owns its
   contract package."
 
@@ -55,7 +55,7 @@ source.
 No build step, no `.d.ts` emit, no version drift: consumers typecheck against the live source, so a
 breaking change fails the consumer's typecheck in the same commit that made it.
 
-Each procedure is a declaration chain — route, schemas, errors:
+Each procedure is a declaration chain of route, schemas, and errors:
 
 ```ts
 getCurrentUser: authedRoute
@@ -68,7 +68,7 @@ getCurrentUser: authedRoute
 set pre-declared, so every authenticated procedure shares one error vocabulary without re-declaring
 it. Procedure-specific errors (`NOT_FOUND`, `CONFLICT`, …) are declared in the contract that owns
 them. Entity schemas live in the contract package that owns the entity, not in a shared types
-package, even at some duplication cost — sharing entity schemas across contracts would couple
+package, even at some duplication cost: sharing entity schemas across contracts would couple
 services through the back door.
 
 Schemas are zod schemas, so every contract depends on `zod`. It is referenced through the workspace
@@ -89,14 +89,14 @@ const getCurrentUser = os.getCurrentUser.handler(({ context, errors }) => {
 });
 ```
 
-Every handler is typechecked against its declaration — inputs, outputs, and error payloads. The oRPC
+Every handler is typechecked against its declaration: inputs, outputs, and error payloads. The oRPC
 router mounts on Elysia at `/rpc` and serves no other path. That path speaks the oRPC RPC protocol
 every typed client uses.
 
-`@vers/service-runtime` provides the shell around this: a `createService(...)` entry composing the
-runtime's Elysia plugins — env validation, s2s token verification ahead of the handler, health
-checks, trace-context propagation, and optional Sentry and OpenTelemetry wiring. A new service is a
-contract package, handlers, and one `createService` call.
+The service runtime wraps the handlers. One `createService(...)` call composes its Elysia plugins:
+env validation, service-to-service (s2s) token verification ahead of the handler, health checks,
+trace-context propagation, and optional Sentry and OpenTelemetry wiring. A new service is a contract
+package, handlers, and one `createService` call.
 
 ## The client side
 
@@ -107,29 +107,27 @@ export const userClient: ContractRouterClient<typeof userContract, ServiceLinkCo
   createORPCClient(buildServiceLink('user'));
 ```
 
-In app-web the link is isomorphic (`buildServiceLink`). On the server it mints a short-lived
-service-to-service token for the target service and attaches it
-([auth](./auth.md#service-to-service-tokens)). In the browser it routes through the app's
-same-origin `/api/rpc/$service` proxy, so the session cookie rides along, since services are not
-reachable outside the private mesh ([overview](../overview.md)).
+In app-web the link is isomorphic (`buildServiceLink`). On the server it mints a short-lived s2s
+token for the target service and attaches it ([auth](./auth.md#service-to-service-tokens)). In the
+browser it routes through the app's same-origin `/api/rpc/$service` proxy, so the session cookie
+rides along, since services are not reachable outside the private mesh ([overview](../overview.md)).
 
 ## Errors and the trust boundary
 
-A contract describes what a caller can receive, not what the service emits. Authentication fails in
-two classes, kept deliberately separate, and only one is a contract error.
+Authentication fails in two classes, kept deliberately separate, and only one is a contract error.
 
-- **A bad session is a contract error.** The session is missing or expired — the caller's own
+- **A bad session is a contract error.** The session is missing or expired. That is the caller's own
   problem, which the caller can act on by signing in again. It is `UNAUTHORIZED` with a typed
   `data.reason` of `missing-session` or `expired-session`, declared once in `@vers/contract-base`.
-- **A bad service-to-service token is not.** Services accept only a short-lived token minted at the
-  edge naming the acting user ([auth](./auth.md#service-to-service-tokens)). A token that fails
-  verification means something is misconfigured or someone is probing — never something a browser
-  user can fix. Runtime middleware in `@vers/service-runtime` rejects it with a plain 401 before any
+- **A bad s2s token is not.** Services accept only a short-lived token from a registered issuer,
+  naming the acting user when the call has one ([auth](./auth.md#service-to-service-tokens)). A
+  token that fails verification means something is misconfigured or someone is probing, never
+  something a browser user can fix. The service runtime rejects it with a plain 401 before any
   handler runs, and the edge reports it as a 5xx with alerting
   ([error handling](./error-handling.md#service-layer)).
 
-Because the edge validates sessions and mints the token, services never see cookies. Identity
-reaches a handler as the verified token's claims:
+Services never see cookies ([auth](./auth.md)). Identity reaches a handler as the verified token's
+claims:
 
 ```ts
 interface ServiceContext {
@@ -157,7 +155,7 @@ permission model needs arrive additively.
 Contracts are unversioned, so the rule is **additive-first**: new procedures, new optional fields,
 and new error variants are always safe. A breaking change is permitted only when every consumer is
 fixed in the same commit. Because consumers typecheck against contract source, CI enforces exactly
-that. There is no deprecation window to manage and no version matrix; the monorepo _is_ the
+that. There is no deprecation window to manage and no version matrix; the monorepo is the
 compatibility mechanism.
 
 ## Testing
@@ -166,8 +164,8 @@ Two layers cover a contract, per the repo's mock-free testing rules:
 
 - **Conformance** (generic, one call per service). `collectConformanceCases` (`@vers/test-utils`)
   walks a contract and runs the mechanical cases every procedure must satisfy against the real
-  Elysia app in-process via `app.handle(request)` — no network, no mocks. The app rejects malformed
-  input with `BAD_REQUEST`, rejects an anonymous call to an authed procedure with
+  Elysia app in-process via `app.handle(request)`, with no network and no mocks. The app rejects
+  malformed input with `BAD_REQUEST`, rejects an anonymous call to an authed procedure with
   `UNAUTHORIZED { reason: 'missing-session' }`, and generates a valid OpenAPI document from the
   contract.
 - **Behavioural** (hand-written, per service): what the service actually does, with test data
@@ -176,12 +174,13 @@ Two layers cover a contract, per the repo's mock-free testing rules:
 ## Known gotchas
 
 - Any package consuming a contract-typed client needs `@orpc/contract` as a **direct** dependency
-  (for `ContractRouterClient`). Under strict dependency isolation the failure mode is a confusing
-  type-error cascade, not a missing-module error.
+  (for `ContractRouterClient`). Under strict dependency isolation the failure mode is a type-error
+  cascade, not a missing-module error.
 - Elysia mounts for oRPC handlers need `{ parse: 'none' }`, or Elysia's body parser consumes the
   request before oRPC can read it.
 - SSR dehydration of an errored query redacts `ORPCError` to a plain `Error`, losing the `code` and
   `data`. When an error state must survive SSR, fold it into a result union with oRPC's `safe()`
-  inside a server function; in practice auth errors usually redirect instead.
-- `RPCLink` has no default type parameter — annotate `RPCLink<Record<never, never>>` or let
-  inference run end-to-end.
+  inside a server function. An auth error instead throws `redirect()`
+  ([error handling](./error-handling.md#app-web)).
+- `RPCLink` has no default type parameter: annotate `RPCLink<Record<never, never>>` or let inference
+  run end-to-end.

@@ -9,8 +9,8 @@ every call site.
 
 ## The registry
 
-`@vers/flags`'s `FLAGS` constant is the single source of truth for every flag. Each entry declares a
-`defaultValue` and a `description` of what it gates.
+The `FLAGS` constant in `@vers/flags` is the single source of truth for every flag. Each entry
+declares a `defaultValue` and a `description` of what it gates.
 
 - A flag's key derives its environment variable name mechanically: `FEATURE_` plus the key
   upper-cased with dashes replaced by underscores, so `market` becomes `FEATURE_MARKET`.
@@ -30,7 +30,7 @@ bundle. `resolveFlags()` evaluates every registered flag and returns a plain
 `Record<FlagKey, boolean>`. A client that needs flag state receives that resolved payload rather
 than the evaluation machinery itself.
 
-`app-web`'s `/_game` layout route resolves flags once, in its `beforeLoad`, through a server
+The `/_game` layout route in `app-web` resolves flags once, in its `beforeLoad`, through a server
 function wrapping `resolveFlags()`:
 
 ```ts
@@ -74,8 +74,8 @@ that checks it. A flag flipped in `app-web` alone has no effect on a service tha
    `defaultValue` and a `description`.
 2. Guard the call sites the feature needs: a route's `beforeLoad`, a nav entry's `flag` field, an
    oRPC procedure's `requireFlag` middleware, or a direct `resolveFlags()`/client read.
-3. Set the derived `FEATURE_<KEY>` environment variable to `"true"` on whichever processes should
-   serve the feature.
+3. Set the derived `FEATURE_<KEY>` environment variable to `"true"` on every process that serves the
+   feature.
 
 ## Removing a flag
 

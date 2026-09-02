@@ -11,9 +11,8 @@ different inputs, so knowing the whole shape tells a player nothing about where 
 client can generate the entire map and still not find which node hides a jackpot. Scanning for one
 returns nothing, which is what makes an infinite client-generated world safe to ship.
 
-This page covers the map: how its shape is generated, what a player may see, where a player may
-travel, and how a node's contents stay sealed. [Game entropy](./game-entropy.md) prices why those
-rules hold. [Seed chain](./seed-chain.md) covers what happens once an avatar starts playing a node.
+[Game entropy](./game-entropy.md) prices why those rules hold. The [seed chain](./seed-chain.md)
+owns what happens once an avatar starts playing a node.
 
 ## The two planes
 
@@ -94,9 +93,9 @@ it falls inside any of those discs.
 
 Nothing stores that projection. There is no reveal event stream and no reveal state, so the
 projection is idempotent by construction and storage grows with the nodes an avatar has completed —
-roughly its path length — never with the area it can see. A player deep in the map pays for their
-path, not for the enormous visible region, which recomputes on demand. A per-chunk run-length
-bitmask is a permitted cache over the projection; the completion rows stay the truth.
+roughly its path length, never with the area it can see. A player deep in the map pays for their
+path, not for the enormous visible region, which recomputes on demand. The completion rows are the
+truth.
 
 The server discloses a node only after the clear that opened it verifies, never on an optimistic
 one. It discloses the node's difficulty and its sealed content fields — never the secret those
@@ -142,8 +141,8 @@ frontier check is the real boundary.
 Disclosing content into that band is safe only because what it discloses is flat. Every bit of
 reward-magnitude variance lives in sealed entropy the client cannot compute — the node's sealed
 content, and the crafting salt drawn online
-([entropy model](./game-entropy.md#sealed-pre-commit-salt)) — so reading a flat base early buys
-nothing. A player farms the known offline and ventures into fog online.
+([crafting entropy](../../game-design/crafting-entropy.md#sealed-pre-commit-salt)) — so reading a
+flat base early buys nothing. A player farms the known offline and ventures into fog online.
 
 Travel extends offline too. Clearing a node offline opens its neighbours for selection before the
 server verifies the clear. The client widens its selectable set from the durable outbox that a
@@ -174,10 +173,10 @@ to forge.
 Every activity row carries a scope-secret reference and version, and the verifier re-derives the
 node's difficulty and sealed fields on each stream's first pass and rejects a mismatch. The row
 carries `contentVersion` beside them, a hash of the content derivation. All three are columns on the
-activity row that the `Started` checkpoint opens, never fields inside the checkpoint stream — an
-append-only replayable stream is the wrong home for anything naming a secret. The pair names only
-the versioned root `service-keys` custodies in `SCOPE_SECRET_ROOTS`, and rotating a secret adds a
-root version rather than rewriting rows.
+activity row that the `Started` checkpoint opens, never fields inside the checkpoint stream: an
+append-only replayable stream is the wrong home for anything naming a secret. The scope-secret
+reference and version name only the versioned root `service-keys` custodies in `SCOPE_SECRET_ROOTS`,
+and rotating a secret adds a root version rather than rewriting rows.
 
 ## Biome, the terrain plane
 
@@ -228,8 +227,7 @@ Difficulty stops climbing at `MAX_DIFFICULTY` while distance runs on, so scaling
 out. Horizontal variety carries the world past that point:
 
 - biome combinatorics from the two blended noise layers
-- node archetypes picked by a low-probability hash
-- rare distance-scaled landmarks, planned to show as pillars of light through the fog
+- encounter archetypes drawn per node from the sealed content pool (`rollEncounterFromStream`)
 - juice, the deliberate investment a player layers onto an activity
   ([economy modes](../../game-design/economy-modes.md))
 
@@ -238,9 +236,9 @@ and what waits out there.
 
 ## The reveal radius
 
-`REVEAL_RADIUS` is a hex distance, and it bounds sight alone. It holds between 2 and 5 hex hops and
-never higher. Look-ahead value and the map-scanning exploit's return both climb with the radius, so
-the upper bound is a security limit rather than a matter of taste.
+`REVEAL_RADIUS` is a hex distance, and it bounds sight alone. Its value is 2 hex hops. The design
+caps it at 5: look-ahead value and the map-scanning exploit's return both climb with the radius, so
+the cap is a security limit rather than a matter of taste.
 
 How far a player travels offline is not this value. It follows from selection: edges out of nodes
 the avatar has cleared, widened by the clears its outbox holds. A wider reveal lets a player see
@@ -274,4 +272,3 @@ Three packages split along the same line the two planes do.
 | cleared frontier  | The set of nodes whose first clear has verified; the boundary replay's reachability check reads.                                                     |
 | reveal            | The region a player has earned sight of: a union of hex discs over the avatar's verified first-clear nodes and the origin, derived and never stored. |
 | selection         | The set a player may travel to: the origin, cleared nodes, and every node an edge joins to a cleared node.                                           |
-| landmark          | A rare, distance-scaled node an avatar is granted, planned to show as a pillar of light through fog.                                                 |

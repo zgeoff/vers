@@ -1,10 +1,9 @@
 # Deployment
 
-Where the stack runs, how a merge reaches production, and how to re-provision it from nothing. The
-stack is a Fly.io fleet, deployed by the repo's deploy CLI from the `deploy.config.ts` manifest.
-Every rollout decision keys off one marker: the `GIT_SHA` stamped into each app's machine env,
-compared against HEAD. A leg that a failure skipped therefore reads stale and ships on the next
-push.
+The stack is a Fly.io fleet. The repo's deploy CLI rolls it out from the `deploy.config.ts`
+manifest, and a push to `main` drives every rollout. Every rollout decision keys off one marker: the
+`GIT_SHA` stamped into each app's machine env, compared against HEAD. A leg that a failure skipped
+therefore reads stale and ships on the next push. The same CLI provisions the fleet from nothing.
 
 ## Topology
 
@@ -17,9 +16,9 @@ The stack runs on Fly.io in the `syd` region. Three apps hold public addresses; 
 - `vers-umami` (`apps/umami`) — the web-analytics dashboard; tracker traffic instead arrives through
   `app-web`'s same-origin proxy ([analytics](../analytics.md)).
 
-Postgres is a Neon project ([database](./database.md)); no app runs its own database, Bugsink
-included. `service-keys` holds no database connection — its state is the `ROLL_KEY_ROOTS` secret
-alone.
+Postgres is the shared Neon database ([database](./database.md)). No app runs its own Postgres.
+Bugsink and Umami own separate logical databases in the same Neon project. `service-keys` holds no
+database connection. Its state is 2 secrets, `ROLL_KEY_ROOTS` and `SCOPE_SECRET_ROOTS`.
 
 Every app scales to zero. `auto_stop_machines = 'suspend'` parks an idle machine with its memory
 snapshot for sub-second wake, and a service wakes on its first request. Two deviations:
@@ -29,15 +28,16 @@ snapshot for sub-second wake, and a service wakes on its first request. Two devi
 - `service-email` stops rather than suspends (`auto_stop_machines = 'stop'`) — the queue-hosting
   policy ([queues](./queues.md)).
 
-`service-replay` carries no inbound player traffic of its own — `service-activity` pokes it over
-flycast (`POST /wake`) each time an append advances an activity past its verified cursor, which
-wakes a suspended machine like any other flycast request. The handler drains every claimable chain
-before responding, holding the request open so the machine stays up until the queue is actually
-empty; with nothing to poke, `service-replay`'s Neon compute scales to zero alongside its machine.
+`service-replay` carries no inbound player traffic of its own. `service-activity` calls the replay
+service's wake procedure over its oRPC client each time an append advances an activity past its
+verified cursor, and that flycast request wakes a suspended machine like any other. The wake handler
+drains every claimable chain before responding, holding the request open so the machine stays up
+until the queue is empty. With nothing to wake it, `service-replay`'s Neon compute scales to zero
+alongside its machine.
 
 ## Networking
 
-`app-web` reaches a service at `http://<app>.flycast` — a private address that load-balances across
+`app-web` reaches a service at `http://<app>.flycast`, a private address that load-balances across
 the service's machines and wakes a suspended one on demand. These URLs live in `app-web`'s
 `fly.toml` `[env]`. A service is allocated no public IP, so nothing outside the mesh can reach it.
 Mesh traffic is already encrypted, so services set `force_https = false`.
@@ -57,25 +57,21 @@ allocates a missing private address for a `flycast` entry before its rollout cut
 ## Secrets
 
 Non-sensitive config (service URLs, `NODE_ENV`, log level) lives in each `fly.toml` or Dockerfile.
-Secrets are set with `fly secrets set` and never committed. Which variables an app needs is its env
-contract's to declare — [provision from nothing](#provision-from-nothing) sets the current values:
+Secrets are set with `fly secrets set` and never committed. Each app's env contract declares the
+variables it needs, and [provision from nothing](#provision-from-nothing) sets the current values.
 
-- A service requires the base schema (`baseEnvSchema`, `@vers/service-runtime`) plus its own shape —
-  `services/<name>/src/env-shape.ts`. The derived key lists are committed as
-  `services/<name>/env-contract.generated.json` ([env preflight](#env-preflight)).
-- `app-web`'s keys are the schema in `apps/web/src/server/web-env-schema.ts` plus the cookie
-  config's `SESSION_SECRET` and `COOKIE_DOMAIN` reads (`apps/web/src/lib/auth/`).
+- A service requires the base schema (`baseEnvSchema`, the service runtime in
+  `@vers/service-runtime`) merged with its own `envShape`. The derived key lists are committed per
+  service as `env-contract.generated.json` ([env preflight](#env-preflight)).
+- `app-web`'s keys are its web env schema plus the cookie config's `SESSION_SECRET` and
+  `COOKIE_DOMAIN` reads.
 - `vers-bugsink` and `vers-umami` read their upstream images' documented env. Bugsink additionally
   reads the `R2_*` keys in `apps/bugsink/r2_storage.py`, which back its uploaded-file storage.
 
-s2s auth runs on one Ed25519 keypair per minting service ([auth](../services/auth.md)). Each minter
-— `app-web` toward the domain services, `service-replay` toward the keys service and version-pinned
-replay providers, `service-activity` toward `service-replay`'s `/wake` endpoint — holds its own
-PKCS8 private half as `SERVICE_AUTH_PRIVATE_KEY` in its own app's secrets, and no other app's.
-`SERVICE_AUTH_JWKS` is the JSON key set every app verifies inbound calls with: each minter's public
-half under its issuer-named `kid`, so a token only validates against the key of the service it
-claims to be from, and a compromised minter can impersonate only itself. Each token's `aud` is the
-target's registered service name (`service-replay`).
+Service-to-service (s2s) auth runs on one Ed25519 keypair per minting service. Each minter holds its
+own private half as `SERVICE_AUTH_PRIVATE_KEY` in its own app's secrets, and every domain service
+verifies inbound calls with `SERVICE_AUTH_JWKS`, the key set holding each minter's public half
+([auth](../services/auth.md#service-to-service-tokens)).
 
 The remaining keys with cross-service meaning:
 
@@ -84,11 +80,13 @@ The remaining keys with cross-service meaning:
 - `ROLL_KEY_ROOTS` — `service-keys`' root-secret payload: JSON, one entry per population, each
   holding its current key version and every hex-encoded root version still derived against
   ([game-entropy](../game/game-entropy.md)).
-- `SENTRY_DSN` — optional on any app, naming its Bugsink project; reporting behavior is
-  [error-handling](../services/error-handling.md)'s.
+- `SCOPE_SECRET_ROOTS` — `service-keys`' scope-secret payload in the same shape, one entry per scope
+  type, which seals world-map content ([world map](../game/worldmap.md#sealing-a-nodes-contents)).
+- `SENTRY_DSN` — optional on any app, naming its Bugsink project.
+  [Error handling](../services/error-handling.md) owns the reporting behavior.
 - `OTEL_EXPORTER_OTLP_*` — the standard OTel export vars, optional on any app and set fleet-wide in
-  practice ([provision from nothing](#provision-from-nothing)); the export path and per-signal
-  header routing are [observability](./observability.md)'s.
+  practice ([provision from nothing](#provision-from-nothing)). [Observability](./observability.md)
+  owns the export path and per-signal header routing.
 
 The browser-side values ride GitHub Actions configuration. The deploy workflow bakes the
 `VITE_SENTRY_DSN` Actions variable into `app-web`'s client bundle. The same value is also set as a
@@ -104,10 +102,10 @@ database, builds every stale app, gates the combined fleet, and cuts over.
 
 ### Pipeline
 
-Neon migrations apply once, in their own never-cancelled `migrate` job — several services share the
-one database, so migration never runs per service. Database migrations are never rolled back: a
-release must tolerate every migration applied after it shipped (expand/contract), which is what
-makes redeploying a previous image safe.
+Neon migrations apply once, in their own never-cancelled `migrate` job. Several services share the
+shared Neon database, so migration never runs per service. Database migrations are never rolled
+back: a release must tolerate every migration applied after it shipped (expand/contract), which is
+what makes redeploying a previous image safe.
 
 Two per-app matrix jobs run the deploy CLI through the `.github/actions/fly-deploy` composite
 action: `build` (`bun run deploy -- build --app <name>`) as soon as checks are green, and `deploy`
@@ -141,9 +139,8 @@ in the deploy phase while file coverage runs at checks time.
 Between build and cutover, the `stack-e2e` job boots every deployable image in a compose stack
 (`apps/web-e2e/docker-compose.stack.yml`): every service image, `app-web`'s production image,
 postgres, and a capture-only Resend stub. It resolves refs with the CLI's `images` command, migrates
-the stack's own database, and drives the signup, verification, onboarding, and login journeys
-(`apps/web-e2e/stack/`) against it. This gate is fleet-wide by design: a combined state that fails
-its journeys ships for no app.
+the stack's own database, and drives the stack journeys in `@vers/web-e2e` against it. This gate is
+fleet-wide by design: a combined state that fails its journeys ships for no app.
 
 ### Build and cutover
 
@@ -188,11 +185,11 @@ holding a public one, fails the run.
 A `fly machine run --schedule` machine is unmanaged: `fly deploy` never rolls its image forward. An
 app entry's `scheduledMachines` in `deploy.config.ts` declares each one (name, command, schedule,
 region). The CLI reconciles the declarations right after the app's rollout lands, and on its
-skipped-deploy path alike — creating a declared machine that doesn't exist yet on the app's
-just-deployed image, and moving one on a stale image onto it. Provisioning a new scheduled machine
-is a manifest edit; creation happens on the app's next deploy, not a manual `fly machine run`.
-`verify-fleet` reds if a declared scheduled machine is missing or drifts onto a different image than
-the app's service machines.
+skipped-deploy path alike. It creates a declared machine that doesn't exist yet on the app's
+just-deployed image, and moves one on a stale image onto it. Provisioning a new scheduled machine is
+a manifest edit; creation happens on the app's next deploy, not a manual `fly machine run`.
+`verify-fleet` fails if a declared scheduled machine is missing or drifts onto a different image
+than the app's service machines.
 
 ### Rollout strategies
 
@@ -200,10 +197,10 @@ Every app and service rolls out `bluegreen`: Fly boots a parallel fleet, gates i
 traffic over, then retires the old machines. A broken boot fails the gate before cutover, and the
 old machines serve every request until it passes — an in-place `rolling` swap of a scale-to-zero
 service's single machine drops its internal callers with 503s for the length of the restart. Deploy
-jobs queue rather than cancel — killing flyctl mid-deploy strands the green machines and fails every
+jobs queue rather than cancel. Killing flyctl mid-deploy strands the green machines and fails every
 later deploy with "found multiple image versions".
 
-A rollout can fail on transient `syd` host-capacity refusals ("could not reserve resource"); Fly
+A rollout can fail on transient `syd` host-capacity refusals ("could not reserve resource"). Fly
 rolls back cleanly, so re-run the failed job.
 
 ### Stranded-machine sweep
@@ -215,13 +212,15 @@ proceeds — so flyctl's own preflight never hits "found multiple image versions
 
 The kept group is the one whose machines all carry the app's recorded release git SHA. When no group
 matches that SHA, the kept group falls back to the single image group holding a started machine
-whose health checks all pass. A started machine outside the kept group is never a destroy target:
-the leg fails instead, printing the fleet's machine table (id, state, image, git SHA) so an operator
-can resolve it by hand — as is a machine whose image flyctl did not report, which is never itself a
-group to keep or destroy and fails the leg the same way, named in the table, once a second image
-group exists. `deploy verify` reports a mixed-image fleet as its own finding — each image with its
-machine count — in place of the generic finding that no trustworthy SHA is recorded, names any
-machine reporting no image, and never sweeps; the fleet is left exactly as found.
+whose health checks all pass. A started machine outside the kept group is never a destroy target.
+The leg fails instead and prints the fleet's machine table (id, state, image, git SHA) so an
+operator can resolve it by hand. A machine whose image flyctl did not report is never a group to
+keep or destroy. Once a second image group exists, that machine fails the leg the same way and
+appears in the table.
+
+`deploy verify` never sweeps and leaves the fleet exactly as found. It reports a mixed-image fleet
+as its own finding, each image with its machine count, in place of the generic finding that no
+trustworthy SHA is recorded. It also names any machine reporting no image.
 
 ### Pinned upstream images
 
@@ -236,16 +235,16 @@ deployed with no build leg at all.
 
 `.github/workflows/infra-drift.yml` runs `pulumi preview --refresh --expect-no-changes` over the
 `infra/` program's `prod` stack and fails on any diff. It runs on pull requests and `main` pushes
-touching `infra/` or the workflow file itself, and on a weekly schedule — console drift arrives with
-no commit, so only the schedule can catch it. A pull request gets the preview as a PR comment. Fork
+touching `infra/` or the workflow file itself, and on a weekly schedule. Console drift arrives with
+no commit, so only the schedule catches it. A pull request gets the preview as a PR comment. Fork
 pull requests are skipped: GitHub withholds secrets from them, so the preview cannot authenticate.
 
-The job authenticates through the `OP_SERVICE_ACCOUNT_TOKEN` repo secret — a non-expiring 1Password
-service account scoped to read only the `vers-ci` vault — and resolves the stack's credentials from
+The job authenticates through the `OP_SERVICE_ACCOUNT_TOKEN` repo secret, a non-expiring 1Password
+service account scoped to read only the `vers-ci` vault, and resolves the stack's credentials from
 their `op://` references at run time. `vers-ci` holds exactly the items the workflow's `op://`
 references name, so a compromised job step cannot reach the signing keys and other credentials in
-the `vers` vault. When the job gains a new credential, its item moves into `vers-ci` — never a copy,
-which rots on rotation — and everything the job does not read stays in `vers`.
+the `vers` vault. When the job gains a new credential, its item moves into `vers-ci`, and everything
+the job does not read stays in `vers`. A copy is never made, because a copy rots on rotation.
 
 The job only ever previews — reconciling a reported drift is a human decision, applied with
 `pulumi up` from a checkout.
@@ -263,19 +262,20 @@ After `vers-service-replay` deploys, and on its skipped-deploy path alike, the C
 `sim_versions` table against the fleet's just-deployed image. A hash with no existing provider app
 gets one: `vers-replay-<hash12>` (the engine hash's first 12 hex characters), a private flycast IPv6
 address, and a machine launched from `vers-service-replay`'s current deployment tag. Provisioning
-always launches by tag — `flyctl machine run` mangles a `@sha256:` digest reference — and records
-the digest `machines list --json` resolves it to separately. The registry row stores that
-digest-pinned image ref, the provider app's flycast URL, and the build's bundled max content version
-(`BUNDLED_CONTENT_VERSION`, `libs/game/content-version`) — the newest content version this engine
-build derives and replays. The row refreshes whenever the fleet's resolved digest or the bundled
-content version differs from what's stored, even when the provider app itself needs no change.
+always launches by tag, because `flyctl machine run` mangles a `@sha256:` digest reference. It
+records the digest `machines list --json` resolves the tag to separately. The registry row stores
+that digest-pinned image ref, the provider app's flycast URL, and the build's bundled max content
+version (`BUNDLED_CONTENT_VERSION`, `libs/game/content-version`), the newest content version this
+engine build derives and replays. The row refreshes whenever the fleet's resolved digest or the
+bundled content version differs from what's stored, even when the provider app itself needs no
+change.
 
-An activity-start mint refuses to stamp a version whose row's max content version falls behind the
-content registry's current version, answering `SIM_VERSION_EXPIRED` rather than accepting a start it
-could never replay. An engine build must deploy and reconcile its row's max content version before
-the content-registry publish that depends on it goes out — the ordering this refusal assumes.
+The activity start ingest refuses to stamp a version whose row's max content version falls behind
+the content registry's current version, answering `SIM_VERSION_EXPIRED` rather than accepting a
+start it could never replay. An engine build must deploy and reconcile its row's max content version
+before the content-registry publish that depends on it goes out. The refusal assumes that ordering.
 
-Pruning stale provider apps and expired registry rows is a separate sweep's job — the deploy CLI
+Pruning stale provider apps and expired registry rows is the retention sweep's job. The deploy CLI
 only ever creates and refreshes.
 
 ### Retention sweep
@@ -291,8 +291,8 @@ The current version — the newest `active` row by `deployed_at` — is excluded
 `retained_until`: a live version is never a valid tombstone target no matter how old its deploy.
 
 Only after a row is tombstoned does the sweep destroy its provider app
-(`flyctl apps destroy <app> --yes`). That order is deliberate: a pruned row with a still-running app
-is harmless — dispatch already reports it `expired` — while an app destroyed before its row flips
+(`flyctl apps destroy <app> --yes`). That order is deliberate. A pruned row with a still-running app
+is harmless, because dispatch already reports it `expired`. An app destroyed before its row flips
 would leave an `active` row pointing at nothing. The sweep finishes by unparking every activity
 whose stamped hash the registry now carries as `active`, so an activity parked while its version was
 unregistered becomes replayable again once a later deploy provisions it, without waiting on the
@@ -366,8 +366,8 @@ Requires `flyctl` authenticated to the `vers` org, the Neon `DATABASE_URL` (the 
    done
    ```
 
-2. Give `app-web` its public addresses. A service's flycast address is the deploy CLI's to allocate,
-   on its first rollout ([networking](#networking)):
+2. Give `app-web` its public addresses. The deploy CLI allocates a service's flycast address on its
+   first rollout ([networking](#networking)):
 
    ```sh
    fly ips allocate-v4 --shared -a vers-app-web
@@ -428,10 +428,11 @@ Requires `flyctl` authenticated to the `vers` org, the Neon `DATABASE_URL` (the 
      SERVICE_AUTH_JWKS="$SERVICE_AUTH_JWKS" \
      SERVICE_AUTH_PRIVATE_KEY="$(cat s2s-service-activity.key)"
 
-   # The root payloads are minted once and stored in the `vers` vault (`key-roots` item):
-   # persisted rows reference their root versions by number, so a rerun reads the stored payloads
-   # (`op read 'op://vers/key-roots/...'`) instead of regenerating them, and a rotation appends a
-   # new version to a payload — never an overwrite of an existing one.
+   # First provisioning mints the two root payloads below and stores them in the `vers` vault
+   # (`key-roots` item). Persisted rows reference root versions by number, so on a rerun replace
+   # the two `openssl rand` mints with `op read 'op://vers/key-roots/roll-key-roots'` and
+   # `op read 'op://vers/key-roots/scope-secret-roots'`. A rotation appends a new version to a
+   # payload and never overwrites an existing one.
    ROLL_KEY_ROOTS="$(jq -nc \
      --arg trade "$(openssl rand -hex 32)" \
      --arg selfFound "$(openssl rand -hex 32)" \
@@ -471,7 +472,7 @@ Requires `flyctl` authenticated to the `vers` org, the Neon `DATABASE_URL` (the 
    ```
 
 5. Stand up the error tracker. The first deploy is by hand; CI redeploys it on later config changes.
-   `--ha=false` keeps the app to one machine — Fly otherwise creates a pair on first deploy. The
+   `--ha=false` keeps the app to one machine. Fly otherwise creates a pair on first deploy. The
    admin credentials live on the `bugsink` item in the `vers` 1Password vault, the same item that
    later carries the MCP token.
 
@@ -509,7 +510,7 @@ Requires `flyctl` authenticated to the `vers` org, the Neon `DATABASE_URL` (the 
 
 7. Stand up web analytics. The first deploy is by hand; CI redeploys it on later config changes.
    Umami boots with an `admin`/`umami` account, so the rotation to the vault value runs in the same
-   block — the stock credential is live from first boot until it does:
+   block. The stock credential is live from first boot until the rotation lands:
 
    ```sh
    fly apps create vers-umami --org vers

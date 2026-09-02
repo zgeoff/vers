@@ -2,9 +2,8 @@
 
 Vers is a browser idle game on a microservice backend. A deterministic simulation runs on the
 client, the server verifies its results by replay, and the whole repo
-[deploys](./platform/deployment.md) as one atomic release from a single SHA. What follows is the
-system map: it names each subsystem, states the distinction that orients it, and links to the doc
-that owns each part's detail.
+[deploys](./platform/deployment.md) as one release built from a single SHA. Each section below names
+one subsystem, states the distinction that orients it, and links to the doc that owns its detail.
 
 ## Request path
 
@@ -29,28 +28,31 @@ internet. Either way the client is typed by the service's contract package alone
 A user has at most one verified session at a time, so completing a 2FA-gated login evicts every
 other session on the account server-side ([auth](./services/auth.md)). A minted service token can
 outlive its session by up to its own short lifetime, so the trust edge re-confirms the session still
-exists on every request before trusting the token. An evicted device is then signed out on its next
-request rather than when its cached token expires.
+exists on every request before trusting the token. An evicted device is therefore signed out on its
+next request rather than when its cached token expires.
 
 ## Topology
 
 Each domain service is its own Fly deployment, reachable only on the private mesh, and scales to
-zero when idle ([deployment](./platform/deployment.md)). The replay worker is the exception:
-replaying a simulation is CPU-bound, so it runs off the request path with its own scaling profile
-and keeps a warm machine.
+zero when idle ([deployment](./platform/deployment.md)). The replay service runs off the request
+path: it carries no player traffic, and the activity service wakes it with a service call each time
+an append leaves unverified work. Older engine builds stay replayable through per-version replay
+provider apps that the deploy CLI provisions
+([sim-version registry](./platform/deployment.md#sim-version-registry)).
 
 ## Data
 
-One Postgres database on Neon holds two shapes of data, and it scales to zero when nobody is playing
-([database](./platform/database.md)).
+The shared Neon database holds three shapes of game data, and it scales to zero when nobody is
+playing ([database](./platform/database.md)). Every application table is accessed through Kysely and
+migrated by kysely-ctl in `@vers/db`. One exception: pg-boss owns the `pgboss` schema and migrates
+it itself ([queues](./platform/queues.md)).
 
-- **Relational identity data** — users, sessions, verifications, and avatars — is accessed through
-  Kysely and migrated by kysely-ctl in `@vers/db`.
-- **Activity checkpoints** — an append-only log plus a per-activity head row — carry the
-  simulation's progress and the cursors its verification advances
-  ([database](./platform/database.md)).
-- **Seed chain state** — one row per `(avatar, chain scope)` pair — hands each activity at a scope
-  the seed it draws from ([the seed chain](./game/seed-chain.md)).
+- **Relational identity data** — users, sessions, verifications, and avatars.
+- **The activity checkpoint tables** — an append-only checkpoint log plus a per-activity head row
+  that carries the simulation's progress and the cursors its verification advances
+  ([checkpoint streams](./game/game-simulation.md#checkpoint-streams)).
+- **Seed chain state** — one row per `(avatar, chain scope)` pair, which hands each activity at a
+  scope the seed it draws from ([the seed chain](./game/seed-chain.md)).
 
 ## Game layer
 
@@ -69,25 +71,26 @@ generates offline progress by simulating forward from the last verified checkpoi
 The world map (`@vers/worldmap-*`) gives every avatar a distinct, unbounded graph generated on
 demand: the client derives its geometry locally from a deterministic hex lattice while the server
 seals each node's content behind a per-avatar secret, so map shape reveals nothing about reward
-([world map](./game/worldmap.md)). It renders that graph with three.js through react-three-fiber
-([game rendering](./game/game-rendering.md)).
+([world map](./game/worldmap.md)). The client renders that graph with three.js through
+react-three-fiber ([game rendering](./game/game-rendering.md)).
 
 ## Cross-cutting
 
-- **Service-to-service auth** — services trust no caller, the private mesh included. Every request
-  carries a short-lived signed service token minted at the edge with the acting user's ID, and the
-  runtime plugin in `@vers/service-runtime` verifies it before any handler runs
-  ([auth](./services/auth.md)).
+- **Service-to-service (s2s) auth** — services trust no caller, the private mesh included. Every
+  request carries a short-lived signed s2s token from a registered issuer: the edge mints it for a
+  browser-originated call, and a calling service mints it for a service-originated one, with the
+  acting user's ID when the call has one. The service runtime (`@vers/service-runtime`) verifies it
+  before any handler runs ([auth](./services/auth.md)).
 - **Contracts** — each service declares its API in its own `@vers/contract-*` package, oRPC
   contract-first with Zod schemas owned by the declaring contract
   ([service contracts](./services/service-contracts.md)).
-- **Atomic release** — contracts are unversioned workspace source packages, and the repo deploys as
-  one unit from one SHA. Turborepo re-typechecks every consumer on any contract change, so
-  divergence cannot land on `main`. There is no version matrix; the monorepo is the compatibility
-  mechanism ([deployment](./platform/deployment.md)).
-- **Observability** — OpenTelemetry sends traces and logs to Axiom; the Sentry SDK sends errors to
-  Bugsink. `@vers/service-runtime` wires both into every service, and request IDs propagate from
-  edge to service ([observability](./platform/observability.md)).
+- **Single-SHA release** — contracts are unversioned workspace source packages, and the repo deploys
+  as one unit from one SHA ([deployment](./platform/deployment.md)).
+  [Service contracts](./services/service-contracts.md#change-discipline) owns the change discipline
+  that keeps consumers and services in step.
+- **Observability** — OpenTelemetry sends traces, logs, and metrics to Axiom; the Sentry SDK sends
+  errors to Bugsink. The service runtime wires both into every service, and one trace id follows a
+  request from edge to service ([observability](./platform/observability.md)).
 
 ## Core technology
 
@@ -115,7 +118,7 @@ Backend:
 
 Development:
 
-- Build - [Vite](https://vitejs.dev), [esbuild](https://esbuild.github.io)
+- Build - [Vite](https://vitejs.dev)
 - Testing - [Bun's test runner](https://bun.sh/docs/cli/test), [Playwright](https://playwright.dev),
   [MSW](https://mswjs.io)
 - Monorepo - [Turborepo](https://turborepo.dev) + [Bun](https://bun.sh) workspaces
@@ -165,6 +168,8 @@ Libraries (`libs/`, grouped by domain):
 - `libs/core/flags` - OpenFeature-backed feature flag registry and env provider
 - `libs/core/trace` - isomorphic W3C trace-context primitives (mint, serialize, parse)
 - `libs/core/utils` - low-level platform-agnostic utils
+- `libs/data/active-avatar` - the account's active-avatar row: find it, find the avatar behind a
+  live activity, and upsert the selection
 - `libs/data/db` - kysely connection helper, migrations, and generated database types
 - `libs/data/content-registry` - published content-document registry: reads a pinned version's
   document, reads and advances the current pointer, and memoizes loaded documents per process
@@ -187,12 +192,12 @@ Libraries (`libs/`, grouped by domain):
   replays, shared by the deploy CLI and the engine packages
 - `libs/game/idle-client` - client code (react, zustand, SharedWorker) for the idle simulation
 - `libs/game/idle-core` - deterministic seeded simulation engine
-- `libs/game/worldmap-content` - sealed worldmap content derivation and the s2s scope-secret read it
-  dispatches to the keys service
+- `libs/game/worldmap-content` - sealed worldmap content derivation and the scope-secret read it
+  dispatches to the keys service over s2s
 - `libs/service/jobs` - typed pg-boss job queue wrapper: send, drain, and retry/dead-letter policy
 - `libs/service/product-analytics` - product-event registry types and the Tinybird Events API sender
 - `libs/service/service-auth` - s2s token minting, parsing, and audience derivation
-- `libs/service/service-runtime` - Elysia service runtime: createService, s2s auth, health, logging,
+- `libs/service/service-runtime` - the service runtime: createService, s2s auth, health, logging,
   OTel/Sentry wiring
 - `libs/service/service-utils` - shared Elysia middleware (auth, logging, remote address) and
   service env schemas

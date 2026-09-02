@@ -1,14 +1,12 @@
 # Offline reconcile
 
-How an avatar's progress made without the server is delivered, checked, and settled in the right
-order once the device reconnects.
-
-The client runs every real-time simulation and records it as append-only checkpoints; the server
-never simulates on the request path. So progress an avatar makes while the server is out of contact
-lives only on the device until it reconnects. Reconcile is the act of bringing that progress back:
-delivering the activities the device holds, replaying them to decide whether to trust them, and
-settling their rewards in order. Whether the simulation was running while the server was out of
-contact decides which it is: real work to deliver, or an idle gap to reconstruct.
+Reconcile delivers, checks, and settles the progress an avatar made without the server, in play
+order, once the device reconnects. The client runs every real-time simulation and records it as
+append-only checkpoints; the server never simulates on the request path. So progress an avatar makes
+while the server is out of contact lives only on the device until it reconnects. Reconcile brings
+that progress back: it delivers the activities the device holds, replays them to decide whether to
+trust them, and settles their rewards in order. Whether the simulation was running while the server
+was out of contact decides which it is: real work to deliver, or an idle gap to reconstruct.
 
 ## Three connectivity states
 
@@ -30,12 +28,12 @@ A backgrounded tab behaves like a closed one. The browser can pause its worker e
 open and the network reachable, so the simulation stops and a gap opens. Reconcile reconstructs that
 gap on resume just as it does a closed period's.
 
-Reconcile is driven by the network returning, an event this page calls **reconnect**. Reconnect is
-distinct from **reopen**, the app opening. A device that reopens while the network is still
-unreachable enters the offline state directly, without ever passing through online, and delivers
-nothing until it later reconnects. So a player crosses several states in one arc — online, into a
-dead spot (offline), close the app (closed), reopen hours later — and reconcile handles the whole
-arc at the reconnect that eventually follows.
+The network returning is a **reconnect**, and the app opening is a **reopen**. Reconnect drives
+reconcile; reopen alone does not. A device that reopens while the network is still unreachable
+enters the offline state directly, without ever passing through online, and delivers nothing until
+it later reconnects. So a player crosses several states in one arc — online, into a dead spot
+(offline), close the app (closed), reopen hours later — and reconcile handles the whole arc at the
+reconnect that eventually follows.
 
 ## Resuming: fast-forward first, then play
 
@@ -51,15 +49,15 @@ The fast-forward must run before live play resumes, or two things go wrong:
   the next seed in that node's [seed chain](./seed-chain.md). An activity that resumes from the
   device's last known position takes a seed those idle attempts already took, and a seed chain holds
   one attempt per position, so the server rejects one of the two.
-- **A stale avatar build.** The resumed activity carries a starting avatar build without the XP the
-  idle attempts earned, so the server rejects it as a mismatch on delivery.
+- **A stale build snapshot.** The resumed activity carries a build snapshot without the XP the idle
+  attempts earned, so the server rejects it as a mismatch on delivery.
 
 Fast-forwarding first moves the device past those idle attempts, so live play starts from a free
 position.
 
 The gap can be any size, including zero. A player who was actively playing has no gap, so the
-fast-forward is a no-op and live play simply continues. A player returning from a long closed period
-has a large gap, reconstructed as re-attempts of the node they were last on.
+fast-forward is a no-op and live play continues. A player returning from a long closed period has a
+large gap, reconstructed as re-attempts of the node they were last on.
 
 Network availability never gates the local simulation; it gates only delivery. The anti-cheat
 guarantee lives at delivery: the server meters the
@@ -115,8 +113,8 @@ player is warned before taking the account over, so nothing is lost silently.
 
 A session that runs past its expiry keeps its row until the next refresh call deletes it and reports
 what happened. app-web can tell a takeover from a lapsed session because of that, and it sends no
-header when a session has simply run out. So a player whose session lapsed while the app was closed
-still delivers the offline play the device holds, once they sign back in.
+header when a session has run out. So a player whose session lapsed while the app was closed still
+delivers the offline play the device holds, once they sign back in.
 
 When the player signs out, one request deletes the session row and clears this device's cookie
 together, so no later call ever finds the row gone and app-web never sends the header. The worker
@@ -143,10 +141,10 @@ provisional in the same way, so the server settles them in the order the player 
 > and its clear with it, so any later activity that leaned on either fails its own check.
 
 A player clears one node, then walks to its neighbour. Clearing the first node earns XP and opens
-the neighbour. The neighbour is built on the first twice: its starting avatar build folds in the XP
-the first earned, and its node is reachable only because the first was cleared. Settling the
-neighbour before the first node's clear is confirmed would pay out against a clear the server might
-still reject, and a paid reward is never clawed back.
+the neighbour. The neighbour is built on the first twice: its build snapshot folds in the XP the
+first earned, and its node is reachable only because the first was cleared. Settling the neighbour
+before the first node's clear is confirmed would pay out against a clear the server might still
+reject, and a paid reward is never clawed back.
 
 Ordering does one thing — it sequences the checks. It never decides whether an activity is legal;
 per-activity checks do that. Because every earlier activity is already settled or rejected when a
@@ -160,7 +158,7 @@ such grant, and the check rejects it.
 
 This is why ordering waits on an earlier activity settling, not clearing. A failed attempt is
 settled, so it releases the wait — but it opened no node, so the reachability check still rejects a
-later activity that had no cleared neighbour. Settling sequences; the check adjudicates.
+later activity that had no cleared neighbour.
 
 The order comes from the client, so the server does not settle on it blindly. Two per-activity
 checks are the boundary, and each reads only what the avatar has already settled. The build check
@@ -201,14 +199,11 @@ An activity ends one of a few ways, and the end decides what the activity produc
   confirmed part earned, opening nothing.
 
 The failed attempt separates the two consequences. XP and node-unlock are distinct outcomes of one
-activity: an activity can settle its XP without ever unlocking a node. This is why the order waits
-on an earlier activity settling, never clearing — a settled failed attempt is still a settled
-activity.
+activity: an activity can settle its XP without ever unlocking a node.
 
 ## Held activities
 
-Two outcomes are neither a settle nor a clean rejection, and both should be impossible when the
-system is working correctly:
+Two outcomes are neither a settle nor a clean rejection, and both mark a bug or an incident:
 
 - **Parked** — the server cannot replay the activity for an operational reason: its sim version is
   unknown or expired, the replay provider is down, or replay timed out. Parking is not a cheat
@@ -218,9 +213,8 @@ system is working correctly:
 
 Because settlement is a single order, a held activity stops every later one from settling. The
 design accepts that. While an avatar holds a parked or quarantined activity, its progression is
-paused, it cannot start new activities, and the hold alarms operators at once. These states mark a
-bug or an incident, not anything a correctly-functioning system produces, so the response is loud
-and blunt on purpose — the server never settles progress on a foundation it cannot verify.
+paused, it cannot start new activities, and the hold alarms operators at once. The response is loud
+and blunt on purpose: the server never settles progress on a foundation it cannot verify.
 
 ## The essential journeys
 
@@ -243,10 +237,9 @@ opened the gap.
 | A later activity reaches the server before its predecessor | offline        |
 | One session moves through online, offline, and closed      | all            |
 
-Jumping to an unreachable node is refused by the reachability check. A device could widen its own
-reachable set offline and start an activity at a node it never earned, but that node is adjacent to
-nothing the avatar has cleared, so the check finds no grant and rejects it. Ordering sequences the
-check; the check is the boundary.
+The reachability check refuses a jump to an unreachable node. A device could widen its own reachable
+set offline and start an activity at a node it never earned, but that node is adjacent to nothing
+the avatar has cleared, so the check finds no grant and rejects it.
 
 ## Worker lifecycle
 
@@ -257,15 +250,15 @@ continuation, and an eviction settlement — run strictly one at a time: the lif
 explicit state machine that processes one flow at a time, so two flows never install over each
 other.
 
-| State          | Meaning                                                                   |
-| -------------- | ------------------------------------------------------------------------- |
-| **idle**       | no activity attached; the worker holds an empty simulation                |
-| **starting**   | minting or attaching an activity and installing it as the live simulation |
-| **running**    | ticking the live simulation and submitting its checkpoints                |
-| **resyncing**  | fetching confirmed server state and deciding what to catch up             |
-| **continuing** | delivering an offline traversal or reconstructing a closed-period gap     |
-| **evicting**   | clearing a run another session took the writer for                        |
-| **stopping**   | ending the running activity and delivering the durable stop request       |
+| State          | Meaning                                                                    |
+| -------------- | -------------------------------------------------------------------------- |
+| **idle**       | no activity attached; the worker holds an empty simulation                 |
+| **starting**   | building or attaching an activity and installing it as the live simulation |
+| **running**    | ticking the live simulation and submitting its checkpoints                 |
+| **resyncing**  | fetching confirmed server state and deciding what to catch up              |
+| **continuing** | delivering an offline traversal or reconstructing a closed-period gap      |
+| **evicting**   | clearing a run another session took the writer for                         |
+| **stopping**   | ending the running activity and delivering the durable stop request        |
 
 The player can stop the running activity. Unlike a start or a resync, stopping does not queue behind
 the active flow — it halts the local simulation at once and needs no network. The client then tells
@@ -276,18 +269,15 @@ player already stopped.
 
 ## Glossary
 
-Each term names what it is, not a fragment that needs the surrounding context to resolve.
-
-| Term             | Meaning                                                                                                            |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------ |
-| activity         | One attempt at one node: a start, gameplay checkpoints, and an end (clear, fail, stop, or cap).                    |
-| node             | A place on the avatar's map, and the target one activity is an attempt at.                                         |
-| encounter        | The fight an activity runs at its node; completing it clears the node.                                             |
-| avatar build     | The avatar's level, equipment, and passives — the inputs its simulation runs on.                                   |
-| activity start   | An activity's first record — which node, which seed, which starting avatar build — before any gameplay checkpoint. |
-| predecessor      | An activity earlier than another in the play order the server settles by.                                          |
-| settle           | The server's verified application of an activity's rewards; the moment provisional becomes real.                   |
-| first clear      | The one-time grant recorded when a node's clear verifies; it opens the node's neighbours.                          |
-| cleared frontier | The set of nodes an avatar has cleared; the boundary the reachability check reads.                                 |
-| fast-forward     | Reconstruct a gap by deterministically re-simulating the elapsed time from the last known position.                |
-| seed chain       | A node's forward sequence of activity attempts, each seeded from the last.                                         |
+| Term             | Meaning                                                                                                                                    |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| activity         | See [game simulation](./game-simulation.md#glossary).                                                                                      |
+| node             | A place on the avatar's map, and the target one activity is an attempt at.                                                                 |
+| encounter        | The fight an activity runs at its node; completing it clears the node.                                                                     |
+| activity start   | See [game simulation](./game-simulation.md#glossary).                                                                                      |
+| predecessor      | The avatar's immediately-prior activity across every chain, stamped by the device at start; the verifier waits for it before adjudicating. |
+| settle           | The server's verified application of an activity's rewards; the moment provisional becomes real.                                           |
+| first clear      | The one-time grant recorded when a node's clear verifies; it opens the node's neighbours.                                                  |
+| cleared frontier | See [world map](./worldmap.md#glossary).                                                                                                   |
+| fast-forward     | Reconstruct a gap by deterministically re-simulating the elapsed time from the last known position.                                        |
+| seed chain       | See [seed chain](./seed-chain.md#glossary).                                                                                                |

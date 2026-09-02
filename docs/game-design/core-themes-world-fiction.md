@@ -1,15 +1,14 @@
 # Core Themes & World Fiction
 
-This note defines the core game-design direction for Vers. It is not a lore bible: it names the
-player contract, the world premise, the identity pillars, and the vocabulary that downstream design
-notes inherit.
+Vers is an idle ARPG/MMO set in a far-future human world. The player shapes an avatar, sends it into
+regions civilization no longer governs, and turns what it recovers into power. The player contract,
+the world premise, the identity pillars, the naming grammar, and the vocabulary register below are
+the root every downstream design note inherits. Lore is texture around progression, never a bible.
 
 ## Contract
 
 Vers is an idle ARPG/MMO where you shape your avatar, send them into dangerous regions, turn loot
-into power, and push farther into harder, stranger parts of the world.
-
-Shape your avatar, send them into the world, recover power, push deeper, and compete.
+into power, push farther into harder, stranger parts of the world, and compete.
 
 ## Decisions
 
@@ -43,8 +42,8 @@ ordinary life cannot safely operate. They are dangerous because they are no long
 human civilization, and valuable because they contain the power, materials, knowledge, and enemies
 that drive progression.
 
-The world should feel artificial, luminous, polluted, overbuilt, and old. Civilization is advanced,
-but not clean. Its systems have accumulated for so long that infrastructure can feel like terrain,
+The world feels artificial, luminous, polluted, overbuilt, and old. Civilization is advanced, but
+not clean. Its systems have accumulated for so long that infrastructure can feel like terrain,
 history, hazard, and myth at the same time.
 
 Respite is central, but it is not omniscient. Its maps, institutions, factions, and public histories
@@ -82,8 +81,8 @@ Three institutions anchor Respite, each defined by what it wants from an avatar'
 Each institution owns the screens that express it: a major screen reads as an artifact of the
 institution behind it, so each feels distinct and inhabited. These are thematic anchors: downstream
 notes attach mechanics to them as they need a licensor, a market, or a fabricator, and institution
-names follow the world's naming grammar. Institutions are designed to carry player alignment and
-perks; that design belongs to its own note.
+names follow the world's naming grammar. Institutions carry player alignment and perks; a downstream
+note owns that design.
 
 The other habitats are the external axis. Records are incomplete: some habitats fell and are ruin,
 some still run with no one left inside, some broke away and became societies Respite no longer
@@ -92,27 +91,25 @@ identities — including the stranger damage types — as downstream notes need 
 
 ### Story Weight
 
-Vers is story-light, not lore-empty. It does not need a campaign narrative as the main activity, but
-named enemies, bosses, regions, factions, events, items, and systems should gradually imply a larger
-world.
+Vers is story-light, not lore-empty. No campaign narrative is the main activity, and named enemies,
+bosses, regions, factions, events, items, and systems gradually imply a larger world.
 
-Lore should be discovered as texture around progression. It should explain why the world works, not
-interrupt the idle ARPG loop.
+Lore is discovered as texture around progression. It explains why the world works and never
+interrupts the idle ARPG loop.
 
 ### Competition
 
-Competition is part of Vers, but it should not dominate the first playable identity. The design
-should leave room for ladders and PvP from the beginning, even if the first loop is PvE region
-progression.
+Competition is part of Vers, and it does not dominate the first playable identity. The design leaves
+room for ladders and PvP from the beginning, while the first loop is PvE region progression.
 
-The word `versus` is part of the name's meaning, but early game design should express that pressure
-through danger, comparison, mastery, and eventual direct conflict.
+The word _versus_ is part of the name's meaning. Early game design expresses that pressure through
+danger, comparison, mastery, and eventual direct conflict.
 
 The MMO layer is economic and competitive, not spatial: play is instanced, and players meet through
-a shared market, ladders, and eventually direct PvP. Loot is tradeable, and drop, crafting, and
-currency design should assume a player economy from the start. Direct PvP is build against build —
-two players' planning resolved in a fight both can study. Competition over regions is comparative
-(who pushes farther, faster), not territorial.
+a shared market, ladders, and eventually direct PvP. Loot is tradeable, so drop, crafting, and
+currency design assume a player economy from the start. Direct PvP is build against build — two
+players' planning resolved in a fight both can study. Competition over regions is comparative (who
+pushes farther, faster), not territorial.
 
 ### Defeat Stakes
 
@@ -126,17 +123,17 @@ banking decision: yield stays at risk until it is pulled out. The player sets ex
 not by hand — automated rules (extract at a yield threshold, or when defenses degrade) let
 unattended runs bank deliberately.
 
-Exact loss rates, floors, and extraction mechanics belong to the progression and economy notes.
+A downstream note owns exact loss rates, minimums, and extraction mechanics.
 
 ## Pillars
 
 ### Dangerous Regions
 
-The world map is dangerous territory, not a passive level select. Regions should imply risk,
-resistance, discovery, escalation, and reward.
+The world map is dangerous territory, not a passive level select. Regions imply risk, resistance,
+discovery, escalation, and reward.
 
-A good region should answer: what makes this place unsafe, what makes it valuable, and how does it
-change as the avatar pushes deeper?
+A good region answers 3 questions: what makes this place unsafe, what makes it valuable, and how it
+changes as the avatar pushes deeper.
 
 Regions become harder and stranger as they move farther from Respite's influence. Distance does not
 need to be purely geographic: age, autonomy, corruption, hostile control, system drift, and lost
@@ -145,11 +142,10 @@ history can all make a region more dangerous and more valuable.
 ### Synthetic World
 
 Vers is science fiction grounded in human civilization, enhanced bodies, artificial environments,
-old infrastructure, and advanced systems. It should not default to fantasy magic, medieval
-symbolism, or space-opera scale.
+old infrastructure, and advanced systems. It never defaults to fantasy magic, medieval symbolism, or
+space-opera scale.
 
-The strange parts of the world should feel engineered, emergent, or historical rather than
-supernatural.
+The strange parts of the world feel engineered, emergent, or historical rather than supernatural.
 
 ### Mythic Systems
 
@@ -179,8 +175,9 @@ make that competition explicit, but the core pressure starts with the world itse
 
 ## Vocabulary Register
 
-The register covers world vocabulary and cross-cutting terms. System vocabulary lives in the
-damage-model and defensive-archetypes notes.
+The register covers world vocabulary and cross-cutting terms. System vocabulary lives in
+[attributes and damage model](./attributes-damage-model.md) and
+[defensive archetypes](./defensive-archetypes.md).
 
 | Term       | Status      | Notes                                                                                                                                                                      |
 | ---------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -194,4 +191,31 @@ damage-model and defensive-archetypes notes.
 | power      | Keep        | Umbrella term for rewards that help the player push farther or more efficiently.                                                                                           |
 | Aether     | Canonical   | The single avatar skill resource: the medium avatars are infused with. Officially the somatic factor — found in avatar blood, never synthesized; the old physics word won. |
 | commitment | Provisional | UI label for a build's distance from center; prose uses committed and centered as plain descriptions.                                                                      |
-| glyph      | Not canon   | Visual candidate for mythic systems, not yet a world rule.                                                                                                                 |
+| glyph      | Not canon   | Visual candidate for mythic systems; no world rule uses it.                                                                                                                |
+
+## Downstream Notes
+
+Each note below is unwritten. A reference to "a downstream note" anywhere in the design set names
+one of these. Their working names appear nowhere else in the design set.
+
+- **Combat** — the formulas: avoidance and interception math, smoothing, the armour curve, recharge
+  timings, buffer hit qualification and deferral and decay rates, resistance caps, critical
+  baselines, Aether cost and regeneration baselines, Azimuth requirement thresholds and weight
+  magnitudes, and each class's mechanic and balance detail.
+- **Skills** — cooldown design, cost shapes, skill target and tempo properties, and any
+  Aether-costed defensive option.
+- **Itemisation** — affix tables and pools, reward tables and rates, drop design, the craft actions
+  and their costs, the craft preview's per-tier fields and forfeit deadline, and the
+  single-target-versus-area and burst-versus-sustain properties of equipment.
+- **Progression** — loss rates on defeat, extraction mechanics, and specialization unlock and respec
+  cost.
+- **Economy loop** — offline caps per mode, juice costs, sinks, throughput limits, and
+  account-legitimacy gates.
+- **Competition** — ladder structure, guild mechanics, and prize events.
+- **Classes** — the launch class and each class's specialization content, one note per class.
+- **World map** — landmarks (rare distance-scaled nodes shown as pillars of light through the fog)
+  and the horizontal variety that carries the world past the difficulty plateau.
+- **Enemy families** — enemy layer distributions and enemy critical tuning.
+- **Reporting** — expedition reports, per-layer legibility, and empowerment uptime.
+- **Fiction** — institution and habitat names, and the economy modes' world names.
+- **Institutions and alignment** — alignment mechanics and perks.

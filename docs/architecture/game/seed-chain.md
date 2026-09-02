@@ -6,20 +6,19 @@ front, plays out from it, and leaves the next position for the activity that fol
 spent once and never drawn twice, so a failed activity costs a position exactly as a completed one
 does. Playing a node again never re-rolls the last result — it plays the next stretch of the chain.
 
-The chain carries two anchors, and the distance between them is what the rest of this page turns on.
-The **appended anchor** marks how far the player claims to have played. The **verified anchor**
-marks how far the server has proved. Play runs ahead of proof, and payment waits for proof.
+The chain carries two anchors. The **appended anchor** marks how far the player claims to have
+played. The **verified anchor** marks how far the server has proved. Play runs ahead of proof, and
+payment waits for proof.
 
 A chain belongs to one avatar at one **chain scope**: a stable place the avatar can leave and return
 to. A world-map encounter's scope is its map node. Two avatars standing on the same node hold two
 separate chains, and neither can read or disturb the other's.
 
-This page covers the chain and nothing else: where one starts, how an activity draws a position, how
-the two anchors move, and what a rejection undoes. Three neighbours carry the rest.
-[Game simulation](./game-simulation.md) explains the simulation that produces an activity and the
-replay that proves it. [Offline reconcile](./offline-reconcile.md) sets out the order the server
-settles an avatar's activities in. [Game entropy](./game-entropy.md#the-seed-chain) says why the
-chain is one flat sequence rather than a tree a player could search.
+Three neighbouring docs own the rest. [Game simulation](./game-simulation.md) explains the
+simulation that produces an activity and the replay that proves it.
+[Offline reconcile](./offline-reconcile.md) sets out the order the server settles an avatar's
+activities in. [Game entropy](./game-entropy.md#the-seed-chain) says why the chain is one flat
+sequence rather than a tree a player could search.
 
 ## The journeys the chain must handle
 
@@ -39,7 +38,7 @@ chain is one flat sequence rather than a tree a player could search.
 ## Where a chain starts
 
 A node's chain begins at a **genesis seed** the server mints the first time it reveals the node. It
-draws sixteen random bytes from a CSPRNG (cryptographically secure PRNG) and carries them as hex,
+draws 16 random bytes from a CSPRNG (cryptographically secure PRNG) and carries them as hex,
 re-drawing on the one degenerate state the generator cannot use. `revealNodes` writes one chain row
 per revealed avatar-and-node pair.
 
@@ -281,23 +280,24 @@ stops two workers duplicating each other. It is not what makes the work land exa
 verified-cursor guard does that, and applying the same segment twice lands nothing.
 
 Two rules keep the writers from deadlocking. Whoever moves an anchor, the request path or the
-verifier, takes the chain row before the activity row. And when a rejection rewinds the appended
-anchor, it reads the verified columns inside its own update statement rather than through a prior
-select, so a concurrent settlement cannot slip between the two.
+verifier, takes the chain row before the activity row. And a rejection's rewind reads the verified
+anchor inside its own update statement, as
+[pulling the appended anchor back](#pulling-the-appended-anchor-back) describes, so a concurrent
+settlement cannot slip in between.
 
 ## Glossary
 
-| Term            | Meaning                                                                                                                                      |
-| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| seed chain      | One forward sequence of positions per avatar per chain scope; each activity draws positions from it and never draws one twice.               |
-| chain scope     | The stable place an avatar leaves and returns to; a world-map encounter's scope is its map node.                                             |
-| chain row       | The `activity_chains` row holding one chain's genesis seed, its two anchors, and its replay priority.                                        |
-| genesis seed    | The seed a chain starts from, which the server mints the first time it reveals the node.                                                     |
-| position        | One point on the chain: a seed and a `chainIndex`.                                                                                           |
-| chainIndex      | A checkpoint's index along the whole chain, counted from the index its activity started at; reward coordinates key on it.                    |
-| appended anchor | The position a new activity begins at, marking how far the player claims to have played.                                                     |
-| verified anchor | The position the server has proved, marking what it may pay for and where a rejection rewinds to.                                            |
-| activity start  | An activity's first record — the node, the position, and the stamps — which the device builds and the server checks when it receives it.     |
-| segment         | The run of checkpoints the verifier adjudicates as one piece; each segment settles what it proved.                                           |
-| forward-exited  | Said of an activity that left active play with honest progress behind it: a terminal checkpoint, a player stop, or an offline cap.           |
-| predecessor     | The avatar's immediately-prior activity across every chain, which the device stamps at start; the verifier waits for it before adjudicating. |
+| Term            | Meaning                                                                                                                                       |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| seed chain      | One forward sequence of positions per avatar per chain scope; each activity draws positions from it and never draws one twice.                |
+| chain scope     | The stable place an avatar leaves and returns to; a world-map encounter's scope is its map node.                                              |
+| chain row       | The `activity_chains` row holding one chain's genesis seed, its two anchors, and its replay priority.                                         |
+| genesis seed    | The seed a chain starts from, which the server mints the first time it reveals the node.                                                      |
+| position        | One point on the chain: a seed and a `chainIndex`.                                                                                            |
+| chainIndex      | A checkpoint's absolute position along the whole chain, counted from genesis and never reset by a new activity; reward coordinates key on it. |
+| appended anchor | The position a new activity begins at, marking how far the player claims to have played.                                                      |
+| verified anchor | The position the server has proved, marking what it may pay for and where a rejection rewinds to.                                             |
+| activity start  | See [game simulation](./game-simulation.md#glossary).                                                                                         |
+| segment         | The run of checkpoints the verifier adjudicates as one piece; each segment settles what it proved.                                            |
+| forward-exited  | Said of an activity that left active play with honest progress behind it: a terminal checkpoint, a player stop, or an offline cap.            |
+| predecessor     | See [offline reconcile](./offline-reconcile.md#glossary).                                                                                     |

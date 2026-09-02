@@ -17,11 +17,11 @@ workflow runs it on changes to this directory.
 
 ## Storage
 
-Event data lives in a dedicated database in the shared Neon project (`DATABASE_URL` secret) — no app
-runs its own database and the machine keeps no volume. Uploaded files (sourcemap artifact bundles),
-which Bugsink stores in the database by default, go to the Cloudflare R2 bucket `vers-bugsink-files`
-via `r2_storage.py` instead, keeping those blobs and their read traffic off Neon. Existing files
-move across with `bugsink-manage migrate_to_current_objectstorage`.
+Event data lives in a dedicated `bugsink` database in the shared Neon project (`DATABASE_URL`
+secret). No app runs its own database, and the machine keeps no volume. Bugsink stores uploaded
+files (sourcemap artifact bundles) in the database by default. Here they go to the Cloudflare R2
+bucket `vers-bugsink-files` through `r2_storage.py` instead, which keeps those blobs and their read
+traffic off Neon. Existing files move across with `bugsink-manage migrate_to_current_objectstorage`.
 
 ## Secrets
 
@@ -40,11 +40,11 @@ The R2 credentials also live on the `bugsink-r2` item in the `vers` 1Password va
 
 ## Alerts
 
-New-issue, regression, and unmute alerts post to the alarms Discord channel: every project carries a
+New-issue, regression, and unmute alerts post to the alarms Discord channel. Every project carries a
 Discord messaging-service config pointing at the channel's incoming webhook (the
 `bugsink-discord-webhook` item in the `vers` 1Password vault), and a new project gets the same
-webhook added in its settings. No outgoing email is configured — alerting is webhook-only, and
-per-project alert toggles live in each Bugsink project's settings.
+webhook added in its settings. No outgoing email is configured, so alerting is webhook-only.
+Per-project alert toggles live in each Bugsink project's settings.
 
 Bugsink's Discord messaging service renders a fixed body the app doesn't template, so these alerts
 keep their own shape rather than the structured embed the CI path posts to the same channel (see

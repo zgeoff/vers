@@ -1,10 +1,11 @@
 # Defensive Archetypes
 
-This note defines the forms of the damage model's defensive layers and the structure of play they
-defend inside. Defensive identity in Vers is emergent: an archetype is a recognized pattern of layer
-investment, never an enforced kit. Defensive stats compete for the same gear slots and passive
-points, and each layer answers a different threat profile, so redundant stacking wastes investment
-and mixing against a region's profile is always a real decision.
+The [damage model](./attributes-damage-model.md#defensive-layers) names the defensive layers; this
+note gives each layer its forms, and each form answers a different threat profile. Defensive
+identity in Vers is emergent: an archetype is a recognized pattern of layer investment, never an
+enforced kit. Defensive stats compete for the same gear slots and passive points, so redundant
+stacking wastes investment and mixing against a region's profile is always a real decision. The
+activity structure those layers defend inside sits beside them.
 
 ## Hit Deliveries
 
@@ -38,7 +39,7 @@ enough strike and projectile that avoidance and interception keep their value.
 | Barrier     | ✓      | ✓          | ✓      | ✓    | ✓          |
 
 Armour and Resistances apply within their type scope: Armour mitigates Physical damage from any
-delivery, Resistances their own types. Which hits qualify for Buffer is combat-note territory.
+delivery, Resistances their own types. A downstream note decides which hits qualify for Buffer.
 
 ## Activities & Encounters
 
@@ -88,15 +89,14 @@ Charge supply bounds interception without a cap: refill rate against enemy hit r
 of a stream can be intercepted. Sparse heavy hitters meet a charge on every swing; dense fast
 streams drain the pool and land past it. Interception is strongest against few large hits and
 weakest against volume — the inverse of avoidance, so the two compose instead of stacking: avoidance
-thins the stream, interception catches the haymakers. Charge refunds from any effect stay below one
+thins the stream, interception catches the heavy hits. Charge refunds from any effect stay below one
 charge per intercept, so refill remains the binding limit.
 
 ## Armour
 
 Armour is Physical mitigation. Its reduction scales inversely with the size of the incoming hit:
-Armour mostly absorbs small hits, and massive hits punch through it. Armour erases chaff and fades
-against giants — the mirror of interception, and the pairing that lets a committed defender cover
-the full hit-size spectrum.
+Armour mostly absorbs small hits, and massive hits punch through it. That is the mirror of
+interception, and the pairing lets a committed defender cover the full hit-size spectrum.
 
 ## Resistances
 
@@ -127,13 +127,14 @@ beats instead of instantly. Deferral converts spikes into pressure that recovery
 counterpart to interception, which removes spike damage rather than smearing it.
 
 Deferral always costs: decay outpaces recovery enough that a deferred pool is never erased before it
-lands. Buffer's own deferred ticks do not count as being hit for Barrier's recharge delay. Which
-hits qualify, how much defers, decay rates, and where deferred damage lands are combat-note
-territory.
+lands. Buffer's own deferred ticks do not count as being hit for Barrier's recharge delay. A
+downstream note owns which hits qualify, how much damage is deferred, decay rates, and where
+deferred damage lands.
 
 ## Life & Recovery
 
-Life is the final pool; reaching zero ends the activity under the defeat rules of the core note.
+Life is the final pool; reaching zero ends the activity under the
+[defeat stakes](./core-themes-world-fiction.md#defeat-stakes).
 
 Recovery styles are separate investments, never one stat:
 
@@ -144,14 +145,11 @@ Recovery styles are separate investments, never one stat:
   an activity's first. This is the only between-fight recovery in the game.
 
 The defensive layers cost no Aether to run: a starved avatar keeps its defenses. Aether-costed
-defensive skills, cooldowns, or pools are an option the skills and itemisation notes may take up,
-not a rule here.
+defensive skills, cooldowns, or pools are an option a downstream note may take up, not a rule here.
 
 ## Non-Goals
 
-This note does not define avoidance or interception math, smoothing functions, the armour curve,
-recharge timings, buffer ratios, resistance cap values, or enemy layer distributions. Formulas
-belong to the combat note; enemy distributions to the enemy-families note; making interception's
-effective value legible per region belongs to the reporting note; single-target-versus-area spread
-and burst-versus-sustain endurance are equipment and skill properties owned by the itemisation and
-skills notes.
+A downstream note owns: avoidance and interception math, smoothing functions, the armour curve,
+recharge timings, buffer ratios, resistance cap values, enemy layer distributions, per-region
+legibility of interception's effective value, and the single-target-versus-area and
+burst-versus-sustain properties of equipment and skills.

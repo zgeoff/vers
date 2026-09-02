@@ -1,7 +1,7 @@
 # Base Class Template
 
-One filled copy specs one class against the base-class model. Fill every field; a blank is an
-undesigned decision, not a default.
+One filled copy specs one class against the [base-class model](./base-classes.md). Fill every field;
+a blank is an undesigned decision, not a default.
 
 ## Base Mechanic
 

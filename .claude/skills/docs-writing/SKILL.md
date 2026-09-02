@@ -32,11 +32,11 @@ knife.
 
 ## Selection — which points the doc makes
 
-- **Final state only.** Present tense, current behavior of the tree being edited. No history
+- **Final state only.** Present tense, current behavior of the code being edited. No history
   ("previously", "now uses"), no roadmap ("will land"), no temporary state ("not wired yet"), no
   references to the project's own issue tracker. A token that appears verbatim in code (a
   `baseline(#236)` marker) is a fact of the code, not a reference. An external upstream issue
-  identifying a defect the tree works around (`turborepo#11007`) is a fact of the workaround, not
+  identifying a defect the code works around (`turborepo#11007`) is a fact of the workaround, not
   tracking — it stays.
 - **Shed process residue.** The work session leaves no trace in the doc. A date stamp in prose
   (`Verified 2026-05-26:`) rots — git history records when work happened; date-prefixed filenames
@@ -58,21 +58,26 @@ knife.
   most one sentence and links to the owner, and the rationale appears at the owner only. When two
   docs disagree, the owner is right: fix the other doc against it, then check the owner against the
   tree. An index restates owned facts at one line each — orientation is its job.
-- **The tree owns its rosters.** A list, count, or mapping derivable from the repo — the packages
+- **The code owns its rosters.** A list, count, or mapping derivable from the repo — the packages
   under a directory, the apps in a manifest, which app reads which env key (its env schema) — is
   stated as the rule that derives it, never transcribed member by member. Name a member only where
   its behavior differs from the set's. A transcribed roster rots with no signal — it is wrong even
-  while accurate. A mixed roster — part tree-derivable, part external — splits: the rule for the
-  tree-held members, named bullets for the rest.
+  while accurate. A mixed roster — part code-derivable, part external — splits: the rule for the
+  code-held members, named bullets for the rest.
   - Bad: "The domain services — `service-activity`, `service-avatar`, `service-keys`,
     `service-session`, `service-user`, and `service-verification` — are private."
   - Good: "The domain services (every `services/*` app) are private."
 
   Two exemptions:
   - code blocks the reader executes
-  - a derivable set keying a table whose other columns carry facts the tree does not hold — the
+  - a derivable set keying a table whose other columns carry facts the code does not hold — the
     roster is then the key, not the payload
 
+- **Architecture states what the code does; design notes hold intent.** A doc under
+  `docs/architecture/` states only behavior the code implements. A mechanism the design calls for
+  but the code does not implement lives in a note under `docs/game-design/`, written as design.
+  Where that intent shaped a built mechanism, the architecture doc links the note in one sentence
+  and states no more of it.
 - **Facts follow the reader's task.** A doc serves one reader task. A fact earns its place only if
   that reader acts on it mid-task; a fact serving a different task lives in that task's doc, linked
   from this one. The opening describes the subject, never who should read the doc or when to — no
@@ -215,7 +220,7 @@ knife.
   prose chain of contrasts. Variants carrying one attribute each render as bullets.
 - **Atomic cells.** A table cell holds one atomic value — an identifier, a number, a short phrase. A
   cell holding a list, a full clause, or a reference to another row means the table is the wrong
-  shape. Resolve in order: point at the tree file that owns the mapping; render as a nested list;
+  shape. Resolve in order: point at the source file that owns the mapping; render as a nested list;
   re-cut the table's axes. A decision table's prose column — a discriminator plus its trade-off or
   when to reach for it — is the shape doing its job, not a mis-cut.
 - **Procedures are numbered steps.** Actions the reader performs in order render as a numbered list,
@@ -278,7 +283,7 @@ knife.
 Before committing docs, run this sequence over the files you touched:
 
 1. Selection pass: cover each point and apply the point test; check each fact against its owner
-   elsewhere in the tree.
+   elsewhere in the repo.
 2. Rendering pass: reread each surviving paragraph against Sentences, Words, Structure, and Stance.
 3. Run the scripted checks from the repo root:
 

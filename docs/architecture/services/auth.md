@@ -1,13 +1,12 @@
 # Auth
 
-How a login becomes a session, how a sensitive mutation earns a fresh code check, and how services
-trust each other. Authentication and step-up authorization split across three domain services and
-the app-web edge. The edge (`apps/web`) runs the credential and code flows, holds the session
-cookie, and signs the service-to-service token for its own outbound calls. Durable state lives in
-the services: sessions and step-up transactions in `service-session`, password credentials and reset
-tokens in `service-user`, TOTP verifications in `service-verification`. Services never see cookies.
-The edge validates the session and passes each service a short-lived token naming the acting user
-([service contracts](./service-contracts.md)).
+Authentication and step-up authorization split across three domain services and the app-web edge.
+The edge (`apps/web`) runs the credential and code flows, holds the session cookie, and signs the
+service-to-service (s2s) token for its own outbound calls. Durable state lives in the services:
+sessions and step-up transactions in `service-session`, password credentials and reset tokens in
+`service-user`, TOTP verifications in `service-verification`. Services never see cookies. The edge
+validates the session and passes each service a short-lived token naming the acting user, so a
+service trusts the token's claims and nothing else ([service contracts](./service-contracts.md)).
 
 ## Session lifecycle
 
@@ -27,15 +26,15 @@ with service-session's PKCS8 key (`JWT_SIGNING_PRIVKEY`). Its issuer and audienc
 `API_IDENTIFIER`. Access tokens live 15 minutes and rotate through `refreshTokens`, which rejects a
 reused refresh token.
 
-The cookie is `en_session` — httpOnly, `SameSite=Lax`, secure in production, sealed by an app secret
-(`buildAuthSessionConfig`). `getAuthSession` reads it and never throws: an absent token is how
+The cookie is `en_session`: httpOnly, `SameSite=Lax`, secure in production, sealed by an app secret
+(`buildAuthSessionConfig`). `getAuthSession` reads it and never throws. An absent token is how
 `requireAuth` and `requireAnonymous` observe "signed out".
 
 ## Step-up authorization
 
-A sensitive mutation — an email change, a password change, or disabling 2FA — demands a fresh code
+A sensitive mutation (an email change, a password change, or disabling 2FA) demands a fresh code
 check before it runs. `checkStepUp` (`apps/web/src/lib/auth/`) decides in priority order. With no
-live 2FA verification for the target, the check isn't needed and the mutation proceeds. With a
+live 2FA verification for the target, the check is not needed and the mutation proceeds. With a
 valid, unused transaction token on the resubmission, the mutation proceeds. Otherwise `checkStepUp`
 creates a pending transaction and challenges the caller for a code.
 
@@ -54,7 +53,7 @@ The transaction token is an RS256 JWT minted and verified only inside the edge p
 mutation it names. It carries `action`, `target`, `sessionID`, and a `jti`, and lives 5 minutes. It
 signs against a per-process in-memory keypair, since it never leaves the process that issued it. The
 `consumed_transaction_tokens` ledger enforces single use: `consumeTransactionToken` records the
-`jti` and rejects a token whose `jti` is already recorded. `checkStepUp` also matches the token's
+`jti` and rejects a token whose `jti` is already recorded. `checkStepUp` matches the token's
 `sessionID` before consuming it, so a token minted under one session cannot redeem under another.
 
 ## TOTP verification
@@ -68,7 +67,7 @@ target and type (`2fa`, `2fa-setup`, `change-email`, `onboarding`):
   rows.
 - `get2FAVerificationURI` returns the authenticator-app URI for a pending 2FA setup.
 
-## Password reset
+## Credentials and password reset
 
 `service-user` owns the credential path: `verifyPassword` gates login, while `changePassword` and
 `resetPassword` rewrite the hash and sign the user out of every session. `service-user` stores a
@@ -83,15 +82,17 @@ the protected header's `kid` both name the minting service. The `sub` claim name
 omitted for a verified-anonymous call. The `aud` claim is the target service's registered audience,
 `service-<name>` from `buildServiceAudience`.
 
-Three issuers mint these tokens, each signing with its own private key — the
-`SERVICE_AUTH_PRIVATE_KEY` in its own environment, held by no other app. `app-web` signs the edge's
-outbound calls in `createEdgeServiceToken`. `service-replay` signs the worker's calls toward the
-keys service and toward version-pinned replay providers (`services/replay/src/dispatch/`).
-`service-activity` signs the wake poke a committed append sends toward service-replay.
+Three issuers mint these tokens. Each signs with its own private key, the `SERVICE_AUTH_PRIVATE_KEY`
+in its own environment, held by no other app:
 
-Each service verifies inbound tokens in its runtime middleware before any handler runs, against
-`SERVICE_AUTH_JWKS` — a JWKS registering every issuer's public key under its `kid`. A token's
-claimed `iss` must be a known issuer and equal its `kid`, and the signature only validates against
-that issuer's registered key, so a leaked minting key lets its holder impersonate only that one
-service. Each service rejects a bad token with a plain 401
+- `app-web` signs the edge's outbound calls in `createEdgeServiceToken`.
+- `service-replay` signs the worker's calls toward the keys service and toward version-pinned replay
+  providers (`services/replay/src/dispatch/`).
+- `service-activity` signs the wake call a committed append sends toward `service-replay`.
+
+The service runtime (`@vers/service-runtime`) verifies every inbound token before any handler runs,
+against `SERVICE_AUTH_JWKS`, a JWKS registering every issuer's public key under its `kid`. A token's
+claimed `iss` must be a known issuer and equal its `kid`, and the signature validates only against
+that issuer's registered key. A leaked minting key therefore lets its holder impersonate that one
+service and no other. The runtime rejects a bad token with a plain 401
 ([service contracts](./service-contracts.md)).

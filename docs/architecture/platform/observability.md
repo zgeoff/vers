@@ -1,6 +1,6 @@
 # Observability
 
-The fleet emits three OpenTelemetry signals — traces, logs, and metrics — and consumes them from
+The fleet emits three OpenTelemetry signals, traces, logs, and metrics, and consumes them from
 Axiom. Error reporting is a separate path (Sentry SDK → Bugsink), covered by
 [error-handling](../services/error-handling.md). Provisioning and secrets live in
 [deployment](./deployment.md).
@@ -10,7 +10,7 @@ Axiom. Error reporting is a separate path (Sentry SDK → Bugsink), covered by
 All three signals export over OTLP (protobuf) to Axiom, one dataset per signal: `vers-traces` and
 `vers-logs` (Events type), `vers-metrics` (Metrics type).
 
-The service scaffold (`createService`, `@vers/service-runtime`) wires every signal when
+The service runtime (`@vers/service-runtime`) wires every signal through `createService` when
 `OTEL_EXPORTER_OTLP_ENDPOINT` is set, one transport per signal:
 
 - traces through `@elysiajs/opentelemetry`
@@ -18,7 +18,7 @@ The service scaffold (`createService`, `@vers/service-runtime`) wires every sign
 - metrics through a process-global meter provider behind a periodic exporter (`startMetricsExport`,
   `@vers/service-utils/otel`)
 
-app-web carries no Elysia plugin — its `server.ts` boots the same trace and metrics export itself
+app-web carries no Elysia plugin. Its `server.ts` boots the same trace and metrics export itself
 through `startTraceExport`/`startMetricsExport`. A process with the endpoint unset emits nothing,
 and every instrument stays the OpenTelemetry API's no-op.
 
@@ -66,7 +66,7 @@ site opens the span.
 Trace context crosses process boundaries through the OpenTelemetry API's global propagator, never
 `@vers/trace` directly:
 
-- At a boundary span site — the server plugins and outbound clients — an outbound call carries
+- At a boundary span site (the server plugins and outbound clients) an outbound call carries
   `traceparent` from the active span, continuing the caller's trace across every hop.
 - A root span opened through `withRootSpan` starts a fresh trace, because a worker iteration or
   queued job has no caller's trace to continue.
@@ -76,25 +76,28 @@ Trace context crosses process boundaries through the OpenTelemetry API's global 
 - `@vers/trace`'s `parseTraceparent`/`buildTraceparent` are the wire-format utilities and the
   fallback path. A process with no tracer provider registered, or a request outside any span (a
   served asset, `/health`), derives its trace id by parsing the inbound header directly and minting
-  a fresh one when none arrives — the same trace-continuation guarantee an active span normally
+  a fresh one when none arrives, the same trace-continuation guarantee an active span normally
   provides.
 
 Wherever a span is active, it is the source of truth for the request's identity:
 `findSpanTraceContext` (`@vers/service-utils`) reads the active span's own trace and span ids, and
-every reader of the ambient `TraceContext` — the pino mixin that stamps log lines, the `x-trace-id`
-response header, an outbound `traceparent` — derives from it. A request's exported span trace id,
-its `x-trace-id` response header, and every log line's `traceID` field always agree.
+every reader of the ambient `TraceContext` (the pino mixin that stamps log lines, the `x-trace-id`
+response header, an outbound `traceparent`) derives from it. A request's exported span trace id, its
+`x-trace-id` response header, and every log line's `traceID` field always agree.
 
 A span carries semantic-convention attributes for its kind: `http.method`/`http.route`/
 `http.status_code` on a SERVER span, `db.system`/`db.statement` on a Kysely CLIENT span. A span
-never carries a raw per-entity id or secret material as an attribute — the same cardinality and
+never carries a raw per-entity id or secret material as an attribute, the same cardinality and
 leakage discipline metric attributes follow.
 
-Once OTel is wired, every app in the fleet emits: one server span per request (app-web skips served
-static assets and `/health`), with the DB, s2s, and external-HTTP calls a request makes recorded as
-its children; one structured request-completion log line; unexpected errors reported to Sentry
-through the central `onError`/error-boundary hook, never a bespoke `captureException` call; and the
-registry-listed metrics for the failure paths it owns.
+Once OTel is wired, every app in the fleet emits:
+
+- one server span per request (app-web skips served static assets and `/health`), with the DB, s2s,
+  and external-HTTP calls a request makes recorded as its children;
+- one structured request-completion log line;
+- unexpected errors reported to Sentry through the central `onError`/error-boundary hook, never a
+  bespoke `captureException` call;
+- the registry-listed metrics for the failure paths it owns.
 
 ## Log lines
 
@@ -109,12 +112,12 @@ line-level conventions:
   label for the event; the fields are what Axiom queries filter and aggregate on.
 - Severity follows outcome: a 5xx response or a thrown handler logs at `error`, a 4xx at `warn`,
   everything else at `info`.
-- A failure always emits a line at the site that decides the outcome — an error folded into a result
+- A failure always emits a line at the site that decides the outcome: an error folded into a result
   value, a rejected token, a failed job. The line carries the reason in a field (`err`, `failure`,
   the validation issues).
 - Each request logs one line on completion with `method`, `path`, `status`, and `durationMs`. The
   query string never reaches a log line: query params carry emailed tokens, auth codes, and
-  GET-mapped procedure inputs. The service scaffold emits the line for every `/rpc` request and
+  GET-mapped procedure inputs. The service runtime emits the line for every `/rpc` request and
   leaves `/health` unlogged, so platform probes don't dominate volume. app-web's middleware emits it
   for every request, at `debug` for a served static asset (a pathname with a file extension).
 - A request past its slow-request threshold logs at `warn` instead, with `slow: true` and
@@ -131,17 +134,17 @@ lands with the metrics that make it observable. The conventions:
 
 - Instruments are defined in the owning package through the global metrics API
   (`metrics.getMeter('@vers/<package>')` from `@opentelemetry/api`).
-- Domain code never constructs, receives, or stops a meter provider — the scaffold owns that
+- Domain code never constructs, receives, or stops a meter provider; the service runtime owns that
   lifecycle. Instruments resolved through the API bind to whatever provider the process registered
   at boot.
 - Names are dot-namespaced `vers.<domain>.<measure>`.
-- Attributes are snake_case with closed value sets, never unbounded values like per-entity IDs —
-  those explode cardinality and cost.
+- Attributes are snake_case with closed value sets, never unbounded values like per-entity IDs,
+  which explode cardinality and cost.
 - Units use UCUM annotations (`s`, `{activity}`, `{rejection}`).
 - A rare, meaningful event is a counter, recorded at the site that decides the event (a
   `record-*.ts` module).
 - Database-resident state is never counted in application code; it observes through observable
-  gauges — one batch callback per package, one snapshot query per collection, failures caught and
+  gauges: one batch callback per package, one snapshot query per collection, failures caught and
   logged so a bad query never takes down the process it observes.
 - Every instrument lands with its row in the instrument registry, in the same PR.
 
@@ -152,40 +155,40 @@ in stack state are encrypted by the stack passphrase.
 
 ## Instrument registry
 
-| Instrument                                      | Type            | Unit             | Attributes          | Meaning                                                                                                                                               |
-| ----------------------------------------------- | --------------- | ---------------- | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `vers.replay.verification_lag`                  | histogram       | `s`              | —                   | seconds between an append landing and a drain cycle confirming it                                                                                     |
-| `vers.replay.wake`                              | counter         | `{wake}`         | —                   | wake requests received                                                                                                                                |
-| `vers.replay.drain_duration`                    | histogram       | `s`              | —                   | wall-clock duration of one drain cycle                                                                                                                |
-| `vers.replay.backlog_claimed`                   | histogram       | `{chain}`        | —                   | chains claimed and adjudicated in one drain cycle                                                                                                     |
-| `vers.verification.rejections`                  | counter         | `{rejection}`    | `reason`            | adjudications that rejected or parked an activity, by reason                                                                                          |
-| `vers.replay.iteration_failures`                | counter         | `{iteration}`    | `outcome`           | worker iterations that failed to replay a claimed chain, by outcome                                                                                   |
-| `vers.replay.settled_xp`                        | up-down counter | `{xp}`           | `source`            | XP that verified segments settled to avatars, by how the amount was derived                                                                           |
-| `vers.replay.clamped_settlements`               | counter         | `{settlement}`   | —                   | settlements whose debit was clamped to a minimum of zero, paying less than recorded                                                                   |
-| `vers.keys.derive_rejections`                   | counter         | `{rejection}`    | `reason`            | derivation calls that refused to derive a roll key or scope secret, by reason                                                                         |
-| `vers.activity.terminal_transitions`            | counter         | `{activity}`     | `status`            | activities that claimed a terminal transition, by status                                                                                              |
-| `vers.activity.writer_takeovers`                | counter         | `{takeover}`     | —                   | successful writer-session claims on active activities                                                                                                 |
-| `vers.activity.replay_poke_failed`              | counter         | `{poke}`         | —                   | replay wake pokes that never delivered after exhausting retries                                                                                       |
-| `vers.activity.avatar_not_active_rejections`    | counter         | `{rejection}`    | —                   | active-avatar-gated calls the shared `requireActiveAvatar` helper rejected because the acting avatar is not active (activity-start mint, revealNodes) |
-| `vers.activity.content_incompatible_rejections` | counter         | `{rejection}`    | `path`              | activity-start mints rejected because the resolved engine's max content version falls behind the requested content                                    |
-| `vers.activity.advance_continuations`           | counter         | `{continuation}` | `outcome`           | advanceActivity continuations processed, by mint outcome                                                                                              |
-| `vers.activity.advance_bailouts`                | counter         | `{bailout}`      | `reason`            | advanceActivity requests that bailed before their continuations' end, by reason                                                                       |
-| `vers.activity.reveal_cells`                    | histogram       | `{cell}`         | —                   | revealed cells returned per getRevealedNodes query                                                                                                    |
-| `vers.activity.reveal_sources`                  | histogram       | `{grant}`        | —                   | first-clear grant rows scanned per getRevealedNodes query                                                                                             |
-| `vers.activity.reveal_mints`                    | counter         | `{node}`         | —                   | activity-chain rows minted or re-affirmed per revealNodes call                                                                                        |
-| `vers.activity.reveal_refusals`                 | counter         | `{node}`         | —                   | nodes refused per revealNodes call for falling outside the revealed region                                                                            |
-| `vers.email.delivery_failures`                  | counter         | `{email}`        | —                   | emails that failed to deliver                                                                                                                         |
-| `vers.session.failed_attempts`                  | counter         | `{attempt}`      | —                   | failed step-up verification attempts                                                                                                                  |
-| `vers.analytics.delivery_failures`              | counter         | `{event}`        | `reason`            | product events that never landed in the Tinybird data source, by reason                                                                               |
-| `vers.web.service_call_retries`                 | counter         | `{retry}`        | `service`           | retry attempts against an outbound service call that failed its previous attempt                                                                      |
-| `vers.web.service_call_failures`                | counter         | `{call}`         | `service`, `reason` | outbound service calls that never delivered, by service and reason                                                                                    |
+| Instrument                                      | Type            | Unit             | Attributes          | Meaning                                                                                                                                                   |
+| ----------------------------------------------- | --------------- | ---------------- | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `vers.replay.verification_lag`                  | histogram       | `s`              | —                   | seconds between an append landing and a drain cycle confirming it                                                                                         |
+| `vers.replay.wake`                              | counter         | `{wake}`         | —                   | wake requests received                                                                                                                                    |
+| `vers.replay.drain_duration`                    | histogram       | `s`              | —                   | wall-clock duration of one drain cycle                                                                                                                    |
+| `vers.replay.backlog_claimed`                   | histogram       | `{chain}`        | —                   | chains claimed and adjudicated in one drain cycle                                                                                                         |
+| `vers.verification.rejections`                  | counter         | `{rejection}`    | `reason`            | adjudications that rejected or parked an activity, by reason                                                                                              |
+| `vers.replay.iteration_failures`                | counter         | `{iteration}`    | `outcome`           | worker iterations that failed to replay a claimed chain, by outcome                                                                                       |
+| `vers.replay.settled_xp`                        | up-down counter | `{xp}`           | `source`            | XP that verified segments settled to avatars, by how the amount was derived                                                                               |
+| `vers.replay.clamped_settlements`               | counter         | `{settlement}`   | —                   | settlements whose debit was clamped to a minimum of zero, paying less than recorded                                                                       |
+| `vers.keys.derive_rejections`                   | counter         | `{rejection}`    | `reason`            | derivation calls that refused to derive a roll key or scope secret, by reason                                                                             |
+| `vers.activity.terminal_transitions`            | counter         | `{activity}`     | `status`            | activities that claimed a terminal transition, by status                                                                                                  |
+| `vers.activity.writer_takeovers`                | counter         | `{takeover}`     | —                   | successful writer-session claims on active activities                                                                                                     |
+| `vers.activity.replay_poke_failed`              | counter         | `{poke}`         | —                   | replay wake pokes that never delivered after exhausting retries                                                                                           |
+| `vers.activity.avatar_not_active_rejections`    | counter         | `{rejection}`    | —                   | active-avatar-gated calls the shared `requireActiveAvatar` helper rejected because the acting avatar is not active (activity-start ingest, `revealNodes`) |
+| `vers.activity.content_incompatible_rejections` | counter         | `{rejection}`    | `path`              | activity starts rejected at ingest because the resolved engine's max content version falls behind the requested content                                   |
+| `vers.activity.advance_continuations`           | counter         | `{continuation}` | `outcome`           | advanceActivity continuations processed, by outcome                                                                                                       |
+| `vers.activity.advance_bailouts`                | counter         | `{bailout}`      | `reason`            | advanceActivity requests that bailed before their continuations' end, by reason                                                                           |
+| `vers.activity.reveal_cells`                    | histogram       | `{cell}`         | —                   | revealed cells returned per getRevealedNodes query                                                                                                        |
+| `vers.activity.reveal_sources`                  | histogram       | `{grant}`        | —                   | first-clear grant rows scanned per getRevealedNodes query                                                                                                 |
+| `vers.activity.reveal_mints`                    | counter         | `{node}`         | —                   | activity-chain rows minted or re-affirmed per revealNodes call                                                                                            |
+| `vers.activity.reveal_refusals`                 | counter         | `{node}`         | —                   | nodes refused per revealNodes call for falling outside the revealed region                                                                                |
+| `vers.email.delivery_failures`                  | counter         | `{email}`        | —                   | emails that failed to deliver                                                                                                                             |
+| `vers.session.failed_attempts`                  | counter         | `{attempt}`      | —                   | failed step-up verification attempts                                                                                                                      |
+| `vers.analytics.delivery_failures`              | counter         | `{event}`        | `reason`            | product events that never landed in the Tinybird data source, by reason                                                                                   |
+| `vers.web.service_call_retries`                 | counter         | `{retry}`        | `service`           | retry attempts against an outbound service call that failed its previous attempt                                                                          |
+| `vers.web.service_call_failures`                | counter         | `{call}`         | `service`, `reason` | outbound service calls that never delivered, by service and reason                                                                                        |
 
-`service-activity` pokes `service-replay`'s `POST /wake` each time an append advances an activity
-past its verified cursor. The handler drains the queue — claiming and adjudicating chains until none
-remain claimable — before responding, so every instrument in `service-replay` emits only while a
-drain is actually running and stays silent on an idle, scaled-to-zero machine.
-`vers.replay.verification_lag` records once per newly verified append, from the append's own
-timestamp to the moment the drain confirms it.
+`service-activity` calls `service-replay`'s wake procedure through its oRPC client each time an
+append advances an activity past its verified cursor. The handler drains the queue, claiming and
+adjudicating chains until none remain claimable, before responding, so every instrument in
+`service-replay` emits only while a drain is actually running and stays silent on an idle,
+scaled-to-zero machine. `vers.replay.verification_lag` records once per newly verified append, from
+the append's own timestamp to the moment the drain confirms it.
 
 `vers.verification.rejections` splits by `reason`:
 
@@ -211,7 +214,7 @@ Each recording's log line carries the raw numbers behind it (heads, checkpoint c
 `vers.replay.settled_xp` splits by `source`: `progress` is a segment settling the per-checkpoint
 deltas it verified, `terminal` a segment settling a run's final total net of what earlier segments
 settled. The measure is signed, since a failed run's terminal settles its death penalty as a
-negative, and an up-down counter is the instrument that keeps negative recordings — a histogram
+negative, and an up-down counter is the instrument that keeps negative recordings; a histogram
 discards them. A `terminal` sum that drifts from the runs completing, or a `progress` sum going
 negative, is a contribution-rule defect.
 
@@ -229,9 +232,9 @@ The remaining split instruments enumerate their attribute values:
   scope secret.
 - `vers.activity.terminal_transitions` by `status`: `stopped` is a completed or failed last
   checkpoint; `capped` is a batch rejected whole for exceeding the avatar's accrued offline budget.
-- `vers.activity.advance_continuations` by `outcome`: `minted` is a continuation whose mint landed a
-  fresh row; `converged` is one that resolved onto a row a prior, partially committed request
-  already minted at the same client id.
+- `vers.activity.advance_continuations` by `outcome`: `minted` is a continuation whose ingest
+  inserted a fresh row; `converged` is one that resolved onto a row a prior, partially committed
+  request already inserted at the same client id.
 - `vers.activity.advance_bailouts` by `reason`, one per `advanceActivity` rejection code
   (`conflict`, `checkpoint_invalid`, `activity_capped`, `session_evicted`, `chain_quarantined`,
   `terminal`). A bailout always leaves the confirmed head advanced past the committed prefix, so a
@@ -240,9 +243,9 @@ The remaining split instruments enumerate their attribute values:
   sim-version hash; `fallback` is the registry-current version resolved for a start that carries no
   hash.
 - `vers.activity.reveal_cells` and `vers.activity.reveal_sources` record once per `getRevealedNodes`
-  call — the returned cell count and the scanned first-clear grant count. Both track the reveal
+  call: the returned cell count and the scanned first-clear grant count. Both track the reveal
   projection's fan-out as an avatar's completed-node history grows.
-- `vers.activity.reveal_mints` records once per `revealNodes` call — the number of distinct nodes it
+- `vers.activity.reveal_mints` records once per `revealNodes` call: the number of distinct nodes it
   minted or re-affirmed a chain row for. A repeat reveal of an already-minted node still counts,
   since the call re-affirms that row's `genesisSeed` rather than skipping it.
 - `vers.activity.reveal_refusals` records once per `revealNodes` call that refuses at least one
@@ -254,15 +257,21 @@ The remaining split instruments enumerate their attribute values:
   a network failure or the upstream deadline tripping.
 
 `vers.web.service_call_retries` and `vers.web.service_call_failures` cover app-web's bounded
-outbound service calls: `service_call_retries` records each retry attempt against a call that failed
-its previous attempt, and `service_call_failures` records a call whose final attempt still failed,
-split by `reason` — `timeout` when that final attempt hit its own per-attempt bound, `transport`
-when it failed some other way before the bound fired. A `timeout` burst against one `service` tracks
-a Fly machine's autosuspend resume window; a sustained `transport` run against the same service
-points at a genuinely unreachable machine.
+outbound service calls. `service_call_retries` records each retry attempt against a call that failed
+its previous attempt. `service_call_failures` records a call whose final attempt still failed, split
+by `reason`: `timeout` when that final attempt hit its own per-attempt bound, `transport` when it
+failed some other way before the bound fired. A `timeout` burst against one `service` tracks a Fly
+machine's autosuspend resume window; a sustained `transport` run against the same service points at
+a genuinely unreachable machine.
+
+The `vers 5xx responses` threshold monitor watches `vers-traces` for any server span whose response
+status is 500 or above, counted in 5-minute bins over a 10-minute range, and notifies `vers alarms`
+on the first bin holding at least 1. Every server error in the fleet therefore alarms. The central
+`onError` interceptor has already reported the same failure to Bugsink with its trace id, so the
+alarm is the prompt to open that event.
 
 The `vers replay poke failed` threshold monitor watches `vers.activity.replay_poke_failed` and
-notifies `vers alarms`. It alerts on the threshold alone, never on no data — the counter emits only
+notifies `vers alarms`. It alerts on the threshold alone, never on no data: the counter emits only
 when a wake delivery exhausts its retries, so a quiet dataset is the healthy default, not a down
 exporter. It is the explicit signal that the replay queue may go undrained despite an activity
 appending unverified work.
@@ -277,7 +286,7 @@ threshold decides.
 ## Alarms channel
 
 Axiom monitors, the CI pipeline, and Bugsink post to one Discord channel. The CI `alert` job posts a
-structured embed — a `[CI] critical — …` title, the failing run's link, and a red severity colour
-(`#e5484d`, decimal `15026253`) — in `.github/workflows/main.yml`. Axiom and Bugsink post their
-tools' stock formats: Axiom's custom-webhook notifier, the one templated body it offers, is not
-enabled on the plan, and Bugsink's Discord messaging service exposes no templating.
+structured embed (a `[CI] critical — …` title, the failing run's link, and a red severity colour
+`#e5484d`, decimal `15026253`) in `.github/workflows/main.yml`. Axiom and Bugsink post their tools'
+stock formats: Axiom's custom-webhook notifier, the one templated body it offers, is not enabled on
+the plan, and Bugsink's Discord messaging service exposes no templating.
