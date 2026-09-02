@@ -172,6 +172,7 @@
     "env:contract:check": "bun scripts/src/bin/write-env-contracts.ts --check",
     "env:coverage": "bun scripts/src/bin/check-env-coverage.ts",
     "env:pull": "bun scripts/src/bin/env-pull.ts",
+    "docs:check-paths": "bun scripts/src/bin/doc-paths.ts",
     "pg:dev:refresh-base": "bun scripts/src/bin/pg-dev-refresh-base.ts",
     "pg:dev:sweep": "bun scripts/src/bin/pg-dev-sweep.ts",
     "pg:reset-dev": "bun scripts/src/bin/pg-reset-dev-db.ts",
