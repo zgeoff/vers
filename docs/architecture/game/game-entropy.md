@@ -85,8 +85,8 @@ The machinery that turns a digest into item content is [item generation](./item-
 
 ### Key custody
 
-The avatar key never leaves the server. The verifier reveals a coordinate's content only once it
-settles the checkpoint, never at bare append ([seed chain](./seed-chain.md)). A
+Under trade custody, the avatar key never leaves the server. The verifier reveals a coordinate's
+content only once it settles the checkpoint, never at bare append ([seed chain](./seed-chain.md)). A
 synced-but-unverified roll holds client-side as pending until then. Connected play settles a kill's
 rewards within a batch cadence; a return from offline settles the window's at once. No connectivity
 state changes what a committed reward is worth.
@@ -161,6 +161,6 @@ and a device-held key is never repatriated into market eligibility.
 | rolled reward       | A reward whose value lives in its roll, committed at a coordinate and revealed later under a key; an item drop is the concrete case.                                                      |
 | reward coordinate   | `(avatarID, scopeType, scopeID, chainIndex, ordinal)`, the deterministic position a rolled reward commits at.                                                                             |
 | keyed PRF           | A pseudorandom function `f(key, coordinate)` whose revealed outputs carry no predictive power over unrevealed coordinates.                                                                |
-| avatar key          | The per-avatar key rolled content derives under, held by the server.                                                                                                                      |
+| avatar key          | The per-avatar key rolled content derives under; the server holds it under trade custody, and the self-found design holds it on the device.                                               |
 | sealed salt         | See [crafting entropy](../../game-design/crafting-entropy.md).                                                                                                                            |
 | provenance          | An outcome's recorded security property (its entropy unpredictable at commit and tied to the minter) which decides tradeability; stamped from server records and the `entropySource` tag. |

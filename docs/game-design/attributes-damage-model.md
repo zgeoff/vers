@@ -107,7 +107,7 @@ type-appropriate defenses and other reductions that make incoming damage smaller
 ### Buffer
 
 Buffer defers damage: a portion of a qualifying hit lands as decaying damage over following beats
-instead of instantly. Defensive archetypes defines it.
+instead of instantly. The [defensive archetypes note](./defensive-archetypes.md) defines it.
 
 ### Barrier
 

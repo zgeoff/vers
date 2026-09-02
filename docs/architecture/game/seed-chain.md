@@ -287,17 +287,17 @@ settlement cannot slip in between.
 
 ## Glossary
 
-| Term            | Meaning                                                                                                                            |
-| --------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| seed chain      | One forward sequence of positions per avatar per chain scope; each activity draws positions from it and never draws one twice.     |
-| chain scope     | The stable place an avatar leaves and returns to; a world-map encounter's scope is its map node.                                   |
-| chain row       | The `activity_chains` row holding one chain's genesis seed, its two anchors, and its replay priority.                              |
-| genesis seed    | The seed a chain starts from, which the server mints the first time it reveals the node.                                           |
-| position        | One point on the chain: a seed and a `chainIndex`.                                                                                 |
-| chainIndex      | A checkpoint's index along the whole chain, counted from the index its activity started at; reward coordinates key on it.          |
-| appended anchor | The position a new activity begins at, marking how far the player claims to have played.                                           |
-| verified anchor | The position the server has proved, marking what it may pay for and where a rejection rewinds to.                                  |
-| activity start  | See [game simulation](./game-simulation.md#glossary).                                                                              |
-| segment         | The run of checkpoints the verifier adjudicates as one piece; each segment settles what it proved.                                 |
-| forward-exited  | Said of an activity that left active play with honest progress behind it: a terminal checkpoint, a player stop, or an offline cap. |
-| predecessor     | See [offline reconcile](./offline-reconcile.md#glossary).                                                                          |
+| Term            | Meaning                                                                                                                                       |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| seed chain      | One forward sequence of positions per avatar per chain scope; each activity draws positions from it and never draws one twice.                |
+| chain scope     | The stable place an avatar leaves and returns to; a world-map encounter's scope is its map node.                                              |
+| chain row       | The `activity_chains` row holding one chain's genesis seed, its two anchors, and its replay priority.                                         |
+| genesis seed    | The seed a chain starts from, which the server mints the first time it reveals the node.                                                      |
+| position        | One point on the chain: a seed and a `chainIndex`.                                                                                            |
+| chainIndex      | A checkpoint's absolute position along the whole chain, counted from genesis and never reset by a new activity; reward coordinates key on it. |
+| appended anchor | The position a new activity begins at, marking how far the player claims to have played.                                                      |
+| verified anchor | The position the server has proved, marking what it may pay for and where a rejection rewinds to.                                             |
+| activity start  | See [game simulation](./game-simulation.md#glossary).                                                                                         |
+| segment         | The run of checkpoints the verifier adjudicates as one piece; each segment settles what it proved.                                            |
+| forward-exited  | Said of an activity that left active play with honest progress behind it: a terminal checkpoint, a player stop, or an offline cap.            |
+| predecessor     | See [offline reconcile](./offline-reconcile.md#glossary).                                                                                     |

@@ -80,11 +80,12 @@ that identifier to a position and result, making reservation and application one
 retransmitted action lands on its recorded position and returns its recorded result, never a fresh
 position or a second spend.
 
-Each position pins the item state it acts on and rejects a retry against stale state rather than
-re-rolling. An item's identity is its lineage: the reward coordinate that dropped it plus the craft
-positions applied since. That chain is a complete, replayable provenance record. A self-found craft
-sequence verifies by replay under the re-derived device key like any self-found stream; a trade
-craft action is server-computed, so there is nothing to replay.
+Each position pins the item state it acts on. An action whose identifier or position is already
+recorded returns its stored result. A new action whose pinned item state no longer matches is
+rejected rather than re-rolled. An item's identity is its lineage: the reward coordinate that
+dropped it plus the craft positions applied since. That chain is a complete, replayable provenance
+record. A self-found craft sequence verifies by replay under the re-derived device key like any
+self-found stream; a trade craft action is server-computed, so there is nothing to replay.
 
 ### Streams by Custody
 

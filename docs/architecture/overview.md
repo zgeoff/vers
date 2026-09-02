@@ -2,9 +2,8 @@
 
 Vers is a browser idle game on a microservice backend. A deterministic simulation runs on the
 client, the server verifies its results by replay, and the whole repo
-[deploys](./platform/deployment.md) as one atomic release from a single SHA. Each section below
-names one subsystem, states the distinction that orients it, and links to the doc that owns its
-detail.
+[deploys](./platform/deployment.md) as one release built from a single SHA. Each section below names
+one subsystem, states the distinction that orients it, and links to the doc that owns its detail.
 
 ## Request path
 
@@ -78,14 +77,15 @@ react-three-fiber ([game rendering](./game/game-rendering.md)).
 ## Cross-cutting
 
 - **Service-to-service (s2s) auth** — services trust no caller, the private mesh included. Every
-  request carries a short-lived signed s2s token minted at the edge with the acting user's ID, and
-  the service runtime (`@vers/service-runtime`) verifies it before any handler runs
-  ([auth](./services/auth.md)).
+  request carries a short-lived signed s2s token from a registered issuer: the edge mints it for a
+  browser-originated call, and a calling service mints it for a service-originated one, with the
+  acting user's ID when the call has one. The service runtime (`@vers/service-runtime`) verifies it
+  before any handler runs ([auth](./services/auth.md)).
 - **Contracts** — each service declares its API in its own `@vers/contract-*` package, oRPC
   contract-first with Zod schemas owned by the declaring contract
   ([service contracts](./services/service-contracts.md)).
-- **Atomic release** — contracts are unversioned workspace source packages, and the repo deploys as
-  one unit from one SHA ([deployment](./platform/deployment.md)).
+- **Single-SHA release** — contracts are unversioned workspace source packages, and the repo deploys
+  as one unit from one SHA ([deployment](./platform/deployment.md)).
   [Service contracts](./services/service-contracts.md#change-discipline) owns the change discipline
   that keeps consumers and services in step.
 - **Observability** — OpenTelemetry sends traces, logs, and metrics to Axiom; the Sentry SDK sends

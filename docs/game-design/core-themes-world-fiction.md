@@ -202,7 +202,8 @@ one of these. Their working names appear nowhere else in the design set.
   timings, buffer hit qualification and deferral and decay rates, resistance caps, critical
   baselines, Aether cost and regeneration baselines, Azimuth requirement thresholds and weight
   magnitudes, and each class's mechanic and balance detail.
-- **Skills** — cooldown design, cost shapes, and any Aether-costed defensive option.
+- **Skills** — cooldown design, cost shapes, skill target and tempo properties, and any
+  Aether-costed defensive option.
 - **Itemisation** — affix tables and pools, reward tables and rates, drop design, the craft actions
   and their costs, the craft preview's per-tier fields and forfeit deadline, and the
   single-target-versus-area and burst-versus-sustain properties of equipment.

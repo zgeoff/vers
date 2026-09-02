@@ -16,9 +16,9 @@ The stack runs on Fly.io in the `syd` region. Three apps hold public addresses; 
 - `vers-umami` (`apps/umami`) — the web-analytics dashboard; tracker traffic instead arrives through
   `app-web`'s same-origin proxy ([analytics](../analytics.md)).
 
-Postgres is the shared Neon database ([database](./database.md)). No app runs its own database,
-Bugsink included. `service-keys` holds no database connection. Its state is 2 secrets,
-`ROLL_KEY_ROOTS` and `SCOPE_SECRET_ROOTS`.
+Postgres is the shared Neon database ([database](./database.md)). No app runs its own Postgres.
+Bugsink and Umami own separate logical databases in the same Neon project. `service-keys` holds no
+database connection. Its state is 2 secrets, `ROLL_KEY_ROOTS` and `SCOPE_SECRET_ROOTS`.
 
 Every app scales to zero. `auto_stop_machines = 'suspend'` parks an idle machine with its memory
 snapshot for sub-second wake, and a service wakes on its first request. Two deviations:

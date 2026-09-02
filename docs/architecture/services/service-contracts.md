@@ -119,11 +119,12 @@ Authentication fails in two classes, kept deliberately separate, and only one is
 - **A bad session is a contract error.** The session is missing or expired. That is the caller's own
   problem, which the caller can act on by signing in again. It is `UNAUTHORIZED` with a typed
   `data.reason` of `missing-session` or `expired-session`, declared once in `@vers/contract-base`.
-- **A bad s2s token is not.** Services accept only a short-lived token minted at the edge naming the
-  acting user ([auth](./auth.md#service-to-service-tokens)). A token that fails verification means
-  something is misconfigured or someone is probing, never something a browser user can fix. The
-  service runtime rejects it with a plain 401 before any handler runs, and the edge reports it as a
-  5xx with alerting ([error handling](./error-handling.md#service-layer)).
+- **A bad s2s token is not.** Services accept only a short-lived token from a registered issuer,
+  naming the acting user when the call has one ([auth](./auth.md#service-to-service-tokens)). A
+  token that fails verification means something is misconfigured or someone is probing, never
+  something a browser user can fix. The service runtime rejects it with a plain 401 before any
+  handler runs, and the edge reports it as a 5xx with alerting
+  ([error handling](./error-handling.md#service-layer)).
 
 Services never see cookies ([auth](./auth.md)). Identity reaches a handler as the verified token's
 claims:
