@@ -8,6 +8,18 @@ that progress back: it delivers the activities the device holds, replays them to
 trust them, and settles their rewards in order. Whether the simulation was running while the server
 was out of contact decides which it is: real work to deliver, or an idle gap to reconstruct.
 
+Three connectivity states describe the device, and a reconnect brings offline progress back.
+
+```mermaid
+stateDiagram-v2
+  online --> offline: network lost, play continues on the device
+  offline --> online: reconnect delivers the outbox
+  online --> closed: app closes or the tab is paused
+  offline --> closed: app closes or the tab is paused
+  closed --> online: reopen fast-forwards the idle gap and delivers the result
+  closed --> offline: reopen with no network fast-forwards, delivers nothing
+```
+
 ## Three connectivity states
 
 Two independent things describe an avatar's situation: whether the app is open, and whether the

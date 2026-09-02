@@ -20,6 +20,16 @@ simulation that produces an activity and the replay that proves it.
 activities in. [Game entropy](./game-entropy.md#the-seed-chain) says why the chain is one flat
 sequence rather than a tree a player could search.
 
+One chain runs left to right, and its two anchors mark proof and play.
+
+```mermaid
+flowchart LR
+  G["genesis seed<br>index 0"] --> P1["activity 1<br>indices 1..n"] --> P2["activity 2<br>indices n+1..m"] --> P3["activity 3<br>appended, unproved"] --> N["next position"]
+  VA["verified anchor"] -.-> P2
+  AA["appended anchor"] -.-> P3
+  R["a rejection rewinds<br>appended onto verified"] -.-> VA
+```
+
 ## The journeys the chain must handle
 
 - **The player attempts a node for the first time.** The server mints the chain when it reveals the
