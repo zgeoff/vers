@@ -34,8 +34,8 @@ interface TrackActivityProgressDeps {
  */
 interface TrackActivityProgressOpts {
   readonly context: {
-    readonly actingSessionId: null | string;
-    readonly actingUserId: null | string;
+    readonly actingSessionID: null | string;
+    readonly actingUserID: null | string;
     readonly logger: ServiceContext['logger'];
   };
   readonly errors: {
@@ -79,13 +79,13 @@ export async function trackActivityProgress(
   deps: TrackActivityProgressDeps,
   opts: TrackActivityProgressOpts,
 ): Promise<{ appendedHead: number }> {
-  const actingUserID = opts.context.actingUserId;
+  const actingUserID = opts.context.actingUserID;
 
   if (actingUserID === null) {
     throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
   }
 
-  const actingSessionID = opts.context.actingSessionId;
+  const actingSessionID = opts.context.actingSessionID;
   const db = deps.db;
 
   const head = await db
@@ -332,7 +332,7 @@ async function checkAppendRace(
     .executeTakeFirst();
 
   const outcome = pickCheckpointBatchRaceOutcome(
-    opts.context.actingSessionId,
+    opts.context.actingSessionID,
     current,
     opts.input.checkpoints,
   );

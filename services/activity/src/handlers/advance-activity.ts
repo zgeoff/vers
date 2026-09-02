@@ -58,8 +58,8 @@ interface AdvanceActivityDeps {
  */
 interface AdvanceActivityOpts {
   readonly context: {
-    readonly actingSessionId: null | string;
-    readonly actingUserId: null | string;
+    readonly actingSessionID: null | string;
+    readonly actingUserID: null | string;
   };
   readonly errors: {
     readonly ACTIVITY_CAPPED: (payload: AdvanceBailPayload) => Error;
@@ -117,13 +117,13 @@ export async function advanceActivity(
   deps: AdvanceActivityDeps,
   opts: AdvanceActivityOpts,
 ): Promise<{ activity: ActivityData; appendedHead: number }> {
-  const actingUserID = opts.context.actingUserId;
+  const actingUserID = opts.context.actingUserID;
 
   if (actingUserID === null) {
     throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
   }
 
-  const actingSessionID = opts.context.actingSessionId;
+  const actingSessionID = opts.context.actingSessionID;
 
   const activityStartRow = await resolveActivityStartRow(deps, opts, actingUserID, actingSessionID);
 

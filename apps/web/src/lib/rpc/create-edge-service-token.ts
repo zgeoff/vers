@@ -26,8 +26,8 @@ export async function createEdgeServiceToken(
     audience: options.audience,
     issuer: 'app-web',
     privateKey: await privateKey,
-    ...(options.actingUserID !== null && { actingUserId: options.actingUserID }),
+    ...(options.actingUserID !== null && { actingUserID: options.actingUserID }),
     ...(options.actingSessionID !== null &&
-      options.actingSessionID !== undefined && { actingSessionId: options.actingSessionID }),
+      options.actingSessionID !== undefined && { actingSessionID: options.actingSessionID }),
   });
 }

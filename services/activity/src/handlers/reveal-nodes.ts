@@ -28,7 +28,7 @@ interface RevealNodesDeps {
  * oRPC handler opts for the authed `revealNodes` procedure.
  */
 interface RevealNodesOpts {
-  readonly context: { readonly actingUserId: null | string };
+  readonly context: { readonly actingUserID: null | string };
   readonly errors: {
     readonly AVATAR_NOT_ACTIVE: (payload: AvatarNotActivePayload) => Error;
     readonly NODE_UNKNOWN: (payload: EmptyErrorPayload) => Error;
@@ -84,7 +84,7 @@ export async function revealNodes(
   deps: RevealNodesDeps,
   opts: RevealNodesOpts,
 ): Promise<RevealNodesResult> {
-  const actingUserID = opts.context.actingUserId;
+  const actingUserID = opts.context.actingUserID;
 
   if (actingUserID === null) {
     throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });

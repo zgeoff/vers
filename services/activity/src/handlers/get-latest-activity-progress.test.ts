@@ -233,8 +233,8 @@ test('it reports isWriter false to a session another writer displaced', async ()
   const keyPair = await getTestServiceKeyPair();
 
   const tokenA = await createServiceToken({
-    actingSessionId: 'session-a',
-    actingUserId: viewer.user.id,
+    actingSessionID: 'session-a',
+    actingUserID: viewer.user.id,
     audience: 'service-activity',
     privateKey: keyPair.privateKey,
   });
@@ -248,8 +248,8 @@ test('it reports isWriter false to a session another writer displaced', async ()
   });
 
   const tokenB = await createServiceToken({
-    actingSessionId: 'session-b',
-    actingUserId: viewer.user.id,
+    actingSessionID: 'session-b',
+    actingUserID: viewer.user.id,
     audience: 'service-activity',
     privateKey: keyPair.privateKey,
   });
@@ -283,8 +283,8 @@ test('it reports isWriter true for an unstamped stream whatever the session', as
   const keyPair = await getTestServiceKeyPair();
 
   const token = await createServiceToken({
-    actingSessionId: 'session-a',
-    actingUserId: viewer.user.id,
+    actingSessionID: 'session-a',
+    actingUserID: viewer.user.id,
     audience: 'service-activity',
     privateKey: keyPair.privateKey,
   });

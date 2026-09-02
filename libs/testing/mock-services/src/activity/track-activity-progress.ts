@@ -12,9 +12,9 @@ import { os } from './os';
  * those rejections are per-test overrides.
  */
 export const trackActivityProgress = os.trackActivityProgress.handler(async (opts) => {
-  const actingUserId = opts.context.actingUserId;
+  const actingUserID = opts.context.actingUserID;
 
-  if (actingUserId === null) {
+  if (actingUserID === null) {
     throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
   }
 
@@ -25,7 +25,7 @@ export const trackActivityProgress = os.trackActivityProgress.handler(async (opt
   }
 
   const avatar = db.avatarCollection.findFirst((q) =>
-    q.where({ id: activity.avatarID, userID: actingUserId }),
+    q.where({ id: activity.avatarID, userID: actingUserID }),
   );
 
   if (avatar === undefined) {

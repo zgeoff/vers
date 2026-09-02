@@ -4,8 +4,8 @@ import type { CryptoKey } from 'jose';
 import * as jose from 'jose';
 
 interface CreateServiceTokenOptions {
-  readonly actingSessionId?: string;
-  readonly actingUserId?: string;
+  readonly actingSessionID?: string;
+  readonly actingUserID?: string;
   readonly audience: string;
   readonly expiresIn?: string;
   readonly issuer?: TokenIssuer;
@@ -21,8 +21,8 @@ export function createServiceToken(options: CreateServiceTokenOptions): Promise<
   const issuer = options.issuer ?? 'app-web';
 
   const claims = {
-    ...(options.actingUserId !== undefined && { sub: options.actingUserId }),
-    ...(options.actingSessionId !== undefined && { sid: options.actingSessionId }),
+    ...(options.actingUserID !== undefined && { sub: options.actingUserID }),
+    ...(options.actingSessionID !== undefined && { sid: options.actingSessionID }),
   };
 
   const jwt = new jose.SignJWT(claims)

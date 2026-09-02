@@ -2,11 +2,11 @@ import * as db from '../db';
 import { os } from './os';
 
 export const getSessions = os.getSessions.handler((opts) => {
-  const actingUserId = opts.context.actingUserId;
+  const actingUserID = opts.context.actingUserID;
 
-  if (actingUserId === null) {
+  if (actingUserID === null) {
     throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
   }
 
-  return db.sessionCollection.findMany((q) => q.where({ userID: actingUserId }));
+  return db.sessionCollection.findMany((q) => q.where({ userID: actingUserID }));
 });

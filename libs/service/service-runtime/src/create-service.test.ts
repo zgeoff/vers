@@ -50,7 +50,7 @@ function buildTestRouter(contract: ReturnType<typeof buildTestContract>) {
       traceID: findSpanTraceContext()?.traceID ?? null,
     })),
     getThing: os.getThing.handler((opts) => {
-      if (opts.context.actingUserId === null) {
+      if (opts.context.actingUserID === null) {
         throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
       }
 
@@ -184,7 +184,7 @@ test('it serves a router built by an async buildRouter', async () => {
   });
 
   const token = await createServiceToken({
-    actingUserId: 'user-1',
+    actingUserID: 'user-1',
     audience: 'test-service',
     privateKey: keyPair.privateKey,
   });
@@ -332,7 +332,7 @@ test('it returns data from an authed procedure given a valid token naming an act
   });
 
   const token = await createServiceToken({
-    actingUserId: 'user-1',
+    actingUserID: 'user-1',
     audience: 'test-service',
     privateKey: keyPair.privateKey,
   });

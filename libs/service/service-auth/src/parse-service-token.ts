@@ -5,7 +5,7 @@ import { TOKEN_ALGORITHM } from './token-claims';
 import type { TokenIssuer } from './types';
 
 export type ServiceTokenResolution =
-  | { actingSessionId: null | string; actingUserId: null | string; issuer: TokenIssuer }
+  | { actingSessionID: null | string; actingUserID: null | string; issuer: TokenIssuer }
   | { failure: 'invalid-service-token' };
 
 interface ParseServiceTokenOptions {
@@ -50,9 +50,9 @@ export async function parseServiceToken(
     });
 
     return {
-      actingSessionId:
+      actingSessionID:
         typeof verification.payload['sid'] === 'string' ? verification.payload['sid'] : null,
-      actingUserId: typeof verification.payload.sub === 'string' ? verification.payload.sub : null,
+      actingUserID: typeof verification.payload.sub === 'string' ? verification.payload.sub : null,
       issuer,
     };
   } catch {

@@ -13,7 +13,7 @@ interface GetAvatarProgressionDeps {
  * oRPC handler opts for the authed `getAvatarProgression` procedure.
  */
 interface GetAvatarProgressionOpts {
-  readonly context: { readonly actingUserId: null | string };
+  readonly context: { readonly actingUserID: null | string };
   readonly errors: {
     readonly UNAUTHORIZED: (payload: MissingSessionPayload) => Error;
   };
@@ -52,7 +52,7 @@ export async function getAvatarProgression(
   deps: GetAvatarProgressionDeps,
   opts: GetAvatarProgressionOpts,
 ): Promise<AvatarProgression | null> {
-  if (opts.context.actingUserId === null) {
+  if (opts.context.actingUserID === null) {
     throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
   }
 
@@ -100,7 +100,7 @@ export async function getAvatarProgression(
       'liveActivity.settledXp as liveSettledXp',
     ])
     .where('avatars.id', '=', opts.input.avatarID)
-    .where('avatars.userId', '=', opts.context.actingUserId)
+    .where('avatars.userId', '=', opts.context.actingUserID)
     .execute();
 
   const [settled] = rows;

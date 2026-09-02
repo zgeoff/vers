@@ -5,8 +5,8 @@ import { TOKEN_ALGORITHM } from './token-claims';
 import type { ServiceName, TokenIssuer } from './types';
 
 export interface CreateServiceTokenOptions {
-  readonly actingSessionId?: string;
-  readonly actingUserId?: string;
+  readonly actingSessionID?: string;
+  readonly actingUserID?: string;
   readonly audience: ServiceName;
   readonly expiresIn?: string;
   readonly issuer: TokenIssuer;
@@ -17,14 +17,14 @@ export interface CreateServiceTokenOptions {
  * Mints the s2s token every outbound service call carries. `issuer` is the minting service's own
  * identity: it becomes the `iss` claim and the protected header's `kid`, and the token only
  * verifies against the key registered for that issuer — sign with your own key, never another
- * minter's. `actingUserId` becomes the token's `sub` claim; omitting it mints a verified-anonymous
- * token instead. `actingSessionId` becomes the `sid` claim naming the caller's underlying session —
+ * minter's. `actingUserID` becomes the token's `sub` claim; omitting it mints a verified-anonymous
+ * token instead. `actingSessionID` becomes the `sid` claim naming the caller's underlying session —
  * the writer identity activity appends are checked against; flows holding no live session omit it.
  */
 export function createServiceToken(options: Readonly<CreateServiceTokenOptions>): Promise<string> {
   const claims = {
-    ...(options.actingUserId !== undefined && { sub: options.actingUserId }),
-    ...(options.actingSessionId !== undefined && { sid: options.actingSessionId }),
+    ...(options.actingUserID !== undefined && { sub: options.actingUserID }),
+    ...(options.actingSessionID !== undefined && { sid: options.actingSessionID }),
   };
 
   const jwt = new jose.SignJWT(claims)

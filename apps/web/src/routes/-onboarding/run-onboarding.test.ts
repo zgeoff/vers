@@ -95,7 +95,7 @@ test('it reports a generic form-level error when account creation fails', async 
   const mockUser = buildContractMock({
     baseUrl: SERVICE_URLS.user,
     contract: userContract,
-    resolveContext: () => ({ actingUserId: null }),
+    resolveContext: () => ({ actingUserID: null }),
   });
 
   server.use(

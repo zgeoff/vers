@@ -6,7 +6,7 @@ import type { EmptyErrorPayload, MissingSessionPayload } from '../types';
  * oRPC handler opts for the authed `updateAvatar` procedure.
  */
 interface UpdateAvatarOpts {
-  readonly context: { readonly actingUserId: null | string };
+  readonly context: { readonly actingUserID: null | string };
   readonly errors: {
     readonly NOT_FOUND: (payload: EmptyErrorPayload) => Error;
     readonly UNAUTHORIZED: (payload: MissingSessionPayload) => Error;
@@ -21,7 +21,7 @@ export async function updateAvatar(
   db: Kysely<DB>,
   opts: UpdateAvatarOpts,
 ): Promise<{ updatedID: string }> {
-  if (opts.context.actingUserId === null) {
+  if (opts.context.actingUserID === null) {
     throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
   }
 
@@ -29,7 +29,7 @@ export async function updateAvatar(
     .updateTable('avatars')
     .set({ name: opts.input.name })
     .where('id', '=', opts.input.id)
-    .where('userId', '=', opts.context.actingUserId)
+    .where('userId', '=', opts.context.actingUserID)
     .returning('id as updatedId')
     .executeTakeFirst();
 

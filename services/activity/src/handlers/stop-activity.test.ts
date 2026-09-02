@@ -374,8 +374,8 @@ test('it rejects a stop from a session another writer displaced with SESSION_EVI
   const keyPair = await getTestServiceKeyPair();
 
   const tokenA = await createServiceToken({
-    actingSessionId: 'session-a',
-    actingUserId: viewer.user.id,
+    actingSessionID: 'session-a',
+    actingUserID: viewer.user.id,
     audience: 'service-activity',
     privateKey: keyPair.privateKey,
   });
@@ -388,8 +388,8 @@ test('it rejects a stop from a session another writer displaced with SESSION_EVI
   });
 
   const tokenB = await createServiceToken({
-    actingSessionId: 'session-b',
-    actingUserId: viewer.user.id,
+    actingSessionID: 'session-b',
+    actingUserID: viewer.user.id,
     audience: 'service-activity',
     privateKey: keyPair.privateKey,
   });
@@ -422,8 +422,8 @@ test('it still succeeds idempotently for a displaced session once the row left a
   const keyPair = await getTestServiceKeyPair();
 
   const tokenA = await createServiceToken({
-    actingSessionId: 'session-a',
-    actingUserId: viewer.user.id,
+    actingSessionID: 'session-a',
+    actingUserID: viewer.user.id,
     audience: 'service-activity',
     privateKey: keyPair.privateKey,
   });
@@ -436,8 +436,8 @@ test('it still succeeds idempotently for a displaced session once the row left a
   });
 
   const tokenB = await createServiceToken({
-    actingSessionId: 'session-b',
-    actingUserId: viewer.user.id,
+    actingSessionID: 'session-b',
+    actingUserID: viewer.user.id,
     audience: 'service-activity',
     privateKey: keyPair.privateKey,
   });

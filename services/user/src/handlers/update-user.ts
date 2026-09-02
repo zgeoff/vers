@@ -6,7 +6,7 @@ import type { EmptyErrorPayload, FieldConflictPayload, MissingSessionPayload } f
  * oRPC handler opts for the authed `updateUser` procedure.
  */
 interface UpdateUserOpts {
-  readonly context: { readonly actingUserId: null | string };
+  readonly context: { readonly actingUserID: null | string };
   readonly errors: {
     readonly CONFLICT: (payload: FieldConflictPayload<'username'>) => Error;
     readonly NOT_FOUND: (payload: EmptyErrorPayload) => Error;
@@ -23,7 +23,7 @@ export async function updateUser(
   db: Kysely<DB>,
   opts: UpdateUserOpts,
 ): Promise<{ updatedID: string }> {
-  if (opts.context.actingUserId === null) {
+  if (opts.context.actingUserID === null) {
     throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
   }
 
@@ -33,7 +33,7 @@ export async function updateUser(
     const existing = await db
       .selectFrom('users')
       .select('id')
-      .where('id', '=', opts.context.actingUserId)
+      .where('id', '=', opts.context.actingUserID)
       .executeTakeFirst();
 
     if (existing === undefined) {
@@ -50,7 +50,7 @@ export async function updateUser(
         ...(opts.input.name !== undefined && { name: opts.input.name }),
         ...(opts.input.username !== undefined && { username: opts.input.username }),
       })
-      .where('id', '=', opts.context.actingUserId)
+      .where('id', '=', opts.context.actingUserID)
       .returning('id as updatedId')
       .executeTakeFirst();
 

@@ -8,14 +8,14 @@ import { os } from './os';
  * `server.use(...)`.
  */
 export const getRevealedNodes = os.getRevealedNodes.handler((opts) => {
-  const actingUserId = opts.context.actingUserId;
+  const actingUserID = opts.context.actingUserID;
 
-  if (actingUserId === null) {
+  if (actingUserID === null) {
     throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
   }
 
   const avatar = db.avatarCollection.findFirst((q) =>
-    q.where({ id: opts.input.avatarID, userID: actingUserId }),
+    q.where({ id: opts.input.avatarID, userID: actingUserID }),
   );
 
   if (avatar === undefined) {

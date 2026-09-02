@@ -7,7 +7,7 @@ import type { EmptyErrorPayload, MissingSessionPayload } from '../types';
  * oRPC handler opts for the authed `updateFailureAction` procedure.
  */
 interface UpdateFailureActionOpts {
-  readonly context: { readonly actingUserId: null | string };
+  readonly context: { readonly actingUserID: null | string };
   readonly errors: {
     readonly NOT_FOUND: (payload: EmptyErrorPayload) => Error;
     readonly UNAUTHORIZED: (payload: MissingSessionPayload) => Error;
@@ -27,7 +27,7 @@ export async function updateFailureAction(
   db: Kysely<DB>,
   opts: UpdateFailureActionOpts,
 ): Promise<UpdateFailureActionResult> {
-  if (opts.context.actingUserId === null) {
+  if (opts.context.actingUserID === null) {
     throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
   }
 
@@ -35,7 +35,7 @@ export async function updateFailureAction(
     .updateTable('avatars')
     .set({ failureAction: opts.input.failureAction })
     .where('id', '=', opts.input.avatarID)
-    .where('userId', '=', opts.context.actingUserId)
+    .where('userId', '=', opts.context.actingUserID)
     .returning('failureAction')
     .executeTakeFirst();
 

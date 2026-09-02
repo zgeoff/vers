@@ -1251,8 +1251,8 @@ test('it rejects an append from a displaced writer session with SESSION_EVICTED'
   const keyPair = await getTestServiceKeyPair();
 
   const tokenB = await createServiceToken({
-    actingSessionId: 'session-b',
-    actingUserId: viewer.user.id,
+    actingSessionID: 'session-b',
+    actingUserID: viewer.user.id,
     audience: 'service-activity',
     privateKey: keyPair.privateKey,
   });
@@ -1293,8 +1293,8 @@ test('it lets the first appending session claim an unstamped stream', async () =
   const keyPair = await getTestServiceKeyPair();
 
   const tokenA = await createServiceToken({
-    actingSessionId: 'session-a',
-    actingUserId: viewer.user.id,
+    actingSessionID: 'session-a',
+    actingUserID: viewer.user.id,
     audience: 'service-activity',
     privateKey: keyPair.privateKey,
   });
@@ -1311,8 +1311,8 @@ test('it lets the first appending session claim an unstamped stream', async () =
   expect(result).toStrictEqual({ appendedHead: 1 });
 
   const tokenB = await createServiceToken({
-    actingSessionId: 'session-b',
-    actingUserId: viewer.user.id,
+    actingSessionID: 'session-b',
+    actingUserID: viewer.user.id,
     audience: 'service-activity',
     privateKey: keyPair.privateKey,
   });

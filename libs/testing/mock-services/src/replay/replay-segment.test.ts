@@ -5,7 +5,7 @@ import { replaySegment } from './replay-segment';
 
 test('it replays any segment as a canned empty success', async () => {
   const result = await call(replaySegment, createMockReplaySegmentInput(), {
-    context: { actingUserId: null },
+    context: { actingUserID: null },
   });
 
   expect(result).toStrictEqual({ checkpoints: [], elapsed: 0 });

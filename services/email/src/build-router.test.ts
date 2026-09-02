@@ -268,8 +268,8 @@ test('it reports a fire-and-forget drain failure carrying the active trace id', 
       },
       {
         context: {
-          actingSessionId: null,
-          actingUserId: null,
+          actingSessionID: null,
+          actingUserID: null,
           logger,
           traceID: trace.traceID,
         },

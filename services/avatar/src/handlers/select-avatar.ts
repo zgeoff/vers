@@ -16,7 +16,7 @@ interface ActivityLockedPayload {
  * oRPC handler opts for the authed `selectAvatar` procedure.
  */
 interface SelectAvatarOpts {
-  readonly context: { readonly actingUserId: null | string };
+  readonly context: { readonly actingUserID: null | string };
   readonly errors: {
     readonly CONFLICT: (payload: ActivityLockedPayload) => Error;
     readonly NOT_FOUND: (payload: EmptyErrorPayload) => Error;
@@ -37,36 +37,36 @@ export function selectAvatar(
   db: Kysely<DB>,
   opts: SelectAvatarOpts,
 ): Promise<{ activeAvatarID: string }> {
-  const actingUserId = opts.context.actingUserId;
+  const actingUserID = opts.context.actingUserID;
 
-  if (actingUserId === null) {
+  if (actingUserID === null) {
     throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
   }
 
   return db.isTransaction
-    ? runSelectWrites(db, actingUserId, opts)
-    : db.transaction().execute((trx) => runSelectWrites(trx, actingUserId, opts));
+    ? runSelectWrites(db, actingUserID, opts)
+    : db.transaction().execute((trx) => runSelectWrites(trx, actingUserID, opts));
 }
 
 async function runSelectWrites(
   trx: Kysely<DB>,
-  actingUserId: string,
+  actingUserID: string,
   opts: SelectAvatarOpts,
 ): Promise<{ activeAvatarID: string }> {
-  await sql`select pg_advisory_xact_lock(hashtext(${actingUserId}))`.execute(trx);
+  await sql`select pg_advisory_xact_lock(hashtext(${actingUserID}))`.execute(trx);
 
   const avatar = await trx
     .selectFrom('avatars')
     .select(['id'])
     .where('id', '=', opts.input.id)
-    .where('userId', '=', actingUserId)
+    .where('userId', '=', actingUserID)
     .executeTakeFirst();
 
   if (avatar === undefined) {
     throw opts.errors.NOT_FOUND({ data: {} });
   }
 
-  const liveAvatar = await findLiveActivityAvatar(trx, actingUserId);
+  const liveAvatar = await findLiveActivityAvatar(trx, actingUserID);
 
   if (liveAvatar !== null && liveAvatar.id !== avatar.id) {
     throw opts.errors.CONFLICT({
@@ -74,7 +74,7 @@ async function runSelectWrites(
     });
   }
 
-  await upsertActiveAvatar(trx, actingUserId, avatar.id);
+  await upsertActiveAvatar(trx, actingUserID, avatar.id);
 
   return { activeAvatarID: avatar.id };
 }

@@ -78,11 +78,11 @@ type TestContract = ReturnType<typeof buildTestContract>;
  */
 // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- structural map of oRPC contract procedures; framework types with no readonly form
 function buildConformingApp(contract: TestContract): ConformanceCaseApp {
-  const os = implement(contract).$context<{ actingUserId: null | string }>();
+  const os = implement(contract).$context<{ actingUserID: null | string }>();
 
   const router = {
     getThing: os.getThing.handler((opts) => {
-      if (opts.context.actingUserId === null) {
+      if (opts.context.actingUserID === null) {
         throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
       }
 
@@ -99,7 +99,7 @@ function buildConformingApp(contract: TestContract): ConformanceCaseApp {
  */
 // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- structural map of oRPC contract procedures; framework types with no readonly form
 function buildBrokenApp(contract: TestContract): ConformanceCaseApp {
-  const os = implement(contract).$context<{ actingUserId: null | string }>();
+  const os = implement(contract).$context<{ actingUserID: null | string }>();
 
   const router = {
     getThing: os.getThing.handler((opts) => ({ id: opts.input.id })),
@@ -109,12 +109,12 @@ function buildBrokenApp(contract: TestContract): ConformanceCaseApp {
   return buildRPCApp(new RPCHandler(router));
 }
 
-function buildRPCApp(handler: RPCHandler<{ actingUserId: null | string }>): ConformanceCaseApp {
+function buildRPCApp(handler: RPCHandler<{ actingUserID: null | string }>): ConformanceCaseApp {
   return {
     handle: async (request) => {
       const result = await handler.handle(request, {
         context: {
-          actingUserId: request.headers.get('x-acting-user-id'),
+          actingUserID: request.headers.get('x-acting-user-id'),
         },
         prefix: '/rpc',
       });

@@ -6,7 +6,7 @@ import type { EmptyErrorPayload, FieldConflictPayload, MissingSessionPayload } f
  * oRPC handler opts for the authed `updateEmail` procedure.
  */
 interface UpdateEmailOpts {
-  readonly context: { readonly actingUserId: null | string };
+  readonly context: { readonly actingUserID: null | string };
   readonly errors: {
     readonly CONFLICT: (payload: FieldConflictPayload<'email'>) => Error;
     readonly NOT_FOUND: (payload: EmptyErrorPayload) => Error;
@@ -27,16 +27,16 @@ export async function updateEmail(
   db: Kysely<DB>,
   opts: UpdateEmailOpts,
 ): Promise<{ updatedID: string }> {
-  const actingUserId = opts.context.actingUserId;
+  const actingUserID = opts.context.actingUserID;
 
-  if (actingUserId === null) {
+  if (actingUserID === null) {
     throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
   }
 
   const user = await db
     .selectFrom('users')
     .select('email')
-    .where('id', '=', actingUserId)
+    .where('id', '=', actingUserID)
     .executeTakeFirst();
 
   if (user === undefined) {
@@ -44,16 +44,16 @@ export async function updateEmail(
   }
 
   try {
-    const matched = await runGuardedEmailUpdate(db, actingUserId, user.email, opts.input.email);
+    const matched = await runGuardedEmailUpdate(db, actingUserID, user.email, opts.input.email);
 
     if (matched) {
-      return { updatedID: actingUserId };
+      return { updatedID: actingUserID };
     }
 
     const retryUser = await db
       .selectFrom('users')
       .select('email')
-      .where('id', '=', actingUserId)
+      .where('id', '=', actingUserID)
       .executeTakeFirst();
 
     if (retryUser === undefined) {
@@ -62,7 +62,7 @@ export async function updateEmail(
 
     const retryMatched = await runGuardedEmailUpdate(
       db,
-      actingUserId,
+      actingUserID,
       retryUser.email,
       opts.input.email,
     );
@@ -71,7 +71,7 @@ export async function updateEmail(
       throw opts.errors.NOT_FOUND({ data: {} });
     }
 
-    return { updatedID: actingUserId };
+    return { updatedID: actingUserID };
   } catch (error: unknown) {
     if (isEmailViolation(error)) {
       throw opts.errors.CONFLICT({ data: { field: 'email' } });
@@ -88,7 +88,7 @@ export async function updateEmail(
  */
 async function runGuardedEmailUpdate(
   db: Kysely<DB>,
-  actingUserId: string,
+  actingUserID: string,
   oldEmail: string,
   newEmail: string,
 ): Promise<boolean> {
@@ -97,7 +97,7 @@ async function runGuardedEmailUpdate(
       qb
         .updateTable('users')
         .set({ email: newEmail })
-        .where('id', '=', actingUserId)
+        .where('id', '=', actingUserID)
         .where('email', '=', oldEmail)
         .returning('id'),
     )

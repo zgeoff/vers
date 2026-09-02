@@ -8,7 +8,7 @@ import { toSessionData } from './to-session-data';
  * oRPC handler opts for the authed `getSessions` procedure.
  */
 interface GetSessionsOpts {
-  readonly context: { readonly actingUserId: null | string };
+  readonly context: { readonly actingUserID: null | string };
   readonly errors: {
     readonly UNAUTHORIZED: (payload: MissingSessionPayload) => Error;
   };
@@ -21,14 +21,14 @@ export async function getSessions(
   db: Kysely<DB>,
   opts: GetSessionsOpts,
 ): Promise<Array<SessionData>> {
-  if (opts.context.actingUserId === null) {
+  if (opts.context.actingUserID === null) {
     throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
   }
 
   const rows = await db
     .selectFrom('sessions')
     .selectAll()
-    .where('userId', '=', opts.context.actingUserId)
+    .where('userId', '=', opts.context.actingUserID)
     .execute();
 
   return rows.map((row) => toSessionData(row));

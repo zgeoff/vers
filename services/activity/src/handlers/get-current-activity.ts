@@ -8,7 +8,7 @@ import { toActivityData } from './to-activity-data';
  * oRPC handler opts for the authed `getCurrentActivity` procedure.
  */
 interface GetCurrentActivityOpts {
-  readonly context: { readonly actingUserId: null | string };
+  readonly context: { readonly actingUserID: null | string };
   readonly errors: {
     readonly UNAUTHORIZED: (payload: MissingSessionPayload) => Error;
   };
@@ -23,7 +23,7 @@ export async function getCurrentActivity(
   db: Kysely<DB>,
   opts: GetCurrentActivityOpts,
 ): Promise<ActivityData | null> {
-  if (opts.context.actingUserId === null) {
+  if (opts.context.actingUserID === null) {
     throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
   }
 
@@ -32,7 +32,7 @@ export async function getCurrentActivity(
     .innerJoin('avatars', 'avatars.id', 'activities.avatarId')
     .selectAll('activities')
     .where('activities.avatarId', '=', opts.input.avatarID)
-    .where('avatars.userId', '=', opts.context.actingUserId)
+    .where('avatars.userId', '=', opts.context.actingUserID)
     .where('activities.status', '=', 'active')
     .executeTakeFirst();
 

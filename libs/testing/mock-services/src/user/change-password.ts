@@ -2,13 +2,13 @@ import * as db from '../db';
 import { os } from './os';
 
 export const changePassword = os.changePassword.handler(async (opts) => {
-  const actingUserId = opts.context.actingUserId;
+  const actingUserID = opts.context.actingUserID;
 
-  if (actingUserId === null) {
+  if (actingUserID === null) {
     throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
   }
 
-  const user = db.userCollection.findFirst((q) => q.where({ id: actingUserId }));
+  const user = db.userCollection.findFirst((q) => q.where({ id: actingUserID }));
 
   if (user === undefined) {
     throw opts.errors.NOT_FOUND({ data: {} });
@@ -20,5 +20,5 @@ export const changePassword = os.changePassword.handler(async (opts) => {
     },
   });
 
-  return { updatedID: actingUserId };
+  return { updatedID: actingUserID };
 });

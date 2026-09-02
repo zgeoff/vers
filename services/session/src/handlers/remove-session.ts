@@ -6,7 +6,7 @@ import type { MissingSessionPayload } from '../types';
  * oRPC handler opts for the authed `deleteSession` procedure.
  */
 interface RemoveSessionOpts {
-  readonly context: { readonly actingUserId: null | string };
+  readonly context: { readonly actingUserID: null | string };
   readonly errors: {
     readonly UNAUTHORIZED: (payload: MissingSessionPayload) => Error;
   };
@@ -22,14 +22,14 @@ export async function removeSession(
   db: Kysely<DB>,
   opts: RemoveSessionOpts,
 ): Promise<Record<never, never>> {
-  if (opts.context.actingUserId === null) {
+  if (opts.context.actingUserID === null) {
     throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
   }
 
   await db
     .deleteFrom('sessions')
     .where('id', '=', opts.input.id)
-    .where('userId', '=', opts.context.actingUserId)
+    .where('userId', '=', opts.context.actingUserID)
     .execute();
 
   return {};

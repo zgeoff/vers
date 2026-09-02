@@ -23,9 +23,9 @@ import { os } from './os';
  * too.
  */
 export const advanceActivity = os.advanceActivity.handler(async (opts) => {
-  const actingUserId = opts.context.actingUserId;
+  const actingUserID = opts.context.actingUserID;
 
-  if (actingUserId === null) {
+  if (actingUserID === null) {
     throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
   }
 
@@ -40,11 +40,11 @@ export const advanceActivity = os.advanceActivity.handler(async (opts) => {
       opts.input.activityID,
       opts.input.activityStart,
       opts,
-      actingUserId,
+      actingUserID,
     );
   } else {
     const avatar = db.avatarCollection.findFirst((q) =>
-      q.where({ id: initialActivity.avatarID, userID: actingUserId }),
+      q.where({ id: initialActivity.avatarID, userID: actingUserID }),
     );
 
     if (avatar === undefined) {
