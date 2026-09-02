@@ -84,6 +84,9 @@ jobs:
           bun run env:contract:check
           bun run env:coverage
 
+      - name: Check Doc Paths
+        run: bun run docs:check-paths
+
       - name: Generate Types
         run: bun run codegen:types
 
