@@ -1350,7 +1350,7 @@ test('it mints an activity start at a node unconnected to any completed node —
   expect(activityStartRow.id).toBe(activityID);
 });
 
-test("it rejects an activity-start admissioned for an avatar that is not the account's active one", async () => {
+test("it rejects an activity-start admitted for an avatar that is not the account's active one", async () => {
   await using ctx = await setupTest();
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });

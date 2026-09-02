@@ -199,7 +199,7 @@ async function admitActivityStartRow(
     });
   }
 
-  const minted = await db.activityCollection.create({
+  const admitted = await db.activityCollection.create({
     avatarID: activityStart.avatarID,
     buildSnapshot: activityStart.buildSnapshot,
     contentVersion: activityStart.contentVersion,
@@ -215,9 +215,9 @@ async function admitActivityStartRow(
     status: 'active',
   });
 
-  invariant(minted !== undefined, 'a freshly minted mock activity start must exist');
+  invariant(admitted !== undefined, 'a freshly admitted mock activity start must exist');
 
-  return minted;
+  return admitted;
 }
 
 /**

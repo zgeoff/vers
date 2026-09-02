@@ -277,7 +277,7 @@ async function resolveActivityStartRow(
     // The mint's insert lost to another row already minted at this client id — resolved here,
     // outside any transaction, since the one that just rolled back cannot run another statement
     // once a constraint violation has poisoned it.
-    const recovered = await resolveActivityStartMintCollision(
+    const recovered = await resolveActivityStartAdmissionCollision(
       deps.db,
       activityStart,
       opts.input.activityID,
@@ -301,7 +301,7 @@ async function resolveActivityStartRow(
  * this same activity start retried — same avatar, `startKey`, and scope; anything short of that
  * full match, a foreign row or no row, is `undefined`.
  */
-async function resolveActivityStartMintCollision(
+async function resolveActivityStartAdmissionCollision(
   db: Kysely<DB>,
   activityStart: Readonly<OfflineActivityStartSubmission>,
   activityID: string,
