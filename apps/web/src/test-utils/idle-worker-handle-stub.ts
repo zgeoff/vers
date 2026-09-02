@@ -25,11 +25,6 @@ let current: StubIdleWorkerHandle = DEFAULT_HANDLE;
 
 const listeners = new Set<() => void>();
 
-/**
- * The external store behind the mocked worker-handle read: `set` notifies subscribers, so a
- * mid-test handle change re-renders subscribed components the way a real worker report does.
- * Defaults to no client, matching a caller that hasn't mounted one yet.
- */
 export const idleWorkerHandleStub = {
   get: (): StubIdleWorkerHandle => current,
   reset: (): void => {

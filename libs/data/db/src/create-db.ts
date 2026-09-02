@@ -10,10 +10,6 @@ interface CreateDBConfig {
   readonly searchPath?: string;
 }
 
-/**
- * Builds a `Kysely` client over the shared postgres.js dialect with camelCase-mapped columns.
- * Callers own env parsing — this never reads `process.env` itself.
- */
 export function createDB(config: CreateDBConfig): Kysely<DB> {
   const sql = postgres(config.databaseURL, buildPostgresOptions(config));
 
@@ -24,41 +20,27 @@ export function createDB(config: CreateDBConfig): Kysely<DB> {
   });
 }
 
-/**
- * Builds the postgres.js connection options `createDB` passes to `postgres(...)`, split out from
- * the dialect construction so tests can assert on the options object without opening a real
- * connection.
- */
 export function buildPostgresOptions(config: CreateDBConfig) {
   return {
-    // Bounds connection acquisition itself, a phase neither `statement_timeout` nor
-    // `idle_timeout` covers: a suspended managed Postgres endpoint that stalls on wake fails in
-    // 10s instead of hanging for minutes, while 10s leaves headroom for a normal cold wake
-    // (roughly 1-5s).
+    // bounds connection acquisition, which neither session timeout below covers: a suspended
+    // managed Postgres endpoint that stalls on wake fails in 10s instead of hanging for minutes,
+    // and 10s leaves headroom for a normal cold wake of roughly 1-5s
     connect_timeout: 10,
     connection: {
-      // Both session-level timeouts below bound how long a single statement or an
-      // idle-in-transaction connection can hold a lock: no future code path that opens a
-      // transaction can leave orphaned transaction state alive past 30s, even across a
-      // serverless process kill.
+      // both session timeouts cap how long a statement or an idle-in-transaction connection holds
+      // a lock, so orphaned transaction state dies within 30s even after a serverless process kill
       idle_in_transaction_session_timeout: 30_000,
       statement_timeout: 30_000,
       ...(config.searchPath === undefined ? {} : { search_path: config.searchPath }),
     },
 
-    // Seconds, unlike the millisecond session timeouts above. Closes a pooled connection from
-    // the client side before the managed Postgres endpoint suspends on its own idle timeout and
-    // drops the socket server-side. Without it the pool hands a caller a connection the endpoint
-    // already closed, and the first write fails with CONNECTION_CLOSED; the value stays under
-    // the endpoint's suspend timeout so the client always closes first.
+    // seconds, unlike the millisecond session timeouts above. Stays under the managed endpoint's
+    // suspend timeout so the client closes a pooled connection first; otherwise the pool hands
+    // out a socket the endpoint already closed and the first write fails with CONNECTION_CLOSED
     idle_timeout: 240,
   };
 }
 
-/**
- * Wraps a `PostgresJSDialect` so the driver it creates emits a `db.connect` span around connection
- * acquisition, delegating every other dialect method straight through.
- */
 function buildTracedDialect(dialect: PostgresJSDialect): Dialect {
   return {
     createAdapter: () => dialect.createAdapter(),
@@ -68,13 +50,10 @@ function buildTracedDialect(dialect: PostgresJSDialect): Dialect {
   };
 }
 
-/**
- * Wraps a `Driver` so `acquireConnection` runs inside a `db.connect` span, delegating every other
- * method — including the optional savepoint methods — to the inner driver unchanged. Delegates
- * through a `Proxy` rather than a hand-listed method map, so a `Driver` method this file doesn't
- * name still reaches the inner driver instead of silently becoming a no-op.
- */
 function buildTracedDriver(driver: Driver): Driver {
+  // a Proxy rather than a hand-listed method map: the dialect's driver interface carries optional
+  // savepoint methods, and one left out of a list would read as unsupported instead of reaching the
+  // inner driver
   return new Proxy(driver, {
     get: (target, property, receiver) => {
       if (property === 'acquireConnection') {
@@ -95,12 +74,6 @@ function buildTracedDriver(driver: Driver): Driver {
   });
 }
 
-/**
- * Runs a driver's `acquireConnection` call inside a `db.connect` CLIENT span, parented to
- * `context.active()` so it nests under whatever request or worker span is active; a no-op span
- * without a registered tracer provider. Marks the span failed and records the exception on a
- * stalled or refused connect.
- */
 async function withConnectSpan<T>(acquireConnection: () => Promise<T>): Promise<T> {
   const tracer = trace.getTracer('@vers/db');
 
@@ -123,14 +96,6 @@ async function withConnectSpan<T>(acquireConnection: () => Promise<T>): Promise<
   }
 }
 
-/**
- * Emits one retroactive CLIENT span per compiled query from Kysely's `log` callback, timed from
- * `queryDurationMillis` so the span covers the statement's real duration rather than the instant
- * this callback runs. Created against `context.active()` so it parents to whatever request or
- * worker span is active; a no-op (the OpenTelemetry API's own no-op span) without a registered
- * tracer provider. Query parameters never ride in the span — only the compiled SQL, already in its
- * placeholder form (`$1`, `$2`, …).
- */
 function recordQuerySpan(event: LogEvent): void {
   const endTime = new Date();
 
@@ -156,10 +121,6 @@ function recordQuerySpan(event: LogEvent): void {
   span.end(endTime);
 }
 
-/**
- * Derives a short span-name suffix from a compiled query's root operation-node kind
- * (`SelectQueryNode` → `select`, `CreateTableNode` → `createtable`).
- */
 function toOperationName(kind: string): string {
   return kind.replace(/(?:Query)?Node$/, '').toLowerCase();
 }

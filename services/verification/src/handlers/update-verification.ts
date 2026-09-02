@@ -3,9 +3,6 @@ import type { DB } from '@vers/db';
 import type { Kysely } from 'kysely';
 import type { EmptyErrorPayload } from '../types';
 
-/**
- * oRPC handler opts for the `updateVerification` procedure.
- */
 interface UpdateVerificationOpts {
   readonly errors: {
     readonly NOT_FOUND: (payload: EmptyErrorPayload) => Error;
@@ -13,9 +10,6 @@ interface UpdateVerificationOpts {
   readonly input: { readonly id: string; readonly type?: VerificationType | undefined };
 }
 
-/**
- * Updates a verification record's set fields; throws NOT_FOUND when it doesn't exist.
- */
 export async function updateVerification(
   db: Kysely<DB>,
   opts: UpdateVerificationOpts,

@@ -3,10 +3,6 @@ import { buildCSPHeaderValue } from './build-csp-header-value';
 import { CSP_NONCE_HEADER } from './csp-nonce-header';
 import type { Middleware } from './middleware';
 
-/**
- * Fixed (non-CSP) security headers applied to every HTML response. Cross-Origin-Embedder-Policy is
- * intentionally left unset — this app embeds cross-origin subresources it doesn't control.
- */
 const FIXED_SECURE_HEADERS: ReadonlyArray<readonly [string, string]> = [
   ['Cross-Origin-Resource-Policy', 'same-origin'],
   ['Cross-Origin-Opener-Policy', 'same-origin'],
@@ -25,11 +21,6 @@ interface MakeSecureHeadersOptions {
   readonly sentryOrigin: string | null;
 }
 
-/**
- * Builds the secure-headers middleware: stamps a fresh CSP nonce onto the request — read back by
- * the router factory via `getRequestHeader` to configure `ssr.nonce` — then, for HTML responses
- * only, applies the CSP and the fixed security header set.
- */
 export function makeSecureHeaders(options: MakeSecureHeadersOptions): Middleware {
   return async (request, next) => {
     const nonce = crypto.randomBytes(16).toString('hex');

@@ -1,8 +1,5 @@
 import { cva } from '@vers/styled-system/css';
 
-/**
- * Whether the effect helps or harms its bearer — drives the pill's colour, not its layout.
- */
 export type StatusKind = 'buff' | 'debuff';
 
 const pill = cva({
@@ -53,10 +50,6 @@ interface StatusPillProps {
   readonly stacks?: number;
 }
 
-/**
- * One buff or debuff chip: a glyph abbreviation of the effect name, its helpful/harmful tint, and a
- * stack count when it exceeds one. The full name rides on the title for hover.
- */
 export function StatusPill(props: Readonly<StatusPillProps>) {
   const stacked = props.stacks !== undefined && props.stacks > 1;
 

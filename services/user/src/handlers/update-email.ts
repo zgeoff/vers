@@ -2,9 +2,6 @@ import type { DB } from '@vers/db';
 import type { Kysely } from 'kysely';
 import type { EmptyErrorPayload, FieldConflictPayload, MissingSessionPayload } from '../types';
 
-/**
- * oRPC handler opts for the authed `updateEmail` procedure.
- */
 interface UpdateEmailOpts {
   readonly context: { readonly actingUserID: null | string };
   readonly errors: {
@@ -15,14 +12,6 @@ interface UpdateEmailOpts {
   readonly input: { readonly email: string };
 }
 
-/**
- * Changes the acting user's email, repointing any in-progress 2FA verification at the old email
- * to the new one in the same statement; throws CONFLICT when the email is taken. The users update
- * only applies while the row still holds the old email read just before it, and the verifications
- * repoint targets that same old email. In the exotic case of a concurrent email change racing this
- * one, the guarded update matches zero rows and the call retries once against the row's current
- * email before giving up.
- */
 export async function updateEmail(
   db: Kysely<DB>,
   opts: UpdateEmailOpts,
@@ -81,11 +70,6 @@ export async function updateEmail(
   }
 }
 
-/**
- * Runs one guarded attempt of the users+verifications email rewrite in a single statement: the
- * users update is predicated on the row still holding `oldEmail`, and the verifications repoint
- * targets that same `oldEmail`. Returns whether the users predicate matched.
- */
 async function runGuardedEmailUpdate(
   db: Kysely<DB>,
   actingUserID: string,
@@ -116,9 +100,6 @@ async function runGuardedEmailUpdate(
   return result.length > 0;
 }
 
-/**
- * postgres.js surfaces a unique-constraint violation as SQLSTATE 23505, naming the constraint.
- */
 function isEmailViolation(error: unknown): boolean {
   return (
     typeof error === 'object' &&

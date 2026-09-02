@@ -1,11 +1,6 @@
 import type { Kysely } from 'kysely';
 import { sql } from 'kysely';
 
-/**
- * Creates the `activity_status` enum, the `activities` head-row table (one row per activity
- * stream, carrying both the appended and verified cursors), and the append-only
- * `activity_checkpoints` table.
- */
 export async function up(db: Kysely<unknown>): Promise<void> {
   await db.schema
     .createType('activity_status')

@@ -10,11 +10,6 @@ const ScopeSecretNotFoundErrorDataSchema = z.object({
   secretVersion: z.int(),
 });
 
-/**
- * The keys service's API: derives an avatar's roll key or scope secret from its custodied root
- * secrets. Every procedure is authed at the s2s transport boundary; no acting-user session is
- * involved.
- */
 export const keysContract = {
   deriveAvatarKey: authedRoute
     .route({ method: 'POST', path: '/avatar-keys', summary: 'Derive an avatar roll key' })

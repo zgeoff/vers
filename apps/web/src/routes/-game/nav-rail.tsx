@@ -22,10 +22,6 @@ interface RailItem {
   readonly to: RailTarget;
 }
 
-/**
- * Rail order mirrors the three planes: the pinned activity, the two canvas destinations, then the
- * meta screens. Each inner array renders as a group separated by a divider.
- */
 const RAIL_GROUPS: ReadonlyArray<ReadonlyArray<RailItem>> = [
   [{ Glyph: Icon.Encounter, label: 'Engage', to: '/activity' }],
   [
@@ -106,10 +102,6 @@ const railLabel = css({
   textTransform: 'uppercase',
 });
 
-/**
- * The always-on navigation rail: a persistent vertical stack pinned to the right edge, above the
- * canvas and any ambient sheet. Focus targets swap the canvas scene; ambient targets open a sheet.
- */
 export function NavRail() {
   const routeContext = useRouteContext({ from: '/_game' });
   const pathname = useRouterState({ select: (state) => state.location.pathname });

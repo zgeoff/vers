@@ -2,12 +2,6 @@ import invariant from 'tiny-invariant';
 import type { ActivityData } from './activity-data-schema';
 import type { OfflineActivityStartSubmission } from './offline-activity-start-submission-schema';
 
-/**
- * Projects a locally minted activity start row down to the wire fields `advanceActivity` accepts
- * for offline-first ingest — every field the server re-derives (`encounterNode`, `keyVersion`,
- * `secretRef`, `secretVersion`) is dropped, since the row's own values for them were never
- * server-authoritative to begin with.
- */
 export function buildOfflineActivityStartSubmission(
   row: Readonly<ActivityData>,
 ): OfflineActivityStartSubmission {

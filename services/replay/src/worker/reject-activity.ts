@@ -13,18 +13,6 @@ interface RejectActivityResult {
   readonly applied: boolean;
 }
 
-/**
- * Rejects an activity on reproducible divergence: the activity itself terminates — from `active`
- * (divergence mid-stream) or its own optimistic `stopped`/`capped` forward-exit (divergence caught
- * on a batch already flushed) — the chain's appended anchor rewinds to its still-trustworthy
- * verified anchor in one self-referential update, and any successor already rooted past the
- * verified point voids too, whether it is still `active` or has itself forward-exited to
- * `stopped`/`capped` — its forward-advance compare-and-swap could no longer match anyway, so this
- * just settles it explicitly. The target activity's own transition is the guard: a stale call
- * whose row no longer matches applies nothing, including the chain rewind and successor void, and
- * reports `applied: false`. The three writes are structurally atomic: runs inside the caller's
- * transaction when given one (composing with a held chain claim), or opens its own otherwise.
- */
 export function rejectActivity(
   db: Kysely<DB>,
   input: Readonly<RejectActivityInput>,

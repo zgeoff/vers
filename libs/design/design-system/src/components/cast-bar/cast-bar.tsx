@@ -1,9 +1,5 @@
 import { css, cva } from '@vers/styled-system/css';
 
-/**
- * Which actor's palette the cast fill takes — the avatar's own output in self gold, a hostile in
- * its rarity colour, an aether channel in world teal.
- */
 export type CastBarTint = 'artisan' | 'enhanced' | 'normal' | 'self' | 'unique' | 'world';
 
 const container = css({
@@ -59,19 +55,11 @@ const fill = cva({
 
 interface CastBarProps {
   readonly label: string;
-  /**
-   * Fill fraction as a 0–100 percentage; values outside the range are clamped. A caller feeding a
-   * per-frame value drives the fill's smoothness itself — this component adds no easing.
-   */
   readonly progress: number;
   readonly tint?: CastBarTint;
   readonly time?: string;
 }
 
-/**
- * The label + timer + fill of an in-flight cast or swing. Presentational only — a caller derives
- * `progress` from real timing and feeds it in.
- */
 export function CastBar(props: Readonly<CastBarProps>) {
   const pct = Math.max(0, Math.min(100, props.progress));
 

@@ -1,11 +1,6 @@
 import * as db from '../db';
 import { os } from './os';
 
-/**
- * Returns the avatar's most recently started activity with its resume progress. The anchor is
- * null while `verifiedHead` is still 0 — the mock never runs verification, so a test that wants
- * an anchor seeds `verifiedHead` and its checkpoint row directly.
- */
 export const getLatestActivityProgress = os.getLatestActivityProgress.handler((opts) => {
   const actingUserID = opts.context.actingUserID;
 

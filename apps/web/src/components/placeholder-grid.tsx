@@ -14,10 +14,6 @@ const cell = css({
   borderWidth: '[1px]',
 });
 
-/**
- * A grid of empty cells standing in for an item or slot layout. Cells hold a fixed size; the column
- * count follows the available width.
- */
 export function PlaceholderGrid(props: Readonly<{ count: number }>) {
   return (
     <div className={grid}>

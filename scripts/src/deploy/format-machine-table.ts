@@ -1,9 +1,5 @@
 import type { AppMachine } from './types';
 
-/**
- * Renders one column-aligned line per machine — id, state, image, git SHA — for an operator reading
- * a sweep-ambiguity failure. A missing image or git SHA prints as `-`.
- */
 export function formatMachineTable(machines: ReadonlyArray<AppMachine>): string {
   const rows = machines.map((machine) => ({
     gitSHA: machine.gitSHA ?? '-',

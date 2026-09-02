@@ -8,14 +8,6 @@ interface CreateClonedDatabaseConfig {
   readonly dbName: string;
 }
 
-/**
- * Clones `dbName` from `templateDB` via `CREATE DATABASE ... TEMPLATE`, safe
- * to call concurrently with other clones and with `createTestTemplate`: a
- * shared session advisory lock on the same key as `createTestTemplate`'s
- * exclusive lock lets clones run in parallel with each other while still
- * excluding a migrate in flight — postgres refuses to clone a template that
- * has an active connection.
- */
 export async function createClonedDatabase(
   config: Readonly<CreateClonedDatabaseConfig>,
 ): Promise<void> {
@@ -32,6 +24,8 @@ export async function createClonedDatabase(
     const session = await admin.reserve();
 
     try {
+      // shared mode lets clones run in parallel while excluding a migrate in flight, which holds
+      // the same key exclusively: postgres refuses to clone a template with an active connection
       await session`SELECT pg_advisory_lock_shared(${lockKey}::bigint)`;
 
       await session.unsafe(

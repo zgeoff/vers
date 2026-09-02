@@ -30,11 +30,6 @@ const threeColumns = css({
 const column = css({ display: 'flex', flexDirection: 'column', gap: '4' });
 const twoColumns = css({ display: 'grid', gap: '4', gridTemplateColumns: 'repeat(2, 1fr)' });
 
-/**
- * Registers the avatar satellite viewer for the panel's lifetime. The viewer is not kept alive, so
- * its canvas dies with the route on navigation away. With `placeholder`, the satellite renders an
- * inert canvas instead of a live WebGL context.
- */
 export function AvatarPanel(props: Readonly<AvatarPanelProps>) {
   useSatellite('avatar-viewer', <AvatarViewer placeholder={props.placeholder ?? false} />);
 

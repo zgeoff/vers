@@ -2,10 +2,6 @@ import * as z from 'zod';
 import * as db from '../db';
 import { os } from './os';
 
-/**
- * Checkpoint types whose `rewards.xp` is a run's final earned total rather than one checkpoint's
- * own delta — the shape a pending entry's `xpDelta` displays.
- */
 const TERMINAL_CHECKPOINT_TYPES = new Set(['completed', 'failed']);
 
 const TerminalCheckpointPayloadSchema = z.object({
@@ -13,15 +9,6 @@ const TerminalCheckpointPayloadSchema = z.object({
   type: z.string(),
 });
 
-/**
- * Returns the avatar's settled xp/level plus one pending entry per terminal-but-unsettled activity
- * — a non-active, non-rejected activity whose `verifiedHead` hasn't caught up to its `appendedHead`
- * — sourced from that activity's tail checkpoint, and an identity entry for the live activity when
- * one is active. Seed `checkpointCollection` to assert on a pending entry's `xpDelta`. The live
- * entry always reports nothing settled: the stored row mirrors the public activity shape, which
- * carries no settled-xp field, so the net a client overlays is asserted against the client's own
- * projection rather than through this handler.
- */
 export const getAvatarProgression = os.getAvatarProgression.handler((opts) => {
   const actingUserID = opts.context.actingUserID;
 

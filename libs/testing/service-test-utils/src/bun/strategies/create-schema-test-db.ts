@@ -4,17 +4,6 @@ import postgres from 'postgres';
 import { createDatabaseFromTemplate } from '../create-database-from-template';
 import type { TestDBHandle } from '../test-db-handle';
 
-/**
- * Schema isolation: a fresh clone of every `public` table (structure, indexes, foreign keys, and
- * `updated_at` triggers) in its own schema on a shared host database, with `search_path` scoped to
- * that schema alone. Writes are real, committed statements — unlike transaction isolation, a
- * caught constraint violation doesn't poison later queries on the same handle, and the handler's
- * own `db.transaction()` calls nest normally. Only code that runs entirely through the returned
- * `db` stays inside the boundary: a handler that opens its own connection, or that
- * schema-qualifies `public.<table>` directly, reaches the shared host state instead of the clone.
- * Database-scoped state (advisory locks, LISTEN/NOTIFY), DDL, and structures `LIKE` can't
- * reproduce (partitioned parents) still need `database` isolation.
- */
 export async function createSchemaTestDB(): Promise<TestDBHandle> {
   const host = await getHost();
 
@@ -51,10 +40,6 @@ interface Host {
 
 let host: Promise<Host> | undefined;
 
-/**
- * One template clone per test process, memoized independently of the sibling strategies' own
- * per-process databases: every schema-isolation acquire clones into this same host.
- */
 function getHost(): Promise<Host> {
   host ??= buildHost();
 
@@ -100,10 +85,7 @@ const FOREIGN_KEY_ACTIONS: Readonly<Record<string, string>> = {
   r: 'RESTRICT',
 };
 
-/**
- * `LIKE ... INCLUDING ALL` never copies foreign keys, so every public→public FK is rediscovered
- * from `pg_constraint` and rebuilt against the clone tables.
- */
+// `LIKE ... INCLUDING ALL` never copies foreign keys, so they are rebuilt from `pg_constraint`
 async function createCloneForeignKeys(sql: postgres.Sql, cloneSchema: string): Promise<void> {
   const foreignKeys = await sql<Array<ForeignKeyRow>>`
     SELECT
@@ -148,11 +130,8 @@ interface TriggerRow {
   readonly tableName: string;
 }
 
-/**
- * Trigger definitions are copied verbatim except for their `ON <table>` target, which is
- * repointed at the clone schema; the trigger function they call (`set_updated_at()`) resolves
- * against `public` at creation time and is stateless, so every clone safely shares it.
- */
+// only the `ON <table>` target is repointed: the trigger function resolves against `public` at
+// creation time and is stateless, so every clone shares it
 async function createCloneTriggers(sql: postgres.Sql, cloneSchema: string): Promise<void> {
   const triggers = await sql<Array<TriggerRow>>`
     SELECT c.relname AS "tableName", pg_get_triggerdef(t.oid) AS def

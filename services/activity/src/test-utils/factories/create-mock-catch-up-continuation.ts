@@ -3,11 +3,6 @@ import { createId } from '@paralleldrive/cuid2';
 import type { CatchUpContinuation } from '@vers/contract-activity';
 import { createMockCheckpointBatch } from './create-mock-checkpoint-batch';
 
-/**
- * A plain catch-up continuation with faker-generated defaults: a single-entry terminal tail
- * chaining onto a random hash. Pass `checkpoints` built against a real row's own hash chain for a
- * continuation the service will accept.
- */
 export function createMockCatchUpContinuation(
   overrides: Readonly<Partial<CatchUpContinuation>> = {},
 ): CatchUpContinuation {

@@ -18,16 +18,8 @@ interface Tab {
 }
 
 interface CreateWorkerDemuxOptions {
-  /**
-   * How long a tab may stay silent before its virtual port is dropped — a re-appearing tab id
-   * gets a fresh upgrade. Defaults to five minutes: generous against normal call cadence, short
-   * enough that a closed tab's entry does not linger for a whole worker lifetime.
-   */
   readonly evictAfterMs?: number;
 
-  /**
-   * A clock override — a test injects its own to drive eviction without a real wait.
-   */
   readonly now?: () => number;
 
   readonly upgrade: WorkerRuntime['upgrade'];
@@ -39,15 +31,6 @@ export interface WorkerDemux {
 
 const DEFAULT_EVICT_AFTER_MS = 5 * 60 * 1000;
 
-/**
- * Bridges every tab on the web-locks path to the runtime's router: no real `MessagePort` exists
- * between a tab and the elected writer, so each tab's frames — enveloped with its id by
- * `createBroadcastPort` — are demultiplexed onto a virtual port per tab. Idle tabs are swept on a
- * timer so a tab that never sends an explicit disconnect — there is no such signal over
- * `BroadcastChannel` — does not leak forever. Removing a tab, by sweep or by its own disconnect,
- * fires the virtual port's close listeners, so the RPC handler aborts that tab's in-flight calls
- * and drops its per-connection state.
- */
 export function createWorkerDemux(options: Readonly<CreateWorkerDemuxOptions>): WorkerDemux {
   const evictAfterMs = options.evictAfterMs ?? DEFAULT_EVICT_AFTER_MS;
   const now = options.now ?? (() => Date.now());
@@ -56,10 +39,8 @@ export function createWorkerDemux(options: Readonly<CreateWorkerDemuxOptions>): 
   const outgoing = new BroadcastChannel(RPC_WORKER_TO_CLIENT_CHANNEL);
   const tabs = new Map<string, Tab>();
 
-  // The returned virtual port is built the moment an unseen tab id first appears, and delivers
-  // synchronously: `upgrade` registers the router's message listener before the incoming-channel
-  // handler below relays the same frame to it, so no buffering or `start()` concept is needed for
-  // correct delivery ordering.
+  // the virtual port delivers synchronously: `upgrade` registers the router's listener before the
+  // incoming handler below relays the same frame, so no buffering or `start()` is needed
   const buildVirtualPort = (
     tabID: string,
 

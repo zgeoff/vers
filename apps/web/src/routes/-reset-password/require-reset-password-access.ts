@@ -6,9 +6,6 @@ export interface ResetPasswordAccess {
   readonly resetToken: string;
 }
 
-/**
- * Gates the reset-password page on the emailed link's `email`/`token` query params.
- */
 export async function requireResetPasswordAccess(
   search: Readonly<Record<string, unknown>>,
 ): Promise<ResetPasswordAccess> {

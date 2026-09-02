@@ -7,12 +7,6 @@ interface AvatarSwitchedNoticeProps {
   readonly testID?: string;
 }
 
-/**
- * Explains a start or catch-up rejected because the account's active avatar changed, naming the
- * new one and offering the one remedy that re-runs every gate against it — a reload. Carries
- * `attempts`/`levelUps` tallies when a fallback catch-up already ran for the new avatar before
- * this notice rendered, rendering nothing further while they read zero.
- */
 export function AvatarSwitchedNotice(props: Readonly<AvatarSwitchedNoticeProps>) {
   return (
     <>

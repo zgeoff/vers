@@ -1,9 +1,5 @@
 import type { Middleware } from './middleware';
 
-/**
- * The logger capabilities this middleware needs — satisfied structurally by the app's pino
- * instance without pulling pino's own types into this module's public signature.
- */
 interface RequestLoggerSink {
   readonly debug: (fields: Readonly<Record<string, unknown>>, message: string) => void;
   readonly error: (fields: Readonly<Record<string, unknown>>, message: string) => void;
@@ -11,17 +7,11 @@ interface RequestLoggerSink {
   readonly warn: (fields: Readonly<Record<string, unknown>>, message: string) => void;
 }
 
-/**
- * Builds the request-lifecycle logging middleware: one structured line per request on completion,
- * carrying method, path, status, and duration as queryable fields — data never rides in the
- * message text. The query string never reaches the line: query params carry emailed tokens and
- * auth codes, and a log stream is no place for either. A handler that throws still logs, at error
- * with the thrown value, before the throw continues to the runtime.
- */
 export function makeRequestLogger(logger: RequestLoggerSink): Middleware {
   return async (request, next) => {
     const start = performance.now();
 
+    // the query string never reaches the log line: query params carry emailed reset tokens and codes
     const path = new URL(request.url).pathname;
 
     let response: Response;
@@ -70,10 +60,6 @@ function pickRequestLogLevel(status: number, pathname: string): keyof RequestLog
   return ASSET_PATH_PATTERN.test(pathname) ? 'debug' : 'info';
 }
 
-/**
- * Rounds an elapsed-time reading to one decimal, keeping the sub-millisecond resolution that
- * whole-millisecond rounding would discard.
- */
 function toDurationMs(elapsedMs: number): number {
   return Math.round(elapsedMs * 10) / 10;
 }

@@ -18,9 +18,6 @@ const widgetContract = {
 
 const widgetSchema = z.object({ id: z.string(), name: z.string() });
 
-/**
- * A fresh, per-test in-memory backend the mocked `getWidget` handler reads from.
- */
 function buildWidgetCollection() {
   return new Collection({ schema: widgetSchema });
 }

@@ -3,11 +3,6 @@ import { createId } from '@paralleldrive/cuid2';
 import type { Activities } from '@vers/db';
 import type { Insertable } from 'kysely';
 
-/**
- * A plain, unpersisted activity head row with faker-generated defaults. Never requires a parent —
- * `avatarId` defaults to a random id, not a real avatar's. Hash and content fields default to
- * opaque strings, and `status` defaults to `'active'` — a live-run row.
- */
 export function createMockActivity(
   overrides: Readonly<Partial<Insertable<Activities>>> = {},
 ): Insertable<Activities> {

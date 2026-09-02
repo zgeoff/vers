@@ -6,20 +6,13 @@ import { buildTracingInterceptor } from '@vers/service-utils/orpc';
 import { createEdgeServiceToken } from '../create-edge-service-token';
 import { SERVICE_URLS } from '../service-urls';
 
-/**
- * The per-call context this client requires: who the outbound s2s token's `sub` claim names.
- */
 interface SessionExistenceClientContext {
   readonly actingUserID: string;
 }
 
-/**
- * A bare session client for the per-request session-existence check: plain `fetch`, minting an s2s
- * token for the caller-supplied acting user directly. The check runs inside the routine that
- * establishes a cookie session's identity, and the isomorphic session client's server link derives
- * an omitted acting user id from that same routine — so calling through it would recurse without
- * bound.
- */
+// a bare client on purpose: the isomorphic session client's server link derives an omitted acting
+// user from the same routine this check runs inside, so calling through it would recurse without
+// bound
 export const sessionExistenceClient: ContractRouterClient<
   typeof sessionContract,
   SessionExistenceClientContext

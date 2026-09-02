@@ -13,10 +13,6 @@ interface SetupTestConfig {
   readonly userID: string;
 }
 
-/**
- * Builds an authed client acting as the given user, so the handler's push hits the same state
- * transitions the real service applies to the avatar rows the test seeds in the mock db.
- */
 async function setupTest(config: Readonly<SetupTestConfig>) {
   const client = await createAuthedServiceClient<ActivityServiceClient>('activity', config.userID);
 

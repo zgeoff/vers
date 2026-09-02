@@ -12,16 +12,12 @@ interface GameCanvasProps {
   forceWebGL?: boolean;
 }
 
-/**
- * The persistent, scene-agnostic canvas: one WebGPU (WebGL-fallback) context for the whole app.
- * Frameloop tracks the scene-state store's presentation, so a hidden scene suspends rendering
- * entirely instead of paying GPU cost off-screen. Construction happens inside the `gl` callback,
- * which R3F only invokes client-side, so importing this module is safe under SSR.
- */
 export function GameCanvas(props: Readonly<GameCanvasProps>): ReactNode {
   const forceWebGL = props.forceWebGL ?? false;
   const frameloop = useSceneStateStore((state) => toFrameloop(state.presentation));
 
+  // the renderer is constructed inside the `gl` callback, which R3F invokes only on the client, so
+  // importing this module is safe under SSR
   return (
     <Canvas
       frameloop={frameloop}

@@ -4,9 +4,6 @@ import type { DB } from '@vers/db';
 import type { Kysely } from 'kysely';
 import type { EmptyErrorPayload, MissingSessionPayload } from '../types';
 
-/**
- * oRPC handler opts for the authed `getActivityRewards` procedure.
- */
 interface GetActivityRewardsOpts {
   readonly context: { readonly actingUserID: null | string };
   readonly errors: {
@@ -32,14 +29,6 @@ interface GetActivityRewardsResult {
   readonly verifiedHead: number;
 }
 
-/**
- * Returns an activity's revealed reward-slot contents: `avatar_items` rows minted at settlement for
- * coordinates at or below the activity's verified anchor, ordered by chain position then slot
- * ordinal. Mint and anchor-advance commit in the same transaction, so every coordinate this range
- * covers is already minted — an unverified tail simply isn't in range yet, never a partial read.
- * `afterChainIndex` is a keyset cursor: a client that already holds rows through some chain index
- * passes it to read only what advanced since.
- */
 export async function getActivityRewards(
   db: Kysely<DB>,
   opts: GetActivityRewardsOpts,

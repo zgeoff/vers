@@ -28,11 +28,6 @@ interface ReferenceFormProps {
   readonly onSuccess?: () => void;
 }
 
-/**
- * A stand-in island wired exactly as a migrated form is: the submit hook drives `useForm`, so a test
- * can inject an `action` to exercise the dispatch triage, or seed a `lastResult` to assert the
- * result→UI mapping with no submit at all.
- */
 function ReferenceForm(props: ReferenceFormProps) {
   const submission = useFormSubmit(props.action ?? noopAction, props.lastResult, props.onSuccess);
 

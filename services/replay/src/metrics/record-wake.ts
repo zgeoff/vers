@@ -1,9 +1,5 @@
 import { metrics } from '@opentelemetry/api';
 
-/**
- * Counts one `/wake` request received, before it collapses onto an already-running drain or starts
- * a new one — the poke-rate signal, silent whenever the queue never needs waking.
- */
 export function recordWake(): void {
   // Resolved through the global metrics API on every call: the SDK returns the same instrument
   // for an identical registration, and resolving late keeps the counter bound to whichever meter

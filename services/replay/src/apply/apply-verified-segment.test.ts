@@ -5,11 +5,8 @@ import { createAvatarRow } from '../test-utils/create-avatar-row';
 import { createChainRow } from '../test-utils/create-chain-row';
 import { applyVerifiedSegment } from './apply-verified-segment';
 
-/**
- * `applyVerifiedSegment` opens its own `db.transaction()` when handed a non-transaction handle,
- * which can't nest under the default rollback-on-dispose isolation — this suite runs against a
- * real, committed schema clone instead.
- */
+// the apply opens its own `db.transaction()` when handed a non-transaction handle, which the
+// default rollback-on-dispose isolation cannot nest, so this suite runs against a committed clone
 async function setupTest() {
   const db = await createTestDB({ isolation: 'schema' });
 

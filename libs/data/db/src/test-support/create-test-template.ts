@@ -8,16 +8,6 @@ interface CreateTestTemplateConfig {
   readonly templateDB: string;
 }
 
-/**
- * Ensures a worktree's test-template database exists and carries every
- * `@vers/db` migration, safe to call concurrently from multiple `bun test`
- * processes racing on first use: an exclusive session advisory lock keyed by
- * the template name serializes the create-and-migrate sequence against other
- * calls to this function, and `applyMigrations` is idempotent, so a template
- * that's already current is a no-op. The same lock key, taken in shared mode
- * by `createClonedDatabase`, keeps a clone from ever racing a migrate — a
- * clone whose source has an active connection is rejected by postgres.
- */
 export async function createTestTemplate(
   config: Readonly<CreateTestTemplateConfig>,
 ): Promise<void> {
@@ -33,6 +23,8 @@ export async function createTestTemplate(
     const session = await admin.reserve();
 
     try {
+      // exclusive: a clone takes the same key in shared mode, so it never overlaps the migrate;
+      // postgres refuses to clone a template that has an active connection
       await session`SELECT pg_advisory_lock(${lockKey}::bigint)`;
 
       const existing =

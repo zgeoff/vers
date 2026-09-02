@@ -5,9 +5,6 @@ import type { Kysely } from 'kysely';
 import { SESSION_DURATION_LONG, SESSION_DURATION_SHORT } from '../consts';
 import { toSessionData } from './to-session-data';
 
-/**
- * oRPC handler opts for the public `createSession` procedure.
- */
 interface CreateSessionOpts {
   readonly input: {
     readonly expiresAt?: Date | undefined;
@@ -17,9 +14,6 @@ interface CreateSessionOpts {
   };
 }
 
-/**
- * Creates an unverified session for a login, its expiry set by `rememberMe` unless overridden.
- */
 export async function createSession(db: Kysely<DB>, opts: CreateSessionOpts): Promise<SessionData> {
   const sessionDuration =
     opts.input.rememberMe === true ? SESSION_DURATION_LONG : SESSION_DURATION_SHORT;

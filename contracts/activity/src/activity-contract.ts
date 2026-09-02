@@ -28,11 +28,6 @@ const CheckpointInvalidDataSchema = z.object({ reason: CheckpointInvalidReasonSc
 const SimVersionProblemDataSchema = z.object({ currentSimVersion: z.string().nullable() });
 const StaleHeadDataSchema = z.object({ appendedHead: z.int() });
 const TerminalStatusDataSchema = z.object({ appendedHead: z.int(), status: ActivityStatusSchema });
-
-/**
- * `advanceActivity`'s uniform bail data: the last row a rejected bulk request fully committed,
- * whatever reason stopped it — the row the client's outer resync re-plans from.
- */
 const AdvanceBailDataSchema = z.object({ activityID: z.string(), appendedHead: z.int() });
 
 const AdvanceCheckpointInvalidDataSchema = AdvanceBailDataSchema.extend({
@@ -55,12 +50,6 @@ const RevealedRewardSchema = z.object({
 });
 
 const PendingXPEntrySchema = z.object({ activityID: z.string(), xpDelta: z.number() });
-
-/**
- * The live activity's xp already on the settled row, so a client overlaying that run's own running
- * total subtracts what it would otherwise count twice. Absent while no activity is live, and from
- * a service deployed before the field existed — both read as nothing settled yet.
- */
 const ActiveXPEntrySchema = z.object({ activityID: z.string(), settledXP: z.int() });
 
 const AvatarProgressionSchema = z.object({
@@ -70,10 +59,6 @@ const AvatarProgressionSchema = z.object({
   xp: z.int(),
 });
 
-/**
- * One cell-coordinate axis value, bounded to the range a world-map cell coordinate packs into. An
- * axis outside it names a cell the map cannot address at all.
- */
 const CellAxisSchema = z.int().min(WORLD_COORD_MIN).max(WORLD_COORD_MAX);
 
 const ViewportSchema = z.object({
@@ -83,30 +68,9 @@ const ViewportSchema = z.object({
   minCY: CellAxisSchema,
 });
 
-/**
- * A revealed cell's disclosed content: expected-value-flat descriptor metadata only, never the raw
- * descriptor hash, salt, or drops. `poolID` is absent for a legacy content version that predates
- * sealed content.
- */
 const RevealedNodeSchema = z.object({ id: z.string(), poolID: z.string().optional() });
-
-/**
- * A seed chain's current append position: `nextSeed` is the seed a start anchoring here derives
- * its first checkpoint from, and `chainIndex` is that checkpoint's position in the seed chain.
- * Equal to `{ genesisSeed, 0 }` for a node never yet played; advances as the avatar plays the
- * node's seed chain further, so a revisited node's start anchors where play actually left off
- * rather than genesis.
- */
 const NodeGenesisAnchorSchema = z.object({ chainIndex: z.int().min(0), nextSeed: z.string() });
 
-/**
- * One node's freshly minted or previously minted genesis seed, alongside its derived encounter and
- * the content version it was derived against — `revealNodes`'s per-node output. `genesisSeed` is
- * the seed chain's origin seed, kept for reference; `anchor` is the position a start at this scope
- * must actually anchor against. `encounterNode` and `contentVersion` are the remaining inputs
- * `buildStartHash` needs to synthesize that start's hash offline, since the encounter is derived
- * against a specific content version.
- */
 const NodeGenesisSchema = z.object({
   anchor: NodeGenesisAnchorSchema,
   contentVersion: z.string(),
@@ -115,27 +79,14 @@ const NodeGenesisSchema = z.object({
   nodeID: z.string(),
 });
 
-/**
- * `revealNodes`'s avatar- and account-global crypto stamps: the key version its avatar's activity
- * starts stamp, and the scope-secret ref/version its encounter derivation reads — the same stamps
- * every node in the batch was derived against, carried once rather than repeated per node.
- */
 const RevealStampsSchema = z.object({
   keyVersion: z.int().min(1),
   secretRef: z.string(),
   secretVersion: z.int().min(1),
 });
 
-/**
- * Every addressable `first_clear` grant key the avatar holds, regardless of viewport — the
- * completed set a client's own selectable-node check evaluates against.
- */
 const CompletedNodeIDsSchema = z.array(z.string());
 
-/**
- * The activities service's API: every procedure is authed and owner-scoped through the caller's
- * avatars.
- */
 export const activityContract = {
   advanceActivity: authedRoute
     .route({
@@ -148,12 +99,6 @@ export const activityContract = {
         .object({
           activityID: z.string(),
 
-          /**
-           * A client-minted activity start the server has never seen — offline-first ingest.
-           * Present only when `activityID` names a row this request itself mints, before the
-           * continuation loop appends onto it. Absent for the ordinary case: `activityID` names a
-           * row the server already holds.
-           */
           activityStart: OfflineActivityStartSubmissionSchema.optional(),
 
           // Empty when the activity start carries the whole request: an ingest with no
@@ -268,10 +213,6 @@ export const activityContract = {
     .input(z.object({ avatarID: z.string() }))
     .output(AvatarProgressionSchema.nullable()),
 
-  /**
-   * Documents are immutable once published, so a fetched version never revalidates — the GET
-   * marks it retry-safe.
-   */
   getContentDocument: authedRoute
     .route({
       method: 'GET',
@@ -309,11 +250,6 @@ export const activityContract = {
         appendedHead: z.int(),
         failureAction: ActivityFailureActionSchema,
 
-        /**
-         * Whether the calling session may append to the activity's stream: it is the stamped
-         * writer, or no writer is stamped yet. `false` means another session owns the stream and
-         * an append would be rejected.
-         */
         isWriter: z.boolean(),
 
         serverTime: z.date(),
@@ -326,12 +262,6 @@ export const activityContract = {
       }),
     ),
 
-  /**
-   * The revealed region is a projection of the avatar's verified first-clear grants, never stored
-   * reveal state — recomputed fresh every call. `viewport` bounds what the response returns, never
-   * what the underlying discs make eligible to disclose: a cell inside the viewport but outside
-   * every disc is never in the response, regardless of viewport size.
-   */
   getRevealedNodes: authedRoute
     .route({
       method: 'GET',
@@ -382,17 +312,6 @@ export const activityContract = {
       }),
     ),
 
-  /**
-   * Mints (or re-affirms) the genesis chain row for each requested world-map node inside the
-   * avatar's revealed region, on the avatar's
-   * behalf, so a later activity start at the same scope has a chain to anchor against, and derives
-   * that node's encounter alongside the crypto stamps a start needs — every input a client
-   * synthesizes a valid activity start from without the server. Idempotent per node: a
-   * repeat reveal self-assigns the existing row's `genesisSeed` rather than rolling a new one, so
-   * the same node reveals to the same seed regardless of how many times or how many concurrent
-   * callers reveal it. A requested node outside the revealed region mints nothing and is absent
-   * from the response rather than rejecting the call.
-   */
   revealNodes: authedRoute
     .route({
       method: 'POST',
@@ -430,13 +349,6 @@ export const activityContract = {
     })
     .input(
       z.object({
-        /**
-         * Targets one specific row, making the call idempotent: stopping a row that already left
-         * `active` succeeds with that row as-is, and a row other than the targeted one is never
-         * touched — so a stop delivered late, or twice, from a durable client queue can neither
-         * fail spuriously nor kill a newer run. Without it, the call keeps its original meaning:
-         * stop whatever is active, `NOT_FOUND` when nothing is.
-         */
         activityID: z.string().optional(),
         avatarID: z.string(),
       }),

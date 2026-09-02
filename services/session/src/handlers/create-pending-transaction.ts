@@ -5,9 +5,6 @@ import { PENDING_TRANSACTION_TTL } from '../consts';
 import type { EmptyErrorPayload } from '../types';
 import { toPendingTransactionData } from './to-pending-transaction-data';
 
-/**
- * oRPC handler opts for the public `stepUp.createPendingTransaction` procedure.
- */
 interface CreatePendingTransactionOpts {
   readonly errors: {
     readonly CONFLICT: (payload: EmptyErrorPayload) => Error;
@@ -21,11 +18,6 @@ interface CreatePendingTransactionOpts {
   };
 }
 
-/**
- * Creates a pending step-up transaction under a caller-supplied id, throwing CONFLICT when that
- * id is already in use. An opportunistic sweep of expired rows runs first as its own statement —
- * correctness never depends on it running, or on it running before the insert below.
- */
 export async function createPendingTransaction(
   db: Kysely<DB>,
   opts: CreatePendingTransactionOpts,
@@ -56,9 +48,6 @@ export async function createPendingTransaction(
   }
 }
 
-/**
- * postgres.js surfaces a unique-constraint violation as SQLSTATE 23505.
- */
 function isUniqueViolation(error: unknown): boolean {
   return typeof error === 'object' && error !== null && 'code' in error && error.code === '23505';
 }

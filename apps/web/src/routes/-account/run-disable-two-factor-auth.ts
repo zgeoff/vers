@@ -6,10 +6,6 @@ import { userClient } from '../../lib/rpc/clients/user-client';
 import { verificationClient } from '../../lib/rpc/clients/verification-client';
 import type { DisableTwoFactorAuthResult } from './types';
 
-/**
- * Runs the account hub's disable-2FA action: a step-up gate (2FA is live by definition here),
- * then removing the account's `2fa` verification once cleared.
- */
 export async function runDisableTwoFactorAuth(
   formData: FormData,
 ): Promise<DisableTwoFactorAuthResult> {

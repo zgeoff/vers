@@ -1,9 +1,3 @@
-/**
- * Collects the skills a session transcript shows as loaded and still in context: every Skill tool
- * call after the last compaction boundary, or after the start when the transcript holds none.
- * A skill loaded before a compaction is summarized away with the rest of the context, so it does
- * not count.
- */
 export function collectLoadedSkills(transcript: string): ReadonlySet<string> {
   const lines = transcript.split('\n');
   const lastBoundary = lines.findLastIndex((line) => line.includes(COMPACT_BOUNDARY_MARKER));

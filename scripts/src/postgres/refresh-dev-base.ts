@@ -4,11 +4,6 @@ import { execa } from 'execa';
 import postgres from 'postgres';
 import { buildDevDSN } from './build-dev-dsn';
 
-/**
- * Rebuilds dev_base from nothing: forced drop, create, migrate, seed, then lock. Existing
- * per-worktree clones are untouched — they pick up new migrations on their next session. The
- * finished template refuses connections (like template0).
- */
 export async function refreshDevBase(maintenanceDSN: string, repoRoot: string): Promise<void> {
   const pg = postgres(maintenanceDSN, { max: 1 });
 

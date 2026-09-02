@@ -10,12 +10,6 @@ import { logger } from '../../server/logger';
 import { runVerification } from './run-verification';
 import { VerifyOTPFormSchema } from './verify-otp-form-schema';
 
-/**
- * Runs the verify-otp form's submission: honeypot then field validation, a code check, and the
- * matching verification type's continuation. Every declared error ends in the same form-level
- * message — there's only the one field to blame it on. A successful `change-email` verify replies
- * instead of redirecting, so its caller can report success without a server-issued navigation.
- */
 export async function verifyOTPHandler(formData: FormData): Promise<Response | SubmissionResult> {
   try {
     checkHoneypot(formData);

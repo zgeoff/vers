@@ -4,11 +4,6 @@ import type { Avatars, DB } from '@vers/db';
 import { createTestUser } from '@vers/service-test-utils/bun';
 import type { Insertable, Kysely, Selectable } from 'kysely';
 
-/**
- * Inserts an avatar row (and, when `userId` is omitted, an owning user) via kysely — the apply
- * primitives need a real avatar for the grant table's foreign key, and this service doesn't own
- * the avatar domain.
- */
 export async function createAvatarRow(
   db: Kysely<DB>,
   data: Readonly<Partial<Insertable<Avatars>>> = {},

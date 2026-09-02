@@ -11,9 +11,6 @@ import { workerContract } from './worker-contract';
 
 const ACK = { ok: true as const };
 
-/**
- * Implements the worker contract, closing every procedure over one runtime's context.
- */
 export function createWorkerRouter(context: WorkerContext, ready: Readonly<Promise<void>>) {
   const os = implement(workerContract).$context<WorkerCallContext>();
 

@@ -14,13 +14,6 @@ interface FindDescriptorDivergenceInput {
   readonly userSeed: number;
 }
 
-/**
- * Compares a segment's stamped, server-sealed node fields against the server's own
- * recomputation: difficulty from the activity's scope id alone, and every sealed content field
- * the content derivation yields for the activity's pinned content and a freshly read scope
- * secret. A scope id that no longer resolves to a coordinate is itself a divergence. Undefined
- * means no divergence found here.
- */
 export function findDescriptorDivergence(
   input: Readonly<FindDescriptorDivergenceInput>,
 ): Extract<CompareVerdict, { kind: 'divergence' }> | undefined {

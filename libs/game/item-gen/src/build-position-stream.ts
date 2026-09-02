@@ -7,11 +7,6 @@ import type { RollPosition } from './types';
 
 const POSITION_STREAM_DOMAIN = 'vers/roll-stream/position/v1';
 
-/**
- * Builds the keyed position stream: the keyed digest over the position's canonical bytes under the
- * avatar's roll key, expanded under a frozen domain label. Only a key holder can compute it, and
- * rebuilding from equal inputs reproduces the identical draw sequence.
- */
 export function buildPositionStream(avatarKey: Uint8Array, position: RollPosition): RollStream {
   invariant(avatarKey.length > 0, 'avatar key must not be empty');
 

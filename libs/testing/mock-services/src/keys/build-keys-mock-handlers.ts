@@ -4,9 +4,6 @@ import type { HttpHandler } from 'msw';
 import { resolveSessionContext } from '../resolve-session-context';
 import { keysRouter } from './keys-router';
 
-/**
- * Builds the MSW handlers backing the keys contract's mock backend at the given origin.
- */
 export function buildKeysMockHandlers(baseUrl: string): Array<HttpHandler> {
   return buildMockService({
     baseUrl,

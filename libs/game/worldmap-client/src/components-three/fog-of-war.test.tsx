@@ -68,10 +68,8 @@ test('it keeps one mesh and one material across pans so the shader never recompi
   await renderer.unmount();
 });
 
-/**
- * Duck-typed stand-in for `instanceof Mesh`: the test renderer constructs objects from a different
- * copy of three than this file imports, so an `instanceof` check never matches.
- */
+// duck-typed stand-in for `instanceof Mesh`: the test renderer constructs objects from a different
+// copy of three than this file imports, so `instanceof` never matches
 function isMesh(object: Object3D): object is Mesh {
   return 'isMesh' in object && object.isMesh === true;
 }

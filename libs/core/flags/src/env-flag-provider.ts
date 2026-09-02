@@ -3,12 +3,6 @@ import { ErrorCode, StandardResolutionReasons } from '@openfeature/server-sdk';
 import { isFlagKey } from './is-flag-key';
 import { toFlagEnvVar } from './to-flag-env-var';
 
-/**
- * OpenFeature provider serving flag values from `process.env`, read fresh on every evaluation, so
- * a long-lived process picks up a changed env without a restart and tests can override env
- * per-test. Boolean-only by design: the string/number/object resolvers always return the default,
- * since the flag registry declares no non-boolean flags.
- */
 export const envFlagProvider: Provider = {
   metadata: { name: 'env-flag-provider' },
 

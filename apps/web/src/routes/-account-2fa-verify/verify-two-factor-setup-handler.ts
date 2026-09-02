@@ -6,11 +6,6 @@ import { logger } from '../../server/logger';
 import type { VerifyTwoFactorSetupResult } from './types';
 import { VerifyTwoFactorSetupFormSchema } from './verify-two-factor-setup-form-schema';
 
-/**
- * Runs the 2FA-setup verify form's submission: a code check against the pending `2fa-setup`
- * verification, then flipping that same row's type to `2fa` on success — enabling it for the
- * account.
- */
 export async function verifyTwoFactorSetupHandler(
   formData: FormData,
 ): Promise<VerifyTwoFactorSetupResult> {

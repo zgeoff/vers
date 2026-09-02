@@ -16,19 +16,10 @@ const PROVIDER_MACHINE_FLAGS = [
   '--detach',
 ];
 
-/**
- * Container command a provider machine runs — the image's `CMD` starts the full-service `server`
- * binary, which a provider machine's narrowed env would fail to boot; this positional cleanly
- * replaces it with the provider-mode binary.
- */
+// the image's `CMD` starts the full-service `server` binary, which a provider machine's narrowed
+// env cannot boot; this positional replaces it with the provider-mode binary
 const PROVIDER_MACHINE_COMMAND = 'provider';
 
-/**
- * Runs the planner's actions against Fly and the shared database, in order —
- * the provider app before its flycast IP, the IP before the machine that
- * needs it, and the registry row last so it never points at an app that
- * doesn't exist yet.
- */
 export async function applySimVersionActions(
   actions: ReadonlyArray<SimVersionAction>,
 ): Promise<void> {

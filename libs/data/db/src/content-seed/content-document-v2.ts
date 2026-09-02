@@ -1,6 +1,3 @@
-/**
- * Frozen published content — a content change is a new published version, never an edit here.
- */
 export const contentDocumentV2 = {
   contentVersion: '2',
   encounter: {

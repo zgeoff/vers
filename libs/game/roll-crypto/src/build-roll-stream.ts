@@ -6,13 +6,6 @@ import type { RollStream, WeightedEntry } from './types';
 
 const BLOCK_SIZE = 32;
 
-/**
- * Builds a roll stream over a lazily unbounded byte tape: every draw derives from `(seed, domain)`
- * alone, with no limit on how many draws the stream can serve. The expansion layout and each draw's
- * byte consumption are frozen — changing either forks every consumer's outcomes; the exact
- * HKDF-SHA256 expansion formula is pinned by `build-roll-stream.test.ts`'s golden snapshots.
- * `pickWeighted` walks its entries in the order given — callers own deterministic entry ordering.
- */
 export function buildRollStream(seed: Uint8Array, domain: string): RollStream {
   // Snapshot the seed so a caller mutating its array cannot fork draws already promised.
   const ikm = Uint8Array.from(seed);

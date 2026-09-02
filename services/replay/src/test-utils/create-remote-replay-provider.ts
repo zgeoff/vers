@@ -9,11 +9,6 @@ interface RemoteReplayProvider {
   readonly url: string;
 }
 
-/**
- * Boots a second replay instance baked with a given engine hash, listening on an ephemeral port,
- * so a cross-version dispatch test has a real provider to round-trip against; stopped via
- * `onTestFinished`.
- */
 export async function createRemoteReplayProvider(
   engineHash: string,
 ): Promise<RemoteReplayProvider> {

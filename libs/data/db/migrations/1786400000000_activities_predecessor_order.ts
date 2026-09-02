@@ -1,13 +1,6 @@
 import { sql } from 'kysely';
 import type { Kysely } from 'kysely';
 
-/**
- * Adds `predecessor_activity_id`, a plain nullable reference to the avatar's immediately-prior
- * activity, and `played_at`, an advisory client-stamped timestamp. Both columns are unbackfilled.
- * The reference carries no foreign key: the replay claim treats a predecessor row that is absent
- * the same as one not yet settled, so it waits rather than rejecting, and a check keeps a row from
- * naming itself. Drops `activity_snapshot_sources`.
- */
 export async function up(db: Kysely<unknown>): Promise<void> {
   await db.schema
     .alterTable('activities')
@@ -32,10 +25,6 @@ export async function up(db: Kysely<unknown>): Promise<void> {
   await db.schema.dropTable('activity_snapshot_sources').execute();
 }
 
-/**
- * Recreates `activity_snapshot_sources`, then drops the predecessor-order columns; unbackfilled
- * forward, so a rollback recovers the table shape but not its rows.
- */
 export async function down(db: Kysely<unknown>): Promise<void> {
   await db.schema
     .createTable('activity_snapshot_sources')

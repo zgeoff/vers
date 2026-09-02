@@ -3,10 +3,6 @@ import { createId } from '@paralleldrive/cuid2';
 import { buildStateFromSeed } from '@vers/game-utils';
 import type { ReplaySegmentInput } from '../../replay-segment-input-schema';
 
-/**
- * A plain, unpersisted `replaySegment` request with faker-generated defaults, shaped like the
- * simplest world-map encounter the engine runs: one enemy, an unarmed avatar wielding no weapon.
- */
 export function createMockReplaySegmentInput(
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- a Partial of the mutable request seed, whose nested activity/avatar have no readonly form; spread into the returned seed, never mutated
   overrides: Partial<ReplaySegmentInput> = {},

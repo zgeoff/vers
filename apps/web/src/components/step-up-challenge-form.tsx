@@ -14,11 +14,6 @@ interface StepUpChallengeFormProps {
 
 const formStyles = css({ display: 'flex', flexDirection: 'column', gap: '4' });
 
-/**
- * The step-up gate's inline client island: every 2FA-gated mutation (change email, change
- * password, disable 2FA) renders this in place of its own form once its handler reports
- * `step-up-required`, and hands the resulting token back to resubmit the original mutation with.
- */
 export function StepUpChallengeForm(props: StepUpChallengeFormProps) {
   const verifyStepUpFn = useServerFn(verifyStepUp);
   const [formError, setFormError] = useState<string | null>(null);

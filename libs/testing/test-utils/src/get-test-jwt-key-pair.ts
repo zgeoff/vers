@@ -7,11 +7,6 @@ interface TestJWTKeyPair {
 
 let cached: Promise<TestJWTKeyPair> | undefined;
 
-/**
- * One RS256 keypair per test process: the preload publishes the private key as
- * `JWT_SIGNING_PRIVKEY`, and tests verify minted tokens against the public half. Bridges preload
- * and test setup through shared module state so both sides agree on the same keypair.
- */
 export function getTestJWTKeyPair(): Promise<TestJWTKeyPair> {
   cached ??= createTestJWTKeyPair();
 

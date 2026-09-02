@@ -10,11 +10,6 @@ const activityCompletedMessageSchema = z
   })
   .readonly();
 
-/**
- * The server has admitted the named activity's client-minted activity start, so the activity is
- * readable through the activity service from now on. Tabs act on this by enabling the reads they
- * hold back while an activity exists only on this device.
- */
 const activityStartIngestedMessageSchema = z
   .object({
     activityID: z.string(),
@@ -29,9 +24,6 @@ const simulationUpdateMessageSchema = z
   })
   .readonly();
 
-/**
- * One resync's lifecycle as tabs observe it, in the terms `run-resync-flow` broadcasts them.
- */
 const resyncStatusSchema = z.discriminatedUnion('kind', [
   z.object({ attempts: z.int(), kind: z.literal('done'), levelUps: z.int() }).readonly(),
   z.object({ attempts: z.int(), kind: z.literal('fast-forwarding'), levelUps: z.int() }).readonly(),
@@ -64,11 +56,6 @@ const failureActionStatusMessageSchema = z
   })
   .readonly();
 
-/**
- * The named activity's checkpoint stream is dead — nothing submitted past its confirmed head will
- * persist. Diagnostics go to the error backend from the worker; tabs act on this only by
- * discarding optimistic reward state for the activity.
- */
 const checkpointStreamInvalidMessageSchema = z
   .object({
     activityID: z.string(),
@@ -100,21 +87,12 @@ const writerDisplacedMessageSchema = z
   })
   .readonly();
 
-/**
- * Broadcast by an elected fallback writer the moment it is ready to serve, first election and
- * every succession alike; the SharedWorker path never emits it. Tabs respond by resetting their
- * handshake state and re-sending initialize and report-online, so a promoted writer that booted
- * with no session context receives it fresh.
- */
 const writerReadyMessageSchema = z
   .object({
     type: z.literal(WorkerMessageType.WriterReady),
   })
   .readonly();
 
-/**
- * Every message the worker may post to a connected tab across the shared-worker boundary.
- */
 export const workerToClientMessageSchema = z.discriminatedUnion('type', [
   activityCompletedMessageSchema,
   activityStartIngestedMessageSchema,

@@ -1,24 +1,15 @@
 import type { DB } from '@vers/db';
 import type { Kysely } from 'kysely';
 
-/**
- * A fixed, valid argon2id hash verified against on every miss so a missing user or unset password
- * takes the same time as a real check, never revealing which case occurred.
- */
+// verified against on every miss so an unknown email or unset password takes as long as a real
+// check; skipping the hash there would let response timing reveal which emails have accounts
 const DUMMY_HASH =
   '$argon2id$v=19$m=65536,t=2,p=1$HcnWDKgn0Ge+fMLfUNLxdQyZQP62cm11r4tp2hS9GwE$jcksXM4djDmS+FjzQVmKOHr/5+J1lvSh1lPjUesXBco';
 
-/**
- * oRPC handler opts for the `verifyPassword` procedure.
- */
 interface VerifyPasswordOpts {
   readonly input: { readonly email: string; readonly password: string };
 }
 
-/**
- * Checks a password against a user's stored hash; never throws for wrong credentials or an
- * unknown email, and rehashes a successfully verified legacy bcrypt hash to argon2id.
- */
 export async function verifyPassword(
   db: Kysely<DB>,
   opts: VerifyPasswordOpts,

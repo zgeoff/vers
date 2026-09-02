@@ -13,12 +13,6 @@ export interface OTLPLogStream {
   readonly write: (line: string) => void;
 }
 
-/**
- * Builds a pino destination that re-emits every line as an OpenTelemetry log record over OTLP.
- * The exporter reads the standard `OTEL_EXPORTER_OTLP_*` environment variables at construction
- * for its endpoint and headers, so callers gate on those being present. Records batch for up to a
- * second before export — a hard process kill can drop the final batch; `flush` forces a drain.
- */
 export function createOTLPLogStream(options: CreateOTLPLogStreamOptions): OTLPLogStream {
   const provider = new LoggerProvider({
     processors: [new BatchLogRecordProcessor({ exporter: new OTLPLogExporter() })],

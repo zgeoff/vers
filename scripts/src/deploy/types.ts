@@ -17,21 +17,9 @@ export interface DeployTarget {
   readonly probes?: ReadonlyArray<Probe>;
   readonly scheduledMachines?: ReadonlyArray<ScheduledMachine>;
 
-  /**
-   * Marks the target whose deploy the sim-version reconcile runs after —
-   * provisioning a per-version provider app and upserting the `sim_versions`
-   * registry row for the engine hash baked into its image. `region` is the
-   * Fly region a provider machine launches into.
-   */
   readonly simVersionProvider?: { readonly region: string };
 }
 
-/**
- * A `fly machine run --schedule` machine the deploy CLI reconciles on every
- * deploy of its app — created at the fleet's default sizing (shared-cpu-1x,
- * 256MB) when absent, and moved onto the app's just-deployed image when it
- * drifts.
- */
 export interface ScheduledMachine {
   readonly name: string;
   readonly command: ReadonlyArray<string>;
@@ -78,20 +66,12 @@ interface MachineCheck {
   readonly status: string;
 }
 
-/**
- * A scheduled machine as it currently exists on Fly, keyed by name for
- * matching against the manifest's declarations.
- */
 export interface ScheduledMachineState {
   readonly id: string;
   readonly name: string;
   readonly image: string;
 }
 
-/**
- * A stranded machine the sweep planner marked for destruction — `image` is null when flyctl
- * reported none, retained so the sweep's log names what it removed.
- */
 export interface MachineSweepTarget {
   readonly id: string;
   readonly image: string | null;
@@ -106,10 +86,6 @@ export interface ChangeSet {
   readonly changedPaths: ReadonlyArray<string>;
 }
 
-/**
- * The fully-resolved image every service machine in a fleet currently agrees
- * on — `repository` carries the registry host (`registry.fly.io/<repo>`).
- */
 export interface FleetImage {
   readonly repository: string;
   readonly tag: string;
@@ -130,13 +106,6 @@ export interface SimVersionActionInput {
   readonly registryRow: SimVersionRow | undefined;
 }
 
-/**
- * What already exists of a per-version provider app. `hasMachine` is false
- * whenever `exists` is — an app can outlive its machine (a partial provision
- * or a manual destroy), and a registry row must never point at one that has
- * nothing to wake. `machineID`/`machineImageDigest`/`machineRegion` are null
- * whenever `hasMachine` is.
- */
 export interface ProviderAppState {
   readonly exists: boolean;
   readonly hasMachine: boolean;
@@ -162,12 +131,6 @@ interface RunProviderMachineAction {
   readonly region: string;
 }
 
-/**
- * Replaces a provider machine whose image has drifted from the fleet's
- * resolved digest or whose region has drifted from the declared one —
- * `image` is always the fleet's tag ref, never its digest ref, matching
- * `RunProviderMachineAction`.
- */
 interface ReplaceProviderMachineAction {
   readonly kind: 'replace-provider-machine';
   readonly app: string;
@@ -188,10 +151,6 @@ export type SimVersionAction =
   | ReplaceProviderMachineAction
   | UpsertRegistryRowAction;
 
-/**
- * An IP address `flyctl ips list` reports for an app, narrowed to whether it's the private
- * flycast ingress or reachable from outside the mesh.
- */
 export interface AppIP {
   readonly address: string;
   readonly type: 'private' | 'public';

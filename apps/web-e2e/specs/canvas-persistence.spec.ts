@@ -1,11 +1,6 @@
 import { expect, test } from '../src/test';
 import { waitForHoneypotWindow } from '../src/wait-for-honeypot-window';
 
-/**
- * The `_game` layout mounts its canvas once and never remounts it across child-route navigation:
- * a client-side nav to another game route must leave the same `<canvas>` element in the DOM,
- * carrying whatever GPU state it already uploaded.
- */
 test('it keeps the same canvas element across client-side game navigation', async ({ page }) => {
   await page.setExtraHTTPHeaders({ 'x-forwarded-for': '127.0.0.1' });
   await page.goto('/login');

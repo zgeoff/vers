@@ -6,49 +6,21 @@ import type { ChunkRange } from './resolve-chunk-stream';
 import { collectCachedEntries, resolveChunkStream } from './resolve-chunk-stream';
 
 export interface UseChunkStreamOptions<TEntry> {
-  /**
-   * Builds one chunk's entry from the seed and its coordinate. Only ever called with the seed
-   * `userSeed` currently holds — a miss never reaches this while `userSeed` is `null`.
-   */
   readonly build: (userSeed: number, chunkX: number, chunkY: number) => TEntry;
 
   readonly cacheCapacity: number;
 
-  /**
-   * Releases an entry's resources. Called for an entry evicted past capacity, for every entry a
-   * seed change drops, and for every entry still cached when the hook unmounts.
-   */
   readonly dispose: (entry: TEntry) => void;
 
-  /**
-   * Reports one progressive-build tick's wall time and how many chunks it built, for the caller to
-   * fold into its own perf telemetry.
-   */
   readonly onBuildTick?: (buildMs: number, builtChunkCount: number) => void;
 
   readonly userSeed: number | null;
 
-  /**
-   * A chunk-aligned viewport — `buildChunkAlignedViewport`'s output, or `null` before one exists.
-   */
   readonly viewport: Viewport | null;
 }
 
-/**
- * Chunk builds allowed per animation frame. Bounding it to the single biggest build a frame can
- * absorb is what keeps a pan interruptible: a multi-chunk batch on one frame reintroduces the
- * synchronous stall this hook exists to remove, while still draining a large miss set within a
- * handful of frames.
- */
 const BUILDS_PER_TICK = 1;
 
-/**
- * Streams a chunk-keyed content layer over a chunk-aligned viewport: cached chunks resolve
- * instantly on every render, a bounded number of misses build per animation frame so a pan never
- * stalls, and the strip one chunk beyond the pan's leading edge prefetches ahead of the viewport
- * that will need it. `viewport` is wrapped in `useDeferredValue` here, once, so every layer this
- * hook drives gets an interruptible transition on a chunk-crossing pan without wrapping it itself.
- */
 export function useChunkStream<TEntry>(
   options: Readonly<UseChunkStreamOptions<TEntry>>,
 ): ReadonlyArray<TEntry> {

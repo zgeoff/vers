@@ -22,10 +22,6 @@ const chip = css({
   _hover: { borderColor: 'text.primary' },
 });
 
-/**
- * The rail's identity anchor: the active avatar opens the switcher, or an empty chip opens the
- * create sheet when the account has none.
- */
 export function AvatarChip() {
   const query = useQuery(buildActiveAvatarQueryOptions());
   const avatar = query.data;

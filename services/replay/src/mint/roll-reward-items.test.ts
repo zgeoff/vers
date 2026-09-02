@@ -8,11 +8,6 @@ import { deriveAvatarKey } from '@vers/roll-crypto';
 import { getTestServiceKeyPair } from '@vers/service-test-utils/bun';
 import { rollRewardItems } from './roll-reward-items';
 
-/**
- * Reproduces the mocked keys backend's own root formula (`@vers/mock-services/keys`), so the
- * expected content below is computed through the identical derivation the mint step dispatches
- * to.
- */
 function buildMockTradeRoot(keyVersion: number): Uint8Array {
   return sha256(utf8ToBytes(`vers-mock-root|trade|${keyVersion}`));
 }

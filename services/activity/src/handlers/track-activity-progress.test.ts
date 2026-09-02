@@ -18,11 +18,8 @@ import { buildRPCTestClient } from '@vers/test-utils';
 import { createActivityService } from '../create-activity-service';
 import { createMockCheckpointBatch } from '../test-utils/factories/create-mock-checkpoint-batch';
 
-/**
- * `trackActivityProgress` opens its own `db.transaction()` for the head-row compare-and-swap, which can't nest
- * under the default rollback-on-dispose isolation — this suite runs against a real, committed
- * schema clone instead.
- */
+// the handler under test opens its own interactive transaction, which the default
+// transaction-isolation handle can't nest — this suite runs against a real, committed schema clone
 async function setupTest(config: { readonly simTimeCapMs?: number } = {}) {
   const db = await createTestDB({ isolation: 'schema' });
 

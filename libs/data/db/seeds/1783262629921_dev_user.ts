@@ -1,11 +1,8 @@
 import type { Kysely } from 'kysely';
 import type { DB } from '../src/schema.generated';
 
-/**
- * Seeds a dev user for local development. Runs on every `kysely seed run`
- * invocation — kysely-ctl has no seed bookkeeping — so this is idempotent
- * via `ON CONFLICT DO NOTHING`.
- */
+// kysely-ctl has no seed bookkeeping, so this runs on every seed invocation and stays idempotent
+// through the conflict clause
 export async function seed(db: Kysely<DB>): Promise<void> {
   await db
     .insertInto('users')

@@ -2,10 +2,6 @@ import type { Trigger } from './types';
 
 const TRIGGER_PATTERN = /^trigger:\s+(?<kind>release|date)\s+(?<rest>.+)$/m;
 
-/**
- * Reads the machine-readable trigger line an upkeep issue carries in its body:
- * `trigger: release <pkg> ><version>` or `trigger: date <YYYY-MM-DD>`.
- */
 export function parseTrigger(body: string): Trigger | null {
   const match = TRIGGER_PATTERN.exec(body);
 

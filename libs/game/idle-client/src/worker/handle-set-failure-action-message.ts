@@ -14,14 +14,6 @@ interface SetFailureActionOutput {
   readonly failureAction: ActivityFailureAction;
 }
 
-/**
- * Applies a tab's failure-action change and answers with the applied value. Every connection
- * hears the effective value through the broadcast — the caller's own tab included, since the
- * broadcast is the only echo it gets. The push to the server is single-flight per worker: a
- * change arriving while a push runs coalesces onto it, so an older push's acknowledgement can
- * never clear the dirty flag or cache a value already superseded. Delivery is best-effort — a
- * connectivity failure leaves the cache dirty for the next resync's reconcile to retry.
- */
 export async function handleSetFailureActionMessage(
   context: WorkerContext,
   input: Readonly<SetFailureActionInput>,

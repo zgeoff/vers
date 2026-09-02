@@ -20,16 +20,11 @@ interface EmailData {
   plainText: string;
 }
 
-/**
- * Renders an email component to its deliverable html and plain-text forms, matching the doctype and
- * plain-text selectors `@react-email/render` produces so delivered emails read the same either way.
- */
 // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- config wraps a React element tree (mutable props); no deep-readonly form
 export function renderEmail(config: EmailConfig): EmailData {
-  // Renders through react-dom directly rather than `@react-email/render`: that package cannot run
-  // inside a `bun build --compile` binary (the bundler initializes its module body before the react
-  // binding it closes over exists, so the first render throws), and the compiled service binaries
-  // are exactly where this runs.
+  // renders through react-dom directly, with the doctype and plain-text selectors copied from
+  // `@react-email/render`: that package cannot run inside a `bun build --compile` binary, since its
+  // module body runs before the react binding it closes over exists and the first render throws.
   const markup = renderToStaticMarkup(config.component);
 
   return {

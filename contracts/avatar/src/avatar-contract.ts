@@ -12,9 +12,6 @@ const SwitchLockedDataSchema = z.object({
   owningAvatarName: z.string(),
 });
 
-/**
- * The avatar service's API: every procedure is authed and owner-scoped by `actingUserID`.
- */
 export const avatarContract = {
   createAvatar: authedRoute
     .route({ method: 'POST', path: '/avatars', summary: 'Create an avatar for the caller' })
@@ -77,10 +74,6 @@ export const avatarContract = {
       }),
     ),
 
-  /**
-   * `name` is the only user-editable field by design: `level`/`xp` are server-owned progression.
-   * The input shape is intentionally minimal — do not widen it.
-   */
   updateAvatar: authedRoute
     .route({
       method: 'PATCH',

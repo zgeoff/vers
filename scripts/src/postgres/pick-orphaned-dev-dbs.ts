@@ -7,11 +7,6 @@ interface OrphanScan {
   machine: string;
 }
 
-/**
- * Databases carrying this machine's prefix whose branch no longer exists
- * locally. Other machines' databases and dev_base never match the prefix, so
- * a sweep can only ever drop what the local machine created.
- */
 export function pickOrphanedDevDBs(scan: Readonly<OrphanScan>): Array<string> {
   const prefix = buildDevDBPrefix(scan.machine);
 

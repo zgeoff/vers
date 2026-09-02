@@ -10,11 +10,6 @@ interface LogoutOptions {
   readonly redirectTo?: string;
 }
 
-/**
- * Ends the caller's session: best-effort deletes it server-side, always clears the `en_session`
- * cookie, then redirects. A failed server-side delete never blocks sign-out — the cookie clear is
- * what actually signs the caller out of this app.
- */
 export async function runLogout(options: LogoutOptions = {}): Promise<never> {
   const session = await getAuthSession();
 

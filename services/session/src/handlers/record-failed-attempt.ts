@@ -5,9 +5,6 @@ import { MAX_TRANSACTION_ATTEMPTS } from '../consts';
 import { recordFailedAttempt as recordFailedAttemptMetric } from '../metrics/record-failed-attempt';
 import type { EmptyErrorPayload } from '../types';
 
-/**
- * oRPC handler opts for the public `stepUp.recordFailedAttempt` procedure.
- */
 interface RecordFailedAttemptOpts {
   readonly errors: {
     readonly NOT_FOUND: (payload: EmptyErrorPayload) => Error;
@@ -15,10 +12,6 @@ interface RecordFailedAttemptOpts {
   readonly input: { readonly id: string };
 }
 
-/**
- * Records a failed step-up verification attempt — called only after a failed verification, never
- * before one, so a pre-verify tracking call can't purge attempts ahead of the real check.
- */
 export async function recordFailedAttempt(
   db: Kysely<DB>,
   opts: RecordFailedAttemptOpts,
@@ -61,9 +54,6 @@ export async function recordFailedAttempt(
   throw opts.errors.NOT_FOUND({ data: {} });
 }
 
-/**
- * Deletes the pending transaction if it has reached the second-to-last allowed attempt.
- */
 async function removeIfAtCap(db: Kysely<DB>, id: string): Promise<boolean> {
   const result = await db
     .deleteFrom('pendingTransactions')

@@ -3,10 +3,6 @@ import { SceneRoot } from './scene-root';
 import { useAvatarRegionGraph } from './use-avatar-region-graph';
 import { useSeedPrefetch } from './use-seed-prefetch';
 
-/**
- * The persistent canvas's world content: dynamically imported through `GameCanvasMount`'s
- * code-split boundary so three.js and the generated region never land in the initial bundle.
- */
 export function GameWorld() {
   const revealedNodeIDs = useAvatarRegionGraph();
 

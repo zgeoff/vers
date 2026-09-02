@@ -446,10 +446,11 @@
     },
     {
       "files": ["**/schema.generated.ts"],
-      // kysely-codegen column overrides emit inline `import()` type annotations; the file is
-      // generated, so the style rule has nothing to teach it
+      // kysely-codegen emits inline `import()` type annotations and a JSDoc header; the file is
+      // generated, so the style rules have nothing to teach it
       "rules": {
-        "typescript/consistent-type-imports": "off"
+        "typescript/consistent-type-imports": "off",
+        "zgeoff/no-jsdoc": "off"
       }
     },
     {

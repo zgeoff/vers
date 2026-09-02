@@ -5,14 +5,6 @@ import { readActivityStart } from './read-activity-start';
 import { removeActivityStart } from './remove-activity-start';
 import type { ActivityServiceClient } from './types';
 
-/**
- * `ingestActivityStart`'s settled outcome: `ingested` when the server admitted the activity start and
- * this device's durable row is gone; `deferred` when the server answered but said nothing about the
- * activity start's own validity — a session lapse, a temporarily inactive avatar — and the row stays
- * for a later retry; `undelivered` when the service never answered at all, which the row also
- * survives; `rejected` when the server refused the activity start outright and the row is gone;
- * `absent` when this device held no pending activity start for the activity id at all.
- */
 export type IngestActivityStartOutcome =
   | 'absent'
   | 'deferred'
@@ -20,53 +12,21 @@ export type IngestActivityStartOutcome =
   | 'rejected'
   | 'undelivered';
 
-/**
- * A refusal the player must be told about, carried out alongside the disposition it earned: the
- * account switched active avatars while this device held the activity start, or the service
- * confirmed this build's engine no longer replays the current content. Absent for every other
- * answer, including the refusals a later retry can clear on its own.
- */
 export type IngestActivityStartNotice =
   | { readonly activeAvatarName: string; readonly kind: 'avatar-switched' }
   | { readonly kind: 'sim-version-expired' };
 
-/**
- * One ingest's disposition, plus the player-facing notice it owes when the server refused on
- * grounds a player can act on.
- */
 export interface IngestActivityStartResult {
   readonly notice?: IngestActivityStartNotice;
   readonly outcome: IngestActivityStartOutcome;
 }
 
-/**
- * A defined `advanceActivity` error naming the activity start permanently invalid — a scope that
- * resolves to no node, or a seed chain that was never revealed. A sim version past retention is
- * equally permanent but answered separately, since it owes the player a notice as well. The
- * server will refuse it under any order, so the pending row is dropped along with the checkpoints
- * that would have chained onto it. The order-sensitive refusals — `CONFLICT` (the predecessor's
- * terminal has not advanced the seed chain's anchor yet), `SIM_VERSION_UNKNOWN` (a version
- * registration this deploy has not caught up to), and `CHAIN_QUARANTINED` (an operator hold) — are
- * absent here on purpose: each resolves once the predecessor lands or the hold clears, so the row
- * defers and retries rather than dropping honest progress. `CHECKPOINT_INVALID` is absent for a
- * different reason: some of its reasons drop the row and some defer it, so each reason carries its
- * own disposition.
- */
 const REJECTED_CODES: ReadonlySet<string> = new Set([
   'NODE_NOT_REVEALED',
   'NODE_UNKNOWN',
   'NOT_FOUND',
 ]);
 
-/**
- * What a start ingest does with each `CHECKPOINT_INVALID` reason: keep the durable row for a later
- * retry, or drop it. A permanent reason drops the row, since retrying only resubmits the same
- * refusal. A deferral assumes the caller's earlier runs still reach the server, so a row whose
- * simulation genuinely diverged from the server's retries for the life of the store.
- *
- * The map covers every member of the contract's reason enum. Adding a member there breaks this
- * map's type until the new member gets a disposition.
- */
 const CHECKPOINT_INVALID_DISPOSITIONS: Readonly<
   Record<AdvanceCheckpointInvalidReason, 'deferred' | 'rejected'>
 > = {
@@ -84,14 +44,6 @@ const CHECKPOINT_INVALID_DISPOSITIONS: Readonly<
   'time-regression': 'rejected',
 };
 
-/**
- * Submits one device's client-minted activity start into the server through `advanceActivity`'s
- * offline-first ingest, an empty `continuations` batch minting the row alone and appending nothing.
- * Removes the durable `pending-activity-starts` row once the server has answered definitively —
- * accepted or refused — and keeps it untouched on anything that says nothing about the activity
- * start's own validity, so a later retry gets another chance. Two refusals also carry a notice for
- * the player: the account switched active avatars, and this build's engine is past retention.
- */
 export async function ingestActivityStart(
   client: Pick<ActivityServiceClient, 'advanceActivity'>,
   activityID: string,

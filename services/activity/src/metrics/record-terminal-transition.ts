@@ -2,11 +2,6 @@ import { metrics } from '@opentelemetry/api';
 
 export type TerminalTransitionStatus = 'capped' | 'stopped';
 
-/**
- * Counts one activity that claimed a terminal transition, split by status: `stopped` covers a
- * completed or failed last checkpoint, `capped` covers a batch rejected whole because it exceeded
- * the avatar's accrued simulated-time budget.
- */
 export function recordTerminalTransition(status: TerminalTransitionStatus): void {
   // resolved through the global metrics API on every call — the SDK returns the same instrument
   // for an identical registration, and resolving late keeps the counter bound to whichever meter

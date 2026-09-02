@@ -4,11 +4,6 @@ import { createId } from '@paralleldrive/cuid2';
 import { UserDataSchema } from '@vers/contract-user';
 import * as z from 'zod';
 
-/**
- * A stored mock user row: the public `UserDataSchema` plus the mock backend's own password check
- * and its password-reset token state. Every field defaults, so tests state only the fields they
- * assert on.
- */
 export const UserRowSchema = UserDataSchema.extend({
   createdAt: z.date().default(() => new Date()),
   email: z.string().default(() => faker.internet.email()),

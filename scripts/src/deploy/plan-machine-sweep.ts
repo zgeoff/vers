@@ -6,17 +6,6 @@ export type MachineSweepPlan =
   | { readonly kind: 'sweep'; readonly machines: ReadonlyArray<MachineSweepTarget> }
   | { readonly kind: 'ambiguous'; readonly reason: string };
 
-/**
- * Decides whether a fleet carries stranded machines from an aborted bluegreen rollout. Groups
- * service machines by normalized image; a single image group (or none) is clean. A machine whose
- * image flyctl did not report sits in its own null-keyed group and, once more than one group
- * exists, makes the fleet ambiguous rather than a candidate to keep or destroy — a missing image
- * is never evidence either way. Otherwise, multiple groups pick a keep group by the recorded
- * release's git SHA, falling back to the one image group with a healthy started machine when the
- * SHA doesn't resolve it uniquely. A keep group chosen by either rule that still leaves a started
- * machine outside it is reported ambiguous rather than swept — a started machine is never a
- * destroy target.
- */
 export function planMachineSweep(
   machines: ReadonlyArray<AppMachine>,
   recordedRelease: { readonly gitSHA: string } | null,
@@ -84,10 +73,6 @@ interface AmbiguousResult {
   readonly reason: string;
 }
 
-/**
- * Reports ambiguous when the null-keyed group exists — machines whose image flyctl did not
- * report never count as evidence for keeping or destroying anything.
- */
 function findUnknownImageAmbiguity(
   groups: ReadonlyMap<string | null, ReadonlyArray<AppMachine>>,
 ): AmbiguousResult | null {

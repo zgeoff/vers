@@ -26,11 +26,6 @@ interface SetupTestConfig {
   readonly userID: string;
 }
 
-/**
- * Builds an authed client acting as the given user, so
- * continuation starts hit the same conflict/mint logic the real service applies to the rows the
- * test seeds in the mock db.
- */
 async function setupTest(config: Readonly<SetupTestConfig>) {
   const client = await createAuthedServiceClient<ActivityServiceClient>('activity', config.userID);
 

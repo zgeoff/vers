@@ -1,12 +1,6 @@
 import type { IDBPDatabase } from 'idb';
 import { openDB } from 'idb';
 
-/**
- * Mirrors the idle worker's private IndexedDB identity (its `resolve-checkpoint-queue-db` in
- * `@vers/idle-client`): the database name and version. The worker exposes no cross-package write
- * path for a continuation-start intent, so a test seeding one opens the same database directly. A
- * drift from the worker's real values fails the seeded-intent read test loudly.
- */
 const IDLE_CHECKPOINT_DB_NAME = 'vers-idle-checkpoint-queue';
 const IDLE_CHECKPOINT_DB_VERSION = 7;
 
@@ -28,10 +22,6 @@ interface IdleCheckpointDBSchema {
     value: unknown;
   };
 
-  /**
-   * The store name an older database version held the activity-start outbox under, declared only
-   * so the upgrade can name the store it deletes.
-   */
   'pending-roots': {
     key: string;
     value: unknown;
@@ -44,12 +34,6 @@ interface IdleCheckpointDBSchema {
 
 let idleCheckpointDB: IDBPDatabase<IdleCheckpointDBSchema> | null = null;
 
-/**
- * Opens the idle worker's durable IndexedDB database under its real name, version, and store
- * layout, so a record this seeds lands where the worker's own read of it looks. Store names are
- * checked against the schema at each call, so a mistyped store fails typecheck rather than
- * drifting.
- */
 export async function resolveIdleCheckpointDB(): Promise<IDBPDatabase<IdleCheckpointDBSchema>> {
   idleCheckpointDB ??= await openDB<IdleCheckpointDBSchema>(
     IDLE_CHECKPOINT_DB_NAME,

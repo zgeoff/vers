@@ -10,13 +10,6 @@ import { ActivityFailureAction } from './types';
 import { isCompletedCheckpoint } from './utils/is-completed-checkpoint';
 import { isFailedCheckpoint } from './utils/is-failed-checkpoint';
 
-/**
- * Macro benchmarks for the two engine consumers: the listener-free driver every replay path runs
- * (verifier, reconstruction, fast-forward) and the live worker loop with an `updated` listener
- * attached. Run `bun run bench` from this package on an idle machine and paste before/after
- * numbers into any PR that touches the tick path. One simulated hour is 72,000 engine ticks.
- */
-
 const SIMULATED_HOUR_MS = 3_600_000;
 
 const SOURCE: SimulationInputSource = {

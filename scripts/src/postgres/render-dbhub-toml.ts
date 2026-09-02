@@ -4,13 +4,6 @@ interface DBHubTOMLConfig {
   prodDSN: string;
 }
 
-/**
- * Both sources are lazy, so a session that never queries postgres never opens
- * a connection and Neon compute stays suspended; the dev source's
- * init_command provisions its database on first use. With two sources, dbhub
- * exposes the tools per source as execute_sql_prod / execute_sql_dev /
- * search_objects_prod / search_objects_dev.
- */
 export function renderDBHubTOML(config: Readonly<DBHubTOMLConfig>): string {
   return `[[sources]]
 id = "prod"

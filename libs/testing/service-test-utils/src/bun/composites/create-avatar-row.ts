@@ -6,10 +6,6 @@ interface CreateAvatarRowData extends Partial<Insertable<Avatars>> {
   readonly userId: string;
 }
 
-/**
- * Seeds an avatar owned by the given user. A cross-tenant fixture is the same composite called
- * with a different `userId`.
- */
 export function createAvatarRow(
   db: Kysely<DB>,
   data: Readonly<CreateAvatarRowData>,

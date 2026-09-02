@@ -34,15 +34,6 @@ type MachineRecord = z.infer<typeof machineSchema>;
 
 const machinesSchema = z.array(machineSchema);
 
-/**
- * Parses `flyctl machines list --json` output into the fleet view the deploy
- * pipeline reasons about. A scheduled machine (`config.schedule` set) is
- * never a service machine, regardless of its process-group metadata — it
- * carries neither, since it's created by `fly machine run --schedule` rather
- * than `fly deploy`. `deployedSHA` and `serviceImage` are the `GIT_SHA` env
- * and image every service machine agrees on — a mixed or absent value yields
- * null, which downstream treats as "unknown, assume stale".
- */
 export function parseAppState(json: unknown): AppState {
   const records = machinesSchema.parse(json);
   const serviceRecords = records.filter((machine) => isServiceMachine(machine));
@@ -71,12 +62,8 @@ export function parseAppState(json: unknown): AppState {
   };
 }
 
-/**
- * `flyctl deploy` records a machine's image as a bare tag, while
- * `flyctl machine run`/`update` store the same release with its resolved
- * `@sha256:…` digest appended — so images compare with the digest stripped,
- * or a reconciled scheduled machine would read as drifted forever.
- */
+// `flyctl deploy` records a machine's image as a bare tag, while `flyctl machine run`/`update`
+// append the resolved `@sha256:…` digest, so images compare with the digest stripped
 function normalizeImage(image: string | undefined): string | null {
   if (image === undefined) {
     return null;

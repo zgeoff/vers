@@ -276,10 +276,6 @@ test('it rejects a garbage token string', async () => {
   expect(resolution).toStrictEqual({ failure: 'invalid-service-token' });
 });
 
-/**
- * Registers each public key under its issuer's `kid` through the same JSON round-trip production
- * key sets load from.
- */
 async function buildKeySet(
   entries: ReadonlyArray<readonly [string, CryptoKey]>,
 ): Promise<ServiceKeySet> {

@@ -9,11 +9,6 @@ interface UpdateVerifiedChainAnchorInput {
   readonly scopeType: string;
 }
 
-/**
- * Advances a chain row's verified anchor to `chainIndex`/`nextSeed` in a single statement, guarded
- * forward-only by a compare-and-swap on the chain's own `verifiedChainIndex` — a stale or duplicate
- * call moves nothing.
- */
 export async function updateVerifiedChainAnchor(
   trx: Kysely<DB>,
   input: Readonly<UpdateVerifiedChainAnchorInput>,

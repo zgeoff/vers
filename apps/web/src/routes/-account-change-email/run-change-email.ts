@@ -9,13 +9,6 @@ import { verificationClient } from '../../lib/rpc/clients/verification-client';
 import { ChangeEmailFormSchema } from './change-email-form-schema';
 import type { ChangeEmailResult } from './types';
 
-/**
- * Runs the change-email form's submission: field validation, then a step-up gate for a
- * 2FA-enabled caller. Once cleared (immediately, or via a step-up-token resubmission), a
- * `change-email`-typed verification code is created for the new address, a verification email is
- * sent to it, and the caller is sent to the shared verify-otp hub to confirm ownership before the
- * address is actually applied.
- */
 export async function runChangeEmail(formData: FormData): Promise<ChangeEmailResult> {
   await requireAuth();
 

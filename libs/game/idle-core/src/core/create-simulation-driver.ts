@@ -14,15 +14,6 @@ import { isStartedCheckpoint } from '../utils/is-started-checkpoint';
 import { createSimulation } from './create-simulation';
 import { SIMULATION_TIMESTEP_MS } from './simulation-timestep-ms';
 
-/**
- * Starts one live simulation on `(activity, avatar)` and returns a driver that advances it in
- * `SIMULATION_TIMESTEP_MS` steps, capturing every checkpoint the engine emits along the way —
- * including a `Failed` retry's or a `Completed` clear's restart, so a multi-wave, multi-attempt
- * stream keeps flowing across calls exactly as it would in one call. A checkpoint whose tick
- * carries `elapsed` past `duration` is still returned to the caller — advancing never discards a
- * checkpoint the underlying generator already produced, so a stream replayed in several calls
- * loses nothing a one-shot call would have kept.
- */
 export function createSimulationDriver(
   activity: ActivityInput,
   avatarData: AvatarData,

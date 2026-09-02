@@ -2,10 +2,6 @@ import { faker } from '@faker-js/faker';
 import type { ActivityStartedCheckpoint } from '@vers/idle-core';
 import { ActivityCheckpointType } from '@vers/idle-core';
 
-/**
- * `Started` consumes nothing from the seed chain, so `nextSeed` defaults to the same value as
- * `seed`.
- */
 export function createMockStartedCheckpoint(
   overrides: Partial<ActivityStartedCheckpoint> = {},
 ): ActivityStartedCheckpoint {

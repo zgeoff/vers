@@ -1,10 +1,5 @@
 import invariant from 'tiny-invariant';
 
-/**
- * Recovers the chunk coordinate `buildChunkKey` encoded. The cache never mints a key any other
- * way, so a key that fails to parse back into two integers can only mean the cache holds a key this
- * module didn't write.
- */
 export function parseChunkKey(key: string): readonly [chunkX: number, chunkY: number] {
   const parts = key.split('_');
   const [rawX, rawY] = parts;

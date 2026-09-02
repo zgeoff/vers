@@ -3,10 +3,6 @@ import type { EnemySnapshot } from '@vers/idle-core';
 import { css, cx } from '@vers/styled-system/css';
 import { SwingBar } from './swing-bar';
 
-/**
- * Enemy rarity has no backing state yet, so every hostile reads as Normal — and takes the grey
- * Normal tint of the shared rarity ramp — until the combat model carries a tier.
- */
 const STUB_RARITY = 'normal' as const;
 
 const plate = css({
@@ -72,10 +68,6 @@ interface EnemyUnitPlateProps {
   readonly enemy: EnemySnapshot;
 }
 
-/**
- * One hostile's frame in the encounter row: crest, identity, life, and its swing timer. A defeated
- * enemy dims and shows a spent marker while it lingers in the lineup.
- */
 export function EnemyUnitPlate(props: Readonly<EnemyUnitPlateProps>) {
   const lastAttackTime = props.enemy.behaviours.enemy_primary_attack?.lastAttackTime ?? 0;
 

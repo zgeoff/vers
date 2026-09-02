@@ -3,13 +3,8 @@ import { isDefinedError, safe } from '@orpc/client';
 import * as db from '@vers/mock-services/db';
 import { userClient } from './user-client';
 
-/**
- * `createIsomorphicFn`'s uncompiled fallback (this package's own bun-test run, with no Start
- * compiler pass) always resolves to the `.server()` branch — the same client instance the app
- * renders with in production. These tests prove the client-lane consumption path (typed call,
- * explicit `actingUserID` context, typed error unwrap) against the stateful mock backend for the
- * same contract the browser branch talks to through the `/api/rpc/$service` proxy.
- */
+// `createIsomorphicFn`'s uncompiled fallback, which `bun test` runs with no Start compiler pass,
+// always resolves to the `.server()` branch
 test('it reads getCurrentUser through the isomorphic client against a mocked service', async () => {
   const user = await db.userCollection.create({
     email: 'clients-test@vers.test',

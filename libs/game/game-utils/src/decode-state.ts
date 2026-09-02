@@ -5,11 +5,6 @@ const STATE_ALL_ZERO = '0'.repeat(32);
 const STATE_WORD_COUNT = 4;
 const STATE_WORD_HEX_CHARS = 8;
 
-/**
- * Decodes a 32-character hex string into the four 32-bit words xoroshiro128+ carries as state.
- * Round-trips `encodeState` exactly — word order is preserved, never interpreted. Throws on a
- * malformed string or the all-zero state, xoroshiro128+'s degenerate fixed point.
- */
 export function decodeState(hex: string): Array<number> {
   invariant(STATE_HEX_PATTERN.test(hex), 'rng state must be a 32-character lowercase hex string');
 

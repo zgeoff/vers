@@ -17,34 +17,15 @@ interface ApplyVerifiedSegmentInput {
   readonly activityID: string;
   readonly avatarID: string;
 
-  /**
-   * Advances the chain row's verified anchor alongside the cursor, for a segment that ends an
-   * adjudicated activity. Guarded forward-only — a stale advance moves nothing.
-   */
   readonly chain?: ChainAdvance;
   readonly expectedVerifiedHead: number;
   readonly grants?: ReadonlyArray<GrantOnce>;
 
-  /**
-   * Rolled reward content minted for this segment's verified reward facts. Inserted with
-   * `ON CONFLICT DO NOTHING`, keyed on the coordinate, so a re-verification of an already-applied
-   * segment never duplicates or re-rolls a row.
-   */
   readonly items?: ReadonlyArray<MintedItem>;
 
-  /**
-   * The activity's xp total through the new verified head, written in the cursor's own guarded
-   * update so the two can never disagree. It records what the settlement intended: the identity
-   * write floors at zero, so a debit larger than the avatar's settled total lands smaller than
-   * this.
-   */
   readonly settledXP: number;
   readonly verifiedHead: number;
 
-  /**
-   * Signed delta added to the avatar's xp (`xp = xp + delta`, floored at zero) — never an absolute
-   * value, so a concurrent grant is never overwritten.
-   */
   readonly xpDelta?: number;
 }
 
@@ -52,17 +33,6 @@ type ApplyVerifiedSegmentResult =
   | { readonly applied: false }
   | { readonly applied: true; readonly granted: ReadonlyArray<GrantOnce> };
 
-/**
- * Applies one replayed segment's verified outcome exactly once. The cursor guard is the whole
- * mechanism: `verified_head` advances only if it still holds the expected value, and every other
- * write — the identity delta, the chain-anchor advance, the grant-once inserts — commits in the
- * same local transaction behind it, so a duplicate or crashed-and-retried apply either lands whole
- * or not at all (`applied: false`, nothing to roll back). One-shot grants insert with
- * `ON CONFLICT DO NOTHING`; `granted` reports which of them actually landed, so a first-clear
- * bonus attaches only on the apply that won the insert. A successful apply resets the poison-pill
- * attempt counter. Runs inside the caller's transaction when given one (composing with a held
- * chain claim), or opens its own otherwise.
- */
 export function applyVerifiedSegment(
   db: Kysely<DB>,
   input: Readonly<ApplyVerifiedSegmentInput>,

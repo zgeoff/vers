@@ -1,11 +1,6 @@
 import type { Kysely } from 'kysely';
 import { sql } from 'kysely';
 
-/**
- * Creates the `sessions` table, one row per authenticated session, tracking
- * refresh-token rotation state (`refresh_token`/`previous_refresh_token`)
- * and step-up verification (`verified`).
- */
 export async function up(db: Kysely<unknown>): Promise<void> {
   await db.schema
     .createTable('sessions')

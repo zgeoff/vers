@@ -21,15 +21,6 @@ import { submitStopIntent } from './submit-stop-intent';
 import type { FlowSignals, StartActivityInput, StopActivityInput, WorkerContext } from './types';
 import type { StartStatus } from './worker-contract';
 
-/**
- * A flow request accepted into the actor's queue. A resync's `signals` are captured the instant
- * the request is accepted, not when its turn to run arrives, so a stop or shutdown raised while it
- * waits still cancels its installs and in-flight reads once it does run; a start or continuation
- * instead captures its signals when its flow begins, so a stop scope advanced while it waited never
- * pre-aborts a run the player asked for afterward. A resync's `carryOverDeferreds` accumulates the
- * deferred of every earlier caller a chain of held claims displaced — each settles once the requeued
- * claim that superseded it finally does.
- */
 type PendingFlowRequest =
   | {
       readonly kind: 'start';
@@ -192,35 +183,6 @@ const runEvictionActor = fromPromise<
   }),
 );
 
-/**
- * The worker's lifecycle owner: a start, a resync, a continuation, and an eviction settlement each
- * run as one flow at a time through `context.pending`, a FIFO queue of accepted requests. A
- * resync's cancellation signals are captured the instant its request is accepted — never at the
- * instant its turn to run arrives — so a stop or shutdown raised while it waits its slot still
- * cancels the installs and in-flight reads its eventual run performs; a start or continuation
- * captures its signals when its flow begins instead, so a stop scope advanced while it waited never
- * pre-aborts it. A flow's own body never rejects; an escaping error reports as a fault under the
- * request's site and the queue still advances. Only a public entry point sends an event — an inner
- * sub-flow one flow's own body needs (a continuation's conflict recovery, a blocked start-intent
- * retry) runs directly, within that flow's own active turn, since queueing it behind itself would
- * deadlock.
- *
- * A resync additionally coalesces: a non-claiming request arriving while `resyncTicket` is set —
- * covering both an active run and one still waiting its queue slot — is dropped, since the run
- * already resyncs against the freshest server state a retry could see. A claiming request in that
- * window is held one deep instead, latest avatar winning, and its own caller resolves immediately;
- * once the in-flight resync settles, the held claim requeues onto the tail of `context.pending`
- * with fresh signals and a fresh deferred, preserving the arrival order of whatever else queued
- * behind the in-flight run, and the original caller's own promise settles only once that requeued
- * run does too.
- *
- * A stop is handled in every state: a live activity naming a different id is a no-op, otherwise the
- * local halt (advancing the stop scope, stopping and resetting the simulation, broadcasting the
- * cleared snapshot) runs synchronously in the event's own step, and the durable delivery runs
- * concurrently with whatever flow is active rather than queueing behind it — an active flow's own
- * invoked service is never torn down by a stop landing mid-flow, since it already abandons its own
- * install through the stop signal it captured.
- */
 export const workerLifecycleMachine = setup({
   actions: {
     // ordered: the old scope aborts, the fresh scope installs, the local halt runs against it,
@@ -713,11 +675,6 @@ function hasLiveActivity(args: ContextArg): boolean {
   return args.context.runtime.getActivity() !== null;
 }
 
-/**
- * Settles a request whose invoked service itself rejected — the backstop the flow bodies' own
- * fault-catching normally makes unreachable. The fault reports under the request's site, every
- * caller resolves (a start as failed) so nothing awaiting the queue hangs, and the queue advances.
- */
 function applyEscapedRequest(
   context: WorkerLifecycleContext,
   site: WorkerFaultSite,
@@ -752,12 +709,6 @@ function buildPendingPop(
   return { currentRequest: context.pending[0] ?? null, pending: context.pending.slice(1) };
 }
 
-/**
- * The held claim a settling resync must requeue, when there is one: the ticket's held avatar plus
- * the finishing resync request whose deferred carries over onto the requeue. Null when the
- * finishing run holds no claim — the single answer every settle-time decision keys on, so the
- * settle, the pop, and the requeue can never disagree about whether a claim is held.
- */
 function findHeldResyncClaim(
   context: WorkerLifecycleContext,
 ): { readonly avatarID: string; readonly current: PendingFlowRequestOf<'resync'> } | null {
@@ -776,12 +727,6 @@ function findHeldResyncClaim(
   return { avatarID: ticket.pendingClaimAvatarID, current };
 }
 
-/**
- * The pending queue as the resync state's own settle transition reads it: a still-held claiming
- * ticket's fresh requeue appends onto the tail before anything decides what runs next, so whatever
- * arrived and queued behind the in-flight resync still runs ahead of the requeued claim, exactly
- * as its own arrival order requires.
- */
 function foldHeldResyncClaim(context: WorkerLifecycleContext): ReadonlyArray<PendingFlowRequest> {
   const heldClaim = findHeldResyncClaim(context);
 
@@ -798,11 +743,6 @@ function foldHeldResyncClaim(context: WorkerLifecycleContext): ReadonlyArray<Pen
   ];
 }
 
-/**
- * Settles the just-finished resync's own deferred — unless a held claim is about to requeue in
- * its place, in which case that deferred instead carries over onto the requeued request, per the
- * coalescing contract's first-caller-awaits-held-follow-up rule.
- */
 function applyResyncSettlement(context: WorkerLifecycleContext): void {
   if (findHeldResyncClaim(context) !== null) {
     return;
@@ -819,12 +759,6 @@ function applyResyncSettlement(context: WorkerLifecycleContext): void {
   }
 }
 
-/**
- * Pops the next request the resync state's settle transition runs. A requeued held claim keeps
- * the window open: `resyncTicket` re-arms with no pending claim rather than clearing, since the
- * requeued run is itself now active or queued and a coalescing decision arriving before it
- * settles must still see a resync in progress.
- */
 function buildResyncSettlePop(
   context: WorkerLifecycleContext,
 ): Pick<WorkerLifecycleContext, 'currentRequest' | 'pending' | 'resyncTicket'> {
@@ -875,11 +809,6 @@ function scheduleReconnectRecovery(context: WorkerLifecycleContext): void {
   })();
 }
 
-/**
- * Aborts the current stop scope, so a flow reading the old signal observes the abort. The paired
- * assign installs the fresh scope a flow accepted afterward captures instead — kept apart because
- * an abort is an effect and an assigner must stay a pure context producer.
- */
 function applyStopScopeAbort(context: WorkerLifecycleContext): void {
   context.stopController.abort();
 }
@@ -895,11 +824,6 @@ function buildFreshStopScope(
   };
 }
 
-/**
- * Settles every request the stopping actor still holds — the running one and the whole pending
- * queue — so no entry point awaiting a deferred hangs past teardown. A start settles as failed;
- * nothing here reports a fault, since teardown is deliberate.
- */
 function applyTeardownSettlement(context: WorkerLifecycleContext): void {
   const requests = [context.currentRequest, ...context.pending];
 

@@ -1,17 +1,5 @@
 import type { Kysely } from 'kysely';
 
-/**
- * Creates `activity_snapshot_sources`, one row per unverified run whose unsettled xp fed an
- * activity's `build_snapshot`. The verifier reads the stored snapshot as its simulation input
- * rather than re-deriving it, so a snapshot built from a run that later rejects would otherwise
- * verify clean against xp that never existed. The edges make that dependency queryable: an
- * activity is unclaimable while a source still has appends past its verified cursor, and a source
- * that rejected invalidates it.
- *
- * Edges are only ever walked from the dependent to its sources, which the primary key's leading
- * column serves. The index on `source_activity_id` carries no read: it keeps the cascade from
- * scanning the whole table once per activity when an avatar is removed.
- */
 export async function up(db: Kysely<unknown>): Promise<void> {
   await db.schema
     .createTable('activity_snapshot_sources')

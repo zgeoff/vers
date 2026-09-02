@@ -13,16 +13,6 @@ interface ParseServiceTokenOptions {
   readonly keySet: ServiceKeySet;
 }
 
-/**
- * Verifies the s2s token on a request and resolves the issuer that minted it plus the acting user
- * it names. The token travels as `Authorization: Bearer <jwt>`; before any signature check, the
- * claimed `iss` must be a known minting identity and must equal the header's `kid`, so the key set
- * only ever offers the key registered for that issuer — a signature by any other minter's key
- * cannot validate. A missing header, malformed header, bad signature, unknown or mismatched
- * `iss`/`kid`, wrong `aud`, or expired token all resolve to the same `invalid-service-token`
- * failure — none of these are a caller's problem to fix, so no detail beyond the failure itself is
- * surfaced.
- */
 export async function parseServiceToken(
   request: Request,
   options: Readonly<ParseServiceTokenOptions>,

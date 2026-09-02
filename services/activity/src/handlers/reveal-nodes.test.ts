@@ -17,12 +17,8 @@ import { findCellCoord, getDifficulty } from '@vers/worldmap-core';
 import invariant from 'tiny-invariant';
 import { createActivityService } from '../create-activity-service';
 
-/**
- * `revealNodes` opens its own `db.transaction()` for the chain-row mint, which can't nest under
- * the default rollback-on-dispose isolation — this suite runs against a real, committed schema
- * clone instead. Content is seeded here, once, since every test that reveals a node needs a
- * current version to derive its encounter against and none of them vary its shape.
- */
+// the handler under test opens its own interactive transaction, which the default
+// transaction-isolation handle can't nest — this suite runs against a real, committed schema clone
 async function setupTest() {
   const db = await createTestDB({ isolation: 'schema' });
 
@@ -168,10 +164,8 @@ test('it self-assigns a stable genesis seed and encounter across repeat reveals 
   const first = await client.revealNodes({ avatarID: avatar.id, nodeIDs: ['0_0'] });
   const second = await client.revealNodes({ avatarID: avatar.id, nodeIDs: ['0_0'] });
 
-  // the genesis seed is a CSPRNG mint with no seeded, reproducible source — only its stability
-  // across repeat reveals is a property this suite can pin, never the value itself; the encounter
-  // and stamps are pure functions of state repeat reveals never change, so the whole response is
-  // stable in place
+  // the genesis seed is a CSPRNG mint with no reproducible source, so only its stability across
+  // repeat reveals can be pinned, never the value itself
   expect(second).toStrictEqual(first);
 
   const [entry] = first.nodes;

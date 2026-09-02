@@ -1,10 +1,6 @@
 import type { DB } from '@vers/db';
 import type { Kysely } from 'kysely';
 
-/**
- * Finds the avatar the user has selected as active, or undefined when the account holds no
- * selection.
- */
 export function findActiveAvatar(
   db: Kysely<DB>,
   userID: string,

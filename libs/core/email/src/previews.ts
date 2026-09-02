@@ -11,12 +11,6 @@ interface Preview {
   render: () => { html: string; plainText: string };
 }
 
-/**
- * Sample-data render entries for every template renderer, consumed by the
- * email-preview workflow. Entry names are the renderer export names kebab-cased
- * with the `render` prefix and `Email` suffix stripped; a co-located test
- * enforces one entry per renderer export.
- */
 export const previews: ReadonlyArray<Preview> = [
   {
     name: 'change-email-notification',

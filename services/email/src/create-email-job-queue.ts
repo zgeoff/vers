@@ -19,10 +19,6 @@ import type { JobFailureContext, JobQueue } from '@vers/jobs';
 import { createJobQueue, defineJobs } from '@vers/jobs';
 import { recordDeliveryFailure } from './metrics/record-delivery-failure';
 
-/**
- * Every job shares the same retry posture: five attempts on an exponential backoff off a 30 second
- * base, dead-lettering a delivery that never succeeds instead of dropping it silently.
- */
 const RETRY_POLICY = {
   deadLetter: true,
   retryBackoff: true,
@@ -51,25 +47,11 @@ export interface CreateEmailJobQueueConfig {
   readonly connectionString: string;
   readonly emailClient: EmailClient;
 
-  /**
-   * Called for every pg-boss maintenance/connection fault; defaults to `@vers/jobs`'s own
-   * `console.error` fallback when omitted.
-   */
   readonly onError?: (error: Error) => void;
 
-  /**
-   * Called with every failed delivery's cause — a handler throw, a stored payload that no longer
-   * parses against its job's schema, or a completion-step rejection; defaults to a `console.error`
-   * fallback when omitted.
-   */
   readonly onJobFailed?: (error: unknown, context: Readonly<JobFailureContext>) => void;
 }
 
-/**
- * Builds the queue behind every send procedure: one job per template, each rendering its matching
- * `@vers/email` generator and delivering through the shared `EmailClient`, keyed on its own
- * pg-boss job id so a retried delivery can never double-send.
- */
 export function createEmailJobQueue(
   config: Readonly<CreateEmailJobQueueConfig>,
 ): JobQueue<EmailJobDefs> {
@@ -157,10 +139,6 @@ export function createEmailJobQueue(
   });
 }
 
-/**
- * Mirrors the failure logging `@vers/jobs` applies when no failure callback is configured, so
- * wrapping the callback to count the metric never silences the report.
- */
 function printJobFailure(error: unknown, context: Readonly<JobFailureContext>): void {
   console.error('[@vers/service-email] job failed', { err: error, ...context });
 }

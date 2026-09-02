@@ -3,15 +3,9 @@ import type { SecureAction } from '@vers/contract-session';
 import { SecureActionSchema } from '@vers/contract-session';
 import * as jose from 'jose';
 
-/**
- * How long a minted step-up transaction token stays redeemable.
- */
 const TRANSACTION_TOKEN_TTL_MS = 5 * 60 * 1000;
 const TRANSACTION_TOKEN_ISSUER = 'vers-web-step-up';
 
-/**
- * Claims a step-up transaction token carries; `jti` is its single-use replay-guard id.
- */
 interface StepUpTransactionClaims {
   readonly action: SecureAction;
   readonly expiresAt: Date;
@@ -26,12 +20,6 @@ interface MintedStepUpTransactionToken {
   readonly token: string;
 }
 
-/**
- * Mints an RS256 step-up transaction token: proof that a pending transaction's code check
- * already passed, redeemable once by the gated mutation it names. Minted and verified only in
- * this app's own server functions — the durable pending-transaction state lives in the session
- * service, but the token itself never leaves the edge.
- */
 export async function createStepUpTransactionToken(
   claims: Readonly<Pick<StepUpTransactionClaims, 'action' | 'sessionID' | 'target'>>,
 ): Promise<MintedStepUpTransactionToken> {
@@ -57,9 +45,6 @@ export async function createStepUpTransactionToken(
   return { expiresAt, jti, token };
 }
 
-/**
- * Verifies a step-up transaction token's signature and expiry, returning its claims.
- */
 export async function verifyStepUpTransactionToken(
   token: string,
 ): Promise<StepUpTransactionClaims> {
@@ -113,11 +98,6 @@ function getSessionIDClaim(payload: jose.JWTPayload): string | null {
 let keyPairPromise: Promise<{ privateKey: jose.CryptoKey; publicKey: jose.CryptoKey }> | null =
   null;
 
-/**
- * Lazily generates this process's step-up signing keypair. Minting and verifying always happen in
- * the same edge process a token was issued from, so a fresh in-memory keypair per process is
- * enough.
- */
 function getStepUpTransactionKeyPair(): Promise<{
   privateKey: jose.CryptoKey;
   publicKey: jose.CryptoKey;

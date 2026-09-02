@@ -16,10 +16,6 @@ const sectionStyles = css({
 const formStyles = css({ display: 'flex', flexDirection: 'column', gap: '4', width: '96' });
 const qrCodeStyles = css({ height: '48', width: '48' });
 
-/**
- * The enable-2FA client island: renders the pending setup's QR code and manual entry code, then
- * submits the confirming TOTP code to finish enabling it.
- */
 export function TwoFactorSetupForm(props: TwoFactorSetupData) {
   const verifyTwoFactorSetupFn = useServerFn(verifyTwoFactorSetup);
   const [formError, setFormError] = useState<string | null>(null);

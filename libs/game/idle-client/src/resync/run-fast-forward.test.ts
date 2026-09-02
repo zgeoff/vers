@@ -25,10 +25,6 @@ interface TrackedAdvanceCall {
   readonly expectedHead: number;
 }
 
-/**
- * The waves every attempt in this suite simulates against — fixed so the same template produces a
- * byte-identical reconstruction whenever it's rebuilt for a fresh attempt.
- */
 function buildWaveTemplate() {
   return {
     waves: [

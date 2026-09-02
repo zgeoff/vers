@@ -8,12 +8,6 @@ interface CreateLoggerOptions {
   readonly stream?: pino.DestinationStream;
 }
 
-/**
- * Builds a pino logger that stamps the active request's trace id onto every entry. Logging is the
- * only sink here — error reporting goes through the Sentry SDK at the error boundary, never a log
- * transport, so one error is never shipped twice. A `stream` is an additional destination written
- * beside stdout, for log shipping; it takes precedence over `pretty`, which is a stdout-only mode.
- */
 export function createLogger(options: CreateLoggerOptions): Logger {
   const baseOptions: pino.LoggerOptions = {
     level: options.level,

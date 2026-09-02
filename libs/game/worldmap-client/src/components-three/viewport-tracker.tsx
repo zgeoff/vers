@@ -4,12 +4,6 @@ import { setViewport } from '../state/set-viewport';
 import { useWorldmapStore } from '../state/use-worldmap-store';
 import { buildViewportFromCamera } from '../utils/build-viewport-from-camera';
 
-/**
- * Keeps the store's viewport in step with the gameplay camera's ground footprint. Reads and writes
- * go through `getState()`/`setViewport` rather than a subscribed selector, so a camera move that
- * doesn't cross a cell boundary costs no re-render — `buildViewportFromCamera`'s cell-granular
- * rounding is what throttles the write to once per boundary crossing instead of once per frame.
- */
 export function ViewportTracker() {
   useFrame(() => {
     const camera = useWorldmapStore.getState().camera;

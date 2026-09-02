@@ -10,21 +10,6 @@ import { buildActivityStart } from './build-activity-start';
 import { resetSimulation } from './reset-simulation';
 import type { FlowSignals, WorkerContext } from './types';
 
-/**
- * Starts the next continuation after a terminal checkpoint: a fresh row synthesized locally for the
- * same scope, continuing the seed chain the terminal checkpoint's `nextSeed` anchors, registered
- * from a zero cursor. Restarting the terminal row is impossible — it is closed to further appends.
- * The row stamps the terminal row it succeeds as its own predecessor, so the play order the server
- * settles by stays exact without consulting the durable last-started record.
- *
- * The minted row is written durably before it installs, so a crash between mint and install still
- * leaves a recoverable activity start. A mint that fails — an input this device never cached —
- * resets the runtime to idle rather than installing a partial run.
- *
- * Queued from the tick loop, the entry guard is the staleness check: a turn whose
- * simulation/activity pair lost the runtime while it waited returns untouched. Past the mint only
- * stops can interleave; a row started under one is stopped back durably.
- */
 export async function runContinuation(
   context: WorkerContext,
   simulation: Simulation,
@@ -86,11 +71,6 @@ export async function runContinuation(
   }
 }
 
-/**
- * Removes a minted row the flow never installed, rewinding the avatar's last-started record to the
- * row it succeeded. The server has never seen the minted row, so there is nothing to stop back —
- * leaving it durable would have a later drain deliver a run the player ended.
- */
 async function removeMintedRow(row: Readonly<ActivityData>): Promise<void> {
   await removeActivityStart(row.id);
 
@@ -106,11 +86,6 @@ async function removeMintedRow(row: Readonly<ActivityData>): Promise<void> {
   });
 }
 
-/**
- * Stops this continuation's own simulation and resets the runtime to idle — but only while it
- * still owns the runtime; a concurrent stop may have installed its own replacement, which must
- * not be evicted.
- */
 function stopAndReset(context: WorkerContext, simulation: Simulation): void {
   simulation.stopActivity();
 

@@ -2,11 +2,6 @@ import { createId } from '@paralleldrive/cuid2';
 import * as db from '../db';
 import { os } from './os';
 
-/**
- * Replaces any existing code for the same target+type, mirroring the real service's
- * `(target, type)` uniqueness — a recreated verification never leaves a stale code verifiable
- * alongside the fresh one.
- */
 export const createVerification = os.createVerification.handler(async (opts) => {
   const existing = db.verificationCollection.findFirst((q) =>
     q.where({ target: opts.input.target, type: opts.input.type }),

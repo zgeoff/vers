@@ -1,11 +1,6 @@
 import { expect, test } from '../src/test';
 import { waitForHoneypotWindow } from '../src/wait-for-honeypot-window';
 
-/**
- * The multi-avatar journey: create a second avatar from the roster (which auto-selects it),
- * switch back to the first, and prove the choice survives a full reload — the selection is
- * persisted server-side, not a client artifact.
- */
 test('it creates a second avatar, switches back, and keeps the choice across a reload', async ({
   page,
 }) => {

@@ -1,7 +1,3 @@
-/**
- * Redirects a request the edge proxy forwarded over plain HTTP to its HTTPS equivalent, per the
- * `X-Forwarded-Proto` header the proxy sets.
- */
 export function redirectToHTTPS(
   request: Request,
   next: () => Promise<Response>,

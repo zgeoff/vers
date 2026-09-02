@@ -1,12 +1,6 @@
 import type { Kysely } from 'kysely';
 import { sql } from 'kysely';
 
-/**
- * Creates the `sim_versions` registry table, one row per built sim engine image keyed by its
- * content hash. `status` tracks whether the image is still deployable (`active`) or has aged out
- * of retention (`pruned`); `retained_until` is the earliest time a `pruned`-eligible row may be
- * removed.
- */
 export async function up(db: Kysely<unknown>): Promise<void> {
   await db.schema
     .createTable('sim_versions')

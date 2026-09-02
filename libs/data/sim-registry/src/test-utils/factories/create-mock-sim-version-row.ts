@@ -2,11 +2,6 @@ import { faker } from '@faker-js/faker';
 import { BUNDLED_CONTENT_VERSION } from '@vers/content-version';
 import type { SimVersionRow } from '../../types';
 
-/**
- * A plain, unpersisted `sim_versions` row with faker-generated defaults. Never requires a parent.
- * `maxContentVersion` defaults to the build's bundled content version, so a seeded row models a
- * currently deployed engine; a test exercising the content gate overrides it lower explicitly.
- */
 export function createMockSimVersionRow(
   overrides: Readonly<Partial<SimVersionRow>> = {},
 ): SimVersionRow {

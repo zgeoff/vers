@@ -5,10 +5,6 @@ import invariant from 'tiny-invariant';
 import type * as z from 'zod';
 import type { JobDef, JobDefs } from './types';
 
-/**
- * `trx`, when present, routes the enqueue through `pg-boss`'s Kysely adapter so the send commits
- * or rolls back with the caller's own transaction instead of pg-boss's separate connection pool.
- */
 export interface SendJobOptions {
   readonly trx?: KyselyTransactionLike;
 }
@@ -29,18 +25,10 @@ export interface JobQueue<TDefs extends JobDefs> {
   readonly drain: (name?: Extract<keyof TDefs, string>) => Promise<DrainResult>;
 }
 
-/**
- * Every job handler's second argument: per-delivery context pg-boss assigns, independent of the
- * job's own payload.
- */
 export interface JobContext {
   readonly jobID: string;
 }
 
-/**
- * A failed job's identity plus whether this failure exhausted its retries — `true` means the job
- * dead-letters (or is dropped, without a configured dead-letter queue) instead of retrying.
- */
 export interface JobFailureContext {
   readonly jobID: string;
   readonly name: string;
@@ -58,36 +46,17 @@ export interface CreateJobQueueConfig<TDefs extends JobDefs> {
     ) => Promise<void>;
   };
 
-  /**
-   * Called for every pg-boss `error` event (a maintenance or connection fault, not a job
-   * failure — job failures surface through the fetch/handle/complete loop's return counts).
-   * Defaults to logging via `console.error` so a fault is never silently swallowed.
-   */
   readonly onError?: (error: Error) => void;
 
-  /**
-   * Called when a fetched job is failed — its handler or completion step threw, or its stored
-   * payload no longer parses against the job's schema. The drain result carries only counts, so
-   * this callback is the one place a failure's cause is reported. Defaults to logging via
-   * `console.error` so the cause is never discarded.
-   */
   readonly onJobFailed?: OnJobFailed;
 }
 
-/**
- * The internal fetch/handle/complete loop only needs each job's schema and handler by name, so it
- * runs against this erased shape rather than threading the factory config's per-job generic
- * through every helper.
- */
 type JobHandlers = Readonly<
   Record<string, (payload: object, context: Readonly<JobContext>) => Promise<void>>
 >;
 
-/**
- * Wraps `pg-boss` behind this package's typed API so consumers never import `pg-boss` directly.
- * `config` is a `NoInfer` site: `TDefs` comes from `defs` alone, so a handler that omits its
- * payload parameter can't widen every job's payload type to `object`.
- */
+// the config parameter is a NoInfer site: the job set infers from the definitions alone, so a
+// handler that omits its payload parameter cannot widen every job's payload type to object
 export function createJobQueue<TDefs extends JobDefs>(
   defs: Readonly<TDefs>,
   config: Readonly<CreateJobQueueConfig<NoInfer<TDefs>>>,
@@ -120,10 +89,6 @@ function printJobError(error: unknown, context: Readonly<JobFailureContext>): vo
 
 const DEAD_LETTER_SUFFIX = '.dead';
 
-/**
- * Idempotent: `pg-boss`'s `createQueue` upserts, so calling `start` again against an already
- * migrated database is safe.
- */
 async function startQueues(boss: PgBoss, defs: JobDefs): Promise<void> {
   await boss.start();
 
@@ -136,6 +101,7 @@ async function startQueues(boss: PgBoss, defs: JobDefs): Promise<void> {
       await boss.createQueue(deadLetterName);
     }
 
+    // pg-boss's createQueue upserts, so a second start against a migrated database is safe
     await boss.createQueue(name, {
       ...(deadLetterName === undefined ? {} : { deadLetter: deadLetterName }),
       ...(def.retryBackoff === undefined ? {} : { retryBackoff: def.retryBackoff }),
@@ -166,10 +132,6 @@ async function sendJob(
   return jobID;
 }
 
-/**
- * The slice of a fetched job `runJob` needs to complete or fail it and report a failure — narrower
- * than `pg-boss`'s full `JobWithMetadata`, so every field here stays trivially readonly.
- */
 interface FetchedJob {
   readonly data: unknown;
   readonly id: string;
@@ -221,12 +183,6 @@ async function drainJobs(
 
 type JobOutcome = 'completed' | 'failed';
 
-/**
- * Runs one job's parse/handle/complete/fail cycle inside its own root span, so a report
- * `onJobFailed` makes and the log line around it correlate by trace id. A payload that no longer
- * parses against its job's schema is failed without ever reaching the handler, since pg-boss
- * stores payloads as untyped jsonb.
- */
 function runJob(
   boss: PgBoss,
   queueName: string,
@@ -275,11 +231,8 @@ function runJob(
   });
 }
 
-/**
- * A fetched job's `retryCount` already reflects this attempt (pg-boss increments it on refetch,
- * before the handler ever runs), so comparing it against `retryLimit` here mirrors exactly the
- * condition pg-boss itself uses to decide retry vs. terminal when this attempt is failed.
- */
+// pg-boss increments retryCount on refetch, before the handler runs, so this attempt is already
+// counted; the comparison mirrors the condition pg-boss uses to pick retry or terminal on fail
 function isRetriesExhausted(job: Readonly<Pick<FetchedJob, 'retryCount' | 'retryLimit'>>): boolean {
   return job.retryCount >= job.retryLimit;
 }

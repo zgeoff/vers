@@ -1,10 +1,6 @@
 import { $ } from 'bun';
 
-/**
- * Reads a 1Password item as JSON via the `op` CLI. Uses `--format json` and
- * leaves the field extraction to the caller — never `op item get --fields`,
- * which CSV-quotes multiline values and corrupts PEM keys.
- */
+// `--format json`, never `--fields`: the latter CSV-quotes multiline values and corrupts PEM keys
 export async function readOpItem(itemTitle: string, vault: string): Promise<unknown> {
   try {
     const result = await $`op item get ${itemTitle} --vault ${vault} --format json`.quiet();

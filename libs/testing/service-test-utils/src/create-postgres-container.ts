@@ -9,11 +9,9 @@ export function createPostgresContainer(): Promise<StartedPostgreSqlContainer> {
       .withUsername('test')
       .withPassword('test')
 
-      // the default wait strategy pairs the health check with a
-      // listening-ports probe that polls via docker exec; under bun the exec
-      // response stream never emits `end`, so start() hangs forever. the
-      // health check alone (pg_isready) gives the same readiness guarantee
-      // without crossing the exec path.
+      // the default wait strategy adds a listening-ports probe polled via docker exec; under bun
+      // the exec response stream never emits `end`, so start() hangs forever. the health check
+      // alone (pg_isready) gives the same readiness guarantee without the exec path.
       .withWaitStrategy(Wait.forHealthCheck())
 
       // use a memory disk for perf

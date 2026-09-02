@@ -4,12 +4,8 @@ interface GameUpdatedNoticeProps {
   readonly testID?: string;
 }
 
-/**
- * Explains a start rejected because the running build's engine no longer supports the current
- * content, offering the one remedy that fetches a build that does — a reload. Deliberately a
- * button rather than an automatic reload: a stale service worker or CDN cache can still serve the
- * very bundle that failed, and an unconditional reload would loop.
- */
+// a button, never an automatic reload: a stale service worker or CDN cache can serve the very
+// bundle that failed again, and an unconditional reload would loop
 export function GameUpdatedNotice(props: Readonly<GameUpdatedNoticeProps>) {
   return (
     <>

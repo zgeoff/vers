@@ -11,14 +11,6 @@ import type { ServiceFetchInit } from '../rpc/types';
 
 const DEFAULT_TIMEOUT_BOUND_MS = Math.max(...DEFAULT_ATTEMPT_TIMEOUTS_MS);
 
-/**
- * Forwards one browser oRPC call to its service, rewriting `/api/rpc/<service>/*` to
- * `<service origin>/rpc/*`. Browser traffic can't reach services directly (private network in
- * production), so it always round-trips through this same-origin proxy; the browser's own call to
- * this route is same-origin, but the service on the other side has no notion of the app's sealed
- * `en_session` cookie — this route's own ambient session is the one thing that does, so it mints
- * and attaches the same s2s token a server-side call would.
- */
 export async function sendRPCRequest(
   request: Request,
   service: ServiceName,
@@ -55,10 +47,9 @@ export async function sendRPCRequest(
 
   const outcome = await loadSessionActor();
 
-  // A session whose row was deleted before its expiry is answered here rather than forwarded: the
-  // service would refuse the unauthenticated call anyway, and only this side can tell a deletion
-  // from an expiry. The header is what tells the caller to discard the offline work it still
-  // holds, so a plain expiry — answered by the service's own 401, with no header — keeps it.
+  // a session deleted before its expiry is answered here, not forwarded: only this side can tell a
+  // deletion from an expiry, and the header tells the caller to discard its offline work. A plain
+  // expiry gets the service's own 401 with no header, so the caller keeps that work.
   if (outcome.kind === 'superseded') {
     return new Response(null, { headers: { 'x-session-superseded': '1' }, status: 401 });
   }
@@ -123,10 +114,9 @@ export async function sendRPCRequest(
     return new Response(null, { status: 503 });
   }
 
-  // fetch responses carry immutable headers, which the server framework must still be able to
-  // finalize (merge, drop stale encoding headers) — rewrap into a mutable response. Copy entry by
-  // entry: passing another runtime's Headers instance to the constructor can yield an empty copy.
-  // The body is already decoded, so the upstream encoding headers no longer describe it.
+  // fetch responses carry immutable headers the server framework must still finalize, so rewrap
+  // into a mutable response. Copy headers entry by entry: another runtime's Headers instance passed
+  // to the constructor can yield an empty copy. The body is already decoded.
   const responseHeaders = new Headers([...response.headers]);
 
   responseHeaders.delete('content-encoding');

@@ -2,22 +2,6 @@ import invariant from 'tiny-invariant';
 import { buildProviderAppName } from './build-provider-app-name';
 import type { SimVersionAction, SimVersionActionInput } from './types';
 
-/**
- * Decides what a replay deploy still needs to provision for an engine hash. The fleet — not the
- * registry row or the running machine — is the source of truth:
- *
- * - a fresh hash gets a new per-version provider app, its flycast IP, a machine launched from the
- *   fleet's just-deployed tag, and a registry row
- * - a missing provider app is always recreated; an app that lost its machine gets a fresh one
- * - a machine running any other digest, or sitting in any other region, is replaced
- * - every non-current state refreshes the registry row
- * - an existing app whose machine already runs the fleet's resolved digest, with a registry row
- *   pointing at that image and carrying the build's bundled content version, needs nothing
- *
- * Launching and replacing always target the fleet's tag, never its digest — `flyctl machine run`
- * mangles a `@sha256:` ref. No actions come back when the fleet has no single resolved image to
- * provision from.
- */
 export function planSimVersionActions(
   input: Readonly<SimVersionActionInput>,
 ): ReadonlyArray<SimVersionAction> {
@@ -41,6 +25,9 @@ export function planSimVersionActions(
   }
 
   const actions: Array<SimVersionAction> = [];
+
+  // launch and replace target the fleet's tag, never its digest: `flyctl machine run` mangles a
+  // `@sha256:` ref
   const tagRef = `${input.fleetImage.repository}:${input.fleetImage.tag}`;
 
   if (!input.providerAppExists) {

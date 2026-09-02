@@ -48,24 +48,18 @@ export default defineConfig({
     ssr: {
       build: {
         rolldownOptions: {
-          // pino's transport/worker mechanism spawns a real worker_thread from a file on disk;
-          // bundling it strips that file out from under it (breaking on `__dirname`, among other
-          // things), so it — and the transports it loads by module name at runtime — stay external
-          // and get resolved from node_modules instead.
+          // pino's transport mechanism spawns a real worker_thread from a file on disk; bundling
+          // strips that file out from under it (breaking on `__dirname`), so pino and the
+          // transports it loads by module name at runtime stay external.
           external: ['pino', 'pino-pretty', 'thread-stream'],
         },
       },
     },
   },
 
-  // the dev server's initial dependency scan never reaches `use-simulation-worker`'s
-  // `new SharedWorker(new URL('./worker.ts', import.meta.url))` target, so the worker's own deps
-  // (`idb`, `@noble/hashes`, reached only via `@vers/idle-client`) go undiscovered until a browser
-  // actually spins up the shared worker, at which point the optimizer re-bundles mid-session and
-  // forces a full reload. Adding the worker as an extra scan entry — Vite concatenates a plugin's
-  // own `optimizeDeps.entries` with this one rather than replacing it — resolves its deps from its
-  // own `node_modules` (the isolated linker gives every workspace package its own), which a
-  // bare-specifier `optimizeDeps.include` can't do from this app's root.
+  // the dev server's dependency scan never reaches the `new SharedWorker(new URL(...))` target, so
+  // the worker's deps go undiscovered until a browser spins it up and the optimizer re-bundles
+  // mid-session with a full reload. An extra scan entry resolves them from the worker's own root.
   optimizeDeps: {
     entries: ['../../libs/game/idle-client/src/worker/worker.ts'],
   },
@@ -78,21 +72,15 @@ export default defineConfig({
   server: { port: 3000 },
 });
 
-/**
- * Docker passes declared-but-unset build args through as empty strings, so an empty
- * value counts as absent — otherwise an argless image build enables the sourcemap
- * plugin with blank credentials instead of skipping it.
- */
+// an empty value counts as absent: Docker passes a declared-but-unset build arg through as an empty
+// string, and an argless image build would otherwise enable the sourcemap plugin with blank
+// credentials
 function findNonEmptyEnv(name: string): string | undefined {
   const value = process.env[name];
 
   return value === undefined || value === '' ? undefined : value;
 }
 
-/**
- * Starts the shared MSW server for `vite dev` only — `configureServer` never fires for
- * `vite build` — so dev boot runs entirely against the mock backend.
- */
 function buildMockBackendPlugin(): Plugin {
   return {
     name: 'vers:mock-backend',
@@ -115,11 +103,9 @@ interface MockBackendServer {
   readonly listen: (options: Readonly<{ onUnhandledRequest: 'bypass' }>) => void;
 }
 
-/**
- * Structural check rather than `instanceof msw/node`'s server class: the bundled config and the
- * ssr-loaded mock module each get their own copy of msw, so class identity fails across that
- * boundary even for a genuine server.
- */
+// a structural check rather than `instanceof`: the bundled config and the ssr-loaded mock module
+// each get their own copy of msw, so class identity fails across that boundary even for a genuine
+// server
 function isMockBackendServer(value: unknown): value is MockBackendServer {
   return (
     typeof value === 'object' &&

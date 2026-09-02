@@ -23,6 +23,7 @@ const composeDocs = new Map<string, unknown>();
 for (const stack of COMPOSE_STACKS) {
   const source = await readFile(stack.file, 'utf8');
 
+  // merge keys stay on: stack files compose shared env through `<<:` anchors
   composeDocs.set(stack.file, parse(source, { merge: true }));
 }
 

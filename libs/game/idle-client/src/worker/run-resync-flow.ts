@@ -30,22 +30,6 @@ import type { FlowSignals, WorkerContext } from './types';
 import { updateWriterDisplacedStatus } from './update-writer-displaced-status';
 import type { ResyncStatus } from './worker-to-client-message-schema';
 
-/**
- * Runs one resync end to end — the data-plane body a public entry point reaches only through the
- * lifecycle actor's queue. Every install re-checks `signals.stop`, the caller's entry-captured stop
- * signal, so a stop raised after the caller began — including during a queue wait — aborts the
- * install; the cancel composite additionally cancels in-flight reads on a worker shutdown.
- *
- * Only a plan covering a real away period broadcasts a `ResyncStatus` progression ending on
- * `done` or `capped`, so a tab's welcome-back UI always resolves. Zero-gap outcomes stay silent,
- * so a fresh login never opens it.
- *
- * An outright failure reports the fault and broadcasts `failed` — never a connection-status
- * change — and never rejects; a tab's retry re-signals it. `UNAUTHORIZED` broadcasts
- * `session-expired` instead, with no fault report: the only remedy is a fresh sign-in, so the tab
- * renders that rather than a futile retry. An abort settles silently — broadcasting `failed`
- * would flash an error for a deliberate stop.
- */
 export async function runResyncFlow(
   context: WorkerContext,
   avatarID: string,
@@ -54,12 +38,9 @@ export async function runResyncFlow(
 ): Promise<void> {
   const heldActivity = context.getActivity();
 
-  // The worker's held activity is stale client state, not a live server row: once a run ends
-  // server-side — capped by a checkpoint submission that exhausted its offline budget, stopped
-  // from another tab, rejected by the verifier, or parked by replay's dispatch — the account may
-  // legitimately switch avatars while this worker still holds the old row, and the next resync
-  // for the new avatar lands here. Never install on top of it — reset first so no snapshot of the
-  // old avatar outlives the switch.
+  // the held activity is stale client state: a run can end server-side and the account switch
+  // avatars while this worker still holds the old row, so reset before installing anything for
+  // the new avatar
   if (heldActivity !== null && heldActivity.avatarID !== avatarID) {
     resetSimulation(context);
   }
@@ -94,9 +75,6 @@ export async function runResyncFlow(
   }
 }
 
-/**
- * One full fetch → plan → sweep → apply pass.
- */
 async function runResyncPass(
   context: WorkerContext,
   avatarID: string,
@@ -128,10 +106,9 @@ async function runResyncPass(
       emitResyncStatus(context, { ...progress, kind: 'fast-forwarding' });
     },
     onProgressFetched: async (progress) => {
-      // The dirty local value is flushed only when the cached record was set for this avatar;
-      // otherwise the server's value wins, and the cache is rewritten clean for this avatar so a
-      // dirty value left over from a different avatar this worker drove earlier is discarded
-      // rather than delivered to the wrong row.
+      // a dirty value is flushed only when it was set for this avatar; otherwise the server's value
+      // wins and the cache is rewritten clean, so a leftover from another avatar never reaches the
+      // wrong row
       const cached = await readFailureActionCache();
 
       if (context.isFailureActionDirty() && cached?.avatarID === avatarID) {
@@ -166,10 +143,6 @@ function toActivityFailureAction(failureAction: ContractFailureAction): Activity
   return failureAction === 'retry' ? ActivityFailureAction.Retry : ActivityFailureAction.Abort;
 }
 
-/**
- * Delivers a dirty local failure-action value to the server as the offline outbox's one entry:
- * best-effort, so a delivery failure leaves it dirty for the next resync's reconcile to retry.
- */
 async function flushFailureAction(
   context: WorkerContext,
   avatarID: string,
@@ -190,10 +163,6 @@ async function flushFailureAction(
   await writeFailureActionCache({ avatarID, dirty: false, failureAction });
 }
 
-/**
- * Adopts the server's failure action as the in-session and cached truth for the resyncing avatar,
- * clearing any dirty flag and broadcasting only when the effective value actually changed.
- */
 async function updateFailureActionFromServer(
   context: WorkerContext,
   avatarID: string,
@@ -211,12 +180,6 @@ async function updateFailureActionFromServer(
   }
 }
 
-/**
- * The activities whose queued checkpoints survive the post-resync sweep: the resync's determined
- * latest activity and whichever activity is live at sweep time (its queue is its running writer's
- * pipeline, never stranded work). Nothing else is worth keeping: a worker restart has no delivery
- * path for a stranded row and the server settles rewards authoritatively.
- */
 function pickKeepActivityIDs(
   context: WorkerContext,
   result: Readonly<ResyncResult>,
@@ -287,12 +250,6 @@ async function applyResyncResult(
   }
 }
 
-/**
- * Settles a displaced outcome: a still-live local simulation of the activity is cleared — its
- * appends are rejected, so leaving it ticking would show progress that never persists — and the
- * displacement is recorded and broadcast. No `ResyncStatus` accompanies it: no catch-up
- * progression started, so there is nothing to resolve.
- */
 function applyActiveElsewhere(context: WorkerContext, activityID: string): void {
   if (context.getActivity()?.id === activityID) {
     resetSimulation(context);
@@ -335,11 +292,9 @@ async function applyFastForward(
     return;
   }
 
-  // The account switched avatars between the closed row's terminal append and the next
-  // continuation's start: the closed row's tallies already persisted, so this resolves rather
-  // than reports a fault — the caller renders it as a normal outcome, not a failed catch-up. No
-  // further fallback pass follows at this depth, so the stamped resync avatar clears here too —
-  // otherwise the next connectivity proof would resync this same dead avatar again.
+  // the closed row's tallies already persisted, so an avatar switch resolves as a normal outcome;
+  // the stamped resync avatar clears too, or the next connectivity proof would resync this same
+  // dead avatar again
   if (report.reason === 'avatar-switched') {
     resetSimulation(context);
 
@@ -383,19 +338,9 @@ async function applyFastForward(
 }
 
 interface HeadAttachOptions {
-  /**
-   * Skip the attach when the reconstructed head is itself a terminal checkpoint — a row adopted
-   * mid-stream with nothing left to submit.
-   */
   readonly skipTerminalHead: boolean;
 }
 
-/**
- * Attaches an activity live, chained onto the confirmed head the submission context names: a
- * zero head starts a checkpoint-0 simulation, a nonzero head reconstructs to the head first so
- * the registered cursor's `previousNextSeed` matches what the engine emits next. A reconstruction
- * divergence broadcasts the invalid stream and attaches nothing.
- */
 async function applyHeadAttach(
   context: WorkerContext,
   activity: Readonly<ActivityData>,
@@ -456,13 +401,6 @@ function isTerminalCheckpoint(checkpoint: ActivityCheckpoint): boolean {
   );
 }
 
-/**
- * Installs a resync's simulation as the live one, or stops the row back durably when a stop
- * landed after the caller's flow began: installing would revive the run the player just ended,
- * and leaving the row active with nothing local driving it would let the next resync revive it
- * instead. No fresher-activity guard remains: lifecycle flows are the only installers, and they
- * run one at a time.
- */
 async function setLiveSimulationOrStopBack(
   context: WorkerContext,
   activity: Readonly<ActivityData>,

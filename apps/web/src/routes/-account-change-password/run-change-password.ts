@@ -6,12 +6,6 @@ import { userClient } from '../../lib/rpc/clients/user-client';
 import { ChangePasswordFormSchema } from './change-password-form-schema';
 import type { ChangePasswordResult } from './types';
 
-/**
- * Runs the change-password form's submission: field validation, a current-password check, then a
- * step-up gate for a 2FA-enabled caller before the new password is applied. The password check
- * runs before the step-up gate so a mistyped password fails fast instead of burning a single-use
- * step-up challenge.
- */
 export async function runChangePassword(formData: FormData): Promise<ChangePasswordResult> {
   await requireAuth();
 

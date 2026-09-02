@@ -2,10 +2,6 @@ import type { CheckpointBatchEntry } from '@vers/contract-activity';
 import { buildCheckpointHashFromEntry } from '@vers/contract-activity';
 import type { ActivityStatus } from '@vers/db';
 
-/**
- * A checkpoint batch's append target, as read fresh after its guarded update lost the race — the
- * shape both `trackActivityProgress` and `advanceActivity` resolve a lost compare-and-swap from.
- */
 export interface CheckpointBatchRaceRow {
   readonly appendedHead: number;
   readonly lastHash: string;
@@ -13,13 +9,6 @@ export interface CheckpointBatchRaceRow {
   readonly writerSessionId: null | string;
 }
 
-/**
- * What a lost checkpoint-batch compare-and-swap resolves to: the row is gone (`not-found`), a
- * resubmit that recomputes onto the recorded tail settles as already-applied (`resubmit-settled`),
- * any other batch against a non-active row is fatal for the stream (`terminal`), a different
- * session now owns the writer (`session-evicted`), or the head is stale and retryable
- * (`conflict`).
- */
 export type CheckpointBatchRaceOutcome =
   | { readonly kind: 'not-found' }
   | { readonly kind: 'session-evicted' }
@@ -27,10 +16,6 @@ export type CheckpointBatchRaceOutcome =
   | { readonly appendedHead: number; readonly kind: 'resubmit-settled' }
   | { readonly appendedHead: number; readonly kind: 'terminal'; readonly status: ActivityStatus };
 
-/**
- * Resolves a lost head-row race from a fresh read of the activity row. Pure and error-shape-free,
- * so each caller maps the outcome onto its own contract's error payloads.
- */
 export function pickCheckpointBatchRaceOutcome(
   actingSessionID: null | string,
   current: Readonly<CheckpointBatchRaceRow> | undefined,
@@ -60,11 +45,6 @@ interface SettledTailRow {
   readonly lastHash: string;
 }
 
-/**
- * Reports whether a checkpoint batch, replayed from scratch, recomputes onto a settled activity's
- * recorded tail. A match proves the recorded tail is this exact batch: the original submit landed
- * and only the ack was lost.
- */
 function isSettledResubmit(
   checkpoints: ReadonlyArray<CheckpointBatchEntry>,
   settled: Readonly<SettledTailRow>,

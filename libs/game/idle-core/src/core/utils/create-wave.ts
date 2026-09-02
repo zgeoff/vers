@@ -1,11 +1,6 @@
 import { createEnemy } from '../../entities/create-enemy';
 import type { EnemyData, SimulationContext, Wave, WaveSnapshot } from '../../types';
 
-/**
- * Builds a wave from its already-resolved enemy data verbatim. `index` names this wave's position
- * within its encounter's ordered wave list; each wave and enemy gets a stable, deterministic id,
- * safe to rely on across ticks.
- */
 export function createWave(
   index: number,
   enemyData: ReadonlyArray<EnemyData>,

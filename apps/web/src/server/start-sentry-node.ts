@@ -1,12 +1,7 @@
 import * as Sentry from '@sentry/node';
 import { env } from './env';
 
-/**
- * Initializes server-side error reporting. Callers guard this behind `env.SENTRY_DSN` — Sentry's
- * own SDK still no-ops without a DSN, but skipping the call entirely avoids paying its startup
- * cost (HTTP instrumentation) when reporting isn't configured. Skips `@sentry/profiling-node`: its
- * native per-platform bindings aren't bundleable by the SSR build.
- */
+// no `@sentry/profiling-node`: its native per-platform bindings cannot be bundled by the SSR build
 export function startSentryNode(): void {
   Sentry.init({
     ...(env.SENTRY_DSN !== undefined && { dsn: env.SENTRY_DSN }),

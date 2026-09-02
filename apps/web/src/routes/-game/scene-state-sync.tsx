@@ -2,13 +2,6 @@ import { useMatches } from '@tanstack/react-router';
 import { setSceneState } from '@vers/game-rendering';
 import { useEffect, useRef } from 'react';
 
-/**
- * The sole entry point for route state into the scene store: `useMatches` resolves root-first, so
- * folding each matched route's `scene`/`presentation` staticData in that order through
- * `setSceneState` lets a child route's declaration override its parent's. `matches` gets a fresh
- * reference on every render regardless of whether its staticData changed, so a ref tracks the
- * last-applied key and skips the store update when it hasn't.
- */
 export function SceneStateSync(): null {
   const matches = useMatches();
 
@@ -16,6 +9,8 @@ export function SceneStateSync(): null {
     .map((match) => `${match.staticData.scene ?? ''}:${match.staticData.presentation ?? ''}`)
     .join('|');
 
+  // `matches` is a fresh reference on every render even when no staticData changed, so the ref
+  // tracks the last-applied key and skips the store update when it is unchanged
   const lastContributionsKey = useRef<string | undefined>(undefined);
 
   useEffect(() => {

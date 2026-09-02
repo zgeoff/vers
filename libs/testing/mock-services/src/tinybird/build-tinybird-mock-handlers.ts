@@ -2,12 +2,6 @@ import type { HttpHandler } from 'msw';
 import { HttpResponse, http } from 'msw';
 import { ProductEventRowSchema, productEventCollection } from '../db/product-event-collection';
 
-/**
- * Builds the MSW handler backing the Tinybird Events API at the given origin. Every NDJSON row a
- * POST carries lands in the product-event collection for tests to assert on, tagged with the
- * `name` query parameter's target data source; the response mirrors the Events API's accepted
- * shape.
- */
 export function buildTinybirdMockHandlers(baseUrl: string): Array<HttpHandler> {
   return [
     http.post(`${baseUrl}/v0/events`, async (info) => {

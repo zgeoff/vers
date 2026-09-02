@@ -2,10 +2,6 @@ import { metrics } from '@opentelemetry/api';
 
 export type DeriveRejectionReason = 'unknown-key-version' | 'unknown-scope-secret-version';
 
-/**
- * Counts one derivation call — an avatar roll key or a scope secret — that refused to derive,
- * split by reason.
- */
 export function recordDeriveRejection(reason: DeriveRejectionReason): void {
   // Resolved through the global metrics API on every call: the SDK returns the same instrument
   // for an identical registration, and resolving late keeps the counter bound to whichever meter

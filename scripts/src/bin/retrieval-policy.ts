@@ -3,10 +3,7 @@ import { z } from 'zod';
 import { INITIAL_RETRIEVAL_STATE, planRetrievalNudge } from '../hooks/plan-retrieval-nudge';
 import type { RetrievalState } from '../hooks/types';
 
-// A PreToolUse hook on every tool and a SessionEnd hook. Threads the retrieval-policy counters
-// through a per-session state file, injects a nudge as context when the planner asks for one, and
-// mirrors it to the user. Every nudge is appended to a fire log for tuning the thresholds. Reads the
-// hook payload on stdin; any malformed payload exits silently, so the hook never blocks a call.
+// runs as a PreToolUse hook on every tool and as a SessionEnd hook
 
 const inputSchema = z.object({
   session_id: z.string().min(1),

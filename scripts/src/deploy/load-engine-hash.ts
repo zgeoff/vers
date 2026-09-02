@@ -1,12 +1,8 @@
 import { createHash } from 'node:crypto';
 import path from 'node:path';
 
-/**
- * Matches `ARG BUN_VERSION` in every service Dockerfile — the runtime the
- * hashed bundle is deployed to. A hash built under a different Bun version
- * isn't comparable across environments, so `loadEngineHash` refuses to run
- * under any other version.
- */
+// matches `ARG BUN_VERSION` in every service Dockerfile: a hash built under another Bun version
+// is not comparable across environments
 export const PINNED_BUN_VERSION = '1.3.10';
 
 const DEFAULT_ENTRYPOINT = path.resolve(
@@ -14,13 +10,6 @@ const DEFAULT_ENTRYPOINT = path.resolve(
   '../../../libs/game/idle-core/src/replay.ts',
 );
 
-/**
- * The sim version identity: a sha256 hex digest over the pure replay
- * entrypoint's bundled output plus the pinned Bun version, so any change to
- * the engine's transitive closure or its build runtime changes the hash. The
- * bundle build is deterministic (`target: 'bun'`, unminified, no sourcemap)
- * so two builds of the same closure agree.
- */
 export async function loadEngineHash(entrypoint: string = DEFAULT_ENTRYPOINT): Promise<string> {
   requirePinnedBunVersion();
 

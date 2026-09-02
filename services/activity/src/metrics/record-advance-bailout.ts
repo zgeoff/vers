@@ -8,12 +8,6 @@ export type AdvanceBailoutReason =
   | 'session_evicted'
   | 'terminal';
 
-/**
- * Counts one `advanceActivity` request that bailed before processing every requested
- * continuation, split by the rejection that stopped it. A bailout always leaves the confirmed head
- * advanced past the committed prefix, so a rising count here tracks how often an offline catch-up's
- * outer resync must re-plan, not lost progress.
- */
 export function recordAdvanceBailout(reason: AdvanceBailoutReason): void {
   // Resolved through the global metrics API on every call: the SDK returns the same instrument for
   // an identical registration, and resolving late keeps the counter bound to whichever meter

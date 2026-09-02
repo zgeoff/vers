@@ -7,11 +7,6 @@ interface RequestInfo {
 
 const RequestEnvelopeSchema = z.object({ json: z.record(z.string(), z.unknown()).optional() });
 
-/**
- * Fails transport-wise the first request whose JSON body satisfies `matches`, then lets every
- * other request — including a retry of the same call and any other test's concurrent traffic on
- * the shared mock server — fall through to the stateful backend registered underneath.
- */
 export function makeFailFirstMatchHandler(
   matches: (input: Readonly<Record<string, unknown>>) => boolean,
 ): (info: Readonly<RequestInfo>) => Promise<Response | undefined> {

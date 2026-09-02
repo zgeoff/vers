@@ -2,11 +2,6 @@ import type { DB } from '@vers/db';
 import type { Kysely } from 'kysely';
 import type { SimVersionRow } from './types';
 
-/**
- * Finds the version new activities should launch against: the newest `active` row by
- * `deployedAt`, breaking a tie with `engineHash`, the table's primary key. Undefined when no
- * version is active.
- */
 export function findCurrentSimVersion(db: Kysely<DB>): Promise<SimVersionRow | undefined> {
   return db
     .selectFrom('simVersions')

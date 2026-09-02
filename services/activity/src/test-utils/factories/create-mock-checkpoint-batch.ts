@@ -3,45 +3,19 @@ import type { CheckpointBatchEntry } from '@vers/contract-activity';
 import { buildCheckpointHash } from '@vers/contract-activity';
 
 interface CreateMockCheckpointBatchConfig {
-  /**
-   * How many entries to build. Default 1.
-   */
   readonly count?: number;
 
-  /**
-   * Extra fields merged into the last entry's payload — `type`/`rewards` for a batch ending in a
-   * terminal checkpoint. Merged before that entry's hash is computed, so the chain stays valid.
-   */
   readonly finalPayloadOverrides?: Readonly<Record<string, unknown>>;
 
-  /**
-   * The hash the batch's first entry links onto — the activity's current `lastHash` for a batch
-   * that will apply cleanly.
-   */
   readonly startPrevHash: string;
 
-  /**
-   * The activity's `startChainIndex` each entry's `chainIndex` is offset from. Default 0.
-   */
   readonly startChainIndex?: number;
 
-  /**
-   * The batch's first entry version — the activity's current `appendedHead + 1` for a batch that
-   * will apply cleanly.
-   */
   readonly startVersion: number;
 
-  /**
-   * Milliseconds of cumulative simulated time per version — each entry's `time` is its version
-   * multiplied by this, so batches stay monotonic across resends and continuations. Default 1000.
-   */
   readonly timeStepMs?: number;
 }
 
-/**
- * Builds a chain-valid checkpoint batch: real hashes computed the same way the service validates
- * them, each entry linking onto the previous one, starting from a given version and previous hash.
- */
 export function createMockCheckpointBatch(
   config: Readonly<CreateMockCheckpointBatchConfig>,
 ): Array<CheckpointBatchEntry> {

@@ -1,11 +1,5 @@
 import type { RevealedReward, RevealedRewardsPage } from './types';
 
-/**
- * Accumulates a fresh keyset page of revealed rewards onto whatever the cache already holds,
- * deduping on `(chainIndex, ordinal)` — the coordinate a reward slot is identified by — so a
- * re-fetched overlap never double-counts. `verifiedHead` carries the higher of the two pages': the
- * fresher fetch's view of the settled boundary never regresses the cache's own.
- */
 export function mergeRevealedRewards(
   previous: Readonly<RevealedRewardsPage> | undefined,
   page: Readonly<RevealedRewardsPage>,

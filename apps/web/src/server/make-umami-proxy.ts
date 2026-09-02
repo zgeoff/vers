@@ -7,13 +7,6 @@ interface MakeUmamiProxyOptions {
   readonly upstream: string | null;
 }
 
-/**
- * Builds the analytics proxy middleware: answers the tracker's same-origin script and beacon
- * paths by forwarding to the Umami deployment, deferring everything else. Beacons carry the
- * client's address in `x-vers-client-ip` — Umami is configured to read that header, so geolocation
- * sees the visitor rather than this server. A `null` upstream disables the proxy and both paths
- * fall through. An unreachable upstream answers 502 — analytics never fails a page.
- */
 export function makeUmamiProxy(options: MakeUmamiProxyOptions): Middleware {
   return async (request, next) => {
     if (options.upstream === null) {
@@ -60,9 +53,6 @@ interface RelayInit {
 // dropping that beacon undercounts landings, the funnel's first step
 const UPSTREAM_DEADLINE_MS = 15_000;
 
-/**
- * Fetches the upstream target and rewraps the result.
- */
 async function sendUpstream(target: URL, init?: RelayInit): Promise<Response> {
   let response: Response;
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -76,10 +66,9 @@ async function sendUpstream(target: URL, init?: RelayInit): Promise<Response> {
     timer.unref?.();
   });
 
-  // a stalled upstream must not pin request handlers — analytics traffic gives up quickly and the
-  // tracker tolerates the loss. The race bounds the wait rather than aborting the socket: signal
-  // instances don't survive environments that patch the fetch globals, and the runtime's pool
-  // reclaims the connection
+  // a stalled upstream must not pin request handlers; the tracker tolerates the loss. The race
+  // bounds the wait rather than aborting the socket: signal instances don't survive environments
+  // that patch the fetch globals, and the runtime's pool reclaims the connection
   try {
     response = await Promise.race([fetch(target, init), deadline]);
   } catch (error) {

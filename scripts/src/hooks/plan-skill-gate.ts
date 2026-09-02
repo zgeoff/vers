@@ -6,10 +6,6 @@ interface SkillGate {
   readonly matches: (relativePath: string) => boolean;
 }
 
-/**
- * The skills an edit under a path needs in context, keyed by what the path is. A path can need
- * several: a test file needs both the code-style and the testing skill.
- */
 const GATES: ReadonlyArray<SkillGate> = [
   { matches: (file) => /\.tsx?$/.test(file), skill: 'code-style' },
   { matches: (file) => /\.test\.tsx?$/.test(file), skill: 'testing' },
@@ -33,11 +29,6 @@ const LIFECYCLE_ROOTS = [
 // Generated output and vendored trees carry no rules of their own.
 const UNGATED_SEGMENTS = ['node_modules/', 'styled-system/', 'dist/', '.generated.'];
 
-/**
- * Plans the gate's verdict for editing `filePath` from a session whose transcript shows
- * `loadedSkills` in context. A path outside `cwd`, a generated file, or a file kind no gate names
- * is allowed; otherwise every gated skill not yet loaded is reported, so one deny lists them all.
- */
 export function planSkillGate(
   cwd: string,
   filePath: string,

@@ -5,9 +5,6 @@ import type { EmptyErrorPayload } from '../types';
 
 const RESET_TOKEN_TTL_MS = 10 * 60 * 1000;
 
-/**
- * oRPC handler opts for the `createPasswordResetToken` procedure.
- */
 interface CreatePasswordResetTokenOpts {
   readonly errors: {
     readonly NOT_FOUND: (payload: EmptyErrorPayload) => Error;
@@ -16,10 +13,6 @@ interface CreatePasswordResetTokenOpts {
   readonly input: { readonly id: string };
 }
 
-/**
- * Mints a password-reset token, storing only its sha256 hash and returning the plaintext to
- * present to the reset flow.
- */
 export async function createPasswordResetToken(
   db: Kysely<DB>,
   opts: CreatePasswordResetTokenOpts,

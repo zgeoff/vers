@@ -14,33 +14,14 @@ import type { ReactElement } from 'react';
 import { buildQueryClient } from '../lib/query/build-query-client';
 
 interface RenderWithRouterOptions {
-  /**
-   * Seeds the `/_game` layout route's context, read via `useRouteContext({ from: '/_game' })`.
-   */
   readonly flags?: Readonly<Record<FlagKey, boolean>>;
-  /**
-   * Extra destinations mounted as real routes under the `/_game` layout, each rendering its
-   * element: navigation tests declare where a transition lands so it resolves to an explicit
-   * marker instead of the catch-all re-rendering the component under test.
-   */
   readonly routes?: Readonly<Record<string, Readonly<ReactElement>>>;
 }
 
 interface RenderWithRouterResult extends ReturnType<typeof render> {
-  /**
-   * The router the tree mounted under: assert `router.state.location.pathname` after a real
-   * transition, or drive one with `router.navigate(...)`.
-   */
   readonly router: AnyRouter;
 }
 
-/**
- * Renders a component tree that uses router-aware primitives (`Link`, `useRouter`, …) and Query
- * hooks (`useQuery`, `useSuspenseQuery`, …) without a real route tree: the component under test
- * becomes the index route nested under a pathless `/_game`-id layout route, so both resolve the
- * same way they do under the app's real router — which wires its `QueryClient` the same way and
- * resolves flags onto that same route id.
- */
 export function renderWithRouter(
   ui: Readonly<ReactElement>,
   options?: Readonly<RenderWithRouterOptions>,

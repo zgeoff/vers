@@ -1,11 +1,6 @@
 import * as z from 'zod';
 import { EntropySourceSchema } from './entropy-source-schema';
 
-/**
- * A checkpoint's payload: an open record so the simulation can carry whatever state it needs,
- * with the subset the hash chain commits to declared explicitly. Parsed payloads are readonly —
- * frozen at runtime — so every consumer sees the exact bytes the hash chain committed to.
- */
 export const CheckpointPayloadSchema = z
   .looseObject({
     chainIndex: z.int().min(0),

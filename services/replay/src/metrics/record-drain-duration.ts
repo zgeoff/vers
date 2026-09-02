@@ -1,9 +1,5 @@
 import { metrics } from '@opentelemetry/api';
 
-/**
- * Records how long one drain cycle held the `/wake` request open, from its first claim attempt
- * through finding the queue empty.
- */
 export function recordDrainDuration(durationSeconds: number): void {
   // resolved through the global metrics API on every call — the SDK returns the same instrument
   // for an identical registration, and resolving late keeps it bound to whichever meter provider

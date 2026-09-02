@@ -7,9 +7,6 @@ interface SweepConfig {
   maintenanceDSN: string;
 }
 
-/**
- * Drops this machine's orphaned dev databases and returns their names.
- */
 export async function sweepDevDBs(config: Readonly<SweepConfig>): Promise<Array<string>> {
   const pg = postgres(config.maintenanceDSN, { max: 1 });
 

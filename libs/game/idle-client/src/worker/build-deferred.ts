@@ -1,10 +1,5 @@
 import invariant from 'tiny-invariant';
 
-/**
- * A promise a caller awaits, paired with the functions that settle it — the machine's coordination
- * primitive for a queued flow's result. Never serialized or persisted: purely in-memory, settled
- * exactly once, from whichever action decides the flow's outcome.
- */
 export interface Deferred<T> {
   readonly promise: Promise<T>;
   readonly reject: (reason: unknown) => void;

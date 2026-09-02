@@ -5,14 +5,8 @@ import type { Kysely } from 'kysely';
 import type { EmptyErrorPayload } from '../types';
 import { toVerificationData } from './to-verification-data';
 
-/**
- * Verification types whose code is consumed once and the row deleted on a successful verify.
- */
 const DELETING_TYPES: ReadonlySet<VerificationType> = new Set(['change-email', 'onboarding']);
 
-/**
- * oRPC handler opts for the `verifyCode` procedure.
- */
 interface VerifyCodeOpts {
   readonly errors: {
     readonly CODE_ALREADY_USED: (payload: EmptyErrorPayload) => Error;
@@ -26,14 +20,6 @@ interface VerifyCodeOpts {
   };
 }
 
-/**
- * Verifies a TOTP code against its target and type, then guards against replay: deleting types
- * (`change-email`/`onboarding`) consume the row on success, so a concurrent second verify finds no
- * row to delete; non-deleting types (`2fa`/`2fa-setup`) record the verified code and timestamp in a
- * conditional UPDATE that re-validates its predicate against the row under its row lock, so a
- * concurrent replay matches zero rows. `orderBy('createdAt', 'desc')` is defense-in-depth against
- * any pre-`(target, type)`-constraint duplicate rows.
- */
 export async function verifyCode(db: Kysely<DB>, opts: VerifyCodeOpts): Promise<VerificationData> {
   const row = await db
     .selectFrom('verifications')

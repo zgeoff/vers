@@ -2,9 +2,6 @@ import type { DB } from '@vers/db';
 import type { Kysely } from 'kysely';
 import type { EmptyErrorPayload, MissingSessionPayload } from '../types';
 
-/**
- * oRPC handler opts for the authed `changePassword` procedure.
- */
 interface ChangePasswordOpts {
   readonly context: { readonly actingUserID: null | string };
   readonly errors: {
@@ -14,9 +11,6 @@ interface ChangePasswordOpts {
   readonly input: { readonly password: string };
 }
 
-/**
- * Rehashes the acting user's password as argon2id; throws NOT_FOUND when the account is gone.
- */
 export async function changePassword(
   db: Kysely<DB>,
   opts: ChangePasswordOpts,

@@ -4,10 +4,6 @@ import { createId } from '@paralleldrive/cuid2';
 import { SessionDataSchema } from '@vers/contract-session';
 import * as z from 'zod';
 
-/**
- * A stored mock session row: the public `SessionDataSchema` plus the token pair it gates. The
- * defaults describe a live, verified session; tests state only the fields they assert on.
- */
 const SessionRowSchema = SessionDataSchema.extend({
   createdAt: z.date().default(() => new Date()),
   expiresAt: z.date().default(() => faker.date.soon()),

@@ -23,15 +23,9 @@ interface TrackActivityProgressDeps {
   readonly db: Kysely<DB>;
   readonly sendReplayWake: () => void;
 
-  /**
-   * Ceiling on the avatar's accrued simulated-time budget, in milliseconds.
-   */
   readonly simTimeCapMs: number;
 }
 
-/**
- * oRPC handler opts for the authed `trackActivityProgress` procedure.
- */
 interface TrackActivityProgressOpts {
   readonly context: {
     readonly actingSessionID: null | string;
@@ -54,27 +48,6 @@ interface TrackActivityProgressOpts {
   };
 }
 
-/**
- * Appends a checkpoint batch to an active activity owned by the acting user.
- *
- * The head-row compare-and-swap inside the transaction is the serialization point: a losing race
- * re-reads the head and resolves to NOT_FOUND, ACTIVITY_TERMINAL, SESSION_EVICTED (fatal — the
- * caller discards its pending queue), or CONFLICT (a retryable stale head).
- *
- * Only the stamped writer session may append; an unstamped activity is claimed by the first
- * appending session.
- *
- * A terminal last checkpoint (completed or failed) claims the activity's terminal transition and
- * advances the chain's appended anchor in the same transaction — the claim guards a duplicate
- * resubmission against double-applying. Settlement of the avatar's xp/level lives behind the
- * verifier, not here: this path only records what was appended.
- *
- * Every accepted batch debits the avatar's simulated-time meter: the budget refills at wall-clock
- * rate up to the cap, and the batch's delta — the last checkpoint's cumulative `time` minus the
- * head row's accounted time — is consumed. A batch whose delta exceeds the accrued budget is
- * rejected whole; the activity claims the terminal `capped` transition at its current head, and
- * ACTIVITY_CAPPED carries that head as the index the caller rebases from after a resync.
- */
 export async function trackActivityProgress(
   deps: TrackActivityProgressDeps,
   opts: TrackActivityProgressOpts,
@@ -276,10 +249,9 @@ export async function trackActivityProgress(
     }
 
     if (timeDelta > 0) {
-      // The refill is recomputed in SQL so the debit applies to the row's current values: the
-      // projection only grows with time, and every other consumer for this avatar is excluded by
-      // the head compare-and-swap this transaction already won, so the guard can only miss on a
-      // bug.
+      // the refill is recomputed in SQL so the debit applies to the row's current values; every
+      // other consumer for this avatar is excluded by the head compare-and-swap this transaction
+      // already won, so the guard can only miss on a bug
       const debit = Math.ceil(timeDelta);
       const refill = sql`least(${deps.simTimeCapMs}, sim_budget_ms + (extract(epoch from (now() - sim_metered_at)) * 1000)::bigint)`;
 
@@ -316,11 +288,6 @@ export async function trackActivityProgress(
   return { appendedHead: appendOutcome.appendedHead };
 }
 
-/**
- * Resolves a batch that lost its guarded update, from a fresh read of the activity row. A batch
- * that recomputes onto the settled tail is a dropped-ack retry: it re-acknowledges with the
- * recorded head — logged, no writes. Every other outcome throws its typed error.
- */
 async function checkAppendRace(
   db: Kysely<DB>,
   opts: TrackActivityProgressOpts,

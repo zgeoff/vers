@@ -64,10 +64,6 @@ interface MissionHeaderProps {
   readonly onEndRun?: () => void;
 }
 
-/**
- * The encounter's name and live progress readout — waves cleared of the total, enemies still
- * standing, experience banked so far — with the run's exit anchored to the right.
- */
 export function MissionHeader(props: Readonly<MissionHeaderProps>) {
   const totalWaves = props.activity.waves.length;
   const clearedWaves = totalWaves - props.activity.wavesRemaining;

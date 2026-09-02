@@ -122,10 +122,6 @@ interface CloneLocation {
   readonly searchPath: string;
 }
 
-/**
- * Resolves the clone's connection URL and `search_path` from inside the handle itself, for tests
- * that verify what a second, independent connection can see.
- */
 async function getCloneLocation(db: Kysely<DB>): Promise<CloneLocation> {
   const target = resolveTestDBTarget();
 

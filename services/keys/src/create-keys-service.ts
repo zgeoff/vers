@@ -5,9 +5,6 @@ import { envShape } from './env-shape';
 import { parseRollKeyRoots } from './parse-roll-key-roots';
 import { parseScopeSecretRoots } from './parse-scope-secret-roots';
 
-/**
- * Boots the keys service; the production entrypoint and tests both call this as the one shared config.
- */
 export function createKeysService(): Promise<Service<typeof envShape>> {
   return createService({
     buildRouter: (runtime) =>

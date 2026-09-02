@@ -4,15 +4,6 @@ import { findCellCoord } from './find-cell-coord';
 import { findEdgeNeighbourID } from './find-edge-neighbour-id';
 import { toNodeID } from './to-node-id';
 
-/**
- * Whether `targetID` is in the avatar's selectable set: the origin cell (always selectable, so a
- * fresh avatar with no grants can start), every completed node (farming an already-cleared node
- * stays legal), and every node directly connected to a completed node by an edge. Reachability is
- * derived fresh from `collectNodeEdges` over the full topology rather than read from a
- * viewport-filtered graph, so a client and the server evaluating the same seed and completed set
- * always agree, including at a viewport boundary. An id `findCellCoord` can't address is never
- * selectable.
- */
 export function isNodeSelectable(
   userSeed: number,
   completedNodeIDs: ReadonlySet<string>,

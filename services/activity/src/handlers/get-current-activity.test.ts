@@ -16,10 +16,8 @@ import { buildRPCTestClient } from '@vers/test-utils';
 import { createActivityService } from '../create-activity-service';
 import { toActivityData } from './to-activity-data';
 
-/**
- * These tests seed committed rows a separate connection then reads back, which the default
- * rollback-on-dispose isolation — this suite runs against a real, committed schema clone instead.
- */
+// these tests read seeded rows back over a separate connection, which the default
+// transaction-isolation handle can't serve — this suite runs against a real, committed schema clone
 async function setupTest() {
   const db = await createTestDB({ isolation: 'schema' });
 

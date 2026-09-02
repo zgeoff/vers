@@ -18,20 +18,10 @@ const composeFileSchema = z.looseObject({
 });
 
 export interface ComposeEnvKeys {
-  /**
-   * `env_file` paths as written in the compose file — relative to the compose file's own
-   * directory, so callers resolve them before reading.
-   */
   readonly envFileRefs: ReadonlyArray<string>;
   readonly keys: ReadonlyArray<string>;
 }
 
-/**
- * Collects the env a compose service's definition supplies: inline `environment` keys plus its
- * `env_file` references. Returns null when the parsed compose document doesn't define the
- * service. Callers must parse the document with YAML merge keys enabled — stack files compose
- * shared env through `<<:` anchors.
- */
 export function collectComposeEnvKeys(
   compose: unknown,
   serviceName: string,

@@ -6,10 +6,9 @@ import type { Kysely } from 'kysely';
 import { createContentVersion } from './create-content-version';
 import { findCurrentContentVersion } from './find-current-content-version';
 
-// `createContentVersion` opens its own interactive transaction, which the default
-// transaction-isolation handle can't nest — this suite publishes in-test, so it runs against a
-// real, committed schema clone. The clone is structure-only, which is also what the never-seeded
-// case relies on.
+// publishing opens its own interactive transaction, which the default transaction-isolation
+// handle cannot nest, so this suite runs against a committed schema clone; the clone is
+// structure-only, which the never-seeded case relies on
 async function setupTest(): Promise<{ db: Kysely<DB> } & AsyncDisposable> {
   const db = await createTestDB({ isolation: 'schema' });
 

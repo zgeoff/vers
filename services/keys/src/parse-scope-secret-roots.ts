@@ -2,9 +2,6 @@ import { hexToBytes } from '@noble/hashes/utils.js';
 import type { SecretRef } from '@vers/contract-keys';
 import * as z from 'zod';
 
-/**
- * A scope's custodied root secrets, keyed by version, plus the version new derivations use.
- */
 interface ScopeSecretRootEntry {
   readonly current: number;
   readonly roots: ReadonlyMap<number, Uint8Array>;
@@ -21,11 +18,6 @@ const RawScopeSecretRootsSchema = z.object({
   worldmap: RawRootEntrySchema,
 });
 
-/**
- * Parses the `SCOPE_SECRET_ROOTS` env payload into decoded per-scope root secrets. Fails fast on
- * any malformed field, always naming the problem and never the root material itself, so a boot
- * failure is safe to log.
- */
 export function parseScopeSecretRoots(raw: string): ScopeSecretRoots {
   const parsed = RawScopeSecretRootsSchema.safeParse(parseJSON(raw));
 

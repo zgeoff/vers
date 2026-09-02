@@ -4,12 +4,6 @@ import { buildDevDBPrefix } from './build-dev-db-prefix';
 
 const MAX_IDENTIFIER_LENGTH = 63;
 
-/**
- * Names a worktree's dev database `dev_<machine>_<branch>`. A name that would
- * exceed postgres's 63-byte identifier limit is truncated and suffixed with a
- * hash of the raw machine/branch pair, so distinct branches stay distinct
- * after truncation.
- */
 export function buildDevDBName(machine: string, branch: string): string {
   const name = `${buildDevDBPrefix(machine)}${normalizeDBPart(branch)}`;
 

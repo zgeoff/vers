@@ -1,15 +1,6 @@
 import { NO_TRUSTWORTHY_SHA_REASON, findStaleReason } from './find-stale-reason';
 import type { AppState, ChangeSet, DeployTarget } from './types';
 
-/**
- * Evaluates a target's fleet state against HEAD and returns findings; an
- * empty array means the app is online and current. Machine-count rules
- * account for Fly auto-stop: existence is always required, but a started
- * machine only where the manifest demands warm capacity. A running machine
- * with a non-passing health check is a finding; a fully parked fleet is
- * indistinguishable from a crash-parked one here and is asserted by the
- * verify pass waking a machine instead.
- */
 export function checkTarget(
   target: DeployTarget,
   state: AppState,
@@ -96,10 +87,6 @@ function findMixedImageFinding(state: AppState): string | null {
   return `fleet splits across ${counts.size} images: ${parts.join(', ')}`;
 }
 
-/**
- * A machine whose image flyctl did not report keeps the rollout planner from trusting the fleet's
- * image groups, so verify names those machines rather than passing the fleet as single-image.
- */
 function findUnreportedImageFinding(state: AppState): string | null {
   const unreported = state.machines.filter((machine) => machine.image === null);
 
@@ -112,10 +99,6 @@ function findUnreportedImageFinding(state: AppState): string | null {
   return `machine(s) ${ids} report no image — flyctl did not read an image for them`;
 }
 
-/**
- * A mixed-image fleet already explains why no single deployed SHA is trustworthy — reporting both
- * findings would restate the same cause as two symptoms.
- */
 function isSuppressedByMixedImages(staleReason: string, mixedImageFinding: string | null): boolean {
   return mixedImageFinding !== null && staleReason === NO_TRUSTWORTHY_SHA_REASON;
 }

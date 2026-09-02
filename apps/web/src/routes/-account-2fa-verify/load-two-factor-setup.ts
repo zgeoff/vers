@@ -10,11 +10,6 @@ export interface TwoFactorSetupData {
   readonly target: string;
 }
 
-/**
- * Ensures a `2fa-setup` verification exists for the caller and reads its TOTP URI, rendered as a
- * QR code for an authenticator app to scan. Bounces back to `/account` for a caller who already
- * has 2FA enabled — this page only ever runs the initial setup.
- */
 export async function loadTwoFactorSetup(): Promise<TwoFactorSetupData> {
   await requireAuth();
 

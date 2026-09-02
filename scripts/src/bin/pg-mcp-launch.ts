@@ -8,12 +8,6 @@ import { buildDevDSN } from '../postgres/build-dev-dsn';
 import { readVaultDSN } from '../postgres/read-vault-dsn';
 import { renderDBHubTOML } from '../postgres/render-dbhub-toml';
 
-/**
- * MCP stdio entrypoint (.mcp.json): renders a per-session dbhub config — the
- * dev source pinned to this worktree's database — then hands stdio over to
- * dbhub. Everything here runs before any tool call, so it must stay cheap and
- * local: DSN reads hit 1Password, never Neon.
- */
 async function runPostgresMCP() {
   const branchResult = await execa('git', ['rev-parse', '--abbrev-ref', 'HEAD']);
 

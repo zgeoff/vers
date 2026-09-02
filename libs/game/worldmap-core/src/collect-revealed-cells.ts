@@ -3,18 +3,6 @@ import { encodeMortonKey } from './encode-morton-key';
 import { getHexDistance } from './get-hex-distance';
 import type { RevealSource, RevealedCells, Viewport } from './types';
 
-/**
- * Projects a set of reveal sources onto the region a viewport actually asks for: for each source,
- * the hex disc of its own radius around its coordinate, clipped to the viewport and to the source's
- * own bounding box, deduplicated across overlapping sources, and returned Morton-sorted. A source
- * whose disc cannot reach the viewport at all — its coordinate falls outside the viewport inflated
- * by its own radius — contributes nothing, so the security constraint holds structurally: only
- * cells inside the union of source discs can appear, and the viewport can only narrow that union,
- * never widen it.
- *
- * A disc around a source near the edge of the packable coordinate range reaches cells no Morton key
- * can address; those cells are dropped, so a source stays usable right up to the edge.
- */
 export function collectRevealedCells(
   sources: ReadonlyArray<RevealSource>,
   viewport: Readonly<Viewport>,

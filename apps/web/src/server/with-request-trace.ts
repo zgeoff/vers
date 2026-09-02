@@ -4,12 +4,6 @@ import { createTraceContext, parseTraceparent } from '@vers/trace';
 
 const ASSET_PATH_PATTERN = /\.[a-z0-9]+$/i;
 
-/**
- * Runs the request inside its W3C trace-context scope. A served static asset (a pathname with a
- * file extension) or the `/health` probe — the same paths logged only at debug level — skips
- * opening a span; every other request opens a SERVER span extracted from the inbound headers, a
- * no-op without a registered tracer provider.
- */
 export function withRequestTrace(
   request: Request,
   next: () => Promise<Response>,
@@ -75,10 +69,6 @@ function runWithServerSpan(
   );
 }
 
-/**
- * Resolves the request's trace context: from the active span when one continued or started a real
- * trace, otherwise a valid inbound `traceparent` parsed directly, or a fresh trace for this hop.
- */
 function resolveTraceContext(request: Request) {
   return (
     findSpanTraceContext() ??
@@ -86,10 +76,6 @@ function resolveTraceContext(request: Request) {
   );
 }
 
-/**
- * Runs `next` and stamps its response with the request's trace id, tolerating the immutable
- * headers a `Response.redirect`/`Response.error` carries.
- */
 async function withTraceIDHeader(
   traceID: string,
   next: () => Promise<Response>,

@@ -9,11 +9,6 @@ interface StepUpChallenge {
   readonly transactionID: string;
 }
 
-/**
- * The account hub's disable-2FA action. A `step-up-required` result swaps the button for the
- * shared step-up challenge island; once it verifies, the action is resubmitted with the resulting
- * transaction token attached.
- */
 export function DisableTwoFactorAuthForm() {
   const disableTwoFactorAuthFn = useServerFn(disableTwoFactorAuth);
   const [formError, setFormError] = useState<string | null>(null);

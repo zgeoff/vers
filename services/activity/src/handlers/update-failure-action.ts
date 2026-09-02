@@ -3,9 +3,6 @@ import type { DB } from '@vers/db';
 import type { Kysely } from 'kysely';
 import type { EmptyErrorPayload, MissingSessionPayload } from '../types';
 
-/**
- * oRPC handler opts for the authed `updateFailureAction` procedure.
- */
 interface UpdateFailureActionOpts {
   readonly context: { readonly actingUserID: null | string };
   readonly errors: {
@@ -19,10 +16,6 @@ interface UpdateFailureActionResult {
   readonly failureAction: ActivityFailureAction;
 }
 
-/**
- * Persists an avatar's failure-action preference — the server's source of truth a device-local
- * cache mirrors as an offline outbox.
- */
 export async function updateFailureAction(
   db: Kysely<DB>,
   opts: UpdateFailureActionOpts,

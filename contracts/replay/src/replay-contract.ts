@@ -6,11 +6,6 @@ import { WakeOutputSchema } from './wake-output-schema';
 
 const SimVersionMismatchDataSchema = z.object({ providerSimVersion: z.string() });
 
-/**
- * The replay service's API: one provider endpoint the dispatcher calls to re-run a simulation
- * segment against this deploy's baked engine, and one drain endpoint that wakes the machine to
- * work through whatever the queue currently holds.
- */
 export const replayContract = {
   replaySegment: authedRoute
     .route({

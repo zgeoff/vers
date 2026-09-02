@@ -4,9 +4,6 @@ import type { Kysely } from 'kysely';
 import type { MissingSessionPayload } from '../types';
 import { toAvatarData } from './to-avatar-data';
 
-/**
- * oRPC handler opts for the authed `getAvatars` procedure.
- */
 interface GetAvatarsOpts {
   readonly context: { readonly actingUserID: null | string };
   readonly errors: {
@@ -14,11 +11,6 @@ interface GetAvatarsOpts {
   };
 }
 
-/**
- * Lists every avatar owned by the acting user together with the persisted active selection. One
- * joined statement, so the list and the selection come from the same snapshot and the answer can
- * never name an avatar it doesn't list.
- */
 export async function getAvatars(db: Kysely<DB>, opts: GetAvatarsOpts): Promise<AvatarRoster> {
   if (opts.context.actingUserID === null) {
     throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });

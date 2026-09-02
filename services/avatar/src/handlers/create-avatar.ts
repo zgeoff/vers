@@ -9,16 +9,10 @@ import { sql } from 'kysely';
 import type { EmptyErrorPayload, MissingSessionPayload } from '../types';
 import { toAvatarData } from './to-avatar-data';
 
-/**
- * Payload shape for createAvatar's LIMIT_REACHED: the mode whose cap the caller hit.
- */
 interface LimitReachedPayload {
   readonly data: { readonly cap: number; readonly mode: AvatarMode };
 }
 
-/**
- * oRPC handler opts for the authed `createAvatar` procedure.
- */
 interface CreateAvatarOpts {
   readonly context: { readonly actingUserID: null | string };
   readonly errors: {
@@ -29,13 +23,6 @@ interface CreateAvatarOpts {
   readonly input: { readonly mode: AvatarMode; readonly name: string };
 }
 
-/**
- * Creates an avatar owned by the acting user and makes it the active one, unless a live activity
- * holds the selection — then the new avatar lands unselected, since taking the slot would steal
- * it from the running avatar. Throws CONFLICT when the name is already taken and LIMIT_REACHED at
- * the per-mode cap. Runs inside the caller's transaction when given one, or opens its own
- * otherwise.
- */
 export async function createAvatar(db: Kysely<DB>, opts: CreateAvatarOpts): Promise<AvatarData> {
   const actingUserID = opts.context.actingUserID;
 
@@ -97,9 +84,6 @@ async function runCreateWrites(
   return toAvatarData(row);
 }
 
-/**
- * postgres.js surfaces a unique-constraint violation as SQLSTATE 23505.
- */
 function isUniqueViolation(error: unknown): boolean {
   return typeof error === 'object' && error !== null && 'code' in error && error.code === '23505';
 }

@@ -1,9 +1,5 @@
 import { GlobalRegistrator } from '@happy-dom/global-registrator';
 
-/**
- * Registers happy-dom's globals for a bun-test preload, then restores bun's native fetch stack
- * over happy-dom's replacements, since the two implementations aren't interoperable.
- */
 export function registerHappyDOM(): void {
   const nativeFetchStack = {
     AbortController: globalThis.AbortController,
@@ -20,9 +16,8 @@ export function registerHappyDOM(): void {
 
   GlobalRegistrator.register();
 
-  // bun's ReadableStream.pipeTo rejects happy-dom's WritableStream, MSW's node interception reads
-  // a Request's signal and a Response's body stream, and a happy-dom AbortSignal fails Bun's
-  // Request constructor's own instance check — the whole fetch stack must come from one
-  // implementation.
+  // the whole fetch stack must come from one implementation: bun's ReadableStream.pipeTo rejects
+  // happy-dom's WritableStream, and a happy-dom AbortSignal fails bun's Request constructor's
+  // instance check, which MSW's node interception hits when it reads a Request's signal.
   Object.assign(globalThis, nativeFetchStack);
 }

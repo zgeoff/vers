@@ -198,12 +198,6 @@ async function runCutover(app: string): Promise<void> {
   });
 }
 
-/**
- * Resolves the image ref each buildable app's cutover would deploy for HEAD: a stale app's is the
- * ref its build phase pushes for this commit, a current app's is its newest recorded release
- * (falling back to the fleet's resolved image for an app predating release records). Consumers —
- * the full-stack e2e harness — get every ref in one JSON object on stdout.
- */
 async function runImages(): Promise<void> {
   const manifest = await loadDeployManifest();
   const sha = await readHeadSHA();
@@ -255,11 +249,6 @@ interface TargetStaleness {
   readonly target: DeployTarget;
 }
 
-/**
- * The staleness preamble every per-app phase shares: resolve the target, then compare HEAD
- * against the SHA stamped on its machines. Each phase re-runs this rather than trusting an
- * earlier phase's answer, so a phase skipped by a failure upstream stays self-gating.
- */
 async function checkTargetStaleness(app: string): Promise<TargetStaleness> {
   const manifest = await loadDeployManifest();
 
@@ -274,11 +263,6 @@ async function checkTargetStaleness(app: string): Promise<TargetStaleness> {
   return { sha, staleReason, state, target };
 }
 
-/**
- * The skipped-rollout path `deploy` and `cutover` share: a current fleet still gets its scheduled
- * machines and sim version reconciled, so drift converges on the next push rather than waiting
- * for a commit that redeploys the app.
- */
 async function runReconcilesForCurrentTarget(staleness: TargetStaleness): Promise<void> {
   console.log(
     `${staleness.target.app} is current at ${staleness.state.deployedSHA ?? 'unknown'} — skipping`,
@@ -303,12 +287,6 @@ async function withReleaseDB(run: (db: Kysely<DB>) => Promise<void>): Promise<vo
   }
 }
 
-/**
- * One rollout from an already-built image (null for targets that deploy their fly.toml stock
- * image). Probes passing records the release as the app's next rollback target; probes failing
- * rolls the fleet back to the previous recorded release and leaves the run red either way, so the
- * failure ships forward on a later push instead of a broken release serving meanwhile.
- */
 async function runRollout(
   db: Kysely<DB>,
   target: DeployTarget,
@@ -368,11 +346,6 @@ async function runRollout(
   await runRollback(target, previous);
 }
 
-/**
- * Records the release the probes just blessed. A target that deploys a stock image has no built
- * ref, so its deployable ref comes from the fleet; a fleet with no single resolved image skips
- * the record rather than store a ref rollback couldn't deploy.
- */
 async function recordRolloutRelease(
   db: Kysely<DB>,
   target: DeployTarget,
@@ -397,13 +370,6 @@ async function recordRolloutRelease(
   });
 }
 
-/**
- * Redeploys the previous recorded release after a failed probe, restamping its own SHA so the
- * fleet reads stale against HEAD and the next push ships the fix. Scheduled machines re-reconcile
- * onto the restored image; the sim-version reconcile is skipped — it pairs the engine hash built
- * from HEAD's source with whatever image the fleet runs, and after a rollback those no longer
- * match.
- */
 async function runRollback(target: DeployTarget, previous: ReleaseRow): Promise<void> {
   console.error(`rolling ${target.app} back to ${previous.image} (${previous.gitSha})`);
 
@@ -432,12 +398,6 @@ async function runRollback(target: DeployTarget, previous: ReleaseRow): Promise<
 
 const SIM_ENGINE_HASH_BUILD_ARG_NAMES = ['SIM_ENGINE_HASH', 'VITE_SIM_ENGINE_HASH'];
 
-/**
- * Computes the engine hash once and stamps it into both build-arg env names
- * a target might forward, when its manifest entry asks for either — the build
- * phase's env-forwarding then picks it up without knowing which name the
- * target's own Dockerfile expects.
- */
 async function setEngineHashEnv(target: DeployTarget): Promise<void> {
   const buildArgs = target.buildArgsFromEnv ?? [];
 
@@ -452,12 +412,6 @@ async function setEngineHashEnv(target: DeployTarget): Promise<void> {
   }
 }
 
-/**
- * Ensures a target's flycast address exists before its image cuts over, so a target that lost or
- * never got one doesn't sit unreachable on the mesh with nothing but the next verify pass to catch
- * it. Never releases a public address a flycast target shouldn't hold — that's `deploy verify`'s
- * finding to report, not an action this reconcile takes on its own.
- */
 async function runIPPostureReconcile(target: DeployTarget): Promise<void> {
   const ips = await readIPList(target.app);
 
@@ -466,15 +420,6 @@ async function runIPPostureReconcile(target: DeployTarget): Promise<void> {
   await applyIPPostureActions(plan.actions);
 }
 
-/**
- * Reconciles a target's declared scheduled machines against its fleet,
- * aligning them to the image and SHA the service machines currently agree
- * on. Runs after a rollout's SHA is confirmed and on skipped deploys alike,
- * so a machine created behind the fleet converges on the next push rather
- * than waiting for a commit that redeploys its app. Without a single fleet
- * image to reconcile against nothing happens — the verify pass reports the
- * drift instead.
- */
 async function runScheduledMachineReconcile(target: DeployTarget): Promise<void> {
   const declarations = target.scheduledMachines ?? [];
 
@@ -499,12 +444,6 @@ async function runScheduledMachineReconcile(target: DeployTarget): Promise<void>
   await applyScheduledMachineActions(target.app, state.deployedSHA, actions);
 }
 
-/**
- * Runs after the replay target's deploy (and on its skipped-deploy path
- * alike, mirroring the scheduled-machine reconcile) to provision or update
- * the per-version provider app for its just-deployed engine hash and keep
- * the `sim_versions` registry row current. A no-op for every other target.
- */
 async function runSimVersionReconcile(target: DeployTarget): Promise<void> {
   if (target.simVersionProvider === undefined) {
     return;
@@ -539,11 +478,6 @@ async function runSimVersionReconcile(target: DeployTarget): Promise<void> {
 
 let engineHashPromise: Promise<string> | null = null;
 
-/**
- * Builds the engine bundle hash at most once per CLI run — every caller in a
- * single invocation shares the result. The first call pays a full engine
- * bundle build and throws on a non-pinned Bun version.
- */
 function loadEngineHashOnce(): Promise<string> {
   engineHashPromise ??= loadEngineHash();
 
@@ -588,13 +522,6 @@ async function runVerify(): Promise<void> {
   }
 }
 
-/**
- * Asserts, before any image builds, that each contract-carrying app's required env keys are
- * covered by its `fly.toml` `[env]` table, its set Fly secrets, or a build arg its Dockerfile
- * bakes into the binary — the gap boot-time validation would otherwise only report as a
- * production crash loop. Non-service apps (app-web, bugsink, umami) carry no generated contract
- * and are skipped; a service missing its contract fails the run rather than bypassing the gate.
- */
 async function runPreflight(): Promise<void> {
   const manifest = await loadDeployManifest();
 
@@ -647,13 +574,6 @@ async function runPreflight(): Promise<void> {
   }
 }
 
-/**
- * Runs the replay retention sweep: tombstones every `sim_versions` row past its retention
- * deadline (the current version is always excluded), destroys the tombstoned rows' provider apps,
- * then unparks any activity whose stamped hash the registry now carries as active. Idempotent — a
- * repeat run tombstones nothing already pruned, destroys nothing already gone, and unparks nothing
- * already active.
- */
 async function runSweepReplay(): Promise<void> {
   const databaseURL = requireEnvVar(
     'DATABASE_URL',

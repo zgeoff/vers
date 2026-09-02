@@ -2,9 +2,6 @@ import { hexToBytes } from '@noble/hashes/utils.js';
 import type { Population } from '@vers/roll-crypto';
 import * as z from 'zod';
 
-/**
- * A population's custodied root secrets, keyed by version, plus the version new derivations use.
- */
 interface RollKeyRootEntry {
   readonly current: number;
   readonly roots: ReadonlyMap<number, Uint8Array>;
@@ -25,11 +22,6 @@ const RawRollKeyRootsSchema = z.object({
   trade: RawRootEntrySchema,
 });
 
-/**
- * Parses the `ROLL_KEY_ROOTS` env payload into decoded per-population root secrets. Fails fast on
- * any malformed field, always naming the problem and never the root material itself, so a boot
- * failure is safe to log.
- */
 export function parseRollKeyRoots(raw: string): RollKeyRoots {
   const parsed = RawRollKeyRootsSchema.safeParse(parseJSON(raw));
 

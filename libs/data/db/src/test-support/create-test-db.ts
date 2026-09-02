@@ -3,12 +3,6 @@ import { createDB } from '../create-db';
 import { createClonedDatabase } from './create-cloned-database';
 import { resolveTestDBTarget } from './resolve-test-db-target';
 
-/**
- * Creates a uniquely named database cloned from the migrated template
- * database and returns a `@vers/db` client bound to it.
- *
- * Implements `Symbol.asyncDispose` to close the client's connection.
- */
 export async function createTestDB() {
   const target = resolveTestDBTarget();
   const dbName = `test_${createId()}`;

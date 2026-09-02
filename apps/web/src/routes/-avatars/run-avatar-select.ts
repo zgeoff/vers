@@ -5,10 +5,6 @@ import { avatarClient } from '../../lib/rpc/clients/avatar-client';
 import { logger } from '../../server/logger';
 import type { AvatarSelectResult } from './types';
 
-/**
- * Persists the picked avatar as active and re-enters the game as them; a live activity's hold on
- * the selection comes back as a named rejection for the roster to render instead of a redirect.
- */
 export async function runAvatarSelect(avatarID: string): Promise<AvatarSelectResult> {
   await requireAuth();
 

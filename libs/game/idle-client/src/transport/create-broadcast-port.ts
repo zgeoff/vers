@@ -12,20 +12,11 @@ interface BroadcastPort {
 }
 
 interface CreateBroadcastPortOptions {
-  /**
-   * Overrides the minted tab id — a test's only way to simulate the same tab id reappearing
-   * (e.g. after the writer-side demux evicts an idle entry).
-   */
   readonly tabID?: string;
 }
 
-/**
- * A structural `MessagePort` bridging this tab to the elected web-locks writer's demux: no real
- * port exists between them, and `BroadcastChannel.postMessage` cannot transfer one, so every frame
- * envelopes with this tab's id on the way out and is filtered to it on the way in — the raw
- * channel carries every tab's RPC traffic at once, and an unfiltered read would misroute another
- * tab's reply here. `tabID` is minted fresh per call, one broadcast port per tab session.
- */
+// `BroadcastChannel.postMessage` cannot transfer a `MessagePort`, so no real port exists between
+// a tab and the elected writer: every frame carries this tab's id and is filtered back to it
 export function createBroadcastPort(
   options: Readonly<CreateBroadcastPortOptions> = {},
 ): SupportedMessagePort {

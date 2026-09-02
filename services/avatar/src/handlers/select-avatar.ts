@@ -4,17 +4,10 @@ import type { Kysely } from 'kysely';
 import { sql } from 'kysely';
 import type { EmptyErrorPayload, MissingSessionPayload } from '../types';
 
-/**
- * Payload shape for selectAvatar's CONFLICT: the live run's avatar, named so the client can tell
- * the player who holds the active slot.
- */
 interface ActivityLockedPayload {
   readonly data: { readonly owningAvatarID: string; readonly owningAvatarName: string };
 }
 
-/**
- * oRPC handler opts for the authed `selectAvatar` procedure.
- */
 interface SelectAvatarOpts {
   readonly context: { readonly actingUserID: null | string };
   readonly errors: {
@@ -25,14 +18,6 @@ interface SelectAvatarOpts {
   readonly input: { readonly id: string };
 }
 
-/**
- * Persists the caller's active avatar. A live activity locks the selection to the avatar running
- * it: selecting any other avatar throws CONFLICT naming the run's owner, while re-selecting the
- * owner (or the already-active avatar) is a no-op success. The per-user advisory lock serializes
- * this against concurrent creates and against the activity service's root mint, which takes the
- * same lock before admitting a start — so the pair is atomic, never best-effort. Runs inside the
- * caller's transaction when given one, or opens its own otherwise.
- */
 export function selectAvatar(
   db: Kysely<DB>,
   opts: SelectAvatarOpts,

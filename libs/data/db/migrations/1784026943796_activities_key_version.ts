@@ -1,9 +1,5 @@
 import type { Kysely } from 'kysely';
 
-/**
- * Adds `key_version` to `activities`, the key generation an activity's rolls derive under.
- * Defaults to 1 so existing rows read as the first generation.
- */
 export async function up(db: Kysely<unknown>): Promise<void> {
   await db.schema
     .alterTable('activities')

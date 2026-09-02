@@ -6,11 +6,6 @@ interface SendIdleCacheNodeSeedsInput {
   readonly stamps: StartStampsPreference;
 }
 
-/**
- * Relays a batch of one avatar's freshly revealed start inputs, plus the crypto stamps they were
- * derived against, to the worker, which persists them to its durable on-device cache scoped to
- * that avatar.
- */
 export async function sendIdleCacheNodeSeeds(
   client: WorkerClient,
   input: Readonly<SendIdleCacheNodeSeedsInput>,

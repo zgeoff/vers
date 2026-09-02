@@ -17,17 +17,10 @@ import { runReplaySimulation } from '../handlers/run-replay-simulation';
 export interface RunReplaySegmentDeps {
   readonly db: Kysely<DB>;
 
-  /**
-   * Signs the s2s token a remote dispatch carries; resolved and injected by the caller, never read
-   * from ambient env inside this module.
-   */
   readonly privateKey: CryptoKey;
 
   readonly simVersion: string;
 
-  /**
-   * Bounds one remote provider dispatch, so tests can wait far less than production's default.
-   */
   readonly timeoutMs?: number;
 }
 
@@ -37,16 +30,6 @@ export type RunReplaySegmentOutcome =
   | { readonly kind: 'replayed'; readonly output: ReplaySegmentOutput }
   | { readonly kind: 'unknownVersion' };
 
-/**
- * Routes one replay job to wherever its stamped `simVersion` can run: in-process when it matches
- * this deploy's own baked engine hash, or a remote call to the registry's provider otherwise.
- * `unknownVersion` (no registry row — a newer or unrecognized stamp), `expired` (past retention),
- * and `providerUnavailable` (the remote dispatch timed out, couldn't connect, or the provider
- * answered with an undefined error such as a proxy 5xx) are operational outcomes for the caller to
- * act on — parking the activity or forcing a resync — never thrown. A `SIM_VERSION_MISMATCH`
- * rejection from a resolved provider means dispatch routed to the wrong deploy; that is a bug, not
- * an operational outcome, and is left to throw.
- */
 export async function runReplaySegment(
   deps: Readonly<RunReplaySegmentDeps>,
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- job carries zod-inferred wire types with no readonly form
@@ -71,6 +54,8 @@ export async function runReplaySegment(
 
     return { kind: 'replayed', output };
   } catch (error) {
+    // a defined error is a genuine misroute; a timeout, a refused connection, and a proxy 5xx
+    // answering for a provider that is still booting all arrive as undefined errors
     if (isDefinedError(error)) {
       throw error;
     }
@@ -79,21 +64,8 @@ export async function runReplaySegment(
   }
 }
 
-/**
- * Bounds one provider dispatch, so a provider stuck mid-boot fails the call rather than holding
- * the caller's claim transaction forever. Applied fresh to each of the two dispatches a
- * cross-version segment can make (initial replay, fresh confirm) rather than a shared deadline
- * across both — worst case, a claim transaction that dispatches twice holds the lock for roughly
- * twice this bound.
- */
 const DEFAULT_PROVIDER_DISPATCH_TIMEOUT_MS = 15_000;
 
-/**
- * Calls the registered provider's own `replaySegment` endpoint, minting a short-lived s2s token
- * scoped to the replay audience. A defined contract error (a genuine misroute) and an undefined
- * one (timeout, connection failure, or a proxy answering for a provider that isn't up yet) both
- * reach the caller as a thrown error — the caller distinguishes them.
- */
 async function sendProviderReplaySegment(
   deps: Readonly<RunReplaySegmentDeps>,
   providerURL: string,

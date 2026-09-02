@@ -26,10 +26,6 @@ interface ServiceRuntime<TEnvShape extends z.ZodRawShape> {
   readonly logger: pino.Logger;
 }
 
-/**
- * `slowRequestMs` defaults to 2000 when unset. `slowRequestOverridesMs` keys a per-pathname
- * threshold that wins over `slowRequestMs` for a matching request.
- */
 export interface ServiceConfig<TEnvShape extends z.ZodRawShape> {
   readonly buildRouter: (runtime: ServiceRuntime<TEnvShape>) => AnyRouter | Promise<AnyRouter>;
   readonly envShape: TEnvShape;
@@ -48,11 +44,6 @@ export interface Service<TEnvShape extends z.ZodRawShape> {
 
 const DEFAULT_SLOW_REQUEST_MS = 2000;
 
-/**
- * Boots the Elysia shell every service composes: env validation, s2s token verification ahead of
- * the oRPC handler, health checks, W3C trace-context propagation, and optional Sentry/OTel wiring.
- * Nothing is started — call the returned `listen` to bind a port.
- */
 export async function createService<TEnvShape extends z.ZodRawShape = Record<never, never>>(
   config: ServiceConfig<TEnvShape>,
 ): Promise<Service<TEnvShape>> {
@@ -97,13 +88,9 @@ export async function createService<TEnvShape extends z.ZodRawShape = Record<nev
     );
   }
 
-  // registered after the OTel plugin above: the Sentry SDK's own OpenTelemetry bootstrap
-  // (client-side tracing, off here — `startErrorReporting` pins `tracesSampleRate: 0`) tries to
-  // register its own global tracer provider, context manager, and propagator, and the
-  // OpenTelemetry API keeps only the first registration per process — going second means Sentry's
-  // registration silently no-ops and the plugin's W3C propagation and OTLP export stay in effect;
-  // reversed, Sentry's `sentry-trace`-only propagator would shadow `traceparent` and no service
-  // span would ever reach the OTLP exporter
+  // registered after the OTel plugin: the OpenTelemetry API keeps only the first global tracer
+  // provider, context manager, and propagator per process, so going second makes the Sentry SDK's
+  // own OTel bootstrap a no-op; reversed, its sentry-trace-only propagator would shadow traceparent
   await startErrorReporting(env.SENTRY_DSN);
 
   const router = await config.buildRouter({ env, logger });
@@ -156,9 +143,6 @@ export async function createService<TEnvShape extends z.ZodRawShape = Record<nev
   };
 }
 
-/**
- * Parses the base + service-specific environment shape against `process.env`, failing fast.
- */
 function parseServiceEnv<TEnvShape extends z.ZodRawShape>(
   envShape: TEnvShape,
 ): ServiceEnv<TEnvShape> {
@@ -177,33 +161,18 @@ function parseServiceEnv<TEnvShape extends z.ZodRawShape>(
   return { ...base.data, ...extra.data };
 }
 
-/**
- * Loads the metrics export on demand, so the OpenTelemetry metrics SDK never loads in a process
- * that doesn't export telemetry.
- */
 async function startMetricsShipper(serviceName: string): Promise<MetricsExport> {
   const otelModule = await import('@vers/service-utils/otel');
 
   return otelModule.startMetricsExport({ serviceName });
 }
 
-/**
- * Loads the OTLP log-shipping destination on demand, so the OpenTelemetry logs SDK never loads in
- * a process that doesn't export telemetry.
- */
 async function createLogShipper(serviceName: string): Promise<OTLPLogStream> {
   const otelModule = await import('@vers/service-utils/otel');
 
   return otelModule.createOTLPLogStream({ serviceName });
 }
 
-/**
- * Resolves the request's trace context: from the active OTel span when the Elysia plugin already
- * opened one (its root span already continued or started the trace from the inbound
- * `traceparent`), so log `traceID`, `x-trace-id`, and outbound `traceparent` always match the
- * exported spans; otherwise continues a valid inbound `traceparent` directly, or starts a fresh
- * trace for this hop.
- */
 function createTrace(request: Request): TraceContext {
   return (
     findSpanTraceContext() ??
@@ -219,16 +188,6 @@ interface RegisterORPCHandlerDeps {
   readonly slowRequestOverridesMs?: Readonly<Record<string, number>>;
 }
 
-/**
- * Registers an oRPC fetch handler behind the s2s trust boundary: an invalid service token short-
- * circuits with a plain 401 before the handler ever runs, per the service auth/trust-boundary
- * split. Every response — including that 401 — carries the request's trace id
- * in `x-trace-id`, and the whole request runs inside its trace-context scope so logs correlate.
- * Every request logs one structured line on completion (method, path, status, duration), severity
- * following the response status; a trust-boundary rejection's line carries the rejection reason. A
- * completed request past its slow-request threshold logs at `warn` with `slow: true` and
- * `thresholdMs` instead, unless its status is already a server error.
- */
 function registerORPCHandler(
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- elysia app is a live framework instance with mutable routing state; no readonly form
   app: Elysia,
@@ -331,10 +290,6 @@ function pickRequestLogLevel(status: number): 'error' | 'info' | 'warn' {
   return status >= 400 ? 'warn' : 'info';
 }
 
-/**
- * Rounds an elapsed-time reading to one decimal, keeping the sub-millisecond resolution that
- * whole-millisecond rounding would discard.
- */
 function toDurationMs(elapsedMs: number): number {
   return Math.round(elapsedMs * 10) / 10;
 }

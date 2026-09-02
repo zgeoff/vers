@@ -11,14 +11,8 @@ interface ProviderProcess {
   readonly url: string;
 }
 
-/**
- * Boots the real `serve-provider.ts` entrypoint as a subprocess on only base env plus
- * `SIM_ENGINE_HASH` — no `DATABASE_URL`, `KEYS_SERVICE_URL`, or `SERVICE_AUTH_PRIVATE_KEY` — the
- * exact env a per-version provider machine boots on. An in-process boot would inherit the suite's
- * full ambient env and mask a missing env-wiring bug, which is the regression this fixture exists
- * to catch. `PORT=0` binds an OS-assigned port, read back from the boot log; the process is killed
- * via `onTestFinished`.
- */
+// a subprocess, not an in-process boot: an in-process boot inherits the suite's full ambient env
+// and masks a missing env-wiring bug, which is the regression this fixture exists to catch
 export async function createProviderProcess(engineHash: string): Promise<ProviderProcess> {
   const keyPair = await getTestServiceKeyPair();
 

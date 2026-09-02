@@ -1,12 +1,6 @@
 import type { Kysely } from 'kysely';
 import { sql } from 'kysely';
 
-/**
- * Creates `avatar_items`: mint-at-settlement's persisted rolled content. Its primary key —
- * `(avatar_id, scope_type, scope_id, chain_index, ordinal)` — is the reward coordinate itself, so
- * an `ON CONFLICT DO NOTHING` insert makes a re-verified segment's mint idempotent: the coordinate
- * can never carry two rolls.
- */
 export async function up(db: Kysely<unknown>): Promise<void> {
   await db.schema
     .createTable('avatar_items')

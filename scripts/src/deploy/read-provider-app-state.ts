@@ -17,13 +17,6 @@ const machineSchema = z
 
 const machinesSchema = z.array(machineSchema);
 
-/**
- * Reads what exists of a per-version provider app: whether the app itself is
- * present in the org, and whether it still holds at least one machine — the
- * planner provisions a fresh machine for an app that lost its machine, not
- * just for a missing app. The first machine's id and image digest are
- * returned so the planner can detect a machine running a stale image.
- */
 export async function readProviderAppState(app: string): Promise<ProviderAppState> {
   const appsStdout = await runFlyctl(['apps', 'list', '--json']);
 

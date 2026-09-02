@@ -6,12 +6,8 @@ const opItemSchema = z.object({
   fields: z.array(opItemFieldSchema),
 });
 
-/**
- * Extracts an item's `notesPlain` field value from `op item get --format
- * json` output — the only field-read path that preserves multiline values
- * (PEM keys, JSON blobs) verbatim. `op item get --fields` CSV-quotes
- * multiline values and corrupts them.
- */
+// reads `notesPlain` from `op item get --format json` output: `--fields` CSV-quotes multiline
+// values and corrupts PEM keys and JSON blobs
 export function parseNotesPlain(raw: unknown, itemTitle: string): string {
   const result = opItemSchema.safeParse(raw);
 

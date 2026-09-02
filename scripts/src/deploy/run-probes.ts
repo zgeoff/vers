@@ -4,11 +4,6 @@ import type { Probe } from './types';
 const PROBE_RETRIES = 9;
 const PROBE_DELAY_MS = 5000;
 
-/**
- * Runs each probe against the live app, retrying while the deploy settles,
- * and returns findings; an empty array means every probe passed. Probes run
- * sequentially so their log output stays readable.
- */
 export async function runProbes(probes: ReadonlyArray<Probe>): Promise<ReadonlyArray<string>> {
   const findings: Array<string> = [];
 

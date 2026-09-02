@@ -8,43 +8,16 @@ interface DrainOfflineBatchesOptions {
   readonly batches: ReadonlyArray<ReadonlyArray<CatchUpContinuation>>;
   readonly client: Pick<ActivityServiceClient, 'advanceActivity'>;
 
-  /**
-   * Called once, on the first rejected batch, before this function returns — the caller's chance
-   * to clear whatever optimistic reward reveals and xp tallies it showed for the unsent tail a
-   * rejection discards. A device-key client must not keep showing loot the verifier will never
-   * settle.
-   */
   readonly onRejected?: () => void;
 }
 
 interface DrainOfflineBatchesResult {
-  /**
-   * The confirmed row and head as of the last batch that committed — the caller's original
-   * `activity`/`appendedHead` when the first batch was rejected, so a caller never reports
-   * progress a rejection discarded.
-   */
   readonly activity: ActivityData;
   readonly appendedHead: number;
 
-  /**
-   * False once any batch was rejected — the caller stops treating `activity`/`appendedHead` as the
-   * end of a fully delivered plan and instead re-fetches through the outer resync.
-   */
   readonly delivered: boolean;
 }
 
-/**
- * Ships bounded offline-catch-up batches to `advanceActivity`, sequentially and awaited — the
- * single delivery path for offline continuations. It is never registered with the per-activity
- * checkpoint submitter, whose held-batch flush fans out with no cross-activity ordering; two
- * flushers over one queue would double-submit and could interleave. Ordering — batch N's mint
- * committing before batch N+1 ships — comes from awaiting each response before sending the next,
- * not from any assertion. On a defined `advanceActivity` rejection, the drain discards every batch
- * still unsent and stops immediately: the confirmed row and head it returns come from the last
- * committed batch, exactly what the outer resync re-plans from. A transport failure carries no such
- * verdict — the server never rejected anything — so it propagates instead of resolving, reaching
- * the resync's own failure/retry path rather than reading as a displaced writer.
- */
 export async function drainOfflineBatches(
   options: Readonly<DrainOfflineBatchesOptions>,
 ): Promise<DrainOfflineBatchesResult> {

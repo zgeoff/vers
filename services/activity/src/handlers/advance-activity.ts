@@ -46,16 +46,9 @@ interface AdvanceActivityDeps {
   readonly secretVersion: number;
   readonly sendReplayWake: () => void;
 
-  /**
-   * Cap on the avatar's accrued simulated-time budget, in milliseconds — the same limit
-   * `trackActivityProgress` enforces, applied once per continuation's own committed transaction.
-   */
   readonly simTimeCapMs: number;
 }
 
-/**
- * oRPC handler opts for the authed `advanceActivity` procedure.
- */
 interface AdvanceActivityOpts {
   readonly context: {
     readonly actingSessionID: null | string;
@@ -84,35 +77,6 @@ interface AdvanceActivityOpts {
   };
 }
 
-/**
- * Bulk mint-and-appends an offline catch-up. Each `continuations` entry appends its tail onto the
- * currently active row — `activityID` for the first entry, the previous entry's minted row after —
- * and, once that append lands terminal, mints the entry's own `id`/`startKey`/`buildSnapshot` as
- * the next row. Every entry both closes a row and opens the next: the client only ever submits a
- * full attempt, so each continuation ends terminal by construction.
- *
- * `contentVersion`, `keyVersion`, `simVersion`, `encounterNode`, and `secretRef`/`secretVersion`
- * are inherited once from `activityID`'s own row and reused for every mint in this request — never
- * re-resolved from the service's current deploy or the world map. The whole offline gap therefore
- * replays under the exact engine, content, and encounter the client's own local simulation was
- * pinned to, and every minted row stays eligible for the replay verifier's descriptor check.
- *
- * The mint authors `buildSnapshot` itself server-side; the entry's own `buildSnapshot` is only a
- * cross-check hint, and a mismatch bails with `CHECKPOINT_INVALID`. A client-supplied snapshot the
- * server stored as-is would be direct xp inflation.
- *
- * Mint dedup keys on the entry's own `id` plus a matching `startKey` and scope, never on id and
- * ownership alone, and resolves outside any transaction once the insert's unique violation has
- * unwound one. The live start path's dedup — the avatar's active-status row — would find nothing
- * once a gap has already ended terminal, and a retry resolved against it would stall forever.
- *
- * When `activityID` names no row, `activityStart` — a client-minted activity start the server has
- * never seen — is admitted onto that id first and the continuations append onto it; absent
- * `activityStart`, the missing row is NOT_FOUND. The activity start is validated against server
- * truth, not trusted: it clears the same gates a fresh start does, must anchor against the chain's
- * live head, and its build snapshot and start hash must reconcile with the server's own derivation.
- * A retry whose activity start was already admitted skips straight to the append.
- */
 export async function advanceActivity(
   deps: AdvanceActivityDeps,
   opts: AdvanceActivityOpts,
@@ -195,15 +159,6 @@ export async function advanceActivity(
   return { activity: toActivityData(finalRow), appendedHead: finalRow.appendedHead };
 }
 
-/**
- * Resolves the row the request's continuations append onto: the existing row at
- * `opts.input.activityID`, or `opts.input.activityStart` freshly admitted onto that id. A missing
- * row with no `activityStart` to admit is NOT_FOUND, as is a `activityStart` the acting user's
- * avatars don't include or an id that already belongs to another user — a foreign id stays
- * owner-scoped NOT_FOUND rather than leaking its existence. On a concurrent duplicate mint it
- * converges on the already-minted row when the id is genuinely this same activity start retried,
- * and CONFLICT otherwise.
- */
 async function resolveActivityStartRow(
   deps: AdvanceActivityDeps,
   opts: AdvanceActivityOpts,
@@ -295,12 +250,6 @@ async function resolveActivityStartRow(
   }
 }
 
-/**
- * Resolves an activity start admission's unique violation from a fresh connection, once the transaction
- * that hit it has rolled back. Returns the existing row at `activityID` only when it is genuinely
- * this same activity start retried — same avatar, `startKey`, and scope; anything short of that
- * full match, a foreign row or no row, is `undefined`.
- */
 async function resolveActivityStartAdmissionCollision(
   db: Kysely<DB>,
   activityStart: Readonly<OfflineActivityStartSubmission>,
@@ -325,10 +274,6 @@ async function resolveActivityStartAdmissionCollision(
   return existing;
 }
 
-/**
- * The fields every mint in a request inherits from `activityID`'s own row rather than re-resolving
- * per continuation.
- */
 interface PinnedActivityContext {
   readonly avatarId: string;
   readonly contentVersion: string;
@@ -368,12 +313,8 @@ type BailOutcome =
       readonly status: ActivityStatus;
     };
 
-/**
- * Thrown to reject a continuation from inside its own transaction, unwinding whatever it appended
- * or minted so far — the mechanism, not a return value, that makes a rejected continuation roll
- * back: `db.transaction().execute()` commits on any normal return regardless of the value, and
- * only a throw triggers its rollback.
- */
+// a throw is the only way to roll a continuation back: Kysely's transaction().execute() commits on
+// any normal return, whatever the value
 class ContinuationBailError extends Error {
   readonly outcome: BailOutcome;
 
@@ -394,9 +335,6 @@ const BAILOUT_REASONS = {
   terminal: 'terminal',
 } as const;
 
-/**
- * Maps a bail outcome onto its typed contract error.
- */
 function buildBailError(
   errors: AdvanceActivityOpts['errors'],
   outcome: Readonly<BailOutcome>,
@@ -461,13 +399,6 @@ interface RunContinuationInput {
   readonly targetExpectedHead: number;
 }
 
-/**
- * Runs one continuation: append its tail onto the target row, then — because every tail ends
- * terminal by construction — mint its own id as the next row. The cap decision and the
- * append-and-mint each open their own top-level transaction. A cap commits on its own: its
- * terminal transition is honest progress independent of this continuation's fate. An append and
- * its following mint share one transaction, so a rejected mint rolls the append back with it.
- */
 async function runContinuation(
   deps: AdvanceActivityDeps,
   pinned: Readonly<PinnedActivityContext>,
@@ -686,10 +617,9 @@ async function runContinuation(
     });
 
     if (timeDelta > 0) {
-      // The same debit formula `trackActivityProgress` uses, recomputed against the row's
-      // currently committed values: because each continuation is its own committed transaction,
-      // the next one's read already sees this debit applied, composing the running account
-      // across the whole request without a separate running total.
+      // the same debit formula the live append path uses, recomputed against the row's committed
+      // values: each continuation commits its own transaction, so the next one's read already sees
+      // this debit applied
       const debit = Math.ceil(timeDelta);
       const refill = sql`least(${deps.simTimeCapMs}, sim_budget_ms + (extract(epoch from (now() - sim_metered_at)) * 1000)::bigint)`;
 
@@ -716,13 +646,6 @@ async function runContinuation(
   return outcome.minted;
 }
 
-/**
- * Resolves a continuation's guarded update losing its compare-and-swap, from a fresh read of the
- * target row. A resubmit that recomputes onto the row's recorded tail has already landed in an
- * earlier, partially committed request — only the mint may still be outstanding, so this falls
- * through to it exactly as a target that already reads non-active does. Every other outcome bails
- * with the row's own current head — the row the client re-plans from.
- */
 async function resolveLostRace(
   trx: Kysely<DB>,
   pinned: Readonly<PinnedActivityContext>,
@@ -770,17 +693,6 @@ async function resolveLostRace(
   });
 }
 
-/**
- * Mints a continuation's own id as the row appended onto in this request's next step, stamping the
- * row it just closed as its `predecessorActivityId` — the request's own continuations are a linear
- * chain of custody, so no client-declared order is needed here. Server-authors `buildSnapshot` from
- * the avatar's settled-plus-unsettled progression and rejects with `CHECKPOINT_INVALID` on a
- * mismatch against the continuation's hint. The insert's own unique violation — an id already
- * minted by an earlier attempt at this same continuation — propagates uncaught: this transaction is
- * about to commit everything before it, so a caught-and-recovered duplicate here would need a
- * second statement in a connection Postgres has already poisoned. The caller resolves that
- * collision instead, once this transaction's rollback has landed.
- */
 async function mintContinuation(
   trx: Kysely<DB>,
   input: Readonly<RunContinuationInput>,
@@ -870,15 +782,6 @@ async function mintContinuation(
   return { mintOutcome: 'minted', row };
 }
 
-/**
- * Resolves a mint's unique violation, from a fresh connection once the transaction that hit it has
- * rolled back: an existing row at the continuation's id converges only when it is the continuation
- * this request is retrying — owned by this avatar, minted from the same `startKey`, and scoped to
- * the same chain — a resubmit of a request whose mint already committed and whose response was
- * lost. A row that merely shares the id but not that provenance (a reused or aliased
- * id landing on an unrelated activity) is rejected exactly like a foreign-owned or missing row:
- * `undefined`, a conflict the caller reports rather than a row it adopts as the next append target.
- */
 async function resolveMintIDCollision(
   db: Kysely<DB>,
   pinned: Readonly<PinnedActivityContext>,

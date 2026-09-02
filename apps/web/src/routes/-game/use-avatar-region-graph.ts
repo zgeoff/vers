@@ -21,48 +21,16 @@ import { buildRevealedNodesQueryOptions } from '../../lib/activity/build-reveale
 import { buildActiveAvatarQueryOptions } from '../../lib/avatar/build-active-avatar-query-options';
 import { useOfflineClearedNodeIDs } from './use-offline-cleared-node-ids';
 
-/**
- * Cell-coordinate box the region graph builds from before the free camera has reported its own
- * viewport — the moment between an avatar loading and the camera's first frame update — and on
- * every avatar switch, so the incoming avatar's origin node is always present to select regardless
- * of where the outgoing avatar had panned the camera.
- */
 const INITIAL_VIEWPORT: Viewport = { maxCX: 24, maxCY: 24, minCX: -24, minCY: -24 };
 const EMPTY_VIEWPORT: Viewport = { maxCX: 0, maxCY: 0, minCX: 0, minCY: 0 };
 
 const EMPTY_NODE_ID_SET: ReadonlySet<string> = new Set();
 
-/**
- * The last resolved completed-node set paired with the avatar it was resolved for, so a held set
- * is never read across an avatar switch.
- */
 interface HeldCompletedNodeIDs {
   readonly avatarID: string | undefined;
   readonly nodeIDs: ReadonlySet<string>;
 }
 
-/**
- * Rebuilds the worldmap store's region graph from the active avatar's seed and the store's current
- * viewport, and resets the selection and viewport to the avatar's origin whenever the active
- * avatar itself changes — a fresh avatar or a switch between avatars — while otherwise leaving the
- * selection alone across a moved viewport, a re-render, or a remount. The region is keyed by the
- * avatar id, not the seed: two avatars can share a seed, and a switch between them must still
- * reset the selection. A missing active avatar leaves the store untouched rather than clearing it.
- *
- * Alongside the graph, every region-touching update recomputes the store's two completed-set
- * projections: the selectable-node set — the origin, every completed node, and every node an edge
- * connects to a completed node, the same reachability rule the activity service gates starts
- * against — over the full topology, never over the viewport-filtered graph edges, so the client
- * and server always agree at a viewport boundary; and the reveal sources the fog-of-war renderer
- * projects the revealed region from. The selectable set additionally extends over the avatar's
- * locally-cleared-but-unverified nodes, so an offline clear opens its neighbours before the server
- * confirms it; the reveal sources stay verified-only, since fog discloses only after verification.
- *
- * Returns the fog-revealed node id set projected over the loaded region — the same reveal sources
- * published to the store, expanded to the individual node ids their discs cover inside the region
- * viewport — for a caller that keeps the worker's on-device genesis-seed cache filled for whatever
- * the player can already see.
- */
 export function useAvatarRegionGraph(): ReadonlySet<string> {
   const avatarQuery = useQuery(buildActiveAvatarQueryOptions());
   const avatarID = avatarQuery.data?.id;
@@ -75,12 +43,9 @@ export function useAvatarRegionGraph(): ReadonlySet<string> {
   const previousCompletedNodeIDsRef = useRef<null | ReadonlySet<string>>(null);
   const previousOptimisticClearedNodeIDsRef = useRef<null | ReadonlySet<string>>(null);
 
-  // The completed set is viewport-independent, but the viewport-carrying query key below means a
-  // pan across a chunk boundary re-keys the query and drops its data back to `undefined` for a
-  // moment. The last resolved set is held here beside the avatar it belongs to and reused until
-  // the new key's fetch lands, rather than collapsing selectability to the origin alone on every
-  // such crossing. An avatar switch drops the held set immediately, so the incoming avatar never
-  // briefly inherits the outgoing avatar's completed nodes.
+  // the completed set is viewport-independent, but the viewport-carrying query key re-keys the
+  // query on a chunk crossing and drops its data to `undefined` for a moment; the last resolved set
+  // is held beside its avatar until the new fetch lands. An avatar switch drops it immediately.
   const [heldCompleted, setHeldCompleted] = useState<HeldCompletedNodeIDs>({
     avatarID: undefined,
     nodeIDs: EMPTY_NODE_ID_SET,
@@ -94,10 +59,9 @@ export function useAvatarRegionGraph(): ReadonlySet<string> {
     ? buildChunkAlignedViewport(viewport, REVEAL_VIEWPORT_CELL_CAP)
     : null;
 
-  // This hook is the sole subscriber to the avatar's revealed-nodes query. It stays disabled
-  // until the camera reports a viewport and the store's region belongs to the active avatar — a
-  // viewport held by another avatar's region is that avatar's camera footprint, and the region
-  // switch clears it before the incoming avatar may issue a request.
+  // the sole subscriber to the avatar's revealed-nodes query. Disabled until the camera reports a
+  // viewport and the store's region belongs to the active avatar: a viewport held by another
+  // avatar's region is that avatar's camera footprint, and the region switch clears it first.
   const revealedNodesQuery = useQuery({
     ...buildRevealedNodesQueryOptions(avatarID ?? '', revealedViewport ?? EMPTY_VIEWPORT),
     enabled: avatarID !== undefined && revealedViewport !== null && regionKey === avatarID,
@@ -214,12 +178,6 @@ function isSameViewport(previous: null | Viewport, next: Viewport): boolean {
   );
 }
 
-/**
- * The selectable-set input: the server-verified completed set widened by whatever the avatar has
- * cleared offline but not yet had verified. Reuses `completedNodeIDs` by reference while nothing is
- * optimistically cleared, so an unchanged region skips a rebuild the same as before this set
- * existed.
- */
 function buildSelectableSource(
   completedNodeIDs: ReadonlySet<string>,
   optimisticClearedNodeIDs: ReadonlySet<string>,
@@ -229,11 +187,6 @@ function buildSelectableSource(
     : new Set([...completedNodeIDs, ...optimisticClearedNodeIDs]);
 }
 
-/**
- * Expands reveal sources to the individual node ids their discs cover inside a viewport — the same
- * cell-level projection the fog-of-war renderer draws from, addressed as node ids instead of scene
- * cells.
- */
 function collectRevealedNodeIDs(
   sources: ReadonlyArray<RevealSource>,
   viewport: Viewport,

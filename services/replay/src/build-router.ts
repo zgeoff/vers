@@ -5,11 +5,6 @@ import { replaySegment } from './handlers/replay-segment';
 import { wake } from './handlers/wake';
 import type { ReplayWorkerDeps } from './worker/types';
 
-/**
- * Assembles the replay service's oRPC router: `replaySegment` closes over the baked engine hash
- * this deploy serves, and `wake` closes over everything a queue drain needs to claim and adjudicate
- * chains.
- */
 export function buildReplayRouter(deps: ReplayWorkerDeps) {
   const os = implement(replayContract).$context<ServiceContext>();
 

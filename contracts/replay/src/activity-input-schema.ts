@@ -1,10 +1,6 @@
 import * as z from 'zod';
 import { EncounterDefinitionSchema } from './encounter-definition-schema';
 
-/**
- * Wire shape of the engine's `WorldMapEncounterActivityInput` — the only activity variant the
- * engine runs today. `type` stays a literal so a future variant is an additive union member.
- */
 export const ActivityInputSchema = z.object({
   difficulty: z.number(),
   encounter: EncounterDefinitionSchema,

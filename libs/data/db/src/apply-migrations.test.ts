@@ -6,10 +6,6 @@ import { contentDocumentV2 } from './content-seed/content-document-v2';
 import { createDB } from './create-db';
 import { resolveTestDBTarget } from './test-support/resolve-test-db-target';
 
-/**
- * Creates a freshly minted, unmigrated database — the state `applyMigrations`
- * expects to find before it has ever run.
- */
 async function createEmptyDB() {
   const baseURI = resolveTestDBTarget().baseURI;
   const dbName = `test_${createId()}`;

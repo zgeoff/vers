@@ -5,12 +5,6 @@ interface BuildTelemetryResourceOptions {
   readonly serviceName: string;
 }
 
-/**
- * Builds the OpenTelemetry resource every exporter a process registers shares: the service name,
- * its version (the deployed Fly image reference when `FLY_IMAGE_REF` is set, absent otherwise), and
- * the deployment environment name from `NODE_ENV` — so every signal the process exports tags the
- * same identity.
- */
 export function buildTelemetryResource(options: BuildTelemetryResourceOptions): Resource {
   const flyImageRef = process.env['FLY_IMAGE_REF'];
 

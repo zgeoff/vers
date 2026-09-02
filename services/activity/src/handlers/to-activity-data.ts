@@ -3,11 +3,6 @@ import { BuildSnapshotSchema, EncounterNodeSchema } from '@vers/contract-activit
 import type { Activities } from '@vers/db';
 import type { Selectable } from 'kysely';
 
-/**
- * Maps a kysely `activities` row (camelCase columns) onto the contract's `ActivityData` shape.
- * `buildSnapshot` and `encounterNode` are untyped jsonb columns and re-enter typed code through
- * their contract schemas, so a drifted row fails here loudly instead of flowing on.
- */
 export function toActivityData(row: Readonly<Selectable<Activities>>): ActivityData {
   return {
     appendedAt: row.appendedAt,

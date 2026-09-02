@@ -13,9 +13,6 @@ import { http } from 'msw';
 import { RPC_PREFIX } from './rpc-prefix';
 import { toRPCHTTPPath } from './to-rpc-http-path';
 
-/**
- * Arguments passed to a mocked procedure's handler function.
- */
 export interface MockProcedureHandlerArgs<
   TInput,
   TContext extends Record<string, unknown>,
@@ -28,9 +25,6 @@ export interface MockProcedureHandlerArgs<
   readonly request: Request;
 }
 
-/**
- * A mocked procedure's output: a static value, or a function computing it per call.
- */
 export type MockProcedureHandler<
   TInput,
   TOutput,
@@ -43,18 +37,12 @@ export type MockProcedureHandler<
       args: MockProcedureHandlerArgs<TInput, TContext, TErrorMap>,
     ) => Promise<Response | TOutput> | Response | TOutput);
 
-/**
- * The leaf the proxy exposes at a contract procedure's path.
- */
 export interface MockProcedureProxy<
   TInput,
   TOutput,
   TContext extends Record<string, unknown>,
   TErrorMap extends ErrorMap,
 > {
-  /**
-   * Registers a narrow MSW handler matching exactly this procedure's RPC URL.
-   */
   handler: (mock: MockProcedureHandler<TInput, TOutput, TContext, TErrorMap>) => HttpHandler;
 }
 
@@ -75,9 +63,6 @@ type MockServiceProxyNode<TNode, TContext extends Record<string, unknown>> =
       ? { [K in keyof TNode]: MockServiceProxyNode<TNode[K], TContext> }
       : never;
 
-/**
- * A typed proxy mirroring a contract's procedure tree; every leaf exposes `.handler(mock)`.
- */
 export type MockServiceProxy<
   TContract extends AnyContractRouter,
   TContext extends Record<string, unknown>,
@@ -87,29 +72,13 @@ export interface MockServiceOptions<
   TContract extends AnyContractRouter,
   TContext extends Record<string, unknown>,
 > {
-  /**
-   * The service's origin, e.g. `http://user.test`; the RPC mount is always `${baseUrl}/rpc`.
-   */
   baseUrl: string;
 
-  /**
-   * The contract the proxy mirrors; anchors every leaf's input/output/error types.
-   */
   contract: TContract;
 
-  /**
-   * Builds per-call context (e.g. `actingUserID`) from a request's forwarded headers.
-   */
   resolveContext: (request: Request) => TContext | Promise<TContext>;
 }
 
-/**
- * Builds a typed proxy mirroring a contract's procedure tree. Each leaf's `.handler(mock)` wraps a
- * single implemented procedure in its own `RPCHandler` and returns a narrow MSW handler matching
- * only that procedure's RPC URL — `server.use(mock.user.getCurrentUser.handler(...))` overrides
- * just that one call over a full-contract base backend, leaving every other call to fall through to
- * it.
- */
 export function buildContractMock<
   TContract extends AnyContractRouter,
   TContext extends Record<string, unknown>,
@@ -120,9 +89,6 @@ export function buildContractMock<
   return buildProxyNode(options, []) as MockServiceProxy<TContract, TContext>;
 }
 
-/**
- * Arguments a mocked procedure's handler function receives, once its types are erased.
- */
 interface LooseMockFnArgs {
   readonly context: Record<string, unknown>;
   readonly errors: unknown;
@@ -131,24 +97,15 @@ interface LooseMockFnArgs {
   readonly request: Request;
 }
 
-/**
- * A mocked procedure's handler function, once its input/output/error/context types are erased.
- */
 // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- generic callback-arg object; members are caller-typed, no deep-readonly satisfies the rule
 type LooseMockFn = (args: LooseMockFnArgs) => unknown;
 
-/**
- * The loosely-typed view of `MockServiceOptions` this module's runtime traversal operates over.
- */
 interface UntypedMockServiceOptions {
   baseUrl: string;
   contract: AnyContractRouter;
   resolveContext: (request: Request) => Promise<Record<string, unknown>> | Record<string, unknown>;
 }
 
-/**
- * Recursively builds the proxy tree, tracking the dot-path walked so far.
- */
 function buildProxyNode<
   TContract extends AnyContractRouter,
   TContext extends Record<string, unknown>,
@@ -170,9 +127,6 @@ function buildProxyNode<
   });
 }
 
-/**
- * Builds the narrow MSW handler for one procedure's `.handler(mock)` call.
- */
 function buildProcedureHandler(
   options: Readonly<UntypedMockServiceOptions>,
   path: ReadonlyArray<string>,
@@ -206,9 +160,6 @@ function buildProcedureHandler(
   });
 }
 
-/**
- * Arguments a single implemented procedure's inner handler receives.
- */
 interface ProcedureImplementerHandlerArgs {
   readonly context: Record<string, unknown>;
   readonly errors: unknown;
@@ -216,19 +167,11 @@ interface ProcedureImplementerHandlerArgs {
   readonly path: ReadonlyArray<string>;
 }
 
-/**
- * The shape `implement(contract)` exposes at a single procedure's path.
- */
 interface ProcedureImplementer {
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- generic callback-arg object; members are caller-typed, no deep-readonly satisfies the rule
   handler: (fn: (opts: ProcedureImplementerHandlerArgs) => Promise<unknown>) => AnyRouter;
 }
 
-/**
- * Implements the single procedure at `path`, resolving `mock` per call. A `Response` result is
- * captured via `onRawResponse` and the procedure rejects, since a raw `Response` can't itself
- * satisfy the procedure's output schema; the caller replaces the RPC response with it verbatim.
- */
 function buildMockProcedure(
   contract: AnyContractRouter,
   path: ReadonlyArray<string>,
@@ -260,9 +203,6 @@ function buildMockProcedure(
   });
 }
 
-/**
- * Rebuilds the nested router shape a single implemented procedure needs to sit at its path.
- */
 // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- oRPC AnyRouter is a live router handle; no readonly form
 function buildNestedRouter(path: ReadonlyArray<string>, leaf: AnyRouter): AnyRouter {
   return path.reduceRight<AnyRouter>((accumulator, segment) => ({ [segment]: accumulator }), leaf);

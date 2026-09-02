@@ -10,22 +10,10 @@ import {
 } from '@opentelemetry/sdk-metrics';
 
 interface InMemoryMetrics {
-  /**
-   * Flushes the reader and returns the named counter's data points, one per distinct attribute
-   * combination recorded in this test.
-   */
   readonly readCounterDataPoints: (name: string) => Promise<ReadonlyArray<CounterDataPoint>>;
 
-  /**
-   * Flushes the reader and returns the latest cumulative value of the named counter, or undefined
-   * when nothing has recorded it in this test.
-   */
   readonly readCounterValue: (name: string) => Promise<number | undefined>;
 
-  /**
-   * Flushes the reader and returns the named histogram's data points, one per distinct attribute
-   * combination recorded in this test.
-   */
   readonly readHistogramDataPoints: (name: string) => Promise<ReadonlyArray<HistogramDataPoint>>;
 }
 
@@ -34,22 +22,12 @@ interface CounterDataPoint {
   readonly value: number;
 }
 
-/**
- * `sum` is absent for a histogram configured without one, so a test reading it asserts on the
- * recorded total only where the instrument keeps one.
- */
 interface HistogramDataPoint {
   readonly attributes: Attributes;
   readonly count: number;
   readonly sum: number | undefined;
 }
 
-/**
- * Registers an in-memory OTel meter provider as the process-global provider for the current test,
- * so code resolving instruments through the global metrics API records into it, and tears it down
- * when the test finishes. The export interval is effectively infinite — the readers force a flush
- * on demand rather than waiting on a periodic reader.
- */
 export function createInMemoryMetrics(): InMemoryMetrics {
   const exporter = new InMemoryMetricExporter(AggregationTemporality.CUMULATIVE);
 

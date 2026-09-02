@@ -26,9 +26,6 @@ const initializeOutputSchema = z
   })
   .readonly();
 
-/**
- * One start call's outcome, answered directly rather than correlated over a broadcast.
- */
 const startStatusSchema = z.discriminatedUnion('kind', [
   z.object({ activity: ActivityDataSchema, kind: z.literal('started') }).readonly(),
   z.object({ activityID: z.string(), kind: z.literal('attached') }).readonly(),
@@ -51,20 +48,10 @@ const nodeSeedSchema = z
   })
   .readonly();
 
-/**
- * `revealNodes`'s avatar- and account-global crypto stamps, relayed alongside a `cacheNodeSeeds`
- * batch so the worker's durable cache holds every input an offline-open start needs.
- */
 const startStampsSchema = z
   .object({ keyVersion: z.int().min(1), secretRef: z.string(), secretVersion: z.int().min(1) })
   .readonly();
 
-/**
- * The worker's in-page RPC surface, called over a `MessagePort` (a real `SharedWorker` port, or a
- * structural port bridging a tab to the elected web-locks writer). Package-internal: no
- * `authedRoute`, no `.errors()` maps — the underlying activity-service client already carries auth,
- * and a worker-side fault reports rather than rejecting the caller.
- */
 export const workerContract = {
   cacheNodeSeeds: oc
     .input(

@@ -6,9 +6,6 @@ export interface OnboardingSession {
   readonly email: string;
 }
 
-/**
- * Gates the onboarding page on a target verified by signup's onboarding-typed code.
- */
 export async function requireOnboardingSession(): Promise<OnboardingSession> {
   await requireAnonymous();
 

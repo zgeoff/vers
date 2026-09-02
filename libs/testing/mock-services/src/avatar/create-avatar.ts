@@ -5,10 +5,6 @@ import { findLiveActivityAvatar } from './find-live-activity-avatar';
 import { os } from './os';
 import { upsertActiveAvatar } from './upsert-active-avatar';
 
-/**
- * Avatar names are unique globally, not per user, mirroring the real service; so are the per-mode
- * cap and the auto-select that yields to a live activity's hold on the selection.
- */
 export const createAvatar = os.createAvatar.handler(async (opts) => {
   const actingUserID = opts.context.actingUserID;
 

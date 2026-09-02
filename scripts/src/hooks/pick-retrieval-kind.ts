@@ -28,10 +28,6 @@ const BUILTIN_EDITS: ReadonlySet<string> = new Set(['Edit', 'Write', 'MultiEdit'
 const SHELL_SEARCH_PATTERN =
   /(?:^|[\n|;&(])\s*(?:git\s+)?(?:rg|grep|egrep|fgrep|ag|ugrep|ack)(?:\s|$)/;
 
-/**
- * Picks what a tool call means to the retrieval policy from its name and input. Only runtime code
- * files count for reads and edits: a Read or Edit of markdown, YAML, JSON, or SQL is `other`.
- */
 export function pickRetrievalKind(
   toolName: string,
   toolInput: Readonly<Record<string, unknown>>,

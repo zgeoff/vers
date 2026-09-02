@@ -1,9 +1,5 @@
 import type { Kysely } from 'kysely';
 
-/**
- * Adds the activity's starting position on its (avatar,node) chain; the client derives each
- * checkpoint's chainIndex as startChainIndex + version.
- */
 export async function up(db: Kysely<unknown>): Promise<void> {
   await db.schema
     .alterTable('activities')

@@ -1,20 +1,9 @@
 interface WaitForOptions {
-  /**
-   * Milliseconds between retries.
-   */
   readonly intervalMs?: number;
 
-  /**
-   * Milliseconds before the wait gives up.
-   */
   readonly timeoutMs?: number;
 }
 
-/**
- * Retries the attempt until it stops throwing or rejecting, resolving with its value — so
- * assertion-style checks read exactly as they would in a straight-line test body. Once the
- * deadline passes, the attempt's final failure is rethrown as the wait's rejection.
- */
 export async function waitFor<T>(
   attempt: () => Promise<T> | T,
   options: Readonly<WaitForOptions> = {},

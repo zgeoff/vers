@@ -3,10 +3,6 @@ import type { Kysely } from 'kysely';
 import { sql } from 'kysely';
 import type { SimVersionRow } from './types';
 
-/**
- * Tombstones every active row past its retention deadline via status flip, excluding the current
- * version so the fleet always keeps a valid replay target.
- */
 export function updateExpiredSimVersions(db: Kysely<DB>): Promise<Array<SimVersionRow>> {
   return (
     db

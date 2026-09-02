@@ -1,10 +1,6 @@
 import type { Kysely } from 'kysely';
 import { sql } from 'kysely';
 
-/**
- * Creates the `set_updated_at()` trigger function shared by every table
- * carrying an `updated_at` column, then the `users` table.
- */
 export async function up(db: Kysely<unknown>): Promise<void> {
   await sql`
     CREATE OR REPLACE FUNCTION set_updated_at()

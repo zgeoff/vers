@@ -7,11 +7,6 @@ interface CreateActivityChainRowData extends Partial<Insertable<ActivityChains>>
   readonly scopeId: string;
 }
 
-/**
- * Seeds a revealed chain row for an existing avatar and scope — the precondition an activity start
- * requires before it will root a new activity there, mirroring what `revealNodes` mints at reveal
- * time.
- */
 export function createActivityChainRow(
   db: Kysely<DB>,
   data: Readonly<CreateActivityChainRowData>,

@@ -10,18 +10,6 @@ import type {
   RolledAffixes,
 } from './types';
 
-/**
- * Rolls affixes onto an existing base under a constraint set — the crafting entry point. The draw
- * sequence is frozen per content version: a values-only roll redraws each existing affix's value
- * in affix-id order; otherwise the count comes from `constraints.count` or one range draw over the
- * base rarity's count range, forced affixes consume one value draw each in affix-id order, and
- * every remaining pick is one weighted draw over the pool plus one value draw, with the picked
- * affix's whole group removed before the next pick. An exhausted pool clamps the roll — returning
- * fewer affixes keeps every shipped content version resolvable. Malformed constraints throw
- * before any draw: forced affixes must occupy distinct groups and fit inside the count, and a
- * values-only roll combines with protected groups alone — an action definition that breaks either
- * is a content bug, never a rollable input.
- */
 export function rollAffixesFromStream(
   tables: Readonly<LootTables>,
   base: Readonly<ItemState>,

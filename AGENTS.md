@@ -9,7 +9,7 @@ read the architecture doc for the subsystem in full before reasoning from its co
 | ---------------- | ---------------------------------------------------------------------------------------------------------- |
 | `code-style`     | writing, reviewing, or renaming any TypeScript — the function-verb taxonomy lives there                    |
 | `testing`        | designing, writing, or reviewing tests                                                                     |
-| `docs-writing`   | writing or editing any committed prose: `docs/`, READMEs, this file, skills, doc comments                  |
+| `docs-writing`   | writing or editing any committed prose: `docs/`, READMEs, this file, skills                                |
 | `delivery-lead`  | triage, refinement, milestone, board, or "what's next" work — the increment model and the roles live there |
 | `game-lifecycle` | any work in the activity, replay, or idle packages — the assumptions to drop and the state machines        |
 
@@ -341,6 +341,9 @@ the mechanics and provisioning.
   `// oxlint-disable-next-line <rule> -- baseline(#236)`, never turned off in config. The
   unused-directive check is the ratchet: fixing a baselined site strands its comment, and lint fails
   until the comment is deleted.
+- `zgeoff/no-jsdoc` and `zgeoff/max-consecutive-line-comments` are never baselined and never
+  disabled inline: a comment the rules reject is deleted or cut, and the fact it held moves to a
+  test name or the subsystem doc (the `code-style` skill owns the rule for what a comment holds).
 - `typescript/prefer-readonly-parameter-types` is never baselined: a function's own
   data/config/props/option types go `readonly` (React props `Readonly<Props>`), and framework
   handles with no readonly form (a `Kysely`/`Elysia`/`RPCHandler`/`Request` handle, a `Date`, …) are

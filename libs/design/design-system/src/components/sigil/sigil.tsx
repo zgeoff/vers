@@ -1,9 +1,5 @@
 import { cva, cx } from '@vers/styled-system/css';
 
-/**
- * Whose faceted crest this is — sets the stroke/fill colour from the matching `accent.*` role or
- * rarity tier.
- */
 export type SigilTint = 'artisan' | 'enhanced' | 'normal' | 'self' | 'unique' | 'world';
 
 const sigil = cva({
@@ -29,10 +25,6 @@ interface SigilProps {
   readonly tint?: SigilTint;
 }
 
-/**
- * The crystalline hex crest that stands in for a unit's portrait — identity carried by shape, drawn
- * in the bearer's role colour via `currentColor`.
- */
 export function Sigil(props: Readonly<SigilProps>) {
   const size = props.size ?? 40;
 

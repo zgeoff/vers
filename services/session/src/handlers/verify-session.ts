@@ -5,9 +5,6 @@ import { createJWT } from '../create-jwt';
 import { isDeadlockError } from '../is-deadlock-error';
 import type { EmptyErrorPayload, SessionSigningDeps } from '../types';
 
-/**
- * oRPC handler opts for the public `verifySession` procedure.
- */
 interface VerifySessionOpts {
   readonly errors: {
     readonly NOT_FOUND: (payload: EmptyErrorPayload) => Error;
@@ -15,12 +12,6 @@ interface VerifySessionOpts {
   readonly input: { readonly id: string };
 }
 
-/**
- * Completes a 2FA-gated login: mints the session's first token pair, then flips `verified` in a
- * guarded update, evicting every other session belonging to the same user in the same statement —
- * enforcing at most one verified session per user. A concurrent second verify of the same session
- * finds no row to update and evicts nothing.
- */
 export async function verifySession(
   db: Kysely<DB>,
   deps: SessionSigningDeps,
@@ -68,10 +59,9 @@ async function runVerifyAndEvict(
   sessionId: string,
   refreshToken: string,
 ): Promise<Array<{ readonly id: string }>> {
-  // Two different pending sessions of the same user verifying concurrently can deadlock
-  // (SQLSTATE 40P01: each statement's update locks its own row while its delete waits on the
-  // other's). The retry's update finds its row already evicted by the winner and fails cleanly
-  // into an empty result, never a raw 500.
+  // two pending sessions of the same user verifying concurrently deadlock in postgres (SQLSTATE
+  // 40P01): each statement's update locks its own row while its delete waits on the other's, so
+  // the loser retries once and finds its row already evicted
   try {
     return await runVerifyAndEvictStatement(db, sessionId, refreshToken);
   } catch (error: unknown) {
@@ -83,12 +73,6 @@ async function runVerifyAndEvict(
   }
 }
 
-/**
- * Flips `verified` on the session guarded by the same precondition the caller's select used, then
- * deletes every other session owned by the same user — cascading onto their pending step-up
- * transactions, since `pending_transactions.session_id` is `ON DELETE CASCADE` and an evicted
- * session's step-up must not survive it.
- */
 function runVerifyAndEvictStatement(
   db: Kysely<DB>,
   sessionId: string,

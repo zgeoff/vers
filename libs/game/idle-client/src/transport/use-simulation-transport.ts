@@ -24,11 +24,9 @@ export function useSimulationTransport() {
   const existingClient = useIdleStore((state) => state.client);
 
   useEffect(() => {
-    // read the store imperatively, not the render closure: sibling consumers mount in one commit,
-    // and a store write during the effect flush does not re-render them before their own queued
-    // effects run — each would see a stale null and construct its own client (and, on the
-    // fallback path, its own election worker). The imperative read also absorbs StrictMode's
-    // double-invoke, since the first run commits to the store synchronously.
+    // read the store imperatively: sibling consumers mount in one commit, and a store write during
+    // the effect flush does not re-render them before their own effects run, so each would see a
+    // stale null and build its own client; the read also absorbs StrictMode's double-invoke
     if (useIdleStore.getState().client !== null) {
       return;
     }
@@ -61,13 +59,8 @@ export function useSimulationTransport() {
 let broadcastChannel: BroadcastChannel | null = null;
 let broadcastSubscriberCount = 0;
 
-/**
- * Attaches the worker-broadcast listener behind a shared count, so however many transport
- * consumers mount in the same commit, exactly one listener is live on the channel — a duplicate
- * would apply every broadcast once per mounted consumer, and the reward-ledger and
- * writer-generation writers append and increment rather than assign, so repeated delivery
- * double-applies.
- */
+// one listener however many consumers mount: the reward-ledger and writer-generation writers
+// append and increment rather than assign, so a second listener double-applies every broadcast
 function subscribeToWorkerBroadcasts() {
   broadcastSubscriberCount += 1;
 
@@ -145,11 +138,6 @@ function handleWorkerMessage(message: WorkerMessage) {
   }
 }
 
-/**
- * Detaches the listener `subscribeToWorkerBroadcasts` attached once its last caller unmounts, so a
- * route transition away from and back to the game shell reconnects instead of layering a second
- * listener onto a channel a stale reference kept open.
- */
 function unsubscribeFromWorkerBroadcasts() {
   broadcastSubscriberCount -= 1;
 

@@ -9,11 +9,6 @@ const TransactionMismatchDataSchema = z.object({
   field: z.enum(['action', 'ipAddress', 'sessionID', 'target']),
 });
 
-/**
- * The session service's API: session lifecycle, token issuance, and step-up transaction state.
- * `stepUp.*` carries the durable state a step-up flow reads and writes; the transaction token
- * itself is minted and verified at the edge.
- */
 export const sessionContract = {
   createSession: publicRoute
     .route({ method: 'POST', path: '/sessions', summary: 'Create a session' })

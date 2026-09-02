@@ -14,57 +14,26 @@ import { traverseContractProcedures } from '@orpc/server';
 import { ZodToJsonSchemaConverter } from '@orpc/zod/zod4';
 import { buildRPCTestClient } from './build-rpc-test-client';
 
-/**
- * An Elysia app (or anything shaped like one) a conformance case can exercise.
- */
 export interface ConformanceCaseApp {
   readonly handle: (request: Request) => Promise<Response> | Response;
 }
 
-/**
- * One mechanical guarantee, checked against a real app via its `handle` function.
- */
 export interface ConformanceCase {
-  /**
-   * Runs the case against a real app via its `handle` function.
-   */
   run: (app: ConformanceCaseApp) => Promise<void>;
 
-  /**
-   * Behavioural title, e.g. "it rejects malformed input on users.getCurrentUser".
-   */
   title: string;
 }
 
-/**
- * Header collection accepted wherever a conformance case needs to send headers.
- */
 type ConformanceHeaders = Readonly<Record<string, string>>;
 
 interface CollectConformanceCasesOptions {
-  /**
-   * Headers carrying a valid service token with no acting user.
-   */
   readonly anonymousHeaders: ConformanceHeaders;
 
-  /**
-   * Schema-valid sample inputs keyed by dot-path (e.g. "getCurrentUser"). Enables the
-   * anonymous-call UNAUTHORIZED case for that procedure, which must reach the handler.
-   */
   readonly authedSamples?: Readonly<Record<string, unknown>>;
 
-  /**
-   * RPC mount prefix of the app under test. Default '/rpc'.
-   */
   readonly rpcPrefix?: string;
 }
 
-/**
- * Walks a contract router and builds the mechanical conformance cases every procedure must
- * satisfy: malformed input is rejected, anonymous calls to authed procedures are rejected, and the
- * contract generates a valid OpenAPI document. Cases are skipped rather than mocked when they don't
- * apply to a given procedure (e.g. no input schema, or no sample input supplied).
- */
 export function collectConformanceCases(
   contract: AnyContractRouter,
   options: CollectConformanceCasesOptions,
@@ -96,9 +65,6 @@ interface ContractProcedureEntry {
   readonly procedure: AnyContractProcedure;
 }
 
-/**
- * Gathers every leaf procedure in a contract router, paired with its dot-separated path.
- */
 function collectContractProcedures(contract: AnyContractRouter): Array<ContractProcedureEntry> {
   const entries: Array<ContractProcedureEntry> = [];
 
@@ -143,9 +109,6 @@ function buildMalformedInputCase(
   };
 }
 
-/**
- * Reads a contract procedure's declared route, schemas, and error map through oRPC's internal definition property.
- */
 function getProcedureDef(
   procedure: AnyContractProcedure,
 ): ContractProcedureDef<AnySchema, AnySchema, ErrorMap, Meta> {
@@ -155,11 +118,6 @@ function getProcedureDef(
 
 const PROBE_VALUES: ReadonlyArray<unknown> = [12_345, null, 'invalid', []];
 
-/**
- * Finds a probe value an input schema's standard-schema validator rejects; undefined if the
- * schema accepts every probe. Assumes the schema validates synchronously, true for any schema
- * without async refinements.
- */
 function findRejectingProbe(schema: AnySchema): unknown {
   for (const probe of PROBE_VALUES) {
     const result = schema['~standard'].validate(probe);
@@ -174,9 +132,6 @@ function findRejectingProbe(schema: AnySchema): unknown {
   return undefined;
 }
 
-/**
- * Builds a typed oRPC client that exercises an app's real RPC wire protocol via its `handle` function.
- */
 function buildConformanceClient(
   app: ConformanceCaseApp,
   rpcPrefix: string,
@@ -188,9 +143,6 @@ function buildConformanceClient(
   });
 }
 
-/**
- * Indexes a dot-path into a client object, returning the callable procedure at that path.
- */
 function getClientProcedure(
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- oRPC client proxy walked by dot-path; framework type with no readonly form
   client: ContractRouterClient<AnyContractRouter>,
@@ -207,9 +159,6 @@ function getClientProcedure(
   return current as (input: unknown) => Promise<unknown>;
 }
 
-/**
- * Runs a client call expected to throw, and returns the thrown ORPCError.
- */
 async function runRejectingCall(call: () => Promise<unknown>): Promise<ORPCError<string, unknown>> {
   try {
     await call();

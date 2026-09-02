@@ -24,11 +24,9 @@ const emails: Array<CapturedEmail> = [];
 let nextID = 1;
 const port = Number(process.env['RESEND_STUB_PORT'] ?? 3020);
 
-// A capture-only stand-in for the Resend HTTP API, for suites running the real service-email
-// against a stack that must send no real mail. `POST /emails` accepts a send exactly like the
-// Resend endpoint resend-node targets via `RESEND_BASE_URL` and records it in memory; specs pull
-// captured sends back with `GET /emails?to=<address>` to read verification codes out of the
-// bodies. State lives for the process lifetime — one stack boot, one mailbox.
+// A capture-only stand-in for the Resend HTTP API: `POST /emails` accepts a send exactly like the
+// endpoint resend-node targets via `RESEND_BASE_URL` and records it in memory; `GET /emails?to=`
+// reads the captured sends back. State lives for the process lifetime.
 Bun.serve({
   fetch: async (request) => {
     const url = new URL(request.url);

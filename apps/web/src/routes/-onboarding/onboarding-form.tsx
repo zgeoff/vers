@@ -27,9 +27,6 @@ const formStyles = css({
   width: '96',
 });
 
-/**
- * The onboarding page's client-interactive form: submits to the onboarding server function.
- */
 export function OnboardingForm(props: OnboardingFormProps) {
   const onboardingFn = useServerFn(onboarding);
 

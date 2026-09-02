@@ -5,12 +5,6 @@ import { ActivityFailureActionSchema } from '@vers/contract-activity';
 import { AvatarDataSchema, AvatarModeSchema } from '@vers/contract-avatar';
 import * as z from 'zod';
 
-/**
- * A stored mock avatar row: the public `AvatarDataSchema` with every field defaulted, so tests
- * state only the fields they assert on. `userID` defaults to a random id, not a real user's.
- * `failureAction` is the activity service's own column on this row, not part of the avatar
- * contract's public shape.
- */
 export const AvatarRowSchema = AvatarDataSchema.extend({
   createdAt: z.date().default(() => new Date()),
   failureAction: ActivityFailureActionSchema.default('abort'),

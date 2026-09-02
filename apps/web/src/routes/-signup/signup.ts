@@ -1,9 +1,6 @@
 import { createServerFn } from '@tanstack/react-start';
 import { runSignup } from './run-signup';
 
-/**
- * The signup form's submit action; field-level validation happens once inside the handler.
- */
 export const signup = createServerFn({ method: 'POST' })
   .validator((formData: unknown) => {
     if (!(formData instanceof FormData)) {

@@ -8,9 +8,6 @@ interface CreateJWTOpts {
   readonly userID: string;
 }
 
-/**
- * Mints an RS256 JWT for a session's access/refresh token, subject-bound to the owning user.
- */
 export function createJWT(opts: CreateJWTOpts): Promise<string> {
   return new jose.SignJWT({})
     .setProtectedHeader({ alg: 'RS256' })

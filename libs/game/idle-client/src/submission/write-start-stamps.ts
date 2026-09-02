@@ -2,10 +2,6 @@ import { PREFERENCES_STORE_NAME, START_STAMPS_KEY } from './constants';
 import { resolveCheckpointQueueDB } from './resolve-checkpoint-queue-db';
 import type { StartStampsPreference } from './types';
 
-/**
- * Persists `revealNodes`'s crypto stamps, dropping a write whose stamps are strictly older than the
- * cached ones. An equal-or-newer pair overwrites.
- */
 export async function writeStartStamps(stamps: Readonly<StartStampsPreference>): Promise<void> {
   const db = await resolveCheckpointQueueDB();
 

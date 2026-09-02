@@ -9,13 +9,6 @@ import { getContainerConnectionURI } from '../get-container-connection-uri';
 
 const TEST_CONTAINER_PORT = 32_999;
 
-/**
- * Publishes the shared postgres test container's connection details as
- * `TEST_DB_URI`/`TEST_TEMPLATE_DB` env vars for bun-test files to read (a
- * bun-test file's preload runs once per file's process, so `inject`-style
- * handoff isn't available). Starts (or attaches to) the reused container,
- * then provisions this worktree's branch-scoped template.
- */
 export async function setupBunTestDB(): Promise<void> {
   if (process.env['TEST_DB_URI'] !== undefined) {
     return;

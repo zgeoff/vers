@@ -38,11 +38,6 @@ import { startErrorReporting } from './start-error-reporting';
 import type { WorkerContext } from './types';
 import type { WorkerMessage } from './worker-to-client-message-schema';
 
-/**
- * A port-like probe over a stub context's captured broadcasts: `received` reads them live,
- * `waitForMessages` polls until the given count has arrived, and `port.postMessage` feeds a
- * sentinel through the same capture the assertions read.
- */
 function collectBroadcasts(context: StubWorkerContext) {
   return {
     port: {
@@ -65,12 +60,6 @@ interface SetupTestConfig {
   readonly userID: string;
 }
 
-/**
- * Builds an authed client acting as the given user and a
- * worker context wearing that client — so a resync's fetch, append, and start calls hit the same
- * state transitions the real service applies to the rows the test seeds in the mock db. The
- * returned flush delivers whatever the submitter has scheduled since the last call.
- */
 async function setupTest(config: Readonly<SetupTestConfig>) {
   const client = await createAuthedServiceClient<ActivityServiceClient>('activity', config.userID);
 
@@ -417,10 +406,9 @@ test('it fast-forwards a short gap, broadcasts progress and final tallies, and i
   const viewer = await createViewer();
   const ctx = await setupTest({ userID: viewer.user.id });
 
-  // this seed's placeholder encounter completes in exactly 60s of simulated time; a 63s gap
-  // leaves just under 3s of budget for the next continuation, too little for any encounter to
-  // reach a terminal checkpoint, so that continuation is guaranteed to be the fast-forward's
-  // unregistered final row regardless of its own random seed
+  // this seed's placeholder encounter completes in exactly 60s of simulated time; a 63s gap leaves
+  // under 3s for the next continuation, too little to reach a terminal checkpoint, so it is the
+  // fast-forward's unregistered final row regardless of its own seed
   const activity = await db.activityCollection.create({
     appendedHead: 0,
     avatarID: viewer.avatar.id,
@@ -480,10 +468,9 @@ test('it reconstructs a fast-forward report left mid-stream and registers from i
   const viewer = await createViewer();
   const ctx = await setupTest({ userID: viewer.user.id });
 
-  // this seed's placeholder encounter completes in exactly 60s of simulated time with one
-  // confirmed ("started") checkpoint at its head; a 20s gap is enough to pick the fast-forward
-  // plan but far short of the 60s tail, so the budget check bails before any continuation is
-  // attempted, reporting back the very row the resync started from
+  // this seed's placeholder encounter completes in exactly 60s with one confirmed checkpoint at
+  // its head; a 20s gap picks the fast-forward plan but falls short of the 60s tail, so the budget
+  // check bails before any continuation and reports the row the resync started from
   const activity = await db.activityCollection.create({
     appendedHead: 1,
     avatarID: viewer.avatar.id,

@@ -17,9 +17,6 @@ let hasSentSessionStart = false;
 let lastEmittedCompletionID: string | undefined;
 const INITIALIZE_RETRY_MS = 1000;
 
-/**
- * A side-effect-only sibling to the game layout's outlet; renders nothing.
- */
 export function GameSimulationMount() {
   const idleWorkerHandle = useIdleWorkerHandle();
   const queryClient = useQueryClient();
@@ -31,9 +28,8 @@ export function GameSimulationMount() {
   const lastWorkerActivityID = useRef(idleWorkerHandle.activity?.id);
 
   // call-and-retry until the worker answers with its initial state: on the web-locks path a call
-  // can go out while no writer holds the lock (first load, a join mid-election, a succession gap)
-  // and hang until the writer generation's own abort settles it, and a writer promotion resets
-  // `initialized` to re-enter this loop
+  // can go out while no writer holds the lock and hang until the writer generation's abort settles
+  // it; a writer promotion resets `initialized` to re-enter this loop
   useEffect(() => {
     const client = idleWorkerHandle.client;
     const needsHandshake = client !== undefined && !idleWorkerHandle.initialized;
@@ -69,11 +65,9 @@ export function GameSimulationMount() {
       return;
     }
 
-    // this mount's first report claims — a mount is the player arriving in the game (a page load
-    // or a deliberate navigation back), so a catch-up the worker schedules may take an active
-    // run's writer. A succession re-report while mounted is automatic and must never claim: a
-    // dying background tab's promotion would otherwise steal the writer from a device the player
-    // is actively driving.
+    // this mount's first report claims: a mount is the player arriving (page load or deliberate
+    // navigation back), so a scheduled catch-up may take an active run's writer. A succession
+    // re-report while mounted must never claim, or a dying background tab would steal the writer.
     const claim = lastReportedGeneration.current === undefined;
 
     lastReportedGeneration.current = writerGeneration;

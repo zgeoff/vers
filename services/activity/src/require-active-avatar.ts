@@ -5,23 +5,10 @@ import type { Kysely } from 'kysely';
 import { recordAvatarNotActiveRejection } from './metrics/record-avatar-not-active-rejection';
 import type { AvatarNotActivePayload } from './types';
 
-/**
- * Errors thrown when the account's active avatar doesn't match the requested one.
- */
 interface RequireActiveAvatarErrors {
   readonly AVATAR_NOT_ACTIVE: (payload: AvatarNotActivePayload) => Error;
 }
 
-/**
- * Throws AVATAR_NOT_ACTIVE unless `avatarID` is the account's active avatar, naming whichever
- * avatar actually is. An account with no selection row — predating the active-avatar migration, or
- * left without one because its prior selection's avatar was deleted — adopts `avatarID` as active,
- * unless a different avatar already holds a live run; adopting past a live run would mint a second
- * one for the account, so that start is refused and the live run's avatar named instead. Takes
- * the same per-user advisory lock the avatar service's select and create take, so the read and the
- * adopt-or-refuse it decides on are atomic against a concurrent selection change, avatar creation,
- * or another activity start for the same user.
- */
 export async function requireActiveAvatar(
   trx: Kysely<DB>,
   userID: string,

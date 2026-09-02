@@ -42,10 +42,6 @@ async function handleSIGTERM(): Promise<void> {
   });
 }
 
-/**
- * Stops accepting HTTP, then flushes telemetry while the process is still alive. Each step runs
- * even if an earlier one rejects, so a failure never strands telemetry timers live.
- */
 async function stopGracefully(): Promise<void> {
   try {
     await service.app.stop();

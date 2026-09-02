@@ -8,16 +8,8 @@ import { Heading } from '../heading/heading';
 interface Props {
   children: React.ReactNode;
 
-  /**
-   * Label for the built-in close trigger. Default "Close".
-   */
   closeLabel?: string;
 
-  /**
-   * Whether escape, the backdrop, and the built-in close trigger can close the dialog. Default
-   * true. `false` renders no close trigger and blocks escape and outside-interaction dismissal,
-   * leaving the caller's own `open` state as the only way to close it.
-   */
   dismissible?: boolean;
   onOpenChange?: (open: boolean) => void;
   open: boolean;
@@ -56,12 +48,6 @@ const dialogRecipe = sva({
   slots: ['backdrop', 'content', 'positioner'],
 });
 
-/**
- * Modal dialog over the Ark UI primitive: focus is trapped while open, and escape, the backdrop,
- * and the built-in close trigger all report through `onOpenChange` — the open state itself is the
- * caller's. `dismissible={false}` drops all three dismissal paths and the close trigger, for a
- * lockout the caller's own state must resolve instead.
- */
 export function Dialog(props: Readonly<Props>) {
   const styles = dialogRecipe();
   const dismissible = props.dismissible ?? true;

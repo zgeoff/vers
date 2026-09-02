@@ -88,11 +88,6 @@ interface SignUpJourney extends E2EOptions {
   readonly username: string;
 }
 
-/**
- * Drives the whole account-creation journey — signup, emailed-code verification, onboarding, and
- * avatar creation — and lands signed in at `/explore`. Every form submit paces past the artifact's
- * real honeypot window first.
- */
 async function runSignUpIntoGame(page: Page, journey: Readonly<SignUpJourney>): Promise<void> {
   await page.setExtraHTTPHeaders({ 'x-forwarded-for': '127.0.0.1' });
   await page.goto('/signup');
@@ -133,11 +128,8 @@ async function runSignUpIntoGame(page: Page, journey: Readonly<SignUpJourney>): 
   const nameField = page.getByLabel('Name', { exact: true });
 
   // the create-avatar form's client mount replaces the server-rendered markup, so a name typed
-  // before the swap passes a value assertion yet submits as an empty form — and gating on the
-  // root hydration marker instead would serialize on the whole game shell, which can take far
-  // longer than the form needs. So the whole fill-and-submit cycle retries on the navigation
-  // outcome: an empty submit is rejected server-side without creating anything, which makes the
-  // retry safe, and the URL guard keeps a slow success from being submitted twice.
+  // before the swap passes a value assertion yet submits as an empty form. An empty submit is
+  // rejected server-side without creating anything, so the whole fill-and-submit cycle retries.
   await expect(async () => {
     if (new URL(page.url()).pathname !== '/explore') {
       await nameField.fill(journey.avatarName);
@@ -151,11 +143,6 @@ async function runSignUpIntoGame(page: Page, journey: Readonly<SignUpJourney>): 
   }).toPass({ timeout: 20_000 });
 }
 
-/**
- * Reads the onboarding code from whichever backend the journey signed up against: the mock
- * verification service's e2e lookup, or the resend stub that captured the real service-email's
- * welcome message.
- */
 function waitForVerificationCode(
   options: Readonly<E2EOptions & { email: string }>,
 ): Promise<string> {
@@ -166,11 +153,6 @@ function waitForVerificationCode(
 
 const MockVerificationCodeSchema = z.object({ code: z.string() });
 
-/**
- * Polls the mock backend's test-only verification-code endpoint, which answers 404 until
- * `createVerification` has stored a row for the email — the welcome-email send that carries the
- * same code is a fire-and-forget queue drain behind the signup response.
- */
 async function waitForMockVerificationCode(
   email: string,
   mockVerificationURL: string | undefined,
@@ -203,10 +185,6 @@ async function waitForMockVerificationCode(
 const CapturedEmailSchema = z.object({ text: z.string() });
 const CapturedEmailsSchema = z.object({ emails: z.array(CapturedEmailSchema) });
 
-/**
- * Polls the resend stub's capture endpoint for the welcome email the real service-email handed it
- * and pulls the onboarding code out of the verification URL its `code` query param carries.
- */
 async function waitForStackVerificationCode(
   email: string,
   resendStubURL: string | undefined,
@@ -237,11 +215,6 @@ async function waitForStackVerificationCode(
   return code;
 }
 
-/**
- * A globally-unique letters-only avatar name: `AvatarNameSchema` accepts letters only, and the
- * real stack's database persists across runs and enforces the same uniqueness the mock backend
- * does.
- */
 function buildAvatarName(): string {
   const alphabet = 'abcdefghijklmnopqrstuvwxyz';
 

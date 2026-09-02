@@ -1,9 +1,6 @@
 import * as z from 'zod';
 import { EquipmentWeaponSchema } from './equipment-weapon-schema';
 
-/**
- * Wire shape of the engine's `AvatarData` — the avatar snapshot `runSimulation` replays against.
- */
 export const AvatarDataSchema = z.object({
   id: z.string(),
   level: z.number(),

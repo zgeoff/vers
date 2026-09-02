@@ -5,11 +5,6 @@ import { buildStartHash } from '@vers/contract-activity';
 import type { Activities } from '@vers/db';
 import type { Insertable } from 'kysely';
 
-/**
- * The factory's own overrides shape: the row's insertable columns, except `encounterNode` narrows
- * from the column's untyped jsonb to the contract type, so the factory threads the typed value a
- * caller authored instead of re-shaping the column read.
- */
 interface CreateMockActivityOverrides extends Omit<
   Partial<Insertable<Activities>>,
   'encounterNode'
@@ -17,12 +12,6 @@ interface CreateMockActivityOverrides extends Omit<
   readonly encounterNode?: Readonly<EncounterNode>;
 }
 
-/**
- * A plain, unpersisted activity row with faker-generated defaults. Never requires a parent —
- * `avatarId` defaults to a random id, not a real avatar's. `lastHash`/`startHash` default to the
- * real start hash of the row's own hash inputs, so a factory-built row chains correctly with a mock
- * checkpoint batch.
- */
 export function createMockActivity(
   overrides: Readonly<CreateMockActivityOverrides> = {},
 ): Insertable<Activities> {

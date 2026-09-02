@@ -19,13 +19,6 @@ const card = css({
 
 const placeholderCanvas = css({ display: '[block]', height: '[100%]', width: '[100%]' });
 
-/**
- * A self-contained satellite widget: its own plain R3F `Canvas` with the default WebGL
- * renderer, isolated from the persistent world canvas and its `WebGPURenderer`/game-loop
- * scheduler. No assets — a single rotating primitive stands in for avatar rendering. With
- * `placeholder`, the same card holds an inert `<canvas>` so the satellite's mount and teardown
- * still register without a live WebGL context.
- */
 export function AvatarViewer(props: Readonly<AvatarViewerProps>) {
   return (
     <div className={card} data-testid="avatar-viewer">

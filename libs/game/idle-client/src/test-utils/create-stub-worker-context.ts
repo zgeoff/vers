@@ -17,30 +17,18 @@ import { createStubSubmitter } from './create-stub-submitter';
 interface CreateStubWorkerContextOptions {
   readonly broadcast?: (message: WorkerMessage) => void;
 
-  /**
-   * The baked engine hash start calls pin, defaulting to undefined — the dev-build shape, where
-   * starts land on the registry's current stamp. A test asserting the pinned-hash wire contract
-   * passes a value.
-   */
   readonly bundledEngineHash?: string;
 
   readonly client?: ActivityServiceClient;
   readonly failureAction?: ActivityFailureAction;
   readonly remainingBudgetMs?: number;
 
-  /**
-   * The runtime-lifetime shutdown controller. A test that simulates worker teardown passes its
-   * own controller and aborts it directly.
-   */
   readonly shutdownController?: AbortController;
 
   readonly submitter?: Readonly<CheckpointSubmitter>;
 }
 
 export interface StubWorkerContext extends WorkerContext {
-  /**
-   * Every message `broadcast` recorded, in arrival order.
-   */
   readonly getBroadcasts: () => ReadonlyArray<WorkerMessage>;
 }
 

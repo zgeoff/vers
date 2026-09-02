@@ -5,35 +5,18 @@ import type { StandardLazyResponse } from '@orpc/standard-server';
 import invariant from 'tiny-invariant';
 
 export interface RetryInterceptorOptions {
-  /**
-   * Growing per-attempt backoff floor in milliseconds; each retry waits `backoffMs * attempt`.
-   */
   readonly backoffMs?: number;
 
   readonly isRetryable: (path: ReadonlyArray<string>) => boolean;
 
-  /**
-   * Number of retries beyond the first attempt — the default allows up to 3 attempts total.
-   */
   readonly maxRetries?: number;
 
-  /**
-   * DI metrics hook invoked once per retry; omit it where the caller has no meter to record to.
-   */
   readonly onRetry?: () => void;
 }
 
 const DEFAULT_MAX_RETRIES = 2;
 const DEFAULT_BACKOFF_MS = 250;
 
-/**
- * Builds an `RPCLink` `clientInterceptors` entry that retries a contract's idempotent procedures
- * on a transient failure — a 5xx response or a thrown transport error — with a growing linear
- * backoff between attempts. A non-retryable path (`isRetryable` reads GET/HEAD off the contract,
- * since only those can't double-apply) passes through unchanged after a single attempt. The
- * caller's own abort always ends the loop immediately, mid-attempt or mid-backoff, rather than
- * spending the remaining retry budget on a call nobody wants anymore.
- */
 export function buildRetryInterceptor<T extends ClientContext = ClientContext>(
   options: Readonly<RetryInterceptorOptions>,
 ): Interceptor<StandardLinkClientInterceptorOptions<T>, Promise<StandardLazyResponse>> {
@@ -79,11 +62,6 @@ export function buildRetryInterceptor<T extends ClientContext = ClientContext>(
   };
 }
 
-/**
- * Waits out `ms`, rejecting immediately with `signal`'s abort reason instead of running out the
- * clock once it aborts — a caller who cancels mid-backoff must not still wait it out. A link with
- * no request signal never aborts, so it always waits the full backoff.
- */
 function waitOrAbort(ms: number, signal: AbortSignal | undefined): Promise<void> {
   if (signal === undefined) {
     return new Promise((resolve) => {
@@ -111,10 +89,6 @@ function waitOrAbort(ms: number, signal: AbortSignal | undefined): Promise<void>
   });
 }
 
-/**
- * `AbortSignal.reason` is typed `any`, so a caller-supplied reason that isn't already an `Error`
- * (a bare string, `undefined`) needs wrapping before it can reject a promise.
- */
 function normalizeAbortReason(reason: unknown): Error {
   return reason instanceof Error ? reason : new Error(String(reason));
 }

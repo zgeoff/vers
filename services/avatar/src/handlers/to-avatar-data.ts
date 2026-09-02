@@ -2,9 +2,6 @@ import type { AvatarData } from '@vers/contract-avatar';
 import type { Avatars } from '@vers/db';
 import type { Selectable } from 'kysely';
 
-/**
- * Maps a kysely `avatars` row (camelCase columns) onto the contract's `AvatarData` shape.
- */
 export function toAvatarData(row: Readonly<Selectable<Avatars>>): AvatarData {
   return {
     createdAt: row.createdAt,

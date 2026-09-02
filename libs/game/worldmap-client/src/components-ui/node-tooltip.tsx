@@ -49,10 +49,6 @@ export function NodeTooltip(props: Readonly<NodeTooltipProps>) {
   );
 }
 
-/**
- * Defers reading `document` until after mount so server rendering, where `document` is
- * undefined, does not throw.
- */
 function useDocument() {
   const [myDocument, setMyDocument] = useState<Document | null>(null);
 

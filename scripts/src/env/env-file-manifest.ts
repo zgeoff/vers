@@ -1,11 +1,5 @@
 import type { EnvFileManifestEntry } from './types';
 
-/**
- * The gitignored local env files `env:pull` materializes from 1Password. Each
- * entry's `itemTitle` item carries the file's full contents in its `notesPlain`
- * field; `targetPath` is repo-root relative. Items whose contents CI also
- * consumes live in the `vers-ci` vault; the rest live in `vers`.
- */
 export const ENV_FILE_MANIFEST: ReadonlyArray<EnvFileManifestEntry> = [
   {
     itemTitle: 'DOTENV_APP_WEB_E2E',
