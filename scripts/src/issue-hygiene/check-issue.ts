@@ -8,7 +8,6 @@ import type { Finding, IssueShape } from './types';
  * reports, so the shape rules don't apply.
  */
 const EXEMPT_LABELS = new Set(['dep-audit', 'dep-outdated']);
-const PRIORITY_LABELS = new Set(['p0-critical', 'p1-high', 'p2-medium']);
 
 const TYPE_LABELS = new Set([
   'bug',
@@ -34,8 +33,8 @@ const FEATURE_TEMPLATE = `${TEMPLATE_DIR}/feature.md`;
 /**
  * Evaluates an issue against the repository's issue-shape rules, returning one actionable finding
  * per violation and an empty array when the issue is clean. Requirements vary by type — an upkeep
- * issue carries a trigger line and no milestone, where other types require area, type, and priority
- * labels, a delivery milestone, and their template's body sections.
+ * issue carries a trigger line and no milestone, where other types require area and type labels and
+ * their template's body sections.
  */
 export function checkIssue(issue: IssueShape): Array<Finding> {
   if (issue.labels.some((label) => EXEMPT_LABELS.has(label))) {
@@ -77,20 +76,6 @@ export function checkIssue(issue: IssueShape): Array<Finding> {
     findings.push({
       rule: 'every issue carries a type label',
       task: 'Add a type label (`feature`, `bug`, `chore`, …)',
-    });
-  }
-
-  if (!issue.labels.some((label) => PRIORITY_LABELS.has(label))) {
-    findings.push({
-      rule: 'every issue carries a priority label',
-      task: 'Add a priority label (`p0-critical`, `p1-high`, `p2-medium`)',
-    });
-  }
-
-  if (issue.milestone === null) {
-    findings.push({
-      rule: 'every issue has a delivery-phase milestone',
-      task: 'Assign the delivery-phase milestone',
     });
   }
 
