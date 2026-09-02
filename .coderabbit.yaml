@@ -49,12 +49,6 @@ reviews:
         cache-migration test for either store. Only the outbox stores —
         pending-checkpoints and pending-roots — hold un-synced local progress
         and keep real versioned migrations.
-    - path: 'AGENTS.md'
-      instructions: |
-        AGENTS.md is generated from agents/shared.md and agents/project.md and
-        committed alongside them; a PR editing a partial plus the regenerated
-        AGENTS.md is correct. Flag only an AGENTS.md change with no corresponding
-        partial change — and CI's drift check already catches stale regeneration.
   auto_review:
     enabled: true
     auto_incremental_review: false
