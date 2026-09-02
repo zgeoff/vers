@@ -66,7 +66,7 @@ test('it logs an unexpected code-check failure while reporting the generic form 
   const mockVerification = buildContractMock({
     baseUrl: SERVICE_URLS.verification,
     contract: verificationContract,
-    resolveContext: () => ({ actingUserId: null }),
+    resolveContext: () => ({ actingUserID: null }),
   });
 
   server.use(

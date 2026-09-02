@@ -278,8 +278,8 @@ function registerORPCHandler(
         try {
           handled = await handler.handle(context.request, {
             context: {
-              actingSessionId: resolution.actingSessionId,
-              actingUserId: resolution.actingUserId,
+              actingSessionID: resolution.actingSessionID,
+              actingUserID: resolution.actingUserID,
               logger: deps.logger,
               traceID: trace.traceID,
             },

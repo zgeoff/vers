@@ -13,7 +13,7 @@ test('it resolves the issuer and acting user from a token minted for the matchin
   const keySet = await buildKeySet([['app-web', keyPair.publicKey]]);
 
   const token = await createServiceToken({
-    actingUserId: 'user-1',
+    actingUserID: 'user-1',
     audience: 'avatar',
     issuer: 'app-web',
     privateKey: keyPair.privateKey,
@@ -29,19 +29,19 @@ test('it resolves the issuer and acting user from a token minted for the matchin
   });
 
   expect(resolution).toStrictEqual({
-    actingSessionId: null,
-    actingUserId: 'user-1',
+    actingSessionID: null,
+    actingUserID: 'user-1',
     issuer: 'app-web',
   });
 });
 
-test('it resolves the acting session from a token minted with an actingSessionId', async () => {
+test('it resolves the acting session from a token minted with an actingSessionID', async () => {
   const keyPair = await jose.generateKeyPair(TOKEN_ALGORITHM, { extractable: true });
   const keySet = await buildKeySet([['app-web', keyPair.publicKey]]);
 
   const token = await createServiceToken({
-    actingSessionId: 'session-1',
-    actingUserId: 'user-1',
+    actingSessionID: 'session-1',
+    actingUserID: 'user-1',
     audience: 'avatar',
     issuer: 'app-web',
     privateKey: keyPair.privateKey,
@@ -57,13 +57,13 @@ test('it resolves the acting session from a token minted with an actingSessionId
   });
 
   expect(resolution).toStrictEqual({
-    actingSessionId: 'session-1',
-    actingUserId: 'user-1',
+    actingSessionID: 'session-1',
+    actingUserID: 'user-1',
     issuer: 'app-web',
   });
 });
 
-test('it resolves a null acting user from a token minted with no actingUserId', async () => {
+test('it resolves a null acting user from a token minted with no actingUserID', async () => {
   const keyPair = await jose.generateKeyPair(TOKEN_ALGORITHM, { extractable: true });
   const keySet = await buildKeySet([['service-activity', keyPair.publicKey]]);
 
@@ -83,8 +83,8 @@ test('it resolves a null acting user from a token minted with no actingUserId', 
   });
 
   expect(resolution).toStrictEqual({
-    actingSessionId: null,
-    actingUserId: null,
+    actingSessionID: null,
+    actingUserID: null,
     issuer: 'service-activity',
   });
 });

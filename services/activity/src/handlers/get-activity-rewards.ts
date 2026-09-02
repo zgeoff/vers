@@ -8,7 +8,7 @@ import type { EmptyErrorPayload, MissingSessionPayload } from '../types';
  * oRPC handler opts for the authed `getActivityRewards` procedure.
  */
 interface GetActivityRewardsOpts {
-  readonly context: { readonly actingUserId: null | string };
+  readonly context: { readonly actingUserID: null | string };
   readonly errors: {
     readonly NOT_FOUND: (payload: EmptyErrorPayload) => Error;
     readonly UNAUTHORIZED: (payload: MissingSessionPayload) => Error;
@@ -44,7 +44,7 @@ export async function getActivityRewards(
   db: Kysely<DB>,
   opts: GetActivityRewardsOpts,
 ): Promise<GetActivityRewardsResult> {
-  if (opts.context.actingUserId === null) {
+  if (opts.context.actingUserID === null) {
     throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
   }
 
@@ -59,7 +59,7 @@ export async function getActivityRewards(
       'activities.verifiedHead',
     ])
     .where('activities.id', '=', opts.input.activityID)
-    .where('avatars.userId', '=', opts.context.actingUserId)
+    .where('avatars.userId', '=', opts.context.actingUserID)
     .executeTakeFirst();
 
   if (activity === undefined) {

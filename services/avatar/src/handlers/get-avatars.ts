@@ -8,7 +8,7 @@ import { toAvatarData } from './to-avatar-data';
  * oRPC handler opts for the authed `getAvatars` procedure.
  */
 interface GetAvatarsOpts {
-  readonly context: { readonly actingUserId: null | string };
+  readonly context: { readonly actingUserID: null | string };
   readonly errors: {
     readonly UNAUTHORIZED: (payload: MissingSessionPayload) => Error;
   };
@@ -20,7 +20,7 @@ interface GetAvatarsOpts {
  * never name an avatar it doesn't list.
  */
 export async function getAvatars(db: Kysely<DB>, opts: GetAvatarsOpts): Promise<AvatarRoster> {
-  if (opts.context.actingUserId === null) {
+  if (opts.context.actingUserID === null) {
     throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
   }
 
@@ -33,7 +33,7 @@ export async function getAvatars(db: Kysely<DB>, opts: GetAvatarsOpts): Promise<
     )
     .selectAll('avatars')
     .select('activeAvatars.avatarId as selectedAvatarId')
-    .where('avatars.userId', '=', opts.context.actingUserId)
+    .where('avatars.userId', '=', opts.context.actingUserID)
     .execute();
 
   return {

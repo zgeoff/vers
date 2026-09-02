@@ -53,8 +53,8 @@ test('it stamps the acting session as the writer', async () => {
   const keyPair = await getTestServiceKeyPair();
 
   const tokenB = await createServiceToken({
-    actingSessionId: 'session-b',
-    actingUserId: viewer.user.id,
+    actingSessionID: 'session-b',
+    actingUserID: viewer.user.id,
     audience: 'service-activity',
     privateKey: keyPair.privateKey,
   });

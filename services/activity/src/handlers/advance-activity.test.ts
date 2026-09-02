@@ -1707,8 +1707,8 @@ test("it refuses a kicked writer session's undelivered offline activityStart wit
   const keyPair = await getTestServiceKeyPair();
 
   const tokenB = await createServiceToken({
-    actingSessionId: 'session-b',
-    actingUserId: viewer.user.id,
+    actingSessionID: 'session-b',
+    actingUserID: viewer.user.id,
     audience: 'service-activity',
     privateKey: keyPair.privateKey,
   });

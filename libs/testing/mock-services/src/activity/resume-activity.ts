@@ -6,9 +6,9 @@ import { os } from './os';
  * as writer is a no-op here — SESSION_EVICTED flows are a per-test override.
  */
 export const resumeActivity = os.resumeActivity.handler((opts) => {
-  const actingUserId = opts.context.actingUserId;
+  const actingUserID = opts.context.actingUserID;
 
-  if (actingUserId === null) {
+  if (actingUserID === null) {
     throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
   }
 
@@ -21,7 +21,7 @@ export const resumeActivity = os.resumeActivity.handler((opts) => {
   }
 
   const avatar = db.avatarCollection.findFirst((q) =>
-    q.where({ id: activity.avatarID, userID: actingUserId }),
+    q.where({ id: activity.avatarID, userID: actingUserID }),
   );
 
   if (avatar === undefined) {

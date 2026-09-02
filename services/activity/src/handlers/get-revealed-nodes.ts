@@ -34,7 +34,7 @@ interface GetRevealedNodesDeps {
  * oRPC handler opts for the authed `getRevealedNodes` procedure.
  */
 interface GetRevealedNodesOpts {
-  readonly context: { readonly actingUserId: null | string };
+  readonly context: { readonly actingUserID: null | string };
   readonly errors: {
     readonly NOT_FOUND: (payload: EmptyErrorPayload) => Error;
     readonly UNAUTHORIZED: (payload: MissingSessionPayload) => Error;
@@ -84,7 +84,7 @@ export async function getRevealedNodes(
   deps: GetRevealedNodesDeps,
   opts: GetRevealedNodesOpts,
 ): Promise<GetRevealedNodesResult> {
-  if (opts.context.actingUserId === null) {
+  if (opts.context.actingUserID === null) {
     throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
   }
 
@@ -92,7 +92,7 @@ export async function getRevealedNodes(
     .selectFrom('avatars')
     .select(['id', 'seed'])
     .where('id', '=', opts.input.avatarID)
-    .where('userId', '=', opts.context.actingUserId)
+    .where('userId', '=', opts.context.actingUserID)
     .executeTakeFirst();
 
   if (avatar === undefined) {

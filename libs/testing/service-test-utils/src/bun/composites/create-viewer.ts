@@ -23,10 +23,10 @@ export async function createViewer(
   const created = await createTestUser(config.db, config.user);
 
   const token = await createServiceToken({
-    actingUserId: created.user.id,
+    actingUserID: created.user.id,
     audience: config.audience,
     privateKey: keyPair.privateKey,
-    ...(config.sessionID !== undefined && { actingSessionId: config.sessionID }),
+    ...(config.sessionID !== undefined && { actingSessionID: config.sessionID }),
   });
 
   return { token, user: created.user };

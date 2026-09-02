@@ -82,7 +82,7 @@ The service implements the contract through oRPC's `implement()`:
 const os = implement(userContract).$context<ServiceContext>();
 
 const getCurrentUser = os.getCurrentUser.handler(({ context, errors }) => {
-  if (context.actingUserId === null) {
+  if (context.actingUserID === null) {
     throw errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
   }
   // …
@@ -133,14 +133,14 @@ reaches a handler as the verified token's claims:
 
 ```ts
 interface ServiceContext {
-  actingSessionId: null | string;
-  actingUserId: null | string; // null = verified anonymous call
+  actingSessionID: null | string;
+  actingUserID: null | string; // null = verified anonymous call
   logger: pino.Logger;
   traceID: string;
 }
 ```
 
-`actingUserId` and `actingSessionId` come from the verified token. `logger` and `traceID` are the
+`actingUserID` and `actingSessionID` come from the verified token. `logger` and `traceID` are the
 runtime's per-request infrastructure ([error handling](./error-handling.md#trace-context)).
 
 When a session expires, the edge itself replies with the contract-shaped

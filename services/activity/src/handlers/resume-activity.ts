@@ -10,8 +10,8 @@ import { toActivityData } from './to-activity-data';
  */
 interface ResumeActivityOpts {
   readonly context: {
-    readonly actingSessionId: null | string;
-    readonly actingUserId: null | string;
+    readonly actingSessionID: null | string;
+    readonly actingUserID: null | string;
   };
   readonly errors: {
     readonly NOT_FOUND: (payload: EmptyErrorPayload) => Error;
@@ -31,8 +31,8 @@ export async function resumeActivity(
   db: Kysely<DB>,
   opts: ResumeActivityOpts,
 ): Promise<ActivityData> {
-  const actingUserID = opts.context.actingUserId;
-  const actingSessionID = opts.context.actingSessionId;
+  const actingUserID = opts.context.actingUserID;
+  const actingSessionID = opts.context.actingSessionID;
 
   if (actingUserID === null || actingSessionID === null) {
     throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });

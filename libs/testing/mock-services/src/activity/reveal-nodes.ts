@@ -34,14 +34,14 @@ const MOCK_SECRET_VERSION = 1;
  * that needs a wider frontier stubs this procedure directly via `server.use(...)`.
  */
 export const revealNodes = os.revealNodes.handler(async (opts) => {
-  const actingUserId = opts.context.actingUserId;
+  const actingUserID = opts.context.actingUserID;
 
-  if (actingUserId === null) {
+  if (actingUserID === null) {
     throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
   }
 
   const avatar = db.avatarCollection.findFirst((q) =>
-    q.where({ id: opts.input.avatarID, userID: actingUserId }),
+    q.where({ id: opts.input.avatarID, userID: actingUserID }),
   );
 
   if (avatar === undefined) {
@@ -56,10 +56,10 @@ export const revealNodes = os.revealNodes.handler(async (opts) => {
     }
   }
 
-  const selection = db.activeAvatarCollection.findFirst((q) => q.where({ userID: actingUserId }));
+  const selection = db.activeAvatarCollection.findFirst((q) => q.where({ userID: actingUserID }));
 
   if (selection === undefined) {
-    const liveAvatar = findLiveActivityAvatar(actingUserId);
+    const liveAvatar = findLiveActivityAvatar(actingUserID);
 
     if (liveAvatar !== null && liveAvatar.id !== opts.input.avatarID) {
       throw opts.errors.AVATAR_NOT_ACTIVE({
@@ -67,7 +67,7 @@ export const revealNodes = os.revealNodes.handler(async (opts) => {
       });
     }
 
-    await upsertActiveAvatar(actingUserId, opts.input.avatarID);
+    await upsertActiveAvatar(actingUserID, opts.input.avatarID);
   } else if (selection.avatarID !== opts.input.avatarID) {
     const activeAvatar = db.avatarCollection.findFirst((q) => q.where({ id: selection.avatarID }));
 

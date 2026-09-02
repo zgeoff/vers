@@ -6,7 +6,7 @@ import type { EmptyErrorPayload, MissingSessionPayload } from '../types';
  * oRPC handler opts for the authed `deleteAvatar` procedure.
  */
 interface RemoveAvatarOpts {
-  readonly context: { readonly actingUserId: null | string };
+  readonly context: { readonly actingUserID: null | string };
   readonly errors: {
     readonly NOT_FOUND: (payload: EmptyErrorPayload) => Error;
     readonly UNAUTHORIZED: (payload: MissingSessionPayload) => Error;
@@ -21,14 +21,14 @@ export async function removeAvatar(
   db: Kysely<DB>,
   opts: RemoveAvatarOpts,
 ): Promise<{ deletedID: string }> {
-  if (opts.context.actingUserId === null) {
+  if (opts.context.actingUserID === null) {
     throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
   }
 
   const row = await db
     .deleteFrom('avatars')
     .where('id', '=', opts.input.id)
-    .where('userId', '=', opts.context.actingUserId)
+    .where('userId', '=', opts.context.actingUserID)
     .returning('id as deletedId')
     .executeTakeFirst();
 

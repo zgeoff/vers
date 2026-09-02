@@ -4,7 +4,7 @@ import * as jose from 'jose';
  * The context every mocked contract handler receives; mirrors the real services' shape.
  */
 export interface MockContext extends Record<string, unknown> {
-  readonly actingUserId: string | null;
+  readonly actingUserID: string | null;
 }
 
 /**
@@ -17,7 +17,7 @@ export function resolveSessionContext(request: Request): MockContext {
   const authorization = request.headers.get('authorization');
 
   if (authorization === null || !authorization.startsWith('Bearer ')) {
-    return { actingUserId: null };
+    return { actingUserID: null };
   }
 
   const token = authorization.slice('Bearer '.length);
@@ -25,8 +25,8 @@ export function resolveSessionContext(request: Request): MockContext {
   try {
     const sub = jose.decodeJwt(token).sub;
 
-    return { actingUserId: typeof sub === 'string' ? sub : null };
+    return { actingUserID: typeof sub === 'string' ? sub : null };
   } catch {
-    return { actingUserId: null };
+    return { actingUserID: null };
   }
 }

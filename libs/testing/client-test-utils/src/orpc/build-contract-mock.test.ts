@@ -10,7 +10,7 @@ import { buildContractMock } from './build-contract-mock';
 import { buildMockService } from './build-mock-service';
 import { server } from './mocks/server';
 
-type SecretContext = Record<string, unknown> & { actingUserId: string | null };
+type SecretContext = Record<string, unknown> & { actingUserID: string | null };
 
 const secretContract = {
   getOther: oc
@@ -30,9 +30,9 @@ const secretContract = {
  */
 function resolveContext(request: Request): SecretContext {
   const header = request.headers.get('authorization') ?? '';
-  const actingUserId = header.startsWith('Bearer ') ? header.slice('Bearer '.length) : null;
+  const actingUserID = header.startsWith('Bearer ') ? header.slice('Bearer '.length) : null;
 
-  return { actingUserId };
+  return { actingUserID };
 }
 
 function buildBaseHandlers() {
@@ -41,7 +41,7 @@ function buildBaseHandlers() {
   const router = {
     getOther: implementer.getOther.handler(() => ({ value: 'base-other' })),
     getSecret: implementer.getSecret.handler((opts) => ({
-      value: `base-secret-for-${opts.context.actingUserId ?? 'anonymous'}`,
+      value: `base-secret-for-${opts.context.actingUserID ?? 'anonymous'}`,
     })),
   };
 
@@ -62,7 +62,7 @@ function buildClient(bearerToken: string): ContractRouterClient<typeof secretCon
   return createORPCClient(link);
 }
 
-test('it resolves the actingUserId a client forwards via the Authorization header', async () => {
+test('it resolves the actingUserID a client forwards via the Authorization header', async () => {
   server.use(...buildBaseHandlers());
 
   const client = buildClient('user_1');
@@ -83,7 +83,7 @@ test('it overrides only the mocked procedure, leaving the rest on the base backe
 
   server.use(
     mock.getSecret.handler((opts) => ({
-      value: `overridden-for-${opts.context.actingUserId}`,
+      value: `overridden-for-${opts.context.actingUserID}`,
     })),
   );
 

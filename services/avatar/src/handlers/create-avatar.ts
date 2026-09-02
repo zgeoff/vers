@@ -20,7 +20,7 @@ interface LimitReachedPayload {
  * oRPC handler opts for the authed `createAvatar` procedure.
  */
 interface CreateAvatarOpts {
-  readonly context: { readonly actingUserId: null | string };
+  readonly context: { readonly actingUserID: null | string };
   readonly errors: {
     readonly CONFLICT: (payload: EmptyErrorPayload) => Error;
     readonly LIMIT_REACHED: (payload: LimitReachedPayload) => Error;
@@ -37,16 +37,16 @@ interface CreateAvatarOpts {
  * otherwise.
  */
 export async function createAvatar(db: Kysely<DB>, opts: CreateAvatarOpts): Promise<AvatarData> {
-  const actingUserId = opts.context.actingUserId;
+  const actingUserID = opts.context.actingUserID;
 
-  if (actingUserId === null) {
+  if (actingUserID === null) {
     throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
   }
 
   try {
     return db.isTransaction
-      ? await runCreateWrites(db, actingUserId, opts)
-      : await db.transaction().execute((trx) => runCreateWrites(trx, actingUserId, opts));
+      ? await runCreateWrites(db, actingUserID, opts)
+      : await db.transaction().execute((trx) => runCreateWrites(trx, actingUserID, opts));
   } catch (error: unknown) {
     if (isUniqueViolation(error)) {
       throw opts.errors.CONFLICT({ data: {} });
@@ -58,17 +58,17 @@ export async function createAvatar(db: Kysely<DB>, opts: CreateAvatarOpts): Prom
 
 async function runCreateWrites(
   trx: Kysely<DB>,
-  actingUserId: string,
+  actingUserID: string,
   opts: CreateAvatarOpts,
 ): Promise<AvatarData> {
   // the per-user advisory lock serializes the count against concurrent creates; a row lock can't
   // apply to inserts that don't exist yet
-  await sql`select pg_advisory_xact_lock(hashtext(${actingUserId}))`.execute(trx);
+  await sql`select pg_advisory_xact_lock(hashtext(${actingUserID}))`.execute(trx);
 
   const counted = await trx
     .selectFrom('avatars')
     .select((eb) => eb.fn.countAll<number>().as('held'))
-    .where('userId', '=', actingUserId)
+    .where('userId', '=', actingUserID)
     .where('mode', '=', opts.input.mode)
     .executeTakeFirstOrThrow();
 
@@ -85,13 +85,13 @@ async function runCreateWrites(
       mode: opts.input.mode,
       name: opts.input.name,
       seed: randomInt(0, 2 ** 31),
-      userId: actingUserId,
+      userId: actingUserID,
     })
     .returningAll()
     .executeTakeFirstOrThrow();
 
-  if ((await findLiveActivityAvatar(trx, actingUserId)) === null) {
-    await upsertActiveAvatar(trx, actingUserId, row.id);
+  if ((await findLiveActivityAvatar(trx, actingUserID)) === null) {
+    await upsertActiveAvatar(trx, actingUserID, row.id);
   }
 
   return toAvatarData(row);

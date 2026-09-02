@@ -8,7 +8,7 @@ import { toAvatarData } from './to-avatar-data';
  * oRPC handler opts for the authed `getAvatar` procedure.
  */
 interface GetAvatarOpts {
-  readonly context: { readonly actingUserId: null | string };
+  readonly context: { readonly actingUserID: null | string };
   readonly errors: {
     readonly UNAUTHORIZED: (payload: MissingSessionPayload) => Error;
   };
@@ -19,7 +19,7 @@ interface GetAvatarOpts {
  * Returns an avatar owned by the acting user, or null when it doesn't exist or isn't theirs.
  */
 export async function getAvatar(db: Kysely<DB>, opts: GetAvatarOpts): Promise<AvatarData | null> {
-  if (opts.context.actingUserId === null) {
+  if (opts.context.actingUserID === null) {
     throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
   }
 
@@ -27,7 +27,7 @@ export async function getAvatar(db: Kysely<DB>, opts: GetAvatarOpts): Promise<Av
     .selectFrom('avatars')
     .selectAll()
     .where('id', '=', opts.input.id)
-    .where('userId', '=', opts.context.actingUserId)
+    .where('userId', '=', opts.context.actingUserID)
     .executeTakeFirst();
 
   return row === undefined ? null : toAvatarData(row);

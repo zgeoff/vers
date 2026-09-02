@@ -6,7 +6,7 @@ import type { EmptyErrorPayload, MissingSessionPayload } from '../types';
  * oRPC handler opts for the authed `changePassword` procedure.
  */
 interface ChangePasswordOpts {
-  readonly context: { readonly actingUserId: null | string };
+  readonly context: { readonly actingUserID: null | string };
   readonly errors: {
     readonly NOT_FOUND: (payload: EmptyErrorPayload) => Error;
     readonly UNAUTHORIZED: (payload: MissingSessionPayload) => Error;
@@ -21,7 +21,7 @@ export async function changePassword(
   db: Kysely<DB>,
   opts: ChangePasswordOpts,
 ): Promise<{ updatedID: string }> {
-  if (opts.context.actingUserId === null) {
+  if (opts.context.actingUserID === null) {
     throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
   }
 
@@ -30,7 +30,7 @@ export async function changePassword(
   const row = await db
     .updateTable('users')
     .set({ passwordHash })
-    .where('id', '=', opts.context.actingUserId)
+    .where('id', '=', opts.context.actingUserID)
     .returning('id as updatedId')
     .executeTakeFirst();
 

@@ -11,8 +11,8 @@ import { toCheckpointData } from './to-checkpoint-data';
  */
 interface GetLatestActivityProgressOpts {
   readonly context: {
-    readonly actingSessionId: null | string;
-    readonly actingUserId: null | string;
+    readonly actingSessionID: null | string;
+    readonly actingUserID: null | string;
   };
   readonly errors: {
     readonly NOT_FOUND: (payload: EmptyErrorPayload) => Error;
@@ -43,7 +43,7 @@ export async function getLatestActivityProgress(
   db: Kysely<DB>,
   opts: GetLatestActivityProgressOpts,
 ): Promise<GetLatestActivityProgressResult> {
-  if (opts.context.actingUserId === null) {
+  if (opts.context.actingUserID === null) {
     throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
   }
 
@@ -57,7 +57,7 @@ export async function getLatestActivityProgress(
     // timestamps identically regardless of session timezone — clients subtract the two.
     .select(sql<Date>`now()::timestamp`.as('serverTime'))
     .where('activities.avatarId', '=', opts.input.avatarID)
-    .where('avatars.userId', '=', opts.context.actingUserId)
+    .where('avatars.userId', '=', opts.context.actingUserID)
     .orderBy('activities.startedAt', 'desc')
     .executeTakeFirst();
 
@@ -80,7 +80,7 @@ export async function getLatestActivityProgress(
     anchor: anchor === undefined ? null : toCheckpointData(anchor),
     appendedHead: row.appendedHead,
     failureAction: row.failureAction,
-    isWriter: row.writerSessionId === null || row.writerSessionId === opts.context.actingSessionId,
+    isWriter: row.writerSessionId === null || row.writerSessionId === opts.context.actingSessionID,
     serverTime: row.serverTime,
     verifiedHead: row.verifiedHead,
   };

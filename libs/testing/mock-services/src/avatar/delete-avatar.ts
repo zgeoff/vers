@@ -2,14 +2,14 @@ import * as db from '../db';
 import { os } from './os';
 
 export const deleteAvatar = os.deleteAvatar.handler((opts) => {
-  const actingUserId = opts.context.actingUserId;
+  const actingUserID = opts.context.actingUserID;
 
-  if (actingUserId === null) {
+  if (actingUserID === null) {
     throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
   }
 
   const avatar = db.avatarCollection.findFirst((q) =>
-    q.where({ id: opts.input.id, userID: actingUserId }),
+    q.where({ id: opts.input.id, userID: actingUserID }),
   );
 
   if (avatar === undefined) {
@@ -20,7 +20,7 @@ export const deleteAvatar = os.deleteAvatar.handler((opts) => {
 
   // mirrors the real table's FK cascade: deleting the active avatar drops the selection
   const selection = db.activeAvatarCollection.findFirst((q) =>
-    q.where({ avatarID: avatar.id, userID: actingUserId }),
+    q.where({ avatarID: avatar.id, userID: actingUserID }),
   );
 
   if (selection !== undefined) {

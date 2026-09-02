@@ -8,7 +8,7 @@ import { toUserData } from './to-user-data';
  * oRPC handler opts for the authed `getCurrentUser` procedure.
  */
 interface GetCurrentUserOpts {
-  readonly context: { readonly actingUserId: null | string };
+  readonly context: { readonly actingUserID: null | string };
   readonly errors: {
     readonly UNAUTHORIZED: (payload: MissingSessionPayload) => Error;
   };
@@ -18,14 +18,14 @@ interface GetCurrentUserOpts {
  * Returns the acting user's own profile; UNAUTHORIZED both for no session and a deleted account.
  */
 export async function getCurrentUser(db: Kysely<DB>, opts: GetCurrentUserOpts): Promise<UserData> {
-  if (opts.context.actingUserId === null) {
+  if (opts.context.actingUserID === null) {
     throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
   }
 
   const row = await db
     .selectFrom('users')
     .selectAll()
-    .where('id', '=', opts.context.actingUserId)
+    .where('id', '=', opts.context.actingUserID)
     .executeTakeFirst();
 
   if (row === undefined) {

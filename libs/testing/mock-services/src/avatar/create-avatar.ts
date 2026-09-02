@@ -10,9 +10,9 @@ import { upsertActiveAvatar } from './upsert-active-avatar';
  * cap and the auto-select that yields to a live activity's hold on the selection.
  */
 export const createAvatar = os.createAvatar.handler(async (opts) => {
-  const actingUserId = opts.context.actingUserId;
+  const actingUserID = opts.context.actingUserID;
 
-  if (actingUserId === null) {
+  if (actingUserID === null) {
     throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
   }
 
@@ -21,7 +21,7 @@ export const createAvatar = os.createAvatar.handler(async (opts) => {
   }
 
   const held = db.avatarCollection.findMany((q) =>
-    q.where({ mode: opts.input.mode, userID: actingUserId }),
+    q.where({ mode: opts.input.mode, userID: actingUserID }),
   );
 
   if (held.length >= AVATAR_MODE_CAP) {
@@ -37,12 +37,12 @@ export const createAvatar = os.createAvatar.handler(async (opts) => {
     mode: opts.input.mode,
     name: opts.input.name,
     updatedAt: now,
-    userID: actingUserId,
+    userID: actingUserID,
     xp: 0,
   });
 
-  if (findLiveActivityAvatar(actingUserId) === null) {
-    await upsertActiveAvatar(actingUserId, avatar.id);
+  if (findLiveActivityAvatar(actingUserID) === null) {
+    await upsertActiveAvatar(actingUserID, avatar.id);
   }
 
   return avatar;

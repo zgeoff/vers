@@ -16,8 +16,8 @@ interface StopActivityDeps {
  */
 interface StopActivityOpts {
   readonly context: {
-    readonly actingSessionId: null | string;
-    readonly actingUserId: null | string;
+    readonly actingSessionID: null | string;
+    readonly actingUserID: null | string;
   };
   readonly errors: {
     readonly NOT_FOUND: (payload: EmptyErrorPayload) => Error;
@@ -41,13 +41,13 @@ export async function stopActivity(
   deps: StopActivityDeps,
   opts: StopActivityOpts,
 ): Promise<ActivityData> {
-  const actingUserID = opts.context.actingUserId;
+  const actingUserID = opts.context.actingUserID;
 
   if (actingUserID === null) {
     throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
   }
 
-  const actingSessionID = opts.context.actingSessionId;
+  const actingSessionID = opts.context.actingSessionID;
 
   const outcome = await deps.db.transaction().execute(async (trx) => {
     // A lockless read to learn which chain the activity belongs to; the guarded update below

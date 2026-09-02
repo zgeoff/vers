@@ -7,9 +7,9 @@ import { os } from './os';
  * chain position then slot ordinal. Seed the collection to assert on revealed content.
  */
 export const getActivityRewards = os.getActivityRewards.handler((opts) => {
-  const actingUserId = opts.context.actingUserId;
+  const actingUserID = opts.context.actingUserID;
 
-  if (actingUserId === null) {
+  if (actingUserID === null) {
     throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
   }
 
@@ -20,7 +20,7 @@ export const getActivityRewards = os.getActivityRewards.handler((opts) => {
   }
 
   const avatar = db.avatarCollection.findFirst((q) =>
-    q.where({ id: activity.avatarID, userID: actingUserId }),
+    q.where({ id: activity.avatarID, userID: actingUserID }),
   );
 
   if (avatar === undefined) {

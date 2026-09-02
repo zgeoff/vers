@@ -20,7 +20,7 @@ export interface BuildMockServiceOptions<
   contract: TContract;
 
   /**
-   * Builds per-call context (e.g. `actingUserId`) from a request's forwarded headers.
+   * Builds per-call context (e.g. `actingUserID`) from a request's forwarded headers.
    */
   resolveContext: (request: Request) => TContext | Promise<TContext>;
 

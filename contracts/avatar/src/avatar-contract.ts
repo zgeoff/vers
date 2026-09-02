@@ -13,7 +13,7 @@ const SwitchLockedDataSchema = z.object({
 });
 
 /**
- * The avatar service's API: every procedure is authed and owner-scoped by `actingUserId`.
+ * The avatar service's API: every procedure is authed and owner-scoped by `actingUserID`.
  */
 export const avatarContract = {
   createAvatar: authedRoute
