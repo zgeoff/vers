@@ -16,7 +16,7 @@ stateDiagram-v2
   offline --> online: reconnect delivers the outbox
   online --> closed: app closes or the tab is paused
   offline --> closed: app closes or the tab is paused
-  closed --> online: reopen fast-forwards the idle gap, then delivers it
+  closed --> online: reopen fast-forwards the idle gap and delivers the result
   closed --> offline: reopen with no network fast-forwards, delivers nothing
 ```
 
