@@ -166,9 +166,10 @@ That record is a behavioural signal, not a replay divergence, and it is scored w
 soft consequence before a hard one, always at a session boundary and never mid-session. Honest
 grinders swing too, and a false accusation costs more than the edge it denies.
 
-Cost gates the targets it can. An entry-gated target burns a non-refundable entry on every attempt,
-so walking the chain toward a favourable seed spends real resources. Detection covers the targets
-cost cannot gate, where near-free abandoned attempts can churn the chain forward.
+An entry fee defends the targets that charge one: every attempt, abandoned or not, burns a
+non-refundable entry, so walking the chain toward a favourable seed spends real resources. Detection
+defends the targets with no entry fee, where near-free abandoned attempts can push the chain
+forward.
 
 ## Non-Goals
 
