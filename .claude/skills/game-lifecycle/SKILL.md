@@ -11,40 +11,39 @@ description:
 
 The client authors every activity and simulates it locally. The server admits what the client
 submits, proves it later by replay, settles one avatar's activities in the order they were played,
-and pays only what it has proved. That inverts the conventional model, in which the server creates
-the record and the client submits to it. The list below names each inversion. Read it before you
-open a file, because a file read through the conventional model looks like a contradiction of the
-docs, and the docs are right.
+and pays only what it has proved. Read the list below before you open a file: a file read through
+the conventional server-authoritative model looks like a contradiction of the docs, and the docs are
+right.
 
-## Assumptions to drop
+## What's true in this system
 
-- **The server creates activities.** The client mints the activity start from materials it cached at
-  reveal and starts simulating with no round trip. The server admits a client-minted start: it
-  re-derives every input from its own truth and refuses a mismatch.
-- **The server simulates on the request path.** A queue-fed verifier in the replay service re-runs
-  submitted checkpoints later. No request handler simulates.
-- **A checkpoint hash proves the outcome.** The hash links the previous checkpoint and nothing more.
-  Replay is the proof.
-- **Verified is a status.** Proof is a cursor. `verified_head` on the head row and the verified
-  anchor on the chain row say how far the server has proved. The status column says only whether the
-  run is `active`, `stopped`, `capped`, `rejected`, `parked`, or `quarantined`.
-- **A terminal checkpoint completes the row.** A `completed` or `failed` checkpoint moves the status
-  to `stopped`, the same status a player stop writes. The last checkpoint's type says how the run
-  ended.
-- **Activities settle independently.** The server settles one avatar's activities one at a time, in
-  the play order the client declares through `predecessorActivityId`. A held predecessor blocks its
-  successors, and a rejected one fails them.
-- **Rewards apply when the client says so.** The client renders optimistic state. The server pays
-  only positions at or below the verified anchor, and a rejection rewinds the appended anchor
-  without clawing back anything already settled.
-- **Retrying a node re-rolls it.** The seed chain is one forward sequence per avatar and node. A
-  failed attempt spends its positions, and the next attempt continues past them.
-- **A parked activity is a cheat verdict.** Parked and quarantined are operational holds that stop
-  the avatar's settlement until an operator acts. Only reproducible divergence under a matched sim
-  version is rejected as cheating.
-- **`mint` means the server inserts a start.** In this area the client mints an activity start and
-  the server admits it. The server mints continuation rows on the catch-up path and chain rows at
-  reveal.
+- **The client creates every activity.** The worker mints the activity start from materials it
+  cached at reveal and starts simulating with no round trip, and the server admits that start by
+  re-deriving every input and refusing a mismatch. A conventional backend creates the record itself.
+- **Nothing simulates on the request path.** A queue-fed verifier in the replay service re-runs
+  submitted checkpoints later. A conventional backend validates the move inside the request.
+- **The checkpoint hash links, and replay proves.** The hash binds a checkpoint to the previous one
+  and attests no outcome, so only a replay under the pinned sim version validates a reward.
+- **Proof is a cursor, never a status.** `verified_head` on the head row and the verified anchor on
+  the chain row say how far the server has proved, and the status column says only whether the run
+  is `active`, `stopped`, `capped`, `rejected`, `parked`, or `quarantined`. There is no `verified`
+  status to look for.
+- **A terminal checkpoint writes `stopped`.** A `completed` or `failed` checkpoint and a player stop
+  move the row to the same status, and the last checkpoint's type says how the run ended.
+- **One avatar's activities settle in play order.** The client declares the order through
+  `predecessorActivityId`, and the verifier claims an activity only once its predecessor has settled
+  or been rejected. A held predecessor blocks its successors, and a rejected one fails them.
+- **The server pays only what it has proved.** The client renders optimistic state, settlement pays
+  positions at or below the verified anchor, and a rejection rewinds the appended anchor without
+  clawing back anything already settled.
+- **A node never re-rolls.** The seed chain is one forward sequence per avatar and node, so a failed
+  attempt spends its positions and the next attempt continues past them.
+- **Parked and quarantined are holds, not verdicts.** Each stops the avatar's settlement until an
+  operator acts, and only reproducible divergence under a matched sim version is rejected as
+  cheating.
+- **The client mints a start, and the server admits it.** The server mints continuation rows on the
+  catch-up path and chain rows at reveal, so `mint` in a server handler names one of those and never
+  an activity start.
 
 ## Reading order
 
