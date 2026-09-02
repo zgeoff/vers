@@ -1,11 +1,11 @@
 # Defensive Archetypes
 
-Each defensive layer of the [damage model](./attributes-damage-model.md#defensive-layers) takes one
-or two forms, and each form answers a different threat profile. Defensive identity in Vers is
-emergent: an archetype is a recognized pattern of layer investment, never an enforced kit. Defensive
-stats compete for the same gear slots and passive points, so redundant stacking wastes investment
-and mixing against a region's profile is always a real decision. The activity structure those layers
-defend inside sits beside them.
+The [damage model](./attributes-damage-model.md#defensive-layers) names the defensive layers; this
+note gives each layer its forms, and each form answers a different threat profile. Defensive
+identity in Vers is emergent: an archetype is a recognized pattern of layer investment, never an
+enforced kit. Defensive stats compete for the same gear slots and passive points, so redundant
+stacking wastes investment and mixing against a region's profile is always a real decision. The
+activity structure those layers defend inside sits beside them.
 
 ## Hit Deliveries
 
@@ -128,8 +128,8 @@ counterpart to interception, which removes spike damage rather than smearing it.
 
 Deferral always costs: decay outpaces recovery enough that a deferred pool is never erased before it
 lands. Buffer's own deferred ticks do not count as being hit for Barrier's recharge delay. A
-downstream note owns which hits qualify, how much defers, decay rates, and where deferred damage
-lands.
+downstream note owns which hits qualify, how much damage is deferred, decay rates, and where
+deferred damage lands.
 
 ## Life & Recovery
 
