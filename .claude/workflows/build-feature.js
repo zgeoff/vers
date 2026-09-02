@@ -47,7 +47,7 @@ const worktree = `.worktrees/${branch}`;
  */
 const REPO_RULES = `
 Ground rules for working in this repo:
-- Read AGENTS.md at the repo root before writing any code; its conventions (module order, function-name prefixes, testing rules) are binding.
+- Read AGENTS.md at the repo root before writing any code, then load the skills its Required reading table names for the work: \`code-style\` before any TypeScript and \`testing\` before any test. Their rules (module order, function-name prefixes, testing regimes) are binding.
 - Work ONLY inside the worktree at ${worktree}. Never commit on main.
 - The worktree needs its own dependencies: run \`bun install\` inside it first (isolated linker — node_modules are not shared with the main checkout).
 - Git hooks are lefthook — read lefthook.yml at the repo root for what each hook actually gates. NEVER bypass hooks with --no-verify or by editing hook files. If a hook fails, fix the cause and re-commit.
@@ -161,7 +161,7 @@ The plan:
 
 ${plan}
 
-Implement the plan completely, including tests for new behaviour per AGENTS.md testing rules. Commit in logical increments. Pre-commit only auto-fixes lint/format on staged files — it proves nothing about types or behaviour. Before your final commit, run \`bunx turbo run typecheck\` and \`bunx turbo run test --affected\` from the worktree and get both green: pre-push and CI gate them anyway, but later stages expect a branch that already passes.
+Implement the plan completely, including tests for new behaviour per the \`testing\` skill. Commit in logical increments. Pre-commit only auto-fixes lint/format on staged files — it proves nothing about types or behaviour. Before your final commit, run \`bunx turbo run typecheck\` and \`bunx turbo run test --affected\` from the worktree and get both green: pre-push and CI gate them anyway, but later stages expect a branch that already passes.
 ${verifyGate}
 Do not push and do not open a PR; later stages handle that.`,
   { label: 'implement', model: 'sonnet', schema: IMPLEMENT_SCHEMA },
@@ -187,7 +187,7 @@ if (impl.status === 'blocked') {
 log(`Implemented: ${impl.summary}`);
 
 phase('Review');
-const reviewPreamble = `You are reviewing an unpushed feature branch before it becomes a PR. Repo root is the current directory; the branch lives in the worktree at ${worktree}. Read AGENTS.md first — its conventions are binding and convention violations that tooling cannot catch are in scope.
+const reviewPreamble = `You are reviewing an unpushed feature branch before it becomes a PR. Repo root is the current directory; the branch lives in the worktree at ${worktree}. Read AGENTS.md first and load the \`code-style\` and \`testing\` skills — their conventions are binding and convention violations that tooling cannot catch are in scope.
 
 Review the full diff (\`git -C ${worktree} diff main...HEAD\`) and read surrounding source where the diff alone is ambiguous. The plan this branch implements:
 

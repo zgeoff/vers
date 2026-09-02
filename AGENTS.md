@@ -5,11 +5,11 @@
 The rules a task needs are not repeated here. Load the skill for the work before starting it, and
 read the architecture doc for the subsystem in full before reasoning from its code.
 
-| Skill          | Load before                                                                             |
-| -------------- | --------------------------------------------------------------------------------------- |
-| `code-style`   | writing, reviewing, or renaming any TypeScript — the function-verb taxonomy lives there |
-| `testing`      | designing, writing, or reviewing tests                                                  |
-| `docs-writing` | writing or editing any committed prose: `docs/`, READMEs, this file, doc comments       |
+| Skill          | Load before                                                                               |
+| -------------- | ----------------------------------------------------------------------------------------- |
+| `code-style`   | writing, reviewing, or renaming any TypeScript — the function-verb taxonomy lives there   |
+| `testing`      | designing, writing, or reviewing tests                                                    |
+| `docs-writing` | writing or editing any committed prose: `docs/`, READMEs, this file, skills, doc comments |
 
 The system is documented under `docs/architecture/`, with `docs/architecture/overview.md` as its
 narrative entry point. A subsystem's doc is the authoritative account of its invariants — grep
