@@ -36,7 +36,7 @@ export const advanceActivity = os.advanceActivity.handler(async (opts) => {
   let activity: NonNullable<typeof initialActivity>;
 
   if (initialActivity === undefined) {
-    activity = await mintActivityStartRow(
+    activity = await admitActivityStartRow(
       opts.input.activityID,
       opts.input.activityStart,
       opts,
@@ -135,7 +135,7 @@ export const advanceActivity = os.advanceActivity.handler(async (opts) => {
   return { activity, appendedHead: activity.appendedHead };
 });
 
-interface MintActivityStartAvatarNotActivePayload {
+interface AdmitActivityStartAvatarNotActivePayload {
   readonly data: { readonly activeAvatarID: string; readonly activeAvatarName: string };
 }
 
@@ -144,10 +144,10 @@ interface EmptyErrorPayload {
 }
 
 /**
- * The typed error constructors the mock's activity start mint throws.
+ * The typed error constructors the mock's activity start admission throws.
  */
-interface MintActivityStartErrors {
-  readonly AVATAR_NOT_ACTIVE: (payload: MintActivityStartAvatarNotActivePayload) => Error;
+interface AdmitActivityStartErrors {
+  readonly AVATAR_NOT_ACTIVE: (payload: AdmitActivityStartAvatarNotActivePayload) => Error;
   readonly NOT_FOUND: (payload: EmptyErrorPayload) => Error;
 }
 
@@ -159,10 +159,10 @@ interface MintActivityStartErrors {
  * The node-selectable, sim-version, and live-anchor gates the real endpoint runs need state this
  * mock doesn't track.
  */
-async function mintActivityStartRow(
+async function admitActivityStartRow(
   activityID: string,
   activityStart: OfflineActivityStartSubmission | undefined,
-  opts: Readonly<{ errors: MintActivityStartErrors }>,
+  opts: Readonly<{ errors: AdmitActivityStartErrors }>,
   actingUserID: string,
 ): Promise<NonNullable<ReturnType<typeof db.activityCollection.findFirst>>> {
   if (activityStart === undefined) {
@@ -199,7 +199,7 @@ async function mintActivityStartRow(
     });
   }
 
-  const minted = await db.activityCollection.create({
+  const admitted = await db.activityCollection.create({
     avatarID: activityStart.avatarID,
     buildSnapshot: activityStart.buildSnapshot,
     contentVersion: activityStart.contentVersion,
@@ -215,9 +215,9 @@ async function mintActivityStartRow(
     status: 'active',
   });
 
-  invariant(minted !== undefined, 'a freshly minted mock activity start must exist');
+  invariant(admitted !== undefined, 'a freshly admitted mock activity start must exist');
 
-  return minted;
+  return admitted;
 }
 
 /**

@@ -6,7 +6,7 @@ import { removeActivityStart } from './remove-activity-start';
 import type { ActivityServiceClient } from './types';
 
 /**
- * `ingestActivityStart`'s settled outcome: `ingested` when the server minted the activity start and
+ * `ingestActivityStart`'s settled outcome: `ingested` when the server admitted the activity start and
  * this device's durable row is gone; `deferred` when the server answered but said nothing about the
  * activity start's own validity — a session lapse, a temporarily inactive avatar — and the row stays
  * for a later retry; `undelivered` when the service never answered at all, which the row also

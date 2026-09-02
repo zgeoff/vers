@@ -199,7 +199,7 @@ export const activityContract = {
         },
         AVATAR_NOT_ACTIVE: {
           data: AvatarNotActiveDataSchema,
-          message: "An activity start mint's avatar is not the account's active one",
+          message: "An activity start admission's avatar is not the account's active one",
           status: 409,
         },
         CHAIN_QUARANTINED: {
@@ -223,7 +223,7 @@ export const activityContract = {
         },
         NODE_UNKNOWN: {
           data: z.object({}),
-          message: "An activity start mint's scope node is not registered on the world map",
+          message: "An activity start admission's scope node is not registered on the world map",
           status: 404,
         },
         NOT_FOUND: { data: z.object({}), message: 'No activity with that id' },
@@ -234,12 +234,12 @@ export const activityContract = {
         },
         SIM_VERSION_EXPIRED: {
           data: SimVersionProblemDataSchema,
-          message: "An activity start mint's stamped sim version is past retention",
+          message: "An activity start admission's stamped sim version is past retention",
           status: 410,
         },
         SIM_VERSION_UNKNOWN: {
           data: SimVersionProblemDataSchema,
-          message: "An activity start mint's stamped sim version is not registered",
+          message: "An activity start admission's stamped sim version is not registered",
           status: 409,
         },
       }),

@@ -164,6 +164,7 @@ Project-level additions to the shared function-naming taxonomy, under the same r
 | Prefix      | Contract                                                                                    | Example                  |
 | ----------- | ------------------------------------------------------------------------------------------- | ------------------------ |
 | `advance`   | step a stateful cursor, clock, or simulation forward in place, optionally to a target       | `advanceToDuration`      |
+| `admit`     | verify a caller-authored record against server truth and persist it, rejecting on mismatch  | `admitActivityStart`     |
 | `broadcast` | post one message to every connected client on whichever transport carries it                | `broadcast`              |
 | `dispose`   | release the resources a built entry holds (a GPU buffer, texture, or subscription)          | `disposeBiomeChunkEntry` |
 | `flush`     | attempt delivery of the durable outbound backlog, removing entries confirmed received       | `flush`                  |

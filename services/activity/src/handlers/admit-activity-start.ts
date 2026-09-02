@@ -24,10 +24,10 @@ import type {
 } from '../types';
 
 /**
- * The content loader and key and secret material an activity start mint derives its authoritative
+ * The content loader and key and secret material an activity start admission derives its authoritative
  * encounter and stamps from.
  */
-interface MintActivityStartDeps {
+interface AdmitActivityStartDeps {
   readonly keysServiceURL: string;
   readonly keyVersion: number;
   readonly loadContentDocument: (contentVersion: string) => Promise<ContentDocument | undefined>;
@@ -37,9 +37,9 @@ interface MintActivityStartDeps {
 }
 
 /**
- * The typed error constructors an activity start mint throws.
+ * The typed error constructors an activity start admission throws.
  */
-interface MintActivityStartErrors {
+interface AdmitActivityStartErrors {
   readonly AVATAR_NOT_ACTIVE: (payload: AvatarNotActivePayload) => Error;
   readonly CHAIN_QUARANTINED: (payload: AdvanceBailPayload) => Error;
   readonly CHECKPOINT_INVALID: (payload: AdvanceCheckpointInvalidPayload) => Error;
@@ -51,7 +51,7 @@ interface MintActivityStartErrors {
 }
 
 /**
- * Mints a client-submitted activity start — one the caller minted offline and the server has never
+ * Admits a client-submitted activity start — one the caller minted offline and the server has never
  * seen — validating it against server truth rather than trusting its payload. Every authoritative
  * input, the encounter node and the key and secret stamps, is derived server-side, and the client's
  * seed, versions, build snapshot, and start hash must reconcile with what the server derives. The
@@ -62,8 +62,8 @@ interface MintActivityStartErrors {
  * CONFLICT when it anchors against a stale chain head; CHECKPOINT_INVALID when its build snapshot
  * or start hash disagree with the server's own derivation.
  */
-export async function mintActivityStart(
-  deps: Readonly<MintActivityStartDeps>,
+export async function admitActivityStart(
+  deps: Readonly<AdmitActivityStartDeps>,
   trx: Kysely<DB>,
   actingUserID: string,
   input: Readonly<{
@@ -71,7 +71,7 @@ export async function mintActivityStart(
     actingSessionID: null | string;
     activityStart: Readonly<OfflineActivityStartSubmission>;
   }>,
-  errors: MintActivityStartErrors,
+  errors: AdmitActivityStartErrors,
 ): Promise<Selectable<Activities>> {
   const activityStart = input.activityStart;
 
@@ -200,7 +200,7 @@ export async function mintActivityStart(
     });
   }
 
-  // no dedup here; a concurrent mint's unique violation is resolved by the caller once this
+  // no dedup here; a concurrent admission's unique violation is resolved by the caller once this
   // transaction has rolled back
   const row = await trx
     .insertInto('activities')
