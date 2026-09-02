@@ -48,8 +48,11 @@
     },
     "serena": {
       "type": "stdio",
-      "command": "serena",
+      "command": "uvx",
       "args": [
+        "--from",
+        "serena-agent==1.7.0",
+        "serena",
         "start-mcp-server",
         "--context",
         ".serena/context.claude-code.yml",
