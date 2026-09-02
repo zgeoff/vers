@@ -147,9 +147,9 @@ without opening it.
 | `handle<LifecycleEvent>` | implementation of an engine lifecycle callback, keyed by the engine's lifecycle-event enum                              | `handleTick`     |
 
 **Banned** — each is a vaguer or synonymous form of a listed verb; use that one instead: `handle`
-(except the `handle<Event>` framework conventions), `process`, `manage`, `do`, `perform` (say what
-it does), `execute` (→ `run`), `compute` (→ `build`), `fetch` (→ `read`), `save`/`store` (→
-`write`), `delete` (→ `remove`), `search`/`lookup` (→ `find`/`get`).
+(except the `handle<Event>` and `handle<LifecycleEvent>` framework conventions), `process`,
+`manage`, `do`, `perform` (say what it does), `execute` (→ `run`), `compute` (→ `build`), `fetch` (→
+`read`), `save`/`store` (→ `write`), `delete` (→ `remove`), `search`/`lookup` (→ `find`/`get`).
 
 Algorithm-native vocabulary (`walk`, `backtrack`, `slideDiagonal`) is allowed inside the module
 implementing that algorithm — forcing list verbs onto textbook terms hides the algorithm.
