@@ -1,8 +1,8 @@
 # Tinybird
 
-The product-analytics workspace as datafiles: `datasources/` holds the `product_events` stream,
-`pipes/` the query endpoints. Ingest path, event conventions, and the registry:
-`docs/architecture/analytics.md`.
+The product-analytics workspace as datafiles: `datasources/` holds the `product_events` stream, and
+`pipes/` holds the query endpoints. [Analytics](../../docs/architecture/analytics.md) owns the
+ingest path, the event conventions, and the event registry.
 
 Deploy from this directory with the Tinybird CLI:
 

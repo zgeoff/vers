@@ -1,10 +1,10 @@
 # Economy Modes & Reward Integrity
 
-This note defines how Vers keeps a fair player economy when the simulation runs on the player's
-machine: the mode chosen at avatar creation, the rules for which outcomes may be predictable, and
-the economic role of juice — spending that modifies an activity. The
-[entropy architecture doc](../architecture/game/game-entropy.md) owns the mechanisms; this note owns
-the design they enforce.
+Vers keeps a fair player economy while the simulation runs on the player's machine. Three rules
+carry it: the economy mode chosen at avatar creation, the tail rule for which outcomes may be
+predictable, and the economic role of juice, the spending that modifies an activity. The
+[entropy architecture doc](../architecture/game/game-entropy.md) owns the mechanisms that enforce
+these rules.
 
 ## Perfect Foresight
 
@@ -56,7 +56,8 @@ a list of today's features:
   gear-influenced, and a device-held key rolls that gear locally, so self-found standing leans
   harder on reroll detection than a trade avatar's. The same appended, verified record defends it,
   though the design does not treat that record as tamper-proof.
-- Avatars are league-scoped, so league resets contain self-found holdings with no extra rule.
+- Avatars are scoped to a league, a ladder season with its own economy, so a league reset contains
+  self-found holdings with no extra rule.
 
 ## Reward Classes
 
@@ -90,7 +91,7 @@ The wider economy design inherits two obligations. First, offline accrual is wal
 non-resettable: an hour of absence yields an hour of progress, capped, and a window cannot be banked
 and immediately re-armed. Second, unattended play mints market-grade loot, so market access needs
 per-account throughput limits and account-legitimacy gates, with sinks sized to a faucet that runs
-while players sleep. The economy-loop note owns both.
+while players sleep. A downstream note owns both.
 
 ## Juice
 
@@ -149,13 +150,28 @@ a throughput brake.
 - Ladders, prize events, and every future reward-bearing space partition by mode — the standing
   invariant from the mode choice.
 - Guild banks hold tradeable goods, so only trade avatars deposit.
-- Ghost PvP is build against build, and mode partitioning follows the ladders.
+- Direct PvP is build against build, and mode partitioning follows the ladders.
 - Group content resolves loot personally: each participant rolls shared encounters under their own
   key, so a mixed-mode party yields each member their own mode's loot and no shared pool exists.
 
+## Reroll Scanning
+
+Reroll scanning is attempting a node repeatedly and discarding the unfavourable results to keep a
+favourable one. Every attempt at a node is a link in the append-only, server-verified chain, so the
+discarded attempts leave a record whether the player failed them or completed and abandoned them. An
+avatar whose results ride the favourable tail of its own verified history stands out from honest
+play: faster clears and better positions, more often than the distribution predicts.
+
+That record is a behavioural signal, not a replay divergence, and it is scored with restraint: a
+soft consequence before a hard one, always at a session boundary and never mid-session. Honest
+grinders swing too, and a false accusation costs more than the edge it denies.
+
+Cost gates the targets it can. An entry-gated target burns a non-refundable entry on every attempt,
+so walking the chain toward a favourable seed spends real resources. Detection covers the targets
+cost cannot gate, where near-free abandoned attempts can churn the chain forward.
+
 ## Non-Goals
 
-This note does not define reward tables or rates, juice mechanics and costs, drop design, ladder
-structure, guild mechanics, offline caps per mode, sink and throughput-limit design (the
-economy-loop note owns them), or the modes' world names. Those belong to the progression,
-itemisation, economy-loop, and fiction notes.
+A downstream note owns: reward tables and rates, juice mechanics and costs, drop design, ladder
+structure, guild mechanics, offline caps per mode, sink and throughput-limit design, and the modes'
+world names.

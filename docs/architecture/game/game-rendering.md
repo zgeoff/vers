@@ -1,8 +1,8 @@
 # Game rendering
 
-The game world renders through one persistent three.js canvas. Every other UI element — panels,
-tooltips, stash, market, character sheets — is HTML from the design system. 3D is reserved for
-genuinely spatial content. List-and-filter UI, forms, and text stay in the DOM lane, where the
+The game world renders through one persistent three.js canvas. Every other UI element (panels,
+tooltips, the stash, the market, the avatar panels) is HTML from the design system. 3D is reserved
+for genuinely spatial content. List-and-filter UI, forms, and text stay in the DOM lane, where the
 design system, accessibility, and testing already work.
 
 ## The persistent canvas
@@ -66,7 +66,7 @@ fallback covers browsers without WebGPU. That fallback constrains authoring:
   `ShaderMaterial`, `RawShaderMaterial`, and `GLBufferAttribute` don't exist on the fallback and are
   banned.
 - **Post-processing goes through the node-based `RenderPipeline`**, which runs on both backends.
-  `EffectComposer` and pmndrs/postprocessing are WebGL-only dead ends.
+  `EffectComposer` and pmndrs/postprocessing run on WebGL only and are banned.
 - **World-map rendering is instanced.** `WebGPURenderer` is slower than WebGL for many
   individually-drawn meshes but faster for instanced, draw-call-heavy scenes. Nodes and edges render
   via `InstancedMesh`/`BatchedMesh` with shared geometry, never one mesh per node.
@@ -78,7 +78,7 @@ fallback covers browsers without WebGPU. That fallback constrains authoring:
 R3F is pinned to the v9 line, and three of its edges are walled off:
 
 - **The game loop lives behind an internal scheduler wrapper**, not raw `useFrame` timing. R3F v9's
-  clock cannot pause or provide deterministic time, and the wrapper keeps loop semantics ours.
+  clock cannot pause or provide deterministic time, and the wrapper owns the loop's timing.
 - **Renderer access goes through one utility** (`useRenderer`), never `state.gl` scattered through
   scene code.
 - **`createPortal` containers stay stable for the life of their children.** Swapping a portal's
@@ -88,7 +88,7 @@ drei and tunnel-rat are reference material, not dependencies. drei trails R3F ma
 GLSL-era helpers the fallback can't run, and tunnel-rat is unmaintained. The project vendors or
 reimplements a helper worth keeping. Camera controls come from `yomotsu/camera-controls` directly.
 
-## Scene ↔ DOM bridge
+## Scene and DOM bridge
 
 Scene and DOM communicate through zustand stores in both directions, under two read disciplines. DOM
 overlays subscribe reactively. The render loop reads imperatively via `getState()` inside the frame

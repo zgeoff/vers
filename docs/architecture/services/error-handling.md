@@ -3,7 +3,7 @@
 Every failure in the fleet is classified, declared, transported, retried, reported, and traced by
 one set of rules, uniform across the services, app-web, and the idle worker. The spine is a
 three-class taxonomy: a domain error the caller acts on, an invariant violation only a bug produces,
-or an infrastructure fault. Handler bodies stay thin — a handler explicitly throws only its typed
+or an infrastructure fault. Handler bodies stay thin. A handler explicitly throws only its typed
 domain errors or an invariant, and lets any other exception propagate to central machinery, which
 classifies, reports, and encodes it.
 
@@ -19,8 +19,9 @@ range, retry policy, and whether it reaches the error backend.
 | **Infrastructure fault** | A dependency failing — database down, upstream timeout        | escapes the handler uncaught             | 5xx    | always   |
 
 One enforcement rule makes the taxonomy mechanical: a procedure handler throws only its typed
-`opts.errors.*` constructors or `invariant()`. Anything else that escapes is class 2 or 3 by
-definition, handled centrally. Handlers contain no try/catch for logging or reporting.
+`opts.errors.*` constructors or `invariant()`. Anything else that escapes is an invariant violation
+or an infrastructure fault by definition, classified centrally. Handlers contain no try/catch for
+logging or reporting.
 
 A condition real input can trigger is never an invariant: it is either a declared domain error or
 ordinary control flow.
@@ -41,7 +42,7 @@ Every `.errors({…})` map is built with `defineErrors` (`@vers/contract-base`),
 policy compile-checked: a bespoke code without `status` and a canonical code restating its built-in
 status are both type errors.
 
-`data` carries the machine-readable specifics a client needs to act — a `field` discriminant on a
+`data` carries the machine-readable specifics a client needs to act: a `field` discriminant on a
 conflict, a `reason` on an auth failure. Fields are for narrowing and rendering, never freetext.
 Clients narrow on `code` (via `isDefinedError`/`safe`) and `data`, never on `message` strings.
 
@@ -59,26 +60,27 @@ Status assignment follows the failure's nature:
 - **404 Not Found** — a reference to a resource that doesn't exist.
 - **409 Conflict** — an operation whose precondition the resource's current state contradicts.
 
-Every activity code applies to the `advanceActivity` bulk path — a mint or a continuation — as well
-as the single call its meaning names. No request-path check rejects an unreachable node:
-reachability is adjudicated at replay. An append error's `data` carries `activityID`, naming the
-request's last fully committed row. It also carries `appendedHead` where the single-call `data`
-omits it. An activity code also tells a device whether to keep the pending activity start it just
-submitted or drop it;
+Every activity code applies to the `advanceActivity` ingest path, an activity start or a
+continuation, as well as to the single call its meaning names. No request-path check rejects an
+unreachable node: reachability is adjudicated at replay. An append error's `data` carries
+`activityID`, naming the request's last fully committed row. It also carries `appendedHead` where
+the single-call `data` omits it. An activity code also tells a device whether to keep the pending
+activity start it just submitted or drop it;
 [the seed chain](../game/seed-chain.md#handing-an-activity-start-to-the-server) owns that split.
 
 | Domain       | Code                   | Status | Meaning                                                                                                                                      | data                                   |
 | ------------ | ---------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
 | activity     | `ACTIVITY_CAPPED`      | 409    | Append exceeds the avatar's accrued offline budget; the activity lands terminal `capped`.                                                    | `{ appendedHead }`                     |
 | activity     | `ACTIVITY_TERMINAL`    | 409    | Append against a terminal activity status; fatal for the stream.                                                                             | `{ status, appendedHead }`             |
-| activity     | `AVATAR_NOT_ACTIVE`    | 409    | Start, reveal, or mint refused: the acting avatar is not the account's active one.                                                           | `{ activeAvatarID, activeAvatarName }` |
-| activity     | `CHAIN_QUARANTINED`    | 409    | New start or mint refused while the chain is quarantined.                                                                                    | —                                      |
+| activity     | `AVATAR_NOT_ACTIVE`    | 409    | Start ingest or reveal refused: the acting avatar is not the account's active one.                                                           | `{ activeAvatarID, activeAvatarName }` |
+| activity     | `CHAIN_QUARANTINED`    | 409    | New start refused while the chain is quarantined.                                                                                            | —                                      |
 | activity     | `CHECKPOINT_INVALID`   | 422    | Checkpoint batch fails structural or cross-check validation; `reason` names the failed check.                                                | `{ reason }`                           |
 | activity     | `NODE_NOT_REVEALED`    | 409    | Scope has no chain row — `revealNodes` was never called for it.                                                                              | —                                      |
 | activity     | `NODE_UNKNOWN`         | 404    | Scope id doesn't resolve to a node on the current world map.                                                                                 | —                                      |
 | activity     | `SESSION_EVICTED`      | 403    | Append or stop from a session that is no longer the activity's writer; fatal for that stream.                                                | —                                      |
 | activity     | `SIM_VERSION_EXPIRED`  | 410    | Stamped or current sim version is past retention, or its engine trails the content the activity would stamp.                                 | `{ currentSimVersion }`                |
 | activity     | `SIM_VERSION_UNKNOWN`  | 409    | Stamped or current sim version isn't registered; on a pinned hash the client retries once without it, landing on the registry-current stamp. | `{ currentSimVersion }`                |
+| avatar       | `LIMIT_REACHED`        | 409    | Avatar creation refused: the account already holds the cap of avatars for the requested mode.                                                | `{ cap, mode }`                        |
 | replay       | `SIM_VERSION_MISMATCH` | 409    | Request `simVersion` doesn't match this provider's baked engine hash; a dispatch misroute guard.                                             | `{ providerSimVersion }`               |
 | user         | `INVALID_RESET_TOKEN`  | 422    | Reset token doesn't match the one on record.                                                                                                 | —                                      |
 | user         | `PASSWORD_NOT_SET`     | 409    | Operation presumes a password; the account has none.                                                                                         | —                                      |
@@ -90,10 +92,10 @@ submitted or drop it;
 | verification | `CODE_EXPIRED`         | 410    | Code was valid but its window has passed.                                                                                                    | —                                      |
 | verification | `INVALID_CODE`         | 422    | Code doesn't verify against the secret.                                                                                                      | —                                      |
 
-`CHECKPOINT_INVALID`'s `reason` names the failed check: contiguity, chain index, chain link, time
-monotonicity, or hash. On `advanceActivity` it can also be a predicted-build-snapshot mismatch, or a
-start-hash recomputation mismatch on a mint. Each procedure declares `reason` as a closed enum, so a
-client narrows on the value rather than matching a string.
+`CHECKPOINT_INVALID`'s `reason` is a closed enum, `CheckpointInvalidReasonSchema`, naming the
+structural check a batch failed. On `advanceActivity`, `AdvanceCheckpointInvalidReasonSchema`
+extends it with the start-ingest checks: the predicted build snapshot and the recomputed start hash.
+A client narrows on the value rather than matching a string.
 
 ## Service layer
 
@@ -118,8 +120,8 @@ is the only path to the error backend. pino is a log-only sink. Keeping them apa
 from shipping twice: never wire a log transport to the error backend, and never `captureException`
 in code the central hooks already cover.
 
-`@vers/service-runtime` owns the one path a service takes to the error backend, through three
-functions:
+The service runtime (`@vers/service-runtime`) owns the one path a service takes to the error
+backend, through three functions:
 
 - `startErrorReporting` initializes the SDK from `SENTRY_DSN`, a no-op when it's undefined.
 - `reportUnexpectedError` captures a failure tagged with the active trace id.
@@ -140,22 +142,21 @@ Reporting happens at four tiers, each with its own hook:
 - **app-web render** — the root route `errorComponent`. Reports render and loader errors nothing
   below caught.
 - **idle worker** — `reportWorkerFault` at each swallow point, plus the SDK's default global
-  handlers. Reports message-routing, tick-loop, reconnect-recovery, and resync failures the worker
-  otherwise swallows.
+  handlers. Reports the failures the worker otherwise swallows, one `site` per swallow point.
 
 The idle SharedWorker (`@vers/idle-client`) runs its own SDK instance. `startErrorReporting`
 initializes `@sentry/browser` inside the worker scope from `VITE_SENTRY_DSN`, a no-op when it's
 undefined, so capture works with every tab closed. `reportWorkerFault` tags each event with a `site`
-tag (`message-routing`, `tick-loop`, `reconnect`, `resync`) naming the swallow point that caught it.
-The SDK's default global handlers net any throw those sites miss. Capture never changes the worker's
-failure behaviour: a failed resync still folds to an offline status, and a tick-loop crash still
-stops the loop. Restarting a simulation that throws deterministically would resubmit the same crash
-every tick.
+tag from the closed `WorkerFaultSite` union, naming the swallow point that caught it. The SDK's
+default global handlers net any throw those sites miss. Capture never changes the worker's failure
+behaviour: a failed resync still folds to an offline status, and a tick-loop crash still stops the
+loop. Restarting a simulation that throws deterministically would resubmit the same crash every
+tick.
 
 A service report carries a `traceID` event tag when the capture runs inside an active trace scope. A
 report emitted outside any scope omits the tag, as does every app-web capture. The RPC interceptor
-tags with the request's trace id. A background report — one worker iteration, one job's
-handle/complete/fail cycle, a boot drain, one sweep run — carries a fresh trace id scoping that unit
+tags with the request's trace id. A background report (one worker iteration, one job's
+handle/complete/fail cycle, a boot drain, one sweep run) carries a fresh trace id scoping that unit
 of work. One exception: a request-triggered fire-and-forget drain inherits the originating request's
 trace. The RPC path reports exactly once per unexpected throw.
 
@@ -163,24 +164,10 @@ trace. The RPC path reports exactly once per unexpected throw.
 
 One W3C trace id follows a request from the browser through app-web into whichever service it lands
 on, and shows up in three places: every pino log line the request writes, the Bugsink event if one
-fires, and the `x-trace-id` header on every service response. The log-line mixin and the response
-header are telemetry the [observability](../platform/observability.md) doc owns. Grepping a trace id
-from an error screen or a support report finds it directly in the logs and the event.
-
-- The browser mints a fresh `traceparent` per RPC call from the `@vers/trace` primitives.
-- app-web's server-side service links continue the ambient request's trace when it carries one, and
-  start a fresh trace otherwise. The browser-lane `/api/rpc/$service` proxy re-injects `traceparent`
-  from its own request span rather than forwarding the browser's header, so the trace continues but
-  the service's span parents to app-web's server span
-  ([observability](../platform/observability.md)).
-- Services parse inbound `traceparent`, mint their hop's span id, and run the whole request inside
-  `withTraceContext` (`@vers/service-utils`), which the pino mixin and Sentry tag read.
-
-The pure primitives (`parseTraceparent`, `buildTraceparent`, `createTraceContext`, `TraceContext`)
-live in `@vers/trace`. They are isomorphic, so browser workers mint the same headers services parse.
-They speak the frozen W3C format, so anything OpenTelemetry-instrumented interoperates at the header
-level. The `AsyncLocalStorage`-bound scope helpers (`withTraceContext`, `findTraceContext`) stay in
-`@vers/service-utils`.
+fires, and the `x-trace-id` header on every service response. Grepping a trace id from an error
+screen or a support report finds it directly in the logs and the event. How the id is minted,
+propagated across hops, and stamped onto spans, log lines, and the response header is telemetry the
+[observability](../platform/observability.md#traces) doc owns.
 
 ## app-web
 

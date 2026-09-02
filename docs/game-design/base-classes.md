@@ -97,8 +97,7 @@ systems, or scaling it through itself — each a distinct read on the one mechan
 
 ## Non-Goals
 
-This note does not define any class's exact mechanic, resource values, accrual rates, or balance;
-the full content of any specialization's tier choices; specialization unlock conditions or respec
-cost; the launch class; or how any class interacts with specific skills, gear, or enemy families.
-Mechanic and balance detail belongs to the combat note; unlock and respec cost to the progression
-note; the per-class content to each class's own downstream ticket.
+A downstream note owns: any class's exact mechanic, resource values, accrual rates, and balance;
+specialization unlock conditions and respec cost; the launch class; and how a class interacts with
+specific skills, gear, or enemy families. Each class's own content, including its specializations'
+tier choices, belongs to that class's own note.

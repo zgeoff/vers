@@ -53,6 +53,8 @@ How the platform is built — system design, data flows, and operational wiring.
   checkpoint streams, and replay verification
 - [Seed chain](./architecture/game/seed-chain.md) — the forward sequence of positions each activity
   draws from: where a chain starts, how its two anchors move, and what a rejection undoes
+- [Offline reconcile](./architecture/game/offline-reconcile.md) — how progress made without the
+  server is delivered, checked, and settled in play order on reconnect
 - [Game entropy](./architecture/game/game-entropy.md) — entropy sources, sealed salt, and reward
   provenance
 - [Item generation](./architecture/game/item-generation.md) — the entropy-agnostic interpreter that
@@ -74,6 +76,8 @@ The game's design language and systems.
   the activity/encounter structure they defend inside
 - [Economy modes and reward integrity](./game-design/economy-modes.md) — economy modes and the
   reward-design rules
+- [Crafting entropy](./game-design/crafting-entropy.md) — sealed pre-commit salt, craft positions,
+  and item lineage
 - [Base classes](./game-design/base-classes.md) — a class as a signature mechanic, the class-design
   laws, and the specialization model
 - [Base class template](./game-design/base-class-template.md) — the fill-in sheet for speccing a

@@ -1,17 +1,13 @@
 # Game simulation & verification
 
-How the client computes and records gameplay, and how server replay decides to trust it.
-
+The client computes and records all gameplay, and the server decides by replay whether to trust it.
 The client runs every real-time simulation as a pure function of a fixed set of inputs and a seeded
-random stream, writing each step to an append-only checkpoint stream. The server never simulates on
-the request path: a queue-fed verifier re-runs the submitted checkpoints later and decides whether
-to trust them. Determinism is what makes that possible: the same inputs re-run to byte-identical
-results. That reproducibility is what lets the verifier check a stream it did not compute, and what
-lets a returning client rebuild simulation state it no longer holds.
-
-This page covers the simulation, the checkpoint stream, and the trust decision.
-[Offline reconcile](./offline-reconcile.md) covers the reconcile that delivers offline progress on
-reconnect, and the worker lifecycle that drives it.
+random stream, and writes each step to an append-only checkpoint stream. The server never simulates
+on the request path: a queue-fed verifier re-runs the submitted checkpoints later and decides
+whether to trust them. The same inputs re-run to byte-identical results, which is what lets the
+verifier check a stream it did not compute and lets a returning client rebuild simulation state it
+no longer holds. [Offline reconcile](./offline-reconcile.md) owns the delivery of offline progress
+on reconnect and the worker lifecycle that drives it.
 
 ## Activities and encounters
 
@@ -73,19 +69,19 @@ worker — lives in [offline reconcile](./offline-reconcile.md#worker-lifecycle)
 ## Authoring and verifying inputs
 
 The client authors every activity input; the server verifies it. Starting an activity is one
-unconditional local synthesis: the client mints the **activity start** — its first record, naming
-the node, seed, and content and version stamps — from materials it cached at reveal, and drops into
-the simulation with no server round trip. The same synthesis covers every start, whether it is the
-player tapping a node, an auto-continuation after a terminal checkpoint, or an offline gap caught up
-on reconnect. The server authors no start on the request path.
+unconditional local step: the client builds the **activity start**, the activity's first record
+naming the node, seed, and content and version stamps, from materials it cached at reveal, and drops
+into the simulation with no server round trip. The same local build covers every start, whether it
+is the player tapping a node, an auto-continuation after a terminal checkpoint, or an offline gap
+caught up on reconnect. The server authors no start on the request path.
 
 The client anchors each start at the seed chain's current appended anchor, which `revealNodes`
 delivers alongside the seed (see [seed chain](./seed-chain.md)). It persists the synthesized start
-to the durable pending-activity-starts store before installing it, so a crash between mint and
-install loses nothing. It queues the activity's checkpoints through the durable checkpoint
-submitter, which lands them whenever the server is next reachable. The server holds no row for the
-activity until that start lands. A client read keyed on the activity id — the run's revealed rewards
-— waits for the ingest rather than asking after a run the server has never seen.
+to the durable pending-activity-starts store before installing it, so a crash between building the
+start and installing it loses nothing. It queues the activity's checkpoints through the durable
+checkpoint submitter, which lands them whenever the server is next reachable. The server holds no
+row for the activity until that start lands. A client read keyed on the activity id — the run's
+revealed rewards — waits for the ingest rather than asking after a run the server has never seen.
 
 `advanceActivity` is the server's authority over a client-authored start. It re-derives every
 authoritative input from its own truth and trusts none of the payload:
@@ -111,8 +107,9 @@ whichever path delivered it, so the replay verifier reproduces it unchanged.
 
 ### What replay pins
 
-The `Started` checkpoint pins every input a replay needs: the sim and content versions, the roll
-`keyVersion` ([game entropy](./game-entropy.md#version-pinning)), and `start_chain_index`
+The **`Started` checkpoint**, the activity's first checkpoint row, pins every input a replay needs:
+the sim and content versions, the roll `keyVersion`
+([game entropy](./game-entropy.md#version-pinning)), and `start_chain_index`
 ([seed chain](./seed-chain.md#positions-on-the-chain)). Each later segment — a run of checkpoints
 under one sim version — replays under the code and content its stamps name.
 
@@ -120,9 +117,9 @@ The activity's own id carries no cryptographic role. Its `startHash` digests onl
 `[seed, simVersion, contentVersion, keyVersion, encounterNode]`, because that tuple already
 identifies the stream uniquely. A checkpoint's `version` — its position in the stream — and its link
 to the previous checkpoint's hash, never the activity id, keep one activity's checkpoints from
-crossing into another's. The id is a client-assigned label: `advanceActivity`'s caller mints each
-continuation's id itself, so the client can compute a whole fast-forward run with no per-row round
-trip.
+crossing into another's. The id is a client-assigned label: the caller of `advanceActivity` assigns
+each continuation's id itself, so the client can compute a whole fast-forward run with no per-row
+round trip.
 
 A node's encounter parameters are fixed at the content version the start pins and freeze onto the
 start row, inherited unchanged by every continuation in the same request. They fold into the
@@ -149,7 +146,7 @@ tracks how far the client has written; `verified_head` tracks how far the verifi
   hashed set as `+`/`-` deltas in an open keyed map, and only a replay validates them.
 - **An append is a guarded update of the head row.** The append advances `appended_head` only if the
   head still holds its expected value; a stale head returns a retryable conflict carrying the
-  current head, and the client resends the tail. Resubmission deduplicates for free —
+  current head, and the client resends the tail. Resubmission deduplicates on its own —
   `UNIQUE(activity_id, version)` plus deterministic checkpoint content — and dedupe runs before
   elapsed-time accounting, so a replayed tail never inflates duration.
 - **Each activity has one writer.** The head row stamps the session allowed to append, and resuming
@@ -195,33 +192,28 @@ and rejects a pinned build that does not match. A build is a pure function of to
 catches a run that banked XP a later rejection erased. The rejection cascades: a successor chained
 onto the mismatched run fails the identical check.
 
-Replay divergence is not the only cheat signal. Because every attempt at a node is a link in the
-append-only, server-verified chain, **reroll-scanning** — repeatedly attempting a node and
-discarding the unfavorable results to keep a favorable roll — leaves a record. An avatar whose
-results ride the favorable tail of its own verified history stands out from honest play: faster
-clears and better positions, more often than the distribution predicts. The record catches it
-whether it reached those results by failing attempts or by completing and discarding them. This is a
-behavioural signal, not a divergence, and it is scored with the same restraint: a soft consequence
-before a hard one, always at a session boundary. Honest grinders swing too, and a false accusation
-costs more than the edge it denies.
+Replay divergence is not the only cheat signal. Every attempt at a node is a link in the
+append-only, server-verified chain, so an avatar that keeps only its favorable results leaves a
+record. [Reroll scanning](../../game-design/economy-modes.md#reroll-scanning) sets out the detection
+that record enables.
 
 Operators watch the verifier through its metrics: replay lag and rejection rates split by cause
 ([observability](../platform/observability.md)). An integrity-mismatch spike there is investigated
 as a deploy regression first, not a cheating wave.
 
-An old sim version stays a valid replay target for a retention window of ~30 days
+An old sim version stays a valid replay target for a retention window of 30 days
 ([deployment](../platform/deployment.md#retention-sweep)) before the sweep tombstones it.
 
 ## Applying verified progress
 
 Verified progress applies exactly once through a cursor-guarded transaction. The transaction
 advances `verified_head` only if it still holds its expected value, then writes the newly verified
-progress to the avatar's identity state and appends the settlement's economic-ledger entry — all in
-one local transaction. A crash mid-apply retries the transaction idempotently.
+progress to the avatar's identity state in the same local transaction. A crash mid-apply retries the
+transaction idempotently.
 
-- **One-shot grants insert idempotently.** First-clears, achievements, and other one-time grants
-  insert into a unique-keyed grant table with `ON CONFLICT DO NOTHING` inside the same transaction,
-  so they hold across re-farms and replays.
+- **One-shot grants insert idempotently.** First clears and other one-time grants insert into a
+  unique-keyed grant table with `ON CONFLICT DO NOTHING` inside the same transaction, so they hold
+  across re-farms and replays.
 - **Item instances mint at settlement.** An item's identity is its reward coordinate, and its
   content is rolled from the avatar's key under the activity's pinned versions (see
   [game entropy](./game-entropy.md)). Re-verification never duplicates or re-rolls an item.
@@ -270,10 +262,10 @@ settles the offline gap is the subject of [offline reconcile](./offline-reconcil
 | activity            | One attempt at one piece of content, recorded as a single append-only checkpoint stream and verified as a unit.                          |
 | activity type       | What the avatar does in an activity; supplies the `ActivityExecutor` that advances its simulation.                                       |
 | world-map encounter | The activity type where an avatar fights through a map node's enemies, arranged in waves.                                                |
-| chain scope         | The stable, returnable target activities chain against; a world-map encounter's scope is its map node.                                   |
+| chain scope         | See [seed chain](./seed-chain.md#glossary).                                                                                              |
 | activity start      | An activity's first record — the node, seed, and stamps — synthesized locally by the client and verified by the server on ingest.        |
 | continuation        | An activity that resumes a chain scope from a prior attempt's appended position, in the same chain.                                      |
-| settle              | The server's verified application of an activity's rewards to durable state; the moment provisional progress becomes real.               |
+| settle              | See [offline reconcile](./offline-reconcile.md#glossary).                                                                                |
 | build snapshot      | The avatar's equipment, passives, and level pinned as a simulation input; the client predicts it, the server re-derives and verifies it. |
 | sim snapshot        | The engine's serializable projection from `getSnapshot()`, which viewer tabs render.                                                     |
 | writer worker       | The one worker per browser profile that runs the simulation and appends its checkpoints.                                                 |

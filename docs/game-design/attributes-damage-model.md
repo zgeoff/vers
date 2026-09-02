@@ -1,13 +1,15 @@
 # Attributes & Damage Model
 
-This note defines the combat stats and damage model for Vers. It supports PoE-like long-term build
-complexity without front-loading that complexity into the first playable loop.
+Combat in Vers resolves through 7 damage types, a small set of damage events, and layered defenses.
+Two attribute layers sit beside them: the Azimuth positions an avatar, and the metagame attributes
+carry persistent player progression. The model supports long-term build complexity of the kind Path
+of Exile carries, without front-loading that complexity into the first playable loop.
 
 ## Damage Types
 
-Vers has seven damage types, each named for its mechanism of harm. The set is intentionally wider
-than a traditional fantasy ARPG element spread, so itemisation should not expect every build to
-cover every offensive or defensive type equally.
+Vers has 7 damage types, each named for its mechanism of harm. The set is intentionally wider than a
+traditional fantasy ARPG element spread, so itemisation never expects every build to cover every
+offensive or defensive type equally.
 
 ### Physical
 
@@ -45,7 +47,7 @@ into the known material systems.
 
 ## Damage Events
 
-The base damage model should be readable while leaving room for deep item, skill, enemy, and region
+The base damage model stays readable while leaving room for deep item, skill, enemy, and region
 interactions.
 
 ### Hits
@@ -67,8 +69,8 @@ preparing for them.
 
 Baseline content is tuned so an unattended avatar's defeat is predictable from its build rather than
 from unlucky sequences — max-hit limits against expected defensive pools, not hard caps. Players who
-juice an instance deliberately trade that safety for yield; the appetite to go deeper should never
-hit a wall. Exact numbers belong to the progression and enemy notes.
+juice an instance deliberately trade that safety for yield, and nothing caps how deep that appetite
+can go. A downstream note owns the exact numbers.
 
 ### Persistent Damage
 
@@ -84,18 +86,18 @@ Status effects are not enumerated here; the damage model carries only the struct
 
 ## Defensive Layers
 
-Defenses should be layered so gear, passives, enemies, and regions have multiple hooks for build
+Defenses are layered so gear, passives, enemies, and regions have multiple hooks for build
 expression.
 
 ### Avoidance
 
 Avoidance is the chance that prevents a hostile action from connecting. Its forms are Evasion and
-Dodge; the defensive-archetypes note defines them.
+Dodge, defined in [defensive archetypes](./defensive-archetypes.md).
 
 ### Interception
 
-Interception reduces a connected hit before mitigation. Its forms are Block and Deflect; the
-defensive-archetypes note defines them.
+Interception reduces a connected hit before mitigation. Its forms are Block and Deflect, defined in
+defensive archetypes.
 
 ### Mitigation
 
@@ -105,7 +107,7 @@ type-appropriate defenses and other reductions that make incoming damage smaller
 ### Buffer
 
 Buffer defers damage: a portion of a qualifying hit lands as decaying damage over following beats
-instead of instantly. The defensive-archetypes note defines it.
+instead of instantly. Defensive archetypes defines it.
 
 ### Barrier
 
@@ -113,8 +115,8 @@ Barrier is recoverable protection consumed before Life.
 
 ### Life
 
-Life is the avatar's health. Reaching zero Life ends the activity; the core note owns the defeat
-rules.
+Life is the avatar's health. Reaching zero Life ends the activity under the
+[defeat stakes](./core-themes-world-fiction.md#defeat-stakes).
 
 ## Resolution Order
 
@@ -135,8 +137,8 @@ may alter it when a specific build or encounter needs a rule-breaking hook.
 
 The order is also the structure of expedition reporting: each defensive layer consumed is
 escalation, and a hit that reaches Life is a close call worth reporting. Reporting carries both a
-high-level summary and the drill-down that explains it — including what failed on defeat; its own
-design note owns the specifics.
+high-level summary and the drill-down that explains it, including what failed on defeat. A
+downstream note owns the specifics.
 
 ## Threat Mix & Coverage
 
@@ -172,8 +174,8 @@ avatar resource layered over that cadence. Skills relate to it in one of three w
   degrades to its free skills instead of stalling.
 - **Costed** skills spend Aether to fire. A costed skill that cannot pay skips its beat rather than
   blocking the avatar — free skills keep the rotation firing, and the real tax is the output gap
-  between that baseline and what the costed beat would have added. A costed skill should be stronger
-  per beat than a free one by roughly the value of its cost, and the build question is whether
+  between that baseline and what the costed beat would have added. A costed skill is stronger per
+  beat than a free one by about the value of its cost, and the build question is whether
   regeneration can sustain it.
 - **Optional-cost** skills fire either way and consume Aether for a stronger outcome when it is
   available. Empowerment converts Aether less efficiently than a costed skill's cost does —
@@ -183,7 +185,7 @@ avatar resource layered over that cadence. Skills relate to it in one of three w
 Cost shape is a skill property, not a class rule. Archetypes may still skew the flow — heavy
 spenders, or generators that build Aether by acting or being hit — through skills and passives;
 generation is a behaviour a skill carries, orthogonal to its cost shape. Some abilities recur on
-cooldowns longer than a beat; the skills note owns cooldown design.
+cooldowns longer than a beat; a downstream note owns cooldown design.
 
 Aether regeneration and capacity are stats worth building around. Specific regeneration, cost,
 capacity, and on-full/on-empty investment stays in itemisation and skills.
@@ -191,7 +193,7 @@ capacity, and on-full/on-empty investment stays in itemisation and skills.
 ## Attribute Layers
 
 Vers uses two attribute layers: the Azimuth, which positions an avatar, and metagame attributes,
-which are persistent player progression. They should not compete for the same items or progression
+which are persistent player progression. They never compete for the same items or progression
 choices.
 
 The Azimuth is local to an avatar and determines what equipment and skills the avatar qualifies for.
@@ -271,8 +273,9 @@ Build archetypes come primarily from skills, gear, passives, damage types, statu
 region interactions, and defensive-layer investment.
 
 Archetype is a per-system term, not a single system: skills, defenses, classes, and specializations
-each carry their own archetypes, and build archetypes emerge from combining them. Classes —
-including a chosen divergence into a specialized class tier — belong to the base-classes note.
+each carry their own archetypes, and build archetypes emerge from combining them.
+[Base classes](./base-classes.md) owns classes, including a chosen divergence into a specialized
+class tier.
 
 The damage model supports long-term complexity through item, skill, passive, enemy, and region
 interactions. The model exposes a small stable core; specialized rules exist only where they create
@@ -280,7 +283,6 @@ meaningful build or encounter identity.
 
 ## Non-Goals
 
-This note does not define exact formulas, ailment lists, resistance caps, interception math,
-avoidance math, critical chance or magnitude baselines, Aether cost or regeneration baselines,
-Azimuth requirement thresholds or weight magnitudes, or complete itemisation rules. Those belong in
-downstream combat, itemisation, enemy, and progression notes.
+A downstream note owns: exact formulas, ailment lists, resistance caps, interception math, avoidance
+math, critical chance and magnitude baselines, Aether cost and regeneration baselines, Azimuth
+requirement thresholds and weight magnitudes, and complete itemisation rules.

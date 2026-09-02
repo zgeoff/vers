@@ -8,17 +8,17 @@ updated), haiku watches CI. Fix loops are bounded at 2 rounds per gate (review, 
 
 Invoke:
 
-```
+```ts
 Workflow({ name: 'build-feature', args: { plan, branch, issue?, prNumber?, verifyCommands? } })
 ```
 
-- The plan is agreed interactively first. A run cannot pause for conversation — bake every decision
-  the run will need into the plan, or split multi-decision phases into separate runs with
+- The plan is agreed interactively first. A run cannot pause for conversation, so bake every
+  decision the run will need into the plan, or split multi-decision phases into separate runs with
   conversation between.
 - `prNumber` pushes to and readies an existing PR instead of creating one.
 - `verifyCommands` adds full-graph gates for cross-cutting work (hooks only cover affected scopes).
-- Results may carry `rebaseConflicts: true` (a hand-resolved rebase — flag those hunks for human
-  review rather than re-running the review) and `minorFindings` for human judgment.
+- A result can carry `rebaseConflicts: true`, meaning a hand-resolved rebase whose hunks want human
+  review rather than a re-run of the review pass, and `minorFindings` for human judgment.
 
 ### Orchestration model
 

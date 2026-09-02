@@ -73,6 +73,10 @@ knife.
   - a derivable set keying a table whose other columns carry facts the tree does not hold — the
     roster is then the key, not the payload
 
+- **Architecture states the tree; design notes hold intent.** A doc under `docs/architecture/`
+  states only what the tree does. A mechanism the design calls for but the tree does not implement
+  lives in a note under `docs/game-design/`, written as design. Where that intent shaped a built
+  mechanism, the architecture doc links the note in one sentence and states no more of it.
 - **Facts follow the reader's task.** A doc serves one reader task. A fact earns its place only if
   that reader acts on it mid-task; a fact serving a different task lives in that task's doc, linked
   from this one. The opening describes the subject, never who should read the doc or when to — no

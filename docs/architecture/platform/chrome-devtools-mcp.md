@@ -36,8 +36,8 @@ session ends.
 
 ## Launch the debug browser
 
-Chrome honors `--remote-debugging-port` only when it starts a fresh instance, so a dedicated profile
-directory keeps the daily browser out of the way:
+Chrome honors `--remote-debugging-port` only when it starts a fresh instance, so the debug browser
+runs from its own profile directory, separate from the daily one:
 
 ```powershell
 & "C:\Program Files\Google\Chrome\Application\chrome.exe" --remote-debugging-port=9222 --remote-allow-origins=* --user-data-dir=C:\temp\chrome-vers-debug
