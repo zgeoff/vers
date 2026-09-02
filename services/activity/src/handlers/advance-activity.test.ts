@@ -101,7 +101,7 @@ interface ActivityStartDerivationInput {
 }
 
 /**
- * Reproduces the encounter node and start hash `mintActivityStart` derives server-side for an
+ * Reproduces the encounter node and start hash `admitActivityStart` derives server-side for an
  * activity start at a scope, so a success-path test can submit a `startHash` the server's own
  * recompute matches. The server stamps `keyVersion` 1 and reads the `worldmap` scope secret at
  * version 1 — the activity service's defaults — so those are fixed here too.
@@ -848,7 +848,7 @@ test('it rejects an anonymous acting user with UNAUTHORIZED', async () => {
   ).rejects.toMatchObject({ code: 'UNAUTHORIZED', data: { reason: 'missing-session' } });
 });
 
-test('it mints a client-minted activityStart under a valid client head, deriving its encounter and stamps server-side', async () => {
+test('it admits a client-minted activityStart under a valid client head, deriving its encounter and stamps server-side', async () => {
   await using ctx = await setupTest();
 
   const current = await createSimVersionRow(ctx.db);
@@ -972,7 +972,7 @@ test('it mints an activity start naming a predecessor not yet on the server, sta
 
   const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
 
-  // an absent predecessor is not rejected — the activity start mints and the replay claim waits on
+  // an absent predecessor is not rejected — the activity start admissions and the replay claim waits on
   // the predecessor, so an out-of-order or reload-orphaned delivery settles once it lands
   const minted = await client.advanceActivity({
     activityID,
@@ -1275,7 +1275,7 @@ test('it rejects an activity start submitted against a quarantined chain with CH
     data: { activityID, appendedHead: 0 },
   });
 
-  // the activity start mint rolled back entirely — no row was left occupying the avatar's
+  // the activity start admission rolled back entirely — no row was left occupying the avatar's
   // active-run slot
   const row = await ctx.db
     .selectFrom('activities')
@@ -1350,7 +1350,7 @@ test('it mints an activity start at a node unconnected to any completed node —
   expect(activityStartRow.id).toBe(activityID);
 });
 
-test("it rejects an activity-start minted for an avatar that is not the account's active one", async () => {
+test("it rejects an activity-start admissioned for an avatar that is not the account's active one", async () => {
   await using ctx = await setupTest();
 
   const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
@@ -1411,7 +1411,7 @@ test('it rejects an activity start whose stamped sim version is past retention w
   ).rejects.toMatchObject({ code: 'SIM_VERSION_EXPIRED' });
 });
 
-test('it conflicts an activity-start mint while another run is already active for the avatar', async () => {
+test('it conflicts an activity-start admission while another run is already active for the avatar', async () => {
   await using ctx = await setupTest();
 
   const current = await createSimVersionRow(ctx.db);
@@ -1718,7 +1718,7 @@ test("it refuses a kicked writer session's undelivered offline activityStart wit
   await clientB.resumeActivity({ activityID: started.id });
 
   // session A, now kicked, delivers a valid offline activity start it minted before the takeover.
-  // The activity start mint reads no acting-session gate, so the kicked session is not singled out:
+  // The activity start admission reads no acting-session gate, so the kicked session is not singled out:
   // the activity start is refused only because the avatar's single active-run slot is still
   // occupied — a generic CONFLICT, never a session-scoped SESSION_EVICTED. The kicked session's
   // undelivered work is not discarded on session grounds; its drop, when it happens, is incidental

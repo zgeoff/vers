@@ -32,7 +32,7 @@ import type {
   MissingSessionPayload,
   SimVersionProblemPayload,
 } from '../types';
-import { mintActivityStart } from './mint-activity-start';
+import { admitActivityStart } from './admit-activity-start';
 import { toActivityData } from './to-activity-data';
 import { updateAppendedAnchorFromTail } from './update-appended-anchor-from-tail';
 
@@ -107,11 +107,11 @@ interface AdvanceActivityOpts {
  * once a gap has already ended terminal, and a retry resolved against it would stall forever.
  *
  * When `activityID` names no row, `activityStart` — a client-minted activity start the server has
- * never seen — is minted onto that id first and the continuations append onto it; absent
+ * never seen — is admitted onto that id first and the continuations append onto it; absent
  * `activityStart`, the missing row is NOT_FOUND. The activity start is validated against server
  * truth, not trusted: it clears the same gates a fresh start does, must anchor against the chain's
  * live head, and its build snapshot and start hash must reconcile with the server's own derivation.
- * A retry whose activity start was already minted skips straight to the append.
+ * A retry whose activity start was already admitted skips straight to the append.
  */
 export async function advanceActivity(
   deps: AdvanceActivityDeps,
@@ -197,8 +197,8 @@ export async function advanceActivity(
 
 /**
  * Resolves the row the request's continuations append onto: the existing row at
- * `opts.input.activityID`, or `opts.input.activityStart` freshly minted onto that id. A missing
- * row with no `activityStart` to mint is NOT_FOUND, as is a `activityStart` the acting user's
+ * `opts.input.activityID`, or `opts.input.activityStart` freshly admitted onto that id. A missing
+ * row with no `activityStart` to admit is NOT_FOUND, as is a `activityStart` the acting user's
  * avatars don't include or an id that already belongs to another user — a foreign id stays
  * owner-scoped NOT_FOUND rather than leaking its existence. On a concurrent duplicate mint it
  * converges on the already-minted row when the id is genuinely this same activity start retried,
@@ -254,7 +254,7 @@ async function resolveActivityStartRow(
 
   try {
     return await deps.db.transaction().execute((trx) =>
-      mintActivityStart(
+      admitActivityStart(
         {
           keyVersion: deps.keyVersion,
           keysServiceURL: deps.keysServiceURL,
@@ -296,7 +296,7 @@ async function resolveActivityStartRow(
 }
 
 /**
- * Resolves an activity start mint's unique violation from a fresh connection, once the transaction
+ * Resolves an activity start admission's unique violation from a fresh connection, once the transaction
  * that hit it has rolled back. Returns the existing row at `activityID` only when it is genuinely
  * this same activity start retried — same avatar, `startKey`, and scope; anything short of that
  * full match, a foreign row or no row, is `undefined`.

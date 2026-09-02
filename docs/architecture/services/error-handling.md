@@ -72,7 +72,7 @@ activity start it just submitted or drop it;
 | ------------ | ---------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
 | activity     | `ACTIVITY_CAPPED`      | 409    | Append exceeds the avatar's accrued offline budget; the activity lands terminal `capped`.                                                    | `{ appendedHead }`                     |
 | activity     | `ACTIVITY_TERMINAL`    | 409    | Append against a terminal activity status; fatal for the stream.                                                                             | `{ status, appendedHead }`             |
-| activity     | `AVATAR_NOT_ACTIVE`    | 409    | Start ingest or reveal refused: the acting avatar is not the account's active one.                                                           | `{ activeAvatarID, activeAvatarName }` |
+| activity     | `AVATAR_NOT_ACTIVE`    | 409    | Start admission or reveal refused: the acting avatar is not the account's active one.                                                        | `{ activeAvatarID, activeAvatarName }` |
 | activity     | `CHAIN_QUARANTINED`    | 409    | New start or continuation refused while the chain is quarantined.                                                                            | —                                      |
 | activity     | `CHECKPOINT_INVALID`   | 422    | Checkpoint batch fails structural or cross-check validation; `reason` names the failed check.                                                | `{ reason }`                           |
 | activity     | `NODE_NOT_REVEALED`    | 409    | Scope has no chain row — `revealNodes` was never called for it.                                                                              | —                                      |
@@ -94,8 +94,8 @@ activity start it just submitted or drop it;
 
 `CHECKPOINT_INVALID`'s `reason` is a closed enum, `CheckpointInvalidReasonSchema`, naming the
 structural check a batch failed. On `advanceActivity`, `AdvanceCheckpointInvalidReasonSchema`
-extends it with the start-ingest checks: the predicted build snapshot and the recomputed start hash.
-A client narrows on the value rather than matching a string.
+extends it with the start-admission checks: the predicted build snapshot and the recomputed start
+hash. A client narrows on the value rather than matching a string.
 
 ## Service layer
 

@@ -3,7 +3,7 @@ import { metrics } from '@opentelemetry/api';
 export type ContentIncompatiblePath = 'fallback' | 'requested';
 
 /**
- * Counts one activity-start mint rejected because the resolved engine's `maxContentVersion` falls
+ * Counts one activity-start admission rejected because the resolved engine's `maxContentVersion` falls
  * behind the content version the request would stamp, split by which resolution path found the
  * mismatch: `requested` covers a client-sent hash, `fallback` covers the registry-current version
  * the transitional hash-less path resolves.
@@ -16,7 +16,7 @@ export function recordContentIncompatibleRejection(path: ContentIncompatiblePath
     .getMeter('@vers/service-activity')
     .createCounter('vers.activity.content_incompatible_rejections', {
       description:
-        "activity-start mints rejected because the resolved engine's max content version falls behind the requested content",
+        "activity-start admissions rejected because the resolved engine's max content version falls behind the requested content",
       unit: '{rejection}',
     });
 

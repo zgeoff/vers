@@ -270,7 +270,7 @@ engine build derives and replays. The row refreshes whenever the fleet's resolve
 bundled content version differs from what's stored, even when the provider app itself needs no
 change.
 
-The activity start ingest refuses to stamp a version whose row's max content version falls behind
+The activity-start admission refuses to stamp a version whose row's max content version falls behind
 the content registry's current version, answering `SIM_VERSION_EXPIRED` rather than accepting a
 start it could never replay. An engine build must deploy and reconcile its row's max content version
 before the content-registry publish that depends on it goes out. The refusal assumes that ordering.

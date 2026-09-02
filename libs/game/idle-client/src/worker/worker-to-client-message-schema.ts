@@ -11,7 +11,7 @@ const activityCompletedMessageSchema = z
   .readonly();
 
 /**
- * The server has minted the named activity's client-minted activity start, so the activity is
+ * The server has admitted the named activity's client-minted activity start, so the activity is
  * readable through the activity service from now on. Tabs act on this by enabling the reads they
  * hold back while an activity exists only on this device.
  */
