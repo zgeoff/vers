@@ -1,8 +1,8 @@
 ---
 name: docs-writing
 description:
-  Prose rules for everything committed to the repo — docs/, READMEs, AGENTS.md, skills, and doc
-  comments. Use when writing, editing, or reviewing any repo prose.
+  Prose rules for everything committed to the repo — docs/, READMEs, AGENTS.md, and skills. Use when
+  writing, editing, or reviewing any repo prose.
 ---
 
 # Docs writing

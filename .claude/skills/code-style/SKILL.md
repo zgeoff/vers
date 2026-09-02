@@ -156,11 +156,12 @@ implementing that algorithm — forcing list verbs onto textbook terms hides the
 
 ## Comments
 
-Two lint rules own comment shape, and neither has an exception or a baseline marker:
-`zgeoff/no-jsdoc` bans every `/** … */` block, and `zgeoff/max-consecutive-line-comments` bans a run
-of more than three consecutive `//` lines. A fact a reader needs has a home that stays true: the
-code, a type, a named constant, a test whose name states the rule, or the subsystem's doc under
-`docs/architecture/`. A comment holds only the residue none of those can hold.
+Two lint rules own comment shape, and neither has an exception for authored code or a baseline
+marker (generated output gets a per-file override in `.oxlintrc.json`): `zgeoff/no-jsdoc` bans every
+`/** … */` block, and `zgeoff/max-consecutive-line-comments` bans a run of more than three
+consecutive `//` lines. A fact a reader needs has a home that stays true: the code, a type, a named
+constant, a test whose name states the rule, or the subsystem's doc under `docs/architecture/`. A
+comment holds only the residue none of those can hold.
 
 - Write a `//` comment for one thing: the reason the obvious alternative is wrong, when the cause
   lives outside the file. A library quirk, a runtime or platform behavior, a parser or compiler

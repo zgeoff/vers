@@ -19,6 +19,8 @@ export async function updateAuthSession(
 
   const expires = opts?.expiresAt?.toISOString() ?? current.data.expires;
 
+  // measured from the session's creation, never a fresh window from now: an unrelated field
+  // update later in the session's life must not extend how long the cookie stays valid
   const maxAge =
     expires === undefined
       ? AUTH_SESSION_READ_MAX_AGE_SECONDS

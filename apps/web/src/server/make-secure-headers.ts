@@ -3,6 +3,8 @@ import { buildCSPHeaderValue } from './build-csp-header-value';
 import { CSP_NONCE_HEADER } from './csp-nonce-header';
 import type { Middleware } from './middleware';
 
+// Cross-Origin-Embedder-Policy stays unset: the app embeds cross-origin subresources it does not
+// control, which the policy would block
 const FIXED_SECURE_HEADERS: ReadonlyArray<readonly [string, string]> = [
   ['Cross-Origin-Resource-Policy', 'same-origin'],
   ['Cross-Origin-Opener-Policy', 'same-origin'],
