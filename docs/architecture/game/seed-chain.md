@@ -20,7 +20,7 @@ simulation that produces an activity and the replay that proves it.
 activities in. [Game entropy](./game-entropy.md#the-seed-chain) says why the chain is one flat
 sequence rather than a tree a player could search.
 
-One chain, read left to right, with the two anchors marking proof and play.
+One chain runs left to right, and its two anchors mark proof and play.
 
 ```mermaid
 flowchart LR

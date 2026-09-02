@@ -8,7 +8,7 @@ that progress back: it delivers the activities the device holds, replays them to
 trust them, and settles their rewards in order. Whether the simulation was running while the server
 was out of contact decides which it is: real work to deliver, or an idle gap to reconstruct.
 
-The three connectivity states and the reconnect that brings offline progress back.
+Three connectivity states describe the device, and a reconnect brings offline progress back.
 
 ```mermaid
 stateDiagram-v2
