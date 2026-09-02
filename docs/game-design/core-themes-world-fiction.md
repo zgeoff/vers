@@ -199,14 +199,21 @@ Each note below is unwritten. A reference to "a downstream note" anywhere in the
 one of these. Their working names appear nowhere else in the design set.
 
 - **Combat** — the formulas: avoidance and interception math, smoothing, the armour curve, recharge
-  timings, buffer ratios, resistance caps, critical baselines, Aether cost and regeneration
-  baselines, and each class's mechanic and balance detail.
+  timings, buffer hit qualification and deferral and decay rates, resistance caps, critical
+  baselines, Aether cost and regeneration baselines, Azimuth requirement thresholds and weight
+  magnitudes, and each class's mechanic and balance detail.
 - **Skills** — cooldown design, cost shapes, and any Aether-costed defensive option.
-- **Itemisation** — affix tables, requirement thresholds, drop design, and the
+- **Itemisation** — affix tables and pools, reward tables and rates, drop design, the craft actions
+  and their costs, the craft preview's per-tier fields and forfeit deadline, and the
   single-target-versus-area and burst-versus-sustain properties of equipment.
 - **Progression** — loss rates on defeat, extraction mechanics, and specialization unlock and respec
   cost.
-- **Economy loop** — offline caps per mode, sinks, throughput limits, and account-legitimacy gates.
+- **Economy loop** — offline caps per mode, juice costs, sinks, throughput limits, and
+  account-legitimacy gates.
+- **Competition** — ladder structure, guild mechanics, and prize events.
+- **Classes** — the launch class and each class's specialization content, one note per class.
+- **World map** — landmarks (rare distance-scaled nodes shown as pillars of light through the fog)
+  and the horizontal variety that carries the world past the difficulty plateau.
 - **Enemy families** — enemy layer distributions and enemy critical tuning.
 - **Reporting** — expedition reports, per-layer legibility, and empowerment uptime.
 - **Fiction** — institution and habitat names, and the economy modes' world names.

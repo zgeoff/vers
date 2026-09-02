@@ -44,8 +44,9 @@ provider apps that the deploy CLI provisions
 ## Data
 
 The shared Neon database holds three shapes of game data, and it scales to zero when nobody is
-playing ([database](./platform/database.md)). Every table is accessed through Kysely and migrated by
-kysely-ctl in `@vers/db`.
+playing ([database](./platform/database.md)). Every application table is accessed through Kysely and
+migrated by kysely-ctl in `@vers/db`. One exception: pg-boss owns the `pgboss` schema and migrates
+it itself ([queues](./platform/queues.md)).
 
 - **Relational identity data** — users, sessions, verifications, and avatars.
 - **The activity checkpoint tables** — an append-only checkpoint log plus a per-activity head row

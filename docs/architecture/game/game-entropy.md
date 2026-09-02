@@ -28,7 +28,7 @@ A node's outcomes ride its seed chain, and the chain is client-computable, so of
 walk any reachable future before the player commits to one. The [seed chain](./seed-chain.md) owns
 the chain's row model, its seed derivation, and the transitions that advance and rewind it. Every
 attempt advances the chain, a failed or abandoned one exactly as a completed one, and the attempt
-after a failure is a fresh continuation rather than a replay. Steering the chain toward a favorable
+after a failure is a fresh continuation rather than a replay. Steering the chain toward a favourable
 seed therefore spends real attempts.
 
 The chain seeds only the trajectory: enemies, timing, survival, experience, and which kills commit
@@ -44,7 +44,7 @@ re-attempt buys by the cost of reaching the position rather than by hiding it. L
 free; reaching the position is not:
 
 - An entry-gated target burns a non-refundable entry on every attempt, including abandoned ones, so
-  walking the chain toward a favorable seed costs real resources.
+  walking the chain toward a favourable seed costs real resources.
 - A second competitive avatar is a full endgame build's worth of investment.
 - The counted attempt is always played in full.
 

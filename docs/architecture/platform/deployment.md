@@ -69,8 +69,8 @@ variables it needs, and [provision from nothing](#provision-from-nothing) sets t
   reads the `R2_*` keys in `apps/bugsink/r2_storage.py`, which back its uploaded-file storage.
 
 Service-to-service (s2s) auth runs on one Ed25519 keypair per minting service. Each minter holds its
-own private half as `SERVICE_AUTH_PRIVATE_KEY` in its own app's secrets, and every app verifies
-inbound calls with `SERVICE_AUTH_JWKS`, the key set holding each minter's public half
+own private half as `SERVICE_AUTH_PRIVATE_KEY` in its own app's secrets, and every domain service
+verifies inbound calls with `SERVICE_AUTH_JWKS`, the key set holding each minter's public half
 ([auth](../services/auth.md#service-to-service-tokens)).
 
 The remaining keys with cross-service meaning:

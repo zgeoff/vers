@@ -193,7 +193,7 @@ catches a run that banked XP a later rejection erased. The rejection cascades: a
 onto the mismatched run fails the identical check.
 
 Replay divergence is not the only cheat signal. Every attempt at a node is a link in the
-append-only, server-verified chain, so an avatar that keeps only its favorable results leaves a
+append-only, server-verified chain, so an avatar that keeps only its favourable results leaves a
 record. [Reroll scanning](../../game-design/economy-modes.md#reroll-scanning) sets out the detection
 that record enables.
 
