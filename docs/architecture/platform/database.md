@@ -73,9 +73,9 @@ wall clock on a 5s interval timer and before every connection acquire, and a gap
 last read means the process was not running. On a detected resume the pool swaps in a fresh
 postgres.js instance for new queries and destroys the old one, which rejects every query still
 pending on it with `CONNECTION_DESTROYED`. Each reset increments `vers.db.pool_resets`
-([observability](./observability.md#instrument-registry)). The 60s threshold keeps a long
-synchronous stretch of work, such as a replay verification that blocks the event loop, from tripping
-a reset that would destroy its own live queries.
+([observability](./observability.md#instrument-registry)). The 60s threshold keeps a synchronous
+stretch of work shorter than 60s, such as a replay verification that blocks the event loop, from
+tripping a reset that would destroy its own live queries.
 
 ## Who connects, and where the string lives
 
