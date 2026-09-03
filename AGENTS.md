@@ -87,8 +87,10 @@ An issue has two owners in turn. The agent that files it prepares it: the body o
 type label and one area label, and a clear hygiene check. The delivery lead (the `delivery-lead`
 skill) then triages it: milestone, blocking edges, board item, and board status. A filer sets no
 milestone and touches no board item. An open issue with no board item, or with a board item that has
-no status, is untriaged and waits for the delivery lead's next cycle. The `delivery-lead` skill owns
-the increment model and the triage procedure; the rules below are the ones a PR must satisfy.
+no status, is untriaged and waits for the delivery lead's next cycle. An upkeep issue is the
+exception: it stays off the board by design ([Upkeep issues](#upkeep-issues)). The `delivery-lead`
+skill owns the increment model and the triage procedure; the rules below are the ones a PR must
+satisfy.
 
 ### Filing
 

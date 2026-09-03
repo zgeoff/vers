@@ -42,11 +42,12 @@ never a theme.
 
 **Status** is the board's workflow field: Backlog, Ready, In Progress, In Review, Done.
 
-An issue is **untriaged** when it has no board item, or a board item with no Status. The agent that
-files an issue prepares it and never triages it; the Filing rules in AGENTS.md's Issue hygiene
-section state the filer's side, and the Triage role states yours. The board's sub-issue automation
-adds a child of an epic to the board with no Status, so a child arrives untriaged like any other
-issue.
+An issue is **untriaged** when it lacks a type label, an `area/*` label, a board item, or a board
+Status. An issue labelled `upkeep`, `dep-outdated`, or `dep-audit` has no board item by design, so
+only its labels count. The agent that files an issue prepares it and never triages it; the Filing
+rules in AGENTS.md's Issue hygiene section state the filer's side, and the Triage role states yours.
+The board's sub-issue automation adds a child of an epic to the board with no Status, so a child
+arrives untriaged like any other issue.
 
 An **interrupt** is work that degrades what already ships or blocks every other pick, whatever
 milestone it sits in: a red `main`, an open bug, an audit advisory, a fired upkeep trigger, a
