@@ -260,10 +260,11 @@ The remaining split instruments enumerate their attribute values:
 `vers.web.service_call_retries` and `vers.web.service_call_failures` cover app-web's bounded
 outbound service calls. `service_call_retries` records each retry attempt against a call that failed
 its previous attempt. `service_call_failures` records a call whose final attempt still failed, split
-by `reason`: `timeout` when that final attempt hit its own per-attempt bound, `transport` when it
-failed some other way before the bound fired. A `timeout` burst against one `service` tracks a Fly
-machine's autosuspend resume window; a sustained `transport` run against the same service points at
-a genuinely unreachable machine.
+by `reason`: `timeout` when that final attempt hit its bound, `transport` when it failed some other
+way before the bound fired. A `timeout` against one `service` means the final attempt's bound
+([retry policy](../services/error-handling.md#retry-policy)) elapsed with no answer from the
+machine; a sustained `transport` run against the same service points at a genuinely unreachable
+machine.
 
 The `vers 5xx responses` threshold monitor watches `vers-traces` for any server span whose response
 status is 500 or above, counted in 5-minute bins over a 10-minute range, and notifies `vers alarms`

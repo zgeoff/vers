@@ -191,10 +191,21 @@ and defined service errors never retry, since retrying can't change the outcome;
 and 5xx retry twice. A per-query `retry` override needs a behavioural reason the default policy
 can't express.
 
-A server function's direct service-client call bypasses the query client. Its service link
-(`buildServiceLink`) bounds each attempt to a short per-attempt timeout and retries the procedures
-the contract declares GET or HEAD; every other procedure gets a single bounded attempt with no
-retry.
+Every call app-web's server makes to a service runs one bounded-attempt policy
+(`runBoundedAttempts`, `apps/web/src/lib/rpc/`): a server function's direct client call, the
+`/api/rpc/$service` proxy forwarding a browser call, and the session lookups both of those run
+first. A procedure its contract declares GET or HEAD gets up to three attempts bounded at 2s, 6s,
+and 16s, with no pause between them. An attempt is resent when it hits its bound, fails in
+transport, or is answered 5xx. Every other procedure gets one attempt bounded at 24s. An attempt
+that hits its bound is aborted. When the last attempt fails, the caller gets `SERVICE_UNAVAILABLE`,
+which the proxy answers as a 503.
 
-The browser's call through the `/api/rpc/$service` proxy gets a single bounded attempt with no
-retry: the query client owns retry for that path.
+**Why:** a Fly machine that falls back to a cold start has answered its first request as late as 21s
+after that request arrived. The two short bounds resend a call stuck on a connection the machine
+stopped answering, and the third bound holds the cold-start window open. A mutation cannot be
+resent, so it waits out the same window in one attempt. Fly's proxy holds the connection open while
+the machine starts, so a pause between attempts buys nothing. The 24s budget stays under the 30s
+slow-request alarm ([observability](../platform/observability.md)).
+
+The browser's query client retries that 503 twice, so a service that stays down costs a browser
+query three budgets before its error shows.

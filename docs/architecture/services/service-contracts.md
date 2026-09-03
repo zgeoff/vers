@@ -104,13 +104,15 @@ Clients are typed by a single annotation against the contract:
 
 ```ts
 export const userClient: ContractRouterClient<typeof userContract, ServiceLinkContext> =
-  createORPCClient(buildServiceLink('user'));
+  createORPCClient(buildServiceLink('user', userContract));
 ```
 
 In app-web the link is isomorphic (`buildServiceLink`). On the server it mints a short-lived s2s
-token for the target service and attaches it ([auth](./auth.md#service-to-service-tokens)). In the
-browser it routes through the app's same-origin `/api/rpc/$service` proxy, so the session cookie
-rides along, since services are not reachable outside the private mesh ([overview](../overview.md)).
+token for the target service and attaches it ([auth](./auth.md#service-to-service-tokens)). Every
+attempt the server link makes is bounded, and a GET or HEAD procedure is resent under the
+[retry policy](./error-handling.md#retry-policy). In the browser it routes through the app's
+same-origin `/api/rpc/$service` proxy, so the session cookie rides along, since services are not
+reachable outside the private mesh ([overview](../overview.md)).
 
 ## Errors and the trust boundary
 

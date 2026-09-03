@@ -2,55 +2,44 @@ import type { ClientContext } from '@orpc/client';
 import { ORPCError } from '@orpc/client';
 import type { LinkFetchClientOptions } from '@orpc/client/fetch';
 import type { ServiceName } from '@vers/service-auth';
-import { recordServiceCallFailure } from '../metrics/record-service-call-failure';
+import { runBoundedAttempts } from './run-bounded-attempts';
 import { serviceDispatcher } from './service-dispatcher';
-import type { ServiceFetchInit } from './types';
+import type { AttemptClock, ServiceFetchInit } from './types';
 
 type BoundFetch = NonNullable<LinkFetchClientOptions<ClientContext>['fetch']>;
 
 export interface MakeBoundedFetchOptions {
-  readonly attemptTimeoutMs?: number;
+  readonly clock?: AttemptClock;
+  readonly isRetryable: (path: ReadonlyArray<string>) => boolean;
   readonly service: ServiceName;
 }
 
-export const DEFAULT_ATTEMPT_TIMEOUTS_MS: ReadonlyArray<number> = [2000, 6000];
+export function makeBoundedFetch(options: Readonly<MakeBoundedFetchOptions>): BoundFetch {
+  return async (request, init, _clientOptions, path) => {
+    const outcome = await runBoundedAttempts(
+      {
+        ...(options.clock !== undefined && { clock: options.clock }),
+        retryable: options.isRetryable(path),
+        service: options.service,
+        signal: request.signal,
+      },
+      (signal) => {
+        const requestInit: ServiceFetchInit = { ...init, dispatcher: serviceDispatcher, signal };
 
-export function makeBoundedFetch(options: MakeBoundedFetchOptions): BoundFetch {
-  const attemptTimeoutMs = options.attemptTimeoutMs ?? Math.max(...DEFAULT_ATTEMPT_TIMEOUTS_MS);
+        // a Request's body is consumed by the send that reads it, so every attempt sends its own
+        // clone
+        return fetch(request.clone(), requestInit);
+      },
+    );
 
-  return async (request, init) => {
-    const controller = new AbortController();
-
-    const signal = AbortSignal.any([request.signal, controller.signal]);
-    let boundFired = false;
-
-    const timer = setTimeout(() => {
-      boundFired = true;
-
-      controller.abort();
-    }, attemptTimeoutMs);
-
-    try {
-      // The timer is cleared the instant `fetch` resolves so the bound never outlives the response
-      // headers — otherwise it stays armed through oRPC's lazy body read and can abort mid-stream.
-      const requestInit: ServiceFetchInit = { ...init, dispatcher: serviceDispatcher, signal };
-
-      const response = await fetch(request, requestInit);
-
-      clearTimeout(timer);
-
-      return response;
-    } catch (error) {
-      clearTimeout(timer);
-
-      if (request.signal.aborted) {
-        throw error;
-      }
-
-      const reason = boundFired ? 'timeout' : 'transport';
-
-      recordServiceCallFailure(options.service, reason);
-      throw new ORPCError('SERVICE_UNAVAILABLE', { cause: error });
+    if (outcome.kind === 'aborted') {
+      throw outcome.cause;
     }
+
+    if (outcome.kind === 'failed') {
+      throw new ORPCError('SERVICE_UNAVAILABLE', { cause: outcome.cause });
+    }
+
+    return outcome.response;
   };
 }

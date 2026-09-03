@@ -88,6 +88,7 @@
         "three": "catalog:",
         "tiny-invariant": "catalog:",
         "undici": "catalog:",
+        "xstate": "catalog:",
         "zod": "catalog:",
       },
       "devDependencies": {
