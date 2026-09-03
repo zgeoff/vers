@@ -63,17 +63,11 @@ signs against a per-process in-memory keypair, since it never leaves the process
 `service-verification` issues and checks TOTP codes with `@epic-web/totp`, one verification row per
 target and type (`2fa`, `2fa-setup`, `change-email`, `onboarding`):
 
-- `createVerification` generates a code and returns the OTP. The type sets the code's lifetime. An
-  emailed code (`onboarding`, `change-email`) uses a 600s TOTP period and the row carries an
-  `expiresAt` 10 minutes from creation, so the code works for the time a person takes to open the
-  email. An authenticator code (`2fa`, `2fa-setup`) uses the 30s period the authenticator app shares
-  and carries no `expiresAt`. A caller's explicit `period` or `expiresAt` overrides the type's
-  default.
+- `createVerification` generates a code and returns the OTP. An emailed code (`onboarding`,
+  `change-email`) lives 10 minutes; an authenticator code (`2fa`, `2fa-setup`) lives one 30s period.
 - `verifyCode` checks it, consuming `change-email` and `onboarding` codes on success and deleting
   the row; `2fa` and `2fa-setup` codes stay, marked verified, each guarded so a replay matches zero
-  rows. `verifyTOTP` accepts the period on either side of the current one, so the period alone would
-  keep an emailed code valid for 10 to 20 minutes; with the type's default `expiresAt`, that check
-  runs first and caps it at 10.
+  rows.
 - `get2FAVerificationURI` returns the authenticator-app URI for a pending 2FA setup.
 
 ## Credentials and password reset
