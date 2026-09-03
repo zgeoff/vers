@@ -206,6 +206,59 @@ test('it reports an abort by the caller without a further attempt', async () => 
   expect(failures).toBeUndefined();
 });
 
+test('it starts no attempt for a caller that has already aborted', async () => {
+  const controller = new AbortController();
+
+  controller.abort();
+
+  const sendAttempt = mock(makeHungAttempt());
+
+  const outcome = await runBoundedAttempts(
+    { clock: new SimulatedClock(), retryable: true, service: 'user', signal: controller.signal },
+    sendAttempt,
+  );
+
+  invariant(outcome.kind === 'aborted');
+
+  expect(outcome.cause).toMatchObject({ name: 'AbortError' });
+  expect(sendAttempt).not.toHaveBeenCalled();
+});
+
+test('it retries past a 5xx answer whose body cannot be cancelled', async () => {
+  let callCount = 0;
+
+  const sendAttempt = mock((): Promise<Response> => {
+    callCount += 1;
+
+    if (callCount === 1) {
+      const erroredBody = new ReadableStream({
+        start(controller) {
+          controller.error(new Error('body failed'));
+        },
+      });
+
+      return Promise.resolve(new Response(erroredBody, { status: 503 }));
+    }
+
+    return Promise.resolve(new Response(null, { status: 200 }));
+  });
+
+  const outcome = await runBoundedAttempts(
+    {
+      clock: new SimulatedClock(),
+      retryable: true,
+      service: 'user',
+      signal: new AbortController().signal,
+    },
+    sendAttempt,
+  );
+
+  invariant(outcome.kind === 'delivered');
+
+  expect(outcome.response.status).toBe(200);
+  expect(sendAttempt).toHaveBeenCalledTimes(2);
+});
+
 test('it retries a retryable call answered with a 5xx and delivers the following answer', async () => {
   let callCount = 0;
 

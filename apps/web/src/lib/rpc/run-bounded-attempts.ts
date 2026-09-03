@@ -33,6 +33,10 @@ export async function runBoundedAttempts(
   const timeouts = options.retryable ? RETRYABLE_ATTEMPT_TIMEOUTS_MS : SINGLE_ATTEMPT_TIMEOUTS_MS;
 
   for (let index = 0; ; index += 1) {
+    if (options.signal.aborted) {
+      return { cause: options.signal.reason, kind: 'aborted' };
+    }
+
     const timeoutMs = timeouts[index];
 
     invariant(timeoutMs !== undefined, 'attempt index ran past the timeout table');
@@ -50,7 +54,11 @@ export async function runBoundedAttempts(
         return { kind: 'delivered', response: attempt.response };
       }
 
-      await attempt.response.body?.cancel();
+      try {
+        await attempt.response.body?.cancel();
+      } catch {
+        // an errored body rejects its own cancel; the socket is released either way
+      }
     } else if (options.signal.aborted) {
       return { cause: attempt.cause, kind: 'aborted' };
     } else if (isLastAttempt) {
