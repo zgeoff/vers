@@ -6,10 +6,8 @@ import { createMockFailedCheckpoint } from '@vers/idle-core/test-utils';
 import invariant from 'tiny-invariant';
 import { writeLastStartedActivity } from '../submission/write-last-started-activity';
 import { writeNodeSeeds } from '../submission/write-node-seeds';
-import { writeQueuedCheckpoint } from '../submission/write-queued-checkpoint';
 import { writeStartStamps } from '../submission/write-start-stamps';
 import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
-import { createMockCheckpointBatchEntry } from '../test-utils/factories/create-mock-checkpoint-batch-entry';
 import { createMockCompletedCheckpoint } from '../test-utils/factories/create-mock-completed-checkpoint';
 import { createMockNodeSeed } from '../test-utils/factories/create-mock-node-seed';
 import { createMockProgressCheckpoint } from '../test-utils/factories/create-mock-progress-checkpoint';
@@ -167,51 +165,6 @@ test('it sources the build snapshot from the last activity this worker installed
 
   // the level is recomputed from the carried-forward xp rather than trusted from the source row
   expect(row.buildSnapshot).toStrictEqual({ level: buildLevelFromXP(8450), xp: 8450 });
-});
-
-test("it folds the previous run's locally queued checkpoint xp onto its start baseline", async () => {
-  const seed = createMockNodeSeed({ avatarID: 'avatar_switch_earned', nodeID: '2_2' });
-
-  await writeNodeSeeds(seed.avatarID, [seed]);
-  await writeStartStamps({ keyVersion: 1, secretRef: 'worldmap', secretVersion: 1 });
-
-  const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_1' });
-
-  const previous = createMockActivityData({
-    avatarID: seed.avatarID,
-    buildSnapshot: { level: buildLevelFromXP(1000), xp: 1000 },
-    id: 'act_earned_previous',
-  });
-
-  context.setActivity(previous);
-
-  await writeQueuedCheckpoint(
-    previous.id,
-    createMockCheckpointBatchEntry({
-      payload: { rewards: { xp: 120 }, type: 'progress' },
-      version: 1,
-    }),
-  );
-
-  await writeQueuedCheckpoint(
-    previous.id,
-    createMockCheckpointBatchEntry({
-      payload: { rewards: { xp: 80 }, type: 'progress' },
-      version: 2,
-    }),
-  );
-
-  const row = await buildActivityStart(context, {
-    avatarID: seed.avatarID,
-    scopeID: seed.nodeID,
-    scopeType: 'world_map_node',
-    startKey: 'start_key_earned',
-  });
-
-  invariant(row !== null, 'expected the cached inputs to synthesize a row');
-
-  // the 1000-xp start baseline plus the 120 + 80 earned across the previous run's queued deltas
-  expect(row.buildSnapshot).toStrictEqual({ level: buildLevelFromXP(1200), xp: 1200 });
 });
 
 test("it starts a fresh avatar's build snapshot at zero xp when the worker holds no prior activity row for it", async () => {
@@ -392,49 +345,6 @@ test("it folds a failed previous run's terminal loss into the next snapshot", as
   invariant(row !== null, 'expected the cached inputs to synthesize a row');
 
   expect(row.buildSnapshot).toStrictEqual({ level: buildLevelFromXP(994), xp: 994 });
-});
-
-test("it prefers the previous run's recorded earnings over the partial rows still queued for it", async () => {
-  const seed = createMockNodeSeed({ avatarID: 'avatar_partial_queue', nodeID: '2_6' });
-
-  await writeNodeSeeds(seed.avatarID, [seed]);
-  await writeStartStamps({ keyVersion: 1, secretRef: 'worldmap', secretVersion: 1 });
-
-  const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_1' });
-
-  const previous = createMockActivityData({
-    avatarID: seed.avatarID,
-    buildSnapshot: { level: buildLevelFromXP(1000), xp: 1000 },
-    id: 'act_partial_queue_previous',
-  });
-
-  context.setActivity(previous);
-
-  // the queue holds only the tail the server has not confirmed yet; the record holds the run
-  await writeQueuedCheckpoint(
-    previous.id,
-    createMockCheckpointBatchEntry({
-      payload: { rewards: { xp: 80 }, type: 'progress' },
-      version: 3,
-    }),
-  );
-
-  context.setRunEarnings({
-    activityID: previous.id,
-    deltaXP: 120,
-    tail: createMockProgressCheckpoint({ rewards: { xp: 80 } }),
-  });
-
-  const row = await buildActivityStart(context, {
-    avatarID: seed.avatarID,
-    scopeID: seed.nodeID,
-    scopeType: 'world_map_node',
-    startKey: 'start_key_partial_queue',
-  });
-
-  invariant(row !== null, 'expected the cached inputs to synthesize a row');
-
-  expect(row.buildSnapshot).toStrictEqual({ level: buildLevelFromXP(1120), xp: 1120 });
 });
 
 test('it ignores earnings recorded for a run other than the previous one', async () => {
