@@ -116,42 +116,22 @@ on how that session ended.
 | The player signed out here   | deleted at once | discarded, once the player confirms |
 | It ran past its expiry       | left in place   | kept                                |
 
-The worker throws work away on two triggers: another device taking the account over, or the player
-signing out here. On a takeover, app-web answers the call itself and puts a header on the answer
-saying the session was taken over rather than that it ran out; the worker reads that header and
-clears its pending activity starts, its queued checkpoints, and the preferences it would otherwise
-recover from. A worker that kept that work would deliver it the next time the player signs in here,
-long after the player carried on elsewhere. The player is warned before taking the account over, so
-nothing is lost silently. A sign-out clears the outbox only once the player confirms its own
-warning.
+On a takeover, the worker throws the outbox away. app-web answers the call itself and marks the
+answer with a header saying the session was taken over rather than that it ran out. The worker reads
+that header and clears its pending activity starts, its queued checkpoints, and the preferences it
+would otherwise recover from. A worker that kept that work would deliver it the next time the player
+signs in here, long after the player carried on elsewhere. The player is warned before taking the
+account over, so nothing is lost silently.
 
 A session that runs past its expiry keeps its row until the next refresh call deletes it and reports
-what happened. app-web can tell a takeover from a lapsed session because of that, and it sends no
-header when a session has run out. So a player whose session lapsed while the app was closed still
-delivers the offline play the device holds, once they sign back in.
+what happened. app-web tells a takeover from a lapsed session by that report, and it sends no header
+when a session has run out. So a player whose session lapsed while the app was closed delivers the
+offline play the device holds once they sign back in.
 
-When the player signs out, one request deletes the session row and clears this device's cookie
-together, so no later call ever finds the row gone and app-web never sends the takeover header. The
-server therefore never learns what the device holds, so the browser decides. The sign-out control
-asks the worker what it is holding before it ends the session: a worker holding nothing signs the
-player straight out, and a worker holding runs warns the player first, naming how many runs and how
-much play sit in the outbox, and clears them once the player confirms. The play it names is the span
-of each run's still-queued checkpoints, so a partly delivered run counts only its undelivered tail.
-Cancelling leaves the outbox exactly where it is. A run in progress counts only through the rows it
-has left in the outbox: a run the server has received in full ends the session with no warning, and
-the next sign-in attaches to it again.
-
-The control answers a failed worker call two ways, depending on which call failed. A worker that
-cannot say what it holds signs the player out and leaves the outbox where it stands, since a dead
-worker must never trap a player on the settings screen. A discard that fails holds the sign-out back
-and asks the player to try again, since ending the session with the work still queued is what the
-warning exists to prevent. The worker clears its durable stores before it stops the live run, so a
-clear that fails leaves the run ticking and the outbox intact.
-
-A different account signing in on this device cannot deliver what the outbox still holds: the worker
-drains only the acting avatar's activity starts, and the server refuses a start naming an avatar the
-acting user does not own. That protection stops at the account boundary. The same account signing
-back in delivers what a cancelled sign-out left in place, which is what cancelling asks for.
+A sign-out is the one ending the server cannot signal. One request deletes the session row and
+clears this device's cookie together, so no later call finds the row gone and app-web never sends
+the takeover header. The browser decides what happens to the outbox instead
+([signing out](#signing-out)).
 
 Session eviction and writer ownership are separate mechanisms on separate scopes. The session
 belongs to the account, and evicting it signs a device out of everything. The writer belongs to one
@@ -159,6 +139,29 @@ activity: that activity's head row stamps the session allowed to append to it, a
 activity on another session takes the stamp over
 ([game simulation](./game-simulation.md#checkpoint-streams)). An avatar's other activities keep the
 writer they already carry.
+
+### Signing out
+
+The sign-out control asks the worker what the outbox holds before it ends the session. An empty
+outbox signs the player out with no warning. An outbox holding runs warns the player first, naming
+how many runs and how much play it holds, and the worker clears it once the player confirms.
+Cancelling leaves the outbox where it is.
+
+Only the outbox counts. A run's play is the span of its still-queued checkpoints, so a partly
+delivered run counts its undelivered tail alone. A run the server has received in full has no rows
+in the outbox, so it raises no warning, and the next sign-in attaches to it again.
+
+The two worker calls fail opposite ways, because they risk opposite things. A worker that cannot say
+what it holds signs the player out and leaves the outbox where it stands: a dead worker must never
+trap a player on the settings screen. A discard that fails holds the sign-out back and asks the
+player to try again: ending the session with the work still queued is what the warning exists to
+prevent. The worker clears its durable stores before it stops the live run, so a failed clear leaves
+the run ticking and the outbox intact.
+
+What a cancelled sign-out leaves in the outbox can reach the server only from the account that
+played it. A different account signing in on this device cannot deliver it: the worker drains only
+the acting avatar's activity starts, and the server refuses a start naming an avatar the acting user
+does not own. The same account signing back in delivers it, which is what cancelling asks for.
 
 ## Settlement in order
 
