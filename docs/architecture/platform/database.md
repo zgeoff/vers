@@ -68,15 +68,12 @@ memory snapshot ([deployment](./deployment.md#topology)), and JavaScript timers 
 the pause, so the pool resumes holding the sockets it had, and the Neon side may have closed them in
 the meantime. A query written to such a socket fails with `CONNECTION_CLOSED`, and a query that was
 in flight when the machine suspended hangs until the kernel's TCP retransmit limit gives up, about
-15 minutes later. `createDB` therefore detects a resume and drops the pool. The detector compares
-the wall clock with the clock it last observed, and a gap over 60s means the process was not
-running. It observes the clock on a 5s interval timer and again before every connection acquire, so
-the first request after a resume resets the pool before it takes a connection rather than running on
-the old pool until the next tick destroys its query. On a detected resume the pool swaps in a fresh
+15 minutes later. `createDB` therefore detects a resume and drops the pool. The detector reads the
+wall clock on a 5s interval timer and before every connection acquire, and a gap over 60s since its
+last read means the process was not running. On a detected resume the pool swaps in a fresh
 postgres.js instance for new queries and destroys the old one, which rejects every query still
 pending on it with `CONNECTION_DESTROYED`. Each reset increments `vers.db.pool_resets`
-([observability](./observability.md#instrument-registry)) once per resume: the acquire-time check
-moves the observed clock forward, so the next tick sees no gap. The 60s threshold keeps a long
+([observability](./observability.md#instrument-registry)). The 60s threshold keeps a long
 synchronous stretch of work, such as a replay verification that blocks the event loop, from tripping
 a reset that would destroy its own live queries.
 
