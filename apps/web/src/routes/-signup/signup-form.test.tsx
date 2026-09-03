@@ -10,6 +10,10 @@ function rejectWithResponse(): Promise<Response> {
   return Promise.resolve(new Response(null, { status: 400 }));
 }
 
+function rejectWithError(): Promise<undefined> {
+  return Promise.reject(new Error('Service Unavailable'));
+}
+
 test('it shows the error for the email field', async () => {
   await withRequestContext({}, async () => {
     renderWithRouter(
@@ -39,6 +43,24 @@ test('it shows a generic failure message when the server rejects the submission'
     const alert = await screen.findByRole('alert');
 
     expect(alert).toHaveTextContent('Something went wrong. Please try again.');
+  });
+});
+
+test('it shows a generic failure message when the signup server function faults', async () => {
+  const user = userEvent.setup();
+
+  await withRequestContext({}, async () => {
+    renderWithRouter(<SignupForm action={rejectWithError} honeypotValidFrom="1700000000000" />);
+
+    const emailInput = await screen.findByLabelText('Email');
+
+    await user.type(emailInput, 'player@vers.test');
+    await user.click(screen.getByRole('button', { name: 'Signup' }));
+
+    const alert = await screen.findByRole('alert');
+
+    expect(alert).toHaveTextContent('Something went wrong. Please try again.');
+    expect(screen.getByRole('button', { name: 'Signup' })).not.toBeDisabled();
   });
 });
 

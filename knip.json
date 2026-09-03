@@ -27,6 +27,7 @@
       "entry": [
         "src/routes/**/*.{ts,tsx}",
         "src/server.ts",
+        "src/start.ts",
         "src/client.tsx",
         "src/start-sentry-react.ts",
         "src/router.tsx",

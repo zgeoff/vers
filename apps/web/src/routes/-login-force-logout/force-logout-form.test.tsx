@@ -6,6 +6,10 @@ import { renderWithRouter } from '../../test-utils/render-with-router';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { ForceLogoutForm } from './force-logout-form';
 
+function rejectWithError(): Promise<undefined> {
+  return Promise.reject(new Error('Service Unavailable'));
+}
+
 test('it disables both buttons while confirming, then re-enables them', async () => {
   const user = userEvent.setup();
   const deferred = buildDeferred<undefined>();
@@ -44,6 +48,24 @@ test('it completes a cancel without leaving the buttons stuck disabled', async (
 
     await deferred.release(undefined);
 
+    expect(screen.getByRole('button', { name: 'Cancel' })).not.toBeDisabled();
+  });
+});
+
+test('it shows a generic failure message when the force-logout server function faults', async () => {
+  const user = userEvent.setup();
+
+  await withRequestContext({}, async () => {
+    renderWithRouter(<ForceLogoutForm action={rejectWithError} />);
+
+    const confirmButton = await screen.findByRole('button', { name: 'Confirm' });
+
+    await user.click(confirmButton);
+
+    const alert = await screen.findByRole('alert');
+
+    expect(alert).toHaveTextContent('Something went wrong. Please try again.');
+    expect(screen.getByRole('button', { name: 'Confirm' })).not.toBeDisabled();
     expect(screen.getByRole('button', { name: 'Cancel' })).not.toBeDisabled();
   });
 });
