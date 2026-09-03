@@ -79,3 +79,15 @@ test('it passes a request with no accept header through', async () => {
   expect(next).toHaveBeenCalledOnce();
   expect(response.text()).resolves.toBe('page');
 });
+
+test('it passes a request with an empty accept header through', async () => {
+  const next = mock(() => Promise.resolve(new Response('page')));
+
+  const response = await rejectNonHTMLAccept(
+    new Request('https://example.test/account', { headers: { accept: '' } }),
+    next,
+  );
+
+  expect(next).toHaveBeenCalledOnce();
+  expect(response.text()).resolves.toBe('page');
+});
