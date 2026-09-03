@@ -355,18 +355,8 @@ Two Dockerfiles deviate from the shape:
   every runtime import from one flat `node_modules` regardless of directory depth.
 - **runtime** — `node:24.18.0-alpine` holding `node_modules`, `server.mjs`, and `dist`.
 
-The server entry (`apps/web/src/server.ts`) carries no top-level `await`. The root `server.mjs`
-awaits the bundle's import, and rolldown folds code the bundle shares with a dynamically imported
-chunk into the entry when the module graph allows it. That chunk then imports the entry back, the
-two modules wait on each other, and Node exits with code 13 for an unsettled top-level await. A
-machine in that crash loop never passes its health check, so the cutover rolls back. The
-OpenTelemetry bootstrap is therefore a static import, called inside the branch that gates on the
-export env.
-
-The e2e harness boots the built artifact with `OTEL_EXPORTER_OTLP_ENDPOINT` set to a local port
-nothing listens on, so the production boot smoke
-(`apps/web-e2e/specs/production-boot-smoke.spec.ts`) takes the same boot path as Fly's machines. The
-exporters drop what they cannot deliver and never block boot.
+The server entry (`apps/web/src/server.ts`) carries no top-level `await`: a dynamically imported
+chunk can import the entry back, and Node then exits with code 13 on the unsettled cycle.
 
 ## Provision from nothing
 
