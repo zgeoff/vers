@@ -1,5 +1,6 @@
 import { fileURLToPath } from 'node:url';
 import { createStartHandler, defaultStreamHandler } from '@tanstack/react-start/server';
+import { startMetricsExport, startTraceExport } from '@vers/service-utils/otel';
 import { serveStatic } from 'srvx/static';
 import { env } from './server/env';
 import { logger } from './server/logger';
@@ -17,14 +18,12 @@ import { withRequestTrace } from './server/with-request-trace';
 // from different working directories
 const CLIENT_ASSETS_DIRECTORY = fileURLToPath(new URL('../client', import.meta.url));
 
-// awaited so registration completes before the Sentry init below runs: the OpenTelemetry API
-// keeps only the first global tracer/context/propagator registration per process, and Sentry's own
-// OpenTelemetry bootstrap would otherwise win the race and shadow standard traceparent propagation
+// a static import, never a top-level `await import()`: rolldown can fold the otel chunk's shared
+// code into this entry, the chunk then imports this module back, and Node exits 13 on the unsettled
+// cycle. Registration also has to land before the Sentry init below, which keeps only the first.
 if (env.OTEL_EXPORTER_OTLP_ENDPOINT !== undefined) {
-  const otelModule = await import('@vers/service-utils/otel');
-
-  otelModule.startTraceExport({ serviceName: 'app-web' });
-  otelModule.startMetricsExport({ serviceName: 'app-web' });
+  startTraceExport({ serviceName: 'app-web' });
+  startMetricsExport({ serviceName: 'app-web' });
 }
 
 if (env.isProduction && env.SENTRY_DSN !== undefined) {

@@ -74,6 +74,11 @@ export function loadE2EEnvironment(options: Readonly<LoadE2EEnvironmentOptions>)
 
           LOGGING: 'warn',
           NODE_ENV: 'production',
+
+          // production sets this, and the server only registers OpenTelemetry when it is set, so
+          // the boot the specs exercise takes the same path as Fly's. Nothing listens on the port:
+          // the exporters drop what they cannot deliver and never block boot.
+          OTEL_EXPORTER_OTLP_ENDPOINT: 'http://127.0.0.1:1',
           PORT: new URL(baseURL).port,
 
           // Start's session sealing rejects any password under 32 characters
