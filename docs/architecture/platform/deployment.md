@@ -2,8 +2,9 @@
 
 The stack is a Fly.io fleet. The repo's deploy CLI rolls it out from the `deploy.config.ts`
 manifest, and a push to `main` drives every rollout. Every rollout decision keys off one marker: the
-`GIT_SHA` stamped into each app's machine env, compared against HEAD. A leg that a failure skipped
-therefore reads stale and ships on the next push. The same CLI provisions the fleet from nothing.
+`GIT_SHA` stamped into each app's machine env, related to HEAD ([staleness](#staleness)). A leg that
+a failure skipped therefore reads stale and ships on the next push. The same CLI provisions the
+fleet from nothing.
 
 ## Topology
 
@@ -111,10 +112,33 @@ Two per-app matrix jobs run the deploy CLI through the `.github/actions/fly-depl
 action: `build` (`bun run deploy -- build --app <name>`) as soon as checks are green, and `deploy`
 (`bun run deploy -- cutover --app <name>`) after `migrate`, `build`, and the full-stack suite. Both
 matrices derive from `deploy.config.ts` via a `manifest` job (the CLI's `list` command), so adding
-an app to the manifest is the whole change. Each leg self-gates: the CLI compares HEAD against the
-`GIT_SHA` stamped on the app's machines, so a phase lost to an earlier failure ships on the next
-push. The `build` job orders the later phases without gating them directly; an app's failed build
-leaves its ref unavailable to `stack-e2e`, whose fleet-wide failure holds every cutover.
+an app to the manifest is the whole change. Each leg self-gates on [staleness](#staleness), so a
+phase lost to an earlier failure ships on the next push. The `build` job orders the later phases
+without gating them directly; an app's failed build leaves its ref unavailable to `stack-e2e`, whose
+fleet-wide failure holds every cutover.
+
+### Staleness
+
+The CLI reads the `GIT_SHA` the app's machines carry, relates that commit to HEAD, and reads the
+app's trigger in `deploy.config.ts` to decide whether the app is stale. The `build`, `cutover`,
+`images`, and `verify` commands share one decision.
+
+- A fleet whose machines carry no single `GIT_SHA` is stale: nothing trustworthy is recorded.
+- A deployed SHA the checkout does not hold is stale for the same reason.
+- A deployed SHA that is HEAD, or that descends from HEAD, is current. The fleet is ahead of the
+  run, which happens when a later push's deploy lands while this run is still between its legs.
+  `deploy verify` passes the app, and a deploy leg skips it rather than roll it back to the older
+  commit.
+- Otherwise the change set is every path `git diff --name-only <deployed_sha> HEAD` lists, minus the
+  paths the root `.dockerignore` excludes, plus the packages turbo reports affected from that base.
+
+A `turbo-affected` trigger is stale when its package is in the affected set. A `paths` trigger is
+stale when a changed path matches one of its globs. The `.dockerignore` filter is what keeps a
+docs-only merge from redeploying bugsink and umami: a file the build context never holds cannot
+change an image, so the ignore file owns that list (`**/*.md` and `**/.env.example` among it) and
+the staleness check reads it rather than carrying its own. The filter never reaches turbo's affected
+set: turbo marks a package affected on any changed file in its directory, so a README edit under
+`apps/web` still ships app-web.
 
 ### Env preflight
 
@@ -225,7 +249,7 @@ trustworthy SHA is recorded. It also names any machine reporting no image.
 ### Pinned upstream images
 
 `vers-bugsink` and `vers-umami` ship pinned upstream images. Neither sits in the turbo task graph,
-so their staleness triggers in `deploy.config.ts` are path globs (`apps/bugsink/**`,
+so their [staleness](#staleness) triggers in `deploy.config.ts` are path globs (`apps/bugsink/**`,
 `apps/umami/**`) rather than turbo affectedness. Upgrading either is a tag bump. Bugsink's is the
 `Dockerfile` `FROM` line — its image is a thin layer over stock Bugsink adding the R2 uploaded-file
 storage, baked by its build leg like any other app's. Umami's is the `fly.toml` `[build]` image,

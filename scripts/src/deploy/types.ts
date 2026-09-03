@@ -86,6 +86,13 @@ export interface ChangeSet {
   readonly changedPaths: ReadonlyArray<string>;
 }
 
+export type CommitRelation = 'missing' | 'same' | 'ancestor' | 'descendant' | 'diverged';
+
+export interface IgnorePattern {
+  readonly glob: string;
+  readonly negated: boolean;
+}
+
 export interface FleetImage {
   readonly repository: string;
   readonly tag: string;

@@ -46,3 +46,6 @@ styled-system
 .git
 .worktrees
 .claude
+# never read by a Dockerfile or a fly.toml, so a change to one never makes an app stale
+**/*.md
+**/.env.example
