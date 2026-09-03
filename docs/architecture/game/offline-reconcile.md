@@ -135,15 +135,17 @@ together, so no later call ever finds the row gone and app-web never sends the t
 server therefore never learns what the device holds, so the browser decides. The sign-out control
 asks the worker what it is holding before it ends the session: a worker holding nothing signs the
 player straight out, and a worker holding runs warns the player first, naming how many runs and how
-much play sit in the outbox, and clears them once the player confirms. Cancelling leaves the outbox
-exactly where it is. A run still in progress counts as undelivered too, since its checkpoints are
-unverified whether or not they have reached the server.
+much play sit in the outbox, and clears them once the player confirms. The play it names is the span
+of each run's still-queued checkpoints, so a partly delivered run counts only its undelivered tail.
+Cancelling leaves the outbox exactly where it is. A run still in progress counts as undelivered too,
+since its checkpoints are unverified whether or not they have reached the server.
 
 The control answers a failed worker call two ways, depending on which call failed. A worker that
 cannot say what it holds signs the player out and leaves the outbox where it stands, since a dead
 worker must never trap a player on the settings screen. A discard that fails holds the sign-out back
 and asks the player to try again, since ending the session with the work still queued is what the
-warning exists to prevent.
+warning exists to prevent. The worker clears its durable stores before it stops the live run, so a
+clear that fails leaves the run ticking and the outbox intact.
 
 A different account signing in on this device cannot deliver what the outbox still holds: the worker
 drains only the acting avatar's activity starts, and the server refuses a start naming an avatar the

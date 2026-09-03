@@ -12,17 +12,6 @@ interface SignOutFormProps {
   readonly action?: () => Promise<unknown>;
 }
 
-/**
- * The account hub's sign-out control. A device holding undelivered offline work is warned before
- * the session ends and told what stands to be lost; confirming clears the work so no later
- * sign-in here delivers it, and cancelling ends nothing, leaving the work where it is.
- *
- * The two worker failures resolve opposite ways, because they risk opposite things. A worker that
- * cannot say what it holds signs the player out anyway — it leaves the outbox exactly as today's
- * sign-out does, and trapping a player on this screen behind a dead worker is worse. A discard
- * that fails holds the sign-out back, since ending the session with the work still queued is the
- * one outcome this control exists to prevent.
- */
 export function SignOutForm(props: Readonly<SignOutFormProps>) {
   const signOutFn = useServerFn(signOut);
   const action = props.action ?? signOutFn;
@@ -123,11 +112,6 @@ export function SignOutForm(props: Readonly<SignOutFormProps>) {
   );
 }
 
-/**
- * Asks the worker what it is holding, answering null for a device with no worker to ask and for a
- * worker that fails to answer — both sign the player straight out. Only this read is guarded, so a
- * rejected sign-out surfaces as its own failure rather than being retried behind a fallback.
- */
 async function tryReadUndeliveredWork(
   client: undefined | WorkerClient,
   signal: AbortSignal,

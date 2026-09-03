@@ -7,13 +7,6 @@ interface BuildUndeliveredWorkInput {
   readonly startIDs: ReadonlyArray<string>;
 }
 
-/**
- * Derives what this device holds undelivered from its durable stores and its live run. A
- * confirmed checkpoint leaves the queue on acknowledgement, so the span between an activity's
- * first and last still-queued row is exactly the play the server has never seen: a wholly offline
- * run starts at its `Started` checkpoint, so its span is its whole length, while a partly
- * delivered run reports only its undelivered tail.
- */
 export function buildUndeliveredWork(input: Readonly<BuildUndeliveredWorkInput>): UndeliveredWork {
   const activityIDs = new Set(input.startIDs);
   const spans = new Map<string, { max: number; min: number }>();
