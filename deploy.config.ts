@@ -112,7 +112,7 @@ export default defineDeployManifest({
       configDir: 'apps/bugsink',
       dockerfile: 'apps/bugsink/Dockerfile',
       exposure: 'public',
-      trigger: { globs: ['apps/bugsink/**'], kind: 'paths' },
+      trigger: { globs: ['apps/bugsink/**', '.dockerignore'], kind: 'paths' },
     },
     {
       app: 'vers-umami',
