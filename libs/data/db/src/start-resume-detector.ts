@@ -6,6 +6,7 @@ export interface StartResumeDetectorConfig {
 }
 
 export interface ResumeDetector {
+  readonly check: () => void;
   readonly stop: () => void;
 }
 
@@ -18,9 +19,7 @@ export function startResumeDetector(config: StartResumeDetectorConfig): ResumeDe
   const now = config.now ?? Date.now;
   let lastTickAt = now();
 
-  // timers run on the monotonic clock, which stops with the VM while Fly holds the machine
-  // suspended, so a wall-clock jump between two ticks is the only trace the pause leaves
-  const timer = setInterval(() => {
+  const check = (): void => {
     const tickAt = now();
     const elapsedMs = tickAt - lastTickAt;
 
@@ -29,11 +28,16 @@ export function startResumeDetector(config: StartResumeDetectorConfig): ResumeDe
     if (elapsedMs > thresholdMs) {
       config.onResume(elapsedMs);
     }
-  }, intervalMs);
+  };
+
+  // timers run on the monotonic clock, which stops with the VM while Fly holds the machine
+  // suspended, so a wall-clock jump between two ticks is the only trace the pause leaves
+  const timer = setInterval(check, intervalMs);
 
   timer.unref();
 
   return {
+    check,
     stop: () => {
       clearInterval(timer);
     },
