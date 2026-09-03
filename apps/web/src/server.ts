@@ -9,6 +9,7 @@ import { makeSecureHeaders } from './server/make-secure-headers';
 import { makeUmamiProxy } from './server/make-umami-proxy';
 import { withMiddleware } from './server/middleware';
 import { redirectToHTTPS } from './server/redirect-to-https';
+import { rejectNonHTMLAccept } from './server/reject-non-html-accept';
 import { removeTrailingSlash } from './server/remove-trailing-slash';
 import { withRequestTrace } from './server/with-request-trace';
 
@@ -65,6 +66,9 @@ const serverEntry = {
       makeRateLimiter({ maxMultiple: RATE_LIMIT_MAX_MULTIPLE }),
       makeUmamiProxy({ upstream: env.UMAMI_URL ?? null }),
       serveClientAssets,
+
+      // last, so only a request bound for a route reaches it
+      rejectNonHTMLAccept,
     ],
     createStartHandler(defaultStreamHandler),
   ),
