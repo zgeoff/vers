@@ -8,10 +8,11 @@ lane. No increment waits on another: an issue is Ready the moment its own blocke
 2. Critical path. For each open issue in an open increment or the side lane, count the open issues
    it transitively blocks. The chain from the issue with the highest count is the critical path, and
    it heads Report.
-3. Ready. Set Ready on every open issue in an open increment, in the side lane, or an interrupt,
-   whose blockers are all closed, which carries no `needs-refinement` label, and which has no open
-   linked PR. An issue with an open linked PR keeps the In Review status Reconcile set. An epic
-   stays at Backlog whatever its edges say. Set Backlog on a Ready issue that no longer qualifies.
+3. Ready. Set Ready on every open issue at Status Backlog that sits in an open increment, in the
+   side lane, or is an interrupt, whose blockers are all closed, and which carries no
+   `needs-refinement` label. This step only moves Backlog to Ready: an issue at In Progress or In
+   Review keeps the status Reconcile left it, PR or hand work alike. An epic is never promoted. Set
+   Backlog on a Ready issue that no longer qualifies, an epic included.
 4. Pick order. Interrupts first. Then sort the Ready issues of every open increment by blocked count
    descending, then increment number ascending, then issue number ascending. Report the top 5 with
    each one's increment.
