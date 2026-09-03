@@ -870,3 +870,62 @@ test('it discards the queue on NOT_FOUND with no ingestActivityStart hook config
 
   expect(track).toHaveBeenCalledOnce();
 });
+
+test('it arms the progress window for a checkpoint queued while a flush was in flight when that flush then fails in its callback', async () => {
+  const track = mock<() => void>();
+  let release: (() => void) | undefined;
+
+  const ctx = setupTest({
+    activityID: 'mid-flight-callback-failed-activity',
+    onAcked: () => {
+      throw new Error('ack callback exploded');
+    },
+  });
+
+  server.use(
+    mockActivityService.trackActivityProgress.handler(async () => {
+      track();
+
+      await new Promise<void>((resolve) => {
+        release = resolve;
+      });
+
+      return { appendedHead: 1 };
+    }),
+  );
+
+  await writeQueuedCheckpoint(
+    'mid-flight-callback-failed-activity',
+    createMockCheckpointBatchEntry({ version: 1 }),
+  );
+
+  ctx.actor.send({ isTerminal: false, type: 'QUEUED', version: 1 });
+  ctx.actor.send({ type: 'FLUSH_DUE' });
+
+  await waitFor(() => {
+    expect(track).toHaveBeenCalledOnce();
+  });
+
+  await writeQueuedCheckpoint(
+    'mid-flight-callback-failed-activity',
+    createMockCheckpointBatchEntry({ version: 2 }),
+  );
+
+  ctx.actor.send({ isTerminal: false, type: 'QUEUED', version: 2 });
+  release?.();
+
+  await waitFor(() => {
+    expect(ctx.actor.getSnapshot().matches('scheduled')).toBeTrue();
+  });
+
+  expect(track).toHaveBeenCalledOnce();
+  expect(ctx.scheduleProgressFlush).toHaveBeenCalledTimes(2);
+
+  expect(ctx.emitted).toStrictEqual([
+    {
+      activityID: 'mid-flight-callback-failed-activity',
+      error: expect.any(Error),
+      type: 'retryFailed',
+    },
+  ]);
+});
