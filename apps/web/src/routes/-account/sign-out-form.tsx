@@ -71,7 +71,7 @@ export function SignOutForm(props: Readonly<SignOutFormProps>) {
         status={isPending ? StatusButton.Status.Pending : StatusButton.Status.Idle}
         type="button"
       >
-        Logout
+        Log out
       </StatusButton>
       {report !== null && (
         <Dialog

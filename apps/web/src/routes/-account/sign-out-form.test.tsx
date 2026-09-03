@@ -24,12 +24,12 @@ test('it signs out directly when this device holds nothing undelivered', async (
   await withRequestContext({}, async () => {
     renderWithRouter(<SignOutForm action={action} />);
 
-    const logoutButton = await screen.findByRole('button', { name: 'Logout' });
+    const logoutButton = await screen.findByRole('button', { name: 'Log out' });
 
     await user.click(logoutButton);
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Logout' })).not.toBeDisabled();
+      expect(screen.getByRole('button', { name: 'Log out' })).not.toBeDisabled();
     });
 
     expect(action).toHaveBeenCalledOnce();
@@ -57,7 +57,7 @@ test('it warns before sign-out when this device holds undelivered work, and does
   await withRequestContext({}, async () => {
     renderWithRouter(<SignOutForm action={action} />);
 
-    const logoutButton = await screen.findByRole('button', { name: 'Logout' });
+    const logoutButton = await screen.findByRole('button', { name: 'Log out' });
 
     await user.click(logoutButton);
 
@@ -87,7 +87,7 @@ test('it discards the undelivered work before signing out when the player confir
   await withRequestContext({}, async () => {
     renderWithRouter(<SignOutForm action={action} />);
 
-    const logoutButton = await screen.findByRole('button', { name: 'Logout' });
+    const logoutButton = await screen.findByRole('button', { name: 'Log out' });
 
     await user.click(logoutButton);
 
@@ -124,7 +124,7 @@ test('it reports the failure and stays open when discarding the work fails', asy
   await withRequestContext({}, async () => {
     renderWithRouter(<SignOutForm action={action} />);
 
-    const logoutButton = await screen.findByRole('button', { name: 'Logout' });
+    const logoutButton = await screen.findByRole('button', { name: 'Log out' });
 
     await user.click(logoutButton);
 
@@ -158,7 +158,7 @@ test('it neither discards nor signs out when the player cancels, and closes the 
   await withRequestContext({}, async () => {
     renderWithRouter(<SignOutForm action={action} />);
 
-    const logoutButton = await screen.findByRole('button', { name: 'Logout' });
+    const logoutButton = await screen.findByRole('button', { name: 'Log out' });
 
     await user.click(logoutButton);
 
@@ -190,12 +190,12 @@ test('it signs out directly when no worker client is mounted', async () => {
   await withRequestContext({}, async () => {
     renderWithRouter(<SignOutForm action={action} />);
 
-    const logoutButton = await screen.findByRole('button', { name: 'Logout' });
+    const logoutButton = await screen.findByRole('button', { name: 'Log out' });
 
     await user.click(logoutButton);
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Logout' })).not.toBeDisabled();
+      expect(screen.getByRole('button', { name: 'Log out' })).not.toBeDisabled();
     });
 
     expect(action).toHaveBeenCalledOnce();

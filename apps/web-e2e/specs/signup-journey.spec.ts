@@ -33,7 +33,7 @@ test('it signs up, creates an avatar, and can navigate the shell to settings and
     await expect(page).toHaveURL(/\/settings$/, { timeout: 1000 });
   }).toPass({ timeout: 15_000 });
 
-  await page.getByRole('button', { name: 'Logout' }).click();
+  await page.getByRole('button', { name: 'Log out' }).click();
 
   await expect(page).toHaveURL('/');
   await expect(page.getByRole('link', { name: 'Log in' })).toBeVisible();
@@ -65,7 +65,7 @@ test('it logs a fresh account out and back in, landing signed in at respite', as
     await expect(page).toHaveURL(/\/settings$/, { timeout: 1000 });
   }).toPass({ timeout: 15_000 });
 
-  await page.getByRole('button', { name: 'Logout' }).click();
+  await page.getByRole('button', { name: 'Log out' }).click();
 
   await expect(page).toHaveURL('/');
 
