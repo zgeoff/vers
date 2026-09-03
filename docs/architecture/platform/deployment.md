@@ -355,6 +355,9 @@ Two Dockerfiles deviate from the shape:
   every runtime import from one flat `node_modules` regardless of directory depth.
 - **runtime** — `node:24.18.0-alpine` holding `node_modules`, `server.mjs`, and `dist`.
 
+The server entry (`apps/web/src/server.ts`) carries no top-level `await`: a dynamically imported
+chunk can import the entry back, and Node then exits with code 13 on the unsettled cycle.
+
 ## Provision from nothing
 
 Requires `flyctl` authenticated to the `vers` org, the Neon `DATABASE_URL` (the direct host —
