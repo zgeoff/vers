@@ -35,7 +35,27 @@ commit-msg:
     - name: commitlint
       run: node_modules/.bin/commitlint --edit {1}
 
+# pre-push reads the ref lines git hands the hook: a push that only deletes
+# refs skips the gate, since lefthook's own push-file detection diffs HEAD
+# against its upstream and would otherwise run the whole gate on a deletion
 pre-push:
+  jobs:
+    - name: push-gate
+      use_stdin: true
+      run: |
+        seen=0
+        deletions_only=1
+        while read -r local_ref local_sha remote_ref remote_sha; do
+          seen=1
+          [ "$local_ref" = "(delete)" ] || deletions_only=0
+        done
+        if [ "$seen" = 1 ] && [ "$deletions_only" = 1 ]; then
+          echo "ref deletion only; skipping the push gate"
+          exit 0
+        fi
+        exec node_modules/.bin/lefthook run push-gate
+
+push-gate:
   parallel: true
   jobs:
     - name: format:check
