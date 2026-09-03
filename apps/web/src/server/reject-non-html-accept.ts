@@ -27,8 +27,9 @@ export function rejectNonHTMLAccept(
   );
 }
 
-// the same parse TanStack Start applies before it renders a route, so every request this gate
-// passes is one Start renders rather than refuses
+// the same parse TanStack Start applies before it renders a route; Start refuses a failing request
+// with a 500 that the 5xx monitor counts as a server fault on every bot probe, so this gate answers
+// it first with a client-error status
 function hasHTMLAccept(request: Request): boolean {
   const accept = request.headers.get('accept');
   const acceptParts = (accept === null || accept === '' ? '*/*' : accept).split(',');

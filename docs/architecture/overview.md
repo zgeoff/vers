@@ -25,15 +25,6 @@ calls route through the app's `/api/rpc` proxy since services are not reachable 
 internet. Either way the client is typed by the service's contract package alone
 ([service contracts](./services/service-contracts.md)).
 
-app-web's server middleware chain ([`apps/web/src/server.ts`](../../apps/web/src/server.ts)) runs
-ahead of TanStack Start and owns the request concerns no route sees. Its last step answers
-`406 Not Acceptable` to a page request whose `Accept` header names neither `text/html` nor `*/*`,
-using the same header parse Start applies before it renders a route. Start itself refuses such a
-request with a 500, which the 5xx monitor counts as a server fault every time a bot probe sends
-`Accept: application/json` or `text/plain`. The RPC proxy under `/api/`, server-function calls under
-`/_serverFn/`, and `/health` pass through with any `Accept` header. Static assets and the analytics
-proxy are served earlier in the chain, so they never reach the gate.
-
 A user has at most one verified session at a time, so completing a 2FA-gated login evicts every
 other session on the account server-side ([auth](./services/auth.md)). A minted service token can
 outlive its session by up to its own short lifetime, so the trust edge re-confirms the session still
