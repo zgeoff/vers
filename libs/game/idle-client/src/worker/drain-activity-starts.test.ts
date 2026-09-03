@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { expect, mock, test } from 'bun:test';
 import { createMockActivityData } from '@vers/contract-activity/test-utils';
 import { mockActivityService } from '@vers/mock-services/activity';
 import { server } from '../mocks/node';
@@ -157,4 +157,48 @@ test('it drops a start the server permanently refuses, its successor, and the la
   expect(remaining).toStrictEqual([]);
   expect(lastStarted).toBeUndefined();
   expect(submitter.registerActivity).not.toHaveBeenCalled();
+});
+
+test('it submits a deferred start once per drain and leaves its successor unsubmitted until it lands', async () => {
+  const submitter = createStubSubmitter();
+  const context = createStubWorkerContext({ submitter });
+  const track = mock<(activityID: string) => void>();
+
+  const deferred = createMockActivityData({
+    avatarID: 'avatar_recovering',
+    id: 'act_drain_deferred',
+    predecessorActivityID: null,
+    scopeID: '1_0',
+    startKey: 'start_key_deferred',
+  });
+
+  const successor = createMockActivityData({
+    avatarID: 'avatar_recovering',
+    id: 'act_drain_deferred_next',
+    predecessorActivityID: deferred.id,
+    scopeID: '1_0',
+    startKey: 'start_key_deferred_next',
+  });
+
+  await writeActivityStart(deferred);
+  await writeActivityStart(successor);
+
+  server.use(
+    mockActivityService.advanceActivity.handler((opts) => {
+      track(opts.input.activityID);
+
+      throw opts.errors.CHECKPOINT_INVALID({
+        data: { activityID: deferred.id, appendedHead: 0, reason: 'build-snapshot-mismatch' },
+      });
+    }),
+  );
+
+  await drainActivityStarts(context, 'avatar_recovering');
+
+  const remaining = await readAllActivityStarts();
+
+  expect(track).toHaveBeenCalledExactlyOnceWith(deferred.id);
+  expect(remaining).toIncludeSameMembers([deferred, successor]);
+  expect(submitter.registerActivity).not.toHaveBeenCalled();
+  expect(context.getConnectivityOnline()).toBeTrue();
 });

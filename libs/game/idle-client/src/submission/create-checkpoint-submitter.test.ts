@@ -15,6 +15,7 @@ import { createMockProgressCheckpoint } from '../test-utils/factories/create-moc
 import { createMockStartedCheckpoint } from '../test-utils/factories/create-mock-started-checkpoint';
 import { RETRY_BACKOFF_CAP_MS } from './constants';
 import { createCheckpointSubmitter } from './create-checkpoint-submitter';
+import type { IngestActivityStartOutcome } from './ingest-activity-start';
 import { readNodeSeed } from './read-node-seed';
 import { readQueuedCheckpoints } from './read-queued-checkpoints';
 import type { ActivityServiceClient } from './types';
@@ -23,6 +24,7 @@ import { writeQueuedCheckpoint } from './write-queued-checkpoint';
 
 function setupTest(
   config: Readonly<{
+    ingestActivityStart?: (activityID: string) => Promise<IngestActivityStartOutcome>;
     onAcked?: (activityID: string, appendedHead: number) => void;
     onServerContact?: () => void;
     scheduleFlush?: (flush: () => Promise<void>) => void;
@@ -625,7 +627,7 @@ test('it holds the queue on a transport failure and retries it in the background
   expect(track).toHaveBeenCalledTimes(2);
 });
 
-test('it holds the queue and retries in the background identically on UNAUTHORIZED', async () => {
+test('it holds the queue and retries in the background on UNAUTHORIZED without reporting the batch held', async () => {
   let shouldFail = true;
   const ctx = setupTest();
 
@@ -648,7 +650,8 @@ test('it holds the queue and retries in the background identically on UNAUTHORIZ
 
   await ctx.submitter.submit('unauthorized-backoff-activity', createMockCompletedCheckpoint());
 
-  expect(ctx.onHeld).toHaveBeenCalledExactlyOnceWith('unauthorized-backoff-activity');
+  expect(ctx.onHeld).not.toHaveBeenCalled();
+  expect(ctx.onServerContact).toHaveBeenCalledOnce();
 
   shouldFail = false;
 
@@ -1678,4 +1681,47 @@ test('it never persists a node anchor when the registration carries no scope', a
   const cached = await readNodeSeed(seed.avatarID, seed.nodeID);
 
   expect(cached?.anchor).toStrictEqual({ chainIndex: 2, nextSeed: 'seed-untouched' });
+});
+
+test('it keeps the device online when a pending activity start defers, retrying on the backoff instead of at once', async () => {
+  const track = mock<() => void>();
+
+  const ingestActivityStart = mock<(activityID: string) => Promise<IngestActivityStartOutcome>>(
+    async () => {
+      await Promise.resolve();
+
+      return 'deferred';
+    },
+  );
+
+  const ctx = setupTest({ ingestActivityStart });
+
+  server.use(
+    mockActivityService.trackActivityProgress.handler((opts) => {
+      track();
+      throw opts.errors.NOT_FOUND({ data: {} });
+    }),
+  );
+
+  await ctx.submitter.registerActivity({
+    activityID: 'deferred-start-activity',
+    appendedHead: 0,
+    lastHash: 'start_hash',
+    startChainIndex: 0,
+  });
+
+  await ctx.submitter.submit('deferred-start-activity', createMockCompletedCheckpoint());
+
+  expect(track).toHaveBeenCalledOnce();
+  expect(ingestActivityStart).toHaveBeenCalledExactlyOnceWith('deferred-start-activity');
+  expect(ctx.onHeld).not.toHaveBeenCalled();
+  expect(ctx.onServerContact).toHaveBeenCalledOnce();
+
+  ctx.clock.increment(RETRY_BACKOFF_CAP_MS);
+
+  await waitFor(() => {
+    expect(track).toHaveBeenCalledTimes(2);
+  });
+
+  expect(ctx.onHeld).not.toHaveBeenCalled();
 });
