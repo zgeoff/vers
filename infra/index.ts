@@ -104,9 +104,21 @@ const resendDMARC = new cloudflare.DnsRecord('resend-dmarc', {
   ttl: 1,
 });
 
+// Receiving domain for QA test inboxes: Resend accepts mail for any address on the domain once
+// this MX resolves, and the Receiving API serves the messages back to the qa-inbox script.
+const resendQAReceivingMX = new cloudflare.DnsRecord('resend-qa-receiving-mx', {
+  zoneId,
+  name: `qa.${zoneName}`,
+  type: 'MX',
+  content: 'inbound-smtp.ap-northeast-1.amazonaws.com',
+  priority: 10,
+  ttl: 1,
+});
+
 export const apexRecord = apex.name;
 export const wwwRecord = www.name;
 export const resendDKIMRecord = resendDKIM.name;
 export const resendReturnPathMXRecord = resendReturnPathMX.name;
 export const resendReturnPathSPFRecord = resendReturnPathSPF.name;
 export const resendDMARCRecord = resendDMARC.name;
+export const resendQAReceivingMXRecord = resendQAReceivingMX.name;
