@@ -19,6 +19,7 @@
     "@vers/contract-verification": "workspace:*",
     "@vers/db": "workspace:*",
     "@vers/mock-services": "workspace:*",
+    "@vers/scripts": "workspace:*",
     "@vers/service-auth": "workspace:*",
     "tiny-invariant": "catalog:",
     "typescript": "catalog:",

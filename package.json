@@ -179,6 +179,7 @@
     "pg:test-container:start": "bun scripts/src/bin/pg-test-container-start.ts",
     "pg:test-container:stop": "bun scripts/src/bin/pg-test-container-stop.ts",
     "pg:test-container:sweep": "bun scripts/src/bin/pg-test-template-sweep.ts",
+    "qa:inbox": "bun scripts/src/bin/qa-inbox.ts",
     "ladle:dev": "cd libs/design/design-system && ./node_modules/.bin/ladle dev",
     "stack": "bun scripts/src/bin/stack.ts",
     "---PROJECT-SPECIFIC": "",

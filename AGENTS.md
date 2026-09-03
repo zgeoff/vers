@@ -342,6 +342,9 @@ the mechanics and provisioning.
   (`turbo run test --affected`); `LEFTHOOK=0` skips all hooks.
 - Python (`apps/bugsink` only) runs `pytest` under `uv` via its `test:adapter` script, outside the
   Bun graph; the `python-tests` workflow runs it on change.
+- `bun run qa:inbox` — reads the verification code or link out of an email sent to a
+  `qa.versidle.com` address during manual QA against production
+  (`docs/architecture/platform/qa-inbox.md`).
 
 ## Lint policy
 
