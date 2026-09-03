@@ -20,18 +20,18 @@ Postgres is the shared Neon database ([database](./database.md)). No app runs it
 Bugsink and Umami own separate logical databases in the same Neon project. `service-keys` holds no
 database connection. Its state is 2 secrets, `ROLL_KEY_ROOTS` and `SCOPE_SECRET_ROOTS`.
 
-Every app scales to zero, and a machine wakes on its first request. An app that holds a Postgres
-pool stops when idle (`auto_stop_machines = 'stop'`): every domain service whose env contract
-declares `DATABASE_URL`, and `vers-umami`, whose Prisma client holds a pool. A stopped machine boots
-a fresh process, so every socket it opens is new. A suspended machine instead resumes the memory
-snapshot it parked with, and JavaScript timers do not run during the pause, so the pool's idle
-timeout (`idle_timeout` in `createDB`, `@vers/db`) never fires. The resumed process reuses sockets
-whose peer closed them during the pause: the first write fails with `CONNECTION_CLOSED`, and a query
-that was in flight when the machine suspended hangs until the kernel's TCP retransmit limit gives
-up, about 15 minutes later. The cold start costs about 5s from the wake request to the service's
-listening line, of which the machine boot is about 2s (Fly logs, `vers-service-user`); a suspended
-machine pays the same whenever Fly falls back from a resume to a cold start. `service-email`'s queue
-adds its own reason ([queues](./queues.md)).
+Every app except `app-web` scales to zero, and a machine wakes on its first request. An app that
+holds a Postgres pool stops when idle (`auto_stop_machines = 'stop'`): every domain service whose
+env contract declares `DATABASE_URL`, and `vers-umami`, whose Prisma client holds a pool. A stopped
+machine boots a fresh process, so every socket it opens is new. A suspended machine instead resumes
+the memory snapshot it parked with, and JavaScript timers do not run during the pause, so the pool's
+idle timeout (`idle_timeout` in `createDB`, `@vers/db`) never fires. The resumed process reuses
+sockets whose peer closed them during the pause: the first write fails with `CONNECTION_CLOSED`, and
+a query that was in flight when the machine suspended hangs until the kernel's TCP retransmit limit
+gives up, about 15 minutes later. The cold start costs about 5s from the wake request to the
+service's listening line, of which the machine boot is about 2s (Fly logs, `vers-service-user`); a
+suspended machine pays the same whenever Fly falls back from a resume to a cold start.
+`service-email`'s queue adds its own reason ([queues](./queues.md)).
 
 The apps without a pool keep `auto_stop_machines = 'suspend'`, which parks an idle machine with its
 memory snapshot for sub-second wake: `service-keys`, which holds no database connection;
@@ -42,7 +42,7 @@ start.
 
 `service-replay` carries no inbound player traffic of its own. `service-activity` calls the replay
 service's wake procedure over its oRPC client each time an append advances an activity past its
-verified cursor, and that flycast request wakes a suspended machine like any other. The wake handler
+verified cursor, and that flycast request wakes a stopped machine like any other. The wake handler
 drains every claimable chain before responding, holding the request open so the machine stays up
 until the queue is empty. With nothing to wake it, `service-replay`'s Neon compute scales to zero
 alongside its machine.
