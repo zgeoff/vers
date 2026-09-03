@@ -42,9 +42,9 @@ would hold both awake around the clock, so delivery rides three one-shot drains 
 
 Durability lives in Postgres, so a job between drains is late, never lost.
 
-A queue-hosting service sets `auto_stop_machines = 'stop'` rather than the fleet's `'suspend'`. A
-suspended process resumes with stale pool sockets and a clock jump under pg-boss's timers; a clean
-boot instead re-runs the boot drain.
+A queue-hosting service stops when idle (`auto_stop_machines = 'stop'`) like every app that holds a
+Postgres pool ([topology](./deployment.md#topology)), and its clean boot re-runs the boot drain. A
+suspended pg-boss process would also resume with a clock jump under its maintenance timers.
 
 ## Retries and failure
 

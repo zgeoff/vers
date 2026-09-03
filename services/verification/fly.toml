@@ -9,7 +9,9 @@ primary_region = 'syd'
 [http_service]
 internal_port = 3000
 force_https = false
-auto_stop_machines = 'suspend'
+# 'stop' rather than 'suspend': timers do not run while a VM is suspended, so a resumed process
+# holds Postgres pool sockets the server closed during the pause and its next query fails or hangs.
+auto_stop_machines = 'stop'
 auto_start_machines = true
 min_machines_running = 0
 processes = ['app']
