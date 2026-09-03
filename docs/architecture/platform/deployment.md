@@ -136,9 +136,11 @@ A `turbo-affected` trigger is stale when its package is in the affected set. A `
 stale when a changed path matches one of its globs. The `.dockerignore` filter is what keeps a
 docs-only merge from redeploying bugsink and umami: a file the build context never holds cannot
 change an image, so the ignore file owns that list (`**/*.md` and `**/.env.example` among it) and
-the staleness check reads it rather than carrying its own. The filter never reaches turbo's affected
-set: turbo marks a package affected on any changed file in its directory, so a README edit under
-`apps/web` still ships app-web.
+the staleness check reads it rather than carrying its own. The ignore file is itself a build input,
+so bugsink's globs name it and a rule change rebuilds the one `paths` app with a Dockerfile. The
+filter never reaches turbo's affected set: turbo marks a package affected on any changed file in its
+directory, and every package affected on a change outside any package, so a README edit under
+`apps/web` still ships app-web and a root-level edit ships every turbo-triggered app.
 
 ### Env preflight
 
@@ -249,11 +251,11 @@ trustworthy SHA is recorded. It also names any machine reporting no image.
 ### Pinned upstream images
 
 `vers-bugsink` and `vers-umami` ship pinned upstream images. Neither sits in the turbo task graph,
-so their [staleness](#staleness) triggers in `deploy.config.ts` are path globs (`apps/bugsink/**`,
-`apps/umami/**`) rather than turbo affectedness. Upgrading either is a tag bump. Bugsink's is the
-`Dockerfile` `FROM` line — its image is a thin layer over stock Bugsink adding the R2 uploaded-file
-storage, baked by its build leg like any other app's. Umami's is the `fly.toml` `[build]` image,
-deployed with no build leg at all.
+so their [staleness](#staleness) triggers in `deploy.config.ts` are path globs (`apps/bugsink/**`
+plus the root `.dockerignore`, and `apps/umami/**`) rather than turbo affectedness. Upgrading either
+is a tag bump. Bugsink's is the `Dockerfile` `FROM` line — its image is a thin layer over stock
+Bugsink adding the R2 uploaded-file storage, baked by its build leg like any other app's. Umami's is
+the `fly.toml` `[build]` image, deployed with no build leg at all.
 
 ## Infra drift
 
