@@ -25,6 +25,13 @@ test('it anchors a leading slash, a dot-slash prefix, and a trailing slash at th
   ]);
 });
 
+test('it cleans dot-dot and doubled separators the way docker does', () => {
+  expect(parseDockerignore('foo/../bar\na//b\n')).toStrictEqual([
+    { glob: 'bar', negated: false },
+    { glob: 'a/b', negated: false },
+  ]);
+});
+
 test('it drops a bare dot pattern', () => {
   expect(parseDockerignore('.\n**/*.md')).toStrictEqual([{ glob: '**/*.md', negated: false }]);
 });

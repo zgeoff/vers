@@ -1,3 +1,4 @@
+import path from 'node:path';
 import type { IgnorePattern } from './types';
 
 export function parseDockerignore(text: string): ReadonlyArray<IgnorePattern> {
@@ -24,14 +25,10 @@ export function parseDockerignore(text: string): ReadonlyArray<IgnorePattern> {
   return patterns;
 }
 
-// docker anchors every pattern at the context root, so `/dist`, `./dist`, and `dist/` all name the
-// same root-level entry as `dist`
+// docker runs each pattern through filepath.Clean and anchors it at the context root, so `/dist`,
+// `./dist`, `dist/`, and `x/../dist` all name the same root-level entry as `dist`
 function normalizePattern(pattern: string): string {
-  let glob = pattern.trim();
+  const cleaned = path.posix.normalize(pattern.trim());
 
-  while (glob.startsWith('./')) {
-    glob = glob.slice(2);
-  }
-
-  return glob.replace(/^\/+/, '').replace(/\/+$/, '');
+  return cleaned.replace(/^\/+/, '').replace(/\/+$/, '');
 }
