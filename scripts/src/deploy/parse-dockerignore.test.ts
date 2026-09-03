@@ -10,10 +10,11 @@ test('it reads one pattern per line and skips blanks and comments', () => {
   ]);
 });
 
-test('it marks a bang-prefixed line as a negation', () => {
-  expect(parseDockerignore('.vscode/*\n!.vscode/settings.json')).toStrictEqual([
+test('it marks a bang-prefixed line as a negation and anchors its pattern too', () => {
+  expect(parseDockerignore('.vscode/*\n!.vscode/settings.json\n!/dist/keep/')).toStrictEqual([
     { glob: '.vscode/*', negated: false },
     { glob: '.vscode/settings.json', negated: true },
+    { glob: 'dist/keep', negated: true },
   ]);
 });
 
