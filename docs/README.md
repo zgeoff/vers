@@ -46,6 +46,8 @@ How the platform is built — system design, data flows, and operational wiring.
   instrument registry, and what the monitors watch
 - [Chrome DevTools MCP](./architecture/platform/chrome-devtools-mcp.md) — agent access to a real
   Windows Chrome from WSL, and the port bridge that makes it reachable
+- [QA inbox](./architecture/platform/qa-inbox.md) — reading verification codes and links from email
+  sent to a `qa.versidle.com` address during manual QA against production
 
 ### Game
 

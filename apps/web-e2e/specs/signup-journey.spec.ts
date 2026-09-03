@@ -1,4 +1,6 @@
 import type { Page } from '@playwright/test';
+import { findVerification } from '@vers/scripts';
+import invariant from 'tiny-invariant';
 import { z } from 'zod';
 import { expect, test } from '../src/test';
 import type { E2EOptions } from '../src/test';
@@ -182,7 +184,7 @@ async function waitForMockVerificationCode(
   return code;
 }
 
-const CapturedEmailSchema = z.object({ text: z.string() });
+const CapturedEmailSchema = z.object({ html: z.string(), text: z.string() });
 const CapturedEmailsSchema = z.object({ emails: z.array(CapturedEmailSchema) });
 
 async function waitForStackVerificationCode(
@@ -201,11 +203,17 @@ async function waitForStackVerificationCode(
 
     const body = CapturedEmailsSchema.parse(raw);
     const lastEmail = body.emails.at(-1);
-    const match = lastEmail?.text.match(/code=(?<code>[A-Z0-9]{6})/);
 
-    expect(match).toBeTruthy();
+    invariant(lastEmail !== undefined, `no email captured for ${email} yet`);
 
-    code = match?.groups?.['code'];
+    const verification = findVerification(lastEmail, 'welcome');
+
+    invariant(
+      verification !== null && verification.code !== null,
+      'the last captured email carries no sign-up code',
+    );
+
+    code = verification.code;
   }).toPass({ timeout: 20_000 });
 
   if (code === undefined) {
