@@ -7,8 +7,10 @@ show reads `none`; never drop the line.
 ```text
 State of play · <date>
 
-Increment   <title> — <open> open · <ready> Ready · <converging|not converging> (<closed> closed in 4 weeks)
-Done test   <the done test from the milestone description>
+Increments  (lead first)
+  <title>     <open> open · <ready> Ready · <converging|not converging> (<closed> closed in 4 weeks)
+  …
+Done test   <the lead increment's done test>
 
 Interrupts
   main CI     <green|red: <workflow> on <sha>, #<issue_number>>
@@ -18,7 +20,7 @@ Interrupts
   security    #<issue_number> · …
 
 Pick next
-  1. #<issue_number>  <title>                              blocks <count>
+  1. #<issue_number>  <title>                    <P<n>>   blocks <count>
   2. …
 Owner's picks   #<issue_number> <title> · …
 

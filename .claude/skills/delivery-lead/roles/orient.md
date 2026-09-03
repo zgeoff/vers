@@ -3,9 +3,9 @@
 Build the state of play from GitHub alone before any other role. Every fact you need is one of these
 reads, and nothing carries over from a previous session.
 
-1. Milestones. Read the open milestones with the milestone query in `reference/board.md`. The
-   lowest-numbered open `P` milestone is the current increment; its description carries the done
-   test.
+1. Milestones. Read the open milestones with the milestone query in `reference/board.md`. Every open
+   `P` milestone is an increment, and each description carries its done test. The lowest-numbered
+   one is the lead increment.
 2. Recent merges. Fetch, then read the last 4 weeks of `origin/main`:
 
    ```bash

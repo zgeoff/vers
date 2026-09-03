@@ -6,6 +6,8 @@ class of edit as one line for Report ("set Done on 12 closed issues").
 - A closed issue whose Status is not Done: set Done.
 - An open issue with no board item, unless labelled `upkeep`, `dep-outdated`, or `dep-audit`: add it
   to the board with Status Backlog.
+- An open issue whose board item has no Status: set Backlog. The sub-issue automation adds items
+  this way.
 - An open issue with an open linked PR whose Status is not In Review: set In Review.
 - An open issue in Status In Progress or In Review with no open linked PR: set Ready when it
   qualifies as Ready, else Backlog, and name it in Report as stalled.
