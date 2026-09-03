@@ -84,10 +84,6 @@ interface AvatarRosterProps {
   };
 }
 
-/**
- * The roster sheet: pick an avatar to persist as active and enter the game as, or take the empty
- * slot to create one. A selection a live activity rejects renders inline, naming the run's owner.
- */
 export function AvatarRoster(props: AvatarRosterProps) {
   const avatarSelectFn = useServerFn(avatarSelect);
   const queryClient = useQueryClient();

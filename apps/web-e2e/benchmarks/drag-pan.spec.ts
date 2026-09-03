@@ -2,56 +2,19 @@ import { expect, test } from '../src/test';
 import { waitForHoneypotWindow } from '../src/wait-for-honeypot-window';
 import { waitForStableFrames } from '../src/wait-for-stable-frames';
 
-/**
- * How many drag legs to walk. Each leg drags 60% of the canvas width in the same direction, so
- * travel accumulates leg over leg — enough total ground to cross many chunk boundaries without
- * reading the client's internal chunk-size constants, which would couple this black-box benchmark
- * to worldmap-client's geometry. Direction never alternates: a there-and-back oscillation would
- * revisit the same chunks, and once chunk generation is cached the benchmark would measure cache
- * replays instead of the generation cost it exists to track.
- */
+// legs never alternate direction: a there-and-back drag revisits chunks whose generation is already
+// cached, so the benchmark would measure cache replays instead of the generation cost it tracks
 const DRAG_LEG_COUNT = 12;
-
-/**
- * Intermediate pointer-move events per leg. Camera-controls reads a drag as a series of pointermove
- * deltas, not a single teleport — too few steps understates a real drag's incremental chunk
- * crossings.
- */
 const DRAG_STEPS_PER_LEG = 20;
-
-/**
- * A frame gap past this many milliseconds — more than one missed vsync at 60fps — counts as a
- * dropped frame.
- */
 const DROPPED_FRAME_THRESHOLD_MS = 32;
 
-/**
- * The frame-gap sampler's state, parked on the page's own `globalThis` so it survives across the
- * two separate `page.evaluate` round trips that start and read it.
- */
 interface DragPanWindow {
   __dragPanFrameGaps: Array<number>;
   __dragPanFrameLoopID: number;
 }
 
-/**
- * Repeatable drag-pan performance probe for the explore map. Reports peak frame gap and
- * dropped-frame count for a multi-leg one-way drag across the world map to `console.log` and a
- * test annotation; it makes no pass/fail claim about specific numbers, since headless-GPU
- * throughput varies by machine.
- *
- * Excluded from every default run: this config's `testDir` is `./benchmarks`, never scanned by
- * `playwright.config.ts`'s `./specs`, so neither `bun run e2e` nor CI ever picks it up. The app
- * server serves the prebuilt artifact, so build first, then run on demand:
- *
- * ```sh
- * bun run build --filter=@vers/web
- * bun run --cwd apps/web-e2e e2e:bench -- --headed
- * ```
- *
- * `--headed` is recommended: headless Chromium's software WebGPU path measures compositor
- * throughput this benchmark doesn't care about, not the app's own frame cost.
- */
+// run with `--headed`: headless Chromium's software WebGPU path measures compositor throughput
+// rather than the app's own frame cost
 test('it drag-pans across the explore map and reports peak frame gap and dropped frames', async ({
   page,
 }) => {
@@ -87,10 +50,9 @@ test('it drag-pans across the explore map and reports peak frame gap and dropped
   const leftX = box.x + box.width * 0.2;
   const rightX = box.x + box.width * 0.8;
 
-  // a throwaway warm-up leg, run before the sampler is installed, so the measured legs below don't
-  // pay for whatever a drag itself first warms up (pointer-event handler JIT, first-drag camera-
-  // controls allocations) on top of the scene readiness waitForStableFrames already gated on. Ends
-  // at rightX, where the first measured leg (below) starts, so no extra jump sits between them.
+  // a throwaway warm-up leg, run before the sampler is installed, so the measured legs don't pay
+  // for what a first drag itself warms up (pointer-event handler JIT, first-drag camera-controls
+  // allocations). Ends at rightX, where the first measured leg starts.
   await page.mouse.move(leftX, centerY);
   await page.mouse.down();
   await page.mouse.move(rightX, centerY, { steps: DRAG_STEPS_PER_LEG });

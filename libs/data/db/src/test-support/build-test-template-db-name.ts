@@ -2,16 +2,10 @@ import { createHash } from 'node:crypto';
 import { normalizeDBPart } from './normalize-db-part';
 import { TEST_TEMPLATE_DB_PREFIX } from './test-template-db-prefix';
 
+// postgres truncates a longer identifier silently, so two branches that differ only past the limit
+// would name the same database; the hash suffix keeps them distinct
 const MAX_IDENTIFIER_LENGTH = 63;
 
-/**
- * Names a worktree's test-template database `test_template_<branch>`,
- * scoping the shared test container's template per branch so concurrent
- * worktrees on the same machine stop clobbering each other's schema. A name
- * that would exceed postgres's 63-byte identifier limit is truncated and
- * suffixed with a hash of the raw branch name, so distinct branches stay
- * distinct after truncation — mirrors `buildDevDBName`'s guard.
- */
 export function buildTestTemplateDBName(branch: string): string {
   const name = `${TEST_TEMPLATE_DB_PREFIX}${normalizeDBPart(branch)}`;
 

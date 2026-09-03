@@ -9,14 +9,6 @@ export interface DeriveWorldmapDescriptorInput {
   readonly userSeed: number;
 }
 
-/**
- * Derives a world map node's sealed descriptor: HMAC-SHA256 keyed by the scope secret over the
- * canonical `vers/worldmap-descriptor/v1|cx|cy|userSeed` byte encoding. Pure: identical input
- * always yields an identical descriptor, and it is uncorrelated with public node geometry — no
- * client can reproduce it without the scope secret.
- *
- * The exact byte layout is frozen and enforced by the golden-descriptor test.
- */
 export function deriveWorldmapDescriptor(
   input: Readonly<DeriveWorldmapDescriptorInput>,
 ): Uint8Array {

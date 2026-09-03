@@ -1,10 +1,5 @@
 import * as z from 'zod';
 
-/**
- * Environment the replay service needs beyond the base service env: the database its worker
- * claims chains from, the keys origin the mint step resolves through, its outbound s2s signing
- * key, and the engine hash its build baked in.
- */
 export const envShape = {
   DATABASE_URL: z.string().describe('Postgres connection string the worker claims chains from'),
   KEYS_SERVICE_URL: z

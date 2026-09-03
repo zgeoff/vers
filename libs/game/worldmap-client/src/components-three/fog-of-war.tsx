@@ -18,53 +18,14 @@ import type { TSLMathNode, TSLTextureNode } from './scene-tsl';
 import { sceneTSL } from './scene-tsl';
 
 const SHROUD_COLOR = sceneColors.fogShroud;
-
-/**
- * Scene-space distance (in unit-hex units) over which fog eases from clear to fully opaque past a
- * reveal disc's edge. Wider reads gentler.
- */
 const FOG_FALLOFF = 3;
-
-/**
- * Density texels per axial cell unit. Higher resolves rounder gradient contours at the cost of a
- * proportionally larger texture rebuild per viewport change.
- */
 const FOG_TEXELS_PER_CELL = 4;
-
-/**
- * Cells the fog quad extends past the chunk-aligned viewport, covering the screen edge between a
- * fast pan and the next chunk-boundary rebuild.
- */
 const FOG_VIEWPORT_MARGIN_CELLS = 2;
-
-/**
- * The fog plane floats just above the node plane so dense fog hides the nodes and edges underneath
- * it.
- */
 const FOG_ELEVATION = 0.2;
-
-/**
- * Spatial frequency of the billow noise in world units — wavelengths around one to two cells read
- * as rolling fog banks rather than shimmer.
- */
 const FOG_BILLOW_SCALE = 0.045;
-
-/**
- * Peak opacity wobble in the middle of the frontier band. Higher makes the edge roil further.
- */
 const FOG_BILLOW_EDGE = 0.35;
-
-/**
- * Opacity wobble deep inside the fog, where the band term is 0 — a faint internal churn that keeps
- * dense fog from reading flat without ever clearing it.
- */
 const FOG_BILLOW_DEEP = 0.08;
 
-/**
- * Draws soft fog of war over the world map. Purely presentational: it projects the density field
- * from the store's reveal sources and stores nothing itself, rebuilding only when a pan crosses a
- * chunk boundary. It renders nothing until both a viewport and reveal sources exist.
- */
 export function FogOfWar() {
   const revealSources = useRevealSources();
   const viewport = useFogViewport();
@@ -102,10 +63,6 @@ interface FogPlaneProps {
   readonly viewport: Viewport;
 }
 
-/**
- * The geometry, material, and texture node live for the whole mount: a field change swaps the
- * texture node's value and rewrites the quad in place, never rebuilding the material.
- */
 function FogPlane(props: Readonly<FogPlaneProps>) {
   const planeRef = useRef<FogPlaneResources | null>(null);
   // a fresh material per change would recompile its shader pipeline on every rebuild, and that
@@ -128,10 +85,6 @@ function FogPlane(props: Readonly<FogPlaneProps>) {
   return <mesh geometry={plane.geometry} material={plane.material} />;
 }
 
-/**
- * The byte buffer behind the live density texture, kept beside its dimensions so a same-size
- * rebuild can rewrite the pixels in place.
- */
 interface DensityBuffer {
   bytes: Uint8Array;
   cols: number;
@@ -180,11 +133,6 @@ function buildFogPlaneResources(
   };
 }
 
-/**
- * Never dispose a texture a queued frame still binds — destroying it is a device loss on the
- * WebGPU backend and a silently blank canvas. Only a resize allocates a replacement, and the old
- * texture is released only after the node stops referencing it.
- */
 function updateFogPlane(
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- the resources' density buffer and texture-node value slot are mutable by design: rewriting them is how a rebuilt field reaches the live material
   plane: FogPlaneResources,
@@ -205,8 +153,9 @@ function updateFogPlane(
 
     plane.textureNode.value.needsUpdate = true;
   } else {
-    // a zoom changes the texel dimensions — allocate a replacement texture and release the old
-    // one only once the node stops referencing it
+    // a zoom changes the texel dimensions — allocate a replacement and release the old texture only
+    // once the node stops referencing it: disposing a texture a queued frame still binds is a
+    // device loss on the WebGPU backend and a silently blank canvas
     plane.density.bytes = new Uint8Array(field.values.length);
 
     plane.density.cols = field.cols;
@@ -249,11 +198,8 @@ function buildDensityTexture(density: DensityBuffer): DataTexture {
   return map;
 }
 
-/**
- * One parallelogram quad whose attribute buffers live as long as the geometry: the position
- * attribute is rewritten in place on every later viewport change, since replacing an attribute
- * object strands its GPU buffer until the whole geometry is disposed.
- */
+// the position attribute is rewritten in place on every later viewport change: replacing an
+// attribute object strands its GPU buffer until the whole geometry is disposed
 function buildFogPlaneGeometry(viewport: Readonly<Viewport>): BufferGeometry {
   const geometry = new BufferGeometry();
 
@@ -266,11 +212,6 @@ function buildFogPlaneGeometry(viewport: Readonly<Viewport>): BufferGeometry {
   return geometry;
 }
 
-/**
- * Rewrites the quad's corners to cover the viewport's cell box in scene space. The axial-to-scene
- * mapping is linear, so the quad's uv interpolation lands each density texel's center exactly on
- * the axial coordinate it was sampled at; the half-cell margin matches the field's texel layout.
- */
 function updateFogPlaneGeometry(geometry: BufferGeometry, viewport: Readonly<Viewport>): void {
   const corners = [
     toHexPosition(viewport.minCX - 0.5, viewport.minCY - 0.5),

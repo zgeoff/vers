@@ -34,11 +34,6 @@ import type { WorkerRuntime } from './create-worker-runtime';
 import { sentryHandle } from './sentry-handle';
 import { startErrorReporting } from './start-error-reporting';
 
-/**
- * Records every broadcast the runtime posts, in arrival order — the state channel a
- * `MessagePort`-based test client never sees, since it now rides `BroadcastChannel` regardless of
- * transport.
- */
 function collectBroadcasts() {
   const channel = new BroadcastChannel(WORKER_TO_CLIENT_CHANNEL);
 
@@ -201,9 +196,8 @@ test('it resumes into a fresh row once a reconnect drains a held terminal append
   const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
 
   // this seed's placeholder encounter completes in exactly 60s of simulated time; the fast clock
-  // below collapses that wait into a single tick-loop frame. A zero-gap active row makes the
-  // resync below attach it live — the tab-side install path now that only the worker sets
-  // activities.
+  // below collapses that wait into one tick-loop frame, and a zero-gap active row makes the
+  // resync attach it live
   const activity = await db.activityCollection.create({
     avatarID: viewer.avatar.id,
     encounterNode: { difficulty: 1 },
@@ -461,11 +455,9 @@ test('it resets the displaced simulation and broadcasts WriterDisplaced on a ses
 
   expect(installed.state.activity).toMatchObject({ id: activity.id });
 
-  // the takeover, modeled consistently: every append is refused as another session's, AND the
-  // fetched progress reports this session no longer holds the writer — so a resync the recovery
-  // may run afterward plans active-elsewhere and preserves the displacement rather than
-  // re-attaching a row the server would refuse. A checkpoint is already queued for the reconnect
-  // drain below to deliver into that refusal.
+  // the takeover modeled consistently: every append is refused and the fetched progress reports
+  // the writer lost, so a resync the recovery runs plans active-elsewhere instead of re-attaching
+  // a row the server would refuse; a queued checkpoint delivers into that refusal below
   server.use(
     mockActivityService.trackActivityProgress.handler((opts) => {
       throw opts.errors.SESSION_EVICTED({ data: {} });

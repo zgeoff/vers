@@ -8,13 +8,6 @@ interface PickPostTerminalActionInput {
 
 export type PostTerminalAction = 'halt-at-boundary' | 'start-next' | 'stop';
 
-/**
- * Decides what follows a terminal checkpoint. Player intent wins first: a failure under the
- * abort policy stops the simulation. An exhausted offline-progress budget halts at the boundary
- * — the simulation idles on its last state instead of tearing down, so a resync replaces it
- * seamlessly — and only a funded, willing stream starts its next attempt. The policy is identical
- * online and offline.
- */
 export function pickPostTerminalAction(
   input: Readonly<PickPostTerminalActionInput>,
 ): PostTerminalAction {

@@ -3,11 +3,6 @@ import { sql } from 'kysely';
 import { contentDocumentV1 } from '../src/content-seed/content-document-v1';
 import { contentDocumentV2 } from '../src/content-seed/content-document-v2';
 
-/**
- * Creates the content registry: `content_versions` holds one immutable row per published
- * document, and `content_current` is a single-row pointer at the version new activities start
- * against. Seeds both shipped versions and points current at `'2'`.
- */
 export async function up(db: Kysely<unknown>): Promise<void> {
   await db.schema
     .createTable('content_versions')

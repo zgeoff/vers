@@ -16,31 +16,16 @@ const SCOPE_SECRET_REF: SecretRef = 'worldmap';
 const SCOPE_SECRET_VERSION = 1;
 
 interface CreateActivityServiceConfig {
-  /**
-   * Injected only in tests, to run the service inside the test's own transaction.
-   */
   readonly db?: Kysely<DB>;
   readonly keyVersion?: number;
   readonly secretRef?: SecretRef;
   readonly secretVersion?: number;
 
-  /**
-   * Injected only in tests, to trip the offline-progress cap without simulating a day.
-   */
   readonly simTimeCapMs?: number;
 
-  /**
-   * Injected only in tests, to disable the wake coalesce window so a delivery assertion never waits
-   * it out.
-   */
   readonly wakeCoalesceWindowMs?: number;
 }
 
-/**
- * Boots the activities service; the production entrypoint and tests both call this as the one
- * shared config. The signing key is parsed and awaited here, before `listen()` ever runs, so a
- * malformed `SERVICE_AUTH_PRIVATE_KEY` fails the boot rather than the first start that needs it.
- */
 export function createActivityService(
   config: CreateActivityServiceConfig = {},
 ): Promise<Service<typeof envShape>> {

@@ -9,12 +9,6 @@ import { emailClient } from '../../lib/rpc/clients/email-client';
 import { userClient } from '../../lib/rpc/clients/user-client';
 import { ForgotPasswordFormSchema } from './forgot-password-form-schema';
 
-/**
- * Runs the forgot-password form's submission: honeypot then field validation, then — for a
- * matching account — mints a reset token and emails the reset link out. Always ends in the same
- * redirect whether or not the address matches an account, so this page can't be used to
- * enumerate accounts.
- */
 export async function runForgotPassword(formData: FormData): Promise<Response | SubmissionResult> {
   await requireAnonymous();
 

@@ -1,10 +1,5 @@
 import type { ServiceName } from '@vers/service-auth';
 
-/**
- * Resolves the origin a service's mock backend mounts at: the same `<NAME>_SERVICE_URL` env vars
- * the SSR service clients read, falling back to the real services' dev ports, so a mock backend
- * and the client calls it intercepts always agree on origin.
- */
 export function resolveServiceURL(service: ServiceName): string {
   return (
     process.env[`${service.toUpperCase()}_SERVICE_URL`] ?? `http://localhost:${DEV_PORTS[service]}`

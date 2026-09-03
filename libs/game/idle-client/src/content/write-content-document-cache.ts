@@ -2,9 +2,6 @@ import type { ContentDocument } from '@vers/contract-activity';
 import { CONTENT_DOCUMENT_STORE_NAME } from '../submission/constants';
 import { resolveCheckpointQueueDB } from '../submission/resolve-checkpoint-queue-db';
 
-/**
- * Persists a fetched content document, keyed by its own `contentVersion`.
- */
 export async function writeContentDocumentCache(
   document: Readonly<ContentDocument>,
 ): Promise<void> {

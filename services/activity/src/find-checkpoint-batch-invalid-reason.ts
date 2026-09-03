@@ -12,10 +12,6 @@ interface CheckpointBatchInput {
   readonly expectedHead: number;
 }
 
-/**
- * The append target's chain-link state a batch validates against — the row's own fields for
- * `trackActivityProgress`, or a freshly minted row's starting state for `advanceActivity`.
- */
 export interface CheckpointBatchHead {
   readonly appendedHead: number;
   readonly appendedTimeMs: number;
@@ -23,23 +19,6 @@ export interface CheckpointBatchHead {
   readonly startChainIndex: number;
 }
 
-/**
- * Validates a checkpoint batch's internal shape ahead of the transactional head-row
- * compare-and-swap:
- *
- * - version contiguity from `expectedHead + 1`
- * - each entry's `chainIndex` continuity from `head.startChainIndex`
- * - no run-ending entry before the batch's last — only the last entry claims the activity's
- *   terminal transition, so an interior one would store a terminal the settlement rule never reads
- * - each entry's optional `rewardSlots` shape and ordinal contiguity
- * - each entry's optional `rewards.xp` fitting postgres `integer`
- * - each entry's `time` landing on an exact integer millisecond
- * - each entry's cumulative `time` never regressing: within the batch always, and from the head
- *   row's accounted time only when `expectedHead` still matches the head row, since a stale batch
- *   predates that value
- * - each entry's hash against its own payload, each entry's chain link to the previous one, and —
- *   when `expectedHead` matches the head row — the first entry's link onto the current head
- */
 export function findCheckpointBatchInvalidReason(
   input: Readonly<CheckpointBatchInput>,
   head: Readonly<CheckpointBatchHead>,
@@ -76,10 +55,9 @@ export function findCheckpointBatchInvalidReason(
       return rewardsReason;
     }
 
-    // A fractional time would round down when it lands in `appended_time_ms` (the head row's
-    // cached mirror of the last appended checkpoint's cumulative time), letting the next batch's
-    // cross-batch regression comparison pass against a value up to 1 ms short of what this
-    // checkpoint claims — silently permitting a regression the exact value would have caught.
+    // a fractional time rounds down when the head row caches it in a bigint column, so the next
+    // batch's cross-batch regression check would compare against a value up to 1 ms short of what
+    // this checkpoint claimed
     if (!Number.isInteger(checkpoint.payload.time)) {
       return 'non-integer-time';
     }
@@ -115,12 +93,6 @@ export function findCheckpointBatchInvalidReason(
 
 const RewardSlotsSchema = z.array(RewardSlotSchema);
 
-/**
- * A checkpoint's `rewardSlots` field rides outside the hashed subset like `rewards`, so it's
- * validated here rather than by the payload schema. Absent is valid — an older client or a
- * checkpoint that dropped nothing carries no key at all. Present, it must parse and its ordinals
- * must run contiguous from 0 in list order.
- */
 function findRewardSlotsInvalidReason(
   payload: Readonly<CheckpointPayload>,
 ): CheckpointInvalidReason | undefined {
@@ -139,15 +111,10 @@ function findRewardSlotsInvalidReason(
   return isContiguous ? undefined : 'invalid-reward-slots';
 }
 
+// xp is bounded to int32 because readers sum it through a SQL integer cast that fails the whole
+// statement on any other value, and would keep failing on every later read
 const RewardsSchema = z.looseObject({ xp: z.int32().optional() });
 
-/**
- * A checkpoint's `rewards` field rides outside the hashed subset, so it's validated here rather
- * than by the payload schema. Absent is valid — a checkpoint that earned nothing carries no key at
- * all. Present, `xp` must fit postgres `integer`: readers aggregate it with a cast that fails the
- * whole statement on a fractional, non-numeric, or out-of-range value, and the offending
- * checkpoint would keep failing it on every later read.
- */
 function findRewardsInvalidReason(
   payload: Readonly<CheckpointPayload>,
 ): CheckpointInvalidReason | undefined {

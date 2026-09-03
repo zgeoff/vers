@@ -35,11 +35,8 @@ import { createMockCheckpointBatch } from '../test-utils/factories/create-mock-c
 import { createMockOfflineActivityStartSubmission } from '../test-utils/factories/create-mock-offline-activity-start-submission';
 import { toActivityData } from './to-activity-data';
 
-/**
- * `advanceActivity` opens its own `db.transaction()` per continuation, which can't nest under the
- * default rollback-on-dispose isolation — this suite runs against a real, committed schema clone
- * instead.
- */
+// the handler under test opens its own interactive transaction, which the default
+// transaction-isolation handle can't nest — this suite runs against a real, committed schema clone
 async function setupTest(config: { readonly simTimeCapMs?: number } = {}) {
   const db = await createTestDB({ isolation: 'schema' });
 
@@ -62,12 +59,6 @@ interface RowContext {
   readonly startChainIndex: number;
 }
 
-/**
- * Derives the row a continuation's tail mints, from the row it appended onto and the tail's own
- * last checkpoint — the same chain arithmetic the client predicts and the server reproduces:
- * `seed` is the tail's terminal `nextSeed`, `startChainIndex` advances by the tail's length, and
- * `startHash` folds the inherited versions and encounter over that seed.
- */
 function buildMintedRowContext(
   preceding: Readonly<RowContext>,
   tail: ReadonlyArray<CheckpointBatchEntry>,
@@ -100,12 +91,6 @@ interface ActivityStartDerivationInput {
   readonly simVersion: string;
 }
 
-/**
- * Reproduces the encounter node and start hash `admitActivityStart` derives server-side for an
- * activity start at a scope, so a success-path test can submit a `startHash` the server's own
- * recompute matches. The server stamps `keyVersion` 1 and reads the `worldmap` scope secret at
- * version 1 — the activity service's defaults — so those are fixed here too.
- */
 function deriveActivityStart(input: Readonly<ActivityStartDerivationInput>): {
   encounterNode: EncounterNode;
   startHash: string;
@@ -1628,17 +1613,12 @@ test('it mints the offline successor of a just-cleared node at admission, deferr
 
   expect(grant).toBeUndefined();
 
-  // The clear's own continuation auto-opened a fresh attempt at A, occupying the avatar's single
-  // active-run slot; the player instead walked to B, so the device stops that dangling attempt the
-  // same way it stops any run it navigates away from, before B's activity start can mint into the
-  // freed slot.
+  // the clear's own continuation auto-opened a fresh attempt at A, occupying the avatar's single
+  // active-run slot; the device stops it before B's activity start can mint into the freed slot
   await client.stopActivity({ avatarID: avatar.id });
 
-  // B is the neighbour A's clear opened, delivered next in the same reconcile. Its activity start
-  // mints: admission runs no reachability check, only the same sim-version and hash gates every
-  // activity start clears. A's unsettled xp already folds into B's optimistic build snapshot at
-  // mint time, ahead of either activity's own verification — replay re-derives it from the settled
-  // total once A settles or rejects.
+  // B is the neighbour A's clear opened; its activity start mints because admission runs no
+  // reachability check, only the sim-version and hash gates every activity start clears
   const derivedB = deriveActivityStart({
     avatarID: avatar.id,
     avatarSeed: avatar.seed,
@@ -1717,12 +1697,9 @@ test("it refuses a kicked writer session's undelivered offline activityStart wit
 
   await clientB.resumeActivity({ activityID: started.id });
 
-  // session A, now kicked, delivers a valid offline activity start it minted before the takeover.
-  // The activity start admission reads no acting-session gate, so the kicked session is not singled out:
-  // the activity start is refused only because the avatar's single active-run slot is still
-  // occupied — a generic CONFLICT, never a session-scoped SESSION_EVICTED. The kicked session's
-  // undelivered work is not discarded on session grounds; its drop, when it happens, is incidental
-  // to the active-run and chain guards.
+  // session A, now kicked, delivers a valid offline activity start it minted before the takeover:
+  // admission reads no acting-session gate, so the refusal is the generic active-run CONFLICT,
+  // never a session-scoped SESSION_EVICTED
   const derived = deriveActivityStart({
     avatarID: avatar.id,
     avatarSeed: avatar.seed,

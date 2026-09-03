@@ -3,11 +3,6 @@ import type { DB } from '@vers/db';
 import type { Kysely } from 'kysely';
 import { findContentDocument } from './find-content-document';
 
-/**
- * Builds a per-process memo cache over immutable published documents: a version loads at most
- * once per process. Only successful, defined results stay cached — a rejection or an unknown
- * version drops its entry, so a later publish becomes loadable on its next call.
- */
 export function makeContentDocumentLoader(
   db: Kysely<DB>,
 ): (contentVersion: string) => Promise<ContentDocument | undefined> {

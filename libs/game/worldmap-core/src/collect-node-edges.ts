@@ -2,20 +2,8 @@ import { buildCellNode } from './build-cell-node';
 import { EDGE_DISTANCE_CAP } from './consts';
 import type { WorldEdge, WorldMapNode } from './types';
 
-/**
- * Rings of cells scanned around a node. Two rings reach every cell whose node could fall inside the
- * circle of a within-cap candidate pair, so the Gabriel test never misses a witness.
- */
 const WITNESS_RING_RADIUS = 2;
 
-/**
- * Collects every edge incident to the node at a cell under the distance-capped Gabriel rule: two
- * nodes connect when they fall within the cap and no third node sits inside the circle whose
- * diameter is the pair. Reading the surrounding cells (the halo) lets a border node see the same
- * candidates its neighbour across a chunk boundary sees, so both derive the identical edge with no
- * reconciliation pass. Returns all incident edges, both orientations; callers spanning many cells
- * dedupe on `id`.
- */
 export function collectNodeEdges(userSeed: number, cx: number, cy: number): Array<WorldEdge> {
   const source = buildCellNode(userSeed, cx, cy);
   const pool = collectDiscNodes(userSeed, cx, cy, WITNESS_RING_RADIUS);
@@ -41,10 +29,6 @@ export function collectNodeEdges(userSeed: number, cx: number, cy: number): Arra
   return edges;
 }
 
-/**
- * Builds the nodes of every cell within `radius` rings of the center, the candidate-and-witness pool
- * one Gabriel evaluation reads.
- */
 function collectDiscNodes(
   userSeed: number,
   cx: number,
@@ -65,10 +49,6 @@ function collectDiscNodes(
   return nodes;
 }
 
-/**
- * Gabriel witness test: true when some pool node other than the pair lies strictly inside the circle
- * whose diameter is the pair, which forbids the edge.
- */
 function hasWitnessInside(
   a: WorldMapNode,
   b: WorldMapNode,
@@ -87,10 +67,6 @@ function hasWitnessInside(
   });
 }
 
-/**
- * Builds the undirected edge for a pair, its id the endpoint ids sorted ascending so either endpoint
- * derives the same identity.
- */
 function buildEdge(a: WorldMapNode, b: WorldMapNode): WorldEdge {
   const id = a.id < b.id ? `${a.id}|${b.id}` : `${b.id}|${a.id}`;
 

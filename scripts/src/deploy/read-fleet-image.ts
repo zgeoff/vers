@@ -21,13 +21,6 @@ const machineSchema = z
 
 const machinesSchema = z.array(machineSchema);
 
-/**
- * Reads the single, fully-resolved image — repository, tag, and the digest
- * Fly has already resolved it to — every service machine in the app's fleet
- * currently agrees on. Returns null when the fleet has no service machines
- * or splits across more than one image, since there's then no one image to
- * provision a sim version from.
- */
 export async function readFleetImage(app: string): Promise<FleetImage | null> {
   const stdout = await runFlyctl(['machines', 'list', '--app', app, '--json']);
 

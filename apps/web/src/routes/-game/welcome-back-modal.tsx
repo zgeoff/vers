@@ -8,21 +8,6 @@ import { runIgnoringRejection } from '../../lib/idle/run-ignoring-rejection';
 import { sendIdleReportOnline } from '../../lib/idle/send-idle-report-online';
 import { useIdleWorkerHandle } from '../../lib/idle/use-idle-worker-handle';
 
-/**
- * Masks the offline catch-up after an away-and-return: it opens the moment a resync starts
- * fast-forwarding a real away period, reports attempts and level-ups as they land, and stays up
- * with the final tally (or the cap notice) until dismissed. A resync with no away period to
- * report — a fresh login, a zero-gap reconnect — broadcasts no status, so it never opens this. A
- * resync that fails outright opens on a retry action instead; one stopped by an expired session
- * opens on a sign-in link, since no retry can succeed until the player signs back in — the login
- * redirect returns them here, where the fresh session's own resync resumes the catch-up. A resync
- * dropped for an avatar the account switched away from opens on a reload action — the tab's own
- * state still names the old avatar, and only a reload re-runs every gate against the new one. A
- * resync dropped because the running build's engine no longer supports the current content also
- * opens on a reload action, for the same reason: no in-page recovery can fetch a newer bundle.
- * While the catch-up is still fast-forwarding, the dialog is a non-dismissible lockout — the
- * player can't act on stale state until the resync settles into one of its terminal outcomes.
- */
 export function WelcomeBackModal() {
   const resyncStatus = useResyncStatus();
 

@@ -11,14 +11,8 @@ interface CreateDevDBConfig {
   maintenanceDSN: string;
 }
 
-/**
- * Clones dev_base into dbName when it doesn't exist yet, stamping provenance
- * (machine, branch, creation time) as a database comment, then migrates the
- * database forward so an existing clone catches up with migrations that
- * landed after dev_base was last refreshed. The maintenance connection must
- * point at a database other than dev_base: postgres refuses to clone a
- * template that has open connections.
- */
+// the maintenance connection must point at a database other than dev_base: postgres refuses to
+// clone a template that has open connections
 export async function createDevDB(config: Readonly<CreateDevDBConfig>): Promise<void> {
   invariant(/^[a-z0-9_]+$/.test(config.dbName), `invalid dev database name: ${config.dbName}`);
 
@@ -58,12 +52,8 @@ export async function createDevDB(config: Readonly<CreateDevDBConfig>): Promise<
 const CLONE_RETRIES = 3;
 const CLONE_RETRY_DELAY_MS = 1500;
 
-/**
- * Neon's compute briefly opens its own sessions against databases while
- * waking from scale-to-zero, and a session on dev_base makes the clone fail
- * with 55006 (object_in_use) — retry through that window; anything else
- * throws immediately.
- */
+// Neon's compute opens its own sessions while it wakes from scale-to-zero; one on dev_base fails
+// the clone with 55006 (object_in_use), so that code retries through the window
 async function createCloneOfDevBase(pg: postgres.Sql, dbName: string): Promise<void> {
   await pRetry(() => pg.unsafe(`CREATE DATABASE ${dbName} TEMPLATE dev_base`), {
     factor: 1,

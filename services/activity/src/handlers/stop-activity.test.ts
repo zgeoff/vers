@@ -20,11 +20,8 @@ import { server } from '../mocks/server';
 import { createMockCheckpointBatch } from '../test-utils/factories/create-mock-checkpoint-batch';
 import { toActivityData } from './to-activity-data';
 
-/**
- * `stopActivity` opens its own `db.transaction()` for the terminal-status claim and the chain's
- * consequent anchor advance, which can't nest under the default rollback-on-dispose isolation —
- * this suite runs against a real, committed schema clone instead.
- */
+// the handler under test opens its own interactive transaction, which the default
+// transaction-isolation handle can't nest — this suite runs against a real, committed schema clone
 async function setupTest() {
   const db = await createTestDB({ isolation: 'schema' });
 

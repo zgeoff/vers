@@ -9,12 +9,6 @@ interface UpdateAuthSessionOptions {
   readonly expiresAt?: Date;
 }
 
-/**
- * Writes to the auth session cookie. The cookie's actual `Max-Age` always resolves to the
- * `expiresAt` a caller set on some earlier call (or `opts.expiresAt` now) measured from the
- * session's own creation time — never a fresh window from "now" — so an unrelated field update
- * later in the session's life can't silently extend how long it stays valid.
- */
 export async function updateAuthSession(
   update: Partial<AuthSessionData>,
   opts?: UpdateAuthSessionOptions,
@@ -25,6 +19,8 @@ export async function updateAuthSession(
 
   const expires = opts?.expiresAt?.toISOString() ?? current.data.expires;
 
+  // measured from the session's creation, never a fresh window from now: an unrelated field
+  // update later in the session's life must not extend how long the cookie stays valid
   const maxAge =
     expires === undefined
       ? AUTH_SESSION_READ_MAX_AGE_SECONDS

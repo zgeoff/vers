@@ -2,11 +2,6 @@ import type { AnyValue, AnyValueMap, LogRecord } from '@opentelemetry/api-logs';
 import { SeverityNumber } from '@opentelemetry/api-logs';
 import { isRecord } from './is-record';
 
-/**
- * Maps one parsed pino line onto the OpenTelemetry log data model: `msg` becomes the body, pino's
- * numeric `level` maps to the matching severity (lines without a recognised level report as INFO),
- * `time` becomes the timestamp, and every remaining key rides along as an attribute.
- */
 export function buildLogRecord(line: Readonly<Record<string, unknown>>): LogRecord {
   const { level, msg, time, ...attributes } = line;
   const severity = pickSeverity(level);

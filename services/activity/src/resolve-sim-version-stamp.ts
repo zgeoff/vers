@@ -6,25 +6,11 @@ import invariant from 'tiny-invariant';
 import { recordContentIncompatibleRejection } from './metrics/record-content-incompatible-rejection';
 import type { SimVersionProblemPayload } from './types';
 
-/**
- * The typed error constructors sim-version resolution throws.
- */
 interface SimVersionStampErrors {
   readonly SIM_VERSION_EXPIRED: (payload: SimVersionProblemPayload) => Error;
   readonly SIM_VERSION_UNKNOWN: (payload: SimVersionProblemPayload) => Error;
 }
 
-/**
- * Resolves the engine hash a new activity stamps. An absent `requested` (the transitional path,
- * before clients send a hash) stamps the registry's current version, throwing SIM_VERSION_UNKNOWN
- * on an empty registry. A `requested` hash stamps as-is when its row is `active` and retained;
- * SIM_VERSION_UNKNOWN when no row matches it, SIM_VERSION_EXPIRED when its row is `pruned` or past
- * `retainedUntil`. Either path additionally throws SIM_VERSION_EXPIRED when the resolved row's
- * `maxContentVersion` falls behind `contentVersion` — the engine predates the content this activity
- * would stamp and could never derive or replay it, the stale-browser signal a client answers by
- * reloading rather than resyncing. Every error carries the registry's current hash (or null) so the
- * client knows what to resync onto.
- */
 export async function resolveSimVersionStamp(
   db: Kysely<DB>,
   requested: string | undefined,
@@ -73,10 +59,6 @@ export async function resolveSimVersionStamp(
   throw errors.SIM_VERSION_EXPIRED({ data: { currentSimVersion } });
 }
 
-/**
- * Whether `row`'s engine can derive and replay `contentVersion` — content versions are
- * server-authored numeric strings, so a non-numeric value here is a bug, not caller input.
- */
 function isContentVersionSupported(row: SimVersionRow, contentVersion: string): boolean {
   const requested = Number(contentVersion);
   const supported = Number(row.maxContentVersion);

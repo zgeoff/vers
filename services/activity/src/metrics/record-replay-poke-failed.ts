@@ -1,10 +1,5 @@
 import { metrics } from '@opentelemetry/api';
 
-/**
- * Counts one replay wake poke that never delivered after exhausting its retries — the explicit
- * stall signal for the replay queue: an activity progress append landed, but no verifier machine
- * ever learned there was work to drain.
- */
 export function recordReplayPokeFailed(): void {
   // The SDK returns the same instrument for an identical registration, and resolving late keeps it
   // bound to whichever meter provider the process registered at boot; without one it is the API's

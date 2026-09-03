@@ -1,24 +1,10 @@
 import * as github from '@pulumi/github';
 import * as pulumi from '@pulumi/pulumi';
 
-/**
- * The default provider authenticates with a fine-grained PAT scoped to
- * zgeoff/vers (Administration, Environments, Issues, Secrets, Variables,
- * Webhooks — all read/write), read from GITHUB_TOKEN in the environment
- * resolved by `op run`; the owner comes from the stack's github:owner config.
- * The PAT itself is console-managed: a token cannot rotate itself without
- * invalidating the session doing the rotating.
- */
-
 const repository = 'vers';
 
-/**
- * The authoritative label set — the registry the issue-hygiene rules assume.
- * The resource owns the repo's labels wholesale: a label added in the console
- * is drift, removed by the next `pulumi up`, and deleting an entry here
- * detaches the label from every issue carrying it. protect guards against
- * whole-set deletion, not per-entry edits.
- */
+// the resource owns the repo's labels wholesale: deleting an entry here detaches the label from
+// every issue carrying it, and protect guards whole-set deletion only, not per-entry edits
 const labels = new github.IssueLabels(
   'vers',
   {
@@ -102,11 +88,6 @@ const mainProtectionRuleset = new github.RepositoryRuleset('main-protection', {
   },
 });
 
-/**
- * The deploy-phase jobs target this environment. Deleting it destroys the
- * environment-scoped secrets with it, so it is protected. No protection rules:
- * deploys gate on green checks, not human approval.
- */
 const productionEnvironment = new github.RepositoryEnvironment(
   'production',
   {
@@ -116,11 +97,6 @@ const productionEnvironment = new github.RepositoryEnvironment(
   { protect: true },
 );
 
-/**
- * Actions variables carry the deploy configuration. Plainly public values sit
- * in code; the service-auth JWKS enters through encrypted stack config,
- * keeping key material of any kind out of the committed source.
- */
 const umamiWebsiteIDVariable = new github.ActionsVariable('vite-umami-website-id', {
   repository,
   variableName: 'VITE_UMAMI_WEBSITE_ID',
@@ -141,14 +117,6 @@ const sentryDSNVariable = new github.ActionsEnvironmentVariable('vite-sentry-dsn
   value: 'https://929f735fcaf5436db8d0910fd1c0d71d@vers-bugsink.fly.dev/1',
 });
 
-/**
- * Actions secrets. Values live in the vers-ci 1Password vault and reach the
- * program as environment variables resolved by `op run`; GitHub cannot return
- * a secret's value, so the program pushes and the vault stays the source of
- * truth. OP_SERVICE_ACCOUNT_TOKEN is console-managed: it is the credential the
- * resolution itself authenticates with, and a value cannot rotate itself
- * without invalidating the session doing the rotating.
- */
 const dotenvAppWebDevSecret = new github.ActionsSecret('dotenv-app-web-dev', {
   repository,
   secretName: 'DOTENV_APP_WEB_DEV',

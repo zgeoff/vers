@@ -2,12 +2,6 @@ import { buildActivityKeyRange } from './build-activity-key-range';
 import { CHECKPOINT_QUEUE_STORE_NAME } from './constants';
 import { resolveCheckpointQueueDB } from './resolve-checkpoint-queue-db';
 
-/**
- * Deletes every queued checkpoint belonging to an activity outside `keepActivityIDs` — a worker
- * restart has no delivery path for a queued activity other than the avatar's latest, and the
- * server settles rewards authoritatively, so a stranded row is worthless. Returns the distinct
- * activity ids it removed.
- */
 export async function sweepStaleCheckpoints(
   keepActivityIDs: ReadonlyArray<string>,
 ): Promise<Array<string>> {

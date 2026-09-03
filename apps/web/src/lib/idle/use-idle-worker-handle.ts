@@ -20,12 +20,6 @@ interface IdleWorkerHandle {
   readonly writerAbortSignal: AbortSignal;
 }
 
-/**
- * The app's one read boundary onto the simulation transport mount: every consumer reads
- * simulation state through this hook, so tests can stub the worker handle here. The test DOM can
- * host neither a SharedWorker nor a dedicated election worker, so this module is replaced under
- * `bun test`.
- */
 export function useIdleWorkerHandle(): IdleWorkerHandle {
   const client = useSimulationTransport();
   const initialized = useSimulationInitialized();

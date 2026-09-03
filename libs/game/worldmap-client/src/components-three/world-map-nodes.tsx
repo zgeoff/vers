@@ -58,9 +58,8 @@ export function WorldMapNodes(props: Readonly<WorldMapNodesProps>) {
     }
 
     // three derives an InstancedMesh's bounding sphere once, lazily, and a matrix rewrite doesn't
-    // invalidate it — without this recompute, a reused mesh (same instance count, new node list)
-    // keeps the sphere anchored over the previous region, so the frustum culls every node once the
-    // camera pans away and raycasting's sphere gate stops pointer events with it
+    // invalidate it: a reused mesh would keep the sphere over the previous region, so the frustum
+    // culls every node once the camera pans away and raycasting's sphere gate drops pointer events
     mesh.computeBoundingSphere();
 
     appliedSelectedNodeIDRef.current = selectedNodeID;
@@ -160,10 +159,6 @@ export function WorldMapNodes(props: Readonly<WorldMapNodesProps>) {
   );
 }
 
-/**
- * The color a node instance takes outside a pointer-driven transition: selected, then selectable
- * base, then dimmed for a node outside the avatar's selectable set.
- */
 function buildRestingColor(
   nodeID: string,
   selectedNodeID: null | string,

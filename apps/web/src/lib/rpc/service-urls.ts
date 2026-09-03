@@ -1,9 +1,5 @@
 import type { ServiceName } from '@vers/service-auth';
 
-/**
- * Each service's origin for the SSR direct-to-service path, defaulting to the real services' dev
- * ports.
- */
 export const SERVICE_URLS: Readonly<Record<ServiceName, string>> = {
   activity: process.env['ACTIVITY_SERVICE_URL'] ?? 'http://localhost:3006',
   avatar: process.env['AVATAR_SERVICE_URL'] ?? 'http://localhost:3005',

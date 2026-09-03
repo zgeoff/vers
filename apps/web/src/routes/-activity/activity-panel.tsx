@@ -20,11 +20,6 @@ const settlingIndicator = css({
   zIndex: '[50]',
 });
 
-/**
- * Hosts the live engagement view and a corner spinner that shows while the activity's appended
- * progress is ahead of its verified head — the stretch whose rewards are not yet settled. The
- * settling count rides a dev-only tooltip; players see only the spinner.
- */
 export function ActivityPanel() {
   const navigate = useNavigate();
   const idleWorkerHandle = useIdleWorkerHandle();
@@ -49,10 +44,9 @@ export function ActivityPanel() {
       ? 0
       : Math.max(0, activity.appendedHead - verifiedHead);
 
-  // The worker owns the stop end to end — local halt, checkpoint flush, durable server delivery —
-  // so navigation never waits on the network and ending a run works offline. With no transport
-  // mounted there is no local simulation to halt, and the targeted server stop goes out directly,
-  // fire-and-forget: a failure must not strand the player on the dead engagement screen.
+  // the worker owns the stop end to end, so navigation never waits on the network. With no
+  // transport mounted there is no local simulation to halt, and the targeted server stop goes out
+  // directly, fire-and-forget: a failure must not strand the player on the dead engagement screen.
   const activityID = activity?.id;
 
   const endRun =

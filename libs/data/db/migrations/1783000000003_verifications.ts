@@ -1,10 +1,6 @@
 import type { Kysely } from 'kysely';
 import { sql } from 'kysely';
 
-/**
- * Creates the `verification_type` enum and the `verifications` table, one
- * row per active OTP/TOTP challenge, unique per `(target, type)` pair.
- */
 export async function up(db: Kysely<unknown>): Promise<void> {
   await db.schema
     .createType('verification_type')

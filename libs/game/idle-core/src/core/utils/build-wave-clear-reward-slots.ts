@@ -1,12 +1,6 @@
 import invariant from 'tiny-invariant';
 import type { RewardSlotContext, Wave } from '../../types';
 
-/**
- * One reward-slot context per enemy in a cleared wave, in the wave's own enemy order — the same
- * canonical enemy order the wave's xp is summed over, so slots and rewards stay aligned on replay.
- * Ordinals are not assigned here: checkpoint creation numbers the contexts earned since the last
- * checkpoint, keeping them 0-contiguous per checkpoint.
- */
 export function buildWaveClearRewardSlots(
   wave: Wave,
   difficulty: number,

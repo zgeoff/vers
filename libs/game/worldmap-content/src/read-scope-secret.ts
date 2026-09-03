@@ -15,10 +15,6 @@ interface ReadScopeSecretDeps {
   readonly keysServiceURL: string;
   readonly privateKey: CryptoKey;
 
-  /**
-   * Bounds the keys dispatch, so a hung keys service fails the caller rather than stalling
-   * indefinitely.
-   */
   readonly timeoutMs?: number;
 }
 
@@ -28,12 +24,6 @@ interface ReadScopeSecretInput {
   readonly secretVersion: number;
 }
 
-/**
- * Reads an avatar's scope secret from the keys service over real s2s auth. A keys-defined
- * NOT_FOUND (an unconfigured secret version — a config bug, not caller input) is rethrown as a
- * plain `Error` naming the missing ref and version, so it can never masquerade as the caller's own
- * NOT_FOUND.
- */
 export async function readScopeSecret(
   deps: Readonly<ReadScopeSecretDeps>,
   input: Readonly<ReadScopeSecretInput>,

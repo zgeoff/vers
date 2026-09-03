@@ -12,12 +12,6 @@ interface BuildCheckpointHashInput {
   readonly version: number;
 }
 
-/**
- * The checkpoint hash chain's link function: a sha256 hex digest over the canonical field order
- * `[prevHash, version, chainIndex, seed, nextSeed, time, type, entropySource]`. Shared by the
- * contract, the service, and (via this package) the client, so every party derives the same hash
- * from the same fields.
- */
 export function buildCheckpointHash(input: Readonly<BuildCheckpointHashInput>): string {
   const canonical = JSON.stringify([
     input.prevHash,

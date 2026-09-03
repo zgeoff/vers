@@ -43,10 +43,6 @@ if (failed) {
   console.log('✓ every committed env contract matches its service env shape');
 }
 
-/**
- * Key-list equality between the committed artifact and the freshly derived contract; formatting
- * never participates, so the repo formatter may restyle the artifact freely.
- */
 function compareEnvContract(committed: EnvContract, contract: EnvContract): boolean {
   return JSON.stringify(committed) === JSON.stringify(contract);
 }

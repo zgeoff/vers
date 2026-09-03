@@ -12,10 +12,6 @@ interface BuildEmailRouterDeps {
   readonly queue: JobQueue<EmailJobDefs>;
 }
 
-/**
- * Assembles the email service's oRPC router: every procedure enqueues its job and returns
- * immediately, closing over the shared queue and logger.
- */
 export function buildEmailRouter(deps: BuildEmailRouterDeps) {
   const os = implement(emailContract).$context<ServiceContext>();
 
@@ -43,12 +39,6 @@ interface SendHandlerOpts<TName extends keyof EmailJobDefs> {
   readonly input: Readonly<z.infer<EmailJobDefs[TName]['schema']>>;
 }
 
-/**
- * Builds one procedure's handler: enqueues its payload under `name`, then nudges delivery without
- * gating the response — a fire-and-forget drain whose failures are pg-boss's retry/dead-letter
- * problem, not this request's. The detached drain starts inside the request's own trace scope, so
- * a report it makes still carries the originating request's trace id.
- */
 function buildSendHandler<TName extends keyof EmailJobDefs>(
   deps: BuildEmailRouterDeps,
   name: TName,

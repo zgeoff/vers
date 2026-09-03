@@ -3,10 +3,6 @@ import type { TraceContext } from './types';
 const TRACEPARENT_PATTERN =
   /^(?<version>[0-9a-f]{2})-(?<traceID>[0-9a-f]{32})-(?<spanID>[0-9a-f]{16})-[0-9a-f]{2}$/;
 
-/**
- * Parses a W3C `traceparent` header into the caller's trace context; null when the header is
- * absent, malformed, or carries the values the spec forbids (version ff, all-zero ids).
- */
 export function parseTraceparent(header: null | string): TraceContext | null {
   if (header === null) {
     return null;

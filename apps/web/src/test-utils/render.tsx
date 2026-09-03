@@ -6,22 +6,10 @@ import { cloneElement } from 'react';
 import { buildQueryClient } from '../lib/query/build-query-client';
 
 type RenderResult = ReturnType<typeof renderRTL> & {
-  /**
-   * The query client backing the rendered tree, for non-DOM waits on server-cache state.
-   */
   readonly queryClient: QueryClient;
-  /**
-   * Re-renders the same tree in place — a fresh element over the same query client — so effects
-   * re-run against updated ambient test state without remounting.
-   */
   readonly refresh: () => void;
 };
 
-/**
- * The project render util for component tests: wraps the tree in the app's providers (a fresh
- * `buildQueryClient` per render) and returns RTL's queries bound to it. Trees that need
- * router-aware primitives use the router-aware render util instead.
- */
 export function render(ui: Readonly<ReactElement>): RenderResult {
   const queryClient = buildQueryClient();
   const rendered = renderRTL(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);

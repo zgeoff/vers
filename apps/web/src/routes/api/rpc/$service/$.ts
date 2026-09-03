@@ -3,12 +3,6 @@ import type { ServiceName } from '@vers/service-auth';
 import { sendRPCRequest } from '../../../../lib/proxy/send-rpc-request';
 import { SERVICE_URLS } from '../../../../lib/rpc/service-urls';
 
-/**
- * Forwards browser oRPC traffic to whichever service the `$service` segment names. Services
- * aren't reachable from the browser directly (private network in production), so every
- * client-lane call round-trips through this same-origin proxy; cookies ride along because the
- * browser's call to this route is same-origin.
- */
 export const Route = createFileRoute('/api/rpc/$service/$')({
   server: {
     handlers: {

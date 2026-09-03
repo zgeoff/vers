@@ -1,9 +1,5 @@
 import type { z } from 'zod';
 
-/**
- * Maps a zod error onto per-field messages, keeping the first issue per field. Issues whose path
- * doesn't start with a listed field (form-level refinements, nested paths) are dropped.
- */
 export function toFieldErrors<Field extends string>(
   error: z.ZodError,
   fields: ReadonlyArray<Field>,

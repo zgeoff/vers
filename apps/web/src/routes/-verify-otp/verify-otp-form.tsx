@@ -58,9 +58,6 @@ const formStyles = css({
 
 const otpField = css({ marginBottom: '6' });
 
-/**
- * The verify-otp page's client-interactive form: submits the code and renders the result.
- */
 export function VerifyOTPForm(props: VerifyOTPFormProps) {
   const router = useRouter();
   const verifyOTPFn = useServerFn(verifyOTP);

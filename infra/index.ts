@@ -66,10 +66,8 @@ const www = new cloudflare.DnsRecord('www', {
   proxied: false,
 });
 
-// Resend sending domain: transactional.versidle.com (region ap-northeast-1). DKIM signs the
-// mail, and the send.* MX + SPF records cover the bounce/return-path host Resend uses. TXT
-// content is quote-wrapped — the Cloudflare API stores TXT values quoted, and unquoted input
-// re-diffs on every plan.
+// Resend sending domain records. TXT content is quote-wrapped: the Cloudflare API stores TXT
+// values quoted, and unquoted input re-diffs on every plan.
 const resendDKIM = new cloudflare.DnsRecord('resend-dkim', {
   zoneId,
   name: `resend._domainkey.transactional.${zoneName}`,

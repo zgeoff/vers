@@ -4,9 +4,6 @@ import { ACCESS_TOKEN_DURATION, SESSION_DURATION_SHORT } from '../consts';
 import { createJWT } from '../create-jwt';
 import type { EmptyErrorPayload, SessionSigningDeps } from '../types';
 
-/**
- * oRPC handler opts for the public `refreshTokens` procedure.
- */
 interface RefreshTokensOpts {
   readonly errors: {
     readonly NOT_FOUND: (payload: EmptyErrorPayload) => Error;
@@ -16,15 +13,6 @@ interface RefreshTokensOpts {
   readonly input: { readonly id: string; readonly refreshToken: string };
 }
 
-/**
- * Rotates a session's refresh token, or skips rotation inside the grace window. Reuse detection
- * keeps a one-deep history: `previousRefreshToken` is the last rotated-away token, so a
- * client that replays it (its own request having lost the race, or an attacker replaying a
- * stolen token) revokes the whole session rather than being silently ignored. Rotation itself is
- * one conditional UPDATE keyed on the refresh token it expects to replace — a concurrent
- * rotation's write invalidates that precondition, so at most one of two racing requests rotates
- * and the loser is treated as reuse.
- */
 export async function refreshTokens(
   db: Kysely<DB>,
   deps: SessionSigningDeps,

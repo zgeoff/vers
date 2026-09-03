@@ -3,12 +3,6 @@ import { pathToFileURL } from 'node:url';
 import invariant from 'tiny-invariant';
 import type * as z from 'zod';
 
-/**
- * Loads a service's `src/env-shape.ts` at runtime and returns its exported shape. The dynamic
- * import keeps the package free of a static import into a service, which the boundaries check
- * forbids; type safety lives at the shape's definition site, so the export is only
- * shape-validated here.
- */
 export async function loadEnvShape(serviceDir: string): Promise<z.ZodRawShape> {
   const shapePath = path.resolve(serviceDir, 'src/env-shape.ts');
 

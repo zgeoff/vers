@@ -1,10 +1,3 @@
-/**
- * One e2e demo account. The mock backend seeds it into its in-memory store and the full-stack
- * harness seeds it into postgres, so a spec's seeded login lands identically against either
- * backend. A non-null `avatarName` seeds one avatar for the account, enough for the shell's
- * active-avatar gate to admit it straight into the game rather than the roster; `null` leaves the
- * account avatarless.
- */
 export interface DemoAccount {
   readonly avatarName: null | string;
   readonly email: string;
@@ -13,11 +6,6 @@ export interface DemoAccount {
   readonly username: string;
 }
 
-/**
- * The e2e demo accounts, single-sourced for both seed writers so adding or changing one is a
- * one-line edit in one place. Each signed-in spec logs in as its own account so their sessions
- * never collide across a shared server.
- */
 export const DEMO_ACCOUNTS: ReadonlyArray<DemoAccount> = [
   {
     avatarName: 'Demo Test Avatar',

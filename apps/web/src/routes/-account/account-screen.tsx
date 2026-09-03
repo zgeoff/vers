@@ -12,11 +12,6 @@ interface AccountScreenProps {
 const body = css({ display: 'flex', flexDirection: 'column', gap: '4' });
 const actions = css({ display: 'flex', flexDirection: 'column', gap: '2', marginTop: '4' });
 
-/**
- * The account settings body — profile content plus the sub-flow actions — shared by the standalone
- * account page and the in-shell settings tab, each of which supplies its own frame. Sub-flows link
- * out to their own top-level routes.
- */
 export function AccountScreen(props: Readonly<AccountScreenProps>) {
   return (
     <div className={body}>

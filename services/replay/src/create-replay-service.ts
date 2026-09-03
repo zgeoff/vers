@@ -13,42 +13,19 @@ import { drainReplayQueue } from './worker/drain-replay-queue';
 import type { ReplayWorkerDeps } from './worker/types';
 
 interface CreateReplayServiceConfig {
-  /**
-   * Injected only in tests, to run the service inside the test's own transaction.
-   */
   readonly db?: Kysely<DB>;
 }
 
-/**
- * The booted replay service, plus the `db` and s2s signing key its RPC router resolved at boot —
- * `buildReplayRouter` hands both to the `wake` procedure's drain handler, rather than re-deriving
- * them from `env` a second time.
- */
 export interface ReplayService extends Service<typeof envShape> {
   readonly db: Kysely<DB>;
 
-  /**
-   * Drains the replay queue to empty, sharing the same deps the `wake` procedure's handler closes
-   * over — the boot entrypoint's self-healing backstop for a poke a crash or deploy lost.
-   */
   readonly drain: () => Promise<number>;
 
   readonly privateKey: CryptoKey;
 
-  /**
-   * Destroys the pool this factory opened itself from `DATABASE_URL` — a no-op when `config.db`
-   * was injected, since the caller owns that handle's lifecycle.
-   */
   readonly stopDB: () => Promise<void>;
 }
 
-/**
- * Boots the replay service; the production entrypoint and every test call this as the one shared
- * config. `config.db` is injected only in tests — the production entrypoint always resolves its
- * own pool from `DATABASE_URL`. The signing key is parsed and awaited here, before `listen()`
- * ever runs, so a malformed `SERVICE_AUTH_PRIVATE_KEY` fails the boot rather than the first
- * cross-version dispatch that needs it.
- */
 export async function createReplayService(
   config: CreateReplayServiceConfig = {},
 ): Promise<ReplayService> {

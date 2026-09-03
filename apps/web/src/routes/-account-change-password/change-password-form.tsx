@@ -18,11 +18,6 @@ type ChangePasswordFieldErrors = Extract<
 
 const formStyles = css({ display: 'flex', flexDirection: 'column', gap: '4', width: '96' });
 
-/**
- * The change-password page's client-interactive form. A `step-up-required` result swaps the form
- * for the shared step-up challenge island; once it verifies, the original submission is
- * resubmitted with the resulting transaction token attached.
- */
 export function ChangePasswordForm() {
   const changePasswordFn = useServerFn(changePassword);
   const [fieldErrors, setFieldErrors] = useState<ChangePasswordFieldErrors>({});

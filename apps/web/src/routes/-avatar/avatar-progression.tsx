@@ -5,11 +5,6 @@ import { buildOptimisticProgression } from '../../lib/activity/build-optimistic-
 import { buildActiveAvatarQueryOptions } from '../../lib/avatar/build-active-avatar-query-options';
 import { useIdleWorkerHandle } from '../../lib/idle/use-idle-worker-handle';
 
-/**
- * Client island rendering the avatar's level and xp: the settled row plus every pending
- * terminal-but-unsettled activity's delta, plus an in-flight activity's own running delta on top —
- * with a settling marker while anything is still projected onto the settled row.
- */
 export function AvatarProgression() {
   const idleWorkerHandle = useIdleWorkerHandle();
   const avatarQuery = useQuery(buildActiveAvatarQueryOptions());

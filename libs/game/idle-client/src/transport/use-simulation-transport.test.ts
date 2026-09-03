@@ -21,11 +21,6 @@ import type {
 import { WORKER_TO_CLIENT_CHANNEL } from './constants';
 import { useSimulationTransport } from './use-simulation-transport';
 
-/**
- * Stands in for a real SharedWorker: only its construction is observable here — actual worker
- * behaviour (message handling, simulation ticking) is covered by the runtime's own suite. This
- * file only exercises the hook's client-construction and broadcast-routing wiring.
- */
 class StubSharedWorker extends EventTarget {
   channel = new MessageChannel();
 
@@ -54,10 +49,6 @@ function registerSharedWorkerStub() {
   });
 }
 
-/**
- * Posts a state broadcast the way both transports do, on the one channel the hook subscribes to
- * regardless of which client it constructed.
- */
 function emitWorkerMessage(message: unknown) {
   const channel = new BroadcastChannel(WORKER_TO_CLIENT_CHANNEL);
 

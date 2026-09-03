@@ -1,9 +1,6 @@
 import { faker } from '@faker-js/faker';
 import type { ReleaseRow } from '../../types';
 
-/**
- * A plain, unpersisted `releases` row with faker-generated defaults. Never requires a parent.
- */
 export function createMockReleaseRow(overrides: Readonly<Partial<ReleaseRow>> = {}): ReleaseRow {
   const sha = faker.git.commitSha();
 

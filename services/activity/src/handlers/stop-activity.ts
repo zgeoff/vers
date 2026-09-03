@@ -11,9 +11,6 @@ interface StopActivityDeps {
   readonly sendReplayWake: () => void;
 }
 
-/**
- * oRPC handler opts for the authed `stopActivity` procedure.
- */
 interface StopActivityOpts {
   readonly context: {
     readonly actingSessionID: null | string;
@@ -27,16 +24,6 @@ interface StopActivityOpts {
   readonly input: { readonly activityID?: string | undefined; readonly avatarID: string };
 }
 
-/**
- * Stops an activity for an avatar owned by the acting user, then advances the chain's appended
- * anchor to the stopped stream's tail. Without `activityID` the call stops whatever is active —
- * `NOT_FOUND` when nothing is. With `activityID` the call is targeted and idempotent: only that
- * row is ever touched, a row that already left `active` succeeds with the row as-is, and
- * `NOT_FOUND` means the row doesn't exist for this caller — so a stop delivered late or twice
- * from a durable client queue can neither fail spuriously nor kill a newer run. A still-active
- * row whose stamped writer is another session rejects with SESSION_EVICTED: the stop intent
- * predates a writer take-over, and honoring it would kill the run the new writer is driving.
- */
 export async function stopActivity(
   deps: StopActivityDeps,
   opts: StopActivityOpts,
@@ -104,11 +91,9 @@ export async function stopActivity(
       .returningAll()
       .executeTakeFirst();
 
-    // The row moved between the read and the guarded update: it left `active` (a terminal append
-    // or a concurrent stop won the race) or its writer was taken over. A targeted call is already
-    // satisfied by a settled row, so it is re-read and returned; a row still active under another
-    // writer rejects instead — the take-over supersedes this stop; the untargeted form keeps its
-    // original meaning and reports nothing active.
+    // the row moved between the read and the guarded update: it left `active` or its writer was
+    // taken over. a targeted call is already satisfied by a settled row and re-reads it; a row
+    // still active under another writer rejects, since the take-over supersedes this stop
     if (stopped === undefined) {
       if (opts.input.activityID === undefined) {
         throw opts.errors.NOT_FOUND({ data: {} });

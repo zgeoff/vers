@@ -7,11 +7,6 @@ import { buildTraceparent, createTraceContext } from '@vers/trace';
 import { findSpanTraceContext } from '../trace/find-span-trace-context';
 import { findTraceContext } from '../trace/find-trace-context';
 
-/**
- * Builds an `RPCLink` `clientInterceptors` entry that mints a CLIENT span per call (named by the
- * procedure's path) and injects the outbound `traceparent`. A 5xx response or a thrown transport
- * failure marks the span failed before it rethrows.
- */
 export function buildTracingInterceptor<T extends ClientContext = ClientContext>(): Interceptor<
   StandardLinkClientInterceptorOptions<T>,
   Promise<StandardLazyResponse>

@@ -7,22 +7,11 @@ import { useEffect, useState } from 'react';
 
 const EMPTY_NODE_ID_SET: ReadonlySet<string> = new Set();
 
-/**
- * The last derived cleared-node set paired with the avatar it was derived for, so the held set is
- * never read across an avatar switch before the incoming avatar's own derive lands.
- */
 interface DerivedClearedNodeIDs {
   readonly avatarID: string | undefined;
   readonly nodeIDs: ReadonlySet<string>;
 }
 
-/**
- * The active avatar's world-map nodes cleared offline but not yet server-verified, re-derived from
- * the durable offline outbox on a fresh offline clear and on a reconnect that settles the outbox —
- * an ingest, verification, or rejection. `undefined` returns the empty set, matching an avatar not
- * yet loaded; an avatar switch reads empty until the incoming avatar's derive lands, so the new
- * avatar never briefly inherits the outgoing avatar's cleared nodes.
- */
 export function useOfflineClearedNodeIDs(avatarID: string | undefined): ReadonlySet<string> {
   const [derived, setDerived] = useState<DerivedClearedNodeIDs>({
     avatarID: undefined,

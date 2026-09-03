@@ -2,17 +2,6 @@ import type { DB } from '@vers/db';
 import type { Transaction } from 'kysely';
 import type { ClaimedActivity } from '../types';
 
-/**
- * Claims an avatar's next-in-order activity for replay: the oldest activity, across every chain,
- * with appends past its verified cursor. A predecessor that is settled or rejected qualifies its
- * successor; a null predecessor (the avatar's first-ever activity) always qualifies. A quarantined
- * or parked activity is excluded, and blocks every activity after it, exactly as a held
- * predecessor does. At most one activity per avatar is ever claimable at a time.
- *
- * Must run inside the caller's transaction: the claim is a row lock (`FOR UPDATE SKIP LOCKED`) that
- * releases on commit or rollback. The lock only prevents duplicated effort — exactly-once
- * application is the verified-cursor guard's job, not this lock's.
- */
 export async function claimNextSeedChain(
   trx: Transaction<DB>,
 ): Promise<ClaimedActivity | undefined> {

@@ -1,11 +1,5 @@
 import { buildCoordHashUnit } from './build-coord-hash';
 
-/**
- * Value noise at a real-valued position: bilinear interpolation of `buildCoordHashUnit` over the
- * integer lattice surrounding `(x, y)`, on the given draw channel. Deterministic and seed-stable
- * like the hash it rides — no dependency, no stored gradients. Returns a value in `[0, 1)`; the
- * caller picks the sampling frequency by scaling `x` and `y` before the call.
- */
 export function buildValueNoise(userSeed: number, x: number, y: number, channel: number): number {
   const x0 = Math.floor(x);
   const y0 = Math.floor(y);

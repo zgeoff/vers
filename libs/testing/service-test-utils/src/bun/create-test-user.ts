@@ -16,19 +16,8 @@ interface TestUser {
   user: Selectable<Users>;
 }
 
-/**
- * Matches the legacy production hasher's cost factor so bcrypt-path
- * regression tests exercise a realistically expensive hash.
- */
 const LEGACY_BCRYPT_COST_FACTOR = 12;
 
-/**
- * Inserts a user for bun-test suites via kysely, sourcing its defaults from a plain mock row.
- * Hashes `password` as argon2id by default, or bcrypt when `passwordAlgorithm: 'bcrypt'` (for
- * legacy-hash regression coverage). A `resetToken` plaintext is hashed with sha256 into
- * `passwordResetToken` and echoed back on the return value for callers that need to present it to
- * a reset flow.
- */
 export async function createTestUser(
   db: Kysely<DB>,
   data: Readonly<CreateTestUserData> = {},

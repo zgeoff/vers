@@ -2,10 +2,6 @@ import { Collection } from '@msw/data';
 import { createId } from '@paralleldrive/cuid2';
 import * as z from 'zod';
 
-/**
- * A stored mock product-event row, one per NDJSON row the Tinybird events endpoint received: the
- * verbatim wire row plus `datasource`, the data source the ingest targeted.
- */
 export const ProductEventRowSchema = z.object({
   activity_id: z.string().nullable().default(null),
   datasource: z.string().default('product_events'),

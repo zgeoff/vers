@@ -9,13 +9,6 @@ interface CreateMockReplaySegmentOverrides extends Partial<
   readonly chain?: Partial<ReplaySegment['chain']>;
 }
 
-/**
- * A plain, unpersisted replay segment with faker-generated defaults, shaped like a chain's first
- * activity with no stored checkpoints. `chain.genesisSeed`/`verifiedNextSeed` and the top-level
- * `seed` rebuild from a merged `activity` override's own `seed` unless the caller explicitly
- * overrides them too — a chain-continuation scenario overrides `chain` and `verifiedHead`
- * directly for that reason.
- */
 export function createMockReplaySegment(
   overrides: Readonly<CreateMockReplaySegmentOverrides> = {},
 ): ReplaySegment {

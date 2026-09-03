@@ -6,12 +6,6 @@ export interface EnvContract {
   readonly required: ReadonlyArray<string>;
 }
 
-/**
- * Derives a service's env contract from its shape merged over the shared base schema: a key is
- * required exactly when its schema rejects an absent value, so defaults and `.optional()` land in
- * `optional` without the shape author declaring requiredness twice.
- * Both key lists are sorted, keeping the generated artifact's diff stable across regenerations.
- */
 // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- ZodType-bearing shape; zod schemas have no readonly form
 export function buildEnvContract(envShape: z.ZodRawShape): EnvContract {
   const merged: Readonly<Record<string, z.ZodType>> = { ...baseEnvSchema.shape, ...envShape };

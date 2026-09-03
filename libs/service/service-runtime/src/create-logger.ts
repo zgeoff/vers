@@ -7,11 +7,6 @@ interface CreateLoggerOptions {
   readonly stream?: pino.DestinationStream;
 }
 
-/**
- * Builds a service's pino logger: JSON lines to stdout, with `name` bound onto every entry and the
- * active request's trace id mixed into every line written inside a trace-context scope. A `stream`
- * is an additional destination written beside stdout, for log shipping.
- */
 export function createLogger(options: CreateLoggerOptions): pino.Logger {
   const baseOptions: pino.LoggerOptions = {
     level: options.level,

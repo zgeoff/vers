@@ -19,10 +19,6 @@ export enum WorkerMessageType {
   WriterReady = 'writer_ready',
 }
 
-/**
- * The activity whose checkpoint stream the worker reported dead — optimistic reward state for it
- * is discarded and never repopulates from checkpoints still in flight.
- */
 export interface CheckpointStreamError {
   readonly activityID: string;
 }

@@ -19,12 +19,9 @@ import { resolveCheckpointQueueDB } from './resolve-checkpoint-queue-db';
 import type { CheckpointQueueSchema } from './types';
 import { upgradeCheckpointQueueDB } from './upgrade-checkpoint-queue-db';
 
-/**
- * A database identity distinct from the worker's real `CHECKPOINT_QUEUE_DB_NAME`/
- * `CHECKPOINT_QUEUE_DB_VERSION`: that pair is a module-scoped singleton that some earlier test in
- * this package's shared process may already have opened fresh at the current version, so exercising
- * a real version-3-to-4 upgrade needs its own database this test alone controls.
- */
+// a database of its own: the real name/version pair is a module-scoped singleton an earlier test
+// in this shared process may already have opened fresh at the current version, so a real
+// upgrade cannot run on it
 const UPGRADE_TEST_DB_NAME = 'vers-idle-checkpoint-queue-upgrade-test';
 
 test('it creates the node-seeds store on an upgrade from v3 without dropping the existing stores or their rows', async () => {

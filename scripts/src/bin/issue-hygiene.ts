@@ -53,10 +53,6 @@ for (const finding of findings) {
   console.log(`#${issueNumber}: ${finding.task}`);
 }
 
-/**
- * Resolves a finding's stub descriptor to paste-ready markdown: a section stub is read from its
- * template file, a literal stub is passed through, and a finding without a stub stays without one.
- */
 async function resolveFinding(finding: Finding): Promise<ResolvedFinding> {
   if (finding.stub === undefined) {
     return { rule: finding.rule, task: finding.task };

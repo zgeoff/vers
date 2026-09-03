@@ -4,11 +4,6 @@ import { createId } from '@paralleldrive/cuid2';
 import { PendingTransactionDataSchema } from '@vers/contract-session';
 import * as z from 'zod';
 
-/**
- * A stored mock pending step-up transaction. `action` stays required — it's what the row is for —
- * and every other field defaults to a live, consumable, fresh-attempt state, so tests state only
- * the fields they wire between rows or assert on.
- */
 const PendingTransactionRowSchema = PendingTransactionDataSchema.extend({
   attempts: z.int().default(0),
   expiresAt: z.date().default(() => faker.date.soon()),

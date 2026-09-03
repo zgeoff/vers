@@ -11,10 +11,6 @@ const rpcUnauthorizedReply = z.object({
   json: rpcUnauthorizedBody,
 });
 
-/**
- * Fleet manifest for the deploy CLI (`bun run deploy`): which Fly apps exist,
- * what makes each one stale, and how a deploy is verified.
- */
 export default defineDeployManifest({
   // Staleness compares HEAD against the `GIT_SHA` each deploy stamps into machine env, so a
   // skipped or cancelled rollout self-heals on the next push.

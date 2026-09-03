@@ -6,9 +6,6 @@ interface CreateActivityRowData extends Partial<Insertable<Activities>> {
   readonly avatarId: string;
 }
 
-/**
- * Seeds an activity head row for an existing avatar, defaulting to a real `status = 'active'` row.
- */
 export function createActivityRow(
   db: Kysely<DB>,
   data: Readonly<CreateActivityRowData>,

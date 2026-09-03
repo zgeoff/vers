@@ -2,14 +2,7 @@ import { createId } from '@paralleldrive/cuid2';
 import * as db from '../db';
 import { os } from './os';
 
-/**
- * Default session lifetime for a login without `rememberMe`, mirroring the session service.
- */
 const SESSION_DURATION_SHORT = 24 * 60 * 60 * 1000;
-
-/**
- * Session lifetime for a login with `rememberMe`, mirroring the session service.
- */
 const SESSION_DURATION_LONG = 7 * 24 * 60 * 60 * 1000;
 
 export const createSession = os.createSession.handler(async (opts) => {

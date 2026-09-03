@@ -21,17 +21,8 @@ export interface CapturedEmail {
   readonly to: string;
 }
 
-/**
- * Every delivery the default resend handler accepted, keyed by recipient. Each consuming
- * package's preload clears it between tests. The map keeps only the last send per recipient, so
- * a test asserting delivery count wraps the resolver in a spy instead.
- */
 export const sentEmails = new Map<string, CapturedEmail>();
 
-/**
- * Exported apart from the handler so a test can re-register a spy-wrapped copy and inspect the
- * raw request — call counts, headers — while keeping the capture behaviour.
- */
 export async function resolveResendEmails(
   info: Parameters<HttpResponseResolver>[0],
 ): Promise<Response> {

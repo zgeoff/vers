@@ -1,10 +1,6 @@
 import type { Kysely } from 'kysely';
 import { sql } from 'kysely';
 
-/**
- * Creates the `avatar_mode` enum and adds the `mode` column to `avatars`, defaulted to `trade`
- * for every existing row.
- */
 export async function up(db: Kysely<unknown>): Promise<void> {
   await db.schema.createType('avatar_mode').asEnum(['trade', 'self_found']).execute();
 

@@ -1,11 +1,6 @@
 import { expect, test } from '../src/test';
 import { waitForHoneypotWindow } from '../src/wait-for-honeypot-window';
 
-/**
- * `/avatar` mounts its own satellite canvas alongside the persistent world canvas: two `<canvas>`
- * elements are attached while the panel is up, and navigating away drops back to one as the
- * satellite dies with the route (`keepAlive: false`) while the tagged world canvas survives.
- */
 test('it mounts a second canvas for the avatar satellite and drops it on navigation away', async ({
   page,
 }) => {

@@ -7,9 +7,6 @@ interface Props {
   children: ReactNode;
   closeLabel?: string;
 
-  /**
-   * Accessible name for the dialog, announced to assistive tech in place of a visible title.
-   */
   label: string;
   onOpenChange?: (open: boolean) => void;
   open: boolean;
@@ -85,13 +82,6 @@ const closeTrigger = css({
   _hover: { borderColor: 'border.strong', color: 'text.primary' },
 });
 
-/**
- * A bottom-anchored, non-modal sheet: it dims the canvas behind it and takes initial focus, but
- * never traps focus or covers a higher-stacked sibling, so an always-on rail beside it stays live.
- * Escape, the scrim, and the close control all report through `onOpenChange` — the open state is
- * the caller's. The hosted content supplies its own heading, so the accessible name comes from
- * `label` rather than a visible title.
- */
 export function Sheet(props: Readonly<Props>) {
   const contentRef = useRef<HTMLDialogElement>(null);
   const open = props.open;

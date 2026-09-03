@@ -9,15 +9,6 @@ import invariant from 'tiny-invariant';
 import type { ReplayTarget } from '../types';
 import type { ReplaySegment } from './types';
 
-/**
- * Reads one target activity's replay unit: its own row, its chain row, and every stored
- * checkpoint from version 1 through `appendedHead` — the whole stream, not just the unverified
- * tail, because a cache-miss rebuild must replay every earlier local attempt's own boundary to
- * read the stream's later `time` values correctly. Undefined when the activity row is gone (raced
- * against a concurrent cleanup) — the caller treats that as nothing to replay. The untyped jsonb
- * columns re-enter typed code through their contract schemas, so a malformed row fails the load
- * loudly instead of flowing into the verifier.
- */
 export async function loadReplaySegment(
   db: Kysely<DB>,
   target: Readonly<ReplayTarget>,

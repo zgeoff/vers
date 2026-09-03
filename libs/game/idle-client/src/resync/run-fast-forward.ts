@@ -9,35 +9,18 @@ import type { FastForwardProgress, FastForwardReport, LatestActivityProgress } f
 interface RunFastForwardOptions {
   readonly budgetMs: number;
 
-  /**
-   * Derives the engine's simulation input and avatar from a chain-position source — the
-   * verifier derives the same way from the same source, so a stream must never carry one avatar
-   * across continuations.
-   */
   readonly buildSimulationInput: (
     source: Readonly<SimulationInputSource>,
   ) => Promise<{ activity: ActivityInput; avatar: AvatarData }>;
 
   readonly client: Pick<ActivityServiceClient, 'advanceActivity'>;
 
-  /**
-   * Caps a single bulk request's total checkpoint count — test-only, to drive the chunking
-   * boundary without simulating a batch this large.
-   */
   readonly maxCheckpointsPerBatch?: number;
 
   readonly onProgress?: (progress: FastForwardProgress) => void;
   readonly progress: LatestActivityProgress;
 }
 
-/**
- * Simulates the whole offline gap locally, then ships it as bounded `advanceActivity` batches —
- * the only path that delivers offline continuations, never the per-activity checkpoint submitter.
- * Tallies report optimistically the instant planning completes, before any batch reaches the
- * network; after a rejected batch, the report reconciles down to the confirmed head with zero
- * attempts and level-ups, so the caller's existing `displaced` handling clears the optimistic
- * display exactly as it does after a lost writer race.
- */
 export async function runFastForward(
   options: Readonly<RunFastForwardOptions>,
 ): Promise<FastForwardReport> {
@@ -86,10 +69,9 @@ export async function runFastForward(
     };
   }
 
-  // The delivered plan's final row is always the last continuation's own fresh mint — nothing has
-  // been appended onto it yet, so it is live-attachable. A plan that stopped on an aborted failure
-  // is the exception: the abort policy's online counterpart never starts a successor, so the
-  // caller stops that freshly minted row back durably rather than attaching or resuming it.
+  // the final row is the last continuation's fresh mint with nothing appended, so it is
+  // live-attachable; after an aborted failure the caller stops it back durably instead, as the
+  // abort policy never starts a successor online either
   return {
     activity: drained.activity,
     appendedHead: drained.appendedHead,

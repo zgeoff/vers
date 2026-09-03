@@ -1,11 +1,6 @@
 import type { Kysely } from 'kysely';
 import { sql } from 'kysely';
 
-/**
- * Creates the step-up transaction surface: a durable pending-transaction
- * table for step-up confirmation flows, and a one-time-use token ledger
- * that blocks replay of consumed step-up tokens.
- */
 export async function up(db: Kysely<unknown>): Promise<void> {
   await db.schema
     .createTable('pending_transactions')

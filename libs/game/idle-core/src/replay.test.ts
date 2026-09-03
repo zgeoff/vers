@@ -7,14 +7,6 @@ import { createSimulationDriver } from './core/create-simulation-driver';
 import { runAttempt } from './core/run-attempt';
 import { ActivityFailureAction } from './types';
 
-/**
- * Golden replay fixtures: literal simulation inputs run through the production derivation
- * (`buildSimulationInput`) and pinned as inline snapshots. An output-identical engine change
- * leaves every snapshot untouched; a deliberate simVersion bump regenerates them via
- * `bun test -u` and the diff is reviewed like any code change. Inputs are literals, never
- * factories — every field here determines the pinned stream.
- */
-
 test('it replays a completed attempt to an identical checkpoint stream', async () => {
   const content: EncounterContent = {
     contentVersion: '1',
@@ -536,14 +528,6 @@ test('it replays a failed attempt to an identical checkpoint stream', async () =
   `);
 });
 
-/**
- * This seed/difficulty/level combination's wave lands two enemies' attacks on the exact same
- * tick, and the first one applied kills the avatar before the second's damage roll draws from
- * the rng — the scenario `create-event-sorter.ts`'s executor-assigned sequence exists to order
- * deterministically. Reordering that tick's application changes how many draws the run consumes,
- * so this fixture's `nextSeed` pins the executor's schedule-order tie-break at the replay level,
- * not just the unit level.
- */
 test('it replays a same-tick multi-enemy avatar-death stream to an identical checkpoint stream', async () => {
   const content: EncounterContent = {
     contentVersion: '1',
@@ -1831,12 +1815,6 @@ test('it replays a multi-clear stream to an identical checkpoint stream', async 
   `);
 });
 
-/**
- * Every replay path must consume the stamped seed identically: the single-attempt runner and the
- * checkpoint-capturing driver are separate orchestrations of the same engine, so their streams for
- * one input must match checkpoint-for-checkpoint. Chunked-advance equivalence is pinned separately
- * beside the driver.
- */
 test('it produces one identical checkpoint stream across the attempt and driver paths', async () => {
   const content: EncounterContent = {
     contentVersion: '1',

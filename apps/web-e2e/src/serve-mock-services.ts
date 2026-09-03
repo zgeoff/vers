@@ -13,13 +13,6 @@ import { userRouter } from '@vers/mock-services/user';
 import { verificationRouter } from '@vers/mock-services/verification';
 import type { ServiceName } from '@vers/service-auth';
 
-/**
- * Serves the stateful mock backends over real HTTP, one listener per service on the same origins
- * the production server's `SERVICE_URLS` defaults resolve, so `server.mjs` needs no env
- * repointing. The vite-dev mock plugin hosts these same routers in-process; this entrypoint
- * exists for runs against the built artifact, which can host no mock backend. Requests
- * round-trip oRPC's real wire protocol; a procedure a router doesn't implement 404s.
- */
 const RPC_HANDLERS: Readonly<Record<ServiceName, RPCHandler<MockContext>>> = {
   activity: new RPCHandler(activityRouter),
   avatar: new RPCHandler(avatarRouter),
@@ -78,11 +71,6 @@ for (const service of SERVICES) {
   console.log(`mock ${service} listening on ${url.origin}`);
 }
 
-/**
- * Answers the e2e-only lookup a spec polls for the code the mock verification service generated,
- * since nothing else observes a mock code once `createVerification` stores it. Responds `{ code }`
- * for a stored `(target, type)` row, 404 otherwise — a spec still waiting on delivery.
- */
 function serveVerificationCode(request: Request): Response {
   const searchParams = new URL(request.url).searchParams;
 

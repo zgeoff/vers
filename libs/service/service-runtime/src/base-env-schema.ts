@@ -1,8 +1,5 @@
 import * as z from 'zod';
 
-/**
- * Environment variables every service validates at boot, before any service-specific ones.
- */
 export const baseEnvSchema = z.object({
   LOG_LEVEL: z
     .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace'])

@@ -28,50 +28,23 @@ export interface WorkerRuntime {
   readonly handleConnect: (event: MessageEvent) => void;
   readonly stop: () => void;
 
-  /**
-   * Upgrades an arbitrary structural port onto the runtime's router — the SharedWorker connect
-   * path's real port, or a web-locks demux's per-tab virtual one.
-   */
   readonly upgrade: (port: SupportedMessagePort, callContext: WorkerCallContext) => void;
 
-  /**
-   * Delegates to `stop`, so a test can acquire the runtime with `using` and have teardown run on
-   * scope exit. Declared as a readonly function-valued member rather than `extends Disposable`:
-   * the built-in interface declares a mutable method, which would make every parameter typed with
-   * this interface fail the readonly-parameter lint requirement.
-   */
+  // a readonly member rather than `extends Disposable`: the built-in interface declares a mutable
+  // method, which fails the readonly-parameter lint on every parameter typed with this interface
   readonly [Symbol.dispose]: () => void;
 }
 
 interface CreateWorkerRuntimeOptions {
-  /**
-   * Overrides the build's baked engine hash — a test's only way to pin the hash start calls
-   * send, since the production value reads from the bundler's env at module scope.
-   */
   readonly bundledEngineHash?: string;
 
-  /**
-   * Overrides the production same-origin proxy client — a test's only way to route the runtime's
-   * calls at a mocked backend, since the real client resolves its URL from `self.location.origin`.
-   */
   readonly client?: ActivityServiceClient;
 
-  /**
-   * The tick loop's clock, defaulting to `performance.now` — a test injects its own to collapse
-   * the loop's real-time pacing instead of waiting out simulated durations in real time.
-   */
   readonly now?: () => number;
 
   readonly timestep?: number;
 }
 
-/**
- * Owns one worker process's simulation, RPC router, and fixed-timestep tick loop. Production
- * wiring (`worker.ts`, `worker-election.ts`) constructs exactly one runtime per worker, holding
- * the one-simulation-per-worker invariant. The tick loop starts immediately at construction,
- * decoupled from any connection: the elected web-locks writer must tick even before any tab calls
- * in.
- */
 export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): WorkerRuntime {
   const timestep = options.timestep ?? SIMULATION_TIMESTEP_MS;
   const now = options.now ?? (() => performance.now());
@@ -97,10 +70,9 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
   // every boot would fire a spurious recovery.
   let connectivityOnline = true;
 
-  // Every procedure call and the self-triggered reconnect resync await this before running, so a
-  // relaunch-while-offline never plans against the enum's Abort default while the real cached
-  // preference is still in flight. A failed read falls back to that default rather than rejecting
-  // forever, which would strand every caller awaiting it.
+  // every procedure call and the reconnect resync await this, so a relaunch while offline never
+  // plans against the Abort default while the cached preference is still loading; a failed read
+  // falls back to that default rather than stranding every awaiting caller
   const failureActionSeeded = (async () => {
     try {
       const cached = await readFailureActionCache();
@@ -345,10 +317,9 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
   const stop = () => {
     stopped = true;
 
-    // the lifecycle actor itself keeps running rather than stopping here: a flow already queued
-    // behind an in-flight one must still get its turn and answer through its own entry check,
-    // which observes the now-permanently-aborted cancel signal and fails cleanly — stopping the
-    // actor would instead strand that queued flow's caller awaiting a deferred nothing settles
+    // the lifecycle actor keeps running: a flow queued behind an in-flight one must still get its
+    // turn and fail through its own entry check on the aborted cancel signal; stopping the actor
+    // would strand that caller awaiting a deferred nothing settles
     shutdownController.abort();
     self.removeEventListener('online', handleOnline);
     self.removeEventListener('offline', handleOffline);

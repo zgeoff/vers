@@ -9,9 +9,6 @@ interface GetAvatarProgressionDeps {
   readonly sendReplayWake: () => void;
 }
 
-/**
- * oRPC handler opts for the authed `getAvatarProgression` procedure.
- */
 interface GetAvatarProgressionOpts {
   readonly context: { readonly actingUserID: null | string };
   readonly errors: {
@@ -37,17 +34,6 @@ interface AvatarProgression {
   readonly xp: number;
 }
 
-/**
- * Returns an avatar's settled xp/level plus one pending entry per ended-but-unsettled activity —
- * a stopped, capped, quarantined, or parked activity whose verified cursor hasn't caught up to its
- * appended tail — and, while a run is live, how much of that run's xp the settled total already
- * carries, so a client overlaying the run's own running total never counts the settled part twice.
- * All three are read in one statement, so a single read always sees the same constant sum a
- * verifier apply moves a delta across: settlement never visibly jumps. A non-empty pending set
- * pokes the replay service, so a client polling this while showing "Settling…" is itself the retry
- * trigger for a poke a crash or deploy lost. Returns null when the avatar doesn't exist or isn't
- * owned by the acting user.
- */
 export async function getAvatarProgression(
   deps: GetAvatarProgressionDeps,
   opts: GetAvatarProgressionOpts,

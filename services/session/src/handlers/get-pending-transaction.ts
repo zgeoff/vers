@@ -3,17 +3,10 @@ import type { DB } from '@vers/db';
 import type { Kysely } from 'kysely';
 import { toPendingTransactionData } from './to-pending-transaction-data';
 
-/**
- * oRPC handler opts for the public `stepUp.getPendingTransaction` procedure.
- */
 interface GetPendingTransactionOpts {
   readonly input: { readonly id: string };
 }
 
-/**
- * Reads a pending step-up transaction without consuming it; an expired row is lazy-deleted and
- * reported as missing. Never touches `attempts` — only `recordFailedAttempt` does.
- */
 export async function getPendingTransaction(
   db: Kysely<DB>,
   opts: GetPendingTransactionOpts,

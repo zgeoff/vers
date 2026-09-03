@@ -1,9 +1,5 @@
 import { fromCallback } from 'xstate';
 
-/**
- * Bridges an external `AbortSignal` into the machine while `retrying` is active — sending
- * `SIGNAL_ABORTED` once, then detaching. Never sent at all when no signal was configured.
- */
 export const subscribeToShutdownAbort = fromCallback<
   { type: 'SIGNAL_ABORTED' },
   { readonly signal: AbortSignal | undefined }

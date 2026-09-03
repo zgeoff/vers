@@ -10,11 +10,6 @@ interface SwingBarProps {
   readonly tint: CastBarTint;
 }
 
-/**
- * The live swing timer for one actor: the fill charges toward the next attack and snaps back to
- * empty the instant it lands. Interpolated at display refresh so the ~20Hz simulation cadence
- * doesn't show through.
- */
 export function SwingBar(props: Readonly<SwingBarProps>) {
   const charge = useSwingCharge({
     attackSpeed: props.attackSpeed,

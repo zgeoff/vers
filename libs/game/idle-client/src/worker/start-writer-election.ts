@@ -18,12 +18,6 @@ interface StartWriterElectionOptions {
   readonly onElected: () => void;
 }
 
-/**
- * Races the writer lock and holds it for this worker's whole life: the granted callback never
- * settles, so the browser releases the lock only when the worker's tab dies, at which point the
- * next queued waiter is granted and promotes through this same path. Losers wait indefinitely —
- * no steal, no timeout, no retry.
- */
 export function startWriterElection(options: StartWriterElectionOptions): void {
   void (async () => {
     try {

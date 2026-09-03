@@ -13,12 +13,8 @@ const REPLAY_ENTRYPOINT = path.resolve(
 
 const IDLE_CORE_DIR = path.resolve(import.meta.dirname, '../../../libs/game/idle-core');
 
-/**
- * Hashes in a fresh bun process: Bun.build misreads store files belonging to
- * packages the invoking process has already imported, and the test preload
- * loads pg and faker before any test runs — so the build must not share a
- * process with this suite.
- */
+// hashes in a fresh bun process: Bun.build misreads store files of packages the invoking process
+// has already imported, and the test preload imports pg and faker before any test runs
 async function loadEngineHashInSubprocess(entrypoint?: string): Promise<string> {
   const script = `
     import { loadEngineHash } from ${JSON.stringify(LOAD_ENGINE_HASH_PATH)};
@@ -95,11 +91,6 @@ test('it changes the hash when the engine source changes', async () => {
   expect(before).not.toBe(after);
 });
 
-/**
- * Copies the real engine source tree into an mkdtemp dir and symlinks in its
- * already-resolved node_modules, so a build from the copy resolves the same
- * package specifiers as the real entrypoint without a workspace install.
- */
 async function createEngineSourceTempDir(): Promise<string> {
   const tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'idle-core-hash-'));
 

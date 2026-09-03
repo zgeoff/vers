@@ -12,10 +12,8 @@ import { buildRPCTestClient } from '@vers/test-utils';
 import { REVEAL_RADIUS, WORLD_COORD_MAX } from '@vers/worldmap-core';
 import { createActivityService } from '../create-activity-service';
 
-/**
- * `createContentVersion` opens its own `db.transaction()`, which can't nest under the default
- * rollback-on-dispose isolation — this suite runs against a real, committed schema clone instead.
- */
+// publishing content in-test opens its own interactive transaction, which the default
+// transaction-isolation handle can't nest — this suite runs against a real, committed schema clone
 async function setupTest() {
   const db = await createTestDB({ isolation: 'schema' });
 

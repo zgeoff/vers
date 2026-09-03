@@ -5,10 +5,8 @@ import { createWorkerSlice } from './create-worker-slice';
 import { useIdleStore } from './use-idle-store';
 
 test('it composes every slice into one store', () => {
-  // the worker slice's `writerAbortController` is a mutable instance, not compared by value —
-  // `advanceWriterGeneration` calls `.abort()` on whatever the current one is process-wide, so a
-  // fresh comparison instance never strict-equals it once any test anywhere has advanced a
-  // generation
+  // `writerAbortController` is a mutable instance: advancing a writer generation anywhere in the
+  // process aborts the current one, so a fresh comparison instance never strict-equals it
   const { writerAbortController: _initialController, ...initialWorkerFields } = createWorkerSlice();
 
   const { writerAbortController: _actualController, ...actualWorkerFields } =

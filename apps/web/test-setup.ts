@@ -51,13 +51,9 @@ registerWorldmapSceneMock();
 registerRespiteSceneMock();
 registerWorldMapNodeCodexSlotMock();
 
-// Imported dynamically, after `GlobalRegistrator.register()`: `@testing-library/react` reads
-// `document` at import time to decide whether to install its own auto-cleanup, and a static
-// import here would resolve before this module's own body (so before happy-dom's global
-// `document` exists) and silently skip it. Registered explicitly rather than relying on that
-// auto-cleanup regardless, since it only fires for whichever test file happens to import the
-// package first — every other file's renders would otherwise accumulate unremoved across its
-// own tests, `bun test` running every file's module graph in one process.
+// imported dynamically, after `GlobalRegistrator.register()`: `@testing-library/react` reads
+// `document` at import time to decide whether to install auto-cleanup, and a static import would
+// resolve before happy-dom exists. Auto-cleanup fires only for the first importer, hence explicit.
 const reactTestingLibrary = await import('@testing-library/react');
 
 afterEach(() => {

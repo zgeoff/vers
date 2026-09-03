@@ -12,11 +12,6 @@ interface CreateServiceTokenOptions {
   readonly privateKey: CryptoKey;
 }
 
-/**
- * Signs a short-lived s2s token carrying the shared claim vocabulary, for tests to send as
- * `Authorization: Bearer <token>`. `issuer` defaults to the edge identity most suites act as; it
- * lands in both `iss` and the `kid` verification resolves the key by.
- */
 export function createServiceToken(options: CreateServiceTokenOptions): Promise<string> {
   const issuer = options.issuer ?? 'app-web';
 

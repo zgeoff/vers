@@ -19,10 +19,7 @@ const SWEEP_ENV_SCHEMA = z.object({
 const env = SWEEP_ENV_SCHEMA.parse(process.env);
 const logger = createLogger({ level: env.LOG_LEVEL, name: 'service-email-sweep' });
 
-// this process never calls createService, so reporting needs its own start — the hourly
-// scheduled-machine entrypoint drains the queue to completion and exits, rather than running the
-// HTTP service, so a delivery a boot drain missed (the process was down when it was enqueued, and
-// no later request nudged it) still lands within the hour
+// this process never calls createService, so error reporting needs its own start
 await startErrorReporting(env.SENTRY_DSN);
 
 // the try/catch lives inside the span so a failure report still carries the run's trace id

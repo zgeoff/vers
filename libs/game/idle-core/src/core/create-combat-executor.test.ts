@@ -79,10 +79,9 @@ test('it processes a tick with a single scheduled event', () => {
 });
 
 test('it applies same-time enemy events in schedule order, not enemy array order', () => {
-  // scheduling the lethal hit first means the avatar dies before the weak enemy's event is
-  // handled, so that event's damage roll never draws from the rng; scheduling the weak hit first
-  // lets it draw before the avatar dies to the lethal hit — the two schedule orders must consume
-  // a different number of draws, even though both scenarios use the same enemy array order
+  // the lethal hit first kills the avatar before the weak enemy's damage roll draws from the rng;
+  // the weak hit first draws before the death, so the two schedule orders consume a different
+  // number of draws despite the same enemy array order
   const stateWhenLethalActsFirst = buildFinalRngState('lethal');
   const stateWhenWeakActsFirst = buildFinalRngState('weak');
 
@@ -101,11 +100,6 @@ test('it returns the expected combat executor state for a client app', () => {
   });
 });
 
-/**
- * Runs a two-enemy tick where one enemy's hit is lethal on its own and the other's isn't,
- * scheduling `firstToAct`'s attack event ahead of the other's, then returns the rng's final
- * state — letting a caller compare draw counts across schedule orders.
- */
 function buildFinalRngState(firstToAct: 'lethal' | 'weak'): string {
   const enemyDataLethal = createMockEnemyData({
     life: 100,

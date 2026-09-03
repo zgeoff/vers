@@ -32,11 +32,6 @@ export const INITIAL_RETRIEVAL_STATE: RetrievalState = {
   calls: 0,
 };
 
-/**
- * Plans the retrieval nudge for one tool call at `now`, threading the session's counters. The
- * nudge is advice, never a block: the caller injects it as context and lets the call run. A nudge
- * resets every counter and starts the cooldown, so at most one fires per cooldown window.
- */
 export function planRetrievalNudge(
   state: RetrievalState,
   call: RetrievalCall,

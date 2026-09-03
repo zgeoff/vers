@@ -3,11 +3,6 @@ interface BuildCSPHeaderValueOptions {
   readonly sentryOrigin: string | null;
 }
 
-/**
- * Builds the app's Content-Security-Policy directive string for one request's nonce. `connect-src`
- * additionally allows the error-ingest origin when one is configured — the browser posts error
- * envelopes directly to it.
- */
 export function buildCSPHeaderValue(options: BuildCSPHeaderValueOptions): string {
   const connectSrc = ["'self'", options.sentryOrigin].filter(
     (value): value is string => value !== null,

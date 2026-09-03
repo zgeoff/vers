@@ -4,11 +4,6 @@ import { avatarCollection } from './db/avatar-collection';
 import { userCollection } from './db/user-collection';
 import { DEMO_ACCOUNTS } from './demo-accounts';
 
-/**
- * Seeds the demo accounts into the mock store with no pre-existing session: every signed-in spec
- * establishes its own session through a real login round trip. Each account carrying an avatar
- * name gets one avatar so the shell's active-avatar gate admits it straight to the game.
- */
 export async function createDemoSeed(): Promise<void> {
   for (const account of DEMO_ACCOUNTS) {
     const userID = createId();

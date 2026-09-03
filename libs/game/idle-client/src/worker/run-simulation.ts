@@ -6,13 +6,6 @@ import { OFFLINE_CAP_WARNING_MS } from './offline-cap-warning-ms';
 import { pickPostTerminalAction } from './pick-post-terminal-action';
 import type { WorkerContext } from './types';
 
-/**
- * Advances the simulation one tick, submits any checkpoint it yields, and resolves what follows a
- * terminal one: stop on an aborted failure, halt at the boundary when the offline-progress budget
- * is spent — the simulation idles on its last state, and connected tabs learn via the cap-status
- * broadcast — or restart into the next attempt. Cap status is also broadcast while the remaining
- * budget is inside the warning window, so tabs can warn before the halt lands.
- */
 export async function runSimulation(
   context: WorkerContext,
   simulation: Simulation,

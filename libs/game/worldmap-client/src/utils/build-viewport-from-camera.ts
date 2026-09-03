@@ -20,21 +20,10 @@ const raycaster = new Raycaster();
 const cornerNDC = new Vector2();
 const hitPoint = new Vector3();
 
-/**
- * Extra cell of margin folded into every side, absorbing per-avatar jitter and the rounding a
- * fractional cell at the frustum's edge takes.
- */
 const CELL_PADDING = 1;
 const HEX_ROW_SPACING = HEX_SIZE * 1.5;
 const HEX_COLUMN_SPACING = HEX_SIZE * Math.sqrt(3);
 
-/**
- * Projects `camera`'s frustum corners onto the world's ground plane and converts the resulting
- * footprint to a cell-coordinate viewport, padded by one cell and clamped to the lattice's
- * encodable range. Returns null while any corner ray misses the ground — a camera that hasn't yet
- * been oriented to the isometric tilt (the frames between mount and the controls' first update)
- * has no ground footprint to report.
- */
 export function buildViewportFromCamera(camera: PerspectiveCamera): null | Viewport {
   let minCX = Infinity;
   let maxCX = -Infinity;

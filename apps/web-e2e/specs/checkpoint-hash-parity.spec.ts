@@ -14,11 +14,6 @@ const CANONICAL_JSON = JSON.stringify([
   'server-key',
 ]);
 
-/**
- * Every party on the checkpoint hash chain — service, verifier, browser client — must derive
- * byte-identical digests. This asserts the Node-context contract call and a real browser's
- * WebCrypto both derive the frozen digest from the same canonical bytes.
- */
 test('it derives the same frozen digest from the contract call and from browser WebCrypto', async ({
   page,
 }) => {

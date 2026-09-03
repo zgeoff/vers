@@ -12,11 +12,6 @@ import { ResetPasswordFormSchema } from './reset-password-form-schema';
 
 const INVALID_LINK_ERROR = 'This reset link is invalid or has expired.';
 
-/**
- * Runs the reset-password form's submission: honeypot then field validation, then applies the new
- * password against the emailed link's token and emails a password-changed notice. Signs the
- * caller out everywhere on success.
- */
 export async function resetPasswordHandler(
   formData: FormData,
 ): Promise<Response | SubmissionResult> {

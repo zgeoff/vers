@@ -23,10 +23,6 @@ import type {
   SimVersionProblemPayload,
 } from '../types';
 
-/**
- * The content loader and key and secret material an activity start admission derives its authoritative
- * encounter and stamps from.
- */
 interface AdmitActivityStartDeps {
   readonly keysServiceURL: string;
   readonly keyVersion: number;
@@ -36,9 +32,6 @@ interface AdmitActivityStartDeps {
   readonly secretVersion: number;
 }
 
-/**
- * The typed error constructors an activity start admission throws.
- */
 interface AdmitActivityStartErrors {
   readonly AVATAR_NOT_ACTIVE: (payload: AvatarNotActivePayload) => Error;
   readonly CHAIN_QUARANTINED: (payload: AdvanceBailPayload) => Error;
@@ -50,18 +43,6 @@ interface AdmitActivityStartErrors {
   readonly SIM_VERSION_UNKNOWN: (payload: SimVersionProblemPayload) => Error;
 }
 
-/**
- * Admits a client-submitted activity start — one the caller minted offline and the server has never
- * seen — validating it against server truth rather than trusting its payload. Every authoritative
- * input, the encounter node and the key and secret stamps, is derived server-side, and the client's
- * seed, versions, build snapshot, and start hash must reconcile with what the server derives. The
- * caller must confirm the acting user owns `activityStart.avatarID` before calling.
- *
- * Throws AVATAR_NOT_ACTIVE, CHAIN_QUARANTINED, NODE_UNKNOWN, NODE_NOT_REVEALED,
- * SIM_VERSION_UNKNOWN, or SIM_VERSION_EXPIRED for an activity start that fails a start gate;
- * CONFLICT when it anchors against a stale chain head; CHECKPOINT_INVALID when its build snapshot
- * or start hash disagree with the server's own derivation.
- */
 export async function admitActivityStart(
   deps: Readonly<AdmitActivityStartDeps>,
   trx: Kysely<DB>,

@@ -7,13 +7,6 @@ import { removeConfirmedCheckpoints } from './remove-confirmed-checkpoints';
 import { removeQueuedCheckpoints } from './remove-queued-checkpoints';
 import type { ActivityServiceClient } from './types';
 
-/**
- * The one invoked flush attempt's settled outcome, routing every `flushing` transition. Every
- * variant that reflects a server answer (`success`, `capped`, `terminal`, `session-evicted`,
- * `conflict`, `invalid`, `not-found`, `held-defined-error`) has already settled the local queue and
- * cursor and called its public callback by the time it resolves; `callback-failed` reports that a
- * settled outcome's own callback threw.
- */
 export type FlushOutcome =
   | { readonly appendedHead: number; readonly type: 'capped' }
   | { readonly appendedHead: number; readonly type: 'conflict' }
@@ -36,11 +29,6 @@ interface FlushAttemptInput {
   readonly client: Pick<ActivityServiceClient, 'trackActivityProgress'>;
   readonly expectedHead: number;
 
-  /**
-   * Ingests this activity's still-pending client-minted activity start, tried once against a
-   * `NOT_FOUND` answer before it discards the queue — undefined for a caller with no offline-first
-   * activity start to self-heal from, which keeps a `NOT_FOUND` an unconditional discard.
-   */
   readonly ingestActivityStart:
     | ((activityID: string) => Promise<IngestActivityStartOutcome>)
     | undefined;
@@ -52,13 +40,6 @@ interface FlushAttemptInput {
   readonly onServerContact: (() => void) | undefined;
 }
 
-/**
- * Runs one checkpoint batch delivery attempt end to end: the durable queue read, the oRPC call,
- * every queue/cursor settlement the response implies, and the response's public callback — all
- * awaited before this resolves, so a caller observing this attempt's outcome never races the next
- * one. Never rejects: a callback throwing after the server answered resolves as `callback-failed`
- * rather than propagating, so the machine can hold the batch without an unhandled rejection.
- */
 export const runCheckpointFlushAttempt = fromPromise<FlushOutcome, FlushAttemptInput>(
   async (args) => {
     const input = args.input;
@@ -156,10 +137,9 @@ export const runCheckpointFlushAttempt = fromPromise<FlushOutcome, FlushAttemptI
 
         const ingestOutcome = await input.ingestActivityStart(input.activityID);
 
-        // the server answered NOT_FOUND — a defined reply, so `onServerContact` fires — but the
-        // activity start cannot ingest yet: a transport failure, a session lapse, or an inactive
-        // avatar. Hold the queue for retry without feeding the transport-stall counter a genuinely
-        // unanswered flush owns.
+        // NOT_FOUND was a defined reply, so `onServerContact` fired, but the start cannot ingest
+        // yet; hold the queue for retry without feeding the stall counter a genuinely unanswered
+        // flush owns
         if (ingestOutcome === 'deferred') {
           return { type: 'held-defined-error' };
         }
@@ -170,10 +150,9 @@ export const runCheckpointFlushAttempt = fromPromise<FlushOutcome, FlushAttemptI
           return { type: 'not-found' };
         }
 
-        // ingested or absent: the row exists at head 0 server-side now — this device just minted
-        // it, or a concurrent drain minted and removed the pending copy — so retry the same batch
-        // once against the now-present row. A genuinely gone activity NOT_FOUNDs again and discards
-        // under the `retriedAfterIngest` guard, never ingesting twice.
+        // ingested or absent: the row now exists at head 0 server-side, so retry the same batch
+        // once; a genuinely gone activity NOT_FOUNDs again and discards under the guard, never
+        // ingesting twice
         retriedAfterIngest = true;
       }
     } catch (error) {

@@ -1,13 +1,6 @@
 import type { Kysely } from 'kysely';
 import { sql } from 'kysely';
 
-/**
- * Creates the `releases` table, one row per app rollout that passed its post-deploy probes.
- * `image` is the registry ref the rollout cut over to (tag form, deployable as-is), and
- * `image_digest` is the digest the fleet resolved it to — null when the fleet had no single
- * resolved image at record time. The newest row per app is the rollback target for that app's
- * next failed deploy.
- */
 export async function up(db: Kysely<unknown>): Promise<void> {
   await db.schema
     .createTable('releases')

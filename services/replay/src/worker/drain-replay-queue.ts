@@ -10,15 +10,8 @@ import type { ReplayWorkerDeps } from './types';
 
 let drainInFlight: Promise<number> | undefined;
 
-/**
- * Drains the replay queue to empty: claims and adjudicates one chain per `runReplayIteration` call
- * until an iteration reports nothing claimed, holding the caller's request open for the whole loop
- * — Fly's proxy treats the open connection as activity, keeping the machine up until there is
- * genuinely nothing left to verify. Concurrent calls on one machine collapse onto whichever drain is
- * already running and share its result; `FOR UPDATE SKIP LOCKED` already makes claiming safe under
- * real concurrency, so the guard only spares a redundant second loop scanning the same emptying
- * queue.
- */
+// the loop holds the caller's `/wake` request open until the queue is empty: Fly's proxy treats the
+// open connection as activity and keeps the machine up until there is nothing left to verify
 export async function drainReplayQueue(deps: Readonly<ReplayWorkerDeps>): Promise<number> {
   recordWake();
 

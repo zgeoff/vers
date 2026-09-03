@@ -6,14 +6,6 @@ import type { AppState } from './types';
 const WAKE_RETRIES = 19;
 const WAKE_DELAY_MS = 3000;
 
-/**
- * Proves a fully parked app can still serve: starts one machine and waits
- * for it to run with every health check passing, leaving re-parking to the
- * app's auto-stop policy. A healthy parked fleet and a crash-parked one are
- * indistinguishable in machine state and check output alone — only a
- * successful wake separates them. Apps with a running machine are skipped;
- * their health is asserted from fleet state directly.
- */
 export async function checkParkedApp(app: string, state: AppState): Promise<ReadonlyArray<string>> {
   if (state.machines.some((machine) => machine.state === 'started')) {
     return [];

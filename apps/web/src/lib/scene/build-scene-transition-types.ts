@@ -1,13 +1,6 @@
 import { isSceneSwap } from '@vers/game-rendering';
 import type { SceneState } from '@vers/game-rendering';
 
-/**
- * Classifies a scene-state change into router view-transition type names, composable so one
- * transition can carry more than one: `scene-swap` when the scene key changes, plus
- * `to-ambient`/`to-focus`/`to-hidden` (named for `next.presentation`) whenever presentation
- * changes, independent of a scene swap. Neither changing yields `same-scene` alone, covering
- * intra-scene param-only navigations.
- */
 export function buildSceneTransitionTypes(previous: SceneState, next: SceneState): Array<string> {
   const types: Array<string> = [];
 

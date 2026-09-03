@@ -19,9 +19,6 @@ const panelLabel = css({
   textTransform: 'uppercase',
 });
 
-/**
- * A labelled section within a screen: the label names the area and children carry its content.
- */
 export function ScreenPanel(props: Readonly<{ children?: ReactNode; label: string }>) {
   return (
     <section className={panel}>

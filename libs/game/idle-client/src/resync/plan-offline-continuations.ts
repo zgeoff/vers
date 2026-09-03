@@ -27,12 +27,6 @@ interface PlannedContinuation {
 interface PlanOfflineContinuationsOptions {
   readonly budgetMs: number;
 
-  /**
-   * Derives the engine's simulation input and avatar from a chain-position source — the real
-   * confirmed row for the gap's first attempt, a client-predicted one for every attempt after.
-   * Loads the pinned content document the source's `contentVersion` names, so it may need to
-   * fetch and cache it before resolving.
-   */
   readonly buildSimulationInput: (
     source: Readonly<SimulationInputSource>,
   ) => Promise<{ activity: ActivityInput; avatar: AvatarData }>;
@@ -45,22 +39,6 @@ export interface PlanOfflineContinuationsResult {
   readonly reason: 'aborted-on-failure' | 'budget-exhausted';
 }
 
-/**
- * Simulates an entire offline gap locally: no network call, no submitter. While budget remains
- * and the failure policy allows it, each further attempt's seed, client id, and predicted build
- * snapshot derive from the chain position alone, exactly as the server reproduces them when it
- * applies the catch-up.
- *
- * A failure under the abort policy stops planning after that continuation's own tail — the same
- * policy live play applies after a terminal checkpoint. The wire format still mints that
- * continuation's own fresh row, since every entry both closes a row and opens the next. The
- * caller stops that row back durably rather than attaching it, so nothing resumes automatically
- * and the row reads idle server-side, like an aborted online failure.
- *
- * A confirmed row whose reconstructed attempt already accounts for every checkpoint through its
- * own terminal — an empty remaining tail — resolves as no fast-forward at all rather than minting
- * a successor from nothing.
- */
 export async function planOfflineContinuations(
   options: Readonly<PlanOfflineContinuationsOptions>,
 ): Promise<PlanOfflineContinuationsResult> {
@@ -139,10 +117,8 @@ export async function planOfflineContinuations(
       unverifiedDeltaSum: 0,
     });
 
-    // Prediction depends on the single-active-run invariant: no other scope accrues unsettled xp
-    // during the gap, so the confirmed row's own snapshot is the correct baseline for every later
-    // attempt's fold, and the only sources this loop must add are the gap's own continuations as
-    // they close.
+    // no other scope accrues unsettled xp during the gap (single-active-run), so the confirmed
+    // row's snapshot is the baseline and the gap's own continuations are the only sources to add
     const optimistic = foldOptimisticBuild(baselineXP, localSources);
 
     const nextBuildSnapshot = {
@@ -203,12 +179,6 @@ interface OfflineOptimisticSource {
   readonly unverifiedDeltaSum: number;
 }
 
-/**
- * Maps a reconstructed attempt's tail onto the wire `CheckpointBatchEntry` shape, chaining each
- * entry's hash onto the row's own `lastHash` (or the previous entry's) exactly as a live
- * submission chains. `appendedHead` offsets the first entry's version for a row whose prefix is
- * already confirmed — the reconstruction's own tail-slicing point.
- */
 function buildTailEntries(
   cursor: Readonly<OfflineRowCursor>,
   appendedHead: number,

@@ -1,12 +1,6 @@
 import type { Kysely } from 'kysely';
 import { sql } from 'kysely';
 
-/**
- * Backfills `settled_xp` for an activity that settled a terminal checkpoint's xp while nothing
- * advanced the column. Its verified cursor already sits at its appended head, so the replay queue
- * never admits it again and no later segment records what it paid; a cursor rewound by hand would
- * then pay that total a second time. Idempotent — it touches only rows still at zero.
- */
 export async function up(db: Kysely<unknown>): Promise<void> {
   await sql`
     UPDATE activities
@@ -21,8 +15,4 @@ export async function up(db: Kysely<unknown>): Promise<void> {
   `.execute(db);
 }
 
-/**
- * The column's own migration owns dropping it; a value written here is indistinguishable from one
- * the verifier wrote, so there is nothing to reverse.
- */
 export async function down(): Promise<void> {}

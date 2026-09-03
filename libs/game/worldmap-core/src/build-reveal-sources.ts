@@ -3,15 +3,6 @@ import { ORIGIN_CELL, REVEAL_RADIUS } from './consts';
 import { findCellCoord } from './find-cell-coord';
 import type { RevealSource } from './types';
 
-/**
- * Builds the reveal sources a fog presentation projects from: one disc per addressable completed
- * node, plus the origin cell unconditionally — mirroring selectability, where the origin is always
- * available, so a fresh avatar sees its starting area instead of a fully fogged map. A completed id
- * that names no addressable cell contributes nothing, and a completed origin contributes no second
- * disc beside the unconditional one. A cell outside the Morton-packable range contributes no disc
- * either: packing bounds the reveal encoding, so a disc anchored past it could otherwise leak cells
- * back into the packable range from a source no reveal query can address.
- */
 export function buildRevealSources(
   completedNodeIDs: ReadonlySet<string>,
 ): ReadonlyArray<RevealSource> {

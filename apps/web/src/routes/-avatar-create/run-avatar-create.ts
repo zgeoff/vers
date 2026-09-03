@@ -7,9 +7,6 @@ import { logger } from '../../server/logger';
 import { AvatarCreateFormSchema } from './avatar-create-form-schema';
 import type { AvatarCreateResult } from './types';
 
-/**
- * A taken name reports a field error instead of the service's generic conflict message.
- */
 export async function runAvatarCreate(formData: FormData): Promise<AvatarCreateResult> {
   await requireAuth();
 

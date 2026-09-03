@@ -14,9 +14,6 @@ interface BuildAvatarRouterDeps {
   readonly db: Kysely<DB>;
 }
 
-/**
- * Assembles the avatar service's oRPC router, closing each handler over the shared db client.
- */
 export function buildAvatarRouter(deps: BuildAvatarRouterDeps) {
   const os = implement(avatarContract).$context<ServiceContext>();
 

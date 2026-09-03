@@ -9,11 +9,6 @@ import { setViewport } from '../state/set-viewport';
 import { setWorldRegion } from '../state/set-world-region';
 import { BiomeGround } from './biome-ground';
 
-/**
- * A single chunk's cell box — the smallest viewport `useFogViewport`'s chunk-alignment ever
- * produces, and the fastest a mounted `BiomeGround` reaches its first rendered mesh: one miss, one
- * progressive-build tick.
- */
 const ONE_CHUNK_VIEWPORT = { maxCX: CHUNK_SIZE - 1, maxCY: CHUNK_SIZE - 1, minCX: 0, minCY: 0 };
 
 test('it renders nothing until a seed and a viewport exist', async () => {
@@ -95,19 +90,12 @@ test('it drops a chunk mesh once a pan carries it out of view and streams in the
   expect(secondPlane).not.toBe(firstPlane);
 });
 
-/**
- * Duck-typed stand-in for `instanceof Mesh`: the test renderer constructs objects from a different
- * copy of three than this file imports, so an `instanceof` check never matches.
- */
+// duck-typed stand-in for `instanceof Mesh`: the test renderer constructs objects from a different
+// copy of three than this file imports, so `instanceof` never matches
 function isMesh(object: Object3D): object is Mesh {
   return 'isMesh' in object && object.isMesh === true;
 }
 
-/**
- * Structural view of the mesh material's TSL color node, narrowing only the mutable texture value
- * slot `BiomeGround` itself reads and writes — the same untyped-node boundary its own facade type
- * exists to cross, so the test reads the identical `DataTexture` the material actually samples.
- */
 interface ColorTextureNode {
   readonly value?: unknown;
 }

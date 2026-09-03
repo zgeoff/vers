@@ -1,9 +1,5 @@
 import type { ScheduledMachine, ScheduledMachineAction, ScheduledMachineState } from './types';
 
-/**
- * Diffs a target's declared scheduled machines against its existing ones,
- * matched by name.
- */
 export function planScheduledMachineActions(
   declarations: ReadonlyArray<ScheduledMachine>,
   image: string,

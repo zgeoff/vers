@@ -9,11 +9,7 @@ interface LockProbe {
   readonly pendingCount: number;
 }
 
-/**
- * Reads the origin's writer-lock state from a page. `navigator.locks.query()` sees locks held by
- * the page's dedicated workers, so this is the observable proof of which tab's worker won the
- * election.
- */
+// `navigator.locks.query()` from the page also reports locks held by the page's dedicated workers
 function readWriterLock(page: Page, lockName: string): Promise<LockProbe> {
   return page.evaluate(async (name) => {
     const state = await navigator.locks.query();
@@ -27,12 +23,6 @@ function readWriterLock(page: Page, lockName: string): Promise<LockProbe> {
   }, lockName);
 }
 
-/**
- * The fallback transport for browsers without SharedWorker: every tab spawns a dedicated worker,
- * the workers race the writer lock, and closing the writer's tab promotes the next waiter. Real
- * tab-death lock release is the one behaviour no in-process test can exercise — this spec is its
- * only coverage.
- */
 test('it elects one writer without SharedWorker and promotes a survivor when the writer tab closes', async ({
   context,
   page,

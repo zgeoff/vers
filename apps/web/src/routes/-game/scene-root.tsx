@@ -3,9 +3,6 @@ import { Scene } from '@vers/worldmap-client';
 import type { ReactNode } from 'react';
 import { RespiteScene } from './respite-scene';
 
-/**
- * The app's scene registry: renders the world matching the scene store's current key.
- */
 export function SceneRoot(): ReactNode {
   const scene = useSceneState((state) => state.scene);
 

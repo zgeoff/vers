@@ -5,13 +5,6 @@ import { sql } from 'kysely';
 import type { Kysely } from 'kysely';
 import invariant from 'tiny-invariant';
 
-/**
- * The total a new run's build snapshot stamps — the avatar's settled xp plus the unsettled xp of
- * every activity that ended and still awaits its verifier — beside the runs that xp came from. A
- * `parked` or `quarantined` activity is left out: both are holds with no path back to verification
- * on their own, so counting them would stamp xp that never settles into this run's snapshot and
- * every later one's.
- */
 export async function getOptimisticBuild(
   trx: Kysely<DB>,
   avatarID: string,

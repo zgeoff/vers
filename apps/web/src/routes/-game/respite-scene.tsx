@@ -22,10 +22,6 @@ const RespiteMaterial = extend(MeshBasicNodeMaterial);
 const blockColor = new Color(sceneColors.respiteBlock);
 const dummy = new Object3D();
 
-/**
- * The home city's placeholder scene: a ground plane and a handful of instanced blocks standing in
- * for buildings.
- */
 export function RespiteScene() {
   const blocksRef = useRef<InstancedMesh | null>(null);
 

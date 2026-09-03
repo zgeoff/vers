@@ -7,19 +7,6 @@ import { submitStopIntent } from './submit-stop-intent';
 import type { FlowSignals, StartActivityInput, WorkerContext } from './types';
 import type { StartStatus } from './worker-contract';
 
-/**
- * Begins a run entirely inside the worker, resolving the single-active-run invariant locally rather
- * than by round-tripping the server: a request naming the avatar, scope, and simulation already
- * live here answers `attached` without minting anything; any other request mints a fresh local row
- * (`buildActivityStart`) and installs it, stopping a genuinely running live run back first only
- * once the mint has succeeded — a mint that fails leaves the current run untouched rather than
- * stranding the worker with no live run and a stale stopped one. The minted row is persisted
- * durably before it installs, so a crash between mint and install still leaves a recoverable
- * activity start. `token` is this call's own supersession token, re-checked after every await — a
- * fresher call can land while this flow runs, and a superseded flow answers `failed`, leaving its
- * minted row to the fresher flow's own recovery. A stop landing mid-start stops the minted row back
- * durably. An abort settles as `failed` without a fault report.
- */
 export async function runStartFlow(
   context: WorkerContext,
   input: Readonly<StartActivityInput>,
@@ -60,10 +47,8 @@ export async function runStartFlow(
   }
 
   if (running !== null) {
-    // silences the old simulation's ticking before the new row installs —
-    // `simulation.startActivity` auto-stops a live generator on its own, but only once this flow
-    // reaches it, and every await between here and there is a window the old run would otherwise
-    // keep advancing in
+    // `simulation.startActivity` auto-stops a live generator, but only once this flow reaches it;
+    // every await before then is a window the old run would keep advancing in
     context.getSimulation().stopActivity();
 
     // submitStopIntent flushes the row's earned checkpoints before the stop lands, so they reach

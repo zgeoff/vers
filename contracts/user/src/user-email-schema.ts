@@ -1,8 +1,5 @@
 import * as z from 'zod';
 
-/**
- * A user's email address; normalized to lowercase since users can type it in any case.
- */
 export const UserEmailSchema = z
   .email({
     error: (issue) => (issue.input === undefined ? 'Email is required' : 'Email is invalid'),

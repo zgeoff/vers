@@ -27,18 +27,7 @@ import { TERMINAL_CHECKPOINT_TYPES } from '../replay/types';
 import { createActivityRow } from './create-activity-row';
 import { createChainRow } from './create-chain-row';
 
-/**
- * The chain scope id every honest fixture activity starts on unless the caller overrides it: a real
- * cell coordinate whose difficulty is 1, so sealed and legacy fixtures stamp the same difficulty
- * and stay byte-comparable.
- */
 const DEFAULT_SCOPE_ID = '1_0';
-
-/**
- * The content version a fixture stamps and publishes when the caller passes neither a document nor
- * a version — the same version the suites' shared setup publishes, so a default fixture and its
- * suite agree on one document.
- */
 const DEFAULT_CONTENT_VERSION = '2';
 
 interface HonestCheckpointRow {
@@ -59,10 +48,6 @@ interface HonestActivityFixture {
   readonly chain: Selectable<ActivityChains>;
   readonly checkpoints: ReadonlyArray<HonestCheckpointRow>;
 
-  /**
-   * The node exactly as this fixture authored it before insert, typed — callers assert loader
-   * output against it instead of re-shaping the row's untyped jsonb.
-   */
   readonly encounterNode: EncounterNode;
 
   readonly engineCheckpoints: ReadonlyArray<ActivityCheckpoint>;
@@ -74,12 +59,6 @@ interface CreateHonestActivityFixtureInput {
   readonly buildSnapshot?: { readonly level: number; readonly xp: number };
   readonly chain?: Readonly<Partial<Insertable<ActivityChains>>>;
 
-  /**
-   * First-clear grants to seed for the fixture's avatar before the row is built, so replay's
-   * reachability check finds the scope connected. Defaults to a node actually adjacent to a
-   * `world_map_node` chain's own scope under the avatar's seed; pass `[]` to build a fixture
-   * reachability rejects.
-   */
   readonly completedNodeIDs?: ReadonlyArray<string>;
 
   readonly contentVersion?: string;
@@ -92,22 +71,6 @@ interface CreateHonestActivityFixtureInput {
   readonly startChainIndex?: number;
 }
 
-/**
- * Builds and persists an honest activity by running the real engine — never a hand-crafted stream —
- * and hashing its output the same way the append path does, so the stored rows are byte-identical
- * to what an honest client would have submitted. The engine output is truncated at its first
- * terminal checkpoint: the append path ends an activity's append-ability on the first
- * `completed`/`failed` checkpoint it accepts, so a stored stream past that point is a shape the
- * server can never actually hold, however long a duration the engine ran for. `checkpoints` are the
- * stored rows a tamper test mutates; `engineCheckpoints` is the untouched (truncated) engine
- * output. `chainRow` activity starts this activity on an already-persisted chain instead of
- * creating a fresh one — a successor fixture's own way of sharing its predecessor's chain — and
- * defaults `startChainIndex` to that chain's own `appendedChainIndex`; pass both explicitly for a
- * successor seeded from a predecessor's tail rather than the chain's current appended anchor. Every
- * row is sealed: `secretRef`/`secretVersion` stamped and the encounter node's sealed fields derived
- * through the real content derivation over the mock keys backend's deterministic scope secret, so a
- * caller verifying through that same backend sees identical truth.
- */
 export async function createHonestActivityFixture(
   db: Kysely<DB>,
   input: Readonly<CreateHonestActivityFixtureInput> = {},
@@ -252,13 +215,6 @@ export async function createHonestActivityFixture(
   return { activity, chain, checkpoints, encounterNode, engineCheckpoints };
 }
 
-/**
- * The default reachability grant a `world_map_node` fixture needs so replay's target check finds
- * its scope connected: a node genuinely adjacent to it under this avatar's own seed, so the grant
- * holds regardless of how jitter placed the scope's neighbours. Falls back to the scope's own id
- * when the topology gives it no edge at all, and grants nothing for the origin (unconditionally
- * selectable) or a non-`world_map_node` scope (outside the reachability rule).
- */
 function resolveDefaultCompletedNodeIDs(
   userSeed: number,
   scopeType: string,
@@ -298,12 +254,6 @@ interface BuildFixtureEncounterNodeInput {
   readonly userSeed: number;
 }
 
-/**
- * Resolves the encounter node a fixture stamps: difficulty recomputed from the fixture's own
- * scope id, plus every sealed content field the real content derivation yields for the mock keys
- * backend's deterministic scope secret — the same truth a verifier reading through that backend
- * recomputes.
- */
 function buildFixtureEncounterNode(input: Readonly<BuildFixtureEncounterNodeInput>): EncounterNode {
   const coord = findCellCoord(input.scopeID);
 
@@ -317,10 +267,6 @@ function buildFixtureEncounterNode(input: Readonly<BuildFixtureEncounterNodeInpu
   };
 }
 
-/**
- * Cuts the engine's output at its first `completed`/`failed` checkpoint, inclusive — the shape a
- * stored stream is always found in, since the append path accepts nothing past a terminal.
- */
 function buildTerminalPrefix(
   checkpoints: ReadonlyArray<ActivityCheckpoint>,
 ): Array<ActivityCheckpoint> {
@@ -331,12 +277,6 @@ function buildTerminalPrefix(
   return terminalIndex === -1 ? [...checkpoints] : checkpoints.slice(0, terminalIndex + 1);
 }
 
-/**
- * Reproduces the append path's own hash chain over a fresh engine run: `chainIndex` counts from
- * the activity's own `startChainIndex`, the entropy-source tag is always `server-key`, and each
- * checkpoint's implicit `seed` is the prior checkpoint's `nextSeed` — every field the real append
- * path would have recomputed identically.
- */
 function buildHonestCheckpointRows(
   engineCheckpoints: ReadonlyArray<ActivityCheckpoint>,
   context: Readonly<HonestCheckpointContext>,

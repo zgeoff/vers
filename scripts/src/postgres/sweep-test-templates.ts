@@ -7,12 +7,6 @@ interface SweepTestTemplatesConfig {
   readonly branches: ReadonlyArray<string>;
 }
 
-/**
- * Drops the local test container's orphaned branch-scoped test-template
- * databases and returns their names, or `null` when the container isn't
- * reachable — a sweep is a no-op on a machine with no running test
- * container.
- */
 export async function sweepTestTemplates(
   config: Readonly<SweepTestTemplatesConfig>,
 ): Promise<Array<string> | null> {

@@ -3,9 +3,6 @@ import type { DB } from '@vers/db';
 import type { Kysely } from 'kysely';
 import type { EmptyErrorPayload } from '../types';
 
-/**
- * oRPC handler opts for the `resetPassword` procedure.
- */
 interface ResetPasswordOpts {
   readonly errors: {
     readonly INVALID_RESET_TOKEN: (payload: EmptyErrorPayload) => Error;
@@ -15,10 +12,6 @@ interface ResetPasswordOpts {
   readonly input: { readonly id: string; readonly password: string; readonly resetToken: string };
 }
 
-/**
- * Resets a user's password given a plaintext reset token whose sha256 hash matches the stored
- * value; atomically rehashes the password and signs the user out of every session.
- */
 export async function resetPassword(
   db: Kysely<DB>,
   opts: ResetPasswordOpts,

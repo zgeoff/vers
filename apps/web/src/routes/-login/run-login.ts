@@ -12,13 +12,6 @@ import { userClient } from '../../lib/rpc/clients/user-client';
 import { verificationClient } from '../../lib/rpc/clients/verification-client';
 import { LoginFormSchema } from './login-form-schema';
 
-/**
- * Runs the login form's submission: honeypot then field validation, a credential check, and — for
- * a caller with neither 2FA nor a competing live session — a completed sign-in. A 2FA-enabled
- * account or an already-live session ends in a redirect instead of a result, carrying just enough
- * verify-session state (the pending session's id) for the next step to complete it. A wrong
- * email or password reports a single form-level error, never which of the two was wrong.
- */
 export async function runLogin(formData: FormData): Promise<Response | SubmissionResult> {
   await requireAnonymous();
 

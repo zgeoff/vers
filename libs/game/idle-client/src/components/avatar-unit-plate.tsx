@@ -3,10 +3,6 @@ import type { AvatarSnapshot } from '@vers/idle-core';
 import { css } from '@vers/styled-system/css';
 import { SwingBar } from './swing-bar';
 
-/**
- * Barrier, aether, discipline, and status effects have no backing state yet; these placeholders let
- * the frame read at its full structure until the combat model carries them.
- */
 const STUB_DISCIPLINE = 'WARD · AEGIS DISCIPLINE';
 const STUB_BARRIER_FRACTION = 0.25;
 const STUB_AETHER = { max: 1600, value: 1024 };
@@ -84,12 +80,6 @@ interface AvatarUnitPlateProps {
   readonly displayName?: string;
 }
 
-/**
- * The player's frame: identity, the life/barrier/aether stack, the weapon swing timer, active
- * effects, and the ability bar. Life and the swing timer read real combat state; the rest render
- * fixed stubs. The simulation knows the avatar only by id, so `displayName` carries the
- * player-facing name; the sim-reported name is the fallback.
- */
 export function AvatarUnitPlate(props: Readonly<AvatarUnitPlateProps>) {
   const lastAttackTime = props.avatar.behaviours.avatar_weapon_attack?.lastAttackTime ?? 0;
 

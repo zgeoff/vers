@@ -28,9 +28,6 @@ const formStyles = css({
   width: '96',
 });
 
-/**
- * The reset-password page's client-interactive form: submits to the reset-password server function.
- */
 export function ResetPasswordForm(props: ResetPasswordFormProps) {
   const resetPasswordFn = useServerFn(resetPassword);
   const submission = useFormSubmit(props.action ?? resetPasswordFn, props.lastResult);

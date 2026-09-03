@@ -1,11 +1,6 @@
 import type { Kysely } from 'kysely';
 import { sql } from 'kysely';
 
-/**
- * Creates `activity_chains`, one row per (avatar, node) holding the genesis seed and the two
- * derivation anchors: `appended_*` is the source for the next activity's seed derivation,
- * `verified_*` is the settlement watermark it advances to once outcomes are confirmed.
- */
 export async function up(db: Kysely<unknown>): Promise<void> {
   await db.schema
     .createTable('activity_chains')

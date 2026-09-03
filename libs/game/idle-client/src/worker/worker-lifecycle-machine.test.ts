@@ -41,10 +41,6 @@ function collectBroadcasts(context: StubWorkerContext) {
   };
 }
 
-/**
- * Waits until the given avatar's resync is the machine's own active request — a requeued held
- * claim has landed and its invoked service has started, not merely accepted into the ticket.
- */
 async function waitForActiveResync(context: StubWorkerContext, avatarID: string): Promise<void> {
   await waitFor(() => {
     expect(context.getLifecycle().getSnapshot().context.currentRequest).toMatchObject({
@@ -54,11 +50,6 @@ async function waitForActiveResync(context: StubWorkerContext, avatarID: string)
   });
 }
 
-/**
- * Seeds the local caches a real start flow needs to mint a fresh row for the given avatar at
- * node `0_0` — the minimal setup `handleStartActivityMessage` needs to occupy the lifecycle
- * queue as a real flow, the way a test can otherwise only fake with an arbitrary body.
- */
 async function setupStartableNode(avatarID: string): Promise<void> {
   const seed = createMockNodeSeed({ avatarID, encounterNode: { difficulty: 1 }, nodeID: '0_0' });
 

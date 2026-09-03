@@ -17,9 +17,6 @@ const panel = css({
   padding: '6',
 });
 
-/**
- * Renders a static placeholder for a market listing's detail view.
- */
 export function MarketListingPanel(props: MarketListingPanelProps) {
   return (
     <section className={panel}>

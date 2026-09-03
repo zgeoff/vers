@@ -33,18 +33,6 @@ interface StartAttemptReport {
   readonly status: StartStatus;
 }
 
-/**
- * The world map node detail view: a spinner until the worker answers the requested start, then
- * the encounter, its auto-retry toggle, and its codex slot. The worker owns the whole start; the
- * panel awaits the call directly and renders its own outcome, so another tab's run never reads as
- * this one's. A failed start renders a retry action.
- *
- * Once the start goes live the panel navigates to the engagement screen, once per activity.
- *
- * While an offline catch-up is still fast-forwarding, the panel withholds its start call — the
- * lockout overlay above it covers the UI, but this keeps a mounted panel from auto-sending a
- * start of its own underneath it.
- */
 export function ExploreCurrentPanel(props: Readonly<ExploreCurrentPanelProps>) {
   const navigate = useNavigate();
   const idleWorkerHandle = useIdleWorkerHandle();
@@ -59,10 +47,9 @@ export function ExploreCurrentPanel(props: Readonly<ExploreCurrentPanelProps>) {
   const [attemptScopeID, setAttemptScopeID] = useState<string | undefined>(undefined);
   const attemptGeneration = useRef(writerGeneration);
 
-  // latched locally once the call resolves: the store holds only the latest broadcast state,
-  // never a start outcome, so this is the panel's only record of its own attempt — tagged with
-  // its scope, since a reply can land after the selection moved on and must not read as the new
-  // node's outcome
+  // latched locally once the call resolves: the store holds only the latest broadcast state, never
+  // a start outcome, so this is the panel's only record of its own attempt. Tagged with its scope:
+  // a reply can land after the selection moved on and must not read as the new node's outcome
   const [report, setReport] = useState<StartAttemptReport | undefined>(undefined);
 
   // the exploration commits when the encounter view opens for a node — independent of worker
@@ -169,10 +156,9 @@ export function ExploreCurrentPanel(props: Readonly<ExploreCurrentPanelProps>) {
     attemptScopeID === selectedNode?.id &&
     idleWorkerHandle.activity?.id === expectedActivityID;
 
-  // The engaged activity is latched in `@vers/idle-client`'s store rather than a component ref, so
-  // a remount (the browser back button, re-drilling the same node) that re-fires the start call
-  // and finds the same activity already live reads it as already engaged rather than bouncing the
-  // player back.
+  // the engaged activity is latched in the idle-client store rather than a component ref, so a
+  // remount (browser back, re-drilling the same node) that re-fires the start and finds the same
+  // activity already live reads it as engaged rather than bouncing the player back.
   useEffect(() => {
     if (!isActivityReady || expectedActivityID === engagedActivityID) {
       return;

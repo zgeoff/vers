@@ -11,9 +11,6 @@ interface BuildKeysRouterDeps {
   readonly scopeRoots: ScopeSecretRoots;
 }
 
-/**
- * Assembles the keys service's oRPC router, closing each handler over the parsed root secrets.
- */
 export function buildKeysRouter(deps: BuildKeysRouterDeps) {
   const os = implement(keysContract).$context<ServiceContext>();
 

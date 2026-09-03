@@ -1,10 +1,6 @@
 import type { Kysely } from 'kysely';
 import { sql } from 'kysely';
 
-/**
- * Creates the `avatar_class` enum and the `avatars` table, one row per
- * player-created avatar.
- */
 export async function up(db: Kysely<unknown>): Promise<void> {
   await db.schema.createType('avatar_class').asEnum(['brute', 'scoundrel', 'scholar']).execute();
 

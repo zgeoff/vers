@@ -7,9 +7,6 @@ interface AccountContentProps {
   readonly user: UserData;
 }
 
-/**
- * The account hub's read-only summary: profile fields plus current 2FA status.
- */
 export function AccountContent(props: AccountContentProps): ReactElement {
   return (
     <section>

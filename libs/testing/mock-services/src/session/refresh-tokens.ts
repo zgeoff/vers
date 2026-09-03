@@ -3,10 +3,6 @@ import { createTestAccessToken } from '../create-test-access-token';
 import * as db from '../db';
 import { os } from './os';
 
-/**
- * Rotates a session's refresh token, mirroring the session service's reuse detection: replaying
- * the token rotated away from (`previousRefreshToken`) revokes the whole session.
- */
 export const refreshTokens = os.refreshTokens.handler(async (opts) => {
   const session = db.sessionCollection.findFirst((q) => q.where({ id: opts.input.id }));
 

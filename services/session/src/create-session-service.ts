@@ -8,15 +8,9 @@ import { buildSessionRouter } from './build-router';
 import { envShape } from './env-shape';
 
 interface CreateSessionServiceConfig {
-  /**
-   * Injected only in tests, to run the service inside the test's own transaction.
-   */
   readonly db?: Kysely<DB>;
 }
 
-/**
- * The production entrypoint and tests both boot through this one shared config.
- */
 export function createSessionService(
   config: CreateSessionServiceConfig = {},
 ): Promise<Service<typeof envShape>> {

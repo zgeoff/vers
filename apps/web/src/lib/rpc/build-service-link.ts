@@ -13,13 +13,6 @@ import { makeBoundedFetch } from './make-bounded-fetch';
 import { SERVICE_URLS } from './service-urls';
 import type { ServiceLinkContext } from './types';
 
-/**
- * Builds one service's server-branch `RPCLink`: mints and attaches a short-lived s2s token for the
- * target service, bounds each outbound attempt to a single timeout, and retries the contract's
- * declared idempotent procedures on a transient failure. Callers invoke this only from inside a
- * `createIsomorphicFn().server()` branch — the contract reference, and everything it pulls in, must
- * never reach the browser bundle.
- */
 export function buildServiceLink(
   service: ServiceName,
   contract: AnyContractRouter,

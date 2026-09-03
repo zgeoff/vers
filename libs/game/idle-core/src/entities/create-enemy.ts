@@ -19,11 +19,6 @@ import { rollEnemyAttackDamage } from './utils/roll-enemy-attack-damage';
 
 const DEFAULT_BEHAVIOUR_FACTORIES = [createEnemyPrimaryAttackBehaviour];
 
-/**
- * `id` must be deterministic — it becomes an attack event's `source` and is matched back to the
- * enemy that owns it when the event is handled, so a random id would make replays diverge on
- * scheduling order.
- */
 export function createEnemy(id: string, data: EnemyData, ctx: SimulationContext): Enemy {
   let state = getInitialState(data);
 
@@ -131,10 +126,6 @@ function getInitialState(data: EnemyData): EnemyState {
   };
 }
 
-/**
- * Writes a behaviour's state into the serializable snapshot under its id, keeping the id and value
- * types aligned.
- */
 function updateBehaviourSnapshot<K extends BehaviourID>(
   state: EnemyBehaviourSnapshot,
   id: K,

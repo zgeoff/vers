@@ -6,23 +6,11 @@ import type { LatestActivityProgress, ResyncPlan } from './types';
 interface PlanResyncInput {
   readonly capMs?: number;
 
-  /**
-   * Whether this session may append to the activity's stream — it holds the writer (stamped or
-   * freshly claimed) or no writer is stamped. An active activity this session may not write
-   * resolves to `active-elsewhere`: attaching would only simulate progress the server rejects.
-   */
   readonly mayWrite: boolean;
 
   readonly progress: LatestActivityProgress;
 }
 
-/**
- * Decides what a resync snapshot warrants before any simulation runs. The offline gap is computed
- * entirely from server data — the server clock minus the last append (or the start, for a stream
- * that never appended) — so a skewed local clock can neither inflate nor starve the budget, and
- * the budget never exceeds the cap. A capped activity resolves to a rebase from its exact stop
- * index rather than trusting any locally derived cursor.
- */
 export function planResync(input: Readonly<PlanResyncInput>): ResyncPlan {
   const capMs = input.capMs ?? OFFLINE_PROGRESS_CAP_MS;
   const activity = input.progress.activity;

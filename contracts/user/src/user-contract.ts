@@ -10,9 +10,6 @@ const CreateUserConflictDataSchema = z.object({ field: z.enum(['email', 'usernam
 const UpdateEmailConflictDataSchema = z.object({ field: z.literal('email') });
 const UpdateUserConflictDataSchema = z.object({ field: z.literal('username') });
 
-/**
- * The user service's API: signup, credential checks, and profile mutation.
- */
 export const userContract = {
   changePassword: authedRoute
     .route({ method: 'POST', path: '/users/me/password', summary: "Change the caller's password" })

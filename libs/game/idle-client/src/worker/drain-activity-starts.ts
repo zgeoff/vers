@@ -8,20 +8,6 @@ import { writeLastStartedActivity } from '../submission/write-last-started-activ
 import { ingestAndBroadcastActivityStart } from './ingest-and-broadcast-activity-start';
 import type { WorkerContext } from './types';
 
-/**
- * Drains this avatar's reload-orphaned client-minted activity starts — an activity start whose live
- * simulation was lost to a worker reload, so nothing is registered to drive its checkpoint flush.
- * Delivers them in predecessor order, so the server always sees an activity start's predecessor
- * before the activity start itself and an absent predecessor means the predecessor was refused,
- * never merely late. Per row the ingest outcome decides the action: `ingested` announces the
- * activity to connected tabs and registers it so its durably queued checkpoints seed and flush;
- * `deferred` leaves the row for a later recovery; `undelivered` means the service never answered,
- * so the drain marks the connection down and stops rather than retrying every remaining row against
- * the same dead connection; `rejected` drops the row and, because a successor built on a refused
- * activity start can never verify, its whole dependent subtree. A row for a different avatar this device also owns is
- * left untouched — it drains on that avatar's own recovery, since minting its activity start needs
- * it as the active avatar.
- */
 export async function drainActivityStarts(context: WorkerContext, avatarID: string): Promise<void> {
   const allRows = await readAllActivityStarts();
 
@@ -81,11 +67,6 @@ export async function drainActivityStarts(context: WorkerContext, avatarID: stri
   await removeDroppedLastStarted(avatarID, dropped);
 }
 
-/**
- * Orders rows so a row whose predecessor is also in the set follows it. A cycle — only a malformed
- * or malicious set produces one — is broken by the visited guard, leaving its members in an
- * arbitrary order among themselves.
- */
 function sortByPredecessor(rows: ReadonlyArray<ActivityData>): Array<ActivityData> {
   const byID = new Map(rows.map((row) => [row.id, row]));
   const visited = new Set<string>();
@@ -116,19 +97,11 @@ function sortByPredecessor(rows: ReadonlyArray<ActivityData>): Array<ActivityDat
   return ordered;
 }
 
-/**
- * Removes an undelivered successor of a refused activity start — its pending row and queued
- * checkpoints — since it can never verify against a predecessor that does not exist.
- */
 async function removeUnverifiableStartRow(activityID: string): Promise<void> {
   await removeActivityStart(activityID);
   await removeQueuedCheckpoints(activityID);
 }
 
-/**
- * Removes the avatar's last-started record when it names a dropped activity start, so a later start
- * stamps no predecessor rather than one that will never exist.
- */
 async function removeDroppedLastStarted(
   avatarID: string,
   dropped: ReadonlySet<string>,

@@ -13,14 +13,6 @@ export interface CreateServiceTokenOptions {
   readonly privateKey: CryptoKey;
 }
 
-/**
- * Mints the s2s token every outbound service call carries. `issuer` is the minting service's own
- * identity: it becomes the `iss` claim and the protected header's `kid`, and the token only
- * verifies against the key registered for that issuer — sign with your own key, never another
- * minter's. `actingUserID` becomes the token's `sub` claim; omitting it mints a verified-anonymous
- * token instead. `actingSessionID` becomes the `sid` claim naming the caller's underlying session —
- * the writer identity activity appends are checked against; flows holding no live session omit it.
- */
 export function createServiceToken(options: Readonly<CreateServiceTokenOptions>): Promise<string> {
   const claims = {
     ...(options.actingUserID !== undefined && { sub: options.actingUserID }),

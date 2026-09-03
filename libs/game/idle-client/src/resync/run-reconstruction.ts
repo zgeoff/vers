@@ -3,11 +3,6 @@ import { ActivityCheckpointType, SIMULATION_TIMESTEP_MS, createSimulation } from
 import invariant from 'tiny-invariant';
 
 interface RunReconstructionOptions {
-  /**
-   * The confirmed checkpoint count to reconstruct up to. Callers only invoke reconstruction once
-   * this is at least 1 — an appendedHead of 0 has no confirmed tail to replay and attaches
-   * directly from the row's own start fields instead.
-   */
   readonly appendedHead: number;
   readonly activity: ActivityInput;
   readonly avatar: AvatarData;
@@ -18,14 +13,6 @@ type RunReconstructionResult =
   | { readonly divergence: true }
   | { readonly lastCheckpoint: ActivityCheckpoint; readonly simulation: Simulation };
 
-/**
- * Rebuilds a live simulation to the exact point the server has confirmed, by ticking a fresh
- * engine instance from the activity's own seed rather than trusting any client-persisted state —
- * the worker restart this resumes from has none. The returned simulation is left running at that
- * point, ready for the caller to keep ticking forward into unconfirmed territory. A local engine
- * that reaches its terminal checkpoint before matching the confirmed count can never reproduce the
- * rest of the server's stream, so that's reported as a divergence rather than a result to attach.
- */
 export function runReconstruction(
   options: Readonly<RunReconstructionOptions>,
 ): RunReconstructionResult {

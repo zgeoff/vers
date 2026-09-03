@@ -3,10 +3,6 @@ import { buildHeadingPattern } from './build-heading-pattern';
 import { collectScopePaths } from './collect-scope-paths';
 import type { Finding, IssueShape } from './types';
 
-/**
- * Labels for issues the dep-health sweep creates and manages itself; their bodies are generated
- * reports, so the shape rules don't apply.
- */
 const EXEMPT_LABELS = new Set(['dep-audit', 'dep-outdated']);
 
 const TYPE_LABELS = new Set([
@@ -21,21 +17,11 @@ const TYPE_LABELS = new Set([
   'spike',
 ]);
 
-/**
- * Title of the feature template's section for the mechanism its author expects to work. Scope is
- * the contract a reader can build against; this section is the guess a reader checks first.
- */
 const APPROACH_TITLE = 'Approach (unverified)';
 const TEMPLATE_DIR = '.github/ISSUE_TEMPLATE';
 const BUG_TEMPLATE = `${TEMPLATE_DIR}/bug.md`;
 const FEATURE_TEMPLATE = `${TEMPLATE_DIR}/feature.md`;
 
-/**
- * Evaluates an issue against the repository's issue-shape rules, returning one actionable finding
- * per violation and an empty array when the issue is clean. Requirements vary by type — an upkeep
- * issue carries a trigger line and no milestone, where other types require area and type labels and
- * their template's body sections.
- */
 export function checkIssue(issue: IssueShape): Array<Finding> {
   if (issue.labels.some((label) => EXEMPT_LABELS.has(label))) {
     return [];

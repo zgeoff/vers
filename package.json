@@ -95,7 +95,7 @@
       "@zgeoff/bun-test-extended": "0.0.3",
       "@zgeoff/dbhub": "0.23.4",
       "@zgeoff/format-codemod": "0.0.8",
-      "@zgeoff/oxlint-config": "0.0.6",
+      "@zgeoff/oxlint-config": "0.1.0",
       "autoprefixer": "10.5.2",
       "babel-plugin-react-compiler": "1.0.0",
       "camera-controls": "3.1.2",

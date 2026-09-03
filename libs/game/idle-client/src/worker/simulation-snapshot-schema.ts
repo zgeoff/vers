@@ -106,11 +106,6 @@ const combatExecutorSnapshotSchema = z
   })
   .readonly();
 
-/**
- * A live simulation's rendered state, as broadcast to every connected tab. `activity`, `avatar`,
- * and `combat` are absent only before a run's first install — a worker that has ever started one
- * always carries all three thereafter.
- */
 export const simulationSnapshotSchema = z
   .object({
     activity: activitySnapshotSchema.exactOptional(),

@@ -4,11 +4,6 @@ import type { CatchUpContinuation } from '../../catch-up-continuation-schema';
 import type { CheckpointBatchEntry } from '../../checkpoint-batch-entry-schema';
 
 type CreateMockCatchUpContinuationOverrides = Partial<CatchUpContinuation> & {
-  /**
-   * How many checkpoint entries the default `checkpoints` array carries. Ignored when
-   * `checkpoints` is itself overridden. Default 1, clamped to at least 1 — the schema requires a
-   * non-empty tail, so a caller-supplied 0 would otherwise build a contract-invalid continuation.
-   */
   readonly checkpointCount?: number;
 };
 

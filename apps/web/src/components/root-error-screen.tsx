@@ -4,11 +4,6 @@ import { Button, Heading, Text } from '@vers/design-system';
 import { css } from '@vers/styled-system/css';
 import { useEffect } from 'react';
 
-/**
- * Root route error boundary: the last-resort screen for a render or loader error nothing below
- * caught. Reports the error once on mount — render errors never pass through the query caches, so
- * this is their only reporting point.
- */
 export function RootErrorScreen(props: ErrorComponentProps) {
   useEffect(() => {
     Sentry.captureException(props.error);

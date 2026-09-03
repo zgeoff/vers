@@ -6,9 +6,6 @@ import { recordDeriveRejection } from '../metrics/record-derive-rejection';
 import type { RollKeyRoots } from '../parse-roll-key-roots';
 import type { UnknownKeyVersionPayload } from '../types';
 
-/**
- * oRPC handler opts for the `deriveAvatarKey` procedure.
- */
 interface DeriveAvatarKeyOpts {
   readonly context: { readonly logger: ServiceContext['logger'] };
   readonly errors: {
@@ -21,10 +18,6 @@ interface DeriveAvatarKeyOpts {
   };
 }
 
-/**
- * Derives an avatar's roll key from its population's custodied root secret, logging one audit line
- * per successful derivation. Never logs key or root material.
- */
 export function deriveAvatarKey(roots: RollKeyRoots, opts: DeriveAvatarKeyOpts): { key: string } {
   const root = roots[opts.input.population].roots.get(opts.input.keyVersion);
 

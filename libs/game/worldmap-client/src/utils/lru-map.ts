@@ -1,16 +1,3 @@
-/**
- * A `Map` bounded to `capacity` entries, evicting in least-recently-used order: `set` past the
- * capacity removes the map's oldest entry, and a `get` hit re-inserts its entry so recently read
- * keys survive eviction. A stored `undefined` value is indistinguishable from a miss and gets no
- * recency refresh.
- *
- * An optional `onEvict` callback fires for every held entry a caller loses access to through this
- * map's own operations — a capacity eviction, an explicit `delete`, or a `clear` — so a map holding
- * resources that must be released (a GPU texture, a subscription) never leaks one. A stored
- * `undefined` is not a held entry (it reads as a miss and takes no recency slot), so it never
- * evicts. It never fires for an overwrite: `set` on an existing key replaces its value without
- * severing the map's hold on the key, so the caller decides whether the old value needs releasing.
- */
 export class LRUMap<K, V> extends Map<K, V> {
   readonly #capacity: number;
 

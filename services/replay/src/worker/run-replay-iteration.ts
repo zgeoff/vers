@@ -8,14 +8,6 @@ import type { ReplayTarget } from '../types';
 import { runReplayTarget } from './run-replay-target';
 import type { ReplayIterationOutcome, ReplayWorkerDeps } from './types';
 
-/**
- * Runs one claim-replay-adjudicate cycle: opens a transaction, claims the highest-priority avatar's
- * next-in-order activity with replay work (`idle` when none), loads its target, and adjudicates
- * it. A target that throws mid-adjudication rolls the whole attempt back — including the claim —
- * and counts one failed attempt against the activity in a fresh statement outside the rolled-back
- * transaction, so a poisoned transaction never blocks the bookkeeping that quarantines a repeatedly
- * failing stream.
- */
 export async function runReplayIteration(
   deps: Readonly<ReplayWorkerDeps>,
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- a mutable cache handle whose remove/get/set are its whole point; no readonly form is useful
@@ -48,13 +40,6 @@ export async function runReplayIteration(
   }
 }
 
-/**
- * The cache mutation a matched, non-terminal segment intends is never applied by the target
- * adjudication itself — it returns the mutation it intends, and this applies it only once the
- * iteration's transaction has actually committed, so a commit failure never leaves the cache
- * reporting progress the database never persisted. The pending mutation is an internal handoff
- * between that adjudication and this caller, so it never reaches the returned outcome.
- */
 function applyPendingCacheEffect(
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- a mutable cache handle whose remove/get/set are its whole point; no readonly form is useful
   cache: ReplayCache,

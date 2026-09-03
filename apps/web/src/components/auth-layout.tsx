@@ -13,9 +13,6 @@ const layout = css({
   width: 'full',
 });
 
-/**
- * The shared frame for pre-auth and account pages: a horizontally centred, width-bounded column.
- */
 export function AuthLayout(props: Readonly<{ children: ReactNode }>) {
   return <main className={layout}>{props.children}</main>;
 }

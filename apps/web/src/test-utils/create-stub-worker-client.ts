@@ -19,11 +19,6 @@ const DEFAULT_INITIALIZE_RESULT = {
 
 const DEFAULT_START_STATUS: StartStatus = { kind: 'failed' };
 
-/**
- * A duck-typed stand-in for the worker RPC client: every procedure is a tracked mock resolving a
- * reasonable default, so a test can assert on calls and override `startActivity` for its own
- * outcome without standing up a real transport.
- */
 export function createStubWorkerClient(
   options: Readonly<StubWorkerClientOptions> = {},
 ): WorkerClient {

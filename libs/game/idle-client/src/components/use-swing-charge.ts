@@ -8,12 +8,6 @@ interface SwingChargeInput {
   readonly lastAttackTime: number;
 }
 
-/**
- * A swing's charge (0–100) interpolated at display refresh from the last combat snapshot. The
- * simulation reports elapsed at ~20Hz; extrapolating from wall-clock between reports lets the fill
- * reach full and hold there for the frames until the reset snapshot lands, instead of topping out
- * at whichever fraction the last tick happened to sample.
- */
 export function useSwingCharge(input: Readonly<SwingChargeInput>): number {
   const elapsed = useCombatElapsed();
   const [charge, setCharge] = useState(0);

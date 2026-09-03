@@ -11,11 +11,6 @@ interface CreateViewerConfig {
   readonly user?: Partial<Insertable<Users>>;
 }
 
-/**
- * A persisted, s2s-authenticated acting user: a token and the user it was minted for. Passing
- * `sessionID` mints the token's `sid` claim — the writer identity activity appends are checked
- * against; omitting it mints a session-less token, matching flows that hold no live session.
- */
 export async function createViewer(
   config: Readonly<CreateViewerConfig>,
 ): Promise<{ token: string; user: Selectable<Users> }> {

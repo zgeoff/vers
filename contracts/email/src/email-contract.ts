@@ -7,10 +7,6 @@ import { SendPasswordChangedInputSchema } from './send-password-changed-input-sc
 import { SendResetPasswordInputSchema } from './send-reset-password-input-schema';
 import { SendWelcomeInputSchema } from './send-welcome-input-schema';
 
-/**
- * The email service's API: one procedure per transactional template, each enqueuing a delivery job
- * and returning its id rather than sending inline.
- */
 export const emailContract = {
   sendChangeEmailNotification: publicRoute
     .route({
@@ -57,10 +53,6 @@ export const emailContract = {
     .input(SendResetPasswordInputSchema)
     .output(EmailJobOutputSchema),
 
-  /**
-   * Despite the name, this template carries the signup onboarding OTP: `verificationCode` and
-   * `verificationURL` are the props it renders.
-   */
   sendWelcome: publicRoute
     .route({
       method: 'POST',

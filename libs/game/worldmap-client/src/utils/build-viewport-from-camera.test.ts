@@ -60,10 +60,8 @@ test('it keeps every chunk-aligned viewport within the zoom limit under the reve
   const radius = ZOOM_MAX_DISTANCE / Math.SQRT2;
   const aspect = 32 / 9;
 
-  // Chunks are 16 cells across and a cell spans roughly 17 scene units, so sweeping a 300-unit
-  // offset in each ground-plane direction covers a full chunk period — every phase the frustum
-  // footprint can land at against the chunk grid, which is what determines how much the aligned
-  // viewport the reveal query actually receives grows past the raw footprint.
+  // a chunk is 16 cells and a cell spans about 17 scene units, so a 300-unit sweep on each axis
+  // covers a full chunk period: every phase the footprint can land at against the chunk grid
   const offsets = Array.from({ length: 151 }, (_, index) => index * 2);
 
   const cellCounts = offsets.flatMap((offsetX) =>

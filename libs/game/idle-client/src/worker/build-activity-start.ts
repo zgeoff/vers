@@ -13,11 +13,6 @@ import type { WorkerContext } from './types';
 interface BuildActivityStartInput {
   readonly avatarID: string;
 
-  /**
-   * The predecessor to stamp, for a caller that holds the terminal row this start succeeds. Absent
-   * for a caller with no such row, which falls back to the avatar's durably tracked last-started
-   * activity.
-   */
   readonly predecessorActivityID?: string | undefined;
 
   readonly scopeID: string;
@@ -25,19 +20,6 @@ interface BuildActivityStartInput {
   readonly startKey: string;
 }
 
-/**
- * Synthesizes the full `ActivityData` row for an activity start, entirely from this device's
- * cached inputs — `null` when any of them is missing, since no local mint is possible without every
- * one: the scope's cached node seed (never revealed on this device, or revealed for a different
- * avatar), the account's cached crypto stamps, or the build's bundled engine hash (undefined in a
- * dev build, which has no local fallback). The start anchors at the node's cached anchor rather
- * than its genesis, so a revisited node's start continues from where play actually left off.
- * `buildSnapshot` is a client-side optimistic guess — a hint the server re-authors and
- * exact-match-rejects at submission time, never a value this mint depends on for its own
- * correctness. `predecessorActivityID` stamps the caller's own value when it holds one, else the
- * avatar's durably tracked last-started activity, null for this device's first start for the
- * avatar. `playedAt` stamps the wall clock now.
- */
 export async function buildActivityStart(
   context: WorkerContext,
   input: Readonly<BuildActivityStartInput>,
@@ -106,26 +88,12 @@ export async function buildActivityStart(
   };
 }
 
-/**
- * The avatar's durably tracked last-started activity id, `null` when this device has never started
- * one for it — the avatar's own first-ever activity, or an avatar this device has no history for.
- */
 async function readPredecessorActivityID(avatarID: string): Promise<null | string> {
   const record = await readLastStartedActivity(avatarID);
 
   return record?.lastActivityID ?? null;
 }
 
-/**
- * The client's own optimistic prediction of the avatar's total xp for a fresh start. The last
- * activity this worker installed for the avatar is the baseline it folds from without a network
- * round trip, so a fresh avatar — or a switch to one this worker has no history for — starts at
- * zero. The just-stopped run's own locally queued checkpoints fold on top of that baseline, so a
- * switch reflects the xp already earned rather than the prior run's stale start snapshot. Sources
- * this worker cannot yet reconstruct — other unsettled runs the server holds but this device never
- * simulated — land with the submission plumbing tracked separately; the snapshot stays a hint the
- * server re-authors regardless.
- */
 async function buildOptimisticBuildSnapshot(
   context: WorkerContext,
   avatarID: string,
@@ -141,12 +109,6 @@ async function buildOptimisticBuildSnapshot(
   return { level: buildLevelFromXP(optimistic.totalXP), xp: optimistic.totalXP };
 }
 
-/**
- * Folds the previous run's locally queued checkpoints into the single optimistic source a switch
- * borrows from: a terminal tail carries the run's final total, and the summed per-checkpoint deltas
- * carry a non-terminal run's xp earned past its own start baseline. An empty queue — a run that has
- * submitted nothing locally — contributes no source, leaving the baseline unchanged.
- */
 async function buildPreviousRunSources(
   activity: Readonly<ActivityData>,
 ): Promise<Array<OptimisticBuildSource>> {
@@ -171,11 +133,6 @@ async function buildPreviousRunSources(
 
 const CheckpointXPSchema = z.object({ rewards: z.object({ xp: z.number() }) });
 
-/**
- * The `rewards.xp` a queued checkpoint's untrusted payload carries, zero when it declares none —
- * appended data is untrusted, so a payload missing the field contributes nothing rather than
- * throwing.
- */
 function parseCheckpointXP(payload: unknown): number {
   const parsed = CheckpointXPSchema.safeParse(payload);
 

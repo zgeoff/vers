@@ -3,10 +3,6 @@ import type { Insertable, Kysely, Selectable } from 'kysely';
 import { createAvatarRow } from './create-avatar-row';
 import { createMockActivityRow } from './factories/create-mock-activity-row';
 
-/**
- * Persists an activity head row sourced from the factory's defaults, creating an owning avatar
- * when `avatarId` is omitted — the head row's foreign key needs a real one.
- */
 export async function createActivityRow(
   db: Kysely<DB>,
   overrides: Readonly<Partial<Insertable<Activities>>> = {},

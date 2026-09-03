@@ -2,9 +2,6 @@ import type { VerificationType } from '@vers/contract-verification';
 import * as db from '../db';
 import { os } from './os';
 
-/**
- * Verification types whose code is consumed once and the row deleted on a successful verify.
- */
 const DELETING_TYPES: ReadonlySet<VerificationType> = new Set(['change-email', 'onboarding']);
 
 export const verifyCode = os.verifyCode.handler((opts) => {

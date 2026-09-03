@@ -1,11 +1,6 @@
 import { Text } from '@vers/design-system';
 import { useOfflineCapStatus } from '@vers/idle-client';
 
-/**
- * Warns a present-but-disconnected player as the offline-progress budget drains: no modal can
- * mask a live simulation, so the warning sits beside the encounter, switching to the paused
- * notice once the worker halts at an encounter boundary.
- */
 export function ApproachingCapWarning() {
   const offlineCapStatus = useOfflineCapStatus();
 

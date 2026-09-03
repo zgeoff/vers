@@ -1,10 +1,6 @@
 import invariant from 'tiny-invariant';
 import type { AffixConstraints, AffixDef, AffixPool } from './types';
 
-/**
- * Applies a constraint set to an affix table so equal inputs always yield an identical pool.
- * Forced affixes bypass the filters; only their existence in the table is asserted.
- */
 export function buildAffixPool(
   affixes: ReadonlyArray<AffixDef>,
   occupiedGroupIDs: ReadonlySet<string>,

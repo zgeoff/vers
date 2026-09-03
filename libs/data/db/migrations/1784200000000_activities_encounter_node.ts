@@ -1,11 +1,6 @@
 import type { Kysely } from 'kysely';
 import { sql } from 'kysely';
 
-/**
- * Adds `encounter_node`: the server-resolved encounter params an activity freezes at start,
- * backfilled to the placeholder `{"difficulty": 1}` every existing row actually played against
- * before this column existed.
- */
 export async function up(db: Kysely<unknown>): Promise<void> {
   await db.schema
     .alterTable('activities')

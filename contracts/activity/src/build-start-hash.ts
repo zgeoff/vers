@@ -14,14 +14,6 @@ interface BuildStartHashInput {
   readonly simVersion: string;
 }
 
-/**
- * The checkpoint stream's first hash, seeding `last_hash` before the first checkpoint links onto
- * it. The exact canonical field order is frozen and enforced by a golden test. The activity's own
- * id carries no cryptographic role and is excluded: `(seed, versions, encounterNode)` already
- * uniquely identifies the stream, and the stream never needs the id to reproduce it — the client
- * computes every continuation's seed and hash from the appended seed chain alone, online and
- * offline alike.
- */
 export function buildStartHash(input: Readonly<BuildStartHashInput>): string {
   const canonical = JSON.stringify([
     input.seed,

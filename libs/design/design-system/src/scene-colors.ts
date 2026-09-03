@@ -1,8 +1,5 @@
-/**
- * Colors for the three.js scene lane, which cannot consume Panda tokens: materials take raw
- * color values, so every 3D color lives here instead of inline in scene code. Values are
- * hand-derived from the semantic token palette and must move with any re-skin.
- */
+// three.js materials take raw color values, not Panda tokens, so every 3D color lives here; the
+// values are hand-derived from the semantic token palette and move with any re-skin.
 export const sceneColors = {
   avatarPlaceholder: '#D8A56E',
   biome1: '#4b5a4e',

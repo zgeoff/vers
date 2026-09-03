@@ -26,34 +26,19 @@ export interface WorldMapEncounterActivityInput extends IActivityInput {
 
 export type ActivityInput = WorldMapEncounterActivityInput;
 
-/**
- * An open keyed map of signed reward deltas. Future keys are added as optional and never
- * repurposed, so an older reader that doesn't know a key can ignore it safely.
- */
 export interface ActivityRewards {
   readonly xp: number;
 }
 
-/**
- * A level crossing recorded on the checkpoint (or activity attempt) that caused it.
- */
 export interface ActivityLevelUp {
   readonly from: number;
   readonly to: number;
 }
 
-/**
- * The rolling context a reward slot carries, resolved from replay-verified trajectory facts — the
- * inputs the minted content is deterministic in, never an outcome.
- */
 export interface RewardSlotContext {
   readonly nodeTier: number;
 }
 
-/**
- * A rolled-reward coordinate slot earned within a checkpoint. `ordinal` is 0-based within this
- * checkpoint's own slot list, in canonical kill order — not a running total across the activity.
- */
 export interface RewardSlot {
   readonly context: RewardSlotContext;
   readonly ordinal: number;

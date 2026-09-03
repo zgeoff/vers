@@ -24,10 +24,6 @@ process.on('SIGTERM', () => {
   void handleSIGTERM();
 });
 
-/**
- * Self-heals a poke that a crash or deploy lost by draining whatever the queue already holds, without
- * ever delaying `listen()` or crashing boot on a drain failure.
- */
 async function runBootDrain(): Promise<void> {
   // the try/catch lives inside the trace scope so a boot-drain failure report still carries its
   // trace id
@@ -63,12 +59,6 @@ async function handleSIGTERM(): Promise<void> {
   });
 }
 
-/**
- * Stops accepting HTTP — which lets an in-flight `/wake` drain finish before the connection closes
- * — then flushes telemetry while the pool is still open, before closing the pool this process
- * opened itself. Each step runs even if an earlier one rejects, so a failure never strands
- * telemetry timers live or the pool open.
- */
 async function stopGracefully(): Promise<void> {
   try {
     await service.app.stop();

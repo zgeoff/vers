@@ -16,11 +16,6 @@ import invariant from 'tiny-invariant';
 import { recordRevealQuery } from '../metrics/record-reveal-query';
 import type { EmptyErrorPayload, MissingSessionPayload } from '../types';
 
-/**
- * Db handle plus the memoized content-document loader and keys dispatch a reveal query reads its
- * scope secret over — the dependencies an activity start closes over, minus the key version and
- * signing inputs a read never stamps.
- */
 interface GetRevealedNodesDeps {
   readonly db: Kysely<DB>;
   readonly keysServiceURL: string;
@@ -30,9 +25,6 @@ interface GetRevealedNodesDeps {
   readonly secretVersion: number;
 }
 
-/**
- * oRPC handler opts for the authed `getRevealedNodes` procedure.
- */
 interface GetRevealedNodesOpts {
   readonly context: { readonly actingUserID: null | string };
   readonly errors: {
@@ -61,25 +53,6 @@ interface GetRevealedNodesResult {
   readonly nodes: Array<RevealedNode>;
 }
 
-/**
- * Returns the disclosed content for every cell the avatar's verified first-clear grants reveal
- * inside the requested viewport. The revealed region is a projection, never stored state: it is the
- * union of the reveal disc around each of the avatar's `first_clear`-kind grants and around the
- * origin, recomputed fresh on every call from the grants table alone. The origin disc is
- * unconditional, so an avatar that has cleared nothing still sees its starting area. Only cells
- * that union actually covers can appear in the response; the viewport bounds what is returned,
- * never what is eligible to be revealed.
- *
- * A grant key that names no addressable world-map cell contributes nothing rather than failing the
- * query — a grant kind sharing the table with an unrelated future feature, or a row written before
- * the coordinate bounds existed. An addressable key outside the Morton-packable coordinate range
- * still counts as completed but contributes no reveal source: packing bounds only the reveal
- * encoding, never completion. The activity start gate evaluates the raw grant keys instead, where
- * a non-addressable key is inert — it can never equal a start target that resolved to a cell, and
- * selectability expansion skips it — so the two sets agree on every node selectability can
- * observe. `completedNodeIDs` carries every addressable grant key regardless of viewport, the set
- * the client mirrors that gate against — only `nodes` is bounded by the viewport.
- */
 export async function getRevealedNodes(
   deps: GetRevealedNodesDeps,
   opts: GetRevealedNodesOpts,

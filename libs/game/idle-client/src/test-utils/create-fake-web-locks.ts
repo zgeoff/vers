@@ -17,27 +17,11 @@ interface FakeLockManager {
 }
 
 export interface FakeWebLocks {
-  /**
-   * Releases the named lock's current holder regardless of its callback's state and grants the
-   * next queued waiter — the in-process stand-in for the browser releasing a lock when its
-   * holder's context dies.
-   */
   readonly advanceLockQueue: (name: string) => void;
 
-  /**
-   * The `navigator.locks`-shaped face handed to the code under test. Grants synchronously when
-   * the name is free; otherwise queues first-in-first-out. A granted callback's returned promise
-   * releases the lock when it settles, exactly like the real API.
-   */
   readonly locks: FakeLockManager;
 }
 
-/**
- * An in-process Web Locks fake with the grant semantics writer election depends on: synchronous
- * grant when free, first-in-first-out waiting, release on callback settlement, and forced release
- * for simulating holder death. Each test constructs its own instance, so no cross-test sweep is
- * needed.
- */
 export function createFakeWebLocks(): FakeWebLocks {
   const holders = new Map<string, QueuedRequest>();
   const queues = new Map<string, Array<QueuedRequest>>();

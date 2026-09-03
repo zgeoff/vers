@@ -7,11 +7,6 @@ type ParseContentDocumentSourceResult =
   | { readonly kind: 'invalid-json'; readonly message: string }
   | { readonly kind: 'invalid-document'; readonly message: string };
 
-/**
- * Parses a content-publish CLI argument's file contents: valid JSON that also satisfies
- * `ContentDocumentSchema` is `ok`; either failure names its own reason so the caller prints one
- * clear message and exits, never a stack trace.
- */
 export function parseContentDocumentSource(text: string): ParseContentDocumentSourceResult {
   let parsed: unknown;
 

@@ -5,9 +5,6 @@ import { recordWriterTakeover } from '../metrics/record-writer-takeover';
 import type { EmptyErrorPayload, MissingSessionPayload } from '../types';
 import { toActivityData } from './to-activity-data';
 
-/**
- * oRPC handler opts for the authed `resumeActivity` procedure.
- */
 interface ResumeActivityOpts {
   readonly context: {
     readonly actingSessionID: null | string;
@@ -20,13 +17,6 @@ interface ResumeActivityOpts {
   readonly input: { readonly activityID: string };
 }
 
-/**
- * Takes over as an active activity's writer session: after this call the acting session is the
- * only one whose appends are accepted, and the displaced writer's in-flight submissions
- * fail fatally. Taking the writer is the whole of resuming server-side — the caller rebuilds its
- * simulation from the verified anchor and appends from the current head. A foreign, missing, or
- * terminal activity all fail the same NOT_FOUND.
- */
 export async function resumeActivity(
   db: Kysely<DB>,
   opts: ResumeActivityOpts,

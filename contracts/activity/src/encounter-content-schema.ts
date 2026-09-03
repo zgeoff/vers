@@ -45,11 +45,6 @@ const EncounterTuningSchema = z
     path: ['waveSizeMax'],
   });
 
-/**
- * A published encounter content version: archetype, pool, and tuning data pinned together. Every
- * pool entry's `archetypeID` must name a member of `archetypes`, and archetype and pool ids are
- * unique — this schema gates publishing, so incoherent content fails here rather than at replay.
- */
 export const EncounterContentSchema = z
   .object({
     contentVersion: z.string(),

@@ -17,11 +17,8 @@ import { createActivityService } from '../create-activity-service';
 import { server } from '../mocks/server';
 import { createMockCheckpointBatch } from '../test-utils/factories/create-mock-checkpoint-batch';
 
-/**
- * `trackActivityProgress` opens its own `db.transaction()` for the head-row compare-and-swap, which
- * can't nest under the default rollback-on-dispose isolation — this suite runs against a real,
- * committed schema clone instead.
- */
+// the handlers these tests drive open their own interactive transaction, which the default
+// transaction-isolation handle can't nest — this suite runs against a real, committed schema clone
 async function setupTest() {
   const db = await createTestDB({ isolation: 'schema' });
 

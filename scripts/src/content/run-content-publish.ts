@@ -7,10 +7,6 @@ interface RunContentPublishInput {
   readonly filePath: string;
 }
 
-/**
- * Reads a content document off disk, validates it, and publishes it as a new content version.
- * Throws a plain `Error` naming the parse failure on invalid input.
- */
 export async function runContentPublish(
   input: Readonly<RunContentPublishInput>,
 ): Promise<{ contentVersion: string }> {

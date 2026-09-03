@@ -3,12 +3,6 @@ import { execa } from 'execa';
 import { createDevDB as createDevDBClone } from '../postgres/create-dev-db';
 import { readVaultDSN } from '../postgres/read-vault-dsn';
 
-/**
- * Runs as the dev source's init_command: dbhub invokes it before the first
- * connection of a session, with cwd inherited from the worktree. stdout is
- * captured and relayed to dbhub's stderr log. Idempotent: a no-op when the
- * database already exists.
- */
 async function createDevDB() {
   const dbName = process.argv.at(2);
 

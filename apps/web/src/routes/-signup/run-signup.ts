@@ -10,12 +10,6 @@ import { userClient } from '../../lib/rpc/clients/user-client';
 import { verificationClient } from '../../lib/rpc/clients/verification-client';
 import { SignupFormSchema } from './signup-form-schema';
 
-/**
- * Runs the signup form's submission: honeypot then field validation, then either an onboarding
- * verification code emailed to a caller with no account yet, or an existing-account notice for
- * one that already has an account. Always redirects to verify-otp, so the response never
- * distinguishes which email was sent.
- */
 export async function runSignup(formData: FormData): Promise<Response | SubmissionResult> {
   await requireAnonymous();
 

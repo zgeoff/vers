@@ -1,7 +1,3 @@
-/**
- * Encodes xoroshiro128+'s four 32-bit state words into a 32-character hex string, one
- * 8-character chunk per word in the order given.
- */
 export function encodeState(words: ReadonlyArray<number>): string {
   return words
     .map((word) => {

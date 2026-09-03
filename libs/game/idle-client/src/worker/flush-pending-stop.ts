@@ -5,18 +5,6 @@ import type { WorkerContext } from './types';
 
 export type PendingStopFlushOutcome = 'delivered' | 'none' | 'undelivered';
 
-/**
- * Attempts delivery of the held stop intent: the stopped activity's queued checkpoints flush
- * first — the server rejects appends onto a stopped row, so delivering the stop before the queue
- * drains would discard progress the player already earned — then the targeted server stop lands.
- * `NOT_FOUND` counts as delivered: the row is gone or was never this caller's, and no retry can
- * change that. `SESSION_EVICTED` counts as delivered too, with the intent removed: another
- * session took the activity's writer after this stop was raised, and the player's continuing the
- * run elsewhere supersedes it — retrying would kill the run the new writer is driving. A
- * transport failure or any other rejection leaves the intent held for the next attempt and
- * reports `undelivered`, which callers about to plan a resync must treat as a hard gate —
- * planning against a row the server still reads as active would revive the stopped run.
- */
 export async function flushPendingStop(context: WorkerContext): Promise<PendingStopFlushOutcome> {
   const intent = await readPendingStopIntent();
 

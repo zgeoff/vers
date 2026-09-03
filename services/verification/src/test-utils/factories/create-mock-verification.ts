@@ -3,9 +3,6 @@ import { createId } from '@paralleldrive/cuid2';
 import type { Verifications } from '@vers/db';
 import type { Insertable } from 'kysely';
 
-/**
- * A plain, unpersisted verification row with faker-generated defaults for a TOTP onboarding code.
- */
 export function createMockVerification(
   overrides: Partial<Insertable<Verifications>> = {},
 ): Insertable<Verifications> {

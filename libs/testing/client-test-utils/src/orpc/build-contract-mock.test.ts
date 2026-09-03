@@ -25,9 +25,6 @@ const secretContract = {
     .output(z.object({ value: z.string() })),
 };
 
-/**
- * Reads the acting user from a bearer token forwarded on the `Authorization` header.
- */
 function resolveContext(request: Request): SecretContext {
   const header = request.headers.get('authorization') ?? '';
   const actingUserID = header.startsWith('Bearer ') ? header.slice('Bearer '.length) : null;

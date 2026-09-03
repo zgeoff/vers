@@ -24,11 +24,8 @@ import { createHonestActivityFixture } from '../test-utils/create-honest-activit
 import { createRemoteReplayProvider } from '../test-utils/create-remote-replay-provider';
 import { runReplayIteration } from './run-replay-iteration';
 
-/**
- * The worker's own `db.transaction()` per iteration commits mid-op across several calls in one
- * test — a rolled-back transaction can't nest that, so this suite runs against a real, committed
- * schema clone.
- */
+// the worker's own `db.transaction()` per iteration commits mid-test across several calls, which
+// a rolled-back transaction cannot nest, so this suite runs against a committed clone
 async function setupTest() {
   const db = await createTestDB({ isolation: 'schema' });
 

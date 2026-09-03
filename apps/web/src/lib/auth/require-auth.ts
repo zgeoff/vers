@@ -9,11 +9,6 @@ interface AuthResult {
   readonly sessionID: string;
 }
 
-/**
- * Gates a route to signed-in callers. A missing or partial auth session ends in a forced logout
- * (clearing whatever partial cookie state remains) redirecting back to `/login` with a `redirect`
- * query param pointing at the page the caller was trying to reach.
- */
 export async function requireAuth(): Promise<AuthResult> {
   const session = await getAuthSession();
 

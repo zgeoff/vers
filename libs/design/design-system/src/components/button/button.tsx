@@ -140,11 +140,6 @@ type ButtonProps = RecipeVariantProps<typeof button> & {
   css?: Styles;
 };
 
-/**
- * A closed union over the elements the button renders as, not an open polymorphic generic: each
- * arm carries its own element's full attribute set, so anchor-only attributes exist exactly when
- * `as: 'a'` is passed and the compiler checks every prop with no casts.
- */
 export type Props = ButtonProps &
   (
     | ({ as: 'a' } & Omit<React.ComponentPropsWithoutRef<'a'>, keyof ButtonProps>)

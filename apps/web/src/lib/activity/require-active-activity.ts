@@ -4,11 +4,6 @@ import { findActiveAvatar } from '../avatar/find-active-avatar';
 import { activityClient } from '../rpc/clients/activity-client';
 import { avatarClient } from '../rpc/clients/avatar-client';
 
-/**
- * The per-screen gate for the engagement view: redirects a caller with no active avatar to the
- * create sheet or roster, and a caller with no running activity back to explore, so the screen
- * can assume a live activity to render.
- */
 export const requireActiveActivity = createServerFn({ method: 'GET' }).handler(async () => {
   const roster = await avatarClient.getAvatars({});
 

@@ -1,7 +1,3 @@
-/**
- * Redirects any path (other than the root) with a trailing slash to its slash-free form,
- * preserving the query string.
- */
 export function removeTrailingSlash(
   request: Request,
   next: () => Promise<Response>,

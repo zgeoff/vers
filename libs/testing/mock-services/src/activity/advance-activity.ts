@@ -5,23 +5,6 @@ import { upsertActiveAvatar } from '../avatar/upsert-active-avatar';
 import * as db from '../db';
 import { os } from './os';
 
-/**
- * Bulk mint-and-appends a catch-up, mirroring the real service's per-continuation transitions at
- * the same simplification level `trackActivityProgress`'s mock accepts: each entry appends its tail
- * onto the currently active row, closes it by flipping to `stopped`, and mints the entry's own id
- * as the next active row using its own hint `buildSnapshot` — the mock has no settled-xp state to
- * author it from. A non-active target row converges on an already-minted continuation the same way
- * the real endpoint's mint dedup does — same avatar, `startKey`, and scope — rather than rejecting
- * a lost-response retry outright. Hash-chain validation, the offline-progress cap, and writer
- * eviction need state the mock doesn't track — those rejections are per-test overrides.
- *
- * When `activityID` names no row and `activityStart` is present, mints it from `activityStart`'s
- * submitted fields wholesale — no server derivation — after checking avatar ownership and the
- * active-avatar selection. The encounter and key/secret stamps the real endpoint derives default in
- * the collection, since `activityStart` doesn't carry them. The node-selectable, sim-version, and
- * live-anchor gates need state this mock doesn't track — those rejections are per-test overrides
- * too.
- */
 export const advanceActivity = os.advanceActivity.handler(async (opts) => {
   const actingUserID = opts.context.actingUserID;
 
@@ -143,22 +126,11 @@ interface EmptyErrorPayload {
   readonly data: Record<never, never>;
 }
 
-/**
- * The typed error constructors the mock's activity start admission throws.
- */
 interface AdmitActivityStartErrors {
   readonly AVATAR_NOT_ACTIVE: (payload: AdmitActivityStartAvatarNotActivePayload) => Error;
   readonly NOT_FOUND: (payload: EmptyErrorPayload) => Error;
 }
 
-/**
- * Mints `activityStart` as a fresh active row at `activityID`, checking ownership of `activity
- * start.avatarID` and the account's active-avatar selection, then storing every submitted field
- * wholesale rather than re-deriving any. The encounter and key/secret stamps `activityStart`
- * doesn't carry default in the collection, and `lastHash` anchors to `activityStart.startHash`.
- * The node-selectable, sim-version, and live-anchor gates the real endpoint runs need state this
- * mock doesn't track.
- */
 async function admitActivityStartRow(
   activityID: string,
   activityStart: OfflineActivityStartSubmission | undefined,
@@ -220,23 +192,12 @@ async function admitActivityStartRow(
   return admitted;
 }
 
-/**
- * The provenance a mint dedup checks a candidate row against — the same fields the real
- * endpoint's own dedup requires beyond ownership alone.
- */
 interface MintProvenance {
   readonly avatarID: string;
   readonly scopeID: string;
   readonly scopeType: string;
 }
 
-/**
- * Resolves a continuation whose target row is no longer active: an existing row at the
- * continuation's id converges only when it is genuinely the continuation this request is
- * retrying — owned by the same avatar, minted from the same `startKey`, and scoped to the same
- * chain — mirroring the real endpoint's mint-id dedup. Anything short of that full match,
- * including no row at all, is `undefined`.
- */
 function resolveMintIDCollision(
   pinned: Readonly<MintProvenance>,
   continuation: Readonly<CatchUpContinuation>,

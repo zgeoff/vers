@@ -13,10 +13,6 @@ interface ReadAvatarRollKeyDeps {
   readonly keysServiceURL: string;
   readonly privateKey: CryptoKey;
 
-  /**
-   * Bounds the keys dispatch, so a hung keys service fails the mint rather than stalling the worker
-   * indefinitely.
-   */
   readonly timeoutMs?: number;
 }
 
@@ -25,10 +21,6 @@ interface ReadAvatarRollKeyInput {
   readonly keyVersion: number;
 }
 
-/**
- * Reads an avatar's roll key from the keys service over real s2s auth, under `'trade'` (server)
- * custody — the sole population until self-found verification lands.
- */
 export async function readAvatarRollKey(
   deps: Readonly<ReadAvatarRollKeyDeps>,
   input: Readonly<ReadAvatarRollKeyInput>,

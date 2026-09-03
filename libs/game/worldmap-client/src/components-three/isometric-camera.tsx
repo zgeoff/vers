@@ -34,34 +34,11 @@ CameraControlsImpl.install({
   THREE: { Box3, Matrix4, Quaternion, Raycaster, Sphere, Spherical, Vector2, Vector3, Vector4 },
 });
 
-/**
- * Fixed spherical offset reproducing the rig's original isometric viewing angle: `POLAR_ANGLE` is
- * the tilt down from directly overhead, `AZIMUTH_ANGLE` the turn around the vertical axis.
- */
 const POLAR_ANGLE = -CAMERA_ROTATION_X;
 const AZIMUTH_ANGLE = CAMERA_ROTATION_Y;
-
-/**
- * Starting dolly distance: the closest allowed, so a fresh session opens focused before the player
- * zooms out to explore.
- */
 const INITIAL_DISTANCE = ZOOM_MIN_DISTANCE;
-
-/**
- * Ground covered per pixel of drag, tuned by feel in playtesting against zero boundary friction —
- * the library default reads sluggish against a map this large.
- */
 const TRUCK_SPEED = 4;
-
-/**
- * Seconds of easing after input stops. Playtest-tunable on feel: lower reads planted, higher
- * reads floaty — with the boundary clamp absorbing no drag motion, glide is tamed here alone.
- */
 const SMOOTH_TIME = 0.12;
-
-/**
- * Seconds of easing while a drag is live. Playtest-tunable on feel alongside the release easing.
- */
 const DRAGGING_SMOOTH_TIME = 0.08;
 
 const WORLD_CORNER_CELLS: ReadonlyArray<readonly [number, number]> = [
@@ -79,21 +56,8 @@ const worldCornerZs = WORLD_CORNER_CELLS.map(
   ([cx, cy]) => -toHexPosition(cx, cy)[1] * NODE_POSITION_SCALING_FACTOR,
 );
 
-/**
- * Scene-unit margin folded into every side of the world boundary: node placement jitters each cell
- * center by up to the per-axis jitter bound, so without the pad a rim node jittered outward would
- * sit past the boundary and the ease-back would fight the camera trying to center it.
- */
 const JITTER_MARGIN = JITTER * NODE_POSITION_SCALING_FACTOR;
 
-/**
- * The box the camera's pan target eases back from at the world's rim: the scene-unit footprint of
- * every cell coordinate the lattice can encode, padded by the jitter margin so every jittered node
- * position stays reachable, flattened onto the ground plane. A zero-height box also draws the
- * target back toward the ground whenever a screen-space drag on the tilted camera would otherwise
- * push it off-plane, which keeps the frustum's ground-plane footprint (and so the viewport it
- * drives) tied to the visible zoom range instead of drifting with altitude.
- */
 const WORLD_BOUNDARY = new Box3(
   new Vector3(
     Math.min(...worldCornerXs) - JITTER_MARGIN,
@@ -109,12 +73,6 @@ const WORLD_BOUNDARY = new Box3(
 
 const targetScratch = new Vector3();
 
-/**
- * A perspective camera fixed at an isometric tilt and turn; a true orthographic isometric
- * projection reads poorly against the current world layout. `camera-controls` drives pan (truck)
- * and zoom (dolly) input, with rotation pinned to the fixed angle above and panning clamped at
- * the world boundary. Selecting a node glides the camera to center it.
- */
 export function IsometricCamera() {
   const cameraRef = useRef<PerspectiveCameraImpl | null>(null);
   const controlsRef = useRef<CameraControlsImpl | null>(null);
@@ -152,10 +110,9 @@ export function IsometricCamera() {
     controls.maxPolarAngle = POLAR_ANGLE;
     controls.minAzimuthAngle = AZIMUTH_ANGLE;
     controls.maxAzimuthAngle = AZIMUTH_ANGLE;
-    // boundaryFriction stays 0: the zero-height boundary clamps the target on every drag, and the
-    // library's friction ease divides by the dot of the drag offset and the clamp delta — a hard
-    // flick can make that dot vanish while the delta doesn't, and the division poisons the whole
-    // camera transform with NaN, blanking the canvas with nothing thrown
+    // boundaryFriction stays 0: camera-controls' friction ease divides by the dot of the drag
+    // offset and the clamp delta, a hard flick against the boundary can make that dot vanish, and
+    // the NaN poisons the whole camera transform, blanking the canvas with nothing thrown
     controls.truckSpeed = TRUCK_SPEED;
     controls.smoothTime = SMOOTH_TIME;
     controls.draggingSmoothTime = DRAGGING_SMOOTH_TIME;
@@ -184,11 +141,8 @@ export function IsometricCamera() {
     // is finite again, but the discarded controls instance may hold poisoned damping velocities
   }, [camera, domElement, controlsGeneration]);
 
-  // depends on controlsVersion, not just selectedNode, so a controls instance rebuilt by the effect
-  // above (a remount after the scene swaps away and back) reapplies the current selection's target
-  // instead of leaving the rebuilt controls centred on their constructor default; the very first
-  // selection (the avatar's origin, on region load) glides too, since its jittered position sits
-  // imperceptibly close to the controls' own starting target
+  // controlsVersion is a dependency so a controls instance rebuilt by the effect above reapplies
+  // the current selection's target instead of resting on its constructor default
   useEffect(() => {
     const controls = controlsRef.current;
     const object3D = selectedNode.object3D;
@@ -269,10 +223,6 @@ function isFiniteVector(vector: Readonly<Vector3>): boolean {
   return Number.isFinite(vector.x) && Number.isFinite(vector.y) && Number.isFinite(vector.z);
 }
 
-/**
- * renders a `CameraHelper` frustum visualization for `camera` in dev tooling, keeping it in sync
- * every frame; a null `camera` renders nothing.
- */
 function useCameraHelper(camera: null | PerspectiveCameraImpl) {
   const scene = useThree((state) => state.scene);
   const helperRef = useRef<CameraHelper | null>(null);

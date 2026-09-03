@@ -20,11 +20,6 @@ const STRATEGIES: Record<Isolation, () => Promise<TestDBHandle>> = {
   transaction: createTransactionTestDB,
 };
 
-/**
- * Makes a package's isolated-test-DB factory. Isolation legality is declared, not detected:
- * requesting a strategy absent from `config.enabled` throws. The migrated template database is
- * built once per test process; this facade only chooses isolation.
- */
 export function makeTestDB(
   config: TestDBConfig,
 ): (options?: CreateTestDBOptions) => Promise<TestDBHandle> {

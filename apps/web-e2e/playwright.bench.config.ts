@@ -6,11 +6,6 @@ import type { E2EOptions } from './src/test';
 // measuring the real WebGPU/R3F canvas, not the placeholder
 const environment = loadE2EEnvironment({});
 
-/**
- * On-demand perf benchmarks: run manually against a real GPU, never picked up by `bun run e2e`'s
- * default config. Its own `testDir` keeps every benchmark spec out of `playwright.config.ts`'s
- * discovery entirely, so nothing here can ever land on the CI critical path.
- */
 export default defineConfig<E2EOptions>({
   expect: {
     timeout: 10 * 1000,

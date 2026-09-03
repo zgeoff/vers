@@ -1,10 +1,6 @@
 import { css, cva, cx } from '@vers/styled-system/css';
 import type { ReactNode } from 'react';
 
-/**
- * The palette a bar or layer paints its fill in. Names map to `accent.*` semantic tokens, so a
- * re-skin moves the colour without touching callers.
- */
 export type ResourceBarTint =
   | 'aether'
   | 'artisan'
@@ -91,11 +87,6 @@ interface ResourceBarProps {
   readonly valueLabel?: string;
 }
 
-/**
- * A layered vitals bar: the primary fill plus any `Overlay`/`Reserved` layers passed as children.
- * Enrich a bar by adding a layer, never a boolean prop; each layer is measured against the same
- * `max` the caller passes it.
- */
 export function ResourceBar(props: Readonly<ResourceBarProps>) {
   const hasHeader = props.label !== undefined || props.valueLabel !== undefined;
 
@@ -133,10 +124,6 @@ interface LayerProps {
   readonly value: number;
 }
 
-/**
- * A translucent segment stacked over the primary fill from the left — a barrier or ward sitting on
- * top of the same track.
- */
 function ResourceBarOverlay(props: Readonly<LayerProps>) {
   return (
     <div
@@ -155,9 +142,6 @@ const reserved = css({
   zIndex: '[1]',
 });
 
-/**
- * An unavailable slice anchored to the right end of the track — capacity held back from the pool.
- */
 function ResourceBarReserved(props: Readonly<LayerProps>) {
   return <div className={reserved} style={{ width: toWidth(props.value, props.max) }} />;
 }

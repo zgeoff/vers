@@ -1,13 +1,6 @@
 import type { Kysely } from 'kysely';
 import { sql } from 'kysely';
 
-/**
- * Adds the replay pipeline's schema: the activity head row gains the single-writer column
- * (`writer_session_id`, the one session allowed to append) and the poison-pill attempt counter, the
- * chain row gains the claim priority, and `avatar_grants` records one-shot grants (first-clears,
- * achievements, meta-unlocks) whose primary key is the grant-once rule itself. The partial index
- * serves the replay claim's pending-work scan (`appended_head > verified_head`).
- */
 export async function up(db: Kysely<unknown>): Promise<void> {
   await db.schema.alterTable('activities').addColumn('writer_session_id', 'text').execute();
 

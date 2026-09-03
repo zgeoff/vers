@@ -5,11 +5,9 @@ interface Deferred<T> {
   readonly release: (value: T) => Promise<void>;
 }
 
-/**
- * A promise a test controls: `promise` stays pending until `release`. `release` resolves it inside
- * `act`, so state a React consumer updates from the promise's own continuation — a microtask outside
- * React's batching that `waitFor` races — is settled before the next assertion.
- */
+// `release` resolves inside `act`: state a consumer updates from the promise's own continuation is
+// a microtask outside React's batching that `waitFor` races, so it must settle before the next
+// assertion
 export function buildDeferred<T>(): Deferred<T> {
   const gate = Promise.withResolvers<T>();
 

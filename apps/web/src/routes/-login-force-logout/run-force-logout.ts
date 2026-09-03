@@ -14,12 +14,6 @@ const CLEAR_PENDING_SESSION: VerifySessionData = {
   'loginLogout#userID': undefined,
 };
 
-/**
- * Runs the force-logout page's confirm/cancel choice. Confirming completes the pending sign-in
- * exactly like a direct login would — `verifySession` itself signs out every other live session
- * for the account; cancelling, or a request with no pending state left to act on, just clears the
- * verify-session cookie and sends the caller back.
- */
 export async function runForceLogout(formData: FormData): Promise<never> {
   await requireAnonymous();
 

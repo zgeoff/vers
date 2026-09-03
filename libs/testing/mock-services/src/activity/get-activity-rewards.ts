@@ -1,11 +1,6 @@
 import * as db from '../db';
 import { os } from './os';
 
-/**
- * Returns an owned activity's revealed reward-slot contents: the minted `avatarItemCollection` rows
- * matching the activity's scope, gated to coordinates at or below its verified anchor and ordered by
- * chain position then slot ordinal. Seed the collection to assert on revealed content.
- */
 export const getActivityRewards = os.getActivityRewards.handler((opts) => {
   const actingUserID = opts.context.actingUserID;
 

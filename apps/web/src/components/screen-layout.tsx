@@ -13,10 +13,6 @@ const layout = css({
   width: 'full',
 });
 
-/**
- * The shared frame for a game screen: a titled, padded column that fills its host — the ambient
- * sheet for meta screens, the viewport for focus scenes.
- */
 export function ScreenLayout(props: Readonly<{ children: ReactNode; title: string }>) {
   return (
     <main className={layout}>

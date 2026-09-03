@@ -6,9 +6,6 @@ import { recordDeriveRejection } from '../metrics/record-derive-rejection';
 import type { ScopeSecretRoots } from '../parse-scope-secret-roots';
 import type { UnknownScopeSecretVersionPayload } from '../types';
 
-/**
- * oRPC handler opts for the `deriveScopeSecret` procedure.
- */
 interface DeriveScopeSecretOpts {
   readonly context: { readonly logger: ServiceContext['logger'] };
   readonly errors: {
@@ -21,10 +18,6 @@ interface DeriveScopeSecretOpts {
   };
 }
 
-/**
- * Derives an avatar's scope secret from its scope's custodied root secret, logging one audit line
- * per successful derivation. Never logs secret or root material.
- */
 export function deriveScopeSecret(
   roots: ScopeSecretRoots,
   opts: DeriveScopeSecretOpts,

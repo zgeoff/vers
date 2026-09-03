@@ -14,11 +14,8 @@ import { createSimVersionRow } from '@vers/sim-registry/test-utils';
 import { buildRPCTestClient } from '@vers/test-utils';
 import { createActivityService } from '../create-activity-service';
 
-/**
- * `advanceActivity` opens its own `db.transaction()` for the chain claim, which can't nest under
- * the default rollback-on-dispose isolation — this suite runs against a real, committed schema
- * clone instead.
- */
+// the handlers these tests drive open their own interactive transaction, which the default
+// transaction-isolation handle can't nest — this suite runs against a real, committed schema clone
 async function setupTest() {
   const db = await createTestDB({ isolation: 'schema' });
 

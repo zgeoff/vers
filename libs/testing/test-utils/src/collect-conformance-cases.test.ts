@@ -6,9 +6,6 @@ import * as z from 'zod';
 import type { ConformanceCaseApp } from './collect-conformance-cases';
 import { collectConformanceCases } from './collect-conformance-cases';
 
-/**
- * Error vocabulary a fixture authed procedure declares, standing in for the real contract-base one.
- */
 const TEST_ERRORS = {
   UNAUTHORIZED: {
     data: z.object({ reason: z.string() }),
@@ -73,9 +70,6 @@ function buildTestContract() {
 
 type TestContract = ReturnType<typeof buildTestContract>;
 
-/**
- * Builds an app whose getThing handler enforces the acting-user check the contract declares.
- */
 // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- structural map of oRPC contract procedures; framework types with no readonly form
 function buildConformingApp(contract: TestContract): ConformanceCaseApp {
   const os = implement(contract).$context<{ actingUserID: null | string }>();
@@ -94,9 +88,6 @@ function buildConformingApp(contract: TestContract): ConformanceCaseApp {
   return buildRPCApp(new RPCHandler(router));
 }
 
-/**
- * Builds an app whose getThing handler skips the acting-user check, so anonymous calls succeed.
- */
 // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- structural map of oRPC contract procedures; framework types with no readonly form
 function buildBrokenApp(contract: TestContract): ConformanceCaseApp {
   const os = implement(contract).$context<{ actingUserID: null | string }>();

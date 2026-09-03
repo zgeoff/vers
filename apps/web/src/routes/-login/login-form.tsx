@@ -29,9 +29,6 @@ const formStyles = css({
 
 const submitButton = css({ marginBottom: '2' });
 
-/**
- * The login page's client-interactive form: submits to the login server function and renders its result.
- */
 export function LoginForm(props: LoginFormProps) {
   const loginFn = useServerFn(login);
   const submission = useFormSubmit(props.action ?? loginFn, props.lastResult);

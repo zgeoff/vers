@@ -1,10 +1,5 @@
 import * as z from 'zod';
 
-/**
- * Why the server refused a checkpoint batch. Every member is permanent: a retry, a later arrival,
- * or a different submission order never makes the refused batch valid. A client that narrows on the
- * reason drops the batch instead of queueing it again.
- */
 export const CheckpointInvalidReasonSchema = z.enum([
   'broken-chain-link',
   'hash-mismatch',

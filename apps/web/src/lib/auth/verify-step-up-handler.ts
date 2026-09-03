@@ -21,11 +21,6 @@ type VerifyStepUpResult =
   | { readonly attemptsRemaining: number; readonly status: 'invalid-code' }
   | { readonly status: 'verified'; readonly token: string };
 
-/**
- * Runs the shared step-up code check every gated mutation's inline challenge submits to: an
- * invalid code counts a failed attempt against the pending transaction, a valid one consumes it
- * and mints the transaction token the originating mutation redeems.
- */
 export async function verifyStepUpHandler(input: VerifyStepUpInput): Promise<VerifyStepUpResult> {
   const [codeError] = await safe(
     verificationClient.verifyCode({ code: input.code, target: input.target, type: '2fa' }),

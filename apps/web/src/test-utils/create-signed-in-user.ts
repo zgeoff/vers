@@ -10,11 +10,6 @@ interface SignedInUser {
   readonly userID: string;
 }
 
-/**
- * Creates a user row and a live, verified session for it, returning the `en_session` cookie map
- * that authenticates as that session under `withRequestContext`. The cookie's access token is a
- * real, fresh signed token, so a driven call resolves the acting user without needing to refresh.
- */
 export async function createSignedInUser(
   user: Readonly<Partial<z.input<typeof UserRowSchema>>> = {},
 ): Promise<SignedInUser> {

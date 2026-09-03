@@ -33,17 +33,6 @@ import { rejectActivity } from './reject-activity';
 import type { PendingCacheEffect, ReplayIterationOutcome, ReplayWorkerDeps } from './types';
 import { updateVerifiedAnchorFromPredecessor } from './update-verified-anchor-from-predecessor';
 
-/**
- * Adjudicates one claimed activity's replay target: loads its segment, catches the chain's verified
- * anchor up to a forward-exited predecessor it missed, re-derives the activity's seed on its first
- * verified batch, then dispatches by `simVersion` — the in-process incremental cache for this
- * deploy's own engine, the cross-version provider registry for everything else — and turns the
- * resulting verdict into a cursor-only apply, a confirmed rejection, or a park. By claim time the
- * activity's predecessor is settled or rejected, so the descriptor, reachability, and build checks
- * below read only fully-settled state and are the legality boundary — the claim itself never
- * decides legality, only sequences when each activity's checks run. Runs inside the caller's
- * transaction, alongside the seed-chain claim it composes with.
- */
 export async function runReplayTarget(
   trx: Transaction<DB>,
   deps: Readonly<ReplayWorkerDeps>,
@@ -93,15 +82,9 @@ export async function runReplayTarget(
 
     invariant(avatarState !== undefined, 'a stamped activity always has an owning avatar');
 
-    // A build is a pure function of settled xp, so the pinned start build must match the avatar's
-    // settled total exactly. This catches a rejected ancestor's xp shortfall: a successor that
-    // banked a now-rejected ancestor's optimistic xp stamped a build the settled total never
-    // backs.
-    //
-    // Gated on this activity's own `settledXP` reading zero, not on the target's `verifiedHead`:
-    // a stale duplicate redelivery can still carry a stale `verifiedHead` of 0, but its
-    // `settledXP` already reflects the earlier apply, so the check runs at most once, on the
-    // genuine first pass.
+    // gated on `settledXP` reading zero, not on `verifiedHead`: a stale duplicate redelivery can
+    // still carry a `verifiedHead` of 0, but its `settledXP` already reflects the earlier apply, so
+    // the check runs at most once
     if (segment.activity.settledXP === 0) {
       const expectedBuild = {
         level: buildLevelFromXP(avatarState.xp),
@@ -180,12 +163,9 @@ interface NextSeedCheckpoint {
   readonly payload: { readonly nextSeed: string };
 }
 
-/**
- * The last checkpoint in a stored run's `nextSeed` — the driver's `stopAtState` sanity check. A
- * checkpoint's own `time` resets on every engine restart within a farmed stream, so it can never
- * size a duration to advance to; `rngState` runs forward monotonically across restarts instead.
- * The segment's own checkpoint count is the driver's primary halt; this is only an early exit.
- */
+// the last checkpoint's `nextSeed` is the driver's stop-at sanity check: a checkpoint's `time`
+// resets on every engine restart within a farmed stream, so it can never size a duration to
+// advance to
 function findStopAtState(checkpoints: ReadonlyArray<NextSeedCheckpoint>): string {
   const last = checkpoints.at(-1);
 
@@ -194,12 +174,6 @@ function findStopAtState(checkpoints: ReadonlyArray<NextSeedCheckpoint>): string
   return last.payload.nextSeed;
 }
 
-/**
- * A cached driver is a valid resume point only when it sits exactly where the freshly loaded
- * segment says verification left off — its emitted count matches `verifiedHead` and its hash
- * matches the segment's own predecessor hash. Anything else (a stale entry left behind by a
- * concurrent adjudication, or simple drift) is discarded rather than trusted.
- */
 function isCacheCurrent(
   entry: Readonly<{ emittedCount: number; lastHash: string }>,
   segment: Readonly<ReplaySegment>,
@@ -329,13 +303,6 @@ async function runReplayTargetCrossVersion(
   return rejectSegment(trx, deps, cache, segment, confirmVerdict, 'confirmed-on-fresh-replay');
 }
 
-/**
- * Settles a matched segment against the activity's running total. A terminal checkpoint carries
- * the run's final xp rather than its own delta, so it pays only the part no earlier segment
- * settled and leaves the total sitting at that final figure; every other segment pays the deltas
- * it verified and adds them on. The two are alternatives — a terminal total already contains the
- * deltas — so a segment holding both settles once, through the terminal.
- */
 function buildSettlement(
   settledXP: number,
   verdict: Extract<CompareVerdict, { kind: 'match' }>,
@@ -496,16 +463,6 @@ function pickRejectMessage(cause: RejectionCause): string {
   return 'replay divergence confirmed on a fresh replay; rejecting activity';
 }
 
-/**
- * Refuses an activity whose pinned start build does not match the avatar's settled xp total. By
- * claim time this activity's predecessor is settled or rejected, so a mismatch here means the
- * pinned build banked optimistic xp from an ancestor a rejection later erased — there is nothing to
- * replay the stream against and no divergence to confirm, since the rejection follows from the
- * build's own foundation rather than from anything the stream itself did. Rejecting through the
- * same single-chain path voids this activity's own successors, and every activity that banked this
- * one's now-erased xp fails this same check in turn, so the refusal cascades through the whole
- * dependency graph without any writer reaching across chains.
- */
 async function rejectBuildMismatch(
   trx: Transaction<DB>,
   deps: Readonly<ReplayWorkerDeps>,
@@ -537,11 +494,6 @@ async function rejectBuildMismatch(
   return { kind: 'rejected' };
 }
 
-/**
- * Refuses a `world_map_node` activity whose scope is not connected to the avatar's verified
- * first-clear target. Rejecting through the same single-chain path voids this activity's own
- * successors, exactly as the build-mismatch rejection does.
- */
 async function rejectUnreachableNode(
   trx: Transaction<DB>,
   deps: Readonly<ReplayWorkerDeps>,

@@ -3,16 +3,10 @@ import type { DB } from '@vers/db';
 import type { Kysely } from 'kysely';
 import { toUserData } from './to-user-data';
 
-/**
- * oRPC handler opts for the `getUser` procedure.
- */
 interface GetUserOpts {
   readonly input: { readonly email?: string | undefined; readonly id?: string | undefined };
 }
 
-/**
- * Looks up a user matching the provided id or email; null when neither is provided or matches.
- */
 export async function getUser(db: Kysely<DB>, opts: GetUserOpts): Promise<UserData | null> {
   const row = await db
     .selectFrom('users')

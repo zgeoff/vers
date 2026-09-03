@@ -1,8 +1,5 @@
 import { metrics } from '@opentelemetry/api';
 
-/**
- * Records how many chains one drain cycle claimed and adjudicated before finding the queue empty.
- */
 export function recordBacklogClaimed(chainCount: number): void {
   // The histogram is resolved through the global metrics API on every call: the SDK returns the
   // same instrument for an identical registration, and resolving late keeps it bound to whichever

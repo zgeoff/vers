@@ -12,10 +12,6 @@ import { logger } from '../../server/logger';
 import { OnboardingFormSchema } from './onboarding-form-schema';
 import { requireOnboardingSession } from './require-onboarding-session';
 
-/**
- * Runs the onboarding form's submission: honeypot then field validation, then account creation
- * for the email signup already verified. Completes the caller's first sign-in on success.
- */
 export async function runOnboarding(formData: FormData): Promise<Response | SubmissionResult> {
   const onboardingSession = await requireOnboardingSession();
 

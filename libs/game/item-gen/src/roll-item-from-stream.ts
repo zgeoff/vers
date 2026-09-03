@@ -3,11 +3,6 @@ import invariant from 'tiny-invariant';
 import { rollAffixesFromStream } from './roll-affixes-from-stream';
 import type { LootTables, RolledItem, SlotContext } from './types';
 
-/**
- * Rolls a complete item in the canonical draw order — rarity pick, base pick, affix-count range
- * draw, then the shared affix path with that fixed count — so there is exactly one affix draw
- * sequence across dropping and crafting. Context selects tables; the stream decides outcomes.
- */
 export function rollItemFromStream(
   tables: Readonly<LootTables>,
   context: Readonly<SlotContext>,

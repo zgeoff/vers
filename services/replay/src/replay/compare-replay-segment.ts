@@ -3,10 +3,6 @@ import { buildCheckpointHash } from '@vers/contract-activity';
 import { TERMINAL_CHECKPOINT_TYPES } from './types';
 import type { CompareVerdict, ReplayedCheckpoint, RewardFact, StoredCheckpoint } from './types';
 
-/**
- * The sole legal entropy-source tag: the checkpoint chain is derived only from server-held key
- * material.
- */
 const SERVER_KEY_ENTROPY_SOURCE: EntropySource = 'server-key';
 
 interface CompareContext {
@@ -15,18 +11,6 @@ interface CompareContext {
   readonly startChainIndex: number;
 }
 
-/**
- * Compares a segment's stored checkpoint rows against a fresh replay's output. A mismatched
- * checkpoint count is itself divergence — a submitted stream that doesn't match what the same
- * duration honestly produces. Otherwise, one version at a time: `chainIndex`, `entropySource`, and
- * every hashed field are recomputed from the replay and the running chain position — never read
- * from the stored payload — and the recomputed hash must byte-match the stored one. Rewards ride
- * outside the hash, so a checkpoint's `rewards.xp` is compared directly against the replay's own
- * value. The two inputs are positionally aligned: `replayed[i]` is what the engine produced for
- * `stored[i].version`. A matching segment reports its xp as both a sum of the non-terminal
- * deltas and, when it ends on one, the terminal checkpoint's own run total — a terminal total
- * already contains every delta the run emitted, so the two are alternatives, never addends.
- */
 export function compareReplaySegment(
   stored: ReadonlyArray<StoredCheckpoint>,
   replayed: ReadonlyArray<ReplayedCheckpoint>,
@@ -117,37 +101,20 @@ export function compareReplaySegment(
   };
 }
 
-/**
- * A plain, non-array object — the shape every structural guard below narrows a raw payload field
- * onto before reading its own fields.
- */
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-/**
- * A number the hash chain would accept: finite, excluding the `NaN`/`Infinity` values `typeof`
- * alone lets through.
- */
 function isFiniteNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value);
 }
 
-/**
- * A stored checkpoint's `rewards` field rides outside the hashed subset, so
- * `CheckpointPayloadSchema` doesn't type it — this reads it from the loose object the same way the
- * append path does, reporting undefined for a missing or malformed shape rather than throwing.
- */
 function findPayloadRewardsXP(payload: Readonly<CheckpointPayload>): number | undefined {
   const rewards = payload['rewards'];
 
   return isRecord(rewards) && isFiniteNumber(rewards['xp']) ? rewards['xp'] : undefined;
 }
 
-/**
- * A stored checkpoint's `levelUp` field rides outside the hashed subset like `rewards`, and is
- * absent from the payload entirely on a checkpoint that crossed no level.
- */
 function findPayloadLevelUp(
   payload: Readonly<CheckpointPayload>,
 ): { from: number; to: number } | undefined {
@@ -176,10 +143,6 @@ type ParsedRewardSlots =
   | { readonly kind: 'malformed' }
   | { readonly kind: 'present'; readonly slots: ReadonlyArray<RewardSlot> };
 
-/**
- * A safe, non-negative integer — the shape a reward slot's `ordinal` and `context.nodeTier` fields
- * must satisfy, floored at the given minimum.
- */
 function isSafeIntAtLeast(value: unknown, min: number): value is number {
   return typeof value === 'number' && Number.isSafeInteger(value) && value >= min;
 }
@@ -193,12 +156,6 @@ function isRewardSlot(value: unknown): value is RewardSlot {
   );
 }
 
-/**
- * A stored checkpoint's `rewardSlots` field rides outside the hashed subset like `rewards`. An
- * absent field is a checkpoint minted before the field existed and normalizes to nothing dropped;
- * a present-but-malformed value is a bug or tamper the caller must diverge on, so the two are kept
- * distinct rather than both collapsing to empty.
- */
 function parsePayloadRewardSlots(payload: Readonly<CheckpointPayload>): ParsedRewardSlots {
   const rewardSlots = payload['rewardSlots'];
 
@@ -212,11 +169,6 @@ function parsePayloadRewardSlots(payload: Readonly<CheckpointPayload>): ParsedRe
     : { kind: 'malformed' };
 }
 
-/**
- * Compares two reward-slot lists positionally after normalizing a missing list to empty — an old
- * engine's checkpoint and an old provider's wire response both simply lack the field, so
- * absent-in-both reads as the same "nothing dropped" fact as an explicit empty list.
- */
 function hasMatchingRewardSlots(
   stored: ReadonlyArray<RewardSlot> | undefined,
   replayed: ReadonlyArray<RewardSlot> | undefined,

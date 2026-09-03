@@ -17,10 +17,6 @@ export interface EncounterEnemy {
   readonly xp: number;
 }
 
-/**
- * A fully resolved world map encounter: ordered waves, each an ordered array of enemies whose
- * stats are already difficulty-scaled. Nothing about it is rolled again once derived.
- */
 export interface EncounterDefinition {
   readonly waves: ReadonlyArray<ReadonlyArray<EncounterEnemy>>;
 }
@@ -54,10 +50,6 @@ export interface EncounterTuning {
   readonly difficultyScalingFactor: number;
 }
 
-/**
- * A content version pins archetype, pool, and tuning data together: any change to any of them is a
- * new version, and every shipped version stays loadable.
- */
 export interface EncounterContent {
   readonly contentVersion: string;
   readonly archetypes: ReadonlyArray<EncounterArchetype>;
@@ -65,10 +57,6 @@ export interface EncounterContent {
   readonly tuning: EncounterTuning;
 }
 
-/**
- * The trajectory facts a derivation resolves an encounter's pool and stat scaling against.
- * `poolID` is absent for content versions that predate sealed pool selection.
- */
 export interface EncounterNode {
   readonly difficulty: number;
   readonly poolID?: string;

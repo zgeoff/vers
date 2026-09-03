@@ -6,9 +6,6 @@ import type { Kysely } from 'kysely';
 import type { FieldConflictPayload } from '../types';
 import { toUserData } from './to-user-data';
 
-/**
- * oRPC handler opts for the `createUser` procedure.
- */
 interface CreateUserOpts {
   readonly errors: {
     readonly CONFLICT: (payload: FieldConflictPayload<'email' | 'username'>) => Error;
@@ -21,9 +18,6 @@ interface CreateUserOpts {
   };
 }
 
-/**
- * Creates a user with an argon2id-hashed password; throws CONFLICT when the email or username is taken.
- */
 export async function createUser(db: Kysely<DB>, opts: CreateUserOpts): Promise<UserData> {
   const passwordHash = await Bun.password.hash(opts.input.password, 'argon2id');
 
@@ -53,9 +47,6 @@ export async function createUser(db: Kysely<DB>, opts: CreateUserOpts): Promise<
   }
 }
 
-/**
- * postgres.js surfaces a unique-constraint violation as SQLSTATE 23505, naming the constraint.
- */
 function findViolatedField(error: unknown): 'email' | 'username' | undefined {
   if (
     typeof error !== 'object' ||

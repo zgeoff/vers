@@ -28,20 +28,11 @@ interface BuildOptimisticProgressionInput {
 }
 
 interface OptimisticProgression {
-  /**
-   * Whether the displayed total carries anything not yet on the settled row: a pending entry, a
-   * live sim overlay, or both. A screen renders its settling marker exactly when this is true.
-   */
   readonly isSettling: boolean;
   readonly level: number;
   readonly xp: number;
 }
 
-/**
- * Derives the level/xp a screen renders from the settled progression read: the settled total plus
- * every pending entry's delta, plus a live-sim overlay, net of whatever the settled total already
- * carries for that run.
- */
 export function buildOptimisticProgression(
   input: Readonly<BuildOptimisticProgressionInput>,
 ): OptimisticProgression {
@@ -56,10 +47,9 @@ export function buildOptimisticProgression(
   const liveActivityID = input.progression.active?.activityID;
   const simIsLive = liveActivityID === input.simActivity?.id;
 
-  // A run other than the sim's is live, so the sim is a stale worker snapshot of a run that has
-  // already been displaced — its total belongs to nothing the settled row is still tracking. No
-  // live run at all leaves the overlay standing, covering the window between a terminal append
-  // and the pending entry that replaces it.
+  // a live run other than the sim's means the sim is a stale snapshot of a displaced run; no live
+  // run at all keeps the overlay, covering the window between a terminal append and its pending
+  // entry.
   const simIsStale = liveActivityID !== undefined && !simIsLive;
   const overlayApplies = input.simActivity !== undefined && !simIsPending && !simIsStale;
   const settledForSim = simIsLive ? (input.progression.active?.settledXP ?? 0) : 0;

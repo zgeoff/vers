@@ -4,9 +4,6 @@ import type { Kysely } from 'kysely';
 import type { MissingSessionPayload } from '../types';
 import { toUserData } from './to-user-data';
 
-/**
- * oRPC handler opts for the authed `getCurrentUser` procedure.
- */
 interface GetCurrentUserOpts {
   readonly context: { readonly actingUserID: null | string };
   readonly errors: {
@@ -14,9 +11,6 @@ interface GetCurrentUserOpts {
   };
 }
 
-/**
- * Returns the acting user's own profile; UNAUTHORIZED both for no session and a deleted account.
- */
 export async function getCurrentUser(db: Kysely<DB>, opts: GetCurrentUserOpts): Promise<UserData> {
   if (opts.context.actingUserID === null) {
     throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });

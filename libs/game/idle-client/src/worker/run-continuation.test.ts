@@ -27,11 +27,6 @@ interface SeedCachesOptions {
   readonly cacheDocument?: boolean;
 }
 
-/**
- * Caches every input a local mint reads — the scope's node seed, the account's stamps, and the
- * content document the install loads. `cacheDocument: false` leaves the document to the service, so
- * a test can interleave with the one await that remains past the mint.
- */
 async function setupTest(options: Readonly<SeedCachesOptions>): Promise<NodeSeed> {
   const seed = createMockNodeSeed({
     avatarID: options.avatarID,

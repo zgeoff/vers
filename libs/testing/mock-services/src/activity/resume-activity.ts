@@ -1,10 +1,6 @@
 import * as db from '../db';
 import { os } from './os';
 
-/**
- * Returns the active activity as-is: the mock backend tracks no writer session, so taking over
- * as writer is a no-op here — SESSION_EVICTED flows are a per-test override.
- */
 export const resumeActivity = os.resumeActivity.handler((opts) => {
   const actingUserID = opts.context.actingUserID;
 

@@ -2,9 +2,6 @@ export interface ActivityExecutorSnapshot {
   readonly elapsed: number;
 }
 
-/**
- * Each activity type supplies its own executor — combat is the world map encounter's.
- */
 export interface ActivityExecutor {
   // getters
   get elapsed(): number;
@@ -45,8 +42,4 @@ export type CombatEvent = AvatarAttackEvent | EnemyAttackEvent;
 
 export type AttackEvent = AvatarAttackEvent | EnemyAttackEvent;
 
-/**
- * A combat event once the executor has assigned it its schedule-order sequence number, used to
- * break same-time ties deterministically regardless of scan or draw order.
- */
 export type ScheduledCombatEvent = CombatEvent & { readonly sequence: number };

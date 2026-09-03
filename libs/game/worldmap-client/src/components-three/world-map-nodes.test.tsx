@@ -128,10 +128,8 @@ test('it moves the bounding sphere with the nodes when the list is replaced at t
   expect(mesh.boundingSphere.center.y).toBeCloseTo(1000);
 });
 
-/**
- * Duck-typed stand-in for `instanceof InstancedMesh`: the test renderer constructs objects from a
- * different copy of three than this file imports, so an `instanceof` check never matches.
- */
+// duck-typed stand-in for `instanceof InstancedMesh`: the test renderer constructs objects from a
+// different copy of three than this file imports, so `instanceof` never matches
 function isInstancedMesh(object: Object3D): object is InstancedMesh {
   return 'isInstancedMesh' in object && object.isInstancedMesh === true;
 }

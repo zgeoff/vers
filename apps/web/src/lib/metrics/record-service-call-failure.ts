@@ -3,12 +3,6 @@ import type { ServiceName } from '@vers/service-auth';
 
 export type ServiceCallFailureReason = 'timeout' | 'transport';
 
-/**
- * Counts one outbound service call that never delivered — either every bounded attempt hit its own
- * per-attempt timeout, or the underlying transport failed outright with no timeout involved. Split
- * by `service` and `reason` so a suspended machine's resume window (`timeout`, self-healing once
- * the machine wakes) reads apart from a genuinely unreachable service (`transport`).
- */
 export function recordServiceCallFailure(
   service: ServiceName,
   reason: ServiceCallFailureReason,

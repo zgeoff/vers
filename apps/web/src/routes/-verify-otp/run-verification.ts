@@ -14,11 +14,6 @@ const RUN_VERIFICATION_TYPE_STRATEGY: Record<VerificationType, VerificationHandl
   onboarding: runOnboarding,
 };
 
-/**
- * Runs a verification type's post-verify continuation. Every type but `change-email` ends its own
- * handler in a thrown redirect; `change-email` applies its mutation and returns instead, so its
- * caller can report success without relying on a server-issued redirect.
- */
 export function runVerification(
   type: VerificationType,
   ctx: Readonly<RunVerificationContext>,

@@ -6,25 +6,9 @@ import { toHexPosition } from './to-hex-position';
 import type { BiomeField, BiomeSample, Viewport } from './types';
 
 export interface BuildBiomeFieldOptions {
-  /**
-   * Texels per axial cell unit. Higher resolves tighter territory borders; 1 degrades to one sample
-   * per cell.
-   */
   readonly resolution: number;
 }
 
-/**
- * Builds the biome texel grid a terrain-tint presentation samples. Ownership is node-anchored: each
- * texel belongs to its nearest jittered node and carries that node's biome, so a patch renders as
- * the union of its nodes' territories — borders weave between nodes, and a node never sits on a
- * border. Node jitter stays within its own cell, so the texel at a cell's own coordinate always
- * agrees with `getBiome` on that cell.
- *
- * `blendTs` carries cross-territory border proximity: 0 through a patch interior — including every
- * internal territory boundary between same-biome nodes — ramping to 1 where two differently-biomed
- * territories meet, over `BIOME_TERRITORY_BLEND_BAND` scene units. `neighbourBaseIDs` names the
- * biome across that border, the tint `blendT` blends toward.
- */
 export function buildBiomeField(
   userSeed: number,
   viewport: Readonly<Viewport>,
@@ -76,10 +60,8 @@ export function buildBiomeField(
     return position;
   };
 
-  // Texels are laid out row-major over the viewport's cell box inflated by half a cell on each
-  // side, the same convention `buildRevealDistanceField` uses: texel `(i, j)` samples axial
-  // `(minCX - 0.5 + (i + 0.5) / resolution, minCY - 0.5 + (j + 0.5) / resolution)`, the mapping
-  // a quad spanning that box with corner-anchored uvs interpolates.
+  // texels sample the cell box inflated by half a cell on each side, the same layout as the reveal
+  // distance field and the mapping a quad spanning that box with corner-anchored uvs interpolates
   for (let j = 0; j < rows; j++) {
     const cy = viewport.minCY - 0.5 + (j + 0.5) / options.resolution;
 
@@ -112,14 +94,6 @@ interface NearestNodeCells {
   readonly secondDistance: number;
 }
 
-/**
- * Scans the 3×3 cell box around an axial position for the cells whose jittered nodes are nearest
- * and second-nearest in scene space, reading each candidate's position through the caller's lookup.
- * The box always contains both winners while the per-axis jitter bound stays below about 0.43: up
- * to there a position's nearest and second-nearest nodes are its own cell's and its hex
- * neighbours', all inside the box. Past that bound the second-nearest can fall outside the box and
- * biome borders would mis-render — the co-located wide-scan comparison test fails loudly first.
- */
 function buildNearestNodeCells(
   getNodePosition: (cellX: number, cellY: number) => readonly [number, number],
   cx: number,

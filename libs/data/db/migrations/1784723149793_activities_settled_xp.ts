@@ -1,20 +1,6 @@
 import type { Kysely } from 'kysely';
 import { sql } from 'kysely';
 
-/**
- * Adds `settled_xp` to `activities` — the xp an activity has already contributed to its avatar's
- * settled row, advanced by the same guarded update that moves `verified_head`. It is an intent
- * ledger: the identity write floors at zero, so a debit larger than the avatar's settled total
- * lands smaller than the amount recorded here. Signed and unconstrained, because a failed run's
- * total is its accrued xp minus a death penalty computed against the avatar's lifetime progress,
- * which is routinely the larger of the two.
- *
- * The default of zero is what makes a run that is mid-flight at deploy come out whole: its
- * verified prefix settled nothing under the previous rule, and its terminal contributes the run
- * total minus this column, so the prefix is paid exactly once at the terminal. A row already
- * settled by a terminal checkpoint has no terminal left to true it up, so it is backfilled with
- * what it was paid — without that, re-verifying one would pay its total a second time.
- */
 export async function up(db: Kysely<unknown>): Promise<void> {
   await db.schema
     .alterTable('activities')

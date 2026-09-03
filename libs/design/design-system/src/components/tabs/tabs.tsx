@@ -51,10 +51,6 @@ const tabsRecipe = sva({
   slots: ['root', 'list', 'trigger', 'content'],
 });
 
-/**
- * Tabbed panel over the Ark UI primitive: each item renders a trigger and its content, the first
- * item selected unless `defaultValue` names another. Keyboard and roving focus come from Ark.
- */
 export function Tabs(props: Readonly<Props>) {
   const styles = tabsRecipe();
 

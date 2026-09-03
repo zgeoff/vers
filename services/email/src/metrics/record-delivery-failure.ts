@@ -1,8 +1,5 @@
 import { metrics } from '@opentelemetry/api';
 
-/**
- * Counts one email that failed to deliver: a job whose handler or completion step failed.
- */
 export function recordDeliveryFailure(): void {
   // Resolved through the global metrics API on every call: the SDK returns the same instrument for
   // an identical registration, and resolving late keeps the counter bound to whichever meter

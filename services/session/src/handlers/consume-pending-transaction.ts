@@ -4,16 +4,10 @@ import type { Kysely } from 'kysely';
 import type { EmptyErrorPayload } from '../types';
 import { toPendingTransactionData } from './to-pending-transaction-data';
 
-/**
- * Payload shape for the `TRANSACTION_MISMATCH` error, naming the first field that didn't match.
- */
 interface TransactionMismatchPayload {
   readonly data: { readonly field: 'action' | 'ipAddress' | 'sessionID' | 'target' };
 }
 
-/**
- * oRPC handler opts for the public `stepUp.consumePendingTransaction` procedure.
- */
 interface ConsumePendingTransactionOpts {
   readonly errors: {
     readonly NOT_FOUND: (payload: EmptyErrorPayload) => Error;
@@ -28,13 +22,6 @@ interface ConsumePendingTransactionOpts {
   };
 }
 
-/**
- * Atomically consumes a pending step-up transaction: the DELETE...RETURNING is the single
- * statement that both claims and reads the row, so a second consume of the same id always finds
- * it already gone. The consuming request's fields are matched against the deleted row only
- * after the delete — a mismatch still burns the transaction, by design, rather than leaving a
- * transaction alive for a second, better-matched attempt.
- */
 export async function consumePendingTransaction(
   db: Kysely<DB>,
   opts: ConsumePendingTransactionOpts,

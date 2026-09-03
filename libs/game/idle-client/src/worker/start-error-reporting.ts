@@ -2,36 +2,15 @@ import type { BrowserOptions } from '@sentry/browser';
 import { sentryHandle } from './sentry-handle';
 
 export interface StartErrorReportingOptions {
-  /**
-   * Test-only hook: intercepts every event just before send, letting a suite record and suppress
-   * delivery without a live DSN destination.
-   */
   readonly beforeSend?: BrowserOptions['beforeSend'];
 
-  /**
-   * Test-only override: when true, passes `defaultIntegrations: false` to the SDK, suppressing
-   * its default integration set — which installs `error`/`unhandledrejection` handlers on the
-   * worker's global scope — so a suite that starts real reporting never leaks global listeners
-   * into the shared test run.
-   */
+  // the SDK's default integrations install `error`/`unhandledrejection` handlers on the worker's
+  // global scope, which would leak into the shared test run
   readonly disableDefaultIntegrations?: boolean;
 
-  /**
-   * Deploy environment stamped on every event; the worker's production wiring passes the build
-   * mode.
-   */
   readonly environment?: string;
 }
 
-/**
- * Initializes the Sentry SDK that `reportWorkerFault` captures through, inside the shared
- * worker's own scope — capture must not depend on a window client being connected, since a worker
- * can fault with every tab gone. A no-op when `dsn` is undefined, so a DSN-less worker never
- * loads the SDK. Never rejects: a bootstrap failure leaves reporting off with a console warning,
- * since an unhandled rejection from the reporting path itself is the one fault nothing can
- * capture. The SDK's default global handlers stay on in production, netting any throw the
- * explicit capture sites miss.
- */
 export async function startErrorReporting(
   dsn: string | undefined,
   options: Readonly<StartErrorReportingOptions> = {},

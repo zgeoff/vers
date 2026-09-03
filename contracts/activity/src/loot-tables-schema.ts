@@ -34,11 +34,6 @@ const AffixDefSchema = z
     path: ['valueMax'],
   });
 
-/**
- * A published loot content version: rarity, base, and affix table data pinned together. Every
- * table is nonempty with unique ids — this schema gates publishing, so incoherent content fails
- * here rather than at replay.
- */
 export const LootTablesSchema = z
   .object({
     contentVersion: z.string(),

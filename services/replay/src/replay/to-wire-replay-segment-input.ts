@@ -14,11 +14,6 @@ const WIRE_ACTIVITY_TYPES: Record<ActivityType, ReplaySegmentInput['activity']['
   [ActivityType.WorldMapEncounter]: 'world_map_encounter',
 };
 
-/**
- * Converts the engine's native `ActivityInput`/`AvatarData` to the wire shape the cross-version
- * dispatch's `replaySegment` provider endpoint accepts — the two are field-identical, differing
- * only in `failureAction`/`type` being engine enums instead of the wire's string literals.
- */
 export function toWireReplaySegmentInput(
   activity: ActivityInput,
   avatar: AvatarData,

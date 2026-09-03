@@ -11,13 +11,6 @@ type StubSessionUpdate =
   | Readonly<Record<string, unknown>>
   | ((data: Readonly<Record<string, unknown>>) => Record<string, unknown> | undefined);
 
-/**
- * Installs the sanctioned ambient-context stub for `@tanstack/react-start/server`'s request and
- * cookie-session reads, called once from the test preload. Every other export of the real module
- * passes through unchanged; a call to a stubbed export outside a `withRequestContext` block throws,
- * the same way the real module throws outside a live request. The stub implementations are object
- * methods so they carry the real module's export names.
- */
 export function registerRequestContextMock(): void {
   afterEach(() => {
     requestContextHolder.current = null;

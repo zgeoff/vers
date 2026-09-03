@@ -13,23 +13,9 @@ const RETRY_BACKOFF_MS = 250;
 const PER_ATTEMPT_TIMEOUT_MS = 2000;
 
 interface MakeSendReplayWakeOptions {
-  /**
-   * Window after a delivery starts during which further pokes are dropped rather than starting a
-   * new one. Injected only in tests, to disable the window so a delivery assertion never waits it
-   * out.
-   */
   readonly coalesceWindowMs?: number;
 }
 
-/**
- * Builds the replay wake poke for one service instance, over its own lazily built oRPC client and
- * its own coalesce state. The returned poke tells the replay service that a committed append
- * advanced claimable verification work — fire-and-forget and level-triggered, so one call means
- * "there is work, come drain" and calling on every advance is fine: the poke coalesces, retries a
- * hung or failed delivery, and self-heals a lost one on the next append. Never throws into the
- * caller. The client is built lazily on the first delivery, so building the poke never reads the
- * environment.
- */
 export function makeSendReplayWake(options: MakeSendReplayWakeOptions = {}): () => void {
   // The lazily built client for this instance: undefined until the first delivery builds it, a
   // build failure clears it back to undefined so the next delivery retries the build fresh, and a

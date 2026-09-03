@@ -7,9 +7,6 @@ import { updateAuthSession } from '../auth/update-auth-session';
 import { sessionExistenceClient } from './clients/session-existence-client';
 import { sessionRefreshClient } from './clients/session-refresh-client';
 
-/**
- * How far ahead of the access token's real `exp` a refresh is triggered proactively.
- */
 const REFRESH_SKEW_SECONDS = 30;
 
 interface RefreshedTokens {
@@ -17,55 +14,17 @@ interface RefreshedTokens {
   readonly refreshToken: string;
 }
 
-/**
- * Why a refresh did not return a token pair: `expired` for a session that lived out its own
- * lifetime, `superseded` for one whose row is gone before that — evicted by a sign-in elsewhere,
- * deleted by a sign-out, or revoked on refresh-token reuse.
- */
 type RefreshFailure = 'expired' | 'superseded';
 
-/**
- * Concurrent calls for the same session share one in-flight refresh instead of each calling
- * `refreshTokens` — racing that call trips the service's refresh-token reuse detection and revokes
- * the session.
- */
+// concurrent calls for one session share a single refresh: racing the refresh call trips the
+// service's refresh-token reuse detection, which revokes the session
 const inFlightRefreshes = new Map<string, Promise<RefreshFailure | RefreshedTokens>>();
 
-/**
- * What a cookie-derived service call may act as.
- *
- * `actor` carries the validated identity pair: the user for the token's `sub` claim, the session
- * for its `sid` claim (the writer identity activity appends are checked against).
- *
- * `signed-out` covers a caller with no live session to act as, and one whose session reached its
- * own expiry. The device may keep whatever it has not yet delivered: the same account signing back
- * in on the same device is entitled to deliver it.
- *
- * `superseded` covers a session whose row is gone before its expiry — an account taken over on
- * another device, a sign-out, or a reuse revocation. The device must discard its undelivered work:
- * the account is being played elsewhere, or the next sign-in here may be someone else.
- */
 export type SessionActorOutcome =
   | { readonly kind: 'actor'; readonly sessionID: string; readonly userID: string }
   | { readonly kind: 'signed-out' }
   | { readonly kind: 'superseded' };
 
-/**
- * Resolves what a cookie-derived service call acts as, proactively re-validating a near-expired
- * session first: services no longer see the caller's own access token, so nothing else re-checks
- * the underlying session's existence, expiry, or revocation before its identity is trusted to mint
- * an s2s token. Even a fresh access token no longer settles that on its own — this closes the
- * token's own trust window by confirming the session row still exists on every call,
- * request-scoped-memoized so the repeated calls one SSR request makes hit the session service at
- * most once per session.
- *
- * The two non-acting outcomes are distinguished rather than collapsed, because they carry opposite
- * instructions for the device's undelivered offline work — see {@link SessionActorOutcome}. The
- * cookie is cleared for both, and the caller's own guard redirects to login on its next request.
- *
- * A session service that can't be reached at all fails the call instead: an unreachable service is
- * never grounds to trust the token or to destroy the cookie.
- */
 export async function loadSessionActor(): Promise<SessionActorOutcome> {
   const session = await getAuthSession();
 
@@ -118,13 +77,6 @@ function isAccessTokenStale(accessToken: string): boolean {
   }
 }
 
-/**
- * Per-request cache of the session-existence check, keyed by the ambient request object: a `Map`
- * per request holding one in-flight/settled lookup per session id, so the several identity loads
- * one SSR request makes for the same session share a single existence round trip. Never a
- * module-level TTL cache — that would trust an evicted session for the life of the process instead
- * of just the request that read it.
- */
 const sessionExistenceCache = new WeakMap<Request, Map<string, Promise<boolean>>>();
 
 function checkSessionStillExists(sessionID: string, userID: string): Promise<boolean> {
@@ -176,13 +128,6 @@ async function resolveRefreshedTokens(
   }
 }
 
-/**
- * Rotates the session's token pair, mapping the contract's declared rejections to the failure the
- * caller signs the session out on. `SESSION_EXPIRED` is the one rejection that says the session
- * simply ran out; every other declared rejection — the row gone, or reuse revoking it — means it
- * was ended before its time. A transport failure or unexpected service error stays a throw: it
- * says nothing about the session, so it must not end it.
- */
 async function runRefresh(
   sessionID: string,
   refreshToken: string,

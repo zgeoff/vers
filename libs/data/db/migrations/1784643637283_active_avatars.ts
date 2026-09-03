@@ -1,12 +1,6 @@
 import type { Kysely } from 'kysely';
 import { sql } from 'kysely';
 
-/**
- * Creates the `active_avatars` table: one row per user naming the avatar the account plays as.
- * The composite foreign key onto `avatars (id, user_id)` makes a cross-user selection
- * unrepresentable, and deleting the avatar cascades the row away — dropping the selection;
- * deleting the user removes it with the account.
- */
 export async function up(db: Kysely<unknown>): Promise<void> {
   await db.schema
     .alterTable('avatars')

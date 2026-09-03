@@ -2,22 +2,6 @@ import type { RevealSource, WorldMapNode } from '@vers/worldmap-core';
 import type { WorldGraph } from '../types';
 import { useWorldmapStore } from './use-worldmap-store';
 
-/**
- * Replaces the active region on a region-key change: the region key, the world graph, the
- * selectable-node set, the reveal sources, the selected node, the selected object reference, and
- * the viewport all move together so no reader observes a graph, selection, selectability, fog, or
- * camera footprint from different regions — the viewport resets to null so a reveal query or graph
- * rebuild for the incoming region never reads the outgoing region's camera footprint, and the
- * camera tracker repopulates it on its next frame. Callers key the region by whose region it is
- * (the avatar id), not by the seed that generated it — two avatars can share a seed, and a switch
- * between them must still reset the selection. A call for the key the store already holds instead
- * just refreshes the world graph, selectable set, and reveal sources, leaving the selection and
- * viewport alone — the shape a caller re-deriving the graph from a moved viewport, or the
- * completed set changing, takes for the same avatar, distinct from an avatar switch.
- * `selectableNodeIDs` is always recomputed alongside `graph` by the caller, since a graph rebuild
- * can bring nodes into or out of view. `userSeed` moves with the region so the biome ground layer
- * can derive its own field client-side, the same seed the graph itself came from.
- */
 export function setWorldRegion(
   regionKey: string,
   userSeed: number,

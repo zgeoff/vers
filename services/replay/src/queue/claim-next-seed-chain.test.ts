@@ -4,11 +4,8 @@ import { createActivityRow } from '../test-utils/create-activity-row';
 import { createChainRow } from '../test-utils/create-chain-row';
 import { claimNextSeedChain } from './claim-next-seed-chain';
 
-/**
- * The claim is a `FOR UPDATE SKIP LOCKED` row lock held across concurrent transactions, which
- * needs real committed rows and independent connections — this suite runs against a real,
- * committed schema clone.
- */
+// the claim is a `FOR UPDATE SKIP LOCKED` row lock held across concurrent transactions, which
+// needs committed rows and independent connections, so this suite runs against a committed clone
 async function setupTest() {
   const db = await createTestDB({ isolation: 'schema' });
 

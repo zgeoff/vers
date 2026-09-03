@@ -2,12 +2,6 @@ import { buildCellNode } from '../build-cell-node';
 import { getBiome } from '../get-biome';
 import { toHexPosition } from '../to-hex-position';
 
-/**
- * Brute-force oracle for the biome field's nearest-node territory lookup: scans a 7×7 cell box
- * around an axial position and returns the base biome id of the nearest jittered node. Wider than
- * the field's own 3×3 scan on purpose, so a test comparing the two catches any jitter increase that
- * would push the true nearest node outside the 3×3 box.
- */
 export function getNearestBaseIDByWideScan(seed: number, cx: number, cy: number): number {
   const [sceneX, sceneY] = toHexPosition(cx, cy);
   let nearestBaseID = -1;

@@ -12,9 +12,6 @@ try {
   process.exit(1);
 }
 
-/**
- * Renders every registered preview to `<name>.html`/`<name>.txt`, plus a linking `index.html`.
- */
 async function writePreviews(outDir: string): Promise<void> {
   await mkdir(outDir, { recursive: true });
 
@@ -34,9 +31,6 @@ async function writePreviews(outDir: string): Promise<void> {
   console.log(`Rendered ${previews.length} email previews to ${outDir}`);
 }
 
-/**
- * Builds a static index page linking every rendered preview's html/plain-text pair.
- */
 function renderIndexPage(): string {
   const items = previews
     .map(

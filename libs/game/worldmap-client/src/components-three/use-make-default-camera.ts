@@ -3,11 +3,6 @@ import { useEffect } from 'react';
 import type { RefObject } from 'react';
 import type { OrthographicCamera, PerspectiveCamera } from 'three';
 
-/**
- * makes the camera held by `cameraRef` the scene's active render camera whenever `isActive` is
- * true, restoring whichever camera was active beforehand once it goes false or the component
- * unmounts.
- */
 export function useMakeDefaultCamera(
   cameraRef: RefObject<null | OrthographicCamera | PerspectiveCamera>,
   isActive: boolean,

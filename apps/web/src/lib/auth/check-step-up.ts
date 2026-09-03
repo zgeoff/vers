@@ -18,13 +18,6 @@ interface CheckStepUpOptions {
   readonly token: string | undefined;
 }
 
-/**
- * Gates a mutation behind step-up: callers with no live 2FA never gate at all. A 2FA-enabled
- * caller needs a transaction token minted from a completed step-up code check — an absent, forged,
- * expired, mismatched-claim, or session-mismatched token starts a fresh pending transaction instead
- * of trusting it. The session check stops a token minted under one auth session from redeeming
- * under another, mirroring the pending-transaction consume path's own `sessionID` match.
- */
 export async function checkStepUp(opts: Readonly<CheckStepUpOptions>): Promise<CheckStepUpResult> {
   const twoFactorVerification = await verificationClient.getVerification({
     target: opts.target,
@@ -53,9 +46,6 @@ export async function checkStepUp(opts: Readonly<CheckStepUpOptions>): Promise<C
   };
 }
 
-/**
- * Redeems a step-up transaction token exactly once, folding every failure mode into `false`.
- */
 async function tryConsumeStepUpToken(
   action: SecureAction,
   target: string,

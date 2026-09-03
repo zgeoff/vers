@@ -3,12 +3,6 @@ import type { E2EOptions } from './src/test';
 
 const baseURL = process.env['STACK_BASE_URL'] ?? 'http://localhost:3200';
 
-/**
- * The full-stack suite: the whole converged spec set against the real service images the deploy
- * pipeline is about to promote, booted by `docker-compose.stack.yml` before playwright runs — no
- * webServer entries, the harness owns the stack lifecycle. Specs create their own unique accounts,
- * so a retry never replays against state a failed attempt mutated.
- */
 export default defineConfig<E2EOptions>({
   expect: {
     timeout: 10 * 1000,

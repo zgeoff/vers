@@ -17,9 +17,6 @@ interface BuildUserRouterDeps {
   readonly db: Kysely<DB>;
 }
 
-/**
- * Assembles the user service's oRPC router, closing each handler over the shared db client.
- */
 export function buildUserRouter(deps: BuildUserRouterDeps) {
   const os = implement(userContract).$context<ServiceContext>();
 

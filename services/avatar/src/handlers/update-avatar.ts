@@ -2,9 +2,6 @@ import type { DB } from '@vers/db';
 import type { Kysely } from 'kysely';
 import type { EmptyErrorPayload, MissingSessionPayload } from '../types';
 
-/**
- * oRPC handler opts for the authed `updateAvatar` procedure.
- */
 interface UpdateAvatarOpts {
   readonly context: { readonly actingUserID: null | string };
   readonly errors: {
@@ -14,9 +11,6 @@ interface UpdateAvatarOpts {
   readonly input: { readonly id: string; readonly name: string };
 }
 
-/**
- * Renames an avatar owned by the acting user; throws NOT_FOUND when they don't own it.
- */
 export async function updateAvatar(
   db: Kysely<DB>,
   opts: UpdateAvatarOpts,
