@@ -5,6 +5,15 @@ import path from 'node:path';
 import { execa } from 'execa';
 import { readCommitRelation } from './read-commit-relation';
 
+// a git hook exports GIT_DIR and its siblings to every child process, and git honours them over
+// `cwd`, so under the pre-push gate the fixture commands and the reader would otherwise act on
+// the real repository
+for (const name of Object.keys(process.env)) {
+  if (name.startsWith('GIT_')) {
+    delete process.env[name];
+  }
+}
+
 async function setupTest() {
   const cwd = await fs.mkdtemp(path.join(os.tmpdir(), 'vers-commit-relation-'));
 
