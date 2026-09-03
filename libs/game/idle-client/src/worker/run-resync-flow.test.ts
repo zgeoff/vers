@@ -1,5 +1,6 @@
 import { expect, test } from 'bun:test';
 import { createMockActivityData } from '@vers/contract-activity/test-utils';
+import { ActivityCheckpointType } from '@vers/idle-core';
 import { createAuthedServiceClient, createViewer } from '@vers/mock-services';
 import * as db from '@vers/mock-services/db';
 import type { ActivityServiceClient } from '../submission/types';
@@ -113,4 +114,35 @@ test('it attaches nothing on a second resync after an offline gap aborted on a f
   expect(context.getActivity()).toBeNull();
   expect(context.getSimulation().activity).toBeNull();
   expect(submitter.registerActivity).not.toHaveBeenCalled();
+});
+
+test("it seeds the run's earnings record from the reconstructed prefix when it attaches mid-stream", async () => {
+  const viewer = await createViewer();
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
+
+  const context = createStubWorkerContext({ client, submitter: createStubSubmitter() });
+
+  // one confirmed checkpoint at the head: the reconstruction replays the started checkpoint the
+  // live tick never saw, and the record must carry it so the next mint folds from this run
+  const activity = await db.activityCollection.create({
+    appendedHead: 1,
+    avatarID: viewer.avatar.id,
+    seed: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaa6072',
+    startedAt: new Date(),
+  });
+
+  const signals: FlowSignals = {
+    cancel: context.getCancelSignal(),
+    stop: context.getStopSignal(),
+  };
+
+  await runResyncFlow(context, viewer.avatar.id, false, signals);
+
+  expect(context.getSimulation().activity?.id).toBe(activity.id);
+
+  expect(context.getRunEarnings()).toMatchObject({
+    activityID: activity.id,
+    deltaXP: 0,
+    tail: { seed: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaa6072', type: ActivityCheckpointType.Started },
+  });
 });

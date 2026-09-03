@@ -11,17 +11,22 @@ export async function runSimulation(
   simulation: Simulation,
   timestep: number,
 ) {
-  const activityID = simulation.activity?.id;
+  const liveActivity = simulation.activity;
 
-  if (activityID === undefined) {
+  if (liveActivity === null) {
     return;
   }
 
+  const activityID = liveActivity.id;
   const checkpoint = simulation.run(timestep);
 
   if (!checkpoint) {
     return;
   }
+
+  // recorded before the submit and independent of the outbox: the next mint folds this run's xp
+  // from here whether its checkpoints are still queued or already confirmed and removed
+  context.setRunEarnings({ activityID, deltaXP: liveActivity.rewards.xp, tail: checkpoint });
 
   const version = await context.getSubmitter().submit(activityID, checkpoint);
 

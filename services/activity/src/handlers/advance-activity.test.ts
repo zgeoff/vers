@@ -10,7 +10,7 @@ import type {
 } from '@vers/contract-activity';
 import { buildStartHash } from '@vers/contract-activity';
 import { createMockContentDocument } from '@vers/contract-activity/test-utils';
-import { buildLevelFromXP } from '@vers/idle-core';
+import { buildLevelFromXP, foldOptimisticBuild } from '@vers/idle-core';
 import { buildMockScopeSecret } from '@vers/mock-services/keys';
 import {
   createActiveAvatarRow,
@@ -1730,4 +1730,89 @@ test("it refuses a kicked writer session's undelivered offline activityStart wit
       activityStart,
     }),
   ).rejects.toMatchObject({ code: 'CONFLICT' });
+});
+
+test("it admits a successor whose build snapshot folds the predecessor's start snapshot with its confirmed terminal checkpoint", async () => {
+  await using ctx = await setupTest();
+
+  const current = await createSimVersionRow(ctx.db);
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id, xp: 100 });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+  const firstStart = { level: buildLevelFromXP(100), xp: 100 };
+
+  const first = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    buildSnapshot: firstStart,
+    scopeId: '0_0',
+  });
+
+  const tail = createMockCheckpointBatch({
+    finalPayloadOverrides: { rewards: { xp: 40 }, type: 'completed' },
+    startChainIndex: first.startChainIndex,
+    startPrevHash: first.startHash,
+    startVersion: 1,
+  });
+
+  // the online case: every checkpoint confirmed, the terminal closed the run, nothing queued
+  await client.trackActivityProgress({
+    activityID: first.id,
+    checkpoints: tail,
+    expectedHead: 0,
+  });
+
+  const terminal = tail.at(-1);
+
+  invariant(terminal !== undefined, 'the batch carries its terminal checkpoint');
+
+  // the client's rule: the predecessor's own start snapshot plus its terminal checkpoint, folded
+  // through the shared fold with no outbox in sight
+  const predicted = foldOptimisticBuild(firstStart.xp, [
+    { settledXP: 0, tailPayload: terminal.payload, unverifiedDeltaSum: 0 },
+  ]);
+
+  const chain = await ctx.db
+    .selectFrom('activityChains')
+    .select(['appendedNextSeed', 'appendedChainIndex'])
+    .where('avatarId', '=', avatar.id)
+    .where('scopeId', '=', '0_0')
+    .executeTakeFirstOrThrow();
+
+  const derived = deriveActivityStart({
+    avatarID: avatar.id,
+    avatarSeed: avatar.seed,
+    contentVersion: '2',
+    document: createMockContentDocument({ contentVersion: '2' }),
+    scopeID: '0_0',
+    seed: chain.appendedNextSeed,
+    simVersion: current.engineHash,
+  });
+
+  const activityStart = createMockOfflineActivityStartSubmission({
+    avatarID: avatar.id,
+    buildSnapshot: { level: buildLevelFromXP(predicted.totalXP), xp: predicted.totalXP },
+    contentVersion: '2',
+    predecessorActivityID: first.id,
+    scopeID: '0_0',
+    scopeType: 'world_map_node',
+    seed: chain.appendedNextSeed,
+    simVersion: current.engineHash,
+    startChainIndex: chain.appendedChainIndex,
+    startHash: derived.startHash,
+  });
+
+  const activityID = `act_${createId()}`;
+
+  await client.advanceActivity({ activityID, continuations: [], expectedHead: 0, activityStart });
+
+  const row = await ctx.db
+    .selectFrom('activities')
+    .select('buildSnapshot')
+    .where('id', '=', activityID)
+    .executeTakeFirstOrThrow();
+
+  expect(row.buildSnapshot).toStrictEqual({ level: buildLevelFromXP(140), xp: 140 });
 });

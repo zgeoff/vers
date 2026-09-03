@@ -2,6 +2,7 @@ import { expect, test } from 'bun:test';
 import { buildStartHash } from '@vers/contract-activity';
 import { createMockActivityData } from '@vers/contract-activity/test-utils';
 import { buildLevelFromXP } from '@vers/idle-core';
+import { createMockFailedCheckpoint } from '@vers/idle-core/test-utils';
 import invariant from 'tiny-invariant';
 import { writeLastStartedActivity } from '../submission/write-last-started-activity';
 import { writeNodeSeeds } from '../submission/write-node-seeds';
@@ -9,7 +10,9 @@ import { writeQueuedCheckpoint } from '../submission/write-queued-checkpoint';
 import { writeStartStamps } from '../submission/write-start-stamps';
 import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
 import { createMockCheckpointBatchEntry } from '../test-utils/factories/create-mock-checkpoint-batch-entry';
+import { createMockCompletedCheckpoint } from '../test-utils/factories/create-mock-completed-checkpoint';
 import { createMockNodeSeed } from '../test-utils/factories/create-mock-node-seed';
+import { createMockProgressCheckpoint } from '../test-utils/factories/create-mock-progress-checkpoint';
 import { buildActivityStart } from './build-activity-start';
 
 test('it synthesizes a row whose start hash matches buildStartHash for the same cached inputs', async () => {
@@ -281,4 +284,189 @@ test('it stamps a null predecessor when the durable record belongs to a differen
   invariant(row !== null, 'expected the cached inputs to synthesize a row');
 
   expect(row.predecessorActivityID).toBeNull();
+});
+
+test("it folds the previous run's recorded terminal total when every checkpoint already left the queue", async () => {
+  const seed = createMockNodeSeed({ avatarID: 'avatar_online_clear', nodeID: '2_3' });
+
+  await writeNodeSeeds(seed.avatarID, [seed]);
+  await writeStartStamps({ keyVersion: 1, secretRef: 'worldmap', secretVersion: 1 });
+
+  const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_1' });
+
+  const previous = createMockActivityData({
+    avatarID: seed.avatarID,
+    buildSnapshot: { level: buildLevelFromXP(1000), xp: 1000 },
+    id: 'act_online_previous',
+  });
+
+  context.setActivity(previous);
+
+  // the run cleared online: the server confirmed every checkpoint and the queue is empty, so the
+  // worker's own record of the run is the only place its earned xp still lives
+  context.setRunEarnings({
+    activityID: previous.id,
+    deltaXP: 150,
+    tail: createMockCompletedCheckpoint({ rewards: { xp: 200 } }),
+  });
+
+  const row = await buildActivityStart(context, {
+    avatarID: seed.avatarID,
+    scopeID: seed.nodeID,
+    scopeType: 'world_map_node',
+    startKey: 'start_key_online',
+  });
+
+  invariant(row !== null, 'expected the cached inputs to synthesize a row');
+
+  // the terminal checkpoint carries the run's whole total, completion bonus included, so the
+  // 200 it names wins over the 150 the progress deltas summed to
+  expect(row.buildSnapshot).toStrictEqual({ level: buildLevelFromXP(1200), xp: 1200 });
+});
+
+test("it folds a still-running previous run's recorded xp deltas when it has no terminal checkpoint yet", async () => {
+  const seed = createMockNodeSeed({ avatarID: 'avatar_switch_mid_run', nodeID: '2_4' });
+
+  await writeNodeSeeds(seed.avatarID, [seed]);
+  await writeStartStamps({ keyVersion: 1, secretRef: 'worldmap', secretVersion: 1 });
+
+  const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_1' });
+
+  const previous = createMockActivityData({
+    avatarID: seed.avatarID,
+    buildSnapshot: { level: buildLevelFromXP(1000), xp: 1000 },
+    id: 'act_mid_run_previous',
+  });
+
+  context.setActivity(previous);
+
+  context.setRunEarnings({
+    activityID: previous.id,
+    deltaXP: 120,
+    tail: createMockProgressCheckpoint({ rewards: { xp: 20 } }),
+  });
+
+  const row = await buildActivityStart(context, {
+    avatarID: seed.avatarID,
+    scopeID: seed.nodeID,
+    scopeType: 'world_map_node',
+    startKey: 'start_key_mid_run',
+  });
+
+  invariant(row !== null, 'expected the cached inputs to synthesize a row');
+
+  expect(row.buildSnapshot).toStrictEqual({ level: buildLevelFromXP(1120), xp: 1120 });
+});
+
+test("it folds a failed previous run's terminal loss into the next snapshot", async () => {
+  const seed = createMockNodeSeed({ avatarID: 'avatar_failed_previous', nodeID: '2_5' });
+
+  await writeNodeSeeds(seed.avatarID, [seed]);
+  await writeStartStamps({ keyVersion: 1, secretRef: 'worldmap', secretVersion: 1 });
+
+  const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_1' });
+
+  const previous = createMockActivityData({
+    avatarID: seed.avatarID,
+    buildSnapshot: { level: buildLevelFromXP(1000), xp: 1000 },
+    id: 'act_failed_previous',
+  });
+
+  context.setActivity(previous);
+
+  // a failed terminal nets the death penalty against what the run earned, so its total can be
+  // negative
+  context.setRunEarnings({
+    activityID: previous.id,
+    deltaXP: 4,
+    tail: createMockFailedCheckpoint({ rewards: { xp: -6 } }),
+  });
+
+  const row = await buildActivityStart(context, {
+    avatarID: seed.avatarID,
+    scopeID: seed.nodeID,
+    scopeType: 'world_map_node',
+    startKey: 'start_key_failed',
+  });
+
+  invariant(row !== null, 'expected the cached inputs to synthesize a row');
+
+  expect(row.buildSnapshot).toStrictEqual({ level: buildLevelFromXP(994), xp: 994 });
+});
+
+test("it prefers the previous run's recorded earnings over the partial rows still queued for it", async () => {
+  const seed = createMockNodeSeed({ avatarID: 'avatar_partial_queue', nodeID: '2_6' });
+
+  await writeNodeSeeds(seed.avatarID, [seed]);
+  await writeStartStamps({ keyVersion: 1, secretRef: 'worldmap', secretVersion: 1 });
+
+  const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_1' });
+
+  const previous = createMockActivityData({
+    avatarID: seed.avatarID,
+    buildSnapshot: { level: buildLevelFromXP(1000), xp: 1000 },
+    id: 'act_partial_queue_previous',
+  });
+
+  context.setActivity(previous);
+
+  // the queue holds only the tail the server has not confirmed yet; the record holds the run
+  await writeQueuedCheckpoint(
+    previous.id,
+    createMockCheckpointBatchEntry({
+      payload: { rewards: { xp: 80 }, type: 'progress' },
+      version: 3,
+    }),
+  );
+
+  context.setRunEarnings({
+    activityID: previous.id,
+    deltaXP: 120,
+    tail: createMockProgressCheckpoint({ rewards: { xp: 80 } }),
+  });
+
+  const row = await buildActivityStart(context, {
+    avatarID: seed.avatarID,
+    scopeID: seed.nodeID,
+    scopeType: 'world_map_node',
+    startKey: 'start_key_partial_queue',
+  });
+
+  invariant(row !== null, 'expected the cached inputs to synthesize a row');
+
+  expect(row.buildSnapshot).toStrictEqual({ level: buildLevelFromXP(1120), xp: 1120 });
+});
+
+test('it ignores earnings recorded for a run other than the previous one', async () => {
+  const seed = createMockNodeSeed({ avatarID: 'avatar_other_run_record', nodeID: '2_7' });
+
+  await writeNodeSeeds(seed.avatarID, [seed]);
+  await writeStartStamps({ keyVersion: 1, secretRef: 'worldmap', secretVersion: 1 });
+
+  const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_1' });
+
+  const previous = createMockActivityData({
+    avatarID: seed.avatarID,
+    buildSnapshot: { level: buildLevelFromXP(1000), xp: 1000 },
+    id: 'act_other_run_previous',
+  });
+
+  context.setActivity(previous);
+
+  context.setRunEarnings({
+    activityID: 'act_some_other_run',
+    deltaXP: 500,
+    tail: createMockCompletedCheckpoint({ rewards: { xp: 500 } }),
+  });
+
+  const row = await buildActivityStart(context, {
+    avatarID: seed.avatarID,
+    scopeID: seed.nodeID,
+    scopeType: 'world_map_node',
+    startKey: 'start_key_other_run',
+  });
+
+  invariant(row !== null, 'expected the cached inputs to synthesize a row');
+
+  expect(row.buildSnapshot).toStrictEqual({ level: buildLevelFromXP(1000), xp: 1000 });
 });

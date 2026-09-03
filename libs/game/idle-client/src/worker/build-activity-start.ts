@@ -103,13 +103,28 @@ async function buildOptimisticBuildSnapshot(
   const previousRun =
     lastActivity !== null && lastActivity.avatarID === avatarID ? lastActivity : null;
 
-  const sources = previousRun === null ? [] : await buildPreviousRunSources(previousRun);
+  const sources = previousRun === null ? [] : await buildPreviousRunSources(context, previousRun);
   const optimistic = foldOptimisticBuild(previousRun?.buildSnapshot.xp ?? 0, sources);
 
   return { level: buildLevelFromXP(optimistic.totalXP), xp: optimistic.totalXP };
 }
 
-async function buildPreviousRunSources(
+function buildPreviousRunSources(
+  context: WorkerContext,
+  activity: Readonly<ActivityData>,
+): Promise<Array<OptimisticBuildSource>> {
+  const earnings = context.getRunEarnings();
+
+  if (earnings !== null && earnings.activityID === activity.id) {
+    return Promise.resolve([
+      { settledXP: 0, tailPayload: earnings.tail, unverifiedDeltaSum: earnings.deltaXP },
+    ]);
+  }
+
+  return buildQueuedSources(activity);
+}
+
+async function buildQueuedSources(
   activity: Readonly<ActivityData>,
 ): Promise<Array<OptimisticBuildSource>> {
   const queued = await readQueuedCheckpoints(activity.id);

@@ -364,6 +364,7 @@ async function applyHeadAttach(
     const simulation = createSimulation();
 
     simulation.startActivity(input.avatar, input.activity);
+    context.setRunEarnings(null);
 
     await setLiveSimulationOrStopBack(context, activity, simulation, signals);
 
@@ -385,6 +386,18 @@ async function applyHeadAttach(
   if (options.skipTerminalHead && isTerminalCheckpoint(reconstruction.lastCheckpoint)) {
     return;
   }
+
+  const reconstructed = reconstruction.simulation.activity;
+
+  invariant(reconstructed !== null, 'a reconstruction that reached its target holds its activity');
+
+  // the replayed prefix never passes through the live tick, so the next mint's xp fold is seeded
+  // from it here — the live ticks that follow carry the record forward
+  context.setRunEarnings({
+    activityID: activity.id,
+    deltaXP: reconstructed.rewards.xp,
+    tail: reconstruction.lastCheckpoint,
+  });
 
   await context.getSubmitter().registerActivity({
     ...submission,

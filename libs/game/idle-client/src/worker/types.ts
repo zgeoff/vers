@@ -1,5 +1,5 @@
 import type { ActivityData } from '@vers/contract-activity';
-import type { ActivityFailureAction, Simulation } from '@vers/idle-core';
+import type { ActivityCheckpoint, ActivityFailureAction, Simulation } from '@vers/idle-core';
 import type { ActorRefFromLogic } from 'xstate';
 import type { CheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import type { ActivityServiceClient } from '../submission/types';
@@ -27,6 +27,12 @@ export interface StopActivityInput {
   readonly avatarID: string;
 }
 
+export interface RunEarnings {
+  readonly activityID: string;
+  readonly deltaXP: number;
+  readonly tail: ActivityCheckpoint;
+}
+
 export interface WorkerContext {
   readonly advanceStopScope: () => void;
 
@@ -47,6 +53,7 @@ export interface WorkerContext {
   readonly getResyncAvatarID: () => string | null;
 
   readonly getRewardSlotLedger: () => RewardSlotLedgerSnapshot;
+  readonly getRunEarnings: () => RunEarnings | null;
   readonly getSimulation: () => Simulation;
 
   readonly getLifecycle: () => ActorRefFromLogic<typeof workerLifecycleMachine>;
@@ -75,6 +82,7 @@ export interface WorkerContext {
   readonly setLastAckAt: (timestamp: number) => void;
 
   readonly setResyncAvatarID: (avatarID: null | string) => void;
+  readonly setRunEarnings: (earnings: RunEarnings | null) => void;
   readonly setStartToken: (token: string) => void;
   readonly setSimulation: (simulation: Simulation) => void;
   readonly setWriterDisplacedActivityID: (activityID: null | string) => void;

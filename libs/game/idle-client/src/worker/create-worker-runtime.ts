@@ -20,7 +20,7 @@ import { ingestAndBroadcastActivityStart } from './ingest-and-broadcast-activity
 import { registerSimulationListeners } from './register-simulation-listeners';
 import { reportWorkerFault } from './report-worker-fault';
 import { runSimulation } from './run-simulation';
-import type { WorkerCallContext, WorkerContext } from './types';
+import type { RunEarnings, WorkerCallContext, WorkerContext } from './types';
 import { workerLifecycleMachine } from './worker-lifecycle-machine';
 import type { WorkerMessage } from './worker-to-client-message-schema';
 
@@ -96,6 +96,7 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
   let lastAckAt = Date.now();
   let rewardSlotLedgerActivityID: null | string = null;
   let rewardSlotLedger: ReadonlyArray<RewardSlotLedgerEntry> = [];
+  let runEarnings: RunEarnings | null = null;
 
   const broadcast = (message: WorkerMessage) => {
     broadcastChannel.postMessage(message);
@@ -128,6 +129,7 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
       activityID: rewardSlotLedgerActivityID,
       entries: rewardSlotLedger,
     }),
+    getRunEarnings: () => runEarnings,
     getSimulation: () => simulation,
     getStartToken: () => getLifecycle().getSnapshot().context.startToken,
     getStopSignal: () => getLifecycle().getSnapshot().context.stopController.signal,
@@ -167,6 +169,9 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
     },
     setResyncAvatarID: (avatarID) => {
       resyncAvatarID = avatarID;
+    },
+    setRunEarnings: (earnings) => {
+      runEarnings = earnings;
     },
     setSimulation: (newSimulation) => {
       simulation = newSimulation;
