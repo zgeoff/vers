@@ -2,6 +2,8 @@ import { implement } from '@orpc/server';
 import { handleCacheNodeSeedsMessage } from './handle-cache-node-seeds-message';
 import { handleDisconnectMessage } from './handle-disconnect-message';
 import { handleInitializeMessage } from './handle-initialize-message';
+import { handleReadUndeliveredWorkMessage } from './handle-read-undelivered-work-message';
+import { handleRemoveUndeliveredWorkMessage } from './handle-remove-undelivered-work-message';
 import { handleReportOnlineMessage } from './handle-report-online-message';
 import { handleSetFailureActionMessage } from './handle-set-failure-action-message';
 import { handleStartActivityMessage } from './handle-start-activity-message';
@@ -34,6 +36,19 @@ export function createWorkerRouter(context: WorkerContext, ready: Readonly<Promi
       await ready;
 
       return handleInitializeMessage(context);
+    }),
+
+    readUndeliveredWork: os.readUndeliveredWork.handler(async () => {
+      await ready;
+
+      return handleReadUndeliveredWorkMessage();
+    }),
+
+    removeUndeliveredWork: os.removeUndeliveredWork.handler(async () => {
+      await ready;
+      await handleRemoveUndeliveredWorkMessage(context);
+
+      return ACK;
     }),
 
     reportOnline: os.reportOnline.handler(async (opts) => {

@@ -107,32 +107,31 @@ the work that session never delivered never reaches the server.
 
 ### When a session ends
 
-The outbox outlives the session that filled it. What the device does with the work inside it depends
-on how that session ended.
+The outbox outlives the session that filled it. What the device does with the outbox depends on how
+that session ended.
 
-| What happened to the session | Its row         | The device's outbox |
-| ---------------------------- | --------------- | ------------------- |
-| Another device took it over  | deleted at once | discarded           |
-| The player signed out here   | deleted at once | kept                |
-| It ran past its expiry       | left in place   | kept                |
+| What happened to the session | Its row         | The device's outbox                 |
+| ---------------------------- | --------------- | ----------------------------------- |
+| Another device took it over  | deleted at once | discarded                           |
+| The player signed out here   | deleted at once | discarded, once the player confirms |
+| It ran past its expiry       | left in place   | kept                                |
 
-The worker throws work away only when another device takes the account over. app-web answers that
-call itself, and puts a header on the answer saying the session was taken over rather than that it
-ran out. The worker reads that header and clears its pending activity starts, its queued
-checkpoints, and the preferences it would otherwise recover from. A worker that kept that work would
-deliver it the next time the player signs in here, long after the player carried on elsewhere. The
-player is warned before taking the account over, so nothing is lost silently.
+When another device takes the account over, the worker discards the outbox. app-web answers the call
+itself and marks the answer with a header saying the session was taken over rather than that it ran
+out. The worker reads that header and clears its pending activity starts, its queued checkpoints,
+and the preferences it would otherwise recover from. A worker that kept the outbox would deliver it
+the next time the player signs in here, long after the player carried on elsewhere. The device
+taking the account over warns the player first, so the player never loses the outbox unknowingly.
 
 A session that runs past its expiry keeps its row until the next refresh call deletes it and reports
-what happened. app-web can tell a takeover from a lapsed session because of that, and it sends no
-header when a session has run out. So a player whose session lapsed while the app was closed still
-delivers the offline play the device holds, once they sign back in.
+what happened. app-web tells a takeover from a lapsed session by that report, and it sends no header
+when a session has run out. So a device whose session lapsed while the app was closed delivers its
+outbox once the player signs back in.
 
 When the player signs out, one request deletes the session row and clears this device's cookie
-together, so no later call ever finds the row gone and app-web never sends the header. The worker
-keeps its outbox. The next player to sign in here still cannot deliver that work: the worker drains
-only the acting avatar's activity starts, and the server refuses a start naming an avatar the acting
-user does not own.
+together. The device therefore never makes a call that finds the row gone, so app-web never sends
+the takeover header. The sign-out control decides what happens to the outbox
+([signing out](#signing-out)).
 
 Session eviction and writer ownership are separate mechanisms on separate scopes. The session
 belongs to the account, and evicting it signs a device out of everything. The writer belongs to one
@@ -140,6 +139,32 @@ activity: that activity's head row stamps the session allowed to append to it, a
 activity on another session takes the stamp over
 ([game simulation](./game-simulation.md#checkpoint-streams)). An avatar's other activities keep the
 writer they already carry.
+
+### Signing out
+
+Before it ends the session, the sign-out control asks the worker what the outbox holds. When the
+outbox is empty, the control signs the player out at once. When the outbox holds activities, the
+control warns the player. Once the player confirms, the worker discards the outbox and the control
+ends the session. Cancelling leaves the outbox unchanged and the session open.
+
+The warning names how many activities the outbox holds and how much simulated time the server has
+not received. An activity the player ran offline sits in the outbox whole: its activity start and
+every checkpoint. An activity the server received in part sits there as the checkpoints the server
+has not received. An activity the server received in full is absent, so the warning omits it, and
+the next sign-in attaches to it again.
+
+A worker that cannot say what the outbox holds does not block the sign-out. The control signs the
+player out and leaves the outbox unchanged, because a dead worker must never trap a player on the
+settings screen. A worker that fails to discard the outbox blocks the sign-out. The control keeps
+the warning open and asks the player to try again, because ending the session with the outbox intact
+is what the warning exists to prevent. The worker clears the outbox before it stops the live
+simulation, so when the outbox clear fails the simulation keeps running and the outbox stays whole.
+
+After a cancelled sign-out, the outbox can reach the server only from the account that filled it. A
+different account signing in on this device cannot deliver the outbox: the worker drains only the
+acting avatar's activity starts, and the server refuses an activity start naming an avatar the
+acting user does not own. The same account signing back in delivers the outbox, which is what
+cancelling asks for.
 
 ## Settlement in order
 

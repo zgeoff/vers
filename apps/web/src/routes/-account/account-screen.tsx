@@ -1,8 +1,8 @@
 import { Link } from '@tanstack/react-router';
-import { Button } from '@vers/design-system';
 import { css } from '@vers/styled-system/css';
 import type { ReactNode } from 'react';
 import { DisableTwoFactorAuthForm } from './disable-two-factor-auth-form';
+import { SignOutForm } from './sign-out-form';
 
 interface AccountScreenProps {
   readonly Content: ReactNode;
@@ -24,11 +24,7 @@ export function AccountScreen(props: Readonly<AccountScreenProps>) {
         ) : (
           <Link to="/account/2fa/verify">Enable 2FA</Link>
         )}
-        <form action="/logout" method="post">
-          <Button type="submit" variant="link">
-            Logout
-          </Button>
-        </form>
+        <SignOutForm />
       </section>
     </div>
   );
