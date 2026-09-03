@@ -21,7 +21,9 @@ Bugsink and Umami own separate logical databases in the same Neon project. `serv
 database connection. Its state is 2 secrets, `ROLL_KEY_ROOTS` and `SCOPE_SECRET_ROOTS`.
 
 Every app scales to zero. `auto_stop_machines = 'suspend'` parks an idle machine with its memory
-snapshot for sub-second wake, and a service wakes on its first request. Two deviations:
+snapshot for sub-second wake, and a service wakes on its first request. A suspended process resumes
+with the Postgres sockets it held, so `@vers/db` drops its pool on resume
+([database](./database.md#connection-pool)). Two deviations:
 
 - `app-web` keeps one machine warm (`min_machines_running = 1`, enforced by `deploy verify` through
   the manifest's `minStartedMachines`) so a visitor never waits on a cold start.

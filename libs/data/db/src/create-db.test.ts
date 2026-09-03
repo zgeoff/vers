@@ -5,6 +5,9 @@ import {
   NodeTracerProvider,
   SimpleSpanProcessor,
 } from '@opentelemetry/sdk-trace-node';
+import { waitFor } from '@vers/test-utils';
+import { createInMemoryMetrics } from '@vers/test-utils/bun';
+import { sql } from 'kysely';
 import invariant from 'tiny-invariant';
 import { buildPostgresOptions, createDB } from './create-db';
 import { createTestDB } from './test-support/create-test-db';
@@ -221,4 +224,61 @@ test('it marks the db.connect span failed and records the exception when the con
 
   expect(connectSpan.status.code).toBe(SpanStatusCode.ERROR);
   expect(connectSpan.events[0]?.name).toBe('exception');
+});
+
+test('it serves the next query from a fresh connection after the wall clock jumps past the resume threshold', async () => {
+  const inMemoryMetrics = createInMemoryMetrics();
+  let clock = Date.now();
+
+  await using handle = await createTestDB({
+    resumeDetection: { intervalMs: 10, now: () => clock, thresholdMs: 1000 },
+  });
+
+  const before = await sql<{ pid: number }>`select pg_backend_pid() as pid`.execute(handle.db);
+
+  clock += 600_000;
+
+  await waitFor(async () => {
+    const resets = await inMemoryMetrics.readCounterValue('vers.db.pool_resets');
+
+    expect(resets).toBe(1);
+  });
+
+  const after = await sql<{ pid: number }>`select pg_backend_pid() as pid`.execute(handle.db);
+
+  const [beforeRow] = before.rows;
+  const [afterRow] = after.rows;
+
+  invariant(beforeRow && afterRow, 'expected one row per query');
+
+  expect(afterRow.pid).not.toBe(beforeRow.pid);
+});
+
+test('it rejects a query still in flight on the old pool when a resume is detected', async () => {
+  let clock = Date.now();
+
+  await using handle = await createTestDB({
+    resumeDetection: { intervalMs: 10, now: () => clock, thresholdMs: 1000 },
+  });
+
+  await handle.db.selectFrom('users').selectAll().execute();
+
+  const sleeping = sql`select pg_sleep(20)`.execute(handle.db);
+
+  await waitFor(async () => {
+    const active = await sql<{ count: number }>`
+      select count(*)::int as count from pg_stat_activity
+      where state = 'active' and query like '%pg_sleep(20)%' and pid <> pg_backend_pid()
+    `.execute(handle.db);
+
+    expect(active.rows[0]?.count).toBe(1);
+  });
+
+  clock += 600_000;
+
+  await sleeping.catch(() => {});
+
+  expect(sleeping).rejects.toMatchObject({ code: 'CONNECTION_DESTROYED' });
+
+  await expect(handle.db.selectFrom('users').selectAll().execute()).toResolve();
 });

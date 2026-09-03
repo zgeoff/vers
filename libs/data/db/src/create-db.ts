@@ -1,20 +1,35 @@
 import { SpanKind, SpanStatusCode, context, trace } from '@opentelemetry/api';
-import { CamelCasePlugin, Kysely } from 'kysely';
-import type { AbortableOperationOptions, Dialect, Driver, LogEvent } from 'kysely';
+import {
+  CamelCasePlugin,
+  Kysely,
+  PostgresAdapter,
+  PostgresIntrospector,
+  PostgresQueryCompiler,
+} from 'kysely';
+import type {
+  AbortableOperationOptions,
+  DatabaseConnection,
+  Dialect,
+  Driver,
+  LogEvent,
+} from 'kysely';
 import { PostgresJSDialect } from 'kysely-postgres-js';
 import postgres from 'postgres';
+import invariant from 'tiny-invariant';
+import { recordPoolReset } from './record-pool-reset';
 import type { DB } from './schema.generated';
+import { startResumeDetector } from './start-resume-detector';
+import type { ResumeDetector, StartResumeDetectorConfig } from './start-resume-detector';
 
-interface CreateDBConfig {
+export interface CreateDBConfig {
   readonly databaseURL: string;
+  readonly resumeDetection?: Omit<StartResumeDetectorConfig, 'onResume'>;
   readonly searchPath?: string;
 }
 
 export function createDB(config: CreateDBConfig): Kysely<DB> {
-  const sql = postgres(config.databaseURL, buildPostgresOptions(config));
-
   return new Kysely<DB>({
-    dialect: buildTracedDialect(new PostgresJSDialect({ postgres: sql })),
+    dialect: buildDialect(config),
     log: recordQuerySpan,
     plugins: [new CamelCasePlugin()],
   });
@@ -41,13 +56,125 @@ export function buildPostgresOptions(config: CreateDBConfig) {
   };
 }
 
-function buildTracedDialect(dialect: PostgresJSDialect): Dialect {
+function buildDialect(config: CreateDBConfig): Dialect {
   return {
-    createAdapter: () => dialect.createAdapter(),
-    createDriver: () => buildTracedDriver(dialect.createDriver()),
-    createIntrospector: (db) => dialect.createIntrospector(db),
-    createQueryCompiler: () => dialect.createQueryCompiler(),
+    createAdapter: () => new PostgresAdapter(),
+    createDriver: () => buildTracedDriver(buildResettableDriver(config)),
+    createIntrospector: (db) => new PostgresIntrospector(db),
+    createQueryCompiler: () => new PostgresQueryCompiler(),
   };
+}
+
+interface PoolGeneration {
+  readonly driver: Driver;
+  ended: boolean;
+  readonly ready: Promise<void>;
+  readonly sql: postgres.Sql;
+}
+
+function buildResettableDriver(config: CreateDBConfig): Driver {
+  const owners = new WeakMap<DatabaseConnection, PoolGeneration>();
+
+  let current = createPoolGeneration(config);
+  let detector: ResumeDetector | null = null;
+
+  const resolveDriver = (connection: DatabaseConnection): Driver =>
+    (owners.get(connection) ?? current).driver;
+
+  const resetPool = async (): Promise<void> => {
+    const previous = current;
+
+    current = createPoolGeneration(config);
+    previous.ended = true;
+
+    recordPoolReset();
+
+    // a zero timeout destroys the sockets and rejects every query still pending on them; the
+    // graceful end would wait on a peer that closed during the pause
+    await previous.sql.end({ timeout: 0 });
+  };
+
+  return {
+    acquireConnection: async (options) => {
+      const generation = current;
+
+      await generation.ready;
+
+      const connection = await generation.driver.acquireConnection(options);
+
+      owners.set(connection, generation);
+
+      return connection;
+    },
+    beginTransaction: (connection, settings) =>
+      resolveDriver(connection).beginTransaction(connection, settings),
+    commitTransaction: (connection) => resolveDriver(connection).commitTransaction(connection),
+    destroy: async (options) => {
+      detector?.stop();
+
+      await current.ready;
+
+      await current.driver.destroy(options);
+    },
+    init: async () => {
+      await current.ready;
+
+      detector = startResumeDetector({
+        ...config.resumeDetection,
+        onResume: () => {
+          void resetPool();
+        },
+      });
+    },
+    releaseConnection: async (connection, options) => {
+      const generation = owners.get(connection) ?? current;
+
+      if (generation.ended) {
+        return;
+      }
+
+      await generation.driver.releaseConnection(connection, options);
+    },
+    releaseSavepoint: (connection, savepointName, compileQuery) => {
+      const driver = resolveDriver(connection);
+
+      invariant(
+        typeof driver.releaseSavepoint === 'function',
+        'the postgres driver implements savepoints',
+      );
+
+      return driver.releaseSavepoint(connection, savepointName, compileQuery);
+    },
+    rollbackToSavepoint: (connection, savepointName, compileQuery) => {
+      const driver = resolveDriver(connection);
+
+      invariant(
+        typeof driver.rollbackToSavepoint === 'function',
+        'the postgres driver implements savepoints',
+      );
+
+      return driver.rollbackToSavepoint(connection, savepointName, compileQuery);
+    },
+    rollbackTransaction: (connection) => resolveDriver(connection).rollbackTransaction(connection),
+    savepoint: (connection, savepointName, compileQuery) => {
+      const driver = resolveDriver(connection);
+
+      invariant(
+        typeof driver.savepoint === 'function',
+        'the postgres driver implements savepoints',
+      );
+
+      return driver.savepoint(connection, savepointName, compileQuery);
+    },
+  };
+}
+
+function createPoolGeneration(config: CreateDBConfig): PoolGeneration {
+  const sql = postgres(config.databaseURL, buildPostgresOptions(config));
+
+  const driver = new PostgresJSDialect({ postgres: sql }).createDriver();
+
+  return { driver, ended: false, ready: driver.init(), sql };
 }
 
 function buildTracedDriver(driver: Driver): Driver {
