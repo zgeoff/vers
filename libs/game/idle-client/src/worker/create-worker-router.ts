@@ -41,7 +41,7 @@ export function createWorkerRouter(context: WorkerContext, ready: Readonly<Promi
     readUndeliveredWork: os.readUndeliveredWork.handler(async () => {
       await ready;
 
-      return handleReadUndeliveredWorkMessage(context);
+      return handleReadUndeliveredWorkMessage();
     }),
 
     removeUndeliveredWork: os.removeUndeliveredWork.handler(async () => {

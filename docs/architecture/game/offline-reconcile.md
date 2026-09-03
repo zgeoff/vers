@@ -137,8 +137,9 @@ asks the worker what it is holding before it ends the session: a worker holding 
 player straight out, and a worker holding runs warns the player first, naming how many runs and how
 much play sit in the outbox, and clears them once the player confirms. The play it names is the span
 of each run's still-queued checkpoints, so a partly delivered run counts only its undelivered tail.
-Cancelling leaves the outbox exactly where it is. A run still in progress counts as undelivered too,
-since its checkpoints are unverified whether or not they have reached the server.
+Cancelling leaves the outbox exactly where it is. A run in progress counts only through the rows it
+has left in the outbox: a run the server has received in full ends the session with no warning, and
+the next sign-in attaches to it again.
 
 The control answers a failed worker call two ways, depending on which call failed. A worker that
 cannot say what it holds signs the player out and leaves the outbox where it stands, since a dead

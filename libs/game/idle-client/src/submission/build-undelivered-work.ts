@@ -3,7 +3,6 @@ import type { QueuedCheckpoint } from './types';
 
 interface BuildUndeliveredWorkInput {
   readonly checkpoints: ReadonlyArray<QueuedCheckpoint>;
-  readonly runningActivityID: null | string;
   readonly startIDs: ReadonlyArray<string>;
 }
 
@@ -24,10 +23,6 @@ export function buildUndeliveredWork(input: Readonly<BuildUndeliveredWorkInput>)
 
     span.max = Math.max(span.max, time);
     span.min = Math.min(span.min, time);
-  }
-
-  if (input.runningActivityID !== null) {
-    activityIDs.add(input.runningActivityID);
   }
 
   let playMs = 0;
