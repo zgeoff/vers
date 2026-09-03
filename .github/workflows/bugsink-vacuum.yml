@@ -24,6 +24,27 @@ jobs:
       - name: Setup flyctl
         uses: superfly/flyctl-actions/setup-flyctl@ed8efb33836e8b2096c7fd3ba1c8afe303ebbff1 # 1.6
 
+      - name: Wake the Bugsink machine
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        # The app suspends its only machine when idle, and `flyctl ssh console`
+        # refuses to connect to an app with no started machine, so start every
+        # machine and wait until each reports started.
+        run: |
+          set -euo pipefail
+          list='flyctl machines list --app vers-bugsink --json'
+          for id in $($list | jq -r '.[] | select(.state != "started") | .id'); do
+            flyctl machine start "$id" --app vers-bugsink
+          done
+          for _ in $(seq 1 24); do
+            if $list | jq -e 'length > 0 and all(.state == "started")' >/dev/null; then
+              exit 0
+            fi
+            sleep 5
+          done
+          echo '::error::no vers-bugsink machine reached the started state within 120s'
+          exit 1
+
       - name: Enqueue vacuum_files
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
