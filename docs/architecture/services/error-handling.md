@@ -142,7 +142,8 @@ Reporting happens at five tiers, each with its own hook:
   or a `Response`, logs it at error level, and rethrows it so the caller still sees the fault. Start
   folds a server function's throw into the serialised result inside its own middleware chain, so a
   request-level middleware sees a 200 response and never the error; this hook is the one server-side
-  place that observes it.
+  place that observes it. The same instance registers Start's cross-site request check for server
+  functions, which Start installs on its own only while no instance file exists.
 - **app-web client** — the `QueryCache`/`MutationCache` `onError`. Reports non-`ORPCError` failures
   (network, client bugs); service errors were already reported by the service that produced them.
 - **app-web render** — the root route `errorComponent`. Reports render and loader errors nothing
@@ -192,9 +193,10 @@ propagated across hops, and stamped onto spans, log lines, and the response head
   `FormData` to its server function and maps the outcome onto Conform's `lastResult`. A rejected
   call, whether a serialised server-function fault or a transport failure, becomes a form-level
   error carrying `Something went wrong. Please try again.`, which the form renders in its alert
-  beside the re-enabled submit button with the typed values intact. The hook reports nothing: the
-  server-function middleware already reported the fault at its origin. Every form that submits
-  through the hook renders that form-level error.
+  beside the re-enabled submit button with the typed values intact. The hook reports nothing. A
+  serialised server-function fault was already reported at its origin by the server-function
+  middleware, and a transport failure between the browser and app-web is reported nowhere. Every
+  form that submits through the hook renders that form-level error.
 
 - **Route error boundaries.** The root route mounts `RootErrorScreen` as the last-resort boundary.
   Routes with a meaningful degraded state mount their own `errorComponent` beneath it.
