@@ -72,8 +72,8 @@ target and type (`2fa`, `2fa-setup`, `change-email`, `onboarding`):
 - `verifyCode` checks it, consuming `change-email` and `onboarding` codes on success and deleting
   the row; `2fa` and `2fa-setup` codes stay, marked verified, each guarded so a replay matches zero
   rows. `verifyTOTP` accepts the period on either side of the current one, so the period alone would
-  keep an emailed code valid for 10 to 20 minutes; the `expiresAt` check runs first and caps it
-  at 10.
+  keep an emailed code valid for 10 to 20 minutes; with the type's default `expiresAt`, that check
+  runs first and caps it at 10.
 - `get2FAVerificationURI` returns the authenticator-app URI for a pending 2FA setup.
 
 ## Credentials and password reset

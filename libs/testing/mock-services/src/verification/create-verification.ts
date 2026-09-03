@@ -5,7 +5,7 @@ import { os } from './os';
 
 const EMAILED_TYPES: ReadonlySet<VerificationType> = new Set(['change-email', 'onboarding']);
 
-const EMAILED_CODE_LIFETIME_MS = 600_000;
+const EMAILED_CODE_PERIOD_SECONDS = 600;
 
 export const createVerification = os.createVerification.handler(async (opts) => {
   const existing = db.verificationCollection.findFirst((q) =>
@@ -23,7 +23,7 @@ export const createVerification = os.createVerification.handler(async (opts) => 
     code,
     expiresAt:
       opts.input.expiresAt === undefined
-        ? pickDefaultExpiry(opts.input.type)
+        ? pickDefaultExpiry(opts.input.type, opts.input.period)
         : opts.input.expiresAt,
     target: opts.input.target,
     type: opts.input.type,
@@ -32,8 +32,10 @@ export const createVerification = os.createVerification.handler(async (opts) => 
   return { id: row.id, otp: code, target: row.target, type: row.type };
 });
 
-function pickDefaultExpiry(type: VerificationType): Date | null {
-  return EMAILED_TYPES.has(type) ? new Date(Date.now() + EMAILED_CODE_LIFETIME_MS) : null;
+function pickDefaultExpiry(type: VerificationType, period: number | undefined): Date | null {
+  const periodSeconds = period ?? EMAILED_CODE_PERIOD_SECONDS;
+
+  return EMAILED_TYPES.has(type) ? new Date(Date.now() + periodSeconds * 1000) : null;
 }
 
 function buildMockCode(): string {
