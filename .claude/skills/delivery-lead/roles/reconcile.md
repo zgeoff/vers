@@ -11,7 +11,8 @@ class of edit as one line for Report ("set Done on 12 closed issues").
   next rule instead.
 - An open issue with an open linked PR whose Status is not In Review: set In Review.
 - An open issue in Status In Progress or In Review with no open linked PR: set Ready when it
-  qualifies as Ready, else Backlog, and name it in Report as stalled.
+  qualifies as Ready, else Backlog, and name it in Report as stalled. A side-lane issue is exempt:
+  the owner works it by hand, so In Progress with no PR is its normal state.
 - An epic (`epic` label) whose body lists issue numbers as a checklist: link the listed issues as
   native sub-issues, then rewrite the body's Scope as outcomes. The sub-issues carry the breakdown
   and their own state.

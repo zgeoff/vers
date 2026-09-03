@@ -10,8 +10,8 @@ lane. No increment waits on another: an issue is Ready the moment its own blocke
    it heads Report.
 3. Ready. Set Ready on every open issue in an open increment, in the side lane, or an interrupt,
    whose blockers are all closed, which carries no `needs-refinement` label, and which has no open
-   linked PR. An issue with an open linked PR keeps the In Review status Reconcile set. Set Backlog
-   on a Ready issue that no longer qualifies.
+   linked PR. An issue with an open linked PR keeps the In Review status Reconcile set. An epic
+   stays at Backlog whatever its edges say. Set Backlog on a Ready issue that no longer qualifies.
 4. Pick order. Interrupts first. Then sort the Ready issues of every open increment by blocked count
    descending, then increment number ascending, then issue number ascending. Report the top 5 with
    each one's increment.
