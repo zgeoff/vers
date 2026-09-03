@@ -30,15 +30,9 @@ The cookie is `en_session`: httpOnly, `SameSite=Lax`, secure in production, seal
 (`buildAuthSessionConfig`). `getAuthSession` reads it and never throws. An absent token is how
 `requireAuth` and `requireAnonymous` observe "signed out". `requireAuth` treats a partial session
 (any of the session id, access token, or refresh token missing) the same way, and runs the logout
-path before it redirects to `/login`, so whatever partial cookie state remained is cleared.
-
-A service refuses a call from a session whose row is gone with `UNAUTHORIZED`; a sign-in on another
-device is what deletes the row
-([offline reconcile](../game/offline-reconcile.md#when-a-session-ends)). A page load's server
-function runs its service calls inside `withRequiredSession` (`apps/web/src/lib/auth/`), which
-answers that refusal with the same logout path and redirect to `/login`. The `/api/rpc` proxy
-answers the worker's call itself with a 401 and the takeover header, so the worker discards its
-offline work.
+path before it redirects to `/login`, so whatever partial cookie state remained is cleared. A
+service's `UNAUTHORIZED` on a page load's server call (`withRequiredSession`,
+`apps/web/src/lib/auth/`) takes the same logout path and redirect.
 
 ## Step-up authorization
 
