@@ -17,13 +17,10 @@ unverified session row, expiring in 24 hours or 7 days with `rememberMe`. With 2
 `runLogin` redirects to `/verify-otp` carrying the pending session id; without it,
 `runSessionSignIn` runs directly.
 
-An onboarding submission runs in the edge's `runOnboarding` (`apps/web/src/routes/-onboarding/`). It
-calls `userClient.createUser` for the verified email, then `sessionClient.createSession`, then
-`runSessionSignIn`. A retry after the session write failed finds the user row already created:
-`createUser` answers `CONFLICT` with `field: 'email'`, and `runOnboarding` checks the submitted
-password with `userClient.verifyPassword`. A match signs the player in through the same session
-path. A mismatch reports a form-level error saying the account exists. A `CONFLICT` on `username` is
-a field error on the form.
+`runOnboarding` (`apps/web/src/routes/-onboarding/`) creates the user, then the session, then runs
+`runSessionSignIn`. A retry whose `createUser` answers `CONFLICT` on the email checks the submitted
+password with `verifyPassword`: a match signs the player in through the same session path, a
+mismatch reports a form-level error saying the account exists.
 
 `runSessionSignIn` (`apps/web/src/lib/auth/`) redirects to a force-logout prompt when the account
 already holds a live session; otherwise it calls `verifySession` and seals the cookie.
