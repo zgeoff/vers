@@ -12,6 +12,7 @@ const POLL_INTERVAL_MS = 3000;
 interface WaitForEmailConfig {
   readonly apiKey: string;
   readonly kind: VerificationKindOption;
+  readonly origin: string;
   readonly since: Date;
   readonly timeoutMS: number;
   readonly to: string;
@@ -34,7 +35,7 @@ export function waitForEmail(config: WaitForEmailConfig): Promise<ReceivedVerifi
 
         const email = await readReceivedEmail(config.apiKey, summary.id);
 
-        const verification = findVerification(email, config.kind);
+        const verification = findVerification(email, config.kind, { origin: config.origin });
 
         if (verification !== null) {
           return {

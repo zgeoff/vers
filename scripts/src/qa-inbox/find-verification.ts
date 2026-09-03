@@ -12,14 +12,20 @@ const KIND_ORDER: ReadonlyArray<VerificationKind> = [
   'two-factor',
 ];
 
+interface FindOptions {
+  readonly origin?: string;
+}
+
 export function findVerification(
   content: EmailContent,
   kind: VerificationKindOption,
+  options: FindOptions = {},
 ): Verification | null {
   const kinds = kind === 'any' ? KIND_ORDER : [kind];
+  const links = collectLinks(content, options.origin);
 
   for (const candidate of kinds) {
-    const found = KIND_FINDERS[candidate](content);
+    const found = KIND_FINDERS[candidate](content, links);
 
     if (found !== null) {
       return { kind: candidate, ...found };
@@ -29,52 +35,62 @@ export function findVerification(
   return null;
 }
 
-type KindFinder = (content: EmailContent) => Omit<Verification, 'kind'> | null;
+interface Link {
+  readonly href: string;
+  readonly params: Readonly<Record<string, string>>;
+  readonly pathname: string;
+}
+
+type KindFinder = (
+  content: EmailContent,
+  links: ReadonlyArray<Link>,
+) => Omit<Verification, 'kind'> | null;
 
 const KIND_FINDERS: Record<VerificationKind, KindFinder> = {
-  'change-email': (content) =>
-    findOTPVerification(content, 'change-email', 'verify your new email address'),
-  'reset-password': (content) => findResetVerification(content),
+  'change-email': (content, links) =>
+    findOTPVerification(content, links, 'change-email', 'verify your new email address'),
+  'reset-password': (_content, links) => findResetVerification(links),
   'two-factor': (content) => findTwoFactorVerification(content),
-  welcome: (content) => findOTPVerification(content, 'onboarding', 'welcome to vers'),
+  welcome: (content, links) => findOTPVerification(content, links, 'onboarding', 'welcome to vers'),
 };
 
 function findOTPVerification(
   content: EmailContent,
+  links: ReadonlyArray<Link>,
   type: string,
   heading: string,
 ): Omit<Verification, 'kind'> | null {
-  const url = collectURLs(content).find(
-    (candidate) =>
-      candidate.pathname === '/verify-otp' && candidate.searchParams.get('type') === type,
+  const link = links.find(
+    (candidate) => candidate.pathname === '/verify-otp' && candidate.params['type'] === type,
   );
 
   const text = toSearchableText(content);
 
-  if (url === undefined && !text.toLowerCase().includes(heading)) {
+  if (link === undefined && !text.toLowerCase().includes(heading)) {
     return null;
   }
 
-  const urlCode = url?.searchParams.get('code') ?? null;
+  const linkCode = link?.params['code'] ?? null;
 
   const code =
-    urlCode !== null && OTP_CODE_PATTERN.test(urlCode)
-      ? urlCode
+    linkCode !== null && OTP_CODE_PATTERN.test(linkCode)
+      ? linkCode
       : (OTP_CODE_IN_TEXT_PATTERN.exec(text)?.groups?.['code'] ?? null);
 
   if (code === null) {
     return null;
   }
 
-  return { code, url: url?.href ?? null };
+  return { code, url: link?.href ?? null };
 }
 
-function findResetVerification(content: EmailContent): Omit<Verification, 'kind'> | null {
-  const url = collectURLs(content).find(
-    (candidate) => candidate.pathname === '/reset-password' && candidate.searchParams.has('token'),
+function findResetVerification(links: ReadonlyArray<Link>): Omit<Verification, 'kind'> | null {
+  const link = links.find(
+    (candidate) =>
+      candidate.pathname === '/reset-password' && candidate.params['token'] !== undefined,
   );
 
-  return url === undefined ? null : { code: null, url: url.href };
+  return link === undefined ? null : { code: null, url: link.href };
 }
 
 function findTwoFactorVerification(content: EmailContent): Omit<Verification, 'kind'> | null {
@@ -86,23 +102,27 @@ function findTwoFactorVerification(content: EmailContent): Omit<Verification, 'k
 const URL_IN_TEXT_PATTERN = /https?:\/\/[^\s<>"']+/g;
 const HREF_PATTERN = /href="(?<href>[^"]+)"/g;
 
-function collectURLs(content: EmailContent): Array<URL> {
+function collectLinks(content: EmailContent, origin: string | undefined): Array<Link> {
   const candidates = [
     ...Array.from(content.text.matchAll(URL_IN_TEXT_PATTERN), (match) => match[0]),
     ...Array.from(content.html.matchAll(HREF_PATTERN), (match) => match.groups?.['href'] ?? ''),
   ];
 
-  const urls: Array<URL> = [];
+  const links: Array<Link> = [];
 
   for (const candidate of candidates) {
     const parsed = URL.parse(decodeEntities(candidate).replace(/[.,)]+$/, ''));
 
-    if (parsed !== null) {
-      urls.push(parsed);
+    if (parsed !== null && (origin === undefined || parsed.origin === origin)) {
+      links.push({
+        href: parsed.href,
+        params: Object.fromEntries(parsed.searchParams),
+        pathname: parsed.pathname,
+      });
     }
   }
 
-  return urls;
+  return links;
 }
 
 function toSearchableText(content: EmailContent): string {

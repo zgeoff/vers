@@ -108,3 +108,31 @@ test('it misses when the email carries no verification at all', () => {
     findVerification({ html: '<p>Your vers password was changed</p>', text: '' }, 'any'),
   ).toBeNull();
 });
+
+test('it ignores a link from another origin when an origin is given', () => {
+  const email = renderResetPasswordEmail({
+    resetURL: 'https://versidle.com.evil.example/reset-password?token=abc',
+  });
+
+  expect(
+    findVerification({ html: email.html, text: email.plainText }, 'reset-password', {
+      origin: 'https://versidle.com',
+    }),
+  ).toBeNull();
+});
+
+test('it keeps a link from the given origin', () => {
+  const email = renderResetPasswordEmail({
+    resetURL: 'https://versidle.com/reset-password?email=qa%40qa.versidle.com&token=abc',
+  });
+
+  expect(
+    findVerification({ html: email.html, text: email.plainText }, 'reset-password', {
+      origin: 'https://versidle.com',
+    }),
+  ).toStrictEqual({
+    code: null,
+    kind: 'reset-password',
+    url: 'https://versidle.com/reset-password?email=qa%40qa.versidle.com&token=abc',
+  });
+});

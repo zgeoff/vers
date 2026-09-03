@@ -6,7 +6,7 @@ const OP_VAULT = 'vers';
 const KEY_FIELD_LABELS = ['full-access-api-key', 'api-key'];
 
 export async function readResendAPIKey(): Promise<string> {
-  const fromEnv = process.env['RESEND_API_KEY'];
+  const fromEnv = process.env['RESEND_API_KEY']?.trim();
 
   if (fromEnv !== undefined && fromEnv !== '') {
     return fromEnv;

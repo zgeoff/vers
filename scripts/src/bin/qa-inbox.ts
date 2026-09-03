@@ -7,6 +7,7 @@ import { readResendAPIKey } from '../qa-inbox/read-resend-api-key';
 import type { VerificationKindOption } from '../qa-inbox/types';
 import { waitForEmail } from '../qa-inbox/wait-for-email';
 
+const APP_ORIGIN = 'https://versidle.com';
 const DEFAULT_SINCE_WINDOW_MS = 2 * 60 * 1000;
 const DEFAULT_TIMEOUT_SECONDS = 120;
 const DEFAULT_LIST_LIMIT = 20;
@@ -43,6 +44,7 @@ program
       const found = await waitForEmail({
         apiKey,
         kind: options.kind,
+        origin: APP_ORIGIN,
         since,
         timeoutMS: options.timeout * 1000,
         to: options.to,

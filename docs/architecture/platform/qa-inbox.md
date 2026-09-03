@@ -32,8 +32,10 @@ candidate's body newest first until one carries the requested kind. `--timeout` 
 seconds (default 120); on timeout the command prints why it stopped and exits 1. `--json` prints
 `{ id, kind, code, url, subject, receivedAt }` on one line for an agent to parse.
 
-`--kind` names the template to read; `any` (the default) tries each kind in the order of the table
-and reports the first that matches.
+A link counts only when its origin is `https://versidle.com`, so mail from a third party to a QA
+address cannot pass off another site's link as the production one. `--kind` names the template to
+read; `any` (the default) tries each kind in the order of the table and reports the first that
+matches.
 
 | Kind             | Email                    | `code`                       | `url`                      |
 | ---------------- | ------------------------ | ---------------------------- | -------------------------- |
