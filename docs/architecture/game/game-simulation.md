@@ -111,14 +111,10 @@ authoritative input from its own truth and trusts none of the payload:
 - It validates the submitted `seed` and `startChainIndex` against the seed chain's live appended
   anchor, and refuses a start computed against a position the seed chain has moved past.
 
-The client predicts the `buildSnapshot` from what the device holds, never from its outbox. The next
-activity start's snapshot is the previous run's start snapshot plus that run's own unsettled XP,
-folded from the run's last checkpoint and its running XP total. The worker records both as the run
-emits each checkpoint, and seeds them from the replayed prefix when it reconstructs a run at its
-appended head. A checkpoint the server has confirmed leaves the outbox, so a prediction read from
-the outbox alone drops the XP an online run has just earned, and the server refuses the next start.
-The server folds the same rule from its own rows: the avatar's settled XP plus the contribution of
-every appended-but-unverified run.
+The client predicts the `buildSnapshot` as the previous run's start snapshot plus that run's own
+unsettled XP, read from the run's last checkpoint and running XP total the worker holds, never from
+its outbox. The server folds the same rule from its own rows: the avatar's settled XP plus every
+appended-but-unverified run's contribution.
 
 A single `advanceActivity` request carries a whole run of continuations, so an offline gap the
 client simulated locally verifies in one round trip. Every continuation reuses the start's seed
