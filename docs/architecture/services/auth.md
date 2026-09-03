@@ -32,6 +32,14 @@ The cookie is `en_session`: httpOnly, `SameSite=Lax`, secure in production, seal
 (any of the session id, access token, or refresh token missing) the same way, and runs the logout
 path before it redirects to `/login`, so whatever partial cookie state remained is cleared.
 
+A service refuses a call from a session whose row is gone with `UNAUTHORIZED`; a sign-in on another
+device is what deletes the row
+([offline reconcile](../game/offline-reconcile.md#when-a-session-ends)). A page load's server
+function runs its service calls inside `withRequiredSession` (`apps/web/src/lib/auth/`), which
+answers that refusal with the same logout path and redirect to `/login`. The `/api/rpc` proxy
+answers the worker's call itself with a 401 and the takeover header, so the worker discards its
+offline work.
+
 ## Step-up authorization
 
 A sensitive mutation (an email change, a password change, or disabling 2FA) demands a fresh code
