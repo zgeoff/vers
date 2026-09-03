@@ -304,26 +304,10 @@ to stop the activity, retried at every reconnect until the server confirms it st
 request lands, the client holds back its next resync, so a catch-up never revives an activity the
 player already stopped.
 
-### Retrying a deferred activity start
-
-An activity start the server defers waits on a backoff. A deferred refusal is an answer from the
-server, not a lost connection: a build snapshot that counts XP from a predecessor still in flight,
-an avatar the account has switched away from, or a stale anchor
-([seed chain](./seed-chain.md#handing-an-activity-start-to-the-server)). The worker therefore keeps
-the device online and does not read the next server answer as a reconnect. A transport failure,
-where the server never answered, is what marks the device offline.
-
-The worker resends a deferred activity start after 10s, then doubles the wait after each refusal up
-to 5min, and it resends on that same backoff a checkpoint batch the server refused with an error the
-worker does not handle. A progress checkpoint the live simulation queues meanwhile rides the next
-attempt rather than forcing one; a terminal checkpoint flushes at once. A reconnect, a reload, or an
-avatar switch resends at once and restarts the backoff at 10s.
-
-A start whose predecessor is deferred waits with it. The reconnect drain submits a deferred
-predecessor once per drain and skips every start that chains on it, because a successor's anchor
-sits past the position its predecessor has yet to advance and the server's anchor check refuses it
-until the predecessor lands. With one deferred start in the outbox, a page load costs three requests
-and a live run costs two per backoff step.
+A deferred activity start, or a checkpoint batch the server refuses with an error the worker does
+not handle, is a server answer, so it does not mark the device offline: the worker resends it on an
+exponential backoff from 10s to 5min, and at once on a reconnect. The reconnect drain skips a start
+whose predecessor is deferred, because the server refuses it until the predecessor lands.
 
 ## Glossary
 
