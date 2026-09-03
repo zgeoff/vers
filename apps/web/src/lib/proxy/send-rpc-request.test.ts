@@ -3,10 +3,12 @@ import { createId } from '@paralleldrive/cuid2';
 import { createTestAccessToken } from '@vers/mock-services';
 import * as db from '@vers/mock-services/db';
 import { withTraceContext } from '@vers/service-utils';
+import { waitFor } from '@vers/test-utils';
 import { createInMemoryMetrics } from '@vers/test-utils/bun';
 import * as jose from 'jose';
 import type { HttpResponseResolver } from 'msw';
 import { HttpResponse, delay, http } from 'msw';
+import { SimulatedClock } from 'xstate';
 import { server } from '../../mocks/node';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { sendRPCRequest } from './send-rpc-request';
@@ -183,22 +185,75 @@ test('it rethrows a body read failure for a caller that is still connected', asy
   expect(promise).rejects.toBeInstanceOf(TypeError);
 });
 
-test('it answers a hung upstream with a 503 after exactly one attempt', async () => {
+test('it resends a hung GET-declared procedure at escalating bounds and forwards the answer that lands', async () => {
+  const clock = new SimulatedClock();
+
+  let callCount = 0;
+
   const resolver = mock<HttpResponseResolver>(async () => {
-    await delay('infinite');
+    callCount += 1;
+
+    if (callCount < 3) {
+      await delay('infinite');
+    }
 
     return HttpResponse.json({});
   });
 
   server.use(http.get('http://localhost:3003/rpc/getUser', resolver));
 
-  const outcome = await withRequestContext({}, () =>
-    sendRPCRequest(
+  const outcome = await withRequestContext({}, async () => {
+    const pending = sendRPCRequest(
       new Request('http://app.test/api/rpc/user/getUser', { method: 'GET' }),
       'user',
-      20,
-    ),
-  );
+      { clock },
+    );
+
+    await waitFor(() => {
+      expect(resolver).toHaveBeenCalledTimes(1);
+    });
+
+    clock.increment(2000);
+
+    await waitFor(() => {
+      expect(resolver).toHaveBeenCalledTimes(2);
+    });
+
+    clock.increment(6000);
+
+    return pending;
+  });
+
+  expect(outcome.value.status).toBe(200);
+  expect(resolver).toHaveBeenCalledTimes(3);
+});
+
+test('it answers a hung mutation with a 503 after one attempt spanning the whole budget', async () => {
+  const clock = new SimulatedClock();
+
+  const resolver = mock<HttpResponseResolver>(async () => {
+    await delay('infinite');
+
+    return HttpResponse.json({});
+  });
+
+  server.use(http.post('http://localhost:3003/rpc/updateEmail', resolver));
+
+  const outcome = await withRequestContext({}, async () => {
+    const pending = sendRPCRequest(
+      new Request('http://app.test/api/rpc/user/updateEmail', { body: '{}', method: 'POST' }),
+      'user',
+      { clock },
+    );
+
+    await waitFor(() => {
+      expect(resolver).toHaveBeenCalledOnce();
+    });
+
+    clock.increment(24_000);
+
+    return pending;
+  });
 
   expect(outcome.value.status).toBe(503);
   expect(resolver).toHaveBeenCalledOnce();

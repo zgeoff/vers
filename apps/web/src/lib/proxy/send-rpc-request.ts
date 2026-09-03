@@ -1,20 +1,22 @@
 import type { ServiceName } from '@vers/service-auth';
 import { findSpanTraceContext, findTraceContext } from '@vers/service-utils';
 import { buildTraceparent, createTraceContext } from '@vers/trace';
-import { recordServiceCallFailure } from '../metrics/record-service-call-failure';
 import { createEdgeServiceToken } from '../rpc/create-edge-service-token';
 import { loadSessionActor } from '../rpc/load-session-actor';
-import { DEFAULT_ATTEMPT_TIMEOUTS_MS } from '../rpc/make-bounded-fetch';
+import { runBoundedAttempts } from '../rpc/run-bounded-attempts';
 import { serviceDispatcher } from '../rpc/service-dispatcher';
 import { SERVICE_URLS } from '../rpc/service-urls';
-import type { ServiceFetchInit } from '../rpc/types';
+import type { AttemptClock, ServiceFetchInit } from '../rpc/types';
+import { isRetryableProxyCall } from './is-retryable-proxy-call';
 
-const DEFAULT_TIMEOUT_BOUND_MS = Math.max(...DEFAULT_ATTEMPT_TIMEOUTS_MS);
+export interface SendRPCRequestOptions {
+  readonly clock?: AttemptClock;
+}
 
 export async function sendRPCRequest(
   request: Request,
   service: ServiceName,
-  timeoutBoundMs = DEFAULT_TIMEOUT_BOUND_MS,
+  options: Readonly<SendRPCRequestOptions> = {},
 ): Promise<Response> {
   const incoming = new URL(request.url);
 
@@ -24,6 +26,11 @@ export async function sendRPCRequest(
     incoming.pathname.replace(prefix, '/rpc') + incoming.search,
     SERVICE_URLS[service],
   );
+
+  const procedurePath = incoming.pathname
+    .slice(prefix.length)
+    .split('/')
+    .filter((segment) => segment !== '');
 
   const hasBody = request.method !== 'GET' && request.method !== 'HEAD';
   let body: Blob | undefined;
@@ -71,48 +78,35 @@ export async function sendRPCRequest(
 
   headers.set('traceparent', buildTraceparent(trace));
 
-  // a single attempt, unretried: buildQueryClient already retries network failures and 5xx twice
-  // on this call's way back to the browser, so a second retry layer here would stack attempts
-  const controller = new AbortController();
+  const attempts = await runBoundedAttempts(
+    {
+      ...(options.clock !== undefined && { clock: options.clock }),
+      retryable: isRetryableProxyCall(service, procedurePath),
+      service,
+      signal: request.signal,
+    },
+    (signal) => {
+      const requestInit: ServiceFetchInit = {
+        dispatcher: serviceDispatcher,
+        headers,
+        method: request.method,
+        signal,
+        ...(body !== undefined && { body }),
+      };
 
-  const signal = AbortSignal.any([request.signal, controller.signal]);
-  let boundFired = false;
+      return fetch(target, requestInit);
+    },
+  );
 
-  const timer = setTimeout(() => {
-    boundFired = true;
+  if (attempts.kind === 'aborted') {
+    throw attempts.cause;
+  }
 
-    controller.abort();
-  }, timeoutBoundMs);
-
-  let response: Response;
-
-  try {
-    const requestInit: ServiceFetchInit = {
-      dispatcher: serviceDispatcher,
-      headers,
-      method: request.method,
-      signal,
-      ...(body !== undefined && { body }),
-    };
-
-    // the timer is cleared the instant `fetch` resolves so the bound never outlives the response
-    // headers — otherwise it stays armed through a streamed body read and can truncate it
-    response = await fetch(target, requestInit);
-
-    clearTimeout(timer);
-  } catch (error) {
-    clearTimeout(timer);
-
-    if (request.signal.aborted) {
-      throw error;
-    }
-
-    const reason = boundFired ? 'timeout' : 'transport';
-
-    recordServiceCallFailure(service, reason);
-
+  if (attempts.kind === 'failed') {
     return new Response(null, { status: 503 });
   }
+
+  const response = attempts.response;
 
   // fetch responses carry immutable headers the server framework must still finalize, so rewrap
   // into a mutable response. Copy headers entry by entry: another runtime's Headers instance passed
