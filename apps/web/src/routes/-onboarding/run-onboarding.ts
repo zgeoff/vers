@@ -2,6 +2,8 @@ import type { SubmissionResult } from '@conform-to/react';
 import { parseWithZod } from '@conform-to/zod/v4';
 import { isDefinedError, safe } from '@orpc/client';
 import { getRequestIP } from '@tanstack/react-start/server';
+import type { UserData } from '@vers/contract-user';
+import invariant from 'tiny-invariant';
 import { checkHoneypot } from '../../lib/auth/check-honeypot';
 import { runSessionSignIn } from '../../lib/auth/run-session-sign-in';
 import { SpamError } from '../../lib/auth/spam-error';
@@ -31,7 +33,7 @@ export async function runOnboarding(formData: FormData): Promise<Response | Subm
     return submission.reply();
   }
 
-  const [error, user] = await safe(
+  const [error, createdUser] = await safe(
     userClient.createUser({
       email: onboardingSession.email,
       name: submission.value.name,
@@ -40,16 +42,29 @@ export async function runOnboarding(formData: FormData): Promise<Response | Subm
     }),
   );
 
-  if (error) {
-    if (isDefinedError(error) && error.data.field === 'username') {
-      return submission.reply({
-        fieldErrors: { username: ['A user with that username already exists'] },
-      });
-    }
+  if (error !== null && isDefinedError(error) && error.data.field === 'username') {
+    return submission.reply({
+      fieldErrors: { username: ['A user with that username already exists'] },
+    });
+  }
 
+  if (error !== null && !isDefinedError(error)) {
     logger.error({ err: error }, 'onboarding account creation failed');
 
     return submission.reply({ formErrors: ['Something went wrong. Please try again.'] });
+  }
+
+  const user =
+    error === null
+      ? createdUser
+      : await findOnboardedUser(onboardingSession.email, submission.value.password);
+
+  if (user === null) {
+    return submission.reply({
+      formErrors: [
+        'An account with this email already exists. Enter its password to sign in, or log in instead.',
+      ],
+    });
   }
 
   const session = await sessionClient.createSession({
@@ -61,4 +76,18 @@ export async function runOnboarding(formData: FormData): Promise<Response | Subm
   await updateVerifySession({ 'onboarding#email': undefined });
 
   return runSessionSignIn({ email: user.email, session });
+}
+
+async function findOnboardedUser(email: string, password: string): Promise<UserData | null> {
+  const verified = await userClient.verifyPassword({ email, password });
+
+  if (!verified.success) {
+    return null;
+  }
+
+  const user = await userClient.getUser({ email });
+
+  invariant(user !== null, 'a user whose password verified must exist');
+
+  return user;
 }
