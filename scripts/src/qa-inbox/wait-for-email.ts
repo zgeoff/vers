@@ -21,9 +21,11 @@ interface WaitForEmailConfig {
 export function waitForEmail(config: WaitForEmailConfig): Promise<ReceivedVerification> {
   const skipped = new Set<string>();
 
+  const deadline = Date.now() + config.timeoutMS;
+
   return pRetry(
     async () => {
-      const listed = await readReceivedEmails(config.apiKey, { limit: LIST_LIMIT });
+      const listed = await readReceivedEmails(config.apiKey, { deadline, limit: LIST_LIMIT });
 
       for (const summary of collectMatchingEmails(listed, {
         since: config.since,
@@ -33,7 +35,7 @@ export function waitForEmail(config: WaitForEmailConfig): Promise<ReceivedVerifi
           continue;
         }
 
-        const email = await readReceivedEmail(config.apiKey, summary.id);
+        const email = await readReceivedEmail(config.apiKey, summary.id, { deadline });
 
         const verification = findVerification(email, config.kind, { origin: config.origin });
 

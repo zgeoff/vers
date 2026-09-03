@@ -12,8 +12,18 @@ const emailSchema = z.object({
   to: z.array(z.string()),
 });
 
-export async function readReceivedEmail(apiKey: string, id: string): Promise<ReceivedEmail> {
-  const raw = await readResendJSON(apiKey, `/emails/receiving/${encodeURIComponent(id)}`);
+interface GetConfig {
+  readonly deadline?: number;
+}
+
+export async function readReceivedEmail(
+  apiKey: string,
+  id: string,
+  config: GetConfig = {},
+): Promise<ReceivedEmail> {
+  const raw = await readResendJSON(apiKey, `/emails/receiving/${encodeURIComponent(id)}`, {
+    ...(config.deadline !== undefined && { deadline: config.deadline }),
+  });
 
   const email = emailSchema.parse(raw);
 

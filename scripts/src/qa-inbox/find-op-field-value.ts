@@ -11,10 +11,12 @@ export function findOpFieldValue(rawItem: unknown, labels: ReadonlyArray<string>
   }
 
   for (const label of labels) {
-    const value = parsed.data.fields.find((field) => field.label === label)?.value;
+    const populated = parsed.data.fields.find(
+      (field) => field.label === label && field.value !== undefined && field.value !== '',
+    );
 
-    if (value !== undefined && value !== '') {
-      return value;
+    if (populated?.value !== undefined) {
+      return populated.value;
     }
   }
 

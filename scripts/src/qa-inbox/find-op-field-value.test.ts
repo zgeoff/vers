@@ -38,6 +38,21 @@ test('it treats an empty field as absent', () => {
   expect(value).toBe('re_restricted');
 });
 
+test('it skips an empty field in favour of a later populated field with the same label', () => {
+  const value = findOpFieldValue(
+    {
+      fields: [
+        { id: 'a', label: 'full-access-api-key', type: 'CONCEALED', value: '' },
+        { id: 'b', label: 'full-access-api-key', type: 'CONCEALED', value: 're_full' },
+        { id: 'c', label: 'api-key', type: 'CONCEALED', value: 're_restricted' },
+      ],
+    },
+    ['full-access-api-key', 'api-key'],
+  );
+
+  expect(value).toBe('re_full');
+});
+
 test('it misses when no label matches', () => {
   expect(
     findOpFieldValue({ fields: [{ id: 'a', label: 'username', value: 'ops' }] }, ['api-key']),

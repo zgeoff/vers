@@ -1,9 +1,10 @@
-import { Command, Option } from 'commander';
+import { Command, InvalidArgumentError, Option } from 'commander';
 import { collectMatchingEmails } from '../qa-inbox/collect-matching-emails';
 import { formatEmailTable } from '../qa-inbox/format-email-table';
 import { readReceivedEmail } from '../qa-inbox/read-received-email';
 import { readReceivedEmails } from '../qa-inbox/read-received-emails';
 import { readResendAPIKey } from '../qa-inbox/read-resend-api-key';
+import { toPrintableText } from '../qa-inbox/to-printable-text';
 import type { VerificationKindOption } from '../qa-inbox/types';
 import { waitForEmail } from '../qa-inbox/wait-for-email';
 
@@ -33,7 +34,7 @@ program
       .choices(['welcome', 'change-email', 'reset-password', 'two-factor', 'any'])
       .default('any'),
   )
-  .option('--timeout <seconds>', 'seconds to keep polling', Number, DEFAULT_TIMEOUT_SECONDS)
+  .option('--timeout <seconds>', 'seconds to keep polling', parseSeconds, DEFAULT_TIMEOUT_SECONDS)
   .option('--json', 'print the result as JSON', false)
   .action(async (options: WaitCommandOptions) => {
     const since = new Date(Date.now() - DEFAULT_SINCE_WINDOW_MS);
@@ -74,12 +75,17 @@ program
   .command('list')
   .description('print the most recent received emails, newest first')
   .option('--to <address>', 'keep only emails sent to this address')
-  .option('--limit <n>', 'emails to print', Number, DEFAULT_LIST_LIMIT)
+  .option(
+    '--limit <n>',
+    `emails to print, at most ${MAX_LIST_LIMIT}`,
+    parseLimit,
+    DEFAULT_LIST_LIMIT,
+  )
   .action(async (options: ListCommandOptions) => {
     const apiKey = await readResendAPIKey();
 
     const listed = await readReceivedEmails(apiKey, {
-      limit: options.to === undefined ? Math.min(options.limit, MAX_LIST_LIMIT) : MAX_LIST_LIMIT,
+      limit: options.to === undefined ? options.limit : MAX_LIST_LIMIT,
     });
 
     const emails =
@@ -109,12 +115,12 @@ program
       return;
     }
 
-    console.log(`subject: ${email.subject}`);
-    console.log(`from: ${email.from}`);
-    console.log(`to: ${email.to.join(', ')}`);
-    console.log(`received: ${email.createdAt}`);
+    console.log(`subject: ${toPrintableText(email.subject)}`);
+    console.log(`from: ${toPrintableText(email.from)}`);
+    console.log(`to: ${toPrintableText(email.to.join(', '))}`);
+    console.log(`received: ${toPrintableText(email.createdAt)}`);
     console.log('');
-    console.log(email.text);
+    console.log(toPrintableText(email.text, { keepLineBreaks: true }));
   });
 
 try {
@@ -122,6 +128,26 @@ try {
 } catch (error) {
   console.error(`qa-inbox: ${toMessage(error)}`);
   process.exit(1);
+}
+
+function parseSeconds(value: string): number {
+  const seconds = Number(value);
+
+  if (!Number.isFinite(seconds) || seconds < 0) {
+    throw new InvalidArgumentError('expected a non-negative number of seconds');
+  }
+
+  return seconds;
+}
+
+function parseLimit(value: string): number {
+  const limit = Number(value);
+
+  if (!Number.isInteger(limit) || limit < 1 || limit > MAX_LIST_LIMIT) {
+    throw new InvalidArgumentError(`expected an integer from 1 to ${MAX_LIST_LIMIT}`);
+  }
+
+  return limit;
 }
 
 function toMessage(error: unknown): string {

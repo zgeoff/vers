@@ -13,6 +13,7 @@ const summarySchema = z.object({
 const listSchema = z.object({ data: z.array(summarySchema) });
 
 interface ListConfig {
+  readonly deadline?: number;
   readonly limit: number;
 }
 
@@ -20,7 +21,9 @@ export async function readReceivedEmails(
   apiKey: string,
   config: ListConfig,
 ): Promise<Array<ReceivedEmailSummary>> {
-  const raw = await readResendJSON(apiKey, `/emails/receiving?limit=${config.limit}`);
+  const raw = await readResendJSON(apiKey, `/emails/receiving?limit=${config.limit}`, {
+    ...(config.deadline !== undefined && { deadline: config.deadline }),
+  });
 
   return listSchema.parse(raw).data.map((email) => ({
     createdAt: email.created_at,
