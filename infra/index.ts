@@ -126,6 +126,25 @@ const resendQADKIM = new cloudflare.DnsRecord('resend-qa-dkim', {
   ttl: 1,
 });
 
+// The return-path pair completes Resend's verification of the domain; without it the domain
+// stays partially verified, and a re-check can drop back to pending.
+const resendQAReturnPathMX = new cloudflare.DnsRecord('resend-qa-return-path-mx', {
+  zoneId,
+  name: `send.qa.${zoneName}`,
+  type: 'MX',
+  content: 'feedback-smtp.ap-northeast-1.amazonses.com',
+  priority: 10,
+  ttl: 1,
+});
+
+const resendQAReturnPathSPF = new cloudflare.DnsRecord('resend-qa-return-path-spf', {
+  zoneId,
+  name: `send.qa.${zoneName}`,
+  type: 'TXT',
+  content: '"v=spf1 include:amazonses.com ~all"',
+  ttl: 1,
+});
+
 export const apexRecord = apex.name;
 export const wwwRecord = www.name;
 export const resendDKIMRecord = resendDKIM.name;
@@ -134,3 +153,5 @@ export const resendReturnPathSPFRecord = resendReturnPathSPF.name;
 export const resendDMARCRecord = resendDMARC.name;
 export const resendQAReceivingMXRecord = resendQAReceivingMX.name;
 export const resendQADKIMRecord = resendQADKIM.name;
+export const resendQAReturnPathMXRecord = resendQAReturnPathMX.name;
+export const resendQAReturnPathSPFRecord = resendQAReturnPathSPF.name;
