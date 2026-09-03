@@ -10,6 +10,9 @@ on:
     - cron: '17 3 1 * *'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 concurrency:
   group: bugsink-vacuum
   cancel-in-progress: false
@@ -33,17 +36,18 @@ jobs:
         run: |
           set -euo pipefail
           list='flyctl machines list --app vers-bugsink --json'
-          for id in $($list | jq -r '.[] | select(.state != "started") | .id'); do
+          machine_ids="$($list | jq -r '.[] | select(.state != "started") | .id')"
+          for id in $machine_ids; do
             flyctl machine start "$id" --app vers-bugsink
           done
-          for _ in $(seq 1 24); do
-            if $list | jq -e 'length > 0 and all(.state == "started")' >/dev/null; then
-              exit 0
+          deadline=$((SECONDS + 120))
+          until $list | jq -e 'length > 0 and all(.state == "started")' >/dev/null; do
+            if [ "$SECONDS" -ge "$deadline" ]; then
+              echo '::error::no vers-bugsink machine reached the started state within 120s'
+              exit 1
             fi
             sleep 5
           done
-          echo '::error::no vers-bugsink machine reached the started state within 120s'
-          exit 1
 
       - name: Enqueue vacuum_files
         env:
