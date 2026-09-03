@@ -20,7 +20,8 @@
     "@opentelemetry/api": "catalog:",
     "kysely": "catalog:",
     "kysely-postgres-js": "catalog:",
-    "postgres": "catalog:"
+    "postgres": "catalog:",
+    "tiny-invariant": "catalog:"
   },
   "devDependencies": {
     "@opentelemetry/sdk-trace-node": "catalog:",
@@ -34,7 +35,6 @@
     "kysely-codegen": "catalog:",
     "kysely-ctl": "catalog:",
     "pg": "catalog:",
-    "tiny-invariant": "catalog:",
     "typescript": "catalog:"
   }
 }

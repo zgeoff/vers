@@ -148,6 +148,7 @@
         "ignoreInferredTypes": true,
         "allow": [
           { "from": "package", "name": "Kysely", "package": "kysely" },
+          { "from": "package", "name": "DatabaseConnection", "package": "kysely" },
           // a live three.js GPU texture handle: upload state and dispose lifecycle, no readonly
           // form
           { "from": "package", "name": "DataTexture", "package": "three" },

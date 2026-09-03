@@ -182,6 +182,7 @@ in stack state are encrypted by the stack passphrase.
 | `vers.analytics.delivery_failures`              | counter         | `{event}`        | `reason`            | product events that never landed in the Tinybird data source, by reason                                                                                      |
 | `vers.web.service_call_retries`                 | counter         | `{retry}`        | `service`           | retry attempts against an outbound service call that failed its previous attempt                                                                             |
 | `vers.web.service_call_failures`                | counter         | `{call}`         | `service`, `reason` | outbound service calls that never delivered, by service and reason                                                                                           |
+| `vers.db.pool_resets`                           | counter         | `{reset}`        | —                   | connection pools dropped after a detected process resume                                                                                                     |
 
 `service-activity` calls `service-replay`'s wake procedure through its oRPC client each time an
 append advances an activity past its verified cursor. The handler drains the queue, claiming and

@@ -52,6 +52,30 @@ Each Neon endpoint has two hosts: **direct** (`ep-<endpoint>.<region>.aws.neon.t
   PgBouncer transaction mode breaks prepared statements. Switch to the pooled host only if
   connection pressure appears, and set `prepare: false` when doing so.
 
+## Connection pool
+
+Every service opens one postgres.js pool through `createDB` (`@vers/db`), and four settings bound
+how a connection can fail while the process runs. `connect_timeout` (10s) bounds connection
+acquisition, so a Neon endpoint that stalls on wake fails in 10s instead of minutes.
+`statement_timeout` and `idle_in_transaction_session_timeout` (30s each) are server-side session
+settings, so a lock an orphaned transaction holds dies within 30s even after a serverless process
+kill. `idle_timeout` (240s) closes a pooled connection before Neon's 300s suspend closes it from the
+server side; otherwise the pool hands out a socket the endpoint already closed and the first write
+fails with `CONNECTION_CLOSED`.
+
+None of those settings runs while the process is paused. Fly suspends an idle machine with its
+memory snapshot ([deployment](./deployment.md#topology)), and JavaScript timers do not run during
+the pause, so the pool resumes holding the sockets it had, and the Neon side may have closed them in
+the meantime. A query written to such a socket fails with `CONNECTION_CLOSED`, and a query that was
+in flight when the machine suspended hangs until the kernel's TCP retransmit limit gives up, about
+15 minutes later. `createDB` therefore detects a resume and drops the pool. A 5s interval timer
+compares the wall clock between ticks, and a gap over 60s means the process was not running. On a
+detected resume the pool swaps in a fresh postgres.js instance for new queries and destroys the old
+one, which rejects every query still pending on it with `CONNECTION_DESTROYED`. Each reset
+increments `vers.db.pool_resets` ([observability](./observability.md#instrument-registry)). The 60s
+threshold keeps a long synchronous stretch of work, such as a replay verification that blocks the
+event loop, from tripping a reset that would destroy its own live queries.
+
 ## Who connects, and where the string lives
 
 Every consumer has its own store, and the string never lives in the repo.
