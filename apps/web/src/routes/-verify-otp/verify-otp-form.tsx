@@ -35,9 +35,9 @@ const INSTRUCTION_BY_TYPE: Record<VerificationType, string> = {
   '2fa-setup':
     'To enable two-factor authentication, please enter the six digit code from your authenticator app',
   'change-email':
-    "To confirm your new email address, please enter the six digit code we've sent to your email",
+    "To confirm your new email address, please enter the 6-character code we've sent to your email",
   onboarding:
-    "To complete your account creation, please enter the six digit code we've sent to your email",
+    "To complete your account creation, please enter the 6-character code we've sent to your email",
 };
 
 const OTP_INPUT_MODE_BY_TYPE: Record<VerificationType, 'alphanumeric' | 'numeric'> = {
