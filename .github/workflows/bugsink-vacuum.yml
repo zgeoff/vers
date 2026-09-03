@@ -10,6 +10,9 @@ on:
     - cron: '17 3 1 * *'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 concurrency:
   group: bugsink-vacuum
   cancel-in-progress: false
@@ -23,6 +26,28 @@ jobs:
     steps:
       - name: Setup flyctl
         uses: superfly/flyctl-actions/setup-flyctl@ed8efb33836e8b2096c7fd3ba1c8afe303ebbff1 # 1.6
+
+      - name: Wake the Bugsink machine
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        # The app suspends its only machine when idle, and `flyctl ssh console`
+        # refuses to connect to an app with no started machine, so start every
+        # machine and wait until each reports started.
+        run: |
+          set -euo pipefail
+          list='flyctl machines list --app vers-bugsink --json'
+          machine_ids="$($list | jq -r '.[] | select(.state != "started") | .id')"
+          for id in $machine_ids; do
+            flyctl machine start "$id" --app vers-bugsink
+          done
+          deadline=$((SECONDS + 120))
+          until $list | jq -e 'length > 0 and all(.state == "started")' >/dev/null; do
+            if [ "$SECONDS" -ge "$deadline" ]; then
+              echo '::error::no vers-bugsink machine reached the started state within 120s'
+              exit 1
+            fi
+            sleep 5
+          done
 
       - name: Enqueue vacuum_files
         env:

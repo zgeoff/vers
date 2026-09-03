@@ -56,6 +56,12 @@ The `.github/workflows/bugsink-vacuum.yml` workflow runs `bugsink-manage vacuum_
 on manual dispatch) to drop unused sourcemap `File`/`Chunk` rows before they accumulate in the
 shared Neon database. It enqueues a snappea background task, so the run returns immediately.
 
+The workflow wakes the app before it connects. The app suspends its only machine when idle, and
+`flyctl ssh console` refuses to connect to an app with no started machine instead of waking one, so
+the job first starts every machine that is not `started` and polls `flyctl machines list` until each
+one is, giving up after 120s. The `production` environment's `FLY_API_TOKEN` is the deploy token,
+which can start machines.
+
 ## API tokens
 
 Tokens are minted in the Bugsink UI or with `bugsink-manage create_auth_token` over
