@@ -30,7 +30,9 @@ The cookie is `en_session`: httpOnly, `SameSite=Lax`, secure in production, seal
 (`buildAuthSessionConfig`). `getAuthSession` reads it and never throws. An absent token is how
 `requireAuth` and `requireAnonymous` observe "signed out". `requireAuth` treats a partial session
 (any of the session id, access token, or refresh token missing) the same way, and runs the logout
-path before it redirects to `/login`, so whatever partial cookie state remained is cleared.
+path before it redirects to `/login`, so whatever partial cookie state remained is cleared. A
+service's `UNAUTHORIZED` on a page load's server call (`withRequiredSession`,
+`apps/web/src/lib/auth/`) takes the same logout path and redirect.
 
 ## Step-up authorization
 
