@@ -153,3 +153,67 @@ test('it creates the account, signs the caller in, and clears the onboarding ses
 
   expect(created?.username).toBe('onboard_success_user');
 });
+
+test('it signs in an already-created account when the retry carries its password', async () => {
+  await db.userCollection.create({ email: 'onboard-retry@vers.test', password: 'password123' });
+
+  const outcome = await withRequestContext(
+    { cookies: { en_verification: { 'onboarding#email': 'onboard-retry@vers.test' } } },
+    async () => {
+      const promise = runOnboarding(
+        buildFormData({
+          agreeToTerms: 'on',
+          confirmPassword: 'password123',
+          name: 'John Smith',
+          password: 'password123',
+          username: 'onboard_retry_user',
+        }),
+      );
+
+      // the outer cookie/db reads must observe the rejected call's sign-in settled
+      await promise.catch(() => {});
+
+      expect(promise).rejects.toMatchObject({ options: { href: '/respite' } });
+    },
+  );
+
+  expect(outcome.cookies['en_session']).toContainKeys(['accessToken', 'refreshToken', 'sessionID']);
+  expect(outcome.cookies['en_verification']).toStrictEqual({});
+
+  const rows = db.userCollection.findMany((q) => q.where({ email: 'onboard-retry@vers.test' }));
+
+  expect(rows).toHaveLength(1);
+});
+
+test('it tells the player the account exists when the retry carries a different password', async () => {
+  await db.userCollection.create({
+    email: 'onboard-retry-mismatch@vers.test',
+    password: 'the-original-password',
+  });
+
+  const outcome = await withRequestContext(
+    { cookies: { en_verification: { 'onboarding#email': 'onboard-retry-mismatch@vers.test' } } },
+    () =>
+      runOnboarding(
+        buildFormData({
+          agreeToTerms: 'on',
+          confirmPassword: 'password123',
+          name: 'John Smith',
+          password: 'password123',
+          username: 'onboard_mismatch',
+        }),
+      ),
+  );
+
+  invariant(!(outcome.value instanceof Response), 'expected a submission result');
+
+  expect(outcome.value.error).toStrictEqual({
+    '': [
+      'An account with this email already exists. Enter its password to sign in, or log in instead.',
+    ],
+  });
+
+  expect(outcome.cookies['en_verification']).toStrictEqual({
+    'onboarding#email': 'onboard-retry-mismatch@vers.test',
+  });
+});
