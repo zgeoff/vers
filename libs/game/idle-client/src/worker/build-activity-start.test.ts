@@ -142,7 +142,7 @@ test('it returns null when the build carries no bundled engine hash', async () =
   expect(row).toBeNull();
 });
 
-test('it sources the build snapshot from the last activity this worker installed for the avatar', async () => {
+test("it folds the build snapshot from the avatar's recorded latest run", async () => {
   const seed = createMockNodeSeed({ avatarID: 'avatar_with_history', nodeID: '1_0' });
 
   await writeNodeSeeds(seed.avatarID, [seed]);
@@ -150,9 +150,13 @@ test('it sources the build snapshot from the last activity this worker installed
 
   const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_1' });
 
-  context.setActivity(
-    createMockActivityData({ avatarID: seed.avatarID, buildSnapshot: { level: 7, xp: 8450 } }),
-  );
+  context.setLatestRun({
+    activityID: 'act_recorded',
+    avatarID: seed.avatarID,
+    baselineXP: 8450,
+    deltaXP: 0,
+    tail: null,
+  });
 
   const row = await buildActivityStart(context, {
     avatarID: seed.avatarID,
@@ -163,11 +167,11 @@ test('it sources the build snapshot from the last activity this worker installed
 
   invariant(row !== null, 'expected the cached inputs to synthesize a row');
 
-  // the level is recomputed from the carried-forward xp rather than trusted from the source row
+  // the level is recomputed from the carried-forward xp rather than trusted from the record
   expect(row.buildSnapshot).toStrictEqual({ level: buildLevelFromXP(8450), xp: 8450 });
 });
 
-test("it starts a fresh avatar's build snapshot at zero xp when the worker holds no prior activity row for it", async () => {
+test("it starts a fresh avatar's build snapshot at zero xp when the recorded run belongs to another avatar", async () => {
   const seed = createMockNodeSeed({ avatarID: 'avatar_fresh', nodeID: '1_0' });
 
   await writeNodeSeeds(seed.avatarID, [seed]);
@@ -175,7 +179,13 @@ test("it starts a fresh avatar's build snapshot at zero xp when the worker holds
 
   const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_1' });
 
-  context.setActivity(createMockActivityData({ avatarID: 'a-different-avatar' }));
+  context.setLatestRun({
+    activityID: 'act_other_avatar',
+    avatarID: 'a-different-avatar',
+    baselineXP: 8450,
+    deltaXP: 0,
+    tail: null,
+  });
 
   const row = await buildActivityStart(context, {
     avatarID: seed.avatarID,
@@ -247,18 +257,12 @@ test("it folds the previous run's recorded terminal total when every checkpoint 
 
   const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_1' });
 
-  const previous = createMockActivityData({
-    avatarID: seed.avatarID,
-    buildSnapshot: { level: buildLevelFromXP(1000), xp: 1000 },
-    id: 'act_online_previous',
-  });
-
-  context.setActivity(previous);
-
   // the run cleared online: the server confirmed every checkpoint and the queue is empty, so the
   // worker's own record of the run is the only place its earned xp still lives
-  context.setRunEarnings({
-    activityID: previous.id,
+  context.setLatestRun({
+    activityID: 'act_online_previous',
+    avatarID: seed.avatarID,
+    baselineXP: 1000,
     deltaXP: 150,
     tail: createMockCompletedCheckpoint({ rewards: { xp: 200 } }),
   });
@@ -285,16 +289,10 @@ test("it folds a still-running previous run's recorded xp deltas when it has no 
 
   const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_1' });
 
-  const previous = createMockActivityData({
+  context.setLatestRun({
+    activityID: 'act_mid_run_previous',
     avatarID: seed.avatarID,
-    buildSnapshot: { level: buildLevelFromXP(1000), xp: 1000 },
-    id: 'act_mid_run_previous',
-  });
-
-  context.setActivity(previous);
-
-  context.setRunEarnings({
-    activityID: previous.id,
+    baselineXP: 1000,
     deltaXP: 120,
     tail: createMockProgressCheckpoint({ rewards: { xp: 20 } }),
   });
@@ -319,18 +317,12 @@ test("it folds a failed previous run's terminal loss into the next snapshot", as
 
   const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_1' });
 
-  const previous = createMockActivityData({
-    avatarID: seed.avatarID,
-    buildSnapshot: { level: buildLevelFromXP(1000), xp: 1000 },
-    id: 'act_failed_previous',
-  });
-
-  context.setActivity(previous);
-
   // a failed terminal nets the death penalty against what the run earned, so its total can be
   // negative
-  context.setRunEarnings({
-    activityID: previous.id,
+  context.setLatestRun({
+    activityID: 'act_failed_previous',
+    avatarID: seed.avatarID,
+    baselineXP: 1000,
     deltaXP: 4,
     tail: createMockFailedCheckpoint({ rewards: { xp: -6 } }),
   });
@@ -347,8 +339,8 @@ test("it folds a failed previous run's terminal loss into the next snapshot", as
   expect(row.buildSnapshot).toStrictEqual({ level: buildLevelFromXP(994), xp: 994 });
 });
 
-test('it ignores earnings recorded for a run other than the previous one', async () => {
-  const seed = createMockNodeSeed({ avatarID: 'avatar_other_run_record', nodeID: '2_7' });
+test('it keeps folding from the recorded run after a stop cleared the installed activity', async () => {
+  const seed = createMockNodeSeed({ avatarID: 'avatar_stopped_run', nodeID: '2_7' });
 
   await writeNodeSeeds(seed.avatarID, [seed]);
   await writeStartStamps({ keyVersion: 1, secretRef: 'worldmap', secretVersion: 1 });
@@ -358,25 +350,30 @@ test('it ignores earnings recorded for a run other than the previous one', async
   const previous = createMockActivityData({
     avatarID: seed.avatarID,
     buildSnapshot: { level: buildLevelFromXP(1000), xp: 1000 },
-    id: 'act_other_run_previous',
+    id: 'act_stopped_previous',
   });
 
   context.setActivity(previous);
 
-  context.setRunEarnings({
-    activityID: 'act_some_other_run',
-    deltaXP: 500,
-    tail: createMockCompletedCheckpoint({ rewards: { xp: 500 } }),
+  context.setLatestRun({
+    activityID: previous.id,
+    avatarID: seed.avatarID,
+    baselineXP: 1000,
+    deltaXP: 30,
+    tail: createMockProgressCheckpoint({ rewards: { xp: 10 } }),
   });
+
+  // a player stop resets the installed activity; the server still counts the stopped run's xp
+  context.setActivity(null);
 
   const row = await buildActivityStart(context, {
     avatarID: seed.avatarID,
     scopeID: seed.nodeID,
     scopeType: 'world_map_node',
-    startKey: 'start_key_other_run',
+    startKey: 'start_key_stopped',
   });
 
   invariant(row !== null, 'expected the cached inputs to synthesize a row');
 
-  expect(row.buildSnapshot).toStrictEqual({ level: buildLevelFromXP(1000), xp: 1000 });
+  expect(row.buildSnapshot).toStrictEqual({ level: buildLevelFromXP(1030), xp: 1030 });
 });

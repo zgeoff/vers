@@ -9,7 +9,7 @@ import { createActor } from 'xstate';
 import type { CheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import type { ActivityServiceClient } from '../submission/types';
 import type { RewardSlotLedgerEntry } from '../types';
-import type { RunEarnings, WorkerContext } from '../worker/types';
+import type { LatestRun, WorkerContext } from '../worker/types';
 import { workerLifecycleMachine } from '../worker/worker-lifecycle-machine';
 import type { WorkerMessage } from '../worker/worker-to-client-message-schema';
 import { createStubSubmitter } from './create-stub-submitter';
@@ -45,7 +45,7 @@ export function createStubWorkerContext(
   let resyncAvatarID: string | null = null;
   let rewardSlotLedgerActivityID: null | string = null;
   let rewardSlotLedger: ReadonlyArray<RewardSlotLedgerEntry> = [];
-  let runEarnings: RunEarnings | null = null;
+  let latestRun: LatestRun | null = null;
   let failureAction: ActivityFailureAction = options.failureAction ?? ActivityFailureAction.Abort;
   let failureActionDirty = false;
   let failureActionPushInFlight = false;
@@ -72,6 +72,7 @@ export function createStubWorkerContext(
     getClient: () => client,
     getConnectivityOnline: () => connectivityOnline,
     getFailureAction: () => failureAction,
+    getLatestRun: () => latestRun,
     getLifecycle,
     getRemainingBudgetMs: () => options.remainingBudgetMs ?? Number.MAX_SAFE_INTEGER,
     getResyncAvatarID: () => resyncAvatarID,
@@ -79,7 +80,6 @@ export function createStubWorkerContext(
       activityID: rewardSlotLedgerActivityID,
       entries: rewardSlotLedger,
     }),
-    getRunEarnings: () => runEarnings,
     getSimulation: () => simulation,
     getStartToken: () => getLifecycle().getSnapshot().context.startToken,
     getStopSignal: () => getLifecycle().getSnapshot().context.stopController.signal,
@@ -118,11 +118,11 @@ export function createStubWorkerContext(
     // the stub's budget is entirely test-controlled through `options.remainingBudgetMs`, so
     // there is no anchor timestamp here for an ack to move
     setLastAckAt: () => {},
+    setLatestRun: (run) => {
+      latestRun = run;
+    },
     setResyncAvatarID: (avatarID) => {
       resyncAvatarID = avatarID;
-    },
-    setRunEarnings: (earnings) => {
-      runEarnings = earnings;
     },
     setSimulation: (newSimulation) => {
       simulation = newSimulation;

@@ -2,6 +2,7 @@ import { expect, test } from 'bun:test';
 import { createContentVersion } from '@vers/content-registry';
 import type { ActivityContract } from '@vers/contract-activity';
 import { createMockContentDocument } from '@vers/contract-activity/test-utils';
+import { buildLevelFromXP } from '@vers/idle-core';
 import {
   createActivityChainRow,
   createActivityRow,
@@ -54,6 +55,7 @@ test('it returns a fresh activity with a null anchor at verifiedHead 0', async (
     appendedHead: 0,
     failureAction: 'abort',
     isWriter: true,
+    optimisticBuild: { level: 1, xp: 0 },
     serverTime: expect.toBeValidDate(),
     verifiedHead: 0,
   });
@@ -291,4 +293,39 @@ test('it reports isWriter true for an unstamped stream whatever the session', as
   const progress = await client.getLatestActivityProgress({ avatarID: avatar.id });
 
   expect(progress.isWriter).toBeTrue();
+});
+
+test("it returns the build snapshot admission would re-author for the avatar's next start", async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id, xp: 100 });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    buildSnapshot: { level: buildLevelFromXP(100), xp: 100 },
+    scopeId: '0_0',
+  });
+
+  const tail = createMockCheckpointBatch({
+    finalPayloadOverrides: { rewards: { xp: 40 }, type: 'completed' },
+    startChainIndex: started.startChainIndex,
+    startPrevHash: started.startHash,
+    startVersion: 1,
+  });
+
+  await client.trackActivityProgress({
+    activityID: started.id,
+    checkpoints: tail,
+    expectedHead: 0,
+  });
+
+  const progress = await client.getLatestActivityProgress({ avatarID: avatar.id });
+
+  // the terminal closed the run unverified, so its whole total is owed on top of the settled xp
+  expect(progress.optimisticBuild).toStrictEqual({ level: buildLevelFromXP(140), xp: 140 });
 });

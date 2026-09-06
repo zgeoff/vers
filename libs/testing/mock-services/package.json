@@ -37,6 +37,7 @@
     "@vers/contract-session": "workspace:*",
     "@vers/contract-user": "workspace:*",
     "@vers/contract-verification": "workspace:*",
+    "@vers/idle-core": "workspace:*",
     "@vers/roll-crypto": "workspace:*",
     "@vers/service-auth": "workspace:*",
     "@vers/worldmap-core": "workspace:*",

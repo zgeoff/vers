@@ -27,10 +27,12 @@ export interface StopActivityInput {
   readonly avatarID: string;
 }
 
-export interface RunEarnings {
+export interface LatestRun {
   readonly activityID: string;
+  readonly avatarID: string;
+  readonly baselineXP: number;
   readonly deltaXP: number;
-  readonly tail: ActivityCheckpoint;
+  readonly tail: ActivityCheckpoint | null;
 }
 
 export interface WorkerContext {
@@ -53,8 +55,9 @@ export interface WorkerContext {
   readonly getResyncAvatarID: () => string | null;
 
   readonly getRewardSlotLedger: () => RewardSlotLedgerSnapshot;
-  readonly getRunEarnings: () => RunEarnings | null;
   readonly getSimulation: () => Simulation;
+
+  readonly getLatestRun: () => LatestRun | null;
 
   readonly getLifecycle: () => ActorRefFromLogic<typeof workerLifecycleMachine>;
 
@@ -81,8 +84,9 @@ export interface WorkerContext {
 
   readonly setLastAckAt: (timestamp: number) => void;
 
+  readonly setLatestRun: (run: LatestRun | null) => void;
+
   readonly setResyncAvatarID: (avatarID: null | string) => void;
-  readonly setRunEarnings: (earnings: RunEarnings | null) => void;
   readonly setStartToken: (token: string) => void;
   readonly setSimulation: (simulation: Simulation) => void;
   readonly setWriterDisplacedActivityID: (activityID: null | string) => void;
