@@ -6,6 +6,7 @@ export type {
 } from './worker/worker-contract';
 
 export type { RunOutcome } from './worker/run-outcome-schema';
+export type { LiveRun } from './worker/live-run-schema';
 export type { ResyncStatus } from './worker/worker-to-client-message-schema';
 
 export enum WorkerMessageType {

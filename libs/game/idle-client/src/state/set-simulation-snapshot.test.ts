@@ -126,3 +126,35 @@ test('it keeps the run outcome while the ended run is still the one in the snaps
 
   expect(useIdleStore.getState().runOutcome).toStrictEqual(outcome);
 });
+
+test('it records the live run beside the snapshot', () => {
+  setSimulationSnapshot(
+    {
+      activity: createMockActivitySnapshot({ id: 'activity_1' }),
+      failureAction: ActivityFailureAction.Abort,
+    },
+    { avatarID: 'avatar_1', id: 'activity_1', scopeID: '0_0', scopeType: 'world_map_node' },
+  );
+
+  expect(useIdleStore.getState().liveRun).toStrictEqual({
+    avatarID: 'avatar_1',
+    id: 'activity_1',
+    scopeID: '0_0',
+    scopeType: 'world_map_node',
+  });
+});
+
+test('it clears the live run when the snapshot carries none', () => {
+  useIdleStore.setState({
+    liveRun: {
+      avatarID: 'avatar_1',
+      id: 'activity_1',
+      scopeID: '0_0',
+      scopeType: 'world_map_node',
+    },
+  });
+
+  setSimulationSnapshot({ failureAction: ActivityFailureAction.Abort });
+
+  expect(useIdleStore.getState().liveRun).toBeNull();
+});

@@ -2,6 +2,7 @@ import { ActivityFailureAction } from '@vers/idle-core';
 import * as z from 'zod';
 import { WorkerMessageType } from '../types';
 import { runOutcomeSchema } from './run-outcome-schema';
+import { liveRunSchema } from './live-run-schema';
 import { simulationSnapshotSchema } from './simulation-snapshot-schema';
 
 const activityEndedMessageSchema = z
@@ -20,6 +21,7 @@ const activityStartIngestedMessageSchema = z
 
 const simulationUpdateMessageSchema = z
   .object({
+    liveRun: liveRunSchema.exactOptional(),
     state: simulationSnapshotSchema,
     type: z.literal(WorkerMessageType.SimulationUpdate),
   })

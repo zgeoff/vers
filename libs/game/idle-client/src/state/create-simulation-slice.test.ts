@@ -8,5 +8,6 @@ test('it builds the empty simulation state', () => {
     avatar: null,
     combat: null,
     failureAction: ActivityFailureAction.Abort,
+    liveRun: null,
   });
 });

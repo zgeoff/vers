@@ -3,11 +3,12 @@ import {
   useAvatar,
   useFailureAction,
   useLastCompletedActivityID,
+  useLiveRun,
   useSimulationInitialized,
   useSimulationTransport,
   useWriterAbortSignal,
 } from '@vers/idle-client';
-import type { WorkerClient } from '@vers/idle-client';
+import type { LiveRun, WorkerClient } from '@vers/idle-client';
 import type { ActivityFailureAction, ActivitySnapshot, AvatarSnapshot } from '@vers/idle-core';
 
 interface IdleWorkerHandle {
@@ -17,6 +18,7 @@ interface IdleWorkerHandle {
   readonly failureAction: ActivityFailureAction;
   readonly initialized: boolean;
   readonly lastCompletedActivityID: string | undefined;
+  readonly liveRun: LiveRun | undefined;
   readonly writerAbortSignal: AbortSignal;
 }
 
@@ -27,6 +29,7 @@ export function useIdleWorkerHandle(): IdleWorkerHandle {
   const avatar = useAvatar();
   const failureAction = useFailureAction();
   const lastCompletedActivityID = useLastCompletedActivityID();
+  const liveRun = useLiveRun();
   const writerAbortSignal = useWriterAbortSignal();
 
   return {
@@ -36,6 +39,7 @@ export function useIdleWorkerHandle(): IdleWorkerHandle {
     failureAction,
     initialized,
     lastCompletedActivityID: lastCompletedActivityID ?? undefined,
+    liveRun: liveRun ?? undefined,
     writerAbortSignal,
   };
 }
