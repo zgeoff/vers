@@ -1,4 +1,4 @@
-import type { WorkerClient } from '@vers/idle-client';
+import type { LiveRun, WorkerClient } from '@vers/idle-client';
 import type { ActivitySnapshot, AvatarSnapshot } from '@vers/idle-core';
 import { ActivityFailureAction } from '@vers/idle-core';
 
@@ -9,6 +9,7 @@ export interface StubIdleWorkerHandle {
   readonly failureAction: ActivityFailureAction;
   readonly initialized: boolean;
   readonly lastCompletedActivityID?: string | undefined;
+  readonly liveRun?: LiveRun | undefined;
   readonly writerAbortSignal: AbortSignal;
 }
 

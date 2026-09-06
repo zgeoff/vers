@@ -33,6 +33,7 @@ export { useAvatar } from './state/use-avatar';
 export { useFailureAction } from './state/use-failure-action';
 export { useLastCompletedActivityID } from './state/use-last-completed-activity-id';
 export { useLastIngestedActivityID } from './state/use-last-ingested-activity-id';
+export { useLiveRun } from './state/use-live-run';
 export { useRewardSlotLedger } from './state/use-reward-slot-ledger';
 export { useSimulationInitialized } from './state/use-simulation-initialized';
 export { useWriterAbortSignal } from './state/use-writer-abort-signal';

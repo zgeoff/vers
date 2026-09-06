@@ -91,3 +91,35 @@ test('it resets the reward-slot ledger once, not on every snapshot of the new ac
 
   expect(useIdleStore.getState().rewardSlotLedger).toStrictEqual([{ count: 9, version: 1 }]);
 });
+
+test('it records the live run beside the snapshot', () => {
+  setSimulationSnapshot(
+    {
+      activity: createMockActivitySnapshot({ id: 'activity_1' }),
+      failureAction: ActivityFailureAction.Abort,
+    },
+    { avatarID: 'avatar_1', id: 'activity_1', scopeID: '0_0', scopeType: 'world_map_node' },
+  );
+
+  expect(useIdleStore.getState().liveRun).toStrictEqual({
+    avatarID: 'avatar_1',
+    id: 'activity_1',
+    scopeID: '0_0',
+    scopeType: 'world_map_node',
+  });
+});
+
+test('it clears the live run when the snapshot carries none', () => {
+  useIdleStore.setState({
+    liveRun: {
+      avatarID: 'avatar_1',
+      id: 'activity_1',
+      scopeID: '0_0',
+      scopeType: 'world_map_node',
+    },
+  });
+
+  setSimulationSnapshot({ failureAction: ActivityFailureAction.Abort });
+
+  expect(useIdleStore.getState().liveRun).toBeNull();
+});
