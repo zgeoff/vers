@@ -29,5 +29,30 @@ test('it serves the favicon and the robots policy as static files', async ({ req
   expect(robots.status()).toBe(200);
   expect(robots.headers()['content-type']).toContain('text/plain');
 
-  await expect(robots.text()).resolves.toContain('User-agent: *');
+  const robotsText = await robots.text();
+
+  const directives = robotsText.split(/\r?\n/);
+
+  expect(directives).toStrictEqual(
+    expect.arrayContaining([
+      'User-agent: *',
+      'Disallow: /api/',
+      'Disallow: /health',
+      'Disallow: /login/force-logout',
+      'Disallow: /onboarding',
+      'Disallow: /verify-otp',
+      'Disallow: /reset-password',
+      'Disallow: /account',
+      'Disallow: /activity',
+      'Disallow: /avatar',
+      'Disallow: /codex',
+      'Disallow: /explore',
+      'Disallow: /market',
+      'Disallow: /respite',
+      'Disallow: /settings',
+      'Disallow: /stash',
+    ]),
+  );
+
+  expect(directives).not.toContain('Disallow: /');
 });
