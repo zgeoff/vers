@@ -10,10 +10,7 @@
     },
     "bugsink": {
       "command": "sh",
-      "args": [
-        "-c",
-        "BUGSINK_TOKEN=\"$(op read 'op://vers/bugsink/mcp-token')\" exec npx -y @zgeoff/bugsink-mcp@0.2.0"
-      ],
+      "args": ["-c", "BUGSINK_TOKEN=\"$(op read 'op://vers/bugsink/mcp-token')\" exec bugsink-mcp"],
       "env": {
         "BUGSINK_URL": "https://vers-bugsink.fly.dev"
       }
@@ -26,39 +23,29 @@
       "command": "sh",
       "args": [
         "-c",
-        "exec npx -y chrome-devtools-mcp@1.7.0 --browser-url \"http://$(ip route show default | awk '{print $3; exit}'):9223\""
+        "exec chrome-devtools-mcp --browser-url \"http://$(ip route show default | awk '{print $3; exit}'):9223\""
       ]
     },
     "tinybird": {
       "command": "sh",
       "args": [
         "-c",
-        "exec npx -y @zgeoff/mcp-remote@0.1.38 \"https://mcp.tinybird.co?token=$(op read 'op://vers/tinybird/read-token')&host=https://api.us-east.tinybird.co\""
+        "exec mcp-remote \"https://mcp.tinybird.co?token=$(op read 'op://vers/tinybird/read-token')&host=https://api.us-east.tinybird.co\""
       ]
     },
     "umami": {
       "command": "sh",
       "args": [
         "-c",
-        "UMAMI_USERNAME=\"$(op read 'op://vers/umami/username')\" UMAMI_PASSWORD=\"$(op read 'op://vers/umami/password')\" exec npx -y @zgeoff/umami-mcp@0.1.0"
+        "UMAMI_USERNAME=\"$(op read 'op://vers/umami/username')\" UMAMI_PASSWORD=\"$(op read 'op://vers/umami/password')\" exec umami-mcp"
       ],
       "env": {
         "UMAMI_API_BASE": "https://vers-umami.fly.dev/api"
       }
     },
     "serena": {
-      "type": "stdio",
-      "command": "uvx",
-      "args": [
-        "--from",
-        "serena-agent==1.7.0",
-        "serena",
-        "start-mcp-server",
-        "--context",
-        ".serena/context.claude-code.yml",
-        "--project-from-cwd"
-      ],
-      "env": {}
+      "type": "http",
+      "url": "http://127.0.0.1:9121/mcp"
     }
   }
 }

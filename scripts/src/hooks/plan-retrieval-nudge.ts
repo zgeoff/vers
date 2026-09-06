@@ -39,7 +39,7 @@ export function planRetrievalNudge(
 ): RetrievalPlan {
   const kind = pickRetrievalKind(call.toolName, call.toolInput);
   const planning = call.permissionMode === 'plan';
-  const edited = kind === 'edit' || kind === 'symbol-edit';
+  const edited = kind === 'edit';
   const sessionPhase: RetrievalPhase = edited && !planning ? 'implement' : state.phase;
   const counted: RetrievalState = { ...state, phase: sessionPhase, calls: state.calls + 1 };
 
@@ -81,7 +81,6 @@ function advanceImplement(state: RetrievalState, kind: RetrievalKind): Retrieval
       return { ...base, searchRun: 0, huntRun: state.huntRun + 1 };
     }
     case 'symbol-lookup':
-    case 'symbol-edit':
     case 'edit': {
       return { ...base, searchRun: 0, huntRun: 0, huntSearches: 0 };
     }
@@ -105,8 +104,7 @@ function advanceResearch(state: RetrievalState, kind: RetrievalKind): RetrievalS
     case 'read-whole':
     case 'read-ranged':
     case 'search':
-    case 'edit':
-    case 'symbol-edit': {
+    case 'edit': {
       return { ...base, lookupRun: 0 };
     }
     case 'other': {

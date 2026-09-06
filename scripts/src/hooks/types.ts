@@ -9,7 +9,6 @@ export type RetrievalKind =
   | 'read-whole'
   | 'read-ranged'
   | 'symbol-lookup'
-  | 'symbol-edit'
   | 'edit'
   | 'other';
 
