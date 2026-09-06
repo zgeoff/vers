@@ -1,10 +1,10 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { ActivityPanel } from '../-activity/activity-panel';
-import { requireActiveActivity } from '../../lib/activity/require-active-activity';
+import { requireActiveAvatar } from '../../lib/avatar/require-active-avatar';
 
 export const Route = createFileRoute('/_game/activity')({
   component: ActivityPanel,
   head: () => ({ meta: [{ title: 'vers | Activity' }] }),
-  loader: () => requireActiveActivity(),
+  loader: () => requireActiveAvatar(),
   staticData: { presentation: 'ambient' },
 });
