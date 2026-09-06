@@ -90,8 +90,8 @@ export function SignOutForm(props: Readonly<SignOutFormProps>) {
             confirmed.
           </Text>
           <Text>
-            Log out now and you give that progress up for good. Cancel, get back online, and it
-            delivers instead.
+            Log out now and you give that progress up for good. Cancel to keep it; it delivers once
+            the server accepts it.
           </Text>
           {discardFailed && (
             <Text role="alert">

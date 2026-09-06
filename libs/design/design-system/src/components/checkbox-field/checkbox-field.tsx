@@ -1,4 +1,4 @@
-import { Checkbox } from '@ark-ui/react/checkbox';
+import { Checkbox, useCheckboxContext } from '@ark-ui/react/checkbox';
 import { Field } from '@ark-ui/react/field';
 import { cx, sva } from '@vers/styled-system/css';
 import * as React from 'react';
@@ -92,9 +92,37 @@ export function CheckboxField(props: Readonly<Props>) {
           {...props.labelProps}
           className={cx(styles.label, props.labelProps.className)}
         />
-        <Checkbox.HiddenInput onClick={onClick} />
+        <SyncedHiddenInput
+          adoptsInputState={props.checkboxProps.checked === undefined}
+          onClick={onClick}
+        />
       </Checkbox.Root>
       <Field.ErrorText className={styles.errorText}>{firstError}</Field.ErrorText>
     </Field.Root>
   );
+}
+
+interface SyncedHiddenInputProps {
+  readonly adoptsInputState: boolean;
+  readonly onClick: React.MouseEventHandler<HTMLInputElement> | undefined;
+}
+
+function SyncedHiddenInput(props: Readonly<SyncedHiddenInputProps>) {
+  const checkbox = useCheckboxContext();
+  const inputRef = React.useRef<HTMLInputElement>(null);
+
+  // a click that lands before hydration toggles the native input while the machine still holds the
+  // server-rendered state; the input is what the form submits, so the click is replayed once the
+  // machine listens — its own setter defers a synthetic change that reads the state it replaces
+  React.useEffect(() => {
+    const input = inputRef.current;
+
+    if (props.adoptsInputState && input !== null && input.checked !== checkbox.checked) {
+      input.checked = checkbox.checked;
+
+      input.click();
+    }
+  }, [checkbox, props.adoptsInputState]);
+
+  return <Checkbox.HiddenInput onClick={props.onClick} ref={inputRef} />;
 }

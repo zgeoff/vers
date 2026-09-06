@@ -1,0 +1,17 @@
+# The public entry pages (home, login, sign-up, forgot-password) are crawlable. The API, the
+# health check, the transactional auth routes, and the session-gated game routes are not.
+User-agent: *
+Disallow: /api/
+Disallow: /health
+Disallow: /onboarding
+Disallow: /verify-otp
+Disallow: /reset-password
+Disallow: /account
+Disallow: /activity
+Disallow: /avatar
+Disallow: /codex
+Disallow: /explore
+Disallow: /market
+Disallow: /respite
+Disallow: /settings
+Disallow: /stash
