@@ -22,7 +22,6 @@ const rows: ReadonlyArray<[RetrievalKind, string, Readonly<Record<string, unknow
   ['other', 'Write', { file_path: '/repo/docs/plan.md' }],
   ['symbol-lookup', 'mcp__serena__find_symbol', {}],
   ['symbol-lookup', 'mcp__serena__get_symbols_overview', {}],
-  ['symbol-edit', 'mcp__serena__replace_symbol_body', {}],
   ['other', 'mcp__serena__initial_instructions', {}],
   ['other', 'Glob', { pattern: '**/*.ts' }],
   ['other', 'Skill', { skill: 'testing' }],

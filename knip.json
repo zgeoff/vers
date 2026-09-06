@@ -14,8 +14,12 @@
       "ignoreDependencies": [
         "@playwright/test",
         "@stylistic/eslint-plugin",
+        "@zgeoff/bugsink-mcp",
         "@zgeoff/bun-test-extended",
-        "@zgeoff/oxlint-config"
+        "@zgeoff/mcp-remote",
+        "@zgeoff/oxlint-config",
+        "@zgeoff/umami-mcp",
+        "chrome-devtools-mcp"
       ]
     },
     "scripts": {

@@ -13,14 +13,6 @@ const SERENA_LOOKUPS: ReadonlySet<string> = new Set([
   'find_implementations',
 ]);
 
-const SERENA_EDITS: ReadonlySet<string> = new Set([
-  'replace_symbol_body',
-  'insert_after_symbol',
-  'insert_before_symbol',
-  'rename_symbol',
-  'safe_delete_symbol',
-]);
-
 const BUILTIN_EDITS: ReadonlySet<string> = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit']);
 
 // A search command where a command can start: the beginning of a line, or after a pipe, separator,
@@ -35,11 +27,7 @@ export function pickRetrievalKind(
   if (toolName.startsWith(SERENA_PREFIX)) {
     const tool = toolName.slice(SERENA_PREFIX.length);
 
-    if (SERENA_LOOKUPS.has(tool)) {
-      return 'symbol-lookup';
-    }
-
-    return SERENA_EDITS.has(tool) ? 'symbol-edit' : 'other';
+    return SERENA_LOOKUPS.has(tool) ? 'symbol-lookup' : 'other';
   }
 
   if (toolName === 'Grep') {
