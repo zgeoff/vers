@@ -31,7 +31,7 @@ test('it reports step-up-required with no transaction token', async () => {
   expect(outcome.value).toMatchObject({ status: 'step-up-required', target: signedIn.userID });
 });
 
-test('it removes the 2FA verification and redirects to account once a valid token is attached', async () => {
+test('it removes the 2FA verification and redirects to settings once a valid token is attached', async () => {
   const signedIn = await createSignedInUser();
 
   await db.verificationCollection.create({ target: signedIn.userID, type: '2fa' });
@@ -49,7 +49,7 @@ test('it removes the 2FA verification and redirects to account once a valid toke
     // step settled
     await promise.catch(() => {});
 
-    expect(promise).rejects.toMatchObject({ options: { href: '/account' } });
+    expect(promise).rejects.toMatchObject({ options: { to: '/settings' } });
   });
 
   expect(
