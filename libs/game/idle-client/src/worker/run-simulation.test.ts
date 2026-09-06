@@ -1,5 +1,8 @@
 import { expect, mock, test } from 'bun:test';
-import { createMockContentDocument } from '@vers/contract-activity/test-utils';
+import {
+  createMockActivityData,
+  createMockContentDocument,
+} from '@vers/contract-activity/test-utils';
 import type { ActivityCheckpoint, SimulationListener } from '@vers/idle-core';
 import {
   ActivityCheckpointType,
@@ -349,7 +352,7 @@ test('it never broadcasts a ledger message for a checkpoint the submitter droppe
   expect(rewardMessages).toStrictEqual([]);
 });
 
-test('it broadcasts an activity completed message when an activity completes', async () => {
+test('it broadcasts a cleared outcome when an activity completes', async () => {
   const context = createStubWorkerContext({ remainingBudgetMs: 0 });
   const simulation = createSimulation();
   const avatar = createMockAvatarData();
@@ -369,16 +372,24 @@ test('it broadcasts an activity completed message when an activity completes', a
 
   await runSimulationSteps(context, simulation, 100, 700);
 
-  const completedMessages = context
+  const endedMessages = context
     .getBroadcasts()
-    .filter((message) => message.type === WorkerMessageType.ActivityCompleted);
+    .filter((message) => message.type === WorkerMessageType.ActivityEnded);
 
-  expect(completedMessages).toStrictEqual([
-    { activityID: activity.id, type: WorkerMessageType.ActivityCompleted },
+  expect(endedMessages).toStrictEqual([
+    {
+      outcome: {
+        activityID: activity.id,
+        avatarID: avatar.id,
+        kind: ActivityCheckpointType.Completed,
+        xp: expect.toBePositive(),
+      },
+      type: WorkerMessageType.ActivityEnded,
+    },
   ]);
 });
 
-test('it never broadcasts an activity completed message for a failed activity', async () => {
+test('it broadcasts a failed outcome and then an activity-less snapshot when an aborted failure stops the run', async () => {
   const context = createStubWorkerContext();
   const simulation = createSimulation();
 
@@ -390,11 +401,60 @@ test('it never broadcasts an activity completed message for a failed activity', 
 
   await runSimulationSteps(context, simulation, 100, 50);
 
-  const completedMessages = context
-    .getBroadcasts()
-    .filter((message) => message.type === WorkerMessageType.ActivityCompleted);
+  const broadcasts = context.getBroadcasts();
+  const endedIndex = broadcasts.findIndex((m) => m.type === WorkerMessageType.ActivityEnded);
+  const ended = broadcasts[endedIndex];
+  const afterEnded = broadcasts[endedIndex + 1];
 
-  expect(completedMessages).toStrictEqual([]);
+  expect(ended).toStrictEqual({
+    outcome: {
+      activityID: activity.id,
+      avatarID: avatar.id,
+      kind: ActivityCheckpointType.Failed,
+      xp: 0,
+    },
+    type: WorkerMessageType.ActivityEnded,
+  });
+
+  expect(afterEnded).toStrictEqual({
+    state: { failureAction: ActivityFailureAction.Abort },
+    type: WorkerMessageType.SimulationUpdate,
+  });
+
+  expect(broadcasts.filter((m) => m.type === WorkerMessageType.ActivityEnded)).toHaveLength(1);
+});
+
+test('it names the node the ended run played beside the outcome when its row is installed', async () => {
+  const context = createStubWorkerContext();
+  const simulation = createSimulation();
+
+  // life of 1 dies on the very first hit taken, forcing a failed checkpoint
+  const avatar = createMockAvatarData({ life: 1 });
+  const activity = createMockActivityInput({ failureAction: ActivityFailureAction.Abort });
+
+  const row = createMockActivityData({
+    avatarID: avatar.id,
+    id: activity.id,
+    scopeID: '3_4',
+    scopeType: 'world_map_node',
+  });
+
+  context.setActivity(row);
+  context.setSimulation(simulation);
+  simulation.startActivity(avatar, activity);
+
+  await runSimulationSteps(context, simulation, 100, 50);
+
+  expect(context.getBroadcasts()).toPartiallyContain({
+    outcome: {
+      activityID: activity.id,
+      avatarID: avatar.id,
+      kind: ActivityCheckpointType.Failed,
+      scope: { scopeID: '3_4', scopeType: 'world_map_node' },
+      xp: 0,
+    },
+    type: WorkerMessageType.ActivityEnded,
+  });
 });
 
 test('it records the started checkpoint and a zero running xp on the first tick', async () => {

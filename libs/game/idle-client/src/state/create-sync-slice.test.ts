@@ -10,6 +10,7 @@ test('it builds the empty sync state', () => {
     resyncStatus: null,
     rewardSlotLedger: [],
     rewardSlotLedgerActivityID: null,
+    runOutcome: null,
     writerDisplacedActivityID: null,
   });
 });
