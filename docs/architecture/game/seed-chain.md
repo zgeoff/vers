@@ -134,7 +134,7 @@ a `CHECKPOINT_INVALID` refusal, whose reasons split across both outcomes
 - **The refusal can clear, so the device keeps it.** A stale anchor, a sim version this deploy has
   not registered yet, an operator hold, and a build snapshot that counted XP from a predecessor
   still in flight all resolve on their own. The device keeps the activity start and sends it again
-  once the predecessor lands or the hold clears.
+  on the worker's backoff ([offline reconcile](./offline-reconcile.md#worker-lifecycle)).
 
 An activity start reaches the server by one of two routes. A device that still holds its live
 simulation hands it over on first contact, and if that stream's checkpoint flush comes back

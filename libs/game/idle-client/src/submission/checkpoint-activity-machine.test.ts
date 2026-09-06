@@ -567,7 +567,7 @@ test('it discards the queue after a second NOT_FOUND on the post-ingest retry, i
   expect(ingestActivityStart).toHaveBeenCalledExactlyOnceWith('not-found-twice-activity');
 });
 
-test('it holds the queue and retries on NOT_FOUND when ingestActivityStart defers', async () => {
+test('it holds the queue on NOT_FOUND when ingestActivityStart defers, without reporting the batch held', async () => {
   const track = mock<() => void>();
 
   const ingestActivityStart = mock<(activityID: string) => Promise<IngestActivityStartOutcome>>(
@@ -599,7 +599,220 @@ test('it holds the queue and retries on NOT_FOUND when ingestActivityStart defer
   });
 
   expect(track).toHaveBeenCalledOnce();
-  expect(ctx.emitted).toStrictEqual([{ activityID: 'not-found-deferred-activity', type: 'held' }]);
+  expect(ctx.emitted).toStrictEqual([]);
+});
+
+test('it retries a deferred activity start on exponential backoff up to the cap, so seven refusals cost eight attempts', async () => {
+  const track = mock<() => void>();
+
+  const ingestActivityStart = mock<(activityID: string) => Promise<IngestActivityStartOutcome>>(
+    async () => {
+      await Promise.resolve();
+
+      return 'deferred';
+    },
+  );
+
+  const ctx = setupTest({ activityID: 'deferred-backoff-activity', ingestActivityStart });
+
+  server.use(
+    mockActivityService.trackActivityProgress.handler((opts) => {
+      track();
+      throw opts.errors.NOT_FOUND({ data: {} });
+    }),
+  );
+
+  await writeQueuedCheckpoint(
+    'deferred-backoff-activity',
+    createMockCheckpointBatchEntry({ payload: { type: 'completed' }, version: 1 }),
+  );
+
+  ctx.actor.send({ isTerminal: true, type: 'QUEUED', version: 1 });
+
+  await waitFor(() => {
+    expect(ctx.actor.getSnapshot().matches('retrying')).toBeTrue();
+  });
+
+  expect(track).toHaveBeenCalledOnce();
+
+  for (const [index, delay] of [10_000, 20_000, 40_000, 80_000, 160_000, 300_000].entries()) {
+    ctx.clock.increment(delay - 1);
+
+    expect(track).toHaveBeenCalledTimes(index + 1);
+
+    ctx.clock.increment(1);
+
+    await waitFor(() => {
+      expect(track).toHaveBeenCalledTimes(index + 2);
+      expect(ctx.actor.getSnapshot().matches('retrying')).toBeTrue();
+    });
+  }
+
+  ctx.clock.increment(RETRY_BACKOFF_CAP_MS - 1);
+
+  expect(track).toHaveBeenCalledTimes(7);
+
+  ctx.clock.increment(1);
+
+  await waitFor(() => {
+    expect(track).toHaveBeenCalledTimes(8);
+  });
+
+  expect(ingestActivityStart).toHaveBeenCalledTimes(8);
+});
+
+test('it keeps a deferred activity start on its backoff while progress checkpoints queue, flushing them with the next attempt', async () => {
+  const track = mock<(input: unknown) => void>();
+
+  const ingestActivityStart = mock<(activityID: string) => Promise<IngestActivityStartOutcome>>(
+    async () => {
+      await Promise.resolve();
+
+      return 'deferred';
+    },
+  );
+
+  const ctx = setupTest({ activityID: 'deferred-progress-activity', ingestActivityStart });
+
+  server.use(
+    mockActivityService.trackActivityProgress.handler((opts) => {
+      track(opts.input);
+      throw opts.errors.NOT_FOUND({ data: {} });
+    }),
+  );
+
+  await writeQueuedCheckpoint(
+    'deferred-progress-activity',
+    createMockCheckpointBatchEntry({ version: 1 }),
+  );
+
+  ctx.actor.send({ isTerminal: false, type: 'QUEUED', version: 1 });
+  ctx.actor.send({ type: 'FLUSH_DUE' });
+
+  await waitFor(() => {
+    expect(ctx.actor.getSnapshot().matches('retrying')).toBeTrue();
+  });
+
+  await writeQueuedCheckpoint(
+    'deferred-progress-activity',
+    createMockCheckpointBatchEntry({ version: 2 }),
+  );
+
+  await writeQueuedCheckpoint(
+    'deferred-progress-activity',
+    createMockCheckpointBatchEntry({ version: 3 }),
+  );
+
+  ctx.actor.send({ isTerminal: false, type: 'QUEUED', version: 2 });
+  ctx.actor.send({ isTerminal: false, type: 'QUEUED', version: 3 });
+
+  expect(ctx.actor.getSnapshot().matches('retrying')).toBeTrue();
+  expect(track).toHaveBeenCalledOnce();
+
+  ctx.clock.increment(PROGRESS_FLUSH_INTERVAL_MS);
+
+  await waitFor(() => {
+    expect(track).toHaveBeenCalledTimes(2);
+  });
+
+  expect(track).toHaveBeenLastCalledWith(
+    expect.objectContaining({
+      checkpoints: [
+        expect.objectContaining({ version: 1 }),
+        expect.objectContaining({ version: 2 }),
+        expect.objectContaining({ version: 3 }),
+      ],
+    }),
+  );
+});
+
+test('it flushes a terminal checkpoint at once while a deferred activity start waits on its backoff', async () => {
+  const track = mock<() => void>();
+
+  const ingestActivityStart = mock<(activityID: string) => Promise<IngestActivityStartOutcome>>(
+    async () => {
+      await Promise.resolve();
+
+      return 'deferred';
+    },
+  );
+
+  const ctx = setupTest({ activityID: 'deferred-terminal-activity', ingestActivityStart });
+
+  server.use(
+    mockActivityService.trackActivityProgress.handler((opts) => {
+      track();
+      throw opts.errors.NOT_FOUND({ data: {} });
+    }),
+  );
+
+  await writeQueuedCheckpoint(
+    'deferred-terminal-activity',
+    createMockCheckpointBatchEntry({ version: 1 }),
+  );
+
+  ctx.actor.send({ isTerminal: false, type: 'QUEUED', version: 1 });
+  ctx.actor.send({ type: 'FLUSH_DUE' });
+
+  await waitFor(() => {
+    expect(ctx.actor.getSnapshot().matches('retrying')).toBeTrue();
+  });
+
+  await writeQueuedCheckpoint(
+    'deferred-terminal-activity',
+    createMockCheckpointBatchEntry({ payload: { type: 'completed' }, version: 2 }),
+  );
+
+  ctx.actor.send({ isTerminal: true, type: 'QUEUED', version: 2 });
+
+  await waitFor(() => {
+    expect(track).toHaveBeenCalledTimes(2);
+  });
+});
+
+test('it arms the progress window for a checkpoint queued while a flush was in flight, rather than flushing it at once', async () => {
+  const track = mock<() => void>();
+  let release: (() => void) | undefined;
+  const ctx = setupTest({ activityID: 'mid-flight-progress-activity' });
+
+  server.use(
+    mockActivityService.trackActivityProgress.handler(async () => {
+      track();
+
+      await new Promise<void>((resolve) => {
+        release = resolve;
+      });
+
+      return { appendedHead: 1 };
+    }),
+  );
+
+  await writeQueuedCheckpoint(
+    'mid-flight-progress-activity',
+    createMockCheckpointBatchEntry({ version: 1 }),
+  );
+
+  ctx.actor.send({ isTerminal: false, type: 'QUEUED', version: 1 });
+  ctx.actor.send({ type: 'FLUSH_DUE' });
+
+  await waitFor(() => {
+    expect(track).toHaveBeenCalledOnce();
+  });
+
+  await writeQueuedCheckpoint(
+    'mid-flight-progress-activity',
+    createMockCheckpointBatchEntry({ version: 2 }),
+  );
+
+  ctx.actor.send({ isTerminal: false, type: 'QUEUED', version: 2 });
+  release?.();
+
+  await waitFor(() => {
+    expect(ctx.actor.getSnapshot().matches('scheduled')).toBeTrue();
+  });
+
+  expect(track).toHaveBeenCalledOnce();
+  expect(ctx.scheduleProgressFlush).toHaveBeenCalledTimes(2);
 });
 
 test('it discards the queue on NOT_FOUND when ingestActivityStart reports the activityStart rejected', async () => {
@@ -656,4 +869,63 @@ test('it discards the queue on NOT_FOUND with no ingestActivityStart hook config
   });
 
   expect(track).toHaveBeenCalledOnce();
+});
+
+test('it arms the progress window for a checkpoint queued while a flush was in flight when that flush then fails in its callback', async () => {
+  const track = mock<() => void>();
+  let release: (() => void) | undefined;
+
+  const ctx = setupTest({
+    activityID: 'mid-flight-callback-failed-activity',
+    onAcked: () => {
+      throw new Error('ack callback exploded');
+    },
+  });
+
+  server.use(
+    mockActivityService.trackActivityProgress.handler(async () => {
+      track();
+
+      await new Promise<void>((resolve) => {
+        release = resolve;
+      });
+
+      return { appendedHead: 1 };
+    }),
+  );
+
+  await writeQueuedCheckpoint(
+    'mid-flight-callback-failed-activity',
+    createMockCheckpointBatchEntry({ version: 1 }),
+  );
+
+  ctx.actor.send({ isTerminal: false, type: 'QUEUED', version: 1 });
+  ctx.actor.send({ type: 'FLUSH_DUE' });
+
+  await waitFor(() => {
+    expect(track).toHaveBeenCalledOnce();
+  });
+
+  await writeQueuedCheckpoint(
+    'mid-flight-callback-failed-activity',
+    createMockCheckpointBatchEntry({ version: 2 }),
+  );
+
+  ctx.actor.send({ isTerminal: false, type: 'QUEUED', version: 2 });
+  release?.();
+
+  await waitFor(() => {
+    expect(ctx.actor.getSnapshot().matches('scheduled')).toBeTrue();
+  });
+
+  expect(track).toHaveBeenCalledOnce();
+  expect(ctx.scheduleProgressFlush).toHaveBeenCalledTimes(2);
+
+  expect(ctx.emitted).toStrictEqual([
+    {
+      activityID: 'mid-flight-callback-failed-activity',
+      error: expect.any(Error),
+      type: 'retryFailed',
+    },
+  ]);
 });

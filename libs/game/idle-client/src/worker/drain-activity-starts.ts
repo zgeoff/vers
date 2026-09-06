@@ -15,6 +15,7 @@ export async function drainActivityStarts(context: WorkerContext, avatarID: stri
   const ordered = sortByPredecessor(rows);
 
   const dropped = new Set<string>();
+  const deferred = new Set<string>();
 
   for (const row of ordered) {
     const predecessorID = row.predecessorActivityID;
@@ -23,6 +24,13 @@ export async function drainActivityStarts(context: WorkerContext, avatarID: stri
       await removeUnverifiableStartRow(row.id);
 
       dropped.add(row.id);
+      continue;
+    }
+
+    // the successor's anchor sits past the position its deferred predecessor has yet to advance,
+    // so the server's anchor check refuses it until the predecessor lands: it waits with it
+    if (predecessorID !== null && deferred.has(predecessorID)) {
+      deferred.add(row.id);
       continue;
     }
 
@@ -42,6 +50,11 @@ export async function drainActivityStarts(context: WorkerContext, avatarID: stri
       await removeQueuedCheckpoints(row.id);
 
       dropped.add(row.id);
+      continue;
+    }
+
+    if (outcome === 'deferred') {
+      deferred.add(row.id);
       continue;
     }
 

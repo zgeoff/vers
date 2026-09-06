@@ -304,6 +304,11 @@ to stop the activity, retried at every reconnect until the server confirms it st
 request lands, the client holds back its next resync, so a catch-up never revives an activity the
 player already stopped.
 
+A deferred activity start, or a checkpoint batch the server refuses with an error the worker does
+not handle, is a server answer, so it does not mark the device offline: the worker resends it on an
+exponential backoff from 10s to 5min, and at once on a reconnect. The reconnect drain skips a start
+whose predecessor is deferred, because the server refuses it until the predecessor lands.
+
 ## Glossary
 
 | Term             | Meaning                                                                                                                                    |

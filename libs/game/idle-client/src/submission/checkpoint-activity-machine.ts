@@ -1,5 +1,6 @@
+import invariant from 'tiny-invariant';
 import type { ActorRef, Snapshot } from 'xstate';
-import { assign, emit, enqueueActions, raise, setup } from 'xstate';
+import { assign, enqueueActions, raise, setup } from 'xstate';
 import { buildMachineTypes } from './build-machine-types';
 import { FLUSH_STALL_THRESHOLD } from './constants';
 import type { IngestActivityStartOutcome } from './ingest-activity-start';
@@ -8,12 +9,15 @@ import { runCheckpointFlushAttempt } from './run-checkpoint-flush-attempt';
 import { subscribeToShutdownAbort } from './subscribe-to-shutdown-abort';
 import type { ActivityServiceClient } from './types';
 
+type HoldCause = 'deferred' | 'transport';
+
 interface CheckpointActivityContext {
   readonly activityID: string;
   readonly client: Pick<ActivityServiceClient, 'trackActivityProgress'>;
   readonly consecutiveFlushFailures: number;
   readonly expectedHead: number;
   readonly flushPending: boolean;
+  readonly holdCause: HoldCause;
   readonly ingestActivityStart:
     | ((activityID: string) => Promise<IngestActivityStartOutcome>)
     | undefined;
@@ -96,6 +100,24 @@ export type CheckpointActivityEmittedEvent =
     };
 
 export const checkpointActivityMachine = setup({
+  actions: {
+    settleCallbackFailure: enqueueActions((args) => {
+      const event = args.event;
+
+      invariant(event.type === 'SETTLED_CALLBACK_FAILED', 'expected a callback-failed settlement');
+
+      args.enqueue.emit({
+        activityID: args.context.activityID,
+        error: event.error,
+        type: 'retryFailed',
+      });
+
+      args.enqueue.assign({
+        consecutiveFlushFailures: 0,
+        expectedHead: event.appendedHead ?? args.context.expectedHead,
+      });
+    }),
+  },
   actors: { subscribeToShutdownAbort, runCheckpointFlushAttempt },
   delays: {
     retryDelay: (args: Readonly<{ context: CheckpointActivityContext }>) =>
@@ -114,6 +136,7 @@ export const checkpointActivityMachine = setup({
     consecutiveFlushFailures: 0,
     expectedHead: args.input.expectedHead,
     flushPending: false,
+    holdCause: 'transport',
     ingestActivityStart: args.input.ingestActivityStart,
     latestQueuedVersion: args.input.latestQueuedVersion,
     onAcked: args.input.onAcked,
@@ -160,23 +183,24 @@ export const checkpointActivityMachine = setup({
         QUEUED: {
           actions: assign((args) => ({
             ...buildQueuedContextUpdate({ context: args.context, event: args.event }),
-            flushPending: true,
+            flushPending: args.context.flushPending || args.event.isTerminal,
           })),
         },
-        SETTLED_CALLBACK_FAILED: {
-          actions: [
-            emit((args) => ({
-              activityID: args.context.activityID,
-              error: args.event.error,
-              type: 'retryFailed',
-            })),
-            assign({
-              consecutiveFlushFailures: 0,
-              expectedHead: (args) => args.event.appendedHead ?? args.context.expectedHead,
-            }),
-          ],
-          target: 'idle',
-        },
+        SETTLED_CALLBACK_FAILED: [
+          {
+            actions: 'settleCallbackFailure',
+            guard: (args) =>
+              !args.context.flushPending &&
+              args.context.latestQueuedVersion !== undefined &&
+              args.context.latestQueuedVersion >
+                (args.event.appendedHead ?? args.context.expectedHead),
+            target: 'scheduled',
+          },
+          {
+            actions: 'settleCallbackFailure',
+            target: 'idle',
+          },
+        ],
         SETTLED_CONFLICT: {
           actions: assign({
             consecutiveFlushFailures: 0,
@@ -195,7 +219,7 @@ export const checkpointActivityMachine = setup({
           target: 'evicted',
         },
         SETTLED_HELD_ERROR: {
-          actions: assign({ consecutiveFlushFailures: 0 }),
+          actions: assign({ consecutiveFlushFailures: 0, holdCause: 'deferred' as const }),
           target: 'retrying',
         },
         SETTLED_INVALID: {
@@ -217,6 +241,18 @@ export const checkpointActivityMachine = setup({
               expectedHead: (args) => args.event.appendedHead,
               retryAttempt: 0,
             }),
+            guard: (args) =>
+              !args.context.flushPending &&
+              args.context.latestQueuedVersion !== undefined &&
+              args.context.latestQueuedVersion > args.event.appendedHead,
+            target: 'scheduled',
+          },
+          {
+            actions: assign({
+              consecutiveFlushFailures: 0,
+              expectedHead: (args) => args.event.appendedHead,
+              retryAttempt: 0,
+            }),
             target: 'idle',
           },
         ],
@@ -224,7 +260,7 @@ export const checkpointActivityMachine = setup({
           actions: enqueueActions((args) => {
             const consecutiveFlushFailures = args.context.consecutiveFlushFailures + 1;
 
-            args.enqueue.assign({ consecutiveFlushFailures });
+            args.enqueue.assign({ consecutiveFlushFailures, holdCause: 'transport' as const });
 
             if (consecutiveFlushFailures === FLUSH_STALL_THRESHOLD) {
               args.enqueue.emit({
@@ -273,7 +309,14 @@ export const checkpointActivityMachine = setup({
         guard: (args) => args.context.flushPending,
         target: 'flushing',
       },
-      entry: emit((args) => ({ activityID: args.context.activityID, type: 'held' })),
+
+      // a deferred hold is a server answer, so it is not reported as held: the worker reads held
+      // as a lost connection and would treat the next answer as a reconnect, re-flushing at once
+      entry: enqueueActions((args) => {
+        if (args.context.holdCause === 'transport') {
+          args.enqueue.emit({ activityID: args.context.activityID, type: 'held' });
+        }
+      }),
       invoke: {
         input: (args) => ({ signal: args.context.signal }),
         src: 'subscribeToShutdownAbort',
@@ -281,7 +324,15 @@ export const checkpointActivityMachine = setup({
       on: {
         FLUSH_HELD: { actions: assign({ retryAttempt: 0 }), reenter: true, target: 'flushing' },
         FLUSH_NOW: { reenter: true, target: 'flushing' },
-        QUEUED: { actions: assign(buildQueuedContextUpdate), reenter: true, target: 'flushing' },
+        QUEUED: [
+          {
+            actions: assign(buildQueuedContextUpdate),
+            guard: (args) => args.event.isTerminal,
+            reenter: true,
+            target: 'flushing',
+          },
+          { actions: assign(buildQueuedContextUpdate) },
+        ],
         SIGNAL_ABORTED: { target: 'idle' },
       },
     },
