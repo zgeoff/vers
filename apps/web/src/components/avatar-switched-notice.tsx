@@ -11,8 +11,7 @@ export function AvatarSwitchedNotice(props: Readonly<AvatarSwitchedNoticeProps>)
   return (
     <>
       <Text data-testid={props.testID} role="alert">
-        You’re now playing as <strong>{props.activeAvatarName}</strong>. Reload to continue as{' '}
-        {props.activeAvatarName}.
+        You’re now playing as <strong>{props.activeAvatarName}</strong>. Reload to continue.
       </Text>
       {props.attempts !== undefined && props.attempts > 0 && (
         <Text>

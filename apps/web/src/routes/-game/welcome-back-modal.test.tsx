@@ -123,7 +123,10 @@ test('it offers a reload action when the account switched avatars mid catch-up',
 
   render(<WelcomeBackModal />);
 
-  expect(screen.getByText(/Reload to continue as Someone Else/)).toBeInTheDocument();
+  expect(screen.getByRole('alert')).toHaveTextContent(
+    'You’re now playing as Someone Else. Reload to continue.',
+  );
+
   expect(screen.getByRole('button', { name: 'Reload' })).toBeInTheDocument();
 });
 
@@ -145,6 +148,9 @@ test('it reports the tallies a fast-forward earned before the account switched a
 
   render(<WelcomeBackModal />);
 
-  expect(screen.getByText(/Reload to continue as Someone Else/)).toBeInTheDocument();
+  expect(screen.getByRole('alert')).toHaveTextContent(
+    'You’re now playing as Someone Else. Reload to continue.',
+  );
+
   expect(screen.getByText('While you were away: 7 attempts, 1 level-ups.')).toBeInTheDocument();
 });
