@@ -7,7 +7,8 @@ layer (project, branches, compute endpoints, roles), and the zgeoff/vers GitHub 
 Cloudflare R2. Credentials resolve from 1Password at run time, so nothing sensitive lives on disk.
 
 - `index.ts` — apex and `www` records pointing `versidle.com` at the Fly web app, DNS-only so Fly
-  serves TLS.
+  serves TLS, plus the Resend records: the sending set for `transactional.versidle.com` and the
+  receiving MX for `qa.versidle.com`, the domain QA test inboxes live on.
 - `axiom.ts` — the Axiom resource set: the `vers-*` datasets, the ingest and query API tokens, the
   threshold monitors, the Discord alarms notifier, and the dashboards; the registries in
   `docs/architecture/platform/observability.md` describe what the monitors and instruments watch.

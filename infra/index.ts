@@ -104,9 +104,54 @@ const resendDMARC = new cloudflare.DnsRecord('resend-dmarc', {
   ttl: 1,
 });
 
+// Receiving domain for QA test inboxes: Resend accepts mail for any address on the domain once
+// this MX resolves, and the Receiving API serves the messages back to the qa-inbox script.
+const resendQAReceivingMX = new cloudflare.DnsRecord('resend-qa-receiving-mx', {
+  zoneId,
+  name: `qa.${zoneName}`,
+  type: 'MX',
+  content: 'inbound-smtp.ap-northeast-1.amazonaws.com',
+  priority: 10,
+  ttl: 1,
+});
+
+// Resend holds a receiving-only domain at "pending" until its DKIM record resolves too, and the
+// inbound endpoint bounces mail for a pending domain, so the record is required for receiving.
+const resendQADKIM = new cloudflare.DnsRecord('resend-qa-dkim', {
+  zoneId,
+  name: `resend._domainkey.qa.${zoneName}`,
+  type: 'TXT',
+  content:
+    '"p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCx4qquTvf3g7t6a80p1A1XVqWQBip7B6hOEfc0YniUYnQhblPz/T5BdFU6x1O9bCzjrByqbCkN1+A5gLsNbuazFlbrTBKJVxFhikChOE9zaViGfaclgZ/mc52th54LP4jeXkGsJFpu+Ioo4gX1+xMvEhkQnhZYJ2XsOhoYXq1a9QIDAQAB"',
+  ttl: 1,
+});
+
+// The return-path pair completes Resend's verification of the domain; without it the domain
+// stays partially verified, and a re-check can drop back to pending.
+const resendQAReturnPathMX = new cloudflare.DnsRecord('resend-qa-return-path-mx', {
+  zoneId,
+  name: `send.qa.${zoneName}`,
+  type: 'MX',
+  content: 'feedback-smtp.ap-northeast-1.amazonses.com',
+  priority: 10,
+  ttl: 1,
+});
+
+const resendQAReturnPathSPF = new cloudflare.DnsRecord('resend-qa-return-path-spf', {
+  zoneId,
+  name: `send.qa.${zoneName}`,
+  type: 'TXT',
+  content: '"v=spf1 include:amazonses.com ~all"',
+  ttl: 1,
+});
+
 export const apexRecord = apex.name;
 export const wwwRecord = www.name;
 export const resendDKIMRecord = resendDKIM.name;
 export const resendReturnPathMXRecord = resendReturnPathMX.name;
 export const resendReturnPathSPFRecord = resendReturnPathSPF.name;
 export const resendDMARCRecord = resendDMARC.name;
+export const resendQAReceivingMXRecord = resendQAReceivingMX.name;
+export const resendQADKIMRecord = resendQADKIM.name;
+export const resendQAReturnPathMXRecord = resendQAReturnPathMX.name;
+export const resendQAReturnPathSPFRecord = resendQAReturnPathSPF.name;
