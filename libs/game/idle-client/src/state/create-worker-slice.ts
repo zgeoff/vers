@@ -1,9 +1,10 @@
 import type { WorkerClient } from '../transport/types';
+import type { LiveRun } from '../worker/live-run-schema';
 
 export interface WorkerSlice {
   client: null | WorkerClient;
 
-  engagedActivityID: null | string;
+  engagedRun: LiveRun | null;
 
   initialized: boolean;
 
@@ -15,7 +16,7 @@ export interface WorkerSlice {
 export function createWorkerSlice(): WorkerSlice {
   return {
     client: null,
-    engagedActivityID: null,
+    engagedRun: null,
     initialized: false,
     writerAbortController: new AbortController(),
     writerGeneration: 0,

@@ -1,6 +1,7 @@
 import { expect, test } from 'bun:test';
 import { ActivityFailureAction } from '@vers/idle-core';
 import { createMockActivitySnapshot } from '@vers/idle-core/test-utils';
+import { createMockLiveRun } from '../test-utils/factories/create-mock-live-run';
 import { setSimulationSnapshot } from './set-simulation-snapshot';
 import { useIdleStore } from './use-idle-store';
 
@@ -98,7 +99,7 @@ test('it records the live run beside the snapshot', () => {
       activity: createMockActivitySnapshot({ id: 'activity_1' }),
       failureAction: ActivityFailureAction.Abort,
     },
-    { avatarID: 'avatar_1', id: 'activity_1', scopeID: '0_0', scopeType: 'world_map_node' },
+    createMockLiveRun({ avatarID: 'avatar_1', id: 'activity_1', scopeID: '0_0' }),
   );
 
   expect(useIdleStore.getState().liveRun).toStrictEqual({
@@ -111,12 +112,7 @@ test('it records the live run beside the snapshot', () => {
 
 test('it clears the live run when the snapshot carries none', () => {
   useIdleStore.setState({
-    liveRun: {
-      avatarID: 'avatar_1',
-      id: 'activity_1',
-      scopeID: '0_0',
-      scopeType: 'world_map_node',
-    },
+    liveRun: createMockLiveRun(),
   });
 
   setSimulationSnapshot({ failureAction: ActivityFailureAction.Abort });
