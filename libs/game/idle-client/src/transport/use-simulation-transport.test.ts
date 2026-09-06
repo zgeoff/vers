@@ -7,6 +7,7 @@ import invariant from 'tiny-invariant';
 import { setWorkerClient } from '../state/set-worker-client';
 import { useIdleStore } from '../state/use-idle-store';
 import { createTestClient } from '../test-utils/create-test-client';
+import { createMockRunOutcome } from '../test-utils/factories/create-mock-run-outcome';
 import { WorkerMessageType } from '../types';
 import type {
   ActivityEndedMessage,
@@ -251,7 +252,7 @@ test('it records the run outcome from a broadcast', async () => {
   hook.rerender();
 
   const message: ActivityEndedMessage = {
-    outcome: { activityID: 'activity_1', kind: ActivityCheckpointType.Completed, xp: 240 },
+    outcome: createMockRunOutcome({ kind: ActivityCheckpointType.Completed }),
     type: WorkerMessageType.ActivityEnded,
   };
 
@@ -261,7 +262,7 @@ test('it records the run outcome from a broadcast', async () => {
     expect(useIdleStore.getState().runOutcome).toStrictEqual(message.outcome);
   });
 
-  expect(useIdleStore.getState().lastCompletedActivityID).toBe('activity_1');
+  expect(useIdleStore.getState().lastCompletedActivityID).toBe(message.outcome.activityID);
 
   hook.unmount();
 });

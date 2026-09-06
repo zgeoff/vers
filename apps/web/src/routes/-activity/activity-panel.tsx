@@ -43,10 +43,7 @@ export function ActivityPanel() {
   // the store outlives an avatar switch and a sign-in, so an outcome that names another avatar's
   // run is not this page's to show or retry
   const runOutcome =
-    lastRunOutcome !== null &&
-    (lastRunOutcome.run === undefined || lastRunOutcome.run.avatarID === avatarID)
-      ? lastRunOutcome
-      : null;
+    lastRunOutcome !== null && lastRunOutcome.avatarID === avatarID ? lastRunOutcome : null;
 
   // both heads count from the activity's own start; the rewards poll advances the verified head
   // between refetches of the activity row itself
@@ -85,18 +82,22 @@ export function ActivityPanel() {
         };
 
   // the ended run names its own node, so a retry never depends on the server row the stop closed
-  const endedRun = runOutcome?.run;
+  const endedScope = runOutcome?.scope;
   const client = idleWorkerHandle.client;
 
   const retry =
-    endedRun === undefined || client === undefined
+    runOutcome === null || endedScope === undefined || client === undefined
       ? undefined
       : () => {
           setIsRetryPending(true);
 
           void (async () => {
             try {
-              await sendIdleStartActivity(client, endedRun, idleWorkerHandle.writerAbortSignal);
+              await sendIdleStartActivity(
+                client,
+                { avatarID: runOutcome.avatarID, ...endedScope },
+                idleWorkerHandle.writerAbortSignal,
+              );
             } catch {
               // an aborted or refused start leaves the outcome up, and the button re-arms below
             } finally {

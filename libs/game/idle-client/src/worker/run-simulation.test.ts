@@ -380,6 +380,7 @@ test('it broadcasts a cleared outcome when an activity completes', async () => {
     {
       outcome: {
         activityID: activity.id,
+        avatarID: avatar.id,
         kind: ActivityCheckpointType.Completed,
         xp: expect.toBePositive(),
       },
@@ -406,7 +407,12 @@ test('it broadcasts a failed outcome and then an activity-less snapshot when an 
   const afterEnded = broadcasts[endedIndex + 1];
 
   expect(ended).toStrictEqual({
-    outcome: { activityID: activity.id, kind: ActivityCheckpointType.Failed, xp: 0 },
+    outcome: {
+      activityID: activity.id,
+      avatarID: avatar.id,
+      kind: ActivityCheckpointType.Failed,
+      xp: 0,
+    },
     type: WorkerMessageType.ActivityEnded,
   });
 
@@ -418,7 +424,7 @@ test('it broadcasts a failed outcome and then an activity-less snapshot when an 
   expect(broadcasts.filter((m) => m.type === WorkerMessageType.ActivityEnded)).toHaveLength(1);
 });
 
-test('it names the ended run beside the outcome when its row is installed', async () => {
+test('it names the node the ended run played beside the outcome when its row is installed', async () => {
   const context = createStubWorkerContext();
   const simulation = createSimulation();
 
@@ -427,7 +433,7 @@ test('it names the ended run beside the outcome when its row is installed', asyn
   const activity = createMockActivityInput({ failureAction: ActivityFailureAction.Abort });
 
   const row = createMockActivityData({
-    avatarID: 'avatar_1',
+    avatarID: avatar.id,
     id: activity.id,
     scopeID: '3_4',
     scopeType: 'world_map_node',
@@ -442,8 +448,9 @@ test('it names the ended run beside the outcome when its row is installed', asyn
   expect(context.getBroadcasts()).toPartiallyContain({
     outcome: {
       activityID: activity.id,
+      avatarID: avatar.id,
       kind: ActivityCheckpointType.Failed,
-      run: { avatarID: 'avatar_1', scopeID: '3_4', scopeType: 'world_map_node' },
+      scope: { scopeID: '3_4', scopeType: 'world_map_node' },
       xp: 0,
     },
     type: WorkerMessageType.ActivityEnded,

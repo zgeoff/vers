@@ -1,9 +1,8 @@
 import { ActivityCheckpointType } from '@vers/idle-core';
 import * as z from 'zod';
 
-const endedRunSchema = z
+const endedScopeSchema = z
   .object({
-    avatarID: z.string(),
     scopeID: z.string(),
     scopeType: z.string(),
   })
@@ -12,11 +11,12 @@ const endedRunSchema = z
 export const runOutcomeSchema = z
   .object({
     activityID: z.string(),
+    avatarID: z.string(),
     kind: z.enum({
       Completed: ActivityCheckpointType.Completed,
       Failed: ActivityCheckpointType.Failed,
     }),
-    run: endedRunSchema.exactOptional(),
+    scope: endedScopeSchema.exactOptional(),
     xp: z.number(),
   })
   .readonly();

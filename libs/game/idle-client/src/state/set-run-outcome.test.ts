@@ -1,28 +1,29 @@
 import { expect, test } from 'bun:test';
 import { ActivityCheckpointType } from '@vers/idle-core';
+import { createMockRunOutcome } from '../test-utils/factories/create-mock-run-outcome';
 import { setRunOutcome } from './set-run-outcome';
 import { useIdleStore } from './use-idle-store';
 
 test('it records the outcome of the run that ended', () => {
-  setRunOutcome({ activityID: 'activity_1', kind: ActivityCheckpointType.Failed, xp: 118 });
+  const outcome = createMockRunOutcome({ kind: ActivityCheckpointType.Failed, xp: 118 });
 
-  expect(useIdleStore.getState().runOutcome).toStrictEqual({
-    activityID: 'activity_1',
-    kind: ActivityCheckpointType.Failed,
-    xp: 118,
-  });
+  setRunOutcome(outcome);
+
+  expect(useIdleStore.getState().runOutcome).toStrictEqual(outcome);
 });
 
 test('it marks a cleared run as the last completed activity', () => {
-  setRunOutcome({ activityID: 'activity_1', kind: ActivityCheckpointType.Completed, xp: 240 });
+  const outcome = createMockRunOutcome({ kind: ActivityCheckpointType.Completed });
 
-  expect(useIdleStore.getState().lastCompletedActivityID).toBe('activity_1');
+  setRunOutcome(outcome);
+
+  expect(useIdleStore.getState().lastCompletedActivityID).toBe(outcome.activityID);
 });
 
 test('it leaves the last completed activity alone when the run failed', () => {
   useIdleStore.setState({ lastCompletedActivityID: 'activity_0' });
 
-  setRunOutcome({ activityID: 'activity_1', kind: ActivityCheckpointType.Failed, xp: 118 });
+  setRunOutcome(createMockRunOutcome({ kind: ActivityCheckpointType.Failed }));
 
   expect(useIdleStore.getState().lastCompletedActivityID).toBe('activity_0');
 });

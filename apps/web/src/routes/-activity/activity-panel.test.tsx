@@ -2,6 +2,7 @@ import { expect, test } from 'bun:test';
 import { waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { setRunOutcome, setSimulationSnapshot } from '@vers/idle-client';
+import { createMockRunOutcome } from '@vers/idle-client/test-utils';
 import { ActivityCheckpointType, ActivityFailureAction } from '@vers/idle-core';
 import { createMockActivitySnapshot, createMockAvatarSnapshot } from '@vers/idle-core/test-utils';
 import * as db from '@vers/mock-services/db';
@@ -112,12 +113,14 @@ test('it shows the outcome instead of the fight once the run has failed', async 
     writerAbortSignal: new AbortController().signal,
   });
 
-  setRunOutcome({
-    activityID: 'activity_ended',
-    kind: ActivityCheckpointType.Failed,
-    run: { avatarID: avatar.id, scopeID: '0_0', scopeType: 'world_map_node' },
-    xp: 118,
-  });
+  setRunOutcome(
+    createMockRunOutcome({
+      avatarID: avatar.id,
+      kind: ActivityCheckpointType.Failed,
+      scope: { scopeID: '0_0', scopeType: 'world_map_node' },
+      xp: 118,
+    }),
+  );
 
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
     const rendered = renderWithRouter(<ActivityPanel />);
@@ -132,10 +135,11 @@ test('it shows the outcome instead of the fight once the run has failed', async 
 
 test('it shows the outcome once the run has been cleared', async () => {
   const signedIn = await createSignedInUser();
+  const avatar = await createActiveAvatar({ userID: signedIn.userID });
 
-  await createActiveAvatar({ userID: signedIn.userID });
-
-  setRunOutcome({ activityID: 'activity_ended', kind: ActivityCheckpointType.Completed, xp: 240 });
+  setRunOutcome(
+    createMockRunOutcome({ avatarID: avatar.id, kind: ActivityCheckpointType.Completed }),
+  );
 
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
     const rendered = renderWithRouter(<ActivityPanel />);
@@ -163,12 +167,12 @@ test('it hands Retry to the worker for the node the ended run played', async () 
     writerAbortSignal,
   });
 
-  setRunOutcome({
-    activityID: 'activity_ended',
-    kind: ActivityCheckpointType.Failed,
-    run: { avatarID: avatar.id, scopeID: '3_4', scopeType: 'world_map_node' },
-    xp: 118,
-  });
+  setRunOutcome(
+    createMockRunOutcome({
+      avatarID: avatar.id,
+      scope: { scopeID: '3_4', scopeType: 'world_map_node' },
+    }),
+  );
 
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
     const rendered = renderWithRouter(<ActivityPanel />);
@@ -186,8 +190,7 @@ test('it hands Retry to the worker for the node the ended run played', async () 
 
 test('it offers no retry when the ended run named no node', async () => {
   const signedIn = await createSignedInUser();
-
-  await createActiveAvatar({ userID: signedIn.userID });
+  const avatar = await createActiveAvatar({ userID: signedIn.userID });
 
   setIdleWorkerHandle({
     activity: undefined,
@@ -197,7 +200,7 @@ test('it offers no retry when the ended run named no node', async () => {
     writerAbortSignal: new AbortController().signal,
   });
 
-  setRunOutcome({ activityID: 'activity_ended', kind: ActivityCheckpointType.Failed, xp: 118 });
+  setRunOutcome(createMockRunOutcome({ avatarID: avatar.id }));
 
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
     const rendered = renderWithRouter(<ActivityPanel />);
@@ -213,9 +216,9 @@ test('it sends Back to map to the explore route', async () => {
 
   const user = userEvent.setup();
 
-  await createActiveAvatar({ userID: signedIn.userID });
+  const avatar = await createActiveAvatar({ userID: signedIn.userID });
 
-  setRunOutcome({ activityID: 'activity_ended', kind: ActivityCheckpointType.Failed, xp: 118 });
+  setRunOutcome(createMockRunOutcome({ avatarID: avatar.id }));
 
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
     const rendered = renderWithRouter(<ActivityPanel />, {
@@ -238,7 +241,7 @@ test('it replaces the outcome with the next live run once a continuation install
 
   await db.activityCollection.create({ avatarID: avatar.id, status: 'active' });
 
-  setRunOutcome({ activityID: 'activity_ended', kind: ActivityCheckpointType.Failed, xp: 118 });
+  setRunOutcome(createMockRunOutcome({ activityID: 'activity_ended', avatarID: avatar.id }));
 
   setSimulationSnapshot({
     activity: createMockActivitySnapshot({ id: 'activity_next', name: 'Next Encounter' }),
@@ -261,12 +264,7 @@ test('it hides an outcome that another avatar left in the store', async () => {
 
   await createActiveAvatar({ userID: signedIn.userID });
 
-  setRunOutcome({
-    activityID: 'activity_ended',
-    kind: ActivityCheckpointType.Failed,
-    run: { avatarID: 'avatar_other', scopeID: '0_0', scopeType: 'world_map_node' },
-    xp: 118,
-  });
+  setRunOutcome(createMockRunOutcome({ avatarID: 'avatar_other' }));
 
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
     const rendered = renderWithRouter(<ActivityPanel />);

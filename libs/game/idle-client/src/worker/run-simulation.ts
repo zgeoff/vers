@@ -1,5 +1,6 @@
 import type { Simulation } from '@vers/idle-core';
 import { ActivityCheckpointType } from '@vers/idle-core';
+import invariant from 'tiny-invariant';
 import { WorkerMessageType } from '../types';
 import { buildDeferred } from './build-deferred';
 import { handleSimulationUpdate } from './handle-simulation-update';
@@ -20,10 +21,13 @@ export async function runSimulation(
   }
 
   const activityID = liveActivity.id;
+  const avatar = simulation.avatar;
+
+  invariant(avatar !== null, 'a live activity always has its avatar installed beside it');
 
   // read before the submit yields: a start that lands during the await installs its own row, and
   // the outcome must name the node this run played, not the one that replaced it
-  const endedRun = findEndedRun(context, activityID);
+  const endedScope = findEndedScope(context, activityID);
   const checkpoint = simulation.run(timestep);
 
   if (!checkpoint) {
@@ -51,8 +55,9 @@ export async function runSimulation(
 
   emitRunOutcome(context, {
     activityID,
+    avatarID: avatar.id,
     kind: checkpoint.type,
-    ...(endedRun !== undefined && { run: endedRun }),
+    ...(endedScope !== undefined && { scope: endedScope }),
     xp: liveActivity.rewards.xp,
   });
 
@@ -99,14 +104,14 @@ export async function runSimulation(
   await deferred.promise;
 }
 
-function findEndedRun(context: WorkerContext, activityID: string): RunOutcome['run'] {
+function findEndedScope(context: WorkerContext, activityID: string): RunOutcome['scope'] {
   const row = context.getActivity();
 
   if (row === null || row.id !== activityID) {
     return undefined;
   }
 
-  return { avatarID: row.avatarID, scopeID: row.scopeID, scopeType: row.scopeType };
+  return { scopeID: row.scopeID, scopeType: row.scopeType };
 }
 
 function emitRunOutcome(context: WorkerContext, outcome: RunOutcome) {

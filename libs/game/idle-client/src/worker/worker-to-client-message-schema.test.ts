@@ -7,8 +7,9 @@ test('it accepts a well-formed activity-ended message', () => {
   const message = {
     outcome: {
       activityID: 'activity_1',
+      avatarID: 'avatar_1',
       kind: ActivityCheckpointType.Failed,
-      run: { avatarID: 'avatar_1', scopeID: '0_0', scopeType: 'world_map_node' },
+      scope: { scopeID: '0_0', scopeType: 'world_map_node' },
       xp: 118,
     },
     type: WorkerMessageType.ActivityEnded,

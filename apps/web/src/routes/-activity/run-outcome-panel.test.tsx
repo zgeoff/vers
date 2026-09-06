@@ -1,6 +1,7 @@
 import { expect, mock, test } from 'bun:test';
 import { ORPCError } from '@orpc/client';
 import userEvent from '@testing-library/user-event';
+import { createMockRunOutcome } from '@vers/idle-client/test-utils';
 import { ActivityCheckpointType } from '@vers/idle-core';
 import { mockActivityService } from '@vers/mock-services/activity';
 import * as db from '@vers/mock-services/db';
@@ -19,7 +20,7 @@ test('it reports a fallen avatar with the xp the run earned', async () => {
     const rendered = render(
       <RunOutcomePanel
         onBackToMap={() => {}}
-        outcome={{ activityID: activity.id, kind: ActivityCheckpointType.Failed, xp: 118 }}
+        outcome={createMockRunOutcome({ activityID: activity.id, xp: 118 })}
       />,
     );
 
@@ -42,7 +43,7 @@ test('it reports a cleared encounter', async () => {
     const rendered = render(
       <RunOutcomePanel
         onBackToMap={() => {}}
-        outcome={{ activityID: 'activity_1', kind: ActivityCheckpointType.Completed, xp: 240 }}
+        outcome={createMockRunOutcome({ kind: ActivityCheckpointType.Completed, xp: 240 })}
       />,
     );
 
@@ -79,7 +80,7 @@ test('it lists the rewards the ended run has revealed so far', async () => {
     const rendered = render(
       <RunOutcomePanel
         onBackToMap={() => {}}
-        outcome={{ activityID: activity.id, kind: ActivityCheckpointType.Failed, xp: 118 }}
+        outcome={createMockRunOutcome({ activityID: activity.id, xp: 118 })}
       />,
     );
 
@@ -102,7 +103,7 @@ test('it says the rewards are still being read while the first page is in flight
     const rendered = render(
       <RunOutcomePanel
         onBackToMap={() => {}}
-        outcome={{ activityID: activity.id, kind: ActivityCheckpointType.Failed, xp: 118 }}
+        outcome={createMockRunOutcome({ activityID: activity.id, xp: 118 })}
       />,
     );
 
@@ -129,7 +130,7 @@ test('it reports rewards it could not load instead of calling them absent', asyn
     const rendered = render(
       <RunOutcomePanel
         onBackToMap={() => {}}
-        outcome={{ activityID: activity.id, kind: ActivityCheckpointType.Failed, xp: 118 }}
+        outcome={createMockRunOutcome({ activityID: activity.id, xp: 118 })}
       />,
     );
 
@@ -152,7 +153,7 @@ test('it offers a retry only when a handler is given and holds it while one is p
         isRetryPending
         onBackToMap={() => {}}
         onRetry={onRetry}
-        outcome={{ activityID: 'activity_1', kind: ActivityCheckpointType.Failed, xp: 0 }}
+        outcome={createMockRunOutcome()}
       />,
     );
 
@@ -174,10 +175,7 @@ test('it raises the back-to-map action', async () => {
 
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
     const rendered = render(
-      <RunOutcomePanel
-        onBackToMap={onBackToMap}
-        outcome={{ activityID: 'activity_1', kind: ActivityCheckpointType.Failed, xp: 0 }}
-      />,
+      <RunOutcomePanel onBackToMap={onBackToMap} outcome={createMockRunOutcome()} />,
     );
 
     const backToMap = await rendered.findByRole('button', { name: 'Back to map' });

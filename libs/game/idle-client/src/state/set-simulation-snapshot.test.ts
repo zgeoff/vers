@@ -1,6 +1,7 @@
 import { expect, test } from 'bun:test';
-import { ActivityCheckpointType, ActivityFailureAction } from '@vers/idle-core';
+import { ActivityFailureAction } from '@vers/idle-core';
 import { createMockActivitySnapshot } from '@vers/idle-core/test-utils';
+import { createMockRunOutcome } from '../test-utils/factories/create-mock-run-outcome';
 import { setSimulationSnapshot } from './set-simulation-snapshot';
 import { useIdleStore } from './use-idle-store';
 
@@ -93,9 +94,7 @@ test('it resets the reward-slot ledger once, not on every snapshot of the new ac
 });
 
 test('it clears the run outcome once a different run goes live', () => {
-  useIdleStore.setState({
-    runOutcome: { activityID: 'activity_1', kind: ActivityCheckpointType.Failed, xp: 118 },
-  });
+  useIdleStore.setState({ runOutcome: createMockRunOutcome({ activityID: 'activity_1' }) });
 
   setSimulationSnapshot({
     activity: createMockActivitySnapshot({ id: 'activity_2' }),
@@ -106,32 +105,24 @@ test('it clears the run outcome once a different run goes live', () => {
 });
 
 test('it keeps the run outcome while no run is live', () => {
-  useIdleStore.setState({
-    runOutcome: { activityID: 'activity_1', kind: ActivityCheckpointType.Failed, xp: 118 },
-  });
+  const outcome = createMockRunOutcome({ activityID: 'activity_1' });
+
+  useIdleStore.setState({ runOutcome: outcome });
 
   setSimulationSnapshot({ failureAction: ActivityFailureAction.Abort });
 
-  expect(useIdleStore.getState().runOutcome).toStrictEqual({
-    activityID: 'activity_1',
-    kind: ActivityCheckpointType.Failed,
-    xp: 118,
-  });
+  expect(useIdleStore.getState().runOutcome).toStrictEqual(outcome);
 });
 
 test('it keeps the run outcome while the ended run is still the one in the snapshot', () => {
-  useIdleStore.setState({
-    runOutcome: { activityID: 'activity_1', kind: ActivityCheckpointType.Completed, xp: 240 },
-  });
+  const outcome = createMockRunOutcome({ activityID: 'activity_1' });
+
+  useIdleStore.setState({ runOutcome: outcome });
 
   setSimulationSnapshot({
     activity: createMockActivitySnapshot({ id: 'activity_1' }),
     failureAction: ActivityFailureAction.Abort,
   });
 
-  expect(useIdleStore.getState().runOutcome).toStrictEqual({
-    activityID: 'activity_1',
-    kind: ActivityCheckpointType.Completed,
-    xp: 240,
-  });
+  expect(useIdleStore.getState().runOutcome).toStrictEqual(outcome);
 });
