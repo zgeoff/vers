@@ -69,7 +69,7 @@ test('it hands END RUN to the worker and never awaits the server', async () => {
   const client = createStubWorkerClient();
 
   setIdleWorkerHandle({
-    activity: createMockActivitySnapshot(),
+    activity: createMockActivitySnapshot({ id: activity.id }),
     avatar: createMockAvatarSnapshot(),
     client,
     failureAction: ActivityFailureAction.Abort,
@@ -78,7 +78,7 @@ test('it hands END RUN to the worker and never awaits the server', async () => {
   });
 
   setSimulationSnapshot({
-    activity: createMockActivitySnapshot(),
+    activity: createMockActivitySnapshot({ id: activity.id }),
     avatar: createMockAvatarSnapshot(),
     failureAction: ActivityFailureAction.Abort,
   });
@@ -96,5 +96,168 @@ test('it hands END RUN to the worker and never awaits the server', async () => {
         expect.anything(),
       );
     });
+  });
+});
+
+test('it renders the run the worker holds while its start has not reached the server', async () => {
+  const signedIn = await createSignedInUser();
+
+  await createActiveAvatar({ userID: signedIn.userID });
+
+  const liveActivity = createMockActivitySnapshot({ name: 'Deferred Encounter' });
+
+  setIdleWorkerHandle({
+    activity: liveActivity,
+    avatar: createMockAvatarSnapshot(),
+    client: createStubWorkerClient(),
+    failureAction: ActivityFailureAction.Abort,
+    initialized: true,
+    writerAbortSignal: new AbortController().signal,
+  });
+
+  setSimulationSnapshot({
+    activity: liveActivity,
+    avatar: createMockAvatarSnapshot(),
+    failureAction: ActivityFailureAction.Abort,
+  });
+
+  await withRequestContext({ cookies: signedIn.cookies }, async () => {
+    const rendered = renderWithRouter(<ActivityPanel />, {
+      routes: { '/explore': <div data-testid="world-map" /> },
+    });
+
+    const title = await rendered.findByText('Deferred Encounter');
+
+    expect(title).toBeVisible();
+
+    // the redirect would follow the server's null row within one query round trip; its absence
+    // over a generous window stands in for the page never leaving
+    await expect(rendered.findByTestId('world-map', undefined, { timeout: 300 })).toReject();
+
+    expect(rendered.router.state.location.pathname).toBe('/');
+  });
+});
+
+test('it hands END RUN the run the worker holds before the server holds its row', async () => {
+  const signedIn = await createSignedInUser();
+  const avatar = await createActiveAvatar({ userID: signedIn.userID });
+
+  const liveActivity = createMockActivitySnapshot();
+  const client = createStubWorkerClient();
+
+  setIdleWorkerHandle({
+    activity: liveActivity,
+    avatar: createMockAvatarSnapshot(),
+    client,
+    failureAction: ActivityFailureAction.Abort,
+    initialized: true,
+    writerAbortSignal: new AbortController().signal,
+  });
+
+  setSimulationSnapshot({
+    activity: liveActivity,
+    avatar: createMockAvatarSnapshot(),
+    failureAction: ActivityFailureAction.Abort,
+  });
+
+  await withRequestContext({ cookies: signedIn.cookies }, async () => {
+    const rendered = renderWithRouter(<ActivityPanel />);
+
+    const endRunButton = await rendered.findByRole('button', { name: 'END RUN' });
+
+    endRunButton.click();
+
+    await waitFor(() => {
+      expect(client.stopActivity).toHaveBeenCalledExactlyOnceWith(
+        { activityID: liveActivity.id, avatarID: avatar.id },
+        expect.anything(),
+      );
+    });
+  });
+});
+
+test('it returns to the map when neither the worker nor the server holds a run', async () => {
+  const signedIn = await createSignedInUser();
+
+  await createActiveAvatar({ userID: signedIn.userID });
+
+  setIdleWorkerHandle({
+    activity: undefined,
+    client: createStubWorkerClient(),
+    failureAction: ActivityFailureAction.Abort,
+    initialized: true,
+    writerAbortSignal: new AbortController().signal,
+  });
+
+  await withRequestContext({ cookies: signedIn.cookies }, async () => {
+    const rendered = renderWithRouter(<ActivityPanel />, {
+      routes: { '/explore': <div data-testid="world-map" /> },
+    });
+
+    const worldMap = await rendered.findByTestId('world-map');
+
+    expect(worldMap).toBeInTheDocument();
+    expect(rendered.router.state.location.pathname).toBe('/explore');
+  });
+});
+
+test('it stays on the page while the worker has not reported its state', async () => {
+  const signedIn = await createSignedInUser();
+
+  await createActiveAvatar({ userID: signedIn.userID });
+
+  setIdleWorkerHandle({
+    activity: undefined,
+    client: createStubWorkerClient(),
+    failureAction: ActivityFailureAction.Abort,
+    initialized: false,
+    writerAbortSignal: new AbortController().signal,
+  });
+
+  await withRequestContext({ cookies: signedIn.cookies }, async () => {
+    const rendered = renderWithRouter(<ActivityPanel />, {
+      routes: { '/explore': <div data-testid="world-map" /> },
+    });
+
+    const heading = await rendered.findByRole('heading', { name: 'Engagement' });
+
+    expect(heading).toBeVisible();
+
+    // the server's null row is back within one query round trip; no redirect over a generous
+    // window stands in for the handshake gating it
+    await expect(rendered.findByTestId('world-map', undefined, { timeout: 300 })).toReject();
+
+    expect(rendered.router.state.location.pathname).toBe('/');
+  });
+});
+
+test('it keeps a cold load on the page while the worker attaches the run the server holds', async () => {
+  const signedIn = await createSignedInUser();
+  const avatar = await createActiveAvatar({ userID: signedIn.userID });
+
+  await db.activityCollection.create({ avatarID: avatar.id, status: 'active' });
+
+  setIdleWorkerHandle({
+    activity: undefined,
+    client: createStubWorkerClient(),
+    failureAction: ActivityFailureAction.Abort,
+    initialized: true,
+    writerAbortSignal: new AbortController().signal,
+  });
+
+  await withRequestContext({ cookies: signedIn.cookies }, async () => {
+    const rendered = renderWithRouter(<ActivityPanel />, {
+      routes: { '/explore': <div data-testid="world-map" /> },
+    });
+
+    const heading = await rendered.findByRole('heading', { name: 'Engagement' });
+
+    expect(heading).toBeVisible();
+
+    // the server row is back within one query round trip; no redirect over a generous window
+    // stands in for the row holding the page open
+    await expect(rendered.findByTestId('world-map', undefined, { timeout: 300 })).toReject();
+
+    expect(rendered.router.state.location.pathname).toBe('/');
   });
 });
