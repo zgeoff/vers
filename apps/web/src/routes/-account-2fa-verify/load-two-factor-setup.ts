@@ -23,7 +23,7 @@ export async function loadTwoFactorSetup(): Promise<TwoFactorSetupData> {
     });
 
     if (twoFactorVerification !== null) {
-      throw redirect({ href: '/account' });
+      throw redirect({ to: '/settings' });
     }
 
     const existingSetup = await verificationClient.getVerification({

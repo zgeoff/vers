@@ -69,7 +69,7 @@ test('it reports invalid credentials for the wrong current password before gatin
   ).toBeUndefined();
 });
 
-test('it changes the password and redirects to account for a caller with no 2FA', async () => {
+test('it changes the password and redirects to settings for a caller with no 2FA', async () => {
   const signedIn = await createSignedInUser({ password: 'original-password' });
 
   const promise = withRequestContext({ cookies: signedIn.cookies }, () =>
@@ -85,7 +85,7 @@ test('it changes the password and redirects to account for a caller with no 2FA'
   // the db read below must observe the rejected call's password-change step settled
   await promise.catch(() => {});
 
-  expect(promise).rejects.toMatchObject({ options: { href: '/account' } });
+  expect(promise).rejects.toMatchObject({ options: { to: '/settings' } });
 
   expect(db.userCollection.findFirst((q) => q.where({ id: signedIn.userID }))).toMatchObject({
     password: 'new-password123',
@@ -110,7 +110,7 @@ test('it reports step-up-required for a 2FA-enabled caller with no transaction t
   expect(outcome.value).toMatchObject({ status: 'step-up-required', target: signedIn.userID });
 });
 
-test('it changes the password once a valid step-up token is attached', async () => {
+test('it changes the password and redirects to settings once a valid step-up token is attached', async () => {
   const signedIn = await createSignedInUser({ password: 'original-password' });
 
   await db.verificationCollection.create({ target: signedIn.userID, type: '2fa' });
@@ -131,6 +131,6 @@ test('it changes the password once a valid step-up token is attached', async () 
       }),
     );
 
-    expect(promise).rejects.toMatchObject({ options: { href: '/account' } });
+    expect(promise).rejects.toMatchObject({ options: { to: '/settings' } });
   });
 });

@@ -34,5 +34,5 @@ export async function runDisableTwoFactorAuth(
 
   await verificationClient.deleteVerification({ id: twoFactorVerification.id });
 
-  throw redirect({ href: '/account' });
+  throw redirect({ to: '/settings' });
 }
