@@ -1,7 +1,12 @@
 import { expect, mock, test } from 'bun:test';
 import { createMockContentDocument } from '@vers/contract-activity/test-utils';
-import type { SimulationListener } from '@vers/idle-core';
-import { ActivityFailureAction, createSimulation } from '@vers/idle-core';
+import type { ActivityCheckpoint, SimulationListener } from '@vers/idle-core';
+import {
+  ActivityCheckpointType,
+  ActivityFailureAction,
+  buildLevelFromXP,
+  createSimulation,
+} from '@vers/idle-core';
 import {
   createMockActivityInput,
   createMockAvatarData,
@@ -15,6 +20,7 @@ import type { CheckpointSubmitter } from '../submission/create-checkpoint-submit
 import type { ActivityServiceClient } from '../submission/types';
 import { writeNodeSeeds } from '../submission/write-node-seeds';
 import { writeStartStamps } from '../submission/write-start-stamps';
+import { createStubSubmitter } from '../test-utils/create-stub-submitter';
 import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
 import { createMockNodeSeed } from '../test-utils/factories/create-mock-node-seed';
 import { WorkerMessageType } from '../types';
@@ -389,4 +395,120 @@ test('it never broadcasts an activity completed message for a failed activity', 
     .filter((message) => message.type === WorkerMessageType.ActivityCompleted);
 
   expect(completedMessages).toStrictEqual([]);
+});
+
+test('it records the started checkpoint and a zero running xp on the first tick', async () => {
+  const context = createStubWorkerContext();
+  const simulation = createSimulation();
+  const activity = createMockActivityInput();
+
+  simulation.startActivity(createMockAvatarData(), activity);
+
+  await runSimulation(context, simulation, 100);
+
+  expect(context.getRunEarnings()).toMatchObject({
+    activityID: activity.id,
+    deltaXP: 0,
+    tail: { type: ActivityCheckpointType.Started },
+  });
+});
+
+test('it keeps the failed terminal checkpoint on record after the run stops', async () => {
+  const context = createStubWorkerContext();
+  const simulation = createSimulation();
+
+  // life of 1 dies on the very first hit taken, forcing a failed checkpoint
+  const avatar = createMockAvatarData({ life: 1 });
+  const activity = createMockActivityInput({ failureAction: ActivityFailureAction.Abort });
+
+  simulation.startActivity(avatar, activity);
+
+  await runSimulationSteps(context, simulation, 100, 50);
+
+  // the stop cleared the live activity, but the next mint still needs the run's total
+  expect(simulation.activity).toBeNull();
+
+  expect(context.getRunEarnings()).toMatchObject({
+    activityID: activity.id,
+    tail: { type: ActivityCheckpointType.Failed },
+  });
+});
+
+test("it mints the successor's build snapshot from the cleared run's terminal total when every checkpoint was confirmed", async () => {
+  const viewer = await createViewer();
+  const ctx = await setupTest({ userID: viewer.user.id });
+
+  const sourceRow = await db.activityCollection.create({
+    avatarID: viewer.avatar.id,
+    buildSnapshot: { level: buildLevelFromXP(500), xp: 500 },
+    status: 'stopped',
+  });
+
+  const nodeSeed = createMockNodeSeed({
+    avatarID: viewer.avatar.id,
+    encounterNode: { difficulty: 1 },
+    nodeID: sourceRow.scopeID,
+  });
+
+  await writeNodeSeeds(viewer.avatar.id, [nodeSeed]);
+  await writeStartStamps({ keyVersion: 1, secretRef: 'worldmap', secretVersion: 1 });
+
+  await writeContentDocumentCache(
+    createMockContentDocument({ contentVersion: nodeSeed.contentVersion }),
+  );
+
+  // a submit that queues nothing models the online case: every checkpoint confirmed and removed
+  // from the outbox before the terminal's continuation mints
+  const submit = mock<CheckpointSubmitter['submit']>(() => Promise.resolve(undefined));
+  const submitter = { ...createStubSubmitter(), submit };
+
+  const context = createStubWorkerContext({
+    bundledEngineHash: 'engine_hash_1',
+    client: ctx.client,
+    submitter,
+  });
+
+  const simulation = createSimulation();
+
+  const activity = createMockActivityInput({
+    encounter: {
+      waves: [
+        Array.from({ length: 6 }, () => createMockEnemyData()),
+        Array.from({ length: 6 }, () => createMockEnemyData()),
+        Array.from({ length: 3 }, () => createMockEnemyData()),
+        Array.from({ length: 4 }, () => createMockEnemyData()),
+      ],
+    },
+    failureAction: ActivityFailureAction.Abort,
+    id: sourceRow.id,
+  });
+
+  context.setActivity(sourceRow);
+  context.setSimulation(simulation);
+  simulation.startActivity(createMockAvatarData(), activity);
+
+  await runSimulationSteps(context, simulation, 100, 700);
+
+  const submitted = submit.mock.calls.map(([, checkpoint]) => checkpoint);
+
+  const completed = submitted.find(
+    (checkpoint: ActivityCheckpoint) => checkpoint.type === ActivityCheckpointType.Completed,
+  );
+
+  invariant(completed !== undefined, 'the run cleared and submitted its completed checkpoint');
+
+  const minted = context.getActivity();
+
+  invariant(minted !== null, 'the continuation installed a fresh row');
+
+  expect(minted.predecessorActivityID).toBe(sourceRow.id);
+
+  // the start snapshot the cleared run was admitted at, plus the total its terminal checkpoint
+  // names — the server folds the same two numbers from its own rows
+  const expectedXP = 500 + completed.rewards.xp;
+
+  expect(minted.buildSnapshot).toStrictEqual({
+    level: buildLevelFromXP(expectedXP),
+    xp: expectedXP,
+  });
 });

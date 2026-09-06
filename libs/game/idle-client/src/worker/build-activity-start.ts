@@ -2,11 +2,9 @@ import { createId } from '@paralleldrive/cuid2';
 import type { ActivityData } from '@vers/contract-activity';
 import { buildStartHash } from '@vers/contract-activity';
 import type { OptimisticBuildSource } from '@vers/idle-core';
-import { buildLevelFromXP, foldOptimisticBuild, parseTerminalCheckpointXP } from '@vers/idle-core';
-import * as z from 'zod';
+import { buildLevelFromXP, foldOptimisticBuild } from '@vers/idle-core';
 import { readLastStartedActivity } from '../submission/read-last-started-activity';
 import { readNodeSeed } from '../submission/read-node-seed';
-import { readQueuedCheckpoints } from '../submission/read-queued-checkpoints';
 import { readStartStamps } from '../submission/read-start-stamps';
 import type { WorkerContext } from './types';
 
@@ -42,7 +40,8 @@ export async function buildActivityStart(
     return null;
   }
 
-  const buildSnapshot = await buildOptimisticBuildSnapshot(context, input.avatarID);
+  const buildSnapshot = buildOptimisticBuildSnapshot(context, input.avatarID);
+
   const trackedPredecessorID = await readPredecessorActivityID(input.avatarID);
 
   const predecessorActivityID = input.predecessorActivityID ?? trackedPredecessorID;
@@ -94,47 +93,30 @@ async function readPredecessorActivityID(avatarID: string): Promise<null | strin
   return record?.lastActivityID ?? null;
 }
 
-async function buildOptimisticBuildSnapshot(
+function buildOptimisticBuildSnapshot(
   context: WorkerContext,
   avatarID: string,
-): Promise<{ level: number; xp: number }> {
+): { level: number; xp: number } {
   const lastActivity = context.getActivity();
 
   const previousRun =
     lastActivity !== null && lastActivity.avatarID === avatarID ? lastActivity : null;
 
-  const sources = previousRun === null ? [] : await buildPreviousRunSources(previousRun);
+  const sources = previousRun === null ? [] : buildPreviousRunSources(context, previousRun);
   const optimistic = foldOptimisticBuild(previousRun?.buildSnapshot.xp ?? 0, sources);
 
   return { level: buildLevelFromXP(optimistic.totalXP), xp: optimistic.totalXP };
 }
 
-async function buildPreviousRunSources(
+function buildPreviousRunSources(
+  context: WorkerContext,
   activity: Readonly<ActivityData>,
-): Promise<Array<OptimisticBuildSource>> {
-  const queued = await readQueuedCheckpoints(activity.id);
+): Array<OptimisticBuildSource> {
+  const earnings = context.getRunEarnings();
 
-  const tail = queued.at(-1);
-
-  if (tail === undefined) {
+  if (earnings === null || earnings.activityID !== activity.id) {
     return [];
   }
 
-  const unverifiedDeltaSum = queued.reduce(
-    (sum, entry) =>
-      parseTerminalCheckpointXP(entry.payload) === undefined
-        ? sum + parseCheckpointXP(entry.payload)
-        : sum,
-    0,
-  );
-
-  return [{ settledXP: 0, tailPayload: tail.payload, unverifiedDeltaSum }];
-}
-
-const CheckpointXPSchema = z.object({ rewards: z.object({ xp: z.number() }) });
-
-function parseCheckpointXP(payload: unknown): number {
-  const parsed = CheckpointXPSchema.safeParse(payload);
-
-  return parsed.success ? parsed.data.rewards.xp : 0;
+  return [{ settledXP: 0, tailPayload: earnings.tail, unverifiedDeltaSum: earnings.deltaXP }];
 }
