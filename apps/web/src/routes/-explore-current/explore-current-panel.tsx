@@ -3,8 +3,8 @@ import { useNavigate } from '@tanstack/react-router';
 import { Button, CheckboxField, Spinner } from '@vers/design-system';
 import type { LiveRun, StartStatus } from '@vers/idle-client';
 import {
-  setEngagedActivityID,
-  useEngagedActivityID,
+  setEngagedRun,
+  useEngagedRun,
   useResyncStatus,
   useWriterGeneration,
 } from '@vers/idle-client';
@@ -54,7 +54,7 @@ export function ExploreCurrentPanel(props: Readonly<ExploreCurrentPanelProps>) {
   // the exploration commits when the encounter view opens for a node — independent of worker
   // readiness, and a retried failed start on the same node never re-reports it
   const lastExploredNodeID = useRef<string | undefined>(undefined);
-  const engagedActivityID = useEngagedActivityID();
+  const engagedRun = useEngagedRun();
 
   useEffect(() => {
     if (selectedNode === null || lastExploredNodeID.current === selectedNode.id) {
@@ -148,7 +148,6 @@ export function ExploreCurrentPanel(props: Readonly<ExploreCurrentPanelProps>) {
   // a report for a scope the selection has left behind renders nothing — the fresh attempt's own
   // reply overwrites it
   const reportedStatus = report?.scopeID === selectedNode?.id ? report?.status : undefined;
-  const expectedActivityID = findExpectedActivityID(reportedStatus);
 
   // readiness follows the live run's scope, never the id the start call answered with: an
   // auto-retry chains a continuation under a fresh id, and the panel stays up across the chain
@@ -157,27 +156,41 @@ export function ExploreCurrentPanel(props: Readonly<ExploreCurrentPanelProps>) {
     attemptScopeID === selectedNode.id &&
     isRunAtNode(idleWorkerHandle.liveRun, avatarID, selectedNode.id);
 
-  // the engaged activity is latched in the idle-client store rather than a component ref, so a
-  // remount (browser back, re-drilling the same node) that re-fires the start and finds the same
-  // activity already live reads it as engaged rather than bouncing the player back.
+  const isEngagedAtNode =
+    selectedNode !== null && isRunAtNode(engagedRun, avatarID, selectedNode.id);
+
+  // the engaged run is latched in the idle-client store rather than a component ref, so a remount
+  // (browser back, re-drilling the same node) that re-fires the start and finds the same run
+  // already live reads it as engaged rather than bouncing the player back.
   useEffect(() => {
+    const liveRun = idleWorkerHandle.liveRun;
+
     if (
       !isActivityReady ||
-      expectedActivityID === undefined ||
-      expectedActivityID === engagedActivityID
+      liveRun === undefined ||
+      reportedStatus === undefined ||
+      reportedStatus.kind === 'failed' ||
+      liveRun.id === engagedRun?.id
     ) {
       return;
     }
 
-    // an attached run engages only a session that has engaged nothing yet: otherwise it is the
-    // run the player already engaged, or a continuation of it, and re-engaging would bounce them
-    if (reportedStatus?.kind === 'attached' && engagedActivityID !== null) {
+    // an attached run at the node the player already engaged is that run or a continuation of
+    // it, so re-engaging would only bounce them off this panel
+    if (reportedStatus.kind === 'attached' && isEngagedAtNode) {
       return;
     }
 
-    setEngagedActivityID(expectedActivityID);
+    setEngagedRun(liveRun);
     void navigate({ to: '/activity' });
-  }, [isActivityReady, expectedActivityID, engagedActivityID, reportedStatus, navigate]);
+  }, [
+    isActivityReady,
+    idleWorkerHandle.liveRun,
+    reportedStatus,
+    engagedRun,
+    isEngagedAtNode,
+    navigate,
+  ]);
 
   if (reportedStatus?.kind === 'failed') {
     return (
@@ -235,26 +248,15 @@ export function ExploreCurrentPanel(props: Readonly<ExploreCurrentPanelProps>) {
 }
 
 function isRunAtNode(
-  run: LiveRun | undefined,
+  run: LiveRun | null | undefined,
   avatarID: string | undefined,
   nodeID: string,
 ): boolean {
   return (
     run !== undefined &&
+    run !== null &&
     run.avatarID === avatarID &&
     run.scopeType === 'world_map_node' &&
     run.scopeID === nodeID
   );
-}
-
-function findExpectedActivityID(report: StartStatus | undefined): string | undefined {
-  if (report === undefined || report.kind === 'failed') {
-    return undefined;
-  }
-
-  if (report.kind === 'started') {
-    return report.activity.id;
-  }
-
-  return report.activityID;
 }

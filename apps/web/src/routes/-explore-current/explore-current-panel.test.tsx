@@ -3,7 +3,7 @@ import { waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMockActivityData } from '@vers/contract-activity/test-utils';
 import type { StartStatus } from '@vers/idle-client';
-import { advanceWriterGeneration, setEngagedActivityID, setResyncStatus } from '@vers/idle-client';
+import { advanceWriterGeneration, setEngagedRun, setResyncStatus } from '@vers/idle-client';
 import { ActivityFailureAction } from '@vers/idle-core';
 import { createMockActivitySnapshot } from '@vers/idle-core/test-utils';
 import { setSelectedNode } from '@vers/worldmap-client';
@@ -203,7 +203,12 @@ test('it renders the node and its codex fragment once the worker reports the sta
 
     // the panel navigates once a fresh start engages; latching it already-engaged keeps the panel
     // mounted here so this test reads the ready-state content in place
-    setEngagedActivityID(started.id);
+    setEngagedRun({
+      avatarID: avatar.id,
+      id: started.id,
+      scopeID: '0_0',
+      scopeType: 'world_map_node',
+    });
 
     // the worker answering the call is one setter call — mounted components re-render on it
     setIdleWorkerHandle({
@@ -248,7 +253,12 @@ test('it treats an attached report as ready once the simulation carries that row
 
     // the panel navigates once a fresh start engages; latching it already-engaged keeps the panel
     // mounted here so this test reads the ready-state content in place
-    setEngagedActivityID('activity_attached');
+    setEngagedRun({
+      avatarID: avatar.id,
+      id: 'activity_attached',
+      scopeID: '0_0',
+      scopeType: 'world_map_node',
+    });
 
     setIdleWorkerHandle({
       activity: createMockActivitySnapshot({ id: 'activity_attached' }),
@@ -339,7 +349,12 @@ test('it renders the auto-retry checkbox unchecked by default and dispatches the
 
     // the panel navigates once a fresh start engages; latching it already-engaged keeps the panel
     // mounted here so this test reads the ready-state content in place
-    setEngagedActivityID(started.id);
+    setEngagedRun({
+      avatarID: avatar.id,
+      id: started.id,
+      scopeID: '0_0',
+      scopeType: 'world_map_node',
+    });
 
     setIdleWorkerHandle({
       activity: createMockActivitySnapshot({ id: started.id }),
@@ -645,7 +660,12 @@ test('it stays rendered once auto-retry chains a continuation of the expected ru
 
     // the panel navigates once a fresh start engages; latching it already-engaged keeps the panel
     // mounted here so this test reads the ready-state content in place
-    setEngagedActivityID(started.id);
+    setEngagedRun({
+      avatarID: avatar.id,
+      id: started.id,
+      scopeID: '0_0',
+      scopeType: 'world_map_node',
+    });
 
     setIdleWorkerHandle({
       activity: createMockActivitySnapshot({ id: started.id }),
@@ -806,5 +826,48 @@ test('it does not bounce back to the engagement screen once a remount finds a co
 
     expect(checkbox).toBeChecked();
     expect(rendered.router.state.location.pathname).toBe('/');
+  });
+});
+
+test('it navigates once an attached run is live at a node other than the engaged one', async () => {
+  const signedIn = await createSignedInUser();
+  const avatar = await createActiveAvatar({ userID: signedIn.userID });
+
+  setSelectedNode(createMockWorldMapNode({ id: '0_0' }));
+
+  // the player engaged a run at a neighbouring node; the run live here was started elsewhere
+  setEngagedRun({
+    avatarID: avatar.id,
+    id: 'activity_1_0',
+    scopeID: '1_0',
+    scopeType: 'world_map_node',
+  });
+
+  const client = createStubWorkerClient({
+    startActivity: () => Promise.resolve({ activityID: 'activity_0_0', kind: 'attached' }),
+  });
+
+  setIdleWorkerHandle({
+    activity: createMockActivitySnapshot({ id: 'activity_0_0' }),
+    client,
+    failureAction: ActivityFailureAction.Abort,
+    initialized: true,
+    liveRun: {
+      avatarID: avatar.id,
+      id: 'activity_0_0',
+      scopeID: '0_0',
+      scopeType: 'world_map_node',
+    },
+    writerAbortSignal: new AbortController().signal,
+  });
+
+  await withRequestContext({ cookies: signedIn.cookies }, async () => {
+    const rendered = renderWithRouter(<ExploreCurrentPanel orpc={orpc} />, {
+      routes: { '/activity': <div data-testid="engagement-screen" /> },
+    });
+
+    await waitFor(() => {
+      expect(rendered.router.state.location.pathname).toBe('/activity');
+    });
   });
 });

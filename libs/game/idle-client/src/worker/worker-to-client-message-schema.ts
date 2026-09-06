@@ -1,8 +1,8 @@
 import { ActivityFailureAction } from '@vers/idle-core';
 import * as z from 'zod';
 import { WorkerMessageType } from '../types';
-import { runOutcomeSchema } from './run-outcome-schema';
 import { liveRunSchema } from './live-run-schema';
+import { runOutcomeSchema } from './run-outcome-schema';
 import { simulationSnapshotSchema } from './simulation-snapshot-schema';
 
 const activityEndedMessageSchema = z
