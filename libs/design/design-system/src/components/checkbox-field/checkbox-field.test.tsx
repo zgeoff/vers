@@ -1,6 +1,7 @@
 import { expect, test } from 'bun:test';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { renderToString } from 'react-dom/server';
 import { CheckboxField } from './checkbox-field';
 
 test('it renders a label and a checkbox input', () => {
@@ -41,4 +42,38 @@ test('it displays error messages', () => {
 
   expect(screen.getByText('This field is required')).toBeInTheDocument();
   expect(screen.getByLabelText('Remember me')).toHaveAttribute('aria-invalid', 'true');
+});
+
+test('it adopts a click that landed on the native input before hydration', async () => {
+  const container = document.createElement('div');
+
+  document.body.append(container);
+
+  container.innerHTML = renderToString(
+    <CheckboxField
+      checkboxProps={{ defaultChecked: true, id: 'remember-me', name: 'rememberMe' }}
+      errors={[]}
+      labelProps={{ children: 'Remember me', htmlFor: 'remember-me' }}
+    />,
+  );
+
+  container.querySelector('input')?.click();
+
+  render(
+    <CheckboxField
+      checkboxProps={{ defaultChecked: true, id: 'remember-me', name: 'rememberMe' }}
+      errors={[]}
+      labelProps={{ children: 'Remember me', htmlFor: 'remember-me' }}
+    />,
+    { container, hydrate: true },
+  );
+
+  await waitFor(() => {
+    expect(container.querySelector('[data-part="control"]')).toHaveAttribute(
+      'data-state',
+      'unchecked',
+    );
+  });
+
+  expect(screen.getByLabelText('Remember me')).not.toBeChecked();
 });

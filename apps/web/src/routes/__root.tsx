@@ -26,7 +26,11 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
   component: RootComponent,
   errorComponent: RootErrorScreen,
   head: () => ({
-    links: [{ href: appStyles, rel: 'stylesheet' }],
+    links: [
+      { href: appStyles, rel: 'stylesheet' },
+      { href: '/favicon.ico', rel: 'icon', sizes: '32x32' },
+      { href: '/favicon.svg', rel: 'icon', type: 'image/svg+xml' },
+    ],
     meta: [
       { charSet: 'utf8' },
       { content: 'width=device-width, initial-scale=1', name: 'viewport' },
