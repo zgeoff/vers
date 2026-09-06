@@ -142,3 +142,70 @@ test('it creates a verification with an explicit expiry time', async () => {
 
   expect(row.expiresAt).toStrictEqual(expiresAt);
 });
+
+test.each(['onboarding', 'change-email'] as const)(
+  'it gives a %s code a ten-minute period and expiry',
+  async (type) => {
+    await using ctx = await setupTest();
+
+    const viewer = await createAnonymousViewer({ audience: 'service-verification' });
+
+    const client = buildRPCTestClient<VerificationContract>(ctx.app, { token: viewer.token });
+    const before = Date.now();
+
+    const created = await client.createVerification({ target: 'emailed@example.com', type });
+
+    const row = await ctx.db
+      .selectFrom('verifications')
+      .selectAll()
+      .where('id', '=', created.id)
+      .executeTakeFirstOrThrow();
+
+    expect(row.period).toBe(600);
+    expect(row.expiresAt).toBeBetween(new Date(before + 600_000), new Date(Date.now() + 600_000));
+  },
+);
+
+test.each(['2fa', '2fa-setup'] as const)(
+  'it keeps a %s code on a 30-second period with no expiry',
+  async (type) => {
+    await using ctx = await setupTest();
+
+    const viewer = await createAnonymousViewer({ audience: 'service-verification' });
+
+    const client = buildRPCTestClient<VerificationContract>(ctx.app, { token: viewer.token });
+
+    const created = await client.createVerification({ target: '+15551234567', type });
+
+    const row = await ctx.db
+      .selectFrom('verifications')
+      .selectAll()
+      .where('id', '=', created.id)
+      .executeTakeFirstOrThrow();
+
+    expect(row.period).toBe(30);
+    expect(row.expiresAt).toBeNull();
+  },
+);
+
+test('it keeps an explicit null expiry on an emailed code', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createAnonymousViewer({ audience: 'service-verification' });
+
+  const client = buildRPCTestClient<VerificationContract>(ctx.app, { token: viewer.token });
+
+  const created = await client.createVerification({
+    expiresAt: null,
+    target: 'no-expiry@example.com',
+    type: 'onboarding',
+  });
+
+  const row = await ctx.db
+    .selectFrom('verifications')
+    .selectAll()
+    .where('id', '=', created.id)
+    .executeTakeFirstOrThrow();
+
+  expect(row.expiresAt).toBeNull();
+});

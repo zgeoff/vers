@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { expect, onTestFinished, setSystemTime, test } from 'bun:test';
 import type { VerificationContract } from '@vers/contract-verification';
 import { createAnonymousViewer, createTestDB } from '@vers/service-test-utils/bun';
 import { buildRPCTestClient } from '@vers/test-utils';
@@ -186,4 +186,97 @@ test('it accepts the same 2fa code again once the replay window has passed', asy
   await expect(
     client.verifyCode({ code: created.otp, target: '+15551234571', type: '2fa' }),
   ).toResolve();
+});
+
+test('it accepts an onboarding code entered five minutes after it was created', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createAnonymousViewer({ audience: 'service-verification' });
+
+  const client = buildRPCTestClient<VerificationContract>(ctx.app, { token: viewer.token });
+
+  const created = await client.createVerification({
+    target: 'slow-reader@example.com',
+    type: 'onboarding',
+  });
+
+  onTestFinished(() => {
+    setSystemTime();
+  });
+
+  setSystemTime(new Date(Date.now() + 5 * 60_000));
+
+  // the s2s token lives 60 seconds, so the later call needs one minted on the advanced clock
+  const laterViewer = await createAnonymousViewer({ audience: 'service-verification' });
+
+  const laterClient = buildRPCTestClient<VerificationContract>(ctx.app, {
+    token: laterViewer.token,
+  });
+
+  await expect(
+    laterClient.verifyCode({
+      code: created.otp,
+      target: 'slow-reader@example.com',
+      type: 'onboarding',
+    }),
+  ).toResolve();
+});
+
+test('it rejects an onboarding code entered after ten minutes with CODE_EXPIRED', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createAnonymousViewer({ audience: 'service-verification' });
+
+  const client = buildRPCTestClient<VerificationContract>(ctx.app, { token: viewer.token });
+
+  const created = await client.createVerification({
+    target: 'late-reader@example.com',
+    type: 'onboarding',
+  });
+
+  onTestFinished(() => {
+    setSystemTime();
+  });
+
+  setSystemTime(new Date(Date.now() + 11 * 60_000));
+
+  const laterViewer = await createAnonymousViewer({ audience: 'service-verification' });
+
+  const laterClient = buildRPCTestClient<VerificationContract>(ctx.app, {
+    token: laterViewer.token,
+  });
+
+  expect(
+    laterClient.verifyCode({
+      code: created.otp,
+      target: 'late-reader@example.com',
+      type: 'onboarding',
+    }),
+  ).rejects.toMatchObject({ code: 'CODE_EXPIRED' });
+});
+
+test('it rejects a 2fa code entered five minutes after it was created with INVALID_CODE', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createAnonymousViewer({ audience: 'service-verification' });
+
+  const client = buildRPCTestClient<VerificationContract>(ctx.app, { token: viewer.token });
+
+  const created = await client.createVerification({ target: '+15551234572', type: '2fa' });
+
+  onTestFinished(() => {
+    setSystemTime();
+  });
+
+  setSystemTime(new Date(Date.now() + 5 * 60_000));
+
+  const laterViewer = await createAnonymousViewer({ audience: 'service-verification' });
+
+  const laterClient = buildRPCTestClient<VerificationContract>(ctx.app, {
+    token: laterViewer.token,
+  });
+
+  expect(
+    laterClient.verifyCode({ code: created.otp, target: '+15551234572', type: '2fa' }),
+  ).rejects.toMatchObject({ code: 'INVALID_CODE' });
 });

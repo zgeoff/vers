@@ -44,7 +44,7 @@ test('it shows the check-your-email heading and instructions for onboarding', as
 
     expect(
       screen.getByText(
-        "To complete your account creation, please enter the six digit code we've sent to your email",
+        "To complete your account creation, please enter the 6-character code we've sent to your email",
       ),
     ).toBeVisible();
   });

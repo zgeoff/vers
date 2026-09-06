@@ -16,6 +16,21 @@ const VERIFICATION_TYPE_TO_CHARSET: Record<VerificationType, string> = {
   onboarding: TOTP_CHARSET,
 };
 
+interface CodeLifetime {
+  readonly expires: boolean;
+  readonly periodSeconds: number;
+}
+
+const EMAILED_CODE_LIFETIME: CodeLifetime = { expires: true, periodSeconds: 600 };
+const AUTHENTICATOR_CODE_LIFETIME: CodeLifetime = { expires: false, periodSeconds: 30 };
+
+const VERIFICATION_TYPE_TO_LIFETIME: Record<VerificationType, CodeLifetime> = {
+  '2fa': AUTHENTICATOR_CODE_LIFETIME,
+  '2fa-setup': AUTHENTICATOR_CODE_LIFETIME,
+  'change-email': EMAILED_CODE_LIFETIME,
+  onboarding: EMAILED_CODE_LIFETIME,
+};
+
 interface CreateVerificationOpts {
   readonly input: {
     readonly expiresAt?: Date | null | undefined;
@@ -29,12 +44,16 @@ export async function createVerification(
   db: Kysely<DB>,
   opts: CreateVerificationOpts,
 ): Promise<VerificationData & { otp: string }> {
-  const expiresAt = opts.input.expiresAt ?? null;
+  const lifetime = VERIFICATION_TYPE_TO_LIFETIME[opts.input.type];
+  const period = opts.input.period ?? lifetime.periodSeconds;
+
+  const expiresAt =
+    opts.input.expiresAt === undefined ? pickDefaultExpiry(lifetime, period) : opts.input.expiresAt;
 
   const { otp, ...totpConfig } = await generateTOTP({
     algorithm: 'SHA-256',
     charSet: VERIFICATION_TYPE_TO_CHARSET[opts.input.type],
-    ...(opts.input.period !== undefined && { period: opts.input.period }),
+    period,
   });
 
   const row = await db
@@ -63,4 +82,10 @@ export async function createVerification(
     .executeTakeFirstOrThrow();
 
   return { ...toVerificationData(row), otp };
+}
+
+// verifyTOTP also accepts the periods either side of the current one, so the period alone keeps a
+// code valid for one to two periods; the expiry caps an emailed code at exactly one period
+function pickDefaultExpiry(lifetime: CodeLifetime, period: number): Date | null {
+  return lifetime.expires ? new Date(Date.now() + period * 1000) : null;
 }
