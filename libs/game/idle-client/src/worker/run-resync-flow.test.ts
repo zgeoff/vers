@@ -357,3 +357,34 @@ test('it records the final mint of an aborted offline gap as the next fold sourc
     lastActivityID: finalMint.id,
   });
 });
+
+test('it records a live-attached row as the predecessor on a worker with empty stores', async () => {
+  const viewer = await createViewer();
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
+
+  const context = createStubWorkerContext({ client, submitter: createStubSubmitter() });
+
+  const activity = await db.activityCollection.create({
+    appendedHead: 1,
+    avatarID: viewer.avatar.id,
+    seed: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaa6072',
+    startedAt: new Date(),
+  });
+
+  const signals: FlowSignals = {
+    cancel: context.getCancelSignal(),
+    stop: context.getStopSignal(),
+  };
+
+  await runResyncFlow(context, viewer.avatar.id, false, signals);
+
+  // the attach keeps the record its reconstruction seeded, and a start after a player stop reads
+  // the durable predecessor this device never wrote itself
+  expect(context.getActivity()?.id).toBe(activity.id);
+  expect(context.getLatestRun()).toMatchObject({ activityID: activity.id, deltaXP: 0 });
+
+  expect(readLastStartedActivity(viewer.avatar.id)).resolves.toStrictEqual({
+    avatarID: viewer.avatar.id,
+    lastActivityID: activity.id,
+  });
+});

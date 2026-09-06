@@ -434,7 +434,7 @@ async function updateLatestRunRecords(
 ): Promise<void> {
   const fetched = pickFetchedBaseline(result);
 
-  if (fetched === null || context.getActivity()?.id === fetched.activity.id) {
+  if (fetched === null) {
     return;
   }
 
@@ -442,7 +442,8 @@ async function updateLatestRunRecords(
   const held = context.getLatestRun();
   const heldID = held !== null && held.avatarID === activity.avatarID ? held.activityID : undefined;
 
-  if (!(await isRecordAhead(heldID, activity.id))) {
+  // an install records the live row itself, with the earnings its replayed prefix carries
+  if (context.getActivity()?.id !== activity.id && !(await isRecordAhead(heldID, activity.id))) {
     context.setLatestRun({
       activityID: activity.id,
       avatarID: activity.avatarID,
