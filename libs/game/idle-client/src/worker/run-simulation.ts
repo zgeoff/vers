@@ -2,8 +2,10 @@ import type { Simulation } from '@vers/idle-core';
 import { ActivityCheckpointType } from '@vers/idle-core';
 import { WorkerMessageType } from '../types';
 import { buildDeferred } from './build-deferred';
+import { handleSimulationUpdate } from './handle-simulation-update';
 import { OFFLINE_CAP_WARNING_MS } from './offline-cap-warning-ms';
 import { pickPostTerminalAction } from './pick-post-terminal-action';
+import type { RunOutcome } from './run-outcome-schema';
 import type { WorkerContext } from './types';
 
 export async function runSimulation(
@@ -18,6 +20,10 @@ export async function runSimulation(
   }
 
   const activityID = liveActivity.id;
+
+  // read before the submit yields: a start that lands during the await installs its own row, and
+  // the outcome must name the node this run played, not the one that replaced it
+  const endedRun = findEndedRun(context, activityID);
   const checkpoint = simulation.run(timestep);
 
   if (!checkpoint) {
@@ -36,17 +42,19 @@ export async function runSimulation(
     emitRewardSlotsRecorded(context, activityID, version, checkpoint.rewardSlots.length);
   }
 
-  const isTerminal =
-    checkpoint.type === ActivityCheckpointType.Completed ||
-    checkpoint.type === ActivityCheckpointType.Failed;
-
-  if (!isTerminal) {
+  if (
+    checkpoint.type !== ActivityCheckpointType.Completed &&
+    checkpoint.type !== ActivityCheckpointType.Failed
+  ) {
     return;
   }
 
-  if (checkpoint.type === ActivityCheckpointType.Completed) {
-    emitActivityCompleted(context, activityID);
-  }
+  emitRunOutcome(context, {
+    activityID,
+    kind: checkpoint.type,
+    ...(endedRun !== undefined && { run: endedRun }),
+    xp: liveActivity.rewards.xp,
+  });
 
   const remainingBudgetMs = context.getRemainingBudgetMs();
 
@@ -58,6 +66,9 @@ export async function runSimulation(
 
   if (action === 'stop') {
     simulation.stopActivity();
+
+    // the stop fires no tick, so the activity-less snapshot goes out here or never
+    handleSimulationUpdate(context);
 
     return;
   }
@@ -88,8 +99,18 @@ export async function runSimulation(
   await deferred.promise;
 }
 
-function emitActivityCompleted(context: WorkerContext, activityID: string) {
-  context.broadcast({ activityID, type: WorkerMessageType.ActivityCompleted });
+function findEndedRun(context: WorkerContext, activityID: string): RunOutcome['run'] {
+  const row = context.getActivity();
+
+  if (row === null || row.id !== activityID) {
+    return undefined;
+  }
+
+  return { avatarID: row.avatarID, scopeID: row.scopeID, scopeType: row.scopeType };
+}
+
+function emitRunOutcome(context: WorkerContext, outcome: RunOutcome) {
+  context.broadcast({ outcome, type: WorkerMessageType.ActivityEnded });
 }
 
 function emitRewardSlotsRecorded(

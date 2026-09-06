@@ -2,16 +2,19 @@ import { safe } from '@orpc/client';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { Spinner } from '@vers/design-system';
-import { EngagementView } from '@vers/idle-client';
+import { EngagementView, useRunOutcome } from '@vers/idle-client';
 import { css } from '@vers/styled-system/css';
+import { useState } from 'react';
 import { ScreenLayout } from '../../components/screen-layout';
 import { buildCurrentActivityQueryOptions } from '../../lib/activity/build-current-activity-query-options';
 import { useActivityRewards } from '../../lib/activity/use-activity-rewards';
 import { buildActiveAvatarQueryOptions } from '../../lib/avatar/build-active-avatar-query-options';
 import { runIgnoringRejection } from '../../lib/idle/run-ignoring-rejection';
+import { sendIdleStartActivity } from '../../lib/idle/send-idle-start-activity';
 import { sendIdleStopActivity } from '../../lib/idle/send-idle-stop-activity';
 import { useIdleWorkerHandle } from '../../lib/idle/use-idle-worker-handle';
 import { activityClient } from '../../lib/rpc/clients/activity-client';
+import { RunOutcomePanel } from './run-outcome-panel';
 
 const settlingIndicator = css({
   bottom: '4',
@@ -34,6 +37,8 @@ export function ActivityPanel() {
 
   const activity = currentActivityQuery.data;
   const rewardsQuery = useActivityRewards(activity?.id);
+  const runOutcome = useRunOutcome();
+  const [isRetryPending, setIsRetryPending] = useState(false);
 
   // both heads count from the activity's own start; the rewards poll advances the verified head
   // between refetches of the activity row itself
@@ -71,12 +76,44 @@ export function ActivityPanel() {
           void navigate({ to: '/explore' });
         };
 
+  // the ended run names its own node, so a retry never depends on the server row the stop closed
+  const endedRun = runOutcome?.run;
+  const client = idleWorkerHandle.client;
+
+  const retry =
+    endedRun === undefined || client === undefined
+      ? undefined
+      : () => {
+          setIsRetryPending(true);
+
+          void (async () => {
+            try {
+              await sendIdleStartActivity(client, endedRun, idleWorkerHandle.writerAbortSignal);
+            } catch {
+              // an aborted or refused start leaves the outcome up, and the button re-arms below
+            } finally {
+              setIsRetryPending(false);
+            }
+          })();
+        };
+
   return (
     <ScreenLayout title="Engagement">
-      <EngagementView
-        {...(avatarName !== undefined && { avatarName })}
-        {...(endRun !== undefined && { onEndRun: endRun })}
-      />
+      {runOutcome === null ? (
+        <EngagementView
+          {...(avatarName !== undefined && { avatarName })}
+          {...(endRun !== undefined && { onEndRun: endRun })}
+        />
+      ) : (
+        <RunOutcomePanel
+          isRetryPending={isRetryPending}
+          onBackToMap={() => {
+            void navigate({ to: '/explore' });
+          }}
+          {...(retry !== undefined && { onRetry: retry })}
+          outcome={runOutcome}
+        />
+      )}
       {pendingCount > 0 ? (
         <output
           className={settlingIndicator}

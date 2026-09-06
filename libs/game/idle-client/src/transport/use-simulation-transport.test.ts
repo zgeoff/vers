@@ -1,6 +1,6 @@
 import { expect, onTestFinished, test } from 'bun:test';
 import { render, renderHook, waitFor } from '@testing-library/react';
-import { ActivityFailureAction } from '@vers/idle-core';
+import { ActivityCheckpointType, ActivityFailureAction } from '@vers/idle-core';
 import { createMockActivitySnapshot } from '@vers/idle-core/test-utils';
 import { createElement } from 'react';
 import invariant from 'tiny-invariant';
@@ -9,7 +9,7 @@ import { useIdleStore } from '../state/use-idle-store';
 import { createTestClient } from '../test-utils/create-test-client';
 import { WorkerMessageType } from '../types';
 import type {
-  ActivityCompletedMessage,
+  ActivityEndedMessage,
   ActivityStartIngestedMessage,
   CheckpointStreamInvalidMessage,
   ResyncStatusMessage,
@@ -243,23 +243,25 @@ test('it reports a checkpoint stream error from a broadcast', async () => {
   hook.unmount();
 });
 
-test('it records the completed activity from a broadcast', async () => {
+test('it records the run outcome from a broadcast', async () => {
   registerSharedWorkerStub();
 
   const hook = renderHook(() => useSimulationTransport());
 
   hook.rerender();
 
-  const message: ActivityCompletedMessage = {
-    activityID: 'activity_1',
-    type: WorkerMessageType.ActivityCompleted,
+  const message: ActivityEndedMessage = {
+    outcome: { activityID: 'activity_1', kind: ActivityCheckpointType.Completed, xp: 240 },
+    type: WorkerMessageType.ActivityEnded,
   };
 
   emitWorkerMessage(message);
 
   await waitFor(() => {
-    expect(useIdleStore.getState().lastCompletedActivityID).toBe('activity_1');
+    expect(useIdleStore.getState().runOutcome).toStrictEqual(message.outcome);
   });
+
+  expect(useIdleStore.getState().lastCompletedActivityID).toBe('activity_1');
 
   hook.unmount();
 });

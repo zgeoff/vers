@@ -57,7 +57,9 @@ Purity rests on three invariants:
 The client does all real-time simulation. One writer per browser profile runs the fixed-timestep
 loop; every other tab is a viewer that renders the writer's **sim snapshot**, the engine's
 serializable projection from `getSnapshot()`. The sim snapshot is distinct from the **build
-snapshot**, the avatar's equipment, passives, and level pinned as a simulation input.
+snapshot**, the avatar's equipment, passives, and level pinned as a simulation input. When a run
+ends, the writer broadcasts the run's outcome beside the snapshot, so a viewer learns the run ended
+without waiting for another tick.
 
 ### Writer election
 

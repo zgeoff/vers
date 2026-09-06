@@ -1,10 +1,18 @@
 import { expect, test } from 'bun:test';
-import { ActivityFailureAction } from '@vers/idle-core';
+import { ActivityCheckpointType, ActivityFailureAction } from '@vers/idle-core';
 import { WorkerMessageType } from '../types';
 import { workerToClientMessageSchema } from './worker-to-client-message-schema';
 
-test('it accepts a well-formed activity-completed message', () => {
-  const message = { activityID: 'activity_1', type: WorkerMessageType.ActivityCompleted };
+test('it accepts a well-formed activity-ended message', () => {
+  const message = {
+    outcome: {
+      activityID: 'activity_1',
+      kind: ActivityCheckpointType.Failed,
+      run: { avatarID: 'avatar_1', scopeID: '0_0', scopeType: 'world_map_node' },
+      xp: 118,
+    },
+    type: WorkerMessageType.ActivityEnded,
+  };
 
   expect(workerToClientMessageSchema.safeParse(message)).toMatchObject({
     data: message,

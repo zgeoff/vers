@@ -1,12 +1,13 @@
 import { ActivityFailureAction } from '@vers/idle-core';
 import * as z from 'zod';
 import { WorkerMessageType } from '../types';
+import { runOutcomeSchema } from './run-outcome-schema';
 import { simulationSnapshotSchema } from './simulation-snapshot-schema';
 
-const activityCompletedMessageSchema = z
+const activityEndedMessageSchema = z
   .object({
-    activityID: z.string(),
-    type: z.literal(WorkerMessageType.ActivityCompleted),
+    outcome: runOutcomeSchema,
+    type: z.literal(WorkerMessageType.ActivityEnded),
   })
   .readonly();
 
@@ -94,7 +95,7 @@ const writerReadyMessageSchema = z
   .readonly();
 
 export const workerToClientMessageSchema = z.discriminatedUnion('type', [
-  activityCompletedMessageSchema,
+  activityEndedMessageSchema,
   activityStartIngestedMessageSchema,
   checkpointStreamInvalidMessageSchema,
   failureActionStatusMessageSchema,
@@ -108,7 +109,7 @@ export const workerToClientMessageSchema = z.discriminatedUnion('type', [
 
 export type WorkerMessage = z.infer<typeof workerToClientMessageSchema>;
 
-export type ActivityCompletedMessage = z.infer<typeof activityCompletedMessageSchema>;
+export type ActivityEndedMessage = z.infer<typeof activityEndedMessageSchema>;
 
 export type ActivityStartIngestedMessage = z.infer<typeof activityStartIngestedMessageSchema>;
 
