@@ -15,10 +15,13 @@ import { loadContentDocument } from '../content/load-content-document';
 import { runReconstruction } from '../resync/run-reconstruction';
 import { runResync } from '../resync/run-resync';
 import type { FastForwardReport, ResyncPlan, ResyncResult } from '../resync/types';
+import { readActivityStart } from '../submission/read-activity-start';
 import { readFailureActionCache } from '../submission/read-failure-action-cache';
+import { readLastStartedActivity } from '../submission/read-last-started-activity';
 import { sweepStaleCheckpoints } from '../submission/sweep-stale-checkpoints';
 import type { ActivitySubmissionContext } from '../submission/types';
 import { writeFailureActionCache } from '../submission/write-failure-action-cache';
+import { writeLastStartedActivity } from '../submission/write-last-started-activity';
 import { WorkerMessageType } from '../types';
 import { flushPendingStop } from './flush-pending-stop';
 import { isAbortError } from './is-abort-error';
@@ -135,6 +138,7 @@ async function runResyncPass(
   }
 
   await applyResyncResult(context, result, signals);
+  await updateLatestRunRecords(context, result);
 
   return result;
 }
@@ -364,7 +368,14 @@ async function applyHeadAttach(
     const simulation = createSimulation();
 
     simulation.startActivity(input.avatar, input.activity);
-    context.setRunEarnings(null);
+
+    context.setLatestRun({
+      activityID: activity.id,
+      avatarID: activity.avatarID,
+      baselineXP: activity.buildSnapshot.xp,
+      deltaXP: 0,
+      tail: null,
+    });
 
     await setLiveSimulationOrStopBack(context, activity, simulation, signals);
 
@@ -393,8 +404,10 @@ async function applyHeadAttach(
 
   // the replayed prefix never passes through the live tick, so the next mint's xp fold is seeded
   // from it here — the live ticks that follow carry the record forward
-  context.setRunEarnings({
+  context.setLatestRun({
     activityID: activity.id,
+    avatarID: activity.avatarID,
+    baselineXP: activity.buildSnapshot.xp,
     deltaXP: reconstructed.rewards.xp,
     tail: reconstruction.lastCheckpoint,
   });
@@ -405,6 +418,81 @@ async function applyHeadAttach(
   });
 
   await setLiveSimulationOrStopBack(context, activity, reconstruction.simulation, signals);
+}
+
+interface FetchedBaseline {
+  readonly activity: ActivityData;
+  readonly xp: number;
+}
+
+// A worker with no later run of its own adopts the server's latest row as the next mint's fold
+// source and predecessor: a fresh device, or one whose previous run the server closed, otherwise
+// mints from xp 0 with no predecessor and is refused.
+async function updateLatestRunRecords(
+  context: WorkerContext,
+  result: Readonly<ResyncResult>,
+): Promise<void> {
+  const fetched = pickFetchedBaseline(result);
+
+  if (fetched === null || context.getActivity()?.id === fetched.activity.id) {
+    return;
+  }
+
+  const activity = fetched.activity;
+  const held = context.getLatestRun();
+  const heldID = held !== null && held.avatarID === activity.avatarID ? held.activityID : undefined;
+
+  if (!(await isRecordAhead(heldID, activity.id))) {
+    context.setLatestRun({
+      activityID: activity.id,
+      avatarID: activity.avatarID,
+      baselineXP: fetched.xp,
+      deltaXP: 0,
+      tail: null,
+    });
+  }
+
+  const lastStarted = await readLastStartedActivity(activity.avatarID);
+
+  if (!(await isRecordAhead(lastStarted?.lastActivityID, activity.id))) {
+    await writeLastStartedActivity({ avatarID: activity.avatarID, lastActivityID: activity.id });
+  }
+}
+
+function pickFetchedBaseline(result: Readonly<ResyncResult>): FetchedBaseline | null {
+  const report = result.report;
+
+  if (report !== undefined) {
+    if (report.reason === 'displaced' || report.reason === 'avatar-switched') {
+      return null;
+    }
+
+    // a gap that minted continuations leaves the final mint as the latest row, and its snapshot
+    // is the server's fold at that mint with nothing appended past it
+    if (report.attempts > 0) {
+      return { activity: report.activity, xp: report.activity.buildSnapshot.xp };
+    }
+  }
+
+  if (result.progress === null) {
+    return null;
+  }
+
+  return { activity: result.progress.activity, xp: result.progress.optimisticBuild.xp };
+}
+
+async function isRecordAhead(recordedID: string | undefined, fetchedID: string): Promise<boolean> {
+  if (recordedID === undefined) {
+    return false;
+  }
+
+  if (recordedID === fetchedID) {
+    return true;
+  }
+
+  // a start still in the durable store was minted here and has not reached the server, so it
+  // succeeds the fetched row rather than preceding it
+  return (await readActivityStart(recordedID)) !== undefined;
 }
 
 function isTerminalCheckpoint(checkpoint: ActivityCheckpoint): boolean {

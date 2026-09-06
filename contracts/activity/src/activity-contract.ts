@@ -5,6 +5,7 @@ import { ActivityDataSchema } from './activity-data-schema';
 import { ActivityFailureActionSchema } from './activity-failure-action-schema';
 import { ActivityStatusSchema } from './activity-status-schema';
 import { AdvanceCheckpointInvalidReasonSchema } from './advance-checkpoint-invalid-reason-schema';
+import { BuildSnapshotSchema } from './build-snapshot-schema';
 import { CatchUpContinuationSchema } from './catch-up-continuation-schema';
 import { CheckpointBatchEntrySchema } from './checkpoint-batch-entry-schema';
 import { CheckpointInvalidReasonSchema } from './checkpoint-invalid-reason-schema';
@@ -251,6 +252,8 @@ export const activityContract = {
         failureAction: ActivityFailureActionSchema,
 
         isWriter: z.boolean(),
+
+        optimisticBuild: BuildSnapshotSchema,
 
         serverTime: z.date(),
         verifiedHead: z.int(),
