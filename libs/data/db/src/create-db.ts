@@ -96,6 +96,9 @@ function buildResettableDriver(config: CreateDBConfig): Driver {
 
   return {
     acquireConnection: async (options) => {
+      // the first request after a resume lands before the detector's next tick, so the gap check
+      // runs here too and the reset swaps the generation before a connection is handed out
+      detector?.check();
       const generation = current;
 
       await generation.ready;

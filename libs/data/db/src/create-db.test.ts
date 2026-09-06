@@ -282,3 +282,28 @@ test('it rejects a query still in flight on the old pool when a resume is detect
 
   await expect(handle.db.selectFrom('users').selectAll().execute()).toResolve();
 });
+
+test('it serves the first query after a wall-clock jump from a fresh connection before the detector ticks', async () => {
+  const inMemoryMetrics = createInMemoryMetrics();
+  let clock = Date.now();
+
+  // a 60s interval keeps the timer from ticking during the test, so only the acquire-time check
+  // can reset the pool
+  await using handle = await createTestDB({
+    resumeDetection: { intervalMs: 60_000, now: () => clock, thresholdMs: 1000 },
+  });
+
+  const before = await sql<{ pid: number }>`select pg_backend_pid() as pid`.execute(handle.db);
+
+  clock += 61_000;
+
+  const after = await sql<{ pid: number }>`select pg_backend_pid() as pid`.execute(handle.db);
+
+  const [beforeRow] = before.rows;
+  const [afterRow] = after.rows;
+
+  invariant(beforeRow && afterRow, 'expected one row per query');
+
+  expect(afterRow.pid).not.toBe(beforeRow.pid);
+  expect(inMemoryMetrics.readCounterValue('vers.db.pool_resets')).resolves.toBe(1);
+});
