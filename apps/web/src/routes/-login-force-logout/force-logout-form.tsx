@@ -16,6 +16,7 @@ interface ForceLogoutFormProps {
 
 const pageInfo = css({ marginBottom: '4', textAlign: 'center' });
 const infoText = css({ marginBottom: '6' });
+const formError = css({ marginBottom: '4' });
 
 const buttonContainer = css({
   alignItems: 'center',
@@ -29,7 +30,13 @@ const buttonContainer = css({
 export function ForceLogoutForm(props: ForceLogoutFormProps) {
   const forceLogoutFn = useServerFn(forceLogout);
   const submission = useFormSubmit(props.action ?? forceLogoutFn);
-  const [form] = useForm({ id: 'force-logout-form', onSubmit: submission.onSubmit });
+
+  const [form] = useForm({
+    id: 'force-logout-form',
+    lastResult: submission.lastResult,
+    onSubmit: submission.onSubmit,
+  });
+
   const [pendingIntent, setPendingIntent] = useState<PendingIntent>(null);
 
   return (
@@ -45,6 +52,12 @@ export function ForceLogoutForm(props: ForceLogoutFormProps) {
         </Text>
         <Text>Would you like to log out your other session?</Text>
       </section>
+
+      {form.errors !== undefined && (
+        <Text className={formError} role="alert">
+          {form.errors[0]}
+        </Text>
+      )}
 
       <form {...getFormProps(form)} className={buttonContainer} method="post">
         <StatusButton

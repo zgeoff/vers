@@ -18,7 +18,17 @@ export function useFormSubmit(
     setIsPending(true);
 
     try {
-      const result = await action({ data: formData });
+      let result: Awaited<ReturnType<FormAction>>;
+
+      try {
+        result = await action({ data: formData });
+      } catch {
+        // the server-function middleware has already reported the fault; the browser's only job
+        // is to tell the player the submission failed
+        setDispatchedResult(buildGenericErrorResult(formData));
+
+        return;
+      }
 
       if (result === undefined) {
         // the submission already succeeded server-side — a completion callback's failure
@@ -32,13 +42,7 @@ export function useFormSubmit(
         return;
       }
 
-      // A result Conform re-applies mid-session must carry the submitted values as `initialValue`,
-      // or its update path reads the absence as a reset and drops the error. A raw `Response` has
-      // none, so rebuild one through `parse` over the same `FormData`.
-      const nextResult =
-        result instanceof Response
-          ? parse(formData, { resolve: () => ({ error: { '': [GENERIC_SUBMIT_ERROR] } }) }).reply()
-          : result;
+      const nextResult = result instanceof Response ? buildGenericErrorResult(formData) : result;
 
       setDispatchedResult(nextResult);
     } finally {
@@ -52,4 +56,11 @@ export function useFormSubmit(
   };
 
   return { isPending, lastResult: dispatchedResult ?? lastResult, onSubmit };
+}
+
+// A result Conform re-applies mid-session must carry the submitted values as `initialValue`, or
+// its update path reads the absence as a reset and drops the error. A raw `Response` or a thrown
+// error has none, so rebuild one through `parse` over the same `FormData`.
+function buildGenericErrorResult(formData: FormData): SubmissionResult {
+  return parse(formData, { resolve: () => ({ error: { '': [GENERIC_SUBMIT_ERROR] } }) }).reply();
 }

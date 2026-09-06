@@ -132,11 +132,14 @@ swallow point: a worker loop iteration, a job queue's `onError` and dead-letter 
 fire-and-forget drain, a sweep entrypoint, a shutdown handler. A process that never calls
 `createService` (a sweep entrypoint) calls `startErrorReporting` itself before its run.
 
-Reporting happens at four tiers, each with its own hook:
+Reporting happens at five tiers, each with its own hook:
 
 - **Service** — the `onError` interceptor in `createService`, and `reportUnexpectedError` at every
   background swallow point. Reports non-`ORPCError` throws and 5xx `ORPCError`s from a request, and
   any unexpected failure from a worker loop, job queue, drain, or sweep run.
+- **app-web server functions** — the global function middleware the Start instance (`start.ts`)
+  registers. Reports every throw a server function lets escape other than a redirect, a not-found,
+  or a `Response`, then rethrows it.
 - **app-web client** — the `QueryCache`/`MutationCache` `onError`. Reports non-`ORPCError` failures
   (network, client bugs); service errors were already reported by the service that produced them.
 - **app-web render** — the root route `errorComponent`. Reports render and loader errors nothing
@@ -154,11 +157,12 @@ loop. Restarting a simulation that throws deterministically would resubmit the s
 tick.
 
 A service report carries a `traceID` event tag when the capture runs inside an active trace scope. A
-report emitted outside any scope omits the tag, as does every app-web capture. The RPC interceptor
-tags with the request's trace id. A background report (one worker iteration, one job's
-handle/complete/fail cycle, a boot drain, one sweep run) carries a fresh trace id scoping that unit
-of work. One exception: a request-triggered fire-and-forget drain inherits the originating request's
-trace. The RPC path reports exactly once per unexpected throw.
+report emitted outside any scope omits the tag, as does every app-web browser capture. The RPC
+interceptor and the app-web server-function middleware tag with the request's trace id. A background
+report (one worker iteration, one job's handle/complete/fail cycle, a boot drain, one sweep run)
+carries a fresh trace id scoping that unit of work. One exception: a request-triggered
+fire-and-forget drain inherits the originating request's trace. The RPC path reports exactly once
+per unexpected throw.
 
 ## Trace context
 
@@ -174,7 +178,9 @@ propagated across hops, and stamped onto spans, log lines, and the response head
 - **Server functions.** Errors signal three ways, by kind:
   - a thrown `redirect()`/`Response` for navigation and access control;
   - Conform's `submission.reply()` return value for form validation;
-  - a thrown error for genuine faults, caught by the nearest route `errorComponent`.
+  - a thrown error for genuine faults, which the server-function middleware reports; a loader's
+    fault lands on the nearest route `errorComponent`, and a form submission's on the shared
+    form-submit hook, which renders `Something went wrong. Please try again.`
 
   Field-level validation is never a thrown error.
 

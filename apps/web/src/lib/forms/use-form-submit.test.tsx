@@ -22,6 +22,10 @@ function rejectWithResponse(): Promise<Response> {
   return Promise.resolve(new Response(null, { status: 400 }));
 }
 
+function rejectWithError(): Promise<undefined> {
+  return Promise.reject(new Error('Service Unavailable'));
+}
+
 interface ReferenceFormProps {
   readonly action?: FormAction;
   readonly lastResult?: SubmissionResult;
@@ -108,6 +112,68 @@ test('it shows a generic error message when the server rejects the submission', 
   const alert = await screen.findByRole('alert');
 
   expect(alert).toHaveTextContent('Something went wrong. Please try again.');
+});
+
+test('it shows the generic error message when the action rejects', async () => {
+  const user = userEvent.setup();
+
+  renderWithRouter(<ReferenceForm action={rejectWithError} />);
+
+  const emailInput = await screen.findByPlaceholderText('Email');
+
+  await user.type(emailInput, 'player@vers.test');
+  await user.type(screen.getByPlaceholderText('Password'), 'password123');
+  await user.click(screen.getByRole('button', { name: 'Sign in' }));
+
+  const alert = await screen.findByRole('alert');
+
+  expect(alert).toHaveTextContent('Something went wrong. Please try again.');
+});
+
+test('it re-enables the submit button after the action rejects', async () => {
+  const user = userEvent.setup();
+
+  renderWithRouter(<ReferenceForm action={rejectWithError} />);
+
+  const emailInput = await screen.findByPlaceholderText('Email');
+
+  await user.type(emailInput, 'player@vers.test');
+  await user.type(screen.getByPlaceholderText('Password'), 'password123');
+  await user.click(screen.getByRole('button', { name: 'Sign in' }));
+  await screen.findByRole('alert');
+
+  expect(screen.getByRole('button', { name: 'Sign in' })).not.toBeDisabled();
+});
+
+test('it keeps the typed values when the action rejects', async () => {
+  const user = userEvent.setup();
+
+  renderWithRouter(<ReferenceForm action={rejectWithError} />);
+
+  const emailInput = await screen.findByPlaceholderText('Email');
+
+  await user.type(emailInput, 'player@vers.test');
+  await user.type(screen.getByPlaceholderText('Password'), 'password123');
+  await user.click(screen.getByRole('button', { name: 'Sign in' }));
+  await screen.findByRole('alert');
+
+  expect(screen.getByPlaceholderText('Email')).toHaveValue('player@vers.test');
+});
+
+test('it reports no success when the action rejects', async () => {
+  const user = userEvent.setup();
+  const onSuccess = mock(() => {});
+
+  renderWithRouter(<ReferenceForm action={rejectWithError} onSuccess={onSuccess} />);
+
+  const emailInput = await screen.findByPlaceholderText('Email');
+
+  await user.type(emailInput, 'player@vers.test');
+  await user.type(screen.getByPlaceholderText('Password'), 'password123');
+  await user.click(screen.getByRole('button', { name: 'Sign in' }));
+  await screen.findByRole('alert');
+
+  expect(onSuccess).not.toHaveBeenCalled();
 });
 
 test('it shows no error after a redirect resolves the submission', async () => {
