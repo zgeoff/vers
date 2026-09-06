@@ -18,18 +18,26 @@ tools. Every code change goes through the built-in edit tools.
 
 ## Run the daemon (one-time)
 
-A systemd user unit keeps the daemon up across reboots. The unit is the serena version's owner:
-`.mcp.json` carries no pin because it only names the URL.
+A systemd user unit runs the daemon, and user lingering starts that unit at boot instead of at first
+login. The unit is the serena version's owner: `.mcp.json` carries no pin because it only names the
+URL. In the unit, `<checkout_path>` is the primary checkout's absolute path, the same value in both
+places, and `<uvx_path>` is what `command -v uvx` prints.
 
-1. Write the unit to `~/.config/systemd/user/serena-mcp.service`:
+1. Let the user manager start at boot and outlive the login session:
+
+   ```bash
+   loginctl enable-linger "$USER"
+   ```
+
+2. Write the unit to `~/.config/systemd/user/serena-mcp.service`:
 
    ```ini
    [Unit]
    Description=Serena MCP daemon for vers
 
    [Service]
-   WorkingDirectory=/home/geoff/projects/vers
-   ExecStart=/usr/bin/uvx --from serena-agent==1.7.0 serena start-mcp-server --transport streamable-http --host 127.0.0.1 --port 9121 --project /home/geoff/projects/vers --context .serena/context.claude-code.yml --open-web-dashboard false
+   WorkingDirectory=<checkout_path>
+   ExecStart=<uvx_path> --from serena-agent==1.7.0 serena start-mcp-server --transport streamable-http --host 127.0.0.1 --port 9121 --project <checkout_path> --context .serena/context.claude-code.yml --open-web-dashboard false
    Restart=on-failure
    RestartSec=5
 
@@ -37,14 +45,14 @@ A systemd user unit keeps the daemon up across reboots. The unit is the serena v
    WantedBy=default.target
    ```
 
-2. Enable and start it:
+3. Enable and start it:
 
    ```bash
    systemctl --user daemon-reload
    systemctl --user enable --now serena-mcp
    ```
 
-3. Verify the endpoint answers an MCP initialize:
+4. Verify the endpoint answers an MCP initialize:
 
    ```bash
    curl -s -o /dev/null -w '%{http_code}\n' -X POST http://127.0.0.1:9121/mcp \
