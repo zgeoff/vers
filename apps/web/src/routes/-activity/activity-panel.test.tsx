@@ -255,3 +255,26 @@ test('it replaces the outcome with the next live run once a continuation install
     expect(rendered.queryByTestId('run-outcome-panel')).not.toBeInTheDocument();
   });
 });
+
+test('it hides an outcome that another avatar left in the store', async () => {
+  const signedIn = await createSignedInUser();
+
+  await createActiveAvatar({ userID: signedIn.userID });
+
+  setRunOutcome({
+    activityID: 'activity_ended',
+    kind: ActivityCheckpointType.Failed,
+    run: { avatarID: 'avatar_other', scopeID: '0_0', scopeType: 'world_map_node' },
+    xp: 118,
+  });
+
+  await withRequestContext({ cookies: signedIn.cookies }, async () => {
+    const rendered = renderWithRouter(<ActivityPanel />);
+
+    await rendered.findByRole('heading', { name: 'Engagement' });
+
+    // the outcome is gated synchronously on the store, so a short window is enough to prove the
+    // active avatar's page never picks it up once its own query has settled
+    await expect(rendered.findByTestId('run-outcome-panel', {}, { timeout: 300 })).toReject();
+  });
+});

@@ -37,8 +37,16 @@ export function ActivityPanel() {
 
   const activity = currentActivityQuery.data;
   const rewardsQuery = useActivityRewards(activity?.id);
-  const runOutcome = useRunOutcome();
+  const lastRunOutcome = useRunOutcome();
   const [isRetryPending, setIsRetryPending] = useState(false);
+
+  // the store outlives an avatar switch and a sign-in, so an outcome that names another avatar's
+  // run is not this page's to show or retry
+  const runOutcome =
+    lastRunOutcome !== null &&
+    (lastRunOutcome.run === undefined || lastRunOutcome.run.avatarID === avatarID)
+      ? lastRunOutcome
+      : null;
 
   // both heads count from the activity's own start; the rewards poll advances the verified head
   // between refetches of the activity row itself

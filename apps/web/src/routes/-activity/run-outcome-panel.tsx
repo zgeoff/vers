@@ -2,6 +2,7 @@ import { Button, Heading, Text } from '@vers/design-system';
 import type { RunOutcome } from '@vers/idle-client';
 import { ActivityCheckpointType } from '@vers/idle-core';
 import { css } from '@vers/styled-system/css';
+import type { RevealedRewardsPage } from '../../lib/activity/types';
 import { useActivityRewards } from '../../lib/activity/use-activity-rewards';
 
 const panel = css({
@@ -42,7 +43,6 @@ interface RunOutcomePanelProps {
 
 export function RunOutcomePanel(props: Readonly<RunOutcomePanelProps>) {
   const rewardsQuery = useActivityRewards(props.outcome.activityID);
-  const items = rewardsQuery.data?.items ?? [];
   const isCleared = props.outcome.kind === ActivityCheckpointType.Completed;
 
   return (
@@ -55,19 +55,11 @@ export function RunOutcomePanel(props: Readonly<RunOutcomePanelProps>) {
       </Text>
       <Text bold>+{props.outcome.xp} XP</Text>
       <Heading level={3}>Rewards</Heading>
-      {items.length === 0 ? (
-        <Text>No rewards revealed yet.</Text>
-      ) : (
-        <ul className={rewardList}>
-          {items.map((item) => (
-            <li className={rewardItem} key={`${item.chainIndex}-${item.ordinal}`}>
-              <Text>
-                {item.item.rarityID} {item.item.baseID}
-              </Text>
-            </li>
-          ))}
-        </ul>
-      )}
+      {renderRewards({
+        isError: rewardsQuery.isError,
+        isPending: rewardsQuery.isPending,
+        items: rewardsQuery.data?.items ?? [],
+      })}
       <div className={actions}>
         {props.onRetry === undefined ? null : (
           <Button disabled={props.isRetryPending === true} onClick={props.onRetry} type="button">
@@ -79,5 +71,42 @@ export function RunOutcomePanel(props: Readonly<RunOutcomePanelProps>) {
         </Button>
       </div>
     </section>
+  );
+}
+
+interface RewardsState {
+  readonly isError: boolean;
+  readonly isPending: boolean;
+  readonly items: RevealedRewardsPage['items'];
+}
+
+function renderRewards(state: Readonly<RewardsState>) {
+  if (state.isPending) {
+    return <Text>Reading rewards…</Text>;
+  }
+
+  if (state.isError) {
+    return <Text>Rewards could not be loaded.</Text>;
+  }
+
+  if (state.items.length === 0) {
+    return <Text>No rewards revealed yet.</Text>;
+  }
+
+  return (
+    <ul className={rewardList}>
+      {state.items.map((item) => (
+        <li className={rewardItem} key={`${item.chainIndex}-${item.ordinal}`}>
+          <Text>
+            {item.item.rarityID} {item.item.baseID}
+          </Text>
+          {item.item.affixes.map((affix) => (
+            <Text key={`${affix.affixID}-${affix.groupID}`}>
+              {affix.affixID} +{affix.value}
+            </Text>
+          ))}
+        </li>
+      ))}
+    </ul>
   );
 }
