@@ -3,6 +3,7 @@
 User-agent: *
 Disallow: /api/
 Disallow: /health
+Disallow: /login/force-logout
 Disallow: /onboarding
 Disallow: /verify-otp
 Disallow: /reset-password
