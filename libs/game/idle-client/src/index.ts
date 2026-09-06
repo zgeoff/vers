@@ -13,7 +13,7 @@ export type {
 } from './resync/types';
 
 export { advanceWriterGeneration } from './state/advance-writer-generation';
-export { setEngagedActivityID } from './state/set-engaged-activity-id';
+export { setEngagedRun } from './state/set-engaged-run';
 export { setFailureAction } from './state/set-failure-action';
 export { setLastCompletedActivityID } from './state/set-last-completed-activity-id';
 export { setLastIngestedActivityID } from './state/set-last-ingested-activity-id';
@@ -28,11 +28,12 @@ export { updateRewardSlotLedger } from './state/update-reward-slot-ledger';
 export { useOfflineCapStatus } from './state/use-offline-cap-status';
 export { useResyncStatus } from './state/use-resync-status';
 export { useActivity } from './state/use-activity';
-export { useEngagedActivityID } from './state/use-engaged-activity-id';
+export { useEngagedRun } from './state/use-engaged-run';
 export { useAvatar } from './state/use-avatar';
 export { useFailureAction } from './state/use-failure-action';
 export { useLastCompletedActivityID } from './state/use-last-completed-activity-id';
 export { useLastIngestedActivityID } from './state/use-last-ingested-activity-id';
+export { useLiveRun } from './state/use-live-run';
 export { useRewardSlotLedger } from './state/use-reward-slot-ledger';
 export { useSimulationInitialized } from './state/use-simulation-initialized';
 export { useWriterAbortSignal } from './state/use-writer-abort-signal';

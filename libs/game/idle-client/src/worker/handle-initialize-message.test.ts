@@ -1,5 +1,7 @@
 import { expect, test } from 'bun:test';
+import { createMockActivityData } from '@vers/contract-activity/test-utils';
 import { createSimulation } from '@vers/idle-core';
+import { createMockActivityInput, createMockAvatarData } from '@vers/idle-core/test-utils';
 import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
 import { handleInitializeMessage } from './handle-initialize-message';
 
@@ -49,4 +51,23 @@ test('it carries a held displacement in the answer', () => {
   const result = handleInitializeMessage(context);
 
   expect(result.writerDisplacedActivityID).toBe('activity_9');
+});
+
+test('it names the live run in the answer while a row is ticking', () => {
+  const context = createStubWorkerContext();
+  const simulation = createSimulation();
+  const activity = createMockActivityData();
+
+  context.setSimulation(simulation);
+  context.setActivity(activity);
+  simulation.startActivity(createMockAvatarData(), createMockActivityInput({ id: activity.id }));
+
+  const result = handleInitializeMessage(context);
+
+  expect(result.liveRun).toStrictEqual({
+    avatarID: activity.avatarID,
+    id: activity.id,
+    scopeID: activity.scopeID,
+    scopeType: activity.scopeType,
+  });
 });

@@ -78,7 +78,7 @@ function subscribeToWorkerBroadcasts() {
 function handleWorkerMessage(message: WorkerMessage) {
   switch (message.type) {
     case WorkerMessageType.SimulationUpdate: {
-      setSimulationSnapshot(message.state);
+      setSimulationSnapshot(message.state, message.liveRun);
       break;
     }
 

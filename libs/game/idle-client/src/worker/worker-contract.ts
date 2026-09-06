@@ -2,6 +2,7 @@ import { oc } from '@orpc/contract';
 import { ActivityDataSchema, EncounterNodeSchema } from '@vers/contract-activity';
 import { ActivityFailureAction } from '@vers/idle-core';
 import * as z from 'zod';
+import { liveRunSchema } from './live-run-schema';
 import { simulationSnapshotSchema } from './simulation-snapshot-schema';
 
 const rewardSlotLedgerEntrySchema = z
@@ -20,6 +21,7 @@ const rewardSlotLedgerSnapshotSchema = z
 
 const initializeOutputSchema = z
   .object({
+    liveRun: liveRunSchema.exactOptional(),
     rewardSlotLedger: rewardSlotLedgerSnapshotSchema,
     state: simulationSnapshotSchema,
     writerDisplacedActivityID: z.string().nullable(),

@@ -92,6 +92,24 @@ test('it accepts a well-formed simulation-update message', () => {
   });
 });
 
+test('it accepts a simulation-update message naming the live run', () => {
+  const message = {
+    liveRun: {
+      avatarID: 'avatar_1',
+      id: 'activity_1',
+      scopeID: '0_0',
+      scopeType: 'world_map_node',
+    },
+    state: { failureAction: ActivityFailureAction.Abort },
+    type: WorkerMessageType.SimulationUpdate,
+  };
+
+  expect(workerToClientMessageSchema.safeParse(message)).toMatchObject({
+    data: message,
+    success: true,
+  });
+});
+
 test('it accepts a well-formed writer-displaced message', () => {
   const message = { activityID: 'activity_1', type: WorkerMessageType.WriterDisplaced };
 
