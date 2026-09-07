@@ -292,6 +292,43 @@ test('it rejects a build-snapshot-mismatch once the named predecessor has stoppe
   expect(stored).toBeUndefined();
 });
 
+test('it rejects a build-snapshot-mismatch when the server’s active row is not the named predecessor', async () => {
+  const viewer = await createViewer();
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
+
+  const predecessor = await db.activityCollection.create({
+    avatarID: viewer.avatar.id,
+    startedAt: new Date(Date.now() - 60_000),
+  });
+
+  await db.activityCollection.create({ avatarID: viewer.avatar.id, startedAt: new Date() });
+
+  const row = createMockActivityData({
+    avatarID: viewer.avatar.id,
+    id: 'act_ingest_divergent',
+    predecessorActivityID: predecessor.id,
+    startKey: 'start_key_divergent',
+  });
+
+  server.use(
+    mockActivityService.advanceActivity.handler((opts) => {
+      throw opts.errors.CHECKPOINT_INVALID({
+        data: { activityID: row.id, appendedHead: 0, reason: 'build-snapshot-mismatch' },
+      });
+    }),
+  );
+
+  await writeActivityStart(row);
+
+  const outcome = await ingestActivityStart(client, row.id);
+
+  expect(outcome.outcome).toBe('rejected');
+
+  const stored = await readActivityStart(row.id);
+
+  expect(stored).toBeUndefined();
+});
+
 test('it rejects a build-snapshot-mismatch on a start that names no predecessor', async () => {
   const viewer = await createViewer();
   const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);

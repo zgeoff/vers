@@ -181,6 +181,34 @@ test('it clears both records when the server holds no activity for the avatar', 
   expect(lastStarted).toBeUndefined();
 });
 
+test('it keeps both records when they name a run that survives the drop', async () => {
+  const context = createStubWorkerContext();
+  const refused = createMockActivityData({ avatarID: 'avatar_keep', id: 'act_keep_root' });
+  const survivor = createMockActivityData({ avatarID: 'avatar_keep', id: 'act_keep_survivor' });
+
+  const held = {
+    activityID: survivor.id,
+    avatarID: 'avatar_keep',
+    baselineXP: 10,
+    deltaXP: 5,
+    tail: null,
+  };
+
+  context.setLatestRun(held);
+
+  await writeLastStartedActivity({ avatarID: 'avatar_keep', lastActivityID: survivor.id });
+
+  await rejectActivityStart(context, {
+    latest: createMockLatestActivityProgress({ optimisticBuild: { level: 2, xp: 105 } }),
+    row: refused,
+  });
+
+  const lastStarted = await readLastStartedActivity('avatar_keep');
+
+  expect(context.getLatestRun()).toStrictEqual(held);
+  expect(lastStarted).toStrictEqual({ avatarID: 'avatar_keep', lastActivityID: survivor.id });
+});
+
 test("it keeps another avatar's fold record when clearing this avatar's", async () => {
   const context = createStubWorkerContext();
   const refused = createMockActivityData({ avatarID: 'avatar_clear_mine', id: 'act_clear_mine' });
@@ -198,4 +226,15 @@ test("it keeps another avatar's fold record when clearing this avatar's", async 
   await rejectActivityStart(context, { latest: null, row: refused });
 
   expect(context.getLatestRun()).toStrictEqual(other);
+});
+
+test('it aborts an in-flight flow before it can chain a fresh start on the refused one', async () => {
+  const context = createStubWorkerContext();
+  const refused = createMockActivityData({ avatarID: 'avatar_abort', id: 'act_abort_root' });
+  const scope = context.getCancelSignal();
+
+  await rejectActivityStart(context, { latest: null, row: refused });
+
+  expect(scope.aborted).toBeTrue();
+  expect(context.getCancelSignal().aborted).toBeFalse();
 });

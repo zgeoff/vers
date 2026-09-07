@@ -1,6 +1,7 @@
 import type { ActivityData } from '@vers/contract-activity';
 import type { LatestActivityProgress } from '../resync/types';
 import { readAllActivityStarts } from '../submission/read-all-activity-starts';
+import { readLastStartedActivity } from '../submission/read-last-started-activity';
 import { removeActivityStart } from '../submission/remove-activity-start';
 import { removeLastStartedActivity } from '../submission/remove-last-started-activity';
 import { removeQueuedCheckpoints } from '../submission/remove-queued-checkpoints';
@@ -21,6 +22,10 @@ export async function rejectActivityStart(
   input: Readonly<RejectActivityStartInput>,
 ): Promise<void> {
   const row = input.row;
+
+  // an in-flight start or continuation would chain its row on the refused one and fold from the
+  // same wrong snapshot; aborting it before the snapshot below keeps the drop complete
+  context.advanceStopScope();
 
   const pending = await readAllActivityStarts();
 
@@ -47,7 +52,7 @@ export async function rejectActivityStart(
     handleSimulationUpdate(context);
   }
 
-  await resetLatestRunRecords(context, row.avatarID, input.latest);
+  await resetLatestRunRecords(context, row.avatarID, dropped, input.latest);
 
   const ended = heldDropped ? held : row;
 
@@ -93,27 +98,38 @@ function collectChainedStartIDs(
 async function resetLatestRunRecords(
   context: WorkerContext,
   avatarID: string,
+  dropped: ReadonlySet<string>,
   latest: LatestActivityProgress | null,
 ): Promise<void> {
+  const held = context.getLatestRun();
+
+  const lastStarted = await readLastStartedActivity(avatarID);
+
+  // a record naming a run that survives the drop still folds and orders the next mint correctly
+  if (held === null || dropped.has(held.activityID)) {
+    const replacement =
+      latest === null
+        ? null
+        : {
+            activityID: latest.activity.id,
+            avatarID,
+            baselineXP: latest.optimisticBuild.xp,
+            deltaXP: 0,
+            tail: null,
+          };
+
+    context.setLatestRun(replacement);
+  }
+
+  if (lastStarted !== undefined && !dropped.has(lastStarted.lastActivityID)) {
+    return;
+  }
+
   if (latest === null) {
-    const held = context.getLatestRun();
-
-    if (held === null || held.avatarID === avatarID) {
-      context.setLatestRun(null);
-    }
-
     await removeLastStartedActivity(avatarID);
 
     return;
   }
-
-  context.setLatestRun({
-    activityID: latest.activity.id,
-    avatarID,
-    baselineXP: latest.optimisticBuild.xp,
-    deltaXP: 0,
-    tail: null,
-  });
 
   await writeLastStartedActivity({ avatarID, lastActivityID: latest.activity.id });
 }
