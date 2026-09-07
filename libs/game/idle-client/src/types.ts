@@ -5,10 +5,11 @@ export type {
   UndeliveredWork,
 } from './worker/worker-contract';
 
+export type { RunOutcome } from './worker/run-outcome-schema';
 export type { ResyncStatus } from './worker/worker-to-client-message-schema';
 
 export enum WorkerMessageType {
-  ActivityCompleted = 'activity_completed',
+  ActivityEnded = 'activity_ended',
   ActivityStartIngested = 'activity_start_ingested',
   CheckpointStreamInvalid = 'checkpoint_stream_invalid',
   FailureActionStatus = 'failure_action_status',

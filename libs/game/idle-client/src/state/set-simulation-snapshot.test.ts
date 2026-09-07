@@ -1,6 +1,7 @@
 import { expect, test } from 'bun:test';
 import { ActivityFailureAction } from '@vers/idle-core';
 import { createMockActivitySnapshot } from '@vers/idle-core/test-utils';
+import { createMockRunOutcome } from '../test-utils/factories/create-mock-run-outcome';
 import { setSimulationSnapshot } from './set-simulation-snapshot';
 import { useIdleStore } from './use-idle-store';
 
@@ -90,4 +91,38 @@ test('it resets the reward-slot ledger once, not on every snapshot of the new ac
   });
 
   expect(useIdleStore.getState().rewardSlotLedger).toStrictEqual([{ count: 9, version: 1 }]);
+});
+
+test('it clears the run outcome once a different run goes live', () => {
+  useIdleStore.setState({ runOutcome: createMockRunOutcome({ activityID: 'activity_1' }) });
+
+  setSimulationSnapshot({
+    activity: createMockActivitySnapshot({ id: 'activity_2' }),
+    failureAction: ActivityFailureAction.Retry,
+  });
+
+  expect(useIdleStore.getState().runOutcome).toBeNull();
+});
+
+test('it keeps the run outcome while no run is live', () => {
+  const outcome = createMockRunOutcome({ activityID: 'activity_1' });
+
+  useIdleStore.setState({ runOutcome: outcome });
+
+  setSimulationSnapshot({ failureAction: ActivityFailureAction.Abort });
+
+  expect(useIdleStore.getState().runOutcome).toStrictEqual(outcome);
+});
+
+test('it keeps the run outcome while the ended run is still the one in the snapshot', () => {
+  const outcome = createMockRunOutcome({ activityID: 'activity_1' });
+
+  useIdleStore.setState({ runOutcome: outcome });
+
+  setSimulationSnapshot({
+    activity: createMockActivitySnapshot({ id: 'activity_1' }),
+    failureAction: ActivityFailureAction.Abort,
+  });
+
+  expect(useIdleStore.getState().runOutcome).toStrictEqual(outcome);
 });

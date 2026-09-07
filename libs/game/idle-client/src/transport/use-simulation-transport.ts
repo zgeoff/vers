@@ -2,10 +2,10 @@ import { useEffect } from 'react';
 import { advanceWriterGeneration } from '../state/advance-writer-generation';
 import { setCheckpointStreamError } from '../state/set-checkpoint-stream-error';
 import { setFailureAction } from '../state/set-failure-action';
-import { setLastCompletedActivityID } from '../state/set-last-completed-activity-id';
 import { setLastIngestedActivityID } from '../state/set-last-ingested-activity-id';
 import { setOfflineCapStatus } from '../state/set-offline-cap-status';
 import { setResyncStatus } from '../state/set-resync-status';
+import { setRunOutcome } from '../state/set-run-outcome';
 import { setSimulationSnapshot } from '../state/set-simulation-snapshot';
 import { setWorkerClient } from '../state/set-worker-client';
 import { setWriterDisplacedActivityID } from '../state/set-writer-displaced-activity-id';
@@ -82,8 +82,8 @@ function handleWorkerMessage(message: WorkerMessage) {
       break;
     }
 
-    case WorkerMessageType.ActivityCompleted: {
-      setLastCompletedActivityID(message.activityID);
+    case WorkerMessageType.ActivityEnded: {
+      setRunOutcome(message.outcome);
       break;
     }
 
