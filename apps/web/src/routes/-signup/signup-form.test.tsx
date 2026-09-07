@@ -84,3 +84,25 @@ test('it disables the submit button while the signup request is pending', async 
     expect(screen.getByRole('button', { name: 'Signup' })).not.toBeDisabled();
   });
 });
+
+test('it tells the player the verification lapsed when signup is reached for that reason', async () => {
+  await withRequestContext({}, async () => {
+    renderWithRouter(<SignupForm honeypotValidFrom="1700000000000" reason="verification-lapsed" />);
+
+    const message = await screen.findByText(
+      'Your verification lapsed after 10 minutes. Sign up again to get a new code.',
+    );
+
+    expect(message).toBeInTheDocument();
+  });
+});
+
+test('it shows no reason message when signup is reached with no reason', async () => {
+  await withRequestContext({}, async () => {
+    renderWithRouter(<SignupForm honeypotValidFrom="1700000000000" />);
+
+    await screen.findByLabelText('Email');
+
+    expect(screen.queryByText(/verification lapsed/)).not.toBeInTheDocument();
+  });
+});

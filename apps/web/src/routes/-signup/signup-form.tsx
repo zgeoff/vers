@@ -11,12 +11,19 @@ import { useFormSubmit } from '../../lib/forms/use-form-submit';
 import { sendAnalyticsEvent } from '../../lib/send-analytics-event';
 import { signup } from './signup';
 import { SignupFormSchema } from './signup-form-schema';
+import type { SignupReason } from './signup-search-schema';
 
 interface SignupFormProps {
   readonly action?: FormAction;
   readonly honeypotValidFrom: string;
   readonly lastResult?: SubmissionResult;
+  readonly reason?: SignupReason | undefined;
 }
+
+const reasonMessages: Readonly<Record<SignupReason, string>> = {
+  'verification-lapsed':
+    'Your verification lapsed after 10 minutes. Sign up again to get a new code.',
+};
 
 const pageInfo = css({ marginBottom: '8', textAlign: 'center' });
 
@@ -56,6 +63,7 @@ export function SignupForm(props: SignupFormProps) {
         </Link>
         <Heading level={2}>Create an account</Heading>
         <Text>Please enter your details to create an account</Text>
+        {props.reason !== undefined && <Text>{reasonMessages[props.reason]}</Text>}
       </section>
       <form {...getFormProps(form)} className={formStyles} method="post">
         <HoneypotInputs validFrom={props.honeypotValidFrom} />

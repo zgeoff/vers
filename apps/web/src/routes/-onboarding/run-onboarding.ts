@@ -15,7 +15,9 @@ import { OnboardingFormSchema } from './onboarding-form-schema';
 import { requireOnboardingSession } from './require-onboarding-session';
 
 export async function runOnboarding(formData: FormData): Promise<Response | SubmissionResult> {
-  const onboardingSession = await requireOnboardingSession();
+  const onboardingSession = await requireOnboardingSession({
+    missingSessionReason: 'verification-lapsed',
+  });
 
   try {
     checkHoneypot(formData);
