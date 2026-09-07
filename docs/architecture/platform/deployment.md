@@ -124,11 +124,14 @@ holds every cutover.
 The CLI relates the `GIT_SHA` on the app's machines to HEAD before it reads any diff. A deployed SHA
 that is HEAD or descends from it is current. That case arises when a later push's deploy lands while
 this run is still between its legs: `deploy verify` passes the app, and a deploy leg skips it rather
-than roll it back. For an older deployed SHA, the change set is the paths
-`git diff --name-only <deployed_sha> HEAD` lists plus the packages turbo reports affected from that
-base. The app's trigger in `deploy.config.ts` reads that set: a `turbo-affected` trigger is stale
-when its package is affected, and a `paths` trigger is stale when a changed path matches one of its
-globs.
+than roll it back. `deploy verify` also passes a fleet split between HEAD's image and a
+descendant's, a later push's rollout caught in progress: a started machine on the descendant image
+may report a `warning` health check while it boots, as long as every started machine on HEAD's image
+passes its checks. A machine on any other image fails the run. For an older deployed SHA, the change
+set is the paths `git diff --name-only <deployed_sha> HEAD` lists plus the packages turbo reports
+affected from that base. The app's trigger in `deploy.config.ts` reads that set: a `turbo-affected`
+trigger is stale when its package is affected, and a `paths` trigger is stale when a changed path
+matches one of its globs.
 
 A path the root `.dockerignore` excludes never counts as a change. A file the build context never
 holds cannot change an image, so the ignore file owns that list, with `**/*.md` and
