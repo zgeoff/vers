@@ -3,6 +3,7 @@ import type {
   OfflineCapStatus,
   ResyncStatus,
   RewardSlotLedgerEntry,
+  RunOutcome,
 } from '../types';
 
 export interface SyncSlice {
@@ -19,6 +20,8 @@ export interface SyncSlice {
 
   rewardSlotLedgerActivityID: null | string;
 
+  runOutcome: null | RunOutcome;
+
   writerDisplacedActivityID: null | string;
 }
 
@@ -31,6 +34,7 @@ export function createSyncSlice(): SyncSlice {
     resyncStatus: null,
     rewardSlotLedger: [],
     rewardSlotLedgerActivityID: null,
+    runOutcome: null,
     writerDisplacedActivityID: null,
   };
 }

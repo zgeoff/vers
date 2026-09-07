@@ -20,6 +20,7 @@ export { setLastIngestedActivityID } from './state/set-last-ingested-activity-id
 export { setOfflineCapStatus } from './state/set-offline-cap-status';
 export { setResyncStatus } from './state/set-resync-status';
 export { setRewardSlotLedger } from './state/set-reward-slot-ledger';
+export { setRunOutcome } from './state/set-run-outcome';
 export { setSimulationInitialized } from './state/set-simulation-initialized';
 export { setSimulationSnapshot } from './state/set-simulation-snapshot';
 export { setWorkerClient } from './state/set-worker-client';
@@ -34,6 +35,7 @@ export { useFailureAction } from './state/use-failure-action';
 export { useLastCompletedActivityID } from './state/use-last-completed-activity-id';
 export { useLastIngestedActivityID } from './state/use-last-ingested-activity-id';
 export { useRewardSlotLedger } from './state/use-reward-slot-ledger';
+export { useRunOutcome } from './state/use-run-outcome';
 export { useSimulationInitialized } from './state/use-simulation-initialized';
 export { useWriterAbortSignal } from './state/use-writer-abort-signal';
 export { useWriterDisplacedActivityID } from './state/use-writer-displaced-activity-id';
@@ -60,7 +62,7 @@ export { OFFLINE_CAP_WARNING_MS } from './worker/offline-cap-warning-ms';
 export { useSimulationTransport } from './transport/use-simulation-transport';
 
 export type {
-  ActivityCompletedMessage,
+  ActivityEndedMessage,
   ActivityStartIngestedMessage,
   CheckpointStreamInvalidMessage,
   FailureActionStatusMessage,
