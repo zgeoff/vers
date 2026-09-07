@@ -1,17 +1,16 @@
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { Button, CheckboxField, Spinner } from '@vers/design-system';
-import type { StartStatus } from '@vers/idle-client';
+import type { LiveRun, StartStatus } from '@vers/idle-client';
 import {
-  setEngagedActivityID,
-  useEngagedActivityID,
+  setEngagedRun,
+  useEngagedRun,
   useResyncStatus,
   useWriterGeneration,
 } from '@vers/idle-client';
 import { ActivityFailureAction } from '@vers/idle-core';
 import { useSelectedNode } from '@vers/worldmap-client';
 import { Suspense, useEffect, useRef, useState } from 'react';
-import invariant from 'tiny-invariant';
 import { WorldMapNodeCodexSlot } from '../../components/world-map-node-codex-slot';
 import { buildActiveAvatarQueryOptions } from '../../lib/avatar/build-active-avatar-query-options';
 import { runIgnoringRejection } from '../../lib/idle/run-ignoring-rejection';
@@ -55,7 +54,7 @@ export function ExploreCurrentPanel(props: Readonly<ExploreCurrentPanelProps>) {
   // the exploration commits when the encounter view opens for a node — independent of worker
   // readiness, and a retried failed start on the same node never re-reports it
   const lastExploredNodeID = useRef<string | undefined>(undefined);
-  const engagedActivityID = useEngagedActivityID();
+  const engagedRun = useEngagedRun();
 
   useEffect(() => {
     if (selectedNode === null || lastExploredNodeID.current === selectedNode.id) {
@@ -149,25 +148,49 @@ export function ExploreCurrentPanel(props: Readonly<ExploreCurrentPanelProps>) {
   // a report for a scope the selection has left behind renders nothing — the fresh attempt's own
   // reply overwrites it
   const reportedStatus = report?.scopeID === selectedNode?.id ? report?.status : undefined;
-  const expectedActivityID = findExpectedActivityID(reportedStatus);
 
+  // readiness follows the live run's scope, never the id the start call answered with: an
+  // auto-retry chains a continuation under a fresh id, and the panel stays up across the chain
   const isActivityReady =
-    expectedActivityID !== undefined &&
-    attemptScopeID === selectedNode?.id &&
-    idleWorkerHandle.activity?.id === expectedActivityID;
+    selectedNode !== null &&
+    attemptScopeID === selectedNode.id &&
+    isRunAtNode(idleWorkerHandle.liveRun, avatarID, selectedNode.id);
 
-  // the engaged activity is latched in the idle-client store rather than a component ref, so a
-  // remount (browser back, re-drilling the same node) that re-fires the start and finds the same
-  // activity already live reads it as engaged rather than bouncing the player back.
+  const isEngagedAtNode =
+    selectedNode !== null && isRunAtNode(engagedRun, avatarID, selectedNode.id);
+
+  // the engaged run is latched in the idle-client store rather than a component ref, so a remount
+  // (browser back, re-drilling the same node) that re-fires the start and finds the same run
+  // already live reads it as engaged rather than bouncing the player back.
   useEffect(() => {
-    if (!isActivityReady || expectedActivityID === engagedActivityID) {
+    const liveRun = idleWorkerHandle.liveRun;
+
+    if (
+      !isActivityReady ||
+      liveRun === undefined ||
+      reportedStatus === undefined ||
+      reportedStatus.kind === 'failed' ||
+      liveRun.id === engagedRun?.id
+    ) {
       return;
     }
 
-    invariant(expectedActivityID !== undefined, 'an activity ready state carries its activity id');
-    setEngagedActivityID(expectedActivityID);
+    // an attached run at the node the player already engaged is that run or a continuation of
+    // it, so re-engaging would only bounce them off this panel
+    if (reportedStatus.kind === 'attached' && isEngagedAtNode) {
+      return;
+    }
+
+    setEngagedRun(liveRun);
     void navigate({ to: '/activity' });
-  }, [isActivityReady, expectedActivityID, engagedActivityID, navigate]);
+  }, [
+    isActivityReady,
+    idleWorkerHandle.liveRun,
+    reportedStatus,
+    engagedRun,
+    isEngagedAtNode,
+    navigate,
+  ]);
 
   if (reportedStatus?.kind === 'failed') {
     return (
@@ -224,14 +247,16 @@ export function ExploreCurrentPanel(props: Readonly<ExploreCurrentPanelProps>) {
   );
 }
 
-function findExpectedActivityID(report: StartStatus | undefined): string | undefined {
-  if (report === undefined || report.kind === 'failed') {
-    return undefined;
-  }
-
-  if (report.kind === 'started') {
-    return report.activity.id;
-  }
-
-  return report.activityID;
+function isRunAtNode(
+  run: LiveRun | null | undefined,
+  avatarID: string | undefined,
+  nodeID: string,
+): boolean {
+  return (
+    run !== undefined &&
+    run !== null &&
+    run.avatarID === avatarID &&
+    run.scopeType === 'world_map_node' &&
+    run.scopeID === nodeID
+  );
 }

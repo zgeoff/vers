@@ -1,6 +1,7 @@
 import { expect, test } from 'bun:test';
 import { ActivityFailureAction } from '@vers/idle-core';
 import { createMockActivitySnapshot } from '@vers/idle-core/test-utils';
+import { createMockLiveRun } from '../test-utils/factories/create-mock-live-run';
 import { createMockRunOutcome } from '../test-utils/factories/create-mock-run-outcome';
 import { setSimulationSnapshot } from './set-simulation-snapshot';
 import { useIdleStore } from './use-idle-store';
@@ -125,4 +126,31 @@ test('it keeps the run outcome while the ended run is still the one in the snaps
   });
 
   expect(useIdleStore.getState().runOutcome).toStrictEqual(outcome);
+});
+
+test('it records the live run beside the snapshot', () => {
+  setSimulationSnapshot(
+    {
+      activity: createMockActivitySnapshot({ id: 'activity_1' }),
+      failureAction: ActivityFailureAction.Abort,
+    },
+    createMockLiveRun({ avatarID: 'avatar_1', id: 'activity_1', scopeID: '0_0' }),
+  );
+
+  expect(useIdleStore.getState().liveRun).toStrictEqual({
+    avatarID: 'avatar_1',
+    id: 'activity_1',
+    scopeID: '0_0',
+    scopeType: 'world_map_node',
+  });
+});
+
+test('it clears the live run when the snapshot carries none', () => {
+  useIdleStore.setState({
+    liveRun: createMockLiveRun(),
+  });
+
+  setSimulationSnapshot({ failureAction: ActivityFailureAction.Abort });
+
+  expect(useIdleStore.getState().liveRun).toBeNull();
 });

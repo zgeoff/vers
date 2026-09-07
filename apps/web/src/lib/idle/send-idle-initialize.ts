@@ -16,7 +16,7 @@ export async function sendIdleInitialize(client: WorkerClient, signal: AbortSign
   }
 
   setSimulationInitialized(true);
-  setSimulationSnapshot(result.state);
+  setSimulationSnapshot(result.state, result.liveRun);
   setRewardSlotLedger(result.rewardSlotLedger);
   setWriterDisplacedActivityID(result.writerDisplacedActivityID);
 }
