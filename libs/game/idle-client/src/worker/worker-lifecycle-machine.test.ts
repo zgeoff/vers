@@ -368,7 +368,10 @@ test("it starts at once when the avatar's latest run is already recorded", async
   expect(seen).not.toContain('resyncing');
 });
 
-test('it queues a start behind a resync already in flight for its avatar without adding a second', async () => {
+test("it starts without another resync when the resync it queued behind recorded its avatar's latest run", async () => {
+  const viewer = await createViewer({ avatar: { xp: 400 } });
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
+
   let releaseFlush: (() => void) | undefined;
 
   const heldFlush = new Promise<void>((resolve) => {
@@ -376,6 +379,8 @@ test('it queues a start behind a resync already in flight for its avatar without
   });
 
   const context = createStubWorkerContext({
+    bundledEngineHash: 'engine_hash_test',
+    client,
     submitter: {
       flushHeld: () => heldFlush,
       flushNow: () => Promise.resolve(),
@@ -386,41 +391,166 @@ test('it queues a start behind a resync already in flight for its avatar without
     },
   });
 
-  const seen: Array<unknown> = [];
+  await setupStartableNode(viewer.avatar.id);
+
+  await db.activityCollection.create({
+    appendedHead: 0,
+    avatarID: viewer.avatar.id,
+    buildSnapshot: { level: buildLevelFromXP(400), xp: 400 },
+    status: 'stopped',
+    verifiedHead: 0,
+  });
+
+  const seen: Array<Readonly<{ kind: string }> | null> = [];
 
   const subscription = context.getLifecycle().subscribe((snapshot) => {
-    seen.push(snapshot.value);
+    seen.push(snapshot.context.currentRequest);
   });
 
   onTestFinished(() => {
     subscription.unsubscribe();
   });
 
-  const resync = runResyncTurn(context, 'avatar_resync_in_flight', false);
+  const resync = runResyncTurn(context, viewer.avatar.id, false);
 
   await waitFor(() => {
     expect(context.getLifecycle().getSnapshot().value).toBe('resyncing');
   });
 
   const start = handleStartActivityMessage(context, {
-    avatarID: 'avatar_resync_in_flight',
+    avatarID: viewer.avatar.id,
     scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
   releaseFlush?.();
 
-  await Promise.all([resync, start]);
+  const [, status] = await Promise.all([resync, start]);
 
-  await waitFor(() => {
-    expect(context.getLifecycle().getSnapshot().value).toBe('idle');
+  expect(status.kind).toBe('started');
+
+  // every snapshot repeats the request in flight, so distinct request objects count the resyncs
+  const resyncRequests = new Set(seen.filter((request) => request?.kind === 'resync'));
+
+  expect(resyncRequests.size).toBe(1);
+});
+
+test("it resyncs the start's avatar once an earlier resync for another avatar has cleared its live run", async () => {
+  const gates: Record<string, { readonly promise: Promise<void>; readonly release: () => void }> =
+    {};
+
+  for (const avatarID of ['avatar_a', 'avatar_b']) {
+    let release: (() => void) | undefined;
+
+    const promise = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+
+    gates[avatarID] = { promise, release: () => release?.() };
+  }
+
+  let currentAvatarID = 'avatar_b';
+
+  const context = createStubWorkerContext({
+    submitter: {
+      flushHeld: () => gates[currentAvatarID]!.promise,
+      flushNow: () => Promise.resolve(),
+      registerActivity: () => Promise.resolve(),
+      submit: () => Promise.resolve(undefined),
+      isEvicted: () => false,
+      removeEviction: () => {},
+    },
   });
 
-  // a snapshot repeats its state on every context write, so only the state changes count
-  const visited = seen.filter((value, index) => value !== seen[index - 1]);
+  // a live run for avatar_a is installed, which would let a start for it skip the resync — but
+  // the resync for avatar_b ahead of it resets that run before the start reaches the head
+  context.setSimulation(createSimulation());
+  context.setActivity(createMockActivityData({ avatarID: 'avatar_a' }));
 
-  expect(visited.filter((value) => value === 'resyncing')).toHaveLength(1);
-  expect(visited.indexOf('starting')).toBeGreaterThan(visited.indexOf('resyncing'));
+  const resync = runResyncTurn(context, 'avatar_b', false);
+
+  await waitFor(() => {
+    expect(context.getLifecycle().getSnapshot().value).toBe('resyncing');
+  });
+
+  const start = handleStartActivityMessage(context, {
+    avatarID: 'avatar_a',
+    scopeID: '0_0',
+    scopeType: 'world_map_node',
+  });
+
+  currentAvatarID = 'avatar_a';
+
+  gates['avatar_b']!.release();
+
+  await waitForActiveResync(context, 'avatar_a');
+
+  expect(context.getActivity()).toBeNull();
+
+  gates['avatar_a']!.release();
+
+  await Promise.all([resync, start]);
+});
+
+test('it builds the prerequisite resync at the head of the queue, so a stop scope advanced while the start waited does not abort it', async () => {
+  const gates: Record<string, { readonly promise: Promise<void>; readonly release: () => void }> =
+    {};
+
+  for (const avatarID of ['avatar_a', 'avatar_b']) {
+    let release: (() => void) | undefined;
+
+    const promise = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+
+    gates[avatarID] = { promise, release: () => release?.() };
+  }
+
+  let currentAvatarID = 'avatar_b';
+
+  const context = createStubWorkerContext({
+    submitter: {
+      flushHeld: () => gates[currentAvatarID]!.promise,
+      flushNow: () => Promise.resolve(),
+      registerActivity: () => Promise.resolve(),
+      submit: () => Promise.resolve(undefined),
+      isEvicted: () => false,
+      removeEviction: () => {},
+    },
+  });
+
+  const resync = runResyncTurn(context, 'avatar_b', false);
+
+  await waitFor(() => {
+    expect(context.getLifecycle().getSnapshot().value).toBe('resyncing');
+  });
+
+  const start = handleStartActivityMessage(context, {
+    avatarID: 'avatar_a',
+    scopeID: '0_0',
+    scopeType: 'world_map_node',
+  });
+
+  context.advanceStopScope();
+
+  currentAvatarID = 'avatar_a';
+
+  gates['avatar_b']!.release();
+
+  await waitForActiveResync(context, 'avatar_a');
+
+  const prerequisite = context.getLifecycle().getSnapshot().context.currentRequest;
+
+  invariant(
+    prerequisite !== null && prerequisite.kind === 'resync',
+    'expected the prerequisite resync as the active request',
+  );
+
+  expect(prerequisite.signals.stop.aborted).toBeFalse();
+
+  gates['avatar_a']!.release();
+
+  await Promise.all([resync, start]);
 });
 
 test('it runs queued starts strictly one at a time in queue order', async () => {

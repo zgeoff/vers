@@ -24,6 +24,7 @@ import type { StartStatus } from './worker-contract';
 type PendingFlowRequest =
   | {
       readonly kind: 'start';
+      readonly awaitedResync: boolean;
       readonly input: Readonly<StartActivityInput>;
       readonly token: string;
       readonly deferred: Deferred<StartStatus>;
@@ -357,48 +358,6 @@ export const workerLifecycleMachine = setup({
           const token = crypto.randomUUID();
 
           return {
-            pending: [
-              ...args.context.pending,
-              buildResyncRequest(
-                args.context,
-                args.event.input.avatarID,
-                false,
-                buildDeferred<void>(),
-                [],
-              ),
-              buildStartRequest(args.event, token),
-            ],
-            resyncTicket: args.context.resyncTicket ?? { pendingClaimAvatarID: null },
-            startToken: token,
-          };
-        }),
-        guard: (args) => isFlowActive(args) && needsResyncBeforeStart(args),
-      },
-      {
-        actions: assign((args) => {
-          const token = crypto.randomUUID();
-
-          return {
-            currentRequest: buildResyncRequest(
-              args.context,
-              args.event.input.avatarID,
-              false,
-              buildDeferred<void>(),
-              [],
-            ),
-            pending: [...args.context.pending, buildStartRequest(args.event, token)],
-            resyncTicket: { pendingClaimAvatarID: null },
-            startToken: token,
-          };
-        }),
-        guard: needsResyncBeforeStart,
-        target: '.resyncing',
-      },
-      {
-        actions: assign((args) => {
-          const token = crypto.randomUUID();
-
-          return {
             pending: [...args.context.pending, buildStartRequest(args.event, token)],
             startToken: token,
           };
@@ -411,7 +370,7 @@ export const workerLifecycleMachine = setup({
 
           return { currentRequest: buildStartRequest(args.event, token), startToken: token };
         }),
-        target: '.starting',
+        target: '.dispatching',
       },
     ],
     STOP_ACTIVITY: [
@@ -526,6 +485,14 @@ export const workerLifecycleMachine = setup({
     // selects
     dispatching: {
       always: [
+        // the resync is built here, as the start reaches the head of the queue, so its signals
+        // follow the stop scope current at that moment and an earlier flow's changes to the live
+        // run are already visible
+        {
+          actions: assign((args) => buildPrerequisiteResync(args.context)),
+          guard: (args) => needsResyncBeforeStart(args.context),
+          target: 'resyncing',
+        },
         {
           guard: (args) => args.context.currentRequest?.kind === 'start',
           target: 'starting',
@@ -690,32 +657,53 @@ function buildStartRequest(
   event: Readonly<StartEvent>,
   token: string,
 ): PendingFlowRequestOf<'start'> {
-  return { deferred: event.deferred, input: event.input, kind: 'start', token };
+  return {
+    awaitedResync: false,
+    deferred: event.deferred,
+    input: event.input,
+    kind: 'start',
+    token,
+  };
 }
 
 // a start folds its build snapshot from the avatar's latest-run record, which only a settled resync
 // or a live run writes — a start that arrives ahead of the boot resync would fold from an empty
 // record and mint a snapshot the server refuses
-function needsResyncBeforeStart(
-  args: Readonly<{ context: WorkerLifecycleContext; event: StartEvent }>,
-): boolean {
-  const avatarID = args.event.input.avatarID;
-  const runtime = args.context.runtime;
+function needsResyncBeforeStart(context: WorkerLifecycleContext): boolean {
+  const request = context.currentRequest;
 
-  if (
-    runtime.getLatestRun()?.avatarID === avatarID ||
-    runtime.getActivity()?.avatarID === avatarID
-  ) {
+  if (request?.kind !== 'start' || request.awaitedResync) {
     return false;
   }
 
-  return !hasQueuedResync(args.context, avatarID);
+  const avatarID = request.input.avatarID;
+  const runtime = context.runtime;
+
+  return (
+    runtime.getLatestRun()?.avatarID !== avatarID && runtime.getActivity()?.avatarID !== avatarID
+  );
 }
 
-function hasQueuedResync(context: WorkerLifecycleContext, avatarID: string): boolean {
-  return [context.currentRequest, ...context.pending].some(
-    (request) => request?.kind === 'resync' && request.avatarID === avatarID,
-  );
+// one prerequisite resync per start: a resync that settles without a record (a fresh avatar, a
+// dead network) still lets the start run rather than requeue behind another
+function buildPrerequisiteResync(
+  context: WorkerLifecycleContext,
+): Pick<WorkerLifecycleContext, 'currentRequest' | 'pending' | 'resyncTicket'> {
+  const request = context.currentRequest;
+
+  invariant(request?.kind === 'start', 'a prerequisite resync is built for a start at the head');
+
+  return {
+    currentRequest: buildResyncRequest(
+      context,
+      request.input.avatarID,
+      false,
+      buildDeferred<void>(),
+      [],
+    ),
+    pending: [{ ...request, awaitedResync: true }, ...context.pending],
+    resyncTicket: context.resyncTicket ?? { pendingClaimAvatarID: null },
+  };
 }
 
 function isFlowActive(args: ContextArg): boolean {
