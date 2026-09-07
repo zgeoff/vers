@@ -1742,14 +1742,19 @@ test("it refuses a kicked writer session's undelivered offline activityStart wit
     startHash: derived.startHash,
   });
 
+  const activityID = `act_${createId()}`;
+
   expect(
     clientA.advanceActivity({
-      activityID: `act_${createId()}`,
+      activityID,
       continuations: [createMockCatchUpContinuation()],
       expectedHead: 0,
       activityStart,
     }),
-  ).rejects.toMatchObject({ code: 'CONFLICT' });
+  ).rejects.toMatchObject({
+    code: 'CONFLICT',
+    data: { activityID, appendedHead: 0, avatarID: avatar.id, reason: 'active-run-exists' },
+  });
 });
 
 test("it admits a successor whose build snapshot folds the predecessor's start snapshot with its confirmed terminal checkpoint", async () => {

@@ -137,20 +137,20 @@ export async function advanceActivity(
       // statement once a constraint violation has poisoned it.
       const recovered = await resolveMintIDCollision(deps.db, pinned, continuation);
 
-      if (recovered === undefined) {
+      if (recovered.kind === 'refused') {
         const outcome: BailOutcome = {
           activityID: stepActivityID,
           appendedHead: stepExpectedHead,
           avatarID: pinned.avatarId,
           kind: 'conflict',
-          reason: 'activity-id-taken',
+          reason: recovered.reason,
         };
 
         recordBailout(outcome);
         throw buildBailError(opts.errors, outcome);
       }
 
-      minted = recovered;
+      minted = recovered.row;
     }
 
     recordAdvanceContinuation(minted.mintOutcome);
@@ -244,45 +244,54 @@ async function resolveActivityStartRow(
       opts.input.activityID,
     );
 
-    if (recovered === undefined) {
+    if (recovered.kind === 'refused') {
       const outcome: BailOutcome = {
         activityID: opts.input.activityID,
         appendedHead: 0,
         avatarID: activityStart.avatarID,
         kind: 'conflict',
-        reason: 'activity-id-taken',
+        reason: recovered.reason,
       };
 
       recordBailout(outcome);
       throw buildBailError(opts.errors, outcome);
     }
 
-    return recovered;
+    return recovered.row;
   }
 }
+
+// The mint's insert trips one of two unique indexes: the primary key, when the client id already
+// names a row, or the one-active-run-per-avatar index, when no row sits at that id.
+type MintCollisionResolution<TConverged> =
+  | { readonly kind: 'converged'; readonly row: TConverged }
+  | { readonly kind: 'refused'; readonly reason: 'active-run-exists' | 'activity-id-taken' };
 
 async function resolveActivityStartAdmissionCollision(
   db: Kysely<DB>,
   activityStart: Readonly<OfflineActivityStartSubmission>,
   activityID: string,
-): Promise<Selectable<Activities> | undefined> {
+): Promise<MintCollisionResolution<Selectable<Activities>>> {
   const existing = await db
     .selectFrom('activities')
     .selectAll()
     .where('id', '=', activityID)
     .executeTakeFirst();
 
+  if (existing === undefined) {
+    return { kind: 'refused', reason: 'active-run-exists' };
+  }
+
   if (
-    existing === undefined ||
     existing.avatarId !== activityStart.avatarID ||
     existing.startKey !== activityStart.startKey ||
     existing.scopeType !== activityStart.scopeType ||
     existing.scopeId !== activityStart.scopeID
   ) {
-    return undefined;
+    return { kind: 'refused', reason: 'activity-id-taken' };
   }
 
-  return existing;
+  return { kind: 'converged', row: existing };
 }
 
 interface PinnedActivityContext {
@@ -827,22 +836,25 @@ async function resolveMintIDCollision(
   db: Kysely<DB>,
   pinned: Readonly<PinnedActivityContext>,
   continuation: Readonly<CatchUpContinuation>,
-): Promise<MintedContinuation | undefined> {
+): Promise<MintCollisionResolution<MintedContinuation>> {
   const existing = await db
     .selectFrom('activities')
     .selectAll()
     .where('id', '=', continuation.id)
     .executeTakeFirst();
 
+  if (existing === undefined) {
+    return { kind: 'refused', reason: 'active-run-exists' };
+  }
+
   if (
-    existing === undefined ||
     existing.avatarId !== pinned.avatarId ||
     existing.startKey !== continuation.startKey ||
     existing.scopeType !== pinned.scopeType ||
     existing.scopeId !== pinned.scopeId
   ) {
-    return undefined;
+    return { kind: 'refused', reason: 'activity-id-taken' };
   }
 
-  return { mintOutcome: 'converged', row: existing };
+  return { kind: 'converged', row: { mintOutcome: 'converged', row: existing } };
 }

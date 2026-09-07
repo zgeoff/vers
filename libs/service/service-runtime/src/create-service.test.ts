@@ -745,6 +745,38 @@ test('it logs a refused /rpc call at warn with the code, the status, and the dat
   );
 });
 
+test('it logs an undeclared 4xx at warn with its code and status and no data', async () => {
+  const keyPair = await getTestServiceKeyPair();
+
+  updateEnv('SERVICE_AUTH_JWKS', keyPair.jwksJSON);
+
+  const contract = buildTestContract();
+
+  const service = await createService({
+    buildRouter: () => buildTestRouter(contract),
+    envShape: {},
+    name: 'test-service',
+  });
+
+  const warnSpy = spyOn(service.logger, 'warn');
+
+  const token = await createServiceToken({
+    audience: 'test-service',
+    privateKey: keyPair.privateKey,
+  });
+
+  const response = await service.app.handle(
+    new Request('http://test.local/rpc/sleep', {
+      body: JSON.stringify({ json: { ms: 'not-a-number' } }),
+      headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+      method: 'POST',
+    }),
+  );
+
+  expect(response.status).toBe(400);
+  expect(warnSpy).toHaveBeenCalledWith({ code: 'BAD_REQUEST', status: 400 }, 'request refused');
+});
+
 test('it logs a failed /rpc call at error severity', async () => {
   const keyPair = await getTestServiceKeyPair();
 

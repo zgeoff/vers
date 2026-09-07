@@ -43,8 +43,10 @@ policy compile-checked: a bespoke code without `status` and a canonical code res
 status are both type errors.
 
 `data` carries the machine-readable specifics a client needs to act: a `field` discriminant on a
-conflict, a `reason` on an auth failure. Fields are for narrowing and rendering, never freetext.
-Clients narrow on `code` (via `isDefinedError`/`safe`) and `data`, never on `message` strings.
+conflict, a `reason` on an auth failure. Fields are for narrowing and rendering, never freetext. The
+service's central interceptor logs a declared error's `data`, so a field never carries a secret or a
+submitted input. Clients narrow on `code` (via `isDefinedError`/`safe`) and `data`, never on
+`message` strings.
 
 ### Registry
 
@@ -101,7 +103,8 @@ The activity `CONFLICT` refusals carry the same `activityID` and `avatarID` besi
 plus a `reason` from `ConflictReasonSchema`: `stale-head` is a batch or continuation whose expected
 head the row has moved past, `stale-chain-head` is an activity start built on a chain position the
 chain has moved past, and `activity-id-taken` is a mint whose client id already names a row with a
-different avatar, start key, or scope.
+different avatar, start key, or scope, and `active-run-exists` is a mint refused because the avatar
+already has an active run at another id.
 
 ## Service layer
 
@@ -112,10 +115,10 @@ different avatar, start key, or scope.
   ([service contracts](./service-contracts.md)).
 - **Central error interceptor.** One `onError` client-interceptor on the RPC handler classifies
   everything a procedure throws. A defined contract error or any 4xx is the caller's outcome: the
-  interceptor logs it at warn with its `code`, `status`, and `data`, so a refusal groups in Axiom by
-  the fields its `data` carries, and never reports it. For everything else, the interceptor logs at
-  error level with the trace id, captures it to the error backend, then oRPC encodes it as a bare
-  `INTERNAL_SERVER_ERROR`. Internals never reach the wire.
+  interceptor logs it at warn with its `code` and `status`, plus a defined error's `data`, so a
+  refusal groups in Axiom by the fields its `data` carries, and never reports it. For everything
+  else, the interceptor logs at error level with the trace id, captures it to the error backend,
+  then oRPC encodes it as a bare `INTERNAL_SERVER_ERROR`. Internals never reach the wire.
 - **Wire protocol.** Services speak the oRPC RPC protocol at `/rpc` only. Contracts keep their
   `.route()` metadata and stay OpenAPI-generatable, which the conformance suite asserts. Services
   serve no OpenAPI endpoint.
