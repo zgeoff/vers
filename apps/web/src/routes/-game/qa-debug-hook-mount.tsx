@@ -1,3 +1,4 @@
+import { useRouterState } from '@tanstack/react-router';
 import { useWriterGeneration } from '@vers/idle-client';
 import { useEffect } from 'react';
 import { useIdleWorkerHandle } from '../../lib/idle/use-idle-worker-handle';
@@ -15,14 +16,15 @@ interface QADebugHookMountProps {
 export function QADebugHookMount(props: Readonly<QADebugHookMountProps>) {
   const idleWorkerHandle = useIdleWorkerHandle();
   const writerGeneration = useWriterGeneration();
+  const search = useRouterState({ select: (state) => state.location.searchStr });
   const client = idleWorkerHandle.client;
   const qaAccount = props.qaAccount;
 
   useEffect(() => {
     const enabled = isQADebugHookEnabled({
-      dev: import.meta.env.DEV,
+      nonProductionBuild: import.meta.env.MODE !== 'production',
       qaAccount,
-      search: globalThis.location.search,
+      search,
     });
 
     const unregister =
@@ -33,7 +35,7 @@ export function QADebugHookMount(props: Readonly<QADebugHookMountProps>) {
     return () => {
       unregister?.();
     };
-  }, [client, qaAccount, writerGeneration]);
+  }, [client, qaAccount, search, writerGeneration]);
 
   return null;
 }

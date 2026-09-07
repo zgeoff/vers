@@ -1,7 +1,8 @@
 import { expect, test } from 'bun:test';
+import { waitFor } from '@testing-library/react';
 import { ActivityFailureAction } from '@vers/idle-core';
 import { createStubWorkerClient } from '../../test-utils/create-stub-worker-client';
-import { render } from '../../test-utils/render';
+import { renderWithRouter } from '../../test-utils/render-with-router';
 import { setIdleWorkerHandle } from '../../test-utils/set-idle-worker-handle';
 import { QADebugHookMount } from './qa-debug-hook-mount';
 
@@ -16,7 +17,11 @@ test('it installs the hook for a QA account once a worker is connected, and remo
     writerAbortSignal: new AbortController().signal,
   });
 
-  const rendered = render(<QADebugHookMount qaAccount />);
+  const rendered = renderWithRouter(<QADebugHookMount qaAccount />);
+
+  await waitFor(() => {
+    expect(globalThis.__versQA).toBeDefined();
+  });
 
   const snapshot = await globalThis.__versQA?.snapshot();
 
@@ -28,7 +33,7 @@ test('it installs the hook for a QA account once a worker is connected, and remo
   expect('__versQA' in globalThis).toBeFalse();
 });
 
-test('it installs nothing for an account outside the QA domain', () => {
+test('it installs nothing for an account outside the QA domain', async () => {
   setIdleWorkerHandle({
     activity: undefined,
     client: createStubWorkerClient(),
@@ -37,12 +42,17 @@ test('it installs nothing for an account outside the QA domain', () => {
     writerAbortSignal: new AbortController().signal,
   });
 
-  render(<QADebugHookMount qaAccount={false} />);
+  const rendered = renderWithRouter(<QADebugHookMount qaAccount={false} />);
+
+  await waitFor(() => {
+    expect(rendered.router.state.status).toBe('idle');
+    expect(rendered.router.state.matches).not.toBeEmpty();
+  });
 
   expect('__versQA' in globalThis).toBeFalse();
 });
 
-test('it installs nothing before a worker has connected', () => {
+test('it installs nothing before a worker has connected', async () => {
   setIdleWorkerHandle({
     activity: undefined,
     client: undefined,
@@ -51,7 +61,12 @@ test('it installs nothing before a worker has connected', () => {
     writerAbortSignal: new AbortController().signal,
   });
 
-  render(<QADebugHookMount qaAccount />);
+  const rendered = renderWithRouter(<QADebugHookMount qaAccount />);
+
+  await waitFor(() => {
+    expect(rendered.router.state.status).toBe('idle');
+    expect(rendered.router.state.matches).not.toBeEmpty();
+  });
 
   expect('__versQA' in globalThis).toBeFalse();
 });

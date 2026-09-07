@@ -183,7 +183,13 @@ export const checkpointActivityMachine = setup({
         onDone: {
           actions: [
             (args) => {
-              args.context.onFlushSettled?.(args.context.activityID, args.event.output);
+              // a throw inside a machine action errors the whole actor and strands the stream,
+              // and this observer is telemetry, so its failure is contained here
+              try {
+                args.context.onFlushSettled?.(args.context.activityID, args.event.output);
+              } catch {
+                // the settled event below still drives the transition
+              }
             },
             raise((args) => buildFlushSettledEvent(args.event.output)),
           ],
