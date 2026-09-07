@@ -359,13 +359,47 @@ export const workerLifecycleMachine = setup({
           return {
             pending: [
               ...args.context.pending,
-              {
-                deferred: args.event.deferred,
-                input: args.event.input,
-                kind: 'start' as const,
-                token,
-              },
+              buildResyncRequest(
+                args.context,
+                args.event.input.avatarID,
+                false,
+                buildDeferred<void>(),
+                [],
+              ),
+              buildStartRequest(args.event, token),
             ],
+            resyncTicket: args.context.resyncTicket ?? { pendingClaimAvatarID: null },
+            startToken: token,
+          };
+        }),
+        guard: (args) => isFlowActive(args) && needsResyncBeforeStart(args),
+      },
+      {
+        actions: assign((args) => {
+          const token = crypto.randomUUID();
+
+          return {
+            currentRequest: buildResyncRequest(
+              args.context,
+              args.event.input.avatarID,
+              false,
+              buildDeferred<void>(),
+              [],
+            ),
+            pending: [...args.context.pending, buildStartRequest(args.event, token)],
+            resyncTicket: { pendingClaimAvatarID: null },
+            startToken: token,
+          };
+        }),
+        guard: needsResyncBeforeStart,
+        target: '.resyncing',
+      },
+      {
+        actions: assign((args) => {
+          const token = crypto.randomUUID();
+
+          return {
+            pending: [...args.context.pending, buildStartRequest(args.event, token)],
             startToken: token,
           };
         }),
@@ -375,15 +409,7 @@ export const workerLifecycleMachine = setup({
         actions: assign((args) => {
           const token = crypto.randomUUID();
 
-          return {
-            currentRequest: {
-              deferred: args.event.deferred,
-              input: args.event.input,
-              kind: 'start' as const,
-              token,
-            },
-            startToken: token,
-          };
+          return { currentRequest: buildStartRequest(args.event, token), startToken: token };
         }),
         target: '.starting',
       },
@@ -656,6 +682,40 @@ function buildResyncRequest(
     kind: 'resync',
     signals: buildFlowSignals(context),
   };
+}
+
+type StartEvent = Extract<WorkerLifecycleEvent, { readonly type: 'START' }>;
+
+function buildStartRequest(
+  event: Readonly<StartEvent>,
+  token: string,
+): PendingFlowRequestOf<'start'> {
+  return { deferred: event.deferred, input: event.input, kind: 'start', token };
+}
+
+// a start folds its build snapshot from the avatar's latest-run record, which only a settled resync
+// or a live run writes — a start that arrives ahead of the boot resync would fold from an empty
+// record and mint a snapshot the server refuses
+function needsResyncBeforeStart(
+  args: Readonly<{ context: WorkerLifecycleContext; event: StartEvent }>,
+): boolean {
+  const avatarID = args.event.input.avatarID;
+  const runtime = args.context.runtime;
+
+  if (
+    runtime.getLatestRun()?.avatarID === avatarID ||
+    runtime.getActivity()?.avatarID === avatarID
+  ) {
+    return false;
+  }
+
+  return !hasQueuedResync(args.context, avatarID);
+}
+
+function hasQueuedResync(context: WorkerLifecycleContext, avatarID: string): boolean {
+  return [context.currentRequest, ...context.pending].some(
+    (request) => request?.kind === 'resync' && request.avatarID === avatarID,
+  );
 }
 
 function isFlowActive(args: ContextArg): boolean {

@@ -4,15 +4,17 @@ import {
   createMockActivityData,
   createMockContentDocument,
 } from '@vers/contract-activity/test-utils';
-import { createSimulation } from '@vers/idle-core';
+import { buildLevelFromXP, createSimulation } from '@vers/idle-core';
 import { createMockActivityInput, createMockAvatarData } from '@vers/idle-core/test-utils';
+import { createAuthedServiceClient, createViewer } from '@vers/mock-services';
 import { mockActivityService } from '@vers/mock-services/activity';
+import * as db from '@vers/mock-services/db';
 import { waitFor } from '@vers/test-utils';
 import invariant from 'tiny-invariant';
 import { createActor, fromPromise } from 'xstate';
 import { writeContentDocumentCache } from '../content/write-content-document-cache';
 import { server } from '../mocks/node';
-import type { ActivitySubmissionContext } from '../submission/types';
+import type { ActivityServiceClient, ActivitySubmissionContext } from '../submission/types';
 import { writeNodeSeeds } from '../submission/write-node-seeds';
 import { writeStartStamps } from '../submission/write-start-stamps';
 import { createStubSubmitter } from '../test-utils/create-stub-submitter';
@@ -270,6 +272,157 @@ test('it queues a start arriving during a resync and runs it after', async () =>
   expect(startIndex).toBeGreaterThan(resyncIndex);
 });
 
+test("it resyncs the avatar ahead of a start that arrives before the boot resync, so the mint folds the server's snapshot and predecessor", async () => {
+  const viewer = await createViewer({ avatar: { xp: 400 } });
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
+
+  const context = createStubWorkerContext({
+    bundledEngineHash: 'engine_hash_boot',
+    client,
+    submitter: createStubSubmitter(),
+  });
+
+  await setupStartableNode(viewer.avatar.id);
+
+  // the previous run failed and was fully delivered: its terminal total is still owed on top of
+  // the settled xp, and a reloaded worker holds no record of it
+  const delivered = await db.activityCollection.create({
+    appendedHead: 1,
+    avatarID: viewer.avatar.id,
+    buildSnapshot: { level: buildLevelFromXP(400), xp: 400 },
+    status: 'stopped',
+    verifiedHead: 0,
+  });
+
+  await db.checkpointCollection.create({
+    activityID: delivered.id,
+    payload: {
+      chainIndex: 1,
+      entropySource: 'server-key',
+      nextSeed: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaa6072',
+      rewards: { xp: 9 },
+      seed: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaa6072',
+      time: 1000,
+      type: 'failed',
+    },
+    version: 1,
+  });
+
+  const seen: Array<unknown> = [];
+
+  const subscription = context.getLifecycle().subscribe((snapshot) => {
+    seen.push(snapshot.value);
+  });
+
+  onTestFinished(() => {
+    subscription.unsubscribe();
+  });
+
+  const status = await handleStartActivityMessage(context, {
+    avatarID: viewer.avatar.id,
+    scopeID: '0_0',
+    scopeType: 'world_map_node',
+  });
+
+  invariant(status.kind === 'started', 'expected the start to mint once the resync settled');
+
+  expect(status.activity.buildSnapshot).toStrictEqual({ level: buildLevelFromXP(409), xp: 409 });
+  expect(status.activity.predecessorActivityID).toBe(delivered.id);
+  expect(seen.indexOf('resyncing')).toBeGreaterThanOrEqual(0);
+  expect(seen.indexOf('starting')).toBeGreaterThan(seen.indexOf('resyncing'));
+});
+
+test("it starts at once when the avatar's latest run is already recorded", async () => {
+  const context = createStubWorkerContext({
+    bundledEngineHash: 'engine_hash_test',
+    submitter: createStubSubmitter(),
+  });
+
+  await setupStartableNode('avatar_known_record');
+
+  context.setLatestRun({
+    activityID: 'act_known',
+    avatarID: 'avatar_known_record',
+    baselineXP: 0,
+    deltaXP: 0,
+    tail: null,
+  });
+
+  const seen: Array<unknown> = [];
+
+  const subscription = context.getLifecycle().subscribe((snapshot) => {
+    seen.push(snapshot.value);
+  });
+
+  onTestFinished(() => {
+    subscription.unsubscribe();
+  });
+
+  const status = await handleStartActivityMessage(context, {
+    avatarID: 'avatar_known_record',
+    scopeID: '0_0',
+    scopeType: 'world_map_node',
+  });
+
+  expect(status.kind).toBe('started');
+  expect(seen).not.toContain('resyncing');
+});
+
+test('it queues a start behind a resync already in flight for its avatar without adding a second', async () => {
+  let releaseFlush: (() => void) | undefined;
+
+  const heldFlush = new Promise<void>((resolve) => {
+    releaseFlush = resolve;
+  });
+
+  const context = createStubWorkerContext({
+    submitter: {
+      flushHeld: () => heldFlush,
+      flushNow: () => Promise.resolve(),
+      registerActivity: () => Promise.resolve(),
+      submit: () => Promise.resolve(undefined),
+      isEvicted: () => false,
+      removeEviction: () => {},
+    },
+  });
+
+  const seen: Array<unknown> = [];
+
+  const subscription = context.getLifecycle().subscribe((snapshot) => {
+    seen.push(snapshot.value);
+  });
+
+  onTestFinished(() => {
+    subscription.unsubscribe();
+  });
+
+  const resync = runResyncTurn(context, 'avatar_resync_in_flight', false);
+
+  await waitFor(() => {
+    expect(context.getLifecycle().getSnapshot().value).toBe('resyncing');
+  });
+
+  const start = handleStartActivityMessage(context, {
+    avatarID: 'avatar_resync_in_flight',
+    scopeID: '0_0',
+    scopeType: 'world_map_node',
+  });
+
+  releaseFlush?.();
+
+  await Promise.all([resync, start]);
+
+  await waitFor(() => {
+    expect(context.getLifecycle().getSnapshot().value).toBe('idle');
+  });
+
+  // a snapshot repeats its state on every context write, so only the state changes count
+  const visited = seen.filter((value, index) => value !== seen[index - 1]);
+
+  expect(visited.filter((value) => value === 'resyncing')).toHaveLength(1);
+  expect(visited.indexOf('starting')).toBeGreaterThan(visited.indexOf('resyncing'));
+});
+
 test('it runs queued starts strictly one at a time in queue order', async () => {
   const order: Array<string> = [];
   let releaseFirst: (() => void) | undefined;
@@ -332,6 +485,15 @@ test('it serializes flows queued from different kinds on the one actor', async (
   const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_test', submitter });
 
   await setupStartableNode('avatar_mixed_kinds');
+
+  // the avatar's latest run is already known, so the start needs no resync ahead of it
+  context.setLatestRun({
+    activityID: 'act_known',
+    avatarID: 'avatar_mixed_kinds',
+    baselineXP: 0,
+    deltaXP: 0,
+    tail: null,
+  });
 
   const seen: Array<unknown> = [];
 
@@ -483,6 +645,15 @@ test('it drops a non-claiming resync while one is queued', async () => {
   const connection = collectBroadcasts(context);
 
   await setupStartableNode('avatar_blocking_start');
+
+  // the avatar's latest run is already known, so the start needs no resync ahead of it
+  context.setLatestRun({
+    activityID: 'act_known',
+    avatarID: 'avatar_blocking_start',
+    baselineXP: 0,
+    deltaXP: 0,
+    tail: null,
+  });
 
   const blocking = handleStartActivityMessage(context, {
     avatarID: 'avatar_blocking_start',
@@ -883,6 +1054,15 @@ test('it runs a resync arriving during a non-resync turn after that turn rather 
   const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_test', submitter });
 
   await setupStartableNode('avatar_blocks_resync');
+
+  // the avatar's latest run is already known, so the start needs no resync ahead of it
+  context.setLatestRun({
+    activityID: 'act_known',
+    avatarID: 'avatar_blocks_resync',
+    baselineXP: 0,
+    deltaXP: 0,
+    tail: null,
+  });
 
   const seen: Array<unknown> = [];
 
