@@ -144,7 +144,12 @@ test('it drops a start the server permanently refuses, its successor, and the la
   server.use(
     mockActivityService.advanceActivity.handler((opts) => {
       throw opts.errors.CHECKPOINT_INVALID({
-        data: { activityID: refused.id, appendedHead: 0, reason: 'start-hash-mismatch' },
+        data: {
+          activityID: refused.id,
+          appendedHead: 0,
+          avatarID: refused.avatarID,
+          reason: 'start-hash-mismatch',
+        },
       });
     }),
   );
@@ -188,7 +193,12 @@ test('it submits a deferred start once per drain and leaves its successor unsubm
       track(opts.input.activityID);
 
       throw opts.errors.CHECKPOINT_INVALID({
-        data: { activityID: deferred.id, appendedHead: 0, reason: 'build-snapshot-mismatch' },
+        data: {
+          activityID: deferred.id,
+          appendedHead: 0,
+          avatarID: deferred.avatarID,
+          reason: 'build-snapshot-mismatch',
+        },
       });
     }),
   );

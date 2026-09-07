@@ -74,7 +74,7 @@ activity start it just submitted or drop it;
 | activity     | `ACTIVITY_TERMINAL`    | 409    | Append against a terminal activity status; fatal for the stream.                                                                             | `{ status, appendedHead }`             |
 | activity     | `AVATAR_NOT_ACTIVE`    | 409    | Start admission or reveal refused: the acting avatar is not the account's active one.                                                        | `{ activeAvatarID, activeAvatarName }` |
 | activity     | `CHAIN_QUARANTINED`    | 409    | New start or continuation refused while the chain is quarantined.                                                                            | —                                      |
-| activity     | `CHECKPOINT_INVALID`   | 422    | Checkpoint batch fails structural or cross-check validation; `reason` names the failed check.                                                | `{ reason }`                           |
+| activity     | `CHECKPOINT_INVALID`   | 422    | Checkpoint batch fails structural or cross-check validation; `reason` names the failed check.                                                | `{ activityID, avatarID, reason }`     |
 | activity     | `NODE_NOT_REVEALED`    | 409    | Scope has no chain row — `revealNodes` was never called for it.                                                                              | —                                      |
 | activity     | `NODE_UNKNOWN`         | 404    | Scope id doesn't resolve to a node on the current world map.                                                                                 | —                                      |
 | activity     | `SESSION_EVICTED`      | 403    | Append or stop from a session that is no longer the activity's writer; fatal for that stream.                                                | —                                      |
@@ -97,6 +97,12 @@ structural check a batch failed. On `advanceActivity`, `AdvanceCheckpointInvalid
 extends it with the start-admission checks: the predicted build snapshot and the recomputed start
 hash. A client narrows on the value rather than matching a string.
 
+The activity `CONFLICT` refusals carry the same `activityID` and `avatarID` beside `appendedHead`,
+plus a `reason` from `ConflictReasonSchema`: `stale-head` is a batch or continuation whose expected
+head the row has moved past, `stale-chain-head` is an activity start built on a chain position the
+chain has moved past, and `activity-id-taken` is a mint whose client id already names a row with a
+different avatar, start key, or scope.
+
 ## Service layer
 
 `createService` (`@vers/service-runtime`) owns the whole failure path outside handler bodies:
@@ -105,9 +111,10 @@ hash. A client narrows on the value rather than matching a string.
   before any oRPC handler runs. The response is not contract-shaped by design
   ([service contracts](./service-contracts.md)).
 - **Central error interceptor.** One `onError` client-interceptor on the RPC handler classifies
-  everything a procedure throws. A defined contract error or any 4xx passes through untouched: no
-  log, no report, it is the caller's outcome. For everything else, the interceptor logs at error
-  level with the trace id, captures it to the error backend, then oRPC encodes it as a bare
+  everything a procedure throws. A defined contract error or any 4xx is the caller's outcome: the
+  interceptor logs it at warn with its `code`, `status`, and `data`, so a refusal groups in Axiom by
+  the fields its `data` carries, and never reports it. For everything else, the interceptor logs at
+  error level with the trace id, captures it to the error backend, then oRPC encodes it as a bare
   `INTERNAL_SERVER_ERROR`. Internals never reach the wire.
 - **Wire protocol.** Services speak the oRPC RPC protocol at `/rpc` only. Contracts keep their
   `.route()` metadata and stay OpenAPI-generatable, which the conformance suite asserts. Services

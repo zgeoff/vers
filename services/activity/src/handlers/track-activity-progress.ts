@@ -7,14 +7,15 @@ import { sql } from 'kysely';
 import type { Kysely } from 'kysely';
 import invariant from 'tiny-invariant';
 import { findCheckpointBatchInvalidReason } from '../find-checkpoint-batch-invalid-reason';
+import { recordRefusal } from '../metrics/record-refusal';
 import { recordTerminalTransition } from '../metrics/record-terminal-transition';
 import { pickCheckpointBatchRaceOutcome } from '../pick-checkpoint-batch-race-outcome';
 import type {
   CappedPayload,
   CheckpointInvalidPayload,
+  ConflictPayload,
   EmptyErrorPayload,
   MissingSessionPayload,
-  StaleHeadPayload,
   TerminalStatusPayload,
 } from '../types';
 import { updateAppendedAnchorFromTail } from './update-appended-anchor-from-tail';
@@ -36,7 +37,7 @@ interface TrackActivityProgressOpts {
     readonly ACTIVITY_CAPPED: (payload: CappedPayload) => Error;
     readonly ACTIVITY_TERMINAL: (payload: TerminalStatusPayload) => Error;
     readonly CHECKPOINT_INVALID: (payload: CheckpointInvalidPayload) => Error;
-    readonly CONFLICT: (payload: StaleHeadPayload) => Error;
+    readonly CONFLICT: (payload: ConflictPayload) => Error;
     readonly NOT_FOUND: (payload: EmptyErrorPayload) => Error;
     readonly SESSION_EVICTED: (payload: EmptyErrorPayload) => Error;
     readonly UNAUTHORIZED: (payload: MissingSessionPayload) => Error;
@@ -101,7 +102,11 @@ export async function trackActivityProgress(
   const reason = findCheckpointBatchInvalidReason(opts.input, { ...head, appendedTimeMs });
 
   if (reason !== undefined) {
-    throw opts.errors.CHECKPOINT_INVALID({ data: { reason } });
+    recordRefusal('CHECKPOINT_INVALID', reason);
+
+    throw opts.errors.CHECKPOINT_INVALID({
+      data: { activityID: opts.input.activityID, avatarID: head.avatarId, reason },
+    });
   }
 
   const lastCheckpoint = opts.input.checkpoints.at(-1);
@@ -294,7 +299,7 @@ async function checkAppendRace(
 ): Promise<{ appendedHead: number }> {
   const current = await db
     .selectFrom('activities')
-    .select(['appendedHead', 'lastHash', 'status', 'writerSessionId'])
+    .select(['appendedHead', 'avatarId', 'lastHash', 'status', 'writerSessionId'])
     .where('id', '=', opts.input.activityID)
     .executeTakeFirst();
 
@@ -320,7 +325,17 @@ async function checkAppendRace(
     }
 
     case 'conflict': {
-      throw opts.errors.CONFLICT({ data: { appendedHead: outcome.appendedHead } });
+      invariant(current !== undefined, 'a conflict outcome resolves only against a read row');
+      recordRefusal('CONFLICT', 'stale-head');
+
+      throw opts.errors.CONFLICT({
+        data: {
+          activityID: opts.input.activityID,
+          appendedHead: outcome.appendedHead,
+          avatarID: current.avatarId,
+          reason: 'stale-head',
+        },
+      });
     }
 
     case 'resubmit-settled': {

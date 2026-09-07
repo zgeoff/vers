@@ -143,7 +143,10 @@ test('it rejects a stale expectedHead with CONFLICT carrying the current head', 
       checkpoints: staleBatch,
       expectedHead: 0,
     }),
-  ).rejects.toMatchObject({ code: 'CONFLICT', data: { appendedHead: 1 } });
+  ).rejects.toMatchObject({
+    code: 'CONFLICT',
+    data: { activityID: started.id, appendedHead: 1, avatarID: avatar.id, reason: 'stale-head' },
+  });
 });
 
 test('it succeeds on a resend of the tail after a stale-head CONFLICT', async () => {
@@ -204,7 +207,7 @@ test('it rejects a non-contiguous batch with CHECKPOINT_INVALID', async () => {
     client.trackActivityProgress({ activityID: started.id, checkpoints: batch, expectedHead: 0 }),
   ).rejects.toMatchObject({
     code: 'CHECKPOINT_INVALID',
-    data: { reason: 'non-contiguous-versions' },
+    data: { activityID: started.id, avatarID: avatar.id, reason: 'non-contiguous-versions' },
   });
 });
 

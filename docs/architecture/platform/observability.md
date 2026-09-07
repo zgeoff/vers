@@ -173,6 +173,7 @@ in stack state are encrypted by the stack passphrase.
 | `vers.activity.content_incompatible_rejections` | counter         | `{rejection}`    | `path`              | activity-start admissions rejected because the resolved engine's max content version falls behind the requested content                                      |
 | `vers.activity.advance_continuations`           | counter         | `{continuation}` | `outcome`           | advanceActivity continuations processed, by outcome                                                                                                          |
 | `vers.activity.advance_bailouts`                | counter         | `{bailout}`      | `reason`            | advanceActivity requests that bailed before their continuations' end, by reason                                                                              |
+| `vers.activity.refusal`                         | counter         | `{refusal}`      | `code`, `reason`    | checkpoint and start refusals answered `CHECKPOINT_INVALID` or `CONFLICT`, by the reason the refusal's `data` carries                                        |
 | `vers.activity.reveal_cells`                    | histogram       | `{cell}`         | —                   | revealed cells returned per getRevealedNodes query                                                                                                           |
 | `vers.activity.reveal_sources`                  | histogram       | `{grant}`        | —                   | first-clear grant rows scanned per getRevealedNodes query                                                                                                    |
 | `vers.activity.reveal_mints`                    | counter         | `{node}`         | —                   | activity-chain rows minted or re-affirmed per revealNodes call                                                                                               |
@@ -240,6 +241,10 @@ The remaining split instruments enumerate their attribute values:
   (`conflict`, `checkpoint_invalid`, `activity_capped`, `session_evicted`, `chain_quarantined`,
   `terminal`). A bailout always leaves the confirmed head advanced past the committed prefix, so a
   rising count tracks how often an offline catch-up's outer resync must re-plan, not lost progress.
+- `vers.activity.refusal` by `code` and `reason`, recorded at every site that answers a
+  `trackActivityProgress` or `advanceActivity` call with `CHECKPOINT_INVALID` or `CONFLICT`. The
+  `reason` is the value the refusal's `data` carries, so the counter and the interceptor's warn log
+  split the same way ([error handling](../services/error-handling.md#registry)).
 - `vers.activity.content_incompatible_rejections` by `path`: `requested` is a client-sent
   sim-version hash; `fallback` is the registry-current version resolved for a start that carries no
   hash.

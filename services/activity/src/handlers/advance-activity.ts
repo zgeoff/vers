@@ -3,6 +3,7 @@ import type {
   AdvanceCheckpointInvalidReason,
   BuildSnapshot,
   CatchUpContinuation,
+  ConflictReason,
   ContentDocument,
   EncounterNode,
   OfflineActivityStartSubmission,
@@ -21,6 +22,7 @@ import { getOptimisticBuild } from '../get-optimistic-build';
 import { isUniqueViolation } from '../is-unique-violation';
 import { recordAdvanceBailout } from '../metrics/record-advance-bailout';
 import { recordAdvanceContinuation } from '../metrics/record-advance-continuation';
+import { recordRefusal } from '../metrics/record-refusal';
 import { recordTerminalTransition } from '../metrics/record-terminal-transition';
 import { pickCheckpointBatchRaceOutcome } from '../pick-checkpoint-batch-race-outcome';
 import type {
@@ -28,6 +30,7 @@ import type {
   AdvanceCheckpointInvalidPayload,
   AdvanceTerminalPayload,
   AvatarNotActivePayload,
+  ConflictPayload,
   EmptyErrorPayload,
   MissingSessionPayload,
   SimVersionProblemPayload,
@@ -60,7 +63,7 @@ interface AdvanceActivityOpts {
     readonly AVATAR_NOT_ACTIVE: (payload: AvatarNotActivePayload) => Error;
     readonly CHAIN_QUARANTINED: (payload: AdvanceBailPayload) => Error;
     readonly CHECKPOINT_INVALID: (payload: AdvanceCheckpointInvalidPayload) => Error;
-    readonly CONFLICT: (payload: AdvanceBailPayload) => Error;
+    readonly CONFLICT: (payload: ConflictPayload) => Error;
     readonly NODE_NOT_REVEALED: (payload: EmptyErrorPayload) => Error;
     readonly NODE_UNKNOWN: (payload: EmptyErrorPayload) => Error;
     readonly NOT_FOUND: (payload: EmptyErrorPayload) => Error;
@@ -121,7 +124,7 @@ export async function advanceActivity(
       });
     } catch (error: unknown) {
       if (error instanceof ContinuationBailError) {
-        recordAdvanceBailout(BAILOUT_REASONS[error.outcome.kind]);
+        recordBailout(error.outcome);
         throw buildBailError(opts.errors, error.outcome);
       }
 
@@ -135,13 +138,16 @@ export async function advanceActivity(
       const recovered = await resolveMintIDCollision(deps.db, pinned, continuation);
 
       if (recovered === undefined) {
-        recordAdvanceBailout('conflict');
-
-        throw buildBailError(opts.errors, {
+        const outcome: BailOutcome = {
           activityID: stepActivityID,
           appendedHead: stepExpectedHead,
+          avatarID: pinned.avatarId,
           kind: 'conflict',
-        });
+          reason: 'activity-id-taken',
+        };
+
+        recordBailout(outcome);
+        throw buildBailError(opts.errors, outcome);
       }
 
       minted = recovered;
@@ -239,11 +245,16 @@ async function resolveActivityStartRow(
     );
 
     if (recovered === undefined) {
-      recordAdvanceBailout('conflict');
+      const outcome: BailOutcome = {
+        activityID: opts.input.activityID,
+        appendedHead: 0,
+        avatarID: activityStart.avatarID,
+        kind: 'conflict',
+        reason: 'activity-id-taken',
+      };
 
-      throw opts.errors.CONFLICT({
-        data: { activityID: opts.input.activityID, appendedHead: 0 },
-      });
+      recordBailout(outcome);
+      throw buildBailError(opts.errors, outcome);
     }
 
     return recovered;
@@ -301,10 +312,17 @@ type BailOutcome =
   | {
       readonly activityID: string;
       readonly appendedHead: number;
+      readonly avatarID: string;
       readonly kind: 'checkpoint-invalid';
       readonly reason: AdvanceCheckpointInvalidReason;
     }
-  | { readonly activityID: string; readonly appendedHead: number; readonly kind: 'conflict' }
+  | {
+      readonly activityID: string;
+      readonly appendedHead: number;
+      readonly avatarID: string;
+      readonly kind: 'conflict';
+      readonly reason: ConflictReason;
+    }
   | { readonly activityID: string; readonly appendedHead: number; readonly kind: 'session-evicted' }
   | {
       readonly activityID: string;
@@ -335,6 +353,18 @@ const BAILOUT_REASONS = {
   terminal: 'terminal',
 } as const;
 
+function recordBailout(outcome: Readonly<BailOutcome>): void {
+  recordAdvanceBailout(BAILOUT_REASONS[outcome.kind]);
+
+  if (outcome.kind === 'checkpoint-invalid') {
+    recordRefusal('CHECKPOINT_INVALID', outcome.reason);
+  }
+
+  if (outcome.kind === 'conflict') {
+    recordRefusal('CONFLICT', outcome.reason);
+  }
+}
+
 function buildBailError(
   errors: AdvanceActivityOpts['errors'],
   outcome: Readonly<BailOutcome>,
@@ -357,6 +387,7 @@ function buildBailError(
         data: {
           activityID: outcome.activityID,
           appendedHead: outcome.appendedHead,
+          avatarID: outcome.avatarID,
           reason: outcome.reason,
         },
       });
@@ -364,7 +395,12 @@ function buildBailError(
 
     case 'conflict': {
       return errors.CONFLICT({
-        data: { activityID: outcome.activityID, appendedHead: outcome.appendedHead },
+        data: {
+          activityID: outcome.activityID,
+          appendedHead: outcome.appendedHead,
+          avatarID: outcome.avatarID,
+          reason: outcome.reason,
+        },
       });
     }
 
@@ -474,6 +510,7 @@ async function runContinuation(
     throw new ContinuationBailError({
       activityID: input.targetActivityID,
       appendedHead: target.appendedHead,
+      avatarID: pinned.avatarId,
       kind: 'checkpoint-invalid',
       reason,
     });
@@ -487,6 +524,7 @@ async function runContinuation(
     throw new ContinuationBailError({
       activityID: input.targetActivityID,
       appendedHead: target.appendedHead,
+      avatarID: pinned.avatarId,
       kind: 'checkpoint-invalid',
       reason: 'continuation-not-terminal',
     });
@@ -689,7 +727,9 @@ async function resolveLostRace(
   throw new ContinuationBailError({
     activityID: input.targetActivityID,
     appendedHead: current.appendedHead,
+    avatarID: pinned.avatarId,
     kind: 'conflict',
+    reason: 'stale-head',
   });
 }
 
@@ -741,6 +781,7 @@ async function mintContinuation(
     throw new ContinuationBailError({
       activityID: input.targetActivityID,
       appendedHead: input.targetExpectedHead,
+      avatarID: pinned.avatarId,
       kind: 'checkpoint-invalid',
       reason: 'build-snapshot-mismatch',
     });

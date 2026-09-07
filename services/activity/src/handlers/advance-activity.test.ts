@@ -309,7 +309,12 @@ test('it rejects a continuation whose predicted buildSnapshot mismatches the ser
 
   expect(request).rejects.toMatchObject({
     code: 'CHECKPOINT_INVALID',
-    data: { activityID: started.id, appendedHead: 0, reason: 'build-snapshot-mismatch' },
+    data: {
+      activityID: started.id,
+      appendedHead: 0,
+      avatarID: avatar.id,
+      reason: 'build-snapshot-mismatch',
+    },
   });
 
   // the append itself rolled back with the mint — the source row never left active
@@ -446,7 +451,12 @@ test('it conflicts a mint whose client id already belongs to another avatar', as
     }),
   ).rejects.toMatchObject({
     code: 'CONFLICT',
-    data: { activityID: startedB.id, appendedHead: 0 },
+    data: {
+      activityID: startedB.id,
+      appendedHead: 0,
+      avatarID: avatarB.id,
+      reason: 'activity-id-taken',
+    },
   });
 });
 
@@ -510,7 +520,12 @@ test('it conflicts a mint whose client id collides with an unrelated row for the
 
   expect(request).rejects.toMatchObject({
     code: 'CONFLICT',
-    data: { activityID: started.id, appendedHead: 0 },
+    data: {
+      activityID: started.id,
+      appendedHead: 0,
+      avatarID: avatar.id,
+      reason: 'activity-id-taken',
+    },
   });
 
   // the mismatch is rejected outright, never adopted as the append target: the unrelated row is
@@ -773,7 +788,12 @@ test('it bails with CHECKPOINT_INVALID on a broken hash chain, leaving the head 
 
   expect(request).rejects.toMatchObject({
     code: 'CHECKPOINT_INVALID',
-    data: { activityID: firstContinuationID, appendedHead: 0 },
+    data: {
+      activityID: firstContinuationID,
+      appendedHead: 0,
+      avatarID: avatar.id,
+      reason: 'broken-chain-link',
+    },
   });
 
   const rows = await ctx.db
@@ -1120,7 +1140,7 @@ test('it rejects an activity start whose buildSnapshot the server re-authors dif
     }),
   ).rejects.toMatchObject({
     code: 'CHECKPOINT_INVALID',
-    data: { activityID, appendedHead: 0, reason: 'build-snapshot-mismatch' },
+    data: { activityID, appendedHead: 0, avatarID: avatar.id, reason: 'build-snapshot-mismatch' },
   });
 });
 
@@ -1157,7 +1177,7 @@ test('it rejects an activity start whose startHash does not match the server rec
     }),
   ).rejects.toMatchObject({
     code: 'CHECKPOINT_INVALID',
-    data: { activityID, appendedHead: 0, reason: 'start-hash-mismatch' },
+    data: { activityID, appendedHead: 0, avatarID: avatar.id, reason: 'start-hash-mismatch' },
   });
 });
 

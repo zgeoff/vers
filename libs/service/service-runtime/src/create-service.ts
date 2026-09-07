@@ -106,9 +106,15 @@ export async function createService<TEnvShape extends z.ZodRawShape = Record<nev
   const handler = new RPCHandler(router, {
     clientInterceptors: [
       onError((thrown) => {
-        // A declared contract error or any other 4xx is the caller's problem, already encoded by
-        // the wire layer; only genuinely unexpected failures are logged and reported.
+        // A declared contract error or any other 4xx is the caller's outcome, already encoded by
+        // the wire layer: logged with the data the contract declares so Axiom can group a refusal
+        // by its cause, never reported. Only genuinely unexpected failures are reported.
         if (thrown instanceof ORPCError && (thrown.defined || thrown.status < 500)) {
+          logger.warn(
+            { code: thrown.code, data: thrown.data, status: thrown.status },
+            'request refused',
+          );
+
           return;
         }
 

@@ -12,6 +12,7 @@ import { deriveWorldmapContent, readScopeSecret } from '@vers/worldmap-content';
 import type { CryptoKey } from 'jose';
 import type { Kysely, Selectable } from 'kysely';
 import { getOptimisticBuild } from '../get-optimistic-build';
+import { recordRefusal } from '../metrics/record-refusal';
 import { requireActiveAvatar } from '../require-active-avatar';
 import { resolveEncounterNode } from '../resolve-encounter-node';
 import { resolveSimVersionStamp } from '../resolve-sim-version-stamp';
@@ -19,6 +20,7 @@ import type {
   AdvanceBailPayload,
   AdvanceCheckpointInvalidPayload,
   AvatarNotActivePayload,
+  ConflictPayload,
   EmptyErrorPayload,
   SimVersionProblemPayload,
 } from '../types';
@@ -36,7 +38,7 @@ interface AdmitActivityStartErrors {
   readonly AVATAR_NOT_ACTIVE: (payload: AvatarNotActivePayload) => Error;
   readonly CHAIN_QUARANTINED: (payload: AdvanceBailPayload) => Error;
   readonly CHECKPOINT_INVALID: (payload: AdvanceCheckpointInvalidPayload) => Error;
-  readonly CONFLICT: (payload: AdvanceBailPayload) => Error;
+  readonly CONFLICT: (payload: ConflictPayload) => Error;
   readonly NODE_NOT_REVEALED: (payload: EmptyErrorPayload) => Error;
   readonly NODE_UNKNOWN: (payload: EmptyErrorPayload) => Error;
   readonly SIM_VERSION_EXPIRED: (payload: SimVersionProblemPayload) => Error;
@@ -114,7 +116,16 @@ export async function admitActivityStart(
     activityStart.startChainIndex !== chain.appendedChainIndex ||
     activityStart.seed !== chain.appendedNextSeed
   ) {
-    throw errors.CONFLICT({ data: { activityID: input.activityID, appendedHead: 0 } });
+    recordRefusal('CONFLICT', 'stale-chain-head');
+
+    throw errors.CONFLICT({
+      data: {
+        activityID: input.activityID,
+        appendedHead: 0,
+        avatarID: activityStart.avatarID,
+        reason: 'stale-chain-head',
+      },
+    });
   }
 
   const optimistic = await getOptimisticBuild(trx, activityStart.avatarID);
@@ -128,8 +139,15 @@ export async function admitActivityStart(
     buildSnapshot.level !== activityStart.buildSnapshot.level ||
     buildSnapshot.xp !== activityStart.buildSnapshot.xp
   ) {
+    recordRefusal('CHECKPOINT_INVALID', 'build-snapshot-mismatch');
+
     throw errors.CHECKPOINT_INVALID({
-      data: { activityID: input.activityID, appendedHead: 0, reason: 'build-snapshot-mismatch' },
+      data: {
+        activityID: input.activityID,
+        appendedHead: 0,
+        avatarID: activityStart.avatarID,
+        reason: 'build-snapshot-mismatch',
+      },
     });
   }
 
@@ -176,8 +194,15 @@ export async function admitActivityStart(
   // equality proves the client folded its hash over the same content and encounter the server just
   // derived; a mismatch means it simulated against something else and cannot be anchored
   if (startHash !== activityStart.startHash) {
+    recordRefusal('CHECKPOINT_INVALID', 'start-hash-mismatch');
+
     throw errors.CHECKPOINT_INVALID({
-      data: { activityID: input.activityID, appendedHead: 0, reason: 'start-hash-mismatch' },
+      data: {
+        activityID: input.activityID,
+        appendedHead: 0,
+        avatarID: activityStart.avatarID,
+        reason: 'start-hash-mismatch',
+      },
     });
   }
 

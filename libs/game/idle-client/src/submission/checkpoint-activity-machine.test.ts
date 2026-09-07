@@ -332,7 +332,14 @@ test('it reaches invalid on CHECKPOINT_INVALID and never flushes again', async (
   server.use(
     mockActivityService.trackActivityProgress.handler((opts) => {
       track();
-      throw opts.errors.CHECKPOINT_INVALID({ data: { reason: 'broken-chain-link' } });
+
+      throw opts.errors.CHECKPOINT_INVALID({
+        data: {
+          activityID: opts.input.activityID,
+          avatarID: 'avatar_invalid',
+          reason: 'broken-chain-link',
+        },
+      });
     }),
   );
 

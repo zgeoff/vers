@@ -138,7 +138,9 @@ test('it defers an order-sensitive CONFLICT, keeping the activityStart for a lat
 
   server.use(
     mockActivityService.advanceActivity.handler((opts) => {
-      throw opts.errors.CONFLICT({ data: { activityID: row.id, appendedHead: 3 } });
+      throw opts.errors.CONFLICT({
+        data: { activityID: row.id, appendedHead: 3, avatarID: row.avatarID, reason: 'stale-head' },
+      });
     }),
   );
 
@@ -160,7 +162,12 @@ test('it rejects and removes the activityStart on a permanent start-hash-mismatc
   server.use(
     mockActivityService.advanceActivity.handler((opts) => {
       throw opts.errors.CHECKPOINT_INVALID({
-        data: { activityID: row.id, appendedHead: 0, reason: 'start-hash-mismatch' },
+        data: {
+          activityID: row.id,
+          appendedHead: 0,
+          avatarID: row.avatarID,
+          reason: 'start-hash-mismatch',
+        },
       });
     }),
   );
@@ -183,7 +190,12 @@ test('it defers an order-sensitive build-snapshot-mismatch, keeping the activity
   server.use(
     mockActivityService.advanceActivity.handler((opts) => {
       throw opts.errors.CHECKPOINT_INVALID({
-        data: { activityID: row.id, appendedHead: 0, reason: 'build-snapshot-mismatch' },
+        data: {
+          activityID: row.id,
+          appendedHead: 0,
+          avatarID: row.avatarID,
+          reason: 'build-snapshot-mismatch',
+        },
       });
     }),
   );

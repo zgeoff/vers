@@ -24,6 +24,8 @@ export type { CheckpointPayload } from './checkpoint-payload-schema';
 export { CheckpointPayloadSchema } from './checkpoint-payload-schema';
 export type { Checkpoint } from './checkpoint-schema';
 export { CheckpointSchema } from './checkpoint-schema';
+export type { ConflictReason } from './conflict-reason-schema';
+export { ConflictReasonSchema } from './conflict-reason-schema';
 export type { ContentDocument } from './content-document-schema';
 export { ContentDocumentSchema } from './content-document-schema';
 export { createGenesisSeed } from './create-genesis-seed';

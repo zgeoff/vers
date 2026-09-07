@@ -122,7 +122,14 @@ test('it trims the queue to the CONFLICT appendedHead and resends the tail', asy
       track(opts.input);
 
       if (track.mock.calls.length === 1) {
-        throw opts.errors.CONFLICT({ data: { appendedHead: 2 } });
+        throw opts.errors.CONFLICT({
+          data: {
+            activityID: opts.input.activityID,
+            appendedHead: 2,
+            avatarID: 'avatar_conflict',
+            reason: 'stale-head',
+          },
+        });
       }
 
       return { appendedHead: 3 };
@@ -160,7 +167,14 @@ test('it stops the stream and keeps queued rows on CHECKPOINT_INVALID', async ()
   server.use(
     mockActivityService.trackActivityProgress.handler((opts) => {
       track(opts.input);
-      throw opts.errors.CHECKPOINT_INVALID({ data: { reason: 'broken-chain-link' } });
+
+      throw opts.errors.CHECKPOINT_INVALID({
+        data: {
+          activityID: opts.input.activityID,
+          avatarID: 'avatar_invalid',
+          reason: 'broken-chain-link',
+        },
+      });
     }),
   );
 
@@ -1040,7 +1054,13 @@ test('it sends a fresh traceparent with each flush and reports its trace id on r
         throw new Error('backend unreachable');
       }
 
-      throw opts.errors.CHECKPOINT_INVALID({ data: { reason: 'broken-chain-link' } });
+      throw opts.errors.CHECKPOINT_INVALID({
+        data: {
+          activityID: opts.input.activityID,
+          avatarID: 'avatar_invalid',
+          reason: 'broken-chain-link',
+        },
+      });
     }),
   );
 
@@ -1342,7 +1362,14 @@ test('it keeps the tombstoned registration on CHECKPOINT_INVALID so a later regi
   server.use(
     mockActivityService.trackActivityProgress.handler((opts) => {
       track(opts.input);
-      throw opts.errors.CHECKPOINT_INVALID({ data: { reason: 'broken-chain-link' } });
+
+      throw opts.errors.CHECKPOINT_INVALID({
+        data: {
+          activityID: opts.input.activityID,
+          avatarID: 'avatar_invalid',
+          reason: 'broken-chain-link',
+        },
+      });
     }),
   );
 
