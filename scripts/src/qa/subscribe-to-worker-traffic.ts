@@ -53,6 +53,8 @@ export async function subscribeToWorkerTraffic(
               url: sent.request.url,
             }),
           );
+        } else {
+          urlsByRequest.delete(sent.requestId);
         }
 
         return;
@@ -118,8 +120,14 @@ export async function subscribeToWorkerTraffic(
     })();
   });
 
-  await client.send('Network.enable');
-  await client.send('Runtime.enable');
+  try {
+    await client.send('Network.enable');
+    await client.send('Runtime.enable');
+    await client.send('Log.enable');
+  } catch (error) {
+    client.close();
+    throw error;
+  }
 
   config.print(formatCaptureEvent({ kind: 'attached', targetID: target.id }));
 

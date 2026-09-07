@@ -127,6 +127,14 @@ export async function createCDPClient(socketURL: string): Promise<CDPClient> {
         unsubscribe();
         reject(new Error(`no ${method} event within ${timeoutMS}ms`));
       }, timeoutMS);
+
+      void (async () => {
+        await closed;
+
+        clearTimeout(timer);
+        unsubscribe();
+        reject(new Error(`${method}: the socket closed before the event`));
+      })();
     });
 
   return {

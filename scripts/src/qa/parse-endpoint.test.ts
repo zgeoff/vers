@@ -10,6 +10,11 @@ test('it rejects a value with a scheme or a path', () => {
   expect(() => parseEndpoint('127.0.0.1:9222/json')).toThrowWithMessage(Error, /host:port/);
 });
 
+test('it rejects a port outside 1 to 65535', () => {
+  expect(() => parseEndpoint('127.0.0.1:0')).toThrowWithMessage(Error, /1 to 65535/);
+  expect(() => parseEndpoint('127.0.0.1:65536')).toThrowWithMessage(Error, /1 to 65535/);
+});
+
 test('it rejects a value with no port', () => {
   expect(() => parseEndpoint('127.0.0.1')).toThrowWithMessage(Error, /host:port/);
 });

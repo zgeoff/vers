@@ -10,16 +10,17 @@ test('it joins the arguments of a console call after its level', () => {
         { type: 'number', value: 3 },
         { type: 'object', value: { attempt: 2 } },
         { description: 'Error: boom', type: 'object' },
+        { type: 'number', unserializableValue: 'NaN' },
         { type: 'undefined' },
       ],
       type: 'warning',
     },
   });
 
-  expect(line).toBe('console.warning: reconnect in 3 {"attempt":2} Error: boom [undefined]');
+  expect(line).toBe('console.warning: reconnect in 3 {"attempt":2} Error: boom NaN [undefined]');
 });
 
-test('it prints the description of a thrown exception, or its text when there is none', () => {
+test('it prints a thrown error by its description and a thrown primitive by its value', () => {
   expect(
     formatConsoleEvent({
       method: 'Runtime.exceptionThrown',
@@ -32,6 +33,17 @@ test('it prints the description of a thrown exception, or its text when there is
     }),
   ).toBe('exception: TypeError: x is not a function');
 
+  expect(
+    formatConsoleEvent({
+      method: 'Runtime.exceptionThrown',
+      params: {
+        exceptionDetails: { exception: { type: 'string', value: 'offline' }, text: 'Uncaught' },
+      },
+    }),
+  ).toBe('exception: offline');
+});
+
+test('it prints the text of a thrown exception that carries no object', () => {
   expect(
     formatConsoleEvent({
       method: 'Runtime.exceptionThrown',

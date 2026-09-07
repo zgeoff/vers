@@ -16,9 +16,15 @@ export function startWorkerCapture(config: CaptureConfig): () => void {
   const attached = new Set<string>();
   const clients = new Set<CDPClient>();
 
+  let stopped = false;
+
   const runPoll = async (): Promise<void> => {
     try {
       const targets = await readDevToolsTargets(config.endpoint);
+
+      if (stopped) {
+        return;
+      }
 
       const picked = pickCaptureTargets(targets, {
         attached,
@@ -56,6 +62,8 @@ export function startWorkerCapture(config: CaptureConfig): () => void {
   }, POLL_INTERVAL_MS);
 
   return () => {
+    stopped = true;
+
     clearInterval(timer);
 
     for (const client of clients) {

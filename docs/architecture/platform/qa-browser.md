@@ -38,27 +38,27 @@ bun run qa:cdp eval <target_id> "__qa.clickText('Sign in')"
 bun run qa:cdp shot <target_id> ./after-sign-in.png
 ```
 
-| Command                                   | Effect                                                                               |
-| ----------------------------------------- | ------------------------------------------------------------------------------------ |
-| `targets`                                 | lists every target as type, id, url, and title                                       |
-| `new [url] [--context <id>]`              | opens a tab in a fresh browser context, or in the context given, and prints both ids |
-| `ctx <target>`                            | prints the target's browser context id                                               |
-| `close <target>`                          | closes the target                                                                    |
-| `nav <target> <url>`                      | navigates and waits for the load event, then prints the landed url                   |
-| `reload <target>`                         | reloads and waits for the load event                                                 |
-| `eval <target> <script>`                  | evaluates the script, awaits a promise, and prints the value as JSON                 |
-| `text <target>`                           | prints the page's visible text                                                       |
-| `shot <target> <file>`                    | writes a PNG screenshot                                                              |
-| `type <target> <selector> <text>`         | focuses the element and types one keystroke at a time                                |
-| `insert <target> <selector> <text>`       | focuses the element and inserts the text as one input event                          |
-| `key <target> <key>`                      | presses one key, such as `Enter`, `Tab`, or `Escape`                                 |
-| `click <target> <x> <y>`                  | clicks at viewport coordinates                                                       |
-| `console <target> [--seconds] [--reload]` | collects console calls, exceptions, and browser log entries for the window           |
-| `offline <target> on\|off`                | switches network emulation of a page or a worker                                     |
-| `pause <target>`                          | interrupts running script, prints the stack, and resumes                             |
-| `profile <target> [--seconds]`            | samples the CPU and prints the functions with the most self time                     |
-| `procs`                                   | lists the browser processes with their CPU time                                      |
-| `monitor [--every] [--url]`               | polls the heap of matching targets and the renderer CPU time until interrupted       |
+| Command                                   | Effect                                                                                  |
+| ----------------------------------------- | --------------------------------------------------------------------------------------- |
+| `targets`                                 | lists every target as type, id, url, and title                                          |
+| `new [url] [--context <id>]`              | opens a tab in a fresh browser context, or in the context given, and prints both ids    |
+| `ctx <target>`                            | prints the target's browser context id                                                  |
+| `close <target>`                          | closes the target                                                                       |
+| `nav <target> <url>`                      | navigates and waits for the load event, then prints the landed url                      |
+| `reload <target>`                         | reloads and waits for the load event                                                    |
+| `eval <target> <script>`                  | evaluates the script, awaits a promise, and prints the value as JSON                    |
+| `text <target>`                           | prints the page's visible text                                                          |
+| `shot <target> <file>`                    | writes a PNG screenshot                                                                 |
+| `type <target> <selector> <text>`         | focuses the element and types one keystroke at a time                                   |
+| `insert <target> <selector> <text>`       | focuses the element and inserts the text as one input event                             |
+| `key <target> <key>`                      | presses one key, such as `Enter`, `Tab`, or `Escape`                                    |
+| `click <target> <x> <y>`                  | clicks at viewport coordinates                                                          |
+| `console <target> [--seconds] [--reload]` | collects console calls, exceptions, and browser log entries for the window              |
+| `offline <target> on\|off`                | switches network emulation of a page or a worker                                        |
+| `pause <target>`                          | interrupts running script, prints the stack, and resumes                                |
+| `profile <target> [--seconds]`            | samples the CPU and prints the functions with the most self time                        |
+| `procs`                                   | lists the browser processes with their CPU time                                         |
+| `monitor [--every] [--url]`               | polls the heap of matching targets and the renderer and GPU CPU times until interrupted |
 
 A browser context created over CDP is ephemeral: it lives until the browser exits, and its cookies
 and storage go with it. Each `new` without `--context` starts from a signed-out state, which is what

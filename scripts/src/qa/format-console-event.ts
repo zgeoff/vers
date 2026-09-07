@@ -7,6 +7,7 @@ const EXCEPTION_LIMIT = 800;
 const remoteObjectSchema = z.object({
   description: z.string().optional(),
   type: z.string(),
+  unserializableValue: z.string().optional(),
   value: z.unknown().optional(),
 });
 
@@ -41,13 +42,12 @@ export function formatConsoleEvent(event: CDPEvent): string | null {
       );
     }
     case 'Runtime.exceptionThrown': {
-      const thrown = exceptionSchema.parse(event.params);
-      const details = thrown.exceptionDetails;
+      const details = exceptionSchema.parse(event.params).exceptionDetails;
 
-      return `exception: ${details.exception?.description ?? details.text}`.slice(
-        0,
-        EXCEPTION_LIMIT,
-      );
+      const thrown =
+        details.exception === undefined ? details.text : formatRemoteObject(details.exception);
+
+      return `exception: ${thrown}`.slice(0, EXCEPTION_LIMIT);
     }
     case 'Log.entryAdded': {
       const entry = logEntrySchema.parse(event.params).entry;
@@ -66,5 +66,5 @@ function formatRemoteObject(object: z.infer<typeof remoteObjectSchema>): string 
     return typeof object.value === 'string' ? object.value : JSON.stringify(object.value);
   }
 
-  return object.description ?? `[${object.type}]`;
+  return object.unserializableValue ?? object.description ?? `[${object.type}]`;
 }
