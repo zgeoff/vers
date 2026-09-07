@@ -46,7 +46,7 @@ test('it installs nothing for an account outside the QA domain', async () => {
 
   await waitFor(() => {
     expect(rendered.router.state.status).toBe('idle');
-    expect(rendered.router.state.matches).not.toBeEmpty();
+    expect(rendered.router.state.matches.length).toBeGreaterThan(0);
   });
 
   expect('__versQA' in globalThis).toBeFalse();
@@ -65,7 +65,7 @@ test('it installs nothing before a worker has connected', async () => {
 
   await waitFor(() => {
     expect(rendered.router.state.status).toBe('idle');
-    expect(rendered.router.state.matches).not.toBeEmpty();
+    expect(rendered.router.state.matches.length).toBeGreaterThan(0);
   });
 
   expect('__versQA' in globalThis).toBeFalse();
