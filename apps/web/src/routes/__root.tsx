@@ -12,6 +12,7 @@ import type { QueryClient } from '@tanstack/react-query';
 import { HeadContent, Outlet, Scripts, createRootRouteWithContext } from '@tanstack/react-router';
 import type { ReactNode } from 'react';
 import { HydrationMarker } from '../components/hydration-marker';
+import { NotFoundScreen } from '../components/not-found-screen';
 import { RootErrorScreen } from '../components/root-error-screen';
 import { buildUmamiScripts } from '../lib/build-umami-scripts';
 import type { OrpcQueryUtils } from '../lib/rpc/orpc';
@@ -38,6 +39,7 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
     ],
     scripts: buildUmamiScripts(import.meta.env['VITE_UMAMI_WEBSITE_ID']),
   }),
+  notFoundComponent: NotFoundScreen,
 });
 
 function RootComponent() {
