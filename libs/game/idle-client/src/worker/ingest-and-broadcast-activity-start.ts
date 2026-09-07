@@ -4,6 +4,7 @@ import type {
 } from '../submission/ingest-activity-start';
 import { ingestActivityStart } from '../submission/ingest-activity-start';
 import { WorkerMessageType } from '../types';
+import { rejectActivityStart } from './reject-activity-start';
 import type { WorkerContext } from './types';
 
 export async function ingestAndBroadcastActivityStart(
@@ -14,6 +15,10 @@ export async function ingestAndBroadcastActivityStart(
 
   if (result.outcome === 'ingested') {
     context.broadcast({ activityID, type: WorkerMessageType.ActivityStartIngested });
+  }
+
+  if (result.refusedSnapshot !== undefined) {
+    await rejectActivityStart(context, result.refusedSnapshot);
   }
 
   if (result.notice !== undefined) {
