@@ -1,0 +1,40 @@
+{
+  "name": "@vers/qa-account",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "bun test",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@epic-web/totp": "catalog:",
+    "@noble/hashes": "catalog:",
+    "@paralleldrive/cuid2": "catalog:",
+    "@vers/content-registry": "workspace:*",
+    "@vers/contract-activity": "workspace:*",
+    "@vers/contract-avatar": "workspace:*",
+    "@vers/contract-keys": "workspace:*",
+    "@vers/contract-user": "workspace:*",
+    "@vers/db": "workspace:*",
+    "@vers/game-utils": "workspace:*",
+    "@vers/idle-core": "workspace:*",
+    "@vers/item-gen": "workspace:*",
+    "@vers/roll-crypto": "workspace:*",
+    "@vers/sim-registry": "workspace:*",
+    "@vers/worldmap-content": "workspace:*",
+    "@vers/worldmap-core": "workspace:*",
+    "commander": "catalog:",
+    "kysely": "catalog:",
+    "tiny-invariant": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@types/bun": "catalog:",
+    "@types/node": "catalog:",
+    "@vers/service-test-utils": "workspace:*",
+    "@vers/test-utils": "workspace:*",
+    "@zgeoff/bun-test-extended": "catalog:",
+    "typescript": "catalog:"
+  }
+}

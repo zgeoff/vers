@@ -204,6 +204,8 @@ Libraries (`libs/`, grouped by domain):
 - `libs/testing/client-test-utils` - react & web worker testing utilities
 - `libs/testing/mock-services` - MSW mock backends for the service contracts: @msw/data-backed
   routers, per-test override proxies, and the demo seed
+- `libs/testing/qa-account` - the QA account seed and reset tools (`bun run qa:seed`,
+  `bun run qa:reset`), a `server-only` package because it runs the sealed encounter derivation
 - `libs/testing/service-test-utils` - postgres test container & mock data utils
 - `libs/testing/test-utils` - generic test helpers: env override/cleanup, MSW lifecycle wiring, JWT
   and in-process RPC-client fixtures, and oRPC conformance-case collection
