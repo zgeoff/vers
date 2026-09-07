@@ -6,11 +6,13 @@ import {
   setEngagedRun,
   useEngagedRun,
   useResyncStatus,
+  useRunOutcome,
   useWriterGeneration,
 } from '@vers/idle-client';
 import { ActivityFailureAction } from '@vers/idle-core';
 import { useSelectedNode } from '@vers/worldmap-client';
 import { Suspense, useEffect, useRef, useState } from 'react';
+import { RunOutcomePanel } from '../-activity/run-outcome-panel';
 import { WorldMapNodeCodexSlot } from '../../components/world-map-node-codex-slot';
 import { buildActiveAvatarQueryOptions } from '../../lib/avatar/build-active-avatar-query-options';
 import { runIgnoringRejection } from '../../lib/idle/run-ignoring-rejection';
@@ -55,6 +57,11 @@ export function ExploreCurrentPanel(props: Readonly<ExploreCurrentPanelProps>) {
   // readiness, and a retried failed start on the same node never re-reports it
   const lastExploredNodeID = useRef<string | undefined>(undefined);
   const engagedRun = useEngagedRun();
+  const lastRunOutcome = useRunOutcome();
+
+  // the run this panel follows: the one its attempt answered with, then whichever run goes live
+  // at the node, since an auto-retry chains a continuation under a fresh id
+  const [followedRunID, setFollowedRunID] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     if (selectedNode === null || lastExploredNodeID.current === selectedNode.id) {
@@ -149,12 +156,44 @@ export function ExploreCurrentPanel(props: Readonly<ExploreCurrentPanelProps>) {
   // reply overwrites it
   const reportedStatus = report?.scopeID === selectedNode?.id ? report?.status : undefined;
 
+  const liveRunID =
+    selectedNode !== null && isRunAtNode(idleWorkerHandle.liveRun, avatarID, selectedNode.id)
+      ? idleWorkerHandle.liveRun?.id
+      : undefined;
+
+  const reportedRunID = pickReportedRunID(reportedStatus);
+
+  useEffect(() => {
+    if (reportedRunID !== undefined) {
+      setFollowedRunID(reportedRunID);
+    }
+  }, [reportedRunID]);
+
+  // keyed on the live run alone: the run's end must not return the panel to the id its attempt
+  // answered with, which a continuation has moved past
+  useEffect(() => {
+    if (liveRunID !== undefined) {
+      setFollowedRunID(liveRunID);
+    }
+  }, [liveRunID]);
+
   // readiness follows the live run's scope, never the id the start call answered with: an
   // auto-retry chains a continuation under a fresh id, and the panel stays up across the chain
   const isActivityReady =
-    selectedNode !== null &&
-    attemptScopeID === selectedNode.id &&
-    isRunAtNode(idleWorkerHandle.liveRun, avatarID, selectedNode.id);
+    selectedNode !== null && attemptScopeID === selectedNode.id && liveRunID !== undefined;
+
+  // the store keeps the last outcome until a different run goes live, so a fresh start's reply
+  // can land while it still names the previous visit's run; only the followed run's end counts
+  const endedRunOutcome =
+    reportedRunID !== undefined &&
+    idleWorkerHandle.liveRun === undefined &&
+    lastRunOutcome !== null &&
+    lastRunOutcome.activityID === followedRunID &&
+    lastRunOutcome.avatarID === avatarID &&
+    lastRunOutcome.scope?.scopeType === 'world_map_node' &&
+    lastRunOutcome.scope.scopeID === selectedNode?.id
+      ? lastRunOutcome
+      : null;
 
   const isEngagedAtNode =
     selectedNode !== null && isRunAtNode(engagedRun, avatarID, selectedNode.id);
@@ -206,6 +245,21 @@ export function ExploreCurrentPanel(props: Readonly<ExploreCurrentPanelProps>) {
     );
   }
 
+  if (endedRunOutcome !== null) {
+    return (
+      <RunOutcomePanel
+        onBackToMap={() => {
+          void navigate({ to: '/explore' });
+        }}
+        onRetry={() => {
+          setAttemptScopeID(undefined);
+          setReport(undefined);
+        }}
+        outcome={endedRunOutcome}
+      />
+    );
+  }
+
   if (!isActivityReady) {
     return <Spinner />;
   }
@@ -245,6 +299,18 @@ export function ExploreCurrentPanel(props: Readonly<ExploreCurrentPanelProps>) {
       </Suspense>
     </>
   );
+}
+
+function pickReportedRunID(status: StartStatus | undefined): string | undefined {
+  if (status?.kind === 'started') {
+    return status.activity.id;
+  }
+
+  if (status?.kind === 'attached') {
+    return status.activityID;
+  }
+
+  return undefined;
 }
 
 function isRunAtNode(
