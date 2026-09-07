@@ -893,6 +893,7 @@ test('it abandons the install when a stop lands mid-resync', async () => {
         appendedHead: 0,
         failureAction: 'abort' as const,
         isWriter: true,
+        optimisticBuild: { level: 1, xp: 0 },
         serverTime: new Date(),
         verifiedHead: 0,
       };
@@ -983,6 +984,7 @@ test('it broadcasts the displacement and clears a live sim the writer was taken 
       appendedHead: 0,
       failureAction: 'abort' as const,
       isWriter: false,
+      optimisticBuild: { level: 1, xp: 0 },
       serverTime: new Date(),
       verifiedHead: 0,
     })),
@@ -1041,6 +1043,7 @@ test('it holds a claiming request behind an in-flight resync and claims once it 
       appendedHead: 0,
       failureAction: 'abort' as const,
       isWriter: false,
+      optimisticBuild: { level: 1, xp: 0 },
       serverTime: new Date(),
       verifiedHead: 0,
     })),

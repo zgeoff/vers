@@ -24,9 +24,19 @@ export async function runSimulation(
     return;
   }
 
+  const installed = context.getActivity();
+
   // recorded before the submit and independent of the outbox: the next mint folds this run's xp
   // from here whether its checkpoints are still queued or already confirmed and removed
-  context.setRunEarnings({ activityID, deltaXP: liveActivity.rewards.xp, tail: checkpoint });
+  if (installed !== null && installed.id === activityID) {
+    context.setLatestRun({
+      activityID,
+      avatarID: installed.avatarID,
+      baselineXP: installed.buildSnapshot.xp,
+      deltaXP: liveActivity.rewards.xp,
+      tail: checkpoint,
+    });
+  }
 
   const version = await context.getSubmitter().submit(activityID, checkpoint);
 

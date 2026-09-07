@@ -6,7 +6,7 @@ import { buildLevelFromXP, foldOptimisticBuild } from '@vers/idle-core';
 import { readLastStartedActivity } from '../submission/read-last-started-activity';
 import { readNodeSeed } from '../submission/read-node-seed';
 import { readStartStamps } from '../submission/read-start-stamps';
-import type { WorkerContext } from './types';
+import type { LatestRun, WorkerContext } from './types';
 
 interface BuildActivityStartInput {
   readonly avatarID: string;
@@ -97,26 +97,18 @@ function buildOptimisticBuildSnapshot(
   context: WorkerContext,
   avatarID: string,
 ): { level: number; xp: number } {
-  const lastActivity = context.getActivity();
-
-  const previousRun =
-    lastActivity !== null && lastActivity.avatarID === avatarID ? lastActivity : null;
-
-  const sources = previousRun === null ? [] : buildPreviousRunSources(context, previousRun);
-  const optimistic = foldOptimisticBuild(previousRun?.buildSnapshot.xp ?? 0, sources);
+  const latestRun = context.getLatestRun();
+  const previousRun = latestRun !== null && latestRun.avatarID === avatarID ? latestRun : null;
+  const sources = previousRun === null ? [] : buildPreviousRunSources(previousRun);
+  const optimistic = foldOptimisticBuild(previousRun?.baselineXP ?? 0, sources);
 
   return { level: buildLevelFromXP(optimistic.totalXP), xp: optimistic.totalXP };
 }
 
-function buildPreviousRunSources(
-  context: WorkerContext,
-  activity: Readonly<ActivityData>,
-): Array<OptimisticBuildSource> {
-  const earnings = context.getRunEarnings();
-
-  if (earnings === null || earnings.activityID !== activity.id) {
+function buildPreviousRunSources(previousRun: Readonly<LatestRun>): Array<OptimisticBuildSource> {
+  if (previousRun.tail === null) {
     return [];
   }
 
-  return [{ settledXP: 0, tailPayload: earnings.tail, unverifiedDeltaSum: earnings.deltaXP }];
+  return [{ settledXP: 0, tailPayload: previousRun.tail, unverifiedDeltaSum: previousRun.deltaXP }];
 }

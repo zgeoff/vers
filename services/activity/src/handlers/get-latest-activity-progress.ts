@@ -1,7 +1,14 @@
-import type { ActivityData, ActivityFailureAction, Checkpoint } from '@vers/contract-activity';
+import type {
+  ActivityData,
+  ActivityFailureAction,
+  BuildSnapshot,
+  Checkpoint,
+} from '@vers/contract-activity';
 import type { DB } from '@vers/db';
+import { buildLevelFromXP } from '@vers/idle-core';
 import { sql } from 'kysely';
 import type { Kysely } from 'kysely';
+import { getOptimisticBuild } from '../get-optimistic-build';
 import type { EmptyErrorPayload, MissingSessionPayload } from '../types';
 import { toActivityData } from './to-activity-data';
 import { toCheckpointData } from './to-checkpoint-data';
@@ -24,6 +31,7 @@ interface GetLatestActivityProgressResult {
   readonly appendedHead: number;
   readonly failureAction: ActivityFailureAction;
   readonly isWriter: boolean;
+  readonly optimisticBuild: BuildSnapshot;
   readonly serverTime: Date;
   readonly verifiedHead: number;
 }
@@ -64,12 +72,17 @@ export async function getLatestActivityProgress(
           .where('version', '=', row.verifiedHead)
           .executeTakeFirst();
 
+  // the snapshot admission would re-author for the avatar's next start, so a device holding no
+  // record of the previous run mints from the server's own fold
+  const optimistic = await getOptimisticBuild(db, opts.input.avatarID);
+
   return {
     activity: toActivityData(row),
     anchor: anchor === undefined ? null : toCheckpointData(anchor),
     appendedHead: row.appendedHead,
     failureAction: row.failureAction,
     isWriter: row.writerSessionId === null || row.writerSessionId === opts.context.actingSessionID,
+    optimisticBuild: { level: buildLevelFromXP(optimistic.totalXP), xp: optimistic.totalXP },
     serverTime: row.serverTime,
     verifiedHead: row.verifiedHead,
   };

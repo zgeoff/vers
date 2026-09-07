@@ -114,7 +114,9 @@ authoritative input from its own truth and trusts none of the payload:
 The client predicts the `buildSnapshot` as the previous run's start snapshot plus that run's own
 unsettled XP, read from the run's last checkpoint and running XP total the worker holds, never from
 its outbox. The server folds the same rule from its own rows: the avatar's settled XP plus every
-appended-but-unverified run's contribution.
+appended-but-unverified run's contribution. A worker that holds no record of the previous run — a
+fresh device, or one whose previous run the server closed — mints from the snapshot the server folds
+and returns beside the avatar's latest activity, and stamps that activity as the predecessor.
 
 A single `advanceActivity` request carries a whole run of continuations, so an offline gap the
 client simulated locally verifies in one round trip. Every continuation reuses the start's seed

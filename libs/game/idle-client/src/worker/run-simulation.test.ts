@@ -1,5 +1,8 @@
 import { expect, mock, test } from 'bun:test';
-import { createMockContentDocument } from '@vers/contract-activity/test-utils';
+import {
+  createMockActivityData,
+  createMockContentDocument,
+} from '@vers/contract-activity/test-utils';
 import type { ActivityCheckpoint, SimulationListener } from '@vers/idle-core';
 import {
   ActivityCheckpointType,
@@ -402,15 +405,37 @@ test('it records the started checkpoint and a zero running xp on the first tick'
   const simulation = createSimulation();
   const activity = createMockActivityInput();
 
+  const installed = createMockActivityData({
+    buildSnapshot: { level: buildLevelFromXP(300), xp: 300 },
+    id: activity.id,
+  });
+
+  context.setActivity(installed);
   simulation.startActivity(createMockAvatarData(), activity);
 
   await runSimulation(context, simulation, 100);
 
-  expect(context.getRunEarnings()).toMatchObject({
+  expect(context.getLatestRun()).toMatchObject({
     activityID: activity.id,
+    avatarID: installed.avatarID,
+    baselineXP: 300,
     deltaXP: 0,
     tail: { type: ActivityCheckpointType.Started },
   });
+});
+
+test('it leaves the recorded run untouched when the ticking simulation is not the installed activity', async () => {
+  const context = createStubWorkerContext();
+  const simulation = createSimulation();
+  const activity = createMockActivityInput();
+
+  // a stale simulation keeps ticking for a row a later flow already replaced
+  context.setActivity(createMockActivityData({ id: 'act_installed_elsewhere' }));
+  simulation.startActivity(createMockAvatarData(), activity);
+
+  await runSimulation(context, simulation, 100);
+
+  expect(context.getLatestRun()).toBeNull();
 });
 
 test('it keeps the failed terminal checkpoint on record after the run stops', async () => {
@@ -421,6 +446,7 @@ test('it keeps the failed terminal checkpoint on record after the run stops', as
   const avatar = createMockAvatarData({ life: 1 });
   const activity = createMockActivityInput({ failureAction: ActivityFailureAction.Abort });
 
+  context.setActivity(createMockActivityData({ id: activity.id }));
   simulation.startActivity(avatar, activity);
 
   await runSimulationSteps(context, simulation, 100, 50);
@@ -428,7 +454,7 @@ test('it keeps the failed terminal checkpoint on record after the run stops', as
   // the stop cleared the live activity, but the next mint still needs the run's total
   expect(simulation.activity).toBeNull();
 
-  expect(context.getRunEarnings()).toMatchObject({
+  expect(context.getLatestRun()).toMatchObject({
     activityID: activity.id,
     tail: { type: ActivityCheckpointType.Failed },
   });
