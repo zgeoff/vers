@@ -4,6 +4,7 @@ import { useNavigate } from '@tanstack/react-router';
 import { Spinner } from '@vers/design-system';
 import { EngagementView } from '@vers/idle-client';
 import { css } from '@vers/styled-system/css';
+import { useEffect } from 'react';
 import { ScreenLayout } from '../../components/screen-layout';
 import { buildCurrentActivityQueryOptions } from '../../lib/activity/build-current-activity-query-options';
 import { useActivityRewards } from '../../lib/activity/use-activity-rewards';
@@ -33,7 +34,19 @@ export function ActivityPanel() {
   });
 
   const activity = currentActivityQuery.data;
+  const liveActivity = idleWorkerHandle.activity;
   const rewardsQuery = useActivityRewards(activity?.id);
+
+  // the worker is the source of the live run: a client-authored start reaches the server only on
+  // the first checkpoint flush, so the server row stands in only for a cold load the worker has
+  // not attached yet, and the map is the destination only when neither holds a run
+  const hasNoRun = idleWorkerHandle.initialized && liveActivity === undefined && activity === null;
+
+  useEffect(() => {
+    if (hasNoRun) {
+      void navigate({ to: '/explore' });
+    }
+  }, [hasNoRun, navigate]);
 
   // both heads count from the activity's own start; the rewards poll advances the verified head
   // between refetches of the activity row itself
@@ -47,7 +60,7 @@ export function ActivityPanel() {
   // the worker owns the stop end to end, so navigation never waits on the network. With no
   // transport mounted there is no local simulation to halt, and the targeted server stop goes out
   // directly, fire-and-forget: a failure must not strand the player on the dead engagement screen.
-  const activityID = activity?.id;
+  const activityID = liveActivity?.id ?? activity?.id;
 
   const endRun =
     avatarID === undefined || activityID === undefined
