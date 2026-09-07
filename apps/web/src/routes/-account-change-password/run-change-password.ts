@@ -52,5 +52,5 @@ export async function runChangePassword(formData: FormData): Promise<ChangePassw
 
   await userClient.changePassword({ password: submission.data.password });
 
-  throw redirect({ href: '/account' });
+  throw redirect({ to: '/settings' });
 }

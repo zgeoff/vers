@@ -39,7 +39,7 @@ test('it reports invalid code for an incorrect code', async () => {
   });
 });
 
-test('it flips the verification to 2fa and redirects to account for a correct code', async () => {
+test('it flips the verification to 2fa and redirects to settings for a correct code', async () => {
   const signedIn = await createSignedInUser();
 
   await db.verificationCollection.create({ target: signedIn.userID, type: '2fa-setup' });
@@ -51,7 +51,7 @@ test('it flips the verification to 2fa and redirects to account for a correct co
   // the db read below must observe the rejected call's verification-flip step settled
   await promise.catch(() => {});
 
-  expect(promise).rejects.toMatchObject({ options: { href: '/account' } });
+  expect(promise).rejects.toMatchObject({ options: { to: '/settings' } });
 
   expect(
     db.verificationCollection.findFirst((q) => q.where({ target: signedIn.userID })),

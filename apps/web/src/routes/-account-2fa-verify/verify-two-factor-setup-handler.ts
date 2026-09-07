@@ -38,5 +38,5 @@ export async function verifyTwoFactorSetupHandler(
 
   await verificationClient.updateVerification({ id: verification.id, type: '2fa' });
 
-  throw redirect({ href: '/account' });
+  throw redirect({ to: '/settings' });
 }

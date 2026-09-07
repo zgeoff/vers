@@ -4,14 +4,14 @@ import { createSignedInUser } from '../../test-utils/create-signed-in-user';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { loadTwoFactorSetup } from './load-two-factor-setup';
 
-test('it redirects to account when 2FA is already enabled', async () => {
+test('it redirects to settings when 2FA is already enabled', async () => {
   const signedIn = await createSignedInUser();
 
   await db.verificationCollection.create({ target: signedIn.userID, type: '2fa' });
 
   const promise = withRequestContext({ cookies: signedIn.cookies }, () => loadTwoFactorSetup());
 
-  expect(promise).rejects.toMatchObject({ options: { href: '/account' } });
+  expect(promise).rejects.toMatchObject({ options: { to: '/settings' } });
 });
 
 test('it creates a pending 2fa-setup verification and returns its QR data for a fresh caller', async () => {
