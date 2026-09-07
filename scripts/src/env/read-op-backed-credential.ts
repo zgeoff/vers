@@ -1,5 +1,5 @@
-import { readOpItem } from '../env/read-op-item';
-import { findOpFieldValue } from '../qa-inbox/find-op-field-value';
+import { findOpFieldValue } from './find-op-field-value';
+import { readOpItem } from './read-op-item';
 import type { OpBackedCredential } from './types';
 
 export async function readOpBackedCredential(credential: OpBackedCredential): Promise<string> {

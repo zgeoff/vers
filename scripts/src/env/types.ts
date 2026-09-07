@@ -24,3 +24,10 @@ export interface EnvWritePlan {
   readonly vault: string;
   readonly filePath: string;
 }
+
+export interface OpBackedCredential {
+  readonly envName: string;
+  readonly fieldLabels: ReadonlyArray<string>;
+  readonly itemTitle: string;
+  readonly vault: string;
+}

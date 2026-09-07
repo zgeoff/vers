@@ -35,5 +35,13 @@ export async function readRecentSpans(
 
   const json: unknown = await response.json();
 
-  return parseAxiomSpans(json);
+  const spans = parseAxiomSpans(json);
+
+  if (spans.length >= SPAN_LIMIT) {
+    throw new Error(
+      `Axiom returned ${spans.length} spans, the query limit, so the window may hold requests the guard did not see`,
+    );
+  }
+
+  return spans;
 }

@@ -31,10 +31,3 @@ export interface ColdPathAction {
   readonly kind: AutoStopMode;
   readonly machineID: string;
 }
-
-export interface OpBackedCredential {
-  readonly envName: string;
-  readonly fieldLabels: ReadonlyArray<string>;
-  readonly itemTitle: string;
-  readonly vault: string;
-}
