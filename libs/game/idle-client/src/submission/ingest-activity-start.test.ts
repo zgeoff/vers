@@ -484,6 +484,7 @@ test('it defers an activityStart the account switched away from, carrying the sw
   expect(outcome).toStrictEqual({
     notice: { activeAvatarName: 'Zetha', kind: 'avatar-switched' },
     outcome: 'deferred',
+    refusal: { code: 'AVATAR_NOT_ACTIVE', reason: null },
   });
 
   // held, not dropped: switching back delivers it
@@ -509,9 +510,32 @@ test('it drops an activityStart this build can no longer replay, carrying the re
   expect(outcome).toStrictEqual({
     notice: { kind: 'sim-version-expired' },
     outcome: 'rejected',
+    refusal: { code: 'SIM_VERSION_EXPIRED', reason: null },
   });
 
   const stored = await readActivityStart(row.id);
 
   expect(stored).toBeUndefined();
+});
+
+test('it names the refused check when the server defers a start on its build snapshot', async () => {
+  const ctx = setupTest();
+  const row = createMockActivityData({ startKey: 'start_refused' });
+
+  await writeActivityStart(row);
+
+  server.use(
+    mockActivityService.advanceActivity.handler((opts) => {
+      throw opts.errors.CHECKPOINT_INVALID({
+        data: { activityID: row.id, appendedHead: 0, reason: 'build-snapshot-mismatch' },
+      });
+    }),
+  );
+
+  const outcome = await ingestActivityStart(ctx.client, row.id);
+
+  expect(outcome).toStrictEqual({
+    outcome: 'deferred',
+    refusal: { code: 'CHECKPOINT_INVALID', reason: 'build-snapshot-mismatch' },
+  });
 });

@@ -14,7 +14,9 @@ import type { ActivityServiceClient } from '../submission/types';
 import { WORKER_TO_CLIENT_CHANNEL } from '../transport/constants';
 import { WorkerMessageType } from '../types';
 import type { RewardSlotLedgerEntry } from '../types';
+import { buildDebugEventFromMessage } from './build-debug-event-from-message';
 import { BUNDLED_ENGINE_HASH } from './bundled-engine-hash';
+import { createDebugRecorder } from './create-debug-recorder';
 import { createWorkerRouter } from './create-worker-router';
 import { ingestAndBroadcastActivityStart } from './ingest-and-broadcast-activity-start';
 import { registerSimulationListeners } from './register-simulation-listeners';
@@ -51,6 +53,8 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
   const client = options.client ?? createActivityServiceClient();
 
   const broadcastChannel = new BroadcastChannel(WORKER_TO_CLIENT_CHANNEL);
+
+  const debug = createDebugRecorder();
 
   // the worker always holds a simulation — "no run" is an empty one; listeners attach right
   // after the context literal below exists
@@ -99,10 +103,22 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
   let latestRun: LatestRun | null = null;
 
   const broadcast = (message: WorkerMessage) => {
+    const event = buildDebugEventFromMessage(message);
+
+    if (event !== null) {
+      debug.recordEvent(event.type, event.detail);
+    }
+
     broadcastChannel.postMessage(message);
   };
 
   const updateConnectivity = (online: boolean) => {
+    if (connectivityOnline !== online) {
+      const detail = online ? 'online' : 'offline';
+
+      debug.recordEvent('connectivity', detail);
+    }
+
     connectivityOnline = online;
   };
 
@@ -121,6 +137,7 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
     getCancelSignal: () => getLifecycle().getSnapshot().context.cancelSignal,
     getClient: () => client,
     getConnectivityOnline: () => connectivityOnline,
+    getDebugRecorder: () => debug,
     getFailureAction: () => failureAction,
     getLatestRun: () => latestRun,
     getLifecycle,
@@ -189,6 +206,18 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
     input: { failureActionSeeded, runtime: context, shutdownSignal: shutdownController.signal },
   }).start();
 
+  let lastRecordedPhase = lifecycleActor.getSnapshot().context.phase;
+
+  lifecycleActor.subscribe((snapshot) => {
+    if (snapshot.context.phase === lastRecordedPhase) {
+      return;
+    }
+
+    lastRecordedPhase = snapshot.context.phase;
+
+    debug.recordEvent('lifecycle', snapshot.context.phase);
+  });
+
   const submitter = createCheckpointSubmitter({
     actor: lifecycleActor.getSnapshot().context.submitterRef,
     client,
@@ -205,6 +234,9 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
     // lifecycle flow that owns it.
     onEvicted: (activityID) => {
       getLifecycle().send({ activityID, type: 'SUBMITTER_EVICTED' });
+    },
+    onFlushSettled: (activityID, outcome) => {
+      debug.recordFlush(activityID, outcome);
     },
     onHeld: () => {
       getLifecycle().send({ type: 'SUBMITTER_HELD' });

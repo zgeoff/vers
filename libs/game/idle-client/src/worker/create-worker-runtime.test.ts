@@ -491,3 +491,24 @@ test('it resets the displaced simulation and broadcasts WriterDisplaced on a ses
   // activity
   expect(result.state.activity).toBeUndefined();
 });
+
+test('it answers a debug snapshot that records a connectivity loss the platform reports', async () => {
+  using runtime = createWorkerRuntime();
+
+  const client = createConnectedTestClient(runtime);
+
+  self.dispatchEvent(new Event('offline'));
+
+  const snapshot = await client.readDebugSnapshot({});
+
+  expect(snapshot).toMatchObject({
+    connectivityOnline: false,
+    events: [{ detail: 'offline', type: 'connectivity' }],
+    latestRun: null,
+    liveRun: null,
+    outbox: { activityStarts: [], checkpoints: [] },
+    phase: 'idle',
+  });
+
+  expect(snapshot.writer.workerID).toBeString();
+});

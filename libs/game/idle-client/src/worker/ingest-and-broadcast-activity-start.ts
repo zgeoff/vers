@@ -13,6 +13,8 @@ export async function ingestAndBroadcastActivityStart(
 ): Promise<IngestActivityStartOutcome> {
   const result = await ingestActivityStart(context.getClient(), activityID);
 
+  context.getDebugRecorder().recordStartAttempt(activityID, result.outcome, result.refusal ?? null);
+
   if (result.outcome === 'ingested') {
     context.broadcast({ activityID, type: WorkerMessageType.ActivityStartIngested });
   }

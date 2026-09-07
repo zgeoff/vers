@@ -4,6 +4,7 @@ import type { ActorRefFromLogic } from 'xstate';
 import type { CheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import type { ActivityServiceClient } from '../submission/types';
 import type { RewardSlotLedgerEntry, RewardSlotLedgerSnapshot } from '../types';
+import type { DebugRecorder } from './create-debug-recorder';
 import type { workerLifecycleMachine } from './worker-lifecycle-machine';
 import type { WorkerMessage } from './worker-to-client-message-schema';
 
@@ -47,6 +48,8 @@ export interface WorkerContext {
   readonly getClient: () => ActivityServiceClient;
 
   readonly getConnectivityOnline: () => boolean;
+
+  readonly getDebugRecorder: () => DebugRecorder;
 
   readonly getFailureAction: () => ActivityFailureAction;
 

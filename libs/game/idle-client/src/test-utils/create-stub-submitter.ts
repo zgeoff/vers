@@ -3,6 +3,7 @@ import type { CheckpointSubmitter } from '../submission/create-checkpoint-submit
 
 export function createStubSubmitter(): CheckpointSubmitter {
   return {
+    collectActivityStates: mock(() => []),
     flushHeld: mock(() => Promise.resolve()),
     flushNow: mock(() => Promise.resolve()),
     registerActivity: mock(() => Promise.resolve()),

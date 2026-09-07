@@ -4,6 +4,7 @@ import invariant from 'tiny-invariant';
 import type { ActorOptions, ActorRefFromLogic, AnyActorLogic } from 'xstate';
 import { createActor, waitFor } from 'xstate';
 import { buildCheckpointBatchEntry } from './build-checkpoint-batch-entry';
+import { buildRetryBackoffMS } from './build-retry-backoff-ms';
 import type { CheckpointActivityChildRef } from './checkpoint-submitter-machine';
 import { checkpointSubmitterMachine } from './checkpoint-submitter-machine';
 import {
@@ -13,11 +14,18 @@ import {
 } from './constants';
 import type { IngestActivityStartOutcome } from './ingest-activity-start';
 import { readQueuedCheckpoints } from './read-queued-checkpoints';
-import type { ActivityServiceClient, ActivitySubmissionContext } from './types';
+import type { FlushOutcome } from './run-checkpoint-flush-attempt';
+import type {
+  ActivityServiceClient,
+  ActivitySubmissionContext,
+  SubmitterActivityState,
+} from './types';
 import { writeNodeAnchor } from './write-node-anchor';
 import { writeQueuedCheckpoint } from './write-queued-checkpoint';
 
 export interface CheckpointSubmitter {
+  collectActivityStates: () => ReadonlyArray<SubmitterActivityState>;
+
   registerActivity: (context: Readonly<ActivitySubmissionContext>) => Promise<void>;
 
   submit: (
@@ -50,6 +58,8 @@ interface CreateCheckpointSubmitterOptions {
   readonly onInvalid: (activityID: string, reason: string, traceID?: string) => void;
 
   readonly onEvicted?: (activityID: string) => void;
+
+  readonly onFlushSettled?: (activityID: string, outcome: Readonly<FlushOutcome>) => void;
 
   readonly onHeld?: (activityID: string) => void;
 
@@ -169,6 +179,7 @@ export function createCheckpointSubmitter(
       onAcked: options.onAcked,
       onCapped: options.onCapped,
       onEvicted: options.onEvicted,
+      onFlushSettled: options.onFlushSettled,
       onInvalid: options.onInvalid,
       onServerContact: options.onServerContact,
       retryTimings,
@@ -302,9 +313,35 @@ export function createCheckpointSubmitter(
   const isEvicted = (activityID: string): boolean =>
     parentActor.getSnapshot().context.evictedActivityIDs.has(activityID);
 
+  const collectActivityStates = (): ReadonlyArray<SubmitterActivityState> =>
+    [...parentActor.getSnapshot().context.children.entries()].map(([activityID, child]) => {
+      const snapshot = child.getSnapshot();
+      const state = snapshot.value;
+
+      return {
+        activityID,
+        expectedHead: snapshot.context.expectedHead,
+        latestQueuedVersion: snapshot.context.latestQueuedVersion ?? null,
+        retryAttempt: snapshot.context.retryAttempt,
+        retryDelayMs:
+          state === 'retrying'
+            ? buildRetryBackoffMS(snapshot.context.retryTimings, snapshot.context.retryAttempt)
+            : null,
+        state,
+      };
+    });
+
   const removeEviction = (activityID: string): void => {
     parentActor.send({ activityID, type: 'REMOVE_EVICTION' });
   };
 
-  return { flushHeld, flushNow, isEvicted, registerActivity, removeEviction, submit };
+  return {
+    collectActivityStates,
+    flushHeld,
+    flushNow,
+    isEvicted,
+    registerActivity,
+    removeEviction,
+    submit,
+  };
 }

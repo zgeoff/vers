@@ -9,6 +9,7 @@ import { createActor } from 'xstate';
 import type { CheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import type { ActivityServiceClient } from '../submission/types';
 import type { RewardSlotLedgerEntry } from '../types';
+import { createDebugRecorder } from '../worker/create-debug-recorder';
 import type { LatestRun, WorkerContext } from '../worker/types';
 import { workerLifecycleMachine } from '../worker/worker-lifecycle-machine';
 import type { WorkerMessage } from '../worker/worker-to-client-message-schema';
@@ -52,6 +53,7 @@ export function createStubWorkerContext(
   const shutdownController = options.shutdownController ?? new AbortController();
   let connectivityOnline = true;
   const broadcasts: Array<WorkerMessage> = [];
+  const debugRecorder = createDebugRecorder();
 
   // referenced by `context.getLifecycle` below via closure before it exists, safe only because
   // nothing calls it until after the `const lifecycleActor` assignment following `context` runs
@@ -71,6 +73,7 @@ export function createStubWorkerContext(
     getCancelSignal: () => getLifecycle().getSnapshot().context.cancelSignal,
     getClient: () => client,
     getConnectivityOnline: () => connectivityOnline,
+    getDebugRecorder: () => debugRecorder,
     getFailureAction: () => failureAction,
     getLatestRun: () => latestRun,
     getLifecycle,

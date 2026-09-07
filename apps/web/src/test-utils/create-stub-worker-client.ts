@@ -1,5 +1,10 @@
 import { mock } from 'bun:test';
-import type { StartStatus, UndeliveredWork, WorkerClient } from '@vers/idle-client';
+import type {
+  StartStatus,
+  UndeliveredWork,
+  WorkerClient,
+  WorkerDebugSnapshot,
+} from '@vers/idle-client';
 import { ActivityFailureAction } from '@vers/idle-core';
 
 interface StubWorkerClientOptions {
@@ -20,6 +25,18 @@ const DEFAULT_INITIALIZE_RESULT = {
 } as const;
 
 const DEFAULT_START_STATUS: StartStatus = { kind: 'failed' };
+
+const DEFAULT_DEBUG_SNAPSHOT: WorkerDebugSnapshot = {
+  capturedAt: 0,
+  connectivityOnline: true,
+  events: [],
+  latestRun: null,
+  liveRun: null,
+  outbox: { activityStarts: [], checkpoints: [] },
+  phase: 'idle',
+  writer: { bootedAt: 0, workerID: 'worker_stub' },
+};
+
 const DEFAULT_UNDELIVERED_WORK: UndeliveredWork = { activityCount: 0, playMs: 0 };
 
 export function createStubWorkerClient(
@@ -29,6 +46,7 @@ export function createStubWorkerClient(
     cacheNodeSeeds: mock(() => Promise.resolve({ ok: true as const })),
     disconnect: mock(() => Promise.resolve({ ok: true as const })),
     initialize: mock(() => Promise.resolve(DEFAULT_INITIALIZE_RESULT)),
+    readDebugSnapshot: mock(() => Promise.resolve(DEFAULT_DEBUG_SNAPSHOT)),
     readUndeliveredWork: mock(
       options.readUndeliveredWork ?? (() => Promise.resolve(DEFAULT_UNDELIVERED_WORK)),
     ),

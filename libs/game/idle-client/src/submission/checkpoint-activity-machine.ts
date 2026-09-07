@@ -2,6 +2,7 @@ import invariant from 'tiny-invariant';
 import type { ActorRef, Snapshot } from 'xstate';
 import { assign, enqueueActions, raise, setup } from 'xstate';
 import { buildMachineTypes } from './build-machine-types';
+import { buildRetryBackoffMS } from './build-retry-backoff-ms';
 import { FLUSH_STALL_THRESHOLD } from './constants';
 import type { IngestActivityStartOutcome } from './ingest-activity-start';
 import type { FlushOutcome } from './run-checkpoint-flush-attempt';
@@ -25,6 +26,9 @@ interface CheckpointActivityContext {
   readonly onAcked: ((activityID: string, appendedHead: number) => void) | undefined;
   readonly onCapped: ((activityID: string, appendedHead: number) => void) | undefined;
   readonly onEvicted: ((activityID: string) => void) | undefined;
+  readonly onFlushSettled:
+    | ((activityID: string, outcome: Readonly<FlushOutcome>) => void)
+    | undefined;
   readonly onInvalid: (activityID: string, reason: string, traceID?: string) => void;
   readonly onServerContact: (() => void) | undefined;
   readonly parentRef: ActorRef<Snapshot<unknown>, CheckpointActivitySettledEvent> | undefined;
@@ -47,6 +51,9 @@ export interface CheckpointActivityInput {
   readonly onAcked: ((activityID: string, appendedHead: number) => void) | undefined;
   readonly onCapped: ((activityID: string, appendedHead: number) => void) | undefined;
   readonly onEvicted: ((activityID: string) => void) | undefined;
+  readonly onFlushSettled?:
+    | ((activityID: string, outcome: Readonly<FlushOutcome>) => void)
+    | undefined;
   readonly onInvalid: (activityID: string, reason: string, traceID?: string) => void;
   readonly onServerContact: (() => void) | undefined;
 
@@ -142,6 +149,7 @@ export const checkpointActivityMachine = setup({
     onAcked: args.input.onAcked,
     onCapped: args.input.onCapped,
     onEvicted: args.input.onEvicted,
+    onFlushSettled: args.input.onFlushSettled,
     onInvalid: args.input.onInvalid,
     onServerContact: args.input.onServerContact,
     parentRef: args.input.parentRef,
@@ -173,7 +181,12 @@ export const checkpointActivityMachine = setup({
           onServerContact: args.context.onServerContact,
         }),
         onDone: {
-          actions: raise((args) => buildFlushSettledEvent(args.event.output)),
+          actions: [
+            (args) => {
+              args.context.onFlushSettled?.(args.context.activityID, args.event.output);
+            },
+            raise((args) => buildFlushSettledEvent(args.event.output)),
+          ],
         },
         src: 'runCheckpointFlushAttempt',
       },
@@ -413,11 +426,4 @@ function buildQueuedContextUpdate(
     latestQueuedVersion: args.event.version,
     terminalQueued: args.context.terminalQueued || args.event.isTerminal,
   };
-}
-
-function buildRetryBackoffMS(
-  retryTimings: Readonly<{ maxTimeout: number; minTimeout: number }>,
-  attempt: number,
-): number {
-  return Math.min(retryTimings.minTimeout * 2 ** attempt, retryTimings.maxTimeout);
 }

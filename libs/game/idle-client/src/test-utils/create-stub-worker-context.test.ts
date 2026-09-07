@@ -46,6 +46,7 @@ test('it returns the injected submitter', () => {
     flushNow: mock(() => Promise.resolve()),
     registerActivity: mock(() => Promise.resolve()),
     submit: mock(() => Promise.resolve(undefined)),
+    collectActivityStates: mock(() => []),
     isEvicted: mock(() => false),
     removeEviction: mock(() => {}),
   };

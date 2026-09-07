@@ -92,6 +92,20 @@ export type ActivityServiceClient = ContractRouterClient<
   ActivityCallContext
 >;
 
+export interface RetryTimings {
+  readonly maxTimeout: number;
+  readonly minTimeout: number;
+}
+
+export interface SubmitterActivityState {
+  readonly activityID: string;
+  readonly expectedHead: number;
+  readonly latestQueuedVersion: null | number;
+  readonly retryAttempt: number;
+  readonly retryDelayMs: null | number;
+  readonly state: string;
+}
+
 export interface ActivitySubmissionContext {
   readonly activityID: string;
   readonly appendedHead: number;
