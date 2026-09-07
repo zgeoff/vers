@@ -34,6 +34,11 @@ interface StartAttemptReport {
   readonly status: StartStatus;
 }
 
+interface SeenLiveRun {
+  readonly reportedRunID: string | undefined;
+  readonly runID: string;
+}
+
 export function ExploreCurrentPanel(props: Readonly<ExploreCurrentPanelProps>) {
   const navigate = useNavigate();
   const idleWorkerHandle = useIdleWorkerHandle();
@@ -59,9 +64,9 @@ export function ExploreCurrentPanel(props: Readonly<ExploreCurrentPanelProps>) {
   const engagedRun = useEngagedRun();
   const lastRunOutcome = useRunOutcome();
 
-  // the run this panel follows: the one its attempt answered with, then whichever run goes live
-  // at the node, since an auto-retry chains a continuation under a fresh id
-  const [followedRunID, setFollowedRunID] = useState<string | undefined>(undefined);
+  // the last run seen live at the node, tagged with the report it was seen under: an auto-retry
+  // chains a continuation under a fresh id, and its end is the one the panel shows
+  const [seenLiveRun, setSeenLiveRun] = useState<SeenLiveRun | undefined>(undefined);
 
   useEffect(() => {
     if (selectedNode === null || lastExploredNodeID.current === selectedNode.id) {
@@ -164,18 +169,17 @@ export function ExploreCurrentPanel(props: Readonly<ExploreCurrentPanelProps>) {
   const reportedRunID = pickReportedRunID(reportedStatus);
 
   useEffect(() => {
-    if (reportedRunID !== undefined) {
-      setFollowedRunID(reportedRunID);
-    }
-  }, [reportedRunID]);
-
-  // keyed on the live run alone: the run's end must not return the panel to the id its attempt
-  // answered with, which a continuation has moved past
-  useEffect(() => {
     if (liveRunID !== undefined) {
-      setFollowedRunID(liveRunID);
+      setSeenLiveRun({ reportedRunID, runID: liveRunID });
     }
-  }, [liveRunID]);
+  }, [liveRunID, reportedRunID]);
+
+  // derived in render, not latched: a re-armed attempt's reply must follow its own run on the
+  // same render it lands, while the store still holds the run the player just retried from
+  const followedRunID =
+    seenLiveRun !== undefined && seenLiveRun.reportedRunID === reportedRunID
+      ? seenLiveRun.runID
+      : reportedRunID;
 
   // readiness follows the live run's scope, never the id the start call answered with: an
   // auto-retry chains a continuation under a fresh id, and the panel stays up across the chain

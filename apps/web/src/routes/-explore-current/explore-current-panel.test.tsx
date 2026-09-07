@@ -1334,3 +1334,94 @@ test("it keeps the spinner while a fresh start is installed past an earlier run'
     expect(rendered.getByRole('status')).toBeVisible();
   });
 });
+
+test('it keeps the spinner after a retry until the next run goes live', async () => {
+  const signedIn = await createSignedInUser();
+  const avatar = await createActiveAvatar({ userID: signedIn.userID });
+
+  setSelectedNode(createMockWorldMapNode({ id: '0_0' }));
+
+  const user = userEvent.setup();
+  const next = createMockActivityData({ avatarID: avatar.id, scopeID: '0_0' });
+
+  // the first call attaches to the run about to end; the retry's call mints the next run, whose
+  // snapshot has not landed by the time its reply does
+  const startActivity = mock(() =>
+    startActivity.mock.calls.length === 1
+      ? Promise.resolve<StartStatus>({ activityID: 'activity_attached', kind: 'attached' })
+      : Promise.resolve<StartStatus>({ activity: next, kind: 'started' }),
+  );
+
+  const client = createStubWorkerClient({ startActivity });
+
+  setIdleWorkerHandle({
+    activity: undefined,
+    client,
+    failureAction: ActivityFailureAction.Abort,
+    initialized: true,
+    writerAbortSignal: new AbortController().signal,
+  });
+
+  await withRequestContext({ cookies: signedIn.cookies }, async () => {
+    const rendered = renderWithRouter(<ExploreCurrentPanel orpc={orpc} />);
+
+    await waitFor(() => {
+      expect(client.startActivity).toHaveBeenCalledTimes(1);
+    });
+
+    setEngagedRun({
+      avatarID: avatar.id,
+      id: 'activity_attached',
+      scopeID: '0_0',
+      scopeType: 'world_map_node',
+    });
+
+    setIdleWorkerHandle({
+      activity: createMockActivitySnapshot({ id: 'activity_attached' }),
+      client,
+      failureAction: ActivityFailureAction.Abort,
+      initialized: true,
+      liveRun: {
+        avatarID: avatar.id,
+        id: 'activity_attached',
+        scopeID: '0_0',
+        scopeType: 'world_map_node',
+      },
+      writerAbortSignal: new AbortController().signal,
+    });
+
+    await rendered.findByLabelText('Auto-retry on failure');
+
+    setRunOutcome(
+      createMockRunOutcome({
+        activityID: 'activity_attached',
+        avatarID: avatar.id,
+        scope: { scopeID: '0_0', scopeType: 'world_map_node' },
+      }),
+    );
+
+    setIdleWorkerHandle({
+      activity: undefined,
+      client,
+      failureAction: ActivityFailureAction.Abort,
+      initialized: true,
+      writerAbortSignal: new AbortController().signal,
+    });
+
+    const retry = await rendered.findByRole('button', { name: 'Retry' });
+
+    await user.click(retry);
+
+    await waitFor(() => {
+      expect(client.startActivity).toHaveBeenCalledTimes(2);
+    });
+
+    // the retried run's outcome stays in the store until the next run's snapshot lands, and must
+    // not come back up on the fresh start's reply
+    await expect(
+      rendered.findByTestId('run-outcome-panel', undefined, { timeout: 100 }),
+    ).toReject();
+
+    expect(rendered.getByRole('status')).toBeVisible();
+  });
+});
