@@ -2,6 +2,8 @@ import { expect, mock, test } from 'bun:test';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ActivityFailureAction } from '@vers/idle-core';
+import { buildQueryClient } from '../../lib/query/build-query-client';
+import { orpc } from '../../lib/rpc/orpc';
 import { createStubWorkerClient } from '../../test-utils/create-stub-worker-client';
 import { renderWithRouter } from '../../test-utils/render-with-router';
 import { setIdleWorkerHandle } from '../../test-utils/set-idle-worker-handle';
@@ -200,5 +202,40 @@ test('it signs out directly when no worker client is mounted', async () => {
 
     expect(action).toHaveBeenCalledOnce();
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+});
+
+test('it forgets the cached queries once sign-out completes', async () => {
+  const user = userEvent.setup();
+  const action = mock(() => Promise.resolve(undefined));
+  const client = createStubWorkerClient();
+  const queryClient = buildQueryClient();
+
+  queryClient.setQueryData(orpc.avatar.getAvatars.queryKey({ input: {} }), {
+    activeAvatarID: null,
+    avatars: [],
+  });
+
+  setIdleWorkerHandle({
+    activity: undefined,
+    client,
+    failureAction: ActivityFailureAction.Abort,
+    initialized: true,
+    writerAbortSignal: new AbortController().signal,
+  });
+
+  await withRequestContext({}, async () => {
+    renderWithRouter(<SignOutForm action={action} />, { queryClient });
+
+    const logoutButton = await screen.findByRole('button', { name: 'Log out' });
+
+    await user.click(logoutButton);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Log out' })).not.toBeDisabled();
+    });
+
+    expect(action).toHaveBeenCalledOnce();
+    expect(queryClient.getQueryCache().getAll()).toHaveLength(0);
   });
 });

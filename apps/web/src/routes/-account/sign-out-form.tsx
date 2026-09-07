@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { useServerFn } from '@tanstack/react-start';
 import { Dialog, StatusButton, Text } from '@vers/design-system';
 import type { UndeliveredWork, WorkerClient } from '@vers/idle-client';
@@ -15,7 +16,17 @@ interface SignOutFormProps {
 export function SignOutForm(props: Readonly<SignOutFormProps>) {
   const signOutFn = useServerFn(signOut);
   const action = props.action ?? signOutFn;
+  const queryClient = useQueryClient();
   const idleWorkerHandle = useIdleWorkerHandle();
+
+  const runSignOut = async (): Promise<void> => {
+    await action();
+
+    // the logout redirect is a client-side transition, so without this the signed-out user's
+    // cached rows would outlive the session and read as a live session on the next screen
+    queryClient.clear();
+  };
+
   const [isPending, setIsPending] = useState(false);
   const [report, setReport] = useState<UndeliveredWork | null>(null);
   const [discardFailed, setDiscardFailed] = useState(false);
@@ -34,7 +45,7 @@ export function SignOutForm(props: Readonly<SignOutFormProps>) {
         return;
       }
 
-      await action();
+      await runSignOut();
     } finally {
       setIsPending(false);
     }
@@ -57,7 +68,7 @@ export function SignOutForm(props: Readonly<SignOutFormProps>) {
         }
       }
 
-      await action();
+      await runSignOut();
     } finally {
       setIsPending(false);
     }
