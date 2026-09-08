@@ -1,10 +1,13 @@
 import { NO_TRUSTWORTHY_SHA_REASON, findStaleReason } from './find-stale-reason';
-import type { AppState, ChangeSet, DeployTarget } from './types';
+import type { AppMachine, AppState, ChangeSet, CommitRelation, DeployTarget } from './types';
+
+type FleetRelations = Readonly<Record<string, CommitRelation>>;
 
 export function checkTarget(
   target: DeployTarget,
   state: AppState,
   changes: ChangeSet | null,
+  relations: FleetRelations,
 ): ReadonlyArray<string> {
   const findings: Array<string> = [];
 
@@ -19,9 +22,11 @@ export function checkTarget(
     findings.push(`${started} machines started, expected at least ${minStarted}`);
   }
 
-  findings.push(...checkMachineHealth(state));
+  const rolloutAhead = isRolloutAhead(state, relations);
 
-  const mixedImageFinding = findMixedImageFinding(state);
+  findings.push(...checkMachineHealth(state, relations, rolloutAhead));
+
+  const mixedImageFinding = rolloutAhead ? null : findMixedImageFinding(state);
 
   if (mixedImageFinding !== null) {
     findings.push(mixedImageFinding);
@@ -33,7 +38,8 @@ export function checkTarget(
     findings.push(unreportedImageFinding);
   }
 
-  const staleReason = state.machines.length === 0 ? null : findStaleReason(target, changes);
+  const staleReason =
+    state.machines.length === 0 || rolloutAhead ? null : findStaleReason(target, changes);
 
   if (staleReason !== null && !isSuppressedByMixedImages(staleReason, mixedImageFinding)) {
     findings.push(`stale: ${staleReason}`);
@@ -44,18 +50,42 @@ export function checkTarget(
   return findings;
 }
 
-function checkMachineHealth(state: AppState): ReadonlyArray<string> {
+function isRolloutAhead(state: AppState, relations: FleetRelations): boolean {
+  const machineRelations = state.machines.map((machine) => findRelation(machine, relations));
+
+  return (
+    machineRelations.some((relation) => relation === 'descendant') &&
+    machineRelations.every((relation) => relation === 'same' || relation === 'descendant')
+  );
+}
+
+function findRelation(machine: AppMachine, relations: FleetRelations): CommitRelation | null {
+  return machine.gitSHA === null ? null : (relations[machine.gitSHA] ?? null);
+}
+
+function checkMachineHealth(
+  state: AppState,
+  relations: FleetRelations,
+  rolloutAhead: boolean,
+): ReadonlyArray<string> {
+  const started = state.machines.filter((machine) => machine.state === 'started');
+
+  const headHealthy = started
+    .filter((machine) => findRelation(machine, relations) === 'same')
+    .every((machine) => (machine.checks ?? []).every((check) => check.status === 'passing'));
+
   const findings: Array<string> = [];
 
-  for (const machine of state.machines) {
-    if (machine.state !== 'started') {
-      continue;
-    }
+  for (const machine of started) {
+    const booting =
+      rolloutAhead && headHealthy && findRelation(machine, relations) === 'descendant';
 
     for (const check of machine.checks ?? []) {
-      if (check.status !== 'passing') {
-        findings.push(`machine ${machine.id} health check ${check.name} is ${check.status}`);
+      if (check.status === 'passing' || (booting && check.status === 'warning')) {
+        continue;
       }
+
+      findings.push(`machine ${machine.id} health check ${check.name} is ${check.status}`);
     }
   }
 

@@ -30,6 +30,7 @@ import { planSimVersionActions } from '../deploy/plan-sim-version-actions';
 import { readAppState } from '../deploy/read-app-state';
 import { readChangesSince } from '../deploy/read-changes-since';
 import { readFleetImage } from '../deploy/read-fleet-image';
+import { readFleetRelations } from '../deploy/read-fleet-relations';
 import { readFlyEnvKeys } from '../deploy/read-fly-env-keys';
 import { readFlySecretNames } from '../deploy/read-fly-secret-names';
 import { readIPList } from '../deploy/read-ip-list';
@@ -494,12 +495,13 @@ async function runVerify(): Promise<void> {
 
     const changes = state.deployedSHA === null ? null : await readChangesSince(state.deployedSHA);
 
+    const relations = await readFleetRelations(state);
     const ips = await readIPList(target.app);
 
     const ipPlan = planIPPosture({ app: target.app, exposure: target.exposure, ips });
 
     const findings = [
-      ...checkTarget(target, state, changes),
+      ...checkTarget(target, state, changes, relations),
       ...(await runProbes(target.probes ?? [])),
       ...(await checkParkedApp(target.app, state)),
       ...ipPlan.violations,
