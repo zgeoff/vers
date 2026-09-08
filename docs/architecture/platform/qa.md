@@ -19,7 +19,7 @@ a link only when its origin is `https://versidle.com`.
 `bun run qa:seed` and `bun run qa:reset` write a QA account straight into the database that
 `DATABASE_URL` names, so a pass starts from a known state without walking sign-up or grinding
 levels. Both commands accept only an address under `qa.versidle.com`, print the target host before
-they act, and refuse a host that is not a loopback address unless `--yes` is passed. Production use
+they act, and refuse a host that is not a loopback address unless you pass `--yes`. Production use
 is the owner's explicit choice: point `DATABASE_URL` at the pre-release database and pass `--yes`.
 
 ```bash
@@ -40,13 +40,12 @@ them: hashed checkpoints, `verified_head` at the appended head, settled XP on th
 reward items, both chain anchors on the last run's tail, and a first-clear grant once a run
 completes. The command prints each run's outcome. Deriving those runs needs the keys service's
 `SCOPE_SECRET_ROOTS` and `ROLL_KEY_ROOTS` in the environment, so the seeded encounter and items
-equal what the services derive for the avatar. An address that already has an account is refused.
+equal what the services derive for the avatar. `qa:seed` refuses an address that already has an
+account.
 
 `qa:reset` deletes the account's activities, chains, items, and grants and returns its avatars to
 level 1; `--all` deletes the account itself, with its sessions and verifications. The logic lives in
-`libs/testing/qa-account/`, its own package: the sealed encounter derivation it calls is
-`server-only`, and the root manifest and the e2e app both depend on `@vers/scripts`, so the tool
-cannot live there.
+`libs/testing/qa-account/`.
 
 ## Inbox
 
@@ -134,8 +133,8 @@ default to `127.0.0.1:9222`. A value from the flag or the environment must be a 
 address and a port from 1 to 65535; the scripts reject any other value before a command runs. The
 port bridge a NAT-mode WSL distribution needs to reach the Windows loopback is in
 [Chrome DevTools MCP](./chrome-devtools-mcp.md#bridge-the-debug-port-one-time). Behind the bridge
-the endpoint is the WSL default gateway on the bridged port (`172.28.80.1:9223` on one machine), so
-a session under NAT sets `QA_CDP_ENDPOINT` once:
+the endpoint is the WSL default gateway on the bridged port, so a session under NAT sets
+`QA_CDP_ENDPOINT` once:
 
 ```bash
 export QA_CDP_ENDPOINT="$(ip route show default | awk '{print $3; exit}'):9223"
@@ -204,7 +203,8 @@ logs that worker's requests whose URL contains `--path` (default `/api/rpc/`) to
 worker's console output and exceptions. `--worker-url <substring>` keeps the attachment to workers
 whose script URL contains it. Each line carries a timestamp; a request prints its method, URL, and
 body, a response prints its status and then its body once the browser has it, and a failed request
-prints the browser's error text. A body longer than 1500 characters is cut and marked with `…`.
+prints the browser's error text. The log cuts a body longer than 1500 characters and marks the cut
+with `…`.
 
 ```bash
 bun run qa:capture --worker-url versidle.com
@@ -230,8 +230,10 @@ await window.__versQA.snapshot();
 with each pending start's attempts and last refusal, the latest-run record the next mint folds from,
 the writer's identity, and the last 200 worker events kept in a ring buffer inside the worker:
 lifecycle phases, start and flush outcomes, refusals, and connectivity changes. The hook reads and
-never writes: it changes no runtime state and no durable store. The writer worker itself, and the
-lifecycle the events trace, are in [game simulation](../game/game-simulation.md#writer-election).
+never writes: it changes no runtime state and no durable store.
+[Game simulation](../game/game-simulation.md#writer-election) owns the writer worker, and
+[offline reconcile](../game/offline-reconcile.md#worker-lifecycle) owns the lifecycle the events
+trace.
 
 ## Cold path
 
@@ -240,8 +242,8 @@ machine of every app in `deploy.config.ts`, stopping instead where the app's `fl
 machines with `stop`, then prints each app's machine states. Before it touches a machine it reads
 the `vers-traces` dataset in Axiom for the last 10 minutes and refuses, with the request count and
 the busiest routes, when any request other than a `/health` check or the anonymous `getCurrentUser`
-probe reached the fleet, so a fleet that is serving a player is never sent cold. `--force` is
-refused: the manifest names only production apps, and no other fleet exists to accept it.
+probe reached the fleet, so a fleet that is serving a player is never sent cold. The script refuses
+`--force`: the manifest names only production apps, and no other fleet exists to accept it.
 
 ```bash
 bun run qa:cold --dry-run
@@ -254,15 +256,3 @@ that is still pending, so a stalled read cannot hold the wait open past it. The 
 `AXIOM_TOKEN` and `FLY_API_TOKEN` from the environment, and when either is unset it reads the
 `vers-ci` 1Password vault through the `op` CLI: the `axiom` item's `iac-token` field and the
 `github-actions` item's `fly-api-token` field.
-
-## Planned
-
-QA tooling with an open issue:
-
-- [#1065](https://github.com/zgeoff/vers/issues/1065) — the idle worker's device-state matrix, with
-  a test for every cell.
-- [#1066](https://github.com/zgeoff/vers/issues/1066) — a QA-only simulation speed multiplier and
-  fixed seed.
-- [#1067](https://github.com/zgeoff/vers/issues/1067) — fast Playwright tests for the browser-only
-  device-state cells.
-- [#1085](https://github.com/zgeoff/vers/issues/1085) — an Axiom monitor on activity refusals.
