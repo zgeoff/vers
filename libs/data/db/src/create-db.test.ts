@@ -11,6 +11,8 @@ import { sql } from 'kysely';
 import invariant from 'tiny-invariant';
 import { buildPostgresOptions, createDB } from './create-db';
 import { createTestDB } from './test-support/create-test-db';
+import { resolveTestDBTarget } from './test-support/resolve-test-db-target';
+import { startStallingProxy } from './test-support/start-stalling-proxy';
 
 function setupTest() {
   const exporter = new InMemorySpanExporter();
@@ -319,4 +321,49 @@ test('it serves the first query after a wall-clock jump from a fresh connection 
 
   expect(afterRow.pid).not.toBe(beforeRow.pid);
   expect(inMemoryMetrics.readCounterValue('vers.db.pool_resets')).resolves.toBe(1);
+});
+
+test('it rejects a query whose reply never arrives within the deadline and serves the next query from a fresh pool', async () => {
+  const inMemoryMetrics = createInMemoryMetrics();
+
+  const proxy = await startStallingProxy(resolveTestDBTarget().baseURI);
+
+  onTestFinished(() => proxy.stop());
+
+  await using handle = await createTestDB({ baseURI: proxy.baseURI, queryDeadlineMs: 200 });
+
+  const before = await sql<{ pid: number }>`select pg_backend_pid() as pid`.execute(handle.db);
+
+  proxy.stopForwarding();
+
+  const startedAt = performance.now();
+  const stalled = sql`select 1`.execute(handle.db);
+
+  await stalled.catch(() => {});
+
+  expect(performance.now() - startedAt).toBeLessThan(1000);
+  expect(stalled).rejects.toMatchObject({ code: 'CONNECTION_DESTROYED' });
+
+  const after = await sql<{ pid: number }>`select pg_backend_pid() as pid`.execute(handle.db);
+
+  const [beforeRow] = before.rows;
+  const [afterRow] = after.rows;
+
+  invariant(beforeRow && afterRow, 'expected one row per query');
+
+  expect(afterRow.pid).not.toBe(beforeRow.pid);
+
+  expect(inMemoryMetrics.readCounterDataPoints('vers.db.pool_resets')).resolves.toStrictEqual([
+    { attributes: { reason: 'query_stall' }, value: 1 },
+  ]);
+});
+
+test('it leaves a query that answers within the deadline untouched', async () => {
+  const inMemoryMetrics = createInMemoryMetrics();
+
+  await using handle = await createTestDB({ queryDeadlineMs: 200 });
+
+  await expect(handle.db.selectFrom('users').selectAll().execute()).toResolve();
+
+  expect(inMemoryMetrics.readCounterDataPoints('vers.db.pool_resets')).resolves.toBeEmpty();
 });

@@ -20,15 +20,21 @@ import { recordPoolReset } from './record-pool-reset';
 import type { DB } from './schema.generated';
 import { startResumeDetector } from './start-resume-detector';
 import type { ResumeDetector, StartResumeDetectorConfig } from './start-resume-detector';
+import type { PoolResetReason } from './types';
 
 export interface CreateDBConfig {
   readonly databaseURL: string;
   readonly idleInTransactionSessionTimeoutMs?: number;
+  readonly queryDeadlineMs?: number;
   readonly resumeDetection?: Omit<StartResumeDetectorConfig, 'onResume'>;
   readonly searchPath?: string;
 }
 
 const DEFAULT_SESSION_TIMEOUT_MS = 30_000;
+
+// statement_timeout makes a live server answer within 30s, so 5s more of silence means the
+// transport is dead, not the statement slow
+const DEFAULT_QUERY_DEADLINE_MS = DEFAULT_SESSION_TIMEOUT_MS + 5000;
 
 export function createDB(config: CreateDBConfig): Kysely<DB> {
   return new Kysely<DB>({
@@ -77,25 +83,39 @@ interface PoolGeneration {
   readonly sql: postgres.Sql;
 }
 
-function buildResettableDriver(config: CreateDBConfig): Driver {
-  const owners = new WeakMap<DatabaseConnection, PoolGeneration>();
+interface ConnectionLease {
+  readonly generation: PoolGeneration;
+  readonly inner: DatabaseConnection;
+}
 
+function buildResettableDriver(config: CreateDBConfig): Driver {
+  const leases = new WeakMap<DatabaseConnection, ConnectionLease>();
+
+  const queryDeadlineMs = config.queryDeadlineMs ?? DEFAULT_QUERY_DEADLINE_MS;
   let current = createPoolGeneration(config);
   let detector: ResumeDetector | null = null;
 
-  const resolveDriver = (connection: DatabaseConnection): Driver =>
-    (owners.get(connection) ?? current).driver;
+  const resolveLease = (connection: DatabaseConnection): ConnectionLease => {
+    const lease = leases.get(connection);
 
-  const resetPool = async (): Promise<void> => {
+    invariant(lease, 'every connection handed back to the driver was leased by acquireConnection');
+
+    return lease;
+  };
+
+  const resolveDriver = (connection: DatabaseConnection): Driver =>
+    resolveLease(connection).generation.driver;
+
+  const resetPool = async (reason: PoolResetReason): Promise<void> => {
     const previous = current;
 
     current = createPoolGeneration(config);
     previous.ended = true;
 
-    recordPoolReset();
+    recordPoolReset(reason);
 
     // a zero timeout destroys the sockets and rejects every query still pending on them; the
-    // graceful end would wait on a peer that closed during the pause
+    // graceful end would wait on a peer that closed during the pause or stopped answering
     await previous.sql.end({ timeout: 0 });
   };
 
@@ -108,9 +128,17 @@ function buildResettableDriver(config: CreateDBConfig): Driver {
 
       await generation.ready;
 
-      const connection = await generation.driver.acquireConnection(options);
+      const inner = await generation.driver.acquireConnection(options);
 
-      owners.set(connection, generation);
+      const connection = buildBoundedConnection(inner, queryDeadlineMs, () => {
+        // a generation already replaced by a resume or an earlier stall has had its sockets
+        // destroyed, which rejected this query too
+        if (generation === current) {
+          void resetPool('query_stall');
+        }
+      });
+
+      leases.set(connection, { generation, inner });
 
       return connection;
     },
@@ -130,18 +158,18 @@ function buildResettableDriver(config: CreateDBConfig): Driver {
       detector = startResumeDetector({
         ...config.resumeDetection,
         onResume: () => {
-          void resetPool();
+          void resetPool('resume');
         },
       });
     },
     releaseConnection: async (connection, options) => {
-      const generation = owners.get(connection) ?? current;
+      const lease = resolveLease(connection);
 
-      if (generation.ended) {
+      if (lease.generation.ended) {
         return;
       }
 
-      await generation.driver.releaseConnection(connection, options);
+      await lease.generation.driver.releaseConnection(lease.inner, options);
     },
     releaseSavepoint: (connection, savepointName, compileQuery) => {
       const driver = resolveDriver(connection);
@@ -174,6 +202,28 @@ function buildResettableDriver(config: CreateDBConfig): Driver {
 
       return driver.savepoint(connection, savepointName, compileQuery);
     },
+  };
+}
+
+function buildBoundedConnection(
+  inner: DatabaseConnection,
+  deadlineMs: number,
+  onDeadline: () => void,
+): DatabaseConnection {
+  return {
+    executeQuery: async (compiledQuery) => {
+      // Kysely's abort signal alone would strand the connection: kysely-postgres-js implements
+      // neither cancelQuery nor killSession, so the reserved socket stays out of the pool until the
+      // kernel gives up on it. Dropping the whole pool generation is the only way to free it.
+      const timer = setTimeout(onDeadline, deadlineMs);
+
+      try {
+        return await inner.executeQuery(compiledQuery);
+      } finally {
+        clearTimeout(timer);
+      }
+    },
+    streamQuery: (compiledQuery, chunkSize) => inner.streamQuery(compiledQuery, chunkSize),
   };
 }
 
