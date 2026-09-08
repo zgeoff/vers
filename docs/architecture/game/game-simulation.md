@@ -80,19 +80,6 @@ next reconnect.
 The worker lifecycle — the states the writer moves through and how a handoff moves work to a fresh
 worker — lives in [offline reconcile](./offline-reconcile.md#worker-lifecycle).
 
-### QA debug hook
-
-A QA tester reads the writer worker's state from the page console through `window.__versQA`, with no
-DevTools attachment to the worker. app-web installs the object on a game page only when the
-session's email is under `qa.versidle.com`, or when a non-production build carries `?qa=1`; the
-server decides the account gate from the session and hands the page a boolean, so the page never
-reads the email, and every other page carries no object and runs no extra code. `snapshot()` answers
-one read-only worker message with a copy of the live run, the durable outbox with each pending
-start's attempts and last refusal, the latest-run record the next mint folds from, the writer's
-identity, and the last 200 worker events — lifecycle phases, start and flush outcomes, refusals, and
-connectivity changes — kept in a ring buffer inside the worker. The hook reads and never writes: it
-changes no runtime state and no durable store.
-
 ## Authoring and verifying inputs
 
 The client authors every activity input; the server verifies it. Starting an activity is one

@@ -347,13 +347,9 @@ the mechanics and provisioning.
   (`turbo run test --affected`); `LEFTHOOK=0` skips all hooks.
 - Python (`apps/bugsink` only) runs `pytest` under `uv` via its `test:adapter` script, outside the
   Bun graph; the `python-tests` workflow runs it on change.
-- `bun run qa:inbox` — reads the verification code or link out of an email sent to a
-  `qa.versidle.com` address during manual QA against production
-  (`docs/architecture/platform/qa-inbox.md`).
-- `bun run qa:cdp` / `bun run qa:capture` — drive a debug Chrome and log its shared workers' RPC
-  traffic over the DevTools Protocol during manual QA (`docs/architecture/platform/qa-browser.md`).
-- `bun run qa:cold` — suspends every machine of the production fleet for cold-path QA, and refuses
-  while Axiom shows a request in the last 10 minutes (`docs/architecture/platform/deployment.md`).
+- `bun run qa:*` — the manual QA scripts: `qa:seed` and `qa:reset` write a QA account, `qa:inbox`
+  reads a verification email, `qa:cdp` and `qa:capture` drive a debug Chrome, and `qa:cold` sends
+  the fleet cold behind a traffic guard (`docs/architecture/platform/qa.md`).
 
 ## Lint policy
 
