@@ -151,6 +151,28 @@ chain and its pinned encounter and version context, and the server re-derives ea
 build the same way it re-derives the start's. The stored activity row carries the same columns
 whichever path delivered it, so the replay verifier reproduces it unchanged.
 
+### Device-state matrix
+
+Every way a device arrives at the game has one answer for what its next activity start folds from
+and what the page shows. The start's build snapshot folds from the worker's latest-run record, and
+its predecessor comes from the avatar's durable last-started record, so each row says which run
+those records name once the arrival settles. A row's name is the title of the test that covers it,
+in `libs/game/idle-client/src/worker/worker-lifecycle-machine.test.ts`; each test drives the
+lifecycle machine and the start flow against a stubbed server and asserts the mint and the broadcast
+the tabs receive. The last row has no test.
+
+| Arrival                                                                                                     | Build snapshot folds from                                    | Predecessor                                | Page shows                                             |
+| ----------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------ | ------------------------------------------------------ |
+| `it mints on a fresh device from the server's latest run and its unsettled xp`                              | the server's latest row and its unsettled xp                 | that row                                   | the run, with no catch-up dialog                       |
+| `it resyncs before a start that beats the boot report on a reload with a delivered run`                     | the server's latest row and its unsettled xp, fetched first  | the delivered run, from the durable record | the run, once the resync settles                       |
+| `it delivers the start on a reload with an undelivered start and reattaches its run`                        | the delivered start's own snapshot                           | the delivered start                        | the run, reattached where it stood                     |
+| `it attaches a second tab's start to the writer's live run without a mint`                                  | no mint                                                      | none                                       | the writer's sim snapshot                              |
+| `it clears the run and mints behind it when the worker is evicted while a run is live`                      | the displaced run's record as this device last held it       | the displaced run                          | "Playing on another device"                            |
+| `it discards the outbox on a takeover from another device and mints from the server after the next sign-in` | nothing until the next sign-in, then the server's latest row | that row                                   | "Your session expired while catching up", with Sign in |
+| `it delivers a start minted offline on a reconnect after offline and mints behind it`                       | the record of the run that continued offline                 | the start minted offline, once delivered   | the run, with no dialog                                |
+| `it drops a start refused because its predecessor is no longer active and mints from the server's row`      | the server's latest row, adopted when the start is dropped   | that row                                   | "Run could not be saved", with Retry                   |
+| a signed-in account whose device holds another avatar's undelivered starts                                  | the server's latest row for the signed-in avatar             | that row                                   | the sign-out warning counts the other avatar's starts  |
+
 ### What replay pins
 
 The **`Started` checkpoint**, the activity's first checkpoint row, pins every input a replay needs:
