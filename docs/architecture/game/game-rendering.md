@@ -69,7 +69,11 @@ fallback covers browsers without WebGPU. That fallback constrains authoring:
   `EffectComposer` and pmndrs/postprocessing run on WebGL only and are banned.
 - **World-map rendering is instanced.** `WebGPURenderer` is slower than WebGL for many
   individually-drawn meshes but faster for instanced, draw-call-heavy scenes. Nodes and edges render
-  via `InstancedMesh`/`BatchedMesh` with shared geometry, never one mesh per node.
+  via `InstancedMesh`/`BatchedMesh` with shared geometry, never one mesh per node. The node renderer
+  mounts no mesh for an empty node list. three sizes an `InstancedMesh`'s instance buffer from its
+  count and binds it before it skips the zero-instance draw, so a count of zero makes WebGPU report
+  a zero-size binding. The store starts with an empty graph, so a cold load renders frames before
+  the first region arrives.
 - **The `forceWebGL` prop forces the WebGL2 backend**, so the fallback path can be driven directly
   rather than trusting WebGPU's automatic fallback.
 

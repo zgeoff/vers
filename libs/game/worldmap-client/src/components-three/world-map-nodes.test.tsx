@@ -19,6 +19,28 @@ async function setupTest(nodes: ReadonlyArray<WorldMapNode>) {
   return renderer;
 }
 
+test('it renders no mesh for an empty node list', async () => {
+  const renderer = await setupTest([]);
+
+  expect(renderer.scene.children).toHaveLength(0);
+});
+
+test('it mounts the mesh once the first non-empty node list arrives', async () => {
+  const renderer = await setupTest([]);
+
+  const node = createMockWorldMapNode({ id: 'nodeA' });
+
+  await renderer.update(<WorldMapNodes nodes={[node]} />);
+
+  expect(renderer.scene.children).toHaveLength(1);
+
+  const mesh = renderer.scene.children[0]!.instance;
+
+  invariant(isInstancedMesh(mesh), 'the component renders an instanced mesh');
+
+  expect(mesh.count).toBe(1);
+});
+
 test('it sets the hovered node when the pointer enters a node instance', async () => {
   const nodeA = createMockWorldMapNode({ id: 'nodeA' });
   const nodeB = createMockWorldMapNode({ id: 'nodeB' });
