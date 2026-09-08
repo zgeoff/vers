@@ -212,11 +212,17 @@ request that takes the count past the tier's budget. A rejected request on the `
 | `strong`  | a GET or HEAD on an auth or account route | client IP | 100            |
 | `default` | every other request                       | client IP | 1000           |
 
-The `rpc` key is a digest of the sealed session cookie's value, so two sessions behind one client IP
-spend separate budgets. A request with no session cookie is keyed by client IP instead. **Why:** the
-game's writer flushes about once every 10s, and a page load adds a burst of under 20 calls, so a
-healthy session spends at most a third of its budget in any minute. A runaway client is stopped
-within seconds instead of after the 1000 requests the IP-keyed `default` tier allows.
+The `rpc` key is the signed-in session id read out of the sealed session cookie, so two sessions
+behind one client IP spend separate budgets, and a re-sealed cookie for the same session keeps
+spending the same one. A request whose cookie is missing, forged, expired, or signed out is keyed by
+client IP instead, so a client cannot mint budgets by inventing cookie values. **Why:** the game's
+writer flushes about once every 10s, and a page load adds a burst of under 20 calls, so a healthy
+session spends under half of its budget in any minute. A runaway client is stopped within seconds
+instead of after the 1000 requests the IP-keyed `default` tier allows.
+
+The limiter holds one window per key in memory and sweeps the expired windows whenever a fresh
+window is opened while 1000 or more are held, so the map is bounded by the keys active in the last
+minute.
 
 Outside production every budget is multiplied by 10,000, since Playwright and local development
 drive these routes far faster than a player ever does.

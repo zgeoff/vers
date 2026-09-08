@@ -3,7 +3,6 @@ import { readSessionSecret } from './read-session-secret';
 
 export type SessionConfig = Parameters<typeof getSession>[0];
 
-export const AUTH_SESSION_COOKIE_NAME = 'en_session';
 export const AUTH_SESSION_READ_MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
 
 export function buildAuthSessionConfig(maxAge: number): SessionConfig {
@@ -21,7 +20,7 @@ export function buildAuthSessionConfig(maxAge: number): SessionConfig {
       secure: process.env.NODE_ENV === 'production',
     },
     maxAge,
-    name: AUTH_SESSION_COOKIE_NAME,
+    name: 'en_session',
     password: readSessionSecret(),
   };
 }

@@ -1,9 +1,14 @@
-import { createHash } from 'node:crypto';
-import { AUTH_SESSION_COOKIE_NAME } from '../lib/auth/build-auth-session-config';
+import {
+  AUTH_SESSION_READ_MAX_AGE_SECONDS,
+  buildAuthSessionConfig,
+} from '../lib/auth/build-auth-session-config';
+import { findSessionID } from './find-session-id';
+import type { SessionUnsealConfig } from './find-session-id';
 import { getClientIPAddress } from './get-client-ip-address';
 import type { Middleware } from './middleware';
 
 const RPC_PATH_PREFIX = '/api/rpc';
+const WINDOW_SWEEP_THRESHOLD = 1000;
 
 const STRICT_ROUTES: ReadonlyArray<string> = [
   '/login',
@@ -41,6 +46,7 @@ interface MakeRateLimiterOptions {
 
 export function makeRateLimiter(options: MakeRateLimiterOptions): Middleware {
   const clock = options.clock ?? { now: Date.now };
+  const sessionConfig = buildAuthSessionConfig(AUTH_SESSION_READ_MAX_AGE_SECONDS);
 
   const windows = new Map<string, RateLimitWindow>();
 
@@ -51,27 +57,25 @@ export function makeRateLimiter(options: MakeRateLimiterOptions): Middleware {
     strong: { limit: 100 * options.maxMultiple, windowMs: 60_000 },
   };
 
-  return (request, next) => {
+  return async (request, next) => {
     const tier = pickRateLimitTier(request);
     const bucket = buckets[tier];
-    const now = clock.now();
 
-    const window = advanceRateLimitWindow({
-      key: resolveRateLimitKey(request, tier),
-      now,
-      windowMs: bucket.windowMs,
-      windows,
-    });
+    const key =
+      tier === 'rpc'
+        ? await resolveRPCRateLimitKey(request, sessionConfig)
+        : `${tier}:${getClientIPAddress(request)}`;
+
+    const now = clock.now();
+    const window = advanceRateLimitWindow({ key, now, windowMs: bucket.windowMs, windows });
 
     if (window.count > bucket.limit) {
       const retryAfterSeconds = Math.max(1, Math.ceil((window.resetAt - now) / 1000));
 
-      return Promise.resolve(
-        new Response('Too Many Requests', {
-          headers: { 'retry-after': String(retryAfterSeconds) },
-          status: 429,
-        }),
-      );
+      return new Response('Too Many Requests', {
+        headers: { 'retry-after': String(retryAfterSeconds) },
+        status: 429,
+      });
     }
 
     return next();
@@ -94,41 +98,13 @@ function pickRateLimitTier(request: Request): RateLimitTier {
   return SAFE_METHODS.has(request.method) ? 'strong' : 'strict';
 }
 
-function resolveRateLimitKey(request: Request, tier: RateLimitTier): string {
-  if (tier !== 'rpc') {
-    return `${tier}:${getClientIPAddress(request)}`;
-  }
+async function resolveRPCRateLimitKey(
+  request: Request,
+  sessionConfig: SessionUnsealConfig,
+): Promise<string> {
+  const sessionID = await findSessionID(request, sessionConfig);
 
-  const sessionCookie = findSessionCookie(request);
-
-  // the session cookie is sealed, so its id is unreadable here without the unseal step every
-  // request would then pay; a digest of the sealed value names the session just as well
-  return sessionCookie === null
-    ? `rpc:ip:${getClientIPAddress(request)}`
-    : `rpc:session:${createHash('sha256').update(sessionCookie).digest('hex')}`;
-}
-
-function findSessionCookie(request: Request): string | null {
-  const cookieHeader = request.headers.get('cookie');
-
-  if (cookieHeader === null) {
-    return null;
-  }
-
-  for (const pair of cookieHeader.split(';')) {
-    const separatorIndex = pair.indexOf('=');
-
-    if (
-      separatorIndex !== -1 &&
-      pair.slice(0, separatorIndex).trim() === AUTH_SESSION_COOKIE_NAME
-    ) {
-      const value = pair.slice(separatorIndex + 1).trim();
-
-      return value === '' ? null : value;
-    }
-  }
-
-  return null;
+  return sessionID === null ? `rpc:ip:${getClientIPAddress(request)}` : `rpc:session:${sessionID}`;
 }
 
 interface AdvanceRateLimitWindowOptions {
@@ -143,6 +119,10 @@ function advanceRateLimitWindow(options: AdvanceRateLimitWindowOptions): RateLim
   const existing = options.windows.get(options.key);
 
   if (!existing || existing.resetAt <= options.now) {
+    if (options.windows.size >= WINDOW_SWEEP_THRESHOLD) {
+      sweepExpiredWindows(options.windows, options.now);
+    }
+
     const fresh: RateLimitWindow = { count: 1, resetAt: options.now + options.windowMs };
 
     options.windows.set(options.key, fresh);
@@ -153,4 +133,13 @@ function advanceRateLimitWindow(options: AdvanceRateLimitWindowOptions): RateLim
   existing.count += 1;
 
   return existing;
+}
+
+// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- the sweep deletes from the windows map in place, and ReadonlyMap has no `.delete()`
+function sweepExpiredWindows(windows: Map<string, RateLimitWindow>, now: number): void {
+  for (const [key, window] of windows) {
+    if (window.resetAt <= now) {
+      windows.delete(key);
+    }
+  }
 }
