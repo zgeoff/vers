@@ -22,6 +22,11 @@ const labels = new github.IssueLabels(
       { name: 'bug', color: 'd73a4a', description: 'bzzzz' },
       { name: 'build', color: 'C2E0C6' },
       { name: 'chore', color: 'FEF2C0', description: 'maintenance / housekeeping' },
+      {
+        name: 'decided',
+        color: '0E8A16',
+        description: 'owner-approved backlog work; Ready once unblocked, no increment needed',
+      },
       { name: 'dep-audit', color: 'B60205', description: 'bun audit found advisories' },
       { name: 'dep-outdated', color: 'FBCA04', description: 'weekly outdated-dependency report' },
       { name: 'do-not-merge', color: '000000', description: 'reference PR — never merge' },

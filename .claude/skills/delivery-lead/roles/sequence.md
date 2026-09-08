@@ -1,20 +1,23 @@
 # Sequence
 
-Keep the blocked-by graph true and the Ready column current across every open increment and the side
-lane. No increment waits on another: an issue is Ready the moment its own blockers close.
+Keep the blocked-by graph true and the Ready column current across every open increment, the side
+lane, and the decided issues. No increment waits on another: an issue is Ready the moment its own
+blockers close.
 
-1. Edges. For each open issue in an open increment or the side lane, check that every dependency its
-   body names has an edge, and add the missing ones. Propose removing an edge the body contradicts.
-2. Critical path. For each open issue in an open increment or the side lane, count the open issues
-   it transitively blocks. The chain from the issue with the highest count is the critical path, and
-   it heads Report.
+1. Edges. For each open issue in an open increment, in the side lane, or carrying the `decided`
+   label, check that every dependency its body names has an edge, and add the missing ones. Propose
+   removing an edge the body contradicts.
+2. Critical path. For each open issue in an open increment, in the side lane, or carrying the
+   `decided` label, count the open issues it transitively blocks. The chain from the issue with the
+   highest count is the critical path, and it heads Report.
 3. Ready. Set Ready on every open issue at Status Backlog that sits in an open increment, in the
-   side lane, or is an interrupt, whose blockers are all closed, and which carries no
-   `needs-refinement` label. This step only moves Backlog to Ready: an issue at In Progress or In
-   Review keeps the status Reconcile left it, PR or hand work alike. An epic is never promoted. Set
-   Backlog on a Ready issue that no longer qualifies, an epic included.
+   side lane, is an interrupt, or carries the `decided` label, whose blockers are all closed, and
+   which carries no `needs-refinement` label. This step only moves Backlog to Ready: an issue at In
+   Progress or In Review keeps the status Reconcile left it, PR or hand work alike. An epic is never
+   promoted. Set Backlog on a Ready issue that no longer qualifies, an epic included.
 4. Pick order. Interrupts first. Then sort the Ready issues of every open increment by blocked count
-   descending, then increment number ascending, then issue number ascending. Report the top 5 with
-   each one's increment.
+   descending, then increment number ascending, then issue number ascending. Then the decided issues
+   by blocked count descending, then issue number ascending. Report the top 5 with each one's
+   increment, or `decided` for a decided issue.
 5. Owner's chain. A blocked chain rooted in a side-lane issue waits on the owner, not on a build
    agent. Name the root in Report as theirs.
