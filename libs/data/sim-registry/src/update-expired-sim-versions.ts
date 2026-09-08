@@ -26,6 +26,13 @@ export function updateExpiredSimVersions(db: Kysely<DB>): Promise<Array<SimVersi
           .orderBy('deployedAt', 'desc')
           .limit(1),
       )
+      .where('engineHash', 'not in', (eb) =>
+        eb
+          .selectFrom('activities')
+          .select('simVersion')
+          .where((eb2) => eb2('appendedHead', '>', eb2.ref('verifiedHead')))
+          .where('status', '!=', 'rejected'),
+      )
       .returningAll()
       .execute()
   );

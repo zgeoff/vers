@@ -210,7 +210,7 @@ test('it floors xp at zero on an adverse delta', async () => {
   expect(settled.xp).toBe(0);
 });
 
-test('it resets the attempt counter on a successful apply', async () => {
+test('it resets the attempt counter and clears the backoff on a successful apply', async () => {
   await using ctx = await setupTest();
 
   const avatar = await createAvatarRow(ctx.db);
@@ -219,6 +219,8 @@ test('it resets the attempt counter on a successful apply', async () => {
     appendedHead: 1,
     avatarId: avatar.id,
     replayAttempts: 3,
+    replayBackoffUntil: new Date(Date.now() + 60_000),
+    replayBackoffs: 2,
   });
 
   await applyVerifiedSegment(ctx.db, {
@@ -231,11 +233,11 @@ test('it resets the attempt counter on a successful apply', async () => {
 
   const row = await ctx.db
     .selectFrom('activities')
-    .select('replayAttempts')
+    .select(['replayAttempts', 'replayBackoffUntil', 'replayBackoffs'])
     .where('id', '=', activity.id)
     .executeTakeFirstOrThrow();
 
-  expect(row.replayAttempts).toBe(0);
+  expect(row).toStrictEqual({ replayAttempts: 0, replayBackoffUntil: null, replayBackoffs: 0 });
 });
 
 test('it mints reward items alongside the verified anchor', async () => {

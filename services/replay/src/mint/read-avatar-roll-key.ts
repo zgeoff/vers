@@ -13,6 +13,7 @@ interface ReadAvatarRollKeyDeps {
   readonly keysServiceURL: string;
   readonly privateKey: CryptoKey;
 
+  readonly signal?: AbortSignal;
   readonly timeoutMs?: number;
 }
 
@@ -41,8 +42,14 @@ export async function readAvatarRollKey(
 
   const result = await client.deriveAvatarKey(
     { avatarID: input.avatarID, keyVersion: input.keyVersion, population: 'trade' },
-    { signal: AbortSignal.timeout(deps.timeoutMs ?? DEFAULT_KEYS_DISPATCH_TIMEOUT_MS) },
+    { signal: buildDispatchSignal(deps) },
   );
 
   return hexToBytes(result.key);
+}
+
+function buildDispatchSignal(deps: Readonly<ReadAvatarRollKeyDeps>): AbortSignal {
+  const timeout = AbortSignal.timeout(deps.timeoutMs ?? DEFAULT_KEYS_DISPATCH_TIMEOUT_MS);
+
+  return deps.signal === undefined ? timeout : AbortSignal.any([deps.signal, timeout]);
 }

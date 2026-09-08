@@ -44,6 +44,11 @@ async function runCreate(
     args.push('--region', action.machine.region);
   }
 
+  // `fly machine run` reads no `[env]` from fly.toml, so a key the binary needs travels here
+  for (const [name, value] of Object.entries(action.machine.env ?? {})) {
+    args.push('--env', `${name}=${value}`);
+  }
+
   await runFlyctl(args);
 }
 

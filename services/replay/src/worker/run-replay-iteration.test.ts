@@ -8,6 +8,7 @@ import { buildStateFromSeed } from '@vers/game-utils';
 import { buildLevelFromXP, buildSimulationInput } from '@vers/idle-core';
 import { createSimulationDriver } from '@vers/idle-core/replay';
 import { resolveServiceURL } from '@vers/mock-services';
+import { mockKeysService } from '@vers/mock-services/keys';
 import { setSentryHandleForTesting, startErrorReporting } from '@vers/service-runtime';
 import { createTestDB, getTestServiceKeyPair } from '@vers/service-test-utils/bun';
 import { withTraceContext } from '@vers/service-utils';
@@ -16,7 +17,7 @@ import { waitFor } from '@vers/test-utils';
 import { createTraceContext } from '@vers/trace';
 import pino from 'pino';
 import invariant from 'tiny-invariant';
-import { MAX_REPLAY_ATTEMPTS } from '../queue/update-replay-attempts';
+import { server } from '../mocks/server';
 import { createReplayCache } from '../replay/create-replay-cache';
 import { createActivityRow } from '../test-utils/create-activity-row';
 import { createAvatarRow } from '../test-utils/create-avatar-row';
@@ -698,7 +699,7 @@ test('it parks rather than rejects when the duration cap trips before the expect
   expect(updated.status).toBe('parked');
 });
 
-test('it parks an activity without incrementing its attempt count when the provider is unavailable', async () => {
+test('it backs off an activity without counting an attempt or parking it when the provider is unavailable', async () => {
   await using ctx = await setupTest();
 
   const fixture = await createHonestActivityFixture(ctx.db, {
@@ -732,16 +733,175 @@ test('it parks an activity without incrementing its attempt count when the provi
 
   const outcome = await runReplayIteration(deps, cache);
 
-  expect(outcome).toStrictEqual({ kind: 'parked', reason: 'providerUnavailable' });
+  expect(outcome).toStrictEqual({ kind: 'backedOff', reason: 'provider-unavailable' });
 
   const updated = await ctx.db
     .selectFrom('activities')
-    .select(['replayAttempts', 'status'])
+    .select(['replayAttempts', 'replayBackoffUntil', 'replayBackoffs', 'status'])
     .where('id', '=', fixture.activity.id)
     .executeTakeFirstOrThrow();
 
-  expect(updated.status).toBe('parked');
-  expect(updated.replayAttempts).toBe(0);
+  expect(updated).toStrictEqual({
+    replayAttempts: 0,
+    replayBackoffUntil: expect.toBeAfter(new Date()),
+    replayBackoffs: 1,
+    status: 'active',
+  });
+
+  expect(runReplayIteration(deps, cache)).resolves.toStrictEqual({ kind: 'idle' });
+});
+
+test('it backs off an activity when the keys service is unreachable on its first pass, and verifies it once the keys service recovers', async () => {
+  await using ctx = await setupTest();
+
+  const fixture = await createHonestActivityFixture(ctx.db, {
+    duration: 80_000,
+    seed: buildStateFromSeed(3_047_525_658),
+  });
+
+  server.use(
+    mockKeysService.deriveScopeSecret.handler(() => {
+      throw new Error('keys backend unreachable');
+    }),
+  );
+
+  const deps = {
+    db: ctx.db,
+    keysServiceURL: resolveServiceURL('keys'),
+    loadContentDocument: makeContentDocumentLoader(ctx.db),
+    logger: buildSilentLogger(),
+    privateKey: ctx.privateKey,
+    simVersion: 'test-engine-hash',
+  };
+
+  const cache = createReplayCache();
+
+  const outcome = await runReplayIteration(deps, cache);
+
+  expect(outcome).toStrictEqual({ kind: 'backedOff', reason: 'keys-unavailable' });
+
+  const backedOff = await ctx.db
+    .selectFrom('activities')
+    .select(['replayAttempts', 'replayBackoffs', 'status', 'verifiedHead'])
+    .where('id', '=', fixture.activity.id)
+    .executeTakeFirstOrThrow();
+
+  expect(backedOff).toStrictEqual({
+    replayAttempts: 0,
+    replayBackoffs: 1,
+    status: 'active',
+    verifiedHead: 0,
+  });
+
+  server.resetHandlers();
+
+  await ctx.db
+    .updateTable('activities')
+    .set({ replayBackoffUntil: new Date(Date.now() - 1000) })
+    .where('id', '=', fixture.activity.id)
+    .execute();
+
+  const recovered = await runReplayIteration(deps, cache);
+
+  expect(recovered).toStrictEqual({ kind: 'matched' });
+
+  const verified = await ctx.db
+    .selectFrom('activities')
+    .select(['replayBackoffUntil', 'replayBackoffs', 'verifiedHead'])
+    .where('id', '=', fixture.activity.id)
+    .executeTakeFirstOrThrow();
+
+  expect(verified).toStrictEqual({
+    replayBackoffUntil: null,
+    replayBackoffs: 0,
+    verifiedHead: fixture.activity.appendedHead,
+  });
+});
+
+test('it backs off an activity and settles nothing when the keys service fails during the reward mint', async () => {
+  await using ctx = await setupTest();
+
+  const fixture = await createHonestActivityFixture(ctx.db, {
+    duration: 80_000,
+    seed: buildStateFromSeed(3_047_525_658),
+  });
+
+  server.use(
+    mockKeysService.deriveAvatarKey.handler(() => {
+      throw new Error('keys backend unreachable');
+    }),
+  );
+
+  const deps = {
+    db: ctx.db,
+    keysServiceURL: resolveServiceURL('keys'),
+    loadContentDocument: makeContentDocumentLoader(ctx.db),
+    logger: buildSilentLogger(),
+    privateKey: ctx.privateKey,
+    simVersion: 'test-engine-hash',
+  };
+
+  const cache = createReplayCache();
+
+  const outcome = await runReplayIteration(deps, cache);
+
+  expect(outcome).toStrictEqual({ kind: 'backedOff', reason: 'keys-unavailable' });
+
+  const updated = await ctx.db
+    .selectFrom('activities')
+    .select(['replayBackoffs', 'settledXp', 'verifiedHead'])
+    .where('id', '=', fixture.activity.id)
+    .executeTakeFirstOrThrow();
+
+  expect(updated).toStrictEqual({ replayBackoffs: 1, settledXp: 0, verifiedHead: 0 });
+
+  const items = await ctx.db
+    .selectFrom('avatarItems')
+    .select('chainIndex')
+    .where('avatarId', '=', fixture.activity.avatarId)
+    .execute();
+
+  expect(items).toBeEmpty();
+});
+
+test('it backs off an activity when the iteration deadline fires while a dependency hangs', async () => {
+  await using ctx = await setupTest();
+
+  const fixture = await createHonestActivityFixture(ctx.db, {
+    duration: 80_000,
+    seed: buildStateFromSeed(3_047_525_658),
+  });
+
+  server.use(mockKeysService.deriveScopeSecret.handler(() => new Promise<never>(() => {})));
+
+  const deps = {
+    db: ctx.db,
+    iterationDeadlineMs: 200,
+    keysServiceURL: resolveServiceURL('keys'),
+    loadContentDocument: makeContentDocumentLoader(ctx.db),
+    logger: buildSilentLogger(),
+    privateKey: ctx.privateKey,
+    simVersion: 'test-engine-hash',
+  };
+
+  const cache = createReplayCache();
+
+  const outcome = await runReplayIteration(deps, cache);
+
+  expect(outcome).toStrictEqual({ kind: 'backedOff', reason: 'deadline' });
+
+  const updated = await ctx.db
+    .selectFrom('activities')
+    .select(['replayAttempts', 'replayBackoffs', 'status', 'verifiedHead'])
+    .where('id', '=', fixture.activity.id)
+    .executeTakeFirstOrThrow();
+
+  expect(updated).toStrictEqual({
+    replayAttempts: 0,
+    replayBackoffs: 1,
+    status: 'active',
+    verifiedHead: 0,
+  });
 });
 
 test('it evicts and rebuilds from Started when the cached driver no longer matches the loaded segment', async () => {
@@ -803,7 +963,7 @@ test('it evicts and rebuilds from Started when the cached driver no longer match
   expect(updated.verifiedHead).toBe(totalCheckpoints);
 });
 
-test('it counts a replay error as a failed attempt and quarantines at the attempt limit', async () => {
+test('it backs off an unexpected replay error without counting an attempt', async () => {
   await using ctx = await setupTest();
 
   const fixture = await createHonestActivityFixture(ctx.db, {
@@ -837,24 +997,17 @@ test('it counts a replay error as a failed attempt and quarantines at the attemp
 
   const cache = createReplayCache();
 
-  for (let attempt = 1; attempt < MAX_REPLAY_ATTEMPTS; attempt++) {
-    const outcome = await runReplayIteration(deps, cache);
+  const outcome = await runReplayIteration(deps, cache);
 
-    expect(outcome).toStrictEqual({ kind: 'errored' });
-  }
-
-  const finalOutcome = await runReplayIteration(deps, cache);
-
-  expect(finalOutcome).toStrictEqual({ kind: 'quarantined' });
+  expect(outcome).toStrictEqual({ kind: 'backedOff', reason: 'errored' });
 
   const updated = await ctx.db
     .selectFrom('activities')
-    .select(['replayAttempts', 'status'])
+    .select(['replayAttempts', 'replayBackoffs', 'status'])
     .where('id', '=', fixture.activity.id)
     .executeTakeFirstOrThrow();
 
-  expect(updated.status).toBe('quarantined');
-  expect(updated.replayAttempts).toBe(MAX_REPLAY_ATTEMPTS);
+  expect(updated).toStrictEqual({ replayAttempts: 0, replayBackoffs: 1, status: 'active' });
 });
 
 test('it reports an iteration failure exactly once when a target was claimed', async () => {
@@ -910,7 +1063,7 @@ test('it reports an iteration failure exactly once when a target was claimed', a
 
   const outcome = await withTraceContext(trace, () => runReplayIteration(deps, cache));
 
-  expect(outcome).toStrictEqual({ kind: 'errored' });
+  expect(outcome).toStrictEqual({ kind: 'backedOff', reason: 'errored' });
 
   await waitFor(() => {
     expect(recorded).toHaveLength(1);

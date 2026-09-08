@@ -27,6 +27,7 @@ test('it provisions everything for a fresh engine hash', () => {
     providerMachineRegion: null,
     region: REGION,
     registryRow: undefined,
+    retentionDays: 3,
   });
 
   expect(actions).toStrictEqual([
@@ -45,6 +46,7 @@ test('it provisions everything for a fresh engine hash', () => {
         imageRef: `${fleetImage.repository}@${fleetImage.digest}`,
         maxContentVersion: '2',
         providerURL: `http://${PROVIDER_APP}.flycast`,
+        retentionDays: 3,
       },
       kind: 'upsert-registry-row',
     },
@@ -64,6 +66,7 @@ test('it carries the declared region on a fresh provision', () => {
     providerMachineRegion: null,
     region: REGION,
     registryRow: undefined,
+    retentionDays: 3,
   });
 
   const runAction = actions.find((action) => action.kind === 'run-provider-machine');
@@ -87,6 +90,7 @@ test('it takes no action when the registry row is current and the machine runs t
       imageRef: `${fleetImage.repository}@${fleetImage.digest}`,
       maxContentVersion: '2',
     }),
+    retentionDays: 3,
   });
 
   expect(actions).toBeEmpty();
@@ -108,6 +112,7 @@ test('it recreates the provider app and refreshes the row when the app is missin
       imageRef: `${fleetImage.repository}@${fleetImage.digest}`,
       maxContentVersion: '2',
     }),
+    retentionDays: 3,
   });
 
   expect(actions).toStrictEqual([
@@ -126,6 +131,7 @@ test('it recreates the provider app and refreshes the row when the app is missin
         imageRef: `${fleetImage.repository}@${fleetImage.digest}`,
         maxContentVersion: '2',
         providerURL: `http://${PROVIDER_APP}.flycast`,
+        retentionDays: 3,
       },
       kind: 'upsert-registry-row',
     },
@@ -148,6 +154,7 @@ test('it only refreshes the registry row when the fleet digest has drifted from 
       imageRef: `${fleetImage.repository}@sha256:stale`,
       maxContentVersion: '2',
     }),
+    retentionDays: 3,
   });
 
   expect(actions).toStrictEqual([
@@ -158,6 +165,7 @@ test('it only refreshes the registry row when the fleet digest has drifted from 
         imageRef: `${fleetImage.repository}@${fleetImage.digest}`,
         maxContentVersion: '2',
         providerURL: `http://${PROVIDER_APP}.flycast`,
+        retentionDays: 3,
       },
       kind: 'upsert-registry-row',
     },
@@ -180,6 +188,7 @@ test('it only refreshes the registry row when the bundled max content version ha
       imageRef: `${fleetImage.repository}@${fleetImage.digest}`,
       maxContentVersion: '1',
     }),
+    retentionDays: 3,
   });
 
   expect(actions).toStrictEqual([
@@ -190,6 +199,7 @@ test('it only refreshes the registry row when the bundled max content version ha
         imageRef: `${fleetImage.repository}@${fleetImage.digest}`,
         maxContentVersion: '2',
         providerURL: `http://${PROVIDER_APP}.flycast`,
+        retentionDays: 3,
       },
       kind: 'upsert-registry-row',
     },
@@ -212,6 +222,7 @@ test('it relaunches only the machine when the app survives but its machine is go
       imageRef: `${fleetImage.repository}@${fleetImage.digest}`,
       maxContentVersion: '2',
     }),
+    retentionDays: 3,
   });
 
   expect(actions).toStrictEqual([
@@ -228,6 +239,7 @@ test('it relaunches only the machine when the app survives but its machine is go
         imageRef: `${fleetImage.repository}@${fleetImage.digest}`,
         maxContentVersion: '2',
         providerURL: `http://${PROVIDER_APP}.flycast`,
+        retentionDays: 3,
       },
       kind: 'upsert-registry-row',
     },
@@ -250,6 +262,7 @@ test('it replaces a running machine whose image digest has drifted from the flee
       imageRef: `${fleetImage.repository}@${fleetImage.digest}`,
       maxContentVersion: '2',
     }),
+    retentionDays: 3,
   });
 
   expect(actions).toStrictEqual([
@@ -267,6 +280,7 @@ test('it replaces a running machine whose image digest has drifted from the flee
         imageRef: `${fleetImage.repository}@${fleetImage.digest}`,
         maxContentVersion: '2',
         providerURL: `http://${PROVIDER_APP}.flycast`,
+        retentionDays: 3,
       },
       kind: 'upsert-registry-row',
     },
@@ -289,6 +303,7 @@ test('it replaces a running machine sitting outside the declared region even whe
       imageRef: `${fleetImage.repository}@${fleetImage.digest}`,
       maxContentVersion: '2',
     }),
+    retentionDays: 3,
   });
 
   expect(actions).toStrictEqual([
@@ -306,6 +321,7 @@ test('it replaces a running machine sitting outside the declared region even whe
         imageRef: `${fleetImage.repository}@${fleetImage.digest}`,
         maxContentVersion: '2',
         providerURL: `http://${PROVIDER_APP}.flycast`,
+        retentionDays: 3,
       },
       kind: 'upsert-registry-row',
     },
@@ -325,6 +341,7 @@ test('it refreshes only the row when the app and machine exist but the row is mi
     providerMachineRegion: REGION,
     region: REGION,
     registryRow: undefined,
+    retentionDays: 3,
   });
 
   expect(actions).toStrictEqual([
@@ -335,6 +352,7 @@ test('it refreshes only the row when the app and machine exist but the row is mi
         imageRef: `${fleetImage.repository}@${fleetImage.digest}`,
         maxContentVersion: '2',
         providerURL: `http://${PROVIDER_APP}.flycast`,
+        retentionDays: 3,
       },
       kind: 'upsert-registry-row',
     },
@@ -354,6 +372,7 @@ test('it launches the provider machine by tag, never by digest', () => {
     providerMachineRegion: null,
     region: REGION,
     registryRow: undefined,
+    retentionDays: 3,
   });
 
   const runAction = actions.find((action) => action.kind === 'run-provider-machine');
@@ -375,6 +394,7 @@ test('it replaces the provider machine by tag, never by digest', () => {
     providerMachineRegion: REGION,
     region: REGION,
     registryRow: undefined,
+    retentionDays: 3,
   });
 
   const replaceAction = actions.find((action) => action.kind === 'replace-provider-machine');
@@ -396,6 +416,7 @@ test('it derives the provider app name and flycast URL from the first 12 hex cha
     providerMachineRegion: null,
     region: REGION,
     registryRow: undefined,
+    retentionDays: 3,
   });
 
   const createAction = actions.find((action) => action.kind === 'create-provider-app');
@@ -422,6 +443,7 @@ test('it takes no action when the fleet has no single resolved image', () => {
     providerMachineRegion: null,
     region: REGION,
     registryRow: undefined,
+    retentionDays: 3,
   });
 
   expect(actions).toBeEmpty();

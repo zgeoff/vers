@@ -29,7 +29,7 @@ async function runBootDrain(): Promise<void> {
   // trace id
   await withTraceContext(createTraceContext(), async () => {
     try {
-      await service.drain();
+      await service.drain('boot');
     } catch (error) {
       service.logger.error({ err: error }, 'boot drain failed');
 

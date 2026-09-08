@@ -25,3 +25,23 @@ jobs:
         with:
           args: sweep-replay
           fly-api-token: ${{ secrets.FLY_API_TOKEN }}
+
+      # a refused prune (unverified work still pinned to an expired version) or a failed sweep
+      # alarms the channel, since nobody watches a scheduled run's Actions tab
+      - name: Send Discord alert
+        if: ${{ failure() }}
+        env:
+          WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          RUN_URL:
+            ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ -z "${WEBHOOK_URL}" ]; then
+            echo "DISCORD_WEBHOOK_URL not configured; skipping alert"
+            exit 0
+          fi
+          payload="$(jq -n \
+            --arg title "[CI] critical — replay retention sweep failed" \
+            --arg url "${RUN_URL}" \
+            --arg desc "an expired sim version still pins unverified work, or the sweep itself failed; open the run" \
+            '{embeds: [{title: $title, url: $url, description: $desc, color: 15026253}]}')"
+          curl -fsS -H 'content-type: application/json' -d "${payload}" "${WEBHOOK_URL}"

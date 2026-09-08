@@ -63,6 +63,7 @@ export function planSimVersionActions(
       imageRef,
       maxContentVersion: input.maxContentVersion,
       providerURL: `http://${providerApp}.flycast`,
+      retentionDays: input.retentionDays,
     },
     kind: 'upsert-registry-row',
   });

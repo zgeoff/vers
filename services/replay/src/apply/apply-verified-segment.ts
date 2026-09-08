@@ -52,6 +52,8 @@ async function applySegmentWrites(
     .updateTable('activities')
     .set({
       replayAttempts: 0,
+      replayBackoffUntil: null,
+      replayBackoffs: 0,
       settledXp: input.settledXP,
       verifiedAt: sql`now()`,
       verifiedHead: input.verifiedHead,

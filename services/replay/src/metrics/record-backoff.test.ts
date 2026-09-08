@@ -6,7 +6,7 @@ import {
   MeterProvider,
   PeriodicExportingMetricReader,
 } from '@opentelemetry/sdk-metrics';
-import { recordWake } from './record-wake';
+import { recordBackoff } from './record-backoff';
 
 function setupTest() {
   const exporter = new InMemoryMetricExporter(AggregationTemporality.CUMULATIVE);
@@ -26,12 +26,12 @@ function setupTest() {
   return { exporter, provider };
 }
 
-test('it counts each drain by what started it', async () => {
+test('it counts backoffs by reason', async () => {
   const ctx = setupTest();
 
-  recordWake('poke');
-  recordWake('poke');
-  recordWake('schedule');
+  recordBackoff('keys-unavailable');
+  recordBackoff('keys-unavailable');
+  recordBackoff('deadline');
 
   await ctx.provider.forceFlush();
 
@@ -39,21 +39,21 @@ test('it counts each drain by what started it', async () => {
     .getMetrics()
     .flatMap((resourceMetrics) => resourceMetrics.scopeMetrics)
     .flatMap((scopeMetrics) => scopeMetrics.metrics)
-    .find((metric) => metric.descriptor.name === 'vers.replay.wake');
+    .find((metric) => metric.descriptor.name === 'vers.replay.backoffs');
 
   const observed = counter?.dataPoints.map((dataPoint) => ({
-    source: dataPoint.attributes['source'],
+    reason: dataPoint.attributes['reason'],
     value: dataPoint.value,
   }));
 
   expect(observed).toIncludeSameMembers([
-    { source: 'poke', value: 2 },
-    { source: 'schedule', value: 1 },
+    { reason: 'keys-unavailable', value: 2 },
+    { reason: 'deadline', value: 1 },
   ]);
 });
 
 test('it stays inert without a registered meter provider', () => {
   expect(() => {
-    recordWake('boot');
+    recordBackoff('errored');
   }).not.toThrow();
 });

@@ -158,7 +158,8 @@ in stack state are encrypted by the stack passphrase.
 | Instrument                                      | Type            | Unit             | Attributes          | Meaning                                                                                                                                                      |
 | ----------------------------------------------- | --------------- | ---------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `vers.replay.verification_lag`                  | histogram       | `s`              | —                   | seconds between an append landing and a drain cycle confirming it                                                                                            |
-| `vers.replay.wake`                              | counter         | `{wake}`         | —                   | wake requests received                                                                                                                                       |
+| `vers.replay.wake`                              | counter         | `{wake}`         | `source`            | drains started, by what started them                                                                                                                         |
+| `vers.replay.backoffs`                          | counter         | `{backoff}`      | `reason`            | claimed activities the verifier backed off instead of adjudicating, by reason                                                                                |
 | `vers.replay.drain_duration`                    | histogram       | `s`              | —                   | wall-clock duration of one drain cycle                                                                                                                       |
 | `vers.replay.backlog_claimed`                   | histogram       | `{chain}`        | —                   | chains claimed and adjudicated in one drain cycle                                                                                                            |
 | `vers.verification.rejections`                  | counter         | `{rejection}`    | `reason`            | adjudications that rejected or parked an activity, by reason                                                                                                 |
@@ -189,8 +190,9 @@ in stack state are encrypted by the stack passphrase.
 append advances an activity past its verified cursor. The handler drains the queue, claiming and
 adjudicating chains until none remain claimable, before responding, so every instrument in
 `service-replay` emits only while a drain is actually running and stays silent on an idle,
-scaled-to-zero machine. `vers.replay.verification_lag` records once per newly verified append, from
-the append's own timestamp to the moment the drain confirms it.
+scaled-to-zero machine. The hourly scheduled drain machine emits the same instruments for its own
+run. `vers.replay.verification_lag` records once per newly verified append, from the append's own
+timestamp to the moment the drain confirms it.
 
 `vers.verification.rejections` splits by `reason`:
 
@@ -198,9 +200,6 @@ the append's own timestamp to the moment the drain confirms it.
 - `version-park` — unknown or retention-expired sim version, a version-registry problem needing
   fleet action.
 - `elapsed-time` — replay duration cap tripped, a per-stream anomaly.
-- `provider-unavailable` — a cross-version dispatch's provider timed out, refused the connection, or
-  answered with an undefined error; repeated occurrences distinguish a dead provider deploy from
-  normal cold-boot latency.
 - `build-mismatch` — the activity's pinned start build does not match the avatar's settled xp total,
   typically because it banked a since-rejected ancestor's optimistic xp, so the level and life it
   plays at were never proven; a rise tracks how far one rejection propagates through an avatar's
@@ -227,6 +226,14 @@ and the shortfall is silent everywhere else.
 
 The remaining split instruments enumerate their attribute values:
 
+- `vers.replay.wake` by `source`: `poke` is the activity service's wake call after an append; `boot`
+  is the drain the serve entrypoint runs on start; `schedule` is the hourly scheduled machine.
+- `vers.replay.backoffs` by `reason`: `keys-unavailable` is a keys-service call that timed out,
+  refused the connection, or answered with an undefined error; `provider-unavailable` is the same
+  for a cross-version replay provider, where repeated occurrences distinguish a dead provider deploy
+  from normal cold-boot latency; `deadline` is an iteration that overran its 90s deadline; `errored`
+  is any other throw, which is also reported to Bugsink. A backoff never counts toward quarantine,
+  and a sustained rate on one reason is an outage of that dependency, not a cheating signal.
 - `vers.replay.iteration_failures` by `outcome`: `quarantined` is an activity that exhausted its
   replay attempts; `errored` is every other failed iteration.
 - `vers.keys.derive_rejections` by `reason`: `unknown-key-version` is an avatar roll-key version

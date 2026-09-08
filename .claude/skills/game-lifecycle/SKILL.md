@@ -41,7 +41,8 @@ looks like a contradiction of the docs, and the docs are right.
   attempt spends its positions and the next attempt continues past them.
 - **Parked and quarantined are holds, not verdicts.** Each stops the avatar's settlement until an
   operator acts. The verifier rejects only reproducible divergence under a matched sim version as
-  cheating.
+  cheating. A backed-off activity is neither: a dependency failure leaves its status alone and sets
+  a retry time, and the verifier skips it until then.
 - **The client mints an activity start, and the server admits it.** The server mints continuation
   rows on the catch-up path and chain rows at node reveal, so `mint` in a server handler names one
   of those and never an activity start.
@@ -108,7 +109,8 @@ stateDiagram-v2
 | durable outbox and its flush                   | `libs/game/idle-client/src/submission/create-checkpoint-submitter.ts` |
 | start admission and offline catch-up           | `services/activity/src/handlers/advance-activity.ts`                  |
 | checkpoint append, budget, terminal transition | `services/activity/src/handlers/track-activity-progress.ts`           |
-| the verifier's claim order                     | `services/replay/src/queue/find-replay-target.ts`                     |
+| the verifier's claim order                     | `services/replay/src/queue/claim-next-seed-chain.ts`                  |
+| the backoff a dependency failure sets          | `services/replay/src/queue/update-replay-backoff.ts`                  |
 | replay and adjudication                        | `services/replay/src/worker/run-replay-target.ts`                     |
 | settlement of a proved segment                 | `services/replay/src/apply/apply-verified-segment.ts`                 |
 | rejection and the anchor rewind                | `services/replay/src/worker/reject-activity.ts`                       |

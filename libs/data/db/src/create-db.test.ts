@@ -149,6 +149,19 @@ test('it bounds connection acquisition with a 10s connect_timeout', () => {
   expect(options.connect_timeout).toBe(10);
 });
 
+test('it holds an idle-in-transaction connection for 30s unless the caller lengthens it', () => {
+  const defaults = buildPostgresOptions({ databaseURL: 'postgres://user:pass@localhost:5432/db' });
+
+  const lengthened = buildPostgresOptions({
+    databaseURL: 'postgres://user:pass@localhost:5432/db',
+    idleInTransactionSessionTimeoutMs: 120_000,
+  });
+
+  expect(defaults.connection.idle_in_transaction_session_timeout).toBe(30_000);
+  expect(lengthened.connection.idle_in_transaction_session_timeout).toBe(120_000);
+  expect(lengthened.connection.statement_timeout).toBe(30_000);
+});
+
 test('it emits a db.connect client span around a successful connection acquisition', async () => {
   const ctx = setupTest();
 

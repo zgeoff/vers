@@ -3,7 +3,7 @@ import { createDB } from '@vers/db';
 import type { DB } from '@vers/db';
 import { findLatestRelease, recordRelease } from '@vers/release-registry';
 import type { ReleaseRow } from '@vers/release-registry';
-import { updateExpiredSimVersions } from '@vers/sim-registry';
+import { collectRetentionRefusals, updateExpiredSimVersions } from '@vers/sim-registry';
 import { Command } from 'commander';
 import { execa } from 'execa';
 import type { Kysely } from 'kysely';
@@ -472,6 +472,7 @@ async function runSimVersionReconcile(target: DeployTarget): Promise<void> {
     providerMachineRegion: providerAppState.machineRegion,
     region: target.simVersionProvider.region,
     registryRow,
+    retentionDays: target.simVersionProvider.retentionDays,
   });
 
   await applySimVersionActions(actions);
@@ -591,12 +592,25 @@ async function runSweepReplay(): Promise<void> {
   await applyRetentionActions(actions);
 
   const unparked = await updateParkedActivities(db);
+  const refusals = await collectRetentionRefusals(db);
 
   await db.destroy();
 
   console.log(
     `sweep-replay: tombstoned ${tombstoned.length} sim version(s), destroyed ${actions.length} provider app(s), unparked ${unparked.length} activity(ies)`,
   );
+
+  // an expired version still pinned by unverified work stays a replay target: the refusal fails the
+  // run so the scheduled workflow alarms, and the sweep retries daily until the work settles
+  for (const refusal of refusals) {
+    console.error(
+      `✗ sweep-replay — sim version ${refusal.engineHash} is past retention but ${refusal.unverifiedActivities} activity(ies) still pin unverified work to it; not pruned`,
+    );
+  }
+
+  if (refusals.length > 0) {
+    process.exitCode = 1;
+  }
 }
 
 function requireTarget(manifest: DeployManifest, app: string): DeployTarget {

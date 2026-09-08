@@ -205,12 +205,20 @@ live stream's simulation in memory at its verified head and advances it by each 
 than replaying from `Started` every time; a verifier restart or cache eviction falls back to a
 from-`Started` rebuild.
 
-The verifier parks an ambiguous stream rather than rejecting it. A sim-version mismatch, an unknown
-engine, or a timeout is held as an operational state, not judged as a cheat signal. Only
-reproducible divergence under a matched sim version and `Started` checkpoint, on repetition, is
-treated as cheating. Enforcement lands at a session boundary, never mid-session. The verifier
-quarantines a stream that fails replay repeatedly and alerts operators rather than retrying it
-forever.
+Three triggers start a drain of the queue: the wake the activity service sends after an append, the
+replay service's own boot, and a Fly scheduled machine that drains hourly. The scheduled drain is
+what retries work no client request will ask about again.
+
+The verifier never judges an operational failure as a cheat signal. A keys or provider call that
+fails, an iteration that overruns its 90s deadline, or an unexpected fault backs the activity off:
+the verifier leaves the activity's status alone, records a retry time that doubles on each
+consecutive failure from 30s up to 15min, and skips the activity and its successors until that time
+passes. The next drain after the retry time takes the activity again, and a verified segment clears
+the backoff. An unknown or retention-expired sim version, and a replay that trips its duration cap,
+park the activity for an operator instead. Only reproducible divergence under a matched sim version
+and `Started` checkpoint, on repetition, is treated as cheating. Enforcement lands at a session
+boundary, never mid-session. The verifier quarantines a stream whose divergence fails to reproduce
+too many times and alerts operators rather than retrying it forever.
 
 Replay also checks reachability and the pinned build. The queue claims an avatar's next activity
 only once its predecessor has itself settled or rejected
@@ -237,8 +245,9 @@ Operators watch the verifier through its metrics: replay lag and rejection rates
 ([observability](../platform/observability.md)). An integrity-mismatch spike there is investigated
 as a deploy regression first, not a cheating wave.
 
-An old sim version stays a valid replay target for a retention window of 30 days
-([deployment](../platform/deployment.md#retention-sweep)) before the sweep tombstones it.
+An old sim version stays a valid replay target until its retention window ends
+([deployment](../platform/deployment.md#retention-sweep)), and the sweep never tombstones a version
+that still pins unverified work.
 
 ## Applying verified progress
 

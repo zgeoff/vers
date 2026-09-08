@@ -8,6 +8,7 @@ import { readAvatarRollKey } from './read-avatar-roll-key';
 interface RollRewardItemsDeps {
   readonly keysServiceURL: string;
   readonly privateKey: CryptoKey;
+  readonly signal?: AbortSignal;
 }
 
 interface RollRewardItemsInput {

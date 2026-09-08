@@ -223,7 +223,8 @@ skipped-deploy path alike. It creates a declared machine that doesn't exist yet 
 just-deployed image, and moves one on a stale image onto it. Provisioning a new scheduled machine is
 a manifest edit; creation happens on the app's next deploy, not a manual `fly machine run`.
 `verify-fleet` fails if a declared scheduled machine is missing or drifts onto a different image
-than the app's service machines.
+than the app's service machines. A declaration carries an `env` map for any key the binary reads
+from fly.toml's `[env]` on a service machine, because `fly machine run` reads no `[env]`.
 
 ### Rollout strategies
 
@@ -313,8 +314,12 @@ only ever creates and refreshes.
 
 ### Retention sweep
 
-A registry row's `retained_until` (30 days past its deploy by default) is when its version stops
-being a valid replay target, not when it disappears. `.github/workflows/replay-retention.yml` runs
+A registry row's `retained_until` is when its version stops being a valid replay target, not when it
+disappears. The version upsert sets it from the `retentionDays` on the replay entry of
+`deploy.config.ts`, so the window is one manifest line: 3 days now, 7 days at the MVP, and 14 days
+at public release. Each retained version keeps its own provider app running, so the window grows
+only at a release gate, when a larger player population can hold unverified work under an old
+version for longer. `.github/workflows/replay-retention.yml` runs
 `bun scripts/src/bin/deploy.ts sweep-replay` daily, and it never deletes a `sim_versions` row.
 Deleting would collapse a distinction dispatch depends on. A version whose row is `pruned` is
 `expired`: the client must resync onto the current version. A hash with no row at all is
@@ -334,6 +339,14 @@ capped resumes as itself, never as an appendable `active` row.
 
 The sweep is idempotent: a repeat run tombstones nothing already `pruned`, destroys nothing already
 gone, and unparks nothing already `active`.
+
+The sweep refuses to tombstone a version that still has appended-but-unverified activities pinned to
+it, whatever its `retained_until`, because pruning it would park honest work. It prints each refused
+version with its count of unverified activities and exits non-zero, so the scheduled workflow fails
+and posts to the alarms channel; the next daily run retries once the work settles. A device outbox
+the server has never seen can still name a pruned version. That activity start is refused as
+`SIM_VERSION_EXPIRED` and the device resyncs onto the current version
+([the seed chain](../game/seed-chain.md#handing-an-activity-start-to-the-server)).
 
 ## Container builds
 

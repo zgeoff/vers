@@ -1,3 +1,4 @@
+import { isDefinedError } from '@orpc/client';
 import type { ContentDocument } from '@vers/contract-activity';
 import { SecretRefSchema } from '@vers/contract-keys';
 import type { DB } from '@vers/db';
@@ -12,6 +13,8 @@ import invariant from 'tiny-invariant';
 import { applyVerifiedSegment } from '../apply/apply-verified-segment';
 import { parkActivity } from '../dispatch/park-activity';
 import { runReplaySegment } from '../dispatch/run-replay-segment';
+import { recordBackoff } from '../metrics/record-backoff';
+import type { BackoffReason } from '../metrics/record-backoff';
 import { recordIterationFailure } from '../metrics/record-iteration-failure';
 import { recordRejection } from '../metrics/record-rejection';
 import type { RejectionReason } from '../metrics/record-rejection';
@@ -19,6 +22,7 @@ import { recordSettledXP } from '../metrics/record-settled-xp';
 import { recordVerificationLag } from '../metrics/record-verification-lag';
 import { rollRewardItems } from '../mint/roll-reward-items';
 import { updateReplayAttempts } from '../queue/update-replay-attempts';
+import { updateReplayBackoff } from '../queue/update-replay-backoff';
 import { buildSegmentDuration } from '../replay/build-segment-duration';
 import { compareReplaySegment } from '../replay/compare-replay-segment';
 import type { ReplayCache } from '../replay/create-replay-cache';
@@ -27,11 +31,23 @@ import { findSeedDivergence } from '../replay/find-seed-divergence';
 import { isForwardExited } from '../replay/is-forward-exited';
 import { loadReplaySegment } from '../replay/load-replay-segment';
 import { toWireReplaySegmentInput } from '../replay/to-wire-replay-segment-input';
-import type { CompareVerdict, ReplaySegment, ReplayedCheckpoint } from '../replay/types';
-import type { ReplayTarget } from '../types';
+import type {
+  CompareVerdict,
+  ReplaySegment,
+  ReplayedCheckpoint,
+  RewardFact,
+} from '../replay/types';
+import type { MintedItem, ReplayTarget } from '../types';
 import { rejectActivity } from './reject-activity';
-import type { PendingCacheEffect, ReplayIterationOutcome, ReplayWorkerDeps } from './types';
+import type {
+  ParkReason,
+  PendingCacheEffect,
+  ReplayIterationOutcome,
+  ReplayWorkerDeps,
+} from './types';
 import { updateVerifiedAnchorFromPredecessor } from './update-verified-anchor-from-predecessor';
+
+const NEVER_ABORTED = new AbortController().signal;
 
 export async function runReplayTarget(
   trx: Transaction<DB>,
@@ -39,12 +55,15 @@ export async function runReplayTarget(
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- a mutable cache handle whose remove/get/set are its whole point; no readonly form is useful
   cache: ReplayCache,
   target: Readonly<ReplayTarget>,
+  deadline: AbortSignal = NEVER_ABORTED,
 ): Promise<ReplayIterationOutcome> {
   const loaded = await loadReplaySegment(trx, target);
 
   if (loaded === undefined) {
     return { kind: 'idle' };
   }
+
+  deadline.throwIfAborted();
 
   const document = await deps.loadContentDocument(loaded.activity.contentVersion);
 
@@ -99,18 +118,11 @@ export async function runReplayTarget(
       }
     }
 
-    const scopeSecret = await readScopeSecret(
-      {
-        issuer: 'service-replay',
-        keysServiceURL: deps.keysServiceURL,
-        privateKey: deps.privateKey,
-      },
-      {
-        avatarID: segment.activity.avatarID,
-        secretRef: SecretRefSchema.parse(segment.activity.secretRef),
-        secretVersion: segment.activity.secretVersion,
-      },
-    );
+    const scopeSecret = await tryReadScopeSecret(deps, segment, deadline);
+
+    if (scopeSecret === undefined) {
+      return scheduleReplayRetry(trx, deps, cache, segment, 'keys-unavailable');
+    }
 
     const descriptorDivergence = findDescriptorDivergence({
       content: document.encounter,
@@ -153,10 +165,42 @@ export async function runReplayTarget(
   }
 
   if (segment.activity.simVersion === deps.simVersion) {
-    return runReplayTargetInProcess(trx, deps, cache, segment, document);
+    return runReplayTargetInProcess(trx, deps, cache, segment, document, deadline);
   }
 
-  return runReplayTargetCrossVersion(trx, deps, cache, segment, document);
+  return runReplayTargetCrossVersion(trx, deps, cache, segment, document, deadline);
+}
+
+// a keys outage is operational, so it backs the activity off rather than counting against it; a
+// defined refusal is a misconfiguration and propagates, and a deadline abort propagates as itself
+async function tryReadScopeSecret(
+  deps: Readonly<ReplayWorkerDeps>,
+  segment: Readonly<ReplaySegment>,
+  deadline: AbortSignal,
+): Promise<Uint8Array | undefined> {
+  try {
+    return await readScopeSecret(
+      {
+        issuer: 'service-replay',
+        keysServiceURL: deps.keysServiceURL,
+        privateKey: deps.privateKey,
+        signal: deadline,
+      },
+      {
+        avatarID: segment.activity.avatarID,
+        secretRef: SecretRefSchema.parse(segment.activity.secretRef),
+        secretVersion: segment.activity.secretVersion,
+      },
+    );
+  } catch (error) {
+    deadline.throwIfAborted();
+
+    if (isDefinedError(error)) {
+      throw error;
+    }
+
+    return undefined;
+  }
 }
 
 interface NextSeedCheckpoint {
@@ -188,6 +232,7 @@ async function runReplayTargetInProcess(
   cache: ReplayCache,
   segment: Readonly<ReplaySegment>,
   document: Readonly<ContentDocument>,
+  deadline: AbortSignal,
 ): Promise<ReplayIterationOutcome> {
   const unverified = segment.checkpoints.slice(segment.verifiedHead);
   const rawCached = cache.get(segment.activity.id);
@@ -213,6 +258,8 @@ async function runReplayTargetInProcess(
 
   const advance = await driver.advanceToDuration(duration, stopAtState, expectedCheckpointCount);
 
+  deadline.throwIfAborted();
+
   const replayed =
     cached === undefined ? advance.checkpoints.slice(segment.verifiedHead) : advance.checkpoints;
 
@@ -224,7 +271,7 @@ async function runReplayTargetInProcess(
     : compareReplaySegment(unverified, replayed, compareContext);
 
   if (verdict?.kind === 'match') {
-    return applyMatch(trx, deps, segment, replayed, driver, verdict, document);
+    return applyMatch(trx, deps, cache, segment, replayed, driver, verdict, document, deadline);
   }
 
   const confirmDriver = buildFreshDriver(document.encounter, segment);
@@ -234,6 +281,8 @@ async function runReplayTargetInProcess(
     stopAtState,
     segment.checkpoints.length,
   );
+
+  deadline.throwIfAborted();
 
   if (confirmAdvance.haltedOnDurationCap) {
     return parkReplayTarget(trx, deps, cache, segment, 'durationCapExceeded');
@@ -258,12 +307,25 @@ async function runReplayTargetCrossVersion(
   cache: ReplayCache,
   segment: Readonly<ReplaySegment>,
   document: Readonly<ContentDocument>,
+  deadline: AbortSignal,
 ): Promise<ReplayIterationOutcome> {
   const unverified = segment.checkpoints.slice(segment.verifiedHead);
   const job = buildCrossVersionJob(document.encounter, segment);
-  const runDeps = { db: trx, privateKey: deps.privateKey, simVersion: deps.simVersion };
+
+  const runDeps = {
+    db: trx,
+    privateKey: deps.privateKey,
+    signal: deadline,
+    simVersion: deps.simVersion,
+  };
 
   const outcome = await runReplaySegment(runDeps, job);
+
+  deadline.throwIfAborted();
+
+  if (outcome.kind === 'providerUnavailable') {
+    return scheduleReplayRetry(trx, deps, cache, segment, 'provider-unavailable');
+  }
 
   if (outcome.kind !== 'replayed') {
     return parkReplayTarget(trx, deps, cache, segment, outcome.kind);
@@ -280,10 +342,16 @@ async function runReplayTargetCrossVersion(
       : compareReplaySegment(unverified, replayed, compareContext);
 
   if (verdict?.kind === 'match') {
-    return applyMatch(trx, deps, segment, replayed, undefined, verdict, document);
+    return applyMatch(trx, deps, cache, segment, replayed, undefined, verdict, document, deadline);
   }
 
   const confirmOutcome = await runReplaySegment(runDeps, job);
+
+  deadline.throwIfAborted();
+
+  if (confirmOutcome.kind === 'providerUnavailable') {
+    return scheduleReplayRetry(trx, deps, cache, segment, 'provider-unavailable');
+  }
 
   if (confirmOutcome.kind !== 'replayed') {
     return parkReplayTarget(trx, deps, cache, segment, confirmOutcome.kind);
@@ -325,13 +393,15 @@ function buildSettlement(
 async function applyMatch(
   trx: Transaction<DB>,
   deps: Readonly<ReplayWorkerDeps>,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- a mutable cache handle whose remove/get/set are its whole point; no readonly form is useful
+  cache: ReplayCache,
   segment: Readonly<ReplaySegment>,
   replayed: ReadonlyArray<ReplayedCheckpoint>,
   driver: SimulationDriver | undefined,
   verdict: Extract<CompareVerdict, { kind: 'match' }>,
   document: Readonly<ContentDocument>,
+  deadline: AbortSignal,
 ): Promise<ReplayIterationOutcome> {
-  const rewardFacts = verdict.rewardFacts;
   const settlement = buildSettlement(segment.activity.settledXP, verdict);
   const lastReplayed = replayed.at(-1);
   const lastStored = segment.checkpoints.at(-1);
@@ -352,17 +422,11 @@ async function applyMatch(
       ? segment.activity.scopeID
       : undefined;
 
-  const items = await rollRewardItems(
-    { keysServiceURL: deps.keysServiceURL, privateKey: deps.privateKey },
-    {
-      avatarID: segment.activity.avatarID,
-      keyVersion: segment.activity.keyVersion,
-      rewardFacts,
-      scopeID: segment.activity.scopeID,
-      scopeType: segment.activity.scopeType,
-      tables: document.loot,
-    },
-  );
+  const items = await tryRollRewardItems(deps, segment, verdict.rewardFacts, document, deadline);
+
+  if (items === undefined) {
+    return scheduleReplayRetry(trx, deps, cache, segment, 'keys-unavailable');
+  }
 
   const result = await applyVerifiedSegment(trx, {
     activityID: segment.activity.id,
@@ -406,6 +470,36 @@ async function applyMatch(
       : { kind: 'evict' };
 
   return { kind: 'matched', pendingCache: { activityID: segment.activity.id, effect } };
+}
+
+async function tryRollRewardItems(
+  deps: Readonly<ReplayWorkerDeps>,
+  segment: Readonly<ReplaySegment>,
+  rewardFacts: ReadonlyArray<RewardFact>,
+  document: Readonly<ContentDocument>,
+  deadline: AbortSignal,
+): Promise<ReadonlyArray<MintedItem> | undefined> {
+  try {
+    return await rollRewardItems(
+      { keysServiceURL: deps.keysServiceURL, privateKey: deps.privateKey, signal: deadline },
+      {
+        avatarID: segment.activity.avatarID,
+        keyVersion: segment.activity.keyVersion,
+        rewardFacts,
+        scopeID: segment.activity.scopeID,
+        scopeType: segment.activity.scopeType,
+        tables: document.loot,
+      },
+    );
+  } catch (error) {
+    deadline.throwIfAborted();
+
+    if (isDefinedError(error)) {
+      throw error;
+    }
+
+    return undefined;
+  }
 }
 
 type RejectionCause =
@@ -554,7 +648,7 @@ async function parkReplayTarget(
   // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- a mutable cache handle whose remove/get/set are its whole point; no readonly form is useful
   cache: ReplayCache,
   segment: Readonly<ReplaySegment>,
-  reason: 'durationCapExceeded' | 'expired' | 'providerUnavailable' | 'unknownVersion',
+  reason: ParkReason,
 ): Promise<ReplayIterationOutcome> {
   const message = pickParkMessage(reason);
 
@@ -580,9 +674,7 @@ async function parkReplayTarget(
   return { kind: 'parked', reason };
 }
 
-function pickParkMessage(
-  reason: 'durationCapExceeded' | 'expired' | 'providerUnavailable' | 'unknownVersion',
-): string {
+function pickParkMessage(reason: ParkReason): string {
   if (reason === 'expired') {
     return 'sim version retention expired; parking activity for operator resolution';
   }
@@ -591,25 +683,40 @@ function pickParkMessage(
     return 'sim version unrecognized; parking activity';
   }
 
-  if (reason === 'providerUnavailable') {
-    return 'sim version provider unavailable; parking activity until the registry sweep retries it';
-  }
-
   return 'replay duration cap exhausted before the expected checkpoint count; parking activity for operator resolution';
 }
 
-function pickParkRejectionReason(
-  reason: 'durationCapExceeded' | 'expired' | 'providerUnavailable' | 'unknownVersion',
-): RejectionReason {
-  if (reason === 'durationCapExceeded') {
-    return 'elapsed-time';
-  }
+function pickParkRejectionReason(reason: ParkReason): RejectionReason {
+  return reason === 'durationCapExceeded' ? 'elapsed-time' : 'version-park';
+}
 
-  if (reason === 'providerUnavailable') {
-    return 'provider-unavailable';
-  }
+async function scheduleReplayRetry(
+  trx: Transaction<DB>,
+  deps: Readonly<ReplayWorkerDeps>,
+  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- a mutable cache handle whose remove/get/set are its whole point; no readonly form is useful
+  cache: ReplayCache,
+  segment: Readonly<ReplaySegment>,
+  reason: Extract<BackoffReason, 'keys-unavailable' | 'provider-unavailable'>,
+): Promise<ReplayIterationOutcome> {
+  const backoff = await updateReplayBackoff(trx, { activityID: segment.activity.id });
 
-  return 'version-park';
+  deps.logger.warn(
+    {
+      activityID: segment.activity.id,
+      appendedHead: segment.activity.appendedHead,
+      reason,
+      simVersion: segment.activity.simVersion,
+      verifiedHead: segment.verifiedHead,
+      ...backoff,
+    },
+    'replay dependency unavailable; backing the activity off',
+  );
+
+  recordBackoff(reason);
+
+  cache.remove(segment.activity.id);
+
+  return { kind: 'backedOff', reason };
 }
 
 function buildFreshDriver(

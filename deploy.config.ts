@@ -78,7 +78,19 @@ export default defineDeployManifest({
       configDir: 'services/replay',
       dockerfile: 'services/replay/Dockerfile',
       exposure: 'flycast',
-      simVersionProvider: { region: 'syd' },
+      scheduledMachines: [
+        {
+          command: ['/usr/local/bin/drain'],
+          env: { KEYS_SERVICE_URL: 'http://vers-service-keys.flycast' },
+          name: 'replay-drainer',
+          region: 'syd',
+          schedule: 'hourly',
+        },
+      ],
+
+      // Engine retention: 3 days now, 7 at the MVP, 14 at public release. Each retained version
+      // keeps its own provider app alive, so the window is raised only at a release gate.
+      simVersionProvider: { region: 'syd', retentionDays: 3 },
       trigger: { kind: 'turbo-affected', pkg: '@vers/service-replay' },
     },
     {

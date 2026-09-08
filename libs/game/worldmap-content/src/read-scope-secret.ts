@@ -15,6 +15,7 @@ interface ReadScopeSecretDeps {
   readonly keysServiceURL: string;
   readonly privateKey: CryptoKey;
 
+  readonly signal?: AbortSignal;
   readonly timeoutMs?: number;
 }
 
@@ -49,7 +50,7 @@ export async function readScopeSecret(
         secretRef: input.secretRef,
         secretVersion: input.secretVersion,
       },
-      { signal: AbortSignal.timeout(deps.timeoutMs ?? DEFAULT_KEYS_DISPATCH_TIMEOUT_MS) },
+      { signal: buildDispatchSignal(deps) },
     ),
   );
 
@@ -64,4 +65,10 @@ export async function readScopeSecret(
   }
 
   throw error;
+}
+
+function buildDispatchSignal(deps: Readonly<ReadScopeSecretDeps>): AbortSignal {
+  const timeout = AbortSignal.timeout(deps.timeoutMs ?? DEFAULT_KEYS_DISPATCH_TIMEOUT_MS);
+
+  return deps.signal === undefined ? timeout : AbortSignal.any([deps.signal, timeout]);
 }
