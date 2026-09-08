@@ -10,7 +10,7 @@ import { createMockCheckpointBatchEntry } from '../test-utils/factories/create-m
 import { handleRemoveUndeliveredWorkMessage } from './handle-remove-undelivered-work-message';
 
 test('it clears the pending starts and the queued checkpoints, and detaches the live activity', async () => {
-  const start = createMockActivityData();
+  const start = createMockActivityData({ avatarID: 'avatar-owned' });
 
   await writeActivityStart(start);
   await writeQueuedCheckpoint(start.id, createMockCheckpointBatchEntry());
@@ -20,7 +20,7 @@ test('it clears the pending starts and the queued checkpoints, and detaches the 
   context.setActivity(start);
   context.setSimulation(createSimulation());
 
-  await handleRemoveUndeliveredWorkMessage(context);
+  await handleRemoveUndeliveredWorkMessage(context, { avatarIDs: ['avatar-owned'] });
 
   const remainingStarts = await readAllActivityStarts();
   const remainingCheckpoints = await readAllQueuedCheckpoints();
@@ -28,4 +28,22 @@ test('it clears the pending starts and the queued checkpoints, and detaches the 
   expect(remainingStarts).toStrictEqual([]);
   expect(remainingCheckpoints).toStrictEqual([]);
   expect(context.getActivity()).toBeNull();
+});
+
+test("it keeps another avatar's pending start and its queued checkpoints", async () => {
+  const foreign = createMockActivityData({ avatarID: 'avatar-foreign' });
+  const entry = createMockCheckpointBatchEntry();
+
+  await writeActivityStart(foreign);
+  await writeQueuedCheckpoint(foreign.id, entry);
+
+  const context = createStubWorkerContext();
+
+  await handleRemoveUndeliveredWorkMessage(context, { avatarIDs: ['avatar-owned'] });
+
+  const remainingStarts = await readAllActivityStarts();
+  const remainingCheckpoints = await readAllQueuedCheckpoints();
+
+  expect(remainingStarts).toStrictEqual([foreign]);
+  expect(remainingCheckpoints).toStrictEqual([{ ...entry, activityID: foreign.id }]);
 });

@@ -37,6 +37,10 @@ const startStatusSchema = z.discriminatedUnion('kind', [
 
 const ackSchema = z.object({ ok: z.literal(true) }).readonly();
 
+const undeliveredWorkInputSchema = z
+  .object({ avatarIDs: z.array(z.string()).readonly() })
+  .readonly();
+
 const undeliveredWorkSchema = z
   .object({ activityCount: z.int().min(0), playMs: z.number().min(0) })
   .readonly();
@@ -78,9 +82,9 @@ export const workerContract = {
 
   readDebugSnapshot: oc.input(z.object({}).readonly()).output(debugSnapshotSchema),
 
-  readUndeliveredWork: oc.input(z.object({}).readonly()).output(undeliveredWorkSchema),
+  readUndeliveredWork: oc.input(undeliveredWorkInputSchema).output(undeliveredWorkSchema),
 
-  removeUndeliveredWork: oc.input(z.object({}).readonly()).output(ackSchema),
+  removeUndeliveredWork: oc.input(undeliveredWorkInputSchema).output(ackSchema),
 
   reportOnline: oc
     .input(z.object({ avatarID: z.string(), claim: z.boolean() }).readonly())
@@ -114,3 +118,5 @@ export type RewardSlotLedgerSnapshot = z.infer<typeof rewardSlotLedgerSnapshotSc
 export type StartStatus = z.infer<typeof startStatusSchema>;
 
 export type UndeliveredWork = z.infer<typeof undeliveredWorkSchema>;
+
+export type UndeliveredWorkInput = z.infer<typeof undeliveredWorkInputSchema>;

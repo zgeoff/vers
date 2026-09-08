@@ -147,6 +147,15 @@ outbox is empty, the control signs the player out at once. When the outbox holds
 control warns the player. Once the player confirms, the worker discards the outbox and the control
 ends the session. Cancelling leaves the outbox unchanged and the session open.
 
+The control asks about the signed-in account's avatars alone. It names the account's avatars when it
+asks the worker, and the worker answers for those avatars: an activity start naming any other
+avatar, and the checkpoints queued behind it, stay out of the warning and survive the discard. A
+queued checkpoint names no avatar, so a checkpoint whose activity start is no longer pending on the
+device counts for whichever account signs out, and the discard clears it. Another account's
+undelivered activity starts therefore stay on the device until that account signs back in and
+delivers them, or until a takeover clears the whole outbox
+([when a session ends](#when-a-session-ends)).
+
 The warning names how many activities the outbox holds and how much simulated time the server has
 not received. An activity the player ran offline sits in the outbox whole: its activity start and
 every checkpoint. An activity the server received in part sits there as the checkpoints the server
@@ -155,10 +164,11 @@ the next sign-in attaches to it again.
 
 A worker that cannot say what the outbox holds does not block the sign-out. The control signs the
 player out and leaves the outbox unchanged, because a dead worker must never trap a player on the
-settings screen. A worker that fails to discard the outbox blocks the sign-out. The control keeps
-the warning open and asks the player to try again, because ending the session with the outbox intact
-is what the warning exists to prevent. The worker clears the outbox before it stops the live
-simulation, so when the outbox clear fails the simulation keeps running and the outbox stays whole.
+settings screen. A control that cannot read the account's avatars does the same. A worker that fails
+to discard the outbox blocks the sign-out. The control keeps the warning open and asks the player to
+try again, because ending the session with the outbox intact is what the warning exists to prevent.
+The worker clears the outbox before it stops the live simulation, so when the outbox clear fails the
+simulation keeps running and the outbox stays whole.
 
 After a cancelled sign-out, the outbox can reach the server only from the account that filled it. A
 different account signing in on this device cannot deliver the outbox: the worker drains only the
