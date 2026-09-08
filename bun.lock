@@ -927,6 +927,40 @@
         "typescript": "catalog:",
       },
     },
+    "libs/testing/qa-account": {
+      "name": "@vers/qa-account",
+      "version": "0.0.0",
+      "dependencies": {
+        "@epic-web/totp": "catalog:",
+        "@noble/hashes": "catalog:",
+        "@paralleldrive/cuid2": "catalog:",
+        "@vers/content-registry": "workspace:*",
+        "@vers/contract-activity": "workspace:*",
+        "@vers/contract-avatar": "workspace:*",
+        "@vers/contract-keys": "workspace:*",
+        "@vers/contract-user": "workspace:*",
+        "@vers/db": "workspace:*",
+        "@vers/game-utils": "workspace:*",
+        "@vers/idle-core": "workspace:*",
+        "@vers/item-gen": "workspace:*",
+        "@vers/roll-crypto": "workspace:*",
+        "@vers/sim-registry": "workspace:*",
+        "@vers/worldmap-content": "workspace:*",
+        "@vers/worldmap-core": "workspace:*",
+        "commander": "catalog:",
+        "kysely": "catalog:",
+        "tiny-invariant": "catalog:",
+        "zod": "catalog:",
+      },
+      "devDependencies": {
+        "@types/bun": "catalog:",
+        "@types/node": "catalog:",
+        "@vers/service-test-utils": "workspace:*",
+        "@vers/test-utils": "workspace:*",
+        "@zgeoff/bun-test-extended": "catalog:",
+        "typescript": "catalog:",
+      },
+    },
     "libs/testing/service-test-utils": {
       "name": "@vers/service-test-utils",
       "version": "0.0.0",
@@ -2697,6 +2731,8 @@
     "@vers/panda-preset": ["@vers/panda-preset@workspace:libs/design/panda-preset"],
 
     "@vers/product-analytics": ["@vers/product-analytics@workspace:libs/service/product-analytics"],
+
+    "@vers/qa-account": ["@vers/qa-account@workspace:libs/testing/qa-account"],
 
     "@vers/release-registry": ["@vers/release-registry@workspace:libs/data/release-registry"],
 

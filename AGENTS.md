@@ -231,9 +231,11 @@ Packages live under kind-first roots; `docs/architecture/overview.md` lists ever
 ## Boundaries
 
 Projects are tagged `lib`, `service`, or `app` in their own `turbo.json`; the root `boundaries`
-block denies `lib` → `service`/`app` and `service` → `app` imports, transitively.
-`bun run boundaries` also flags imports of packages missing from the importer's `package.json`. It
-walks the filesystem ignoring `.gitignore` — run it on a clean tree, or stale
+block denies `lib` → `service`/`app` and `service` → `app` imports, transitively. A project tagged
+`server-only` beside its kind is importable only by a `service` or another `server-only` project,
+and the check follows dependents transitively, so no package the root manifest or an app depends on
+may import one. `bun run boundaries` also flags imports of packages missing from the importer's
+`package.json`. It walks the filesystem ignoring `.gitignore` — run it on a clean tree, or stale
 `dist/`/`styled-system/` output reads as source.
 
 Package naming is `@vers/` plus the leaf folder name (`libs/core/utils` → `@vers/utils`, `apps/web`
@@ -253,6 +255,9 @@ test, lint, boundaries, and knip like any project.
   enough that running the CLI is their coverage.
 - Root-manifest entries (`bun run deploy`, `bun run stack`, `pg:*`) invoke the bin files with plain
   `bun`.
+- One exception: a tool that imports a `server-only` package lives in its own `server-only` package
+  with its own `src/bin/` (`libs/testing/qa-account`), because the root manifest and the e2e app
+  depend on `@vers/scripts` and the boundaries check follows that edge.
 
 ## Env files
 

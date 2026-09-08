@@ -43,6 +43,9 @@
     "apps/web-e2e": {
       "entry": ["src/serve-mock-services.ts", "src/serve-resend-stub.ts", "specs/*.spec.ts"]
     },
+    "libs/testing/qa-account": {
+      "entry": ["src/bin/*.ts"]
+    },
     "libs/data/db": {
       "entry": ["kysely.config.ts", "migrations/*.ts", "seeds/*.ts"]
     },

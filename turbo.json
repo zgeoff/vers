@@ -17,7 +17,7 @@
       },
       "server-only": {
         "dependents": {
-          "allow": ["service"]
+          "allow": ["server-only", "service"]
         }
       },
       "service": {
