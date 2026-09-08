@@ -23,3 +23,9 @@ test('it allows the error-ingest origin when error reporting is enabled', () => 
 
   expect(value).toInclude("connect-src 'self' https://errors.example.test");
 });
+
+test('it restricts fonts to the app origin', () => {
+  const value = buildCSPHeaderValue({ nonce: 'abc123', sentryOrigin: null });
+
+  expect(value).toInclude("font-src 'self';");
+});

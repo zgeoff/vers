@@ -10,7 +10,12 @@ const sentryAuthToken = findNonEmptyEnv('SENTRY_AUTH_TOKEN');
 const sentryDSN = findNonEmptyEnv('VITE_SENTRY_DSN');
 
 export default defineConfig({
-  build: { sourcemap: sentryAuthToken === undefined ? false : 'hidden' },
+  build: {
+    // the CSP's `font-src 'self'` rejects a `data:` font, so a font file never inlines however
+    // small it is; every other asset keeps vite's size-based default
+    assetsInlineLimit: (filePath) => (isFontFile(filePath) ? false : undefined),
+    sourcemap: sentryAuthToken === undefined ? false : 'hidden',
+  },
   plugins: [
     tanstackStart({ rsc: { enabled: true } }),
     rsc(),
@@ -79,6 +84,10 @@ function findNonEmptyEnv(name: string): string | undefined {
   const value = process.env[name];
 
   return value === undefined || value === '' ? undefined : value;
+}
+
+function isFontFile(filePath: string): boolean {
+  return /\.woff2?$/.test(filePath);
 }
 
 function buildMockBackendPlugin(): Plugin {
