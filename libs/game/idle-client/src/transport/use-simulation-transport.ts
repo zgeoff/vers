@@ -8,6 +8,7 @@ import { setResyncStatus } from '../state/set-resync-status';
 import { setRunOutcome } from '../state/set-run-outcome';
 import { setSimulationSnapshot } from '../state/set-simulation-snapshot';
 import { setWorkerClient } from '../state/set-worker-client';
+import { setWriterContention } from '../state/set-writer-contention';
 import { setWriterDisplacedActivityID } from '../state/set-writer-displaced-activity-id';
 import { updateRewardSlotLedger } from '../state/update-reward-slot-ledger';
 import { useIdleStore } from '../state/use-idle-store';
@@ -131,7 +132,13 @@ function handleWorkerMessage(message: WorkerMessage) {
       break;
     }
 
+    case WorkerMessageType.WriterPending: {
+      setWriterContention(true);
+      break;
+    }
+
     case WorkerMessageType.WriterReady: {
+      setWriterContention(false);
       advanceWriterGeneration();
       break;
     }

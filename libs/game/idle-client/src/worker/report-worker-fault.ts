@@ -5,6 +5,7 @@ export type WorkerFaultSite =
   | 'checkpoint-stream'
   | 'continuation'
   | 'eviction'
+  | 'journal-open'
   | 'message-routing'
   | 'preference-seed'
   | 'writer-election'

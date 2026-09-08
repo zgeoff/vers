@@ -5,14 +5,11 @@ interface TransportCapabilities {
   readonly hasWebLocks: boolean;
 }
 
+// both transports elect through the writer lock, so a browser without Web Locks gets neither
 export function pickTransportKind(capabilities: TransportCapabilities): SimulationTransportKind {
-  if (capabilities.hasSharedWorker) {
-    return 'shared-worker';
+  if (!capabilities.hasWebLocks) {
+    return 'none';
   }
 
-  if (capabilities.hasWebLocks) {
-    return 'web-locks';
-  }
-
-  return 'none';
+  return capabilities.hasSharedWorker ? 'shared-worker' : 'web-locks';
 }

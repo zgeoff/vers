@@ -1,10 +1,11 @@
-import { expect, test } from 'bun:test';
+import { expect, onTestFinished, test } from 'bun:test';
 import { createMockActivityData } from '@vers/contract-activity/test-utils';
 import { ActivityFailureAction } from '@vers/idle-core';
 import type { IDBPDatabase } from 'idb';
 import { deleteDB, openDB } from 'idb';
 import { createMockCheckpointBatchEntry } from '../test-utils/factories/create-mock-checkpoint-batch-entry';
 import {
+  CHECKPOINT_QUEUE_DB_NAME,
   CHECKPOINT_QUEUE_DB_VERSION,
   CHECKPOINT_QUEUE_STORE_NAME,
   CONTENT_DOCUMENT_STORE_NAME,
@@ -209,4 +210,57 @@ test('upgrading a database holding the legacy outbox store drops both outbox sto
 
     await deleteDB(legacyTestDBName);
   }
+});
+
+test("it closes its connection for another context's upgrade and opens afresh afterwards", async () => {
+  const before = await resolveCheckpointQueueDB();
+
+  // a newer build opening the journal at a higher version: the held connection must yield, or the
+  // upgrade waits on it forever
+  const upgraded = await openDB<CheckpointQueueSchema>(
+    CHECKPOINT_QUEUE_DB_NAME,
+    CHECKPOINT_QUEUE_DB_VERSION + 1,
+    { upgrade() {} },
+  );
+
+  upgraded.close();
+
+  onTestFinished(async () => {
+    await deleteDB(CHECKPOINT_QUEUE_DB_NAME);
+  });
+
+  await deleteDB(CHECKPOINT_QUEUE_DB_NAME);
+
+  const after = await resolveCheckpointQueueDB();
+  const rows = await after.count(CHECKPOINT_QUEUE_STORE_NAME);
+
+  expect(after).not.toBe(before);
+  expect(rows).toBe(0);
+});
+
+test('it retries the open after a failed first open', async () => {
+  await resolveCheckpointQueueDB();
+
+  // the higher open makes the held connection yield and forget itself, and leaves the journal at
+  // a version the bundled open then refuses
+  const higher = await openDB<CheckpointQueueSchema>(
+    CHECKPOINT_QUEUE_DB_NAME,
+    CHECKPOINT_QUEUE_DB_VERSION + 1,
+    { upgrade() {} },
+  );
+
+  higher.close();
+
+  onTestFinished(async () => {
+    await deleteDB(CHECKPOINT_QUEUE_DB_NAME);
+  });
+
+  await expect(resolveCheckpointQueueDB()).toReject();
+
+  await deleteDB(CHECKPOINT_QUEUE_DB_NAME);
+
+  const recovered = await resolveCheckpointQueueDB();
+  const rows = await recovered.count(CHECKPOINT_QUEUE_STORE_NAME);
+
+  expect(rows).toBe(0);
 });

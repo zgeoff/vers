@@ -7,6 +7,7 @@ import {
   useSimulationInitialized,
   useSimulationTransport,
   useWriterAbortSignal,
+  useWriterContention,
 } from '@vers/idle-client';
 import type { LiveRun, WorkerClient } from '@vers/idle-client';
 import type { ActivityFailureAction, ActivitySnapshot, AvatarSnapshot } from '@vers/idle-core';
@@ -20,6 +21,7 @@ interface IdleWorkerHandle {
   readonly lastCompletedActivityID: string | undefined;
   readonly liveRun: LiveRun | undefined;
   readonly writerAbortSignal: AbortSignal;
+  readonly writerContention: boolean;
 }
 
 export function useIdleWorkerHandle(): IdleWorkerHandle {
@@ -31,6 +33,7 @@ export function useIdleWorkerHandle(): IdleWorkerHandle {
   const lastCompletedActivityID = useLastCompletedActivityID();
   const liveRun = useLiveRun();
   const writerAbortSignal = useWriterAbortSignal();
+  const writerContention = useWriterContention();
 
   return {
     activity: activity ?? undefined,
@@ -41,5 +44,6 @@ export function useIdleWorkerHandle(): IdleWorkerHandle {
     lastCompletedActivityID: lastCompletedActivityID ?? undefined,
     liveRun: liveRun ?? undefined,
     writerAbortSignal,
+    writerContention,
   };
 }

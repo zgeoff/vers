@@ -17,6 +17,7 @@ import type {
   RewardSlotsRecordedMessage,
   SimulationUpdateMessage,
   WriterDisplacedMessage,
+  WriterPendingMessage,
   WriterReadyMessage,
 } from '../worker/worker-to-client-message-schema';
 import { WORKER_TO_CLIENT_CHANNEL } from './constants';
@@ -38,13 +39,27 @@ class StubSharedWorker extends EventTarget {
 
 const constructedWorkers: Array<StubSharedWorker> = [];
 
+// a browser with a SharedWorker also has Web Locks, which the transport pick now requires; the
+// test runtime has neither, so both are stubbed together
 function registerSharedWorkerStub() {
   const originalSharedWorker = globalThis.SharedWorker;
+  const locksDescriptor = Object.getOwnPropertyDescriptor(navigator, 'locks');
 
   Reflect.set(globalThis, 'SharedWorker', StubSharedWorker);
 
+  Object.defineProperty(navigator, 'locks', {
+    configurable: true,
+    value: { request: () => Promise.resolve() },
+  });
+
   onTestFinished(() => {
     Reflect.set(globalThis, 'SharedWorker', originalSharedWorker);
+
+    if (locksDescriptor === undefined) {
+      Reflect.deleteProperty(navigator, 'locks');
+    } else {
+      Object.defineProperty(navigator, 'locks', locksDescriptor);
+    }
 
     constructedWorkers.length = 0;
   });
@@ -217,6 +232,32 @@ test('it resets the handshake and advances the generation on a writer-ready broa
   });
 
   expect(useIdleStore.getState().initialized).toBeFalse();
+
+  hook.unmount();
+});
+
+test('it flags writer contention on a writer-pending broadcast and clears it once the writer is ready', async () => {
+  registerSharedWorkerStub();
+
+  const hook = renderHook(() => useSimulationTransport());
+
+  hook.rerender();
+
+  const pending: WriterPendingMessage = { type: WorkerMessageType.WriterPending };
+
+  emitWorkerMessage(pending);
+
+  await waitFor(() => {
+    expect(useIdleStore.getState().writerContention).toBeTrue();
+  });
+
+  const ready: WriterReadyMessage = { type: WorkerMessageType.WriterReady };
+
+  emitWorkerMessage(ready);
+
+  await waitFor(() => {
+    expect(useIdleStore.getState().writerContention).toBeFalse();
+  });
 
   hook.unmount();
 });

@@ -2,6 +2,7 @@ import { expect, mock, onTestFinished, test } from 'bun:test';
 import { onMessagePortClose } from '@orpc/client/message-port';
 import { ActivityFailureAction } from '@vers/idle-core';
 import { waitFor } from '@vers/test-utils';
+import { buildProtocolStamp } from '../transport/build-protocol-stamp';
 import { RPC_CLIENT_TO_WORKER_CHANNEL } from '../transport/constants';
 import { createBroadcastPort } from '../transport/create-broadcast-port';
 import { createWorkerClient } from '../transport/create-worker-client';
@@ -97,9 +98,37 @@ test('it fires the virtual port close listeners when the sweep evicts an idle ta
     channel.close();
   });
 
-  channel.postMessage({ data: 'ping', tabID: 'tab-idle' });
+  channel.postMessage({ data: 'ping', protocol: buildProtocolStamp(), tabID: 'tab-idle' });
 
   await waitFor(() => {
     expect(closes).toStrictEqual(['close']);
   });
+});
+
+test('it refuses a tab from another build by name instead of upgrading it', async () => {
+  using runtime = createWorkerRuntime();
+
+  const upgrade = mock(runtime.upgrade);
+  const demux = createWorkerDemux({ protocol: 'worker-build', upgrade });
+
+  onTestFinished(() => {
+    demux.stop();
+  });
+
+  const refusals: Array<string> = [];
+
+  const client = createWorkerClient(
+    createBroadcastPort({
+      onRefused: (workerProtocol) => {
+        refusals.push(workerProtocol);
+      },
+      protocol: 'tab-build',
+    }),
+  );
+
+  // the refusal closes the tab's port, so the call settles with a closed error
+  await expect(client.initialize({})).toReject();
+
+  expect(refusals).toStrictEqual(['worker-build']);
+  expect(upgrade).not.toHaveBeenCalled();
 });
