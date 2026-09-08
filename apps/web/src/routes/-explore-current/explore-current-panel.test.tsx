@@ -3,9 +3,16 @@ import { waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMockActivityData } from '@vers/contract-activity/test-utils';
 import type { StartStatus } from '@vers/idle-client';
-import { advanceWriterGeneration, setEngagedRun, setResyncStatus } from '@vers/idle-client';
-import { ActivityFailureAction } from '@vers/idle-core';
+import {
+  advanceWriterGeneration,
+  setEngagedRun,
+  setResyncStatus,
+  setRunOutcome,
+} from '@vers/idle-client';
+import { createMockRunOutcome } from '@vers/idle-client/test-utils';
+import { ActivityCheckpointType, ActivityFailureAction } from '@vers/idle-core';
 import { createMockActivitySnapshot } from '@vers/idle-core/test-utils';
+import * as db from '@vers/mock-services/db';
 import { setSelectedNode } from '@vers/worldmap-client';
 import { createMockWorldMapNode } from '@vers/worldmap-client/test-utils';
 import invariant from 'tiny-invariant';
@@ -869,5 +876,552 @@ test('it navigates once an attached run is live at a node other than the engaged
     await waitFor(() => {
       expect(rendered.router.state.location.pathname).toBe('/activity');
     });
+  });
+});
+
+test('it renders the auto-retry checkbox and the rewards while the attached run is live', async () => {
+  const signedIn = await createSignedInUser();
+  const avatar = await createActiveAvatar({ userID: signedIn.userID });
+
+  // the server holds the row, so the rewards read goes ahead
+  await db.activityCollection.create({ avatarID: avatar.id, id: 'activity_attached' });
+
+  setSelectedNode(createMockWorldMapNode({ id: '0_0' }));
+
+  const client = createStubWorkerClient({
+    startActivity: () => Promise.resolve({ activityID: 'activity_attached', kind: 'attached' }),
+  });
+
+  setIdleWorkerHandle({
+    activity: undefined,
+    client,
+    failureAction: ActivityFailureAction.Abort,
+    initialized: true,
+    writerAbortSignal: new AbortController().signal,
+  });
+
+  await withRequestContext({ cookies: signedIn.cookies }, async () => {
+    const rendered = renderWithRouter(<ExploreCurrentPanel orpc={orpc} />);
+
+    await waitFor(() => {
+      expect(client.startActivity).toHaveBeenCalledTimes(1);
+    });
+
+    setEngagedRun({
+      avatarID: avatar.id,
+      id: 'activity_attached',
+      scopeID: '0_0',
+      scopeType: 'world_map_node',
+    });
+
+    setIdleWorkerHandle({
+      activity: createMockActivitySnapshot({ id: 'activity_attached' }),
+      client,
+      failureAction: ActivityFailureAction.Abort,
+      initialized: true,
+      liveRun: {
+        avatarID: avatar.id,
+        id: 'activity_attached',
+        scopeID: '0_0',
+        scopeType: 'world_map_node',
+      },
+      writerAbortSignal: new AbortController().signal,
+    });
+
+    const rewards = await rendered.findByTestId('activity-rewards-panel');
+
+    expect(rewards).toBeVisible();
+    expect(rendered.getByLabelText('Auto-retry on failure')).toBeVisible();
+    expect(rendered.queryByRole('status')).not.toBeInTheDocument();
+  });
+});
+
+test('it shows the outcome once the attached run ends with no continuation', async () => {
+  const signedIn = await createSignedInUser();
+  const avatar = await createActiveAvatar({ userID: signedIn.userID });
+
+  setSelectedNode(createMockWorldMapNode({ id: '0_0' }));
+
+  const client = createStubWorkerClient({
+    startActivity: () => Promise.resolve({ activityID: 'activity_attached', kind: 'attached' }),
+  });
+
+  setIdleWorkerHandle({
+    activity: undefined,
+    client,
+    failureAction: ActivityFailureAction.Abort,
+    initialized: true,
+    writerAbortSignal: new AbortController().signal,
+  });
+
+  await withRequestContext({ cookies: signedIn.cookies }, async () => {
+    const rendered = renderWithRouter(<ExploreCurrentPanel orpc={orpc} />);
+
+    await waitFor(() => {
+      expect(client.startActivity).toHaveBeenCalledTimes(1);
+    });
+
+    setEngagedRun({
+      avatarID: avatar.id,
+      id: 'activity_attached',
+      scopeID: '0_0',
+      scopeType: 'world_map_node',
+    });
+
+    setIdleWorkerHandle({
+      activity: createMockActivitySnapshot({ id: 'activity_attached' }),
+      client,
+      failureAction: ActivityFailureAction.Abort,
+      initialized: true,
+      liveRun: {
+        avatarID: avatar.id,
+        id: 'activity_attached',
+        scopeID: '0_0',
+        scopeType: 'world_map_node',
+      },
+      writerAbortSignal: new AbortController().signal,
+    });
+
+    await rendered.findByLabelText('Auto-retry on failure');
+
+    // the run ends with auto-retry off: the worker reports the outcome, then the activity-less
+    // snapshot that drops the live run
+    setRunOutcome(
+      createMockRunOutcome({
+        activityID: 'activity_attached',
+        avatarID: avatar.id,
+        scope: { scopeID: '0_0', scopeType: 'world_map_node' },
+        xp: 118,
+      }),
+    );
+
+    setIdleWorkerHandle({
+      activity: undefined,
+      client,
+      failureAction: ActivityFailureAction.Abort,
+      initialized: true,
+      writerAbortSignal: new AbortController().signal,
+    });
+
+    const heading = await rendered.findByRole('heading', { name: 'Your avatar fell' });
+
+    expect(heading).toBeVisible();
+    expect(rendered.getByText('+118 XP')).toBeVisible();
+    expect(rendered.getByRole('button', { name: 'Retry' })).toBeVisible();
+    expect(rendered.getByRole('button', { name: 'Back to map' })).toBeVisible();
+    expect(rendered.queryByRole('status')).not.toBeInTheDocument();
+  });
+});
+
+test('it shows the outcome of the continuation the run chained into', async () => {
+  const signedIn = await createSignedInUser();
+  const avatar = await createActiveAvatar({ userID: signedIn.userID });
+
+  setSelectedNode(createMockWorldMapNode({ id: '0_0' }));
+
+  const client = createStubWorkerClient({
+    startActivity: () => Promise.resolve({ activityID: 'activity_attached', kind: 'attached' }),
+  });
+
+  setIdleWorkerHandle({
+    activity: undefined,
+    client,
+    failureAction: ActivityFailureAction.Retry,
+    initialized: true,
+    writerAbortSignal: new AbortController().signal,
+  });
+
+  await withRequestContext({ cookies: signedIn.cookies }, async () => {
+    const rendered = renderWithRouter(<ExploreCurrentPanel orpc={orpc} />);
+
+    await waitFor(() => {
+      expect(client.startActivity).toHaveBeenCalledTimes(1);
+    });
+
+    setEngagedRun({
+      avatarID: avatar.id,
+      id: 'activity_attached',
+      scopeID: '0_0',
+      scopeType: 'world_map_node',
+    });
+
+    // the attached run fails and chains a continuation under a fresh id at the same node
+    setIdleWorkerHandle({
+      activity: createMockActivitySnapshot({ id: 'activity_continuation' }),
+      client,
+      failureAction: ActivityFailureAction.Retry,
+      initialized: true,
+      liveRun: {
+        avatarID: avatar.id,
+        id: 'activity_continuation',
+        scopeID: '0_0',
+        scopeType: 'world_map_node',
+      },
+      writerAbortSignal: new AbortController().signal,
+    });
+
+    await rendered.findByLabelText('Auto-retry on failure');
+
+    setRunOutcome(
+      createMockRunOutcome({
+        activityID: 'activity_continuation',
+        avatarID: avatar.id,
+        kind: ActivityCheckpointType.Completed,
+        scope: { scopeID: '0_0', scopeType: 'world_map_node' },
+      }),
+    );
+
+    setIdleWorkerHandle({
+      activity: undefined,
+      client,
+      failureAction: ActivityFailureAction.Retry,
+      initialized: true,
+      writerAbortSignal: new AbortController().signal,
+    });
+
+    const heading = await rendered.findByRole('heading', { name: 'Encounter cleared' });
+
+    expect(heading).toBeVisible();
+  });
+});
+
+test('it re-arms the start when the player retries from the outcome', async () => {
+  const signedIn = await createSignedInUser();
+  const avatar = await createActiveAvatar({ userID: signedIn.userID });
+
+  setSelectedNode(createMockWorldMapNode({ id: '0_0' }));
+
+  const user = userEvent.setup();
+
+  const client = createStubWorkerClient({
+    startActivity: () => Promise.resolve({ activityID: 'activity_attached', kind: 'attached' }),
+  });
+
+  const writerAbortSignal = new AbortController().signal;
+
+  setIdleWorkerHandle({
+    activity: undefined,
+    client,
+    failureAction: ActivityFailureAction.Abort,
+    initialized: true,
+    writerAbortSignal,
+  });
+
+  await withRequestContext({ cookies: signedIn.cookies }, async () => {
+    const rendered = renderWithRouter(<ExploreCurrentPanel orpc={orpc} />);
+
+    await waitFor(() => {
+      expect(client.startActivity).toHaveBeenCalledTimes(1);
+    });
+
+    setEngagedRun({
+      avatarID: avatar.id,
+      id: 'activity_attached',
+      scopeID: '0_0',
+      scopeType: 'world_map_node',
+    });
+
+    setIdleWorkerHandle({
+      activity: createMockActivitySnapshot({ id: 'activity_attached' }),
+      client,
+      failureAction: ActivityFailureAction.Abort,
+      initialized: true,
+      liveRun: {
+        avatarID: avatar.id,
+        id: 'activity_attached',
+        scopeID: '0_0',
+        scopeType: 'world_map_node',
+      },
+      writerAbortSignal,
+    });
+
+    await rendered.findByLabelText('Auto-retry on failure');
+
+    setRunOutcome(
+      createMockRunOutcome({
+        activityID: 'activity_attached',
+        avatarID: avatar.id,
+        scope: { scopeID: '0_0', scopeType: 'world_map_node' },
+      }),
+    );
+
+    setIdleWorkerHandle({
+      activity: undefined,
+      client,
+      failureAction: ActivityFailureAction.Abort,
+      initialized: true,
+      writerAbortSignal,
+    });
+
+    const retry = await rendered.findByRole('button', { name: 'Retry' });
+
+    await user.click(retry);
+
+    await waitFor(() => {
+      expect(client.startActivity).toHaveBeenCalledTimes(2);
+    });
+
+    expect(client.startActivity).toHaveBeenLastCalledWith(
+      { avatarID: avatar.id, scopeID: '0_0', scopeType: 'world_map_node' },
+      { signal: writerAbortSignal },
+    );
+  });
+});
+
+test('it returns to the map when the player leaves the outcome', async () => {
+  const signedIn = await createSignedInUser();
+  const avatar = await createActiveAvatar({ userID: signedIn.userID });
+
+  setSelectedNode(createMockWorldMapNode({ id: '0_0' }));
+
+  const user = userEvent.setup();
+
+  const client = createStubWorkerClient({
+    startActivity: () => Promise.resolve({ activityID: 'activity_attached', kind: 'attached' }),
+  });
+
+  setIdleWorkerHandle({
+    activity: undefined,
+    client,
+    failureAction: ActivityFailureAction.Abort,
+    initialized: true,
+    writerAbortSignal: new AbortController().signal,
+  });
+
+  await withRequestContext({ cookies: signedIn.cookies }, async () => {
+    const rendered = renderWithRouter(<ExploreCurrentPanel orpc={orpc} />, {
+      routes: { '/explore': <div data-testid="map-screen" /> },
+    });
+
+    await waitFor(() => {
+      expect(client.startActivity).toHaveBeenCalledTimes(1);
+    });
+
+    setEngagedRun({
+      avatarID: avatar.id,
+      id: 'activity_attached',
+      scopeID: '0_0',
+      scopeType: 'world_map_node',
+    });
+
+    setIdleWorkerHandle({
+      activity: createMockActivitySnapshot({ id: 'activity_attached' }),
+      client,
+      failureAction: ActivityFailureAction.Abort,
+      initialized: true,
+      liveRun: {
+        avatarID: avatar.id,
+        id: 'activity_attached',
+        scopeID: '0_0',
+        scopeType: 'world_map_node',
+      },
+      writerAbortSignal: new AbortController().signal,
+    });
+
+    await rendered.findByLabelText('Auto-retry on failure');
+
+    setRunOutcome(
+      createMockRunOutcome({
+        activityID: 'activity_attached',
+        avatarID: avatar.id,
+        scope: { scopeID: '0_0', scopeType: 'world_map_node' },
+      }),
+    );
+
+    setIdleWorkerHandle({
+      activity: undefined,
+      client,
+      failureAction: ActivityFailureAction.Abort,
+      initialized: true,
+      writerAbortSignal: new AbortController().signal,
+    });
+
+    const backToMap = await rendered.findByRole('button', { name: 'Back to map' });
+
+    await user.click(backToMap);
+
+    await waitFor(() => {
+      expect(rendered.router.state.location.pathname).toBe('/explore');
+    });
+  });
+});
+
+test("it keeps the spinner while the start is in flight past an earlier run's outcome", async () => {
+  const signedIn = await createSignedInUser();
+  const avatar = await createActiveAvatar({ userID: signedIn.userID });
+
+  setSelectedNode(createMockWorldMapNode({ id: '0_0' }));
+
+  // the previous visit's run at this node ended; the store keeps its outcome until another run
+  // goes live
+  setRunOutcome(
+    createMockRunOutcome({
+      activityID: 'activity_previous',
+      avatarID: avatar.id,
+      scope: { scopeID: '0_0', scopeType: 'world_map_node' },
+    }),
+  );
+
+  const client = createStubWorkerClient({
+    startActivity: () => new Promise(() => {}),
+  });
+
+  setIdleWorkerHandle({
+    activity: undefined,
+    client,
+    failureAction: ActivityFailureAction.Abort,
+    initialized: true,
+    writerAbortSignal: new AbortController().signal,
+  });
+
+  await withRequestContext({ cookies: signedIn.cookies }, async () => {
+    const rendered = renderWithRouter(<ExploreCurrentPanel orpc={orpc} />);
+
+    await waitFor(() => {
+      expect(client.startActivity).toHaveBeenCalledTimes(1);
+    });
+
+    // the start never answers, so an outcome panel within this window could only be the stale one
+    await expect(
+      rendered.findByTestId('run-outcome-panel', undefined, { timeout: 100 }),
+    ).toReject();
+
+    expect(rendered.getByRole('status')).toBeVisible();
+  });
+});
+
+test("it keeps the spinner while a fresh start is installed past an earlier run's outcome", async () => {
+  const signedIn = await createSignedInUser();
+  const avatar = await createActiveAvatar({ userID: signedIn.userID });
+
+  setSelectedNode(createMockWorldMapNode({ id: '0_0' }));
+
+  setRunOutcome(
+    createMockRunOutcome({
+      activityID: 'activity_previous',
+      avatarID: avatar.id,
+      scope: { scopeID: '0_0', scopeType: 'world_map_node' },
+    }),
+  );
+
+  const started = createMockActivityData({ avatarID: avatar.id, scopeID: '0_0' });
+
+  const client = createStubWorkerClient({
+    startActivity: () => Promise.resolve({ activity: started, kind: 'started' }),
+  });
+
+  setIdleWorkerHandle({
+    activity: undefined,
+    client,
+    failureAction: ActivityFailureAction.Abort,
+    initialized: true,
+    writerAbortSignal: new AbortController().signal,
+  });
+
+  await withRequestContext({ cookies: signedIn.cookies }, async () => {
+    const rendered = renderWithRouter(<ExploreCurrentPanel orpc={orpc} />);
+
+    await waitFor(() => {
+      expect(client.startActivity).toHaveBeenCalledTimes(1);
+    });
+
+    // the reply has settled and the run's own snapshot has not landed: the stale outcome must not
+    // stand in for the run being installed
+    await expect(
+      rendered.findByTestId('run-outcome-panel', undefined, { timeout: 100 }),
+    ).toReject();
+
+    expect(rendered.getByRole('status')).toBeVisible();
+  });
+});
+
+test('it keeps the spinner after a retry until the next run goes live', async () => {
+  const signedIn = await createSignedInUser();
+  const avatar = await createActiveAvatar({ userID: signedIn.userID });
+
+  setSelectedNode(createMockWorldMapNode({ id: '0_0' }));
+
+  const user = userEvent.setup();
+  const next = createMockActivityData({ avatarID: avatar.id, scopeID: '0_0' });
+
+  // the first call attaches to the run about to end; the retry's call mints the next run, whose
+  // snapshot has not landed by the time its reply does
+  const startActivity = mock(() =>
+    startActivity.mock.calls.length === 1
+      ? Promise.resolve<StartStatus>({ activityID: 'activity_attached', kind: 'attached' })
+      : Promise.resolve<StartStatus>({ activity: next, kind: 'started' }),
+  );
+
+  const client = createStubWorkerClient({ startActivity });
+
+  setIdleWorkerHandle({
+    activity: undefined,
+    client,
+    failureAction: ActivityFailureAction.Abort,
+    initialized: true,
+    writerAbortSignal: new AbortController().signal,
+  });
+
+  await withRequestContext({ cookies: signedIn.cookies }, async () => {
+    const rendered = renderWithRouter(<ExploreCurrentPanel orpc={orpc} />);
+
+    await waitFor(() => {
+      expect(client.startActivity).toHaveBeenCalledTimes(1);
+    });
+
+    setEngagedRun({
+      avatarID: avatar.id,
+      id: 'activity_attached',
+      scopeID: '0_0',
+      scopeType: 'world_map_node',
+    });
+
+    setIdleWorkerHandle({
+      activity: createMockActivitySnapshot({ id: 'activity_attached' }),
+      client,
+      failureAction: ActivityFailureAction.Abort,
+      initialized: true,
+      liveRun: {
+        avatarID: avatar.id,
+        id: 'activity_attached',
+        scopeID: '0_0',
+        scopeType: 'world_map_node',
+      },
+      writerAbortSignal: new AbortController().signal,
+    });
+
+    await rendered.findByLabelText('Auto-retry on failure');
+
+    setRunOutcome(
+      createMockRunOutcome({
+        activityID: 'activity_attached',
+        avatarID: avatar.id,
+        scope: { scopeID: '0_0', scopeType: 'world_map_node' },
+      }),
+    );
+
+    setIdleWorkerHandle({
+      activity: undefined,
+      client,
+      failureAction: ActivityFailureAction.Abort,
+      initialized: true,
+      writerAbortSignal: new AbortController().signal,
+    });
+
+    const retry = await rendered.findByRole('button', { name: 'Retry' });
+
+    await user.click(retry);
+
+    await waitFor(() => {
+      expect(client.startActivity).toHaveBeenCalledTimes(2);
+    });
+
+    // the retried run's outcome stays in the store until the next run's snapshot lands, and must
+    // not come back up on the fresh start's reply
+    await expect(
+      rendered.findByTestId('run-outcome-panel', undefined, { timeout: 100 }),
+    ).toReject();
+
+    expect(rendered.getByRole('status')).toBeVisible();
   });
 });
