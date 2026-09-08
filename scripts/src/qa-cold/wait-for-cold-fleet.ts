@@ -4,26 +4,47 @@ import { isColdMachine } from './is-cold-machine';
 
 const POLL_INTERVAL_MS = 3000;
 
-export function waitForColdFleet(apps: ReadonlyArray<string>, timeoutMS: number): Promise<void> {
-  return pRetry(
-    async () => {
-      for (const app of apps) {
-        const state = await readAppState(app);
+export async function waitForColdFleet(
+  apps: ReadonlyArray<string>,
+  timeoutMS: number,
+): Promise<void> {
+  const deadline = AbortSignal.timeout(timeoutMS);
+  let lastFailure = 'no state read completed';
 
-        const warm = state.machines.filter((machine) => !isColdMachine(machine));
+  try {
+    await pRetry(
+      async () => {
+        for (const app of apps) {
+          const state = await readAppState(app, { cancelSignal: deadline });
 
-        if (warm.length > 0) {
-          const listed = warm.map((machine) => `${machine.id} ${machine.state}`).join(', ');
+          const warm = state.machines.filter((machine) => !isColdMachine(machine));
 
-          throw new Error(`${app}: machine(s) ${listed} are not cold yet`);
+          if (warm.length > 0) {
+            const listed = warm.map((machine) => `${machine.id} ${machine.state}`).join(', ');
+
+            throw new Error(`${app}: machine(s) ${listed} are not cold yet`);
+          }
         }
-      }
-    },
-    {
-      factor: 1,
-      maxRetryTime: timeoutMS,
-      minTimeout: POLL_INTERVAL_MS,
-      retries: Math.ceil(timeoutMS / POLL_INTERVAL_MS),
-    },
-  );
+      },
+      {
+        factor: 1,
+        minTimeout: POLL_INTERVAL_MS,
+        onFailedAttempt: (context) => {
+          if (!deadline.aborted) {
+            lastFailure = context.error.message;
+          }
+        },
+        retries: Number.POSITIVE_INFINITY,
+        signal: deadline,
+      },
+    );
+  } catch (error) {
+    if (!deadline.aborted) {
+      throw error;
+    }
+
+    throw new Error(`the fleet did not go cold within ${timeoutMS} ms (${lastFailure})`, {
+      cause: error,
+    });
+  }
 }

@@ -31,6 +31,7 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@faker-js/faker": "catalog:",
     "@types/bun": "catalog:",
     "@types/node": "catalog:",
     "@vers/email": "workspace:*",

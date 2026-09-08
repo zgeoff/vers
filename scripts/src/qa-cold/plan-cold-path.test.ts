@@ -1,14 +1,15 @@
 import { expect, test } from 'bun:test';
+import { createMockAppMachine } from '../test-utils/factories/create-mock-app-machine';
 import { planColdPath } from './plan-cold-path';
 
 test('it plans a suspend for each warm machine and skips the cold ones', () => {
   const actions = planColdPath(
     'vers-service-activity',
     [
-      { checks: [], gitSHA: 'sha', id: 'm1', image: 'img', state: 'started' },
-      { checks: [], gitSHA: 'sha', id: 'm2', image: 'img', state: 'suspended' },
-      { checks: [], gitSHA: 'sha', id: 'm3', image: 'img', state: 'stopped' },
-      { checks: [], gitSHA: 'sha', id: 'm4', image: 'img', state: 'starting' },
+      createMockAppMachine({ id: 'm1', state: 'started' }),
+      createMockAppMachine({ id: 'm2', state: 'suspended' }),
+      createMockAppMachine({ id: 'm3', state: 'stopped' }),
+      createMockAppMachine({ id: 'm4', state: 'starting' }),
     ],
     'suspend',
   );
@@ -22,7 +23,7 @@ test('it plans a suspend for each warm machine and skips the cold ones', () => {
 test('it plans a stop for an app that parks idle machines by stopping them', () => {
   const actions = planColdPath(
     'vers-service-email',
-    [{ checks: [], gitSHA: 'sha', id: 'm1', image: 'img', state: 'started' }],
+    [createMockAppMachine({ id: 'm1', state: 'started' })],
     'stop',
   );
 
@@ -32,7 +33,7 @@ test('it plans a stop for an app that parks idle machines by stopping them', () 
 test('it plans nothing for a fleet that is already cold', () => {
   const actions = planColdPath(
     'vers-service-keys',
-    [{ checks: [], gitSHA: 'sha', id: 'm1', image: 'img', state: 'suspended' }],
+    [createMockAppMachine({ id: 'm1', state: 'suspended' })],
     'suspend',
   );
 
