@@ -197,6 +197,30 @@ propagated across hops, and stamped onto spans, log lines, and the response head
 - **Route error boundaries.** The root route mounts `RootErrorScreen` as the last-resort boundary.
   Routes with a meaningful degraded state mount their own `errorComponent` beneath it.
 
+### Rate limits
+
+app-web's server answers a request over its rate limit with a 429 and a plain-text body before the
+request reaches a route. The limiter (`apps/web/src/server/make-rate-limiter.ts`) picks one tier per
+request from its path and method, counts requests per key in a fixed 60s window, and rejects the
+request that takes the count past the tier's budget. A rejected request on the `rpc` tier carries a
+`Retry-After` header holding the whole seconds until its window resets.
+
+| Tier      | Requests                                  | Key       | Budget per 60s |
+| --------- | ----------------------------------------- | --------- | -------------- |
+| `rpc`     | any method under `/api/rpc`               | session   | 60             |
+| `strict`  | a mutation on an auth or account route    | client IP | 10             |
+| `strong`  | a GET or HEAD on an auth or account route | client IP | 100            |
+| `default` | every other request                       | client IP | 1000           |
+
+The `rpc` key is a digest of the sealed session cookie's value, so two sessions behind one client IP
+spend separate budgets. A request with no session cookie is keyed by client IP instead. **Why:** the
+game's writer flushes about once every 10s, and a page load adds a burst of under 20 calls, so a
+healthy session spends at most a third of its budget in any minute. A runaway client is stopped
+within seconds instead of after the 1000 requests the IP-keyed `default` tier allows.
+
+Outside production every budget is multiplied by 10,000, since Playwright and local development
+drive these routes far faster than a player ever does.
+
 ### Retry policy
 
 Three lanes carry outbound HTTP traffic between the browser and the services, each owning its own
