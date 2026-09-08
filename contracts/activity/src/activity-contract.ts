@@ -10,6 +10,7 @@ import { CatchUpContinuationSchema } from './catch-up-continuation-schema';
 import { CheckpointBatchEntrySchema } from './checkpoint-batch-entry-schema';
 import { CheckpointInvalidReasonSchema } from './checkpoint-invalid-reason-schema';
 import { CheckpointSchema } from './checkpoint-schema';
+import { ConflictReasonSchema } from './conflict-reason-schema';
 import { ContentDocumentSchema } from './content-document-schema';
 import { EncounterNodeSchema } from './encounter-node-schema';
 import { MAX_CATCH_UP_BATCH_CHECKPOINTS } from './max-catch-up-batch-checkpoints';
@@ -25,13 +26,26 @@ const AvatarNotActiveDataSchema = z.object({
 });
 
 const CappedDataSchema = z.object({ appendedHead: z.int() });
-const CheckpointInvalidDataSchema = z.object({ reason: CheckpointInvalidReasonSchema });
+
+const CheckpointInvalidDataSchema = z.object({
+  activityID: z.string(),
+  avatarID: z.string(),
+  reason: CheckpointInvalidReasonSchema,
+});
+
+const ConflictDataSchema = z.object({
+  activityID: z.string(),
+  appendedHead: z.int(),
+  avatarID: z.string(),
+  reason: ConflictReasonSchema,
+});
+
 const SimVersionProblemDataSchema = z.object({ currentSimVersion: z.string().nullable() });
-const StaleHeadDataSchema = z.object({ appendedHead: z.int() });
 const TerminalStatusDataSchema = z.object({ appendedHead: z.int(), status: ActivityStatusSchema });
 const AdvanceBailDataSchema = z.object({ activityID: z.string(), appendedHead: z.int() });
 
 const AdvanceCheckpointInvalidDataSchema = AdvanceBailDataSchema.extend({
+  avatarID: z.string(),
   reason: AdvanceCheckpointInvalidReasonSchema,
 });
 
@@ -159,7 +173,7 @@ export const activityContract = {
           status: 422,
         },
         CONFLICT: {
-          data: AdvanceBailDataSchema,
+          data: ConflictDataSchema,
           message: "A continuation's mint or append is stale for the chain's current state",
         },
         NODE_NOT_REVEALED: {
@@ -400,7 +414,7 @@ export const activityContract = {
           status: 422,
         },
         CONFLICT: {
-          data: StaleHeadDataSchema,
+          data: ConflictDataSchema,
           message: "Checkpoint batch is stale for the activity's current head",
         },
         NOT_FOUND: { data: z.object({}), message: 'No activity with that id' },

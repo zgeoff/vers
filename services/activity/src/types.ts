@@ -2,6 +2,7 @@ import type {
   ActivityStatus,
   AdvanceCheckpointInvalidReason,
   CheckpointInvalidReason,
+  ConflictReason,
 } from '@vers/contract-activity';
 
 export interface MissingSessionPayload {
@@ -20,12 +21,21 @@ export interface SimVersionProblemPayload {
   readonly data: { readonly currentSimVersion: string | null };
 }
 
-export interface StaleHeadPayload {
-  readonly data: { readonly appendedHead: number };
+export interface ConflictPayload {
+  readonly data: {
+    readonly activityID: string;
+    readonly appendedHead: number;
+    readonly avatarID: string;
+    readonly reason: ConflictReason;
+  };
 }
 
 export interface CheckpointInvalidPayload {
-  readonly data: { readonly reason: CheckpointInvalidReason };
+  readonly data: {
+    readonly activityID: string;
+    readonly avatarID: string;
+    readonly reason: CheckpointInvalidReason;
+  };
 }
 
 export interface TerminalStatusPayload {
@@ -44,6 +54,7 @@ export interface AdvanceCheckpointInvalidPayload {
   readonly data: {
     readonly activityID: string;
     readonly appendedHead: number;
+    readonly avatarID: string;
     readonly reason: AdvanceCheckpointInvalidReason;
   };
 }

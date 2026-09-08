@@ -60,7 +60,12 @@ export const advanceActivity = os.advanceActivity.handler(async (opts) => {
 
     if (expectedHead !== activity.appendedHead) {
       throw opts.errors.CONFLICT({
-        data: { activityID: activity.id, appendedHead: activity.appendedHead },
+        data: {
+          activityID: activity.id,
+          appendedHead: activity.appendedHead,
+          avatarID: activity.avatarID,
+          reason: 'stale-head',
+        },
       });
     }
 

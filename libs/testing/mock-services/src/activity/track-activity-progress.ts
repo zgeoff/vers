@@ -31,7 +31,14 @@ export const trackActivityProgress = os.trackActivityProgress.handler(async (opt
   }
 
   if (opts.input.expectedHead !== activity.appendedHead) {
-    throw opts.errors.CONFLICT({ data: { appendedHead: activity.appendedHead } });
+    throw opts.errors.CONFLICT({
+      data: {
+        activityID: activity.id,
+        appendedHead: activity.appendedHead,
+        avatarID: activity.avatarID,
+        reason: 'stale-head',
+      },
+    });
   }
 
   const now = new Date();

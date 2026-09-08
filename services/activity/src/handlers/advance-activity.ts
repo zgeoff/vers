@@ -3,6 +3,7 @@ import type {
   AdvanceCheckpointInvalidReason,
   BuildSnapshot,
   CatchUpContinuation,
+  ConflictReason,
   ContentDocument,
   EncounterNode,
   OfflineActivityStartSubmission,
@@ -21,6 +22,7 @@ import { getOptimisticBuild } from '../get-optimistic-build';
 import { isUniqueViolation } from '../is-unique-violation';
 import { recordAdvanceBailout } from '../metrics/record-advance-bailout';
 import { recordAdvanceContinuation } from '../metrics/record-advance-continuation';
+import { recordRefusal } from '../metrics/record-refusal';
 import { recordTerminalTransition } from '../metrics/record-terminal-transition';
 import { pickCheckpointBatchRaceOutcome } from '../pick-checkpoint-batch-race-outcome';
 import type {
@@ -28,6 +30,7 @@ import type {
   AdvanceCheckpointInvalidPayload,
   AdvanceTerminalPayload,
   AvatarNotActivePayload,
+  ConflictPayload,
   EmptyErrorPayload,
   MissingSessionPayload,
   SimVersionProblemPayload,
@@ -60,7 +63,7 @@ interface AdvanceActivityOpts {
     readonly AVATAR_NOT_ACTIVE: (payload: AvatarNotActivePayload) => Error;
     readonly CHAIN_QUARANTINED: (payload: AdvanceBailPayload) => Error;
     readonly CHECKPOINT_INVALID: (payload: AdvanceCheckpointInvalidPayload) => Error;
-    readonly CONFLICT: (payload: AdvanceBailPayload) => Error;
+    readonly CONFLICT: (payload: ConflictPayload) => Error;
     readonly NODE_NOT_REVEALED: (payload: EmptyErrorPayload) => Error;
     readonly NODE_UNKNOWN: (payload: EmptyErrorPayload) => Error;
     readonly NOT_FOUND: (payload: EmptyErrorPayload) => Error;
@@ -121,7 +124,7 @@ export async function advanceActivity(
       });
     } catch (error: unknown) {
       if (error instanceof ContinuationBailError) {
-        recordAdvanceBailout(BAILOUT_REASONS[error.outcome.kind]);
+        recordBailout(error.outcome);
         throw buildBailError(opts.errors, error.outcome);
       }
 
@@ -134,17 +137,20 @@ export async function advanceActivity(
       // statement once a constraint violation has poisoned it.
       const recovered = await resolveMintIDCollision(deps.db, pinned, continuation);
 
-      if (recovered === undefined) {
-        recordAdvanceBailout('conflict');
-
-        throw buildBailError(opts.errors, {
+      if (recovered.kind === 'refused') {
+        const outcome: BailOutcome = {
           activityID: stepActivityID,
           appendedHead: stepExpectedHead,
+          avatarID: pinned.avatarId,
           kind: 'conflict',
-        });
+          reason: recovered.reason,
+        };
+
+        recordBailout(outcome);
+        throw buildBailError(opts.errors, outcome);
       }
 
-      minted = recovered;
+      minted = recovered.row;
     }
 
     recordAdvanceContinuation(minted.mintOutcome);
@@ -238,40 +244,54 @@ async function resolveActivityStartRow(
       opts.input.activityID,
     );
 
-    if (recovered === undefined) {
-      recordAdvanceBailout('conflict');
+    if (recovered.kind === 'refused') {
+      const outcome: BailOutcome = {
+        activityID: opts.input.activityID,
+        appendedHead: 0,
+        avatarID: activityStart.avatarID,
+        kind: 'conflict',
+        reason: recovered.reason,
+      };
 
-      throw opts.errors.CONFLICT({
-        data: { activityID: opts.input.activityID, appendedHead: 0 },
-      });
+      recordBailout(outcome);
+      throw buildBailError(opts.errors, outcome);
     }
 
-    return recovered;
+    return recovered.row;
   }
 }
+
+// The mint's insert trips one of two unique indexes: the primary key, when the client id already
+// names a row, or the one-active-run-per-avatar index, when no row sits at that id.
+type MintCollisionResolution<TConverged> =
+  | { readonly kind: 'converged'; readonly row: TConverged }
+  | { readonly kind: 'refused'; readonly reason: 'active-run-exists' | 'activity-id-taken' };
 
 async function resolveActivityStartAdmissionCollision(
   db: Kysely<DB>,
   activityStart: Readonly<OfflineActivityStartSubmission>,
   activityID: string,
-): Promise<Selectable<Activities> | undefined> {
+): Promise<MintCollisionResolution<Selectable<Activities>>> {
   const existing = await db
     .selectFrom('activities')
     .selectAll()
     .where('id', '=', activityID)
     .executeTakeFirst();
 
+  if (existing === undefined) {
+    return { kind: 'refused', reason: 'active-run-exists' };
+  }
+
   if (
-    existing === undefined ||
     existing.avatarId !== activityStart.avatarID ||
     existing.startKey !== activityStart.startKey ||
     existing.scopeType !== activityStart.scopeType ||
     existing.scopeId !== activityStart.scopeID
   ) {
-    return undefined;
+    return { kind: 'refused', reason: 'activity-id-taken' };
   }
 
-  return existing;
+  return { kind: 'converged', row: existing };
 }
 
 interface PinnedActivityContext {
@@ -301,10 +321,17 @@ type BailOutcome =
   | {
       readonly activityID: string;
       readonly appendedHead: number;
+      readonly avatarID: string;
       readonly kind: 'checkpoint-invalid';
       readonly reason: AdvanceCheckpointInvalidReason;
     }
-  | { readonly activityID: string; readonly appendedHead: number; readonly kind: 'conflict' }
+  | {
+      readonly activityID: string;
+      readonly appendedHead: number;
+      readonly avatarID: string;
+      readonly kind: 'conflict';
+      readonly reason: ConflictReason;
+    }
   | { readonly activityID: string; readonly appendedHead: number; readonly kind: 'session-evicted' }
   | {
       readonly activityID: string;
@@ -335,6 +362,18 @@ const BAILOUT_REASONS = {
   terminal: 'terminal',
 } as const;
 
+function recordBailout(outcome: Readonly<BailOutcome>): void {
+  recordAdvanceBailout(BAILOUT_REASONS[outcome.kind]);
+
+  if (outcome.kind === 'checkpoint-invalid') {
+    recordRefusal('CHECKPOINT_INVALID', outcome.reason);
+  }
+
+  if (outcome.kind === 'conflict') {
+    recordRefusal('CONFLICT', outcome.reason);
+  }
+}
+
 function buildBailError(
   errors: AdvanceActivityOpts['errors'],
   outcome: Readonly<BailOutcome>,
@@ -357,6 +396,7 @@ function buildBailError(
         data: {
           activityID: outcome.activityID,
           appendedHead: outcome.appendedHead,
+          avatarID: outcome.avatarID,
           reason: outcome.reason,
         },
       });
@@ -364,7 +404,12 @@ function buildBailError(
 
     case 'conflict': {
       return errors.CONFLICT({
-        data: { activityID: outcome.activityID, appendedHead: outcome.appendedHead },
+        data: {
+          activityID: outcome.activityID,
+          appendedHead: outcome.appendedHead,
+          avatarID: outcome.avatarID,
+          reason: outcome.reason,
+        },
       });
     }
 
@@ -474,6 +519,7 @@ async function runContinuation(
     throw new ContinuationBailError({
       activityID: input.targetActivityID,
       appendedHead: target.appendedHead,
+      avatarID: pinned.avatarId,
       kind: 'checkpoint-invalid',
       reason,
     });
@@ -487,6 +533,7 @@ async function runContinuation(
     throw new ContinuationBailError({
       activityID: input.targetActivityID,
       appendedHead: target.appendedHead,
+      avatarID: pinned.avatarId,
       kind: 'checkpoint-invalid',
       reason: 'continuation-not-terminal',
     });
@@ -689,7 +736,9 @@ async function resolveLostRace(
   throw new ContinuationBailError({
     activityID: input.targetActivityID,
     appendedHead: current.appendedHead,
+    avatarID: pinned.avatarId,
     kind: 'conflict',
+    reason: 'stale-head',
   });
 }
 
@@ -741,6 +790,7 @@ async function mintContinuation(
     throw new ContinuationBailError({
       activityID: input.targetActivityID,
       appendedHead: input.targetExpectedHead,
+      avatarID: pinned.avatarId,
       kind: 'checkpoint-invalid',
       reason: 'build-snapshot-mismatch',
     });
@@ -786,22 +836,25 @@ async function resolveMintIDCollision(
   db: Kysely<DB>,
   pinned: Readonly<PinnedActivityContext>,
   continuation: Readonly<CatchUpContinuation>,
-): Promise<MintedContinuation | undefined> {
+): Promise<MintCollisionResolution<MintedContinuation>> {
   const existing = await db
     .selectFrom('activities')
     .selectAll()
     .where('id', '=', continuation.id)
     .executeTakeFirst();
 
+  if (existing === undefined) {
+    return { kind: 'refused', reason: 'active-run-exists' };
+  }
+
   if (
-    existing === undefined ||
     existing.avatarId !== pinned.avatarId ||
     existing.startKey !== continuation.startKey ||
     existing.scopeType !== pinned.scopeType ||
     existing.scopeId !== pinned.scopeId
   ) {
-    return undefined;
+    return { kind: 'refused', reason: 'activity-id-taken' };
   }
 
-  return { mintOutcome: 'converged', row: existing };
+  return { kind: 'converged', row: { mintOutcome: 'converged', row: existing } };
 }
