@@ -16,6 +16,14 @@ test('it describes a run outcome by activity, kind, and xp', () => {
   ).toStrictEqual({ detail: 'act_1 completed xp=42', type: 'run' });
 });
 
+test('it describes a refused start as a run outcome with no xp', () => {
+  const outcome = createMockRunOutcome({ activityID: 'act_1', kind: 'refused', xp: 0 });
+
+  expect(
+    buildDebugEventFromMessage({ outcome, type: WorkerMessageType.ActivityEnded }),
+  ).toStrictEqual({ detail: 'act_1 refused xp=0', type: 'run' });
+});
+
 test('it describes a resync status by its kind', () => {
   expect(
     buildDebugEventFromMessage({

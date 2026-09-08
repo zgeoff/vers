@@ -213,7 +213,10 @@ test('it defers a build-snapshot-mismatch while the named predecessor is still a
 
   const outcome = await ingestActivityStart(client, row.id);
 
-  expect(outcome).toStrictEqual({ outcome: 'deferred' });
+  expect(outcome).toStrictEqual({
+    outcome: 'deferred',
+    refusal: { code: 'CHECKPOINT_INVALID', reason: 'build-snapshot-mismatch' },
+  });
 
   const stored = await readActivityStart(row.id);
 
@@ -257,7 +260,11 @@ test('it defers a build-snapshot-mismatch while the named predecessor still wait
 
   const outcome = await ingestActivityStart(ctx.client, row.id);
 
-  expect(outcome).toStrictEqual({ outcome: 'deferred' });
+  expect(outcome).toStrictEqual({
+    outcome: 'deferred',
+    refusal: { code: 'CHECKPOINT_INVALID', reason: 'build-snapshot-mismatch' },
+  });
+
   expect(track).not.toHaveBeenCalled();
 
   const stored = await readActivityStart(row.id);
@@ -423,6 +430,7 @@ test('it rejects a build-snapshot-mismatch with no server row to fold from when 
 
   expect(outcome).toStrictEqual({
     outcome: 'rejected',
+    refusal: { code: 'CHECKPOINT_INVALID', reason: 'build-snapshot-mismatch' },
     refusedSnapshot: { latest: null, row },
   });
 });
@@ -454,7 +462,10 @@ test('it keeps a build-snapshot-mismatch for the backoff when the progress read 
 
   const outcome = await ingestActivityStart(ctx.client, row.id);
 
-  expect(outcome).toStrictEqual({ outcome: 'deferred' });
+  expect(outcome).toStrictEqual({
+    outcome: 'deferred',
+    refusal: { code: 'CHECKPOINT_INVALID', reason: 'build-snapshot-mismatch' },
+  });
 
   const stored = await readActivityStart(row.id);
 
@@ -516,26 +527,4 @@ test('it drops an activityStart this build can no longer replay, carrying the re
   const stored = await readActivityStart(row.id);
 
   expect(stored).toBeUndefined();
-});
-
-test('it names the refused check when the server defers a start on its build snapshot', async () => {
-  const ctx = setupTest();
-  const row = createMockActivityData({ startKey: 'start_refused' });
-
-  await writeActivityStart(row);
-
-  server.use(
-    mockActivityService.advanceActivity.handler((opts) => {
-      throw opts.errors.CHECKPOINT_INVALID({
-        data: { activityID: row.id, appendedHead: 0, reason: 'build-snapshot-mismatch' },
-      });
-    }),
-  );
-
-  const outcome = await ingestActivityStart(ctx.client, row.id);
-
-  expect(outcome).toStrictEqual({
-    outcome: 'deferred',
-    refusal: { code: 'CHECKPOINT_INVALID', reason: 'build-snapshot-mismatch' },
-  });
 });
