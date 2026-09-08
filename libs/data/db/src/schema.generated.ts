@@ -51,6 +51,8 @@ export interface Activities {
   playedAt: Timestamp | null;
   predecessorActivityId: string | null;
   replayAttempts: Generated<number>;
+  replayBackoffUntil: Timestamp | null;
+  replayBackoffs: Generated<number>;
   scopeId: string;
   scopeType: string;
   secretRef: string;

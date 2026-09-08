@@ -4,6 +4,7 @@ import { recordBacklogClaimed } from '../metrics/record-backlog-claimed';
 import { recordDrainDuration } from '../metrics/record-drain-duration';
 import { recordIterationFailure } from '../metrics/record-iteration-failure';
 import { recordWake } from '../metrics/record-wake';
+import type { WakeSource } from '../metrics/record-wake';
 import { createReplayCache } from '../replay/create-replay-cache';
 import { runReplayIteration } from './run-replay-iteration';
 import type { ReplayWorkerDeps } from './types';
@@ -12,8 +13,11 @@ let drainInFlight: Promise<number> | undefined;
 
 // the loop holds the caller's `/wake` request open until the queue is empty: Fly's proxy treats the
 // open connection as activity and keeps the machine up until there is nothing left to verify
-export async function drainReplayQueue(deps: Readonly<ReplayWorkerDeps>): Promise<number> {
-  recordWake();
+export async function drainReplayQueue(
+  deps: Readonly<ReplayWorkerDeps>,
+  source: WakeSource,
+): Promise<number> {
+  recordWake(source);
 
   drainInFlight ??= runDrain(deps);
 

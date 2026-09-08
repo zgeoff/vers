@@ -19,6 +19,8 @@ export interface RunReplaySegmentDeps {
 
   readonly privateKey: CryptoKey;
 
+  readonly signal?: AbortSignal;
+
   readonly simVersion: string;
 
   readonly timeoutMs?: number;
@@ -86,7 +88,9 @@ async function sendProviderReplaySegment(
     }),
   );
 
+  const timeout = AbortSignal.timeout(deps.timeoutMs ?? DEFAULT_PROVIDER_DISPATCH_TIMEOUT_MS);
+
   return client.replaySegment(job, {
-    signal: AbortSignal.timeout(deps.timeoutMs ?? DEFAULT_PROVIDER_DISPATCH_TIMEOUT_MS),
+    signal: deps.signal === undefined ? timeout : AbortSignal.any([deps.signal, timeout]),
   });
 }

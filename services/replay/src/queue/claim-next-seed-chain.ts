@@ -1,5 +1,6 @@
 import type { DB } from '@vers/db';
 import type { Transaction } from 'kysely';
+import { sql } from 'kysely';
 import type { ClaimedActivity } from '../types';
 
 export async function claimNextSeedChain(
@@ -29,6 +30,14 @@ export async function claimNextSeedChain(
           .whereRef('activities.avatarId', '=', 'avatars.id')
           .where((eb2) => eb2('activities.appendedHead', '>', eb2.ref('activities.verifiedHead')))
           .where('activities.status', '!=', 'rejected')
+
+          // a backed-off activity waits out its retry time, and its successors wait behind it
+          .where((eb2) =>
+            eb2.or([
+              eb2('activities.replayBackoffUntil', 'is', null),
+              eb2('activities.replayBackoffUntil', '<=', sql<Date>`now()`),
+            ]),
+          )
           .where((eb2) => {
             // settled: verified to its head and not held — a parked or quarantined predecessor,
             // even one with no appends past its cursor, still blocks everything after it

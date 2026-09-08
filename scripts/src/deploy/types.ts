@@ -17,7 +17,12 @@ export interface DeployTarget {
   readonly probes?: ReadonlyArray<Probe>;
   readonly scheduledMachines?: ReadonlyArray<ScheduledMachine>;
 
-  readonly simVersionProvider?: { readonly region: string };
+  readonly simVersionProvider?: SimVersionProvider;
+}
+
+interface SimVersionProvider {
+  readonly region: string;
+  readonly retentionDays: number;
 }
 
 export interface ScheduledMachine {
@@ -25,6 +30,7 @@ export interface ScheduledMachine {
   readonly command: ReadonlyArray<string>;
   readonly schedule: 'hourly' | 'daily' | 'weekly' | 'monthly';
   readonly region?: string;
+  readonly env?: Readonly<Record<string, string>>;
 }
 
 export type DeployTrigger =
@@ -79,7 +85,12 @@ export interface MachineSweepTarget {
 
 export type ScheduledMachineAction =
   | { readonly kind: 'create'; readonly machine: ScheduledMachine; readonly image: string }
-  | { readonly kind: 'update-image'; readonly machineID: string; readonly image: string };
+  | {
+      readonly kind: 'update-image';
+      readonly machineID: string;
+      readonly image: string;
+      readonly machine: ScheduledMachine;
+    };
 
 export interface ChangeSet {
   readonly affectedPkgs: ReadonlyArray<string>;
@@ -111,6 +122,7 @@ export interface SimVersionActionInput {
   readonly providerMachineRegion: string | null;
   readonly region: string;
   readonly registryRow: SimVersionRow | undefined;
+  readonly retentionDays: number;
 }
 
 export interface ProviderAppState {

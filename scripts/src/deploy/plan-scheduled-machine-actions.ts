@@ -16,7 +16,7 @@ export function planScheduledMachineActions(
     }
 
     if (current.image !== image) {
-      actions.push({ image, kind: 'update-image', machineID: current.id });
+      actions.push({ image, kind: 'update-image', machine: declaration, machineID: current.id });
     }
   }
 

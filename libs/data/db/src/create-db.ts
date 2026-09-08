@@ -23,9 +23,12 @@ import type { ResumeDetector, StartResumeDetectorConfig } from './start-resume-d
 
 export interface CreateDBConfig {
   readonly databaseURL: string;
+  readonly idleInTransactionSessionTimeoutMs?: number;
   readonly resumeDetection?: Omit<StartResumeDetectorConfig, 'onResume'>;
   readonly searchPath?: string;
 }
+
+const DEFAULT_SESSION_TIMEOUT_MS = 30_000;
 
 export function createDB(config: CreateDBConfig): Kysely<DB> {
   return new Kysely<DB>({
@@ -43,9 +46,11 @@ export function buildPostgresOptions(config: CreateDBConfig) {
     connect_timeout: 10,
     connection: {
       // both session timeouts cap how long a statement or an idle-in-transaction connection holds
-      // a lock, so orphaned transaction state dies within 30s even after a serverless process kill
-      idle_in_transaction_session_timeout: 30_000,
-      statement_timeout: 30_000,
+      // a lock, so orphaned transaction state dies after a serverless process kill: within 30s for
+      // a statement, and within the configured idle bound (30s unless the caller lengthens it)
+      idle_in_transaction_session_timeout:
+        config.idleInTransactionSessionTimeoutMs ?? DEFAULT_SESSION_TIMEOUT_MS,
+      statement_timeout: DEFAULT_SESSION_TIMEOUT_MS,
       ...(config.searchPath === undefined ? {} : { search_path: config.searchPath }),
     },
 

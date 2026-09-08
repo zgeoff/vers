@@ -48,19 +48,25 @@ RUN bun build src/serve.ts --compile --target=bun-linux-x64-musl \
   --define "process.env.SIM_ENGINE_HASH='$SIM_ENGINE_HASH'" \
   --outfile /tmp/server
 
+# the drain binary: the hourly scheduled machine runs one queue drain and exits
+RUN bun build src/drain.ts --compile --target=bun-linux-x64-musl \
+  --define "process.env.SIM_ENGINE_HASH='$SIM_ENGINE_HASH'" \
+  --outfile /tmp/drain
+
 # the provider binary: only `replaySegment`, on a narrowed env shape with no database, keys
 # service, or signing key — per-version provider apps run this instead of `server`
 RUN bun build src/serve-provider.ts --compile --target=bun-linux-x64-musl \
   --define "process.env.SIM_ENGINE_HASH='$SIM_ENGINE_HASH'" \
   --outfile /tmp/provider
 
-# --- runtime: both binaries on alpine (busybox shell kept for `fly ssh console`) ---
+# --- runtime: the three binaries on alpine (busybox shell kept for `fly ssh console`) ---
 FROM alpine:3.21
 
 # bun's musl binaries link against libgcc and libstdc++
 RUN apk add --no-cache libgcc libstdc++
 
 COPY --from=builder /tmp/server /usr/local/bin/server
+COPY --from=builder /tmp/drain /usr/local/bin/drain
 COPY --from=builder /tmp/provider /usr/local/bin/provider
 
 ENV NODE_ENV="production"

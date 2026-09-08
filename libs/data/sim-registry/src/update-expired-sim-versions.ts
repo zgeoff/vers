@@ -1,6 +1,8 @@
 import type { DB } from '@vers/db';
 import type { Kysely } from 'kysely';
 import { sql } from 'kysely';
+import { buildCurrentEngineHashQuery } from './build-current-engine-hash-query';
+import { buildPinnedEngineHashesQuery } from './build-pinned-engine-hashes-query';
 import type { SimVersionRow } from './types';
 
 export function updateExpiredSimVersions(db: Kysely<DB>): Promise<Array<SimVersionRow>> {
@@ -15,17 +17,11 @@ export function updateExpiredSimVersions(db: Kysely<DB>): Promise<Array<SimVersi
       .where('status', '=', 'active')
       .where('retainedUntil', '<', sql<Date>`now()`)
 
-      // Excludes the current version (the newest active row by deployedAt) regardless of its own
-      // retainedUntil, so a lone active row is always protected. The active guard on both sides also
-      // keeps a repeat run from re-returning rows a prior sweep already pruned.
-      .where('engineHash', 'is distinct from', (eb) =>
-        eb
-          .selectFrom('simVersions')
-          .select('engineHash')
-          .where('status', '=', 'active')
-          .orderBy('deployedAt', 'desc')
-          .limit(1),
-      )
+      // Excludes the current version regardless of its own retainedUntil, so a lone active row is
+      // always protected. The active guard on both sides also keeps a repeat run from re-returning
+      // rows a prior sweep already pruned.
+      .where('engineHash', 'is distinct from', buildCurrentEngineHashQuery(db))
+      .where('engineHash', 'not in', buildPinnedEngineHashesQuery(db))
       .returningAll()
       .execute()
   );

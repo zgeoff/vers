@@ -297,3 +297,37 @@ test("it claims the avatar's origin activity with a null predecessor", async () 
 
   expect(claimed).toMatchObject({ activityID: activity.id });
 });
+
+test('it skips an avatar whose claimable activity is backed off into the future', async () => {
+  await using ctx = await setupTest();
+
+  const chain = await createChainRow(ctx.db);
+
+  await createActivityRow(ctx.db, {
+    appendedHead: 3,
+    avatarId: chain.avatarId,
+    replayBackoffUntil: new Date(Date.now() + 60_000),
+    scopeId: chain.scopeId,
+  });
+
+  const claimed = await ctx.db.transaction().execute((trx) => claimNextSeedChain(trx));
+
+  expect(claimed).toBeUndefined();
+});
+
+test('it claims an activity whose backoff has elapsed', async () => {
+  await using ctx = await setupTest();
+
+  const chain = await createChainRow(ctx.db);
+
+  const activity = await createActivityRow(ctx.db, {
+    appendedHead: 3,
+    avatarId: chain.avatarId,
+    replayBackoffUntil: new Date(Date.now() - 1000),
+    scopeId: chain.scopeId,
+  });
+
+  const claimed = await ctx.db.transaction().execute((trx) => claimNextSeedChain(trx));
+
+  expect(claimed?.activityID).toBe(activity.id);
+});

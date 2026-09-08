@@ -242,9 +242,9 @@ activity: an activity can settle its XP without ever unlocking a node.
 
 Two outcomes are neither a settle nor a clean rejection, and both mark a bug or an incident:
 
-- **Parked** — the server cannot replay the activity for an operational reason: its sim version is
-  unknown or expired, the replay provider is down, or replay timed out. Parking is not a cheat
-  verdict; the activity waits for an operator to resolve the cause.
+- **Parked** — the server cannot replay the activity: its sim version is unknown or expired, or the
+  replay tripped its duration cap. Parking is not a cheat verdict; the activity waits for an
+  operator to resolve the cause.
 - **Quarantined** — the activity failed to confirm too many times, so the server sets it aside and
   alerts a human rather than retrying forever.
 
@@ -252,6 +252,12 @@ Because settlement is a single order, a held activity stops every later one from
 design accepts that. While an avatar holds a parked or quarantined activity, its progression is
 paused, it cannot start new activities, and the hold alarms operators at once. The response is loud
 and blunt on purpose: the server never settles progress on a foundation it cannot verify.
+
+A dependency failure is neither a hold nor a verdict. When the keys service or a replay provider
+does not answer, the verifier backs the activity off
+([game simulation](./game-simulation.md#replay)): the activity keeps its status, and the verifier
+skips it and its successors until its retry time passes. The backoff clears on its own once the
+dependency answers, so no operator acts and the player sees only a longer "Settling…" display.
 
 ## The essential journeys
 

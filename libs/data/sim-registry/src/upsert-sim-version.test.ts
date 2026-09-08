@@ -3,7 +3,7 @@ import type { DB } from '@vers/db';
 import { createTestDB } from '@vers/service-test-utils/bun';
 import type { Kysely } from 'kysely';
 import { createSimVersionRow } from './test-utils/create-sim-version-row';
-import { DEFAULT_RETENTION_DAYS, upsertSimVersion } from './upsert-sim-version';
+import { upsertSimVersion } from './upsert-sim-version';
 
 async function setupTest(): Promise<{ db: Kysely<DB> } & AsyncDisposable> {
   const db = await createTestDB();
@@ -22,6 +22,7 @@ test('it inserts a new row for an unregistered engine hash', async () => {
     imageRef: 'registry.fly.io/vers-sim:new',
     maxContentVersion: '2',
     providerURL: 'https://sim-new.internal',
+    retentionDays: 30,
   });
 
   expect(row).toMatchObject({
@@ -35,13 +36,10 @@ test('it inserts a new row for an unregistered engine hash', async () => {
 
   const retentionMs = row.retainedUntil.getTime() - before;
 
-  expect(retentionMs).toBeWithin(
-    (DEFAULT_RETENTION_DAYS - 1) * 24 * 60 * 60 * 1000,
-    (DEFAULT_RETENTION_DAYS + 1) * 24 * 60 * 60 * 1000,
-  );
+  expect(retentionMs).toBeWithin(29 * 24 * 60 * 60 * 1000, 31 * 24 * 60 * 60 * 1000);
 });
 
-test('it applies a given retentionDays instead of the default', async () => {
+test('it retains a version for exactly the given number of days', async () => {
   await using ctx = await setupTest();
 
   const before = Date.now();
@@ -80,6 +78,7 @@ test('it refreshes image, provider, bun version, max content version, deploy tim
     imageRef: 'registry.fly.io/vers-sim:rebuilt',
     maxContentVersion: '2',
     providerURL: 'https://sim-rebuilt.internal',
+    retentionDays: 30,
   });
 
   expect(updated).toMatchObject({
@@ -106,6 +105,7 @@ test('it does not insert a second row on conflict', async () => {
     imageRef: 'registry.fly.io/vers-sim:rebuilt',
     maxContentVersion: '2',
     providerURL: 'https://sim-rebuilt.internal',
+    retentionDays: 30,
   });
 
   const rows = await ctx.db

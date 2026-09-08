@@ -36,7 +36,7 @@ async function setupTest() {
 test('it returns 0 against an idle queue', async () => {
   await using ctx = await setupTest();
 
-  expect(drainReplayQueue(ctx.deps)).resolves.toBe(0);
+  expect(drainReplayQueue(ctx.deps, 'poke')).resolves.toBe(0);
 });
 
 test('it drains a seeded backlog to empty and returns the count', async () => {
@@ -52,7 +52,7 @@ test('it drains a seeded backlog to empty and returns the count', async () => {
     seed: buildStateFromSeed(1_284_930_112),
   });
 
-  const drained = await drainReplayQueue(ctx.deps);
+  const drained = await drainReplayQueue(ctx.deps, 'poke');
 
   expect(drained).toBe(2);
 
@@ -63,7 +63,7 @@ test('it drains a seeded backlog to empty and returns the count', async () => {
     .execute();
 
   expect(rows.every((row) => row.verifiedHead === row.appendedHead)).toBeTrue();
-  expect(drainReplayQueue(ctx.deps)).resolves.toBe(0);
+  expect(drainReplayQueue(ctx.deps, 'poke')).resolves.toBe(0);
 });
 
 test('it stops draining and reports a claim failure carrying a trace id, without hanging', async () => {
@@ -91,14 +91,17 @@ test('it stops draining and reports a claim failure carrying a trace id, without
     disableDefaultIntegrations: true,
   });
 
-  const drained = await drainReplayQueue({
-    db: unreachableDB,
-    keysServiceURL: resolveServiceURL('keys'),
-    loadContentDocument: makeContentDocumentLoader(unreachableDB),
-    logger: pino({ enabled: false }),
-    privateKey: keyPair.privateKey,
-    simVersion: 'test-engine-hash',
-  });
+  const drained = await drainReplayQueue(
+    {
+      db: unreachableDB,
+      keysServiceURL: resolveServiceURL('keys'),
+      loadContentDocument: makeContentDocumentLoader(unreachableDB),
+      logger: pino({ enabled: false }),
+      privateKey: keyPair.privateKey,
+      simVersion: 'test-engine-hash',
+    },
+    'poke',
+  );
 
   expect(drained).toBe(0);
 

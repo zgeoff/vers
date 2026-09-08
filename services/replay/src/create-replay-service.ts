@@ -9,8 +9,14 @@ import type { Kysely } from 'kysely';
 import invariant from 'tiny-invariant';
 import { buildReplayRouter } from './build-router';
 import { envShape } from './env-shape';
+import type { WakeSource } from './metrics/record-wake';
 import { drainReplayQueue } from './worker/drain-replay-queue';
 import type { ReplayWorkerDeps } from './worker/types';
+
+// a replay iteration holds its claim transaction open across keys and provider calls that can
+// each wait out their own timeout, so the worker's pool lengthens the fleet's 30s
+// idle-in-transaction backstop past the iteration's own 90s deadline
+const REPLAY_IDLE_IN_TRANSACTION_TIMEOUT_MS = 120_000;
 
 interface CreateReplayServiceConfig {
   readonly db?: Kysely<DB>;
@@ -19,7 +25,7 @@ interface CreateReplayServiceConfig {
 export interface ReplayService extends Service<typeof envShape> {
   readonly db: Kysely<DB>;
 
-  readonly drain: () => Promise<number>;
+  readonly drain: (source: WakeSource) => Promise<number>;
 
   readonly privateKey: CryptoKey;
 
@@ -36,7 +42,12 @@ export async function createReplayService(
     buildRouter: async (runtime) => {
       ownsDB = config.db === undefined;
 
-      const db = config.db ?? createDB({ databaseURL: runtime.env.DATABASE_URL });
+      const db =
+        config.db ??
+        createDB({
+          databaseURL: runtime.env.DATABASE_URL,
+          idleInTransactionSessionTimeoutMs: REPLAY_IDLE_IN_TRANSACTION_TIMEOUT_MS,
+        });
 
       const privateKey = await parseServicePrivateKey(runtime.env.SERVICE_AUTH_PRIVATE_KEY);
 
@@ -62,7 +73,7 @@ export async function createReplayService(
   return {
     ...service,
     db: deps.db,
-    drain: () => drainReplayQueue(deps),
+    drain: (source) => drainReplayQueue(deps, source),
     privateKey: deps.privateKey,
     stopDB: async () => {
       if (ownsDB) {

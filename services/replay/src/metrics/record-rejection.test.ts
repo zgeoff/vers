@@ -33,7 +33,7 @@ test('it counts adjudications by reason', async () => {
   recordRejection('integrity-mismatch');
   recordRejection('version-park');
   recordRejection('elapsed-time');
-  recordRejection('provider-unavailable');
+  recordRejection('build-mismatch');
 
   await ctx.provider.forceFlush();
 
@@ -52,7 +52,7 @@ test('it counts adjudications by reason', async () => {
     { reason: 'integrity-mismatch', value: 2 },
     { reason: 'version-park', value: 1 },
     { reason: 'elapsed-time', value: 1 },
-    { reason: 'provider-unavailable', value: 1 },
+    { reason: 'build-mismatch', value: 1 },
   ]);
 });
 

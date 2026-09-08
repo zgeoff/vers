@@ -1,6 +1,6 @@
 import pRetry from 'p-retry';
 import { runFlyctl } from '../utils/run-flyctl';
-import type { ScheduledMachineAction } from './types';
+import type { ScheduledMachine, ScheduledMachineAction } from './types';
 
 // an update can collide with Fly stopping the scheduled machine outside its schedule window, so
 // it retries a few times before the error is raised
@@ -44,7 +44,16 @@ async function runCreate(
     args.push('--region', action.machine.region);
   }
 
-  await runFlyctl(args);
+  await runFlyctl([...args, ...buildEnvArgs(action.machine)]);
+}
+
+// `fly machine run` and `fly machine update` read no `[env]` from fly.toml, so a key the binary
+// needs travels on every create and every image roll
+function buildEnvArgs(machine: ScheduledMachine): ReadonlyArray<string> {
+  return Object.entries(machine.env ?? {}).flatMap(([name, value]) => [
+    '--env',
+    `${name}=${value}`,
+  ]);
 }
 
 async function runUpdateImage(
@@ -64,6 +73,7 @@ async function runUpdateImage(
         action.image,
         '--env',
         `GIT_SHA=${sha}`,
+        ...buildEnvArgs(action.machine),
         '--yes',
       ]),
     { factor: 1, minTimeout: UPDATE_RETRY_DELAY_MS, retries: UPDATE_RETRIES },

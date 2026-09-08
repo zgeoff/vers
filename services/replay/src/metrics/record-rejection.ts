@@ -6,7 +6,6 @@ export type RejectionReason =
   | 'elapsed-time'
   | 'integrity-mismatch'
   | 'node-unreachable'
-  | 'provider-unavailable'
   | 'version-park';
 
 export function recordRejection(reason: RejectionReason): void {

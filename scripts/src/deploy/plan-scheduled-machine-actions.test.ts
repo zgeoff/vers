@@ -22,7 +22,7 @@ test('it updates a declared machine whose image differs from the target', () => 
   const actions = planScheduledMachineActions([sweeper], 'registry.fly.io/x:new', existing);
 
   expect(actions).toStrictEqual([
-    { image: 'registry.fly.io/x:new', kind: 'update-image', machineID: 'm1' },
+    { image: 'registry.fly.io/x:new', kind: 'update-image', machine: sweeper, machineID: 'm1' },
   ]);
 });
 
@@ -50,7 +50,7 @@ test('it plans a mix of create, update, and no-op actions across declarations', 
   );
 
   expect(actions).toStrictEqual([
-    { image: 'registry.fly.io/x:tag1', kind: 'update-image', machineID: 'm2' },
+    { image: 'registry.fly.io/x:tag1', kind: 'update-image', machine: stale, machineID: 'm2' },
     { image: 'registry.fly.io/x:tag1', kind: 'create', machine: missing },
   ]);
 });

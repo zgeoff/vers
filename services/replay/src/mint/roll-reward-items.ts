@@ -1,14 +1,7 @@
 import { buildPositionStream, rollItemFromStream } from '@vers/item-gen';
 import type { LootTables } from '@vers/item-gen';
-import type { CryptoKey } from 'jose';
 import type { RewardFact } from '../replay/types';
 import type { MintedItem } from '../types';
-import { readAvatarRollKey } from './read-avatar-roll-key';
-
-interface RollRewardItemsDeps {
-  readonly keysServiceURL: string;
-  readonly privateKey: CryptoKey;
-}
 
 interface RollRewardItemsInput {
   readonly avatarID: string;
@@ -19,19 +12,10 @@ interface RollRewardItemsInput {
   readonly tables: Readonly<LootTables>;
 }
 
-export async function rollRewardItems(
-  deps: Readonly<RollRewardItemsDeps>,
+export function rollRewardItems(
+  rollKey: Uint8Array,
   input: Readonly<RollRewardItemsInput>,
-): Promise<ReadonlyArray<MintedItem>> {
-  if (input.rewardFacts.length === 0) {
-    return [];
-  }
-
-  const rollKey = await readAvatarRollKey(deps, {
-    avatarID: input.avatarID,
-    keyVersion: input.keyVersion,
-  });
-
+): ReadonlyArray<MintedItem> {
   return input.rewardFacts.map((fact) => {
     const stream = buildPositionStream(rollKey, {
       avatarID: input.avatarID,

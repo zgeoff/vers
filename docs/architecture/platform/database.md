@@ -59,9 +59,12 @@ how a connection can fail while the process runs. `connect_timeout` (10s) bounds
 acquisition, so a Neon endpoint that stalls on wake fails in 10s instead of minutes.
 `statement_timeout` and `idle_in_transaction_session_timeout` (30s each) are server-side session
 settings, so a lock an orphaned transaction holds dies within 30s even after a serverless process
-kill. `idle_timeout` (240s) closes a pooled connection before Neon's 300s suspend closes it from the
-server side; otherwise the pool hands out a socket the endpoint already closed and the first write
-fails with `CONNECTION_CLOSED`.
+kill. One exception: `service-replay` lengthens `idle_in_transaction_session_timeout` to 120s
+through `createDB`'s `idleInTransactionSessionTimeoutMs`, because a replay iteration holds its claim
+transaction open across keys and provider calls under a 90s deadline
+([game simulation](../game/game-simulation.md#replay)). `idle_timeout` (240s) closes a pooled
+connection before Neon's 300s suspend closes it from the server side; otherwise the pool hands out a
+socket the endpoint already closed and the first write fails with `CONNECTION_CLOSED`.
 
 None of those settings runs while the process is paused. Fly suspends an idle machine with its
 memory snapshot ([deployment](./deployment.md#topology)), and JavaScript timers do not run during

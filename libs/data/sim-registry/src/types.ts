@@ -9,5 +9,10 @@ export interface UpsertSimVersionInput {
   readonly imageRef: string;
   readonly maxContentVersion: string;
   readonly providerURL: string;
-  readonly retentionDays?: number;
+  readonly retentionDays: number;
+}
+
+export interface RetentionRefusal {
+  readonly engineHash: string;
+  readonly unverifiedActivities: number;
 }

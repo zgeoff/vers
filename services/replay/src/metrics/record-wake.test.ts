@@ -26,12 +26,12 @@ function setupTest() {
   return { exporter, provider };
 }
 
-test('it counts each wake request received', async () => {
+test('it counts each drain by what started it', async () => {
   const ctx = setupTest();
 
-  recordWake();
-  recordWake();
-  recordWake();
+  recordWake('poke');
+  recordWake('poke');
+  recordWake('schedule');
 
   await ctx.provider.forceFlush();
 
@@ -41,11 +41,19 @@ test('it counts each wake request received', async () => {
     .flatMap((scopeMetrics) => scopeMetrics.metrics)
     .find((metric) => metric.descriptor.name === 'vers.replay.wake');
 
-  expect(counter?.dataPoints[0]?.value).toBe(3);
+  const observed = counter?.dataPoints.map((dataPoint) => ({
+    source: dataPoint.attributes['source'],
+    value: dataPoint.value,
+  }));
+
+  expect(observed).toIncludeSameMembers([
+    { source: 'poke', value: 2 },
+    { source: 'schedule', value: 1 },
+  ]);
 });
 
 test('it stays inert without a registered meter provider', () => {
   expect(() => {
-    recordWake();
+    recordWake('boot');
   }).not.toThrow();
 });
