@@ -204,9 +204,6 @@ rolled-back app reads stale there by design. It also checks each app's IP postur
 manifest `exposure` ([networking](#networking)): a `flycast` app missing its private address, or
 holding a public one, fails the run.
 
-`bun run qa:cold` sends the fleet cold for manual QA of a cold start, behind a traffic guard that
-[manual QA](./qa.md#cold-path) owns.
-
 ### Scheduled machines
 
 A `fly machine run --schedule` machine is unmanaged: `fly deploy` never rolls its image forward. An

@@ -80,9 +80,6 @@ next reconnect.
 The worker lifecycle — the states the writer moves through and how a handoff moves work to a fresh
 worker — lives in [offline reconcile](./offline-reconcile.md#worker-lifecycle).
 
-A QA tester reads the writer worker's state from the page console through a read-only debug hook,
-which [manual QA](../platform/qa.md#debug-hook) owns.
-
 ## Authoring and verifying inputs
 
 The client authors every activity input; the server verifies it. Starting an activity is one
