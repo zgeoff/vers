@@ -185,6 +185,7 @@
     "pg:test-container:sweep": "bun scripts/src/bin/pg-test-template-sweep.ts",
     "qa:capture": "bun scripts/src/bin/qa-capture.ts",
     "qa:cdp": "bun scripts/src/bin/qa-cdp.ts",
+    "qa:cold": "bun scripts/src/bin/qa-cold.ts",
     "qa:inbox": "bun scripts/src/bin/qa-inbox.ts",
     "qa:reset": "bun libs/testing/qa-account/src/bin/qa-reset.ts",
     "qa:seed": "bun libs/testing/qa-account/src/bin/qa-seed.ts",

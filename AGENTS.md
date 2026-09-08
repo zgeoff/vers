@@ -352,6 +352,8 @@ the mechanics and provisioning.
   (`docs/architecture/platform/qa-inbox.md`).
 - `bun run qa:cdp` / `bun run qa:capture` — drive a debug Chrome and log its shared workers' RPC
   traffic over the DevTools Protocol during manual QA (`docs/architecture/platform/qa-browser.md`).
+- `bun run qa:cold` — suspends every machine of the production fleet for cold-path QA, and refuses
+  while Axiom shows a request in the last 10 minutes (`docs/architecture/platform/deployment.md`).
 
 ## Lint policy
 
