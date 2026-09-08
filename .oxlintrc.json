@@ -103,8 +103,10 @@
       {
         "allow": [
           "@zgeoff/bun-test-extended",
+          "@vers/utils/disable-zod-jit",
           "fake-indexeddb/auto",
           "**/augment-bun-test.ts",
+          "./disable-zod-jit",
           "**/*.css"
         ]
       }

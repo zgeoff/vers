@@ -1,3 +1,5 @@
+// first so it runs before any imported module builds a schema
+import '@vers/utils/disable-zod-jit';
 import { WORKER_TO_CLIENT_CHANNEL } from '../transport/constants';
 import { WorkerMessageType } from '../types';
 import { createWorkerDemux } from './create-worker-demux';

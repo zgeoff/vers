@@ -25,6 +25,7 @@
     "@vers/service-utils": "workspace:*",
     "@vers/styled-system": "workspace:*",
     "@vers/trace": "workspace:*",
+    "@vers/utils": "workspace:*",
     "idb": "catalog:",
     "react": "catalog:",
     "tiny-invariant": "catalog:",
