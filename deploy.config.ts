@@ -21,6 +21,7 @@ export default defineDeployManifest({
       dockerfile: 'services/activity/Dockerfile',
       exposure: 'flycast',
       minStartedMachines: 1,
+      sharedSecrets: ['DATABASE_URL'],
       trigger: { kind: 'turbo-affected', pkg: '@vers/service-activity' },
     },
     {
@@ -28,6 +29,7 @@ export default defineDeployManifest({
       configDir: 'services/avatar',
       dockerfile: 'services/avatar/Dockerfile',
       exposure: 'flycast',
+      sharedSecrets: ['DATABASE_URL'],
       trigger: { kind: 'turbo-affected', pkg: '@vers/service-avatar' },
     },
     {
@@ -43,6 +45,7 @@ export default defineDeployManifest({
           schedule: 'hourly',
         },
       ],
+      sharedSecrets: ['DATABASE_URL'],
       trigger: { kind: 'turbo-affected', pkg: '@vers/service-email' },
     },
     {
@@ -58,6 +61,7 @@ export default defineDeployManifest({
       dockerfile: 'services/session/Dockerfile',
       exposure: 'flycast',
       minStartedMachines: 1,
+      sharedSecrets: ['DATABASE_URL'],
       trigger: { kind: 'turbo-affected', pkg: '@vers/service-session' },
     },
     {
@@ -65,6 +69,7 @@ export default defineDeployManifest({
       configDir: 'services/user',
       dockerfile: 'services/user/Dockerfile',
       exposure: 'flycast',
+      sharedSecrets: ['DATABASE_URL'],
       trigger: { kind: 'turbo-affected', pkg: '@vers/service-user' },
     },
     {
@@ -72,6 +77,7 @@ export default defineDeployManifest({
       configDir: 'services/verification',
       dockerfile: 'services/verification/Dockerfile',
       exposure: 'flycast',
+      sharedSecrets: ['DATABASE_URL'],
       trigger: { kind: 'turbo-affected', pkg: '@vers/service-verification' },
     },
     {
@@ -89,6 +95,7 @@ export default defineDeployManifest({
           schedule: 'hourly',
         },
       ],
+      sharedSecrets: ['DATABASE_URL'],
 
       // Engine retention: 3 days now, 7 at the MVP, 14 at public release. Each retained version
       // keeps its own provider app alive, so the window is raised only at a release gate.

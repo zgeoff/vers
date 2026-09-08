@@ -16,6 +16,7 @@ export interface DeployTarget {
   readonly buildArgsFromEnv?: ReadonlyArray<string>;
   readonly probes?: ReadonlyArray<Probe>;
   readonly scheduledMachines?: ReadonlyArray<ScheduledMachine>;
+  readonly sharedSecrets?: ReadonlyArray<string>;
 
   readonly simVersionProvider?: SimVersionProvider;
 }
@@ -186,4 +187,15 @@ export type IPPostureAction = AllocateFlycastIPAction;
 export interface IPPosturePlan {
   readonly actions: ReadonlyArray<IPPostureAction>;
   readonly violations: ReadonlyArray<string>;
+}
+
+export interface FlySecret {
+  readonly name: string;
+  readonly digest: string;
+}
+
+export interface SharedSecretHolder {
+  readonly app: string;
+  readonly sharedSecrets: ReadonlyArray<string>;
+  readonly secrets: ReadonlyArray<FlySecret>;
 }
