@@ -1,3 +1,4 @@
+import { setWriterContention } from '../state/set-writer-contention';
 import { createBroadcastPort } from './create-broadcast-port';
 import { createWorkerClient } from './create-worker-client';
 import type { WorkerClient } from './types';
@@ -13,7 +14,15 @@ export function createWebLocksClient(
 
   createWorker();
 
-  const client = createWorkerClient(createBroadcastPort());
+  // a writer from another build refuses this tab's frames; the tab reports the contention rather
+  // than leaving every call pending
+  const client = createWorkerClient(
+    createBroadcastPort({
+      onRefused: () => {
+        setWriterContention(true);
+      },
+    }),
+  );
 
   // oRPC's `RPCLink` has no close-notify of its own, so `pagehide` is the one teardown signal
   // every environment delivers

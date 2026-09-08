@@ -90,6 +90,12 @@ const writerDisplacedMessageSchema = z
   })
   .readonly();
 
+const writerPendingMessageSchema = z
+  .object({
+    type: z.literal(WorkerMessageType.WriterPending),
+  })
+  .readonly();
+
 const writerReadyMessageSchema = z
   .object({
     type: z.literal(WorkerMessageType.WriterReady),
@@ -106,6 +112,7 @@ export const workerToClientMessageSchema = z.discriminatedUnion('type', [
   rewardSlotsRecordedMessageSchema,
   simulationUpdateMessageSchema,
   writerDisplacedMessageSchema,
+  writerPendingMessageSchema,
   writerReadyMessageSchema,
 ]);
 
@@ -130,5 +137,7 @@ export type RewardSlotsRecordedMessage = z.infer<typeof rewardSlotsRecordedMessa
 export type SimulationUpdateMessage = z.infer<typeof simulationUpdateMessageSchema>;
 
 export type WriterDisplacedMessage = z.infer<typeof writerDisplacedMessageSchema>;
+
+export type WriterPendingMessage = z.infer<typeof writerPendingMessageSchema>;
 
 export type WriterReadyMessage = z.infer<typeof writerReadyMessageSchema>;

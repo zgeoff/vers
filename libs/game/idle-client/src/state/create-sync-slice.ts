@@ -22,6 +22,8 @@ export interface SyncSlice {
 
   runOutcome: null | RunOutcome;
 
+  writerContention: boolean;
+
   writerDisplacedActivityID: null | string;
 }
 
@@ -35,6 +37,7 @@ export function createSyncSlice(): SyncSlice {
     rewardSlotLedger: [],
     rewardSlotLedgerActivityID: null,
     runOutcome: null,
+    writerContention: false,
     writerDisplacedActivityID: null,
   };
 }

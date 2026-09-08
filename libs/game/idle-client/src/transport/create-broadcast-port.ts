@@ -1,8 +1,15 @@
 import type { SupportedMessagePort } from '@orpc/client/message-port';
+import { buildProtocolStamp } from './build-protocol-stamp';
 import { RPC_CLIENT_TO_WORKER_CHANNEL, RPC_WORKER_TO_CLIENT_CHANNEL } from './constants';
 
 interface Envelope {
   readonly data: unknown;
+  readonly protocol: string;
+  readonly tabID: string;
+}
+
+interface Refusal {
+  readonly refused: { readonly protocol: string };
   readonly tabID: string;
 }
 
@@ -12,6 +19,8 @@ interface BroadcastPort {
 }
 
 interface CreateBroadcastPortOptions {
+  readonly onRefused?: (workerProtocol: string) => void;
+  readonly protocol?: string;
   readonly tabID?: string;
 }
 
@@ -21,13 +30,20 @@ export function createBroadcastPort(
   options: Readonly<CreateBroadcastPortOptions> = {},
 ): SupportedMessagePort {
   const tabID = options.tabID ?? crypto.randomUUID();
+  const protocol = options.protocol ?? buildProtocolStamp();
 
   const outgoing = new BroadcastChannel(RPC_CLIENT_TO_WORKER_CHANNEL);
   const incoming = new BroadcastChannel(RPC_WORKER_TO_CLIENT_CHANNEL);
   const listeners = new Set<EventListenerOrEventListenerObject>();
 
-  incoming.addEventListener('message', (event: MessageEvent<Envelope>) => {
+  incoming.addEventListener('message', (event: MessageEvent<Envelope | Refusal>) => {
     if (event.data.tabID !== tabID) {
+      return;
+    }
+
+    if ('refused' in event.data) {
+      options.onRefused?.(event.data.refused.protocol);
+
       return;
     }
 
@@ -45,7 +61,7 @@ export function createBroadcastPort(
       }
     },
     postMessage: (data: unknown) => {
-      outgoing.postMessage({ data, tabID } satisfies Envelope);
+      outgoing.postMessage({ data, protocol, tabID } satisfies Envelope);
     },
   };
 

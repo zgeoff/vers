@@ -25,6 +25,7 @@ export { RunOutcomeKind } from './worker/run-outcome-schema';
 export { setSimulationInitialized } from './state/set-simulation-initialized';
 export { setSimulationSnapshot } from './state/set-simulation-snapshot';
 export { setWorkerClient } from './state/set-worker-client';
+export { setWriterContention } from './state/set-writer-contention';
 export { setWriterDisplacedActivityID } from './state/set-writer-displaced-activity-id';
 export { updateRewardSlotLedger } from './state/update-reward-slot-ledger';
 export { useOfflineCapStatus } from './state/use-offline-cap-status';
@@ -40,6 +41,7 @@ export { useRewardSlotLedger } from './state/use-reward-slot-ledger';
 export { useRunOutcome } from './state/use-run-outcome';
 export { useSimulationInitialized } from './state/use-simulation-initialized';
 export { useWriterAbortSignal } from './state/use-writer-abort-signal';
+export { useWriterContention } from './state/use-writer-contention';
 export { useWriterDisplacedActivityID } from './state/use-writer-displaced-activity-id';
 export { useWriterGeneration } from './state/use-writer-generation';
 export { readActivityStart } from './submission/read-activity-start';
@@ -74,4 +76,5 @@ export type {
   SimulationUpdateMessage,
   WorkerMessage,
   WriterDisplacedMessage,
+  WriterPendingMessage,
 } from './worker/worker-to-client-message-schema';

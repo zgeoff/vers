@@ -1,8 +1,15 @@
+import { buildProtocolStamp } from '../transport/build-protocol-stamp';
 import { RPC_CLIENT_TO_WORKER_CHANNEL, RPC_WORKER_TO_CLIENT_CHANNEL } from '../transport/constants';
 import type { WorkerRuntime } from './create-worker-runtime';
 
 interface Envelope {
   readonly data: unknown;
+  readonly protocol?: string;
+  readonly tabID: string;
+}
+
+interface Refusal {
+  readonly refused: { readonly protocol: string };
   readonly tabID: string;
 }
 
@@ -22,6 +29,8 @@ interface CreateWorkerDemuxOptions {
 
   readonly now?: () => number;
 
+  readonly protocol?: string;
+
   readonly upgrade: WorkerRuntime['upgrade'];
 }
 
@@ -34,6 +43,7 @@ const DEFAULT_EVICT_AFTER_MS = 5 * 60 * 1000;
 export function createWorkerDemux(options: Readonly<CreateWorkerDemuxOptions>): WorkerDemux {
   const evictAfterMs = options.evictAfterMs ?? DEFAULT_EVICT_AFTER_MS;
   const now = options.now ?? (() => Date.now());
+  const protocol = options.protocol ?? buildProtocolStamp();
 
   const incoming = new BroadcastChannel(RPC_CLIENT_TO_WORKER_CHANNEL);
   const outgoing = new BroadcastChannel(RPC_WORKER_TO_CLIENT_CHANNEL);
@@ -82,6 +92,15 @@ export function createWorkerDemux(options: Readonly<CreateWorkerDemuxOptions>): 
   incoming.addEventListener('message', (event: MessageEvent<Envelope>) => {
     const data = event.data.data;
     const tabID = event.data.tabID;
+
+    // a tab from another build speaks a different wire shape: it is refused by name rather than
+    // upgraded, so its calls fail explicitly instead of decoding into the wrong procedure
+    if (event.data.protocol !== protocol) {
+      outgoing.postMessage({ refused: { protocol }, tabID } satisfies Refusal);
+
+      return;
+    }
+
     let tab = tabs.get(tabID);
 
     if (tab === undefined) {

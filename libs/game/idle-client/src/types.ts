@@ -20,6 +20,7 @@ export enum WorkerMessageType {
   RewardSlotsRecorded = 'reward_slots_recorded',
   SimulationUpdate = 'simulation_update',
   WriterDisplaced = 'writer_displaced',
+  WriterPending = 'writer_pending',
   WriterReady = 'writer_ready',
 }
 

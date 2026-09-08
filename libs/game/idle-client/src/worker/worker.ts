@@ -1,4 +1,5 @@
 import { createWorkerRuntime } from './create-worker-runtime';
+import { createWriterGate } from './create-writer-gate';
 import { startErrorReporting } from './start-error-reporting';
 
 declare let self: SharedWorkerGlobalScope;
@@ -7,7 +8,13 @@ declare let self: SharedWorkerGlobalScope;
 // the first connection
 const dsn: string | undefined = import.meta.env['VITE_SENTRY_DSN'];
 
-void startErrorReporting(dsn, { environment: import.meta.env.MODE });
-const runtime = createWorkerRuntime();
+const gate = createWriterGate({
+  createRuntime: () => {
+    void startErrorReporting(dsn, { environment: import.meta.env.MODE });
 
-self.addEventListener('connect', runtime.handleConnect);
+    return createWorkerRuntime();
+  },
+  locks: navigator.locks,
+});
+
+self.addEventListener('connect', gate.handleConnect);

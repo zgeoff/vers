@@ -596,6 +596,7 @@
       "name": "@vers/idle-client",
       "version": "0.0.0",
       "dependencies": {
+        "@noble/hashes": "catalog:",
         "@orpc/client": "catalog:",
         "@orpc/contract": "catalog:",
         "@orpc/server": "catalog:",

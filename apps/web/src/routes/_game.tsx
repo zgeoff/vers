@@ -12,6 +12,7 @@ import { QADebugHookMount } from './-game/qa-debug-hook-mount';
 import { SatelliteStack } from './-game/satellite-stack';
 import { SceneStateSync } from './-game/scene-state-sync';
 import { WelcomeBackModal } from './-game/welcome-back-modal';
+import { WriterContentionNotice } from './-game/writer-contention-notice';
 
 const requireAuthFn = createServerFn({ method: 'GET' }).handler(() => requireAuth());
 const resolveFlagsFn = createServerFn({ method: 'GET' }).handler(() => resolveFlags());
@@ -49,6 +50,7 @@ function GameLayout() {
       <QADebugHookMount qaAccount={loaderData.qaDebugHook} />
       <WelcomeBackModal />
       <PlayingElsewhereNotice />
+      <WriterContentionNotice />
       <NavRail />
       {presentation === 'ambient' ? (
         <AmbientSheet>

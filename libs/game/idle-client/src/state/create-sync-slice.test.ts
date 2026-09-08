@@ -11,6 +11,7 @@ test('it builds the empty sync state', () => {
     rewardSlotLedger: [],
     rewardSlotLedgerActivityID: null,
     runOutcome: null,
+    writerContention: false,
     writerDisplacedActivityID: null,
   });
 });
