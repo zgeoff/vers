@@ -2,6 +2,7 @@ import * as cloudflare from '@pulumi/cloudflare';
 import * as pulumi from '@pulumi/pulumi';
 
 export {
+  activityRefusalsMonitorName,
   alarmsNotifierName,
   baselineDashboardUID,
   ingestTokenName,
