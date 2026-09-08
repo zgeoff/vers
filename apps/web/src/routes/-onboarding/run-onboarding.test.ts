@@ -10,7 +10,7 @@ import { buildFormData } from '../../test-utils/build-form-data';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { runOnboarding } from './run-onboarding';
 
-test('it redirects to signup when there is no pending onboarding session', () => {
+test('it redirects to signup with the lapse reason when there is no pending onboarding session', () => {
   const promise = withRequestContext({}, () =>
     runOnboarding(
       buildFormData({
@@ -23,7 +23,9 @@ test('it redirects to signup when there is no pending onboarding session', () =>
     ),
   );
 
-  expect(promise).rejects.toMatchObject({ options: { href: '/signup' } });
+  expect(promise).rejects.toMatchObject({
+    options: { href: '/signup?reason=verification-lapsed' },
+  });
 });
 
 test('it rejects a submission with a filled-in honeypot field', async () => {
