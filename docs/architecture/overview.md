@@ -91,6 +91,9 @@ react-three-fiber ([game rendering](./game/game-rendering.md)).
 - **Observability** — OpenTelemetry sends traces, logs, and metrics to Axiom; the Sentry SDK sends
   errors to Bugsink. The service runtime wires both into every service, and one trace id follows a
   request from edge to service ([observability](./platform/observability.md)).
+- **Manual QA** — a QA pass drives production at `https://versidle.com` with an account under
+  `qa.versidle.com`, a debug Chrome, and the `bun run qa:*` scripts that seed accounts, read
+  verification email, log worker traffic, and send the fleet cold ([manual QA](./platform/qa.md)).
 
 ## Core technology
 

@@ -204,15 +204,8 @@ rolled-back app reads stale there by design. It also checks each app's IP postur
 manifest `exposure` ([networking](#networking)): a `flycast` app missing its private address, or
 holding a public one, fails the run.
 
-`bun run qa:cold` sends the fleet cold for manual QA of the cold path: it suspends every service
-machine of every manifest app, stopping instead where the app's `fly.toml` parks idle machines with
-`stop`, then prints each app's machine states. Before it touches a machine it reads the
-`vers-traces` dataset for the last 10 minutes and refuses, with the request count and the busiest
-routes, when any request other than a `/health` check or the anonymous `getCurrentUser` probe
-reached the fleet, so a fleet that is serving a player is never sent cold. `--dry-run` prints the
-verdict and the planned actions without acting, and `--wait` polls until every machine reports
-suspended or stopped, for at most three minutes; the deadline also ends a `flyctl` read that is
-still pending, so a stalled read cannot hold the wait open past it.
+`bun run qa:cold` sends the fleet cold for manual QA of a cold start, behind a traffic guard that
+[manual QA](./qa.md#cold-path) owns.
 
 ### Scheduled machines
 

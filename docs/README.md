@@ -48,10 +48,8 @@ How the platform is built — system design, data flows, and operational wiring.
   Windows Chrome from WSL, and the port bridge that makes it reachable
 - [Serena MCP](./architecture/platform/serena-mcp.md) — the shared read-only symbol-lookup daemon
   every agent session connects to, and why it serves the primary checkout
-- [QA inbox](./architecture/platform/qa-inbox.md) — reading verification codes and links from email
-  sent to a `qa.versidle.com` address during manual QA against production
-- [QA browser tools](./architecture/platform/qa-browser.md) — driving a debug Chrome and logging its
-  shared workers' RPC traffic over the DevTools Protocol during manual QA
+- [Manual QA](./architecture/platform/qa.md) — QA accounts, the inbox, the browser tools, the debug
+  hook, and the cold-path script for a manual pass against production
 
 ### Game
 

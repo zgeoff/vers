@@ -20,7 +20,7 @@ behind each concern and the doc that owns its wiring.
 
 - **Resend** — transactional email, sent from the React Email templates in `@vers/email`. The
   `qa.versidle.com` receiving domain holds the test addresses manual QA reads back through the
-  Receiving API ([QA inbox](../platform/qa-inbox.md)).
+  Receiving API ([manual QA](../platform/qa.md#inbox)).
 
 ## Observability
 
