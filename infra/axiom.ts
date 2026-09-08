@@ -165,6 +165,7 @@ const activityRefusalsMonitor = new axiom.Monitor(
     operator: 'AboveOrEqual',
     threshold: 5,
     triggerFromNRuns: 1,
+    notifyByGroup: true,
     notifierIds: [alarmsNotifier.id],
   },
   { provider: axiomProvider },
