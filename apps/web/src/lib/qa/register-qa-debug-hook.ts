@@ -27,7 +27,7 @@ export function registerQADebugHook(options: Readonly<RegisterQADebugHookOptions
 
       return Object.freeze({
         ...worker,
-        tab: { tabID: options.tabID, writerGeneration: options.writerGeneration },
+        tab: Object.freeze({ tabID: options.tabID, writerGeneration: options.writerGeneration }),
       });
     },
   };
