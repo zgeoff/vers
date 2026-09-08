@@ -148,6 +148,28 @@ const replayPokeFailedMonitor = new axiom.Monitor(
   { provider: axiomProvider },
 );
 
+const activityRefusalsMonitor = new axiom.Monitor(
+  'vers-activity-refusals',
+  {
+    name: 'vers activity refusals',
+    type: 'Threshold',
+    description:
+      'service-activity refused at least 5 starts or appends inside one 10-minute bin, grouped by reason. One transient stale-head conflict stays under the threshold; a device stuck retrying a refused chain crosses it within minutes.',
+
+    // Each aligned bin scores as its own increase, so the range spans two bin edges: the last
+    // complete 10-minute bin is scored as a whole, not only the partial bin the run lands in.
+    mplQuery:
+      '`vers-metrics`:`vers.activity.refusal` | align to 10m using max | group by reason using max | map increase',
+    intervalMinutes: 5,
+    rangeMinutes: 20,
+    operator: 'AboveOrEqual',
+    threshold: 5,
+    triggerFromNRuns: 1,
+    notifierIds: [alarmsNotifier.id],
+  },
+  { provider: axiomProvider },
+);
+
 // the provider normalizes state against the configured key set, so fields it manages or defaults
 // (uid, owner, empty overrides, server timestamps) stay out; adding one shows a permanent
 // phantom diff
@@ -219,6 +241,7 @@ export const alarmsNotifierName = alarmsNotifier.name;
 export const serverErrorsMonitorName = serverErrorsMonitor.name;
 export const slowRequestsMonitorName = slowRequestsMonitor.name;
 export const replayPokeFailedMonitorName = replayPokeFailedMonitor.name;
+export const activityRefusalsMonitorName = activityRefusalsMonitor.name;
 export const baselineDashboardUID = baselineDashboard.uid;
 
 // the provider stores the document re-marshalled by Go, which sorts object keys and HTML-escapes

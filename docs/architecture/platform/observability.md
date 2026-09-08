@@ -290,6 +290,13 @@ when a wake delivery exhausts its retries, so a quiet dataset is the healthy def
 exporter. It is the explicit signal that the replay queue may go undrained despite an activity
 appending unverified work.
 
+The `vers activity refusals` threshold monitor watches `vers.activity.refusal` grouped by `reason`
+and notifies `vers alarms` when one reason's count inside a 10-minute bin reaches 5, so the alarm
+names the reason. It alerts on the threshold alone, never on no data: the counter emits only when
+service-activity refuses a start or an append, so a quiet dataset is the healthy default, not a down
+exporter. The threshold sits above a single transient stale-head conflict and below a device stuck
+retrying a refused chain, which produces refusals at several per minute.
+
 The `vers slow requests` threshold monitor watches `vers-traces` for any non-probe server span past
 a fixed 30s duration threshold and notifies `vers alarms`, evaluated on its own schedule rather than
 at span close. Health-probe routes are excluded because their latency tracks scale-to-zero machine
