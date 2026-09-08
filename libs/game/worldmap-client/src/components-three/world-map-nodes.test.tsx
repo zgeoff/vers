@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { expect, onTestFinished, test } from 'bun:test';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { sceneColors } from '@vers/design-system';
 import type { WorldMapNode } from '@vers/worldmap-core';
@@ -15,6 +15,10 @@ const BASE_COLOR = new Color(sceneColors.nodeBase);
 
 async function setupTest(nodes: ReadonlyArray<WorldMapNode>) {
   const renderer = await ReactThreeTestRenderer.create(<WorldMapNodes nodes={[...nodes]} />);
+
+  onTestFinished(async () => {
+    await renderer.unmount();
+  });
 
   return renderer;
 }
