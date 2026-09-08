@@ -367,3 +367,30 @@ test('it leaves a query that answers within the deadline untouched', async () =>
 
   expect(inMemoryMetrics.readCounterDataPoints('vers.db.pool_resets')).resolves.toBeEmpty();
 });
+
+test('it rejects a streamed query whose next chunk never arrives within the deadline', async () => {
+  const proxy = await startStallingProxy(resolveTestDBTarget().baseURI);
+
+  onTestFinished(() => proxy.stop());
+
+  await using handle = await createTestDB({ baseURI: proxy.baseURI, queryDeadlineMs: 200 });
+
+  await handle.db.selectFrom('users').selectAll().execute();
+
+  proxy.stopForwarding();
+
+  const startedAt = performance.now();
+
+  const streamed = (async () => {
+    for await (const row of handle.db.selectFrom('users').selectAll().stream(1)) {
+      void row;
+    }
+  })();
+
+  await streamed.catch(() => {});
+
+  expect(performance.now() - startedAt).toBeLessThan(1000);
+  expect(streamed).rejects.toMatchObject({ code: 'CONNECTION_DESTROYED' });
+
+  await expect(handle.db.selectFrom('users').selectAll().execute()).toResolve();
+});

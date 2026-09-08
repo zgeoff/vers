@@ -81,18 +81,21 @@ A query whose reply never arrives is bounded by a client-side deadline, because 
 setting reaches a dead transport. A query written to a socket whose peer stopped answering waits on
 the kernel's TCP retransmit limit, about 15 minutes, and TCP keepalive never probes while data sits
 unacknowledged. `createDB` therefore starts a 35s deadline around every statement it sends
-(`queryDeadlineMs`). `statement_timeout` makes a live server answer within 30s, so 5s more of
-silence means the transport is dead. A deadline that expires drops the pool the same way a detected
-resume does. Kysely's abort signal is never used on its own: kysely-postgres-js implements neither
-`cancelQuery` nor `killSession`, so an abort would leave the reserved socket out of the pool until
-the kernel gives up on it.
+(`queryDeadlineMs`), and around each chunk it awaits from a streamed query. `statement_timeout`
+makes a live server answer within 30s, so 5s more of silence means the transport is dead. A deadline
+that expires drops the pool the same way a detected resume does. Kysely's abort signal is never used
+on its own: kysely-postgres-js implements neither `cancelQuery` nor `killSession`, so an abort would
+leave the reserved socket out of the pool until the kernel gives up on it.
 
 A pool reset, from either trigger, swaps in a fresh postgres.js instance for new queries and
 destroys the old one with a zero-timeout end. Every query still pending on the old instance rejects
 with `CONNECTION_DESTROYED`, not only the one that tripped the deadline. That cost is accepted
 because a socket silent past `statement_timeout` is dead for every connection the process holds to
-the same endpoint, and a caller that receives `CONNECTION_DESTROYED` retries on the fresh pool. Each
-reset increments `vers.db.pool_resets` with its trigger as the `reason`
+the same endpoint, and the next query from any caller lands on the fresh pool. Whether the failed
+call itself is resent is the caller's retry policy: the rejection reaches a service client as an
+`INTERNAL_SERVER_ERROR`, which app-web resends for a GET procedure and never for a mutation
+([error handling](../services/error-handling.md#retry-policy)). Each reset increments
+`vers.db.pool_resets` with its trigger as the `reason`
 ([observability](./observability.md#instrument-registry)).
 
 ## Who connects, and where the string lives

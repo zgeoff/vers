@@ -211,20 +211,56 @@ function buildBoundedConnection(
   onDeadline: () => void,
 ): DatabaseConnection {
   return {
-    executeQuery: async (compiledQuery) => {
-      // Kysely's abort signal alone would strand the connection: kysely-postgres-js implements
-      // neither cancelQuery nor killSession, so the reserved socket stays out of the pool until the
-      // kernel gives up on it. Dropping the whole pool generation is the only way to free it.
-      const timer = setTimeout(onDeadline, deadlineMs);
-
-      try {
-        return await inner.executeQuery(compiledQuery);
-      } finally {
-        clearTimeout(timer);
-      }
-    },
-    streamQuery: (compiledQuery, chunkSize) => inner.streamQuery(compiledQuery, chunkSize),
+    executeQuery: (compiledQuery) =>
+      withDeadline(() => inner.executeQuery(compiledQuery), deadlineMs, onDeadline),
+    streamQuery: (compiledQuery, chunkSize, options) =>
+      withChunkDeadline(
+        () => inner.streamQuery(compiledQuery, chunkSize, options),
+        deadlineMs,
+        onDeadline,
+      ),
   };
+}
+
+async function* withChunkDeadline<T>(
+  open: () => AsyncIterableIterator<T>,
+  deadlineMs: number,
+  onDeadline: () => void,
+): AsyncIterableIterator<T> {
+  const iterator = open()[Symbol.asyncIterator]();
+
+  try {
+    for (;;) {
+      // the deadline runs only while a chunk is awaited from the driver, never across the
+      // consumer's own work between chunks
+      const step = await withDeadline(() => iterator.next(), deadlineMs, onDeadline);
+
+      if (step.done === true) {
+        return;
+      }
+
+      yield step.value;
+    }
+  } finally {
+    await iterator.return?.();
+  }
+}
+
+async function withDeadline<T>(
+  run: () => Promise<T>,
+  deadlineMs: number,
+  onDeadline: () => void,
+): Promise<T> {
+  // Kysely's abort signal alone would strand the connection: kysely-postgres-js implements
+  // neither cancelQuery nor killSession, so the reserved socket stays out of the pool until the
+  // kernel gives up on it. Dropping the whole pool generation is the only way to free it.
+  const timer = setTimeout(onDeadline, deadlineMs);
+
+  try {
+    return await run();
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 function createPoolGeneration(config: CreateDBConfig): PoolGeneration {
