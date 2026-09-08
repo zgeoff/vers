@@ -40,6 +40,7 @@ test('it reads both durable stores and the recorder into one snapshot', async ()
       checkpoints: [{ activityID: 'act_pending', count: 2, highestVersion: 2, submitter: null }],
     },
     phase: 'idle',
+    simulationSpeed: 1,
     writer: { workerID: context.getDebugRecorder().workerID },
   });
 });

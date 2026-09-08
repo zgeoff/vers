@@ -84,6 +84,7 @@ export const debugSnapshotSchema = z
       })
       .readonly(),
     phase: z.string(),
+    simulationSpeed: z.int().min(1),
     writer: z.object({ bootedAt: z.number(), workerID: z.string() }).readonly(),
   })
   .readonly();

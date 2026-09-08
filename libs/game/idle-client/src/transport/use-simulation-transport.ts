@@ -7,6 +7,7 @@ import { setOfflineCapStatus } from '../state/set-offline-cap-status';
 import { setResyncStatus } from '../state/set-resync-status';
 import { setRunOutcome } from '../state/set-run-outcome';
 import { setSimulationSnapshot } from '../state/set-simulation-snapshot';
+import { setSimulationSpeed } from '../state/set-simulation-speed';
 import { setWorkerClient } from '../state/set-worker-client';
 import { setWriterContention } from '../state/set-writer-contention';
 import { setWriterDisplacedActivityID } from '../state/set-writer-displaced-activity-id';
@@ -114,6 +115,11 @@ function handleWorkerMessage(message: WorkerMessage) {
 
     case WorkerMessageType.FailureActionStatus: {
       setFailureAction(message.failureAction);
+      break;
+    }
+
+    case WorkerMessageType.SimulationSpeedStatus: {
+      setSimulationSpeed(message.speed);
       break;
     }
 

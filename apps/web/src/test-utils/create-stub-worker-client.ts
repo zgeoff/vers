@@ -1,5 +1,6 @@
 import { mock } from 'bun:test';
 import type {
+  SimulationSpeedStatus,
   StartStatus,
   UndeliveredWork,
   WorkerClient,
@@ -18,8 +19,14 @@ interface StubSetFailureActionInput {
   readonly failureAction: ActivityFailureAction;
 }
 
+interface StubSetSimulationSpeedInput {
+  readonly isQAAvatar: boolean;
+  readonly speed: number;
+}
+
 const DEFAULT_INITIALIZE_RESULT = {
   rewardSlotLedger: { activityID: null, entries: [] },
+  simulationSpeed: 1,
   state: { failureAction: ActivityFailureAction.Abort },
   writerDisplacedActivityID: null,
 } as const;
@@ -34,6 +41,7 @@ const DEFAULT_DEBUG_SNAPSHOT: WorkerDebugSnapshot = {
   liveRun: null,
   outbox: { activityStarts: [], checkpoints: [] },
   phase: 'idle',
+  simulationSpeed: 1,
   writer: { bootedAt: 0, workerID: 'worker_stub' },
 };
 
@@ -56,6 +64,16 @@ export function createStubWorkerClient(
     reportOnline: mock(() => Promise.resolve({ ok: true as const })),
     setFailureAction: mock((input: StubSetFailureActionInput) =>
       Promise.resolve({ failureAction: input.failureAction }),
+    ),
+    setSimulationSpeed: mock(
+      (input: StubSetSimulationSpeedInput): Promise<SimulationSpeedStatus> => {
+        const status: SimulationSpeedStatus =
+          input.speed > 1 && !input.isQAAvatar
+            ? { kind: 'refused', reason: 'avatar-not-qa' }
+            : { kind: 'applied', speed: input.speed };
+
+        return Promise.resolve(status);
+      },
     ),
     startActivity: mock(options.startActivity ?? (() => Promise.resolve(DEFAULT_START_STATUS))),
     stopActivity: mock(() => Promise.resolve({ ok: true as const })),

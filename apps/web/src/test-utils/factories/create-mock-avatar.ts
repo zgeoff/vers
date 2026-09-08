@@ -5,6 +5,7 @@ export function createMockAvatar(overrides: Readonly<Partial<AvatarData>> = {}):
   return {
     createdAt: faker.date.past(),
     id: faker.string.uuid(),
+    isQA: false,
     level: faker.number.int({ max: 99, min: 1 }),
     mode: 'trade',
     name: faker.person.firstName(),

@@ -2,11 +2,11 @@
 
 Manual QA drives production at `https://versidle.com` with a QA account, a real Chrome, and the repo
 scripts behind `bun run qa:*`. The scripts seed and reset accounts, read verification email, drive
-the browser and log its worker traffic, and send the fleet cold. A read-only hook on the game page
-shows the writer worker's state from the console. `qa:seed`, `qa:reset`, and `qa:cold` change
-production state, so each one prints its target and refuses when its guard fails: an address outside
-`qa.versidle.com`, a database host that is not loopback without `--yes`, or a fleet that served a
-request in the last 10 minutes.
+the browser and log its worker traffic, and send the fleet cold. A hook on the game page shows the
+writer worker's state from the console and sets a QA avatar's simulation speed. `qa:seed`,
+`qa:reset`, and `qa:cold` change production state, so each one prints its target and refuses when
+its guard fails: an address outside `qa.versidle.com`, a database host that is not loopback without
+`--yes`, or a fleet that served a request in the last 10 minutes.
 
 A QA account is an address under `qa.versidle.com`, a Resend receiving domain: mail to any address
 on it (`qa+signup-1@qa.versidle.com`) lands in Resend's received mail, where the inbox script reads
@@ -30,22 +30,24 @@ bun run qa:reset --user qa-007 --all --yes
 ```
 
 `qa:seed` creates `qa-007@qa.versidle.com` with the password from `--password`, or a generated one,
-and an active avatar whose XP is the minimum for `--level`. The username and avatar name derive from
-the account name under their contracts (`qa_007` and `qaaah` for `qa-007`), and the command prints
-them with the credentials once; `--two-factor` writes an authenticator verification and prints its
-secret and `otpauth://` URI. With `--runs`, it seeds that many origin-node runs, each simulated with
-the real engine to its terminal checkpoint against the registry's current content document and
-stamped with the current sim version, then stored as the activity and replay services would leave
-them: hashed checkpoints, `verified_head` at the appended head, settled XP on the avatar, minted
-reward items, both chain anchors on the last run's tail, and a first-clear grant once a run
-completes. The command prints each run's outcome. Deriving those runs needs the keys service's
-`SCOPE_SECRET_ROOTS` and `ROLL_KEY_ROOTS` in the environment, so the seeded encounter and items
-equal what the services derive for the avatar. `qa:seed` refuses an address that already has an
-account.
+and an active avatar whose XP is the minimum for `--level`. The avatar is flagged as a QA avatar,
+which is what lets the debug hook run it above real time
+([game simulation](../game/game-simulation.md#the-qa-speed-multiplier)); nothing but this command
+writes that flag. The username and avatar name derive from the account name under their contracts
+(`qa_007` and `qaaah` for `qa-007`), and the command prints them with the credentials once;
+`--two-factor` writes an authenticator verification and prints its secret and `otpauth://` URI. With
+`--runs`, it seeds that many origin-node runs, each simulated with the real engine to its terminal
+checkpoint against the registry's current content document and stamped with the current sim version,
+then stored as the activity and replay services would leave them: hashed checkpoints,
+`verified_head` at the appended head, settled XP on the avatar, minted reward items, both chain
+anchors on the last run's tail, and a first-clear grant once a run completes. The command prints
+each run's outcome. Deriving those runs needs the keys service's `SCOPE_SECRET_ROOTS` and
+`ROLL_KEY_ROOTS` in the environment, so the seeded encounter and items equal what the services
+derive for the avatar. `qa:seed` refuses an address that already has an account.
 
 `qa:reset` deletes the account's activities, chains, items, and grants and returns its avatars to
-level 1; `--all` deletes the account itself, with its sessions and verifications. The logic lives in
-`libs/testing/qa-account/`.
+level 1, keeping the QA flag; `--all` deletes the account itself, with its sessions and
+verifications. The logic lives in `libs/testing/qa-account/`.
 
 ## Inbox
 
@@ -216,11 +218,12 @@ until the capture stops. Stop the capture (Ctrl-C) before closing the last tab o
 
 ## Debug hook
 
-A QA tester reads the writer worker's state from the page console through `window.__versQA`, with no
-DevTools attachment to the worker. app-web installs the object on a game page only when the
-session's email is under `qa.versidle.com`, or when a non-production build carries `?qa=1`. The
-server decides the account gate from the session and hands the page a boolean, so the page never
-reads the email, and every other page carries no object and runs no extra code.
+A QA tester reads the writer worker's state and sets a QA avatar's simulation speed from the page
+console through `window.__versQA`, with no DevTools attachment to the worker. app-web installs the
+object on a game page only when the session's email is under `qa.versidle.com`, or when a
+non-production build carries `?qa=1`. The server decides the account gate from the session and hands
+the page a boolean, so the page never reads the email, and every other page carries no object and
+runs no extra code.
 
 ```js
 await window.__versQA.snapshot();
@@ -228,12 +231,26 @@ await window.__versQA.snapshot();
 
 `snapshot()` answers one read-only worker message with a copy of the live run, the durable outbox
 with each pending start's attempts and last refusal, the latest-run record the next mint folds from,
-the writer's identity, and the last 200 worker events kept in a ring buffer inside the worker:
-lifecycle phases, start and flush outcomes, refusals, and connectivity changes. The hook reads and
-never writes: it changes no runtime state and no durable store.
+the writer's identity, the current simulation speed, and the last 200 worker events kept in a ring
+buffer inside the worker: lifecycle phases, start and flush outcomes, refusals, speed changes, and
+connectivity changes. The snapshot changes no runtime state and no durable store.
 [Game simulation](../game/game-simulation.md#writer-election) owns the writer worker, and
 [offline reconcile](../game/offline-reconcile.md#worker-lifecycle) owns the lifecycle the events
 trace.
+
+```js
+await window.__versQA.setSpeed(20);
+await window.__versQA.setSpeed(1);
+```
+
+`setSpeed(n)` runs the live simulation at `n` fixed steps per step of real time, for an integer `n`
+from 1 to 20, and resolves to the applied speed. The worker refuses a speed above 1 unless the
+active avatar is a QA avatar, and the call rejects with the refusal. While the speed is above 1 the
+game routes show a `QA ×N` badge in the top right corner, so a sped-up run is never mistaken for a
+real one. The speed lives in the writer worker, so it holds across tabs and resets to 1 when the
+worker restarts. The offline budget credits a QA avatar at the maximum speed
+([game simulation](../game/game-simulation.md#the-qa-speed-multiplier)), so a run at any speed up to
+20 stays inside the budget.
 
 ## Cold path
 

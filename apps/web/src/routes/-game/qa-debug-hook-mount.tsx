@@ -1,6 +1,8 @@
+import { useQuery } from '@tanstack/react-query';
 import { useRouterState } from '@tanstack/react-router';
 import { useWriterGeneration } from '@vers/idle-client';
 import { useEffect } from 'react';
+import { buildActiveAvatarQueryOptions } from '../../lib/avatar/build-active-avatar-query-options';
 import { useIdleWorkerHandle } from '../../lib/idle/use-idle-worker-handle';
 import { isQADebugHookEnabled } from '../../lib/qa/is-qa-debug-hook-enabled';
 import { registerQADebugHook } from '../../lib/qa/register-qa-debug-hook';
@@ -17,8 +19,10 @@ export function QADebugHookMount(props: Readonly<QADebugHookMountProps>) {
   const idleWorkerHandle = useIdleWorkerHandle();
   const writerGeneration = useWriterGeneration();
   const search = useRouterState({ select: (state) => state.location.searchStr });
+  const avatarQuery = useQuery(buildActiveAvatarQueryOptions());
   const client = idleWorkerHandle.client;
   const qaAccount = props.qaAccount;
+  const isQAAvatar = avatarQuery.data?.isQA ?? false;
 
   useEffect(() => {
     const enabled = isQADebugHookEnabled({
@@ -29,13 +33,13 @@ export function QADebugHookMount(props: Readonly<QADebugHookMountProps>) {
 
     const unregister =
       client !== undefined && enabled
-        ? registerQADebugHook({ client, tabID: TAB_ID, writerGeneration })
+        ? registerQADebugHook({ client, isQAAvatar, tabID: TAB_ID, writerGeneration })
         : null;
 
     return () => {
       unregister?.();
     };
-  }, [client, qaAccount, search, writerGeneration]);
+  }, [client, isQAAvatar, qaAccount, search, writerGeneration]);
 
   return null;
 }

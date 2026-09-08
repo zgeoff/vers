@@ -119,6 +119,7 @@ export interface Avatars {
   createdAt: Generated<Timestamp>;
   failureAction: Generated<ActivityFailureAction>;
   id: string;
+  isQa: Generated<boolean>;
   level: Generated<number>;
   mode: Generated<AvatarMode>;
   name: string;

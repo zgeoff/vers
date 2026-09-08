@@ -1426,6 +1426,115 @@ test('it accepts a batch whose simulated time fits the wall-clock accrued budget
   expect(Number(updated.simBudgetMs)).toBeWithin(1_700_000, 1_900_000);
 });
 
+test("it credits a QA avatar's offline budget at the maximum simulation speed", async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+
+  const avatar = await createAvatarRow(ctx.db, {
+    isQa: true,
+    simBudgetMs: 0,
+    simMeteredAt: new Date(Date.now() - 3_600_000),
+    userId: viewer.user.id,
+  });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
+  });
+
+  const batch = createMockCheckpointBatch({
+    startPrevHash: started.startHash,
+    startVersion: 1,
+    timeStepMs: 36_000_000,
+  });
+
+  const result = await client.trackActivityProgress({
+    activityID: started.id,
+    checkpoints: batch,
+    expectedHead: 0,
+  });
+
+  expect(result).toStrictEqual({ appendedHead: 1 });
+
+  const updated = await ctx.db
+    .selectFrom('avatars')
+    .selectAll()
+    .where('id', '=', avatar.id)
+    .executeTakeFirstOrThrow();
+
+  // the hour of absence accrued twenty hours, the ten hours of simulated time were debited
+  expect(Number(updated.simBudgetMs)).toBeWithin(36_000_000, 36_600_000);
+});
+
+test("it credits every other avatar's offline budget at wall-clock rate", async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+
+  const avatar = await createAvatarRow(ctx.db, {
+    isQa: false,
+    simBudgetMs: 0,
+    simMeteredAt: new Date(Date.now() - 3_600_000),
+    userId: viewer.user.id,
+  });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
+  });
+
+  const batch = createMockCheckpointBatch({
+    startPrevHash: started.startHash,
+    startVersion: 1,
+    timeStepMs: 36_000_000,
+  });
+
+  expect(
+    client.trackActivityProgress({ activityID: started.id, checkpoints: batch, expectedHead: 0 }),
+  ).rejects.toMatchObject({ code: 'ACTIVITY_CAPPED', data: { appendedHead: 0 } });
+});
+
+test('it never credits a QA avatar past the configured cap', async () => {
+  await using ctx = await setupTest({ simTimeCapMs: 60_000 });
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+
+  const avatar = await createAvatarRow(ctx.db, {
+    isQa: true,
+    simBudgetMs: 0,
+    simMeteredAt: new Date(Date.now() - 3_600_000),
+    userId: viewer.user.id,
+  });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
+  });
+
+  const overCap = createMockCheckpointBatch({
+    startPrevHash: started.startHash,
+    startVersion: 1,
+    timeStepMs: 100_000,
+  });
+
+  expect(
+    client.trackActivityProgress({ activityID: started.id, checkpoints: overCap, expectedHead: 0 }),
+  ).rejects.toMatchObject({ code: 'ACTIVITY_CAPPED', data: { appendedHead: 0 } });
+});
+
 test('it never accrues budget past the configured cap', async () => {
   await using ctx = await setupTest({ simTimeCapMs: 60_000 });
 

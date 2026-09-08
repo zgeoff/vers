@@ -8,6 +8,7 @@ export function handleInitializeMessage(context: WorkerContext): InitializeOutpu
   return {
     ...(liveRun !== undefined && { liveRun }),
     rewardSlotLedger: context.getRewardSlotLedger(),
+    simulationSpeed: context.getSimulationSpeed(),
     state: context.getSimulation().getSnapshot(),
     writerDisplacedActivityID: context.getWriterDisplacedActivityID(),
   };

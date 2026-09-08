@@ -9,5 +9,6 @@ test('it builds the empty simulation state', () => {
     combat: null,
     failureAction: ActivityFailureAction.Abort,
     liveRun: null,
+    simulationSpeed: 1,
   });
 });

@@ -7,6 +7,7 @@ import { handleReadUndeliveredWorkMessage } from './handle-read-undelivered-work
 import { handleRemoveUndeliveredWorkMessage } from './handle-remove-undelivered-work-message';
 import { handleReportOnlineMessage } from './handle-report-online-message';
 import { handleSetFailureActionMessage } from './handle-set-failure-action-message';
+import { handleSetSimulationSpeedMessage } from './handle-set-simulation-speed-message';
 import { handleStartActivityMessage } from './handle-start-activity-message';
 import { handleStopActivityMessage } from './handle-stop-activity-message';
 import type { WorkerCallContext, WorkerContext } from './types';
@@ -69,6 +70,12 @@ export function createWorkerRouter(context: WorkerContext, ready: Readonly<Promi
       await ready;
 
       return handleSetFailureActionMessage(context, opts.input);
+    }),
+
+    setSimulationSpeed: os.setSimulationSpeed.handler(async (opts) => {
+      await ready;
+
+      return handleSetSimulationSpeedMessage(context, opts.input);
     }),
 
     startActivity: os.startActivity.handler(async (opts) => {

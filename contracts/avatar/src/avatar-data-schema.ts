@@ -4,6 +4,7 @@ import { AvatarModeSchema } from './avatar-mode-schema';
 export const AvatarDataSchema = z.object({
   createdAt: z.date(),
   id: z.string(),
+  isQA: z.boolean(),
   level: z.int(),
   mode: AvatarModeSchema,
   name: z.string(),

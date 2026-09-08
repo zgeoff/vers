@@ -9,6 +9,7 @@ export const AvatarRowSchema = AvatarDataSchema.extend({
   createdAt: z.date().default(() => new Date()),
   failureAction: ActivityFailureActionSchema.default('abort'),
   id: z.string().default(() => createId()),
+  isQA: z.boolean().default(false),
   level: z.int().default(1),
   mode: AvatarModeSchema.default('trade'),
   name: z

@@ -25,6 +25,7 @@ import { recordAdvanceContinuation } from '../metrics/record-advance-continuatio
 import { recordRefusal } from '../metrics/record-refusal';
 import { recordTerminalTransition } from '../metrics/record-terminal-transition';
 import { pickCheckpointBatchRaceOutcome } from '../pick-checkpoint-batch-race-outcome';
+import { pickSimTimeCreditRate } from '../pick-sim-time-credit-rate';
 import type {
   AdvanceBailPayload,
   AdvanceCheckpointInvalidPayload,
@@ -461,6 +462,7 @@ async function runContinuation(
       'activities.startChainIndex',
       'activities.status',
       'activities.writerSessionId',
+      'avatars.isQa',
       'avatars.simBudgetMs',
       'avatars.simMeteredAt',
     ])
@@ -541,9 +543,11 @@ async function runContinuation(
 
   const newTimeMs = lastCheckpoint.payload.time;
   const timeDelta = newTimeMs - appendedTimeMs;
+  const creditRate = pickSimTimeCreditRate(target);
 
   const accruedMs =
-    Number(target.simBudgetMs) + (target.meterReadAt.getTime() - target.simMeteredAt.getTime());
+    Number(target.simBudgetMs) +
+    (target.meterReadAt.getTime() - target.simMeteredAt.getTime()) * creditRate;
 
   const availableMs = Math.min(deps.simTimeCapMs, accruedMs);
 
@@ -668,7 +672,7 @@ async function runContinuation(
       // values: each continuation commits its own transaction, so the next one's read already sees
       // this debit applied
       const debit = Math.ceil(timeDelta);
-      const refill = sql`least(${deps.simTimeCapMs}, sim_budget_ms + (extract(epoch from (now() - sim_metered_at)) * 1000)::bigint)`;
+      const refill = sql`least(${deps.simTimeCapMs}, sim_budget_ms + (extract(epoch from (now() - sim_metered_at)) * 1000 * ${creditRate})::bigint)`;
 
       const consumed = await trx
         .updateTable('avatars')

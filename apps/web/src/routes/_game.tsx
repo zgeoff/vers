@@ -9,6 +9,7 @@ import { GameSimulationMount } from './-game/game-simulation-mount';
 import { NavRail } from './-game/nav-rail';
 import { PlayingElsewhereNotice } from './-game/playing-elsewhere-notice';
 import { QADebugHookMount } from './-game/qa-debug-hook-mount';
+import { QASpeedBadge } from './-game/qa-speed-badge';
 import { SatelliteStack } from './-game/satellite-stack';
 import { SceneStateSync } from './-game/scene-state-sync';
 import { WelcomeBackModal } from './-game/welcome-back-modal';
@@ -48,6 +49,7 @@ function GameLayout() {
       <SceneStateSync />
       <GameSimulationMount />
       <QADebugHookMount qaAccount={loaderData.qaDebugHook} />
+      <QASpeedBadge />
       <WelcomeBackModal />
       <PlayingElsewhereNotice />
       <WriterContentionNotice />

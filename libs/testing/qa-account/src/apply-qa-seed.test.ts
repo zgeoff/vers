@@ -57,7 +57,13 @@ test('it creates a verified account whose password checks and whose avatar sits 
     .where('userId', '=', user.id)
     .executeTakeFirstOrThrow();
 
-  expect(avatar).toMatchObject({ id: seeded.avatar.id, level: 6, name: 'qaaah', xp: 2500 });
+  expect(avatar).toMatchObject({
+    id: seeded.avatar.id,
+    isQa: true,
+    level: 6,
+    name: 'qaaah',
+    xp: 2500,
+  });
 
   expect(
     ctx.db

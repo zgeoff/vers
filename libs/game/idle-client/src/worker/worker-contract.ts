@@ -1,5 +1,5 @@
 import { oc } from '@orpc/contract';
-import { ActivityDataSchema, EncounterNodeSchema } from '@vers/contract-activity';
+import { ActivityDataSchema, EncounterNodeSchema, QA_SIM_SPEED_MAX } from '@vers/contract-activity';
 import { ActivityFailureAction } from '@vers/idle-core';
 import * as z from 'zod';
 import { debugSnapshotSchema } from './debug-snapshot-schema';
@@ -24,6 +24,7 @@ const initializeOutputSchema = z
   .object({
     liveRun: liveRunSchema.exactOptional(),
     rewardSlotLedger: rewardSlotLedgerSnapshotSchema,
+    simulationSpeed: z.int().min(1),
     state: simulationSnapshotSchema,
     writerDisplacedActivityID: z.string().nullable(),
   })
@@ -40,6 +41,11 @@ const ackSchema = z.object({ ok: z.literal(true) }).readonly();
 const undeliveredWorkInputSchema = z
   .object({ avatarIDs: z.array(z.string()).readonly() })
   .readonly();
+
+const simulationSpeedStatusSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('applied'), speed: z.int().min(1) }).readonly(),
+  z.object({ kind: z.literal('refused'), reason: z.literal('avatar-not-qa') }).readonly(),
+]);
 
 const undeliveredWorkSchema = z
   .object({ activityCount: z.int().min(0), playMs: z.number().min(0) })
@@ -96,6 +102,12 @@ export const workerContract = {
     )
     .output(z.object({ failureAction: z.enum(ActivityFailureAction) }).readonly()),
 
+  setSimulationSpeed: oc
+    .input(
+      z.object({ isQAAvatar: z.boolean(), speed: z.int().min(1).max(QA_SIM_SPEED_MAX) }).readonly(),
+    )
+    .output(simulationSpeedStatusSchema),
+
   startActivity: oc
     .input(
       z.object({ avatarID: z.string(), scopeID: z.string(), scopeType: z.string() }).readonly(),
@@ -114,6 +126,8 @@ export type InitializeOutput = z.infer<typeof initializeOutputSchema>;
 export type RewardSlotLedgerEntry = z.infer<typeof rewardSlotLedgerEntrySchema>;
 
 export type RewardSlotLedgerSnapshot = z.infer<typeof rewardSlotLedgerSnapshotSchema>;
+
+export type SimulationSpeedStatus = z.infer<typeof simulationSpeedStatusSchema>;
 
 export type StartStatus = z.infer<typeof startStatusSchema>;
 

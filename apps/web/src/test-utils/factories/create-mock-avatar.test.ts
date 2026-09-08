@@ -7,6 +7,7 @@ test('it builds a default avatar', () => {
   expect(avatar).toStrictEqual({
     createdAt: expect.toBeDate(),
     id: expect.toBeString(),
+    isQA: false,
     level: expect.toBeNumber(),
     mode: 'trade',
     name: expect.toBeString(),

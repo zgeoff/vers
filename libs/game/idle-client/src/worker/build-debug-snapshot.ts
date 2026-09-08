@@ -14,6 +14,7 @@ interface BuildDebugSnapshotInput {
   readonly latestRun: LatestRun | null;
   readonly liveRun: LiveRun | undefined;
   readonly phase: string;
+  readonly simulationSpeed: number;
   readonly startAttempts: ReadonlyMap<string, StartAttemptRecord>;
   readonly starts: ReadonlyArray<ActivityData>;
   readonly submitterStates: ReadonlyArray<SubmitterActivityState>;
@@ -89,6 +90,7 @@ export function buildDebugSnapshot(input: BuildDebugSnapshotInput): WorkerDebugS
       })),
     },
     phase: input.phase,
+    simulationSpeed: input.simulationSpeed,
     writer: input.writer,
   };
 }

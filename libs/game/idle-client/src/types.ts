@@ -1,6 +1,7 @@
 export type {
   RewardSlotLedgerEntry,
   RewardSlotLedgerSnapshot,
+  SimulationSpeedStatus,
   StartStatus,
   UndeliveredWork,
 } from './worker/worker-contract';
@@ -18,6 +19,7 @@ export enum WorkerMessageType {
   OfflineCapStatus = 'offline_cap_status',
   ResyncStatus = 'resync_status',
   RewardSlotsRecorded = 'reward_slots_recorded',
+  SimulationSpeedStatus = 'simulation_speed_status',
   SimulationUpdate = 'simulation_update',
   WriterDisplaced = 'writer_displaced',
   WriterPending = 'writer_pending',

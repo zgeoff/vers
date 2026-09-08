@@ -6,6 +6,7 @@ test('it accepts a well-formed trade-mode avatar', () => {
   const payload: AvatarData = {
     createdAt: new Date('2026-01-01T00:00:00.000Z'),
     id: 'avatar_1',
+    isQA: false,
     level: 5,
     mode: 'trade',
     name: 'Karnak',
@@ -22,6 +23,7 @@ test('it accepts a well-formed self_found-mode avatar', () => {
   const payload: AvatarData = {
     createdAt: new Date('2026-01-01T00:00:00.000Z'),
     id: 'avatar_1',
+    isQA: false,
     level: 5,
     mode: 'self_found',
     name: 'Karnak',
@@ -38,6 +40,7 @@ test('it rejects an unrecognized mode', () => {
   const payload = {
     createdAt: new Date('2026-01-01T00:00:00.000Z'),
     id: 'avatar_1',
+    isQA: false,
     level: 5,
     mode: 'hardcore',
     name: 'Karnak',

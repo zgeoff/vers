@@ -61,6 +61,23 @@ snapshot**, the avatar's equipment, passives, and level pinned as a simulation i
 ends, the writer broadcasts the run's outcome beside the snapshot, so a viewer learns the run ended
 without waiting for another tick.
 
+### The QA speed multiplier
+
+A QA avatar can run the writer's fixed-timestep loop faster than real time. The multiplier scales
+the wall clock the loop banks into its accumulator, never the fixed step (`SIMULATION_TIMESTEP_MS`)
+each run consumes, so at speed 20 the writer runs 20 fixed steps for every step of real time and
+walks the same step sequence a real-time run walks. The checkpoint stream, its hashes, its rewards,
+and the replay that proves it are identical to a real-time run on the same seed. The multiplier
+applies to live combat only: the checkpoint flush keeps its wall-clock cadence, `playedAt` stays the
+wall clock, and the offline fast-forward is unaffected.
+
+A **QA avatar** is an avatar whose row carries the `is_qa` flag. Only the QA seed tooling writes the
+flag ([manual QA](../platform/qa.md#accounts)); no client route or procedure can set it. The writer
+accepts a speed from 1 to `QA_SIM_SPEED_MAX` (20) through the QA debug hook
+([manual QA](../platform/qa.md#debug-hook)) and refuses a speed above 1 for an avatar that is not
+flagged. A sped-up run debits the avatar's offline budget at its simulated rate, so the activity
+service credits a QA avatar's meter faster in turn ([the offline budget](#the-offline-budget)).
+
 ### Writer election
 
 Every writer takes one origin-wide exclusive Web Lock before it boots, whichever transport the
@@ -300,6 +317,11 @@ time — not activity cycling, not stop/start, not avatar rotation. Live play se
 banks roughly the wall clock it consumes. A small initial grant on the meter absorbs tick-boundary
 and network jitter.
 
+One exception: a QA avatar's meter refills at `QA_SIM_SPEED_MAX` (20) times the elapsed wall clock,
+so a run at the maximum [QA speed multiplier](#the-qa-speed-multiplier) self-funds the way a
+real-time run does. The cap still applies, the same append path enforces it, and every other avatar
+refills at wall-clock rate.
+
 A batch whose delta exceeds the accrued budget is rejected whole, and the activity takes the
 terminal `capped` transition at its current head. The `ACTIVITY_CAPPED` error carries that head as
 the exact index the client rebases its stream cursor from, and resuming requires a resync. An honest
@@ -324,6 +346,7 @@ settles the offline gap is the subject of [offline reconcile](./offline-reconcil
 | build snapshot      | The avatar's equipment, passives, and level pinned as a simulation input; the client predicts it, the server re-derives and verifies it. |
 | sim snapshot        | The engine's serializable projection from `getSnapshot()`, which viewer tabs render.                                                     |
 | writer worker       | The one worker per browser profile that runs the simulation and appends its checkpoints.                                                 |
+| QA avatar           | An avatar whose row the QA seed tooling flagged; it may run the writer above real time and its offline budget refills faster to match.   |
 | verifier            | The server process that replays a submitted stream to decide whether to trust it.                                                        |
 | checkpoint          | One recorded simulation step: a row keyed `(activity_id, version)` that links the previous checkpoint's hash.                            |
 | head row            | An activity's single row carrying its two cursors, last checkpoint hash, writer session, and status.                                     |

@@ -9,6 +9,7 @@ export type DebugEventType =
   | 'lifecycle'
   | 'resync'
   | 'run'
+  | 'speed'
   | 'start'
   | 'start-ingest'
   | 'stream'

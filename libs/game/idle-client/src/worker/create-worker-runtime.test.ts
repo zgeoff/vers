@@ -552,3 +552,489 @@ test('it records the resync a fresh worker runs ahead of its first start in the 
   expect(phases).toStrictEqual(['resyncing', 'starting', 'running']);
   expect(snapshot.events).toPartiallyContain({ detail: '1_0 started', type: 'start' });
 });
+
+test('it runs twenty fixed steps per real-time step at speed 20 and writes the checkpoint stream a real-time run writes', async () => {
+  const viewer = await createViewer();
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
+
+  // this seed's placeholder encounter completes in exactly 60s of simulated time; the hashes are
+  // pinned so the stream links from the same start whichever row a run attaches to
+  const activity = await db.activityCollection.create({
+    avatarID: viewer.avatar.id,
+    encounterNode: { difficulty: 1 },
+    lastHash: 'a'.repeat(64),
+    seed: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaa6072',
+    startHash: 'b'.repeat(64),
+    startedAt: new Date(),
+  });
+
+  const clock = createFastClock();
+
+  using runtime = createWorkerRuntime({ client, now: clock.now });
+
+  const testClient = createConnectedTestClient(runtime);
+
+  await testClient.initialize({});
+
+  // the report awaits the recovery it triggers, so the zero-gap row is attached live and sits at
+  // no simulated time when it answers
+  await testClient.reportOnline({ avatarID: viewer.avatar.id, claim: true });
+
+  const attached = await testClient.initialize({});
+
+  expect(attached.state.activity).toMatchObject({ elapsed: 0, id: activity.id });
+
+  const status = await testClient.setSimulationSpeed({ isQAAvatar: true, speed: 20 });
+
+  expect(status).toStrictEqual({ kind: 'applied', speed: 20 });
+
+  clock.jump(1000);
+
+  // one second of wall clock is twenty seconds of simulated time; the run's clock reads one fixed
+  // step behind the frame because the engine yields the Started checkpoint before it starts it
+  await waitFor(async () => {
+    const current = await testClient.initialize({});
+
+    expect(current.state.activity?.elapsed).toBe(19_950);
+  });
+
+  await waitFor(
+    () => {
+      // re-armed every poll until the jump lands on a live tick and the terminal append flushes;
+      // one landing carries the run past its 60s completion
+      clock.jump(2250);
+
+      const stopped = db.activityCollection.findFirst((q) => q.where({ id: activity.id }));
+
+      invariant(stopped !== undefined, 'expected the attached row to survive the run');
+
+      expect(stopped.status).toBe('stopped');
+    },
+
+    // the tick loop paces itself on real timers between each of the many timesteps this jump
+    // spans, so a loaded runner can need several times the default budget to land a live tick
+    { timeoutMs: 5000 },
+  );
+
+  const stream = db.checkpointCollection
+    .findMany((q) => q.where({ activityID: activity.id }))
+    .toSorted((a, b) => a.version - b.version)
+    .map((checkpoint) => ({
+      chainIndex: checkpoint.payload.chainIndex,
+      hash: checkpoint.hash,
+      time: checkpoint.payload.time,
+      type: checkpoint.payload.type,
+      version: checkpoint.version,
+    }));
+
+  expect(stream).toMatchInlineSnapshot(`
+    [
+      {
+        "chainIndex": 1,
+        "hash": "b9f607a83348ea06776f36f8c237ccb477b5dcb88b13e9f0eb12eed87e3ab3d4",
+        "time": 0,
+        "type": "started",
+        "version": 1,
+      },
+      {
+        "chainIndex": 2,
+        "hash": "0d42348c3abb6a8376ab4ed8e609128b4648812348caf62279125902dffdb85e",
+        "time": 2500,
+        "type": "progress",
+        "version": 2,
+      },
+      {
+        "chainIndex": 3,
+        "hash": "2097b0685292037f1ec84130500dd3a1d3fa3a2863904799ffdce8fa8056a1f8",
+        "time": 3750,
+        "type": "progress",
+        "version": 3,
+      },
+      {
+        "chainIndex": 4,
+        "hash": "e4832c5538db11a6fce54b181e18c9c36a44d756f4f478b242a2fe79174944d2",
+        "time": 7500,
+        "type": "progress",
+        "version": 4,
+      },
+      {
+        "chainIndex": 5,
+        "hash": "470fa1c0e352db39632a33061bfa2e439dd6ac2f1f662faf947a49468cb537ba",
+        "time": 11250,
+        "type": "progress",
+        "version": 5,
+      },
+      {
+        "chainIndex": 6,
+        "hash": "b8235b9374ecf2933c91f8fe5530a47fa9fe8839282e1022fe320a942ce1c189",
+        "time": 15000,
+        "type": "progress",
+        "version": 6,
+      },
+      {
+        "chainIndex": 7,
+        "hash": "2aca4a9a87601995af3170e6df46f7942c7b5a3bc0f8b4d4caffe1bb83c1a813",
+        "time": 18750,
+        "type": "progress",
+        "version": 7,
+      },
+      {
+        "chainIndex": 8,
+        "hash": "0d75ce48fd5a0ec2bce3122bc4bbd5323c206888d3ac1d47f8ab62e9d66af819",
+        "time": 21250,
+        "type": "progress",
+        "version": 8,
+      },
+      {
+        "chainIndex": 9,
+        "hash": "45d08011b788c7b43a6e2858d4cd4b4ebe1d479825869cfb4046ba8e732bcfcc",
+        "time": 25000,
+        "type": "progress",
+        "version": 9,
+      },
+      {
+        "chainIndex": 10,
+        "hash": "c95928929bfb0a416aeb560a7f6f02aff2c30c1342668a702024acb151c0d8ac",
+        "time": 27500,
+        "type": "progress",
+        "version": 10,
+      },
+      {
+        "chainIndex": 11,
+        "hash": "7ef1af731cbca24c2ec37a2b1c085553cd5f96b5f3ecf4866087c9ef54779461",
+        "time": 30000,
+        "type": "progress",
+        "version": 11,
+      },
+      {
+        "chainIndex": 12,
+        "hash": "25cdf7f8a1df88a12b4c76bdf7e17a77f0db395364bda663d115f1a15e059bc0",
+        "time": 33750,
+        "type": "progress",
+        "version": 12,
+      },
+      {
+        "chainIndex": 13,
+        "hash": "e0748114d81b13f777d23505356426e8b5e7b3a02e7c26fe55e3e22f311c2414",
+        "time": 35000,
+        "type": "progress",
+        "version": 13,
+      },
+      {
+        "chainIndex": 14,
+        "hash": "2887c3a87720b7bf9ab26a3c1b6cc6982667c1458d6582e0b9e7f31680983ce1",
+        "time": 37500,
+        "type": "progress",
+        "version": 14,
+      },
+      {
+        "chainIndex": 15,
+        "hash": "c4581165d418d23f82220590a6368eec8fe1f2ff64ac221da4322fac19822028",
+        "time": 40000,
+        "type": "progress",
+        "version": 15,
+      },
+      {
+        "chainIndex": 16,
+        "hash": "6ce6242499785717015e530ca209c8ff3e071b563eeacd43e95aa4f9abc84bc3",
+        "time": 42500,
+        "type": "progress",
+        "version": 16,
+      },
+      {
+        "chainIndex": 17,
+        "hash": "55051dcbb66ac44c0e7bba16fef85b8f1bbf10499e2b3a16da1efeb76e8e8d5b",
+        "time": 45000,
+        "type": "progress",
+        "version": 17,
+      },
+      {
+        "chainIndex": 18,
+        "hash": "cf79c2ba50a32468b3f6f7af66d9b613abf79be5c1f2225bfb78f72c1370fdd8",
+        "time": 47500,
+        "type": "progress",
+        "version": 18,
+      },
+      {
+        "chainIndex": 19,
+        "hash": "209ea7503e10607cbbce55b785595546a3b49ea8ddbf3f71ce3b10ceb42da8e9",
+        "time": 50000,
+        "type": "progress",
+        "version": 19,
+      },
+      {
+        "chainIndex": 20,
+        "hash": "399fc5839dd392a4215a078c632988b159a15e396f9adda05d346b495acb2bea",
+        "time": 52500,
+        "type": "progress",
+        "version": 20,
+      },
+      {
+        "chainIndex": 21,
+        "hash": "645a3089b11e47cbd1a35565db6a0750b47e7c53add9816ac442100a8bfb1d03",
+        "time": 55000,
+        "type": "progress",
+        "version": 21,
+      },
+      {
+        "chainIndex": 22,
+        "hash": "123c2126509544910162ac63de6b97dac3fe7409ec416178692b2b3ca869e761",
+        "time": 57500,
+        "type": "progress",
+        "version": 22,
+      },
+      {
+        "chainIndex": 23,
+        "hash": "5d7eace6c117d4d38a9c9d0ac2004da6b723b3e749dd9cd8d9f357f963055f23",
+        "time": 60000,
+        "type": "progress",
+        "version": 23,
+      },
+      {
+        "chainIndex": 24,
+        "hash": "e90d3e62164200bfec7f2940cde935cc075a6801b4a7fad71e847fc3807ca8f0",
+        "time": 60000,
+        "type": "completed",
+        "version": 24,
+      },
+    ]
+  `);
+});
+
+test('it writes the same checkpoint stream at real time as a speed-20 run on the same seed', async () => {
+  const viewer = await createViewer();
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
+
+  const activity = await db.activityCollection.create({
+    avatarID: viewer.avatar.id,
+    encounterNode: { difficulty: 1 },
+    lastHash: 'a'.repeat(64),
+    seed: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaa6072',
+    startHash: 'b'.repeat(64),
+    startedAt: new Date(),
+  });
+
+  const clock = createFastClock();
+
+  using runtime = createWorkerRuntime({ client, now: clock.now });
+
+  const testClient = createConnectedTestClient(runtime);
+
+  await testClient.initialize({});
+  await testClient.reportOnline({ avatarID: viewer.avatar.id, claim: true });
+
+  const attached = await testClient.initialize({});
+
+  expect(attached.state.activity).toMatchObject({ elapsed: 0, id: activity.id });
+
+  clock.jump(20_000);
+
+  // twenty seconds of wall clock is twenty seconds of simulated time, read one fixed step behind
+  // the frame for the same reason the speed-20 run reads it
+  await waitFor(async () => {
+    const current = await testClient.initialize({});
+
+    expect(current.state.activity?.elapsed).toBe(19_950);
+  });
+
+  await waitFor(
+    () => {
+      // re-armed every poll until the jump lands on a live tick and the terminal append flushes
+      clock.jump(45_000);
+
+      const stopped = db.activityCollection.findFirst((q) => q.where({ id: activity.id }));
+
+      invariant(stopped !== undefined, 'expected the attached row to survive the run');
+
+      expect(stopped.status).toBe('stopped');
+    },
+
+    // the tick loop paces itself on real timers between each of the many timesteps this jump
+    // spans, so a loaded runner can need several times the default budget to land a live tick
+    { timeoutMs: 5000 },
+  );
+
+  const stream = db.checkpointCollection
+    .findMany((q) => q.where({ activityID: activity.id }))
+    .toSorted((a, b) => a.version - b.version)
+    .map((checkpoint) => ({
+      chainIndex: checkpoint.payload.chainIndex,
+      hash: checkpoint.hash,
+      time: checkpoint.payload.time,
+      type: checkpoint.payload.type,
+      version: checkpoint.version,
+    }));
+
+  expect(stream).toMatchInlineSnapshot(`
+    [
+      {
+        "chainIndex": 1,
+        "hash": "b9f607a83348ea06776f36f8c237ccb477b5dcb88b13e9f0eb12eed87e3ab3d4",
+        "time": 0,
+        "type": "started",
+        "version": 1,
+      },
+      {
+        "chainIndex": 2,
+        "hash": "0d42348c3abb6a8376ab4ed8e609128b4648812348caf62279125902dffdb85e",
+        "time": 2500,
+        "type": "progress",
+        "version": 2,
+      },
+      {
+        "chainIndex": 3,
+        "hash": "2097b0685292037f1ec84130500dd3a1d3fa3a2863904799ffdce8fa8056a1f8",
+        "time": 3750,
+        "type": "progress",
+        "version": 3,
+      },
+      {
+        "chainIndex": 4,
+        "hash": "e4832c5538db11a6fce54b181e18c9c36a44d756f4f478b242a2fe79174944d2",
+        "time": 7500,
+        "type": "progress",
+        "version": 4,
+      },
+      {
+        "chainIndex": 5,
+        "hash": "470fa1c0e352db39632a33061bfa2e439dd6ac2f1f662faf947a49468cb537ba",
+        "time": 11250,
+        "type": "progress",
+        "version": 5,
+      },
+      {
+        "chainIndex": 6,
+        "hash": "b8235b9374ecf2933c91f8fe5530a47fa9fe8839282e1022fe320a942ce1c189",
+        "time": 15000,
+        "type": "progress",
+        "version": 6,
+      },
+      {
+        "chainIndex": 7,
+        "hash": "2aca4a9a87601995af3170e6df46f7942c7b5a3bc0f8b4d4caffe1bb83c1a813",
+        "time": 18750,
+        "type": "progress",
+        "version": 7,
+      },
+      {
+        "chainIndex": 8,
+        "hash": "0d75ce48fd5a0ec2bce3122bc4bbd5323c206888d3ac1d47f8ab62e9d66af819",
+        "time": 21250,
+        "type": "progress",
+        "version": 8,
+      },
+      {
+        "chainIndex": 9,
+        "hash": "45d08011b788c7b43a6e2858d4cd4b4ebe1d479825869cfb4046ba8e732bcfcc",
+        "time": 25000,
+        "type": "progress",
+        "version": 9,
+      },
+      {
+        "chainIndex": 10,
+        "hash": "c95928929bfb0a416aeb560a7f6f02aff2c30c1342668a702024acb151c0d8ac",
+        "time": 27500,
+        "type": "progress",
+        "version": 10,
+      },
+      {
+        "chainIndex": 11,
+        "hash": "7ef1af731cbca24c2ec37a2b1c085553cd5f96b5f3ecf4866087c9ef54779461",
+        "time": 30000,
+        "type": "progress",
+        "version": 11,
+      },
+      {
+        "chainIndex": 12,
+        "hash": "25cdf7f8a1df88a12b4c76bdf7e17a77f0db395364bda663d115f1a15e059bc0",
+        "time": 33750,
+        "type": "progress",
+        "version": 12,
+      },
+      {
+        "chainIndex": 13,
+        "hash": "e0748114d81b13f777d23505356426e8b5e7b3a02e7c26fe55e3e22f311c2414",
+        "time": 35000,
+        "type": "progress",
+        "version": 13,
+      },
+      {
+        "chainIndex": 14,
+        "hash": "2887c3a87720b7bf9ab26a3c1b6cc6982667c1458d6582e0b9e7f31680983ce1",
+        "time": 37500,
+        "type": "progress",
+        "version": 14,
+      },
+      {
+        "chainIndex": 15,
+        "hash": "c4581165d418d23f82220590a6368eec8fe1f2ff64ac221da4322fac19822028",
+        "time": 40000,
+        "type": "progress",
+        "version": 15,
+      },
+      {
+        "chainIndex": 16,
+        "hash": "6ce6242499785717015e530ca209c8ff3e071b563eeacd43e95aa4f9abc84bc3",
+        "time": 42500,
+        "type": "progress",
+        "version": 16,
+      },
+      {
+        "chainIndex": 17,
+        "hash": "55051dcbb66ac44c0e7bba16fef85b8f1bbf10499e2b3a16da1efeb76e8e8d5b",
+        "time": 45000,
+        "type": "progress",
+        "version": 17,
+      },
+      {
+        "chainIndex": 18,
+        "hash": "cf79c2ba50a32468b3f6f7af66d9b613abf79be5c1f2225bfb78f72c1370fdd8",
+        "time": 47500,
+        "type": "progress",
+        "version": 18,
+      },
+      {
+        "chainIndex": 19,
+        "hash": "209ea7503e10607cbbce55b785595546a3b49ea8ddbf3f71ce3b10ceb42da8e9",
+        "time": 50000,
+        "type": "progress",
+        "version": 19,
+      },
+      {
+        "chainIndex": 20,
+        "hash": "399fc5839dd392a4215a078c632988b159a15e396f9adda05d346b495acb2bea",
+        "time": 52500,
+        "type": "progress",
+        "version": 20,
+      },
+      {
+        "chainIndex": 21,
+        "hash": "645a3089b11e47cbd1a35565db6a0750b47e7c53add9816ac442100a8bfb1d03",
+        "time": 55000,
+        "type": "progress",
+        "version": 21,
+      },
+      {
+        "chainIndex": 22,
+        "hash": "123c2126509544910162ac63de6b97dac3fe7409ec416178692b2b3ca869e761",
+        "time": 57500,
+        "type": "progress",
+        "version": 22,
+      },
+      {
+        "chainIndex": 23,
+        "hash": "5d7eace6c117d4d38a9c9d0ac2004da6b723b3e749dd9cd8d9f357f963055f23",
+        "time": 60000,
+        "type": "progress",
+        "version": 23,
+      },
+      {
+        "chainIndex": 24,
+        "hash": "e90d3e62164200bfec7f2940cde935cc075a6801b4a7fad71e847fc3807ca8f0",
+        "time": 60000,
+        "type": "completed",
+        "version": 24,
+      },
+    ]
+  `);
+});

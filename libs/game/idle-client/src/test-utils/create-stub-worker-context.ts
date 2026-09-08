@@ -42,6 +42,7 @@ export function createStubWorkerContext(
 
   const submitter: CheckpointSubmitter = options.submitter ?? createStubSubmitter();
   let simulation: Simulation = createSimulation();
+  let simulationSpeed = 1;
   let activity: ActivityData | null = null;
   let resyncAvatarID: string | null = null;
   let rewardSlotLedgerActivityID: null | string = null;
@@ -84,6 +85,7 @@ export function createStubWorkerContext(
       entries: rewardSlotLedger,
     }),
     getSimulation: () => simulation,
+    getSimulationSpeed: () => simulationSpeed,
     getStartToken: () => getLifecycle().getSnapshot().context.startToken,
     getStopSignal: () => getLifecycle().getSnapshot().context.stopController.signal,
     getSubmitter: () => submitter,
@@ -129,6 +131,9 @@ export function createStubWorkerContext(
     },
     setSimulation: (newSimulation) => {
       simulation = newSimulation;
+    },
+    setSimulationSpeed: (speed) => {
+      simulationSpeed = speed;
     },
     setStartToken: (token) => {
       getLifecycle().send({ token, type: 'SET_START_TOKEN' });
