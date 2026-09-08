@@ -23,9 +23,15 @@ interface RefusedSnapshot {
   readonly row: ActivityData;
 }
 
+export interface StartRefusal {
+  readonly code: string;
+  readonly reason: null | string;
+}
+
 export interface IngestActivityStartResult {
   readonly notice?: IngestActivityStartNotice;
   readonly outcome: IngestActivityStartOutcome;
+  readonly refusal?: StartRefusal;
   readonly refusedSnapshot?: RefusedSnapshot;
 }
 
@@ -91,14 +97,16 @@ export async function ingestActivityStart(
     return { outcome: 'undelivered' };
   }
 
+  const refusal = buildStartRefusal(error);
+
   if (error.code === 'CHECKPOINT_INVALID') {
     if (CHECKPOINT_INVALID_DISPOSITIONS[error.data.reason] === 'progress-check') {
-      return resolveRefusedSnapshot(client, row);
+      return resolveRefusedSnapshot(client, row, refusal);
     }
 
     await removeActivityStart(activityID);
 
-    return { outcome: 'rejected' };
+    return { outcome: 'rejected', refusal };
   }
 
   // the account switched avatars while this device held the activity start: the row keeps for a
@@ -107,6 +115,7 @@ export async function ingestActivityStart(
     return {
       notice: { activeAvatarName: error.data.activeAvatarName, kind: 'avatar-switched' },
       outcome: 'deferred',
+      refusal,
     };
   }
 
@@ -114,28 +123,40 @@ export async function ingestActivityStart(
   if (error.code === 'SIM_VERSION_EXPIRED') {
     await removeActivityStart(activityID);
 
-    return { notice: { kind: 'sim-version-expired' }, outcome: 'rejected' };
+    return { notice: { kind: 'sim-version-expired' }, outcome: 'rejected', refusal };
   }
 
   if (REJECTED_CODES.has(error.code)) {
     await removeActivityStart(activityID);
 
-    return { outcome: 'rejected' };
+    return { outcome: 'rejected', refusal };
   }
 
-  return { outcome: 'deferred' };
+  return { outcome: 'deferred', refusal };
+}
+
+function buildStartRefusal(error: Readonly<{ code: string; data: unknown }>): StartRefusal {
+  const data: unknown = error.data;
+
+  const reason =
+    typeof data === 'object' && data !== null && 'reason' in data && typeof data.reason === 'string'
+      ? data.reason
+      : null;
+
+  return { code: error.code, reason };
 }
 
 async function resolveRefusedSnapshot(
   client: IngestClient,
   row: Readonly<ActivityData>,
+  refusal: StartRefusal,
 ): Promise<IngestActivityStartResult> {
   // the server folds without a predecessor this device has not delivered yet; the drain delivers
   // it first, and this row's resend follows
   const predecessorPending = await isPredecessorPending(row.predecessorActivityID);
 
   if (predecessorPending) {
-    return { outcome: 'deferred' };
+    return { outcome: 'deferred', refusal };
   }
 
   const [error, progress] = await safe(
@@ -143,7 +164,7 @@ async function resolveRefusedSnapshot(
   );
 
   if (error !== null && !(isDefinedError(error) && error.code === 'NOT_FOUND')) {
-    return { outcome: 'deferred' };
+    return { outcome: 'deferred', refusal };
   }
 
   const latest = error === null ? progress : null;
@@ -152,12 +173,12 @@ async function resolveRefusedSnapshot(
     pickRefusedSnapshotDisposition({ latest, predecessorID: row.predecessorActivityID }) ===
     'deferred'
   ) {
-    return { outcome: 'deferred' };
+    return { outcome: 'deferred', refusal };
   }
 
   // the caller removes the row once its drop has cleared everything chained on it; removing it
   // here would leave a drop that fails part way with no root for the next reconnect to retry from
-  return { outcome: 'rejected', refusedSnapshot: { latest, row } };
+  return { outcome: 'rejected', refusal, refusedSnapshot: { latest, row } };
 }
 
 async function isPredecessorPending(predecessorID: null | string): Promise<boolean> {

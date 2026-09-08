@@ -213,7 +213,10 @@ test('it defers a build-snapshot-mismatch while the named predecessor is still a
 
   const outcome = await ingestActivityStart(client, row.id);
 
-  expect(outcome).toStrictEqual({ outcome: 'deferred' });
+  expect(outcome).toStrictEqual({
+    outcome: 'deferred',
+    refusal: { code: 'CHECKPOINT_INVALID', reason: 'build-snapshot-mismatch' },
+  });
 
   const stored = await readActivityStart(row.id);
 
@@ -257,7 +260,11 @@ test('it defers a build-snapshot-mismatch while the named predecessor still wait
 
   const outcome = await ingestActivityStart(ctx.client, row.id);
 
-  expect(outcome).toStrictEqual({ outcome: 'deferred' });
+  expect(outcome).toStrictEqual({
+    outcome: 'deferred',
+    refusal: { code: 'CHECKPOINT_INVALID', reason: 'build-snapshot-mismatch' },
+  });
+
   expect(track).not.toHaveBeenCalled();
 
   const stored = await readActivityStart(row.id);
@@ -423,6 +430,7 @@ test('it rejects a build-snapshot-mismatch with no server row to fold from when 
 
   expect(outcome).toStrictEqual({
     outcome: 'rejected',
+    refusal: { code: 'CHECKPOINT_INVALID', reason: 'build-snapshot-mismatch' },
     refusedSnapshot: { latest: null, row },
   });
 });
@@ -454,7 +462,10 @@ test('it keeps a build-snapshot-mismatch for the backoff when the progress read 
 
   const outcome = await ingestActivityStart(ctx.client, row.id);
 
-  expect(outcome).toStrictEqual({ outcome: 'deferred' });
+  expect(outcome).toStrictEqual({
+    outcome: 'deferred',
+    refusal: { code: 'CHECKPOINT_INVALID', reason: 'build-snapshot-mismatch' },
+  });
 
   const stored = await readActivityStart(row.id);
 
@@ -484,6 +495,7 @@ test('it defers an activityStart the account switched away from, carrying the sw
   expect(outcome).toStrictEqual({
     notice: { activeAvatarName: 'Zetha', kind: 'avatar-switched' },
     outcome: 'deferred',
+    refusal: { code: 'AVATAR_NOT_ACTIVE', reason: null },
   });
 
   // held, not dropped: switching back delivers it
@@ -509,6 +521,7 @@ test('it drops an activityStart this build can no longer replay, carrying the re
   expect(outcome).toStrictEqual({
     notice: { kind: 'sim-version-expired' },
     outcome: 'rejected',
+    refusal: { code: 'SIM_VERSION_EXPIRED', reason: null },
   });
 
   const stored = await readActivityStart(row.id);

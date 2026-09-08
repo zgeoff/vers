@@ -2,6 +2,7 @@ import { implement } from '@orpc/server';
 import { handleCacheNodeSeedsMessage } from './handle-cache-node-seeds-message';
 import { handleDisconnectMessage } from './handle-disconnect-message';
 import { handleInitializeMessage } from './handle-initialize-message';
+import { handleReadDebugSnapshotMessage } from './handle-read-debug-snapshot-message';
 import { handleReadUndeliveredWorkMessage } from './handle-read-undelivered-work-message';
 import { handleRemoveUndeliveredWorkMessage } from './handle-remove-undelivered-work-message';
 import { handleReportOnlineMessage } from './handle-report-online-message';
@@ -38,6 +39,12 @@ export function createWorkerRouter(context: WorkerContext, ready: Readonly<Promi
       return handleInitializeMessage(context);
     }),
 
+    readDebugSnapshot: os.readDebugSnapshot.handler(async () => {
+      await ready;
+
+      return handleReadDebugSnapshotMessage(context);
+    }),
+
     readUndeliveredWork: os.readUndeliveredWork.handler(async () => {
       await ready;
 
@@ -67,7 +74,11 @@ export function createWorkerRouter(context: WorkerContext, ready: Readonly<Promi
     startActivity: os.startActivity.handler(async (opts) => {
       await ready;
 
-      return handleStartActivityMessage(context, opts.input);
+      const status = await handleStartActivityMessage(context, opts.input);
+
+      context.getDebugRecorder().recordEvent('start', `${opts.input.scopeID} ${status.kind}`);
+
+      return status;
     }),
 
     stopActivity: os.stopActivity.handler(async (opts) => {

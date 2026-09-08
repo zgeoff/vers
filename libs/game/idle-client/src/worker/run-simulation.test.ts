@@ -283,6 +283,7 @@ test('it broadcasts a reward-slot ledger message for each submitted checkpoint t
 
       return Promise.resolve(version);
     },
+    collectActivityStates: () => [],
     isEvicted: () => false,
     removeEviction: () => {},
   };

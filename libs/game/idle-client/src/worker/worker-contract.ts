@@ -2,6 +2,7 @@ import { oc } from '@orpc/contract';
 import { ActivityDataSchema, EncounterNodeSchema } from '@vers/contract-activity';
 import { ActivityFailureAction } from '@vers/idle-core';
 import * as z from 'zod';
+import { debugSnapshotSchema } from './debug-snapshot-schema';
 import { liveRunSchema } from './live-run-schema';
 import { simulationSnapshotSchema } from './simulation-snapshot-schema';
 
@@ -74,6 +75,8 @@ export const workerContract = {
   disconnect: oc.input(z.object({}).readonly()).output(ackSchema),
 
   initialize: oc.input(z.object({}).readonly()).output(initializeOutputSchema),
+
+  readDebugSnapshot: oc.input(z.object({}).readonly()).output(debugSnapshotSchema),
 
   readUndeliveredWork: oc.input(z.object({}).readonly()).output(undeliveredWorkSchema),
 

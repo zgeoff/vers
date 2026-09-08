@@ -12,6 +12,7 @@ import type { CheckpointActivityEmittedEvent } from './checkpoint-activity-machi
 import { checkpointActivityMachine } from './checkpoint-activity-machine';
 import { PROGRESS_FLUSH_INTERVAL_MS, RETRY_BACKOFF_CAP_MS } from './constants';
 import type { IngestActivityStartOutcome } from './ingest-activity-start';
+import type { FlushOutcome } from './run-checkpoint-flush-attempt';
 import type { ActivityServiceClient } from './types';
 import { writeQueuedCheckpoint } from './write-queued-checkpoint';
 
@@ -21,6 +22,7 @@ function setupTest(
     ingestActivityStart?: (activityID: string) => Promise<IngestActivityStartOutcome>;
     latestQueuedVersion?: number;
     onAcked?: (activityID: string, appendedHead: number) => void;
+    onFlushSettled?: (activityID: string, outcome: Readonly<FlushOutcome>) => void;
     signal?: AbortSignal;
     terminalQueued?: boolean;
   }> = {},
@@ -45,6 +47,7 @@ function setupTest(
       onAcked,
       onCapped: undefined,
       onEvicted: undefined,
+      onFlushSettled: config.onFlushSettled,
       onInvalid,
       onServerContact: undefined,
       retryTimings: { maxTimeout: RETRY_BACKOFF_CAP_MS, minTimeout: PROGRESS_FLUSH_INTERVAL_MS },
@@ -935,4 +938,52 @@ test('it arms the progress window for a checkpoint queued while a flush was in f
       type: 'retryFailed',
     },
   ]);
+});
+
+test('it reports every flush outcome to the settled observer', async () => {
+  const onFlushSettled = mock<(activityID: string, outcome: Readonly<FlushOutcome>) => void>();
+  const ctx = setupTest({ activityID: 'observed-flush-activity', onFlushSettled });
+
+  server.use(mockActivityService.trackActivityProgress.handler(() => ({ appendedHead: 1 })));
+
+  await writeQueuedCheckpoint(
+    'observed-flush-activity',
+    createMockCheckpointBatchEntry({ version: 1 }),
+  );
+
+  ctx.actor.send({ type: 'FLUSH_NOW' });
+
+  await waitFor(() => {
+    expect(ctx.actor.getSnapshot().matches('idle')).toBeTrue();
+  });
+
+  expect(onFlushSettled).toHaveBeenCalledExactlyOnceWith('observed-flush-activity', {
+    appendedHead: 1,
+    type: 'success',
+  });
+});
+
+test('it settles the flush even when the settled observer throws', async () => {
+  const ctx = setupTest({
+    activityID: 'throwing-observer-activity',
+    onFlushSettled: () => {
+      throw new Error('observer failed');
+    },
+  });
+
+  server.use(mockActivityService.trackActivityProgress.handler(() => ({ appendedHead: 1 })));
+
+  await writeQueuedCheckpoint(
+    'throwing-observer-activity',
+    createMockCheckpointBatchEntry({ version: 1 }),
+  );
+
+  ctx.actor.send({ type: 'FLUSH_NOW' });
+
+  await waitFor(() => {
+    expect(ctx.actor.getSnapshot().matches('idle')).toBeTrue();
+  });
+
+  expect(ctx.actor.getSnapshot().status).toBe('active');
+  expect(ctx.onAcked).toHaveBeenCalledExactlyOnceWith('throwing-observer-activity', 1);
 });

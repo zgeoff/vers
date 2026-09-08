@@ -491,3 +491,64 @@ test('it resets the displaced simulation and broadcasts WriterDisplaced on a ses
   // activity
   expect(result.state.activity).toBeUndefined();
 });
+
+test('it answers a debug snapshot that records a connectivity loss the platform reports', async () => {
+  using runtime = createWorkerRuntime();
+
+  const client = createConnectedTestClient(runtime);
+
+  self.dispatchEvent(new Event('offline'));
+
+  const snapshot = await client.readDebugSnapshot({});
+
+  expect(snapshot).toMatchObject({
+    connectivityOnline: false,
+    events: [{ detail: 'offline', type: 'connectivity' }],
+    latestRun: null,
+    liveRun: null,
+    outbox: { activityStarts: [], checkpoints: [] },
+    phase: 'idle',
+  });
+
+  expect(snapshot.writer.workerID).toBeString();
+});
+
+test('it records the resync a fresh worker runs ahead of its first start in the debug snapshot', async () => {
+  const viewer = await createViewer();
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
+
+  await db.contentDocumentCollection.create({ contentVersion: '2' });
+
+  const revealed = await client.revealNodes({ avatarID: viewer.avatar.id, nodeIDs: ['1_0'] });
+
+  await writeNodeSeeds(viewer.avatar.id, revealed.nodes);
+
+  await writeStartStamps({
+    keyVersion: revealed.keyVersion,
+    secretRef: revealed.secretRef,
+    secretVersion: revealed.secretVersion,
+  });
+
+  using runtime = createWorkerRuntime({ bundledEngineHash: 'test_engine_hash', client });
+
+  const testClient = createConnectedTestClient(runtime);
+
+  await testClient.initialize({});
+
+  const status = await testClient.startActivity({
+    avatarID: viewer.avatar.id,
+    scopeID: '1_0',
+    scopeType: 'world_map_node',
+  });
+
+  expect(status.kind).toBe('started');
+
+  const snapshot = await testClient.readDebugSnapshot({});
+
+  const phases = snapshot.events
+    .filter((event) => event.type === 'lifecycle')
+    .map((event) => event.detail);
+
+  expect(phases).toStrictEqual(['resyncing', 'starting', 'running']);
+  expect(snapshot.events).toPartiallyContain({ detail: '1_0 started', type: 'start' });
+});
