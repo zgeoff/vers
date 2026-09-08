@@ -353,4 +353,4 @@ settles the offline gap is the subject of [offline reconcile](./offline-reconcil
 | appended head       | `appended_head`: how far the client has written the stream.                                                                              |
 | verified head       | `verified_head`: how far the verifier has replayed and trusted the stream.                                                               |
 | sim version         | The engine build's version stamp (`simVersion`); pins which code replays a segment.                                                      |
-| offline budget      | The per-avatar simulated-time meter, refilled at wall-clock rate and debited per accepted batch.                                         |
+| offline budget      | The per-avatar simulated-time meter, refilled at wall-clock rate (20 times that for a QA avatar) and debited per accepted batch.         |

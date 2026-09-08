@@ -592,11 +592,17 @@ test('it runs twenty fixed steps per real-time step at speed 20 and writes the c
 
   // one second of wall clock is twenty seconds of simulated time; the run's clock reads one fixed
   // step behind the frame because the engine yields the Started checkpoint before it starts it
-  await waitFor(async () => {
-    const current = await testClient.initialize({});
+  await waitFor(
+    async () => {
+      const current = await testClient.initialize({});
 
-    expect(current.state.activity?.elapsed).toBe(19_950);
-  });
+      expect(current.state.activity?.elapsed).toBe(19_950);
+    },
+
+    // the frame runs four hundred fixed steps, each awaiting its own tick, so a loaded runner can
+    // need several times the default budget to finish it
+    { timeoutMs: 5000 },
+  );
 
   await waitFor(
     () => {
@@ -831,11 +837,17 @@ test('it writes the same checkpoint stream at real time as a speed-20 run on the
 
   // twenty seconds of wall clock is twenty seconds of simulated time, read one fixed step behind
   // the frame for the same reason the speed-20 run reads it
-  await waitFor(async () => {
-    const current = await testClient.initialize({});
+  await waitFor(
+    async () => {
+      const current = await testClient.initialize({});
 
-    expect(current.state.activity?.elapsed).toBe(19_950);
-  });
+      expect(current.state.activity?.elapsed).toBe(19_950);
+    },
+
+    // the frame runs four hundred fixed steps, each awaiting its own tick, so a loaded runner can
+    // need several times the default budget to finish it
+    { timeoutMs: 5000 },
+  );
 
   await waitFor(
     () => {
