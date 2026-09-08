@@ -13,10 +13,41 @@ if (bakedEngineHash !== undefined) {
   process.env[engineHashKey] = bakedEngineHash;
 }
 
-const service = await createReplayService();
+// error reporting starts inside the service boot, so a boot failure has nowhere to report but
+// stderr, which Fly keeps beside the machine's exit code
+const service = await createReplayService().catch((error: unknown) => {
+  console.error('scheduled replay drain could not boot', error);
+
+  return process.exit(1);
+});
+
+await withTraceContext(createTraceContext(), runScheduledDrain);
+
+// a teardown fault is reported too, and the flush runs whatever the teardown did
+try {
+  await service.stopTelemetry();
+} catch (error) {
+  service.logger.error({ err: error }, 'telemetry stop failed after the scheduled drain');
+
+  reportUnexpectedError(error);
+} finally {
+  await service.stopDB().catch((error: unknown) => {
+    service.logger.error({ err: error }, 'database stop failed after the scheduled drain');
+
+    reportUnexpectedError(error);
+  });
+}
+
+const flushed = await flushErrorReports();
+
+if (!flushed) {
+  service.logger.warn('error reports were still queued when the flush timed out');
+}
+
+process.exit(process.exitCode ?? 0);
 
 // the try/catch lives inside the trace scope so a drain failure report still carries its trace id
-await withTraceContext(createTraceContext(), async () => {
+async function runScheduledDrain(): Promise<void> {
   try {
     const drained = await service.drain('schedule');
 
@@ -28,20 +59,4 @@ await withTraceContext(createTraceContext(), async () => {
 
     process.exitCode = 1;
   }
-});
-
-try {
-  await service.stopTelemetry();
-} finally {
-  await service.stopDB();
 }
-
-// reports captured during the drain (a backed-off iteration's fault) still need delivery before
-// the process dies
-const flushed = await flushErrorReports();
-
-if (!flushed) {
-  service.logger.warn('error reports were still queued when the flush timed out');
-}
-
-process.exit(process.exitCode ?? 0);

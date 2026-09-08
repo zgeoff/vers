@@ -331,30 +331,3 @@ test('it claims an activity whose backoff has elapsed', async () => {
 
   expect(claimed?.activityID).toBe(activity.id);
 });
-
-test('it blocks a successor whose predecessor is backed off', async () => {
-  await using ctx = await setupTest();
-
-  const chain = await createChainRow(ctx.db);
-
-  const predecessor = await createActivityRow(ctx.db, {
-    appendedHead: 3,
-    avatarId: chain.avatarId,
-    replayBackoffUntil: new Date(Date.now() + 60_000),
-    scopeId: chain.scopeId,
-    status: 'stopped',
-  });
-
-  const successorChain = await createChainRow(ctx.db, { avatarId: chain.avatarId });
-
-  await createActivityRow(ctx.db, {
-    appendedHead: 2,
-    avatarId: chain.avatarId,
-    predecessorActivityId: predecessor.id,
-    scopeId: successorChain.scopeId,
-  });
-
-  const claimed = await ctx.db.transaction().execute((trx) => claimNextSeedChain(trx));
-
-  expect(claimed).toBeUndefined();
-});

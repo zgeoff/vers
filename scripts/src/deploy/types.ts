@@ -85,7 +85,12 @@ export interface MachineSweepTarget {
 
 export type ScheduledMachineAction =
   | { readonly kind: 'create'; readonly machine: ScheduledMachine; readonly image: string }
-  | { readonly kind: 'update-image'; readonly machineID: string; readonly image: string };
+  | {
+      readonly kind: 'update-image';
+      readonly machineID: string;
+      readonly image: string;
+      readonly machine: ScheduledMachine;
+    };
 
 export interface ChangeSet {
   readonly affectedPkgs: ReadonlyArray<string>;

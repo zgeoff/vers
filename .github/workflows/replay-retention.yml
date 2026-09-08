@@ -40,8 +40,8 @@ jobs:
             exit 0
           fi
           payload="$(jq -n \
-            --arg title "[CI] critical — replay retention sweep failed" \
+            --arg title "[CI] critical — replay retention sweep run failed" \
             --arg url "${RUN_URL}" \
-            --arg desc "an expired sim version still pins unverified work, or the sweep itself failed; open the run" \
+            --arg desc "the run failed: a refused prune (unverified work pinned to an expired version), a sweep fault, or a step before it; open the run" \
             '{embeds: [{title: $title, url: $url, description: $desc, color: 15026253}]}')"
           curl -fsS -H 'content-type: application/json' -d "${payload}" "${WEBHOOK_URL}"

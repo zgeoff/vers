@@ -1,54 +1,19 @@
-import { expect, onTestFinished, test } from 'bun:test';
-import { metrics } from '@opentelemetry/api';
-import {
-  AggregationTemporality,
-  InMemoryMetricExporter,
-  MeterProvider,
-  PeriodicExportingMetricReader,
-} from '@opentelemetry/sdk-metrics';
+import { expect, test } from 'bun:test';
+import { createInMemoryMetrics } from '@vers/test-utils/bun';
 import { recordBackoff } from './record-backoff';
 
-function setupTest() {
-  const exporter = new InMemoryMetricExporter(AggregationTemporality.CUMULATIVE);
-
-  const provider = new MeterProvider({
-    readers: [new PeriodicExportingMetricReader({ exporter, exportIntervalMillis: 3_600_000 })],
-  });
-
-  metrics.setGlobalMeterProvider(provider);
-
-  onTestFinished(async () => {
-    metrics.disable();
-
-    await provider.shutdown();
-  });
-
-  return { exporter, provider };
-}
-
 test('it counts backoffs by reason', async () => {
-  const ctx = setupTest();
+  const inMemory = createInMemoryMetrics();
 
   recordBackoff('keys-unavailable');
   recordBackoff('keys-unavailable');
   recordBackoff('deadline');
 
-  await ctx.provider.forceFlush();
+  const points = await inMemory.readCounterDataPoints('vers.replay.backoffs');
 
-  const counter = ctx.exporter
-    .getMetrics()
-    .flatMap((resourceMetrics) => resourceMetrics.scopeMetrics)
-    .flatMap((scopeMetrics) => scopeMetrics.metrics)
-    .find((metric) => metric.descriptor.name === 'vers.replay.backoffs');
-
-  const observed = counter?.dataPoints.map((dataPoint) => ({
-    reason: dataPoint.attributes['reason'],
-    value: dataPoint.value,
-  }));
-
-  expect(observed).toIncludeSameMembers([
-    { reason: 'keys-unavailable', value: 2 },
-    { reason: 'deadline', value: 1 },
+  expect(points).toIncludeSameMembers([
+    { attributes: { reason: 'keys-unavailable' }, value: 2 },
+    { attributes: { reason: 'deadline' }, value: 1 },
   ]);
 });
 

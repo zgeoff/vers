@@ -46,7 +46,8 @@ export function buildPostgresOptions(config: CreateDBConfig) {
     connect_timeout: 10,
     connection: {
       // both session timeouts cap how long a statement or an idle-in-transaction connection holds
-      // a lock, so orphaned transaction state dies within 30s even after a serverless process kill
+      // a lock, so orphaned transaction state dies after a serverless process kill: within 30s for
+      // a statement, and within the configured idle bound (30s unless the caller lengthens it)
       idle_in_transaction_session_timeout:
         config.idleInTransactionSessionTimeoutMs ?? DEFAULT_SESSION_TIMEOUT_MS,
       statement_timeout: DEFAULT_SESSION_TIMEOUT_MS,

@@ -20,6 +20,7 @@ import { recordRejection } from '../metrics/record-rejection';
 import type { RejectionReason } from '../metrics/record-rejection';
 import { recordSettledXP } from '../metrics/record-settled-xp';
 import { recordVerificationLag } from '../metrics/record-verification-lag';
+import { readAvatarRollKey } from '../mint/read-avatar-roll-key';
 import { rollRewardItems } from '../mint/roll-reward-items';
 import { updateReplayAttempts } from '../queue/update-replay-attempts';
 import { updateReplayBackoff } from '../queue/update-replay-backoff';
@@ -402,6 +403,8 @@ async function applyMatch(
   document: Readonly<ContentDocument>,
   deadline: AbortSignal,
 ): Promise<ReplayIterationOutcome> {
+  deadline.throwIfAborted();
+
   const settlement = buildSettlement(segment.activity.settledXP, verdict);
   const lastReplayed = replayed.at(-1);
   const lastStored = segment.checkpoints.at(-1);
@@ -472,6 +475,7 @@ async function applyMatch(
   return { kind: 'matched', pendingCache: { activityID: segment.activity.id, effect } };
 }
 
+// only the key read can be unavailable: a fault inside the roll itself is a bug and propagates
 async function tryRollRewardItems(
   deps: Readonly<ReplayWorkerDeps>,
   segment: Readonly<ReplaySegment>,
@@ -479,17 +483,16 @@ async function tryRollRewardItems(
   document: Readonly<ContentDocument>,
   deadline: AbortSignal,
 ): Promise<ReadonlyArray<MintedItem> | undefined> {
+  if (rewardFacts.length === 0) {
+    return [];
+  }
+
+  let rollKey: Uint8Array;
+
   try {
-    return await rollRewardItems(
+    rollKey = await readAvatarRollKey(
       { keysServiceURL: deps.keysServiceURL, privateKey: deps.privateKey, signal: deadline },
-      {
-        avatarID: segment.activity.avatarID,
-        keyVersion: segment.activity.keyVersion,
-        rewardFacts,
-        scopeID: segment.activity.scopeID,
-        scopeType: segment.activity.scopeType,
-        tables: document.loot,
-      },
+      { avatarID: segment.activity.avatarID, keyVersion: segment.activity.keyVersion },
     );
   } catch (error) {
     deadline.throwIfAborted();
@@ -500,6 +503,15 @@ async function tryRollRewardItems(
 
     return undefined;
   }
+
+  return rollRewardItems(rollKey, {
+    avatarID: segment.activity.avatarID,
+    keyVersion: segment.activity.keyVersion,
+    rewardFacts,
+    scopeID: segment.activity.scopeID,
+    scopeType: segment.activity.scopeType,
+    tables: document.loot,
+  });
 }
 
 type RejectionCause =
@@ -698,7 +710,10 @@ async function scheduleReplayRetry(
   segment: Readonly<ReplaySegment>,
   reason: Extract<BackoffReason, 'keys-unavailable' | 'provider-unavailable'>,
 ): Promise<ReplayIterationOutcome> {
-  const backoff = await updateReplayBackoff(trx, { activityID: segment.activity.id });
+  const backoff = await updateReplayBackoff(trx, {
+    activityID: segment.activity.id,
+    verifiedHead: segment.verifiedHead,
+  });
 
   deps.logger.warn(
     {

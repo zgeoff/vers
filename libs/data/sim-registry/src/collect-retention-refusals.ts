@@ -1,6 +1,8 @@
 import type { DB } from '@vers/db';
 import type { Kysely } from 'kysely';
 import { sql } from 'kysely';
+import { buildCurrentEngineHashQuery } from './build-current-engine-hash-query';
+import { buildPinnedEngineHashesQuery } from './build-pinned-engine-hashes-query';
 import type { RetentionRefusal } from './types';
 
 export async function collectRetentionRefusals(
@@ -8,25 +10,19 @@ export async function collectRetentionRefusals(
 ): Promise<ReadonlyArray<RetentionRefusal>> {
   const rows = await db
     .selectFrom('simVersions')
-    .innerJoin('activities', 'activities.simVersion', 'simVersions.engineHash')
     .select((eb) => [
-      'simVersions.engineHash',
-      eb.fn.count<string>('activities.id').as('unverifiedActivities'),
-    ])
-    .where('simVersions.status', '=', 'active')
-    .where('simVersions.retainedUntil', '<', sql<Date>`now()`)
-    .where('simVersions.engineHash', 'is distinct from', (eb) =>
+      'engineHash',
       eb
-        .selectFrom('simVersions as current')
-        .select('current.engineHash')
-        .where('current.status', '=', 'active')
-        .orderBy('current.deployedAt', 'desc')
-        .limit(1),
-    )
-    .where((eb) => eb('activities.appendedHead', '>', eb.ref('activities.verifiedHead')))
-    .where('activities.status', '!=', 'rejected')
-    .groupBy('simVersions.engineHash')
-    .orderBy('simVersions.engineHash')
+        .selectFrom(buildPinnedEngineHashesQuery(db).as('pinned'))
+        .select((inner) => inner.fn.countAll<string>().as('count'))
+        .whereRef('pinned.simVersion', '=', 'simVersions.engineHash')
+        .as('unverifiedActivities'),
+    ])
+    .where('status', '=', 'active')
+    .where('retainedUntil', '<', sql<Date>`now()`)
+    .where('engineHash', 'is distinct from', buildCurrentEngineHashQuery(db))
+    .where('engineHash', 'in', buildPinnedEngineHashesQuery(db))
+    .orderBy('engineHash')
     .execute();
 
   return rows.map((row) => ({

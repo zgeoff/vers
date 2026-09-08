@@ -83,7 +83,10 @@ async function resolveIterationFailure(
   cache.remove(target.activityID);
 
   if (deadline.aborted) {
-    const backoff = await updateReplayBackoff(deps.db, { activityID: target.activityID });
+    const backoff = await updateReplayBackoff(deps.db, {
+      activityID: target.activityID,
+      verifiedHead: target.verifiedHead,
+    });
 
     deps.logger.warn(
       { activityID: target.activityID, deadlineMs, ...backoff },
@@ -95,7 +98,10 @@ async function resolveIterationFailure(
     return { kind: 'backedOff', reason: 'deadline' };
   }
 
-  const backoff = await updateReplayBackoff(deps.db, { activityID: target.activityID });
+  const backoff = await updateReplayBackoff(deps.db, {
+    activityID: target.activityID,
+    verifiedHead: target.verifiedHead,
+  });
 
   deps.logger.error(
     { activityID: target.activityID, err: error, ...backoff },

@@ -7,6 +7,8 @@ const REPLAY_BACKOFF_CAP_MS = 900_000;
 
 interface UpdateReplayBackoffInput {
   readonly activityID: string;
+
+  readonly verifiedHead: number;
 }
 
 interface UpdateReplayBackoffResult {
@@ -25,6 +27,11 @@ export async function updateReplayBackoff(
       replayBackoffs: eb('replayBackoffs', '+', 1),
     }))
     .where('id', '=', input.activityID)
+
+    // a worker that settled the activity between this worker's rollback and this write leaves
+    // nothing to back off, so the stale failure must not delay the next append
+    .where('verifiedHead', '=', input.verifiedHead)
+    .where((eb) => eb('appendedHead', '>', eb.ref('verifiedHead')))
     .returning(['replayBackoffUntil', 'replayBackoffs'])
     .executeTakeFirst();
 
