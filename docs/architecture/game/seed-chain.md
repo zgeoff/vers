@@ -135,6 +135,14 @@ a `CHECKPOINT_INVALID` refusal, whose reasons split across both outcomes
   not registered yet, an operator hold, and a build snapshot that counted XP from a predecessor
   still in flight all resolve on their own. The device keeps the activity start and sends it again
   on the worker's backoff ([offline reconcile](./offline-reconcile.md#worker-lifecycle)).
+- **A refused build snapshot is checked before the device keeps it.** The device reads the avatar's
+  latest activity from the server and keeps the activity start only while its named predecessor is
+  still the server's active row or still waits in this device's own store. Otherwise the snapshot
+  itself was wrong and no resend can clear it: the device drops the activity start, its queued
+  checkpoints, and every activity start chained on it, halts the live run if it was one of them,
+  takes the next mint's fold source and predecessor from the server's row, and tells the player the
+  run could not be saved. The refused activity start itself goes last, so a drop that fails part way
+  leaves it in the store and the next reconnect repeats the whole drop.
 
 An activity start reaches the server by one of two routes. A device that still holds its live
 simulation hands it over on first contact, and if that stream's checkpoint flush comes back

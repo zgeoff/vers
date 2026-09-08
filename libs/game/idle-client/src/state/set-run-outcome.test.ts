@@ -1,6 +1,7 @@
 import { expect, test } from 'bun:test';
 import { ActivityCheckpointType } from '@vers/idle-core';
 import { createMockRunOutcome } from '../test-utils/factories/create-mock-run-outcome';
+import { RunOutcomeKind } from '../worker/run-outcome-schema';
 import { setRunOutcome } from './set-run-outcome';
 import { useIdleStore } from './use-idle-store';
 
@@ -24,6 +25,14 @@ test('it leaves the last completed activity alone when the run failed', () => {
   useIdleStore.setState({ lastCompletedActivityID: 'activity_0' });
 
   setRunOutcome(createMockRunOutcome({ kind: ActivityCheckpointType.Failed }));
+
+  expect(useIdleStore.getState().lastCompletedActivityID).toBe('activity_0');
+});
+
+test('it leaves the last completed activity alone when the server refused the run', () => {
+  useIdleStore.setState({ lastCompletedActivityID: 'activity_0' });
+
+  setRunOutcome(createMockRunOutcome({ kind: RunOutcomeKind.Refused, xp: 0 }));
 
   expect(useIdleStore.getState().lastCompletedActivityID).toBe('activity_0');
 });

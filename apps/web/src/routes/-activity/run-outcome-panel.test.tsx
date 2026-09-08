@@ -1,6 +1,7 @@
 import { expect, mock, test } from 'bun:test';
 import { ORPCError } from '@orpc/client';
 import userEvent from '@testing-library/user-event';
+import { RunOutcomeKind } from '@vers/idle-client';
 import { createMockRunOutcome } from '@vers/idle-client/test-utils';
 import { ActivityCheckpointType } from '@vers/idle-core';
 import { mockActivityService } from '@vers/mock-services/activity';
@@ -183,5 +184,32 @@ test('it raises the back-to-map action', async () => {
     await user.click(backToMap);
 
     expect(onBackToMap).toHaveBeenCalledOnce();
+  });
+});
+
+test('it reports a run the server refused with no xp and no rewards', async () => {
+  const signedIn = await createSignedInUser();
+
+  const user = userEvent.setup();
+  const onRetry = mock(() => {});
+
+  await withRequestContext({ cookies: signedIn.cookies }, async () => {
+    const rendered = render(
+      <RunOutcomePanel
+        onBackToMap={() => {}}
+        onRetry={onRetry}
+        outcome={createMockRunOutcome({ kind: RunOutcomeKind.Refused, xp: 0 })}
+      />,
+    );
+
+    const heading = await rendered.findByRole('heading', { name: 'Run could not be saved' });
+
+    expect(heading).toBeVisible();
+    expect(rendered.queryByText('+0 XP')).not.toBeInTheDocument();
+    expect(rendered.queryByRole('heading', { name: 'Rewards' })).not.toBeInTheDocument();
+
+    await user.click(rendered.getByRole('button', { name: 'Retry' }));
+
+    expect(onRetry).toHaveBeenCalledOnce();
   });
 });

@@ -1,6 +1,6 @@
 import { Button, Heading, Text } from '@vers/design-system';
 import type { RunOutcome } from '@vers/idle-client';
-import { ActivityCheckpointType } from '@vers/idle-core';
+import { RunOutcomeKind } from '@vers/idle-client';
 import { css } from '@vers/styled-system/css';
 import type { RevealedRewardsPage } from '../../lib/activity/types';
 import { useActivityRewards } from '../../lib/activity/use-activity-rewards';
@@ -42,8 +42,25 @@ interface RunOutcomePanelProps {
 }
 
 export function RunOutcomePanel(props: Readonly<RunOutcomePanelProps>) {
-  const rewardsQuery = useActivityRewards(props.outcome.activityID);
-  const isCleared = props.outcome.kind === ActivityCheckpointType.Completed;
+  const isRefused = props.outcome.kind === RunOutcomeKind.Refused;
+  const isCleared = props.outcome.kind === RunOutcomeKind.Completed;
+
+  // a refused run has no server row, so there are no rewards to read for it
+  const rewardsActivityID = isRefused ? undefined : props.outcome.activityID;
+  const rewardsQuery = useActivityRewards(rewardsActivityID);
+
+  if (isRefused) {
+    return (
+      <section className={panel} data-testid="run-outcome-panel">
+        <Heading level={2}>Run could not be saved</Heading>
+        <Text>
+          The server refused this run’s starting state, so its progress was not kept. Start again
+          from the map.
+        </Text>
+        {renderActions(props)}
+      </section>
+    );
+  }
 
   return (
     <section className={panel} data-testid="run-outcome-panel">
@@ -60,17 +77,23 @@ export function RunOutcomePanel(props: Readonly<RunOutcomePanelProps>) {
         isPending: rewardsQuery.isPending,
         items: rewardsQuery.data?.items ?? [],
       })}
-      <div className={actions}>
-        {props.onRetry === undefined ? null : (
-          <Button disabled={props.isRetryPending === true} onClick={props.onRetry} type="button">
-            Retry
-          </Button>
-        )}
-        <Button onClick={props.onBackToMap} type="button" variant="secondary">
-          Back to map
-        </Button>
-      </div>
+      {renderActions(props)}
     </section>
+  );
+}
+
+function renderActions(props: Readonly<RunOutcomePanelProps>) {
+  return (
+    <div className={actions}>
+      {props.onRetry === undefined ? null : (
+        <Button disabled={props.isRetryPending === true} onClick={props.onRetry} type="button">
+          Retry
+        </Button>
+      )}
+      <Button onClick={props.onBackToMap} type="button" variant="secondary">
+        Back to map
+      </Button>
+    </div>
   );
 }
 

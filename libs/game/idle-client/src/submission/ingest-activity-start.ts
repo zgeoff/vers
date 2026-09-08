@@ -1,6 +1,8 @@
 import { isDefinedError, safe } from '@orpc/client';
-import type { AdvanceCheckpointInvalidReason } from '@vers/contract-activity';
+import type { ActivityData, AdvanceCheckpointInvalidReason } from '@vers/contract-activity';
 import { buildOfflineActivityStartSubmission } from '@vers/contract-activity';
+import type { LatestActivityProgress } from '../resync/types';
+import { pickRefusedSnapshotDisposition } from './pick-refused-snapshot-disposition';
 import { readActivityStart } from './read-activity-start';
 import { removeActivityStart } from './remove-activity-start';
 import type { ActivityServiceClient } from './types';
@@ -16,10 +18,18 @@ export type IngestActivityStartNotice =
   | { readonly activeAvatarName: string; readonly kind: 'avatar-switched' }
   | { readonly kind: 'sim-version-expired' };
 
+interface RefusedSnapshot {
+  readonly latest: LatestActivityProgress | null;
+  readonly row: ActivityData;
+}
+
 export interface IngestActivityStartResult {
   readonly notice?: IngestActivityStartNotice;
   readonly outcome: IngestActivityStartOutcome;
+  readonly refusedSnapshot?: RefusedSnapshot;
 }
+
+type IngestClient = Pick<ActivityServiceClient, 'advanceActivity' | 'getLatestActivityProgress'>;
 
 const REJECTED_CODES: ReadonlySet<string> = new Set([
   'NODE_NOT_REVEALED',
@@ -28,10 +38,10 @@ const REJECTED_CODES: ReadonlySet<string> = new Set([
 ]);
 
 const CHECKPOINT_INVALID_DISPOSITIONS: Readonly<
-  Record<AdvanceCheckpointInvalidReason, 'deferred' | 'rejected'>
+  Record<AdvanceCheckpointInvalidReason, 'progress-check' | 'rejected'>
 > = {
   'broken-chain-link': 'rejected',
-  'build-snapshot-mismatch': 'deferred',
+  'build-snapshot-mismatch': 'progress-check',
   'continuation-not-terminal': 'rejected',
   'hash-mismatch': 'rejected',
   'invalid-reward-slots': 'rejected',
@@ -45,7 +55,7 @@ const CHECKPOINT_INVALID_DISPOSITIONS: Readonly<
 };
 
 export async function ingestActivityStart(
-  client: Pick<ActivityServiceClient, 'advanceActivity'>,
+  client: IngestClient,
   activityID: string,
 ): Promise<IngestActivityStartResult> {
   const row = await readActivityStart(activityID);
@@ -82,8 +92,8 @@ export async function ingestActivityStart(
   }
 
   if (error.code === 'CHECKPOINT_INVALID') {
-    if (CHECKPOINT_INVALID_DISPOSITIONS[error.data.reason] === 'deferred') {
-      return { outcome: 'deferred' };
+    if (CHECKPOINT_INVALID_DISPOSITIONS[error.data.reason] === 'progress-check') {
+      return resolveRefusedSnapshot(client, row);
     }
 
     await removeActivityStart(activityID);
@@ -114,4 +124,42 @@ export async function ingestActivityStart(
   }
 
   return { outcome: 'deferred' };
+}
+
+async function resolveRefusedSnapshot(
+  client: IngestClient,
+  row: Readonly<ActivityData>,
+): Promise<IngestActivityStartResult> {
+  // the server folds without a predecessor this device has not delivered yet; the drain delivers
+  // it first, and this row's resend follows
+  const predecessorPending = await isPredecessorPending(row.predecessorActivityID);
+
+  if (predecessorPending) {
+    return { outcome: 'deferred' };
+  }
+
+  const [error, progress] = await safe(
+    client.getLatestActivityProgress({ avatarID: row.avatarID }),
+  );
+
+  if (error !== null && !(isDefinedError(error) && error.code === 'NOT_FOUND')) {
+    return { outcome: 'deferred' };
+  }
+
+  const latest = error === null ? progress : null;
+
+  if (
+    pickRefusedSnapshotDisposition({ latest, predecessorID: row.predecessorActivityID }) ===
+    'deferred'
+  ) {
+    return { outcome: 'deferred' };
+  }
+
+  // the caller removes the row once its drop has cleared everything chained on it; removing it
+  // here would leave a drop that fails part way with no root for the next reconnect to retry from
+  return { outcome: 'rejected', refusedSnapshot: { latest, row } };
+}
+
+async function isPredecessorPending(predecessorID: null | string): Promise<boolean> {
+  return predecessorID !== null && (await readActivityStart(predecessorID)) !== undefined;
 }

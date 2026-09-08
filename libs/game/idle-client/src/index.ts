@@ -21,6 +21,7 @@ export { setOfflineCapStatus } from './state/set-offline-cap-status';
 export { setResyncStatus } from './state/set-resync-status';
 export { setRewardSlotLedger } from './state/set-reward-slot-ledger';
 export { setRunOutcome } from './state/set-run-outcome';
+export { RunOutcomeKind } from './worker/run-outcome-schema';
 export { setSimulationInitialized } from './state/set-simulation-initialized';
 export { setSimulationSnapshot } from './state/set-simulation-snapshot';
 export { setWorkerClient } from './state/set-worker-client';

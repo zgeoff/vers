@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { ActivityCheckpointType } from '@vers/idle-core';
 import type { RunOutcome } from './run-outcome-schema';
-import { runOutcomeSchema } from './run-outcome-schema';
+import { RunOutcomeKind, runOutcomeSchema } from './run-outcome-schema';
 
 test('it accepts a run outcome that names the node the ended run played', () => {
   const outcome: RunOutcome = {
@@ -47,4 +47,16 @@ test('it rejects a run outcome that names no avatar', () => {
 
   expect(result.success).toBeFalse();
   expect(result.error?.issues).toPartiallyContain(expect.objectContaining({ path: ['avatarID'] }));
+});
+
+test('it accepts a run outcome the server refused', () => {
+  const outcome: RunOutcome = {
+    activityID: 'activity_1',
+    avatarID: 'avatar_1',
+    kind: RunOutcomeKind.Refused,
+    scope: { scopeID: '0_0', scopeType: 'world_map_node' },
+    xp: 0,
+  };
+
+  expect(runOutcomeSchema.parse(outcome)).toStrictEqual(outcome);
 });

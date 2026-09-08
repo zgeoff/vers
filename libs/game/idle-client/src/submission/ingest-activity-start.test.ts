@@ -2,8 +2,9 @@ import { expect, mock, test } from 'bun:test';
 import { createORPCClient } from '@orpc/client';
 import { RPCLink } from '@orpc/client/fetch';
 import { createMockActivityData } from '@vers/contract-activity/test-utils';
-import { resolveServiceURL } from '@vers/mock-services';
+import { createAuthedServiceClient, createViewer, resolveServiceURL } from '@vers/mock-services';
 import { mockActivityService } from '@vers/mock-services/activity';
+import * as db from '@vers/mock-services/db';
 import { HttpResponse } from 'msw';
 import { server } from '../mocks/node';
 import { ingestActivityStart } from './ingest-activity-start';
@@ -176,9 +177,17 @@ test('it rejects and removes the activityStart on a permanent start-hash-mismatc
   expect(stored).toBeUndefined();
 });
 
-test('it defers an order-sensitive build-snapshot-mismatch, keeping the activityStart', async () => {
-  const ctx = setupTest();
-  const row = createMockActivityData({ id: 'act_ingest_build_snapshot', startKey: 'start_key_f' });
+test('it defers a build-snapshot-mismatch while the named predecessor is still active server-side', async () => {
+  const viewer = await createViewer();
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
+  const predecessor = await db.activityCollection.create({ avatarID: viewer.avatar.id });
+
+  const row = createMockActivityData({
+    avatarID: viewer.avatar.id,
+    id: 'act_ingest_server_behind',
+    predecessorActivityID: predecessor.id,
+    startKey: 'start_key_f',
+  });
 
   server.use(
     mockActivityService.advanceActivity.handler((opts) => {
@@ -190,13 +199,224 @@ test('it defers an order-sensitive build-snapshot-mismatch, keeping the activity
 
   await writeActivityStart(row);
 
-  const outcome = await ingestActivityStart(ctx.client, row.id);
+  const outcome = await ingestActivityStart(client, row.id);
 
-  expect(outcome.outcome).toBe('deferred');
+  expect(outcome).toStrictEqual({ outcome: 'deferred' });
 
   const stored = await readActivityStart(row.id);
 
-  expect(stored).toBeDefined();
+  expect(stored).toStrictEqual(row);
+});
+
+test('it defers a build-snapshot-mismatch while the named predecessor still waits in this device’s store', async () => {
+  const ctx = setupTest();
+  const track = mock<() => void>();
+
+  const predecessor = createMockActivityData({
+    id: 'act_ingest_pending_pred',
+    startKey: 'start_key_pending_pred',
+  });
+
+  const row = createMockActivityData({
+    id: 'act_ingest_pending_next',
+    predecessorActivityID: predecessor.id,
+    startKey: 'start_key_pending_next',
+  });
+
+  server.use(
+    mockActivityService.advanceActivity.handler((opts) => {
+      throw opts.errors.CHECKPOINT_INVALID({
+        data: { activityID: row.id, appendedHead: 0, reason: 'build-snapshot-mismatch' },
+      });
+    }),
+    mockActivityService.getLatestActivityProgress.handler((opts) => {
+      track();
+      throw opts.errors.NOT_FOUND({ data: {} });
+    }),
+  );
+
+  await writeActivityStart(predecessor);
+  await writeActivityStart(row);
+
+  const outcome = await ingestActivityStart(ctx.client, row.id);
+
+  expect(outcome).toStrictEqual({ outcome: 'deferred' });
+  expect(track).not.toHaveBeenCalled();
+
+  const stored = await readActivityStart(row.id);
+
+  expect(stored).toStrictEqual(row);
+});
+
+test('it rejects a build-snapshot-mismatch once the named predecessor has stopped server-side, carrying the server’s latest row and keeping the row for the drop', async () => {
+  const viewer = await createViewer({ avatar: { level: 2, xp: 105 } });
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
+
+  const predecessor = await db.activityCollection.create({
+    avatarID: viewer.avatar.id,
+    status: 'stopped',
+  });
+
+  const row = createMockActivityData({
+    avatarID: viewer.avatar.id,
+    id: 'act_ingest_snapshot_wrong',
+    predecessorActivityID: predecessor.id,
+    startKey: 'start_key_g',
+  });
+
+  server.use(
+    mockActivityService.advanceActivity.handler((opts) => {
+      throw opts.errors.CHECKPOINT_INVALID({
+        data: { activityID: row.id, appendedHead: 0, reason: 'build-snapshot-mismatch' },
+      });
+    }),
+  );
+
+  await writeActivityStart(row);
+
+  const outcome = await ingestActivityStart(client, row.id);
+
+  expect(outcome).toMatchObject({
+    outcome: 'rejected',
+    refusedSnapshot: {
+      latest: {
+        activity: { id: predecessor.id, status: 'stopped' },
+        optimisticBuild: { level: 2, xp: 105 },
+      },
+      row,
+    },
+  });
+
+  const stored = await readActivityStart(row.id);
+
+  expect(stored).toStrictEqual(row);
+});
+
+test('it rejects a build-snapshot-mismatch when the server’s active row is not the named predecessor, keeping the row for the drop', async () => {
+  const viewer = await createViewer();
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
+
+  const predecessor = await db.activityCollection.create({
+    avatarID: viewer.avatar.id,
+    startedAt: new Date(Date.now() - 60_000),
+  });
+
+  await db.activityCollection.create({ avatarID: viewer.avatar.id, startedAt: new Date() });
+
+  const row = createMockActivityData({
+    avatarID: viewer.avatar.id,
+    id: 'act_ingest_divergent',
+    predecessorActivityID: predecessor.id,
+    startKey: 'start_key_divergent',
+  });
+
+  server.use(
+    mockActivityService.advanceActivity.handler((opts) => {
+      throw opts.errors.CHECKPOINT_INVALID({
+        data: { activityID: row.id, appendedHead: 0, reason: 'build-snapshot-mismatch' },
+      });
+    }),
+  );
+
+  await writeActivityStart(row);
+
+  const outcome = await ingestActivityStart(client, row.id);
+
+  expect(outcome.outcome).toBe('rejected');
+
+  const stored = await readActivityStart(row.id);
+
+  expect(stored).toStrictEqual(row);
+});
+
+test('it rejects a build-snapshot-mismatch on a start that names no predecessor, keeping the row for the drop', async () => {
+  const viewer = await createViewer();
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
+
+  await db.activityCollection.create({ avatarID: viewer.avatar.id });
+
+  const row = createMockActivityData({
+    avatarID: viewer.avatar.id,
+    id: 'act_ingest_no_predecessor',
+    predecessorActivityID: null,
+    startKey: 'start_key_h',
+  });
+
+  server.use(
+    mockActivityService.advanceActivity.handler((opts) => {
+      throw opts.errors.CHECKPOINT_INVALID({
+        data: { activityID: row.id, appendedHead: 0, reason: 'build-snapshot-mismatch' },
+      });
+    }),
+  );
+
+  await writeActivityStart(row);
+
+  const outcome = await ingestActivityStart(client, row.id);
+
+  expect(outcome.outcome).toBe('rejected');
+
+  const stored = await readActivityStart(row.id);
+
+  expect(stored).toStrictEqual(row);
+});
+
+test('it rejects a build-snapshot-mismatch with no server row to fold from when the avatar has no activity', async () => {
+  const viewer = await createViewer();
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
+
+  const row = createMockActivityData({
+    avatarID: viewer.avatar.id,
+    id: 'act_ingest_no_server_row',
+    predecessorActivityID: 'act_ingest_never_landed',
+    startKey: 'start_key_i2',
+  });
+
+  server.use(
+    mockActivityService.advanceActivity.handler((opts) => {
+      throw opts.errors.CHECKPOINT_INVALID({
+        data: { activityID: row.id, appendedHead: 0, reason: 'build-snapshot-mismatch' },
+      });
+    }),
+  );
+
+  await writeActivityStart(row);
+
+  const outcome = await ingestActivityStart(client, row.id);
+
+  expect(outcome).toStrictEqual({
+    outcome: 'rejected',
+    refusedSnapshot: { latest: null, row },
+  });
+});
+
+test('it keeps a build-snapshot-mismatch for the backoff when the progress read fails in transport', async () => {
+  const ctx = setupTest();
+
+  const row = createMockActivityData({
+    id: 'act_ingest_progress_down',
+    predecessorActivityID: 'act_ingest_progress_pred',
+    startKey: 'start_key_j',
+  });
+
+  server.use(
+    mockActivityService.advanceActivity.handler((opts) => {
+      throw opts.errors.CHECKPOINT_INVALID({
+        data: { activityID: row.id, appendedHead: 0, reason: 'build-snapshot-mismatch' },
+      });
+    }),
+    mockActivityService.getLatestActivityProgress.handler(() => HttpResponse.error()),
+  );
+
+  await writeActivityStart(row);
+
+  const outcome = await ingestActivityStart(ctx.client, row.id);
+
+  expect(outcome).toStrictEqual({ outcome: 'deferred' });
+
+  const stored = await readActivityStart(row.id);
+
+  expect(stored).toStrictEqual(row);
 });
 
 test('it defers an activityStart the account switched away from, carrying the switch notice', async () => {

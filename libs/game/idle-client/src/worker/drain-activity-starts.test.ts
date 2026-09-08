@@ -1,10 +1,15 @@
 import { expect, mock, test } from 'bun:test';
 import { createMockActivityData } from '@vers/contract-activity/test-utils';
+import { ActivityFailureAction, createSimulation } from '@vers/idle-core';
+import { createMockActivityInput, createMockAvatarData } from '@vers/idle-core/test-utils';
+import { createAuthedServiceClient, createViewer } from '@vers/mock-services';
 import { mockActivityService } from '@vers/mock-services/activity';
+import * as db from '@vers/mock-services/db';
 import { server } from '../mocks/node';
 import { readAllActivityStarts } from '../submission/read-all-activity-starts';
 import { readLastStartedActivity } from '../submission/read-last-started-activity';
 import { readQueuedCheckpoints } from '../submission/read-queued-checkpoints';
+import type { ActivityServiceClient } from '../submission/types';
 import { writeActivityStart } from '../submission/write-activity-start';
 import { writeLastStartedActivity } from '../submission/write-last-started-activity';
 import { writeQueuedCheckpoint } from '../submission/write-queued-checkpoint';
@@ -13,6 +18,7 @@ import { createStubWorkerContext } from '../test-utils/create-stub-worker-contex
 import { createMockCheckpointBatchEntry } from '../test-utils/factories/create-mock-checkpoint-batch-entry';
 import { WorkerMessageType } from '../types';
 import { drainActivityStarts } from './drain-activity-starts';
+import { RunOutcomeKind } from './run-outcome-schema';
 
 test("it ingests and registers the recovery avatar's row, leaving another avatar's row untouched", async () => {
   const submitter = createStubSubmitter();
@@ -159,21 +165,26 @@ test('it drops a start the server permanently refuses, its successor, and the la
   expect(submitter.registerActivity).not.toHaveBeenCalled();
 });
 
-test('it submits a deferred start once per drain and leaves its successor unsubmitted until it lands', async () => {
+test('it submits a start refused while its predecessor is still active server-side once per drain, leaving its successor unsubmitted', async () => {
+  const viewer = await createViewer();
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
+
   const submitter = createStubSubmitter();
-  const context = createStubWorkerContext({ submitter });
+  const context = createStubWorkerContext({ client, submitter });
   const track = mock<(activityID: string) => void>();
 
+  const predecessor = await db.activityCollection.create({ avatarID: viewer.avatar.id });
+
   const deferred = createMockActivityData({
-    avatarID: 'avatar_recovering',
+    avatarID: viewer.avatar.id,
     id: 'act_drain_deferred',
-    predecessorActivityID: null,
+    predecessorActivityID: predecessor.id,
     scopeID: '1_0',
     startKey: 'start_key_deferred',
   });
 
   const successor = createMockActivityData({
-    avatarID: 'avatar_recovering',
+    avatarID: viewer.avatar.id,
     id: 'act_drain_deferred_next',
     predecessorActivityID: deferred.id,
     scopeID: '1_0',
@@ -193,7 +204,7 @@ test('it submits a deferred start once per drain and leaves its successor unsubm
     }),
   );
 
-  await drainActivityStarts(context, 'avatar_recovering');
+  await drainActivityStarts(context, viewer.avatar.id);
 
   const remaining = await readAllActivityStarts();
 
@@ -201,4 +212,162 @@ test('it submits a deferred start once per drain and leaves its successor unsubm
   expect(remaining).toIncludeSameMembers([deferred, successor]);
   expect(submitter.registerActivity).not.toHaveBeenCalled();
   expect(context.getConnectivityOnline()).toBeTrue();
+  expect(context.getBroadcasts()).toStrictEqual([]);
+});
+
+test('it drops a start whose snapshot the server refused for good, halts the live run built on it, and folds the next mint from the server’s row', async () => {
+  const viewer = await createViewer({ avatar: { level: 2, xp: 105 } });
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
+
+  const submitter = createStubSubmitter();
+  const context = createStubWorkerContext({ client, submitter });
+  const simulation = createSimulation();
+  const track = mock<(activityID: string) => void>();
+
+  const landed = await db.activityCollection.create({
+    avatarID: viewer.avatar.id,
+    status: 'stopped',
+  });
+
+  const refused = createMockActivityData({
+    avatarID: viewer.avatar.id,
+    id: 'act_drain_snapshot_wrong',
+    predecessorActivityID: landed.id,
+    scopeID: '1_0',
+    startKey: 'start_key_snapshot_wrong',
+  });
+
+  const live = createMockActivityData({
+    avatarID: viewer.avatar.id,
+    id: 'act_drain_snapshot_wrong_live',
+    predecessorActivityID: refused.id,
+    scopeID: '1_1',
+    startKey: 'start_key_snapshot_wrong_live',
+  });
+
+  await writeActivityStart(refused);
+  await writeActivityStart(live);
+  await writeQueuedCheckpoint(refused.id, createMockCheckpointBatchEntry({ version: 1 }));
+  await writeQueuedCheckpoint(live.id, createMockCheckpointBatchEntry({ version: 1 }));
+  await writeLastStartedActivity({ avatarID: viewer.avatar.id, lastActivityID: live.id });
+
+  simulation.startActivity(createMockAvatarData(), createMockActivityInput({ id: live.id }));
+  context.setSimulation(simulation);
+  context.setActivity(live);
+
+  context.setLatestRun({
+    activityID: live.id,
+    avatarID: viewer.avatar.id,
+    baselineXP: 0,
+    deltaXP: 30,
+    tail: null,
+  });
+
+  server.use(
+    mockActivityService.advanceActivity.handler((opts) => {
+      track(opts.input.activityID);
+
+      throw opts.errors.CHECKPOINT_INVALID({
+        data: { activityID: refused.id, appendedHead: 0, reason: 'build-snapshot-mismatch' },
+      });
+    }),
+  );
+
+  await drainActivityStarts(context, viewer.avatar.id);
+
+  const remaining = await readAllActivityStarts();
+  const refusedQueue = await readQueuedCheckpoints(refused.id);
+  const liveQueue = await readQueuedCheckpoints(live.id);
+  const lastStarted = await readLastStartedActivity(viewer.avatar.id);
+
+  expect(track).toHaveBeenCalledExactlyOnceWith(refused.id);
+  expect(remaining).toStrictEqual([]);
+  expect(refusedQueue).toStrictEqual([]);
+  expect(liveQueue).toStrictEqual([]);
+  expect(submitter.registerActivity).not.toHaveBeenCalled();
+  expect(simulation.activity).toBeNull();
+  expect(context.getActivity()).toBeNull();
+
+  expect(context.getLatestRun()).toStrictEqual({
+    activityID: landed.id,
+    avatarID: viewer.avatar.id,
+    baselineXP: 105,
+    deltaXP: 0,
+    tail: null,
+  });
+
+  expect(lastStarted).toStrictEqual({ avatarID: viewer.avatar.id, lastActivityID: landed.id });
+
+  expect(context.getBroadcasts()).toStrictEqual([
+    {
+      state: { failureAction: ActivityFailureAction.Abort },
+      type: WorkerMessageType.SimulationUpdate,
+    },
+    {
+      outcome: {
+        activityID: live.id,
+        avatarID: viewer.avatar.id,
+        kind: RunOutcomeKind.Refused,
+        scope: { scopeID: '1_1', scopeType: live.scopeType },
+        xp: 0,
+      },
+      type: WorkerMessageType.ActivityEnded,
+    },
+  ]);
+});
+
+test('it clears the fold records when a start is refused for good and the server holds no row for the avatar', async () => {
+  const viewer = await createViewer();
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
+
+  const context = createStubWorkerContext({ client, submitter: createStubSubmitter() });
+
+  const refused = createMockActivityData({
+    avatarID: viewer.avatar.id,
+    id: 'act_drain_no_server_row',
+    predecessorActivityID: 'act_drain_never_landed',
+    scopeID: '1_0',
+    startKey: 'start_key_no_server_row',
+  });
+
+  await writeActivityStart(refused);
+  await writeLastStartedActivity({ avatarID: viewer.avatar.id, lastActivityID: refused.id });
+
+  context.setLatestRun({
+    activityID: refused.id,
+    avatarID: viewer.avatar.id,
+    baselineXP: 0,
+    deltaXP: 30,
+    tail: null,
+  });
+
+  server.use(
+    mockActivityService.advanceActivity.handler((opts) => {
+      throw opts.errors.CHECKPOINT_INVALID({
+        data: { activityID: refused.id, appendedHead: 0, reason: 'build-snapshot-mismatch' },
+      });
+    }),
+  );
+
+  await drainActivityStarts(context, viewer.avatar.id);
+
+  const remaining = await readAllActivityStarts();
+  const lastStarted = await readLastStartedActivity(viewer.avatar.id);
+
+  expect(remaining).toStrictEqual([]);
+  expect(lastStarted).toBeUndefined();
+  expect(context.getLatestRun()).toBeNull();
+
+  expect(context.getBroadcasts()).toStrictEqual([
+    {
+      outcome: {
+        activityID: refused.id,
+        avatarID: viewer.avatar.id,
+        kind: RunOutcomeKind.Refused,
+        scope: { scopeID: '1_0', scopeType: refused.scopeType },
+        xp: 0,
+      },
+      type: WorkerMessageType.ActivityEnded,
+    },
+  ]);
 });
