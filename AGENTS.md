@@ -345,6 +345,8 @@ the mechanics and provisioning.
 - `bun run qa:inbox` — reads the verification code or link out of an email sent to a
   `qa.versidle.com` address during manual QA against production
   (`docs/architecture/platform/qa-inbox.md`).
+- `bun run qa:cdp` / `bun run qa:capture` — drive a debug Chrome and log its shared workers' RPC
+  traffic over the DevTools Protocol during manual QA (`docs/architecture/platform/qa-browser.md`).
 
 ## Lint policy
 

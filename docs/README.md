@@ -50,6 +50,8 @@ How the platform is built — system design, data flows, and operational wiring.
   every agent session connects to, and why it serves the primary checkout
 - [QA inbox](./architecture/platform/qa-inbox.md) — reading verification codes and links from email
   sent to a `qa.versidle.com` address during manual QA against production
+- [QA browser tools](./architecture/platform/qa-browser.md) — driving a debug Chrome and logging its
+  shared workers' RPC traffic over the DevTools Protocol during manual QA
 
 ### Game
 
