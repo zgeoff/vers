@@ -15,7 +15,7 @@ import { WorkerMessageType } from '../types';
 import { rejectActivityStart } from './reject-activity-start';
 import { RunOutcomeKind } from './run-outcome-schema';
 
-test('it drops every pending start chained on the refused one, with their queued checkpoints', async () => {
+test('it drops the refused start and every pending start chained on it, with their queued checkpoints', async () => {
   const context = createStubWorkerContext();
   const refused = createMockActivityData({ avatarID: 'avatar_refused', id: 'act_refused_root' });
 
@@ -37,6 +37,7 @@ test('it drops every pending start chained on the refused one, with their queued
     predecessorActivityID: 'act_elsewhere',
   });
 
+  await writeActivityStart(refused);
   await writeActivityStart(successor);
   await writeActivityStart(grandchild);
   await writeActivityStart(unrelated);
@@ -237,4 +238,41 @@ test('it aborts an in-flight flow before it can chain a fresh start on the refus
 
   expect(scope.aborted).toBeTrue();
   expect(context.getCancelSignal().aborted).toBeFalse();
+});
+
+test('it keeps the refused root when the drop fails part way, so the next reconnect retries it', async () => {
+  const context = createStubWorkerContext({
+    broadcast: () => {
+      throw new Error('channel closed');
+    },
+  });
+
+  const simulation = createSimulation();
+  const refused = createMockActivityData({ avatarID: 'avatar_retry', id: 'act_retry_root' });
+
+  const live = createMockActivityData({
+    avatarID: 'avatar_retry',
+    id: 'act_retry_live',
+    predecessorActivityID: refused.id,
+  });
+
+  await writeActivityStart(refused);
+  await writeActivityStart(live);
+  await writeQueuedCheckpoint(refused.id, createMockCheckpointBatchEntry({ version: 1 }));
+
+  simulation.startActivity(createMockAvatarData(), createMockActivityInput({ id: live.id }));
+  context.setSimulation(simulation);
+  context.setActivity(live);
+
+  const rejection = rejectActivityStart(context, { latest: null, row: refused });
+
+  await rejection.catch(() => {});
+
+  expect(rejection).rejects.toThrowWithMessage(Error, 'channel closed');
+
+  const remaining = await readAllActivityStarts();
+  const refusedQueue = await readQueuedCheckpoints(refused.id);
+
+  expect(remaining).toStrictEqual([refused]);
+  expect(refusedQueue).toHaveLength(1);
 });

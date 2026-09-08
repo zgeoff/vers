@@ -35,8 +35,10 @@ export async function rejectActivityStart(
   );
 
   for (const activityID of dropped) {
-    await removeActivityStart(activityID);
-    await removeQueuedCheckpoints(activityID);
+    if (activityID !== row.id) {
+      await removeActivityStart(activityID);
+      await removeQueuedCheckpoints(activityID);
+    }
   }
 
   const held = context.getActivity();
@@ -53,6 +55,11 @@ export async function rejectActivityStart(
   }
 
   await resetLatestRunRecords(context, row.avatarID, dropped, input.latest);
+
+  // the root goes last: a drop that fails before this point leaves it in the store, and the next
+  // reconnect re-ingests it, is refused again, and repeats the whole drop
+  await removeActivityStart(row.id);
+  await removeQueuedCheckpoints(row.id);
 
   const ended = heldDropped ? held : row;
 

@@ -141,7 +141,8 @@ a `CHECKPOINT_INVALID` refusal, whose reasons split across both outcomes
   itself was wrong and no resend can clear it: the device drops the activity start, its queued
   checkpoints, and every activity start chained on it, halts the live run if it was one of them,
   takes the next mint's fold source and predecessor from the server's row, and tells the player the
-  run could not be saved.
+  run could not be saved. The refused activity start itself goes last, so a drop that fails part way
+  leaves it in the store and the next reconnect repeats the whole drop.
 
 An activity start reaches the server by one of two routes. A device that still holds its live
 simulation hands it over on first contact, and if that stream's checkpoint flush comes back

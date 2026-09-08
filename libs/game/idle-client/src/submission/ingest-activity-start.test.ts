@@ -248,7 +248,7 @@ test('it defers a build-snapshot-mismatch while the named predecessor still wait
   expect(stored).toStrictEqual(row);
 });
 
-test('it rejects a build-snapshot-mismatch once the named predecessor has stopped server-side, carrying the server’s latest row', async () => {
+test('it rejects a build-snapshot-mismatch once the named predecessor has stopped server-side, carrying the server’s latest row and keeping the row for the drop', async () => {
   const viewer = await createViewer({ avatar: { level: 2, xp: 105 } });
   const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
 
@@ -289,10 +289,10 @@ test('it rejects a build-snapshot-mismatch once the named predecessor has stoppe
 
   const stored = await readActivityStart(row.id);
 
-  expect(stored).toBeUndefined();
+  expect(stored).toStrictEqual(row);
 });
 
-test('it rejects a build-snapshot-mismatch when the server’s active row is not the named predecessor', async () => {
+test('it rejects a build-snapshot-mismatch when the server’s active row is not the named predecessor, keeping the row for the drop', async () => {
   const viewer = await createViewer();
   const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
 
@@ -326,10 +326,10 @@ test('it rejects a build-snapshot-mismatch when the server’s active row is not
 
   const stored = await readActivityStart(row.id);
 
-  expect(stored).toBeUndefined();
+  expect(stored).toStrictEqual(row);
 });
 
-test('it rejects a build-snapshot-mismatch on a start that names no predecessor', async () => {
+test('it rejects a build-snapshot-mismatch on a start that names no predecessor, keeping the row for the drop', async () => {
   const viewer = await createViewer();
   const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
 
@@ -358,7 +358,7 @@ test('it rejects a build-snapshot-mismatch on a start that names no predecessor'
 
   const stored = await readActivityStart(row.id);
 
-  expect(stored).toBeUndefined();
+  expect(stored).toStrictEqual(row);
 });
 
 test('it rejects a build-snapshot-mismatch with no server row to fold from when the avatar has no activity', async () => {

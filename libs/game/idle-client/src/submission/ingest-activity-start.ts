@@ -155,8 +155,8 @@ async function resolveRefusedSnapshot(
     return { outcome: 'deferred' };
   }
 
-  await removeActivityStart(row.id);
-
+  // the caller removes the row once its drop has cleared everything chained on it; removing it
+  // here would leave a drop that fails part way with no root for the next reconnect to retry from
   return { outcome: 'rejected', refusedSnapshot: { latest, row } };
 }
 
