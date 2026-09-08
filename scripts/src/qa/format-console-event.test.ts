@@ -66,3 +66,13 @@ test('it prints a browser log entry with its level and source url', () => {
 test('it returns null for an event that is not console output', () => {
   expect(formatConsoleEvent({ method: 'Page.loadEventFired', params: {} })).toBeNull();
 });
+
+test('it clips a browser log entry to 500 characters', () => {
+  const line = formatConsoleEvent({
+    method: 'Log.entryAdded',
+    params: { entry: { level: 'warning', text: 'x'.repeat(600) } },
+  });
+
+  expect(line).toHaveLength(500);
+  expect(line).toStartWith('log/warning: xxx');
+});

@@ -3,6 +3,7 @@ import type { CDPEvent } from './types';
 
 const CONSOLE_LIMIT = 500;
 const EXCEPTION_LIMIT = 800;
+const LOG_LIMIT = 500;
 
 const remoteObjectSchema = z.object({
   description: z.string().optional(),
@@ -53,7 +54,7 @@ export function formatConsoleEvent(event: CDPEvent): string | null {
       const entry = logEntrySchema.parse(event.params).entry;
       const source = entry.url === undefined ? '' : ` ${entry.url}`;
 
-      return `log/${entry.level}: ${entry.text}${source}`;
+      return `log/${entry.level}: ${entry.text}${source}`.slice(0, LOG_LIMIT);
     }
     default: {
       return null;

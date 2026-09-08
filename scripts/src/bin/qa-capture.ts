@@ -1,8 +1,7 @@
 import { Command } from 'commander';
-import { parseEndpoint } from '../qa/parse-endpoint';
+import { buildEndpointOption } from '../qa/build-endpoint-option';
 import { startWorkerCapture } from '../qa/start-worker-capture';
 
-const DEFAULT_ENDPOINT = process.env['QA_CDP_ENDPOINT'] ?? '127.0.0.1:9222';
 const DEFAULT_PATH_FILTER = '/api/rpc/';
 
 interface CaptureOptions {
@@ -14,7 +13,7 @@ interface CaptureOptions {
 const program = new Command()
   .name('qa-capture')
   .description("log every shared worker's RPC requests and responses from a debug Chrome")
-  .option('--endpoint <host:port>', 'DevTools endpoint', parseEndpoint, DEFAULT_ENDPOINT)
+  .addOption(buildEndpointOption())
   .option('--path <substring>', 'log only requests whose url contains this', DEFAULT_PATH_FILTER)
   .option('--worker-url <substring>', 'attach only to shared workers whose url contains this')
   .action((options: CaptureOptions) => {

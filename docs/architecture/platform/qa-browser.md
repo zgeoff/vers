@@ -11,12 +11,13 @@ emulation, a stack pause, a CPU profile, and a traffic log that survives the ses
 ## Endpoint
 
 The scripts read the endpoint from `--endpoint <host:port>`, then from `QA_CDP_ENDPOINT`, and
-default to `127.0.0.1:9222`. Chrome exposes that endpoint only when it launches with
-`--remote-debugging-port` and `--remote-allow-origins=*`; the launch line, and the port bridge a
-NAT-mode WSL distribution needs to reach it, are in
-[Chrome DevTools MCP](./chrome-devtools-mcp.md#launch-the-debug-browser). Behind the bridge the
-endpoint is the WSL default gateway on the bridged port (`172.28.80.1:9223` on one machine), so a
-session under NAT sets `QA_CDP_ENDPOINT` once:
+default to `127.0.0.1:9222`. A value from the flag or the environment must be a hostname or IPv4
+address and a port from 1 to 65535; the scripts reject any other value before a command runs. Chrome
+exposes that endpoint only when it launches with `--remote-debugging-port` and
+`--remote-allow-origins=*`; the launch line, and the port bridge a NAT-mode WSL distribution needs
+to reach it, are in [Chrome DevTools MCP](./chrome-devtools-mcp.md#launch-the-debug-browser). Behind
+the bridge the endpoint is the WSL default gateway on the bridged port (`172.28.80.1:9223` on one
+machine), so a session under NAT sets `QA_CDP_ENDPOINT` once:
 
 ```bash
 export QA_CDP_ENDPOINT="$(ip route show default | awk '{print $3; exit}'):9223"

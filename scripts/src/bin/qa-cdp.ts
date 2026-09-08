@@ -1,5 +1,6 @@
 import { Command, InvalidArgumentError } from 'commander';
 import { z } from 'zod';
+import { buildEndpointOption } from '../qa/build-endpoint-option';
 import { buildKeyEvents } from '../qa/build-key-events';
 import { buildTargetSocketURL } from '../qa/build-target-socket-url';
 import { createCDPClient } from '../qa/create-cdp-client';
@@ -7,13 +8,11 @@ import { formatConsoleEvent } from '../qa/format-console-event';
 import { formatProfileSummary } from '../qa/format-profile-summary';
 import { formatTargetTable } from '../qa/format-target-table';
 import { PAGE_HELPERS_SOURCE } from '../qa/page-helpers-source';
-import { parseEndpoint } from '../qa/parse-endpoint';
 import { readDevToolsTargets } from '../qa/read-devtools-targets';
 import type { CDPClient } from '../qa/types';
 import { withBrowserClient } from '../qa/with-browser-client';
 import { withTargetClient } from '../qa/with-target-client';
 
-const DEFAULT_ENDPOINT = process.env['QA_CDP_ENDPOINT'] ?? '127.0.0.1:9222';
 const LOAD_TIMEOUT_MS = 30_000;
 const SETTLE_AFTER_LOAD_MS = 500;
 const KEYSTROKE_GAP_MS = 30;
@@ -26,7 +25,7 @@ const OFFLINE_CONDITIONS = { downloadThroughput: -1, latency: 0, uploadThroughpu
 const program = new Command()
   .name('qa-cdp')
   .description('drive one page or worker target of a debug Chrome over the DevTools Protocol')
-  .option('--endpoint <host:port>', 'DevTools endpoint', parseEndpoint, DEFAULT_ENDPOINT);
+  .addOption(buildEndpointOption());
 
 function getEndpoint(): string {
   return program.opts<{ endpoint: string }>().endpoint;
@@ -433,7 +432,8 @@ program
 
       await target.send('Debugger.enable');
 
-      void target.send('Debugger.pause');
+      // the pause answer can arrive after the socket closes on a timed-out wait; the wait reports that
+      target.send('Debugger.pause').catch(() => {});
 
       const rawPaused = await paused;
 
