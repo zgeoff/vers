@@ -105,7 +105,12 @@ test('it halts a live run whose own start the server refused for good and tells 
   server.use(
     mockActivityService.advanceActivity.handler((opts) => {
       throw opts.errors.CHECKPOINT_INVALID({
-        data: { activityID: live.id, appendedHead: 0, reason: 'build-snapshot-mismatch' },
+        data: {
+          activityID: live.id,
+          appendedHead: 0,
+          avatarID: live.avatarID,
+          reason: 'build-snapshot-mismatch',
+        },
       });
     }),
   );
