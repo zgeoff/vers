@@ -278,7 +278,12 @@ test('it drops a start whose snapshot the server refused for good, halts the liv
       track(opts.input.activityID);
 
       throw opts.errors.CHECKPOINT_INVALID({
-        data: { activityID: refused.id, appendedHead: 0, reason: 'build-snapshot-mismatch' },
+        data: {
+          activityID: refused.id,
+          appendedHead: 0,
+          avatarID: refused.avatarID,
+          reason: 'build-snapshot-mismatch',
+        },
       });
     }),
   );
@@ -354,7 +359,12 @@ test('it clears the fold records when a start is refused for good and the server
   server.use(
     mockActivityService.advanceActivity.handler((opts) => {
       throw opts.errors.CHECKPOINT_INVALID({
-        data: { activityID: refused.id, appendedHead: 0, reason: 'build-snapshot-mismatch' },
+        data: {
+          activityID: refused.id,
+          appendedHead: 0,
+          avatarID: refused.avatarID,
+          reason: 'build-snapshot-mismatch',
+        },
       });
     }),
   );

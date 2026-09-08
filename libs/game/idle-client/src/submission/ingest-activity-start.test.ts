@@ -238,7 +238,12 @@ test('it defers a build-snapshot-mismatch while the named predecessor still wait
   server.use(
     mockActivityService.advanceActivity.handler((opts) => {
       throw opts.errors.CHECKPOINT_INVALID({
-        data: { activityID: row.id, appendedHead: 0, reason: 'build-snapshot-mismatch' },
+        data: {
+          activityID: row.id,
+          appendedHead: 0,
+          avatarID: row.avatarID,
+          reason: 'build-snapshot-mismatch',
+        },
       });
     }),
     mockActivityService.getLatestActivityProgress.handler((opts) => {
@@ -279,7 +284,12 @@ test('it rejects a build-snapshot-mismatch once the named predecessor has stoppe
   server.use(
     mockActivityService.advanceActivity.handler((opts) => {
       throw opts.errors.CHECKPOINT_INVALID({
-        data: { activityID: row.id, appendedHead: 0, reason: 'build-snapshot-mismatch' },
+        data: {
+          activityID: row.id,
+          appendedHead: 0,
+          avatarID: row.avatarID,
+          reason: 'build-snapshot-mismatch',
+        },
       });
     }),
   );
@@ -325,7 +335,12 @@ test('it rejects a build-snapshot-mismatch when the server’s active row is not
   server.use(
     mockActivityService.advanceActivity.handler((opts) => {
       throw opts.errors.CHECKPOINT_INVALID({
-        data: { activityID: row.id, appendedHead: 0, reason: 'build-snapshot-mismatch' },
+        data: {
+          activityID: row.id,
+          appendedHead: 0,
+          avatarID: row.avatarID,
+          reason: 'build-snapshot-mismatch',
+        },
       });
     }),
   );
@@ -357,7 +372,12 @@ test('it rejects a build-snapshot-mismatch on a start that names no predecessor,
   server.use(
     mockActivityService.advanceActivity.handler((opts) => {
       throw opts.errors.CHECKPOINT_INVALID({
-        data: { activityID: row.id, appendedHead: 0, reason: 'build-snapshot-mismatch' },
+        data: {
+          activityID: row.id,
+          appendedHead: 0,
+          avatarID: row.avatarID,
+          reason: 'build-snapshot-mismatch',
+        },
       });
     }),
   );
@@ -387,7 +407,12 @@ test('it rejects a build-snapshot-mismatch with no server row to fold from when 
   server.use(
     mockActivityService.advanceActivity.handler((opts) => {
       throw opts.errors.CHECKPOINT_INVALID({
-        data: { activityID: row.id, appendedHead: 0, reason: 'build-snapshot-mismatch' },
+        data: {
+          activityID: row.id,
+          appendedHead: 0,
+          avatarID: row.avatarID,
+          reason: 'build-snapshot-mismatch',
+        },
       });
     }),
   );
@@ -414,7 +439,12 @@ test('it keeps a build-snapshot-mismatch for the backoff when the progress read 
   server.use(
     mockActivityService.advanceActivity.handler((opts) => {
       throw opts.errors.CHECKPOINT_INVALID({
-        data: { activityID: row.id, appendedHead: 0, reason: 'build-snapshot-mismatch' },
+        data: {
+          activityID: row.id,
+          appendedHead: 0,
+          avatarID: row.avatarID,
+          reason: 'build-snapshot-mismatch',
+        },
       });
     }),
     mockActivityService.getLatestActivityProgress.handler(() => HttpResponse.error()),
