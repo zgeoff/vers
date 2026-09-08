@@ -1,11 +1,12 @@
 import { randomBytes, randomInt } from 'node:crypto';
 import { createGenesisSeed } from '@vers/contract-activity';
 import { createDB } from '@vers/db';
-import { Command, InvalidArgumentError } from 'commander';
+import { Command } from 'commander';
 import { QA_KEY_VERSION, QA_SCOPE_SECRET_VERSION, applyQASeed } from '../apply-qa-seed';
 import { buildPasswordFromBytes } from '../build-password-from-bytes';
 import { env } from '../env';
 import { parseDatabaseTarget } from '../parse-database-target';
+import { parseIntegerOption } from '../parse-integer-option';
 import { parseKeyRoots } from '../parse-key-roots';
 import { parseQAUser } from '../parse-qa-user';
 import { requireEnvVar } from '../require-env-var';
@@ -28,8 +29,15 @@ const program = new Command()
     'create a verified QA account with an avatar at a level, optionally with verified runs',
   )
   .requiredOption('--user <name>', 'account name; the address is <name>@qa.versidle.com')
-  .requiredOption('--level <n>', 'avatar level, at least 1', parsePositiveInteger)
-  .option('--runs <n>', 'completed, verified runs to seed on the origin node', parseCount, 0)
+  .requiredOption('--level <n>', 'avatar level, at least 1', (value: string) =>
+    parseIntegerOption(value, 1),
+  )
+  .option(
+    '--runs <n>',
+    'completed, verified runs to seed on the origin node',
+    (value: string) => parseIntegerOption(value, 0),
+    0,
+  )
   .option('--two-factor', 'enable two-factor sign-in and print its secret', false)
   .option('--password <password>', 'password to set; generated and printed when absent')
   .option('--yes', 'act on a database host that is not a loopback address', false)
@@ -106,24 +114,4 @@ function readKeyRoots(): KeyRoots {
     },
     { keyVersion: QA_KEY_VERSION, secretVersion: QA_SCOPE_SECRET_VERSION },
   );
-}
-
-function parsePositiveInteger(value: string): number {
-  const parsed = Number(value);
-
-  if (!Number.isInteger(parsed) || parsed < 1) {
-    throw new InvalidArgumentError('expected an integer of at least 1');
-  }
-
-  return parsed;
-}
-
-function parseCount(value: string): number {
-  const parsed = Number(value);
-
-  if (!Number.isInteger(parsed) || parsed < 0) {
-    throw new InvalidArgumentError('expected a non-negative integer');
-  }
-
-  return parsed;
 }
