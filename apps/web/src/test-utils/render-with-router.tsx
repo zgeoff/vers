@@ -1,3 +1,4 @@
+import type { QueryClient } from '@tanstack/react-query';
 import {
   Outlet,
   RouterProvider,
@@ -15,6 +16,7 @@ import { buildQueryClient } from '../lib/query/build-query-client';
 
 interface RenderWithRouterOptions {
   readonly flags?: Readonly<Record<FlagKey, boolean>>;
+  readonly queryClient?: QueryClient;
   readonly routes?: Readonly<Record<string, Readonly<ReactElement>>>;
 }
 
@@ -57,7 +59,7 @@ export function renderWithRouter(
     path: '$',
   });
 
-  const queryClient = buildQueryClient();
+  const queryClient = options?.queryClient ?? buildQueryClient();
 
   const router = createRouter({
     history: createMemoryHistory({ initialEntries: ['/'] }),
