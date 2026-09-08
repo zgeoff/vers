@@ -64,11 +64,12 @@ without waiting for another tick.
 ### Writer election
 
 Every writer takes one origin-wide exclusive Web Lock before it boots, whichever transport the
-browser uses. The writer worker is a SharedWorker where the browser has one. Where it does not —
-Android Chrome, older Safari — every tab spawns a dedicated worker, and the workers race the same
-lock. The winner boots the worker runtime and announces itself with a writer-ready broadcast. A
-dedicated writer reaches every tab over a pair of BroadcastChannels, one for each direction. The
-inbound and outbound channels are separate, so a tab never receives a message another tab sent.
+browser uses, so a browser without Web Locks gets no writer at all. The writer worker is a
+SharedWorker where the browser has one. Where it does not — Android Chrome, older Safari — every tab
+spawns a dedicated worker, and the workers race the same lock. The winner boots the worker runtime
+and announces itself with a writer-ready broadcast. A dedicated writer reaches every tab over a pair
+of BroadcastChannels, one for each direction. The inbound and outbound channels are separate, so a
+tab never receives a message another tab sent.
 
 A browser holds one SharedWorker per script URL, and each deployed build ships its worker under its
 own hashed URL, so two builds open under one origin would each boot a writer. The lock is what stops
@@ -81,8 +82,10 @@ boots from.
 
 Every tab-to-worker frame in the dedicated transport carries a protocol stamp, a digest of the
 tab-to-worker contract and the worker-to-tab message schema. A writer refuses a frame whose stamp
-differs from its own by name instead of upgrading the tab, and the tab reports the contention rather
-than leaving its calls pending. Two builds share a stamp exactly when their wire shapes agree.
+differs from its own by name instead of upgrading the tab. The refusal closes the tab's port, so its
+pending calls settle with an error, the tab reports the contention, and the tab's handshake pauses
+until a writer of its own build is ready. Two builds share a stamp exactly when their wire shapes
+agree.
 
 The granted-lock callback never settles, so the browser releases the lock only when the writer's tab
 dies. The next queued worker then boots exactly as a reloaded worker does, seeding from the same

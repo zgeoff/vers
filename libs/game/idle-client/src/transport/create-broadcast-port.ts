@@ -35,14 +35,25 @@ export function createBroadcastPort(
   const outgoing = new BroadcastChannel(RPC_CLIENT_TO_WORKER_CHANNEL);
   const incoming = new BroadcastChannel(RPC_WORKER_TO_CLIENT_CHANNEL);
   const listeners = new Set<EventListenerOrEventListenerObject>();
+  const closeListeners = new Set<EventListenerOrEventListenerObject>();
 
   incoming.addEventListener('message', (event: MessageEvent<Envelope | Refusal>) => {
     if (event.data.tabID !== tabID) {
       return;
     }
 
+    // a refusal closes the port for the RPC link, so every pending call settles with a closed
+    // error instead of waiting on an answer that never comes
     if ('refused' in event.data) {
       options.onRefused?.(event.data.refused.protocol);
+
+      const closed = new Event('close');
+
+      for (const listener of closeListeners) {
+        emitToListener(listener, closed);
+      }
+
+      closeListeners.clear();
 
       return;
     }
@@ -59,6 +70,10 @@ export function createBroadcastPort(
       if (type === 'message') {
         listeners.add(listener);
       }
+
+      if (type === 'close') {
+        closeListeners.add(listener);
+      }
     },
     postMessage: (data: unknown) => {
       outgoing.postMessage({ data, protocol, tabID } satisfies Envelope);
@@ -68,10 +83,7 @@ export function createBroadcastPort(
   return port;
 }
 
-function emitToListener(
-  listener: EventListenerOrEventListenerObject,
-  event: MessageEvent<unknown>,
-): void {
+function emitToListener(listener: EventListenerOrEventListenerObject, event: Event): void {
   if (typeof listener === 'function') {
     listener(event);
 

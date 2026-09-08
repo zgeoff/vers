@@ -27,6 +27,23 @@ test('it calls initialize once a worker connects that has not reported state yet
   expect(client.initialize).toHaveBeenCalledExactlyOnceWith({}, { signal: writerAbortSignal });
 });
 
+test('it holds the handshake while another build owns the writer', () => {
+  const client = createStubWorkerClient();
+
+  setIdleWorkerHandle({
+    activity: undefined,
+    client,
+    failureAction: ActivityFailureAction.Abort,
+    initialized: false,
+    writerAbortSignal: new AbortController().signal,
+    writerContention: true,
+  });
+
+  render(<GameSimulationMount />);
+
+  expect(client.initialize).not.toHaveBeenCalled();
+});
+
 test('it calls nothing once the worker has already reported its state and no avatar is known', () => {
   const client = createStubWorkerClient();
 

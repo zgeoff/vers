@@ -32,7 +32,10 @@ export function GameSimulationMount() {
   // it; a writer promotion resets `initialized` to re-enter this loop
   useEffect(() => {
     const client = idleWorkerHandle.client;
-    const needsHandshake = client !== undefined && !idleWorkerHandle.initialized;
+
+    const needsHandshake =
+      client !== undefined && !idleWorkerHandle.initialized && !idleWorkerHandle.writerContention;
+
     const signal = idleWorkerHandle.writerAbortSignal;
 
     const timer = needsHandshake
@@ -50,7 +53,12 @@ export function GameSimulationMount() {
         clearInterval(timer);
       }
     };
-  }, [idleWorkerHandle.client, idleWorkerHandle.initialized, idleWorkerHandle.writerAbortSignal]);
+  }, [
+    idleWorkerHandle.client,
+    idleWorkerHandle.initialized,
+    idleWorkerHandle.writerAbortSignal,
+    idleWorkerHandle.writerContention,
+  ]);
 
   // reports once per writer generation, only once the worker has reported its initial state and
   // an active avatar is known — a connectivity signal, not a resync command: the worker decides

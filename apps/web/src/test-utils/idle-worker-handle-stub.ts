@@ -11,6 +11,7 @@ export interface StubIdleWorkerHandle {
   readonly lastCompletedActivityID?: string | undefined;
   readonly liveRun?: LiveRun | undefined;
   readonly writerAbortSignal: AbortSignal;
+  readonly writerContention?: boolean;
 }
 
 const DEFAULT_HANDLE: StubIdleWorkerHandle = {

@@ -1,5 +1,6 @@
 import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex, utf8ToBytes } from '@noble/hashes/utils.js';
+import invariant from 'tiny-invariant';
 import * as z from 'zod';
 import { workerContract } from '../worker/worker-contract';
 import { workerToClientMessageSchema } from '../worker/worker-to-client-message-schema';
@@ -23,9 +24,7 @@ export function buildProtocolStamp(): string {
 }
 
 function renderSchema(schema: unknown): unknown {
-  if (!(schema instanceof z.ZodType)) {
-    return null;
-  }
+  invariant(schema instanceof z.ZodType, 'every wire schema is a zod schema');
 
   return z.toJSONSchema(schema, { unrepresentable: 'any' });
 }

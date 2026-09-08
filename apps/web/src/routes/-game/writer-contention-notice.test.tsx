@@ -15,7 +15,8 @@ test('it asks a tab that never initialized to close the other version', () => {
   render(<WriterContentionNotice />);
 
   expect(screen.getByText('Another version is still running')).toBeInTheDocument();
-  expect(screen.queryByRole('button', { name: 'Reload' })).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Reload' })).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Close' })).not.toBeInTheDocument();
 });
 
 test('it asks an initialized tab to reload into the waiting version', () => {

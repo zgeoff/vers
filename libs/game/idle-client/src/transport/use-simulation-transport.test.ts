@@ -39,13 +39,27 @@ class StubSharedWorker extends EventTarget {
 
 const constructedWorkers: Array<StubSharedWorker> = [];
 
+// a browser with a SharedWorker also has Web Locks, which the transport pick now requires; the
+// test runtime has neither, so both are stubbed together
 function registerSharedWorkerStub() {
   const originalSharedWorker = globalThis.SharedWorker;
+  const locksDescriptor = Object.getOwnPropertyDescriptor(navigator, 'locks');
 
   Reflect.set(globalThis, 'SharedWorker', StubSharedWorker);
 
+  Object.defineProperty(navigator, 'locks', {
+    configurable: true,
+    value: { request: () => Promise.resolve() },
+  });
+
   onTestFinished(() => {
     Reflect.set(globalThis, 'SharedWorker', originalSharedWorker);
+
+    if (locksDescriptor === undefined) {
+      Reflect.deleteProperty(navigator, 'locks');
+    } else {
+      Object.defineProperty(navigator, 'locks', locksDescriptor);
+    }
 
     constructedWorkers.length = 0;
   });

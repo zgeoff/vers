@@ -31,6 +31,8 @@ test('it hands a connection to the runtime at once when the writer lock is free'
     locks: ctx.fake.locks,
   });
 
+  onTestFinished(gate.stop);
+
   const event = new MessageEvent('connect', { ports: [new MessageChannel().port1] });
 
   gate.handleConnect(event);
@@ -50,6 +52,8 @@ test('it holds connections while another worker owns the writer lock, and hands 
   // another build's worker holds the origin-wide lock for as long as its tabs live
   void ctx.fake.locks.request(WRITER_LOCK_NAME, { mode: 'exclusive' }, () => new Promise(() => {}));
   const gate = createWriterGate({ createRuntime, locks: ctx.fake.locks });
+
+  onTestFinished(gate.stop);
 
   const first = new MessageEvent('connect', { ports: [new MessageChannel().port1] });
   const second = new MessageEvent('connect', { ports: [new MessageChannel().port1] });
@@ -85,7 +89,47 @@ test('it rejects a connect event that carries no port', () => {
     locks: ctx.fake.locks,
   });
 
+  onTestFinished(gate.stop);
+
   expect(() => {
     gate.handleConnect(new MessageEvent('connect'));
   }).toThrow();
+});
+
+test('it restates the pending writer when another waiting writer is elected first', async () => {
+  const ctx = setupTest();
+
+  void ctx.fake.locks.request(WRITER_LOCK_NAME, { mode: 'exclusive' }, () => new Promise(() => {}));
+
+  const earlier = createWriterGate({
+    createRuntime: () => ({ handleConnect: () => {} }),
+    locks: ctx.fake.locks,
+  });
+
+  const later = createWriterGate({
+    createRuntime: () => ({ handleConnect: () => {} }),
+    locks: ctx.fake.locks,
+  });
+
+  onTestFinished(() => {
+    earlier.stop();
+    later.stop();
+  });
+
+  earlier.handleConnect(new MessageEvent('connect', { ports: [new MessageChannel().port1] }));
+  later.handleConnect(new MessageEvent('connect', { ports: [new MessageChannel().port1] }));
+
+  await waitFor(() => {
+    expect(ctx.broadcasts).toHaveLength(2);
+  });
+
+  // the first holder dies: the earlier gate is elected, the later one still waits behind it
+  ctx.fake.advanceLockQueue(WRITER_LOCK_NAME);
+
+  await waitFor(() => {
+    expect(ctx.broadcasts.slice(2)).toStrictEqual([
+      { type: WorkerMessageType.WriterReady },
+      { type: WorkerMessageType.WriterPending },
+    ]);
+  });
 });

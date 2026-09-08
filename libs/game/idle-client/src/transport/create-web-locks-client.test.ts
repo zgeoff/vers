@@ -71,11 +71,9 @@ test('it flags writer contention when the elected writer refuses this tab', asyn
     workerReply.postMessage({ refused: { protocol: 'other-build' }, tabID: event.data.tabID });
   });
 
-  void client.initialize({});
+  await expect(client.initialize({})).toReject();
 
-  await waitFor(() => {
-    expect(useIdleStore.getState().writerContention).toBeTrue();
-  });
+  expect(useIdleStore.getState().writerContention).toBeTrue();
 });
 
 test('it mints a distinct tab id for each client', async () => {

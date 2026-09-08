@@ -126,12 +126,9 @@ test('it refuses a tab from another build by name instead of upgrading it', asyn
     }),
   );
 
-  // no writer ever answers a refused tab, so the call stays pending; only the refusal matters
-  void client.initialize({});
+  // the refusal closes the tab's port, so the call settles with a closed error
+  await expect(client.initialize({})).toReject();
 
-  await waitFor(() => {
-    expect(refusals).toStrictEqual(['worker-build']);
-  });
-
+  expect(refusals).toStrictEqual(['worker-build']);
   expect(upgrade).not.toHaveBeenCalled();
 });
