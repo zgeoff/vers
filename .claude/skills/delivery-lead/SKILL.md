@@ -56,12 +56,17 @@ security finding. Mechanically it is a red run of the `main` workflow, or an ope
 increment's done test needs it.
 
 **Ready** means open, every blocker closed, not labelled `needs-refinement`, and one of: in an open
-increment, in the side lane, or an interrupt. An epic (`epic` label) is never Ready: its children
-carry the work, and the epic closes when they do.
+increment, in the side lane, an interrupt, or labelled `decided`. An epic (`epic` label) is never
+Ready: its children carry the work, and the epic closes when they do.
+
+A **decided** issue (`decided` label) is backlog work the owner has scoped and approved in chat, so
+a build agent picks it without waiting for an increment to need it. The label records the owner's
+yes: you apply it when they approve the issue's Scope, and you never apply it on your own.
 
 **Pick order**: interrupts first, then across every open increment the Ready issue that blocks the
-most open issues, then the lowest increment number, then the lowest issue number. There is no
-priority label.
+most open issues, then the lowest increment number, then the lowest issue number. A decided issue
+sorts after every increment's Ready issues, by blocked count then issue number. There is no priority
+label.
 
 ## Final state
 
