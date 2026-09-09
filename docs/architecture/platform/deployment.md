@@ -177,10 +177,13 @@ crosses from the GitHub runner. The leg pushes the image as
 travels between the jobs. Re-running a leg overwrites its own tag instead of minting a new artifact.
 
 A stale cutover leg deploys that pushed ref (`flyctl deploy --image`), waits for the fleet to report
-the new SHA, then runs the app's post-deploy probes from `deploy.config.ts`. An app with no
-Dockerfile (`vers-umami`) has no build leg work and cuts over to the image named in its `fly.toml`.
-For a manual rollout, the CLI's `deploy` command runs both phases in one invocation. The CLI's
-`images` command prints each buildable app's deployable ref for HEAD as JSON:
+the new SHA, then runs the app's post-deploy probes from `deploy.config.ts`. A probe is an HTTP
+status check, a JSON round-trip against an expected body, or a Lighthouse audit of the live page
+that fails under the manifest's `minPerformanceScore`. The Lighthouse audit runs in the runner's own
+Chrome and gets one retry, where a request probe gets nine. An app with no Dockerfile (`vers-umami`)
+has no build leg work and cuts over to the image named in its `fly.toml`. For a manual rollout, the
+CLI's `deploy` command runs both phases in one invocation. The CLI's `images` command prints each
+buildable app's deployable ref for HEAD as JSON:
 
 - the commit-derived tag when the app is stale;
 - the newest recorded release otherwise;
