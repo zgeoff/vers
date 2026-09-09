@@ -602,7 +602,7 @@ async function runContentCoveragePreflight(): Promise<void> {
     ]);
 
     const gap = findContentCoverageGap({
-      currentContentVersion,
+      contentVersion: currentContentVersion,
       maxContentVersion: engine?.maxContentVersion,
     });
 

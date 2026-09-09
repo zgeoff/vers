@@ -28,7 +28,7 @@ export async function runContentPublish(
     const engine = await findCurrentSimVersion(db);
 
     const gap = findContentCoverageGap({
-      currentContentVersion: result.document.contentVersion,
+      contentVersion: result.document.contentVersion,
       maxContentVersion: engine?.maxContentVersion,
     });
 

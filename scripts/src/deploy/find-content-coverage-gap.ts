@@ -1,27 +1,30 @@
 interface ContentCoverageInput {
-  readonly currentContentVersion: string | undefined;
+  readonly contentVersion: string | undefined;
   readonly maxContentVersion: string | undefined;
 }
 
-// content versions are numeric strings, the same rule the activity start admission applies
+// the same numeric-string rule the content document schema enforces, applied here so a malformed
+// registry value reads as a gap rather than coercing to a number that passes
+const NUMERIC_VERSION = /^\d+$/;
+
 export function findContentCoverageGap(input: Readonly<ContentCoverageInput>): string | null {
-  if (input.currentContentVersion === undefined) {
+  if (input.contentVersion === undefined) {
     return null;
   }
 
   if (input.maxContentVersion === undefined) {
-    return `content version ${input.currentContentVersion} is current but no active engine is registered to replay it`;
+    return `content version ${input.contentVersion} has no active engine registered to replay it`;
   }
 
-  const current = Number(input.currentContentVersion);
-  const supported = Number(input.maxContentVersion);
-
-  if (Number.isNaN(current) || Number.isNaN(supported)) {
-    return `content versions are numeric strings; got current ${input.currentContentVersion} and engine max ${input.maxContentVersion}`;
+  if (
+    !NUMERIC_VERSION.test(input.contentVersion) ||
+    !NUMERIC_VERSION.test(input.maxContentVersion)
+  ) {
+    return `content versions are numeric strings; got content ${input.contentVersion} and engine max ${input.maxContentVersion}`;
   }
 
-  if (current > supported) {
-    return `content version ${input.currentContentVersion} is newer than the active engine's max content version ${input.maxContentVersion}`;
+  if (Number(input.contentVersion) > Number(input.maxContentVersion)) {
+    return `content version ${input.contentVersion} is newer than the active engine's max content version ${input.maxContentVersion}`;
   }
 
   return null;
