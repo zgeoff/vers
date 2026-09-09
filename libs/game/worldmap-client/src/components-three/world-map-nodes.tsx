@@ -145,6 +145,12 @@ export function WorldMapNodes(props: Readonly<WorldMapNodesProps>) {
     setSelectedNode(node);
   };
 
+  // three sizes the instance-matrix storage buffer from the count and binds it before it skips a
+  // zero-instance draw, so a count-0 mesh makes WebGPU report a zero-size binding on a cold load
+  if (props.nodes.length === 0) {
+    return null;
+  }
+
   return (
     <instancedMesh
       ref={meshRef}
