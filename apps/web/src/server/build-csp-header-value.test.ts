@@ -4,8 +4,14 @@ import { buildCSPHeaderValue } from './build-csp-header-value';
 test('it scopes script-src and script-src-attr to the request nonce', () => {
   const value = buildCSPHeaderValue({ nonce: 'abc123', sentryOrigin: null });
 
-  expect(value).toInclude("script-src 'unsafe-eval' 'strict-dynamic' 'self' 'nonce-abc123'");
+  expect(value).toInclude("script-src 'strict-dynamic' 'self' 'nonce-abc123';");
   expect(value).toInclude("script-src-attr 'nonce-abc123'");
+});
+
+test('it never allows string evaluation in script-src', () => {
+  const value = buildCSPHeaderValue({ nonce: 'abc123', sentryOrigin: null });
+
+  expect(value).not.toInclude("'unsafe-eval'");
 });
 
 test('it omits the error-ingest origin when error reporting is disabled', () => {

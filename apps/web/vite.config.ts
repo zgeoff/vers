@@ -48,6 +48,21 @@ export default defineConfig({
       : []),
   ],
   environments: {
+    client: {
+      build: {
+        rolldownOptions: {
+          output: {
+            // the bundler hoists a shared chunk above the entry's body, so a schema built in one
+            // would probe eval before the entry's jitless call ran; keeping zod and the jitless
+            // module in one chunk every schema chunk imports keeps the call ahead of every schema
+            codeSplitting: {
+              groups: [{ name: 'zod', test: /node_modules\/zod\/|\/disable-zod-jit\.ts$/ }],
+            },
+          },
+        },
+      },
+    },
+
     // tanstack start names its server environment `ssr` (kept for compatibility with vite plugins
     // predating the environment API), not `server`.
     ssr: {

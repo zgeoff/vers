@@ -79,6 +79,7 @@
         "@vers/service-utils": "workspace:*",
         "@vers/styled-system": "workspace:*",
         "@vers/trace": "workspace:*",
+        "@vers/utils": "workspace:*",
         "@vers/worldmap-client": "workspace:*",
         "@vers/worldmap-core": "workspace:*",
         "h3": "catalog:",
@@ -383,6 +384,9 @@
     "libs/core/utils": {
       "name": "@vers/utils",
       "version": "0.0.0",
+      "dependencies": {
+        "zod": "catalog:",
+      },
       "devDependencies": {
         "@types/bun": "catalog:",
         "@types/node": "catalog:",
@@ -610,6 +614,7 @@
         "@vers/service-utils": "workspace:*",
         "@vers/styled-system": "workspace:*",
         "@vers/trace": "workspace:*",
+        "@vers/utils": "workspace:*",
         "idb": "catalog:",
         "react": "catalog:",
         "tiny-invariant": "catalog:",

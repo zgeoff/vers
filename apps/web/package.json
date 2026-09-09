@@ -50,6 +50,7 @@
     "@vers/service-utils": "workspace:*",
     "@vers/styled-system": "workspace:*",
     "@vers/trace": "workspace:*",
+    "@vers/utils": "workspace:*",
     "@vers/worldmap-client": "workspace:*",
     "@vers/worldmap-core": "workspace:*",
     "h3": "catalog:",

@@ -1,3 +1,5 @@
+// first so it runs before any imported module builds a schema
+import '@vers/utils/disable-zod-jit';
 import { createWorkerRuntime } from './create-worker-runtime';
 import { createWriterGate } from './create-writer-gate';
 import { startErrorReporting } from './start-error-reporting';
