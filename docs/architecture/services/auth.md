@@ -60,7 +60,8 @@ IP, session, or target does not match the stored row.
 The transaction token is an RS256 JWT minted and verified only inside the edge process
 (`create-step-up-transaction-token.ts`). It is proof a code check passed, redeemable once by the
 mutation it names. It carries `action`, `target`, `sessionID`, and a `jti`, and lives 5 minutes. It
-signs against a per-process in-memory keypair, since it never leaves the process that issued it. The
+signs against a per-process in-memory keypair. The token round-trips through the browser between the
+code check and the mutation, so it verifies only on the edge process that minted it. The
 `consumed_transaction_tokens` ledger enforces single use: `consumeTransactionToken` records the
 `jti` and rejects a token whose `jti` is already recorded. `checkStepUp` matches the token's
 `sessionID` before consuming it, so a token minted under one session cannot redeem under another.

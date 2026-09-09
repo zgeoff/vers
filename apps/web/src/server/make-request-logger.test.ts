@@ -231,3 +231,38 @@ test('it logs at error and rethrows when the handler throws', async () => {
     message: 'request failed',
   });
 });
+
+test('it logs a request as overdue while it is still open past the overdue threshold', async () => {
+  const lines: Array<{ fields: Record<string, unknown>; level: string; message: string }> = [];
+
+  const requestLogger = makeRequestLogger(
+    {
+      debug: (fields, message) => {
+        lines.push({ fields, level: 'debug', message });
+      },
+      error: (fields, message) => {
+        lines.push({ fields, level: 'error', message });
+      },
+      info: (fields, message) => {
+        lines.push({ fields, level: 'info', message });
+      },
+      warn: (fields, message) => {
+        lines.push({ fields, level: 'warn', message });
+      },
+    },
+    { overdueRequestMs: 10 },
+  );
+
+  await requestLogger(
+    new Request('https://example.test/nexus'),
+    () =>
+      new Promise((resolve) => {
+        setTimeout(() => {
+          resolve(new Response('ok'));
+        }, 30);
+      }),
+  );
+
+  expect(lines.map((line) => line.message)).toStrictEqual(['request overdue', 'request completed']);
+  expect(lines[0]?.fields).toStrictEqual({ elapsedMs: 10, method: 'GET', path: '/nexus' });
+});

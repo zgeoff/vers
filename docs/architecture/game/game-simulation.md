@@ -210,10 +210,10 @@ A queue-fed verifier replays submitted checkpoint batches and compares its resul
 stream. Replay is per-stream FIFO: `version` N+1 never verifies before N, because the seed chain
 would break. The verifier replays from the `Started` checkpoint under the sim version stamped into
 it, dispatched through a provider registry keyed by sim version so an old segment replays under the
-code and content that produced it. For the sim version this deploy runs, the verifier holds each
-live stream's simulation in memory at its verified head and advances it by each batch's delta rather
-than replaying from `Started` every time; a verifier restart or cache eviction falls back to a
-from-`Started` rebuild.
+code and content that produced it. For the sim version this deploy runs, a drain holds each stream
+it verified in memory at its verified head for the rest of that drain, so a later batch in the same
+drain advances by its delta rather than replaying from `Started`. The next drain, a verifier
+restart, or a cache eviction rebuilds from `Started`.
 
 Three triggers start a drain of the queue: the wake the activity service sends after an append, the
 replay service's own boot, and a Fly scheduled machine that drains hourly. The scheduled drain is

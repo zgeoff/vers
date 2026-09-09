@@ -20,6 +20,7 @@ export default defineDeployManifest({
       configDir: 'services/activity',
       dockerfile: 'services/activity/Dockerfile',
       exposure: 'flycast',
+      minStartedMachines: 1,
       trigger: { kind: 'turbo-affected', pkg: '@vers/service-activity' },
     },
     {
@@ -56,6 +57,7 @@ export default defineDeployManifest({
       configDir: 'services/session',
       dockerfile: 'services/session/Dockerfile',
       exposure: 'flycast',
+      minStartedMachines: 1,
       trigger: { kind: 'turbo-affected', pkg: '@vers/service-session' },
     },
     {
