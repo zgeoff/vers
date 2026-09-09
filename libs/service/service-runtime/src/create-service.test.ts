@@ -878,6 +878,69 @@ test('it logs a request past its slow-request threshold at warn with slow and th
   );
 });
 
+test('it logs a request as overdue while it is still open past the overdue threshold', async () => {
+  const keyPair = await getTestServiceKeyPair();
+
+  updateEnv('SERVICE_AUTH_JWKS', keyPair.jwksJSON);
+
+  const contract = buildTestContract();
+
+  const service = await createService({
+    buildRouter: () => buildTestRouter(contract),
+    envShape: {},
+    name: 'test-service',
+    overdueRequestMs: 10,
+  });
+
+  const warnSpy = spyOn(service.logger, 'warn');
+
+  const token = await createServiceToken({
+    audience: 'test-service',
+    privateKey: keyPair.privateKey,
+  });
+
+  const client = buildRPCTestClient<ReturnType<typeof buildTestContract>>(service.app, {
+    headers: { authorization: `Bearer ${token}` },
+  });
+
+  await client.sleep({ ms: 30 });
+
+  expect(warnSpy).toHaveBeenCalledExactlyOnceWith(
+    { elapsedMs: 10, method: 'POST', path: '/rpc/sleep' },
+    'request overdue',
+  );
+});
+
+test('it writes no overdue line for a request that finishes inside the threshold', async () => {
+  const keyPair = await getTestServiceKeyPair();
+
+  updateEnv('SERVICE_AUTH_JWKS', keyPair.jwksJSON);
+
+  const contract = buildTestContract();
+
+  const service = await createService({
+    buildRouter: () => buildTestRouter(contract),
+    envShape: {},
+    name: 'test-service',
+    overdueRequestMs: 1000,
+  });
+
+  const warnSpy = spyOn(service.logger, 'warn');
+
+  const token = await createServiceToken({
+    audience: 'test-service',
+    privateKey: keyPair.privateKey,
+  });
+
+  const client = buildRPCTestClient<ReturnType<typeof buildTestContract>>(service.app, {
+    headers: { authorization: `Bearer ${token}` },
+  });
+
+  await client.sleep({ ms: 1 });
+
+  expect(warnSpy).not.toHaveBeenCalled();
+});
+
 test('it keeps a slow 5xx at error severity without the slow flag', async () => {
   const keyPair = await getTestServiceKeyPair();
 

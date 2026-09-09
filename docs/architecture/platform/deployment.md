@@ -24,10 +24,13 @@ database connection. Its state is 2 secrets, `ROLL_KEY_ROOTS` and `SCOPE_SECRET_
 Every app scales to zero. `auto_stop_machines = 'suspend'` parks an idle machine with its memory
 snapshot for sub-second wake, and a service wakes on its first request. A suspended process resumes
 with the Postgres sockets it held, so `@vers/db` drops its pool on resume
-([database](./database.md#connection-pool)). Two deviations:
+([database](./database.md#connection-pool)). Three deviations:
 
-- `app-web` keeps one machine warm (`min_machines_running = 1`, enforced by `deploy verify` through
-  the manifest's `minStartedMachines`) so a visitor never waits on a cold start.
+- `app-web`, `service-activity`, and `service-session` each keep one machine warm
+  (`min_machines_running = 1`, enforced by `deploy verify` through the manifest's
+  `minStartedMachines`). Every request passes through app-web and the session service, and the first
+  tap of a session reaches the activity service, so a warm trio keeps a player's first action from
+  waiting on a chain of machine wakes.
 - `service-email` stops rather than suspends (`auto_stop_machines = 'stop'`) — the queue-hosting
   policy ([queues](./queues.md)).
 
@@ -297,7 +300,10 @@ change.
 The activity-start admission refuses to stamp a version whose row's max content version falls behind
 the content registry's current version, answering `SIM_VERSION_EXPIRED` rather than accepting a
 start it could never replay. An engine build must deploy and reconcile its row's max content version
-before the content-registry publish that depends on it goes out. The refusal assumes that ordering.
+before the content-registry publish that depends on it goes out. Two checks enforce that ordering:
+the deploy preflight fails when the registry's current content version is newer than the newest
+active engine row's max content version, and the content publish refuses to move the current pointer
+past what that row supports.
 
 Pruning stale provider apps and expired registry rows is the retention sweep's job. The deploy CLI
 only ever creates and refreshes.

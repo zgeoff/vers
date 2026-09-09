@@ -30,6 +30,7 @@ export interface ServiceConfig<TEnvShape extends z.ZodRawShape> {
   readonly buildRouter: (runtime: ServiceRuntime<TEnvShape>) => AnyRouter | Promise<AnyRouter>;
   readonly envShape: TEnvShape;
   readonly name: string;
+  readonly overdueRequestMs?: number;
   readonly slowRequestMs?: number;
   readonly slowRequestOverridesMs?: Readonly<Record<string, number>>;
 }
@@ -43,6 +44,7 @@ export interface Service<TEnvShape extends z.ZodRawShape> {
 }
 
 const DEFAULT_SLOW_REQUEST_MS = 2000;
+const DEFAULT_OVERDUE_REQUEST_MS = 30_000;
 
 export async function createService<TEnvShape extends z.ZodRawShape = Record<never, never>>(
   config: ServiceConfig<TEnvShape>,
@@ -133,6 +135,7 @@ export async function createService<TEnvShape extends z.ZodRawShape = Record<nev
     keySet,
     logger,
     serviceName: config.name,
+    overdueRequestMs: config.overdueRequestMs ?? DEFAULT_OVERDUE_REQUEST_MS,
     slowRequestMs: config.slowRequestMs ?? DEFAULT_SLOW_REQUEST_MS,
     ...(config.slowRequestOverridesMs !== undefined && {
       slowRequestOverridesMs: config.slowRequestOverridesMs,
@@ -193,6 +196,7 @@ function createTrace(request: Request): TraceContext {
 interface RegisterORPCHandlerDeps {
   readonly keySet: ServiceKeySet;
   readonly logger: pino.Logger;
+  readonly overdueRequestMs: number;
   readonly serviceName: string;
   readonly slowRequestMs: number;
   readonly slowRequestOverridesMs?: Readonly<Record<string, number>>;
@@ -211,85 +215,118 @@ function registerORPCHandler(
       const trace = createTrace(context.request);
 
       return withTraceContext(trace, async () => {
-        const start = performance.now();
         const method = context.request.method;
 
         // pathname only: a GET-mapped procedure encodes its input in the query string, and logged
         // inputs belong to the handler's own lines, not the transport's
         const path = new URL(context.request.url).pathname;
 
-        const resolution = await parseServiceToken(context.request, {
-          audience: deps.serviceName,
-          keySet: deps.keySet,
-        });
-
-        if ('failure' in resolution) {
-          const response = Response.json({ error: resolution.failure }, { status: 401 });
-
-          response.headers.set('x-trace-id', trace.traceID);
-
-          deps.logger.warn(
-            {
-              durationMs: toDurationMs(performance.now() - start),
-              failure: resolution.failure,
-              method,
-              path,
-              status: 401,
-            },
-            'service token rejected',
-          );
-
-          return response;
-        }
-
-        let handled: Awaited<ReturnType<typeof handler.handle>>;
+        // written while the request is still open: a span exports only once it ends, so a request
+        // that never finishes leaves this line as its only trace
+        const overdue = setTimeout(() => {
+          deps.logger.warn({ elapsedMs: deps.overdueRequestMs, method, path }, 'request overdue');
+        }, deps.overdueRequestMs);
 
         try {
-          handled = await handler.handle(context.request, {
-            context: {
-              actingSessionID: resolution.actingSessionID,
-              actingUserID: resolution.actingUserID,
-              logger: deps.logger,
-              traceID: trace.traceID,
-            },
-            prefix,
-          });
-        } catch (error) {
-          deps.logger.error(
-            { durationMs: toDurationMs(performance.now() - start), err: error, method, path },
-            'request failed',
-          );
-
-          throw error;
-        }
-
-        const finalResponse = handled.matched
-          ? handled.response
-          : new Response('not found', { status: 404 });
-
-        finalResponse.headers.set('x-trace-id', trace.traceID);
-
-        const elapsedMs = performance.now() - start;
-        const durationMs = toDurationMs(elapsedMs);
-        const thresholdMs = deps.slowRequestOverridesMs?.[path] ?? deps.slowRequestMs;
-        const isSlow = elapsedMs > thresholdMs && finalResponse.status < 500;
-
-        deps.logger[isSlow ? 'warn' : pickRequestLogLevel(finalResponse.status)](
-          {
-            durationMs,
+          return await serveORPCRequest(context.request, handler, deps, trace, {
             method,
             path,
-            status: finalResponse.status,
-            ...(isSlow && { slow: true, thresholdMs }),
-          },
-          'request completed',
-        );
-
-        return finalResponse;
+            prefix,
+          });
+        } finally {
+          clearTimeout(overdue);
+        }
       });
     },
     { parse: 'none' },
   );
+}
+
+interface RequestRoute {
+  readonly method: string;
+  readonly path: string;
+  readonly prefix: `/${string}`;
+}
+
+async function serveORPCRequest(
+  request: Request,
+  handler: FetchHandler<ServiceContext>,
+  deps: RegisterORPCHandlerDeps,
+  trace: Readonly<TraceContext>,
+  route: Readonly<RequestRoute>,
+): Promise<Response> {
+  const method = route.method;
+  const path = route.path;
+  const start = performance.now();
+
+  const resolution = await parseServiceToken(request, {
+    audience: deps.serviceName,
+    keySet: deps.keySet,
+  });
+
+  if ('failure' in resolution) {
+    const response = Response.json({ error: resolution.failure }, { status: 401 });
+
+    response.headers.set('x-trace-id', trace.traceID);
+
+    deps.logger.warn(
+      {
+        durationMs: toDurationMs(performance.now() - start),
+        failure: resolution.failure,
+        method,
+        path,
+        status: 401,
+      },
+      'service token rejected',
+    );
+
+    return response;
+  }
+
+  let handled: Awaited<ReturnType<typeof handler.handle>>;
+
+  try {
+    handled = await handler.handle(request, {
+      context: {
+        actingSessionID: resolution.actingSessionID,
+        actingUserID: resolution.actingUserID,
+        logger: deps.logger,
+        traceID: trace.traceID,
+      },
+      prefix: route.prefix,
+    });
+  } catch (error) {
+    deps.logger.error(
+      { durationMs: toDurationMs(performance.now() - start), err: error, method, path },
+      'request failed',
+    );
+
+    throw error;
+  }
+
+  const finalResponse = handled.matched
+    ? handled.response
+    : new Response('not found', { status: 404 });
+
+  finalResponse.headers.set('x-trace-id', trace.traceID);
+
+  const elapsedMs = performance.now() - start;
+  const durationMs = toDurationMs(elapsedMs);
+  const thresholdMs = deps.slowRequestOverridesMs?.[path] ?? deps.slowRequestMs;
+  const isSlow = elapsedMs > thresholdMs && finalResponse.status < 500;
+
+  deps.logger[isSlow ? 'warn' : pickRequestLogLevel(finalResponse.status)](
+    {
+      durationMs,
+      method,
+      path,
+      status: finalResponse.status,
+      ...(isSlow && { slow: true, thresholdMs }),
+    },
+    'request completed',
+  );
+
+  return finalResponse;
 }
 
 function pickRequestLogLevel(status: number): 'error' | 'info' | 'warn' {

@@ -124,6 +124,11 @@ line-level conventions:
   `thresholdMs` added onto the completion line, unless its status is already a server error. The
   threshold defaults to 2s (`slowRequestMs`, a `createService` config option) and is overridable per
   pathname through `slowRequestOverridesMs`.
+- A request still open 30s after it arrived writes a `request overdue` line at `warn` while it is
+  still running, with `method`, `path`, and `elapsedMs`. The completion line and the span come only
+  when the request ends, so this line is the one record a request that never finishes leaves. The
+  threshold is `overdueRequestMs` on `createService`, and app-web's request logger applies the same
+  default.
 - Presentation is the transport's job: dev consoles pretty-print through `pino-pretty`, and call
   sites never embed color codes or decoration in the message.
 
@@ -293,9 +298,14 @@ appending unverified work.
 The `vers slow requests` threshold monitor watches `vers-traces` for any non-probe server span past
 a fixed 30s duration threshold and notifies `vers alarms`, evaluated on its own schedule rather than
 at span close. Health-probe routes are excluded because their latency tracks scale-to-zero machine
-wake rather than request handling. It is the fleet-wide alarm for a hung or pathologically slow
-request, independent of the per-request slow-request warn log a service's own `slowRequestMs`
-threshold decides.
+wake rather than request handling. It is the fleet-wide alarm for a pathologically slow request that
+did complete, independent of the per-request slow-request warn log a service's own `slowRequestMs`
+threshold decides. It never sees a request that has not finished: the batch span processor exports a
+span only after it ends.
+
+The `vers overdue requests` threshold monitor closes that gap. It watches `vers-logs` for the
+`request overdue` line a service or app-web writes while a request is still open past 30s, and
+notifies `vers alarms` on the first bin holding at least 1.
 
 ## Alarms channel
 

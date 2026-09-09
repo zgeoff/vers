@@ -16,8 +16,8 @@ stateDiagram-v2
   offline --> online: reconnect delivers the outbox
   online --> closed: app closes or the tab is paused
   offline --> closed: app closes or the tab is paused
-  closed --> online: reopen fast-forwards the idle gap and delivers the result
-  closed --> offline: reopen with no network fast-forwards, delivers nothing
+  closed --> online: reopen reads the confirmed position, fast-forwards the idle gap, and delivers the result
+  closed --> offline: reopen with no network reconstructs nothing until a reconnect
 ```
 
 ## Three connectivity states
@@ -42,18 +42,18 @@ gap on resume just as it does a closed period's.
 
 The network returning is a **reconnect**, and the app opening is a **reopen**. Reconnect drives
 reconcile; reopen alone does not. A device that reopens while the network is still unreachable
-enters the offline state directly, without ever passing through online, and delivers nothing until
-it later reconnects. So a player crosses several states in one arc — online, into a dead spot
-(offline), close the app (closed), reopen hours later — and reconcile handles the whole arc at the
-reconnect that eventually follows.
+enters the offline state directly, without ever passing through online, reconstructs no gap, and
+delivers nothing until it later reconnects. So a player crosses several states in one arc — online,
+into a dead spot (offline), close the app (closed), reopen hours later — and reconcile handles the
+whole arc at the reconnect that eventually follows.
 
 ## Resuming: fast-forward first, then play
 
 When the device resumes, it first reconstructs the gap between its last simulated position and now,
 then resumes live play. Reconstruction is a **fast-forward**: a deterministic re-simulation from the
-last known position over the elapsed time. The fast-forward is local — it needs no network, because
-the seed and position it starts from are cached on the device and the simulation is a pure function
-of them. Only delivering the result waits for reconnect.
+last known position over the elapsed time. The simulation itself is local, a pure function of the
+cached seed and position, but the worker reads the server's confirmed position before it
+reconstructs anything, so a fast-forward runs only once the network answers.
 
 The fast-forward must run before live play resumes, or two things go wrong:
 
@@ -71,8 +71,8 @@ The gap can be any size, including zero. A player who was actively playing has n
 fast-forward is a no-op and live play continues. A player returning from a long closed period has a
 large gap, reconstructed as re-attempts of the node they were last on.
 
-Network availability never gates the local simulation; it gates only delivery. The anti-cheat
-guarantee lives at delivery: the server meters the
+Network availability gates the start of a reconstruction and the delivery of its result, never the
+simulation in between. The anti-cheat guarantee lives at delivery: the server meters the
 [offline budget](./game-simulation.md#the-offline-budget) on the append path, and the catch-up
 settles only up to where the budget runs out. The activity caps at that point, and the device
 resyncs from there. A device could set its own clock forward and fast-forward an enormous gap, and

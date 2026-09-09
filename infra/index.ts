@@ -8,6 +8,7 @@ export {
   logsDatasetName,
   mcpTokenName,
   metricsDatasetName,
+  overdueRequestsMonitorName,
   replayPokeFailedMonitorName,
   serverErrorsMonitorName,
   slowRequestsMonitorName,

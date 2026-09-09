@@ -1,9 +1,14 @@
+import { findCurrentContentVersion } from '@vers/content-registry';
 import { BUNDLED_CONTENT_VERSION } from '@vers/content-version';
 import { createDB } from '@vers/db';
 import type { DB } from '@vers/db';
 import { findLatestRelease, recordRelease } from '@vers/release-registry';
 import type { ReleaseRow } from '@vers/release-registry';
-import { collectRetentionRefusals, updateExpiredSimVersions } from '@vers/sim-registry';
+import {
+  collectRetentionRefusals,
+  findCurrentSimVersion,
+  updateExpiredSimVersions,
+} from '@vers/sim-registry';
 import { Command } from 'commander';
 import { execa } from 'execa';
 import type { Kysely } from 'kysely';
@@ -18,6 +23,7 @@ import { buildImageRef } from '../deploy/build-image-ref';
 import { buildProviderAppName } from '../deploy/build-provider-app-name';
 import { checkParkedApp } from '../deploy/check-parked-app';
 import { checkTarget } from '../deploy/check-target';
+import { findContentCoverageGap } from '../deploy/find-content-coverage-gap';
 import { findStaleReason } from '../deploy/find-stale-reason';
 import { formatMachineTable } from '../deploy/format-machine-table';
 import { loadDeployManifest } from '../deploy/load-deploy-manifest';
@@ -93,7 +99,7 @@ program
 program
   .command('preflight')
   .description(
-    "assert every app's required env keys are covered by its fly env, secrets, or baked build args",
+    "assert every app's required env keys are covered by its fly env, secrets, or baked build args, and that the active engine covers the current content",
   )
   .action(async () => {
     await runPreflight();
@@ -574,6 +580,43 @@ async function runPreflight(): Promise<void> {
     );
 
     process.exitCode = 1;
+  }
+
+  await runContentCoveragePreflight();
+}
+
+// a content publish that outruns the engine strands every start at SIM_VERSION_EXPIRED; the
+// preflight checks the ordering the activity admission assumes
+async function runContentCoveragePreflight(): Promise<void> {
+  const databaseURL = requireEnvVar(
+    'DATABASE_URL',
+    'the content coverage preflight reads the sim-version and content registries',
+  );
+
+  const db = createDB({ databaseURL });
+
+  try {
+    const [engine, currentContentVersion] = await Promise.all([
+      findCurrentSimVersion(db),
+      findCurrentContentVersion(db),
+    ]);
+
+    const gap = findContentCoverageGap({
+      currentContentVersion,
+      maxContentVersion: engine?.maxContentVersion,
+    });
+
+    if (gap === null) {
+      console.log('✓ content coverage — the active engine covers the current content version');
+
+      return;
+    }
+
+    console.error(`✗ content coverage — ${gap}`);
+
+    process.exitCode = 1;
+  } finally {
+    await db.destroy();
   }
 }
 

@@ -109,12 +109,31 @@ const slowRequestsMonitor = new axiom.Monitor(
     name: 'vers slow requests',
     type: 'Threshold',
     description:
-      'Fires when a vers service or app-web server span other than a health probe exceeds a 30s duration ceiling — the explicit alarm for a hung or pathologically slow request.',
+      "Fires when a vers service or app-web server span other than a health probe completes after more than 30s. A span exports only once it ends, so a request that never finishes is the overdue-requests monitor's to catch.",
 
     // health-probe latency tracks scale-to-zero machine wake, not request handling, so probe
     // routes are excluded or the alarm fires continuously
     aplQuery:
       "['vers-traces'] | where kind == 'server' and duration > 30s and not (name endswith '/health') | summarize count() by bin(_time, 5m)",
+    intervalMinutes: 5,
+    rangeMinutes: 10,
+    operator: 'AboveOrEqual',
+    threshold: 1,
+    triggerFromNRuns: 1,
+    notifierIds: [alarmsNotifier.id],
+  },
+  { provider: axiomProvider },
+);
+
+const overdueRequestsMonitor = new axiom.Monitor(
+  'vers-overdue-requests',
+  {
+    name: 'vers overdue requests',
+    type: 'Threshold',
+    description:
+      'A vers service or app-web wrote a request-overdue line: a request was still open 30s after it arrived. A span exports only once it ends, so this line is the one signal for a request that never finishes.',
+    aplQuery:
+      "['vers-logs'] | where body == 'request overdue' | summarize count() by bin(_time, 5m)",
     intervalMinutes: 5,
     rangeMinutes: 10,
     operator: 'AboveOrEqual',
@@ -218,6 +237,7 @@ export const mcpTokenName = mcpToken.name;
 export const alarmsNotifierName = alarmsNotifier.name;
 export const serverErrorsMonitorName = serverErrorsMonitor.name;
 export const slowRequestsMonitorName = slowRequestsMonitor.name;
+export const overdueRequestsMonitorName = overdueRequestsMonitor.name;
 export const replayPokeFailedMonitorName = replayPokeFailedMonitor.name;
 export const baselineDashboardUID = baselineDashboard.uid;
 
