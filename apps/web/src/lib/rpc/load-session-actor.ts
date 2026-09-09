@@ -39,10 +39,7 @@ export async function loadSessionActor(): Promise<SessionActorOutcome> {
 
   // a token no published key signed, or one signed for another user, is no session at all: the
   // cookie is cleared rather than refreshed, since a refresh would trust its claims
-  if (
-    verdict.kind === 'invalid' ||
-    (verdict.kind === 'valid' && verdict.userID !== session.userID)
-  ) {
+  if (verdict.kind === 'invalid' || verdict.userID !== session.userID) {
     await removeAuthSession();
 
     return { kind: 'signed-out' };

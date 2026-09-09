@@ -41,10 +41,39 @@ test('it publishes a retired key behind the active one so tokens minted before a
   const retiredJWK = await jose.exportJWK(retired.publicKey);
   const retiredThumbprint = await jose.calculateJwkThumbprint(retiredJWK);
 
+  const tokenUnderRetiredKey = await new jose.SignJWT({})
+    .setProtectedHeader({ alg: 'RS256', kid: retiredThumbprint })
+    .setSubject('user_1')
+    .sign(retired.privateKey);
+
+  const verified = await jose.jwtVerify(
+    tokenUnderRetiredKey,
+    jose.createLocalJWKSet(toJSONWebKeySet(published.keySet)),
+  );
+
   expect(published.keySet.keys.map((key) => key.kid)).toStrictEqual([
     published.activeKeyID,
     retiredThumbprint,
   ]);
+
+  expect(verified.payload.sub).toBe('user_1');
+});
+
+test('it verifies a token that names no key against a set holding one key', async () => {
+  const keyPair = await jose.generateKeyPair('RS256', { extractable: true });
+  const published = await buildSigningKeySet({ active: keyPair.privateKey, retired: [] });
+
+  const legacyToken = await new jose.SignJWT({})
+    .setProtectedHeader({ alg: 'RS256' })
+    .setSubject('user_1')
+    .sign(keyPair.privateKey);
+
+  const verified = await jose.jwtVerify(
+    legacyToken,
+    jose.createLocalJWKSet(toJSONWebKeySet(published.keySet)),
+  );
+
+  expect(verified.payload.sub).toBe('user_1');
 });
 
 test('it publishes keys a verifier accepts a signed token against', async () => {

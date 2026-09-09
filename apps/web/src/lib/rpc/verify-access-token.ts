@@ -3,7 +3,7 @@ import * as jose from 'jose';
 import { sessionKeysClient } from './clients/session-keys-client';
 
 export type AccessTokenVerdict =
-  | { readonly kind: 'expired' }
+  | { readonly kind: 'expired'; readonly userID: string }
   | { readonly kind: 'invalid' }
   | { readonly kind: 'valid'; readonly userID: string };
 
@@ -45,7 +45,12 @@ async function tryVerifyAgainstPublishedKeys(token: string): Promise<VerifyAttem
       return { kind: 'unknown-key' };
     }
 
-    return error instanceof jose.errors.JWTExpired ? { kind: 'expired' } : { kind: 'invalid' };
+    // the signature is checked before the claims, so an expired token's subject is still trusted
+    if (error instanceof jose.errors.JWTExpired && typeof error.payload.sub === 'string') {
+      return { kind: 'expired', userID: error.payload.sub };
+    }
+
+    return { kind: 'invalid' };
   }
 
   if (typeof payload.sub !== 'string') {
@@ -54,7 +59,7 @@ async function tryVerifyAgainstPublishedKeys(token: string): Promise<VerifyAttem
 
   // a token inside the refresh skew reads as expired so the refresh runs before it lapses mid-call
   if (payload.exp === undefined || payload.exp <= Date.now() / 1000 + REFRESH_SKEW_SECONDS) {
-    return { kind: 'expired' };
+    return { kind: 'expired', userID: payload.sub };
   }
 
   return { kind: 'valid', userID: payload.sub };

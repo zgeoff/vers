@@ -48,7 +48,11 @@ test('it signs out and clears the cookie for an access token whose signature doe
   const accessToken = await createTestAccessToken(session.userID);
 
   const [header, payload, signature] = accessToken.split('.');
-  const tampered = `${header}.${payload}.${signature?.slice(0, -2)}AA`;
+
+  // one character deep inside the signature is flipped, never a trailing one whose low bits the
+  // base64url decoder discards
+  const flipped = signature?.[5] === 'A' ? 'B' : 'A';
+  const tampered = `${header}.${payload}.${signature?.slice(0, 5)}${flipped}${signature?.slice(6)}`;
 
   const outcome = await withRequestContext(
     {
@@ -105,6 +109,28 @@ test('it signs out for a valid access token whose subject is not the cookie user
       cookies: {
         en_session: {
           accessToken,
+          refreshToken: 'refresh-1',
+          sessionID: session.id,
+          userID: session.userID,
+        },
+      },
+    },
+    () => loadSessionActor(),
+  );
+
+  expect(outcome.value).toStrictEqual({ kind: 'signed-out' });
+  expect(outcome.cookies['en_session']).toBeUndefined();
+});
+
+test('it signs out for an expired access token whose subject is not the cookie user instead of refreshing', async () => {
+  const session = await db.sessionCollection.create({ refreshToken: 'refresh-1' });
+  const staleForeignToken = await createTestAccessToken(createId(), '-1s');
+
+  const outcome = await withRequestContext(
+    {
+      cookies: {
+        en_session: {
+          accessToken: staleForeignToken,
           refreshToken: 'refresh-1',
           sessionID: session.id,
           userID: session.userID,
