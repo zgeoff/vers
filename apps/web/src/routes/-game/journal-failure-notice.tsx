@@ -1,23 +1,19 @@
 import { Dialog, Text } from '@vers/design-system';
-import { setJournalFailure, useJournalFailure, useSaveStatus } from '@vers/idle-client';
+import { setJournalFailure, useJournalFailure } from '@vers/idle-client';
 
 export function JournalFailureNotice() {
   const failure = useJournalFailure();
-  const saveStatus = useSaveStatus();
 
   if (failure === null) {
     return null;
   }
 
-  const received =
-    saveStatus !== null && saveStatus.activityID === failure.activityID
-      ? saveStatus.receivedVersion
-      : null;
-
+  // the worker stamps the server's cursor onto the failure itself, so the line is right on a tab
+  // that never saw a save report
   const receivedLine =
-    received === null
+    failure.receivedVersion === null || failure.receivedVersion === 0
       ? 'The server has not received any of this run yet.'
-      : `The server has received this run up to save ${received}.`;
+      : `The server has received this run up to save ${failure.receivedVersion}.`;
 
   return (
     <Dialog

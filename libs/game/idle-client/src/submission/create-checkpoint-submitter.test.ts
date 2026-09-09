@@ -31,6 +31,7 @@ function setupTest(
       readonly writeQueuedCheckpoint: typeof writeQueuedCheckpoint;
     };
     onAcked?: (activityID: string, appendedHead: number) => void;
+    onJournalUnreadable?: (activityID: string, receivedVersion: number, error: unknown) => void;
     onServerContact?: () => void;
     scheduleFlush?: (flush: () => Promise<void>) => void;
     signal?: AbortSignal;
@@ -54,7 +55,10 @@ function setupTest(
   const onInvalid = mock<(activityID: string, reason: string, traceID?: string) => void>();
   const onHeld = mock<(activityID: string) => void>();
   const onJournalFailure = mock<(failure: Readonly<JournalWriteError>) => void>();
-  const onJournalUnreadable = mock<(activityID: string, error: unknown) => void>();
+
+  const onJournalUnreadable =
+    mock<(activityID: string, receivedVersion: number, error: unknown) => void>();
+
   const onSaved = mock<(activityID: string, version: number) => void>();
   const onRetryFailed = mock<(activityID: string, error: unknown) => void>();
   const onServerContact = mock<() => void>();
@@ -113,6 +117,43 @@ test('it reports each version it saved to the journal', async () => {
   ]);
 });
 
+test('it reports the queued tail as saved when it attaches to a journal that already holds rows', async () => {
+  const ctx = setupTest();
+
+  await writeQueuedCheckpoint('attached-activity', createMockCheckpointBatchEntry({ version: 1 }));
+  await writeQueuedCheckpoint('attached-activity', createMockCheckpointBatchEntry({ version: 2 }));
+
+  await ctx.submitter.registerActivity({
+    activityID: 'attached-activity',
+    appendedHead: 0,
+    lastHash: 'start_hash',
+    startChainIndex: 0,
+  });
+
+  expect(ctx.onSaved).toHaveBeenCalledExactlyOnceWith('attached-activity', 2);
+});
+
+test('it still invalidates the stream when the unreadable-journal observer throws', async () => {
+  const ctx = setupTest({
+    journal: {
+      readQueuedCheckpoints: () => Promise.reject(new DOMException('gone', 'InvalidStateError')),
+      writeQueuedCheckpoint,
+    },
+    onJournalUnreadable: () => {
+      throw new Error('observer fault');
+    },
+  });
+
+  await ctx.submitter.registerActivity({
+    activityID: 'throwing-observer-activity',
+    appendedHead: 0,
+    lastHash: 'start_hash',
+    startChainIndex: 0,
+  });
+
+  expect(ctx.onInvalid).toHaveBeenCalledOnce();
+});
+
 test('it classifies a refused journal write, reports it, and keeps the cursor where it was', async () => {
   const ctx = setupTest({
     journal: {
@@ -135,7 +176,7 @@ test('it classifies a refused journal write, reports it, and keeps the cursor wh
   await rejected.catch(() => {});
 
   expect(ctx.onJournalFailure).toHaveBeenCalledExactlyOnceWith(
-    expect.objectContaining({ activityID: 'quota-activity', kind: 'quota' }),
+    expect.objectContaining({ activityID: 'quota-activity', kind: 'quota', receivedVersion: 0 }),
   );
 
   expect(ctx.onSaved).not.toHaveBeenCalled();
@@ -162,6 +203,7 @@ test('it reports an unreadable journal at registration beside the stream invalid
 
   expect(ctx.onJournalUnreadable).toHaveBeenCalledExactlyOnceWith(
     'unreadable-activity',
+    0,
     expect.any(DOMException),
   );
 

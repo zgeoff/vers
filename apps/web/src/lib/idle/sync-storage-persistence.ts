@@ -5,7 +5,7 @@ interface PersistentStorageManager {
 }
 
 // `persist()` exists on Window only, never in a worker, so the tab asks at the player's start and
-// the answer is recorded once; a browser without the API reads as best-effort storage
+// the answer is recorded once; a browser without the API reads as not offered
 export async function syncStoragePersistence(
   storage: PersistentStorageManager | undefined = findStorageManager(),
 ): Promise<void> {

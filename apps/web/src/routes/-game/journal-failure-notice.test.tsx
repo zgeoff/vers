@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { setJournalFailure, updateSaveStatus } from '@vers/idle-client';
+import { setJournalFailure } from '@vers/idle-client';
 import { render } from '../../test-utils/render';
 import { JournalFailureNotice } from './journal-failure-notice';
 
@@ -12,8 +12,7 @@ test('it renders nothing while the journal is healthy', () => {
 });
 
 test('it tells the player the device is out of storage and how far the server got', () => {
-  updateSaveStatus({ activityID: 'activity_1', receivedVersion: 7, savedVersion: 9 });
-  setJournalFailure({ activityID: 'activity_1', kind: 'quota' });
+  setJournalFailure({ activityID: 'activity_1', kind: 'quota', receivedVersion: 7 });
   render(<JournalFailureNotice />);
 
   expect(screen.getByText('This device is out of storage')).toBeInTheDocument();
@@ -21,7 +20,7 @@ test('it tells the player the device is out of storage and how far the server go
 });
 
 test('it never claims the server holds a run it has not received', () => {
-  setJournalFailure({ activityID: 'activity_1', kind: 'write' });
+  setJournalFailure({ activityID: 'activity_1', kind: 'write', receivedVersion: 0 });
   render(<JournalFailureNotice />);
 
   expect(screen.getByText('This device could not save')).toBeInTheDocument();
@@ -29,7 +28,7 @@ test('it never claims the server holds a run it has not received', () => {
 });
 
 test('it names the loss when the saved history cannot be read', () => {
-  setJournalFailure({ activityID: 'activity_1', kind: 'unreadable' });
+  setJournalFailure({ activityID: 'activity_1', kind: 'unreadable', receivedVersion: 4 });
   render(<JournalFailureNotice />);
 
   expect(screen.getByText('Saved history is missing')).toBeInTheDocument();
@@ -39,7 +38,7 @@ test('it names the loss when the saved history cannot be read', () => {
 test('it dismisses by clearing the failure', async () => {
   const user = userEvent.setup();
 
-  setJournalFailure({ activityID: 'activity_1', kind: 'quota' });
+  setJournalFailure({ activityID: 'activity_1', kind: 'quota', receivedVersion: null });
   render(<JournalFailureNotice />);
 
   await user.click(screen.getByRole('button', { name: 'Close' }));

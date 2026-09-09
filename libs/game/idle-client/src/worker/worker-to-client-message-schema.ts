@@ -70,6 +70,7 @@ const journalFailureMessageSchema = z
   .object({
     activityID: z.string(),
     kind: z.enum(['quota', 'unreadable', 'write']),
+    receivedVersion: z.int().nullable(),
     type: z.literal(WorkerMessageType.JournalFailure),
   })
   .readonly();

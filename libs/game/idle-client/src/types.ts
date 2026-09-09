@@ -40,6 +40,7 @@ export type JournalFailureKind = 'quota' | 'unreadable' | 'write';
 export interface JournalFailure {
   readonly activityID: string;
   readonly kind: JournalFailureKind;
+  readonly receivedVersion: number | null;
 }
 
 export interface SaveStatus {

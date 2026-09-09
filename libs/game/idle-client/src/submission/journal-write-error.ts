@@ -9,7 +9,9 @@ export class JournalWriteError extends Error {
 
   readonly kind: Extract<JournalFailureKind, 'quota' | 'write'>;
 
-  constructor(activityID: string, cause: unknown) {
+  readonly receivedVersion: number;
+
+  constructor(activityID: string, receivedVersion: number, cause: unknown) {
     const kind =
       cause instanceof Error && cause.name === QUOTA_ERROR_NAME
         ? ('quota' as const)
@@ -20,5 +22,6 @@ export class JournalWriteError extends Error {
     this.name = 'JournalWriteError';
     this.activityID = activityID;
     this.kind = kind;
+    this.receivedVersion = receivedVersion;
   }
 }

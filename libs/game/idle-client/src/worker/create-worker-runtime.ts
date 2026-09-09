@@ -257,12 +257,19 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
       broadcast({
         activityID: failure.activityID,
         kind: failure.kind,
+        receivedVersion: failure.receivedVersion,
         type: WorkerMessageType.JournalFailure,
       });
     },
-    onJournalUnreadable: (activityID, error) => {
+    onJournalUnreadable: (activityID, receivedVersion, error) => {
       reportWorkerFault('journal-write', error);
-      broadcast({ activityID, kind: 'unreadable', type: WorkerMessageType.JournalFailure });
+
+      broadcast({
+        activityID,
+        kind: 'unreadable',
+        receivedVersion,
+        type: WorkerMessageType.JournalFailure,
+      });
     },
     onSaved: (activityID, version) => {
       broadcast({
