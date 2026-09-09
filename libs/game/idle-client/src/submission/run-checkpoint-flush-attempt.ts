@@ -48,14 +48,18 @@ export const runCheckpointFlushAttempt = fromPromise<FlushOutcome, FlushAttemptI
     let settledHead: number | undefined;
 
     try {
-      const queued = await readQueuedCheckpoints(input.activityID);
+      // the same per-request cap as an offline catch-up: a queue past it goes out as a prefix, and
+      // the tail rides the flush that follows the acknowledgement; one row past the cap is read only
+      // to learn that a tail exists
+      const queued = await readQueuedCheckpoints(
+        input.activityID,
+        MAX_CATCH_UP_BATCH_CHECKPOINTS + 1,
+      );
 
       if (queued.length === 0) {
         return { type: 'empty' };
       }
 
-      // the same per-request cap as an offline catch-up: a queue past it goes out as a prefix, and
-      // the tail rides the flush that follows the acknowledgement
       const rows = queued.slice(0, MAX_CATCH_UP_BATCH_CHECKPOINTS);
       const tailQueued = queued.length > rows.length;
       const trace = createTraceContext();
