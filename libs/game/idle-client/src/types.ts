@@ -15,9 +15,11 @@ export enum WorkerMessageType {
   ActivityStartIngested = 'activity_start_ingested',
   CheckpointStreamInvalid = 'checkpoint_stream_invalid',
   FailureActionStatus = 'failure_action_status',
+  JournalFailure = 'journal_failure',
   OfflineCapStatus = 'offline_cap_status',
   ResyncStatus = 'resync_status',
   RewardSlotsRecorded = 'reward_slots_recorded',
+  SaveStatus = 'save_status',
   SimulationUpdate = 'simulation_update',
   WriterDisplaced = 'writer_displaced',
   WriterPending = 'writer_pending',
@@ -32,3 +34,19 @@ export interface OfflineCapStatus {
   readonly halted: boolean;
   readonly remainingMs: number;
 }
+
+export type JournalFailureKind = 'quota' | 'unreadable' | 'write';
+
+export interface JournalFailure {
+  readonly activityID: string;
+  readonly kind: JournalFailureKind;
+  readonly receivedVersion: number | null;
+}
+
+export interface SaveStatus {
+  readonly activityID: string;
+  readonly receivedVersion: number | null;
+  readonly savedVersion: number | null;
+}
+
+export type StoragePersistence = 'denied' | 'granted' | 'unavailable' | 'unknown';

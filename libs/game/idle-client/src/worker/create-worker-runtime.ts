@@ -9,6 +9,7 @@ import type { ActorRefFromLogic } from 'xstate';
 import { createActor } from 'xstate';
 import { createActivityServiceClient } from '../submission/create-activity-service-client';
 import { createCheckpointSubmitter } from '../submission/create-checkpoint-submitter';
+import { JournalWriteError } from '../submission/journal-write-error';
 import { readFailureActionCache } from '../submission/read-failure-action-cache';
 import type { ActivityServiceClient } from '../submission/types';
 import { WORKER_TO_CLIENT_CHANNEL } from '../transport/constants';
@@ -222,8 +223,15 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
     actor: lifecycleActor.getSnapshot().context.submitterRef,
     client,
     ingestActivityStart: (activityID) => ingestAndBroadcastActivityStart(context, activityID),
-    onAcked: () => {
+    onAcked: (activityID, appendedHead) => {
       getLifecycle().send({ type: 'SUBMITTER_ACKED' });
+
+      broadcast({
+        activityID,
+        receivedVersion: appendedHead,
+        savedVersion: null,
+        type: WorkerMessageType.SaveStatus,
+      });
     },
     onCapped: () => {
       getLifecycle().send({ type: 'SUBMITTER_CAPPED' });
@@ -240,6 +248,36 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
     },
     onHeld: () => {
       getLifecycle().send({ type: 'SUBMITTER_HELD' });
+    },
+
+    // reported here, at the durable boundary, so the tick loop that the throw stops reports nothing
+    onJournalFailure: (failure) => {
+      reportWorkerFault('journal-write', failure);
+
+      broadcast({
+        activityID: failure.activityID,
+        kind: failure.kind,
+        receivedVersion: failure.receivedVersion,
+        type: WorkerMessageType.JournalFailure,
+      });
+    },
+    onJournalUnreadable: (activityID, receivedVersion, error) => {
+      reportWorkerFault('journal-write', error);
+
+      broadcast({
+        activityID,
+        kind: 'unreadable',
+        receivedVersion,
+        type: WorkerMessageType.JournalFailure,
+      });
+    },
+    onSaved: (activityID, version) => {
+      broadcast({
+        activityID,
+        receivedVersion: null,
+        savedVersion: version,
+        type: WorkerMessageType.SaveStatus,
+      });
     },
 
     // The submitter's backoff retries double as a reconnect probe: the first answer after an
@@ -333,6 +371,10 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
       try {
         await runTickLoop();
       } catch (error) {
+        if (error instanceof JournalWriteError) {
+          return;
+        }
+
         reportWorkerFault('tick-loop', error);
       }
     })();

@@ -166,6 +166,28 @@ acting avatar's activity starts, and the server refuses an activity start naming
 acting user does not own. The same account signing back in delivers the outbox, which is what
 cancelling asks for.
 
+### When the device cannot save
+
+The device asks the browser to keep its storage when the player starts a run, and the game shows the
+answer beside the save status: kept, best effort, or not offered by this browser. Persistence stops
+the browser from evicting the journal under storage pressure. It never stops the player from
+clearing site data, so the outbox is safe only once the server has received it.
+
+The journal write is where a failed save is decided. A checkpoint the journal refuses is not in the
+outbox, so the worker stops the run at the last checkpoint it kept rather than simulate past an
+unsaved step, and it reports the failure to the tabs with its kind: an exhausted quota, or any other
+write fault. The player sees which it was, how far the server has received the run, and the
+recovery: free storage or reload. The run's saved checkpoints stay in the outbox and deliver on the
+next reconnect.
+
+A journal the worker cannot read at all is the same failure with nothing to recover locally. The
+worker reports it, and the player is told that the server holds what it received and that anything
+else is lost. The game never claims that a run it could not save is safe.
+
+The save status the game shows keeps two cursors apart: the last checkpoint this device saved, and
+the last checkpoint the server acknowledged. The acknowledgment is the only authority for a save
+being safe on another device; the local save only says the outbox holds it.
+
 ## Settlement in order
 
 An activity's rewards are provisional until the server [replays](./game-simulation.md#replay) the

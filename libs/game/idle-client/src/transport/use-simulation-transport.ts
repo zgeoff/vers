@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { advanceWriterGeneration } from '../state/advance-writer-generation';
 import { setCheckpointStreamError } from '../state/set-checkpoint-stream-error';
 import { setFailureAction } from '../state/set-failure-action';
+import { setJournalFailure } from '../state/set-journal-failure';
 import { setLastIngestedActivityID } from '../state/set-last-ingested-activity-id';
 import { setOfflineCapStatus } from '../state/set-offline-cap-status';
 import { setResyncStatus } from '../state/set-resync-status';
@@ -11,6 +12,7 @@ import { setWorkerClient } from '../state/set-worker-client';
 import { setWriterContention } from '../state/set-writer-contention';
 import { setWriterDisplacedActivityID } from '../state/set-writer-displaced-activity-id';
 import { updateRewardSlotLedger } from '../state/update-reward-slot-ledger';
+import { updateSaveStatus } from '../state/update-save-status';
 import { useIdleStore } from '../state/use-idle-store';
 import { WorkerMessageType } from '../types';
 import type { WorkerMessage } from '../worker/worker-to-client-message-schema';
@@ -95,6 +97,26 @@ function handleWorkerMessage(message: WorkerMessage) {
 
     case WorkerMessageType.CheckpointStreamInvalid: {
       setCheckpointStreamError({ activityID: message.activityID });
+      break;
+    }
+
+    case WorkerMessageType.JournalFailure: {
+      setJournalFailure({
+        activityID: message.activityID,
+        kind: message.kind,
+        receivedVersion: message.receivedVersion,
+      });
+
+      break;
+    }
+
+    case WorkerMessageType.SaveStatus: {
+      updateSaveStatus({
+        activityID: message.activityID,
+        receivedVersion: message.receivedVersion,
+        savedVersion: message.savedVersion,
+      });
+
       break;
     }
 

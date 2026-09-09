@@ -6,6 +6,7 @@ export type WorkerFaultSite =
   | 'continuation'
   | 'eviction'
   | 'journal-open'
+  | 'journal-write'
   | 'message-routing'
   | 'preference-seed'
   | 'writer-election'

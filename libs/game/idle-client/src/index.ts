@@ -15,6 +15,7 @@ export type {
 export { advanceWriterGeneration } from './state/advance-writer-generation';
 export { setEngagedRun } from './state/set-engaged-run';
 export { setFailureAction } from './state/set-failure-action';
+export { setJournalFailure } from './state/set-journal-failure';
 export { setLastCompletedActivityID } from './state/set-last-completed-activity-id';
 export { setLastIngestedActivityID } from './state/set-last-ingested-activity-id';
 export { setOfflineCapStatus } from './state/set-offline-cap-status';
@@ -24,21 +25,26 @@ export { setRunOutcome } from './state/set-run-outcome';
 export { RunOutcomeKind } from './worker/run-outcome-schema';
 export { setSimulationInitialized } from './state/set-simulation-initialized';
 export { setSimulationSnapshot } from './state/set-simulation-snapshot';
+export { setStoragePersistence } from './state/set-storage-persistence';
 export { setWorkerClient } from './state/set-worker-client';
 export { setWriterContention } from './state/set-writer-contention';
 export { setWriterDisplacedActivityID } from './state/set-writer-displaced-activity-id';
 export { updateRewardSlotLedger } from './state/update-reward-slot-ledger';
+export { updateSaveStatus } from './state/update-save-status';
 export { useOfflineCapStatus } from './state/use-offline-cap-status';
 export { useResyncStatus } from './state/use-resync-status';
 export { useActivity } from './state/use-activity';
 export { useEngagedRun } from './state/use-engaged-run';
 export { useAvatar } from './state/use-avatar';
 export { useFailureAction } from './state/use-failure-action';
+export { useJournalFailure } from './state/use-journal-failure';
 export { useLastCompletedActivityID } from './state/use-last-completed-activity-id';
 export { useLastIngestedActivityID } from './state/use-last-ingested-activity-id';
 export { useLiveRun } from './state/use-live-run';
 export { useRewardSlotLedger } from './state/use-reward-slot-ledger';
 export { useRunOutcome } from './state/use-run-outcome';
+export { useSaveStatus } from './state/use-save-status';
+export { useStoragePersistence } from './state/use-storage-persistence';
 export { useSimulationInitialized } from './state/use-simulation-initialized';
 export { useWriterAbortSignal } from './state/use-writer-abort-signal';
 export { useWriterContention } from './state/use-writer-contention';
@@ -70,7 +76,9 @@ export type {
   ActivityStartIngestedMessage,
   CheckpointStreamInvalidMessage,
   FailureActionStatusMessage,
+  JournalFailureMessage,
   OfflineCapStatusMessage,
+  SaveStatusMessage,
   ResyncStatusMessage,
   RewardSlotsRecordedMessage,
   SimulationUpdateMessage,
