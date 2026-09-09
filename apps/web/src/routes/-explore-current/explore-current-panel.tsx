@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
-import { Button, CheckboxField, Spinner } from '@vers/design-system';
+import { Button, CheckboxField, Spinner, Text } from '@vers/design-system';
 import type { LiveRun, StartStatus } from '@vers/idle-client';
 import {
   setEngagedRun,
@@ -213,6 +213,7 @@ export function ExploreCurrentPanel(props: Readonly<ExploreCurrentPanelProps>) {
       liveRun === undefined ||
       reportedStatus === undefined ||
       reportedStatus.kind === 'failed' ||
+      reportedStatus.kind === 'unreconstructed' ||
       liveRun.id === engagedRun?.id
     ) {
       return;
@@ -234,6 +235,10 @@ export function ExploreCurrentPanel(props: Readonly<ExploreCurrentPanelProps>) {
     isEngagedAtNode,
     navigate,
   ]);
+
+  if (reportedStatus?.kind === 'unreconstructed') {
+    return <Text>Connect to the network to resume play on this device.</Text>;
+  }
 
   if (reportedStatus?.kind === 'failed') {
     return (

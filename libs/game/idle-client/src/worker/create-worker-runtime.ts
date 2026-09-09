@@ -102,6 +102,9 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
   let rewardSlotLedger: ReadonlyArray<RewardSlotLedgerEntry> = [];
   let latestRun: LatestRun | null = null;
 
+  // per boot, never durable: a reload starts empty again, which is the state the guard exists for
+  const reconstructedAvatarIDs = new Set<string>();
+
   const broadcast = (message: WorkerMessage) => {
     const event = buildDebugEventFromMessage(message);
 
@@ -153,6 +156,7 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
     getSubmitter,
     getWriterDisplacedActivityID: () =>
       getLifecycle().getSnapshot().context.writerDisplacedActivityID,
+    hasReconstructed: (avatarID) => reconstructedAvatarIDs.has(avatarID),
     isFailureActionDirty: () => failureActionDirty,
     isFailureActionPushInFlight: () => failureActionPushInFlight,
     recordRewardSlots: (activityID, entry) => {
@@ -164,6 +168,9 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
 
       rewardSlotLedgerActivityID = activityID;
       rewardSlotLedger = [entry];
+    },
+    registerReconstruction: (avatarID) => {
+      reconstructedAvatarIDs.add(avatarID);
     },
     resetRewardSlotLedger: () => {
       rewardSlotLedgerActivityID = null;

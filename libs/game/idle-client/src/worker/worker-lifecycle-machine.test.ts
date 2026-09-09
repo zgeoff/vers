@@ -99,6 +99,8 @@ test('it reports starting while a start flow installs, then running once it land
     submitter,
   });
 
+  gatedContext.registerReconstruction('avatar_declared_state');
+
   const started = handleStartActivityMessage(gatedContext, {
     avatarID: seed.avatarID,
     scopeID: seed.nodeID,
@@ -340,6 +342,8 @@ test("it starts at once when the avatar's latest run is already recorded", async
     submitter: createStubSubmitter(),
   });
 
+  context.registerReconstruction('avatar_known_record');
+
   await setupStartableNode('avatar_known_record');
 
   context.setLatestRun({
@@ -576,6 +580,9 @@ test('it runs queued starts strictly one at a time in queue order', async () => 
 
   const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_test', submitter });
 
+  context.registerReconstruction('avatar_queue_order_first');
+  context.registerReconstruction('avatar_queue_order_second');
+
   await setupStartableNode('avatar_queue_order_first');
   await setupStartableNode('avatar_queue_order_second');
 
@@ -684,6 +691,8 @@ test('it keeps the queue alive past a start that throws', async () => {
 
   const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_test', submitter });
 
+  context.registerReconstruction('avatar_throws');
+
   await setupStartableNode('avatar_throws');
 
   const input = {
@@ -716,6 +725,8 @@ test('it resolves the caller only once its own flow settles', async () => {
   });
 
   const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_test', submitter });
+
+  context.registerReconstruction('avatar_settle_order');
 
   await setupStartableNode('avatar_settle_order');
 
@@ -750,6 +761,8 @@ test('it reports an escaping flow error as a fault under its site', async () => 
   submitter.registerActivity = mock(() => Promise.reject(new Error('turn exploded')));
 
   const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_test', submitter });
+
+  context.registerReconstruction('avatar_reports_fault');
 
   await setupStartableNode('avatar_reports_fault');
 
@@ -1128,7 +1141,7 @@ test('it accepts a later resync after a resync flow faults', async () => {
 
   expect(connection.received).toStrictEqual([
     {
-      status: { avatarID: 'avatar_a', kind: 'failed' },
+      status: { avatarID: 'avatar_a', kind: 'unreconstructed' },
       type: WorkerMessageType.ResyncStatus,
     },
     {

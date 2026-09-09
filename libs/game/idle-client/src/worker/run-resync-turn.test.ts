@@ -698,7 +698,7 @@ test('it stops back an attach-live row when a stop lands during its registration
   expect(stoppedBack.status).toBe('stopped');
 });
 
-test('it reports a fault to the error backend and broadcasts a failed status when the resync fails outright', async () => {
+test('it reports a fault to the error backend and broadcasts an unreconstructed status when the boot resync fails outright', async () => {
   const previousHandle = sentryHandle.current;
   const recorded: Array<Readonly<ErrorEvent>> = [];
 
@@ -740,7 +740,7 @@ test('it reports a fault to the error backend and broadcasts a failed status whe
 
   expect(connection.received).toStrictEqual([
     {
-      status: { avatarID: 'avatar-with-held-tail', kind: 'failed' },
+      status: { avatarID: 'avatar-with-held-tail', kind: 'unreconstructed' },
       type: WorkerMessageType.ResyncStatus,
     },
     { type: WorkerMessageType.WriterReady },
@@ -753,19 +753,19 @@ test('it reports a fault to the error backend and broadcasts a failed status whe
   expect(recorded[0]?.tags).toMatchObject({ site: 'resync' });
 
   // the drop window closed once the first turn settled: a follow-up non-claiming call for the
-  // same avatar actually runs rather than being dropped, broadcasting its own failed status
+  // same avatar actually runs rather than being dropped, broadcasting its own status
   await runResyncTurn(context, 'avatar-with-held-tail', false);
 
   await connection.waitForMessages(3);
 
   expect(connection.received).toStrictEqual([
     {
-      status: { avatarID: 'avatar-with-held-tail', kind: 'failed' },
+      status: { avatarID: 'avatar-with-held-tail', kind: 'unreconstructed' },
       type: WorkerMessageType.ResyncStatus,
     },
     { type: WorkerMessageType.WriterReady },
     {
-      status: { avatarID: 'avatar-with-held-tail', kind: 'failed' },
+      status: { avatarID: 'avatar-with-held-tail', kind: 'unreconstructed' },
       type: WorkerMessageType.ResyncStatus,
     },
   ]);
@@ -828,7 +828,7 @@ test('it broadcasts session-expired without a fault report when the session is n
   ]);
 });
 
-test('it fails the resync while a raised stop is undelivered', async () => {
+test('it fails the resync as unreconstructed while a raised stop is undelivered on a cold worker', async () => {
   server.use(mockActivityService.stopActivity.handler(() => HttpResponse.error()));
 
   const viewer = await createViewer();
@@ -843,7 +843,7 @@ test('it fails the resync while a raised stop is undelivered', async () => {
 
   expect(ctx.connection.received).toStrictEqual([
     {
-      status: { avatarID: viewer.avatar.id, kind: 'failed' },
+      status: { avatarID: viewer.avatar.id, kind: 'unreconstructed' },
       type: WorkerMessageType.ResyncStatus,
     },
   ]);

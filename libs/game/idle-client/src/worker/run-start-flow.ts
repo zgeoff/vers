@@ -37,6 +37,12 @@ export async function runStartFlow(
     return { activityID: running.id, kind: 'attached' };
   }
 
+  // a start folds its build and predecessor from what the last reconstruction recorded, so a
+  // worker that has reconstructed nothing since it booted would mint a run the server refuses
+  if (!context.hasReconstructed(input.avatarID)) {
+    return { kind: 'unreconstructed' };
+  }
+
   // the mint is attempted before the live run is stopped: a mint that fails (a missing cache)
   // leaves the current run intact rather than stranding the worker with no live run and a stale
   // stopped one

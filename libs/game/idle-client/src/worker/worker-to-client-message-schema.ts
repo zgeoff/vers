@@ -41,6 +41,7 @@ const resyncStatusSchema = z.discriminatedUnion('kind', [
     .readonly(),
   z.object({ avatarID: z.string(), kind: z.literal('failed') }).readonly(),
   z.object({ avatarID: z.string(), kind: z.literal('session-expired') }).readonly(),
+  z.object({ avatarID: z.string(), kind: z.literal('unreconstructed') }).readonly(),
   z.object({ kind: z.literal('capped') }).readonly(),
   z.object({ kind: z.literal('sim-version-expired') }).readonly(),
 ]);

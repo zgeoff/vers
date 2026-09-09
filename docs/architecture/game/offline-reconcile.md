@@ -310,6 +310,13 @@ to stop the activity, retried at every reconnect until the server confirms it st
 request lands, the client holds back its next resync, so a catch-up never revives an activity the
 player already stopped.
 
+A start waits on the worker's first reconstruction of its avatar since the worker booted. A reloaded
+worker holds an empty simulation and no record of the avatar's last run, so a start minted before a
+resync completes would take a seed the idle gap already spent and carry a build without the idle XP.
+The worker runs that resync ahead of the start, and refuses the start as `unreconstructed` when the
+resync fails: on a cold open with no network the tab shows a connect-to-resume state instead of an
+empty play screen, and the next resync that completes lifts the refusal.
+
 A deferred activity start, or a checkpoint batch the server refuses with an error the worker does
 not handle, is a server answer, so it does not mark the device offline: the worker resends it on an
 exponential backoff from 10s to 5min, and at once on a reconnect. The reconnect drain skips a start

@@ -58,12 +58,14 @@ export async function runResyncFlow(
     // An undelivered stop gates the whole resync: until the server row reads closed, the progress
     // fetch would find it active and plan a catch-up for a run the player already ended.
     if ((await flushPendingStop(context)) === 'undelivered') {
-      emitResyncStatus(context, { avatarID, kind: 'failed' });
+      emitResyncStatus(context, buildResyncFailure(context, avatarID));
 
       return;
     }
 
     await runResyncPass(context, avatarID, claim, signals);
+
+    context.registerReconstruction(avatarID);
   } catch (error) {
     if (isAbortError(error, signals.cancel)) {
       return;
@@ -73,9 +75,15 @@ export async function runResyncFlow(
       emitResyncStatus(context, { avatarID, kind: 'session-expired' });
     } else {
       reportWorkerFault('resync', error);
-      emitResyncStatus(context, { avatarID, kind: 'failed' });
+      emitResyncStatus(context, buildResyncFailure(context, avatarID));
     }
   }
+}
+
+// a failure before the first reconstruction since boot is the state the tab must name, since the
+// worker refuses every start until a reconstruction completes
+function buildResyncFailure(context: WorkerContext, avatarID: string): ResyncStatus {
+  return { avatarID, kind: context.hasReconstructed(avatarID) ? 'failed' : 'unreconstructed' };
 }
 
 async function runResyncPass(

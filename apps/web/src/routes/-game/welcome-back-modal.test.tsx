@@ -52,6 +52,19 @@ test('it offers a retry when the catch-up fails outright', () => {
   expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument();
 });
 
+test('it asks the player to connect when the device has not synced this character since it opened', () => {
+  setResyncStatus({ avatarID: 'avatar_1', kind: 'unreconstructed' });
+  render(<WelcomeBackModal />);
+
+  expect(
+    screen.getByText(
+      'This device hasn’t synced this character since it opened. Connect to the network to resume.',
+    ),
+  ).toBeInTheDocument();
+
+  expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument();
+});
+
 test('it offers a sign-in link back to this page when the session expired mid catch-up', () => {
   setResyncStatus({ avatarID: 'avatar_1', kind: 'session-expired' });
   render(<WelcomeBackModal />);

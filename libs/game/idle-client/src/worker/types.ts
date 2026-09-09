@@ -74,11 +74,16 @@ export interface WorkerContext {
 
   readonly getWriterDisplacedActivityID: () => null | string;
 
+  readonly hasReconstructed: (avatarID: string) => boolean;
+
   readonly isFailureActionDirty: () => boolean;
 
   readonly isFailureActionPushInFlight: () => boolean;
 
   readonly recordRewardSlots: (activityID: string, entry: RewardSlotLedgerEntry) => void;
+
+  readonly registerReconstruction: (avatarID: string) => void;
+
   readonly resetRewardSlotLedger: () => void;
   readonly setActivity: (activity: ActivityData | null) => void;
   readonly setFailureAction: (action: ActivityFailureAction) => void;

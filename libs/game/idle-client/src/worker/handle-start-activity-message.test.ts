@@ -19,6 +19,7 @@ import { writeStartStamps } from '../submission/write-start-stamps';
 import { createStubSubmitter } from '../test-utils/create-stub-submitter';
 import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
 import { createMockNodeSeed } from '../test-utils/factories/create-mock-node-seed';
+import { WorkerMessageType } from '../types';
 import { handleStartActivityMessage } from './handle-start-activity-message';
 import { sentryHandle } from './sentry-handle';
 import { startErrorReporting } from './start-error-reporting';
@@ -27,6 +28,7 @@ test('it mints a row locally, installs it, and persists the pending activityStar
   const submitter = createStubSubmitter();
   const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_1', submitter });
 
+  context.registerReconstruction('avatar_fresh_start');
   context.setSimulation(createSimulation());
 
   const seed = createMockNodeSeed({
@@ -105,6 +107,9 @@ test('it answers attached without re-minting when the request already matches th
 test('it stops the live run and starts the new one when the request names a different scope', async () => {
   const submitter = createStubSubmitter();
   const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_2', submitter });
+
+  context.registerReconstruction('avatar_switch_scope');
+
   const simulation = createSimulation();
 
   const previous = createMockActivityData({
@@ -148,6 +153,9 @@ test('it stops the live run and starts the new one when the request names a diff
 test('it leaves the live run intact when a different-scope switch cannot mint the new scope', async () => {
   const submitter = createStubSubmitter();
   const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_switch', submitter });
+
+  context.registerReconstruction('avatar_switch_no_cache');
+
   const simulation = createSimulation();
 
   const previous = createMockActivityData({
@@ -182,8 +190,52 @@ test('it leaves the live run intact when a different-scope switch cannot mint th
   expect(rows).toStrictEqual([]);
 });
 
+test('it refuses a start with unreconstructed until a reconstruction has run since the worker booted', async () => {
+  const context = createStubWorkerContext({ submitter: createStubSubmitter() });
+
+  const seed = createMockNodeSeed({
+    avatarID: 'avatar_cold_open',
+    encounterNode: { difficulty: 1 },
+    nodeID: '0_0',
+  });
+
+  await writeNodeSeeds(seed.avatarID, [seed]);
+  await writeStartStamps({ keyVersion: 1, secretRef: 'worldmap', secretVersion: 1 });
+
+  await writeContentDocumentCache(
+    createMockContentDocument({ contentVersion: seed.contentVersion }),
+  );
+
+  // the network is gone on this cold open: the prerequisite resync cannot read server progress
+  server.use(
+    mockActivityService.getLatestActivityProgress.handler(() => {
+      throw new Error('network unreachable');
+    }),
+  );
+
+  const result = await handleStartActivityMessage(context, {
+    avatarID: seed.avatarID,
+    scopeID: seed.nodeID,
+    scopeType: 'world_map_node',
+  });
+
+  expect(result).toStrictEqual({ kind: 'unreconstructed' });
+  expect(context.getSimulation().activity).toBeNull();
+
+  expect(context.getBroadcasts()).toContainEqual({
+    status: { avatarID: seed.avatarID, kind: 'unreconstructed' },
+    type: WorkerMessageType.ResyncStatus,
+  });
+
+  const rows = await readAllActivityStarts();
+
+  expect(rows).toStrictEqual([]);
+});
+
 test('it answers failed and persists nothing when the scope was never cached', async () => {
   const context = createStubWorkerContext({ submitter: createStubSubmitter() });
+
+  context.registerReconstruction('avatar_never_cached');
 
   const result = await handleStartActivityMessage(context, {
     avatarID: 'avatar_never_cached',
@@ -254,6 +306,9 @@ test('it abandons a superseded different-scope switch without touching the live 
   };
 
   const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_3', submitter });
+
+  context.registerReconstruction('avatar_superseded_switch');
+
   const simulation = createSimulation();
 
   const previous = createMockActivityData({
@@ -308,6 +363,9 @@ test('it stops a freshly minted row back durably when a stop lands mid-switch', 
   };
 
   const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_4', submitter });
+
+  context.registerReconstruction('avatar_stop_mid_switch');
+
   const simulation = createSimulation();
 
   const previous = createMockActivityData({
