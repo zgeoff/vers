@@ -1,4 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
+import type { QueryClient } from '@tanstack/react-query';
 import { useServerFn } from '@tanstack/react-start';
 import { Dialog, StatusButton, Text } from '@vers/design-system';
 import type { UndeliveredWork, WorkerClient } from '@vers/idle-client';
@@ -6,11 +7,17 @@ import { useState } from 'react';
 import { sendIdleReadUndeliveredWork } from '../../lib/idle/send-idle-read-undelivered-work';
 import { sendIdleRemoveUndeliveredWork } from '../../lib/idle/send-idle-remove-undelivered-work';
 import { useIdleWorkerHandle } from '../../lib/idle/use-idle-worker-handle';
+import { orpc } from '../../lib/rpc/orpc';
 import { formatUndeliveredPlay } from './format-undelivered-play';
 import { signOut } from './sign-out';
 
 interface SignOutFormProps {
   readonly action?: () => Promise<unknown>;
+}
+
+interface UndeliveredWarning {
+  readonly avatarIDs: ReadonlyArray<string>;
+  readonly work: UndeliveredWork;
 }
 
 export function SignOutForm(props: Readonly<SignOutFormProps>) {
@@ -28,7 +35,7 @@ export function SignOutForm(props: Readonly<SignOutFormProps>) {
   };
 
   const [isPending, setIsPending] = useState(false);
-  const [report, setReport] = useState<UndeliveredWork | null>(null);
+  const [warning, setWarning] = useState<UndeliveredWarning | null>(null);
   const [discardFailed, setDiscardFailed] = useState(false);
 
   const handleLogoutClick = async (): Promise<void> => {
@@ -37,10 +44,14 @@ export function SignOutForm(props: Readonly<SignOutFormProps>) {
     setIsPending(true);
 
     try {
-      const work = await tryReadUndeliveredWork(client, idleWorkerHandle.writerAbortSignal);
+      const held = await tryReadUndeliveredWork(
+        client,
+        queryClient,
+        idleWorkerHandle.writerAbortSignal,
+      );
 
-      if (work !== null && work.activityCount > 0) {
-        setReport(work);
+      if (held !== null && held.work.activityCount > 0) {
+        setWarning(held);
 
         return;
       }
@@ -51,7 +62,7 @@ export function SignOutForm(props: Readonly<SignOutFormProps>) {
     }
   };
 
-  const handleConfirmClick = async (): Promise<void> => {
+  const handleConfirmClick = async (avatarIDs: ReadonlyArray<string>): Promise<void> => {
     const client = idleWorkerHandle.client;
 
     setIsPending(true);
@@ -60,7 +71,11 @@ export function SignOutForm(props: Readonly<SignOutFormProps>) {
     try {
       if (client !== undefined) {
         try {
-          await sendIdleRemoveUndeliveredWork(client, idleWorkerHandle.writerAbortSignal);
+          await sendIdleRemoveUndeliveredWork(
+            client,
+            avatarIDs,
+            idleWorkerHandle.writerAbortSignal,
+          );
         } catch {
           setDiscardFailed(true);
 
@@ -84,12 +99,12 @@ export function SignOutForm(props: Readonly<SignOutFormProps>) {
       >
         Log out
       </StatusButton>
-      {report !== null && (
+      {warning !== null && (
         <Dialog
           closeLabel="Cancel"
           onOpenChange={(open) => {
             if (!open) {
-              setReport(null);
+              setWarning(null);
               setDiscardFailed(false);
             }
           }}
@@ -97,7 +112,7 @@ export function SignOutForm(props: Readonly<SignOutFormProps>) {
           title="Log out and lose this progress?"
         >
           <Text>
-            This device is holding {formatUndeliveredPlay(report)} that the server has not
+            This device is holding {formatUndeliveredPlay(warning.work)} that the server has not
             confirmed.
           </Text>
           <Text>
@@ -111,7 +126,7 @@ export function SignOutForm(props: Readonly<SignOutFormProps>) {
           )}
           <StatusButton
             disabled={isPending}
-            onClick={() => void handleConfirmClick()}
+            onClick={() => void handleConfirmClick(warning.avatarIDs)}
             status={pickConfirmStatus(isPending, discardFailed)}
             type="button"
           >
@@ -125,14 +140,21 @@ export function SignOutForm(props: Readonly<SignOutFormProps>) {
 
 async function tryReadUndeliveredWork(
   client: undefined | WorkerClient,
+  queryClient: QueryClient,
   signal: AbortSignal,
-): Promise<UndeliveredWork | null> {
+): Promise<null | UndeliveredWarning> {
   if (client === undefined) {
     return null;
   }
 
   try {
-    return await sendIdleReadUndeliveredWork(client, signal);
+    const roster = await queryClient.fetchQuery(orpc.avatar.getAvatars.queryOptions({ input: {} }));
+
+    const avatarIDs = roster.avatars.map((avatar) => avatar.id);
+
+    const work = await sendIdleReadUndeliveredWork(client, avatarIDs, signal);
+
+    return { avatarIDs, work };
   } catch {
     return null;
   }

@@ -2,8 +2,10 @@ import { expect, mock, test } from 'bun:test';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ActivityFailureAction } from '@vers/idle-core';
+import * as db from '@vers/mock-services/db';
 import { buildQueryClient } from '../../lib/query/build-query-client';
 import { orpc } from '../../lib/rpc/orpc';
+import { createSignedInUser } from '../../test-utils/create-signed-in-user';
 import { createStubWorkerClient } from '../../test-utils/create-stub-worker-client';
 import { renderWithRouter } from '../../test-utils/render-with-router';
 import { setIdleWorkerHandle } from '../../test-utils/set-idle-worker-handle';
@@ -15,6 +17,10 @@ test('it signs out directly when this device holds nothing undelivered', async (
   const action = mock(() => Promise.resolve(undefined));
   const client = createStubWorkerClient();
 
+  const signedIn = await createSignedInUser();
+
+  await db.avatarCollection.create({ userID: signedIn.userID });
+
   setIdleWorkerHandle({
     activity: undefined,
     client,
@@ -23,7 +29,7 @@ test('it signs out directly when this device holds nothing undelivered', async (
     writerAbortSignal: new AbortController().signal,
   });
 
-  await withRequestContext({}, async () => {
+  await withRequestContext({ cookies: signedIn.cookies }, async () => {
     renderWithRouter(<SignOutForm action={action} />);
 
     const logoutButton = await screen.findByRole('button', { name: 'Log out' });
@@ -35,14 +41,57 @@ test('it signs out directly when this device holds nothing undelivered', async (
     });
 
     expect(action).toHaveBeenCalledOnce();
+    expect(client.readUndeliveredWork).toHaveBeenCalledOnce();
     expect(client.removeUndeliveredWork).not.toHaveBeenCalled();
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+});
+
+test("it asks the worker about the signed-in user's avatars only", async () => {
+  const user = userEvent.setup();
+  const action = mock(() => Promise.resolve(undefined));
+  const client = createStubWorkerClient();
+
+  const signedIn = await createSignedInUser();
+  const other = await createSignedInUser();
+  const first = await db.avatarCollection.create({ userID: signedIn.userID });
+  const second = await db.avatarCollection.create({ userID: signedIn.userID });
+
+  await db.avatarCollection.create({ userID: other.userID });
+
+  setIdleWorkerHandle({
+    activity: undefined,
+    client,
+    failureAction: ActivityFailureAction.Abort,
+    initialized: true,
+    writerAbortSignal: new AbortController().signal,
+  });
+
+  await withRequestContext({ cookies: signedIn.cookies }, async () => {
+    renderWithRouter(<SignOutForm action={action} />);
+
+    const logoutButton = await screen.findByRole('button', { name: 'Log out' });
+
+    await user.click(logoutButton);
+
+    await waitFor(() => {
+      expect(action).toHaveBeenCalledOnce();
+    });
+
+    expect(client.readUndeliveredWork).toHaveBeenCalledExactlyOnceWith(
+      { avatarIDs: expect.toIncludeSameMembers([first.id, second.id]) },
+      expect.anything(),
+    );
   });
 });
 
 test('it warns before sign-out when this device holds undelivered work, and does not sign out', async () => {
   const user = userEvent.setup();
   const action = mock(() => Promise.resolve(undefined));
+
+  const signedIn = await createSignedInUser();
+
+  await db.avatarCollection.create({ userID: signedIn.userID });
 
   const client = createStubWorkerClient({
     readUndeliveredWork: () => Promise.resolve({ activityCount: 2, playMs: 90_000 }),
@@ -56,7 +105,7 @@ test('it warns before sign-out when this device holds undelivered work, and does
     writerAbortSignal: new AbortController().signal,
   });
 
-  await withRequestContext({}, async () => {
+  await withRequestContext({ cookies: signedIn.cookies }, async () => {
     renderWithRouter(<SignOutForm action={action} />);
 
     const logoutButton = await screen.findByRole('button', { name: 'Log out' });
@@ -70,9 +119,12 @@ test('it warns before sign-out when this device holds undelivered work, and does
   });
 });
 
-test('it discards the undelivered work before signing out when the player confirms', async () => {
+test("it discards the signed-in user's undelivered work before signing out when the player confirms", async () => {
   const user = userEvent.setup();
   const action = mock(() => Promise.resolve(undefined));
+
+  const signedIn = await createSignedInUser();
+  const avatar = await db.avatarCollection.create({ userID: signedIn.userID });
 
   const client = createStubWorkerClient({
     readUndeliveredWork: () => Promise.resolve({ activityCount: 1, playMs: 5000 }),
@@ -86,7 +138,7 @@ test('it discards the undelivered work before signing out when the player confir
     writerAbortSignal: new AbortController().signal,
   });
 
-  await withRequestContext({}, async () => {
+  await withRequestContext({ cookies: signedIn.cookies }, async () => {
     renderWithRouter(<SignOutForm action={action} />);
 
     const logoutButton = await screen.findByRole('button', { name: 'Log out' });
@@ -103,12 +155,21 @@ test('it discards the undelivered work before signing out when the player confir
 
     expect(action).toHaveBeenCalledOnce();
     expect(client.removeUndeliveredWork).toHaveBeenCalledBefore(action);
+
+    expect(client.removeUndeliveredWork).toHaveBeenCalledExactlyOnceWith(
+      { avatarIDs: [avatar.id] },
+      expect.anything(),
+    );
   });
 });
 
 test('it reports the failure and stays open when discarding the work fails', async () => {
   const user = userEvent.setup();
   const action = mock(() => Promise.resolve(undefined));
+
+  const signedIn = await createSignedInUser();
+
+  await db.avatarCollection.create({ userID: signedIn.userID });
 
   const client = createStubWorkerClient({
     readUndeliveredWork: () => Promise.resolve({ activityCount: 1, playMs: 5000 }),
@@ -123,7 +184,7 @@ test('it reports the failure and stays open when discarding the work fails', asy
     writerAbortSignal: new AbortController().signal,
   });
 
-  await withRequestContext({}, async () => {
+  await withRequestContext({ cookies: signedIn.cookies }, async () => {
     renderWithRouter(<SignOutForm action={action} />);
 
     const logoutButton = await screen.findByRole('button', { name: 'Log out' });
@@ -145,6 +206,10 @@ test('it neither discards nor signs out when the player cancels, and closes the 
   const user = userEvent.setup();
   const action = mock(() => Promise.resolve(undefined));
 
+  const signedIn = await createSignedInUser();
+
+  await db.avatarCollection.create({ userID: signedIn.userID });
+
   const client = createStubWorkerClient({
     readUndeliveredWork: () => Promise.resolve({ activityCount: 1, playMs: 5000 }),
   });
@@ -157,7 +222,7 @@ test('it neither discards nor signs out when the player cancels, and closes the 
     writerAbortSignal: new AbortController().signal,
   });
 
-  await withRequestContext({}, async () => {
+  await withRequestContext({ cookies: signedIn.cookies }, async () => {
     renderWithRouter(<SignOutForm action={action} />);
 
     const logoutButton = await screen.findByRole('button', { name: 'Log out' });
@@ -201,6 +266,40 @@ test('it signs out directly when no worker client is mounted', async () => {
     });
 
     expect(action).toHaveBeenCalledOnce();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+});
+
+test('it signs out directly and leaves the outbox alone when the avatar roster cannot be read', async () => {
+  const user = userEvent.setup();
+  const action = mock(() => Promise.resolve(undefined));
+
+  const client = createStubWorkerClient({
+    readUndeliveredWork: () => Promise.resolve({ activityCount: 1, playMs: 5000 }),
+  });
+
+  setIdleWorkerHandle({
+    activity: undefined,
+    client,
+    failureAction: ActivityFailureAction.Abort,
+    initialized: true,
+    writerAbortSignal: new AbortController().signal,
+  });
+
+  await withRequestContext({}, async () => {
+    renderWithRouter(<SignOutForm action={action} />);
+
+    const logoutButton = await screen.findByRole('button', { name: 'Log out' });
+
+    await user.click(logoutButton);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Log out' })).not.toBeDisabled();
+    });
+
+    expect(action).toHaveBeenCalledOnce();
+    expect(client.readUndeliveredWork).not.toHaveBeenCalled();
+    expect(client.removeUndeliveredWork).not.toHaveBeenCalled();
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 });

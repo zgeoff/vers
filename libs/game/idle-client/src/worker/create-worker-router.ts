@@ -45,15 +45,15 @@ export function createWorkerRouter(context: WorkerContext, ready: Readonly<Promi
       return handleReadDebugSnapshotMessage(context);
     }),
 
-    readUndeliveredWork: os.readUndeliveredWork.handler(async () => {
+    readUndeliveredWork: os.readUndeliveredWork.handler(async (opts) => {
       await ready;
 
-      return handleReadUndeliveredWorkMessage();
+      return handleReadUndeliveredWorkMessage(opts.input);
     }),
 
-    removeUndeliveredWork: os.removeUndeliveredWork.handler(async () => {
+    removeUndeliveredWork: os.removeUndeliveredWork.handler(async (opts) => {
       await ready;
-      await handleRemoveUndeliveredWorkMessage(context);
+      await handleRemoveUndeliveredWorkMessage(context, opts.input);
 
       return ACK;
     }),
