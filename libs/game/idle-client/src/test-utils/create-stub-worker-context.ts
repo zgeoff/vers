@@ -55,6 +55,8 @@ export function createStubWorkerContext(
   const broadcasts: Array<WorkerMessage> = [];
   const debugRecorder = createDebugRecorder();
 
+  const reconstructedAvatarIDs = new Set<string>();
+
   // referenced by `context.getLifecycle` below via closure before it exists, safe only because
   // nothing calls it until after the `const lifecycleActor` assignment following `context` runs
   const getLifecycle = (): ActorRefFromLogic<typeof workerLifecycleMachine> => lifecycleActor;
@@ -89,6 +91,7 @@ export function createStubWorkerContext(
     getSubmitter: () => submitter,
     getWriterDisplacedActivityID: () =>
       getLifecycle().getSnapshot().context.writerDisplacedActivityID,
+    hasReconstructed: (avatarID) => reconstructedAvatarIDs.has(avatarID),
     isFailureActionDirty: () => failureActionDirty,
     isFailureActionPushInFlight: () => failureActionPushInFlight,
     recordRewardSlots: (activityID, entry) => {
@@ -100,6 +103,9 @@ export function createStubWorkerContext(
 
       rewardSlotLedgerActivityID = activityID;
       rewardSlotLedger = [entry];
+    },
+    registerReconstruction: (avatarID) => {
+      reconstructedAvatarIDs.add(avatarID);
     },
     resetRewardSlotLedger: () => {
       rewardSlotLedgerActivityID = null;

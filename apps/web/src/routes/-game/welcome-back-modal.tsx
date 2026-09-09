@@ -93,10 +93,17 @@ function ResyncOutcome(props: Readonly<ResyncOutcomeProps>) {
     return <GameUpdatedNotice />;
   }
 
-  if (resyncStatus.kind === 'failed') {
+  // an unreconstructed catch-up is the connect-to-resume state: the worker refuses every start
+  // until one reconstruction completes, so the player's only move is to get the network back
+  if (resyncStatus.kind === 'failed' || resyncStatus.kind === 'unreconstructed') {
+    const message =
+      resyncStatus.kind === 'failed'
+        ? 'Catching up didn’t finish. Your progress is safe.'
+        : 'This device hasn’t synced this character since it opened. Connect to the network to resume.';
+
     return (
       <>
-        <Text>Catching up didn’t finish. Your progress is safe.</Text>
+        <Text>{message}</Text>
         <Button
           onClick={() => {
             if (idleWorkerHandle.client !== undefined) {
@@ -132,6 +139,7 @@ function formatResyncStatus(
       | { readonly kind: 'fast-forwarding' }
       | { readonly kind: 'session-expired' }
       | { readonly kind: 'sim-version-expired' }
+      | { readonly kind: 'unreconstructed' }
     >
   >,
 ): string {

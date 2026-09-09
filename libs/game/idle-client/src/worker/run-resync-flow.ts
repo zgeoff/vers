@@ -58,12 +58,16 @@ export async function runResyncFlow(
     // An undelivered stop gates the whole resync: until the server row reads closed, the progress
     // fetch would find it active and plan a catch-up for a run the player already ended.
     if ((await flushPendingStop(context)) === 'undelivered') {
-      emitResyncStatus(context, { avatarID, kind: 'failed' });
+      emitResyncStatus(context, buildResyncFailure(context, avatarID));
 
       return;
     }
 
-    await runResyncPass(context, avatarID, claim, signals);
+    const reconstructed = await runResyncPass(context, avatarID, claim, signals);
+
+    if (reconstructed) {
+      context.registerReconstruction(avatarID);
+    }
   } catch (error) {
     if (isAbortError(error, signals.cancel)) {
       return;
@@ -73,17 +77,25 @@ export async function runResyncFlow(
       emitResyncStatus(context, { avatarID, kind: 'session-expired' });
     } else {
       reportWorkerFault('resync', error);
-      emitResyncStatus(context, { avatarID, kind: 'failed' });
+      emitResyncStatus(context, buildResyncFailure(context, avatarID));
     }
   }
 }
 
+// a failure before the first reconstruction since boot is the state the tab must name, since the
+// worker refuses every start until a reconstruction completes
+function buildResyncFailure(context: WorkerContext, avatarID: string): ResyncStatus {
+  return { avatarID, kind: context.hasReconstructed(avatarID) ? 'failed' : 'unreconstructed' };
+}
+
+// resolves false when the stream the resync rebuilt diverged: a reconstruction that could not
+// reproduce the server's own checkpoints leaves the worker as unreconstructed as before
 async function runResyncPass(
   context: WorkerContext,
   avatarID: string,
   claim: boolean,
   signals: Readonly<FlowSignals>,
-): Promise<ResyncResult> {
+): Promise<boolean> {
   const result = await runResync({
     avatarID,
     buildSimulationInput: async (source) => {
@@ -137,10 +149,11 @@ async function runResyncPass(
     reportWorkerFault('resync', error);
   }
 
-  await applyResyncResult(context, result, signals);
+  const reconstructed = await applyResyncResult(context, result, signals);
+
   await updateLatestRunRecords(context, result);
 
-  return result;
+  return reconstructed;
 }
 
 function toActivityFailureAction(failureAction: ContractFailureAction): ActivityFailureAction {
@@ -213,11 +226,11 @@ function pickLatestActivityID(result: Readonly<ResyncResult>): string | undefine
   return result.plan.context.activityID;
 }
 
-async function applyResyncResult(
+function applyResyncResult(
   context: WorkerContext,
   result: Readonly<ResyncResult>,
   signals: Readonly<FlowSignals>,
-): Promise<void> {
+): Promise<boolean> {
   // A fetched row that is no longer active moots any recorded displacement for it: the run is
   // over, so neither a queued eviction settlement nor a lingering notice should tell the player
   // it continues elsewhere.
@@ -232,26 +245,26 @@ async function applyResyncResult(
   }
 
   if (result.report !== undefined) {
-    await applyFastForward(context, result.report, signals);
-
-    return;
+    return applyFastForward(context, result.report, signals);
   }
 
   if (result.plan.kind === 'rebase') {
     emitResyncStatus(context, { kind: 'capped' });
 
-    return;
+    return Promise.resolve(true);
   }
 
   if (result.plan.kind === 'active-elsewhere') {
     applyActiveElsewhere(context, result.plan.activityID);
 
-    return;
+    return Promise.resolve(true);
   }
 
   if (result.plan.kind === 'attach-live') {
-    await applyAttachLive(context, result.plan, result.progress, signals);
+    return applyAttachLive(context, result.plan, result.progress, signals);
   }
+
+  return Promise.resolve(true);
 }
 
 function applyActiveElsewhere(context: WorkerContext, activityID: string): void {
@@ -262,14 +275,14 @@ function applyActiveElsewhere(context: WorkerContext, activityID: string): void 
   updateWriterDisplacedStatus(context, activityID);
 }
 
-async function applyAttachLive(
+function applyAttachLive(
   context: WorkerContext,
   plan: Extract<ResyncPlan, { kind: 'attach-live' }>,
   progress: ResyncResult['progress'],
   signals: Readonly<FlowSignals>,
-): Promise<void> {
+): Promise<boolean> {
   if (context.getSimulation().activity?.id === plan.context.activityID) {
-    return;
+    return Promise.resolve(true);
   }
 
   invariant(
@@ -277,7 +290,7 @@ async function applyAttachLive(
     'an attach-live plan always carries the progress it was decided from',
   );
 
-  await applyHeadAttach(context, progress.activity, plan.context, signals, {
+  return applyHeadAttach(context, progress.activity, plan.context, signals, {
     skipTerminalHead: false,
   });
 }
@@ -286,14 +299,14 @@ async function applyFastForward(
   context: WorkerContext,
   report: FastForwardReport,
   signals: Readonly<FlowSignals>,
-): Promise<void> {
+): Promise<boolean> {
   // The progression already broadcast `fast-forwarding`, so it must still resolve — with the
   // displaced outcome, not `done`, since the tallies past the confirmed head never persisted.
   if (report.reason === 'displaced') {
     applyActiveElsewhere(context, report.activity.id);
     emitResyncStatus(context, { activityID: report.activity.id, kind: 'active-elsewhere' });
 
-    return;
+    return true;
   }
 
   // the closed row's tallies already persisted, so an avatar switch resolves as a normal outcome;
@@ -311,8 +324,10 @@ async function applyFastForward(
       levelUps: report.levelUps,
     });
 
-    return;
+    return true;
   }
+
+  let reconstructed = true;
 
   if (report.finalRowTerminal) {
     // The plan's abort policy mints its final continuation's row exactly like any other, but the
@@ -320,7 +335,7 @@ async function applyFastForward(
     // gap reads idle server-side, instead of sitting active for the next resync to revive.
     await submitStopIntent(context, report.activity);
   } else if (report.activity.status === 'active') {
-    await applyHeadAttach(
+    reconstructed = await applyHeadAttach(
       context,
       report.activity,
       {
@@ -339,6 +354,8 @@ async function applyFastForward(
     kind: 'done',
     levelUps: report.levelUps,
   });
+
+  return reconstructed;
 }
 
 interface HeadAttachOptions {
@@ -351,7 +368,7 @@ async function applyHeadAttach(
   submission: Readonly<ActivitySubmissionContext>,
   signals: Readonly<FlowSignals>,
   options: HeadAttachOptions,
-): Promise<void> {
+): Promise<boolean> {
   const document = await loadContentDocument(
     context.getClient(),
     activity.contentVersion,
@@ -379,7 +396,7 @@ async function applyHeadAttach(
 
     await setLiveSimulationOrStopBack(context, activity, simulation, signals);
 
-    return;
+    return true;
   }
 
   const reconstruction = runReconstruction({
@@ -391,11 +408,11 @@ async function applyHeadAttach(
   if ('divergence' in reconstruction) {
     emitDivergence(context, activity.id);
 
-    return;
+    return false;
   }
 
   if (options.skipTerminalHead && isTerminalCheckpoint(reconstruction.lastCheckpoint)) {
-    return;
+    return true;
   }
 
   const reconstructed = reconstruction.simulation.activity;
@@ -418,6 +435,8 @@ async function applyHeadAttach(
   });
 
   await setLiveSimulationOrStopBack(context, activity, reconstruction.simulation, signals);
+
+  return true;
 }
 
 interface FetchedBaseline {
