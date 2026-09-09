@@ -81,6 +81,10 @@ verifies inbound calls with `SERVICE_AUTH_JWKS`, the key set holding each minter
 
 The remaining keys with cross-service meaning:
 
+- `DATABASE_URL` — the shared Neon database's connection string: the direct host with
+  `sslmode=verify-full` ([database](./database.md#connection-strings)). Every domain service that
+  opens a database connection holds it, with one value fleet-wide
+  ([shared secrets](#shared-secrets)).
 - `JWT_SIGNING_PRIVKEY` — the RS256 PKCS8 private key `service-session` signs user tokens with,
   under issuer and audience `API_IDENTIFIER`.
 - `ROLL_KEY_ROOTS` — `service-keys`' root-secret payload: JSON, one entry per population, each
@@ -100,6 +104,23 @@ The browser-side values ride GitHub Actions configuration. The deploy workflow b
 authenticate with the `SENTRY_AUTH_TOKEN` GitHub secret, a Bugsink API token; when it's unset the
 build skips source maps entirely. The workflow bakes the `VITE_UMAMI_WEBSITE_ID` Actions variable
 the same way; a bundle without it ships no analytics tracker ([analytics](../analytics.md)).
+
+### Shared secrets
+
+A shared secret is a secret that holds one value on every app that carries it. Each app entry that
+carries one lists it in `sharedSecrets` in `deploy.config.ts`, and you set a shared secret once,
+with the same value, on every declaring app. `deploy verify` reads each declaring app's secret
+digests with `flyctl secrets list` and fails the run when a shared secret holds more than one digest
+across those apps, naming each app under its digest prefix. It also fails when a declaring app does
+not hold the secret at all ([fleet verification](#fleet-verification)).
+
+A drifted `DATABASE_URL` is one app connecting to a different host, or with different parameters,
+than the rest. Fix the drift by setting the one value again on each app the finding names — for
+`DATABASE_URL`, the direct-host string with `sslmode=verify-full`:
+
+```sh
+fly secrets set -a <app> DATABASE_URL="$DATABASE_URL"
+```
 
 ## Release
 
@@ -205,7 +226,9 @@ rollout; the leg reports that and leaves the fleet on the restored release.
 manifest app is online and current, catching an app at zero machines or a fleet behind HEAD. A
 rolled-back app reads stale there by design. It also checks each app's IP posture against its
 manifest `exposure` ([networking](#networking)): a `flycast` app missing its private address, or
-holding a public one, fails the run.
+holding a public one, fails the run. It also reads the secret digests of every app that declares a
+shared secret and fails the run when one holds more than one value across them
+([shared secrets](#shared-secrets)).
 
 ### Scheduled machines
 

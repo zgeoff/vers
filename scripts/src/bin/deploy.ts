@@ -22,6 +22,7 @@ import { applySimVersionActions } from '../deploy/apply-sim-version-actions';
 import { buildImageRef } from '../deploy/build-image-ref';
 import { buildProviderAppName } from '../deploy/build-provider-app-name';
 import { checkParkedApp } from '../deploy/check-parked-app';
+import { checkSharedSecrets } from '../deploy/check-shared-secrets';
 import { checkTarget } from '../deploy/check-target';
 import { findContentCoverageGap } from '../deploy/find-content-coverage-gap';
 import { findStaleReason } from '../deploy/find-stale-reason';
@@ -38,12 +39,12 @@ import { readChangesSince } from '../deploy/read-changes-since';
 import { readFleetImage } from '../deploy/read-fleet-image';
 import { readFleetRelations } from '../deploy/read-fleet-relations';
 import { readFlyEnvKeys } from '../deploy/read-fly-env-keys';
-import { readFlySecretNames } from '../deploy/read-fly-secret-names';
+import { readFlySecrets } from '../deploy/read-fly-secrets';
 import { readIPList } from '../deploy/read-ip-list';
 import { readProviderAppState } from '../deploy/read-provider-app-state';
 import { readSimVersionRow } from '../deploy/read-sim-version-row';
 import { runProbes } from '../deploy/run-probes';
-import type { DeployManifest, DeployTarget } from '../deploy/types';
+import type { DeployManifest, DeployTarget, SharedSecretHolder } from '../deploy/types';
 import { updateParkedActivities } from '../deploy/update-parked-activities';
 import { waitForDeployedSHA } from '../deploy/wait-for-deployed-sha';
 import { findEnvGaps } from '../env/find-env-gaps';
@@ -526,9 +527,37 @@ async function runVerify(): Promise<void> {
     }
   }
 
+  const holders = await readSharedSecretHolders(manifest);
+
+  const sharedSecretFindings = checkSharedSecrets(holders);
+
+  if (holders.length > 0 && sharedSecretFindings.length === 0) {
+    console.log('✓ fleet — every shared secret holds one value');
+  }
+
+  for (const finding of sharedSecretFindings) {
+    failed = true;
+
+    console.error(`✗ fleet — ${finding}`);
+  }
+
   if (failed) {
     process.exitCode = 1;
   }
+}
+
+function readSharedSecretHolders(
+  manifest: DeployManifest,
+): Promise<ReadonlyArray<SharedSecretHolder>> {
+  const declaring = manifest.apps.filter((target) => (target.sharedSecrets ?? []).length > 0);
+
+  return Promise.all(
+    declaring.map(async (target) => ({
+      app: target.app,
+      secrets: await readFlySecrets(target.app),
+      sharedSecrets: target.sharedSecrets ?? [],
+    })),
+  );
 }
 
 async function runPreflight(): Promise<void> {
@@ -551,12 +580,16 @@ async function runPreflight(): Promise<void> {
       continue;
     }
 
-    const [envKeys, secretNames] = await Promise.all([
+    const [envKeys, secrets] = await Promise.all([
       readFlyEnvKeys(target.configDir),
-      readFlySecretNames(target.app),
+      readFlySecrets(target.app),
     ]);
 
-    const available = new Set([...envKeys, ...secretNames, ...(target.buildArgsFromEnv ?? [])]);
+    const available = new Set([
+      ...envKeys,
+      ...secrets.map((secret) => secret.name),
+      ...(target.buildArgsFromEnv ?? []),
+    ]);
 
     const gaps = findEnvGaps(contract.required, [{ available, label: target.app }]);
 
