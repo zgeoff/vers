@@ -29,6 +29,8 @@ How the platform is built — system design, data flows, and operational wiring.
   and change discipline
 - [Error handling](./architecture/services/error-handling.md) — error taxonomy, bespoke-code
   registry, and the reporting split
+- [Rate limits](./architecture/services/rate-limits.md) — app-web's request budgets by tier and the
+  session-keyed rpc budget
 - [Feature flags](./architecture/services/feature-flags.md) — OpenFeature registry, resolution, and
   route gating
 - [Service providers](./architecture/services/service-providers.md) — the external services and what

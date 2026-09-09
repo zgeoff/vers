@@ -197,35 +197,8 @@ propagated across hops, and stamped onto spans, log lines, and the response head
 - **Route error boundaries.** The root route mounts `RootErrorScreen` as the last-resort boundary.
   Routes with a meaningful degraded state mount their own `errorComponent` beneath it.
 
-### Rate limits
-
-app-web's server answers a request over its rate limit with a 429 and a plain-text body before the
-request reaches a route. The limiter (`apps/web/src/server/make-rate-limiter.ts`) picks one tier per
-request from its path and method, counts requests per key in a fixed 60s window, and rejects the
-request that takes the count past the tier's budget. A rejected request on the `rpc` tier carries a
-`Retry-After` header holding the whole seconds until its window resets.
-
-| Tier      | Requests                                  | Key       | Budget per 60s |
-| --------- | ----------------------------------------- | --------- | -------------- |
-| `rpc`     | any method under `/api/rpc`               | session   | 60             |
-| `strict`  | a mutation on an auth or account route    | client IP | 10             |
-| `strong`  | a GET or HEAD on an auth or account route | client IP | 100            |
-| `default` | every other request                       | client IP | 1000           |
-
-The `rpc` key is the signed-in session id read out of the sealed session cookie, so two sessions
-behind one client IP spend separate budgets, and a re-sealed cookie for the same session keeps
-spending the same one. A request whose cookie is missing, forged, expired, or signed out is keyed by
-client IP instead, so a client cannot mint budgets by inventing cookie values. **Why:** the game's
-writer flushes about once every 10s, and a page load adds a burst of under 20 calls, so a healthy
-session spends under half of its budget in any minute. A runaway client is stopped within seconds
-instead of after the 1000 requests the IP-keyed `default` tier allows.
-
-The limiter holds one window per key in memory and sweeps the expired windows whenever a fresh
-window is opened while 1000 or more are held, so the map is bounded by the keys active in the last
-minute.
-
-Outside production every budget is multiplied by 10,000, since Playwright and local development
-drive these routes far faster than a player ever does.
+- **Rate limits.** A request over its budget is answered with a 429 before it reaches a route;
+  [rate limits](./rate-limits.md) owns the tiers and the session key.
 
 ### Retry policy
 
