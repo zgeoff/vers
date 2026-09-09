@@ -54,7 +54,7 @@ Each Neon endpoint has two hosts: **direct** (`ep-<endpoint>.<region>.aws.neon.t
 
 ## Connection pool
 
-Every service opens one postgres.js pool through `createDB` (`@vers/db`), and four settings bound
+Every service opens one postgres.js pool through `createDB` (`@vers/db`), and five settings bound
 how a connection can fail while the process runs. `connect_timeout` (10s) bounds connection
 acquisition, so a Neon endpoint that stalls on wake fails in 10s instead of minutes.
 `statement_timeout` and `idle_in_transaction_session_timeout` (30s each) are server-side session
@@ -73,12 +73,30 @@ the meantime. A query written to such a socket fails with `CONNECTION_CLOSED`, a
 in flight when the machine suspended hangs until the kernel's TCP retransmit limit gives up, about
 15 minutes later. `createDB` therefore detects a resume and drops the pool. The detector reads the
 wall clock on a 5s interval timer and before every connection acquire, and a gap over 60s since its
-last read means the process was not running. On a detected resume the pool swaps in a fresh
-postgres.js instance for new queries and destroys the old one, which rejects every query still
-pending on it with `CONNECTION_DESTROYED`. Each reset increments `vers.db.pool_resets`
-([observability](./observability.md#instrument-registry)). The 60s threshold keeps a synchronous
-stretch of work shorter than 60s, such as a replay verification that blocks the event loop, from
-tripping a reset that would destroy its own live queries.
+last read means the process was not running. The 60s threshold keeps a synchronous stretch of work
+shorter than 60s, such as a replay verification that blocks the event loop, from tripping a reset
+that would destroy its own live queries.
+
+A query whose reply never arrives is bounded by a client-side deadline, because no server-side
+setting reaches a dead transport. A query written to a socket whose peer stopped answering waits on
+the kernel's TCP retransmit limit, about 15 minutes, and TCP keepalive never probes while data sits
+unacknowledged. `createDB` therefore starts a 35s deadline around every statement it sends
+(`queryDeadlineMs`), and around each chunk it awaits from a streamed query. `statement_timeout`
+makes a live server answer within 30s, so 5s more of silence means the transport is dead. A deadline
+that expires drops the pool the same way a detected resume does. Kysely's abort signal is never used
+on its own: kysely-postgres-js implements neither `cancelQuery` nor `killSession`, so an abort would
+leave the reserved socket out of the pool until the kernel gives up on it.
+
+A pool reset, from either trigger, swaps in a fresh postgres.js instance for new queries and
+destroys the old one with a zero-timeout end. Every query still pending on the old instance rejects
+with `CONNECTION_DESTROYED`, not only the one that tripped the deadline. That cost is accepted
+because a socket silent past `statement_timeout` is dead for every connection the process holds to
+the same endpoint, and the next query from any caller lands on the fresh pool. Whether the failed
+call itself is resent is the caller's retry policy: the rejection reaches a service client as an
+`INTERNAL_SERVER_ERROR`, which app-web resends for a GET procedure and never for a mutation
+([error handling](../services/error-handling.md#retry-policy)). Each reset increments
+`vers.db.pool_resets` with its trigger as the `reason`
+([observability](./observability.md#instrument-registry)).
 
 ## Who connects, and where the string lives
 

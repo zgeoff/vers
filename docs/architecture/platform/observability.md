@@ -189,7 +189,7 @@ in stack state are encrypted by the stack passphrase.
 | `vers.analytics.delivery_failures`              | counter         | `{event}`        | `reason`            | product events that never landed in the Tinybird data source, by reason                                                                                      |
 | `vers.web.service_call_retries`                 | counter         | `{retry}`        | `service`           | retry attempts against an outbound service call that failed its previous attempt                                                                             |
 | `vers.web.service_call_failures`                | counter         | `{call}`         | `service`, `reason` | outbound service calls that never delivered, by service and reason                                                                                           |
-| `vers.db.pool_resets`                           | counter         | `{reset}`        | —                   | connection pools dropped after a detected process resume                                                                                                     |
+| `vers.db.pool_resets`                           | counter         | `{reset}`        | `reason`            | connection pools dropped, by what dropped them                                                                                                               |
 
 `service-activity` calls `service-replay`'s wake procedure through its oRPC client each time an
 append advances an activity past its verified cursor. The handler drains the queue, claiming and
@@ -273,6 +273,12 @@ The remaining split instruments enumerate their attribute values:
 - `vers.analytics.delivery_failures` by `reason`: `rejected` is a non-2xx response from the Tinybird
   Events API; `quarantined` is a row the API accepted but failed schema validation; `unreachable` is
   a network failure or the upstream deadline tripping.
+
+`vers.db.pool_resets` splits by `reason`: `resume` is a wall-clock gap the resume detector read, and
+`query_stall` is a statement whose reply never arrived within the query deadline
+([database](./database.md#connection-pool)). A `query_stall` on a process that never paused points
+at the endpoint or the path to it, since the server would have answered a live socket within its
+`statement_timeout`.
 
 `vers.web.service_call_retries` and `vers.web.service_call_failures` cover app-web's bounded
 outbound service calls. `service_call_retries` records each retry attempt against a call that failed
