@@ -37,7 +37,7 @@ export type DeployTrigger =
   | { readonly kind: 'turbo-affected'; readonly pkg: string }
   | { readonly kind: 'paths'; readonly globs: ReadonlyArray<string> };
 
-export type Probe = HTTPProbe | JSONPostProbe;
+export type Probe = HTTPProbe | JSONPostProbe | LighthouseProbe;
 
 interface HTTPProbe {
   readonly kind: 'http';
@@ -50,6 +50,12 @@ interface JSONPostProbe {
   readonly url: string;
   readonly body: unknown;
   readonly expect: (body: unknown) => boolean;
+}
+
+export interface LighthouseProbe {
+  readonly kind: 'lighthouse';
+  readonly url: string;
+  readonly minPerformanceScore: number;
 }
 
 export interface AppState {

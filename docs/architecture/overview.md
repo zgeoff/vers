@@ -101,7 +101,9 @@ Frontend:
 
 - UI - [React](https://react.dev) 19 with the
   [React Compiler](https://react.dev/learn/react-compiler)
-- Framework - [TanStack Start](https://tanstack.com/start) (SSR + server functions)
+- Framework - [TanStack Start](https://tanstack.com/start) on its React Server Components plugin
+  line. If that line stalls, the escape hatch is Start's non-RSC build, which keeps the same routes
+  and server functions and drops server components.
 - Data Fetching - [TanStack Query](https://tanstack.com/query)
 - State Management - [Zustand](https://zustand-demo.pmnd.rs)
 - 3D Graphics - [Three.js](https://threejs.org), [@react-three/fiber](https://r3f.docs.pmnd.rs)

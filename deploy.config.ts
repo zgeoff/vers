@@ -118,6 +118,14 @@ export default defineDeployManifest({
           kind: 'json-post',
           url: 'https://vers-app-web.fly.dev/api/rpc/user/getCurrentUser',
         },
+
+        // the landing page measured 0.83 on a cold fleet; 0.6 leaves room for run-to-run variance
+        // and a slow machine wake while still catching a regression that halves the score
+        {
+          kind: 'lighthouse',
+          minPerformanceScore: 0.6,
+          url: 'https://vers-app-web.fly.dev/',
+        },
       ],
       trigger: { kind: 'turbo-affected', pkg: '@vers/web' },
     },

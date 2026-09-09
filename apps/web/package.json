@@ -10,6 +10,8 @@
     "build": "vite build",
     "codegen": "panda cssgen",
     "dev": "vite dev",
+    "size": "size-limit",
+    "size:build": "turbo run build --filter=@vers/web",
     "test": "bun test",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "typegen": "tsr generate"
@@ -43,7 +45,6 @@
     "@vers/game-rendering": "workspace:*",
     "@vers/idle-client": "workspace:*",
     "@vers/idle-core": "workspace:*",
-    "@vers/mock-services": "workspace:*",
     "@vers/panda-preset": "workspace:*",
     "@vers/product-analytics": "workspace:*",
     "@vers/service-auth": "workspace:*",
@@ -74,6 +75,7 @@
     "@pandacss/dev": "catalog:",
     "@rolldown/plugin-babel": "catalog:",
     "@sentry/vite-plugin": "catalog:",
+    "@size-limit/file": "catalog:",
     "@tanstack/router-cli": "catalog:",
     "@tanstack/start-storage-context": "catalog:",
     "@testing-library/jest-dom": "catalog:",
@@ -87,6 +89,7 @@
     "@types/react-dom": "catalog:",
     "@types/three": "catalog:",
     "@vers/client-test-utils": "workspace:*",
+    "@vers/mock-services": "workspace:*",
     "@vers/test-utils": "workspace:*",
     "@vitejs/plugin-react": "catalog:",
     "@vitejs/plugin-rsc": "catalog:",
@@ -94,9 +97,39 @@
     "babel-plugin-react-compiler": "catalog:",
     "fake-indexeddb": "catalog:",
     "idb": "catalog:",
+    "size-limit": "catalog:",
     "typescript": "catalog:",
     "vite": "catalog:"
   },
+  "size-limit": [
+    {
+      "name": "client entry chunk (measured 163 KB gzipped)",
+      "path": "dist/client/assets/index-*.js",
+      "gzip": true,
+      "limit": "180 KB"
+    },
+    {
+      "name": "idle shared worker (measured 241 KB gzipped)",
+      "path": [
+        "dist/client/assets/worker-*.js",
+        "!dist/client/assets/worker-election-*.js"
+      ],
+      "gzip": true,
+      "limit": "266 KB"
+    },
+    {
+      "name": "idle dedicated worker (measured 243 KB gzipped)",
+      "path": "dist/client/assets/worker-election-*.js",
+      "gzip": true,
+      "limit": "268 KB"
+    },
+    {
+      "name": "all client scripts (measured 1264 KB gzipped)",
+      "path": "dist/client/assets/*.js",
+      "gzip": true,
+      "limit": "1390 KB"
+    }
+  ],
   "engines": {
     "node": "24.18.0"
   },
