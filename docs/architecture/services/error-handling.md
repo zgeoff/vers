@@ -197,6 +197,9 @@ propagated across hops, and stamped onto spans, log lines, and the response head
 - **Route error boundaries.** The root route mounts `RootErrorScreen` as the last-resort boundary.
   Routes with a meaningful degraded state mount their own `errorComponent` beneath it.
 
+- **Rate limits.** A request over its budget is answered with a 429 before it reaches a route;
+  [rate limits](./rate-limits.md) owns the tiers and the session key.
+
 ### Retry policy
 
 Three lanes carry outbound HTTP traffic between the browser and the services, each owning its own

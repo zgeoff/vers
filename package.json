@@ -109,6 +109,7 @@
       "expect-type": "1.4.0",
       "fake-indexeddb": "6.2.5",
       "fast-equals": "6.0.2",
+      "h3": "2.0.1-rc.20",
       "happy-dom": "20.10.6",
       "html-to-text": "9.0.5",
       "idb": "8.0.3",

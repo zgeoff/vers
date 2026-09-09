@@ -52,6 +52,7 @@
     "@vers/trace": "workspace:*",
     "@vers/worldmap-client": "workspace:*",
     "@vers/worldmap-core": "workspace:*",
+    "h3": "catalog:",
     "jose": "catalog:",
     "msw": "catalog:",
     "pino": "catalog:",
