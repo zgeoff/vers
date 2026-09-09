@@ -6,6 +6,7 @@ export function toAvatarData(row: Readonly<Selectable<Avatars>>): AvatarData {
   return {
     createdAt: row.createdAt,
     id: row.id,
+    isQA: row.isQa,
     level: row.level,
     mode: row.mode,
     name: row.name,

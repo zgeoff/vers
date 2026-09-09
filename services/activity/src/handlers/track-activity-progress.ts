@@ -10,6 +10,7 @@ import { findCheckpointBatchInvalidReason } from '../find-checkpoint-batch-inval
 import { recordRefusal } from '../metrics/record-refusal';
 import { recordTerminalTransition } from '../metrics/record-terminal-transition';
 import { pickCheckpointBatchRaceOutcome } from '../pick-checkpoint-batch-race-outcome';
+import { pickSimTimeCreditRate } from '../pick-sim-time-credit-rate';
 import type {
   CappedPayload,
   CheckpointInvalidPayload,
@@ -75,6 +76,7 @@ export async function trackActivityProgress(
       'activities.startChainIndex',
       'activities.status',
       'activities.writerSessionId',
+      'avatars.isQa',
       'avatars.simBudgetMs',
       'avatars.simMeteredAt',
     ])
@@ -124,9 +126,11 @@ export async function trackActivityProgress(
   // The budget decision is only meaningful against the head the batch claims to extend; a stale
   // batch falls through to the transaction's guarded update and resolves as CONFLICT.
   const headMatches = opts.input.expectedHead === head.appendedHead;
+  const creditRate = pickSimTimeCreditRate(head);
 
   const accruedMs =
-    Number(head.simBudgetMs) + (head.meterReadAt.getTime() - head.simMeteredAt.getTime());
+    Number(head.simBudgetMs) +
+    (head.meterReadAt.getTime() - head.simMeteredAt.getTime()) * creditRate;
 
   const availableMs = Math.min(deps.simTimeCapMs, accruedMs);
 
@@ -258,7 +262,7 @@ export async function trackActivityProgress(
       // other consumer for this avatar is excluded by the head compare-and-swap this transaction
       // already won, so the guard can only miss on a bug
       const debit = Math.ceil(timeDelta);
-      const refill = sql`least(${deps.simTimeCapMs}, sim_budget_ms + (extract(epoch from (now() - sim_metered_at)) * 1000)::bigint)`;
+      const refill = sql`least(${deps.simTimeCapMs}, sim_budget_ms + (extract(epoch from (now() - sim_metered_at)) * 1000 * ${creditRate})::bigint)`;
 
       const consumed = await trx
         .updateTable('avatars')

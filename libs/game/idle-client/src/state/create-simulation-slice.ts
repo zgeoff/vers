@@ -8,6 +8,7 @@ export interface SimulationSlice {
   combat: CombatExecutorSnapshot | null;
   failureAction: ActivityFailureAction;
   liveRun: LiveRun | null;
+  simulationSpeed: number;
 }
 
 export function createSimulationSlice(): SimulationSlice {
@@ -17,5 +18,6 @@ export function createSimulationSlice(): SimulationSlice {
     combat: null,
     failureAction: ActivityFailureAction.Abort,
     liveRun: null,
+    simulationSpeed: 1,
   };
 }

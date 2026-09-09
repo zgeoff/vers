@@ -56,10 +56,10 @@ test('it clears the activity history and returns the avatar to level 1', async (
   expect(
     ctx.db
       .selectFrom('avatars')
-      .select(['level', 'xp'])
+      .select(['isQa', 'level', 'xp'])
       .where('id', '=', seeded.avatar.id)
       .executeTakeFirst(),
-  ).resolves.toStrictEqual({ level: 1, xp: 0 });
+  ).resolves.toStrictEqual({ isQa: true, level: 1, xp: 0 });
 
   expect(
     ctx.db.selectFrom('activities').select('id').where('avatarId', '=', seeded.avatar.id).execute(),

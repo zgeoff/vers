@@ -34,6 +34,7 @@ test('it folds the outbox, the live run, and the latest run into one view', () =
     },
     liveRun,
     phase: 'running',
+    simulationSpeed: 1,
     startAttempts: new Map([
       [
         'act_pending',
@@ -112,6 +113,7 @@ test('it folds the outbox, the live run, and the latest run into one view', () =
       ],
     },
     phase: 'running',
+    simulationSpeed: 1,
     writer: { bootedAt: 1000, workerID: 'worker_1' },
   });
 });
@@ -131,6 +133,7 @@ test('it dates the next retry from the last flush when the submitter is backing 
     latestRun: null,
     liveRun: undefined,
     phase: 'idle',
+    simulationSpeed: 1,
     startAttempts: new Map(),
     starts: [createMockActivityData({ id: 'act_1' })],
     submitterStates: [
@@ -160,6 +163,7 @@ test('it reports an empty device with no live run, no latest run, and an empty o
     latestRun: null,
     liveRun: undefined,
     phase: 'idle',
+    simulationSpeed: 1,
     startAttempts: new Map(),
     starts: [],
     submitterStates: [],
@@ -174,6 +178,7 @@ test('it reports an empty device with no live run, no latest run, and an empty o
     liveRun: null,
     outbox: { activityStarts: [], checkpoints: [] },
     phase: 'idle',
+    simulationSpeed: 1,
     writer: { bootedAt: 0, workerID: 'worker_1' },
   });
 });

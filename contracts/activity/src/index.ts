@@ -40,6 +40,7 @@ export { MAX_REVEAL_BATCH_NODES } from './max-reveal-batch-nodes';
 export type { NodeSeed } from './node-seed-schema';
 export { NodeSeedSchema } from './node-seed-schema';
 export { OFFLINE_PROGRESS_CAP_MS } from './offline-progress-cap-ms';
+export { QA_SIM_SPEED_MAX } from './qa-sim-speed-max';
 export type { OfflineActivityStartSubmission } from './offline-activity-start-submission-schema';
 export { OfflineActivityStartSubmissionSchema } from './offline-activity-start-submission-schema';
 export { REVEAL_VIEWPORT_CELL_CAP } from './reveal-viewport-cell-cap';

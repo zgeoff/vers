@@ -48,6 +48,12 @@ export async function runResyncFlow(
     resetSimulation(context);
   }
 
+  // the speed was set for the avatar the worker last resynced; another avatar starts at real time
+  if (context.getResyncAvatarID() !== avatarID && context.getSimulationSpeed() !== 1) {
+    context.setSimulationSpeed(1);
+    context.broadcast({ speed: 1, type: WorkerMessageType.SimulationSpeedStatus });
+  }
+
   context.setResyncAvatarID(avatarID);
 
   try {

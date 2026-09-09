@@ -41,6 +41,53 @@ test('it resets a held run belonging to another avatar before installing', async
   expect(context.getSimulation()).not.toBe(before);
 });
 
+test('it returns the simulation to real time when the resync is for a different avatar', async () => {
+  const viewer = await createViewer();
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
+
+  const context = createStubWorkerContext({ client });
+
+  context.setResyncAvatarID('someone-else');
+  context.setSimulationSpeed(20);
+
+  const signals: FlowSignals = {
+    cancel: context.getCancelSignal(),
+    stop: context.getStopSignal(),
+  };
+
+  await runResyncFlow(context, viewer.avatar.id, false, signals);
+
+  expect(context.getSimulationSpeed()).toBe(1);
+
+  expect(context.getBroadcasts()).toPartiallyContain({
+    speed: 1,
+    type: WorkerMessageType.SimulationSpeedStatus,
+  });
+});
+
+test('it keeps the simulation speed across a resync of the same avatar', async () => {
+  const viewer = await createViewer();
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
+
+  const context = createStubWorkerContext({ client });
+
+  context.setResyncAvatarID(viewer.avatar.id);
+  context.setSimulationSpeed(20);
+
+  const signals: FlowSignals = {
+    cancel: context.getCancelSignal(),
+    stop: context.getStopSignal(),
+  };
+
+  await runResyncFlow(context, viewer.avatar.id, false, signals);
+
+  expect(context.getSimulationSpeed()).toBe(20);
+
+  expect(context.getBroadcasts()).not.toPartiallyContain({
+    type: WorkerMessageType.SimulationSpeedStatus,
+  });
+});
+
 test('it leaves the avatar idle with no live attach after an offline gap aborts on a failure', async () => {
   const viewer = await createViewer();
   const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);

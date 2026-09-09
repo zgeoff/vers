@@ -11,6 +11,7 @@ test('it answers with the current simulation snapshot', () => {
 
   expect(result).toStrictEqual({
     rewardSlotLedger: { activityID: null, entries: [] },
+    simulationSpeed: 1,
     state: context.getSimulation().getSnapshot(),
     writerDisplacedActivityID: null,
   });
@@ -26,6 +27,7 @@ test('it answers with the retained reward-slot ledger for a mid-run call', () =>
 
   expect(result).toStrictEqual({
     rewardSlotLedger: { activityID: 'activity_1', entries: [{ count: 2, version: 1 }] },
+    simulationSpeed: 1,
     state: context.getSimulation().getSnapshot(),
     writerDisplacedActivityID: null,
   });

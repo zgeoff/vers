@@ -63,6 +63,7 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
   let stopped = false;
   let lastFrameTime = now();
   let accumulator = 0;
+  let simulationSpeed = 1;
   let resyncAvatarID: string | null = null;
   let failureAction: ActivityFailureAction = ActivityFailureAction.Abort;
   let failureActionDirty = false;
@@ -148,6 +149,7 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
       entries: rewardSlotLedger,
     }),
     getSimulation: () => simulation,
+    getSimulationSpeed: () => simulationSpeed,
     getStartToken: () => getLifecycle().getSnapshot().context.startToken,
     getStopSignal: () => getLifecycle().getSnapshot().context.stopController.signal,
     getSubmitter,
@@ -192,6 +194,9 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
     },
     setSimulation: (newSimulation) => {
       simulation = newSimulation;
+    },
+    setSimulationSpeed: (speed) => {
+      simulationSpeed = speed;
     },
     setStartToken: (token) => {
       getLifecycle().send({ token, type: 'SET_START_TOKEN' });
@@ -311,7 +316,9 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
     const frameNow = now();
     const frameTime = frameNow - lastFrameTime;
 
-    accumulator += frameTime;
+    // the speed scales the wall clock the accumulator banks, never the fixed step each run
+    // consumes, so a sped-up run walks the same step sequence a real-time run does
+    accumulator += frameTime * simulationSpeed;
 
     while (accumulator >= timestep) {
       accumulator -= timestep;

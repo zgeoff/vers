@@ -61,48 +61,6 @@ snapshot**, the avatar's equipment, passives, and level pinned as a simulation i
 ends, the writer broadcasts the run's outcome beside the snapshot, so a viewer learns the run ended
 without waiting for another tick.
 
-### Writer election
-
-Every writer takes one origin-wide exclusive Web Lock before it boots, whichever transport the
-browser uses, so a browser without Web Locks gets no writer at all. The writer worker is a
-SharedWorker where the browser has one. Where it does not — Android Chrome, older Safari — every tab
-spawns a dedicated worker, and the workers race the same lock. The winner boots the worker runtime
-and announces itself with a writer-ready broadcast. A dedicated writer reaches every tab over a pair
-of BroadcastChannels, one for each direction. The inbound and outbound channels are separate, so a
-tab never receives a message another tab sent.
-
-A browser holds one SharedWorker per script URL, and each deployed build ships its worker under its
-own hashed URL, so two builds open under one origin would each boot a writer. The lock is what stops
-that: the second build's shared worker holds every tab connection until the lock is granted, and
-broadcasts a writer-pending message so its tabs can tell the player another version is still
-running. A tab that already initialized against the holding writer reads the same broadcast as the
-other side: another version is waiting on it, and the tab offers a reload. The handover preserves
-undelivered work because the outgoing writer's outbox lives in the durable stores the next writer
-boots from.
-
-Every tab-to-worker frame in the dedicated transport carries a protocol stamp, a digest of the
-tab-to-worker contract and the worker-to-tab message schema. A writer refuses a frame whose stamp
-differs from its own by name instead of upgrading the tab. The refusal closes the tab's port, so its
-pending calls settle with an error, the tab reports the contention, and the tab's handshake pauses
-until a writer of its own build is ready. Two builds share a stamp exactly when their wire shapes
-agree.
-
-The granted-lock callback never settles, so the browser releases the lock only when the writer's tab
-dies. The next queued worker then boots exactly as a reloaded worker does, seeding from the same
-durable stores a reload reads — its queued checkpoints and its pending-activity-starts store. A
-frozen background tab holds the lock while paused: the writer stalls until the tab thaws or the
-browser discards it, and the offline reconcile absorbs the stall by reconstructing the gap on the
-next reconnect.
-
-The durable stores are one IndexedDB journal per browser profile. The worker holds one connection to
-it and forgets that connection when it fails to open, when the browser terminates it, or when
-another context asks to upgrade the journal, so the next read opens afresh. A connection asked to
-yield for an upgrade closes itself, so a newer build's worker never waits on an older one's journal
-handle.
-
-The worker lifecycle — the states the writer moves through and how a handoff moves work to a fresh
-worker — lives in [offline reconcile](./offline-reconcile.md#worker-lifecycle).
-
 ## Authoring and verifying inputs
 
 The client authors every activity input; the server verifies it. Starting an activity is one
@@ -299,6 +257,10 @@ Because the only credit source is elapsed wall clock, no path earns simulated ti
 time — not activity cycling, not stop/start, not avatar rotation. Live play self-funds: each flush
 banks roughly the wall clock it consumes. A small initial grant on the meter absorbs tick-boundary
 and network jitter.
+
+One exception: a QA avatar's meter refills at 20 times the elapsed wall clock, so a run under the
+[QA speed multiplier](../platform/qa.md#debug-hook) self-funds the way a real-time run does; the cap
+still applies.
 
 A batch whose delta exceeds the accrued budget is rejected whole, and the activity takes the
 terminal `capped` transition at its current head. The `ACTIVITY_CAPPED` error carries that head as

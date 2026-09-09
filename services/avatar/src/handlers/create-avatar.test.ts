@@ -29,6 +29,7 @@ test('it creates an avatar owned by the acting user, defaulted to trade mode', a
   expect(avatar).toStrictEqual({
     createdAt: expect.toBeValidDate(),
     id: expect.toBeString(),
+    isQA: false,
     level: 1,
     mode: 'trade',
     name: 'Brutus',

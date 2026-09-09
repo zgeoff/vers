@@ -93,6 +93,7 @@ export async function applyQASeed(
       .insertInto('avatars')
       .values({
         id: avatarID,
+        isQa: true,
         level: buildLevelFromXP(finalXP),
         name: input.user.avatarName,
         seed: input.entropy.userSeed,

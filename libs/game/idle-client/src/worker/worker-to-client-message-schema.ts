@@ -19,6 +19,13 @@ const activityStartIngestedMessageSchema = z
   })
   .readonly();
 
+const simulationSpeedStatusMessageSchema = z
+  .object({
+    speed: z.int().min(1),
+    type: z.literal(WorkerMessageType.SimulationSpeedStatus),
+  })
+  .readonly();
+
 const simulationUpdateMessageSchema = z
   .object({
     liveRun: liveRunSchema.exactOptional(),
@@ -110,6 +117,7 @@ export const workerToClientMessageSchema = z.discriminatedUnion('type', [
   offlineCapStatusMessageSchema,
   resyncStatusMessageSchema,
   rewardSlotsRecordedMessageSchema,
+  simulationSpeedStatusMessageSchema,
   simulationUpdateMessageSchema,
   writerDisplacedMessageSchema,
   writerPendingMessageSchema,
@@ -133,6 +141,8 @@ export type ResyncStatus = z.infer<typeof resyncStatusSchema>;
 export type ResyncStatusMessage = z.infer<typeof resyncStatusMessageSchema>;
 
 export type RewardSlotsRecordedMessage = z.infer<typeof rewardSlotsRecordedMessageSchema>;
+
+export type SimulationSpeedStatusMessage = z.infer<typeof simulationSpeedStatusMessageSchema>;
 
 export type SimulationUpdateMessage = z.infer<typeof simulationUpdateMessageSchema>;
 

@@ -24,6 +24,7 @@ export async function handleReadDebugSnapshotMessage(
     latestRun: context.getLatestRun(),
     liveRun: findLiveRun(context),
     phase: context.getLifecycle().getSnapshot().context.phase,
+    simulationSpeed: context.getSimulationSpeed(),
     startAttempts: debug.getStartAttempts(),
     starts,
     submitterStates: context.getSubmitter().collectActivityStates(),

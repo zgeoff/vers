@@ -60,6 +60,8 @@ export interface WorkerContext {
   readonly getRewardSlotLedger: () => RewardSlotLedgerSnapshot;
   readonly getSimulation: () => Simulation;
 
+  readonly getSimulationSpeed: () => number;
+
   readonly getLatestRun: () => LatestRun | null;
 
   readonly getLifecycle: () => ActorRefFromLogic<typeof workerLifecycleMachine>;
@@ -92,6 +94,7 @@ export interface WorkerContext {
   readonly setResyncAvatarID: (avatarID: null | string) => void;
   readonly setStartToken: (token: string) => void;
   readonly setSimulation: (simulation: Simulation) => void;
+  readonly setSimulationSpeed: (speed: number) => void;
   readonly setWriterDisplacedActivityID: (activityID: null | string) => void;
 
   readonly updateConnectivity: (online: boolean) => void;

@@ -3,6 +3,7 @@ import {
   setRewardSlotLedger,
   setSimulationInitialized,
   setSimulationSnapshot,
+  setSimulationSpeed,
   setWriterDisplacedActivityID,
 } from '@vers/idle-client';
 
@@ -18,5 +19,6 @@ export async function sendIdleInitialize(client: WorkerClient, signal: AbortSign
   setSimulationInitialized(true);
   setSimulationSnapshot(result.state, result.liveRun);
   setRewardSlotLedger(result.rewardSlotLedger);
+  setSimulationSpeed(result.simulationSpeed);
   setWriterDisplacedActivityID(result.writerDisplacedActivityID);
 }
