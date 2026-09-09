@@ -112,3 +112,22 @@ test('it ignores a secret that differs across apps when no app declares it share
 test('it finds nothing when no app declares a shared secret', () => {
   expect(checkSharedSecrets([])).toStrictEqual([]);
 });
+
+test('it names the apps in the same order whichever order the holders arrive in', () => {
+  const activity = {
+    app: 'vers-service-activity',
+    secrets: [{ digest: '237eb2558e3b4f0a9c1d2e3f40516273', name: 'DATABASE_URL' }],
+    sharedSecrets: ['DATABASE_URL'],
+  };
+  const replay = {
+    app: 'vers-service-replay',
+    secrets: [{ digest: '237eb2558e3b4f0a9c1d2e3f40516273', name: 'DATABASE_URL' }],
+    sharedSecrets: ['DATABASE_URL'],
+  };
+  const user = { app: 'vers-service-user', secrets: [], sharedSecrets: ['DATABASE_URL'] };
+  const avatar = { app: 'vers-service-avatar', secrets: [], sharedSecrets: ['DATABASE_URL'] };
+
+  expect(checkSharedSecrets([replay, user, activity, avatar])).toStrictEqual(
+    checkSharedSecrets([activity, avatar, replay, user]),
+  );
+});

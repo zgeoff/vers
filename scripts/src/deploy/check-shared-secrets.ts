@@ -23,7 +23,8 @@ function checkSharedSecret(
 
   const unset = holders
     .filter((holder) => findDigest(holder, name) === null)
-    .map((holder) => holder.app);
+    .map((holder) => holder.app)
+    .toSorted();
 
   if (unset.length > 0) {
     findings.push(`shared secret ${name} is unset on ${unset.join(', ')}`);
@@ -47,7 +48,7 @@ function checkSharedSecret(
 
   // default string sort — code-unit order keeps the finding text identical across locales
   const groups = [...appsByDigest.keys()].toSorted().map((digest) => {
-    const apps = appsByDigest.get(digest) ?? [];
+    const apps = (appsByDigest.get(digest) ?? []).toSorted();
 
     return `${digest.slice(0, DIGEST_PREFIX_LENGTH)} on ${apps.join(', ')}`;
   });
