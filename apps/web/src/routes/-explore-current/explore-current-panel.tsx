@@ -146,6 +146,23 @@ export function ExploreCurrentPanel(props: Readonly<ExploreCurrentPanelProps>) {
     resyncStatus,
   ]);
 
+  // a start refused for want of a reconstruction re-arms itself once a catch-up completes, so a
+  // reconnect resumes play without the player leaving and re-entering the node
+  useEffect(() => {
+    if (
+      report?.status.kind !== 'unreconstructed' ||
+      resyncStatus === null ||
+      resyncStatus.kind === 'unreconstructed' ||
+      resyncStatus.kind === 'failed' ||
+      resyncStatus.kind === 'session-expired'
+    ) {
+      return;
+    }
+
+    setAttemptScopeID(undefined);
+    setReport(undefined);
+  }, [report, resyncStatus]);
+
   useEffect(() => {
     if (report?.status.kind !== 'started') {
       return;

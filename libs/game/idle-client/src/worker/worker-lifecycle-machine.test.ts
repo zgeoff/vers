@@ -626,6 +626,8 @@ test('it serializes flows queued from different kinds on the one actor', async (
 
   const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_test', submitter });
 
+  context.registerReconstruction('avatar_mixed_kinds');
+
   await setupStartableNode('avatar_mixed_kinds');
 
   // the avatar's latest run is already known, so the start needs no resync ahead of it
@@ -790,6 +792,9 @@ test('it drops a non-claiming resync while one is queued', async () => {
   submitter.registerActivity = mock(() => blockingGate);
 
   const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_test', submitter });
+
+  context.registerReconstruction('avatar_blocking_start');
+
   const connection = collectBroadcasts(context);
 
   await setupStartableNode('avatar_blocking_start');
@@ -1207,6 +1212,8 @@ test('it runs a resync arriving during a non-resync turn after that turn rather 
 
   const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_test', submitter });
 
+  context.registerReconstruction('avatar_blocks_resync');
+
   await setupStartableNode('avatar_blocks_resync');
 
   // the avatar's latest run is already known, so the start needs no resync ahead of it
@@ -1272,6 +1279,8 @@ test('it runs a start queued during an in-flight resync before a held claim requ
       removeEviction: () => {},
     },
   });
+
+  context.registerReconstruction('avatar_held_claim_order');
 
   await setupStartableNode('avatar_held_claim_order');
 
