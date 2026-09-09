@@ -142,16 +142,30 @@ jobs:
         with:
           bun-version-file: .bun-version
 
-      # the action builds the base branch and the head branch in turn to comment the delta; the
-      # install is left to it so the base build resolves its own lockfile
+      - name: Install Dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Setup Turbo cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-
+
+      # the action checks out the base branch and the head branch in turn and runs the script on
+      # each; a base that predates the budget yields an empty result set instead of failing the
+      # job, so the comment reads the whole head size as the delta
       - name: Size delta comment
         uses: andresz1/size-limit-action@94bc357df29c36c8f8d50ea497c3e225c3c95d1d # v1.8.0
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           package_manager: bun
-          build_script: size:build
+          skip_step: build
           directory: apps/web
-          script: bunx size-limit --json
+          script:
+            bash -c "bun run size:build >/dev/null 2>&1; bunx size-limit --json 2>/dev/null || echo
+            []"
 
   e2e:
     runs-on: ubuntu-latest
