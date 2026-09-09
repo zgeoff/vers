@@ -52,6 +52,7 @@ export async function refreshTokens(
     const accessToken = await createJWT({
       apiIdentifier: deps.apiIdentifier,
       expiresAt: accessTokenExpiresAt,
+      keyID: deps.keyID,
       signingKey: deps.signingKey,
       userID: row.userId,
     });
@@ -63,12 +64,14 @@ export async function refreshTokens(
     createJWT({
       apiIdentifier: deps.apiIdentifier,
       expiresAt: row.expiresAt,
+      keyID: deps.keyID,
       signingKey: deps.signingKey,
       userID: row.userId,
     }),
     createJWT({
       apiIdentifier: deps.apiIdentifier,
       expiresAt: accessTokenExpiresAt,
+      keyID: deps.keyID,
       signingKey: deps.signingKey,
       userID: row.userId,
     }),

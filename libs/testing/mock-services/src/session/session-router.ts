@@ -2,6 +2,7 @@ import { createSession } from './create-session';
 import { deleteSession } from './delete-session';
 import { getSession } from './get-session';
 import { getSessions } from './get-sessions';
+import { getSigningKeys } from './get-signing-keys';
 import { refreshTokens } from './refresh-tokens';
 import { stepUpRouter } from './step-up/step-up-router';
 import { verifySession } from './verify-session';
@@ -11,6 +12,7 @@ export const sessionRouter = {
   deleteSession,
   getSession,
   getSessions,
+  getSigningKeys,
   refreshTokens,
   stepUp: stepUpRouter,
   verifySession,

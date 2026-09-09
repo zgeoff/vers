@@ -31,6 +31,7 @@
     "@vers/service-test-utils": "workspace:*",
     "@vers/test-utils": "workspace:*",
     "@zgeoff/bun-test-extended": "catalog:",
+    "tiny-invariant": "catalog:",
     "typescript": "catalog:"
   }
 }

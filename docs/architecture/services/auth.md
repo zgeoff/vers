@@ -31,6 +31,23 @@ with service-session's PKCS8 key (`JWT_SIGNING_PRIVKEY`). Its issuer and audienc
 `API_IDENTIFIER`. Access tokens live 15 minutes and rotate through `refreshTokens`, which rejects a
 reused refresh token.
 
+The edge verifies the access token before it trusts any claim in it. Every session JWT carries a
+`kid` header naming its signing key, the JWK thumbprint of that key's public half, and
+service-session publishes its public key set through `getSigningKeys`, one JSON Web Key per signing
+key. `loadSessionActor` (`apps/web/src/lib/rpc/`) reads that set once per process, verifies the
+cookie's access token against it by `kid`, and requires the token's subject to match the cookie's
+user. A token no published key signed, a tampered token, or a subject mismatch clears the cookie and
+reads as signed out; an expired token, or one inside 30s of expiry, takes the refresh path instead.
+A native client reads the same procedure through the edge proxy.
+
+A key rotates through an overlap window. Set `JWT_SIGNING_RETIRED_PUBKEY` to the outgoing key's SPKI
+public half and `JWT_SIGNING_PRIVKEY` to the new private key, and deploy: the service signs with the
+new key and publishes both. The edge re-reads the key set once when a token names a `kid` the cached
+set lacks, so the first token under the new key refreshes the set on its own. Once every access
+token minted under the old key has expired, 15 minutes after the deploy, unset the retired key and
+deploy again. Refresh tokens are matched against the session row, never verified by signature, so a
+rotation never invalidates a live session.
+
 The cookie is `en_session`: httpOnly, `SameSite=Lax`, secure in production, sealed by an app secret
 (`buildAuthSessionConfig`). `getAuthSession` reads it and never throws. An absent token is how
 `requireAuth` and `requireAnonymous` observe "signed out". `requireAuth` treats a partial session

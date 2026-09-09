@@ -4,6 +4,7 @@ import { buildContractMock } from '@vers/client-test-utils/orpc';
 import { sessionContract } from '@vers/contract-session';
 import { createTestAccessToken, resolveSessionContext } from '@vers/mock-services';
 import * as db from '@vers/mock-services/db';
+import * as jose from 'jose';
 import { server } from '../../mocks/node';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { loadSessionActor } from './load-session-actor';
@@ -40,6 +41,107 @@ test('it returns the cookie userID unchanged for a fresh access token whose sess
   });
 
   expect(outcome.cookies['en_session']).toContainEntry(['accessToken', accessToken]);
+});
+
+test('it signs out and clears the cookie for an access token whose signature does not verify', async () => {
+  const session = await db.sessionCollection.create({});
+  const accessToken = await createTestAccessToken(session.userID);
+
+  const [header, payload, signature] = accessToken.split('.');
+
+  // one character deep inside the signature is flipped, never a trailing one whose low bits the
+  // base64url decoder discards
+  const flipped = signature?.[5] === 'A' ? 'B' : 'A';
+  const tampered = `${header}.${payload}.${signature?.slice(0, 5)}${flipped}${signature?.slice(6)}`;
+
+  const outcome = await withRequestContext(
+    {
+      cookies: {
+        en_session: {
+          accessToken: tampered,
+          refreshToken: 'refresh-1',
+          sessionID: session.id,
+          userID: session.userID,
+        },
+      },
+    },
+    () => loadSessionActor(),
+  );
+
+  expect(outcome.value).toStrictEqual({ kind: 'signed-out' });
+  expect(outcome.cookies['en_session']).toBeUndefined();
+});
+
+test('it signs out for an access token signed by a key the session service never published', async () => {
+  const session = await db.sessionCollection.create({});
+  const foreignKeyPair = await jose.generateKeyPair('EdDSA');
+
+  const foreignToken = await new jose.SignJWT({})
+    .setProtectedHeader({ alg: 'EdDSA', kid: 'never-published' })
+    .setSubject(session.userID)
+    .setExpirationTime('15m')
+    .sign(foreignKeyPair.privateKey);
+
+  const outcome = await withRequestContext(
+    {
+      cookies: {
+        en_session: {
+          accessToken: foreignToken,
+          refreshToken: 'refresh-1',
+          sessionID: session.id,
+          userID: session.userID,
+        },
+      },
+    },
+    () => loadSessionActor(),
+  );
+
+  expect(outcome.value).toStrictEqual({ kind: 'signed-out' });
+  expect(outcome.cookies['en_session']).toBeUndefined();
+});
+
+test('it signs out for a valid access token whose subject is not the cookie user', async () => {
+  const session = await db.sessionCollection.create({});
+  const accessToken = await createTestAccessToken(createId());
+
+  const outcome = await withRequestContext(
+    {
+      cookies: {
+        en_session: {
+          accessToken,
+          refreshToken: 'refresh-1',
+          sessionID: session.id,
+          userID: session.userID,
+        },
+      },
+    },
+    () => loadSessionActor(),
+  );
+
+  expect(outcome.value).toStrictEqual({ kind: 'signed-out' });
+  expect(outcome.cookies['en_session']).toBeUndefined();
+});
+
+test('it signs out for an expired access token whose subject is not the cookie user instead of refreshing', async () => {
+  const session = await db.sessionCollection.create({ refreshToken: 'refresh-1' });
+  const staleForeignToken = await createTestAccessToken(createId(), '-1s');
+
+  const outcome = await withRequestContext(
+    {
+      cookies: {
+        en_session: {
+          accessToken: staleForeignToken,
+          refreshToken: 'refresh-1',
+          sessionID: session.id,
+          userID: session.userID,
+        },
+      },
+    },
+    () => loadSessionActor(),
+  );
+
+  expect(outcome.value).toStrictEqual({ kind: 'signed-out' });
+  expect(outcome.cookies['en_session']).toBeUndefined();
 });
 
 test('it reports superseded for a fresh access token whose session row is gone', async () => {
