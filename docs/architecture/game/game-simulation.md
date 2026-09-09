@@ -61,65 +61,6 @@ snapshot**, the avatar's equipment, passives, and level pinned as a simulation i
 ends, the writer broadcasts the run's outcome beside the snapshot, so a viewer learns the run ended
 without waiting for another tick.
 
-### The QA speed multiplier
-
-A QA avatar can run the writer's fixed-timestep loop faster than real time. The multiplier scales
-the wall clock the loop banks into its accumulator, never the fixed step (`SIMULATION_TIMESTEP_MS`)
-each run consumes, so at speed 20 the writer runs 20 fixed steps for every step of real time and
-walks the same step sequence a real-time run walks. The checkpoint stream, its hashes, its rewards,
-and the replay that proves it are identical to a real-time run on the same seed. The multiplier
-applies to live combat only: the checkpoint flush keeps its wall-clock cadence, `playedAt` stays the
-wall clock, and the offline fast-forward is unaffected.
-
-A **QA avatar** is an avatar whose row carries the `is_qa` flag. Only the QA seed tooling writes the
-flag ([manual QA](../platform/qa.md#accounts)); no client route or procedure can set it. The writer
-accepts a speed from 1 to `QA_SIM_SPEED_MAX` (20) through the QA debug hook
-([manual QA](../platform/qa.md#debug-hook)) and refuses a speed above 1 for an avatar that is not
-flagged. A sped-up run debits the avatar's offline budget at its simulated rate, so the activity
-service credits a QA avatar's meter faster in turn ([the offline budget](#the-offline-budget)).
-
-### Writer election
-
-Every writer takes one origin-wide exclusive Web Lock before it boots, whichever transport the
-browser uses, so a browser without Web Locks gets no writer at all. The writer worker is a
-SharedWorker where the browser has one. Where it does not — Android Chrome, older Safari — every tab
-spawns a dedicated worker, and the workers race the same lock. The winner boots the worker runtime
-and announces itself with a writer-ready broadcast. A dedicated writer reaches every tab over a pair
-of BroadcastChannels, one for each direction. The inbound and outbound channels are separate, so a
-tab never receives a message another tab sent.
-
-A browser holds one SharedWorker per script URL, and each deployed build ships its worker under its
-own hashed URL, so two builds open under one origin would each boot a writer. The lock is what stops
-that: the second build's shared worker holds every tab connection until the lock is granted, and
-broadcasts a writer-pending message so its tabs can tell the player another version is still
-running. A tab that already initialized against the holding writer reads the same broadcast as the
-other side: another version is waiting on it, and the tab offers a reload. The handover preserves
-undelivered work because the outgoing writer's outbox lives in the durable stores the next writer
-boots from.
-
-Every tab-to-worker frame in the dedicated transport carries a protocol stamp, a digest of the
-tab-to-worker contract and the worker-to-tab message schema. A writer refuses a frame whose stamp
-differs from its own by name instead of upgrading the tab. The refusal closes the tab's port, so its
-pending calls settle with an error, the tab reports the contention, and the tab's handshake pauses
-until a writer of its own build is ready. Two builds share a stamp exactly when their wire shapes
-agree.
-
-The granted-lock callback never settles, so the browser releases the lock only when the writer's tab
-dies. The next queued worker then boots exactly as a reloaded worker does, seeding from the same
-durable stores a reload reads — its queued checkpoints and its pending-activity-starts store. A
-frozen background tab holds the lock while paused: the writer stalls until the tab thaws or the
-browser discards it, and the offline reconcile absorbs the stall by reconstructing the gap on the
-next reconnect.
-
-The durable stores are one IndexedDB journal per browser profile. The worker holds one connection to
-it and forgets that connection when it fails to open, when the browser terminates it, or when
-another context asks to upgrade the journal, so the next read opens afresh. A connection asked to
-yield for an upgrade closes itself, so a newer build's worker never waits on an older one's journal
-handle.
-
-The worker lifecycle — the states the writer moves through and how a handoff moves work to a fresh
-worker — lives in [offline reconcile](./offline-reconcile.md#worker-lifecycle).
-
 ## Authoring and verifying inputs
 
 The client authors every activity input; the server verifies it. Starting an activity is one
@@ -317,10 +258,9 @@ time — not activity cycling, not stop/start, not avatar rotation. Live play se
 banks roughly the wall clock it consumes. A small initial grant on the meter absorbs tick-boundary
 and network jitter.
 
-One exception: a QA avatar's meter refills at `QA_SIM_SPEED_MAX` (20) times the elapsed wall clock,
-so a run at the maximum [QA speed multiplier](#the-qa-speed-multiplier) self-funds the way a
-real-time run does. The cap still applies, the same append path enforces it, and every other avatar
-refills at wall-clock rate.
+One exception: a QA avatar's meter refills at 20 times the elapsed wall clock, so a run under the
+[QA speed multiplier](../platform/qa.md#debug-hook) self-funds the way a real-time run does; the cap
+still applies.
 
 A batch whose delta exceeds the accrued budget is rejected whole, and the activity takes the
 terminal `capped` transition at its current head. The `ACTIVITY_CAPPED` error carries that head as
@@ -346,11 +286,10 @@ settles the offline gap is the subject of [offline reconcile](./offline-reconcil
 | build snapshot      | The avatar's equipment, passives, and level pinned as a simulation input; the client predicts it, the server re-derives and verifies it. |
 | sim snapshot        | The engine's serializable projection from `getSnapshot()`, which viewer tabs render.                                                     |
 | writer worker       | The one worker per browser profile that runs the simulation and appends its checkpoints.                                                 |
-| QA avatar           | An avatar whose row the QA seed tooling flagged; it may run the writer above real time and its offline budget refills faster to match.   |
 | verifier            | The server process that replays a submitted stream to decide whether to trust it.                                                        |
 | checkpoint          | One recorded simulation step: a row keyed `(activity_id, version)` that links the previous checkpoint's hash.                            |
 | head row            | An activity's single row carrying its two cursors, last checkpoint hash, writer session, and status.                                     |
 | appended head       | `appended_head`: how far the client has written the stream.                                                                              |
 | verified head       | `verified_head`: how far the verifier has replayed and trusted the stream.                                                               |
 | sim version         | The engine build's version stamp (`simVersion`); pins which code replays a segment.                                                      |
-| offline budget      | The per-avatar simulated-time meter, refilled at wall-clock rate (20 times that for a QA avatar) and debited per accepted batch.         |
+| offline budget      | The per-avatar simulated-time meter, refilled at wall-clock rate and debited per accepted batch.                                         |

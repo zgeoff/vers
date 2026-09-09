@@ -31,8 +31,7 @@ bun run qa:reset --user qa-007 --all --yes
 
 `qa:seed` creates `qa-007@qa.versidle.com` with the password from `--password`, or a generated one,
 and an active avatar whose XP is the minimum for `--level`. The avatar is flagged as a QA avatar,
-which is what lets the debug hook run it above real time
-([game simulation](../game/game-simulation.md#the-qa-speed-multiplier)); nothing but this command
+which is what lets the [debug hook](#debug-hook) run it above real time; nothing but this command
 writes that flag. The username and avatar name derive from the account name under their contracts
 (`qa_007` and `qaaah` for `qa-007`), and the command prints them with the credentials once;
 `--two-factor` writes an authenticator verification and prints its secret and `otpauth://` URI. With
@@ -244,13 +243,18 @@ await window.__versQA.setSpeed(1);
 ```
 
 `setSpeed(n)` runs the live simulation at `n` fixed steps per step of real time, for an integer `n`
-from 1 to 20, and resolves to the applied speed. The worker refuses a speed above 1 unless the
-active avatar is a QA avatar, and the call rejects with the refusal. While the speed is above 1 the
-game routes show a `QA ×N` badge in the top right corner, so a sped-up run is never mistaken for a
-real one. The speed lives in the writer worker, so it holds across tabs and resets to 1 when the
-worker restarts. The offline budget credits a QA avatar at the maximum speed
-([game simulation](../game/game-simulation.md#the-qa-speed-multiplier)), so a run at any speed up to
-20 stays inside the budget.
+from 1 to 20, and resolves to the applied speed. The multiplier scales the wall clock the writer
+banks into its accumulator, never the fixed step each run consumes, so a sped-up run walks the same
+step sequence as a real-time run and produces the same checkpoint stream, hashes, rewards, and
+replay result. It applies to live combat only: the checkpoint flush keeps its wall-clock cadence,
+`playedAt` stays the wall clock, and the offline fast-forward is unaffected. The worker refuses a
+speed above 1 unless the active avatar is a QA avatar, and the call rejects with the refusal. While
+the speed is above 1 the game routes show a `QA ×N` badge in the top right corner, so a sped-up run
+is never mistaken for a real one. The speed lives in the writer worker, so it holds across tabs and
+resets to 1 when the worker restarts. The activity service credits a QA avatar's offline budget at
+20 times the wall clock instead of 1, on the same append path and under the same cap as every other
+avatar, so a run at any speed up to 20 stays inside the budget
+([the offline budget](../game/game-simulation.md#the-offline-budget)).
 
 ## Cold path
 
