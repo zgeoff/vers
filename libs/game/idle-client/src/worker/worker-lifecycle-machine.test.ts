@@ -4,27 +4,41 @@ import {
   createMockActivityData,
   createMockContentDocument,
 } from '@vers/contract-activity/test-utils';
-import { buildLevelFromXP, createSimulation } from '@vers/idle-core';
+import { ActivityFailureAction, buildLevelFromXP, createSimulation } from '@vers/idle-core';
 import { createMockActivityInput, createMockAvatarData } from '@vers/idle-core/test-utils';
 import { createAuthedServiceClient, createViewer } from '@vers/mock-services';
 import { mockActivityService } from '@vers/mock-services/activity';
 import * as db from '@vers/mock-services/db';
 import { waitFor } from '@vers/test-utils';
+import { http } from 'msw';
 import invariant from 'tiny-invariant';
 import { createActor, fromPromise } from 'xstate';
 import { writeContentDocumentCache } from '../content/write-content-document-cache';
 import { server } from '../mocks/node';
+import { createActivityServiceClient } from '../submission/create-activity-service-client';
+import { createCheckpointSubmitter } from '../submission/create-checkpoint-submitter';
+import { readAllActivityStarts } from '../submission/read-all-activity-starts';
+import { readQueuedCheckpoints } from '../submission/read-queued-checkpoints';
 import type { ActivityServiceClient, ActivitySubmissionContext } from '../submission/types';
+import { writeActivityStart } from '../submission/write-activity-start';
+import { writeLastStartedActivity } from '../submission/write-last-started-activity';
 import { writeNodeSeeds } from '../submission/write-node-seeds';
+import { writeQueuedCheckpoint } from '../submission/write-queued-checkpoint';
 import { writeStartStamps } from '../submission/write-start-stamps';
+import { createStubActivityProxy } from '../test-utils/create-stub-activity-proxy';
 import { createStubSubmitter } from '../test-utils/create-stub-submitter';
 import type { StubWorkerContext } from '../test-utils/create-stub-worker-context';
 import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
+import { createMockCheckpointBatchEntry } from '../test-utils/factories/create-mock-checkpoint-batch-entry';
 import { createMockNodeSeed } from '../test-utils/factories/create-mock-node-seed';
+import { createMockProgressCheckpoint } from '../test-utils/factories/create-mock-progress-checkpoint';
 import { WorkerMessageType } from '../types';
 import { buildDeferred } from './build-deferred';
+import { handleInitializeMessage } from './handle-initialize-message';
+import { handleReportOnlineMessage } from './handle-report-online-message';
 import { handleStartActivityMessage } from './handle-start-activity-message';
 import { handleStopActivityMessage } from './handle-stop-activity-message';
+import { RunOutcomeKind } from './run-outcome-schema';
 import { runResyncTurn } from './run-resync-turn';
 import { sentryHandle } from './sentry-handle';
 import { startErrorReporting } from './start-error-reporting';
@@ -1446,6 +1460,602 @@ test('it holds a claiming resync arriving while a requeued claim is running', as
     {
       status: { avatarID: 'avatar_d', kind: 'session-expired' },
       type: WorkerMessageType.ResyncStatus,
+    },
+  ]);
+});
+
+test("it mints on a fresh device from the server's latest run and its unsettled xp", async () => {
+  const viewer = await createViewer({ avatar: { xp: 400 } });
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
+
+  const context = createStubWorkerContext({
+    bundledEngineHash: 'engine_hash_matrix',
+    client,
+    submitter: createStubSubmitter(),
+  });
+
+  await setupStartableNode(viewer.avatar.id);
+
+  // a run another device played to a failure and delivered: its terminal total is still owed on
+  // top of the settled xp, and this device holds no record of it
+  const delivered = await db.activityCollection.create({
+    appendedHead: 1,
+    avatarID: viewer.avatar.id,
+    buildSnapshot: { level: buildLevelFromXP(400), xp: 400 },
+    status: 'stopped',
+    verifiedHead: 0,
+  });
+
+  await db.checkpointCollection.create({
+    activityID: delivered.id,
+    payload: {
+      chainIndex: 1,
+      entropySource: 'server-key',
+      nextSeed: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaa6072',
+      rewards: { xp: 9 },
+      seed: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaa6072',
+      time: 1000,
+      type: 'failed',
+    },
+    version: 1,
+  });
+
+  await handleReportOnlineMessage(context, { avatarID: viewer.avatar.id, claim: true });
+
+  const status = await handleStartActivityMessage(context, {
+    avatarID: viewer.avatar.id,
+    scopeID: '0_0',
+    scopeType: 'world_map_node',
+  });
+
+  invariant(status.kind === 'started', 'expected the fresh device to mint');
+
+  expect(status.activity.buildSnapshot).toStrictEqual({ level: buildLevelFromXP(409), xp: 409 });
+  expect(status.activity.predecessorActivityID).toBe(delivered.id);
+  expect(context.getBroadcasts()).toStrictEqual([]);
+});
+
+test('it resyncs before a start that beats the boot report on a reload with a delivered run', async () => {
+  const viewer = await createViewer({ avatar: { xp: 400 } });
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
+
+  const context = createStubWorkerContext({
+    bundledEngineHash: 'engine_hash_matrix',
+    client,
+    submitter: createStubSubmitter(),
+  });
+
+  await setupStartableNode(viewer.avatar.id);
+
+  const delivered = await db.activityCollection.create({
+    appendedHead: 1,
+    avatarID: viewer.avatar.id,
+    buildSnapshot: { level: buildLevelFromXP(400), xp: 400 },
+    status: 'stopped',
+    verifiedHead: 0,
+  });
+
+  await db.checkpointCollection.create({
+    activityID: delivered.id,
+    payload: {
+      chainIndex: 1,
+      entropySource: 'server-key',
+      nextSeed: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaa6072',
+      rewards: { xp: 9 },
+      seed: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaa6072',
+      time: 1000,
+      type: 'failed',
+    },
+    version: 1,
+  });
+
+  // the reload keeps the durable record of the delivered run and loses the in-memory one
+  await writeLastStartedActivity({ avatarID: viewer.avatar.id, lastActivityID: delivered.id });
+
+  const seen: Array<unknown> = [];
+
+  const subscription = context.getLifecycle().subscribe((snapshot) => {
+    seen.push(snapshot.value);
+  });
+
+  onTestFinished(() => {
+    subscription.unsubscribe();
+  });
+
+  // the tab's start reaches the worker before the mount's boot report does
+  const started = handleStartActivityMessage(context, {
+    avatarID: viewer.avatar.id,
+    scopeID: '0_0',
+    scopeType: 'world_map_node',
+  });
+
+  const reported = runResyncTurn(context, viewer.avatar.id, true);
+
+  const [status] = await Promise.all([started, reported]);
+
+  invariant(status.kind === 'started', 'expected the start to mint once the resync settled');
+
+  expect(status.activity.buildSnapshot).toStrictEqual({ level: buildLevelFromXP(409), xp: 409 });
+  expect(status.activity.predecessorActivityID).toBe(delivered.id);
+  expect(seen.indexOf('resyncing')).toBeGreaterThanOrEqual(0);
+  expect(seen.indexOf('starting')).toBeGreaterThan(seen.indexOf('resyncing'));
+  expect(context.getBroadcasts()).toStrictEqual([]);
+
+  await waitFor(() => {
+    expect(context.getLifecycle().getSnapshot().value).toBe('running');
+  });
+});
+
+test('it delivers the start on a reload with an undelivered start and reattaches its run', async () => {
+  const viewer = await createViewer({ avatar: { xp: 400 } });
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
+
+  const context = createStubWorkerContext({
+    bundledEngineHash: 'engine_hash_matrix',
+    client,
+    submitter: createStubSubmitter(),
+  });
+
+  await setupStartableNode(viewer.avatar.id);
+
+  const next = createMockNodeSeed({
+    avatarID: viewer.avatar.id,
+    encounterNode: { difficulty: 1 },
+    nodeID: '1_0',
+  });
+
+  await writeNodeSeeds(viewer.avatar.id, [next]);
+
+  await writeContentDocumentCache(
+    createMockContentDocument({ contentVersion: next.contentVersion }),
+  );
+
+  const delivered = await db.activityCollection.create({
+    appendedHead: 1,
+    avatarID: viewer.avatar.id,
+    buildSnapshot: { level: buildLevelFromXP(400), xp: 400 },
+    status: 'stopped',
+    verifiedHead: 0,
+  });
+
+  await db.checkpointCollection.create({
+    activityID: delivered.id,
+    payload: {
+      chainIndex: 1,
+      entropySource: 'server-key',
+      nextSeed: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaa6072',
+      rewards: { xp: 9 },
+      seed: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaa6072',
+      time: 1000,
+      type: 'failed',
+    },
+    version: 1,
+  });
+
+  // a start this device minted on the delivered run and never delivered before the reload
+  const undelivered = createMockActivityData({
+    avatarID: viewer.avatar.id,
+    buildSnapshot: { level: buildLevelFromXP(409), xp: 409 },
+    id: 'act_matrix_undelivered',
+    predecessorActivityID: delivered.id,
+    scopeID: '0_0',
+    seed: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaa6072',
+    startKey: 'start_key_matrix_undelivered',
+  });
+
+  await writeActivityStart(undelivered);
+  await writeLastStartedActivity({ avatarID: viewer.avatar.id, lastActivityID: undelivered.id });
+  await handleReportOnlineMessage(context, { avatarID: viewer.avatar.id, claim: true });
+
+  const reattachedID = context.getActivity()?.id;
+
+  const status = await handleStartActivityMessage(context, {
+    avatarID: viewer.avatar.id,
+    scopeID: '1_0',
+    scopeType: 'world_map_node',
+  });
+
+  invariant(status.kind === 'started', 'expected the next start to mint behind the delivered one');
+
+  const remaining = await readAllActivityStarts();
+
+  expect(reattachedID).toBe(undelivered.id);
+  expect(status.activity.buildSnapshot).toStrictEqual({ level: buildLevelFromXP(409), xp: 409 });
+  expect(status.activity.predecessorActivityID).toBe(undelivered.id);
+  expect(remaining.map((row) => row.id)).toStrictEqual([status.activity.id]);
+
+  expect(context.getBroadcasts()).toStrictEqual([
+    { activityID: undelivered.id, type: WorkerMessageType.ActivityStartIngested },
+  ]);
+});
+
+test("it attaches a second tab's start to the writer's live run without a mint", async () => {
+  const viewer = await createViewer();
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
+
+  const context = createStubWorkerContext({
+    bundledEngineHash: 'engine_hash_matrix',
+    client,
+    submitter: createStubSubmitter(),
+  });
+
+  await setupStartableNode(viewer.avatar.id);
+
+  // the writer's live run: the server's active row this worker attached on its own boot
+  const live = await db.activityCollection.create({
+    appendedHead: 1,
+    avatarID: viewer.avatar.id,
+    scopeID: '0_0',
+    seed: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaa6072',
+    startedAt: new Date(),
+  });
+
+  await handleReportOnlineMessage(context, { avatarID: viewer.avatar.id, claim: true });
+
+  const initialized = handleInitializeMessage(context);
+
+  const status = await handleStartActivityMessage(context, {
+    avatarID: viewer.avatar.id,
+    scopeID: '0_0',
+    scopeType: 'world_map_node',
+  });
+
+  expect(initialized.liveRun).toStrictEqual({
+    avatarID: viewer.avatar.id,
+    id: live.id,
+    scopeID: '0_0',
+    scopeType: 'world_map_node',
+  });
+
+  expect(status).toStrictEqual({ activityID: live.id, kind: 'attached' });
+  expect(readAllActivityStarts()).resolves.toStrictEqual([]);
+  expect(context.getBroadcasts()).toStrictEqual([]);
+});
+
+test('it clears the run and mints behind it when the worker is evicted while a run is live', async () => {
+  const viewer = await createViewer({ avatar: { xp: 400 } });
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
+
+  // the real submitter, so the eviction is the server refusing an append; the lifecycle it reports
+  // to is filled in once the context exists, because each references the other
+  const lifecycle: { current: StubWorkerContext['getLifecycle'] | undefined } = {
+    current: undefined,
+  };
+
+  const submitter = createCheckpointSubmitter({
+    client,
+    onEvicted: (activityID) => {
+      lifecycle.current?.().send({ activityID, type: 'SUBMITTER_EVICTED' });
+    },
+    onInvalid: () => {},
+    scheduleFlush: () => {},
+  });
+
+  const context = createStubWorkerContext({
+    bundledEngineHash: 'engine_hash_matrix',
+    client,
+    submitter,
+  });
+
+  lifecycle.current = context.getLifecycle;
+
+  await setupStartableNode(viewer.avatar.id);
+
+  const live = await db.activityCollection.create({
+    appendedHead: 1,
+    avatarID: viewer.avatar.id,
+    buildSnapshot: { level: buildLevelFromXP(400), xp: 400 },
+    scopeID: '0_0',
+    seed: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaa6072',
+    startedAt: new Date(),
+  });
+
+  await handleReportOnlineMessage(context, { avatarID: viewer.avatar.id, claim: true });
+
+  // another session took the writer: every append from this one is refused from here on
+  server.use(
+    mockActivityService.trackActivityProgress.handler((opts) => {
+      throw opts.errors.SESSION_EVICTED({ data: {} });
+    }),
+  );
+
+  await submitter.submit(
+    live.id,
+    createMockProgressCheckpoint({ nextSeed: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbb6072' }),
+  );
+
+  await submitter.flushNow(live.id);
+
+  await waitFor(() => {
+    expect(context.getBroadcasts()).toContainEqual({
+      activityID: live.id,
+      type: WorkerMessageType.WriterDisplaced,
+    });
+  });
+
+  const status = await handleStartActivityMessage(context, {
+    avatarID: viewer.avatar.id,
+    scopeID: '0_0',
+    scopeType: 'world_map_node',
+  });
+
+  invariant(status.kind === 'started', 'expected the start after the eviction to mint');
+
+  expect(status.activity.buildSnapshot).toStrictEqual({ level: buildLevelFromXP(400), xp: 400 });
+  expect(status.activity.predecessorActivityID).toBe(live.id);
+
+  expect(context.getBroadcasts()).toStrictEqual([
+    { activityID: live.id, type: WorkerMessageType.WriterDisplaced },
+  ]);
+});
+
+test('it discards the outbox on a takeover from another device and mints from the server after the next sign-in', async () => {
+  const viewer = await createViewer({ avatar: { xp: 400 } });
+
+  // the worker's own service client, so the proxy's superseded-session marker reaches its discard
+  server.use(createStubActivityProxy(viewer.user.id));
+
+  const context = createStubWorkerContext({
+    bundledEngineHash: 'engine_hash_matrix',
+    client: createActivityServiceClient(),
+    submitter: createStubSubmitter(),
+  });
+
+  await setupStartableNode(viewer.avatar.id);
+
+  const delivered = await db.activityCollection.create({
+    appendedHead: 1,
+    avatarID: viewer.avatar.id,
+    buildSnapshot: { level: buildLevelFromXP(400), xp: 400 },
+    status: 'stopped',
+    verifiedHead: 0,
+  });
+
+  await db.checkpointCollection.create({
+    activityID: delivered.id,
+    payload: {
+      chainIndex: 1,
+      entropySource: 'server-key',
+      nextSeed: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaa6072',
+      rewards: { xp: 9 },
+      seed: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaa6072',
+      time: 1000,
+      type: 'failed',
+    },
+    version: 1,
+  });
+
+  await handleReportOnlineMessage(context, { avatarID: viewer.avatar.id, claim: true });
+
+  // a start minted offline on the delivered run and never delivered
+  const undelivered = createMockActivityData({
+    avatarID: viewer.avatar.id,
+    id: 'act_matrix_taken_over',
+    predecessorActivityID: delivered.id,
+    startKey: 'start_key_matrix_taken_over',
+  });
+
+  await writeActivityStart(undelivered);
+  await writeLastStartedActivity({ avatarID: viewer.avatar.id, lastActivityID: undelivered.id });
+
+  // another device took the account over: app-web refuses every call with the superseded marker
+  server.use(
+    http.all(
+      `${self.location.origin}/api/rpc/activity/*`,
+      () => new Response(null, { headers: { 'x-session-superseded': '1' }, status: 401 }),
+    ),
+  );
+
+  await handleReportOnlineMessage(context, { avatarID: viewer.avatar.id, claim: false });
+
+  const outboxAfterTakeover = await readAllActivityStarts();
+
+  // the player signs back in here: the session answers again, and the map reveal restocks the
+  // node inputs the discard cleared
+  server.resetHandlers();
+  server.use(createStubActivityProxy(viewer.user.id));
+
+  await setupStartableNode(viewer.avatar.id);
+  await handleReportOnlineMessage(context, { avatarID: viewer.avatar.id, claim: true });
+
+  const status = await handleStartActivityMessage(context, {
+    avatarID: viewer.avatar.id,
+    scopeID: '0_0',
+    scopeType: 'world_map_node',
+  });
+
+  invariant(status.kind === 'started', 'expected the start after the sign-in to mint');
+
+  expect(outboxAfterTakeover).toStrictEqual([]);
+  expect(status.activity.buildSnapshot).toStrictEqual({ level: buildLevelFromXP(409), xp: 409 });
+  expect(status.activity.predecessorActivityID).toBe(delivered.id);
+
+  expect(context.getBroadcasts()).toStrictEqual([
+    {
+      status: { avatarID: viewer.avatar.id, kind: 'session-expired' },
+      type: WorkerMessageType.ResyncStatus,
+    },
+  ]);
+});
+
+test('it delivers a start minted offline on a reconnect after offline and mints behind it', async () => {
+  const viewer = await createViewer({ avatar: { xp: 400 } });
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
+
+  const context = createStubWorkerContext({
+    bundledEngineHash: 'engine_hash_matrix',
+    client,
+    submitter: createStubSubmitter(),
+  });
+
+  await setupStartableNode(viewer.avatar.id);
+
+  const next = createMockNodeSeed({
+    avatarID: viewer.avatar.id,
+    encounterNode: { difficulty: 1 },
+    nodeID: '1_0',
+  });
+
+  await writeNodeSeeds(viewer.avatar.id, [next]);
+
+  await writeContentDocumentCache(
+    createMockContentDocument({ contentVersion: next.contentVersion }),
+  );
+
+  const delivered = await db.activityCollection.create({
+    appendedHead: 1,
+    avatarID: viewer.avatar.id,
+    buildSnapshot: { level: buildLevelFromXP(400), xp: 400 },
+    status: 'stopped',
+    verifiedHead: 0,
+  });
+
+  await db.checkpointCollection.create({
+    activityID: delivered.id,
+    payload: {
+      chainIndex: 1,
+      entropySource: 'server-key',
+      nextSeed: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaa6072',
+      rewards: { xp: 9 },
+      seed: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaa6072',
+      time: 1000,
+      type: 'failed',
+    },
+    version: 1,
+  });
+
+  await handleReportOnlineMessage(context, { avatarID: viewer.avatar.id, claim: true });
+
+  context.getLifecycle().send({ type: 'OFFLINE' });
+
+  const offline = await handleStartActivityMessage(context, {
+    avatarID: viewer.avatar.id,
+    scopeID: '0_0',
+    scopeType: 'world_map_node',
+  });
+
+  invariant(offline.kind === 'started', 'expected the offline start to mint locally');
+
+  await handleReportOnlineMessage(context, { avatarID: viewer.avatar.id, claim: false });
+
+  const status = await handleStartActivityMessage(context, {
+    avatarID: viewer.avatar.id,
+    scopeID: '1_0',
+    scopeType: 'world_map_node',
+  });
+
+  invariant(status.kind === 'started', 'expected the next start to mint behind the offline one');
+
+  const remaining = await readAllActivityStarts();
+
+  expect(status.activity.buildSnapshot).toStrictEqual({ level: buildLevelFromXP(409), xp: 409 });
+  expect(status.activity.predecessorActivityID).toBe(offline.activity.id);
+  expect(remaining.map((row) => row.id)).toStrictEqual([status.activity.id]);
+
+  expect(context.getBroadcasts()).toStrictEqual([
+    { activityID: offline.activity.id, type: WorkerMessageType.ActivityStartIngested },
+  ]);
+});
+
+test("it drops a start refused because its predecessor is no longer active and mints from the server's row", async () => {
+  const viewer = await createViewer({ avatar: { xp: 400 } });
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
+
+  const context = createStubWorkerContext({
+    bundledEngineHash: 'engine_hash_matrix',
+    client,
+    submitter: createStubSubmitter(),
+  });
+
+  await setupStartableNode(viewer.avatar.id);
+
+  const delivered = await db.activityCollection.create({
+    appendedHead: 1,
+    avatarID: viewer.avatar.id,
+    buildSnapshot: { level: buildLevelFromXP(400), xp: 400 },
+    status: 'stopped',
+    verifiedHead: 0,
+  });
+
+  await db.checkpointCollection.create({
+    activityID: delivered.id,
+    payload: {
+      chainIndex: 1,
+      entropySource: 'server-key',
+      nextSeed: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaa6072',
+      rewards: { xp: 9 },
+      seed: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaa6072',
+      time: 1000,
+      type: 'failed',
+    },
+    version: 1,
+  });
+
+  // a start minted before the delivered run's terminal total reached the server's fold, so its
+  // snapshot can never match again; its run kept simulating here with a checkpoint queued behind it
+  const refused = createMockActivityData({
+    avatarID: viewer.avatar.id,
+    buildSnapshot: { level: buildLevelFromXP(400), xp: 400 },
+    id: 'act_matrix_refused',
+    predecessorActivityID: delivered.id,
+    scopeID: '0_0',
+    startKey: 'start_key_matrix_refused',
+  });
+
+  await writeActivityStart(refused);
+  await writeLastStartedActivity({ avatarID: viewer.avatar.id, lastActivityID: refused.id });
+  await writeQueuedCheckpoint(refused.id, createMockCheckpointBatchEntry({ version: 1 }));
+
+  const simulation = createSimulation();
+
+  simulation.startActivity(createMockAvatarData(), createMockActivityInput({ id: refused.id }));
+  context.setSimulation(simulation);
+  context.setActivity(refused);
+
+  server.use(
+    mockActivityService.advanceActivity.handler((opts) => {
+      throw opts.errors.CHECKPOINT_INVALID({
+        data: {
+          activityID: refused.id,
+          appendedHead: 0,
+          avatarID: viewer.avatar.id,
+          reason: 'build-snapshot-mismatch',
+        },
+      });
+    }),
+  );
+
+  await handleReportOnlineMessage(context, { avatarID: viewer.avatar.id, claim: true });
+
+  const status = await handleStartActivityMessage(context, {
+    avatarID: viewer.avatar.id,
+    scopeID: '0_0',
+    scopeType: 'world_map_node',
+  });
+
+  invariant(status.kind === 'started', 'expected the retried start to mint');
+
+  const remaining = await readAllActivityStarts();
+
+  expect(status.activity.buildSnapshot).toStrictEqual({ level: buildLevelFromXP(409), xp: 409 });
+  expect(status.activity.predecessorActivityID).toBe(delivered.id);
+  expect(remaining.map((row) => row.id)).toStrictEqual([status.activity.id]);
+  expect(readQueuedCheckpoints(refused.id)).resolves.toStrictEqual([]);
+
+  expect(context.getBroadcasts()).toStrictEqual([
+    {
+      state: { failureAction: ActivityFailureAction.Abort },
+      type: WorkerMessageType.SimulationUpdate,
+    },
+    {
+      outcome: {
+        activityID: refused.id,
+        avatarID: viewer.avatar.id,
+        kind: RunOutcomeKind.Refused,
+        scope: { scopeID: '0_0', scopeType: 'world_map_node' },
+        xp: 0,
+      },
+      type: WorkerMessageType.ActivityEnded,
     },
   ]);
 });
