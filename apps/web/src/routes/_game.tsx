@@ -6,10 +6,12 @@ import { readQADebugHookAccess } from '../lib/qa/read-qa-debug-hook-access';
 import { AmbientSheet } from './-game/ambient-sheet';
 import { GameCanvasMount } from './-game/game-canvas-mount';
 import { GameSimulationMount } from './-game/game-simulation-mount';
+import { JournalFailureNotice } from './-game/journal-failure-notice';
 import { NavRail } from './-game/nav-rail';
 import { PlayingElsewhereNotice } from './-game/playing-elsewhere-notice';
 import { QADebugHookMount } from './-game/qa-debug-hook-mount';
 import { SatelliteStack } from './-game/satellite-stack';
+import { SaveStatusLine } from './-game/save-status-line';
 import { SceneStateSync } from './-game/scene-state-sync';
 import { WelcomeBackModal } from './-game/welcome-back-modal';
 import { WriterContentionNotice } from './-game/writer-contention-notice';
@@ -51,6 +53,8 @@ function GameLayout() {
       <WelcomeBackModal />
       <PlayingElsewhereNotice />
       <WriterContentionNotice />
+      <JournalFailureNotice />
+      <SaveStatusLine />
       <NavRail />
       {presentation === 'ambient' ? (
         <AmbientSheet>

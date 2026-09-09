@@ -66,6 +66,23 @@ const checkpointStreamInvalidMessageSchema = z
   })
   .readonly();
 
+const journalFailureMessageSchema = z
+  .object({
+    activityID: z.string(),
+    kind: z.enum(['quota', 'unreadable', 'write']),
+    type: z.literal(WorkerMessageType.JournalFailure),
+  })
+  .readonly();
+
+const saveStatusMessageSchema = z
+  .object({
+    activityID: z.string(),
+    receivedVersion: z.int().nullable(),
+    savedVersion: z.int().nullable(),
+    type: z.literal(WorkerMessageType.SaveStatus),
+  })
+  .readonly();
+
 const offlineCapStatusMessageSchema = z
   .object({
     halted: z.boolean(),
@@ -107,9 +124,11 @@ export const workerToClientMessageSchema = z.discriminatedUnion('type', [
   activityStartIngestedMessageSchema,
   checkpointStreamInvalidMessageSchema,
   failureActionStatusMessageSchema,
+  journalFailureMessageSchema,
   offlineCapStatusMessageSchema,
   resyncStatusMessageSchema,
   rewardSlotsRecordedMessageSchema,
+  saveStatusMessageSchema,
   simulationUpdateMessageSchema,
   writerDisplacedMessageSchema,
   writerPendingMessageSchema,
@@ -126,7 +145,11 @@ export type CheckpointStreamInvalidMessage = z.infer<typeof checkpointStreamInva
 
 export type FailureActionStatusMessage = z.infer<typeof failureActionStatusMessageSchema>;
 
+export type JournalFailureMessage = z.infer<typeof journalFailureMessageSchema>;
+
 export type OfflineCapStatusMessage = z.infer<typeof offlineCapStatusMessageSchema>;
+
+export type SaveStatusMessage = z.infer<typeof saveStatusMessageSchema>;
 
 export type ResyncStatus = z.infer<typeof resyncStatusSchema>;
 
