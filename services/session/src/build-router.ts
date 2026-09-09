@@ -1,5 +1,6 @@
 import { implement } from '@orpc/server';
 import { sessionContract } from '@vers/contract-session';
+import type { SigningKeySet } from '@vers/contract-session';
 import type { DB } from '@vers/db';
 import type { ServiceContext } from '@vers/service-runtime';
 import type { CryptoKey } from 'jose';
@@ -19,7 +20,9 @@ import { verifySession } from './handlers/verify-session';
 interface BuildSessionRouterDeps {
   readonly apiIdentifier: string;
   readonly db: Kysely<DB>;
+  readonly keyID: string;
   readonly signingKey: CryptoKey;
+  readonly signingKeySet: SigningKeySet;
 }
 
 export function buildSessionRouter(deps: Readonly<BuildSessionRouterDeps>) {
@@ -30,10 +33,11 @@ export function buildSessionRouter(deps: Readonly<BuildSessionRouterDeps>) {
     deleteSession: os.deleteSession.handler((opts) => removeSession(deps.db, opts)),
     getSession: os.getSession.handler((opts) => getSession(deps.db, opts)),
     getSessions: os.getSessions.handler((opts) => getSessions(deps.db, opts)),
+    getSigningKeys: os.getSigningKeys.handler(() => deps.signingKeySet),
     refreshTokens: os.refreshTokens.handler((opts) =>
       refreshTokens(
         deps.db,
-        { apiIdentifier: deps.apiIdentifier, signingKey: deps.signingKey },
+        { apiIdentifier: deps.apiIdentifier, keyID: deps.keyID, signingKey: deps.signingKey },
         opts,
       ),
     ),
@@ -57,7 +61,7 @@ export function buildSessionRouter(deps: Readonly<BuildSessionRouterDeps>) {
     verifySession: os.verifySession.handler((opts) =>
       verifySession(
         deps.db,
-        { apiIdentifier: deps.apiIdentifier, signingKey: deps.signingKey },
+        { apiIdentifier: deps.apiIdentifier, keyID: deps.keyID, signingKey: deps.signingKey },
         opts,
       ),
     ),

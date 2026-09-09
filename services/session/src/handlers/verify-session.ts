@@ -34,12 +34,14 @@ export async function verifySession(
     createJWT({
       apiIdentifier: deps.apiIdentifier,
       expiresAt: session.expiresAt,
+      keyID: deps.keyID,
       signingKey: deps.signingKey,
       userID: session.userId,
     }),
     createJWT({
       apiIdentifier: deps.apiIdentifier,
       expiresAt: accessTokenExpiresAt,
+      keyID: deps.keyID,
       signingKey: deps.signingKey,
       userID: session.userId,
     }),

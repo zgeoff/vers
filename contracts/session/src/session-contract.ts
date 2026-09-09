@@ -4,6 +4,7 @@ import { PendingTransactionDataSchema } from './pending-transaction-data-schema'
 import { SecureActionSchema } from './secure-action-schema';
 import { SessionDataSchema } from './session-data-schema';
 import { SessionTokensSchema } from './session-tokens-schema';
+import { SigningKeySetSchema } from './signing-key-set-schema';
 
 const TransactionMismatchDataSchema = z.object({
   field: z.enum(['action', 'ipAddress', 'sessionID', 'target']),
@@ -36,6 +37,15 @@ export const sessionContract = {
     .route({ method: 'GET', path: '/sessions', summary: "List the caller's sessions" })
     .input(z.object({}))
     .output(z.array(SessionDataSchema)),
+
+  getSigningKeys: publicRoute
+    .route({
+      method: 'GET',
+      path: '/sessions/signing-keys',
+      summary: 'List the public keys session tokens verify against',
+    })
+    .input(z.object({}))
+    .output(SigningKeySetSchema),
 
   refreshTokens: publicRoute
     .route({ method: 'POST', path: '/sessions/refresh', summary: 'Rotate session tokens' })

@@ -1,5 +1,6 @@
 export { createAuthedServiceClient } from './create-authed-service-client';
 export { createDemoSeed } from './create-demo-seed';
+export { buildTestSigningKeySet } from './build-test-signing-key-set';
 export { createTestAccessToken } from './create-test-access-token';
 export { createViewer } from './create-viewer';
 export { DEMO_ACCOUNTS } from './demo-accounts';
