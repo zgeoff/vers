@@ -1,4 +1,5 @@
 import { ORPCError, isDefinedError, safe } from '@orpc/client';
+import { MAX_CATCH_UP_BATCH_CHECKPOINTS } from '@vers/contract-activity';
 import { buildTraceparent, createTraceContext } from '@vers/trace';
 import { fromPromise } from 'xstate';
 import type { IngestActivityStartOutcome } from './ingest-activity-start';
@@ -10,7 +11,7 @@ import type { ActivityServiceClient } from './types';
 export type FlushOutcome =
   | { readonly appendedHead: number; readonly type: 'capped' }
   | { readonly appendedHead: number; readonly type: 'conflict' }
-  | { readonly appendedHead: number; readonly type: 'success' }
+  | { readonly appendedHead: number; readonly tailQueued: boolean; readonly type: 'success' }
   | { readonly reason: string; readonly traceID: string; readonly type: 'transport-failure' }
   | {
       readonly appendedHead: number | undefined;
@@ -47,12 +48,16 @@ export const runCheckpointFlushAttempt = fromPromise<FlushOutcome, FlushAttemptI
     let settledHead: number | undefined;
 
     try {
-      const rows = await readQueuedCheckpoints(input.activityID);
+      const queued = await readQueuedCheckpoints(input.activityID);
 
-      if (rows.length === 0) {
+      if (queued.length === 0) {
         return { type: 'empty' };
       }
 
+      // the same per-request cap as an offline catch-up: a queue past it goes out as a prefix, and
+      // the tail rides the flush that follows the acknowledgement
+      const rows = queued.slice(0, MAX_CATCH_UP_BATCH_CHECKPOINTS);
+      const tailQueued = queued.length > rows.length;
       const trace = createTraceContext();
       let retriedAfterIngest = false;
 
@@ -75,7 +80,7 @@ export const runCheckpointFlushAttempt = fromPromise<FlushOutcome, FlushAttemptI
           settledHead = result.appendedHead;
           input.onAcked?.(input.activityID, result.appendedHead);
 
-          return { appendedHead: result.appendedHead, type: 'success' };
+          return { appendedHead: result.appendedHead, tailQueued, type: 'success' };
         }
 
         if (!isDefinedError(error)) {
