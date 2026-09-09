@@ -156,9 +156,9 @@ test('it broadcasts a simulation update once a started run installs', async () =
 
   expect(status.kind).toBe('started');
 
-  await broadcasts.waitForMessages(1);
-
-  expect(broadcasts.received).toPartiallyContain({ type: WorkerMessageType.SimulationUpdate });
+  await waitFor(() => {
+    expect(broadcasts.received).toPartiallyContain({ type: WorkerMessageType.SimulationUpdate });
+  });
 });
 
 test('it closes the connection on disconnect so no further call it makes is answered', async () => {

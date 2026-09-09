@@ -13,8 +13,10 @@ import type {
   ActivityEndedMessage,
   ActivityStartIngestedMessage,
   CheckpointStreamInvalidMessage,
+  JournalFailureMessage,
   ResyncStatusMessage,
   RewardSlotsRecordedMessage,
+  SaveStatusMessage,
   SimulationUpdateMessage,
   WriterDisplacedMessage,
   WriterPendingMessage,
@@ -257,6 +259,66 @@ test('it flags writer contention on a writer-pending broadcast and clears it onc
 
   await waitFor(() => {
     expect(useIdleStore.getState().writerContention).toBeFalse();
+  });
+
+  hook.unmount();
+});
+
+test('it records a journal failure from a broadcast', async () => {
+  registerSharedWorkerStub();
+
+  const hook = renderHook(() => useSimulationTransport());
+
+  hook.rerender();
+
+  const message: JournalFailureMessage = {
+    activityID: 'activity_1',
+    kind: 'quota',
+    type: WorkerMessageType.JournalFailure,
+  };
+
+  emitWorkerMessage(message);
+
+  await waitFor(() => {
+    expect(useIdleStore.getState().journalFailure).toStrictEqual({
+      activityID: 'activity_1',
+      kind: 'quota',
+    });
+  });
+
+  hook.unmount();
+});
+
+test('it folds saved and received cursors from separate broadcasts into one save status', async () => {
+  registerSharedWorkerStub();
+
+  const hook = renderHook(() => useSimulationTransport());
+
+  hook.rerender();
+
+  const saved: SaveStatusMessage = {
+    activityID: 'activity_1',
+    receivedVersion: null,
+    savedVersion: 4,
+    type: WorkerMessageType.SaveStatus,
+  };
+
+  const received: SaveStatusMessage = {
+    activityID: 'activity_1',
+    receivedVersion: 2,
+    savedVersion: null,
+    type: WorkerMessageType.SaveStatus,
+  };
+
+  emitWorkerMessage(saved);
+  emitWorkerMessage(received);
+
+  await waitFor(() => {
+    expect(useIdleStore.getState().saveStatus).toStrictEqual({
+      activityID: 'activity_1',
+      receivedVersion: 2,
+      savedVersion: 4,
+    });
   });
 
   hook.unmount();

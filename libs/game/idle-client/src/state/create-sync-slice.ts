@@ -1,13 +1,18 @@
 import type {
   CheckpointStreamError,
+  JournalFailure,
   OfflineCapStatus,
   ResyncStatus,
   RewardSlotLedgerEntry,
   RunOutcome,
+  SaveStatus,
+  StoragePersistence,
 } from '../types';
 
 export interface SyncSlice {
   checkpointStreamError: CheckpointStreamError | null;
+
+  journalFailure: JournalFailure | null;
 
   lastCompletedActivityID: null | string;
 
@@ -22,6 +27,10 @@ export interface SyncSlice {
 
   runOutcome: null | RunOutcome;
 
+  saveStatus: null | SaveStatus;
+
+  storagePersistence: StoragePersistence;
+
   writerContention: boolean;
 
   writerDisplacedActivityID: null | string;
@@ -30,6 +39,7 @@ export interface SyncSlice {
 export function createSyncSlice(): SyncSlice {
   return {
     checkpointStreamError: null,
+    journalFailure: null,
     lastCompletedActivityID: null,
     lastIngestedActivityID: null,
     offlineCapStatus: null,
@@ -37,6 +47,8 @@ export function createSyncSlice(): SyncSlice {
     rewardSlotLedger: [],
     rewardSlotLedgerActivityID: null,
     runOutcome: null,
+    saveStatus: null,
+    storagePersistence: 'unknown',
     writerContention: false,
     writerDisplacedActivityID: null,
   };
