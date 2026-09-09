@@ -64,7 +64,11 @@ interface CreateCheckpointSubmitterOptions {
 
   readonly onJournalFailure?: (failure: Readonly<JournalWriteError>) => void;
 
-  readonly onJournalUnreadable?: (activityID: string, error: unknown) => void;
+  readonly onJournalUnreadable?: (
+    activityID: string,
+    receivedVersion: number,
+    error: unknown,
+  ) => void;
 
   readonly onSaved?: (activityID: string, version: number) => void;
 
@@ -161,7 +165,13 @@ export function createCheckpointSubmitter(
     try {
       rows = await journal.readQueuedCheckpoints(context.activityID);
     } catch (error) {
-      options.onJournalUnreadable?.(context.activityID, error);
+      // a reporting observer never replaces the invalidation that keeps the stream from resuming
+      try {
+        options.onJournalUnreadable?.(context.activityID, context.appendedHead, error);
+      } catch {
+        // contained: see above
+      }
+
       options.onInvalid(context.activityID, `pending-checkpoint read failed: ${String(error)}`);
 
       return;
@@ -187,6 +197,7 @@ export function createCheckpointSubmitter(
       cursor.previousNextSeed = lastRow.payload.nextSeed;
       terminalQueued = TERMINAL_CHECKPOINT_TYPES.has(lastRow.payload.type);
       latestQueuedVersion = lastRow.version;
+      options.onSaved?.(context.activityID, lastRow.version);
     }
 
     writeCursors.set(context.activityID, cursor);
@@ -302,9 +313,19 @@ export function createCheckpointSubmitter(
     try {
       await journal.writeQueuedCheckpoint(activityID, entry);
     } catch (error) {
-      const failure = new JournalWriteError(activityID, error);
+      const failure = new JournalWriteError(
+        activityID,
+        child.getSnapshot().context.expectedHead,
+        error,
+      );
 
-      options.onJournalFailure?.(failure);
+      // a reporting observer never replaces the classified failure the tick loop stops on
+      try {
+        options.onJournalFailure?.(failure);
+      } catch {
+        // contained: see above
+      }
+
       throw failure;
     }
 

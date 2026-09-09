@@ -1,11 +1,13 @@
 import { Text } from '@vers/design-system';
-import { useSaveStatus, useStoragePersistence } from '@vers/idle-client';
+import { useActivity, useSaveStatus, useStoragePersistence } from '@vers/idle-client';
 
 export function SaveStatusLine() {
   const saveStatus = useSaveStatus();
   const persistence = useStoragePersistence();
+  const activity = useActivity();
 
-  if (saveStatus === null) {
+  // a report for the previous run stays in the store until the live run's first save lands
+  if (saveStatus === null || activity === null || saveStatus.activityID !== activity.id) {
     return null;
   }
 

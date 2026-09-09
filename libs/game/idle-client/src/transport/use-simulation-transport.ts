@@ -102,7 +102,12 @@ function handleWorkerMessage(message: WorkerMessage) {
     }
 
     case WorkerMessageType.JournalFailure: {
-      setJournalFailure({ activityID: message.activityID, kind: message.kind });
+      setJournalFailure({
+        activityID: message.activityID,
+        kind: message.kind,
+        receivedVersion: message.receivedVersion,
+      });
+
       break;
     }
 

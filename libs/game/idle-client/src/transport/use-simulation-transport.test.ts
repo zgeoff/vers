@@ -274,6 +274,7 @@ test('it records a journal failure from a broadcast', async () => {
   const message: JournalFailureMessage = {
     activityID: 'activity_1',
     kind: 'quota',
+    receivedVersion: 2,
     type: WorkerMessageType.JournalFailure,
   };
 
@@ -283,6 +284,7 @@ test('it records a journal failure from a broadcast', async () => {
     expect(useIdleStore.getState().journalFailure).toStrictEqual({
       activityID: 'activity_1',
       kind: 'quota',
+      receivedVersion: 2,
     });
   });
 
