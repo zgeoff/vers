@@ -237,6 +237,62 @@ test('it accepts an advanceActivity request at the aggregate checkpoint cap', ()
   );
 });
 
+test('it rejects a trackActivityProgress batch past the checkpoint cap on the checkpoints path', () => {
+  const checkpoint = {
+    hash: 'hash',
+    payload: {
+      chainIndex: 0,
+      entropySource: 'server-key',
+      nextSeed: 'seed',
+      seed: 'seed',
+      time: 0,
+      type: 'progress',
+    },
+    prevHash: 'prev',
+    version: 1,
+  };
+
+  const input = {
+    activityID: 'act_live',
+    checkpoints: Array.from({ length: MAX_CATCH_UP_BATCH_CHECKPOINTS + 1 }, () => checkpoint),
+    expectedHead: 0,
+  };
+
+  const result = activityContract.trackActivityProgress['~orpc'].inputSchema?.safeParse(input);
+
+  expect(result?.success).toBe(false);
+
+  expect(result?.error?.issues).toPartiallyContain(
+    expect.objectContaining({ path: ['checkpoints'] }),
+  );
+});
+
+test('it accepts a trackActivityProgress batch at the checkpoint cap', () => {
+  const checkpoint = {
+    hash: 'hash',
+    payload: {
+      chainIndex: 0,
+      entropySource: 'server-key',
+      nextSeed: 'seed',
+      seed: 'seed',
+      time: 0,
+      type: 'progress',
+    },
+    prevHash: 'prev',
+    version: 1,
+  };
+
+  const input = {
+    activityID: 'act_live',
+    checkpoints: Array.from({ length: MAX_CATCH_UP_BATCH_CHECKPOINTS }, () => checkpoint),
+    expectedHead: 0,
+  };
+
+  expect(
+    activityContract.trackActivityProgress['~orpc'].inputSchema?.safeParse(input).success,
+  ).toBe(true);
+});
+
 test('it declares NOT_FOUND on getRevealedNodes', () => {
   expect(activityContract.getRevealedNodes['~orpc'].errorMap).toContainAllKeys([
     'UNAUTHORIZED',

@@ -148,6 +148,10 @@ tracks how far the client has written; `verified_head` tracks how far the verifi
   derivable from the stream alone.
 - **The hash links the previous checkpoint, it does not prove an outcome.** Rewards ride outside the
   hashed set as `+`/`-` deltas in an open keyed map, and only a replay validates them.
+- **A batch carries at most 500 checkpoints.** The cap is the same one an offline catch-up request
+  carries, and the contract refuses a longer batch. A live flush of a longer queue sends the first
+  500 and the remainder on the flush that follows the acknowledgement at once, so a device that
+  played a whole offline budget still delivers in bounded requests.
 - **An append is a guarded update of the head row.** The append advances `appended_head` only if the
   head still holds its expected value; a stale head returns a retryable conflict carrying the
   current head, and the client resends the tail. Resubmission deduplicates on its own —
