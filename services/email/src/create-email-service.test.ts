@@ -1,7 +1,9 @@
 import { expect, onTestFinished, test } from 'bun:test';
+import type { EmailContract } from '@vers/contract-email';
 import { createEmailClient } from '@vers/email';
 import { sentEmails } from '@vers/email/mocks';
-import { createDatabaseFromTemplate } from '@vers/service-test-utils/bun';
+import { createAnonymousViewer, createDatabaseFromTemplate } from '@vers/service-test-utils/bun';
+import { buildRPCTestClient } from '@vers/test-utils';
 import { createEmailJobQueue } from './create-email-job-queue';
 import { createEmailService } from './create-email-service';
 
@@ -59,4 +61,46 @@ test('it delivers a job enqueued while the process was down, once booted and its
   await emailService.queue.stop();
 
   expect(sentEmails.get('player@example.com')).toMatchObject({ to: 'player@example.com' });
+});
+
+test('it accepts a call from app-web', async () => {
+  const emailService = await createEmailService();
+
+  onTestFinished(() => emailService.queue.stop());
+
+  await emailService.queue.start();
+
+  const viewer = await createAnonymousViewer({ audience: 'service-email' });
+
+  const client = buildRPCTestClient<EmailContract>(emailService.service.app, {
+    token: viewer.token,
+  });
+
+  await expect(
+    client.sendWelcome({
+      to: 'accepted@example.com',
+      verificationCode: '123456',
+      verificationURL: 'https://versidle.com/verify',
+    }),
+  ).toResolve();
+});
+
+test('it rejects a call from service-activity with 403', async () => {
+  const emailService = await createEmailService();
+
+  onTestFinished(() => emailService.queue.stop());
+
+  const viewer = await createAnonymousViewer({
+    audience: 'service-email',
+    issuer: 'service-activity',
+  });
+
+  const response = await emailService.service.app.handle(
+    new Request('http://test.local/rpc/sendWelcome', {
+      headers: { authorization: `Bearer ${viewer.token}` },
+      method: 'POST',
+    }),
+  );
+
+  expect(response.status).toBe(403);
 });
