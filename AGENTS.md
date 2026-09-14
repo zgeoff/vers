@@ -20,8 +20,9 @@ locates code, it does not teach a subsystem's rules.
 - Before substantial work in a subsystem, read its doc in full first, not after reasoning from code
   fragments. Mandatory reads by area:
   - activities, the seed chain, verification, replay, or reconcile —
-    `docs/architecture/game/game-simulation.md`, `docs/architecture/game/seed-chain.md`, and
-    `docs/architecture/game/offline-reconcile.md`
+    `docs/architecture/game/game-simulation.md`, `docs/architecture/game/replay-verification.md`,
+    `docs/architecture/game/seed-chain.md`, `docs/architecture/game/offline-reconcile.md`, and
+    `docs/architecture/game/glossary.md`
   - world-map generation, reveal, or fog of war — `docs/architecture/game/worldmap.md`
   - item and reward rolls, or content entropy — `docs/architecture/game/item-generation.md` and
     `docs/architecture/game/game-entropy.md`
@@ -349,7 +350,7 @@ the mechanics and provisioning.
   Bun graph; the `python-tests` workflow runs it on change.
 - `bun run qa:*` — the manual QA scripts: `qa:seed` and `qa:reset` write a QA account, `qa:inbox`
   reads a verification email, `qa:cdp` and `qa:capture` drive a debug Chrome, and `qa:cold` sends
-  the fleet cold behind a traffic guard (`docs/architecture/platform/qa.md`).
+  the fleet cold behind a traffic guard (`docs/runbooks/qa.md`).
 
 ## Lint policy
 

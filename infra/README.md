@@ -20,10 +20,9 @@ Cloudflare R2. Credentials resolve from 1Password at run time, so nothing sensit
 - `neon.ts` — the Neon layer: the `vers` project, its `main` and `dev` branches with their compute
   endpoints, and the `mcp_ro` and `mcp_dev` roles. Databases, schemas, and migrations stay with the
   migration pipeline. Each role's in-database grants are SQL applied per the
-  [database](../docs/architecture/platform/database.md) provisioning steps, because the Neon API
-  models role existence and not privileges. Role passwords are Neon-generated secret outputs held in
-  encrypted stack state. The provider's own API key is console-managed, for the same reason as the
-  Axiom token.
+  [provisioning](../docs/runbooks/provisioning.md) steps, because the Neon API models role existence
+  and not privileges. Role passwords are Neon-generated secret outputs held in encrypted stack
+  state. The provider's own API key is console-managed, for the same reason as the Axiom token.
 - `github.ts` — the zgeoff/vers repo configuration: the authoritative label set (the registry the
   issue-hygiene rules point at), the `main protection` branch ruleset, the `production` environment,
   the Actions variables, and the Actions secrets. Variables are repo- and environment-scoped. The

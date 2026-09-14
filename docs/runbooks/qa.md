@@ -133,9 +133,9 @@ The scripts read the endpoint from `--endpoint <host:port>`, then from `QA_CDP_E
 default to `127.0.0.1:9222`. A value from the flag or the environment must be a hostname or IPv4
 address and a port from 1 to 65535; the scripts reject any other value before a command runs. The
 port bridge a NAT-mode WSL distribution needs to reach the Windows loopback is in
-[Chrome DevTools MCP](./chrome-devtools-mcp.md#bridge-the-debug-port-one-time). Behind the bridge
-the endpoint is the WSL default gateway on the bridged port, so a session under NAT sets
-`QA_CDP_ENDPOINT` once:
+[Chrome DevTools MCP](../../.claude/skills/chrome-devtools-mcp/SKILL.md#bridge-the-debug-port-one-time).
+Behind the bridge the endpoint is the WSL default gateway on the bridged port, so a session under
+NAT sets `QA_CDP_ENDPOINT` once:
 
 ```bash
 export QA_CDP_ENDPOINT="$(ip route show default | awk '{print $3; exit}'):9223"
@@ -233,9 +233,9 @@ with each pending start's attempts and last refusal, the latest-run record the n
 the writer's identity, the current simulation speed, and the last 200 worker events kept in a ring
 buffer inside the worker: lifecycle phases, start and flush outcomes, refusals, speed changes, and
 connectivity changes. The snapshot changes no runtime state and no durable store.
-[Game simulation](../game/game-simulation.md#writer-election) owns the writer worker, and
-[offline reconcile](../game/offline-reconcile.md#worker-lifecycle) owns the lifecycle the events
-trace.
+[Game simulation](../architecture/game/game-simulation.md#writer-election) owns the writer worker,
+and [offline reconcile](../architecture/game/offline-reconcile.md#worker-lifecycle) owns the
+lifecycle the events trace.
 
 ```js
 await window.__versQA.setSpeed(20);
@@ -254,7 +254,7 @@ is never mistaken for a real one. The speed lives in the writer worker, so it ho
 resets to 1 when the worker restarts. The activity service credits a QA avatar's offline budget at
 20 times the wall clock instead of 1, on the same append path and under the same cap as every other
 avatar, so a run at any speed up to 20 stays inside the budget
-([the offline budget](../game/game-simulation.md#the-offline-budget)).
+([the offline budget](../architecture/game/game-simulation.md#the-offline-budget)).
 
 ## Cold path
 

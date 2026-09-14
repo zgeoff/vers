@@ -1,3 +1,11 @@
+---
+name: chrome-devtools-mcp
+description:
+  Reach the Windows host's Chrome from WSL for the chrome-devtools MCP server - bridge the debug
+  port, launch the debug browser, connect, and tear down. Use when the chrome-devtools tools cannot
+  connect or on a new machine.
+---
+
 # Chrome DevTools MCP across the WSL boundary
 
 The `chrome-devtools` MCP server, registered in [`.mcp.json`](../../../.mcp.json), gives an agent

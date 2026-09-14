@@ -1,3 +1,11 @@
+---
+name: serena-mcp
+description:
+  Set up, check, or restart the shared serena MCP daemon that serves symbol lookups to every Claude
+  Code session on this machine. Use when the serena tools fail to connect, on a new machine, or when
+  a lookup answers from a stale tree.
+---
+
 # Serena MCP as a shared daemon
 
 The `serena` MCP server gives an agent language-server symbol tools over the monorepo: a file's

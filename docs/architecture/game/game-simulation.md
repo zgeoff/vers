@@ -1,4 +1,4 @@
-# Game simulation & verification
+# Game simulation
 
 The client computes and records all gameplay, and the server decides by replay whether to trust it.
 The client runs every real-time simulation as a pure function of a fixed set of inputs and a seeded
@@ -6,8 +6,9 @@ random stream, and writes each step to an append-only checkpoint stream. The ser
 on the request path: a queue-fed verifier re-runs the submitted checkpoints later and decides
 whether to trust them. The same inputs re-run to byte-identical results, which is what lets the
 verifier check a stream it did not compute and lets a returning client rebuild simulation state it
-no longer holds. [Offline reconcile](./offline-reconcile.md) owns the delivery of offline progress
-on reconnect and the worker lifecycle that drives it.
+no longer holds. [Replay verification](./replay-verification.md) owns the verifier and settlement.
+[Offline reconcile](./offline-reconcile.md) owns the delivery of offline progress on reconnect and
+the worker lifecycle that drives it.
 
 A checkpoint's path from the client to settled progress runs through four owners.
 
@@ -83,7 +84,7 @@ authoritative input from its own truth and trusts none of the payload:
 
 - It runs the sim-version admission check every start passes. It does not check node reachability at
   admission: an offline gap can legitimately reach a neighbour whose opening clear the server has
-  not yet verified, so [replay](#replay) adjudicates reachability instead.
+  not yet verified, so [replay](./replay-verification.md#replay) adjudicates reachability instead.
 - It derives the encounter node and its hashed stamps from the server's own content document, never
   the payload.
 - It re-authors the `buildSnapshot` from the avatar's progression, and rejects a start whose
@@ -162,89 +163,6 @@ tracks how far the client has written; `verified_head` tracks how far the verifi
   quarantined — rejects any later append. Together these resolve every race between logout, forced
   logout, stop, rejection, and cap.
 
-## Replay
-
-A queue-fed verifier replays submitted checkpoint batches and compares its results against the
-stream. Replay is per-stream FIFO: `version` N+1 never verifies before N, because the seed chain
-would break. The verifier replays from the `Started` checkpoint under the sim version stamped into
-it, dispatched through a provider registry keyed by sim version so an old segment replays under the
-code and content that produced it. For the sim version this deploy runs, a drain holds each stream
-it verified in memory at its verified head for the rest of that drain, so a later batch in the same
-drain advances by its delta rather than replaying from `Started`. The next drain, a verifier
-restart, or a cache eviction rebuilds from `Started`.
-
-Three triggers start a drain of the queue: the wake the activity service sends after an append, the
-replay service's own boot, and a Fly scheduled machine that drains hourly. The scheduled drain is
-what retries work no client request will ask about again.
-
-The verifier never judges an operational failure as a cheat signal. A keys or provider call that
-fails, an iteration that overruns its 90s deadline, or an unexpected fault backs the activity off:
-the verifier leaves the activity's status alone, records a retry time that doubles on each
-consecutive failure from 30s up to 15min, and skips the activity and its successors until that time
-passes. The next drain after the retry time takes the activity again, and a verified segment clears
-the backoff. An unknown or retention-expired sim version, and a replay that trips its duration cap,
-park the activity for an operator instead. Only reproducible divergence under a matched sim version
-and `Started` checkpoint, on repetition, is treated as cheating. Enforcement lands at a session
-boundary, never mid-session. The verifier quarantines a stream whose divergence fails to reproduce
-too many times and alerts operators rather than retrying it forever.
-
-Replay also checks reachability and the pinned build. The queue claims an avatar's next activity
-only once its predecessor has itself settled or rejected
-([offline reconcile](./offline-reconcile.md#settlement-in-order)), so both checks read fully-settled
-state.
-
-On a run's first verified pass at a world-map node, the verifier confirms the node borders a node
-the avatar has already cleared; the origin always counts as reachable. A node with no cleared
-neighbour is rejected. The clear that opened an honest node settles before that node's run is
-checked, so its grant is present; an unearned jump reaches a node no clear opened and finds no
-grant.
-
-The same first pass re-derives the run's expected starting build from the avatar's settled XP total
-and rejects a pinned build that does not match. A build is a pure function of total XP, so this
-catches a run that banked XP a later rejection erased. The rejection cascades: a successor chained
-onto the mismatched run fails the identical check.
-
-Replay divergence is not the only cheat signal. Every attempt at a node is a link in the
-append-only, server-verified chain, so an avatar that keeps only its favourable results leaves a
-record. [Reroll scanning](../../game-design/economy-modes.md#reroll-scanning) sets out the detection
-that record enables.
-
-Operators watch the verifier through its metrics: replay lag and rejection rates split by cause
-([observability](../platform/observability.md)). An integrity-mismatch spike there is investigated
-as a deploy regression first, not a cheating wave.
-
-An old sim version stays a valid replay target until its retention window ends
-([deployment](../platform/deployment.md#retention-sweep)), and the sweep never tombstones a version
-that still pins unverified work.
-
-## Applying verified progress
-
-Verified progress applies exactly once through a cursor-guarded transaction. The transaction
-advances `verified_head` only if it still holds its expected value, then writes the newly verified
-progress to the avatar's identity state in the same local transaction. A crash mid-apply retries the
-transaction idempotently.
-
-- **One-shot grants insert idempotently.** First clears and other one-time grants insert into a
-  unique-keyed grant table with `ON CONFLICT DO NOTHING` inside the same transaction, so they hold
-  across re-farms and replays.
-- **Item instances mint at settlement.** An item's identity is its reward coordinate, and its
-  content is rolled from the avatar's key under the activity's pinned versions (see
-  [game entropy](./game-entropy.md)). Re-verification never duplicates or re-rolls an item.
-- **A reward stays hidden until it is verified.** The read path that returns a coordinate's rolled
-  reward for display answers only for a chain position the verifier has confirmed, never one only
-  appended ([seed chain](./seed-chain.md)); a reward that has synced but not yet verified holds on
-  the client as pending until settlement. That read is a pure function of the coordinate, so an
-  append retry or a bulk offline resend returns the same reward every time.
-- **A rejected activity rolls back by compensating forward, never by restoring a prior database
-  state.** Settlement returns the node to its last verified checkpoint, and any reward revealed past
-  that point but not yet settled clears from the optimistic display.
-
-When play resumes, the client rebuilds its own optimistic state by simulating forward from the
-verified head. It never reads the server's settled progression columns directly, because those
-columns lag verification by design. The order the server settles reconciled activities in — and why
-a later activity waits on an earlier one — lives in
-[offline reconcile](./offline-reconcile.md#settlement-in-order).
-
 ## The offline budget
 
 Offline progress is bounded by a per-avatar simulated-time meter, enforced on the append path. The
@@ -259,8 +177,8 @@ banks roughly the wall clock it consumes. A small initial grant on the meter abs
 and network jitter.
 
 One exception: a QA avatar's meter refills at 20 times the elapsed wall clock, so a run under the
-[QA speed multiplier](../platform/qa.md#debug-hook) self-funds the way a real-time run does; the cap
-still applies.
+[QA speed multiplier](../../runbooks/qa.md#debug-hook) self-funds the way a real-time run does; the
+cap still applies.
 
 A batch whose delta exceeds the accrued budget is rejected whole, and the activity takes the
 terminal `capped` transition at its current head. The `ACTIVITY_CAPPED` error carries that head as
@@ -271,25 +189,3 @@ at or under the same bound.
 Which rewards an offline simulation may produce is an economy rule, not a protocol one: the
 [economy modes note](../../game-design/economy-modes.md) owns it. How a reconnect delivers and
 settles the offline gap is the subject of [offline reconcile](./offline-reconcile.md).
-
-## Glossary
-
-| Term                | Meaning                                                                                                                                  |
-| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| activity            | One attempt at one piece of content, recorded as a single append-only checkpoint stream and verified as a unit.                          |
-| activity type       | What the avatar does in an activity; supplies the `ActivityExecutor` that advances its simulation.                                       |
-| world-map encounter | The activity type where an avatar fights through a map node's enemies, arranged in waves.                                                |
-| chain scope         | See [seed chain](./seed-chain.md#glossary).                                                                                              |
-| activity start      | An activity's first record — the node, seed, and stamps — synthesized locally by the client and verified by the server on ingest.        |
-| continuation        | An activity that resumes a chain scope from a prior attempt's appended position, in the same chain.                                      |
-| settle              | See [offline reconcile](./offline-reconcile.md#glossary).                                                                                |
-| build snapshot      | The avatar's equipment, passives, and level pinned as a simulation input; the client predicts it, the server re-derives and verifies it. |
-| sim snapshot        | The engine's serializable projection from `getSnapshot()`, which viewer tabs render.                                                     |
-| writer worker       | The one worker per browser profile that runs the simulation and appends its checkpoints.                                                 |
-| verifier            | The server process that replays a submitted stream to decide whether to trust it.                                                        |
-| checkpoint          | One recorded simulation step: a row keyed `(activity_id, version)` that links the previous checkpoint's hash.                            |
-| head row            | An activity's single row carrying its two cursors, last checkpoint hash, writer session, and status.                                     |
-| appended head       | `appended_head`: how far the client has written the stream.                                                                              |
-| verified head       | `verified_head`: how far the verifier has replayed and trusted the stream.                                                               |
-| sim version         | The engine build's version stamp (`simVersion`); pins which code replays a segment.                                                      |
-| offline budget      | The per-avatar simulated-time meter, refilled at wall-clock rate and debited per accepted batch.                                         |

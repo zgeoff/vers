@@ -149,18 +149,3 @@ the property; device-custody rolls do not. The delivery channel is irrelevant.
 An avatar's economy mode (the [economy modes note](../../game-design/economy-modes.md) owns the
 choice) fixes its key custody at creation, permanently. No path converts one custody into the other,
 and a device-held key is never repatriated into market eligibility.
-
-## Glossary
-
-| Term                | Meaning                                                                                                                                                                                   |
-| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| entropy source      | A source of random outcomes (the seed chain, an avatar key, sealed salt) whose security properties decide whether its rewards may be tradeable.                                           |
-| look-ahead          | Simulating a reachable future offline to inspect its outcome before committing to play it.                                                                                                |
-| best-of-N selection | The value a scanner extracts by simulating many futures and playing only the best; the quantity these rules price.                                                                        |
-| reward tail         | The rare, large upper end of a reward distribution; where best-of-N selection extracts its value, so tail-bearing entropy stays sealed.                                                   |
-| rolled reward       | A reward whose value lives in its roll, committed at a coordinate and revealed later under a key; an item drop is the concrete case.                                                      |
-| reward coordinate   | `(avatarID, scopeType, scopeID, chainIndex, ordinal)`, the deterministic position a rolled reward commits at.                                                                             |
-| keyed PRF           | A pseudorandom function `f(key, coordinate)` whose revealed outputs carry no predictive power over unrevealed coordinates.                                                                |
-| avatar key          | The per-avatar key rolled content derives under; the server holds it under trade custody, and the self-found design holds it on the device.                                               |
-| sealed salt         | See [crafting entropy](../../game-design/crafting-entropy.md).                                                                                                                            |
-| provenance          | An outcome's recorded security property (its entropy unpredictable at commit and tied to the minter) which decides tradeability; stamped from server records and the `entropySource` tag. |
