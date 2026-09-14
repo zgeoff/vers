@@ -154,8 +154,9 @@ jobs:
             turbo-${{ runner.os }}-
 
       # the action checks out the base branch and the head branch in turn and runs the script on
-      # each; a base that predates the budget yields an empty result set instead of failing the
-      # job, so the comment reads the whole head size as the delta
+      # each; a checkout with no size-limit config (a base that predates the budget) yields an
+      # empty result set, so the comment reads the whole head size as the delta, while a checkout
+      # that carries the config reports its build or measurement failure as a failed job
       - name: Size delta comment
         uses: andresz1/size-limit-action@94bc357df29c36c8f8d50ea497c3e225c3c95d1d # v1.8.0
         with:
@@ -163,9 +164,9 @@ jobs:
           package_manager: bun
           skip_step: build
           directory: apps/web
-          script:
-            bash -c "bun run size:build >/dev/null 2>&1; bunx size-limit --json 2>/dev/null || echo
-            []"
+          script: >-
+            bash -c 'if grep -q "\"size-limit\": \[" package.json; then bun run size:build
+            >/dev/null 2>&1 && bunx size-limit --json; else echo []; fi'
 
   e2e:
     runs-on: ubuntu-latest
