@@ -1,0 +1,10 @@
+checkpoints/
+renders/
+scenes/*
+!scenes/respite.blend
+exports/
+references/
+textures/
+__pycache__/
+viewer/node_modules/
+viewer/dist/

@@ -1,0 +1,88 @@
+{
+  "references": [
+    {
+      "file": "references/aesthetic_ref.png",
+      "source": "/mnt/c/Users/User/Desktop/direction/aesthetic_ref.png",
+      "sha256": "43e9bd7003722e8f618f164c5fb12161e5c1494c9033d99917bf4e9b85c3b94e",
+      "role": "Fog and luminous machinery"
+    },
+    {
+      "file": "references/aesthetic_ref_2.jpg",
+      "source": "/mnt/c/Users/User/Desktop/direction/aesthetic_ref_2.jpg",
+      "sha256": "54e18a834724c4dd0479e22451e30fe739499c6de901ba5a11676984e7026292",
+      "role": "Monumental tunnel integrated into a continuous wall"
+    },
+    {
+      "file": "references/aesthetic_ref_3.png",
+      "source": "/mnt/c/Users/User/Desktop/direction/aesthetic_ref_3.png",
+      "sha256": "d5190531033bc2ed9f91f9eefd86d2a7504ecd5288de946448cc778dea210f43",
+      "role": "Light through fog and immense machinery"
+    },
+    {
+      "file": "references/backdrop.png",
+      "source": "/mnt/c/Users/User/Desktop/direction/backdrop.png",
+      "sha256": "1e85e1d4543f95c239422897d5bf500fa01602bb764714d5fe3f91fce550d66f",
+      "role": "Infrastructure scale and material character"
+    },
+    {
+      "file": "references/buildings_pop.png",
+      "source": "/mnt/c/Users/User/Desktop/direction/buildings_pop.png",
+      "sha256": "22b7f7297e86632ceabe50e4e3a25271dfec51763bf6662ef172d85a9808289c",
+      "role": "Destination readability and atmospheric colour"
+    },
+    {
+      "file": "references/codex-adjusted.png",
+      "source": "/mnt/c/Users/User/Desktop/direction/codex-adjusted.png",
+      "sha256": "8dcc85eb556707bdf0fc7282b986eb36ca672637daac27c5ea45ed6d3bcf25e8",
+      "role": "Codex geometry; mirrored tall front panels supersede the earlier asymmetry"
+    },
+    {
+      "file": "references/codex.png",
+      "source": "/mnt/c/Users/User/Desktop/direction/codex.png",
+      "sha256": "b8d55375707a06089d4c609499b2e84344aff539280fbd71d0856d29acd0f63c",
+      "role": "Earlier Codex architecture; adjusted facade takes precedence"
+    },
+    {
+      "file": "references/composition-9d05.png",
+      "source": "/home/geoff/.codex/generated_images/01a0807a-e1a3-7c31-b164-c840fe625213/exec-0a0f0602-efb9-47ac-a52d-b355b25f9d05.png",
+      "sha256": "8d074b49e96aa21eed89d89d0ac2fe1df28bb6ff6838b402af1432970fa9b374",
+      "role": "Composition, camera relationship, and destination hierarchy"
+    },
+    {
+      "file": "references/exit.png",
+      "source": "/mnt/c/Users/User/Desktop/direction/exit.png",
+      "sha256": "aa0945c34d5b6e34ff671f69398039a5943f710fa1bbddf2c1596bc1ee886f4d",
+      "role": "Circular mouth and tower integrated into the shared wall"
+    },
+    {
+      "file": "references/market_02.png",
+      "source": "/mnt/c/Users/User/Desktop/direction/market_02.png",
+      "sha256": "cf2d6a25e9b25262f62e158e7deffb629ce16306abf8e138bce1c7ad14f9f878",
+      "role": "Bazaar geometry, right option 02 only"
+    },
+    {
+      "file": "references/stash.png",
+      "source": "/mnt/c/Users/User/Desktop/direction/stash.png",
+      "sha256": "fadf851aebcdf41450d048e4fa73e9e9fc9a810bf145b09fc9a7b2f60a0be81e",
+      "role": "Vault architecture"
+    },
+    {
+      "file": "references/texture_ref.png",
+      "source": "/mnt/c/Users/User/Desktop/direction/texture_ref.png",
+      "sha256": "9df08940df07eb7faaec2ee28b15fa9a2f497d32b0e1cbc985b4a892b4172173",
+      "role": "Soft painted wear; not the reference palette"
+    },
+    {
+      "file": "references/workshop.png",
+      "source": "/mnt/c/Users/User/Desktop/direction/workshop.png",
+      "sha256": "f703d6601b6c7195045f04e4d474d247808c91945eb104ca896cf9fb16e1c25a",
+      "role": "Single drum and rectangular rear hall"
+    }
+  ],
+  "legacy_spike_checkpoint": "68a84afd",
+  "textures": {
+    "source": "scripts/bake_materials.py",
+    "method": "Authored procedural paint baked in Blender to seamless image textures",
+    "external_assets": []
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "name": "respite-art-preview",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs"
+  },
+  "dependencies": {
+    "camera-controls": "3.1.2",
+    "three": "0.185.1"
+  }
+}

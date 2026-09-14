@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Respite · asset review</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: #11151e;
+        color: #cbd0dd;
+        font:
+          13px system-ui,
+          sans-serif;
+        overflow: hidden;
+      }
+      canvas {
+        display: block;
+      }
+      #toolbar {
+        position: fixed;
+        top: 16px;
+        left: 16px;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        padding: 10px 12px;
+        background: #121720e8;
+        border: 1px solid #465067;
+        border-radius: 4px;
+        z-index: 2;
+      }
+      strong {
+        font-size: 12px;
+        letter-spacing: 0.14em;
+        margin-right: 10px;
+      }
+      select,
+      button {
+        background: #202936;
+        color: #e4e6ef;
+        border: 1px solid #465067;
+        padding: 6px 10px;
+        border-radius: 3px;
+        font: inherit;
+      }
+      button {
+        cursor: pointer;
+      }
+      #info {
+        position: fixed;
+        bottom: 16px;
+        left: 16px;
+        padding: 9px 12px;
+        background: #121720e8;
+        border: 1px solid #465067;
+        white-space: pre-line;
+        font:
+          12px ui-monospace,
+          monospace;
+        max-width: 70vw;
+      }
+      #settings {
+        position: fixed;
+        right: 16px;
+        top: 16px;
+        width: 205px;
+        padding: 12px;
+        background: #121720e8;
+        border: 1px solid #465067;
+        border-radius: 4px;
+      }
+      #settings label {
+        display: grid;
+        grid-template-columns: 1fr 44px;
+        gap: 8px;
+        margin-bottom: 12px;
+        font-size: 12px;
+      }
+      #settings input {
+        grid-column: 1/-1;
+        width: 100%;
+        accent-color: #a9bbed;
+      }
+      #settings output {
+        text-align: right;
+      }
+      #settings button {
+        width: 100%;
+      }
+      body.capture #toolbar,
+      body.capture #info,
+      body.capture #settings {
+        display: none;
+      }
+    </style>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "/three/build/three.webgpu.js",
+          "three/webgpu": "/three/build/three.webgpu.js",
+          "three/tsl": "/three/build/three.tsl.js",
+          "three/addons/": "/three/examples/jsm/",
+          "camera-controls": "/camera-controls.js"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <div id="toolbar">
+      <strong>RESPITE</strong
+      ><select id="subject">
+        <option value="court">Court</option>
+        <option>codex</option>
+        <option>stash</option>
+        <option>workshop</option>
+        <option>bazaar</option>
+        <option>exit</option></select
+      ><select id="treatment">
+        <option value="neutral">Inspection</option>
+        <option value="concept">Concept atmosphere</option>
+        <option value="legacy">Original viewer study</option></select
+      ><select id="camera">
+        <option>Court</option>
+        <option>Court-alternate</option>
+        <option>Plan</option></select
+      ><button id="reset">Reset camera</button><button id="reload">Reload assets</button>
+    </div>
+    <div id="info">Load assets…</div>
+    <aside id="settings">
+      <label
+        >Exposure<output id="exposure-value"></output
+        ><input id="exposure" type="range" min="0.3" max="2" step="0.05" /></label
+      ><label
+        >Fog<output id="fog-value"></output
+        ><input id="fog" type="range" min="0" max="2" step="0.05" /></label
+      ><label
+        >Bloom<output id="bloom-value"></output
+        ><input id="bloom" type="range" min="0" max="1" step="0.05" /></label
+      ><label
+        >Ink<output id="ink-value"></output
+        ><input id="ink" type="range" min="0" max="0.8" step="0.05" /></label
+      ><button id="reset-treatment">Reset treatment</button>
+    </aside>
+    <script type="module" src="/viewer.mjs"></script>
+  </body>
+</html>
