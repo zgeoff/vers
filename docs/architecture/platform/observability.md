@@ -276,9 +276,7 @@ The remaining split instruments enumerate their attribute values:
 
 `vers.db.pool_resets` splits by `reason`: `resume` is a wall-clock gap the resume detector read, and
 `query_stall` is a statement whose reply never arrived within the query deadline
-([database](./database.md#connection-pool)). A `query_stall` on a process that never paused points
-at the endpoint or the path to it, since the server would have answered a live socket within its
-`statement_timeout`.
+([database](./database.md#connection-pool)).
 
 `vers.web.service_call_retries` and `vers.web.service_call_failures` cover app-web's bounded
 outbound service calls. `service_call_retries` records each retry attempt against a call that failed
