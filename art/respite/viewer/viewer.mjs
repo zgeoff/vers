@@ -23,8 +23,8 @@ const environment = pmrem.fromScene(environmentRoom);
 environmentRoom.dispose();
 pmrem.dispose();
 scene.environment = environment.texture;
-const perspectiveCamera = new THREE.PerspectiveCamera(35, innerWidth / innerHeight, 0.1, 500);
-const planCamera = new THREE.OrthographicCamera(-40, 40, 25, -25, 0.1, 500);
+const perspectiveCamera = new THREE.PerspectiveCamera(35, innerWidth / innerHeight, 0.5, 500);
+const planCamera = new THREE.OrthographicCamera(-40, 40, 25, -25, 0.5, 500);
 let camera = perspectiveCamera;
 const controls = new CameraControls(camera, renderer.domElement);
 const loader = new GLTFLoader();
@@ -239,15 +239,14 @@ function applyView(resetCamera = false) {
     } else {
       camera.fov = state.fov;
     }
-    camera.updateProjectionMatrix();
+    updateCameraAspect();
     controls.setLookAt(...state.position, ...state.target, false);
   } else {
     const bounds = new THREE.Box3().setFromObject(loaded.get(subject));
     const size = bounds.getSize(new THREE.Vector3());
     const center = bounds.getCenter(new THREE.Vector3());
     const radius = Math.max(size.x, size.y, size.z) * 1.65;
-    camera.fov = 36;
-    camera.updateProjectionMatrix();
+    updateCameraAspect();
     controls.setLookAt(
       center.x + radius * 0.7,
       center.y + radius * 0.55,
@@ -257,6 +256,24 @@ function applyView(resetCamera = false) {
     );
   }
   applyLighting();
+}
+
+function updateCameraAspect() {
+  const aspect = innerWidth / innerHeight;
+  if (camera.isPerspectiveCamera) {
+    const sourceCamera = subject === 'court' ? manifest.cameras[cameraName] : null;
+    const sourceFOV = sourceCamera?.fov ?? 36;
+    const sourceAspect = sourceCamera?.aspect ?? 1.6;
+    camera.aspect = aspect;
+    const expansion = Math.max(1, sourceAspect / aspect);
+    const halfAngle = THREE.MathUtils.degToRad(sourceFOV) / 2;
+    const expandedAngle = 2 * Math.atan(Math.tan(halfAngle) * expansion);
+    camera.fov = THREE.MathUtils.radToDeg(expandedAngle);
+  } else {
+    camera.top = camera.right / aspect;
+    camera.bottom = -camera.top;
+  }
+  camera.updateProjectionMatrix();
 }
 
 function collectDiagnostics() {
@@ -367,13 +384,7 @@ document.querySelector('#reset-treatment').addEventListener('click', () => {
   applyLighting();
 });
 addEventListener('resize', () => {
-  if (camera.isPerspectiveCamera) {
-    camera.aspect = innerWidth / innerHeight;
-  } else {
-    camera.top = camera.right / (innerWidth / innerHeight);
-    camera.bottom = -camera.top;
-  }
-  camera.updateProjectionMatrix();
+  updateCameraAspect();
   renderer.setSize(innerWidth, innerHeight);
 });
 await refreshAssets();

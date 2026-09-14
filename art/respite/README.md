@@ -104,6 +104,6 @@ reference images, textures, exports, checkpoints, and review renders. These supp
 outside Git. Preserve the complete bundle when moving the workspace; the reference-provenance file
 identifies its original art.
 
-The preview uses the project's three.js version and its node render pipeline. Runtime integration
-into the persistent game canvas remains separate from this art workspace. The original aesthetic
+The preview uses the pinned three.js version and its node render pipeline. Runtime integration into
+the persistent game canvas remains separate from this art workspace. The original aesthetic
 experiment remains on `spike/respite-lookdev` at checkpoint `68a84afd`.

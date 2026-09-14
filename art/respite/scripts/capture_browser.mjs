@@ -4,6 +4,8 @@ import { resolve as resolvePath } from 'node:path';
 const endpoint = process.env.QA_CDP_ENDPOINT ?? '172.28.80.1:9223';
 const args = process.argv.slice(2);
 const [targetID, filename] = args;
+const captureWidth = Number(process.env.RESPITE_CAPTURE_WIDTH ?? 1600);
+const captureHeight = Number(process.env.RESPITE_CAPTURE_HEIGHT ?? 1000);
 if (!targetID || !filename) {
   throw new Error('Usage: node capture_browser.mjs <target-id> <filename> [expression]');
 }
@@ -52,8 +54,8 @@ function send(method, params = {}) {
 try {
   await send('Page.bringToFront');
   await send('Emulation.setDeviceMetricsOverride', {
-    width: 1600,
-    height: 1000,
+    width: captureWidth,
+    height: captureHeight,
     deviceScaleFactor: 1,
     mobile: false,
   });
@@ -95,5 +97,9 @@ try {
   );
   console.log(filename);
 } finally {
-  ws.close();
+  try {
+    await send('Emulation.clearDeviceMetricsOverride');
+  } finally {
+    ws.close();
+  }
 }

@@ -1,4 +1,5 @@
 import { bloom } from 'three/addons/tsl/display/BloomNode.js';
+import { fxaa } from 'three/addons/tsl/display/FXAANode.js';
 import {
   color,
   float,
@@ -9,8 +10,10 @@ import {
   output,
   pass,
   positionWorld,
+  renderOutput,
   screenSize,
   screenUV,
+  texture,
   uv,
   vec2,
   vec3,
@@ -36,12 +39,17 @@ export function buildTreatment(
   const neutral = preset === 'neutral';
   const legacy = preset === 'legacy';
   const isCourt = subject === 'court';
+  const rig = {
+    neutral: { environment: 0.24, ambient: 1.5, key: 2.4, fill: 0.7 },
+    legacy: { environment: 0.07, ambient: 0.34, key: 0.85, fill: 0.2 },
+    concept: { environment: 0.05, ambient: 0.22, key: 0.58, fill: 0.13 },
+  }[preset];
   renderer.toneMappingExposure = settings.exposure;
   const backgroundColor = neutral ? '#333d50' : '#080c20';
   scene.background = new THREE.Color(backgroundColor);
   scene.fog = null;
   scene.fogNode = null;
-  scene.environmentIntensity = neutral ? 0.24 : 0.07;
+  scene.environmentIntensity = rig.environment;
   if (!neutral && isCourt) {
     const depth = positionWorld.z.negate().sub(9).div(72).clamp(0, 1).pow(1.3);
     const height = positionWorld.y.sub(10).div(60).clamp(0, 1);
@@ -53,19 +61,20 @@ export function buildTreatment(
     createFogBanks(lighting, settings.fog, legacy);
   }
   const ambientColor = neutral ? '#cbd7f5' : '#788be7';
-  const ambientIntensity = neutral ? 1.5 : 0.34;
+  const ambientIntensity = rig.ambient;
   const ambient = new THREE.HemisphereLight(ambientColor, '#252432', ambientIntensity);
   const keyColor = neutral ? '#fff3e5' : '#829ceb';
-  const keyIntensity = neutral ? 2.4 : 0.85;
+  const keyIntensity = rig.key;
   const key = new THREE.DirectionalLight(keyColor, keyIntensity);
   key.position.set(-25, 40, 20);
   key.castShadow = true;
   key.shadow.mapSize.set(2048, 2048);
   Object.assign(key.shadow.camera, { left: -55, right: 55, top: 55, bottom: -55, far: 160 });
   key.shadow.bias = -0.0004;
+  key.shadow.normalBias = 0.025;
   lighting.add(ambient, key);
   const fillColor = neutral ? '#9aabdf' : '#6b589b';
-  const fillIntensity = neutral ? 0.7 : 0.2;
+  const fillIntensity = rig.fill;
   const fill = new THREE.DirectionalLight(fillColor, fillIntensity);
   fill.position.set(30, 20, -10);
   lighting.add(fill);
@@ -123,17 +132,38 @@ export function buildTreatment(
   if (legacy) {
     combined = combined.mul(vec3(1.05, 1, 0.94));
   }
-  pipeline.outputNode = combined;
+  const outputTarget = new THREE.RenderTarget(1, 1, {
+    type: THREE.HalfFloatType,
+    depthBuffer: false,
+  });
+  const finalPipeline = new THREE.RenderPipeline(renderer, fxaa(texture(outputTarget.texture)));
+  const bufferSize = new THREE.Vector2();
+  pipeline.outputNode = renderOutput(combined, renderer.toneMapping, renderer.outputColorSpace);
+  pipeline.outputColorTransform = false;
+  finalPipeline.outputColorTransform = false;
   return {
     render() {
       if (edgeCamera) {
         edgeCamera.copy(camera);
         edgeCamera.layers.set(0);
       }
-      pipeline.render();
+      renderer.getDrawingBufferSize(bufferSize);
+      if (outputTarget.width !== bufferSize.x || outputTarget.height !== bufferSize.y) {
+        outputTarget.setSize(bufferSize.x, bufferSize.y);
+      }
+      const previousTarget = renderer.getRenderTarget();
+      renderer.setRenderTarget(outputTarget);
+      try {
+        pipeline.render();
+      } finally {
+        renderer.setRenderTarget(previousTarget);
+      }
+      finalPipeline.render();
     },
     dispose() {
       pipeline.dispose();
+      finalPipeline.dispose();
+      outputTarget.dispose();
       for (const resource of resources) {
         resource.dispose();
       }
@@ -144,18 +174,19 @@ export function buildTreatment(
 function createDestinationLights(group, loaded, subject, legacy) {
   const emitters = {
     codex: [
-      [[0, 2.6, 5.7], '#ffe3b4', 45],
-      [[-3.5, 4.7, 5.7], '#be7dff', 25],
+      [[0, 2.6, 6.5], '#ffe3b4', 18],
+      [[-3.5, 4.7, 6], '#be7dff', 10],
     ],
-    stash: [[[0, 3.5, 5.9], '#ffe8c2', 65]],
+    stash: [[[0, 3.5, 6.6], '#ffe8c2', 27]],
     workshop: [
-      [[-3.5, 2.7, 6.4], '#ffd5a0', 45],
-      [[2, 3.5, 6.8], '#ff641f', 38],
+      [[-3.5, 2.7, 6.7], '#ffd5a0', 17],
+      [[2, 3.5, 7.1], '#ff641f', 20],
     ],
     bazaar: [
-      [[0, 3, 3], '#d697ff', 36],
-      [[-2.5, 3.3, 0], '#ffe0b4', 28],
-      [[2.5, 3.3, 0], '#ffd6a4', 28],
+      [[0, 2.2, 0], '#d697ff', 24],
+      [[-2.7, 2.3, 0], '#ffe0b4', 9],
+      [[2.7, 2.3, 0], '#ffd6a4', 9],
+      [[0, 2.4, -2.4], '#ffe0b4', 12],
     ],
     exit: [
       [[0, 7, -2], '#48bcff', 320],

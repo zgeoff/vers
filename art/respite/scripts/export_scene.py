@@ -87,7 +87,7 @@ def export_scene(keys=None):
     for name in ('Court','Court-alternate','Plan'):
         obj = bpy.data.objects[name]
         cameras[name] = {'position':to_three(obj.location),
-                         'target':to_three(obj.location + obj.rotation_euler.to_quaternion() @ Vector((0,0,-50))),
+                         'target':to_three(obj.location + obj.rotation_euler.to_quaternion() @ Vector((0,0,-obj.get('respite_orbit_distance',50)))),
                          'fov':math.degrees(2*math.atan(obj.data.sensor_width/(2*obj.data.lens*aspect))),
                          'type':obj.data.type,'orthoScale':obj.data.ortho_scale,'aspect':aspect}
     manifest = {'revision':time.time_ns(),'units':'meters','assets':list(assets.values()),'cameras':cameras}

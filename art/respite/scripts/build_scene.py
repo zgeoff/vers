@@ -13,7 +13,7 @@ PLACEMENTS = {
     'codex': (-12, 12, 16),
     'stash': (-17, -3, 64),
     'workshop': (23, 14, -28),
-    'bazaar': (16, -4, -48),
+    'bazaar': (16, -5, -48),
     'exit': (6, 24, 0),
     'habitat': (0, 0, 0),
     'ground': (0, 0, 0),
@@ -49,6 +49,7 @@ def setup_materials():
     material('glass', (.025, .048, .075), .22, .42)
     material('fabric', (.17, .095, .19), .95, 0)
     material('floor', (.18, .195, .23), .9, 0)
+    material('joint', (.12, .13, .15), .95, 0)
     material('wall', (.13, .15, .19), .9, .08)
     material('cyan', (.06, .7, 1), .4, .05, 4)
     material('lilac', (.6, .23, .9), .4, .05, 3)
@@ -410,11 +411,7 @@ def build_bazaar():
 def build_exit():
     select_collection('exit')
     arc('arch', (0,5.45),6.95,8.05,-1.2,1.4,-51.5,231.5,64)
-    arc('inner-liner',(0,5.45),6.76,6.95,-1.32,8,-54.8,234.8,64,'dark')
     arc('cyan-rim',(0,5.45),6.73,6.80,-1.38,.09,-54.8,234.8,64,'cyan')
-    for i in range(3):
-        arc('passage-rib'+str(i),(0,5.45),6.67,6.78,1.3+i*2.7,.2,-51.5,231.5,48,'roof')
-    box('passage-floor',(0,3.5,-.10),(10.2,10,.2),'floor',.02)
     box('observation-tower',(9.05,.5,6.9),(3.7,4.1,13.8),'shell',.2)
     for z in (9.4,12.0):
         box('tower-window-frame'+str(z),(9.05,-1.62,z),(3.0,.16,1.9),'dark')
@@ -430,10 +427,6 @@ def build_exit():
     for s in (-1,1):
         x=s*5.65
         prism('arch-foot'+str(s),[(x-.7,0),(x+.7,0),(x+.55,1.3),(x+.3,2.3),(x-.4,2.3),(x-.7,1.1)],-1.6,1.8,'shell',.09)
-    for i,y in enumerate((1.0,3.7,6.4)):
-        for s in (-1,1):
-            lamp=box('passage-lamp'+str((i,s)),(s*4.7,y,9.97),(1.0,.5,.10),'cyan',.035)
-            lamp.rotation_euler.y=s*math.radians(45)
     for z in (3.5,6.8):
         box('tower-front-panel'+str(z),(9.05,-1.61,z),(2.9,.12,1.6),'shell',.055)
     for x in (7.22,10.88):
@@ -443,6 +436,27 @@ def build_exit():
     for z in (2.2,5.5,8.6):
         cylinder('gate-pipe-joint'+str(z),(-7.8,.2,z),.48,.24,'dark',vertices=24)
     cylinder('tower-aerial',(9.9,.8,15.2),.06,2.8,'dark',vertices=12,bevel=.015)
+
+
+def build_passage():
+    global CURRENT_ROOT
+    habitat_root=CURRENT_ROOT
+    frame=bpy.data.objects.new('habitat.passage',None)
+    CURRENT_COLLECTION.objects.link(frame)
+    frame.parent=habitat_root
+    frame.location=(6,24,0)
+    frame['respite_generated']=True
+    CURRENT_ROOT=frame
+    arc('inner-liner',(0,5.45),6.76,6.95,-1.32,20,-54.8,234.8,64,'dark')
+    for i in range(6):
+        arc('rib'+str(i),(0,5.45),6.67,6.78,1.3+i*2.7,.2,-51.5,231.5,48,'roof')
+    box('floor',(0,8.8,-.10),(10.2,20.6,.2),'floor',.02)
+    box('turn-baffle',(2.5,17,5.8),(8,1.0,12),'dark',.08)
+    for i,y in enumerate((1.0,3.7,6.4,10.2,14.0)):
+        for s in (-1,1):
+            lamp=box('lamp'+str((i,s)),(s*4.7,y,9.97),(1.0,.5,.10),'cyan',.035)
+            lamp.rotation_euler.y=s*math.radians(45)
+    CURRENT_ROOT=habitat_root
 
 
 def build_habitat():
@@ -469,29 +483,39 @@ def build_habitat():
             box('large-wall-panel'+str((x,z)),(x,23.91,z),(7.5,.18,4.6),'wall',.05)
     for i,(x,y,w,d,h) in enumerate([(-40,30,8,10,47),(-30,48,9,12,64),(-58,43,12,10,75),(-45,62,14,14,90),(-16,62,10,10,77)]):
         box('distant-mass'+str(i),(x,y,h/2),(w,d,h),'wall',.25)
-    box('left-catwalk',(-34,15,17),(36,2.0,.8),'roof')
-    box('upper-left-catwalk',(-34,33,32),(50,2.3,1),'roof')
+    box('left-catwalk',(-34,15,17),(60,2.0,.8),'roof')
+    box('catwalk-return',(-4,18.5,17),(2.0,7.0,.8),'roof')
+    box('upper-left-catwalk',(-34,33,32),(58,2.3,1),'roof')
+    box('catwalk-service-recess',(-4,21.22,18.55),(1.5,.1,2.25),'dark',.04)
+    box('catwalk-service-door',(-4,21.14,18.55),(1.24,.06,2.04),'roof',.03)
     for x in (-49,-34,-19):
         box('left-support'+str(x),(x,17.2,8.5),(1.1,1.5,17),'wall',.12)
         brace=box('left-bracket'+str(x),(x,16.1,15.1),(.65,3.3,.65),'roof',.06)
         brace.rotation_euler.x=math.radians(35)
-    for z,y,width in ((17.6,14.25,36),(32.6,32.05,50)):
+    for z,y,width in ((17.6,14.25,60),(32.6,32.05,58)):
         for dz in (.15,.75):
             box('rail'+str((z,dz)),(-34,y,z+dz),(width,.065,.065),'dark',.015)
         for index in range(int(width/2)):
             cylinder('rail-post'+str((z,index)),(-34-width/2+index*2,y,z+.38),.035,.9,'dark',vertices=8,bevel=0)
+    for x in (-4.85,-3.15):
+        for z in (17.75,18.35):
+            box('return-rail'+str((x,z)),(x,18.4,z),(.065,5.2,.065),'dark',.015)
     for index,(x,y,z) in enumerate(((-40,24.8,30),(-29,41.8,45),(-58,37.8,55),(-45,54.8,63),(-16,56.8,55))):
         box('far-signal'+str(index),(x,y,z),(.15,.07,4.5),'lilac',.02)
     pipe('wall-main-feed',[(40,21.5,0),(40,21.5,14),(36,21.5,18),(22,21.5,18)],.70)
+    build_passage()
 
 
 def build_ground():
     select_collection('ground')
     box('continuous-paving',(0,0,-.25),(180,180,.4),'floor',0)
-    # Broad tile joints carry scale without inventory-sized detail.
-    for i in range(-9,10):
-        box('paving-joint-x'+str(i),(i*3.0,0,-.044),(.025,70,.007),'dark',0)
-        box('paving-joint-y'+str(i),(0,i*3.0,-.043),(70,.025,.007),'dark',0)
+    # Staggered joints keep the paving legible without an editor-like grid.
+    for row in range(-14,15):
+        y=row*2.4
+        box('paving-bed'+str(row),(0,y,-.031),(76,.018,.008),'joint',0)
+        offset=2.4 if row%2 else 0
+        for column in range(-8,9):
+            box('paving-joint'+str((row,column)),(column*4.8+offset,y+1.2,-.031),(.018,2.4,.008),'joint',0)
     for index in range(48):
         a=index*math.tau/48
         b=(index+1)*math.tau/48
@@ -511,6 +535,7 @@ def camera(name, position, target, lens=42, orthographic=None):
     obj['respite_generated']=True
     obj.location=position
     obj.rotation_euler=(Vector(target)-obj.location).to_track_quat('-Z','Y').to_euler()
+    obj['respite_orbit_distance']=(Vector(target)-obj.location).length
     data.lens=lens
     data.clip_end=600
     if orthographic:
@@ -537,6 +562,9 @@ def setup_scene():
     select_collection('presentation')
     scene=bpy.context.scene
     scene.name='Respite'
+    scene.unit_settings.system='METRIC'
+    scene.unit_settings.scale_length=1.0
+    scene.unit_settings.length_unit='METERS'
     scene.camera=camera('Court',(24,-64,40),(0,6,5.0),43)
     camera('Court-alternate',(-33,-46,29),(0,5,4.7),40)
     camera('Plan',(0,8,100),(0,8,0),orthographic=86)
