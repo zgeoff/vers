@@ -15,6 +15,29 @@ test('it prints a happy-dom element as its opening tag', () => {
   expect(Bun.inspect(button)).toBe('<button type="button" disabled="">');
 });
 
+test('it escapes a quote inside an attribute value', () => {
+  registerHappyDOM();
+  onTestFinished(() => GlobalRegistrator.unregister());
+
+  const div = new Window().document.createElement('div');
+
+  div.setAttribute('title', 'say "hi" <now> & go');
+
+  expect(Bun.inspect(div)).toBe('<div title="say &quot;hi&quot; &lt;now> &amp; go">');
+});
+
+test('it keeps the case of an svg element name', () => {
+  registerHappyDOM();
+  onTestFinished(() => GlobalRegistrator.unregister());
+
+  const gradient = new Window().document.createElementNS(
+    'http://www.w3.org/2000/svg',
+    'linearGradient',
+  );
+
+  expect(Bun.inspect(gradient)).toBe('<linearGradient>');
+});
+
 test('it prints a happy-dom text node as its name and text', () => {
   registerHappyDOM();
   onTestFinished(() => GlobalRegistrator.unregister());

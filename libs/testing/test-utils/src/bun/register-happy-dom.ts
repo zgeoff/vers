@@ -48,13 +48,17 @@ function formatNode(node: InspectableNode): string {
   if (node instanceof Element) {
     const attributes = Array.from(
       node.attributes,
-      (attribute) => ` ${attribute.name}="${attribute.value}"`,
+      (attribute) => ` ${attribute.name}="${formatAttributeValue(attribute.value ?? '')}"`,
     ).join('');
 
-    return `<${node.tagName.toLowerCase()}${attributes}>`;
+    return `<${node.localName}${attributes}>`;
   }
 
   return node.nodeValue === null
     ? node.nodeName
     : `${node.nodeName} ${JSON.stringify(node.nodeValue)}`;
+}
+
+function formatAttributeValue(value: string): string {
+  return value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('"', '&quot;');
 }
