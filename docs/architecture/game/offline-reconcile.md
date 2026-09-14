@@ -315,7 +315,9 @@ worker holds an empty simulation and no record of the avatar's last run, so a st
 resync completes would take a seed the idle gap already spent and carry a build without the idle XP.
 The worker runs that resync ahead of the start, and refuses the start as `unreconstructed` when the
 resync fails: on a cold open with no network the tab shows a connect-to-resume state instead of an
-empty play screen, and the next resync that completes lifts the refusal.
+empty play screen, and the next resync that completes lifts the refusal. A resync whose rebuilt
+checkpoint stream diverges from the server's reports the same `unreconstructed` outcome in place of
+`done`, so the tab never shows a completed catch-up on a worker that still refuses every start.
 
 A deferred activity start, or a checkpoint batch the server refuses with an error the worker does
 not handle, is a server answer, so it does not mark the device offline: the worker resends it on an

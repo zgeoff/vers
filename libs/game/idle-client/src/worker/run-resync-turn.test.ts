@@ -392,10 +392,14 @@ test('it reports a divergence fault, broadcasts the dead stream, and skips regis
 
   await runResyncTurn(ctx.context, viewer.avatar.id, false);
 
-  await ctx.connection.waitForMessages(1);
+  await ctx.connection.waitForMessages(2);
 
   expect(ctx.connection.received).toStrictEqual([
     { activityID: activity.id, type: WorkerMessageType.CheckpointStreamInvalid },
+    {
+      status: { avatarID: viewer.avatar.id, kind: 'unreconstructed' },
+      type: WorkerMessageType.ResyncStatus,
+    },
   ]);
 
   expect(recorded).toHaveLength(1);

@@ -1,6 +1,12 @@
 import { expect, test } from 'bun:test';
 import { createMockActivityData } from '@vers/contract-activity/test-utils';
-import { ActivityCheckpointType, buildLevelFromXP } from '@vers/idle-core';
+import { createMockEncounterContent } from '@vers/game-utils/test-utils';
+import {
+  ActivityCheckpointType,
+  buildLevelFromXP,
+  buildSimulationInput,
+  runAttempt,
+} from '@vers/idle-core';
 import { createAuthedServiceClient, createViewer } from '@vers/mock-services';
 import * as db from '@vers/mock-services/db';
 import invariant from 'tiny-invariant';
@@ -387,4 +393,44 @@ test('it records a live-attached row as the predecessor on a worker with empty s
     avatarID: viewer.avatar.id,
     lastActivityID: activity.id,
   });
+});
+
+test('it reports the catch-up as unreconstructed when the rebuilt stream diverged', async () => {
+  const viewer = await createViewer();
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
+
+  const context = createStubWorkerContext({ client, submitter: createStubSubmitter() });
+
+  const activity = await db.activityCollection.create({
+    avatarID: viewer.avatar.id,
+    startedAt: new Date(Date.now() - 2000),
+  });
+
+  const input = buildSimulationInput(createMockEncounterContent({ contentVersion: '2' }), activity);
+
+  const attempt = await runAttempt(input.activity, input.avatar, { maxDurationMs: 120_000 });
+
+  // a confirmed head beyond anything the activity's own stream produced is unreachable by
+  // reconstruction, forcing the divergence path
+  await db.activityCollection.update(activity, {
+    data(record) {
+      record.appendedHead = attempt.checkpoints.length + 5;
+    },
+    strict: true,
+  });
+
+  const signals: FlowSignals = {
+    cancel: context.getCancelSignal(),
+    stop: context.getStopSignal(),
+  };
+
+  await runResyncFlow(context, viewer.avatar.id, false, signals);
+
+  const statuses = context
+    .getBroadcasts()
+    .filter((message) => message.type === WorkerMessageType.ResyncStatus)
+    .map((message) => message.status);
+
+  expect(statuses).toStrictEqual([{ avatarID: viewer.avatar.id, kind: 'unreconstructed' }]);
+  expect(context.hasReconstructed(viewer.avatar.id)).toBe(false);
 });

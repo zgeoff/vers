@@ -67,6 +67,8 @@ export async function runResyncFlow(
 
     if (reconstructed) {
       context.registerReconstruction(avatarID);
+    } else {
+      emitResyncStatus(context, buildResyncFailure(context, avatarID));
     }
   } catch (error) {
     if (isAbortError(error, signals.cancel)) {
@@ -349,11 +351,16 @@ async function applyFastForward(
     );
   }
 
-  emitResyncStatus(context, {
-    attempts: report.attempts,
-    kind: 'done',
-    levelUps: report.levelUps,
-  });
+  // a diverged head attach resolves the announced fast-forward through the outer flow's failure
+  // status instead, since `done` would read as a completed catch-up on a worker that still refuses
+  // every start
+  if (reconstructed) {
+    emitResyncStatus(context, {
+      attempts: report.attempts,
+      kind: 'done',
+      levelUps: report.levelUps,
+    });
+  }
 
   return reconstructed;
 }
