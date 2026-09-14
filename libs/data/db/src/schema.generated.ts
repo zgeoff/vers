@@ -177,6 +177,7 @@ export interface Sessions {
   ipAddress: string;
   previousRefreshToken: string | null;
   refreshToken: string | null;
+  rotationGraceUntil: Timestamp | null;
   updatedAt: Generated<Timestamp>;
   userId: string;
   verified: Generated<boolean>;
