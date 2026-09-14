@@ -287,6 +287,38 @@ test('it treats an attached report as ready once the simulation carries that row
   });
 });
 
+test('it asks the player to connect when the worker has not reconstructed this device since it booted', async () => {
+  const signedIn = await createSignedInUser();
+
+  await createActiveAvatar({ userID: signedIn.userID });
+
+  setSelectedNode(createMockWorldMapNode({ id: '0_0' }));
+
+  const client = createStubWorkerClient({
+    startActivity: () => Promise.resolve({ kind: 'unreconstructed' }),
+  });
+
+  setIdleWorkerHandle({
+    activity: undefined,
+    client,
+    failureAction: ActivityFailureAction.Abort,
+    initialized: true,
+    writerAbortSignal: new AbortController().signal,
+  });
+
+  await withRequestContext({ cookies: signedIn.cookies }, async () => {
+    const rendered = renderWithRouter(<ExploreCurrentPanel orpc={orpc} />);
+
+    const notice = await rendered.findByText(
+      'Connect to the network to resume play on this device.',
+    );
+
+    expect(notice).toBeInTheDocument();
+    expect(rendered.queryByTestId('start-activity-retry')).not.toBeInTheDocument();
+    expect(rendered.router.state.location.pathname).not.toBe('/activity');
+  });
+});
+
 test('it offers a retry on a failed report and sends a fresh call on demand', async () => {
   const signedIn = await createSignedInUser();
 

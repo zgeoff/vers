@@ -113,6 +113,8 @@ test('it reports starting while a start flow installs, then running once it land
     submitter,
   });
 
+  gatedContext.registerReconstruction('avatar_declared_state');
+
   const started = handleStartActivityMessage(gatedContext, {
     avatarID: seed.avatarID,
     scopeID: seed.nodeID,
@@ -354,6 +356,8 @@ test("it starts at once when the avatar's latest run is already recorded", async
     submitter: createStubSubmitter(),
   });
 
+  context.registerReconstruction('avatar_known_record');
+
   await setupStartableNode('avatar_known_record');
 
   context.setLatestRun({
@@ -590,6 +594,9 @@ test('it runs queued starts strictly one at a time in queue order', async () => 
 
   const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_test', submitter });
 
+  context.registerReconstruction('avatar_queue_order_first');
+  context.registerReconstruction('avatar_queue_order_second');
+
   await setupStartableNode('avatar_queue_order_first');
   await setupStartableNode('avatar_queue_order_second');
 
@@ -632,6 +639,8 @@ test('it serializes flows queued from different kinds on the one actor', async (
   submitter.registerActivity = mock(() => firstGate);
 
   const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_test', submitter });
+
+  context.registerReconstruction('avatar_mixed_kinds');
 
   await setupStartableNode('avatar_mixed_kinds');
 
@@ -698,6 +707,8 @@ test('it keeps the queue alive past a start that throws', async () => {
 
   const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_test', submitter });
 
+  context.registerReconstruction('avatar_throws');
+
   await setupStartableNode('avatar_throws');
 
   const input = {
@@ -730,6 +741,8 @@ test('it resolves the caller only once its own flow settles', async () => {
   });
 
   const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_test', submitter });
+
+  context.registerReconstruction('avatar_settle_order');
 
   await setupStartableNode('avatar_settle_order');
 
@@ -765,6 +778,8 @@ test('it reports an escaping flow error as a fault under its site', async () => 
 
   const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_test', submitter });
 
+  context.registerReconstruction('avatar_reports_fault');
+
   await setupStartableNode('avatar_reports_fault');
 
   await handleStartActivityMessage(context, {
@@ -791,6 +806,9 @@ test('it drops a non-claiming resync while one is queued', async () => {
   submitter.registerActivity = mock(() => blockingGate);
 
   const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_test', submitter });
+
+  context.registerReconstruction('avatar_blocking_start');
+
   const connection = collectBroadcasts(context);
 
   await setupStartableNode('avatar_blocking_start');
@@ -1142,7 +1160,7 @@ test('it accepts a later resync after a resync flow faults', async () => {
 
   expect(connection.received).toStrictEqual([
     {
-      status: { avatarID: 'avatar_a', kind: 'failed' },
+      status: { avatarID: 'avatar_a', kind: 'unreconstructed' },
       type: WorkerMessageType.ResyncStatus,
     },
     {
@@ -1207,6 +1225,8 @@ test('it runs a resync arriving during a non-resync turn after that turn rather 
   submitter.registerActivity = mock(() => blockingGate);
 
   const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_test', submitter });
+
+  context.registerReconstruction('avatar_blocks_resync');
 
   await setupStartableNode('avatar_blocks_resync');
 
@@ -1273,6 +1293,8 @@ test('it runs a start queued during an in-flight resync before a held claim requ
       removeEviction: () => {},
     },
   });
+
+  context.registerReconstruction('avatar_held_claim_order');
 
   await setupStartableNode('avatar_held_claim_order');
 
