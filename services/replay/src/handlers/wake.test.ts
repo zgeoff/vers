@@ -14,7 +14,11 @@ async function setupTest() {
   await createContentVersion(db.db, createMockContentDocument({ contentVersion: '2' }));
 
   const service = await createReplayService({ db: db.db });
-  const viewer = await createAnonymousViewer({ audience: 'service-replay' });
+
+  const viewer = await createAnonymousViewer({
+    audience: 'service-replay',
+    issuer: 'service-activity',
+  });
 
   return {
     client: buildRPCTestClient<ReplayContract>(service.app, { token: viewer.token }),
