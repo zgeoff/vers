@@ -1,8 +1,13 @@
 import pRetry from 'p-retry';
+import { findLighthouseFinding } from './find-lighthouse-finding';
+import { runLighthouseAudit } from './run-lighthouse-audit';
 import type { Probe } from './types';
 
 const PROBE_RETRIES = 9;
 const PROBE_DELAY_MS = 5000;
+
+// a Lighthouse run costs about a minute, so it gets one retry where a request probe gets nine
+const LIGHTHOUSE_RETRIES = 1;
 
 export async function runProbes(probes: ReadonlyArray<Probe>): Promise<ReadonlyArray<string>> {
   const findings: Array<string> = [];
@@ -12,7 +17,7 @@ export async function runProbes(probes: ReadonlyArray<Probe>): Promise<ReadonlyA
       await pRetry(() => runProbe(probe), {
         factor: 1,
         minTimeout: PROBE_DELAY_MS,
-        retries: PROBE_RETRIES,
+        retries: probe.kind === 'lighthouse' ? LIGHTHOUSE_RETRIES : PROBE_RETRIES,
       });
 
       console.log(`✓ probe passed: ${formatProbe(probe)}`);
@@ -30,6 +35,18 @@ async function runProbe(probe: Probe): Promise<void> {
 
     if (response.status !== probe.expectStatus) {
       throw new Error(`expected status ${probe.expectStatus}, got ${response.status}`);
+    }
+
+    return;
+  }
+
+  if (probe.kind === 'lighthouse') {
+    const scores = await runLighthouseAudit(probe.url);
+
+    const finding = findLighthouseFinding(probe, scores);
+
+    if (finding !== null) {
+      throw new Error(finding);
     }
 
     return;
