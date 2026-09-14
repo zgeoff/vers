@@ -4,13 +4,14 @@ import * as jose from 'jose';
 interface CreateJWTOpts {
   readonly apiIdentifier: string;
   readonly expiresAt: Date;
+  readonly keyID: string;
   readonly signingKey: CryptoKey;
   readonly userID: string;
 }
 
 export function createJWT(opts: CreateJWTOpts): Promise<string> {
   return new jose.SignJWT({})
-    .setProtectedHeader({ alg: 'RS256' })
+    .setProtectedHeader({ alg: 'RS256', kid: opts.keyID })
     .setSubject(opts.userID)
     .setIssuedAt()
     .setIssuer(opts.apiIdentifier)

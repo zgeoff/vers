@@ -10,5 +10,6 @@ export interface EmptyErrorPayload {
 
 export interface SessionSigningDeps {
   readonly apiIdentifier: string;
+  readonly keyID: string;
   readonly signingKey: CryptoKey;
 }

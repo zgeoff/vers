@@ -31,6 +31,13 @@ with service-session's PKCS8 key (`JWT_SIGNING_PRIVKEY`). Its issuer and audienc
 `API_IDENTIFIER`. Access tokens live 15 minutes and rotate through `refreshTokens`, which rejects a
 reused refresh token.
 
+The edge verifies the access token's signature against service-session's published key set, selected
+by the token's `kid` header, and requires the token's subject to match the cookie's user before it
+trusts any claim. A token no published key signed or a subject mismatch reads as signed out; an
+expired token takes the refresh path. A key rotates through an overlap window in which the service
+signs with the new key and publishes both, and a refresh token is matched against the session row
+rather than verified by signature, so a rotation never invalidates a live session.
+
 The cookie is `en_session`: httpOnly, `SameSite=Lax`, secure in production, sealed by an app secret
 (`buildAuthSessionConfig`). `getAuthSession` reads it and never throws. An absent token is how
 `requireAuth` and `requireAnonymous` observe "signed out". `requireAuth` treats a partial session

@@ -264,6 +264,7 @@
       "name": "@vers/contract-session",
       "version": "0.0.0",
       "dependencies": {
+        "@faker-js/faker": "catalog:",
         "@orpc/contract": "catalog:",
         "@vers/contract-base": "workspace:*",
         "zod": "catalog:",
@@ -1222,6 +1223,7 @@
         "@vers/service-runtime": "workspace:*",
         "jose": "catalog:",
         "kysely": "catalog:",
+        "tiny-invariant": "catalog:",
         "zod": "catalog:",
       },
       "devDependencies": {

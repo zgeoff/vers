@@ -20,6 +20,7 @@
     "@vers/service-runtime": "workspace:*",
     "jose": "catalog:",
     "kysely": "catalog:",
+    "tiny-invariant": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {

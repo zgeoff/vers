@@ -13,6 +13,10 @@ test('it declares no errors on createSession', () => {
   expect(Object.keys(sessionContract.createSession['~orpc'].errorMap)).toBeEmpty();
 });
 
+test('it declares no errors on getSigningKeys', () => {
+  expect(Object.keys(sessionContract.getSigningKeys['~orpc'].errorMap)).toBeEmpty();
+});
+
 test('it generates a valid OpenAPI document from the session contract', async () => {
   const generator = new OpenAPIGenerator({
     schemaConverters: [new ZodToJsonSchemaConverter()],

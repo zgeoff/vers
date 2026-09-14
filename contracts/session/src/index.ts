@@ -8,3 +8,6 @@ export type { SessionData } from './session-data-schema';
 export { SessionDataSchema } from './session-data-schema';
 export type { SessionTokens } from './session-tokens-schema';
 export { SessionTokensSchema } from './session-tokens-schema';
+export type { SigningKey, SigningKeySet } from './signing-key-set-schema';
+export { SigningKeySchema, SigningKeySetSchema } from './signing-key-set-schema';
+export { toJSONWebKeySet } from './to-json-web-key-set';
