@@ -15,8 +15,8 @@
   },
   "ink": {
     "width": 0.3,
-    "depthThreshold": 0.005,
-    "normalThreshold": 0.5,
+    "depthThreshold": 0.003,
+    "normalThreshold": 0.05,
     "strength": 0.7
   },
   "atmo": {
@@ -43,13 +43,13 @@
     "bloomThreshold": 0.62
   },
   "light": {
-    "ambient": 0.84,
-    "bounce": 1.05,
-    "keyLight": 1.92,
-    "fogNear": 65,
+    "ambient": 1.13,
+    "bounce": 1.39,
+    "keyLight": 5.22,
+    "fogNear": 86,
     "fogFar": 340
   },
   "render": {
-    "pixelRatio": 2
+    "pixelRatio": 2.3
   }
 }
