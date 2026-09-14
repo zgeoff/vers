@@ -1,6 +1,8 @@
 import { expect, mock, test } from 'bun:test';
 import { createId } from '@paralleldrive/cuid2';
-import { createTestAccessToken } from '@vers/mock-services';
+import { buildContractMock } from '@vers/client-test-utils/orpc';
+import { sessionContract } from '@vers/contract-session';
+import { createTestAccessToken, resolveSessionContext } from '@vers/mock-services';
 import * as db from '@vers/mock-services/db';
 import { withTraceContext } from '@vers/service-utils';
 import { waitFor } from '@vers/test-utils';
@@ -11,6 +13,7 @@ import { HttpResponse, delay, http } from 'msw';
 import { SimulatedClock } from 'xstate';
 import { server } from '../../mocks/node';
 import { withRequestContext } from '../../test-utils/with-request-context';
+import { SERVICE_URLS } from '../rpc/service-urls';
 import { sendRPCRequest } from './send-rpc-request';
 
 test('it rewrites the proxied path from /api/rpc/<service> to /rpc on the service origin', async () => {
@@ -320,6 +323,50 @@ test('it forwards a call whose session reached its own expiry, leaving the offli
   });
 
   const staleAccessToken = await createTestAccessToken(session.userID, '-1s');
+
+  const outcome = await withRequestContext(
+    {
+      cookies: {
+        en_session: {
+          accessToken: staleAccessToken,
+          refreshToken: 'refresh-1',
+          sessionID: session.id,
+          userID: session.userID,
+        },
+      },
+    },
+    () =>
+      sendRPCRequest(
+        new Request('http://app.test/api/rpc/user/getCurrentUser', { method: 'POST' }),
+        'user',
+      ),
+  );
+
+  expect(resolver).toHaveBeenCalledOnce();
+  expect(outcome.value.headers.get('x-session-superseded')).toBeNull();
+});
+
+test('it sets no session-superseded header when the refresh resolves inside the window', async () => {
+  const resolver = mock<HttpResponseResolver>(() => HttpResponse.json({}));
+
+  server.use(http.post('http://localhost:3003/rpc/getCurrentUser', resolver));
+
+  const session = await db.sessionCollection.create({ refreshToken: 'refresh-1' });
+  const staleAccessToken = await createTestAccessToken(session.userID, '-1s');
+  const freshAccessToken = await createTestAccessToken(session.userID);
+
+  const mockSession = buildContractMock({
+    baseUrl: SERVICE_URLS.session,
+    contract: sessionContract,
+    resolveContext: resolveSessionContext,
+  });
+
+  server.use(
+    mockSession.refreshTokens.handler(() => ({
+      accessToken: freshAccessToken,
+      refreshToken: 'refresh-1',
+    })),
+  );
 
   const outcome = await withRequestContext(
     {
