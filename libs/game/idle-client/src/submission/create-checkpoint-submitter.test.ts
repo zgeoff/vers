@@ -1,6 +1,7 @@
 import { expect, mock, test } from 'bun:test';
 import { createORPCClient } from '@orpc/client';
 import { RPCLink } from '@orpc/client/fetch';
+import { MAX_CATCH_UP_BATCH_CHECKPOINTS } from '@vers/contract-activity';
 import { resolveServiceURL } from '@vers/mock-services';
 import { mockActivityService } from '@vers/mock-services/activity';
 import { waitFor } from '@vers/test-utils';
@@ -156,6 +157,50 @@ test('it trims the queue to the CONFLICT appendedHead and resends the tail', asy
   });
 
   const remaining = await readQueuedCheckpoints('conflict-activity');
+
+  expect(remaining).toStrictEqual([]);
+});
+
+test('it sends a queue past the batch cap as a capped prefix and the tail on the flush that follows', async () => {
+  for (let version = 1; version <= MAX_CATCH_UP_BATCH_CHECKPOINTS + 2; version += 1) {
+    await writeQueuedCheckpoint(
+      'long-offline-activity',
+      createMockCheckpointBatchEntry({ hash: `long_hash_${version}`, version }),
+    );
+  }
+
+  const ctx = setupTest();
+  const track = mock<(batchSize: number, expectedHead: number) => void>();
+
+  server.use(
+    mockActivityService.trackActivityProgress.handler((opts) => {
+      track(opts.input.checkpoints.length, opts.input.expectedHead);
+
+      const last = opts.input.checkpoints.at(-1);
+
+      invariant(last, 'a batch carries at least one checkpoint');
+
+      return { appendedHead: last.version };
+    }),
+  );
+
+  await ctx.submitter.registerActivity({
+    activityID: 'long-offline-activity',
+    appendedHead: 0,
+    lastHash: 'start_hash',
+    startChainIndex: 0,
+  });
+
+  await waitFor(() => {
+    expect(track).toHaveBeenCalledTimes(2);
+  });
+
+  expect(track.mock.calls).toStrictEqual([
+    [MAX_CATCH_UP_BATCH_CHECKPOINTS, 0],
+    [2, MAX_CATCH_UP_BATCH_CHECKPOINTS],
+  ]);
+
+  const remaining = await readQueuedCheckpoints('long-offline-activity');
 
   expect(remaining).toStrictEqual([]);
 });

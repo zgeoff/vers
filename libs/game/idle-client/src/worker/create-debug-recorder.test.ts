@@ -30,7 +30,7 @@ test('it keeps the last flush per activity and writes a one-line flush event', (
   let tick = 0;
   const recorder = createDebugRecorder({ now: () => ++tick });
 
-  recorder.recordFlush('act_1', { appendedHead: 4, type: 'success' });
+  recorder.recordFlush('act_1', { appendedHead: 4, tailQueued: false, type: 'success' });
   recorder.recordFlush('act_1', { reason: 'hash-mismatch', type: 'invalid' });
   recorder.recordFlush('act_2', { type: 'empty' });
 

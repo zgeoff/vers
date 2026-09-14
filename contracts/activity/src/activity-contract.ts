@@ -391,7 +391,7 @@ export const activityContract = {
     .input(
       z.object({
         activityID: z.string(),
-        checkpoints: z.array(CheckpointBatchEntrySchema),
+        checkpoints: z.array(CheckpointBatchEntrySchema).max(MAX_CATCH_UP_BATCH_CHECKPOINTS),
         expectedHead: z.int().min(0),
       }),
     )

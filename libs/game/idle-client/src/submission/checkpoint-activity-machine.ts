@@ -72,7 +72,11 @@ export interface CheckpointActivitySettledEvent {
 
 type FlushSettledEvent =
   | { readonly appendedHead: number; readonly type: 'SETTLED_CONFLICT' }
-  | { readonly appendedHead: number; readonly type: 'SETTLED_SUCCESS' }
+  | {
+      readonly appendedHead: number;
+      readonly tailQueued: boolean;
+      readonly type: 'SETTLED_SUCCESS';
+    }
   | {
       readonly reason: string;
       readonly traceID: string;
@@ -260,6 +264,16 @@ export const checkpointActivityMachine = setup({
               expectedHead: (args) => args.event.appendedHead,
               retryAttempt: 0,
             }),
+            guard: (args) => args.event.tailQueued,
+            reenter: true,
+            target: 'flushing',
+          },
+          {
+            actions: assign({
+              consecutiveFlushFailures: 0,
+              expectedHead: (args) => args.event.appendedHead,
+              retryAttempt: 0,
+            }),
             guard: (args) =>
               !args.context.flushPending &&
               args.context.latestQueuedVersion !== undefined &&
@@ -416,7 +430,11 @@ function buildFlushSettledEvent(outcome: FlushOutcome): FlushSettledEvent {
   }
 
   if (outcome.type === 'success') {
-    return { appendedHead: outcome.appendedHead, type: 'SETTLED_SUCCESS' };
+    return {
+      appendedHead: outcome.appendedHead,
+      tailQueued: outcome.tailQueued,
+      type: 'SETTLED_SUCCESS',
+    };
   }
 
   return { reason: outcome.reason, traceID: outcome.traceID, type: 'SETTLED_TRANSPORT_FAILURE' };

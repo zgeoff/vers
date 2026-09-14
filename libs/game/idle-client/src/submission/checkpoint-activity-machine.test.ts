@@ -959,6 +959,7 @@ test('it reports every flush outcome to the settled observer', async () => {
 
   expect(onFlushSettled).toHaveBeenCalledExactlyOnceWith('observed-flush-activity', {
     appendedHead: 1,
+    tailQueued: false,
     type: 'success',
   });
 });
