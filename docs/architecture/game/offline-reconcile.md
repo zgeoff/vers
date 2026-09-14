@@ -192,9 +192,11 @@ write fault. The player sees which it was, how far the server has received the r
 recovery: free storage or reload. The run's saved checkpoints stay in the outbox and deliver on the
 next reconnect.
 
-A journal the worker cannot read at all is the same failure with nothing to recover locally. The
-worker reports it, and the player is told that the server holds what it received and that anything
-else is lost. The game never claims that a run it could not save is safe.
+A journal the worker cannot read is the same failure with the outbox out of reach. The worker
+reports it once, stops the run, and tells the player that progress the server has not received is
+unconfirmed. A read failure deletes nothing: the rows stay in the journal, and a reload that reads
+them again delivers them on the next reconnect. The game never claims that a run it could not save
+is safe.
 
 The save status the game shows keeps two cursors apart: the last checkpoint this device saved, and
 the last checkpoint the server acknowledged. The acknowledgment is the only authority for a save

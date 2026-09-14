@@ -11,7 +11,7 @@ import { createActivityServiceClient } from '../submission/create-activity-servi
 import { createCheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import { JournalWriteError } from '../submission/journal-write-error';
 import { readFailureActionCache } from '../submission/read-failure-action-cache';
-import type { ActivityServiceClient } from '../submission/types';
+import type { ActivityServiceClient, CheckpointJournal } from '../submission/types';
 import { WORKER_TO_CLIENT_CHANNEL } from '../transport/constants';
 import { WorkerMessageType } from '../types';
 import type { RewardSlotLedgerEntry } from '../types';
@@ -42,6 +42,8 @@ interface CreateWorkerRuntimeOptions {
   readonly bundledEngineHash?: string;
 
   readonly client?: ActivityServiceClient;
+
+  readonly journal?: CheckpointJournal;
 
   readonly now?: () => number;
 
@@ -231,10 +233,15 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
     debug.recordEvent('lifecycle', snapshot.context.phase);
   });
 
+  // an unreadable journal reports once, at the journal boundary; the stream invalidation that
+  // follows it broadcasts to the tabs and reports nothing more
+  const unreadableJournalActivityIDs = new Set<string>();
+
   const submitter = createCheckpointSubmitter({
     actor: lifecycleActor.getSnapshot().context.submitterRef,
     client,
     ingestActivityStart: (activityID) => ingestAndBroadcastActivityStart(context, activityID),
+    ...(options.journal === undefined ? {} : { journal: options.journal }),
     onAcked: (activityID, appendedHead) => {
       getLifecycle().send({ type: 'SUBMITTER_ACKED' });
 
@@ -274,6 +281,8 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
       });
     },
     onJournalUnreadable: (activityID, receivedVersion, error) => {
+      unreadableJournalActivityIDs.add(activityID);
+
       reportWorkerFault('journal-write', error);
 
       broadcast({
@@ -314,11 +323,13 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
     onInvalid: (activityID, reason, traceID) => {
       const tags = traceID === undefined ? undefined : { traceID };
 
-      reportWorkerFault(
-        'checkpoint-stream',
-        new Error(`checkpoint stream rejected for activity ${activityID}: ${reason}`),
-        tags,
-      );
+      if (!unreadableJournalActivityIDs.delete(activityID)) {
+        reportWorkerFault(
+          'checkpoint-stream',
+          new Error(`checkpoint stream rejected for activity ${activityID}: ${reason}`),
+          tags,
+        );
+      }
 
       broadcast({ activityID, type: WorkerMessageType.CheckpointStreamInvalid });
     },

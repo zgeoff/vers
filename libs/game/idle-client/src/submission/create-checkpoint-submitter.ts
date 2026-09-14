@@ -19,6 +19,7 @@ import type { FlushOutcome } from './run-checkpoint-flush-attempt';
 import type {
   ActivityServiceClient,
   ActivitySubmissionContext,
+  CheckpointJournal,
   SubmitterActivityState,
 } from './types';
 import { writeNodeAnchor } from './write-node-anchor';
@@ -87,13 +88,6 @@ interface CreateCheckpointSubmitterOptions {
   readonly signal?: AbortSignal;
 }
 
-// the two journal calls the outbox depends on, injectable so a test can make the browser's storage
-// refuse a write, which fake-indexeddb never does on its own
-interface CheckpointJournal {
-  readonly readQueuedCheckpoints: typeof readQueuedCheckpoints;
-  readonly writeQueuedCheckpoint: typeof writeQueuedCheckpoint;
-}
-
 const REAL_JOURNAL: CheckpointJournal = { readQueuedCheckpoints, writeQueuedCheckpoint };
 
 interface WriteCursor {
@@ -157,6 +151,16 @@ export function createCheckpointSubmitter(
       });
     };
 
+  // a reporting observer never interrupts the transition it observes: the journal row is written
+  // and the cursor has moved whatever the observer does with the news
+  const emitSaved = (activityID: string, version: number): void => {
+    try {
+      options.onSaved?.(activityID, version);
+    } catch {
+      // contained: see above
+    }
+  };
+
   const createActivityRegistration = async (
     context: Readonly<ActivitySubmissionContext>,
   ): Promise<void> => {
@@ -197,7 +201,8 @@ export function createCheckpointSubmitter(
       cursor.previousNextSeed = lastRow.payload.nextSeed;
       terminalQueued = TERMINAL_CHECKPOINT_TYPES.has(lastRow.payload.type);
       latestQueuedVersion = lastRow.version;
-      options.onSaved?.(context.activityID, lastRow.version);
+
+      emitSaved(context.activityID, lastRow.version);
     }
 
     writeCursors.set(context.activityID, cursor);
@@ -332,7 +337,8 @@ export function createCheckpointSubmitter(
     cursor.prevHash = entry.hash;
     cursor.previousNextSeed = entry.payload.nextSeed;
     cursor.nextVersion += 1;
-    options.onSaved?.(activityID, entry.version);
+
+    emitSaved(activityID, entry.version);
 
     if (cursor.avatarID !== undefined && cursor.scopeID !== undefined) {
       await writeNodeAnchor(cursor.avatarID, cursor.scopeID, {

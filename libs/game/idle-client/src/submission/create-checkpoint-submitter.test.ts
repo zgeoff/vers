@@ -33,6 +33,7 @@ function setupTest(
     };
     onAcked?: (activityID: string, appendedHead: number) => void;
     onJournalUnreadable?: (activityID: string, receivedVersion: number, error: unknown) => void;
+    onSaved?: (activityID: string, version: number) => void;
     onServerContact?: () => void;
     scheduleFlush?: (flush: () => Promise<void>) => void;
     signal?: AbortSignal;
@@ -132,6 +133,29 @@ test('it reports the queued tail as saved when it attaches to a journal that alr
   });
 
   expect(ctx.onSaved).toHaveBeenCalledExactlyOnceWith('attached-activity', 2);
+});
+
+test('it still registers the activity and queues every checkpoint when the saved observer throws', async () => {
+  const ctx = setupTest({
+    onSaved: () => {
+      throw new Error('observer fault');
+    },
+  });
+
+  await ctx.submitter.registerActivity({
+    activityID: 'throwing-saved-observer',
+    appendedHead: 0,
+    lastHash: 'start_hash',
+    startChainIndex: 0,
+  });
+
+  await ctx.submitter.submit('throwing-saved-observer', createMockProgressCheckpoint());
+  await ctx.submitter.submit('throwing-saved-observer', createMockProgressCheckpoint());
+
+  expect(readQueuedCheckpoints('throwing-saved-observer')).resolves.toSatisfy(
+    (rows: ReadonlyArray<{ readonly version: number }>) =>
+      rows.map((row) => row.version).join(',') === '1,2',
+  );
 });
 
 test('it still invalidates the stream when the unreadable-journal observer throws', async () => {

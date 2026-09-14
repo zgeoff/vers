@@ -1,10 +1,12 @@
 import { Dialog, Text } from '@vers/design-system';
-import { setJournalFailure, useJournalFailure } from '@vers/idle-client';
+import { setJournalFailure, useActivity, useJournalFailure } from '@vers/idle-client';
 
 export function JournalFailureNotice() {
   const failure = useJournalFailure();
+  const activity = useActivity();
 
-  if (failure === null) {
+  // a failure outlives the run it stopped until the player dismisses it or another run goes live
+  if (failure === null || (activity !== null && activity.id !== failure.activityID)) {
     return null;
   }
 
@@ -33,7 +35,7 @@ export function JournalFailureNotice() {
 
 function pickTitle(kind: 'quota' | 'unreadable' | 'write'): string {
   if (kind === 'unreadable') {
-    return 'Saved history is missing';
+    return 'Saved history cannot be read';
   }
 
   return kind === 'quota' ? 'This device is out of storage' : 'This device could not save';
@@ -41,7 +43,7 @@ function pickTitle(kind: 'quota' | 'unreadable' | 'write'): string {
 
 function pickBody(kind: 'quota' | 'unreadable' | 'write'): string {
   if (kind === 'unreadable') {
-    return 'This device cannot read its saved history, so anything the server has not received is lost. Reload to continue from what the server holds.';
+    return 'This device cannot read its saved history, so progress the server has not received is unconfirmed. Reload to continue; a history that reads again is sent to the server.';
   }
 
   if (kind === 'quota') {
