@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@elysiajs/opentelemetry": "catalog:",
+    "@opentelemetry/api": "catalog:",
     "@opentelemetry/exporter-trace-otlp-proto": "catalog:",
     "@orpc/server": "catalog:",
     "@sentry/bun": "catalog:",
@@ -24,7 +25,6 @@
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@opentelemetry/api": "catalog:",
     "@types/bun": "catalog:",
     "@types/node": "catalog:",
     "@vers/contract-base": "workspace:*",

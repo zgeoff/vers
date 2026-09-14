@@ -2,7 +2,7 @@ import type { AnyRouter } from '@orpc/server';
 import { ORPCError, onError } from '@orpc/server';
 import type { FetchHandler } from '@orpc/server/fetch';
 import { RPCHandler } from '@orpc/server/fetch';
-import type { ServiceKeySet } from '@vers/service-auth';
+import type { ServiceKeySet, TokenIssuer } from '@vers/service-auth';
 import { parseServiceJWKS, parseServiceToken } from '@vers/service-auth';
 import { findSpanTraceContext, withTraceContext } from '@vers/service-utils';
 import type { MetricsExport, OTLPLogStream } from '@vers/service-utils/otel';
@@ -13,6 +13,7 @@ import type pino from 'pino';
 import * as z from 'zod';
 import { baseEnvSchema } from './base-env-schema';
 import { createLogger } from './create-logger';
+import { recordCallerRejection } from './metrics/record-caller-rejection';
 import { reportUnexpectedError } from './report-unexpected-error';
 import { shouldTraceRequest } from './should-trace-request';
 import { startErrorReporting } from './start-error-reporting';
@@ -27,6 +28,7 @@ interface ServiceRuntime<TEnvShape extends z.ZodRawShape> {
 }
 
 export interface ServiceConfig<TEnvShape extends z.ZodRawShape> {
+  readonly allowedIssuers: ReadonlyArray<TokenIssuer>;
   readonly buildRouter: (runtime: ServiceRuntime<TEnvShape>) => AnyRouter | Promise<AnyRouter>;
   readonly envShape: TEnvShape;
   readonly name: string;
@@ -132,6 +134,7 @@ export async function createService<TEnvShape extends z.ZodRawShape = Record<nev
   });
 
   registerORPCHandler(app, '/rpc', handler, {
+    allowedIssuers: config.allowedIssuers,
     keySet,
     logger,
     serviceName: config.name,
@@ -194,6 +197,7 @@ function createTrace(request: Request): TraceContext {
 }
 
 interface RegisterORPCHandlerDeps {
+  readonly allowedIssuers: ReadonlyArray<TokenIssuer>;
   readonly keySet: ServiceKeySet;
   readonly logger: pino.Logger;
   readonly overdueRequestMs: number;
@@ -283,6 +287,27 @@ async function serveORPCRequest(
     return response;
   }
 
+  if (!deps.allowedIssuers.includes(resolution.issuer)) {
+    recordCallerRejection({ issuer: resolution.issuer, service: deps.serviceName });
+
+    const response = Response.json({ error: 'issuer-not-permitted' }, { status: 403 });
+
+    response.headers.set('x-trace-id', trace.traceID);
+
+    deps.logger.warn(
+      {
+        durationMs: toDurationMs(performance.now() - start),
+        issuer: resolution.issuer,
+        method,
+        path,
+        status: 403,
+      },
+      'service caller rejected',
+    );
+
+    return response;
+  }
+
   let handled: Awaited<ReturnType<typeof handler.handle>>;
 
   try {
@@ -290,6 +315,7 @@ async function serveORPCRequest(
       context: {
         actingSessionID: resolution.actingSessionID,
         actingUserID: resolution.actingUserID,
+        issuer: resolution.issuer,
         logger: deps.logger,
         traceID: trace.traceID,
       },
