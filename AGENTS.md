@@ -32,9 +32,9 @@ locates code, it does not teach a subsystem's rules.
 - An architecture doc states a subsystem's structure and the invariants a caller must obey; it never
   narrates a change or defends a decision (the `docs-writing` skill owns that selection rule). A PR
   edits a doc in three cases only: a sentence the change made false, corrected in place; an
-  invariant the change adds, in at most 3 sentences at its owner; and a registry row a section of
-  this file mandates. A change with none of those touches no doc: a fix inside documented behavior,
-  a test-only or tooling change, a move of where a rule is enforced. The reason for a decision lives
+  invariant the change adds, stated at its owner; and a registry row a section of this file
+  mandates. A change with none of those touches no doc: a fix inside documented behavior, a
+  test-only or tooling change, a move of where a rule is enforced. The reason for a decision lives
   in the commit body.
 
 ## Operations

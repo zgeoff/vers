@@ -84,8 +84,7 @@ knife.
   decision was made, a defense of that decision, and a description of what a player sees all fail
   the point test there: the code shows the mechanism, the commit body holds the reason, and a design
   note holds the player's view. An invariant takes at most 3 sentences: the rule, its consequence,
-  and one exception where one exists. A change that makes no sentence false and adds no invariant
-  touches no doc.
+  and one exception where one exists.
 - **Facts follow the reader's task.** A doc serves one reader task. A fact earns its place only if
   that reader acts on it mid-task; a fact serving a different task lives in that task's doc, linked
   from this one. The opening describes the subject, never who should read the doc or when to — no

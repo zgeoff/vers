@@ -171,8 +171,8 @@ those can hold.
   a test already states, which step does what. An agent derives those from the code, its tests, and
   its references; a comment that caches them goes stale.
 - A caller-facing contract is a test whose name states it. An invariant that code in another package
-  obeys is one sentence in the subsystem doc as well. The reason for a design decision lives in the
-  commit body, never in the doc. A reason a reader needs at the line follows the comment rule above.
+  obeys is stated in the subsystem doc as well. The reason for a design decision lives in the commit
+  body, never in the doc. A reason a reader needs at the line follows the comment rule above.
 - Comments describe the code as it is now — no history ("previously", "now uses"), no project state
   (issue numbers, phase labels, "not wired yet"); those live in the commit message.
 - Comments don't name other declarations — renames strand the reference. State the fact instead: "an
