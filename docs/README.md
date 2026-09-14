@@ -38,8 +38,7 @@ How the platform is built — system design, data flows, and operational wiring.
 
 ### Platform
 
-- [Database](./architecture/platform/database.md) — Neon postgres topology, connection rules, and
-  re-provisioning
+- [Database](./architecture/platform/database.md) — Neon postgres topology and connection rules
 - [Queues](./architecture/platform/queues.md) — pg-boss behind `@vers/jobs`, the drain delivery
   model, and retry/idempotency rules
 - [Deployment](./architecture/platform/deployment.md) — Fly rollouts, container builds, CI wiring,
@@ -49,8 +48,8 @@ How the platform is built — system design, data flows, and operational wiring.
 
 ### Game
 
-- [Game simulation](./architecture/game/game-simulation.md) — the deterministic client sim,
-  checkpoint streams, and replay verification
+- [Game simulation](./architecture/game/game-simulation.md) — the deterministic client sim, activity
+  starts, and checkpoint streams
 - [Seed chain](./architecture/game/seed-chain.md) — the forward sequence of positions each activity
   draws from: where a chain starts, how its two anchors move, and what a rejection undoes
 - [Offline reconcile](./architecture/game/offline-reconcile.md) — how progress made without the

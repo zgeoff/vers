@@ -1,7 +1,6 @@
 # Game glossary
 
-The terms the game architecture docs share, each defined once. A doc uses a term from this table
-without redefining it.
+The terms the game architecture docs share. Each term has one owner, the doc that states its rules.
 
 | Term                | Meaning                                                                                                                                                                                   |
 | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -43,6 +42,7 @@ without redefining it.
 | rolled reward       | A reward whose value lives in its roll, committed at a coordinate and revealed later under a key; an item drop is the concrete case.                                                      |
 | scope secret        | The per-avatar secret the server holds and never ships; without it `userSeed` derives no content.                                                                                         |
 | sealed descriptor   | The keyed digest a node's contents derive from, uncorrelated with anything on the geometry plane.                                                                                         |
+| sealed salt         | Server-held entropy for a tail-bearing roll, drawn online and committed before the player commits; the [crafting entropy note](../../game-design/crafting-entropy.md) owns it.            |
 | seed chain          | One forward sequence of positions per avatar per chain scope; each activity draws positions from it and never draws one twice.                                                            |
 | segment             | The run of checkpoints the verifier adjudicates as one piece; each segment settles what it proved.                                                                                        |
 | selection           | The set a player may travel to: the origin, cleared nodes, and every node an edge joins to a cleared node.                                                                                |

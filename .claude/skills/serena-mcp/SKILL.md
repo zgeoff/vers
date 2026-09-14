@@ -31,6 +31,9 @@ login. The unit is the serena version's owner: `.mcp.json` carries no pin becaus
 URL. In the unit, `<checkout_path>` is the primary checkout's absolute path, the same value in both
 places, and `<uvx_path>` is what `command -v uvx` prints.
 
+The two commands below persist the daemon across logout and reboot on this machine. Run them only
+after the user agrees to that.
+
 1. Let the user manager start at boot and outlive the login session:
 
    ```bash

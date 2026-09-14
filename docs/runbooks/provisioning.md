@@ -1,14 +1,33 @@
 # Provisioning
 
-The steps that stand the platform up from nothing and tear it down: the Fly fleet and its secrets,
-the Neon project, and the roles agent sessions query through.
+The steps that stand the platform up from nothing and tear it down: the Neon project, the Fly fleet
+and its secrets, and the roles agent sessions query through.
 [Deployment](../architecture/platform/deployment.md) owns what a rollout does once the fleet exists;
 [database](../architecture/platform/database.md) owns the Neon topology and connection rules.
+
+## Neon project
+
+The Pulumi program creates the Neon layer: project, branches, endpoints, roles. The database and its
+connection string follow with neonctl, authenticated through `neonctl auth`:
+
+```sh
+cd infra && bun run up
+neonctl databases create --project-id <new-id> --name vers --owner-name neondb_owner
+neonctl connection-string main --project-id <new-id> --database-name vers
+# then: rewrite sslmode to verify-full, drop channel_binding, and distribute to the consumer stores
+```
+
+After provisioning, write the string into `libs/data/db/.env.local`. Then `db:migrate` and `db:seed`
+(run with `--env-file=.env.local`) bring the schema and dev seed data up from zero. Update the
+`database-url` field on the `vers-ci` vault's `github-actions` item (the vers-infra program pushes
+it to the `DATABASE_URL` Actions secret) and each Fly app's secret to the new string.
 
 ## Fly fleet
 
 Requires `flyctl` authenticated to the `vers` org, the Neon `DATABASE_URL` (the direct host —
-[database](../architecture/platform/database.md)), and the domain in `$DOMAIN`.
+[database](../architecture/platform/database.md)), and the domain in `$DOMAIN`. Export `EMAIL_FROM`,
+`RESEND_API_KEY`, `TINYBIRD_URL`, and `TINYBIRD_INGEST_TOKEN` from the `vers` vault before step 4:
+an unset variable sets an empty secret, which `flyctl` accepts.
 
 1. Create the apps:
 
@@ -45,6 +64,8 @@ Requires `flyctl` authenticated to the `vers` org, the Neon `DATABASE_URL` (the 
    1Password vault.
 
    ```sh
+   set -euo pipefail
+
    for issuer in app-web service-activity service-replay; do
      openssl genpkey -algorithm ed25519 -out "s2s-$issuer.key"
    done
@@ -80,22 +101,24 @@ Requires `flyctl` authenticated to the `vers` org, the Neon `DATABASE_URL` (the 
      SERVICE_AUTH_JWKS="$SERVICE_AUTH_JWKS" \
      SERVICE_AUTH_PRIVATE_KEY="$(cat s2s-service-activity.key)"
 
-   # First provisioning mints the two root payloads below and stores them in the `vers` vault
-   # (`key-roots` item). Persisted rows reference root versions by number, so on a rerun replace
-   # the two `openssl rand` mints with `op read 'op://vers/key-roots/roll-key-roots'` and
-   # `op read 'op://vers/key-roots/scope-secret-roots'`. A rotation appends a new version to a
-   # payload and never overwrites an existing one.
-   ROLL_KEY_ROOTS="$(jq -nc \
-     --arg trade "$(openssl rand -hex 32)" \
-     --arg selfFound "$(openssl rand -hex 32)" \
-     '{trade: {current: 1, roots: {"1": $trade}}, "self-found": {current: 1, roots: {"1": $selfFound}}}')"
-   SCOPE_SECRET_ROOTS="$(jq -nc \
-     --arg worldmap "$(openssl rand -hex 32)" \
-     '{worldmap: {current: 1, roots: {"1": $worldmap}}}')"
+   # Persisted rows reference root versions by number, so a rerun reuses the roots the `vers`
+   # vault already holds. A rotation appends a new version and never overwrites an existing one.
+   if op item get key-roots --vault vers >/dev/null 2>&1; then
+     ROLL_KEY_ROOTS="$(op read 'op://vers/key-roots/roll-key-roots')"
+     SCOPE_SECRET_ROOTS="$(op read 'op://vers/key-roots/scope-secret-roots')"
+   else
+     ROLL_KEY_ROOTS="$(jq -nc \
+       --arg trade "$(openssl rand -hex 32)" \
+       --arg selfFound "$(openssl rand -hex 32)" \
+       '{trade: {current: 1, roots: {"1": $trade}}, "self-found": {current: 1, roots: {"1": $selfFound}}}')"
+     SCOPE_SECRET_ROOTS="$(jq -nc \
+       --arg worldmap "$(openssl rand -hex 32)" \
+       '{worldmap: {current: 1, roots: {"1": $worldmap}}}')"
 
-   op item create --vault vers --category "API Credential" --title key-roots \
-     "roll-key-roots[concealed]=$ROLL_KEY_ROOTS" \
-     "scope-secret-roots[concealed]=$SCOPE_SECRET_ROOTS"
+     op item create --vault vers --category "API Credential" --title key-roots \
+       "roll-key-roots[concealed]=$ROLL_KEY_ROOTS" \
+       "scope-secret-roots[concealed]=$SCOPE_SECRET_ROOTS"
+   fi
 
    fly secrets set -a vers-service-keys \
      SERVICE_AUTH_JWKS="$SERVICE_AUTH_JWKS" \
@@ -220,23 +243,6 @@ Requires `flyctl` authenticated to the `vers` org, the Neon `DATABASE_URL` (the 
 
 Agent access goes through the hosted MCP server (`https://mcp.axiom.co/mcp`, OAuth) declared in
 `.mcp.json`. The next push to `main` fills the machines.
-
-## Neon project
-
-The Pulumi program creates the Neon layer: project, branches, endpoints, roles. The database and its
-connection string follow with neonctl, authenticated through `neonctl auth`:
-
-```sh
-cd infra && bun run up
-neonctl databases create --project-id <new-id> --name vers --owner-name neondb_owner
-neonctl connection-string main --project-id <new-id> --database-name vers
-# then: rewrite sslmode to verify-full, drop channel_binding, and distribute to the consumer stores
-```
-
-After provisioning, write the string into `libs/data/db/.env.local`. Then `db:migrate` and `db:seed`
-(run with `--env-file=.env.local`) bring the schema and dev seed data up from zero. Update the
-`database-url` field on the `vers-ci` vault's `github-actions` item (the vers-infra program pushes
-it to the `DATABASE_URL` Actions secret) and each Fly app's secret to the new string.
 
 ## Agent database access
 
