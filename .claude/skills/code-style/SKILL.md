@@ -160,8 +160,9 @@ Two lint rules own comment shape, and neither has an exception for authored code
 marker (generated output gets a per-file override in `.oxlintrc.json`): `zgeoff/no-jsdoc` bans every
 `/** … */` block, and `zgeoff/max-consecutive-line-comments` bans a run of more than three
 consecutive `//` lines. A fact a reader needs has a home that stays true: the code, a type, a named
-constant, a test whose name states the rule, or the subsystem's doc under `docs/architecture/`. A
-comment holds only the residue none of those can hold.
+constant, a test whose name states the rule, the commit body, or the subsystem's doc under
+`docs/architecture/` for an invariant that callers obey. A comment holds only the residue none of
+those can hold.
 
 - Write a `//` comment for one thing: the reason the obvious alternative is wrong, when the cause
   lives outside the file. A library quirk, a runtime or platform behavior, a parser or compiler
@@ -169,8 +170,9 @@ comment holds only the residue none of those can hold.
 - Never write what the code shows: what a function does, its parameters, its outcomes, an invariant
   a test already states, which step does what. An agent derives those from the code, its tests, and
   its references; a comment that caches them goes stale.
-- A caller-facing contract is a test whose name states it, or a sentence in the subsystem doc. A
-  design decision is a sentence in the subsystem doc.
+- A caller-facing contract is a test whose name states it. An invariant that code in another package
+  obeys is one sentence in the subsystem doc as well. The reason for a design decision lives in the
+  commit body, never in the doc. A reason a reader needs at the line follows the comment rule above.
 - Comments describe the code as it is now — no history ("previously", "now uses"), no project state
   (issue numbers, phase labels, "not wired yet"); those live in the commit message.
 - Comments don't name other declarations — renames strand the reference. State the fact instead: "an
