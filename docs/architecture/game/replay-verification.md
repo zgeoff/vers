@@ -59,7 +59,7 @@ Operators watch the verifier through its metrics: replay lag and rejection rates
 as a deploy regression first, not a cheating wave.
 
 An old sim version stays a valid replay target until its retention window ends
-([deployment](#retention-sweep)), and the sweep never tombstones a version that still pins
+([retention sweep](#retention-sweep)), and the sweep never tombstones a version that still pins
 unverified work.
 
 ## Applying verified progress

@@ -267,7 +267,7 @@ and blunt on purpose: the server never settles progress on a foundation it canno
 
 A dependency failure is neither a hold nor a verdict. When the keys service or a replay provider
 does not answer, the verifier backs the activity off
-([game simulation](./replay-verification.md#replay)): the activity keeps its status, and the
+([replay verification](./replay-verification.md#replay)): the activity keeps its status, and the
 verifier skips it and its successors until its retry time passes. The backoff clears on its own once
 the dependency answers, so no operator acts and the player sees only a longer "Settling…" display.
 
