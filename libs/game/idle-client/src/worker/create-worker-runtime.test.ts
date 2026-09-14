@@ -156,9 +156,76 @@ test('it broadcasts a simulation update once a started run installs', async () =
 
   expect(status.kind).toBe('started');
 
-  await broadcasts.waitForMessages(1);
+  await waitFor(() => {
+    expect(broadcasts.received).toPartiallyContain({ type: WorkerMessageType.SimulationUpdate });
+  });
+});
 
-  expect(broadcasts.received).toPartiallyContain({ type: WorkerMessageType.SimulationUpdate });
+test('it reports an unreadable journal once and still tells the tabs the stream is dead', async () => {
+  const previousHandle = sentryHandle.current;
+  const recorded: Array<Readonly<ErrorEvent>> = [];
+
+  onTestFinished(() => {
+    sentryHandle.current = previousHandle;
+  });
+
+  await startErrorReporting('https://testpublickey@o0.ingest.sentry.io/1', {
+    beforeSend: (event) => {
+      recorded.push(event);
+
+      return null;
+    },
+    disableDefaultIntegrations: true,
+  });
+
+  const viewer = await createViewer();
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
+
+  await db.contentDocumentCollection.create({ contentVersion: '2' });
+
+  const revealed = await client.revealNodes({ avatarID: viewer.avatar.id, nodeIDs: ['1_0'] });
+
+  await writeNodeSeeds(viewer.avatar.id, revealed.nodes);
+
+  await writeStartStamps({
+    keyVersion: revealed.keyVersion,
+    secretRef: revealed.secretRef,
+    secretVersion: revealed.secretVersion,
+  });
+
+  using runtime = createWorkerRuntime({
+    bundledEngineHash: 'test_engine_hash',
+    client,
+    journal: {
+      readQueuedCheckpoints: () => Promise.reject(new DOMException('gone', 'InvalidStateError')),
+      writeQueuedCheckpoint,
+    },
+  });
+
+  const broadcasts = collectBroadcasts();
+  const testClient = createConnectedTestClient(runtime);
+
+  await testClient.initialize({});
+
+  await testClient.startActivity({
+    avatarID: viewer.avatar.id,
+    scopeID: '1_0',
+    scopeType: 'world_map_node',
+  });
+
+  await waitFor(() => {
+    expect(broadcasts.received).toPartiallyContain({
+      type: WorkerMessageType.CheckpointStreamInvalid,
+    });
+  });
+
+  expect(broadcasts.received).toPartiallyContain({
+    kind: 'unreadable',
+    type: WorkerMessageType.JournalFailure,
+  });
+
+  expect(recorded).toHaveLength(1);
+  expect(recorded[0]?.tags).toMatchObject({ site: 'journal-write' });
 });
 
 test('it closes the connection on disconnect so no further call it makes is answered', async () => {

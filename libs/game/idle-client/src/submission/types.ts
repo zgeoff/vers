@@ -9,6 +9,8 @@ import type {
 } from '@vers/contract-activity';
 import type { ActivityFailureAction } from '@vers/idle-core';
 import type { DBSchema } from 'idb';
+import type { readQueuedCheckpoints } from './read-queued-checkpoints';
+import type { writeQueuedCheckpoint } from './write-queued-checkpoint';
 
 export interface QueuedCheckpoint extends CheckpointBatchEntry {
   readonly activityID: string;
@@ -114,4 +116,11 @@ export interface ActivitySubmissionContext {
   readonly previousNextSeed?: string;
   readonly scopeID?: string;
   readonly startChainIndex: number;
+}
+
+// the two journal calls the outbox depends on, injectable so a test can make the browser's storage
+// refuse a write or a read, which fake-indexeddb never does on its own
+export interface CheckpointJournal {
+  readonly readQueuedCheckpoints: typeof readQueuedCheckpoints;
+  readonly writeQueuedCheckpoint: typeof writeQueuedCheckpoint;
 }

@@ -178,6 +178,15 @@ acting avatar's activity starts, and the server refuses an activity start naming
 acting user does not own. The same account signing back in delivers the outbox, which is what
 cancelling asks for.
 
+The device asks the browser to persist its storage when a run starts. Persistence stops the browser
+from evicting the journal under storage pressure; it never stops the player from clearing site data,
+so the outbox is safe only once the server has received it.
+
+A checkpoint the journal refuses is not in the outbox, so the worker stops the run at the last
+checkpoint it kept and reports the failure kind to the tabs. A journal the worker cannot read stops
+the run the same way and deletes nothing. The server's acknowledgment is the only authority for a
+save being safe on another device; the local save says only that the outbox holds it.
+
 ## Settlement in order
 
 An activity's rewards are provisional until the server [replays](./game-simulation.md#replay) the

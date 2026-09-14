@@ -13,11 +13,13 @@ import {
   RETRY_BACKOFF_CAP_MS,
 } from './constants';
 import type { IngestActivityStartOutcome } from './ingest-activity-start';
+import { JournalWriteError } from './journal-write-error';
 import { readQueuedCheckpoints } from './read-queued-checkpoints';
 import type { FlushOutcome } from './run-checkpoint-flush-attempt';
 import type {
   ActivityServiceClient,
   ActivitySubmissionContext,
+  CheckpointJournal,
   SubmitterActivityState,
 } from './types';
 import { writeNodeAnchor } from './write-node-anchor';
@@ -49,6 +51,8 @@ interface CreateCheckpointSubmitterOptions {
 
   readonly ingestActivityStart?: (activityID: string) => Promise<IngestActivityStartOutcome>;
 
+  readonly journal?: CheckpointJournal;
+
   readonly onAcked?: (activityID: string, appendedHead: number) => void;
 
   readonly onCapped?: (activityID: string, appendedHead: number) => void;
@@ -58,6 +62,16 @@ interface CreateCheckpointSubmitterOptions {
   readonly onInvalid: (activityID: string, reason: string, traceID?: string) => void;
 
   readonly onEvicted?: (activityID: string) => void;
+
+  readonly onJournalFailure?: (failure: Readonly<JournalWriteError>) => void;
+
+  readonly onJournalUnreadable?: (
+    activityID: string,
+    receivedVersion: number,
+    error: unknown,
+  ) => void;
+
+  readonly onSaved?: (activityID: string, version: number) => void;
 
   readonly onFlushSettled?: (activityID: string, outcome: Readonly<FlushOutcome>) => void;
 
@@ -73,6 +87,8 @@ interface CreateCheckpointSubmitterOptions {
 
   readonly signal?: AbortSignal;
 }
+
+const REAL_JOURNAL: CheckpointJournal = { readQueuedCheckpoints, writeQueuedCheckpoint };
 
 interface WriteCursor {
   readonly avatarID: string | undefined;
@@ -93,6 +109,8 @@ export function createCheckpointSubmitter(
 ): CheckpointSubmitter {
   const writeCursors = new Map<string, WriteCursor>();
   const registrations = new Map<string, Promise<void>>();
+
+  const journal = options.journal ?? REAL_JOURNAL;
 
   // an options object carrying `clock: undefined` clobbers the actor system's default clock, so
   // the option is only forwarded when a caller actually injected one
@@ -133,14 +151,31 @@ export function createCheckpointSubmitter(
       });
     };
 
+  // a reporting observer never interrupts the transition it observes: the journal row is written
+  // and the cursor has moved whatever the observer does with the news
+  const emitSaved = (activityID: string, version: number): void => {
+    try {
+      options.onSaved?.(activityID, version);
+    } catch {
+      // contained: see above
+    }
+  };
+
   const createActivityRegistration = async (
     context: Readonly<ActivitySubmissionContext>,
   ): Promise<void> => {
     let rows;
 
     try {
-      rows = await readQueuedCheckpoints(context.activityID);
+      rows = await journal.readQueuedCheckpoints(context.activityID);
     } catch (error) {
+      // a reporting observer never replaces the invalidation that keeps the stream from resuming
+      try {
+        options.onJournalUnreadable?.(context.activityID, context.appendedHead, error);
+      } catch {
+        // contained: see above
+      }
+
       options.onInvalid(context.activityID, `pending-checkpoint read failed: ${String(error)}`);
 
       return;
@@ -166,6 +201,8 @@ export function createCheckpointSubmitter(
       cursor.previousNextSeed = lastRow.payload.nextSeed;
       terminalQueued = TERMINAL_CHECKPOINT_TYPES.has(lastRow.payload.type);
       latestQueuedVersion = lastRow.version;
+
+      emitSaved(context.activityID, lastRow.version);
     }
 
     writeCursors.set(context.activityID, cursor);
@@ -276,11 +313,32 @@ export function createCheckpointSubmitter(
       version: cursor.nextVersion,
     });
 
-    await writeQueuedCheckpoint(activityID, entry);
+    // a checkpoint the journal refused is not in the outbox, so the cursor stays where it was and
+    // the failure propagates to the tick loop, which stops rather than simulate past an unsaved step
+    try {
+      await journal.writeQueuedCheckpoint(activityID, entry);
+    } catch (error) {
+      const failure = new JournalWriteError(
+        activityID,
+        child.getSnapshot().context.expectedHead,
+        error,
+      );
+
+      // a reporting observer never replaces the classified failure the tick loop stops on
+      try {
+        options.onJournalFailure?.(failure);
+      } catch {
+        // contained: see above
+      }
+
+      throw failure;
+    }
 
     cursor.prevHash = entry.hash;
     cursor.previousNextSeed = entry.payload.nextSeed;
     cursor.nextVersion += 1;
+
+    emitSaved(activityID, entry.version);
 
     if (cursor.avatarID !== undefined && cursor.scopeID !== undefined) {
       await writeNodeAnchor(cursor.avatarID, cursor.scopeID, {

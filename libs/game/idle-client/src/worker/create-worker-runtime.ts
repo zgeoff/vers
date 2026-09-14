@@ -9,8 +9,9 @@ import type { ActorRefFromLogic } from 'xstate';
 import { createActor } from 'xstate';
 import { createActivityServiceClient } from '../submission/create-activity-service-client';
 import { createCheckpointSubmitter } from '../submission/create-checkpoint-submitter';
+import { JournalWriteError } from '../submission/journal-write-error';
 import { readFailureActionCache } from '../submission/read-failure-action-cache';
-import type { ActivityServiceClient } from '../submission/types';
+import type { ActivityServiceClient, CheckpointJournal } from '../submission/types';
 import { WORKER_TO_CLIENT_CHANNEL } from '../transport/constants';
 import { WorkerMessageType } from '../types';
 import type { RewardSlotLedgerEntry } from '../types';
@@ -41,6 +42,8 @@ interface CreateWorkerRuntimeOptions {
   readonly bundledEngineHash?: string;
 
   readonly client?: ActivityServiceClient;
+
+  readonly journal?: CheckpointJournal;
 
   readonly now?: () => number;
 
@@ -230,12 +233,24 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
     debug.recordEvent('lifecycle', snapshot.context.phase);
   });
 
+  // an unreadable journal reports once, at the journal boundary; the stream invalidation that
+  // follows it broadcasts to the tabs and reports nothing more
+  const unreadableJournalActivityIDs = new Set<string>();
+
   const submitter = createCheckpointSubmitter({
     actor: lifecycleActor.getSnapshot().context.submitterRef,
     client,
     ingestActivityStart: (activityID) => ingestAndBroadcastActivityStart(context, activityID),
-    onAcked: () => {
+    ...(options.journal === undefined ? {} : { journal: options.journal }),
+    onAcked: (activityID, appendedHead) => {
       getLifecycle().send({ type: 'SUBMITTER_ACKED' });
+
+      broadcast({
+        activityID,
+        receivedVersion: appendedHead,
+        savedVersion: null,
+        type: WorkerMessageType.SaveStatus,
+      });
     },
     onCapped: () => {
       getLifecycle().send({ type: 'SUBMITTER_CAPPED' });
@@ -252,6 +267,38 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
     },
     onHeld: () => {
       getLifecycle().send({ type: 'SUBMITTER_HELD' });
+    },
+
+    // reported here, at the durable boundary, so the tick loop that the throw stops reports nothing
+    onJournalFailure: (failure) => {
+      reportWorkerFault('journal-write', failure);
+
+      broadcast({
+        activityID: failure.activityID,
+        kind: failure.kind,
+        receivedVersion: failure.receivedVersion,
+        type: WorkerMessageType.JournalFailure,
+      });
+    },
+    onJournalUnreadable: (activityID, receivedVersion, error) => {
+      unreadableJournalActivityIDs.add(activityID);
+
+      reportWorkerFault('journal-write', error);
+
+      broadcast({
+        activityID,
+        kind: 'unreadable',
+        receivedVersion,
+        type: WorkerMessageType.JournalFailure,
+      });
+    },
+    onSaved: (activityID, version) => {
+      broadcast({
+        activityID,
+        receivedVersion: null,
+        savedVersion: version,
+        type: WorkerMessageType.SaveStatus,
+      });
     },
 
     // The submitter's backoff retries double as a reconnect probe: the first answer after an
@@ -276,11 +323,13 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
     onInvalid: (activityID, reason, traceID) => {
       const tags = traceID === undefined ? undefined : { traceID };
 
-      reportWorkerFault(
-        'checkpoint-stream',
-        new Error(`checkpoint stream rejected for activity ${activityID}: ${reason}`),
-        tags,
-      );
+      if (!unreadableJournalActivityIDs.delete(activityID)) {
+        reportWorkerFault(
+          'checkpoint-stream',
+          new Error(`checkpoint stream rejected for activity ${activityID}: ${reason}`),
+          tags,
+        );
+      }
 
       broadcast({ activityID, type: WorkerMessageType.CheckpointStreamInvalid });
     },
@@ -347,6 +396,10 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
       try {
         await runTickLoop();
       } catch (error) {
+        if (error instanceof JournalWriteError) {
+          return;
+        }
+
         reportWorkerFault('tick-loop', error);
       }
     })();
