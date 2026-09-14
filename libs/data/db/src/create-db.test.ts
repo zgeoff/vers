@@ -1,4 +1,4 @@
-import { expect, onTestFinished, test } from 'bun:test';
+import { expect, onTestFinished, setSystemTime, test } from 'bun:test';
 import { SpanKind, SpanStatusCode, trace } from '@opentelemetry/api';
 import {
   InMemorySpanExporter,
@@ -393,4 +393,31 @@ test('it rejects a streamed query whose next chunk never arrives within the dead
   expect(streamed).rejects.toMatchObject({ code: 'CONNECTION_DESTROYED' });
 
   await expect(handle.db.selectFrom('users').selectAll().execute()).toResolve();
+});
+
+test('it leaves the pool alone across a wall-clock jump when resume detection is off', async () => {
+  const inMemoryMetrics = createInMemoryMetrics();
+
+  await using handle = await createTestDB({ resumeDetection: false });
+
+  const before = await sql<{ pid: number }>`select pg_backend_pid() as pid`.execute(handle.db);
+
+  onTestFinished(() => {
+    setSystemTime();
+  });
+
+  setSystemTime(new Date(Date.now() + 11 * 60_000));
+
+  const after = await sql<{ pid: number }>`select pg_backend_pid() as pid`.execute(handle.db);
+
+  const [beforeRow] = before.rows;
+  const [afterRow] = after.rows;
+
+  invariant(beforeRow && afterRow, 'expected one row per query');
+
+  expect(afterRow.pid).toBe(beforeRow.pid);
+
+  const resets = await inMemoryMetrics.readCounterDataPoints('vers.db.pool_resets');
+
+  expect(resets).toBeEmpty();
 });

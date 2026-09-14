@@ -21,7 +21,11 @@ export async function createSchemaTestDB(): Promise<TestDBHandle> {
     throw error;
   }
 
-  const db = createDB({ databaseURL: host.databaseURL, searchPath: cloneSchema });
+  const db = createDB({
+    databaseURL: host.databaseURL,
+    resumeDetection: false,
+    searchPath: cloneSchema,
+  });
 
   return {
     db,
