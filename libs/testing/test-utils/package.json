@@ -20,6 +20,7 @@
     "@orpc/openapi": "catalog:",
     "@orpc/server": "catalog:",
     "@orpc/zod": "catalog:",
+    "happy-dom": "catalog:",
     "jose": "catalog:",
     "msw": "catalog:"
   },
