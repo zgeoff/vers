@@ -29,8 +29,13 @@ locates code, it does not teach a subsystem's rules.
   The error-handling, metrics, analytics, deployment, and database sections carry their own
   mandatory read.
 
-- A behavior change to a documented subsystem updates that subsystem's doc in the same PR. The doc
-  states current behavior, so a change that leaves it stale is incomplete.
+- An architecture doc states a subsystem's structure and the invariants a caller must obey; it never
+  narrates a change or defends a decision (the `docs-writing` skill owns that selection rule). A PR
+  edits a doc in three cases only: a sentence the change made false, corrected in place; an
+  invariant the change adds, stated at its owner; and a registry row a section of this file
+  mandates. A change with none of those touches no doc: a fix inside documented behavior, a
+  test-only or tooling change, a move of where a rule is enforced. The reason for a decision lives
+  in the commit body.
 
 ## Operations
 
@@ -363,7 +368,8 @@ the mechanics and provisioning.
   until the comment is deleted.
 - `zgeoff/no-jsdoc` and `zgeoff/max-consecutive-line-comments` are never baselined and never
   disabled inline: a comment the rules reject is deleted or cut, and the fact it held moves to a
-  test name or the subsystem doc (the `code-style` skill owns the rule for what a comment holds).
+  test name, to the commit body, or to the subsystem doc when it is an invariant (the `code-style`
+  skill owns the rule for what a comment holds).
 - `typescript/prefer-readonly-parameter-types` is never baselined: a function's own
   data/config/props/option types go `readonly` (React props `Readonly<Props>`), and framework
   handles with no readonly form (a `Kysely`/`Elysia`/`RPCHandler`/`Request` handle, a `Date`, …) are

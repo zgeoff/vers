@@ -78,6 +78,13 @@ knife.
   but the code does not implement lives in a note under `docs/game-design/`, written as design.
   Where that intent shaped a built mechanism, the architecture doc links the note in one sentence
   and states no more of it.
+- **Architecture is structure and invariants.** A doc under `docs/architecture/` states how a
+  subsystem is put together — its parts, their boundaries, and which part owns each piece of state —
+  and the invariants a caller must obey. A step-by-step narration of a mechanism, the reason a
+  decision was made, a defense of that decision, and a description of what a player sees all fail
+  the point test there: the code shows the mechanism, the commit body holds the reason, and a design
+  note holds the player's view. An invariant takes at most 3 sentences: the rule, its consequence,
+  and one exception where one exists.
 - **Facts follow the reader's task.** A doc serves one reader task. A fact earns its place only if
   that reader acts on it mid-task; a fact serving a different task lives in that task's doc, linked
   from this one. The opening describes the subject, never who should read the doc or when to — no
