@@ -1,6 +1,7 @@
 import type { SigningKey, SigningKeySet } from '@vers/contract-session';
 import type { CryptoKey } from 'jose';
 import * as jose from 'jose';
+import invariant from 'tiny-invariant';
 
 interface SigningKeys {
   readonly active: CryptoKey;
@@ -23,9 +24,7 @@ export async function buildSigningKeySet(
 
   const [active] = published;
 
-  if (active === undefined) {
-    throw new Error('the active signing key always publishes');
-  }
+  invariant(active !== undefined, 'the active signing key always publishes');
 
   return { activeKeyID: active.kid, keySet: { keys: published } };
 }
