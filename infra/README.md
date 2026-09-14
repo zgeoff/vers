@@ -86,6 +86,9 @@ bun run preview   # op run --env-file=.env -- pulumi preview
 bun run up        # op run --env-file=.env -- pulumi up
 ```
 
+Rebase the branch onto `main` before running `bun run up`. The stack state is shared, so an
+out-of-date branch can try to revert a resource that a later deploy already changed.
+
 Once the records exist, let Fly serve TLS for the hostnames:
 
 ```sh
