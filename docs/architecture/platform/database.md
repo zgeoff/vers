@@ -54,7 +54,7 @@ Each Neon endpoint has two hosts: **direct** (`ep-<endpoint>.<region>.aws.neon.t
 
 ## Connection pool
 
-Every service opens one postgres.js pool through `createDB` (`@vers/db`), and four settings bound
+Every service opens one postgres.js pool through `createDB` (`@vers/db`), and five settings bound
 how a connection can fail while the process runs. `connect_timeout` (10s) bounds connection
 acquisition, so a Neon endpoint that stalls on wake fails in 10s instead of minutes.
 `statement_timeout` and `idle_in_transaction_session_timeout` (30s each) are server-side session
@@ -73,12 +73,18 @@ the meantime. A query written to such a socket fails with `CONNECTION_CLOSED`, a
 in flight when the machine suspended hangs until the kernel's TCP retransmit limit gives up, about
 15 minutes later. `createDB` therefore detects a resume and drops the pool. The detector reads the
 wall clock on a 5s interval timer and before every connection acquire, and a gap over 60s since its
-last read means the process was not running. On a detected resume the pool swaps in a fresh
-postgres.js instance for new queries and destroys the old one, which rejects every query still
-pending on it with `CONNECTION_DESTROYED`. Each reset increments `vers.db.pool_resets`
-([observability](./observability.md#instrument-registry)). The 60s threshold keeps a synchronous
-stretch of work shorter than 60s, such as a replay verification that blocks the event loop, from
-tripping a reset that would destroy its own live queries.
+last read means the process was not running. The 60s threshold keeps a synchronous stretch of work
+shorter than 60s, such as a replay verification that blocks the event loop, from tripping a reset
+that would destroy its own live queries.
+
+A query whose reply never arrives is bounded by a 35s client-side deadline (`queryDeadlineMs`)
+around every statement and every chunk of a streamed query. A deadline that expires drops the pool
+the same way a detected resume does. A pool reset swaps in a fresh postgres.js instance for new
+queries and destroys the old one, so every query still pending on it rejects with
+`CONNECTION_DESTROYED`; the caller's retry policy decides a resend
+([error handling](../services/error-handling.md#retry-policy)). Each reset increments
+`vers.db.pool_resets` with its trigger as the `reason`
+([observability](./observability.md#instrument-registry)).
 
 ## Who connects, and where the string lives
 

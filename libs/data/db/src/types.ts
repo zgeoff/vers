@@ -9,3 +9,5 @@ interface JsonObject {
 }
 
 type JsonPrimitive = boolean | number | string | null;
+
+export type PoolResetReason = 'query_stall' | 'resume';
