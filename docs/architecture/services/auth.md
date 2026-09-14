@@ -113,6 +113,21 @@ committed append sends toward the replay service.
 
 The service runtime verifies every inbound token before any handler runs, against a key set
 registering every issuer's public key under its key id. A token's claimed issuer must be a known
-issuer and equal its key id, and the signature validates only against that issuer's registered key,
-so a leaked minting key lets its holder impersonate that one service and no other. The runtime
-rejects a bad token with a plain 401 ([service contracts](./service-contracts.md)).
+issuer and equal its key id, and the signature validates only against that issuer's registered key.
+Each service also declares the issuers it accepts, and the runtime rejects a token from any other
+issuer with a plain 403 before any handler runs. A leaked minting key therefore reaches only the
+services that name its issuer, and acts solely within that issuer's role. The runtime rejects a bad
+token with a plain 401 and a forbidden caller with a plain 403
+([service contracts](./service-contracts.md)).
+
+| Service                   | Accepts                              |
+| ------------------------- | ------------------------------------ |
+| `service-user`            | `app-web`                            |
+| `service-session`         | `app-web`                            |
+| `service-verification`    | `app-web`                            |
+| `service-avatar`          | `app-web`                            |
+| `service-email`           | `app-web`                            |
+| `service-activity`        | `app-web`                            |
+| `service-keys`            | `service-activity`, `service-replay` |
+| `service-replay`          | `service-activity`                   |
+| `service-replay-provider` | `service-replay`                     |
