@@ -10,6 +10,7 @@ test('it builds a default session row', () => {
     ipAddress: expect.toBeString(),
     previousRefreshToken: null,
     refreshToken: null,
+    rotationGraceUntil: null,
     userId: expect.toBeString(),
     verified: false,
   });
@@ -24,6 +25,7 @@ test('it applies overrides on top of the defaults', () => {
     ipAddress: expect.toBeString(),
     previousRefreshToken: null,
     refreshToken: null,
+    rotationGraceUntil: null,
     userId: 'user_1',
     verified: true,
   });

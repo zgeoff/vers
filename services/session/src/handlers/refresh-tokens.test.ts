@@ -2,6 +2,7 @@ import { expect, test } from 'bun:test';
 import type { SessionContract } from '@vers/contract-session';
 import { createAnonymousViewer, createTestDB, createTestUser } from '@vers/service-test-utils/bun';
 import { buildRPCTestClient } from '@vers/test-utils';
+import invariant from 'tiny-invariant';
 import { SESSION_DURATION_SHORT } from '../consts';
 import { createSessionService } from '../create-session-service';
 import { createSessionRow } from '../test-utils/create-session-row';
@@ -63,7 +64,7 @@ test('it rotates the refresh token after the grace window and records the previo
   expect(row.previousRefreshToken).toBe('old-token');
 });
 
-test('it revokes the session and throws REFRESH_TOKEN_REUSED when a superseded refresh token is presented', async () => {
+test('it records a rotation window when it rotates the token', async () => {
   await using ctx = await setupTest();
 
   const created = await createTestUser(ctx.db);
@@ -82,6 +83,65 @@ test('it revokes the session and throws REFRESH_TOKEN_REUSED when a superseded r
 
   await client.refreshTokens({ id: session.id, refreshToken: 'old-token' });
 
+  const row = await ctx.db
+    .selectFrom('sessions')
+    .selectAll()
+    .where('id', '=', session.id)
+    .executeTakeFirstOrThrow();
+
+  invariant(row.rotationGraceUntil !== null, 'rotation records a grace window on the session row');
+
+  expect(row.rotationGraceUntil).toBeAfter(new Date());
+});
+
+test("it returns the session's current refresh token when the previous token arrives inside the window", async () => {
+  await using ctx = await setupTest();
+
+  const created = await createTestUser(ctx.db);
+
+  const session = await createSessionRow(ctx.db, {
+    previousRefreshToken: 'old-token',
+    refreshToken: 'current-token',
+    rotationGraceUntil: new Date(Date.now() + 60_000),
+    userId: created.user.id,
+  });
+
+  const viewer = await createAnonymousViewer({ audience: 'service-session' });
+
+  const client = buildRPCTestClient<SessionContract>(ctx.app, { token: viewer.token });
+
+  const result = await client.refreshTokens({ id: session.id, refreshToken: 'old-token' });
+
+  expect(result).toStrictEqual({
+    accessToken: expect.toBeString(),
+    refreshToken: 'current-token',
+  });
+
+  const row = await ctx.db
+    .selectFrom('sessions')
+    .selectAll()
+    .where('id', '=', session.id)
+    .executeTakeFirstOrThrow();
+
+  expect(row.refreshToken).toBe('current-token');
+});
+
+test('it revokes the session when the previous token arrives after the window', async () => {
+  await using ctx = await setupTest();
+
+  const created = await createTestUser(ctx.db);
+
+  const session = await createSessionRow(ctx.db, {
+    previousRefreshToken: 'old-token',
+    refreshToken: 'current-token',
+    rotationGraceUntil: new Date(Date.now() - 1000),
+    userId: created.user.id,
+  });
+
+  const viewer = await createAnonymousViewer({ audience: 'service-session' });
+
+  const client = buildRPCTestClient<SessionContract>(ctx.app, { token: viewer.token });
+
   expect(client.refreshTokens({ id: session.id, refreshToken: 'old-token' })).rejects.toMatchObject(
     { code: 'REFRESH_TOKEN_REUSED' },
   );
@@ -93,6 +153,69 @@ test('it revokes the session and throws REFRESH_TOKEN_REUSED when a superseded r
     .executeTakeFirst();
 
   expect(row).toBeUndefined();
+});
+
+test('it revokes the session when the previous token arrives and no window was ever recorded', async () => {
+  await using ctx = await setupTest();
+
+  const created = await createTestUser(ctx.db);
+
+  const session = await createSessionRow(ctx.db, {
+    previousRefreshToken: 'old-token',
+    refreshToken: 'current-token',
+    rotationGraceUntil: null,
+    userId: created.user.id,
+  });
+
+  const viewer = await createAnonymousViewer({ audience: 'service-session' });
+
+  const client = buildRPCTestClient<SessionContract>(ctx.app, { token: viewer.token });
+
+  expect(client.refreshTokens({ id: session.id, refreshToken: 'old-token' })).rejects.toMatchObject(
+    { code: 'REFRESH_TOKEN_REUSED' },
+  );
+
+  const row = await ctx.db
+    .selectFrom('sessions')
+    .selectAll()
+    .where('id', '=', session.id)
+    .executeTakeFirst();
+
+  expect(row).toBeUndefined();
+});
+
+test('it answers an immediate reuse of the previous token with the current token instead of revoking the session', async () => {
+  await using ctx = await setupTest();
+
+  const created = await createTestUser(ctx.db);
+
+  const createdAt = new Date(Date.now() - SESSION_DURATION_SHORT - 1000);
+
+  const session = await createSessionRow(ctx.db, {
+    createdAt,
+    refreshToken: 'old-token',
+    userId: created.user.id,
+  });
+
+  const viewer = await createAnonymousViewer({ audience: 'service-session' });
+
+  const client = buildRPCTestClient<SessionContract>(ctx.app, { token: viewer.token });
+
+  const rotated = await client.refreshTokens({ id: session.id, refreshToken: 'old-token' });
+  const second = await client.refreshTokens({ id: session.id, refreshToken: 'old-token' });
+
+  expect(second).toStrictEqual({
+    accessToken: expect.toBeString(),
+    refreshToken: rotated.refreshToken,
+  });
+
+  const row = await ctx.db
+    .selectFrom('sessions')
+    .selectAll()
+    .where('id', '=', session.id)
+    .executeTakeFirstOrThrow();
+
+  expect(row.refreshToken).toBe(rotated.refreshToken);
 });
 
 test('it deletes the session and throws SESSION_EXPIRED for an expired session', async () => {
