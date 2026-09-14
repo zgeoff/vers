@@ -178,29 +178,14 @@ acting avatar's activity starts, and the server refuses an activity start naming
 acting user does not own. The same account signing back in delivers the outbox, which is what
 cancelling asks for.
 
-### When the device cannot save
+The device asks the browser to persist its storage when a run starts. Persistence stops the browser
+from evicting the journal under storage pressure; it never stops the player from clearing site data,
+so the outbox is safe only once the server has received it.
 
-The device asks the browser to keep its storage when the player starts a run, and the game shows the
-answer beside the save status: kept, best effort, or not offered by this browser. Persistence stops
-the browser from evicting the journal under storage pressure. It never stops the player from
-clearing site data, so the outbox is safe only once the server has received it.
-
-The journal write is where a failed save is decided. A checkpoint the journal refuses is not in the
-outbox, so the worker stops the run at the last checkpoint it kept rather than simulate past an
-unsaved step, and it reports the failure to the tabs with its kind: an exhausted quota, or any other
-write fault. The player sees which it was, how far the server has received the run, and the
-recovery: free storage or reload. The run's saved checkpoints stay in the outbox and deliver on the
-next reconnect.
-
-A journal the worker cannot read is the same failure with the outbox out of reach. The worker
-reports it once, stops the run, and tells the player that progress the server has not received is
-unconfirmed. A read failure deletes nothing: the rows stay in the journal, and a reload that reads
-them again delivers them on the next reconnect. The game never claims that a run it could not save
-is safe.
-
-The save status the game shows keeps two cursors apart: the last checkpoint this device saved, and
-the last checkpoint the server acknowledged. The acknowledgment is the only authority for a save
-being safe on another device; the local save only says the outbox holds it.
+A checkpoint the journal refuses is not in the outbox, so the worker stops the run at the last
+checkpoint it kept and reports the failure kind to the tabs. A journal the worker cannot read stops
+the run the same way and deletes nothing. The server's acknowledgment is the only authority for a
+save being safe on another device; the local save says only that the outbox holds it.
 
 ## Settlement in order
 
