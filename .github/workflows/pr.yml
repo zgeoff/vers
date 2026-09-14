@@ -153,10 +153,12 @@ jobs:
           restore-keys: |
             turbo-${{ runner.os }}-
 
-      # the action checks out the base branch and the head branch in turn and runs the script on
-      # each; a checkout with no size-limit config (a base that predates the budget) yields an
-      # empty result set, so the comment reads the whole head size as the delta, while a checkout
-      # that carries the config reports its build or measurement failure as a failed job
+      # the action runs the script on the head, then checks out the base and runs `bun install`
+      # and `bun run build` there before the script (skip_step covers the head only). A checkout
+      # without the size:delta script (a base that predates the budget) yields an empty result set,
+      # so the comment reads the whole head size as the delta; a checkout with it reports a build
+      # or measurement failure as a failed job. The action re-splits the script on quotes, so it
+      # stays free of inner quoting.
       - name: Size delta comment
         uses: andresz1/size-limit-action@94bc357df29c36c8f8d50ea497c3e225c3c95d1d # v1.8.0
         with:
@@ -164,9 +166,8 @@ jobs:
           package_manager: bun
           skip_step: build
           directory: apps/web
-          script: >-
-            bash -c 'if grep -q "\"size-limit\": \[" package.json; then bun run size:build
-            >/dev/null 2>&1 && bunx size-limit --json; else echo []; fi'
+          script:
+            bash -c "if grep -q size:delta package.json; then bun run size:delta; else echo []; fi"
 
   e2e:
     runs-on: ubuntu-latest
