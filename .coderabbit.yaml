@@ -6,6 +6,9 @@ reviews:
   high_level_summary: false
   collapse_walkthrough: true
   sequence_diagrams: false
+  pre_merge_checks:
+    docstrings:
+      mode: off
   path_filters:
     - '!bun.lock'
     - '!libs/data/db/src/schema.generated.ts'
