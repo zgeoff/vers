@@ -14,6 +14,7 @@ const SessionRowSchema = SessionDataSchema.extend({
     .string()
     .nullable()
     .default(() => faker.string.alphanumeric(32)),
+  rotationGraceUntil: z.date().nullable().default(null),
   updatedAt: z.date().default(() => new Date()),
   userID: z.string().default(() => createId()),
   verified: z.boolean().default(true),

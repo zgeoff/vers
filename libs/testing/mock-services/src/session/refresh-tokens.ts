@@ -3,6 +3,8 @@ import { createTestAccessToken } from '../create-test-access-token';
 import * as db from '../db';
 import { os } from './os';
 
+const ROTATION_GRACE_DURATION = 2 * 60 * 1000;
+
 export const refreshTokens = os.refreshTokens.handler(async (opts) => {
   const session = db.sessionCollection.findFirst((q) => q.where({ id: opts.input.id }));
 
@@ -19,6 +21,17 @@ export const refreshTokens = os.refreshTokens.handler(async (opts) => {
     session.previousRefreshToken !== null &&
     opts.input.refreshToken === session.previousRefreshToken
   ) {
+    if (
+      session.rotationGraceUntil !== null &&
+      session.rotationGraceUntil.getTime() > Date.now() &&
+      session.refreshToken !== null
+    ) {
+      return {
+        accessToken: await createTestAccessToken(session.userID),
+        refreshToken: session.refreshToken,
+      };
+    }
+
     db.sessionCollection.delete(session);
     throw opts.errors.REFRESH_TOKEN_REUSED({ data: {} });
   }
@@ -33,6 +46,8 @@ export const refreshTokens = os.refreshTokens.handler(async (opts) => {
     data(record) {
       record.previousRefreshToken = session.refreshToken;
       record.refreshToken = rotatedRefreshToken;
+
+      record.rotationGraceUntil = new Date(Date.now() + ROTATION_GRACE_DURATION);
     },
   });
 

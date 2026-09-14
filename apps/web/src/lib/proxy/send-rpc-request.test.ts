@@ -1,8 +1,6 @@
 import { expect, mock, test } from 'bun:test';
 import { createId } from '@paralleldrive/cuid2';
-import { buildContractMock } from '@vers/client-test-utils/orpc';
-import { sessionContract } from '@vers/contract-session';
-import { createTestAccessToken, resolveSessionContext } from '@vers/mock-services';
+import { createTestAccessToken } from '@vers/mock-services';
 import * as db from '@vers/mock-services/db';
 import { withTraceContext } from '@vers/service-utils';
 import { waitFor } from '@vers/test-utils';
@@ -13,7 +11,6 @@ import { HttpResponse, delay, http } from 'msw';
 import { SimulatedClock } from 'xstate';
 import { server } from '../../mocks/node';
 import { withRequestContext } from '../../test-utils/with-request-context';
-import { SERVICE_URLS } from '../rpc/service-urls';
 import { sendRPCRequest } from './send-rpc-request';
 
 test('it rewrites the proxied path from /api/rpc/<service> to /rpc on the service origin', async () => {
@@ -351,22 +348,13 @@ test('it sets no session-superseded header when the refresh resolves inside the 
 
   server.use(http.post('http://localhost:3003/rpc/getCurrentUser', resolver));
 
-  const session = await db.sessionCollection.create({ refreshToken: 'refresh-1' });
-  const staleAccessToken = await createTestAccessToken(session.userID, '-1s');
-  const freshAccessToken = await createTestAccessToken(session.userID);
-
-  const mockSession = buildContractMock({
-    baseUrl: SERVICE_URLS.session,
-    contract: sessionContract,
-    resolveContext: resolveSessionContext,
+  const session = await db.sessionCollection.create({
+    previousRefreshToken: 'refresh-1',
+    refreshToken: 'refresh-2',
+    rotationGraceUntil: new Date(Date.now() + 60_000),
   });
 
-  server.use(
-    mockSession.refreshTokens.handler(() => ({
-      accessToken: freshAccessToken,
-      refreshToken: 'refresh-1',
-    })),
-  );
+  const staleAccessToken = await createTestAccessToken(session.userID, '-1s');
 
   const outcome = await withRequestContext(
     {
@@ -388,4 +376,5 @@ test('it sets no session-superseded header when the refresh resolves inside the 
 
   expect(resolver).toHaveBeenCalledOnce();
   expect(outcome.value.headers.get('x-session-superseded')).toBeNull();
+  expect(outcome.cookies['en_session']).toContainEntry(['refreshToken', 'refresh-2']);
 });
