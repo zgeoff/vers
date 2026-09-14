@@ -7,6 +7,7 @@ import { parseScopeSecretRoots } from './parse-scope-secret-roots';
 
 export function createKeysService(): Promise<Service<typeof envShape>> {
   return createService({
+    allowedIssuers: ['service-activity', 'service-replay'],
     buildRouter: (runtime) =>
       buildKeysRouter({
         roots: parseRollKeyRoots(runtime.env.ROLL_KEY_ROOTS),

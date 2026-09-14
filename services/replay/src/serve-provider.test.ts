@@ -27,6 +27,7 @@ test(
 
     const token = await createServiceToken({
       audience: 'service-replay-provider',
+      issuer: 'service-replay',
       privateKey: keyPair.privateKey,
     });
 

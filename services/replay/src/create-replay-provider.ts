@@ -7,6 +7,7 @@ export type ReplayProvider = Service<typeof providerEnvShape>;
 
 export function createReplayProvider(): Promise<ReplayProvider> {
   return createService({
+    allowedIssuers: ['service-replay'],
     buildRouter: (runtime) => buildProviderRouter({ simVersion: runtime.env.SIM_ENGINE_HASH }),
     envShape: providerEnvShape,
     name: 'service-replay-provider',
