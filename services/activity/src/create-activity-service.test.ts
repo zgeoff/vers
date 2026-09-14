@@ -88,3 +88,42 @@ test('it uses an injected key version when given', async () => {
 
   expect(revealed).toMatchObject({ keyVersion: 7 });
 });
+
+test('it accepts a call from app-web', async () => {
+  await using db = await createTestDB({ isolation: 'schema' });
+
+  await createSimVersionRow(db.db);
+  await createContentVersion(db.db, createMockContentDocument({ contentVersion: '2' }));
+
+  const service = await createActivityService({ db: db.db });
+  const viewer = await createViewer({ audience: 'service-activity', db: db.db });
+  const avatar = await createAvatarRow(db.db, { userId: viewer.user.id });
+
+  const client = buildRPCTestClient<ActivityContract>(service.app, { token: viewer.token });
+
+  await expect(client.revealNodes({ avatarID: avatar.id, nodeIDs: ['0_0'] })).toResolve();
+});
+
+test('it rejects a call from service-activity with 403', async () => {
+  await using db = await createTestDB({ isolation: 'schema' });
+
+  await createSimVersionRow(db.db);
+  await createContentVersion(db.db, createMockContentDocument({ contentVersion: '2' }));
+
+  const service = await createActivityService({ db: db.db });
+
+  const viewer = await createViewer({
+    audience: 'service-activity',
+    db: db.db,
+    issuer: 'service-activity',
+  });
+
+  const response = await service.app.handle(
+    new Request('http://test.local/rpc/revealNodes', {
+      headers: { authorization: `Bearer ${viewer.token}` },
+      method: 'POST',
+    }),
+  );
+
+  expect(response.status).toBe(403);
+});

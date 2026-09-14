@@ -87,3 +87,33 @@ test('it mints access tokens that verify against the published key set by key id
   expect(header.kid).toBe(published.keys[0]?.kid);
   expect(verified.payload.sub).toBe(created.user.id);
 });
+
+test('it accepts a call from app-web', async () => {
+  const ctx = await setupTest();
+  const created = await createTestUser(ctx.db);
+  const viewer = await createAnonymousViewer({ audience: 'service-session' });
+
+  const client = buildRPCTestClient<SessionContract>(ctx.app, { token: viewer.token });
+
+  await expect(
+    client.createSession({ ipAddress: '127.0.0.1', userID: created.user.id }),
+  ).toResolve();
+});
+
+test('it rejects a call from service-activity with 403', async () => {
+  const ctx = await setupTest();
+
+  const viewer = await createAnonymousViewer({
+    audience: 'service-session',
+    issuer: 'service-activity',
+  });
+
+  const response = await ctx.app.handle(
+    new Request('http://test.local/rpc/createSession', {
+      headers: { authorization: `Bearer ${viewer.token}` },
+      method: 'POST',
+    }),
+  );
+
+  expect(response.status).toBe(403);
+});
