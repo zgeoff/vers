@@ -34,8 +34,8 @@ would hold both awake around the clock, so delivery rides three one-shot drains 
 
 - Nudge: an enqueue procedure fires a drain fire-and-forget after the insert. The machine handling
   the request is already awake, so delivery lands at once. A deadline-bearing job's enqueue keeps
-  re-draining its queue every few seconds until that job reaches a terminal state or its deadline
-  passes, capped at eight minutes.
+  re-draining its queue until that job reaches a terminal state or its deadline passes, and stops
+  after a bounded time even when the deadline lies far ahead.
 - Boot drain: the serve entrypoint drains on start, catching jobs enqueued while the process was
   down.
 - Scheduled sweep: a Fly scheduled machine runs the service's sweep entrypoint, which starts the
@@ -54,7 +54,8 @@ A handler throw fails the job, and pg-boss keeps it invisible until its retry de
 doubling that delay per attempt when the definition asks for backoff. A job that exhausts its retry
 limit on a dead-lettering definition moves to a dead queue named after its own. Handlers make
 outbound effects idempotent with the job id, so at-least-once delivery never doubles an effect; the
-email service sends the job id as its provider's idempotency key. The handler starts no send for a
-deadline-bearing job after its deadline has passed. It completes such a job unsent and counts the
-drop. pg-boss pools its own connections, so a queue test takes database isolation rather than an
-injected transaction.
+email service sends the job id as its provider's idempotency key. pg-boss pools its own connections,
+so a queue test takes database isolation rather than an injected transaction.
+
+The handler never sends a deadline-bearing job after its deadline has passed. It completes such a
+job unsent.
