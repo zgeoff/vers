@@ -14,9 +14,9 @@ export async function createRemoteReplayProvider(
 ): Promise<RemoteReplayProvider> {
   updateEnv('SIM_ENGINE_HASH', engineHash);
 
-  // named `service-replay`, matching the dispatcher's current mint audience
-  // (`services/replay/src/dispatch/run-replay-segment.ts`) rather than the real provider's own
-  // `service-replay-provider` name — a pre-existing defect this fix doesn't address
+  // named `service-replay`, the audience baked into the token run-replay-segment.ts mints
+  // (`services/replay/src/dispatch/`) from its `replay` argument, rather than the real provider's
+  // own `service-replay-provider` name — a pre-existing defect this fix doesn't address
   const provider = await createReplayProvider({ name: 'service-replay' });
 
   provider.listen(0);
