@@ -1,6 +1,6 @@
 # Auth
 
-Authentication and step-up authorization split across three domain services and the web edge. The
+The web edge and the domain services split authentication and step-up authorization by role. The
 edge runs the credential and code flows, holds the session cookie, and signs the service-to-service
 token for its own outbound calls. Durable state lives in the services: sessions and step-up
 transactions in the session service, password credentials and reset tokens in the user service, TOTP
@@ -23,15 +23,17 @@ Sign-in redirects to a force-logout prompt when the account already holds a live
 it verifies the session and seals the cookie. Verifying a session mints the first access and refresh
 token pair, marks the row verified, and evicts every other session of the same user in one
 statement, so at most one verified session per user survives. Each token is a JWT subject-bound to
-the user and signed with the session service's private key. Access tokens are short-lived and rotate
-through a refresh call, which rejects a reused refresh token.
+the user and signed with the session service's private key. Access tokens are short-lived, and a
+refresh call rotates the pair once the access token has aged. A reused refresh token, a superseded
+rotation, or an expired session revokes the session. A service token can outlive its session by its
+own short lifetime, so the edge re-confirms the session still exists on every request while the
+access token is fresh, and an evicted device is signed out on its next request.
 
-The session cookie is httpOnly, same-site, secure in production, and sealed by an app secret.
+The session cookie is httpOnly, same-site lax, secure in production, and sealed by an app secret.
 Reading it never throws, and an absent token is how the edge observes "signed out". A partial
-session, one missing any of the session id, access token, or refresh token, reads the same way, and
-the edge runs the logout path before it redirects to login, so whatever partial cookie state
-remained is cleared. A service's `UNAUTHORIZED` on a page load's server call takes the same logout
-path and redirect.
+session, one missing any of the session id, access token, or refresh token, reads the same way. The
+edge runs the logout path before it redirects to login. A service's `UNAUTHORIZED` on a page load's
+server call takes the same logout path and redirect.
 
 ## Step-up authorization
 
@@ -46,39 +48,41 @@ against the pending transaction, and the edge abandons the transaction after a f
 failures. A valid code atomically consumes the pending transaction and mints a transaction token.
 
 A pending transaction lives in postgres with its action, target, IP, and owning session. Postgres
-cascade-deletes it with the session, it expires on its own, and consuming it rejects a request whose
-action, IP, session, or target does not match the stored row.
+cascade-deletes it with the session. The session service ignores an expired row at consume time and
+sweeps expired rows on the next create, and consuming a row rejects a request whose action, IP,
+session, or target does not match it.
 
 The transaction token is a short-lived JWT minted and verified only inside the edge process, against
 a per-process in-memory keypair, because it round-trips through the browser between the code check
-and the mutation. It is proof a code check passed, redeemable once by the mutation it names. A
-ledger records each consumed token id and rejects a repeat, and the check matches the token's
-session before consuming it, so a token minted under one session cannot redeem under another.
+and the mutation. It is proof a code check passed, redeemable once by the mutation it names. The
+session service records each consumed token id and rejects a repeat, and the check matches the
+token's session before consuming it, so a token minted under one session cannot redeem under
+another.
 
 ## TOTP verification
 
-The verification service issues and checks TOTP codes, one verification row per target and type
-(`2fa`, `2fa-setup`, `change-email`, `onboarding`). An emailed code lives for minutes; an
-authenticator code lives one TOTP period. Verifying consumes an emailed code on success and deletes
-its row. An authenticator code's row stays, marked verified and guarded so a replay matches zero
-rows. The service also returns the authenticator-app URI for a pending 2FA setup.
+The verification service issues and checks TOTP codes, one verification row per target and type. An
+emailed code (onboarding and an email change) carries an expiry; an authenticator code (2FA and 2FA
+setup) lives one TOTP period. Verifying consumes an emailed code on success and deletes its row. An
+authenticator row stays and records its last verified code and time, so a repeat of the same code
+matches zero rows. The service also returns the authenticator-app URI for a pending 2FA setup.
 
 ## Credentials and password reset
 
-The user service owns the credential path: it verifies a password at login, and a password change or
-reset rewrites the hash and signs the user out of every session. It stores a reset token as its
-hash, the token reaches the user only through the URL in the reset email, and the reset matches it
-in constant time.
+The user service owns the credential path: it verifies a password at login, a password change
+rewrites the hash and leaves the sessions in place, and a password reset rewrites the hash and
+deletes every session of that user. It stores a reset token as its hash, the token reaches the user
+only through the URL in the reset email, and the reset matches it in constant time.
 
 ## Service-to-service tokens
 
 Every service call over the private network carries a short-lived JWT signed with an Ed25519
 keypair. The issuer claim and the key id both name the minting service, the subject names the acting
-user and is omitted for a verified-anonymous call, and the audience is the target service's
-registered audience. Three issuers mint these tokens, each with its own private key held by no other
-app: the web edge for its outbound calls, the replay service for its calls toward the keys service
-and the version-pinned replay providers, and the activity service for the wake call a committed
-append sends toward the replay service.
+user and is omitted for a verified-anonymous call, a session claim names the acting session, and the
+audience is the target service's registered audience. Every issuer holds its own private key, held
+by no other app: the web edge for its outbound calls, the replay service for its calls toward the
+keys service and the version-pinned replay providers, and the activity service for the wake call a
+committed append sends toward the replay service.
 
 The service runtime verifies every inbound token before any handler runs, against a key set
 registering every issuer's public key under its key id. A token's claimed issuer must be a known
