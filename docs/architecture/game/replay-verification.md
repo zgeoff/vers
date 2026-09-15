@@ -12,11 +12,13 @@ rejection moves.
 ## Replay
 
 The verifier holds each stream at the checkpoint it last verified for the life of the process, and a
-later batch replays forward from that checkpoint. A stream it does not hold instead replays from its
-`Started` checkpoint, under the sim version stamped there. It dispatches the replay to the provider
-app for that sim version, so an old segment replays under the code and content that produced it. A
-checkpoint never verifies before the one before it, because each checkpoint's position on the seed
-chain depends on the one before. A drain of the queue starts on:
+later batch replays forward from that checkpoint. A stream the verifier does not hold replays from
+its `Started` checkpoint under the sim version stamped there. One exception: the verifier drops the
+least recently used stream once its cache is full, and drops a stream whose iteration fails, so the
+next batch for that stream replays from `Started`. The verifier dispatches the replay to the
+provider app for that sim version, so an old segment replays under the code and content that
+produced it. A checkpoint never verifies before the one before it, because each checkpoint's
+position on the seed chain depends on the one before. A drain of the queue starts on:
 
 - a wake from the activity service after an append
 - a progression read that finds unsettled work
