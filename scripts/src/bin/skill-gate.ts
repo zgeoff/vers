@@ -28,14 +28,18 @@ if (!parsed.success) {
 const input = parsed.data;
 const filePath = input.tool_input.file_path;
 const subagentsDir = `${input.transcript_path.replace(/\.jsonl$/, '')}/subagents`;
+
 const subagents = await collectSubagentTranscripts(subagentsDir);
+
 const picked = pickSkillTranscripts(
   input.transcript_path,
   input.agent_id,
   subagents,
   FALLBACK_LIMIT,
 );
+
 const loadedSkills = await readLoadedSkills(picked.primary, picked.fallback);
+
 const verdict = planSkillGate(input.cwd, filePath, loadedSkills);
 
 if (verdict.kind === 'deny') {
