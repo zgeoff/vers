@@ -70,9 +70,10 @@ services it called. The line-level conventions:
   string never reaches a log line, because query params carry emailed tokens, auth codes, and
   GET-mapped procedure inputs. A service leaves its health probe unlogged; the web app logs its
   probe like any request and logs a served static asset at `debug`.
-- A service logs a request past its slow-request threshold at `warn`, with a per-path override. A
-  service or the web app writes an overdue line for a request still open past the overdue threshold,
-  the one record a request that never finishes leaves.
+- A service logs a request past its slow-request threshold at `warn`, with a per-path override,
+  unless its status is already a server error. A service or the web app writes an overdue line for a
+  request still open past the overdue threshold, the one record a request that never finishes
+  leaves.
 - Presentation is the transport's job: dev consoles pretty-print, and call sites never embed
   decoration in the message.
 

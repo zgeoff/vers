@@ -193,9 +193,10 @@ because bun re-resolves the smaller workspace's hoisting and fails a frozen inst
 (turborepo#11007). The stage copies every workspace manifest plus the committed root lockfile into
 the image instead, and the install stages read those.
 
-Every domain service compiles to a single Bun executable and runs it alone on `alpine` as `nobody`,
-with no `node_modules` and no source. The web app bundles an SSR server instead: a full install with
-dev dependencies for the build, then a production-only install with the hoisted linker, so the SSR
-bundle resolves every runtime import from one flat `node_modules`. Its server entry carries no
-top-level `await`, because a dynamically imported chunk can import the entry back and Node exits on
-the unsettled cycle.
+Every domain service compiles to a Bun executable and runs it on `alpine` as `nobody`, with no
+`node_modules` and no source. One exception: the email service's image also carries the sweep binary
+its scheduled machine runs ([queues](./queues.md)). The web app bundles an SSR server instead: a
+full install with dev dependencies for the build, then a production-only install with the hoisted
+linker, so the SSR bundle resolves every runtime import from one flat `node_modules`. Its server
+entry carries no top-level `await`, because a dynamically imported chunk can import the entry back
+and Node exits on the unsettled cycle.
