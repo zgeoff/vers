@@ -64,8 +64,22 @@ domain service that opens a connection carries.
 
 ## Release
 
-A push to `main` runs the main workflow; once the checks pass, the pipeline migrates the database
-while it builds every stale app, then gates the combined fleet and cuts over.
+```mermaid
+flowchart LR
+  C[checks] --> M[migrate]
+  C --> P[env preflight]
+  C --> X[read deploy manifest]
+  P --> B["build<br>one leg per stale app"]
+  X --> B
+  B --> G["full-stack gate<br>every image in one compose stack"]
+  M --> D
+  P --> D
+  G --> D["deploy<br>one leg per stale app"]
+  D -.->|"even when every leg skipped"| V[deploy verify]
+```
+
+A push to `main` runs the main workflow. Each build and deploy leg self-gates on staleness, so a
+phase lost to an earlier failure ships on the next push.
 
 ### Pipeline
 
@@ -74,11 +88,9 @@ share one database. Database migrations are never rolled back: a release must to
 migration applied after it shipped (expand and contract), which is what makes redeploying a previous
 image safe.
 
-Two per-app matrix jobs run the deploy CLI: `build` once the env preflight passes, and `deploy`
-after `migrate`, `build`, and the full-stack suite. Both matrices derive from the manifest, so
-adding an app to the manifest is the whole change. Each leg self-gates on staleness, so a phase lost
-to an earlier failure ships on the next push. An app's failed build leaves its ref unavailable to
-the full-stack gate, whose fleet-wide failure holds every cutover.
+The build and deploy matrices derive from the manifest, so adding an app to the manifest is the
+whole change. An app's failed build leaves its ref unavailable to the full-stack gate, whose
+fleet-wide failure holds every cutover.
 
 ### Staleness
 
