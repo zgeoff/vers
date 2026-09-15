@@ -6,6 +6,7 @@ export interface JobDef<TPayload extends object = object> {
   readonly retryDelay?: number;
   readonly retryBackoff?: boolean;
   readonly deadLetter?: boolean;
+  readonly expireInSeconds?: number;
 }
 
 export type JobDefs = Readonly<Record<string, JobDef>>;
