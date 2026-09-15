@@ -24,10 +24,9 @@ The interpreter is a library of pure functions over versioned table data. It imp
 and does no I/O. The server calls it at settlement, the one call site that rolls.
 
 - The item roll reads a whole item from one stream in canonical draw order: rarity, base, affix
-  count, then each affix. Context is the trajectory facts of the slot that produced the roll: the
-  node's difficulty, the encounter's class, and the tier of
-  [juice](../../game-design/economy-modes.md#juice) the player chose. Context picks which tables the
-  stream is read against, and the stream decides the outcomes.
+  count, then each affix. Context is the trajectory fact of the slot that produced the roll, the
+  node's difficulty. Context picks which tables the stream is read against, and the stream decides
+  the outcomes.
 - The affix roll applies a constraint set to an existing base. A crafting roll enters the
   interpreter through the affix roll
   ([craft positions](../../game-design/crafting-entropy.md#craft-positions)).

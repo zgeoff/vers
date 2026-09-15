@@ -38,8 +38,8 @@ hashes, so replaying the chain reproduces every coordinate exactly.
 
 ### Reward reveal
 
-Because every position carries equal expected value, and the server discloses a coordinate's content
-only once the verifier settles its checkpoint
+Every position carries equal expected value, and the server discloses a coordinate's content only
+once the verifier settles its checkpoint
 ([applying verified progress](./replay-verification.md#applying-verified-progress)), so re-reaching
 a position trades one blind roll for an independent roll of equal worth.
 
