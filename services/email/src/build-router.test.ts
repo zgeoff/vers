@@ -3,7 +3,7 @@ import { call } from '@orpc/server';
 import type { ErrorEvent } from '@sentry/bun';
 import type { EmailContract } from '@vers/contract-email';
 import { RESEND_ENDPOINT_URL, sentEmails, server } from '@vers/email/mocks';
-import type { JobQueue } from '@vers/jobs';
+import type { JobQueue, JobState } from '@vers/jobs';
 import {
   createLogger,
   setSentryHandleForTesting,
@@ -42,6 +42,7 @@ test('#sendWelcome it enqueues and returns a job id', async () => {
 
   const result = await ctx.client.sendWelcome({
     to: 'player@example.com',
+    usefulUntil: new Date(Date.now() + 60_000),
     verificationCode: '123456',
     verificationURL: 'https://versidle.com/verify',
   });
@@ -54,6 +55,7 @@ test('#sendWelcome it delivers the email on drain, sending the job id as the ide
 
   const result = await ctx.client.sendWelcome({
     to: 'player@example.com',
+    usefulUntil: new Date(Date.now() + 60_000),
     verificationCode: '123456',
     verificationURL: 'https://versidle.com/verify',
   });
@@ -111,6 +113,7 @@ test('#sendChangeEmailVerification it enqueues and delivers to the account s cur
   const result = await ctx.client.sendChangeEmailVerification({
     newEmail: 'new@example.com',
     to: 'old@example.com',
+    usefulUntil: new Date(Date.now() + 60_000),
     verificationCode: '123456',
     verificationURL: 'https://versidle.com/verify-email',
   });
@@ -213,6 +216,7 @@ test('it keeps a job left failed by a downstream error for a later sweep', async
 
   await ctx.queue.send('send-welcome', {
     to: 'player@example.com',
+    usefulUntil: new Date(Date.now() + 60_000),
     verificationCode: '123456',
     verificationURL: 'https://versidle.com/verify',
   });
@@ -250,6 +254,7 @@ test('it reports a fire-and-forget drain failure carrying the active trace id', 
 
   const stubQueue: JobQueue<EmailJobDefs> = {
     drain: () => Promise.reject(new Error('drain failed')),
+    getJobState: () => Promise.resolve(undefined),
     send: () => Promise.resolve('job-1'),
     start: () => Promise.resolve(),
     stop: () => Promise.resolve(),
@@ -263,6 +268,7 @@ test('it reports a fire-and-forget drain failure carrying the active trace id', 
       router.sendWelcome,
       {
         to: 'player@example.com',
+        usefulUntil: new Date(Date.now() + 60_000),
         verificationCode: '123456',
         verificationURL: 'https://versidle.com/verify',
       },
@@ -282,4 +288,65 @@ test('it reports a fire-and-forget drain failure carrying the active trace id', 
   });
 
   expect(recorded[0]?.tags).toMatchObject({ traceID: trace.traceID });
+});
+
+test('it re-drains a deadline job every few seconds until its job reaches a terminal state', async () => {
+  const jobStates: Array<JobState> = ['retry', 'retry', 'completed'];
+  const recordedDelays: Array<number> = [];
+  let drainCalls = 0;
+  let elapsedMs = 0;
+  const logger = createLogger({ level: 'fatal', name: 'test-email-router' });
+
+  const stubQueue: JobQueue<EmailJobDefs> = {
+    drain: () => {
+      drainCalls += 1;
+
+      return Promise.resolve({ completed: 0, failed: 1 });
+    },
+    getJobState: () => Promise.resolve(jobStates.shift() ?? 'completed'),
+    send: () => Promise.resolve('job-1'),
+    start: () => Promise.resolve(),
+    stop: () => Promise.resolve(),
+  };
+
+  const router = buildEmailRouter({
+    logger,
+    now: () => elapsedMs,
+    queue: stubQueue,
+    wait: (ms) => {
+      recordedDelays.push(ms);
+
+      elapsedMs += ms;
+
+      return Promise.resolve();
+    },
+  });
+
+  const trace = createTraceContext();
+
+  await withTraceContext(trace, () =>
+    call(
+      router.sendWelcome,
+      {
+        to: 'player@example.com',
+        usefulUntil: new Date(60_000),
+        verificationCode: '123456',
+        verificationURL: 'https://versidle.com/verify',
+      },
+      {
+        context: {
+          actingSessionID: null,
+          actingUserID: null,
+          logger,
+          traceID: trace.traceID,
+        },
+      },
+    ),
+  );
+
+  await waitFor(() => {
+    expect(drainCalls).toBe(3);
+  });
+
+  expect(recordedDelays).toStrictEqual([5000, 5000, 5000]);
 });

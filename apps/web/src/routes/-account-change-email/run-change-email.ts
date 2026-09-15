@@ -1,5 +1,6 @@
 import { redirect } from '@tanstack/react-router';
 import { getRequest } from '@tanstack/react-start/server';
+import invariant from 'tiny-invariant';
 import { checkStepUp } from '../../lib/auth/check-step-up';
 import { findStepUpToken } from '../../lib/auth/find-step-up-token';
 import { requireAuth } from '../../lib/auth/require-auth';
@@ -40,6 +41,8 @@ export async function runChangeEmail(formData: FormData): Promise<ChangeEmailRes
     type: 'change-email',
   });
 
+  invariant(verification.expiresAt, 'an emailed verification always expires');
+
   const origin = new URL(getRequest().url).origin;
 
   const verificationURL = `${origin}/verify-otp?${new URLSearchParams({ code: verification.otp, target: submission.data.email, type: 'change-email' }).toString()}`;
@@ -47,6 +50,7 @@ export async function runChangeEmail(formData: FormData): Promise<ChangeEmailRes
   await emailClient.sendChangeEmailVerification({
     newEmail: submission.data.email,
     to: submission.data.email,
+    usefulUntil: verification.expiresAt,
     verificationCode: verification.otp,
     verificationURL,
   });

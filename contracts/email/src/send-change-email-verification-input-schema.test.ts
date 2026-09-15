@@ -5,6 +5,7 @@ test('it accepts a well-formed change-email verification input', () => {
   const result = SendChangeEmailVerificationInputSchema.safeParse({
     newEmail: 'new@example.com',
     to: 'old@example.com',
+    usefulUntil: '2026-01-01T00:10:00.000Z',
     verificationCode: '123456',
     verificationURL: 'https://versidle.com/verify-email',
   });
@@ -16,10 +17,27 @@ test('it rejects a newEmail that is not a valid address', () => {
   const result = SendChangeEmailVerificationInputSchema.safeParse({
     newEmail: 'not-an-email',
     to: 'old@example.com',
+    usefulUntil: '2026-01-01T00:10:00.000Z',
     verificationCode: '123456',
     verificationURL: 'https://versidle.com/verify-email',
   });
 
   expect(result.success).toBeFalse();
   expect(result.error?.issues).toPartiallyContain(expect.objectContaining({ path: ['newEmail'] }));
+});
+
+test('it rejects a usefulUntil that is not a valid date', () => {
+  const result = SendChangeEmailVerificationInputSchema.safeParse({
+    newEmail: 'new@example.com',
+    to: 'old@example.com',
+    usefulUntil: 'not-a-date',
+    verificationCode: '123456',
+    verificationURL: 'https://versidle.com/verify-email',
+  });
+
+  expect(result.success).toBeFalse();
+
+  expect(result.error?.issues).toPartiallyContain(
+    expect.objectContaining({ path: ['usefulUntil'] }),
+  );
 });
