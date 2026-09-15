@@ -44,8 +44,8 @@ Purity rests on four invariants:
   failed attempt loses, are configured as a decimal literal rather than a fixed-point value.
 
 Arithmetic on those quantities uses addition, subtraction, multiplication, division, square root,
-floor, round, minimum, maximum, and raising to an integer power. A lint rule scoped to the
-simulation packages enforces the rule.
+floor, round, minimum, maximum, and raising to a power whose exponent is written as an integer
+literal. A lint rule scoped to the simulation packages enforces the rule.
 
 One writer worker per browser profile runs the simulation on a fixed timestep
 ([worker lifecycle](./offline-reconcile.md#worker-lifecycle)). Every other tab is a viewer that

@@ -1,5 +1,5 @@
-import { expect, test } from 'bun:test';
-import { mkdtemp, writeFile } from 'node:fs/promises';
+import { expect, onTestFinished, test } from 'bun:test';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -13,6 +13,10 @@ async function setupTest(source: string): Promise<LintResult> {
   const pluginPath = join(import.meta.dir, 'plugin.js');
 
   const dir = await mkdtemp(join(tmpdir(), 'vers-lint-plugin-test-'));
+
+  onTestFinished(async () => {
+    await rm(dir, { recursive: true, force: true });
+  });
 
   const config = { jsPlugins: [pluginPath], rules: { 'vers/no-unportable-math': 'error' } };
 
@@ -51,6 +55,13 @@ test('it flags a non-integer exponent on Math.pow', async () => {
   expect(result.stdout).toInclude('no-unportable-math');
 });
 
+test('it flags a non-integer exponent on Math.pow reached by a string key', async () => {
+  const result = await setupTest("const a = Math['pow'](2, 0.5);\n");
+
+  expect(result.exitCode).toBe(1);
+  expect(result.stdout).toInclude('no-unportable-math');
+});
+
 test('it flags a non-integer exponent on the ** operator', async () => {
   const result = await setupTest('const a = 3 ** 0.5;\n');
 
@@ -78,6 +89,13 @@ test('it flags toFixed and both spellings of parseFloat', async () => {
 
   expect(result.exitCode).toBe(1);
   expect(result.stdout.match(/no-unportable-math/gu)).toHaveLength(3);
+});
+
+test('it flags toFixed reached by a string key', async () => {
+  const result = await setupTest("const a = (5.5)['toFixed'](2);\n");
+
+  expect(result.exitCode).toBe(1);
+  expect(result.stdout).toInclude('no-unportable-math');
 });
 
 test('it leaves an unrelated parseFloat property alone', async () => {

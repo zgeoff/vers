@@ -16,14 +16,18 @@ const noUnportableMath = {
       "MemberExpression[object.name='Math']": (node) => {
         checkMathMember(context, node);
       },
-      "CallExpression[callee.object.name='Math'][callee.property.name='pow']": (node) => {
-        checkExponent(context, node, node.arguments[1]);
+      "CallExpression[callee.type='MemberExpression'][callee.object.name='Math']": (node) => {
+        if (getMemberPropertyName(node.callee) === 'pow') {
+          checkExponent(context, node, node.arguments[1]);
+        }
       },
       "BinaryExpression[operator='**']": (node) => {
         checkExponent(context, node, node.right);
       },
-      "MemberExpression[property.name='toFixed'][computed=false]": (node) => {
-        reportBanned(context, node, 'toFixed');
+      MemberExpression: (node) => {
+        if (getMemberPropertyName(node) === 'toFixed') {
+          reportBanned(context, node, 'toFixed');
+        }
       },
       "CallExpression[callee.name='parseFloat']": (node) => {
         reportBanned(context, node, 'parseFloat');
@@ -70,7 +74,7 @@ const bannedMathMembers = new Set([
 ]);
 
 function checkMathMember(context, node) {
-  const name = getMathMemberName(node);
+  const name = getMemberPropertyName(node);
 
   if (name === undefined || !bannedMathMembers.has(name)) {
     return;
@@ -79,7 +83,7 @@ function checkMathMember(context, node) {
   context.report({ node, messageId: 'member', data: { name } });
 }
 
-function getMathMemberName(node) {
+function getMemberPropertyName(node) {
   if (!node.computed) {
     return node.property.name;
   }
