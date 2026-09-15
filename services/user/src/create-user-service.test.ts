@@ -34,7 +34,7 @@ test('it accepts a call from app-web', async () => {
   await using db = await createTestDB();
 
   const service = await createUserService({ db: db.db });
-  const viewer = await createAnonymousViewer({ audience: 'service-user' });
+  const viewer = await createAnonymousViewer({ audience: 'service-user', issuer: 'app-web' });
 
   const client = buildRPCTestClient<UserContract>(service.app, { token: viewer.token });
 

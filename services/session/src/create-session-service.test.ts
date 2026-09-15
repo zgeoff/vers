@@ -31,7 +31,7 @@ test('it accepts a call from app-web', async () => {
 
   const service = await createSessionService({ db: db.db });
   const created = await createTestUser(db.db);
-  const viewer = await createAnonymousViewer({ audience: 'service-session' });
+  const viewer = await createAnonymousViewer({ audience: 'service-session', issuer: 'app-web' });
 
   const client = buildRPCTestClient<SessionContract>(service.app, { token: viewer.token });
 

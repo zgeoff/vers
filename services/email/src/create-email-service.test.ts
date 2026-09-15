@@ -72,7 +72,7 @@ test('it accepts a call from app-web', async () => {
 
   await emailService.queue.start();
 
-  const viewer = await createAnonymousViewer({ audience: 'service-email' });
+  const viewer = await createAnonymousViewer({ audience: 'service-email', issuer: 'app-web' });
 
   const client = buildRPCTestClient<EmailContract>(emailService.service.app, {
     token: viewer.token,
