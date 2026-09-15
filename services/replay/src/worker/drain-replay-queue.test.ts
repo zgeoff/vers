@@ -20,6 +20,7 @@ async function setupTest() {
   await createContentVersion(db.db, createMockContentDocument({ contentVersion: '2' }));
 
   const keyPair = await getTestServiceKeyPair();
+
   const cache = createReplayCache();
 
   return {
