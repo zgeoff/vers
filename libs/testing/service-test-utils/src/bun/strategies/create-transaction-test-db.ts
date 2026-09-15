@@ -27,5 +27,5 @@ function getWorkerDB(): Promise<Kysely<DB>> {
 async function buildWorkerDB(): Promise<Kysely<DB>> {
   const databaseURL = await createDatabaseFromTemplate();
 
-  return createDB({ databaseURL });
+  return createDB({ databaseURL, resumeDetection: false });
 }

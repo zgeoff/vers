@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { expect, onTestFinished, setSystemTime, test } from 'bun:test';
 import { sql } from 'kysely';
 import { createTestDB } from './create-test-db';
 import { createTestUser } from './create-test-user';
@@ -36,4 +36,22 @@ test('it opts into schema isolation on request', async () => {
   const result = await sql<{ searchPath: string }>`show search_path`.execute(testDB.db);
 
   expect(result.rows[0]?.searchPath).toStartWith('tu_');
+});
+
+test('it keeps an open handle usable after another handle is created on an advanced system clock', async () => {
+  await using first = await createTestDB();
+
+  await first.db.selectFrom('users').selectAll().execute();
+
+  onTestFinished(() => {
+    setSystemTime();
+  });
+
+  setSystemTime(new Date(Date.now() + 11 * 60_000));
+
+  await using second = await createTestDB();
+
+  await second.db.selectFrom('users').selectAll().execute();
+
+  await expect(first.db.selectFrom('users').selectAll().execute()).toResolve();
 });

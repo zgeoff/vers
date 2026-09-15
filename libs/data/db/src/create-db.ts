@@ -26,7 +26,7 @@ export interface CreateDBConfig {
   readonly databaseURL: string;
   readonly idleInTransactionSessionTimeoutMs?: number;
   readonly queryDeadlineMs?: number;
-  readonly resumeDetection?: Omit<StartResumeDetectorConfig, 'onResume'>;
+  readonly resumeDetection?: Omit<StartResumeDetectorConfig, 'onResume'> | false;
   readonly searchPath?: string;
 }
 
@@ -154,6 +154,10 @@ function buildResettableDriver(config: CreateDBConfig): Driver {
     },
     init: async () => {
       await current.ready;
+
+      if (config.resumeDetection === false) {
+        return;
+      }
 
       detector = startResumeDetector({
         ...config.resumeDetection,
