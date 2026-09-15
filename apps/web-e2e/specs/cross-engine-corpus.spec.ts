@@ -41,10 +41,8 @@ test('it matches the Bun corpus digests in this browser engine', async ({
 
   try {
     expect(browserDigests).toStrictEqual(bunDigests);
-  } catch (error) {
+  } catch {
     await checkCorpusMismatch({ browserDigests, browserName, bunDigests, page }, testInfo);
-
-    throw error;
   }
 });
 
@@ -58,14 +56,19 @@ interface CorpusMismatchContext {
 async function checkCorpusMismatch(
   context: Readonly<CorpusMismatchContext>,
   testInfo: TestInfo,
-): Promise<void> {
-  const mismatchIndex = context.bunDigests.findIndex(
-    (entry, index) => entry.digest !== context.browserDigests[index]?.digest,
+): Promise<never> {
+  const maxDigestCount = Math.max(context.bunDigests.length, context.browserDigests.length);
+
+  const mismatchIndex = Array.from({ length: maxDigestCount }, (_, index) => index).findIndex(
+    (index) =>
+      context.bunDigests[index]?.id !== context.browserDigests[index]?.id ||
+      context.bunDigests[index]?.digest !== context.browserDigests[index]?.digest,
   );
 
   invariant(mismatchIndex !== -1, 'a failed digest comparison must contain a differing entry');
 
-  const mismatchedEntry = context.bunDigests[mismatchIndex];
+  const mismatchedEntry =
+    context.bunDigests[mismatchIndex] ?? context.browserDigests[mismatchIndex];
 
   invariant(mismatchedEntry, 'the diverging index must name a digest entry');
 

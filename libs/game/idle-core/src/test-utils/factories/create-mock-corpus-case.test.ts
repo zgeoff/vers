@@ -1,4 +1,6 @@
 import { expect, test } from 'bun:test';
+import { buildSimulationInput } from '../../core/build-simulation-input';
+import { CORPUS_CONTENT } from '../../corpus/corpus-content';
 import { ActivityFailureAction } from '../../types';
 import { createMockCorpusCase } from './create-mock-corpus-case';
 
@@ -29,3 +31,12 @@ test('it applies overrides on top of the defaults', () => {
     id: 'override-case',
   });
 });
+
+test.each([['baseline'], ['fast-attack']] as const)(
+  'it builds a source whose content version matches the %s content',
+  (contentID) => {
+    const corpusCase = createMockCorpusCase({ contentID });
+
+    expect(() => buildSimulationInput(CORPUS_CONTENT[contentID], corpusCase.source)).not.toThrow();
+  },
+);

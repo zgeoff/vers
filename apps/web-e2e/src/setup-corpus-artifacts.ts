@@ -6,5 +6,8 @@ export default function setupCorpusArtifacts(): void {
   const scriptPath = path.join(import.meta.dirname, 'write-corpus-artifacts.ts');
   const result = spawnSync('bun', [scriptPath], { stdio: 'inherit' });
 
-  invariant(result.status === 0, 'writing the corpus artifacts must exit cleanly');
+  invariant(
+    result.error === undefined && result.status === 0,
+    `writing the corpus artifacts must exit cleanly: ${result.error?.message ?? `exit code ${String(result.status)}`}`,
+  );
 }
