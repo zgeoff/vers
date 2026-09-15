@@ -63,7 +63,10 @@ The database factory therefore detects a resume, as a wall-clock gap between rea
 interval timer and before every acquire, and swaps in a fresh pool for new queries while destroying
 the old one, which rejects every query still pending on it. The gap threshold stays above any
 synchronous stretch of work that blocks the event loop, so a long replay verification never trips a
-reset that would destroy its own live queries.
+reset that would destroy its own live queries. A query whose reply never arrives is bounded by a
+client-side deadline, and an expired deadline drops the pool the same way a detected resume does;
+the caller's retry policy decides a resend
+([retry policy](../services/error-handling.md#retry-policy)).
 
 ## Agent access (MCP)
 

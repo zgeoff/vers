@@ -122,6 +122,8 @@ the verified head tracks how far the verifier has trusted.
   carrying the current head, and the client resends the tail. A resend deduplicates on the
   activity-and-position key, because checkpoint content is deterministic, and it deduplicates before
   elapsed-time accounting, so a replayed tail never inflates duration.
+- A batch carries at most a fixed number of checkpoints. The contract refuses a longer batch, and a
+  live flush of a longer queue sends the remainder on the flush that follows the acknowledgement.
 - Each activity has one writer. The head row stamps the session allowed to append, and a writer
   handover moves it to a new session. Writer ownership is per activity, never per account; the
   account's single verified session is a separate rule

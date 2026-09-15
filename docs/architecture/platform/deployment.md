@@ -122,9 +122,10 @@ fleet-wide by design: a combined state that fails its journeys ships for no app.
 A stale build leg builds on Fly's remote builder and pushes the image under a tag derived from the
 commit, so no image blob crosses from the GitHub runner and no ref travels between jobs. Re-running
 a leg overwrites its own tag. A stale cutover leg deploys that pushed ref, waits for the fleet to
-report the new commit, then runs the app's post-deploy probes from the manifest. An app with no
-Dockerfile cuts over to the image named in its `fly.toml`. For a manual rollout, the CLI's `deploy`
-command runs both phases in one invocation.
+report the new commit, then runs the app's post-deploy probes from the manifest: an HTTP status
+check, a JSON round-trip against an expected body, or a Lighthouse audit of the live page against
+the manifest's performance budget. An app with no Dockerfile cuts over to the image named in its
+`fly.toml`. For a manual rollout, the CLI's `deploy` command runs both phases in one invocation.
 
 An app whose `fly.toml` sets the blue-green strategy, which is every app the repo builds, rolls out
 that way: Fly boots a parallel fleet, gates it on `/health`, cuts traffic over, then retires the old

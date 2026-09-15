@@ -67,7 +67,11 @@ activity and any idle gap on top of it fast-forwards. A different device or brow
 different store. It knows only the last position the server confirmed, so it fast-forwards idle
 attempts at that node instead, and the device delivers none of the nodes the player walked offline.
 The loss is mechanical: while the original device is offline or closed, nothing can reach its
-outbox.
+outbox. The device asks the browser to persist its storage when a run starts, which stops the
+browser from evicting the outbox under storage pressure but never stops the player from clearing
+site data, so the outbox is safe only once the server has received it. A checkpoint the outbox
+refuses to store is not in the outbox, so the worker stops the run at the last checkpoint it kept
+and reports the failure to the tabs.
 
 An account holds one verified session, so verifying a session on a new device evicts every other
 session the account owns ([auth](../services/auth.md#session-lifecycle)). The evicted device's next
@@ -145,7 +149,10 @@ display.
 One writer worker per browser profile owns every activity transition; the tabs express intent and
 read the worker's outcome, so no tab drives the activity service itself. The worker is an explicit
 state machine that runs one flow at a time, so no two flows install over each other. A resync reads
-the server's confirmed state and decides what to fast-forward.
+the server's confirmed state and decides what to fast-forward. A start waits on the worker's first
+resync of its avatar since the worker booted, and the worker refuses the start while that resync
+fails or its rebuilt stream diverges from the server's; the next resync that completes lifts the
+refusal.
 
 Stopping does not queue behind the active flow: it halts the local simulation at once and needs no
 network. The worker then flushes the activity's earned checkpoints and sends an idempotent stop
