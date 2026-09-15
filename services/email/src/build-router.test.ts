@@ -270,6 +270,7 @@ test('it reports a fire-and-forget drain failure carrying the active trace id', 
         context: {
           actingSessionID: null,
           actingUserID: null,
+          issuer: 'app-web',
           logger,
           traceID: trace.traceID,
         },

@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { createContentVersion } from '@vers/content-registry';
 import { createMockContentDocument } from '@vers/contract-activity/test-utils';
 import { buildStateFromSeed } from '@vers/game-utils';
-import { createTestDB } from '@vers/service-test-utils/bun';
+import { createAnonymousViewer, createTestDB } from '@vers/service-test-utils/bun';
 import { updateEnv } from '@vers/test-utils/bun';
 import { createReplayService } from './create-replay-service';
 import { createHonestActivityFixture } from './test-utils/create-honest-activity-fixture';
@@ -59,4 +59,39 @@ test('it drains a claimable chain through the same deps the wake procedure close
   const drained = await service.drain('boot');
 
   expect(drained).toBe(1);
+});
+
+test('it accepts a call from service-activity', async () => {
+  await using ctx = await createTestDB({ isolation: 'schema' });
+
+  const service = await createReplayService({ db: ctx.db });
+
+  const viewer = await createAnonymousViewer({
+    audience: 'service-replay',
+    issuer: 'service-activity',
+  });
+
+  const response = await service.app.handle(
+    new Request('http://test.local/rpc/wake', {
+      body: JSON.stringify({ json: {} }),
+      headers: { authorization: `Bearer ${viewer.token}`, 'content-type': 'application/json' },
+      method: 'POST',
+    }),
+  );
+
+  expect(response.status).toBe(200);
+});
+
+test('it rejects a call from app-web with 403', async () => {
+  const service = await createReplayService();
+  const viewer = await createAnonymousViewer({ audience: 'service-replay', issuer: 'app-web' });
+
+  const response = await service.app.handle(
+    new Request('http://test.local/rpc/wake', {
+      headers: { authorization: `Bearer ${viewer.token}` },
+      method: 'POST',
+    }),
+  );
+
+  expect(response.status).toBe(403);
 });
