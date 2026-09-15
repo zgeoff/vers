@@ -64,6 +64,8 @@ async function stopGracefully(): Promise<void> {
     await service.app.stop();
   } finally {
     try {
+      service.stopCache();
+
       await service.stopTelemetry();
     } finally {
       await service.stopDB();

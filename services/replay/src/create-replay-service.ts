@@ -10,6 +10,7 @@ import invariant from 'tiny-invariant';
 import { buildReplayRouter } from './build-router';
 import { envShape } from './env-shape';
 import type { WakeSource } from './metrics/record-wake';
+import { createReplayCache } from './replay/create-replay-cache';
 import { drainReplayQueue } from './worker/drain-replay-queue';
 import type { ReplayWorkerDeps } from './worker/types';
 
@@ -28,6 +29,8 @@ export interface ReplayService extends Service<typeof envShape> {
   readonly drain: (source: WakeSource) => Promise<number>;
 
   readonly privateKey: CryptoKey;
+
+  readonly stopCache: () => void;
 
   readonly stopDB: () => Promise<void>;
 }
@@ -52,6 +55,9 @@ export async function createReplayService(
       const privateKey = await parseServicePrivateKey(runtime.env.SERVICE_AUTH_PRIVATE_KEY);
 
       resolvedDeps = {
+        cache: createReplayCache(undefined, (error) => {
+          runtime.logger.error({ err: error }, 'replay cache driver stop failed');
+        }),
         db,
         keysServiceURL: runtime.env.KEYS_SERVICE_URL,
         loadContentDocument: makeContentDocumentLoader(db),
@@ -75,6 +81,9 @@ export async function createReplayService(
     db: deps.db,
     drain: (source) => drainReplayQueue(deps, source),
     privateKey: deps.privateKey,
+    stopCache: () => {
+      deps.cache.stopAll();
+    },
     stopDB: async () => {
       if (ownsDB) {
         await deps.db.destroy();

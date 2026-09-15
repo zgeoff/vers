@@ -5,6 +5,7 @@ import type { CryptoKey } from 'jose';
 import type { Kysely } from 'kysely';
 import type pino from 'pino';
 import type { BackoffReason } from '../metrics/record-backoff';
+import type { ReplayCache } from '../replay/create-replay-cache';
 
 export type PendingCacheEffect =
   | { readonly kind: 'evict' }
@@ -32,6 +33,8 @@ export type ReplayIterationOutcome =
   | { readonly kind: 'unconfirmedDivergence' };
 
 export interface ReplayWorkerDeps {
+  readonly cache: ReplayCache;
+
   readonly db: Kysely<DB>;
 
   readonly iterationDeadlineMs?: number;
