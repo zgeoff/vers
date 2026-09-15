@@ -1,11 +1,17 @@
+import { stat } from 'node:fs/promises';
 import { z } from 'zod';
 import { collectLoadedSkills } from '../hooks/collect-loaded-skills';
+import type { SubagentTranscript } from '../hooks/pick-skill-transcripts';
+import { pickSkillTranscripts } from '../hooks/pick-skill-transcripts';
 import { planSkillGate } from '../hooks/plan-skill-gate';
 
 // A PreToolUse hook: refuses an Edit, Write, or MultiEdit under a gated path until the session has
 // loaded the path's skills, and stays silent otherwise. Reads the hook payload on stdin.
 
+const FALLBACK_LIMIT = 20;
+
 const inputSchema = z.object({
+  agent_id: z.string().optional(),
   cwd: z.string(),
   tool_input: z.object({ file_path: z.string() }),
   transcript_path: z.string(),
@@ -21,12 +27,20 @@ if (!parsed.success) {
 
 const input = parsed.data;
 const filePath = input.tool_input.file_path;
-const transcriptFile = Bun.file(input.transcript_path);
+const subagentsDir = `${input.transcript_path.replace(/\.jsonl$/, '')}/subagents`;
 
-const transcriptExists = await transcriptFile.exists();
+const subagents = await collectSubagentTranscripts(subagentsDir);
 
-const transcript = transcriptExists ? await transcriptFile.text() : '';
-const verdict = planSkillGate(input.cwd, filePath, collectLoadedSkills(transcript));
+const picked = pickSkillTranscripts(
+  input.transcript_path,
+  input.agent_id,
+  subagents,
+  FALLBACK_LIMIT,
+);
+
+const loadedSkills = await readLoadedSkills(picked.primary, picked.fallback);
+
+const verdict = planSkillGate(input.cwd, filePath, loadedSkills);
 
 if (verdict.kind === 'deny') {
   const skills = verdict.missing.map((skill) => `\`${skill}\``).join(' and ');
@@ -40,4 +54,65 @@ if (verdict.kind === 'deny') {
       },
     }),
   );
+}
+
+async function collectSubagentTranscripts(dir: string): Promise<ReadonlyArray<SubagentTranscript>> {
+  const entries: Array<SubagentTranscript> = [];
+
+  try {
+    for await (const hit of new Bun.Glob('**/agent-*.jsonl').scan({
+      absolute: true,
+      cwd: dir,
+      onlyFiles: true,
+    })) {
+      try {
+        const info = await stat(hit);
+
+        entries.push({ modifiedAt: info.mtimeMs, path: hit });
+      } catch {
+        // A transcript can vanish between the listing and the stat call; skip it and keep scanning.
+      }
+    }
+  } catch {
+    // The subagents directory doesn't exist yet for a session with no subagent calls.
+    return entries;
+  }
+
+  return entries;
+}
+
+async function readLoadedSkills(
+  primary: ReadonlyArray<string>,
+  fallback: ReadonlyArray<string>,
+): Promise<ReadonlySet<string>> {
+  const fromPrimary = await collectSkillsFromTranscripts(primary);
+
+  return fromPrimary.size > 0 ? fromPrimary : collectSkillsFromTranscripts(fallback);
+}
+
+async function collectSkillsFromTranscripts(paths: ReadonlyArray<string>): Promise<Set<string>> {
+  const skills = new Set<string>();
+
+  for (const transcriptPath of paths) {
+    const file = Bun.file(transcriptPath);
+
+    if (!(await file.exists())) {
+      continue;
+    }
+
+    let text: string;
+
+    try {
+      text = await file.text();
+    } catch {
+      // A transcript can vanish between the exists check and the read; skip it.
+      continue;
+    }
+
+    for (const skill of collectLoadedSkills(text)) {
+      skills.add(skill);
+    }
+  }
+
+  return skills;
 }
