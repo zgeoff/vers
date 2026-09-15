@@ -62,7 +62,9 @@ test('it drains a claimable chain through the same deps the wake procedure close
 });
 
 test('it accepts a call from service-activity', async () => {
-  const service = await createReplayService();
+  await using ctx = await createTestDB({ isolation: 'schema' });
+
+  const service = await createReplayService({ db: ctx.db });
 
   const viewer = await createAnonymousViewer({
     audience: 'service-replay',
