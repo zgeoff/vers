@@ -289,7 +289,7 @@ test('it reports a fire-and-forget drain failure carrying the active trace id', 
   expect(recorded[0]?.tags).toMatchObject({ traceID: trace.traceID });
 });
 
-test('it re-drains a deadline job on the retry schedule until a drain completes it', async () => {
+test('it re-drains a deadline job at a fixed interval until a drain completes it', async () => {
   const drainResults: Array<DrainResult> = [
     { completed: 0, failed: 1 },
     { completed: 0, failed: 0 },
@@ -297,6 +297,7 @@ test('it re-drains a deadline job on the retry schedule until a drain completes 
   ];
 
   let drainCalls = 0;
+  let elapsedMs = 0;
   const logger = createLogger({ level: 'fatal', name: 'test-email-router' });
 
   const stubQueue: JobQueue<EmailJobDefs> = {
@@ -310,7 +311,17 @@ test('it re-drains a deadline job on the retry schedule until a drain completes 
     stop: () => Promise.resolve(),
   };
 
-  const router = buildEmailRouter({ logger, queue: stubQueue });
+  const router = buildEmailRouter({
+    logger,
+    now: () => elapsedMs,
+    queue: stubQueue,
+    wait: (ms) => {
+      elapsedMs += ms;
+
+      return Promise.resolve();
+    },
+  });
+
   const trace = createTraceContext();
 
   await withTraceContext(trace, () =>
@@ -318,7 +329,7 @@ test('it re-drains a deadline job on the retry schedule until a drain completes 
       router.sendWelcome,
       {
         to: 'player@example.com',
-        usefulUntil: new Date(Date.now() + 60_000),
+        usefulUntil: new Date(60_000),
         verificationCode: '123456',
         verificationURL: 'https://versidle.com/verify',
       },
@@ -333,10 +344,7 @@ test('it re-drains a deadline job on the retry schedule until a drain completes 
     ),
   );
 
-  await waitFor(
-    () => {
-      expect(drainCalls).toBe(3);
-    },
-    { timeoutMs: 20_000 },
-  );
-}, 25_000);
+  await waitFor(() => {
+    expect(drainCalls).toBe(3);
+  });
+});
