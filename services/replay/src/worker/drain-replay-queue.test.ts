@@ -20,11 +20,12 @@ async function setupTest() {
   await createContentVersion(db.db, createMockContentDocument({ contentVersion: '2' }));
 
   const keyPair = await getTestServiceKeyPair();
+  const cache = createReplayCache();
 
   return {
     db: db.db,
     deps: {
-      cache: createReplayCache(),
+      cache,
       db: db.db,
       keysServiceURL: resolveServiceURL('keys'),
       loadContentDocument: makeContentDocumentLoader(db.db),
@@ -32,7 +33,11 @@ async function setupTest() {
       privateKey: keyPair.privateKey,
       simVersion: 'test-engine-hash',
     },
-    [Symbol.asyncDispose]: db[Symbol.asyncDispose],
+    [Symbol.asyncDispose]: async () => {
+      cache.stopAll();
+
+      await db[Symbol.asyncDispose]();
+    },
   };
 }
 

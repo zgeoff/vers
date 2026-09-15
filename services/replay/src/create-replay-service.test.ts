@@ -129,4 +129,12 @@ test('it drains a claimable chain after stopCache clears a driver the previous d
   const secondDrained = await service.drain('boot');
 
   expect(secondDrained).toBe(1);
+
+  const updated = await ctx.db
+    .selectFrom('activities')
+    .select('verifiedHead')
+    .where('id', '=', fixture.activity.id)
+    .executeTakeFirstOrThrow();
+
+  expect(updated.verifiedHead).toBe(totalCheckpoints);
 });

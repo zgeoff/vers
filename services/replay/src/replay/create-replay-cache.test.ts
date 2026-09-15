@@ -40,8 +40,11 @@ test('it drops an evicted activity and stops its driver', () => {
 
 test('it evicts the oldest activity once a default cache takes one more than its cap', () => {
   const cache = createReplayCache();
+  const firstDriver = buildFakeDriver();
 
-  for (let index = 0; index < REPLAY_CACHE_CAP; index += 1) {
+  cache.set('act_0', { driver: firstDriver, emittedCount: 0, lastHash: 'hash-0' });
+
+  for (let index = 1; index < REPLAY_CACHE_CAP; index += 1) {
     cache.set(`act_${index}`, {
       driver: buildFakeDriver(),
       emittedCount: index,
@@ -49,9 +52,11 @@ test('it evicts the oldest activity once a default cache takes one more than its
     });
   }
 
+  expect(firstDriver.stop).not.toHaveBeenCalled();
+
   cache.set('act_overflow', { driver: buildFakeDriver(), emittedCount: 0, lastHash: 'hash-over' });
 
-  expect(cache.get('act_0')).toBeUndefined();
+  expect(firstDriver.stop).toHaveBeenCalledOnce();
   expect(cache.get('act_overflow')).toBeDefined();
 });
 
