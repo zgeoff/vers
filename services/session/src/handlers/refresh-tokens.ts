@@ -137,6 +137,7 @@ async function buildGraceReply(
   const accessToken = await createJWT({
     apiIdentifier: deps.apiIdentifier,
     expiresAt: new Date(Date.now() + ACCESS_TOKEN_DURATION),
+    keyID: deps.keyID,
     signingKey: deps.signingKey,
     userID: row.userId,
   });
