@@ -96,7 +96,7 @@ test('it accepts a call from app-web', async () => {
   await createContentVersion(db.db, createMockContentDocument({ contentVersion: '2' }));
 
   const service = await createActivityService({ db: db.db });
-  const viewer = await createViewer({ audience: 'service-activity', db: db.db });
+  const viewer = await createViewer({ audience: 'service-activity', db: db.db, issuer: 'app-web' });
   const avatar = await createAvatarRow(db.db, { userId: viewer.user.id });
 
   const client = buildRPCTestClient<ActivityContract>(service.app, { token: viewer.token });

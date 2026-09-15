@@ -91,7 +91,7 @@ test('it mints access tokens that verify against the published key set by key id
 test('it accepts a call from app-web', async () => {
   const ctx = await setupTest();
   const created = await createTestUser(ctx.db);
-  const viewer = await createAnonymousViewer({ audience: 'service-session' });
+  const viewer = await createAnonymousViewer({ audience: 'service-session', issuer: 'app-web' });
 
   const client = buildRPCTestClient<SessionContract>(ctx.app, { token: viewer.token });
 
