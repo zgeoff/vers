@@ -1,5 +1,7 @@
 import type { DrainResult } from '@vers/jobs';
 
+const RETRY_POLL_INTERVAL_MS = 5000;
+
 export interface RunRetryDrainsOpts {
   readonly drain: () => Promise<DrainResult>;
   readonly now: () => number;
@@ -8,8 +10,8 @@ export interface RunRetryDrainsOpts {
 }
 
 export async function runRetryDrains(opts: Readonly<RunRetryDrainsOpts>): Promise<void> {
-  for (const delayMs of buildRetryDelaysMs()) {
-    await opts.wait(delayMs);
+  while (opts.now() < opts.usefulUntil.getTime()) {
+    await opts.wait(RETRY_POLL_INTERVAL_MS);
 
     if (opts.now() >= opts.usefulUntil.getTime()) {
       return;
@@ -17,20 +19,8 @@ export async function runRetryDrains(opts: Readonly<RunRetryDrainsOpts>): Promis
 
     const drained = await opts.drain();
 
-    if (drained.failed === 0) {
+    if (drained.completed > 0) {
       return;
     }
   }
-}
-
-const DEADLINE_RETRY_DELAY_SECONDS = 15;
-const DEADLINE_RETRY_ATTEMPTS = 4;
-const RETRY_MARGIN_SECONDS = 1;
-
-function buildRetryDelaysMs(): ReadonlyArray<number> {
-  return Array.from({ length: DEADLINE_RETRY_ATTEMPTS }, (_value, attempt) => {
-    const backoffSeconds = DEADLINE_RETRY_DELAY_SECONDS * 2 ** attempt;
-
-    return (backoffSeconds + RETRY_MARGIN_SECONDS) * 1000;
-  });
 }
