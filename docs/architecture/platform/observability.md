@@ -12,7 +12,7 @@ flowchart LR
   subgraph service["a domain service (service runtime)"]
     T1[Elysia OpenTelemetry plugin] -->|traces| O
     L1[pino-to-OTLP stream] -->|logs| O
-    M1[process-global meter provider] -->|metrics| O
+    M1["process-global meter provider<br>behind a periodic exporter"] -->|metrics| O
   end
   subgraph web["the web app"]
     W[its own exporters] -->|traces, logs, metrics| O

@@ -16,7 +16,7 @@ stateDiagram-v2
   unverified --> unverified: 2FA on the account, the code prompt holds the pending session id
   unverified --> verified: sign-in verifies the session, which mints the token pair and evicts the user's other sessions
   unverified --> [*]: expiry, or eviction by a newer verify
-  verified --> verified: a refresh re-mints the access token, and rotates the refresh token once the session has aged
+  verified --> verified: a refresh re-mints the access token, and rotates the refresh token once the session outlives its short lifetime
   verified --> [*]: logout, eviction by a newer verify, or revocation
 ```
 
@@ -60,7 +60,7 @@ flowchart TD
   A -->|no| R[the mutation runs]
   A -->|yes| T{"valid, unused transaction token<br>on the resubmission?"}
   T -->|yes| R
-  T -->|no| P[the edge creates a pending transaction]
+  T -->|no| P[the edge asks the session service for a pending transaction]
   P --> Q[challenge for a code]
   Q --> C{"code valid?"}
   C -->|yes| K["consume the pending transaction,<br>mint a transaction token"] -->|resubmission| M
@@ -69,7 +69,7 @@ flowchart TD
   F -->|at the limit| X[abandoned]
 ```
 
-A sensitive mutation demands a fresh code check before it runs.
+A sensitive mutation runs behind a fresh code check when its target has live 2FA verification.
 
 One handler verifies the challenge for every gated mutation, and a valid code consumes the pending
 transaction atomically.

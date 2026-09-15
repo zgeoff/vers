@@ -74,6 +74,7 @@ flowchart LR
   B --> G["full-stack gate<br>every image in one compose stack"]
   M --> D
   P --> D
+  X --> D
   G --> D["deploy<br>one leg per stale app"]
   D -.->|"even when every leg skipped"| V[deploy verify]
 ```
