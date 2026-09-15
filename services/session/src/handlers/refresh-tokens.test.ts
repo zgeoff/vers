@@ -141,7 +141,6 @@ test('it revokes the session when the previous token arrives after the window', 
   const viewer = await createAnonymousViewer({ audience: 'service-session' });
 
   const client = buildRPCTestClient<SessionContract>(ctx.app, { token: viewer.token });
-
   const request = client.refreshTokens({ id: session.id, refreshToken: 'old-token' });
 
   await request.catch(() => {});
@@ -172,7 +171,6 @@ test('it revokes the session when the previous token arrives and no window was e
   const viewer = await createAnonymousViewer({ audience: 'service-session' });
 
   const client = buildRPCTestClient<SessionContract>(ctx.app, { token: viewer.token });
-
   const request = client.refreshTokens({ id: session.id, refreshToken: 'old-token' });
 
   await request.catch(() => {});
