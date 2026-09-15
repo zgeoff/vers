@@ -3,6 +3,7 @@ import * as z from 'zod';
 export const SendChangeEmailVerificationInputSchema = z.object({
   newEmail: z.email(),
   to: z.email(),
+  usefulUntil: z.coerce.date(),
   verificationCode: z.string(),
   verificationURL: z.url(),
 });
