@@ -134,88 +134,11 @@ Development:
 
 ## Projects
 
-Applications (`apps/`):
-
-- `apps/bugsink` - self-hosted error tracker, ingesting over the Sentry protocol
-- `apps/umami` - self-hosted web analytics, tracked through the web app's same-origin proxy
-- `apps/web` - TanStack Start web app; the trust edge and only public deployment
-- `apps/web-e2e` - e2e test suite for the web app
-
-Services (`services/`):
-
-- `services/activity` - activities domain service
-- `services/avatar` - avatar domain service
-- `services/email` - transactional email delivery service, queued on pg-boss
-- `services/keys` - avatar roll-key custody and derivation service
-- `services/replay` - replay domain service: replays simulation segments to verify submitted
-  checkpoints
-- `services/session` - session domain service
-- `services/user` - user domain service
-- `services/verification` - OTP/TOTP verification domain service
-
-Contracts (`contracts/`):
-
-- `contracts/activity` - oRPC API declaration for the activities service
-- `contracts/avatar` - oRPC API declaration for the avatar service
-- `contracts/base` - shared contract error taxonomy and base builders
-- `contracts/email` - oRPC API declaration for the email service
-- `contracts/keys` - oRPC API declaration for the keys service
-- `contracts/replay` - oRPC API declaration for the replay service
-- `contracts/session` - oRPC API declaration for the session service
-- `contracts/user` - oRPC API declaration for the user service
-- `contracts/verification` - oRPC API declaration for the verification service
-
-Libraries (`libs/`, grouped by domain):
-
-- `libs/core/email` - Resend wrapper and react-email template factories
-- `libs/core/flags` - OpenFeature-backed feature flag registry and env provider
-- `libs/core/trace` - isomorphic W3C trace-context primitives (mint, serialize, parse)
-- `libs/core/utils` - low-level platform-agnostic utils
-- `libs/data/active-avatar` - the account's active-avatar row: find it, find the avatar behind a
-  live activity, and upsert the selection
-- `libs/data/db` - kysely connection helper, migrations, and generated database types
-- `libs/data/content-registry` - published content-document registry: reads a pinned version's
-  document, reads and advances the current pointer, and memoizes loaded documents per process
-- `libs/data/release-registry` - deploy release registry: records a row per rollout that passed its
-  post-deploy probes and finds each app's newest release as its rollback target
-- `libs/data/sim-registry` - sim-engine version registry: registers built engine images, resolves
-  versions by engine hash, and expires rows past their retention deadline
-- `libs/design/design-system` - ui component library (Ark UI primitives + Panda recipes)
-- `libs/design/panda-preset` - design tokens & panda css config
-- `libs/design/styled-system` - generated code for panda css design system
-- `libs/game/worldmap-client` - client code (react, three, zustand) for the world map
-- `libs/game/worldmap-core` - platform-agnostic world-graph generation
-- `libs/game/game-rendering` - client rendering shell: scene/presentation state for the persistent
-  three.js canvas
-- `libs/game/game-utils` - shared game logic (encounter derivation, rewards)
-- `libs/game/roll-crypto` - avatar roll-key derivation and the rolled-reward digest PRF
-- `libs/game/item-gen` - entropy-agnostic item interpreter: roll streams, interpretation of
-  caller-supplied loot tables, affix constraints
-- `libs/game/content-version` - the newest content version this build's engine code derives and
-  replays, shared by the deploy CLI and the engine packages
-- `libs/game/idle-client` - client code (react, zustand, SharedWorker) for the idle simulation
-- `libs/game/idle-core` - deterministic seeded simulation engine
-- `libs/game/worldmap-content` - sealed worldmap content derivation and the scope-secret read it
-  dispatches to the keys service over s2s
-- `libs/service/jobs` - typed pg-boss job queue wrapper: send, drain, and retry/dead-letter policy
-- `libs/service/product-analytics` - product-event registry types and the Tinybird Events API sender
-- `libs/service/service-auth` - s2s token minting, parsing, and audience derivation
-- `libs/service/service-runtime` - the service runtime: createService, s2s auth, health, logging,
-  OTel/Sentry wiring
-- `libs/service/service-utils` - shared Elysia middleware (auth, logging, remote address) and
-  service env schemas
-- `libs/testing/client-test-utils` - react & web worker testing utilities
-- `libs/testing/mock-services` - MSW mock backends for the service contracts: @msw/data-backed
-  routers, per-test override proxies, and the demo seed
-- `libs/testing/qa-account` - the QA account seed and reset tools (`bun run qa:seed`,
-  `bun run qa:reset`), a `server-only` package because it runs the sealed encounter derivation
-- `libs/testing/service-test-utils` - postgres test container & mock data utils
-- `libs/testing/test-utils` - generic test helpers: env override/cleanup, MSW lifecycle wiring, JWT
-  and in-process RPC-client fixtures, and oRPC conformance-case collection
-
-Infrastructure and tooling:
-
-- `infra` - pulumi infrastructure definitions and the Tinybird workspace datafiles
-  (`infra/tinybird`)
-- `scripts` - operational tooling: the deploy, stack, and postgres CLIs invoked through
-  root-manifest scripts
+The workspace globs and the naming rule in AGENTS.md derive the project list: `apps/*` holds the web
+app, its e2e suite, and the two self-hosted tools; `services/*` holds one domain service per bounded
+context; `contracts/*` holds one oRPC contract package per service plus the shared base;
+`libs/<domain>/*` groups the libraries as core, data, design, game, service, and testing; and
+`infra` and `scripts` hold the Pulumi program and the operational CLIs. Three members differ from
+their sets. `libs/testing/qa-account` is `server-only`, because it runs the sealed encounter
+derivation. `libs/design/styled-system` is generated output. `libs/game/content-version` is shared
+by the deploy CLI and the engine packages, so a content version bump is one edit.

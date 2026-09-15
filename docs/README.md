@@ -16,8 +16,7 @@
 
 How the platform is built — system design, data flows, and operational wiring.
 
-- [Overview](./architecture/overview.md) — system architecture, request path, and the full project
-  map
+- [Overview](./architecture/overview.md) — system architecture, request path, and the project layout
 - [Analytics](./architecture/analytics.md) — the web/product analytics split, funnel events, and the
   privacy stance
 
@@ -27,9 +26,9 @@ How the platform is built — system design, data flows, and operational wiring.
   service-to-service tokens
 - [Service contracts](./architecture/services/service-contracts.md) — contract-first oRPC mechanics
   and change discipline
-- [Error handling](./architecture/services/error-handling.md) — error taxonomy, bespoke-code
-  registry, and the reporting split
-- [Rate limits](./architecture/services/rate-limits.md) — app-web's request budgets by tier and the
+- [Error handling](./architecture/services/error-handling.md) — error taxonomy, status rules, and
+  the reporting split
+- [Rate limits](./architecture/services/rate-limits.md) — app-web's request tiers and the
   session-keyed rpc budget
 - [Feature flags](./architecture/services/feature-flags.md) — OpenFeature registry, resolution, and
   route gating
