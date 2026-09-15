@@ -10,7 +10,9 @@ import { runRetryDrains } from './run-retry-drains';
 
 interface BuildEmailRouterDeps {
   readonly logger: ServiceContext['logger'];
+  readonly now?: () => number;
   readonly queue: JobQueue<EmailJobDefs>;
+  readonly wait?: (ms: number) => Promise<void>;
 }
 
 export function buildEmailRouter(deps: BuildEmailRouterDeps) {
@@ -77,9 +79,9 @@ function buildDeadlineSendHandler<TName extends DeadlineJobName>(
         if (drained.failed > 0) {
           await runRetryDrains({
             drain: () => deps.queue.drain(name),
-            now: Date.now,
+            now: deps.now ?? Date.now,
             usefulUntil: opts.input.usefulUntil,
-            wait: Bun.sleep,
+            wait: deps.wait ?? Bun.sleep,
           });
         }
       } catch (error) {
