@@ -78,7 +78,8 @@ knife.
   ("connection acquisition is bounded", "the bounds escalate to cover a cold start") and nothing
   more, because the number changes on the next tuning PR with no signal to the doc. A number stays
   only when the code does not decide it: a protocol-fixed period, a design cap a design note owns, a
-  count that is the point itself ("three classes").
+  count that is the point itself ("three classes"), or a measured fact stated with its source (a
+  bundle size, an observed latency).
   - Bad: "`idle_timeout` (240s) closes a pooled connection before Neon's 300s suspend closes it."
   - Good: "An idle pooled connection closes before Neon's suspend closes it from the server side."
 - **An identifier is never the referent.** A function, option, column, env-var, or package name, or
