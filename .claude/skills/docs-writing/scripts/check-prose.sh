@@ -29,6 +29,12 @@ report 'Process residue (date stamps, investigation framing, memory citations, Â
 report 'Banned words (judge each match â€” the AGENTS.md registry and markdown-fence senses are legal):' \
   "$(git grep -nPi '\bsurfaces?\b|load-bearing|\bseams?\b|\bfenc(e|es|ed|ing)\b|(?-i:\bCAS\b)' -- "$@")"
 
+# Architecture docs state rules, never the values the code decides (the skill's "code owns its
+# constants" rule). A unit-bearing number under docs/architecture is a hit; judge a protocol-fixed
+# period or a design cap and move it to its design note.
+report 'Numeric constants with units under docs/architecture (the code owns its constants):' \
+  "$(git grep -nP '\b[0-9]+(\.[0-9]+)?(ms|s|min|h|d|KB|MB|GB)\b|\b[0-9]+-(second|minute|hour|day)\b' -- "$@" 2>/dev/null | grep '^docs/architecture/')"
+
 report 'Untagged code fences:' \
   "$(git ls-files -- "$@" | grep '\.md$' | xargs -r awk \
     'FNR==1{n=0} /^```/{n++; if (n%2==1 && $0=="```") print FILENAME": "FNR}')"

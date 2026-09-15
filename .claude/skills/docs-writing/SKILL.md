@@ -73,6 +73,25 @@ knife.
   - a derivable set keying a table whose other columns carry facts the code does not hold — the
     roster is then the key, not the payload
 
+- **The code owns its constants.** A numeric config value — a timeout, a threshold, a retry bound, a
+  cadence, a cap, a byte length — never appears in a doc. The doc states the rule the value serves
+  ("connection acquisition is bounded", "the bounds escalate to cover a cold start") and nothing
+  more, because the number changes on the next tuning PR with no signal to the doc. A number stays
+  only when the code does not decide it: a protocol-fixed period, a design cap a design note owns, a
+  count that is the point itself ("three classes").
+  - Bad: "`idle_timeout` (240s) closes a pooled connection before Neon's 300s suspend closes it."
+  - Good: "An idle pooled connection closes before Neon's suspend closes it from the server side."
+- **An identifier is never the referent.** A function, option, column, env-var, or package name, or
+  a file path, is a reference that a rename strands with no signal, so prose names the role instead:
+  "the admission handler", "the head row's appended cursor", "the database factory". Three kinds
+  stay: an error code or wire field a client narrows on, a domain noun the doc defines that is also
+  an identifier (the `Started` checkpoint, `userSeed`), and a command or path the reader types.
+  - Bad: "`runBoundedAttempts` (`apps/web/src/lib/rpc/`) retries a GET up to three times."
+  - Good: "The bounded-attempt policy resends a GET when an attempt hits its bound."
+- **A fix is not a point.** A PR that changes behavior rereads the owning doc's points and rewrites
+  the one whose invariant or journey the change altered. It adds no point for a failure sub-case, a
+  tuned value, a renamed function, a new metric, or an operator procedure; those are the code's, the
+  registry's, or a runbook's. A doc that gains a paragraph per fix becomes a changelog.
 - **Architecture states what the code does; design notes hold intent.** A doc under
   `docs/architecture/` states only behavior the code implements. A mechanism the design calls for
   but the code does not implement lives in a note under `docs/game-design/`, written as design.
@@ -298,9 +317,10 @@ Before committing docs, run this sequence over the files you touched:
    bash .claude/skills/docs-writing/scripts/check-prose.sh <path>...
    ```
 
-   The script greps the given paths for process residue, greppable banned words, and untagged code
-   fences, and exits non-zero on any hit. It skips this skill's own directory, which documents the
-   forbidden patterns and contains them as examples.
+   The script greps the given paths for process residue, greppable banned words, numeric constants
+   with units under `docs/architecture/`, and untagged code fences, and exits non-zero on any hit.
+   It skips this skill's own directory, which documents the forbidden patterns and contains them as
+   examples.
 
 4. Visual audit: walk each changed section's links and confirm every link's text still matches its
    target heading.
