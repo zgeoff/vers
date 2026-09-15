@@ -3,10 +3,10 @@
 The web app's server answers a request over its rate limit with a 429 and a plain-text body before
 the request reaches a route. The limiter picks one tier per request from its path and method, counts
 requests per key in a fixed window, and rejects the request that takes the count past the tier's
-budget. A rejected request on the `rpc` tier carries a `Retry-After` header. The domain services
-hold no limiter of their own: every client request enters through the web app, so its limiter is the
-one budget a client spends. Outside production every budget is multiplied up, because the e2e suite
-and local development drive these routes far faster than a player does.
+budget. A rejected request carries a `Retry-After` header. The domain services hold no limiter of
+their own: every client request enters through the web app, so its limiter is the one budget a
+client spends. Outside production every budget is multiplied up, because the e2e suite and local
+development drive these routes far faster than a player does.
 
 ## Tiers
 
@@ -23,8 +23,8 @@ The `rpc` key is the signed-in session id read out of the sealed session cookie,
 behind one client IP spend separate budgets, and a re-sealed cookie for the same session keeps
 spending the same one. A request whose cookie is missing, forged, expired, or signed out is keyed by
 client IP instead, so a client cannot mint budgets by inventing cookie values. **Why:** a healthy
-session's writer flushes and page-load bursts spend well under the budget in any window, so a
-runaway client is stopped within seconds instead of after the far larger IP-keyed budget.
+session's writer flushes and page loads never approach the budget, so a runaway client is stopped
+within seconds instead of after the far larger IP-keyed budget.
 
 The limiter unseals the cookie with the library the framework seals it with, pinned to the same
 version, because it runs in the fetch middleware chain ahead of the framework handler, where no

@@ -64,10 +64,10 @@ The service runtime owns the whole failure path outside handler bodies:
   ([service contracts](./service-contracts.md)).
 - Central error interceptor. One error interceptor on the RPC handler classifies everything a
   procedure throws. A defined contract error or any 4xx is the caller's outcome: the interceptor
-  logs it at warn with its code, status, and `data`, so a refusal groups in Axiom by the fields its
-  `data` carries, and never reports it. For everything else, the interceptor logs at error level
-  with the trace id, captures it to the error backend, then oRPC encodes it as a bare
-  `INTERNAL_SERVER_ERROR`. Internals never reach the wire.
+  logs it at warn with its code and status, plus a defined error's `data`, so a refusal groups in
+  Axiom by the fields its `data` carries, and never reports it. For everything else, the interceptor
+  logs at error level with the trace id, captures it to the error backend, then oRPC encodes it as a
+  bare `INTERNAL_SERVER_ERROR`. Internals never reach the wire.
 - Wire protocol. Services speak the oRPC RPC protocol at `/rpc` only. Contracts keep their route
   metadata and stay OpenAPI-generatable, which the conformance suite asserts, but services serve no
   OpenAPI endpoint.
