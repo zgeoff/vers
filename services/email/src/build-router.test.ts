@@ -293,7 +293,6 @@ test('it reports a fire-and-forget drain failure carrying the active trace id', 
 test('it re-drains a deadline job every few seconds until its job reaches a terminal state', async () => {
   const jobStates: Array<JobState> = ['retry', 'retry', 'completed'];
   const recordedDelays: Array<number> = [];
-
   let drainCalls = 0;
   let elapsedMs = 0;
   const logger = createLogger({ level: 'fatal', name: 'test-email-router' });
@@ -316,6 +315,7 @@ test('it re-drains a deadline job every few seconds until its job reaches a term
     queue: stubQueue,
     wait: (ms) => {
       recordedDelays.push(ms);
+
       elapsedMs += ms;
 
       return Promise.resolve();
