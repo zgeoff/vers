@@ -30,7 +30,7 @@ pure function of the node, the seed, and the content, and the idle engine runs a
 
 ## The deterministic core
 
-Purity rests on three invariants:
+Purity rests on four invariants:
 
 - Every random draw comes from the seeded stream. No draw reads a system random source or a wall
   clock.
@@ -39,6 +39,14 @@ Purity rests on three invariants:
 - Combat events resolve into one total order. Events sort by event time. At an equal time the
   avatar's own events sort ahead of enemy events, and events that still tie sort by the sequence
   number the executor stamped when it scheduled them.
+- Every stat and every simulation time that arithmetic derives is an integer or a fixed-point
+  per-mille value. One exception: an avatar's and an enemy's attack speed, and the fraction of XP a
+  failed attempt loses, are configured as a decimal literal rather than a fixed-point value.
+
+Arithmetic on those quantities uses addition, subtraction, multiplication, division, square root,
+floor, round, minimum, maximum, and raising to an integer power. A non-integer exponent, an
+exponential, a logarithm, a trigonometric function, a fixed-decimal conversion, and a float parse
+are banned, and a lint rule scoped to the simulation packages fails the build on one.
 
 One writer worker per browser profile runs the simulation on a fixed timestep
 ([worker lifecycle](./offline-reconcile.md#worker-lifecycle)). Every other tab is a viewer that
