@@ -8,6 +8,7 @@ import { createInMemoryMetrics } from '@vers/test-utils/bun';
 import * as jose from 'jose';
 import type { HttpResponseResolver } from 'msw';
 import { HttpResponse, delay, http } from 'msw';
+import invariant from 'tiny-invariant';
 import { SimulatedClock } from 'xstate';
 import { server } from '../../mocks/node';
 import { withRequestContext } from '../../test-utils/with-request-context';
@@ -341,4 +342,53 @@ test('it forwards a call whose session reached its own expiry, leaving the offli
 
   expect(resolver).toHaveBeenCalledOnce();
   expect(outcome.value.headers.get('x-session-superseded')).toBeNull();
+});
+
+test('it sets no session-superseded header when the refresh resolves inside the window', async () => {
+  const resolver = mock<HttpResponseResolver>(() => HttpResponse.json({}));
+
+  server.use(http.post('http://localhost:3003/rpc/getCurrentUser', resolver));
+
+  const session = await db.sessionCollection.create({
+    previousRefreshToken: 'refresh-1',
+    refreshToken: 'refresh-2',
+    rotationGraceUntil: new Date(Date.now() + 60_000),
+  });
+
+  const staleAccessToken = await createTestAccessToken(session.userID, '-1s');
+
+  const outcome = await withRequestContext(
+    {
+      cookies: {
+        en_session: {
+          accessToken: staleAccessToken,
+          refreshToken: 'refresh-1',
+          sessionID: session.id,
+          userID: session.userID,
+        },
+      },
+    },
+    () =>
+      sendRPCRequest(
+        new Request('http://app.test/api/rpc/user/getCurrentUser', { method: 'POST' }),
+        'user',
+      ),
+  );
+
+  expect(resolver).toHaveBeenCalledOnce();
+  expect(outcome.value.headers.get('x-session-superseded')).toBeNull();
+  expect(outcome.cookies['en_session']).toContainEntry(['refreshToken', 'refresh-2']);
+
+  const refreshedSession = outcome.cookies['en_session'];
+
+  invariant(refreshedSession !== undefined, 'the refresh sets the en_session cookie');
+
+  const refreshedAccessToken = refreshedSession['accessToken'];
+
+  invariant(
+    typeof refreshedAccessToken === 'string',
+    'a resolved refresh sets a fresh access token',
+  );
+
+  expect(jose.decodeJwt(refreshedAccessToken).exp).toBeGreaterThan(Date.now() / 1000);
 });

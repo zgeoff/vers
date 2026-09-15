@@ -12,6 +12,7 @@ export function createMockSession(
     ipAddress: faker.internet.ip(),
     previousRefreshToken: null,
     refreshToken: null,
+    rotationGraceUntil: null,
     userId: createId(),
     verified: false,
     ...overrides,

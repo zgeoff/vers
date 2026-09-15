@@ -1,7 +1,9 @@
-import type { DB } from '@vers/db';
-import type { Kysely } from 'kysely';
+import { ROTATION_GRACE_DURATION } from '@vers/contract-session';
+import type { DB, Sessions } from '@vers/db';
+import type { Kysely, Selectable } from 'kysely';
 import { ACCESS_TOKEN_DURATION, SESSION_DURATION_SHORT } from '../consts';
 import { createJWT } from '../create-jwt';
+import { recordRotationGraceReply } from '../metrics/record-rotation-grace-reply';
 import type { EmptyErrorPayload, SessionSigningDeps } from '../types';
 
 interface RefreshTokensOpts {
@@ -35,6 +37,14 @@ export async function refreshTokens(
   }
 
   if (row.previousRefreshToken !== null && opts.input.refreshToken === row.previousRefreshToken) {
+    const graceReply = await buildGraceReply(deps, row);
+
+    if (graceReply !== null) {
+      recordRotationGraceReply();
+
+      return graceReply;
+    }
+
     await db.deleteFrom('sessions').where('id', '=', row.id).execute();
 
     throw opts.errors.REFRESH_TOKEN_REUSED({ data: {} });
@@ -79,16 +89,65 @@ export async function refreshTokens(
 
   const updateResult = await db
     .updateTable('sessions')
-    .set({ previousRefreshToken: row.refreshToken, refreshToken: rotatedTokens[0] })
+    .set({
+      previousRefreshToken: row.refreshToken,
+      refreshToken: rotatedTokens[0],
+      rotationGraceUntil: new Date(Date.now() + ROTATION_GRACE_DURATION),
+    })
     .where('id', '=', row.id)
     .where('refreshToken', '=', row.refreshToken)
     .executeTakeFirst();
 
   if (updateResult.numUpdatedRows === 0n) {
+    const current = await db
+      .selectFrom('sessions')
+      .selectAll()
+      .where('id', '=', row.id)
+      .executeTakeFirst();
+
+    if (current !== undefined && current.expiresAt < new Date()) {
+      await db.deleteFrom('sessions').where('id', '=', row.id).execute();
+
+      throw opts.errors.SESSION_EXPIRED({ data: {} });
+    }
+
+    if (current !== undefined && current.previousRefreshToken === opts.input.refreshToken) {
+      const graceReply = await buildGraceReply(deps, current);
+
+      if (graceReply !== null) {
+        recordRotationGraceReply();
+
+        return graceReply;
+      }
+    }
+
     await db.deleteFrom('sessions').where('id', '=', row.id).execute();
 
     throw opts.errors.REFRESH_TOKEN_REUSED({ data: {} });
   }
 
   return { accessToken: rotatedTokens[1], refreshToken: rotatedTokens[0] };
+}
+
+async function buildGraceReply(
+  deps: SessionSigningDeps,
+  row: Selectable<Sessions>,
+): Promise<null | { accessToken: string; refreshToken: string }> {
+  if (row.rotationGraceUntil === null || row.rotationGraceUntil <= new Date()) {
+    return null;
+  }
+
+  if (row.refreshToken === null) {
+    return null;
+  }
+
+  const accessToken = await createJWT({
+    apiIdentifier: deps.apiIdentifier,
+    expiresAt: new Date(Date.now() + ACCESS_TOKEN_DURATION),
+    keyID: deps.keyID,
+    signingKey: deps.signingKey,
+    userID: row.userId,
+  });
+
+  return { accessToken, refreshToken: row.refreshToken };
 }
