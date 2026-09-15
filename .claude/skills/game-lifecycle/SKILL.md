@@ -49,14 +49,17 @@ looks like a contradiction of the docs, and the docs are right.
 
 ## Reading order
 
-Read all three docs in full before you open a file. The code is split one export per file, so no
+Read all five docs in full before you open a file. The code is split one export per file, so no
 single file shows a flow.
 
-1. `docs/architecture/game/game-simulation.md` — the deterministic core, checkpoint streams, replay,
-   and what settlement applies.
-2. `docs/architecture/game/seed-chain.md` — positions, the two anchors, what moves each, and the
+1. `docs/architecture/game/glossary.md` — the terms the other four docs use without redefining.
+2. `docs/architecture/game/game-simulation.md` — the deterministic core, the inputs a start pins,
+   and checkpoint streams.
+3. `docs/architecture/game/replay-verification.md` — the verifier, what settlement applies, and the
+   sim-version registry.
+4. `docs/architecture/game/seed-chain.md` — positions, the two anchors, what moves each, and the
    order the verifier claims work in.
-3. `docs/architecture/game/offline-reconcile.md` — the connectivity states, fast-forward, settlement
+5. `docs/architecture/game/offline-reconcile.md` — the connectivity states, fast-forward, settlement
    in order, held activities, and the worker lifecycle.
 
 ## State machines

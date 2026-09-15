@@ -38,25 +38,18 @@ How the platform is built — system design, data flows, and operational wiring.
 
 ### Platform
 
-- [Database](./architecture/platform/database.md) — Neon postgres topology, connection rules, and
-  re-provisioning
+- [Database](./architecture/platform/database.md) — Neon postgres topology and connection rules
 - [Queues](./architecture/platform/queues.md) — pg-boss behind `@vers/jobs`, the drain delivery
   model, and retry/idempotency rules
 - [Deployment](./architecture/platform/deployment.md) — Fly rollouts, container builds, CI wiring,
   and secrets
 - [Observability](./architecture/platform/observability.md) — OpenTelemetry metrics and traces, the
   instrument registry, and what the monitors watch
-- [Chrome DevTools MCP](./architecture/platform/chrome-devtools-mcp.md) — agent access to a real
-  Windows Chrome from WSL, and the port bridge that makes it reachable
-- [Serena MCP](./architecture/platform/serena-mcp.md) — the shared read-only symbol-lookup daemon
-  every agent session connects to, and why it serves the primary checkout
-- [Manual QA](./architecture/platform/qa.md) — QA accounts, the inbox, the browser tools, the debug
-  hook, and the cold-path script for a manual pass against production
 
 ### Game
 
-- [Game simulation](./architecture/game/game-simulation.md) — the deterministic client sim,
-  checkpoint streams, and replay verification
+- [Game simulation](./architecture/game/game-simulation.md) — the deterministic client sim, activity
+  starts, and checkpoint streams
 - [Seed chain](./architecture/game/seed-chain.md) — the forward sequence of positions each activity
   draws from: where a chain starts, how its two anchors move, and what a rejection undoes
 - [Offline reconcile](./architecture/game/offline-reconcile.md) — how progress made without the
@@ -67,8 +60,22 @@ How the platform is built — system design, data flows, and operational wiring.
   turns a digest into item content: roll streams, versioned tables, craft constraints
 - [World map](./architecture/game/worldmap.md) — the per-avatar infinite graph: public hex-lattice
   geometry, server-sealed content, reveal projection, and biome terrain
+- [Replay verification](./architecture/game/replay-verification.md) — the queue-fed verifier,
+  settlement, and the sim-version registry that keeps old engine builds replayable
 - [Game rendering](./architecture/game/game-rendering.md) — the persistent three.js canvas and scene
   state
+- [Glossary](./architecture/game/glossary.md) — the terms the game docs share, each defined once
+
+## Runbooks
+
+Procedures an operator or an agent runs by hand.
+
+- [Provisioning](./runbooks/provisioning.md) — stand the Fly fleet, the Neon project, and agent
+  database access up from nothing, and tear them down
+- [Dev database](./runbooks/dev-database.md) — local migrations, Neon branches for experiments, and
+  the per-worktree clones MCP sessions use
+- [Manual QA](./runbooks/qa.md) — QA accounts, the inbox, the browser tools, the debug hook, and the
+  cold-path script for a manual pass against production
 
 ## Game design
 

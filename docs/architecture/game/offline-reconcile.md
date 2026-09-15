@@ -189,9 +189,9 @@ save being safe on another device; the local save says only that the outbox hold
 
 ## Settlement in order
 
-An activity's rewards are provisional until the server [replays](./game-simulation.md#replay) the
-activity and confirms it. Only then does the reward settle: the avatar's XP total rises, its items
-mint, and a cleared node's neighbours open. An activity built on an earlier one's reward is
+An activity's rewards are provisional until the server [replays](./replay-verification.md#replay)
+the activity and confirms it. Only then does the reward settle: the avatar's XP total rises, its
+items mint, and a cleared node's neighbours open. An activity built on an earlier one's reward is
 provisional in the same way, so the server settles them in the order the player played them.
 
 > The server settles an avatar's activities one at a time, in the order the player played them. It
@@ -276,9 +276,9 @@ and blunt on purpose: the server never settles progress on a foundation it canno
 
 A dependency failure is neither a hold nor a verdict. When the keys service or a replay provider
 does not answer, the verifier backs the activity off
-([game simulation](./game-simulation.md#replay)): the activity keeps its status, and the verifier
-skips it and its successors until its retry time passes. The backoff clears on its own once the
-dependency answers, so no operator acts and the player sees only a longer "Settling…" display.
+([replay verification](./replay-verification.md#replay)): the activity keeps its status, and the
+verifier skips it and its successors until its retry time passes. The backoff clears on its own once
+the dependency answers, so no operator acts and the player sees only a longer "Settling…" display.
 
 ## The essential journeys
 
@@ -339,18 +339,3 @@ A deferred activity start, or a checkpoint batch the server refuses with an erro
 not handle, is a server answer, so it does not mark the device offline: the worker resends it on an
 exponential backoff from 10s to 5min, and at once on a reconnect. The reconnect drain skips a start
 whose predecessor is deferred, because the server refuses it until the predecessor lands.
-
-## Glossary
-
-| Term             | Meaning                                                                                                                                    |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| activity         | See [game simulation](./game-simulation.md#glossary).                                                                                      |
-| node             | A place on the avatar's map, and the target one activity is an attempt at.                                                                 |
-| encounter        | The fight an activity runs at its node; completing it clears the node.                                                                     |
-| activity start   | See [game simulation](./game-simulation.md#glossary).                                                                                      |
-| predecessor      | The avatar's immediately-prior activity across every chain, stamped by the device at start; the verifier waits for it before adjudicating. |
-| settle           | The server's verified application of an activity's rewards; the moment provisional becomes real.                                           |
-| first clear      | The one-time grant recorded when a node's clear verifies; it opens the node's neighbours.                                                  |
-| cleared frontier | See [world map](./worldmap.md#glossary).                                                                                                   |
-| fast-forward     | Reconstruct a gap by deterministically re-simulating the elapsed time from the last known position.                                        |
-| seed chain       | See [seed chain](./seed-chain.md#glossary).                                                                                                |

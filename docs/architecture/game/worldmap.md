@@ -257,18 +257,3 @@ Three packages split along the same line the two planes do.
   disclosed content, all in the SharedWorker. Geometry renders optimistically while content slots
   read as fogged until the server discloses them. The three.js layer — meshes, edge lines, culling,
   tooltips — draws from the local generator.
-
-## Glossary
-
-| Term              | Meaning                                                                                                                                              |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| geometry plane    | Everything derived from `userSeed` and a coordinate: positions, edges, difficulty, biome. Public and client-computable.                              |
-| content plane     | Everything that also needs the scope secret: a node's sealed reward and encounter pool. Server-only.                                                 |
-| `userSeed`        | The avatar's own seed. Not a secret, shipped to the client, and an input to both planes.                                                             |
-| scope secret      | The per-avatar secret the server holds and never ships; without it `userSeed` derives no content.                                                    |
-| chunk coordinate  | The address of one square of hex cells, and the unit the generator works in.                                                                         |
-| cell coordinate   | The address of one hex cell, and a node's stable id.                                                                                                 |
-| sealed descriptor | The keyed digest a node's contents derive from, uncorrelated with anything on the geometry plane.                                                    |
-| cleared frontier  | The set of nodes whose first clear has verified; the boundary replay's reachability check reads.                                                     |
-| reveal            | The region a player has earned sight of: a union of hex discs over the avatar's verified first-clear nodes and the origin, derived and never stored. |
-| selection         | The set a player may travel to: the origin, cleared nodes, and every node an edge joins to a cleared node.                                           |

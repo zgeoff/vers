@@ -1,3 +1,11 @@
+---
+name: serena-mcp
+description:
+  Set up, check, or restart the shared serena MCP daemon that serves symbol lookups to every Claude
+  Code session on this machine. Use when the serena tools fail to connect, on a new machine, or when
+  a lookup answers from a stale tree.
+---
+
 # Serena MCP as a shared daemon
 
 The `serena` MCP server gives an agent language-server symbol tools over the monorepo: a file's
@@ -22,6 +30,9 @@ A systemd user unit runs the daemon, and user lingering starts that unit at boot
 login. The unit is the serena version's owner: `.mcp.json` carries no pin because it only names the
 URL. In the unit, `<checkout_path>` is the primary checkout's absolute path, the same value in both
 places, and `<uvx_path>` is what `command -v uvx` prints.
+
+The two commands below persist the daemon across logout and reboot on this machine. Run them only
+after the user agrees to that.
 
 1. Let the user manager start at boot and outlive the login session:
 

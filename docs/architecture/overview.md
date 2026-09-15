@@ -38,7 +38,7 @@ zero when idle ([deployment](./platform/deployment.md)). The replay service runs
 path: it carries no player traffic, and the activity service wakes it with a service call each time
 an append leaves unverified work. Older engine builds stay replayable through per-version replay
 provider apps that the deploy CLI provisions
-([sim-version registry](./platform/deployment.md#sim-version-registry)).
+([sim-version registry](./game/replay-verification.md#sim-version-registry)).
 
 ## Data
 
@@ -93,7 +93,7 @@ react-three-fiber ([game rendering](./game/game-rendering.md)).
   request from edge to service ([observability](./platform/observability.md)).
 - **Manual QA** — a QA pass drives production at `https://versidle.com` with an account under
   `qa.versidle.com`, a debug Chrome, and the `bun run qa:*` scripts that seed accounts, read
-  verification email, log worker traffic, and send the fleet cold ([manual QA](./platform/qa.md)).
+  verification email, log worker traffic, and send the fleet cold ([manual QA](../runbooks/qa.md)).
 
 ## Core technology
 
