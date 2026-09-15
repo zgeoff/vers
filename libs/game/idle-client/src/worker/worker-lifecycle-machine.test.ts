@@ -2081,3 +2081,12 @@ test("it drops a start refused because its predecessor is no longer active and m
     },
   ]);
 });
+
+test('it stops the tick loop when the submitter reports a journal failure', () => {
+  const context = createStubWorkerContext();
+
+  context.getLifecycle().send({ type: 'SUBMITTER_JOURNAL_FAILED' });
+
+  expect(context.isTickingStopped()).toBeTrue();
+  expect(context.getLifecycle().getSnapshot().context.phase).toBe('idle');
+});
