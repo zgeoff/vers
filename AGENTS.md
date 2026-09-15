@@ -366,10 +366,11 @@ the mechanics and provisioning.
   `// oxlint-disable-next-line <rule> -- baseline(#236)`, never turned off in config. The
   unused-directive check is the ratchet: fixing a baselined site strands its comment, and lint fails
   until the comment is deleted.
-- `zgeoff/no-jsdoc` and `zgeoff/max-consecutive-line-comments` are never baselined and never
-  disabled inline: a comment the rules reject is deleted or cut, and the fact it held moves to a
-  test name, to the commit body, or to the subsystem doc when it is an invariant (the `code-style`
-  skill owns the rule for what a comment holds).
+- `zgeoff/no-jsdoc`, `zgeoff/max-consecutive-line-comments`, and `vers/no-unportable-math` are never
+  baselined and never disabled inline. A comment either comment rule rejects is deleted or cut, and
+  the fact it held moves to a test name, to the commit body, or to the subsystem doc when it is an
+  invariant (the `code-style` skill owns the rule for what a comment holds). An operation
+  `vers/no-unportable-math` rejects is rewritten to use an allowed operation, never silenced.
 - `typescript/prefer-readonly-parameter-types` is never baselined: a function's own
   data/config/props/option types go `readonly` (React props `Readonly<Props>`), and framework
   handles with no readonly form (a `Kysely`/`Elysia`/`RPCHandler`/`Request` handle, a `Date`, …) are

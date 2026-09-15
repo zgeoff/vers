@@ -2,6 +2,11 @@
   "$schema": "./node_modules/oxlint/configuration_schema.json",
   "extends": ["./node_modules/@zgeoff/oxlint-config/oxlintrc.json"],
   "plugins": ["typescript", "unicorn", "oxc", "import", "promise", "react", "jsx-a11y"],
+  "jsPlugins": [
+    "./scripts/src/lint/plugin.js",
+    "@zgeoff/oxlint-config/plugin",
+    "@stylistic/eslint-plugin"
+  ],
   "env": {
     "browser": true,
     "node": true,
@@ -541,6 +546,19 @@
             ]
           }
         ]
+      }
+    },
+    {
+      // the numeric rule polices only the deterministic simulation core, whose arithmetic must
+      // replay to byte-identical results across engine builds
+      // (docs/architecture/game/game-simulation.md#the-deterministic-core)
+      "files": [
+        "**/libs/game/idle-core/src/**",
+        "**/libs/game/game-utils/src/**",
+        "**/libs/game/item-gen/src/**"
+      ],
+      "rules": {
+        "vers/no-unportable-math": "error"
       }
     }
   ],
