@@ -104,6 +104,7 @@ async function startQueues(boss: PgBoss, defs: JobDefs): Promise<void> {
     // pg-boss's createQueue upserts, so a second start against a migrated database is safe
     await boss.createQueue(name, {
       ...(deadLetterName === undefined ? {} : { deadLetter: deadLetterName }),
+      ...(def.expireInSeconds === undefined ? {} : { expireInSeconds: def.expireInSeconds }),
       ...(def.retryBackoff === undefined ? {} : { retryBackoff: def.retryBackoff }),
       ...(def.retryDelay === undefined ? {} : { retryDelay: def.retryDelay }),
       ...(def.retryLimit === undefined ? {} : { retryLimit: def.retryLimit }),
