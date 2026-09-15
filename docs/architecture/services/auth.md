@@ -26,14 +26,14 @@ statement, so at most one verified session per user survives. Each token is a JW
 the user and signed with the session service's private key. The edge verifies the access token's
 signature against the session service's published key set, selected by the token's key id, and
 requires the token's subject to match the cookie's user before it trusts any claim; a token no
-published key signed reads as signed out. Access tokens are short-lived, and a refresh call rotates
-the pair once the access token has aged. A reused refresh token, a superseded rotation, or an
-expired session revokes the session. A signing key rotates through an overlap window in which the
-service signs with the new key and publishes both, and a refresh token is matched against the
-session row rather than verified by signature, so a rotation never invalidates a live session. A
-service token can outlive its session by its own short lifetime, so the edge re-confirms the session
-still exists on every request while the access token is fresh, and an evicted device is signed out
-on its next request.
+published key signed, or whose subject is not the cookie's user, reads as signed out. Access tokens
+are short-lived, and a refresh call rotates the pair once the access token has aged. A reused
+refresh token, a superseded rotation, or an expired session revokes the session. A signing key
+rotates through an overlap window in which the service signs with the new key and publishes both,
+and a refresh token is matched against the session row rather than verified by signature, so a
+rotation never invalidates a live session. A service token can outlive its session by its own short
+lifetime, so the edge re-confirms the session still exists on every request while the access token
+is fresh, and an evicted device is signed out on its next request.
 
 The session cookie is httpOnly, same-site lax, secure in production, and sealed by an app secret.
 Reading it never throws, and an absent token is how the edge observes "signed out". A partial
