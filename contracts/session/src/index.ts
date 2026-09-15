@@ -1,5 +1,6 @@
 export type { PendingTransactionData } from './pending-transaction-data-schema';
 export { PendingTransactionDataSchema } from './pending-transaction-data-schema';
+export { ROTATION_GRACE_DURATION } from './rotation-grace-duration';
 export type { SecureAction } from './secure-action-schema';
 export { SecureActionSchema } from './secure-action-schema';
 export type { SessionContract } from './session-contract';

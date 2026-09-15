@@ -142,9 +142,11 @@ test('it revokes the session when the previous token arrives after the window', 
 
   const client = buildRPCTestClient<SessionContract>(ctx.app, { token: viewer.token });
 
-  expect(client.refreshTokens({ id: session.id, refreshToken: 'old-token' })).rejects.toMatchObject(
-    { code: 'REFRESH_TOKEN_REUSED' },
-  );
+  const request = client.refreshTokens({ id: session.id, refreshToken: 'old-token' });
+
+  await request.catch(() => {});
+
+  expect(request).rejects.toMatchObject({ code: 'REFRESH_TOKEN_REUSED' });
 
   const row = await ctx.db
     .selectFrom('sessions')
@@ -171,9 +173,11 @@ test('it revokes the session when the previous token arrives and no window was e
 
   const client = buildRPCTestClient<SessionContract>(ctx.app, { token: viewer.token });
 
-  expect(client.refreshTokens({ id: session.id, refreshToken: 'old-token' })).rejects.toMatchObject(
-    { code: 'REFRESH_TOKEN_REUSED' },
-  );
+  const request = client.refreshTokens({ id: session.id, refreshToken: 'old-token' });
+
+  await request.catch(() => {});
+
+  expect(request).rejects.toMatchObject({ code: 'REFRESH_TOKEN_REUSED' });
 
   const row = await ctx.db
     .selectFrom('sessions')

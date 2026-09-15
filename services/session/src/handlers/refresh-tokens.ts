@@ -1,6 +1,7 @@
+import { ROTATION_GRACE_DURATION } from '@vers/contract-session';
 import type { DB, Sessions } from '@vers/db';
 import type { Kysely, Selectable } from 'kysely';
-import { ACCESS_TOKEN_DURATION, ROTATION_GRACE_DURATION, SESSION_DURATION_SHORT } from '../consts';
+import { ACCESS_TOKEN_DURATION, SESSION_DURATION_SHORT } from '../consts';
 import { createJWT } from '../create-jwt';
 import { recordRotationGraceReply } from '../metrics/record-rotation-grace-reply';
 import type { EmptyErrorPayload, SessionSigningDeps } from '../types';

@@ -6,5 +6,3 @@ export const SESSION_DURATION_LONG = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 export const MAX_TRANSACTION_ATTEMPTS = 5;
 export const PENDING_TRANSACTION_TTL = 5 * 60 * 1000; // 5 minutes
-
-export const ROTATION_GRACE_DURATION = 2 * 60 * 1000; // 2 minutes

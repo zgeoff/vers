@@ -1,9 +1,8 @@
 import { createId } from '@paralleldrive/cuid2';
+import { ROTATION_GRACE_DURATION } from '@vers/contract-session';
 import { createTestAccessToken } from '../create-test-access-token';
 import * as db from '../db';
 import { os } from './os';
-
-const ROTATION_GRACE_DURATION = 2 * 60 * 1000;
 
 export const refreshTokens = os.refreshTokens.handler(async (opts) => {
   const session = db.sessionCollection.findFirst((q) => q.where({ id: opts.input.id }));
