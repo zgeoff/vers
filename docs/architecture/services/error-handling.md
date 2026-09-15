@@ -1,10 +1,11 @@
 # Error handling
 
-Every failure in the fleet is classified, declared, transported, retried, reported, and traced by
-one set of rules, uniform across the services, the web app, and the idle worker. The spine is a
-three-class taxonomy: a domain error the caller acts on, an invariant violation only a bug produces,
-or an infrastructure fault. A handler throws only its typed domain errors or an invariant and lets
-any other exception propagate to central machinery, which classifies, reports, and encodes it.
+One set of rules classifies every failure in the fleet, decides its status, and decides whether it
+reaches the error backend, uniform across the services, the web app, and the idle worker. The spine
+is a three-class taxonomy: a domain error the caller acts on, an invariant violation only a bug
+produces, or an infrastructure fault. A handler throws only its typed domain errors or an invariant
+and lets any other exception propagate to central machinery, which classifies, reports, and encodes
+it.
 
 ## Taxonomy
 
@@ -50,27 +51,26 @@ secret or a submitted input, because the central interceptor logs a declared err
 narrow on `code` and `data`, never on `message` strings, and a `reason` field is a closed enum, so a
 client narrows on the value rather than matching a string.
 
-An activity code answers both the single call its meaning names and the offline catch-up path, and
-it also tells a device whether to keep or drop the pending activity start it just submitted; the
-[seed chain](../game/seed-chain.md#handing-an-activity-start-to-the-server) owns that split. No
-request-path code rejects an unreachable node, because replay adjudicates reachability.
+An activity code has two readers. The single call whose meaning it names and the offline catch-up
+call that admits a start or a continuation both answer it, and the device reads it to decide whether
+to keep or drop the pending activity start it just submitted
+([seed chain](../game/seed-chain.md#handing-an-activity-start-to-the-server)). A request-path code
+never rejects an unreachable node, because replay adjudicates reachability.
 
 ## Service layer
 
 The service runtime owns the whole failure path outside handler bodies:
 
 - Trust boundary. An invalid service-to-service token short-circuits with a plain 401 before any
-  oRPC handler runs. The response is not contract-shaped by design
-  ([service contracts](./service-contracts.md)).
+  handler runs ([service contracts](./service-contracts.md#errors-and-the-trust-boundary)).
 - Central error interceptor. One error interceptor on the RPC handler classifies everything a
   procedure throws. A defined contract error or any 4xx is the caller's outcome: the interceptor
   logs it at warn with its code and status, plus a defined error's `data`, so a refusal groups in
   Axiom by the fields its `data` carries, and never reports it. For everything else, the interceptor
   logs at error level with the trace id, captures it to the error backend, then oRPC encodes it as a
   bare `INTERNAL_SERVER_ERROR`. Internals never reach the wire.
-- Wire protocol. Services speak the oRPC RPC protocol at `/rpc` only. Contracts keep their route
-  metadata and stay OpenAPI-generatable, which the conformance suite asserts, but services serve no
-  OpenAPI endpoint.
+- Wire protocol. Services speak the oRPC RPC protocol at `/rpc` only
+  ([service contracts](./service-contracts.md#the-service-side)).
 
 ## Reporting
 
@@ -81,14 +81,11 @@ exception in code the central hooks already cover.
 
 The service runtime owns the one path a service takes to the error backend: it initializes the SDK
 from the DSN, a no-op when the DSN is unset, captures a failure tagged with the active trace id, and
-flushes before a process exits. The RPC error interceptor captures directly, and so does every
-background swallow point: a worker loop iteration, a job queue's error and dead-letter callbacks, a
-fire-and-forget drain, a sweep entrypoint, a shutdown handler. A process that never boots the
-service runtime initializes reporting itself before its run.
+flushes before a process exits. A process that never boots the service runtime initializes reporting
+itself before its run. Each layer reports through its own hook:
 
-Reporting happens at five tiers, each with its own hook:
-
-- Service: the error interceptor, and the capture call at every background swallow point.
+- Service: the error interceptor for a request, and a capture call at any point that swallows an
+  exception outside a request, such as a worker iteration or a queue callback.
 - Web app server functions: the global function middleware reports every throw a server function
   lets escape other than a redirect, a not-found, or a `Response`, then rethrows it.
 - Web app client: the query and mutation cache error hooks report failures that are not service
@@ -126,19 +123,19 @@ own beneath it. A request over its rate limit is answered with a 429 before it r
 
 ### Retry policy
 
-Three lanes carry outbound HTTP traffic between the browser and the services, and each owns its
-retry. The query client owns retry for every call the browser makes through it: 4xx and defined
-service errors never retry, since retrying cannot change the outcome, and network failures and 5xx
-retry a fixed number of times. A per-query override needs a behavioural reason the default policy
-cannot express.
+Two owners retry outbound traffic between the browser and the services. The query client owns retry
+for every call the browser makes through it: 4xx and defined service errors never retry, since
+retrying cannot change the outcome, and network failures and 5xx retry a fixed number of times. A
+per-query override needs a behavioural reason the default policy cannot express.
 
 Every call the web app's server makes to a service runs one bounded-attempt policy: a server
 function's direct client call, the RPC proxy forwarding a browser call, and the session lookups both
-of those run first. A procedure its contract declares GET or HEAD is resent when an attempt hits its
-bound, fails in transport, or is answered 5xx, and the bounds escalate so the last one holds a
-cold-started machine's wake window open. Every other procedure gets one attempt bounded at that same
-window, because a mutation cannot be resent. Attempts run with no pause between them, because Fly's
-proxy holds the connection open while the machine starts. When the last attempt fails, the caller
-gets `SERVICE_UNAVAILABLE`, which the proxy answers as a 503, and the browser's query client retries
-that 503 in turn. The whole budget stays under the slow-request alarm
+of those run first. A procedure whose contract declares it GET or HEAD is resent when an attempt
+hits its bound, fails in transport, or is answered 5xx, and the bounds escalate so the last one
+holds a cold-started machine's wake window open. Every other procedure gets one attempt bounded at
+that same window, because a mutation cannot be resent. Attempts run with no pause between them,
+because Fly's proxy holds the connection open while the machine starts. A last attempt answered 5xx
+delivers that response to the caller. A last attempt that fails in transport or hits its bound
+raises `SERVICE_UNAVAILABLE`, which the proxy answers as a 503, and the browser's query client
+retries that 503 in turn. The whole budget stays under the slow-request alarm
 ([observability](../platform/observability.md#alarms)).
