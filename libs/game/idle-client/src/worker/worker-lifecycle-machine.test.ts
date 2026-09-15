@@ -2082,11 +2082,27 @@ test("it drops a start refused because its predecessor is no longer active and m
   ]);
 });
 
-test('it stops the tick loop when the submitter reports a journal failure', () => {
-  const context = createStubWorkerContext();
+test('it stops the tick loop when the submitter reports a journal failure', async () => {
+  const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_journal_failure' });
+
+  context.registerReconstruction('avatar_journal_failure');
+
+  await setupStartableNode('avatar_journal_failure');
+
+  const status = await handleStartActivityMessage(context, {
+    avatarID: 'avatar_journal_failure',
+    scopeID: '0_0',
+    scopeType: 'world_map_node',
+  });
+
+  invariant(status.kind === 'started', 'expected the start to mint');
+
+  await waitFor(() => {
+    expect(context.getLifecycle().getSnapshot().context.phase).toBe('running');
+  });
 
   context.getLifecycle().send({ type: 'SUBMITTER_JOURNAL_FAILED' });
 
   expect(context.isTickingStopped()).toBeTrue();
-  expect(context.getLifecycle().getSnapshot().context.phase).toBe('idle');
+  expect(context.getLifecycle().getSnapshot().context.phase).toBe('running');
 });
