@@ -54,7 +54,7 @@ A handler throw fails the job, and pg-boss keeps it invisible until its retry de
 doubling that delay per attempt when the definition asks for backoff. A job that exhausts its retry
 limit on a dead-lettering definition moves to a dead queue named after its own. Handlers make
 outbound effects idempotent with the job id, so at-least-once delivery never doubles an effect; the
-email service sends the job id as its provider's idempotency key. A job whose payload carries a
-useful-until deadline is never delivered past it: the handler completes such a job unsent and counts
-the drop. pg-boss pools its own connections, so a queue test takes database isolation rather than an
+email service sends the job id as its provider's idempotency key. The handler starts no send for a
+deadline-bearing job after its deadline has passed. It completes such a job unsent and counts the
+drop. pg-boss pools its own connections, so a queue test takes database isolation rather than an
 injected transaction.
