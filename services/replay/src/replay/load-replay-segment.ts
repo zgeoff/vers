@@ -55,6 +55,7 @@ export async function loadReplaySegment(
     .selectFrom('activityCheckpoints')
     .select(['appendedAt', 'hash', 'payload', 'prevHash', 'version'])
     .where('activityId', '=', target.activityID)
+    .where('version', '>=', target.verifiedHead)
     .where('version', '<=', target.appendedHead)
     .orderBy('version')
     .execute();
@@ -67,11 +68,20 @@ export async function loadReplaySegment(
     version: row.version,
   }));
 
-  const predecessor = target.verifiedHead === 0 ? undefined : checkpoints[target.verifiedHead - 1];
+  const predecessor = target.verifiedHead === 0 ? undefined : checkpoints[0];
+
+  invariant(
+    target.verifiedHead === 0 || predecessor !== undefined,
+    'a verified head always has an anchoring checkpoint row',
+  );
 
   invariant(
     target.verifiedHead === 0 || predecessor?.version === target.verifiedHead,
     'a verified head always has a stored checkpoint row at its own version',
+  );
+
+  const unverifiedCheckpoints = checkpoints.filter(
+    (checkpoint) => checkpoint.version > target.verifiedHead,
   );
 
   return {
@@ -95,9 +105,9 @@ export async function loadReplaySegment(
       status: activity.status,
     },
     chain,
-    checkpoints,
     prevHash: predecessor === undefined ? activity.startHash : predecessor.hash,
     seed: predecessor === undefined ? activity.seed : predecessor.payload.nextSeed,
+    unverifiedCheckpoints,
     verifiedHead: target.verifiedHead,
   };
 }

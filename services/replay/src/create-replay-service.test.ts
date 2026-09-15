@@ -60,3 +60,22 @@ test('it drains a claimable chain through the same deps the wake procedure close
 
   expect(drained).toBe(1);
 });
+
+test('it still drains a claimable chain after stopCache runs', async () => {
+  await using ctx = await createTestDB({ isolation: 'schema' });
+
+  await createContentVersion(ctx.db, createMockContentDocument({ contentVersion: '2' }));
+
+  const service = await createReplayService({ db: ctx.db });
+
+  service.stopCache();
+
+  await createHonestActivityFixture(ctx.db, {
+    duration: 80_000,
+    seed: buildStateFromSeed(3_047_525_658),
+  });
+
+  const drained = await service.drain('boot');
+
+  expect(drained).toBe(1);
+});

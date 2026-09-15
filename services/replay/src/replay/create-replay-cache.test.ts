@@ -1,7 +1,7 @@
 import { expect, mock, test } from 'bun:test';
 import type { SimulationDriver } from '@vers/idle-core';
 import { waitFor } from '@vers/test-utils';
-import { createReplayCache } from './create-replay-cache';
+import { REPLAY_CACHE_CAP, createReplayCache } from './create-replay-cache';
 
 function buildFakeDriver(): SimulationDriver {
   return {
@@ -36,6 +36,23 @@ test('it drops an evicted activity and stops its driver', () => {
 
   expect(cache.get('act_1')).toBeUndefined();
   expect(entry.driver.stop).toHaveBeenCalledOnce();
+});
+
+test('it defaults the cache cap to REPLAY_CACHE_CAP', () => {
+  const cache = createReplayCache();
+
+  for (let index = 0; index < REPLAY_CACHE_CAP; index += 1) {
+    cache.set(`act_${index}`, {
+      driver: buildFakeDriver(),
+      emittedCount: index,
+      lastHash: `hash-${index}`,
+    });
+  }
+
+  cache.set('act_overflow', { driver: buildFakeDriver(), emittedCount: 0, lastHash: 'hash-over' });
+
+  expect(cache.get('act_0')).toBeUndefined();
+  expect(cache.get('act_overflow')).toBeDefined();
 });
 
 test('it evicts the least-recently-used entry once the cap is exceeded', () => {
