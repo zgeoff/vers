@@ -31,9 +31,14 @@ report 'Banned words (judge each match — the AGENTS.md registry and markdown-f
 
 # Architecture docs state rules, never the values the code decides (the skill's "code owns its
 # constants" rule). A unit-bearing number under docs/architecture is a hit; judge a protocol-fixed
-# period or a design cap and move it to its design note.
+# period, a design cap, or a measured fact with its source. This check reads the working tree, so
+# an untracked new doc is checked too.
+paths=()
+for arg in "$@"; do
+  case $arg in :*) ;; *) paths+=("$arg") ;; esac
+done
 report 'Numeric constants with units under docs/architecture (the code owns its constants):' \
-  "$(git grep -nP '\b[0-9]+(\.[0-9]+)?(ms|s|min|h|d|KB|MB|GB)\b|\b[0-9]+-(second|minute|hour|day)\b' -- "$@" 2>/dev/null | grep '^docs/architecture/')"
+  "$(grep -rnP --include='*.md' '\b[0-9]+(\.[0-9]+)?(ms|s|min|h|d|KB|MB|GB)\b|\b[0-9]+[ -](second|minute|hour|day|week)s?\b' "${paths[@]}" 2>/dev/null | grep '^docs/architecture/')"
 
 report 'Untagged code fences:' \
   "$(git ls-files -- "$@" | grep '\.md$' | xargs -r awk \
