@@ -1,357 +1,202 @@
 # Deployment
 
-The stack is a Fly.io fleet. The repo's deploy CLI rolls it out from the `deploy.config.ts`
-manifest, and a push to `main` drives every rollout. Every rollout decision keys off one marker: the
-`GIT_SHA` stamped into each app's machine env, compared against HEAD ([staleness](#staleness)). A
-leg that a failure skipped therefore reads stale and ships on the next push. The same CLI provisions
-the fleet from nothing.
+The stack is a Fly.io fleet, and a push to `main` drives every rollout through the repo's deploy CLI
+and its manifest, `deploy.config.ts`. Every rollout decision keys off one marker: the commit stamped
+into each app's machine env, compared against HEAD ([staleness](#staleness)).
+[Provisioning](../../runbooks/provisioning.md) stands the fleet up from nothing.
 
 ## Topology
 
-The stack runs on Fly.io in the `syd` region. Three apps hold public addresses; the domain services
-(every `services/*` app) are private, reachable only across the organization's 6PN WireGuard mesh.
+The web app, the error tracker, and the analytics dashboard hold public addresses. Every domain
+service (every `services/*` app) is private, reachable only across the organization's private mesh.
+Browsers post error envelopes to the tracker directly, and analytics tracker traffic arrives through
+the web app's same-origin proxy ([analytics](../analytics.md)). All persistent state is the shared
+Neon database ([database](./database.md)): no app runs its own Postgres, and the keys service holds
+no database connection at all, only its root secrets.
 
-- `app-web` — the user-facing edge.
-- `vers-bugsink` (`apps/bugsink`) — the error tracker; public because browsers post error envelopes
-  directly to it.
-- `vers-umami` (`apps/umami`) — the web-analytics dashboard; tracker traffic instead arrives through
-  `app-web`'s same-origin proxy ([analytics](../analytics.md)).
+Every app scales to zero. Fly suspends an idle machine with its memory snapshot and wakes it on its
+first request, so a suspended process resumes with the sockets it held
+([connection pool](./database.md#connection-pool)). Three deviations:
 
-Postgres is the shared Neon database ([database](./database.md)). No app runs its own Postgres.
-Bugsink and Umami own separate logical databases in the same Neon project. `service-keys` holds no
-database connection. Its state is 2 secrets, `ROLL_KEY_ROOTS` and `SCOPE_SECRET_ROOTS`.
-
-Every app scales to zero. `auto_stop_machines = 'suspend'` parks an idle machine with its memory
-snapshot for sub-second wake, and a service wakes on its first request. A suspended process resumes
-with the Postgres sockets it held, so `@vers/db` drops its pool on resume
-([database](./database.md#connection-pool)). Three deviations:
-
-- `app-web`, `service-activity`, and `service-session` each keep one machine warm
-  (`min_machines_running = 1`, enforced by `deploy verify` through the manifest's
-  `minStartedMachines`). Every request passes through app-web and the session service, and the first
-  tap of a session reaches the activity service, so a warm trio keeps a player's first action from
-  waiting on a chain of machine wakes.
-- `service-email` stops rather than suspends (`auto_stop_machines = 'stop'`) — the queue-hosting
-  policy ([queues](./queues.md)).
-
-`service-replay` carries no inbound player traffic of its own. `service-activity` calls the replay
-service's wake procedure over its oRPC client each time an append advances an activity past its
-verified cursor, and that flycast request wakes a suspended machine like any other. The wake handler
-drains every claimable chain before responding, holding the request open so the machine stays up
-until the queue is empty. With nothing to wake it, `service-replay`'s Neon compute scales to zero
-alongside its machine.
+- The web app, the session service, and the activity service each keep one machine warm, because
+  every request passes through the first two and a session's first tap reaches the third.
+  `deploy verify` enforces the minimum through the manifest.
+- The email service stops rather than suspends, the queue-hosting policy ([queues](./queues.md)).
+- The replay service carries no inbound player traffic; a drain holds its machine up until its queue
+  is empty ([replay](../game/replay-verification.md#replay)).
 
 ## Networking
 
-`app-web` reaches a service at `http://<app>.flycast`, a private address that load-balances across
-the service's machines and wakes a suspended one on demand. These URLs live in `app-web`'s
-`fly.toml` `[env]`. A service is allocated no public IP, so nothing outside the mesh can reach it.
-Mesh traffic is already encrypted, so services set `force_https = false`.
+The web app reaches a service at a private address that load-balances across the service's machines
+and wakes a suspended one on demand. A service is allocated no public IP, so nothing outside the
+mesh can reach it, and mesh traffic is already encrypted, so a service enforces no HTTPS of its own.
+The web app's outbound dispatcher caps a pooled connection's idle keep-alive below Fly's suspend
+window, because a keep-alive socket to a suspended machine looks usable while a request written onto
+it neither arrives nor wakes the machine.
 
-An outbound call's pooled connection can hold a keep-alive socket to a flycast origin past the point
-its machine suspends: the socket still looks usable, so a request written onto it neither arrives
-nor triggers the machine's wake. `app-web`'s outbound dispatcher
-(`apps/web/src/lib/rpc/service-dispatcher.ts`) caps the pool's idle keep-alive at 30 seconds, well
-under the suspend window, so a stale socket closes before it can swallow a request.
-
-Each `deploy.config.ts` entry declares its own `exposure`, `public` or `flycast`. The deploy CLI
-allocates a missing private address for a `flycast` entry before its rollout cuts over, and
-`deploy verify` fails an entry that holds a public address or lacks its flycast one
-([fleet verification](#fleet-verification)). A `public` entry's addresses stay a manual
-`fly ips allocate` call ([provisioning](../../runbooks/provisioning.md#fly-fleet)).
+Each manifest entry declares its exposure, public or private. The deploy CLI allocates a missing
+private address before the entry's rollout cuts over, and `deploy verify` fails a private entry that
+holds a public address or lacks its private one.
 
 ## Secrets
 
-Non-sensitive config (service URLs, `NODE_ENV`, log level) lives in each `fly.toml` or Dockerfile.
-Secrets are set with `fly secrets set` and never committed. Each app's env contract declares the
-variables it needs, and [provisioning](../../runbooks/provisioning.md#fly-fleet) sets the current
-values.
+Non-sensitive config (service URLs, the environment name, the log level) lives in each `fly.toml` or
+Dockerfile. Secrets are set with `fly secrets set` and never committed, and each app's env contract
+declares the keys it needs ([env preflight](#env-preflight)). Service-to-service auth runs on one
+keypair per minting service: each minter holds its private half in its own app's secrets, and every
+domain service verifies inbound calls with the key set holding each minter's public half
+([auth](../services/auth.md#service-to-service-tokens)). The meaning of every other secret belongs
+to the doc of the feature that reads it.
 
-- A service requires the base schema (`baseEnvSchema`, the service runtime in
-  `@vers/service-runtime`) merged with its own `envShape`. The derived key lists are committed per
-  service as `env-contract.generated.json` ([env preflight](#env-preflight)).
-- `app-web`'s keys are its web env schema plus the cookie config's `SESSION_SECRET` and
-  `COOKIE_DOMAIN` reads.
-- `vers-bugsink` and `vers-umami` read their upstream images' documented env. Bugsink additionally
-  reads the `R2_*` keys in `apps/bugsink/r2_storage.py`, which back its uploaded-file storage.
-
-Service-to-service (s2s) auth runs on one Ed25519 keypair per minting service. Each minter holds its
-own private half as `SERVICE_AUTH_PRIVATE_KEY` in its own app's secrets, and every domain service
-verifies inbound calls with `SERVICE_AUTH_JWKS`, the key set holding each minter's public half
-([auth](../services/auth.md#service-to-service-tokens)).
-
-The remaining keys with cross-service meaning:
-
-- `DATABASE_URL` — the shared Neon database's connection string: the direct host with
-  `sslmode=verify-full` ([database](./database.md#connection-strings)). Every domain service that
-  opens a database connection holds it, with one value fleet-wide
-  ([shared secrets](#shared-secrets)).
-- `JWT_SIGNING_PRIVKEY` — the RS256 PKCS8 private key `service-session` signs user tokens with,
-  under issuer and audience `API_IDENTIFIER`.
-- `ROLL_KEY_ROOTS` — `service-keys`' root-secret payload: JSON, one entry per population, each
-  holding its current key version and every hex-encoded root version still derived against
-  ([game-entropy](../game/game-entropy.md)).
-- `SCOPE_SECRET_ROOTS` — `service-keys`' scope-secret payload in the same shape, one entry per scope
-  type, which seals world-map content ([world map](../game/worldmap.md#sealing-a-nodes-contents)).
-- `SENTRY_DSN` — optional on any app, naming its Bugsink project.
-  [Error handling](../services/error-handling.md) owns the reporting behavior.
-- `OTEL_EXPORTER_OTLP_*` — the standard OTel export vars, optional on any app and set fleet-wide in
-  practice ([provisioning](../../runbooks/provisioning.md#fly-fleet)).
-  [Observability](./observability.md) owns the export path and per-signal header routing.
-
-The browser-side values ride GitHub Actions configuration. The deploy workflow bakes the
-`VITE_SENTRY_DSN` Actions variable into `app-web`'s client bundle. The same value is also set as a
-`vers-app-web` secret so the runtime can allow the ingest origin in its CSP. Source-map uploads
-authenticate with the `SENTRY_AUTH_TOKEN` GitHub secret, a Bugsink API token; when it's unset the
-build skips source maps entirely. The workflow bakes the `VITE_UMAMI_WEBSITE_ID` Actions variable
-the same way; a bundle without it ships no analytics tracker ([analytics](../analytics.md)).
+The browser-side values ride GitHub Actions configuration. The deploy workflow bakes the browser
+error-tracker DSN and the analytics website id into the web app's client bundle as build args, and a
+bundle without the website id ships no analytics tracker ([analytics](../analytics.md)). Source-map
+uploads authenticate with an Actions secret, and the build skips source maps when it is unset.
 
 ### Shared secrets
 
-A shared secret is a secret that holds one value on every app that carries it. Each app entry that
-carries one lists it in `sharedSecrets` in `deploy.config.ts`, and you set a shared secret once,
-with the same value, on every declaring app. `deploy verify` reads each declaring app's secret
-digests with `flyctl secrets list` and fails the run when a shared secret holds more than one digest
-across those apps, naming each app under its digest prefix. It also fails when a declaring app does
-not hold the secret at all ([fleet verification](#fleet-verification)).
-
-A drifted `DATABASE_URL` is one app connecting to a different host, or with different parameters,
-than the rest. Fix the drift by setting the one value again on each app the finding names — for
-`DATABASE_URL`, the direct-host string with `sslmode=verify-full`:
-
-```sh
-fly secrets set -a <app> DATABASE_URL="$DATABASE_URL"
-```
+A shared secret holds one value on every app that carries it. Each manifest entry that carries one
+lists it, and you set a shared secret once, with the same value, on every declaring app.
+`deploy verify` reads each declaring app's secret digests and fails the run when a shared secret
+holds more than one digest across those apps, or when a declaring app does not hold it at all,
+naming each app under its digest prefix. The database connection string is the shared secret every
+domain service that opens a connection carries.
 
 ## Release
 
-A push to `main` runs `.github/workflows/main.yml`; once the checks pass, the pipeline migrates the
-database, builds every stale app, gates the combined fleet, and cuts over.
+A push to `main` runs the main workflow; once the checks pass, the pipeline migrates the database
+while it builds every stale app, then gates the combined fleet and cuts over.
 
 ### Pipeline
 
-Neon migrations apply once, in their own never-cancelled `migrate` job. Several services share the
-shared Neon database, so migration never runs per service. Database migrations are never rolled
-back: a release must tolerate every migration applied after it shipped (expand/contract), which is
-what makes redeploying a previous image safe.
+Neon migrations apply once, in their own never-cancelled `migrate` job, because several services
+share one database. Database migrations are never rolled back: a release must tolerate every
+migration applied after it shipped (expand and contract), which is what makes redeploying a previous
+image safe.
 
-Two per-app matrix jobs run the deploy CLI through the `.github/actions/fly-deploy` composite
-action: `build` (`bun run deploy -- build --app <name>`) as soon as checks are green, and `deploy`
-(`bun run deploy -- cutover --app <name>`) after `migrate`, `build`, and the full-stack suite. Both
-matrices derive from `deploy.config.ts` via a `manifest` job (the CLI's `list` command), so adding
-an app to the manifest is the whole change. Each leg self-gates on staleness, so a phase lost to an
-earlier failure ships on the next push. The `build` job orders the later phases without gating them
-directly; an app's failed build leaves its ref unavailable to `stack-e2e`, whose fleet-wide failure
-holds every cutover.
+Two per-app matrix jobs run the deploy CLI: `build` once the env preflight passes, and `deploy`
+after `migrate`, `build`, and the full-stack suite. Both matrices derive from the manifest, so
+adding an app to the manifest is the whole change. Each leg self-gates on staleness, so a phase lost
+to an earlier failure ships on the next push. An app's failed build leaves its ref unavailable to
+the full-stack gate, whose fleet-wide failure holds every cutover.
 
 ### Staleness
 
-The CLI relates the `GIT_SHA` on the app's machines to HEAD before it reads any diff. A deployed SHA
-that is HEAD or descends from it is current. That case arises when a later push's deploy lands while
-this run is still between its legs: `deploy verify` passes the app, and a deploy leg skips it rather
-than roll it back. `deploy verify` also passes a fleet split between HEAD's image and a
-descendant's, a later push's rollout caught in progress: a started machine on the descendant image
-may report a `warning` health check while it boots, as long as every started machine on HEAD's image
-passes its checks. A fleet already entirely on the descendant image passes the same way, since no
-HEAD-image machine remains to check. A machine on any other image fails the run. For an older
-deployed SHA, the change set is the paths `git diff --name-only <deployed_sha> HEAD` lists plus the
-packages turbo reports affected from that base. The app's trigger in `deploy.config.ts` reads that
-set: a `turbo-affected` trigger is stale when its package is affected, and a `paths` trigger is
-stale when a changed path matches one of its globs.
+The CLI relates the commit stamped on the app's machines to HEAD before it reads any diff. A
+deployed commit that is HEAD or descends from it is current, which happens when a later push's
+deploy lands while this run is still between its legs: `deploy verify` passes the app, and a deploy
+leg skips it rather than roll it back. `deploy verify` also passes a fleet split between HEAD's
+image and a descendant's, as long as every started machine on HEAD's image passes its health checks,
+and a machine on any other image fails the run. A deploy leg reads a split fleet as stale, because
+no single commit is stamped across its machines, and redeploys HEAD.
 
-A path the root `.dockerignore` excludes never counts as a change. A file the build context never
-holds cannot change an image, so the ignore file owns that list, with `**/*.md` and
-`**/.env.example` among it. The filter never reaches turbo's affected set: turbo marks a package
-affected on any changed file in its directory, and every package affected on a change outside any
-package, so a README edit under `apps/web` still ships app-web.
+For an older deployed commit, the change set is the paths git reports changed since it plus the
+packages turbo reports affected from that base. The app's manifest trigger reads that set: a
+turbo-affected trigger is stale when its package is affected, and a paths trigger is stale when a
+changed path matches one of its globs. A path the root `.dockerignore` excludes never counts as a
+change, because a file the build context never holds cannot change an image. The filter never
+reaches turbo's affected set, so a README edit under an app's directory still ships that app.
 
 ### Env preflight
 
-Each service commits `env-contract.generated.json`: the sorted required and optional key lists
-derived from its env shape merged over the base schema, where a key is required exactly when its
-schema rejects an absent value. `bun run env:contract` regenerates the artifacts, so a PR that adds
-a required key shows it in the diff.
+Each service commits its env contract, the sorted required and optional key lists derived from its
+env shape merged over the base schema; a key is required exactly when its schema rejects an absent
+value. `bun run env:contract` regenerates the artifacts, so a PR that adds a required key shows it
+in the diff. The checks job fails on a stale artifact and on a required key missing from the
+service's dev env files or either compose stack. Keys a Dockerfile bakes into the binary from build
+args count as covered wherever the built image runs.
 
-The checks job fails on a stale artifact (`bun run env:contract:check`) and on a required key
-missing from the service's `.env.development`, its `.env.example` when one exists, or either compose
-stack (`bun run env:coverage`). Keys a Dockerfile bakes into the binary from build args
-(`buildArgsFromEnv` in `deploy.config.ts`) count as covered wherever the built image runs.
-
-The `preflight` job (`bun run deploy -- preflight`) gates `build` and `deploy`: every required key
-of each contract-carrying app must appear in its `fly.toml` `[env]` table, its set Fly secrets, or
-its baked build args. `flyctl secrets list` returns names and digests only, so no secret value
-enters the run. Production secrets are unreadable from PR checks, which is why the fleet check runs
-in the deploy phase while file coverage runs at checks time.
+The `preflight` job gates `build` and `deploy`: every required key of each contract-carrying app
+must appear in its `fly.toml` env table, its set Fly secrets, or its baked build args. Fly reports
+secret names and digests only, so no secret value enters the run.
 
 ### Full-stack gate
 
-Between build and cutover, the `stack-e2e` job boots every deployable image in a compose stack
-(`apps/web-e2e/docker-compose.stack.yml`): every service image, `app-web`'s production image,
-postgres, and a capture-only Resend stub. It resolves refs with the CLI's `images` command, migrates
-the stack's own database, and drives the stack journeys in `@vers/web-e2e` against it. This gate is
+Between build and cutover, the `stack-e2e` job boots every deployable image in a compose stack:
+every service image, the web app's production image, postgres, and a capture-only email stub. It
+migrates the stack's own database and drives the e2e suite's stack journeys against it. The gate is
 fleet-wide by design: a combined state that fails its journeys ships for no app.
 
 ### Build and cutover
 
-A stale build leg runs `flyctl deploy --build-only --push` on Fly's remote builder, so no image blob
-crosses from the GitHub runner. The leg pushes the image as
-`registry.fly.io/<app>:deployment-<sha>`. Both phases derive the tag from the commit, so no ref
-travels between the jobs. Re-running a leg overwrites its own tag instead of minting a new artifact.
+A stale build leg builds on Fly's remote builder and pushes the image under a tag derived from the
+commit, so no image blob crosses from the GitHub runner and no ref travels between jobs. Re-running
+a leg overwrites its own tag. A stale cutover leg deploys that pushed ref, waits for the fleet to
+report the new commit, then runs the app's post-deploy probes from the manifest. An app with no
+Dockerfile cuts over to the image named in its `fly.toml`. For a manual rollout, the CLI's `deploy`
+command runs both phases in one invocation.
 
-A stale cutover leg deploys that pushed ref (`flyctl deploy --image`), waits for the fleet to report
-the new SHA, then runs the app's post-deploy probes from `deploy.config.ts`. A probe is an HTTP
-status check, a JSON round-trip against an expected body, or a Lighthouse audit of the live page
-that fails under the manifest's `minPerformanceScore`. An app with no Dockerfile (`vers-umami`) has
-no build leg work and cuts over to the image named in its `fly.toml`. For a manual rollout, the
-CLI's `deploy` command runs both phases in one invocation. The CLI's `images` command prints each
-buildable app's deployable ref for HEAD as JSON:
-
-- the commit-derived tag when the app is stale;
-- the newest recorded release otherwise;
-- the fleet's resolved image for an app with no recorded release yet.
+An app whose `fly.toml` sets the blue-green strategy, which is every app the repo builds, rolls out
+that way: Fly boots a parallel fleet, gates it on `/health`, cuts traffic over, then retires the old
+machines. A broken boot fails the gate before cutover, and the old machines serve every request
+until it passes. The two pinned upstream apps set no strategy and roll over in place. Deploy jobs
+queue rather than cancel. A rollout can fail on a transient host-capacity refusal; Fly rolls back
+cleanly, so re-run the failed job.
 
 ### Release record and rollback
 
-A rollout whose probes pass is recorded in the `releases` table: app, commit SHA, image ref, and the
-digest the fleet resolved it to. The newest row per app is that app's rollback target. The cutover
-legs require `DATABASE_URL` for this record.
-
-A rollout whose probes fail rolls back: the CLI redeploys the app's newest recorded release,
-restamping that release's own `GIT_SHA` so the fleet reads stale against HEAD and the next push
-ships the fix. The leg still fails — rollback restores service, it never greens the run. A failed
-rollout is never recorded. An app with no recorded release yet is left serving the broken release,
-reported in the leg's log. Probes that fail on the restored release too mean the fault predates the
-rollout; the leg reports that and leaves the fleet on the restored release.
+A rollout whose probes pass is recorded in the release registry: app, commit, image ref, and the
+digest the fleet resolved it to. The newest row per app is that app's rollback target. A rollout
+whose probes fail rolls back: the CLI redeploys the app's newest recorded release, restamping that
+release's own commit so the fleet reads stale against HEAD and the next push ships the fix. The leg
+still fails, because rollback restores service and never greens the run. An app with no recorded
+release yet is left serving the broken release, reported in the leg's log.
 
 ### Fleet verification
 
-`verify-fleet` runs on every green push — even when every deploy leg skipped — and asserts every
+`verify-fleet` runs on every green push, even when every deploy leg skipped, and asserts every
 manifest app is online and current, catching an app at zero machines or a fleet behind HEAD. A
-rolled-back app reads stale there by design. It also checks each app's IP posture against its
-manifest `exposure` ([networking](#networking)): a `flycast` app missing its private address, or
-holding a public one, fails the run. It also reads the secret digests of every app that declares a
-shared secret and fails the run when one holds more than one value across them
-([shared secrets](#shared-secrets)).
+rolled-back app reads stale there by design. It also checks each private entry's addresses
+([networking](#networking)), each declared scheduled machine against the app's image, and each
+shared secret's digests across its declaring apps.
 
 ### Scheduled machines
 
-A `fly machine run --schedule` machine is unmanaged: `fly deploy` never rolls its image forward. An
-app entry's `scheduledMachines` in `deploy.config.ts` declares each one (name, command, schedule,
-region). The CLI reconciles the declarations right after the app's rollout lands, and on its
-skipped-deploy path alike. It creates a declared machine that doesn't exist yet on the app's
-just-deployed image, and moves one on a stale image onto it. Provisioning a new scheduled machine is
-a manifest edit; creation happens on the app's next deploy, not a manual `fly machine run`.
-`verify-fleet` fails if a declared scheduled machine is missing or drifts onto a different image
-than the app's service machines. A declaration carries an `env` map for any key the binary reads
-from fly.toml's `[env]` on a service machine, because `fly machine run` reads no `[env]`.
-
-### Rollout strategies
-
-Every app and service rolls out `bluegreen`: Fly boots a parallel fleet, gates it on `/health`, cuts
-traffic over, then retires the old machines. A broken boot fails the gate before cutover, and the
-old machines serve every request until it passes — an in-place `rolling` swap of a scale-to-zero
-service's single machine drops its internal callers with 503s for the length of the restart. Deploy
-jobs queue rather than cancel. Killing flyctl mid-deploy strands the green machines and fails every
-later deploy with "found multiple image versions".
-
-A rollout can fail on transient `syd` host-capacity refusals ("could not reserve resource"). Fly
-rolls back cleanly, so re-run the failed job.
+A scheduled machine is unmanaged: `fly deploy` never rolls its image forward. An app entry declares
+each one in the manifest, and the CLI reconciles the declarations right after the app's rollout
+lands, and on its skipped-deploy path alike: it creates a declared machine that does not exist yet
+on the app's just-deployed image and moves one on a stale image onto it. Provisioning a new
+scheduled machine is a manifest edit. A declaration carries its own env map, because a scheduled
+machine reads no `fly.toml` env table.
 
 ### Stranded-machine sweep
 
-A deploy or cutover leg reads the fleet before running flyctl and groups its machines by image. A
-single group is clean. Multiple groups mean a prior rollout left machines stranded on a second
-image, and the leg sweeps them: it picks the group to keep, destroys every machine outside it, then
-proceeds — so flyctl's own preflight never hits "found multiple image versions".
-
-The kept group is the one whose machines all carry the app's recorded release git SHA. When no group
-matches that SHA, the kept group falls back to the single image group holding a started machine
-whose health checks all pass. A started machine outside the kept group is never a destroy target.
-The leg fails instead and prints the fleet's machine table (id, state, image, git SHA) so an
-operator can resolve it by hand. A machine whose image flyctl did not report is never a group to
-keep or destroy. Once a second image group exists, that machine fails the leg the same way and
-appears in the table.
-
-`deploy verify` never sweeps and leaves the fleet exactly as found. It reports a mixed-image fleet
-as its own finding, each image with its machine count, in place of the generic finding that no
-trustworthy SHA is recorded. It also names any machine reporting no image.
+A deploy or cutover leg reads the fleet before running flyctl and groups its machines by image.
+Multiple groups mean a prior rollout left machines stranded on a second image, and the leg sweeps
+them. It keeps the group whose machines all carry the app's recorded release commit, or else the
+single image group holding a started machine whose health checks all pass, destroys every machine
+outside it, then proceeds. A started machine outside the kept group is never a destroy target; the
+leg fails instead and prints the fleet's machine table for an operator. `deploy verify` never
+sweeps; it reports a mixed-image fleet as its own finding.
 
 ### Pinned upstream images
 
-`vers-bugsink` and `vers-umami` ship pinned upstream images. Neither sits in the turbo task graph,
-so their staleness triggers in `deploy.config.ts` are path globs rather than turbo affectedness.
-Upgrading either is a tag bump. Bugsink's is the `Dockerfile` `FROM` line — its image is a thin
-layer over stock Bugsink adding the R2 uploaded-file storage, baked by its build leg like any other
-app's. Umami's is the `fly.toml` `[build]` image, deployed with no build leg at all.
+The error tracker and the analytics dashboard ship pinned upstream images. Neither sits in the turbo
+task graph, so their staleness triggers are path globs, and upgrading either is a tag bump. The
+tracker's tag is in its Dockerfile, which adds object storage for uploaded files over the stock
+image. The dashboard's is in its `fly.toml`.
 
 ## Infra drift
 
-`.github/workflows/infra-drift.yml` runs `pulumi preview --refresh --expect-no-changes` over the
-`infra/` program's `prod` stack and fails on any diff. It runs on pull requests and `main` pushes
-touching `infra/` or the workflow file itself, and on a weekly schedule. Console drift arrives with
-no commit, so only the schedule catches it. A pull request gets the preview as a PR comment. Fork
-pull requests are skipped: GitHub withholds secrets from them, so the preview cannot authenticate.
-
-The job authenticates through the `OP_SERVICE_ACCOUNT_TOKEN` repo secret, a non-expiring 1Password
-service account scoped to read only the `vers-ci` vault, and resolves the stack's credentials from
-their `op://` references at run time. `vers-ci` holds exactly the items the workflow's `op://`
-references name, so a compromised job step cannot reach the signing keys and other credentials in
-the `vers` vault. When the job gains a new credential, its item moves into `vers-ci`, and everything
-the job does not read stays in `vers`. A copy is never made, because a copy rots on rotation.
-
-The job only ever previews — reconciling a reported drift is a human decision, applied with
-`pulumi up` from a checkout.
+A scheduled workflow runs a Pulumi preview over the `infra/` program's production stack and fails on
+any diff. The workflow also runs on pull requests and pushes touching `infra/`, but console drift
+arrives with no commit, so only the schedule catches it. The job authenticates through a 1Password
+service account scoped to read the `vers-ci` vault. It only ever previews; reconciling a reported
+drift is a human decision, applied with `pulumi up` from a checkout.
 
 ## Container builds
 
-Fly's remote builder builds every server image from the app's Dockerfile. A shared `pruner` stage
-cuts the workspace to the target's dependency graph; the later stages install, build, and assemble a
-minimal runtime.
+Fly's remote builder builds every server image from the app's Dockerfile. Each Dockerfile opens with
+a prune stage that cuts the workspace to the target's dependency graph with `turbo prune`, and its
+later stages install, build, and assemble a minimal runtime. The pruned lockfile goes unused,
+because bun re-resolves the smaller workspace's hoisting and fails a frozen install
+(turborepo#11007). The stage copies every workspace manifest plus the committed root lockfile into
+the image instead, and the install stages read those.
 
-The `pruner` stage runs a standalone `turbo` binary (`bun add --global turbo`, no workspace install
-needed) and `turbo prune <pkg> --docker`. Of prune's output, only `out/full` — the pruned source —
-feeds a later stage. The pruned lockfile goes unused: bun re-resolves the smaller workspace's
-hoisting and fails `--frozen-lockfile` (turborepo#11007). The stage instead copies every workspace
-`package.json` plus the committed root `bun.lock`, `bunfig.toml`, and `patches/` into `/manifests`,
-and the install stages read that. Each `bun install` layer mounts a BuildKit cache
-(`--mount=type=cache,target=/root/.bun/install/cache`) to reuse the package cache across builds.
-
-### Services
-
-Every domain service carries its own Dockerfile stamped from one shared shape, compiling the service
-to a single executable:
-
-- **pruner** — the shared prune stage.
-- **builder** — installs the service's graph from `/manifests`, copies the pruned source, and runs
-  `bun build src/serve.ts --compile --target=bun-linux-x64-musl` to inline every JS import —
-  workspace source and external deps — into one binary. The services carry no native addons, so the
-  binary is standalone.
-- **runtime** — `alpine` with `libgcc` and `libstdc++` (bun's musl binary links against them) and
-  the binary alone, run as `nobody`. No `node_modules`, no source; the busybox shell keeps
-  `fly ssh console` usable.
-
-Two Dockerfiles deviate from the shape:
-
-- `service-email`'s builder compiles a second `sweep` binary, the command its hourly scheduled
-  machine runs ([queues](./queues.md)).
-- `service-replay`'s builder takes the `SIM_ENGINE_HASH` build arg and bakes it into the compiled
-  binary.
-
-### app-web
-
-`app-web` bundles an SSR server across five stages:
-
-- **pruner** — the shared prune stage.
-- **installer** — a full install of `@vers/web` plus `@vers/source` (the root manifest, carrying the
-  build tooling: turbo and the base tsconfig), devDependencies included.
-- **builder** — copies the pruned source and `tsconfig.base.json`, which lives outside any package,
-  then runs codegen, typegen, and the vite production build. The stage adds `ca-certificates`
-  because sentry-cli's sourcemap upload reads the system CA store the slim base omits. Build args
-  `SENTRY_AUTH_TOKEN` and `VITE_SENTRY_DSN` bake the browser DSN into the bundle and authenticate
-  the sourcemap upload.
-- **prod-deps** — a production-only install with the hoisted linker, so the SSR bundle resolves
-  every runtime import from one flat `node_modules` regardless of directory depth.
-- **runtime** — `node:24.18.0-alpine` holding `node_modules`, `server.mjs`, and `dist`.
-
-The server entry (`apps/web/src/server.ts`) carries no top-level `await`: a dynamically imported
-chunk can import the entry back, and Node then exits with code 13 on the unsettled cycle.
+Every domain service compiles to a Bun executable and runs it on `alpine` as `nobody`, with no
+`node_modules` and no source. One exception: the email service's image also carries the sweep binary
+its scheduled machine runs ([queues](./queues.md)). The web app bundles an SSR server instead: a
+full install with dev dependencies for the build, then a production-only install with the hoisted
+linker, so the SSR bundle resolves every runtime import from one flat `node_modules`. Its server
+entry carries no top-level `await`, because a dynamically imported chunk can import the entry back
+and Node exits on the unsettled cycle.

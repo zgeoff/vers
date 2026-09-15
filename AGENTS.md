@@ -183,8 +183,8 @@ satisfy:
 
 Instrumentation is part of a feature, not a follow-up: work that adds a pipeline, queue, worker, or
 failure path lands with the OpenTelemetry metrics that make it observable. Read
-`docs/architecture/platform/observability.md` before adding an instrument — it owns the mechanics,
-conventions, and instrument registry. The rules a PR must satisfy:
+`docs/architecture/platform/observability.md` before adding an instrument — it owns the mechanics
+and conventions. The rules a PR must satisfy:
 
 - Instruments are defined in the owning package through the global metrics API (`metrics.getMeter`,
   `@opentelemetry/api`) — domain code never constructs, receives, or stops a meter provider; the
@@ -194,8 +194,8 @@ conventions, and instrument registry. The rules a PR must satisfy:
 - A rare, meaningful event is a counter recorded at the site that decides it (a `record-*.ts`
   module). State that lives in the database observes through observable gauges — one batch callback
   per package, one snapshot query per collection, failures caught and logged, never thrown.
-- Every new instrument lands with its row in the `docs/architecture/platform/observability.md`
-  registry table in the same PR.
+- An instrument's `description` and `unit` in its definition are its registry; a new instrument
+  needs no doc row.
 
 ## Banned words
 
