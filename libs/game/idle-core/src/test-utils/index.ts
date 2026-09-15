@@ -4,6 +4,7 @@ export { createMockAvatarData } from './factories/create-mock-avatar-data';
 export { createMockAvatarSnapshot } from './factories/create-mock-avatar-snapshot';
 export { createMockCombatExecutorSnapshot } from './factories/create-mock-combat-executor-snapshot';
 export { createMockCompletedCheckpoint } from './factories/create-mock-completed-checkpoint';
+export { createMockCorpusCase } from './factories/create-mock-corpus-case';
 export { createMockEnemyData } from './factories/create-mock-enemy-data';
 export { createMockEnemySnapshot } from './factories/create-mock-enemy-snapshot';
 export { createMockFailedCheckpoint } from './factories/create-mock-failed-checkpoint';
