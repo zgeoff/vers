@@ -30,6 +30,7 @@ export async function createEmailService(
           apiKey: runtime.env.RESEND_API_KEY,
           from: runtime.env.EMAIL_FROM,
         }),
+        logger: runtime.logger,
         onError: (error) => {
           runtime.logger.error({ err: error }, 'email job queue error');
 

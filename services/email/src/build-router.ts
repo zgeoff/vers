@@ -6,6 +6,7 @@ import type { ServiceContext } from '@vers/service-runtime';
 import { reportUnexpectedError } from '@vers/service-runtime';
 import type * as z from 'zod';
 import type { EmailJobDefs } from './create-email-job-queue';
+import { runRetryDrains } from './run-retry-drains';
 
 interface BuildEmailRouterDeps {
   readonly logger: ServiceContext['logger'];
@@ -20,7 +21,7 @@ export function buildEmailRouter(deps: BuildEmailRouterDeps) {
       buildSendHandler(deps, 'send-change-email-notification'),
     ),
     sendChangeEmailVerification: os.sendChangeEmailVerification.handler(
-      buildSendHandler(deps, 'send-change-email-verification'),
+      buildDeadlineSendHandler(deps, 'send-change-email-verification'),
     ),
     sendExistingAccount: os.sendExistingAccount.handler(
       buildSendHandler(deps, 'send-existing-account'),
@@ -29,7 +30,7 @@ export function buildEmailRouter(deps: BuildEmailRouterDeps) {
       buildSendHandler(deps, 'send-password-changed'),
     ),
     sendResetPassword: os.sendResetPassword.handler(buildSendHandler(deps, 'send-reset-password')),
-    sendWelcome: os.sendWelcome.handler(buildSendHandler(deps, 'send-welcome')),
+    sendWelcome: os.sendWelcome.handler(buildDeadlineSendHandler(deps, 'send-welcome')),
   };
 }
 
@@ -49,6 +50,38 @@ function buildSendHandler<TName extends keyof EmailJobDefs>(
     void (async () => {
       try {
         await deps.queue.drain(name);
+      } catch (error) {
+        deps.logger.error({ err: error, jobID, queue: name }, 'email job drain failed');
+
+        reportUnexpectedError(error);
+      }
+    })();
+
+    return { jobID };
+  };
+}
+
+type DeadlineJobName = 'send-change-email-verification' | 'send-welcome';
+
+function buildDeadlineSendHandler<TName extends DeadlineJobName>(
+  deps: BuildEmailRouterDeps,
+  name: TName,
+) {
+  return async (opts: SendHandlerOpts<TName>): Promise<EmailJobOutput> => {
+    const jobID = await deps.queue.send(name, opts.input);
+
+    void (async () => {
+      try {
+        const drained = await deps.queue.drain(name);
+
+        if (drained.failed > 0) {
+          await runRetryDrains({
+            drain: () => deps.queue.drain(name),
+            now: Date.now,
+            usefulUntil: opts.input.usefulUntil,
+            wait: Bun.sleep,
+          });
+        }
       } catch (error) {
         deps.logger.error({ err: error, jobID, queue: name }, 'email job drain failed');
 
