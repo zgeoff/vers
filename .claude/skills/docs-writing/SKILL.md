@@ -1,327 +1,424 @@
 ---
 name: docs-writing
 description:
-  Prose rules for everything committed to the repo — docs/, READMEs, AGENTS.md, and skills. Use when
-  writing, editing, or reviewing any repo prose.
+  How to write prose that gets committed to this repo — docs/, READMEs, AGENTS.md, and skills. Load
+  it before writing, editing, or reviewing any of them.
 ---
 
-# Docs writing
+# Writing docs
 
-Write for a cold reader: someone with none of the conversation, ticket, or diff that produced the
-doc, reading every sentence as if it had always existed. When a sentence needs that missing context
-to resolve, it fails review however clean it reads to you — as the author, your resolved mental
-model binds every referent, so the failure is invisible from the writing seat and you check for it
-deliberately.
+This guide is for anyone writing prose that gets committed to the repo. Write for someone who wasn't
+there: they didn't see the conversation, the ticket, or the diff, and they will read your sentence
+months from now as if it had always been there. If a sentence only makes sense with that context, it
+fails, however clean it looks to you. As the author you already know what every word refers to, so
+you can't feel this failure. Check for it on purpose.
 
-Aim for plain sentences with actors and verbs. Not telegraphic — keep the articles and the
-connective clauses — and not florid. The rules below make that register checkable. When a sentence
-fails one, redraft it from the facts it contains rather than patching it word by word; patching
-preserves the failed structure. The same holds at doc scale: when a doc fails, list what each
-section must say and rewrite the sections fresh.
+Two questions govern every doc: what it should say, and how it should say it. The first is where you
+cut. The second is where you spend words. A doc is made of points, and a point is a fact plus the
+reason for it, however many sentences that takes. When a doc feels too long, remove whole points;
+don't squeeze the sentences that state the points you keep. And when a sentence fails a rule here,
+rewrite it from the facts rather than patching it word by word, because patching keeps the broken
+shape.
 
-> **Note:** these docs are written by AI and read by humans. The rules are written to be executable
-> by the writer, so some phrasing is more precise than a human reader needs — line budgets,
-> greppable patterns, exact placeholder shapes. That precision is what makes a rule checkable rather
-> than aspirational.
+## Deciding what to include
 
-Two passes govern every doc. **Selection** decides which points the doc makes; it is ruthless.
-**Rendering** decides how a surviving point is written — its sentences, its words, its shape, its
-stance; it is generous. Shorten a doc by removing points, never by compressing the sentences that
-state a surviving point. When a draft feels long, return to Selection — Rendering is never the
-knife.
+### Describe the system as it is now
 
-## Selection — which points the doc makes
+Write in the present tense about what the code does today. Leave out history ("previously", "now
+uses"), plans ("will land"), temporary states ("not wired yet"), and links to our own issue tracker.
+Two things that look like references are fine, because they're facts about the code: a marker that
+appears verbatim in the source, like a `baseline(#236)` comment, and an upstream issue the code
+works around, like `turborepo#11007`.
 
-- **Final state only.** Present tense, current behavior of the code being edited. No history
-  ("previously", "now uses"), no roadmap ("will land"), no temporary state ("not wired yet"), no
-  references to the project's own issue tracker. A token that appears verbatim in code (a
-  `baseline(#236)` marker) is a fact of the code, not a reference. An external upstream issue
-  identifying a defect the code works around (`turborepo#11007`) is a fact of the workaround, not
-  tracking — it stays.
-- **Shed process residue.** The work session leaves no trace in the doc. A date stamp in prose
-  (`Verified 2026-05-26:`) rots — git history records when work happened; date-prefixed filenames
-  and header metadata rows are structural and stay. Investigation framing ("Verified against…", "I
-  checked…") belongs in the commit or PR body — state the finding itself. A citation of an agent's
-  private memory file is a reference no other reader can resolve — cite the source file the memory
-  points at, or omit.
-- **The point test.** A point is a fact plus its rationale, however many sentences it takes to
-  state. Cover the point; if a reader with the file open would know and do everything the same,
-  delete the whole point. This test judges whole points, never single sentences — a sentence that
-  orients, names a referent, or summarizes is kept or cut on how it reads, not on whether it carries
-  a point.
-- **No defensive points.** A paragraph defending a decision against unlikely scenarios — enumerated
-  edge cases requiring external tampering, "in case someone", scope-defending re-statements — is a
-  point that fails the point test. A paragraph past 8 lines is the audit trigger: most ballooning is
-  over-explaining decisions that don't need defending.
-- **One owner per fact.** Each fact is explained in one place — its owner — across the whole docs
-  tree, not just within one document. Any section that needs a fact it doesn't own states it in at
-  most one sentence and links to the owner, and the rationale appears at the owner only. When two
-  docs disagree, the owner is right: fix the other doc against it, then check the owner against the
-  tree. An index restates owned facts at one line each — orientation is its job.
-- **The code owns its rosters.** A list, count, or mapping derivable from the repo — the packages
-  under a directory, the apps in a manifest, which app reads which env key (its env schema) — is
-  stated as the rule that derives it, never transcribed member by member. Name a member only where
-  its behavior differs from the set's. A transcribed roster rots with no signal — it is wrong even
-  while accurate. A mixed roster — part code-derivable, part external — splits: the rule for the
-  code-held members, named bullets for the rest.
-  - Bad: "The domain services — `service-activity`, `service-avatar`, `service-keys`,
-    `service-session`, `service-user`, and `service-verification` — are private."
-  - Good: "The domain services (every `services/*` app) are private."
+Don't leave traces of the work session either. Date stamps in prose go stale, and git already
+records when things happened. "Verified against…" and "I checked…" belong in the commit message; in
+the doc, state what you found. Never cite an agent's private memory file, because no one else can
+open it. Cite the source it pointed at, or leave the claim out. Dated filenames and metadata rows in
+a header are structure, not traces, and they stay.
 
-  Two exemptions:
-  - code blocks the reader executes
-  - a derivable set keying a table whose other columns carry facts the code does not hold — the
-    roster is then the key, not the payload
+The same rule applies at the word level. "Also", "as well as", "in addition", "now", and "still" all
+describe a change from some earlier state. That's fine when the doc itself describes the earlier
+state. When the earlier state is only in your head, the conversation, or the diff, the sentence
+documents your edit instead of the system. Write the resulting state. "The new endpoint" is stale
+the moment the change merges, so name the endpoint.
 
-- **The code owns its constants.** A numeric config value — a timeout, a threshold, a retry bound, a
-  cadence, a cap, a byte length — never appears in a doc. The doc states the rule the value serves
-  ("connection acquisition is bounded", "the bounds escalate to cover a cold start") and nothing
-  more, because the number changes on the next tuning PR with no signal to the doc. A number stays
-  only when the code does not decide it: a protocol-fixed period, a design cap a design note owns, a
-  count that is the point itself ("three classes"), or a measured fact stated with its source (a
-  bundle size, an observed latency).
-  - Bad: "`idle_timeout` (240s) closes a pooled connection before Neon's 300s suspend closes it."
-  - Good: "An idle pooled connection closes before Neon's suspend closes it from the server side."
-- **An identifier is never the referent.** A function, option, column, env-var, or package name, or
-  a file path, is a reference that a rename strands with no signal, so prose names the role instead:
-  "the admission handler", "the head row's appended cursor", "the database factory". Three kinds
-  stay: an error code or wire field a client narrows on, a domain noun the doc defines that is also
-  an identifier (the `Started` checkpoint, `userSeed`), and a command or path the reader types.
-  - Bad: "`runBoundedAttempts` (`apps/web/src/lib/rpc/`) retries a GET up to three times."
-  - Good: "The bounded-attempt policy resends a GET when an attempt hits its bound."
-- **A fix is not a point.** A PR that changes behavior rereads the owning doc's points and rewrites
-  the one whose invariant or journey the change altered. It adds no point for a failure sub-case, a
-  tuned value, a renamed function, a new metric, or an operator procedure; those are the code's, the
-  registry's, or a runbook's. A doc that gains a paragraph per fix becomes a changelog.
-- **Architecture states what the code does; design notes hold intent.** A doc under
-  `docs/architecture/` states only behavior the code implements. A mechanism the design calls for
-  but the code does not implement lives in a note under `docs/game-design/`, written as design.
-  Where that intent shaped a built mechanism, the architecture doc links the note in one sentence
-  and states no more of it.
-- **Architecture is structure and invariants.** A doc under `docs/architecture/` states how a
-  subsystem is put together — its parts, their boundaries, and which part owns each piece of state —
-  and the invariants a caller must obey. A step-by-step narration of a mechanism, the reason a
-  decision was made, a defense of that decision, and a description of what a player sees all fail
-  the point test there: the code shows the mechanism, the commit body holds the reason, and a design
-  note holds the player's view. An invariant takes at most 3 sentences: the rule, its consequence,
-  and one exception where one exists.
-- **Facts follow the reader's task.** A doc serves one reader task. A fact earns its place only if
-  that reader acts on it mid-task; a fact serving a different task lives in that task's doc, linked
-  from this one. The opening describes the subject, never who should read the doc or when to — no
-  "read this when…", no "this doc is for…", no naming of the reader. A pass-through system (a deploy
-  pipeline, config plumbing) documents its mechanism once and never the semantics of each value it
-  carries — those belong to the owning feature's doc.
+### Cut anything the reader could get from the code
 
-## Sentences — how a surviving point reads
+For each point, ask: if a reader had the source file open and this paragraph didn't exist, would
+they still know everything it says and act the same way? If yes, delete the whole point. Judge whole
+points, not single sentences. Keep or cut a sentence that orients the reader, names something, or
+summarizes on how it reads, not on whether it carries a fact.
 
-- **One fact per sentence; two only when inseparable.** Two facts are inseparable only when one is
-  the other's direct consequence — "the tag derives from the commit, so no ref travels between jobs"
-  is one fact. A sentence carrying two em-dash asides, or an em-dash aside plus a parenthetical
-  gloss, splits at the first dash.
-  - Bad: "The build leg pushes the image as `registry.fly.io/<app>:deployment-<sha>` — both phases
-    derive the tag from the commit, so no ref travels between jobs — and re-running a leg overwrites
-    its own tag."
-  - Good: "The build leg pushes the image as `registry.fly.io/<app>:deployment-<sha>`. Both phases
-    derive the tag from the commit, so no ref travels between jobs. Re-running a leg overwrites its
-    own tag."
-- **Topic sentence first.** A paragraph's first sentence states its single point; every later
-  sentence supports that point, and a sentence starting a new point starts a new paragraph. The
-  test: reading only first sentences yields a correct coarse version of the doc.
-- **Lead with the fact.** The answer first, framing never — "Reuses the existing bucket", not "What
-  we want to do here is…". An orientation clause ("To detect a stale artifact, …") is not
-  throat-clearing — it tells the reader where they are before the payload lands, so it stays.
-- **Show the rule in an instance.** When one concrete example carries a general rule, lead with the
-  example: "a request to `/admin/api/2026-07/graphql.json` is intercepted even though the schema is
-  pinned to `2026-01`" beats "handlers match any version segment and answer from the pinned schema".
-  State the abstraction alone only when no single instance can carry it.
-- **Address the reader in how-to prose.** Instructions say "you" and use imperatives ("seed it
-  yourself", "call `seed()` if you'd rather not create data per test"). A how-to written without a
-  reader reads as a spec. Reference and design prose stay declarative — there the doc states what
-  the system is, not what the reader does.
-- **Name the actor.** "The sweep drops each stranded machine and records the set removed", not
-  "stranded machines are dropped and the removed set is recorded". Two shapes hide the actor: the
-  passive — append "by monkeys" and a sentence that still parses is passive — and the disguised
-  activity, a copular sentence whose subject is really a verb someone performs ("a voice review is a
-  redraft" hides "when you review voice, you redraft"). A sentence stating a state or definition
-  ("the field is optional", "a point is a fact plus its rationale") has no actor — the copula is
-  correct there.
-- **Decisions read as decisions.** A made call never reads "may", "should", or "might" — hedged
-  modals mark genuinely open options only. A conditional that defines criteria ("a change may be
-  treated as standard-risk when…") is a definition, not a hedge.
-- **Rule, then exception.** An exception takes its own sentence, placed after the rule's sentence —
-  never a subordinate clause inside it. Two or more exceptions become a list.
-  - Bad: "A background report carries a fresh trace id, except that a request-triggered drain
-    inherits the originating request's trace."
-  - Good: "A background report carries a fresh trace id scoping that unit of work. One exception: a
-    request-triggered fire-and-forget drain inherits the originating request's trace."
-- **Name the referent.** A pronoun's referent lives in the same sentence or the one before it; any
-  farther back, repeat the noun. Repeating a noun is never a defect; a re-read to resolve a pronoun
-  is. The same rule covers definite nouns: where the doc has more than one cap, filter, or budget,
-  the bare form ("the cap") is legal only after the qualified form ("the cardinality cap") earlier
-  in the same paragraph.
-- **Name what a noun is part of.** A domain noun for a part, record, or position of something is
-  introduced with that something in the phrase — `activity start`, not a bare `start`; `chain head`,
-  not a bare `head`. This extends the referent rule to opaque part-nouns: the qualified form leads,
-  and a bare form follows only under the same-paragraph allowance above.
-- **First use defines.** Spell an acronym out where it first appears ("Content Security Policy
-  (CSP)"); a term of art gets a one-line definition or a link to its owner.
-- **Same term for the same thing.** Varying a term to dodge repetition ("the runner… the executor…
-  the worker") makes the reader ask whether they differ. Elegant variation is a defect in technical
-  prose.
-- **Qualify nominalized verbs.** A verb used as a noun ("a reveal", "the split", "an append") is a
-  coinage: compound it with the noun it acts on ("checkpoint reveal", "partition split", "chain
-  append") or restructure the sentence around the verb. Define the compound at first use. A
-  nominalization that names a design concept is reserved for that concept — pick a different word
-  for the everyday sense.
-- **Negate the verb or object, never the subject.** "A drain never delivers entries out of order",
-  not "no drain delivers entries out of order" — a negated subject garden-paths. Noun stacks
-  garden-path too: three bare nouns in a row unstack. A reduced relative clause appended after a
-  dash takes "that" or "which".
-- **Unstack abstract nouns.** A chain of abstract nouns with nobody doing anything ("the escalation
-  path for consumers on diverging versions") stays opaque however precise it is. Rewrite it as a
-  clause with a subject and a verb ("what to do when a consuming repo needs a version the mock isn't
-  on").
-- **One verb per mechanism.** Joining unlike things under one vague verb ("carries", "handles",
-  "covers") makes them read as a matched pair sharing one mechanism, and the reader goes looking for
-  it. Where two things act differently, give each its own clause and verb: "the worker drops the
-  machine and records the removal", never "the worker handles the machine and the removal".
-- **Attribution takes a verb.** Name the owning doc or component as the subject: "the overview owns
-  the boundaries", never "the boundaries are the overview's". A possessive on a markdown link ("the
-  [sweep](url)'s seven readers") garden-paths twice over — put the link in a prepositional phrase
-  instead.
-- **Parentheses hold identifiers, paths, and values.** Never a gloss restating the prose, and at
-  most one parenthetical per sentence. A consequence is never parenthetical — render it as its own
-  sentence or after a colon.
+Paragraphs that defend a decision are the most common source of padding: lists of edge cases that
+only happen if someone tampers with the system, "in case someone…", restatements of what is out of
+scope. If a paragraph runs past about eight lines, reread it and ask whether it's defending a
+decision nobody attacked.
 
-## Words — what to cut on sight
+### A bug fix rarely needs a doc change
 
-- **Throat-clearing.** Filler that adds no information — find and cull: "naturally", "organically",
-  "cleanly", "honestly", "trivially", "earns its complexity", "lays foundation for", "cheap
-  insurance", "the right level". "Easy", "simple", and "quick" pressure the reader and read as
-  marketing — describe the thing instead ("one command", "on by default"). `Mitigation:` as a label
-  — drop the label, state the mitigation.
-- **Adjective stacks.** Five adjectives deep on one noun reads as marketing copy. Rewrite
-  fact-first.
-  - Bad: "This work introduces continuations — session-scoped, chain-rooted, identity-bearing rows
-    that resume an activity…"
-  - Good: "A continuation is a row minted from a chain coordinate. The session that owns it resumes
-    the activity through it."
-- **Weasel words.** Vague qualifiers where a specific claim belongs: "significantly", "many",
-  "often", "typically", "generally", "near-instant". State the figure and its source, or make the
-  concrete claim the qualifier is dodging. "~28.7KB gzipped on average over a 7-day window" survives
-  review; "artifacts are small" doesn't.
-- **Repeated framing.** The same rhetorical move three times in a row: "X, not Y" (pick the
-  strongest contrast, drop the rest); "no new A, no new B, no new C" (collapse to one line); "means"
-  / "is the" as the spine of every sentence (vary).
-- **Generated-prose tells.** Patterns that mark prose as machine-drafted. Cut or rewrite on sight:
-  - Summary-style transitions recapping the previous paragraph ("With this setup complete…", "Now
-    that we've covered…"). Pivot straight to the next point.
-  - Spec-sheet voice narrating features instead of stating facts ("provides", "is configurable",
-    "offers a flexible way to").
-  - Stop-start fragments splitting one dependent idea ("Previously this was manual. Now it's
-    automatic. This saves time." — one sentence). A short sentence for emphasis is fine.
-  - Personified artifacts performing human actions ("the token hands the browser a session"); state
-    what the system does ("the browser fetches the session"). Errors and status codes are not actors
-    either: "on the 400, the client refetches", never "the 400 refetches".
-  - Template framing not specific to this doc ("The question most teams face is…").
-  - Rhetorical questions setting up the answer the next sentence gives ("So why not cache it?
-    Because…"). State the point.
-- **Delta-framing.** "Also", "as well as", "in addition", "now", "still" assert an addition or a
-  change against a baseline. With the baseline stated in the same doc the framing is legal; with the
-  baseline in the conversation, a prior draft, or the diff, the sentence documents the edit instead
-  of the system — write the resulting state. "New" qualifying a component ("the new endpoint") is
-  the word-scale form: it stales the moment the change merges, so name the component.
-- **Banned words.** The AGENTS.md banned-words list applies to all prose; fix a violation on sight.
+When a PR changes behavior, reread the doc that owns that behavior and rewrite whichever sentence
+the change made false. Don't add a paragraph for a new failure case, a tuned value, a renamed
+function, a new metric, or an operator procedure. Those live in the code, in a registry the code
+defines, or in a runbook. A doc that grows a paragraph per fix turns into a changelog.
 
-## Structure — the shape points take
+### Architecture docs describe structure and invariants
 
-- **Summary before detail.** A doc opens with three to six plain sentences saying what the system
-  does and the one distinction a reader most needs. A section of four or more paragraphs opens with
-  one sentence naming its scope and the common case. A section beyond six paragraphs splits into
-  subsections. Detail never precedes its orientation.
-- **Bullets for parallel facts, prose for causal flow.** A paragraph enumerating parallel items is a
-  list — break it. A list whose items narrate cause and effect is a paragraph — join it. Every item
-  carries a fact beyond its name; an item that has none moves inline.
-- **Tables carry multi-attribute variants.** Three or more values of one discriminator (states,
-  tiers, modes), each carrying two or more attributes of its own, render as a table — never as a
-  prose chain of contrasts. Variants carrying one attribute each render as bullets.
-- **Atomic cells.** A table cell holds one atomic value — an identifier, a number, a short phrase. A
-  cell holding a list, a full clause, or a reference to another row means the table is the wrong
-  shape. Resolve in order: point at the source file that owns the mapping; render as a nested list;
-  re-cut the table's axes. A decision table's prose column — a discriminator plus its trade-off or
-  when to reach for it — is the shape doing its job, not a mis-cut.
-- **Procedures are numbered steps.** Actions the reader performs in order render as a numbered list,
-  one action per step; a step needing its own explanation gets a sentence under the step, not a
-  longer step. A fenced code block inside a step is indented to the step — indentation is layout,
-  not a content change. A procedure states its expected outcome verbatim ("Expect: HTTP 202", exact
-  error text), never "should succeed". A verification checklist with no inherent order renders as
-  bullets. A sequence a system performs is narration, never dressed as reader instructions; where
-  the order itself is the fact (a pipeline, a request lifecycle), it renders as numbered stages
-  written declarative, not imperative.
-- **A multi-paragraph bold-lead is a heading.** One paragraph of body keeps a bold-lead; a second
-  paragraph or a fenced code block makes it a section — promote it. Repeated template labels
-  (`**Scope**` / `**Risk**` across the phases of a plan) still count: each introduces a
-  multi-paragraph block, so all of them promote. Two shapes stay: one-line inline markers
-  (`**Why:**`, `**Depends on:** phase 1.`) and a catalogue's run of same-shape sibling entries,
-  which would gain a heading per entry and no navigation.
-- **No label wrappers.** A bold label naming the body's role — `**Design**`, `**Details**`,
-  `**Rationale**`, `**Overview**` — adds nothing: the body already is its design, detail, or
-  rationale. Drop the wrapper; replace a per-section `**Rationale**` block with inline `**Why:**`
-  markers at the specific decisions whose rationale isn't visible. A section heading naming a role
-  instead of a topic (`## Overview`, `## Notes`) is the heading-scale form — fold its content into
-  the doc's intro or name what the section actually covers.
-- **No horizontal rules.** `---` between sections is a heading that lost its name — headings already
-  divide the doc. Delete it; if the break felt necessary, the section below it wants a heading.
+A doc under `docs/architecture/` says how a subsystem is put together and what a caller must never
+break. Structure means the parts, the boundaries between them, and which part owns each piece of
+state. An invariant is a rule that holds no matter what a caller does. State an invariant in at most
+three sentences: the rule, what it guarantees, and one exception if there is one.
 
-## Stance — how the doc regards its reader and itself
+Four things don't belong there, because each has a better home:
 
-- **Subject, not document.** Text points at the subject, never at the document's own structure ("as
-  noted above", "see below") and never at the session that produced it. Links to an owning section
-  or another doc are pointers at the subject and stand.
-- **No positional framing of text.** Never define text by its position among sibling text — "the
-  second…", "another…", "also sanctioned", a table cell reading "the above + …". A contrast between
-  two domain states ("a `pruned` row means expired; a missing row means unknown") is a fact about
-  the domain, not positional framing, and stands.
+- A step-by-step walkthrough of a mechanism. The code shows that.
+- The reason a decision was made. The commit message holds that.
+- A defense of that decision. Leave it out.
+- What the player sees. A design note under `docs/game-design/` holds that.
+
+If the design calls for something the code doesn't implement yet, that's design, and it goes in a
+design note. Where a design decision shaped something the code does implement, link the design note
+in one sentence and stop there.
+
+### Give each doc one job and each fact one owner
+
+A doc serves one reader doing one task. A fact belongs in it only if that reader needs it while
+doing that task. A fact that serves a different task belongs in that task's doc, with a link from
+this one. Open with what the subject is, not with who should read the doc or when: no "read this
+when…", no "this doc is for…".
+
+Explain each fact, with its reasoning, in exactly one doc across the whole tree. That doc is the
+fact's owner. Any other section that needs the fact states it in one sentence and links to the
+owner. When two docs disagree, the owner is right: fix the other doc, then check the owner against
+the code. An index may restate owned facts at one line each, because that's what an index is for.
+
+A system that passes values through, like a deploy pipeline or config plumbing, documents its
+mechanism once. What each value means belongs in the doc for the feature that owns the value.
+
+### Don't copy what the code owns
+
+Anything the code defines, describe rather than copy. A copy goes stale the next time someone
+changes the code, and nothing tells you. This covers four things.
+
+**Lists.** If the repo already defines a list, such as the packages under a directory, the apps in a
+manifest, or the env keys a service reads, describe how the list is defined instead of writing it
+out.
+
+- Bad: "The domain services — `service-activity`, `service-avatar`, `service-keys`,
+  `service-session`, `service-user`, and `service-verification` — are private."
+- Good: "The domain services (every `services/*` app) are private."
+
+Name an individual member only when it behaves differently from the rest. If a list is partly from
+the code and partly external, describe the rule for the code-defined members and list the external
+ones by name. Two kinds of list are fine to write out: commands the reader will run, and a table
+where the list is the key column and the other columns hold facts that aren't in the code.
+
+**Numbers.** Don't put a config value in a doc: a timeout, a threshold, a retry limit, a schedule, a
+cap, a byte length. State the rule the number serves instead.
+
+- Bad: "`idle_timeout` (240s) closes a pooled connection before Neon's 300s suspend closes it."
+- Good: "An idle pooled connection closes before Neon's suspend closes it from the server side."
+
+A number belongs in a doc only when the code doesn't decide it: a period fixed by a protocol, a cap
+that a design note defines, a count that is the point ("three classes"), or a measurement with its
+source, like a bundle size or an observed latency.
+
+**Names.** Don't refer to something by its function name, option name, column, env var, package
+name, or file path. A rename breaks the reference silently. Name the role instead: "the admission
+handler", "the database factory".
+
+- Bad: "`runBoundedAttempts` (`apps/web/src/lib/rpc/`) retries a GET up to three times."
+- Good: "The bounded-attempt policy resends a GET when an attempt hits its bound."
+
+Three kinds of identifier are fine: an error code or wire field a client switches on, a domain term
+the doc defines that also happens to be an identifier (the `Started` checkpoint, `userSeed`), and a
+command or path the reader types.
+
+**Code.** A code block holds a command the reader runs or a short made-up example. Code that exists
+in the repo gets a link, not a copy. The typechecker checks the source file, not your copy of it.
+
+## Writing the sentences
+
+### One idea per sentence
+
+Keep two ideas in one sentence only when the second follows directly from the first: "the tag
+derives from the commit, so no ref travels between jobs". If a sentence has two dash asides, or a
+dash aside plus a parenthetical, split it at the first dash.
+
+- Bad: "The build leg pushes the image as `registry.fly.io/<app>:deployment-<sha>` — both phases
+  derive the tag from the commit, so no ref travels between jobs — and re-running a leg overwrites
+  its own tag."
+- Good: "The build leg pushes the image as `registry.fly.io/<app>:deployment-<sha>`. Both phases
+  derive the tag from the commit, so no ref travels between jobs. Re-running a leg overwrites its
+  own tag."
+
+If you put a relative clause after a dash, keep its "that" or "which". Without it, the clause reads
+as a second aside.
+
+Use parentheses for identifiers, values, and short examples. Never use one to restate the sentence
+in other words, and never put more than one in a sentence. A consequence is not a parenthetical:
+give it its own sentence or put it after a colon.
+
+### Put the point first
+
+Start each paragraph with the sentence that states its point, and make every later sentence support
+it. When a sentence starts a new point, start a new paragraph. A quick test: read only the first
+sentence of each paragraph. You should get a correct rough version of the doc.
+
+Inside a sentence, lead with the answer: "Reuses the existing bucket", not "What we want to do here
+is…". A short orienting clause is fine ("To detect a stale artifact, …"), because it tells the
+reader where they are before the fact arrives.
+
+When one concrete example carries a general rule, give the example first. "The handler intercepts a
+request to `/admin/api/2026-07/graphql.json` and answers it from the `2026-01` schema" is better
+than "handlers match any version segment and answer from the pinned schema". State the abstraction
+on its own only when no single example can carry it.
+
+### Say who does what
+
+Name the actor. "The sweep drops each stranded machine and records which ones it removed", not
+"stranded machines are dropped and the removed set is recorded". Four shapes hide the actor:
+
+- The passive voice. Add "by monkeys" to the end of the sentence. If it still parses, it's passive.
+- An action disguised as a definition. "A schema review is a rewrite" hides "when you review a
+  schema, you rewrite it".
+- An object doing a person's job. A token doesn't "hand" the browser a session; the browser fetches
+  one. A 400 doesn't "refetch"; the client refetches on a 400.
+- A chain of abstract nouns with nobody in it. "The escalation path for consumers on diverging
+  versions" stays opaque however precise it is. Rewrite it as a clause with a subject and a verb:
+  "who to call when a client is on an older version than the server".
+
+Sentences that state a fact or a definition have no actor, and "is" is the right verb there: "the
+field is optional".
+
+When you say which doc or component owns something, make it the subject: "the overview owns the
+boundaries", not "the boundaries are the overview's". Don't hang a possessive on a link ("the
+[sweep](url)'s seven readers"); put the link in a prepositional phrase instead.
+
+Give each mechanism its own verb. If you join two different things with one vague verb like
+"handles", "carries", or "covers", they sound like one mechanism, and the reader goes looking for
+it. "The worker drops the machine and records the removal", not "the worker handles the machine and
+the removal".
+
+### Don't hedge a decision
+
+If something has been decided, don't write "may", "should", or "might". Save those for options that
+are genuinely open. A conditional that defines a rule ("a change may be treated as standard-risk
+when…") is a definition, not a hedge.
+
+### State the rule, then the exception
+
+Put an exception in its own sentence, after the rule. Don't fold it into the rule's sentence as a
+clause. If there are two or more exceptions, list them.
+
+- Bad: "A background report carries a fresh trace id, except that a request-triggered drain inherits
+  the originating request's trace."
+- Good: "A background report carries a fresh trace id for that unit of work. One exception: a
+  request-triggered fire-and-forget drain inherits the originating request's trace."
+
+### Make every reference easy to resolve
+
+A pronoun's referent should be in the same sentence or the one before. Any farther back, repeat the
+noun. Repeating a noun is never a fault; making the reader scroll back is.
+
+The same goes for "the" plus a noun. If the doc mentions more than one kind of limit, "the limit" is
+only clear once "the rate limit" has appeared earlier in the same paragraph.
+
+When a noun names a part of something, name the whole thing the first time: "activity start", not
+"start"; "chain head", not "head".
+
+Point at the subject, not at the document. No "as noted above", no "see below", no "the second…", no
+"another…". Links to the section or doc that owns a fact are fine; they point at the subject. A
+contrast between two states of the system ("a `pruned` row means expired; a missing row means
+unknown") is a fact about the system and is fine.
+
+### Use one name for each thing
+
+Spell out an acronym the first time it appears ("Content Security Policy (CSP)"). Give a term of art
+a one-line definition or a link to where it's defined. Then keep using the same term. Switching
+words to avoid repetition ("the runner… the executor… the worker") makes the reader wonder whether
+those are three different things.
+
+A verb turned into a noun ("a reveal", "the split", "an append") is a made-up term, so attach it to
+what it acts on ("checkpoint reveal", "partition split", "chain append") and define it on first use.
+Or restructure the sentence around the verb. If a made-up term names a design concept, keep it for
+that concept and use a different word for the everyday sense.
+
+### Avoid noun pile-ups and negated subjects
+
+Three bare nouns in a row make the reader parse the sentence twice. Break the pile-up with a
+preposition: "a bug in the token expiry check", not "the token expiry check bug".
+
+Negate the verb or the object, never the subject. "A drain never delivers entries out of order", not
+"no drain delivers entries out of order". A negated subject reads as a claim about the subject until
+the verb arrives.
+
+### Write how-to as instructions
+
+In a how-to, address the reader as "you" and use imperatives: "seed it yourself", "call `seed()` if
+you'd rather not create data per test". A how-to written without a reader reads like a spec.
+Reference and design docs stay declarative, because there you're describing what the system is, not
+telling the reader what to do.
+
+## Choosing words
+
+### Cut filler and vague qualifiers
+
+Cut words that add nothing: "naturally", "organically", "cleanly", "honestly", "trivially", "just",
+"earns its complexity", "lays foundation for", "cheap insurance", "the right level". "Easy",
+"simple", and "quick" sound like marketing, so describe the thing instead: "one command", "on by
+default". Drop labels like `Mitigation:` and state the mitigation.
+
+Replace vague qualifiers with claims. "Significantly", "many", "often", "typically", "generally",
+"near-instant" stand where a real claim should be. Give the figure and its source, or make the
+concrete claim the qualifier is dodging. "~28.7KB gzipped on average over a 7-day window" survives
+review; "artifacts are small" doesn't.
+
+### Don't stack adjectives
+
+Three or more adjectives on one noun read as marketing copy. Lead with the fact instead.
+
+- Bad: "This work introduces continuations — session-scoped, chain-rooted, identity-bearing rows
+  that resume an activity…"
+- Good: "A continuation is a row minted from a chain coordinate. The session that owns it resumes
+  the activity through it."
+
+### Don't repeat a rhetorical move
+
+The same move three times in a row wears out. If you've written "X, not Y" three times, keep the
+strongest contrast. If you've written "no new A, no new B, no new C", collapse it to one line. If
+"means" or "is the" is the main verb of every sentence, vary the verbs.
+
+### Cut the tells of machine-drafted prose
+
+These patterns mark text as generated. Cut or rewrite them:
+
+- Transitions that recap the previous paragraph: "With this setup complete…", "Now that we've
+  covered…". Go straight to the next point.
+- Feature-list voice: "provides", "is configurable", "offers a flexible way to". State the fact.
+- Choppy fragments that split one idea: "Previously this was manual. Now it's automatic. This saves
+  time." Make it one sentence. A short sentence for emphasis is fine.
+- Framing that could open any doc: "The question most teams face is…".
+- A rhetorical question that only sets up the next sentence: "So why not cache it? Because…". Say it
+  directly.
+
+### Banned words
+
+The [banned-words list in AGENTS.md](../../../AGENTS.md#banned-words) applies to all prose. Fix any
+violation you see.
+
+## Shaping the doc
+
+### Summary first
+
+Open a doc with three to six plain sentences that say what the system does and the one thing a
+reader most needs to know. Open any section of four or more paragraphs with a sentence that names
+what it covers and the common case. Split a section that runs past six paragraphs into subsections.
+Bullets count as paragraphs for these limits.
+
+### Lists for parallel items, prose for cause and effect
+
+If a paragraph enumerates parallel things, make it a list. If a list's items tell a cause-and-effect
+story, make it a paragraph. Every list item should carry a fact beyond its own name; an item with
+nothing to add goes inline.
+
+### Tables for variants with several attributes
+
+When you have three or more values of one kind (states, tiers, modes) and each has two or more
+attributes, use a table. Don't write a chain of contrasting sentences. If each value has only one
+attribute, use bullets.
+
+Keep each cell to one value: an identifier, a number, a short phrase. If you find yourself putting a
+list, a whole clause, or a reference to another row in a cell, the table is the wrong shape. Try
+these in order: point to the source file that owns the mapping; use a nested list; re-cut the
+table's columns. A decision table is the exception: its prose column says what each option is and
+when to use it, and that's fine.
+
+### Diagrams for pipelines, state machines, and topologies
+
+If a section's subject is a pipeline, a state machine, or a topology, open it with one mermaid
+diagram of that shape. Those three are the whole list; a section about a rule, a contract, or a set
+of parallel facts gets no diagram. Under the diagram, write only what the diagram can't show: the
+invariant on each edge, who owns each state, the exception.
+
+Use the same names in the diagram that the surrounding prose and the subsystem's glossary use. A
+diagram adds no vocabulary and no nodes the prose doesn't mention. It carries no numbers from the
+code, no identifiers the prose wouldn't use, and no defensive edge cases.
+
+### Procedures as numbered steps
+
+When the reader performs actions in order, write a numbered list with one action per step. If a step
+needs explanation, add a sentence under it rather than making the step longer. Indent a code block
+inside a step to the step. State the expected outcome exactly ("Expect: HTTP 202", the exact error
+text), never "should succeed". A checklist with no inherent order is bullets.
+
+A sequence the system performs is a description, not instructions to the reader. Where the order is
+the point (a pipeline, a request lifecycle), write it as numbered stages in the declarative: "1. The
+build job pushes the image", not "1. Push the image".
+
+### Headings, bold leads, and rules
+
+A bold lead-in works for a single paragraph. Once it needs a second paragraph or a code block, it's
+a section, so give it a heading. This includes repeated template labels like `**Scope**` and
+`**Risk**` across the phases of a plan. Two shapes stay bold: a one-line marker (`**Why:**`,
+`**Depends on:** phase 1.`) and a run of entries that all have the same shape, like the entries in a
+changelog, where a heading on each one would only add noise.
+
+Don't label a body with its own role. `**Design**`, `**Rationale**`, `## Overview`, and `## Notes`
+add nothing, because the body already is the design or the rationale. Name what the section is
+about, or fold it into the intro. Replace a per-section `**Rationale**` block with inline `**Why:**`
+markers at the specific decisions that need one.
+
+Don't use `---` between sections. A horizontal rule is a heading that lost its name. Delete it, and
+if the break felt necessary, give the section under it a heading.
 
 ## Formatting and links
 
-- **Write paragraphs as single long lines.** oxfmt reflows prose on commit (`proseWrap: "always"`,
-  100 columns); hand-wrapping creates churn. Code blocks are left untouched — alignment inside
-  fences survives.
-- **Every code block carries a language tag** (`bash`, `ts`; `text` for plain output). An untagged
-  block renders flat on GitHub and hides what it is.
-- **Link code, don't transcribe it.** A fenced block holds commands the reader runs or a short
-  illustrative shape. Code that exists in the repo is linked, never transcribed — a transcribed
-  block is a roster: it rots with no signal, and the source file is typechecked where the block is
-  not.
-- **Units attach directly to their value** (`200ms`, `30s`, `64KB`). Numerals for counts ("8
-  deployments", not "eight").
-- **Placeholders name their content** (`<task_list_id>`, `<service_id>`), never `xxx`, `ABC123`, or
+- Write each paragraph as one long line. oxfmt reflows prose on commit, so hand-wrapping creates
+  churn. Code blocks are left as written.
+- Tag every code block with a language (`bash`, `ts`, or `text` for plain output). An untagged block
+  renders flat on GitHub.
+- Attach units to their value: `200ms`, `30s`, `64KB`. Write measured counts as numerals: "8
+  deployments", not "eight".
+- Name what a placeholder stands for: `<task_list_id>`, `<service_id>`. Never `xxx`, `ABC123`, or
   `<TOKEN>`.
-- **Anchors are GitHub's kebab-case** (`### Atomic cells` → `#atomic-cells`; `&` and `/` collapse to
-  extra hyphens). A cross-doc link goes via a path relative to the linking file.
-- **Link a target once** where it first matters, then refer to the topic by name — linking the same
-  target six times across one section is noise.
-- **`§` is forbidden** — bare in prose and inside link text. Link the section by its title; the link
-  itself makes the section nature clear.
+- GitHub makes anchors by lowercasing the heading, dropping punctuation, and turning each space into
+  a hyphen, so `## Game entropy & provenance` links as `#game-entropy--provenance`.
+- Link to another doc with a path relative to the linking file.
+- Link a target once, where it first matters, and refer to it by name after that.
+- Never use `§`, in prose or in link text. Link the section by its title.
 
-## Review workflow
+## Reviewing a doc
 
-Before committing docs, run this sequence over the files you touched:
+Before you commit, review each file you touched in four passes. A review subagent runs the same four
+passes with this guide as its only reference.
 
-1. Selection pass: cover each point and apply the point test; check each fact against its owner
-   elsewhere in the repo.
-2. Rendering pass: reread each surviving paragraph against Sentences, Words, Structure, and Stance.
-3. Run the scripted checks from the repo root:
+1. What it says. List the points each section makes and judge each one against "Deciding what to
+   include". Check every fact against the doc that owns it.
+2. How it says it. Reread each surviving paragraph against "Writing the sentences", "Choosing
+   words", "Shaping the doc", and "Formatting and links", in that order.
+3. The scripted checks. Run from the repo root:
 
    ```bash
    bash .claude/skills/docs-writing/scripts/check-prose.sh <path>...
    ```
 
-   The script greps the given paths for process residue, greppable banned words, numeric constants
-   with units under `docs/architecture/`, and untagged code fences, and exits non-zero on any hit.
-   It skips this skill's own directory, which documents the forbidden patterns and contains them as
-   examples.
+   The script fails on four things: traces of the work session (date stamps, "Verified against…"),
+   the banned words a grep can catch, numbers with units under `docs/architecture/`, and untagged
+   code blocks. It skips this skill's own directory, because the examples here contain those
+   patterns on purpose. If you're reviewing this skill, run the greps by hand and judge the hits.
 
-4. Visual audit: walk each changed section's links and confirm every link's text still matches its
-   target heading.
+4. The links. Walk each changed section's links and confirm the link text still matches the heading
+   it points to.
+
+### What a review report looks like
+
+A report is a list of findings followed by a verdict. Each finding is one line:
+
+```text
+path:line — rule — "the quoted text" — the proposed fix
+```
+
+The rule is the heading of the section the finding falls under. The proposed fix is a rewritten
+sentence or "delete". Group findings by pass. End with `clean` if there are no findings, or `fail`
+and the count. A reviewer proposes and never edits. The writer then fixes each finding by rewriting
+from the facts, not by pasting the reviewer's sentence in.
