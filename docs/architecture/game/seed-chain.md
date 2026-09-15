@@ -29,21 +29,11 @@ flowchart LR
   R["a rejection rewinds<br>appended onto verified"] -.-> VA
 ```
 
-## Journeys
-
-- The player attempts a node for the first time. The server mints the chain when it reveals the
-  node, and the activity draws its opening position.
-- The player stops part way through. The chain advances to the point they stopped, and no further.
-- The player runs a string of activities with no network. Each draws its position on the device, and
-  all of them reach the server at the next reconnect.
-- The server refuses an activity. The appended anchor rewinds onto the verified anchor, and every
-  activity that started past it is rejected.
-
 ## Where a chain starts
 
 A node's chain begins at a genesis seed the server mints the first time it reveals the node to the
 avatar. The server draws the seed from a cryptographically secure generator, stores it, and never
-derives it again: the verifier reads the stored value, and a restored device fetches it. The server
+recomputes it: the verifier reads the stored value, and a restored device fetches it. The server
 mints a seed only for a node inside the avatar's revealed region
 ([what a player may see](./worldmap.md#what-a-player-may-see)); a node outside it gets no chain.
 Revealing the same node twice mints nothing new.
@@ -64,31 +54,30 @@ the server checks every submitted checkpoint's index against the value it derive
 
 ## Drawing a position
 
-The client draws its position without asking the server. Node reveal stocks the device with every
-input an activity start needs except the sim version, which the client already holds, and among
-those inputs are the node's genesis seed and its current appended anchor. An activity begins at the
-node's appended anchor rather than at genesis, so it resumes where play on the node left off; a node
-never played has an anchor of its genesis seed at index zero. A device that plays forward begins its
-next activity at the position it reached. That position can sit ahead of the anchor the server
-holds, because the server's anchor waits for the activity to end.
+The client draws its position without asking the server. Node reveal hands the device the node's
+genesis seed and its current appended anchor
+([authoring an activity start](./game-simulation.md#authoring-an-activity-start)). An activity
+begins at the node's appended anchor rather than at genesis, so it resumes where play on the node
+left off; a node never played has an anchor of its genesis seed at index 0. A device that plays
+forward begins its next activity at the position it reached. That position can sit ahead of the
+appended anchor the server holds, because the server's appended anchor waits for the activity to
+end.
 
 ### Handing an activity start to the server
 
-The worker hands each activity start to the server on the next contact
-([authoring an activity start](./game-simulation.md#authoring-an-activity-start)), and the server
-checks the anchor exactly. A start's index must equal the chain's appended index, and its seed must
-equal the chain's appended seed. A start computed against a position the chain has since moved past
-is refused rather than layered onto a position that no longer exists.
+The worker hands each activity start to the server on the next contact, and the server checks the
+anchor exactly. A start's index must equal the chain's appended index, and its seed must equal the
+chain's appended seed. The server refuses a start computed against a position the chain has since
+moved past, rather than layering it onto a position that no longer exists.
 
-A refusal that can clear keeps the start on the device, and a refusal that holds under any order
-drops it. A stale anchor, a sim version this deploy has not registered yet, an operator hold, and a
-build snapshot that counted XP from a predecessor still in flight all clear on their own, so the
-worker resends the start on its backoff
-([worker lifecycle](./offline-reconcile.md#worker-lifecycle)). A chain that was never revealed, a
-sim version past retention, and a simulation that diverged from the server's own derivation never
-clear, so the worker drops the start and the checkpoints queued behind it. The device tells the two
-apart by the refusal's error code and by the `reason` a `CHECKPOINT_INVALID` refusal carries
-([error handling](../services/error-handling.md)).
+The device keeps a start whose refusal a later server state can clear, such as a stale anchor, and
+drops a start the server would refuse under any order, such as a chain that was never revealed. It
+tells the two apart by the refusal's error code and the reason the refusal carries
+([error handling](../services/error-handling.md)). One exception: for a build-snapshot mismatch the
+device asks the server for the avatar's latest activity and keeps the start only while an
+undelivered predecessor explains the mismatch. A kept start resends on the worker's backoff
+([worker lifecycle](./offline-reconcile.md#worker-lifecycle)), and a dropped start takes its queued
+checkpoints with it.
 
 ## The anchors
 
@@ -99,43 +88,31 @@ that appended nothing, or whose only checkpoint is the `Started` one, moves noth
 `Started` checkpoint draws nothing from the seed.
 
 The verified anchor moves only when a proved activity ends. A segment part way through an activity
-settles what it proved and advances that activity's own verified cursor, but leaves the chain's
-anchor where it stands. The anchor moves on the segment that both ends a forward-exited activity and
+settles what it proved and advances that activity's own verified head, but leaves the chain's anchor
+where it stands. The anchor moves on the segment that both ends a forward-exited activity and
 reaches its last appended checkpoint. When the verifier claims an activity whose start index sits
 ahead of the anchor, it catches the anchor up from the forward-exited predecessor before it
 adjudicates.
 
 Settlement trusts a position only at or below the verified anchor
-([applying verified progress](./replay-verification.md#applying-verified-progress)). The chain also
-carries a replay priority: the verifier picks between avatars by the priority on their chains,
-highest first and older chain on a tie, and it never reorders one avatar's own chains against each
-other. Whoever moves an anchor, the request path or the verifier, takes the chain row before the
-activity row, so the two writers never deadlock.
+([applying verified progress](./replay-verification.md#applying-verified-progress)).
+
+The chain also carries a replay priority. The verifier picks between avatars by the priority on
+their chains, highest first and older chain on a tie, and it never reorders one avatar's own chains
+against each other.
+
+Whoever moves an anchor, the request path or the verifier, takes the chain row before the activity
+row, so the two writers never deadlock.
 
 ## Pulling the appended anchor back
 
-The verifier rejects a stream whose divergence it can reproduce. One transaction does three things:
+The verifier rejects a stream whose divergence it can reproduce, in one transaction:
 
-1. It marks the diverging activity rejected, whether it was still active or had already
-   forward-exited.
-2. It rewinds the appended anchor onto the verified anchor in one guarded update.
-3. It rejects every activity on the chain that started past the verified anchor, active and
-   already-exited alike.
+- It marks the diverging activity rejected, whether it was still active or had already
+  forward-exited.
+- It rewinds the appended anchor onto the verified anchor in one guarded update.
+- It rejects every activity on the chain that started past the verified anchor, active and
+  already-exited alike.
 
-Rejecting a stream voids the chain's unproved remainder and reverses no payout already made. A
-quarantine moves neither anchor, and a writer handover moves neither anchor.
-
-## Building against unsettled XP
-
-A new activity's build snapshot counts the unsettled XP of every activity this avatar has ended that
-still waits for its verifier, so a player who finishes one activity and starts another builds
-against what they just earned. Identity is avatar-wide while chains are per scope, so a snapshot
-draws from activities on other chains too. A held activity does not count: a parked or quarantined
-activity reaches verification only when an operator intervenes, so counting it would stamp XP that
-never settles into this snapshot and every later one. XP is the only quantity a snapshot draws ahead
-of proof, because an item mints only for a proved segment.
-
-The client predicts the snapshot as the previous activity's start snapshot plus that activity's own
-XP, and the server folds the same rule from its own rows. A worker with no record of the previous
-activity, on a fresh device or after the server closed it, mints from the snapshot the server
-returns beside the avatar's latest activity.
+Rejecting a stream voids the chain's unproved remainder and reverses no payout already made. Neither
+a quarantine nor a writer handover moves an anchor.

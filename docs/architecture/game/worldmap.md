@@ -1,26 +1,27 @@
 # The world map
 
 The world map is the graph of places an avatar travels to reach content. Every avatar walks a
-different map, dense near its origin and opening into unbounded space as distance grows. The server
-stores no part of the map. The client computes the shape on the device, the server computes what
-each place holds, and the wire carries only the nodes a player has revealed.
+different map, unbounded in every direction and harder the farther from its origin it runs. The
+server stores no part of the map. The client computes the shape on the device, the server computes
+what each place holds, and the wire carries only the nodes a player has revealed.
 
 One split governs everything else. The map's shape is public and any client can compute it, while a
 node's contents are sealed and only the server can compute them. The two derive from different
 inputs, so knowing the whole shape tells a player nothing about where the reward sits. A public
 shape over sealed contents is what makes an infinite client-computed world safe to ship.
 
-[Game entropy](./game-entropy.md) owns the threat model those rules answer. The
+The [economy modes note](../../game-design/economy-modes.md#perfect-foresight) owns the threat model
+those rules answer, and [game entropy](./game-entropy.md) owns the entropy model. The
 [seed chain](./seed-chain.md) owns what happens once an avatar starts playing a node.
 
 ## The two planes
 
 Every derived value sits on one of two planes, split by who can compute it.
 
-| Plane    | Derived from                      | Holds                                       | Who computes it  |
-| -------- | --------------------------------- | ------------------------------------------- | ---------------- |
-| geometry | `userSeed` and the coordinate     | positions, edges, difficulty, biome         | anyone           |
-| content  | the scope secret, plus both above | the node's sealed reward and encounter pool | the server alone |
+| Plane    | Derived from                                     | Holds                                       | Who computes it  |
+| -------- | ------------------------------------------------ | ------------------------------------------- | ---------------- |
+| geometry | `userSeed` and the coordinate                    | positions, edges, difficulty, biome         | anyone           |
+| content  | the scope secret, `userSeed`, and the coordinate | the node's sealed reward and encounter pool | the server alone |
 
 `userSeed` is the avatar's own seed. It differs per avatar, so every map differs, and it is not a
 secret: shipping it leaks nothing, because the shape it produces is worth nothing on its own. The
@@ -45,8 +46,9 @@ the unit the generator works in. A cell coordinate addresses one hex cell and is
 - Node placement. Every hex cell carries exactly one node, offset from its centre by a bounded
   jitter that keeps it inside its own hex. Sparse-looking ground is a rendering choice, not an
   absent node.
-- Edge connectivity. Two nodes connect when they sit within the edge distance cap of each other and
-  no third node falls inside the circle drawn on that pair as its diameter, a distance-capped
+- Edge connectivity. Two nodes connect when no third node falls inside the circle drawn on that pair
+  as its diameter and when they sit within the edge distance cap, a maximum span beyond which no
+  pair connects. That makes the graph a distance-capped
   [Gabriel graph](https://en.wikipedia.org/wiki/Gabriel_graph). The test is local, so both sides of
   a chunk border reach the same answer on the same inputs and borders join with no stitching pass.
 - Difficulty. A cell's difficulty climbs one step per fixed number of rings out from the origin, up
@@ -96,10 +98,10 @@ has cleared. Reveal measures hex distance; selection follows edges. A revealed n
 with no edge to a cleared node is visible and unreachable, and that is the intended shape of the
 boundary.
 
-The server holds that boundary. Replay checks each activity's node against the avatar's cleared
-frontier, the set of nodes whose first clear has verified, and rejects anything beyond it
-([replay verification](./replay-verification.md#replay)). Client and server derive edges from
-identical inputs, so they never disagree about which nodes connect.
+The server holds that boundary. The avatar's cleared frontier, the set of nodes whose first clear
+has verified, bounds travel: replay rejects an activity at a node that borders no node on the
+frontier ([replay verification](./replay-verification.md#replay)). Client and server derive edges
+from identical inputs, so they never disagree about which nodes connect.
 
 ### Playing past the frontier offline
 
@@ -131,30 +133,28 @@ The content derivation is constant-time and stores nothing. The server derives a
 an activity is admitted, and the verifier derives them again at replay, so no stored row exists to
 forge.
 
-Every activity row carries a scope-secret reference and version and the content version beside them.
-All three are columns on the activity row, never fields inside the checkpoint stream. The reference
-names only a versioned root the keys service custodies, and rotating a secret adds a root version
-rather than rewriting rows. The verifier re-derives the node's difficulty and sealed fields on each
-stream's first pass and rejects a mismatch.
+Every activity row carries a scope-secret reference and version as columns of its own, never as
+fields inside the checkpoint stream. The reference names only a versioned root the keys service
+custodies ([key derivation](./game-entropy.md#key-derivation)). The verifier re-derives the node's
+difficulty and sealed fields on each stream's first pass and rejects a mismatch.
 
 ## Biome, the terrain plane
 
 Biome is how the ground looks, so it renders on the client and sits on the geometry plane. A player
 sees it through fog before reaching it.
 
-The terrain samples in two independent layers. A base layer paints organic regional patches from a
+The generator samples terrain in two independent layers. A base layer paints regional patches from a
 low-frequency hybrid of [Worley](https://en.wikipedia.org/wiki/Worley_noise) and
 [value noise](https://en.wikipedia.org/wiki/Value_noise), with each biome's rarity banded by
 distance from the origin. A second layer paints a rarer modifier over the top, spanning several base
 patches. Both sample at any real position, not only at cell centres, so a renderer can fill a texel
 grid between nodes.
 
-Terrain draws as node territories. Every point of ground wears the biome of its nearest jittered
+Terrain draws as node territories. Every point of ground takes the biome of its nearest jittered
 node, a patch is the union of its nodes' territories, and borders weave between nodes so no node
-ever sits on one. Node jitter alone gives those borders their organic wander, and a tint crossfade
-softens the border where two territories wear different biomes.
+ever sits on one. Node jitter alone makes those borders wander, and a tint crossfade softens the
+border where two territories wear different biomes.
 
-The content derivation takes no biome input, so terrain is never a prior over what a node holds. A
-reward may vary by biome only through a public term every client can compute; a hidden per-node
-reward that clusters by biome is forbidden, because client-visible terrain would become a map to
-sealed loot.
+Content ignores biome ([sealing a node's contents](#sealing-a-nodes-contents)), so a client cannot
+read terrain as a predictor of a node's reward. A reward may vary by biome only through a public
+term every client can compute.
