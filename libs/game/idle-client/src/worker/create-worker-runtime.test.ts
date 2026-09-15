@@ -228,6 +228,65 @@ test('it reports an unreadable journal once and still tells the tabs the stream 
   expect(recorded[0]?.tags).toMatchObject({ site: 'journal-write' });
 });
 
+// several tick periods, so a tick loop still running would have produced another broadcast
+const SEVERAL_TICK_PERIODS_MS = 300;
+
+test('it simulates nothing more once the journal cannot be read', async () => {
+  const viewer = await createViewer();
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
+
+  await db.contentDocumentCollection.create({ contentVersion: '2' });
+
+  const revealed = await client.revealNodes({ avatarID: viewer.avatar.id, nodeIDs: ['1_0'] });
+
+  await writeNodeSeeds(viewer.avatar.id, revealed.nodes);
+
+  await writeStartStamps({
+    keyVersion: revealed.keyVersion,
+    secretRef: revealed.secretRef,
+    secretVersion: revealed.secretVersion,
+  });
+
+  using runtime = createWorkerRuntime({
+    bundledEngineHash: 'test_engine_hash',
+    client,
+    journal: {
+      readQueuedCheckpoints: () => Promise.reject(new DOMException('gone', 'InvalidStateError')),
+      writeQueuedCheckpoint,
+    },
+  });
+
+  const broadcasts = collectBroadcasts();
+  const testClient = createConnectedTestClient(runtime);
+
+  await testClient.initialize({});
+
+  await testClient.startActivity({
+    avatarID: viewer.avatar.id,
+    scopeID: '1_0',
+    scopeType: 'world_map_node',
+  });
+
+  await waitFor(() => {
+    expect(broadcasts.received).toPartiallyContain({
+      kind: 'unreadable',
+      receivedVersion: 0,
+      type: WorkerMessageType.JournalFailure,
+    });
+  });
+
+  const settled = broadcasts.received.length;
+
+  await expect(
+    waitFor(
+      () => {
+        expect(broadcasts.received.length).toBeGreaterThan(settled);
+      },
+      { timeoutMs: SEVERAL_TICK_PERIODS_MS },
+    ),
+  ).toReject();
+});
+
 test('it closes the connection on disconnect so no further call it makes is answered', async () => {
   using runtime = createWorkerRuntime();
 
