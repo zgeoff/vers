@@ -1,116 +1,97 @@
 # Auth
 
-Authentication and step-up authorization split across three domain services and the app-web edge.
-The edge (`apps/web`) runs the credential and code flows, holds the session cookie, and signs the
-service-to-service (s2s) token for its own outbound calls. Durable state lives in the services:
-sessions and step-up transactions in `service-session`, password credentials and reset tokens in
-`service-user`, TOTP verifications in `service-verification`. Services never see cookies. The edge
-validates the session and passes each service a short-lived token naming the acting user, so a
-service trusts the token's claims and nothing else ([service contracts](./service-contracts.md)).
+The web edge and the domain services split authentication and step-up authorization by role. The
+edge runs the credential and code flows, holds the session cookie, and signs the service-to-service
+token for its own outbound calls. Durable state lives in the services: sessions and step-up
+transactions in the session service, password credentials and reset tokens in the user service, TOTP
+verifications in the verification service. Services never see cookies. The edge validates the
+session and passes each service a short-lived token naming the acting user, so a service trusts the
+token's claims and nothing else ([service contracts](./service-contracts.md)).
 
 ## Session lifecycle
 
-A login runs in the edge's `runLogin` (`apps/web/src/routes/-login/`). It validates the honeypot and
-fields, then calls `userClient.getUser` and `userClient.verifyPassword`. A wrong email or password
-reports one form-level error, never which was wrong. `sessionClient.createSession` then writes an
-unverified session row, expiring in 24 hours or 7 days with `rememberMe`. With 2FA on the account,
-`runLogin` redirects to `/verify-otp` carrying the pending session id; without it,
-`runSessionSignIn` runs directly.
+A login validates the honeypot and the fields, then checks the email and password against the user
+service. A wrong email or password reports one form-level error, never which was wrong. The session
+service then writes an unverified session row, with a longer lifetime when the player asks to be
+remembered. With 2FA on the account, the edge redirects to the code prompt carrying the pending
+session id; without it, sign-in completes directly. Onboarding creates the user, then the session,
+then completes the same sign-in. An onboarding retry that finds the email already taken checks the
+submitted password: a match signs the player in through the same path, and a mismatch reports that
+the account exists.
 
-`runOnboarding` (`apps/web/src/routes/-onboarding/`) creates the user, then the session, then runs
-`runSessionSignIn`. A retry whose `createUser` answers `CONFLICT` on the email checks the submitted
-password with `verifyPassword`: a match signs the player in through the same session path, a
-mismatch reports a form-level error saying the account exists.
+Sign-in redirects to a force-logout prompt when the account already holds a live session; otherwise
+it verifies the session and seals the cookie. Verifying a session mints the first access and refresh
+token pair, marks the row verified, and evicts every other session of the same user in one
+statement, so at most one verified session per user survives. Each token is a JWT subject-bound to
+the user and signed with the session service's private key. The edge verifies the access token's
+signature against the session service's published key set, selected by the token's key id, and
+requires the token's subject to match the cookie's user before it trusts any claim; a token no
+published key signed reads as signed out. Access tokens are short-lived, and a refresh call rotates
+the pair once the access token has aged. A reused refresh token, a superseded rotation, or an
+expired session revokes the session. A signing key rotates through an overlap window in which the
+service signs with the new key and publishes both, and a refresh token is matched against the
+session row rather than verified by signature, so a rotation never invalidates a live session. A
+service token can outlive its session by its own short lifetime, so the edge re-confirms the session
+still exists on every request while the access token is fresh, and an evicted device is signed out
+on its next request.
 
-`runSessionSignIn` (`apps/web/src/lib/auth/`) redirects to a force-logout prompt when the account
-already holds a live session; otherwise it calls `verifySession` and seals the cookie.
-`verifySession` (`services/session/src/handlers/`) mints the first access/refresh pair, flips the
-row to `verified`, and evicts every other session of the same user in one CTE. At most one verified
-session per user survives. Each token in the pair is an RS256 JWT subject-bound to the user, signed
-with service-session's PKCS8 key (`JWT_SIGNING_PRIVKEY`). Its issuer and audience are both
-`API_IDENTIFIER`. Access tokens live 15 minutes and rotate through `refreshTokens`, which rejects a
-reused refresh token.
-
-The edge verifies the access token's signature against service-session's published key set, selected
-by the token's `kid` header, and requires the token's subject to match the cookie's user before it
-trusts any claim. A token no published key signed or a subject mismatch reads as signed out; an
-expired token takes the refresh path. A key rotates through an overlap window in which the service
-signs with the new key and publishes both, and a refresh token is matched against the session row
-rather than verified by signature, so a rotation never invalidates a live session.
-
-The cookie is `en_session`: httpOnly, `SameSite=Lax`, secure in production, sealed by an app secret
-(`buildAuthSessionConfig`). `getAuthSession` reads it and never throws. An absent token is how
-`requireAuth` and `requireAnonymous` observe "signed out". `requireAuth` treats a partial session
-(any of the session id, access token, or refresh token missing) the same way, and runs the logout
-path before it redirects to `/login`, so whatever partial cookie state remained is cleared. A
-service's `UNAUTHORIZED` on a page load's server call (`withRequiredSession`,
-`apps/web/src/lib/auth/`) takes the same logout path and redirect.
+The session cookie is httpOnly, same-site lax, secure in production, and sealed by an app secret.
+Reading it never throws, and an absent token is how the edge observes "signed out". A partial
+session, one missing any of the session id, access token, or refresh token, reads the same way. The
+edge runs the logout path before it redirects to login. A service's `UNAUTHORIZED` on a page load's
+server call takes the same logout path and redirect.
 
 ## Step-up authorization
 
 A sensitive mutation (an email change, a password change, or disabling 2FA) demands a fresh code
-check before it runs. `checkStepUp` (`apps/web/src/lib/auth/`) decides in priority order. With no
-live 2FA verification for the target, the check is not needed and the mutation proceeds. With a
-valid, unused transaction token on the resubmission, the mutation proceeds. Otherwise `checkStepUp`
-creates a pending transaction and challenges the caller for a code.
+check before it runs. The step-up check decides in priority order: with no live 2FA verification for
+the target, the mutation proceeds; with a valid, unused transaction token on the resubmission, the
+mutation proceeds; otherwise the edge creates a pending transaction and challenges the caller for a
+code.
 
-The challenge submits to `verifyStepUpHandler`, shared by every gated mutation. `verifyCode` checks
-the submitted TOTP. An invalid code counts a failed attempt against the pending transaction, and
-`recordFailedAttempt` abandons it after 5. A valid code atomically consumes the pending transaction
-and mints a transaction token.
+One handler verifies the challenge for every gated mutation. An invalid code counts a failed attempt
+against the pending transaction, and the edge abandons the transaction after a fixed number of
+failures. A valid code atomically consumes the pending transaction and mints a transaction token.
 
-State that outlives a request lives in postgres, in the `pending_transactions` table. A pending
-transaction holds its action, target, IP, and owning session; postgres cascade-deletes it with the
-session, and it expires after 5 minutes. `consumePendingTransaction` rejects a request whose action,
-IP, session, or target does not match the stored row.
+A pending transaction lives in postgres with its action, target, IP, and owning session. Postgres
+cascade-deletes it with the session. The session service ignores an expired row at consume time and
+sweeps expired rows on the next create, and consuming a row rejects a request whose action, IP,
+session, or target does not match it.
 
-The transaction token is an RS256 JWT minted and verified only inside the edge process
-(`create-step-up-transaction-token.ts`). It is proof a code check passed, redeemable once by the
-mutation it names. It carries `action`, `target`, `sessionID`, and a `jti`, and lives 5 minutes. It
-signs against a per-process in-memory keypair. The token round-trips through the browser between the
-code check and the mutation, so it verifies only on the edge process that minted it. The
-`consumed_transaction_tokens` ledger enforces single use: `consumeTransactionToken` records the
-`jti` and rejects a token whose `jti` is already recorded. `checkStepUp` matches the token's
-`sessionID` before consuming it, so a token minted under one session cannot redeem under another.
+The transaction token is a short-lived JWT minted and verified only inside the edge process, against
+a per-process in-memory keypair, because it round-trips through the browser between the code check
+and the mutation. It is proof a code check passed, redeemable once by the mutation it names. The
+session service records each consumed token id and rejects a repeat, and the check matches the
+token's session before consuming it, so a token minted under one session cannot redeem under
+another.
 
 ## TOTP verification
 
-`service-verification` issues and checks TOTP codes with `@epic-web/totp`, one verification row per
-target and type (`2fa`, `2fa-setup`, `change-email`, `onboarding`):
-
-- `createVerification` generates a code and returns the OTP. An emailed code (`onboarding`,
-  `change-email`) lives 10 minutes; an authenticator code (`2fa`, `2fa-setup`) lives one 30s period.
-- `verifyCode` checks it, consuming `change-email` and `onboarding` codes on success and deleting
-  the row; `2fa` and `2fa-setup` codes stay, marked verified, each guarded so a replay matches zero
-  rows.
-- `get2FAVerificationURI` returns the authenticator-app URI for a pending 2FA setup.
+The verification service issues and checks TOTP codes, one verification row per target and type. An
+emailed code (onboarding and an email change) carries an expiry; an authenticator code (2FA and 2FA
+setup) lives one TOTP period. Verifying consumes an emailed code on success and deletes its row. An
+authenticator row stays and records its last verified code and time, so a repeat of the same code
+matches zero rows. The service also returns the authenticator-app URI for a pending 2FA setup.
 
 ## Credentials and password reset
 
-`service-user` owns the credential path: `verifyPassword` gates login, while `changePassword` and
-`resetPassword` rewrite the hash and sign the user out of every session. `service-user` stores a
-reset token as its sha256 hash, and the token reaches the user only through the URL in the reset
-email. `resetPassword` matches it in constant time.
+The user service owns the credential path: it verifies a password at login, a password change
+rewrites the hash and leaves the sessions in place, and a password reset rewrites the hash and
+deletes every session of that user. It stores a reset token as its hash, the token reaches the user
+only through the URL in the reset email, and the reset matches it in constant time.
 
 ## Service-to-service tokens
 
-Every service call over the private network carries a short-lived JWT from `createServiceToken`
-(`@vers/service-auth`): EdDSA over an Ed25519 keypair, 60-second default expiry. The `iss` claim and
-the protected header's `kid` both name the minting service. The `sub` claim names the acting user,
-omitted for a verified-anonymous call. The `aud` claim is the target service's registered audience,
-`service-<name>` from `buildServiceAudience`.
+Every service call over the private network carries a short-lived JWT signed with an Ed25519
+keypair. The issuer claim and the key id both name the minting service, the subject names the acting
+user and is omitted for a verified-anonymous call, a session claim names the acting session, and the
+audience is the target service's registered audience. Every issuer holds its own private key, held
+by no other app: the web edge for its outbound calls, the replay service for its calls toward the
+keys service and the version-pinned replay providers, and the activity service for the wake call a
+committed append sends toward the replay service.
 
-Three issuers mint these tokens. Each signs with its own private key, the `SERVICE_AUTH_PRIVATE_KEY`
-in its own environment, held by no other app:
-
-- `app-web` signs the edge's outbound calls in `createEdgeServiceToken`.
-- `service-replay` signs the worker's calls toward the keys service and toward version-pinned replay
-  providers (`services/replay/src/dispatch/`).
-- `service-activity` signs the wake call a committed append sends toward `service-replay`.
-
-The service runtime (`@vers/service-runtime`) verifies every inbound token before any handler runs,
-against `SERVICE_AUTH_JWKS`, a JWKS registering every issuer's public key under its `kid`. A token's
-claimed `iss` must be a known issuer and equal its `kid`, and the signature validates only against
-that issuer's registered key. A leaked minting key therefore lets its holder impersonate that one
-service and no other. The runtime rejects a bad token with a plain 401
-([service contracts](./service-contracts.md)).
+The service runtime verifies every inbound token before any handler runs, against a key set
+registering every issuer's public key under its key id. A token's claimed issuer must be a known
+issuer and equal its key id, and the signature validates only against that issuer's registered key,
+so a leaked minting key lets its holder impersonate that one service and no other. The runtime
+rejects a bad token with a plain 401 ([service contracts](./service-contracts.md)).

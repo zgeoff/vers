@@ -2,16 +2,15 @@
 
 Vers is a browser idle game on a microservice backend. A deterministic simulation runs on the
 client, the server verifies its results by replay, and the whole repo
-[deploys](./platform/deployment.md) as one release built from a single SHA. Each section below names
-one subsystem, states the distinction that orients it, and links to the doc that owns its detail.
+[deploys](./platform/deployment.md) as one release built from a single SHA.
 
 ## Request path
 
 The web app (`apps/web`) is the only public-facing deployment. Its TanStack Start server renders the
-UI and is the trust edge. It terminates the user's session, mints a short-lived signed service token
-carrying the acting user's ID, and calls domain services through typed oRPC contract clients over
-Fly's private mesh. Services verify that token on every call, do their work against Postgres on
-Neon, and return typed results.
+UI and is the trust edge. It holds the session cookie and validates the session, mints a short-lived
+signed service token carrying the acting user's ID, and calls domain services through typed oRPC
+contract clients over Fly's private mesh. Services verify that token on every call, do their work
+against Postgres on Neon, and return typed results.
 
 ```mermaid
 flowchart LR
@@ -20,16 +19,12 @@ flowchart LR
     S -->|Kysely| P[("Postgres<br>(Neon)")]
 ```
 
-The oRPC link is isomorphic: during SSR the Start server calls services directly, and in the browser
-calls route through the app's `/api/rpc` proxy since services are not reachable from the public
-internet. Either way the client is typed by the service's contract package alone
-([service contracts](./services/service-contracts.md)).
+The oRPC link is isomorphic, and either way the client is typed by the service's contract package
+alone ([service contracts](./services/service-contracts.md)).
 
-A user has at most one verified session at a time, so completing a 2FA-gated login evicts every
-other session on the account server-side ([auth](./services/auth.md)). A minted service token can
-outlive its session by up to its own short lifetime, so the trust edge re-confirms the session still
-exists on every request before trusting the token. An evicted device is therefore signed out on its
-next request rather than when its cached token expires.
+A user has at most one verified session at a time, so completing a sign-in evicts every other
+session on the account, and an evicted device is signed out on its next request
+([auth](./services/auth.md)).
 
 ## Topology
 
@@ -76,11 +71,9 @@ react-three-fiber ([game rendering](./game/game-rendering.md)).
 
 ## Cross-cutting
 
-- **Service-to-service (s2s) auth** — services trust no caller, the private mesh included. Every
-  request carries a short-lived signed s2s token from a registered issuer: the edge mints it for a
-  browser-originated call, and a calling service mints it for a service-originated one, with the
-  acting user's ID when the call has one. The service runtime (`@vers/service-runtime`) verifies it
-  before any handler runs ([auth](./services/auth.md)).
+- **Service-to-service (s2s) auth** — services trust no caller, the private mesh included; every
+  call carries a short-lived signed token from a registered issuer
+  ([s2s tokens](./services/auth.md#service-to-service-tokens)).
 - **Contracts** — each service declares its API in its own `@vers/contract-*` package, oRPC
   contract-first with Zod schemas owned by the declaring contract
   ([service contracts](./services/service-contracts.md)).
@@ -95,127 +88,10 @@ react-three-fiber ([game rendering](./game/game-rendering.md)).
   `qa.versidle.com`, a debug Chrome, and the `bun run qa:*` scripts that seed accounts, read
   verification email, log worker traffic, and send the fleet cold ([manual QA](../runbooks/qa.md)).
 
-## Core technology
-
-Frontend:
-
-- UI - [React](https://react.dev) 19 with the
-  [React Compiler](https://react.dev/learn/react-compiler)
-- Framework - [TanStack Start](https://tanstack.com/start) (SSR + server functions)
-- Data Fetching - [TanStack Query](https://tanstack.com/query)
-- State Management - [Zustand](https://zustand-demo.pmnd.rs)
-- 3D Graphics - [Three.js](https://threejs.org), [@react-three/fiber](https://r3f.docs.pmnd.rs)
-- Component Library - [Ark UI](https://ark-ui.com)
-- Styling - [Panda CSS](https://panda-css.com)
-
-Backend:
-
-- Runtime - [Bun](https://bun.sh)
-- Web Server - [Elysia](https://elysiajs.com)
-- API Layer - [oRPC](https://orpc.unnoq.com), contract-first
-- Database - [PostgreSQL](https://postgresql.org) on [Neon](https://neon.tech) via
-  [Kysely](https://kysely.dev)
-- Authentication - [TOTP](https://github.com/epicweb-dev/totp),
-  [jose](https://github.com/panva/jose), `Bun.password` (argon2id)
-- Email - [React Email](https://react.email), [Resend](https://resend.com)
-
-Development:
-
-- Build - [Vite](https://vitejs.dev)
-- Testing - [Bun's test runner](https://bun.sh/docs/cli/test), [Playwright](https://playwright.dev),
-  [MSW](https://mswjs.io)
-- Monorepo - [Turborepo](https://turborepo.dev) + [Bun](https://bun.sh) workspaces
-- Type Safety - [TypeScript](https://typescriptlang.org), [Zod](https://zod.dev)
-- Monitoring - [Bugsink](https://www.bugsink.com) (errors, Sentry protocol),
-  [Axiom](https://axiom.co) (traces and logs via [OpenTelemetry](https://opentelemetry.io))
-- Analytics - [Umami](https://umami.is) (self-hosted web traffic and acquisition-funnel analytics),
-  [Tinybird](https://tinybird.co) (managed ClickHouse behind the product-event stream)
-- Hosting - [Fly.io](https://fly.io) (compute), [Neon](https://neon.tech) (data)
-
 ## Projects
 
-Applications (`apps/`):
-
-- `apps/bugsink` - self-hosted error tracker, ingesting over the Sentry protocol
-- `apps/umami` - self-hosted web analytics, tracked through the web app's same-origin proxy
-- `apps/web` - TanStack Start web app; the trust edge and only public deployment
-- `apps/web-e2e` - e2e test suite for the web app
-
-Services (`services/`):
-
-- `services/activity` - activities domain service
-- `services/avatar` - avatar domain service
-- `services/email` - transactional email delivery service, queued on pg-boss
-- `services/keys` - avatar roll-key custody and derivation service
-- `services/replay` - replay domain service: replays simulation segments to verify submitted
-  checkpoints
-- `services/session` - session domain service
-- `services/user` - user domain service
-- `services/verification` - OTP/TOTP verification domain service
-
-Contracts (`contracts/`):
-
-- `contracts/activity` - oRPC API declaration for the activities service
-- `contracts/avatar` - oRPC API declaration for the avatar service
-- `contracts/base` - shared contract error taxonomy and base builders
-- `contracts/email` - oRPC API declaration for the email service
-- `contracts/keys` - oRPC API declaration for the keys service
-- `contracts/replay` - oRPC API declaration for the replay service
-- `contracts/session` - oRPC API declaration for the session service
-- `contracts/user` - oRPC API declaration for the user service
-- `contracts/verification` - oRPC API declaration for the verification service
-
-Libraries (`libs/`, grouped by domain):
-
-- `libs/core/email` - Resend wrapper and react-email template factories
-- `libs/core/flags` - OpenFeature-backed feature flag registry and env provider
-- `libs/core/trace` - isomorphic W3C trace-context primitives (mint, serialize, parse)
-- `libs/core/utils` - low-level platform-agnostic utils
-- `libs/data/active-avatar` - the account's active-avatar row: find it, find the avatar behind a
-  live activity, and upsert the selection
-- `libs/data/db` - kysely connection helper, migrations, and generated database types
-- `libs/data/content-registry` - published content-document registry: reads a pinned version's
-  document, reads and advances the current pointer, and memoizes loaded documents per process
-- `libs/data/release-registry` - deploy release registry: records a row per rollout that passed its
-  post-deploy probes and finds each app's newest release as its rollback target
-- `libs/data/sim-registry` - sim-engine version registry: registers built engine images, resolves
-  versions by engine hash, and expires rows past their retention deadline
-- `libs/design/design-system` - ui component library (Ark UI primitives + Panda recipes)
-- `libs/design/panda-preset` - design tokens & panda css config
-- `libs/design/styled-system` - generated code for panda css design system
-- `libs/game/worldmap-client` - client code (react, three, zustand) for the world map
-- `libs/game/worldmap-core` - platform-agnostic world-graph generation
-- `libs/game/game-rendering` - client rendering shell: scene/presentation state for the persistent
-  three.js canvas
-- `libs/game/game-utils` - shared game logic (encounter derivation, rewards)
-- `libs/game/roll-crypto` - avatar roll-key derivation and the rolled-reward digest PRF
-- `libs/game/item-gen` - entropy-agnostic item interpreter: roll streams, interpretation of
-  caller-supplied loot tables, affix constraints
-- `libs/game/content-version` - the newest content version this build's engine code derives and
-  replays, shared by the deploy CLI and the engine packages
-- `libs/game/idle-client` - client code (react, zustand, SharedWorker) for the idle simulation
-- `libs/game/idle-core` - deterministic seeded simulation engine
-- `libs/game/worldmap-content` - sealed worldmap content derivation and the scope-secret read it
-  dispatches to the keys service over s2s
-- `libs/service/jobs` - typed pg-boss job queue wrapper: send, drain, and retry/dead-letter policy
-- `libs/service/product-analytics` - product-event registry types and the Tinybird Events API sender
-- `libs/service/service-auth` - s2s token minting, parsing, and audience derivation
-- `libs/service/service-runtime` - the service runtime: createService, s2s auth, health, logging,
-  OTel/Sentry wiring
-- `libs/service/service-utils` - shared Elysia middleware (auth, logging, remote address) and
-  service env schemas
-- `libs/testing/client-test-utils` - react & web worker testing utilities
-- `libs/testing/mock-services` - MSW mock backends for the service contracts: @msw/data-backed
-  routers, per-test override proxies, and the demo seed
-- `libs/testing/qa-account` - the QA account seed and reset tools (`bun run qa:seed`,
-  `bun run qa:reset`), a `server-only` package because it runs the sealed encounter derivation
-- `libs/testing/service-test-utils` - postgres test container & mock data utils
-- `libs/testing/test-utils` - generic test helpers: env override/cleanup, MSW lifecycle wiring, JWT
-  and in-process RPC-client fixtures, and oRPC conformance-case collection
-
-Infrastructure and tooling:
-
-- `infra` - pulumi infrastructure definitions and the Tinybird workspace datafiles
-  (`infra/tinybird`)
-- `scripts` - operational tooling: the deploy, stack, and postgres CLIs invoked through
-  root-manifest scripts
+AGENTS.md's monorepo layout owns the workspace globs and the naming rule that derive the project
+list. Members whose behavior differs from their set: `libs/game/worldmap-content` and
+`libs/testing/qa-account` are `server-only`, the second because it imports the first;
+`libs/design/styled-system` is generated output; and `libs/game/content-version` is shared by the
+deploy CLI and the engine packages, so a content version bump is one edit.
