@@ -67,7 +67,9 @@ test('it delivers a job enqueued while the process was down, once booted and its
 });
 
 test('it accepts a call from app-web', async () => {
-  const emailService = await createEmailService();
+  const emailService = await createEmailService({
+    queueConnectionString: await createDatabaseFromTemplate(),
+  });
 
   onTestFinished(() => emailService.queue.stop());
 
@@ -86,6 +88,8 @@ test('it accepts a call from app-web', async () => {
       verificationURL: 'https://versidle.com/verify',
     }),
   ).toResolve();
+
+  await emailService.queue.drain();
 });
 
 test('it rejects a call from service-activity with 403', async () => {
