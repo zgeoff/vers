@@ -8,7 +8,7 @@ test('it reports a deadline in the past as past', () => {
 });
 
 test('it reports a deadline in the future as not past', () => {
-  const usefulUntil = new Date(Date.now() + 1000);
+  const usefulUntil = new Date(Date.now() + 60_000);
 
   expect(isPastDeadline(usefulUntil)).toBeFalse();
 });
