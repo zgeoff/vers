@@ -87,14 +87,7 @@ export function createEmailJobQueue(
         });
       },
       'send-change-email-verification': async (payload, context) => {
-        if (isPastDeadline(payload.usefulUntil)) {
-          recordExpiredSend('send-change-email-verification');
-
-          logger.warn(
-            { queue: 'send-change-email-verification', usefulUntil: payload.usefulUntil },
-            'email skipped past its deadline',
-          );
-
+        if (checkPastDeadline(logger, 'send-change-email-verification', payload.usefulUntil)) {
           return;
         }
 
@@ -142,14 +135,7 @@ export function createEmailJobQueue(
         });
       },
       'send-welcome': async (payload, context) => {
-        if (isPastDeadline(payload.usefulUntil)) {
-          recordExpiredSend('send-welcome');
-
-          logger.warn(
-            { queue: 'send-welcome', usefulUntil: payload.usefulUntil },
-            'email skipped past its deadline',
-          );
-
+        if (checkPastDeadline(logger, 'send-welcome', payload.usefulUntil)) {
           return;
         }
 
@@ -172,6 +158,24 @@ export function createEmailJobQueue(
     },
     ...(config.onError !== undefined && { onError: config.onError }),
   });
+}
+
+type DeadlineJobName = 'send-change-email-verification' | 'send-welcome';
+
+function checkPastDeadline(
+  logger: ServiceContext['logger'],
+  queue: DeadlineJobName,
+  usefulUntil: Date,
+): boolean {
+  if (!isPastDeadline(usefulUntil)) {
+    return false;
+  }
+
+  recordExpiredSend(queue);
+
+  logger.warn({ queue, usefulUntil }, 'email skipped past its deadline');
+
+  return true;
 }
 
 function printJobFailure(error: unknown, context: Readonly<JobFailureContext>): void {

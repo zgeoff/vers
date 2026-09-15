@@ -34,7 +34,8 @@ would hold both awake around the clock, so delivery rides three one-shot drains 
 
 - Nudge: an enqueue procedure fires a drain fire-and-forget after the insert. The machine handling
   the request is already awake, so delivery lands at once. A deadline-bearing job's enqueue keeps
-  re-draining its queue on a fixed interval until a drain completes the job or the deadline passes.
+  re-draining its queue every few seconds until that job reaches a terminal state or its deadline
+  passes, capped at eight minutes.
 - Boot drain: the serve entrypoint drains on start, catching jobs enqueued while the process was
   down.
 - Scheduled sweep: a Fly scheduled machine runs the service's sweep entrypoint, which starts the
