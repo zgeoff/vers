@@ -105,6 +105,12 @@ export async function refreshTokens(
       .where('id', '=', row.id)
       .executeTakeFirst();
 
+    if (current !== undefined && current.expiresAt < new Date()) {
+      await db.deleteFrom('sessions').where('id', '=', row.id).execute();
+
+      throw opts.errors.SESSION_EXPIRED({ data: {} });
+    }
+
     if (current !== undefined && current.previousRefreshToken === opts.input.refreshToken) {
       const graceReply = await buildGraceReply(deps, current);
 

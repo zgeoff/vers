@@ -8,6 +8,7 @@ import { createInMemoryMetrics } from '@vers/test-utils/bun';
 import * as jose from 'jose';
 import type { HttpResponseResolver } from 'msw';
 import { HttpResponse, delay, http } from 'msw';
+import invariant from 'tiny-invariant';
 import { SimulatedClock } from 'xstate';
 import { server } from '../../mocks/node';
 import { withRequestContext } from '../../test-utils/with-request-context';
@@ -377,4 +378,17 @@ test('it sets no session-superseded header when the refresh resolves inside the 
   expect(resolver).toHaveBeenCalledOnce();
   expect(outcome.value.headers.get('x-session-superseded')).toBeNull();
   expect(outcome.cookies['en_session']).toContainEntry(['refreshToken', 'refresh-2']);
+
+  const refreshedSession = outcome.cookies['en_session'];
+
+  invariant(refreshedSession !== undefined, 'the refresh sets the en_session cookie');
+
+  const refreshedAccessToken = refreshedSession['accessToken'];
+
+  invariant(
+    typeof refreshedAccessToken === 'string',
+    'a resolved refresh sets a fresh access token',
+  );
+
+  expect(jose.decodeJwt(refreshedAccessToken).exp).toBeGreaterThan(Date.now() / 1000);
 });
