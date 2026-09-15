@@ -1,16 +1,16 @@
 import { expect, test } from 'bun:test';
 import { runRetryDrains } from './run-retry-drains';
 
-test('it stops draining once a drain reports no failure', async () => {
+test('it stops draining once a drain reports a completed job', async () => {
   const recordedDelays: Array<number> = [];
 
   const drainResults = [
-    { completed: 0, failed: 1 },
+    { completed: 0, failed: 0 },
     { completed: 1, failed: 0 },
   ];
 
   await runRetryDrains({
-    drain: () => Promise.resolve(drainResults.shift() ?? { completed: 0, failed: 0 }),
+    drain: () => Promise.resolve(drainResults.shift() ?? { completed: 0, failed: 1 }),
     now: () => 0,
     usefulUntil: new Date(1_000_000),
     wait: (ms) => {
@@ -20,7 +20,7 @@ test('it stops draining once a drain reports no failure', async () => {
     },
   });
 
-  expect(recordedDelays).toStrictEqual([16_000, 31_000]);
+  expect(recordedDelays).toStrictEqual([5000, 5000]);
 });
 
 test('it stops draining once the deadline has passed', async () => {
@@ -42,12 +42,13 @@ test('it stops draining once the deadline has passed', async () => {
     },
   });
 
-  expect(recordedDelays).toStrictEqual([16_000]);
+  expect(recordedDelays).toBeEmpty();
   expect(drainCalls).toBe(0);
 });
 
-test('it runs every scheduled drain while each one keeps failing', async () => {
+test('it keeps polling while every drain reports no completion until the deadline passes', async () => {
   const recordedDelays: Array<number> = [];
+  let elapsedMs = 0;
   let drainCalls = 0;
 
   await runRetryDrains({
@@ -56,15 +57,17 @@ test('it runs every scheduled drain while each one keeps failing', async () => {
 
       return Promise.resolve({ completed: 0, failed: 1 });
     },
-    now: () => 0,
-    usefulUntil: new Date(1_000_000),
+    now: () => elapsedMs,
+    usefulUntil: new Date(14_000),
     wait: (ms) => {
       recordedDelays.push(ms);
+
+      elapsedMs += ms;
 
       return Promise.resolve();
     },
   });
 
-  expect(recordedDelays).toStrictEqual([16_000, 31_000, 61_000, 121_000]);
-  expect(drainCalls).toBe(4);
+  expect(recordedDelays).toStrictEqual([5000, 5000, 5000]);
+  expect(drainCalls).toBe(2);
 });
