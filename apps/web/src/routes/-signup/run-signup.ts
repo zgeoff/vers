@@ -2,6 +2,7 @@ import type { SubmissionResult } from '@conform-to/react';
 import { parseWithZod } from '@conform-to/zod/v4';
 import { redirect } from '@tanstack/react-router';
 import { getRequest } from '@tanstack/react-start/server';
+import invariant from 'tiny-invariant';
 import { checkHoneypot } from '../../lib/auth/check-honeypot';
 import { requireAnonymous } from '../../lib/auth/require-anonymous';
 import { SpamError } from '../../lib/auth/spam-error';
@@ -39,12 +40,15 @@ export async function runSignup(formData: FormData): Promise<Response | Submissi
       type: 'onboarding',
     });
 
+    invariant(verification.expiresAt, 'an emailed verification always expires');
+
     const origin = new URL(getRequest().url).origin;
 
     const verificationURL = `${origin}/verify-otp?${new URLSearchParams({ code: verification.otp, target: email, type: 'onboarding' }).toString()}`;
 
     await emailClient.sendWelcome({
       to: email,
+      usefulUntil: verification.expiresAt,
       verificationCode: verification.otp,
       verificationURL,
     });
