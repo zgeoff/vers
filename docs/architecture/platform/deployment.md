@@ -2,10 +2,8 @@
 
 The stack is a Fly.io fleet, and a push to `main` drives every rollout through the repo's deploy CLI
 and its manifest, `deploy.config.ts`. Every rollout decision keys off one marker: the commit stamped
-into each app's machine env, compared against HEAD ([staleness](#staleness)). A leg that a failure
-skipped therefore reads stale and ships on the next push.
-[Provisioning](../../runbooks/provisioning.md) stands the fleet up from nothing; this doc owns what
-a rollout does once the fleet exists.
+into each app's machine env, compared against HEAD ([staleness](#staleness)).
+[Provisioning](../../runbooks/provisioning.md) stands the fleet up from nothing.
 
 ## Topology
 
@@ -16,7 +14,7 @@ the web app's same-origin proxy ([analytics](../analytics.md)). All persistent s
 Neon database ([database](./database.md)): no app runs its own Postgres, and the keys service holds
 no database connection at all, only its root secrets.
 
-Every app scales to zero. Fly parks an idle machine with its memory snapshot and wakes it on its
+Every app scales to zero. Fly suspends an idle machine with its memory snapshot and wakes it on its
 first request, so a suspended process resumes with the sockets it held
 ([connection pool](./database.md#connection-pool)). Three deviations:
 
@@ -24,31 +22,29 @@ first request, so a suspended process resumes with the sockets it held
   every request passes through the first two and a session's first tap reaches the third.
   `deploy verify` enforces the minimum through the manifest.
 - The email service stops rather than suspends, the queue-hosting policy ([queues](./queues.md)).
-- The replay service carries no inbound player traffic. The activity service calls its wake
-  procedure when an append advances an activity past its verified head, and the wake handler drains
-  every claimable chain before it responds, so the machine stays up until the queue is empty.
+- The replay service carries no inbound player traffic; a drain holds its machine up until its queue
+  is empty ([replay](../game/replay-verification.md#replay)).
 
 ## Networking
 
 The web app reaches a service at a private address that load-balances across the service's machines
 and wakes a suspended one on demand. A service is allocated no public IP, so nothing outside the
 mesh can reach it, and mesh traffic is already encrypted, so a service enforces no HTTPS of its own.
-The web app's outbound dispatcher caps a pooled connection's idle keep-alive well under the suspend
+The web app's outbound dispatcher caps a pooled connection's idle keep-alive below Fly's suspend
 window, because a keep-alive socket to a suspended machine looks usable while a request written onto
 it neither arrives nor wakes the machine.
 
 Each manifest entry declares its exposure, public or private. The deploy CLI allocates a missing
-private address before the entry's rollout cuts over, and `deploy verify` fails an entry whose
-addresses disagree with its exposure ([fleet verification](#fleet-verification)). A public entry's
-addresses are allocated at provisioning.
+private address before the entry's rollout cuts over, and `deploy verify` fails a private entry that
+holds a public address or lacks its private one.
 
 ## Secrets
 
-Non-sensitive config (service URLs, `NODE_ENV`, log level) lives in each `fly.toml` or Dockerfile.
-Secrets are set with `fly secrets set` and never committed, and each app's env contract declares the
-keys it needs ([env preflight](#env-preflight)). Service-to-service auth runs on one keypair per
-minting service: each minter holds its private half in its own app's secrets, and every domain
-service verifies inbound calls with the key set holding each minter's public half
+Non-sensitive config (service URLs, the environment name, the log level) lives in each `fly.toml` or
+Dockerfile. Secrets are set with `fly secrets set` and never committed, and each app's env contract
+declares the keys it needs ([env preflight](#env-preflight)). Service-to-service auth runs on one
+keypair per minting service: each minter holds its private half in its own app's secrets, and every
+domain service verifies inbound calls with the key set holding each minter's public half
 ([auth](../services/auth.md#service-to-service-tokens)). The meaning of every other secret belongs
 to the doc of the feature that reads it.
 
@@ -68,8 +64,8 @@ domain service that opens a connection carries.
 
 ## Release
 
-A push to `main` runs the main workflow; once the checks pass, the pipeline migrates the database,
-builds every stale app, gates the combined fleet, and cuts over.
+A push to `main` runs the main workflow; once the checks pass, the pipeline migrates the database
+while it builds every stale app, then gates the combined fleet and cuts over.
 
 ### Pipeline
 
@@ -78,20 +74,21 @@ share one database. Database migrations are never rolled back: a release must to
 migration applied after it shipped (expand and contract), which is what makes redeploying a previous
 image safe.
 
-Two per-app matrix jobs run the deploy CLI: `build` as soon as checks are green, and `deploy` after
-`migrate`, `build`, and the full-stack suite. Both matrices derive from the manifest, so adding an
-app to the manifest is the whole change. Each leg self-gates on staleness, so a phase lost to an
-earlier failure ships on the next push. An app's failed build leaves its ref unavailable to the
-full-stack gate, whose fleet-wide failure holds every cutover.
+Two per-app matrix jobs run the deploy CLI: `build` once the env preflight passes, and `deploy`
+after `migrate`, `build`, and the full-stack suite. Both matrices derive from the manifest, so
+adding an app to the manifest is the whole change. Each leg self-gates on staleness, so a phase lost
+to an earlier failure ships on the next push. An app's failed build leaves its ref unavailable to
+the full-stack gate, whose fleet-wide failure holds every cutover.
 
 ### Staleness
 
 The CLI relates the commit stamped on the app's machines to HEAD before it reads any diff. A
 deployed commit that is HEAD or descends from it is current, which happens when a later push's
 deploy lands while this run is still between its legs: `deploy verify` passes the app, and a deploy
-leg skips it rather than roll it back. A fleet split between HEAD's image and a descendant's passes
-the same way, as long as every started machine on HEAD's image passes its health checks. A machine
-on any other image fails the run.
+leg skips it rather than roll it back. `deploy verify` also passes a fleet split between HEAD's
+image and a descendant's, as long as every started machine on HEAD's image passes its health checks,
+and a machine on any other image fails the run. A deploy leg reads a split fleet as stale, because
+no single commit is stamped across its machines, and redeploys HEAD.
 
 For an older deployed commit, the change set is the paths git reports changed since it plus the
 packages turbo reports affected from that base. The app's manifest trigger reads that set: a
@@ -111,9 +108,7 @@ args count as covered wherever the built image runs.
 
 The `preflight` job gates `build` and `deploy`: every required key of each contract-carrying app
 must appear in its `fly.toml` env table, its set Fly secrets, or its baked build args. Fly reports
-secret names and digests only, so no secret value enters the run. Production secrets are unreadable
-from PR checks, which is why the fleet check runs in the deploy phase while file coverage runs at
-checks time.
+secret names and digests only, so no secret value enters the run.
 
 ### Full-stack gate
 
@@ -131,14 +126,16 @@ report the new commit, then runs the app's post-deploy probes from the manifest.
 Dockerfile cuts over to the image named in its `fly.toml`. For a manual rollout, the CLI's `deploy`
 command runs both phases in one invocation.
 
-Every app rolls out blue-green: Fly boots a parallel fleet, gates it on `/health`, cuts traffic
-over, then retires the old machines. A broken boot fails the gate before cutover, and the old
-machines serve every request until it passes. Deploy jobs queue rather than cancel. A rollout can
-fail on a transient host-capacity refusal; Fly rolls back cleanly, so re-run the failed job.
+An app whose `fly.toml` sets the blue-green strategy, which is every app the repo builds, rolls out
+that way: Fly boots a parallel fleet, gates it on `/health`, cuts traffic over, then retires the old
+machines. A broken boot fails the gate before cutover, and the old machines serve every request
+until it passes. The two pinned upstream apps set no strategy and roll over in place. Deploy jobs
+queue rather than cancel. A rollout can fail on a transient host-capacity refusal; Fly rolls back
+cleanly, so re-run the failed job.
 
 ### Release record and rollback
 
-A rollout whose probes pass is recorded in the `releases` table: app, commit, image ref, and the
+A rollout whose probes pass is recorded in the release registry: app, commit, image ref, and the
 digest the fleet resolved it to. The newest row per app is that app's rollback target. A rollout
 whose probes fail rolls back: the CLI redeploys the app's newest recorded release, restamping that
 release's own commit so the fleet reads stale against HEAD and the next push ships the fix. The leg
@@ -149,9 +146,9 @@ release yet is left serving the broken release, reported in the leg's log.
 
 `verify-fleet` runs on every green push, even when every deploy leg skipped, and asserts every
 manifest app is online and current, catching an app at zero machines or a fleet behind HEAD. A
-rolled-back app reads stale there by design. It also checks each app's addresses against its
-manifest exposure, each declared scheduled machine against the app's image, and each shared secret's
-digests across its declaring apps.
+rolled-back app reads stale there by design. It also checks each private entry's addresses
+([networking](#networking)), each declared scheduled machine against the app's image, and each
+shared secret's digests across its declaring apps.
 
 ### Scheduled machines
 
@@ -177,26 +174,24 @@ sweeps; it reports a mixed-image fleet as its own finding.
 The error tracker and the analytics dashboard ship pinned upstream images. Neither sits in the turbo
 task graph, so their staleness triggers are path globs, and upgrading either is a tag bump. The
 tracker's tag is in its Dockerfile, which adds object storage for uploaded files over the stock
-image, and the dashboard's is in its `fly.toml`, deployed with no build leg at all.
+image. The dashboard's is in its `fly.toml`.
 
 ## Infra drift
 
 A scheduled workflow runs a Pulumi preview over the `infra/` program's production stack and fails on
 any diff. The workflow also runs on pull requests and pushes touching `infra/`, but console drift
 arrives with no commit, so only the schedule catches it. The job authenticates through a 1Password
-service account scoped to read only the `vers-ci` vault, which holds exactly the items the workflow
-references, so a compromised job step cannot reach the signing keys and other credentials in the
-`vers` vault. The job only ever previews; reconciling a reported drift is a human decision, applied
-with `pulumi up` from a checkout.
+service account scoped to read the `vers-ci` vault. It only ever previews; reconciling a reported
+drift is a human decision, applied with `pulumi up` from a checkout.
 
 ## Container builds
 
-Fly's remote builder builds every server image from the app's Dockerfile. A shared prune stage cuts
-the workspace to the target's dependency graph with `turbo prune`, and the later stages install,
-build, and assemble a minimal runtime. The pruned lockfile goes unused, because bun re-resolves the
-smaller workspace's hoisting and fails a frozen install (turborepo#11007); the stage instead copies
-every workspace manifest plus the committed root lockfile into the image, and the install stages
-read that.
+Fly's remote builder builds every server image from the app's Dockerfile. Each Dockerfile opens with
+a prune stage that cuts the workspace to the target's dependency graph with `turbo prune`, and its
+later stages install, build, and assemble a minimal runtime. The pruned lockfile goes unused,
+because bun re-resolves the smaller workspace's hoisting and fails a frozen install
+(turborepo#11007). The stage copies every workspace manifest plus the committed root lockfile into
+the image instead, and the install stages read those.
 
 Every domain service compiles to a single Bun executable and runs it alone on `alpine` as `nobody`,
 with no `node_modules` and no source. The web app bundles an SSR server instead: a full install with
