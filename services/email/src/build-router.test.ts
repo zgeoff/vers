@@ -3,7 +3,7 @@ import { call } from '@orpc/server';
 import type { ErrorEvent } from '@sentry/bun';
 import type { EmailContract } from '@vers/contract-email';
 import { RESEND_ENDPOINT_URL, sentEmails, server } from '@vers/email/mocks';
-import type { DrainResult, JobQueue } from '@vers/jobs';
+import type { JobQueue, JobState } from '@vers/jobs';
 import {
   createLogger,
   setSentryHandleForTesting,
@@ -254,6 +254,7 @@ test('it reports a fire-and-forget drain failure carrying the active trace id', 
 
   const stubQueue: JobQueue<EmailJobDefs> = {
     drain: () => Promise.reject(new Error('drain failed')),
+    getJobState: () => Promise.resolve(undefined),
     send: () => Promise.resolve('job-1'),
     start: () => Promise.resolve(),
     stop: () => Promise.resolve(),
@@ -289,12 +290,9 @@ test('it reports a fire-and-forget drain failure carrying the active trace id', 
   expect(recorded[0]?.tags).toMatchObject({ traceID: trace.traceID });
 });
 
-test('it re-drains a deadline job at a fixed interval until a drain completes it', async () => {
-  const drainResults: Array<DrainResult> = [
-    { completed: 0, failed: 1 },
-    { completed: 0, failed: 0 },
-    { completed: 1, failed: 0 },
-  ];
+test('it re-drains a deadline job every few seconds until its job reaches a terminal state', async () => {
+  const jobStates: Array<JobState> = ['retry', 'retry', 'completed'];
+  const recordedDelays: Array<number> = [];
 
   let drainCalls = 0;
   let elapsedMs = 0;
@@ -304,8 +302,9 @@ test('it re-drains a deadline job at a fixed interval until a drain completes it
     drain: () => {
       drainCalls += 1;
 
-      return Promise.resolve(drainResults.shift() ?? { completed: 0, failed: 0 });
+      return Promise.resolve({ completed: 0, failed: 1 });
     },
+    getJobState: () => Promise.resolve(jobStates.shift() ?? 'completed'),
     send: () => Promise.resolve('job-1'),
     start: () => Promise.resolve(),
     stop: () => Promise.resolve(),
@@ -316,6 +315,7 @@ test('it re-drains a deadline job at a fixed interval until a drain completes it
     now: () => elapsedMs,
     queue: stubQueue,
     wait: (ms) => {
+      recordedDelays.push(ms);
       elapsedMs += ms;
 
       return Promise.resolve();
@@ -347,4 +347,6 @@ test('it re-drains a deadline job at a fixed interval until a drain completes it
   await waitFor(() => {
     expect(drainCalls).toBe(3);
   });
+
+  expect(recordedDelays).toStrictEqual([5000, 5000, 5000]);
 });
