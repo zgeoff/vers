@@ -23,6 +23,8 @@ point is a fact plus its rationale, however many sentences it takes.
 
 ### What a point is
 
+A point survives when it states the present system, serves the reader's task, and defends nothing.
+
 - **Final state only.** A doc states the present behavior of the code, in the present tense. It
   carries no history ("previously", "now uses"), no roadmap ("will land"), no temporary state ("not
   wired yet"), and no reference to the project's own issue tracker. 2 tokens stay because they are
@@ -46,6 +48,8 @@ point is a fact plus its rationale, however many sentences it takes.
   runbook. A doc that gains a paragraph per fix is a changelog.
 
 ### Where a fact lives
+
+Each fact has one owning doc, chosen by the reader task it serves.
 
 - **Architecture states structure and invariants.** A doc under `docs/architecture/` states how a
   subsystem is put together and the invariants a caller must obey. Structure is the subsystem's
@@ -73,6 +77,8 @@ point is a fact plus its rationale, however many sentences it takes.
   restates owned facts at one line each, because orientation is its job.
 
 ### What the code owns
+
+A fact the repo derives stays in the repo, and the doc states the rule that derives it.
 
 - **The code owns its rosters.** The doc states a list, count, or mapping the repo derives as the
   rule that derives it, never member by member: the packages under a directory, the apps in a
@@ -117,8 +123,8 @@ A sentence carries one fact, names who does what, and uses one name for each thi
 
 - **One fact per sentence.** A fact and its direct consequence share a sentence: "the tag derives
   from the commit, so no ref travels between jobs". Any other pair splits. A sentence that carries
-  two dash asides, or a dash aside plus a parenthetical gloss, splits at the first dash. A reduced
-  relative clause after a dash takes "that" or "which".
+  two dash asides, or a dash aside plus a parenthetical gloss, splits at the first dash. A relative
+  clause after a dash keeps its "that" or "which", because a reduced one reads as a second aside.
   - Bad: "The build leg pushes the image as `registry.fly.io/<app>:deployment-<sha>` — both phases
     derive the tag from the commit, so no ref travels between jobs — and re-running a leg overwrites
     its own tag."
@@ -302,8 +308,8 @@ expect.
 - **Counts are numerals** ("8 deployments", not "eight").
 - **Placeholders name their content** (`<task_list_id>`, `<service_id>`), never `xxx`, `ABC123`, or
   `<TOKEN>`.
-- **Anchors are GitHub's kebab-case** (`### Atomic cells` → `#atomic-cells`). `&` and `/` collapse
-  to extra hyphens.
+- **Anchors are GitHub's.** GitHub lowercases the heading, drops its punctuation, and turns each
+  space into a hyphen, so `## Game entropy & provenance` links as `#game-entropy--provenance`.
 - **A cross-doc link uses a path relative to the linking file.**
 - **Link a target once** where it first matters, then refer to the topic by name.
 - **`§` is forbidden**, bare in prose and inside link text. Link the section by its title.

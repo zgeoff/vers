@@ -40,8 +40,9 @@ done
 report 'Numeric constants with units under docs/architecture (the code owns its constants):' \
   "$(grep -rnP --include='*.md' '\b[0-9]+(\.[0-9]+)?(ms|s|min|h|d|KB|MB|GB)\b|\b[0-9]+[ -](second|minute|hour|day|week)s?\b' "${paths[@]}" 2>/dev/null | grep '^docs/architecture/')"
 
+# Reads the working tree, so an untracked new doc is checked too.
 report 'Untagged code fences:' \
-  "$(git ls-files -- "$@" | grep '\.md$' | xargs -r awk \
+  "$(find "${paths[@]}" -name '*.md' -not -path '*/node_modules/*' -not -path '*/.claude/skills/docs-writing/*' 2>/dev/null | sort | xargs -r awk \
     'FNR==1{n=0} /^```/{n++; if (n%2==1 && $0=="```") print FILENAME": "FNR}')"
 
 if [ "$fail" -eq 0 ]; then
