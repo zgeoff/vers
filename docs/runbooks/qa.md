@@ -233,7 +233,7 @@ with each pending start's attempts and last refusal, the latest-run record the n
 the writer's identity, the current simulation speed, and the last 200 worker events kept in a ring
 buffer inside the worker: lifecycle phases, start and flush outcomes, refusals, speed changes, and
 connectivity changes. The snapshot changes no runtime state and no durable store.
-[Game simulation](../architecture/game/game-simulation.md#the-deterministic-core) owns the writer
+[Game simulation](../architecture/game/game-simulation.md#checkpoint-streams) owns the writer
 worker, and [offline reconcile](../architecture/game/offline-reconcile.md#worker-lifecycle) owns the
 lifecycle the events trace.
 
