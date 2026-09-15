@@ -5,6 +5,7 @@ import { toJSON } from '@vers/db';
 import { buildStateFromSeed } from '@vers/game-utils';
 import { createTestDB } from '@vers/service-test-utils/bun';
 import { updateEnv } from '@vers/test-utils/bun';
+import invariant from 'tiny-invariant';
 import { createReplayService } from './create-replay-service';
 import { createHonestActivityFixture } from './test-utils/create-honest-activity-fixture';
 
@@ -77,7 +78,6 @@ test('it drains a claimable chain after stopCache clears a driver the previous d
   const totalCheckpoints = fixture.checkpoints.length;
   const firstBatchCount = Math.max(1, Math.floor(totalCheckpoints / 2));
 
-  expect(firstBatchCount).toBeGreaterThan(0);
   expect(firstBatchCount).toBeLessThan(totalCheckpoints);
 
   await ctx.db
@@ -87,6 +87,11 @@ test('it drains a claimable chain after stopCache clears a driver the previous d
     .execute();
 
   const firstBatchLastHash = fixture.checkpoints[firstBatchCount - 1]?.hash;
+
+  invariant(
+    firstBatchLastHash !== undefined,
+    'the fixture always has a checkpoint at the split index',
+  );
 
   await ctx.db
     .updateTable('activities')

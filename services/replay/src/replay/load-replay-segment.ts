@@ -71,11 +71,6 @@ export async function loadReplaySegment(
   const predecessor = target.verifiedHead === 0 ? undefined : checkpoints[0];
 
   invariant(
-    target.verifiedHead === 0 || predecessor !== undefined,
-    'a verified head always has an anchoring checkpoint row',
-  );
-
-  invariant(
     target.verifiedHead === 0 || predecessor?.version === target.verifiedHead,
     'a verified head always has a stored checkpoint row at its own version',
   );

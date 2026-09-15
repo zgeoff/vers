@@ -38,7 +38,7 @@ test('it drops an evicted activity and stops its driver', () => {
   expect(entry.driver.stop).toHaveBeenCalledOnce();
 });
 
-test('it defaults the cache cap to REPLAY_CACHE_CAP', () => {
+test('it evicts the oldest activity once a default cache takes one more than its cap', () => {
   const cache = createReplayCache();
 
   for (let index = 0; index < REPLAY_CACHE_CAP; index += 1) {

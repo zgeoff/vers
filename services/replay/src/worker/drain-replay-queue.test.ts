@@ -69,7 +69,7 @@ test('it drains a seeded backlog to empty and returns the count', async () => {
   expect(drainReplayQueue(ctx.deps, 'poke')).resolves.toBe(0);
 });
 
-test('it verifies a second drain from the driver the first drain held, reaching the terminal total', async () => {
+test('it settles a stream split across two drains to its terminal total and chain anchor', async () => {
   await using ctx = await setupTest();
 
   const fixture = await createHonestActivityFixture(ctx.db, {
@@ -80,7 +80,6 @@ test('it verifies a second drain from the driver the first drain held, reaching 
   const totalCheckpoints = fixture.checkpoints.length;
   const firstBatchCount = Math.max(1, Math.floor(totalCheckpoints / 2));
 
-  expect(firstBatchCount).toBeGreaterThan(0);
   expect(firstBatchCount).toBeLessThan(totalCheckpoints);
 
   await ctx.db
@@ -90,6 +89,11 @@ test('it verifies a second drain from the driver the first drain held, reaching 
     .execute();
 
   const firstBatchLastHash = fixture.checkpoints[firstBatchCount - 1]?.hash;
+
+  invariant(
+    firstBatchLastHash !== undefined,
+    'the fixture always has a checkpoint at the split index',
+  );
 
   await ctx.db
     .updateTable('activities')
@@ -167,7 +171,6 @@ test('it verifies a second drain from a fresh cache, reaching the same terminal 
   const totalCheckpoints = fixture.checkpoints.length;
   const firstBatchCount = Math.max(1, Math.floor(totalCheckpoints / 2));
 
-  expect(firstBatchCount).toBeGreaterThan(0);
   expect(firstBatchCount).toBeLessThan(totalCheckpoints);
 
   await ctx.db
@@ -177,6 +180,11 @@ test('it verifies a second drain from a fresh cache, reaching the same terminal 
     .execute();
 
   const firstBatchLastHash = fixture.checkpoints[firstBatchCount - 1]?.hash;
+
+  invariant(
+    firstBatchLastHash !== undefined,
+    'the fixture always has a checkpoint at the split index',
+  );
 
   await ctx.db
     .updateTable('activities')
@@ -260,7 +268,6 @@ test('it reuses the same held driver object across two warm drains', async () =>
   const secondBatchCount = totalCheckpoints - 1;
   const firstBatchCount = Math.max(1, Math.floor(secondBatchCount / 2));
 
-  expect(firstBatchCount).toBeGreaterThan(0);
   expect(firstBatchCount).toBeLessThan(secondBatchCount);
 
   await ctx.db
@@ -270,6 +277,11 @@ test('it reuses the same held driver object across two warm drains', async () =>
     .execute();
 
   const firstBatchLastHash = fixture.checkpoints[firstBatchCount - 1]?.hash;
+
+  invariant(
+    firstBatchLastHash !== undefined,
+    'the fixture always has a checkpoint at the split index',
+  );
 
   await ctx.db
     .updateTable('activities')
@@ -297,11 +309,18 @@ test('it reuses the same held driver object across two warm drains', async () =>
     )
     .execute();
 
+  const secondBatchLastHash = fixture.checkpoints[secondBatchCount - 1]?.hash;
+
+  invariant(
+    secondBatchLastHash !== undefined,
+    'the fixture always has a checkpoint at the split index',
+  );
+
   await ctx.db
     .updateTable('activities')
     .set({
       appendedHead: secondBatchCount,
-      lastHash: fixture.checkpoints[secondBatchCount - 1]?.hash,
+      lastHash: secondBatchLastHash,
     })
     .where('id', '=', fixture.activity.id)
     .execute();
