@@ -14,6 +14,8 @@ export interface DrainResult {
   readonly failed: number;
 }
 
+export type JobState = 'created' | 'retry' | 'active' | 'completed' | 'failed' | 'cancelled';
+
 export interface JobQueue<TDefs extends JobDefs> {
   readonly start: () => Promise<void>;
   readonly stop: () => Promise<void>;
@@ -23,6 +25,10 @@ export interface JobQueue<TDefs extends JobDefs> {
     opts?: Readonly<SendJobOptions>,
   ) => Promise<string>;
   readonly drain: (name?: Extract<keyof TDefs, string>) => Promise<DrainResult>;
+  readonly getJobState: (
+    name: Extract<keyof TDefs, string>,
+    jobID: string,
+  ) => Promise<JobState | undefined>;
 }
 
 export interface JobContext {
@@ -76,7 +82,18 @@ export function createJobQueue<TDefs extends JobDefs>(
     stop: () => boss.stop(),
     send: (name, payload, opts) => sendJob(boss, defs, name, payload, opts),
     drain: (name) => drainJobs(boss, defs, handlers, onJobFailed, name),
+    getJobState: (name, jobID) => getJobState(boss, name, jobID),
   };
+}
+
+async function getJobState(
+  boss: PgBoss,
+  name: string,
+  jobID: string,
+): Promise<JobState | undefined> {
+  const [job] = await boss.findJobs(name, { id: jobID });
+
+  return job?.state;
 }
 
 function printJobQueueError(error: Error): void {

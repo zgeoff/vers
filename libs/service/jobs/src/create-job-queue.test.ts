@@ -449,3 +449,85 @@ test('it runs each drained job inside its own trace context', async () => {
 
   expect(firstTraceID).not.toBe(secondTraceID);
 });
+
+test('it reports created for a sent job before any drain touches it', async () => {
+  const connectionString = await createDatabaseFromTemplate();
+
+  const defs = defineJobs({ email: { schema: z.object({ to: z.string() }) } });
+
+  const queue = createJobQueue(defs, {
+    connectionString,
+    handlers: { email: () => Promise.resolve() },
+  });
+
+  await queue.start();
+
+  onTestFinished(() => queue.stop());
+
+  const jobID = await queue.send('email', { to: 'a@example.com' });
+
+  expect(queue.getJobState('email', jobID)).resolves.toBe('created');
+});
+
+test('it reports completed for a job a drain finished', async () => {
+  const connectionString = await createDatabaseFromTemplate();
+
+  const defs = defineJobs({ email: { schema: z.object({ to: z.string() }) } });
+
+  const queue = createJobQueue(defs, {
+    connectionString,
+    handlers: { email: () => Promise.resolve() },
+  });
+
+  await queue.start();
+
+  onTestFinished(() => queue.stop());
+
+  const jobID = await queue.send('email', { to: 'a@example.com' });
+
+  await queue.drain();
+
+  expect(queue.getJobState('email', jobID)).resolves.toBe('completed');
+});
+
+test('it reports retry for a job sitting out its retry delay', async () => {
+  const connectionString = await createDatabaseFromTemplate();
+
+  const defs = defineJobs({
+    email: { retryDelay: 30, retryLimit: 1, schema: z.object({ to: z.string() }) },
+  });
+
+  const queue = createJobQueue(defs, {
+    connectionString,
+    handlers: { email: () => Promise.reject(new Error('always fails')) },
+  });
+
+  await queue.start();
+
+  onTestFinished(() => queue.stop());
+
+  const jobID = await queue.send('email', { to: 'a@example.com' });
+
+  await queue.drain();
+
+  expect(queue.getJobState('email', jobID)).resolves.toBe('retry');
+});
+
+test('it reports undefined for a job id no queue holds', async () => {
+  const connectionString = await createDatabaseFromTemplate();
+
+  const defs = defineJobs({ email: { schema: z.object({ to: z.string() }) } });
+
+  const queue = createJobQueue(defs, {
+    connectionString,
+    handlers: { email: () => Promise.resolve() },
+  });
+
+  await queue.start();
+
+  onTestFinished(() => queue.stop());
+
+  expect(
+    queue.getJobState('email', '00000000-0000-0000-0000-000000000000'),
+  ).resolves.toBeUndefined();
+});

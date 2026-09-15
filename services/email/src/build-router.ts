@@ -79,6 +79,7 @@ function buildDeadlineSendHandler<TName extends DeadlineJobName>(
         if (drained.failed > 0) {
           await runRetryDrains({
             drain: () => deps.queue.drain(name),
+            getState: () => deps.queue.getJobState(name, jobID),
             now: deps.now ?? Date.now,
             usefulUntil: opts.input.usefulUntil,
             wait: deps.wait ?? Bun.sleep,
