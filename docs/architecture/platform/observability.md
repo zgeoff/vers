@@ -1,326 +1,122 @@
 # Observability
 
-The fleet emits three OpenTelemetry signals, traces, logs, and metrics, and consumes them from
-Axiom. Error reporting is a separate path (Sentry SDK → Bugsink), covered by
-[error-handling](../services/error-handling.md). Provisioning and secrets live in
-[deployment](./deployment.md).
+The fleet emits three OpenTelemetry signals, traces, logs, and metrics, and Axiom consumes them, one
+dataset per signal. Error reporting is a separate path through the Sentry SDK to Bugsink
+([error handling](../services/error-handling.md)). Axiom threshold monitors over the datasets alarm
+to one Discord channel, and every Axiom resource is managed as code in the `infra/` Pulumi program,
+so a console edit is drift.
 
 ## Export path
 
-All three signals export over OTLP (protobuf) to Axiom, one dataset per signal: `vers-traces` and
-`vers-logs` (Events type), `vers-metrics` (Metrics type).
+The service runtime wires every signal through `createService` when the OTLP endpoint variable is
+set, one transport per signal: traces through the Elysia OpenTelemetry plugin, logs through a
+pino-to-OTLP stream, and metrics through a process-global meter provider behind a periodic exporter.
+The web app carries no Elysia plugin and boots the same trace and metrics export itself. A process
+with the endpoint unset emits nothing, and every instrument stays the OpenTelemetry API's no-op.
 
-The service runtime (`@vers/service-runtime`) wires every signal through `createService` when
-`OTEL_EXPORTER_OTLP_ENDPOINT` is set, one transport per signal:
+The runtime boots OpenTelemetry before the Sentry SDK, and the order matters. The OpenTelemetry API
+keeps only the first global tracer, context manager, and propagator registration per process, and
+Sentry's own bootstrap registers unconditionally. Going second, Sentry's registration no-ops and W3C
+propagation and OTLP export stay in effect; reversed, Sentry's propagator would shadow `traceparent`
+and no service span would reach the exporter.
 
-- traces through `@elysiajs/opentelemetry`
-- logs through a pino → OTLP stream
-- metrics through a process-global meter provider behind a periodic exporter (`startMetricsExport`,
-  `@vers/service-utils/otel`)
-
-app-web carries no Elysia plugin. Its `server.ts` boots the same trace and metrics export itself
-through `startTraceExport`/`startMetricsExport`. A process with the endpoint unset emits nothing,
-and every instrument stays the OpenTelemetry API's no-op.
-
-`createService` boots the Elysia OTel plugin before the Sentry SDK, and the order matters. The
-OpenTelemetry API keeps only the first global tracer, context manager, and propagator registration
-per process. Sentry's own OpenTelemetry bootstrap registers unconditionally, so going second its
-registration silently no-ops and the plugin's W3C propagation and OTLP export stay in effect.
-Reversed, Sentry's `sentry-trace`-only propagator would shadow `traceparent`, and no service span
-would reach the OTLP exporter. app-web's `server.ts` awaits its own trace and metrics boot before
-starting Sentry for the same reason.
-
-Each exporter configures itself from the standard `OTEL_EXPORTER_OTLP_*` environment variables. The
-per-signal headers carry the ingest token and dataset routing. Metrics route by the
-`X-Axiom-Metrics-Dataset` header. The `X-Axiom-Dataset` header covers only traces and logs.
-
-`Service.stopTelemetry` flushes pending exports and releases the metric reader's periodic timer. The
-timer otherwise keeps the event loop alive. An entrypoint that traps SIGTERM for a graceful drain
-calls `stopTelemetry` before closing its database pool, since a final gauge collection may still
-query.
+Each exporter configures itself from the standard `OTEL_EXPORTER_OTLP_*` variables, whose per-signal
+headers carry the ingest token and dataset routing. Stopping telemetry flushes pending exports and
+releases the metric reader's timer, which otherwise keeps the event loop alive. An entrypoint that
+drains on SIGTERM stops telemetry before it closes its database pool, since a final gauge collection
+may still query.
 
 ## Traces
 
 One span opens per unit of work and stays active across every await inside it, so a query, an RPC
 call, or a manual span nests under the work that caused it. Where the work originates decides which
-site opens the span.
+site opens the span:
 
-- **Inbound request, a service** — every service's Elysia app carries the `@elysiajs/opentelemetry`
-  plugin, which opens one SERVER span per request from the inbound `traceparent` and keeps it active
-  across every await. A Kysely query, an RPC client call, or a manual span reads it through
-  `context.active()`.
-- **Inbound request, app-web** — app-web carries no such plugin. `withRequestTrace`
-  (`apps/web/src/server/with-request-trace.ts`) opens the same SERVER span itself, skipping a served
-  static asset or the `/health` probe.
-- **Database query** — every `Kysely` client (`createDB`, `@vers/db`) emits a retroactively timed
-  CLIENT span per compiled query from its `log` callback, named `db.<operation>` from the query's
-  root node kind and carrying the compiled SQL, never its parameters.
-- **Database connect** — a `db.connect` CLIENT span wraps each connection acquired from the driver's
-  pool, covering the phase neither the query span nor a session timeout observes.
-- **Service-to-service call** — every `RPCLink` carries `buildTracingInterceptor`
-  (`@vers/service-utils/orpc`) in its `clientInterceptors`, minting a CLIENT span per call named by
-  the procedure path.
-- **No inbound request** — a worker iteration, a boot drain, a scheduled sweep, or a queued job
-  opens its own root span through `withRootSpan` (`@vers/service-utils`).
+- An inbound request to a service: the Elysia plugin opens one SERVER span from the inbound
+  `traceparent`.
+- An inbound request to the web app: its request middleware opens the same SERVER span itself,
+  skipping a served static asset and the health probe.
+- A database query: every Kysely client emits a CLIENT span per compiled query, carrying the
+  compiled SQL and never its parameters, and a CLIENT span per connection acquired from the pool.
+- A service-to-service call: every RPC link carries a tracing interceptor that mints a CLIENT span
+  per call.
+- No inbound request: a worker iteration, a boot drain, a scheduled sweep, or a queued job opens its
+  own root span, which starts a fresh trace.
 
-Trace context crosses process boundaries through the OpenTelemetry API's global propagator, never
-`@vers/trace` directly:
+Trace context crosses process boundaries through the OpenTelemetry API's global propagator. An
+outbound call carries `traceparent` from the active span, and the web app's RPC proxy re-injects
+`traceparent` from its own active context rather than forwarding the browser's raw header, so the
+service span parents to the web app's server span. A request outside any span derives its trace id
+by parsing the inbound header directly and mints a fresh one when none arrives.
 
-- At a boundary span site (the server plugins and outbound clients) an outbound call carries
-  `traceparent` from the active span, continuing the caller's trace across every hop.
-- A root span opened through `withRootSpan` starts a fresh trace, because a worker iteration or
-  queued job has no caller's trace to continue.
-- app-web's RPC proxy re-injects `traceparent` from its own active context rather than forwarding
-  the browser's raw header, so the service span parents to app-web's server span instead of becoming
-  its sibling.
-- `@vers/trace`'s `parseTraceparent`/`buildTraceparent` are the wire-format utilities and the
-  fallback path. A process with no tracer provider registered, or a request outside any span (a
-  served asset, `/health`), derives its trace id by parsing the inbound header directly and minting
-  a fresh one when none arrives, the same trace-continuation guarantee an active span normally
-  provides.
-
-Wherever a span is active, it is the source of truth for the request's identity:
-`findSpanTraceContext` (`@vers/service-utils`) reads the active span's own trace and span ids, and
-every reader of the ambient `TraceContext` (the pino mixin that stamps log lines, the `x-trace-id`
-response header, an outbound `traceparent`) derives from it. A request's exported span trace id, its
-`x-trace-id` response header, and every log line's `traceID` field always agree.
-
-A span carries semantic-convention attributes for its kind: `http.method`/`http.route`/
-`http.status_code` on a SERVER span, `db.system`/`db.statement` on a Kysely CLIENT span. A span
-never carries a raw per-entity id or secret material as an attribute, the same cardinality and
-leakage discipline metric attributes follow.
-
-Once OTel is wired, every app in the fleet emits:
-
-- one server span per request (app-web skips served static assets and `/health`), with the DB, s2s,
-  and external-HTTP calls a request makes recorded as its children;
-- one structured request-completion log line;
-- unexpected errors reported to Sentry through the central `onError`/error-boundary hook, never a
-  bespoke `captureException` call;
-- the registry-listed metrics for the failure paths it owns.
+Wherever a span is active, it is the source of truth for the request's identity: a request's
+exported span trace id, its `x-trace-id` response header, and every log line's trace id field always
+agree. A span carries semantic-convention attributes for its kind and never a raw per-entity id or
+secret material, the same cardinality and leakage discipline metric attributes follow.
 
 ## Log lines
 
-Every pino logger stamps the active request's trace id onto each entry through an AsyncLocalStorage
-mixin. HTTP responses report the same id in `x-trace-id`, so one trace id names a request's log
-lines across app-web and the services it called. A response built with immutable headers (a
-`Response.redirect`) passes through unstamped and correlates through its request line instead. The
-line-level conventions:
+Every pino logger stamps the active request's trace id onto each entry, and HTTP responses report
+the same id in `x-trace-id`, so one trace id names a request's log lines across the web app and the
+services it called. The line-level conventions:
 
-- Data rides in structured fields, never interpolated into the message:
-  `logger.info({ method, path, status, durationMs }, 'request completed')`. The message is a stable
-  label for the event; the fields are what Axiom queries filter and aggregate on.
+- Data rides in structured fields, never interpolated into the message. The message is a stable
+  label for the event, and the fields are what Axiom queries filter and aggregate on.
 - Severity follows outcome: a 5xx response or a thrown handler logs at `error`, a 4xx at `warn`,
   everything else at `info`.
-- A failure always emits a line at the site that decides the outcome: an error folded into a result
-  value, a rejected token, a failed job. The line carries the reason in a field (`err`, `failure`,
-  the validation issues).
-- Each request logs one line on completion with `method`, `path`, `status`, and `durationMs`. The
-  query string never reaches a log line: query params carry emailed tokens, auth codes, and
-  GET-mapped procedure inputs. The service runtime emits the line for every `/rpc` request and
-  leaves `/health` unlogged, so platform probes don't dominate volume. app-web's middleware emits it
-  for every request, at `debug` for a served static asset (a pathname with a file extension).
-- A request past its slow-request threshold logs at `warn` instead, with `slow: true` and
-  `thresholdMs` added onto the completion line, unless its status is already a server error. The
-  threshold defaults to 2s (`slowRequestMs`, a `createService` config option) and is overridable per
-  pathname through `slowRequestOverridesMs`.
-- A request still open 30s after it arrived writes a `request overdue` line at `warn` while it is
-  still running, with `method`, `path`, and `elapsedMs`. The completion line and the span come only
-  when the request ends, so this line is the one record a request that never finishes leaves. The
-  threshold is `overdueRequestMs` on `createService`, and app-web's request logger applies the same
-  default.
-- Presentation is the transport's job: dev consoles pretty-print through `pino-pretty`, and call
-  sites never embed color codes or decoration in the message.
+- A failure always emits a line at the site that decides the outcome, carrying the reason in a
+  field.
+- Each request logs one completion line with its method, path, status, and duration. The query
+  string never reaches a log line, because query params carry emailed tokens, auth codes, and
+  GET-mapped procedure inputs. The health probe is unlogged, and the web app logs a served static
+  asset at `debug`.
+- A request past the slow-request threshold logs its completion line at `warn`. A request still open
+  past the overdue threshold writes an overdue line while it runs, the one record a request that
+  never finishes leaves. Both thresholds are `createService` options, and the web app applies the
+  same defaults.
+- Presentation is the transport's job: dev consoles pretty-print, and call sites never embed
+  decoration in the message.
 
 ## Metrics
 
 Instrumentation is part of a feature: work that adds a pipeline, queue, worker, or failure path
 lands with the metrics that make it observable. The conventions:
 
-- Instruments are defined in the owning package through the global metrics API
-  (`metrics.getMeter('@vers/<package>')` from `@opentelemetry/api`).
-- Domain code never constructs, receives, or stops a meter provider; the service runtime owns that
-  lifecycle. Instruments resolved through the API bind to whatever provider the process registered
-  at boot.
-- Names are dot-namespaced `vers.<domain>.<measure>`.
-- Attributes are snake_case with closed value sets, never unbounded values like per-entity IDs,
-  which explode cardinality and cost.
-- Units use UCUM annotations (`s`, `{activity}`, `{rejection}`).
-- A rare, meaningful event is a counter, recorded at the site that decides the event (a
-  `record-*.ts` module).
-- Database-resident state is never counted in application code; it observes through observable
-  gauges: one batch callback per package, one snapshot query per collection, failures caught and
-  logged so a bad query never takes down the process it observes.
-- Every instrument lands with its row in the instrument registry, in the same PR.
+- Instruments are defined in the owning package through the global metrics API (`metrics.getMeter`).
+  Domain code never constructs, receives, or stops a meter provider; the service runtime owns that
+  lifecycle.
+- Names are dot-namespaced `vers.<domain>.<measure>`, units use UCUM annotations, and attributes are
+  snake_case with closed value sets, never unbounded values like per-entity ids.
+- A rare, meaningful event is a counter recorded at the site that decides it, a `record-*.ts`
+  module, and the recording's log line carries the raw numbers behind it.
+- Database-resident state observes through observable gauges: one batch callback per package, one
+  snapshot query per collection, failures caught and logged so a bad query never takes down the
+  process it observes.
+- An instrument's `description` and `unit` in its definition are its registry. A grep for `vers.`
+  finds every instrument with its meaning attached.
 
-Alerting is Axiom threshold monitors over these datasets, notifying the `vers alarms` notifier.
-Every Axiom resource is managed as code in the `infra/` Pulumi program (`axiom.ts`). A console edit
-to any resource is drift, reconciled by the next `pulumi up`. The sensitive outputs Pulumi records
-in stack state are encrypted by the stack passphrase.
+The replay service's instruments emit only while a drain runs, so they stay silent on an idle,
+scaled-to-zero machine. A backoff never counts toward quarantine, and a sustained backoff rate on
+one reason is an outage of that dependency, not a cheating signal. An integrity-mismatch rejection
+spike is investigated as a deploy regression first, not a cheating wave.
 
-## Instrument registry
+## Alarms
 
-| Instrument                                      | Type            | Unit             | Attributes          | Meaning                                                                                                                                                      |
-| ----------------------------------------------- | --------------- | ---------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `vers.replay.verification_lag`                  | histogram       | `s`              | —                   | seconds between an append landing and a drain cycle confirming it                                                                                            |
-| `vers.replay.wake`                              | counter         | `{wake}`         | `source`            | drains started, by what started them                                                                                                                         |
-| `vers.replay.backoffs`                          | counter         | `{backoff}`      | `reason`            | claimed activities the verifier backed off instead of adjudicating, by reason                                                                                |
-| `vers.replay.drain_duration`                    | histogram       | `s`              | —                   | wall-clock duration of one drain cycle                                                                                                                       |
-| `vers.replay.backlog_claimed`                   | histogram       | `{chain}`        | —                   | chains claimed and adjudicated in one drain cycle                                                                                                            |
-| `vers.verification.rejections`                  | counter         | `{rejection}`    | `reason`            | adjudications that rejected or parked an activity, by reason                                                                                                 |
-| `vers.replay.iteration_failures`                | counter         | `{iteration}`    | `outcome`           | worker iterations that failed to replay a claimed chain, by outcome                                                                                          |
-| `vers.replay.settled_xp`                        | up-down counter | `{xp}`           | `source`            | XP that verified segments settled to avatars, by how the amount was derived                                                                                  |
-| `vers.replay.clamped_settlements`               | counter         | `{settlement}`   | —                   | settlements whose debit was clamped to a minimum of zero, paying less than recorded                                                                          |
-| `vers.keys.derive_rejections`                   | counter         | `{rejection}`    | `reason`            | derivation calls that refused to derive a roll key or scope secret, by reason                                                                                |
-| `vers.activity.terminal_transitions`            | counter         | `{activity}`     | `status`            | activities that claimed a terminal transition, by status                                                                                                     |
-| `vers.activity.writer_takeovers`                | counter         | `{takeover}`     | —                   | successful writer-session claims on active activities                                                                                                        |
-| `vers.activity.replay_poke_failed`              | counter         | `{poke}`         | —                   | replay wake pokes that never delivered after exhausting retries                                                                                              |
-| `vers.activity.avatar_not_active_rejections`    | counter         | `{rejection}`    | —                   | active-avatar-gated calls the shared `requireActiveAvatar` helper rejected because the acting avatar is not active (activity-start admission, `revealNodes`) |
-| `vers.activity.content_incompatible_rejections` | counter         | `{rejection}`    | `path`              | activity-start admissions rejected because the resolved engine's max content version falls behind the requested content                                      |
-| `vers.activity.advance_continuations`           | counter         | `{continuation}` | `outcome`           | advanceActivity continuations processed, by outcome                                                                                                          |
-| `vers.activity.advance_bailouts`                | counter         | `{bailout}`      | `reason`            | advanceActivity requests that bailed before their continuations' end, by reason                                                                              |
-| `vers.activity.refusal`                         | counter         | `{refusal}`      | `code`, `reason`    | checkpoint and start refusals answered `CHECKPOINT_INVALID` or `CONFLICT`, by the reason the refusal's `data` carries                                        |
-| `vers.activity.reveal_cells`                    | histogram       | `{cell}`         | —                   | revealed cells returned per getRevealedNodes query                                                                                                           |
-| `vers.activity.reveal_sources`                  | histogram       | `{grant}`        | —                   | first-clear grant rows scanned per getRevealedNodes query                                                                                                    |
-| `vers.activity.reveal_mints`                    | counter         | `{node}`         | —                   | activity-chain rows minted or re-affirmed per revealNodes call                                                                                               |
-| `vers.activity.reveal_refusals`                 | counter         | `{node}`         | —                   | nodes refused per revealNodes call for falling outside the revealed region                                                                                   |
-| `vers.email.delivery_failures`                  | counter         | `{email}`        | —                   | emails that failed to deliver                                                                                                                                |
-| `vers.session.failed_attempts`                  | counter         | `{attempt}`      | —                   | failed step-up verification attempts                                                                                                                         |
-| `vers.analytics.delivery_failures`              | counter         | `{event}`        | `reason`            | product events that never landed in the Tinybird data source, by reason                                                                                      |
-| `vers.web.service_call_retries`                 | counter         | `{retry}`        | `service`           | retry attempts against an outbound service call that failed its previous attempt                                                                             |
-| `vers.web.service_call_failures`                | counter         | `{call}`         | `service`, `reason` | outbound service calls that never delivered, by service and reason                                                                                           |
-| `vers.db.pool_resets`                           | counter         | `{reset}`        | —                   | connection pools dropped after a detected process resume                                                                                                     |
+Axiom threshold monitors notify the alarms channel. Each monitor alerts on its threshold alone,
+never on no data, because a failure counter that emits only on failure reads quiet when healthy. The
+monitors:
 
-`service-activity` calls `service-replay`'s wake procedure through its oRPC client each time an
-append advances an activity past its verified cursor. The handler drains the queue, claiming and
-adjudicating chains until none remain claimable, before responding, so every instrument in
-`service-replay` emits only while a drain is actually running and stays silent on an idle,
-scaled-to-zero machine. The hourly scheduled drain machine emits the same instruments for its own
-run. `vers.replay.verification_lag` records once per newly verified append, from the append's own
-timestamp to the moment the drain confirms it.
+- 5xx responses: any server span with a 5xx status. The central error interceptor has already
+  reported the same failure to Bugsink with its trace id, so the alarm is the prompt to open that
+  event.
+- Slow requests: any non-probe server span past a fixed duration, a request that did complete
+  slowly. Health probes are excluded because their latency tracks machine wake.
+- Overdue requests: the overdue log line, which covers the request that never finishes and so never
+  exports a span.
+- Replay poke failed: a replay wake that exhausted its retries, the signal that the queue may go
+  undrained despite unverified work.
+- Activity refusals: refusals grouped by reason, each reason alerting on its own, with a threshold
+  above a single transient stale-head conflict and below a device stuck retrying a refused chain.
 
-`vers.verification.rejections` splits by `reason`:
-
-- `integrity-mismatch` — confirmed divergence or seed validation.
-- `version-park` — unknown or retention-expired sim version, a version-registry problem needing
-  fleet action.
-- `elapsed-time` — replay duration cap tripped, a per-stream anomaly.
-- `build-mismatch` — the activity's pinned start build does not match the avatar's settled xp total,
-  typically because it banked a since-rejected ancestor's optimistic xp, so the level and life it
-  plays at were never proven; a rise tracks how far one rejection propagates through an avatar's
-  later runs.
-- `descriptor-mismatch` — a sealed node's stamped content fields failed to reproduce against a
-  freshly read scope secret, on the segment's first verification pass.
-- `node-unreachable` — a `world_map_node` run's scope was not connected to any verified completed
-  node on the segment's first verification pass, the authoritative reachability gate for both online
-  and offline traversal.
-
-Each recording's log line carries the raw numbers behind it (heads, checkpoint counts, sim version).
-
-`vers.replay.settled_xp` splits by `source`: `progress` is a segment settling the per-checkpoint
-deltas it verified, `terminal` a segment settling a run's final total net of what earlier segments
-settled. The measure is signed, since a failed run's terminal settles its death penalty as a
-negative, and an up-down counter is the instrument that keeps negative recordings; a histogram
-discards them. A `terminal` sum that drifts from the runs completing, or a `progress` sum going
-negative, is a contribution-rule defect.
-
-`vers.replay.clamped_settlements` stays at zero while the penalty and the settled total are computed
-against the same base: the engine clamps a failure penalty to the progress made into the current
-level, so a debit cannot exceed an avatar's settled XP. A non-zero count means they have diverged,
-and the shortfall is silent everywhere else.
-
-The remaining split instruments enumerate their attribute values:
-
-- `vers.replay.wake` by `source`: `poke` is the activity service's wake call after an append; `boot`
-  is the drain the serve entrypoint runs on start; `schedule` is the hourly scheduled machine.
-- `vers.replay.backoffs` by `reason`: `keys-unavailable` is a keys-service call that timed out,
-  refused the connection, or answered with an undefined error; `provider-unavailable` is the same
-  for a cross-version replay provider, where repeated occurrences distinguish a dead provider deploy
-  from normal cold-boot latency; `deadline` is an iteration that overran its 90s deadline; `errored`
-  is any other throw, which is also reported to Bugsink. A backoff never counts toward quarantine,
-  and a sustained rate on one reason is an outage of that dependency, not a cheating signal.
-- `vers.replay.iteration_failures` by `outcome`: `quarantined` is an activity that exhausted its
-  replay attempts; `errored` is every other failed iteration.
-- `vers.keys.derive_rejections` by `reason`: `unknown-key-version` is an avatar roll-key version
-  absent from the population's custodied roots; `unknown-scope-secret-version` is the same for a
-  scope secret.
-- `vers.activity.terminal_transitions` by `status`: `stopped` is a completed or failed last
-  checkpoint; `capped` is a batch rejected whole for exceeding the avatar's accrued offline budget.
-- `vers.activity.advance_continuations` by `outcome`: `minted` is a continuation whose ingest
-  inserted a fresh row; `converged` is one that resolved onto a row a prior, partially committed
-  request already inserted at the same client id.
-- `vers.activity.advance_bailouts` by `reason`, one per `advanceActivity` rejection code
-  (`conflict`, `checkpoint_invalid`, `activity_capped`, `session_evicted`, `chain_quarantined`,
-  `terminal`). A bailout always leaves the confirmed head advanced past the committed prefix, so a
-  rising count tracks how often an offline catch-up's outer resync must re-plan, not lost progress.
-- `vers.activity.refusal` by `code` and `reason`, recorded at every site that answers a
-  `trackActivityProgress` or `advanceActivity` call with `CHECKPOINT_INVALID` or `CONFLICT`. The
-  `reason` is the value the refusal's `data` carries, so the counter and the interceptor's warn log
-  split the same way ([error handling](../services/error-handling.md#registry)).
-- `vers.activity.content_incompatible_rejections` by `path`: `requested` is a client-sent
-  sim-version hash; `fallback` is the registry-current version resolved for a start that carries no
-  hash.
-- `vers.activity.reveal_cells` and `vers.activity.reveal_sources` record once per `getRevealedNodes`
-  call: the returned cell count and the scanned first-clear grant count. Both track the reveal
-  projection's fan-out as an avatar's completed-node history grows.
-- `vers.activity.reveal_mints` records once per `revealNodes` call: the number of distinct nodes it
-  minted or re-affirmed a chain row for. A repeat reveal of an already-minted node still counts,
-  since the call re-affirms that row's `genesisSeed` rather than skipping it.
-- `vers.activity.reveal_refusals` records once per `revealNodes` call that refuses at least one
-  node, carrying the number of distinct nodes it dropped for falling outside the avatar's revealed
-  region. A call that refuses nothing records nothing, so the counter reads zero for every honest
-  client and any non-zero rate is a client asking for ground it has not earned sight of.
-- `vers.analytics.delivery_failures` by `reason`: `rejected` is a non-2xx response from the Tinybird
-  Events API; `quarantined` is a row the API accepted but failed schema validation; `unreachable` is
-  a network failure or the upstream deadline tripping.
-
-`vers.web.service_call_retries` and `vers.web.service_call_failures` cover app-web's bounded
-outbound service calls. `service_call_retries` records each retry attempt against a call that failed
-its previous attempt. `service_call_failures` records a call whose final attempt still failed, split
-by `reason`: `timeout` when that final attempt hit its bound, `transport` when it failed some other
-way before the bound fired. A `timeout` against one `service` means the final attempt's bound
-([retry policy](../services/error-handling.md#retry-policy)) elapsed with no answer from the
-machine; a sustained `transport` run against the same service points at a genuinely unreachable
-machine.
-
-The `vers 5xx responses` threshold monitor watches `vers-traces` for any server span whose response
-status is 500 or above, counted in 5-minute bins over a 10-minute range, and notifies `vers alarms`
-on the first bin holding at least 1. Every server error in the fleet therefore alarms. The central
-`onError` interceptor has already reported the same failure to Bugsink with its trace id, so the
-alarm is the prompt to open that event.
-
-The `vers replay poke failed` threshold monitor watches `vers.activity.replay_poke_failed` and
-notifies `vers alarms`. It alerts on the threshold alone, never on no data: the counter emits only
-when a wake delivery exhausts its retries, so a quiet dataset is the healthy default, not a down
-exporter. It is the explicit signal that the replay queue may go undrained despite an activity
-appending unverified work.
-
-The `vers activity refusals` threshold monitor watches `vers.activity.refusal` grouped by `reason`
-and notifies `vers alarms` when one reason's count inside a 10-minute bin reaches 5, so the alarm
-names the reason. Each reason alerts on its own, so a second reason crossing the threshold sends its
-own notification. The monitor runs every 5 minutes over a 20-minute range, which scores the last
-complete 10-minute bin and the current partial bin. It alerts on the threshold alone, never on no
-data: the counter emits only when service-activity refuses a start or an append, so a quiet dataset
-is the healthy default, not a down exporter. The threshold sits above a single transient stale-head
-conflict and below a device stuck retrying a refused chain, which produces refusals at several per
-minute.
-
-The `vers slow requests` threshold monitor watches `vers-traces` for any non-probe server span past
-a fixed 30s duration threshold and notifies `vers alarms`, evaluated on its own schedule rather than
-at span close. Health-probe routes are excluded because their latency tracks scale-to-zero machine
-wake rather than request handling. It is the fleet-wide alarm for a pathologically slow request that
-did complete, independent of the per-request slow-request warn log a service's own `slowRequestMs`
-threshold decides. It never sees a request that has not finished: the batch span processor exports a
-span only after it ends.
-
-The `vers overdue requests` threshold monitor closes that gap. It watches `vers-logs` for the
-`request overdue` line a service or app-web writes while a request is still open past 30s, and
-notifies `vers alarms` on the first bin holding at least 1.
-
-## Alarms channel
-
-Axiom monitors, the CI pipeline, and Bugsink post to one Discord channel. The CI `alert` job posts a
-structured embed (a `[CI] critical — …` title, the failing run's link, and a red severity colour
-`#e5484d`, decimal `15026253`) in `.github/workflows/main.yml`. Axiom and Bugsink post their tools'
-stock formats: Axiom's custom-webhook notifier, the one templated body it offers, is not enabled on
-the plan, and Bugsink's Discord messaging service exposes no templating.
+Axiom monitors, the CI pipeline, and Bugsink all post to one Discord channel. CI posts a structured
+embed; Axiom and Bugsink post their tools' stock formats.
