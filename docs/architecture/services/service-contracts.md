@@ -126,8 +126,9 @@ Authentication fails in two classes, kept deliberately separate, and only one is
   token that fails verification means something is misconfigured or someone is probing, never
   something a browser user can fix. The service runtime rejects it with a plain 401 before any
   handler runs, and the edge reports it as a 5xx with alerting
-  ([error handling](./error-handling.md#service-layer)). A token that verifies but names an issuer
-  the target service does not accept is rejected with a plain 403, on the same terms.
+  ([error handling](./error-handling.md#service-layer)). The runtime rejects a token that verifies
+  but names an issuer the service does not accept with a plain 403 on the same terms
+  ([auth](./auth.md)).
 
 Services never see cookies ([auth](./auth.md)). Identity reaches a handler as the verified token's
 claims:
@@ -142,8 +143,8 @@ interface ServiceContext {
 }
 ```
 
-`actingUserID`, `actingSessionID`, and `issuer` come from the verified token; `issuer` names the
-service that minted it. `logger` and `traceID` are the runtime's per-request infrastructure
+`actingUserID`, `actingSessionID`, and `issuer` come from the verified token. `issuer` names the
+service that minted the token. `logger` and `traceID` are the runtime's per-request infrastructure
 ([error handling](./error-handling.md#trace-context)).
 
 When a session expires, the edge itself replies with the contract-shaped
