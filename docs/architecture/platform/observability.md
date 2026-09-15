@@ -2,16 +2,15 @@
 
 The fleet emits three OpenTelemetry signals, traces, logs, and metrics, and Axiom consumes them, one
 dataset per signal. Error reporting is a separate path through the Sentry SDK to Bugsink
-([error handling](../services/error-handling.md)). Axiom threshold monitors over the datasets alarm
-to one Discord channel, and every Axiom resource is managed as code in the `infra/` Pulumi program,
-so a console edit is drift.
+([error handling](../services/error-handling.md)). Every Axiom resource is managed as code in the
+`infra/` Pulumi program ([infra drift](./deployment.md#infra-drift)).
 
 ## Export path
 
 The service runtime wires every signal through `createService` when the OTLP endpoint variable is
 set, one transport per signal: traces through the Elysia OpenTelemetry plugin, logs through a
 pino-to-OTLP stream, and metrics through a process-global meter provider behind a periodic exporter.
-The web app carries no Elysia plugin and boots the same trace and metrics export itself. A process
+The web app carries no Elysia plugin and boots its own exporters for all three signals. A process
 with the endpoint unset emits nothing, and every instrument stays the OpenTelemetry API's no-op.
 
 The runtime boots OpenTelemetry before the Sentry SDK, and the order matters. The OpenTelemetry API
@@ -22,9 +21,8 @@ and no service span would reach the exporter.
 
 Each exporter configures itself from the standard `OTEL_EXPORTER_OTLP_*` variables, whose per-signal
 headers carry the ingest token and dataset routing. Stopping telemetry flushes pending exports and
-releases the metric reader's timer, which otherwise keeps the event loop alive. An entrypoint that
-drains on SIGTERM stops telemetry before it closes its database pool, since a final gauge collection
-may still query.
+shuts the metric reader down. An entrypoint that shuts down gracefully on SIGTERM stops telemetry
+before it closes its database pool, since a final gauge collection may still query.
 
 ## Traces
 
@@ -38,21 +36,23 @@ site opens the span:
   skipping a served static asset and the health probe.
 - A database query: every Kysely client emits a CLIENT span per compiled query, carrying the
   compiled SQL and never its parameters, and a CLIENT span per connection acquired from the pool.
-- A service-to-service call: every RPC link carries a tracing interceptor that mints a CLIENT span
-  per call.
+- A service-to-service call from a server: a server-side RPC link carries a tracing interceptor that
+  opens a CLIENT span per call. A browser link stamps the header and opens no span.
 - No inbound request: a worker iteration, a boot drain, a scheduled sweep, or a queued job opens its
   own root span, which starts a fresh trace.
 
-Trace context crosses process boundaries through the OpenTelemetry API's global propagator. An
-outbound call carries `traceparent` from the active span, and the web app's RPC proxy re-injects
-`traceparent` from its own active context rather than forwarding the browser's raw header, so the
-service span parents to the web app's server span. A request outside any span derives its trace id
-by parsing the inbound header directly and mints a fresh one when none arrives.
+The web app extracts an inbound `traceparent` through the OpenTelemetry API's global propagator, and
+an outbound call writes `traceparent` from the active trace context. The web app's RPC proxy
+re-injects `traceparent` from its own context rather than forwarding the browser's raw header, so
+the service span parents to the web app's server span. A request outside any span derives its trace
+id by parsing the inbound header directly and mints a fresh one when none arrives.
 
 Wherever a span is active, it is the source of truth for the request's identity: a request's
-exported span trace id, its `x-trace-id` response header, and every log line's trace id field always
-agree. A span carries semantic-convention attributes for its kind and never a raw per-entity id or
-secret material, the same cardinality and leakage discipline metric attributes follow.
+exported span trace id, its `x-trace-id` response header, and every log line's trace id field agree.
+One exception: a response built with immutable headers, such as a redirect, ships unstamped and
+correlates through its log lines only. A span carries semantic-convention attributes for its kind
+and never a raw per-entity id or secret material, the same cardinality and leakage discipline metric
+attributes follow.
 
 ## Log lines
 
@@ -68,12 +68,11 @@ services it called. The line-level conventions:
   field.
 - Each request logs one completion line with its method, path, status, and duration. The query
   string never reaches a log line, because query params carry emailed tokens, auth codes, and
-  GET-mapped procedure inputs. The health probe is unlogged, and the web app logs a served static
-  asset at `debug`.
-- A request past the slow-request threshold logs its completion line at `warn`. A request still open
-  past the overdue threshold writes an overdue line while it runs, the one record a request that
-  never finishes leaves. Both thresholds are `createService` options, and the web app applies the
-  same defaults.
+  GET-mapped procedure inputs. A service leaves its health probe unlogged; the web app logs its
+  probe like any request and logs a served static asset at `debug`.
+- A service logs a request past its slow-request threshold at `warn`, with a per-path override. A
+  service or the web app writes an overdue line for a request still open past the overdue threshold,
+  the one record a request that never finishes leaves.
 - Presentation is the transport's job: dev consoles pretty-print, and call sites never embed
   decoration in the message.
 
@@ -92,31 +91,30 @@ lands with the metrics that make it observable. The conventions:
 - Database-resident state observes through observable gauges: one batch callback per package, one
   snapshot query per collection, failures caught and logged so a bad query never takes down the
   process it observes.
-- An instrument's `description` and `unit` in its definition are its registry. A grep for `vers.`
-  finds every instrument with its meaning attached.
+- An instrument's `description` and `unit` in its definition are its registry. A grep for the
+  instrument constructors (`createCounter`, `createHistogram`, `createUpDownCounter`,
+  `createObservableGauge`) finds every instrument with its meaning attached.
 
-The replay service's instruments emit only while a drain runs, so they stay silent on an idle,
-scaled-to-zero machine. A backoff never counts toward quarantine, and a sustained backoff rate on
-one reason is an outage of that dependency, not a cheating signal. An integrity-mismatch rejection
-spike is investigated as a deploy regression first, not a cheating wave.
+The replay service's instruments emit only while a drain runs, so an idle, scaled-to-zero machine
+reads quiet.
 
 ## Alarms
 
-Axiom threshold monitors notify the alarms channel. Each monitor alerts on its threshold alone,
-never on no data, because a failure counter that emits only on failure reads quiet when healthy. The
-monitors:
+Each Axiom threshold monitor alerts on its threshold alone, never on no data, because a failure
+counter that emits only on failure reads quiet when healthy. The monitors:
 
-- 5xx responses: any server span with a 5xx status. The central error interceptor has already
-  reported the same failure to Bugsink with its trace id, so the alarm is the prompt to open that
+- 5xx responses: a server span that completed with a 5xx status. The central error interceptor has
+  already reported the failure to Bugsink with its trace id, so the alarm is the prompt to open that
   event.
-- Slow requests: any non-probe server span past a fixed duration, a request that did complete
-  slowly. Health probes are excluded because their latency tracks machine wake.
-- Overdue requests: the overdue log line, which covers the request that never finishes and so never
+- Slow requests: a server span that completed but took longer than a player would wait, probes
+  excluded because probe latency tracks machine wake.
+- Overdue requests: the overdue log line, which covers a request that never finishes and so never
   exports a span.
-- Replay poke failed: a replay wake that exhausted its retries, the signal that the queue may go
-  undrained despite unverified work.
-- Activity refusals: refusals grouped by reason, each reason alerting on its own, with a threshold
-  above a single transient stale-head conflict and below a device stuck retrying a refused chain.
+- Replay poke failed: the activity service's wake poke to the replay service exhausted its retries,
+  so the queue may go undrained while unverified work sits in it.
+- Activity refusals: starts and appends the activity service refused, grouped by reason, each reason
+  alerting on its own. The threshold sits above one transient stale-head conflict and below a device
+  stuck retrying a refused chain.
 
 Axiom monitors, the CI pipeline, and Bugsink all post to one Discord channel. CI posts a structured
 embed; Axiom and Bugsink post their tools' stock formats.
