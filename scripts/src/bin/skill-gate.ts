@@ -65,12 +65,17 @@ async function collectSubagentTranscripts(dir: string): Promise<ReadonlyArray<Su
       cwd: dir,
       onlyFiles: true,
     })) {
-      const info = await stat(hit);
+      try {
+        const info = await stat(hit);
 
-      entries.push({ modifiedAt: info.mtimeMs, path: hit });
+        entries.push({ modifiedAt: info.mtimeMs, path: hit });
+      } catch {
+        // A transcript can vanish between the listing and the stat call; skip it and keep scanning.
+      }
     }
   } catch {
-    return [];
+    // The subagents directory doesn't exist yet for a session with no subagent calls.
+    return entries;
   }
 
   return entries;
@@ -95,7 +100,14 @@ async function collectSkillsFromTranscripts(paths: ReadonlyArray<string>): Promi
       continue;
     }
 
-    const text = await file.text();
+    let text: string;
+
+    try {
+      text = await file.text();
+    } catch {
+      // A transcript can vanish between the exists check and the read; skip it.
+      continue;
+    }
 
     for (const skill of collectLoadedSkills(text)) {
       skills.add(skill);
