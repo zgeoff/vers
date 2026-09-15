@@ -1,13 +1,11 @@
 import { onTestFinished } from 'bun:test';
-import { createService } from '@vers/service-runtime';
-import type { Service } from '@vers/service-runtime';
 import { updateEnv } from '@vers/test-utils/bun';
 import invariant from 'tiny-invariant';
-import { buildProviderRouter } from '../build-provider-router';
-import { providerEnvShape } from '../provider-env-shape';
+import { createReplayProvider } from '../create-replay-provider';
+import type { ReplayProvider } from '../create-replay-provider';
 
 interface RemoteReplayProvider {
-  readonly provider: Service<typeof providerEnvShape>;
+  readonly provider: ReplayProvider;
   readonly url: string;
 }
 
@@ -16,15 +14,10 @@ export async function createRemoteReplayProvider(
 ): Promise<RemoteReplayProvider> {
   updateEnv('SIM_ENGINE_HASH', engineHash);
 
-  // named and audienced as `service-replay`, matching the dispatcher's current mint
-  // (`services/replay/src/dispatch/run-replay-segment.ts`), rather than the real provider's own
-  // `service-replay-provider` audience
-  const provider = await createService({
-    allowedIssuers: ['service-replay'],
-    buildRouter: (runtime) => buildProviderRouter({ simVersion: runtime.env.SIM_ENGINE_HASH }),
-    envShape: providerEnvShape,
-    name: 'service-replay',
-  });
+  // named `service-replay`, matching the dispatcher's current mint audience
+  // (`services/replay/src/dispatch/run-replay-segment.ts`) rather than the real provider's own
+  // `service-replay-provider` name — a pre-existing defect this fix doesn't address
+  const provider = await createReplayProvider({ name: 'service-replay' });
 
   provider.listen(0);
 

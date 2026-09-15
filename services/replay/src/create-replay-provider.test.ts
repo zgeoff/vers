@@ -9,6 +9,27 @@ test('it boots from env.SIM_ENGINE_HASH', async () => {
   expect(service.env.SIM_ENGINE_HASH).toBe('test-engine-hash');
 });
 
+test('it verifies tokens against a name override instead of its default audience', async () => {
+  const service = await createReplayProvider({ name: 'service-replay' });
+
+  const viewer = await createAnonymousViewer({
+    audience: 'service-replay',
+    issuer: 'service-replay',
+  });
+
+  const input = createMockReplaySegmentInput({ simVersion: 'test-engine-hash' });
+
+  const response = await service.app.handle(
+    new Request('http://test.local/rpc/replaySegment', {
+      body: JSON.stringify({ json: input }),
+      headers: { authorization: `Bearer ${viewer.token}`, 'content-type': 'application/json' },
+      method: 'POST',
+    }),
+  );
+
+  expect(response.status).toBe(200);
+});
+
 test('it accepts a call from service-replay', async () => {
   const service = await createReplayProvider();
 
