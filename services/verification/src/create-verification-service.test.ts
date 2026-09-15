@@ -29,7 +29,11 @@ test('it accepts a call from app-web', async () => {
   await using db = await createTestDB();
 
   const service = await createVerificationService({ db: db.db });
-  const viewer = await createAnonymousViewer({ audience: 'service-verification' });
+
+  const viewer = await createAnonymousViewer({
+    audience: 'service-verification',
+    issuer: 'app-web',
+  });
 
   const client = buildRPCTestClient<VerificationContract>(service.app, { token: viewer.token });
 
@@ -50,10 +54,18 @@ test('it rejects a call from service-activity with 403', async () => {
 
   const response = await service.app.handle(
     new Request('http://test.local/rpc/createVerification', {
-      headers: { authorization: `Bearer ${viewer.token}` },
+      body: JSON.stringify({ json: { target: 'rejected@example.com', type: 'onboarding' } }),
+      headers: {
+        authorization: `Bearer ${viewer.token}`,
+        'content-type': 'application/json',
+      },
       method: 'POST',
     }),
   );
 
   expect(response.status).toBe(403);
+
+  const rows = await db.db.selectFrom('verifications').selectAll().execute();
+
+  expect(rows).toHaveLength(0);
 });
