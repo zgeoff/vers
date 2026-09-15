@@ -2,6 +2,8 @@ import { defineConfig, devices } from '@playwright/test';
 import { loadE2EEnvironment } from './src/load-e2e-environment';
 import type { E2EOptions } from './src/test';
 
+const CROSS_ENGINE_CORPUS_SPEC = /cross-engine-corpus\.spec\.ts/;
+
 const environment = loadE2EEnvironment({
   appWebEnv: {
     // the live WebGPU/R3F canvas blocks the main thread long enough under CI's software-GL to
@@ -15,12 +17,23 @@ export default defineConfig<E2EOptions>({
     timeout: 10 * 1000,
   },
   fullyParallel: true,
+  globalSetup: './src/setup-corpus-artifacts.ts',
   outputDir: '.test-results',
   testDir: './specs',
   projects: [
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
+    },
+    {
+      name: 'firefox',
+      testMatch: CROSS_ENGINE_CORPUS_SPEC,
+      use: { ...devices['Desktop Firefox'] },
+    },
+    {
+      name: 'webkit',
+      testMatch: CROSS_ENGINE_CORPUS_SPEC,
+      use: { ...devices['Desktop Safari'] },
     },
   ],
 
