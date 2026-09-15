@@ -24,6 +24,7 @@ test('it creates a verification code and stores a record of it', async () => {
   });
 
   expect(created).toStrictEqual({
+    expiresAt: expect.toBeAfter(new Date()),
     id: expect.toBeString(),
     otp: expect.toBeString(),
     target: 'onboard@example.com',
@@ -49,6 +50,7 @@ test('it uses a simple charset for 2fa verification codes', async () => {
   const created = await client.createVerification({ target: '+15551234567', type: '2fa' });
 
   expect(created.otp).toMatch(/^[0-9]+$/);
+  expect(created.expiresAt).toBeNull();
 });
 
 test('it uses a simple charset for 2fa setup verification codes', async () => {
