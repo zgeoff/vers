@@ -154,16 +154,15 @@ line the sweep can't parse fails it.
 ## Error handling
 
 Read `docs/architecture/services/error-handling.md` before adding or changing a failure path — it
-owns the full taxonomy, code registry, trace context, and reporting split. The rules a PR must
+owns the taxonomy, the status rules, trace context, and the reporting split. The rules a PR must
 satisfy:
 
 - A procedure handler throws only its typed `opts.errors.*` constructors or `invariant()`. No
   try/catch for logging or reporting in handlers — the central `onError` interceptor in
   `createService` owns that.
 - Every contract `.errors({…})` map is built with `defineErrors` (`@vers/contract-base`). A bespoke
-  code (any code outside oRPC's canonical set) declares an explicit `status` and lands with its row
-  in the `docs/architecture/services/error-handling.md` registry table in the same PR; bespoke codes
-  are named `NOUN_PROBLEM`.
+  code (any code outside oRPC's canonical set) declares an explicit `status`, and its `defineErrors`
+  entry is its registry; bespoke codes are named `NOUN_PROBLEM`.
 - Clients narrow on `code` via `isDefinedError`/`safe` and act on `data` fields — never on `message`
   strings.
 - The Sentry SDK is the only path to the error backend; pino is a log-only sink. Never wire a log
@@ -213,7 +212,7 @@ text.
 
 ## Monorepo layout
 
-Packages live under kind-first roots; `docs/architecture/overview.md` lists every project.
+Packages live under kind-first roots.
 
 - Workspace globs: `apps/*`, `services/*`, `contracts/*`, `libs/*/*` (grouped by domain: `core`,
   `data`, `design`, `game`, `service`, `testing`), `infra`, and `scripts`.
