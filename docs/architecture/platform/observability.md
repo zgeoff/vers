@@ -7,6 +7,19 @@ dataset per signal. Error reporting is a separate path through the Sentry SDK to
 
 ## Export path
 
+```mermaid
+flowchart LR
+  subgraph service["a domain service (service runtime)"]
+    T1[Elysia OpenTelemetry plugin] -->|traces| O
+    L1[pino-to-OTLP stream] -->|logs| O
+    M1["process-global meter provider<br>behind a periodic exporter"] -->|metrics| O
+  end
+  subgraph web["the web app"]
+    W[its own exporters] -->|traces, logs, metrics| O
+  end
+  O[("the OTLP endpoint")]
+```
+
 The service runtime wires every signal through `createService` when the OTLP endpoint variable is
 set, one transport per signal: traces through the Elysia OpenTelemetry plugin, logs through a
 pino-to-OTLP stream, and metrics through a process-global meter provider behind a periodic exporter.

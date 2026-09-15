@@ -20,6 +20,15 @@ never touch it.
 
 ## Delivery model: drains, not resident workers
 
+```mermaid
+flowchart LR
+  E["enqueue procedure<br>inserts the job"] --> P
+  E -->|nudge| D["drain<br>fetches, handles, and completes jobs until the queue is empty"]
+  S["serve entrypoint<br>on boot"] -->|boot drain| D
+  F["Fly scheduled machine<br>sweep entrypoint"] -->|scheduled sweep| D
+  D <--> P[("Postgres<br>job rows")]
+```
+
 Fleet services scale to zero when idle, and Neon suspends the database. A resident polling worker
 would hold both awake around the clock, so delivery rides three one-shot drains instead:
 

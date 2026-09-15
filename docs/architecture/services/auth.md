@@ -10,6 +10,16 @@ token's claims and nothing else ([service contracts](./service-contracts.md)).
 
 ## Session lifecycle
 
+```mermaid
+stateDiagram-v2
+  [*] --> unverified: login or onboarding writes the session row
+  unverified --> unverified: 2FA on the account, the code prompt holds the pending session id
+  unverified --> verified: sign-in verifies the session, which mints the token pair and evicts the user's other sessions
+  unverified --> [*]: expiry, or eviction by a newer verify
+  verified --> verified: a refresh re-mints the access token, and rotates the refresh token once the session outlives its short lifetime
+  verified --> [*]: logout, eviction by a newer verify, or revocation
+```
+
 A login validates the honeypot and the fields, then checks the email and password against the user
 service. A wrong email or password reports one form-level error, never which was wrong. The session
 service then writes an unverified session row, with a longer lifetime when the player asks to be
@@ -27,13 +37,14 @@ the user and signed with the session service's private key. The edge verifies th
 signature against the session service's published key set, selected by the token's key id, and
 requires the token's subject to match the cookie's user before it trusts any claim; a token no
 published key signed, or whose subject is not the cookie's user, reads as signed out. Access tokens
-are short-lived, and a refresh call rotates the pair once the access token has aged. A reused
-refresh token, a superseded rotation, or an expired session revokes the session. A signing key
-rotates through an overlap window in which the service signs with the new key and publishes both,
-and a refresh token is matched against the session row rather than verified by signature, so a
-rotation never invalidates a live session. A service token can outlive its session by its own short
-lifetime, so the edge re-confirms the session still exists on every request while the access token
-is fresh, and an evicted device is signed out on its next request.
+are short-lived. A refresh call re-mints the access token, and rotates the refresh token only once
+the session has outlived its short lifetime. A reused refresh token, a superseded rotation, or an
+expired session revokes the session. A signing key rotates through an overlap window in which the
+service signs with the new key and publishes both, and a refresh token is matched against the
+session row rather than verified by signature, so a rotation never invalidates a live session. A
+service token can outlive its session by its own short lifetime, so the edge re-confirms the session
+still exists on every request while the access token is fresh, and an evicted device is signed out
+on its next request.
 
 The session cookie is httpOnly, same-site lax, secure in production, and sealed by an app secret.
 Reading it never throws, and an absent token is how the edge observes "signed out". A partial
@@ -43,15 +54,25 @@ server call takes the same logout path and redirect.
 
 ## Step-up authorization
 
-A sensitive mutation (an email change, a password change, or disabling 2FA) demands a fresh code
-check before it runs. The step-up check decides in priority order: with no live 2FA verification for
-the target, the mutation proceeds; with a valid, unused transaction token on the resubmission, the
-mutation proceeds; otherwise the edge creates a pending transaction and challenges the caller for a
-code.
+```mermaid
+flowchart TD
+  M["sensitive mutation<br>email change, password change, disabling 2FA"] --> A{"live 2FA verification<br>for the target?"}
+  A -->|no| R[the mutation runs]
+  A -->|yes| T{"valid, unused transaction token<br>on the resubmission?"}
+  T -->|yes| R
+  T -->|no| P[the edge asks the session service for a pending transaction]
+  P --> Q[challenge for a code]
+  Q --> C{"code valid?"}
+  C -->|yes| K["consume the pending transaction,<br>mint a transaction token"] -->|resubmission| M
+  C -->|no| F[count a failed attempt against the transaction]
+  F -->|under the limit| Q
+  F -->|at the limit| X[abandoned]
+```
 
-One handler verifies the challenge for every gated mutation. An invalid code counts a failed attempt
-against the pending transaction, and the edge abandons the transaction after a fixed number of
-failures. A valid code atomically consumes the pending transaction and mints a transaction token.
+A sensitive mutation runs behind a fresh code check when its target has live 2FA verification.
+
+One handler verifies the challenge for every gated mutation, and a valid code consumes the pending
+transaction atomically.
 
 A pending transaction lives in postgres with its action, target, IP, and owning session. Postgres
 cascade-deletes it with the session. The session service ignores an expired row at consume time and
