@@ -17,7 +17,10 @@ import {
 } from '@vers/email';
 import type { JobFailureContext, JobQueue } from '@vers/jobs';
 import { createJobQueue, defineJobs } from '@vers/jobs';
+import type { ServiceContext } from '@vers/service-runtime';
+import { isPastDeadline } from './is-past-deadline';
 import { recordDeliveryFailure } from './metrics/record-delivery-failure';
+import { recordExpiredSend } from './metrics/record-expired-send';
 
 const RETRY_POLICY = {
   deadLetter: true,
@@ -26,19 +29,27 @@ const RETRY_POLICY = {
   retryLimit: 5,
 } as const;
 
-const EMAIL_JOB_DEFS = defineJobs({
+const DEADLINE_RETRY_POLICY = {
+  deadLetter: true,
+  expireInSeconds: 60,
+  retryBackoff: true,
+  retryDelay: 15,
+  retryLimit: 4,
+} as const;
+
+export const EMAIL_JOB_DEFS = defineJobs({
   'send-change-email-notification': {
     ...RETRY_POLICY,
     schema: SendChangeEmailNotificationInputSchema,
   },
   'send-change-email-verification': {
-    ...RETRY_POLICY,
+    ...DEADLINE_RETRY_POLICY,
     schema: SendChangeEmailVerificationInputSchema,
   },
   'send-existing-account': { ...RETRY_POLICY, schema: SendExistingAccountInputSchema },
   'send-password-changed': { ...RETRY_POLICY, schema: SendPasswordChangedInputSchema },
   'send-reset-password': { ...RETRY_POLICY, schema: SendResetPasswordInputSchema },
-  'send-welcome': { ...RETRY_POLICY, schema: SendWelcomeInputSchema },
+  'send-welcome': { ...DEADLINE_RETRY_POLICY, schema: SendWelcomeInputSchema },
 });
 
 export type EmailJobDefs = typeof EMAIL_JOB_DEFS;
@@ -46,6 +57,7 @@ export type EmailJobDefs = typeof EMAIL_JOB_DEFS;
 export interface CreateEmailJobQueueConfig {
   readonly connectionString: string;
   readonly emailClient: EmailClient;
+  readonly logger: ServiceContext['logger'];
 
   readonly onError?: (error: Error) => void;
 
@@ -56,6 +68,7 @@ export function createEmailJobQueue(
   config: Readonly<CreateEmailJobQueueConfig>,
 ): JobQueue<EmailJobDefs> {
   const emailClient = config.emailClient;
+  const logger = config.logger;
 
   // Passed as an object literal, not a separately-typed variable: `createJobQueue`'s handler map
   // is a type inferred jointly with the queue defs argument, and TypeScript only carries that
@@ -74,6 +87,17 @@ export function createEmailJobQueue(
         });
       },
       'send-change-email-verification': async (payload, context) => {
+        if (isPastDeadline(payload.usefulUntil)) {
+          recordExpiredSend('send-change-email-verification');
+
+          logger.warn(
+            { queue: 'send-change-email-verification', usefulUntil: payload.usefulUntil },
+            'email skipped past its deadline',
+          );
+
+          return;
+        }
+
         const email = renderChangeEmailVerificationEmail({
           newEmail: payload.newEmail,
           verificationCode: payload.verificationCode,
@@ -118,6 +142,17 @@ export function createEmailJobQueue(
         });
       },
       'send-welcome': async (payload, context) => {
+        if (isPastDeadline(payload.usefulUntil)) {
+          recordExpiredSend('send-welcome');
+
+          logger.warn(
+            { queue: 'send-welcome', usefulUntil: payload.usefulUntil },
+            'email skipped past its deadline',
+          );
+
+          return;
+        }
+
         const email = renderWelcomeEmail({
           verificationCode: payload.verificationCode,
           verificationURL: payload.verificationURL,

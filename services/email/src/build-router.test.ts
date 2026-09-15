@@ -42,6 +42,7 @@ test('#sendWelcome it enqueues and returns a job id', async () => {
 
   const result = await ctx.client.sendWelcome({
     to: 'player@example.com',
+    usefulUntil: new Date(Date.now() + 60_000),
     verificationCode: '123456',
     verificationURL: 'https://versidle.com/verify',
   });
@@ -54,6 +55,7 @@ test('#sendWelcome it delivers the email on drain, sending the job id as the ide
 
   const result = await ctx.client.sendWelcome({
     to: 'player@example.com',
+    usefulUntil: new Date(Date.now() + 60_000),
     verificationCode: '123456',
     verificationURL: 'https://versidle.com/verify',
   });
@@ -111,6 +113,7 @@ test('#sendChangeEmailVerification it enqueues and delivers to the account s cur
   const result = await ctx.client.sendChangeEmailVerification({
     newEmail: 'new@example.com',
     to: 'old@example.com',
+    usefulUntil: new Date(Date.now() + 60_000),
     verificationCode: '123456',
     verificationURL: 'https://versidle.com/verify-email',
   });
@@ -213,6 +216,7 @@ test('it keeps a job left failed by a downstream error for a later sweep', async
 
   await ctx.queue.send('send-welcome', {
     to: 'player@example.com',
+    usefulUntil: new Date(Date.now() + 60_000),
     verificationCode: '123456',
     verificationURL: 'https://versidle.com/verify',
   });
@@ -263,6 +267,7 @@ test('it reports a fire-and-forget drain failure carrying the active trace id', 
       router.sendWelcome,
       {
         to: 'player@example.com',
+        usefulUntil: new Date(Date.now() + 60_000),
         verificationCode: '123456',
         verificationURL: 'https://versidle.com/verify',
       },
