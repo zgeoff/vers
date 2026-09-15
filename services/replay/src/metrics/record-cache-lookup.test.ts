@@ -1,56 +1,21 @@
-import { expect, onTestFinished, test } from 'bun:test';
-import { metrics } from '@opentelemetry/api';
-import {
-  AggregationTemporality,
-  InMemoryMetricExporter,
-  MeterProvider,
-  PeriodicExportingMetricReader,
-} from '@opentelemetry/sdk-metrics';
+import { expect, test } from 'bun:test';
+import { createInMemoryMetrics } from '@vers/test-utils/bun';
 import { recordCacheLookup } from './record-cache-lookup';
 
-function setupTest() {
-  const exporter = new InMemoryMetricExporter(AggregationTemporality.CUMULATIVE);
-
-  const provider = new MeterProvider({
-    readers: [new PeriodicExportingMetricReader({ exporter, exportIntervalMillis: 3_600_000 })],
-  });
-
-  metrics.setGlobalMeterProvider(provider);
-
-  onTestFinished(async () => {
-    metrics.disable();
-
-    await provider.shutdown();
-  });
-
-  return { exporter, provider };
-}
-
 test('it counts each lookup by what it found', async () => {
-  const ctx = setupTest();
+  const inMemory = createInMemoryMetrics();
 
   recordCacheLookup('hit');
   recordCacheLookup('hit');
   recordCacheLookup('miss');
   recordCacheLookup('stale');
 
-  await ctx.provider.forceFlush();
+  const points = await inMemory.readCounterDataPoints('vers.replay.cache_lookups');
 
-  const counter = ctx.exporter
-    .getMetrics()
-    .flatMap((resourceMetrics) => resourceMetrics.scopeMetrics)
-    .flatMap((scopeMetrics) => scopeMetrics.metrics)
-    .find((metric) => metric.descriptor.name === 'vers.replay.cache_lookups');
-
-  const observed = counter?.dataPoints.map((dataPoint) => ({
-    outcome: dataPoint.attributes['outcome'],
-    value: dataPoint.value,
-  }));
-
-  expect(observed).toIncludeSameMembers([
-    { outcome: 'hit', value: 2 },
-    { outcome: 'miss', value: 1 },
-    { outcome: 'stale', value: 1 },
+  expect(points).toIncludeSameMembers([
+    { attributes: { outcome: 'hit' }, value: 2 },
+    { attributes: { outcome: 'miss' }, value: 1 },
+    { attributes: { outcome: 'stale' }, value: 1 },
   ]);
 });
 

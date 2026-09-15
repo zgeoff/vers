@@ -1,6 +1,7 @@
 import { expect, test } from 'bun:test';
 import { createContentVersion } from '@vers/content-registry';
 import { createMockContentDocument } from '@vers/contract-activity/test-utils';
+import { toJSON } from '@vers/db';
 import { buildStateFromSeed } from '@vers/game-utils';
 import { createTestDB } from '@vers/service-test-utils/bun';
 import { updateEnv } from '@vers/test-utils/bun';
@@ -61,21 +62,66 @@ test('it drains a claimable chain through the same deps the wake procedure close
   expect(drained).toBe(1);
 });
 
-test('it still drains a claimable chain after stopCache runs', async () => {
+test('it drains a claimable chain after stopCache clears a driver the previous drain held', async () => {
   await using ctx = await createTestDB({ isolation: 'schema' });
 
   await createContentVersion(ctx.db, createMockContentDocument({ contentVersion: '2' }));
 
   const service = await createReplayService({ db: ctx.db });
 
-  service.stopCache();
-
-  await createHonestActivityFixture(ctx.db, {
+  const fixture = await createHonestActivityFixture(ctx.db, {
     duration: 80_000,
     seed: buildStateFromSeed(3_047_525_658),
   });
 
-  const drained = await service.drain('boot');
+  const totalCheckpoints = fixture.checkpoints.length;
+  const firstBatchCount = Math.max(1, Math.floor(totalCheckpoints / 2));
 
-  expect(drained).toBe(1);
+  expect(firstBatchCount).toBeGreaterThan(0);
+  expect(firstBatchCount).toBeLessThan(totalCheckpoints);
+
+  await ctx.db
+    .deleteFrom('activityCheckpoints')
+    .where('activityId', '=', fixture.activity.id)
+    .where('version', '>', firstBatchCount)
+    .execute();
+
+  const firstBatchLastHash = fixture.checkpoints[firstBatchCount - 1]?.hash;
+
+  await ctx.db
+    .updateTable('activities')
+    .set({ appendedHead: firstBatchCount, lastHash: firstBatchLastHash })
+    .where('id', '=', fixture.activity.id)
+    .execute();
+
+  const firstDrained = await service.drain('boot');
+
+  expect(firstDrained).toBe(1);
+
+  service.stopCache();
+
+  const remaining = fixture.checkpoints.slice(firstBatchCount);
+
+  await ctx.db
+    .insertInto('activityCheckpoints')
+    .values(
+      remaining.map((checkpoint) => ({
+        activityId: fixture.activity.id,
+        hash: checkpoint.hash,
+        payload: toJSON(checkpoint.payload),
+        prevHash: checkpoint.prevHash,
+        version: checkpoint.version,
+      })),
+    )
+    .execute();
+
+  await ctx.db
+    .updateTable('activities')
+    .set({ appendedHead: totalCheckpoints, lastHash: fixture.activity.lastHash })
+    .where('id', '=', fixture.activity.id)
+    .execute();
+
+  const secondDrained = await service.drain('boot');
+
+  expect(secondDrained).toBe(1);
 });

@@ -312,8 +312,11 @@ test('it reuses the same held driver object across two warm drains', async () =>
 
   const cachedAfterSecond = ctx.deps.cache.get(fixture.activity.id);
 
-  expect(cachedAfterSecond?.driver).toBe(cachedAfterFirst?.driver);
-  expect(cachedAfterSecond?.emittedCount).toBe(secondBatchCount);
+  invariant(cachedAfterFirst !== undefined, 'the first drain caches the driver it built');
+  invariant(cachedAfterSecond !== undefined, 'the second drain reuses the cached entry');
+
+  expect(cachedAfterSecond.driver).toBe(cachedAfterFirst.driver);
+  expect(cachedAfterSecond.emittedCount).toBe(secondBatchCount);
 });
 
 test('it stops draining and reports a claim failure carrying a trace id, without hanging', async () => {
