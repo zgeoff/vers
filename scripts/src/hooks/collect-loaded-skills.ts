@@ -5,12 +5,8 @@ export function collectLoadedSkills(transcript: string): ReadonlySet<string> {
   const loaded = new Set<string>();
 
   for (const line of lines.slice(lastBoundary + 1)) {
-    for (const match of line.matchAll(SKILL_CALL_PATTERN)) {
-      const skill = match.groups?.['skill'];
-
-      if (skill !== undefined) {
-        loaded.add(skill);
-      }
+    for (const skill of parseLineSkills(line)) {
+      loaded.add(skill);
     }
   }
 
@@ -19,5 +15,69 @@ export function collectLoadedSkills(transcript: string): ReadonlySet<string> {
 
 const COMPACT_BOUNDARY_MARKER = '"subtype":"compact_boundary"';
 
-// A Skill tool_use serializes its input with `skill` as the first key, with or without `args` after it.
-const SKILL_CALL_PATTERN = /"name":"Skill","input":\{"skill":"(?<skill>[^"]+)"/g;
+// Serializers order object keys freely across models, so each line parses as JSON instead of pattern-matching one key order.
+function parseLineSkills(line: string): ReadonlyArray<string> {
+  let entry: unknown;
+
+  try {
+    entry = JSON.parse(line);
+  } catch {
+    return [];
+  }
+
+  if (typeof entry !== 'object' || entry === null) {
+    return [];
+  }
+
+  if (typeof entry !== 'object' || entry === null || !('message' in entry)) {
+    return [];
+  }
+
+  const message = entry.message;
+
+  if (typeof message !== 'object' || message === null || !('content' in message)) {
+    return [];
+  }
+
+  const content = message.content;
+
+  if (!Array.isArray(content)) {
+    return [];
+  }
+
+  const skills: Array<string> = [];
+
+  for (const block of content) {
+    const skill = readSkillName(block);
+
+    if (skill !== undefined) {
+      skills.push(skill);
+    }
+  }
+
+  return skills;
+}
+
+function readSkillName(block: unknown): string | undefined {
+  if (
+    typeof block !== 'object' ||
+    block === null ||
+    !('type' in block) ||
+    !('name' in block) ||
+    !('input' in block)
+  ) {
+    return undefined;
+  }
+
+  if (block.type !== 'tool_use' || block.name !== 'Skill') {
+    return undefined;
+  }
+
+  const input = block.input;
+
+  if (typeof input !== 'object' || input === null || !('skill' in input)) {
+    return undefined;
+  }
+
+  return typeof input.skill === 'string' ? input.skill : undefined;
+}
