@@ -5,6 +5,7 @@ tmp
 /out-tsc
 .test-results
 .stack-test-results
+.corpus
 
 # git worktrees
 .worktrees
@@ -42,6 +43,7 @@ testem.log
 /coverage
 **/.test-results
 **/.stack-test-results
+**/.corpus
 **/.bench-test-results
 
 # System Files
