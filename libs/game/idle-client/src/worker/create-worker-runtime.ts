@@ -64,6 +64,7 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
   let simulation: Simulation = createSimulation();
   let activity: ActivityData | null = null;
   let stopped = false;
+  let tickingStopped = false;
   let lastFrameTime = now();
   let accumulator = 0;
   let simulationSpeed = 1;
@@ -214,6 +215,9 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
     setWriterDisplacedActivityID: (activityID) => {
       getLifecycle().send({ activityID, type: 'SET_WRITER_DISPLACED' });
     },
+    stopTicking: () => {
+      tickingStopped = true;
+    },
     updateConnectivity,
   };
 
@@ -279,6 +283,8 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
         receivedVersion: failure.receivedVersion,
         type: WorkerMessageType.JournalFailure,
       });
+
+      getLifecycle().send({ type: 'SUBMITTER_JOURNAL_FAILED' });
     },
     onJournalUnreadable: (activityID, receivedVersion, error) => {
       unreadableJournalActivityIDs.add(activityID);
@@ -291,6 +297,8 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
         receivedVersion,
         type: WorkerMessageType.JournalFailure,
       });
+
+      getLifecycle().send({ type: 'SUBMITTER_JOURNAL_FAILED' });
     },
     onSaved: (activityID, version) => {
       broadcast({
@@ -365,7 +373,7 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
   // a fixed timestep keeps updates consistent: the worker isn't tied to UI updates and has no
   // requestAnimationFrame
   const runTickLoop = async () => {
-    if (stopped) {
+    if (stopped || tickingStopped) {
       return;
     }
 
@@ -377,6 +385,10 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
     accumulator += frameTime * simulationSpeed;
 
     while (accumulator >= timestep) {
+      if (tickingStopped) {
+        break;
+      }
+
       accumulator -= timestep;
 
       await runSimulation(context, context.getSimulation(), timestep);
