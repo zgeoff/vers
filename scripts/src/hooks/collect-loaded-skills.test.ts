@@ -1,8 +1,6 @@
 import { expect, test } from 'bun:test';
 import { collectLoadedSkills } from './collect-loaded-skills';
 
-const compactLine = '{"type":"system","subtype":"compact_boundary","content":"..."}';
-
 test('it collects a skill load serialized name-first', () => {
   const transcript =
     '{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Skill","input":{"skill":"testing"}}]}}';
@@ -34,6 +32,8 @@ test('it collects loads across lines in mixed key orders', () => {
 });
 
 test('it ignores a load that a compaction boundary summarized away', () => {
+  const compactLine = '{"type":"system","subtype":"compact_boundary","content":"..."}';
+
   const transcript = [
     '{"type":"assistant","message":{"content":[{"type":"tool_use","input":{"skill":"testing"},"name":"Skill"}]}}',
     compactLine,
@@ -41,6 +41,13 @@ test('it ignores a load that a compaction boundary summarized away', () => {
   ].join('\n');
 
   expect([...collectLoadedSkills(transcript)]).toStrictEqual(['code-style']);
+});
+
+test('it ignores a skill-shaped block on a non-assistant record', () => {
+  const transcript =
+    '{"type":"user","message":{"content":[{"type":"tool_use","input":{"skill":"docs-writing"},"name":"Skill"}]}}';
+
+  expect(collectLoadedSkills(transcript).size).toBe(0);
 });
 
 test('it ignores tool calls and lines that are not skill loads', () => {

@@ -29,7 +29,13 @@ function parseLineSkills(line: string): ReadonlyArray<string> {
     return [];
   }
 
-  if (typeof entry !== 'object' || entry === null || !('message' in entry)) {
+  if (
+    typeof entry !== 'object' ||
+    entry === null ||
+    !('type' in entry) ||
+    entry.type !== 'assistant' ||
+    !('message' in entry)
+  ) {
     return [];
   }
 
