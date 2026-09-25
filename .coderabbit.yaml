@@ -1,16 +1,11 @@
 # yaml-language-server: $schema=https://storage.googleapis.com/coderabbit_public_assets/schema.v2.json
-language: en-US
+# Layers vers-specific settings over the shared config in zgeoff/coderabbit.
+# A list item here replaces the shared item with the same `path`, so the
+# **/*.test.ts entry carries the full vers text.
+inheritance: true
 
 reviews:
-  profile: assertive
-  high_level_summary: false
-  collapse_walkthrough: true
-  sequence_diagrams: false
-  pre_merge_checks:
-    docstrings:
-      mode: off
   path_filters:
-    - '!bun.lock'
     - '!libs/data/db/src/schema.generated.ts'
   path_instructions:
     - path: '**/*.ts'
@@ -52,19 +47,3 @@ reviews:
         cache-migration test for either store. Only the outbox stores —
         pending-checkpoints and pending-roots — hold un-synced local progress
         and keep real versioned migrations.
-  auto_review:
-    enabled: true
-    auto_incremental_review: false
-    drafts: false
-  tools:
-    eslint:
-      enabled: false
-    biome:
-      enabled: false
-
-knowledge_base:
-  learnings:
-    scope: local
-
-chat:
-  art: false
