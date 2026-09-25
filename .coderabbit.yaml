@@ -39,6 +39,9 @@ reviews:
         awaited: Bun's matcher types declare them synchronous, per the AGENTS.md
         testing rules. Only toResolve()/toReject() return promises and are
         awaited. Never flag an unawaited .rejects/.resolves chain.
+        bun test loads jest-extended matchers through the
+        @zgeoff/bun-test-extended preload, so tests use matchers beyond Bun's
+        built-in expect API; an unknown matcher name is caught by typecheck.
     - path: 'libs/game/idle-client/**'
       instructions: |
         The node-seeds and content-documents IndexedDB stores are caches: a row
