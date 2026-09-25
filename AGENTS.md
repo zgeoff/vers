@@ -71,8 +71,9 @@ locates code, it does not teach a subsystem's rules.
 
 ## Review bots
 
-CodeRabbit and cubic review every PR, configured by `.coderabbit.yaml` and `cubic.yaml` at the repo
-root; CodeRabbit reads this file as its guidelines.
+CodeRabbit and cubic review every PR. CodeRabbit layers the repo-root `.coderabbit.yaml` over the
+shared config in zgeoff/coderabbit; cubic reads `cubic.yaml`. CodeRabbit reads this file as its
+guidelines.
 
 - A PR is ready only after both bot reviews are read and every finding is answered on its own
   thread: a fixed finding's reply cites the commit that fixed it; a declined finding's reply states
@@ -83,7 +84,7 @@ root; CodeRabbit reads this file as its guidelines.
   `resolveReviewThread`). A finding the agent cannot confidently judge is escalation, not
   disposition: reply saying so and leave the thread open for a human.
 - Never teach a bot through chat (`@coderabbitai` learnings and the like) — a correction to bot
-  behaviour is an edit to `.coderabbit.yaml` or `cubic.yaml`, reviewed in a PR.
+  behaviour is an edit to `.coderabbit.yaml`, zgeoff/coderabbit, or `cubic.yaml`, reviewed in a PR.
 - Bots review a PR once, at open; an agent invokes a re-review only when asked, never on its own
   initiative.
 
