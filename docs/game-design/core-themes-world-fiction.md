@@ -67,8 +67,7 @@ into danger, recover power, push deeper — the contract, embodied in one person
 
 The player chooses an avatar's bloodline when creating the avatar. The bloodline is one of the few
 near-permanent parts of an avatar. Changing it is possible but expensive, and it is never a core
-part of the story. A bloodline need not carry mechanical weight: a god whose blood grants identity
-and nothing else is a valid member of the pantheon.
+part of the story.
 
 Avatars are embodied people, not disposable drones. They can be enhanced, equipped, specialized,
 injured, defeated, recovered, ranked, and eventually set against other avatars.
@@ -92,8 +91,8 @@ notes attach mechanics to them as they need a licensor, a market, or a fabricato
 names follow the world's naming grammar. Institutions carry player alignment and perks; a downstream
 note owns that design.
 
-Respite's landmarks are the places the home screen shows, and each landmark is the home of one game
-system:
+Respite holds far more than its landmarks. The home screen shows the landmarks, and each one is the
+home of a game system:
 
 | Landmark              | Institution                    | System                        |
 | --------------------- | ------------------------------ | ----------------------------- |
@@ -105,8 +104,8 @@ system:
 | The arena             | None                           | Ladders and PvP               |
 | The guild halls       | None                           | Guilds                        |
 
-The artisans' quarter gathers the forge, the leatherworker, and the tailor. The gates stand at the
-edge of the city and face outward, so the paths on the world map begin where the city ends.
+The gates stand at the edge of the city and face outward, so the paths on the world map begin where
+the city ends.
 
 ### Story Weight
 
