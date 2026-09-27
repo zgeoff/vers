@@ -1,0 +1,35 @@
+{
+  "tool": "built-in image_gen",
+  "outputs": [
+    {
+      "id": "01-inhabited-frontage",
+      "output": "01-inhabited-frontage.png",
+      "source": "/home/geoff/.codex/generated_images/01a0e0a7-7c02-7cb1-8ed1-258ea16fbb2d/exec-c8f20730-81d4-4212-ac0c-4117524be33e.png",
+      "sha256": "8ecf4cac648f3fd0d231400ebd07dc289bdbd7db361e27a039e75fbcb1e76c0a"
+    },
+    {
+      "id": "02-shared-utilities",
+      "output": "02-shared-utilities.png",
+      "source": "/home/geoff/.codex/generated_images/01a0e0a7-7c02-7cb1-8ed1-258ea16fbb2d/exec-2245d8b6-96c7-4784-909c-df76e74c339b.png",
+      "sha256": "f0e08631271e39668835291ea70bb96f418cae4669cf2e61bf26bb5d9cb6b87d"
+    },
+    {
+      "id": "03-old-foundations",
+      "output": "03-old-foundations.png",
+      "source": "/home/geoff/.codex/generated_images/01a0e0a7-7c02-7cb1-8ed1-258ea16fbb2d/exec-85e937ff-23ff-446e-ae3c-d5882cebab54.png",
+      "sha256": "6aff91575ebac097272fe34f6edae94ccdb6f5c92582c84cc6d6aa9811e1c5e5"
+    },
+    {
+      "id": "04-covered-walkway",
+      "output": "04-covered-walkway.png",
+      "source": "/home/geoff/.codex/generated_images/01a0e0a7-7c02-7cb1-8ed1-258ea16fbb2d/exec-4e4bef9a-9843-4a8e-80f0-364b5b3a3447.png",
+      "sha256": "53acfcaa00d1db7a45c5fb6cac44a6cfd39ad95aa0b56420417ce7524a058ad9"
+    },
+    {
+      "id": "05-quiet-civic-court",
+      "output": "05-quiet-civic-court.png",
+      "source": "/home/geoff/.codex/generated_images/01a0e0a7-7c02-7cb1-8ed1-258ea16fbb2d/exec-b24bd79a-7894-401a-840e-12b7537b51db.png",
+      "sha256": "606eff539b7d6111718858da6f600c83d8ec8124c64057e0860aae381f63b857"
+    }
+  ]
+}
