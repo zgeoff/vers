@@ -35,8 +35,9 @@ one, or a drowned one, carried by its biome. A region is dangerous because ordin
 survive it, and valuable because it holds the power, materials, knowledge, and enemies that drive
 progression.
 
-The farther a path runs from Respite, the harder and stranger the regions along it become. Every
-avatar walks its own map, and the fiction leaves that unexplained.
+Respite sits at the origin of every avatar's world map, and the paths start at its gates. The
+farther a region lies from that origin, the harder and stranger it becomes. Every avatar walks its
+own map, and the fiction leaves that unexplained.
 
 Respite is central, but it is not omniscient. Its maps, institutions, and public histories can be
 incomplete, biased, or deliberately constrained. This gives the multiverse room for discovery
