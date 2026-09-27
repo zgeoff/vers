@@ -4,7 +4,7 @@ The current layout tests the bazaar beside the stash along the left perimeter. B
 across the shared court. The Codex and workshop follow the angled rear edges. The right perimeter
 remains open for a possible future destination.
 
-![Market beside the stash](renders/market-aligned.png)
+![Market beside the stash](renders/stash-even-spacing.png)
 
 The [top view](renders/market-left-plan.png) shows the extended court. The
 [comparison render](renders/oblique-before-market-move.png) preserves the market on the right from

@@ -11,7 +11,7 @@ COURT = {'west': -8.0, 'east': 20.0, 'south': -31.0, 'north': 14.0, 'rear_chamfe
 DIAGONAL = math.sqrt(.5)
 PLACEMENTS = {
     'codex': (-4-5.3*DIAGONAL, 10+5.3*DIAGONAL, 45),
-    'stash': (-13.5, -5, 90),
+    'stash': (-13.5, -2.25, 90),
     'workshop': (16+6.7*DIAGONAL, 10+6.7*DIAGONAL, -45),
     'bazaar': (-12.55, -22, 110),
 }
