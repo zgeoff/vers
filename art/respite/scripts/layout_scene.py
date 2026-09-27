@@ -7,13 +7,13 @@ from pathlib import Path
 from mathutils import Vector
 
 ROOT = Path(__file__).resolve().parents[1]
-COURT = {'west': -8.0, 'east': 20.0, 'south': -14.0, 'north': 14.0, 'rear_chamfer': 8.0}
+COURT = {'west': -8.0, 'east': 20.0, 'south': -31.0, 'north': 14.0, 'rear_chamfer': 8.0}
 DIAGONAL = math.sqrt(.5)
 PLACEMENTS = {
     'codex': (-4-5.3*DIAGONAL, 10+5.3*DIAGONAL, 45),
     'stash': (-13.5, -5, 90),
     'workshop': (16+6.7*DIAGONAL, 10+6.7*DIAGONAL, -45),
-    'bazaar': (27.8, -5, -90),
+    'bazaar': (-15.8, -22, 90),
 }
 
 
@@ -61,7 +61,7 @@ def apply_layout():
         line('perimeter-walk-joint'+str(x),(x,s),(x,n-chamfer),.10,'roof')
     line('rear-west-walk',(w+3,n-chamfer),(w+chamfer,n-3),.10,'roof')
     line('rear-east-walk',(e-3,n-chamfer),(e-chamfer,n-3),.10,'roof')
-    for row,y in enumerate(range(-14,14,2)):
+    for row,y in enumerate(range(int(s),int(n),2)):
         inset=max(0,y-(n-chamfer))
         line('court-bed'+str(y),(w+inset,y),(e-inset,y))
         next_inset=max(0,y+2-(n-chamfer))
@@ -71,15 +71,21 @@ def apply_layout():
     for y in (15,17,19,21,23): line('apron-joint'+str(y),(1,y),(11,y))
 
     camera=bpy.data.objects['Court']
-    target=Vector((6,4,5.5))
-    camera.location=(6,-50,41)
-    camera.rotation_euler=(target-camera.location).to_track_quat('-Z','Y').to_euler()
-    camera['respite_orbit_distance']=(target-camera.location).length
-    camera.data.lens=27
+    reference=json.loads((ROOT/'camera-reference.json').read_text())
+    px,py,pz=reference['position']
+    dx,dy,dz=reference['direction']
+    camera.location=(px,-pz,py)
+    direction=Vector((dx,-dz,dy))
+    camera.rotation_euler=direction.to_track_quat('-Z','Y').to_euler()
+    camera.location+=(camera.rotation_euler.to_quaternion()@Vector((1,0,0)))*reference.get('framing_pan_right_m',0)
+    camera['respite_orbit_distance']=50
+    bpy.context.scene.render.resolution_x=2048
+    bpy.context.scene.render.resolution_y=1000
+    camera.data.lens=camera.data.sensor_width/(2*math.tan(math.radians(reference['fov'])/2)*(2048/1000))
     plan=bpy.data.objects['Plan']
-    plan.location=(6,5,100)
+    plan.location=(0,-4,100)
     plan.rotation_euler=(0,0,0)
-    plan.data.ortho_scale=65
+    plan.data.ortho_scale=82
     plan['respite_orbit_distance']=100
     bpy.context.scene.camera=camera
     bpy.context.scene['respite_court_bounds']=json.dumps(COURT)

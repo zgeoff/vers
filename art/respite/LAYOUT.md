@@ -1,15 +1,19 @@
 # Respite plaza layout
 
-The plaza is a rectangle with two rear corners cut back at 45 degrees. Its centre line aligns with
-the tunnel. The stash and bazaar face each other across the straight side edges. The Codex and
-workshop follow the angled rear edges, with their entrances facing the shared court.
+The current layout tests the bazaar beside the stash along the left perimeter. Both entrances face
+across the shared court. The Codex and workshop follow the angled rear edges. The right perimeter
+remains open for a possible future destination.
 
-![Game camera](renders/plaza-shape-court.png)
+![Market beside the stash](renders/market-left-framed.png)
 
-The [top view](renders/plaza-shape-plan.png) shows the shape and the four frontages. The buildings
-sit outside the plaza perimeter; their doors and the Codex steps open directly onto its pedestrian
-space. The tunnel connects to the centre of the rear edge through a short apron. The foreground
-stays open.
+The [top view](renders/market-left-plan.png) shows the extended court. The
+[comparison render](renders/oblique-before-market-move.png) preserves the market on the right from
+the user's preferred oblique angle. The [camera reference](camera-reference.json) records the live
+viewer camera; the current framing pans sideways to include the whole market while retaining that
+angle and field of view.
+
+The prior arrangement remains in `checkpoints/before-market-left.blend`. This candidate changes the
+market placement and foreground extent, while the other destination placements remain fixed.
 
 The wall is continuous on both sides of the tunnel. The passage sits within one broad mass behind
 it, with no separate box-shaped roof. Curved machinery and shared utilities establish the approved

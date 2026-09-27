@@ -29,7 +29,8 @@ def check_layout():
     entrances={}
     framing={}
     facing={}
-    center=Vector((6,0,0))
+    bounds=json.loads(scene['respite_court_bounds'])
+    center=Vector(((bounds['west']+bounds['east'])/2,(bounds['south']+bounds['north'])/2,0))
     for key in DESTINATIONS:
         root=bpy.data.objects[key]
         target=Vector(targets[key])
@@ -63,7 +64,7 @@ def check_layout():
         endpoint=bpy.data.objects[key].matrix_world@Vector(targets[key])
         local_approach=Vector(targets[key]);local_approach.y-=1.6
         approach=bpy.data.objects[key].matrix_world@local_approach
-        route=[Vector((6,22.0,1)),Vector((6,14,1)),Vector((6,0,1)),Vector((approach.x,approach.y,1)),Vector((endpoint.x,endpoint.y,1))]
+        route=[Vector((6,22.0,1)),Vector((6,14,1)),Vector((center.x,center.y,1)),Vector((approach.x,approach.y,1)),Vector((endpoint.x,endpoint.y,1))]
         if key=='bazaar':
             inner=bpy.data.objects['bazaar'].matrix_world@Vector((0,-1,1));route.append(inner)
         results=[]
