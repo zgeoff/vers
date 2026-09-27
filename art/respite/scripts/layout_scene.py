@@ -13,7 +13,7 @@ PLACEMENTS = {
     'codex': (-4-5.3*DIAGONAL, 10+5.3*DIAGONAL, 45),
     'stash': (-13.5, -5, 90),
     'workshop': (16+6.7*DIAGONAL, 10+6.7*DIAGONAL, -45),
-    'bazaar': (-15.8, -22, 110),
+    'bazaar': (-12.55, -22, 110),
 }
 
 
