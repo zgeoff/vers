@@ -60,13 +60,13 @@ export const preset = definePreset({
             aether: { value: '#a78bfa' },
             barrier: { value: '#7dd3fc' },
             damage: {
-              cognitive: { value: '#e879f9' },
               cold: { value: '#60a5fa' },
-              electric: { value: '#fbbf24' },
-              heat: { value: '#fb7185' },
-              null: { value: '#a78bfa' },
+              fire: { value: '#fb7185' },
+              lightning: { value: '#fbbf24' },
+              mind: { value: '#e879f9' },
               physical: { value: '{colors.ink.300}' },
-              toxic: { value: '#4ade80' },
+              poison: { value: '#4ade80' },
+              void: { value: '#a78bfa' },
             },
             enemy: { value: '#fb7185' },
             rarity: {

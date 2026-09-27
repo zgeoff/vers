@@ -7,43 +7,39 @@ of Exile carries, without front-loading that complexity into the first playable 
 
 ## Damage Types
 
-Vers has 7 damage types, each named for its mechanism of harm. The set is intentionally wider than a
-traditional fantasy ARPG element spread, so itemisation never expects every build to cover every
-offensive or defensive type equally.
+Vers has 7 damage types, each named for its mechanism of harm. The set extends the classic fantasy
+elements with Mind and Void, so itemisation never expects every build to cover every offensive or
+defensive type equally.
 
 ### Physical
 
-Physical damage is material force: impact, rupture, blades, ballistics, crushing pressure, and other
-direct material trauma.
+Physical damage is material force: impact, rupture, blades, arrows, crushing weight, and other
+direct bodily trauma.
 
-### Heat
+### Fire
 
-Heat damage is destructive temperature gain: burning, plasma, friction, and radiant transfer.
+Fire damage is burning: flame, searing heat, embers, and molten matter.
 
 ### Cold
 
-Cold damage is destructive temperature loss: freezing, thermal shock, coolant exposure, and the
-failure of tissue and systems in deep cold.
+Cold damage is freezing: frost, ice, and the failure of flesh in deep cold.
 
-### Electric
+### Lightning
 
-Electric damage is charge and overload: current, arcs, shorting, and hostile energy flow through
-bodies or systems.
+Lightning damage is charge and overload: bolts, arcs, and storm energy through bodies.
 
-### Toxic
+### Poison
 
-Toxic damage is contamination: chemical exposure, biological attack, corrosion, poison,
-environmental taint, and other damaging intrusion.
+Poison damage is contamination: venom, disease, corrosion, rot, and other damaging intrusion.
 
-### Cognitive
+### Mind
 
-Cognitive damage is hostile patterning: perception attack, neural interference, signal confusion,
-memory pressure, and other effects that harm through thought, control, or understanding.
+Mind damage is harm through thought: dread, madness, domination, illusion, and other effects that
+attack perception, will, or memory.
 
-### Null
+### Void
 
-Null damage is absence and impossibility: entropy, erasure, unreality, and forces that do not fit
-into the known material systems.
+Void damage is absence and unmaking: erasure, entropy, and forces from the emptiness between worlds.
 
 ## Damage Events
 
@@ -142,27 +138,27 @@ downstream note owns the specifics.
 
 ## Threat Mix & Coverage
 
-Six of the seven damage types are resistable: type-specific mitigation exists for Heat, Cold,
-Electric, Toxic, Cognitive, and Null, and an endgame avatar is expected to reach the mitigation cap
-for the types its target regions deal. Physical is not resistable — it is the universal pressure
-type, handled through the other defensive layers rather than a resistance stat.
+Six of the seven damage types are resistable: type-specific mitigation exists for Fire, Cold,
+Lightning, Poison, Mind, and Void, and an endgame avatar is expected to reach the mitigation cap for
+the types its target regions deal. Physical is not resistable — it is the universal pressure type,
+handled through the other defensive layers rather than a resistance stat.
 
 Regions are weighted toward a dominant damage type but never deal it exclusively. Type mitigation is
 specced against a region's mix; Avoidance, Interception, and Barrier work against every damage type
 and catch what a build has not covered.
 
 Every damage type has at least one region or faction that expresses it. The strange types arrive
-with progression: Cognitive appears later, and Null is endgame. The type spectrum deepens as avatars
-push farther from Respite.
+with progression: Mind appears later, and Void is endgame. The type spectrum deepens as avatars push
+farther from Respite.
 
 Enemies use the same defensive layers as avatars, including Physical mitigation of their own —
 Physical is universal pressure in both directions. Layer distribution across enemy families is a
 tuning choice (heavily avoidance-stacked enemies are rarely fun), and incoming damage never converts
 between types.
 
-A region's damage mix is also its history: mechanical drift reads as Physical, Heat, Cold, and
-Electric; ecological drift as Toxic; human drift as Cognitive; total drift as Null. Reading a threat
-table is reading the region's biography.
+A region's damage mix is also its character: the elemental types read as the nature of its world,
+Poison as what lives and rots there, Mind as a world bent by will or dream, and Void as a world that
+borders the emptiness. Reading a threat table is reading the region's biography.
 
 ## Resource
 

@@ -1,14 +1,15 @@
 # Core Themes & World Fiction
 
-Vers is an idle ARPG/MMO set in a far-future human world. The player shapes an avatar, sends it into
-regions civilization no longer governs, and turns what it recovers into power. The player contract,
-the world premise, the identity pillars, the naming grammar, and the vocabulary register below are
-the root every downstream design note inherits. Lore is texture around progression, never a bible.
+Vers is an idle ARPG/MMO set in a fantasy multiverse. The player shapes an avatar, a mortal who
+carries the blood of a god, and sends it out of Respite, the hub city, along the paths into the
+worlds beyond. What the avatar recovers there becomes power. The player contract, the world premise,
+the identity pillars, the naming grammar, and the vocabulary register below are the root every
+downstream design note inherits. Lore is texture around progression, never a bible.
 
 ## Contract
 
 Vers is an idle ARPG/MMO where you shape your avatar, send them into dangerous regions, turn loot
-into power, push farther into harder, stranger parts of the world, and compete.
+into power, push farther into harder, stranger parts of the multiverse, and compete.
 
 ## Decisions
 
@@ -24,59 +25,65 @@ build prove itself over time.
 
 ### World Premise
 
-Vers takes place in a far-future human world where civilization persists around Respite — officially
-Habitat Nine — the largest known human center. Beyond it are older, stranger, partially autonomous
-regions that most people cannot safely enter.
+Vers takes place in a multiverse of many worlds, with Respite at its center. Respite is a
+multicultural hub city where travellers, traders, and exiles from every world meet. A few paths
+leave the city, and each one leads out into the worlds beyond it.
 
-The world was never destroyed; it stopped answering. Civilization built on itself for so long that
-most of the world now runs on its own accumulated logic — infrastructure that no longer recognizes
-anyone's authority, ecologies that were designed once and have since gone their own way, and human
-societies that broke from Respite and became something stranger. Respite is the largest place that
-still answers to the people living inside it. A region's danger is a measure of how far it has
-drifted — mechanical, ecological, or human; its value is what it still produces, protects, or knows.
+Those worlds are the world map: the regions an avatar enters, clears, revisits, pushes through, and
+eventually competes over. Each region has one legible identity, such as a burning world, a frozen
+one, or a drowned one, carried by its biome. A region is dangerous because ordinary mortals cannot
+survive it, and valuable because it holds the power, materials, knowledge, and enemies that drive
+progression.
 
-Those regions are the world map: real places and systems that can be entered, cleared, revisited,
-pushed through, and eventually competed over. They include abandoned infrastructure, synthetic
-ecologies, failed habitats, hostile machine systems, contested frontiers, and other places where
-ordinary life cannot safely operate. They are dangerous because they are no longer fully governed by
-human civilization, and valuable because they contain the power, materials, knowledge, and enemies
-that drive progression.
+Respite sits at the origin of every avatar's world map, and the paths start at its gates. The
+farther a region lies from that origin, the harder and stranger it becomes. Every avatar walks its
+own map, and the fiction leaves that unexplained.
 
-The world feels artificial, luminous, polluted, overbuilt, and old. Civilization is advanced, but
-not clean. Its systems have accumulated for so long that infrastructure can feel like terrain,
-history, hazard, and myth at the same time.
-
-Respite is central, but it is not omniscient. Its maps, institutions, factions, and public histories
-can be incomplete, biased, or deliberately constrained. This gives the world room for discovery
+Respite is central, but it is not omniscient. Its maps, institutions, and public histories can be
+incomplete, biased, or deliberately constrained. This gives the multiverse room for discovery
 without making lore the main activity.
+
+### The Pantheon
+
+The gods of the pantheon are real and present in the multiverse, and each has interests in the
+worlds. The gods hold temples, agents, and debts throughout Respite, and a temple stands in every
+quarter of the city rather than in a district of its own. Respite still lies outside their direct
+influence: no god acts on the city by its own power, and the fiction gives no reason.
+
+Aether is divine blood. An avatar carries the blood of one god and inherits some of that god's
+traits, and the inheritance makes the avatar exceptional among mortals. The blood appears in some
+mortals and not in others for no stated reason, and no institution can manufacture it.
+
+Carrying a god's blood makes an avatar neither a worshipper nor a servant. The god has a stake in
+the avatar, the way an investor has a stake in a venture, and an avatar owes it nothing by default.
+Relations between avatars and gods stay morally grey.
 
 ### Avatar Premise
 
-An avatar is an enhanced human shaped by the player and capable of entering regions that ordinary
-people cannot survive. "Avatar" is the worn remnant of a longer phrase — avatar _of_ something — and
-what filled the blank is lost; rival accounts contest what it was. What is known: the capacity is
-inborn, appearing by chance in some and not others, and no institution can manufacture it. The
-player-facing fantasy stays direct: shape your avatar, send them into danger, recover power, push
-deeper — the contract, embodied in one person.
+An avatar is a mortal who carries a god's blood, shaped by the player and capable of entering
+regions that ordinary people cannot survive. The name is short for the avatar of a god: the god
+whose blood the avatar carries. The player-facing fantasy stays direct: shape your avatar, send them
+into danger, recover power, push deeper — the contract, embodied in one person.
 
-Avatars are embodied people, not disposable drones. They can be augmented, equipped, specialized,
+The player chooses an avatar's bloodline when creating the avatar. The bloodline is one of the few
+near-permanent parts of an avatar. Changing it is possible but expensive, and it is never a core
+part of the story.
+
+Avatars are embodied people, not disposable drones. They can be enhanced, equipped, specialized,
 injured, defeated, recovered, ranked, and eventually set against other avatars.
 
-### Institutions & Factions
-
-Factions run on two axes: the institutions inside Respite, and what remains of the other habitats
-outside it.
+### Institutions & Places
 
 Three institutions anchor Respite, each defined by what it wants from an avatar's expeditions:
 
 - **The authority over the outside** licenses expeditions and keeps the maps, catalogues, and public
   histories. It wants what an expedition learned. What it publishes is incomplete by design — the
-  bias in Respite's picture of the world has an author. The in-game codex is its artifact.
+  bias in Respite's picture of the multiverse has an author. The in-game codex is its artifact.
 - **The market** turns salvage into value: commerce, currency, and the funding that makes
   expeditions worth mounting. It wants what an expedition carried back.
 - **The industry** transforms what the world yields: refinement, equipment, crafting, and the
-  augmentation of avatars among its trades. It wants raw material from expeditions — and proof of
-  how its work held up in the field. The crafting screens are its artifacts.
+  enhancement of avatars among its trades. It wants raw material from expeditions — and proof of how
+  its work held up in the field. The crafting screens are its artifacts.
 
 Each institution owns the screens that express it: a major screen reads as an artifact of the
 institution behind it, so each feels distinct and inhabited. These are thematic anchors: downstream
@@ -84,10 +91,21 @@ notes attach mechanics to them as they need a licensor, a market, or a fabricato
 names follow the world's naming grammar. Institutions carry player alignment and perks; a downstream
 note owns that design.
 
-The other habitats are the external axis. Records are incomplete: some habitats fell and are ruin,
-some still run with no one left inside, some broke away and became societies Respite no longer
-recognizes — and some numbers have no entry at all. Habitats can anchor region, faction, and enemy
-identities — including the stranger damage types — as downstream notes need them.
+Respite holds far more than its landmarks. The home screen shows the landmarks, and each one is the
+home of a game system:
+
+| Landmark              | Institution                    | System                        |
+| --------------------- | ------------------------------ | ----------------------------- |
+| The gates             | The authority over the outside | Expeditions                   |
+| The library           | The authority over the outside | The codex                     |
+| The market            | The market                     | Trade between players         |
+| The bank              | The market                     | Storage of items and currency |
+| The artisans' quarter | The industry                   | Crafting                      |
+| The arena             | None                           | Ladders and PvP               |
+| The guild halls       | None                           | Guilds                        |
+
+The gates stand at the edge of the city and face outward, so the paths on the world map begin where
+the city ends.
 
 ### Story Weight
 
@@ -135,43 +153,34 @@ discovery, escalation, and reward.
 A good region answers 3 questions: what makes this place unsafe, what makes it valuable, and how it
 changes as the avatar pushes deeper.
 
-Regions become harder and stranger as they move farther from Respite's influence. Distance does not
-need to be purely geographic: age, autonomy, corruption, hostile control, system drift, and lost
-history can all make a region more dangerous and more valuable.
+Regions become harder and stranger the farther they lie from Respite along the paths.
 
-### Synthetic World
+### Familiar Fantasy
 
-Vers is science fiction grounded in human civilization, enhanced bodies, artificial environments,
-old infrastructure, and advanced systems. It never defaults to fantasy magic, medieval symbolism, or
-space-opera scale.
+Vers is fantasy built from concepts a player already knows: gods, elements, planes, bloodlines,
+guilds, and a crossroads city. A player reads a region, an enemy, or an item at a glance, because
+each one draws on a familiar idea rather than an invented taxonomy. Where a familiar fantasy word
+exists, the world uses it.
 
-The strange parts of the world feel engineered, emergent, or historical rather than supernatural.
-
-### Mythic Systems
-
-The world's technology can feel ritualized, symbolic, and only partly understood. Interfaces,
-materials, enemy forms, region rules, and item language can carry a sense of hidden structure.
-
-This is how Vers gets mystery without becoming fantasy: advanced systems behave consistently enough
-to master, but strangely enough to feel deep.
+Familiar does not mean flat. Each region commits to one identity and carries it through its biome,
+its enemies, and its damage mix.
 
 ### Competitive Expedition
 
-Progress is measured by how far and efficiently avatars can push into the world. Ladders and PvP
-make that competition explicit, but the core pressure starts with the world itself.
+Progress is measured by how far and efficiently avatars can push into the multiverse. Ladders and
+PvP make that competition explicit, but the core pressure starts with the regions themselves.
 
 ## Naming Grammar
 
 1. **Two registers.** System vocabulary (damage types, hit deliveries, defensive layers, the
-   Azimuth) is clinical and stable — it lives in tables and logs. World vocabulary (places,
+   Azimuth) is clinical and stable — it lives in tables and logs. World vocabulary (places, gods,
    factions, enemies, items) is worn and human. Never swap them.
-2. **The worn-name pattern.** World things carry an official designation and the vernacular name
-   that won: Habitat Nine → Respite, the somatic factor → Aether. The pattern is the template, not a
-   one-off.
-3. **Numbers are history.** Serials and indices read as accumulated record, not decoration.
-4. **Institutions are called what citizens call them**, never their charter name.
-5. **Register bans.** No fantasy-magic words in either vocabulary. No console words (`root`,
-   `admin`, `null`) in world vocabulary — they are fine in system vocabulary.
+2. **Familiar words first.** A world name draws on a word a fantasy player already knows before the
+   world invents one.
+3. **Institutions are called what citizens call them**, never their charter name.
+4. **Register bans.** No science-fiction or technology words in world vocabulary (`machine`,
+   `signal`, `circuit`), and no console words (`root`, `admin`, `null`). Console words are fine in
+   system vocabulary.
 
 ## Vocabulary Register
 
@@ -179,19 +188,21 @@ The register covers world vocabulary and cross-cutting terms. System vocabulary 
 [attributes and damage model](./attributes-damage-model.md) and
 [defensive archetypes](./defensive-archetypes.md).
 
-| Term       | Status      | Notes                                                                                                                                                                      |
-| ---------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Vers       | Keep        | Carries universe and versus: world exploration plus competition.                                                                                                           |
-| avatar     | Canonical   | Enhanced human shaped by the player and sent into dangerous regions.                                                                                                       |
-| Respite    | Canonical   | The largest human center; officially Habitat Nine — the vernacular name won.                                                                                               |
-| world      | Keep        | The broad play space and fiction layer; not just a menu.                                                                                                                   |
-| region     | Provisional | Neutral term for world-map areas.                                                                                                                                          |
-| expedition | Provisional | The core activity: outfit an avatar, send it out, recover what returns.                                                                                                    |
-| loot       | Keep        | Core ARPG promise.                                                                                                                                                         |
-| power      | Keep        | Umbrella term for rewards that help the player push farther or more efficiently.                                                                                           |
-| Aether     | Canonical   | The single avatar skill resource: the medium avatars are infused with. Officially the somatic factor — found in avatar blood, never synthesized; the old physics word won. |
-| commitment | Provisional | UI label for a build's distance from center; prose uses committed and centered as plain descriptions.                                                                      |
-| glyph      | Not canon   | Visual candidate for mythic systems; no world rule uses it.                                                                                                                |
+| Term       | Status      | Notes                                                                                                 |
+| ---------- | ----------- | ----------------------------------------------------------------------------------------------------- |
+| Vers       | Keep        | Carries universe and versus: exploration of the multiverse plus competition.                          |
+| avatar     | Canonical   | A mortal who carries a god's blood, shaped by the player and sent into dangerous regions.             |
+| Respite    | Canonical   | The multicultural hub city at the center of the multiverse.                                           |
+| multiverse | Keep        | The worlds the paths from Respite reach; the broad play space and fiction layer.                      |
+| pantheon   | Canonical   | The gods whose blood avatars carry.                                                                   |
+| bloodline  | Canonical   | The god whose blood an avatar carries; chosen at avatar creation and near-permanent.                  |
+| Aether     | Canonical   | Divine blood, and the single avatar skill resource.                                                   |
+| region     | Provisional | Neutral term for world-map areas.                                                                     |
+| expedition | Provisional | The core activity: outfit an avatar, send it out, recover what returns.                               |
+| loot       | Keep        | Core ARPG promise.                                                                                    |
+| power      | Keep        | Umbrella term for rewards that help the player push farther or more efficiently.                      |
+| commitment | Provisional | UI label for a build's distance from center; prose uses committed and centered as plain descriptions. |
+| glyph      | Not canon   | Visual candidate; no world rule uses it.                                                              |
 
 ## Downstream Notes
 
@@ -217,5 +228,6 @@ one of these. Their working names appear nowhere else in the design set.
   and the horizontal variety that carries the world past the difficulty plateau.
 - **Enemy families** — enemy layer distributions and enemy critical tuning.
 - **Reporting** — expedition reports, per-layer legibility, and empowerment uptime.
-- **Fiction** — institution and habitat names, and the economy modes' world names.
+- **Fiction** — institution names, region and biome identities, and the economy modes' world names.
+- **Pantheon** — the gods, what each bloodline grants, and the cost of changing a bloodline.
 - **Institutions and alignment** — alignment mechanics and perks.

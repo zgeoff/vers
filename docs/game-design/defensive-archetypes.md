@@ -13,14 +13,14 @@ Every hit carries a delivery:
 
 - **Strike** — contact: blows, blades, grapples, rams.
 - **Projectile** — a traveling object: rounds, thrown mass, launched fragments.
-- **Direct** — delivered without a travel vector: signal, lock, imposition. Direct hits cannot be
+- **Direct** — delivered without a travel vector: curse, gaze, imposition. Direct hits cannot be
   avoided or intercepted.
 - **Area** — a detonation across a space: explosions, shockwaves, eruptions. Area hits cannot be
   avoided or intercepted.
 
 Persistent damage is not a hit and has no delivery.
 
-The strange damage types lean direct: Cognitive and Null arrive mostly as impositions rather than
+The strange damage types lean direct: Mind and Void arrive mostly as impositions rather than
 objects. A region or enemy family's delivery profile characterizes it as strongly as its damage mix,
 and both appear in its fingerprint.
 
