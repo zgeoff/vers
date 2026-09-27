@@ -1,36 +1,30 @@
 # Respite plaza layout
 
-The editable scene places the stash and bazaar on opposite sides of one court. The Codex and
-workshop stand beside the tunnel approach. Shared paving, low service walls, and a west service
-block connect the destinations. The tunnel penetrates a continuous wall across both sides of the
-court. The passage sits within one continuous mass behind the wall, with no separate tunnel roof
-silhouette. The wall top sits above the arch; curved machine structures and connected utilities form
-the provisional backdrop.
+The plaza is a rectangle with two rear corners cut back at 45 degrees. Its centre line aligns with
+the tunnel. The stash and bazaar face each other across the straight side edges. The Codex and
+workshop follow the angled rear edges, with their entrances facing the shared court.
 
-![Current three.js layout](renders/perimeter-layout-three.png)
+![Game camera](renders/plaza-shape-court.png)
 
-The [plan view](renders/plaza-layout-plan-current.png) shows the inward-facing entrances. The bazaar
-preserves three roofed vendor wings and both return walls. Its wider courtyard exposes the vendor
-bays from the game camera. The Codex steps meet the doorway threshold.
+The [top view](renders/plaza-shape-plan.png) shows the shape and the four frontages. The buildings
+sit outside the plaza perimeter; their doors and the Codex steps open directly onto its pedestrian
+space. The tunnel connects to the centre of the rear edge through a short apron. The foreground
+stays open.
 
-## Inspect the layout
+The wall is continuous on both sides of the tunnel. The passage sits within one broad mass behind
+it, with no separate box-shaped roof. Curved machinery and shared utilities establish the approved
+backdrop direction. Surrounding frontages and amenities remain a separate design pass.
+
+## Inspect and rebuild
 
 Open [the Blender scene](scenes/respite.blend) or run the
-[browser preview](README.md#run-the-browser-preview). The Court camera defines the game view. The
-Plan camera checks the court boundaries and approaches.
+[browser preview](README.md#run-the-browser-preview). Court defines the game view; Plan shows the
+arrangement from above. The [layout script](scripts/layout_scene.py) defines the plaza shape before
+it places the buildings against its edges.
 
-The [geometry report](renders/plaza-layout-check.json) records destination framing, entrance
-visibility samples, and clear approach segments from the tunnel. The route probe follows a normal
-approach to each doorway. It samples a 0.7m-wide corridor at two heights; it is not a navigation
-mesh or a general collision solver. Visual review remains necessary.
-
-## Reapply the layout
-
-The [layout script](scripts/layout_scene.py) owns the proposed placements, Court camera, and
-generated connecting geometry. It saves a Blender checkpoint before replacing its tagged objects.
-The market proportions and Codex steps belong to the [building script](scripts/build_scene.py).
-
-Run these commands inside Blender with `root` set as described in the authoring README:
+The script saves a checkpoint before replacing its generated paving and placement. It preserves the
+building meshes and the habitat wall. Run these commands inside Blender with `root` set as described
+in the authoring README:
 
 ```python
 runpy.run_path(str(root / "scripts/layout_scene.py"), run_name="__main__")
@@ -38,40 +32,16 @@ runpy.run_path(str(root / "scripts/check_layout.py"), run_name="__main__")
 runpy.run_path(str(root / "scripts/export_scene.py"), run_name="__main__")
 ```
 
-The original first-pass scene remains in `checkpoints/before-plaza-layout.blend`. The checkpoint
-`checkpoints/before-resume-september27.blend` preserves the interrupted layout candidate.
+The [geometry report](renders/plaza-layout-check.json) records framing, entrance visibility,
+approach samples, and passage enclosure. It samples a 0.7m-wide approach at two heights. It is not a
+navigation mesh or a general collision solver.
 
-## Environmental concepts
+## Environment references
 
-[Study D](concepts/d-continuous-wall.png) combines the curved backdrop and shared utility pipework
-behind a continuous wall. The wall and passage enclosure exist in the Blender scene. The paintover
-supplies a proposal for their final materials, light, and background detail.
+[Study D](concepts/d-continuous-wall.png) establishes the continuous wall, curved background
+machinery, and connected pipework. [Study E](concepts/e-connected-perimeter.png) explores the
+surrounding town frontage. These are image-generated art references; the actual building arrangement
+comes from the scene and top view above.
 
-The [concept prompts](concepts/studies.json) record three built-in imagegen studies. The current
-scene supplies the composition; the original references supply atmosphere and material direction.
-These images are visual proposals, not screenshots of implemented geometry. Background structures,
-added vegetation, windows, and lighting remain subject to selection.
-
-| Study                                                        | Architectural proposal                                         | Review concern                                                |
-| ------------------------------------------------------------ | -------------------------------------------------------------- | ------------------------------------------------------------- |
-| [A: Service galleries](concepts/a-service-galleries.png)     | An inhabited perimeter links the left buildings.               | Plants and repeated warm lamps exceed the intended restraint. |
-| [B: Curved structural ribs](concepts/b-curved-structure.png) | Vast curved machinery recedes behind the settlement.           | The bright upper-left fog competes with the exit.             |
-| [C: Shared utilities](concepts/c-shared-utilities.png)       | A connected conduit system explains the surrounding machinery. | The market gains unnecessary small goods.                     |
-
-The generated studies change some wall heights and small building details. The Blender source
-retains the approved asset forms and the continuous wall. Concept selection governs the background
-character, not automatic adoption of every generated detail.
-
-The [continuous-wall prompt](concepts/continuous-wall-prompt.txt) combines the curved backdrop and
-shared utilities while preserving the full-width wall from the actual scene. The enclosure checks
-sample solid wall on both sides, roof coverage above the passage, and a clear bore through both wall
-volumes.
-
-The [perimeter prompt](concepts/perimeter-prompt.txt) holds the approved wall and backdrop direction
-while exploring shallow connecting frontages, sparse edge amenities, and continuous unoutlined
-paving. The building spacing is a candidate for visual review.
-
-[Study E](concepts/e-connected-perimeter.png) tests a linked left frontage, covered perimeter
-recesses, sparse wall planting, and an open unoutlined court. The broad rear structure, tighter
-asset placements, and right utility annex exist in Blender. The additional recesses and amenities
-remain concept proposals.
+The [study index](concepts/studies.json) records outputs, references, and prompts. The complete
+working and Desktop review bundles retain the images, exports, and checkpoints outside Git.
