@@ -3,10 +3,11 @@
 The editable scene places the stash and bazaar on opposite sides of one court. The Codex and
 workshop stand beside the tunnel approach. Shared paving, low service walls, and a west service
 block connect the destinations. The tunnel penetrates a continuous wall across both sides of the
-court. A deep housing encloses the passage behind the wall. The wall top sits above the arch; curved
-machine structures and connected utilities form the provisional backdrop.
+court. The passage sits within one continuous mass behind the wall, with no separate tunnel roof
+silhouette. The wall top sits above the arch; curved machine structures and connected utilities form
+the provisional backdrop.
 
-![Current three.js layout](renders/continuous-wall-three-02.png)
+![Current three.js layout](renders/perimeter-layout-three.png)
 
 The [plan view](renders/plaza-layout-plan-current.png) shows the inward-facing entrances. The bazaar
 preserves three roofed vendor wings and both return walls. Its wider courtyard exposes the vendor
@@ -65,3 +66,12 @@ The [continuous-wall prompt](concepts/continuous-wall-prompt.txt) combines the c
 shared utilities while preserving the full-width wall from the actual scene. The enclosure checks
 sample solid wall on both sides, roof coverage above the passage, and a clear bore through both wall
 volumes.
+
+The [perimeter prompt](concepts/perimeter-prompt.txt) holds the approved wall and backdrop direction
+while exploring shallow connecting frontages, sparse edge amenities, and continuous unoutlined
+paving. The building spacing is a candidate for visual review.
+
+[Study E](concepts/e-connected-perimeter.png) tests a linked left frontage, covered perimeter
+recesses, sparse wall planting, and an open unoutlined court. The broad rear structure, tighter
+asset placements, and right utility annex exist in Blender. The additional recesses and amenities
+remain concept proposals.

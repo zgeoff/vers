@@ -469,7 +469,7 @@ def build_passage():
 def build_habitat():
     select_collection('habitat')
     wall=box('continuous-wall',(2.5,28,8.25),(135,8,16.5),'wall',0)
-    housing=box('passage-housing',(6,43,8.25),(21,22,16.5),'wall',0)
+    housing=box('passage-housing',(2.5,43,8.25),(135,22,16.5),'wall',0)
     cutter=cylinder('temporary-cut',(6,39,5.45),6.96,34,None,'Y',64,0)
     for block in (wall,housing):
         bpy.context.view_layer.objects.active=block

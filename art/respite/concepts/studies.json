@@ -39,6 +39,14 @@
       ],
       "output": "d-continuous-wall.png",
       "sha256": "9d9702cae5168cdf850cb1e859d655108dfb55bf3d0b336bfdca1c212f2631ea"
+    },
+    {
+      "id": "E",
+      "name": "Connected town perimeter",
+      "prompt_file": "perimeter-prompt.txt",
+      "references": ["../renders/perimeter-layout-three.png", "d-continuous-wall.png"],
+      "output": "e-connected-perimeter.png",
+      "sha256": "5b8a6deeaa1854f72812fd1199bd2c36e26281a4ec96cbf65f9647b51f2fe0c8"
     }
   ]
 }

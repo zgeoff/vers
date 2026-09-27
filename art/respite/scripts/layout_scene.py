@@ -8,10 +8,10 @@ from mathutils import Vector
 
 ROOT=Path(__file__).resolve().parents[1]
 PLACEMENTS={
-    'codex':(-11,17,0),
-    'stash':(-18,1,90),
+    'codex':(-11,15,0),
+    'stash':(-17,2,90),
     'workshop':(25,16,-15),
-    'bazaar':(22,-5,-90),
+    'bazaar':(20,-5,-90),
 }
 
 
@@ -55,21 +55,15 @@ def apply_layout():
 
     # Flush paving defines one forecourt and the short approach from the passage.
     polygon('arrival-paving',[(1,8.1),(11,8.1),(11,24),(1,24)],'floor',-.012)
-    for x in (1,11): line('arrival-edge'+str(x),(x,8.35),(x,22.3),.28,'roof')
     for y in (12,16,20,22): line('arrival-joint'+str(y),(1,y),(11,y),.035,'joint',-.007)
     line('north-court-edge-west',(-13,8.1),(1,8.1),.28,'roof')
     line('north-court-edge-east',(11,8.1),(17,8.1),.28,'roof')
-    # Replace the detached circle with a centered, flush court boundary.
+    # The shared paving stays flush and has no enclosing border.
     for obj in list(bpy.data.collections['Respite.ground'].objects):
         if obj.name.startswith('ground.court-inlay'):
             bpy.data.objects.remove(obj,do_unlink=True)
-    court=[(-9,-8),(-9,8.1),(11,8.1),(11,-8),(7,-12),(-5,-12)]
+    court=[(-9,-12),(-9,8.1),(11,8.1),(11,-12)]
     polygon('common-court',court,'floor',-.013)
-    center=Vector((1,-1))
-    inner=[tuple(center+(Vector(p)-center)*.965) for p in court]
-    for i,a in enumerate(court):
-        j=(i+1)%len(court)
-        polygon('court-boundary'+str(i),[a,court[j],inner[j],inner[i]],'roof',-.006)
     for y in (-8,-4,0,4):
         left=-9
         right=11
@@ -98,9 +92,12 @@ def apply_layout():
         box('perimeter-bench-base'+str(x),(x,y,.36),(length,.65,.72),'wall',.08)
         box('perimeter-bench-top'+str(x),(x,y,.77),(length+.12,.79,.12),'roof',.04)
 
-    box('east-service-wall',(31,7,1.15),(.65,10,2.3),'wall',.08)
-    box('east-service-cap',(31,7,2.38),(.85,10.2,.2),'roof',.04)
-    box('east-workshop-return',(29.2,12,1.15),(4.2,.65,2.3),'wall',.08)
+    box('east-utility-room',(28.4,7.2,1.5),(3.2,6.0,3.0),'wall',.1)
+    box('east-utility-roof',(28.4,7.2,3.08),(3.45,6.25,.2),'roof',.04)
+    box('east-utility-recess',(26.75,7.2,1.65),(.08,3.6,1.6),'dark',.025)
+    box('east-service-wall',(30.25,7,1.15),(.65,10,2.3),'wall',.08)
+    box('east-service-cap',(30.25,7,2.38),(.85,10.2,.2),'roof',.04)
+    box('east-workshop-return',(28.7,12,1.15),(3.2,.65,2.3),'wall',.08)
     workshop_port=bpy.data.objects['workshop'].matrix_world@Vector((-1.8,4.2,7.05))
     tag(build['pipe']('workshop-shared-feed',[(22,21.5,18),(workshop_port.x,21.5,18),(workshop_port.x,workshop_port.y,18),tuple(workshop_port)],.45))
 
