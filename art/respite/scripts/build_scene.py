@@ -243,7 +243,7 @@ def build_codex():
     prism('entrance-brow',[(-1.62,2.8),(1.62,2.8),(1.49,3.25),(-1.49,3.25)],-5.35,.55,'trim',.06)
     box('front-base',(0,-4.84,.17),(7.2,.27,.34),'trim',.05)
     for i in range(3):
-        box('step'+str(i), (0, -5.95+i*.3, .075+i*.14), (2.75, 1.4-i*.3, .15+i*.28), 'trim', .03)
+        box('step'+str(i), (0, -5.95+i*.3, .07*(i+1)), (2.75, 1.4-i*.3, .14*(i+1)), 'trim', .03)
     box('lilac-inset', (-3.49, -5.46, 5.2), (.12, .07, .94), 'lilac', .025)
     box('roof-plant', (1.0, 3.1, 7.8), (3.2, 1.7, .95), 'roof', .12)
     box('plant-grille',(1,2.21,7.86),(1.05,.06,.48),'dark',.02)
@@ -363,49 +363,56 @@ def canopy(name, x, y, width, direction=0):
 
 def build_bazaar():
     select_collection('bazaar')
-    box('left-vendor-wing',(-5,0,2.15),(3.0,12,4.3),'shell',.13)
-    box('right-vendor-wing',(5,0,2.15),(3.0,12,4.3),'shell',.13)
-    box('rear-vendor-wing',(0,4.6,2.15),(7,2.8,4.3),'shell',.13)
-    for s in (-1,1):
-        box('wing-roof'+str(s),(s*5,0,4.36),(3.2,12.2,.28),'roof')
-        box('return-wall'+str(s),(s*4.3,-6.1,1.45),(4.25,.45,2.9),'shell',.10)
-        box('gatepost'+str(s),(s*2.12,-6.15,1.9),(.5,.65,3.8),'trim',.07)
-        box('gate-accent'+str(s),(s*2.12,-6.51,2.4),(.075,.025,.7),'lilac',.015)
-        for i,y in enumerate((-2.1,1.5)):
-            box('vendor-counter'+str((s,i)),(s*3.18,y,.62),(.8,2.7,1.24),'trim')
-            box('vendor-shutter'+str((s,i)),(s*3.47,y,2.2),(.04,2.7,2.15),'dark',.02)
-            canopy('awning'+str((s,i)),s*3.5,y,3.0,s*math.pi/2)
-    box('rear-roof',(0,4.6,4.36),(7,3,.28),'roof')
-    box('rear-counter',(0,2.9,.62),(3.8,.8,1.24),'trim')
-    box('rear-shutter',(0,3.16,2.2),(3.8,.04,2.15),'dark',.02)
-    canopy('rear-awning',0,3.2,4.5,math.pi)
-    box('banner-crossbar',(0,-6.15,3.45),(4.7,.11,.12),'dark',.03)
-    box('banner',(0,-6.17,3.02),(3.7,.04,.7),'fabric',.02)
-    box('court-floor',(0,0,.02),(13,12.2,.08),'floor',.01)
-    box('rear-service-plant',(1.5,4.6,4.95),(3.4,2,1.0),'roof',.10)
-    for s in (-1,1):
-        for y in (-5.75,-1.85,2.0,5.75):
-            box('outer-pier'+str((s,y)),(s*6.43,y,2.25),(.4,.46,4.5),'trim',.075)
-        for y in (-3.85,.05,3.9):
-            for z in (1.25,3.2):
-                box('outer-cladding'+str((s,y,z)),(s*6.51,y,z),(.12,3.42,1.55),'shell',.035)
-        box('wing-parapet'+str(s),(s*6.32,0,4.60),(.24,11.8,.25),'trim',.04)
-        box('inner-parapet'+str(s),(s*3.60,0,4.60),(.24,11.8,.25),'trim',.04)
-        for i,y in enumerate((-2.1,1.5)):
-            box('stall-header'+str((s,i)),(s*3.40,y,3.76),(.25,2.9,.28),'trim',.04)
-            box('stall-lamp'+str((s,i)),(s*3.25,y,3.67),(.05,1.8,.09),'warm',.012)
+    half_width, half_depth, room_depth = 8.5, 7.5, 3.0
+    inner = half_width-room_depth
+    wing = half_width-room_depth/2
+    rear = half_depth-room_depth/2
+    gate = 3.2
+    vendor_rows = (-3.1, .7)
+    for side in (-1, 1):
+        box('vendor-wing'+str(side),(side*wing,0,2.15),(room_depth,half_depth*2,4.3),'shell',.13)
+        box('wing-roof'+str(side),(side*wing,0,4.36),(room_depth+.2,half_depth*2+.2,.28),'roof')
+        return_width=half_width-gate
+        return_center=side*(half_width+gate)/2
+        box('return-wall'+str(side),(return_center,-half_depth-.1,1.45),(return_width,.45,2.9),'shell',.10)
+        box('return-cap'+str(side),(return_center,-half_depth-.1,2.98),(return_width,.57,.2),'trim',.04)
+        box('gatepost'+str(side),(side*gate,-half_depth-.15,1.9),(.5,.65,3.8),'trim',.07)
+        box('gatepost-foot'+str(side),(side*gate,-half_depth-.15,.3),(.70,.83,.6),'roof',.055)
+        box('gate-accent'+str(side),(side*gate,-half_depth-.51,2.4),(.075,.025,.7),'lilac',.015)
+        for i,y in enumerate(vendor_rows):
+            box('vendor-counter'+str((side,i)),(side*(inner-.32),y,.62),(.8,2.7,1.24),'trim')
+            box('vendor-shutter'+str((side,i)),(side*(inner-.03),y,2.2),(.04,2.7,2.15),'dark',.02)
+            canopy('awning'+str((side,i)),side*inner,y,3.0,side*math.pi/2)
+            box('stall-header'+str((side,i)),(side*(inner-.10),y,3.76),(.25,2.9,.28),'trim',.04)
+            box('stall-lamp'+str((side,i)),(side*(inner-.25),y,3.67),(.05,1.8,.09),'warm',.012)
             for z in (1.55,1.9,2.25,2.60,2.95):
-                box('shutter-course'+str((s,i,z)),(s*3.435,y,z),(.05,2.57,.045),'roof',.01)
-            box('counter-pad'+str((s,i)),(s*3.15,y,1.27),(.47,1.4,.05),'dark',.02)
-        box('gatepost-foot'+str(s),(s*2.12,-6.15,.3),(.70,.83,.6),'roof',.055)
-        box('return-cap'+str(s),(s*4.3,-6.1,2.98),(4.25,.57,.2),'trim',.04)
-        for x in (s*3.1,s*5.15):
-            box('return-panel'+str(x),(x,-6.35,1.65),(1.78,.08,1.8),'shell',.025)
-    box('rear-stall-header',(0,3.08,3.77),(4.1,.28,.27),'trim',.045)
-    box('rear-stall-lamp',(0,2.91,3.65),(2.6,.04,.09),'warm',.012)
-    for z in (1.55,1.9,2.25,2.60,2.95):
-        box('rear-shutter-course'+str(z),(0,3.12,z),(3.65,.05,.045),'roof',.01)
-    pipe('outside-service-return',[(6.8,4.8,.5),(6.8,4.8,3.5),(6.7,4.3,4.1),(5.2,4.3,4.1)],.18)
+                box('shutter-course'+str((side,i,z)),(side*(inner-.065),y,z),(.05,2.57,.045),'roof',.01)
+            box('counter-pad'+str((side,i)),(side*(inner-.35),y,1.27),(.47,1.4,.05),'dark',.02)
+        for y in (-half_depth+.25,-2.5,2.5,half_depth-.25):
+            box('outer-pier'+str((side,y)),(side*(half_width-.07),y,2.25),(.4,.46,4.5),'trim',.075)
+        for y in (-4.9,0,4.9):
+            for z in (1.25,3.2):
+                box('outer-cladding'+str((side,y,z)),(side*(half_width+.01),y,z),(.12,4.35,1.55),'shell',.035)
+        for x in (half_width-.18,inner+.1):
+            box('wing-parapet'+str((side,x)),(side*x,0,4.60),(.24,half_depth*2-.2,.25),'trim',.04)
+        for x in (gate+.95,half_width-.95):
+            box('return-panel'+str((side,x)),(side*x,-half_depth-.35,1.65),(1.78,.08,1.8),'shell',.025)
+    box('rear-vendor-wing',(0,rear,2.15),(inner*2,room_depth,4.3),'shell',.13)
+    box('rear-roof',(0,rear,4.36),(inner*2,room_depth+.2,.28),'roof')
+    for x in (-2.75,2.75):
+        y=half_depth-room_depth
+        box('rear-counter'+str(x),(x,y-.3,.62),(3.8,.8,1.24),'trim')
+        box('rear-shutter'+str(x),(x,y-.04,2.2),(3.8,.04,2.15),'dark',.02)
+        canopy('rear-awning'+str(x),x,y,4.5,math.pi)
+        box('rear-stall-header'+str(x),(x,y-.12,3.77),(4.1,.28,.27),'trim',.045)
+        box('rear-stall-lamp'+str(x),(x,y-.29,3.65),(2.6,.04,.09),'warm',.012)
+        for z in (1.55,1.9,2.25,2.60,2.95):
+            box('rear-shutter-course'+str((x,z)),(x,y-.08,z),(3.65,.05,.045),'roof',.01)
+    box('banner-crossbar',(0,-half_depth-.15,3.45),(gate*2+.45,.11,.12),'dark',.03)
+    box('banner',(0,-half_depth-.17,3.02),(gate*2-.55,.04,.7),'fabric',.02)
+    box('court-floor',(0,0,.02),(half_width*2,half_depth*2+.2,.08),'floor',.01)
+    box('rear-service-plant',(1.5,rear,4.95),(3.4,2,1.0),'roof',.10)
+    pipe('outside-service-return',[(half_width+.3,rear,.5),(half_width+.3,rear,3.5),(half_width+.2,rear-.5,4.1),(wing+.2,rear-.5,4.1)],.18)
 
 
 def build_exit():

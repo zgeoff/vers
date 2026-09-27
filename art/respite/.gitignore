@@ -8,3 +8,4 @@ textures/
 __pycache__/
 viewer/node_modules/
 viewer/dist/
+concepts/*.png

@@ -39,6 +39,12 @@ failed load keeps the last complete scene. `Reload assets` forces a reload. The 
 backend, geometry, textures, export size, and frame interval. Frame interval includes browser
 scheduling and is not a GPU duration measurement.
 
+## Review the court
+
+The [layout review](LAYOUT.md) links the current court render, plan, geometry checks, and
+environmental concept prompts. The layout script reapplies the proposed placements and connecting
+geometry after an asset rebuild.
+
 ## Change an asset
 
 Edit the Blender objects directly for manual adjustments. The scripts construct the generated
