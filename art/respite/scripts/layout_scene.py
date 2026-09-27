@@ -12,7 +12,7 @@ DIAGONAL = math.sqrt(.5)
 PLACEMENTS = {
     'codex': (-4-5.3*DIAGONAL, 10+5.3*DIAGONAL, 45),
     'stash': (-13.5, -2.25, 90),
-    'workshop': (16+6.7*DIAGONAL, 10+6.7*DIAGONAL, -45),
+    'workshop': (20+6.7*DIAGONAL, 10+6.7*DIAGONAL, -25),
     'bazaar': (-12.55, -22, 110),
 }
 

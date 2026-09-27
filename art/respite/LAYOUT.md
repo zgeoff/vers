@@ -1,10 +1,10 @@
 # Respite plaza layout
 
 The current layout tests the bazaar beside the stash along the left perimeter. Both entrances face
-across the shared court. The Codex and workshop follow the angled rear edges. The right perimeter
-remains open for a possible future destination.
+across the shared court. The Codex occupies the rear-left corner. The forge faces toward the camera
+beside the tower on the right. The right perimeter remains open for a possible future destination.
 
-![Market beside the stash](renders/stash-even-spacing.png)
+![Market beside the stash](renders/forge-repositioned.png)
 
 The [top view](renders/market-left-plan.png) shows the extended court. The
 [comparison render](renders/oblique-before-market-move.png) preserves the market on the right from
