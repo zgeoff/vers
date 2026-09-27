@@ -74,9 +74,28 @@ def check_layout():
                     aa=a+sideways*offset;bb=b+sideways*offset;aa.z=height;bb.z=height
                     results.append(ray(aa,bb))
         routes[key]={'clear':all(r['clear'] for r in results),'segments':results,'points':[list(p) for p in route]}
+    wall=bpy.data.objects['habitat.continuous-wall'].evaluated_get(depsgraph)
+    housing=bpy.data.objects['habitat.passage-housing'].evaluated_get(depsgraph)
+    wall_samples=[]
+    for x in (-60,-40,-20,-8,20,40,60):
+        for z in (2,8,15):
+            origin=Vector((x,20,z))
+            hit,point,normal,index=wall.ray_cast(wall.matrix_world.inverted()@origin,Vector((0,1,0)),distance=40)
+            wall_samples.append({'x':x,'z':z,'solid':hit})
+    roof_samples=[]
+    for y in (28,40,50):
+        block=wall if y<32 else housing
+        origin=Vector((6,y,30))
+        hit,point,normal,index=block.ray_cast(block.matrix_world.inverted()@origin,Vector((0,0,-1)),distance=30)
+        roof_samples.append({'y':y,'covered':hit,'height':(block.matrix_world@point).z if hit else None})
+    clear_bores=[]
+    for block in (wall,housing):
+        hit,point,normal,index=block.ray_cast(block.matrix_world.inverted()@Vector((6,20,5.45)),Vector((0,1,0)),distance=40)
+        clear_bores.append({'object':block.name,'clear':not hit})
+    enclosure={'solid_wall':wall_samples,'covered_passage':roof_samples,'clear_bore':clear_bores}
     report={'camera':camera.name,'framing':framing,'entrances':entrances,'facing':facing,'routes':routes,
             'bazaar':{'outer_dimensions_m':[17,15],'wing_depth_m':3,'clear_court_width_m':11,'gateway_clear_width_m':5.9,'walls':'three wings and two returns'},
-            'units':scene.unit_settings.system,'file':bpy.data.filepath}
+            'units':scene.unit_settings.system,'file':bpy.data.filepath,'enclosure':enclosure}
     (ROOT/'renders/plaza-layout-check.json').write_text(json.dumps(report,indent=2)+'\n')
     print(json.dumps({'framing':{k:v['inside'] for k,v in framing.items()},'entrance_clear_samples':{k:v['clear_samples'] for k,v in entrances.items()},'routes':{k:v['clear'] for k,v in routes.items()},'facing':{k:round(v['toward_court_dot'],3) for k,v in facing.items()}}))
     return report

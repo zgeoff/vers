@@ -57,10 +57,11 @@ Keep the foreground as continuous plaza ground. Avoid a foreground retaining wal
 or roof that draws attention below the scene. Fit the stash and bazaar within the frame. Preserve a
 clear view of the workshop entrance behind the bazaar.
 
-The habitat wall continues beyond the top and right edges. Its scale implies a much larger structure
-outside the frame. Back-left bridges and machinery can vary; they remain subordinate to the
-destinations. The center circle in the composition is optional paving, not a sixth interaction or
-raised platform.
+The habitat wall continues beyond both the left and right edges, with solid structure on both sides
+of the tunnel. Its top sits slightly above the arch. Enormous curved machinery and service
+structures rise behind the wall and extend beyond the top of the frame. Background machinery remains
+subordinate to the destinations. The center circle in the composition is optional paving, not a
+sixth interaction or raised platform.
 
 ## Building forms
 
@@ -174,7 +175,8 @@ integration; retain an editable source scene.
 ## Completion checks
 
 - The five destinations face the common court, with a clear exit and an unobscured stash.
-- The habitat wall reaches the right edge, and the foreground remains open ground.
+- The habitat wall reaches both side edges around the tunnel, and the foreground remains open
+  ground.
 - The individual studies define the models, including one workshop drum and the complete bazaar
   enclosure.
 - The scene is darker and foggier than 9d05, with distinct destinations and readable broad textures.

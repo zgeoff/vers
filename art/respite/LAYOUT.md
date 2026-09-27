@@ -2,9 +2,11 @@
 
 The editable scene places the stash and bazaar on opposite sides of one court. The Codex and
 workshop stand beside the tunnel approach. Shared paving, low service walls, and a west service
-block connect the destinations. The background volumes are provisional design elements.
+block connect the destinations. The tunnel penetrates a continuous wall across both sides of the
+court. A deep housing encloses the passage behind the wall. The wall top sits above the arch; curved
+machine structures and connected utilities form the provisional backdrop.
 
-![Current three.js layout](renders/plaza-layout-current.png)
+![Current three.js layout](renders/continuous-wall-three-02.png)
 
 The [plan view](renders/plaza-layout-plan-current.png) shows the inward-facing entrances. The bazaar
 preserves three roofed vendor wings and both return walls. Its wider courtyard exposes the vendor
@@ -40,6 +42,10 @@ The original first-pass scene remains in `checkpoints/before-plaza-layout.blend`
 
 ## Environmental concepts
 
+[Study D](concepts/d-continuous-wall.png) combines the curved backdrop and shared utility pipework
+behind a continuous wall. The wall and passage enclosure exist in the Blender scene. The paintover
+supplies a proposal for their final materials, light, and background detail.
+
 The [concept prompts](concepts/studies.json) record three built-in imagegen studies. The current
 scene supplies the composition; the original references supply atmosphere and material direction.
 These images are visual proposals, not screenshots of implemented geometry. Background structures,
@@ -54,3 +60,8 @@ added vegetation, windows, and lighting remain subject to selection.
 The generated studies change some wall heights and small building details. The Blender source
 retains the approved asset forms and the continuous wall. Concept selection governs the background
 character, not automatic adoption of every generated detail.
+
+The [continuous-wall prompt](concepts/continuous-wall-prompt.txt) combines the curved backdrop and
+shared utilities while preserving the full-width wall from the actual scene. The enclosure checks
+sample solid wall on both sides, roof coverage above the passage, and a clear bore through both wall
+volumes.

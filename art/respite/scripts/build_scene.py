@@ -468,47 +468,44 @@ def build_passage():
 
 def build_habitat():
     select_collection('habitat')
-    wall=box('continuous-wall',(32.5,28,31),(75,8,62),'wall',0)
-    cutter=cylinder('temporary-cut',(6,28,5.45),6.96,30,None,'Y',64,0)
-    bpy.context.view_layer.objects.active=wall
-    mod=wall.modifiers.new('True passage opening','BOOLEAN')
-    mod.operation='DIFFERENCE'
-    mod.object=cutter
-    bpy.ops.object.modifier_apply(modifier=mod.name)
+    wall=box('continuous-wall',(2.5,28,8.25),(135,8,16.5),'wall',0)
+    housing=box('passage-housing',(6,43,8.25),(21,22,16.5),'wall',0)
+    cutter=cylinder('temporary-cut',(6,39,5.45),6.96,34,None,'Y',64,0)
+    for block in (wall,housing):
+        bpy.context.view_layer.objects.active=block
+        mod=block.modifiers.new('True passage opening','BOOLEAN')
+        mod.operation='DIFFERENCE'
+        mod.object=cutter
+        bpy.ops.object.modifier_apply(modifier=mod.name)
+        block.data.materials.clear()
+        block.data.materials.append(MATERIALS['wall'])
+        for face in block.data.polygons: face.material_index=0
+        bevel=block.modifiers.new('Wall edges','BEVEL'); bevel.width=.12; bevel.segments=2
     bpy.data.objects.remove(cutter,do_unlink=True)
-    wall.data.materials.clear()
-    wall.data.materials.append(MATERIALS['wall'])
-    for face in wall.data.polygons: face.material_index=0
-    bevel=wall.modifiers.new('Wall edges','BEVEL'); bevel.width=.12; bevel.segments=2
-    box('left-habitat-base',(-30,28,5.1),(50,8,10.2),'wall',.12)
-    for x in (-4,21,37,54,69):
-        box('wall-pier'+str(x),(x,22.8,25),(2.3,3.0,50),'wall',.18)
-    for z in (18,34,49):
-        box('wall-course'+str(z),(32.5,23.7,z),(75,.6,.8),'roof')
-    for x in (3.6,12.1,27,45,62):
-        for z in (23,29,40,46,56):
-            box('large-wall-panel'+str((x,z)),(x,23.91,z),(7.5,.18,4.6),'wall',.05)
-    for i,(x,y,w,d,h) in enumerate([(-40,30,8,10,47),(-30,48,9,12,64),(-58,43,12,10,75),(-45,62,14,14,90),(-16,62,10,10,77)]):
+    box('wall-coping',(2.5,24,16.55),(135,1.0,.38),'roof',.06)
+    for x in (-64,-44,-24,-4,21,40,59,69):
+        box('wall-pier'+str(x),(x,23.0,8.25),(2.1,2.0,16.5),'wall',.15)
+    for x in (-54,-34,-14,30,49,64):
+        for z in (4.8,11.8):
+            box('wall-panel'+str((x,z)),(x,23.86,z),(7.5,.18,5.0),'wall',.05)
+    box('wall-top-walk',(2.5,23.7,16.85),(135,2.0,.25),'roof',.04)
+    for z in (17.25,17.85):
+        box('wall-top-rail'+str(z),(2.5,22.88,z),(135,.075,.075),'dark',.015)
+    for i in range(46):
+        cylinder('wall-top-post'+str(i),(-65+i*3,22.88,17.36),.045,1.0,'dark',vertices=8,bevel=0)
+    for i,(x,y,w,d,h) in enumerate([(-40,64,8,10,47),(-30,82,9,12,64),(-58,73,12,10,75),(-45,92,14,14,90),(-16,92,10,10,77),(37,78,12,12,72),(65,91,15,12,89)]):
         box('distant-mass'+str(i),(x,y,h/2),(w,d,h),'wall',.25)
-    box('left-catwalk',(-34,15,17),(60,2.0,.8),'roof')
-    box('catwalk-return',(-4,18.5,17),(2.0,7.0,.8),'roof')
-    box('upper-left-catwalk',(-34,33,32),(58,2.3,1),'roof')
-    box('catwalk-service-recess',(-4,21.22,18.55),(1.5,.1,2.25),'dark',.04)
-    box('catwalk-service-door',(-4,21.14,18.55),(1.24,.06,2.04),'roof',.03)
-    for x in (-49,-34,-19):
-        box('left-support'+str(x),(x,17.2,8.5),(1.1,1.5,17),'wall',.12)
-        brace=box('left-bracket'+str(x),(x,16.1,15.1),(.65,3.3,.65),'roof',.06)
-        brace.rotation_euler.x=math.radians(35)
-    for z,y,width in ((17.6,14.25,60),(32.6,32.05,58)):
-        for dz in (.15,.75):
-            box('rail'+str((z,dz)),(-34,y,z+dz),(width,.065,.065),'dark',.015)
-        for index in range(int(width/2)):
-            cylinder('rail-post'+str((z,index)),(-34-width/2+index*2,y,z+.38),.035,.9,'dark',vertices=8,bevel=0)
-    for x in (-4.85,-3.15):
-        for z in (17.75,18.35):
-            box('return-rail'+str((x,z)),(x,18.4,z),(.065,5.2,.065),'dark',.015)
-    for index,(x,y,z) in enumerate(((-40,24.8,30),(-29,41.8,45),(-58,37.8,55),(-45,54.8,63),(-16,56.8,55))):
-        box('far-signal'+str(index),(x,y,z),(.15,.07,4.5),'lilac',.02)
+    arc('distant-shell-rib',(22,-22),68,73,38,8,60,170,64,'wall')
+    arc('far-shell-rib',(22,-22),89,93,57,7,55,170,64,'wall')
+    box('distant-service-gallery',(-9,62,31),(114,2.3,.9),'roof',.08)
+    for x in (-54,-19,29):
+        box('distant-gallery-support'+str(x),(x,63,15.5),(1.4,2.0,31),'wall',.1)
+    for i,(x,y,z) in enumerate(((-40,58.8,30),(-29,75.8,45),(-58,67.8,55),(-45,84.8,63),(-16,86.8,55),(37,71.8,47),(65,84.8,68))):
+        box('far-signal'+str(i),(x,y,z),(.15,.07,4.5),'lilac',.02)
+    pipe('west-utility-trunk',[(-67,21.8,12.3),(-10,21.8,12.3),(-7,24.5,12.3),(-7,28,12.3)],.85)
+    for x in (-54,-34,-14):
+        cylinder('trunk-collar'+str(x),(x,21.8,12.3),1.02,.3,'roof','X',24,.03)
+        box('trunk-bracket'+str(x),(x,22.9,11.5),(.6,2.5,1.2),'dark',.06)
     pipe('wall-main-feed',[(40,21.5,0),(40,21.5,14),(36,21.5,18),(22,21.5,18)],.70)
     build_passage()
 

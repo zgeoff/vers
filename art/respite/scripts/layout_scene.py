@@ -11,7 +11,7 @@ PLACEMENTS={
     'codex':(-11,17,0),
     'stash':(-18,1,90),
     'workshop':(25,16,-15),
-    'bazaar':(22,-3.5,-90),
+    'bazaar':(22,-5,-90),
 }
 
 
@@ -105,8 +105,8 @@ def apply_layout():
     tag(build['pipe']('workshop-shared-feed',[(22,21.5,18),(workshop_port.x,21.5,18),(workshop_port.x,workshop_port.y,18),tuple(workshop_port)],.45))
 
     camera=bpy.data.objects['Court']
-    target=Vector((3,6,3.8))
-    camera.location=(3,-37,42)
+    target=Vector((3,6,6.5))
+    camera.location=(3,-50,39)
     camera.rotation_euler=(target-camera.location).to_track_quat('-Z','Y').to_euler()
     camera['respite_orbit_distance']=(target-camera.location).length
     camera.data.lens=27
