@@ -1,0 +1,17 @@
+{
+  "tool": "built-in image_gen",
+  "outputs": [
+    {
+      "id": "06-connected-neighborhood",
+      "output": "06-connected-neighborhood.png",
+      "source": "/home/geoff/.codex/generated_images/01a0e0a7-7c02-7cb1-8ed1-258ea16fbb2d/exec-74e5bb9b-cdaf-49ee-a93d-61a900cdbb3e.png",
+      "sha256": "692ee66561766e59294af57c84b5c592eb5d031f23186f68166f9566aef186bd"
+    },
+    {
+      "id": "07-covered-service-court",
+      "output": "07-covered-service-court.png",
+      "source": "/home/geoff/.codex/generated_images/01a0e0a7-7c02-7cb1-8ed1-258ea16fbb2d/exec-3eb4bb9a-9f8c-47a8-a459-9425aa91ff99.png",
+      "sha256": "df5c6cbaa4cc1d0ac1c9c469543456009bdab14cba4529585c625ac28f03084f"
+    }
+  ]
+}
