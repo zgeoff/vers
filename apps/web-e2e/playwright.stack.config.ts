@@ -10,6 +10,7 @@ export default defineConfig<E2EOptions>({
   fullyParallel: true,
   outputDir: '.stack-test-results',
   testDir: './specs',
+  testIgnore: /cross-engine-corpus\.spec\.ts/,
   projects: [
     {
       name: 'chromium',

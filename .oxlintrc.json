@@ -167,6 +167,9 @@
           { "from": "package", "name": "LogEvent", "package": "kysely" },
           // a live playwright page handle: driver connection and event state, no readonly form
           { "from": "package", "name": "Page", "package": "playwright-core" },
+          // a live playwright test-run handle: attachments and annotations appended over the
+          // test's life, no readonly form
+          { "from": "package", "name": "TestInfo", "package": "playwright" },
           // a live kysely transaction handle: same mutable connection state as Kysely above
           { "from": "package", "name": "Transaction", "package": "kysely" },
           // a driver's connection-pool handle: structurally a set of method signatures, same as

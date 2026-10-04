@@ -41,7 +41,12 @@
       "ignoreDependencies": ["pino", "pino-pretty"]
     },
     "apps/web-e2e": {
-      "entry": ["src/serve-mock-services.ts", "src/serve-resend-stub.ts", "specs/*.spec.ts"]
+      "entry": [
+        "src/serve-mock-services.ts",
+        "src/serve-resend-stub.ts",
+        "src/write-corpus-artifacts.ts",
+        "specs/*.spec.ts"
+      ]
     },
     "libs/testing/qa-account": {
       "entry": ["src/bin/*.ts"]

@@ -220,7 +220,7 @@ jobs:
             turbo-${{ runner.os }}-
 
       - name: Install E2E browsers
-        run: bun run playwright install --with-deps --only-shell chromium
+        run: bun run playwright install --with-deps --only-shell chromium firefox webkit
 
       - name: E2E Tests
         id: e2e

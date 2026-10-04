@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./corpus/*": "./src/corpus/*.ts",
     "./replay": "./src/replay.ts",
     "./test-utils": "./src/test-utils/index.ts"
   },
