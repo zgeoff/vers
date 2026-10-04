@@ -88,7 +88,8 @@ test('it creates an onboarding verification and redirects to verify-otp', async 
     q.where({ target: 'signup-new@vers.test', type: 'onboarding' }),
   );
 
-  expect(verification).toBeDefined();
+  invariant(verification, 'expected a persisted verification row');
+  invariant(verification.expiresAt, 'expected an emailed verification to carry an expiry');
 
   const welcomeEmail = db.sentEmailCollection.findFirst((q) =>
     q.where({ payload: { to: 'signup-new@vers.test' }, template: 'send-welcome' }),
@@ -96,7 +97,8 @@ test('it creates an onboarding verification and redirects to verify-otp', async 
 
   expect(welcomeEmail?.payload).toStrictEqual({
     to: 'signup-new@vers.test',
-    verificationCode: verification?.code ?? '',
-    verificationURL: `http://localhost/verify-otp?${new URLSearchParams({ code: verification?.code ?? '', target: 'signup-new@vers.test', type: 'onboarding' }).toString()}`,
+    usefulUntil: verification.expiresAt,
+    verificationCode: verification.code,
+    verificationURL: `http://localhost/verify-otp?${new URLSearchParams({ code: verification.code, target: 'signup-new@vers.test', type: 'onboarding' }).toString()}`,
   });
 });

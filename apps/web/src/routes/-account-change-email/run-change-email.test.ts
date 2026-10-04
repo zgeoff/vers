@@ -1,5 +1,6 @@
 import { expect, test } from 'bun:test';
 import * as db from '@vers/mock-services/db';
+import invariant from 'tiny-invariant';
 import { createStepUpTransactionToken } from '../../lib/auth/create-step-up-transaction-token';
 import { buildFormData } from '../../test-utils/build-form-data';
 import { createSignedInUser } from '../../test-utils/create-signed-in-user';
@@ -39,6 +40,9 @@ test('it starts a change-email verification and redirects to verify-otp for a ca
 
   expect(verification).toMatchObject({ type: 'change-email' });
 
+  invariant(verification, 'expected a persisted verification row');
+  invariant(verification.expiresAt, 'expected an emailed verification to carry an expiry');
+
   const verificationEmail = db.sentEmailCollection.findFirst((q) =>
     q.where({ payload: { to: 'new@vers.test' }, template: 'send-change-email-verification' }),
   );
@@ -46,8 +50,9 @@ test('it starts a change-email verification and redirects to verify-otp for a ca
   expect(verificationEmail?.payload).toStrictEqual({
     newEmail: 'new@vers.test',
     to: 'new@vers.test',
-    verificationCode: verification?.code ?? '',
-    verificationURL: `http://localhost/verify-otp?${new URLSearchParams({ code: verification?.code ?? '', target: 'new@vers.test', type: 'change-email' }).toString()}`,
+    usefulUntil: verification.expiresAt,
+    verificationCode: verification.code,
+    verificationURL: `http://localhost/verify-otp?${new URLSearchParams({ code: verification.code, target: 'new@vers.test', type: 'change-email' }).toString()}`,
   });
 });
 

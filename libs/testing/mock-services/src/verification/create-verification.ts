@@ -29,7 +29,7 @@ export const createVerification = os.createVerification.handler(async (opts) => 
     type: opts.input.type,
   });
 
-  return { id: row.id, otp: code, target: row.target, type: row.type };
+  return { expiresAt: row.expiresAt, id: row.id, otp: code, target: row.target, type: row.type };
 });
 
 function pickDefaultExpiry(type: VerificationType, period: number | undefined): Date | null {
