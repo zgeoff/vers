@@ -25,6 +25,8 @@ await withTraceContext(createTraceContext(), runScheduledDrain);
 
 // a teardown fault is reported too, and the flush runs whatever the teardown did
 try {
+  service.stopCache();
+
   await service.stopTelemetry();
 } catch (error) {
   service.logger.error({ err: error }, 'telemetry stop failed after the scheduled drain');

@@ -13,7 +13,6 @@ const DEFAULT_ITERATION_DEADLINE_MS = 90_000;
 
 export async function runReplayIteration(
   deps: Readonly<ReplayWorkerDeps>,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- a mutable cache handle whose remove/get/set are its whole point; no readonly form is useful
   cache: ReplayCache,
 ): Promise<ReplayIterationOutcome> {
   const deadlineMs = deps.iterationDeadlineMs ?? DEFAULT_ITERATION_DEADLINE_MS;
@@ -46,7 +45,6 @@ export async function runReplayIteration(
 }
 
 function applyPendingCacheEffect(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- a mutable cache handle whose remove/get/set are its whole point; no readonly form is useful
   cache: ReplayCache,
   outcome: Readonly<ReplayIterationOutcome>,
 ): ReplayIterationOutcome {
@@ -69,7 +67,6 @@ function applyPendingCacheEffect(
 // connection and survives whatever the iteration left half-done
 async function resolveIterationFailure(
   deps: Readonly<ReplayWorkerDeps>,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- a mutable cache handle whose remove/get/set are its whole point; no readonly form is useful
   cache: ReplayCache,
   target: ReplayTarget | undefined,
   error: unknown,

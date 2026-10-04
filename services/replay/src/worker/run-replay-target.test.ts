@@ -54,6 +54,7 @@ test('it defers the cache mutation until the caller applies it, never touching t
   const cache = createReplayCache();
 
   const deps = {
+    cache,
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
@@ -87,7 +88,10 @@ test('it defers the cache mutation until the caller applies it, never touching t
 test('it reports idle rather than throwing when the claimed activity row is gone', async () => {
   await using ctx = await setupTest();
 
+  const cache = createReplayCache();
+
   const deps = {
+    cache,
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
@@ -97,7 +101,7 @@ test('it reports idle rather than throwing when the claimed activity row is gone
   };
 
   const outcome = await ctx.db.transaction().execute((trx) =>
-    runReplayTarget(trx, deps, createReplayCache(), {
+    runReplayTarget(trx, deps, cache, {
       activityID: 'act_gone',
       appendedHead: 3,
       replayAttempts: 0,
@@ -129,6 +133,7 @@ test('it settles the terminal checkpoint reward into the avatar xp and level on 
   const cache = createReplayCache();
 
   const deps = {
+    cache,
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
@@ -180,6 +185,7 @@ test('it settles a run verified in two segments to the terminal total, counting 
   const cache = createReplayCache();
 
   const deps = {
+    cache,
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
@@ -268,6 +274,7 @@ test('it settles a matched mid-run segment onto the avatar before the run ends',
   const cache = createReplayCache();
 
   const deps = {
+    cache,
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
@@ -324,6 +331,7 @@ test('it settles no additional xp when a stale duplicate target misses the alrea
   const cache = createReplayCache();
 
   const deps = {
+    cache,
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
@@ -392,8 +400,10 @@ test("it rejects an activity whose pinned build does not match the avatar's sett
     .execute();
 
   const inMemoryMetrics = createInMemoryMetrics();
+  const cache = createReplayCache();
 
   const deps = {
+    cache,
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
@@ -403,7 +413,7 @@ test("it rejects an activity whose pinned build does not match the avatar's sett
   };
 
   const outcome = await ctx.db.transaction().execute((trx) =>
-    runReplayTarget(trx, deps, createReplayCache(), {
+    runReplayTarget(trx, deps, cache, {
       activityID: fixture.activity.id,
       appendedHead: fixture.activity.appendedHead,
       replayAttempts: 0,
@@ -467,6 +477,7 @@ test('it makes no keys dispatch when the target has already verified part of the
   const cache = createReplayCache();
 
   const deps = {
+    cache,
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
@@ -508,6 +519,7 @@ test('it verifies an honest sealed content-version-2 row, matching its stamped p
   const cache = createReplayCache();
 
   const deps = {
+    cache,
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
@@ -588,6 +600,7 @@ test("it verifies an honest row sealed under the avatar's own seed, not a shared
   const cache = createReplayCache();
 
   const deps = {
+    cache,
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
@@ -683,6 +696,7 @@ test("it rejects a tampered stamped poolID with reason 'descriptor-mismatch'", a
   const cache = createReplayCache();
 
   const deps = {
+    cache,
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
@@ -745,6 +759,7 @@ test("it rejects a tampered stamped encounter node on a continuation row, not ju
   const cache = createReplayCache();
 
   const deps = {
+    cache,
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
@@ -796,6 +811,7 @@ test('it grants a first_clear keyed by the node when a verified segment complete
   const cache = createReplayCache();
 
   const deps = {
+    cache,
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
@@ -881,6 +897,7 @@ test('it lands no grant when a verified segment ends on a failed terminal', asyn
   const cache = createReplayCache();
 
   const deps = {
+    cache,
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
@@ -943,6 +960,7 @@ test('it lands no grant when a stop forward-exits the chain without a completed 
   const cache = createReplayCache();
 
   const deps = {
+    cache,
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
@@ -998,6 +1016,7 @@ test('it lands no grant when a completed terminal verifies on a non-map-node sco
   const cache = createReplayCache();
 
   const deps = {
+    cache,
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
@@ -1048,6 +1067,7 @@ test('it grants a first_clear exactly once across a re-verification of an alread
   const cache = createReplayCache();
 
   const deps = {
+    cache,
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
@@ -1112,6 +1132,7 @@ test('it rejects a settled activity whose node no earlier settled clear made rea
   const cache = createReplayCache();
 
   const deps = {
+    cache,
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
@@ -1164,6 +1185,7 @@ test('it verifies a world-map-node run whose scope is connected to a verified fi
   const cache = createReplayCache();
 
   const deps = {
+    cache,
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
@@ -1210,6 +1232,7 @@ test('it rejects a world-map-node run whose scope is not connected to any comple
   const cache = createReplayCache();
 
   const deps = {
+    cache,
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
@@ -1276,6 +1299,7 @@ test('it cascades a build mismatch through a chain of successors, once the run t
   const cache = createReplayCache();
 
   const deps = {
+    cache,
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
@@ -1336,6 +1360,7 @@ test('it settles an unrelated successor once its zero-xp predecessor rejects', a
   const cache = createReplayCache();
 
   const deps = {
+    cache,
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
@@ -1405,6 +1430,7 @@ test('it never rejects a world-map-node run at the origin for reachability, even
   const cache = createReplayCache();
 
   const deps = {
+    cache,
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
@@ -1441,6 +1467,7 @@ test('it never rejects a non-world_map_node scope for reachability', async () =>
   const cache = createReplayCache();
 
   const deps = {
+    cache,
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),

@@ -5,7 +5,6 @@ import { recordDrainDuration } from '../metrics/record-drain-duration';
 import { recordIterationFailure } from '../metrics/record-iteration-failure';
 import { recordWake } from '../metrics/record-wake';
 import type { WakeSource } from '../metrics/record-wake';
-import { createReplayCache } from '../replay/create-replay-cache';
 import { runReplayIteration } from './run-replay-iteration';
 import type { ReplayWorkerDeps } from './types';
 
@@ -29,42 +28,32 @@ export async function drainReplayQueue(
 }
 
 async function runDrain(deps: Readonly<ReplayWorkerDeps>): Promise<number> {
-  const cache = createReplayCache(undefined, (stopError) => {
-    deps.logger.error({ err: stopError }, 'replay cache driver stop failed');
-  });
-
   const startedAt = performance.now();
   let drained = 0;
 
-  try {
-    for (;;) {
-      // the failure conversion is chained inside the span callback, not around it, so
-      // `reportUnexpectedError` still runs while the root span it tags the report with is active
-      const outcome = await withRootSpan('replay.iteration', () =>
-        runReplayIteration(deps, cache).catch((error: unknown) => {
-          deps.logger.error({ err: error }, 'replay drain iteration threw unexpectedly');
+  for (;;) {
+    // the failure conversion is chained inside the span callback, not around it, so
+    // `reportUnexpectedError` still runs while the root span it tags the report with is active
+    const outcome = await withRootSpan('replay.iteration', () =>
+      runReplayIteration(deps, deps.cache).catch((error: unknown) => {
+        deps.logger.error({ err: error }, 'replay drain iteration threw unexpectedly');
 
-          reportUnexpectedError(error);
-          recordIterationFailure('errored');
+        reportUnexpectedError(error);
+        recordIterationFailure('errored');
 
-          return { kind: 'claimFailed' } as const;
-        }),
-      );
+        return { kind: 'claimFailed' } as const;
+      }),
+    );
 
-      if (outcome.kind === 'idle' || outcome.kind === 'claimFailed') {
-        break;
-      }
-
-      drained += 1;
+    if (outcome.kind === 'idle' || outcome.kind === 'claimFailed') {
+      break;
     }
 
-    recordDrainDuration((performance.now() - startedAt) / 1000);
-    recordBacklogClaimed(drained);
-
-    return drained;
-  } finally {
-    // the last claimed driver stays live past the loop; stopping every held entry keeps a driver
-    // from outliving the drain that built it
-    cache.stopAll();
+    drained += 1;
   }
+
+  recordDrainDuration((performance.now() - startedAt) / 1000);
+  recordBacklogClaimed(drained);
+
+  return drained;
 }

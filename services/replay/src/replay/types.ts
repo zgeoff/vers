@@ -38,9 +38,9 @@ export interface ReplaySegment {
     readonly verifiedChainIndex: number;
     readonly verifiedNextSeed: string;
   };
-  readonly checkpoints: ReadonlyArray<StoredCheckpoint>;
   readonly prevHash: string;
   readonly seed: string;
+  readonly unverifiedCheckpoints: ReadonlyArray<StoredCheckpoint>;
   readonly verifiedHead: number;
 }
 
