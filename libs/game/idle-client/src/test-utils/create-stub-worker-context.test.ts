@@ -9,6 +9,7 @@ test('it creates a context with no broadcasts and an empty simulation by default
 
   expect(context.getBroadcasts()).toStrictEqual([]);
   expect(context.getSimulation().activity).toBeNull();
+  expect(context.isTickingStopped()).toBeFalse();
 });
 
 test('it records every broadcast and forwards it to the given callback', () => {
@@ -65,4 +66,12 @@ test('it reflects an externally aborted shutdown controller on the cancel signal
 
   expect(context.getCancelSignal().aborted).toBeTrue();
   expect(context.getStopSignal().aborted).toBeFalse();
+});
+
+test('it reports the ticks stopped once the runtime is told to stop them', () => {
+  const context = createStubWorkerContext();
+
+  context.stopTicking();
+
+  expect(context.isTickingStopped()).toBeTrue();
 });

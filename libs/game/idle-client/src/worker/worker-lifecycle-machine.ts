@@ -113,6 +113,7 @@ type WorkerLifecycleEvent =
   | { readonly type: 'SUBMITTER_CAPPED' }
   | { readonly type: 'SUBMITTER_EVICTED'; readonly activityID: string }
   | { readonly type: 'SUBMITTER_HELD' }
+  | { readonly type: 'SUBMITTER_JOURNAL_FAILED' }
   | { readonly type: 'SUBMITTER_SERVER_CONTACT' };
 
 type StopDeliveryDoneEvent = Extract<WorkerLifecycleEvent, { readonly type: 'STOP_DELIVERY_DONE' }>;
@@ -429,6 +430,11 @@ export const workerLifecycleMachine = setup({
     SUBMITTER_HELD: {
       actions: (args) => {
         args.context.runtime.updateConnectivity(false);
+      },
+    },
+    SUBMITTER_JOURNAL_FAILED: {
+      actions: (args) => {
+        args.context.runtime.stopTicking();
       },
     },
     SUBMITTER_SERVER_CONTACT: {

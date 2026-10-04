@@ -70,7 +70,8 @@ The loss is mechanical: while the original device is offline or closed, nothing 
 outbox. The device asks the browser to persist its storage when a run starts, which stops the
 browser from evicting the outbox under storage pressure but never stops the player from clearing
 site data, so the outbox is safe only once the server has received it. A checkpoint the outbox
-refuses to store is not in the outbox, so the worker stops the run at the last checkpoint it kept
+refuses to store is not in the outbox, and an outbox the worker cannot read back holds no dependable
+record of the run. On either failure the worker stops the run at the last checkpoint the outbox kept
 and reports the failure to the tabs.
 
 An account holds one verified session, so verifying a session on a new device evicts every other

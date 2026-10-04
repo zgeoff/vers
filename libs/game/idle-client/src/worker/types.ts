@@ -102,5 +102,7 @@ export interface WorkerContext {
   readonly setSimulationSpeed: (speed: number) => void;
   readonly setWriterDisplacedActivityID: (activityID: null | string) => void;
 
+  readonly stopTicking: () => void;
+
   readonly updateConnectivity: (online: boolean) => void;
 }
