@@ -6,7 +6,11 @@ import { createReplayService } from './create-replay-service';
 
 test('it passes every conformance case collected from its contract', async () => {
   const service = await createReplayService();
-  const viewer = await createAnonymousViewer({ audience: 'service-replay' });
+
+  const viewer = await createAnonymousViewer({
+    audience: 'service-replay',
+    issuer: 'service-activity',
+  });
 
   const cases = collectConformanceCases(replayContract, {
     anonymousHeaders: { authorization: `Bearer ${viewer.token}` },

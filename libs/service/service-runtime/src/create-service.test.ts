@@ -75,6 +75,7 @@ test('it throws at boot when SERVICE_AUTH_JWKS is missing', () => {
 
   expect(
     createService({
+      allowedIssuers: ['app-web'],
       buildRouter: () => buildTestRouter(contract),
       envShape: {},
       name: 'test-service',
@@ -92,6 +93,7 @@ test('it applies default PORT and LOG_LEVEL when unset', async () => {
   const contract = buildTestContract();
 
   const service = await createService({
+    allowedIssuers: ['app-web'],
     buildRouter: () => buildTestRouter(contract),
     envShape: {},
     name: 'test-service',
@@ -110,6 +112,7 @@ test('it parses a service-specific envShape variable onto env', async () => {
   const contract = buildTestContract();
 
   const service = await createService({
+    allowedIssuers: ['app-web'],
     buildRouter: () => buildTestRouter(contract),
     envShape: { CUSTOM_GREETING: z.string() },
     name: 'test-service',
@@ -131,6 +134,7 @@ test('it resolves when OTEL_EXPORTER_OTLP_ENDPOINT is set, wiring the OTel plugi
 
   await expect(
     createService({
+      allowedIssuers: ['app-web'],
       buildRouter: () => buildTestRouter(contract),
       envShape: {},
       name: 'test-service',
@@ -147,6 +151,7 @@ test('it keeps the active OTel span bound to the request across awaits under the
   const contract = buildTestContract();
 
   const service = await createService({
+    allowedIssuers: ['app-web'],
     buildRouter: () => buildTestRouter(contract),
     envShape: {},
     name: 'test-service',
@@ -174,6 +179,7 @@ test('it serves a router built by an async buildRouter', async () => {
   const contract = buildTestContract();
 
   const service = await createService({
+    allowedIssuers: ['app-web'],
     buildRouter: async () => {
       await Promise.resolve();
 
@@ -206,6 +212,7 @@ test('it rejects an /rpc call with no Authorization header with a plain 401', as
   const contract = buildTestContract();
 
   const service = await createService({
+    allowedIssuers: ['app-web'],
     buildRouter: () => buildTestRouter(contract),
     envShape: {},
     name: 'test-service',
@@ -234,6 +241,7 @@ test('it rejects an /rpc call with a garbage token with a plain 401', async () =
   const contract = buildTestContract();
 
   const service = await createService({
+    allowedIssuers: ['app-web'],
     buildRouter: () => buildTestRouter(contract),
     envShape: {},
     name: 'test-service',
@@ -261,6 +269,7 @@ test('it rejects an /rpc call with an expired token with a plain 401', async () 
   const contract = buildTestContract();
 
   const service = await createService({
+    allowedIssuers: ['app-web'],
     buildRouter: () => buildTestRouter(contract),
     envShape: {},
     name: 'test-service',
@@ -294,6 +303,7 @@ test('it rejects an /rpc call with a wrong-audience token with a plain 401', asy
   const contract = buildTestContract();
 
   const service = await createService({
+    allowedIssuers: ['app-web'],
     buildRouter: () => buildTestRouter(contract),
     envShape: {},
     name: 'test-service',
@@ -326,6 +336,7 @@ test('it returns data from an authed procedure given a valid token naming an act
   const contract = buildTestContract();
 
   const service = await createService({
+    allowedIssuers: ['app-web'],
     buildRouter: () => buildTestRouter(contract),
     envShape: {},
     name: 'test-service',
@@ -354,6 +365,7 @@ test('it throws a contract-shaped UNAUTHORIZED for an authed procedure given a v
   const contract = buildTestContract();
 
   const service = await createService({
+    allowedIssuers: ['app-web'],
     buildRouter: () => buildTestRouter(contract),
     envShape: {},
     name: 'test-service',
@@ -382,6 +394,7 @@ test('it serves /health without any token', async () => {
   const contract = buildTestContract();
 
   const service = await createService({
+    allowedIssuers: ['app-web'],
     buildRouter: () => buildTestRouter(contract),
     envShape: {},
     name: 'test-service',
@@ -405,6 +418,7 @@ test('it mints a fresh trace id when no traceparent is supplied', async () => {
   const contract = buildTestContract();
 
   const service = await createService({
+    allowedIssuers: ['app-web'],
     buildRouter: () => buildTestRouter(contract),
     envShape: {},
     name: 'test-service',
@@ -423,6 +437,7 @@ test('it continues the trace named by an inbound traceparent header', async () =
   const contract = buildTestContract();
 
   const service = await createService({
+    allowedIssuers: ['app-web'],
     buildRouter: () => buildTestRouter(contract),
     envShape: {},
     name: 'test-service',
@@ -446,6 +461,7 @@ test('it reports the OTel span trace id as x-trace-id when no traceparent came i
   const contract = buildTestContract();
 
   const service = await createService({
+    allowedIssuers: ['app-web'],
     buildRouter: () => buildTestRouter(contract),
     envShape: {},
     name: 'test-service',
@@ -490,6 +506,7 @@ test('it mints a fresh trace id for a malformed traceparent header', async () =>
   const contract = buildTestContract();
 
   const service = await createService({
+    allowedIssuers: ['app-web'],
     buildRouter: () => buildTestRouter(contract),
     envShape: {},
     name: 'test-service',
@@ -512,6 +529,7 @@ test('it masks an unexpected handler error as a bare INTERNAL_SERVER_ERROR', asy
   const contract = buildTestContract();
 
   const service = await createService({
+    allowedIssuers: ['app-web'],
     buildRouter: () => buildTestRouter(contract),
     envShape: {},
     name: 'test-service',
@@ -564,6 +582,7 @@ test('it reports an unexpected handler error to the error backend exactly once',
   } as unknown as NonNullable<typeof sentryHandle.current>);
 
   const service = await createService({
+    allowedIssuers: ['app-web'],
     buildRouter: () => buildTestRouter(contract),
     envShape: {},
     name: 'test-service',
@@ -595,6 +614,7 @@ test('it does not serve the dropped /api and /spec.json paths', async () => {
   const contract = buildTestContract();
 
   const service = await createService({
+    allowedIssuers: ['app-web'],
     buildRouter: () => buildTestRouter(contract),
     envShape: {},
     name: 'test-service',
@@ -618,6 +638,7 @@ test('it passes every conformance case collected from its own contract', async (
   const contract = buildTestContract();
 
   const service = await createService({
+    allowedIssuers: ['app-web'],
     buildRouter: () => buildTestRouter(contract),
     envShape: {},
     name: 'test-service',
@@ -646,6 +667,7 @@ test('it logs one structured request line when an /rpc call completes', async ()
   const contract = buildTestContract();
 
   const service = await createService({
+    allowedIssuers: ['app-web'],
     buildRouter: () => buildTestRouter(contract),
     envShape: {},
     name: 'test-service',
@@ -683,6 +705,7 @@ test('it logs the rejection reason when the trust boundary rejects a request', a
   const contract = buildTestContract();
 
   const service = await createService({
+    allowedIssuers: ['app-web'],
     buildRouter: () => buildTestRouter(contract),
     envShape: {},
     name: 'test-service',
@@ -717,6 +740,7 @@ test('it logs a refused /rpc call at warn with the code, the status, and the dat
   const contract = buildTestContract();
 
   const service = await createService({
+    allowedIssuers: ['app-web'],
     buildRouter: () => buildTestRouter(contract),
     envShape: {},
     name: 'test-service',
@@ -753,6 +777,7 @@ test('it logs an undeclared 4xx at warn with its code and status and no data', a
   const contract = buildTestContract();
 
   const service = await createService({
+    allowedIssuers: ['app-web'],
     buildRouter: () => buildTestRouter(contract),
     envShape: {},
     name: 'test-service',
@@ -785,6 +810,7 @@ test('it logs a failed /rpc call at error severity', async () => {
   const contract = buildTestContract();
 
   const service = await createService({
+    allowedIssuers: ['app-web'],
     buildRouter: () => buildTestRouter(contract),
     envShape: {},
     name: 'test-service',
@@ -826,6 +852,7 @@ test('it serves /health without logging a request line', async () => {
   const contract = buildTestContract();
 
   const service = await createService({
+    allowedIssuers: ['app-web'],
     buildRouter: () => buildTestRouter(contract),
     envShape: {},
     name: 'test-service',
@@ -846,6 +873,7 @@ test('it logs a request past its slow-request threshold at warn with slow and th
   const contract = buildTestContract();
 
   const service = await createService({
+    allowedIssuers: ['app-web'],
     buildRouter: () => buildTestRouter(contract),
     envShape: {},
     name: 'test-service',
@@ -886,6 +914,7 @@ test('it logs a request as overdue while it is still open past the overdue thres
   const contract = buildTestContract();
 
   const service = await createService({
+    allowedIssuers: ['app-web'],
     buildRouter: () => buildTestRouter(contract),
     envShape: {},
     name: 'test-service',
@@ -919,6 +948,7 @@ test('it writes no overdue line for a request that finishes inside the threshold
   const contract = buildTestContract();
 
   const service = await createService({
+    allowedIssuers: ['app-web'],
     buildRouter: () => buildTestRouter(contract),
     envShape: {},
     name: 'test-service',
@@ -949,6 +979,7 @@ test('it keeps a slow 5xx at error severity without the slow flag', async () => 
   const contract = buildTestContract();
 
   const service = await createService({
+    allowedIssuers: ['app-web'],
     buildRouter: () => buildTestRouter(contract),
     envShape: {},
     name: 'test-service',
@@ -987,6 +1018,7 @@ test('it keeps a request under its slow-request threshold at its status-derived 
   const contract = buildTestContract();
 
   const service = await createService({
+    allowedIssuers: ['app-web'],
     buildRouter: () => buildTestRouter(contract),
     envShape: {},
     name: 'test-service',
@@ -1025,6 +1057,7 @@ test('it honors a per-path slow-request override over the default threshold', as
   const contract = buildTestContract();
 
   const service = await createService({
+    allowedIssuers: ['app-web'],
     buildRouter: () => buildTestRouter(contract),
     envShape: {},
     name: 'test-service',
@@ -1056,4 +1089,114 @@ test('it honors a per-path slow-request override over the default threshold', as
     },
     'request completed',
   );
+});
+
+test('it serves a call from a permitted issuer', async () => {
+  const keyPair = await getTestServiceKeyPair();
+
+  updateEnv('SERVICE_AUTH_JWKS', keyPair.jwksJSON);
+
+  const contract = buildTestContract();
+
+  const service = await createService({
+    allowedIssuers: ['app-web', 'service-activity'],
+    buildRouter: () => buildTestRouter(contract),
+    envShape: {},
+    name: 'test-service',
+  });
+
+  const token = await createServiceToken({
+    audience: 'test-service',
+    issuer: 'service-activity',
+    privateKey: keyPair.privateKey,
+  });
+
+  const client = buildRPCTestClient<ReturnType<typeof buildTestContract>>(service.app, {
+    headers: { authorization: `Bearer ${token}` },
+  });
+
+  expect(client.ping()).resolves.toStrictEqual({ pong: true });
+});
+
+test('it rejects a call from an issuer the service does not accept with 403', async () => {
+  const keyPair = await getTestServiceKeyPair();
+
+  updateEnv('SERVICE_AUTH_JWKS', keyPair.jwksJSON);
+
+  const contract = buildTestContract();
+  let handlerRan = false;
+  const os = implement(contract).$context<ServiceContext>();
+
+  const router = {
+    ...buildTestRouter(contract),
+    ping: os.ping.handler(() => {
+      handlerRan = true;
+
+      return { pong: true };
+    }),
+  };
+
+  const service = await createService({
+    allowedIssuers: ['app-web', 'service-activity'],
+    buildRouter: () => router,
+    envShape: {},
+    name: 'test-service',
+  });
+
+  const token = await createServiceToken({
+    audience: 'test-service',
+    issuer: 'service-replay',
+    privateKey: keyPair.privateKey,
+  });
+
+  const response = await service.app.handle(
+    new Request('http://test.local/rpc/ping', {
+      headers: { authorization: `Bearer ${token}` },
+      method: 'POST',
+    }),
+  );
+
+  expect(response.status).toBe(403);
+  expect(response.json()).resolves.toStrictEqual({ error: 'issuer-not-permitted' });
+  expect(handlerRan).toBeFalse();
+});
+
+test('it gives the handler the verified issuer', async () => {
+  const keyPair = await getTestServiceKeyPair();
+
+  updateEnv('SERVICE_AUTH_JWKS', keyPair.jwksJSON);
+
+  const contract = buildTestContract();
+  let capturedIssuer: string | undefined;
+  const os = implement(contract).$context<ServiceContext>();
+
+  const router = {
+    ...buildTestRouter(contract),
+    ping: os.ping.handler((opts) => {
+      capturedIssuer = opts.context.issuer;
+
+      return { pong: true };
+    }),
+  };
+
+  const service = await createService({
+    allowedIssuers: ['app-web', 'service-activity'],
+    buildRouter: () => router,
+    envShape: {},
+    name: 'test-service',
+  });
+
+  const token = await createServiceToken({
+    audience: 'test-service',
+    issuer: 'service-activity',
+    privateKey: keyPair.privateKey,
+  });
+
+  const client = buildRPCTestClient<ReturnType<typeof buildTestContract>>(service.app, {
+    headers: { authorization: `Bearer ${token}` },
+  });
+
+  await client.ping();
+
+  expect(capturedIssuer).toBe('service-activity');
 });

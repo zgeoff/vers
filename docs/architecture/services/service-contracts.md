@@ -126,7 +126,9 @@ Authentication fails in two classes, kept deliberately separate, and only one is
   token that fails verification means something is misconfigured or someone is probing, never
   something a browser user can fix. The service runtime rejects it with a plain 401 before any
   handler runs, and the edge reports it as a 5xx with alerting
-  ([error handling](./error-handling.md#service-layer)).
+  ([error handling](./error-handling.md#service-layer)). The runtime rejects a token that verifies
+  but names an issuer the service does not accept with a plain 403 on the same terms
+  ([auth](./auth.md)).
 
 Services never see cookies ([auth](./auth.md)). Identity reaches a handler as the verified token's
 claims:
@@ -135,13 +137,15 @@ claims:
 interface ServiceContext {
   actingSessionID: null | string;
   actingUserID: null | string; // null = verified anonymous call
+  issuer: TokenIssuer;
   logger: pino.Logger;
   traceID: string;
 }
 ```
 
-`actingUserID` and `actingSessionID` come from the verified token. `logger` and `traceID` are the
-runtime's per-request infrastructure ([error handling](./error-handling.md#trace-context)).
+`actingUserID`, `actingSessionID`, and `issuer` come from the verified token. `issuer` names the
+service that minted the token. `logger` and `traceID` are the runtime's per-request infrastructure
+([error handling](./error-handling.md#trace-context)).
 
 When a session expires, the edge itself replies with the contract-shaped
 `UNAUTHORIZED { reason: 'expired-session' }` without calling the service at all. Services themselves

@@ -14,6 +14,7 @@ export function createAvatarService(
   config: CreateAvatarServiceConfig = {},
 ): Promise<Service<typeof envShape>> {
   return createService({
+    allowedIssuers: ['app-web'],
     buildRouter: (runtime) =>
       buildAvatarRouter({ db: config.db ?? createDB({ databaseURL: runtime.env.DATABASE_URL }) }),
     envShape,

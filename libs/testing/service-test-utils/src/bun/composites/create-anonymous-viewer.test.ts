@@ -16,3 +16,14 @@ test('it mints a valid token carrying no acting subject', async () => {
 
   expect(verified.payload.sub).toBeUndefined();
 });
+
+test('it applies the given issuer override', async () => {
+  const viewer = await createAnonymousViewer({
+    audience: 'create-anonymous-viewer-spec',
+    issuer: 'service-activity',
+  });
+
+  const header = jose.decodeProtectedHeader(viewer.token);
+
+  expect(header.kid).toBe('service-activity');
+});

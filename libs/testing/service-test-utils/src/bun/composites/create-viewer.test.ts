@@ -28,14 +28,19 @@ test('it persists a user and mints a token carrying that user as the acting subj
   expect(row.id).toBe(viewer.user.id);
 });
 
-test('it applies the given user overrides', async () => {
+test('it applies the given user and issuer overrides', async () => {
   await using testDB = await createTestDB();
 
   const viewer = await createViewer({
     audience: 'create-viewer-spec',
     db: testDB.db,
+    issuer: 'service-activity',
     user: { email: 'viewer-override@test.com' },
   });
 
   expect(viewer.user.email).toBe('viewer-override@test.com');
+
+  const header = jose.decodeProtectedHeader(viewer.token);
+
+  expect(header.kid).toBe('service-activity');
 });

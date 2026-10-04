@@ -39,6 +39,7 @@ export async function createReplayService(
   let ownsDB = false;
 
   const service = await createService({
+    allowedIssuers: ['service-activity'],
     buildRouter: async (runtime) => {
       ownsDB = config.db === undefined;
 

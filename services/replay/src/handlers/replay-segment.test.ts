@@ -69,7 +69,11 @@ const DETERMINISTIC_INPUT = createMockReplaySegmentInput({
 
 async function setupTest() {
   const service = await createReplayService();
-  const viewer = await createAnonymousViewer({ audience: 'service-replay' });
+
+  const viewer = await createAnonymousViewer({
+    audience: 'service-replay',
+    issuer: 'service-activity',
+  });
 
   const client = buildRPCTestClient<ReplayContract>(service.app, { token: viewer.token });
 

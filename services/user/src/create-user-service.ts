@@ -14,6 +14,7 @@ export function createUserService(
   config: CreateUserServiceConfig = {},
 ): Promise<Service<typeof envShape>> {
   return createService({
+    allowedIssuers: ['app-web'],
     buildRouter: (runtime) =>
       buildUserRouter({
         db: config.db ?? createDB({ databaseURL: runtime.env.DATABASE_URL }),

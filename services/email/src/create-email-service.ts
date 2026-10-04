@@ -23,6 +23,7 @@ export async function createEmailService(
   let queue: JobQueue<EmailJobDefs> | undefined;
 
   const service = await createService({
+    allowedIssuers: ['app-web'],
     buildRouter: (runtime) => {
       queue = createEmailJobQueue({
         connectionString: config.queueConnectionString ?? runtime.env.DATABASE_URL,
