@@ -15,12 +15,14 @@ minimumReleaseAge = 604800
 # qs 6.16.0 (published 2026-08-29, patches GHSA-x5fp-wj9c-mxmx + GHSA-4mjr-xmp4-gh2g) ages past the gate ~2026-09-05 — remove then (#982)
 # @zgeoff/oxlint-config 0.1.0 (published 2026-09-02, adds the comment rules) ages past the gate ~2026-09-09 — remove then (#986)
 # http-cache-semantics 4.3.0 (published 2026-10-04, patches GHSA-ch52-4w7c-c8xp) ages past the gate ~2026-10-11 — remove then (#1191)
+# source-map-js 1.2.2 (published 2026-09-30, patches GHSA-68fv-2mgg-jv7q) ages past the gate ~2026-10-07 — remove then (#1191)
 minimumReleaseAgeExcludes = [
   "hono",
   "nanoid",
   "qs",
   "@zgeoff/oxlint-config",
   "http-cache-semantics",
+  "source-map-js",
 ]
 
 [test]
