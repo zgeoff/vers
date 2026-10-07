@@ -53,10 +53,11 @@ the scaffolding suites, and the access pairs below.
 
 ## The idle-core construction ladder
 
-An idle-core suite builds its entities in four steps that the test then drives:
+An idle-core test builds the entities it drives with a fixed ladder of calls:
 `createMockSimulationContext()`, `createAvatar(data, ctx)`, `createActivity(data, ctx)`, and
-`createCombatExecutor(activity, avatar, ctx)`. The four lines repeat in every suite. A composite
-that wraps them hides the handles the test acts on, so the ladder stays inline.
+`createCombatExecutor(activity, avatar, ctx)`. A test climbs only as far as the last entity it
+needs: an avatar test stops after `createAvatar`. The ladder stays inline in each test, because a
+composite that wraps it hides the handles the test acts on.
 
 ## The web app
 
