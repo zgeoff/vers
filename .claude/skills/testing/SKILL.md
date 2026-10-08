@@ -5,8 +5,8 @@ description:
   with onTestFinished cleanup, inline data and tested factories, strict assertions and inline
   snapshots, controlled time, condition waits, real filesystems and transports, and the narrow cases
   for module mocks. References cover real databases, React and TanStack clients, HTTP mocking with
-  MSW, observability, and native Go and NixOS conventions. Load when designing, writing, or
-  reviewing tests.
+  MSW, observability, Claude Code mod checks, and native Go and NixOS conventions. Load when
+  designing, writing, or reviewing tests.
 ---
 
 # Testing
@@ -23,6 +23,13 @@ This skill is the shared base that repo-sync delivers from zgeoff/tools: edit it
 downstream copy. When the repo has a `project-testing` skill, load it as well. That skill adds this
 repo's harnesses, regimes, and stricter rules. A project skill never relaxes a rule here; a repo
 that needs an exception changes this skill.
+
+A repo that runs the skill gate refuses an edit to a test file until the session that makes it has
+loaded the skills the path needs. A subagent loads them itself, because the main session's loads do
+not count for it. A compaction clears every load, so load the skills again after one. The gate sees
+only Edit, Write and MultiEdit: change a gated file with those tools, never with a Bash redirect,
+`tee`, `sed -i`, or a script. The gate does not check Bash, and that gap is accepted, not a way
+around the rule.
 
 ## Languages and runners
 
@@ -44,7 +51,9 @@ which reference to open beside this file.
 | Real database | A service, app, or library that owns a schema     | The real engine, isolated per test                  | [database](./references/database.md)                                       |
 
 Code that records metrics, spans, error reports, or structured logs follows
-[observability](./references/observability.md) in any regime.
+[observability](./references/observability.md) in any regime. A Claude Code mod's hooks follow
+[Claude Code mod checks](./references/claude-code-mods.md), which `claude plugin test` runs instead
+of `bun test`.
 
 ## Principles
 
@@ -87,9 +96,11 @@ These decide a case that the rules below leave open.
   input. The row supplies the actual values to the test. Any other set of cases gets a separate
   `test()` for each case.
 - Tests sit beside the module they test (`parse-entry.ts` and `parse-entry.test.ts`), and a test of
-  a program's entry module, such as `cli.ts`, sits beside that module too. The one exception is
-  `e2e/` at the repo root, which holds the end-to-end suites that run the whole program. The repo
-  has no other `test/`, `tests/`, or `__tests__` directory.
+  a program's entry module, such as `cli.ts`, sits beside that module too, so `src/` stays a mirror
+  with one test file per module. Two root directories are the exceptions: `e2e/` holds the
+  end-to-end suites that run the whole program, and `evals/` holds the
+  [evaluation suites](#evaluation-suites). The repo has no other `test/`, `tests/`, or `__tests__`
+  directory.
 
 ```ts
 test.each([
@@ -117,6 +128,21 @@ infrastructure startup and shutdown; test files keep the hook rules in
 
 Keep command construction importable. Test argument and flag-position cases through the real parser
 in module tests; keep binary journeys that check the assembled program.
+
+### Evaluation suites
+
+An evaluation suite in `evals/` checks production code against a committed corpus or report: it
+replays a corpus of recorded traffic through the production path, or checks a committed evaluation
+report against the code. It tests a corpus, not one module, so it has no module to sit beside.
+
+- The input is the committed corpus or report file, read through one tested loader. The cases are
+  never restated as inline literals.
+- Helpers live in `evals/test-utils/` with tests of their own. A stand-in replaces only what a
+  recording cannot reproduce, such as the disk or the forge, and the suite injects it into the
+  production path.
+- A deliberate mismatch between the report and the code fails the suite. A suite that passes on a
+  stale report checks nothing.
+- Every other rule in this skill applies to an evaluation suite.
 
 ### Loops
 
@@ -235,7 +261,10 @@ Each kind of state has one cleanup tool.
 
 `try`/`finally` never appears in a test. `onTestFinished` runs on failure as well, keeps teardown
 beside the acquisition, and needs no `?.` guard for a resource the test never reached. A shared test
-util may register `onTestFinished` for its callers. These helpers must run inside a test.
+util may register `onTestFinished` for its callers. These helpers must run inside a test. A test of
+such a helper proves its cleanup ran by registering an `onTestFinished` hook after the helper's
+call, so the hook runs after the helper's release, and asserting in that hook. This is the only
+place an assertion leaves the test body.
 
 When resources have cleanup dependencies, register one callback that closes them in the required
 order. Every cleanup must run even if another cleanup throws. Use a disposable stack when reverse
@@ -481,6 +510,9 @@ Control time in the most explicit form the code allows:
    and the test steps it.
 3. **Fake timers.** Code with no injection point, such as a third-party library, gets
    `setSystemTime()` and fake timers. The test restores them in `onTestFinished`.
+
+A Claude Code mod reads the wall clock and never the host's clock, for the reason in
+[Claude Code mod checks](./references/claude-code-mods.md#time).
 
 A value that depends on the wall clock is built relative to `Date.now()`
 (`expiresAt: new Date(Date.now() - 1000)`) and asserted with range matchers such as `toBeAfter` and
