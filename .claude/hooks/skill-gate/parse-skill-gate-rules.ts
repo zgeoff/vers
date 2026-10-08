@@ -28,15 +28,16 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+// An empty string would match every path as an ignore segment, and no session can load it as a skill.
 function isStringArray(value: unknown): value is string[] {
-  return Array.isArray(value) && value.every((item) => typeof item === 'string');
+  return Array.isArray(value) && value.every((item) => typeof item === 'string' && item !== '');
 }
 
 function parseRulesRecord(value: Readonly<Record<string, unknown>>): SkillGateRulesResult {
   const ignore = value['ignore'] ?? [];
 
   if (!isStringArray(ignore)) {
-    return { ok: false, error: '`ignore` must be an array of strings' };
+    return { ok: false, error: '`ignore` must be an array of non-empty strings' };
   }
 
   const gates = value['gates'];
@@ -67,7 +68,7 @@ function parseGate(gate: unknown, index: number): SkillGate | string {
   const skills = gate['skills'];
 
   if (!isStringArray(skills) || skills.length === 0) {
-    return `gate "${gate['match']}" needs a non-empty \`skills\` array`;
+    return `gate "${gate['match']}" needs a non-empty \`skills\` array of non-empty strings`;
   }
 
   return { match: gate['match'], skills };

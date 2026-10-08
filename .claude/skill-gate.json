@@ -1,5 +1,12 @@
 {
-  "ignore": ["node_modules/", "styled-system/", "dist/", ".generated."],
+  "ignore": [
+    "node_modules/",
+    "apps/web/src/styled-system/",
+    "libs/design/design-system/src/styled-system/",
+    "libs/design/styled-system/styled-system/",
+    "dist/",
+    ".generated."
+  ],
   "gates": [
     { "match": "**/*.{ts,tsx}", "skills": ["code-style"] },
     { "match": "**/*.test.{ts,tsx}", "skills": ["testing", "project-testing"] },

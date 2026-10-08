@@ -254,3 +254,29 @@ test('it allows a file kind no gate names without warning of an unknown skill', 
   expect(result.status).toBe(0);
   expect(result.stdout).toBe('');
 });
+
+test('it gates authored source in the styled-system package', async () => {
+  const ctx = await setupTest();
+
+  await writeFile(join(ctx.dir, 'transcript.jsonl'), '');
+
+  const result = spawnSync('bun', [ctx.hookPath], {
+    encoding: 'utf8',
+    env: { PATH: process.env['PATH'], CLAUDE_PROJECT_DIR: ctx.repoDir },
+    input: JSON.stringify({
+      cwd: ctx.repoDir,
+      transcript_path: join(ctx.dir, 'transcript.jsonl'),
+      tool_input: { file_path: join(ctx.repoDir, 'libs/design/styled-system/panda.config.ts') },
+    }),
+  });
+
+  expect(result.status).toBe(0);
+
+  expect(JSON.parse(result.stdout)).toStrictEqual({
+    hookSpecificOutput: {
+      hookEventName: 'PreToolUse',
+      permissionDecision: 'deny',
+      permissionDecisionReason: `Load the \`code-style\` skill with the Skill tool before editing ${join(ctx.repoDir, 'libs/design/styled-system/panda.config.ts')}, then retry the edit. .claude/skill-gate.json lists the skills each path needs.`,
+    },
+  });
+});

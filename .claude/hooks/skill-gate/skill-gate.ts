@@ -22,7 +22,7 @@ const hasRules = await rulesFile.exists();
 const filePath = path.resolve(input.cwd, input.filePath);
 const relativePath = path.relative(projectDir, filePath).split(path.sep).join('/');
 
-if (!hasRules || relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
+if (!hasRules || isOutsideProject(relativePath)) {
   process.exit(0);
 }
 
@@ -68,6 +68,10 @@ function parseEditInput(
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isOutsideProject(fromProject: string): boolean {
+  return fromProject === '..' || fromProject.startsWith('../') || path.isAbsolute(fromProject);
 }
 
 async function collectAvailableSkills(skillsDir: string): Promise<readonly string[]> {
