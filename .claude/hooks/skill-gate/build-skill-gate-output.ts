@@ -1,4 +1,4 @@
-import type { SkillGateHookOutput, SkillGatePlan } from './types.ts';
+import type { SkillGateHookOutput, SkillGateOutputContext, SkillGatePlan } from './types.ts';
 
 // Builds the PreToolUse hook output for one edit, or null when the edit goes ahead in silence. A
 // missing skill denies the edit. A broken rules file or a rule that names a skill the repo does
@@ -6,10 +6,12 @@ import type { SkillGateHookOutput, SkillGatePlan } from './types.ts';
 export function buildSkillGateOutput(
   filePath: string,
   plan: SkillGatePlan,
-  rulesError?: string,
+  context: SkillGateOutputContext = {},
 ): SkillGateHookOutput | null {
   const warnings = [
-    ...(rulesError === undefined ? [] : [`skill-gate: ${RULES_PATH} ${rulesError}.`]),
+    ...(context.rulesError === undefined
+      ? []
+      : [`skill-gate: ${RULES_PATH} ${context.rulesError}.`]),
     ...plan.unknown.map(
       (entry) =>
         `skill-gate: the rule "${entry.match}" in ${RULES_PATH} names the skill "${entry.skill}", but .claude/skills/${entry.skill}/SKILL.md does not exist. Fix the rule or add the skill; until then the gate skips that skill.`,
@@ -19,7 +21,10 @@ export function buildSkillGateOutput(
   const warning = warnings.length === 0 ? undefined : warnings.join('\n');
 
   if (plan.missing.length > 0) {
-    const reason = `Load the ${formatSkillList(plan.missing)} with the Skill tool before editing ${filePath}, then retry the edit. ${RULES_PATH} lists the skills each path needs.`;
+    const reason =
+      context.compacted === true
+        ? `Load the ${formatSkillList(plan.missing)} again with the Skill tool before editing ${filePath}, then retry the edit. This session was compacted, and a skill loaded before the compaction no longer counts. ${EDIT_TOOLS_NOTE} ${RULES_PATH} lists the skills each path needs.`
+        : `Load the ${formatSkillList(plan.missing)} with the Skill tool before editing ${filePath}, then retry the edit. ${EDIT_TOOLS_NOTE} ${RULES_PATH} lists the skills each path needs.`;
 
     return {
       ...(warning === undefined ? {} : { systemMessage: warning }),
@@ -42,6 +47,10 @@ export function buildSkillGateOutput(
 }
 
 const RULES_PATH = '.claude/skill-gate.json';
+
+// The gate sees Edit, Write and MultiEdit only, so it names them as the way to change a gated path.
+const EDIT_TOOLS_NOTE =
+  'Change a gated path only with Edit, Write or MultiEdit, never through Bash.';
 
 function formatSkillList(skills: readonly string[]): string {
   const names = skills.map((skill) => `\`${skill}\``);

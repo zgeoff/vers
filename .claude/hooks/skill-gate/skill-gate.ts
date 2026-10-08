@@ -5,7 +5,8 @@ import { parseSkillGateRules } from './parse-skill-gate-rules.ts';
 import { planSkillGate } from './plan-skill-gate.ts';
 
 // A PreToolUse hook for Edit, Write and MultiEdit that repo-sync delivers from zgeoff/tools. The
-// repo's own .claude/skill-gate.json holds the rules; a repo without that file has no gate.
+// repo's own .claude/skill-gate.json holds the rules; a repo without that file has no gate. A
+// subagent's loads come from its own transcript, never the main session's.
 const payload: unknown = await Bun.stdin.json().catch(() => null);
 
 const input = parseEditInput(payload);
@@ -31,22 +32,35 @@ const rulesText = await rulesFile.text();
 const parsed = parseSkillGateRules(rulesText);
 
 if (!parsed.ok) {
-  printOutput(buildSkillGateOutput(filePath, { missing: [], unknown: [] }, parsed.error));
+  printOutput(
+    buildSkillGateOutput(filePath, { missing: [], unknown: [] }, { rulesError: parsed.error }),
+  );
 
   process.exit(0);
 }
 
 const availableSkills = await collectAvailableSkills(path.join(projectDir, '.claude', 'skills'));
-const transcript = await readTranscript(input.transcriptPath);
+const transcript = await readTranscript(resolveSessionTranscriptPath(input));
 
-const loadedSkills = collectLoadedSkills(transcript);
-const plan = planSkillGate({ rules: parsed.rules, relativePath, loadedSkills, availableSkills });
+const loaded = collectLoadedSkills(transcript);
 
-printOutput(buildSkillGateOutput(filePath, plan));
+const plan = planSkillGate({
+  rules: parsed.rules,
+  relativePath,
+  loadedSkills: loaded.skills,
+  availableSkills,
+});
 
-function parseEditInput(
-  value: unknown,
-): { cwd: string; filePath: string; transcriptPath: string } | null {
+printOutput(buildSkillGateOutput(filePath, plan, { compacted: loaded.compacted }));
+
+interface EditInput {
+  readonly cwd: string;
+  readonly filePath: string;
+  readonly transcriptPath: string;
+  readonly agentID: unknown;
+}
+
+function parseEditInput(value: unknown): EditInput | null {
   if (!isRecord(value) || !isRecord(value['tool_input'])) {
     return null;
   }
@@ -63,7 +77,7 @@ function parseEditInput(
     return null;
   }
 
-  return { cwd, filePath: editPath, transcriptPath };
+  return { cwd, filePath: editPath, transcriptPath, agentID: value['agent_id'] };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -90,7 +104,28 @@ async function collectAvailableSkills(skillsDir: string): Promise<readonly strin
   return skills;
 }
 
-async function readTranscript(transcriptPath: string): Promise<string> {
+// A subagent's call carries the main session's transcript_path plus its own agent_id, and Claude
+// Code keeps its transcript at <session>/subagents/agent-<agent_id>.jsonl. An agent_id that is not
+// a plain name resolves to no transcript, so the edit is denied.
+function resolveSessionTranscriptPath(edit: EditInput): string | null {
+  if (edit.agentID === undefined) {
+    return edit.transcriptPath;
+  }
+
+  if (typeof edit.agentID !== 'string' || !/^[\w-]+$/u.test(edit.agentID)) {
+    return null;
+  }
+
+  const sessionDir = edit.transcriptPath.replace(/\.jsonl$/u, '');
+
+  return path.join(sessionDir, 'subagents', `agent-${edit.agentID}.jsonl`);
+}
+
+async function readTranscript(transcriptPath: string | null): Promise<string> {
+  if (transcriptPath === null) {
+    return '';
+  }
+
   const transcriptFile = Bun.file(transcriptPath);
 
   const exists = await transcriptFile.exists();

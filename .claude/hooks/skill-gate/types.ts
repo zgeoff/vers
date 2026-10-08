@@ -17,6 +17,11 @@ export interface UnknownSkill {
   readonly skill: string;
 }
 
+export interface LoadedSkills {
+  readonly skills: readonly string[];
+  readonly compacted: boolean;
+}
+
 export interface SkillGateInput {
   readonly rules: SkillGateRules;
   readonly relativePath: string;
@@ -27,6 +32,11 @@ export interface SkillGateInput {
 export interface SkillGatePlan {
   readonly missing: readonly string[];
   readonly unknown: readonly UnknownSkill[];
+}
+
+export interface SkillGateOutputContext {
+  readonly compacted?: boolean;
+  readonly rulesError?: string;
 }
 
 export interface SkillGateHookOutput {
