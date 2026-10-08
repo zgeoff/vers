@@ -1,13 +1,16 @@
-// Collects the skills a transcript loaded since its last compaction, which summarizes earlier loads
-// away. A skill loads through a Skill tool call that succeeded, or a slash command the user types.
-export function collectLoadedSkills(transcript: string): readonly string[] {
+import type { LoadedSkills } from './types.ts';
+
+// Collects the skills a transcript loaded since its last compaction, which voids earlier loads even
+// though Claude Code re-attaches their text. A skill loads through a Skill tool call that succeeded,
+// or a slash command the user types; a subagent's transcript has no user to type one.
+export function collectLoadedSkills(transcript: string): LoadedSkills {
   const entries = transcript.split('\n').map((line) => parseEntry(line));
   const lastBoundary = entries.findLastIndex((entry) => isCompactBoundary(entry));
   const current = entries.slice(lastBoundary + 1);
   const succeeded = collectSucceededToolUseIDs(current);
   const skills = current.flatMap((entry) => collectEntrySkills(entry, succeeded));
 
-  return [...new Set(skills)];
+  return { skills: [...new Set(skills)], compacted: lastBoundary !== -1 };
 }
 
 function parseEntry(line: string): unknown {
@@ -55,7 +58,12 @@ function collectEntrySkills(entry: unknown, succeeded: readonly string[]): reado
 }
 
 function findSlashCommand(entry: unknown): string | undefined {
-  if (!isRecord(entry) || entry['type'] !== 'user' || !isRecord(entry['message'])) {
+  if (
+    !isRecord(entry) ||
+    entry['type'] !== 'user' ||
+    entry['isSidechain'] === true ||
+    !isRecord(entry['message'])
+  ) {
     return undefined;
   }
 
