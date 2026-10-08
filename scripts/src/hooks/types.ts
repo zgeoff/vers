@@ -1,7 +1,3 @@
-export type SkillGateVerdict =
-  | { readonly kind: 'allow' }
-  | { readonly kind: 'deny'; readonly missing: ReadonlyArray<string> };
-
 export type RetrievalPhase = 'research' | 'implement';
 
 export type RetrievalKind =
