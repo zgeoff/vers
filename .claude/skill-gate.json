@@ -1,0 +1,19 @@
+{
+  "ignore": [
+    "node_modules/",
+    "apps/web/src/styled-system/",
+    "libs/design/design-system/src/styled-system/",
+    "libs/design/styled-system/styled-system/",
+    "dist/",
+    ".generated."
+  ],
+  "gates": [
+    { "match": "**/*.{ts,tsx}", "skills": ["code-style"] },
+    { "match": "**/*.test.{ts,tsx}", "skills": ["testing", "project-testing"] },
+    { "match": "**/*.md", "skills": ["docs-writing"] },
+    {
+      "match": "{contracts/activity,contracts/replay,libs/game/idle-client,libs/game/idle-core,services/activity,services/replay}/**",
+      "skills": ["game-lifecycle"]
+    }
+  ]
+}
