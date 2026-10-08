@@ -16,11 +16,11 @@ from the migrations or from a schema dump, and the util names which.
 
 The handle offers three isolation levels:
 
-| Level         | Mechanism                                        | Use it when                                                                                                      |
-| ------------- | ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------- |
-| `transaction` | One transaction per test, rolled back on dispose | The default for every suite                                                                                      |
-| `schema`      | A committed copy of the schema per test          | The code commits during the operation, or carries on after a constraint violation it caught                      |
-| `database`    | A committed copy of the database per test        | The code uses database-wide state: advisory locks, `LISTEN`/`NOTIFY`, DDL and migration runs, partitioned tables |
+| Level         | Mechanism                                                 | Use it when                                                                                                      |
+| ------------- | --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `transaction` | One transaction per test, rolled back in `onTestFinished` | The default for every suite                                                                                      |
+| `schema`      | A committed copy of the schema per test                   | The code commits during the operation, or carries on after a constraint violation it caught                      |
+| `database`    | A committed copy of the database per test                 | The code uses database-wide state: advisory locks, `LISTEN`/`NOTIFY`, DDL and migration runs, partitioned tables |
 
 **Why the opt-outs exist:** a rolled-back transaction cannot nest a second interactive transaction,
 and one failed statement aborts the whole shared transaction, so every later query in the test
@@ -30,7 +30,7 @@ it, such as `// claimJob commits the claim before it runs the job`.
 ## SQLite isolation
 
 A fresh SQLite database per test costs little, so SQLite needs no isolation levels. `setupTest()`
-opens the database and its dispose closes it.
+opens the database and registers its cleanup with `onTestFinished`.
 
 - Open a file inside the test's `mkdtemp` tree when the code opens its own connection by path, or
   when the test depends on file behaviour such as a read-only connection or write-ahead logging.
