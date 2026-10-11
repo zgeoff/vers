@@ -55,6 +55,18 @@
       "dependsOn": ["codegen", "typegen"],
       "outputs": []
     },
+    // the skill-gate suite runs the hook against the repo's own rules and skills, which sit
+    // outside the package, so a change to them must miss the cache
+    "@vers/scripts#test": {
+      "dependsOn": ["codegen", "typegen"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/.claude/skill-gate.json",
+        "$TURBO_ROOT$/.claude/hooks/skill-gate/**",
+        "$TURBO_ROOT$/.claude/skills/**"
+      ],
+      "outputs": []
+    },
     "e2e": {
       // the build dependency keeps the production-artifact webServer from rebuilding: the e2e
       // run serves whatever this task graph just built (or restored from cache)

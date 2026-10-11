@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 
 // Runs the synced skill gate hook against this repo's own .claude/skill-gate.json and skills.
 async function setupTest() {
-  const dir = await mkdtemp(join(tmpdir(), 'skill-gate-rules-'));
+  const dir = await mkdtemp(join(tmpdir(), 'skill-gate-'));
 
   onTestFinished(() => rm(dir, { recursive: true, force: true }));
 
