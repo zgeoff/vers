@@ -13,7 +13,8 @@ both. Where the two disagree, this skill wins.
 
 ## The docs/ tree
 
-vers adds one folder to the shared tree:
+vers keeps three folders under `docs/`: `architecture/`, `runbooks/`, and one the shared tree lacks.
+It has no `decisions/`, `design/`, `guides/`, or `reference/` folder.
 
 | Folder              | Holds                                                                          |
 | ------------------- | ------------------------------------------------------------------------------ |
@@ -26,7 +27,8 @@ vers adds one folder to the shared tree:
 - **An architecture doc links the design once.** Where a game-design decision shaped code that
   exists, the architecture doc links the note in one sentence and stops there.
 - **The commit body holds a decision's reason.** vers keeps no decision records, so the reason a
-  decision was made goes in the commit message, never in an architecture doc.
+  decision was made goes in the commit message, never in an architecture doc. An architecture
+  invariant carries no `**Why:**` line, and a rejected alternative appears in no doc.
 
 ## The game glossary
 
