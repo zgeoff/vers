@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { expect, onTestFinished, test } from 'bun:test';
 import { createId } from '@paralleldrive/cuid2';
 import postgres from 'postgres';
 import { applyMigrations } from './apply-migrations';
@@ -54,6 +54,55 @@ test('it creates the pending_transactions table with defaults applied', async ()
   expect(inserted.createdAt).toBeInstanceOf(Date);
 
   await db.destroy();
+});
+
+test('it creates the activity_chains table with both chain indexes starting at zero', async () => {
+  const databaseURL = await createEmptyDB();
+
+  await applyMigrations({ databaseURL });
+
+  const db = createDB({ databaseURL });
+
+  onTestFinished(() => db.destroy());
+
+  await db
+    .insertInto('users')
+    .values({ email: 'chains@example.com', id: 'usr_chains', name: 'Chains', username: 'chains' })
+    .execute();
+
+  await db
+    .insertInto('avatars')
+    .values({ id: 'avt_chains', name: 'Chains', userId: 'usr_chains' })
+    .execute();
+
+  const inserted = await db
+    .insertInto('activityChains')
+    .values({
+      appendedNextSeed: '22222222222222222222222222222222',
+      avatarId: 'avt_chains',
+      genesisSeed: '11111111111111111111111111111111',
+      scopeId: 'node_1',
+      scopeType: 'world_map_node',
+      verifiedNextSeed: '33333333333333333333333333333333',
+    })
+    .returningAll()
+    .executeTakeFirstOrThrow();
+
+  const selected = await db
+    .selectFrom('activityChains')
+    .selectAll()
+    .where('avatarId', '=', 'avt_chains')
+    .where('scopeType', '=', 'world_map_node')
+    .where('scopeId', '=', 'node_1')
+    .executeTakeFirstOrThrow();
+
+  expect(selected).toStrictEqual(inserted);
+  expect(selected.appendedChainIndex).toBe(0);
+  expect(selected.verifiedChainIndex).toBe(0);
+  expect(selected.genesisSeed).toBe('11111111111111111111111111111111');
+  expect(selected.appendedNextSeed).toBe('22222222222222222222222222222222');
+  expect(selected.verifiedNextSeed).toBe('33333333333333333333333333333333');
+  expect(selected.createdAt).toBeInstanceOf(Date);
 });
 
 test('it adds the consumed-transaction-token table and audit columns', async () => {
