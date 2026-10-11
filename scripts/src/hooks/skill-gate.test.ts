@@ -1,4 +1,3 @@
-// oxlint-disable zgeoff/test-beside-module -- has no module of its own; GEO-435 moves it beside the module it tests
 import { expect, onTestFinished, test } from 'bun:test';
 import { spawnSync } from 'node:child_process';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
@@ -8,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 
 // Runs the synced skill gate hook against this repo's own .claude/skill-gate.json and skills.
 async function setupTest() {
-  const dir = await mkdtemp(join(tmpdir(), 'skill-gate-rules-'));
+  const dir = await mkdtemp(join(tmpdir(), 'skill-gate-'));
 
   onTestFinished(() => rm(dir, { recursive: true, force: true }));
 
