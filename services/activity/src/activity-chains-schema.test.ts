@@ -1,3 +1,4 @@
+// oxlint-disable zgeoff/test-beside-module -- has no module of its own; GEO-435 moves it beside the module it tests
 import { expect, test } from 'bun:test';
 import { faker } from '@faker-js/faker';
 import { createAvatarRow, createTestDB, createTestUser } from '@vers/service-test-utils/bun';
