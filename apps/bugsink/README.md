@@ -48,7 +48,7 @@ Per-project alert toggles live in each Bugsink project's settings.
 
 Bugsink's Discord messaging service renders a fixed body the app doesn't template, so these alerts
 keep their own shape rather than the structured embed the CI path posts to the same channel (see
-[Alarms channel](../../docs/architecture/platform/observability.md#alarms-channel)).
+[Alarms](../../docs/architecture/platform/observability.md#alarms)).
 
 ## Housekeeping
 

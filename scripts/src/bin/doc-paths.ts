@@ -6,10 +6,19 @@ import { collectDocPaths } from '../docs/collect-doc-paths';
 // a doc pointing at nothing. Exits 1 when any is missing.
 
 const DOC_GLOBS = ['AGENTS.md', 'README.md', 'docs/**/*.md', '.claude/skills/*/SKILL.md'];
+
+// repo-sync delivers the docs-writing skill from zgeoff/tools, and its examples name paths from
+// other repos.
+const SYNCED_DOCS = new Set(['.claude/skills/docs-writing/SKILL.md']);
+
 const missing: Array<string> = [];
 
 for (const pattern of DOC_GLOBS) {
   for await (const docPath of new Glob(pattern).scan({ cwd: process.cwd(), dot: true })) {
+    if (SYNCED_DOCS.has(docPath)) {
+      continue;
+    }
+
     const markdown = await Bun.file(docPath).text();
 
     for (const reference of collectDocPaths(markdown, docPath)) {

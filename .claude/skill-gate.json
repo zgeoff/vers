@@ -10,7 +10,7 @@
   "gates": [
     { "match": "**/*.{ts,tsx}", "skills": ["code-style"] },
     { "match": "**/*.test.{ts,tsx}", "skills": ["testing", "project-testing"] },
-    { "match": "**/*.md", "skills": ["docs-writing"] },
+    { "match": "**/*.md", "skills": ["docs-writing", "project-docs-writing"] },
     {
       "match": "{contracts/activity,contracts/replay,libs/game/idle-client,libs/game/idle-core,services/activity,services/replay}/**",
       "skills": ["game-lifecycle"]

@@ -191,7 +191,7 @@ test('it gates a lifecycle package on the game-lifecycle skill as well', async (
   });
 });
 
-test('it gates markdown on the docs-writing skill', async () => {
+test('it gates markdown on the docs-writing and project-docs-writing skills', async () => {
   const ctx = await setupTest();
 
   await writeFile(join(ctx.dir, 'transcript.jsonl'), '');
@@ -212,7 +212,7 @@ test('it gates markdown on the docs-writing skill', async () => {
     hookSpecificOutput: {
       hookEventName: 'PreToolUse',
       permissionDecision: 'deny',
-      permissionDecisionReason: `Load the \`docs-writing\` skill with the Skill tool before editing ${join(ctx.repoDir, 'docs/architecture/overview.md')}, then retry the edit. Change a gated path only with Edit, Write or MultiEdit, never through Bash. .claude/skill-gate.json lists the skills each path needs.`,
+      permissionDecisionReason: `Load the \`docs-writing\` and \`project-docs-writing\` skills with the Skill tool before editing ${join(ctx.repoDir, 'docs/architecture/overview.md')}, then retry the edit. Change a gated path only with Edit, Write or MultiEdit, never through Bash. .claude/skill-gate.json lists the skills each path needs.`,
     },
   });
 });

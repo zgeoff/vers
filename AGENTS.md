@@ -9,7 +9,7 @@ read the architecture doc for the subsystem in full before reasoning from its co
 | ---------------- | ---------------------------------------------------------------------------------------------------------- |
 | `code-style`     | writing, reviewing, or renaming any TypeScript — the function-verb taxonomy lives there                    |
 | `testing`        | designing, writing, or reviewing tests                                                                     |
-| `docs-writing`   | writing or editing any committed prose: `docs/`, READMEs, this file, skills                                |
+| `docs-writing`   | writing or editing any committed prose: `docs/`, READMEs, this file, skills — with `project-docs-writing`  |
 | `delivery-lead`  | triage, refinement, milestone, board, or "what's next" work — the increment model and the roles live there |
 | `game-lifecycle` | any work in the activity, replay, or idle packages — the assumptions to drop and the state machines        |
 
