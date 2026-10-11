@@ -33,7 +33,7 @@ services:
       timeout: 3s
       retries: 15
   resend-stub:
-    image: oven/bun:1.3.10-slim
+    image: oven/bun:1.4.2-slim
     # the whole workspace rides in so the stub resolves its deps from the host's installed
     # node_modules — the image itself installs nothing
     volumes:

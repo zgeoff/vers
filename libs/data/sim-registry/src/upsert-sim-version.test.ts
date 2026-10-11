@@ -17,7 +17,7 @@ test('it inserts a new row for an unregistered engine hash', async () => {
   const before = Date.now();
 
   const row = await upsertSimVersion(ctx.db, {
-    bunVersion: '1.3.10',
+    bunVersion: '1.4.2',
     engineHash: 'hash_new',
     imageRef: 'registry.fly.io/vers-sim:new',
     maxContentVersion: '2',
@@ -26,7 +26,7 @@ test('it inserts a new row for an unregistered engine hash', async () => {
   });
 
   expect(row).toMatchObject({
-    bunVersion: '1.3.10',
+    bunVersion: '1.4.2',
     engineHash: 'hash_new',
     imageRef: 'registry.fly.io/vers-sim:new',
     maxContentVersion: '2',
@@ -45,7 +45,7 @@ test('it retains a version for exactly the given number of days', async () => {
   const before = Date.now();
 
   const row = await upsertSimVersion(ctx.db, {
-    bunVersion: '1.3.10',
+    bunVersion: '1.4.2',
     engineHash: 'hash_short',
     imageRef: 'registry.fly.io/vers-sim:short',
     maxContentVersion: '2',
@@ -73,7 +73,7 @@ test('it refreshes image, provider, bun version, max content version, deploy tim
   });
 
   const updated = await upsertSimVersion(ctx.db, {
-    bunVersion: '1.3.10',
+    bunVersion: '1.4.2',
     engineHash: 'hash_existing',
     imageRef: 'registry.fly.io/vers-sim:rebuilt',
     maxContentVersion: '2',
@@ -82,7 +82,7 @@ test('it refreshes image, provider, bun version, max content version, deploy tim
   });
 
   expect(updated).toMatchObject({
-    bunVersion: '1.3.10',
+    bunVersion: '1.4.2',
     engineHash: 'hash_existing',
     imageRef: 'registry.fly.io/vers-sim:rebuilt',
     maxContentVersion: '2',
@@ -100,7 +100,7 @@ test('it does not insert a second row on conflict', async () => {
   await createSimVersionRow(ctx.db, { engineHash: 'hash_existing' });
 
   await upsertSimVersion(ctx.db, {
-    bunVersion: '1.3.10',
+    bunVersion: '1.4.2',
     engineHash: 'hash_existing',
     imageRef: 'registry.fly.io/vers-sim:rebuilt',
     maxContentVersion: '2',
