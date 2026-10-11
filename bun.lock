@@ -1402,7 +1402,7 @@
     "@zgeoff/bugsink-mcp": "0.2.0",
     "@zgeoff/bun-test-extended": "0.0.3",
     "@zgeoff/dbhub": "0.23.4",
-    "@zgeoff/format-codemod": "0.0.8",
+    "@zgeoff/format-codemod": "0.1.0",
     "@zgeoff/mcp-remote": "0.1.38",
     "@zgeoff/oxlint-config": "0.2.0",
     "@zgeoff/umami-mcp": "0.1.0",
@@ -2989,7 +2989,7 @@
 
     "@zgeoff/dbhub": ["@zgeoff/dbhub@0.23.4", "", { "dependencies": { "@iarna/toml": "2.2.5", "@modelcontextprotocol/sdk": "1.29.0", "dotenv": "16.5.0", "express": "5.2.1", "ssh-config": "5.0.3", "ssh2": "1.16.0", "zod": "3.25.64" }, "optionalDependencies": { "@aws-sdk/rds-signer": "3.1079.0", "@azure/identity": "4.13.1", "mariadb": "3.4.2", "mssql": "11.0.1", "mysql2": "3.14.1", "pg": "8.16.0" }, "bin": { "dbhub": "dist/index.js" } }, "sha512-mA/fQOLJRxmph0XidO9KzPvHJfk+vonVibUT06tKxr9zxQdG3TeloRkqtgpilACLjX2ok23mI6VhZGX5DMoW8w=="],
 
-    "@zgeoff/format-codemod": ["@zgeoff/format-codemod@0.0.8", "", { "dependencies": { "oxc-parser": "0.137.0" }, "bin": { "format-codemod": "dist/cli.js" } }, "sha512-McQm4/N+49SqpRdcoTKV8sGkYmB7BGtECvSgbuoPK22lsgaUCwQ+E1bO5Llyo7izO990xXPNkzMqlOdhttO4gg=="],
+    "@zgeoff/format-codemod": ["@zgeoff/format-codemod@0.1.0", "", { "dependencies": { "oxc-parser": "0.137.0" }, "bin": { "format-codemod": "dist/cli.js" } }, "sha512-WVP6d3iuuaKuYrGIuHLkTxjI3W2IQzeAq6TtUiZiz+uw4f2AF2q4GgKQ6czpz/89qgZXauvhl1Pcef1/NZl4Rg=="],
 
     "@zgeoff/mcp-remote": ["@zgeoff/mcp-remote@0.1.38", "", { "dependencies": { "express": "^4.21.2", "open": "^10.1.0", "strict-url-sanitise": "^0.0.1", "undici": "^7.12.0" }, "bin": { "mcp-remote": "dist/proxy.js", "mcp-remote-client": "dist/client.js" } }, "sha512-NIF6nd1wJ3/NmaXmI7vm1eE7vbXQDP9cxqhfGpYaEdoEPwzbju1uxyaNvGnHrzBblYFpfk6m2aqqJhT8OLDbxw=="],
 
