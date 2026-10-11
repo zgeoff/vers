@@ -38,7 +38,7 @@ test('it denies a source edit until the code-style skill is loaded', async () =>
     hookSpecificOutput: {
       hookEventName: 'PreToolUse',
       permissionDecision: 'deny',
-      permissionDecisionReason: `Load the \`code-style\` skill with the Skill tool before editing ${join(ctx.repoDir, 'libs/core/utils/src/index.ts')}, then retry the edit. .claude/skill-gate.json lists the skills each path needs.`,
+      permissionDecisionReason: `Load the \`code-style\` skill with the Skill tool before editing ${join(ctx.repoDir, 'libs/core/utils/src/index.ts')}, then retry the edit. Change a gated path only with Edit, Write or MultiEdit, never through Bash. .claude/skill-gate.json lists the skills each path needs.`,
     },
   });
 });
@@ -89,7 +89,7 @@ test('it denies a test file edit until code-style, testing and project-testing a
     hookSpecificOutput: {
       hookEventName: 'PreToolUse',
       permissionDecision: 'deny',
-      permissionDecisionReason: `Load the \`code-style\`, \`testing\` and \`project-testing\` skills with the Skill tool before editing ${join(ctx.repoDir, 'libs/core/utils/src/a.test.ts')}, then retry the edit. .claude/skill-gate.json lists the skills each path needs.`,
+      permissionDecisionReason: `Load the \`code-style\`, \`testing\` and \`project-testing\` skills with the Skill tool before editing ${join(ctx.repoDir, 'libs/core/utils/src/a.test.ts')}, then retry the edit. Change a gated path only with Edit, Write or MultiEdit, never through Bash. .claude/skill-gate.json lists the skills each path needs.`,
     },
   });
 });
@@ -125,7 +125,7 @@ test('it denies a test file edit with only the testing skill loaded', async () =
     hookSpecificOutput: {
       hookEventName: 'PreToolUse',
       permissionDecision: 'deny',
-      permissionDecisionReason: `Load the \`project-testing\` skill with the Skill tool before editing ${join(ctx.repoDir, 'apps/web/src/routes/-game/qa-debug-hook-mount.test.tsx')}, then retry the edit. .claude/skill-gate.json lists the skills each path needs.`,
+      permissionDecisionReason: `Load the \`project-testing\` skill with the Skill tool before editing ${join(ctx.repoDir, 'apps/web/src/routes/-game/qa-debug-hook-mount.test.tsx')}, then retry the edit. Change a gated path only with Edit, Write or MultiEdit, never through Bash. .claude/skill-gate.json lists the skills each path needs.`,
     },
   });
 });
@@ -186,7 +186,7 @@ test('it gates a lifecycle package on the game-lifecycle skill as well', async (
     hookSpecificOutput: {
       hookEventName: 'PreToolUse',
       permissionDecision: 'deny',
-      permissionDecisionReason: `Load the \`game-lifecycle\` skill with the Skill tool before editing ${join(ctx.repoDir, 'services/activity/src/handlers/a.ts')}, then retry the edit. .claude/skill-gate.json lists the skills each path needs.`,
+      permissionDecisionReason: `Load the \`game-lifecycle\` skill with the Skill tool before editing ${join(ctx.repoDir, 'services/activity/src/handlers/a.ts')}, then retry the edit. Change a gated path only with Edit, Write or MultiEdit, never through Bash. .claude/skill-gate.json lists the skills each path needs.`,
     },
   });
 });
@@ -212,7 +212,7 @@ test('it gates markdown on the docs-writing skill', async () => {
     hookSpecificOutput: {
       hookEventName: 'PreToolUse',
       permissionDecision: 'deny',
-      permissionDecisionReason: `Load the \`docs-writing\` skill with the Skill tool before editing ${join(ctx.repoDir, 'docs/architecture/overview.md')}, then retry the edit. .claude/skill-gate.json lists the skills each path needs.`,
+      permissionDecisionReason: `Load the \`docs-writing\` skill with the Skill tool before editing ${join(ctx.repoDir, 'docs/architecture/overview.md')}, then retry the edit. Change a gated path only with Edit, Write or MultiEdit, never through Bash. .claude/skill-gate.json lists the skills each path needs.`,
     },
   });
 });
@@ -276,7 +276,7 @@ test('it gates authored source in the styled-system package', async () => {
     hookSpecificOutput: {
       hookEventName: 'PreToolUse',
       permissionDecision: 'deny',
-      permissionDecisionReason: `Load the \`code-style\` skill with the Skill tool before editing ${join(ctx.repoDir, 'libs/design/styled-system/panda.config.ts')}, then retry the edit. .claude/skill-gate.json lists the skills each path needs.`,
+      permissionDecisionReason: `Load the \`code-style\` skill with the Skill tool before editing ${join(ctx.repoDir, 'libs/design/styled-system/panda.config.ts')}, then retry the edit. Change a gated path only with Edit, Write or MultiEdit, never through Bash. .claude/skill-gate.json lists the skills each path needs.`,
     },
   });
 });
