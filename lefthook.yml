@@ -78,11 +78,11 @@ push-gate:
       run:
         node_modules/.bin/turbo run typecheck --concurrency=1 --output-logs=errors-only --
         --checkers 1
-    # tests import uncommitted generated modules (panda's styled-system,
-    # router typegen), so they are generated first
+    # tests import uncommitted generated modules (panda's styled-system, router
+    # typegen), so they are generated first. lefthook drops deleted paths from
+    # {files}, so git lists them and a deleted module's sibling test still runs
     - name: test
-      files: git diff --name-only --diff-filter=ACMR origin/main...HEAD
-      glob: '*.{ts,tsx}'
       run:
         node_modules/.bin/turbo run codegen typegen --output-logs=errors-only && bun
-        scripts/src/bin/test-related.ts {files}
+        scripts/src/bin/test-related.ts $(git diff --name-only --diff-filter=ACMRD
+        origin/main...HEAD)
