@@ -24,8 +24,12 @@ const noUnportableMath = {
           checkMathReference(context, node);
         }
       },
-      "MemberExpression[object.name='globalThis']": (node) => {
-        if (getMemberPropertyName(node) === 'Math' && isGlobalReference(context, node.object)) {
+      "MemberExpression[object.type='Identifier']": (node) => {
+        if (
+          globalObjectNames.has(node.object.name) &&
+          getMemberPropertyName(node) === 'Math' &&
+          isGlobalReference(context, node.object)
+        ) {
           checkMathReference(context, node);
         }
       },
@@ -58,6 +62,8 @@ const plugin = {
 };
 
 export default plugin;
+
+const globalObjectNames = new Set(['globalThis', 'window', 'self', 'global']);
 
 const bannedMathMembers = new Set([
   'exp',

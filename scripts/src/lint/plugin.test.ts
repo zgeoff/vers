@@ -223,6 +223,20 @@ test('it flags a banned Math member reached through globalThis', async () => {
   expect(result.stdout.match(/no-unportable-math/gu)).toHaveLength(2);
 });
 
+test('it flags a banned Math member reached through every global object', async () => {
+  const source = [
+    'const a = window.Math.exp(2);',
+    'const b = self.Math.log(2);',
+    'const c = global.Math.pow(2, 0.5);',
+    '',
+  ].join('\n');
+
+  const result = await setupTest(source);
+
+  expect(result.exitCode).toBe(1);
+  expect(result.stdout.match(/no-unportable-math/gu)).toHaveLength(3);
+});
+
 test('it leaves allowed Math members alone however they are reached', async () => {
   const source = [
     'const { floor, max: maximum } = Math;',
