@@ -59,6 +59,12 @@ push-gate:
   # one job at a time, to bound memory on a small host
   piped: true
   jobs:
+    # lefthook skips a job whose files command fails and still exits 0, so a
+    # missing base ref would pass the gate without linting or testing anything
+    - name: base ref
+      run:
+        git rev-parse --verify --quiet origin/main > /dev/null || { echo "push-gate needs
+        origin/main; run git fetch origin main"; exit 1; }
     - name: format:check
       run: bun run format:check
     # plain oxlint: the type-aware pass needs more memory than a 2 GiB host has
