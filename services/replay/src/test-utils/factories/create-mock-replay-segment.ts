@@ -44,9 +44,9 @@ export function createMockReplaySegment(
   };
 
   return {
-    checkpoints: [],
     prevHash,
     seed: activity.seed,
+    unverifiedCheckpoints: [],
     verifiedHead: 0,
     ...overrides,
     activity,

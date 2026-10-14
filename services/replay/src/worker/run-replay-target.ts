@@ -15,6 +15,8 @@ import { parkActivity } from '../dispatch/park-activity';
 import { runReplaySegment } from '../dispatch/run-replay-segment';
 import { recordBackoff } from '../metrics/record-backoff';
 import type { BackoffReason } from '../metrics/record-backoff';
+import { recordCacheLookup } from '../metrics/record-cache-lookup';
+import type { CacheLookupOutcome } from '../metrics/record-cache-lookup';
 import { recordIterationFailure } from '../metrics/record-iteration-failure';
 import { recordRejection } from '../metrics/record-rejection';
 import type { RejectionReason } from '../metrics/record-rejection';
@@ -53,7 +55,6 @@ const NEVER_ABORTED = new AbortController().signal;
 export async function runReplayTarget(
   trx: Transaction<DB>,
   deps: Readonly<ReplayWorkerDeps>,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- a mutable cache handle whose remove/get/set are its whole point; no readonly form is useful
   cache: ReplayCache,
   target: Readonly<ReplayTarget>,
   deadline: AbortSignal = NEVER_ABORTED,
@@ -226,20 +227,32 @@ function isCacheCurrent(
   return entry.emittedCount === segment.verifiedHead && entry.lastHash === segment.prevHash;
 }
 
+function pickCacheLookupOutcome(
+  rawCached: Readonly<{ emittedCount: number; lastHash: string }> | undefined,
+  cacheIsCurrent: boolean,
+): CacheLookupOutcome {
+  if (rawCached === undefined) {
+    return 'miss';
+  }
+
+  return cacheIsCurrent ? 'hit' : 'stale';
+}
+
 async function runReplayTargetInProcess(
   trx: Transaction<DB>,
   deps: Readonly<ReplayWorkerDeps>,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- a mutable cache handle whose remove/get/set are its whole point; no readonly form is useful
   cache: ReplayCache,
   segment: Readonly<ReplaySegment>,
   document: Readonly<ContentDocument>,
   deadline: AbortSignal,
 ): Promise<ReplayIterationOutcome> {
-  const unverified = segment.checkpoints.slice(segment.verifiedHead);
+  const unverified = segment.unverifiedCheckpoints;
   const rawCached = cache.get(segment.activity.id);
+  const cacheIsCurrent = rawCached !== undefined && isCacheCurrent(rawCached, segment);
 
-  const cached =
-    rawCached !== undefined && isCacheCurrent(rawCached, segment) ? rawCached : undefined;
+  recordCacheLookup(pickCacheLookupOutcome(rawCached, cacheIsCurrent));
+
+  const cached = cacheIsCurrent ? rawCached : undefined;
 
   if (rawCached !== undefined && cached === undefined) {
     cache.remove(segment.activity.id);
@@ -247,15 +260,15 @@ async function runReplayTargetInProcess(
 
   const compareContext = buildCompareContext(segment);
   const driver = cached?.driver ?? buildFreshDriver(document.encounter, segment);
-  const stopAtState = findStopAtState(segment.checkpoints);
+  const stopAtState = findStopAtState(segment.unverifiedCheckpoints);
 
   const duration = buildSegmentDuration(
     segment.activity.appendedTimeMs,
-    segment.checkpoints.length,
+    segment.activity.appendedHead,
   );
 
   const expectedCheckpointCount =
-    cached === undefined ? segment.checkpoints.length : unverified.length;
+    cached === undefined ? segment.activity.appendedHead : unverified.length;
 
   const advance = await driver.advanceToDuration(duration, stopAtState, expectedCheckpointCount);
 
@@ -280,7 +293,7 @@ async function runReplayTargetInProcess(
   const confirmAdvance = await confirmDriver.advanceToDuration(
     duration,
     stopAtState,
-    segment.checkpoints.length,
+    segment.activity.appendedHead,
   );
 
   deadline.throwIfAborted();
@@ -304,13 +317,12 @@ async function runReplayTargetInProcess(
 async function runReplayTargetCrossVersion(
   trx: Transaction<DB>,
   deps: Readonly<ReplayWorkerDeps>,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- a mutable cache handle whose remove/get/set are its whole point; no readonly form is useful
   cache: ReplayCache,
   segment: Readonly<ReplaySegment>,
   document: Readonly<ContentDocument>,
   deadline: AbortSignal,
 ): Promise<ReplayIterationOutcome> {
-  const unverified = segment.checkpoints.slice(segment.verifiedHead);
+  const unverified = segment.unverifiedCheckpoints;
   const job = buildCrossVersionJob(document.encounter, segment);
 
   const runDeps = {
@@ -394,7 +406,6 @@ function buildSettlement(
 async function applyMatch(
   trx: Transaction<DB>,
   deps: Readonly<ReplayWorkerDeps>,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- a mutable cache handle whose remove/get/set are its whole point; no readonly form is useful
   cache: ReplayCache,
   segment: Readonly<ReplaySegment>,
   replayed: ReadonlyArray<ReplayedCheckpoint>,
@@ -407,7 +418,7 @@ async function applyMatch(
 
   const settlement = buildSettlement(segment.activity.settledXP, verdict);
   const lastReplayed = replayed.at(-1);
-  const lastStored = segment.checkpoints.at(-1);
+  const lastStored = segment.unverifiedCheckpoints.at(-1);
 
   invariant(
     lastReplayed !== undefined && lastStored !== undefined,
@@ -457,7 +468,7 @@ async function applyMatch(
 
     const now = Date.now();
 
-    for (const checkpoint of segment.checkpoints.slice(segment.verifiedHead, lastStored.version)) {
+    for (const checkpoint of segment.unverifiedCheckpoints) {
       if (checkpoint.appendedAt !== undefined) {
         recordVerificationLag((now - checkpoint.appendedAt.getTime()) / 1000);
       }
@@ -522,7 +533,6 @@ type RejectionCause =
 async function rejectSegment(
   trx: Transaction<DB>,
   deps: Readonly<ReplayWorkerDeps>,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- a mutable cache handle whose remove/get/set are its whole point; no readonly form is useful
   cache: ReplayCache,
   segment: Readonly<ReplaySegment>,
   divergence: Extract<CompareVerdict, { kind: 'divergence' }>,
@@ -572,7 +582,6 @@ function pickRejectMessage(cause: RejectionCause): string {
 async function rejectBuildMismatch(
   trx: Transaction<DB>,
   deps: Readonly<ReplayWorkerDeps>,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- a mutable cache handle whose remove/get/set are its whole point; no readonly form is useful
   cache: ReplayCache,
   segment: Readonly<ReplaySegment>,
 ): Promise<ReplayIterationOutcome> {
@@ -603,7 +612,6 @@ async function rejectBuildMismatch(
 async function rejectUnreachableNode(
   trx: Transaction<DB>,
   deps: Readonly<ReplayWorkerDeps>,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- a mutable cache handle whose remove/get/set are its whole point; no readonly form is useful
   cache: ReplayCache,
   segment: Readonly<ReplaySegment>,
 ): Promise<ReplayIterationOutcome> {
@@ -657,7 +665,6 @@ async function countFailedAttempt(
 async function parkReplayTarget(
   trx: Transaction<DB>,
   deps: Readonly<ReplayWorkerDeps>,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- a mutable cache handle whose remove/get/set are its whole point; no readonly form is useful
   cache: ReplayCache,
   segment: Readonly<ReplaySegment>,
   reason: ParkReason,
@@ -669,7 +676,7 @@ async function parkReplayTarget(
       activityID: segment.activity.id,
       appendedHead: segment.activity.appendedHead,
       appendedTimeMs: segment.activity.appendedTimeMs,
-      checkpointCount: segment.checkpoints.length,
+      checkpointCount: segment.activity.appendedHead,
       reason,
       simVersion: segment.activity.simVersion,
       verifiedHead: segment.verifiedHead,
@@ -705,7 +712,6 @@ function pickParkRejectionReason(reason: ParkReason): RejectionReason {
 async function scheduleReplayRetry(
   trx: Transaction<DB>,
   deps: Readonly<ReplayWorkerDeps>,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- a mutable cache handle whose remove/get/set are its whole point; no readonly form is useful
   cache: ReplayCache,
   segment: Readonly<ReplaySegment>,
   reason: Extract<BackoffReason, 'keys-unavailable' | 'provider-unavailable'>,
@@ -748,11 +754,11 @@ function buildCrossVersionJob(
   segment: Readonly<ReplaySegment>,
 ) {
   const input = buildSimulationInput(content, segment.activity);
-  const stopAtState = findStopAtState(segment.checkpoints);
+  const stopAtState = findStopAtState(segment.unverifiedCheckpoints);
 
   const duration = buildSegmentDuration(
     segment.activity.appendedTimeMs,
-    segment.checkpoints.length,
+    segment.activity.appendedHead,
   );
 
   return toWireReplaySegmentInput(
@@ -761,7 +767,7 @@ function buildCrossVersionJob(
     duration,
     segment.activity.simVersion,
     stopAtState,
-    segment.checkpoints.length,
+    segment.activity.appendedHead,
   );
 }
 

@@ -26,8 +26,8 @@ test('it anchors a genesis segment on the activity startHash and seed', async ()
   expect(segment).toBeDefined();
   expect(segment?.prevHash).toBe(fixture.activity.startHash);
   expect(segment?.seed).toBe(fixture.activity.seed);
-  expect(segment?.checkpoints).toHaveLength(fixture.checkpoints.length);
-  expect(segment?.checkpoints[0]?.version).toBe(1);
+  expect(segment?.unverifiedCheckpoints).toHaveLength(fixture.checkpoints.length);
+  expect(segment?.unverifiedCheckpoints[0]?.version).toBe(1);
 
   expect(segment?.chain).toStrictEqual({
     genesisSeed: fixture.chain.genesisSeed,
@@ -77,9 +77,8 @@ test('it anchors a continuation segment on the last verified checkpoint hash and
   expect(predecessor).toBeDefined();
   expect(segment?.prevHash).toBe(predecessor?.hash);
   expect(segment?.seed).toBe(predecessor?.payload.nextSeed);
-  expect(segment?.checkpoints).toHaveLength(fixture.checkpoints.length);
-  expect(segment?.checkpoints.slice(verifiedHead)).toHaveLength(fixture.checkpoints.length - 1);
-  expect(segment?.checkpoints[verifiedHead]?.version).toBe(2);
+  expect(segment?.unverifiedCheckpoints).toHaveLength(fixture.checkpoints.length - 1);
+  expect(segment?.unverifiedCheckpoints[0]?.version).toBe(2);
 });
 
 test('it reports undefined when the activity row is gone', async () => {

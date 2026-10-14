@@ -29,9 +29,9 @@ test('it builds a default genesis segment', () => {
       verifiedChainIndex: 0,
       verifiedNextSeed: segment.activity.seed,
     },
-    checkpoints: [],
     prevHash: expect.toBeString(),
     seed: segment.activity.seed,
+    unverifiedCheckpoints: [],
     verifiedHead: 0,
   });
 });

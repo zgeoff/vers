@@ -1,7 +1,7 @@
 import type { SimulationDriver } from '@vers/idle-core';
 import { LRUCache } from 'lru-cache';
 
-const REPLAY_CACHE_CAP = 512;
+export const REPLAY_CACHE_CAP = 512;
 
 interface CachedReplayStream {
   readonly driver: SimulationDriver;
@@ -10,10 +10,10 @@ interface CachedReplayStream {
 }
 
 export interface ReplayCache {
-  get: (activityID: string) => CachedReplayStream | undefined;
-  remove: (activityID: string) => void;
-  set: (activityID: string, entry: Readonly<CachedReplayStream>) => void;
-  stopAll: () => void;
+  readonly get: (activityID: string) => CachedReplayStream | undefined;
+  readonly remove: (activityID: string) => void;
+  readonly set: (activityID: string, entry: Readonly<CachedReplayStream>) => void;
+  readonly stopAll: () => void;
 }
 
 export function createReplayCache(

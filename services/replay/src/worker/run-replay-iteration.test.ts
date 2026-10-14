@@ -49,7 +49,10 @@ test('it replays an honest full stream, matches, and advances the verified head 
     seed: buildStateFromSeed(3_047_525_658),
   });
 
+  const cache = createReplayCache();
+
   const deps = {
+    cache,
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
@@ -57,8 +60,6 @@ test('it replays an honest full stream, matches, and advances the verified head 
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };
-
-  const cache = createReplayCache();
 
   const outcome = await runReplayIteration(deps, cache);
 
@@ -86,7 +87,10 @@ test('it mints one reward per slot earned by the verified stream', async () => {
     seed: buildStateFromSeed(3_047_525_658),
   });
 
+  const cache = createReplayCache();
+
   const deps = {
+    cache,
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
@@ -94,8 +98,6 @@ test('it mints one reward per slot earned by the verified stream', async () => {
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };
-
-  const cache = createReplayCache();
 
   await runReplayIteration(deps, cache);
 
@@ -154,7 +156,10 @@ test('it verifies a later batch from held state, not a fresh from-Started replay
     .where('id', '=', fixture.activity.id)
     .execute();
 
+  const cache = createReplayCache();
+
   const deps = {
+    cache,
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
@@ -162,8 +167,6 @@ test('it verifies a later batch from held state, not a fresh from-Started replay
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };
-
-  const cache = createReplayCache();
 
   const firstOutcome = await runReplayIteration(deps, cache);
 
@@ -258,7 +261,10 @@ test('it rejects a checkpoint with a forged continuation seed, rewinds the chain
     status: 'active',
   });
 
+  const cache = createReplayCache();
+
   const deps = {
+    cache,
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
@@ -266,8 +272,6 @@ test('it rejects a checkpoint with a forged continuation seed, rewinds the chain
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };
-
-  const cache = createReplayCache();
 
   const outcome = await runReplayIteration(deps, cache);
 
@@ -338,7 +342,10 @@ test('it settles no xp and drops the rejected activity from the pending anchor w
     .where('version', '=', targetVersion)
     .execute();
 
+  const cache = createReplayCache();
+
   const deps = {
+    cache,
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
@@ -346,8 +353,6 @@ test('it settles no xp and drops the rejected activity from the pending anchor w
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };
-
-  const cache = createReplayCache();
 
   const outcome = await runReplayIteration(deps, cache);
 
@@ -407,7 +412,10 @@ test('it rejects a checkpoint with a forged chain position', async () => {
     .where('version', '=', targetVersion)
     .execute();
 
+  const cache = createReplayCache();
+
   const deps = {
+    cache,
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
@@ -415,8 +423,6 @@ test('it rejects a checkpoint with a forged chain position', async () => {
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };
-
-  const cache = createReplayCache();
 
   const outcome = await runReplayIteration(deps, cache);
 
@@ -456,7 +462,10 @@ test('it rejects a checkpoint claiming the wrong entropy source', async () => {
     .where('version', '=', targetVersion)
     .execute();
 
+  const cache = createReplayCache();
+
   const deps = {
+    cache,
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
@@ -464,8 +473,6 @@ test('it rejects a checkpoint claiming the wrong entropy source', async () => {
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };
-
-  const cache = createReplayCache();
 
   const outcome = await runReplayIteration(deps, cache);
 
@@ -492,7 +499,10 @@ test('it rejects a checkpoint with a forged reward total', async () => {
     .where('version', '=', targetVersion)
     .execute();
 
+  const cache = createReplayCache();
+
   const deps = {
+    cache,
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
@@ -500,8 +510,6 @@ test('it rejects a checkpoint with a forged reward total', async () => {
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };
-
-  const cache = createReplayCache();
 
   const outcome = await runReplayIteration(deps, cache);
 
@@ -522,7 +530,10 @@ test('it rejects a wrong continuation seed', async () => {
     .where('id', '=', fixture.activity.id)
     .execute();
 
+  const cache = createReplayCache();
+
   const deps = {
+    cache,
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
@@ -530,8 +541,6 @@ test('it rejects a wrong continuation seed', async () => {
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };
-
-  const cache = createReplayCache();
 
   const outcome = await runReplayIteration(deps, cache);
 
@@ -560,7 +569,10 @@ test('it parks an activity stamped with an unknown sim version', async () => {
     .where('id', '=', fixture.activity.id)
     .execute();
 
+  const cache = createReplayCache();
+
   const deps = {
+    cache,
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
@@ -568,8 +580,6 @@ test('it parks an activity stamped with an unknown sim version', async () => {
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };
-
-  const cache = createReplayCache();
 
   const outcome = await runReplayIteration(deps, cache);
 
@@ -598,7 +608,10 @@ test('it parks a stopped activity, leaving its chain claimable again', async () 
     .where('id', '=', fixture.activity.id)
     .execute();
 
+  const cache = createReplayCache();
+
   const deps = {
+    cache,
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
@@ -606,8 +619,6 @@ test('it parks a stopped activity, leaving its chain claimable again', async () 
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };
-
-  const cache = createReplayCache();
 
   const outcome = await runReplayIteration(deps, cache);
 
@@ -642,7 +653,10 @@ test('it parks an activity stamped with a retention-expired sim version', async 
 
   await createSimVersionRow(ctx.db, { engineHash: 'pruned-hash', status: 'pruned' });
 
+  const cache = createReplayCache();
+
   const deps = {
+    cache,
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
@@ -650,8 +664,6 @@ test('it parks an activity stamped with a retention-expired sim version', async 
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };
-
-  const cache = createReplayCache();
 
   const outcome = await runReplayIteration(deps, cache);
 
@@ -675,7 +687,10 @@ test('it parks rather than rejects when the duration cap trips before the expect
     .where('id', '=', fixture.activity.id)
     .execute();
 
+  const cache = createReplayCache();
+
   const deps = {
+    cache,
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
@@ -683,8 +698,6 @@ test('it parks rather than rejects when the duration cap trips before the expect
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };
-
-  const cache = createReplayCache();
 
   const outcome = await runReplayIteration(deps, cache);
 
@@ -720,7 +733,10 @@ test('it backs off an activity without counting an attempt or parking it when th
     status: 'active',
   });
 
+  const cache = createReplayCache();
+
   const deps = {
+    cache,
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
@@ -728,8 +744,6 @@ test('it backs off an activity without counting an attempt or parking it when th
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };
-
-  const cache = createReplayCache();
 
   const outcome = await runReplayIteration(deps, cache);
 
@@ -765,7 +779,10 @@ test('it backs off an activity when the keys service is unreachable on its first
     }),
   );
 
+  const cache = createReplayCache();
+
   const deps = {
+    cache,
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
@@ -773,8 +790,6 @@ test('it backs off an activity when the keys service is unreachable on its first
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };
-
-  const cache = createReplayCache();
 
   const outcome = await runReplayIteration(deps, cache);
 
@@ -832,7 +847,10 @@ test('it backs off an activity and settles nothing when the keys service fails d
     }),
   );
 
+  const cache = createReplayCache();
+
   const deps = {
+    cache,
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
@@ -840,8 +858,6 @@ test('it backs off an activity and settles nothing when the keys service fails d
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };
-
-  const cache = createReplayCache();
 
   const outcome = await runReplayIteration(deps, cache);
 
@@ -874,7 +890,10 @@ test('it backs off an activity when the iteration deadline fires while a depende
 
   server.use(mockKeysService.deriveScopeSecret.handler(() => new Promise<never>(() => {})));
 
+  const cache = createReplayCache();
+
   const deps = {
+    cache,
     db: ctx.db,
     iterationDeadlineMs: 200,
     keysServiceURL: resolveServiceURL('keys'),
@@ -883,8 +902,6 @@ test('it backs off an activity when the iteration deadline fires while a depende
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };
-
-  const cache = createReplayCache();
 
   const outcome = await runReplayIteration(deps, cache);
 
@@ -942,6 +959,7 @@ test('it evicts and rebuilds from Started when the cached driver no longer match
   });
 
   const deps = {
+    cache,
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
@@ -986,7 +1004,10 @@ test('it backs off an unexpected replay error without counting an attempt', asyn
     status: 'active',
   });
 
+  const cache = createReplayCache();
+
   const deps = {
+    cache,
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
@@ -994,8 +1015,6 @@ test('it backs off an unexpected replay error without counting an attempt', asyn
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };
-
-  const cache = createReplayCache();
 
   const outcome = await runReplayIteration(deps, cache);
 
@@ -1033,7 +1052,10 @@ test('it reports an iteration failure exactly once when a target was claimed', a
     status: 'active',
   });
 
+  const cache = createReplayCache();
+
   const deps = {
+    cache,
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
@@ -1042,7 +1064,6 @@ test('it reports an iteration failure exactly once when a target was claimed', a
     simVersion: 'test-engine-hash',
   };
 
-  const cache = createReplayCache();
   const recorded: Array<Readonly<ErrorEvent>> = [];
   const previousHandle = setSentryHandleForTesting(undefined);
 
@@ -1120,6 +1141,7 @@ test('it does not reject a divergence that fails to reproduce on the fresh confi
   });
 
   const deps = {
+    cache,
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
@@ -1163,7 +1185,10 @@ test("it advances the chain verified anchor from a user-stopped activity's tail,
     .where('id', '=', predecessor.activity.id)
     .execute();
 
+  const cache = createReplayCache();
+
   const deps = {
+    cache,
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
@@ -1171,8 +1196,6 @@ test("it advances the chain verified anchor from a user-stopped activity's tail,
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };
-
-  const cache = createReplayCache();
 
   const predecessorOutcome = await runReplayIteration(deps, cache);
 
@@ -1232,7 +1255,10 @@ test("it advances the chain verified anchor from a capped activity's tail, and a
     .where('id', '=', predecessor.activity.id)
     .execute();
 
+  const cache = createReplayCache();
+
   const deps = {
+    cache,
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
@@ -1240,8 +1266,6 @@ test("it advances the chain verified anchor from a capped activity's tail, and a
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };
-
-  const cache = createReplayCache();
 
   const predecessorOutcome = await runReplayIteration(deps, cache);
 
@@ -1305,7 +1329,10 @@ test('it reconciles the anchor once a successor claims a forward-exited predeces
     .where('id', '=', predecessor.activity.id)
     .execute();
 
+  const cache = createReplayCache();
+
   const deps = {
+    cache,
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
@@ -1313,8 +1340,6 @@ test('it reconciles the anchor once a successor claims a forward-exited predeces
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };
-
-  const cache = createReplayCache();
 
   const verifyOutcome = await runReplayIteration(deps, cache);
 
@@ -1392,7 +1417,10 @@ test('it leaves the anchor untouched for a stopped activity whose only checkpoin
   expect(predecessor.checkpoints).toHaveLength(1);
   expect(predecessor.checkpoints[0]?.payload.type).toBe('started');
 
+  const cache = createReplayCache();
+
   const deps = {
+    cache,
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
@@ -1400,8 +1428,6 @@ test('it leaves the anchor untouched for a stopped activity whose only checkpoin
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };
-
-  const cache = createReplayCache();
 
   const predecessorOutcome = await runReplayIteration(deps, cache);
 
