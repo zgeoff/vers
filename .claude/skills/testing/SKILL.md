@@ -217,7 +217,10 @@ never appear in a test file.
   conditional setup flag.
 - A test file declares one function, `setupTest()`, and nothing else. A helper the tests want goes
   one of three ways: inline it where it is used, swap it for a registered matcher, or move it to the
-  shared test utils with tests of its own. A file with nothing to wire has no `setupTest()`.
+  shared test utils with tests of its own. A file with nothing to wire has no `setupTest()`. One
+  exception: a collection-time skip gate may keep its awaited probe, and named gates derived from
+  it, at module level. Only `skipIf` reads them, each repeated condition is named once, and a
+  comment gives the reason: Bun 1.4.2's `skipIf` takes a boolean and has no in-body skip.
 - Each test file keeps its own `setupTest()`. A shared one gathers a flag for every suite that uses
   it.
 
@@ -262,9 +265,10 @@ Each kind of state has one cleanup tool.
 `try`/`finally` never appears in a test. `onTestFinished` runs on failure as well, keeps teardown
 beside the acquisition, and needs no `?.` guard for a resource the test never reached. A shared test
 util may register `onTestFinished` for its callers. These helpers must run inside a test. A test of
-such a helper proves its cleanup ran by registering an `onTestFinished` hook after the helper's
-call, so the hook runs after the helper's release, and asserting in that hook. This is the only
-place an assertion leaves the test body.
+such a helper proves its cleanup ran by asserting in an `onTestFinished` hook. `onTestFinished`
+hooks run first-in, first-out, so register that check after the helper's call, and register the
+removal of any directory the check reads after the check, not immediately after creating it. This is
+the only place an assertion leaves the test body.
 
 When resources have cleanup dependencies, register one callback that closes them in the required
 order. Every cleanup must run even if another cleanup throws. Use a disposable stack when reverse
@@ -336,10 +340,10 @@ Reordering the tests or choosing unique keys hides the gap and leaves it for the
   a constant that only names a literal (`const EMPTY = ''`) never appears in a test file.
 - A domain type that crosses a module boundary gets a factory, `build-mock-<type>.ts` exporting
   `buildMock<Type>`, in the shared test utils as soon as a test needs one. A factory returns a value
-  and brings no resource into existence, so it takes the `build` prefix from the AGENTS.md naming
-  table. A composite that writes rows creates a resource and keeps `create`. A type that another
-  package owns, such as an SDK result, is in the same position on first use. A type private to the
-  module under test stays an inline literal.
+  and brings no resource into existence, so it takes the `build` prefix from the repo's
+  function-naming table. A composite that writes rows creates a resource and keeps `create`. A type
+  that another package owns, such as an SDK result, is in the same position on first use. A type
+  private to the module under test stays an inline literal.
 - A factory returns a complete plain object. Fields whose value is arbitrary default to
   `@faker-js/faker` values, which prove the unit does not depend on one particular value.
   Constrained fields, such as an enum or a discriminator, take a fixed default. A deterministic
@@ -361,12 +365,12 @@ Reordering the tests or choosing unique keys hides the gap and leaves it for the
 - The test that uses a factory's value calls the factory itself. A helper that presets overrides is
   a second set of defaults that the reader cannot see.
 - A runtime stand-in that implements behaviour or assumptions about a dependency lives in the shared
-  test utils under a name for what it impersonates. Its prefix follows the AGENTS.md naming table. A
-  stand-in that starts something long-running, such as a stub server, is `start-stub-<thing>.ts`. A
-  stand-in that creates a resource, such as a stub repository on disk, is `create-stub-<thing>.ts`.
-  Every other stand-in is `build-stub-<thing>.ts`. It has its own tests, which pin the assumptions
-  it makes about the real thing. An executable stand-in script uses `run-stub-<thing>.ts`; an
-  imported helper that starts it keeps `start-stub-<thing>.ts`.
+  test utils under a name for what it impersonates. Its prefix follows the repo's function-naming
+  table. A stand-in that starts something long-running, such as a stub server, is
+  `start-stub-<thing>.ts`. A stand-in that creates a resource, such as a stub repository on disk, is
+  `create-stub-<thing>.ts`. Every other stand-in is `build-stub-<thing>.ts`. It has its own tests,
+  which pin the assumptions it makes about the real thing. An executable stand-in script uses
+  `run-stub-<thing>.ts`; an imported helper that starts it keeps `start-stub-<thing>.ts`.
 - Keep bare call recorders (`mock()` with no implementation) and no-op callbacks (`() => {}`)
   inline, including a recorder inside an object such as `{ sendEvent: mock() }`. Never extract a
   wrapper or add a test whose only purpose is to check that the mocking library records calls. A
@@ -531,6 +535,11 @@ control that proves an unprotected operation crosses the deadline; a nominal tim
 does not prove expiry. Keep default configuration coverage separate. Wait out the real default only
 when the runtime cannot expose a shorter faithful deadline, and run that case through an explicit
 script.
+
+When a third-party library owns a timer, runs it internally, and takes only a duration in its
+config, pass the shortest duration the library accepts and wait on the observable event, never with
+a sleep. Add a control: the same duration with a live peer does not fire. Fake timers stay for
+libraries whose timers do not interleave with real I/O.
 
 A real delay may define an end-to-end workload rate or a seeded fault-injection offset. State the
 rate or fault purpose and preserve replay information. A claim that a fault lands mid-operation
