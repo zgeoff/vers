@@ -338,6 +338,7 @@ test('it re-drains a deadline job every few seconds until its job reaches a term
         context: {
           actingSessionID: null,
           actingUserID: null,
+          issuer: 'app-web',
           logger,
           traceID: trace.traceID,
         },
@@ -396,6 +397,7 @@ test('it re-drains a deadline job that another request drain failed, though its 
         context: {
           actingSessionID: null,
           actingUserID: null,
+          issuer: 'app-web',
           logger,
           traceID: trace.traceID,
         },
