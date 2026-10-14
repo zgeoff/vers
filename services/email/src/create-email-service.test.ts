@@ -1,6 +1,7 @@
 import { expect, onTestFinished, test } from 'bun:test';
 import { createEmailClient } from '@vers/email';
 import { sentEmails } from '@vers/email/mocks';
+import { createLogger } from '@vers/service-runtime';
 import { createDatabaseFromTemplate } from '@vers/service-test-utils/bun';
 import { createEmailJobQueue } from './create-email-job-queue';
 import { createEmailService } from './create-email-service';
@@ -40,12 +41,14 @@ test('it delivers a job enqueued while the process was down, once booted and its
   const writerQueue = createEmailJobQueue({
     connectionString: queueConnectionString,
     emailClient: createEmailClient({ apiKey: 'test-api-key', from: 'test@example.com' }),
+    logger: createLogger({ level: 'fatal', name: 'test-email-service' }),
   });
 
   await writerQueue.start();
 
   await writerQueue.send('send-welcome', {
     to: 'player@example.com',
+    usefulUntil: new Date(Date.now() + 60_000),
     verificationCode: '123456',
     verificationURL: 'https://versidle.com/verify',
   });

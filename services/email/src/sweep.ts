@@ -28,6 +28,7 @@ await withRootSpan('email.sweep', async () => {
     const queue = createEmailJobQueue({
       connectionString: env.DATABASE_URL,
       emailClient: createEmailClient({ apiKey: env.RESEND_API_KEY, from: env.EMAIL_FROM }),
+      logger,
       onError: (error) => {
         logger.error({ err: error }, 'email job queue error');
 

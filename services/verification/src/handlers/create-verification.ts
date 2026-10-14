@@ -43,7 +43,7 @@ interface CreateVerificationOpts {
 export async function createVerification(
   db: Kysely<DB>,
   opts: CreateVerificationOpts,
-): Promise<VerificationData & { otp: string }> {
+): Promise<VerificationData & { expiresAt: Date | null; otp: string }> {
   const lifetime = VERIFICATION_TYPE_TO_LIFETIME[opts.input.type];
   const period = opts.input.period ?? lifetime.periodSeconds;
 
@@ -81,7 +81,7 @@ export async function createVerification(
     .returningAll()
     .executeTakeFirstOrThrow();
 
-  return { ...toVerificationData(row), otp };
+  return { ...toVerificationData(row), expiresAt: row.expiresAt, otp };
 }
 
 // verifyTOTP also accepts the periods either side of the current one, so the period alone keeps a

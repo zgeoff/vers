@@ -14,7 +14,9 @@ export const verificationContract = {
         type: VerificationTypeSchema,
       }),
     )
-    .output(VerificationDataSchema.extend({ otp: z.string() })),
+    .output(
+      VerificationDataSchema.extend({ expiresAt: z.coerce.date().nullable(), otp: z.string() }),
+    ),
 
   deleteVerification: publicRoute
     .route({ method: 'DELETE', path: '/verifications/{id}', summary: 'Delete a verification' })

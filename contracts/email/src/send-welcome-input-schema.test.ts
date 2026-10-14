@@ -4,6 +4,7 @@ import { SendWelcomeInputSchema } from './send-welcome-input-schema';
 test('it accepts a well-formed welcome input', () => {
   const result = SendWelcomeInputSchema.safeParse({
     to: 'player@example.com',
+    usefulUntil: '2026-01-01T00:10:00.000Z',
     verificationCode: '123456',
     verificationURL: 'https://versidle.com/verify',
   });
@@ -14,6 +15,7 @@ test('it accepts a well-formed welcome input', () => {
 test('it rejects a to address that is not a valid email', () => {
   const result = SendWelcomeInputSchema.safeParse({
     to: 'not-an-email',
+    usefulUntil: '2026-01-01T00:10:00.000Z',
     verificationCode: '123456',
     verificationURL: 'https://versidle.com/verify',
   });
@@ -25,6 +27,7 @@ test('it rejects a to address that is not a valid email', () => {
 test('it rejects a verificationURL that is not a valid url', () => {
   const result = SendWelcomeInputSchema.safeParse({
     to: 'player@example.com',
+    usefulUntil: '2026-01-01T00:10:00.000Z',
     verificationCode: '123456',
     verificationURL: 'not-a-url',
   });
@@ -33,5 +36,20 @@ test('it rejects a verificationURL that is not a valid url', () => {
 
   expect(result.error?.issues).toPartiallyContain(
     expect.objectContaining({ path: ['verificationURL'] }),
+  );
+});
+
+test('it rejects a usefulUntil that is not a valid date', () => {
+  const result = SendWelcomeInputSchema.safeParse({
+    to: 'player@example.com',
+    usefulUntil: 'not-a-date',
+    verificationCode: '123456',
+    verificationURL: 'https://versidle.com/verify',
+  });
+
+  expect(result.success).toBeFalse();
+
+  expect(result.error?.issues).toPartiallyContain(
+    expect.objectContaining({ path: ['usefulUntil'] }),
   );
 });

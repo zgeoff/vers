@@ -6,6 +6,7 @@ export type {
   JobContext,
   JobFailureContext,
   JobQueue,
+  JobState,
   SendJobOptions,
 } from './create-job-queue';
 
