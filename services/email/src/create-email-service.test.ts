@@ -81,9 +81,12 @@ test('it accepts a call from app-web', async () => {
     token: viewer.token,
   });
 
+  const usefulUntil = new Date(Date.now() + 60_000);
+
   await expect(
     client.sendWelcome({
       to: 'accepted@example.com',
+      usefulUntil,
       verificationCode: '123456',
       verificationURL: 'https://versidle.com/verify',
     }),
