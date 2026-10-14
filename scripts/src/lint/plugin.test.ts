@@ -237,6 +237,47 @@ test('it flags a banned Math member reached through every global object', async 
   expect(result.stdout.match(/no-unportable-math/gu)).toHaveLength(3);
 });
 
+test('it flags Math destructured from a global object', async () => {
+  const source = ['const { Math: M } = globalThis;', 'const { Math: { exp } } = window;', ''].join(
+    '\n',
+  );
+
+  const result = await setupTest(source);
+
+  expect(result.exitCode).toBe(1);
+  expect(result.stdout).toInclude('only as Math.member');
+  expect(result.stdout).toInclude('Math.exp is banned');
+});
+
+test('it flags a global object stored, spread out, or keyed at runtime', async () => {
+  const source = [
+    'const g = globalThis;',
+    'const { ...rest } = self;',
+    "const key = 'Math';",
+    'const a = global[key];',
+    '',
+  ].join('\n');
+
+  const result = await setupTest(source);
+
+  expect(result.exitCode).toBe(1);
+  expect(result.stdout.match(/with the member named directly/gu)).toHaveLength(3);
+});
+
+test('it leaves Math used as a type alone', async () => {
+  const source = [
+    'type MathShape = Math;',
+    'let value: Math | undefined;',
+    'const { crypto } = globalThis;',
+    'globalThis.someRunner = undefined;',
+    '',
+  ].join('\n');
+
+  const result = await setupTest(source);
+
+  expect(result.exitCode).toBe(0);
+});
+
 test('it leaves allowed Math members alone however they are reached', async () => {
   const source = [
     'const { floor, max: maximum } = Math;',

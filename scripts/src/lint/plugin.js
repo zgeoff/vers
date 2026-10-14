@@ -14,23 +14,20 @@ const noUnportableMath = {
         'A Math member chosen at runtime is banned in the simulation. Name the member directly so its use can be checked.',
       mathValue:
         'Math is allowed in the simulation only as Math.member. A stored or passed Math object hides its banned members.',
+      globalValue:
+        '{{name}} is allowed in the simulation only as {{name}}.member with the member named directly. Any other use can hide Math.',
     },
     schema: [],
   },
   create(context) {
     return {
-      "Identifier[name='Math']": (node) => {
-        if (isGlobalReference(context, node)) {
+      Identifier: (node) => {
+        if (node.name === 'Math' && isGlobalValueReference(context, node)) {
           checkMathReference(context, node);
         }
-      },
-      "MemberExpression[object.type='Identifier']": (node) => {
-        if (
-          globalObjectNames.has(node.object.name) &&
-          getMemberPropertyName(node) === 'Math' &&
-          isGlobalReference(context, node.object)
-        ) {
-          checkMathReference(context, node);
+
+        if (globalObjectNames.has(node.name) && isGlobalValueReference(context, node)) {
+          checkGlobalObjectReference(context, node);
         }
       },
       "BinaryExpression[operator='**']": (node) => {
@@ -90,12 +87,15 @@ const bannedMathMembers = new Set([
   'fround',
 ]);
 
-function isGlobalReference(context, node) {
+function isGlobalValueReference(context, node) {
   for (let scope = context.sourceCode.getScope(node); scope !== null; scope = scope.upper) {
     const reference = scope.references.find((candidate) => candidate.identifier === node);
 
     if (reference !== undefined) {
-      return reference.resolved === null || reference.resolved.defs.length === 0;
+      return (
+        reference.isValueReference &&
+        (reference.resolved === null || reference.resolved.defs.length === 0)
+      );
     }
   }
 
@@ -126,6 +126,80 @@ function checkMathReference(context, node) {
   for (const property of pattern.properties) {
     checkDestructuredProperty(context, property);
   }
+}
+
+function checkGlobalObjectReference(context, node) {
+  const parent = node.parent;
+
+  if (parent.type === 'TSTypeQuery') {
+    return;
+  }
+
+  if (parent.type === 'MemberExpression' && parent.object === node) {
+    checkGlobalObjectMember(context, node, parent);
+
+    return;
+  }
+
+  const pattern = findDestructuringPattern(node);
+
+  if (pattern === null) {
+    reportGlobalValue(context, node, node);
+
+    return;
+  }
+
+  for (const property of pattern.properties) {
+    checkGlobalDestructuredProperty(context, node, property);
+  }
+}
+
+function checkGlobalObjectMember(context, globalNode, member) {
+  const name = getMemberPropertyName(member);
+
+  if (name === undefined) {
+    reportGlobalValue(context, member, globalNode);
+
+    return;
+  }
+
+  if (name === 'Math') {
+    checkMathReference(context, member);
+  }
+}
+
+function checkGlobalDestructuredProperty(context, globalNode, property) {
+  if (property.type === 'RestElement') {
+    reportGlobalValue(context, property, globalNode);
+
+    return;
+  }
+
+  const name = getPropertyKeyName(property);
+
+  if (name === undefined) {
+    reportGlobalValue(context, property, globalNode);
+
+    return;
+  }
+
+  if (name !== 'Math') {
+    return;
+  }
+
+  if (property.value.type !== 'ObjectPattern') {
+    context.report({ node: property, messageId: 'mathValue' });
+
+    return;
+  }
+
+  for (const mathProperty of property.value.properties) {
+    checkDestructuredProperty(context, mathProperty);
+  }
+}
+
+function reportGlobalValue(context, node, globalNode) {
+  context.report({ node, messageId: 'globalValue', data: { name: globalNode.name } });
 }
 
 function checkMathMember(context, node) {
