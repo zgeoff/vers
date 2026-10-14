@@ -347,10 +347,12 @@ the mechanics and provisioning.
 - `bun run format:check` — both tools' check legs.
 - `bun run build` / `bun run e2e` / `bun run boundaries` — `turbo run` each; `e2e` is Playwright
   (`@vers/web-e2e`).
-- `bun run deadcode` — knip (`knip.json`); blocking in CI and pre-push. Needs codegen output
-  present; a dependency knip can't see gets a `knip.json` ignore in the PR that introduces it.
-- Git hooks: lefthook (`lefthook.yml`, installed by `prepare`). Pre-push tests changed files only
-  (`turbo run test --affected`); `LEFTHOOK=0` skips all hooks.
+- `bun run deadcode` — knip (`knip.json`); blocking in CI. Needs codegen output present; a
+  dependency knip can't see gets a `knip.json` ignore in the PR that introduces it.
+- Git hooks: lefthook (`lefthook.yml`, installed by `prepare`). Pre-push runs one job at a time so
+  it fits a 2 GiB host: the format check, plain oxlint on the branch's changed files, and the tests
+  beside them. CI alone runs type-aware lint, which also reports compiler errors through
+  `--type-check`, plus knip and the full suite. `LEFTHOOK=0` skips all hooks.
 - Python (`apps/bugsink` only) runs `pytest` under `uv` via its `test:adapter` script, outside the
   Bun graph; the `python-tests` workflow runs it on change.
 - `bun run qa:*` — the manual QA scripts: `qa:seed` and `qa:reset` write a QA account, `qa:inbox`

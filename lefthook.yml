@@ -1,7 +1,7 @@
 # Git hooks. pre-commit fixes and codegens staged files only (fast); pre-push
-# gates the whole tree so config drift affecting unstaged files is caught
-# before CI. pre-push tests cover changed files only — the full suite (incl.
-# the pg-testcontainer-backed projects when untouched) is CI's job.
+# checks what the branch changes, plus the cheap whole-tree format check. CI
+# runs every whole-tree check: typecheck through type-aware lint, dead code,
+# and the full test suite.
 
 pre-commit:
   piped: true
@@ -56,15 +56,17 @@ pre-push:
         exec node_modules/.bin/lefthook run push-gate
 
 push-gate:
-  parallel: true
+  # one job at a time, to bound memory on a small host
+  piped: true
   jobs:
     - name: format:check
       run: bun run format:check
+    # plain oxlint: the type-aware pass needs more memory than a 2 GiB host has
     - name: lint
-      run: bun run lint
-    - name: typecheck
-      run: node_modules/.bin/turbo run typecheck
-    - name: deadcode
-      run: bun run deadcode
-    - name: test (changed)
-      run: node_modules/.bin/turbo run test --affected
+      files: git diff --name-only --diff-filter=ACMR origin/main...HEAD
+      glob: '*.{js,mjs,cjs,jsx,ts,mts,cts,tsx}'
+      run: node_modules/.bin/oxlint --no-error-on-unmatched-pattern {files}
+    - name: test
+      files: git diff --name-only --diff-filter=ACMR origin/main...HEAD
+      glob: '*.{ts,tsx}'
+      run: bun scripts/src/bin/test-related.ts {files}
