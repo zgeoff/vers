@@ -18,6 +18,7 @@
     "@vers/contract-activity": "workspace:*",
     "@vers/contract-verification": "workspace:*",
     "@vers/db": "workspace:*",
+    "@vers/idle-core": "workspace:*",
     "@vers/mock-services": "workspace:*",
     "@vers/scripts": "workspace:*",
     "@vers/service-auth": "workspace:*",
