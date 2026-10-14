@@ -31,6 +31,7 @@ interface CreateStubWorkerContextOptions {
 
 export interface StubWorkerContext extends WorkerContext {
   readonly getBroadcasts: () => ReadonlyArray<WorkerMessage>;
+  readonly isTickingStopped: () => boolean;
 }
 
 export function createStubWorkerContext(
@@ -55,6 +56,7 @@ export function createStubWorkerContext(
   let connectivityOnline = true;
   const broadcasts: Array<WorkerMessage> = [];
   const debugRecorder = createDebugRecorder();
+  let tickingStopped = false;
 
   const reconstructedAvatarIDs = new Set<string>();
 
@@ -96,6 +98,7 @@ export function createStubWorkerContext(
     hasReconstructed: (avatarID) => reconstructedAvatarIDs.has(avatarID),
     isFailureActionDirty: () => failureActionDirty,
     isFailureActionPushInFlight: () => failureActionPushInFlight,
+    isTickingStopped: () => tickingStopped,
     recordRewardSlots: (activityID, entry) => {
       if (rewardSlotLedgerActivityID === activityID) {
         rewardSlotLedger = [...rewardSlotLedger, entry];
@@ -146,6 +149,9 @@ export function createStubWorkerContext(
     },
     setWriterDisplacedActivityID: (activityID) => {
       getLifecycle().send({ activityID, type: 'SET_WRITER_DISPLACED' });
+    },
+    stopTicking: () => {
+      tickingStopped = true;
     },
     updateConnectivity: (online) => {
       connectivityOnline = online;
