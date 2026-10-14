@@ -1,7 +1,7 @@
 # Git hooks. pre-commit fixes and codegens staged files only (fast); pre-push
-# gates the whole tree so config drift affecting unstaged files is caught
-# before CI. pre-push tests cover changed files only — the full suite (incl.
-# the pg-testcontainer-backed projects when untouched) is CI's job.
+# checks what the branch changes, plus the whole-tree gates that fit a small
+# host: format check and typecheck. CI runs every whole-tree check: type-aware
+# lint, dead code, and the full test suite.
 
 pre-commit:
   piped: true
@@ -56,15 +56,33 @@ pre-push:
         exec node_modules/.bin/lefthook run push-gate
 
 push-gate:
-  parallel: true
+  # one job at a time, to bound memory on a small host
+  piped: true
   jobs:
+    # lefthook skips a job whose files command fails and still exits 0, so a
+    # missing base ref would pass the gate without linting or testing anything
+    - name: base ref
+      run:
+        git rev-parse --verify --quiet origin/main > /dev/null || { echo "push-gate needs
+        origin/main; run git fetch origin main"; exit 1; }
     - name: format:check
       run: bun run format:check
+    # plain oxlint: the type-aware pass needs more memory than a 2 GiB host has
     - name: lint
-      run: bun run lint
+      files: git diff --name-only --diff-filter=ACMR origin/main...HEAD
+      glob: '*.{js,mjs,cjs,jsx,ts,mts,cts,tsx}'
+      run: node_modules/.bin/oxlint --no-error-on-unmatched-pattern {files}
+    # one project and one checker at a time: tsc's default parallel checkers
+    # push the web app's typecheck to about 1.5 GiB, one checker to about 0.8
     - name: typecheck
-      run: node_modules/.bin/turbo run typecheck
-    - name: deadcode
-      run: bun run deadcode
-    - name: test (changed)
-      run: node_modules/.bin/turbo run test --affected
+      run:
+        node_modules/.bin/turbo run typecheck --concurrency=1 --output-logs=errors-only --
+        --checkers 1
+    # tests import uncommitted generated modules (panda's styled-system, router
+    # typegen), so they are generated first. lefthook drops deleted paths from
+    # {files}, so git lists them and a deleted module's sibling test still runs
+    - name: test
+      run:
+        node_modules/.bin/turbo run codegen typegen --output-logs=errors-only && bun
+        scripts/src/bin/test-related.ts $(git diff --name-only --diff-filter=ACMRD
+        origin/main...HEAD)
