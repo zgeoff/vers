@@ -92,14 +92,15 @@ function isGlobalValueReference(context, node) {
     const reference = scope.references.find((candidate) => candidate.identifier === node);
 
     if (reference !== undefined) {
-      return (
-        reference.isValueReference &&
-        (reference.resolved === null || reference.resolved.defs.length === 0)
-      );
+      return reference.isValueReference && !isLocalValue(reference.resolved);
     }
   }
 
   return false;
+}
+
+function isLocalValue(variable) {
+  return variable !== null && variable.defs.length > 0 && variable.isValueVariable;
 }
 
 function checkMathReference(context, node) {

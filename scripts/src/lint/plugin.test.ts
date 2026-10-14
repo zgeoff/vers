@@ -293,6 +293,21 @@ test('it leaves allowed Math members alone however they are reached', async () =
   expect(result.exitCode).toBe(0);
 });
 
+test('it flags a banned Math member when a type named Math is declared', async () => {
+  const source = [
+    'interface Math { extra: number }',
+    'type globalThis = unknown;',
+    'const a = Math.exp(2);',
+    'const b = globalThis.Math.log(2);',
+    '',
+  ].join('\n');
+
+  const result = await setupTest(source);
+
+  expect(result.exitCode).toBe(1);
+  expect(result.stdout.match(/no-unportable-math/gu)).toHaveLength(2);
+});
+
 test('it leaves a local binding named Math alone', async () => {
   const result = await setupTest(
     'function f(Math: { exp: (x: number) => number }) { return Math.exp(2); }\n',
