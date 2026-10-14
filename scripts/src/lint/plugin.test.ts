@@ -69,6 +69,19 @@ test('it flags a non-integer exponent on the ** operator', async () => {
   expect(result.stdout).toInclude('no-unportable-math');
 });
 
+test('it flags a non-integer exponent on the **= operator', async () => {
+  const result = await setupTest('let a = 3;\na **= 0.5;\n');
+
+  expect(result.exitCode).toBe(1);
+  expect(result.stdout).toInclude('no-unportable-math');
+});
+
+test('it leaves an integer exponent on the **= operator alone', async () => {
+  const result = await setupTest('let a = 3;\na **= 2;\n');
+
+  expect(result.exitCode).toBe(0);
+});
+
 test('it leaves a negative integer exponent alone', async () => {
   const source = ['const a = Math.pow(2, -1);', 'const b = 2 ** -1;', ''].join('\n');
 

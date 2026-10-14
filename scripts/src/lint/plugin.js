@@ -24,6 +24,9 @@ const noUnportableMath = {
       "BinaryExpression[operator='**']": (node) => {
         checkExponent(context, node, node.right);
       },
+      "AssignmentExpression[operator='**=']": (node) => {
+        checkExponent(context, node, node.right);
+      },
       MemberExpression: (node) => {
         if (getMemberPropertyName(node) === 'toFixed') {
           reportBanned(context, node, 'toFixed');
