@@ -66,7 +66,11 @@ push-gate:
       files: git diff --name-only --diff-filter=ACMR origin/main...HEAD
       glob: '*.{js,mjs,cjs,jsx,ts,mts,cts,tsx}'
       run: node_modules/.bin/oxlint --no-error-on-unmatched-pattern {files}
+    # tests import uncommitted generated modules (panda's styled-system,
+    # router typegen), so they are generated first
     - name: test
       files: git diff --name-only --diff-filter=ACMR origin/main...HEAD
       glob: '*.{ts,tsx}'
-      run: bun scripts/src/bin/test-related.ts {files}
+      run:
+        node_modules/.bin/turbo run codegen typegen --output-logs=errors-only && bun
+        scripts/src/bin/test-related.ts {files}
