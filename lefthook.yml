@@ -1,7 +1,7 @@
 # Git hooks. pre-commit fixes and codegens staged files only (fast); pre-push
-# checks what the branch changes, plus the cheap whole-tree format check. CI
-# runs every whole-tree check: typecheck through type-aware lint, dead code,
-# and the full test suite.
+# checks what the branch changes, plus the whole-tree gates that fit a small
+# host: format check and typecheck. CI runs every whole-tree check: type-aware
+# lint, dead code, and the full test suite.
 
 pre-commit:
   piped: true
@@ -72,6 +72,12 @@ push-gate:
       files: git diff --name-only --diff-filter=ACMR origin/main...HEAD
       glob: '*.{js,mjs,cjs,jsx,ts,mts,cts,tsx}'
       run: node_modules/.bin/oxlint --no-error-on-unmatched-pattern {files}
+    # one project and one checker at a time: tsc's default parallel checkers
+    # push the web app's typecheck to about 1.5 GiB, one checker to about 0.8
+    - name: typecheck
+      run:
+        node_modules/.bin/turbo run typecheck --concurrency=1 --output-logs=errors-only --
+        --checkers 1
     # tests import uncommitted generated modules (panda's styled-system,
     # router typegen), so they are generated first
     - name: test
