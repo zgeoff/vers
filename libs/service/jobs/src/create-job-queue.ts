@@ -118,15 +118,38 @@ async function startQueues(boss: PgBoss, defs: JobDefs): Promise<void> {
       await boss.createQueue(deadLetterName);
     }
 
-    // pg-boss's createQueue upserts, so a second start against a migrated database is safe
-    await boss.createQueue(name, {
+    const policy = {
       ...(deadLetterName === undefined ? {} : { deadLetter: deadLetterName }),
-      ...(def.expireInSeconds === undefined ? {} : { expireInSeconds: def.expireInSeconds }),
-      ...(def.retryBackoff === undefined ? {} : { retryBackoff: def.retryBackoff }),
-      ...(def.retryDelay === undefined ? {} : { retryDelay: def.retryDelay }),
-      ...(def.retryLimit === undefined ? {} : { retryLimit: def.retryLimit }),
-    });
+      ...buildQueuePolicy(def),
+    };
+
+    // pg-boss's createQueue ignores an existing queue, and updateQueue keeps every option it is
+    // not sent, so the full policy goes through both to reach a queue an earlier start created
+    await boss.createQueue(name, policy);
+    await boss.updateQueue(name, policy);
   }
+}
+
+// pg-boss 12's own queue defaults, restored when a definition drops an option it once set
+const DEFAULT_QUEUE_POLICY = {
+  expireInSeconds: 15 * 60,
+  retryBackoff: false,
+  retryDelay: 0,
+  retryLimit: 2,
+} as const;
+
+function buildQueuePolicy(def: Readonly<JobDef>): {
+  readonly expireInSeconds: number;
+  readonly retryBackoff: boolean;
+  readonly retryDelay: number;
+  readonly retryLimit: number;
+} {
+  return {
+    expireInSeconds: def.expireInSeconds ?? DEFAULT_QUEUE_POLICY.expireInSeconds,
+    retryBackoff: def.retryBackoff ?? DEFAULT_QUEUE_POLICY.retryBackoff,
+    retryDelay: def.retryDelay ?? DEFAULT_QUEUE_POLICY.retryDelay,
+    retryLimit: def.retryLimit ?? DEFAULT_QUEUE_POLICY.retryLimit,
+  };
 }
 
 async function sendJob(

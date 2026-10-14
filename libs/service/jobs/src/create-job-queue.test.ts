@@ -4,6 +4,7 @@ import { findTraceContext } from '@vers/service-utils';
 import { waitFor } from '@vers/test-utils';
 import { Kysely, PostgresDialect } from 'kysely';
 import { Pool } from 'pg';
+import { PgBoss } from 'pg-boss';
 import invariant from 'tiny-invariant';
 import * as z from 'zod';
 import { createJobQueue } from './create-job-queue';
@@ -278,6 +279,105 @@ test('it dead-letters a job that exhausts its retry limit when the definition op
 
   expect(drainedDead).toStrictEqual({ completed: 1, failed: 0 });
   expect(deadLettered).toStrictEqual([{ to: 'a@example.com' }]);
+});
+
+test('it applies a changed definition policy to a queue an earlier start created', async () => {
+  const connectionString = await createDatabaseFromTemplate();
+
+  const schema = z.object({ to: z.string() });
+
+  const earlier = createJobQueue(
+    defineJobs({
+      email: { deadLetter: true, retryBackoff: true, retryDelay: 30, retryLimit: 5, schema },
+    }),
+    { connectionString, handlers: { email: () => Promise.resolve() } },
+  );
+
+  await earlier.start();
+  await earlier.stop();
+
+  const queue = createJobQueue(
+    defineJobs({
+      email: {
+        deadLetter: true,
+        expireInSeconds: 60,
+        retryBackoff: true,
+        retryDelay: 15,
+        retryLimit: 4,
+        schema,
+      },
+    }),
+    { connectionString, handlers: { email: () => Promise.resolve() } },
+  );
+
+  await queue.start();
+
+  onTestFinished(() => queue.stop());
+
+  const pool = new Pool({ connectionString });
+
+  onTestFinished(() => pool.end());
+
+  const email = await pool.query(
+    `SELECT dead_letter, expire_seconds, retry_backoff, retry_delay, retry_limit
+     FROM pgboss.queue WHERE name = 'email'`,
+  );
+
+  expect(email.rows).toStrictEqual([
+    {
+      dead_letter: 'email.dead',
+      expire_seconds: 60,
+      retry_backoff: true,
+      retry_delay: 15,
+      retry_limit: 4,
+    },
+  ]);
+});
+
+test('it restores the pg-boss default policy to an existing queue whose definition drops its options', async () => {
+  const connectionString = await createDatabaseFromTemplate();
+
+  const schema = z.object({ to: z.string() });
+
+  const earlier = createJobQueue(
+    defineJobs({
+      email: { expireInSeconds: 60, retryBackoff: true, retryDelay: 15, retryLimit: 4, schema },
+    }),
+    { connectionString, handlers: { email: () => Promise.resolve() } },
+  );
+
+  await earlier.start();
+  await earlier.stop();
+
+  const queue = createJobQueue(defineJobs({ email: { schema } }), {
+    connectionString,
+    handlers: { email: () => Promise.resolve() },
+  });
+
+  await queue.start();
+
+  onTestFinished(() => queue.stop());
+
+  const boss = new PgBoss(connectionString);
+
+  await boss.start();
+
+  onTestFinished(() => boss.stop());
+
+  await boss.createQueue('bare');
+
+  const pool = new Pool({ connectionString });
+
+  onTestFinished(() => pool.end());
+
+  const policyQuery = `SELECT expire_seconds, retry_backoff, retry_delay, retry_limit
+     FROM pgboss.queue WHERE name = $1`;
+
+  const bare = await pool.query(policyQuery, ['bare']);
+  const email = await pool.query(policyQuery, ['email']);
+
+  expect(email.rows).toStrictEqual(bare.rows);
+  expect(bare.rows).toHaveLength(1);
 });
 
 test('it fails a job whose stored payload no longer parses', async () => {
