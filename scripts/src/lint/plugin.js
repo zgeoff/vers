@@ -8,17 +8,26 @@ const noUnportableMath = {
         'An exponent that is not an integer literal is banned in the simulation. Keep the exponent an integer literal, or carry the value as an integer or per-mille fixed point.',
       banned:
         '{{name}} is banned in the simulation. Carry the value as an integer or per-mille fixed point instead.',
+      powReference:
+        'Math.pow is allowed in the simulation only as a direct call, where its exponent can be checked.',
+      dynamicMember:
+        'A Math member chosen at runtime is banned in the simulation. Name the member directly so its use can be checked.',
+      mathValue:
+        'Math is allowed in the simulation only as Math.member. A stored or passed Math object hides its banned members.',
+      globalValue:
+        '{{name}} is allowed in the simulation only as {{name}}.member with the member named directly. Any other use can hide Math.',
     },
     schema: [],
   },
   create(context) {
     return {
-      "MemberExpression[object.name='Math']": (node) => {
-        checkMathMember(context, node);
-      },
-      "CallExpression[callee.type='MemberExpression'][callee.object.name='Math']": (node) => {
-        if (getMemberPropertyName(node.callee) === 'pow') {
-          checkExponent(context, node, node.arguments[1]);
+      Identifier: (node) => {
+        if (node.name === 'Math' && isGlobalValueReference(context, node)) {
+          checkMathReference(context, node);
+        }
+
+        if (globalObjectNames.has(node.name) && isGlobalValueReference(context, node)) {
+          checkGlobalObjectReference(context, node);
         }
       },
       "BinaryExpression[operator='**']": (node) => {
@@ -51,6 +60,8 @@ const plugin = {
 
 export default plugin;
 
+const globalObjectNames = new Set(['globalThis', 'window', 'self', 'global']);
+
 const bannedMathMembers = new Set([
   'exp',
   'expm1',
@@ -76,14 +87,203 @@ const bannedMathMembers = new Set([
   'fround',
 ]);
 
-function checkMathMember(context, node) {
-  const name = getMemberPropertyName(node);
+function isGlobalValueReference(context, node) {
+  for (let scope = context.sourceCode.getScope(node); scope !== null; scope = scope.upper) {
+    const reference = scope.references.find((candidate) => candidate.identifier === node);
 
-  if (name === undefined || !bannedMathMembers.has(name)) {
+    if (reference !== undefined) {
+      return reference.isValueReference && !isLocalValue(reference.resolved);
+    }
+  }
+
+  return false;
+}
+
+function isLocalValue(variable) {
+  return variable !== null && variable.defs.length > 0 && variable.isValueVariable;
+}
+
+function checkMathReference(context, node) {
+  const parent = node.parent;
+
+  if (parent.type === 'TSTypeQuery') {
     return;
   }
 
-  context.report({ node, messageId: 'member', data: { name } });
+  if (parent.type === 'MemberExpression' && parent.object === node) {
+    checkMathMember(context, parent);
+
+    return;
+  }
+
+  const pattern = findDestructuringPattern(node);
+
+  if (pattern === null) {
+    context.report({ node, messageId: 'mathValue' });
+
+    return;
+  }
+
+  for (const property of pattern.properties) {
+    checkDestructuredProperty(context, property);
+  }
+}
+
+function checkGlobalObjectReference(context, node) {
+  const parent = node.parent;
+
+  if (parent.type === 'TSTypeQuery') {
+    return;
+  }
+
+  if (parent.type === 'MemberExpression' && parent.object === node) {
+    checkGlobalObjectMember(context, node, parent);
+
+    return;
+  }
+
+  const pattern = findDestructuringPattern(node);
+
+  if (pattern === null) {
+    reportGlobalValue(context, node, node);
+
+    return;
+  }
+
+  for (const property of pattern.properties) {
+    checkGlobalDestructuredProperty(context, node, property);
+  }
+}
+
+function checkGlobalObjectMember(context, globalNode, member) {
+  const name = getMemberPropertyName(member);
+
+  if (name === undefined) {
+    reportGlobalValue(context, member, globalNode);
+
+    return;
+  }
+
+  if (name === 'Math') {
+    checkMathReference(context, member);
+  }
+}
+
+function checkGlobalDestructuredProperty(context, globalNode, property) {
+  if (property.type === 'RestElement') {
+    reportGlobalValue(context, property, globalNode);
+
+    return;
+  }
+
+  const name = getPropertyKeyName(property);
+
+  if (name === undefined) {
+    reportGlobalValue(context, property, globalNode);
+
+    return;
+  }
+
+  if (name !== 'Math') {
+    return;
+  }
+
+  if (property.value.type !== 'ObjectPattern') {
+    context.report({ node: property, messageId: 'mathValue' });
+
+    return;
+  }
+
+  for (const mathProperty of property.value.properties) {
+    checkDestructuredProperty(context, mathProperty);
+  }
+}
+
+function reportGlobalValue(context, node, globalNode) {
+  context.report({ node, messageId: 'globalValue', data: { name: globalNode.name } });
+}
+
+function checkMathMember(context, node) {
+  const name = getMemberPropertyName(node);
+
+  if (name === undefined) {
+    context.report({ node, messageId: 'dynamicMember' });
+
+    return;
+  }
+
+  if (name === 'pow') {
+    checkPowReference(context, node);
+
+    return;
+  }
+
+  checkMathMemberName(context, node, name);
+}
+
+function checkPowReference(context, node) {
+  const parent = node.parent;
+
+  if (parent.type === 'CallExpression' && parent.callee === node) {
+    checkExponent(context, parent, parent.arguments[1]);
+
+    return;
+  }
+
+  context.report({ node, messageId: 'powReference' });
+}
+
+function checkMathMemberName(context, node, name) {
+  if (bannedMathMembers.has(name)) {
+    context.report({ node, messageId: 'member', data: { name } });
+  }
+}
+
+function findDestructuringPattern(node) {
+  const parent = node.parent;
+
+  if (parent.type === 'VariableDeclarator' && parent.init === node) {
+    return parent.id.type === 'ObjectPattern' ? parent.id : null;
+  }
+
+  if (
+    (parent.type === 'AssignmentExpression' || parent.type === 'AssignmentPattern') &&
+    parent.right === node
+  ) {
+    return parent.left.type === 'ObjectPattern' ? parent.left : null;
+  }
+
+  return null;
+}
+
+function checkDestructuredProperty(context, property) {
+  if (property.type === 'RestElement') {
+    context.report({ node: property, messageId: 'mathValue' });
+
+    return;
+  }
+
+  const name = getPropertyKeyName(property);
+
+  if (name === undefined) {
+    context.report({ node: property, messageId: 'dynamicMember' });
+
+    return;
+  }
+
+  if (name === 'pow') {
+    context.report({ node: property, messageId: 'powReference' });
+
+    return;
+  }
+
+  checkMathMemberName(context, property, name);
+}
+
+function getPropertyKeyName(property) {
+  return !property.computed && property.key.type === 'Identifier'
+    ? property.key.name
+    : getStringLiteralValue(property.key);
 }
 
 function getMemberPropertyName(node) {
@@ -91,9 +291,11 @@ function getMemberPropertyName(node) {
     return node.property.name;
   }
 
-  return node.property.type === 'Literal' && typeof node.property.value === 'string'
-    ? node.property.value
-    : undefined;
+  return getStringLiteralValue(node.property);
+}
+
+function getStringLiteralValue(node) {
+  return node.type === 'Literal' && typeof node.value === 'string' ? node.value : undefined;
 }
 
 function checkExponent(context, node, exponentNode) {

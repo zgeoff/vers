@@ -18,7 +18,12 @@ async function setupTest(source: string): Promise<LintResult> {
     await rm(dir, { recursive: true, force: true });
   });
 
-  const config = { jsPlugins: [pluginPath], rules: { 'vers/no-unportable-math': 'error' } };
+  // the root config's env declares Math as a global, which changes how its references resolve
+  const config = {
+    env: { browser: true, node: true, es2024: true },
+    jsPlugins: [pluginPath],
+    rules: { 'vers/no-unportable-math': 'error' },
+  };
 
   await writeFile(join(dir, '.oxlintrc.json'), JSON.stringify(config));
   await writeFile(join(dir, 'sample.ts'), source);
@@ -136,6 +141,177 @@ test('it leaves the allowed operations alone', async () => {
 
 test('it leaves Math.random alone', async () => {
   const result = await setupTest('const a = Math.random();\n');
+
+  expect(result.exitCode).toBe(0);
+});
+
+test('it flags a banned Math member reached by destructuring', async () => {
+  const result = await setupTest('const { exp } = Math;\nconst a = exp(2);\n');
+
+  expect(result.exitCode).toBe(1);
+  expect(result.stdout).toInclude('Math.exp is banned');
+});
+
+test('it flags a banned Math member destructured under a new name or a string key', async () => {
+  const source = [
+    'const { log: ln } = Math;',
+    "const { 'sin': sine } = Math;",
+    "const { ['cos']: cosine } = Math;",
+    'let tangent;',
+    '({ tan: tangent } = Math);',
+    'function f({ atan } = Math) { return atan; }',
+    '',
+  ].join('\n');
+
+  const result = await setupTest(source);
+
+  expect(result.exitCode).toBe(1);
+  expect(result.stdout.match(/no-unportable-math/gu)).toHaveLength(5);
+});
+
+test('it flags Math.pow stored in a variable', async () => {
+  const result = await setupTest('const power = Math.pow;\nconst a = power(2, 0.5);\n');
+
+  expect(result.exitCode).toBe(1);
+  expect(result.stdout).toInclude('only as a direct call');
+});
+
+test('it flags Math.pow reached other than by a direct call', async () => {
+  const source = [
+    'const { pow } = Math;',
+    'const a = Math.pow.call(undefined, 2, 0.5);',
+    'const b = [2].map(Math.pow);',
+    '',
+  ].join('\n');
+
+  const result = await setupTest(source);
+
+  expect(result.exitCode).toBe(1);
+  expect(result.stdout.match(/only as a direct call/gu)).toHaveLength(3);
+});
+
+test('it flags Math stored, passed, or spread out as a value', async () => {
+  const source = [
+    'const M = Math;',
+    'const a = (Math as { exp: (x: number) => number }).exp(2);',
+    'const { ...rest } = Math;',
+    'useMath(Math);',
+    '',
+  ].join('\n');
+
+  const result = await setupTest(source);
+
+  expect(result.exitCode).toBe(1);
+  expect(result.stdout.match(/only as Math\.member/gu)).toHaveLength(4);
+});
+
+test('it flags a Math member chosen at runtime', async () => {
+  const result = await setupTest("const key = 'exp';\nconst a = Math[key](2);\n");
+
+  expect(result.exitCode).toBe(1);
+  expect(result.stdout).toInclude('chosen at runtime');
+});
+
+test('it flags a banned Math member reached through globalThis', async () => {
+  const source = ['const a = globalThis.Math.exp(2);', 'const b = globalThis.Math.pow;', ''].join(
+    '\n',
+  );
+
+  const result = await setupTest(source);
+
+  expect(result.exitCode).toBe(1);
+  expect(result.stdout.match(/no-unportable-math/gu)).toHaveLength(2);
+});
+
+test('it flags a banned Math member reached through every global object', async () => {
+  const source = [
+    'const a = window.Math.exp(2);',
+    'const b = self.Math.log(2);',
+    'const c = global.Math.pow(2, 0.5);',
+    '',
+  ].join('\n');
+
+  const result = await setupTest(source);
+
+  expect(result.exitCode).toBe(1);
+  expect(result.stdout.match(/no-unportable-math/gu)).toHaveLength(3);
+});
+
+test('it flags Math destructured from a global object', async () => {
+  const source = ['const { Math: M } = globalThis;', 'const { Math: { exp } } = window;', ''].join(
+    '\n',
+  );
+
+  const result = await setupTest(source);
+
+  expect(result.exitCode).toBe(1);
+  expect(result.stdout).toInclude('only as Math.member');
+  expect(result.stdout).toInclude('Math.exp is banned');
+});
+
+test('it flags a global object stored, spread out, or keyed at runtime', async () => {
+  const source = [
+    'const g = globalThis;',
+    'const { ...rest } = self;',
+    "const key = 'Math';",
+    'const a = global[key];',
+    '',
+  ].join('\n');
+
+  const result = await setupTest(source);
+
+  expect(result.exitCode).toBe(1);
+  expect(result.stdout.match(/with the member named directly/gu)).toHaveLength(3);
+});
+
+test('it leaves Math used as a type alone', async () => {
+  const source = [
+    'type MathShape = Math;',
+    'let value: Math | undefined;',
+    'const { crypto } = globalThis;',
+    'globalThis.someRunner = undefined;',
+    '',
+  ].join('\n');
+
+  const result = await setupTest(source);
+
+  expect(result.exitCode).toBe(0);
+});
+
+test('it leaves allowed Math members alone however they are reached', async () => {
+  const source = [
+    'const { floor, max: maximum } = Math;',
+    'const a = floor(1.5) + maximum(1, 2);',
+    'const b = Math.pow(2, 3);',
+    'const c = globalThis.Math.sqrt(4);',
+    'type MathLike = typeof Math;',
+    '',
+  ].join('\n');
+
+  const result = await setupTest(source);
+
+  expect(result.exitCode).toBe(0);
+});
+
+test('it flags a banned Math member when a type named Math is declared', async () => {
+  const source = [
+    'interface Math { extra: number }',
+    'type globalThis = unknown;',
+    'const a = Math.exp(2);',
+    'const b = globalThis.Math.log(2);',
+    '',
+  ].join('\n');
+
+  const result = await setupTest(source);
+
+  expect(result.exitCode).toBe(1);
+  expect(result.stdout.match(/no-unportable-math/gu)).toHaveLength(2);
+});
+
+test('it leaves a local binding named Math alone', async () => {
+  const result = await setupTest(
+    'function f(Math: { exp: (x: number) => number }) { return Math.exp(2); }\n',
+  );
 
   expect(result.exitCode).toBe(0);
 });
