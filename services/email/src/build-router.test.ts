@@ -350,3 +350,59 @@ test('it re-drains a deadline job every few seconds until its job reaches a term
 
   expect(recordedDelays).toStrictEqual([5000, 5000, 5000]);
 });
+
+test('it re-drains a deadline job that another request drain failed, though its own drain failed none', async () => {
+  const jobStates: Array<JobState> = ['retry', 'completed'];
+  let drainCalls = 0;
+  let elapsedMs = 0;
+  const logger = createLogger({ level: 'fatal', name: 'test-email-router' });
+
+  const stubQueue: JobQueue<EmailJobDefs> = {
+    drain: () => {
+      drainCalls += 1;
+
+      return Promise.resolve({ completed: 0, failed: 0 });
+    },
+    getJobState: () => Promise.resolve(jobStates.shift() ?? 'completed'),
+    send: () => Promise.resolve('job-1'),
+    start: () => Promise.resolve(),
+    stop: () => Promise.resolve(),
+  };
+
+  const router = buildEmailRouter({
+    logger,
+    now: () => elapsedMs,
+    queue: stubQueue,
+    wait: (ms) => {
+      elapsedMs += ms;
+
+      return Promise.resolve();
+    },
+  });
+
+  const trace = createTraceContext();
+
+  await withTraceContext(trace, () =>
+    call(
+      router.sendWelcome,
+      {
+        to: 'player@example.com',
+        usefulUntil: new Date(60_000),
+        verificationCode: '123456',
+        verificationURL: 'https://versidle.com/verify',
+      },
+      {
+        context: {
+          actingSessionID: null,
+          actingUserID: null,
+          logger,
+          traceID: trace.traceID,
+        },
+      },
+    ),
+  );
+
+  await waitFor(() => {
+    expect(drainCalls).toBe(2);
+  });
+});

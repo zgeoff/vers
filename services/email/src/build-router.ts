@@ -74,17 +74,17 @@ function buildDeadlineSendHandler<TName extends DeadlineJobName>(
 
     void (async () => {
       try {
-        const drained = await deps.queue.drain(name);
+        await deps.queue.drain(name);
 
-        if (drained.failed > 0) {
-          await runRetryDrains({
-            drain: () => deps.queue.drain(name),
-            getState: () => deps.queue.getJobState(name, jobID),
-            now: deps.now ?? Date.now,
-            usefulUntil: opts.input.usefulUntil,
-            wait: deps.wait ?? Bun.sleep,
-          });
-        }
+        // Watch this job whatever this drain reported: a concurrent request's drain can claim
+        // and fail it while this one fails none.
+        await runRetryDrains({
+          drain: () => deps.queue.drain(name),
+          getState: () => deps.queue.getJobState(name, jobID),
+          now: deps.now ?? Date.now,
+          usefulUntil: opts.input.usefulUntil,
+          wait: deps.wait ?? Bun.sleep,
+        });
       } catch (error) {
         deps.logger.error({ err: error, jobID, queue: name }, 'email job drain failed');
 
