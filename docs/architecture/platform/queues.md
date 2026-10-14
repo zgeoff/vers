@@ -9,16 +9,17 @@ service is the only consumer today.
 
 The queue wrapper is the only module that imports pg-boss. A job definition pairs a zod payload
 schema with the job's retry, dead-letter, and expiry policy. Its name doubles as the queue name.
-Every queue start writes each definition's whole policy onto its queue, so a changed definition
-takes effect on a queue that an earlier deployment created, and an option the definition drops
-returns to the pg-boss default. Every defined job needs a handler, which receives the schema-parsed
-payload and the job id. The queue handle carries the pg-boss lifecycle, one validating enqueue, and
-one drain. The enqueue validates the payload before it inserts and can route the insert through the
-caller's Kysely transaction, so job creation commits or rolls back with the domain write it belongs
-to. A drain fetches, handles, and completes in batches until its queue is empty, covers every
-defined queue when called with no name, and fails a stored payload that no longer parses without
-reaching the handler. pg-boss owns its own schema in the shared database and migrates it itself at
-start, so the schema migrations never touch it.
+Every queue start writes each definition's policy onto its queue, so a changed definition takes
+effect on a queue that an earlier deployment created, and a retry or expiry option the definition
+drops returns to the pg-boss default. One exception: a queue keeps its dead-letter queue after the
+definition drops it, because pg-boss offers no way to clear one. Every defined job needs a handler,
+which receives the schema-parsed payload and the job id. The queue handle carries the pg-boss
+lifecycle, one validating enqueue, and one drain. The enqueue validates the payload before it
+inserts and can route the insert through the caller's Kysely transaction, so job creation commits or
+rolls back with the domain write it belongs to. A drain fetches, handles, and completes in batches
+until its queue is empty, covers every defined queue when called with no name, and fails a stored
+payload that no longer parses without reaching the handler. pg-boss owns its own schema in the
+shared database and migrates it itself at start, so the schema migrations never touch it.
 
 ## Delivery model: drains, not resident workers
 
