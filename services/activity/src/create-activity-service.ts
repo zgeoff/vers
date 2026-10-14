@@ -37,6 +37,7 @@ export function createActivityService(
   const sendReplayWake = makeSendReplayWake(wakeOptions);
 
   return createService({
+    allowedIssuers: ['app-web'],
     buildRouter: async (runtime) => {
       const privateKey = await parseServicePrivateKey(runtime.env.SERVICE_AUTH_PRIVATE_KEY);
 

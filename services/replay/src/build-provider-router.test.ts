@@ -7,7 +7,11 @@ import { createReplayProvider } from './create-replay-provider';
 
 test('it passes every conformance case collected from its narrowed contract', async () => {
   const service = await createReplayProvider();
-  const viewer = await createAnonymousViewer({ audience: 'service-replay-provider' });
+
+  const viewer = await createAnonymousViewer({
+    audience: 'service-replay-provider',
+    issuer: 'service-replay',
+  });
 
   const cases = collectConformanceCases(
     { replaySegment: replayContract.replaySegment },
@@ -21,7 +25,11 @@ test('it passes every conformance case collected from its narrowed contract', as
 
 test('it rejects a stamp that does not match the baked engine hash with SIM_VERSION_MISMATCH', async () => {
   const service = await createReplayProvider();
-  const viewer = await createAnonymousViewer({ audience: 'service-replay-provider' });
+
+  const viewer = await createAnonymousViewer({
+    audience: 'service-replay-provider',
+    issuer: 'service-replay',
+  });
 
   const client = buildRPCTestClient<{ replaySegment: typeof replayContract.replaySegment }>(
     service.app,
@@ -38,7 +46,11 @@ test('it rejects a stamp that does not match the baked engine hash with SIM_VERS
 
 test('it 404s on /rpc/wake — a provider serves no drain route', async () => {
   const service = await createReplayProvider();
-  const viewer = await createAnonymousViewer({ audience: 'service-replay-provider' });
+
+  const viewer = await createAnonymousViewer({
+    audience: 'service-replay-provider',
+    issuer: 'service-replay',
+  });
 
   const response = await service.app.handle(
     new Request('http://test.local/rpc/wake', {

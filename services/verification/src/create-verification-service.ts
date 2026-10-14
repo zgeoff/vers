@@ -14,6 +14,7 @@ export function createVerificationService(
   config: CreateVerificationServiceConfig = {},
 ): Promise<Service<typeof envShape>> {
   return createService({
+    allowedIssuers: ['app-web'],
     buildRouter: (runtime) =>
       buildVerificationRouter({
         db: config.db ?? createDB({ databaseURL: runtime.env.DATABASE_URL }),

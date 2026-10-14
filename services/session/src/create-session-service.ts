@@ -16,6 +16,7 @@ export function createSessionService(
   config: CreateSessionServiceConfig = {},
 ): Promise<Service<typeof envShape>> {
   return createService({
+    allowedIssuers: ['app-web'],
     buildRouter: async (runtime) => {
       // imported once at boot, not per request: every handler reuses this same resolved key
       const signingKey = await jose.importPKCS8(runtime.env.JWT_SIGNING_PRIVKEY, 'RS256', {
