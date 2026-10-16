@@ -27,13 +27,14 @@ what tooling can't check.
 
 ## State lifecycles
 
-State that is persisted, or that exits the process, moves through a declared transition table: the
-states, the moves allowed between them, and one check, in the one place that writes the state, that
-refuses a move the table lacks. A long-lived actor inside one process, such as a reconnecting
-transport or an interactive client, is an xstate machine instead, because its states last only as
-long as the process and xstate keeps its events, guards and timers in one definition. Write the
-table before a module that owns the state splits, so the modules the split creates share one copy of
-the rule instead of each keeping its own.
+State that is persisted, or that leaves the process (sent to a client or another process), moves
+through a declared transition table: the states, the moves allowed between them, and one check, in
+the one place that writes the state, that refuses a move the table lacks. A long-lived actor whose
+states live only inside one process, such as a reconnecting transport or an interactive client, is
+an xstate machine instead, because its states last only as long as the process and xstate keeps its
+events, guards and timers in one definition. An actor that persists part of its state keeps a
+transition table for that part. Write the table before a module that owns the state splits, so the
+modules the split creates share one copy of the rule instead of each keeping its own.
 
 ## Function naming
 
