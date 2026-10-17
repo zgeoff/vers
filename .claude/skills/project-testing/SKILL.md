@@ -131,3 +131,13 @@ acts on.
   asserts on store state. A DOM component in
   [`components-ui/`](../../../libs/game/worldmap-client/src/components-ui/) goes through React
   Testing Library and `userEvent`.
+
+## Golden values
+
+- A golden value — transcribed machine output no human derives by reading the code: a stream's draw
+  sequence, a rolled encounter or item, a derived key, an RNG state — is asserted with
+  `toMatchInlineSnapshot()`. `bun test -u` regenerates it after an intentional behavior change, and
+  the regenerated diff is reviewed like any code change.
+- Human-authored expectations keep explicit matchers: spec test vectors from an external authority,
+  wire forms readable against their encoding, and property assertions. A snapshot there would bless
+  a broken implementation's own output.

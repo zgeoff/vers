@@ -4,8 +4,8 @@ description:
   vers's own TypeScript style on top of the shared code-style skill — where the project function
   verbs and exempt names live, the verbs a reader confuses with shared ones, comments, type-only
   modules, invariants, untyped column boundaries, third-party packages, Panda CSS styling and
-  screens, and Zustand client state. Load it beside code-style before writing, reviewing, or
-  renaming any TypeScript in vers.
+  screens, Zustand client state, and the lint directives. Load it beside code-style before writing,
+  reviewing, or renaming any TypeScript in vers.
 ---
 
 # vers code style
@@ -108,6 +108,28 @@ callers obey. A comment holds only the residue none of those can hold.
 - Comments don't name other declarations — renames strand the reference. State the fact instead: "an
   append from any other session is rejected", not "(see appendCheckpoints)". A declaration's own
   parameters and signature types are fine to name.
+
+## Lint directives
+
+Every type-aware rule is on in [`.oxlintrc.json`](../../../.oxlintrc.json). Two exceptions are
+permanent: the documented app-web override for `only-throw-error`, and the inline directives on the
+`@vers/idle-core` tick and lifecycle handlers, which mutate their entity parameter by design.
+
+- Baseline a pre-existing violation inline with
+  `// oxlint-disable-next-line <rule> -- baseline(#236)`, never by turning the rule off in config.
+  The unused-directive check is the ratchet: fixing a baselined site strands its comment, and lint
+  fails until the comment is deleted.
+- In authored code, `zgeoff/no-jsdoc`, `zgeoff/max-consecutive-line-comments` and
+  `vers/no-unportable-math` are never baselined and never disabled inline. Generated output gets a
+  per-file override in [`.oxlintrc.json`](../../../.oxlintrc.json). Rewrite an operation
+  `vers/no-unportable-math` rejects to use an allowed operation. [Comments](#comments) gives the
+  home for a fact a rejected comment held.
+- Add no new baseline for `typescript/prefer-readonly-parameter-types`. The baselines under
+  `scripts/` stay until their sites are fixed. A function's own data, config, props and option types
+  go `readonly` (React props `Readonly<Props>`). A framework type with no readonly form goes in the
+  rule's `allow` list in [`.oxlintrc.json`](../../../.oxlintrc.json), as `Kysely` and Playwright's
+  `Page` do. Only an own type that cannot be `readonly`, such as a generic callback argument or a
+  `ZodType`-bearing shape, carries a single inline directive that states why.
 
 ## Type-only modules
 

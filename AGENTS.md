@@ -5,379 +5,196 @@
 The rules a task needs are not repeated here. Load the skill for the work before starting it, and
 read the architecture doc for the subsystem in full before reasoning from its code.
 
-| Skill                | Load before                                                                                                |
-| -------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `code-style`         | writing, reviewing, or renaming any TypeScript — the shared function-verb taxonomy                         |
-| `project-code-style` | the same, beside `code-style` — vers's own verbs and code rules                                            |
-| `testing`            | designing, writing, or reviewing tests                                                                     |
-| `docs-writing`       | writing or editing any committed prose: `docs/`, READMEs, this file, skills — with `project-docs-writing`  |
-| `delivery-lead`      | triage, refinement, milestone, board, or "what's next" work — the increment model and the roles live there |
-| `game-lifecycle`     | any work in the activity, replay, or idle packages — the assumptions to drop and the state machines        |
+| Skill                | Load before                                                                                               |
+| -------------------- | --------------------------------------------------------------------------------------------------------- |
+| `code-style`         | writing, reviewing, or renaming any TypeScript — the shared function-verb taxonomy                        |
+| `project-code-style` | the same, beside `code-style` — vers's own verbs, code rules and lint directives                          |
+| `testing`            | designing, writing, or reviewing tests — with `project-testing`                                           |
+| `docs-writing`       | writing or editing any committed prose: `docs/`, READMEs, this file, skills — with `project-docs-writing` |
+| `game-lifecycle`     | any work in the activity, replay, or idle packages — the assumptions to drop and the state machines       |
 
-The system is documented under `docs/architecture/`, with `docs/architecture/overview.md` as its
-narrative entry point. A subsystem's doc is the authoritative account of its invariants — grep
-locates code, it does not teach a subsystem's rules.
+`docs/architecture/overview.md` is the entry point to the system's docs. A subsystem's doc is the
+authoritative account of its invariants: grep locates code, and it does not teach a subsystem's
+rules. Read the doc for the area in full before substantial work there:
 
-- Before substantial work in a subsystem, read its doc in full first, not after reasoning from code
-  fragments. Mandatory reads by area:
-  - activities, the seed chain, verification, replay, or reconcile —
-    `docs/architecture/game/game-simulation.md`, `docs/architecture/game/replay-verification.md`,
-    `docs/architecture/game/seed-chain.md`, `docs/architecture/game/offline-reconcile.md`, and
-    `docs/architecture/game/glossary.md`
-  - world-map generation, reveal, or fog of war — `docs/architecture/game/worldmap.md`
-  - item and reward rolls, or content entropy — `docs/architecture/game/item-generation.md` and
-    `docs/architecture/game/game-entropy.md`
+- Activities, the seed chain, verification, replay or reconcile:
+  `docs/architecture/game/game-simulation.md`, `docs/architecture/game/replay-verification.md`,
+  `docs/architecture/game/seed-chain.md`, `docs/architecture/game/offline-reconcile.md` and
+  `docs/architecture/game/glossary.md`.
+- World-map generation, reveal or fog of war: `docs/architecture/game/worldmap.md`.
+- Item and reward rolls, or content entropy: `docs/architecture/game/item-generation.md` and
+  `docs/architecture/game/game-entropy.md`.
+- Error handling, metrics, analytics, deploys and the database: the doc that each section below
+  points to.
 
-  The error-handling, metrics, analytics, deployment, and database sections carry their own
-  mandatory read.
+## Repo structure
 
-- An architecture doc states a subsystem's structure and the invariants a caller must obey; it never
-  narrates a change or defends a decision (the `docs-writing` skill owns that selection rule). A PR
-  edits a doc in three cases only: a sentence the change made false, corrected in place; an
-  invariant the change adds, stated at its owner; and a registry row a section of this file
-  mandates. A change with none of those touches no doc: a fix inside documented behavior, a
-  test-only or tooling change, a move of where a rule is enforced. The reason for a decision lives
-  in the commit body.
+vers is one Bun workspace. Every package takes the name `@vers/` plus its leaf folder name. A
+library or contract is consumed as TypeScript source through an `exports` map that points at
+`src/index.ts`, with no build step. Two names differ: `services/<name>` is `@vers/service-<name>`,
+and `contracts/<name>` is `@vers/contract-<name>`.
 
-## Operations
+```text
+apps/              deployables: web, web-e2e (Playwright), umami, bugsink
+services/          domain services; each compiles to a Bun binary on alpine
+contracts/         one oRPC contract per service, plus contract-base
+libs/<domain>/     shared libraries, grouped by domain for browsing only: core, data, design,
+                   game, service, testing
+infra/             the vers-infra Pulumi program (GitHub labels and settings, Neon, Axiom) and the
+                   Tinybird datasources
+scripts/           @vers/scripts: the operational CLIs behind bun run deploy, stack and pg:*
+templates/service/ the scaffold for a new service
+patches/           bun patches for third-party packages
+docs/
+  architecture/    what is built, by area: game, platform, services
+  game-design/     what a player sees, feels and decides
+  runbooks/        operator and contributor procedures
+deploy.config.ts   the manifest every Fly rollout reads
+```
 
-- Perform all work on a branch in a git worktree under `.worktrees/` (e.g.
-  `git worktree add .worktrees/<branch> -b <branch>`) — never commit directly on `main`.
-- Use [Conventional Commits](https://www.conventionalcommits.org/) for all commit messages.
-- A squash merge makes the PR title the commit subject, so a PR title is a Conventional Commit too.
-  `feat(#412): add the retry budget` is a title; `add the retry budget` is not.
-- Commit subjects and PR titles use the imperative mood ("add X", never "added X" or a bare noun
-  phrase).
-- Open PRs against `main` using the PR template (`.github/PULL_REQUEST_TEMPLATE.md`). Descriptions
-  are condensed: lead paragraph ≤2 sentences, one-line bullets, ≤150 words — write the short version
-  first, don't draft long and trim.
-- After pushing, link the PR URL in your response.
-- A PR is ready only when its checks are green: watch CI (`gh pr checks <n> --watch`) after opening
-  or updating, and report a failure with what you're doing about it.
+## Packages
 
-## Dependencies
+Dependencies:
 
-- Pin exact versions — no `^`/`~` ranges. (`bun add` saves exact automatically via `exact = true` in
-  bunfig.toml — the rule applies to hand-written edits.)
+- Every external version lives once, in the root `workspaces.catalog`. A package writes `"catalog:"`
+  for an external dependency and `"workspace:*"` for an internal one.
+- Pin exact versions, with no `^` or `~` ranges. `bun add` saves exact versions, so the rule covers
+  hand-written edits.
+- TypeScript is version 7, with no `baseUrl` and no path aliases, so write each import relative to
+  the importing file.
 
-## Golden values in tests
+Boundaries:
 
-- A golden value — transcribed machine output no human derives by reading the code: a stream's draw
-  sequence, a rolled encounter or item, a derived key, an RNG state — is asserted with
-  `toMatchInlineSnapshot()`. `bun test -u` regenerates it after an intentional behavior change, and
-  the regenerated diff is reviewed like any code change.
-- Human-authored expectations keep explicit matchers: spec test vectors from an external authority,
-  wire forms readable against their encoding, and property assertions. A snapshot there would bless
-  a broken implementation's own output.
+- `bun run boundaries` checks each import against the tags in each project's `turbo.json` and the
+  rules in the root `turbo.json`. It also flags an import of a package missing from the importer's
+  `package.json`.
+- A `lib` imports no `service` or `app`, and a `service` imports no `app`, transitively.
+- A project tagged `server-only` is importable only by a `service` or another `server-only` project,
+  and the check follows dependents transitively. So no package that the root manifest or an app
+  depends on may import one.
+- `bun run boundaries` reads the filesystem and ignores `.gitignore`, so run it on a clean tree:
+  stale `dist/` or `styled-system/` output reads as source.
 
-## Review bots
+Repo scripts:
 
-CodeRabbit and cubic review every PR. CodeRabbit layers the repo-root `.coderabbit.yaml` over the
-shared config in zgeoff/coderabbit; cubic reads `cubic.yaml`. CodeRabbit reads this file as its
-guidelines.
+- `scripts/src/bin/` holds the entrypoints: thin shells that sequence I/O and exit codes. Root
+  `package.json` scripts run them with plain `bun`.
+- `scripts/src/<domain>/` holds the logic, and `scripts/src/utils/` takes only domain-free pieces.
+  Decision logic is pure, data in and findings out, with tests beside it.
+- A tool that imports a `server-only` package lives in its own `server-only` package with its own
+  `src/bin/`, such as `libs/testing/qa-account`. The root manifest and the e2e app depend on
+  `@vers/scripts`, and the boundaries check follows that edge.
 
-- A PR is ready only after both bot reviews are read and every finding is answered on its own
-  thread: a fixed finding's reply cites the commit that fixed it; a declined finding's reply states
-  the reason — when a finding contradicts this file, this file wins and the reply names the rule.
-  Reviews land within a few minutes of opening; read them with `gh pr view <n> --comments` and
-  `gh api repos/zgeoff/vers/pulls/<n>/comments`.
-- Resolve a thread once its reply is posted, fixed and declined alike (GraphQL
-  `resolveReviewThread`). A finding the agent cannot confidently judge is escalation, not
-  disposition: reply saying so and leave the thread open for a human.
-- Never teach a bot through chat (`@coderabbitai` learnings and the like) — a correction to bot
-  behaviour is an edit to `.coderabbit.yaml`, zgeoff/coderabbit, or `cubic.yaml`, reviewed in a PR.
-- Bots review a PR once, at open; an agent invokes a re-review only when asked, never on its own
-  initiative.
+## Commands
 
-## Issue hygiene
-
-An issue has two owners in turn. The agent that files it prepares it: the body on its template, one
-type label and one area label, and a clear hygiene check. The delivery lead (the `delivery-lead`
-skill) then triages it: milestone, blocking edges, board item, and board status. A filer sets no
-milestone and touches no board item. An open issue with no board item, or with a board item that has
-no status, is untriaged and waits for the delivery lead's next cycle. An upkeep issue is the
-exception: it stays off the board by design ([Upkeep issues](#upkeep-issues)). The `delivery-lead`
-skill owns the increment model and the triage procedure; the rules below are the ones a PR must
-satisfy.
-
-### Filing
-
-- Write the body to its type's template ([Body](#body)).
-- Assign one type label and one `area/*` label.
-- Name the source in Notes: the PR, review thread, spike, or doc the issue came from.
-- Clear every finding of the hygiene check ([Checking](#checking)).
-- Set no milestone and add nothing to the delivery board.
-
-### Triage
-
-- Assign a milestone only when that increment's done test needs the issue; every other issue stays
-  in the backlog with no milestone.
-- Record blocking edges against the issues it depends on.
-- Add it to the delivery board and set its board status.
-
-The vers-infra Pulumi program (`infra/github.ts`) owns the label registry, so a label change is a PR
-there, never a console edit. Milestones stay console-managed — they are delivery state, not schema.
-
-### Body
-
-A new issue's body follows its type's template in `.github/ISSUE_TEMPLATE` (feature, bug, upkeep).
-Three sections of the feature template carry rules the template can't state on its own.
-
-**Player story** — required wherever a player perceives the outcome, which is every `area/game`
-feature. Write it in second person, present tense: what you concretely see or feel once it ships.
-Name what you don't experience too — no dupes, no lost progress. Close with a one-sentence
-distillation. The story names no implementation nouns, so no table, field, component, or service
-names. The two sections below carry the machinery.
-
-**Scope** — the outcomes the work delivers, one per bullet. An outcome stays true however the work
-is built. A Scope bullet names no file path: a rename inside the delivery window strands the
-reference. A path belongs in Notes, written as orientation on the date the issue was opened.
-
-**Approach (unverified)** — the mechanism the author expects to carry the Scope. It is a guess, so
-the implementer checks it against the tree before building on it. Write `none` where the author has
-no candidate.
-
-### Checking
-
-The issue-hygiene workflow checks each new issue's labels, required sections, and Scope paths, then
-comments the defects it finds. It exempts dep-health's generated report issues, whose bodies are
-machine-written.
-
-After opening or editing an issue, run `bun scripts/src/bin/issue-hygiene.ts <n>` and clear every
-finding before handing it back. The command runs the workflow's own check locally, so a dropped
-section is caught before CI.
-
-### Upkeep issues
-
-An upkeep issue is event- or date-triggered maintenance: dropping a dependency override, deleting an
-audit ignore. It carries the `upkeep` label plus an area label, takes no milestone, and stays off
-the delivery board.
-
-Its body opens with a fenced trigger line — `trigger: date <YYYY-MM-DD>` or
-`trigger: release <pkg> ><version>` — that the weekly dep-health sweep evaluates. The sweep comments
-on the issue and labels it `upkeep-ready` once the condition holds. An upkeep issue whose trigger
-line the sweep can't parse fails it.
+- `bun run typecheck`, `bun run test`, `bun run build` and `bun run e2e` run through turbo. Pass
+  `--filter=@vers/<name>` for one project.
+- Every JS and TS package runs on `bun test`; never add vitest. Start
+  `bun run pg:test-container:start` before a postgres-backed suite.
+- `bun test` reads `bunfig.toml` from the working directory and never merges it up. A root-invoked
+  `bun test <file>` still resolves the jest-extended matchers from the root preload.
+- `bun run lint` runs codegen and typegen first, then the type-aware oxlint pass over the whole
+  tree. Without the generated output, those imports degrade to `any` and the unsafe rules report
+  hundreds of false violations.
+- Run `bun run format` from the repo root. The codemod reads its exclusions from the working
+  directory.
+- `bun run deadcode` runs knip, which also needs the codegen output. A dependency knip cannot see
+  gets a `knip.json` ignore in the PR that adds it.
+- lefthook runs the light checks before a commit and a push, and CI runs the rest.
+- `apps/bugsink` is Python. Its `test:adapter` script runs `pytest` under `uv`, outside the Bun
+  graph.
+- The `bun run qa:*` scripts drive manual QA: a QA account, the verification inbox, a debug Chrome,
+  and a cold fleet. `docs/runbooks/qa.md` covers them.
 
 ## Error handling
 
-Read `docs/architecture/services/error-handling.md` before adding or changing a failure path — it
-owns the taxonomy, the status rules, trace context, and the reporting split. The rules a PR must
-satisfy:
+Read `docs/architecture/services/error-handling.md` before you add or change a failure path. It owns
+the taxonomy, the status rules, trace context and the reporting split.
 
-- A procedure handler throws only its typed `opts.errors.*` constructors or `invariant()`. No
-  try/catch for logging or reporting in handlers — the central `onError` interceptor in
+- A procedure handler throws only its typed `opts.errors.*` constructors or `invariant()`. A handler
+  has no try/catch for logging or reporting, because the central `onError` interceptor in
   `createService` owns that.
-- Every contract `.errors({…})` map is built with `defineErrors` (`@vers/contract-base`). A bespoke
-  code (any code outside oRPC's canonical set) declares an explicit `status`, and its `defineErrors`
-  entry is its registry; bespoke codes are named `NOUN_PROBLEM`.
-- Clients narrow on `code` via `isDefinedError`/`safe` and act on `data` fields — never on `message`
-  strings.
-- The Sentry SDK is the only path to the error backend; pino is a log-only sink. Never wire a log
-  transport to the error backend, and never `captureException` in code the central hooks (service
-  interceptor, query caches, root error boundary) already cover.
-- app-web: form validation returns `submission.reply()`, navigation and access control throw
-  `redirect()`/`Response`, faults throw and land on a route `errorComponent`. Retry policy is
-  central in `buildQueryClient`; a per-query `retry` override needs a behavioural reason the default
-  policy can't express.
+- Every contract `.errors({…})` map is built with `defineErrors` from `@vers/contract-base`. A code
+  outside oRPC's canonical set declares an explicit `status`, and its `defineErrors` entry is its
+  registry. Name such a code `NOUN_PROBLEM`.
+- A client narrows on `code` through `isDefinedError` or `safe` and acts on `data` fields, never on
+  `message` strings.
+- The Sentry SDK is the only path to the error backend, and pino is a log sink only. Never wire a
+  log transport to the error backend. Never call `captureException` in code that the central hooks
+  already cover: the service interceptor, the query caches and the root error boundary.
+- In app-web, form validation returns `submission.reply()`, navigation and access control throw
+  `redirect()` or a `Response`, and a fault throws and lands on a route `errorComponent`. Retry
+  policy is central in `buildQueryClient`. A per-query `retry` override needs a reason the default
+  policy cannot express.
 
 ## Metrics
 
-Instrumentation is part of a feature, not a follow-up: work that adds a pipeline, queue, worker, or
-failure path lands with the OpenTelemetry metrics that make it observable. Read
-`docs/architecture/platform/observability.md` before adding an instrument — it owns the mechanics
-and conventions. The rules a PR must satisfy:
+Work that adds a pipeline, queue, worker or failure path lands with the OpenTelemetry metrics that
+make it observable. Read `docs/architecture/platform/observability.md` before you add an instrument.
 
-- Instruments are defined in the owning package through the global metrics API (`metrics.getMeter`,
-  `@opentelemetry/api`) — domain code never constructs, receives, or stops a meter provider; the
-  service scaffold owns that lifecycle.
-- Names are dot-namespaced `vers.<domain>.<measure>`; attributes are snake_case with closed value
-  sets, never unbounded values like per-entity IDs.
-- A rare, meaningful event is a counter recorded at the site that decides it (a `record-*.ts`
-  module). State that lives in the database observes through observable gauges — one batch callback
-  per package, one snapshot query per collection, failures caught and logged, never thrown.
-- An instrument's `description` and `unit` in its definition are its registry; a new instrument
+- Define an instrument in its owning package through the global metrics API (`metrics.getMeter` from
+  `@opentelemetry/api`). Domain code never constructs, receives or stops a meter provider, because
+  the service scaffold owns that lifecycle.
+- Name a metric `vers.<domain>.<measure>`. Attributes are snake_case with closed value sets, never
+  unbounded values such as per-entity IDs.
+- Record a rare, meaningful event as a counter at the site that decides it, in a `record-*.ts`
+  module. State that lives in the database reports through observable gauges: one batch callback per
+  package and one snapshot query per collection, with failures caught and logged, never thrown.
+- An instrument's `description` and `unit` in its definition are its registry, so a new instrument
   needs no doc row.
 
-## Banned words
+## Analytics
 
-Overused jargon a plainer word covers; applies to all prose — docs, comments, PR descriptions, issue
-text.
+Read `docs/architecture/analytics.md` before you add or reshape an analytics event. It owns both
+streams, the event registry and the privacy stance.
 
-- `bites` (figurative) — "applies", "takes effect", or name the consequence.
-- `CAS` (the acronym) — "compare-and-swap" spelled out, or name the behaviour: a guarded update that
-  applies only if the cursor still holds its expected value.
-- `ceiling` (figurative limit) — "cap", "limit", "maximum", "upper bound"; a timeout is a "timeout".
-  A game mechanic the design names a ceiling keeps the name.
-- `fence` / `fencing` (the distributed-systems metaphor) — state the rule it enforces: "each
-  activity has a single writer", "an append from any other session is rejected". A markdown code
-  fence is a different word and stays.
-- `floor` (figurative minimum) — "minimum", "lower bound", "at least". A literal floor and a game
-  mechanic the design names a floor keep the name.
-- `load-bearing` — "required", "essential", or name what breaks without it.
-- `seam` — "boundary", "join", "integration point".
-- `surface` — noun: "area", "API", the concrete thing itself; verb: "show", "raise", "report".
-
-## Monorepo layout
-
-Packages live under kind-first roots.
-
-- Workspace globs: `apps/*`, `services/*`, `contracts/*`, `libs/*/*` (grouped by domain: `core`,
-  `data`, `design`, `game`, `service`, `testing`), `infra`, and `scripts`.
-- Internal deps use the `workspace:*` protocol; every external version lives in the root manifest's
-  `workspaces.catalog`, referenced everywhere as `catalog:` — project manifests carry no version
-  pins.
-- Libraries are consumed as TypeScript source (`exports` → `./src/index.ts`); there are no
-  per-library build steps.
-- `bun install` uses the isolated linker with exact pins and a 7-day `minimumReleaseAge`
-  (`bunfig.toml`).
-- Turborepo drives the task graph from the root `turbo.json`; per-project `turbo.json` files exist
-  only to declare `boundaries` tags. CI's changed-project detection is `turbo run --affected`.
-- TypeScript is 7.0.2: no `baseUrl`, no path aliases — write imports relative to the importing file.
-  Node is 24.18.0 in CI and app-web; the domain services compile to a Bun binary on `alpine`.
-
-## Boundaries
-
-Projects are tagged `lib`, `service`, or `app` in their own `turbo.json`; the root `boundaries`
-block denies `lib` → `service`/`app` and `service` → `app` imports, transitively. A project tagged
-`server-only` beside its kind is importable only by a `service` or another `server-only` project,
-and the check follows dependents transitively, so no package the root manifest or an app depends on
-may import one. `bun run boundaries` also flags imports of packages missing from the importer's
-`package.json`. It walks the filesystem ignoring `.gitignore` — run it on a clean tree, or stale
-`dist/`/`styled-system/` output reads as source.
-
-Package naming is `@vers/` plus the leaf folder name (`libs/core/utils` → `@vers/utils`, `apps/web`
-→ `@vers/web`), except `services/user` → `@vers/service-user` and `contracts/user` →
-`@vers/contract-user`. The `libs/<domain>/` grouping is browsing-only — moving a lib between domains
-changes nothing but its path.
-
-## Repo scripts
-
-Operational tooling is the `@vers/scripts` workspace package (`scripts/`), covered by typecheck,
-test, lint, boundaries, and knip like any project.
-
-- `src/bin/` holds the executable entrypoints — thin shells that sequence I/O and exit codes.
-- `src/<domain>/` directories (`deploy/`, `stack/`, `postgres/`) hold the composable logic;
-  `src/utils/` accepts only domain-free pieces.
-- Decision logic is pure — data in, findings out — with co-located tests; effect modules stay thin
-  enough that running the CLI is their coverage.
-- Root-manifest entries (`bun run deploy`, `bun run stack`, `pg:*`) invoke the bin files with plain
-  `bun`.
-- One exception: a tool that imports a `server-only` package lives in its own `server-only` package
-  with its own `src/bin/` (`libs/testing/qa-account`), because the root manifest and the e2e app
-  depend on `@vers/scripts` and the boundaries check follows that edge.
+- **Umami web analytics:** a player-facing flow whose completion is an acquisition-funnel step fires
+  a curated event through `sendAnalyticsEvent`. These events carry no personal data and no user or
+  avatar keys.
+- **Tinybird product events:** a game flow whose outcome feeds funnels, retention or progression
+  analysis fires a curated event through `emitProductEvent`.
+- Name a product event in snake_case `noun_pastparticiple`, such as `activity_started`. Its
+  properties are the IDs of the entities it is about. The server stamps identity from the caller's
+  session, so a client payload never carries user or session keys.
+- A new product event lands in one PR with its entry in the `@vers/product-analytics` registry
+  types, its arm in app-web's ingest schema, any new column in
+  `infra/tinybird/datasources/product_events.datasource`, and its row in the registry table in
+  `docs/architecture/analytics.md`.
+- Never await `emitProductEvent`, and never gate a flow on it. Fire it only for something that has
+  already happened, such as a service response, a worker broadcast or a completed client transition,
+  never for an intent.
 
 ## Env files
 
 A service's env contract is the `envShape` it passes to `createService`, merged with the shared
-`baseEnvSchema` and validated against `process.env` at boot. A project that also needs a local
-`.env` ships a committed `.env.example` documenting its keys; real values come from
-`bun run env:pull`, which pulls each managed file from 1Password via the `op` CLI. `.env` files
-themselves are never committed. Each service commits its derived key lists as
-`env-contract.generated.json`, regenerated by `bun run env:contract`; CI fails on a stale artifact,
-on a required key missing from the service's dev env files or either compose stack, and — before any
-image builds — on one missing from the app's Fly env and secrets
-(`docs/architecture/platform/deployment.md`).
+`baseEnvSchema` and validated against `process.env` at boot.
+
+- A project that needs a local `.env` commits a `.env.example` with its keys. `bun run env:pull`
+  pulls the real values from 1Password. Never commit a `.env` file.
+- Each service commits its key lists as `env-contract.generated.json`. Regenerate it with
+  `bun run env:contract`, because CI fails on a stale one, and on a required key missing from the
+  service's dev env files, the compose stacks, or the app's Fly env and secrets.
 
 ## Deploys
 
-`bun run deploy` drives every Fly rollout from the `deploy.config.ts` manifest at the repo root;
-`deploy verify` asserts the fleet is online and current. Read
-`docs/architecture/platform/deployment.md` before changing a rollout, container build, or secret —
-it owns the mechanics, staleness detection, and CI wiring.
+`bun run deploy` drives every Fly rollout from `deploy.config.ts`, and `deploy verify` checks that
+the fleet is online and current. Read `docs/architecture/platform/deployment.md` before you change a
+rollout, a container build or a secret.
 
-- Database migrations run once per green push in their own never-cancelled `migrate` job — never per
-  service.
-- Deploy-phase jobs target the `production` GitHub environment; repo-level secrets carry only what
-  PR checks need.
-
-## Analytics
-
-app-web ships self-hosted Umami web analytics (`apps/umami`). A player-facing flow whose completion
-is an acquisition-funnel step fires a curated event through `sendAnalyticsEvent`
-(`apps/web/src/lib/send-analytics-event.ts`) — weigh this when building or reshaping such flows.
-Analytics events carry no PII and no user or avatar keys — data that would be joined to a user
-belongs in the product-analytics stream instead. Boundaries and privacy stance:
-`docs/architecture/analytics.md`.
-
-Tinybird carries the behavioural product-event stream. A game flow whose outcome feeds funnels,
-retention, or progression analysis fires a curated event through `emitProductEvent`
-(`apps/web/src/lib/product-events/emit-product-event.ts`) — weigh this when building or reshaping
-game flows. Read `docs/architecture/analytics.md` before adding or reshaping an analytics event — it
-owns the mechanics and the event registry. The rules a PR must satisfy:
-
-- Event names are snake_case `noun_pastparticiple` (`activity_started`); properties are ids of the
-  entities the event is about. Identity is stamped server-side from the caller's session — a client
-  payload never carries user or session keys.
-- A new event lands with its entry in the `@vers/product-analytics` registry types, its arm in
-  app-web's ingest schema, any new column in `infra/tinybird/datasources/product_events.datasource`,
-  and its row in the `docs/architecture/analytics.md` registry table — all in the same PR.
-- Emission is fire-and-forget through `emitProductEvent`: never await it, never gate a flow on it,
-  and fire only for something that has already happened — a service response, a worker broadcast, a
-  completed client transition — never for intent.
+- Database migrations run once per green push, in their own `migrate` job that is never cancelled,
+  never per service.
+- Deploy jobs target the `production` GitHub environment. Repo-level secrets hold only what PR
+  checks need.
 
 ## Postgres access (MCP)
 
-The `postgres` MCP server exposes production and dev sources. Read
-`docs/architecture/platform/database.md` before connecting to or provisioning the database — it owns
-the mechanics and provisioning.
+The `postgres` MCP server exposes a production source and a dev source. Read
+`docs/architecture/platform/database.md` before you connect to or provision the database.
 
-- `execute_sql_prod` / `search_objects_prod` query production read-only — writes are refused at both
-  the tool and role layer.
-- `execute_sql_dev` / `search_objects_dev` hit a disposable database cloned for the current worktree
-  on its first use: no setup step, full read/write, migrated and seeded. Sessions that never query
-  postgres never touch the database.
-- Tests never point at the dev database — postgres-backed suites own the local test container.
-- After removing a worktree, `bun run pg:dev:sweep` drops its database;
-  `bun run pg:dev:refresh-base` rebuilds the clone template when seed data changes.
-
-## Running things
-
-- `bun install` — whole workspace (`--frozen-lockfile` in CI; `bun.lock` is committed).
-- `bun run typecheck` — `turbo run typecheck`; one project via `--filter=@vers/<name>`.
-- `bun run test` — `turbo run test`, each project's own runner; one project via `--filter`. Every
-  JS/TS package runs on `bun test` — never add vitest. Postgres-backed suites need
-  `bun run pg:test-container:start` first. bunfig is read from cwd, not merged up, but root-invoked
-  `bun test <file>` still resolves jest-extended matchers from the root preload.
-- `bun run lint` / `bun run lint:fix` — `turbo run codegen typegen`, then type-aware oxlint over the
-  whole tree. The codegen leg is required: without generated output (panda's `styled-system`, router
-  typegen) those imports degrade to `any` and the unsafe-\* rules report hundreds of false
-  violations.
-- `bun run format` — `oxfmt .`, then `format-codemod` (blank-line padding). Run from the repo root:
-  the codemod's exclusions (`.formatignore`, keeping it off committed codegen output and nested
-  checkouts) are read from the working directory. The chain is idempotent.
-- `bun run format:check` — both tools' check legs.
-- `bun run build` / `bun run e2e` / `bun run boundaries` — `turbo run` each; `e2e` is Playwright
-  (`@vers/web-e2e`).
-- `bun run deadcode` — knip (`knip.json`); blocking in CI. Needs codegen output present; a
-  dependency knip can't see gets a `knip.json` ignore in the PR that introduces it.
-- Git hooks: lefthook (`lefthook.yml`, installed by `prepare`). Pre-push runs one job at a time so
-  it fits a 2 GiB host: the format check, plain oxlint on the branch's changed files, typecheck one
-  project at a time with one checker each, and the tests beside the changed files. It leaves the
-  type-aware lint, knip, and the full suite to CI. `LEFTHOOK=0` skips all hooks.
-- Python (`apps/bugsink` only) runs `pytest` under `uv` via its `test:adapter` script, outside the
-  Bun graph; the `python-tests` workflow runs it on change.
-- `bun run qa:*` — the manual QA scripts: `qa:seed` and `qa:reset` write a QA account, `qa:inbox`
-  reads a verification email, `qa:cdp` and `qa:capture` drive a debug Chrome, and `qa:cold` sends
-  the fleet cold behind a traffic guard (`docs/runbooks/qa.md`).
-
-## Lint policy
-
-- Every type-aware rule is on (`.oxlintrc.json`; oxlint-tsgolint underneath, ~5s wall with warm
-  caches). Two permanent exceptions: `only-throw-error`'s documented app-web override, and the
-  inline directives on `@vers/idle-core`/`@vers/worldmap-core` tick/lifecycle handlers that mutate
-  their entity parameter by design.
-- Pre-existing violations are baselined inline with
-  `// oxlint-disable-next-line <rule> -- baseline(#236)`, never turned off in config. The
-  unused-directive check is the ratchet: fixing a baselined site strands its comment, and lint fails
-  until the comment is deleted.
-- `zgeoff/no-jsdoc`, `zgeoff/max-consecutive-line-comments`, and `vers/no-unportable-math` are never
-  baselined and never disabled inline. A comment either comment rule rejects is deleted or cut, and
-  the fact it held moves to a test name, to the commit body, or to the subsystem doc when it is an
-  invariant (the `project-code-style` skill owns the rule for what a comment holds). An operation
-  `vers/no-unportable-math` rejects is rewritten to use an allowed operation, never silenced.
-- `typescript/prefer-readonly-parameter-types` is never baselined: a function's own
-  data/config/props/option types go `readonly` (React props `Readonly<Props>`), and framework
-  handles with no readonly form (a `Kysely`/`Elysia`/`RPCHandler`/`Request` handle, a `Date`, …) are
-  exempted per-type via the rule's `allow` list in `.oxlintrc.json` — never an inline marker. Only a
-  genuinely un-`readonly`-able own type (a generic callback-arg object, a `ZodType`-bearing shape)
-  carries a single inline directive stating why.
+- `execute_sql_prod` and `search_objects_prod` query production read-only. The tool and the role
+  both refuse writes.
+- `execute_sql_dev` and `search_objects_dev` reach a throwaway database cloned for the current
+  worktree on first use: migrated, seeded, and open to reads and writes.
+- Tests never point at the dev database. Postgres-backed suites own the local test container.
+- After you remove a worktree, `bun run pg:dev:sweep` drops its database.
+  `bun run pg:dev:refresh-base` rebuilds the clone template when the seed data changes.
