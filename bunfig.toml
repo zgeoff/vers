@@ -8,19 +8,28 @@ exact = true
 # supply-chain guard: only install versions published >= 7 days ago
 minimumReleaseAge = 604800
 
-# an exclude lives only as long as its pinned version is younger than the gate —
-# once the version ages past it, the entry is dead weight; remove it
+# first-party packages skip the gate for good, and their own dependencies stay
+# behind it. Renovate bumps @zgeoff packages as soon as they publish, so each one
+# vers uses needs an entry here, or bun install refuses the bump.
+#
+# every other exclude lives only as long as its pinned version is younger than
+# the gate — once the version ages past it, the entry is dead weight; remove it
 # hono 4.13.0 (published 2026-08-03, patches GHSA-8j4g-w8fx-2239) ages past the gate ~2026-08-10 — remove then (#837)
 # nanoid 3.3.18 (published 2026-08-07, patches the revised GHSA-2v37-7h3g-55p8) ages past the gate ~2026-08-14 — remove then (#839)
 # qs 6.16.0 (published 2026-08-29, patches GHSA-x5fp-wj9c-mxmx + GHSA-4mjr-xmp4-gh2g) ages past the gate ~2026-09-05 — remove then (#982)
-# @zgeoff/oxlint-config 0.2.0 (published 2026-10-11, adds the test-placement rule) ages past the gate ~2026-10-18 — remove then (GEO-431)
 # http-cache-semantics 4.3.0 (published 2026-10-04, patches GHSA-ch52-4w7c-c8xp) ages past the gate ~2026-10-11 — remove then (#1191)
 # source-map-js 1.2.2 (published 2026-09-30, patches GHSA-68fv-2mgg-jv7q) ages past the gate ~2026-10-07 — remove then (#1191)
 minimumReleaseAgeExcludes = [
+  "@zgeoff/bugsink-mcp",
+  "@zgeoff/bun-test-extended",
+  "@zgeoff/dbhub",
+  "@zgeoff/format-codemod",
+  "@zgeoff/mcp-remote",
+  "@zgeoff/oxlint-config",
+  "@zgeoff/umami-mcp",
   "hono",
   "nanoid",
   "qs",
-  "@zgeoff/oxlint-config",
   "http-cache-semantics",
   "source-map-js",
 ]

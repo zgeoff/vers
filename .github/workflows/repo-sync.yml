@@ -22,7 +22,8 @@ jobs:
     with:
       skip: agents, pr-template, editorconfig
       include:
-        skill-testing, hook-skill-gate, skill-docs-writing, skill-code-style, skill-skill-writing
+        skill-testing, hook-skill-gate, skill-docs-writing, skill-code-style, skill-skill-writing,
+        workflow-audit-fix
     secrets:
       REPO_SYNC_APP_CLIENT_ID: ${{ secrets.REPO_SYNC_APP_CLIENT_ID }}
       REPO_SYNC_APP_PRIVATE_KEY: ${{ secrets.REPO_SYNC_APP_PRIVATE_KEY }}
