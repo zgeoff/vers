@@ -11,7 +11,7 @@ permissions:
   issues: write
 
 env:
-  # keep ANSI escapes out of the logs and the outdated issue body
+  # keep ANSI escapes out of the issue bodies
   NO_COLOR: 1
 
 jobs:
@@ -26,11 +26,37 @@ jobs:
         with:
           bun-version-file: .bun-version
 
-      # audit reads bun.lock and the advisory registry directly - no install
-      # needed. A red run starts the audit-fix workflow, which opens the fix or
-      # ignore pull request.
+      # audit reads bun.lock and the advisory registry directly - no install needed
       - name: Audit
-        run: bun run audit
+        id: audit
+        run: |
+          set +e
+          bun run audit > audit.txt
+          echo "exit=$?" >> "$GITHUB_OUTPUT"
+          cat audit.txt
+
+      - name: Escalate To Issue
+        if: steps.audit.outputs.exit != '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo "Scheduled \`bun audit\` found advisories. [Run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+            echo
+            echo '```'
+            cat audit.txt
+            echo '```'
+          } > body.md
+          existing=$(gh issue list --label dep-audit --state open --json number --jq '.[0].number')
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body-file body.md
+          else
+            gh issue create --title "bun audit: advisories in locked dependencies" --label dep-audit --body-file body.md
+          fi
+
+      - name: Fail On Advisories
+        if: steps.audit.outputs.exit != '0'
+        run: exit 1
 
   # comments on upkeep issues whose trigger condition now holds and flags audit
   # ignores that stopped matching a live advisory; red only on new findings
