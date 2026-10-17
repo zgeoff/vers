@@ -17,7 +17,7 @@ async function setupTest() {
   return { dir, repoDir, hookPath };
 }
 
-test('it denies a source edit until the code-style skill is loaded', async () => {
+test('it denies a source edit until both code-style skills are loaded', async () => {
   const ctx = await setupTest();
 
   await writeFile(join(ctx.dir, 'transcript.jsonl'), '');
@@ -38,12 +38,12 @@ test('it denies a source edit until the code-style skill is loaded', async () =>
     hookSpecificOutput: {
       hookEventName: 'PreToolUse',
       permissionDecision: 'deny',
-      permissionDecisionReason: `Load the \`code-style\` skill with the Skill tool before editing ${join(ctx.repoDir, 'libs/core/utils/src/index.ts')}, then retry the edit. Change a gated path only with Edit, Write or MultiEdit, never through Bash. .claude/skill-gate.json lists the skills each path needs.`,
+      permissionDecisionReason: `Load the \`code-style\` and \`project-code-style\` skills with the Skill tool before editing ${join(ctx.repoDir, 'libs/core/utils/src/index.ts')}, then retry the edit. Change a gated path only with Edit, Write or MultiEdit, never through Bash. .claude/skill-gate.json lists the skills each path needs.`,
     },
   });
 });
 
-test('it allows a source edit once the code-style skill is loaded', async () => {
+test('it allows a source edit once both code-style skills are loaded', async () => {
   const ctx = await setupTest();
 
   await writeFile(
@@ -51,6 +51,8 @@ test('it allows a source edit once the code-style skill is loaded', async () => 
     [
       '{"type":"assistant","message":{"content":[{"type":"tool_use","id":"toolu_1","name":"Skill","input":{"skill":"code-style"}}]}}',
       '{"type":"user","message":{"content":[{"type":"tool_result","tool_use_id":"toolu_1","content":"Launching skill: code-style"}]}}',
+      '{"type":"assistant","message":{"content":[{"type":"tool_use","id":"toolu_1p","name":"Skill","input":{"skill":"project-code-style"}}]}}',
+      '{"type":"user","message":{"content":[{"type":"tool_result","tool_use_id":"toolu_1p","content":"Launching skill: project-code-style"}]}}',
     ].join('\n'),
   );
 
@@ -68,7 +70,7 @@ test('it allows a source edit once the code-style skill is loaded', async () => 
   expect(result.stdout).toBe('');
 });
 
-test('it denies a test file edit until code-style, testing and project-testing are loaded', async () => {
+test('it denies a test file edit until both code-style skills, testing and project-testing are loaded', async () => {
   const ctx = await setupTest();
 
   await writeFile(join(ctx.dir, 'transcript.jsonl'), '');
@@ -89,7 +91,7 @@ test('it denies a test file edit until code-style, testing and project-testing a
     hookSpecificOutput: {
       hookEventName: 'PreToolUse',
       permissionDecision: 'deny',
-      permissionDecisionReason: `Load the \`code-style\`, \`testing\` and \`project-testing\` skills with the Skill tool before editing ${join(ctx.repoDir, 'libs/core/utils/src/a.test.ts')}, then retry the edit. Change a gated path only with Edit, Write or MultiEdit, never through Bash. .claude/skill-gate.json lists the skills each path needs.`,
+      permissionDecisionReason: `Load the \`code-style\`, \`project-code-style\`, \`testing\` and \`project-testing\` skills with the Skill tool before editing ${join(ctx.repoDir, 'libs/core/utils/src/a.test.ts')}, then retry the edit. Change a gated path only with Edit, Write or MultiEdit, never through Bash. .claude/skill-gate.json lists the skills each path needs.`,
     },
   });
 });
@@ -102,6 +104,8 @@ test('it denies a test file edit with only the testing skill loaded', async () =
     [
       '{"type":"assistant","message":{"content":[{"type":"tool_use","id":"toolu_1","name":"Skill","input":{"skill":"code-style"}}]}}',
       '{"type":"user","message":{"content":[{"type":"tool_result","tool_use_id":"toolu_1","content":"Launching skill: code-style"}]}}',
+      '{"type":"assistant","message":{"content":[{"type":"tool_use","id":"toolu_1p","name":"Skill","input":{"skill":"project-code-style"}}]}}',
+      '{"type":"user","message":{"content":[{"type":"tool_result","tool_use_id":"toolu_1p","content":"Launching skill: project-code-style"}]}}',
       '{"type":"assistant","message":{"content":[{"type":"tool_use","id":"toolu_2","name":"Skill","input":{"skill":"testing"}}]}}',
       '{"type":"user","message":{"content":[{"type":"tool_result","tool_use_id":"toolu_2","content":"Launching skill: testing"}]}}',
     ].join('\n'),
@@ -130,7 +134,7 @@ test('it denies a test file edit with only the testing skill loaded', async () =
   });
 });
 
-test('it allows a test file edit once both testing skills and code-style are loaded', async () => {
+test('it allows a test file edit once both testing skills and both code-style skills are loaded', async () => {
   const ctx = await setupTest();
 
   await writeFile(
@@ -138,6 +142,8 @@ test('it allows a test file edit once both testing skills and code-style are loa
     [
       '{"type":"assistant","message":{"content":[{"type":"tool_use","id":"toolu_1","name":"Skill","input":{"skill":"code-style"}}]}}',
       '{"type":"user","message":{"content":[{"type":"tool_result","tool_use_id":"toolu_1","content":"Launching skill: code-style"}]}}',
+      '{"type":"assistant","message":{"content":[{"type":"tool_use","id":"toolu_1p","name":"Skill","input":{"skill":"project-code-style"}}]}}',
+      '{"type":"user","message":{"content":[{"type":"tool_result","tool_use_id":"toolu_1p","content":"Launching skill: project-code-style"}]}}',
       '{"type":"assistant","message":{"content":[{"type":"tool_use","id":"toolu_2","name":"Skill","input":{"skill":"testing"}}]}}',
       '{"type":"user","message":{"content":[{"type":"tool_result","tool_use_id":"toolu_2","content":"Launching skill: testing"}]}}',
       '{"type":"assistant","message":{"content":[{"type":"tool_use","id":"toolu_3","name":"Skill","input":{"skill":"project-testing"}}]}}',
@@ -167,6 +173,8 @@ test('it gates a lifecycle package on the game-lifecycle skill as well', async (
     [
       '{"type":"assistant","message":{"content":[{"type":"tool_use","id":"toolu_1","name":"Skill","input":{"skill":"code-style"}}]}}',
       '{"type":"user","message":{"content":[{"type":"tool_result","tool_use_id":"toolu_1","content":"Launching skill: code-style"}]}}',
+      '{"type":"assistant","message":{"content":[{"type":"tool_use","id":"toolu_1p","name":"Skill","input":{"skill":"project-code-style"}}]}}',
+      '{"type":"user","message":{"content":[{"type":"tool_result","tool_use_id":"toolu_1p","content":"Launching skill: project-code-style"}]}}',
     ].join('\n'),
   );
 
@@ -276,7 +284,7 @@ test('it gates authored source in the styled-system package', async () => {
     hookSpecificOutput: {
       hookEventName: 'PreToolUse',
       permissionDecision: 'deny',
-      permissionDecisionReason: `Load the \`code-style\` skill with the Skill tool before editing ${join(ctx.repoDir, 'libs/design/styled-system/panda.config.ts')}, then retry the edit. Change a gated path only with Edit, Write or MultiEdit, never through Bash. .claude/skill-gate.json lists the skills each path needs.`,
+      permissionDecisionReason: `Load the \`code-style\` and \`project-code-style\` skills with the Skill tool before editing ${join(ctx.repoDir, 'libs/design/styled-system/panda.config.ts')}, then retry the edit. Change a gated path only with Edit, Write or MultiEdit, never through Bash. .claude/skill-gate.json lists the skills each path needs.`,
     },
   });
 });

@@ -62,8 +62,10 @@ looks like a contradiction of the docs, and the docs are right.
   [`updateReplayBackoff`](../../../services/replay/src/queue/update-replay-backoff.ts), and the
   verifier skips it until then.
 - **The client mints an activity start, and the server admits it.** The server mints continuation
-  rows on the offline catch-up path, which `advanceActivity` also owns, and chain rows at node
-  reveal, so `mint` in a server handler names one of those and never an activity start.
+  rows on the offline catch-up path, which
+  [`advanceActivity`](../../../services/activity/src/handlers/advance-activity.ts) also owns, and
+  chain rows at node reveal, so `mint` in a server handler names one of those and never an activity
+  start.
 
 ## Reading order
 

@@ -5,8 +5,8 @@ Status. An issue labelled `upkeep`, `dep-outdated`, or `dep-audit` has no board 
 only its labels count. A filing agent prepares the labels and the body and stops there; the rest of
 this role is yours. Triage every untriaged issue in the same cycle you find it.
 
-1. Labels. One `area/*` label and one type label. The type set is the `TYPE_LABELS` list in
-   [`check-issue.ts`](../../../../scripts/src/issue-hygiene/check-issue.ts); `ux`, `security`,
+1. Labels. One `area/*` label and one type label. The type set is the
+   [`TYPE_LABELS`](../../../../scripts/src/issue-hygiene/check-issue.ts) list; `ux`, `security`,
    `easy win`, `tech-debt`, and `rebuild` are qualifiers, not types.
 2. Milestone. An open increment only when its done test needs this issue; the side lane when the
    owner does the work by hand; otherwise none.
