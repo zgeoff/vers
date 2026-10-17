@@ -12,3 +12,8 @@
 
 # Collapse codegen output in diffs; review bots skip linguist-generated files
 /libs/data/db/src/schema.generated.ts linguist-generated
+
+# Third-party agent skills, kept as published; the skill checks skip them
+.claude/skills/neon-postgres/** linguist-vendored
+.claude/skills/neon-postgres-branches/** linguist-vendored
+.claude/skills/neon-postgres-egress-optimizer/** linguist-vendored

@@ -3,10 +3,12 @@
 Write issues from a source: an epic, a merged design note, an audit finding, or an owner ask. Cut on
 ask, or on yes to a split proposal.
 
-1. Read the source and the architecture doc for its area named in AGENTS.md.
+1. Read the source and the architecture doc for its area named in
+   [AGENTS.md](../../../../AGENTS.md).
 2. Cut one issue per outcome a build agent delivers in one PR. An outcome that needs two PRs is two
    issues joined by an edge.
-3. Write the body to its template under `.github/ISSUE_TEMPLATE/`. A feature carries the lead
+3. Write the body to its template under
+   [`.github/ISSUE_TEMPLATE/`](../../../../.github/ISSUE_TEMPLATE/). A feature carries the lead
    paragraph, a Player story when a player perceives it, Scope as outcomes, Approach (unverified),
    and Notes. A bug carries Observed, Expected, Repro, and Notes. The title is a lowercase phrase
    naming the outcome, with no type prefix, because the label carries the type.

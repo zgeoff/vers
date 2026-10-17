@@ -3,15 +3,24 @@
 React code renders under React Testing Library (RTL) on happy-dom, and the test drives it the way a
 user does: it finds elements by what a user perceives, interacts through `userEvent`, and asserts on
 what the user sees or on the store the interaction changes. Server data arrives through the MSW
-handlers in [HTTP mocking](./http.md), never through stubbed hooks. The [testing skill](../SKILL.md)
-rules on setup, data, and assertions apply throughout.
+handlers that the [HTTP mocking](../SKILL.md#references) reference describes, never through stubbed
+hooks. The [testing skill](../SKILL.md) rules on setup, data, and assertions apply throughout.
+
+- [Preloads](#preloads)
+- [Rendering](#rendering)
+- [Queries](#queries)
+- [Interactions](#interactions)
+- [Store state](#store-state)
+- [Hooks with changing input](#hooks-with-changing-input)
+- [Routing](#routing)
+- [Server functions in TanStack Start](#server-functions-in-tanstack-start)
 
 ## Preloads
 
 `@zgeoff/bun-test-react` registers happy-dom with Bun's own fetch stack kept, loads the jest-dom
 matchers, and after each test unmounts every rendered tree and then resets every zustand store. List
-its preloads in this order in `bunfig.toml`, because the zustand wrapper must load before any store
-is created:
+its preloads in this order in [`bunfig.toml`](../../../../bunfig.toml), because the zustand wrapper
+must load before any store is created:
 
 ```toml
 [test]

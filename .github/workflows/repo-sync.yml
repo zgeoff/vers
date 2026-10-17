@@ -18,10 +18,10 @@ jobs:
   sync:
     permissions:
       contents: read
-    uses: zgeoff/tools/.github/workflows/repo-sync.yml@sync-v1
+    uses: zgeoff/tools/.github/workflows/repo-sync.yml@sync-v2
     with:
       skip: agents, pr-template, editorconfig
-      include: skill-testing, hook-skill-gate, skill-docs-writing
+      include: skill-testing, hook-skill-gate, skill-docs-writing, skill-code-style, skill-skill-writing
     secrets:
       REPO_SYNC_APP_CLIENT_ID: ${{ secrets.REPO_SYNC_APP_CLIENT_ID }}
       REPO_SYNC_APP_PRIVATE_KEY: ${{ secrets.REPO_SYNC_APP_PRIVATE_KEY }}

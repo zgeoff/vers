@@ -25,6 +25,13 @@ to anything that can reach port 9223 from the firewall rule's private range. The
 a dedicated empty profile and never the daily one, and the bridge is torn down when a debugging
 session ends.
 
+- [Bridge the debug port](#bridge-the-debug-port-one-time): a Windows port proxy and a firewall rule
+  scoped to the whole WSL private range.
+- [Launch the debug browser](#launch-the-debug-browser): a fresh Chrome on its own empty profile,
+  then verify the bridge from WSL.
+- [Connect](#connect): a session started while the bridge is up connects on its own.
+- [Teardown](#teardown): remove the proxy and the rule when the debugging session ends.
+
 ## Bridge the debug port (one-time)
 
 1. Forward a WSL-reachable port to Chrome's loopback-bound one — PowerShell as administrator:

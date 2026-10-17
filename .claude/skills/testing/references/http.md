@@ -7,6 +7,14 @@ Per-test handlers exist only for what the store cannot express. The [testing ski
 rules on setup, data, and assertions apply throughout. Real application and native transport cases
 follow [Real applications and transport](../SKILL.md#real-applications-and-transport).
 
+- [The server and its lifecycle](#the-server-and-its-lifecycle)
+- [Stateful handlers](#stateful-handlers)
+- [Per-test handlers](#per-test-handlers)
+- [A mock API shared across packages](#a-mock-api-shared-across-packages)
+- [RPC contracts](#rpc-contracts)
+- [Queues and other stateful services](#queues-and-other-stateful-services)
+- [Auth tokens](#auth-tokens)
+
 ## The server and its lifecycle
 
 - Each package has one MSW server, `setupServer(...handlers)`, exported from `mocks/node.ts`. The
@@ -47,7 +55,8 @@ operations, and relationships use `@msw/data` collections.
   them.
 - Each collection takes its shape from a zod schema (`new Collection({ schema })`). Every field in
   the schema has a `.default()`, using faker where the value is arbitrary. The one exception is a
-  discriminator whose value gives a record its meaning. A `.create()` call never restates a default.
+  discriminator whose value gives a record its meaning. Nested fields count as fields. A `.create()`
+  call never restates a default.
 - `@msw/data`'s `factory()` model dictionary never appears.
 - A handler takes its response type from the production contract, so a change to the real API breaks
   the mock at typecheck.
@@ -57,10 +66,14 @@ operations, and relationships use `@msw/data` collections.
 `server.use(...)` in a test adds a handler for one of two reasons:
 
 - **A deviation** that the store cannot express: an error status, a transport failure, a malformed
-  payload, or a scripted sequence such as a failure followed by a success. An `if` inside such a
-  handler scripts the remote side, and it is not branching in the test.
+  payload, or a scripted sequence such as a failure followed by a success.
 - **Capturing input.** The handler feeds an inline `mock()`, and the test asserts it with the mock
   matchers.
+
+A per-test handler holds data, as the stand-in rule in the [testing skill](../SKILL.md#test-data)
+defines it: a fixed response, a response read from an answer table by one request parameter, an
+input it captures, parsed or not, or the next answer from the tested answer-queue util. Any other
+response that depends on the request belongs in the default handlers.
 
 ```ts
 const received = mock<(input: unknown) => void>();
@@ -103,12 +116,17 @@ list and runs the lifecycle in its own preload.
 
 ## RPC contracts
 
-A contract module's suite has three parts:
+A contract module's suite has up to three parts:
 
 1. Each procedure's error map holds the codes it declares, asserted with `toContainAllKeys`.
 2. Each custom error code has an explicit assertion of its HTTP status.
 3. A closing test generates the OpenAPI document from the contract, which proves the contract and
    its schema converters produce one.
+
+Part 3 applies only when the repo commits, serves, or publishes an OpenAPI document built from the
+contract. When the repo commits the document, the closing test compares the regenerated document
+with the committed file, as the [testing skill's assertions](../SKILL.md#assertions) describe.
+Otherwise it asserts that generation resolves.
 
 ## Queues and other stateful services
 

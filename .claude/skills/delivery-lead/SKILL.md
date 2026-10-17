@@ -17,9 +17,40 @@ This skill is iterative. When a rule here produces a wrong edit or a proposal th
 declining, say so in Report and propose the rule change; the Improve the process role carries it
 into a PR.
 
-Load the role file under `roles/` before performing that role; this file carries only what every
-role needs. Board identifiers and every query and mutation live in `reference/board.md`, and the
-state-of-play block Orient and Report print lives in `reference/state-of-play.md`.
+Load the role file before performing that role; this file carries only what every role needs.
+
+## Key rules
+
+- [Model](#model): an increment is a milestone with one done test, and pick order runs interrupts
+  first, then the Ready issue that blocks the most.
+- [Final state](#final-state): state lives on GitHub only, you never comment, and anything beyond
+  the listed edits is a proposal.
+- [Operating loop](#operating-loop): run Orient, Reconcile, Triage, Sequence, and Report every
+  session, then stop for the owner.
+
+## References
+
+Each role file holds one role. Load it before performing that role.
+
+- [Orient](./roles/orient.md): reads milestones, board, open issues, and recent merges into a state
+  of play.
+- [Reconcile](./roles/reconcile.md): corrects board drift against issue and PR state.
+- [Triage](./roles/triage.md): labels, milestone, edges, board, and hygiene on every untriaged
+  issue.
+- [Sequence](./roles/sequence.md): maintains edges, finds the critical path, promotes Ready.
+- [Report](./roles/report.md): the health note and the decisions the owner owes.
+- [Refine](./roles/refine.md): brings thin issues to template, splits, merges, marks
+  `needs-refinement`.
+- [Cut tickets](./roles/cut-tickets.md): writes issues and sub-issue trees from an epic, a design
+  note, or an audit.
+- [Plan the increment](./roles/plan-increment.md): done tests, what drops to backlog, what opens
+  next.
+- [Improve the process](./roles/improve-process.md): turns a repeated correction into a PR to this
+  skill or AGENTS.md.
+- [Board](./reference/board.md): the board identifiers and every query and mutation; load it with
+  any role that reads or edits GitHub state.
+- [State of play](./reference/state-of-play.md): the block Orient and Report print; load it with
+  either.
 
 ## Model
 
@@ -45,9 +76,9 @@ never a theme.
 An issue is **untriaged** when it lacks a type label, an `area/*` label, a board item, or a board
 Status. An issue labelled `upkeep`, `dep-outdated`, or `dep-audit` has no board item by design, so
 only its labels count. The agent that files an issue prepares it and never triages it; the Filing
-rules in AGENTS.md's Issue hygiene section state the filer's side, and the Triage role states yours.
-The board's sub-issue automation adds a child of an epic to the board with no Status, so a child
-arrives untriaged like any other issue.
+rules in the Issue hygiene section of [AGENTS.md](../../../AGENTS.md) state the filer's side, and
+the Triage role states yours. The board's sub-issue automation adds a child of an epic to the board
+with no Status, so a child arrives untriaged like any other issue.
 
 An **interrupt** is work that degrades what already ships or blocks every other pick, whatever
 milestone it sits in: a red `main`, an open bug, an audit advisory, a fired upkeep trigger, a
@@ -83,7 +114,8 @@ edges, sub-issue links, and body rewrites that bring an issue to its template wi
 scope. Everything else is a proposal: closing an issue as not planned, changing an issue's scope,
 changing a done test, dropping an item from an increment, opening or closing an increment.
 
-A label change is a PR to `infra/github.ts`. A milestone is console state, so you edit it directly.
+A label change is a PR to [`infra/github.ts`](../../../infra/github.ts). A milestone is console
+state, so you edit it directly.
 
 ## Operating loop
 
@@ -97,17 +129,3 @@ Run these roles in order every session, and stop after Report to wait for the ow
 
 Perform Refine, Cut tickets, Plan the increment, and Improve the process when the owner asks, or
 when Report names one as the next action and the owner agrees.
-
-## Roles
-
-| Role                | File                       | Does                                                                         |
-| ------------------- | -------------------------- | ---------------------------------------------------------------------------- |
-| Orient              | `roles/orient.md`          | reads milestones, board, open issues, and recent merges into a state of play |
-| Reconcile           | `roles/reconcile.md`       | corrects board drift against issue and PR state                              |
-| Triage              | `roles/triage.md`          | labels, milestone, edges, board, and hygiene on every untriaged issue        |
-| Sequence            | `roles/sequence.md`        | maintains edges, finds the critical path, promotes Ready                     |
-| Report              | `roles/report.md`          | the health note and the decisions the owner owes                             |
-| Refine              | `roles/refine.md`          | brings thin issues to template, splits, merges, marks `needs-refinement`     |
-| Cut tickets         | `roles/cut-tickets.md`     | writes issues and sub-issue trees from an epic, a design note, or an audit   |
-| Plan the increment  | `roles/plan-increment.md`  | done tests, what drops to backlog, what opens next                           |
-| Improve the process | `roles/improve-process.md` | turns a repeated correction into a PR to this skill or AGENTS.md             |

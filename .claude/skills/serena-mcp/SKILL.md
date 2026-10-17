@@ -12,7 +12,7 @@ The `serena` MCP server gives an agent language-server symbol tools over the mon
 symbol outline, a definition, its references and implementations, and diagnostics. One serena
 process serves every Claude Code session on the machine. It listens on `127.0.0.1:9121` over
 streamable HTTP, and [`.mcp.json`](../../../.mcp.json) registers it as an `http` server, so a
-session opens a connection instead of spawning its own copy. A per-session serena costs about 740MB
+session opens a connection instead of spawning its own copy. A per-session serena costs about 740 MB
 (a Python agent, two `tsserver` processes, a typings installer, and the language-server wrapper), so
 the daemon saves that much per open session.
 
@@ -24,12 +24,17 @@ to the primary checkout rather than the worktree the session works in, so the pr
 ([`.serena/context.claude-code.yml`](../../../.serena/context.claude-code.yml)) excludes the editing
 tools. Every code change goes through the built-in edit tools.
 
+- [Run the daemon](#run-the-daemon-one-time): a systemd user unit owns the daemon and its serena
+  version; ask the user before enabling it.
+- [Connect](#connect): a session started while the daemon is up connects on its own, and `/mcp`
+  reconnects a running one.
+
 ## Run the daemon (one-time)
 
 A systemd user unit runs the daemon, and user lingering starts that unit at boot instead of at first
-login. The unit is the serena version's owner: `.mcp.json` carries no pin because it only names the
-URL. In the unit, `<checkout_path>` is the primary checkout's absolute path, the same value in both
-places, and `<uvx_path>` is what `command -v uvx` prints.
+login. The unit is the serena version's owner: [`.mcp.json`](../../../.mcp.json) carries no pin
+because it only names the URL. In the unit, `<checkout_path>` is the primary checkout's absolute
+path, the same value in both places, and `<uvx_path>` is what `command -v uvx` prints.
 
 The two commands below persist the daemon across logout and reboot on this machine. Run them only
 after the user agrees to that.
@@ -81,5 +86,5 @@ The daemon reads the project and context files at startup, so a change to either
 
 A Claude Code session started while the daemon is up connects on its own; in a running session,
 `/mcp` reconnects the server. The working-state check is `get_symbols_overview` answering for any
-TypeScript file. The tool list holds lookups only: `find_symbol`, `find_referencing_symbols`,
-`find_declaration`, `find_implementations`, `get_symbols_overview`, and `get_diagnostics_for_file`.
+TypeScript file. The tool list holds lookups only, because the context file's `excluded_tools` drops
+every editing, file, and shell tool.

@@ -13,12 +13,10 @@ both. Where the two disagree, this skill wins.
 
 ## The docs/ tree
 
-vers keeps three folders under `docs/`: `architecture/`, `runbooks/`, and one the shared tree lacks.
-It has no `decisions/`, `design/`, `guides/`, or `reference/` folder.
-
-| Folder              | Holds                                                                          |
-| ------------------- | ------------------------------------------------------------------------------ |
-| `docs/game-design/` | the game's design language and systems: what a player sees, feels, and decides |
+vers keeps three folders under `docs/`: `architecture/`, `runbooks/`, and one the shared tree lacks,
+[`docs/game-design/`](../../../docs/game-design/), which holds the game's design language and
+systems: what a player sees, feels, and decides. It has no `decisions/`, `design/`, `guides/`, or
+`reference/` folder.
 
 - **What the player sees lives in a game-design note.** An architecture doc covers how the code
   delivers it and never restates the player's experience.
@@ -32,5 +30,6 @@ It has no `decisions/`, `design/`, `guides/`, or `reference/` folder.
 
 ## The game glossary
 
-- **Game terms come from the glossary.** `docs/architecture/game/glossary.md` defines each term the
-  game docs share, once. A game doc and its diagrams use the glossary's term.
+- **Game terms come from the glossary.**
+  [`glossary.md`](../../../docs/architecture/game/glossary.md) defines each term the game docs
+  share, once. A game doc and its diagrams use the glossary's term.
