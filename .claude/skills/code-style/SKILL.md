@@ -67,6 +67,12 @@ events, guards and timers in one definition. An actor that persists part of its 
 transition table for that part. Write the table before a module that owns the state splits, so the
 modules the split creates share one copy of the rule instead of each keeping its own.
 
+## Waiting on time and events
+
+Wait on a timer with `Bun.sleep`, and on one event with `events.once`. When a caller resolves a
+promise from outside, take the parts from `Promise.withResolvers()`. Hand-build a `new Promise` only
+when none of these fits, such as an event that can also fail through a second event.
+
 ## Function naming
 
 Every function name starts with a prefix from the closed list below. The prefix is a contract — a
@@ -108,6 +114,7 @@ in its `project-code-style` skill.
 | `format`                      | value → human-readable string                                             | `formatRange`       |
 | `render`                      | structure → output text or markup                                         | `renderHunk`        |
 | `normalize`                   | variant forms → the canonical form                                        | `normalizePath`     |
+| `sanitize`                    | untrusted input → a safe form, unsafe parts stripped or escaped           | `sanitizeTitle`     |
 | `resolve`                     | follow indirection to a concrete value                                    | `resolveBinPath`    |
 | `expand`                      | compact form → full form                                                  | `expandInputs`      |
 | `compress`                    | value → its reversible compact encoding                                   | `compressGraph`     |
@@ -121,18 +128,28 @@ in its `project-code-style` skill.
 | -------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ------------------ |
 | `apply`        | perform previously planned changes                                                                                                      | `applyEdits`       |
 | `create`       | bring a resource into existence (file, directory, process)                                                                              | `createWorkDir`    |
+| `mint`         | issue a new unique token, ID or credential                                                                                              | `mintSessionToken` |
+| `open`         | acquire a handle that stays live until closed (file, socket, connection)                                                                | `openDatabase`     |
+| `dispose`      | free an object's resources so it can no longer be used                                                                                  | `disposeTerminal`  |
 | `claim`        | atomically take exclusive ownership of a work item or resource; ownership ends at commit or an explicit release                         | `claimNextChain`   |
+| `release`      | give back a hold taken earlier (a lock, a lease, a claim)                                                                               | `releaseLock`      |
+| `revoke`       | withdraw a grant (token, permission, credential) so it stops working                                                                    | `revokeToken`      |
 | `read`         | pull raw content from filesystem or network into memory                                                                                 | `readSource`       |
 | `load`         | read **and** parse into a ready structure                                                                                               | `loadConfig`       |
 | `write`        | persist to the filesystem                                                                                                               | `writeOutput`      |
 | `remove`       | delete a resource                                                                                                                       | `removeStaleDist`  |
 | `update`       | mutate existing state or resource in place                                                                                              | `updateIndex`      |
+| `refresh`      | replace cached or stale state with a fresh read                                                                                         | `refreshSessions`  |
 | `upsert`       | single-statement insert-or-update keyed by a natural or composite key, refreshing the conflicting row's columns in place                | `upsertUser`       |
 | `set`          | assign a store's named state slice wholesale — the store-setter idiom; partial mutation is `update`                                     | `setSelectedNode`  |
 | `toggle<Flag>` | invert a boolean state slice                                                                                                            | `toggleDevCamera`  |
 | `reset`        | return state to its initial value                                                                                                       | `resetCombatState` |
+| `restore`      | bring back a saved earlier state                                                                                                        | `restoreSnapshot`  |
 | `print`        | write to stdout/stderr                                                                                                                  | `printHelp`        |
+| `record`       | append an observation to a log, history or metrics store                                                                                | `recordUsage`      |
 | `run`          | execute a subprocess, task, or whole pipeline                                                                                           | `runCLI`           |
+| `spawn`        | launch a child process or task without waiting for it to end (`run` waits)                                                              | `spawnWorker`      |
+| `schedule`     | arrange work to run later or on a timer                                                                                                 | `scheduleRetry`    |
 | `check`        | evaluate and report findings; effects allowed per mode                                                                                  | `checkFile`        |
 | `try<X>`       | X with failures captured as a value instead of a throw                                                                                  | `tryCheckFile`     |
 | `register`     | add to a registry the caller doesn't own                                                                                                | `registerMatcher`  |
@@ -148,6 +165,8 @@ in its `project-code-style` skill.
 | `teardown`     | release what `setup` prepared                                                                                                           | `teardownTest`     |
 | `start`        | put a long-running resource into service (server, worker, poll loop); `stop` reverses it                                                | `startQueues`      |
 | `stop`         | take a long-running resource out of service, releasing what `start` acquired                                                            | `stopWorker`       |
+| `restart`      | stop then start a long-running resource again                                                                                           | `restartDaemon`    |
+| `advance`      | move a cursor, clock or state machine forward                                                                                           | `advanceTurn`      |
 | `drain`        | consume a pending backlog until empty                                                                                                   | `drainJobs`        |
 
 **Wrappers and factories** — the result is behaviour, not data:
