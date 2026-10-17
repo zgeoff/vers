@@ -1,0 +1,31 @@
+# repo-sync delivers this file from zgeoff/tools
+#
+# Runs the shared audit-fix step, which turns a red `bun audit` on the default
+# branch into a fix pull request, or into a pull request that records an ignore
+# with a reason and an expiry. It runs daily, by hand, and after a PR or
+# dependency-health run fails. It needs Bun 1.4.0 or newer in .bun-version and
+# the repo-sync App secrets.
+name: Audit fix
+
+on:
+  workflow_run:
+    workflows: [PR, Dependency Health, Dep Health]
+    types: [completed]
+  schedule:
+    - cron: 30 5 * * *
+  workflow_dispatch:
+
+# One run at a time; a run that queues behind it replaces any older queued run.
+concurrency:
+  group: audit-fix
+  cancel-in-progress: false
+
+jobs:
+  audit-fix:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'failure'
+    permissions:
+      contents: read
+    uses: zgeoff/tools/.github/workflows/audit-fix.yml@sync-v6
+    secrets:
+      REPO_SYNC_APP_CLIENT_ID: ${{ secrets.REPO_SYNC_APP_CLIENT_ID }}
+      REPO_SYNC_APP_PRIVATE_KEY: ${{ secrets.REPO_SYNC_APP_PRIVATE_KEY }}
