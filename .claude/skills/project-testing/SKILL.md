@@ -113,7 +113,7 @@ acts on.
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
     const rendered = renderWithRouter(<AccountScreen />);
 
-    expect(await rendered.findByText(signedIn.username)).toBeInTheDocument();
+    expect(await rendered.findByText(signedIn.user.username)).toBeInTheDocument();
   });
   ```
 
