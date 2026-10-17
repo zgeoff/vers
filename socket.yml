@@ -1,0 +1,15 @@
+# repo-sync delivers this file from zgeoff/tools; edit the source there.
+#
+# The Socket GitHub app scans a pull request only when it changes a file that
+# triggerPaths matches. The patterns follow .gitignore rules, so `**/` matches
+# the root and every folder below it. The account runs on Socket's Free plan,
+# whose monthly scan cap a scan of every pull request would pass, so only a
+# dependency or workflow change starts a scan.
+version: 2
+
+triggerPaths:
+  - '**/package.json'
+  - '**/bun.lock'
+  - '**/go.mod'
+  - '**/go.sum'
+  - '.github/workflows/**'
