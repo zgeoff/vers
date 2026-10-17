@@ -7,7 +7,6 @@ import { isAttackReady } from './is-attack-ready';
 
 export function handleTick(
   entity: Avatar,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- this behaviour's state is mutated in place via setState during the tick loop
   behaviour: AvatarWeaponAttackBehaviour,
   executor: CombatExecutor,
 ): void {

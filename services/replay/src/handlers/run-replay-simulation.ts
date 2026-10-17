@@ -11,10 +11,7 @@ import type {
 import { runSimulation } from '@vers/idle-core/replay';
 import { UnreachableCodeError } from '@vers/utils';
 
-export async function runReplaySimulation(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- input.activity/avatar are zod-inferred wire types with no readonly form
-  input: ReplaySegmentInput,
-): Promise<ReplaySegmentOutput> {
+export async function runReplaySimulation(input: ReplaySegmentInput): Promise<ReplaySegmentOutput> {
   const result = await runSimulation(toEngineActivityInput(input.activity), input.avatar, {
     duration: input.duration,
     ...(input.expectedCheckpointCount !== undefined && {
@@ -40,7 +37,6 @@ const ENGINE_FAILURE_ACTIONS: Record<
   retry: ActivityFailureAction.Retry,
 };
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- zod-inferred wire type (enemies array) has no readonly form
 function toEngineActivityInput(activity: ReplaySegmentInput['activity']): EngineActivityInput {
   return {
     ...activity,

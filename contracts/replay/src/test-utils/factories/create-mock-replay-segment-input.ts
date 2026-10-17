@@ -4,7 +4,6 @@ import { buildStateFromSeed } from '@vers/game-utils';
 import type { ReplaySegmentInput } from '../../replay-segment-input-schema';
 
 export function createMockReplaySegmentInput(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- a Partial of the mutable request seed, whose nested activity/avatar have no readonly form; spread into the returned seed, never mutated
   overrides: Partial<ReplaySegmentInput> = {},
 ): ReplaySegmentInput {
   const input: ReplaySegmentInput = {

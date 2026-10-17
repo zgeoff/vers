@@ -70,7 +70,6 @@ function buildTestContract() {
 
 type TestContract = ReturnType<typeof buildTestContract>;
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- structural map of oRPC contract procedures; framework types with no readonly form
 function buildConformingApp(contract: TestContract): ConformanceCaseApp {
   const os = implement(contract).$context<{ actingUserID: null | string }>();
 
@@ -88,7 +87,6 @@ function buildConformingApp(contract: TestContract): ConformanceCaseApp {
   return buildRPCApp(new RPCHandler(router));
 }
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- structural map of oRPC contract procedures; framework types with no readonly form
 function buildBrokenApp(contract: TestContract): ConformanceCaseApp {
   const os = implement(contract).$context<{ actingUserID: null | string }>();
 

@@ -2,7 +2,6 @@ import { faker } from '@faker-js/faker';
 import type { RevealedRewardData } from '../../lib/activity/types';
 
 export function createMockRevealedReward(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- overrides spread into the mutable wire shape mock handlers must return; a readonly form cannot
   overrides: Partial<RevealedRewardData> = {},
 ): RevealedRewardData {
   return {

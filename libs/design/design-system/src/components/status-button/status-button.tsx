@@ -54,7 +54,6 @@ const hideButtonContent = css({
   transform: 'translateY(200%)',
 });
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- the polymorphic props type composes through Omit<>, which resolves to a concrete DOM attribute type with no readonly form and no allow-list match once the element type argument is fixed
 export function StatusButton(props: Readonly<Props>) {
   const { children, ...restProps } = props;
 

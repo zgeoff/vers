@@ -37,10 +37,7 @@ interface RunResyncOptions {
   readonly submitter: CheckpointSubmitter;
 }
 
-export async function runResync(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- carries a callback-bearing submitter handle and client, neither of which has a readonly form
-  options: Readonly<RunResyncOptions>,
-): Promise<ResyncResult> {
+export async function runResync(options: Readonly<RunResyncOptions>): Promise<ResyncResult> {
   const first = await readLatestProgress(options);
 
   if (first === null) {
@@ -126,7 +123,6 @@ export async function runResync(
 }
 
 async function readLatestProgress(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- carries a callback-bearing client handle, which has no readonly form
   options: Readonly<RunResyncOptions>,
 ): Promise<LatestActivityProgress | null> {
   const callOptions = options.signal === undefined ? undefined : { signal: options.signal };
@@ -147,7 +143,6 @@ async function readLatestProgress(
 }
 
 async function drainQueuedCheckpoints(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- a callback-bearing submitter handle, which has no readonly form
   submitter: CheckpointSubmitter,
   progress: Readonly<LatestActivityProgress>,
 ): Promise<boolean> {

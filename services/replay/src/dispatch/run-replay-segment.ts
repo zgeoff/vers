@@ -34,7 +34,6 @@ export type RunReplaySegmentOutcome =
 
 export async function runReplaySegment(
   deps: Readonly<RunReplaySegmentDeps>,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- job carries zod-inferred wire types with no readonly form
   job: ReplaySegmentInput,
 ): Promise<RunReplaySegmentOutcome> {
   if (job.simVersion === deps.simVersion) {
@@ -71,7 +70,6 @@ const DEFAULT_PROVIDER_DISPATCH_TIMEOUT_MS = 15_000;
 async function sendProviderReplaySegment(
   deps: Readonly<RunReplaySegmentDeps>,
   providerURL: string,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- job carries zod-inferred wire types with no readonly form
   job: ReplaySegmentInput,
 ): Promise<ReplaySegmentOutput> {
   const token = await createServiceToken({

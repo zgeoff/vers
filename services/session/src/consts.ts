@@ -1,8 +1,9 @@
-export const ACCESS_TOKEN_DURATION = 15 * 60 * 1000; // 15 minutes
+const MINUTE_MS = 60 * 1000;
+const HOUR_MS = 60 * MINUTE_MS;
+const DAY_MS = 24 * HOUR_MS;
 
-export const SESSION_DURATION_SHORT = 24 * 60 * 60 * 1000; // 24 hours
-
-export const SESSION_DURATION_LONG = 7 * 24 * 60 * 60 * 1000; // 7 days
-
+export const ACCESS_TOKEN_DURATION = 15 * MINUTE_MS;
+export const SESSION_DURATION_SHORT = 24 * HOUR_MS;
+export const SESSION_DURATION_LONG = 7 * DAY_MS;
 export const MAX_TRANSACTION_ATTEMPTS = 5;
-export const PENDING_TRANSACTION_TTL = 5 * 60 * 1000; // 5 minutes
+export const PENDING_TRANSACTION_TTL = 5 * MINUTE_MS;

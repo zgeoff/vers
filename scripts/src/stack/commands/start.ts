@@ -7,7 +7,6 @@ export interface StartOptions {
   forceRecreate?: boolean;
 }
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- baseline(#236)
 export async function start(service?: ServiceID, options?: StartOptions): Promise<void> {
   const args = [];
 

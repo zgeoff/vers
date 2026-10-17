@@ -15,7 +15,6 @@ interface ReplaySegmentOpts {
 
 export function replaySegment(
   deps: ReplaySegmentDeps,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- input.activity/avatar are zod-inferred wire types with no readonly form
   opts: ReplaySegmentOpts,
 ): Promise<ReplaySegmentOutput> {
   if (opts.input.simVersion !== deps.simVersion) {

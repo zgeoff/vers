@@ -114,7 +114,6 @@ interface AdvanceRateLimitWindowOptions {
   readonly windows: Map<string, RateLimitWindow>;
 }
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- the windows map is mutated on every call (recording each window's count/reset), and ReadonlyMap has no `.set()`
 function advanceRateLimitWindow(options: AdvanceRateLimitWindowOptions): RateLimitWindow {
   const existing = options.windows.get(options.key);
 
@@ -135,7 +134,6 @@ function advanceRateLimitWindow(options: AdvanceRateLimitWindowOptions): RateLim
   return existing;
 }
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- the sweep deletes from the windows map in place, and ReadonlyMap has no `.delete()`
 function sweepExpiredWindows(windows: Map<string, RateLimitWindow>, now: number): void {
   for (const [key, window] of windows) {
     if (window.resetAt <= now) {

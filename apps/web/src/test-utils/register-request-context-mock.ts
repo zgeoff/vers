@@ -85,7 +85,6 @@ function requireContext(): RequestContextState {
   return current;
 }
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- the stub session store's Map is deliberately mutable; that mutability is the point of this test double
 function findOrCreateSession(state: RequestContextState, name: string): StubSession {
   const existing = state.sessions.get(name);
 

@@ -138,240 +138,6 @@
     "typescript/no-unsafe-member-access": "error",
     "typescript/no-unsafe-type-assertion": "error",
     "typescript/prefer-nullish-coalescing": "error",
-    // `lib-idle-core`/`lib-worldmap-core` tick/lifecycle handlers mutate their
-    // entity parameter in place by design -- those sites carry a real reason
-    // instead of a baseline marker (see the sim-core exception noted where
-    // they occur).
-    //
-    // `allow` exempts framework/library handles per-arg: readonly is
-    // semantically wrong for a live mutable handle (a db client, an HTTP app,
-    // a test container), so only params whose *type* matches are exempted --
-    // a data param on the same function is still checked. New code marks its
-    // own data/config/props types `readonly` rather than suppressing; this
-    // list is for the handles it can't (#265).
-    "typescript/prefer-readonly-parameter-types": [
-      "error",
-      {
-        "ignoreInferredTypes": true,
-        "allow": [
-          { "from": "package", "name": "Kysely", "package": "kysely" },
-          { "from": "package", "name": "DatabaseConnection", "package": "kysely" },
-          // a live three.js GPU texture handle: upload state and dispose lifecycle, no readonly
-          // form
-          { "from": "package", "name": "DataTexture", "package": "three" },
-          // a live three.js geometry handle: attribute buffers rewritten in place, no readonly
-          // form
-          { "from": "package", "name": "BufferGeometry", "package": "three" },
-          // a live three.js WebGPU node-material handle: shader graph and GPU pipeline state, no
-          // readonly form
-          { "from": "package", "name": "MeshBasicNodeMaterial", "package": "three" },
-          // a live three.js renderer handle: GPU backend and canvas state, no readonly form
-          { "from": "package", "name": "WebGPURenderer", "package": "three" },
-          // a query-log event: its `query` field is Kysely's internal operation-node AST, built
-          // and read by Kysely itself with no readonly form
-          { "from": "package", "name": "LogEvent", "package": "kysely" },
-          // a live playwright page handle: driver connection and event state, no readonly form
-          { "from": "package", "name": "Page", "package": "playwright-core" },
-          // a live playwright test-run handle: attachments and annotations appended over the
-          // test's life, no readonly form
-          { "from": "package", "name": "TestInfo", "package": "playwright" },
-          // a live kysely transaction handle: same mutable connection state as Kysely above
-          { "from": "package", "name": "Transaction", "package": "kysely" },
-          // a driver's connection-pool handle: structurally a set of method signatures, same as
-          // KyselyTransactionLike below
-          { "from": "package", "name": "Driver", "package": "kysely" },
-          // a live kysely-postgres-js dialect handle: wraps a postgres.js Sql client, no readonly
-          // form
-          { "from": "package", "name": "PostgresJSDialect", "package": "kysely-postgres-js" },
-          // a live pg-boss client handle: connection pool and event emitter state, no readonly form
-          { "from": "package", "name": "PgBoss", "package": "pg-boss" },
-          // structurally a single method signature, which the rule's default settings treat as
-          // mutable (typescript-eslint#8013), same as ReadonlySet below
-          { "from": "package", "name": "KyselyTransactionLike", "package": "pg-boss" },
-          { "from": "package", "name": "Logger", "package": "pino" },
-          // a pino write sink: its single `write` method is behaviour, not data; no readonly form
-          { "from": "package", "name": "DestinationStream", "package": "pino" },
-          // the router instance: a live handle carrying match/history/cache state it mutates
-          // internally on every navigation, so it has no useful readonly form
-          { "from": "package", "name": "AnyRouter", "package": "@tanstack/router-core" },
-          // the router hands the boundary a live error/reset pair; its `info` member is a
-          // mutable React structure with no readonly form
-          { "from": "package", "name": "ErrorComponentProps", "package": "@tanstack/router-core" },
-          // a live query-cache handle: cache contents and subscriptions the client rewrites
-          // internally, no readonly form
-          { "from": "package", "name": "QueryClient", "package": "@tanstack/query-core" },
-          // one query's cache record: every field is rewritten in place as the query fetches and
-          // resolves, so it has no readonly form
-          { "from": "package", "name": "QueryState", "package": "@tanstack/query-core" },
-          {
-            "from": "package",
-            "name": "StartedPostgreSqlContainer",
-            "package": "@testcontainers/postgresql"
-          },
-          // a live postgres.js client handle: connection pool state, no readonly form
-          { "from": "package", "name": "Sql", "package": "postgres" },
-          {
-            "from": "package",
-            "name": ["AnyContractRouter", "AnyContractProcedure"],
-            "package": "@orpc/contract"
-          },
-          {
-            "from": "package",
-            "name": ["RPCHandler", "FetchHandler"],
-            "package": "@orpc/server"
-          },
-          // a structural MessagePort union: no readonly form, the same DOM callback shape as
-          // MessagePort/EventListenerOrEventListenerObject below
-          { "from": "package", "name": "SupportedMessagePort", "package": "@orpc/client" },
-          // an Error subclass: the same mutable message/stack state as lib Error below
-          { "from": "package", "name": "ORPCError", "package": "@orpc/client" },
-          { "from": "package", "name": "SetupServer", "package": "msw" },
-          // a response resolver's request context: wraps the live fetch Request; no readonly form
-          { "from": "package", "name": "ResponseResolverInfo", "package": "msw" },
-          { "from": "package", "name": "Collection", "package": "@msw/data" },
-          // a live actor handle: subscription and mailbox state xstate mutates internally, no
-          // readonly form
-          { "from": "package", "name": ["ActorRef", "ActorRefFromLogic"], "package": "xstate" },
-          // an actor clock handle: its setTimeout/clearTimeout methods are behaviour, not data
-          { "from": "package", "name": "Clock", "package": "xstate" },
-          // a live IndexedDB handle: createObjectStore/transaction mutate it, no readonly form
-          { "from": "package", "name": "IDBPDatabase", "package": "idb" },
-          // a live IndexedDB versionchange transaction handle: clears and rewrites stores in place,
-          // no readonly form
-          { "from": "package", "name": "IDBPTransaction", "package": "idb" },
-          {
-            "from": "package",
-            "name": ["CryptoKey", "Request", "Response", "AbortSignal"],
-            "package": "@types/node"
-          },
-          {
-            "from": "lib",
-            "name": [
-              "Request",
-              "Response",
-              "Date",
-              "Error",
-              "Headers",
-              "FormData",
-              "HTMLFormElement",
-              "Event",
-              "MessageEvent",
-              "MessagePort",
-              "EventListenerOrEventListenerObject",
-              "SharedWorker",
-              "Uint8Array",
-              "URL",
-              "KeyboardEvent",
-              "MouseEvent",
-              // a live cancellation handle: addEventListener/aborted state, no readonly form
-              "AbortSignal",
-              // the mutable handle behind AbortSignal above: its whole purpose is the `abort()`
-              // call, so it has no readonly form either
-              "AbortController",
-              // genuinely immutable, but its members are method signatures, which the
-              // rule's default settings treat as mutable (typescript-eslint#8013)
-              "ReadonlySet",
-              "ReadonlyMap",
-              // settles exactly once and exposes only method signatures — the same
-              // typescript-eslint#8013 limitation as ReadonlySet/ReadonlyMap above
-              "Promise"
-            ]
-          },
-          // zustand's own generic callback type; it has no readonly form
-          { "from": "package", "name": "StateCreator", "package": "zustand" },
-          { "from": "package", "name": "ReactNode", "package": "react" },
-          { "from": "package", "name": "SyntheticEvent", "package": "react" },
-          { "from": "package", "name": "ElementType", "package": "react" },
-          { "from": "package", "name": "ChangeEvent", "package": "react" },
-          // a ref's entire purpose is its mutable `.current` slot, so it has
-          // no useful readonly form
-          { "from": "package", "name": "RefObject", "package": "react" },
-          {
-            "from": "package",
-            "name": ["SVGProps", "InputHTMLAttributes", "LabelHTMLAttributes", "HTMLAttributes"],
-            "package": "react"
-          },
-          { "from": "package", "name": "ZodError", "package": "zod" },
-          // a schema's validation/refinement methods, no readonly form
-          { "from": "package", "name": "ZodType", "package": "zod" },
-          { "from": "package", "name": "JWTPayload", "package": "jose" },
-          { "from": "package", "name": "SubmissionResult", "package": "@conform-to/dom" },
-          { "from": "package", "name": "Context", "package": "hono" },
-          { "from": "package", "name": "PostgresError", "package": "postgres" },
-          // stateful factory-return handle: getInt/getSeries/generateNewSeed
-          // close over a mutable seed, so there is no readonly form to consume
-          { "from": "file", "name": "RNG", "path": "../game-utils/src/types.ts" },
-          // three.js scene-graph handles: mutated in place every frame
-          // (position/rotation writes, matrix updates) by design, so no
-          // readonly form of them is useful to a caller
-          {
-            "from": "package",
-            "name": ["Object3D", "Mesh", "PerspectiveCamera", "OrthographicCamera"],
-            "package": "three"
-          },
-          // r3f pointer event: intersects a live DOM PointerEvent, which has
-          // no readonly form
-          { "from": "package", "name": "ThreeEvent", "package": "@react-three/fiber" },
-          // idle-core's live domain objects are mutable handles: entities and
-          // the simulation own internal state that tick/lifecycle code drives
-          // through mutation methods (receiveDamage, setState, scheduleEvent),
-          // and the *Data seeds are mutated in place during setup -- none has a
-          // readonly form a caller can consume, so they are exempted by type
-          {
-            "from": "file",
-            "name": [
-              "ActivityInput",
-              "ActivitySnapshot",
-              "WorldMapEncounterActivityInput",
-              "Activity"
-            ],
-            "path": "../idle-core/src/types/activity.ts"
-          },
-          // from-file paths resolve against the consuming package's directory, so
-          // consumers outside libs/game/ need their own entry per depth
-          {
-            "from": "file",
-            "name": [
-              "ActivityInput",
-              "ActivitySnapshot",
-              "WorldMapEncounterActivityInput",
-              "Activity"
-            ],
-            "path": "../../libs/game/idle-core/src/types/activity.ts"
-          },
-          {
-            "from": "file",
-            "name": ["AvatarData", "EnemyData", "Avatar", "Enemy", "Wave"],
-            "path": "../idle-core/src/types/entities.ts"
-          },
-          {
-            "from": "file",
-            "name": ["AvatarData", "EnemyData", "Avatar", "Enemy", "Wave"],
-            "path": "../../libs/game/idle-core/src/types/entities.ts"
-          },
-          {
-            "from": "file",
-            "name": ["Simulation", "SimulationContext", "SimulationDriver"],
-            "path": "../idle-core/src/types/simulation.ts"
-          },
-          {
-            "from": "file",
-            "name": ["Simulation", "SimulationContext", "SimulationDriver"],
-            "path": "../../libs/game/idle-core/src/types/simulation.ts"
-          },
-          {
-            "from": "file",
-            "name": ["ActivityExecutor", "CombatExecutor"],
-            "path": "../idle-core/src/types/combat.ts"
-          },
-          {
-            "from": "file",
-            "name": ["Behaviour", "AvatarBehaviour", "EnemyBehaviour"],
-            "path": "../idle-core/src/types/behaviour.ts"
-          }
-        ]
-      }
-    ],
     "typescript/prefer-regexp-exec": "error",
     "typescript/require-await": "error",
     "typescript/return-await": "error",
@@ -400,25 +166,9 @@
     // forcing the `/u` flag on every regex (including simple literals in
     // assertions and matchers) is broader than this repo wants
     "require-unicode-regexp": "off",
-    // arbitrary size/complexity caps this repo has never enforced —
-    // simulation and rendering code legitimately runs long
-    "max-statements": "off",
-    "max-lines-per-function": "off",
-    "max-lines": "off",
-    "max-params": "off",
-    "import/max-dependencies": "off",
-    // inline comments and `continue` are normal control flow here, not
-    // smells
-    "no-inline-comments": "off",
-    "no-continue": "off",
-    "init-declarations": "off",
-    // sequential awaits inside a loop are intentional in conformance-test
-    // iteration and simulation stepping
-    "no-await-in-loop": "off",
     // low-level worker/message-port wrapping needs a bare `new Promise`
     // executor with an early-return
     "no-promise-executor-return": "off",
-    "promise/avoid-new": "off",
     // false-positives on fluent builder call chains (oRPC's
     // `os.getThing.handler(...)`)
     "new-cap": "off",
@@ -456,12 +206,36 @@
       }
     },
     {
-      "files": ["**/schema.generated.ts"],
-      // kysely-codegen emits inline `import()` type annotations and a JSDoc header; the file is
-      // generated, so the style rules have nothing to teach it
+      // files over 500 non-blank lines, until GEO-1202 splits them
+      "files": [
+        "**/libs/game/idle-client/src/worker/worker-lifecycle-machine.ts",
+        "**/scripts/src/bin/deploy.ts",
+        "**/services/activity/src/handlers/advance-activity.ts",
+        "**/services/replay/src/worker/run-replay-target.ts"
+      ],
       "rules": {
-        "typescript/consistent-type-imports": "off",
-        "zgeoff/no-jsdoc": "off"
+        "max-lines": "off"
+      }
+    },
+    {
+      // functions with more than 4 parameters, until GEO-1203 reshapes them
+      "files": [
+        "**/apps/web/src/routes/-game/use-seed-prefetch.ts",
+        "**/libs/game/idle-client/src/worker/run-resync-flow.ts",
+        "**/libs/game/idle-client/src/worker/worker-lifecycle-machine.ts",
+        "**/libs/game/idle-core/src/core/utils/create-progress-checkpoint.ts",
+        "**/libs/game/worldmap-client/src/state/set-world-region.ts",
+        "**/libs/game/worldmap-core/src/get-biome.ts",
+        "**/libs/service/jobs/src/create-job-queue.ts",
+        "**/libs/service/service-runtime/src/create-service.ts",
+        "**/libs/testing/client-test-utils/src/orpc/build-contract-mock.ts",
+        "**/services/activity/src/handlers/admit-activity-start.ts",
+        "**/services/replay/src/replay/to-wire-replay-segment-input.ts",
+        "**/services/replay/src/worker/run-replay-iteration.ts",
+        "**/services/replay/src/worker/run-replay-target.ts"
+      ],
+      "rules": {
+        "max-params": "off"
       }
     },
     {
@@ -471,6 +245,7 @@
       // coverage, not complexity, and non-null assertions on known-shaped
       // fixtures are fine
       "rules": {
+        // the shared config exempts only `*.test.ts` from max-lines
         "max-lines": "off",
         "typescript/no-non-null-assertion": "off"
       }
@@ -582,6 +357,8 @@
     "**/apps/web/src/styled-system/**",
     "**/libs/design/design-system/src/styled-system/**",
     "**/libs/design/styled-system/styled-system/**",
-    "**/.ladle/**"
+    "**/.ladle/**",
+    // kysely-codegen output: generated, so lint has nothing to teach it
+    "**/schema.generated.ts"
   ]
 }

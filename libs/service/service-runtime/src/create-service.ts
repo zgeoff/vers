@@ -207,7 +207,6 @@ interface RegisterORPCHandlerDeps {
 }
 
 function registerORPCHandler(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- elysia app is a live framework instance with mutable routing state; no readonly form
   app: Elysia,
   prefix: `/${string}`,
   handler: FetchHandler<ServiceContext>,
