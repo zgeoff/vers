@@ -3,7 +3,7 @@
 Build the state of play from GitHub alone before any other role. Every fact you need is one of these
 reads, and nothing carries over from a previous session.
 
-1. Milestones. Read the open milestones with the milestone query in `reference/board.md`. Every open
+1. Milestones. Read the open milestones with the milestone query in the board reference. Every open
    `P` milestone is an increment, and each description carries its done test. The lowest-numbered
    one is the lead increment.
 2. Recent merges. Fetch, then read the last 4 weeks of `origin/main`:
@@ -26,6 +26,6 @@ reads, and nothing carries over from a previous session.
    gh run list --branch main --workflow main.yml --limit 1 --json conclusion,headSha,url
    ```
 
-Print the state-of-play block from `reference/state-of-play.md` down to the Stale line, then
-continue to Reconcile. Reconcile, Triage, and Sequence change these numbers, and Report prints the
-corrected block in full.
+Print the state-of-play block from the state-of-play reference down to the Stale line, then continue
+to Reconcile. Reconcile, Triage, and Sequence change these numbers, and Report prints the corrected
+block in full.

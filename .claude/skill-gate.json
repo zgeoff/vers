@@ -8,7 +8,7 @@
     ".generated."
   ],
   "gates": [
-    { "match": "**/*.{ts,tsx}", "skills": ["code-style"] },
+    { "match": "**/*.{ts,tsx}", "skills": ["code-style", "project-code-style"] },
     { "match": "**/*.test.{ts,tsx}", "skills": ["testing", "project-testing"] },
     { "match": "**/*.md", "skills": ["docs-writing", "project-docs-writing"] },
     {

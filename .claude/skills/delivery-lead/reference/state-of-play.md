@@ -1,6 +1,6 @@
 # State of play
 
-Orient and Report print this block inside a fenced `text` block so the column alignment survives the
+Orient and Report print this block inside a `text` code block so the column alignment survives the
 terminal. Orient stops after the Stale line; Report prints the whole block. A line with nothing to
 show reads `none`; never drop the line.
 

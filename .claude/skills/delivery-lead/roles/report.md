@@ -1,6 +1,6 @@
 # Report
 
-Print the state-of-play block from `reference/state-of-play.md` in full as the last act of a cycle.
+Print the state-of-play block from the state-of-play reference in full as the last act of a cycle.
 It is the only output the owner reads, so it stands alone.
 
 - Convergence is each increment's open count against its closures over the last 4 weeks.

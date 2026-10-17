@@ -26,9 +26,83 @@ or a terse chat register governs what you say to the person you're working with,
 reaches a committed file: no clipped sentences, no numerals for every count, no instruction voice in
 a description.
 
+## Key rules
+
+Each line links the section that explains it.
+
+- [Deciding what to include](#deciding-what-to-include)
+  - [Describe the system as it is now](#describe-the-system-as-it-is-now): present tense, with no
+    history, plans, or traces of the work session.
+  - [Cut anything the reader could get from the code](#cut-anything-the-reader-could-get-from-the-code):
+    delete a point that a reader with the source file open already knows.
+  - [A bug fix rarely needs a doc change](#a-bug-fix-rarely-needs-a-doc-change): rewrite the
+    sentence the change made false, and add no paragraph per fix.
+  - [Give each doc one job and each fact one owner](#give-each-doc-one-job-and-each-fact-one-owner):
+    explain each fact in one doc, and link to it from the others.
+  - [Don't copy what the code owns](#dont-copy-what-the-code-owns): describe a list, a number, a
+    name, or code; never copy it.
+- [Writing the sentences](#writing-the-sentences)
+  - [One idea per sentence](#one-idea-per-sentence): split at the first dash aside, but keep a cause
+    with its effect.
+  - [Put the point first](#put-the-point-first): the first sentence of each paragraph states its
+    point.
+  - [Say who does what](#say-who-does-what): name the actor, and never give data a speech verb.
+  - [Don't hedge a decision](#dont-hedge-a-decision): no "may" or "should" for something decided.
+  - [State the rule, then the exception](#state-the-rule-then-the-exception): an exception gets its
+    own sentence after the rule.
+  - [Make every reference easy to resolve](#make-every-reference-easy-to-resolve): a pronoun's noun
+    sits in the same or the previous sentence.
+  - [Use one name for each thing](#use-one-name-for-each-thing): one term per concept, defined on
+    first use.
+  - [Avoid noun pile-ups and negated subjects](#avoid-noun-pile-ups-and-negated-subjects): break
+    three bare nouns with a preposition, and negate the verb.
+  - [Write how-to as instructions](#write-how-to-as-instructions): "you" and imperatives in a
+    how-to, declarative elsewhere.
+- [Choosing words](#choosing-words)
+  - [Cut filler and vague qualifiers](#cut-filler-and-vague-qualifiers): replace a qualifier with
+    the figure or the concrete claim.
+  - [Don't stack adjectives](#dont-stack-adjectives): lead with the fact, not three adjectives.
+  - [Don't repeat a rhetorical move](#dont-repeat-a-rhetorical-move): use an "X, not Y" contrast
+    once, where the reader would assume Y.
+  - [Cut the tells of machine-drafted prose](#cut-the-tells-of-machine-drafted-prose): no recap
+    transitions, feature-list voice, slogans, or set-up questions.
+  - [Banned words](#banned-words): `check-prose.sh` fails on them.
+- [Shaping the doc](#shaping-the-doc)
+  - [Summary first](#summary-first): open with three to six plain sentences on what the system does.
+  - [Lists for parallel items, prose for cause and effect](#lists-for-parallel-items-prose-for-cause-and-effect):
+    a list for parallel things, a paragraph for a causal story.
+  - [Tables for variants with several attributes](#tables-for-variants-with-several-attributes):
+    three or more values with two or more attributes each, one value per cell.
+  - [Diagrams for pipelines, state machines, and topologies](#diagrams-for-pipelines-state-machines-and-topologies):
+    one mermaid diagram for those three shapes only.
+  - [Procedures as numbered steps](#procedures-as-numbered-steps): one action per step, with the
+    exact expected outcome.
+  - [Headings, bold leads, and rules](#headings-bold-leads-and-rules): a second paragraph needs a
+    heading, and no `---`.
+- [Formatting and links](#formatting-and-links): one line per paragraph, tagged code blocks, and
+  relative links.
+- [Reviewing a doc](#reviewing-a-doc): four passes, then the scripted checks, then a one-line
+  finding per fault.
+
+## References
+
+Open a reference when the doc is of its kind.
+
+- [Architecture docs](./references/architecture-docs.md): a doc under `docs/architecture/`, which
+  gives the reader a working model of one subsystem.
+- [The docs/ tree](./references/docs-tree.md): where each kind of doc lives, the line caps, and what
+  stays out of `docs/`.
+- [READMEs](./references/readmes.md): the sections and line limits of a package, repo, or folder
+  README.
+
+## Loading the skill
+
 This guide is the shared base that repo-sync delivers from zgeoff/tools; edit it there, never in a
 downstream repo. When the repo has a `project-docs-writing` skill, load it too. It holds the rules
 for this repo's own docs tree, and where the two disagree, the project skill wins.
+
+A skill follows the `skill-writing` skill too. It holds what a skill holds, how a skill points at
+code instead of copying it, and how a skill is checked.
 
 ## Deciding what to include
 
@@ -60,7 +134,8 @@ points, not single sentences. Keep or cut a sentence that orients the reader, na
 summarizes on how it reads, not on whether it carries a fact.
 
 The test is one source file, not the whole repo: a fact that shows only across several files stays
-("Describe the mechanism where the mechanism is the architecture" covers which).
+([Describe the mechanism where the mechanism is the architecture](./references/architecture-docs.md#describe-the-mechanism-where-the-mechanism-is-the-architecture)
+covers which).
 
 Paragraphs that defend a decision are the most common source of padding: lists of edge cases that
 only happen if someone tampers with the system, "in case someone…", restatements of what is out of
@@ -144,175 +219,6 @@ into another tool, such as a database branch or an MCP source, counts as a key t
 
 **Code.** A code block holds a command the reader runs or a short made-up example. Code that exists
 in the repo gets a link, not a copy. The typechecker checks the source file, not your copy of it.
-
-## Architecture docs
-
-### What an architecture doc is for
-
-A reader opens an architecture doc before they change a subsystem, and should leave with a working
-model of it: what it is for, what its parts are, how they fit together, which part owns each piece
-of state, what must stay true whatever a caller does, and why the system has this shape. The test of
-a good one: after reading it, the reader can predict what the system does in a case the doc never
-names, such as what happens when a process dies halfway through a write. Everything else in this
-section serves that model.
-
-### Open with the concept, not the package
-
-The first sentences say what the subsystem does, in the domain's own terms. The package that
-implements it comes later and in passing, if at all.
-
-- Bad: "`libs/seed-chain` holds the chain row, the two anchors, and the draw function."
-- Good: "Every activity an avatar runs at a node draws its randomness from one place: that node's
-  seed chain. The chain is a single sequence of positions running forward. An activity draws the
-  position at the front, plays out from it, and leaves the next position for the activity that
-  follows."
-
-### Describe the mechanism where the mechanism is the architecture
-
-Some mechanisms are the design: how queued work gets delivered when no worker stays resident, how a
-connection pool recovers after the machine was frozen, how two anchors on a chain move and when one
-is pulled back. Describe those, as a sequence of cause and effect, because the reader can't change
-the subsystem safely without them.
-
-A mechanism belongs in the doc when understanding it needs more than one file, or when the reason
-for it isn't visible in the code. A step-by-step narration of one function stays out: the reader can
-open the function.
-
-### Give the reason in the sentence that needs it
-
-Most facts in an architecture doc have a reason, and the reason goes in the same sentence or the
-next one, joined by "because", "so", or "therefore". That lets a paragraph build an argument: the
-problem, its consequence, the response, and the limit on the response. A reason is why this shape
-works or what breaks without it. The alternatives that were rejected, and the history of how the
-shape was reached, belong in a decision record.
-
-Keep the `**Why:**` marker for a single decision that stands apart from the paragraph around it. A
-doc with a `**Why:**` on every paragraph has turned into a rule list: each fact stops, its reason
-stops, and the connection between facts is lost.
-
-- Bad:
-
-  > The database factory detects a resume as a wall-clock gap. **Why:** timers don't run while the
-  > machine is paused.
-  >
-  > The factory swaps in a fresh pool on a resume. **Why:** Neon may have closed the old sockets.
-  >
-  > The gap threshold stays above any synchronous stretch of work. **Why:** a long verification must
-  > not reset its own queries.
-
-- Good:
-
-  > The pool's timeouts stop while the process is paused. Fly suspends an idle machine with its
-  > memory snapshot, so the pool resumes holding the sockets it had, and Neon may have closed them
-  > in the meantime. The database factory therefore detects a resume, as a wall-clock gap between
-  > reads it takes on a timer, and swaps in a fresh pool for new queries. The gap threshold stays
-  > above any synchronous stretch of work that blocks the event loop, so a long verification never
-  > trips a reset that would destroy its own live queries.
-
-State an invariant, a rule that holds whatever a caller does, in plain sentences inside the
-paragraph about the part that keeps it, with its reason beside it.
-
-### Shape the doc set around concepts
-
-- **The architecture overview comes first.** `docs/architecture/overview.md` gives the whole system
-  on one page: the path a request takes end to end, the topology (which processes and deployments
-  exist and how they reach each other), the data (each store and the shapes of data it holds), and
-  the cross-cutting concerns, each in a paragraph with a link to the doc that covers it. It differs
-  from a product overview, which says what the product is and who it's for.
-- **One doc per concept, not per package.** A concept can span several packages, and a package can
-  hold parts of several concepts. Split a doc at a concept boundary, and split early when a concept
-  is going to grow, rather than letting one doc absorb two.
-- **Each doc points at its neighbours.** Near the top, a doc says in one sentence each which other
-  docs cover the facts next to its own: "[Replay verification](./replay-verification.md) covers the
-  verifier that proves a stream and settles it." A link inside the opening paragraph does the same
-  job, when its sentence says what the linked doc covers.
-- **Diagrams carry the shapes.** The overview's request path and topology get diagrams, under the
-  rules in "Diagrams for pipelines, state machines, and topologies".
-
-### What stays out of an architecture doc
-
-- Design the code doesn't implement yet. It lives under `docs/design/`, and where a design shaped
-  something that is built, the architecture doc links it in one sentence. In a system that is still
-  being built, the overview describes the connections that exist, and one sentence links the design
-  for the rest.
-- What a user sees and does. A guide covers that.
-- The alternatives a decision rejected. A decision record covers those.
-- Reference for internals: one entry per protocol method, config key, or module.
-
-## The docs/ tree
-
-One architecture doc covers one concept, and one guide covers one user task. The repo has no total
-line budget: the total follows from the doc list.
-
-| Folder               | Holds                                                                     |
-| -------------------- | ------------------------------------------------------------------------- |
-| `docs/README.md`     | the index                                                                 |
-| `docs/architecture/` | how the built system works, one doc per concept, with an overview         |
-| `docs/guides/`       | the steps a user does, one doc per user task                              |
-| `docs/runbooks/`     | operator and contributor procedures, development and releasing included   |
-| `docs/reference/`    | generated reference only, such as the config JSON schema                  |
-| `docs/decisions/`    | numbered decision records: the choice, the rejected alternatives, and why |
-| `docs/design/`       | a design for big speculative work, opened by the owner and temporary      |
-
-Group `docs/architecture/` in subfolders by area once it holds more than about 6 docs. The index
-links `docs/reference/` once.
-
-- **The code owns its reference.** Config keys, flags, and MCP tools are described in the code: the
-  config schema (one `.describe()` per key, generated into `docs/reference/`), `--help`, and the
-  tool descriptions. A configuration guide covers where config lives, worked examples, and a link to
-  the schema.
-- **Evaluations, research write-ups, plans, diagnoses, and history stay out of `docs/`**, outside
-  `docs/design/`. A finding that is still a constraint becomes one sentence in the architecture doc
-  that owns it; the rest goes to the issue tracker or is deleted.
-- **A doc stays under 250 lines, and a runbook under 300.** Past the cap, cut points first, then
-  split at a concept boundary. When the doc is still over, say so in the PR body. Never compress
-  sentences to fit, never move the overflow into a README or code comments, and never split where
-  the concept has no boundary. `check-length.sh` warns on a doc over its cap.
-- **A design lives in `docs/design/<work>/`** while its code is unbuilt, with any spikes as runnable
-  packages in `docs/design/<work>/spikes/<name>/`. A plan for work about to be built is no design:
-  it lives in its issue or PR. When the work lands, the built part moves into `docs/architecture/`
-  and the design folder is deleted.
-- **A decision record is permanent.** It states the choice, never how the system works now; the
-  architecture doc owns that. A changed decision gets a new record that supersedes the old one.
-- **Development and releasing live in runbooks.** `docs/runbooks/development.md` holds the
-  contributor setup; `docs/runbooks/releasing.md` holds only the steps the release tooling doesn't
-  do, and is deleted when none remain. A folder README that documents its own folder stays beside
-  it.
-
-## READMEs
-
-A README reader wants three things, in order: the pitch, the install, and the capabilities with
-their configuration. Everything else lives in a guide in `docs/`, in `--help`, or in the config
-schema.
-
-A package README (one for a published package, classified as the table below states) has six
-sections, in this order:
-
-1. Hero: the logo or title, badges, and at most 3 links.
-2. Pitch: 1 to 2 short paragraphs and the demo, when one exists. The pitch names the 2 or 3 actions
-   that get a first session working.
-3. Install: one command and its prerequisites. Other install paths link to a guide.
-4. Capabilities: one section per capability axis, such as "Supported agents" (one line per agent)
-   and "Features" (a short list, one line and one link per feature).
-5. Configuration: one paragraph and a link.
-6. Documentation: one line linking `docs/`.
-
-A plain repo README (a repo that publishes no package) has one paragraph, then Quick start, Checks,
-Layout, and Documentation. A sub-package or folder README documents its own folder.
-
-`check-length.sh` classifies each README outside `docs/` and `.claude/`, and fails the run above its
-limit:
-
-| README      | Classified by                                                | Target | Limit |
-| ----------- | ------------------------------------------------------------ | ------ | ----- |
-| Package     | a package.json beside it that is not private, or `--package` | 120    | 130   |
-| Plain repo  | the root README of a repo that isn't a package               | 50     | 60    |
-| Sub-package | any other README outside `docs/`                             | 60     | 70    |
-
-A README never holds flags, exit codes, config keys, per-agent or per-platform install variants,
-edge cases inside table rows, key or state tables, dated "checked" stamps, or person names. A
-feature PR rewrites only a README sentence the feature made false. A PR that adds a README sentence
-is a README PR, and the repo owner reviews it.
 
 ## Writing the sentences
 
@@ -603,10 +509,11 @@ Before you commit, review each file you touched in four passes. A review subagen
 passes with this guide as its only reference.
 
 1. What it says. List the points each section makes and judge each one against "Deciding what to
-   include". Check every fact against the doc that owns it, and each doc against "The docs/ tree"
-   and "READMEs". For an architecture doc, also run the model test: read only its first sentences
-   and its diagrams, and check that they give a correct rough model; then pick a case the doc never
-   names and check that the doc lets you predict what the system does.
+   include". Check every fact against the doc that owns it, and each doc against
+   [The docs/ tree](./references/docs-tree.md) and [READMEs](./references/readmes.md). For an
+   architecture doc, also run the model test: read only its first sentences and its diagrams, and
+   check that they give a correct rough model; then pick a case the doc never names and check that
+   the doc lets you predict what the system does.
 2. How it says it. Reread each surviving paragraph against "Writing the sentences", "Choosing
    words", "Shaping the doc", and "Formatting and links", in that order.
 3. The scripted checks. Run from the repo root; CI runs the same two commands:
@@ -617,11 +524,13 @@ passes with this guide as its only reference.
    ```
 
    `check-length.sh` prints each README against its limit and each docs/ file over its cap, then
-   runs `check-prose.sh` over the READMEs and the Markdown under `docs/`. It fails on a README over
-   its limit or on a prose violation. Pass `--package <readme>` for a package README whose
-   package.json is private. `check-links.sh` checks every relative link and anchor in the READMEs
-   and `docs/` (outside `.claude/`), and fails on a broken one. Pass paths to check other Markdown.
-   To check other prose, such as a skill or AGENTS.md, run `check-prose.sh <path>...` on it.
+   runs `check-prose.sh` over the READMEs, the Markdown under `docs/`, and each skill's Markdown. It
+   fails on a README over its limit or on a prose violation. Pass `--package <readme>` for a package
+   README whose package.json is private. `check-links.sh` checks every relative link and anchor in
+   the READMEs, `docs/`, and the skills, and fails on a broken one. It skips the docs-writing,
+   project-docs-writing, and skill-writing skills, whose examples link to placeholder targets. Pass
+   paths to check other Markdown. Both skip a file git marks `linguist-vendored`. To check other
+   prose, such as AGENTS.md, run `check-prose.sh <path>...` on it.
 
    `check-prose.sh` fails on traces of the work session, the banned words a grep can catch, values
    with units under `docs/architecture/`, formatting faults, and untagged code blocks. It then

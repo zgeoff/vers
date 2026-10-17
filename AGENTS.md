@@ -5,13 +5,14 @@
 The rules a task needs are not repeated here. Load the skill for the work before starting it, and
 read the architecture doc for the subsystem in full before reasoning from its code.
 
-| Skill            | Load before                                                                                                |
-| ---------------- | ---------------------------------------------------------------------------------------------------------- |
-| `code-style`     | writing, reviewing, or renaming any TypeScript — the function-verb taxonomy lives there                    |
-| `testing`        | designing, writing, or reviewing tests                                                                     |
-| `docs-writing`   | writing or editing any committed prose: `docs/`, READMEs, this file, skills — with `project-docs-writing`  |
-| `delivery-lead`  | triage, refinement, milestone, board, or "what's next" work — the increment model and the roles live there |
-| `game-lifecycle` | any work in the activity, replay, or idle packages — the assumptions to drop and the state machines        |
+| Skill                | Load before                                                                                                |
+| -------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `code-style`         | writing, reviewing, or renaming any TypeScript — the shared function-verb taxonomy                         |
+| `project-code-style` | the same, beside `code-style` — vers's own verbs and code rules                                            |
+| `testing`            | designing, writing, or reviewing tests                                                                     |
+| `docs-writing`       | writing or editing any committed prose: `docs/`, READMEs, this file, skills — with `project-docs-writing`  |
+| `delivery-lead`      | triage, refinement, milestone, board, or "what's next" work — the increment model and the roles live there |
+| `game-lifecycle`     | any work in the activity, replay, or idle packages — the assumptions to drop and the state machines        |
 
 The system is documented under `docs/architecture/`, with `docs/architecture/overview.md` as its
 narrative entry point. A subsystem's doc is the authoritative account of its invariants — grep
@@ -372,7 +373,7 @@ the mechanics and provisioning.
 - `zgeoff/no-jsdoc`, `zgeoff/max-consecutive-line-comments`, and `vers/no-unportable-math` are never
   baselined and never disabled inline. A comment either comment rule rejects is deleted or cut, and
   the fact it held moves to a test name, to the commit body, or to the subsystem doc when it is an
-  invariant (the `code-style` skill owns the rule for what a comment holds). An operation
+  invariant (the `project-code-style` skill owns the rule for what a comment holds). An operation
   `vers/no-unportable-math` rejects is rewritten to use an allowed operation, never silenced.
 - `typescript/prefer-readonly-parameter-types` is never baselined: a function's own
   data/config/props/option types go `readonly` (React props `Readonly<Props>`), and framework

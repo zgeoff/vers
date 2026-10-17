@@ -1,19 +1,23 @@
 #!/usr/bin/env bash
 # Checks every relative link and anchor in Markdown files; exits non-zero on a broken one.
 # Usage (from the repo root): check-links.sh [<path>...]
-# With no path, it reads every README.md and every Markdown file under docs/. A link with a scheme
+# With no path, it reads every README.md outside .claude/, every Markdown file under docs/, and
+# every skill's Markdown under .claude/skills/ and sync/skills/. A link with a scheme
 # (https:, mailto:) is never followed. An anchor is checked only on a Markdown target, against
 # GitHub's heading anchors and the page's explicit id and name attributes.
 set -uo pipefail
 
 if [ "$#" -eq 0 ]; then
-  set -- ':(glob)**/README.md' ':(glob)docs/**/*.md' ':(exclude,glob).claude/**'
+  set -- ':(glob)**/README.md' ':(glob)docs/**/*.md' ':(glob).claude/skills/**/*.md' \
+    ':(glob)sync/skills/**/*.md' ':(exclude,glob).claude/**/README.md'
 fi
 
-# The skill's own files, and the repo's project skill beside them, link to placeholder targets
-# as examples.
+# The skill's own files, the repo's project skill beside them, and the skill-writing skill link to
+# placeholder targets as examples. A file git marks linguist-vendored belongs to someone else.
 set -- "$@" ':(exclude).claude/skills/docs-writing' ':(exclude).claude/skills/project-docs-writing' \
-  ':(exclude)sync/skills/docs-writing'
+  ':(exclude)sync/skills/docs-writing' ':(exclude).claude/skills/skill-writing' \
+  ':(exclude)sync/skills/skill-writing' ':(exclude,attr:linguist-vendored)' \
+  ':(exclude,attr:linguist-vendored=true)'
 
 # Reads untracked files too, so a new doc is checked before it is staged.
 git ls-files -z --cached --others --exclude-standard -- "$@" | perl -0 -COE -e '

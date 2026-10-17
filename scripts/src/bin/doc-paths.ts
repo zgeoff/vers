@@ -7,9 +7,12 @@ import { collectDocPaths } from '../docs/collect-doc-paths';
 
 const DOC_GLOBS = ['AGENTS.md', 'README.md', 'docs/**/*.md', '.claude/skills/*/SKILL.md'];
 
-// repo-sync delivers the docs-writing skill from zgeoff/tools, and its examples name paths from
-// other repos.
-const SYNCED_DOCS = new Set(['.claude/skills/docs-writing/SKILL.md']);
+// repo-sync delivers the docs-writing and skill-writing skills from zgeoff/tools, and their examples
+// name paths from other repos.
+const SYNCED_DOCS = new Set([
+  '.claude/skills/docs-writing/SKILL.md',
+  '.claude/skills/skill-writing/SKILL.md',
+]);
 
 const missing: Array<string> = [];
 

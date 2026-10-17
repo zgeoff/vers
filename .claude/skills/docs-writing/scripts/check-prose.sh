@@ -11,10 +11,13 @@ if [ "$#" -eq 0 ]; then
   exit 2
 fi
 
-# The skill's own files, and the repo's project skill beside them, document the forbidden
-# patterns and contain them as examples.
+# The skill's own files, the repo's project skill beside them, and the skill-writing skill document
+# the forbidden patterns and contain them as examples. A file git marks linguist-vendored belongs to
+# someone else, so a repo marks its third-party skills in .gitattributes.
 set -- "$@" ':(exclude).claude/skills/docs-writing' ':(exclude).claude/skills/project-docs-writing' \
-  ':(exclude)sync/skills/docs-writing'
+  ':(exclude)sync/skills/docs-writing' ':(exclude).claude/skills/skill-writing' \
+  ':(exclude)sync/skills/skill-writing' ':(exclude,attr:linguist-vendored)' \
+  ':(exclude,attr:linguist-vendored=true)'
 
 # Every grep reads untracked files too, so a new doc is checked before it is staged, and skips
 # binary files.
