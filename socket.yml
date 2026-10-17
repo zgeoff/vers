@@ -1,10 +1,11 @@
 # repo-sync delivers this file from zgeoff/tools; edit the source there.
 #
-# The Socket GitHub app scans a pull request only when it changes a file that
-# triggerPaths matches. The patterns follow .gitignore rules, so `**/` matches
-# the root and every folder below it. The account runs on Socket's Free plan,
-# whose monthly scan cap a scan of every pull request would pass, so only a
-# dependency or workflow change starts a scan.
+# The account runs on Socket's Free plan, whose monthly scan cap a scan of
+# every push would pass. The Socket GitHub app runs a pull-request alert scan
+# only when a pull request changes a file that triggerPaths matches. The
+# patterns follow .gitignore rules, so `**/` matches the root and every folder
+# below it. triggerPaths does not gate the project report, which scans every
+# push to every branch, so projectReportsEnabled turns it off.
 version: 2
 
 triggerPaths:
@@ -13,3 +14,6 @@ triggerPaths:
   - '**/go.mod'
   - '**/go.sum'
   - '.github/workflows/**'
+
+githubApp:
+  projectReportsEnabled: false
