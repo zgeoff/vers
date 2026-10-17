@@ -185,7 +185,7 @@ test('it rejects an inverted range', () => {
     'test/domain',
   );
 
-  expect(() => stream.rollRange(2, 1)).toThrowWithMessage(Error, /range min must not exceed max/);
+  expect(() => stream.rollRange(2, 1)).toThrowWithMessage(Error, /range min must not exceed max/u);
 });
 
 test('it rejects a span above 2^32', () => {
@@ -196,7 +196,7 @@ test('it rejects a span above 2^32', () => {
 
   expect(() => stream.rollRange(0, 2 ** 32)).toThrowWithMessage(
     Error,
-    /range span must not exceed 2\^32/,
+    /range span must not exceed 2\^32/u,
   );
 });
 
@@ -208,12 +208,12 @@ test('it rejects non-integer bounds', () => {
 
   expect(() => stream.rollRange(0.5, 2)).toThrowWithMessage(
     Error,
-    /range min must be a safe integer/,
+    /range min must be a safe integer/u,
   );
 
   expect(() => stream.rollRange(0, 1.5)).toThrowWithMessage(
     Error,
-    /range max must be a safe integer/,
+    /range max must be a safe integer/u,
   );
 });
 
@@ -225,7 +225,7 @@ test('it rejects an empty weighted pick', () => {
 
   expect(() => stream.pickWeighted([])).toThrowWithMessage(
     Error,
-    /weighted pick needs at least one entry/,
+    /weighted pick needs at least one entry/u,
   );
 });
 
@@ -237,11 +237,11 @@ test('it rejects zero and fractional weights', () => {
 
   expect(() => stream.pickWeighted([{ value: 'a', weight: 0 }])).toThrowWithMessage(
     Error,
-    /weights must be integers of at least 1/,
+    /weights must be integers of at least 1/u,
   );
 
   expect(() => stream.pickWeighted([{ value: 'a', weight: 1.5 }])).toThrowWithMessage(
     Error,
-    /weights must be integers of at least 1/,
+    /weights must be integers of at least 1/u,
   );
 });

@@ -390,7 +390,7 @@ test('it stops the stream and keeps queued rows on CHECKPOINT_INVALID', async ()
   expect(ctx.onInvalid).toHaveBeenCalledExactlyOnceWith(
     'invalid-activity',
     'broken-chain-link',
-    expect.stringMatching(/^[0-9a-f]{32}$/),
+    expect.stringMatching(/^[0-9a-f]{32}$/u),
   );
 
   expect(track).toHaveBeenCalledOnce();
@@ -1188,7 +1188,7 @@ test('it reports a stall once after repeated unanswered flushes and keeps the qu
   expect(ctx.onFlushStalled).toHaveBeenCalledExactlyOnceWith(
     'stalled-activity',
     expect.toInclude('INTERNAL_SERVER_ERROR'),
-    expect.stringMatching(/^[0-9a-f]{32}$/),
+    expect.stringMatching(/^[0-9a-f]{32}$/u),
   );
 
   // the streak keeps failing past the threshold without a second report
@@ -1276,7 +1276,7 @@ test('it sends a fresh traceparent with each flush and reports its trace id on r
   expect(traceparents).toHaveLength(2);
 
   expect(traceparents).toSatisfyAll(
-    (header: null | string) => header !== null && /^00-[0-9a-f]{32}-[0-9a-f]{16}-01$/.test(header),
+    (header: null | string) => header !== null && /^00-[0-9a-f]{32}-[0-9a-f]{16}-01$/u.test(header),
   );
 
   expect(traceparents[1]).not.toBe(traceparents[0]);

@@ -2,8 +2,8 @@ import { hexToBytes } from '@noble/hashes/utils.js';
 import * as z from 'zod';
 import type { KeyRoots } from './types';
 
-const HEX_ROOT_PATTERN = /^[0-9a-f]{64}$/i;
-const INTEGER_KEY_PATTERN = /^[1-9]\d*$/;
+const HEX_ROOT_PATTERN = /^[0-9a-f]{64}$/iu;
+const INTEGER_KEY_PATTERN = /^[1-9]\d*$/u;
 
 // the same entry contract service-keys parses at boot, so a payload the service refuses fails here
 const RootEntrySchema = z.object({

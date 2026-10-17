@@ -3,7 +3,7 @@ export function getTokenFromHeader(header: null | string | undefined): null | st
     return null;
   }
 
-  const headerParts = header.split(/\s+/);
+  const headerParts = header.split(/\s+/u);
 
   if (headerParts.length !== 2) {
     return null;

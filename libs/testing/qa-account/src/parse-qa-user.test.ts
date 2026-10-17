@@ -29,21 +29,21 @@ test('it caps the username and avatar name at their contract lengths', () => {
 test('it refuses an address outside the QA domain', () => {
   expect(() => parseQAUser('player@versidle.com')).toThrowWithMessage(
     Error,
-    /only addresses under qa\.versidle\.com/,
+    /only addresses under qa\.versidle\.com/u,
   );
 });
 
 test('it refuses an account name with characters outside the allowed set', () => {
-  expect(() => parseQAUser('qa 007')).toThrowWithMessage(Error, /invalid QA account name/);
+  expect(() => parseQAUser('qa 007')).toThrowWithMessage(Error, /invalid QA account name/u);
 });
 
 test('it refuses an empty account name', () => {
   expect(() => parseQAUser('@qa.versidle.com')).toThrowWithMessage(
     Error,
-    /invalid QA account name/,
+    /invalid QA account name/u,
   );
 });
 
 test('it refuses a name too short to yield a valid avatar name', () => {
-  expect(() => parseQAUser('q1')).toThrowWithMessage(Error, /no valid avatar name/);
+  expect(() => parseQAUser('q1')).toThrowWithMessage(Error, /no valid avatar name/u);
 });

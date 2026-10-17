@@ -21,33 +21,33 @@ test('it links every rail destination to its route', async () => {
   setActiveActivity();
   renderWithRouter(<NavRail />, { flags: { 'game-renderer': true, market: true } });
 
-  await screen.findByRole('link', { name: /Engage/ });
+  await screen.findByRole('link', { name: /Engage/u });
 
-  expect(screen.getByRole('link', { name: /Engage/ })).toHaveAttribute('href', '/activity');
-  expect(screen.getByRole('link', { name: /Respite/ })).toHaveAttribute('href', '/respite');
-  expect(screen.getByRole('link', { name: /Explore/ })).toHaveAttribute('href', '/explore');
-  expect(screen.getByRole('link', { name: /Avatar/ })).toHaveAttribute('href', '/avatar');
-  expect(screen.getByRole('link', { name: /Stash/ })).toHaveAttribute('href', '/stash');
-  expect(screen.getByRole('link', { name: /Market/ })).toHaveAttribute('href', '/market');
-  expect(screen.getByRole('link', { name: /Codex/ })).toHaveAttribute('href', '/codex');
-  expect(screen.getByRole('link', { name: /Settings/ })).toHaveAttribute('href', '/settings');
+  expect(screen.getByRole('link', { name: /Engage/u })).toHaveAttribute('href', '/activity');
+  expect(screen.getByRole('link', { name: /Respite/u })).toHaveAttribute('href', '/respite');
+  expect(screen.getByRole('link', { name: /Explore/u })).toHaveAttribute('href', '/explore');
+  expect(screen.getByRole('link', { name: /Avatar/u })).toHaveAttribute('href', '/avatar');
+  expect(screen.getByRole('link', { name: /Stash/u })).toHaveAttribute('href', '/stash');
+  expect(screen.getByRole('link', { name: /Market/u })).toHaveAttribute('href', '/market');
+  expect(screen.getByRole('link', { name: /Codex/u })).toHaveAttribute('href', '/codex');
+  expect(screen.getByRole('link', { name: /Settings/u })).toHaveAttribute('href', '/settings');
 });
 
 test('it disables the Engage destination when no activity is running', async () => {
   renderWithRouter(<NavRail />, { flags: { 'game-renderer': true, market: true } });
 
-  await screen.findByRole('link', { name: /Respite/ });
+  await screen.findByRole('link', { name: /Respite/u });
 
-  expect(screen.queryByRole('link', { name: /Engage/ })).not.toBeInTheDocument();
+  expect(screen.queryByRole('link', { name: /Engage/u })).not.toBeInTheDocument();
   expect(screen.getByText('Engage').closest('[aria-disabled="true"]')).not.toBeNull();
 });
 
 test('it hides the Market destination when the market flag is off', async () => {
   renderWithRouter(<NavRail />, { flags: { 'game-renderer': true, market: false } });
 
-  await screen.findByRole('link', { name: /Respite/ });
+  await screen.findByRole('link', { name: /Respite/u });
 
-  expect(screen.queryByRole('link', { name: /Market/ })).not.toBeInTheDocument();
+  expect(screen.queryByRole('link', { name: /Market/u })).not.toBeInTheDocument();
 });
 
 test('it marks the followed destination as the current page', async () => {
@@ -55,11 +55,11 @@ test('it marks the followed destination as the current page', async () => {
 
   renderWithRouter(<NavRail />, { flags: { 'game-renderer': true, market: true } });
 
-  const stashLink = await screen.findByRole('link', { name: /Stash/ });
+  const stashLink = await screen.findByRole('link', { name: /Stash/u });
 
   expect(stashLink).not.toHaveAttribute('aria-current');
 
   await user.click(stashLink);
 
-  expect(screen.getByRole('link', { name: /Stash/ })).toHaveAttribute('aria-current', 'page');
+  expect(screen.getByRole('link', { name: /Stash/u })).toHaveAttribute('aria-current', 'page');
 });

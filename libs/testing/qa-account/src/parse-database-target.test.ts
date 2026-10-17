@@ -27,5 +27,5 @@ test('it marks a hosted database as a non-loopback target', () => {
 });
 
 test('it rejects a connection string that is not a URL', () => {
-  expect(() => parseDatabaseTarget('not a url')).toThrowWithMessage(Error, /not a valid URL/);
+  expect(() => parseDatabaseTarget('not a url')).toThrowWithMessage(Error, /not a valid URL/u);
 });

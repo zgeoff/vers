@@ -14,7 +14,7 @@ test('it reads the avatar roll key over real s2s auth against the mocked keys ba
     { avatarID: 'avatar_1', keyVersion: 1 },
   );
 
-  expect(bytesToHex(key)).toMatch(/^[0-9a-f]{64}$/);
+  expect(bytesToHex(key)).toMatch(/^[0-9a-f]{64}$/u);
 });
 
 test('it reads the identical key for the identical avatar and key version', async () => {

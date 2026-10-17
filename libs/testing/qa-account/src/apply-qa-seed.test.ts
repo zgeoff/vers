@@ -247,7 +247,7 @@ test('it refuses to seed an address that already has an account', async () => {
         username: 'qa_dup',
       },
     }),
-  ).rejects.toThrowWithMessage(Error, /already exists/);
+  ).rejects.toThrowWithMessage(Error, /already exists/u);
 });
 
 test('it refuses runs when the registry has no active sim version', async () => {
@@ -272,5 +272,5 @@ test('it refuses runs when the registry has no active sim version', async () => 
         username: 'qa_nosim',
       },
     }),
-  ).rejects.toThrowWithMessage(Error, /no active version/);
+  ).rejects.toThrowWithMessage(Error, /no active version/u);
 });

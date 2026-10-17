@@ -46,7 +46,7 @@ test('it rejects an invalid endpoint from the environment before any command run
 
   expect(() => program.parse([], { from: 'user' })).toThrowWithMessage(
     Error,
-    /from env 'QA_CDP_ENDPOINT' is invalid\. expected host:port/,
+    /from env 'QA_CDP_ENDPOINT' is invalid\. expected host:port/u,
   );
 });
 

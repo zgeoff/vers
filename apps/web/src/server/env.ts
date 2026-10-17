@@ -20,7 +20,7 @@ const envSchema = z.object({
     .optional()
     .describe('Append-scoped token for the product_events data source; unset disables delivery'),
   TINYBIRD_URL: z
-    .url({ protocol: /^https$/ })
+    .url({ protocol: /^https$/u })
     .optional()
     .describe('Product-analytics Events API origin; unset disables delivery'),
   UMAMI_URL: z

@@ -1,7 +1,7 @@
 import type { TraceContext } from './types';
 
 const TRACEPARENT_PATTERN =
-  /^(?<version>[0-9a-f]{2})-(?<traceID>[0-9a-f]{32})-(?<spanID>[0-9a-f]{16})-[0-9a-f]{2}$/;
+  /^(?<version>[0-9a-f]{2})-(?<traceID>[0-9a-f]{32})-(?<spanID>[0-9a-f]{16})-[0-9a-f]{2}$/u;
 
 export function parseTraceparent(header: null | string): TraceContext | null {
   if (header === null) {
@@ -18,7 +18,7 @@ export function parseTraceparent(header: null | string): TraceContext | null {
   const traceID = groups['traceID'] ?? '';
   const spanID = groups['spanID'] ?? '';
 
-  if (version === 'ff' || !/[1-9a-f]/.test(traceID) || !/[1-9a-f]/.test(spanID)) {
+  if (version === 'ff' || !/[1-9a-f]/u.test(traceID) || !/[1-9a-f]/u.test(spanID)) {
     return null;
   }
 

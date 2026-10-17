@@ -14,7 +14,7 @@ interface CreateDevDBConfig {
 // the maintenance connection must point at a database other than dev_base: postgres refuses to
 // clone a template that has open connections
 export async function createDevDB(config: Readonly<CreateDevDBConfig>): Promise<void> {
-  invariant(/^[a-z0-9_]+$/.test(config.dbName), `invalid dev database name: ${config.dbName}`);
+  invariant(/^[a-z0-9_]+$/u.test(config.dbName), `invalid dev database name: ${config.dbName}`);
 
   const pg = postgres(config.maintenanceDSN, { max: 1 });
 

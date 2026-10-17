@@ -3,7 +3,7 @@ import { createRNG } from '@vers/game-utils';
 import { createGenesisSeed } from './create-genesis-seed';
 
 test('it returns a 32-char lowercase-hex string', () => {
-  expect(createGenesisSeed()).toMatch(/^[0-9a-f]{32}$/);
+  expect(createGenesisSeed()).toMatch(/^[0-9a-f]{32}$/u);
 });
 
 test('it is accepted by createRNG without throwing', () => {

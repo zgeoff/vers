@@ -9,7 +9,7 @@ import { SaveStatusLine } from './save-status-line';
 test('it renders nothing before the worker reports a save', () => {
   render(<SaveStatusLine />);
 
-  expect(screen.queryByText(/This device/)).not.toBeInTheDocument();
+  expect(screen.queryByText(/This device/u)).not.toBeInTheDocument();
 });
 
 test('it shows the saved cursor apart from what the server received', () => {
@@ -48,5 +48,5 @@ test('it hides a report that belongs to the previous run once a new run is live'
 
   render(<SaveStatusLine />);
 
-  expect(screen.queryByText(/This device/)).not.toBeInTheDocument();
+  expect(screen.queryByText(/This device/u)).not.toBeInTheDocument();
 });

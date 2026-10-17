@@ -163,9 +163,6 @@
     // is the idiomatic pattern here, more so with `no-destructured-params`
     // in force
     "react/jsx-props-no-spreading": "off",
-    // forcing the `/u` flag on every regex (including simple literals in
-    // assertions and matchers) is broader than this repo wants
-    "require-unicode-regexp": "off",
     // low-level worker/message-port wrapping needs a bare `new Promise`
     // executor with an early-return
     "no-promise-executor-return": "off",

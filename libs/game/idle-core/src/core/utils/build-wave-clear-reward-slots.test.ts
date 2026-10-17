@@ -38,7 +38,7 @@ test('it rejects a non-positive difficulty', () => {
 
   expect(() => buildWaveClearRewardSlots(wave, 0)).toThrowWithMessage(
     Error,
-    /nodeTier must be a positive integer/,
+    /nodeTier must be a positive integer/u,
   );
 });
 
@@ -49,6 +49,6 @@ test('it rejects a fractional difficulty', () => {
 
   expect(() => buildWaveClearRewardSlots(wave, 1.5)).toThrowWithMessage(
     Error,
-    /nodeTier must be a positive integer/,
+    /nodeTier must be a positive integer/u,
   );
 });

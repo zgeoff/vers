@@ -71,5 +71,5 @@ test('it reads an empty window as no spans', () => {
 test('it rejects a match without a trace id', () => {
   expect(() =>
     parseAxiomSpans({ matches: [{ data: { name: 'GET /', service: { name: 'app-web' } } }] }),
-  ).toThrowWithMessage(ZodError, /trace_id/);
+  ).toThrowWithMessage(ZodError, /trace_id/u);
 });

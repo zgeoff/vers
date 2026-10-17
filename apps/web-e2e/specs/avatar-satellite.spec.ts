@@ -18,7 +18,7 @@ test('it mounts a second canvas for the avatar satellite and drops it on navigat
   await page.getByRole('button', { exact: true, name: 'Login' }).click();
 
   // the seeded account carries an avatar, so the active-avatar gate lands it in-game at respite
-  await expect(page).toHaveURL(/\/respite$/);
+  await expect(page).toHaveURL(/\/respite$/u);
 
   // scope the no-console-errors assertion to the satellite-canvas walk this spec is about; the
   // login that arranges the session is setup
@@ -32,7 +32,7 @@ test('it mounts a second canvas for the avatar satellite and drops it on navigat
 
   await page.getByRole('link', { exact: true, name: 'Avatar' }).click();
 
-  await expect(page).toHaveURL(/\/avatar$/);
+  await expect(page).toHaveURL(/\/avatar$/u);
 
   const canvases = page.locator('canvas');
 
@@ -46,7 +46,7 @@ test('it mounts a second canvas for the avatar satellite and drops it on navigat
 
   await page.getByRole('link', { exact: true, name: 'Respite' }).click();
 
-  await expect(page).toHaveURL(/\/respite$/);
+  await expect(page).toHaveURL(/\/respite$/u);
   await expect(canvases).toHaveCount(1);
   await expect(canvases.first()).toHaveAttribute('data-canvas-persistence-tag', 'world');
 

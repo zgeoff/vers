@@ -40,10 +40,10 @@ test('it renders settled reward items once the query resolves', async () => {
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
     renderWithRouter(<ActivityRewardsPanel activityID="activity_rewards_settled" orpc={orpc} />);
 
-    const item = await screen.findByText(/base_longsword/i);
+    const item = await screen.findByText(/base_longsword/iu);
 
     expect(item).toBeVisible();
-    expect(screen.getByText(/affix_flat_damage \+12/i)).toBeVisible();
+    expect(screen.getByText(/affix_flat_damage \+12/iu)).toBeVisible();
     expect(screen.queryByTestId('activity-rewards-pending')).not.toBeInTheDocument();
   });
 });

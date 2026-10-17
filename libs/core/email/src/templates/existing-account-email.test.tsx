@@ -9,8 +9,8 @@ test('it renders the existing account email with all required elements', () => {
     name: 'You already have an account',
   });
 
-  const emailText = screen.getByText(/test@example\.com/i);
-  const resetLink = screen.getByRole('link', { name: /reset password/i });
+  const emailText = screen.getByText(/test@example\.com/iu);
+  const resetLink = screen.getByRole('link', { name: /reset password/iu });
 
   expect(heading).toBeInTheDocument();
   expect(emailText).toBeInTheDocument();

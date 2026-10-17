@@ -18,7 +18,7 @@ test('it parses a valid payload into decoded roots', () => {
 });
 
 test('it rejects malformed JSON', () => {
-  expect(() => parseScopeSecretRoots('not json')).toThrowWithMessage(Error, /malformed JSON/);
+  expect(() => parseScopeSecretRoots('not json')).toThrowWithMessage(Error, /malformed JSON/u);
 });
 
 test('it rejects a payload missing the worldmap scope', () => {
@@ -32,7 +32,7 @@ test('it rejects a root that is not 64-character hex', () => {
     worldmap: { current: 1, roots: { 1: 'not-hex' } },
   });
 
-  expect(() => parseScopeSecretRoots(payload)).toThrowWithMessage(Error, /64-character hex/);
+  expect(() => parseScopeSecretRoots(payload)).toThrowWithMessage(Error, /64-character hex/u);
 });
 
 test('it rejects a non-integer secret version', () => {
@@ -42,7 +42,7 @@ test('it rejects a non-integer secret version', () => {
 
   expect(() => parseScopeSecretRoots(payload)).toThrowWithMessage(
     Error,
-    /non-integer secret version/,
+    /non-integer secret version/u,
   );
 });
 
@@ -51,7 +51,7 @@ test('it rejects a current version absent from roots', () => {
     worldmap: { current: 2, roots: { 1: WORLDMAP_ROOT } },
   });
 
-  expect(() => parseScopeSecretRoots(payload)).toThrowWithMessage(Error, /no matching root/);
+  expect(() => parseScopeSecretRoots(payload)).toThrowWithMessage(Error, /no matching root/u);
 });
 
 test('it never echoes root material in a rejection message', () => {
@@ -61,11 +61,11 @@ test('it never echoes root material in a rejection message', () => {
 
   expect(() => parseScopeSecretRoots(payload)).toThrowWithMessage(
     Error,
-    /scope "worldmap" secret version 1 is not 64-character hex/,
+    /scope "worldmap" secret version 1 is not 64-character hex/u,
   );
 
   expect(() => parseScopeSecretRoots(payload)).not.toThrowWithMessage(
     Error,
-    /not-hex-but-secret-shaped/,
+    /not-hex-but-secret-shaped/u,
   );
 });

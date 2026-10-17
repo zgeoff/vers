@@ -5,7 +5,7 @@ test('it encodes the bytes as base64url so every byte value maps evenly', () => 
   const password = buildPasswordFromBytes(new Uint8Array(21).map((_, index) => index * 12));
 
   expect(password).toHaveLength(28);
-  expect(password).toMatch(/^[A-Za-z0-9_-]+$/);
+  expect(password).toMatch(/^[A-Za-z0-9_-]+$/u);
 });
 
 test('it maps equal bytes to the same password', () => {
@@ -17,6 +17,6 @@ test('it maps equal bytes to the same password', () => {
 test('it refuses fewer than 16 bytes of entropy', () => {
   expect(() => buildPasswordFromBytes(new Uint8Array(8))).toThrowWithMessage(
     Error,
-    /at least 16 bytes/,
+    /at least 16 bytes/u,
   );
 });

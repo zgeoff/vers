@@ -40,13 +40,13 @@ test('it never collides a craft position with a reward coordinate', () => {
 test('it rejects an identifier containing the separator', () => {
   expect(() =>
     encodePositionBytes({ kind: 'craft', avatarID: 'a|b', position: 1 }),
-  ).toThrowWithMessage(Error, /avatarID must not contain the separator/);
+  ).toThrowWithMessage(Error, /avatarID must not contain the separator/u);
 });
 
 test('it rejects a negative position index', () => {
   expect(() =>
     encodePositionBytes({ kind: 'craft', avatarID: 'a', position: -1 }),
-  ).toThrowWithMessage(Error, /craft position must be a non-negative integer/);
+  ).toThrowWithMessage(Error, /craft position must be a non-negative integer/u);
 });
 
 test('it rejects a scope identifier containing the separator', () => {
@@ -59,7 +59,7 @@ test('it rejects a scope identifier containing the separator', () => {
       chainIndex: 1,
       ordinal: 0,
     }),
-  ).toThrowWithMessage(Error, /scopeID must not contain the separator/);
+  ).toThrowWithMessage(Error, /scopeID must not contain the separator/u);
 });
 
 test('it rejects a scope type containing the separator', () => {
@@ -72,7 +72,7 @@ test('it rejects a scope type containing the separator', () => {
       chainIndex: 1,
       ordinal: 0,
     }),
-  ).toThrowWithMessage(Error, /scopeType must not contain the separator/);
+  ).toThrowWithMessage(Error, /scopeType must not contain the separator/u);
 });
 
 test('it rejects a negative chain index', () => {
@@ -85,13 +85,13 @@ test('it rejects a negative chain index', () => {
       chainIndex: -1,
       ordinal: 0,
     }),
-  ).toThrowWithMessage(Error, /chainIndex must be a non-negative integer/);
+  ).toThrowWithMessage(Error, /chainIndex must be a non-negative integer/u);
 });
 
 test('it rejects an identifier with malformed unicode', () => {
   expect(() =>
     encodePositionBytes({ kind: 'craft', avatarID: 'a\uD800b', position: 1 }),
-  ).toThrowWithMessage(Error, /avatarID must be well-formed unicode/);
+  ).toThrowWithMessage(Error, /avatarID must be well-formed unicode/u);
 });
 
 test('it rejects a fractional ordinal', () => {
@@ -104,5 +104,5 @@ test('it rejects a fractional ordinal', () => {
       chainIndex: 1,
       ordinal: 0.5,
     }),
-  ).toThrowWithMessage(Error, /ordinal must be a non-negative integer/);
+  ).toThrowWithMessage(Error, /ordinal must be a non-negative integer/u);
 });

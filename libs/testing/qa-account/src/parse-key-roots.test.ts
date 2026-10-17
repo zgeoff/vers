@@ -31,7 +31,7 @@ test('it rejects roots that have no entry for the stamped version', () => {
       },
       { keyVersion: 1, secretVersion: 1 },
     ),
-  ).toThrowWithMessage(Error, /ROLL_KEY_ROOTS has no "trade" root for version 1/);
+  ).toThrowWithMessage(Error, /ROLL_KEY_ROOTS has no "trade" root for version 1/u);
 });
 
 test('it rejects a root that is not 64-character hex, even one it would not pick', () => {
@@ -45,7 +45,7 @@ test('it rejects a root that is not 64-character hex, even one it would not pick
       },
       { keyVersion: 1, secretVersion: 1 },
     ),
-  ).toThrowWithMessage(Error, /invalid SCOPE_SECRET_ROOTS: .*64-character hex/s);
+  ).toThrowWithMessage(Error, /invalid SCOPE_SECRET_ROOTS: .*64-character hex/su);
 });
 
 test('it rejects an entry whose current version has no root', () => {
@@ -59,7 +59,7 @@ test('it rejects an entry whose current version has no root', () => {
       },
       { keyVersion: 1, secretVersion: 1 },
     ),
-  ).toThrowWithMessage(Error, /"trade" current version 3 has no matching root/);
+  ).toThrowWithMessage(Error, /"trade" current version 3 has no matching root/u);
 });
 
 test('it rejects an entry without a current version', () => {
@@ -73,7 +73,7 @@ test('it rejects an entry without a current version', () => {
       },
       { keyVersion: 1, secretVersion: 1 },
     ),
-  ).toThrowWithMessage(Error, /invalid ROLL_KEY_ROOTS: .*current/s);
+  ).toThrowWithMessage(Error, /invalid ROLL_KEY_ROOTS: .*current/su);
 });
 
 test('it rejects malformed JSON', () => {
@@ -87,7 +87,7 @@ test('it rejects malformed JSON', () => {
       },
       { keyVersion: 1, secretVersion: 1 },
     ),
-  ).toThrowWithMessage(Error, /invalid ROLL_KEY_ROOTS: malformed JSON/);
+  ).toThrowWithMessage(Error, /invalid ROLL_KEY_ROOTS: malformed JSON/u);
 });
 
 test('it rejects a payload missing the worldmap scope', () => {
@@ -99,5 +99,5 @@ test('it rejects a payload missing the worldmap scope', () => {
       },
       { keyVersion: 1, secretVersion: 1 },
     ),
-  ).toThrowWithMessage(Error, /invalid SCOPE_SECRET_ROOTS/);
+  ).toThrowWithMessage(Error, /invalid SCOPE_SECRET_ROOTS/u);
 });

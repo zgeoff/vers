@@ -5,7 +5,7 @@ import { ScopeIdentifierSchema } from './scope-identifier-schema';
 export const OfflineActivityStartSubmissionSchema = z.object({
   avatarID: z.string(),
   buildSnapshot: BuildSnapshotSchema,
-  contentVersion: z.string().regex(/^\d+$/),
+  contentVersion: z.string().regex(/^\d+$/u),
 
   playedAt: z.date().nullable(),
 

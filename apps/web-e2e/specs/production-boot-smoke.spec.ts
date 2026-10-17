@@ -31,7 +31,7 @@ test('it serves the favicon and the robots policy as static files', async ({ req
 
   const robotsText = await robots.text();
 
-  const directives = robotsText.split(/\r?\n/);
+  const directives = robotsText.split(/\r?\n/u);
 
   expect(directives).toStrictEqual(
     expect.arrayContaining([

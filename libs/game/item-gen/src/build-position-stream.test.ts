@@ -64,7 +64,7 @@ test('it reproduces identical draws when rebuilt from equal inputs', () => {
 test('it rejects an empty key', () => {
   expect(() =>
     buildPositionStream(new Uint8Array(0), { kind: 'craft', avatarID: 'a', position: 1 }),
-  ).toThrowWithMessage(Error, /avatar key must not be empty/);
+  ).toThrowWithMessage(Error, /avatar key must not be empty/u);
 });
 
 test('it diverges under a different key', () => {

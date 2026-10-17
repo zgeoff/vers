@@ -11,12 +11,12 @@ test('it renders the account content and sub-flow links', async () => {
 
   expect(body).toBeInTheDocument();
 
-  expect(screen.getByRole('link', { name: /Change email/ })).toHaveAttribute(
+  expect(screen.getByRole('link', { name: /Change email/u })).toHaveAttribute(
     'href',
     '/account/change-email',
   );
 
-  expect(screen.getByRole('link', { name: /Change password/ })).toHaveAttribute(
+  expect(screen.getByRole('link', { name: /Change password/u })).toHaveAttribute(
     'href',
     '/account/change-password',
   );
@@ -25,7 +25,7 @@ test('it renders the account content and sub-flow links', async () => {
 test('it offers to enable 2FA when the account has none', async () => {
   renderWithRouter(<AccountScreen Content={<p>account body</p>} has2FA={false} />);
 
-  const enableLink = await screen.findByRole('link', { name: /Enable 2FA/ });
+  const enableLink = await screen.findByRole('link', { name: /Enable 2FA/u });
 
   expect(enableLink).toHaveAttribute('href', '/account/2fa/verify');
 });

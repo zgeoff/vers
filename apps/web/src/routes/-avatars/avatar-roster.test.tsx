@@ -17,11 +17,11 @@ test('it renders each avatar as a selectable card and offers a create slot', asy
 
   renderWithRouter(<AvatarRoster roster={{ activeAvatarID: null, avatars: [avatar] }} />);
 
-  const card = await screen.findByRole('button', { name: /Karnak/ });
+  const card = await screen.findByRole('button', { name: /Karnak/u });
 
   expect(card).toBeEnabled();
 
-  expect(screen.getByRole('link', { name: /Create avatar/ })).toHaveAttribute(
+  expect(screen.getByRole('link', { name: /Create avatar/u })).toHaveAttribute(
     'href',
     '/avatars/create',
   );
@@ -35,9 +35,9 @@ test('it marks the active avatar', async () => {
     <AvatarRoster roster={{ activeAvatarID: active.id, avatars: [active, idle] }} />,
   );
 
-  const activeCard = await screen.findByRole('button', { name: /Karnak/ });
+  const activeCard = await screen.findByRole('button', { name: /Karnak/u });
 
-  const idleCard = screen.getByRole('button', { name: /Zetha/ });
+  const idleCard = screen.getByRole('button', { name: /Zetha/u });
 
   expect(activeCard).toHaveTextContent('Active');
   expect(idleCard).not.toHaveTextContent('Active');
@@ -46,10 +46,10 @@ test('it marks the active avatar', async () => {
 test('it shows only the create slot when the account has no avatars', async () => {
   renderWithRouter(<AvatarRoster roster={{ activeAvatarID: null, avatars: [] }} />);
 
-  const createLink = await screen.findByRole('link', { name: /Create avatar/ });
+  const createLink = await screen.findByRole('link', { name: /Create avatar/u });
 
   expect(createLink).toHaveAttribute('href', '/avatars/create');
-  expect(screen.queryByText(/Level/)).not.toBeInTheDocument();
+  expect(screen.queryByText(/Level/u)).not.toBeInTheDocument();
 });
 
 test('it hides the create slot when every mode is at its cap', async () => {
@@ -60,9 +60,9 @@ test('it hides the create slot when every mode is at its cap', async () => {
 
   renderWithRouter(<AvatarRoster roster={{ activeAvatarID: null, avatars }} />);
 
-  await screen.findByRole('heading', { name: /Choose your avatar/ });
+  await screen.findByRole('heading', { name: /Choose your avatar/u });
 
-  expect(screen.queryByRole('link', { name: /Create avatar/ })).not.toBeInTheDocument();
+  expect(screen.queryByRole('link', { name: /Create avatar/u })).not.toBeInTheDocument();
 });
 
 test('it blocks a click on a different avatar than the one live in the simulation', async () => {
@@ -81,7 +81,7 @@ test('it blocks a click on a different avatar than the one live in the simulatio
 
   renderWithRouter(<AvatarRoster roster={{ activeAvatarID: null, avatars: [out, other] }} />);
 
-  const otherCard = await screen.findByRole('button', { name: /Zetha/ });
+  const otherCard = await screen.findByRole('button', { name: /Zetha/u });
 
   await user.click(otherCard);
   await screen.findByText('Karnak is out on an activity — finish or stop it to switch');
@@ -108,7 +108,7 @@ test('it lets a click on the currently-out avatar proceed', async () => {
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
     renderWithRouter(<AvatarRoster roster={{ activeAvatarID: null, avatars: [out, other] }} />);
 
-    const outCard = await screen.findByRole('button', { name: /Karnak/ });
+    const outCard = await screen.findByRole('button', { name: /Karnak/u });
 
     await user.click(outCard);
 
@@ -120,6 +120,6 @@ test('it lets a click on the currently-out avatar proceed', async () => {
       expect(active).toMatchObject({ avatarID: out.id });
     });
 
-    expect(screen.queryByText(/is out on an activity/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/is out on an activity/u)).not.toBeInTheDocument();
   });
 });

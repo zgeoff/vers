@@ -79,7 +79,7 @@ test('it rejects a forced affix missing from the tables', () => {
       new Set(),
       { forceAffixIDs: ['ghost'] },
     ),
-  ).toThrowWithMessage(Error, /forced affix must exist in the tables: ghost/);
+  ).toThrowWithMessage(Error, /forced affix must exist in the tables: ghost/u);
 });
 
 test('it rejects a negative reweight factor', () => {
@@ -89,5 +89,5 @@ test('it rejects a negative reweight factor', () => {
       new Set(),
       { reweights: { alpha: -1 } },
     ),
-  ).toThrowWithMessage(Error, /reweight factors must be non-negative integers/);
+  ).toThrowWithMessage(Error, /reweight factors must be non-negative integers/u);
 });

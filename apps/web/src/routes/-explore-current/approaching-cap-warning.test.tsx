@@ -6,7 +6,7 @@ import { ApproachingCapWarning } from './approaching-cap-warning';
 test('it renders nothing while no cap status is reported', () => {
   render(<ApproachingCapWarning />);
 
-  expect(screen.queryByText(/reconnect/i)).not.toBeInTheDocument();
+  expect(screen.queryByText(/reconnect/iu)).not.toBeInTheDocument();
 });
 
 test('it warns with the remaining time while the budget drains', () => {

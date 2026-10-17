@@ -172,7 +172,7 @@ test('it self-assigns a stable genesis seed and encounter across repeat reveals 
 
   invariant(entry, 'revealNodes must return one entry per input node');
 
-  expect(entry.genesisSeed).toMatch(/^[0-9a-f]{32}$/);
+  expect(entry.genesisSeed).toMatch(/^[0-9a-f]{32}$/u);
 
   const rows = await ctx.db
     .selectFrom('activityChains')

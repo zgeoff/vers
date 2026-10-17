@@ -233,7 +233,7 @@ test('it refuses to update a content_versions row', async () => {
       .set({ document: { nonsense: true } })
       .where('contentVersion', '=', '1')
       .execute(),
-  ).rejects.toThrowWithMessage(Error, /immutable/);
+  ).rejects.toThrowWithMessage(Error, /immutable/u);
 
   await db.destroy();
 });
@@ -247,7 +247,7 @@ test('it refuses to delete a content_versions row', async () => {
 
   expect(
     db.deleteFrom('contentVersions').where('contentVersion', '=', '1').execute(),
-  ).rejects.toThrowWithMessage(Error, /immutable/);
+  ).rejects.toThrowWithMessage(Error, /immutable/u);
 
   await db.destroy();
 });

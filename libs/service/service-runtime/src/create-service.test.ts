@@ -79,7 +79,7 @@ test('it throws at boot when SERVICE_AUTH_JWKS is missing', () => {
       envShape: {},
       name: 'test-service',
     }),
-  ).rejects.toThrowWithMessage(Error, /SERVICE_AUTH_JWKS/);
+  ).rejects.toThrowWithMessage(Error, /SERVICE_AUTH_JWKS/u);
 });
 
 test('it applies default PORT and LOG_LEVEL when unset', async () => {
@@ -425,7 +425,7 @@ test('it mints a fresh trace id when no traceparent is supplied', async () => {
 
   const response = await service.app.handle(new Request('http://test.local/health'));
 
-  expect(response.headers.get('x-trace-id')).toMatch(/^[0-9a-f]{32}$/);
+  expect(response.headers.get('x-trace-id')).toMatch(/^[0-9a-f]{32}$/u);
 });
 
 test('it continues the trace named by an inbound traceparent header', async () => {
@@ -493,7 +493,7 @@ test('it reports the OTel span trace id as x-trace-id when no traceparent came i
   invariant(result.traceID !== null, 'expected an active span inside the handler');
   invariant(response !== undefined, 'expected the RPC response to be captured');
 
-  expect(result.traceID).toMatch(/^[0-9a-f]{32}$/);
+  expect(result.traceID).toMatch(/^[0-9a-f]{32}$/u);
   expect(response.headers.get('x-trace-id')).toBe(result.traceID);
 });
 
@@ -517,7 +517,7 @@ test('it mints a fresh trace id for a malformed traceparent header', async () =>
     }),
   );
 
-  expect(response.headers.get('x-trace-id')).toMatch(/^[0-9a-f]{32}$/);
+  expect(response.headers.get('x-trace-id')).toMatch(/^[0-9a-f]{32}$/u);
 });
 
 test('it masks an unexpected handler error as a bare INTERNAL_SERVER_ERROR', async () => {

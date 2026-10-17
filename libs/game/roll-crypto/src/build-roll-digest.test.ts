@@ -50,5 +50,5 @@ test('it formats the digest as lowercase hex', () => {
   const avatarKey = utf8ToBytes('avatar-key');
   const coordinateBytes = utf8ToBytes('coordinate');
 
-  expect(buildRollDigest(avatarKey, coordinateBytes)).toMatch(/^[0-9a-f]{64}$/);
+  expect(buildRollDigest(avatarKey, coordinateBytes)).toMatch(/^[0-9a-f]{64}$/u);
 });

@@ -1405,7 +1405,7 @@
     "@zgeoff/dbhub": "0.23.4",
     "@zgeoff/format-codemod": "0.1.0",
     "@zgeoff/mcp-remote": "0.1.38",
-    "@zgeoff/oxlint-config": "0.2.2",
+    "@zgeoff/oxlint-config": "0.2.3",
     "@zgeoff/umami-mcp": "0.1.0",
     "autoprefixer": "10.5.2",
     "babel-plugin-react-compiler": "1.0.0",
@@ -2994,7 +2994,7 @@
 
     "@zgeoff/mcp-remote": ["@zgeoff/mcp-remote@0.1.38", "", { "dependencies": { "express": "^4.21.2", "open": "^10.1.0", "strict-url-sanitise": "^0.0.1", "undici": "^7.12.0" }, "bin": { "mcp-remote": "dist/proxy.js", "mcp-remote-client": "dist/client.js" } }, "sha512-NIF6nd1wJ3/NmaXmI7vm1eE7vbXQDP9cxqhfGpYaEdoEPwzbju1uxyaNvGnHrzBblYFpfk6m2aqqJhT8OLDbxw=="],
 
-    "@zgeoff/oxlint-config": ["@zgeoff/oxlint-config@0.2.2", "", { "dependencies": { "@stylistic/eslint-plugin": "5.10.0" }, "peerDependencies": { "oxlint": ">=1.71.0" } }, "sha512-lcjwFXOp7MegC9ZrjV5IUeE6wIMS118LrM7LLslfhsAYLxC6R8y6YUtpN98B2FEgTqnKH0TxOtkhsRsEZl9s1g=="],
+    "@zgeoff/oxlint-config": ["@zgeoff/oxlint-config@0.2.3", "", { "dependencies": { "@stylistic/eslint-plugin": "5.10.0" }, "peerDependencies": { "oxlint": ">=1.71.0" } }, "sha512-AJiHOTxRjS6FYACY6CnffHgOwX1Cc/B267zzEdrKdzeLom93FP0e9G57c3UXNW/u2isymBjL9642y9YLHcoAeQ=="],
 
     "@zgeoff/umami-mcp": ["@zgeoff/umami-mcp@0.1.0", "", { "dependencies": { "@modelcontextprotocol/sdk": "1.29.0", "zod": "3.25.76" }, "bin": { "umami-mcp": "dist/index.js" } }, "sha512-+GhMmBw3SFA4EGKU6HiXj0+MoFsEFNga9vpd0KLLbrn4nDDbBbmgb0bzFe7iG68i1z2oEfvzJt5wUZStoLWZ2g=="],
 

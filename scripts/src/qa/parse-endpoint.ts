@@ -1,6 +1,6 @@
 import { InvalidArgumentError } from 'commander';
 
-const ENDPOINT_PATTERN = /^(?<host>[A-Za-z0-9.-]+):(?<port>\d{1,5})$/;
+const ENDPOINT_PATTERN = /^(?<host>[A-Za-z0-9.-]+):(?<port>\d{1,5})$/u;
 const MAX_PORT = 65_535;
 
 export function parseEndpoint(value: string): string {

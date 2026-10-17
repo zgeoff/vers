@@ -7,9 +7,9 @@ test('it has a preview entry for every template generator', () => {
     .filter((exportName) => exportName.startsWith('render'))
     .map((exportName) =>
       exportName
-        .replace(/^render/, '')
-        .replace(/Email$/, '')
-        .replaceAll(/(?<=[a-z])(?=[A-Z])/g, '-')
+        .replace(/^render/u, '')
+        .replace(/Email$/u, '')
+        .replaceAll(/(?<=[a-z])(?=[A-Z])/gu, '-')
         .toLowerCase(),
     );
 

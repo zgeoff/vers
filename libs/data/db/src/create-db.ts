@@ -347,5 +347,5 @@ function recordQuerySpan(event: LogEvent): void {
 }
 
 function toOperationName(kind: string): string {
-  return kind.replace(/(?:Query)?Node$/, '').toLowerCase();
+  return kind.replace(/(?:Query)?Node$/u, '').toLowerCase();
 }

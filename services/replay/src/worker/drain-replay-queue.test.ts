@@ -388,5 +388,5 @@ test('it stops draining and reports a claim failure carrying a trace id, without
     expect(recorded.length).toBeGreaterThan(0);
   });
 
-  expect(recorded[0]?.tags?.['traceID']).toMatch(/^[0-9a-f]{32}$/);
+  expect(recorded[0]?.tags?.['traceID']).toMatch(/^[0-9a-f]{32}$/u);
 });

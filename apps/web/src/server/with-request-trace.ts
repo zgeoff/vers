@@ -2,7 +2,7 @@ import { SpanKind, SpanStatusCode, context, propagation, trace } from '@opentele
 import { findSpanTraceContext, withTraceContext } from '@vers/service-utils';
 import { createTraceContext, parseTraceparent } from '@vers/trace';
 
-const ASSET_PATH_PATTERN = /\.[a-z0-9]+$/i;
+const ASSET_PATH_PATTERN = /\.[a-z0-9]+$/iu;
 
 export function withRequestTrace(
   request: Request,

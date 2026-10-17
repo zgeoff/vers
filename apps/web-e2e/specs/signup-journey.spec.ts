@@ -32,7 +32,7 @@ test('it signs up, creates an avatar, and can navigate the shell to settings and
   await expect(async () => {
     await page.getByRole('link', { exact: true, name: 'Settings' }).click();
 
-    await expect(page).toHaveURL(/\/settings$/, { timeout: 1000 });
+    await expect(page).toHaveURL(/\/settings$/u, { timeout: 1000 });
   }).toPass({ timeout: 15_000 });
 
   await page.getByRole('button', { name: 'Log out' }).click();
@@ -64,7 +64,7 @@ test('it logs a fresh account out and back in, landing signed in at respite', as
   await expect(async () => {
     await page.getByRole('link', { exact: true, name: 'Settings' }).click();
 
-    await expect(page).toHaveURL(/\/settings$/, { timeout: 1000 });
+    await expect(page).toHaveURL(/\/settings$/u, { timeout: 1000 });
   }).toPass({ timeout: 15_000 });
 
   await page.getByRole('button', { name: 'Log out' }).click();
@@ -80,7 +80,7 @@ test('it logs a fresh account out and back in, landing signed in at respite', as
 
   await page.getByRole('button', { exact: true, name: 'Login' }).click();
 
-  await expect(page).toHaveURL(/\/respite$/);
+  await expect(page).toHaveURL(/\/respite$/u);
 });
 
 interface SignUpJourney extends E2EOptions {
@@ -103,7 +103,7 @@ async function runSignUpIntoGame(page: Page, journey: Readonly<SignUpJourney>): 
 
   await page.getByRole('button', { exact: true, name: 'Signup' }).click();
 
-  await expect(page).toHaveURL(/\/verify-otp/);
+  await expect(page).toHaveURL(/\/verify-otp/u);
 
   const code = await waitForVerificationCode(journey);
 
@@ -113,7 +113,7 @@ async function runSignUpIntoGame(page: Page, journey: Readonly<SignUpJourney>): 
 
   await page.getByRole('button', { exact: true, name: 'Verify' }).click();
 
-  await expect(page).toHaveURL(/\/onboarding/);
+  await expect(page).toHaveURL(/\/onboarding/u);
 
   await page.getByLabel('Username').fill(journey.username);
   await page.getByLabel('Name', { exact: true }).fill('Journey Account');
@@ -125,7 +125,7 @@ async function runSignUpIntoGame(page: Page, journey: Readonly<SignUpJourney>): 
 
   await page.getByRole('button', { name: 'Create an Account' }).click();
 
-  await expect(page).toHaveURL(/\/avatars\/create$/, { timeout: 20_000 });
+  await expect(page).toHaveURL(/\/avatars\/create$/u, { timeout: 20_000 });
 
   const nameField = page.getByLabel('Name', { exact: true });
 
@@ -141,7 +141,7 @@ async function runSignUpIntoGame(page: Page, journey: Readonly<SignUpJourney>): 
       await page.getByRole('button', { name: 'Create Avatar' }).click();
     }
 
-    await expect(page).toHaveURL(/\/explore$/, { timeout: 5000 });
+    await expect(page).toHaveURL(/\/explore$/u, { timeout: 5000 });
   }).toPass({ timeout: 20_000 });
 }
 

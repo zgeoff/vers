@@ -9,7 +9,7 @@ test('it derives a 64-char lowercase hex key', async () => {
     { context: { actingUserID: null } },
   );
 
-  expect(result.key).toMatch(/^[0-9a-f]{64}$/);
+  expect(result.key).toMatch(/^[0-9a-f]{64}$/u);
 });
 
 test('it derives the same key for the same input across calls', async () => {

@@ -18,7 +18,7 @@ test('it renders respite, avatar, and explore for a signed-in caller without con
   await page.getByRole('button', { exact: true, name: 'Login' }).click();
 
   // the seeded account carries an avatar, so the active-avatar gate lands it in-game at respite
-  await expect(page).toHaveURL(/\/respite$/);
+  await expect(page).toHaveURL(/\/respite$/u);
 
   // scope the no-console-errors assertion to the in-game navigation this spec is about; the login
   // that arranges the session is setup
@@ -52,11 +52,11 @@ test('it renders respite, avatar, and explore for a signed-in caller without con
 
   await page.getByRole('link', { exact: true, name: 'Avatar' }).click();
 
-  await expect(page).toHaveURL(/\/avatar$/);
+  await expect(page).toHaveURL(/\/avatar$/u);
 
   await page.getByRole('link', { exact: true, name: 'Explore' }).click();
 
-  await expect(page).toHaveURL(/\/explore$/);
+  await expect(page).toHaveURL(/\/explore$/u);
   await expect(page.locator('canvas').first()).toBeVisible();
 
   expect(consoleErrors).toStrictEqual([]);

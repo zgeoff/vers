@@ -152,7 +152,7 @@ test('it rejects content whose version does not match the source', () => {
       id: 'act_1',
       seed: 'dd'.repeat(16),
     }),
-  ).toThrowWithMessage(Error, /content must match the source's pinned content version/);
+  ).toThrowWithMessage(Error, /content must match the source's pinned content version/u);
 });
 
 test('it selects the pool named by a stamped poolID, and falls back to the first when absent', () => {

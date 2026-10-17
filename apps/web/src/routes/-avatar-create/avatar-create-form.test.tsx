@@ -25,7 +25,7 @@ test('it defaults to Trade mode with no permanence warning shown', async () => {
     const tradeOption = await rendered.findByRole('radio', { name: 'Trade' });
 
     expect(tradeOption).toBeChecked();
-    expect(rendered.queryByText(/Self-Found is permanent/)).not.toBeInTheDocument();
+    expect(rendered.queryByText(/Self-Found is permanent/u)).not.toBeInTheDocument();
   });
 });
 
@@ -40,7 +40,7 @@ test('it shows a permanence warning when Self-Found is selected', async () => {
     await user.click(selfFoundOption);
 
     expect(selfFoundOption).toBeChecked();
-    expect(rendered.getByText(/Self-Found is permanent/)).toBeInTheDocument();
+    expect(rendered.getByText(/Self-Found is permanent/u)).toBeInTheDocument();
   });
 });
 

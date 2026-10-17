@@ -38,6 +38,6 @@ test('it diverges from a position stream fed the same bytes', () => {
 test('it rejects an empty salt', () => {
   expect(() => buildSaltStream(new Uint8Array(0))).toThrowWithMessage(
     Error,
-    /salt must not be empty/,
+    /salt must not be empty/u,
   );
 });

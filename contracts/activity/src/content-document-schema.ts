@@ -4,7 +4,7 @@ import { LootTablesSchema } from './loot-tables-schema';
 
 export const ContentDocumentSchema = z
   .object({
-    contentVersion: z.string().regex(/^\d+$/),
+    contentVersion: z.string().regex(/^\d+$/u),
     encounter: EncounterContentSchema,
     loot: LootTablesSchema,
   })
