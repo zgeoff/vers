@@ -92,7 +92,7 @@
       "@types/react-dom": "19.2.3",
       "@types/three": "0.185.0",
       "@vitejs/plugin-react": "6.0.3",
-      "@vitejs/plugin-rsc": "0.5.27",
+      "@vitejs/plugin-rsc": "0.5.30",
       "@zgeoff/bugsink-mcp": "0.2.0",
       "@zgeoff/bun-test-extended": "0.0.3",
       "@zgeoff/dbhub": "0.23.4",
