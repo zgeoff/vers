@@ -7,7 +7,7 @@ export const UsernameSchema = z
   .string({ error: 'Username is required' })
   .min(USERNAME_MIN_LENGTH, { error: 'Username is too short' })
   .max(USERNAME_MAX_LENGTH, { error: 'Username is too long' })
-  .regex(/^[a-zA-Z0-9_]+$/, {
+  .regex(/^[a-zA-Z0-9_]+$/u, {
     error: 'Username can only include letters, numbers, and underscores',
   })
   .transform((value) => value.toLowerCase());

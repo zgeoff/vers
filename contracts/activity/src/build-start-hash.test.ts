@@ -61,7 +61,7 @@ test('it produces a 64-character hex digest', () => {
     simVersion: '0.0.0-dev',
   });
 
-  expect(hash).toMatch(/^[a-f0-9]{64}$/);
+  expect(hash).toMatch(/^[a-f0-9]{64}$/u);
 });
 
 test('it derives the frozen canonical digest for a known input', () => {

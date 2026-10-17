@@ -1,6 +1,6 @@
 import { toNodeID } from './to-node-id';
 
-const ID_PATTERN = /^-?\d+_-?\d+$/;
+const ID_PATTERN = /^-?\d+_-?\d+$/u;
 
 export function findCellCoord(id: string): [number, number] | undefined {
   if (!ID_PATTERN.test(id)) {

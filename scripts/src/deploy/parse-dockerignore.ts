@@ -30,5 +30,5 @@ export function parseDockerignore(text: string): ReadonlyArray<IgnorePattern> {
 function normalizePattern(pattern: string): string {
   const cleaned = path.posix.normalize(pattern.trim());
 
-  return cleaned.replace(/^\/+/, '').replace(/\/+$/, '');
+  return cleaned.replace(/^\/+/u, '').replace(/\/+$/u, '');
 }

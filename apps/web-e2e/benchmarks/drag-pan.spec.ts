@@ -28,11 +28,11 @@ test('it drag-pans across the explore map and reports peak frame gap and dropped
 
   await page.getByRole('button', { exact: true, name: 'Login' }).click();
 
-  await expect(page).toHaveURL(/\/respite$/);
+  await expect(page).toHaveURL(/\/respite$/u);
 
   await page.getByRole('link', { exact: true, name: 'Explore' }).click();
 
-  await expect(page).toHaveURL(/\/explore$/);
+  await expect(page).toHaveURL(/\/explore$/u);
 
   const canvas = page.locator('canvas').first();
 

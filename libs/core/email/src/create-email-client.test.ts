@@ -98,7 +98,7 @@ test('it throws when resend reports an error', () => {
       subject: 'Test Subject',
       to: 'test@example.com',
     }),
-  ).rejects.toThrowWithMessage(Error, /failed to send email/);
+  ).rejects.toThrowWithMessage(Error, /failed to send email/u);
 });
 
 test('it emits a resend.send client span for a successful send', async () => {
@@ -133,7 +133,7 @@ test('it marks the span failed when resend reports an error', async () => {
     to: 'test@example.com',
   });
 
-  expect(pending).rejects.toThrowWithMessage(Error, /failed to send email/);
+  expect(pending).rejects.toThrowWithMessage(Error, /failed to send email/u);
 
   await expect(pending).toReject();
 

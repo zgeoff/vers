@@ -49,7 +49,7 @@ test('it uses a simple charset for 2fa verification codes', async () => {
 
   const created = await client.createVerification({ target: '+15551234567', type: '2fa' });
 
-  expect(created.otp).toMatch(/^[0-9]+$/);
+  expect(created.otp).toMatch(/^[0-9]+$/u);
   expect(created.expiresAt).toBeNull();
 });
 
@@ -62,7 +62,7 @@ test('it uses a simple charset for 2fa setup verification codes', async () => {
 
   const created = await client.createVerification({ target: '+15551234567', type: '2fa-setup' });
 
-  expect(created.otp).toMatch(/^[0-9]+$/);
+  expect(created.otp).toMatch(/^[0-9]+$/u);
 });
 
 test('it replaces an existing verification for the same target and type', async () => {

@@ -33,7 +33,7 @@ test('it shows loading state when pending', () => {
 test('it shows success state', () => {
   render(<StatusButton status={StatusButton.Status.Success}>Click me</StatusButton>);
 
-  const successIndicator = screen.getByRole('img', { name: /success/i });
+  const successIndicator = screen.getByRole('img', { name: /success/iu });
 
   expect(successIndicator).toBeInTheDocument();
 });
@@ -41,7 +41,7 @@ test('it shows success state', () => {
 test('it shows error state', () => {
   render(<StatusButton status={StatusButton.Status.Error}>Click me</StatusButton>);
 
-  const errorIndicator = screen.getByRole('img', { name: /error/i });
+  const errorIndicator = screen.getByRole('img', { name: /error/iu });
 
   expect(errorIndicator).toBeInTheDocument();
 });

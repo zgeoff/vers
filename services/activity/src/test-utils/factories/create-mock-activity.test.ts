@@ -32,7 +32,7 @@ test('it defaults lastHash and startHash to the real start hash of its own field
   });
 
   expect(row.startHash).toBe(row.lastHash);
-  expect(row.startHash).toMatch(/^[a-f0-9]{64}$/);
+  expect(row.startHash).toMatch(/^[a-f0-9]{64}$/u);
 });
 
 test('it applies overrides on top of the faker-generated defaults', () => {

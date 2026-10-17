@@ -155,5 +155,5 @@ test('it reports a missing account instead of touching anything', async () => {
         username: 'qa_missing',
       },
     }),
-  ).rejects.toThrowWithMessage(Error, /no account exists/);
+  ).rejects.toThrowWithMessage(Error, /no account exists/u);
 });

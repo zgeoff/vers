@@ -1,6 +1,6 @@
 import type { Trigger } from './types';
 
-const TRIGGER_PATTERN = /^trigger:\s+(?<kind>release|date)\s+(?<rest>.+)$/m;
+const TRIGGER_PATTERN = /^trigger:\s+(?<kind>release|date)\s+(?<rest>.+)$/mu;
 
 export function parseTrigger(body: string): Trigger | null {
   const match = TRIGGER_PATTERN.exec(body);
@@ -12,10 +12,10 @@ export function parseTrigger(body: string): Trigger | null {
   const rest = match.groups['rest']?.trim() ?? '';
 
   if (match.groups['kind'] === 'date') {
-    return /^\d{4}-\d{2}-\d{2}$/.test(rest) ? { date: rest, kind: 'date' } : null;
+    return /^\d{4}-\d{2}-\d{2}$/u.test(rest) ? { date: rest, kind: 'date' } : null;
   }
 
-  const release = /^(?<pkg>\S+)\s+>(?<version>\S+)$/.exec(rest);
+  const release = /^(?<pkg>\S+)\s+>(?<version>\S+)$/u.exec(rest);
   const pkg = release?.groups?.['pkg'];
   const version = release?.groups?.['version'];
 

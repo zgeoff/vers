@@ -75,7 +75,7 @@ test('it toggles scatter visibility', async () => {
 test('it renders no perf HUD before the frame probe samples anything', () => {
   setupTest();
 
-  expect(screen.queryByText(/^fps /)).not.toBeInTheDocument();
+  expect(screen.queryByText(/^fps /u)).not.toBeInTheDocument();
 });
 
 test('it renders the sampled perf HUD once the store carries a snapshot', () => {

@@ -22,7 +22,7 @@ test('it truncates a long name under the identifier limit with a hash suffix', (
 
   expect(name.length).toBeLessThanOrEqual(63);
   expect(name).toStartWith('dev_devbox_feat_');
-  expect(name).toMatch(/_[0-9a-f]{8}$/);
+  expect(name).toMatch(/_[0-9a-f]{8}$/u);
 });
 
 test('it keeps distinct long branches distinct after truncation', () => {

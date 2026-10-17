@@ -1,9 +1,9 @@
 import type { EmailContent, Verification, VerificationKind, VerificationKindOption } from './types';
 
 // the same code rule the e2e sign-up journey applies to the stub's captured sends
-const OTP_CODE_PATTERN = /^[A-Z0-9]{6}$/;
-const OTP_CODE_IN_TEXT_PATTERN = /verification code:\s*(?<code>[A-Z0-9]{6})\b/i;
-const TWO_FACTOR_CODE_IN_TEXT_PATTERN = /finish signing in[^:]*:\s*(?<code>\d{6})\b/i;
+const OTP_CODE_PATTERN = /^[A-Z0-9]{6}$/u;
+const OTP_CODE_IN_TEXT_PATTERN = /verification code:\s*(?<code>[A-Z0-9]{6})\b/iu;
+const TWO_FACTOR_CODE_IN_TEXT_PATTERN = /finish signing in[^:]*:\s*(?<code>\d{6})\b/iu;
 
 const KIND_ORDER: ReadonlyArray<VerificationKind> = [
   'welcome',
@@ -99,8 +99,8 @@ function findTwoFactorVerification(content: EmailContent): Omit<Verification, 'k
   return code === undefined ? null : { code, url: null };
 }
 
-const URL_IN_TEXT_PATTERN = /https?:\/\/[^\s<>"']+/g;
-const HREF_PATTERN = /href="(?<href>[^"]+)"/g;
+const URL_IN_TEXT_PATTERN = /https?:\/\/[^\s<>"']+/gu;
+const HREF_PATTERN = /href="(?<href>[^"]+)"/gu;
 
 function collectLinks(content: EmailContent, origin: string | undefined): Array<Link> {
   const candidates = [
@@ -111,7 +111,7 @@ function collectLinks(content: EmailContent, origin: string | undefined): Array<
   const links: Array<Link> = [];
 
   for (const candidate of candidates) {
-    const parsed = URL.parse(decodeEntities(candidate).replace(/[.,)]+$/, ''));
+    const parsed = URL.parse(decodeEntities(candidate).replace(/[.,)]+$/u, ''));
 
     if (parsed !== null && (origin === undefined || parsed.origin === origin)) {
       links.push({
@@ -127,7 +127,7 @@ function collectLinks(content: EmailContent, origin: string | undefined): Array<
 
 function toSearchableText(content: EmailContent): string {
   return content.text.trim() === ''
-    ? decodeEntities(content.html.replaceAll(/<[^>]+>/g, ' ')).replaceAll(/\s+/g, ' ')
+    ? decodeEntities(content.html.replaceAll(/<[^>]+>/gu, ' ')).replaceAll(/\s+/gu, ' ')
     : content.text;
 }
 
@@ -141,5 +141,5 @@ const ENTITIES: ReadonlyMap<string, string> = new Map([
 ]);
 
 function decodeEntities(value: string): string {
-  return value.replaceAll(/&[#\w]+;/g, (entity) => ENTITIES.get(entity) ?? entity);
+  return value.replaceAll(/&[#\w]+;/gu, (entity) => ENTITIES.get(entity) ?? entity);
 }

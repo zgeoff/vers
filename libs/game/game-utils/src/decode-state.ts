@@ -1,6 +1,6 @@
 import invariant from 'tiny-invariant';
 
-const STATE_HEX_PATTERN = /^[0-9a-f]{32}$/;
+const STATE_HEX_PATTERN = /^[0-9a-f]{32}$/u;
 const STATE_ALL_ZERO = '0'.repeat(32);
 const STATE_WORD_COUNT = 4;
 const STATE_WORD_HEX_CHARS = 8;

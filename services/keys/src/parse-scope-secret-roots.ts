@@ -43,8 +43,8 @@ interface RawRootEntry {
   readonly roots: Readonly<Record<string, string>>;
 }
 
-const HEX_ROOT_PATTERN = /^[0-9a-f]{64}$/i;
-const INTEGER_KEY_PATTERN = /^[1-9]\d*$/;
+const HEX_ROOT_PATTERN = /^[0-9a-f]{64}$/iu;
+const INTEGER_KEY_PATTERN = /^[1-9]\d*$/u;
 
 function parseScopeEntry(secretRef: SecretRef, entry: RawRootEntry): ScopeSecretRootEntry {
   const roots = new Map<number, Uint8Array>();

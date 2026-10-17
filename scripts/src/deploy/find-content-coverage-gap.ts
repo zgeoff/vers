@@ -5,7 +5,7 @@ interface ContentCoverageInput {
 
 // the same numeric-string rule the content document schema enforces, applied here so a malformed
 // registry value reads as a gap rather than coercing to a number that passes
-const NUMERIC_VERSION = /^\d+$/;
+const NUMERIC_VERSION = /^\d+$/u;
 
 export function findContentCoverageGap(input: Readonly<ContentCoverageInput>): string | null {
   if (input.contentVersion === undefined) {

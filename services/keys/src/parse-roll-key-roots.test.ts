@@ -21,7 +21,7 @@ test('it parses a valid two-population payload into decoded roots', () => {
 });
 
 test('it rejects malformed JSON', () => {
-  expect(() => parseRollKeyRoots('not json')).toThrowWithMessage(Error, /malformed JSON/);
+  expect(() => parseRollKeyRoots('not json')).toThrowWithMessage(Error, /malformed JSON/u);
 });
 
 test('it rejects a payload missing the self-found population', () => {
@@ -36,7 +36,7 @@ test('it rejects a root that is not 64-character hex', () => {
     trade: { current: 1, roots: { 1: 'not-hex' } },
   });
 
-  expect(() => parseRollKeyRoots(payload)).toThrowWithMessage(Error, /64-character hex/);
+  expect(() => parseRollKeyRoots(payload)).toThrowWithMessage(Error, /64-character hex/u);
 });
 
 test('it rejects a non-integer key version', () => {
@@ -45,7 +45,7 @@ test('it rejects a non-integer key version', () => {
     trade: { current: 1, roots: { abc: TRADE_ROOT } },
   });
 
-  expect(() => parseRollKeyRoots(payload)).toThrowWithMessage(Error, /non-integer key version/);
+  expect(() => parseRollKeyRoots(payload)).toThrowWithMessage(Error, /non-integer key version/u);
 });
 
 test('it rejects a current version absent from roots', () => {
@@ -54,7 +54,7 @@ test('it rejects a current version absent from roots', () => {
     trade: { current: 2, roots: { 1: TRADE_ROOT } },
   });
 
-  expect(() => parseRollKeyRoots(payload)).toThrowWithMessage(Error, /no matching root/);
+  expect(() => parseRollKeyRoots(payload)).toThrowWithMessage(Error, /no matching root/u);
 });
 
 test('it never echoes root material in a rejection message', () => {
@@ -65,16 +65,16 @@ test('it never echoes root material in a rejection message', () => {
 
   expect(() => parseRollKeyRoots(payload)).toThrowWithMessage(
     Error,
-    /population "trade" key version 1 is not 64-character hex/,
+    /population "trade" key version 1 is not 64-character hex/u,
   );
 
   expect(() => parseRollKeyRoots(payload)).not.toThrowWithMessage(
     Error,
-    /not-hex-but-secret-shaped/,
+    /not-hex-but-secret-shaped/u,
   );
 
   expect(() => parseRollKeyRoots(payload)).not.toThrowWithMessage(
     Error,
-    new RegExp(SELF_FOUND_ROOT),
+    new RegExp(SELF_FOUND_ROOT, 'u'),
   );
 });

@@ -11,7 +11,7 @@ test('it builds a contract-valid document by default', () => {
 test('it defaults to a numeric-string contentVersion carried through encounter and loot', () => {
   const document = createMockContentDocument();
 
-  expect(document.contentVersion).toMatch(/^\d{6}$/);
+  expect(document.contentVersion).toMatch(/^\d{6}$/u);
   expect(document.encounter.contentVersion).toBe(document.contentVersion);
   expect(document.loot.contentVersion).toBe(document.contentVersion);
 });

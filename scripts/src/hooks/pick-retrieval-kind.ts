@@ -18,7 +18,7 @@ const BUILTIN_EDITS: ReadonlySet<string> = new Set(['Edit', 'Write', 'MultiEdit'
 // A search command where a command can start: the beginning of a line, or after a pipe, separator,
 // or subshell open. A search word inside another command's arguments does not count.
 const SHELL_SEARCH_PATTERN =
-  /(?:^|[\n|;&(])\s*(?:git\s+)?(?:rg|grep|egrep|fgrep|ag|ugrep|ack)(?:\s|$)/;
+  /(?:^|[\n|;&(])\s*(?:git\s+)?(?:rg|grep|egrep|fgrep|ag|ugrep|ack)(?:\s|$)/u;
 
 export function pickRetrievalKind(
   toolName: string,

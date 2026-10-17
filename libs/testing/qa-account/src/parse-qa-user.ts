@@ -4,7 +4,7 @@ import * as z from 'zod';
 import type { QAUser } from './types';
 
 export const QA_DOMAIN = 'qa.versidle.com';
-const NAME_PATTERN = /^[a-z0-9][a-z0-9._+-]{0,63}$/;
+const NAME_PATTERN = /^[a-z0-9][a-z0-9._+-]{0,63}$/u;
 const AVATAR_NAME_MAX_LENGTH = 16;
 const DIGIT_LETTERS = 'abcdefghij';
 
@@ -33,15 +33,15 @@ export function parseQAUser(raw: string): QAUser {
 }
 
 function buildUsername(name: string): string {
-  return name.replaceAll(/[^a-z0-9_]/g, '_').slice(0, USERNAME_MAX_LENGTH);
+  return name.replaceAll(/[^a-z0-9_]/gu, '_').slice(0, USERNAME_MAX_LENGTH);
 }
 
 // the avatar name contract admits letters only, so each digit maps to a letter and every other
 // character drops
 function buildAvatarName(name: string): string {
   return name
-    .replaceAll(/[0-9]/g, (digit) => DIGIT_LETTERS.charAt(Number(digit)))
-    .replaceAll(/[^a-z]/g, '')
+    .replaceAll(/[0-9]/gu, (digit) => DIGIT_LETTERS.charAt(Number(digit)))
+    .replaceAll(/[^a-z]/gu, '')
     .slice(0, AVATAR_NAME_MAX_LENGTH);
 }
 

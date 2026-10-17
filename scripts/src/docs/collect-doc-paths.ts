@@ -2,12 +2,12 @@ import path from 'node:path';
 import type { DocPathReference } from './types';
 
 const ROOTED_PATH_PATTERN =
-  /(?<![\w./-])(?:apps|contracts|docs|infra|libs|scripts|services|\.github|\.claude)\/[\w./*<>{}$-]*[\w*>}$-]/g;
+  /(?<![\w./-])(?:apps|contracts|docs|infra|libs|scripts|services|\.github|\.claude)\/[\w./*<>{}$-]*[\w*>}$-]/gu;
 
-const LINK_PATTERN = /\]\((?<target>\.{1,2}\/[^)#\s]+)(?:#[^)]*)?\)/g;
+const LINK_PATTERN = /\]\((?<target>\.{1,2}\/[^)#\s]+)(?:#[^)]*)?\)/gu;
 
 // Placeholders, globs, and env files name no single committed file.
-const UNCHECKABLE_PATTERN = /[<>*{}$]|(?:^|\/)\.env/;
+const UNCHECKABLE_PATTERN = /[<>*{}$]|(?:^|\/)\.env/u;
 
 export function collectDocPaths(markdown: string, docPath: string): Array<DocPathReference> {
   const docDir = path.posix.dirname(docPath);

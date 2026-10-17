@@ -3,14 +3,14 @@ import { makeTestDB } from './make-test-db';
 
 test('it throws when the default isolation is not itself enabled', () => {
   expect(() => makeTestDB({ default: 'database', enabled: ['transaction'] })).toThrow(
-    /default 'database' not in enabled/,
+    /default 'database' not in enabled/u,
   );
 });
 
 test('it throws when a caller requests an isolation absent from enabled', () => {
   const createTestDB = makeTestDB({ default: 'transaction', enabled: ['transaction'] });
 
-  expect(() => createTestDB({ isolation: 'database' })).toThrow(/'database' not in enabled/);
+  expect(() => createTestDB({ isolation: 'database' })).toThrow(/'database' not in enabled/u);
 });
 
 test('it acquires the declared default isolation when none is requested', async () => {

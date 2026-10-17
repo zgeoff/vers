@@ -56,7 +56,7 @@ export default defineConfig({
             // would probe eval before the entry's jitless call ran; keeping zod and the jitless
             // module in one chunk every schema chunk imports keeps the call ahead of every schema
             codeSplitting: {
-              groups: [{ name: 'zod', test: /node_modules\/zod\/|\/disable-zod-jit\.ts$/ }],
+              groups: [{ name: 'zod', test: /node_modules\/zod\/|\/disable-zod-jit\.ts$/u }],
             },
           },
         },
@@ -102,7 +102,7 @@ function findNonEmptyEnv(name: string): string | undefined {
 }
 
 function isFontFile(filePath: string): boolean {
-  return /\.woff2?$/.test(filePath);
+  return /\.woff2?$/u.test(filePath);
 }
 
 function buildMockBackendPlugin(): Plugin {

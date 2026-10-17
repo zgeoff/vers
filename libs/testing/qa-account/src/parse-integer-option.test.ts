@@ -13,27 +13,27 @@ test('it accepts an integer above the minimum', () => {
 test('it rejects an integer below the minimum', () => {
   expect(() => parseIntegerOption('0', 1)).toThrowWithMessage(
     InvalidArgumentError,
-    /an integer of at least 1/,
+    /an integer of at least 1/u,
   );
 });
 
 test('it rejects a fraction', () => {
   expect(() => parseIntegerOption('1.5', 1)).toThrowWithMessage(
     InvalidArgumentError,
-    /an integer of at least 1/,
+    /an integer of at least 1/u,
   );
 });
 
 test('it rejects text that is not a number', () => {
   expect(() => parseIntegerOption('six', 1)).toThrowWithMessage(
     InvalidArgumentError,
-    /an integer of at least 1/,
+    /an integer of at least 1/u,
   );
 });
 
 test('it rejects an integer beyond the safe range instead of rounding it', () => {
   expect(() => parseIntegerOption('9007199254740993', 0)).toThrowWithMessage(
     InvalidArgumentError,
-    /an integer of at least 0/,
+    /an integer of at least 0/u,
   );
 });

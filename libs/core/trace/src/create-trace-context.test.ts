@@ -4,8 +4,8 @@ import { createTraceContext } from './create-trace-context';
 test('it mints a fresh trace and span id without a parent', () => {
   const trace = createTraceContext();
 
-  expect(trace.traceID).toMatch(/^[0-9a-f]{32}$/);
-  expect(trace.spanID).toMatch(/^[0-9a-f]{16}$/);
+  expect(trace.traceID).toMatch(/^[0-9a-f]{32}$/u);
+  expect(trace.spanID).toMatch(/^[0-9a-f]{16}$/u);
 });
 
 test('it continues the parent trace id with a fresh span id', () => {

@@ -47,7 +47,7 @@ test('it elects one writer without SharedWorker and promotes a survivor when the
   await page.getByRole('button', { exact: true, name: 'Login' }).click();
 
   // the seeded account carries an avatar, so the active-avatar gate lands it in-game at respite
-  await expect(page).toHaveURL(/\/respite$/);
+  await expect(page).toHaveURL(/\/respite$/u);
 
   const consoleErrors: Array<string> = [];
 
@@ -76,7 +76,7 @@ test('it elects one writer without SharedWorker and promotes a survivor when the
 
   await secondPage.goto('/respite');
 
-  await expect(secondPage).toHaveURL(/\/respite$/);
+  await expect(secondPage).toHaveURL(/\/respite$/u);
 
   // attached after the initial load settles, matching the other game specs: load-time noise (the
   // pre-existing data-URI font CSP reports) is not what this spec asserts on
@@ -118,7 +118,7 @@ test('it elects one writer without SharedWorker and promotes a survivor when the
   // the surviving tab keeps a working game shell on the new writer
   await secondPage.getByRole('link', { exact: true, name: 'Explore' }).click();
 
-  await expect(secondPage).toHaveURL(/\/explore$/);
+  await expect(secondPage).toHaveURL(/\/explore$/u);
 
   expect(consoleErrors).toStrictEqual([]);
 });

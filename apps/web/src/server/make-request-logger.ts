@@ -65,7 +65,7 @@ export function makeRequestLogger(
   };
 }
 
-const ASSET_PATH_PATTERN = /\.[a-z0-9]+$/i;
+const ASSET_PATH_PATTERN = /\.[a-z0-9]+$/iu;
 
 function pickRequestLogLevel(status: number, pathname: string): keyof RequestLoggerSink {
   if (status >= 500) {

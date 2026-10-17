@@ -103,6 +103,6 @@ test('it shows no reason message when signup is reached with no reason', async (
 
     await screen.findByLabelText('Email');
 
-    expect(screen.queryByText(/verification lapsed/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/verification lapsed/u)).not.toBeInTheDocument();
   });
 });

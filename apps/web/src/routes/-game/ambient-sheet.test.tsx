@@ -23,7 +23,7 @@ test('it hosts the route content in a dialog with a dismiss control', async () =
 
   expect(dialog).toBeInTheDocument();
   expect(screen.getByText('hosted panel')).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: /Close/ })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /Close/u })).toBeInTheDocument();
 });
 
 test('it dismisses to the region map when the close control is used', async () => {
@@ -60,7 +60,7 @@ test('it dismisses to the region map when the close control is used', async () =
   render(<RouterProvider router={router} />);
 
   await screen.findByText('hosted panel');
-  await user.click(screen.getByRole('button', { name: /Close/ }));
+  await user.click(screen.getByRole('button', { name: /Close/u }));
 
   const regionMap = await screen.findByText('region map');
 

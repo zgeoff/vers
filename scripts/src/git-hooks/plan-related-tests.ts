@@ -1,8 +1,8 @@
 import path from 'node:path';
 import type { RelatedTestRun } from './types';
 
-const TEST_SUFFIX = /\.test\.tsx?$/;
-const SOURCE_SUFFIX = /\.tsx?$/;
+const TEST_SUFFIX = /\.test\.tsx?$/u;
+const SOURCE_SUFFIX = /\.tsx?$/u;
 
 export function planRelatedTests(
   changedPaths: ReadonlyArray<string>,

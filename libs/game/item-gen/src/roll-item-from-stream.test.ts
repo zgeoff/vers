@@ -253,6 +253,6 @@ test('it rejects a malformed context', () => {
 
   expect(() => rollItemFromStream(tables, { nodeTier: -1 }, stream)).toThrowWithMessage(
     Error,
-    /nodeTier must be a non-negative integer/,
+    /nodeTier must be a non-negative integer/u,
   );
 });

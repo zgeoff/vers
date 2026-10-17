@@ -4,7 +4,7 @@ import type { FleetRequest, RequestSpan } from './types';
 const HEALTH_PATH = '/health';
 const PROBE_ROUTE = 'POST /api/rpc/user/getCurrentUser';
 const PROBE_STATUS = 401;
-const UNROUTED_NAME = /^HTTP [A-Z]+$/;
+const UNROUTED_NAME = /^HTTP [A-Z]+$/u;
 
 export function collectFleetRequests(spans: ReadonlyArray<RequestSpan>): Array<FleetRequest> {
   const requests: Array<FleetRequest> = [];

@@ -10,7 +10,7 @@ test('it renders a two-factor email with the provided configuration', () => {
   render(<TwoFactorEmail {...props} />);
 
   const heading = screen.getByText('Your two-factor sign-in code');
-  const codeText = screen.getByText(/123456/);
+  const codeText = screen.getByText(/123456/u);
   const resetLink = screen.getByRole('link', { name: 'here' });
 
   expect(heading).toBeInTheDocument();

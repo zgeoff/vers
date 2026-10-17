@@ -9,7 +9,7 @@ test('it derives a 64-char lowercase hex secret', async () => {
     { context: { actingUserID: null } },
   );
 
-  expect(result.secret).toMatch(/^[0-9a-f]{64}$/);
+  expect(result.secret).toMatch(/^[0-9a-f]{64}$/u);
 });
 
 test('it derives the same secret for the same input across calls', async () => {

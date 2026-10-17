@@ -9,8 +9,8 @@ interface RollKeyRootEntry {
 
 export type RollKeyRoots = Readonly<Record<Population, RollKeyRootEntry>>;
 
-const HEX_ROOT_PATTERN = /^[0-9a-f]{64}$/i;
-const INTEGER_KEY_PATTERN = /^[1-9]\d*$/;
+const HEX_ROOT_PATTERN = /^[0-9a-f]{64}$/iu;
+const INTEGER_KEY_PATTERN = /^[1-9]\d*$/u;
 
 const RawRootEntrySchema = z.object({
   current: z.int().min(1),

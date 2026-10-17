@@ -324,7 +324,7 @@ test('it rejects a forced list larger than the affix count', () => {
       { count: 1, forceAffixIDs: ['flat-power', 'flat-guard'] },
       stream,
     ),
-  ).toThrowWithMessage(Error, /forced affixes must fit inside the affix count/);
+  ).toThrowWithMessage(Error, /forced affixes must fit inside the affix count/u);
 });
 
 test('it rejects forced affixes sharing a group', () => {
@@ -356,7 +356,7 @@ test('it rejects forced affixes sharing a group', () => {
       { count: 2, forceAffixIDs: ['flat-power', 'pct-power'] },
       stream,
     ),
-  ).toThrowWithMessage(Error, /forced affixes must occupy distinct groups/);
+  ).toThrowWithMessage(Error, /forced affixes must occupy distinct groups/u);
 });
 
 test('it rejects a values-only roll combined with an identity-changing constraint', () => {
@@ -388,7 +388,7 @@ test('it rejects a values-only roll combined with an identity-changing constrain
       { valuesOnly: true, count: 1 },
       stream,
     ),
-  ).toThrowWithMessage(Error, /a values-only roll combines only with protected groups/);
+  ).toThrowWithMessage(Error, /a values-only roll combines only with protected groups/u);
 });
 
 test('it rejects a base rarity missing from the tables', () => {
@@ -420,5 +420,5 @@ test('it rejects a base rarity missing from the tables', () => {
       {},
       stream,
     ),
-  ).toThrowWithMessage(Error, /base rarity must exist in the tables: mythic/);
+  ).toThrowWithMessage(Error, /base rarity must exist in the tables: mythic/u);
 });

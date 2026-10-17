@@ -106,7 +106,7 @@ test('it throws when the worker refuses the speed for an avatar that is not flag
   onTestFinished(unregister);
   invariant(globalThis.__versQA, 'the hook is installed');
 
-  expect(globalThis.__versQA.setSpeed(2)).rejects.toThrowWithMessage(Error, /not flagged for QA/);
+  expect(globalThis.__versQA.setSpeed(2)).rejects.toThrowWithMessage(Error, /not flagged for QA/u);
 });
 
 test('it rejects a speed outside 1 to 20 before asking the worker', () => {
@@ -122,7 +122,7 @@ test('it rejects a speed outside 1 to 20 before asking the worker', () => {
   onTestFinished(unregister);
   invariant(globalThis.__versQA, 'the hook is installed');
 
-  expect(globalThis.__versQA.setSpeed(21)).rejects.toThrowWithMessage(RangeError, /1 to 20/);
-  expect(globalThis.__versQA.setSpeed(1.5)).rejects.toThrowWithMessage(RangeError, /integer/);
+  expect(globalThis.__versQA.setSpeed(21)).rejects.toThrowWithMessage(RangeError, /1 to 20/u);
+  expect(globalThis.__versQA.setSpeed(1.5)).rejects.toThrowWithMessage(RangeError, /integer/u);
   expect(client.setSimulationSpeed).not.toHaveBeenCalled();
 });

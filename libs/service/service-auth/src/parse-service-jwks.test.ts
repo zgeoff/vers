@@ -26,15 +26,15 @@ test('it rejects malformed JSON', () => {
 test('it rejects a JWKS entry missing its kid', () => {
   expect(() =>
     parseServiceJWKS('{"keys":[{"kty":"OKP","crv":"Ed25519","x":"abc"}]}'),
-  ).toThrowWithMessage(Error, /"keys",\s*0,\s*"kid"/);
+  ).toThrowWithMessage(Error, /"keys",\s*0,\s*"kid"/u);
 });
 
 test('it rejects a JWKS entry that is not an Ed25519 public key', () => {
   expect(() =>
     parseServiceJWKS('{"keys":[{"kty":"RSA","n":"abc","e":"AQAB","kid":"app-web"}]}'),
-  ).toThrowWithMessage(Error, /"keys",\s*0,\s*"crv"/);
+  ).toThrowWithMessage(Error, /"keys",\s*0,\s*"crv"/u);
 });
 
 test('it rejects a payload with no keys array', () => {
-  expect(() => parseServiceJWKS('{}')).toThrowWithMessage(Error, /keys/);
+  expect(() => parseServiceJWKS('{}')).toThrowWithMessage(Error, /keys/u);
 });

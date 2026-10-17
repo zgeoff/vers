@@ -28,7 +28,7 @@ test('it defaults startHash to the real start hash of the client-cached inputs',
     simVersion: 'sim_1',
   });
 
-  expect(activityStart.startHash).toMatch(/^[a-f0-9]{64}$/);
+  expect(activityStart.startHash).toMatch(/^[a-f0-9]{64}$/u);
 });
 
 test('it applies overrides on top of the faker-generated defaults', () => {

@@ -147,7 +147,7 @@ async function createCloneTriggers(sql: postgres.Sql, cloneSchema: string): Prom
 
   for (const trigger of triggers) {
     const rewritten = trigger.def.replace(
-      new RegExp(` ON (public\\.)?"?${trigger.tableName}"? `),
+      new RegExp(` ON (public\\.)?"?${trigger.tableName}"? `, 'u'),
       ` ON "${cloneSchema}"."${trigger.tableName}" `,
     );
 

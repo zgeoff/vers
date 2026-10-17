@@ -41,7 +41,7 @@ test('it explains a capped catch-up', () => {
   setResyncStatus({ kind: 'capped' });
   render(<WelcomeBackModal />);
 
-  expect(screen.getByText(/reached its cap/)).toBeInTheDocument();
+  expect(screen.getByText(/reached its cap/u)).toBeInTheDocument();
 });
 
 test('it offers a retry when the catch-up fails outright', () => {

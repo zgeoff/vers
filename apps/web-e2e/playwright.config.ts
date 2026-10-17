@@ -2,7 +2,7 @@ import { defineConfig, devices } from '@playwright/test';
 import { loadE2EEnvironment } from './src/load-e2e-environment';
 import type { E2EOptions } from './src/test';
 
-const CROSS_ENGINE_CORPUS_SPEC = /cross-engine-corpus\.spec\.ts/;
+const CROSS_ENGINE_CORPUS_SPEC = /cross-engine-corpus\.spec\.ts/u;
 
 const environment = loadE2EEnvironment({
   appWebEnv: {

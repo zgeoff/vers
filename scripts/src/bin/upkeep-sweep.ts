@@ -4,7 +4,7 @@ import { isTriggerFired } from '../upkeep/is-trigger-fired';
 import { parseIgnoredAdvisories } from '../upkeep/parse-ignored-advisories';
 import { parseTrigger } from '../upkeep/parse-trigger';
 
-const GHSA_PATTERN = /GHSA-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}/g;
+const GHSA_PATTERN = /GHSA-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}/gu;
 const READY_LABEL = 'upkeep-ready';
 const manifestSchema = z.object({ scripts: z.record(z.string(), z.string()) });
 

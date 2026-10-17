@@ -34,7 +34,7 @@ test('it calls unreceived progress unconfirmed when the saved history cannot be 
   render(<JournalFailureNotice />);
 
   expect(screen.getByText('Saved history cannot be read')).toBeInTheDocument();
-  expect(screen.getByText(/the server has not received is unconfirmed/)).toBeInTheDocument();
+  expect(screen.getByText(/the server has not received is unconfirmed/u)).toBeInTheDocument();
 });
 
 test('it keeps showing the failure of the run it stopped while no other run is live', () => {

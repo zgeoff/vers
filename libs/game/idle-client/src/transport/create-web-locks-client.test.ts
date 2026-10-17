@@ -53,7 +53,7 @@ test('it stamps every frame with the wire-contract protocol', async () => {
     expect(received).toHaveLength(1);
   });
 
-  expect(received[0]?.protocol).toMatch(/^[0-9a-f]{64}$/);
+  expect(received[0]?.protocol).toMatch(/^[0-9a-f]{64}$/u);
 });
 
 test('it flags writer contention when the elected writer refuses this tab', async () => {

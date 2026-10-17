@@ -520,5 +520,5 @@ test('it rejects a poolID naming no pool in the content', () => {
       { difficulty: 1, poolID: 'nonexistent-pool' },
       buildRollStream(seed, 'test/domain'),
     ),
-  ).toThrowWithMessage(Error, /node poolID must reference a known pool/);
+  ).toThrowWithMessage(Error, /node poolID must reference a known pool/u);
 });
