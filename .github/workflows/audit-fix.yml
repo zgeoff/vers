@@ -9,7 +9,7 @@ name: Audit fix
 
 on:
   workflow_run:
-    workflows: [PR, Dependency Health, Dep Health]
+    workflows: [PR, pr, CI, Dependency Health, Dep Health]
     types: [completed]
   schedule:
     - cron: 30 5 * * *
