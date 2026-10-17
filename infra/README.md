@@ -23,15 +23,15 @@ Cloudflare R2. Credentials resolve from 1Password at run time, so nothing sensit
   [provisioning](../docs/runbooks/provisioning.md) steps, because the Neon API models role existence
   and not privileges. Role passwords are Neon-generated secret outputs held in encrypted stack
   state. The provider's own API key is console-managed, for the same reason as the Axiom token.
-- `github.ts` — the zgeoff/vers repo configuration: the authoritative label set (the registry the
-  issue-hygiene rules point at), the `main protection` branch ruleset, the `production` environment,
-  the Actions variables, and the Actions secrets. Variables are repo- and environment-scoped. The
-  service-auth public key value comes from encrypted stack config, and the rest sit in code. Secret
-  values resolve from the `vers-ci` vault as environment variables at run time. GitHub cannot return
-  a secret's value, so the program pushes and the vault stays the source of truth. Three things stay
-  console-managed and are therefore not drift: milestones and the delivery board, which are delivery
-  state rather than schema; the `OP_SERVICE_ACCOUNT_TOKEN` secret, the credential the resolution
-  itself authenticates with; and the provider's own PAT, for the same reason as the Axiom token.
+- `github.ts` — the zgeoff/vers repo configuration: the authoritative label set, the
+  `main protection` branch ruleset, the `production` environment, the Actions variables, and the
+  Actions secrets. Variables are repo- and environment-scoped. The service-auth public key value
+  comes from encrypted stack config, and the rest sit in code. Secret values resolve from the
+  `vers-ci` vault as environment variables at run time. GitHub cannot return a secret's value, so
+  the program pushes and the vault stays the source of truth. Three things stay console-managed and
+  are therefore not drift: milestones and project boards, which are planning state rather than
+  schema; the `OP_SERVICE_ACCOUNT_TOKEN` secret, the credential the resolution itself authenticates
+  with; and the provider's own PAT, for the same reason as the Axiom token.
 - `sdks/axiom/`, `sdks/neon/` — committed TypeScript SDKs generated from the bridged Terraform
   providers. `pulumi package add terraform-provider axiomhq/axiom 1.6.2` and
   `pulumi package add terraform-provider kislerdm/neon 0.13.0` regenerate them, and `Pulumi.yaml`

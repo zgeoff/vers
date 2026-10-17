@@ -2,8 +2,8 @@
 name: project-docs-writing
 description:
   vers's own docs rules — game-design notes, decision reasons, and the game glossary — layered on
-  top of the shared docs-writing skill. Load both before writing, editing, or reviewing any
-  committed prose in vers.
+  top of the shared docs-writing skill, and the banned words. Load both before writing, editing, or
+  reviewing any committed prose in vers, a PR description or an issue.
 ---
 
 # Project docs writing
@@ -33,3 +33,22 @@ systems: what a player sees, feels, and decides. It has no `decisions/`, `design
 - **Game terms come from the glossary.**
   [`glossary.md`](../../../docs/architecture/game/glossary.md) defines each term the game docs
   share, once. A game doc and its diagrams use the glossary's term.
+
+## Banned words
+
+Overused jargon a plainer word covers; applies to all prose — docs, comments, PR descriptions, issue
+text.
+
+- `bites` (figurative) — "applies", "takes effect", or name the consequence.
+- `CAS` (the acronym) — "compare-and-swap" spelled out, or name the behaviour: a guarded update that
+  applies only if the cursor still holds its expected value.
+- `ceiling` (figurative limit) — "cap", "limit", "maximum", "upper bound"; a timeout is a "timeout".
+  A game mechanic the design names a ceiling keeps the name.
+- `fence` / `fencing` (the distributed-systems metaphor) — state the rule it enforces: "each
+  activity has a single writer", "an append from any other session is rejected". A markdown code
+  fence is a different word and stays.
+- `floor` (figurative minimum) — "minimum", "lower bound", "at least". A literal floor and a game
+  mechanic the design names a floor keep the name.
+- `load-bearing` — "required", "essential", or name what breaks without it.
+- `seam` — "boundary", "join", "integration point".
+- `surface` — noun: "area", "API", the concrete thing itself; verb: "show", "raise", "report".

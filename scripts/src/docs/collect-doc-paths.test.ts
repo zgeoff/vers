@@ -18,10 +18,10 @@ test('it resolves a relative link against the document directory', () => {
 });
 
 test('it drops the sentence period a trailing path picks up', () => {
-  const markdown = 'The check lives in scripts/src/issue-hygiene/check-issue.ts.';
+  const markdown = 'The check lives in scripts/src/deploy/apply-build.ts.';
 
   expect(collectDocPaths(markdown, 'docs/README.md')).toStrictEqual([
-    { line: 1, path: 'scripts/src/issue-hygiene/check-issue.ts' },
+    { line: 1, path: 'scripts/src/deploy/apply-build.ts' },
   ]);
 });
 
