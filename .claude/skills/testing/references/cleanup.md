@@ -42,7 +42,7 @@ async function setupTest() {
   stack.defer(() => db.close());
   applyNotesMigrations(db);
 
-  return { dir, db };
+  return { dir, db, stack };
 }
 ```
 
@@ -65,7 +65,8 @@ test('it reads a note written by another connection', async () => {
   const ctx = await setupTest();
 
   const writer = new Database(join(ctx.dir, 'notes.db'));
-  onTestFinished(() => writer.close());
+
+  ctx.stack.defer(() => writer.close());
 
   writer.run(`INSERT INTO notes (title) VALUES ('from writer')`);
 

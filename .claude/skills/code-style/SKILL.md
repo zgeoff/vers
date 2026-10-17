@@ -35,8 +35,8 @@ A `project-code-style` skill lists each of the repo's verbs as a bullet or a tab
 with the backticked verb under `## Project verbs`, and each exempt name the same way under
 `## Exempt names`, so an agent sees every verb it may use when the skill loads.
 `check-project-verbs.sh`, beside this skill, fails when those lists differ from the `verbs` and
-`exemptNames` options of `zgeoff/function-verb` in `.oxlintrc.json`, and docs-writing's
-`check-length.sh` runs it.
+`exemptNames` options of `zgeoff/function-verb` in [`.oxlintrc.json`](../../../.oxlintrc.json), and
+docs-writing's `check-length.sh` runs it.
 
 ## Files and modules
 
@@ -72,8 +72,9 @@ modules the split creates share one copy of the rule instead of each keeping its
 Every function name starts with a prefix from the closed list below. The prefix is a contract — a
 reader should know the function's shape without opening it. A verb that any repo could use extends
 this list and the lint rule's list in zgeoff/tools in one PR, and a test there fails when the two
-differ. A verb that only one repo needs goes in that repo's `.oxlintrc.json`, under the `verbs`
-option of `zgeoff/function-verb`, and in its `project-code-style` skill.
+differ. A verb that only one repo needs goes in that repo's
+[`.oxlintrc.json`](../../../.oxlintrc.json), under the `verbs` option of `zgeoff/function-verb`, and
+in its `project-code-style` skill.
 
 **Predicates** — return boolean, no side effects:
 

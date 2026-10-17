@@ -144,7 +144,7 @@ sub list_references {
 # Reads the frontmatter block: a name, and a description that may fold over indented lines.
 sub check_frontmatter {
   my ($dir, $skill, @lines) = @_;
-  my ($name, $description, $in_description, $closed);
+  my ($name, $description, $in_description, $closed, $raw_description, $folded);
 
   if (@lines && $lines[0] eq "---") {
     for my $line (@lines[1 .. $#lines]) {
@@ -153,15 +153,21 @@ sub check_frontmatter {
         $name = unquote($1);
         $in_description = 0;
       } elsif ($line =~ /^description:\s*(.*?)\s*$/) {
+        $raw_description = $1;
         $description = $1 =~ /^[>|][+-]?$/ ? "" : unquote($1);
         $in_description = 1;
       } elsif ($in_description && $line =~ /^\s+(\S.*?)\s*$/) {
         $description .= ($description eq "" ? "" : " ") . $1;
+        $folded = 1;
       } elsif ($line =~ /^[A-Za-z_-]+:/) {
         $in_description = 0;
       }
     }
   }
+
+  # A plain null (null, Null, NULL or ~) on one line has no text, as YAML reads it.
+  $description = "" if !$folded && defined $raw_description
+    && $raw_description =~ /\A(?:null|Null|NULL|~)(?:\s+#.*)?\z/;
 
   unless ($closed) {
     fail($skill, "has no frontmatter block");
@@ -200,6 +206,7 @@ sub check_markdown {
   my $line_number = 0;
   my $contents_links = 0;
   my $reference = !$is_skill;
+  my $in_comment = 0;
 
   for my $line (@lines) {
     $line_number++;
@@ -212,7 +219,18 @@ sub check_markdown {
     }
     next if $open ne "";
 
-    my $text = $line;
+    # An HTML comment never renders, so its text holds no link and no path.
+    # A comment marker inside inline code renders as text, so the spans hide their markers first.
+    my $visible = $line =~ s{(`+)(.+?)\1}{my $span = $&; $span =~ s/<!--/<\x{1}!--/g; $span =~ s/-->/--\x{1}>/g; $span}ger;
+    if ($in_comment) {
+      next unless $visible =~ s/\A.*?-->//;
+      $in_comment = 0;
+    }
+    $visible =~ s/<!--.*?-->//g;
+    $in_comment = 1 if $visible =~ s/<!--.*\z//;
+    $visible =~ s/\x{1}//g;
+
+    my $text = $visible;
     my @spans;
     $text =~ s/(`+)(.+?)\1/push @spans, $2; ""/ge;
 
@@ -234,8 +252,8 @@ sub check_markdown {
 
     # A span inside link text is already a link, so only the spans left after links drop are read.
     # A table row holds commands the agent types, such as the commands table of a skill, so it is skipped.
-    next if $line =~ /^\s*\|/;
-    my $outside_links = $line =~ s/!?\[[^\]]*\]\([^)]*\)//gr;
+    next if $visible =~ /^\s*\|/;
+    my $outside_links = $visible =~ s/!?\[[^\]]*\]\([^)]*\)//gr;
     my @bare;
     $outside_links =~ s/(`+)(.+?)\1/push @bare, $2; ""/ge;
 

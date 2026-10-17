@@ -527,9 +527,10 @@ passes with this guide as its only reference.
    runs `check-prose.sh` over the READMEs, the Markdown under `docs/`, and each skill's Markdown. It
    fails on a README over its limit or on a prose violation. Pass `--package <readme>` for a package
    README whose package.json is private. `check-links.sh` checks every relative link and anchor in
-   the READMEs, `docs/`, and the skills, and fails on a broken one. Pass paths to check other
-   Markdown. Both skip a file git marks `linguist-vendored`. To check other prose, such as
-   AGENTS.md, run `check-prose.sh <path>...` on it.
+   the READMEs, `docs/`, and the skills, and fails on a broken one. It skips the docs-writing,
+   project-docs-writing, and skill-writing skills, whose examples link to placeholder targets. Pass
+   paths to check other Markdown. Both skip a file git marks `linguist-vendored`. To check other
+   prose, such as AGENTS.md, run `check-prose.sh <path>...` on it.
 
    `check-prose.sh` fails on traces of the work session, the banned words a grep can catch, values
    with units under `docs/architecture/`, formatting faults, and untagged code blocks. It then

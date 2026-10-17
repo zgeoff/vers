@@ -15,8 +15,8 @@ factories and persistence helpers. Both live in the shared test utils with tests
 - A factory returns a complete plain object. Fields whose value is arbitrary default to
   `@faker-js/faker` values, which prove the unit does not depend on one particular value.
   Constrained fields, such as an enum or a discriminator, take a fixed default. A deterministic
-  package, whose outputs are pinned as golden values, takes fixed defaults throughout. The preload
-  seeds faker once, so a failing run reproduces.
+  package, whose outputs are pinned as golden values, takes fixed defaults throughout. Seed faker
+  once in the preload of each package that uses it, so a failing run reproduces.
 - A factory defaults each foreign key to a fresh id and never requires a parent. Wiring real parents
   is a composite's job.
 - A factory for a class returns an instance of that class, so `toStrictEqual` against a real

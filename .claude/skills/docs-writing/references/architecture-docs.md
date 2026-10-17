@@ -86,9 +86,10 @@ paragraph about the part that keeps it, with its reason beside it.
   hold parts of several concepts. Split a doc at a concept boundary, and split early when a concept
   is going to grow, rather than letting one doc absorb two.
 - **Each doc points at its neighbours.** Near the top, a doc says in one sentence each which other
-  docs cover the facts next to its own: "[Replay verification](./replay-verification.md) covers the
-  verifier that proves a stream and settles it." A link inside the opening paragraph does the same
-  job, when its sentence says what the linked doc covers.
+  docs cover the facts next to its own:
+  `[Replay verification](./replay-verification.md) covers the verifier that proves a stream and settles it.`
+  A link inside the opening paragraph does the same job, when its sentence says what the linked doc
+  covers.
 - **Diagrams carry the shapes.** The overview's request path and topology get diagrams, under the
   rules in
   [Diagrams for pipelines, state machines, and topologies](../SKILL.md#diagrams-for-pipelines-state-machines-and-topologies).

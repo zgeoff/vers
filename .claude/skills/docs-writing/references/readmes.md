@@ -19,8 +19,8 @@ sections, in this order:
 A plain repo README (a repo that publishes no package) has one paragraph, then Quick start, Checks,
 Layout, and Documentation. A sub-package or folder README documents its own folder.
 
-`check-length.sh` classifies each README outside `docs/` and `.claude/`, and fails the run above its
-limit:
+[`check-length.sh`](../scripts/check-length.sh) classifies each README outside `docs/` and
+`.claude/`, and fails the run above its limit:
 
 | README      | Classified by                                                | Target | Limit |
 | ----------- | ------------------------------------------------------------ | ------ | ----- |

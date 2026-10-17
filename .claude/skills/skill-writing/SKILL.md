@@ -132,13 +132,14 @@ the code", and move only what few tasks need. A reference follows every rule in 
 
 ## Point at the code, never copy it
 
-A copy of the code takes three shapes, and each has a replacement.
+A copy of the code takes four shapes, and each has a replacement.
 
 ### A pointer to a name
 
 A pointer is allowed when the agent needs a name. Write the name as a Markdown link to its file, in
 a sentence that holds a fact the code doesn't: a trap, a reason, or a choice. `check-links.sh`
-checks a link, so a rename fails CI. Nothing checks a path in code formatting.
+checks a link, so a rename fails CI. A path in code formatting gets only a warning from
+`check-skill.sh`, and nothing fails when it goes stale.
 
 - Bad: "Call `createWidget` (`src/widgets/create-widget.ts`) to build one; it ignores `theme` when
   `size` is `compact`."
@@ -256,5 +257,5 @@ one skill, pass its folder:
 bash .claude/skills/skill-writing/scripts/check-skill.sh .claude/skills/<skill>
 ```
 
-A repo marks a third-party skill `linguist-vendored` in `.gitattributes`, and none of these checks
-read it.
+A repo marks a third-party skill `linguist-vendored` in [`.gitattributes`](../../../.gitattributes),
+and none of these checks read it.
