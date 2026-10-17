@@ -16,8 +16,8 @@ and tightens rules and never relaxes one from the base.
 
 ## Key rules
 
-- [Project verbs](#project-verbs): the verbs vers adds to the shared taxonomy, each with its contract
-  and the shared verb it differs from.
+- [Project verbs](#project-verbs): the verbs vers adds to the shared taxonomy, each with its
+  contract and the shared verb it differs from.
 - [Exempt names](#exempt-names): Kysely's migration exports and the oRPC handlers named after their
   contract procedures need no verb.
 - [Comments](#comments): a `//` comment holds only the reason the obvious alternative is wrong, when
@@ -52,15 +52,15 @@ vers adds these verbs to the shared taxonomy. A new verb goes here and into the 
 | `mint`      | create and persist a new identity-bearing row rooted in a chain or coordinate               | `create`, for any resource                                |
 | `park`      | set a work item aside in a parked status for later resumption                               | `reject`, which refuses the item                          |
 | `record`    | durably note that an event occurred (counter, log, audit row)                               | `write`, which persists content to the filesystem         |
-| `redirect` | return a redirect response for a request failing a gate, else defer | `serve`, which answers with the resource |
+| `redirect`  | return a redirect response for a request failing a gate, else defer                         | `serve`, which answers with the resource                  |
 | `refresh`   | rebuild a derived resource in place from its current source, discarding prior contents      | `update`, which keeps prior contents; `sync`              |
 | `reject`    | mark a work item refused and apply the consequences                                         | `remove`, which deletes it                                |
 | `report`    | forward a fault to the error backend                                                        | `emit`, `print`, and `record`                             |
 | `restart`   | return a long-running resource to service from its initial state                            | `start`; `reset`, which returns state only                |
 | `roll`      | consume typed draws from a roll stream to produce an outcome, advancing its cursor          | `advance`, which produces no outcome                      |
-| `schedule` | enqueue an event or callback for deferred execution | `submit`, which queues a payload for delivery |
+| `schedule`  | enqueue an event or callback for deferred execution                                         | `submit`, which queues a payload for delivery             |
 | `select`    | persist the caller's choice among owned alternatives as the new state                       | `pick`, which chooses without persisting                  |
-| `serve` | answer a request for a static resource, else defer | `redirect`, which sends the request elsewhere |
+| `serve`     | answer a request for a static resource, else defer                                          | `redirect`, which sends the request elsewhere             |
 | `submit`    | accept a payload into a durable outbound queue and schedule its delivery                    | `send`, which transmits at once; `flush`                  |
 | `sweep`     | bulk-remove stale or orphaned resources found by a scan, returning the set removed          | `remove`, for one known resource                          |
 | `sync`      | reconcile cached state to an external source, clearing it the first time the source changes | `refresh`, which rebuilds every time                      |
