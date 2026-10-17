@@ -33,7 +33,6 @@ export type MockProcedureHandler<
 > =
   | TOutput
   | ((
-      // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- generic callback-arg object; members are caller-typed, no deep-readonly satisfies the rule
       args: MockProcedureHandlerArgs<TInput, TContext, TErrorMap>,
     ) => Promise<Response | TOutput> | Response | TOutput);
 
@@ -97,7 +96,6 @@ interface LooseMockFnArgs {
   readonly request: Request;
 }
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- generic callback-arg object; members are caller-typed, no deep-readonly satisfies the rule
 type LooseMockFn = (args: LooseMockFnArgs) => unknown;
 
 interface UntypedMockServiceOptions {
@@ -168,7 +166,6 @@ interface ProcedureImplementerHandlerArgs {
 }
 
 interface ProcedureImplementer {
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- generic callback-arg object; members are caller-typed, no deep-readonly satisfies the rule
   handler: (fn: (opts: ProcedureImplementerHandlerArgs) => Promise<unknown>) => AnyRouter;
 }
 
@@ -203,7 +200,6 @@ function buildMockProcedure(
   });
 }
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- oRPC AnyRouter is a live router handle; no readonly form
 function buildNestedRouter(path: ReadonlyArray<string>, leaf: AnyRouter): AnyRouter {
   return path.reduceRight<AnyRouter>((accumulator, segment) => ({ [segment]: accumulator }), leaf);
 }

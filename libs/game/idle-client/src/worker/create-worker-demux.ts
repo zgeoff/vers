@@ -51,14 +51,7 @@ export function createWorkerDemux(options: Readonly<CreateWorkerDemuxOptions>): 
 
   // the virtual port delivers synchronously: `upgrade` registers the router's listener before the
   // incoming handler below relays the same frame, so no buffering or `start()` is needed
-  const buildVirtualPort = (
-    tabID: string,
-
-    // the tab's listener sets are this function's whole purpose to mutate (the RPC handler
-    // registers its listeners into them); a Set has no readonly form that still allows add()
-    // oxlint-disable-next-line typescript/prefer-readonly-parameter-types
-    tab: Tab,
-  ): VirtualPort => ({
+  const buildVirtualPort = (tabID: string, tab: Tab): VirtualPort => ({
     addEventListener: (type: string, listener: EventListenerOrEventListenerObject) => {
       if (type === 'message') {
         tab.messageListeners.add(listener);

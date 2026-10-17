@@ -55,7 +55,6 @@ function expandEnvFileRefs(
 }
 
 function collectEnvironmentKeys(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- zod-inferred union; its readonly form defeats Array.isArray narrowing
   environment: z.infer<typeof environmentSchema> | undefined,
 ): Array<string> {
   if (environment === undefined) {

@@ -57,7 +57,6 @@ async function runSeedReveal(
   client: WorkerClient,
   avatarID: string,
   delta: ReadonlyArray<string>,
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- mutated in place: the delta is marked up front and a failed batch's still-unfetched tail is unmarked
   sessionNodeIDs: Set<string>,
   signal: AbortSignal,
 ): Promise<void> {

@@ -31,7 +31,7 @@ export async function createTestTemplate(
         await session`SELECT 1 FROM pg_database WHERE datname = ${config.templateDB}`;
 
       if (existing.length === 0) {
-        await session.unsafe(/* SQL */ `CREATE DATABASE ${config.templateDB}`);
+        await session.unsafe(`CREATE DATABASE ${config.templateDB}`);
       }
 
       const result = await applyMigrations({

@@ -6,7 +6,6 @@ export interface EnvContract {
   readonly required: ReadonlyArray<string>;
 }
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- ZodType-bearing shape; zod schemas have no readonly form
 export function buildEnvContract(envShape: z.ZodRawShape): EnvContract {
   const merged: Readonly<Record<string, z.ZodType>> = { ...baseEnvSchema.shape, ...envShape };
   const optional: Array<string> = [];

@@ -11,7 +11,7 @@ async function createEmptyDB() {
   const dbName = `test_${createId()}`;
   const setupClient = postgres(`${baseURI}/postgres`);
 
-  await setupClient.unsafe(/* SQL */ `CREATE DATABASE ${dbName}`);
+  await setupClient.unsafe(`CREATE DATABASE ${dbName}`);
   await setupClient.end();
 
   return `${baseURI}/${dbName}`;

@@ -146,7 +146,6 @@ export type Props = ButtonProps &
     | ({ as?: never } & Omit<React.ComponentPropsWithoutRef<'button'>, keyof ButtonProps>)
   );
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- carries React's DOM attribute types (style, dangerouslySetInnerHTML), which have no readonly form
 export function Button(props: Readonly<Props>) {
   const composedClassName = cx(
     button({

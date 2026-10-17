@@ -22,5 +22,6 @@ test('it calculates the weapons attack interval', () => {
   const avatar = createAvatar(avatarData, ctx);
   const interval = getAttackIntervalMS(avatar);
 
-  expect(interval).toBe(1818); // 1000ms / 0.55 = 1818ms
+  // 1000ms / 0.55 = 1818ms
+  expect(interval).toBe(1818);
 });

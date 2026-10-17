@@ -1,1 +1,3 @@
-export const ROTATION_GRACE_DURATION = 2 * 60 * 1000; // 2 minutes
+const MINUTE_MS = 60 * 1000;
+
+export const ROTATION_GRACE_DURATION = 2 * MINUTE_MS;

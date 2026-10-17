@@ -28,9 +28,7 @@ export async function createClonedDatabase(
       // the same key exclusively: postgres refuses to clone a template with an active connection
       await session`SELECT pg_advisory_lock_shared(${lockKey}::bigint)`;
 
-      await session.unsafe(
-        /* SQL */ `CREATE DATABASE ${config.dbName} TEMPLATE ${config.templateDB}`,
-      );
+      await session.unsafe(`CREATE DATABASE ${config.dbName} TEMPLATE ${config.templateDB}`);
     } finally {
       try {
         // a session advisory lock dies with its session, so a failed unlock

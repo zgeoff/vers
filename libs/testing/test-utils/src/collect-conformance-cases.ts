@@ -144,7 +144,6 @@ function buildConformanceClient(
 }
 
 function getClientProcedure(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- oRPC client proxy walked by dot-path; framework type with no readonly form
   client: ContractRouterClient<AnyContractRouter>,
   dotPath: string,
 ): (input: unknown) => Promise<unknown> {

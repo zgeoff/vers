@@ -134,7 +134,6 @@ function buildFogPlaneResources(
 }
 
 function updateFogPlane(
-  // oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- the resources' density buffer and texture-node value slot are mutable by design: rewriting them is how a rebuilt field reaches the live material
   plane: FogPlaneResources,
   field: RevealDistanceField,
   viewport: Readonly<Viewport>,
@@ -179,7 +178,6 @@ function updateDensityBytes(bytes: Uint8Array, field: RevealDistanceField): void
   }
 }
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- the density buffer is mutable by design: it backs the live texture's pixel storage
 function buildDensityTexture(density: DensityBuffer): DataTexture {
   const map = new DataTexture(
     density.bytes,

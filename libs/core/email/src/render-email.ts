@@ -20,7 +20,6 @@ interface EmailData {
   plainText: string;
 }
 
-// oxlint-disable-next-line typescript/prefer-readonly-parameter-types -- config wraps a React element tree (mutable props); no deep-readonly form
 export function renderEmail(config: EmailConfig): EmailData {
   // renders through react-dom directly, with the doctype and plain-text selectors copied from
   // `@react-email/render`: that package cannot run inside a `bun build --compile` binary, since its
