@@ -100,7 +100,7 @@
       "@zgeoff/mcp-remote": "0.1.38",
       "@zgeoff/oxlint-config": "0.2.5",
       "@zgeoff/umami-mcp": "0.1.0",
-      "autoprefixer": "10.5.2",
+      "autoprefixer": "10.6.1",
       "babel-plugin-react-compiler": "1.0.0",
       "camera-controls": "3.1.2",
       "chrome-devtools-mcp": "1.7.0",
