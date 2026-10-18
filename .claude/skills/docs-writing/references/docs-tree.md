@@ -31,8 +31,12 @@ links `docs/reference/` once.
   packages in `docs/design/<work>/spikes/<name>/`. A plan for work about to be built is no design:
   it lives in its issue or PR. When the work lands, the built part moves into `docs/architecture/`
   and the design folder is deleted.
-- **A decision record is permanent.** It states the choice, never how the system works now; the
-  architecture doc owns that. A changed decision gets a new record that supersedes the old one.
+- **A decision record is permanent, and a changed decision is edited in place.** A record states the
+  choice, the alternatives it rejected and why, never how the system works now; the architecture doc
+  owns that. When a decision changes, its record keeps its number and states the decision as it now
+  stands, its header gains an `Updated` date, and a `## Changes` list at its end gives each change's
+  date and a one-line summary. That list is the one place a record holds history, so the log grows
+  only when a new decision is made.
 - **Development and releasing live in runbooks.** `docs/runbooks/development.md` holds the
   contributor setup; `docs/runbooks/releasing.md` holds only the steps the release tooling doesn't
   do, and is deleted when none remain. A folder README that documents its own folder stays beside
