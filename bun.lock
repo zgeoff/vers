@@ -1330,9 +1330,9 @@
     "@elysiajs/opentelemetry": "1.4.11",
     "@epic-web/totp": "4.0.1",
     "@faker-js/faker": "10.6.0",
-    "@fontsource/chakra-petch": "5.2.7",
-    "@fontsource/ibm-plex-mono": "5.2.7",
-    "@fontsource/manrope": "5.2.8",
+    "@fontsource/chakra-petch": "5.3.0",
+    "@fontsource/ibm-plex-mono": "5.3.0",
+    "@fontsource/manrope": "5.3.0",
     "@happy-dom/global-registrator": "20.10.6",
     "@ladle/react": "5.1.1",
     "@msw/data": "1.1.6",
@@ -1728,11 +1728,11 @@
 
     "@floating-ui/utils": ["@floating-ui/utils@0.2.12", "", {}, "sha512-HpCo8tmWzLVad5s2d19EhAz5zqrrQ6s69qd6moPMQvkOuSwDT1YgRfWSVuc4ennqrgv3OHppiOGMQ7oC13yIww=="],
 
-    "@fontsource/chakra-petch": ["@fontsource/chakra-petch@5.2.7", "", {}, "sha512-GLbun5WZJNAEc8FtWxwcgo+4Kurqdwejvf671l+YfIjyQgPvTjyxXYP7Ffg2HAY89NGnp3oOvKQjRzfm/fBECw=="],
+    "@fontsource/chakra-petch": ["@fontsource/chakra-petch@5.3.0", "", {}, "sha512-QZvbM/q2R6n1pg2x+TJPftZmBNS+ADU37L4Z4L/6UJIz+JZ/SRaEf8usPFRiP7Ht28sIideMu/Bm1SnGlSrwNw=="],
 
-    "@fontsource/ibm-plex-mono": ["@fontsource/ibm-plex-mono@5.2.7", "", {}, "sha512-MKAb8qV+CaiMQn2B0dIi1OV3565NYzp3WN5b4oT6LTkk+F0jR6j0ZN+5BKJiIhffDC3rtBULsYZE65+0018z9w=="],
+    "@fontsource/ibm-plex-mono": ["@fontsource/ibm-plex-mono@5.3.0", "", {}, "sha512-eTgnZjZEGk1QtD3ZstF+Vclo2HLAni8YMy34/DxllwZvyz1lR/1RF/xTiAquOBO7MvqBx8D2Ig2WCPMVfdZu7Q=="],
 
-    "@fontsource/manrope": ["@fontsource/manrope@5.2.8", "", {}, "sha512-gJHJmcuUk7qWcNCfcAri/DJQtXtBYqi9yKratr4jXhSo0I3xUtNNKI+igQIcw5c+m95g0vounk8ZnX/kb8o0TA=="],
+    "@fontsource/manrope": ["@fontsource/manrope@5.3.0", "", {}, "sha512-obJ1Dv3+uCA6HlHgW8u4BGYxJR9In2HW7gjJhlflEvkrj1X1iSEwu0fToL+JYGC/FEKFfIz1sBuPduvcL2gIAA=="],
 
     "@formatjs/ecma402-abstract": ["@formatjs/ecma402-abstract@2.3.6", "", { "dependencies": { "@formatjs/fast-memoize": "2.2.7", "@formatjs/intl-localematcher": "0.6.2", "decimal.js": "^10.4.3", "tslib": "^2.8.0" } }, "sha512-HJnTFeRM2kVFVr5gr5kH1XP6K0JcJtE7Lzvtr3FS/so5f1kpsqqqxy5JF+FRaO6H2qmcMfAUIox7AJteieRtVw=="],
 
