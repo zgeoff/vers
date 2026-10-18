@@ -22,7 +22,7 @@
       "@dotenvx/dotenvx": "2.1.4",
       "@elysiajs/opentelemetry": "1.4.11",
       "@epic-web/totp": "4.0.1",
-      "@faker-js/faker": "10.5.0",
+      "@faker-js/faker": "10.6.0",
       "@fontsource/chakra-petch": "5.2.7",
       "@fontsource/ibm-plex-mono": "5.2.7",
       "@fontsource/manrope": "5.2.8",
