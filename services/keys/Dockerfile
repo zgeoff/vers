@@ -42,7 +42,7 @@ WORKDIR /app/services/keys
 RUN bun build src/serve.ts --compile --target=bun-linux-x64-musl --outfile /tmp/server
 
 # --- runtime: just the binary on alpine (busybox shell kept for `fly ssh console`) ---
-FROM alpine:3.21
+FROM alpine:3.24
 
 # bun's musl binary links against libgcc and libstdc++
 RUN apk add --no-cache libgcc libstdc++

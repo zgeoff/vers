@@ -60,7 +60,7 @@ RUN bun build src/serve-provider.ts --compile --target=bun-linux-x64-musl \
   --outfile /tmp/provider
 
 # --- runtime: the three binaries on alpine (busybox shell kept for `fly ssh console`) ---
-FROM alpine:3.21
+FROM alpine:3.24
 
 # bun's musl binaries link against libgcc and libstdc++
 RUN apk add --no-cache libgcc libstdc++
