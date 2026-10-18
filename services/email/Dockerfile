@@ -43,7 +43,7 @@ RUN bun build src/serve.ts --compile --target=bun-linux-x64-musl --outfile /tmp/
 RUN bun build src/sweep.ts --compile --target=bun-linux-x64-musl --outfile /tmp/sweep
 
 # --- runtime: both binaries on alpine (busybox shell kept for `fly ssh console`) ---
-FROM alpine:3.21
+FROM alpine:3.24
 
 # bun's musl binaries link against libgcc and libstdc++
 RUN apk add --no-cache libgcc libstdc++
