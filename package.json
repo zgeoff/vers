@@ -14,7 +14,7 @@
       "scripts"
     ],
     "catalog": {
-      "@ark-ui/react": "5.37.2",
+      "@ark-ui/react": "5.39.3",
       "@babel/core": "8.0.1",
       "@commitlint/cli": "21.2.0",
       "@conform-to/react": "1.19.4",
