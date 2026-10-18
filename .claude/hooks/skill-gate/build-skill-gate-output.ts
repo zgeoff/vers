@@ -1,3 +1,4 @@
+import { formatSkillList } from './format-skill-list.ts';
 import type { SkillGateHookOutput, SkillGateOutputContext, SkillGatePlan } from './types.ts';
 
 // Builds the PreToolUse hook output for one edit, or null when the edit goes ahead in silence. A
@@ -48,17 +49,6 @@ export function buildSkillGateOutput(
 
 const RULES_PATH = '.claude/skill-gate.json';
 
-// The gate sees Edit, Write and MultiEdit only, so it names them as the way to change a gated path.
+// A gated path changes only through these tools; the gate warns on a Bash write and blocks an edit.
 const EDIT_TOOLS_NOTE =
   'Change a gated path only with Edit, Write or MultiEdit, never through Bash.';
-
-function formatSkillList(skills: readonly string[]): string {
-  const names = skills.map((skill) => `\`${skill}\``);
-  const noun = names.length === 1 ? 'skill' : 'skills';
-
-  if (names.length === 1) {
-    return `${names[0]} ${noun}`;
-  }
-
-  return `${names.slice(0, -1).join(', ')} and ${names.at(-1)} ${noun}`;
-}
