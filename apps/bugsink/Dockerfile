@@ -3,7 +3,7 @@
 # is still a tag bump on the FROM line. The base image's config template is kept
 # as bugsink_conf_base so our bugsink_conf.py inherits it and overrides only the
 # file object storage.
-FROM bugsink/bugsink:2.4.0
+FROM bugsink/bugsink:2.6.1
 
 USER root
 
