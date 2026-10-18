@@ -19,7 +19,7 @@
       "@commitlint/cli": "21.2.0",
       "@conform-to/react": "1.19.4",
       "@conform-to/zod": "1.19.4",
-      "@dotenvx/dotenvx": "2.1.4",
+      "@dotenvx/dotenvx": "2.34.2",
       "@elysiajs/opentelemetry": "1.4.11",
       "@epic-web/totp": "4.0.1",
       "@faker-js/faker": "10.6.0",
