@@ -60,7 +60,7 @@
       "@react-email/components": "1.0.12",
       "@react-hookz/web": "25.3.0",
       "@react-spring/rafz": "10.1.2",
-      "@react-three/fiber": "9.6.1",
+      "@react-three/fiber": "9.8.1",
       "@react-three/test-renderer": "9.1.0",
       "@rolldown/plugin-babel": "0.2.3",
       "@sentry/browser": "10.63.0",
