@@ -1365,7 +1365,7 @@
     "@pulumi/github": "6.14.0",
     "@pulumi/pulumi": "3.253.0",
     "@react-email/components": "1.0.12",
-    "@react-hookz/web": "25.2.0",
+    "@react-hookz/web": "25.3.0",
     "@react-spring/rafz": "10.1.2",
     "@react-three/fiber": "9.6.1",
     "@react-three/test-renderer": "9.1.0",
@@ -2284,7 +2284,7 @@
 
     "@react-email/text": ["@react-email/text@0.1.6", "", { "peerDependencies": { "react": "^18.0 || ^19.0 || ^19.0.0-rc" } }, "sha512-TYqkioRS45wTR5il3dYk/SbUjjEdhSwh9BtRNB99qNH1pXAwA45H7rAuxehiu8iJQJH0IyIr+6n62gBz9ezmsw=="],
 
-    "@react-hookz/web": ["@react-hookz/web@25.2.0", "", { "dependencies": { "@ver0/deep-equal": "^1.0.0" }, "peerDependencies": { "js-cookie": "^3.0.5", "react": "^16.8 || ^17 || ^18 || ^19", "react-dom": "^16.8 || ^17 || ^18 || ^19" }, "optionalPeers": ["js-cookie"] }, "sha512-60iU7lGnZOjdkNVpu/8xNEnTPVQQ5ckauIEvsh9S+58v2j/mY1lhgNas+w+9UF8VoUhWC4/cpaxT64EUC6DgsQ=="],
+    "@react-hookz/web": ["@react-hookz/web@25.3.0", "", { "dependencies": { "@ver0/deep-equal": "^2.0.1" }, "peerDependencies": { "js-cookie": "^3.0.5", "react": "^16.8 || ^17 || ^18 || ^19", "react-dom": "^16.8 || ^17 || ^18 || ^19" }, "optionalPeers": ["js-cookie"] }, "sha512-aZXe1p7yn3AUzvP13P8mhR25hpYLJU9QhOMeUcVUx4krd0cdTI/g/ogJmVGvu93u+ST13SISC8/KaFPiodhVUw=="],
 
     "@react-spring/rafz": ["@react-spring/rafz@10.1.2", "", {}, "sha512-KC6vSFZyPnRJ2rXqipV9QqR4SaYbYXjvKfdYKWipNK2mWuV79gr20WmpVUOsTiEHGRY3WSOdWCHN+P9Pdaqb7Q=="],
 
@@ -2718,7 +2718,7 @@
 
     "@ungap/structured-clone": ["@ungap/structured-clone@1.3.3", "", {}, "sha512-60YRaenCQcVjYEKOcG824+DRGGIQ3VKErcBoAEDJZz5bKIs2ZG+X/H9Nk+Q6EVkwJk5QNApxbrc5QtBSwtrXAg=="],
 
-    "@ver0/deep-equal": ["@ver0/deep-equal@1.0.1", "", {}, "sha512-XSvL5wKXBZIv7fflMqhQx936sRpEtzxeV25xAEt0rLLXzbF6RCQaRA1jrVIn8JCubMyn/y0TaidphUtilLzl1A=="],
+    "@ver0/deep-equal": ["@ver0/deep-equal@2.0.1", "", {}, "sha512-JVSbDwzKASqorJum+ATnnZNIkni4K4G3aeJDsTgEhHcm0CiCwAVaLbhFByeNAir1HExEWjHxhIXVR+d8ZzeJGw=="],
 
     "@vers/active-avatar": ["@vers/active-avatar@workspace:libs/data/active-avatar"],
 
