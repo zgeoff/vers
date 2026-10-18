@@ -1324,8 +1324,8 @@
     "@ark-ui/react": "5.39.3",
     "@babel/core": "8.0.1",
     "@commitlint/cli": "21.2.0",
-    "@conform-to/react": "1.19.4",
-    "@conform-to/zod": "1.19.4",
+    "@conform-to/react": "1.21.1",
+    "@conform-to/zod": "1.21.1",
     "@dotenvx/dotenvx": "2.34.2",
     "@elysiajs/opentelemetry": "1.4.11",
     "@epic-web/totp": "4.0.1",
@@ -1624,11 +1624,11 @@
 
     "@commitlint/types": ["@commitlint/types@21.2.0", "", { "dependencies": { "conventional-commits-parser": "^7.0.0", "picocolors": "^1.1.1" } }, "sha512-7zVFCDB2reMvJH5dmbKnOQPjZEvjdJTH8jc0U/PIPU1r3/+vf5pD1HlfitV2MWsWXrvu7u39iY1lyLUPOaN0Gw=="],
 
-    "@conform-to/dom": ["@conform-to/dom@1.19.4", "", {}, "sha512-P/mBdVRl946iE74TXmF5YLY9+1IDrQzxKdj9A7qv7Cd4l/O02EvJskg3X7cHwhmFFIXXgNzSmf/y4B597SS4gg=="],
+    "@conform-to/dom": ["@conform-to/dom@1.21.1", "", {}, "sha512-pYnhrJoM1xDbAx36rVxxm4643TFWwquTDoI8abtgnC40XIHDZDUhy3pIrZrv+QjwtLEgSWGP5GX/LqJ+IDfe/Q=="],
 
-    "@conform-to/react": ["@conform-to/react@1.19.4", "", { "dependencies": { "@conform-to/dom": "1.19.4" }, "peerDependencies": { "react": ">=18", "react-dom": ">=18" } }, "sha512-Xyw4hbD9467q8PTWW+Nvmf523y814w70eeABRJzVvfnpghGOAWAGt1lpOboAs6sqaKG/eouqifibz/r+PDFZLg=="],
+    "@conform-to/react": ["@conform-to/react@1.21.1", "", { "dependencies": { "@conform-to/dom": "1.21.1" }, "peerDependencies": { "react": ">=18", "react-dom": ">=18" } }, "sha512-q0kzC5dEHL4okfmdbih95OfuelXw6xlLeN9WvtxQ7CP047D6A5lRK+0DykZZHCFP4idsQzC8NUBQd/tkKXPukg=="],
 
-    "@conform-to/zod": ["@conform-to/zod@1.19.4", "", { "dependencies": { "@conform-to/dom": "1.19.4" }, "peerDependencies": { "zod": "^3.21.0 || ^4.0.0" } }, "sha512-g80QtotXLcXWCF86Xou/VpI6i+NBOQxYgLS9YCQYrgV27yilZFJYpgWWBsA8YwodmJVBIYm9RawJba7WnUoddA=="],
+    "@conform-to/zod": ["@conform-to/zod@1.21.1", "", { "dependencies": { "@conform-to/dom": "1.21.1" }, "peerDependencies": { "zod": "^3.21.0 || ^4.0.0" } }, "sha512-VqMuYoUVtZJ57P1EYD4tDuOyOaN5jiep1Ui6BRl7aP1m6tA8Do+mKioR7WXkGKULiNsjgPR7/FyWLtMUmtJNHg=="],
 
     "@conventional-changelog/git-client": ["@conventional-changelog/git-client@3.1.0", "", { "dependencies": { "@simple-libs/child-process-utils": "^2.0.0", "@simple-libs/stream-utils": "^2.0.0", "semver": "^7.5.2" }, "peerDependencies": { "conventional-commits-filter": "^6.0.1", "conventional-commits-parser": "^7.0.1" }, "optionalPeers": ["conventional-commits-filter", "conventional-commits-parser"] }, "sha512-Tqa/gHco2WJWa740NRjOrfKVvzIqxkZpecb8bemaQ8sKM5PXb1UK4uTyTb/1wIqNuOVaDOFxyBdhTIQZn6gdjQ=="],
 
