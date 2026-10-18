@@ -103,7 +103,7 @@
       "autoprefixer": "10.5.2",
       "babel-plugin-react-compiler": "1.0.0",
       "camera-controls": "3.1.2",
-      "chrome-devtools-mcp": "1.7.0",
+      "chrome-devtools-mcp": "1.10.1",
       "chrome-launcher": "1.2.1",
       "commander": "15.0.0",
       "elysia": "1.4.29",
