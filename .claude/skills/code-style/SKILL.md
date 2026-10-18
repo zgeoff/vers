@@ -2,9 +2,9 @@
 name: code-style
 description:
   Code style for zgeoff TypeScript repos — module layout and file naming, acronyms, state
-  lifecycles, and the closed function-verb taxonomy that the function-verb lint rule enforces. Load
-  before writing, reviewing, or renaming any TypeScript, with the repo's project-code-style skill
-  beside it.
+  lifecycles, branching on a union with ts-pattern, and the closed function-verb taxonomy that the
+  function-verb lint rule enforces. Load before writing, reviewing, or renaming any TypeScript, with
+  the repo's project-code-style skill beside it.
 ---
 
 # Code style
@@ -22,6 +22,8 @@ Each line links the section that explains it.
   name.
 - [State lifecycles](#state-lifecycles): persisted state moves through one declared transition
   table, and an in-process actor is an xstate machine.
+- [Branching on a union](#branching-on-a-union): branch with `match(...).exhaustive()` from
+  `ts-pattern`, never `switch`.
 - [Function naming](#function-naming): every function name starts with a verb from the closed list,
   and the banned verbs never appear.
 
@@ -47,6 +49,10 @@ docs-writing's `check-length.sh` runs it.
   — never helpers first. Supporting declarations (consts, interfaces, type aliases) sit directly
   above their first use, never below it and never leading the file; types for the primary export's
   signature may sit just above it.
+- Build objects with a factory function, never a class. The factory takes the verb its result needs:
+  `build<X>` for a value, `create<X>` for a resource, and `make<X>` for a function. The one
+  exception is a custom error, `class <X>Error extends Error`, since `instanceof` checks and stack
+  traces need it.
 
 ## Acronyms
 
@@ -74,6 +80,14 @@ waits with `setTimeout` from `node:timers/promises`, because Node has no `Bun` g
 event with `events.once`. When a caller resolves a promise from outside, take the parts from
 `Promise.withResolvers()`. Hand-build a `new Promise` only when none of these fits, such as an event
 that can also fail through a second event.
+
+## Branching on a union
+
+Branch on a union with `match(...).exhaustive()` from `ts-pattern`, never with `switch`. The
+`exhaustive()` call fails the type check when a member of the union has no branch, so a member added
+later cannot fall through to a default. `zgeoff/no-switch` reports every `switch`, but only the
+author can tell a union from an open value. End the match with `.otherwise()` only when the value is
+open, such as a string from outside the program.
 
 ## Function naming
 
