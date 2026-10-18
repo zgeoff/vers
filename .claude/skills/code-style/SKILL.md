@@ -69,9 +69,11 @@ modules the split creates share one copy of the rule instead of each keeping its
 
 ## Waiting on time and events
 
-Wait on a timer with `Bun.sleep`, and on one event with `events.once`. When a caller resolves a
-promise from outside, take the parts from `Promise.withResolvers()`. Hand-build a `new Promise` only
-when none of these fits, such as an event that can also fail through a second event.
+Wait on a timer with `Bun.sleep` in a script or test that only Bun runs. Code that ships to Node
+waits with `setTimeout` from `node:timers/promises`, because Node has no `Bun` global. Wait on one
+event with `events.once`. When a caller resolves a promise from outside, take the parts from
+`Promise.withResolvers()`. Hand-build a `new Promise` only when none of these fits, such as an event
+that can also fail through a second event.
 
 ## Function naming
 
