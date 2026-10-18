@@ -1,3 +1,4 @@
+import { collectGateSkills } from './collect-gate-skills.ts';
 import type { SkillGateInput, SkillGatePlan, UnknownSkill } from './types.ts';
 
 // Plans the gate for one edit: the skills the path needs that the session has not loaded, in gate
@@ -10,23 +11,11 @@ export function planSkillGate(input: SkillGateInput): SkillGatePlan {
       .map((skill) => ({ match: gate.match, skill })),
   );
 
-  if (input.rules.ignore.some((segment) => input.relativePath.includes(segment))) {
-    return { missing: [], unknown };
-  }
-
-  const needed = input.rules.gates
-    .filter((gate) => isGlobMatch(gate.match, input.relativePath))
-    .flatMap((gate) => gate.skills);
+  const needed = collectGateSkills(input.rules, input.relativePath);
 
   const missing = needed.filter(
     (skill) => input.availableSkills.includes(skill) && !input.loadedSkills.includes(skill),
   );
 
   return { missing: [...new Set(missing)], unknown };
-}
-
-function isGlobMatch(pattern: string, relativePath: string): boolean {
-  const glob = new Bun.Glob(pattern);
-
-  return glob.match(relativePath);
 }
