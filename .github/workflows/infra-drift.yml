@@ -83,4 +83,4 @@ jobs:
           expect-no-changes: true
           refresh: true
           comment-on-pr: ${{ github.event_name == 'pull_request' }}
-          pulumi-version: 3.251.0
+          pulumi-version: 3.268.0
