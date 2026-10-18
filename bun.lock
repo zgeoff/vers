@@ -1362,7 +1362,7 @@
     "@paralleldrive/cuid2": "3.3.0",
     "@playwright/test": "1.61.1",
     "@pulumi/cloudflare": "6.22.0",
-    "@pulumi/github": "6.14.0",
+    "@pulumi/github": "6.15.0",
     "@pulumi/pulumi": "3.268.0",
     "@react-email/components": "1.0.12",
     "@react-hookz/web": "25.2.0",
@@ -2236,7 +2236,7 @@
 
     "@pulumi/cloudflare": ["@pulumi/cloudflare@6.22.0", "", { "dependencies": { "@pulumi/pulumi": "^3.142.0" } }, "sha512-ljJpS3vhIaTNzTvoNURkUfXnzDlBS0gx2nxvg84JmH6kuYoCmsLiQ1afOdhXly4+G/JIgYqjdxo2QNliVUWYDw=="],
 
-    "@pulumi/github": ["@pulumi/github@6.14.0", "", { "dependencies": { "@pulumi/pulumi": "^3.142.0" } }, "sha512-qrgH5ot2Wh9xLMPnBq9hpBjEYTIfgDpJRS/rmROgt5NIEAhwDfaTJ8dgpdjV8CQwfpuaRY7mrs8mKWlSANEeYQ=="],
+    "@pulumi/github": ["@pulumi/github@6.15.0", "", { "dependencies": { "@pulumi/pulumi": "^3.142.0" } }, "sha512-U8ZxPQQcOrcTn8y8EZsWmXzMtbw0JnwWCVGmqxBZ/i2SpUlEGMYT9B+EFC/qTALZXkDf7cMiq6fZ3Gy1G23nyQ=="],
 
     "@pulumi/pulumi": ["@pulumi/pulumi@3.268.0", "", { "dependencies": { "@grpc/grpc-js": "^1.10.1", "@logdna/tail-file": "^2.0.6", "@npmcli/arborist": "^9.0.0", "@opentelemetry/api": "^1.9", "@opentelemetry/core": "^2.9", "@opentelemetry/exporter-trace-otlp-grpc": "^0.220", "@opentelemetry/exporter-zipkin": "^2.9", "@opentelemetry/instrumentation": "^0.220", "@opentelemetry/instrumentation-grpc": "^0.220", "@opentelemetry/resources": "^2.9", "@opentelemetry/sdk-trace-base": "^2.9", "@opentelemetry/sdk-trace-node": "^2.9", "@opentelemetry/semantic-conventions": "^1.42", "@types/google-protobuf": "^3.15.5", "@types/semver": "^7.5.6", "execa": "^5.1.0", "google-protobuf": "^3.21.4", "ini": "^2.0.0", "js-yaml": "^4.3.2", "minimist": "^1.2.6", "normalize-package-data": "^6.0.0", "require-from-string": "^2.0.1", "semver": "^7.5.2", "source-map-support": "^0.5.6", "upath": "^1.1.0" }, "peerDependencies": { "ts-node": ">= 7.0.1 < 12", "typescript": ">= 3.8.3 < 7" }, "optionalPeers": ["ts-node", "typescript"] }, "sha512-VtTIr44eC78BX4cAeh2MEqJqVFu5/UfrmsxjLdH73YIPr5igPEo9JB4g5yqncTHcXNxbkxJXndMOEm1CkpJA5Q=="],
 
