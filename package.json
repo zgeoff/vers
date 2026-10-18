@@ -235,7 +235,7 @@
     "zod": "catalog:"
   },
   "overrides": {
-    "@hono/node-server": "2.0.11",
+    "@hono/node-server": "2.1.4",
     "@modelcontextprotocol/sdk": "1.32.1",
     "@opentelemetry/propagator-jaeger": "2.9.0",
     "@opentelemetry/sdk-node": "0.220.0",
