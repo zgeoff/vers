@@ -1,6 +1,6 @@
 # The full-stack e2e harness: the real service images the deploy pipeline is about to promote,
 # postgres, and app-web's production image, wired together with the throwaway keypair in stack.env
-# and a capture-only Resend stub. Image refs arrive as IMAGE_* env vars from
+# a capture-only Resend stub, and an umami stub behind the analytics proxy. Image refs arrive as IMAGE_* env vars from
 # `bun run deploy -- images`. Host ports: app-web 3200, postgres 5533, resend stub 3020 — off the
 # dev stack's ranges so both can run beside each other.
 
@@ -44,6 +44,19 @@ services:
       - '3020:3020'
     healthcheck:
       test: ['CMD', 'bun', '-e', 'await fetch("http://127.0.0.1:3020/health")']
+      interval: 2s
+      timeout: 3s
+      retries: 15
+  # app-web's image bakes the analytics tracker tag in; with no upstream behind the proxy, every
+  # tracker load answers 404 and a page logs it as a console error
+  umami-stub:
+    image: oven/bun:1.4.2-slim
+    volumes:
+      - ../..:/repo:ro
+    working_dir: /repo
+    command: ['bun', 'apps/web-e2e/src/serve-umami-stub.ts']
+    healthcheck:
+      test: ['CMD', 'bun', '-e', 'await fetch("http://127.0.0.1:3021/health")']
       interval: 2s
       timeout: 3s
       retries: 15
@@ -136,9 +149,12 @@ services:
       USER_SERVICE_URL: http://service-user:3000
       VERIFICATION_SERVICE_URL: http://service-verification:3000
       SESSION_SECRET: e2e-session-secret-32-characters
+      UMAMI_URL: http://umami-stub:3021
     ports:
       - '3200:3000'
     depends_on:
+      umami-stub:
+        condition: service_healthy
       service-activity:
         condition: service_healthy
       service-avatar:

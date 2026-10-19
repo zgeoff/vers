@@ -42,6 +42,7 @@
       "entry": [
         "src/serve-mock-services.ts",
         "src/serve-resend-stub.ts",
+        "src/serve-umami-stub.ts",
         "src/write-corpus-artifacts.ts",
         "specs/*.spec.ts"
       ]
