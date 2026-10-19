@@ -6,7 +6,7 @@ test('it does not retry a 4xx service error', async () => {
   const queryClient = buildQueryClient();
   let attempts = 0;
 
-  const result = queryClient.fetchQuery({
+  const result = queryClient.query({
     queryFn: () => {
       attempts += 1;
       throw new ORPCError('CONFLICT');
@@ -26,7 +26,7 @@ test('it retries a 5xx service error twice before failing', async () => {
   const queryClient = buildQueryClient();
   let attempts = 0;
 
-  const result = queryClient.fetchQuery({
+  const result = queryClient.query({
     queryFn: () => {
       attempts += 1;
       throw new ORPCError('INTERNAL_SERVER_ERROR');
@@ -46,7 +46,7 @@ test('it retries a network-style failure twice before failing', async () => {
   const queryClient = buildQueryClient();
   let attempts = 0;
 
-  const result = queryClient.fetchQuery({
+  const result = queryClient.query({
     queryFn: () => {
       attempts += 1;
       throw new TypeError('fetch failed');
