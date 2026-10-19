@@ -16,6 +16,7 @@
         "@zgeoff/bugsink-mcp",
         "@zgeoff/bun-test-extended",
         "@zgeoff/mcp-remote",
+        "@zgeoff/skill-gate",
         "@zgeoff/umami-mcp",
         "chrome-devtools-mcp"
       ]
