@@ -26,6 +26,7 @@ minimumReleaseAgeExcludes = [
   "@zgeoff/format-codemod",
   "@zgeoff/mcp-remote",
   "@zgeoff/oxlint-config",
+  "@zgeoff/skill-gate",
   "@zgeoff/umami-mcp",
   "hono",
   "nanoid",
