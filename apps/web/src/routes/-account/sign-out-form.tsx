@@ -148,7 +148,7 @@ async function tryReadUndeliveredWork(
   }
 
   try {
-    const roster = await queryClient.fetchQuery(orpc.avatar.getAvatars.queryOptions({ input: {} }));
+    const roster = await queryClient.query(orpc.avatar.getAvatars.queryOptions({ input: {} }));
 
     const avatarIDs = roster.avatars.map((avatar) => avatar.id);
 

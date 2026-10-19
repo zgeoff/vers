@@ -26,7 +26,7 @@ test('it also links to the map once a game screen has loaded the avatars', async
   const queryClient = buildQueryClient();
 
   await withRequestContext({ cookies: signedIn.cookies }, () =>
-    queryClient.prefetchQuery(orpc.avatar.getAvatars.queryOptions({ input: {} })),
+    queryClient.query(orpc.avatar.getAvatars.queryOptions({ input: {} })),
   );
 
   const rendered = renderWithRouter(<NotFoundScreen />, { queryClient });
