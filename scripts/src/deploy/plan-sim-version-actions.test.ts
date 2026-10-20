@@ -12,7 +12,7 @@ test('it provisions everything for a fresh engine hash', () => {
   };
 
   const actions = planSimVersionActions({
-    bunVersion: '1.4.2',
+    bunVersion: '1.4.3',
     engineHash: 'a1b2c3d4e5f6'.padEnd(64, '0'),
     fleetImage,
     maxContentVersion: '2',
@@ -37,7 +37,7 @@ test('it provisions everything for a fresh engine hash', () => {
     },
     {
       input: {
-        bunVersion: '1.4.2',
+        bunVersion: '1.4.3',
         engineHash: 'a1b2c3d4e5f6'.padEnd(64, '0'),
         imageRef: `${fleetImage.repository}@${fleetImage.digest}`,
         maxContentVersion: '2',
@@ -57,7 +57,7 @@ test('it carries the declared region on a fresh provision', () => {
   };
 
   const actions = planSimVersionActions({
-    bunVersion: '1.4.2',
+    bunVersion: '1.4.3',
     engineHash: 'a1b2c3d4e5f6'.padEnd(64, '0'),
     fleetImage,
     maxContentVersion: '2',
@@ -84,7 +84,7 @@ test('it takes no action when the registry row is current and the machine runs t
   };
 
   const actions = planSimVersionActions({
-    bunVersion: '1.4.2',
+    bunVersion: '1.4.3',
     engineHash: 'a1b2c3d4e5f6'.padEnd(64, '0'),
     fleetImage,
     maxContentVersion: '2',
@@ -112,7 +112,7 @@ test('it recreates the provider app and refreshes the row when the app is missin
   };
 
   const actions = planSimVersionActions({
-    bunVersion: '1.4.2',
+    bunVersion: '1.4.3',
     engineHash: 'a1b2c3d4e5f6'.padEnd(64, '0'),
     fleetImage,
     maxContentVersion: '2',
@@ -140,7 +140,7 @@ test('it recreates the provider app and refreshes the row when the app is missin
     },
     {
       input: {
-        bunVersion: '1.4.2',
+        bunVersion: '1.4.3',
         engineHash: 'a1b2c3d4e5f6'.padEnd(64, '0'),
         imageRef: `${fleetImage.repository}@${fleetImage.digest}`,
         maxContentVersion: '2',
@@ -160,7 +160,7 @@ test('it only refreshes the registry row when the fleet digest has drifted from 
   };
 
   const actions = planSimVersionActions({
-    bunVersion: '1.4.2',
+    bunVersion: '1.4.3',
     engineHash: 'a1b2c3d4e5f6'.padEnd(64, '0'),
     fleetImage,
     maxContentVersion: '2',
@@ -180,7 +180,7 @@ test('it only refreshes the registry row when the fleet digest has drifted from 
   expect(actions).toStrictEqual([
     {
       input: {
-        bunVersion: '1.4.2',
+        bunVersion: '1.4.3',
         engineHash: 'a1b2c3d4e5f6'.padEnd(64, '0'),
         imageRef: `${fleetImage.repository}@${fleetImage.digest}`,
         maxContentVersion: '2',
@@ -200,7 +200,7 @@ test('it only refreshes the registry row when the bundled max content version ha
   };
 
   const actions = planSimVersionActions({
-    bunVersion: '1.4.2',
+    bunVersion: '1.4.3',
     engineHash: 'a1b2c3d4e5f6'.padEnd(64, '0'),
     fleetImage,
     maxContentVersion: '2',
@@ -220,7 +220,7 @@ test('it only refreshes the registry row when the bundled max content version ha
   expect(actions).toStrictEqual([
     {
       input: {
-        bunVersion: '1.4.2',
+        bunVersion: '1.4.3',
         engineHash: 'a1b2c3d4e5f6'.padEnd(64, '0'),
         imageRef: `${fleetImage.repository}@${fleetImage.digest}`,
         maxContentVersion: '2',
@@ -240,7 +240,7 @@ test('it relaunches only the machine when the app survives but its machine is go
   };
 
   const actions = planSimVersionActions({
-    bunVersion: '1.4.2',
+    bunVersion: '1.4.3',
     engineHash: 'a1b2c3d4e5f6'.padEnd(64, '0'),
     fleetImage,
     maxContentVersion: '2',
@@ -266,7 +266,7 @@ test('it relaunches only the machine when the app survives but its machine is go
     },
     {
       input: {
-        bunVersion: '1.4.2',
+        bunVersion: '1.4.3',
         engineHash: 'a1b2c3d4e5f6'.padEnd(64, '0'),
         imageRef: `${fleetImage.repository}@${fleetImage.digest}`,
         maxContentVersion: '2',
@@ -286,7 +286,7 @@ test('it replaces a running machine whose image digest has drifted from the flee
   };
 
   const actions = planSimVersionActions({
-    bunVersion: '1.4.2',
+    bunVersion: '1.4.3',
     engineHash: 'a1b2c3d4e5f6'.padEnd(64, '0'),
     fleetImage,
     maxContentVersion: '2',
@@ -313,7 +313,7 @@ test('it replaces a running machine whose image digest has drifted from the flee
     },
     {
       input: {
-        bunVersion: '1.4.2',
+        bunVersion: '1.4.3',
         engineHash: 'a1b2c3d4e5f6'.padEnd(64, '0'),
         imageRef: `${fleetImage.repository}@${fleetImage.digest}`,
         maxContentVersion: '2',
@@ -333,7 +333,7 @@ test('it replaces a running machine sitting outside the declared region even whe
   };
 
   const actions = planSimVersionActions({
-    bunVersion: '1.4.2',
+    bunVersion: '1.4.3',
     engineHash: 'a1b2c3d4e5f6'.padEnd(64, '0'),
     fleetImage,
     maxContentVersion: '2',
@@ -360,7 +360,7 @@ test('it replaces a running machine sitting outside the declared region even whe
     },
     {
       input: {
-        bunVersion: '1.4.2',
+        bunVersion: '1.4.3',
         engineHash: 'a1b2c3d4e5f6'.padEnd(64, '0'),
         imageRef: `${fleetImage.repository}@${fleetImage.digest}`,
         maxContentVersion: '2',
@@ -380,7 +380,7 @@ test('it refreshes only the row when the app and machine exist but the row is mi
   };
 
   const actions = planSimVersionActions({
-    bunVersion: '1.4.2',
+    bunVersion: '1.4.3',
     engineHash: 'a1b2c3d4e5f6'.padEnd(64, '0'),
     fleetImage,
     maxContentVersion: '2',
@@ -397,7 +397,7 @@ test('it refreshes only the row when the app and machine exist but the row is mi
   expect(actions).toStrictEqual([
     {
       input: {
-        bunVersion: '1.4.2',
+        bunVersion: '1.4.3',
         engineHash: 'a1b2c3d4e5f6'.padEnd(64, '0'),
         imageRef: `${fleetImage.repository}@${fleetImage.digest}`,
         maxContentVersion: '2',
@@ -417,7 +417,7 @@ test('it launches the provider machine by tag, never by digest', () => {
   };
 
   const actions = planSimVersionActions({
-    bunVersion: '1.4.2',
+    bunVersion: '1.4.3',
     engineHash: 'a1b2c3d4e5f6'.padEnd(64, '0'),
     fleetImage,
     maxContentVersion: '2',
@@ -445,7 +445,7 @@ test('it replaces the provider machine by tag, never by digest', () => {
   };
 
   const actions = planSimVersionActions({
-    bunVersion: '1.4.2',
+    bunVersion: '1.4.3',
     engineHash: 'a1b2c3d4e5f6'.padEnd(64, '0'),
     fleetImage,
     maxContentVersion: '2',
@@ -473,7 +473,7 @@ test('it derives the provider app name and flycast URL from the first 12 hex cha
   };
 
   const actions = planSimVersionActions({
-    bunVersion: '1.4.2',
+    bunVersion: '1.4.3',
     engineHash: 'a1b2c3d4e5f6'.padEnd(64, '0'),
     fleetImage,
     maxContentVersion: '2',
@@ -500,7 +500,7 @@ test('it derives the provider app name and flycast URL from the first 12 hex cha
 
 test('it takes no action when the fleet has no single resolved image', () => {
   const actions = planSimVersionActions({
-    bunVersion: '1.4.2',
+    bunVersion: '1.4.3',
     engineHash: 'a1b2c3d4e5f6'.padEnd(64, '0'),
     fleetImage: null,
     maxContentVersion: '2',
