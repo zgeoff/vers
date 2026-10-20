@@ -19,13 +19,15 @@ interface WrapperProps {
 }
 
 test('it returns no entries while the seed or the viewport is missing', () => {
+  const viewport: Viewport = { maxCX: 15, maxCY: 15, minCX: 0, minCY: 0 };
+
   const hook = renderHook(() =>
     useChunkStream<StubEntry>({
       build: (_userSeed, chunkX, chunkY) => ({ chunkX, chunkY }),
       cacheCapacity: 8,
       dispose: () => {},
       userSeed: null,
-      viewport: { maxCX: 15, maxCY: 15, minCX: 0, minCY: 0 },
+      viewport,
     }),
   );
 
@@ -33,13 +35,15 @@ test('it returns no entries while the seed or the viewport is missing', () => {
 });
 
 test('it fills a miss over following animation frames rather than on the first render', async () => {
+  const viewport: Viewport = { maxCX: 15, maxCY: 15, minCX: 0, minCY: 0 };
+
   const hook = renderHook(() =>
     useChunkStream<StubEntry>({
       build: (_userSeed, chunkX, chunkY) => ({ chunkX, chunkY }),
       cacheCapacity: 8,
       dispose: () => {},
       userSeed: 1,
-      viewport: { maxCX: 15, maxCY: 15, minCX: 0, minCY: 0 },
+      viewport,
     }),
   );
 
@@ -52,6 +56,7 @@ test('it fills a miss over following animation frames rather than on the first r
 
 test('it fills a two-chunk miss set across two separate animation-frame ticks, never both in one', async () => {
   const ticks: Array<number> = [];
+  const viewport: Viewport = { maxCX: 31, maxCY: 15, minCX: 0, minCY: 0 };
 
   const hook = renderHook(() =>
     useChunkStream<StubEntry>({
@@ -62,7 +67,7 @@ test('it fills a two-chunk miss set across two separate animation-frame ticks, n
         ticks.push(builtChunkCount);
       },
       userSeed: 1,
-      viewport: { maxCX: 31, maxCY: 15, minCX: 0, minCY: 0 },
+      viewport,
     }),
   );
 
@@ -78,6 +83,7 @@ test('it fills a two-chunk miss set across two separate animation-frame ticks, n
 
 test('it resolves an already-built chunk instantly on a later render, with no further build', async () => {
   const disposed: Array<StubEntry> = [];
+  const firstViewport: Viewport = { maxCX: 15, maxCY: 15, minCX: 0, minCY: 0 };
 
   const hook = renderHook(
     (viewport: Viewport) =>
@@ -90,7 +96,7 @@ test('it resolves an already-built chunk instantly on a later render, with no fu
         userSeed: 1,
         viewport,
       }),
-    { initialProps: { maxCX: 15, maxCY: 15, minCX: 0, minCY: 0 } },
+    { initialProps: firstViewport },
   );
 
   await waitFor(() => {
@@ -108,7 +114,7 @@ test('it resolves an already-built chunk instantly on a later render, with no fu
   });
 
   act(() => {
-    hook.rerender({ maxCX: 15, maxCY: 15, minCX: 0, minCY: 0 });
+    hook.rerender(firstViewport);
   });
 
   expect(hook.result.current).toStrictEqual([{ chunkX: 0, chunkY: 0 }]);
@@ -117,6 +123,7 @@ test('it resolves an already-built chunk instantly on a later render, with no fu
 
 test('it disposes every cached entry the moment the seed changes', async () => {
   const disposed: Array<StubEntry> = [];
+  const viewport: Viewport = { maxCX: 15, maxCY: 15, minCX: 0, minCY: 0 };
 
   const hook = renderHook(
     (userSeed: number) =>
@@ -127,7 +134,7 @@ test('it disposes every cached entry the moment the seed changes', async () => {
           disposed.push(entry);
         },
         userSeed,
-        viewport: { maxCX: 15, maxCY: 15, minCX: 0, minCY: 0 },
+        viewport,
       }),
     { initialProps: 1 },
   );
@@ -146,6 +153,7 @@ test('it disposes every cached entry the moment the seed changes', async () => {
 
 test('it disposes every cached entry on unmount', async () => {
   const disposed: Array<StubEntry> = [];
+  const viewport: Viewport = { maxCX: 15, maxCY: 15, minCX: 0, minCY: 0 };
 
   const hook = renderHook(() =>
     useChunkStream<StubEntry>({
@@ -155,7 +163,7 @@ test('it disposes every cached entry on unmount', async () => {
         disposed.push(entry);
       },
       userSeed: 1,
-      viewport: { maxCX: 15, maxCY: 15, minCX: 0, minCY: 0 },
+      viewport,
     }),
   );
 
@@ -172,6 +180,7 @@ test('it disposes every cached entry on unmount', async () => {
 
 test('it reports each build tick to onBuildTick with the chunk count it built', async () => {
   const ticks: Array<{ builtChunkCount: number }> = [];
+  const viewport: Viewport = { maxCX: 15, maxCY: 15, minCX: 0, minCY: 0 };
 
   renderHook(() =>
     useChunkStream<StubEntry>({
@@ -182,7 +191,7 @@ test('it reports each build tick to onBuildTick with the chunk count it built', 
         ticks.push({ builtChunkCount });
       },
       userSeed: 1,
-      viewport: { maxCX: 15, maxCY: 15, minCX: 0, minCY: 0 },
+      viewport,
     }),
   );
 
