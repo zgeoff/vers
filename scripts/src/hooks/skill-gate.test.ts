@@ -7,27 +7,27 @@ import { fileURLToPath } from 'node:url';
 
 // Runs the synced skill gate hook against this repo's own .claude/skill-gate.json and skills.
 async function setupTest() {
-  const dir = await mkdtemp(join(tmpdir(), 'skill-gate-'));
+  const directory = await mkdtemp(join(tmpdir(), 'skill-gate-'));
 
-  onTestFinished(() => rm(dir, { recursive: true, force: true }));
+  onTestFinished(() => rm(directory, { recursive: true, force: true }));
 
   const repoDir = fileURLToPath(new URL('../../../', import.meta.url)).replace(/\/$/u, '');
   const hookPath = join(repoDir, '.claude/hooks/skill-gate/skill-gate.ts');
 
-  return { dir, repoDir, hookPath };
+  return { directory, repoDir, hookPath };
 }
 
 test('it denies a source edit until both code-style skills are loaded', async () => {
   const ctx = await setupTest();
 
-  await writeFile(join(ctx.dir, 'transcript.jsonl'), '');
+  await writeFile(join(ctx.directory, 'transcript.jsonl'), '');
 
   const result = spawnSync('bun', [ctx.hookPath], {
     encoding: 'utf8',
     env: { PATH: process.env['PATH'], CLAUDE_PROJECT_DIR: ctx.repoDir },
     input: JSON.stringify({
       cwd: ctx.repoDir,
-      transcript_path: join(ctx.dir, 'transcript.jsonl'),
+      transcript_path: join(ctx.directory, 'transcript.jsonl'),
       tool_input: { file_path: join(ctx.repoDir, 'libs/core/utils/src/index.ts') },
     }),
   });
@@ -47,7 +47,7 @@ test('it allows a source edit once both code-style skills are loaded', async () 
   const ctx = await setupTest();
 
   await writeFile(
-    join(ctx.dir, 'transcript.jsonl'),
+    join(ctx.directory, 'transcript.jsonl'),
     [
       '{"type":"assistant","message":{"content":[{"type":"tool_use","id":"toolu_1","name":"Skill","input":{"skill":"code-style"}}]}}',
       '{"type":"user","message":{"content":[{"type":"tool_result","tool_use_id":"toolu_1","content":"Launching skill: code-style"}]}}',
@@ -61,7 +61,7 @@ test('it allows a source edit once both code-style skills are loaded', async () 
     env: { PATH: process.env['PATH'], CLAUDE_PROJECT_DIR: ctx.repoDir },
     input: JSON.stringify({
       cwd: ctx.repoDir,
-      transcript_path: join(ctx.dir, 'transcript.jsonl'),
+      transcript_path: join(ctx.directory, 'transcript.jsonl'),
       tool_input: { file_path: join(ctx.repoDir, 'libs/core/utils/src/index.ts') },
     }),
   });
@@ -73,14 +73,14 @@ test('it allows a source edit once both code-style skills are loaded', async () 
 test('it denies a test file edit until both code-style skills, testing and project-testing are loaded', async () => {
   const ctx = await setupTest();
 
-  await writeFile(join(ctx.dir, 'transcript.jsonl'), '');
+  await writeFile(join(ctx.directory, 'transcript.jsonl'), '');
 
   const result = spawnSync('bun', [ctx.hookPath], {
     encoding: 'utf8',
     env: { PATH: process.env['PATH'], CLAUDE_PROJECT_DIR: ctx.repoDir },
     input: JSON.stringify({
       cwd: ctx.repoDir,
-      transcript_path: join(ctx.dir, 'transcript.jsonl'),
+      transcript_path: join(ctx.directory, 'transcript.jsonl'),
       tool_input: { file_path: join(ctx.repoDir, 'libs/core/utils/src/a.test.ts') },
     }),
   });
@@ -100,7 +100,7 @@ test('it denies a test file edit with only the testing skill loaded', async () =
   const ctx = await setupTest();
 
   await writeFile(
-    join(ctx.dir, 'transcript.jsonl'),
+    join(ctx.directory, 'transcript.jsonl'),
     [
       '{"type":"assistant","message":{"content":[{"type":"tool_use","id":"toolu_1","name":"Skill","input":{"skill":"code-style"}}]}}',
       '{"type":"user","message":{"content":[{"type":"tool_result","tool_use_id":"toolu_1","content":"Launching skill: code-style"}]}}',
@@ -116,7 +116,7 @@ test('it denies a test file edit with only the testing skill loaded', async () =
     env: { PATH: process.env['PATH'], CLAUDE_PROJECT_DIR: ctx.repoDir },
     input: JSON.stringify({
       cwd: ctx.repoDir,
-      transcript_path: join(ctx.dir, 'transcript.jsonl'),
+      transcript_path: join(ctx.directory, 'transcript.jsonl'),
       tool_input: {
         file_path: join(ctx.repoDir, 'apps/web/src/routes/-game/qa-debug-hook-mount.test.tsx'),
       },
@@ -138,7 +138,7 @@ test('it allows a test file edit once both testing skills and both code-style sk
   const ctx = await setupTest();
 
   await writeFile(
-    join(ctx.dir, 'transcript.jsonl'),
+    join(ctx.directory, 'transcript.jsonl'),
     [
       '{"type":"assistant","message":{"content":[{"type":"tool_use","id":"toolu_1","name":"Skill","input":{"skill":"code-style"}}]}}',
       '{"type":"user","message":{"content":[{"type":"tool_result","tool_use_id":"toolu_1","content":"Launching skill: code-style"}]}}',
@@ -156,7 +156,7 @@ test('it allows a test file edit once both testing skills and both code-style sk
     env: { PATH: process.env['PATH'], CLAUDE_PROJECT_DIR: ctx.repoDir },
     input: JSON.stringify({
       cwd: ctx.repoDir,
-      transcript_path: join(ctx.dir, 'transcript.jsonl'),
+      transcript_path: join(ctx.directory, 'transcript.jsonl'),
       tool_input: { file_path: join(ctx.repoDir, 'libs/core/utils/src/a.test.ts') },
     }),
   });
@@ -169,7 +169,7 @@ test('it gates a lifecycle package on the game-lifecycle skill as well', async (
   const ctx = await setupTest();
 
   await writeFile(
-    join(ctx.dir, 'transcript.jsonl'),
+    join(ctx.directory, 'transcript.jsonl'),
     [
       '{"type":"assistant","message":{"content":[{"type":"tool_use","id":"toolu_1","name":"Skill","input":{"skill":"code-style"}}]}}',
       '{"type":"user","message":{"content":[{"type":"tool_result","tool_use_id":"toolu_1","content":"Launching skill: code-style"}]}}',
@@ -183,7 +183,7 @@ test('it gates a lifecycle package on the game-lifecycle skill as well', async (
     env: { PATH: process.env['PATH'], CLAUDE_PROJECT_DIR: ctx.repoDir },
     input: JSON.stringify({
       cwd: ctx.repoDir,
-      transcript_path: join(ctx.dir, 'transcript.jsonl'),
+      transcript_path: join(ctx.directory, 'transcript.jsonl'),
       tool_input: { file_path: join(ctx.repoDir, 'services/activity/src/handlers/a.ts') },
     }),
   });
@@ -202,14 +202,14 @@ test('it gates a lifecycle package on the game-lifecycle skill as well', async (
 test('it gates markdown on the docs-writing and project-docs-writing skills', async () => {
   const ctx = await setupTest();
 
-  await writeFile(join(ctx.dir, 'transcript.jsonl'), '');
+  await writeFile(join(ctx.directory, 'transcript.jsonl'), '');
 
   const result = spawnSync('bun', [ctx.hookPath], {
     encoding: 'utf8',
     env: { PATH: process.env['PATH'], CLAUDE_PROJECT_DIR: ctx.repoDir },
     input: JSON.stringify({
       cwd: ctx.repoDir,
-      transcript_path: join(ctx.dir, 'transcript.jsonl'),
+      transcript_path: join(ctx.directory, 'transcript.jsonl'),
       tool_input: { file_path: join(ctx.repoDir, 'docs/architecture/overview.md') },
     }),
   });
@@ -228,14 +228,14 @@ test('it gates markdown on the docs-writing and project-docs-writing skills', as
 test('it allows generated output', async () => {
   const ctx = await setupTest();
 
-  await writeFile(join(ctx.dir, 'transcript.jsonl'), '');
+  await writeFile(join(ctx.directory, 'transcript.jsonl'), '');
 
   const result = spawnSync('bun', [ctx.hookPath], {
     encoding: 'utf8',
     env: { PATH: process.env['PATH'], CLAUDE_PROJECT_DIR: ctx.repoDir },
     input: JSON.stringify({
       cwd: ctx.repoDir,
-      transcript_path: join(ctx.dir, 'transcript.jsonl'),
+      transcript_path: join(ctx.directory, 'transcript.jsonl'),
       tool_input: { file_path: join(ctx.repoDir, 'apps/web/src/styled-system/css.ts') },
     }),
   });
@@ -247,14 +247,14 @@ test('it allows generated output', async () => {
 test('it allows a file kind no gate names without warning of an unknown skill', async () => {
   const ctx = await setupTest();
 
-  await writeFile(join(ctx.dir, 'transcript.jsonl'), '');
+  await writeFile(join(ctx.directory, 'transcript.jsonl'), '');
 
   const result = spawnSync('bun', [ctx.hookPath], {
     encoding: 'utf8',
     env: { PATH: process.env['PATH'], CLAUDE_PROJECT_DIR: ctx.repoDir },
     input: JSON.stringify({
       cwd: ctx.repoDir,
-      transcript_path: join(ctx.dir, 'transcript.jsonl'),
+      transcript_path: join(ctx.directory, 'transcript.jsonl'),
       tool_input: { file_path: join(ctx.repoDir, 'package.json') },
     }),
   });
@@ -266,14 +266,14 @@ test('it allows a file kind no gate names without warning of an unknown skill', 
 test('it gates authored source in the styled-system package', async () => {
   const ctx = await setupTest();
 
-  await writeFile(join(ctx.dir, 'transcript.jsonl'), '');
+  await writeFile(join(ctx.directory, 'transcript.jsonl'), '');
 
   const result = spawnSync('bun', [ctx.hookPath], {
     encoding: 'utf8',
     env: { PATH: process.env['PATH'], CLAUDE_PROJECT_DIR: ctx.repoDir },
     input: JSON.stringify({
       cwd: ctx.repoDir,
-      transcript_path: join(ctx.dir, 'transcript.jsonl'),
+      transcript_path: join(ctx.directory, 'transcript.jsonl'),
       tool_input: { file_path: join(ctx.repoDir, 'libs/design/styled-system/panda.config.ts') },
     }),
   });

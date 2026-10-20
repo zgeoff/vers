@@ -21,36 +21,12 @@
     // `up`/`down` and `seed` are Kysely-mandated migration and seed-file
     // exports; the oRPC handler exemptions mirror their contract procedure
     // names (the contract key is the public API vocabulary) and would
-    // misname the public API if renamed
+    // misname the public API if renamed; `executeQuery`, `fetch` and `handle`
+    // implement Kysely's connection, the Bun.serve, srvx and oRPC link
+    // options, and Elysia's request handler
     "zgeoff/function-verb": [
       "error",
       {
-        "verbs": [
-          "admit",
-          "advance",
-          "broadcast",
-          "compare",
-          "dispose",
-          "flush",
-          "fold",
-          "ingest",
-          "mint",
-          "park",
-          "record",
-          "redirect",
-          "refresh",
-          "reject",
-          "report",
-          "restart",
-          "roll",
-          "schedule",
-          "select",
-          "serve",
-          "submit",
-          "sweep",
-          "sync",
-          "upgrade"
-        ],
         "exemptNames": [
           "up",
           "down",
@@ -62,7 +38,10 @@
           "resumeActivity",
           "revealNodes",
           "trackActivityProgress",
-          "wake"
+          "wake",
+          "executeQuery",
+          "fetch",
+          "handle"
         ]
       }
     ],

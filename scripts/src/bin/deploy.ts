@@ -1,12 +1,12 @@
-import { findCurrentContentVersion } from '@vers/content-registry';
+import { readCurrentContentVersion } from '@vers/content-registry';
 import { BUNDLED_CONTENT_VERSION } from '@vers/content-version';
 import { createDB } from '@vers/db';
 import type { DB } from '@vers/db';
-import { findLatestRelease, recordRelease } from '@vers/release-registry';
+import { readLatestRelease, recordRelease } from '@vers/release-registry';
 import type { ReleaseRow } from '@vers/release-registry';
 import {
-  collectRetentionRefusals,
-  findCurrentSimVersion,
+  readCurrentSimVersion,
+  readRetentionRefusals,
   updateExpiredSimVersions,
 } from '@vers/sim-registry';
 import { Command } from 'commander';
@@ -228,7 +228,7 @@ async function runImages(): Promise<void> {
         continue;
       }
 
-      const release = await findLatestRelease(db, target.app);
+      const release = await readLatestRelease(db, target.app);
 
       if (release !== undefined) {
         refs[target.app] = release.image;
@@ -301,7 +301,7 @@ async function runRollout(
   sha: string,
   image: string | null,
 ): Promise<void> {
-  const previous = await findLatestRelease(db, target.app);
+  const previous = await readLatestRelease(db, target.app);
   const fleet = await readAppState(target.app);
 
   const recordedRelease = previous === undefined ? null : { gitSHA: previous.gitSha };
@@ -630,8 +630,8 @@ async function runContentCoveragePreflight(): Promise<void> {
 
   try {
     const [engine, currentContentVersion] = await Promise.all([
-      findCurrentSimVersion(db),
-      findCurrentContentVersion(db),
+      readCurrentSimVersion(db),
+      readCurrentContentVersion(db),
     ]);
 
     const gap = findContentCoverageGap({
@@ -668,7 +668,7 @@ async function runSweepReplay(): Promise<void> {
   await applyRetentionActions(actions);
 
   const unparked = await updateParkedActivities(db);
-  const refusals = await collectRetentionRefusals(db);
+  const refusals = await readRetentionRefusals(db);
 
   await db.destroy();
 

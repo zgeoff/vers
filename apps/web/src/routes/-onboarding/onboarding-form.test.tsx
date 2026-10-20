@@ -6,10 +6,6 @@ import { renderWithRouter } from '../../test-utils/render-with-router';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { OnboardingForm } from './onboarding-form';
 
-function rejectWithResponse(): Promise<Response> {
-  return Promise.resolve(new Response(null, { status: 400 }));
-}
-
 test('it renders every field the account-creation form collects', async () => {
   await withRequestContext(
     { cookies: { en_verification: { 'onboarding#email': 'onboarding-form@vers.test' } } },
@@ -74,7 +70,10 @@ test('it shows a generic failure message when the server rejects the submission'
     { cookies: { en_verification: { 'onboarding#email': 'onboarding-form-honeypot@vers.test' } } },
     async () => {
       renderWithRouter(
-        <OnboardingForm action={rejectWithResponse} honeypotValidFrom="1700000000000" />,
+        <OnboardingForm
+          action={() => Promise.resolve(new Response(null, { status: 400 }))}
+          honeypotValidFrom="1700000000000"
+        />,
       );
 
       const usernameField = await screen.findByLabelText('Username');

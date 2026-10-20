@@ -1,12 +1,12 @@
 import * as jose from 'jose';
-import { buildTestSigningKeySet } from './build-test-signing-key-set';
 import { readTestSigningPrivateKey } from './read-test-signing-private-key';
+import { resolveTestSigningKeySet } from './resolve-test-signing-key-set';
 
 const ALGORITHM = 'EdDSA';
 
 export async function createTestAccessToken(userID: string, expiresIn = '15m'): Promise<string> {
   const privateKey = await readTestSigningPrivateKey();
-  const published = await buildTestSigningKeySet();
+  const published = await resolveTestSigningKeySet();
 
   return new jose.SignJWT({})
     .setProtectedHeader({ alg: ALGORITHM, kid: published.keyID })

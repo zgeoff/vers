@@ -11,7 +11,7 @@ import type { FastForwardProgress, LatestActivityProgress, ResyncResult } from '
 interface RunResyncOptions {
   readonly avatarID: string;
 
-  readonly buildSimulationInput: (
+  readonly loadSimulationInput: (
     source: Readonly<SimulationInputSource>,
   ) => Promise<{ activity: ActivityInput; avatar: AvatarData }>;
 
@@ -113,7 +113,7 @@ export async function runResync(options: Readonly<RunResyncOptions>): Promise<Re
 
   const report = await runFastForward({
     budgetMs: plan.budgetMs,
-    buildSimulationInput: options.buildSimulationInput,
+    loadSimulationInput: options.loadSimulationInput,
     client: options.client,
     progress,
     ...(options.onProgress !== undefined && { onProgress: options.onProgress }),

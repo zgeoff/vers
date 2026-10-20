@@ -1,20 +1,20 @@
 import type { Avatar, ScheduledCombatEvent } from '../../types';
 
 export function createEventSorter(avatar: Avatar) {
-  return (a: ScheduledCombatEvent, b: ScheduledCombatEvent) => {
-    const timeDiff = a.time - b.time;
+  return (left: ScheduledCombatEvent, right: ScheduledCombatEvent) => {
+    const timeDiff = left.time - right.time;
 
     if (timeDiff !== 0) {
       return timeDiff;
     }
 
-    const aIsAvatar = a.source === avatar.id;
-    const bIsAvatar = b.source === avatar.id;
+    const leftIsAvatar = left.source === avatar.id;
+    const rightIsAvatar = right.source === avatar.id;
 
-    if (aIsAvatar !== bIsAvatar) {
-      return aIsAvatar ? -1 : 1;
+    if (leftIsAvatar !== rightIsAvatar) {
+      return leftIsAvatar ? -1 : 1;
     }
 
-    return a.sequence - b.sequence;
+    return left.sequence - right.sequence;
   };
 }

@@ -3,12 +3,14 @@ import type { SimulationDriver } from '@vers/idle-core';
 import { waitFor } from '@vers/test-utils';
 import { REPLAY_CACHE_CAP, createReplayCache } from './create-replay-cache';
 
-function buildFakeDriver(): SimulationDriver {
+function setupTest() {
   return {
-    advanceToDuration: () => Promise.resolve({ checkpoints: [], haltedOnDurationCap: false }),
-    elapsed: 0,
-    rngState: '',
-    stop: mock(() => Promise.resolve()),
+    buildFakeDriver: (): SimulationDriver => ({
+      advanceToDuration: () => Promise.resolve({ checkpoints: [], haltedOnDurationCap: false }),
+      elapsed: 0,
+      rngState: '',
+      stop: mock(() => Promise.resolve()),
+    }),
   };
 }
 
@@ -19,8 +21,9 @@ test('it returns undefined for an activity that was never cached', () => {
 });
 
 test('it returns what was set for a cached activity', () => {
+  const ctx = setupTest();
   const cache = createReplayCache();
-  const entry = { driver: buildFakeDriver(), emittedCount: 5, lastHash: 'hash-5' };
+  const entry = { driver: ctx.buildFakeDriver(), emittedCount: 5, lastHash: 'hash-5' };
 
   cache.set('act_1', entry);
 
@@ -28,8 +31,9 @@ test('it returns what was set for a cached activity', () => {
 });
 
 test('it drops an evicted activity and stops its driver', () => {
+  const ctx = setupTest();
   const cache = createReplayCache();
-  const entry = { driver: buildFakeDriver(), emittedCount: 1, lastHash: 'hash-1' };
+  const entry = { driver: ctx.buildFakeDriver(), emittedCount: 1, lastHash: 'hash-1' };
 
   cache.set('act_1', entry);
   cache.remove('act_1');
@@ -39,14 +43,15 @@ test('it drops an evicted activity and stops its driver', () => {
 });
 
 test('it evicts the oldest activity once a default cache takes one more than its cap', () => {
+  const ctx = setupTest();
   const cache = createReplayCache();
-  const firstDriver = buildFakeDriver();
+  const firstDriver = ctx.buildFakeDriver();
 
   cache.set('act_0', { driver: firstDriver, emittedCount: 0, lastHash: 'hash-0' });
 
   for (let index = 1; index < REPLAY_CACHE_CAP; index += 1) {
     cache.set(`act_${index}`, {
-      driver: buildFakeDriver(),
+      driver: ctx.buildFakeDriver(),
       emittedCount: index,
       lastHash: `hash-${index}`,
     });
@@ -54,18 +59,23 @@ test('it evicts the oldest activity once a default cache takes one more than its
 
   expect(firstDriver.stop).not.toHaveBeenCalled();
 
-  cache.set('act_overflow', { driver: buildFakeDriver(), emittedCount: 0, lastHash: 'hash-over' });
+  cache.set('act_overflow', {
+    driver: ctx.buildFakeDriver(),
+    emittedCount: 0,
+    lastHash: 'hash-over',
+  });
 
   expect(firstDriver.stop).toHaveBeenCalledOnce();
   expect(cache.get('act_overflow')).toBeDefined();
 });
 
 test('it evicts the least-recently-used entry once the cap is exceeded', () => {
+  const ctx = setupTest();
   const cache = createReplayCache(2);
 
-  cache.set('act_1', { driver: buildFakeDriver(), emittedCount: 1, lastHash: 'hash-1' });
-  cache.set('act_2', { driver: buildFakeDriver(), emittedCount: 2, lastHash: 'hash-2' });
-  cache.set('act_3', { driver: buildFakeDriver(), emittedCount: 3, lastHash: 'hash-3' });
+  cache.set('act_1', { driver: ctx.buildFakeDriver(), emittedCount: 1, lastHash: 'hash-1' });
+  cache.set('act_2', { driver: ctx.buildFakeDriver(), emittedCount: 2, lastHash: 'hash-2' });
+  cache.set('act_3', { driver: ctx.buildFakeDriver(), emittedCount: 3, lastHash: 'hash-3' });
 
   expect(cache.get('act_1')).toBeUndefined();
   expect(cache.get('act_2')).toBeDefined();
@@ -73,22 +83,24 @@ test('it evicts the least-recently-used entry once the cap is exceeded', () => {
 });
 
 test('it stops the cap-evicted entry driver', () => {
+  const ctx = setupTest();
   const cache = createReplayCache(1);
-  const first = { driver: buildFakeDriver(), emittedCount: 1, lastHash: 'hash-1' };
+  const first = { driver: ctx.buildFakeDriver(), emittedCount: 1, lastHash: 'hash-1' };
 
   cache.set('act_1', first);
-  cache.set('act_2', { driver: buildFakeDriver(), emittedCount: 2, lastHash: 'hash-2' });
+  cache.set('act_2', { driver: ctx.buildFakeDriver(), emittedCount: 2, lastHash: 'hash-2' });
 
   expect(first.driver.stop).toHaveBeenCalledOnce();
 });
 
 test('it treats a get as a use, sparing a recently read entry from eviction', () => {
+  const ctx = setupTest();
   const cache = createReplayCache(2);
 
-  cache.set('act_1', { driver: buildFakeDriver(), emittedCount: 1, lastHash: 'hash-1' });
-  cache.set('act_2', { driver: buildFakeDriver(), emittedCount: 2, lastHash: 'hash-2' });
+  cache.set('act_1', { driver: ctx.buildFakeDriver(), emittedCount: 1, lastHash: 'hash-1' });
+  cache.set('act_2', { driver: ctx.buildFakeDriver(), emittedCount: 2, lastHash: 'hash-2' });
   cache.get('act_1');
-  cache.set('act_3', { driver: buildFakeDriver(), emittedCount: 3, lastHash: 'hash-3' });
+  cache.set('act_3', { driver: ctx.buildFakeDriver(), emittedCount: 3, lastHash: 'hash-3' });
 
   expect(cache.get('act_1')).toBeDefined();
   expect(cache.get('act_2')).toBeUndefined();
@@ -96,8 +108,9 @@ test('it treats a get as a use, sparing a recently read entry from eviction', ()
 });
 
 test('it does not stop a re-set entry that reuses the same driver', () => {
+  const ctx = setupTest();
   const cache = createReplayCache();
-  const driver = buildFakeDriver();
+  const driver = ctx.buildFakeDriver();
 
   cache.set('act_1', { driver, emittedCount: 1, lastHash: 'hash-1' });
   cache.set('act_1', { driver, emittedCount: 2, lastHash: 'hash-2' });
@@ -106,6 +119,7 @@ test('it does not stop a re-set entry that reuses the same driver', () => {
 });
 
 test('it reports a driver stop rejection instead of leaving it unhandled', async () => {
+  const ctx = setupTest();
   const reported: Array<unknown> = [];
 
   const cache = createReplayCache(undefined, (stopError) => {
@@ -115,7 +129,7 @@ test('it reports a driver stop rejection instead of leaving it unhandled', async
   const failure = new Error('stop exploded');
 
   const entry = {
-    driver: { ...buildFakeDriver(), stop: mock(() => Promise.reject(failure)) },
+    driver: { ...ctx.buildFakeDriver(), stop: mock(() => Promise.reject(failure)) },
     emittedCount: 1,
     lastHash: 'hash-1',
   };

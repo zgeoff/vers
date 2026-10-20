@@ -43,7 +43,7 @@ export async function createReplayService(
 
   const service = await createService({
     allowedIssuers: ['service-activity'],
-    buildRouter: async (runtime) => {
+    createRouter: async (runtime) => {
       ownsDB = config.db === undefined;
 
       const db =
@@ -73,7 +73,7 @@ export async function createReplayService(
     name: 'service-replay',
   });
 
-  invariant(resolvedDeps !== undefined, 'buildRouter always resolves deps before returning');
+  invariant(resolvedDeps !== undefined, 'createRouter always resolves deps before returning');
 
   const deps = resolvedDeps;
 

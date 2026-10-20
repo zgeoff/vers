@@ -1,1 +1,1 @@
-export type { SessionRouter } from './build-router';
+export type { SessionRouter } from './create-session-router';

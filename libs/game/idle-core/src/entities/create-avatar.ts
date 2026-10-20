@@ -31,7 +31,7 @@ export function createAvatar(data: AvatarData, ctx: SimulationContext): Avatar {
     const behaviourState: AvatarBehaviourSnapshot = {};
 
     for (const behaviour of behaviours) {
-      updateBehaviourSnapshot(behaviourState, behaviour.id, behaviour.getState());
+      assignBehaviourSnapshot(behaviourState, behaviour.id, behaviour.getState());
     }
 
     const mainHandWeapon = data.paperdoll[EquipmentSlot.MainHand];
@@ -159,7 +159,7 @@ function getInitialState(data: AvatarData): AvatarState {
   };
 }
 
-function updateBehaviourSnapshot<K extends BehaviourID>(
+function assignBehaviourSnapshot<K extends BehaviourID>(
   state: AvatarBehaviourSnapshot,
   id: K,
   value: AvatarBehaviourSnapshot[K],

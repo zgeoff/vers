@@ -1,3 +1,3 @@
-export { buildRetryInterceptor } from './build-retry-interceptor';
-export { buildTracingInterceptor } from './build-tracing-interceptor';
+export { makeRetryInterceptor } from './make-retry-interceptor';
+export { makeTracingInterceptor } from './make-tracing-interceptor';
 export { makeIsRetryable } from './make-is-retryable';

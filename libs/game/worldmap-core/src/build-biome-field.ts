@@ -62,12 +62,12 @@ export function buildBiomeField(
 
   // texels sample the cell box inflated by half a cell on each side, the same layout as the reveal
   // distance field and the mapping a quad spanning that box with corner-anchored uvs interpolates
-  for (let j = 0; j < rows; j++) {
-    const cy = viewport.minCY - 0.5 + (j + 0.5) / options.resolution;
+  for (let row = 0; row < rows; row++) {
+    const cy = viewport.minCY - 0.5 + (row + 0.5) / options.resolution;
 
-    for (let i = 0; i < cols; i++) {
-      const cx = viewport.minCX - 0.5 + (i + 0.5) / options.resolution;
-      const index = j * cols + i;
+    for (let column = 0; column < cols; column++) {
+      const cx = viewport.minCX - 0.5 + (column + 0.5) / options.resolution;
+      const index = row * cols + column;
       const territory = buildNearestNodeCells(getNodePosition, cx, cy);
       const sample = getSample(territory.nearestCellX, territory.nearestCellY);
       const neighbour = getSample(territory.secondCellX, territory.secondCellY);

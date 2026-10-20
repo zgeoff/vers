@@ -102,7 +102,9 @@ test('it rebuilds the graph and resets the selection when the active avatar chan
 
     expect(hook.result.current.worldGraph).toStrictEqual(firstExpected);
 
-    const active = db.activeAvatarCollection.findFirst((q) => q.where({ userID: signedIn.userID }));
+    const active = db.activeAvatarCollection.findFirst((query) =>
+      query.where({ userID: signedIn.userID }),
+    );
 
     invariant(active, 'createActiveAvatar seeds an active-avatar row for this user');
 
@@ -256,7 +258,9 @@ test('it selects the new origin on an avatar switch even when the viewport had p
 
     setViewport(farViewport);
 
-    const active = db.activeAvatarCollection.findFirst((q) => q.where({ userID: signedIn.userID }));
+    const active = db.activeAvatarCollection.findFirst((query) =>
+      query.where({ userID: signedIn.userID }),
+    );
 
     invariant(active, 'createActiveAvatar seeds an active-avatar row for this user');
 
@@ -614,7 +618,9 @@ test("it drops the selectable set to origin-only on an avatar switch, not carryi
       expect(hook.result.current.selectable.has(firstNeighbourID)).toBe(true);
     });
 
-    const active = db.activeAvatarCollection.findFirst((q) => q.where({ userID: signedIn.userID }));
+    const active = db.activeAvatarCollection.findFirst((query) =>
+      query.where({ userID: signedIn.userID }),
+    );
 
     invariant(active, 'createActiveAvatar seeds an active-avatar row for this user');
 
@@ -680,7 +686,9 @@ test("it returns an empty frontier through an avatar switch, never the outgoing 
       expect(hook.result.current.has(firstOnlyID)).toBe(true);
     });
 
-    const active = db.activeAvatarCollection.findFirst((q) => q.where({ userID: signedIn.userID }));
+    const active = db.activeAvatarCollection.findFirst((query) =>
+      query.where({ userID: signedIn.userID }),
+    );
 
     invariant(active, 'createActiveAvatar seeds an active-avatar row for this user');
 

@@ -14,8 +14,8 @@ test('it stamps the acting session onto the event and delivers it', async () => 
     }),
   );
 
-  const row = db.productEventCollection.findFirst((q) =>
-    q.where({ session_id: signedIn.sessionID }),
+  const row = db.productEventCollection.findFirst((query) =>
+    query.where({ session_id: signedIn.sessionID }),
   );
 
   expect(row).toMatchObject({
@@ -30,16 +30,16 @@ test('it stamps the acting session onto the event and delivers it', async () => 
 });
 
 test('it drops an unauthenticated caller’s event without contacting analytics', async () => {
-  const rowsBefore = db.productEventCollection.findMany((q) =>
-    q.where({ event_name: 'session_started' }),
+  const rowsBefore = db.productEventCollection.findMany((query) =>
+    query.where({ event_name: 'session_started' }),
   ).length;
 
   await withRequestContext({}, () =>
     runProductEventIngest({ name: 'session_started', properties: {} }),
   );
 
-  const rowsAfter = db.productEventCollection.findMany((q) =>
-    q.where({ event_name: 'session_started' }),
+  const rowsAfter = db.productEventCollection.findMany((query) =>
+    query.where({ event_name: 'session_started' }),
   ).length;
 
   expect(rowsAfter).toBe(rowsBefore);

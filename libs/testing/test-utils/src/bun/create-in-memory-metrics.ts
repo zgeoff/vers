@@ -9,14 +9,6 @@ import {
   PeriodicExportingMetricReader,
 } from '@opentelemetry/sdk-metrics';
 
-interface InMemoryMetrics {
-  readonly readCounterDataPoints: (name: string) => Promise<ReadonlyArray<CounterDataPoint>>;
-
-  readonly readCounterValue: (name: string) => Promise<number | undefined>;
-
-  readonly readHistogramDataPoints: (name: string) => Promise<ReadonlyArray<HistogramDataPoint>>;
-}
-
 interface CounterDataPoint {
   readonly attributes: Attributes;
   readonly value: number;
@@ -26,6 +18,14 @@ interface HistogramDataPoint {
   readonly attributes: Attributes;
   readonly count: number;
   readonly sum: number | undefined;
+}
+
+interface InMemoryMetrics {
+  readonly readCounterDataPoints: (name: string) => Promise<ReadonlyArray<CounterDataPoint>>;
+
+  readonly readCounterValue: (name: string) => Promise<number | undefined>;
+
+  readonly readHistogramDataPoints: (name: string) => Promise<ReadonlyArray<HistogramDataPoint>>;
 }
 
 export function createInMemoryMetrics(): InMemoryMetrics {

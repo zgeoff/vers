@@ -1,7 +1,7 @@
 import type { DB } from '@vers/db';
 import type { Kysely } from 'kysely';
 import { updateVerifiedChainAnchor } from '../apply/update-verified-chain-anchor';
-import { findVerifiedAnchorPredecessor } from '../queue/find-verified-anchor-predecessor';
+import { readVerifiedAnchorPredecessor } from '../queue/read-verified-anchor-predecessor';
 import type { ReplaySegment } from '../replay/types';
 
 export async function updateVerifiedAnchorFromPredecessor(
@@ -12,7 +12,7 @@ export async function updateVerifiedAnchorFromPredecessor(
     return undefined;
   }
 
-  const predecessor = await findVerifiedAnchorPredecessor(trx, {
+  const predecessor = await readVerifiedAnchorPredecessor(trx, {
     avatarID: segment.activity.avatarID,
     scopeID: segment.activity.scopeID,
     scopeType: segment.activity.scopeType,

@@ -7,7 +7,7 @@ import { parseServicePrivateKey } from '@vers/service-auth';
 import { createService } from '@vers/service-runtime';
 import type { Service } from '@vers/service-runtime';
 import type { Kysely } from 'kysely';
-import { buildActivityRouter } from './build-router';
+import { createActivityRouter } from './create-activity-router';
 import { envShape } from './env-shape';
 import { makeSendReplayWake } from './wake/make-send-replay-wake';
 
@@ -38,12 +38,12 @@ export function createActivityService(
 
   return createService({
     allowedIssuers: ['app-web'],
-    buildRouter: async (runtime) => {
+    createRouter: async (runtime) => {
       const privateKey = await parseServicePrivateKey(runtime.env.SERVICE_AUTH_PRIVATE_KEY);
 
       const db = config.db ?? createDB({ databaseURL: runtime.env.DATABASE_URL });
 
-      return buildActivityRouter({
+      return createActivityRouter({
         db,
         keyVersion: config.keyVersion ?? KEY_VERSION,
         keysServiceURL: runtime.env.KEYS_SERVICE_URL,

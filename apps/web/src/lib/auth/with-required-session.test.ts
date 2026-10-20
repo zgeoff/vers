@@ -7,7 +7,7 @@ import { createSignedInUser } from '../../test-utils/create-signed-in-user';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { avatarClient } from '../rpc/clients/avatar-client';
 import { SERVICE_URLS } from '../rpc/service-urls';
-import { getAuthSession } from './get-auth-session';
+import { readAuthSession } from './read-auth-session';
 import { withRequiredSession } from './with-required-session';
 
 function setupTest() {
@@ -51,7 +51,7 @@ test('it signs the caller out and redirects to login when the service rejects th
 
       expect(promise).rejects.toMatchObject({ options: { href: '/login?redirect=%2Fexplore' } });
 
-      return getAuthSession();
+      return readAuthSession();
     },
   );
 
@@ -76,7 +76,7 @@ test('it rethrows a service fault and keeps the caller signed in', async () => {
 
     expect(promise).rejects.toMatchObject({ code: 'INTERNAL_SERVER_ERROR' });
 
-    return getAuthSession();
+    return readAuthSession();
   });
 
   expect(outcome.value).toContainEntry(['sessionID', signedIn.sessionID]);
@@ -100,7 +100,7 @@ test('it rethrows a declared error other than unauthorized and keeps the caller 
 
     expect(promise).rejects.toMatchObject({ code: 'FORBIDDEN' });
 
-    return getAuthSession();
+    return readAuthSession();
   });
 
   expect(outcome.value).toContainEntry(['sessionID', signedIn.sessionID]);

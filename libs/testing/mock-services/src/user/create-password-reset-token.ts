@@ -5,7 +5,7 @@ import { os } from './os';
 const RESET_TOKEN_TTL_MS = 10 * 60 * 1000;
 
 export const createPasswordResetToken = os.createPasswordResetToken.handler(async (opts) => {
-  const user = db.userCollection.findFirst((q) => q.where({ id: opts.input.id }));
+  const user = db.userCollection.findFirst((query) => query.where({ id: opts.input.id }));
 
   if (user === undefined) {
     throw opts.errors.NOT_FOUND({ data: {} });

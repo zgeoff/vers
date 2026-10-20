@@ -6,10 +6,6 @@ import { renderWithRouter } from '../../test-utils/render-with-router';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { ForgotPasswordForm } from './forgot-password-form';
 
-function rejectWithResponse(): Promise<Response> {
-  return Promise.resolve(new Response(null, { status: 400 }));
-}
-
 test('it shows the error for the email field', async () => {
   await withRequestContext({}, async () => {
     renderWithRouter(
@@ -30,7 +26,10 @@ test('it shows a generic failure message when the server rejects the submission'
 
   await withRequestContext({}, async () => {
     renderWithRouter(
-      <ForgotPasswordForm action={rejectWithResponse} honeypotValidFrom="1700000000000" />,
+      <ForgotPasswordForm
+        action={() => Promise.resolve(new Response(null, { status: 400 }))}
+        honeypotValidFrom="1700000000000"
+      />,
     );
 
     const emailInput = await screen.findByLabelText('Email');

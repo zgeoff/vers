@@ -47,7 +47,7 @@ export function buildAffixPool(
     .filter((affix) => affix.weight > 0)
 
     // sorts by affix id for a canonical, order-independent pool
-    .toSorted((a, b) => (a.id < b.id ? -1 : 1));
+    .toSorted((left, right) => (left.id < right.id ? -1 : 1));
 
   const forced = (constraints.forceAffixIDs ?? []).toSorted().map((affixID) => {
     const affix = affixes.find((candidate) => candidate.id === affixID);

@@ -68,8 +68,8 @@ test('it mints a row locally, installs it, and persists the pending activityStar
 
   expect(persisted).toStrictEqual(result.activity);
 
-  const mintedServerSide = db.activityCollection.findMany((q) =>
-    q.where({ avatarID: seed.avatarID }),
+  const mintedServerSide = db.activityCollection.findMany((query) =>
+    query.where({ avatarID: seed.avatarID }),
   );
 
   expect(mintedServerSide).toStrictEqual([]);

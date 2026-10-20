@@ -66,8 +66,14 @@ test('it signs out every other live session and completes sign-in on confirm', a
 
   expect(outcome.cookies['en_verification']).toStrictEqual({});
   expect(outcome.cookies['en_session']).toContainKeys(['accessToken', 'refreshToken', 'sessionID']);
-  expect(db.sessionCollection.findFirst((q) => q.where({ id: otherSessionID }))).toBeUndefined();
-  expect(db.sessionCollection.findFirst((q) => q.where({ id: pendingSessionID }))).toBeDefined();
+
+  expect(
+    db.sessionCollection.findFirst((query) => query.where({ id: otherSessionID })),
+  ).toBeUndefined();
+
+  expect(
+    db.sessionCollection.findFirst((query) => query.where({ id: pendingSessionID })),
+  ).toBeDefined();
 });
 
 test('it honors a stashed redirect target on confirm', async () => {

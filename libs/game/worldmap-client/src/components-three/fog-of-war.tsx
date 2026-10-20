@@ -17,14 +17,9 @@ import { useRevealSources } from '../state/use-reveal-sources';
 import type { TSLMathNode, TSLTextureNode } from './scene-tsl';
 import { sceneTSL } from './scene-tsl';
 
-const SHROUD_COLOR = sceneColors.fogShroud;
 const FOG_FALLOFF = 3;
 const FOG_TEXELS_PER_CELL = 4;
 const FOG_VIEWPORT_MARGIN_CELLS = 2;
-const FOG_ELEVATION = 0.2;
-const FOG_BILLOW_SCALE = 0.045;
-const FOG_BILLOW_EDGE = 0.35;
-const FOG_BILLOW_DEEP = 0.08;
 
 export function FogOfWar() {
   const revealSources = useRevealSources();
@@ -63,11 +58,26 @@ interface FogPlaneProps {
   readonly viewport: Viewport;
 }
 
+interface DensityBuffer {
+  bytes: Uint8Array;
+  cols: number;
+  rows: number;
+}
+
+interface FogPlaneResources {
+  applied: { field: RevealDistanceField; viewport: Viewport };
+  readonly density: DensityBuffer;
+  readonly geometry: BufferGeometry;
+  readonly material: MeshBasicNodeMaterial;
+  readonly textureNode: TSLTextureNode;
+}
+
 function FogPlane(props: Readonly<FogPlaneProps>) {
   const planeRef = useRef<FogPlaneResources | null>(null);
   // a fresh material per change would recompile its shader pipeline on every rebuild, and that
   // churn is enough to lose the GPU context mid-pan — the canvas goes irrecoverably blank
-  const plane = (planeRef.current ??= buildFogPlaneResources(props.field, props.viewport));
+  // oxlint-disable-next-line no-multi-assign -- react/refs refuses a ref read split from its lazy init
+  const plane = (planeRef.current ??= createFogPlaneResources(props.field, props.viewport));
 
   useLayoutEffect(() => {
     updateFogPlane(plane, props.field, props.viewport);
@@ -85,21 +95,9 @@ function FogPlane(props: Readonly<FogPlaneProps>) {
   return <mesh geometry={plane.geometry} material={plane.material} />;
 }
 
-interface DensityBuffer {
-  bytes: Uint8Array;
-  cols: number;
-  rows: number;
-}
+const SHROUD_COLOR = sceneColors.fogShroud;
 
-interface FogPlaneResources {
-  applied: { field: RevealDistanceField; viewport: Viewport };
-  readonly density: DensityBuffer;
-  readonly geometry: BufferGeometry;
-  readonly material: MeshBasicNodeMaterial;
-  readonly textureNode: TSLTextureNode;
-}
-
-function buildFogPlaneResources(
+function createFogPlaneResources(
   field: RevealDistanceField,
   viewport: Readonly<Viewport>,
 ): FogPlaneResources {
@@ -122,15 +120,104 @@ function buildFogPlaneResources(
     transparent: true,
   });
 
-  material.opacityNode = sceneTSL.toNode(buildBillowedOpacity(textureNode.r));
+  material.opacityNode = sceneTSL.toNode(buildBillowedOpacity(textureNode.x));
 
   return {
     applied: { field, viewport },
     density,
-    geometry: buildFogPlaneGeometry(viewport),
+    geometry: createFogPlaneGeometry(viewport),
     material,
     textureNode,
   };
+}
+
+function updateDensityBytes(bytes: Uint8Array, field: RevealDistanceField): void {
+  for (let index = 0; index < bytes.length; index++) {
+    bytes[index] = Math.round((field.values[index] ?? 0) * 255);
+  }
+}
+
+function buildDensityTexture(density: DensityBuffer): DataTexture {
+  const map = new DataTexture(
+    density.bytes,
+    density.cols,
+    density.rows,
+    RedFormat,
+    UnsignedByteType,
+  );
+
+  // bilinear sampling between texel centers is what turns the texel grid into a continuous
+  // gradient
+  map.magFilter = LinearFilter;
+  map.minFilter = LinearFilter;
+  map.needsUpdate = true;
+
+  return map;
+}
+
+const FOG_BILLOW_SCALE = 0.045;
+const FOG_BILLOW_EDGE = 0.35;
+const FOG_BILLOW_DEEP = 0.08;
+
+function buildBillowedOpacity(density: TSLMathNode): TSLMathNode {
+  const ground = sceneTSL.positionWorld.xz;
+  const clock = sceneTSL.time;
+  // strongest in the frontier band: `density * (1 - density)` peaks mid-gradient and vanishes at
+  // both ends
+  const band = density.mul(density.oneMinus()).mul(4);
+  // noise coordinates come from world position, not uv, so drifting the camera never drags the
+  // billow along with the quad
+  const drift = ground.mul(FOG_BILLOW_SCALE);
+  const coarse = sceneTSL.mx_noise_float(drift.add(clock.mul(0.24)));
+  // two octaves drifting in opposite directions, with the time term broadcast onto both axes
+  // blowing the noise field diagonally, like wind
+  const fine = sceneTSL.mx_noise_float(drift.mul(2.3).sub(clock.mul(0.31)));
+  const billow = coarse.mul(0.7).add(fine.mul(0.3));
+  // a small density-proportional term added to the band term so deep fog keeps a faint internal
+  // churn
+  const amplitude = band.mul(FOG_BILLOW_EDGE).add(density.mul(FOG_BILLOW_DEEP));
+
+  return density.add(billow.mul(amplitude)).clamp(0, 1);
+}
+
+// the position attribute is rewritten in place on every later viewport change: replacing an
+// attribute object strands its GPU buffer until the whole geometry is disposed
+function createFogPlaneGeometry(viewport: Readonly<Viewport>): BufferGeometry {
+  const geometry = new BufferGeometry();
+
+  geometry.setAttribute('position', new BufferAttribute(new Float32Array(12), 3));
+  geometry.setAttribute('uv', new BufferAttribute(new Float32Array([0, 0, 1, 0, 0, 1, 1, 1]), 2));
+  geometry.setIndex([0, 1, 2, 2, 1, 3]);
+
+  updateFogPlaneGeometry(geometry, viewport);
+
+  return geometry;
+}
+
+const FOG_ELEVATION = 0.2;
+
+function updateFogPlaneGeometry(geometry: BufferGeometry, viewport: Readonly<Viewport>): void {
+  const corners = [
+    toHexPosition(viewport.minCX - 0.5, viewport.minCY - 0.5),
+    toHexPosition(viewport.maxCX + 0.5, viewport.minCY - 0.5),
+    toHexPosition(viewport.minCX - 0.5, viewport.maxCY + 0.5),
+    toHexPosition(viewport.maxCX + 0.5, viewport.maxCY + 0.5),
+  ];
+
+  const position = geometry.getAttribute('position');
+
+  for (const [index, [x, y]] of corners.entries()) {
+    position.setXYZ(
+      index,
+      x * NODE_POSITION_SCALING_FACTOR,
+      y * NODE_POSITION_SCALING_FACTOR,
+      FOG_ELEVATION,
+    );
+  }
+
+  position.needsUpdate = true;
+
+  geometry.computeBoundingSphere();
 }
 
 function updateFogPlane(
@@ -170,87 +257,4 @@ function updateFogPlane(
   }
 
   updateFogPlaneGeometry(plane.geometry, viewport);
-}
-
-function updateDensityBytes(bytes: Uint8Array, field: RevealDistanceField): void {
-  for (let index = 0; index < bytes.length; index++) {
-    bytes[index] = Math.round((field.values[index] ?? 0) * 255);
-  }
-}
-
-function buildDensityTexture(density: DensityBuffer): DataTexture {
-  const map = new DataTexture(
-    density.bytes,
-    density.cols,
-    density.rows,
-    RedFormat,
-    UnsignedByteType,
-  );
-
-  // bilinear sampling between texel centers is what turns the texel grid into a continuous
-  // gradient
-  map.magFilter = LinearFilter;
-  map.minFilter = LinearFilter;
-  map.needsUpdate = true;
-
-  return map;
-}
-
-// the position attribute is rewritten in place on every later viewport change: replacing an
-// attribute object strands its GPU buffer until the whole geometry is disposed
-function buildFogPlaneGeometry(viewport: Readonly<Viewport>): BufferGeometry {
-  const geometry = new BufferGeometry();
-
-  geometry.setAttribute('position', new BufferAttribute(new Float32Array(12), 3));
-  geometry.setAttribute('uv', new BufferAttribute(new Float32Array([0, 0, 1, 0, 0, 1, 1, 1]), 2));
-  geometry.setIndex([0, 1, 2, 2, 1, 3]);
-
-  updateFogPlaneGeometry(geometry, viewport);
-
-  return geometry;
-}
-
-function updateFogPlaneGeometry(geometry: BufferGeometry, viewport: Readonly<Viewport>): void {
-  const corners = [
-    toHexPosition(viewport.minCX - 0.5, viewport.minCY - 0.5),
-    toHexPosition(viewport.maxCX + 0.5, viewport.minCY - 0.5),
-    toHexPosition(viewport.minCX - 0.5, viewport.maxCY + 0.5),
-    toHexPosition(viewport.maxCX + 0.5, viewport.maxCY + 0.5),
-  ];
-
-  const position = geometry.getAttribute('position');
-
-  for (const [index, [x, y]] of corners.entries()) {
-    position.setXYZ(
-      index,
-      x * NODE_POSITION_SCALING_FACTOR,
-      y * NODE_POSITION_SCALING_FACTOR,
-      FOG_ELEVATION,
-    );
-  }
-
-  position.needsUpdate = true;
-
-  geometry.computeBoundingSphere();
-}
-
-function buildBillowedOpacity(density: TSLMathNode): TSLMathNode {
-  const ground = sceneTSL.positionWorld.xz;
-  const clock = sceneTSL.time;
-  // strongest in the frontier band: `density * (1 - density)` peaks mid-gradient and vanishes at
-  // both ends
-  const band = density.mul(density.oneMinus()).mul(4);
-  // noise coordinates come from world position, not uv, so drifting the camera never drags the
-  // billow along with the quad
-  const drift = ground.mul(FOG_BILLOW_SCALE);
-  const coarse = sceneTSL.mx_noise_float(drift.add(clock.mul(0.24)));
-  // two octaves drifting in opposite directions, with the time term broadcast onto both axes
-  // blowing the noise field diagonally, like wind
-  const fine = sceneTSL.mx_noise_float(drift.mul(2.3).sub(clock.mul(0.31)));
-  const billow = coarse.mul(0.7).add(fine.mul(0.3));
-  // a small density-proportional term added to the band term so deep fog keeps a faint internal
-  // churn
-  const amplitude = band.mul(FOG_BILLOW_EDGE).add(density.mul(FOG_BILLOW_DEEP));
-
-  return density.add(billow.mul(amplitude)).clamp(0, 1);
 }

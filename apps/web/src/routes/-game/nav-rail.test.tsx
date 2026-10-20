@@ -7,7 +7,7 @@ import { renderWithRouter } from '../../test-utils/render-with-router';
 import { setIdleWorkerHandle } from '../../test-utils/set-idle-worker-handle';
 import { NavRail } from './nav-rail';
 
-function setActiveActivity(): void {
+test('it links every rail destination to its route', async () => {
   setIdleWorkerHandle({
     activity: createMockActivitySnapshot(),
     client: undefined,
@@ -15,10 +15,7 @@ function setActiveActivity(): void {
     initialized: true,
     writerAbortSignal: new AbortController().signal,
   });
-}
 
-test('it links every rail destination to its route', async () => {
-  setActiveActivity();
   renderWithRouter(<NavRail />, { flags: { 'game-renderer': true, market: true } });
 
   await screen.findByRole('link', { name: /Engage/u });

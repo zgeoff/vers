@@ -182,6 +182,7 @@ test('it logs a warn line for an email skipped past its deadline', async () => {
   invariant(lines[0] !== undefined, 'the deadline skip logs exactly one line');
 
   expect(JSON.parse(lines[0])).toMatchObject({
+    // oxlint-disable-next-line zgeoff/no-abbreviated-names -- pino writes the message under `msg`
     msg: 'email skipped past its deadline',
     queue: 'send-welcome',
   });

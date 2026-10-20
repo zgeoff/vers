@@ -11,7 +11,7 @@ import {
   createServiceToken,
   createTestDB,
   createViewer,
-  getTestServiceKeyPair,
+  resolveTestServiceKeyPair,
 } from '@vers/service-test-utils/bun';
 import { createSimVersionRow } from '@vers/sim-registry/test-utils';
 import { buildRPCTestClient } from '@vers/test-utils';
@@ -1248,7 +1248,7 @@ test('it rejects an append from a displaced writer session with SESSION_EVICTED'
     scopeId: '0_0',
   });
 
-  const keyPair = await getTestServiceKeyPair();
+  const keyPair = await resolveTestServiceKeyPair();
 
   const tokenB = await createServiceToken({
     actingSessionID: 'session-b',
@@ -1290,7 +1290,7 @@ test('it lets the first appending session claim an unstamped stream', async () =
     scopeId: '0_0',
   });
 
-  const keyPair = await getTestServiceKeyPair();
+  const keyPair = await resolveTestServiceKeyPair();
 
   const tokenA = await createServiceToken({
     actingSessionID: 'session-a',

@@ -23,7 +23,7 @@ interface MintedStepUpTransactionToken {
 export async function createStepUpTransactionToken(
   claims: Readonly<Pick<StepUpTransactionClaims, 'action' | 'sessionID' | 'target'>>,
 ): Promise<MintedStepUpTransactionToken> {
-  const keyPair = await getStepUpTransactionKeyPair();
+  const keyPair = await resolveStepUpTransactionKeyPair();
 
   const jti = createId();
 
@@ -48,7 +48,7 @@ export async function createStepUpTransactionToken(
 export async function verifyStepUpTransactionToken(
   token: string,
 ): Promise<StepUpTransactionClaims> {
-  const keyPair = await getStepUpTransactionKeyPair();
+  const keyPair = await resolveStepUpTransactionKeyPair();
 
   const verifyResult = await jose.jwtVerify(token, keyPair.publicKey, {
     algorithms: ['RS256'],
@@ -66,7 +66,7 @@ export async function verifyStepUpTransactionToken(
     action: SecureActionSchema.parse(payload['action']),
     expiresAt: new Date(payload.exp * 1000),
     jti: getRequiredStringClaim(payload, 'jti'),
-    sessionID: getSessionIDClaim(payload),
+    sessionID: findSessionIDClaim(payload),
     target: getRequiredStringClaim(payload, 'target'),
   };
 }
@@ -81,7 +81,7 @@ function getRequiredStringClaim(payload: jose.JWTPayload, key: 'jti' | 'target')
   return value;
 }
 
-function getSessionIDClaim(payload: jose.JWTPayload): string | null {
+function findSessionIDClaim(payload: jose.JWTPayload): string | null {
   const value = payload['sessionID'];
 
   if (value === null) {
@@ -98,7 +98,7 @@ function getSessionIDClaim(payload: jose.JWTPayload): string | null {
 let keyPairPromise: Promise<{ privateKey: jose.CryptoKey; publicKey: jose.CryptoKey }> | null =
   null;
 
-function getStepUpTransactionKeyPair(): Promise<{
+function resolveStepUpTransactionKeyPair(): Promise<{
   privateKey: jose.CryptoKey;
   publicKey: jose.CryptoKey;
 }> {

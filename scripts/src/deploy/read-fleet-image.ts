@@ -7,8 +7,6 @@ const imageRefSchema = z
   .object({ digest: z.string(), registry: z.string(), repository: z.string(), tag: z.string() })
   .readonly();
 
-type ImageRef = z.infer<typeof imageRefSchema>;
-
 const stringRecordSchema = z.record(z.string(), z.string()).readonly();
 
 const machineConfigSchema = z
@@ -44,11 +42,13 @@ export async function readFleetImage(app: string): Promise<FleetImage | null> {
   };
 }
 
-function isSameImage(a: Readonly<ImageRef>, b: Readonly<ImageRef>): boolean {
+type ImageRef = z.infer<typeof imageRefSchema>;
+
+function isSameImage(left: Readonly<ImageRef>, right: Readonly<ImageRef>): boolean {
   return (
-    a.registry === b.registry &&
-    a.repository === b.repository &&
-    a.tag === b.tag &&
-    a.digest === b.digest
+    left.registry === right.registry &&
+    left.repository === right.repository &&
+    left.tag === right.tag &&
+    left.digest === right.digest
   );
 }

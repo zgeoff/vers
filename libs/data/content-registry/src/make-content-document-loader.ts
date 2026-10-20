@@ -1,7 +1,7 @@
 import type { ContentDocument } from '@vers/contract-activity';
 import type { DB } from '@vers/db';
 import type { Kysely } from 'kysely';
-import { findContentDocument } from './find-content-document';
+import { readContentDocument } from './read-content-document';
 
 export function makeContentDocumentLoader(
   db: Kysely<DB>,
@@ -17,7 +17,7 @@ export function makeContentDocumentLoader(
       return cached;
     }
 
-    const pending = findContentDocument(db, contentVersion);
+    const pending = readContentDocument(db, contentVersion);
 
     cache.set(contentVersion, pending);
 

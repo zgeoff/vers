@@ -1,6 +1,6 @@
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-proto';
 import { BatchSpanProcessor, NodeTracerProvider } from '@opentelemetry/sdk-trace-node';
-import { buildTelemetryResource } from './build-telemetry-resource';
+import { readTelemetryResource } from './read-telemetry-resource';
 
 interface StartTraceExportOptions {
   readonly serviceName: string;
@@ -12,7 +12,7 @@ export interface TraceExport {
 
 export function startTraceExport(options: StartTraceExportOptions): TraceExport {
   const provider = new NodeTracerProvider({
-    resource: buildTelemetryResource({ serviceName: options.serviceName }),
+    resource: readTelemetryResource({ serviceName: options.serviceName }),
     spanProcessors: [new BatchSpanProcessor(new OTLPTraceExporter())],
   });
 

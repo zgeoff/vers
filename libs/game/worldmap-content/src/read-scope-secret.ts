@@ -5,10 +5,8 @@ import type { ContractRouterClient } from '@orpc/contract';
 import type { SecretRef, keysContract } from '@vers/contract-keys';
 import { createServiceToken } from '@vers/service-auth';
 import type { TokenIssuer } from '@vers/service-auth';
-import { buildTracingInterceptor } from '@vers/service-utils/orpc';
+import { makeTracingInterceptor } from '@vers/service-utils/orpc';
 import type { CryptoKey } from 'jose';
-
-const DEFAULT_KEYS_DISPATCH_TIMEOUT_MS = 10_000;
 
 interface ReadScopeSecretDeps {
   readonly issuer: TokenIssuer;
@@ -37,7 +35,7 @@ export async function readScopeSecret(
 
   const client: ContractRouterClient<typeof keysContract> = createORPCClient(
     new RPCLink({
-      clientInterceptors: [buildTracingInterceptor()],
+      clientInterceptors: [makeTracingInterceptor()],
       headers: { authorization: `Bearer ${token}` },
       url: `${deps.keysServiceURL}/rpc`,
     }),
@@ -66,6 +64,8 @@ export async function readScopeSecret(
 
   throw error;
 }
+
+const DEFAULT_KEYS_DISPATCH_TIMEOUT_MS = 10_000;
 
 function buildDispatchSignal(deps: Readonly<ReadScopeSecretDeps>): AbortSignal {
   const timeout = AbortSignal.timeout(deps.timeoutMs ?? DEFAULT_KEYS_DISPATCH_TIMEOUT_MS);

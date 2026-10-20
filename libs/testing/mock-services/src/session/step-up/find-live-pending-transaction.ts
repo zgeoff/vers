@@ -3,7 +3,7 @@ import * as db from '../../db';
 export function findLivePendingTransaction(
   id: string,
 ): ReturnType<typeof db.pendingTransactionCollection.findFirst> {
-  const row = db.pendingTransactionCollection.findFirst((q) => q.where({ id }));
+  const row = db.pendingTransactionCollection.findFirst((query) => query.where({ id }));
 
   if (row === undefined) {
     return undefined;

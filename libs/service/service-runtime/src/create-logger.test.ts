@@ -20,6 +20,7 @@ test('it writes each entry to the extra stream with the service name bound', () 
 
   expect(JSON.parse(lines[0] ?? '')).toMatchObject({
     level: 30,
+    // oxlint-disable-next-line zgeoff/no-abbreviated-names -- pino writes the message under `msg`
     msg: 'listening',
     name: 'test-service',
   });

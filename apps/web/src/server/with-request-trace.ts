@@ -23,6 +23,29 @@ function runWithoutSpan(request: Request, next: () => Promise<Response>): Promis
   return withTraceContext(traceContext, () => withTraceIDHeader(traceContext.traceID, next));
 }
 
+function resolveTraceContext(request: Request) {
+  return (
+    findSpanTraceContext() ??
+    createTraceContext(parseTraceparent(request.headers.get('traceparent')) ?? undefined)
+  );
+}
+
+async function withTraceIDHeader(
+  traceID: string,
+  next: () => Promise<Response>,
+): Promise<Response> {
+  const response = await next();
+
+  try {
+    response.headers.set('x-trace-id', traceID);
+  } catch {
+    // a response built by Response.redirect or Response.error carries immutable headers; those
+    // still correlate through the request log lines, so pass them through unstamped
+  }
+
+  return response;
+}
+
 function runWithServerSpan(
   request: Request,
   pathname: string,
@@ -67,27 +90,4 @@ function runWithServerSpan(
       }
     },
   );
-}
-
-function resolveTraceContext(request: Request) {
-  return (
-    findSpanTraceContext() ??
-    createTraceContext(parseTraceparent(request.headers.get('traceparent')) ?? undefined)
-  );
-}
-
-async function withTraceIDHeader(
-  traceID: string,
-  next: () => Promise<Response>,
-): Promise<Response> {
-  const response = await next();
-
-  try {
-    response.headers.set('x-trace-id', traceID);
-  } catch {
-    // a response built by Response.redirect or Response.error carries immutable headers; those
-    // still correlate through the request log lines, so pass them through unstamped
-  }
-
-  return response;
 }

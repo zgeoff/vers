@@ -6,6 +6,7 @@ import type { ServiceContext } from '@vers/service-runtime';
 import { sql } from 'kysely';
 import type { Kysely } from 'kysely';
 import invariant from 'tiny-invariant';
+import { match } from 'ts-pattern';
 import { findCheckpointBatchInvalidReason } from '../find-checkpoint-batch-invalid-reason';
 import { recordRefusal } from '../metrics/record-refusal';
 import { recordTerminalTransition } from '../metrics/record-terminal-transition';
@@ -313,44 +314,38 @@ async function checkAppendRace(
     opts.input.checkpoints,
   );
 
-  switch (outcome.kind) {
-    case 'not-found': {
+  const settled = match(outcome)
+    .with({ kind: 'not-found' }, () => {
       throw opts.errors.NOT_FOUND({ data: {} });
-    }
-
-    case 'session-evicted': {
+    })
+    .with({ kind: 'session-evicted' }, () => {
       throw opts.errors.SESSION_EVICTED({ data: {} });
-    }
-
-    case 'terminal': {
+    })
+    .with({ kind: 'terminal' }, (terminal) => {
       throw opts.errors.ACTIVITY_TERMINAL({
-        data: { appendedHead: outcome.appendedHead, status: outcome.status },
+        data: { appendedHead: terminal.appendedHead, status: terminal.status },
       });
-    }
-
-    case 'conflict': {
+    })
+    .with({ kind: 'conflict' }, (conflict) => {
       invariant(current !== undefined, 'a conflict outcome resolves only against a read row');
       recordRefusal('CONFLICT', 'stale-head');
 
       throw opts.errors.CONFLICT({
         data: {
           activityID: opts.input.activityID,
-          appendedHead: outcome.appendedHead,
+          appendedHead: conflict.appendedHead,
           avatarID: current.avatarId,
           reason: 'stale-head',
         },
       });
-    }
-
-    case 'resubmit-settled': {
-      break;
-    }
-  }
+    })
+    .with({ kind: 'resubmit-settled' }, (resubmitted) => resubmitted)
+    .exhaustive();
 
   opts.context.logger.info(
     { activityID: opts.input.activityID },
     'settled batch re-acknowledged after a dropped ack',
   );
 
-  return { appendedHead: outcome.appendedHead };
+  return { appendedHead: settled.appendedHead };
 }

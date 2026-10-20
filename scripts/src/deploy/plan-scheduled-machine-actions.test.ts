@@ -2,14 +2,14 @@ import { expect, test } from 'bun:test';
 import { planScheduledMachineActions } from './plan-scheduled-machine-actions';
 import type { ScheduledMachine } from './types';
 
-const sweeper: ScheduledMachine = {
-  command: ['/usr/local/bin/sweep'],
-  name: 'email-sweeper',
-  region: 'syd',
-  schedule: 'hourly',
-};
-
 test('it creates a declared machine absent from the existing fleet', () => {
+  const sweeper: ScheduledMachine = {
+    command: ['/usr/local/bin/sweep'],
+    name: 'email-sweeper',
+    region: 'syd',
+    schedule: 'hourly',
+  };
+
   const actions = planScheduledMachineActions([sweeper], 'registry.fly.io/x:tag1', []);
 
   expect(actions).toStrictEqual([
@@ -18,6 +18,13 @@ test('it creates a declared machine absent from the existing fleet', () => {
 });
 
 test('it updates a declared machine whose image differs from the target', () => {
+  const sweeper: ScheduledMachine = {
+    command: ['/usr/local/bin/sweep'],
+    name: 'email-sweeper',
+    region: 'syd',
+    schedule: 'hourly',
+  };
+
   const existing = [{ id: 'm1', image: 'registry.fly.io/x:old', name: 'email-sweeper' }];
   const actions = planScheduledMachineActions([sweeper], 'registry.fly.io/x:new', existing);
 
@@ -27,6 +34,13 @@ test('it updates a declared machine whose image differs from the target', () => 
 });
 
 test('it takes no action for a declared machine already on the target image', () => {
+  const sweeper: ScheduledMachine = {
+    command: ['/usr/local/bin/sweep'],
+    name: 'email-sweeper',
+    region: 'syd',
+    schedule: 'hourly',
+  };
+
   const existing = [{ id: 'm1', image: 'registry.fly.io/x:tag1', name: 'email-sweeper' }];
   const actions = planScheduledMachineActions([sweeper], 'registry.fly.io/x:tag1', existing);
 
@@ -34,6 +48,13 @@ test('it takes no action for a declared machine already on the target image', ()
 });
 
 test('it plans a mix of create, update, and no-op actions across declarations', () => {
+  const sweeper: ScheduledMachine = {
+    command: ['/usr/local/bin/sweep'],
+    name: 'email-sweeper',
+    region: 'syd',
+    schedule: 'hourly',
+  };
+
   const current: ScheduledMachine = { ...sweeper, name: 'current-sweeper' };
   const stale: ScheduledMachine = { ...sweeper, name: 'stale-sweeper' };
   const missing: ScheduledMachine = { ...sweeper, name: 'missing-sweeper' };
@@ -56,6 +77,13 @@ test('it plans a mix of create, update, and no-op actions across declarations', 
 });
 
 test('it never leaks state between separate planning calls', () => {
+  const sweeper: ScheduledMachine = {
+    command: ['/usr/local/bin/sweep'],
+    name: 'email-sweeper',
+    region: 'syd',
+    schedule: 'hourly',
+  };
+
   const existingForOtherApp = [
     { id: 'other-app-machine', image: 'registry.fly.io/other:tag', name: 'email-sweeper' },
   ];

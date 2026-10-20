@@ -81,7 +81,7 @@ export function IsometricCamera() {
   const camera = useCamera();
   const isDevCameraActive = useIsDevCameraActive();
   const selectedNode = useSelectedNode();
-  const [controlsVersion, setControlsVersion] = useState(0);
+  const selectedNodeRef = useRef(selectedNode);
   const [controlsGeneration, setControlsGeneration] = useState(0);
 
   const setCameraRef = useCallback((cameraInstance: null | PerspectiveCameraImpl) => {
@@ -129,7 +129,13 @@ export function IsometricCamera() {
     void controls.dollyTo(INITIAL_DISTANCE, false);
     controlsRef.current = controls;
 
-    setControlsVersion((version) => version + 1);
+    // a rebuilt controls instance reapplies the current selection's target instead of resting on
+    // its constructor default
+    const selectedObject3D = selectedNodeRef.current.object3D;
+
+    if (selectedObject3D) {
+      void controls.moveTo(selectedObject3D.position.x, 0, -selectedObject3D.position.y, true);
+    }
 
     return () => {
       controls.disconnect();
@@ -139,11 +145,12 @@ export function IsometricCamera() {
     };
     // controlsGeneration re-runs this effect after a non-finite-pose recovery: the restored camera
     // is finite again, but the discarded controls instance may hold poisoned damping velocities
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies -- the dependency forces the rebuild
   }, [camera, domElement, controlsGeneration]);
 
-  // controlsVersion is a dependency so a controls instance rebuilt by the effect above reapplies
-  // the current selection's target instead of resting on its constructor default
   useEffect(() => {
+    selectedNodeRef.current = selectedNode;
+
     const controls = controlsRef.current;
     const object3D = selectedNode.object3D;
 
@@ -152,14 +159,14 @@ export function IsometricCamera() {
     }
 
     void controls.moveTo(object3D.position.x, 0, -object3D.position.y, true);
-  }, [selectedNode, controlsVersion]);
+  }, [selectedNode]);
 
   useFrame((state, delta) => {
     if (!camera) {
       return;
     }
 
-    camera.aspect = state.size.width / state.size.height;
+    setCameraAspect(camera, state.size.width / state.size.height);
 
     camera.updateProjectionMatrix();
 
@@ -178,10 +185,9 @@ export function IsometricCamera() {
     controls.getTarget(targetScratch);
 
     if (isFinitePose(camera) && isFiniteVector(targetScratch)) {
-      const lastGoodPose = (lastGoodPoseRef.current ??= {
-        position: new Vector3(),
-        target: new Vector3(),
-      });
+      lastGoodPoseRef.current ??= { position: new Vector3(), target: new Vector3() };
+
+      const lastGoodPose = lastGoodPoseRef.current;
 
       lastGoodPose.position.copy(camera.position);
       lastGoodPose.target.copy(targetScratch);
@@ -207,20 +213,6 @@ export function IsometricCamera() {
   });
 
   return <perspectiveCamera ref={setCameraRef} />;
-}
-
-function isFinitePose(camera: PerspectiveCameraImpl): boolean {
-  return (
-    isFiniteVector(camera.position) &&
-    Number.isFinite(camera.quaternion.x) &&
-    Number.isFinite(camera.quaternion.y) &&
-    Number.isFinite(camera.quaternion.z) &&
-    Number.isFinite(camera.quaternion.w)
-  );
-}
-
-function isFiniteVector(vector: Readonly<Vector3>): boolean {
-  return Number.isFinite(vector.x) && Number.isFinite(vector.y) && Number.isFinite(vector.z);
 }
 
 function useCameraHelper(camera: null | PerspectiveCameraImpl) {
@@ -249,4 +241,22 @@ function useCameraHelper(camera: null | PerspectiveCameraImpl) {
   useFrame(() => {
     helperRef.current?.update();
   });
+}
+
+function setCameraAspect(camera: PerspectiveCameraImpl, aspect: number): void {
+  camera.aspect = aspect;
+}
+
+function isFinitePose(camera: PerspectiveCameraImpl): boolean {
+  return (
+    isFiniteVector(camera.position) &&
+    Number.isFinite(camera.quaternion.x) &&
+    Number.isFinite(camera.quaternion.y) &&
+    Number.isFinite(camera.quaternion.z) &&
+    Number.isFinite(camera.quaternion.w)
+  );
+}
+
+function isFiniteVector(vector: Readonly<Vector3>): boolean {
+  return Number.isFinite(vector.x) && Number.isFinite(vector.y) && Number.isFinite(vector.z);
 }

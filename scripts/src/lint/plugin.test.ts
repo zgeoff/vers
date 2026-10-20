@@ -12,10 +12,10 @@ async function setupTest(source: string): Promise<LintResult> {
   const oxlintBin = join(import.meta.dir, '..', '..', '..', 'node_modules', '.bin', 'oxlint');
   const pluginPath = join(import.meta.dir, 'plugin.js');
 
-  const dir = await mkdtemp(join(tmpdir(), 'vers-lint-plugin-test-'));
+  const directory = await mkdtemp(join(tmpdir(), 'vers-lint-plugin-test-'));
 
   onTestFinished(async () => {
-    await rm(dir, { recursive: true, force: true });
+    await rm(directory, { recursive: true, force: true });
   });
 
   // the root config's env declares Math as a global, which changes how its references resolve
@@ -25,16 +25,16 @@ async function setupTest(source: string): Promise<LintResult> {
     rules: { 'vers/no-unportable-math': 'error' },
   };
 
-  await writeFile(join(dir, '.oxlintrc.json'), JSON.stringify(config));
-  await writeFile(join(dir, 'sample.ts'), source);
+  await writeFile(join(directory, '.oxlintrc.json'), JSON.stringify(config));
+  await writeFile(join(directory, 'sample.ts'), source);
 
-  const proc = Bun.spawn([oxlintBin, '-c', '.oxlintrc.json', 'sample.ts'], {
-    cwd: dir,
+  const child = Bun.spawn([oxlintBin, '-c', '.oxlintrc.json', 'sample.ts'], {
+    cwd: directory,
     stdout: 'pipe',
     stderr: 'pipe',
   });
 
-  const [exitCode, stdout] = await Promise.all([proc.exited, new Response(proc.stdout).text()]);
+  const [exitCode, stdout] = await Promise.all([child.exited, new Response(child.stdout).text()]);
 
   return { exitCode, stdout };
 }

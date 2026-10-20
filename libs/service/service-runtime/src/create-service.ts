@@ -3,7 +3,7 @@ import { ORPCError, onError } from '@orpc/server';
 import type { FetchHandler } from '@orpc/server/fetch';
 import { RPCHandler } from '@orpc/server/fetch';
 import type { ServiceKeySet, TokenIssuer } from '@vers/service-auth';
-import { parseServiceJWKS, parseServiceToken } from '@vers/service-auth';
+import { parseServiceJWKS, verifyServiceToken } from '@vers/service-auth';
 import { findSpanTraceContext, withTraceContext } from '@vers/service-utils';
 import type { MetricsExport, OTLPLogStream } from '@vers/service-utils/otel';
 import type { TraceContext } from '@vers/trace';
@@ -29,7 +29,7 @@ interface ServiceRuntime<TEnvShape extends z.ZodRawShape> {
 
 export interface ServiceConfig<TEnvShape extends z.ZodRawShape> {
   readonly allowedIssuers: ReadonlyArray<TokenIssuer>;
-  readonly buildRouter: (runtime: ServiceRuntime<TEnvShape>) => AnyRouter | Promise<AnyRouter>;
+  readonly createRouter: (runtime: ServiceRuntime<TEnvShape>) => AnyRouter | Promise<AnyRouter>;
   readonly envShape: TEnvShape;
   readonly name: string;
   readonly overdueRequestMs?: number;
@@ -51,7 +51,7 @@ const DEFAULT_OVERDUE_REQUEST_MS = 30_000;
 export async function createService<TEnvShape extends z.ZodRawShape = Record<never, never>>(
   config: ServiceConfig<TEnvShape>,
 ): Promise<Service<TEnvShape>> {
-  const env = parseServiceEnv(config.envShape);
+  const env = readServiceEnv(config.envShape);
 
   const otlpLogStream =
     env.OTEL_EXPORTER_OTLP_ENDPOINT === undefined ? undefined : await createLogShipper(config.name);
@@ -72,12 +72,13 @@ export async function createService<TEnvShape extends z.ZodRawShape = Record<nev
   const app = new Elysia();
 
   if (env.OTEL_EXPORTER_OTLP_ENDPOINT !== undefined) {
-    const [{ opentelemetry }, { OTLPTraceExporter }, { buildTelemetryResource }] =
-      await Promise.all([
+    const [{ opentelemetry }, { OTLPTraceExporter }, { readTelemetryResource }] = await Promise.all(
+      [
         import('@elysiajs/opentelemetry'),
         import('@opentelemetry/exporter-trace-otlp-proto'),
         import('@vers/service-utils/otel'),
-      ]);
+      ],
+    );
 
     // constructed bare so the exporter derives its full configuration from the standard
     // `OTEL_EXPORTER_OTLP_*` environment variables: the base endpoint gains the per-signal path,
@@ -85,7 +86,7 @@ export async function createService<TEnvShape extends z.ZodRawShape = Record<nev
     app.use(
       opentelemetry({
         checkIfShouldTrace: shouldTraceRequest,
-        resource: buildTelemetryResource({ serviceName: config.name }),
+        resource: readTelemetryResource({ serviceName: config.name }),
         serviceName: config.name,
         traceExporter: new OTLPTraceExporter(),
       }),
@@ -97,7 +98,7 @@ export async function createService<TEnvShape extends z.ZodRawShape = Record<nev
   // own OTel bootstrap a no-op; reversed, its sentry-trace-only propagator would shadow traceparent
   await startErrorReporting(env.SENTRY_DSN);
 
-  const router = await config.buildRouter({ env, logger });
+  const router = await config.createRouter({ env, logger });
 
   app.get('/health', (context) => {
     const trace = createTrace(context.request);
@@ -159,7 +160,7 @@ export async function createService<TEnvShape extends z.ZodRawShape = Record<nev
   };
 }
 
-function parseServiceEnv<TEnvShape extends z.ZodRawShape>(
+function readServiceEnv<TEnvShape extends z.ZodRawShape>(
   envShape: TEnvShape,
 ): ServiceEnv<TEnvShape> {
   const base = baseEnvSchema.safeParse(process.env);
@@ -177,16 +178,16 @@ function parseServiceEnv<TEnvShape extends z.ZodRawShape>(
   return { ...base.data, ...extra.data };
 }
 
-async function startMetricsShipper(serviceName: string): Promise<MetricsExport> {
-  const otelModule = await import('@vers/service-utils/otel');
-
-  return otelModule.startMetricsExport({ serviceName });
-}
-
 async function createLogShipper(serviceName: string): Promise<OTLPLogStream> {
   const otelModule = await import('@vers/service-utils/otel');
 
   return otelModule.createOTLPLogStream({ serviceName });
+}
+
+async function startMetricsShipper(serviceName: string): Promise<MetricsExport> {
+  const otelModule = await import('@vers/service-utils/otel');
+
+  return otelModule.startMetricsExport({ serviceName });
 }
 
 function createTrace(request: Request): TraceContext {
@@ -262,7 +263,7 @@ async function serveORPCRequest(
   const path = route.path;
   const start = performance.now();
 
-  const resolution = await parseServiceToken(request, {
+  const resolution = await verifyServiceToken(request, {
     audience: deps.serviceName,
     keySet: deps.keySet,
   });
@@ -354,14 +355,14 @@ async function serveORPCRequest(
   return finalResponse;
 }
 
+function toDurationMs(elapsedMs: number): number {
+  return Math.round(elapsedMs * 10) / 10;
+}
+
 function pickRequestLogLevel(status: number): 'error' | 'info' | 'warn' {
   if (status >= 500) {
     return 'error';
   }
 
   return status >= 400 ? 'warn' : 'info';
-}
-
-function toDurationMs(elapsedMs: number): number {
-  return Math.round(elapsedMs * 10) / 10;
 }

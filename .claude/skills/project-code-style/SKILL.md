@@ -35,9 +35,8 @@ and tightens rules and never relaxes one from the base.
 
 ## Project verbs
 
-vers adds these verbs to the shared taxonomy. A new verb goes here and into the `verbs` option of
-`zgeoff/function-verb` in [`.oxlintrc.json`](../../../.oxlintrc.json) in the same PR, and
-`check-project-verbs.sh` fails when the two lists differ.
+vers adds these verbs to the shared taxonomy. `zgeoff/function-verb` reports only the banned verbs,
+so a project verb needs no lint option, and a new one goes in this table with its contract.
 
 | Verb        | Contract                                                                                    | As opposed to                                             |
 | ----------- | ------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
@@ -68,9 +67,10 @@ vers adds these verbs to the shared taxonomy. A new verb goes here and into the 
 
 ## Exempt names
 
-The verb rule skips these names, which also sit in the `exemptNames` option beside `verbs`. An oRPC
-handler keeps the name of its contract procedure, because the contract key is the public API's
-vocabulary and a rename would misname it.
+The verb rule skips these names, which also sit in the `exemptNames` option of
+`zgeoff/function-verb` in [`.oxlintrc.json`](../../../.oxlintrc.json). An oRPC handler keeps the
+name of its contract procedure, because the contract key is the public API's vocabulary and a rename
+would misname it. A method that implements a library's interface keeps the name the library calls.
 
 - `up`, a migration export Kysely requires
 - `down`, a migration export Kysely requires
@@ -83,6 +83,10 @@ vocabulary and a rename would misname it.
 - `revealNodes`, an oRPC handler
 - `trackActivityProgress`, an oRPC handler
 - `wake`, an oRPC handler
+- `executeQuery`, the query method of a Kysely database connection
+- `fetch`, the request handler that `Bun.serve` and srvx call, and the transport option of an oRPC
+  link
+- `handle`, the request handler of an Elysia app
 
 ## Comments
 

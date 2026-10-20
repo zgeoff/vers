@@ -31,6 +31,11 @@ interface HeldCompletedNodeIDs {
   readonly nodeIDs: ReadonlySet<string>;
 }
 
+interface PublishedRevealedNodeIDs {
+  readonly avatarID: string | undefined;
+  readonly nodeIDs: ReadonlySet<string>;
+}
+
 export function useAvatarRegionGraph(): ReadonlySet<string> {
   const avatarQuery = useQuery(buildActiveAvatarQueryOptions());
   const avatarID = avatarQuery.data?.id;
@@ -51,7 +56,10 @@ export function useAvatarRegionGraph(): ReadonlySet<string> {
     nodeIDs: EMPTY_NODE_ID_SET,
   });
 
-  const [revealedNodeIDs, setRevealedNodeIDs] = useState<ReadonlySet<string>>(EMPTY_NODE_ID_SET);
+  const [publishedRevealed, setPublishedRevealed] = useState<PublishedRevealedNodeIDs>({
+    avatarID: undefined,
+    nodeIDs: EMPTY_NODE_ID_SET,
+  });
 
   // The chunk-aligned viewport keying the query is shrunk to the reveal cell cap so no canvas
   // aspect can produce a request the service would reject.
@@ -122,7 +130,11 @@ export function useAvatarRegionGraph(): ReadonlySet<string> {
       const selectableSource = buildSelectableSource(completedNodeIDs, optimisticClearedNodeIDs);
 
       setCompletedNodeProjections(collectSelectableNodeIDs(seed, selectableSource), sources);
-      setRevealedNodeIDs(collectRevealedNodeIDs(sources, regionViewport));
+
+      setPublishedRevealed({
+        avatarID,
+        nodeIDs: collectRevealedNodeIDs(sources, regionViewport),
+      });
 
       return;
     }
@@ -145,22 +157,22 @@ export function useAvatarRegionGraph(): ReadonlySet<string> {
       sources,
     );
 
-    setRevealedNodeIDs(collectRevealedNodeIDs(sources, regionViewport));
+    setPublishedRevealed({ avatarID, nodeIDs: collectRevealedNodeIDs(sources, regionViewport) });
   }, [avatarID, seed, viewport, completedNodeIDs, optimisticClearedNodeIDs]);
 
   // the frontier state still holds the outgoing avatar's nodes until the effect republishes for the
   // incoming avatar; gating on the projection's avatar keeps a switch from prefetching the wrong
   // avatar's coordinates during the transition render
-  return avatarID === previousAvatarIDRef.current ? revealedNodeIDs : EMPTY_NODE_ID_SET;
+  return avatarID === publishedRevealed.avatarID ? publishedRevealed.nodeIDs : EMPTY_NODE_ID_SET;
 }
 
-function isSameNodeIDSet(a: ReadonlySet<string>, b: ReadonlySet<string>): boolean {
-  if (a.size !== b.size) {
+function isSameNodeIDSet(left: ReadonlySet<string>, right: ReadonlySet<string>): boolean {
+  if (left.size !== right.size) {
     return false;
   }
 
-  for (const id of a) {
-    if (!b.has(id)) {
+  for (const id of left) {
+    if (!right.has(id)) {
       return false;
     }
   }

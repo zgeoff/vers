@@ -26,8 +26,8 @@ test('it creates a pending 2fa-setup verification and returns its QR data for a 
   expect(outcome.value.qrCodeDataURL).toStartWith('data:image/png;base64,');
 
   expect(
-    db.verificationCollection.findFirst((q) =>
-      q.where({ target: signedIn.userID, type: '2fa-setup' }),
+    db.verificationCollection.findFirst((query) =>
+      query.where({ target: signedIn.userID, type: '2fa-setup' }),
     ),
   ).toBeDefined();
 });
@@ -44,8 +44,8 @@ test('it reuses an existing pending 2fa-setup verification instead of rotating i
   await withRequestContext({ cookies: signedIn.cookies }, () => loadTwoFactorSetup());
 
   expect(
-    db.verificationCollection.findFirst((q) =>
-      q.where({ target: signedIn.userID, type: '2fa-setup' }),
+    db.verificationCollection.findFirst((query) =>
+      query.where({ target: signedIn.userID, type: '2fa-setup' }),
     ),
   ).toMatchObject({ code: 'existing-code' });
 });

@@ -4,8 +4,6 @@ import type { SyntheticEvent } from 'react';
 import { useState } from 'react';
 import type { FormAction, FormSubmission, FormSubmitContext } from './types';
 
-const GENERIC_SUBMIT_ERROR = 'Something went wrong. Please try again.';
-
 export function useFormSubmit(
   action: FormAction,
   lastResult?: SubmissionResult,
@@ -57,6 +55,8 @@ export function useFormSubmit(
 
   return { isPending, lastResult: dispatchedResult ?? lastResult, onSubmit };
 }
+
+const GENERIC_SUBMIT_ERROR = 'Something went wrong. Please try again.';
 
 // A result Conform re-applies mid-session must carry the submitted values as `initialValue`, or
 // its update path reads the absence as a reset and drops the error. A raw `Response` or a thrown

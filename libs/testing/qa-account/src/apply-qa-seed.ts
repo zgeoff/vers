@@ -1,25 +1,17 @@
 import { generateTOTP, getTOTPAuthUri } from '@epic-web/totp';
 import { createId } from '@paralleldrive/cuid2';
-import { findContentDocument, findCurrentContentVersion } from '@vers/content-registry';
+import { readContentDocument, readCurrentContentVersion } from '@vers/content-registry';
 import type { SecretRef } from '@vers/contract-keys';
 import type { DB } from '@vers/db';
 import { toJSON } from '@vers/db';
 import { createSeed } from '@vers/game-utils';
 import { buildLevelFromXP, buildXPThreshold } from '@vers/idle-core';
 import { deriveAvatarKey, deriveScopeSecret } from '@vers/roll-crypto';
-import { findCurrentSimVersion } from '@vers/sim-registry';
+import { readCurrentSimVersion } from '@vers/sim-registry';
 import type { Kysely } from 'kysely';
 import invariant from 'tiny-invariant';
 import { planQARuns } from './plan-qa-runs';
 import type { KeyRoots, QARunsPlan, QAUser, RunOutcome, SeedEntropy } from './types';
-
-// the versions service-activity stamps on every row it admits; the roots must carry them
-export const QA_KEY_VERSION = 1;
-const QA_SCOPE_SECRET_REF: SecretRef = 'worldmap';
-
-export const QA_SCOPE_SECRET_VERSION = 1;
-const TWO_FACTOR_CHARSET = '0123456789';
-const TWO_FACTOR_PERIOD_SECONDS = 30;
 
 export interface ApplyQASeedInput {
   readonly entropy: SeedEntropy;
@@ -74,7 +66,7 @@ export async function applyQASeed(
 
   const passwordHash = await Bun.password.hash(input.password, 'argon2id');
 
-  const twoFactor = input.twoFactor ? await buildTwoFactor(userID) : undefined;
+  const twoFactor = input.twoFactor ? await createTwoFactor(userID) : undefined;
 
   await db.transaction().execute(async (trx) => {
     await trx
@@ -133,6 +125,12 @@ export async function applyQASeed(
   };
 }
 
+// the versions service-activity stamps on every row it admits; the roots must carry them
+export const QA_KEY_VERSION = 1;
+const QA_SCOPE_SECRET_REF: SecretRef = 'worldmap';
+
+export const QA_SCOPE_SECRET_VERSION = 1;
+
 async function planRuns(
   db: Kysely<DB>,
   input: Readonly<ApplyQASeedInput>,
@@ -141,19 +139,19 @@ async function planRuns(
 ): Promise<QARunsPlan> {
   invariant(input.keyRoots !== undefined, 'seeding runs needs the scope-secret and roll-key roots');
 
-  const simVersion = await findCurrentSimVersion(db);
+  const simVersion = await readCurrentSimVersion(db);
 
   if (simVersion === undefined) {
     throw new Error('the sim_versions registry has no active version to stamp on a run');
   }
 
-  const contentVersion = await findCurrentContentVersion(db);
+  const contentVersion = await readCurrentContentVersion(db);
 
   if (contentVersion === undefined) {
     throw new Error('the content registry has no current version to run against');
   }
 
-  const document = await findContentDocument(db, contentVersion);
+  const document = await readContentDocument(db, contentVersion);
 
   if (document === undefined) {
     throw new Error(`current content version ${contentVersion} is not published`);
@@ -186,6 +184,56 @@ async function planRuns(
   });
 }
 
+interface TwoFactorSetup {
+  readonly row: {
+    readonly algorithm: string;
+    readonly charSet: string;
+    readonly digits: number;
+    readonly expiresAt: null;
+    readonly id: string;
+    readonly period: number;
+    readonly secret: string;
+    readonly target: string;
+    readonly type: '2fa';
+  };
+  readonly uri: string;
+}
+
+const TWO_FACTOR_CHARSET = '0123456789';
+const TWO_FACTOR_PERIOD_SECONDS = 30;
+
+async function createTwoFactor(userID: string): Promise<TwoFactorSetup> {
+  const { otp, ...config } = await generateTOTP({
+    algorithm: 'SHA-256',
+    charSet: TWO_FACTOR_CHARSET,
+    period: TWO_FACTOR_PERIOD_SECONDS,
+  });
+
+  const row = {
+    algorithm: config.algorithm,
+    charSet: config.charSet,
+    digits: config.digits,
+    expiresAt: null,
+    id: createId(),
+    period: config.period,
+    secret: config.secret,
+    target: userID,
+    type: '2fa' as const,
+  };
+
+  return {
+    row,
+    uri: getTOTPAuthUri({
+      accountName: userID,
+      algorithm: row.algorithm,
+      digits: row.digits,
+      issuer: 'vers',
+      period: row.period,
+      secret: row.secret,
+    }),
+  };
+}
+
 async function writeRuns(trx: Kysely<DB>, plan: QARunsPlan, avatarID: string): Promise<void> {
   await trx.insertInto('activityChains').values(plan.chain).execute();
 
@@ -216,51 +264,4 @@ async function writeRuns(trx: Kysely<DB>, plan: QARunsPlan, avatarID: string): P
       .values(plan.clearedNodeIDs.map((key) => ({ avatarId: avatarID, key, kind: 'first_clear' })))
       .execute();
   }
-}
-
-interface TwoFactorSetup {
-  readonly row: {
-    readonly algorithm: string;
-    readonly charSet: string;
-    readonly digits: number;
-    readonly expiresAt: null;
-    readonly id: string;
-    readonly period: number;
-    readonly secret: string;
-    readonly target: string;
-    readonly type: '2fa';
-  };
-  readonly uri: string;
-}
-
-async function buildTwoFactor(userID: string): Promise<TwoFactorSetup> {
-  const { otp, ...config } = await generateTOTP({
-    algorithm: 'SHA-256',
-    charSet: TWO_FACTOR_CHARSET,
-    period: TWO_FACTOR_PERIOD_SECONDS,
-  });
-
-  const row = {
-    algorithm: config.algorithm,
-    charSet: config.charSet,
-    digits: config.digits,
-    expiresAt: null,
-    id: createId(),
-    period: config.period,
-    secret: config.secret,
-    target: userID,
-    type: '2fa' as const,
-  };
-
-  return {
-    row,
-    uri: getTOTPAuthUri({
-      accountName: userID,
-      algorithm: row.algorithm,
-      digits: row.digits,
-      issuer: 'vers',
-      period: row.period,
-      secret: row.secret,
-    }),
-  };
 }

@@ -9,8 +9,8 @@ test('it returns the same value for the same inputs', () => {
 });
 
 test('it maps to the half-open unit interval', () => {
-  for (let i = 0; i < 25; i++) {
-    const value = buildValueNoise(7, i * 0.37, i * -0.61, HASH_CHANNEL.wobbleX);
+  for (let step = 0; step < 25; step++) {
+    const value = buildValueNoise(7, step * 0.37, step * -0.61, HASH_CHANNEL.wobbleX);
 
     expect(value).toBeGreaterThanOrEqual(0);
     expect(value).toBeLessThan(1);

@@ -8,5 +8,5 @@ export const getSessions = os.getSessions.handler((opts) => {
     throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
   }
 
-  return db.sessionCollection.findMany((q) => q.where({ userID: actingUserID }));
+  return db.sessionCollection.findMany((query) => query.where({ userID: actingUserID }));
 });

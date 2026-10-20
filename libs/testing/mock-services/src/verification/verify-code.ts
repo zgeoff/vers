@@ -5,8 +5,8 @@ import { os } from './os';
 const DELETING_TYPES: ReadonlySet<VerificationType> = new Set(['change-email', 'onboarding']);
 
 export const verifyCode = os.verifyCode.handler((opts) => {
-  const row = db.verificationCollection.findFirst((q) =>
-    q.where({ target: opts.input.target, type: opts.input.type }),
+  const row = db.verificationCollection.findFirst((query) =>
+    query.where({ target: opts.input.target, type: opts.input.type }),
   );
 
   if (row === undefined) {

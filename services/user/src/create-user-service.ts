@@ -3,7 +3,7 @@ import type { DB } from '@vers/db';
 import { createService } from '@vers/service-runtime';
 import type { Service } from '@vers/service-runtime';
 import type { Kysely } from 'kysely';
-import { buildUserRouter } from './build-router';
+import { createUserRouter } from './create-user-router';
 import { envShape } from './env-shape';
 
 interface CreateUserServiceConfig {
@@ -15,8 +15,8 @@ export function createUserService(
 ): Promise<Service<typeof envShape>> {
   return createService({
     allowedIssuers: ['app-web'],
-    buildRouter: (runtime) =>
-      buildUserRouter({
+    createRouter: (runtime) =>
+      createUserRouter({
         db: config.db ?? createDB({ databaseURL: runtime.env.DATABASE_URL }),
       }),
     envShape,

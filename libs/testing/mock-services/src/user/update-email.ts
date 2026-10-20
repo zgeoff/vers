@@ -8,13 +8,15 @@ export const updateEmail = os.updateEmail.handler(async (opts) => {
     throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
   }
 
-  const user = db.userCollection.findFirst((q) => q.where({ id: actingUserID }));
+  const user = db.userCollection.findFirst((query) => query.where({ id: actingUserID }));
 
   if (user === undefined) {
     throw opts.errors.NOT_FOUND({ data: {} });
   }
 
-  if (db.userCollection.findFirst((q) => q.where({ email: opts.input.email })) !== undefined) {
+  if (
+    db.userCollection.findFirst((query) => query.where({ email: opts.input.email })) !== undefined
+  ) {
     throw opts.errors.CONFLICT({ data: { field: 'email' } });
   }
 

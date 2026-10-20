@@ -17,5 +17,7 @@ export function collectMatchingEmails(
         email.to.some((recipient) => recipient.trim().toLowerCase() === address) &&
         new Date(email.createdAt).getTime() >= config.since.getTime(),
     )
-    .toSorted((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    .toSorted(
+      (left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime(),
+    );
 }

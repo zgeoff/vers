@@ -447,8 +447,8 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
   return { [Symbol.dispose]: stop, handleConnect, stop, upgrade };
 }
 
-function wait(ms: number) {
+function wait(durationMs: number) {
   return new Promise((resolve) => {
-    setTimeout(resolve, ms);
+    setTimeout(resolve, durationMs);
   });
 }

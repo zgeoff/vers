@@ -30,12 +30,6 @@ export interface CreateDBConfig {
   readonly searchPath?: string;
 }
 
-const DEFAULT_SESSION_TIMEOUT_MS = 30_000;
-
-// statement_timeout makes a live server answer within 30s, so 5s more of silence means the
-// transport is dead, not the statement slow
-const DEFAULT_QUERY_DEADLINE_MS = DEFAULT_SESSION_TIMEOUT_MS + 5000;
-
 export function createDB(config: CreateDBConfig): Kysely<DB> {
   return new Kysely<DB>({
     dialect: buildDialect(config),
@@ -70,10 +64,56 @@ export function buildPostgresOptions(config: CreateDBConfig) {
 function buildDialect(config: CreateDBConfig): Dialect {
   return {
     createAdapter: () => new PostgresAdapter(),
-    createDriver: () => buildTracedDriver(buildResettableDriver(config)),
+    createDriver: () => buildTracedDriver(createResettableDriver(config)),
     createIntrospector: (db) => new PostgresIntrospector(db),
     createQueryCompiler: () => new PostgresQueryCompiler(),
   };
+}
+
+function buildTracedDriver(driver: Driver): Driver {
+  // a Proxy rather than a hand-listed method map: the dialect's driver interface carries optional
+  // savepoint methods, and one left out of a list would read as unsupported instead of reaching the
+  // inner driver
+  return new Proxy(driver, {
+    get: (target, property, receiver) => {
+      if (property === 'acquireConnection') {
+        return (options?: AbortableOperationOptions) =>
+          withConnectSpan(() => target.acquireConnection(options));
+      }
+
+      const value: unknown = Reflect.get(target, property, receiver);
+
+      if (typeof value !== 'function') {
+        return value;
+      }
+
+      const boundValue: unknown = value.bind(target);
+
+      return boundValue;
+    },
+  });
+}
+
+async function withConnectSpan<T>(acquireConnection: () => Promise<T>): Promise<T> {
+  const tracer = trace.getTracer('@vers/db');
+
+  const span = tracer.startSpan(
+    'db.connect',
+    { attributes: { 'db.system': 'postgresql' }, kind: SpanKind.CLIENT },
+    context.active(),
+  );
+
+  try {
+    return await acquireConnection();
+  } catch (error) {
+    const exception = error instanceof Error ? error : String(error);
+
+    span.recordException(exception);
+    span.setStatus({ code: SpanStatusCode.ERROR });
+    throw error;
+  } finally {
+    span.end();
+  }
 }
 
 interface PoolGeneration {
@@ -88,7 +128,13 @@ interface ConnectionLease {
   readonly inner: DatabaseConnection;
 }
 
-function buildResettableDriver(config: CreateDBConfig): Driver {
+const DEFAULT_SESSION_TIMEOUT_MS = 30_000;
+
+// statement_timeout makes a live server answer within 30s, so 5s more of silence means the
+// transport is dead, not the statement slow
+const DEFAULT_QUERY_DEADLINE_MS = DEFAULT_SESSION_TIMEOUT_MS + 5000;
+
+function createResettableDriver(config: CreateDBConfig): Driver {
   const leases = new WeakMap<DatabaseConnection, ConnectionLease>();
 
   const queryDeadlineMs = config.queryDeadlineMs ?? DEFAULT_QUERY_DEADLINE_MS;
@@ -209,6 +255,14 @@ function buildResettableDriver(config: CreateDBConfig): Driver {
   };
 }
 
+function createPoolGeneration(config: CreateDBConfig): PoolGeneration {
+  const sql = postgres(config.databaseURL, buildPostgresOptions(config));
+
+  const driver = new PostgresJSDialect({ postgres: sql }).createDriver();
+
+  return { driver, ended: false, ready: driver.init(), sql };
+}
+
 function buildBoundedConnection(
   inner: DatabaseConnection,
   deadlineMs: number,
@@ -224,6 +278,23 @@ function buildBoundedConnection(
         onDeadline,
       ),
   };
+}
+
+async function withDeadline<T>(
+  run: () => Promise<T>,
+  deadlineMs: number,
+  onDeadline: () => void,
+): Promise<T> {
+  // Kysely's abort signal alone would strand the connection: kysely-postgres-js implements
+  // neither cancelQuery nor killSession, so the reserved socket stays out of the pool until the
+  // kernel gives up on it. Dropping the whole pool generation is the only way to free it.
+  const timer = setTimeout(onDeadline, deadlineMs);
+
+  try {
+    return await run();
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 async function* withChunkDeadline<T>(
@@ -247,77 +318,6 @@ async function* withChunkDeadline<T>(
     }
   } finally {
     await iterator.return?.();
-  }
-}
-
-async function withDeadline<T>(
-  run: () => Promise<T>,
-  deadlineMs: number,
-  onDeadline: () => void,
-): Promise<T> {
-  // Kysely's abort signal alone would strand the connection: kysely-postgres-js implements
-  // neither cancelQuery nor killSession, so the reserved socket stays out of the pool until the
-  // kernel gives up on it. Dropping the whole pool generation is the only way to free it.
-  const timer = setTimeout(onDeadline, deadlineMs);
-
-  try {
-    return await run();
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
-function createPoolGeneration(config: CreateDBConfig): PoolGeneration {
-  const sql = postgres(config.databaseURL, buildPostgresOptions(config));
-
-  const driver = new PostgresJSDialect({ postgres: sql }).createDriver();
-
-  return { driver, ended: false, ready: driver.init(), sql };
-}
-
-function buildTracedDriver(driver: Driver): Driver {
-  // a Proxy rather than a hand-listed method map: the dialect's driver interface carries optional
-  // savepoint methods, and one left out of a list would read as unsupported instead of reaching the
-  // inner driver
-  return new Proxy(driver, {
-    get: (target, property, receiver) => {
-      if (property === 'acquireConnection') {
-        return (options?: AbortableOperationOptions) =>
-          withConnectSpan(() => target.acquireConnection(options));
-      }
-
-      const value: unknown = Reflect.get(target, property, receiver);
-
-      if (typeof value !== 'function') {
-        return value;
-      }
-
-      const boundValue: unknown = value.bind(target);
-
-      return boundValue;
-    },
-  });
-}
-
-async function withConnectSpan<T>(acquireConnection: () => Promise<T>): Promise<T> {
-  const tracer = trace.getTracer('@vers/db');
-
-  const span = tracer.startSpan(
-    'db.connect',
-    { attributes: { 'db.system': 'postgresql' }, kind: SpanKind.CLIENT },
-    context.active(),
-  );
-
-  try {
-    return await acquireConnection();
-  } catch (error) {
-    const exception = error instanceof Error ? error : String(error);
-
-    span.recordException(exception);
-    span.setStatus({ code: SpanStatusCode.ERROR });
-    throw error;
-  } finally {
-    span.end();
   }
 }
 

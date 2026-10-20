@@ -36,8 +36,8 @@ test("it resyncs the reporting tab's avatar when an undelivered start names a di
 
   await runReconnectRecovery(ctx.context, viewer.avatar.id);
 
-  const minted = db.activityCollection.findFirst((q) =>
-    q.where({ avatarID: avatar.id, status: 'active' }),
+  const minted = db.activityCollection.findFirst((query) =>
+    query.where({ avatarID: avatar.id, status: 'active' }),
   );
 
   expect(minted).toBeUndefined();
@@ -128,7 +128,7 @@ test('it delivers a stop raised offline even when no resync follows', async () =
 
   await runReconnectRecovery(ctx.context, viewer.avatar.id);
 
-  const stopped = db.activityCollection.findFirst((q) => q.where({ id: row.id }));
+  const stopped = db.activityCollection.findFirst((query) => query.where({ id: row.id }));
 
   invariant(stopped !== undefined, 'expected the targeted row to survive');
 

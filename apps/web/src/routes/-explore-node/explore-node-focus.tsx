@@ -14,7 +14,7 @@ export function ExploreNodeFocus(props: ExploreNodeFocusProps) {
     if (node !== undefined) {
       setSelectedNode(node);
     }
-  }, [props.nodeID, node]);
+  }, [node]);
 
   return null;
 }

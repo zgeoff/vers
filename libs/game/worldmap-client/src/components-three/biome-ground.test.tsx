@@ -9,7 +9,29 @@ import { setViewport } from '../state/set-viewport';
 import { setWorldRegion } from '../state/set-world-region';
 import { BiomeGround } from './biome-ground';
 
-const ONE_CHUNK_VIEWPORT = { maxCX: CHUNK_SIZE - 1, maxCY: CHUNK_SIZE - 1, minCX: 0, minCY: 0 };
+interface ColorTextureNode {
+  readonly value?: unknown;
+}
+
+function setupTest() {
+  return {
+    getGroundTexture: (mesh: Mesh): DataTexture => {
+      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the material's real type is three's heavily generic node-material type; only this narrow, mutable-by-design slot is read
+      const colorNode = (mesh.material as { colorNode?: ColorTextureNode }).colorNode;
+      const value = colorNode?.value;
+
+      invariant(
+        value instanceof DataTexture,
+        'the ground plane material carries a live DataTexture',
+      );
+
+      return value;
+    },
+    // duck-typed stand-in for `instanceof Mesh`: the test renderer constructs objects from a
+    // different copy of three than this file imports, so `instanceof` never matches
+    isMesh: (object: Object3D): object is Mesh => 'isMesh' in object && object.isMesh === true,
+  };
+}
 
 test('it renders nothing until a seed and a viewport exist', async () => {
   const renderer = await ReactThreeTestRenderer.create(<BiomeGround />);
@@ -20,12 +42,14 @@ test('it renders nothing until a seed and a viewport exist', async () => {
 });
 
 test('it renders a chunk mesh once its tile finishes its progressive build', async () => {
+  const ctx = setupTest();
+
   onTestFinished(() => {
     scatterBuildStats.buildMs = 0;
   });
 
   setWorldRegion('avatar-a', 42, { edges: {}, nodes: {} }, null, new Set(), []);
-  setViewport(ONE_CHUNK_VIEWPORT);
+  setViewport({ maxCX: CHUNK_SIZE - 1, maxCY: CHUNK_SIZE - 1, minCX: 0, minCY: 0 });
 
   const renderer = await ReactThreeTestRenderer.create(<BiomeGround />);
 
@@ -35,13 +59,13 @@ test('it renders a chunk mesh once its tile finishes its progressive build', asy
 
   const plane = renderer.scene.children[0]!.instance;
 
-  invariant(isMesh(plane), 'the rendered child is the chunk tile mesh');
+  invariant(ctx.isMesh(plane), 'the rendered child is the chunk tile mesh');
 
   // one parallelogram quad — two triangles over four vertices — carries the chunk's tile
   expect(plane.geometry.getAttribute('position').count).toBe(4);
   expect(plane.geometry.index?.count).toBe(6);
 
-  const texture = getGroundTexture(plane);
+  const texture = ctx.getGroundTexture(plane);
   const expectedTexels = CHUNK_SIZE * 4;
 
   expect(texture.image.width).toBe(expectedTexels);
@@ -49,12 +73,14 @@ test('it renders a chunk mesh once its tile finishes its progressive build', asy
 });
 
 test('it drops a chunk mesh once a pan carries it out of view and streams in the entered chunk', async () => {
+  const ctx = setupTest();
+
   onTestFinished(() => {
     scatterBuildStats.buildMs = 0;
   });
 
   setWorldRegion('avatar-a', 42, { edges: {}, nodes: {} }, null, new Set(), []);
-  setViewport(ONE_CHUNK_VIEWPORT);
+  setViewport({ maxCX: CHUNK_SIZE - 1, maxCY: CHUNK_SIZE - 1, minCX: 0, minCY: 0 });
 
   const renderer = await ReactThreeTestRenderer.create(<BiomeGround />);
 
@@ -64,7 +90,7 @@ test('it drops a chunk mesh once a pan carries it out of view and streams in the
 
   const firstPlane = renderer.scene.children[0]!.instance;
 
-  invariant(isMesh(firstPlane), 'the rendered child is the first chunk tile mesh');
+  invariant(ctx.isMesh(firstPlane), 'the rendered child is the first chunk tile mesh');
 
   // several chunks away — outside the predictive-prefetch strip — so the departed chunk is never
   // still cached under the new viewport
@@ -85,27 +111,7 @@ test('it drops a chunk mesh once a pan carries it out of view and streams in the
 
   const secondPlane = renderer.scene.children[0]!.instance;
 
-  invariant(isMesh(secondPlane), 'the rendered child is the entered chunk tile mesh');
+  invariant(ctx.isMesh(secondPlane), 'the rendered child is the entered chunk tile mesh');
 
   expect(secondPlane).not.toBe(firstPlane);
 });
-
-// duck-typed stand-in for `instanceof Mesh`: the test renderer constructs objects from a different
-// copy of three than this file imports, so `instanceof` never matches
-function isMesh(object: Object3D): object is Mesh {
-  return 'isMesh' in object && object.isMesh === true;
-}
-
-interface ColorTextureNode {
-  readonly value?: unknown;
-}
-
-function getGroundTexture(mesh: Mesh): DataTexture {
-  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the material's real type is three's heavily generic node-material type; only this narrow, mutable-by-design slot is read
-  const colorNode = (mesh.material as { colorNode?: ColorTextureNode }).colorNode;
-  const value = colorNode?.value;
-
-  invariant(value instanceof DataTexture, 'the ground plane material carries a live DataTexture');
-
-  return value;
-}

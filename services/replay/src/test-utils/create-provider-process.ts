@@ -1,6 +1,6 @@
 import { onTestFinished } from 'bun:test';
 import path from 'node:path';
-import { getTestServiceKeyPair } from '@vers/service-test-utils/bun';
+import { resolveTestServiceKeyPair } from '@vers/service-test-utils/bun';
 import { findListeningPort } from './find-listening-port';
 
 const SERVE_PROVIDER_PATH = path.resolve(import.meta.dirname, '..', 'serve-provider.ts');
@@ -14,9 +14,9 @@ interface ProviderProcess {
 // a subprocess, not an in-process boot: an in-process boot inherits the suite's full ambient env
 // and masks a missing env-wiring bug, which is the regression this fixture exists to catch
 export async function createProviderProcess(engineHash: string): Promise<ProviderProcess> {
-  const keyPair = await getTestServiceKeyPair();
+  const keyPair = await resolveTestServiceKeyPair();
 
-  const proc = Bun.spawn([process.execPath, SERVE_PROVIDER_PATH], {
+  const providerProcess = Bun.spawn([process.execPath, SERVE_PROVIDER_PATH], {
     cwd: REPLAY_DIR,
     env: {
       PORT: '0',
@@ -28,9 +28,9 @@ export async function createProviderProcess(engineHash: string): Promise<Provide
   });
 
   onTestFinished(async () => {
-    proc.kill();
+    providerProcess.kill();
 
-    await proc.exited;
+    await providerProcess.exited;
   });
 
   const collected: Array<string> = [];
@@ -41,7 +41,7 @@ export async function createProviderProcess(engineHash: string): Promise<Provide
   const drainStderr = async (): Promise<void> => {
     const decoder = new TextDecoder();
 
-    for await (const chunk of proc.stderr) {
+    for await (const chunk of providerProcess.stderr) {
       stderrCollected.push(decoder.decode(chunk, { stream: true }));
     }
   };
@@ -56,7 +56,7 @@ export async function createProviderProcess(engineHash: string): Promise<Provide
     let buffer = '';
     let reported = false;
 
-    for await (const chunk of proc.stdout) {
+    for await (const chunk of providerProcess.stdout) {
       const text = decoder.decode(chunk, { stream: true });
 
       collected.push(text);
@@ -94,7 +94,7 @@ export async function createProviderProcess(engineHash: string): Promise<Provide
     }).catch(() => {});
 
     const reportExit = async (): Promise<void> => {
-      const code = await proc.exited;
+      const code = await providerProcess.exited;
 
       // the drain ends when the pipe closes at process death, so the message carries all of stderr
       await stderrDrain.catch(() => {});

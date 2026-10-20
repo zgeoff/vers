@@ -37,7 +37,7 @@ test('it applies a resolved query onto a peer tab', async () => {
 test('it leaves an RSC-keyed query out of the broadcast', async () => {
   const ctx = setupTest();
 
-  ctx.sender.setQueryData([RSC_QUERY_KEY_PREFIX, 'node-codex', 1], { src: 'fragment' });
+  ctx.sender.setQueryData([RSC_QUERY_KEY_PREFIX, 'node-codex', 1], { source: 'fragment' });
   ctx.sender.setQueryData(['avatar', 'progression'], { level: 3 });
 
   await waitFor(() => {
@@ -47,7 +47,7 @@ test('it leaves an RSC-keyed query out of the broadcast', async () => {
   });
 
   expect(
-    ctx.peer.getQueryData<{ src: string }>([RSC_QUERY_KEY_PREFIX, 'node-codex', 1]),
+    ctx.peer.getQueryData<{ source: string }>([RSC_QUERY_KEY_PREFIX, 'node-codex', 1]),
   ).toBeUndefined();
 });
 
@@ -55,7 +55,7 @@ test('it keeps a payload structured clone rejects inside the sending tab', () =>
   const ctx = setupTest();
 
   expect(() => {
-    ctx.sender.setQueryData(['proxied'], { src: new Proxy({ node: 1 }, {}) });
+    ctx.sender.setQueryData(['proxied'], { source: new Proxy({ node: 1 }, {}) });
   }).not.toThrow();
 });
 
@@ -135,13 +135,13 @@ test('it opens no channel where there is no window to mirror onto', () => {
   const originalBroadcastChannel = globalThis.BroadcastChannel;
   let constructed = 0;
 
-  globalThis.BroadcastChannel = class extends originalBroadcastChannel {
-    constructor(name: string) {
-      super(name);
-
+  globalThis.BroadcastChannel = new Proxy(originalBroadcastChannel, {
+    construct(target, argumentList, newTarget) {
       constructed += 1;
-    }
-  };
+
+      return Reflect.construct(target, argumentList, newTarget);
+    },
+  });
 
   Reflect.deleteProperty(globalThis, 'window');
 

@@ -24,7 +24,7 @@ export async function createEmailService(
 
   const service = await createService({
     allowedIssuers: ['app-web'],
-    buildRouter: (runtime) => {
+    createRouter: (runtime) => {
       queue = createEmailJobQueue({
         connectionString: config.queueConnectionString ?? runtime.env.DATABASE_URL,
         emailClient: createEmailClient({
@@ -52,7 +52,7 @@ export async function createEmailService(
     name: 'service-email',
   });
 
-  invariant(queue, 'buildRouter did not run before createService resolved');
+  invariant(queue, 'createRouter did not run before createService resolved');
 
   return { queue, service };
 }

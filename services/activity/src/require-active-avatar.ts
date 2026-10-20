@@ -1,4 +1,4 @@
-import { findActiveAvatar, findLiveActivityAvatar, upsertActiveAvatar } from '@vers/active-avatar';
+import { readActiveAvatar, readLiveActivityAvatar, upsertActiveAvatar } from '@vers/active-avatar';
 import type { DB } from '@vers/db';
 import { sql } from 'kysely';
 import type { Kysely } from 'kysely';
@@ -17,10 +17,10 @@ export async function requireActiveAvatar(
 ): Promise<void> {
   await sql`select pg_advisory_xact_lock(hashtext(${userID}))`.execute(trx);
 
-  const selection = await findActiveAvatar(trx, userID);
+  const selection = await readActiveAvatar(trx, userID);
 
   if (selection === undefined) {
-    const liveAvatar = await findLiveActivityAvatar(trx, userID);
+    const liveAvatar = await readLiveActivityAvatar(trx, userID);
 
     if (liveAvatar !== null && liveAvatar.id !== avatarID) {
       recordAvatarNotActiveRejection();

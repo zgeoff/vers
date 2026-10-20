@@ -65,7 +65,7 @@ test('it reports invalid credentials for the wrong current password before gatin
   });
 
   expect(
-    db.pendingTransactionCollection.findFirst((q) => q.where({ target: signedIn.userID })),
+    db.pendingTransactionCollection.findFirst((query) => query.where({ target: signedIn.userID })),
   ).toBeUndefined();
 });
 
@@ -87,7 +87,9 @@ test('it changes the password and redirects to settings for a caller with no 2FA
 
   expect(promise).rejects.toMatchObject({ options: { to: '/settings' } });
 
-  expect(db.userCollection.findFirst((q) => q.where({ id: signedIn.userID }))).toMatchObject({
+  expect(
+    db.userCollection.findFirst((query) => query.where({ id: signedIn.userID })),
+  ).toMatchObject({
     password: 'new-password123',
   });
 });

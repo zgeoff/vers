@@ -6,7 +6,7 @@ import { removeActivityStart } from '../submission/remove-activity-start';
 import { removeLastStartedActivity } from '../submission/remove-last-started-activity';
 import { writeActivityStart } from '../submission/write-activity-start';
 import { writeLastStartedActivity } from '../submission/write-last-started-activity';
-import { buildActivityStart } from './build-activity-start';
+import { loadActivityStart } from './load-activity-start';
 import { resetSimulation } from './reset-simulation';
 import type { FlowSignals, WorkerContext } from './types';
 
@@ -23,7 +23,7 @@ export async function runContinuation(
 
   // Keyed by the terminal row it succeeds, so a row this flow already minted is recognisable to a
   // later recovery rather than delivered twice under two different keys.
-  const row = await buildActivityStart(context, {
+  const row = await loadActivityStart(context, {
     avatarID: activity.avatarID,
     predecessorActivityID: activity.id,
     scopeID: activity.scopeID,
@@ -71,6 +71,14 @@ export async function runContinuation(
   }
 }
 
+function stopAndReset(context: WorkerContext, simulation: Simulation): void {
+  simulation.stopActivity();
+
+  if (context.getSimulation() === simulation) {
+    resetSimulation(context);
+  }
+}
+
 async function removeMintedRow(row: Readonly<ActivityData>): Promise<void> {
   await removeActivityStart(row.id);
 
@@ -84,14 +92,6 @@ async function removeMintedRow(row: Readonly<ActivityData>): Promise<void> {
     avatarID: row.avatarID,
     lastActivityID: row.predecessorActivityID,
   });
-}
-
-function stopAndReset(context: WorkerContext, simulation: Simulation): void {
-  simulation.stopActivity();
-
-  if (context.getSimulation() === simulation) {
-    resetSimulation(context);
-  }
 }
 
 async function startContinuationFrom(

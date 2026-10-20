@@ -27,7 +27,6 @@ import { writeFailureActionCache } from '../submission/write-failure-action-cach
 import { writePendingStopIntent } from '../submission/write-pending-stop-intent';
 import { writeQueuedCheckpoint } from '../submission/write-queued-checkpoint';
 import { createStubSubmitter } from '../test-utils/create-stub-submitter';
-import type { StubWorkerContext } from '../test-utils/create-stub-worker-context';
 import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
 import { createMockCheckpointBatchEntry } from '../test-utils/factories/create-mock-checkpoint-batch-entry';
 import { createMockStartedCheckpoint } from '../test-utils/factories/create-mock-started-checkpoint';
@@ -37,22 +36,6 @@ import { sentryHandle } from './sentry-handle';
 import { startErrorReporting } from './start-error-reporting';
 import type { WorkerContext } from './types';
 import type { WorkerMessage } from './worker-to-client-message-schema';
-
-function collectBroadcasts(context: StubWorkerContext) {
-  return {
-    port: {
-      postMessage: (message: WorkerMessage) => {
-        context.broadcast(message);
-      },
-    },
-    received: context.getBroadcasts(),
-    waitForMessages: async (count: number) => {
-      await waitFor(() => {
-        expect(context.getBroadcasts().length).toBeGreaterThanOrEqual(count);
-      });
-    },
-  };
-}
 
 interface SetupTestConfig {
   readonly failureAction?: ActivityFailureAction;
@@ -80,7 +63,19 @@ async function setupTest(config: Readonly<SetupTestConfig>) {
     ...(config.remainingBudgetMs !== undefined && { remainingBudgetMs: config.remainingBudgetMs }),
   });
 
-  const connection = collectBroadcasts(context);
+  const connection = {
+    port: {
+      postMessage: (message: WorkerMessage) => {
+        context.broadcast(message);
+      },
+    },
+    received: context.getBroadcasts(),
+    waitForMessages: async (count: number) => {
+      await waitFor(() => {
+        expect(context.getBroadcasts().length).toBeGreaterThanOrEqual(count);
+      });
+    },
+  };
 
   return { client, connection, context, flush: () => capturedFlush?.() ?? Promise.resolve() };
 }
@@ -144,7 +139,9 @@ test('it delivers a queued row for the resync-determined latest activity rather 
 
   // the resync's own drain delivered the determined latest activity's queued row over the
   // network rather than the sweep silently discarding it
-  const landed = db.checkpointCollection.findMany((q) => q.where({ activityID: activity.id }));
+  const landed = db.checkpointCollection.findMany((query) =>
+    query.where({ activityID: activity.id }),
+  );
 
   expect(landed).toHaveLength(1);
 
@@ -347,7 +344,9 @@ test('it reconstructs and installs a live simulation mid-stream, registering fro
   await ctx.context.getSubmitter().submit(activity.id, checkpoint);
   await ctx.flush();
 
-  const landed = db.checkpointCollection.findMany((q) => q.where({ activityID: activity.id }));
+  const landed = db.checkpointCollection.findMany((query) =>
+    query.where({ activityID: activity.id }),
+  );
 
   expect(landed.map((row) => row.payload.seed)).toStrictEqual([lastConfirmed.nextSeed]);
 });
@@ -439,8 +438,8 @@ test('it fast-forwards a short gap, broadcasts progress and final tallies, and i
 
   // the completed attempt's terminal batch closed the seeded row, so the backend holds exactly
   // one fresh active continuation for the avatar
-  const minted = db.activityCollection.findFirst((q) =>
-    q.where({ avatarID: viewer.avatar.id, status: 'active' }),
+  const minted = db.activityCollection.findFirst((query) =>
+    query.where({ avatarID: viewer.avatar.id, status: 'active' }),
   );
 
   invariant(minted !== undefined, 'expected the fast-forward to mint an active continuation');
@@ -464,7 +463,9 @@ test('it fast-forwards a short gap, broadcasts progress and final tallies, and i
   await ctx.context.getSubmitter().submit(minted.id, checkpoint);
   await ctx.flush();
 
-  const landed = db.checkpointCollection.findMany((q) => q.where({ activityID: minted.id }));
+  const landed = db.checkpointCollection.findMany((query) =>
+    query.where({ activityID: minted.id }),
+  );
 
   expect(landed).toHaveLength(1);
 });
@@ -512,7 +513,9 @@ test('it reconstructs a fast-forward report left mid-stream and registers from i
   // the running seed the reconstructed cursor carries forward from the confirmed started
   // checkpoint — proves the registered cursor chains onto the reconstruction, not a fresh
   // checkpoint-0 sim
-  const landed = db.checkpointCollection.findMany((q) => q.where({ activityID: activity.id }));
+  const landed = db.checkpointCollection.findMany((query) =>
+    query.where({ activityID: activity.id }),
+  );
 
   expect(landed.map((row) => row.payload.seed)).toMatchInlineSnapshot(`
     [
@@ -611,7 +614,9 @@ test('it flushes a dirty local failure action to the server during resync, clear
     failureAction: ActivityFailureAction.Retry,
   });
 
-  const updatedAvatar = db.avatarCollection.findFirst((q) => q.where({ id: viewer.avatar.id }));
+  const updatedAvatar = db.avatarCollection.findFirst((query) =>
+    query.where({ id: viewer.avatar.id }),
+  );
 
   invariant(updatedAvatar !== undefined, 'expected the seeded avatar to still exist');
 
@@ -695,7 +700,7 @@ test('it stops back an attach-live row when a stop lands during its registration
 
   expect(context.getSimulation().activity).toBeNull();
 
-  const stoppedBack = db.activityCollection.findFirst((q) => q.where({ id: row.id }));
+  const stoppedBack = db.activityCollection.findFirst((query) => query.where({ id: row.id }));
 
   invariant(stoppedBack !== undefined, 'expected the targeted row to survive');
 
@@ -731,18 +736,18 @@ test('it reports a fault to the error backend and broadcasts an unreconstructed 
     },
   });
 
-  const connection = collectBroadcasts(context);
-
   await runResyncTurn(context, 'avatar-with-held-tail', false);
 
   // posted on the worker's own port after the handler settles, this arrives after anything the
   // handler broadcast on the same channel — a single failed status ahead of it proves nothing
   // else rode along
-  connection.port.postMessage({ type: WorkerMessageType.WriterReady });
+  context.broadcast({ type: WorkerMessageType.WriterReady });
 
-  await connection.waitForMessages(2);
+  await waitFor(() => {
+    expect(context.getBroadcasts().length).toBeGreaterThanOrEqual(2);
+  });
 
-  expect(connection.received).toStrictEqual([
+  expect(context.getBroadcasts()).toStrictEqual([
     {
       status: { avatarID: 'avatar-with-held-tail', kind: 'unreconstructed' },
       type: WorkerMessageType.ResyncStatus,
@@ -760,9 +765,11 @@ test('it reports a fault to the error backend and broadcasts an unreconstructed 
   // same avatar actually runs rather than being dropped, broadcasting its own status
   await runResyncTurn(context, 'avatar-with-held-tail', false);
 
-  await connection.waitForMessages(3);
+  await waitFor(() => {
+    expect(context.getBroadcasts().length).toBeGreaterThanOrEqual(3);
+  });
 
-  expect(connection.received).toStrictEqual([
+  expect(context.getBroadcasts()).toStrictEqual([
     {
       status: { avatarID: 'avatar-with-held-tail', kind: 'unreconstructed' },
       type: WorkerMessageType.ResyncStatus,
@@ -870,7 +877,7 @@ test('it delivers the held stop before planning, leaving the stopped run cleared
   await writePendingStopIntent({ activityID: row.id, avatarID: viewer.avatar.id });
   await runResyncTurn(ctx.context, viewer.avatar.id, false);
 
-  const stopped = db.activityCollection.findFirst((q) => q.where({ id: row.id }));
+  const stopped = db.activityCollection.findFirst((query) => query.where({ id: row.id }));
 
   invariant(stopped !== undefined, 'expected the targeted row to survive');
 
@@ -1040,7 +1047,6 @@ test('it holds a claiming request behind an in-flight resync and claims once it 
     },
   });
 
-  const connection = collectBroadcasts(context);
   const resume = mock<(input: unknown) => void>();
 
   server.use(
@@ -1079,9 +1085,11 @@ test('it holds a claiming request behind an in-flight resync and claims once it 
   expect(context.getWriterDisplacedActivityID()).toBeNull();
 
   // the claiming install resolved the recorded displacement and told every tab
-  await connection.waitForMessages(1);
+  await waitFor(() => {
+    expect(context.getBroadcasts().length).toBeGreaterThanOrEqual(1);
+  });
 
-  expect(connection.received).toStrictEqual([
+  expect(context.getBroadcasts()).toStrictEqual([
     { activityID: null, type: WorkerMessageType.WriterDisplaced },
   ]);
 });

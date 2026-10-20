@@ -1,5 +1,5 @@
 import { createDB } from '@vers/db';
-import { findSimVersion } from '@vers/sim-registry';
+import { readSimVersion } from '@vers/sim-registry';
 import type { SimVersionRow } from '@vers/sim-registry';
 import { requireEnvVar } from '../utils/require-env-var';
 
@@ -11,7 +11,7 @@ export async function readSimVersionRow(engineHash: string): Promise<SimVersionR
 
   const db = createDB({ databaseURL });
 
-  const row = await findSimVersion(db, engineHash);
+  const row = await readSimVersion(db, engineHash);
 
   await db.destroy();
 

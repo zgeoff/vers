@@ -37,7 +37,7 @@ export async function refreshTokens(
   }
 
   if (row.previousRefreshToken !== null && opts.input.refreshToken === row.previousRefreshToken) {
-    const graceReply = await buildGraceReply(deps, row);
+    const graceReply = await mintGraceReply(deps, row);
 
     if (graceReply !== null) {
       recordRotationGraceReply();
@@ -112,7 +112,7 @@ export async function refreshTokens(
     }
 
     if (current !== undefined && current.previousRefreshToken === opts.input.refreshToken) {
-      const graceReply = await buildGraceReply(deps, current);
+      const graceReply = await mintGraceReply(deps, current);
 
       if (graceReply !== null) {
         recordRotationGraceReply();
@@ -129,7 +129,7 @@ export async function refreshTokens(
   return { accessToken: rotatedTokens[1], refreshToken: rotatedTokens[0] };
 }
 
-async function buildGraceReply(
+async function mintGraceReply(
   deps: SessionSigningDeps,
   row: Selectable<Sessions>,
 ): Promise<null | { accessToken: string; refreshToken: string }> {

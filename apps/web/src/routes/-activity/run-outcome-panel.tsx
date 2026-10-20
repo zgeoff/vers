@@ -17,23 +17,6 @@ const panel = css({
   padding: '4',
 });
 
-const rewardList = css({
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '2',
-});
-
-const rewardItem = css({
-  backgroundColor: 'bg.panelElevated',
-  padding: '2',
-});
-
-const actions = css({
-  display: 'flex',
-  flexWrap: 'wrap',
-  gap: '3',
-});
-
 interface RunOutcomePanelProps {
   readonly isRetryPending?: boolean;
   readonly onBackToMap: () => void;
@@ -82,6 +65,12 @@ export function RunOutcomePanel(props: Readonly<RunOutcomePanelProps>) {
   );
 }
 
+const actions = css({
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: '3',
+});
+
 function renderActions(props: Readonly<RunOutcomePanelProps>) {
   return (
     <div className={actions}>
@@ -102,6 +91,17 @@ interface RewardsState {
   readonly isPending: boolean;
   readonly items: RevealedRewardsPage['items'];
 }
+
+const rewardList = css({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '2',
+});
+
+const rewardItem = css({
+  backgroundColor: 'bg.panelElevated',
+  padding: '2',
+});
 
 function renderRewards(state: Readonly<RewardsState>) {
   if (state.isPending) {

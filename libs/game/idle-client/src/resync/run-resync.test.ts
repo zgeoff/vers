@@ -38,7 +38,7 @@ test('it resolves to none for an avatar with no activity history', async () => {
 
   const result = await runResync({
     avatarID: viewer.avatar.id,
-    buildSimulationInput: (started) =>
+    loadSimulationInput: (started) =>
       Promise.resolve({
         activity: createMockActivityInput({
           encounter: {
@@ -73,7 +73,7 @@ test('it rejects the progress fetch when the given signal is already aborted', a
   await expect(
     runResync({
       avatarID: viewer.avatar.id,
-      buildSimulationInput: (started) =>
+      loadSimulationInput: (started) =>
         Promise.resolve({
           activity: createMockActivityInput({
             encounter: {
@@ -110,7 +110,7 @@ test('it rebases from the stop index without simulating when the activity is cap
 
   const result = await runResync({
     avatarID: viewer.avatar.id,
-    buildSimulationInput: (started) =>
+    loadSimulationInput: (started) =>
       Promise.resolve({
         activity: createMockActivityInput({
           encounter: {
@@ -160,7 +160,7 @@ test('it attaches live when the gap is negligible, leaving the submitter untouch
 
   const result = await runResync({
     avatarID: viewer.avatar.id,
-    buildSimulationInput: (started) =>
+    loadSimulationInput: (started) =>
       Promise.resolve({
         activity: createMockActivityInput({
           encounter: {
@@ -207,7 +207,7 @@ test('it fast-forwards a real offline gap and reports the outcome', async () => 
 
   const result = await runResync({
     avatarID: viewer.avatar.id,
-    buildSimulationInput: (started) =>
+    loadSimulationInput: (started) =>
       Promise.resolve({
         activity: createMockActivityInput({
           encounter: {
@@ -267,7 +267,7 @@ test('it awaits onProgressFetched with the settled progress before planning a fa
 
   const resync = runResync({
     avatarID: viewer.avatar.id,
-    buildSimulationInput: (started) =>
+    loadSimulationInput: (started) =>
       Promise.resolve({
         activity: createMockActivityInput({
           encounter: {
@@ -329,7 +329,7 @@ test('it delivers checkpoints a previous worker left queued and plans against th
 
   const result = await runResync({
     avatarID: viewer.avatar.id,
-    buildSimulationInput: (started) =>
+    loadSimulationInput: (started) =>
       Promise.resolve({
         activity: createMockActivityInput({
           encounter: {
@@ -352,7 +352,9 @@ test('it delivers checkpoints a previous worker left queued and plans against th
 
   // the stranded rows landed as one append onto the seeded head, freshening the row — so the
   // refetched gap is gone and the plan attaches live at the head they advanced
-  const landed = db.checkpointCollection.findMany((q) => q.where({ activityID: activity.id }));
+  const landed = db.checkpointCollection.findMany((query) =>
+    query.where({ activityID: activity.id }),
+  );
 
   expect(landed.map((row) => row.version)).toStrictEqual([6, 7]);
   expect(result.plan).toMatchObject({ context: { appendedHead: 7 }, kind: 'attach-live' });
@@ -388,7 +390,7 @@ test('it refuses to plan while stranded checkpoints cannot be delivered', async 
   expect(
     runResync({
       avatarID: viewer.avatar.id,
-      buildSimulationInput: (started) =>
+      loadSimulationInput: (started) =>
         Promise.resolve({
           activity: createMockActivityInput({
             encounter: {
@@ -425,7 +427,7 @@ test('it downgrades a fast-forward to attach-live when the activity is already s
 
   const result = await runResync({
     avatarID: viewer.avatar.id,
-    buildSimulationInput: (started) =>
+    loadSimulationInput: (started) =>
       Promise.resolve({
         activity: createMockActivityInput({
           encounter: {
@@ -471,7 +473,7 @@ test('it leaves a live activity queue untouched instead of draining it', async (
 
   const result = await runResync({
     avatarID: viewer.avatar.id,
-    buildSimulationInput: (started) =>
+    loadSimulationInput: (started) =>
       Promise.resolve({
         activity: createMockActivityInput({
           encounter: {
@@ -534,7 +536,7 @@ test('it resolves active-elsewhere without claiming when another session holds t
 
   const result = await runResync({
     avatarID: viewer.avatar.id,
-    buildSimulationInput: (started) =>
+    loadSimulationInput: (started) =>
       Promise.resolve({
         activity: createMockActivityInput({
           encounter: {
@@ -594,7 +596,7 @@ test('it takes over the writer before planning when claiming a run another sessi
 
   const result = await runResync({
     avatarID: viewer.avatar.id,
-    buildSimulationInput: (started) =>
+    loadSimulationInput: (started) =>
       Promise.resolve({
         activity: createMockActivityInput({
           encounter: {
@@ -644,7 +646,7 @@ test('it skips the claim when this session already holds the writer', async () =
 
   const result = await runResync({
     avatarID: viewer.avatar.id,
-    buildSimulationInput: (started) =>
+    loadSimulationInput: (started) =>
       Promise.resolve({
         activity: createMockActivityInput({
           encounter: {
@@ -707,7 +709,7 @@ test('it refetches after a claim that reveals appends the fetch missed', async (
 
   const result = await runResync({
     avatarID: viewer.avatar.id,
-    buildSimulationInput: (started) =>
+    loadSimulationInput: (started) =>
       Promise.resolve({
         activity: createMockActivityInput({
           encounter: {
@@ -772,7 +774,7 @@ test('it plans the terminal outcome without claiming when the run ends before th
 
   const result = await runResync({
     avatarID: viewer.avatar.id,
-    buildSimulationInput: (started) =>
+    loadSimulationInput: (started) =>
       Promise.resolve({
         activity: createMockActivityInput({
           encounter: {
@@ -840,7 +842,7 @@ test('it drains a stale fork before claiming, so the fork lands as an eviction, 
 
   const result = await runResync({
     avatarID: viewer.avatar.id,
-    buildSimulationInput: (started) =>
+    loadSimulationInput: (started) =>
       Promise.resolve({
         activity: createMockActivityInput({
           encounter: {
@@ -900,7 +902,7 @@ test('it reports a lost writer for a live run another session took, then resolve
 
   const result = await runResync({
     avatarID: viewer.avatar.id,
-    buildSimulationInput: (started) =>
+    loadSimulationInput: (started) =>
       Promise.resolve({
         activity: createMockActivityInput({
           encounter: {
@@ -965,7 +967,7 @@ test('it yields to a third session that claims over this one before the refetch'
 
   const result = await runResync({
     avatarID: viewer.avatar.id,
-    buildSimulationInput: (started) =>
+    loadSimulationInput: (started) =>
       Promise.resolve({
         activity: createMockActivityInput({
           encounter: {

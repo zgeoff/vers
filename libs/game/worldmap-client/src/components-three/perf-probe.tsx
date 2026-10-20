@@ -28,10 +28,10 @@ export function PerfProbe() {
     // three's own animation loop resets `info.render` on its own rAF cadence, which races the R3F
     // loop that drives the render here and can zero the counts before this probe reads them, so the
     // probe owns the reset per tick; the renderer outlives scene swaps, so cleanup restores it
-    renderer.info.autoReset = false;
+    setInfoAutoReset(renderer, false);
 
     return () => {
-      renderer.info.autoReset = previousAutoReset;
+      setInfoAutoReset(renderer, previousAutoReset);
     };
   }, [renderer]);
 
@@ -72,4 +72,8 @@ export function PerfProbe() {
   });
 
   return null;
+}
+
+function setInfoAutoReset(renderer: ReturnType<typeof useRenderer>, autoReset: boolean): void {
+  renderer.info.autoReset = autoReset;
 }

@@ -34,41 +34,45 @@ import type { WorkerRuntime } from './create-worker-runtime';
 import { sentryHandle } from './sentry-handle';
 import { startErrorReporting } from './start-error-reporting';
 
-function collectBroadcasts() {
-  const channel = new BroadcastChannel(WORKER_TO_CLIENT_CHANNEL);
-
-  onTestFinished(() => {
-    channel.close();
-  });
-
-  const received: Array<unknown> = [];
-
-  channel.addEventListener('message', (event: MessageEvent<unknown>) => {
-    received.push(event.data);
-  });
-
+function setupTest() {
   return {
-    received,
-    waitForMessages: async (count: number) => {
-      await waitFor(() => {
-        expect(received.length).toBeGreaterThanOrEqual(count);
+    collectBroadcasts: () => {
+      const channel = new BroadcastChannel(WORKER_TO_CLIENT_CHANNEL);
+
+      onTestFinished(() => {
+        channel.close();
       });
+
+      const received: Array<unknown> = [];
+
+      channel.addEventListener('message', (event: MessageEvent<unknown>) => {
+        received.push(event.data);
+      });
+
+      return {
+        received,
+        waitForMessages: async (count: number) => {
+          await waitFor(() => {
+            expect(received.length).toBeGreaterThanOrEqual(count);
+          });
+        },
+      };
+    },
+    createConnectedTestClient: (runtime: WorkerRuntime) => {
+      const testClient = createTestClient();
+
+      runtime.handleConnect(new MessageEvent('connect', { ports: [testClient.port] }));
+
+      return testClient.client;
     },
   };
-}
-
-function createConnectedTestClient(runtime: WorkerRuntime) {
-  const testClient = createTestClient();
-
-  runtime.handleConnect(new MessageEvent('connect', { ports: [testClient.port] }));
-
-  return testClient.client;
 }
 
 test('it answers initialize with the current state', async () => {
   using runtime = createWorkerRuntime();
 
-  const client = createConnectedTestClient(runtime);
+  const ctx = setupTest();
+  const client = ctx.createConnectedTestClient(runtime);
 
   const result = await client.initialize({});
 
@@ -85,7 +89,8 @@ test('it seeds the boot state from the device-local failure-action cache before 
 
   using runtime = createWorkerRuntime();
 
-  const client = createConnectedTestClient(runtime);
+  const ctx = setupTest();
+  const client = ctx.createConnectedTestClient(runtime);
 
   const result = await client.initialize({});
 
@@ -111,12 +116,15 @@ test('it retains the cached dirty flag across boot so the next resync flushes it
 
   using runtime = createWorkerRuntime({ client });
 
-  const testClient = createConnectedTestClient(runtime);
+  const ctx = setupTest();
+  const testClient = ctx.createConnectedTestClient(runtime);
 
   await testClient.reportOnline({ avatarID: viewer.avatar.id, claim: false });
 
   await waitFor(() => {
-    const updatedAvatar = db.avatarCollection.findFirst((q) => q.where({ id: viewer.avatar.id }));
+    const updatedAvatar = db.avatarCollection.findFirst((query) =>
+      query.where({ id: viewer.avatar.id }),
+    );
 
     expect(updatedAvatar?.failureAction).toBe('retry');
   });
@@ -143,8 +151,9 @@ test('it broadcasts a simulation update once a started run installs', async () =
 
   using runtime = createWorkerRuntime({ bundledEngineHash: 'test_engine_hash', client });
 
-  const broadcasts = collectBroadcasts();
-  const testClient = createConnectedTestClient(runtime);
+  const ctx = setupTest();
+  const broadcasts = ctx.collectBroadcasts();
+  const testClient = ctx.createConnectedTestClient(runtime);
 
   await testClient.initialize({});
 
@@ -202,8 +211,9 @@ test('it reports an unreadable journal once and still tells the tabs the stream 
     },
   });
 
-  const broadcasts = collectBroadcasts();
-  const testClient = createConnectedTestClient(runtime);
+  const ctx = setupTest();
+  const broadcasts = ctx.collectBroadcasts();
+  const testClient = ctx.createConnectedTestClient(runtime);
 
   await testClient.initialize({});
 
@@ -227,9 +237,6 @@ test('it reports an unreadable journal once and still tells the tabs the stream 
   expect(recorded).toHaveLength(1);
   expect(recorded[0]?.tags).toMatchObject({ site: 'journal-write' });
 });
-
-// several tick periods, so a tick loop still running would have produced another broadcast
-const SEVERAL_TICK_PERIODS_MS = 300;
 
 test('it simulates nothing more once the journal cannot be read', async () => {
   const viewer = await createViewer();
@@ -256,8 +263,9 @@ test('it simulates nothing more once the journal cannot be read', async () => {
     },
   });
 
-  const broadcasts = collectBroadcasts();
-  const testClient = createConnectedTestClient(runtime);
+  const ctx = setupTest();
+  const broadcasts = ctx.collectBroadcasts();
+  const testClient = ctx.createConnectedTestClient(runtime);
 
   await testClient.initialize({});
 
@@ -277,12 +285,14 @@ test('it simulates nothing more once the journal cannot be read', async () => {
 
   const settled = broadcasts.received.length;
 
+  // the timeout spans several tick periods, so a tick loop still running would have produced
+  // another broadcast
   await expect(
     waitFor(
       () => {
         expect(broadcasts.received.length).toBeGreaterThan(settled);
       },
-      { timeoutMs: SEVERAL_TICK_PERIODS_MS },
+      { timeoutMs: 300 },
     ),
   ).toReject();
 });
@@ -290,7 +300,8 @@ test('it simulates nothing more once the journal cannot be read', async () => {
 test('it closes the connection on disconnect so no further call it makes is answered', async () => {
   using runtime = createWorkerRuntime();
 
-  const client = createConnectedTestClient(runtime);
+  const ctx = setupTest();
+  const client = ctx.createConnectedTestClient(runtime);
 
   await client.disconnect({});
 
@@ -376,7 +387,8 @@ test('it resumes into a fresh row once a reconnect drains a held terminal append
     now: clock.now,
   });
 
-  const testClient = createConnectedTestClient(runtime);
+  const ctx = setupTest();
+  const testClient = ctx.createConnectedTestClient(runtime);
 
   await testClient.initialize({});
   await testClient.reportOnline({ avatarID: viewer.avatar.id, claim: false });
@@ -426,8 +438,9 @@ test('it recovers a stop parked offline once a flush answer proves the connectio
 
   using runtime = createWorkerRuntime({ client, now: clock.now });
 
-  const broadcasts = collectBroadcasts();
-  const testClient = createConnectedTestClient(runtime);
+  const ctx = setupTest();
+  const broadcasts = ctx.collectBroadcasts();
+  const testClient = ctx.createConnectedTestClient(runtime);
 
   await testClient.initialize({});
   await testClient.reportOnline({ avatarID: viewer.avatar.id, claim: true });
@@ -462,7 +475,7 @@ test('it recovers a stop parked offline once a flush answer proves the connectio
       // re-armed every poll until the jump lands on a live tick and the terminal append flushes
       clock.jump(65_000);
 
-      const stopped = db.activityCollection.findFirst((q) => q.where({ id: other.id }));
+      const stopped = db.activityCollection.findFirst((query) => query.where({ id: other.id }));
 
       invariant(stopped !== undefined, "expected the parked stop's row to survive");
 
@@ -517,7 +530,8 @@ test('it cancels an in-flight resync read on stop() without stopping the row bac
 
   using runtime = createWorkerRuntime({ client });
 
-  const testClient = createConnectedTestClient(runtime);
+  const ctx = setupTest();
+  const testClient = ctx.createConnectedTestClient(runtime);
 
   await testClient.initialize({});
 
@@ -541,7 +555,7 @@ test('it cancels an in-flight resync read on stop() without stopping the row bac
   expect(status.kind).toBe('failed');
   expect(recorded).toStrictEqual([]);
 
-  const row = db.activityCollection.findFirst((q) => q.where({ id: activity.id }));
+  const row = db.activityCollection.findFirst((query) => query.where({ id: activity.id }));
 
   invariant(row !== undefined, 'expected the seeded row to survive shutdown');
 
@@ -565,11 +579,12 @@ test('it resets the displaced simulation and broadcasts WriterDisplaced on a ses
     startedAt: new Date(),
   });
 
-  const broadcasts = collectBroadcasts();
+  const ctx = setupTest();
+  const broadcasts = ctx.collectBroadcasts();
 
   using runtime = createWorkerRuntime({ client });
 
-  const testClient = createConnectedTestClient(runtime);
+  const testClient = ctx.createConnectedTestClient(runtime);
 
   await testClient.initialize({});
 
@@ -621,7 +636,8 @@ test('it resets the displaced simulation and broadcasts WriterDisplaced on a ses
 test('it answers a debug snapshot that records a connectivity loss the platform reports', async () => {
   using runtime = createWorkerRuntime();
 
-  const client = createConnectedTestClient(runtime);
+  const ctx = setupTest();
+  const client = ctx.createConnectedTestClient(runtime);
 
   self.dispatchEvent(new Event('offline'));
 
@@ -657,7 +673,8 @@ test('it records the resync a fresh worker runs ahead of its first start in the 
 
   using runtime = createWorkerRuntime({ bundledEngineHash: 'test_engine_hash', client });
 
-  const testClient = createConnectedTestClient(runtime);
+  const ctx = setupTest();
+  const testClient = ctx.createConnectedTestClient(runtime);
 
   await testClient.initialize({});
 
@@ -698,7 +715,8 @@ test('it runs twenty fixed steps per real-time step at speed 20 and writes the c
 
   using runtime = createWorkerRuntime({ client, now: clock.now });
 
-  const testClient = createConnectedTestClient(runtime);
+  const ctx = setupTest();
+  const testClient = ctx.createConnectedTestClient(runtime);
 
   await testClient.initialize({});
 
@@ -736,7 +754,7 @@ test('it runs twenty fixed steps per real-time step at speed 20 and writes the c
       // one landing carries the run past its 60s completion
       clock.jump(2250);
 
-      const stopped = db.activityCollection.findFirst((q) => q.where({ id: activity.id }));
+      const stopped = db.activityCollection.findFirst((query) => query.where({ id: activity.id }));
 
       invariant(stopped !== undefined, 'expected the attached row to survive the run');
 
@@ -749,8 +767,8 @@ test('it runs twenty fixed steps per real-time step at speed 20 and writes the c
   );
 
   const stream = db.checkpointCollection
-    .findMany((q) => q.where({ activityID: activity.id }))
-    .toSorted((a, b) => a.version - b.version)
+    .findMany((query) => query.where({ activityID: activity.id }))
+    .toSorted((left, right) => left.version - right.version)
     .map((checkpoint) => ({
       chainIndex: checkpoint.payload.chainIndex,
       hash: checkpoint.hash,
@@ -950,7 +968,8 @@ test('it writes the same checkpoint stream at real time as a speed-20 run on the
 
   using runtime = createWorkerRuntime({ client, now: clock.now });
 
-  const testClient = createConnectedTestClient(runtime);
+  const ctx = setupTest();
+  const testClient = ctx.createConnectedTestClient(runtime);
 
   await testClient.initialize({});
   await testClient.reportOnline({ avatarID: viewer.avatar.id, claim: true });
@@ -980,7 +999,7 @@ test('it writes the same checkpoint stream at real time as a speed-20 run on the
       // re-armed every poll until the jump lands on a live tick and the terminal append flushes
       clock.jump(45_000);
 
-      const stopped = db.activityCollection.findFirst((q) => q.where({ id: activity.id }));
+      const stopped = db.activityCollection.findFirst((query) => query.where({ id: activity.id }));
 
       invariant(stopped !== undefined, 'expected the attached row to survive the run');
 
@@ -993,8 +1012,8 @@ test('it writes the same checkpoint stream at real time as a speed-20 run on the
   );
 
   const stream = db.checkpointCollection
-    .findMany((q) => q.where({ activityID: activity.id }))
-    .toSorted((a, b) => a.version - b.version)
+    .findMany((query) => query.where({ activityID: activity.id }))
+    .toSorted((left, right) => left.version - right.version)
     .map((checkpoint) => ({
       chainIndex: checkpoint.payload.chainIndex,
       hash: checkpoint.hash,

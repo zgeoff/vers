@@ -21,7 +21,7 @@ import { createStubWorkerContext } from '../test-utils/create-stub-worker-contex
 import { createMockNodeSeed } from '../test-utils/factories/create-mock-node-seed';
 import { createMockProgressCheckpoint } from '../test-utils/factories/create-mock-progress-checkpoint';
 import { WorkerMessageType } from '../types';
-import { buildActivityStart } from './build-activity-start';
+import { loadActivityStart } from './load-activity-start';
 import { runResyncFlow } from './run-resync-flow';
 import type { FlowSignals } from './types';
 
@@ -131,8 +131,8 @@ test('it leaves the avatar idle with no live attach after an offline gap aborts 
   // the abort mints its final continuation's row server-side exactly like any other, but nothing
   // ever attaches it live — left active it would sit ready for the very next resync to revive
   expect(
-    db.activityCollection.findFirst((q) =>
-      q.where({ avatarID: viewer.avatar.id, status: 'active' }),
+    db.activityCollection.findFirst((query) =>
+      query.where({ avatarID: viewer.avatar.id, status: 'active' }),
     ),
   ).toBeUndefined();
 });
@@ -243,7 +243,7 @@ test("it mints the next start from the server-closed latest run's snapshot and p
   await writeNodeSeeds(viewer.avatar.id, [seed]);
   await writeStartStamps({ keyVersion: 1, secretRef: 'worldmap', secretVersion: 1 });
 
-  const row = await buildActivityStart(context, {
+  const row = await loadActivityStart(context, {
     avatarID: viewer.avatar.id,
     scopeID: seed.nodeID,
     scopeType: 'world_map_node',
@@ -302,7 +302,7 @@ test("it folds a stopped run's unverified xp through the server's own build when
   await writeNodeSeeds(viewer.avatar.id, [seed]);
   await writeStartStamps({ keyVersion: 1, secretRef: 'worldmap', secretVersion: 1 });
 
-  const row = await buildActivityStart(context, {
+  const row = await loadActivityStart(context, {
     avatarID: viewer.avatar.id,
     scopeID: seed.nodeID,
     scopeType: 'world_map_node',
@@ -391,8 +391,8 @@ test('it records the final mint of an aborted offline gap as the next fold sourc
   // the abort stops the gap's final continuation back rather than attaching it, so nothing on
   // this worker installed it — the record still has to name it, or the next mint folds from the
   // row the gap started on
-  const finalMint = db.activityCollection.findFirst((q) =>
-    q.where({ avatarID: viewer.avatar.id, id: (id) => id !== original.id }),
+  const finalMint = db.activityCollection.findFirst((query) =>
+    query.where({ avatarID: viewer.avatar.id, id: (id) => id !== original.id }),
   );
 
   invariant(finalMint !== undefined, 'the aborted gap minted its final continuation');

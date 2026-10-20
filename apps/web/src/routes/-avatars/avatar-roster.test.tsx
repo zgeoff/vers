@@ -113,8 +113,8 @@ test('it lets a click on the currently-out avatar proceed', async () => {
     await user.click(outCard);
 
     await waitFor(() => {
-      const active = db.activeAvatarCollection.findFirst((q) =>
-        q.where({ userID: signedIn.userID }),
+      const active = db.activeAvatarCollection.findFirst((query) =>
+        query.where({ userID: signedIn.userID }),
       );
 
       expect(active).toMatchObject({ avatarID: out.id });

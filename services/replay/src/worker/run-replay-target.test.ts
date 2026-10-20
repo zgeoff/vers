@@ -5,7 +5,7 @@ import { buildStateFromSeed } from '@vers/game-utils';
 import { ActivityCheckpointType, buildLevelFromXP, buildXPThreshold } from '@vers/idle-core';
 import { resolveServiceURL } from '@vers/mock-services';
 import { mockKeysService } from '@vers/mock-services/keys';
-import { createTestDB, getTestServiceKeyPair } from '@vers/service-test-utils/bun';
+import { createTestDB, resolveTestServiceKeyPair } from '@vers/service-test-utils/bun';
 import { createInMemoryMetrics } from '@vers/test-utils/bun';
 import { ORIGIN_CELL, toNodeID } from '@vers/worldmap-core';
 import pino from 'pino';
@@ -22,7 +22,7 @@ async function setupTest() {
 
   await createContentVersion(db.db, createMockContentDocument({ contentVersion: '2' }));
 
-  const keyPair = await getTestServiceKeyPair();
+  const keyPair = await resolveTestServiceKeyPair();
 
   return {
     db: db.db,

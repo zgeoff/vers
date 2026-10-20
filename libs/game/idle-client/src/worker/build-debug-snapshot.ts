@@ -21,8 +21,6 @@ interface BuildDebugSnapshotInput {
   readonly writer: WorkerDebugSnapshot['writer'];
 }
 
-type PendingCheckpoints = WorkerDebugSnapshot['outbox']['checkpoints'][number];
-
 export function buildDebugSnapshot(input: BuildDebugSnapshotInput): WorkerDebugSnapshot {
   const submitters = new Map(input.submitterStates.map((state) => [state.activityID, state]));
 
@@ -39,6 +37,7 @@ export function buildDebugSnapshot(input: BuildDebugSnapshotInput): WorkerDebugS
 
   const liveRun = input.liveRun;
   const latestRun = input.latestRun;
+  const attemptsByStartID = input.startAttempts;
 
   return {
     capturedAt: input.capturedAt,
@@ -66,7 +65,7 @@ export function buildDebugSnapshot(input: BuildDebugSnapshotInput): WorkerDebugS
           },
     outbox: {
       activityStarts: input.starts.map((start) => {
-        const attempt = input.startAttempts.get(start.id);
+        const attempt = attemptsByStartID.get(start.id);
 
         return {
           activityID: start.id,
@@ -94,6 +93,8 @@ export function buildDebugSnapshot(input: BuildDebugSnapshotInput): WorkerDebugS
     writer: input.writer,
   };
 }
+
+type PendingCheckpoints = WorkerDebugSnapshot['outbox']['checkpoints'][number];
 
 function collectPendingCheckpoints(
   checkpoints: ReadonlyArray<QueuedCheckpoint>,

@@ -3,7 +3,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { PerspectiveCamera } from 'three';
 import { setCamera } from '../state/set-camera';
 import { useWorldmapStore } from '../state/use-worldmap-store';
-import { buildViewportFromCamera } from '../utils/build-viewport-from-camera';
+import { projectViewportFromCamera } from '../utils/project-viewport-from-camera';
 import { ViewportTracker } from './viewport-tracker';
 
 test('it writes the viewport once when a positioned camera first reports its bounds', async () => {
@@ -31,7 +31,7 @@ test('it writes the viewport once when a positioned camera first reports its bou
   unsubscribe();
 
   expect(writeCount).toBe(1);
-  expect(useWorldmapStore.getState().viewport).toStrictEqual(buildViewportFromCamera(camera));
+  expect(useWorldmapStore.getState().viewport).toStrictEqual(projectViewportFromCamera(camera));
 });
 
 test('it writes nothing when the camera moves within the same quantized cell bounds', async () => {
@@ -100,5 +100,5 @@ test('it writes again once the camera crosses into new quantized cell bounds', a
   unsubscribe();
 
   expect(writeCount).toBe(1);
-  expect(useWorldmapStore.getState().viewport).toStrictEqual(buildViewportFromCamera(camera));
+  expect(useWorldmapStore.getState().viewport).toStrictEqual(projectViewportFromCamera(camera));
 });

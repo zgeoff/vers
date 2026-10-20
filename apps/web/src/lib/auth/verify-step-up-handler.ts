@@ -6,7 +6,7 @@ import { logger } from '../../server/logger';
 import { sessionClient } from '../rpc/clients/session-client';
 import { verificationClient } from '../rpc/clients/verification-client';
 import { createStepUpTransactionToken } from './create-step-up-transaction-token';
-import { getAuthSession } from './get-auth-session';
+import { readAuthSession } from './read-auth-session';
 
 export const VerifyStepUpInputSchema = z.object({
   action: SecureActionSchema,
@@ -38,7 +38,7 @@ export async function verifyStepUpHandler(input: VerifyStepUpInput): Promise<Ver
     return { attemptsRemaining: failedAttempt.attemptsRemaining, status: 'invalid-code' };
   }
 
-  const authSession = await getAuthSession();
+  const authSession = await readAuthSession();
 
   const sessionID = authSession.sessionID ?? null;
 

@@ -2,12 +2,12 @@ import { expect, test } from 'bun:test';
 import * as z from 'zod';
 import { toFieldErrors } from './to-field-errors';
 
-const Schema = z.object({
-  email: z.email('Invalid email'),
-  password: z.string().min(8, 'Too short'),
-});
-
 test('it maps each failing field to its first issue message', () => {
+  const Schema = z.object({
+    email: z.email('Invalid email'),
+    password: z.string().min(8, 'Too short'),
+  });
+
   const result = Schema.safeParse({ email: 'not-an-email', password: 'x' });
 
   if (result.success) {
@@ -21,6 +21,11 @@ test('it maps each failing field to its first issue message', () => {
 });
 
 test('it drops issues for fields outside the listed set', () => {
+  const Schema = z.object({
+    email: z.email('Invalid email'),
+    password: z.string().min(8, 'Too short'),
+  });
+
   const result = Schema.safeParse({ email: 'not-an-email', password: 'x' });
 
   if (result.success) {

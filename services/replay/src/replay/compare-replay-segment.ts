@@ -101,6 +101,12 @@ export function compareReplaySegment(
   };
 }
 
+function findPayloadRewardsXP(payload: Readonly<CheckpointPayload>): number | undefined {
+  const rewards = payload['rewards'];
+
+  return isRecord(rewards) && isFiniteNumber(rewards['xp']) ? rewards['xp'] : undefined;
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -109,10 +115,15 @@ function isFiniteNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value);
 }
 
-function findPayloadRewardsXP(payload: Readonly<CheckpointPayload>): number | undefined {
-  const rewards = payload['rewards'];
+function hasMatchingLevelUp(
+  stored: Readonly<{ from: number; to: number }> | undefined,
+  replayed: Readonly<{ from: number; to: number }> | undefined,
+): boolean {
+  if (stored === undefined || replayed === undefined) {
+    return stored === replayed;
+  }
 
-  return isRecord(rewards) && isFiniteNumber(rewards['xp']) ? rewards['xp'] : undefined;
+  return stored.from === replayed.from && stored.to === replayed.to;
 }
 
 function findPayloadLevelUp(
@@ -127,34 +138,10 @@ function findPayloadLevelUp(
   return { from: levelUp['from'], to: levelUp['to'] };
 }
 
-function hasMatchingLevelUp(
-  stored: Readonly<{ from: number; to: number }> | undefined,
-  replayed: Readonly<{ from: number; to: number }> | undefined,
-): boolean {
-  if (stored === undefined || replayed === undefined) {
-    return stored === replayed;
-  }
-
-  return stored.from === replayed.from && stored.to === replayed.to;
-}
-
 type ParsedRewardSlots =
   | { readonly kind: 'absent' }
   | { readonly kind: 'malformed' }
   | { readonly kind: 'present'; readonly slots: ReadonlyArray<RewardSlot> };
-
-function isSafeIntAtLeast(value: unknown, min: number): value is number {
-  return typeof value === 'number' && Number.isSafeInteger(value) && value >= min;
-}
-
-function isRewardSlot(value: unknown): value is RewardSlot {
-  return (
-    isRecord(value) &&
-    isSafeIntAtLeast(value['ordinal'], 0) &&
-    isRecord(value['context']) &&
-    isSafeIntAtLeast(value['context']['nodeTier'], 1)
-  );
-}
 
 function parsePayloadRewardSlots(payload: Readonly<CheckpointPayload>): ParsedRewardSlots {
   const rewardSlots = payload['rewardSlots'];
@@ -167,6 +154,19 @@ function parsePayloadRewardSlots(payload: Readonly<CheckpointPayload>): ParsedRe
     rewardSlots.every((slot): slot is RewardSlot => isRewardSlot(slot))
     ? { kind: 'present', slots: rewardSlots }
     : { kind: 'malformed' };
+}
+
+function isRewardSlot(value: unknown): value is RewardSlot {
+  return (
+    isRecord(value) &&
+    isSafeIntAtLeast(value['ordinal'], 0) &&
+    isRecord(value['context']) &&
+    isSafeIntAtLeast(value['context']['nodeTier'], 1)
+  );
+}
+
+function isSafeIntAtLeast(value: unknown, min: number): value is number {
+  return typeof value === 'number' && Number.isSafeInteger(value) && value >= min;
 }
 
 function hasMatchingRewardSlots(

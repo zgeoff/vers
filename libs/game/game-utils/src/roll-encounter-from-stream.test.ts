@@ -199,12 +199,12 @@ test('it rolls identical encounters from equal content, node, and stream inputs'
   };
 
   const first = buildRollStream(
-    Uint8Array.from({ length: 32 }, (_, i) => i),
+    Uint8Array.from({ length: 32 }, (_, index) => index),
     'test/domain',
   );
 
   const second = buildRollStream(
-    Uint8Array.from({ length: 32 }, (_, i) => i),
+    Uint8Array.from({ length: 32 }, (_, index) => index),
     'test/domain',
   );
 

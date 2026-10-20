@@ -173,6 +173,90 @@ export async function runReplayTarget(
   return runReplayTargetCrossVersion(trx, deps, cache, segment, document, deadline);
 }
 
+type RejectionCause =
+  | 'confirmed-on-fresh-replay'
+  | 'descriptor-validation-failed'
+  | 'seed-validation-failed';
+
+async function rejectSegment(
+  trx: Transaction<DB>,
+  deps: Readonly<ReplayWorkerDeps>,
+  cache: ReplayCache,
+  segment: Readonly<ReplaySegment>,
+  divergence: Extract<CompareVerdict, { kind: 'divergence' }>,
+  cause: RejectionCause,
+): Promise<ReplayIterationOutcome> {
+  deps.logger.error(
+    {
+      activityID: segment.activity.id,
+      appendedHead: segment.activity.appendedHead,
+      reason: divergence.reason,
+      simVersion: segment.activity.simVersion,
+      verifiedHead: segment.verifiedHead,
+      version: divergence.version,
+    },
+    pickRejectMessage(cause),
+  );
+
+  const rejectionReason: RejectionReason =
+    cause === 'descriptor-validation-failed' ? 'descriptor-mismatch' : 'integrity-mismatch';
+
+  recordRejection(rejectionReason);
+
+  await rejectActivity(trx, {
+    activityID: segment.activity.id,
+    avatarID: segment.activity.avatarID,
+    scopeID: segment.activity.scopeID,
+    scopeType: segment.activity.scopeType,
+  });
+
+  cache.remove(segment.activity.id);
+
+  return { kind: 'rejected' };
+}
+
+function pickRejectMessage(cause: RejectionCause): string {
+  if (cause === 'seed-validation-failed') {
+    return 'replay seed validation failed; rejecting activity';
+  }
+
+  if (cause === 'descriptor-validation-failed') {
+    return 'replay descriptor validation failed; rejecting activity';
+  }
+
+  return 'replay divergence confirmed on a fresh replay; rejecting activity';
+}
+
+async function rejectBuildMismatch(
+  trx: Transaction<DB>,
+  deps: Readonly<ReplayWorkerDeps>,
+  cache: ReplayCache,
+  segment: Readonly<ReplaySegment>,
+): Promise<ReplayIterationOutcome> {
+  deps.logger.error(
+    {
+      activityID: segment.activity.id,
+      appendedHead: segment.activity.appendedHead,
+      buildSnapshotXP: segment.activity.buildSnapshot.xp,
+      verifiedHead: segment.verifiedHead,
+    },
+    'pinned build does not match the settled xp total; rejecting activity',
+  );
+
+  recordRejection('build-mismatch');
+
+  await rejectActivity(trx, {
+    activityID: segment.activity.id,
+    avatarID: segment.activity.avatarID,
+    scopeID: segment.activity.scopeID,
+    scopeType: segment.activity.scopeType,
+  });
+
+  cache.remove(segment.activity.id);
+
+  return { kind: 'rejected' };
+}
+
 // a keys outage is operational, so it backs the activity off rather than counting against it; a
 // defined refusal is a misconfiguration and propagates, and a deadline abort propagates as itself
 async function tryReadScopeSecret(
@@ -205,37 +289,65 @@ async function tryReadScopeSecret(
   }
 }
 
-interface NextSeedCheckpoint {
-  readonly payload: { readonly nextSeed: string };
-}
-
-// the last checkpoint's `nextSeed` is the driver's stop-at sanity check: a checkpoint's `time`
-// resets on every engine restart within a farmed stream, so it can never size a duration to
-// advance to
-function findStopAtState(checkpoints: ReadonlyArray<NextSeedCheckpoint>): string {
-  const last = checkpoints.at(-1);
-
-  invariant(last !== undefined, 'a replayed run always has at least one checkpoint');
-
-  return last.payload.nextSeed;
-}
-
-function isCacheCurrent(
-  entry: Readonly<{ emittedCount: number; lastHash: string }>,
+async function scheduleReplayRetry(
+  trx: Transaction<DB>,
+  deps: Readonly<ReplayWorkerDeps>,
+  cache: ReplayCache,
   segment: Readonly<ReplaySegment>,
-): boolean {
-  return entry.emittedCount === segment.verifiedHead && entry.lastHash === segment.prevHash;
+  reason: Extract<BackoffReason, 'keys-unavailable' | 'provider-unavailable'>,
+): Promise<ReplayIterationOutcome> {
+  const backoff = await updateReplayBackoff(trx, {
+    activityID: segment.activity.id,
+    verifiedHead: segment.verifiedHead,
+  });
+
+  deps.logger.warn(
+    {
+      activityID: segment.activity.id,
+      appendedHead: segment.activity.appendedHead,
+      reason,
+      simVersion: segment.activity.simVersion,
+      verifiedHead: segment.verifiedHead,
+      ...backoff,
+    },
+    'replay dependency unavailable; backing the activity off',
+  );
+
+  recordBackoff(reason);
+
+  cache.remove(segment.activity.id);
+
+  return { kind: 'backedOff', reason };
 }
 
-function pickCacheLookupOutcome(
-  rawCached: Readonly<{ emittedCount: number; lastHash: string }> | undefined,
-  cacheIsCurrent: boolean,
-): CacheLookupOutcome {
-  if (rawCached === undefined) {
-    return 'miss';
-  }
+async function rejectUnreachableNode(
+  trx: Transaction<DB>,
+  deps: Readonly<ReplayWorkerDeps>,
+  cache: ReplayCache,
+  segment: Readonly<ReplaySegment>,
+): Promise<ReplayIterationOutcome> {
+  deps.logger.error(
+    {
+      activityID: segment.activity.id,
+      appendedHead: segment.activity.appendedHead,
+      scopeID: segment.activity.scopeID,
+      verifiedHead: segment.verifiedHead,
+    },
+    'replay node reachability check failed; rejecting activity',
+  );
 
-  return cacheIsCurrent ? 'hit' : 'stale';
+  recordRejection('node-unreachable');
+
+  await rejectActivity(trx, {
+    activityID: segment.activity.id,
+    avatarID: segment.activity.avatarID,
+    scopeID: segment.activity.scopeID,
+    scopeType: segment.activity.scopeType,
+  });
+
+  cache.remove(segment.activity.id);
+
+  return { kind: 'rejected' };
 }
 
 async function runReplayTargetInProcess(
@@ -260,7 +372,7 @@ async function runReplayTargetInProcess(
 
   const compareContext = buildCompareContext(segment);
   const driver = cached?.driver ?? buildFreshDriver(document.encounter, segment);
-  const stopAtState = findStopAtState(segment.unverifiedCheckpoints);
+  const stopAtState = getStopAtState(segment.unverifiedCheckpoints);
 
   const duration = buildSegmentDuration(
     segment.activity.appendedTimeMs,
@@ -314,93 +426,54 @@ async function runReplayTargetInProcess(
   return rejectSegment(trx, deps, cache, segment, confirmVerdict, 'confirmed-on-fresh-replay');
 }
 
-async function runReplayTargetCrossVersion(
-  trx: Transaction<DB>,
-  deps: Readonly<ReplayWorkerDeps>,
-  cache: ReplayCache,
+function isCacheCurrent(
+  entry: Readonly<{ emittedCount: number; lastHash: string }>,
   segment: Readonly<ReplaySegment>,
-  document: Readonly<ContentDocument>,
-  deadline: AbortSignal,
-): Promise<ReplayIterationOutcome> {
-  const unverified = segment.unverifiedCheckpoints;
-  const job = buildCrossVersionJob(document.encounter, segment);
-
-  const runDeps = {
-    db: trx,
-    privateKey: deps.privateKey,
-    signal: deadline,
-    simVersion: deps.simVersion,
-  };
-
-  const outcome = await runReplaySegment(runDeps, job);
-
-  deadline.throwIfAborted();
-
-  if (outcome.kind === 'providerUnavailable') {
-    return scheduleReplayRetry(trx, deps, cache, segment, 'provider-unavailable');
-  }
-
-  if (outcome.kind !== 'replayed') {
-    return parkReplayTarget(trx, deps, cache, segment, outcome.kind);
-  }
-
-  const compareContext = buildCompareContext(segment);
-  const replayed = outcome.output.checkpoints.slice(segment.verifiedHead);
-
-  // As in the in-process path, a duration-cap trip on this first attempt isn't conclusive on its
-  // own — it falls through to the same fresh confirmation dispatch a compare divergence gets.
-  const verdict =
-    outcome.output.haltedOnDurationCap === true
-      ? undefined
-      : compareReplaySegment(unverified, replayed, compareContext);
-
-  if (verdict?.kind === 'match') {
-    return applyMatch(trx, deps, cache, segment, replayed, undefined, verdict, document, deadline);
-  }
-
-  const confirmOutcome = await runReplaySegment(runDeps, job);
-
-  deadline.throwIfAborted();
-
-  if (confirmOutcome.kind === 'providerUnavailable') {
-    return scheduleReplayRetry(trx, deps, cache, segment, 'provider-unavailable');
-  }
-
-  if (confirmOutcome.kind !== 'replayed') {
-    return parkReplayTarget(trx, deps, cache, segment, confirmOutcome.kind);
-  }
-
-  if (confirmOutcome.output.haltedOnDurationCap === true) {
-    return parkReplayTarget(trx, deps, cache, segment, 'durationCapExceeded');
-  }
-
-  const confirmReplayed = confirmOutcome.output.checkpoints.slice(segment.verifiedHead);
-  const confirmVerdict = compareReplaySegment(unverified, confirmReplayed, compareContext);
-
-  if (confirmVerdict.kind === 'match') {
-    return countFailedAttempt(trx, deps, segment);
-  }
-
-  return rejectSegment(trx, deps, cache, segment, confirmVerdict, 'confirmed-on-fresh-replay');
+): boolean {
+  return entry.emittedCount === segment.verifiedHead && entry.lastHash === segment.prevHash;
 }
 
-function buildSettlement(
-  settledXP: number,
-  verdict: Extract<CompareVerdict, { kind: 'match' }>,
-): {
-  readonly settledXP: number;
-  readonly source: 'progress' | 'terminal';
-  readonly xpDelta: number;
-} {
-  if (verdict.terminalXPTotal === undefined) {
-    return { settledXP: settledXP + verdict.xpSum, source: 'progress', xpDelta: verdict.xpSum };
+function pickCacheLookupOutcome(
+  rawCached: Readonly<{ emittedCount: number; lastHash: string }> | undefined,
+  cacheIsCurrent: boolean,
+): CacheLookupOutcome {
+  if (rawCached === undefined) {
+    return 'miss';
   }
 
+  return cacheIsCurrent ? 'hit' : 'stale';
+}
+
+function buildCompareContext(segment: Readonly<ReplaySegment>) {
   return {
-    settledXP: verdict.terminalXPTotal,
-    source: 'terminal',
-    xpDelta: verdict.terminalXPTotal - settledXP,
+    prevHash: segment.prevHash,
+    seed: segment.seed,
+    startChainIndex: segment.activity.startChainIndex,
   };
+}
+
+function buildFreshDriver(
+  content: Readonly<EncounterContent>,
+  segment: Readonly<ReplaySegment>,
+): SimulationDriver {
+  const input = buildSimulationInput(content, segment.activity);
+
+  return createSimulationDriver(input.activity, input.avatar);
+}
+
+interface NextSeedCheckpoint {
+  readonly payload: { readonly nextSeed: string };
+}
+
+// the last checkpoint's `nextSeed` is the driver's stop-at sanity check: a checkpoint's `time`
+// resets on every engine restart within a farmed stream, so it can never size a duration to
+// advance to
+function getStopAtState(checkpoints: ReadonlyArray<NextSeedCheckpoint>): string {
+  const last = checkpoints.at(-1);
+
+  invariant(last !== undefined, 'a replayed run always has at least one checkpoint');
+
+  return last.payload.nextSeed;
 }
 
 async function applyMatch(
@@ -486,6 +559,25 @@ async function applyMatch(
   return { kind: 'matched', pendingCache: { activityID: segment.activity.id, effect } };
 }
 
+function buildSettlement(
+  settledXP: number,
+  verdict: Extract<CompareVerdict, { kind: 'match' }>,
+): {
+  readonly settledXP: number;
+  readonly source: 'progress' | 'terminal';
+  readonly xpDelta: number;
+} {
+  if (verdict.terminalXPTotal === undefined) {
+    return { settledXP: settledXP + verdict.xpSum, source: 'progress', xpDelta: verdict.xpSum };
+  }
+
+  return {
+    settledXP: verdict.terminalXPTotal,
+    source: 'terminal',
+    xpDelta: verdict.terminalXPTotal - settledXP,
+  };
+}
+
 // only the key read can be unavailable: a fault inside the roll itself is a bug and propagates
 async function tryRollRewardItems(
   deps: Readonly<ReplayWorkerDeps>,
@@ -523,143 +615,6 @@ async function tryRollRewardItems(
     scopeType: segment.activity.scopeType,
     tables: document.loot,
   });
-}
-
-type RejectionCause =
-  | 'confirmed-on-fresh-replay'
-  | 'descriptor-validation-failed'
-  | 'seed-validation-failed';
-
-async function rejectSegment(
-  trx: Transaction<DB>,
-  deps: Readonly<ReplayWorkerDeps>,
-  cache: ReplayCache,
-  segment: Readonly<ReplaySegment>,
-  divergence: Extract<CompareVerdict, { kind: 'divergence' }>,
-  cause: RejectionCause,
-): Promise<ReplayIterationOutcome> {
-  deps.logger.error(
-    {
-      activityID: segment.activity.id,
-      appendedHead: segment.activity.appendedHead,
-      reason: divergence.reason,
-      simVersion: segment.activity.simVersion,
-      verifiedHead: segment.verifiedHead,
-      version: divergence.version,
-    },
-    pickRejectMessage(cause),
-  );
-
-  const rejectionReason: RejectionReason =
-    cause === 'descriptor-validation-failed' ? 'descriptor-mismatch' : 'integrity-mismatch';
-
-  recordRejection(rejectionReason);
-
-  await rejectActivity(trx, {
-    activityID: segment.activity.id,
-    avatarID: segment.activity.avatarID,
-    scopeID: segment.activity.scopeID,
-    scopeType: segment.activity.scopeType,
-  });
-
-  cache.remove(segment.activity.id);
-
-  return { kind: 'rejected' };
-}
-
-function pickRejectMessage(cause: RejectionCause): string {
-  if (cause === 'seed-validation-failed') {
-    return 'replay seed validation failed; rejecting activity';
-  }
-
-  if (cause === 'descriptor-validation-failed') {
-    return 'replay descriptor validation failed; rejecting activity';
-  }
-
-  return 'replay divergence confirmed on a fresh replay; rejecting activity';
-}
-
-async function rejectBuildMismatch(
-  trx: Transaction<DB>,
-  deps: Readonly<ReplayWorkerDeps>,
-  cache: ReplayCache,
-  segment: Readonly<ReplaySegment>,
-): Promise<ReplayIterationOutcome> {
-  deps.logger.error(
-    {
-      activityID: segment.activity.id,
-      appendedHead: segment.activity.appendedHead,
-      buildSnapshotXP: segment.activity.buildSnapshot.xp,
-      verifiedHead: segment.verifiedHead,
-    },
-    'pinned build does not match the settled xp total; rejecting activity',
-  );
-
-  recordRejection('build-mismatch');
-
-  await rejectActivity(trx, {
-    activityID: segment.activity.id,
-    avatarID: segment.activity.avatarID,
-    scopeID: segment.activity.scopeID,
-    scopeType: segment.activity.scopeType,
-  });
-
-  cache.remove(segment.activity.id);
-
-  return { kind: 'rejected' };
-}
-
-async function rejectUnreachableNode(
-  trx: Transaction<DB>,
-  deps: Readonly<ReplayWorkerDeps>,
-  cache: ReplayCache,
-  segment: Readonly<ReplaySegment>,
-): Promise<ReplayIterationOutcome> {
-  deps.logger.error(
-    {
-      activityID: segment.activity.id,
-      appendedHead: segment.activity.appendedHead,
-      scopeID: segment.activity.scopeID,
-      verifiedHead: segment.verifiedHead,
-    },
-    'replay node reachability check failed; rejecting activity',
-  );
-
-  recordRejection('node-unreachable');
-
-  await rejectActivity(trx, {
-    activityID: segment.activity.id,
-    avatarID: segment.activity.avatarID,
-    scopeID: segment.activity.scopeID,
-    scopeType: segment.activity.scopeType,
-  });
-
-  cache.remove(segment.activity.id);
-
-  return { kind: 'rejected' };
-}
-
-async function countFailedAttempt(
-  trx: Transaction<DB>,
-  deps: Readonly<ReplayWorkerDeps>,
-  segment: Readonly<ReplaySegment>,
-): Promise<ReplayIterationOutcome> {
-  const result = await updateReplayAttempts(trx, {
-    activityID: segment.activity.id,
-  });
-
-  if (result?.quarantined === true) {
-    deps.logger.error(
-      { activityID: segment.activity.id },
-      'replay attempts exhausted; activity quarantined',
-    );
-
-    recordIterationFailure('quarantined');
-
-    return { kind: 'quarantined' };
-  }
-
-  return { kind: 'unconfirmedDivergence' };
 }
 
 async function parkReplayTarget(
@@ -709,44 +664,97 @@ function pickParkRejectionReason(reason: ParkReason): RejectionReason {
   return reason === 'durationCapExceeded' ? 'elapsed-time' : 'version-park';
 }
 
-async function scheduleReplayRetry(
+async function countFailedAttempt(
+  trx: Transaction<DB>,
+  deps: Readonly<ReplayWorkerDeps>,
+  segment: Readonly<ReplaySegment>,
+): Promise<ReplayIterationOutcome> {
+  const result = await updateReplayAttempts(trx, {
+    activityID: segment.activity.id,
+  });
+
+  if (result?.quarantined === true) {
+    deps.logger.error(
+      { activityID: segment.activity.id },
+      'replay attempts exhausted; activity quarantined',
+    );
+
+    recordIterationFailure('quarantined');
+
+    return { kind: 'quarantined' };
+  }
+
+  return { kind: 'unconfirmedDivergence' };
+}
+
+async function runReplayTargetCrossVersion(
   trx: Transaction<DB>,
   deps: Readonly<ReplayWorkerDeps>,
   cache: ReplayCache,
   segment: Readonly<ReplaySegment>,
-  reason: Extract<BackoffReason, 'keys-unavailable' | 'provider-unavailable'>,
+  document: Readonly<ContentDocument>,
+  deadline: AbortSignal,
 ): Promise<ReplayIterationOutcome> {
-  const backoff = await updateReplayBackoff(trx, {
-    activityID: segment.activity.id,
-    verifiedHead: segment.verifiedHead,
-  });
+  const unverified = segment.unverifiedCheckpoints;
+  const job = buildCrossVersionJob(document.encounter, segment);
 
-  deps.logger.warn(
-    {
-      activityID: segment.activity.id,
-      appendedHead: segment.activity.appendedHead,
-      reason,
-      simVersion: segment.activity.simVersion,
-      verifiedHead: segment.verifiedHead,
-      ...backoff,
-    },
-    'replay dependency unavailable; backing the activity off',
-  );
+  const runDeps = {
+    db: trx,
+    privateKey: deps.privateKey,
+    signal: deadline,
+    simVersion: deps.simVersion,
+  };
 
-  recordBackoff(reason);
+  const outcome = await runReplaySegment(runDeps, job);
 
-  cache.remove(segment.activity.id);
+  deadline.throwIfAborted();
 
-  return { kind: 'backedOff', reason };
-}
+  if (outcome.kind === 'providerUnavailable') {
+    return scheduleReplayRetry(trx, deps, cache, segment, 'provider-unavailable');
+  }
 
-function buildFreshDriver(
-  content: Readonly<EncounterContent>,
-  segment: Readonly<ReplaySegment>,
-): SimulationDriver {
-  const input = buildSimulationInput(content, segment.activity);
+  if (outcome.kind !== 'replayed') {
+    return parkReplayTarget(trx, deps, cache, segment, outcome.kind);
+  }
 
-  return createSimulationDriver(input.activity, input.avatar);
+  const compareContext = buildCompareContext(segment);
+  const replayed = outcome.output.checkpoints.slice(segment.verifiedHead);
+
+  // As in the in-process path, a duration-cap trip on this first attempt isn't conclusive on its
+  // own — it falls through to the same fresh confirmation dispatch a compare divergence gets.
+  const verdict =
+    outcome.output.haltedOnDurationCap === true
+      ? undefined
+      : compareReplaySegment(unverified, replayed, compareContext);
+
+  if (verdict?.kind === 'match') {
+    return applyMatch(trx, deps, cache, segment, replayed, undefined, verdict, document, deadline);
+  }
+
+  const confirmOutcome = await runReplaySegment(runDeps, job);
+
+  deadline.throwIfAborted();
+
+  if (confirmOutcome.kind === 'providerUnavailable') {
+    return scheduleReplayRetry(trx, deps, cache, segment, 'provider-unavailable');
+  }
+
+  if (confirmOutcome.kind !== 'replayed') {
+    return parkReplayTarget(trx, deps, cache, segment, confirmOutcome.kind);
+  }
+
+  if (confirmOutcome.output.haltedOnDurationCap === true) {
+    return parkReplayTarget(trx, deps, cache, segment, 'durationCapExceeded');
+  }
+
+  const confirmReplayed = confirmOutcome.output.checkpoints.slice(segment.verifiedHead);
+  const confirmVerdict = compareReplaySegment(unverified, confirmReplayed, compareContext);
+
+  if (confirmVerdict.kind === 'match') {
+    return countFailedAttempt(trx, deps, segment);
+  }
+
+  return rejectSegment(trx, deps, cache, segment, confirmVerdict, 'confirmed-on-fresh-replay');
 }
 
 function buildCrossVersionJob(
@@ -754,7 +762,7 @@ function buildCrossVersionJob(
   segment: Readonly<ReplaySegment>,
 ) {
   const input = buildSimulationInput(content, segment.activity);
-  const stopAtState = findStopAtState(segment.unverifiedCheckpoints);
+  const stopAtState = getStopAtState(segment.unverifiedCheckpoints);
 
   const duration = buildSegmentDuration(
     segment.activity.appendedTimeMs,
@@ -769,12 +777,4 @@ function buildCrossVersionJob(
     stopAtState,
     segment.activity.appendedHead,
   );
-}
-
-function buildCompareContext(segment: Readonly<ReplaySegment>) {
-  return {
-    prevHash: segment.prevHash,
-    seed: segment.seed,
-    startChainIndex: segment.activity.startChainIndex,
-  };
 }

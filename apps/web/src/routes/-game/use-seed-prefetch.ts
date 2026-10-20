@@ -24,6 +24,10 @@ export function useSeedPrefetch(revealedNodeIDs: ReadonlySet<string>): void {
   // a running batch finish caching its seeds. Declared before the reveal effect so its fresh
   // controller is in place when the reveal fires.
   useEffect(() => {
+    if (avatarID === undefined || client === undefined) {
+      return;
+    }
+
     const controller = new AbortController();
 
     controllerRef.current = controller;

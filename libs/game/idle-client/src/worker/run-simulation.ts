@@ -116,10 +116,6 @@ export async function runSimulation(
   await deferred.promise;
 }
 
-function emitRunOutcome(context: WorkerContext, outcome: RunOutcome) {
-  context.broadcast({ outcome, type: WorkerMessageType.ActivityEnded });
-}
-
 function emitRewardSlotsRecorded(
   context: WorkerContext,
   activityID: string,
@@ -132,6 +128,10 @@ function emitRewardSlotsRecorded(
     type: WorkerMessageType.RewardSlotsRecorded,
     version,
   });
+}
+
+function emitRunOutcome(context: WorkerContext, outcome: RunOutcome) {
+  context.broadcast({ outcome, type: WorkerMessageType.ActivityEnded });
 }
 
 function emitCapStatus(context: WorkerContext, remainingMs: number, halted: boolean) {

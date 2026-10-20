@@ -7,14 +7,14 @@ import type {
   SimulationContext,
   Wave,
 } from '../types';
-import { getWaves } from './utils/get-waves';
+import { createWaves } from './utils/create-waves';
 
 export function createActivity(data: ActivityInput, ctx: SimulationContext): Activity {
   let elapsed = 0;
   let currentWaveIdx = 0;
   let rewards: ActivityRewards = { xp: 0 };
   let levelUp: ActivityLevelUp | null = null;
-  const waves: Array<Wave> = getWaves(data, ctx);
+  const waves: Array<Wave> = createWaves(data, ctx);
   const isWavesRemaining = () => waves.some((wave) => wave.remaining > 0);
 
   const advanceWave = () => {

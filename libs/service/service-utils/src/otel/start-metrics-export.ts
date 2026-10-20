@@ -1,7 +1,7 @@
 import { metrics } from '@opentelemetry/api';
 import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-proto';
 import { MeterProvider, PeriodicExportingMetricReader } from '@opentelemetry/sdk-metrics';
-import { buildTelemetryResource } from './build-telemetry-resource';
+import { readTelemetryResource } from './read-telemetry-resource';
 
 interface StartMetricsExportOptions {
   readonly serviceName: string;
@@ -16,7 +16,7 @@ export function startMetricsExport(options: StartMetricsExportOptions): MetricsE
     // the exporter reads its endpoint and headers from OTEL_EXPORTER_OTLP_* at construction, so
     // callers gate on those being present
     readers: [new PeriodicExportingMetricReader({ exporter: new OTLPMetricExporter() })],
-    resource: buildTelemetryResource({ serviceName: options.serviceName }),
+    resource: readTelemetryResource({ serviceName: options.serviceName }),
   });
 
   metrics.setGlobalMeterProvider(provider);

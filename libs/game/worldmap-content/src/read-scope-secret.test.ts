@@ -2,12 +2,12 @@ import { expect, test } from 'bun:test';
 import { bytesToHex } from '@noble/hashes/utils.js';
 import { resolveServiceURL } from '@vers/mock-services';
 import { buildMockScopeSecret, mockKeysService } from '@vers/mock-services/keys';
-import { getTestServiceKeyPair } from '@vers/service-test-utils/bun';
+import { resolveTestServiceKeyPair } from '@vers/service-test-utils/bun';
 import { server } from './mocks/server';
 import { readScopeSecret } from './read-scope-secret';
 
 test('it reads the mocked scope secret over real s2s auth against the mocked keys backend', async () => {
-  const keyPair = await getTestServiceKeyPair();
+  const keyPair = await resolveTestServiceKeyPair();
 
   const secret = await readScopeSecret(
     {
@@ -22,7 +22,7 @@ test('it reads the mocked scope secret over real s2s auth against the mocked key
 });
 
 test('it reads the identical secret for the identical avatar and secret version', async () => {
-  const keyPair = await getTestServiceKeyPair();
+  const keyPair = await resolveTestServiceKeyPair();
 
   const deps = {
     issuer: 'service-activity' as const,
@@ -46,7 +46,7 @@ test('it reads the identical secret for the identical avatar and secret version'
 });
 
 test('it reads a different secret for a different avatar', async () => {
-  const keyPair = await getTestServiceKeyPair();
+  const keyPair = await resolveTestServiceKeyPair();
 
   const deps = {
     issuer: 'service-activity' as const,
@@ -70,7 +70,7 @@ test('it reads a different secret for a different avatar', async () => {
 });
 
 test('it rethrows a keys-defined NOT_FOUND as a plain Error naming the ref and version', async () => {
-  const keyPair = await getTestServiceKeyPair();
+  const keyPair = await resolveTestServiceKeyPair();
 
   server.use(
     mockKeysService.deriveScopeSecret.handler((args) => {
@@ -93,7 +93,7 @@ test('it rethrows a keys-defined NOT_FOUND as a plain Error naming the ref and v
 });
 
 test('it rejects when the keys service never responds', async () => {
-  const keyPair = await getTestServiceKeyPair();
+  const keyPair = await resolveTestServiceKeyPair();
 
   server.use(mockKeysService.deriveScopeSecret.handler(() => new Promise<never>(() => {})));
 

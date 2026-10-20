@@ -9,5 +9,5 @@ interface WorldMapNodeCodexSlotProps {
 export function WorldMapNodeCodexSlot(props: WorldMapNodeCodexSlotProps) {
   const result = useSuspenseQuery(buildWorldMapNodeCodexQueryOptions(props.difficulty));
 
-  return <CompositeComponent src={result.data.src} />;
+  return <CompositeComponent src={result.data.source} />;
 }

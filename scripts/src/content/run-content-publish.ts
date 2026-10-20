@@ -1,6 +1,6 @@
 import { createContentVersion } from '@vers/content-registry';
 import { createDB } from '@vers/db';
-import { findCurrentSimVersion } from '@vers/sim-registry';
+import { readCurrentSimVersion } from '@vers/sim-registry';
 import { findContentCoverageGap } from '../deploy/find-content-coverage-gap';
 import { parseContentDocumentSource } from './parse-content-document-source';
 
@@ -25,7 +25,7 @@ export async function runContentPublish(
   try {
     // the publish refuses to move the current pointer past what the active engine replays, the
     // same ordering the deploy preflight asserts from the other side
-    const engine = await findCurrentSimVersion(db);
+    const engine = await readCurrentSimVersion(db);
 
     const gap = findContentCoverageGap({
       contentVersion: result.document.contentVersion,

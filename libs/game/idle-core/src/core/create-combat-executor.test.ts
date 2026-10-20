@@ -10,6 +10,61 @@ import { CombatEventType, EquipmentSlot } from '../types';
 import { createActivity } from './create-activity';
 import { createCombatExecutor } from './create-combat-executor';
 
+function setupTest() {
+  return {
+    runScheduleOrder: (firstToAct: 'lethal' | 'weak'): string => {
+      const enemyDataLethal = createMockEnemyData({
+        life: 100,
+        primaryAttack: { maxDamage: 150, minDamage: 150, speed: 1 },
+      });
+
+      const enemyDataWeak = createMockEnemyData({
+        life: 100,
+        primaryAttack: { maxDamage: 10, minDamage: 1, speed: 1 },
+      });
+
+      const avatarData = createMockAvatarData({ life: 100 });
+
+      const activityData = createMockActivityInput({
+        encounter: { waves: [[enemyDataLethal, enemyDataWeak]] },
+      });
+
+      const ctx = createMockSimulationContext();
+      const avatar = createAvatar(avatarData, ctx);
+      const activity = createActivity(activityData, ctx);
+      const combatExecutor = createCombatExecutor(activity, avatar, ctx);
+      const [lethalEnemy, weakEnemy] = activity.currentWave?.enemies ?? [];
+
+      invariant(lethalEnemy && weakEnemy, 'both enemies are required');
+
+      const lethalEvent: EnemyAttackEvent = {
+        source: lethalEnemy.id,
+        time: 0,
+        type: CombatEventType.EnemyAttack,
+      };
+
+      const weakEvent: EnemyAttackEvent = {
+        source: weakEnemy.id,
+        time: 0,
+        type: CombatEventType.EnemyAttack,
+      };
+
+      const orderedEvents =
+        firstToAct === 'lethal' ? [lethalEvent, weakEvent] : [weakEvent, lethalEvent];
+
+      orderedEvents.forEach((event) => {
+        combatExecutor.scheduleEvent(event);
+      });
+
+      // a zero delta leaves both entities' own attack timers unready, so only our manually
+      // scheduled events are applied this tick
+      combatExecutor.run(0);
+
+      return ctx.rng.getState();
+    },
+  };
+}
+
 test('it processes events', () => {
   const weapon: EquipmentWeapon = {
     id: 'test-weapon',
@@ -82,8 +137,9 @@ test('it applies same-time enemy events in schedule order, not enemy array order
   // the lethal hit first kills the avatar before the weak enemy's damage roll draws from the rng;
   // the weak hit first draws before the death, so the two schedule orders consume a different
   // number of draws despite the same enemy array order
-  const stateWhenLethalActsFirst = buildFinalRngState('lethal');
-  const stateWhenWeakActsFirst = buildFinalRngState('weak');
+  const ctx = setupTest();
+  const stateWhenLethalActsFirst = ctx.runScheduleOrder('lethal');
+  const stateWhenWeakActsFirst = ctx.runScheduleOrder('weak');
 
   expect(stateWhenLethalActsFirst).not.toBe(stateWhenWeakActsFirst);
 });
@@ -99,54 +155,3 @@ test('it returns the expected combat executor state for a client app', () => {
     elapsed: 0,
   });
 });
-
-function buildFinalRngState(firstToAct: 'lethal' | 'weak'): string {
-  const enemyDataLethal = createMockEnemyData({
-    life: 100,
-    primaryAttack: { maxDamage: 150, minDamage: 150, speed: 1 },
-  });
-
-  const enemyDataWeak = createMockEnemyData({
-    life: 100,
-    primaryAttack: { maxDamage: 10, minDamage: 1, speed: 1 },
-  });
-
-  const avatarData = createMockAvatarData({ life: 100 });
-
-  const activityData = createMockActivityInput({
-    encounter: { waves: [[enemyDataLethal, enemyDataWeak]] },
-  });
-
-  const ctx = createMockSimulationContext();
-  const avatar = createAvatar(avatarData, ctx);
-  const activity = createActivity(activityData, ctx);
-  const combatExecutor = createCombatExecutor(activity, avatar, ctx);
-  const [lethalEnemy, weakEnemy] = activity.currentWave?.enemies ?? [];
-
-  invariant(lethalEnemy && weakEnemy, 'both enemies are required');
-
-  const lethalEvent: EnemyAttackEvent = {
-    source: lethalEnemy.id,
-    time: 0,
-    type: CombatEventType.EnemyAttack,
-  };
-
-  const weakEvent: EnemyAttackEvent = {
-    source: weakEnemy.id,
-    time: 0,
-    type: CombatEventType.EnemyAttack,
-  };
-
-  const orderedEvents =
-    firstToAct === 'lethal' ? [lethalEvent, weakEvent] : [weakEvent, lethalEvent];
-
-  orderedEvents.forEach((event) => {
-    combatExecutor.scheduleEvent(event);
-  });
-
-  // a zero delta leaves both entities' own attack timers unready, so only our manually
-  // scheduled events are applied this tick
-  combatExecutor.run(0);
-
-  return ctx.rng.getState();
-}

@@ -1,6 +1,6 @@
 import type { DB } from '@vers/db';
 import type { SimVersionRow } from '@vers/sim-registry';
-import { findCurrentSimVersion, findSimVersion } from '@vers/sim-registry';
+import { readCurrentSimVersion, readSimVersion } from '@vers/sim-registry';
 import type { Kysely } from 'kysely';
 import invariant from 'tiny-invariant';
 import { recordContentIncompatibleRejection } from './metrics/record-content-incompatible-rejection';
@@ -18,7 +18,7 @@ export async function resolveSimVersionStamp(
   errors: SimVersionStampErrors,
 ): Promise<string> {
   if (requested === undefined) {
-    const current = await findCurrentSimVersion(db);
+    const current = await readCurrentSimVersion(db);
 
     if (current === undefined) {
       throw errors.SIM_VERSION_UNKNOWN({ data: { currentSimVersion: null } });
@@ -32,13 +32,13 @@ export async function resolveSimVersionStamp(
     return current.engineHash;
   }
 
-  const version = await findSimVersion(db, requested);
+  const version = await readSimVersion(db, requested);
 
   if (version !== undefined && version.status === 'active' && version.retainedUntil > new Date()) {
     if (!isContentVersionSupported(version, contentVersion)) {
       recordContentIncompatibleRejection('requested');
 
-      const current = await findCurrentSimVersion(db);
+      const current = await readCurrentSimVersion(db);
 
       throw errors.SIM_VERSION_EXPIRED({
         data: { currentSimVersion: current?.engineHash ?? null },
@@ -48,7 +48,7 @@ export async function resolveSimVersionStamp(
     return requested;
   }
 
-  const current = await findCurrentSimVersion(db);
+  const current = await readCurrentSimVersion(db);
 
   const currentSimVersion = current?.engineHash ?? null;
 

@@ -78,7 +78,7 @@ function rollValues(
 ): RolledAffixes {
   const protectedGroupIDs = new Set(constraints.protectGroupIDs);
 
-  const sorted = base.affixes.toSorted((a, b) => (a.affixID < b.affixID ? -1 : 1));
+  const sorted = base.affixes.toSorted((left, right) => (left.affixID < right.affixID ? -1 : 1));
 
   const affixes = sorted.map((existing) => {
     if (protectedGroupIDs.has(existing.groupID)) {

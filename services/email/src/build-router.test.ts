@@ -254,7 +254,7 @@ test('it reports a fire-and-forget drain failure carrying the active trace id', 
 
   const stubQueue: JobQueue<EmailJobDefs> = {
     drain: () => Promise.reject(new Error('drain failed')),
-    getJobState: () => Promise.resolve(undefined),
+    readJobState: () => Promise.resolve(undefined),
     send: () => Promise.resolve('job-1'),
     start: () => Promise.resolve(),
     stop: () => Promise.resolve(),
@@ -304,7 +304,7 @@ test('it re-drains a deadline job every few seconds until its job reaches a term
 
       return Promise.resolve({ completed: 0, failed: 1 });
     },
-    getJobState: () => Promise.resolve(jobStates.shift() ?? 'completed'),
+    readJobState: () => Promise.resolve(jobStates.shift() ?? 'completed'),
     send: () => Promise.resolve('job-1'),
     start: () => Promise.resolve(),
     stop: () => Promise.resolve(),
@@ -314,10 +314,10 @@ test('it re-drains a deadline job every few seconds until its job reaches a term
     logger,
     now: () => elapsedMs,
     queue: stubQueue,
-    wait: (ms) => {
-      recordedDelays.push(ms);
+    wait: (delayMs) => {
+      recordedDelays.push(delayMs);
 
-      elapsedMs += ms;
+      elapsedMs += delayMs;
 
       return Promise.resolve();
     },
@@ -365,7 +365,7 @@ test('it re-drains a deadline job that another request drain failed, though its 
 
       return Promise.resolve({ completed: 0, failed: 0 });
     },
-    getJobState: () => Promise.resolve(jobStates.shift() ?? 'completed'),
+    readJobState: () => Promise.resolve(jobStates.shift() ?? 'completed'),
     send: () => Promise.resolve('job-1'),
     start: () => Promise.resolve(),
     stop: () => Promise.resolve(),
@@ -375,8 +375,8 @@ test('it re-drains a deadline job that another request drain failed, though its 
     logger,
     now: () => elapsedMs,
     queue: stubQueue,
-    wait: (ms) => {
-      elapsedMs += ms;
+    wait: (delayMs) => {
+      elapsedMs += delayMs;
 
       return Promise.resolve();
     },

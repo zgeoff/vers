@@ -5,12 +5,16 @@ import { createMockContentDocument } from '@vers/contract-activity/test-utils';
 import { resolveServiceURL } from '@vers/mock-services';
 import * as db from '@vers/mock-services/db';
 import type { ActivityServiceClient } from '../submission/types';
-import { findCachedContentDocument } from './find-cached-content-document';
 import { loadContentDocument } from './load-content-document';
+import { readCachedContentDocument } from './read-cached-content-document';
 import { writeContentDocumentCache } from './write-content-document-cache';
 
-function createRealClient(): ActivityServiceClient {
-  return createORPCClient(new RPCLink({ url: `${resolveServiceURL('activity')}/rpc` }));
+function setupTest() {
+  const client: ActivityServiceClient = createORPCClient(
+    new RPCLink({ url: `${resolveServiceURL('activity')}/rpc` }),
+  );
+
+  return { client };
 }
 
 test('it returns a cached document without dispatching a fetch', async () => {
@@ -30,18 +34,22 @@ test('it returns a cached document without dispatching a fetch', async () => {
 });
 
 test('it fetches and persists a document on a cache miss', async () => {
+  const ctx = setupTest();
+
   const published = await db.contentDocumentCollection.create({});
-  const document = await loadContentDocument(createRealClient(), published.contentVersion);
+  const document = await loadContentDocument(ctx.client, published.contentVersion);
 
   expect(document.contentVersion).toBe(published.contentVersion);
 
-  const nowCached = await findCachedContentDocument(published.contentVersion);
+  const nowCached = await readCachedContentDocument(published.contentVersion);
 
   expect(nowCached).toStrictEqual(document);
 });
 
 test('it propagates NOT_FOUND for an unpublished version', () => {
-  expect(loadContentDocument(createRealClient(), 'not-a-real-version')).rejects.toMatchObject({
+  const ctx = setupTest();
+
+  expect(loadContentDocument(ctx.client, 'not-a-real-version')).rejects.toMatchObject({
     code: 'NOT_FOUND',
   });
 });

@@ -1,8 +1,8 @@
 import type { ActivityData } from '@vers/contract-activity';
 import { writeActivityStart } from '../submission/write-activity-start';
 import { writeLastStartedActivity } from '../submission/write-last-started-activity';
-import { buildActivityStart } from './build-activity-start';
 import { handleSetActivityMessage } from './handle-set-activity-message';
+import { loadActivityStart } from './load-activity-start';
 import { submitStopIntent } from './submit-stop-intent';
 import type { FlowSignals, StartActivityInput, WorkerContext } from './types';
 import type { StartStatus } from './worker-contract';
@@ -46,7 +46,7 @@ export async function runStartFlow(
   // the mint is attempted before the live run is stopped: a mint that fails (a missing cache)
   // leaves the current run intact rather than stranding the worker with no live run and a stale
   // stopped one
-  const row = await buildActivityStart(context, { ...input, startKey: token });
+  const row = await loadActivityStart(context, { ...input, startKey: token });
 
   if (row === null) {
     return { kind: 'failed' };

@@ -11,7 +11,7 @@ export { createTestUser } from './create-test-user';
 export { createMockActivity } from './factories/create-mock-activity';
 export { createMockActivityChain } from './factories/create-mock-activity-chain';
 export { createMockAvatar } from './factories/create-mock-avatar';
-export { getTestServiceKeyPair } from './get-test-service-key-pair';
+export { resolveTestServiceKeyPair } from './resolve-test-service-key-pair';
 export type { Isolation } from './make-test-db';
 export { makeTestDB } from './make-test-db';
 export { resolveTestDBTarget } from './resolve-test-db-target';

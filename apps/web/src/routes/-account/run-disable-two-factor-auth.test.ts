@@ -53,6 +53,8 @@ test('it removes the 2FA verification and redirects to settings once a valid tok
   });
 
   expect(
-    db.verificationCollection.findFirst((q) => q.where({ target: signedIn.userID, type: '2fa' })),
+    db.verificationCollection.findFirst((query) =>
+      query.where({ target: signedIn.userID, type: '2fa' }),
+    ),
   ).toBeUndefined();
 });

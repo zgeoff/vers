@@ -232,9 +232,13 @@ const baselineDashboardDocument = {
     },
   ],
   layout: [
+    // oxlint-disable-next-line id-length -- Axiom's dashboard layout names its cell fields h, i and w
     { h: 8, i: 'request-rate', w: 6, x: 0, y: 0 },
+    // oxlint-disable-next-line id-length -- Axiom's dashboard layout names its cell fields h, i and w
     { h: 8, i: 'error-rate', w: 6, x: 6, y: 0 },
+    // oxlint-disable-next-line id-length -- Axiom's dashboard layout names its cell fields h, i and w
     { h: 8, i: 'p95-latency', w: 6, x: 0, y: 8 },
+    // oxlint-disable-next-line id-length -- Axiom's dashboard layout names its cell fields h, i and w
     { h: 8, i: 'error-logs', w: 6, x: 6, y: 8 },
   ],
   refreshTime: 60,
@@ -282,12 +286,12 @@ function sortKeysDeep(value: unknown): unknown {
   if (value !== null && typeof value === 'object') {
     return Object.fromEntries(
       Object.entries(value)
-        .toSorted(([a], [b]) => {
-          if (a < b) {
+        .toSorted(([left], [right]) => {
+          if (left < right) {
             return -1;
           }
 
-          return a > b ? 1 : 0;
+          return left > right ? 1 : 0;
         })
         .map(([key, entry]) => [key, sortKeysDeep(entry)]),
     );

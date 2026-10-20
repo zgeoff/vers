@@ -90,6 +90,10 @@ export async function runResyncFlow(
   }
 }
 
+function emitResyncStatus(context: WorkerContext, status: Readonly<ResyncStatus>): void {
+  context.broadcast({ status, type: WorkerMessageType.ResyncStatus });
+}
+
 // a failure before the first reconstruction since boot is the state the tab must name, since the
 // worker refuses every start until a reconstruction completes
 function buildResyncFailure(context: WorkerContext, avatarID: string): ResyncStatus {
@@ -106,7 +110,7 @@ async function runResyncPass(
 ): Promise<boolean> {
   const result = await runResync({
     avatarID,
-    buildSimulationInput: async (source) => {
+    loadSimulationInput: async (source) => {
       const document = await loadContentDocument(
         context.getClient(),
         source.contentVersion,
@@ -164,10 +168,6 @@ async function runResyncPass(
   return reconstructed;
 }
 
-function toActivityFailureAction(failureAction: ContractFailureAction): ActivityFailureAction {
-  return failureAction === 'retry' ? ActivityFailureAction.Retry : ActivityFailureAction.Abort;
-}
-
 async function flushFailureAction(
   context: WorkerContext,
   avatarID: string,
@@ -203,6 +203,17 @@ async function updateFailureActionFromServer(
   if (changed) {
     emitFailureActionStatus(context, failureAction);
   }
+}
+
+function emitFailureActionStatus(
+  context: WorkerContext,
+  failureAction: ActivityFailureAction,
+): void {
+  context.broadcast({ failureAction, type: WorkerMessageType.FailureActionStatus });
+}
+
+function toActivityFailureAction(failureAction: ContractFailureAction): ActivityFailureAction {
+  return failureAction === 'retry' ? ActivityFailureAction.Retry : ActivityFailureAction.Abort;
 }
 
 function pickKeepActivityIDs(
@@ -275,34 +286,6 @@ function applyResyncResult(
   return Promise.resolve(true);
 }
 
-function applyActiveElsewhere(context: WorkerContext, activityID: string): void {
-  if (context.getActivity()?.id === activityID) {
-    resetSimulation(context);
-  }
-
-  updateWriterDisplacedStatus(context, activityID);
-}
-
-function applyAttachLive(
-  context: WorkerContext,
-  plan: Extract<ResyncPlan, { kind: 'attach-live' }>,
-  progress: ResyncResult['progress'],
-  signals: Readonly<FlowSignals>,
-): Promise<boolean> {
-  if (context.getSimulation().activity?.id === plan.context.activityID) {
-    return Promise.resolve(true);
-  }
-
-  invariant(
-    progress !== null,
-    'an attach-live plan always carries the progress it was decided from',
-  );
-
-  return applyHeadAttach(context, progress.activity, plan.context, signals, {
-    skipTerminalHead: false,
-  });
-}
-
 async function applyFastForward(
   context: WorkerContext,
   report: FastForwardReport,
@@ -369,6 +352,14 @@ async function applyFastForward(
   }
 
   return reconstructed;
+}
+
+function applyActiveElsewhere(context: WorkerContext, activityID: string): void {
+  if (context.getActivity()?.id === activityID) {
+    resetSimulation(context);
+  }
+
+  updateWriterDisplacedStatus(context, activityID);
 }
 
 interface HeadAttachOptions {
@@ -452,9 +443,62 @@ async function applyHeadAttach(
   return true;
 }
 
-interface FetchedBaseline {
-  readonly activity: ActivityData;
-  readonly xp: number;
+async function setLiveSimulationOrStopBack(
+  context: WorkerContext,
+  activity: Readonly<ActivityData>,
+  simulation: Simulation,
+  signals: Readonly<FlowSignals>,
+): Promise<void> {
+  if (signals.stop.aborted) {
+    await submitStopIntent(context, activity);
+
+    return;
+  }
+
+  context.setActivity(activity);
+  context.setSimulation(simulation);
+
+  registerSimulationListeners(context, simulation);
+
+  // an install resolves any recorded displacement: this session either took the writer back or
+  // moved on to a different run
+  updateWriterDisplacedStatus(context, null);
+}
+
+function emitDivergence(context: WorkerContext, activityID: string): void {
+  reportWorkerFault(
+    'checkpoint-stream',
+    new Error(`checkpoint stream rejected for activity ${activityID}: reconstruction-divergence`),
+  );
+
+  context.broadcast({ activityID, type: WorkerMessageType.CheckpointStreamInvalid });
+}
+
+function isTerminalCheckpoint(checkpoint: ActivityCheckpoint): boolean {
+  return (
+    checkpoint.type === ActivityCheckpointType.Completed ||
+    checkpoint.type === ActivityCheckpointType.Failed
+  );
+}
+
+function applyAttachLive(
+  context: WorkerContext,
+  plan: Extract<ResyncPlan, { kind: 'attach-live' }>,
+  progress: ResyncResult['progress'],
+  signals: Readonly<FlowSignals>,
+): Promise<boolean> {
+  if (context.getSimulation().activity?.id === plan.context.activityID) {
+    return Promise.resolve(true);
+  }
+
+  invariant(
+    progress !== null,
+    'an attach-live plan always carries the progress it was decided from',
+  );
+
+  return applyHeadAttach(context, progress.activity, plan.context, signals, {
+    skipTerminalHead: false,
+  });
 }
 
 // A worker with no later run of its own adopts the server's latest row as the next mint's fold
@@ -475,7 +519,7 @@ async function updateLatestRunRecords(
   const heldID = held !== null && held.avatarID === activity.avatarID ? held.activityID : undefined;
 
   // an install records the live row itself, with the earnings its replayed prefix carries
-  if (context.getActivity()?.id !== activity.id && !(await isRecordAhead(heldID, activity.id))) {
+  if (context.getActivity()?.id !== activity.id && !(await probeRecordAhead(heldID, activity.id))) {
     context.setLatestRun({
       activityID: activity.id,
       avatarID: activity.avatarID,
@@ -487,9 +531,14 @@ async function updateLatestRunRecords(
 
   const lastStarted = await readLastStartedActivity(activity.avatarID);
 
-  if (!(await isRecordAhead(lastStarted?.lastActivityID, activity.id))) {
+  if (!(await probeRecordAhead(lastStarted?.lastActivityID, activity.id))) {
     await writeLastStartedActivity({ avatarID: activity.avatarID, lastActivityID: activity.id });
   }
+}
+
+interface FetchedBaseline {
+  readonly activity: ActivityData;
+  readonly xp: number;
 }
 
 function pickFetchedBaseline(result: Readonly<ResyncResult>): FetchedBaseline | null {
@@ -514,7 +563,10 @@ function pickFetchedBaseline(result: Readonly<ResyncResult>): FetchedBaseline | 
   return { activity: result.progress.activity, xp: result.progress.optimisticBuild.xp };
 }
 
-async function isRecordAhead(recordedID: string | undefined, fetchedID: string): Promise<boolean> {
+async function probeRecordAhead(
+  recordedID: string | undefined,
+  fetchedID: string,
+): Promise<boolean> {
   if (recordedID === undefined) {
     return false;
   }
@@ -526,53 +578,4 @@ async function isRecordAhead(recordedID: string | undefined, fetchedID: string):
   // a start still in the durable store was minted here and has not reached the server, so it
   // succeeds the fetched row rather than preceding it
   return (await readActivityStart(recordedID)) !== undefined;
-}
-
-function isTerminalCheckpoint(checkpoint: ActivityCheckpoint): boolean {
-  return (
-    checkpoint.type === ActivityCheckpointType.Completed ||
-    checkpoint.type === ActivityCheckpointType.Failed
-  );
-}
-
-async function setLiveSimulationOrStopBack(
-  context: WorkerContext,
-  activity: Readonly<ActivityData>,
-  simulation: Simulation,
-  signals: Readonly<FlowSignals>,
-): Promise<void> {
-  if (signals.stop.aborted) {
-    await submitStopIntent(context, activity);
-
-    return;
-  }
-
-  context.setActivity(activity);
-  context.setSimulation(simulation);
-
-  registerSimulationListeners(context, simulation);
-
-  // an install resolves any recorded displacement: this session either took the writer back or
-  // moved on to a different run
-  updateWriterDisplacedStatus(context, null);
-}
-
-function emitResyncStatus(context: WorkerContext, status: Readonly<ResyncStatus>): void {
-  context.broadcast({ status, type: WorkerMessageType.ResyncStatus });
-}
-
-function emitDivergence(context: WorkerContext, activityID: string): void {
-  reportWorkerFault(
-    'checkpoint-stream',
-    new Error(`checkpoint stream rejected for activity ${activityID}: reconstruction-divergence`),
-  );
-
-  context.broadcast({ activityID, type: WorkerMessageType.CheckpointStreamInvalid });
-}
-
-function emitFailureActionStatus(
-  context: WorkerContext,
-  failureAction: ActivityFailureAction,
-): void {
-  context.broadcast({ failureAction, type: WorkerMessageType.FailureActionStatus });
 }

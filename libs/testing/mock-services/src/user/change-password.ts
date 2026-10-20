@@ -8,7 +8,7 @@ export const changePassword = os.changePassword.handler(async (opts) => {
     throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
   }
 
-  const user = db.userCollection.findFirst((q) => q.where({ id: actingUserID }));
+  const user = db.userCollection.findFirst((query) => query.where({ id: actingUserID }));
 
   if (user === undefined) {
     throw opts.errors.NOT_FOUND({ data: {} });

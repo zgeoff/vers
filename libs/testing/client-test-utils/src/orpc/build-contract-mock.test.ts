@@ -12,57 +12,53 @@ import { server } from './mocks/server';
 
 type SecretContext = Record<string, unknown> & { actingUserID: string | null };
 
-const secretContract = {
-  getOther: oc
-    .route({ method: 'GET', path: '/other' })
-    .input(z.object({}))
-    .output(z.object({ value: z.string() })),
+function setupTest() {
+  const contract = {
+    getOther: oc
+      .route({ method: 'GET', path: '/other' })
+      .input(z.object({}))
+      .output(z.object({ value: z.string() })),
 
-  getSecret: oc
-    .errors({ UNAUTHORIZED: { data: z.object({ reason: z.string() }) } })
-    .route({ method: 'GET', path: '/secret' })
-    .input(z.object({}))
-    .output(z.object({ value: z.string() })),
-};
-
-function resolveContext(request: Request): SecretContext {
-  const header = request.headers.get('authorization') ?? '';
-  const actingUserID = header.startsWith('Bearer ') ? header.slice('Bearer '.length) : null;
-
-  return { actingUserID };
-}
-
-function buildBaseHandlers() {
-  const implementer = implement(secretContract).$context<SecretContext>();
-
-  const router = {
-    getOther: implementer.getOther.handler(() => ({ value: 'base-other' })),
-    getSecret: implementer.getSecret.handler((opts) => ({
-      value: `base-secret-for-${opts.context.actingUserID ?? 'anonymous'}`,
-    })),
+    getSecret: oc
+      .errors({ UNAUTHORIZED: { data: z.object({ reason: z.string() }) } })
+      .route({ method: 'GET', path: '/secret' })
+      .input(z.object({}))
+      .output(z.object({ value: z.string() })),
   };
 
-  return buildMockService({
-    baseUrl: 'http://secret.test',
-    contract: secretContract,
-    resolveContext,
-    router,
-  });
-}
+  const implementer = implement(contract).$context<SecretContext>();
 
-function buildClient(bearerToken: string): ContractRouterClient<typeof secretContract> {
-  const link = new RPCLink<Record<never, never>>({
-    headers: { authorization: `Bearer ${bearerToken}` },
-    url: 'http://secret.test/rpc',
-  });
+  server.use(
+    ...buildMockService({
+      baseUrl: 'http://secret.test',
+      contract,
+      resolveContext: (request: Request): SecretContext => {
+        const header = request.headers.get('authorization') ?? '';
+        const actingUserID = header.startsWith('Bearer ') ? header.slice('Bearer '.length) : null;
 
-  return createORPCClient(link);
+        return { actingUserID };
+      },
+      router: {
+        getOther: implementer.getOther.handler(() => ({ value: 'base-other' })),
+        getSecret: implementer.getSecret.handler((opts) => ({
+          value: `base-secret-for-${opts.context.actingUserID ?? 'anonymous'}`,
+        })),
+      },
+    }),
+  );
+
+  return { contract };
 }
 
 test('it resolves the actingUserID a client forwards via the Authorization header', async () => {
-  server.use(...buildBaseHandlers());
+  const ctx = setupTest();
 
-  const client = buildClient('user_1');
+  const client: ContractRouterClient<typeof ctx.contract> = createORPCClient(
+    new RPCLink<Record<never, never>>({
+      headers: { authorization: 'Bearer user_1' },
+      url: 'http://secret.test/rpc',
+    }),
+  );
 
   const result = await client.getSecret({});
 
@@ -70,12 +66,17 @@ test('it resolves the actingUserID a client forwards via the Authorization heade
 });
 
 test('it overrides only the mocked procedure, leaving the rest on the base backend', async () => {
-  server.use(...buildBaseHandlers());
+  const ctx = setupTest();
 
   const mock = buildContractMock({
     baseUrl: 'http://secret.test',
-    contract: secretContract,
-    resolveContext,
+    contract: ctx.contract,
+    resolveContext: (request: Request): SecretContext => {
+      const header = request.headers.get('authorization') ?? '';
+      const actingUserID = header.startsWith('Bearer ') ? header.slice('Bearer '.length) : null;
+
+      return { actingUserID };
+    },
   });
 
   server.use(
@@ -84,7 +85,12 @@ test('it overrides only the mocked procedure, leaving the rest on the base backe
     })),
   );
 
-  const client = buildClient('user_2');
+  const client: ContractRouterClient<typeof ctx.contract> = createORPCClient(
+    new RPCLink<Record<never, never>>({
+      headers: { authorization: 'Bearer user_2' },
+      url: 'http://secret.test/rpc',
+    }),
+  );
 
   const secret = await client.getSecret({});
   const other = await client.getOther({});
@@ -94,12 +100,17 @@ test('it overrides only the mocked procedure, leaving the rest on the base backe
 });
 
 test('it surfaces a mock-thrown typed error as a defined ORPCError client-side', () => {
-  server.use(...buildBaseHandlers());
+  const ctx = setupTest();
 
   const mock = buildContractMock({
     baseUrl: 'http://secret.test',
-    contract: secretContract,
-    resolveContext,
+    contract: ctx.contract,
+    resolveContext: (request: Request): SecretContext => {
+      const header = request.headers.get('authorization') ?? '';
+      const actingUserID = header.startsWith('Bearer ') ? header.slice('Bearer '.length) : null;
+
+      return { actingUserID };
+    },
   });
 
   server.use(
@@ -108,7 +119,12 @@ test('it surfaces a mock-thrown typed error as a defined ORPCError client-side',
     }),
   );
 
-  const client = buildClient('user_3');
+  const client: ContractRouterClient<typeof ctx.contract> = createORPCClient(
+    new RPCLink<Record<never, never>>({
+      headers: { authorization: 'Bearer user_3' },
+      url: 'http://secret.test/rpc',
+    }),
+  );
 
   expect(client.getSecret({})).rejects.toMatchObject({ data: { reason: 'missing-session' } });
 });

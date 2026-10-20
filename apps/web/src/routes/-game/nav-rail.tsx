@@ -59,6 +59,38 @@ const divider = css({
   marginY: '1',
 });
 
+export function NavRail() {
+  const routeContext = useRouteContext({ from: '/_game' });
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const idleWorkerHandle = useIdleWorkerHandle();
+  const hasActivity = idleWorkerHandle.activity !== undefined;
+
+  return (
+    <nav aria-label="Game navigation" className={rail}>
+      <AvatarChip />
+      <span aria-hidden className={divider} />
+      {RAIL_GROUPS.map((group, index) => (
+        <RailGroup
+          key={group[0]?.to ?? index}
+          flags={routeContext.flags}
+          hasActivity={hasActivity}
+          items={group}
+          pathname={pathname}
+          showDivider={index > 0}
+        />
+      ))}
+    </nav>
+  );
+}
+
+interface RailGroupProps {
+  readonly flags: Partial<Record<FlagKey, boolean>>;
+  readonly hasActivity: boolean;
+  readonly items: ReadonlyArray<RailItem>;
+  readonly pathname: string;
+  readonly showDivider: boolean;
+}
+
 const railButton = css({
   alignItems: 'center',
   backgroundColor: 'bg.panel',
@@ -101,38 +133,6 @@ const railLabel = css({
   letterSpacing: 'wider',
   textTransform: 'uppercase',
 });
-
-export function NavRail() {
-  const routeContext = useRouteContext({ from: '/_game' });
-  const pathname = useRouterState({ select: (state) => state.location.pathname });
-  const idleWorkerHandle = useIdleWorkerHandle();
-  const hasActivity = idleWorkerHandle.activity !== undefined;
-
-  return (
-    <nav aria-label="Game navigation" className={rail}>
-      <AvatarChip />
-      <span aria-hidden className={divider} />
-      {RAIL_GROUPS.map((group, index) => (
-        <RailGroup
-          key={group[0]?.to ?? index}
-          flags={routeContext.flags}
-          hasActivity={hasActivity}
-          items={group}
-          pathname={pathname}
-          showDivider={index > 0}
-        />
-      ))}
-    </nav>
-  );
-}
-
-interface RailGroupProps {
-  readonly flags: Partial<Record<FlagKey, boolean>>;
-  readonly hasActivity: boolean;
-  readonly items: ReadonlyArray<RailItem>;
-  readonly pathname: string;
-  readonly showDivider: boolean;
-}
 
 function RailGroup(props: Readonly<RailGroupProps>) {
   const visible = props.items.filter((item) => !item.flag || props.flags[item.flag] === true);

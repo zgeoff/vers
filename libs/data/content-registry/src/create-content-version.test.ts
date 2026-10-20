@@ -4,8 +4,8 @@ import type { DB } from '@vers/db';
 import { createTestDB } from '@vers/service-test-utils/bun';
 import type { Kysely } from 'kysely';
 import { createContentVersion } from './create-content-version';
-import { findContentDocument } from './find-content-document';
-import { findCurrentContentVersion } from './find-current-content-version';
+import { readContentDocument } from './read-content-document';
+import { readCurrentContentVersion } from './read-current-content-version';
 
 async function setupTest(): Promise<{ db: Kysely<DB> } & AsyncDisposable> {
   const db = await createTestDB({ isolation: 'schema' });
@@ -20,8 +20,8 @@ test('it publishes a document and moves the current pointer to it', async () => 
 
   await createContentVersion(ctx.db, document);
 
-  expect(findContentDocument(ctx.db, document.contentVersion)).resolves.toStrictEqual(document);
-  expect(findCurrentContentVersion(ctx.db)).resolves.toBe(document.contentVersion);
+  expect(readContentDocument(ctx.db, document.contentVersion)).resolves.toStrictEqual(document);
+  expect(readCurrentContentVersion(ctx.db)).resolves.toBe(document.contentVersion);
 });
 
 test('it rejects a duplicate contentVersion and leaves the pointer untouched', async () => {
@@ -35,5 +35,5 @@ test('it rejects a duplicate contentVersion and leaves the pointer untouched', a
 
   // republishing the first document must not move the pointer back off the later version
   expect(createContentVersion(ctx.db, first)).rejects.toThrow();
-  expect(findCurrentContentVersion(ctx.db)).resolves.toBe('31001');
+  expect(readCurrentContentVersion(ctx.db)).resolves.toBe('31001');
 });

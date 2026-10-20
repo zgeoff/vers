@@ -59,8 +59,8 @@ test('it creates a Self-Found avatar when that option is selected', async () => 
     await user.click(rendered.getByRole('button', { name: 'Create Avatar' }));
 
     await waitFor(() => {
-      const created = db.avatarCollection.findFirst((q) =>
-        q.where({ name: 'Outlander', userID: signedIn.userID }),
+      const created = db.avatarCollection.findFirst((query) =>
+        query.where({ name: 'Outlander', userID: signedIn.userID }),
       );
 
       expect(created).toMatchObject({ mode: 'self_found' });

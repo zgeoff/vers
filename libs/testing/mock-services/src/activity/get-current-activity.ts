@@ -8,16 +8,16 @@ export const getCurrentActivity = os.getCurrentActivity.handler((opts) => {
     throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
   }
 
-  const avatar = db.avatarCollection.findFirst((q) =>
-    q.where({ id: opts.input.avatarID, userID: actingUserID }),
+  const avatar = db.avatarCollection.findFirst((query) =>
+    query.where({ id: opts.input.avatarID, userID: actingUserID }),
   );
 
   if (avatar === undefined) {
     return null;
   }
 
-  const activity = db.activityCollection.findFirst((q) =>
-    q.where({ avatarID: opts.input.avatarID, status: 'active' }),
+  const activity = db.activityCollection.findFirst((query) =>
+    query.where({ avatarID: opts.input.avatarID, status: 'active' }),
   );
 
   return activity ?? null;

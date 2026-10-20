@@ -1,5 +1,5 @@
 import type { SceneState } from './types';
 
-export function isSceneSwap(a: SceneState, b: SceneState): boolean {
-  return a.scene !== b.scene;
+export function isSceneSwap(previous: SceneState, next: SceneState): boolean {
+  return previous.scene !== next.scene;
 }

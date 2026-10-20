@@ -5,7 +5,7 @@ import * as db from '../db';
 import { os } from './os';
 
 export const refreshTokens = os.refreshTokens.handler(async (opts) => {
-  const session = db.sessionCollection.findFirst((q) => q.where({ id: opts.input.id }));
+  const session = db.sessionCollection.findFirst((query) => query.where({ id: opts.input.id }));
 
   if (session === undefined) {
     throw opts.errors.NOT_FOUND({ data: {} });

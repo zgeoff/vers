@@ -1,11 +1,11 @@
 import { redirect } from '@tanstack/react-router';
-import { getVerifySession } from '../../lib/auth/get-verify-session';
+import { readVerifySession } from '../../lib/auth/read-verify-session';
 import { requireAnonymous } from '../../lib/auth/require-anonymous';
 
 export async function requireForceLogoutPending(): Promise<void> {
   await requireAnonymous();
 
-  const verifySession = await getVerifySession();
+  const verifySession = await readVerifySession();
 
   if (
     verifySession['loginLogout#email'] === undefined ||

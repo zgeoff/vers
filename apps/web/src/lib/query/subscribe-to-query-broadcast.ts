@@ -4,25 +4,9 @@ import { RSC_QUERY_KEY_PREFIX } from './rsc-query-key-prefix';
 
 export const QUERY_BROADCAST_CHANNEL_NAME = 'vers-query';
 
-type QueryBroadcast =
-  | {
-      readonly queryHash: string;
-      readonly queryKey: QueryKey;
-      readonly state: QueryState;
-      readonly type: 'updated';
-    }
-  | { readonly queryHash: string; readonly type: 'removed' };
-
 interface QueryCacheChange {
   readonly actionType: string | undefined;
   readonly type: string;
-}
-
-interface BroadcastableQuery {
-  readonly observers: ReadonlyArray<unknown>;
-  readonly queryHash: string;
-  readonly queryKey: QueryKey;
-  readonly state: QueryState;
 }
 
 export function subscribeToQueryBroadcast(queryClient: QueryClient): () => void {
@@ -83,6 +67,22 @@ export function subscribeToQueryBroadcast(queryClient: QueryClient): () => void 
 
     channel.close();
   };
+}
+
+type QueryBroadcast =
+  | {
+      readonly queryHash: string;
+      readonly queryKey: QueryKey;
+      readonly state: QueryState;
+      readonly type: 'updated';
+    }
+  | { readonly queryHash: string; readonly type: 'removed' };
+
+interface BroadcastableQuery {
+  readonly observers: ReadonlyArray<unknown>;
+  readonly queryHash: string;
+  readonly queryKey: QueryKey;
+  readonly state: QueryState;
 }
 
 function buildQueryBroadcast(

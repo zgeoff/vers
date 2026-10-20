@@ -81,8 +81,8 @@ function serveVerificationCode(request: Request): Response {
     return new Response(null, { status: 400 });
   }
 
-  const verification = verificationCollection.findFirst((q) =>
-    q.where({ target, type: type.data }),
+  const verification = verificationCollection.findFirst((query) =>
+    query.where({ target, type: type.data }),
   );
 
   return verification === undefined

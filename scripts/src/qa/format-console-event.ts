@@ -1,3 +1,4 @@
+import { match } from 'ts-pattern';
 import { z } from 'zod';
 import type { CDPEvent } from './types';
 
@@ -33,33 +34,31 @@ const logEntrySchema = z.object({
 });
 
 export function formatConsoleEvent(event: CDPEvent): string | null {
-  switch (event.method) {
-    case 'Runtime.consoleAPICalled': {
+  return match(event.method)
+    .returnType<string | null>()
+    .with('Runtime.consoleAPICalled', () => {
       const call = consoleCallSchema.parse(event.params);
 
       return `console.${call.type}: ${call.args.map(formatRemoteObject).join(' ')}`.slice(
         0,
         CONSOLE_LIMIT,
       );
-    }
-    case 'Runtime.exceptionThrown': {
+    })
+    .with('Runtime.exceptionThrown', () => {
       const details = exceptionSchema.parse(event.params).exceptionDetails;
 
       const thrown =
         details.exception === undefined ? details.text : formatRemoteObject(details.exception);
 
       return `exception: ${thrown}`.slice(0, EXCEPTION_LIMIT);
-    }
-    case 'Log.entryAdded': {
+    })
+    .with('Log.entryAdded', () => {
       const entry = logEntrySchema.parse(event.params).entry;
       const source = entry.url === undefined ? '' : ` ${entry.url}`;
 
       return `log/${entry.level}: ${entry.text}${source}`.slice(0, LOG_LIMIT);
-    }
-    default: {
-      return null;
-    }
-  }
+    })
+    .otherwise(() => null);
 }
 
 function formatRemoteObject(object: z.infer<typeof remoteObjectSchema>): string {

@@ -3,7 +3,7 @@ import type { TokenIssuer } from '@vers/service-auth';
 import type { Insertable, Kysely, Selectable } from 'kysely';
 import { createServiceToken } from '../create-service-token';
 import { createTestUser } from '../create-test-user';
-import { getTestServiceKeyPair } from '../get-test-service-key-pair';
+import { resolveTestServiceKeyPair } from '../resolve-test-service-key-pair';
 
 interface CreateViewerConfig {
   readonly audience: string;
@@ -16,7 +16,7 @@ interface CreateViewerConfig {
 export async function createViewer(
   config: Readonly<CreateViewerConfig>,
 ): Promise<{ token: string; user: Selectable<Users> }> {
-  const keyPair = await getTestServiceKeyPair();
+  const keyPair = await resolveTestServiceKeyPair();
   const created = await createTestUser(config.db, config.user);
 
   const token = await createServiceToken({

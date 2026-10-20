@@ -44,6 +44,7 @@ test('it ships written lines to the OTLP logs endpoint with the env-configured h
   const stream = createOTLPLogStream({ serviceName: 'test-service' });
 
   stream.write(
+    // oxlint-disable-next-line zgeoff/no-abbreviated-names -- pino writes the message under `msg`
     `${JSON.stringify({ level: 30, msg: 'shipped line', name: 'test-service', time: Date.now() })}\n`,
   );
 

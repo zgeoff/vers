@@ -1,4 +1,4 @@
-import { findCurrentContentVersion } from '@vers/content-registry';
+import { readCurrentContentVersion } from '@vers/content-registry';
 import type { ContentDocument, EncounterNode } from '@vers/contract-activity';
 import { createGenesisSeed } from '@vers/contract-activity';
 import type { SecretRef } from '@vers/contract-keys';
@@ -214,7 +214,7 @@ async function loadEncounterInputs(
   deps: RevealNodesDeps,
   avatarID: string,
 ): Promise<EncounterInputs> {
-  const contentVersion = await findCurrentContentVersion(deps.db);
+  const contentVersion = await readCurrentContentVersion(deps.db);
 
   invariant(contentVersion !== undefined, 'content registry has no current version');
 

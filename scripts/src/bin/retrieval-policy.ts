@@ -110,7 +110,7 @@ async function readStateFile(): Promise<unknown> {
 
 async function recordFire(): Promise<void> {
   const record = {
-    t: new Date(now).toISOString(),
+    time: new Date(now).toISOString(),
     session: input.session_id,
     phase: plan.state.phase,
     tool: input.tool_name,

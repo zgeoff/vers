@@ -1,10 +1,10 @@
 import { expect, test } from 'bun:test';
-import { createTestJWT, getTestJWTKeyPair } from '@vers/test-utils';
+import { createTestJWT, resolveTestJWTKeyPair } from '@vers/test-utils';
 import * as jose from 'jose';
 import { createTokenVerifier } from './create-token-verifier';
 
 test('it authorizes a valid token and extracts the payload', async () => {
-  const keyPair = await getTestJWTKeyPair();
+  const keyPair = await resolveTestJWTKeyPair();
 
   const verifyToken = createTokenVerifier({
     audience: 'test.com',
@@ -27,7 +27,7 @@ test('it authorizes a valid token and extracts the payload', async () => {
 });
 
 test('it rejects a missing token', async () => {
-  const keyPair = await getTestJWTKeyPair();
+  const keyPair = await resolveTestJWTKeyPair();
 
   const verifyToken = createTokenVerifier({
     audience: 'test.com',
@@ -39,7 +39,7 @@ test('it rejects a missing token', async () => {
 });
 
 test('it rejects an invalid token', async () => {
-  const keyPair = await getTestJWTKeyPair();
+  const keyPair = await resolveTestJWTKeyPair();
 
   const verifyToken = createTokenVerifier({
     audience: 'test.com',

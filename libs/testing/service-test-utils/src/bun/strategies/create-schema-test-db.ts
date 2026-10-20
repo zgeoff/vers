@@ -5,7 +5,7 @@ import { createDatabaseFromTemplate } from '../create-database-from-template';
 import type { TestDBHandle } from '../test-db-handle';
 
 export async function createSchemaTestDB(): Promise<TestDBHandle> {
-  const host = await getHost();
+  const host = await resolveHost();
 
   const cloneSchema = `tu_${createId()}`;
 
@@ -44,13 +44,13 @@ interface Host {
 
 let host: Promise<Host> | undefined;
 
-function getHost(): Promise<Host> {
-  host ??= buildHost();
+function resolveHost(): Promise<Host> {
+  host ??= createHost();
 
   return host;
 }
 
-async function buildHost(): Promise<Host> {
+async function createHost(): Promise<Host> {
   const databaseURL = await createDatabaseFromTemplate();
 
   return { databaseURL, sql: postgres(databaseURL, { onnotice: () => {} }) };
@@ -81,13 +81,13 @@ interface ForeignKeyRow {
   readonly tableName: string;
 }
 
-const FOREIGN_KEY_ACTIONS: Readonly<Record<string, string>> = {
-  a: 'NO ACTION',
-  c: 'CASCADE',
-  d: 'SET DEFAULT',
-  n: 'SET NULL',
-  r: 'RESTRICT',
-};
+const FOREIGN_KEY_ACTIONS: ReadonlyMap<string, string> = new Map([
+  ['a', 'NO ACTION'],
+  ['c', 'CASCADE'],
+  ['d', 'SET DEFAULT'],
+  ['n', 'SET NULL'],
+  ['r', 'RESTRICT'],
+]);
 
 // `LIKE ... INCLUDING ALL` never copies foreign keys, so they are rebuilt from `pg_constraint`
 async function createCloneForeignKeys(sql: postgres.Sql, cloneSchema: string): Promise<void> {
@@ -122,8 +122,8 @@ async function createCloneForeignKeys(sql: postgres.Sql, cloneSchema: string): P
       ADD CONSTRAINT ${sql(fk.conname)}
       FOREIGN KEY (${sql(fk.columns)})
       REFERENCES ${sql(cloneSchema)}.${sql(fk.refTableName)} (${sql(fk.refColumns)})
-      ON UPDATE ${sql.unsafe(FOREIGN_KEY_ACTIONS[fk.confupdtype] ?? 'NO ACTION')}
-      ON DELETE ${sql.unsafe(FOREIGN_KEY_ACTIONS[fk.confdeltype] ?? 'NO ACTION')}
+      ON UPDATE ${sql.unsafe(FOREIGN_KEY_ACTIONS.get(fk.confupdtype) ?? 'NO ACTION')}
+      ON DELETE ${sql.unsafe(FOREIGN_KEY_ACTIONS.get(fk.confdeltype) ?? 'NO ACTION')}
       ${sql.unsafe(deferrable)}
     `;
   }

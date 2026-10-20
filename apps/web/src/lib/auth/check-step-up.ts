@@ -5,7 +5,7 @@ import { logger } from '../../server/logger';
 import { sessionClient } from '../rpc/clients/session-client';
 import { verificationClient } from '../rpc/clients/verification-client';
 import { verifyStepUpTransactionToken } from './create-step-up-transaction-token';
-import { getAuthSession } from './get-auth-session';
+import { readAuthSession } from './read-auth-session';
 
 type CheckStepUpResult =
   | { readonly status: 'not-needed' }
@@ -28,7 +28,7 @@ export async function checkStepUp(opts: Readonly<CheckStepUpOptions>): Promise<C
     return { status: 'not-needed' };
   }
 
-  const authSession = await getAuthSession();
+  const authSession = await readAuthSession();
 
   const sessionID = authSession.sessionID ?? null;
 

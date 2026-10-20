@@ -95,8 +95,8 @@ test('it reports a form error for a stale or invalid reset token', async () => {
   });
 
   expect(
-    db.sentEmailCollection.findFirst((q) =>
-      q.where({
+    db.sentEmailCollection.findFirst((query) =>
+      query.where({
         payload: { to: 'reset-password-bad-token@vers.test' },
         template: 'send-password-changed',
       }),
@@ -128,17 +128,19 @@ test('it resets the password, signs the caller out everywhere, and redirects to 
 
   expect(promise).rejects.toMatchObject({ options: { href: '/login' } });
 
-  const updated = db.userCollection.findFirst((q) => q.where({ id: user.id }));
+  const updated = db.userCollection.findFirst((query) => query.where({ id: user.id }));
 
   expect(updated?.password).toBe('new-password123');
   expect(updated?.passwordResetToken).toBeNull();
 
-  const remainingSessions = db.sessionCollection.findMany((q) => q.where({ userID: user.id }));
+  const remainingSessions = db.sessionCollection.findMany((query) =>
+    query.where({ userID: user.id }),
+  );
 
   expect(remainingSessions).toStrictEqual([]);
 
-  const passwordChangedEmail = db.sentEmailCollection.findFirst((q) =>
-    q.where({
+  const passwordChangedEmail = db.sentEmailCollection.findFirst((query) =>
+    query.where({
       payload: { to: 'reset-password-success@vers.test' },
       template: 'send-password-changed',
     }),

@@ -7,11 +7,11 @@ import { buildStartHash } from '@vers/contract-activity';
 import type { SecretRef } from '@vers/contract-keys';
 import type { Activities, DB } from '@vers/db';
 import { buildLevelFromXP } from '@vers/idle-core';
-import { findCurrentSimVersion } from '@vers/sim-registry';
+import { readCurrentSimVersion } from '@vers/sim-registry';
 import { deriveWorldmapContent, readScopeSecret } from '@vers/worldmap-content';
 import type { CryptoKey } from 'jose';
 import type { Kysely, Selectable } from 'kysely';
-import { getOptimisticBuild } from '../get-optimistic-build';
+import { loadOptimisticBuild } from '../load-optimistic-build';
 import { recordRefusal } from '../metrics/record-refusal';
 import { requireActiveAvatar } from '../require-active-avatar';
 import { resolveEncounterNode } from '../resolve-encounter-node';
@@ -128,7 +128,7 @@ export async function admitActivityStart(
     });
   }
 
-  const optimistic = await getOptimisticBuild(trx, activityStart.avatarID);
+  const optimistic = await loadOptimisticBuild(trx, activityStart.avatarID);
 
   const buildSnapshot: BuildSnapshot = {
     level: buildLevelFromXP(optimistic.totalXP),
@@ -154,7 +154,7 @@ export async function admitActivityStart(
   const document = await deps.loadContentDocument(activityStart.contentVersion);
 
   if (document === undefined) {
-    const current = await findCurrentSimVersion(trx);
+    const current = await readCurrentSimVersion(trx);
 
     throw errors.SIM_VERSION_EXPIRED({ data: { currentSimVersion: current?.engineHash ?? null } });
   }

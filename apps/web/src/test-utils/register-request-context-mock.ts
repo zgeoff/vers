@@ -31,6 +31,7 @@ export function registerRequestContextMock(): void {
       return requireContext().request;
     },
 
+    // oxlint-disable-next-line zgeoff/verb-contract -- stands in for the @tanstack/react-start/server export of this name
     getRequestHeader(name: string): string | undefined {
       return requireContext().headers.get(name) ?? undefined;
     },
@@ -39,6 +40,7 @@ export function registerRequestContextMock(): void {
       return requireContext().headers;
     },
 
+    // oxlint-disable-next-line zgeoff/verb-contract -- stands in for the @tanstack/react-start/server export of this name
     getRequestIP(): string | undefined {
       return requireContext().ip;
     },

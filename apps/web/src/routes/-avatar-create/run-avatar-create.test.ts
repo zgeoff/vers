@@ -45,8 +45,8 @@ test('it creates the avatar and enters the game', async () => {
 
   expect(promise).rejects.toMatchObject({ options: { href: '/explore' } });
 
-  const created = db.avatarCollection.findFirst((q) =>
-    q.where({ name: 'Karnak', userID: signedIn.userID }),
+  const created = db.avatarCollection.findFirst((query) =>
+    query.where({ name: 'Karnak', userID: signedIn.userID }),
   );
 
   expect(created).toMatchObject({ level: 1, mode: 'trade', name: 'Karnak', xp: 0 });
@@ -64,8 +64,8 @@ test('it creates a Self-Found avatar when that mode is requested', async () => {
 
   expect(promise).rejects.toMatchObject({ options: { href: '/explore' } });
 
-  const created = db.avatarCollection.findFirst((q) =>
-    q.where({ name: 'Vagrant', userID: signedIn.userID }),
+  const created = db.avatarCollection.findFirst((query) =>
+    query.where({ name: 'Vagrant', userID: signedIn.userID }),
   );
 
   expect(created).toMatchObject({ mode: 'self_found' });

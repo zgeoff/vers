@@ -1,27 +1,11 @@
 import {
   AUTH_SESSION_READ_MAX_AGE_SECONDS,
-  buildAuthSessionConfig,
-} from '../lib/auth/build-auth-session-config';
-import { findSessionID } from './find-session-id';
-import type { SessionUnsealConfig } from './find-session-id';
+  readAuthSessionConfig,
+} from '../lib/auth/read-auth-session-config';
 import { getClientIPAddress } from './get-client-ip-address';
 import type { Middleware } from './middleware';
-
-const RPC_PATH_PREFIX = '/api/rpc';
-const WINDOW_SWEEP_THRESHOLD = 1000;
-
-const STRICT_ROUTES: ReadonlyArray<string> = [
-  '/login',
-  '/signup',
-  '/verify-otp',
-  '/onboarding',
-  '/reset-password',
-  '/account',
-  '/account/2fa/verify',
-  '/account/change-password',
-];
-
-const SAFE_METHODS: ReadonlySet<string> = new Set(['GET', 'HEAD']);
+import { readSessionID } from './read-session-id';
+import type { SessionUnsealConfig } from './read-session-id';
 
 type RateLimitTier = 'default' | 'rpc' | 'strict' | 'strong';
 
@@ -46,7 +30,7 @@ interface MakeRateLimiterOptions {
 
 export function makeRateLimiter(options: MakeRateLimiterOptions): Middleware {
   const clock = options.clock ?? { now: Date.now };
-  const sessionConfig = buildAuthSessionConfig(AUTH_SESSION_READ_MAX_AGE_SECONDS);
+  const sessionConfig = readAuthSessionConfig(AUTH_SESSION_READ_MAX_AGE_SECONDS);
 
   const windows = new Map<string, RateLimitWindow>();
 
@@ -82,6 +66,21 @@ export function makeRateLimiter(options: MakeRateLimiterOptions): Middleware {
   };
 }
 
+const RPC_PATH_PREFIX = '/api/rpc';
+
+const STRICT_ROUTES: ReadonlyArray<string> = [
+  '/login',
+  '/signup',
+  '/verify-otp',
+  '/onboarding',
+  '/reset-password',
+  '/account',
+  '/account/2fa/verify',
+  '/account/change-password',
+];
+
+const SAFE_METHODS: ReadonlySet<string> = new Set(['GET', 'HEAD']);
+
 function pickRateLimitTier(request: Request): RateLimitTier {
   const pathname = new URL(request.url).pathname;
 
@@ -102,7 +101,7 @@ async function resolveRPCRateLimitKey(
   request: Request,
   sessionConfig: SessionUnsealConfig,
 ): Promise<string> {
-  const sessionID = await findSessionID(request, sessionConfig);
+  const sessionID = await readSessionID(request, sessionConfig);
 
   return sessionID === null ? `rpc:ip:${getClientIPAddress(request)}` : `rpc:session:${sessionID}`;
 }
@@ -113,6 +112,8 @@ interface AdvanceRateLimitWindowOptions {
   readonly windowMs: number;
   readonly windows: Map<string, RateLimitWindow>;
 }
+
+const WINDOW_SWEEP_THRESHOLD = 1000;
 
 function advanceRateLimitWindow(options: AdvanceRateLimitWindowOptions): RateLimitWindow {
   const existing = options.windows.get(options.key);

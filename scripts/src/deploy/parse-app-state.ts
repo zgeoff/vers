@@ -30,8 +30,6 @@ const machineSchema = z
   })
   .readonly();
 
-type MachineRecord = z.infer<typeof machineSchema>;
-
 const machinesSchema = z.array(machineSchema);
 
 export function parseAppState(json: unknown): AppState {
@@ -81,6 +79,8 @@ function pickDeployedSHA(machines: ReadonlyArray<AppMachine>): string | null {
 
   return [...shas][0] ?? null;
 }
+
+type MachineRecord = z.infer<typeof machineSchema>;
 
 function pickServiceImage(serviceRecords: ReadonlyArray<MachineRecord>): string | null {
   const images = new Set(serviceRecords.map((machine) => normalizeImage(machine.config?.image)));

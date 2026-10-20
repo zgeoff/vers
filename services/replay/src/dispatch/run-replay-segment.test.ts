@@ -1,80 +1,81 @@
 import { expect, onTestFinished, test } from 'bun:test';
 import { createMockReplaySegmentInput } from '@vers/contract-replay/test-utils';
 import { buildStateFromSeed } from '@vers/game-utils';
-import { createTestDB, getTestServiceKeyPair } from '@vers/service-test-utils/bun';
+import { createTestDB, resolveTestServiceKeyPair } from '@vers/service-test-utils/bun';
 import { createSimVersionRow } from '@vers/sim-registry/test-utils';
 import { http, passthrough } from 'msw';
 import { server } from '../mocks/server';
 import { createRemoteReplayProvider } from '../test-utils/create-remote-replay-provider';
 import { runReplaySegment } from './run-replay-segment';
 
-const DETERMINISTIC_INPUT = createMockReplaySegmentInput({
-  simVersion: 'test-engine-hash',
-  activity: {
-    difficulty: 1,
-    encounter: {
-      waves: [
-        Array.from({ length: 6 }, () => ({
-          level: 1,
-          life: 30,
-          name: 'Test Enemy',
-          primaryAttack: { maxDamage: 3, minDamage: 1, speed: 0.5 },
-          xp: 10,
-        })),
-        Array.from({ length: 6 }, () => ({
-          level: 1,
-          life: 30,
-          name: 'Test Enemy',
-          primaryAttack: { maxDamage: 3, minDamage: 1, speed: 0.5 },
-          xp: 10,
-        })),
-        Array.from({ length: 3 }, () => ({
-          level: 1,
-          life: 30,
-          name: 'Test Enemy',
-          primaryAttack: { maxDamage: 3, minDamage: 1, speed: 0.5 },
-          xp: 10,
-        })),
-        Array.from({ length: 4 }, () => ({
-          level: 1,
-          life: 30,
-          name: 'Test Enemy',
-          primaryAttack: { maxDamage: 3, minDamage: 1, speed: 0.5 },
-          xp: 10,
-        })),
-      ],
-    },
-    failureAction: 'retry',
-    id: 'world_map_encounter_1',
-    name: 'World Map Encounter',
-    seed: buildStateFromSeed(3_047_525_658),
-    type: 'world_map_encounter',
-  },
-  avatar: {
-    id: 'avatar_1',
-    level: 1,
-    life: 200,
-    name: 'Test Avatar',
-    paperdoll: {
-      mainHand: {
-        id: 'weapon_1',
-        maxDamage: 20,
-        minDamage: 10,
-        name: 'Bloodthirst Blade, Bastard Sword',
-        speed: 0.8,
-      },
-    },
-    xp: 0,
-  },
-  duration: 80_000,
-});
-
 async function setupTest() {
   const db = await createTestDB();
-  const keyPair = await getTestServiceKeyPair();
+  const keyPair = await resolveTestServiceKeyPair();
+
+  const deterministicInput = createMockReplaySegmentInput({
+    simVersion: 'test-engine-hash',
+    activity: {
+      difficulty: 1,
+      encounter: {
+        waves: [
+          Array.from({ length: 6 }, () => ({
+            level: 1,
+            life: 30,
+            name: 'Test Enemy',
+            primaryAttack: { maxDamage: 3, minDamage: 1, speed: 0.5 },
+            xp: 10,
+          })),
+          Array.from({ length: 6 }, () => ({
+            level: 1,
+            life: 30,
+            name: 'Test Enemy',
+            primaryAttack: { maxDamage: 3, minDamage: 1, speed: 0.5 },
+            xp: 10,
+          })),
+          Array.from({ length: 3 }, () => ({
+            level: 1,
+            life: 30,
+            name: 'Test Enemy',
+            primaryAttack: { maxDamage: 3, minDamage: 1, speed: 0.5 },
+            xp: 10,
+          })),
+          Array.from({ length: 4 }, () => ({
+            level: 1,
+            life: 30,
+            name: 'Test Enemy',
+            primaryAttack: { maxDamage: 3, minDamage: 1, speed: 0.5 },
+            xp: 10,
+          })),
+        ],
+      },
+      failureAction: 'retry',
+      id: 'world_map_encounter_1',
+      name: 'World Map Encounter',
+      seed: buildStateFromSeed(3_047_525_658),
+      type: 'world_map_encounter',
+    },
+    avatar: {
+      id: 'avatar_1',
+      level: 1,
+      life: 200,
+      name: 'Test Avatar',
+      paperdoll: {
+        mainHand: {
+          id: 'weapon_1',
+          maxDamage: 20,
+          minDamage: 10,
+          name: 'Bloodthirst Blade, Bastard Sword',
+          speed: 0.8,
+        },
+      },
+      xp: 0,
+    },
+    duration: 80_000,
+  });
 
   return {
     db: db.db,
+    deterministicInput,
     privateKey: keyPair.privateKey,
     [Symbol.asyncDispose]: db[Symbol.asyncDispose],
   };
@@ -84,8 +85,8 @@ test('it replays in-process when the job matches this deploy’s baked hash', as
   await using ctx = await setupTest();
 
   const outcome = await runReplaySegment(
-    { db: ctx.db, privateKey: ctx.privateKey, simVersion: DETERMINISTIC_INPUT.simVersion },
-    DETERMINISTIC_INPUT,
+    { db: ctx.db, privateKey: ctx.privateKey, simVersion: ctx.deterministicInput.simVersion },
+    ctx.deterministicInput,
   );
 
   expect(outcome).toMatchInlineSnapshot(`
@@ -517,22 +518,22 @@ test('it reports expired for a registry row past its retention deadline', async 
 test('it round-trips a remote dispatch over real HTTP with real s2s auth', async () => {
   await using ctx = await setupTest();
 
-  const remote = await createRemoteReplayProvider(DETERMINISTIC_INPUT.simVersion);
+  const remote = await createRemoteReplayProvider(ctx.deterministicInput.simVersion);
 
   await createSimVersionRow(ctx.db, {
-    engineHash: DETERMINISTIC_INPUT.simVersion,
+    engineHash: ctx.deterministicInput.simVersion,
     providerUrl: remote.url,
     status: 'active',
   });
 
   const outcome = await runReplaySegment(
     { db: ctx.db, privateKey: ctx.privateKey, simVersion: 'this-dispatcher-hash' },
-    DETERMINISTIC_INPUT,
+    ctx.deterministicInput,
   );
 
   const local = await runReplaySegment(
-    { db: ctx.db, privateKey: ctx.privateKey, simVersion: DETERMINISTIC_INPUT.simVersion },
-    DETERMINISTIC_INPUT,
+    { db: ctx.db, privateKey: ctx.privateKey, simVersion: ctx.deterministicInput.simVersion },
+    ctx.deterministicInput,
   );
 
   // a remote dispatch must reproduce the in-process replay exactly
@@ -542,10 +543,10 @@ test('it round-trips a remote dispatch over real HTTP with real s2s auth', async
 test('it attaches a traceparent to a remote dispatch', async () => {
   await using ctx = await setupTest();
 
-  const remote = await createRemoteReplayProvider(DETERMINISTIC_INPUT.simVersion);
+  const remote = await createRemoteReplayProvider(ctx.deterministicInput.simVersion);
 
   await createSimVersionRow(ctx.db, {
-    engineHash: DETERMINISTIC_INPUT.simVersion,
+    engineHash: ctx.deterministicInput.simVersion,
     providerUrl: remote.url,
     status: 'active',
   });
@@ -562,7 +563,7 @@ test('it attaches a traceparent to a remote dispatch', async () => {
 
   const response = await runReplaySegment(
     { db: ctx.db, privateKey: ctx.privateKey, simVersion: 'this-dispatcher-hash' },
-    DETERMINISTIC_INPUT,
+    ctx.deterministicInput,
   );
 
   expect(response).toMatchObject({ kind: 'replayed' });

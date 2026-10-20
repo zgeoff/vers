@@ -3,7 +3,7 @@ import { parseWithZod } from '@conform-to/zod/v4';
 import { isDefinedError, safe } from '@orpc/client';
 import { redirect } from '@tanstack/react-router';
 import { checkHoneypot } from '../../lib/auth/check-honeypot';
-import { getVerifySession } from '../../lib/auth/get-verify-session';
+import { readVerifySession } from '../../lib/auth/read-verify-session';
 import { SpamError } from '../../lib/auth/spam-error';
 import { verificationClient } from '../../lib/rpc/clients/verification-client';
 import { logger } from '../../server/logger';
@@ -35,7 +35,7 @@ export async function verifyOTPHandler(formData: FormData): Promise<Response | S
   let target = submission.value.target;
 
   if (submission.value.type === '2fa') {
-    const verifySession = await getVerifySession();
+    const verifySession = await readVerifySession();
 
     const boundTarget = verifySession['login2FA#target'];
 

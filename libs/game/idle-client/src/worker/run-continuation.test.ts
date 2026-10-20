@@ -80,7 +80,7 @@ test('it mints the next row locally, installs it, and registers from a zero curs
   });
 
   // the server authors nothing on the request path — the row reaches it through the ingest
-  const mintedServerSide = db.activityCollection.findMany((q) => q.where({ avatarID }));
+  const mintedServerSide = db.activityCollection.findMany((query) => query.where({ avatarID }));
 
   expect(mintedServerSide).toStrictEqual([]);
 });

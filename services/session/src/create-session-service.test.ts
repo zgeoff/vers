@@ -2,7 +2,7 @@ import { expect, onTestFinished, test } from 'bun:test';
 import type { SessionContract } from '@vers/contract-session';
 import { toJSONWebKeySet } from '@vers/contract-session';
 import { createAnonymousViewer, createTestDB, createTestUser } from '@vers/service-test-utils/bun';
-import { buildRPCTestClient, getTestJWTKeyPair } from '@vers/test-utils';
+import { buildRPCTestClient, resolveTestJWTKeyPair } from '@vers/test-utils';
 import * as jose from 'jose';
 import invariant from 'tiny-invariant';
 import { createSessionService } from './create-session-service';
@@ -45,7 +45,7 @@ test('it publishes the signing key as one RS256 signature key whose id is its th
   const client = buildRPCTestClient<SessionContract>(ctx.app, { token: viewer.token });
 
   const published = await client.getSigningKeys({});
-  const keyPair = await getTestJWTKeyPair();
+  const keyPair = await resolveTestJWTKeyPair();
   const publicKey = await jose.importSPKI(keyPair.publicKeyPEM, 'RS256');
   const publicJWK = await jose.exportJWK(publicKey);
   const thumbprint = await jose.calculateJwkThumbprint(publicJWK);
@@ -56,9 +56,11 @@ test('it publishes the signing key as one RS256 signature key whose id is its th
     keys: [
       {
         alg: 'RS256',
+        // oxlint-disable-next-line id-length -- RFC 7518 names the RSA key's exponent and modulus `e` and `n`
         e: publicJWK.e,
         kid: thumbprint,
         kty: 'RSA',
+        // oxlint-disable-next-line id-length -- RFC 7518 names the RSA key's exponent and modulus `e` and `n`
         n: publicJWK.n,
         use: 'sig' as const,
       },

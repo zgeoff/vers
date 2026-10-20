@@ -1,5 +1,5 @@
 import { redirect } from '@tanstack/react-router';
-import { getVerifySession } from '../../lib/auth/get-verify-session';
+import { readVerifySession } from '../../lib/auth/read-verify-session';
 import { requireAnonymous } from '../../lib/auth/require-anonymous';
 import { toSafeRedirectPath } from '../../lib/auth/to-safe-redirect-path';
 import type { VerifySessionData } from '../../lib/auth/types';
@@ -19,7 +19,7 @@ export async function runForceLogout(formData: FormData): Promise<never> {
 
   const intent = formData.get('intent');
 
-  const verifySession = await getVerifySession();
+  const verifySession = await readVerifySession();
 
   const sessionID = verifySession['loginLogout#sessionID'];
   const actingUserID = verifySession['loginLogout#userID'];

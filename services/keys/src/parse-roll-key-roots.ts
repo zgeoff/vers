@@ -9,9 +9,6 @@ interface RollKeyRootEntry {
 
 export type RollKeyRoots = Readonly<Record<Population, RollKeyRootEntry>>;
 
-const HEX_ROOT_PATTERN = /^[0-9a-f]{64}$/iu;
-const INTEGER_KEY_PATTERN = /^[1-9]\d*$/u;
-
 const RawRootEntrySchema = z.object({
   current: z.int().min(1),
   roots: z.record(z.string(), z.string()),
@@ -47,6 +44,9 @@ interface RawRootEntry {
   readonly current: number;
   readonly roots: Readonly<Record<string, string>>;
 }
+
+const HEX_ROOT_PATTERN = /^[0-9a-f]{64}$/iu;
+const INTEGER_KEY_PATTERN = /^[1-9]\d*$/u;
 
 function parsePopulationEntry(population: Population, entry: RawRootEntry): RollKeyRootEntry {
   const roots = new Map<number, Uint8Array>();

@@ -2,20 +2,27 @@ import { expect, test } from 'bun:test';
 import { checkTarget } from './check-target';
 import type { DeployTarget } from './types';
 
-const target: DeployTarget = {
-  app: 'vers-service-user',
-  configDir: 'services/user',
-  exposure: 'flycast',
-  trigger: { kind: 'turbo-affected', pkg: '@vers/service-user' },
-};
-
 test('it flags an app with no machines', () => {
+  const target: DeployTarget = {
+    app: 'vers-service-user',
+    configDir: 'services/user',
+    exposure: 'flycast',
+    trigger: { kind: 'turbo-affected', pkg: '@vers/service-user' },
+  };
+
   const state = { deployedSHA: null, machines: [], scheduledMachines: [], serviceImage: null };
 
   expect(checkTarget(target, state, null, {})).toStrictEqual(['no machines exist']);
 });
 
 test('it passes a current app with a suspended machine', () => {
+  const target: DeployTarget = {
+    app: 'vers-service-user',
+    configDir: 'services/user',
+    exposure: 'flycast',
+    trigger: { kind: 'turbo-affected', pkg: '@vers/service-user' },
+  };
+
   const state = {
     deployedSHA: 'abc123',
     machines: [{ gitSHA: 'abc123', id: 'm1', image: 'registry.fly.io/x:tag1', state: 'suspended' }],
@@ -29,7 +36,13 @@ test('it passes a current app with a suspended machine', () => {
 });
 
 test('it flags an app below its warm-machine floor', () => {
-  const warmTarget: DeployTarget = { ...target, minStartedMachines: 1 };
+  const target: DeployTarget = {
+    app: 'vers-service-user',
+    configDir: 'services/user',
+    exposure: 'flycast',
+    minStartedMachines: 1,
+    trigger: { kind: 'turbo-affected', pkg: '@vers/service-user' },
+  };
 
   const state = {
     deployedSHA: 'abc123',
@@ -40,12 +53,19 @@ test('it flags an app below its warm-machine floor', () => {
 
   const changes = { affectedPkgs: [], changedPaths: [] };
 
-  expect(checkTarget(warmTarget, state, changes, {})).toStrictEqual([
+  expect(checkTarget(target, state, changes, {})).toStrictEqual([
     '0 machines started, expected at least 1',
   ]);
 });
 
 test('it flags a started machine with a non-passing health check', () => {
+  const target: DeployTarget = {
+    app: 'vers-service-user',
+    configDir: 'services/user',
+    exposure: 'flycast',
+    trigger: { kind: 'turbo-affected', pkg: '@vers/service-user' },
+  };
+
   const state = {
     deployedSHA: 'abc123',
     machines: [
@@ -69,6 +89,13 @@ test('it flags a started machine with a non-passing health check', () => {
 });
 
 test('it passes a started machine whose health checks pass', () => {
+  const target: DeployTarget = {
+    app: 'vers-service-user',
+    configDir: 'services/user',
+    exposure: 'flycast',
+    trigger: { kind: 'turbo-affected', pkg: '@vers/service-user' },
+  };
+
   const state = {
     deployedSHA: 'abc123',
     machines: [
@@ -90,6 +117,13 @@ test('it passes a started machine whose health checks pass', () => {
 });
 
 test('it ignores the checks of a machine parked in its idle state', () => {
+  const target: DeployTarget = {
+    app: 'vers-service-user',
+    configDir: 'services/user',
+    exposure: 'flycast',
+    trigger: { kind: 'turbo-affected', pkg: '@vers/service-user' },
+  };
+
   const state = {
     deployedSHA: 'abc123',
     machines: [
@@ -111,6 +145,13 @@ test('it ignores the checks of a machine parked in its idle state', () => {
 });
 
 test('it flags a stale app whose package changed since the deployed SHA', () => {
+  const target: DeployTarget = {
+    app: 'vers-service-user',
+    configDir: 'services/user',
+    exposure: 'flycast',
+    trigger: { kind: 'turbo-affected', pkg: '@vers/service-user' },
+  };
+
   const state = {
     deployedSHA: 'abc123',
     machines: [{ gitSHA: 'abc123', id: 'm1', image: 'registry.fly.io/x:tag1', state: 'started' }],
@@ -125,15 +166,17 @@ test('it flags a stale app whose package changed since the deployed SHA', () => 
   ]);
 });
 
-const emailSweeper = {
-  command: ['/usr/local/bin/sweep'],
-  name: 'email-sweeper',
-  schedule: 'hourly' as const,
-};
-
-const emailTarget: DeployTarget = { ...target, scheduledMachines: [emailSweeper] };
-
 test('it flags a declared scheduled machine that does not exist', () => {
+  const target: DeployTarget = {
+    app: 'vers-service-user',
+    configDir: 'services/user',
+    exposure: 'flycast',
+    scheduledMachines: [
+      { command: ['/usr/local/bin/sweep'], name: 'email-sweeper', schedule: 'hourly' },
+    ],
+    trigger: { kind: 'turbo-affected', pkg: '@vers/service-user' },
+  };
+
   const state = {
     deployedSHA: 'abc123',
     machines: [{ gitSHA: 'abc123', id: 'm1', image: 'registry.fly.io/x:tag1', state: 'started' }],
@@ -143,12 +186,22 @@ test('it flags a declared scheduled machine that does not exist', () => {
 
   const changes = { affectedPkgs: [], changedPaths: [] };
 
-  expect(checkTarget(emailTarget, state, changes, {})).toStrictEqual([
+  expect(checkTarget(target, state, changes, {})).toStrictEqual([
     'scheduled machine email-sweeper missing',
   ]);
 });
 
 test('it flags a declared scheduled machine on a different image than the service machines', () => {
+  const target: DeployTarget = {
+    app: 'vers-service-user',
+    configDir: 'services/user',
+    exposure: 'flycast',
+    scheduledMachines: [
+      { command: ['/usr/local/bin/sweep'], name: 'email-sweeper', schedule: 'hourly' },
+    ],
+    trigger: { kind: 'turbo-affected', pkg: '@vers/service-user' },
+  };
+
   const state = {
     deployedSHA: 'abc123',
     machines: [{ gitSHA: 'abc123', id: 'm1', image: 'registry.fly.io/x:tag1', state: 'started' }],
@@ -158,12 +211,22 @@ test('it flags a declared scheduled machine on a different image than the servic
 
   const changes = { affectedPkgs: [], changedPaths: [] };
 
-  expect(checkTarget(emailTarget, state, changes, {})).toStrictEqual([
+  expect(checkTarget(target, state, changes, {})).toStrictEqual([
     'scheduled machine email-sweeper image differs from service machines',
   ]);
 });
 
 test('it passes a declared scheduled machine already on the service image', () => {
+  const target: DeployTarget = {
+    app: 'vers-service-user',
+    configDir: 'services/user',
+    exposure: 'flycast',
+    scheduledMachines: [
+      { command: ['/usr/local/bin/sweep'], name: 'email-sweeper', schedule: 'hourly' },
+    ],
+    trigger: { kind: 'turbo-affected', pkg: '@vers/service-user' },
+  };
+
   const state = {
     deployedSHA: 'abc123',
     machines: [{ gitSHA: 'abc123', id: 'm1', image: 'registry.fly.io/x:tag1', state: 'started' }],
@@ -173,10 +236,17 @@ test('it passes a declared scheduled machine already on the service image', () =
 
   const changes = { affectedPkgs: [], changedPaths: [] };
 
-  expect(checkTarget(emailTarget, state, changes, {})).toBeEmpty();
+  expect(checkTarget(target, state, changes, {})).toBeEmpty();
 });
 
 test('it leaves an app with no scheduled-machine declarations untouched', () => {
+  const target: DeployTarget = {
+    app: 'vers-service-user',
+    configDir: 'services/user',
+    exposure: 'flycast',
+    trigger: { kind: 'turbo-affected', pkg: '@vers/service-user' },
+  };
+
   const state = {
     deployedSHA: 'abc123',
     machines: [{ gitSHA: 'abc123', id: 'm1', image: 'registry.fly.io/x:tag1', state: 'started' }],
@@ -190,6 +260,13 @@ test('it leaves an app with no scheduled-machine declarations untouched', () => 
 });
 
 test('it flags a mixed-image fleet with the images and their machine counts, not the vague stale reason', () => {
+  const target: DeployTarget = {
+    app: 'vers-service-user',
+    configDir: 'services/user',
+    exposure: 'flycast',
+    trigger: { kind: 'turbo-affected', pkg: '@vers/service-user' },
+  };
+
   const state = {
     deployedSHA: null,
     machines: [
@@ -213,6 +290,13 @@ test('it flags a mixed-image fleet with the images and their machine counts, not
 });
 
 test('it flags a machine flyctl reported no image for beside its single-image peers', () => {
+  const target: DeployTarget = {
+    app: 'vers-service-user',
+    configDir: 'services/user',
+    exposure: 'flycast',
+    trigger: { kind: 'turbo-affected', pkg: '@vers/service-user' },
+  };
+
   const state = {
     deployedSHA: null,
     machines: [
@@ -230,6 +314,13 @@ test('it flags a machine flyctl reported no image for beside its single-image pe
 });
 
 test('it still flags no trustworthy deployed SHA on a single-image fleet', () => {
+  const target: DeployTarget = {
+    app: 'vers-service-user',
+    configDir: 'services/user',
+    exposure: 'flycast',
+    trigger: { kind: 'turbo-affected', pkg: '@vers/service-user' },
+  };
+
   const state = {
     deployedSHA: null,
     machines: [
@@ -246,6 +337,13 @@ test('it still flags no trustworthy deployed SHA on a single-image fleet', () =>
 });
 
 test('it passes a fleet split between the head image and a descendant image whose machines are still booting', () => {
+  const target: DeployTarget = {
+    app: 'vers-service-user',
+    configDir: 'services/user',
+    exposure: 'flycast',
+    trigger: { kind: 'turbo-affected', pkg: '@vers/service-user' },
+  };
+
   const state = {
     deployedSHA: null,
     machines: [
@@ -291,6 +389,13 @@ test('it passes a fleet split between the head image and a descendant image whos
 });
 
 test('it passes the same split when the booting descendant machines are listed before the head machines', () => {
+  const target: DeployTarget = {
+    app: 'vers-service-user',
+    configDir: 'services/user',
+    exposure: 'flycast',
+    trigger: { kind: 'turbo-affected', pkg: '@vers/service-user' },
+  };
+
   const state = {
     deployedSHA: null,
     machines: [
@@ -322,6 +427,13 @@ test('it passes the same split when the booting descendant machines are listed b
 });
 
 test('it passes a fleet entirely on a descendant image while its machines boot', () => {
+  const target: DeployTarget = {
+    app: 'vers-service-user',
+    configDir: 'services/user',
+    exposure: 'flycast',
+    trigger: { kind: 'turbo-affected', pkg: '@vers/service-user' },
+  };
+
   const state = {
     deployedSHA: 'shaNEXT',
     machines: [
@@ -344,6 +456,13 @@ test('it passes a fleet entirely on a descendant image while its machines boot',
 });
 
 test('it flags a booting descendant machine when a head machine is unhealthy', () => {
+  const target: DeployTarget = {
+    app: 'vers-service-user',
+    configDir: 'services/user',
+    exposure: 'flycast',
+    trigger: { kind: 'turbo-affected', pkg: '@vers/service-user' },
+  };
+
   const state = {
     deployedSHA: null,
     machines: [
@@ -378,6 +497,13 @@ test('it flags a booting descendant machine when a head machine is unhealthy', (
 });
 
 test('it flags a critical check on a descendant machine even mid-rollout', () => {
+  const target: DeployTarget = {
+    app: 'vers-service-user',
+    configDir: 'services/user',
+    exposure: 'flycast',
+    trigger: { kind: 'turbo-affected', pkg: '@vers/service-user' },
+  };
+
   const state = {
     deployedSHA: null,
     machines: [
@@ -411,6 +537,13 @@ test('it flags a critical check on a descendant machine even mid-rollout', () =>
 });
 
 test('it still flags a split that includes an image behind head', () => {
+  const target: DeployTarget = {
+    app: 'vers-service-user',
+    configDir: 'services/user',
+    exposure: 'flycast',
+    trigger: { kind: 'turbo-affected', pkg: '@vers/service-user' },
+  };
+
   const state = {
     deployedSHA: null,
     machines: [
@@ -445,6 +578,13 @@ test('it still flags a split that includes an image behind head', () => {
 });
 
 test('it still flags a split between a descendant image and one off the head lineage', () => {
+  const target: DeployTarget = {
+    app: 'vers-service-user',
+    configDir: 'services/user',
+    exposure: 'flycast',
+    trigger: { kind: 'turbo-affected', pkg: '@vers/service-user' },
+  };
+
   const state = {
     deployedSHA: null,
     machines: [
@@ -466,6 +606,13 @@ test('it still flags a split between a descendant image and one off the head lin
 });
 
 test('it still flags a split when a machine carries no git SHA', () => {
+  const target: DeployTarget = {
+    app: 'vers-service-user',
+    configDir: 'services/user',
+    exposure: 'flycast',
+    trigger: { kind: 'turbo-affected', pkg: '@vers/service-user' },
+  };
+
   const state = {
     deployedSHA: null,
     machines: [

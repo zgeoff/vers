@@ -12,8 +12,8 @@ export const advanceActivity = os.advanceActivity.handler(async (opts) => {
     throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
   }
 
-  const initialActivity = db.activityCollection.findFirst((q) =>
-    q.where({ id: opts.input.activityID }),
+  const initialActivity = db.activityCollection.findFirst((query) =>
+    query.where({ id: opts.input.activityID }),
   );
 
   let activity: NonNullable<typeof initialActivity>;
@@ -26,8 +26,8 @@ export const advanceActivity = os.advanceActivity.handler(async (opts) => {
       actingUserID,
     );
   } else {
-    const avatar = db.avatarCollection.findFirst((q) =>
-      q.where({ id: initialActivity.avatarID, userID: actingUserID }),
+    const avatar = db.avatarCollection.findFirst((query) =>
+      query.where({ id: initialActivity.avatarID, userID: actingUserID }),
     );
 
     if (avatar === undefined) {
@@ -146,15 +146,17 @@ async function admitActivityStartRow(
     throw opts.errors.NOT_FOUND({ data: {} });
   }
 
-  const avatar = db.avatarCollection.findFirst((q) =>
-    q.where({ id: activityStart.avatarID, userID: actingUserID }),
+  const avatar = db.avatarCollection.findFirst((query) =>
+    query.where({ id: activityStart.avatarID, userID: actingUserID }),
   );
 
   if (avatar === undefined) {
     throw opts.errors.NOT_FOUND({ data: {} });
   }
 
-  const selection = db.activeAvatarCollection.findFirst((q) => q.where({ userID: actingUserID }));
+  const selection = db.activeAvatarCollection.findFirst((query) =>
+    query.where({ userID: actingUserID }),
+  );
 
   if (selection === undefined) {
     const liveAvatar = findLiveActivityAvatar(actingUserID);
@@ -167,7 +169,9 @@ async function admitActivityStartRow(
 
     await upsertActiveAvatar(actingUserID, activityStart.avatarID);
   } else if (selection.avatarID !== activityStart.avatarID) {
-    const activeAvatar = db.avatarCollection.findFirst((q) => q.where({ id: selection.avatarID }));
+    const activeAvatar = db.avatarCollection.findFirst((query) =>
+      query.where({ id: selection.avatarID }),
+    );
 
     invariant(activeAvatar !== undefined, 'active avatar selection must name an existing avatar');
 
@@ -207,7 +211,7 @@ function resolveMintIDCollision(
   pinned: Readonly<MintProvenance>,
   continuation: Readonly<CatchUpContinuation>,
 ): ReturnType<typeof db.activityCollection.findFirst> {
-  const existing = db.activityCollection.findFirst((q) => q.where({ id: continuation.id }));
+  const existing = db.activityCollection.findFirst((query) => query.where({ id: continuation.id }));
 
   if (
     existing === undefined ||

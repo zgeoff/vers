@@ -5,6 +5,6 @@ export { parkActivity } from './dispatch/park-activity';
 export type { RunReplaySegmentDeps, RunReplaySegmentOutcome } from './dispatch/run-replay-segment';
 export { runReplaySegment } from './dispatch/run-replay-segment';
 export { claimNextSeedChain } from './queue/claim-next-seed-chain';
-export { findReplayTarget } from './queue/find-replay-target';
+export { readReplayTarget } from './queue/read-replay-target';
 export { MAX_REPLAY_ATTEMPTS, updateReplayAttempts } from './queue/update-replay-attempts';
 export type { ClaimedActivity, GrantOnce, ReplayTarget } from './types';

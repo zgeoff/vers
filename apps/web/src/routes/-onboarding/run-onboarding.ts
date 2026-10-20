@@ -59,7 +59,7 @@ export async function runOnboarding(formData: FormData): Promise<Response | Subm
   const user =
     error === null
       ? createdUser
-      : await findOnboardedUser(onboardingSession.email, submission.value.password);
+      : await readOnboardedUser(onboardingSession.email, submission.value.password);
 
   if (user === null) {
     return submission.reply({
@@ -80,7 +80,7 @@ export async function runOnboarding(formData: FormData): Promise<Response | Subm
   return runSessionSignIn({ email: user.email, session });
 }
 
-async function findOnboardedUser(email: string, password: string): Promise<UserData | null> {
+async function readOnboardedUser(email: string, password: string): Promise<UserData | null> {
   const verified = await userClient.verifyPassword({ email, password });
 
   if (!verified.success) {

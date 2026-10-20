@@ -74,13 +74,15 @@ test('it matches a wide brute-force nearest-node scan at the current jitter', ()
   const viewport = { maxCX: 5, maxCY: 5, minCX: 0, minCY: 0 };
   const field = buildBiomeField(seed, viewport, { resolution });
 
-  for (let j = 0; j < field.rows; j++) {
-    const cy = viewport.minCY - 0.5 + (j + 0.5) / resolution;
+  for (let row = 0; row < field.rows; row++) {
+    const cy = viewport.minCY - 0.5 + (row + 0.5) / resolution;
 
-    for (let i = 0; i < field.cols; i++) {
-      const cx = viewport.minCX - 0.5 + (i + 0.5) / resolution;
+    for (let column = 0; column < field.cols; column++) {
+      const cx = viewport.minCX - 0.5 + (column + 0.5) / resolution;
 
-      expect(field.baseIDs[j * field.cols + i]).toBe(getNearestBaseIDByWideScan(seed, cx, cy));
+      expect(field.baseIDs[row * field.cols + column]).toBe(
+        getNearestBaseIDByWideScan(seed, cx, cy),
+      );
     }
   }
 });

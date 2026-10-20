@@ -6,6 +6,14 @@ import { setCompletedNodeProjections } from '../state/set-completed-node-project
 import { setViewport } from '../state/set-viewport';
 import { FogOfWar } from './fog-of-war';
 
+function setupTest() {
+  return {
+    // duck-typed stand-in for `instanceof Mesh`: the test renderer constructs objects from a
+    // different copy of three than this file imports, so `instanceof` never matches
+    isMesh: (object: Object3D): object is Mesh => 'isMesh' in object && object.isMesh === true,
+  };
+}
+
 test('it renders nothing until reveal sources and a viewport exist', async () => {
   const renderer = await ReactThreeTestRenderer.create(<FogOfWar />);
 
@@ -15,6 +23,8 @@ test('it renders nothing until reveal sources and a viewport exist', async () =>
 });
 
 test('it covers the viewport with one transparent fog plane', async () => {
+  const ctx = setupTest();
+
   setViewport({ maxCX: 2, maxCY: 2, minCX: -2, minCY: -2 });
   setCompletedNodeProjections(new Set(), [{ coord: [0, 0], radius: 1 }]);
 
@@ -24,7 +34,7 @@ test('it covers the viewport with one transparent fog plane', async () => {
 
   const plane = renderer.scene.children[0]!.instance;
 
-  invariant(isMesh(plane), 'the sole child is the fog plane');
+  invariant(ctx.isMesh(plane), 'the sole child is the fog plane');
 
   expect(plane.material).toMatchObject({ depthWrite: false, transparent: true });
 
@@ -36,6 +46,8 @@ test('it covers the viewport with one transparent fog plane', async () => {
 });
 
 test('it keeps one mesh and one material across pans so the shader never recompiles', async () => {
+  const ctx = setupTest();
+
   setViewport({ maxCX: 2, maxCY: 2, minCX: -2, minCY: -2 });
   setCompletedNodeProjections(new Set(), [{ coord: [0, 0], radius: 1 }]);
 
@@ -43,7 +55,7 @@ test('it keeps one mesh and one material across pans so the shader never recompi
 
   const plane = renderer.scene.children[0]!.instance;
 
-  invariant(isMesh(plane), 'the sole child is the fog plane');
+  invariant(ctx.isMesh(plane), 'the sole child is the fog plane');
 
   const material = plane.material;
 
@@ -67,9 +79,3 @@ test('it keeps one mesh and one material across pans so the shader never recompi
 
   await renderer.unmount();
 });
-
-// duck-typed stand-in for `instanceof Mesh`: the test renderer constructs objects from a different
-// copy of three than this file imports, so `instanceof` never matches
-function isMesh(object: Object3D): object is Mesh {
-  return 'isMesh' in object && object.isMesh === true;
-}

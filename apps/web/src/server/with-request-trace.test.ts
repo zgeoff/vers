@@ -71,17 +71,17 @@ test('it exposes the trace scope to work running inside the request', async () =
 test('it relays a redirect response even when its headers refuse the stamp', async () => {
   // Node marks redirect headers immutable while Bun leaves them writable; a set-refusing Headers
   // stand-in pins the immutable behaviour so the test exercises the same path in both runtimes
-  class SealedHeaders extends Headers {
-    override set(): never {
-      throw new TypeError('immutable');
-    }
-  }
-
   const redirect = Response.redirect('https://example.test/nexus', 301);
 
-  Object.defineProperty(redirect, 'headers', {
-    value: new SealedHeaders(redirect.headers),
+  const sealedHeaders = new Headers(redirect.headers);
+
+  Object.defineProperty(sealedHeaders, 'set', {
+    value: (): never => {
+      throw new TypeError('immutable');
+    },
   });
+
+  Object.defineProperty(redirect, 'headers', { value: sealedHeaders });
 
   const response = await withRequestTrace(new Request('https://example.test/nexus/'), () =>
     Promise.resolve(redirect),

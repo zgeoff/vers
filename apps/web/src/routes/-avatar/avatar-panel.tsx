@@ -21,15 +21,6 @@ const container = css({
   width: 'full',
 });
 
-const threeColumns = css({
-  display: 'grid',
-  gap: '4',
-  gridTemplateColumns: 'repeat(3, 1fr)',
-});
-
-const column = css({ display: 'flex', flexDirection: 'column', gap: '4' });
-const twoColumns = css({ display: 'grid', gap: '4', gridTemplateColumns: 'repeat(2, 1fr)' });
-
 export function AvatarPanel(props: Readonly<AvatarPanelProps>) {
   useSatellite('avatar-viewer', <AvatarViewer placeholder={props.placeholder ?? false} />);
 
@@ -45,6 +36,14 @@ export function AvatarPanel(props: Readonly<AvatarPanelProps>) {
     </main>
   );
 }
+
+const threeColumns = css({
+  display: 'grid',
+  gap: '4',
+  gridTemplateColumns: 'repeat(3, 1fr)',
+});
+
+const column = css({ display: 'flex', flexDirection: 'column', gap: '4' });
 
 function SheetTab() {
   return (
@@ -64,6 +63,8 @@ function SheetTab() {
     </div>
   );
 }
+
+const twoColumns = css({ display: 'grid', gap: '4', gridTemplateColumns: 'repeat(2, 1fr)' });
 
 function PassiveTreeTab() {
   return (

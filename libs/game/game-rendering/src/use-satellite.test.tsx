@@ -7,16 +7,22 @@ interface OwnerProps {
   readonly keepAlive?: boolean;
 }
 
-function Owner(props: Readonly<OwnerProps>) {
-  useSatellite('viewer', <span>viewer content</span>, props.keepAlive);
+function setupTest() {
+  return {
+    Owner: (props: Readonly<OwnerProps>) => {
+      useSatellite('viewer', <span>viewer content</span>, props.keepAlive);
 
-  return null;
+      return null;
+    },
+  };
 }
 
 test('it registers its satellite element while mounted', () => {
+  const ctx = setupTest();
+
   const rendered = render(
     <>
-      <Owner />
+      <ctx.Owner />
       <SatelliteHost />
     </>,
   );
@@ -25,9 +31,11 @@ test('it registers its satellite element while mounted', () => {
 });
 
 test('it removes a non-keepAlive satellite when its owner unmounts', () => {
+  const ctx = setupTest();
+
   const rendered = render(
     <>
-      <Owner />
+      <ctx.Owner />
       <SatelliteHost />
     </>,
   );
@@ -38,9 +46,11 @@ test('it removes a non-keepAlive satellite when its owner unmounts', () => {
 });
 
 test('it leaves a keepAlive satellite registered after its owner unmounts', () => {
+  const ctx = setupTest();
+
   const rendered = render(
     <>
-      <Owner keepAlive />
+      <ctx.Owner keepAlive />
       <SatelliteHost />
     </>,
   );

@@ -1,0 +1,331 @@
+import { expect, test } from 'bun:test';
+import { createContentVersion } from '@vers/content-registry';
+import type { ActivityContract } from '@vers/contract-activity';
+import { createMockContentDocument } from '@vers/contract-activity/test-utils';
+import { buildLevelFromXP } from '@vers/idle-core';
+import {
+  createActivityChainRow,
+  createActivityRow,
+  createAnonymousViewer,
+  createAvatarRow,
+  createServiceToken,
+  createTestDB,
+  createViewer,
+  resolveTestServiceKeyPair,
+} from '@vers/service-test-utils/bun';
+import { createSimVersionRow } from '@vers/sim-registry/test-utils';
+import { buildRPCTestClient } from '@vers/test-utils';
+import { createActivityService } from '../create-activity-service';
+import { createMockCheckpointBatch } from '../test-utils/factories/create-mock-checkpoint-batch';
+import { toActivityData } from './to-activity-data';
+
+// the handlers these tests drive open their own interactive transaction, which the default
+// transaction-isolation handle can't nest — this suite runs against a real, committed schema clone
+async function setupTest() {
+  const db = await createTestDB({ isolation: 'schema' });
+
+  await createSimVersionRow(db.db);
+  await createContentVersion(db.db, createMockContentDocument({ contentVersion: '2' }));
+
+  const service = await createActivityService({ db: db.db });
+
+  return { app: service.app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
+}
+
+test('it returns a fresh activity with a null anchor at verifiedHead 0', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
+  });
+
+  const progress = await client.getLatestActivityProgress({ avatarID: avatar.id });
+
+  expect(progress).toStrictEqual({
+    activity: toActivityData(started),
+    anchor: null,
+    appendedHead: 0,
+    failureAction: 'abort',
+    isWriter: true,
+    optimisticBuild: { level: 1, xp: 0 },
+    serverTime: expect.toBeValidDate(),
+    verifiedHead: 0,
+  });
+});
+
+test("it returns the avatar's persisted failure action", async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+
+  const avatar = await createAvatarRow(ctx.db, {
+    failureAction: 'retry',
+    userId: viewer.user.id,
+  });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
+  });
+
+  const progress = await client.getLatestActivityProgress({ avatarID: avatar.id });
+
+  expect(progress.failureAction).toBe('retry');
+});
+
+test('it returns the server clock beside the resume cursors', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
+  });
+
+  const progress = await client.getLatestActivityProgress({ avatarID: avatar.id });
+
+  // The clock and the activity's own timestamps come from the same database session, so an
+  // offline gap computed as their difference can't be skewed by the caller's clock.
+  expect(progress.serverTime).toBeValidDate();
+  expect(progress.serverTime.getTime()).toBeGreaterThanOrEqual(started.startedAt.getTime());
+});
+
+test('it returns the activity anchored to its verified checkpoint once verifiedHead advances', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
+  });
+
+  const batch = createMockCheckpointBatch({ startPrevHash: started.startHash, startVersion: 1 });
+
+  await client.trackActivityProgress({
+    activityID: started.id,
+    checkpoints: batch,
+    expectedHead: 0,
+  });
+
+  await ctx.db
+    .updateTable('activities')
+    .set({ verifiedAt: new Date(), verifiedHead: 1 })
+    .where('id', '=', started.id)
+    .execute();
+
+  const progress = await client.getLatestActivityProgress({ avatarID: avatar.id });
+
+  expect(progress.anchor).toMatchObject({
+    hash: batch[0]?.hash,
+    prevHash: started.startHash,
+    version: 1,
+  });
+
+  expect(progress.verifiedHead).toBe(1);
+});
+
+test('it returns the newest activity regardless of status', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
+  });
+
+  await client.stopActivity({ avatarID: avatar.id });
+
+  const progress = await client.getLatestActivityProgress({ avatarID: avatar.id });
+
+  expect(progress.activity.id).toBe(started.id);
+  expect(progress.activity.status).toBe('stopped');
+});
+
+test('it rejects when no activity exists at all with NOT_FOUND', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  expect(client.getLatestActivityProgress({ avatarID: avatar.id })).rejects.toMatchObject({
+    code: 'NOT_FOUND',
+  });
+});
+
+test('it rejects a foreign avatar with NOT_FOUND', async () => {
+  await using ctx = await setupTest();
+
+  const owner = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: owner.user.id });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
+  await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
+  });
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  expect(client.getLatestActivityProgress({ avatarID: avatar.id })).rejects.toMatchObject({
+    code: 'NOT_FOUND',
+  });
+});
+
+test('it rejects an anonymous acting user with UNAUTHORIZED', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createAnonymousViewer({ audience: 'service-activity' });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  expect(client.getLatestActivityProgress({ avatarID: 'avatar_1' })).rejects.toMatchObject({
+    code: 'UNAUTHORIZED',
+    data: { reason: 'missing-session' },
+  });
+});
+
+test('it reports isWriter false to a session another writer displaced', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
+  const keyPair = await resolveTestServiceKeyPair();
+
+  const tokenA = await createServiceToken({
+    actingSessionID: 'session-a',
+    actingUserID: viewer.user.id,
+    audience: 'service-activity',
+    privateKey: keyPair.privateKey,
+  });
+
+  const clientA = buildRPCTestClient<ActivityContract>(ctx.app, { token: tokenA });
+
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
+    writerSessionId: 'session-a',
+  });
+
+  const tokenB = await createServiceToken({
+    actingSessionID: 'session-b',
+    actingUserID: viewer.user.id,
+    audience: 'service-activity',
+    privateKey: keyPair.privateKey,
+  });
+
+  const clientB = buildRPCTestClient<ActivityContract>(ctx.app, { token: tokenB });
+
+  const progressB = await clientB.getLatestActivityProgress({ avatarID: avatar.id });
+
+  expect(progressB.isWriter).toBeFalse();
+
+  const progressA = await clientA.getLatestActivityProgress({ avatarID: avatar.id });
+
+  expect(progressA.isWriter).toBeTrue();
+  expect(progressB.activity.id).toBe(started.id);
+});
+
+test('it reports isWriter true for an unstamped stream whatever the session', async () => {
+  await using ctx = await setupTest();
+
+  // the seeded row carries no writer session, so the first append claims it
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
+  await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
+  });
+
+  const keyPair = await resolveTestServiceKeyPair();
+
+  const token = await createServiceToken({
+    actingSessionID: 'session-a',
+    actingUserID: viewer.user.id,
+    audience: 'service-activity',
+    privateKey: keyPair.privateKey,
+  });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token });
+
+  const progress = await client.getLatestActivityProgress({ avatarID: avatar.id });
+
+  expect(progress.isWriter).toBeTrue();
+});
+
+test("it returns the build snapshot admission would re-author for the avatar's next start", async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id, xp: 100 });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    buildSnapshot: { level: buildLevelFromXP(100), xp: 100 },
+    scopeId: '0_0',
+  });
+
+  const tail = createMockCheckpointBatch({
+    finalPayloadOverrides: { rewards: { xp: 40 }, type: 'completed' },
+    startChainIndex: started.startChainIndex,
+    startPrevHash: started.startHash,
+    startVersion: 1,
+  });
+
+  await client.trackActivityProgress({
+    activityID: started.id,
+    checkpoints: tail,
+    expectedHead: 0,
+  });
+
+  const progress = await client.getLatestActivityProgress({ avatarID: avatar.id });
+
+  // the terminal closed the run unverified, so its whole total is owed on top of the settled xp
+  expect(progress.optimisticBuild).toStrictEqual({ level: buildLevelFromXP(140), xp: 140 });
+});

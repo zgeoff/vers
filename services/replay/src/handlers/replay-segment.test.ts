@@ -6,67 +6,6 @@ import { createAnonymousViewer } from '@vers/service-test-utils/bun';
 import { buildRPCTestClient } from '@vers/test-utils';
 import { createReplayService } from '../create-replay-service';
 
-const DETERMINISTIC_INPUT = createMockReplaySegmentInput({
-  simVersion: 'test-engine-hash',
-  activity: {
-    difficulty: 1,
-    encounter: {
-      waves: [
-        Array.from({ length: 6 }, () => ({
-          level: 1,
-          life: 30,
-          name: 'Test Enemy',
-          primaryAttack: { maxDamage: 3, minDamage: 1, speed: 0.5 },
-          xp: 10,
-        })),
-        Array.from({ length: 6 }, () => ({
-          level: 1,
-          life: 30,
-          name: 'Test Enemy',
-          primaryAttack: { maxDamage: 3, minDamage: 1, speed: 0.5 },
-          xp: 10,
-        })),
-        Array.from({ length: 3 }, () => ({
-          level: 1,
-          life: 30,
-          name: 'Test Enemy',
-          primaryAttack: { maxDamage: 3, minDamage: 1, speed: 0.5 },
-          xp: 10,
-        })),
-        Array.from({ length: 4 }, () => ({
-          level: 1,
-          life: 30,
-          name: 'Test Enemy',
-          primaryAttack: { maxDamage: 3, minDamage: 1, speed: 0.5 },
-          xp: 10,
-        })),
-      ],
-    },
-    failureAction: 'retry',
-    id: 'world_map_encounter_1',
-    name: 'World Map Encounter',
-    seed: buildStateFromSeed(3_047_525_658),
-    type: 'world_map_encounter',
-  },
-  avatar: {
-    id: 'avatar_1',
-    level: 1,
-    life: 200,
-    name: 'Test Avatar',
-    paperdoll: {
-      mainHand: {
-        id: 'weapon_1',
-        maxDamage: 20,
-        minDamage: 10,
-        name: 'Bloodthirst Blade, Bastard Sword',
-        speed: 0.8,
-      },
-    },
-    xp: 0,
-  },
-  duration: 80_000,
-});
-
 async function setupTest() {
   const service = await createReplayService();
 
@@ -77,12 +16,73 @@ async function setupTest() {
 
   const client = buildRPCTestClient<ReplayContract>(service.app, { token: viewer.token });
 
-  return { client };
+  const deterministicInput = createMockReplaySegmentInput({
+    simVersion: 'test-engine-hash',
+    activity: {
+      difficulty: 1,
+      encounter: {
+        waves: [
+          Array.from({ length: 6 }, () => ({
+            level: 1,
+            life: 30,
+            name: 'Test Enemy',
+            primaryAttack: { maxDamage: 3, minDamage: 1, speed: 0.5 },
+            xp: 10,
+          })),
+          Array.from({ length: 6 }, () => ({
+            level: 1,
+            life: 30,
+            name: 'Test Enemy',
+            primaryAttack: { maxDamage: 3, minDamage: 1, speed: 0.5 },
+            xp: 10,
+          })),
+          Array.from({ length: 3 }, () => ({
+            level: 1,
+            life: 30,
+            name: 'Test Enemy',
+            primaryAttack: { maxDamage: 3, minDamage: 1, speed: 0.5 },
+            xp: 10,
+          })),
+          Array.from({ length: 4 }, () => ({
+            level: 1,
+            life: 30,
+            name: 'Test Enemy',
+            primaryAttack: { maxDamage: 3, minDamage: 1, speed: 0.5 },
+            xp: 10,
+          })),
+        ],
+      },
+      failureAction: 'retry',
+      id: 'world_map_encounter_1',
+      name: 'World Map Encounter',
+      seed: buildStateFromSeed(3_047_525_658),
+      type: 'world_map_encounter',
+    },
+    avatar: {
+      id: 'avatar_1',
+      level: 1,
+      life: 200,
+      name: 'Test Avatar',
+      paperdoll: {
+        mainHand: {
+          id: 'weapon_1',
+          maxDamage: 20,
+          minDamage: 10,
+          name: 'Bloodthirst Blade, Bastard Sword',
+          speed: 0.8,
+        },
+      },
+      xp: 0,
+    },
+    duration: 80_000,
+  });
+
+  return { client, deterministicInput };
 }
 
 test('it reproduces the committed fixture for a fully-specified deterministic segment', async () => {
   const ctx = await setupTest();
-  const result = await ctx.client.replaySegment(DETERMINISTIC_INPUT);
+  const result = await ctx.client.replaySegment(ctx.deterministicInput);
 
   expect(result).toMatchInlineSnapshot(`
     {
@@ -462,8 +462,8 @@ test('it reproduces the committed fixture for a fully-specified deterministic se
 
 test('it reproduces the same result on a second call with identical input', async () => {
   const ctx = await setupTest();
-  const first = await ctx.client.replaySegment(DETERMINISTIC_INPUT);
-  const second = await ctx.client.replaySegment(DETERMINISTIC_INPUT);
+  const first = await ctx.client.replaySegment(ctx.deterministicInput);
+  const second = await ctx.client.replaySegment(ctx.deterministicInput);
 
   expect(second).toStrictEqual(first);
 });

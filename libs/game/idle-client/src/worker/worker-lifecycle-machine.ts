@@ -116,14 +116,6 @@ type WorkerLifecycleEvent =
   | { readonly type: 'SUBMITTER_JOURNAL_FAILED' }
   | { readonly type: 'SUBMITTER_SERVER_CONTACT' };
 
-type StopDeliveryDoneEvent = Extract<WorkerLifecycleEvent, { readonly type: 'STOP_DELIVERY_DONE' }>;
-
-interface StopDeliverySender {
-  readonly send: (event: StopDeliveryDoneEvent) => void;
-}
-
-type ContextArg = Readonly<{ context: WorkerLifecycleContext }>;
-
 const runStartActor = fromPromise<
   StartStatus,
   {
@@ -482,6 +474,7 @@ export const workerLifecycleMachine = setup({
           ],
           target: '#workerLifecycle.dispatching',
         },
+        // oxlint-disable-next-line zgeoff/no-abbreviated-names -- xstate names an invoke's actor `src`
         src: 'runContinuationActor',
       },
     },
@@ -496,7 +489,7 @@ export const workerLifecycleMachine = setup({
         // run are already visible
         {
           actions: assign((args) => buildPrerequisiteResync(args.context)),
-          guard: (args) => needsResyncBeforeStart(args.context),
+          guard: (args) => shouldResyncBeforeStart(args.context),
           target: 'resyncing',
         },
         {
@@ -544,6 +537,7 @@ export const workerLifecycleMachine = setup({
           ],
           target: '#workerLifecycle.dispatching',
         },
+        // oxlint-disable-next-line zgeoff/no-abbreviated-names -- xstate names an invoke's actor `src`
         src: 'runEvictionActor',
       },
     },
@@ -579,6 +573,7 @@ export const workerLifecycleMachine = setup({
           ],
           target: '#workerLifecycle.dispatching',
         },
+        // oxlint-disable-next-line zgeoff/no-abbreviated-names -- xstate names an invoke's actor `src`
         src: 'runResyncActor',
       },
     },
@@ -621,12 +616,73 @@ export const workerLifecycleMachine = setup({
           ],
           target: '#workerLifecycle.dispatching',
         },
+        // oxlint-disable-next-line zgeoff/no-abbreviated-names -- xstate names an invoke's actor `src`
         src: 'runStartActor',
       },
     },
     stopping: { entry: assign({ phase: 'stopping' as const }) },
   },
 });
+
+function applyStopScopeAbort(context: WorkerLifecycleContext): void {
+  context.stopController.abort();
+}
+
+function buildFreshStopScope(
+  context: WorkerLifecycleContext,
+): Pick<WorkerLifecycleContext, 'cancelSignal' | 'stopController'> {
+  const stopController = new AbortController();
+
+  return {
+    cancelSignal: AbortSignal.any([stopController.signal, context.shutdownSignal]),
+    stopController,
+  };
+}
+
+function applyStopHalt(context: WorkerLifecycleContext): void {
+  context.runtime.getSimulation().stopActivity();
+
+  resetSimulation(context.runtime);
+
+  context.runtime.resetRewardSlotLedger();
+
+  context.runtime.broadcast({
+    state: { failureAction: context.runtime.getFailureAction() },
+    type: WorkerMessageType.SimulationUpdate,
+  });
+}
+
+type StopDeliveryDoneEvent = Extract<WorkerLifecycleEvent, { readonly type: 'STOP_DELIVERY_DONE' }>;
+
+interface StopDeliverySender {
+  readonly send: (event: StopDeliveryDoneEvent) => void;
+}
+
+function scheduleStopDelivery(
+  runtime: WorkerContext,
+  self: StopDeliverySender,
+  input: Readonly<StopActivityInput>,
+  deferred: Deferred<void>,
+): void {
+  void (async () => {
+    try {
+      await runStopDelivery(runtime, input);
+
+      deferred.resolve();
+    } catch (error) {
+      deferred.reject(error);
+    } finally {
+      self.send({ type: 'STOP_DELIVERY_DONE' });
+    }
+  })();
+}
+
+async function runStopDelivery(
+  runtime: WorkerContext,
+  input: Readonly<StopActivityInput>,
+): Promise<void> {
+  await submitStopIntent(runtime, { avatarID: input.avatarID, id: input.activityID });
+}
 
 async function runFlowBody(site: WorkerFaultSite, body: () => Promise<void>): Promise<void> {
   try {
@@ -636,8 +692,55 @@ async function runFlowBody(site: WorkerFaultSite, body: () => Promise<void>): Pr
   }
 }
 
-function buildFlowSignals(context: WorkerLifecycleContext): FlowSignals {
-  return { cancel: context.cancelSignal, stop: context.stopController.signal };
+function waitForMacrotask(): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, 0);
+  });
+}
+
+function applyTeardownSettlement(context: WorkerLifecycleContext): void {
+  const requests = [context.currentRequest, ...context.pending];
+
+  for (const request of requests) {
+    if (request === null || request.kind === 'eviction') {
+      continue;
+    }
+
+    if (request.kind === 'start') {
+      request.deferred.resolve({ kind: 'failed' });
+      continue;
+    }
+
+    request.deferred.resolve();
+
+    if (request.kind === 'resync') {
+      for (const carryOver of request.carryOverDeferreds) {
+        carryOver.resolve();
+      }
+    }
+  }
+}
+
+type ContextArg = Readonly<{ context: WorkerLifecycleContext }>;
+
+function isFlowActive(args: ContextArg): boolean {
+  return (
+    args.context.phase === 'starting' ||
+    args.context.phase === 'resyncing' ||
+    args.context.phase === 'continuing' ||
+    args.context.phase === 'evicting'
+  );
+}
+
+function scheduleReconnectRecovery(context: WorkerLifecycleContext): void {
+  void (async () => {
+    try {
+      await context.failureActionSeeded;
+      await runReconnectRecovery(context.runtime);
+    } catch (error) {
+      reportWorkerFault('reconnect', error);
+    }
+  })();
 }
 
 function buildResyncRequest(
@@ -657,6 +760,10 @@ function buildResyncRequest(
   };
 }
 
+function buildFlowSignals(context: WorkerLifecycleContext): FlowSignals {
+  return { cancel: context.cancelSignal, stop: context.stopController.signal };
+}
+
 type StartEvent = Extract<WorkerLifecycleEvent, { readonly type: 'START' }>;
 
 function buildStartRequest(
@@ -672,61 +779,14 @@ function buildStartRequest(
   };
 }
 
-// a start folds its build snapshot from the avatar's latest-run record, which only a settled resync
-// or a live run writes — a start that arrives ahead of the boot resync would fold from an empty
-// record and mint a snapshot the server refuses
-function needsResyncBeforeStart(context: WorkerLifecycleContext): boolean {
-  const request = context.currentRequest;
-
-  if (request?.kind !== 'start' || request.awaitedResync) {
-    return false;
-  }
-
-  const avatarID = request.input.avatarID;
-  const runtime = context.runtime;
-
-  return (
-    runtime.getLatestRun()?.avatarID !== avatarID && runtime.getActivity()?.avatarID !== avatarID
-  );
-}
-
-// one prerequisite resync per start: a resync that settles without a record (a fresh avatar, a
-// dead network) still lets the start run rather than requeue behind another
-function buildPrerequisiteResync(
-  context: WorkerLifecycleContext,
-): Pick<WorkerLifecycleContext, 'currentRequest' | 'pending' | 'resyncTicket'> {
-  const request = context.currentRequest;
-
-  invariant(request?.kind === 'start', 'a prerequisite resync is built for a start at the head');
-
-  return {
-    currentRequest: buildResyncRequest(
-      context,
-      request.input.avatarID,
-      false,
-      buildDeferred<void>(),
-      [],
-    ),
-    pending: [{ ...request, awaitedResync: true }, ...context.pending],
-    resyncTicket: context.resyncTicket ?? { pendingClaimAvatarID: null },
-  };
-}
-
-function isFlowActive(args: ContextArg): boolean {
-  return (
-    args.context.phase === 'starting' ||
-    args.context.phase === 'resyncing' ||
-    args.context.phase === 'continuing' ||
-    args.context.phase === 'evicting'
-  );
-}
-
 function isIdleOrRunning(args: ContextArg): boolean {
   return args.context.phase === 'idle' || args.context.phase === 'running';
 }
 
-function hasLiveActivity(args: ContextArg): boolean {
-  return args.context.runtime.getActivity() !== null;
+function buildPendingPop(
+  context: WorkerLifecycleContext,
+): Pick<WorkerLifecycleContext, 'currentRequest' | 'pending'> {
+  return { currentRequest: context.pending[0] ?? null, pending: context.pending.slice(1) };
 }
 
 function applyEscapedRequest(
@@ -757,10 +817,64 @@ function applyEscapedRequest(
   }
 }
 
-function buildPendingPop(
+// one prerequisite resync per start: a resync that settles without a record (a fresh avatar, a
+// dead network) still lets the start run rather than requeue behind another
+function buildPrerequisiteResync(
   context: WorkerLifecycleContext,
-): Pick<WorkerLifecycleContext, 'currentRequest' | 'pending'> {
-  return { currentRequest: context.pending[0] ?? null, pending: context.pending.slice(1) };
+): Pick<WorkerLifecycleContext, 'currentRequest' | 'pending' | 'resyncTicket'> {
+  const request = context.currentRequest;
+
+  invariant(request?.kind === 'start', 'a prerequisite resync is built for a start at the head');
+
+  return {
+    currentRequest: buildResyncRequest(
+      context,
+      request.input.avatarID,
+      false,
+      buildDeferred<void>(),
+      [],
+    ),
+    pending: [{ ...request, awaitedResync: true }, ...context.pending],
+    resyncTicket: context.resyncTicket ?? { pendingClaimAvatarID: null },
+  };
+}
+
+// a start folds its build snapshot from the avatar's latest-run record, which only a settled resync
+// or a live run writes — a start that arrives ahead of the boot resync would fold from an empty
+// record and mint a snapshot the server refuses
+function shouldResyncBeforeStart(context: WorkerLifecycleContext): boolean {
+  const request = context.currentRequest;
+
+  if (request?.kind !== 'start' || request.awaitedResync) {
+    return false;
+  }
+
+  const avatarID = request.input.avatarID;
+  const runtime = context.runtime;
+
+  return (
+    runtime.getLatestRun()?.avatarID !== avatarID && runtime.getActivity()?.avatarID !== avatarID
+  );
+}
+
+function hasLiveActivity(args: ContextArg): boolean {
+  return args.context.runtime.getActivity() !== null;
+}
+
+function applyResyncSettlement(context: WorkerLifecycleContext): void {
+  if (findHeldResyncClaim(context) !== null) {
+    return;
+  }
+
+  const current = context.currentRequest;
+
+  invariant(current?.kind === 'resync', 'expected a queued resync request');
+
+  current.deferred.resolve();
+
+  for (const carryOver of current.carryOverDeferreds) {
+    carryOver.resolve();
+  }
 }
 
 function findHeldResyncClaim(
@@ -781,6 +895,19 @@ function findHeldResyncClaim(
   return { avatarID: ticket.pendingClaimAvatarID, current };
 }
 
+function buildResyncSettlePop(
+  context: WorkerLifecycleContext,
+): Pick<WorkerLifecycleContext, 'currentRequest' | 'pending' | 'resyncTicket'> {
+  const heldClaim = findHeldResyncClaim(context);
+  const pending = foldHeldResyncClaim(context);
+
+  return {
+    currentRequest: pending[0] ?? null,
+    pending: pending.slice(1),
+    resyncTicket: heldClaim === null ? null : { pendingClaimAvatarID: null },
+  };
+}
+
 function foldHeldResyncClaim(context: WorkerLifecycleContext): ReadonlyArray<PendingFlowRequest> {
   const heldClaim = findHeldResyncClaim(context);
 
@@ -795,127 +922,4 @@ function foldHeldResyncClaim(context: WorkerLifecycleContext): ReadonlyArray<Pen
       heldClaim.current.deferred,
     ]),
   ];
-}
-
-function applyResyncSettlement(context: WorkerLifecycleContext): void {
-  if (findHeldResyncClaim(context) !== null) {
-    return;
-  }
-
-  const current = context.currentRequest;
-
-  invariant(current?.kind === 'resync', 'expected a queued resync request');
-
-  current.deferred.resolve();
-
-  for (const carryOver of current.carryOverDeferreds) {
-    carryOver.resolve();
-  }
-}
-
-function buildResyncSettlePop(
-  context: WorkerLifecycleContext,
-): Pick<WorkerLifecycleContext, 'currentRequest' | 'pending' | 'resyncTicket'> {
-  const heldClaim = findHeldResyncClaim(context);
-  const pending = foldHeldResyncClaim(context);
-
-  return {
-    currentRequest: pending[0] ?? null,
-    pending: pending.slice(1),
-    resyncTicket: heldClaim === null ? null : { pendingClaimAvatarID: null },
-  };
-}
-
-async function runStopDelivery(
-  runtime: WorkerContext,
-  input: Readonly<StopActivityInput>,
-): Promise<void> {
-  await submitStopIntent(runtime, { avatarID: input.avatarID, id: input.activityID });
-}
-
-function scheduleStopDelivery(
-  runtime: WorkerContext,
-  self: StopDeliverySender,
-  input: Readonly<StopActivityInput>,
-  deferred: Deferred<void>,
-): void {
-  void (async () => {
-    try {
-      await runStopDelivery(runtime, input);
-
-      deferred.resolve();
-    } catch (error) {
-      deferred.reject(error);
-    } finally {
-      self.send({ type: 'STOP_DELIVERY_DONE' });
-    }
-  })();
-}
-
-function scheduleReconnectRecovery(context: WorkerLifecycleContext): void {
-  void (async () => {
-    try {
-      await context.failureActionSeeded;
-      await runReconnectRecovery(context.runtime);
-    } catch (error) {
-      reportWorkerFault('reconnect', error);
-    }
-  })();
-}
-
-function applyStopScopeAbort(context: WorkerLifecycleContext): void {
-  context.stopController.abort();
-}
-
-function buildFreshStopScope(
-  context: WorkerLifecycleContext,
-): Pick<WorkerLifecycleContext, 'cancelSignal' | 'stopController'> {
-  const stopController = new AbortController();
-
-  return {
-    cancelSignal: AbortSignal.any([stopController.signal, context.shutdownSignal]),
-    stopController,
-  };
-}
-
-function applyTeardownSettlement(context: WorkerLifecycleContext): void {
-  const requests = [context.currentRequest, ...context.pending];
-
-  for (const request of requests) {
-    if (request === null || request.kind === 'eviction') {
-      continue;
-    }
-
-    if (request.kind === 'start') {
-      request.deferred.resolve({ kind: 'failed' });
-      continue;
-    }
-
-    request.deferred.resolve();
-
-    if (request.kind === 'resync') {
-      for (const carryOver of request.carryOverDeferreds) {
-        carryOver.resolve();
-      }
-    }
-  }
-}
-
-function applyStopHalt(context: WorkerLifecycleContext): void {
-  context.runtime.getSimulation().stopActivity();
-
-  resetSimulation(context.runtime);
-
-  context.runtime.resetRewardSlotLedger();
-
-  context.runtime.broadcast({
-    state: { failureAction: context.runtime.getFailureAction() },
-    type: WorkerMessageType.SimulationUpdate,
-  });
-}
-
-function waitForMacrotask(): Promise<void> {
-  return new Promise((resolve) => {
-    setTimeout(resolve, 0);
-  });
 }

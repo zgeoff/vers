@@ -9,39 +9,31 @@ import * as z from 'zod';
 import { buildMockService } from './build-mock-service';
 import { server } from './mocks/server';
 
-const widgetContract = {
-  getWidget: oc
-    .route({ method: 'GET', path: '/widgets/{id}' })
-    .input(z.object({ id: z.string() }))
-    .output(z.object({ id: z.string(), name: z.string() }).nullable()),
-};
+function setupTest() {
+  const contract = {
+    getWidget: oc
+      .route({ method: 'GET', path: '/widgets/{id}' })
+      .input(z.object({ id: z.string() }))
+      .output(z.object({ id: z.string(), name: z.string() }).nullable()),
+  };
 
-const widgetSchema = z.object({ id: z.string(), name: z.string() });
+  const widgets = new Collection({ schema: z.object({ id: z.string(), name: z.string() }) });
 
-function buildWidgetCollection() {
-  return new Collection({ schema: widgetSchema });
-}
-
-type WidgetCollection = ReturnType<typeof buildWidgetCollection>;
-
-function findWidget(widgets: WidgetCollection, id: string) {
-  const widget = widgets.findFirst((query) => query.where({ id }));
-
-  return widget ?? null;
+  return { contract, widgets };
 }
 
 test('it serves a stateful value from an @msw/data-backed router', async () => {
-  const widgets = buildWidgetCollection();
+  const ctx = setupTest();
 
-  await widgets.create({ id: 'widget_1', name: 'Lantern' });
+  await ctx.widgets.create({ id: 'widget_1', name: 'Lantern' });
 
-  const getWidget = implement(widgetContract).getWidget.handler((opts) =>
-    findWidget(widgets, opts.input.id),
+  const getWidget = implement(ctx.contract).getWidget.handler(
+    (opts) => ctx.widgets.findFirst((query) => query.where({ id: opts.input.id })) ?? null,
   );
 
   const handlers = buildMockService({
     baseUrl: 'http://widget.test',
-    contract: widgetContract,
+    contract: ctx.contract,
     resolveContext: () => ({}),
     router: { getWidget },
   });
@@ -50,7 +42,7 @@ test('it serves a stateful value from an @msw/data-backed router', async () => {
 
   const link = new RPCLink<Record<never, never>>({ url: 'http://widget.test/rpc' });
 
-  const client: ContractRouterClient<typeof widgetContract> = createORPCClient(link);
+  const client: ContractRouterClient<typeof ctx.contract> = createORPCClient(link);
 
   const result = await client.getWidget({ id: 'widget_1' });
 
@@ -58,11 +50,12 @@ test('it serves a stateful value from an @msw/data-backed router', async () => {
 });
 
 test('it 404s a call the router does not implement', async () => {
-  const getWidget = implement(widgetContract).getWidget.handler(() => null);
+  const ctx = setupTest();
+  const getWidget = implement(ctx.contract).getWidget.handler(() => null);
 
   const handlers = buildMockService({
     baseUrl: 'http://widget.test',
-    contract: widgetContract,
+    contract: ctx.contract,
     resolveContext: () => ({}),
     router: { getWidget },
   });

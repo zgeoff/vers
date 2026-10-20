@@ -117,6 +117,7 @@ export function ExploreCurrentPanel(props: Readonly<ExploreCurrentPanelProps>) {
 
     const scopeID = selectedNode.id;
 
+    // oxlint-disable-next-line react/set-state-in-effect -- the attempt latch is set where the start is sent, so a re-render never sends a second start
     setAttemptScopeID(scopeID);
     setReport(undefined);
 
@@ -148,20 +149,16 @@ export function ExploreCurrentPanel(props: Readonly<ExploreCurrentPanelProps>) {
 
   // a start refused for want of a reconstruction re-arms itself once a catch-up completes, so a
   // reconnect resumes play without the player leaving and re-entering the node
-  useEffect(() => {
-    if (
-      report?.status.kind !== 'unreconstructed' ||
-      resyncStatus === null ||
-      resyncStatus.kind === 'unreconstructed' ||
-      resyncStatus.kind === 'failed' ||
-      resyncStatus.kind === 'session-expired'
-    ) {
-      return;
-    }
-
+  if (
+    report?.status.kind === 'unreconstructed' &&
+    resyncStatus !== null &&
+    resyncStatus.kind !== 'unreconstructed' &&
+    resyncStatus.kind !== 'failed' &&
+    resyncStatus.kind !== 'session-expired'
+  ) {
     setAttemptScopeID(undefined);
     setReport(undefined);
-  }, [report, resyncStatus]);
+  }
 
   useEffect(() => {
     if (report?.status.kind !== 'started') {
@@ -185,11 +182,14 @@ export function ExploreCurrentPanel(props: Readonly<ExploreCurrentPanelProps>) {
 
   const reportedRunID = pickReportedRunID(reportedStatus);
 
-  useEffect(() => {
-    if (liveRunID !== undefined) {
-      setSeenLiveRun({ reportedRunID, runID: liveRunID });
-    }
-  }, [liveRunID, reportedRunID]);
+  if (
+    liveRunID !== undefined &&
+    (seenLiveRun === undefined ||
+      seenLiveRun.runID !== liveRunID ||
+      seenLiveRun.reportedRunID !== reportedRunID)
+  ) {
+    setSeenLiveRun({ reportedRunID, runID: liveRunID });
+  }
 
   // derived in render, not latched: a re-armed attempt's reply must follow its own run on the
   // same render it lands, while the store still holds the run the player just retried from
@@ -327,18 +327,6 @@ export function ExploreCurrentPanel(props: Readonly<ExploreCurrentPanelProps>) {
   );
 }
 
-function pickReportedRunID(status: StartStatus | undefined): string | undefined {
-  if (status?.kind === 'started') {
-    return status.activity.id;
-  }
-
-  if (status?.kind === 'attached') {
-    return status.activityID;
-  }
-
-  return undefined;
-}
-
 function isRunAtNode(
   run: LiveRun | null | undefined,
   avatarID: string | undefined,
@@ -351,4 +339,16 @@ function isRunAtNode(
     run.scopeType === 'world_map_node' &&
     run.scopeID === nodeID
   );
+}
+
+function pickReportedRunID(status: StartStatus | undefined): string | undefined {
+  if (status?.kind === 'started') {
+    return status.activity.id;
+  }
+
+  if (status?.kind === 'attached') {
+    return status.activityID;
+  }
+
+  return undefined;
 }

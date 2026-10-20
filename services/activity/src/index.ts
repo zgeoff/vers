@@ -1,1 +1,1 @@
-export type { ActivityRouter } from './build-router';
+export type { ActivityRouter } from './create-activity-router';

@@ -211,9 +211,9 @@ function getWeightAtDistance(
         return point[1];
       }
 
-      const t = (distance - previous[0]) / span;
+      const ratio = (distance - previous[0]) / span;
 
-      return previous[1] + (point[1] - previous[1]) * t;
+      return previous[1] + (point[1] - previous[1]) * ratio;
     }
 
     previous = point;
@@ -224,7 +224,7 @@ function getWeightAtDistance(
 
 function getBorderBlend(nearestDistance: number, secondDistance: number): number {
   const gap = secondDistance - nearestDistance;
-  const t = Math.min(Math.max(gap / BIOME_BLEND_BAND, 0), 1);
+  const ratio = Math.min(Math.max(gap / BIOME_BLEND_BAND, 0), 1);
 
-  return 1 - t;
+  return 1 - ratio;
 }

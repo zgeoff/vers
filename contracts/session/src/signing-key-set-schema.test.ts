@@ -3,6 +3,7 @@ import { SigningKeySetSchema } from './signing-key-set-schema';
 
 test('it accepts a key set whose keys carry the four required members plus key-type members', () => {
   const payload = {
+    // oxlint-disable-next-line id-length -- RFC 7518 names the RSA key's exponent and modulus `e` and `n`
     keys: [{ alg: 'RS256', e: 'AQAB', kid: 'thumb', kty: 'RSA', n: 'abc', use: 'sig' as const }],
   };
 
@@ -11,6 +12,7 @@ test('it accepts a key set whose keys carry the four required members plus key-t
 
 test('it rejects a key that is not marked for signatures', () => {
   const result = SigningKeySetSchema.safeParse({
+    // oxlint-disable-next-line id-length -- RFC 7518 names the RSA key's exponent and modulus `e` and `n`
     keys: [{ alg: 'RS256', e: 'AQAB', kid: 'thumb', kty: 'RSA', n: 'abc', use: 'enc' }],
   });
 
@@ -21,6 +23,7 @@ test('it rejects a key that is not marked for signatures', () => {
 
 test('it rejects a key without a key id', () => {
   const result = SigningKeySetSchema.safeParse({
+    // oxlint-disable-next-line id-length -- RFC 7518 names the RSA key's exponent and modulus `e` and `n`
     keys: [{ alg: 'RS256', e: 'AQAB', kty: 'RSA', n: 'abc', use: 'sig' }],
   });
 

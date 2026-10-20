@@ -16,6 +16,7 @@ export function createStyleContext<R extends StyleRecipe>(recipe: R) {
     const ComponentWithStyles = React.forwardRef<
       React.ComponentRef<T>,
       React.ComponentPropsWithoutRef<T> & RecipeVariantProps<R>
+      // oxlint-disable-next-line react/function-component-definition -- prefer-arrow-callback refuses the function expression this rule asks for
     >((props, ref) => {
       const [variantProps, restProps] = recipe.splitVariantProps(props);
       // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- calling a value of the generic type R returns its call signature's declared type, not ReturnType<R>; TS can't unify the two for a type parameter
@@ -50,6 +51,7 @@ export function createStyleContext<R extends StyleRecipe>(recipe: R) {
     const StyledComponent = React.forwardRef<
       React.ComponentRef<T>,
       React.ComponentPropsWithoutRef<T>
+      // oxlint-disable-next-line react/function-component-definition -- prefer-arrow-callback refuses the function expression this rule asks for
     >((props, ref) => {
       const slotStyles = React.useContext(StyleContext);
 

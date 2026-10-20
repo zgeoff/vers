@@ -12,6 +12,12 @@ import type { ActivityServiceClient } from './types';
 
 type HoldCause = 'deferred' | 'transport';
 
+export interface CheckpointActivitySettledEvent {
+  readonly activityID: string;
+  readonly sessionEvicted: boolean;
+  readonly type: 'CHILD_SETTLED';
+}
+
 interface CheckpointActivityContext {
   readonly activityID: string;
   readonly client: Pick<ActivityServiceClient, 'trackActivityProgress'>;
@@ -62,12 +68,6 @@ export interface CheckpointActivityInput {
   readonly scheduleProgressFlush: () => void;
   readonly signal: AbortSignal | undefined;
   readonly terminalQueued: boolean;
-}
-
-export interface CheckpointActivitySettledEvent {
-  readonly activityID: string;
-  readonly sessionEvicted: boolean;
-  readonly type: 'CHILD_SETTLED';
 }
 
 type FlushSettledEvent =
@@ -198,6 +198,7 @@ export const checkpointActivityMachine = setup({
             raise((args) => buildFlushSettledEvent(args.event.output)),
           ],
         },
+        // oxlint-disable-next-line zgeoff/no-abbreviated-names -- xstate names an invoke's actor `src`
         src: 'runCheckpointFlushAttempt',
       },
       on: {
@@ -352,6 +353,7 @@ export const checkpointActivityMachine = setup({
       }),
       invoke: {
         input: (args) => ({ signal: args.context.signal }),
+        // oxlint-disable-next-line zgeoff/no-abbreviated-names -- xstate names an invoke's actor `src`
         src: 'subscribeToShutdownAbort',
       },
       on: {

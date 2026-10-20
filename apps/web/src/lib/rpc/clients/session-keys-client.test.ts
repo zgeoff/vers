@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { buildContractMock } from '@vers/client-test-utils/orpc';
 import { sessionContract } from '@vers/contract-session';
-import { buildTestSigningKeySet } from '@vers/mock-services';
+import { resolveTestSigningKeySet } from '@vers/mock-services';
 import { server } from '../../../mocks/node';
 import { SERVICE_URLS } from '../service-urls';
 import { sessionKeysClient } from './session-keys-client';
@@ -19,7 +19,7 @@ test('it attaches a traceparent header to the outbound getSigningKeys call', asy
     mockSession.getSigningKeys.handler(async (args) => {
       observedTraceparents.push(args.request.headers.get('traceparent'));
 
-      const published = await buildTestSigningKeySet();
+      const published = await resolveTestSigningKeySet();
 
       return published.keySet;
     }),

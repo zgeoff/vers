@@ -34,8 +34,6 @@ export interface PlanQARunsInput {
 }
 
 const SCOPE_TYPE = 'world_map_node';
-const ENTROPY_SOURCE = 'server-key';
-const RUN_DURATION_MS = 600_000;
 const RUN_SPACING_MS = 10 * 60 * 1000;
 
 export async function planQARuns(input: Readonly<PlanQARunsInput>): Promise<QARunsPlan> {
@@ -115,6 +113,8 @@ interface PlanRunContext {
   readonly startedAt: Date;
   readonly xp: number;
 }
+
+const RUN_DURATION_MS = 600_000;
 
 async function planRun(
   input: Readonly<PlanQARunsInput>,
@@ -214,6 +214,8 @@ interface CheckpointRowContext {
   readonly startChainIndex: number;
   readonly startHash: string;
 }
+
+const ENTROPY_SOURCE = 'server-key';
 
 function buildCheckpointRows(
   engineCheckpoints: ReadonlyArray<ActivityCheckpoint>,

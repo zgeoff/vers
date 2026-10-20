@@ -2,7 +2,7 @@ import { reportUnexpectedError } from '@vers/service-runtime';
 import { recordBackoff } from '../metrics/record-backoff';
 import { recordIterationFailure } from '../metrics/record-iteration-failure';
 import { claimNextSeedChain } from '../queue/claim-next-seed-chain';
-import { findReplayTarget } from '../queue/find-replay-target';
+import { readReplayTarget } from '../queue/read-replay-target';
 import { updateReplayBackoff } from '../queue/update-replay-backoff';
 import type { ReplayCache } from '../replay/create-replay-cache';
 import type { ReplayTarget } from '../types';
@@ -27,7 +27,7 @@ export async function runReplayIteration(
         return { kind: 'idle' } as const;
       }
 
-      const target = await findReplayTarget(trx, claimed.activityID);
+      const target = await readReplayTarget(trx, claimed.activityID);
 
       if (target === undefined) {
         return { kind: 'idle' } as const;

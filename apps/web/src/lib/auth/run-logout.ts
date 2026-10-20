@@ -1,7 +1,7 @@
 import { redirect } from '@tanstack/react-router';
 import { logger } from '../../server/logger';
 import { sessionClient } from '../rpc/clients/session-client';
-import { getAuthSession } from './get-auth-session';
+import { readAuthSession } from './read-auth-session';
 import { removeAuthSession } from './remove-auth-session';
 import { toSafeRedirectPath } from './to-safe-redirect-path';
 
@@ -11,7 +11,7 @@ interface LogoutOptions {
 }
 
 export async function runLogout(options: LogoutOptions = {}): Promise<never> {
-  const session = await getAuthSession();
+  const session = await readAuthSession();
 
   if (options.deleteSession === true && session.sessionID !== undefined) {
     const sessionID = session.sessionID;

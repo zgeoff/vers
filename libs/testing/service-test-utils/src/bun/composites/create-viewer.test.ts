@@ -2,13 +2,13 @@ import { expect, test } from 'bun:test';
 import { parseServiceJWKS } from '@vers/service-auth';
 import * as jose from 'jose';
 import { createTestDB } from '../create-test-db';
-import { getTestServiceKeyPair } from '../get-test-service-key-pair';
+import { resolveTestServiceKeyPair } from '../resolve-test-service-key-pair';
 import { createViewer } from './create-viewer';
 
 test('it persists a user and mints a token carrying that user as the acting subject', async () => {
   await using testDB = await createTestDB();
 
-  const keyPair = await getTestServiceKeyPair();
+  const keyPair = await resolveTestServiceKeyPair();
   const viewer = await createViewer({ audience: 'create-viewer-spec', db: testDB.db });
 
   const keySet = parseServiceJWKS(keyPair.jwksJSON);

@@ -1,4 +1,4 @@
-import { LRUMap } from '../utils/lru-map';
+import { createLRUMap } from '../utils/create-lru-map';
 
 export interface CreateChunkCacheOptions<TEntry> {
   readonly capacity: number;
@@ -19,8 +19,7 @@ export interface ChunkCache<TEntry> {
 export function createChunkCache<TEntry>(
   options: Readonly<CreateChunkCacheOptions<TEntry>>,
 ): ChunkCache<TEntry> {
-  const map = new LRUMap<string, TEntry>(options.capacity, options.dispose);
-
+  const map = createLRUMap<string, TEntry>(options.capacity, options.dispose);
   let syncedSeed: number | null = null;
 
   return {
@@ -32,7 +31,7 @@ export function createChunkCache<TEntry>(
       map.clear();
     },
 
-    get: (key) => map.get(key),
+    get: (key) => map.findValue(key),
 
     has: (key) => map.has(key),
 

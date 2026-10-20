@@ -5,12 +5,9 @@ import { createChunkCache } from './create-chunk-cache';
 import type { ChunkRange } from './resolve-chunk-stream';
 import { resolveChunkStream } from './resolve-chunk-stream';
 
-// two chunks wide (chunk x 0 and 1), one chunk tall (chunk y 0)
-const TWO_CHUNK_VIEWPORT = { maxCX: 31, maxCY: 15, minCX: 0, minCY: 0 };
-
 test('it reports every chunk the viewport covers as a miss when the cache is empty', () => {
   const cache = createChunkCache<string>({ capacity: 8, dispose: () => {} });
-  const resolved = resolveChunkStream(cache, TWO_CHUNK_VIEWPORT, null);
+  const resolved = resolveChunkStream(cache, { maxCX: 31, maxCY: 15, minCX: 0, minCY: 0 }, null);
 
   expect(resolved.entries).toHaveLength(0);
   expect(resolved.misses).toIncludeSameMembers(['0_0', '1_0']);
@@ -22,7 +19,7 @@ test('it resolves a cached chunk as an entry and drops it from the misses', () =
 
   cache.set('0_0', 'tile-0-0');
 
-  const resolved = resolveChunkStream(cache, TWO_CHUNK_VIEWPORT, null);
+  const resolved = resolveChunkStream(cache, { maxCX: 31, maxCY: 15, minCX: 0, minCY: 0 }, null);
 
   expect(resolved.entries).toStrictEqual(['tile-0-0']);
   expect(resolved.misses).toStrictEqual(['1_0']);
@@ -30,7 +27,7 @@ test('it resolves a cached chunk as an entry and drops it from the misses', () =
 
 test('it queues no leading-edge strip on the first resolve, with no previous range', () => {
   const cache = createChunkCache<string>({ capacity: 8, dispose: () => {} });
-  const resolved = resolveChunkStream(cache, TWO_CHUNK_VIEWPORT, null);
+  const resolved = resolveChunkStream(cache, { maxCX: 31, maxCY: 15, minCX: 0, minCY: 0 }, null);
 
   expect(resolved.misses).toIncludeSameMembers(['0_0', '1_0']);
 });
@@ -42,7 +39,12 @@ test('it queues no leading-edge strip when the range is unchanged from the previ
   cache.set('1_0', 'tile-1-0');
 
   const previousRange: ChunkRange = { maxChunkX: 1, maxChunkY: 0, minChunkX: 0, minChunkY: 0 };
-  const resolved = resolveChunkStream(cache, TWO_CHUNK_VIEWPORT, previousRange);
+
+  const resolved = resolveChunkStream(
+    cache,
+    { maxCX: 31, maxCY: 15, minCX: 0, minCY: 0 },
+    previousRange,
+  );
 
   expect(resolved.misses).toHaveLength(0);
 });
@@ -72,7 +74,12 @@ test('it queues the strip beyond the min-x edge when the range retreated in the 
   cache.set('1_0', 'tile-1-0');
 
   const previousRange: ChunkRange = { maxChunkX: 2, maxChunkY: 0, minChunkX: 1, minChunkY: 0 };
-  const resolved = resolveChunkStream(cache, TWO_CHUNK_VIEWPORT, previousRange);
+
+  const resolved = resolveChunkStream(
+    cache,
+    { maxCX: 31, maxCY: 15, minCX: 0, minCY: 0 },
+    previousRange,
+  );
 
   expect(resolved.misses).toStrictEqual(['-1_0']);
 });

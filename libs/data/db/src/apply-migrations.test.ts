@@ -6,7 +6,7 @@ import { contentDocumentV2 } from './content-seed/content-document-v2';
 import { createDB } from './create-db';
 import { resolveTestDBTarget } from './test-support/resolve-test-db-target';
 
-async function createEmptyDB() {
+async function setupTest() {
   const baseURI = resolveTestDBTarget().baseURI;
   const dbName = `test_${createId()}`;
   const setupClient = postgres(`${baseURI}/postgres`);
@@ -14,28 +14,28 @@ async function createEmptyDB() {
   await setupClient.unsafe(`CREATE DATABASE ${dbName}`);
   await setupClient.end();
 
-  return `${baseURI}/${dbName}`;
+  return { databaseURL: `${baseURI}/${dbName}` };
 }
 
 test('it applies pending migrations once and is a no-op the second time', async () => {
-  const databaseURL = await createEmptyDB();
-  const first = await applyMigrations({ databaseURL });
+  const ctx = await setupTest();
+  const first = await applyMigrations({ databaseURL: ctx.databaseURL });
 
   expect(first.error).toBeUndefined();
   expect(first.results).not.toBeEmpty();
 
-  const second = await applyMigrations({ databaseURL });
+  const second = await applyMigrations({ databaseURL: ctx.databaseURL });
 
   expect(second.error).toBeUndefined();
   expect(second.results).toBeEmpty();
 });
 
 test('it creates the pending_transactions table with defaults applied', async () => {
-  const databaseURL = await createEmptyDB();
+  const ctx = await setupTest();
 
-  await applyMigrations({ databaseURL });
+  await applyMigrations({ databaseURL: ctx.databaseURL });
 
-  const db = createDB({ databaseURL });
+  const db = createDB({ databaseURL: ctx.databaseURL });
 
   const inserted = await db
     .insertInto('pendingTransactions')
@@ -57,11 +57,11 @@ test('it creates the pending_transactions table with defaults applied', async ()
 });
 
 test('it creates the activity_chains table with both chain indexes starting at zero', async () => {
-  const databaseURL = await createEmptyDB();
+  const ctx = await setupTest();
 
-  await applyMigrations({ databaseURL });
+  await applyMigrations({ databaseURL: ctx.databaseURL });
 
-  const db = createDB({ databaseURL });
+  const db = createDB({ databaseURL: ctx.databaseURL });
 
   onTestFinished(() => db.destroy());
 
@@ -106,11 +106,11 @@ test('it creates the activity_chains table with both chain indexes starting at z
 });
 
 test('it adds the consumed-transaction-token table and audit columns', async () => {
-  const databaseURL = await createEmptyDB();
+  const ctx = await setupTest();
 
-  await applyMigrations({ databaseURL });
+  await applyMigrations({ databaseURL: ctx.databaseURL });
 
-  const db = createDB({ databaseURL });
+  const db = createDB({ databaseURL: ctx.databaseURL });
 
   const token = await db
     .insertInto('consumedTransactionTokens')
@@ -161,11 +161,11 @@ test('it adds the consumed-transaction-token table and audit columns', async () 
 });
 
 test('it bumps updated_at through the set_updated_at trigger on update', async () => {
-  const databaseURL = await createEmptyDB();
+  const ctx = await setupTest();
 
-  await applyMigrations({ databaseURL });
+  await applyMigrations({ databaseURL: ctx.databaseURL });
 
-  const db = createDB({ databaseURL });
+  const db = createDB({ databaseURL: ctx.databaseURL });
 
   const staleDate = new Date('2020-01-01T00:00:00.000Z');
 
@@ -195,11 +195,11 @@ test('it bumps updated_at through the set_updated_at trigger on update', async (
 });
 
 test('it seeds both content versions and points current at the newest', async () => {
-  const databaseURL = await createEmptyDB();
+  const ctx = await setupTest();
 
-  await applyMigrations({ databaseURL });
+  await applyMigrations({ databaseURL: ctx.databaseURL });
 
-  const db = createDB({ databaseURL });
+  const db = createDB({ databaseURL: ctx.databaseURL });
 
   const versions = await db.selectFrom('contentVersions').select('contentVersion').execute();
 
@@ -221,11 +221,11 @@ test('it seeds both content versions and points current at the newest', async ()
 });
 
 test('it refuses to update a content_versions row', async () => {
-  const databaseURL = await createEmptyDB();
+  const ctx = await setupTest();
 
-  await applyMigrations({ databaseURL });
+  await applyMigrations({ databaseURL: ctx.databaseURL });
 
-  const db = createDB({ databaseURL });
+  const db = createDB({ databaseURL: ctx.databaseURL });
 
   expect(
     db
@@ -239,11 +239,11 @@ test('it refuses to update a content_versions row', async () => {
 });
 
 test('it refuses to delete a content_versions row', async () => {
-  const databaseURL = await createEmptyDB();
+  const ctx = await setupTest();
 
-  await applyMigrations({ databaseURL });
+  await applyMigrations({ databaseURL: ctx.databaseURL });
 
-  const db = createDB({ databaseURL });
+  const db = createDB({ databaseURL: ctx.databaseURL });
 
   expect(
     db.deleteFrom('contentVersions').where('contentVersion', '=', '1').execute(),

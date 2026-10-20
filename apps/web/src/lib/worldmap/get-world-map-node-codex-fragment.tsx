@@ -10,9 +10,9 @@ export const getWorldMapNodeCodexFragment = createServerFn({ method: 'GET' })
   .handler(async (ctx) => {
     const message = pickWorldMapNodeCodexMessage(ctx.data.difficulty);
 
-    const src = await createCompositeComponent(() => (
+    const source = await createCompositeComponent(() => (
       <p data-testid="world-map-node-codex">{message}</p>
     ));
 
-    return { src };
+    return { source };
   });

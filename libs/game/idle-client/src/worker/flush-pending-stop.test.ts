@@ -42,7 +42,7 @@ test('it flushes the queue, stops the row, and releases the intent', async () =>
   expect(outcome).toBe('delivered');
   expect(submitter.flushNow).toHaveBeenCalledExactlyOnceWith(activity.id);
 
-  const row = db.activityCollection.findFirst((q) => q.where({ id: activity.id }));
+  const row = db.activityCollection.findFirst((query) => query.where({ id: activity.id }));
 
   invariant(row !== undefined, 'expected the targeted row to survive');
 
@@ -93,7 +93,7 @@ test('it never touches a row other than the targeted one', async () => {
 
   expect(outcome).toBe('delivered');
 
-  const survivor = db.activityCollection.findFirst((q) => q.where({ id: newer.id }));
+  const survivor = db.activityCollection.findFirst((query) => query.where({ id: newer.id }));
 
   invariant(survivor !== undefined, 'expected the newer row to survive');
 
@@ -165,7 +165,7 @@ test('it releases a stop another writer superseded, leaving the row active', asy
 
   expect(intent).toBeUndefined();
 
-  const row = db.activityCollection.findFirst((q) => q.where({ id: activity.id }));
+  const row = db.activityCollection.findFirst((query) => query.where({ id: activity.id }));
 
   invariant(row !== undefined, 'expected the targeted row to survive');
 

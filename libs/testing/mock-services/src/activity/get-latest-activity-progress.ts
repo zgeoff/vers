@@ -13,19 +13,21 @@ export const getLatestActivityProgress = os.getLatestActivityProgress.handler((o
     throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
   }
 
-  const avatar = db.avatarCollection.findFirst((q) =>
-    q.where({ id: opts.input.avatarID, userID: actingUserID }),
+  const avatar = db.avatarCollection.findFirst((query) =>
+    query.where({ id: opts.input.avatarID, userID: actingUserID }),
   );
 
   if (avatar === undefined) {
     throw opts.errors.NOT_FOUND({ data: {} });
   }
 
-  const activities = db.activityCollection.findMany((q) =>
-    q.where({ avatarID: opts.input.avatarID }),
+  const activities = db.activityCollection.findMany((query) =>
+    query.where({ avatarID: opts.input.avatarID }),
   );
 
-  const [latest] = activities.toSorted((a, b) => b.startedAt.getTime() - a.startedAt.getTime());
+  const [latest] = activities.toSorted(
+    (left, right) => right.startedAt.getTime() - left.startedAt.getTime(),
+  );
 
   if (latest === undefined) {
     throw opts.errors.NOT_FOUND({ data: {} });
@@ -34,8 +36,8 @@ export const getLatestActivityProgress = os.getLatestActivityProgress.handler((o
   const anchor =
     latest.verifiedHead === 0
       ? undefined
-      : db.checkpointCollection.findFirst((q) =>
-          q.where({ activityID: latest.id, version: latest.verifiedHead }),
+      : db.checkpointCollection.findFirst((query) =>
+          query.where({ activityID: latest.id, version: latest.verifiedHead }),
         );
 
   const optimistic = foldOptimisticBuild(avatar.xp, collectUnsettledSources(activities));
@@ -72,12 +74,15 @@ function collectUnsettledSources(
         activity.verifiedHead < activity.appendedHead,
     )
     .map((activity) => {
-      const tail = db.checkpointCollection.findFirst((q) =>
-        q.where({ activityID: activity.id, version: activity.appendedHead }),
+      const tail = db.checkpointCollection.findFirst((query) =>
+        query.where({ activityID: activity.id, version: activity.appendedHead }),
       );
 
-      const unverified = db.checkpointCollection.findMany((q) =>
-        q.where({ activityID: activity.id, version: (version) => version > activity.verifiedHead }),
+      const unverified = db.checkpointCollection.findMany((query) =>
+        query.where({
+          activityID: activity.id,
+          version: (version) => version > activity.verifiedHead,
+        }),
       );
 
       const unverifiedDeltaSum = unverified.reduce((sum, checkpoint) => {

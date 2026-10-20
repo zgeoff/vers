@@ -18,9 +18,6 @@ interface WrapperProps {
   readonly children: ReactNode;
 }
 
-const ONE_CHUNK_VIEWPORT: Viewport = { maxCX: 15, maxCY: 15, minCX: 0, minCY: 0 };
-const TWO_CHUNK_VIEWPORT: Viewport = { maxCX: 31, maxCY: 15, minCX: 0, minCY: 0 };
-
 test('it returns no entries while the seed or the viewport is missing', () => {
   const hook = renderHook(() =>
     useChunkStream<StubEntry>({
@@ -28,7 +25,7 @@ test('it returns no entries while the seed or the viewport is missing', () => {
       cacheCapacity: 8,
       dispose: () => {},
       userSeed: null,
-      viewport: ONE_CHUNK_VIEWPORT,
+      viewport: { maxCX: 15, maxCY: 15, minCX: 0, minCY: 0 },
     }),
   );
 
@@ -42,7 +39,7 @@ test('it fills a miss over following animation frames rather than on the first r
       cacheCapacity: 8,
       dispose: () => {},
       userSeed: 1,
-      viewport: ONE_CHUNK_VIEWPORT,
+      viewport: { maxCX: 15, maxCY: 15, minCX: 0, minCY: 0 },
     }),
   );
 
@@ -65,7 +62,7 @@ test('it fills a two-chunk miss set across two separate animation-frame ticks, n
         ticks.push(builtChunkCount);
       },
       userSeed: 1,
-      viewport: TWO_CHUNK_VIEWPORT,
+      viewport: { maxCX: 31, maxCY: 15, minCX: 0, minCY: 0 },
     }),
   );
 
@@ -93,7 +90,7 @@ test('it resolves an already-built chunk instantly on a later render, with no fu
         userSeed: 1,
         viewport,
       }),
-    { initialProps: ONE_CHUNK_VIEWPORT },
+    { initialProps: { maxCX: 15, maxCY: 15, minCX: 0, minCY: 0 } },
   );
 
   await waitFor(() => {
@@ -111,7 +108,7 @@ test('it resolves an already-built chunk instantly on a later render, with no fu
   });
 
   act(() => {
-    hook.rerender(ONE_CHUNK_VIEWPORT);
+    hook.rerender({ maxCX: 15, maxCY: 15, minCX: 0, minCY: 0 });
   });
 
   expect(hook.result.current).toStrictEqual([{ chunkX: 0, chunkY: 0 }]);
@@ -130,7 +127,7 @@ test('it disposes every cached entry the moment the seed changes', async () => {
           disposed.push(entry);
         },
         userSeed,
-        viewport: ONE_CHUNK_VIEWPORT,
+        viewport: { maxCX: 15, maxCY: 15, minCX: 0, minCY: 0 },
       }),
     { initialProps: 1 },
   );
@@ -158,7 +155,7 @@ test('it disposes every cached entry on unmount', async () => {
         disposed.push(entry);
       },
       userSeed: 1,
-      viewport: ONE_CHUNK_VIEWPORT,
+      viewport: { maxCX: 15, maxCY: 15, minCX: 0, minCY: 0 },
     }),
   );
 
@@ -185,7 +182,7 @@ test('it reports each build tick to onBuildTick with the chunk count it built', 
         ticks.push({ builtChunkCount });
       },
       userSeed: 1,
-      viewport: ONE_CHUNK_VIEWPORT,
+      viewport: { maxCX: 15, maxCY: 15, minCX: 0, minCY: 0 },
     }),
   );
 
@@ -211,7 +208,7 @@ test('it still prefetches the leading-edge chunk under development double-render
         viewport: props.viewport,
       }),
     {
-      initialProps: { viewport: ONE_CHUNK_VIEWPORT },
+      initialProps: { viewport: { maxCX: 15, maxCY: 15, minCX: 0, minCY: 0 } },
       wrapper: (props: WrapperProps) => createElement(StrictMode, null, props.children),
     },
   );

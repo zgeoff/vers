@@ -2,9 +2,9 @@ import { expect, test } from 'bun:test';
 import { bytesToHex } from '@noble/hashes/utils.js';
 import { deriveAvatarKey } from './derive-avatar-key';
 
-const root = new Uint8Array(32).fill(0x0b);
-
 test('it derives a frozen golden key from fixed inputs', () => {
+  const root = new Uint8Array(32).fill(0x0b);
+
   const key = deriveAvatarKey({ root, population: 'trade', avatarID: 'avatar_1', keyVersion: 1 });
 
   expect(bytesToHex(key)).toMatchInlineSnapshot(
@@ -13,12 +13,16 @@ test('it derives a frozen golden key from fixed inputs', () => {
 });
 
 test('it derives bit-identical keys for identical input', () => {
+  const root = new Uint8Array(32).fill(0x0b);
+
   const input = { root, population: 'trade', avatarID: 'avatar_1', keyVersion: 1 } as const;
 
   expect(deriveAvatarKey(input)).toStrictEqual(deriveAvatarKey(input));
 });
 
 test('it derives a different key for a different population', () => {
+  const root = new Uint8Array(32).fill(0x0b);
+
   const tradeKey = deriveAvatarKey({
     root,
     population: 'trade',
@@ -37,6 +41,8 @@ test('it derives a different key for a different population', () => {
 });
 
 test('it derives a different key for a different avatar ID', () => {
+  const root = new Uint8Array(32).fill(0x0b);
+
   const key1 = deriveAvatarKey({ root, population: 'trade', avatarID: 'avatar_1', keyVersion: 1 });
   const key2 = deriveAvatarKey({ root, population: 'trade', avatarID: 'avatar_2', keyVersion: 1 });
 
@@ -44,6 +50,8 @@ test('it derives a different key for a different avatar ID', () => {
 });
 
 test('it derives a different key for a different key version', () => {
+  const root = new Uint8Array(32).fill(0x0b);
+
   const keyV1 = deriveAvatarKey({ root, population: 'trade', avatarID: 'avatar_1', keyVersion: 1 });
   const keyV2 = deriveAvatarKey({ root, population: 'trade', avatarID: 'avatar_1', keyVersion: 2 });
 
@@ -51,6 +59,8 @@ test('it derives a different key for a different key version', () => {
 });
 
 test('it derives a 32-byte key', () => {
+  const root = new Uint8Array(32).fill(0x0b);
+
   const key = deriveAvatarKey({ root, population: 'trade', avatarID: 'avatar_1', keyVersion: 1 });
 
   expect(key).toHaveLength(32);

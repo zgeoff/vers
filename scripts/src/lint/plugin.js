@@ -129,80 +129,6 @@ function checkMathReference(context, node) {
   }
 }
 
-function checkGlobalObjectReference(context, node) {
-  const parent = node.parent;
-
-  if (parent.type === 'TSTypeQuery') {
-    return;
-  }
-
-  if (parent.type === 'MemberExpression' && parent.object === node) {
-    checkGlobalObjectMember(context, node, parent);
-
-    return;
-  }
-
-  const pattern = findDestructuringPattern(node);
-
-  if (pattern === null) {
-    reportGlobalValue(context, node, node);
-
-    return;
-  }
-
-  for (const property of pattern.properties) {
-    checkGlobalDestructuredProperty(context, node, property);
-  }
-}
-
-function checkGlobalObjectMember(context, globalNode, member) {
-  const name = getMemberPropertyName(member);
-
-  if (name === undefined) {
-    reportGlobalValue(context, member, globalNode);
-
-    return;
-  }
-
-  if (name === 'Math') {
-    checkMathReference(context, member);
-  }
-}
-
-function checkGlobalDestructuredProperty(context, globalNode, property) {
-  if (property.type === 'RestElement') {
-    reportGlobalValue(context, property, globalNode);
-
-    return;
-  }
-
-  const name = getPropertyKeyName(property);
-
-  if (name === undefined) {
-    reportGlobalValue(context, property, globalNode);
-
-    return;
-  }
-
-  if (name !== 'Math') {
-    return;
-  }
-
-  if (property.value.type !== 'ObjectPattern') {
-    context.report({ node: property, messageId: 'mathValue' });
-
-    return;
-  }
-
-  for (const mathProperty of property.value.properties) {
-    checkDestructuredProperty(context, mathProperty);
-  }
-}
-
-function reportGlobalValue(context, node, globalNode) {
-  context.report({ node, messageId: 'globalValue', data: { name: globalNode.name } });
-}
-
 function checkMathMember(context, node) {
   const name = getMemberPropertyName(node);
 
@@ -221,6 +147,18 @@ function checkMathMember(context, node) {
   checkMathMemberName(context, node, name);
 }
 
+function getMemberPropertyName(node) {
+  if (!node.computed) {
+    return node.property.name;
+  }
+
+  return getStringLiteralValue(node.property);
+}
+
+function getStringLiteralValue(node) {
+  return node.type === 'Literal' && typeof node.value === 'string' ? node.value : undefined;
+}
+
 function checkPowReference(context, node) {
   const parent = node.parent;
 
@@ -231,6 +169,31 @@ function checkPowReference(context, node) {
   }
 
   context.report({ node, messageId: 'powReference' });
+}
+
+function checkExponent(context, node, exponentNode) {
+  if (isIntegerLiteral(exponentNode)) {
+    return;
+  }
+
+  context.report({ node, messageId: 'exponent' });
+}
+
+function isIntegerLiteral(node) {
+  if (node === undefined) {
+    return false;
+  }
+
+  const literal =
+    node.type === 'UnaryExpression' && (node.operator === '-' || node.operator === '+')
+      ? node.argument
+      : node;
+
+  return (
+    literal.type === 'Literal' &&
+    typeof literal.value === 'number' &&
+    Number.isInteger(literal.value)
+  );
 }
 
 function checkMathMemberName(context, node, name) {
@@ -286,41 +249,78 @@ function getPropertyKeyName(property) {
     : getStringLiteralValue(property.key);
 }
 
-function getMemberPropertyName(node) {
-  if (!node.computed) {
-    return node.property.name;
-  }
+function checkGlobalObjectReference(context, node) {
+  const parent = node.parent;
 
-  return getStringLiteralValue(node.property);
-}
-
-function getStringLiteralValue(node) {
-  return node.type === 'Literal' && typeof node.value === 'string' ? node.value : undefined;
-}
-
-function checkExponent(context, node, exponentNode) {
-  if (isIntegerLiteral(exponentNode)) {
+  if (parent.type === 'TSTypeQuery') {
     return;
   }
 
-  context.report({ node, messageId: 'exponent' });
-}
+  if (parent.type === 'MemberExpression' && parent.object === node) {
+    checkGlobalObjectMember(context, node, parent);
 
-function isIntegerLiteral(node) {
-  if (node === undefined) {
-    return false;
+    return;
   }
 
-  const literal =
-    node.type === 'UnaryExpression' && (node.operator === '-' || node.operator === '+')
-      ? node.argument
-      : node;
+  const pattern = findDestructuringPattern(node);
 
-  return (
-    literal.type === 'Literal' &&
-    typeof literal.value === 'number' &&
-    Number.isInteger(literal.value)
-  );
+  if (pattern === null) {
+    reportGlobalValue(context, node, node);
+
+    return;
+  }
+
+  for (const property of pattern.properties) {
+    checkGlobalDestructuredProperty(context, node, property);
+  }
+}
+
+function checkGlobalObjectMember(context, globalNode, member) {
+  const name = getMemberPropertyName(member);
+
+  if (name === undefined) {
+    reportGlobalValue(context, member, globalNode);
+
+    return;
+  }
+
+  if (name === 'Math') {
+    checkMathReference(context, member);
+  }
+}
+
+function reportGlobalValue(context, node, globalNode) {
+  context.report({ node, messageId: 'globalValue', data: { name: globalNode.name } });
+}
+
+function checkGlobalDestructuredProperty(context, globalNode, property) {
+  if (property.type === 'RestElement') {
+    reportGlobalValue(context, property, globalNode);
+
+    return;
+  }
+
+  const name = getPropertyKeyName(property);
+
+  if (name === undefined) {
+    reportGlobalValue(context, property, globalNode);
+
+    return;
+  }
+
+  if (name !== 'Math') {
+    return;
+  }
+
+  if (property.value.type !== 'ObjectPattern') {
+    context.report({ node: property, messageId: 'mathValue' });
+
+    return;
+  }
+
+  for (const mathProperty of property.value.properties) {
+    checkDestructuredProperty(context, mathProperty);
+  }
 }
 
 function reportBanned(context, node, name) {
