@@ -1410,7 +1410,7 @@
     "@zgeoff/format-codemod": "0.3.0",
     "@zgeoff/mcp-remote": "0.1.38",
     "@zgeoff/oxlint-config": "0.5.2",
-    "@zgeoff/skill-gate": "0.2.0",
+    "@zgeoff/skill-gate": "0.2.2",
     "@zgeoff/umami-mcp": "0.1.0",
     "autoprefixer": "10.6.1",
     "babel-plugin-react-compiler": "1.0.0",
@@ -3010,9 +3010,7 @@
 
     "@zgeoff/oxlint-config": ["@zgeoff/oxlint-config@0.5.2", "", { "dependencies": { "@stylistic/eslint-plugin": "5.10.0" }, "peerDependencies": { "oxlint": ">=1.78.0" } }, "sha512-cUW6nPI6b2+iDBiRnqJb0edKpZ7nBlNpKNV3UpwRtuthkTNQkecsBEC9nH3rwM7S1nUUAFoV2wkiHJZwoBUHSw=="],
 
-    "@zgeoff/skill-gate": ["@zgeoff/skill-gate@0.2.0", "", { "dependencies": { "@zgeoff/std": "0.2.0", "ts-pattern": "5.9.0" } }, "sha512-9b8kNTKV9owOVFHBhQHvUv9NTUVmbqURnjHmkmsfGda+7X8pYk2of/GanWzwDhLDLqsmGdGGv+KchsLK8qPZFA=="],
-
-    "@zgeoff/std": ["@zgeoff/std@0.2.0", "", {}, "sha512-iJA7pejdYPQdJ7B9V4nefbcknioUYXYPWFd9rQeJjyuKqZeHfLSqlNjnfV0X4X12eGCasEKai9UQAi9e/LQbCw=="],
+    "@zgeoff/skill-gate": ["@zgeoff/skill-gate@0.2.2", "", {}, "sha512-aqOIse+F//NyMAkXSAAF/E0VstYsxoXiCYvh6d1MnuZshjWLcfW+NGBV0j4CW5vqEpH4/EfpL1EtfnB+hUg4uw=="],
 
     "@zgeoff/umami-mcp": ["@zgeoff/umami-mcp@0.1.0", "", { "dependencies": { "@modelcontextprotocol/sdk": "1.29.0", "zod": "3.25.76" }, "bin": { "umami-mcp": "dist/index.js" } }, "sha512-+GhMmBw3SFA4EGKU6HiXj0+MoFsEFNga9vpd0KLLbrn4nDDbBbmgb0bzFe7iG68i1z2oEfvzJt5wUZStoLWZ2g=="],
 
