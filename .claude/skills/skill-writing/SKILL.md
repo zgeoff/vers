@@ -11,9 +11,9 @@ description:
 
 A skill holds what an agent cannot get from the code: when to load the skill, the commands to run
 and what each needs, the traps that cost time, the reasons behind rules that look arbitrary, and
-where to look next. The code, its doc comments, `--help`, and the docs own everything else, so a
-skill points at them and never copies them. A copy goes stale the next time the code changes, and
-nothing tells the agent that reads it.
+where to look next. The code, its tests, `--help`, and the docs own everything else, so a skill
+points at them and never copies them. A copy goes stale the next time the code changes, and nothing
+tells the agent that reads it.
 
 The prose rules in [docs-writing](../docs-writing/SKILL.md) apply to a skill as they do to any
 committed doc, and this guide doesn't repeat them. Where the two disagree about a skill, this guide
@@ -37,6 +37,8 @@ Each line links the section that explains it.
   link to its file; no inventories, no narrations, and no stale quotes.
 - [Answering a review of a skill](#answering-a-review-of-a-skill): decline a finding that asks for a
   copy of the code.
+- [Examples in a shared skill](#examples-in-a-shared-skill): made up, and naming no repo, file, or
+  line.
 - [Keeping a skill true](#keeping-a-skill-true): rules, not incidents, and a script where a check
   can replace prose.
 - [Checking a skill](#checking-a-skill): `check-length.sh`, `check-links.sh`, and `check-skill.sh`.
@@ -159,20 +161,20 @@ An inventory is one row or bullet per file, function, option, or other member of
 defines. Replace it with the rule that defines the list and the search that lists it.
 
 - Bad: a table with a row for each stand-in in `test-utils/`, naming the boundary each replaces.
-- Good: "Each stand-in is a `build-stub-*` file in [test-utils](../../../test-utils/), and its doc
-  comment names the boundary it replaces. Search there before writing one."
+- Good: "Each stand-in is a `build-stub-*` file in [test-utils](../../../test-utils/), and its name
+  states the boundary it replaces. Search there before writing one."
 
 docs-writing allows a table whose key column is a list when its other columns hold facts the code
 doesn't. In a skill, a table keyed by files, functions, or options is an inventory whatever its
-other columns hold: move those facts into the code as doc comments, so the search returns them. A
-table keyed by something the agent does or passes, such as the commands table above or the arguments
-of a workflow the skill tells the agent to call, is no inventory: the agent needs it on every load,
-at the call.
+other columns hold: move those facts into the code, as a name, a type, or a test whose name states
+them, so the search returns them. A table keyed by something the agent does or passes, such as the
+commands table above or the arguments of a workflow the skill tells the agent to call, is no
+inventory: the agent needs it on every load, at the call.
 
 When agents need to browse a list, generate the reference from the code with a script, and have CI
-fail when the reference drifts. When most loads of the skill need the list itself, such as the verbs
-a repo's function names may start with, keep the list in the skill and add a check that fails when
-it differs from the code, as `check-project-verbs.sh` does for the code-style skill.
+fail when the reference drifts. When most loads of the skill need the list itself, such as a table
+of names that a lint rule also holds, keep the list in the skill and add a test that fails when it
+differs from the code.
 
 ### A narration
 
@@ -212,6 +214,15 @@ Review bots and review agents ask for precision: the exact path, every member of
 script takes. In a skill, a finding that asks for a copy of the code is declined under "Point at the
 code, never copy it", and the reply names that rule. A finding that shows a sentence is wrong is
 fixed, by correcting the fact or by replacing the copy with a pointer.
+
+## Examples in a shared skill
+
+A shared skill is one that a sync copies into several repos. Every example in it is made up, and
+names no repo, and no file, line, issue, or identifier from one repo. A reader in another repo can't
+open that file, and the example goes stale when its repo changes. Invent names that keep the
+example's point, as the widget examples in this guide do. An upstream project's issue, such as
+`turborepo#11007`, and a tool's or library's own name are fine, because every repo sees the same
+thing.
 
 ## Keeping a skill true
 
