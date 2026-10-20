@@ -2,9 +2,9 @@
 name: project-code-style
 description:
   vers's own TypeScript style on top of the shared code-style skill — where the project function
-  verbs and exempt names live, the verbs a reader confuses with shared ones, comments, type-only
-  modules, invariants, untyped column boundaries, third-party packages, Panda CSS styling and
-  screens, Zustand client state, and the lint directives. Load it beside code-style before writing,
+  verbs and exempt names live, the verbs a reader confuses with shared ones, type-only modules,
+  invariants, untyped column boundaries, third-party packages, Panda CSS styling and screens,
+  Zustand client state, and the lint directives. Load it beside code-style before writing,
   reviewing, or renaming any TypeScript in vers.
 ---
 
@@ -20,8 +20,6 @@ and tightens rules and never relaxes one from the base.
   contract and the shared verb it differs from.
 - [Exempt names](#exempt-names): Kysely's migration exports and the oRPC handlers named after their
   contract procedures need no verb.
-- [Comments](#comments): a `//` comment holds only the reason the obvious alternative is wrong, when
-  the cause lives outside the file.
 - [Type-only modules](#type-only-modules): shared types go in the directory's one `types.ts`.
 - [Invariants](#invariants): a true invariant uses `tiny-invariant`, never a hand-rolled throw.
 - [Untyped column boundaries](#untyped-column-boundaries): a jsonb or text value re-enters typed
@@ -87,31 +85,6 @@ pass it a named function that follows the verb rule, such as `handleRequest`.
 - `wake`, an oRPC handler
 - `executeQuery`, the query method of a Kysely database connection
 
-## Comments
-
-Two lint rules in [`.oxlintrc.json`](../../../.oxlintrc.json) own comment shape, and neither has an
-exception for authored code or a baseline marker (generated output gets a per-file override there):
-`zgeoff/no-jsdoc` bans every `/** … */` block, and `zgeoff/max-consecutive-line-comments` bans a run
-of more than three consecutive `//` lines. A fact a reader needs has a home that stays true: the
-code, a type, a named constant, a test whose name states the rule, the commit body, or the
-subsystem's doc under [`docs/architecture/`](../../../docs/architecture/) for an invariant that
-callers obey. A comment holds only the residue none of those can hold.
-
-- Write a `//` comment for one thing: the reason the obvious alternative is wrong, when the cause
-  lives outside the file. A library quirk, a runtime or platform behavior, a parser or compiler
-  rule, a production incident. Place it at the line or declaration it explains, three lines at most.
-- Never write what the code shows: what a function does, its parameters, its outcomes, an invariant
-  a test already states, which step does what. An agent derives those from the code, its tests, and
-  its references; a comment that caches them goes stale.
-- A caller-facing contract is a test whose name states it. An invariant that code in another package
-  obeys is stated in the subsystem doc as well. The reason for a design decision lives in the commit
-  body, never in the doc. A reason a reader needs at the line follows the comment rule above.
-- Comments describe the code as it is now — no history ("previously", "now uses"), no project state
-  (issue numbers, phase labels, "not wired yet"); those live in the commit message.
-- Comments don't name other declarations — renames strand the reference. State the fact instead: "an
-  append from any other session is rejected", not "(see appendCheckpoints)". A declaration's own
-  parameters and signature types are fine to name.
-
 ## Lint directives
 
 Every type-aware rule is on in [`.oxlintrc.json`](../../../.oxlintrc.json), except
@@ -125,8 +98,8 @@ app-web override for `only-throw-error` is permanent.
 - In authored code, `zgeoff/no-jsdoc`, `zgeoff/max-consecutive-line-comments` and
   `vers/no-unportable-math` are never baselined and never disabled inline. Generated output goes in
   `ignorePatterns` in [`.oxlintrc.json`](../../../.oxlintrc.json). Rewrite an operation
-  `vers/no-unportable-math` rejects to use an allowed operation. [Comments](#comments) gives the
-  home for a fact a rejected comment held.
+  `vers/no-unportable-math` rejects to use an allowed operation. The `Comments` section of the
+  shared `code-style` skill gives the home for a fact a rejected comment held.
 
 ## Type-only modules
 
