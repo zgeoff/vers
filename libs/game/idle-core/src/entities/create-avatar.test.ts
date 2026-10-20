@@ -180,9 +180,7 @@ test('it allows for preserving avatar state when resetting', () => {
     id: BehaviourID.Test,
     predicate: () => true,
     setState: mock<AvatarTestBehaviour['setState']>(),
-    state: {
-      count: 0,
-    },
+    state: {},
   };
 
   avatar.registerBehaviour(behaviour);

@@ -136,10 +136,10 @@ test('it opens no channel where there is no window to mirror onto', () => {
   let constructed = 0;
 
   globalThis.BroadcastChannel = new Proxy(originalBroadcastChannel, {
-    construct(target, argumentList, newTarget) {
+    construct(target, argumentList: [string]) {
       constructed += 1;
 
-      return Reflect.construct(target, argumentList, newTarget);
+      return new target(argumentList[0]);
     },
   });
 

@@ -40,7 +40,7 @@ test('it serves a stateful value from an @msw/data-backed router', async () => {
 
   server.use(...handlers);
 
-  const link = new RPCLink<Record<never, never>>({ url: 'http://widget.test/rpc' });
+  const link = new RPCLink<Record<string, never>>({ url: 'http://widget.test/rpc' });
 
   const client: ContractRouterClient<typeof ctx.contract> = createORPCClient(link);
 

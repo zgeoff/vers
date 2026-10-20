@@ -54,7 +54,7 @@ test('it resolves the actingUserID a client forwards via the Authorization heade
   const ctx = setupTest();
 
   const client: ContractRouterClient<typeof ctx.contract> = createORPCClient(
-    new RPCLink<Record<never, never>>({
+    new RPCLink<Record<string, never>>({
       headers: { authorization: 'Bearer user_1' },
       url: 'http://secret.test/rpc',
     }),
@@ -86,7 +86,7 @@ test('it overrides only the mocked procedure, leaving the rest on the base backe
   );
 
   const client: ContractRouterClient<typeof ctx.contract> = createORPCClient(
-    new RPCLink<Record<never, never>>({
+    new RPCLink<Record<string, never>>({
       headers: { authorization: 'Bearer user_2' },
       url: 'http://secret.test/rpc',
     }),
@@ -120,7 +120,7 @@ test('it surfaces a mock-thrown typed error as a defined ORPCError client-side',
   );
 
   const client: ContractRouterClient<typeof ctx.contract> = createORPCClient(
-    new RPCLink<Record<never, never>>({
+    new RPCLink<Record<string, never>>({
       headers: { authorization: 'Bearer user_3' },
       url: 'http://secret.test/rpc',
     }),
@@ -172,7 +172,7 @@ test('it overrides a nested-namespace procedure while a sibling top-level call s
     mock.stepUp.getPendingTransaction.handler(() => ({ transactionID: 'overridden-txn' })),
   );
 
-  const link = new RPCLink<Record<never, never>>({ url: 'http://auth.test/rpc' });
+  const link = new RPCLink<Record<string, never>>({ url: 'http://auth.test/rpc' });
 
   const client: ContractRouterClient<typeof authContract> = createORPCClient(link);
 
@@ -209,7 +209,7 @@ test('it surfaces a raw Response returned by a mock handler verbatim to the clie
 
   let transportResponse: Response | undefined;
 
-  const link = new RPCLink<Record<never, never>>({
+  const link = new RPCLink<Record<string, never>>({
     fetch: async (request: Request) => {
       const response = await fetch(request);
 

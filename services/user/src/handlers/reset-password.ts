@@ -15,7 +15,7 @@ interface ResetPasswordOpts {
 export async function resetPassword(
   db: Kysely<DB>,
   opts: ResetPasswordOpts,
-): Promise<Record<never, never>> {
+): Promise<Record<string, never>> {
   const user = await db
     .selectFrom('users')
     .select(['passwordResetToken', 'passwordResetTokenExpiresAt'])

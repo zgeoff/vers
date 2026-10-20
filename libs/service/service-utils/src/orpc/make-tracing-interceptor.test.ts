@@ -13,7 +13,7 @@ import { makeTracingInterceptor } from './make-tracing-interceptor';
 test('it injects a traceparent built from the ambient trace context', async () => {
   const interceptor = makeTracingInterceptor();
 
-  const options: StandardLinkClientInterceptorOptions<Record<never, never>> & {
+  const options: StandardLinkClientInterceptorOptions<Record<string, never>> & {
     next: () => Promise<StandardLazyResponse>;
   } = {
     context: {},
@@ -43,7 +43,7 @@ test('it injects a traceparent built from the ambient trace context', async () =
 test('it injects a traceparent built from a fresh trace when no ambient scope exists', async () => {
   const interceptor = makeTracingInterceptor();
 
-  const options: StandardLinkClientInterceptorOptions<Record<never, never>> & {
+  const options: StandardLinkClientInterceptorOptions<Record<string, never>> & {
     next: () => Promise<StandardLazyResponse>;
   } = {
     context: {},
@@ -79,7 +79,7 @@ test('it names the client span by the procedure path and marks it failed on a 5x
 
   const interceptor = makeTracingInterceptor();
 
-  const options: StandardLinkClientInterceptorOptions<Record<never, never>> & {
+  const options: StandardLinkClientInterceptorOptions<Record<string, never>> & {
     next: () => Promise<StandardLazyResponse>;
   } = {
     context: {},
@@ -118,7 +118,7 @@ test('it marks the span failed and rethrows when the transport call throws', asy
 
   const interceptor = makeTracingInterceptor();
 
-  const options: StandardLinkClientInterceptorOptions<Record<never, never>> & {
+  const options: StandardLinkClientInterceptorOptions<Record<string, never>> & {
     next: () => Promise<StandardLazyResponse>;
   } = {
     context: {},

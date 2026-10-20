@@ -86,7 +86,7 @@ export interface EnemyPrimaryAttackBehaviour extends IBehaviour<
   get nextAttackTime(): number;
 }
 
-export interface AvatarTestBehaviour extends IBehaviour<Avatar, Record<never, never>> {
+export interface AvatarTestBehaviour extends IBehaviour<Avatar, Record<string, never>> {
   readonly id: BehaviourID.Test;
 }
 

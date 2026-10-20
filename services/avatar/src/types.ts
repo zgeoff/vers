@@ -3,5 +3,5 @@ export interface MissingSessionPayload {
 }
 
 export interface EmptyErrorPayload {
-  readonly data: Record<never, never>;
+  readonly data: Record<string, never>;
 }

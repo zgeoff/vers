@@ -48,7 +48,7 @@ export interface Service<TEnvShape extends z.ZodRawShape> {
 const DEFAULT_SLOW_REQUEST_MS = 2000;
 const DEFAULT_OVERDUE_REQUEST_MS = 30_000;
 
-export async function createService<TEnvShape extends z.ZodRawShape = Record<never, never>>(
+export async function createService<TEnvShape extends z.ZodRawShape = Record<string, never>>(
   config: ServiceConfig<TEnvShape>,
 ): Promise<Service<TEnvShape>> {
   const env = readServiceEnv(config.envShape);

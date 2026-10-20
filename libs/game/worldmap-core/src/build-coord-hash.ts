@@ -71,6 +71,5 @@ function buildSquirrelNoise(position: number, seed: number): number {
 }
 
 function toUint32(value: number): number {
-  // oxlint-disable-next-line unicorn/prefer-math-trunc -- unsigned shift reinterprets the sign bit as magnitude; Math.trunc cannot clear it
   return value >>> 0;
 }

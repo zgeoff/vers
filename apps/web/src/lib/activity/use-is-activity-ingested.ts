@@ -19,10 +19,6 @@ export function useIsActivityIngested(activityID: string | undefined): boolean {
   }
 
   useEffect(() => {
-    if (activityID === undefined) {
-      return;
-    }
-
     // guards against a stale activity's read landing after the panel has already moved on
     let ignore = false;
 
@@ -43,7 +39,9 @@ export function useIsActivityIngested(activityID: string | undefined): boolean {
       }
     };
 
-    void derive(activityID);
+    if (activityID !== undefined) {
+      void derive(activityID);
+    }
 
     return () => {
       ignore = true;

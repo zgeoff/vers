@@ -26,10 +26,6 @@ export function useOfflineClearedNodeIDs(avatarID: string | undefined): Readonly
   }
 
   useEffect(() => {
-    if (avatarID === undefined) {
-      return;
-    }
-
     // guards against a stale avatar's derive landing after a switch has already moved on
     let ignore = false;
 
@@ -50,7 +46,9 @@ export function useOfflineClearedNodeIDs(avatarID: string | undefined): Readonly
       }
     };
 
-    void derive(avatarID);
+    if (avatarID !== undefined) {
+      void derive(avatarID);
+    }
 
     return () => {
       ignore = true;
