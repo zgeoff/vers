@@ -24,18 +24,17 @@ section serves that model.
 The first sentences say what the subsystem does, in the domain's own terms. The package that
 implements it comes later and in passing, if at all.
 
-- Bad: "`libs/seed-chain` holds the chain row, the two anchors, and the draw function."
-- Good: "Every activity an avatar runs at a node draws its randomness from one place: that node's
-  seed chain. The chain is a single sequence of positions running forward. An activity draws the
-  position at the front, plays out from it, and leaves the next position for the activity that
-  follows."
+- Bad: "`libs/stock-ledger` holds the ledger row, the two counters, and the reserve function."
+- Good: "Every order a buyer places at a warehouse takes its stock from one place: that warehouse's
+  stock ledger. The ledger is a single sequence of entries running forward. An order reserves the
+  units it needs, ships from them, and leaves what is left for the order that follows."
 
 ## Describe the mechanism where the mechanism is the architecture
 
 Some mechanisms are the design: how queued work gets delivered when no worker stays resident, how a
-connection pool recovers after the machine was frozen, how two anchors on a chain move and when one
-is pulled back. Describe those, as a sequence of cause and effect, because the reader can't change
-the subsystem safely without them.
+connection pool recovers after the machine was frozen, how a lease on a job passes to another worker
+when its holder stops. Describe those, as a sequence of cause and effect, because the reader can't
+change the subsystem safely without them.
 
 A mechanism belongs in the doc when understanding it needs more than one file, or when the reason
 for it isn't visible in the code. A step-by-step narration of one function stays out: the reader can

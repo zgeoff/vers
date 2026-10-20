@@ -1,7 +1,7 @@
 ---
 name: docs-writing
 description:
-  How to write prose that gets committed to the repo — docs/, READMEs, AGENTS.md, skills, and doc
+  How to write prose that gets committed to the repo — docs/, READMEs, AGENTS.md, skills, and code
   comments — plus the README and docs/ contracts and the scripts that check them. Load it before
   writing, editing, or reviewing any of them.
 ---
@@ -111,8 +111,8 @@ code instead of copying it, and how a skill is checked.
 Write in the present tense about what the code does today. Leave out history ("previously", "now
 uses"), plans ("will land"), temporary states ("not wired yet"), and links to the project's own
 issue tracker. Two things that look like references are fine, because they're facts about the code:
-a marker that appears verbatim in the source, like a `baseline(#236)` comment, and an upstream issue
-the code works around, like `turborepo#11007`.
+a marker that appears verbatim in the source, like a `quarantine(#<issue>)` comment, and an upstream
+issue the code works around, like `turborepo#11007`.
 
 Don't leave traces of the work session either. Date stamps in prose go stale, and git already
 records when things happened. "Verified against…" and "I checked…" belong in the commit message; in
@@ -140,7 +140,9 @@ covers which).
 Paragraphs that defend a decision are the most common source of padding: lists of edge cases that
 only happen if someone tampers with the system, "in case someone…", restatements of what is out of
 scope. If a paragraph runs past about eight lines, reread it and ask whether it's defending a
-decision nobody attacked.
+decision nobody attacked. `check-prose.sh` checks paragraph length in each file the branch changes:
+it warns on a long paragraph and fails on a far longer one, at the limits set at the top of the
+script.
 
 ### A bug fix rarely needs a doc change
 
@@ -178,8 +180,8 @@ changes the code, and nothing tells you. This covers four things.
 manifest, or the env keys a service reads, describe how the list is defined instead of writing it
 out.
 
-- Bad: "The domain services — `service-activity`, `service-avatar`, `service-keys`,
-  `service-session`, `service-user`, and `service-verification` — are private."
+- Bad: "The domain services — `service-cart`, `service-catalog`, `service-checkout`,
+  `service-invoice`, `service-refund`, and `service-shipping` — are private."
 - Good: "The domain services (every `services/*` app) are private."
 
 Name an individual member only when it behaves differently from the rest. If a list is partly from
@@ -204,8 +206,8 @@ code.
 path. A rename breaks the reference silently. Name the role instead: "the admission handler", "the
 database factory".
 
-- Bad: "`runBoundedAttempts` (`apps/web/src/lib/rpc/`) retries a GET up to three times."
-- Good: "The bounded-attempt policy resends a GET when an attempt hits its bound."
+- Bad: "`resendOnTimeout` (`src/client/retry/`) retries a GET up to three times."
+- Good: "The retry policy resends a GET when an attempt times out."
 
 A library, product, protocol, or algorithm the system is built from keeps its real name: pg-boss,
 Neon, SQLite's WAL mode, Ed25519. Replacing one is an architecture change, so a refactor never
@@ -213,7 +215,7 @@ breaks the name. A workspace package's name may appear once, in passing, where t
 find the code.
 
 Three kinds of identifier are fine too: an error code or wire field a client switches on, a domain
-term the doc defines that also happens to be an identifier (the `Started` checkpoint, `userSeed`),
+term the doc defines that also happens to be an identifier (the `Pending` order state, `cartToken`),
 and a command, key, or path the reader types. The name of an outside resource that the reader types
 into another tool, such as a database branch or an MCP source, counts as a key the reader types.
 
@@ -317,8 +319,8 @@ noun. Repeating a noun is never a fault; making the reader scroll back is.
 The same goes for "the" plus a noun. If the doc mentions more than one kind of limit, "the limit" is
 only clear once "the rate limit" has appeared earlier in the same paragraph.
 
-When a noun names a part of something, name the whole thing the first time: "activity start", not
-"start"; "chain head", not "head".
+When a noun names a part of something, name the whole thing the first time: "order start", not
+"start"; "queue head", not "head".
 
 Point at the subject, not at the document. No "as noted above", no "see below", no "the second…", no
 "another…". Links to the section or doc that owns a fact are fine; they point at the subject. A
@@ -333,9 +335,9 @@ words to avoid repetition ("the runner… the executor… the worker") makes the
 those are three different things.
 
 A verb turned into a noun ("a reveal", "the split", "an append") is a made-up term, so attach it to
-what it acts on ("checkpoint reveal", "partition split", "chain append") and define it on first use.
-Or restructure the sentence around the verb. If a made-up term names a design concept, keep it for
-that concept and use a different word for the everyday sense.
+what it acts on ("bid reveal", "partition split", "log append") and define it on first use. Or
+restructure the sentence around the verb. If a made-up term names a design concept, keep it for that
+concept and use a different word for the everyday sense.
 
 ### Avoid noun pile-ups and negated subjects
 
@@ -373,10 +375,10 @@ API has") is the same fault in the other direction.
 
 Three or more adjectives on one noun read as marketing copy. Lead with the fact instead.
 
-- Bad: "This work introduces continuations — session-scoped, chain-rooted, identity-bearing rows
-  that resume an activity…"
-- Good: "A continuation is a row minted from a chain coordinate. The session that owns it resumes
-  the activity through it."
+- Bad: "This work introduces holds — cart-scoped, time-boxed, stock-reserving rows that keep an item
+  for a buyer…"
+- Good: "A hold is a row that reserves one item's stock for one cart. The hold expires when the cart
+  does."
 
 ### Don't repeat a rhetorical move
 
@@ -420,7 +422,7 @@ Fix any violation you see.
 
 Open a doc with a paragraph of three to six plain sentences that say what the system does and the
 one thing a reader most needs to know. The text before the first heading may run to a few short
-paragraphs when they lay out the core of the model, such as the two anchors of a chain, but never
+paragraphs when they lay out the core of the model, such as the three states of an order, but never
 into detail. Open any section of four or more paragraphs with a sentence that names what it covers
 and the common case. Split a section that runs past six paragraphs into subsections. Bullets count
 as paragraphs for these limits.
@@ -494,7 +496,7 @@ if the break felt necessary, give the section under it a heading.
   renders flat on GitHub and hides what it is.
 - Put a space between a value and its unit: `64 KB`, `200 ms`, `30 s`. Write measured counts as
   numerals: "8 deployments", not "eight". A count that is the point of the sentence reads as a word
-  ("three classes", "two anchors").
+  ("three classes", "two replicas").
 - Name what a placeholder stands for: `<task_list_id>`, `<service_id>`. Never `xxx`, `ABC123`, or
   `<TOKEN>`.
 - GitHub makes anchors by lowercasing the heading, dropping punctuation, and turning each space into
@@ -533,11 +535,12 @@ passes with this guide as its only reference.
    prose, such as AGENTS.md, run `check-prose.sh <path>...` on it.
 
    `check-prose.sh` fails on traces of the work session, the banned words a grep can catch, values
-   with units under `docs/architecture/`, formatting faults, and untagged code blocks. It then
-   prints candidates (filler words that have term-of-art uses, speech verbs on data, delta words,
-   headings written as claims), which need judgment and never fail the run. It skips this skill's
-   own directory, because the examples here contain those patterns on purpose. If you're reviewing
-   this skill, run the greps by hand and judge the hits.
+   with units under `docs/architecture/`, formatting faults, untagged code blocks, and a paragraph
+   over its word limit in a file the branch changes. It then prints candidates (filler words that
+   have term-of-art uses, speech verbs on data, delta words, headings written as claims), which need
+   judgment and never fail the run. It skips this skill's own directory, because the examples here
+   contain those patterns on purpose. If you're reviewing this skill, run the greps by hand and
+   judge the hits.
 
 4. The links. Walk each changed section's links and confirm the link text still matches the heading
    it points to.
