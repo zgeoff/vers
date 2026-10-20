@@ -1,30 +1,31 @@
 # System tests
 
 These rules cover the tests that run a whole program or reach the host: end-to-end journeys,
-evaluation suites, property tests, native timers, real network stand-ins, and resources the host
-fixes. The [testing skill](../SKILL.md) rules apply throughout, and each section here names the one
-it relaxes.
+evaluation suites, property tests, native timers, real network stand-ins, browser suites, stateful
+stand-ins for a program the repo drives, and resources the host fixes. The
+[testing skill](../SKILL.md) rules apply throughout, and each section here names the one it relaxes.
 
 - [End-to-end suites](#end-to-end-suites)
 - [Evaluation suites](#evaluation-suites)
 - [Property tests](#property-tests)
 - [Native timers and scenario delays](#native-timers-and-scenario-delays)
 - [Real applications and transport](#real-applications-and-transport)
+- [Browser suites](#browser-suites)
+- [Stateful stand-ins](#stateful-stand-ins)
 - [Program-fixed paths and global resources](#program-fixed-paths-and-global-resources)
 
 ## End-to-end suites
 
-An end-to-end suite splits by user journey, one file per journey: `e2e/tui-spawn.test.ts` beside
-`e2e/tui-attach.test.ts`. A journey test may chain dependent act-and-assert phases, because each
-step of the journey needs the state that the step before it left. Ordinary tests outside `e2e/` act
-once. Generated sequences follow [Property tests](#property-tests).
+An end-to-end suite splits by user journey, one file per journey: `e2e/checkout.test.ts` beside
+`e2e/refund.test.ts`. A journey test may chain dependent act-and-assert phases, because each step of
+the journey needs the state that the step before it left. Ordinary tests outside `e2e/` act once.
+Generated sequences follow [Property tests](#property-tests).
 
-An outer harness may reuse expensive hosts, services, and immutable fixture inputs across journeys.
-Each journey keeps its own file, setup, scenario, and cleanup. Reset shared infrastructure to a
-clean baseline before each journey; test that the reset removes dirty state, including after failure
-or interruption. Recreate the environment when a reset cannot restore the baseline. The harness owns
-infrastructure startup and shutdown; test files keep the hook rules in
-[Setup and cleanup](../SKILL.md#setup-and-cleanup).
+An outer harness may reuse expensive hosts and services across journeys. Each journey keeps its own
+file, setup, scenario, and cleanup. Reset shared infrastructure to a clean baseline before each
+journey; test that the reset removes dirty state, including after failure or interruption. Recreate
+the environment when a reset cannot restore the baseline. The harness owns infrastructure startup
+and shutdown; test files keep the hook rules in [Setup and cleanup](../SKILL.md#setup-and-cleanup).
 
 Keep command construction importable. Test argument and flag-position cases through the real parser
 in module tests; keep binary journeys that check the assembled program.
@@ -109,6 +110,62 @@ requests from a child process, container, or VM outside the intercepted process.
 interceptor limitation with the installed versions. Keep real routing and serialization,
 schema-backed rich mock state, and visible failures for unexpected calls. Ordinary remote HTTP
 behavior keeps MSW where it applies.
+
+## Browser suites
+
+A test that drives a real browser, such as Chrome through `Bun.WebView` or Playwright, lives in a
+browser suite named `<module>.browser.test.ts` beside the module it tests. The repo's test script
+runs browser suites in their own serial lane after the parallel run, so the browser starts on an
+idle CPU. A cold browser start on a CPU that the parallel pool saturates can outlast the test
+timeout, and a raised timeout only hides that cost.
+
+- A browser suite keeps the default test timeout. When it needs more, the suite is doing an
+  end-to-end journey's work, and the journey belongs in `e2e/`.
+- Every other test stays out of a browser suite, so the parallel run keeps its speed.
+
+## Stateful stand-ins
+
+A program that the repo starts in another process and drives over its own protocol, such as a
+worker, a language server, or a sandboxed guest, gets a stateful stand-in for the host's tests. The
+stand-in speaks the real messages over the real framing, keeps the state the program keeps, and
+answers from that state. A test shapes the state through the stand-in's methods and drives the host
+through its real code. The program's own suite runs the real program, so the host's tests start no
+process.
+
+A scripted stand-in answers each message with whatever the test wrote for it. Each test then
+describes the program's behaviour again, and the stand-in accepts a message the real program
+refuses, so a host bug passes. When test after test scripts the same stand-in, give it state.
+
+In this made-up example, a build host sends jobs to a worker process that keeps a cache of
+checked-out repositories. A host that skips the checkout for a repository the worker evicted gets
+the refusal the real worker sends:
+
+```ts
+test('it checks a repository out again after the worker evicts it', async () => {
+  const ctx = await setupTest(); // the build host on the stub worker
+
+  await ctx.host.build({ repo: 'acme/api', ref: 'main' });
+
+  ctx.worker.evict('acme/api');
+
+  await ctx.host.build({ repo: 'acme/api', ref: 'main' });
+
+  expect(ctx.worker.received.map((message) => message.type)).toStrictEqual([
+    'checkout',
+    'build',
+    'checkout',
+    'build',
+  ]);
+});
+```
+
+A scripted worker answers the second `build` with the answer its script holds, so a host that never
+sends the second `checkout` still passes. The stateful worker holds no checkout for `acme/api` after
+the eviction, refuses the `build`, and fails the test.
+
+The stand-in follows the stand-in rules in [Test data](../SKILL.md#test-data): it lives in the
+shared test utils, takes a stand-in's file name, and has its own tests. Each of those tests pins one
+behaviour the stand-in copies from the real program, such as the refusal for an evicted repository.
 
 ## Program-fixed paths and global resources
 
