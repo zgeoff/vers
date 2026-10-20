@@ -16,7 +16,7 @@ and tightens rules and never relaxes one from the base.
 ## Key rules
 
 - [Exempt names](#exempt-names): a library method whose fixed name starts with a banned verb sits in
-  the rule's `exemptNames` option.
+  the `exemptNames` option of `zgeoff/function-verb`.
 - [Type-only modules](#type-only-modules): shared types go in the directory's one `types.ts`.
 - [Invariants](#invariants): a true invariant uses `tiny-invariant`, never a hand-rolled throw.
 - [Untyped column boundaries](#untyped-column-boundaries): a jsonb or text value re-enters typed
