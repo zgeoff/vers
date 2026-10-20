@@ -8,10 +8,6 @@ import { renderWithRouter } from '../../test-utils/render-with-router';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { VerifyOTPForm } from './verify-otp-form';
 
-function rejectWithResponse(): Promise<Response> {
-  return Promise.resolve(new Response(null, { status: 400 }));
-}
-
 test('it shows the 2FA heading and instructions for a login verification', async () => {
   await withRequestContext({}, async () => {
     renderWithRouter(
@@ -73,7 +69,7 @@ test('it shows a generic failure message for a rejected submission', async () =>
   await withRequestContext({}, async () => {
     renderWithRouter(
       <VerifyOTPForm
-        action={rejectWithResponse}
+        action={() => Promise.resolve(new Response(null, { status: 400 }))}
         honeypotValidFrom="1700000000000"
         target="user_1"
         type="2fa"

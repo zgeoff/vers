@@ -1,11 +1,6 @@
 import invariant from 'tiny-invariant';
 import type { FleetRequest, RequestSpan } from './types';
 
-const HEALTH_PATH = '/health';
-const PROBE_ROUTE = 'POST /api/rpc/user/getCurrentUser';
-const PROBE_STATUS = 401;
-const UNROUTED_NAME = /^HTTP [A-Z]+$/u;
-
 export function collectFleetRequests(spans: ReadonlyArray<RequestSpan>): Array<FleetRequest> {
   const requests: Array<FleetRequest> = [];
 
@@ -43,13 +38,20 @@ function buildTraceGroups(
   return traces;
 }
 
+const HEALTH_PATH = '/health';
+
 function isHealthCheck(span: RequestSpan): boolean {
   return span.path === HEALTH_PATH || span.name.endsWith(` ${HEALTH_PATH}`);
 }
 
+const PROBE_ROUTE = 'POST /api/rpc/user/getCurrentUser';
+const PROBE_STATUS = 401;
+
 function isVerifyProbe(span: RequestSpan): boolean {
   return span.name === PROBE_ROUTE && span.statusCode === PROBE_STATUS;
 }
+
+const UNROUTED_NAME = /^HTTP [A-Z]+$/u;
 
 // app-web emits a routed span (`POST /api/rpc/…`) beside an unrouted one (`HTTP POST`) that
 // carries the path, and a service span is named by its wildcard route with the path alongside

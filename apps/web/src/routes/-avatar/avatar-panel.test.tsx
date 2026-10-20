@@ -5,18 +5,14 @@ import { SatelliteHost } from '@vers/game-rendering';
 import { buildQueryClient } from '../../lib/query/build-query-client';
 import { AvatarPanel } from './avatar-panel';
 
-function renderPanel(content: React.ReactNode) {
+test('it renders the loader-provided content', () => {
   const queryClient = buildQueryClient();
 
-  return render(
+  const rendered = render(
     <QueryClientProvider client={queryClient}>
-      <AvatarPanel Content={content} />
+      <AvatarPanel Content={<p>avatar content</p>} />
     </QueryClientProvider>,
   );
-}
-
-test('it renders the loader-provided content', () => {
-  const rendered = renderPanel(<p>avatar content</p>);
 
   expect(rendered.getByText('avatar content')).toBeInTheDocument();
 });

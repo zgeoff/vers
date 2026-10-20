@@ -3,7 +3,7 @@ export { NodeEnvSchema } from './schemas/node-env-schema';
 export { expandEnv } from './utils/expand-env';
 export { createLogger } from './utils/create-logger';
 export { createTokenVerifier } from './utils/create-token-verifier';
-export { getTokenFromHeader } from './utils/get-token-from-header';
+export { findTokenFromHeader } from './utils/find-token-from-header';
 export { isPGError } from './utils/is-pg-error';
 export { isUniqueConstraintError } from './utils/is-unique-constraint-error';
 export { findSpanTraceContext } from './trace/find-span-trace-context';

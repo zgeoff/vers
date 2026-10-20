@@ -8,7 +8,7 @@ import type {
 import type { AnyRouter, ORPCErrorConstructorMap } from '@orpc/server';
 import { implement } from '@orpc/server';
 import { RPCHandler } from '@orpc/server/fetch';
-import type { HttpHandler } from 'msw';
+import type { HttpHandler, HttpResponseResolver } from 'msw';
 import { http } from 'msw';
 import { RPC_PREFIX } from './rpc-prefix';
 import { toRPCHTTPPath } from './to-rpc-http-path';
@@ -88,16 +88,6 @@ export function buildContractMock<
   return buildProxyNode(options, []) as MockServiceProxy<TContract, TContext>;
 }
 
-interface LooseMockFnArgs {
-  readonly context: Record<string, unknown>;
-  readonly errors: unknown;
-  readonly input: unknown;
-  readonly path: ReadonlyArray<string>;
-  readonly request: Request;
-}
-
-type LooseMockFn = (args: LooseMockFnArgs) => unknown;
-
 interface UntypedMockServiceOptions {
   baseUrl: string;
   contract: AnyContractRouter;
@@ -132,7 +122,15 @@ function buildProcedureHandler(
 ): HttpHandler {
   const url = `${options.baseUrl}${RPC_PREFIX}${toRPCHTTPPath(path)}`;
 
-  return http.all(url, async (info) => {
+  return http.all(url, makeProcedureResolver(options, path, mock));
+}
+
+function makeProcedureResolver(
+  options: Readonly<UntypedMockServiceOptions>,
+  path: ReadonlyArray<string>,
+  mock: unknown,
+): HttpResponseResolver {
+  return async (info) => {
     const context = await options.resolveContext(info.request);
 
     let rawResponse: Response | undefined;
@@ -155,7 +153,7 @@ function buildProcedureHandler(
     }
 
     return handled.matched ? handled.response : new Response(null, { status: 404 });
-  });
+  };
 }
 
 interface ProcedureImplementerHandlerArgs {
@@ -185,10 +183,29 @@ function buildMockProcedure(
 
   // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- type-erased runtime Proxy walking a generic contract; no typed path-accessor exists
   const implementer = node as ProcedureImplementer;
+
+  return implementer.handler(makeMockProcedureHandler(request, mock, onRawResponse));
+}
+
+interface LooseMockFnArgs {
+  readonly context: Record<string, unknown>;
+  readonly errors: unknown;
+  readonly input: unknown;
+  readonly path: ReadonlyArray<string>;
+  readonly request: Request;
+}
+
+type LooseMockFn = (args: LooseMockFnArgs) => unknown;
+
+function makeMockProcedureHandler(
+  request: Request,
+  mock: unknown,
+  onRawResponse: (response: Response) => void,
+): (handlerOptions: ProcedureImplementerHandlerArgs) => Promise<unknown> {
   // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- type-erased runtime Proxy walking a generic contract; no typed path-accessor exists
   const mockFn = typeof mock === 'function' ? (mock as LooseMockFn) : undefined;
 
-  return implementer.handler(async (handlerOptions) => {
+  return async (handlerOptions) => {
     const output = mockFn ? await mockFn({ ...handlerOptions, request }) : mock;
 
     if (output instanceof Response) {
@@ -197,7 +214,7 @@ function buildMockProcedure(
     }
 
     return output;
-  });
+  };
 }
 
 function buildNestedRouter(path: ReadonlyArray<string>, leaf: AnyRouter): AnyRouter {

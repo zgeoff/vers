@@ -1,4 +1,4 @@
-import * as E from '@react-email/components';
+import * as ReactEmail from '@react-email/components';
 import type { ReactElement } from 'react';
 
 interface Props {
@@ -7,16 +7,18 @@ interface Props {
 
 export function ResetPasswordEmail(props: Readonly<Props>): ReactElement {
   return (
-    <E.Container>
-      <E.Heading as="h1">
-        <E.Text>Forgot your password?</E.Text>
-      </E.Heading>
-      <E.Text>
+    <ReactEmail.Container>
+      <ReactEmail.Heading as="h1">
+        <ReactEmail.Text>Forgot your password?</ReactEmail.Text>
+      </ReactEmail.Heading>
+      <ReactEmail.Text>
         We received a request to reset your password. To reset your password, please click the link
         below:
-      </E.Text>
-      <E.Link href={props.resetURL}>{props.resetURL}</E.Link>
-      <E.Text>If you did not request a password reset, please ignore this email.</E.Text>
-    </E.Container>
+      </ReactEmail.Text>
+      <ReactEmail.Link href={props.resetURL}>{props.resetURL}</ReactEmail.Link>
+      <ReactEmail.Text>
+        If you did not request a password reset, please ignore this email.
+      </ReactEmail.Text>
+    </ReactEmail.Container>
   );
 }

@@ -1,8 +1,6 @@
 import path from 'node:path';
 import type { RetrievalKind } from './types';
 
-const CODE_EXTENSIONS: ReadonlySet<string> = new Set(['.ts', '.tsx', '.js', '.mjs', '.cjs']);
-
 const SERENA_PREFIX = 'mcp__serena__';
 
 const SERENA_LOOKUPS: ReadonlySet<string> = new Set([
@@ -14,11 +12,6 @@ const SERENA_LOOKUPS: ReadonlySet<string> = new Set([
 ]);
 
 const BUILTIN_EDITS: ReadonlySet<string> = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit']);
-
-// A search command where a command can start: the beginning of a line, or after a pipe, separator,
-// or subshell open. A search word inside another command's arguments does not count.
-const SHELL_SEARCH_PATTERN =
-  /(?:^|[\n|;&(])\s*(?:git\s+)?(?:rg|grep|egrep|fgrep|ag|ugrep|ack)(?:\s|$)/u;
 
 export function pickRetrievalKind(
   toolName: string,
@@ -55,9 +48,16 @@ export function pickRetrievalKind(
   return 'other';
 }
 
+// A search command where a command can start: the beginning of a line, or after a pipe, separator,
+// or subshell open. A search word inside another command's arguments does not count.
+const SHELL_SEARCH_PATTERN =
+  /(?:^|[\n|;&(])\s*(?:git\s+)?(?:rg|grep|egrep|fgrep|ag|ugrep|ack)(?:\s|$)/u;
+
 function isShellSearch(command: unknown): boolean {
   return typeof command === 'string' && SHELL_SEARCH_PATTERN.test(command);
 }
+
+const CODE_EXTENSIONS: ReadonlySet<string> = new Set(['.ts', '.tsx', '.js', '.mjs', '.cjs']);
 
 function isCodePath(filePath: unknown): boolean {
   return typeof filePath === 'string' && CODE_EXTENSIONS.has(path.extname(filePath).toLowerCase());

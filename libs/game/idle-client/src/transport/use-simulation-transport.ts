@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { match } from 'ts-pattern';
 import { advanceWriterGeneration } from '../state/advance-writer-generation';
 import { setCheckpointStreamError } from '../state/set-checkpoint-stream-error';
 import { setFailureAction } from '../state/set-failure-action';
@@ -31,7 +32,7 @@ export function useSimulationTransport() {
     // read the store imperatively: sibling consumers mount in one commit, and a store write during
     // the effect flush does not re-render them before their own effects run, so each would see a
     // stale null and build its own client; the read also absorbs StrictMode's double-invoke
-    if (useIdleStore.getState().client !== null) {
+    if (existingClient !== null || useIdleStore.getState().client !== null) {
       return;
     }
 
@@ -80,97 +81,66 @@ function subscribeToWorkerBroadcasts() {
 }
 
 function handleWorkerMessage(message: WorkerMessage) {
-  switch (message.type) {
-    case WorkerMessageType.SimulationUpdate: {
-      setSimulationSnapshot(message.state, message.liveRun);
-      break;
-    }
-
-    case WorkerMessageType.ActivityEnded: {
-      setRunOutcome(message.outcome);
-      break;
-    }
-
-    case WorkerMessageType.ActivityStartIngested: {
-      setLastIngestedActivityID(message.activityID);
-      break;
-    }
-
-    case WorkerMessageType.CheckpointStreamInvalid: {
-      setCheckpointStreamError({ activityID: message.activityID });
-      break;
-    }
-
-    case WorkerMessageType.JournalFailure: {
+  match(message)
+    .with({ type: WorkerMessageType.SimulationUpdate }, (received) => {
+      setSimulationSnapshot(received.state, received.liveRun);
+    })
+    .with({ type: WorkerMessageType.ActivityEnded }, (received) => {
+      setRunOutcome(received.outcome);
+    })
+    .with({ type: WorkerMessageType.ActivityStartIngested }, (received) => {
+      setLastIngestedActivityID(received.activityID);
+    })
+    .with({ type: WorkerMessageType.CheckpointStreamInvalid }, (received) => {
+      setCheckpointStreamError({ activityID: received.activityID });
+    })
+    .with({ type: WorkerMessageType.JournalFailure }, (received) => {
       setJournalFailure({
-        activityID: message.activityID,
-        kind: message.kind,
-        receivedVersion: message.receivedVersion,
+        activityID: received.activityID,
+        kind: received.kind,
+        receivedVersion: received.receivedVersion,
       });
-
-      break;
-    }
-
-    case WorkerMessageType.SaveStatus: {
+    })
+    .with({ type: WorkerMessageType.SaveStatus }, (received) => {
       updateSaveStatus({
-        activityID: message.activityID,
-        receivedVersion: message.receivedVersion,
-        savedVersion: message.savedVersion,
+        activityID: received.activityID,
+        receivedVersion: received.receivedVersion,
+        savedVersion: received.savedVersion,
       });
-
-      break;
-    }
-
-    case WorkerMessageType.OfflineCapStatus: {
+    })
+    .with({ type: WorkerMessageType.OfflineCapStatus }, (received) => {
       setOfflineCapStatus({
-        halted: message.halted,
-        remainingMs: message.remainingMs,
+        halted: received.halted,
+        remainingMs: received.remainingMs,
       });
-
-      break;
-    }
-
-    case WorkerMessageType.ResyncStatus: {
-      setResyncStatus(message.status);
-      break;
-    }
-
-    case WorkerMessageType.FailureActionStatus: {
-      setFailureAction(message.failureAction);
-      break;
-    }
-
-    case WorkerMessageType.SimulationSpeedStatus: {
-      setSimulationSpeed(message.speed);
-      break;
-    }
-
-    case WorkerMessageType.RewardSlotsRecorded: {
+    })
+    .with({ type: WorkerMessageType.ResyncStatus }, (received) => {
+      setResyncStatus(received.status);
+    })
+    .with({ type: WorkerMessageType.FailureActionStatus }, (received) => {
+      setFailureAction(received.failureAction);
+    })
+    .with({ type: WorkerMessageType.SimulationSpeedStatus }, (received) => {
+      setSimulationSpeed(received.speed);
+    })
+    .with({ type: WorkerMessageType.RewardSlotsRecorded }, (received) => {
       updateRewardSlotLedger({
-        activityID: message.activityID,
-        count: message.rewardSlotCount,
-        version: message.version,
+        activityID: received.activityID,
+        count: received.rewardSlotCount,
+        version: received.version,
       });
-
-      break;
-    }
-
-    case WorkerMessageType.WriterDisplaced: {
-      setWriterDisplacedActivityID(message.activityID);
-      break;
-    }
-
-    case WorkerMessageType.WriterPending: {
+    })
+    .with({ type: WorkerMessageType.WriterDisplaced }, (received) => {
+      setWriterDisplacedActivityID(received.activityID);
+    })
+    .with({ type: WorkerMessageType.WriterPending }, () => {
       setWriterContention(true);
-      break;
-    }
-
-    case WorkerMessageType.WriterReady: {
+    })
+    .with({ type: WorkerMessageType.WriterReady }, () => {
       setWriterContention(false);
       advanceWriterGeneration();
-      break;
-    }
-  }
+    })
+    .exhaustive();
 }
 
 function unsubscribeFromWorkerBroadcasts() {

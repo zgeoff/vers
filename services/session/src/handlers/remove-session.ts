@@ -13,7 +13,7 @@ interface RemoveSessionOpts {
 export async function removeSession(
   db: Kysely<DB>,
   opts: RemoveSessionOpts,
-): Promise<Record<never, never>> {
+): Promise<Record<string, never>> {
   if (opts.context.actingUserID === null) {
     throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
   }

@@ -44,37 +44,41 @@ import { sentryHandle } from './sentry-handle';
 import { startErrorReporting } from './start-error-reporting';
 import { workerLifecycleMachine } from './worker-lifecycle-machine';
 
-function collectBroadcasts(context: StubWorkerContext) {
+function setupTest() {
   return {
-    get received() {
-      return context.getBroadcasts();
+    collectBroadcasts: (context: StubWorkerContext) => ({
+      get received() {
+        return context.getBroadcasts();
+      },
+      waitForMessages: async (count: number) => {
+        await waitFor(() => {
+          expect(context.getBroadcasts().length).toBeGreaterThanOrEqual(count);
+        });
+      },
+    }),
+    setupStartableNode: async (avatarID: string): Promise<void> => {
+      const seed = createMockNodeSeed({
+        avatarID,
+        encounterNode: { difficulty: 1 },
+        nodeID: '0_0',
+      });
+
+      await writeNodeSeeds(avatarID, [seed]);
+      await writeStartStamps({ keyVersion: 1, secretRef: 'worldmap', secretVersion: 1 });
+
+      await writeContentDocumentCache(
+        createMockContentDocument({ contentVersion: seed.contentVersion }),
+      );
     },
-    waitForMessages: async (count: number) => {
+    waitForActiveResync: async (context: StubWorkerContext, avatarID: string): Promise<void> => {
       await waitFor(() => {
-        expect(context.getBroadcasts().length).toBeGreaterThanOrEqual(count);
+        expect(context.getLifecycle().getSnapshot().context.currentRequest).toMatchObject({
+          avatarID,
+          kind: 'resync',
+        });
       });
     },
   };
-}
-
-async function waitForActiveResync(context: StubWorkerContext, avatarID: string): Promise<void> {
-  await waitFor(() => {
-    expect(context.getLifecycle().getSnapshot().context.currentRequest).toMatchObject({
-      avatarID,
-      kind: 'resync',
-    });
-  });
-}
-
-async function setupStartableNode(avatarID: string): Promise<void> {
-  const seed = createMockNodeSeed({ avatarID, encounterNode: { difficulty: 1 }, nodeID: '0_0' });
-
-  await writeNodeSeeds(avatarID, [seed]);
-  await writeStartStamps({ keyVersion: 1, secretRef: 'worldmap', secretVersion: 1 });
-
-  await writeContentDocumentCache(
-    createMockContentDocument({ contentVersion: seed.contentVersion }),
-  );
 }
 
 test('it sits in idle with no activity', () => {
@@ -300,7 +304,9 @@ test("it resyncs the avatar ahead of a start that arrives before the boot resync
     submitter: createStubSubmitter(),
   });
 
-  await setupStartableNode(viewer.avatar.id);
+  const ctx = setupTest();
+
+  await ctx.setupStartableNode(viewer.avatar.id);
 
   // the previous run failed and was fully delivered: its terminal total is still owed on top of
   // the settled xp, and a reloaded worker holds no record of it
@@ -358,7 +364,9 @@ test("it starts at once when the avatar's latest run is already recorded", async
 
   context.registerReconstruction('avatar_known_record');
 
-  await setupStartableNode('avatar_known_record');
+  const ctx = setupTest();
+
+  await ctx.setupStartableNode('avatar_known_record');
 
   context.setLatestRun({
     activityID: 'act_known',
@@ -412,7 +420,9 @@ test("it starts without another resync when the resync it queued behind recorded
     },
   });
 
-  await setupStartableNode(viewer.avatar.id);
+  const ctx = setupTest();
+
+  await ctx.setupStartableNode(viewer.avatar.id);
 
   await db.activityCollection.create({
     appendedHead: 0,
@@ -505,7 +515,9 @@ test("it resyncs the start's avatar once an earlier resync for another avatar ha
 
   gates['avatar_b']!.release();
 
-  await waitForActiveResync(context, 'avatar_a');
+  const ctx = setupTest();
+
+  await ctx.waitForActiveResync(context, 'avatar_a');
 
   expect(context.getActivity()).toBeNull();
 
@@ -560,7 +572,9 @@ test('it builds the prerequisite resync at the head of the queue, so a stop scop
 
   gates['avatar_b']!.release();
 
-  await waitForActiveResync(context, 'avatar_a');
+  const ctx = setupTest();
+
+  await ctx.waitForActiveResync(context, 'avatar_a');
 
   const prerequisite = context.getLifecycle().getSnapshot().context.currentRequest;
 
@@ -597,8 +611,10 @@ test('it runs queued starts strictly one at a time in queue order', async () => 
   context.registerReconstruction('avatar_queue_order_first');
   context.registerReconstruction('avatar_queue_order_second');
 
-  await setupStartableNode('avatar_queue_order_first');
-  await setupStartableNode('avatar_queue_order_second');
+  const ctx = setupTest();
+
+  await ctx.setupStartableNode('avatar_queue_order_first');
+  await ctx.setupStartableNode('avatar_queue_order_second');
 
   const first = handleStartActivityMessage(context, {
     avatarID: 'avatar_queue_order_first',
@@ -642,7 +658,9 @@ test('it serializes flows queued from different kinds on the one actor', async (
 
   context.registerReconstruction('avatar_mixed_kinds');
 
-  await setupStartableNode('avatar_mixed_kinds');
+  const ctx = setupTest();
+
+  await ctx.setupStartableNode('avatar_mixed_kinds');
 
   // the avatar's latest run is already known, so the start needs no resync ahead of it
   context.setLatestRun({
@@ -709,7 +727,9 @@ test('it keeps the queue alive past a start that throws', async () => {
 
   context.registerReconstruction('avatar_throws');
 
-  await setupStartableNode('avatar_throws');
+  const ctx = setupTest();
+
+  await ctx.setupStartableNode('avatar_throws');
 
   const input = {
     avatarID: 'avatar_throws',
@@ -744,7 +764,9 @@ test('it resolves the caller only once its own flow settles', async () => {
 
   context.registerReconstruction('avatar_settle_order');
 
-  await setupStartableNode('avatar_settle_order');
+  const ctx = setupTest();
+
+  await ctx.setupStartableNode('avatar_settle_order');
 
   await handleStartActivityMessage(context, {
     avatarID: 'avatar_settle_order',
@@ -780,7 +802,9 @@ test('it reports an escaping flow error as a fault under its site', async () => 
 
   context.registerReconstruction('avatar_reports_fault');
 
-  await setupStartableNode('avatar_reports_fault');
+  const ctx = setupTest();
+
+  await ctx.setupStartableNode('avatar_reports_fault');
 
   await handleStartActivityMessage(context, {
     avatarID: 'avatar_reports_fault',
@@ -809,9 +833,10 @@ test('it drops a non-claiming resync while one is queued', async () => {
 
   context.registerReconstruction('avatar_blocking_start');
 
-  const connection = collectBroadcasts(context);
+  const ctx = setupTest();
+  const connection = ctx.collectBroadcasts(context);
 
-  await setupStartableNode('avatar_blocking_start');
+  await ctx.setupStartableNode('avatar_blocking_start');
 
   // the avatar's latest run is already known, so the start needs no resync ahead of it
   context.setLatestRun({
@@ -872,7 +897,8 @@ test('it drops a non-claiming resync while one is running', async () => {
     },
   });
 
-  const connection = collectBroadcasts(context);
+  const ctx = setupTest();
+  const connection = ctx.collectBroadcasts(context);
   const running = runResyncTurn(context, 'avatar_a', false);
 
   await waitFor(() => {
@@ -923,7 +949,8 @@ test('it holds a claiming resync and runs it after the in-flight one settles', a
     },
   });
 
-  const connection = collectBroadcasts(context);
+  const ctx = setupTest();
+  const connection = ctx.collectBroadcasts(context);
   const first = runResyncTurn(context, 'avatar_a', false);
 
   await waitFor(() => {
@@ -975,7 +1002,8 @@ test('it keeps only the latest claiming avatar when two arrive', async () => {
     },
   });
 
-  const connection = collectBroadcasts(context);
+  const ctx = setupTest();
+  const connection = ctx.collectBroadcasts(context);
   const first = runResyncTurn(context, 'avatar_a', false);
 
   await waitFor(() => {
@@ -1034,7 +1062,8 @@ test('it settles the first caller only after the held follow-up runs', async () 
     },
   });
 
-  const connection = collectBroadcasts(context);
+  const ctx = setupTest();
+  const connection = ctx.collectBroadcasts(context);
   const first = runResyncTurn(context, 'avatar_a', false);
 
   await waitFor(() => {
@@ -1114,7 +1143,9 @@ test('it captures a requeued claim signals at requeue rather than at its arrival
 
   gates['avatar_a']!.release();
 
-  await waitForActiveResync(context, 'avatar_b');
+  const ctx = setupTest();
+
+  await ctx.waitForActiveResync(context, 'avatar_b');
 
   const requeuedRequest = context.getLifecycle().getSnapshot().context.currentRequest;
 
@@ -1151,7 +1182,8 @@ test('it accepts a later resync after a resync flow faults', async () => {
     },
   });
 
-  const connection = collectBroadcasts(context);
+  const ctx = setupTest();
+  const connection = ctx.collectBroadcasts(context);
 
   await runResyncTurn(context, 'avatar_a', false);
   await runResyncTurn(context, 'avatar_b', false);
@@ -1228,7 +1260,9 @@ test('it runs a resync arriving during a non-resync turn after that turn rather 
 
   context.registerReconstruction('avatar_blocks_resync');
 
-  await setupStartableNode('avatar_blocks_resync');
+  const ctx = setupTest();
+
+  await ctx.setupStartableNode('avatar_blocks_resync');
 
   // the avatar's latest run is already known, so the start needs no resync ahead of it
   context.setLatestRun({
@@ -1296,7 +1330,9 @@ test('it runs a start queued during an in-flight resync before a held claim requ
 
   context.registerReconstruction('avatar_held_claim_order');
 
-  await setupStartableNode('avatar_held_claim_order');
+  const ctx = setupTest();
+
+  await ctx.setupStartableNode('avatar_held_claim_order');
 
   const seen: Array<unknown> = [];
 
@@ -1371,7 +1407,8 @@ test('it drops a non-claiming resync arriving while a requeued claim is running'
     },
   });
 
-  const connection = collectBroadcasts(context);
+  const ctx = setupTest();
+  const connection = ctx.collectBroadcasts(context);
   const first = runResyncTurn(context, 'avatar_a', false);
 
   await waitFor(() => {
@@ -1387,7 +1424,7 @@ test('it drops a non-claiming resync arriving while a requeued claim is running'
 
   // avatar_a settles and the held claim's requeued run is now the active flow — still inside
   // the coalescing window this requeue reopens
-  await waitForActiveResync(context, 'avatar_b');
+  await ctx.waitForActiveResync(context, 'avatar_b');
 
   await expect(runResyncTurn(context, 'avatar_c', false)).toResolve();
 
@@ -1439,7 +1476,8 @@ test('it holds a claiming resync arriving while a requeued claim is running', as
     },
   });
 
-  const connection = collectBroadcasts(context);
+  const ctx = setupTest();
+  const connection = ctx.collectBroadcasts(context);
   const first = runResyncTurn(context, 'avatar_a', false);
 
   await waitFor(() => {
@@ -1455,7 +1493,7 @@ test('it holds a claiming resync arriving while a requeued claim is running', as
 
   // avatar_a settles and the held claim's requeued run is now the active flow — still inside
   // the coalescing window this requeue reopens
-  await waitForActiveResync(context, 'avatar_b');
+  await ctx.waitForActiveResync(context, 'avatar_b');
 
   // a second claiming resync arrives in that same window — held one deep rather than queued as
   // its own request, its own caller resolving immediately without waiting on its eventual run
@@ -1496,7 +1534,9 @@ test("it mints on a fresh device from the server's latest run and its unsettled 
     submitter: createStubSubmitter(),
   });
 
-  await setupStartableNode(viewer.avatar.id);
+  const ctx = setupTest();
+
+  await ctx.setupStartableNode(viewer.avatar.id);
 
   // a run another device played to a failure and delivered: its terminal total is still owed on
   // top of the settled xp, and this device holds no record of it
@@ -1547,7 +1587,9 @@ test('it resyncs before a start that beats the boot report on a reload with a de
     submitter: createStubSubmitter(),
   });
 
-  await setupStartableNode(viewer.avatar.id);
+  const ctx = setupTest();
+
+  await ctx.setupStartableNode(viewer.avatar.id);
 
   const delivered = await db.activityCollection.create({
     appendedHead: 1,
@@ -1618,7 +1660,9 @@ test('it delivers the start on a reload with an undelivered start and reattaches
     submitter: createStubSubmitter(),
   });
 
-  await setupStartableNode(viewer.avatar.id);
+  const ctx = setupTest();
+
+  await ctx.setupStartableNode(viewer.avatar.id);
 
   const next = createMockNodeSeed({
     avatarID: viewer.avatar.id,
@@ -1701,7 +1745,9 @@ test("it attaches a second tab's start to the writer's live run without a mint",
     submitter: createStubSubmitter(),
   });
 
-  await setupStartableNode(viewer.avatar.id);
+  const ctx = setupTest();
+
+  await ctx.setupStartableNode(viewer.avatar.id);
 
   // the writer's live run: the server's active row this worker attached on its own boot
   const live = await db.activityCollection.create({
@@ -1761,7 +1807,9 @@ test('it clears the run and mints behind it when the worker is evicted while a r
 
   lifecycle.current = context.getLifecycle;
 
-  await setupStartableNode(viewer.avatar.id);
+  const ctx = setupTest();
+
+  await ctx.setupStartableNode(viewer.avatar.id);
 
   const live = await db.activityCollection.create({
     appendedHead: 1,
@@ -1823,7 +1871,9 @@ test('it discards the outbox on a takeover from another device and mints from th
     submitter: createStubSubmitter(),
   });
 
-  await setupStartableNode(viewer.avatar.id);
+  const ctx = setupTest();
+
+  await ctx.setupStartableNode(viewer.avatar.id);
 
   const delivered = await db.activityCollection.create({
     appendedHead: 1,
@@ -1877,7 +1927,8 @@ test('it discards the outbox on a takeover from another device and mints from th
   server.resetHandlers();
   server.use(createStubActivityProxy(viewer.user.id));
 
-  await setupStartableNode(viewer.avatar.id);
+  await ctx.setupStartableNode(viewer.avatar.id);
+
   await handleReportOnlineMessage(context, { avatarID: viewer.avatar.id, claim: true });
 
   const status = await handleStartActivityMessage(context, {
@@ -1910,7 +1961,9 @@ test('it delivers a start minted offline on a reconnect after offline and mints 
     submitter: createStubSubmitter(),
   });
 
-  await setupStartableNode(viewer.avatar.id);
+  const ctx = setupTest();
+
+  await ctx.setupStartableNode(viewer.avatar.id);
 
   const next = createMockNodeSeed({
     avatarID: viewer.avatar.id,
@@ -1989,7 +2042,9 @@ test("it drops a start refused because its predecessor is no longer active and m
     submitter: createStubSubmitter(),
   });
 
-  await setupStartableNode(viewer.avatar.id);
+  const ctx = setupTest();
+
+  await ctx.setupStartableNode(viewer.avatar.id);
 
   const delivered = await db.activityCollection.create({
     appendedHead: 1,
@@ -2087,7 +2142,9 @@ test('it stops the tick loop when the submitter reports a journal failure', asyn
 
   context.registerReconstruction('avatar_journal_failure');
 
-  await setupStartableNode('avatar_journal_failure');
+  const ctx = setupTest();
+
+  await ctx.setupStartableNode('avatar_journal_failure');
 
   const status = await handleStartActivityMessage(context, {
     avatarID: 'avatar_journal_failure',

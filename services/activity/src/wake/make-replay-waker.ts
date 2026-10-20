@@ -70,8 +70,8 @@ export function makeReplayWaker(options: ReplayWakerOptions): ReplayWaker {
   return { sendReplayWake, waitUntilSettled };
 }
 
-function wait(ms: number): Promise<void> {
+function wait(delayMs: number): Promise<void> {
   return new Promise((resolve) => {
-    setTimeout(resolve, ms);
+    setTimeout(resolve, delayMs);
   });
 }

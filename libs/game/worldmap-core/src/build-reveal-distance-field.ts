@@ -2,9 +2,6 @@ import { JITTER } from './consts';
 import { toHexPosition } from './to-hex-position';
 import type { RevealDistanceField, RevealSource, Viewport } from './types';
 
-const SQRT_3 = Math.sqrt(3);
-const JITTER_MARGIN = JITTER * Math.SQRT2;
-
 export interface RevealFieldOptions {
   readonly falloff: number;
 
@@ -25,25 +22,25 @@ export function buildRevealDistanceField(
 
   // texels sample the cell box inflated by half a cell on each side, the mapping a quad spanning
   // that box with corner-anchored uvs interpolates
-  for (let j = 0; j < rows; j++) {
-    const b = viewport.minCY - 0.5 + (j + 0.5) / options.resolution;
+  for (let row = 0; row < rows; row++) {
+    const cellY = viewport.minCY - 0.5 + (row + 0.5) / options.resolution;
 
-    for (let i = 0; i < cols; i++) {
-      const a = viewport.minCX - 0.5 + (i + 0.5) / options.resolution;
-      const [x, y] = toHexPosition(a, b);
+    for (let column = 0; column < cols; column++) {
+      const cellX = viewport.minCX - 0.5 + (column + 0.5) / options.resolution;
+      const [x, y] = toHexPosition(cellX, cellY);
       let distance = Number.POSITIVE_INFINITY;
 
       for (const disc of discs) {
-        const d = Math.hypot(x - disc.x, y - disc.y) - disc.clearRadius;
+        const discDistance = Math.hypot(x - disc.x, y - disc.y) - disc.clearRadius;
 
-        if (d < distance) {
-          distance = d;
+        if (discDistance < distance) {
+          distance = discDistance;
         }
       }
 
-      const t = Math.min(Math.max(distance / options.falloff, 0), 1);
+      const ramp = Math.min(Math.max(distance / options.falloff, 0), 1);
 
-      values[j * cols + i] = t * t * t * (t * (t * 6 - 15) + 10);
+      values[row * cols + column] = ramp * ramp * ramp * (ramp * (ramp * 6 - 15) + 10);
     }
   }
 
@@ -55,6 +52,9 @@ interface ReachingDisc {
   readonly x: number;
   readonly y: number;
 }
+
+const SQRT_3 = Math.sqrt(3);
+const JITTER_MARGIN = JITTER * Math.SQRT2;
 
 function collectReachingDiscs(
   sources: ReadonlyArray<RevealSource>,

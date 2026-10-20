@@ -6,9 +6,6 @@ import { createAnonymousViewer } from '@vers/service-test-utils/bun';
 import { buildRPCTestClient } from '@vers/test-utils';
 import { createKeysService } from './create-keys-service';
 
-const TRADE_ROOT_HEX = '11'.repeat(32);
-const WORLDMAP_ROOT_HEX = '44'.repeat(32);
-
 async function setupTest() {
   const service = await createKeysService();
 
@@ -52,7 +49,7 @@ test('it derives a key matching a direct call against the configured root', asyn
     avatarID: 'avatar-1',
     keyVersion: 1,
     population: 'trade',
-    root: hexToBytes(TRADE_ROOT_HEX),
+    root: hexToBytes('11'.repeat(32)),
   });
 
   expect(result.key).toBe(Buffer.from(expected).toString('hex'));
@@ -146,7 +143,7 @@ test('it derives a scope secret matching a direct call against the configured ro
     avatarID: 'avatar-1',
     secretRef: 'worldmap',
     secretVersion: 1,
-    root: hexToBytes(WORLDMAP_ROOT_HEX),
+    root: hexToBytes('44'.repeat(32)),
   });
 
   expect(result.secret).toBe(Buffer.from(expected).toString('hex'));

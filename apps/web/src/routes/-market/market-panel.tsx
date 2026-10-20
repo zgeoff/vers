@@ -4,17 +4,6 @@ import { css } from '@vers/styled-system/css';
 import { ScreenLayout } from '../../components/screen-layout';
 import { ScreenPanel } from '../../components/screen-panel';
 
-interface MarketListing {
-  readonly listingID: string;
-  readonly title: string;
-}
-
-const MARKET_LISTINGS: ReadonlyArray<MarketListing> = [
-  { listingID: 'listing-1', title: 'Sunforged Blade' },
-  { listingID: 'listing-2', title: 'Warden Plate Greaves' },
-  { listingID: 'listing-3', title: 'Ember-Touched Charm' },
-];
-
 export function MarketPanel() {
   return (
     <ScreenLayout title="Market">
@@ -29,8 +18,28 @@ export function MarketPanel() {
   );
 }
 
+function SearchTab() {
+  return (
+    <>
+      <ScreenPanel label="Filter builder" />
+      <ScreenPanel label="Stat search" />
+    </>
+  );
+}
+
 const list = css({ display: 'flex', flexDirection: 'column', gap: '2' });
 const listing = css({ backgroundColor: 'bg.panelElevated', display: 'block', padding: '3' });
+
+interface MarketListing {
+  readonly listingID: string;
+  readonly title: string;
+}
+
+const MARKET_LISTINGS: ReadonlyArray<MarketListing> = [
+  { listingID: 'listing-1', title: 'Sunforged Blade' },
+  { listingID: 'listing-2', title: 'Warden Plate Greaves' },
+  { listingID: 'listing-3', title: 'Ember-Touched Charm' },
+];
 
 function ListingsTab() {
   return (
@@ -49,15 +58,6 @@ function ListingsTab() {
         ))}
       </ul>
     </ScreenPanel>
-  );
-}
-
-function SearchTab() {
-  return (
-    <>
-      <ScreenPanel label="Filter builder" />
-      <ScreenPanel label="Stat search" />
-    </>
   );
 }
 

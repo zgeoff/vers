@@ -149,8 +149,8 @@ test('it creates the account, signs the caller in, and clears the onboarding ses
   expect(outcome.cookies['en_session']).toContainKeys(['accessToken', 'refreshToken', 'sessionID']);
   expect(outcome.cookies['en_verification']).toStrictEqual({});
 
-  const created = db.userCollection.findFirst((q) =>
-    q.where({ email: 'onboard-success@vers.test' }),
+  const created = db.userCollection.findFirst((query) =>
+    query.where({ email: 'onboard-success@vers.test' }),
   );
 
   expect(created?.username).toBe('onboard_success_user');
@@ -182,7 +182,9 @@ test('it signs in an already-created account when the retry carries its password
   expect(outcome.cookies['en_session']).toContainKeys(['accessToken', 'refreshToken', 'sessionID']);
   expect(outcome.cookies['en_verification']).toStrictEqual({});
 
-  const rows = db.userCollection.findMany((q) => q.where({ email: 'onboard-retry@vers.test' }));
+  const rows = db.userCollection.findMany((query) =>
+    query.where({ email: 'onboard-retry@vers.test' }),
+  );
 
   expect(rows).toHaveLength(1);
 });

@@ -2,7 +2,9 @@ import * as db from '../db';
 import { os } from './os';
 
 export const updateVerification = os.updateVerification.handler(async (opts) => {
-  const verification = db.verificationCollection.findFirst((q) => q.where({ id: opts.input.id }));
+  const verification = db.verificationCollection.findFirst((query) =>
+    query.where({ id: opts.input.id }),
+  );
 
   if (verification === undefined) {
     throw opts.errors.NOT_FOUND({ data: {} });

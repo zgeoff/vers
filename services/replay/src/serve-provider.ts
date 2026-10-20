@@ -2,11 +2,11 @@ import { flushErrorReports, reportUnexpectedError } from '@vers/service-runtime'
 import { withTraceContext } from '@vers/service-utils';
 import { createTraceContext } from '@vers/trace';
 import { createReplayProvider } from './create-replay-provider';
-import { getBakedEngineHash } from './get-baked-engine-hash';
+import { readBakedEngineHash } from './read-baked-engine-hash';
 
 // Env validation reads the process env object dynamically, which a compile-time define never
 // rewrites — the baked hash must be seeded back into the environment before the service boots.
-const bakedEngineHash = getBakedEngineHash();
+const bakedEngineHash = readBakedEngineHash();
 const engineHashKey = 'SIM_ENGINE_HASH';
 
 if (bakedEngineHash !== undefined) {

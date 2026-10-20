@@ -21,7 +21,7 @@ import {
   createServiceToken,
   createTestDB,
   createViewer,
-  getTestServiceKeyPair,
+  resolveTestServiceKeyPair,
 } from '@vers/service-test-utils/bun';
 import { createSimVersionRow } from '@vers/sim-registry/test-utils';
 import { buildRPCTestClient } from '@vers/test-utils';
@@ -34,6 +34,24 @@ import { createMockCatchUpContinuation } from '../test-utils/factories/create-mo
 import { createMockCheckpointBatch } from '../test-utils/factories/create-mock-checkpoint-batch';
 import { createMockOfflineActivityStartSubmission } from '../test-utils/factories/create-mock-offline-activity-start-submission';
 import { toActivityData } from './to-activity-data';
+
+interface RowContext {
+  readonly contentVersion: string;
+  readonly encounterNode: { readonly difficulty: number };
+  readonly keyVersion: number;
+  readonly simVersion: string;
+  readonly startChainIndex: number;
+}
+
+interface ActivityStartDerivationInput {
+  readonly avatarID: string;
+  readonly avatarSeed: number;
+  readonly contentVersion: string;
+  readonly document: ContentDocument;
+  readonly scopeID: string;
+  readonly seed: string;
+  readonly simVersion: string;
+}
 
 // the handler under test opens its own interactive transaction, which the default
 // transaction-isolation handle can't nest — this suite runs against a real, committed schema clone
@@ -48,77 +66,60 @@ async function setupTest(config: { readonly simTimeCapMs?: number } = {}) {
     ...(config.simTimeCapMs !== undefined && { simTimeCapMs: config.simTimeCapMs }),
   });
 
-  return { app: service.app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
-}
+  return {
+    app: service.app,
+    buildMintedRowContext: (
+      preceding: Readonly<RowContext>,
+      tail: ReadonlyArray<CheckpointBatchEntry>,
+    ): RowContext & { readonly seed: string; readonly startHash: string } => {
+      const last = tail.at(-1);
 
-interface RowContext {
-  readonly contentVersion: string;
-  readonly encounterNode: { readonly difficulty: number };
-  readonly keyVersion: number;
-  readonly simVersion: string;
-  readonly startChainIndex: number;
-}
+      invariant(last !== undefined, 'a continuation always carries at least one checkpoint');
 
-function buildMintedRowContext(
-  preceding: Readonly<RowContext>,
-  tail: ReadonlyArray<CheckpointBatchEntry>,
-): RowContext & { readonly seed: string; readonly startHash: string } {
-  const last = tail.at(-1);
+      const seed = last.payload.nextSeed;
+      const startChainIndex = preceding.startChainIndex + last.version;
 
-  invariant(last !== undefined, 'a continuation always carries at least one checkpoint');
+      const startHash = buildStartHash({
+        contentVersion: preceding.contentVersion,
+        encounterNode: preceding.encounterNode,
+        keyVersion: preceding.keyVersion,
+        seed,
+        simVersion: preceding.simVersion,
+      });
 
-  const seed = last.payload.nextSeed;
-  const startChainIndex = preceding.startChainIndex + last.version;
+      return { ...preceding, seed, startChainIndex, startHash };
+    },
+    db: db.db,
+    deriveActivityStart: (
+      input: Readonly<ActivityStartDerivationInput>,
+    ): { encounterNode: EncounterNode; startHash: string } => {
+      const coord = findCellCoord(input.scopeID);
 
-  const startHash = buildStartHash({
-    contentVersion: preceding.contentVersion,
-    encounterNode: preceding.encounterNode,
-    keyVersion: preceding.keyVersion,
-    seed,
-    simVersion: preceding.simVersion,
-  });
+      invariant(coord, `scope id ${input.scopeID} must resolve to a valid cell coordinate`);
 
-  return { ...preceding, seed, startChainIndex, startHash };
-}
+      const scopeSecret = buildMockScopeSecret(input.avatarID, 'worldmap', 1);
 
-interface ActivityStartDerivationInput {
-  readonly avatarID: string;
-  readonly avatarSeed: number;
-  readonly contentVersion: string;
-  readonly document: ContentDocument;
-  readonly scopeID: string;
-  readonly seed: string;
-  readonly simVersion: string;
-}
+      const encounterNode = {
+        difficulty: getDifficulty(coord[0], coord[1]),
+        ...deriveWorldmapContent(input.document.encounter, {
+          coord,
+          scopeSecret,
+          userSeed: input.avatarSeed,
+        }),
+      };
 
-function deriveActivityStart(input: Readonly<ActivityStartDerivationInput>): {
-  encounterNode: EncounterNode;
-  startHash: string;
-} {
-  const coord = findCellCoord(input.scopeID);
+      const startHash = buildStartHash({
+        contentVersion: input.contentVersion,
+        encounterNode,
+        keyVersion: 1,
+        seed: input.seed,
+        simVersion: input.simVersion,
+      });
 
-  invariant(coord, `scope id ${input.scopeID} must resolve to a valid cell coordinate`);
-
-  const scopeSecret = buildMockScopeSecret(input.avatarID, 'worldmap', 1);
-
-  const encounterNode = {
-    difficulty: getDifficulty(coord[0], coord[1]),
-    ...deriveWorldmapContent(input.document.encounter, {
-      coord,
-      scopeSecret,
-      userSeed: input.avatarSeed,
-    }),
+      return { encounterNode, startHash };
+    },
+    [Symbol.asyncDispose]: db[Symbol.asyncDispose],
   };
-
-  const startHash = buildStartHash({
-    contentVersion: input.contentVersion,
-    encounterNode,
-    keyVersion: 1,
-    seed: input.seed,
-    simVersion: input.simVersion,
-  });
-
-  return { encounterNode, startHash };
 }
 
 test('it mint-and-appends a two-continuation chain, returning the final freshly minted row', async () => {
@@ -143,7 +144,7 @@ test('it mint-and-appends a two-continuation chain, returning the final freshly 
     startVersion: 1,
   });
 
-  const rowB = buildMintedRowContext(toActivityData(started), firstTail);
+  const rowB = ctx.buildMintedRowContext(toActivityData(started), firstTail);
 
   const secondTail = createMockCheckpointBatch({
     finalPayloadOverrides: { rewards: { xp: 25 }, type: 'completed' },
@@ -152,7 +153,7 @@ test('it mint-and-appends a two-continuation chain, returning the final freshly 
     startVersion: 1,
   });
 
-  const rowC = buildMintedRowContext(rowB, secondTail);
+  const rowC = ctx.buildMintedRowContext(rowB, secondTail);
 
   const firstContinuation: CatchUpContinuation = {
     buildSnapshot: { level: buildLevelFromXP(40), xp: 40 },
@@ -749,7 +750,7 @@ test('it bails with CHECKPOINT_INVALID on a broken hash chain, leaving the head 
     startVersion: 1,
   });
 
-  const rowB = buildMintedRowContext(toActivityData(started), firstTail);
+  const rowB = ctx.buildMintedRowContext(toActivityData(started), firstTail);
 
   const brokenSecondTail = createMockCheckpointBatch({
     finalPayloadOverrides: { rewards: { xp: 25 }, type: 'completed' },
@@ -867,7 +868,7 @@ test('it admits a client-minted activityStart under a valid client head, derivin
   // reads the encounter the server derives against
   const document = createMockContentDocument({ contentVersion: '2' });
 
-  const derived = deriveActivityStart({
+  const derived = ctx.deriveActivityStart({
     avatarID: avatar.id,
     avatarSeed: avatar.seed,
     contentVersion: '2',
@@ -952,7 +953,7 @@ test('it mints an activity start naming a predecessor not yet on the server, sta
   const predecessorID = `act_${createId()}`;
   const document = createMockContentDocument({ contentVersion: '2' });
 
-  const derived = deriveActivityStart({
+  const derived = ctx.deriveActivityStart({
     avatarID: avatar.id,
     avatarSeed: avatar.seed,
     contentVersion: '2',
@@ -1008,7 +1009,7 @@ test('it converges a sequential activityStart retry onto the existing row withou
   const activityID = `act_${createId()}`;
   const document = createMockContentDocument({ contentVersion: '2' });
 
-  const derived = deriveActivityStart({
+  const derived = ctx.deriveActivityStart({
     avatarID: avatar.id,
     avatarSeed: avatar.seed,
     contentVersion: '2',
@@ -1302,7 +1303,7 @@ test('it mints an activity start at a node unconnected to any completed node —
   const activityID = `act_${createId()}`;
   const document = createMockContentDocument({ contentVersion: '2' });
 
-  const derived = deriveActivityStart({
+  const derived = ctx.deriveActivityStart({
     avatarID: avatar.id,
     avatarSeed: avatar.seed,
     contentVersion: '2',
@@ -1439,7 +1440,7 @@ test('it conflicts an activity-start admission while another run is already acti
 
   const activityID = `act_${createId()}`;
 
-  const derived = deriveActivityStart({
+  const derived = ctx.deriveActivityStart({
     avatarID: avatar.id,
     avatarSeed: avatar.seed,
     contentVersion: '2',
@@ -1579,7 +1580,7 @@ test('it mints the offline successor of a just-cleared node at admission, deferr
 
   // A clears offline: its activity start anchors at the origin (always reachable), and a terminal
   // continuation delivers the clear. Admission accepts it — the origin needs no grant.
-  const derivedA = deriveActivityStart({
+  const derivedA = ctx.deriveActivityStart({
     avatarID: avatar.id,
     avatarSeed: avatar.seed,
     contentVersion: '2',
@@ -1639,7 +1640,7 @@ test('it mints the offline successor of a just-cleared node at admission, deferr
 
   // B is the neighbour A's clear opened; its activity start mints because admission runs no
   // reachability check, only the sim-version and hash gates every activity start clears
-  const derivedB = deriveActivityStart({
+  const derivedB = ctx.deriveActivityStart({
     avatarID: avatar.id,
     avatarSeed: avatar.seed,
     contentVersion: '2',
@@ -1704,7 +1705,7 @@ test("it refuses a kicked writer session's undelivered offline activityStart wit
   });
 
   // session B takes over the same run, kicking session A off as its writer
-  const keyPair = await getTestServiceKeyPair();
+  const keyPair = await resolveTestServiceKeyPair();
 
   const tokenB = await createServiceToken({
     actingSessionID: 'session-b',
@@ -1720,7 +1721,7 @@ test("it refuses a kicked writer session's undelivered offline activityStart wit
   // session A, now kicked, delivers a valid offline activity start it minted before the takeover:
   // admission reads no acting-session gate, so the refusal is the generic active-run CONFLICT,
   // never a session-scoped SESSION_EVICTED
-  const derived = deriveActivityStart({
+  const derived = ctx.deriveActivityStart({
     avatarID: avatar.id,
     avatarSeed: avatar.seed,
     contentVersion: '2',
@@ -1806,7 +1807,7 @@ test("it admits a successor whose build snapshot folds the predecessor's start s
     .where('scopeId', '=', '0_0')
     .executeTakeFirstOrThrow();
 
-  const derived = deriveActivityStart({
+  const derived = ctx.deriveActivityStart({
     avatarID: avatar.id,
     avatarSeed: avatar.seed,
     contentVersion: '2',
@@ -1883,7 +1884,7 @@ test('it admits a start minted from the progress read on a device holding no rec
     .where('scopeId', '=', '0_0')
     .executeTakeFirstOrThrow();
 
-  const derived = deriveActivityStart({
+  const derived = ctx.deriveActivityStart({
     avatarID: avatar.id,
     avatarSeed: avatar.seed,
     contentVersion: '2',

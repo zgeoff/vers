@@ -373,7 +373,7 @@ test('it single-flights concurrent refreshes for the same session', async () => 
 
   // if the two calls raced instead of sharing one refresh, the mock service's reuse detection
   // would revoke the session on the second rotation
-  expect(db.sessionCollection.findFirst((q) => q.where({ id: session.id }))).toMatchObject({
+  expect(db.sessionCollection.findFirst((query) => query.where({ id: session.id }))).toMatchObject({
     previousRefreshToken: 'refresh-1',
   });
 });

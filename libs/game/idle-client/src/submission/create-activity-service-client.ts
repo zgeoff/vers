@@ -1,7 +1,7 @@
 import { createORPCClient } from '@orpc/client';
 import { RPCLink } from '@orpc/client/fetch';
 import { activityContract } from '@vers/contract-activity';
-import { buildRetryInterceptor, makeIsRetryable } from '@vers/service-utils/orpc';
+import { makeIsRetryable, makeRetryInterceptor } from '@vers/service-utils/orpc';
 import { removeOfflineWork } from './remove-offline-work';
 import type { ActivityCallContext, ActivityServiceClient } from './types';
 
@@ -23,20 +23,22 @@ export function createActivityServiceClient(): ActivityServiceClient {
     }
   };
 
+  const sendRequest = async (input: Request, init?: RequestInit): Promise<Response> => {
+    const response = await fetch(input, init);
+
+    if (response.headers.has(SESSION_SUPERSEDED_HEADER)) {
+      discard ??= runDiscard();
+
+      await discard;
+    }
+
+    return response;
+  };
+
   const link = new RPCLink<ActivityCallContext>({
-    clientInterceptors: [buildRetryInterceptor({ isRetryable: makeIsRetryable(activityContract) })],
+    clientInterceptors: [makeRetryInterceptor({ isRetryable: makeIsRetryable(activityContract) })],
 
-    fetch: async (input, init) => {
-      const response = await fetch(input, init);
-
-      if (response.headers.has(SESSION_SUPERSEDED_HEADER)) {
-        discard ??= runDiscard();
-
-        await discard;
-      }
-
-      return response;
-    },
+    fetch: sendRequest,
 
     // a call made with no options at all reaches this callback with an undefined context
     headers: (options) =>

@@ -16,16 +16,16 @@ export const getAvatarProgression = os.getAvatarProgression.handler((opts) => {
     throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
   }
 
-  const avatar = db.avatarCollection.findFirst((q) =>
-    q.where({ id: opts.input.avatarID, userID: actingUserID }),
+  const avatar = db.avatarCollection.findFirst((query) =>
+    query.where({ id: opts.input.avatarID, userID: actingUserID }),
   );
 
   if (avatar === undefined) {
     return null;
   }
 
-  const unsettled = db.activityCollection.findMany((q) =>
-    q.where({
+  const unsettled = db.activityCollection.findMany((query) =>
+    query.where({
       avatarID: opts.input.avatarID,
       status: (value) => value !== 'active' && value !== 'rejected',
     }),
@@ -34,8 +34,8 @@ export const getAvatarProgression = os.getAvatarProgression.handler((opts) => {
   const pending = unsettled
     .filter((activity) => activity.verifiedHead < activity.appendedHead)
     .flatMap((activity) => {
-      const checkpoint = db.checkpointCollection.findFirst((q) =>
-        q.where({ activityID: activity.id, version: activity.appendedHead }),
+      const checkpoint = db.checkpointCollection.findFirst((query) =>
+        query.where({ activityID: activity.id, version: activity.appendedHead }),
       );
 
       if (checkpoint === undefined) {
@@ -51,8 +51,8 @@ export const getAvatarProgression = os.getAvatarProgression.handler((opts) => {
       return [{ activityID: activity.id, xpDelta: parsed.data.rewards.xp }];
     });
 
-  const live = db.activityCollection.findFirst((q) =>
-    q.where({ avatarID: opts.input.avatarID, status: 'active' }),
+  const live = db.activityCollection.findFirst((query) =>
+    query.where({ avatarID: opts.input.avatarID, status: 'active' }),
   );
 
   const active = live === undefined ? null : { activityID: live.id, settledXP: 0 };

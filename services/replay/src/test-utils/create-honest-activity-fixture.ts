@@ -1,6 +1,6 @@
 import { faker } from '@faker-js/faker';
 import { createId } from '@paralleldrive/cuid2';
-import { createContentVersion, findContentDocument } from '@vers/content-registry';
+import { createContentVersion, readContentDocument } from '@vers/content-registry';
 import type { CheckpointPayload, ContentDocument, EncounterNode } from '@vers/contract-activity';
 import { buildCheckpointHash, buildStartHash } from '@vers/contract-activity';
 import { createMockContentDocument } from '@vers/contract-activity/test-utils';
@@ -35,12 +35,6 @@ interface HonestCheckpointRow {
   readonly payload: CheckpointPayload;
   readonly prevHash: string;
   readonly version: number;
-}
-
-interface HonestCheckpointContext {
-  readonly seed: string;
-  readonly startChainIndex: number;
-  readonly startHash: string;
 }
 
 interface HonestActivityFixture {
@@ -107,7 +101,7 @@ export async function createHonestActivityFixture(
   // The replay worker loads content by the row's stamped version, so the document this fixture ran
   // the engine against must be readable back from the registry; a suite (or an earlier fixture)
   // may already have published the version, in which case its content is assumed identical.
-  if ((await findContentDocument(db, contentVersion)) === undefined) {
+  if ((await readContentDocument(db, contentVersion)) === undefined) {
     await createContentVersion(db, document);
   }
 
@@ -275,6 +269,12 @@ function buildTerminalPrefix(
   );
 
   return terminalIndex === -1 ? [...checkpoints] : checkpoints.slice(0, terminalIndex + 1);
+}
+
+interface HonestCheckpointContext {
+  readonly seed: string;
+  readonly startChainIndex: number;
+  readonly startHash: string;
 }
 
 function buildHonestCheckpointRows(

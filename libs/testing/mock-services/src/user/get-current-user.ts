@@ -8,7 +8,7 @@ export const getCurrentUser = os.getCurrentUser.handler((opts) => {
     throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
   }
 
-  const user = db.userCollection.findFirst((q) => q.where({ id: actingUserID }));
+  const user = db.userCollection.findFirst((query) => query.where({ id: actingUserID }));
 
   if (user === undefined) {
     throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });

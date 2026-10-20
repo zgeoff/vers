@@ -1,7 +1,7 @@
 import { RPCLink } from '@orpc/client/fetch';
 import type { AnyContractRouter } from '@orpc/contract';
 import type { ServiceName } from '@vers/service-auth';
-import { buildTracingInterceptor, makeIsRetryable } from '@vers/service-utils/orpc';
+import { makeIsRetryable, makeTracingInterceptor } from '@vers/service-utils/orpc';
 import { createEdgeServiceToken } from './create-edge-service-token';
 import { loadSessionActor } from './load-session-actor';
 import { makeBoundedFetch } from './make-bounded-fetch';
@@ -18,7 +18,7 @@ export function buildServiceLink(
   options: Readonly<BuildServiceLinkOptions> = {},
 ): RPCLink<ServiceLinkContext> {
   return new RPCLink<ServiceLinkContext>({
-    clientInterceptors: [buildTracingInterceptor()],
+    clientInterceptors: [makeTracingInterceptor()],
     fetch: makeBoundedFetch({
       ...(options.clock !== undefined && { clock: options.clock }),
       isRetryable: makeIsRetryable(contract),

@@ -25,7 +25,7 @@ export interface JobQueue<TDefs extends JobDefs> {
     opts?: Readonly<SendJobOptions>,
   ) => Promise<string>;
   readonly drain: (name?: Extract<keyof TDefs, string>) => Promise<DrainResult>;
-  readonly getJobState: (
+  readonly readJobState: (
     name: Extract<keyof TDefs, string>,
     jobID: string,
   ) => Promise<JobState | undefined>;
@@ -82,18 +82,8 @@ export function createJobQueue<TDefs extends JobDefs>(
     stop: () => boss.stop(),
     send: (name, payload, opts) => sendJob(boss, defs, name, payload, opts),
     drain: (name) => drainJobs(boss, defs, handlers, onJobFailed, name),
-    getJobState: (name, jobID) => getJobState(boss, name, jobID),
+    readJobState: (name, jobID) => readJobState(boss, name, jobID),
   };
-}
-
-async function getJobState(
-  boss: PgBoss,
-  name: string,
-  jobID: string,
-): Promise<JobState | undefined> {
-  const [job] = await boss.findJobs(name, { id: jobID });
-
-  return job?.state;
 }
 
 function printJobQueueError(error: Error): void {
@@ -173,13 +163,6 @@ async function sendJob(
   return jobID;
 }
 
-interface FetchedJob {
-  readonly data: unknown;
-  readonly id: string;
-  readonly retryCount: number;
-  readonly retryLimit: number;
-}
-
 async function drainJobs(
   boss: PgBoss,
   defs: JobDefs,
@@ -223,6 +206,13 @@ async function drainJobs(
 }
 
 type JobOutcome = 'completed' | 'failed';
+
+interface FetchedJob {
+  readonly data: unknown;
+  readonly id: string;
+  readonly retryCount: number;
+  readonly retryLimit: number;
+}
 
 function runJob(
   boss: PgBoss,
@@ -276,4 +266,14 @@ function runJob(
 // counted; the comparison mirrors the condition pg-boss uses to pick retry or terminal on fail
 function isRetriesExhausted(job: Readonly<Pick<FetchedJob, 'retryCount' | 'retryLimit'>>): boolean {
   return job.retryCount >= job.retryLimit;
+}
+
+async function readJobState(
+  boss: PgBoss,
+  name: string,
+  jobID: string,
+): Promise<JobState | undefined> {
+  const [job] = await boss.findJobs(name, { id: jobID });
+
+  return job?.state;
 }

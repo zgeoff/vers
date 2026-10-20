@@ -30,7 +30,7 @@ export async function loadEngineHash(entrypoint: string = DEFAULT_ENTRYPOINT): P
     result.outputs.map(async (output) => ({ path: output.path, text: await output.text() })),
   );
 
-  outputs.sort((a, b) => a.path.localeCompare(b.path));
+  outputs.sort((left, right) => left.path.localeCompare(right.path));
 
   const hash = createHash('sha256');
 

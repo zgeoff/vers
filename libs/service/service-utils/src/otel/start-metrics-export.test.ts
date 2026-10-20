@@ -16,22 +16,24 @@ interface ReceivedExport {
 test('it exports recorded instruments to the OTLP metrics endpoint with the env-configured headers', async () => {
   const received: Array<ReceivedExport> = [];
 
+  const handleRequest = async (request: Request): Promise<Response> => {
+    const body = await request.arrayBuffer();
+
+    received.push({
+      bodyBytes: body.byteLength,
+      headers: {
+        auth: request.headers.get('authorization'),
+        contentType: request.headers.get('content-type'),
+        dataset: request.headers.get('x-axiom-metrics-dataset'),
+        path: new URL(request.url).pathname,
+      },
+    });
+
+    return Response.json({});
+  };
+
   const server = Bun.serve({
-    fetch: async (request) => {
-      const body = await request.arrayBuffer();
-
-      received.push({
-        bodyBytes: body.byteLength,
-        headers: {
-          auth: request.headers.get('authorization'),
-          contentType: request.headers.get('content-type'),
-          dataset: request.headers.get('x-axiom-metrics-dataset'),
-          path: new URL(request.url).pathname,
-        },
-      });
-
-      return Response.json({});
-    },
+    fetch: handleRequest,
     port: 0,
   });
 

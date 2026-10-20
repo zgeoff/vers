@@ -3,9 +3,6 @@ import { CHUNK_SIZE, WORLD_COORD_MAX, WORLD_COORD_MIN } from '@vers/worldmap-cor
 import { buildChunkKey } from './build-chunk-key';
 import type { ChunkCache } from './create-chunk-cache';
 
-const MIN_WORLD_CHUNK = Math.floor(WORLD_COORD_MIN / CHUNK_SIZE);
-const MAX_WORLD_CHUNK = Math.floor(WORLD_COORD_MAX / CHUNK_SIZE);
-
 export interface ChunkRange {
   readonly maxChunkX: number;
   readonly maxChunkY: number;
@@ -76,6 +73,9 @@ export function collectCachedEntries<TEntry>(
 
   return entries;
 }
+
+const MIN_WORLD_CHUNK = Math.floor(WORLD_COORD_MIN / CHUNK_SIZE);
+const MAX_WORLD_CHUNK = Math.floor(WORLD_COORD_MAX / CHUNK_SIZE);
 
 function collectLeadingEdgeMisses<TEntry>(
   cache: Readonly<ChunkCache<TEntry>>,

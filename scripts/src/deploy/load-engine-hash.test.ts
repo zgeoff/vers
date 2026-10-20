@@ -4,35 +4,32 @@ import os from 'node:os';
 import path from 'node:path';
 import { PINNED_BUN_VERSION } from './load-engine-hash';
 
-const LOAD_ENGINE_HASH_PATH = path.resolve(import.meta.dirname, 'load-engine-hash.ts');
+function setupTest() {
+  const loadEngineHashPath = path.resolve(import.meta.dirname, 'load-engine-hash.ts');
 
-const REPLAY_ENTRYPOINT = path.resolve(
-  import.meta.dirname,
-  '../../../libs/game/idle-core/src/replay.ts',
-);
+  // hashes in a fresh bun process: Bun.build misreads store files of packages the invoking process
+  // has already imported, and the test preload imports pg and faker before any test runs
+  const loadEngineHashInSubprocess = async (entrypoint?: string): Promise<string> => {
+    const script = `
+      import { loadEngineHash } from ${JSON.stringify(loadEngineHashPath)};
+      process.stdout.write(await loadEngineHash(${entrypoint === undefined ? '' : JSON.stringify(entrypoint)}));
+    `;
 
-const IDLE_CORE_DIR = path.resolve(import.meta.dirname, '../../../libs/game/idle-core');
+    const child = Bun.spawn(['bun', '-e', script], { stderr: 'pipe', stdout: 'pipe' });
 
-// hashes in a fresh bun process: Bun.build misreads store files of packages the invoking process
-// has already imported, and the test preload imports pg and faker before any test runs
-async function loadEngineHashInSubprocess(entrypoint?: string): Promise<string> {
-  const script = `
-    import { loadEngineHash } from ${JSON.stringify(LOAD_ENGINE_HASH_PATH)};
-    process.stdout.write(await loadEngineHash(${entrypoint === undefined ? '' : JSON.stringify(entrypoint)}));
-  `;
+    const [stdout, stderr, exitCode] = await Promise.all([
+      new Response(child.stdout).text(),
+      new Response(child.stderr).text(),
+      child.exited,
+    ]);
 
-  const proc = Bun.spawn(['bun', '-e', script], { stderr: 'pipe', stdout: 'pipe' });
+    expect(stderr).toBeEmpty();
+    expect(exitCode).toBe(0);
 
-  const [stdout, stderr, exitCode] = await Promise.all([
-    new Response(proc.stdout).text(),
-    new Response(proc.stderr).text(),
-    proc.exited,
-  ]);
+    return stdout;
+  };
 
-  expect(stderr).toBeEmpty();
-  expect(exitCode).toBe(0);
-
-  return stdout;
+  return { loadEngineHashInSubprocess };
 }
 
 test('it is pinned to the bun version this process is running', () => {
@@ -40,16 +37,23 @@ test('it is pinned to the bun version this process is running', () => {
 });
 
 test('it produces the same hash across two consecutive builds', async () => {
-  const first = await loadEngineHashInSubprocess();
-  const second = await loadEngineHashInSubprocess();
+  const ctx = setupTest();
+
+  const first = await ctx.loadEngineHashInSubprocess();
+  const second = await ctx.loadEngineHashInSubprocess();
 
   expect(first).toBe(second);
 });
 
 test('it excludes test utilities and faker from the bundle', async () => {
+  const replayEntrypoint = path.resolve(
+    import.meta.dirname,
+    '../../../libs/game/idle-core/src/replay.ts',
+  );
+
   const script = `
     const result = await Bun.build({
-      entrypoints: [${JSON.stringify(REPLAY_ENTRYPOINT)}],
+      entrypoints: [${JSON.stringify(replayEntrypoint)}],
       minify: false,
       sourcemap: 'none',
       target: 'bun',
@@ -58,12 +62,12 @@ test('it excludes test utilities and faker from the bundle', async () => {
     process.stdout.write(texts.join('\\n'));
   `;
 
-  const proc = Bun.spawn(['bun', '-e', script], { stderr: 'pipe', stdout: 'pipe' });
+  const child = Bun.spawn(['bun', '-e', script], { stderr: 'pipe', stdout: 'pipe' });
 
   const [bundle, stderr, exitCode] = await Promise.all([
-    new Response(proc.stdout).text(),
-    new Response(proc.stderr).text(),
-    proc.exited,
+    new Response(child.stdout).text(),
+    new Response(child.stderr).text(),
+    child.exited,
   ]);
 
   expect(stderr).toBeEmpty();
@@ -74,8 +78,28 @@ test('it excludes test utilities and faker from the bundle', async () => {
 });
 
 test('it changes the hash when the engine source changes', async () => {
-  const copiedEntrypoint = await createEngineSourceTempDir();
-  const before = await loadEngineHashInSubprocess(copiedEntrypoint);
+  const ctx = setupTest();
+  const idleCoreDirectory = path.resolve(import.meta.dirname, '../../../libs/game/idle-core');
+
+  const tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'idle-core-hash-'));
+
+  onTestFinished(async () => {
+    await fs.rm(tmpRoot, { force: true, recursive: true });
+  });
+
+  await fs.cp(path.join(idleCoreDirectory, 'src'), path.join(tmpRoot, 'src'), {
+    recursive: true,
+  });
+
+  await fs.symlink(
+    path.join(idleCoreDirectory, 'node_modules'),
+    path.join(tmpRoot, 'node_modules'),
+    'dir',
+  );
+
+  const copiedEntrypoint = path.join(tmpRoot, 'src', 'replay.ts');
+
+  const before = await ctx.loadEngineHashInSubprocess(copiedEntrypoint);
 
   const constantsPath = path.join(path.dirname(copiedEntrypoint), 'progression/constants.ts');
 
@@ -86,25 +110,7 @@ test('it changes the hash when the engine source changes', async () => {
     constantsSource.replace('COMPLETION_BASE_XP = 25', 'COMPLETION_BASE_XP = 26'),
   );
 
-  const after = await loadEngineHashInSubprocess(copiedEntrypoint);
+  const after = await ctx.loadEngineHashInSubprocess(copiedEntrypoint);
 
   expect(before).not.toBe(after);
 });
-
-async function createEngineSourceTempDir(): Promise<string> {
-  const tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'idle-core-hash-'));
-
-  onTestFinished(async () => {
-    await fs.rm(tmpRoot, { force: true, recursive: true });
-  });
-
-  await fs.cp(path.join(IDLE_CORE_DIR, 'src'), path.join(tmpRoot, 'src'), { recursive: true });
-
-  await fs.symlink(
-    path.join(IDLE_CORE_DIR, 'node_modules'),
-    path.join(tmpRoot, 'node_modules'),
-    'dir',
-  );
-
-  return path.join(tmpRoot, 'src', 'replay.ts');
-}

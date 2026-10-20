@@ -2,8 +2,8 @@ import * as db from '../../db';
 import { os } from '../os';
 
 export const consumeTransactionToken = os.stepUp.consumeTransactionToken.handler(async (opts) => {
-  const existing = db.usedTransactionTokenCollection.findFirst((q) =>
-    q.where({ jti: opts.input.jti }),
+  const existing = db.usedTransactionTokenCollection.findFirst((query) =>
+    query.where({ jti: opts.input.jti }),
   );
 
   if (existing !== undefined) {

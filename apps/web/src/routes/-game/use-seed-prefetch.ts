@@ -31,6 +31,7 @@ export function useSeedPrefetch(revealedNodeIDs: ReadonlySet<string>): void {
     return () => {
       controller.abort();
     };
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies -- an avatar or client change aborts the running batch
   }, [avatarID, client]);
 
   useEffect(() => {

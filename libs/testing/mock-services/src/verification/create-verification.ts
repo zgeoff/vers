@@ -8,8 +8,8 @@ const EMAILED_TYPES: ReadonlySet<VerificationType> = new Set(['change-email', 'o
 const EMAILED_CODE_PERIOD_SECONDS = 600;
 
 export const createVerification = os.createVerification.handler(async (opts) => {
-  const existing = db.verificationCollection.findFirst((q) =>
-    q.where({ target: opts.input.target, type: opts.input.type }),
+  const existing = db.verificationCollection.findFirst((query) =>
+    query.where({ target: opts.input.target, type: opts.input.type }),
   );
 
   if (existing !== undefined) {
@@ -32,12 +32,12 @@ export const createVerification = os.createVerification.handler(async (opts) => 
   return { expiresAt: row.expiresAt, id: row.id, otp: code, target: row.target, type: row.type };
 });
 
+function buildMockCode(): string {
+  return Math.floor(100_000 + Math.random() * 900_000).toString();
+}
+
 function pickDefaultExpiry(type: VerificationType, period: number | undefined): Date | null {
   const periodSeconds = period ?? EMAILED_CODE_PERIOD_SECONDS;
 
   return EMAILED_TYPES.has(type) ? new Date(Date.now() + periodSeconds * 1000) : null;
-}
-
-function buildMockCode(): string {
-  return Math.floor(100_000 + Math.random() * 900_000).toString();
 }

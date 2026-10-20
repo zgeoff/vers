@@ -16,6 +16,7 @@ test('it writes each entry to the extra stream as a JSON line', () => {
   logger.info({ requestID: 'r1' }, 'served');
 
   expect(lines).toHaveLength(1);
+  // oxlint-disable-next-line zgeoff/no-abbreviated-names -- pino writes the message under `msg`
   expect(JSON.parse(lines[0] ?? '')).toMatchObject({ level: 30, msg: 'served', requestID: 'r1' });
 });
 

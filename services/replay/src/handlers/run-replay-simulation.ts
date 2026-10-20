@@ -9,7 +9,7 @@ import type {
   ActivityInput as EngineActivityInput,
 } from '@vers/idle-core';
 import { runSimulation } from '@vers/idle-core/replay';
-import { UnreachableCodeError } from '@vers/utils';
+import { match } from 'ts-pattern';
 
 export async function runReplaySimulation(input: ReplaySegmentInput): Promise<ReplaySegmentOutput> {
   const result = await runSimulation(toEngineActivityInput(input.activity), input.avatar, {
@@ -54,25 +54,15 @@ function toWireActivityCheckpoint(checkpoint: EngineActivityCheckpoint): Activit
     ...(checkpoint.levelUp !== undefined && { levelUp: checkpoint.levelUp }),
   };
 
-  switch (checkpoint.type) {
-    case ActivityCheckpointType.Started: {
-      return { ...shared, seed: checkpoint.seed, type: 'started' };
-    }
-
-    case ActivityCheckpointType.Failed: {
-      return { ...shared, type: 'failed' };
-    }
-
-    case ActivityCheckpointType.Completed: {
-      return { ...shared, type: 'completed' };
-    }
-
-    case ActivityCheckpointType.Progress: {
-      return { ...shared, type: 'progress' };
-    }
-
-    default: {
-      throw new UnreachableCodeError('every ActivityCheckpointType is handled above');
-    }
-  }
+  return match(checkpoint)
+    .returnType<ActivityCheckpoint>()
+    .with({ type: ActivityCheckpointType.Started }, (started) => ({
+      ...shared,
+      seed: started.seed,
+      type: 'started',
+    }))
+    .with({ type: ActivityCheckpointType.Failed }, () => ({ ...shared, type: 'failed' }))
+    .with({ type: ActivityCheckpointType.Completed }, () => ({ ...shared, type: 'completed' }))
+    .with({ type: ActivityCheckpointType.Progress }, () => ({ ...shared, type: 'progress' }))
+    .exhaustive();
 }

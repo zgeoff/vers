@@ -1,31 +1,24 @@
+import { match } from 'ts-pattern';
 import type { CaptureEvent } from './types';
 
-const BODY_LIMIT = 1500;
-
 export function formatCaptureEvent(event: CaptureEvent): string {
-  switch (event.kind) {
-    case 'attached': {
-      return `attached worker ${event.targetID}`;
-    }
-    case 'body': {
-      return `   response ${event.url}: ${toClippedBody(event.body)}`;
-    }
-    case 'detached': {
-      return `worker ${event.targetID} closed`;
-    }
-    case 'failure': {
-      return `!! failed ${event.url}: ${event.reason}`;
-    }
-    case 'request': {
-      return `>> ${event.method} ${event.url}\n   body: ${toClippedBody(event.body)}`;
-    }
-    case 'response': {
-      break;
-    }
-  }
-
-  return `<< ${event.status} ${event.url}`;
+  return match(event)
+    .with({ kind: 'attached' }, (attached) => `attached worker ${attached.targetID}`)
+    .with(
+      { kind: 'body' },
+      (received) => `   response ${received.url}: ${toClippedBody(received.body)}`,
+    )
+    .with({ kind: 'detached' }, (detached) => `worker ${detached.targetID} closed`)
+    .with({ kind: 'failure' }, (failure) => `!! failed ${failure.url}: ${failure.reason}`)
+    .with(
+      { kind: 'request' },
+      (request) => `>> ${request.method} ${request.url}\n   body: ${toClippedBody(request.body)}`,
+    )
+    .with({ kind: 'response' }, (response) => `<< ${response.status} ${response.url}`)
+    .exhaustive();
 }
+
+const BODY_LIMIT = 1500;
 
 function toClippedBody(body: string): string {
   return body.length > BODY_LIMIT ? `${body.slice(0, BODY_LIMIT)}…` : body;

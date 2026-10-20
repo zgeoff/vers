@@ -1,6 +1,6 @@
 import { randomInt } from 'node:crypto';
 import { createId } from '@paralleldrive/cuid2';
-import { findLiveActivityAvatar, upsertActiveAvatar } from '@vers/active-avatar';
+import { readLiveActivityAvatar, upsertActiveAvatar } from '@vers/active-avatar';
 import type { AvatarData, AvatarMode } from '@vers/contract-avatar';
 import { AVATAR_MODE_CAP } from '@vers/contract-avatar';
 import type { DB } from '@vers/db';
@@ -77,7 +77,7 @@ async function runCreateWrites(
     .returningAll()
     .executeTakeFirstOrThrow();
 
-  if ((await findLiveActivityAvatar(trx, actingUserID)) === null) {
+  if ((await readLiveActivityAvatar(trx, actingUserID)) === null) {
     await upsertActiveAvatar(trx, actingUserID, row.id);
   }
 

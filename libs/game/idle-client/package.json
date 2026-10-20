@@ -29,6 +29,7 @@
     "idb": "catalog:",
     "react": "catalog:",
     "tiny-invariant": "catalog:",
+    "ts-pattern": "catalog:",
     "xstate": "catalog:",
     "zod": "catalog:",
     "zustand": "catalog:"

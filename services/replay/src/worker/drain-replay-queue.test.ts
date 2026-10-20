@@ -6,7 +6,7 @@ import { createDB, toJSON } from '@vers/db';
 import { buildStateFromSeed } from '@vers/game-utils';
 import { resolveServiceURL } from '@vers/mock-services';
 import { setSentryHandleForTesting, startErrorReporting } from '@vers/service-runtime';
-import { createTestDB, getTestServiceKeyPair } from '@vers/service-test-utils/bun';
+import { createTestDB, resolveTestServiceKeyPair } from '@vers/service-test-utils/bun';
 import { waitFor } from '@vers/test-utils';
 import pino from 'pino';
 import invariant from 'tiny-invariant';
@@ -19,7 +19,7 @@ async function setupTest() {
 
   await createContentVersion(db.db, createMockContentDocument({ contentVersion: '2' }));
 
-  const keyPair = await getTestServiceKeyPair();
+  const keyPair = await resolveTestServiceKeyPair();
 
   const cache = createReplayCache();
 
@@ -347,7 +347,7 @@ test('it reuses the same held driver object across two warm drains', async () =>
 test('it stops draining and reports a claim failure carrying a trace id, without hanging', async () => {
   const unreachableDB = createDB({ databaseURL: 'postgresql://bad:bad@127.0.0.1:1/nope' });
 
-  const keyPair = await getTestServiceKeyPair();
+  const keyPair = await resolveTestServiceKeyPair();
 
   const recorded: Array<Readonly<ErrorEvent>> = [];
   const previousHandle = setSentryHandleForTesting(undefined);

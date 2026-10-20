@@ -4,6 +4,7 @@ import { buildLogRecord } from './build-log-record';
 test('it maps a pino line onto body, severity, timestamp, and attributes', () => {
   const record = buildLogRecord({
     level: 30,
+    // oxlint-disable-next-line zgeoff/no-abbreviated-names -- pino writes the message under `msg`
     msg: 'listening on port 3000',
     name: 'test-service',
     time: 1_752_192_000_000,
@@ -36,11 +37,13 @@ test('it maps each pino level to the matching severity', () => {
 });
 
 test('it reports a line without a recognised level as info', () => {
+  // oxlint-disable-next-line zgeoff/no-abbreviated-names -- pino writes the message under `msg`
   expect(buildLogRecord({ msg: 'bare' })).toMatchObject({
     severityNumber: 9,
     severityText: 'info',
   });
 
+  // oxlint-disable-next-line zgeoff/no-abbreviated-names -- pino writes the message under `msg`
   expect(buildLogRecord({ level: 35, msg: 'custom' })).toMatchObject({
     severityNumber: 9,
     severityText: 'info',
@@ -48,5 +51,6 @@ test('it reports a line without a recognised level as info', () => {
 });
 
 test('it omits the timestamp when the line carries no time', () => {
+  // oxlint-disable-next-line zgeoff/no-abbreviated-names -- pino writes the message under `msg`
   expect(buildLogRecord({ level: 30, msg: 'no clock' })).not.toContainKey('timestamp');
 });

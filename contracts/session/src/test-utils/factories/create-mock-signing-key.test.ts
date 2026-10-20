@@ -7,9 +7,11 @@ test('it builds a default signing key', () => {
 
   expect(key).toStrictEqual({
     alg: 'RS256',
+    // oxlint-disable-next-line id-length -- RFC 7518 names the RSA key's exponent and modulus `e` and `n`
     e: 'AQAB',
     kid: expect.toBeString(),
     kty: 'RSA',
+    // oxlint-disable-next-line id-length -- RFC 7518 names the RSA key's exponent and modulus `e` and `n`
     n: expect.toBeString(),
     use: 'sig',
   });

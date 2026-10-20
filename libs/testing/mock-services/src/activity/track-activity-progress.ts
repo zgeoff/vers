@@ -10,14 +10,16 @@ export const trackActivityProgress = os.trackActivityProgress.handler(async (opt
     throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
   }
 
-  const activity = db.activityCollection.findFirst((q) => q.where({ id: opts.input.activityID }));
+  const activity = db.activityCollection.findFirst((query) =>
+    query.where({ id: opts.input.activityID }),
+  );
 
   if (activity === undefined) {
     throw opts.errors.NOT_FOUND({ data: {} });
   }
 
-  const avatar = db.avatarCollection.findFirst((q) =>
-    q.where({ id: activity.avatarID, userID: actingUserID }),
+  const avatar = db.avatarCollection.findFirst((query) =>
+    query.where({ id: activity.avatarID, userID: actingUserID }),
   );
 
   if (avatar === undefined) {

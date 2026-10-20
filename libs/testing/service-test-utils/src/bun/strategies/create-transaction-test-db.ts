@@ -5,7 +5,7 @@ import { createDatabaseFromTemplate } from '../create-database-from-template';
 import type { TestDBHandle } from '../test-db-handle';
 
 export async function createTransactionTestDB(): Promise<TestDBHandle> {
-  const db = await getWorkerDB();
+  const db = await resolveWorkerDB();
   const trx = await db.startTransaction().execute();
 
   return {
@@ -18,13 +18,13 @@ export async function createTransactionTestDB(): Promise<TestDBHandle> {
 
 let workerDB: Promise<Kysely<DB>> | undefined;
 
-function getWorkerDB(): Promise<Kysely<DB>> {
-  workerDB ??= buildWorkerDB();
+function resolveWorkerDB(): Promise<Kysely<DB>> {
+  workerDB ??= createWorkerDB();
 
   return workerDB;
 }
 
-async function buildWorkerDB(): Promise<Kysely<DB>> {
+async function createWorkerDB(): Promise<Kysely<DB>> {
   const databaseURL = await createDatabaseFromTemplate();
 
   return createDB({ databaseURL, resumeDetection: false });

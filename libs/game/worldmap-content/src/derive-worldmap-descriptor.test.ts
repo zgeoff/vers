@@ -2,9 +2,9 @@ import { expect, test } from 'bun:test';
 import { bytesToHex } from '@noble/hashes/utils.js';
 import { deriveWorldmapDescriptor } from './derive-worldmap-descriptor';
 
-const scopeSecret = new Uint8Array(32).fill(0x0b);
-
 test('it derives a frozen golden descriptor from fixed inputs', () => {
+  const scopeSecret = new Uint8Array(32).fill(0x0b);
+
   const descriptor = deriveWorldmapDescriptor({ coord: [3, -2], scopeSecret, userSeed: 0 });
 
   expect(bytesToHex(descriptor)).toMatchInlineSnapshot(
@@ -13,12 +13,15 @@ test('it derives a frozen golden descriptor from fixed inputs', () => {
 });
 
 test('it derives bit-identical descriptors for identical input', () => {
+  const scopeSecret = new Uint8Array(32).fill(0x0b);
+
   const input = { coord: [3, -2], scopeSecret, userSeed: 0 } as const;
 
   expect(deriveWorldmapDescriptor(input)).toStrictEqual(deriveWorldmapDescriptor(input));
 });
 
 test('it derives a different descriptor for a different scope secret', () => {
+  const scopeSecret = new Uint8Array(32).fill(0x0b);
   const otherSecret = new Uint8Array(32).fill(0x0c);
 
   const first = deriveWorldmapDescriptor({ coord: [3, -2], scopeSecret, userSeed: 0 });
@@ -33,6 +36,8 @@ test('it derives a different descriptor for a different scope secret', () => {
 });
 
 test('it derives a different descriptor for a different coordinate', () => {
+  const scopeSecret = new Uint8Array(32).fill(0x0b);
+
   const first = deriveWorldmapDescriptor({ coord: [3, -2], scopeSecret, userSeed: 0 });
   const second = deriveWorldmapDescriptor({ coord: [4, -2], scopeSecret, userSeed: 0 });
 
@@ -40,6 +45,8 @@ test('it derives a different descriptor for a different coordinate', () => {
 });
 
 test('it derives a different descriptor for a different userSeed', () => {
+  const scopeSecret = new Uint8Array(32).fill(0x0b);
+
   const first = deriveWorldmapDescriptor({ coord: [3, -2], scopeSecret, userSeed: 0 });
   const second = deriveWorldmapDescriptor({ coord: [3, -2], scopeSecret, userSeed: 1 });
 
@@ -47,6 +54,8 @@ test('it derives a different descriptor for a different userSeed', () => {
 });
 
 test('it derives a 32-byte descriptor', () => {
+  const scopeSecret = new Uint8Array(32).fill(0x0b);
+
   const descriptor = deriveWorldmapDescriptor({ coord: [3, -2], scopeSecret, userSeed: 0 });
 
   expect(descriptor).toHaveLength(32);

@@ -36,6 +36,7 @@ function useEmulateSubmit(config: EmulateSubmitConfig) {
 
   const handleSubmit = () => {
     setSubmitting(true);
+    setStatus(StatusButton.Status.Pending);
   };
 
   const resetStatus = () => {
@@ -43,14 +44,11 @@ function useEmulateSubmit(config: EmulateSubmitConfig) {
     setSubmitting(false);
   };
 
-  // when we start submitting set the status to pending, and after a
-  // 2 second delay, set the status to success
+  // after a 2 second delay, set the status to success
   useEffect(() => {
     if (!submitting) {
       return () => {};
     }
-
-    setStatus(StatusButton.Status.Pending);
 
     const timeout = setTimeout(() => {
       setSubmitting(false);

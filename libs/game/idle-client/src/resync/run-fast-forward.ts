@@ -9,7 +9,7 @@ import type { FastForwardProgress, FastForwardReport, LatestActivityProgress } f
 interface RunFastForwardOptions {
   readonly budgetMs: number;
 
-  readonly buildSimulationInput: (
+  readonly loadSimulationInput: (
     source: Readonly<SimulationInputSource>,
   ) => Promise<{ activity: ActivityInput; avatar: AvatarData }>;
 
@@ -26,7 +26,7 @@ export async function runFastForward(
 ): Promise<FastForwardReport> {
   const plan = await planOfflineContinuations({
     budgetMs: options.budgetMs,
-    buildSimulationInput: options.buildSimulationInput,
+    loadSimulationInput: options.loadSimulationInput,
     progress: options.progress,
   });
 

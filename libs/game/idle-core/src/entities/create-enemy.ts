@@ -26,7 +26,7 @@ export function createEnemy(id: string, data: EnemyData, ctx: SimulationContext)
     const behaviourState: EnemyBehaviourSnapshot = {};
 
     for (const behaviour of behaviours) {
-      updateBehaviourSnapshot(behaviourState, behaviour.id, behaviour.getState());
+      assignBehaviourSnapshot(behaviourState, behaviour.id, behaviour.getState());
     }
 
     return {
@@ -126,7 +126,7 @@ function getInitialState(data: EnemyData): EnemyState {
   };
 }
 
-function updateBehaviourSnapshot<K extends BehaviourID>(
+function assignBehaviourSnapshot<K extends BehaviourID>(
   state: EnemyBehaviourSnapshot,
   id: K,
   value: EnemyBehaviourSnapshot[K],

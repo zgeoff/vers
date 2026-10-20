@@ -14,11 +14,6 @@ import { rejectNonHTMLAccept } from './server/reject-non-html-accept';
 import { removeTrailingSlash } from './server/remove-trailing-slash';
 import { withRequestTrace } from './server/with-request-trace';
 
-// resolved from this built file's own location (`dist/server/server.js`) rather than the
-// process's cwd, since the root `server.mjs` shim and the Docker runtime image invoke this bundle
-// from different working directories
-const CLIENT_ASSETS_DIRECTORY = fileURLToPath(new URL('../client', import.meta.url));
-
 // a static import, never a top-level `await import()`: rolldown can fold the otel chunk's shared
 // code into this entry, the chunk then imports this module back, and Node exits 13 on the unsettled
 // cycle. Registration also has to land before the Sentry init below, which keeps only the first.
@@ -45,14 +40,6 @@ const RATE_LIMIT_MAX_MULTIPLE = env.isProduction ? 1 : 10_000;
 const SENTRY_ORIGIN =
   env.VITE_SENTRY_DSN === undefined ? null : new URL(env.VITE_SENTRY_DSN).origin;
 
-const clientAssets = serveStatic({ dir: CLIENT_ASSETS_DIRECTORY });
-
-function serveClientAssets(request: Request, next: () => Promise<Response>): Promise<Response> {
-  // srvx's `clientAssets` permits a synchronous `Response`; wrapping normalizes its return to
-  // this file's own `Middleware` return type.
-  return Promise.resolve(clientAssets(request, next));
-}
-
 const serverEntry = {
   fetch: withMiddleware(
     [
@@ -74,3 +61,17 @@ const serverEntry = {
 };
 
 export default serverEntry;
+
+// resolved from this built file's own location (`dist/server/server.js`) rather than the
+// process's cwd, since the root `server.mjs` shim and the Docker runtime image invoke this bundle
+// from different working directories
+const CLIENT_ASSETS_DIRECTORY = fileURLToPath(new URL('../client', import.meta.url));
+
+// oxlint-disable-next-line zgeoff/no-abbreviated-names -- srvx names the option `dir`
+const clientAssets = serveStatic({ dir: CLIENT_ASSETS_DIRECTORY });
+
+function serveClientAssets(request: Request, next: () => Promise<Response>): Promise<Response> {
+  // srvx's `clientAssets` permits a synchronous `Response`; wrapping normalizes its return to
+  // this file's own `Middleware` return type.
+  return Promise.resolve(clientAssets(request, next));
+}

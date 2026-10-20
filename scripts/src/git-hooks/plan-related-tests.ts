@@ -1,9 +1,6 @@
 import path from 'node:path';
 import type { RelatedTestRun } from './types';
 
-const TEST_SUFFIX = /\.test\.tsx?$/u;
-const SOURCE_SUFFIX = /\.tsx?$/u;
-
 export function planRelatedTests(
   changedPaths: ReadonlyArray<string>,
   isFile: (repoPath: string) => boolean,
@@ -17,7 +14,7 @@ export function planRelatedTests(
       continue;
     }
 
-    const packageDir = findPackageDir(testPath, isFile);
+    const packageDir = getPackageDirectory(testPath, isFile);
     const tests = testsByPackage.get(packageDir) ?? new Set<string>();
 
     tests.add(`./${path.posix.relative(packageDir, testPath)}`);
@@ -29,6 +26,9 @@ export function planRelatedTests(
     testPaths: [...tests],
   }));
 }
+
+const TEST_SUFFIX = /\.test\.tsx?$/u;
+const SOURCE_SUFFIX = /\.tsx?$/u;
 
 function findRelatedTest(
   changedPath: string,
@@ -47,12 +47,12 @@ function findRelatedTest(
   return [`${stem}.test.ts`, `${stem}.test.tsx`].find((candidate) => isFile(candidate));
 }
 
-function findPackageDir(repoPath: string, isFile: (repoPath: string) => boolean): string {
-  let dir = path.posix.dirname(repoPath);
+function getPackageDirectory(repoPath: string, isFile: (repoPath: string) => boolean): string {
+  let directory = path.posix.dirname(repoPath);
 
-  while (dir !== '.' && !isFile(`${dir}/package.json`)) {
-    dir = path.posix.dirname(dir);
+  while (directory !== '.' && !isFile(`${directory}/package.json`)) {
+    directory = path.posix.dirname(directory);
   }
 
-  return dir;
+  return directory;
 }

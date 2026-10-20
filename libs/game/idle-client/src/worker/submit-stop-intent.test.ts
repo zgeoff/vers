@@ -19,7 +19,7 @@ test('it delivers the targeted stop and leaves no intent held', async () => {
 
   await submitStopIntent(context, row);
 
-  const stopped = db.activityCollection.findFirst((q) => q.where({ id: row.id }));
+  const stopped = db.activityCollection.findFirst((query) => query.where({ id: row.id }));
 
   invariant(stopped !== undefined, 'expected the targeted row to survive');
 

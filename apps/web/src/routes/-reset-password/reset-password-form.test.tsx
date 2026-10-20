@@ -6,10 +6,6 @@ import { renderWithRouter } from '../../test-utils/render-with-router';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { ResetPasswordForm } from './reset-password-form';
 
-function rejectWithResponse(): Promise<Response> {
-  return Promise.resolve(new Response(null, { status: 400 }));
-}
-
 test('it renders the hidden email and reset-token fields', async () => {
   await withRequestContext({}, async () => {
     renderWithRouter(
@@ -81,7 +77,7 @@ test('it shows a generic failure message when the server rejects the submission'
   await withRequestContext({}, async () => {
     renderWithRouter(
       <ResetPasswordForm
-        action={rejectWithResponse}
+        action={() => Promise.resolve(new Response(null, { status: 400 }))}
         email="reset-form-honeypot@vers.test"
         honeypotValidFrom="1700000000000"
         resetToken="tok"

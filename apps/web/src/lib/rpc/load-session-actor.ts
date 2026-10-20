@@ -1,22 +1,11 @@
 import { isDefinedError, safe } from '@orpc/client';
 import { getRequest } from '@tanstack/react-start/server';
-import { getAuthSession } from '../auth/get-auth-session';
+import { readAuthSession } from '../auth/read-auth-session';
 import { removeAuthSession } from '../auth/remove-auth-session';
 import { updateAuthSession } from '../auth/update-auth-session';
 import { sessionExistenceClient } from './clients/session-existence-client';
 import { sessionRefreshClient } from './clients/session-refresh-client';
 import { verifyAccessToken } from './verify-access-token';
-
-interface RefreshedTokens {
-  readonly accessToken: string;
-  readonly refreshToken: string;
-}
-
-type RefreshFailure = 'expired' | 'superseded';
-
-// concurrent calls for one session share a single refresh: racing the refresh call trips the
-// service's refresh-token reuse detection, which revokes the session
-const inFlightRefreshes = new Map<string, Promise<RefreshFailure | RefreshedTokens>>();
 
 export type SessionActorOutcome =
   | { readonly kind: 'actor'; readonly sessionID: string; readonly userID: string }
@@ -24,7 +13,7 @@ export type SessionActorOutcome =
   | { readonly kind: 'superseded' };
 
 export async function loadSessionActor(): Promise<SessionActorOutcome> {
-  const session = await getAuthSession();
+  const session = await readAuthSession();
 
   if (
     session.userID === undefined ||
@@ -104,6 +93,17 @@ async function readSessionStillExists(sessionID: string, userID: string): Promis
 
   return row !== null && row.userID === userID;
 }
+
+interface RefreshedTokens {
+  readonly accessToken: string;
+  readonly refreshToken: string;
+}
+
+type RefreshFailure = 'expired' | 'superseded';
+
+// concurrent calls for one session share a single refresh: racing the refresh call trips the
+// service's refresh-token reuse detection, which revokes the session
+const inFlightRefreshes = new Map<string, Promise<RefreshFailure | RefreshedTokens>>();
 
 async function resolveRefreshedTokens(
   sessionID: string,

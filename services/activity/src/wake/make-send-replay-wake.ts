@@ -3,7 +3,7 @@ import { RPCLink } from '@orpc/client/fetch';
 import type { ContractRouterClient } from '@orpc/contract';
 import type { replayContract } from '@vers/contract-replay';
 import { createServiceToken, parseServicePrivateKey } from '@vers/service-auth';
-import { buildTracingInterceptor } from '@vers/service-utils/orpc';
+import { makeTracingInterceptor } from '@vers/service-utils/orpc';
 import invariant from 'tiny-invariant';
 import { makeReplayWaker } from './make-replay-waker';
 
@@ -23,7 +23,7 @@ export function makeSendReplayWake(options: MakeSendReplayWakeOptions = {}): () 
   let clientPromise: Promise<ContractRouterClient<typeof replayContract>> | undefined;
 
   const sendWakeRequest = async (signal: AbortSignal): Promise<unknown> => {
-    clientPromise ??= buildReplayClient();
+    clientPromise ??= createReplayClient();
 
     // A build failure clears the cache so the next wake retries it fresh; a wake-call failure below
     // leaves an already-resolved handle untouched, since only this await sits inside the catch.
@@ -48,12 +48,12 @@ export function makeSendReplayWake(options: MakeSendReplayWakeOptions = {}): () 
   }).sendReplayWake;
 }
 
-async function buildReplayClient(): Promise<ContractRouterClient<typeof replayContract>> {
+async function createReplayClient(): Promise<ContractRouterClient<typeof replayContract>> {
   const privateKey = await parseServicePrivateKey(readRequiredEnv('SERVICE_AUTH_PRIVATE_KEY'));
 
   return createORPCClient(
     new RPCLink({
-      clientInterceptors: [buildTracingInterceptor()],
+      clientInterceptors: [makeTracingInterceptor()],
       headers: async () => ({
         authorization: `Bearer ${await createServiceToken({ audience: 'replay', issuer: 'service-activity', privateKey })}`,
       }),

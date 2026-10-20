@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { createContentVersion, findContentDocument } from '@vers/content-registry';
+import { createContentVersion, readContentDocument } from '@vers/content-registry';
 import type { ActivityContract } from '@vers/contract-activity';
 import { createMockContentDocument } from '@vers/contract-activity/test-utils';
 import { createAvatarRow, createTestDB, createViewer } from '@vers/service-test-utils/bun';
@@ -69,7 +69,7 @@ test('it stamps a content version whose document the registry can load', async (
 
   invariant(node !== undefined, 'a reveal of one node returns one entry');
 
-  expect(findContentDocument(db.db, node.contentVersion)).resolves.toBeDefined();
+  expect(readContentDocument(db.db, node.contentVersion)).resolves.toBeDefined();
 });
 
 test('it uses an injected key version when given', async () => {

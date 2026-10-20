@@ -240,7 +240,8 @@ test('it selects across every registered pool over a spread of coordinates', () 
   const poolIDs = new Set(
     Array.from(
       { length: 50 },
-      (_, i) => deriveWorldmapContent(content, { coord: [i, -i], scopeSecret, userSeed: 0 }).poolID,
+      (_, index) =>
+        deriveWorldmapContent(content, { coord: [index, -index], scopeSecret, userSeed: 0 }).poolID,
     ),
   );
 

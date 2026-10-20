@@ -71,13 +71,11 @@ export function StatusButton(props: Readonly<Props>) {
 
   // keep track of our last non-idle status so we can make sure we're always
   // displaying an icon even when we return to idle
-  useEffect(() => {
-    if (restProps.status !== StatusButtonStatus.Idle) {
-      setLastNonIdleStatus(restProps.status);
-    }
-  }, [restProps.status]);
+  if (restProps.status !== StatusButtonStatus.Idle && restProps.status !== lastNonIdleStatus) {
+    setLastNonIdleStatus(restProps.status);
+  }
 
-  const statusIcon = getStatusIcon(lastNonIdleStatus);
+  const statusIcon = findStatusIcon(lastNonIdleStatus);
   const isError = lastNonIdleStatus === StatusButtonStatus.Error;
 
   return (
@@ -98,7 +96,7 @@ export function StatusButton(props: Readonly<Props>) {
 
 StatusButton.Status = StatusButtonStatus;
 
-function getStatusIcon(status: StatusButtonStatus) {
+function findStatusIcon(status: StatusButtonStatus) {
   if (status === StatusButtonStatus.Pending) {
     return <Spinner size="sm" />;
   }

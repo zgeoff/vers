@@ -17,9 +17,10 @@ import type { CryptoKey } from 'jose';
 import { sql } from 'kysely';
 import type { Kysely, Selectable } from 'kysely';
 import invariant from 'tiny-invariant';
+import { match } from 'ts-pattern';
 import { findCheckpointBatchInvalidReason } from '../find-checkpoint-batch-invalid-reason';
-import { getOptimisticBuild } from '../get-optimistic-build';
 import { isUniqueViolation } from '../is-unique-violation';
+import { loadOptimisticBuild } from '../load-optimistic-build';
 import { recordAdvanceBailout } from '../metrics/record-advance-bailout';
 import { recordAdvanceContinuation } from '../metrics/record-advance-continuation';
 import { recordRefusal } from '../metrics/record-refusal';
@@ -80,6 +81,52 @@ interface AdvanceActivityOpts {
     readonly activityStart?: OfflineActivityStartSubmission | undefined;
   };
 }
+
+interface PinnedActivityContext {
+  readonly avatarId: string;
+  readonly contentVersion: string;
+  readonly encounterNode: Readonly<EncounterNode>;
+  readonly keyVersion: number;
+  readonly scopeId: string;
+  readonly scopeType: string;
+  readonly secretRef: string;
+  readonly secretVersion: number;
+  readonly simVersion: string;
+}
+
+interface MintedContinuation {
+  readonly mintOutcome: 'converged' | 'minted';
+  readonly row: Selectable<Activities>;
+}
+
+type BailOutcome =
+  | { readonly activityID: string; readonly appendedHead: number; readonly kind: 'capped' }
+  | {
+      readonly activityID: string;
+      readonly appendedHead: number;
+      readonly kind: 'chain-quarantined';
+    }
+  | {
+      readonly activityID: string;
+      readonly appendedHead: number;
+      readonly avatarID: string;
+      readonly kind: 'checkpoint-invalid';
+      readonly reason: AdvanceCheckpointInvalidReason;
+    }
+  | {
+      readonly activityID: string;
+      readonly appendedHead: number;
+      readonly avatarID: string;
+      readonly kind: 'conflict';
+      readonly reason: ConflictReason;
+    }
+  | { readonly activityID: string; readonly appendedHead: number; readonly kind: 'session-evicted' }
+  | {
+      readonly activityID: string;
+      readonly appendedHead: number;
+      readonly kind: 'terminal';
+      readonly status: ActivityStatus;
+    };
 
 export async function advanceActivity(
   deps: AdvanceActivityDeps,
@@ -295,52 +342,6 @@ async function resolveActivityStartAdmissionCollision(
   return { kind: 'converged', row: existing };
 }
 
-interface PinnedActivityContext {
-  readonly avatarId: string;
-  readonly contentVersion: string;
-  readonly encounterNode: Readonly<EncounterNode>;
-  readonly keyVersion: number;
-  readonly scopeId: string;
-  readonly scopeType: string;
-  readonly secretRef: string;
-  readonly secretVersion: number;
-  readonly simVersion: string;
-}
-
-interface MintedContinuation {
-  readonly mintOutcome: 'converged' | 'minted';
-  readonly row: Selectable<Activities>;
-}
-
-type BailOutcome =
-  | { readonly activityID: string; readonly appendedHead: number; readonly kind: 'capped' }
-  | {
-      readonly activityID: string;
-      readonly appendedHead: number;
-      readonly kind: 'chain-quarantined';
-    }
-  | {
-      readonly activityID: string;
-      readonly appendedHead: number;
-      readonly avatarID: string;
-      readonly kind: 'checkpoint-invalid';
-      readonly reason: AdvanceCheckpointInvalidReason;
-    }
-  | {
-      readonly activityID: string;
-      readonly appendedHead: number;
-      readonly avatarID: string;
-      readonly kind: 'conflict';
-      readonly reason: ConflictReason;
-    }
-  | { readonly activityID: string; readonly appendedHead: number; readonly kind: 'session-evicted' }
-  | {
-      readonly activityID: string;
-      readonly appendedHead: number;
-      readonly kind: 'terminal';
-      readonly status: ActivityStatus;
-    };
-
 // a throw is the only way to roll a continuation back: Kysely's transaction().execute() commits on
 // any normal return, whatever the value
 class ContinuationBailError extends Error {
@@ -379,63 +380,52 @@ function buildBailError(
   errors: AdvanceActivityOpts['errors'],
   outcome: Readonly<BailOutcome>,
 ): Error {
-  switch (outcome.kind) {
-    case 'chain-quarantined': {
-      return errors.CHAIN_QUARANTINED({
-        data: { activityID: outcome.activityID, appendedHead: outcome.appendedHead },
-      });
-    }
-
-    case 'capped': {
-      return errors.ACTIVITY_CAPPED({
-        data: { activityID: outcome.activityID, appendedHead: outcome.appendedHead },
-      });
-    }
-
-    case 'checkpoint-invalid': {
-      return errors.CHECKPOINT_INVALID({
+  return match(outcome)
+    .with({ kind: 'chain-quarantined' }, (quarantined) =>
+      errors.CHAIN_QUARANTINED({
+        data: { activityID: quarantined.activityID, appendedHead: quarantined.appendedHead },
+      }),
+    )
+    .with({ kind: 'capped' }, (capped) =>
+      errors.ACTIVITY_CAPPED({
+        data: { activityID: capped.activityID, appendedHead: capped.appendedHead },
+      }),
+    )
+    .with({ kind: 'checkpoint-invalid' }, (invalid) =>
+      errors.CHECKPOINT_INVALID({
         data: {
-          activityID: outcome.activityID,
-          appendedHead: outcome.appendedHead,
-          avatarID: outcome.avatarID,
-          reason: outcome.reason,
+          activityID: invalid.activityID,
+          appendedHead: invalid.appendedHead,
+          avatarID: invalid.avatarID,
+          reason: invalid.reason,
         },
-      });
-    }
-
-    case 'conflict': {
-      return errors.CONFLICT({
+      }),
+    )
+    .with({ kind: 'conflict' }, (conflict) =>
+      errors.CONFLICT({
         data: {
-          activityID: outcome.activityID,
-          appendedHead: outcome.appendedHead,
-          avatarID: outcome.avatarID,
-          reason: outcome.reason,
+          activityID: conflict.activityID,
+          appendedHead: conflict.appendedHead,
+          avatarID: conflict.avatarID,
+          reason: conflict.reason,
         },
-      });
-    }
-
-    case 'session-evicted': {
-      return errors.SESSION_EVICTED({
-        data: { activityID: outcome.activityID, appendedHead: outcome.appendedHead },
-      });
-    }
-
-    case 'terminal': {
-      return errors.ACTIVITY_TERMINAL({
+      }),
+    )
+    .with({ kind: 'session-evicted' }, (evicted) =>
+      errors.SESSION_EVICTED({
+        data: { activityID: evicted.activityID, appendedHead: evicted.appendedHead },
+      }),
+    )
+    .with({ kind: 'terminal' }, (terminal) =>
+      errors.ACTIVITY_TERMINAL({
         data: {
-          activityID: outcome.activityID,
-          appendedHead: outcome.appendedHead,
-          status: outcome.status,
+          activityID: terminal.activityID,
+          appendedHead: terminal.appendedHead,
+          status: terminal.status,
         },
-      });
-    }
-
-    // every BailOutcome kind is handled above; a raw throw here (rather than `invariant`) is what
-    // satisfies the linter's return-consistency check across an exhaustive switch
-    default: {
-      throw new Error(`unreachable BailOutcome kind: ${JSON.stringify(outcome)}`);
-    }
-  }
+      }),
+    )
+    .exhaustive();
 }
 
 interface RunContinuationInput {
@@ -697,55 +687,6 @@ async function runContinuation(
   return outcome.minted;
 }
 
-async function resolveLostRace(
-  trx: Kysely<DB>,
-  pinned: Readonly<PinnedActivityContext>,
-  input: Readonly<RunContinuationInput>,
-): Promise<MintedContinuation> {
-  const current = await trx
-    .selectFrom('activities')
-    .select(['appendedHead', 'lastHash', 'status', 'writerSessionId'])
-    .where('id', '=', input.targetActivityID)
-    .executeTakeFirst();
-
-  invariant(current !== undefined, 'a continuation target row must exist once minted');
-
-  const raceOutcome = pickCheckpointBatchRaceOutcome(
-    input.actingSessionID,
-    current,
-    input.continuation.checkpoints,
-  );
-
-  if (raceOutcome.kind === 'resubmit-settled') {
-    return mintContinuation(trx, input, pinned);
-  }
-
-  if (raceOutcome.kind === 'session-evicted') {
-    throw new ContinuationBailError({
-      activityID: input.targetActivityID,
-      appendedHead: current.appendedHead,
-      kind: 'session-evicted',
-    });
-  }
-
-  if (raceOutcome.kind === 'terminal') {
-    throw new ContinuationBailError({
-      activityID: input.targetActivityID,
-      appendedHead: raceOutcome.appendedHead,
-      kind: 'terminal',
-      status: raceOutcome.status,
-    });
-  }
-
-  throw new ContinuationBailError({
-    activityID: input.targetActivityID,
-    appendedHead: current.appendedHead,
-    avatarID: pinned.avatarId,
-    kind: 'conflict',
-    reason: 'stale-head',
-  });
-}
-
 async function mintContinuation(
   trx: Kysely<DB>,
   input: Readonly<RunContinuationInput>,
@@ -778,7 +719,7 @@ async function mintContinuation(
 
   const seed = chain.appendedNextSeed;
 
-  const optimistic = await getOptimisticBuild(trx, pinned.avatarId);
+  const optimistic = await loadOptimisticBuild(trx, pinned.avatarId);
 
   const buildSnapshot: BuildSnapshot = {
     level: buildLevelFromXP(optimistic.totalXP),
@@ -834,6 +775,55 @@ async function mintContinuation(
     .executeTakeFirstOrThrow();
 
   return { mintOutcome: 'minted', row };
+}
+
+async function resolveLostRace(
+  trx: Kysely<DB>,
+  pinned: Readonly<PinnedActivityContext>,
+  input: Readonly<RunContinuationInput>,
+): Promise<MintedContinuation> {
+  const current = await trx
+    .selectFrom('activities')
+    .select(['appendedHead', 'lastHash', 'status', 'writerSessionId'])
+    .where('id', '=', input.targetActivityID)
+    .executeTakeFirst();
+
+  invariant(current !== undefined, 'a continuation target row must exist once minted');
+
+  const raceOutcome = pickCheckpointBatchRaceOutcome(
+    input.actingSessionID,
+    current,
+    input.continuation.checkpoints,
+  );
+
+  if (raceOutcome.kind === 'resubmit-settled') {
+    return mintContinuation(trx, input, pinned);
+  }
+
+  if (raceOutcome.kind === 'session-evicted') {
+    throw new ContinuationBailError({
+      activityID: input.targetActivityID,
+      appendedHead: current.appendedHead,
+      kind: 'session-evicted',
+    });
+  }
+
+  if (raceOutcome.kind === 'terminal') {
+    throw new ContinuationBailError({
+      activityID: input.targetActivityID,
+      appendedHead: raceOutcome.appendedHead,
+      kind: 'terminal',
+      status: raceOutcome.status,
+    });
+  }
+
+  throw new ContinuationBailError({
+    activityID: input.targetActivityID,
+    appendedHead: current.appendedHead,
+    avatarID: pinned.avatarId,
+    kind: 'conflict',
+    reason: 'stale-head',
+  });
 }
 
 async function resolveMintIDCollision(

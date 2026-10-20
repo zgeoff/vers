@@ -34,8 +34,8 @@ test('it starts a change-email verification and redirects to verify-otp for a ca
     options: { href: '/verify-otp?target=new%40vers.test&type=change-email' },
   });
 
-  const verification = db.verificationCollection.findFirst((q) =>
-    q.where({ target: 'new@vers.test' }),
+  const verification = db.verificationCollection.findFirst((query) =>
+    query.where({ target: 'new@vers.test' }),
   );
 
   expect(verification).toMatchObject({ type: 'change-email' });
@@ -43,8 +43,8 @@ test('it starts a change-email verification and redirects to verify-otp for a ca
   invariant(verification, 'expected a persisted verification row');
   invariant(verification.expiresAt, 'expected an emailed verification to carry an expiry');
 
-  const verificationEmail = db.sentEmailCollection.findFirst((q) =>
-    q.where({ payload: { to: 'new@vers.test' }, template: 'send-change-email-verification' }),
+  const verificationEmail = db.sentEmailCollection.findFirst((query) =>
+    query.where({ payload: { to: 'new@vers.test' }, template: 'send-change-email-verification' }),
   );
 
   expect(verificationEmail?.payload).toStrictEqual({

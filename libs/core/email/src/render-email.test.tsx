@@ -1,17 +1,13 @@
 import { expect, test } from 'bun:test';
 import { renderEmail } from './render-email';
 
-function TestEmail() {
-  return (
-    <div>
-      <h1>Test Email</h1>
-    </div>
-  );
-}
-
 test('it renders both HTML and plain text versions of the email', () => {
   const email = renderEmail({
-    component: <TestEmail />,
+    component: (
+      <div>
+        <h1>Test Email</h1>
+      </div>
+    ),
   });
 
   expect(email.html).toStartWith('<!DOCTYPE html');

@@ -13,27 +13,27 @@ export function setSimulationSnapshot(snapshot: SimulationSnapshot, liveRun?: Li
       combat: snapshot.combat ?? null,
       failureAction: snapshot.failureAction,
       liveRun: liveRun ?? null,
-      ...(needsRewardSlotLedgerReset(state.rewardSlotLedgerActivityID, activityID)
+      ...(shouldResetRewardSlotLedger(state.rewardSlotLedgerActivityID, activityID)
         ? { rewardSlotLedger: [], rewardSlotLedgerActivityID: activityID }
         : {}),
-      ...(needsRunOutcomeReset(state.runOutcome?.activityID ?? null, activityID)
+      ...(shouldResetRunOutcome(state.runOutcome?.activityID ?? null, activityID)
         ? { runOutcome: null }
         : {}),
     };
   });
 }
 
-// the outcome outlives the ended run's own frames and an activity-less snapshot, and clears only
-// once a different run goes live
-function needsRunOutcomeReset(outcomeActivityID: string | null, nextActivityID: string | null) {
-  return (
-    outcomeActivityID !== null && nextActivityID !== null && outcomeActivityID !== nextActivityID
-  );
-}
-
-function needsRewardSlotLedgerReset(
+function shouldResetRewardSlotLedger(
   ledgerActivityID: string | null,
   nextActivityID: string | null,
 ): boolean {
   return ledgerActivityID !== nextActivityID;
+}
+
+// the outcome outlives the ended run's own frames and an activity-less snapshot, and clears only
+// once a different run goes live
+function shouldResetRunOutcome(outcomeActivityID: string | null, nextActivityID: string | null) {
+  return (
+    outcomeActivityID !== null && nextActivityID !== null && outcomeActivityID !== nextActivityID
+  );
 }

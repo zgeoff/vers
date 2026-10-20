@@ -20,9 +20,16 @@ import { useFogViewport } from '../state/use-fog-viewport';
 import { useUserSeed } from '../state/use-user-seed';
 import { sceneTSL } from './scene-tsl';
 
-const BIOME_TEXELS_PER_CELL = 4;
 const BIOME_CHUNK_CACHE_CAPACITY = 256;
 const BIOME_GROUND_ELEVATION = -0.05;
+
+interface BiomeChunkEntry {
+  readonly chunkX: number;
+  readonly chunkY: number;
+  readonly geometry: BufferGeometry;
+  readonly material: MeshBasicNodeMaterial;
+  readonly texture: DataTexture;
+}
 
 export function BiomeGround() {
   const userSeed = useUserSeed();
@@ -53,13 +60,7 @@ export function BiomeGround() {
   );
 }
 
-interface BiomeChunkEntry {
-  readonly chunkX: number;
-  readonly chunkY: number;
-  readonly geometry: BufferGeometry;
-  readonly material: MeshBasicNodeMaterial;
-  readonly texture: DataTexture;
-}
+const BIOME_TEXELS_PER_CELL = 4;
 
 function buildBiomeChunkEntry(userSeed: number, chunkX: number, chunkY: number): BiomeChunkEntry {
   const box: Viewport = {
@@ -85,10 +86,50 @@ function buildBiomeChunkEntry(userSeed: number, chunkX: number, chunkY: number):
   };
 }
 
-function disposeBiomeChunkEntry(entry: Readonly<BiomeChunkEntry>): void {
-  entry.geometry.dispose();
-  entry.material.dispose();
-  entry.texture.dispose();
+function buildGroundTexture(field: Readonly<BiomeField>): DataTexture {
+  const bytes = new Uint8Array(field.cols * field.rows * 4);
+
+  fillGroundBytes(bytes, field);
+
+  const map = new DataTexture(bytes, field.cols, field.rows, RGBAFormat, UnsignedByteType);
+
+  map.magFilter = LinearFilter;
+  map.minFilter = LinearFilter;
+  map.needsUpdate = true;
+
+  return map;
+}
+
+const MODIFIER_OVERLAY_ALPHA = 0.35;
+
+const MODIFIER_TINT = new Color(sceneColors.modifierOverlay);
+
+function fillGroundBytes(bytes: Uint8Array, field: Readonly<BiomeField>): void {
+  const count = field.cols * field.rows;
+
+  for (let index = 0; index < count; index++) {
+    const base = getBaseTint(field.baseIDs[index] ?? 0);
+    const neighbour = getBaseTint(field.neighbourBaseIDs[index] ?? 0);
+    const mixT = 0.5 * (field.blendTs[index] ?? 0);
+    // The base tint blends toward the border neighbour's tint by half `blendT`.
+    let red = base.r + (neighbour.r - base.r) * mixT;
+    let green = base.g + (neighbour.g - base.g) * mixT;
+    let blue = base.b + (neighbour.b - base.b) * mixT;
+
+    if ((field.modifierIDs[index] ?? 0) !== 0) {
+      // The modifier tint overlays at `MODIFIER_OVERLAY_ALPHA` where the modifier layer drew non-`none`.
+      red += (MODIFIER_TINT.r - red) * MODIFIER_OVERLAY_ALPHA;
+      green += (MODIFIER_TINT.g - green) * MODIFIER_OVERLAY_ALPHA;
+      blue += (MODIFIER_TINT.b - blue) * MODIFIER_OVERLAY_ALPHA;
+    }
+
+    const offset = index * 4;
+
+    bytes[offset] = Math.round(red * 255);
+    bytes[offset + 1] = Math.round(green * 255);
+    bytes[offset + 2] = Math.round(blue * 255);
+    bytes[offset + 3] = 255;
+  }
 }
 
 const BASE_TINT_HEXES: ReadonlyArray<string> = [
@@ -107,52 +148,6 @@ const BASE_TINTS: ReadonlyMap<number, Color> = new Map(
     return [entry.id, new Color(hex)];
   }),
 );
-
-const MODIFIER_TINT = new Color(sceneColors.modifierOverlay);
-
-const MODIFIER_OVERLAY_ALPHA = 0.35;
-
-function buildGroundTexture(field: Readonly<BiomeField>): DataTexture {
-  const bytes = new Uint8Array(field.cols * field.rows * 4);
-
-  updateGroundBytes(bytes, field);
-
-  const map = new DataTexture(bytes, field.cols, field.rows, RGBAFormat, UnsignedByteType);
-
-  map.magFilter = LinearFilter;
-  map.minFilter = LinearFilter;
-  map.needsUpdate = true;
-
-  return map;
-}
-
-function updateGroundBytes(bytes: Uint8Array, field: Readonly<BiomeField>): void {
-  const count = field.cols * field.rows;
-
-  for (let index = 0; index < count; index++) {
-    const base = getBaseTint(field.baseIDs[index] ?? 0);
-    const neighbour = getBaseTint(field.neighbourBaseIDs[index] ?? 0);
-    const mixT = 0.5 * (field.blendTs[index] ?? 0);
-    // The base tint blends toward the border neighbour's tint by half `blendT`.
-    let r = base.r + (neighbour.r - base.r) * mixT;
-    let g = base.g + (neighbour.g - base.g) * mixT;
-    let b = base.b + (neighbour.b - base.b) * mixT;
-
-    if ((field.modifierIDs[index] ?? 0) !== 0) {
-      // The modifier tint overlays at `MODIFIER_OVERLAY_ALPHA` where the modifier layer drew non-`none`.
-      r += (MODIFIER_TINT.r - r) * MODIFIER_OVERLAY_ALPHA;
-      g += (MODIFIER_TINT.g - g) * MODIFIER_OVERLAY_ALPHA;
-      b += (MODIFIER_TINT.b - b) * MODIFIER_OVERLAY_ALPHA;
-    }
-
-    const offset = index * 4;
-
-    bytes[offset] = Math.round(r * 255);
-    bytes[offset + 1] = Math.round(g * 255);
-    bytes[offset + 2] = Math.round(b * 255);
-    bytes[offset + 3] = 255;
-  }
-}
 
 function getBaseTint(id: number): Color {
   const tint = BASE_TINTS.get(id);
@@ -186,4 +181,10 @@ function buildBiomeChunkGeometry(box: Readonly<Viewport>): BufferGeometry {
   geometry.computeBoundingSphere();
 
   return geometry;
+}
+
+function disposeBiomeChunkEntry(entry: Readonly<BiomeChunkEntry>): void {
+  entry.geometry.dispose();
+  entry.material.dispose();
+  entry.texture.dispose();
 }

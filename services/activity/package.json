@@ -33,6 +33,7 @@
     "jose": "catalog:",
     "kysely": "catalog:",
     "tiny-invariant": "catalog:",
+    "ts-pattern": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {

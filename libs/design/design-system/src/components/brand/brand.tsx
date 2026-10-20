@@ -1,10 +1,6 @@
 import type { RecipeVariantProps } from '@vers/styled-system/css';
 import { cva, cx } from '@vers/styled-system/css';
 
-type Props = RecipeVariantProps<typeof brand> & {
-  className?: string;
-};
-
 const brand = cva({
   base: {
     color: 'text.heading',
@@ -32,6 +28,10 @@ const brand = cva({
     },
   },
 });
+
+type Props = RecipeVariantProps<typeof brand> & {
+  className?: string;
+};
 
 export function Brand(props: Readonly<Props>) {
   return (

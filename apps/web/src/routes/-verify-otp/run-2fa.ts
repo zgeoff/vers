@@ -1,5 +1,5 @@
 import { redirect } from '@tanstack/react-router';
-import { getVerifySession } from '../../lib/auth/get-verify-session';
+import { readVerifySession } from '../../lib/auth/read-verify-session';
 import { runSessionSignIn } from '../../lib/auth/run-session-sign-in';
 import { updateVerifySession } from '../../lib/auth/update-verify-session';
 import { sessionClient } from '../../lib/rpc/clients/session-client';
@@ -7,7 +7,7 @@ import { userClient } from '../../lib/rpc/clients/user-client';
 import type { RunVerificationContext } from './types';
 
 export async function run2FA(ctx: Readonly<RunVerificationContext>): Promise<never> {
-  const verifySession = await getVerifySession();
+  const verifySession = await readVerifySession();
 
   const sessionID = verifySession['login2FA#sessionID'];
 

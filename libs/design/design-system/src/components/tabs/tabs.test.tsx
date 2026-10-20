@@ -3,13 +3,15 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Tabs } from './tabs';
 
-const ITEMS = [
-  { content: <p>first panel</p>, label: 'One', value: 'one' },
-  { content: <p>second panel</p>, label: 'Two', value: 'two' },
-];
-
 test('it shows the first tab by default', () => {
-  render(<Tabs items={ITEMS} />);
+  render(
+    <Tabs
+      items={[
+        { content: <p>first panel</p>, label: 'One', value: 'one' },
+        { content: <p>second panel</p>, label: 'Two', value: 'two' },
+      ]}
+    />,
+  );
 
   expect(screen.getByText('first panel')).toBeVisible();
 });
@@ -17,7 +19,14 @@ test('it shows the first tab by default', () => {
 test('it switches to the selected tab', async () => {
   const user = userEvent.setup();
 
-  render(<Tabs items={ITEMS} />);
+  render(
+    <Tabs
+      items={[
+        { content: <p>first panel</p>, label: 'One', value: 'one' },
+        { content: <p>second panel</p>, label: 'Two', value: 'two' },
+      ]}
+    />,
+  );
 
   await user.click(screen.getByRole('tab', { name: 'Two' }));
 
@@ -25,7 +34,15 @@ test('it switches to the selected tab', async () => {
 });
 
 test('it honors a default value', () => {
-  render(<Tabs defaultValue="two" items={ITEMS} />);
+  render(
+    <Tabs
+      defaultValue="two"
+      items={[
+        { content: <p>first panel</p>, label: 'One', value: 'one' },
+        { content: <p>second panel</p>, label: 'Two', value: 'two' },
+      ]}
+    />,
+  );
 
   expect(screen.getByText('second panel')).toBeVisible();
 });

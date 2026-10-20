@@ -1,3 +1,4 @@
+import { P, match } from 'ts-pattern';
 import { pickRetrievalKind } from './pick-retrieval-kind';
 import type {
   RetrievalCall,
@@ -6,18 +7,6 @@ import type {
   RetrievalPlan,
   RetrievalState,
 } from './types';
-
-// Consecutive content searches in the implement phase before a nudge.
-const SEARCH_THRESHOLD = 3;
-
-// Interleaved content searches and whole-file code reads in the implement phase before a nudge.
-// The run needs at least HUNT_MIN_SEARCHES searches in it: reads alone never fire, and one search
-// followed by reads is reading the results, not hunting for a definition.
-const HUNT_THRESHOLD = 5;
-const HUNT_MIN_SEARCHES = 2;
-
-// Consecutive Serena symbol lookups in the research phase, with no file read between, before a nudge.
-const LOOKUP_THRESHOLD = 3;
 
 // After a nudge, nothing is counted or fired for this long; a reminder on every call is residue.
 const COOLDOWN_MS = 120_000;
@@ -68,53 +57,49 @@ export function planRetrievalNudge(
 function advanceImplement(state: RetrievalState, kind: RetrievalKind): RetrievalState {
   const base = { ...state, lookupRun: 0 };
 
-  switch (kind) {
-    case 'search': {
-      return {
-        ...base,
-        searchRun: state.searchRun + 1,
-        huntRun: state.huntRun + 1,
-        huntSearches: state.huntSearches + 1,
-      };
-    }
-    case 'read-whole': {
-      return { ...base, searchRun: 0, huntRun: state.huntRun + 1 };
-    }
-    case 'symbol-lookup':
-    case 'edit': {
-      return { ...base, searchRun: 0, huntRun: 0, huntSearches: 0 };
-    }
-    case 'read-ranged':
-    case 'other': {
-      break;
-    }
-  }
-
   // A ranged read or any other call breaks a consecutive search run but leaves the hunt alone.
-  return { ...base, searchRun: 0 };
+  return match(kind)
+    .returnType<RetrievalState>()
+    .with('search', () => ({
+      ...base,
+      searchRun: state.searchRun + 1,
+      huntRun: state.huntRun + 1,
+      huntSearches: state.huntSearches + 1,
+    }))
+    .with('read-whole', () => ({ ...base, searchRun: 0, huntRun: state.huntRun + 1 }))
+    .with(P.union('symbol-lookup', 'edit'), () => ({
+      ...base,
+      searchRun: 0,
+      huntRun: 0,
+      huntSearches: 0,
+    }))
+    .with(P.union('read-ranged', 'other'), () => ({ ...base, searchRun: 0 }))
+    .exhaustive();
 }
 
 function advanceResearch(state: RetrievalState, kind: RetrievalKind): RetrievalState {
   const base = { ...state, searchRun: 0, huntRun: 0, huntSearches: 0 };
 
-  switch (kind) {
-    case 'symbol-lookup': {
-      return { ...base, lookupRun: state.lookupRun + 1 };
-    }
-    case 'read-whole':
-    case 'read-ranged':
-    case 'search':
-    case 'edit': {
-      return { ...base, lookupRun: 0 };
-    }
-    case 'other': {
-      break;
-    }
-  }
-
   // Glob, Bash, and the like neither extend nor break a lookup run.
-  return base;
+  return match(kind)
+    .returnType<RetrievalState>()
+    .with('symbol-lookup', () => ({ ...base, lookupRun: state.lookupRun + 1 }))
+    .with(P.union('read-whole', 'read-ranged', 'search', 'edit'), () => ({
+      ...base,
+      lookupRun: 0,
+    }))
+    .with('other', () => base)
+    .exhaustive();
 }
+
+// Consecutive content searches in the implement phase before a nudge.
+const SEARCH_THRESHOLD = 3;
+
+// Interleaved content searches and whole-file code reads in the implement phase before a nudge.
+// The run needs at least HUNT_MIN_SEARCHES searches in it: reads alone never fire, and one search
+// followed by reads is reading the results, not hunting for a definition.
+const HUNT_THRESHOLD = 5;
+const HUNT_MIN_SEARCHES = 2;
 
 function formatImplementNudge(state: RetrievalState): string | null {
   const hunting = state.huntRun >= HUNT_THRESHOLD && state.huntSearches >= HUNT_MIN_SEARCHES;
@@ -135,6 +120,9 @@ function formatImplementNudge(state: RetrievalState): string | null {
     'Whole-file reads stay fine when you need the surrounding intent.',
   ].join(' ');
 }
+
+// Consecutive Serena symbol lookups in the research phase, with no file read between, before a nudge.
+const LOOKUP_THRESHOLD = 3;
 
 function formatResearchNudge(state: RetrievalState): string | null {
   if (state.lookupRun < LOOKUP_THRESHOLD) {

@@ -12,7 +12,7 @@ interface BuildEmailRouterDeps {
   readonly logger: ServiceContext['logger'];
   readonly now?: () => number;
   readonly queue: JobQueue<EmailJobDefs>;
-  readonly wait?: (ms: number) => Promise<void>;
+  readonly wait?: (delayMs: number) => Promise<void>;
 }
 
 export function buildEmailRouter(deps: BuildEmailRouterDeps) {
@@ -20,19 +20,19 @@ export function buildEmailRouter(deps: BuildEmailRouterDeps) {
 
   return {
     sendChangeEmailNotification: os.sendChangeEmailNotification.handler(
-      buildSendHandler(deps, 'send-change-email-notification'),
+      makeSendHandler(deps, 'send-change-email-notification'),
     ),
     sendChangeEmailVerification: os.sendChangeEmailVerification.handler(
-      buildDeadlineSendHandler(deps, 'send-change-email-verification'),
+      makeDeadlineSendHandler(deps, 'send-change-email-verification'),
     ),
     sendExistingAccount: os.sendExistingAccount.handler(
-      buildSendHandler(deps, 'send-existing-account'),
+      makeSendHandler(deps, 'send-existing-account'),
     ),
     sendPasswordChanged: os.sendPasswordChanged.handler(
-      buildSendHandler(deps, 'send-password-changed'),
+      makeSendHandler(deps, 'send-password-changed'),
     ),
-    sendResetPassword: os.sendResetPassword.handler(buildSendHandler(deps, 'send-reset-password')),
-    sendWelcome: os.sendWelcome.handler(buildDeadlineSendHandler(deps, 'send-welcome')),
+    sendResetPassword: os.sendResetPassword.handler(makeSendHandler(deps, 'send-reset-password')),
+    sendWelcome: os.sendWelcome.handler(makeDeadlineSendHandler(deps, 'send-welcome')),
   };
 }
 
@@ -42,7 +42,7 @@ interface SendHandlerOpts<TName extends keyof EmailJobDefs> {
   readonly input: Readonly<z.infer<EmailJobDefs[TName]['schema']>>;
 }
 
-function buildSendHandler<TName extends keyof EmailJobDefs>(
+function makeSendHandler<TName extends keyof EmailJobDefs>(
   deps: BuildEmailRouterDeps,
   name: TName,
 ) {
@@ -65,7 +65,7 @@ function buildSendHandler<TName extends keyof EmailJobDefs>(
 
 type DeadlineJobName = 'send-change-email-verification' | 'send-welcome';
 
-function buildDeadlineSendHandler<TName extends DeadlineJobName>(
+function makeDeadlineSendHandler<TName extends DeadlineJobName>(
   deps: BuildEmailRouterDeps,
   name: TName,
 ) {
@@ -80,7 +80,7 @@ function buildDeadlineSendHandler<TName extends DeadlineJobName>(
         // and fail it while this one fails none.
         await runRetryDrains({
           drain: () => deps.queue.drain(name),
-          getState: () => deps.queue.getJobState(name, jobID),
+          readState: () => deps.queue.readJobState(name, jobID),
           now: deps.now ?? Date.now,
           usefulUntil: opts.input.usefulUntil,
           wait: deps.wait ?? Bun.sleep,

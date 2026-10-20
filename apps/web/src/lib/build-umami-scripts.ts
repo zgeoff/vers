@@ -16,6 +16,7 @@ export function buildUmamiScripts(websiteID: string | undefined): Array<UmamiScr
       'data-host-url': UMAMI_PATHS.hostURL,
       'data-website-id': websiteID,
       defer: true,
+      // oxlint-disable-next-line zgeoff/no-abbreviated-names -- the HTML script attribute is `src`
       src: UMAMI_PATHS.script,
     },
   ];

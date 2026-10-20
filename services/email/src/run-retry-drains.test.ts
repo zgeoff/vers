@@ -12,11 +12,11 @@ test("it stops draining once the job's state is completed", async () => {
 
       return Promise.resolve({ completed: 1, failed: 0 });
     },
-    getState: () => Promise.resolve('completed'),
+    readState: () => Promise.resolve('completed'),
     now: () => 0,
     usefulUntil: new Date(1_000_000),
-    wait: (ms) => {
-      recordedDelays.push(ms);
+    wait: (delayMs) => {
+      recordedDelays.push(delayMs);
 
       return Promise.resolve();
     },
@@ -36,11 +36,11 @@ test("it stops draining once the job's state is failed", async () => {
 
       return Promise.resolve({ completed: 0, failed: 0 });
     },
-    getState: () => Promise.resolve('failed'),
+    readState: () => Promise.resolve('failed'),
     now: () => 0,
     usefulUntil: new Date(1_000_000),
-    wait: (ms) => {
-      recordedDelays.push(ms);
+    wait: (delayMs) => {
+      recordedDelays.push(delayMs);
 
       return Promise.resolve();
     },
@@ -61,13 +61,13 @@ test('it stops draining once the effective deadline passes with the job still in
 
       return Promise.resolve({ completed: 0, failed: 1 });
     },
-    getState: () => Promise.resolve('retry'),
+    readState: () => Promise.resolve('retry'),
     now: () => elapsedMs,
     usefulUntil: new Date(14_000),
-    wait: (ms) => {
-      recordedDelays.push(ms);
+    wait: (delayMs) => {
+      recordedDelays.push(delayMs);
 
-      elapsedMs += ms;
+      elapsedMs += delayMs;
 
       return Promise.resolve();
     },
@@ -88,11 +88,11 @@ test("it keeps draining while the job's state stays retry", async () => {
 
       return Promise.resolve({ completed: 0, failed: 1 });
     },
-    getState: () => Promise.resolve(states.shift() ?? 'completed'),
+    readState: () => Promise.resolve(states.shift() ?? 'completed'),
     now: () => 0,
     usefulUntil: new Date(1_000_000),
-    wait: (ms) => {
-      recordedDelays.push(ms);
+    wait: (delayMs) => {
+      recordedDelays.push(delayMs);
 
       return Promise.resolve();
     },
@@ -113,13 +113,13 @@ test('it caps a far-future usefulUntil at the eight-minute maximum duration', as
 
       return Promise.resolve({ completed: 0, failed: 1 });
     },
-    getState: () => Promise.resolve('retry'),
+    readState: () => Promise.resolve('retry'),
     now: () => elapsedMs,
     usefulUntil: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
-    wait: (ms) => {
-      recordedDelays.push(ms);
+    wait: (delayMs) => {
+      recordedDelays.push(delayMs);
 
-      elapsedMs += ms;
+      elapsedMs += delayMs;
 
       return Promise.resolve();
     },

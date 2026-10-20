@@ -1,11 +1,5 @@
 import type { ServiceName } from '@vers/service-auth';
 
-export function resolveServiceURL(service: ServiceName): string {
-  return (
-    process.env[`${service.toUpperCase()}_SERVICE_URL`] ?? `http://localhost:${DEV_PORTS[service]}`
-  );
-}
-
 const DEV_PORTS: Readonly<Record<ServiceName, number>> = {
   activity: 3006,
   avatar: 3005,
@@ -16,3 +10,9 @@ const DEV_PORTS: Readonly<Record<ServiceName, number>> = {
   user: 3003,
   verification: 3004,
 };
+
+export function resolveServiceURL(service: ServiceName): string {
+  return (
+    process.env[`${service.toUpperCase()}_SERVICE_URL`] ?? `http://localhost:${DEV_PORTS[service]}`
+  );
+}

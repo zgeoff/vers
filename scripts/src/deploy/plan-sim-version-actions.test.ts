@@ -4,20 +4,16 @@ import { buildProviderAppName } from './build-provider-app-name';
 import { planSimVersionActions } from './plan-sim-version-actions';
 import type { FleetImage } from './types';
 
-const ENGINE_HASH = 'a1b2c3d4e5f6'.padEnd(64, '0');
-const PROVIDER_APP = 'vers-replay-a1b2c3d4e5f6';
-const REGION = 'syd';
-
-const fleetImage: FleetImage = {
-  digest: 'sha256:current',
-  repository: 'registry.fly.io/vers-service-replay',
-  tag: 'deployment-current',
-};
-
 test('it provisions everything for a fresh engine hash', () => {
+  const fleetImage: FleetImage = {
+    digest: 'sha256:current',
+    repository: 'registry.fly.io/vers-service-replay',
+    tag: 'deployment-current',
+  };
+
   const actions = planSimVersionActions({
     bunVersion: '1.4.2',
-    engineHash: ENGINE_HASH,
+    engineHash: 'a1b2c3d4e5f6'.padEnd(64, '0'),
     fleetImage,
     maxContentVersion: '2',
     providerAppExists: false,
@@ -25,27 +21,27 @@ test('it provisions everything for a fresh engine hash', () => {
     providerMachineID: null,
     providerMachineImageDigest: null,
     providerMachineRegion: null,
-    region: REGION,
+    region: 'syd',
     registryRow: undefined,
     retentionDays: 3,
   });
 
   expect(actions).toStrictEqual([
-    { app: PROVIDER_APP, kind: 'create-provider-app' },
-    { app: PROVIDER_APP, kind: 'allocate-flycast-ip' },
+    { app: 'vers-replay-a1b2c3d4e5f6', kind: 'create-provider-app' },
+    { app: 'vers-replay-a1b2c3d4e5f6', kind: 'allocate-flycast-ip' },
     {
-      app: PROVIDER_APP,
+      app: 'vers-replay-a1b2c3d4e5f6',
       image: `${fleetImage.repository}:${fleetImage.tag}`,
       kind: 'run-provider-machine',
-      region: REGION,
+      region: 'syd',
     },
     {
       input: {
         bunVersion: '1.4.2',
-        engineHash: ENGINE_HASH,
+        engineHash: 'a1b2c3d4e5f6'.padEnd(64, '0'),
         imageRef: `${fleetImage.repository}@${fleetImage.digest}`,
         maxContentVersion: '2',
-        providerURL: `http://${PROVIDER_APP}.flycast`,
+        providerURL: 'http://vers-replay-a1b2c3d4e5f6.flycast',
         retentionDays: 3,
       },
       kind: 'upsert-registry-row',
@@ -54,9 +50,15 @@ test('it provisions everything for a fresh engine hash', () => {
 });
 
 test('it carries the declared region on a fresh provision', () => {
+  const fleetImage: FleetImage = {
+    digest: 'sha256:current',
+    repository: 'registry.fly.io/vers-service-replay',
+    tag: 'deployment-current',
+  };
+
   const actions = planSimVersionActions({
     bunVersion: '1.4.2',
-    engineHash: ENGINE_HASH,
+    engineHash: 'a1b2c3d4e5f6'.padEnd(64, '0'),
     fleetImage,
     maxContentVersion: '2',
     providerAppExists: false,
@@ -64,28 +66,34 @@ test('it carries the declared region on a fresh provision', () => {
     providerMachineID: null,
     providerMachineImageDigest: null,
     providerMachineRegion: null,
-    region: REGION,
+    region: 'syd',
     registryRow: undefined,
     retentionDays: 3,
   });
 
   const runAction = actions.find((action) => action.kind === 'run-provider-machine');
 
-  expect(runAction?.kind === 'run-provider-machine' && runAction.region).toBe(REGION);
+  expect(runAction?.kind === 'run-provider-machine' && runAction.region).toBe('syd');
 });
 
 test('it takes no action when the registry row is current and the machine runs the fleet digest', () => {
+  const fleetImage: FleetImage = {
+    digest: 'sha256:current',
+    repository: 'registry.fly.io/vers-service-replay',
+    tag: 'deployment-current',
+  };
+
   const actions = planSimVersionActions({
     bunVersion: '1.4.2',
-    engineHash: ENGINE_HASH,
+    engineHash: 'a1b2c3d4e5f6'.padEnd(64, '0'),
     fleetImage,
     maxContentVersion: '2',
     providerAppExists: true,
     providerMachineExists: true,
     providerMachineID: 'machine-1',
     providerMachineImageDigest: fleetImage.digest,
-    providerMachineRegion: REGION,
-    region: REGION,
+    providerMachineRegion: 'syd',
+    region: 'syd',
     registryRow: createMockSimVersionRow({
       imageRef: `${fleetImage.repository}@${fleetImage.digest}`,
       maxContentVersion: '2',
@@ -97,9 +105,15 @@ test('it takes no action when the registry row is current and the machine runs t
 });
 
 test('it recreates the provider app and refreshes the row when the app is missing', () => {
+  const fleetImage: FleetImage = {
+    digest: 'sha256:current',
+    repository: 'registry.fly.io/vers-service-replay',
+    tag: 'deployment-current',
+  };
+
   const actions = planSimVersionActions({
     bunVersion: '1.4.2',
-    engineHash: ENGINE_HASH,
+    engineHash: 'a1b2c3d4e5f6'.padEnd(64, '0'),
     fleetImage,
     maxContentVersion: '2',
     providerAppExists: false,
@@ -107,7 +121,7 @@ test('it recreates the provider app and refreshes the row when the app is missin
     providerMachineID: null,
     providerMachineImageDigest: null,
     providerMachineRegion: null,
-    region: REGION,
+    region: 'syd',
     registryRow: createMockSimVersionRow({
       imageRef: `${fleetImage.repository}@${fleetImage.digest}`,
       maxContentVersion: '2',
@@ -116,21 +130,21 @@ test('it recreates the provider app and refreshes the row when the app is missin
   });
 
   expect(actions).toStrictEqual([
-    { app: PROVIDER_APP, kind: 'create-provider-app' },
-    { app: PROVIDER_APP, kind: 'allocate-flycast-ip' },
+    { app: 'vers-replay-a1b2c3d4e5f6', kind: 'create-provider-app' },
+    { app: 'vers-replay-a1b2c3d4e5f6', kind: 'allocate-flycast-ip' },
     {
-      app: PROVIDER_APP,
+      app: 'vers-replay-a1b2c3d4e5f6',
       image: `${fleetImage.repository}:${fleetImage.tag}`,
       kind: 'run-provider-machine',
-      region: REGION,
+      region: 'syd',
     },
     {
       input: {
         bunVersion: '1.4.2',
-        engineHash: ENGINE_HASH,
+        engineHash: 'a1b2c3d4e5f6'.padEnd(64, '0'),
         imageRef: `${fleetImage.repository}@${fleetImage.digest}`,
         maxContentVersion: '2',
-        providerURL: `http://${PROVIDER_APP}.flycast`,
+        providerURL: 'http://vers-replay-a1b2c3d4e5f6.flycast',
         retentionDays: 3,
       },
       kind: 'upsert-registry-row',
@@ -139,17 +153,23 @@ test('it recreates the provider app and refreshes the row when the app is missin
 });
 
 test('it only refreshes the registry row when the fleet digest has drifted from the stored one', () => {
+  const fleetImage: FleetImage = {
+    digest: 'sha256:current',
+    repository: 'registry.fly.io/vers-service-replay',
+    tag: 'deployment-current',
+  };
+
   const actions = planSimVersionActions({
     bunVersion: '1.4.2',
-    engineHash: ENGINE_HASH,
+    engineHash: 'a1b2c3d4e5f6'.padEnd(64, '0'),
     fleetImage,
     maxContentVersion: '2',
     providerAppExists: true,
     providerMachineExists: true,
     providerMachineID: 'machine-1',
     providerMachineImageDigest: fleetImage.digest,
-    providerMachineRegion: REGION,
-    region: REGION,
+    providerMachineRegion: 'syd',
+    region: 'syd',
     registryRow: createMockSimVersionRow({
       imageRef: `${fleetImage.repository}@sha256:stale`,
       maxContentVersion: '2',
@@ -161,10 +181,10 @@ test('it only refreshes the registry row when the fleet digest has drifted from 
     {
       input: {
         bunVersion: '1.4.2',
-        engineHash: ENGINE_HASH,
+        engineHash: 'a1b2c3d4e5f6'.padEnd(64, '0'),
         imageRef: `${fleetImage.repository}@${fleetImage.digest}`,
         maxContentVersion: '2',
-        providerURL: `http://${PROVIDER_APP}.flycast`,
+        providerURL: 'http://vers-replay-a1b2c3d4e5f6.flycast',
         retentionDays: 3,
       },
       kind: 'upsert-registry-row',
@@ -173,17 +193,23 @@ test('it only refreshes the registry row when the fleet digest has drifted from 
 });
 
 test('it only refreshes the registry row when the bundled max content version has drifted from the stored one', () => {
+  const fleetImage: FleetImage = {
+    digest: 'sha256:current',
+    repository: 'registry.fly.io/vers-service-replay',
+    tag: 'deployment-current',
+  };
+
   const actions = planSimVersionActions({
     bunVersion: '1.4.2',
-    engineHash: ENGINE_HASH,
+    engineHash: 'a1b2c3d4e5f6'.padEnd(64, '0'),
     fleetImage,
     maxContentVersion: '2',
     providerAppExists: true,
     providerMachineExists: true,
     providerMachineID: 'machine-1',
     providerMachineImageDigest: fleetImage.digest,
-    providerMachineRegion: REGION,
-    region: REGION,
+    providerMachineRegion: 'syd',
+    region: 'syd',
     registryRow: createMockSimVersionRow({
       imageRef: `${fleetImage.repository}@${fleetImage.digest}`,
       maxContentVersion: '1',
@@ -195,10 +221,10 @@ test('it only refreshes the registry row when the bundled max content version ha
     {
       input: {
         bunVersion: '1.4.2',
-        engineHash: ENGINE_HASH,
+        engineHash: 'a1b2c3d4e5f6'.padEnd(64, '0'),
         imageRef: `${fleetImage.repository}@${fleetImage.digest}`,
         maxContentVersion: '2',
-        providerURL: `http://${PROVIDER_APP}.flycast`,
+        providerURL: 'http://vers-replay-a1b2c3d4e5f6.flycast',
         retentionDays: 3,
       },
       kind: 'upsert-registry-row',
@@ -207,9 +233,15 @@ test('it only refreshes the registry row when the bundled max content version ha
 });
 
 test('it relaunches only the machine when the app survives but its machine is gone', () => {
+  const fleetImage: FleetImage = {
+    digest: 'sha256:current',
+    repository: 'registry.fly.io/vers-service-replay',
+    tag: 'deployment-current',
+  };
+
   const actions = planSimVersionActions({
     bunVersion: '1.4.2',
-    engineHash: ENGINE_HASH,
+    engineHash: 'a1b2c3d4e5f6'.padEnd(64, '0'),
     fleetImage,
     maxContentVersion: '2',
     providerAppExists: true,
@@ -217,7 +249,7 @@ test('it relaunches only the machine when the app survives but its machine is go
     providerMachineID: null,
     providerMachineImageDigest: null,
     providerMachineRegion: null,
-    region: REGION,
+    region: 'syd',
     registryRow: createMockSimVersionRow({
       imageRef: `${fleetImage.repository}@${fleetImage.digest}`,
       maxContentVersion: '2',
@@ -227,18 +259,18 @@ test('it relaunches only the machine when the app survives but its machine is go
 
   expect(actions).toStrictEqual([
     {
-      app: PROVIDER_APP,
+      app: 'vers-replay-a1b2c3d4e5f6',
       image: `${fleetImage.repository}:${fleetImage.tag}`,
       kind: 'run-provider-machine',
-      region: REGION,
+      region: 'syd',
     },
     {
       input: {
         bunVersion: '1.4.2',
-        engineHash: ENGINE_HASH,
+        engineHash: 'a1b2c3d4e5f6'.padEnd(64, '0'),
         imageRef: `${fleetImage.repository}@${fleetImage.digest}`,
         maxContentVersion: '2',
-        providerURL: `http://${PROVIDER_APP}.flycast`,
+        providerURL: 'http://vers-replay-a1b2c3d4e5f6.flycast',
         retentionDays: 3,
       },
       kind: 'upsert-registry-row',
@@ -247,17 +279,23 @@ test('it relaunches only the machine when the app survives but its machine is go
 });
 
 test('it replaces a running machine whose image digest has drifted from the fleet', () => {
+  const fleetImage: FleetImage = {
+    digest: 'sha256:current',
+    repository: 'registry.fly.io/vers-service-replay',
+    tag: 'deployment-current',
+  };
+
   const actions = planSimVersionActions({
     bunVersion: '1.4.2',
-    engineHash: ENGINE_HASH,
+    engineHash: 'a1b2c3d4e5f6'.padEnd(64, '0'),
     fleetImage,
     maxContentVersion: '2',
     providerAppExists: true,
     providerMachineExists: true,
     providerMachineID: 'machine-1',
     providerMachineImageDigest: 'sha256:stale',
-    providerMachineRegion: REGION,
-    region: REGION,
+    providerMachineRegion: 'syd',
+    region: 'syd',
     registryRow: createMockSimVersionRow({
       imageRef: `${fleetImage.repository}@${fleetImage.digest}`,
       maxContentVersion: '2',
@@ -267,19 +305,19 @@ test('it replaces a running machine whose image digest has drifted from the flee
 
   expect(actions).toStrictEqual([
     {
-      app: PROVIDER_APP,
+      app: 'vers-replay-a1b2c3d4e5f6',
       image: `${fleetImage.repository}:${fleetImage.tag}`,
       kind: 'replace-provider-machine',
       machineID: 'machine-1',
-      region: REGION,
+      region: 'syd',
     },
     {
       input: {
         bunVersion: '1.4.2',
-        engineHash: ENGINE_HASH,
+        engineHash: 'a1b2c3d4e5f6'.padEnd(64, '0'),
         imageRef: `${fleetImage.repository}@${fleetImage.digest}`,
         maxContentVersion: '2',
-        providerURL: `http://${PROVIDER_APP}.flycast`,
+        providerURL: 'http://vers-replay-a1b2c3d4e5f6.flycast',
         retentionDays: 3,
       },
       kind: 'upsert-registry-row',
@@ -288,9 +326,15 @@ test('it replaces a running machine whose image digest has drifted from the flee
 });
 
 test('it replaces a running machine sitting outside the declared region even when its image is current', () => {
+  const fleetImage: FleetImage = {
+    digest: 'sha256:current',
+    repository: 'registry.fly.io/vers-service-replay',
+    tag: 'deployment-current',
+  };
+
   const actions = planSimVersionActions({
     bunVersion: '1.4.2',
-    engineHash: ENGINE_HASH,
+    engineHash: 'a1b2c3d4e5f6'.padEnd(64, '0'),
     fleetImage,
     maxContentVersion: '2',
     providerAppExists: true,
@@ -298,7 +342,7 @@ test('it replaces a running machine sitting outside the declared region even whe
     providerMachineID: 'machine-1',
     providerMachineImageDigest: fleetImage.digest,
     providerMachineRegion: 'iad',
-    region: REGION,
+    region: 'syd',
     registryRow: createMockSimVersionRow({
       imageRef: `${fleetImage.repository}@${fleetImage.digest}`,
       maxContentVersion: '2',
@@ -308,19 +352,19 @@ test('it replaces a running machine sitting outside the declared region even whe
 
   expect(actions).toStrictEqual([
     {
-      app: PROVIDER_APP,
+      app: 'vers-replay-a1b2c3d4e5f6',
       image: `${fleetImage.repository}:${fleetImage.tag}`,
       kind: 'replace-provider-machine',
       machineID: 'machine-1',
-      region: REGION,
+      region: 'syd',
     },
     {
       input: {
         bunVersion: '1.4.2',
-        engineHash: ENGINE_HASH,
+        engineHash: 'a1b2c3d4e5f6'.padEnd(64, '0'),
         imageRef: `${fleetImage.repository}@${fleetImage.digest}`,
         maxContentVersion: '2',
-        providerURL: `http://${PROVIDER_APP}.flycast`,
+        providerURL: 'http://vers-replay-a1b2c3d4e5f6.flycast',
         retentionDays: 3,
       },
       kind: 'upsert-registry-row',
@@ -329,17 +373,23 @@ test('it replaces a running machine sitting outside the declared region even whe
 });
 
 test('it refreshes only the row when the app and machine exist but the row is missing', () => {
+  const fleetImage: FleetImage = {
+    digest: 'sha256:current',
+    repository: 'registry.fly.io/vers-service-replay',
+    tag: 'deployment-current',
+  };
+
   const actions = planSimVersionActions({
     bunVersion: '1.4.2',
-    engineHash: ENGINE_HASH,
+    engineHash: 'a1b2c3d4e5f6'.padEnd(64, '0'),
     fleetImage,
     maxContentVersion: '2',
     providerAppExists: true,
     providerMachineExists: true,
     providerMachineID: 'machine-1',
     providerMachineImageDigest: fleetImage.digest,
-    providerMachineRegion: REGION,
-    region: REGION,
+    providerMachineRegion: 'syd',
+    region: 'syd',
     registryRow: undefined,
     retentionDays: 3,
   });
@@ -348,10 +398,10 @@ test('it refreshes only the row when the app and machine exist but the row is mi
     {
       input: {
         bunVersion: '1.4.2',
-        engineHash: ENGINE_HASH,
+        engineHash: 'a1b2c3d4e5f6'.padEnd(64, '0'),
         imageRef: `${fleetImage.repository}@${fleetImage.digest}`,
         maxContentVersion: '2',
-        providerURL: `http://${PROVIDER_APP}.flycast`,
+        providerURL: 'http://vers-replay-a1b2c3d4e5f6.flycast',
         retentionDays: 3,
       },
       kind: 'upsert-registry-row',
@@ -360,9 +410,15 @@ test('it refreshes only the row when the app and machine exist but the row is mi
 });
 
 test('it launches the provider machine by tag, never by digest', () => {
+  const fleetImage: FleetImage = {
+    digest: 'sha256:current',
+    repository: 'registry.fly.io/vers-service-replay',
+    tag: 'deployment-current',
+  };
+
   const actions = planSimVersionActions({
     bunVersion: '1.4.2',
-    engineHash: ENGINE_HASH,
+    engineHash: 'a1b2c3d4e5f6'.padEnd(64, '0'),
     fleetImage,
     maxContentVersion: '2',
     providerAppExists: false,
@@ -370,7 +426,7 @@ test('it launches the provider machine by tag, never by digest', () => {
     providerMachineID: null,
     providerMachineImageDigest: null,
     providerMachineRegion: null,
-    region: REGION,
+    region: 'syd',
     registryRow: undefined,
     retentionDays: 3,
   });
@@ -382,17 +438,23 @@ test('it launches the provider machine by tag, never by digest', () => {
 });
 
 test('it replaces the provider machine by tag, never by digest', () => {
+  const fleetImage: FleetImage = {
+    digest: 'sha256:current',
+    repository: 'registry.fly.io/vers-service-replay',
+    tag: 'deployment-current',
+  };
+
   const actions = planSimVersionActions({
     bunVersion: '1.4.2',
-    engineHash: ENGINE_HASH,
+    engineHash: 'a1b2c3d4e5f6'.padEnd(64, '0'),
     fleetImage,
     maxContentVersion: '2',
     providerAppExists: true,
     providerMachineExists: true,
     providerMachineID: 'machine-1',
     providerMachineImageDigest: 'sha256:stale',
-    providerMachineRegion: REGION,
-    region: REGION,
+    providerMachineRegion: 'syd',
+    region: 'syd',
     registryRow: undefined,
     retentionDays: 3,
   });
@@ -404,9 +466,15 @@ test('it replaces the provider machine by tag, never by digest', () => {
 });
 
 test('it derives the provider app name and flycast URL from the first 12 hex chars of the engine hash', () => {
+  const fleetImage: FleetImage = {
+    digest: 'sha256:current',
+    repository: 'registry.fly.io/vers-service-replay',
+    tag: 'deployment-current',
+  };
+
   const actions = planSimVersionActions({
     bunVersion: '1.4.2',
-    engineHash: ENGINE_HASH,
+    engineHash: 'a1b2c3d4e5f6'.padEnd(64, '0'),
     fleetImage,
     maxContentVersion: '2',
     providerAppExists: false,
@@ -414,7 +482,7 @@ test('it derives the provider app name and flycast URL from the first 12 hex cha
     providerMachineID: null,
     providerMachineImageDigest: null,
     providerMachineRegion: null,
-    region: REGION,
+    region: 'syd',
     registryRow: undefined,
     retentionDays: 3,
   });
@@ -422,7 +490,7 @@ test('it derives the provider app name and flycast URL from the first 12 hex cha
   const createAction = actions.find((action) => action.kind === 'create-provider-app');
   const upsertAction = actions.find((action) => action.kind === 'upsert-registry-row');
 
-  expect(buildProviderAppName(ENGINE_HASH)).toBe('vers-replay-a1b2c3d4e5f6');
+  expect(buildProviderAppName('a1b2c3d4e5f6'.padEnd(64, '0'))).toBe('vers-replay-a1b2c3d4e5f6');
   expect(createAction?.app).toBe('vers-replay-a1b2c3d4e5f6');
 
   expect(upsertAction?.kind === 'upsert-registry-row' && upsertAction.input.providerURL).toBe(
@@ -433,7 +501,7 @@ test('it derives the provider app name and flycast URL from the first 12 hex cha
 test('it takes no action when the fleet has no single resolved image', () => {
   const actions = planSimVersionActions({
     bunVersion: '1.4.2',
-    engineHash: ENGINE_HASH,
+    engineHash: 'a1b2c3d4e5f6'.padEnd(64, '0'),
     fleetImage: null,
     maxContentVersion: '2',
     providerAppExists: false,
@@ -441,7 +509,7 @@ test('it takes no action when the fleet has no single resolved image', () => {
     providerMachineID: null,
     providerMachineImageDigest: null,
     providerMachineRegion: null,
-    region: REGION,
+    region: 'syd',
     registryRow: undefined,
     retentionDays: 3,
   });

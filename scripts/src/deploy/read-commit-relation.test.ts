@@ -2,19 +2,18 @@ import { expect, onTestFinished, test } from 'bun:test';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import { updateEnv } from '@vers/test-utils/bun';
 import { execa } from 'execa';
 import { readCommitRelation } from './read-commit-relation';
 
-// a git hook exports GIT_DIR and its siblings to every child process, and git honours them over
-// `cwd`, so under the pre-push gate the fixture commands and the reader would otherwise act on
-// the real repository
-for (const name of Object.keys(process.env)) {
-  if (name.startsWith('GIT_')) {
-    delete process.env[name];
-  }
-}
-
 async function setupTest() {
+  // a git hook exports GIT_DIR and its siblings to every child process, and git honours them over
+  // `cwd`, so under the pre-push gate the fixture commands and the reader would otherwise act on
+  // the real repository
+  for (const name of Object.keys(process.env).filter((key) => key.startsWith('GIT_'))) {
+    updateEnv(name, undefined);
+  }
+
   const cwd = await fs.mkdtemp(path.join(os.tmpdir(), 'vers-commit-relation-'));
 
   onTestFinished(async () => {
@@ -49,11 +48,11 @@ test('it reports a commit HEAD descends from as an ancestor', async () => {
 
   await ctx.runGit(['commit', '-q', '--allow-empty', '-m', 'a']);
 
-  const a = await ctx.runGit(['rev-parse', 'HEAD']);
+  const ancestorSHA = await ctx.runGit(['rev-parse', 'HEAD']);
 
   await ctx.runGit(['commit', '-q', '--allow-empty', '-m', 'b']);
 
-  expect(readCommitRelation(a, { cwd: ctx.cwd })).resolves.toBe('ancestor');
+  expect(readCommitRelation(ancestorSHA, { cwd: ctx.cwd })).resolves.toBe('ancestor');
 });
 
 test('it reports a commit that descends from HEAD as a descendant', async () => {
@@ -62,11 +61,11 @@ test('it reports a commit that descends from HEAD as a descendant', async () => 
   await ctx.runGit(['commit', '-q', '--allow-empty', '-m', 'a']);
   await ctx.runGit(['commit', '-q', '--allow-empty', '-m', 'b']);
 
-  const b = await ctx.runGit(['rev-parse', 'HEAD']);
+  const descendantSHA = await ctx.runGit(['rev-parse', 'HEAD']);
 
   await ctx.runGit(['checkout', '-q', 'HEAD~1']);
 
-  expect(readCommitRelation(b, { cwd: ctx.cwd })).resolves.toBe('descendant');
+  expect(readCommitRelation(descendantSHA, { cwd: ctx.cwd })).resolves.toBe('descendant');
 });
 
 test('it reports HEAD itself as the same commit', async () => {
@@ -74,9 +73,9 @@ test('it reports HEAD itself as the same commit', async () => {
 
   await ctx.runGit(['commit', '-q', '--allow-empty', '-m', 'a']);
 
-  const a = await ctx.runGit(['rev-parse', 'HEAD']);
+  const headSHA = await ctx.runGit(['rev-parse', 'HEAD']);
 
-  expect(readCommitRelation(a, { cwd: ctx.cwd })).resolves.toBe('same');
+  expect(readCommitRelation(headSHA, { cwd: ctx.cwd })).resolves.toBe('same');
 });
 
 test('it reports a commit on another branch as diverged', async () => {
@@ -85,12 +84,12 @@ test('it reports a commit on another branch as diverged', async () => {
   await ctx.runGit(['commit', '-q', '--allow-empty', '-m', 'a']);
   await ctx.runGit(['commit', '-q', '--allow-empty', '-m', 'b']);
 
-  const b = await ctx.runGit(['rev-parse', 'HEAD']);
+  const mainSHA = await ctx.runGit(['rev-parse', 'HEAD']);
 
   await ctx.runGit(['checkout', '-q', '-b', 'topic', 'HEAD~1']);
   await ctx.runGit(['commit', '-q', '--allow-empty', '-m', 'c']);
 
-  expect(readCommitRelation(b, { cwd: ctx.cwd })).resolves.toBe('diverged');
+  expect(readCommitRelation(mainSHA, { cwd: ctx.cwd })).resolves.toBe('diverged');
 });
 
 test('it reports a commit the repository does not hold as missing', async () => {

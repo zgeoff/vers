@@ -3,12 +3,12 @@ import { SeverityNumber } from '@opentelemetry/api-logs';
 import { isRecord } from './is-record';
 
 export function buildLogRecord(line: Readonly<Record<string, unknown>>): LogRecord {
-  const { level, msg, time, ...attributes } = line;
+  const { level, msg: message, time, ...attributes } = line;
   const severity = pickSeverity(level);
 
   return {
     attributes: toAnyValueMap(attributes),
-    ...(typeof msg === 'string' && { body: msg }),
+    ...(typeof message === 'string' && { body: message }),
     severityNumber: severity.number,
     severityText: severity.text,
     ...(typeof time === 'number' && { timestamp: time }),

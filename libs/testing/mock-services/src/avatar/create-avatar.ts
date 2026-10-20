@@ -12,12 +12,14 @@ export const createAvatar = os.createAvatar.handler(async (opts) => {
     throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
   }
 
-  if (db.avatarCollection.findFirst((q) => q.where({ name: opts.input.name })) !== undefined) {
+  if (
+    db.avatarCollection.findFirst((query) => query.where({ name: opts.input.name })) !== undefined
+  ) {
     throw opts.errors.CONFLICT({ data: {} });
   }
 
-  const held = db.avatarCollection.findMany((q) =>
-    q.where({ mode: opts.input.mode, userID: actingUserID }),
+  const held = db.avatarCollection.findMany((query) =>
+    query.where({ mode: opts.input.mode, userID: actingUserID }),
   );
 
   if (held.length >= AVATAR_MODE_CAP) {

@@ -21,8 +21,8 @@ export async function readCommitRelation(
   }
 
   const [baseIsAncestor, headIsAncestor] = await Promise.all([
-    isAncestor(baseSHA, 'HEAD', cwd),
-    isAncestor('HEAD', baseSHA, cwd),
+    probeAncestor(baseSHA, 'HEAD', cwd),
+    probeAncestor('HEAD', baseSHA, cwd),
   ]);
 
   if (baseIsAncestor && headIsAncestor) {
@@ -40,7 +40,7 @@ export async function readCommitRelation(
   return 'diverged';
 }
 
-async function isAncestor(older: string, newer: string, cwd: string): Promise<boolean> {
+async function probeAncestor(older: string, newer: string, cwd: string): Promise<boolean> {
   const result = await execa('git', ['merge-base', '--is-ancestor', older, newer], {
     cwd,
     reject: false,

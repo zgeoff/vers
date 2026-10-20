@@ -9,7 +9,7 @@ import {
   createServiceToken,
   createTestDB,
   createViewer,
-  getTestServiceKeyPair,
+  resolveTestServiceKeyPair,
 } from '@vers/service-test-utils/bun';
 import { createSimVersionRow } from '@vers/sim-registry/test-utils';
 import { buildRPCTestClient } from '@vers/test-utils';
@@ -47,7 +47,7 @@ test('it stamps the acting session as the writer', async () => {
     writerSessionId: 'session-a',
   });
 
-  const keyPair = await getTestServiceKeyPair();
+  const keyPair = await resolveTestServiceKeyPair();
 
   const tokenB = await createServiceToken({
     actingSessionID: 'session-b',

@@ -153,7 +153,7 @@ async function resolveRefusedSnapshot(
 ): Promise<IngestActivityStartResult> {
   // the server folds without a predecessor this device has not delivered yet; the drain delivers
   // it first, and this row's resend follows
-  const predecessorPending = await isPredecessorPending(row.predecessorActivityID);
+  const predecessorPending = await probePredecessorPending(row.predecessorActivityID);
 
   if (predecessorPending) {
     return { outcome: 'deferred', refusal };
@@ -181,6 +181,6 @@ async function resolveRefusedSnapshot(
   return { outcome: 'rejected', refusal, refusedSnapshot: { latest, row } };
 }
 
-async function isPredecessorPending(predecessorID: null | string): Promise<boolean> {
+async function probePredecessorPending(predecessorID: null | string): Promise<boolean> {
   return predecessorID !== null && (await readActivityStart(predecessorID)) !== undefined;
 }

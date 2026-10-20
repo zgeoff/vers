@@ -8,8 +8,8 @@ export const getAvatar = os.getAvatar.handler((opts) => {
     throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
   }
 
-  const avatar = db.avatarCollection.findFirst((q) =>
-    q.where({ id: opts.input.id, userID: actingUserID }),
+  const avatar = db.avatarCollection.findFirst((query) =>
+    query.where({ id: opts.input.id, userID: actingUserID }),
   );
 
   return avatar ?? null;

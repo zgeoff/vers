@@ -55,17 +55,17 @@ test('it draws a stable field for a fixed seed', () => {
   `);
 });
 
-const BASE_IDS = new Set(BIOME_ROSTER.map((entry) => entry.id));
-const MODIFIER_IDS = new Set(MODIFIER_ROSTER.map((entry) => entry.id));
-
 test('it always returns a roster base id, neighbour id, and modifier id', () => {
+  const baseIDs = new Set(BIOME_ROSTER.map((entry) => entry.id));
+  const modifierIDs = new Set(MODIFIER_ROSTER.map((entry) => entry.id));
+
   for (let cx = -20; cx <= 20; cx += 4) {
     for (let cy = -20; cy <= 20; cy += 4) {
       const sample = getBiome(13, cx, cy);
 
-      expect(BASE_IDS.has(sample.baseID)).toBe(true);
-      expect(BASE_IDS.has(sample.neighbourBaseID)).toBe(true);
-      expect(MODIFIER_IDS.has(sample.modifierID)).toBe(true);
+      expect(baseIDs.has(sample.baseID)).toBe(true);
+      expect(baseIDs.has(sample.neighbourBaseID)).toBe(true);
+      expect(modifierIDs.has(sample.modifierID)).toBe(true);
     }
   }
 });
@@ -81,15 +81,13 @@ test('it keeps blendT within the unit interval', () => {
   }
 });
 
-const DEEP_ONLY_ID = 2;
-
 test('it never draws the deep-only biome near the origin', () => {
   for (let cx = -5; cx <= 5; cx++) {
     for (let cy = -5; cy <= 5; cy++) {
       const sample = getBiome(55, cx, cy);
 
-      expect(sample.baseID).not.toBe(DEEP_ONLY_ID);
-      expect(sample.neighbourBaseID).not.toBe(DEEP_ONLY_ID);
+      expect(sample.baseID).not.toBe(2);
+      expect(sample.neighbourBaseID).not.toBe(2);
     }
   }
 });

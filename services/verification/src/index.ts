@@ -1,1 +1,1 @@
-export type { VerificationRouter } from './build-router';
+export type { VerificationRouter } from './create-verification-router';

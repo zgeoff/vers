@@ -2,12 +2,12 @@ import { expect, test } from 'bun:test';
 import { bytesToHex } from '@noble/hashes/utils.js';
 import { resolveServiceURL } from '@vers/mock-services';
 import { mockKeysService } from '@vers/mock-services/keys';
-import { getTestServiceKeyPair } from '@vers/service-test-utils/bun';
+import { resolveTestServiceKeyPair } from '@vers/service-test-utils/bun';
 import { server } from '../mocks/server';
 import { readAvatarRollKey } from './read-avatar-roll-key';
 
 test('it reads the avatar roll key over real s2s auth against the mocked keys backend', async () => {
-  const keyPair = await getTestServiceKeyPair();
+  const keyPair = await resolveTestServiceKeyPair();
 
   const key = await readAvatarRollKey(
     { keysServiceURL: resolveServiceURL('keys'), privateKey: keyPair.privateKey },
@@ -18,7 +18,7 @@ test('it reads the avatar roll key over real s2s auth against the mocked keys ba
 });
 
 test('it reads the identical key for the identical avatar and key version', async () => {
-  const keyPair = await getTestServiceKeyPair();
+  const keyPair = await resolveTestServiceKeyPair();
 
   const deps = { keysServiceURL: resolveServiceURL('keys'), privateKey: keyPair.privateKey };
 
@@ -29,7 +29,7 @@ test('it reads the identical key for the identical avatar and key version', asyn
 });
 
 test('it reads a different key for a different avatar', async () => {
-  const keyPair = await getTestServiceKeyPair();
+  const keyPair = await resolveTestServiceKeyPair();
 
   const deps = { keysServiceURL: resolveServiceURL('keys'), privateKey: keyPair.privateKey };
 
@@ -40,7 +40,7 @@ test('it reads a different key for a different avatar', async () => {
 });
 
 test('it reads a different key for a different key version of the same avatar', async () => {
-  const keyPair = await getTestServiceKeyPair();
+  const keyPair = await resolveTestServiceKeyPair();
 
   const deps = { keysServiceURL: resolveServiceURL('keys'), privateKey: keyPair.privateKey };
 
@@ -51,7 +51,7 @@ test('it reads a different key for a different key version of the same avatar', 
 });
 
 test('it attaches a traceparent header to the outbound request', async () => {
-  const keyPair = await getTestServiceKeyPair();
+  const keyPair = await resolveTestServiceKeyPair();
 
   const observedTraceparents: Array<string | null> = [];
 
@@ -74,7 +74,7 @@ test('it attaches a traceparent header to the outbound request', async () => {
 });
 
 test('it rejects when the keys service never responds', async () => {
-  const keyPair = await getTestServiceKeyPair();
+  const keyPair = await resolveTestServiceKeyPair();
 
   server.use(mockKeysService.deriveAvatarKey.handler(() => new Promise<never>(() => {})));
 

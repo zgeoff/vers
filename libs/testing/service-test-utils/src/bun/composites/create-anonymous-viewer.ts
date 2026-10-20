@@ -1,6 +1,6 @@
 import type { TokenIssuer } from '@vers/service-auth';
 import { createServiceToken } from '../create-service-token';
-import { getTestServiceKeyPair } from '../get-test-service-key-pair';
+import { resolveTestServiceKeyPair } from '../resolve-test-service-key-pair';
 
 interface CreateAnonymousViewerConfig {
   readonly audience: string;
@@ -10,7 +10,7 @@ interface CreateAnonymousViewerConfig {
 export async function createAnonymousViewer(
   config: Readonly<CreateAnonymousViewerConfig>,
 ): Promise<{ token: string }> {
-  const keyPair = await getTestServiceKeyPair();
+  const keyPair = await resolveTestServiceKeyPair();
 
   return {
     token: await createServiceToken({

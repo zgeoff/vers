@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { pickRetrievalKind } from './pick-retrieval-kind';
 import type { RetrievalKind } from './types';
 
-const rows: ReadonlyArray<[RetrievalKind, string, Readonly<Record<string, unknown>>]> = [
+test.each<[RetrievalKind, string, Readonly<Record<string, unknown>>]>([
   ['search', 'Grep', { pattern: 'createSession' }],
   ['search', 'Bash', { command: 'rg -n createSession services' }],
   ['search', 'Bash', { command: 'cat a.ts | grep foo' }],
@@ -25,8 +25,6 @@ const rows: ReadonlyArray<[RetrievalKind, string, Readonly<Record<string, unknow
   ['other', 'mcp__serena__initial_instructions', {}],
   ['other', 'Glob', { pattern: '**/*.ts' }],
   ['other', 'Skill', { skill: 'testing' }],
-];
-
-test.each(rows)('it picks %s for a %s call with %j', (expected, toolName, toolInput) => {
+])('it picks %s for a %s call with %j', (expected, toolName, toolInput) => {
   expect(pickRetrievalKind(toolName, toolInput)).toBe(expected);
 });

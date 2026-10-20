@@ -1,1 +1,1 @@
-export type { AvatarRouter } from './build-router';
+export type { AvatarRouter } from './create-avatar-router';

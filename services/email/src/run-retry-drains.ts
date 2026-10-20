@@ -5,10 +5,10 @@ const RETRY_DRAIN_MAX_DURATION = 8 * 60 * 1000;
 
 export interface RunRetryDrainsOpts {
   readonly drain: () => Promise<DrainResult>;
-  readonly getState: () => Promise<JobState | undefined>;
+  readonly readState: () => Promise<JobState | undefined>;
   readonly now: () => number;
   readonly usefulUntil: Date;
-  readonly wait: (ms: number) => Promise<void>;
+  readonly wait: (delayMs: number) => Promise<void>;
 }
 
 export async function runRetryDrains(opts: Readonly<RunRetryDrainsOpts>): Promise<void> {
@@ -24,7 +24,7 @@ export async function runRetryDrains(opts: Readonly<RunRetryDrainsOpts>): Promis
       return;
     }
 
-    const state = await opts.getState();
+    const state = await opts.readState();
 
     if (
       state === undefined ||

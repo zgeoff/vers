@@ -42,25 +42,27 @@ for (const service of SERVICES) {
 
   const url = new URL(resolveServiceURL(service));
 
+  const handleRequest = async (request: Request): Promise<Response> => {
+    const pathname = new URL(request.url).pathname;
+
+    if (pathname === '/health') {
+      return Response.json({ ok: true });
+    }
+
+    if (service === 'verification' && pathname === '/test/verification-code') {
+      return serveVerificationCode(request);
+    }
+
+    const handled = await rpcHandler.handle(request, {
+      context: resolveSessionContext(request),
+      prefix: '/rpc',
+    });
+
+    return handled.matched ? handled.response : new Response(null, { status: 404 });
+  };
+
   Bun.serve({
-    fetch: async (request) => {
-      const pathname = new URL(request.url).pathname;
-
-      if (pathname === '/health') {
-        return Response.json({ ok: true });
-      }
-
-      if (service === 'verification' && pathname === '/test/verification-code') {
-        return serveVerificationCode(request);
-      }
-
-      const handled = await rpcHandler.handle(request, {
-        context: resolveSessionContext(request),
-        prefix: '/rpc',
-      });
-
-      return handled.matched ? handled.response : new Response(null, { status: 404 });
-    },
+    fetch: handleRequest,
 
     // never the wildcard interface: these routers accept unverified bearer subjects and expose
     // mutating procedures, so nothing beyond this host may reach them
@@ -81,8 +83,8 @@ function serveVerificationCode(request: Request): Response {
     return new Response(null, { status: 400 });
   }
 
-  const verification = verificationCollection.findFirst((q) =>
-    q.where({ target, type: type.data }),
+  const verification = verificationCollection.findFirst((query) =>
+    query.where({ target, type: type.data }),
   );
 
   return verification === undefined

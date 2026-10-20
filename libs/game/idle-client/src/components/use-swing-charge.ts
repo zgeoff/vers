@@ -34,15 +34,15 @@ export function useSwingCharge(input: Readonly<SwingChargeInput>): number {
     let frame = 0;
 
     const updateCharge = () => {
-      const a = anchor.current;
-      const extrapolated = a.elapsed + (performance.now() - a.wall);
+      const current = anchor.current;
+      const extrapolated = current.elapsed + (performance.now() - current.wall);
 
       const next = Math.round(
         buildSwingProgress({
-          attackSpeed: a.attackSpeed,
+          attackSpeed: current.attackSpeed,
           elapsed: extrapolated,
-          isAlive: a.isAlive,
-          lastAttackTime: a.lastAttackTime,
+          isAlive: current.isAlive,
+          lastAttackTime: current.lastAttackTime,
         }),
       );
 

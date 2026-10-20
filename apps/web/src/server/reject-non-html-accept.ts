@@ -1,6 +1,5 @@
 const PASSTHROUGH_PREFIXES = ['/api/', '/_serverFn/'] as const;
 const PASSTHROUGH_PATHS = ['/health'] as const;
-const HTML_ACCEPT_TYPES = ['*/*', 'text/html'] as const;
 
 export function rejectNonHTMLAccept(
   request: Request,
@@ -26,6 +25,8 @@ export function rejectNonHTMLAccept(
     }),
   );
 }
+
+const HTML_ACCEPT_TYPES = ['*/*', 'text/html'] as const;
 
 // the same parse TanStack Start applies before it renders a route; Start refuses a failing request
 // with a 500 that the 5xx monitor counts as a server fault on every bot probe, so this gate answers

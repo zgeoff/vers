@@ -2,7 +2,7 @@ import { expect, onTestFinished, spyOn, test } from 'bun:test';
 import { trace } from '@opentelemetry/api';
 import { implement } from '@orpc/server';
 import { authedRoute, publicRoute } from '@vers/contract-base';
-import { createServiceToken, getTestServiceKeyPair } from '@vers/service-test-utils/bun';
+import { createServiceToken, resolveTestServiceKeyPair } from '@vers/service-test-utils/bun';
 import { findSpanTraceContext } from '@vers/service-utils';
 import { buildRPCTestClient, collectConformanceCases, waitFor } from '@vers/test-utils';
 import { updateEnv } from '@vers/test-utils/bun';
@@ -14,8 +14,8 @@ import { sentryHandle } from './sentry-handle';
 import { setSentryHandleForTesting } from './set-sentry-handle-for-testing';
 import type { ServiceContext } from './types';
 
-function buildTestContract() {
-  return {
+function setupTest() {
+  const contract = {
     getActiveSpanStability: publicRoute.output(z.object({ sameSpanAcrossAwaits: z.boolean() })),
     getSpanTraceID: publicRoute.output(z.object({ traceID: z.string().nullable() })),
     getThing: authedRoute
@@ -23,15 +23,15 @@ function buildTestContract() {
       .input(z.object({ id: z.string() }))
       .output(z.object({ id: z.string() })),
     ping: publicRoute.output(z.object({ pong: z.boolean() })),
-    sleep: publicRoute.input(z.object({ ms: z.number() })).output(z.object({ slept: z.boolean() })),
+    sleep: publicRoute
+      .input(z.object({ durationMs: z.number() }))
+      .output(z.object({ slept: z.boolean() })),
     throwPlainError: publicRoute.output(z.object({})),
   };
-}
 
-function buildTestRouter(contract: ReturnType<typeof buildTestContract>) {
   const os = implement(contract).$context<ServiceContext>();
 
-  return {
+  const router = {
     getActiveSpanStability: os.getActiveSpanStability.handler(async () => {
       // exercises the async-context fidelity the Bun spike verified: a Bun.sleep and a
       // Promise.all both cross a real await boundary, and the request's span stays the active
@@ -57,7 +57,7 @@ function buildTestRouter(contract: ReturnType<typeof buildTestContract>) {
     }),
     ping: os.ping.handler(() => ({ pong: true })),
     sleep: os.sleep.handler(async (opts) => {
-      await Bun.sleep(opts.input.ms);
+      await Bun.sleep(opts.input.durationMs);
 
       return { slept: true };
     }),
@@ -65,17 +65,19 @@ function buildTestRouter(contract: ReturnType<typeof buildTestContract>) {
       throw new Error('a secret internal detail');
     }),
   };
+
+  return { contract, router };
 }
 
 test('it throws at boot when SERVICE_AUTH_JWKS is missing', () => {
   updateEnv('SERVICE_AUTH_JWKS', undefined);
 
-  const contract = buildTestContract();
+  const ctx = setupTest();
 
   expect(
     createService({
       allowedIssuers: ['app-web'],
-      buildRouter: () => buildTestRouter(contract),
+      createRouter: () => ctx.router,
       envShape: {},
       name: 'test-service',
     }),
@@ -83,17 +85,17 @@ test('it throws at boot when SERVICE_AUTH_JWKS is missing', () => {
 });
 
 test('it applies default PORT and LOG_LEVEL when unset', async () => {
-  const keyPair = await getTestServiceKeyPair();
+  const keyPair = await resolveTestServiceKeyPair();
 
   updateEnv('LOG_LEVEL', undefined);
   updateEnv('PORT', undefined);
   updateEnv('SERVICE_AUTH_JWKS', keyPair.jwksJSON);
 
-  const contract = buildTestContract();
+  const ctx = setupTest();
 
   const service = await createService({
     allowedIssuers: ['app-web'],
-    buildRouter: () => buildTestRouter(contract),
+    createRouter: () => ctx.router,
     envShape: {},
     name: 'test-service',
   });
@@ -103,16 +105,16 @@ test('it applies default PORT and LOG_LEVEL when unset', async () => {
 });
 
 test('it parses a service-specific envShape variable onto env', async () => {
-  const keyPair = await getTestServiceKeyPair();
+  const keyPair = await resolveTestServiceKeyPair();
 
   updateEnv('CUSTOM_GREETING', 'hi there');
   updateEnv('SERVICE_AUTH_JWKS', keyPair.jwksJSON);
 
-  const contract = buildTestContract();
+  const ctx = setupTest();
 
   const service = await createService({
     allowedIssuers: ['app-web'],
-    buildRouter: () => buildTestRouter(contract),
+    createRouter: () => ctx.router,
     envShape: { CUSTOM_GREETING: z.string() },
     name: 'test-service',
   });
@@ -124,17 +126,17 @@ test('it parses a service-specific envShape variable onto env', async () => {
 });
 
 test('it resolves when OTEL_EXPORTER_OTLP_ENDPOINT is set, wiring the OTel plugin and log shipping at boot', async () => {
-  const keyPair = await getTestServiceKeyPair();
+  const keyPair = await resolveTestServiceKeyPair();
 
   updateEnv('OTEL_EXPORTER_OTLP_ENDPOINT', 'http://127.0.0.1:1/');
   updateEnv('SERVICE_AUTH_JWKS', keyPair.jwksJSON);
 
-  const contract = buildTestContract();
+  const ctx = setupTest();
 
   await expect(
     createService({
       allowedIssuers: ['app-web'],
-      buildRouter: () => buildTestRouter(contract),
+      createRouter: () => ctx.router,
       envShape: {},
       name: 'test-service',
     }),
@@ -142,16 +144,16 @@ test('it resolves when OTEL_EXPORTER_OTLP_ENDPOINT is set, wiring the OTel plugi
 });
 
 test('it keeps the active OTel span bound to the request across awaits under the Elysia plugin', async () => {
-  const keyPair = await getTestServiceKeyPair();
+  const keyPair = await resolveTestServiceKeyPair();
 
   updateEnv('OTEL_EXPORTER_OTLP_ENDPOINT', 'http://127.0.0.1:1/');
   updateEnv('SERVICE_AUTH_JWKS', keyPair.jwksJSON);
 
-  const contract = buildTestContract();
+  const ctx = setupTest();
 
   const service = await createService({
     allowedIssuers: ['app-web'],
-    buildRouter: () => buildTestRouter(contract),
+    createRouter: () => ctx.router,
     envShape: {},
     name: 'test-service',
   });
@@ -161,7 +163,7 @@ test('it keeps the active OTel span bound to the request across awaits under the
     privateKey: keyPair.privateKey,
   });
 
-  const client = buildRPCTestClient<ReturnType<typeof buildTestContract>>(service.app, {
+  const client = buildRPCTestClient<typeof ctx.contract>(service.app, {
     token,
   });
 
@@ -170,20 +172,16 @@ test('it keeps the active OTel span bound to the request across awaits under the
   expect(result.sameSpanAcrossAwaits).toBeTrue();
 });
 
-test('it serves a router built by an async buildRouter', async () => {
-  const keyPair = await getTestServiceKeyPair();
+test('it serves a router built by an async createRouter', async () => {
+  const keyPair = await resolveTestServiceKeyPair();
 
   updateEnv('SERVICE_AUTH_JWKS', keyPair.jwksJSON);
 
-  const contract = buildTestContract();
+  const ctx = setupTest();
 
   const service = await createService({
     allowedIssuers: ['app-web'],
-    buildRouter: async () => {
-      await Promise.resolve();
-
-      return buildTestRouter(contract);
-    },
+    createRouter: () => Promise.resolve(ctx.router),
     envShape: {},
     name: 'test-service',
   });
@@ -194,7 +192,7 @@ test('it serves a router built by an async buildRouter', async () => {
     privateKey: keyPair.privateKey,
   });
 
-  const client = buildRPCTestClient<ReturnType<typeof buildTestContract>>(service.app, {
+  const client = buildRPCTestClient<typeof ctx.contract>(service.app, {
     headers: { authorization: `Bearer ${token}` },
   });
 
@@ -204,15 +202,15 @@ test('it serves a router built by an async buildRouter', async () => {
 });
 
 test('it rejects an /rpc call with no Authorization header with a plain 401', async () => {
-  const keyPair = await getTestServiceKeyPair();
+  const keyPair = await resolveTestServiceKeyPair();
 
   updateEnv('SERVICE_AUTH_JWKS', keyPair.jwksJSON);
 
-  const contract = buildTestContract();
+  const ctx = setupTest();
 
   const service = await createService({
     allowedIssuers: ['app-web'],
-    buildRouter: () => buildTestRouter(contract),
+    createRouter: () => ctx.router,
     envShape: {},
     name: 'test-service',
   });
@@ -233,15 +231,15 @@ test('it rejects an /rpc call with no Authorization header with a plain 401', as
 });
 
 test('it rejects an /rpc call with a garbage token with a plain 401', async () => {
-  const keyPair = await getTestServiceKeyPair();
+  const keyPair = await resolveTestServiceKeyPair();
 
   updateEnv('SERVICE_AUTH_JWKS', keyPair.jwksJSON);
 
-  const contract = buildTestContract();
+  const ctx = setupTest();
 
   const service = await createService({
     allowedIssuers: ['app-web'],
-    buildRouter: () => buildTestRouter(contract),
+    createRouter: () => ctx.router,
     envShape: {},
     name: 'test-service',
   });
@@ -261,15 +259,15 @@ test('it rejects an /rpc call with a garbage token with a plain 401', async () =
 });
 
 test('it rejects an /rpc call with an expired token with a plain 401', async () => {
-  const keyPair = await getTestServiceKeyPair();
+  const keyPair = await resolveTestServiceKeyPair();
 
   updateEnv('SERVICE_AUTH_JWKS', keyPair.jwksJSON);
 
-  const contract = buildTestContract();
+  const ctx = setupTest();
 
   const service = await createService({
     allowedIssuers: ['app-web'],
-    buildRouter: () => buildTestRouter(contract),
+    createRouter: () => ctx.router,
     envShape: {},
     name: 'test-service',
   });
@@ -295,15 +293,15 @@ test('it rejects an /rpc call with an expired token with a plain 401', async () 
 });
 
 test('it rejects an /rpc call with a wrong-audience token with a plain 401', async () => {
-  const keyPair = await getTestServiceKeyPair();
+  const keyPair = await resolveTestServiceKeyPair();
 
   updateEnv('SERVICE_AUTH_JWKS', keyPair.jwksJSON);
 
-  const contract = buildTestContract();
+  const ctx = setupTest();
 
   const service = await createService({
     allowedIssuers: ['app-web'],
-    buildRouter: () => buildTestRouter(contract),
+    createRouter: () => ctx.router,
     envShape: {},
     name: 'test-service',
   });
@@ -328,15 +326,15 @@ test('it rejects an /rpc call with a wrong-audience token with a plain 401', asy
 });
 
 test('it returns data from an authed procedure given a valid token naming an acting user', async () => {
-  const keyPair = await getTestServiceKeyPair();
+  const keyPair = await resolveTestServiceKeyPair();
 
   updateEnv('SERVICE_AUTH_JWKS', keyPair.jwksJSON);
 
-  const contract = buildTestContract();
+  const ctx = setupTest();
 
   const service = await createService({
     allowedIssuers: ['app-web'],
-    buildRouter: () => buildTestRouter(contract),
+    createRouter: () => ctx.router,
     envShape: {},
     name: 'test-service',
   });
@@ -347,7 +345,7 @@ test('it returns data from an authed procedure given a valid token naming an act
     privateKey: keyPair.privateKey,
   });
 
-  const client = buildRPCTestClient<ReturnType<typeof buildTestContract>>(service.app, {
+  const client = buildRPCTestClient<typeof ctx.contract>(service.app, {
     headers: { authorization: `Bearer ${token}` },
   });
 
@@ -357,15 +355,15 @@ test('it returns data from an authed procedure given a valid token naming an act
 });
 
 test('it throws a contract-shaped UNAUTHORIZED for an authed procedure given a valid anonymous token', async () => {
-  const keyPair = await getTestServiceKeyPair();
+  const keyPair = await resolveTestServiceKeyPair();
 
   updateEnv('SERVICE_AUTH_JWKS', keyPair.jwksJSON);
 
-  const contract = buildTestContract();
+  const ctx = setupTest();
 
   const service = await createService({
     allowedIssuers: ['app-web'],
-    buildRouter: () => buildTestRouter(contract),
+    createRouter: () => ctx.router,
     envShape: {},
     name: 'test-service',
   });
@@ -375,7 +373,7 @@ test('it throws a contract-shaped UNAUTHORIZED for an authed procedure given a v
     privateKey: keyPair.privateKey,
   });
 
-  const client = buildRPCTestClient<ReturnType<typeof buildTestContract>>(service.app, {
+  const client = buildRPCTestClient<typeof ctx.contract>(service.app, {
     headers: { authorization: `Bearer ${token}` },
   });
 
@@ -386,15 +384,15 @@ test('it throws a contract-shaped UNAUTHORIZED for an authed procedure given a v
 });
 
 test('it serves /health without any token', async () => {
-  const keyPair = await getTestServiceKeyPair();
+  const keyPair = await resolveTestServiceKeyPair();
 
   updateEnv('SERVICE_AUTH_JWKS', keyPair.jwksJSON);
 
-  const contract = buildTestContract();
+  const ctx = setupTest();
 
   const service = await createService({
     allowedIssuers: ['app-web'],
-    buildRouter: () => buildTestRouter(contract),
+    createRouter: () => ctx.router,
     envShape: {},
     name: 'test-service',
   });
@@ -410,15 +408,15 @@ test('it serves /health without any token', async () => {
 });
 
 test('it mints a fresh trace id when no traceparent is supplied', async () => {
-  const keyPair = await getTestServiceKeyPair();
+  const keyPair = await resolveTestServiceKeyPair();
 
   updateEnv('SERVICE_AUTH_JWKS', keyPair.jwksJSON);
 
-  const contract = buildTestContract();
+  const ctx = setupTest();
 
   const service = await createService({
     allowedIssuers: ['app-web'],
-    buildRouter: () => buildTestRouter(contract),
+    createRouter: () => ctx.router,
     envShape: {},
     name: 'test-service',
   });
@@ -429,15 +427,15 @@ test('it mints a fresh trace id when no traceparent is supplied', async () => {
 });
 
 test('it continues the trace named by an inbound traceparent header', async () => {
-  const keyPair = await getTestServiceKeyPair();
+  const keyPair = await resolveTestServiceKeyPair();
 
   updateEnv('SERVICE_AUTH_JWKS', keyPair.jwksJSON);
 
-  const contract = buildTestContract();
+  const ctx = setupTest();
 
   const service = await createService({
     allowedIssuers: ['app-web'],
-    buildRouter: () => buildTestRouter(contract),
+    createRouter: () => ctx.router,
     envShape: {},
     name: 'test-service',
   });
@@ -452,16 +450,16 @@ test('it continues the trace named by an inbound traceparent header', async () =
 });
 
 test('it reports the OTel span trace id as x-trace-id when no traceparent came in', async () => {
-  const keyPair = await getTestServiceKeyPair();
+  const keyPair = await resolveTestServiceKeyPair();
 
   updateEnv('OTEL_EXPORTER_OTLP_ENDPOINT', 'http://127.0.0.1:1/');
   updateEnv('SERVICE_AUTH_JWKS', keyPair.jwksJSON);
 
-  const contract = buildTestContract();
+  const ctx = setupTest();
 
   const service = await createService({
     allowedIssuers: ['app-web'],
-    buildRouter: () => buildTestRouter(contract),
+    createRouter: () => ctx.router,
     envShape: {},
     name: 'test-service',
   });
@@ -473,18 +471,15 @@ test('it reports the OTel span trace id as x-trace-id when no traceparent came i
 
   const responses: Array<Response> = [];
 
-  const client = buildRPCTestClient<ReturnType<typeof buildTestContract>>(
-    {
-      handle: async (request) => {
-        const response = await service.app.handle(request);
+  const handleRequest = async (request: Request): Promise<Response> => {
+    const response = await service.app.handle(request);
 
-        responses.push(response);
+    responses.push(response);
 
-        return response;
-      },
-    },
-    { token },
-  );
+    return response;
+  };
+
+  const client = buildRPCTestClient<typeof ctx.contract>({ handle: handleRequest }, { token });
 
   const result = await client.getSpanTraceID();
 
@@ -498,15 +493,15 @@ test('it reports the OTel span trace id as x-trace-id when no traceparent came i
 });
 
 test('it mints a fresh trace id for a malformed traceparent header', async () => {
-  const keyPair = await getTestServiceKeyPair();
+  const keyPair = await resolveTestServiceKeyPair();
 
   updateEnv('SERVICE_AUTH_JWKS', keyPair.jwksJSON);
 
-  const contract = buildTestContract();
+  const ctx = setupTest();
 
   const service = await createService({
     allowedIssuers: ['app-web'],
-    buildRouter: () => buildTestRouter(contract),
+    createRouter: () => ctx.router,
     envShape: {},
     name: 'test-service',
   });
@@ -521,15 +516,15 @@ test('it mints a fresh trace id for a malformed traceparent header', async () =>
 });
 
 test('it masks an unexpected handler error as a bare INTERNAL_SERVER_ERROR', async () => {
-  const keyPair = await getTestServiceKeyPair();
+  const keyPair = await resolveTestServiceKeyPair();
 
   updateEnv('SERVICE_AUTH_JWKS', keyPair.jwksJSON);
 
-  const contract = buildTestContract();
+  const ctx = setupTest();
 
   const service = await createService({
     allowedIssuers: ['app-web'],
-    buildRouter: () => buildTestRouter(contract),
+    createRouter: () => ctx.router,
     envShape: {},
     name: 'test-service',
   });
@@ -539,7 +534,7 @@ test('it masks an unexpected handler error as a bare INTERNAL_SERVER_ERROR', asy
     privateKey: keyPair.privateKey,
   });
 
-  const client = buildRPCTestClient<ReturnType<typeof buildTestContract>>(service.app, {
+  const client = buildRPCTestClient<typeof ctx.contract>(service.app, {
     headers: { authorization: `Bearer ${token}` },
   });
 
@@ -555,12 +550,12 @@ interface FakeSentryScope {
 }
 
 test('it reports an unexpected handler error to the error backend exactly once', async () => {
-  const keyPair = await getTestServiceKeyPair();
+  const keyPair = await resolveTestServiceKeyPair();
 
   updateEnv('SERVICE_AUTH_JWKS', keyPair.jwksJSON);
   updateEnv('SENTRY_DSN', undefined);
 
-  const contract = buildTestContract();
+  const ctx = setupTest();
   const previousHandle = sentryHandle.current;
   const reported: Array<unknown> = [];
 
@@ -582,7 +577,7 @@ test('it reports an unexpected handler error to the error backend exactly once',
 
   const service = await createService({
     allowedIssuers: ['app-web'],
-    buildRouter: () => buildTestRouter(contract),
+    createRouter: () => ctx.router,
     envShape: {},
     name: 'test-service',
   });
@@ -592,7 +587,7 @@ test('it reports an unexpected handler error to the error backend exactly once',
     privateKey: keyPair.privateKey,
   });
 
-  const client = buildRPCTestClient<ReturnType<typeof buildTestContract>>(service.app, {
+  const client = buildRPCTestClient<typeof ctx.contract>(service.app, {
     headers: { authorization: `Bearer ${token}` },
   });
 
@@ -606,15 +601,15 @@ test('it reports an unexpected handler error to the error backend exactly once',
 });
 
 test('it does not serve the dropped /api and /spec.json paths', async () => {
-  const keyPair = await getTestServiceKeyPair();
+  const keyPair = await resolveTestServiceKeyPair();
 
   updateEnv('SERVICE_AUTH_JWKS', keyPair.jwksJSON);
 
-  const contract = buildTestContract();
+  const ctx = setupTest();
 
   const service = await createService({
     allowedIssuers: ['app-web'],
-    buildRouter: () => buildTestRouter(contract),
+    createRouter: () => ctx.router,
     envShape: {},
     name: 'test-service',
   });
@@ -630,15 +625,15 @@ test('it does not serve the dropped /api and /spec.json paths', async () => {
 });
 
 test('it passes every conformance case collected from its own contract', async () => {
-  const keyPair = await getTestServiceKeyPair();
+  const keyPair = await resolveTestServiceKeyPair();
 
   updateEnv('SERVICE_AUTH_JWKS', keyPair.jwksJSON);
 
-  const contract = buildTestContract();
+  const ctx = setupTest();
 
   const service = await createService({
     allowedIssuers: ['app-web'],
-    buildRouter: () => buildTestRouter(contract),
+    createRouter: () => ctx.router,
     envShape: {},
     name: 'test-service',
   });
@@ -648,7 +643,7 @@ test('it passes every conformance case collected from its own contract', async (
     privateKey: keyPair.privateKey,
   });
 
-  const cases = collectConformanceCases(contract, {
+  const cases = collectConformanceCases(ctx.contract, {
     anonymousHeaders: { authorization: `Bearer ${anonymousToken}` },
     authedSamples: { getThing: { id: 'thing-1' } },
   });
@@ -659,15 +654,15 @@ test('it passes every conformance case collected from its own contract', async (
 });
 
 test('it logs one structured request line when an /rpc call completes', async () => {
-  const keyPair = await getTestServiceKeyPair();
+  const keyPair = await resolveTestServiceKeyPair();
 
   updateEnv('SERVICE_AUTH_JWKS', keyPair.jwksJSON);
 
-  const contract = buildTestContract();
+  const ctx = setupTest();
 
   const service = await createService({
     allowedIssuers: ['app-web'],
-    buildRouter: () => buildTestRouter(contract),
+    createRouter: () => ctx.router,
     envShape: {},
     name: 'test-service',
   });
@@ -679,7 +674,7 @@ test('it logs one structured request line when an /rpc call completes', async ()
     privateKey: keyPair.privateKey,
   });
 
-  const client = buildRPCTestClient<ReturnType<typeof buildTestContract>>(service.app, {
+  const client = buildRPCTestClient<typeof ctx.contract>(service.app, {
     headers: { authorization: `Bearer ${token}` },
   });
 
@@ -697,15 +692,15 @@ test('it logs one structured request line when an /rpc call completes', async ()
 });
 
 test('it logs the rejection reason when the trust boundary rejects a request', async () => {
-  const keyPair = await getTestServiceKeyPair();
+  const keyPair = await resolveTestServiceKeyPair();
 
   updateEnv('SERVICE_AUTH_JWKS', keyPair.jwksJSON);
 
-  const contract = buildTestContract();
+  const ctx = setupTest();
 
   const service = await createService({
     allowedIssuers: ['app-web'],
-    buildRouter: () => buildTestRouter(contract),
+    createRouter: () => ctx.router,
     envShape: {},
     name: 'test-service',
   });
@@ -732,15 +727,15 @@ test('it logs the rejection reason when the trust boundary rejects a request', a
 });
 
 test('it logs a refused /rpc call at warn with the code, the status, and the data the contract declares', async () => {
-  const keyPair = await getTestServiceKeyPair();
+  const keyPair = await resolveTestServiceKeyPair();
 
   updateEnv('SERVICE_AUTH_JWKS', keyPair.jwksJSON);
 
-  const contract = buildTestContract();
+  const ctx = setupTest();
 
   const service = await createService({
     allowedIssuers: ['app-web'],
-    buildRouter: () => buildTestRouter(contract),
+    createRouter: () => ctx.router,
     envShape: {},
     name: 'test-service',
   });
@@ -752,7 +747,7 @@ test('it logs a refused /rpc call at warn with the code, the status, and the dat
     privateKey: keyPair.privateKey,
   });
 
-  const client = buildRPCTestClient<ReturnType<typeof buildTestContract>>(service.app, {
+  const client = buildRPCTestClient<typeof ctx.contract>(service.app, {
     headers: { authorization: `Bearer ${anonymousToken}` },
   });
 
@@ -769,15 +764,15 @@ test('it logs a refused /rpc call at warn with the code, the status, and the dat
 });
 
 test('it logs an undeclared 4xx at warn with its code and status and no data', async () => {
-  const keyPair = await getTestServiceKeyPair();
+  const keyPair = await resolveTestServiceKeyPair();
 
   updateEnv('SERVICE_AUTH_JWKS', keyPair.jwksJSON);
 
-  const contract = buildTestContract();
+  const ctx = setupTest();
 
   const service = await createService({
     allowedIssuers: ['app-web'],
-    buildRouter: () => buildTestRouter(contract),
+    createRouter: () => ctx.router,
     envShape: {},
     name: 'test-service',
   });
@@ -791,7 +786,7 @@ test('it logs an undeclared 4xx at warn with its code and status and no data', a
 
   const response = await service.app.handle(
     new Request('http://test.local/rpc/sleep', {
-      body: JSON.stringify({ json: { ms: 'not-a-number' } }),
+      body: JSON.stringify({ json: { durationMs: 'not-a-number' } }),
       headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
       method: 'POST',
     }),
@@ -802,15 +797,15 @@ test('it logs an undeclared 4xx at warn with its code and status and no data', a
 });
 
 test('it logs a failed /rpc call at error severity', async () => {
-  const keyPair = await getTestServiceKeyPair();
+  const keyPair = await resolveTestServiceKeyPair();
 
   updateEnv('SERVICE_AUTH_JWKS', keyPair.jwksJSON);
 
-  const contract = buildTestContract();
+  const ctx = setupTest();
 
   const service = await createService({
     allowedIssuers: ['app-web'],
-    buildRouter: () => buildTestRouter(contract),
+    createRouter: () => ctx.router,
     envShape: {},
     name: 'test-service',
   });
@@ -822,7 +817,7 @@ test('it logs a failed /rpc call at error severity', async () => {
     privateKey: keyPair.privateKey,
   });
 
-  const client = buildRPCTestClient<ReturnType<typeof buildTestContract>>(service.app, {
+  const client = buildRPCTestClient<typeof ctx.contract>(service.app, {
     headers: { authorization: `Bearer ${token}` },
   });
 
@@ -844,15 +839,15 @@ test('it logs a failed /rpc call at error severity', async () => {
 });
 
 test('it serves /health without logging a request line', async () => {
-  const keyPair = await getTestServiceKeyPair();
+  const keyPair = await resolveTestServiceKeyPair();
 
   updateEnv('SERVICE_AUTH_JWKS', keyPair.jwksJSON);
 
-  const contract = buildTestContract();
+  const ctx = setupTest();
 
   const service = await createService({
     allowedIssuers: ['app-web'],
-    buildRouter: () => buildTestRouter(contract),
+    createRouter: () => ctx.router,
     envShape: {},
     name: 'test-service',
   });
@@ -865,15 +860,15 @@ test('it serves /health without logging a request line', async () => {
 });
 
 test('it logs a request past its slow-request threshold at warn with slow and thresholdMs', async () => {
-  const keyPair = await getTestServiceKeyPair();
+  const keyPair = await resolveTestServiceKeyPair();
 
   updateEnv('SERVICE_AUTH_JWKS', keyPair.jwksJSON);
 
-  const contract = buildTestContract();
+  const ctx = setupTest();
 
   const service = await createService({
     allowedIssuers: ['app-web'],
-    buildRouter: () => buildTestRouter(contract),
+    createRouter: () => ctx.router,
     envShape: {},
     name: 'test-service',
     slowRequestMs: 10,
@@ -886,11 +881,11 @@ test('it logs a request past its slow-request threshold at warn with slow and th
     privateKey: keyPair.privateKey,
   });
 
-  const client = buildRPCTestClient<ReturnType<typeof buildTestContract>>(service.app, {
+  const client = buildRPCTestClient<typeof ctx.contract>(service.app, {
     headers: { authorization: `Bearer ${token}` },
   });
 
-  await client.sleep({ ms: 30 });
+  await client.sleep({ durationMs: 30 });
 
   expect(warnSpy).toHaveBeenCalledExactlyOnceWith(
     {
@@ -906,15 +901,15 @@ test('it logs a request past its slow-request threshold at warn with slow and th
 });
 
 test('it logs a request as overdue while it is still open past the overdue threshold', async () => {
-  const keyPair = await getTestServiceKeyPair();
+  const keyPair = await resolveTestServiceKeyPair();
 
   updateEnv('SERVICE_AUTH_JWKS', keyPair.jwksJSON);
 
-  const contract = buildTestContract();
+  const ctx = setupTest();
 
   const service = await createService({
     allowedIssuers: ['app-web'],
-    buildRouter: () => buildTestRouter(contract),
+    createRouter: () => ctx.router,
     envShape: {},
     name: 'test-service',
     overdueRequestMs: 10,
@@ -927,11 +922,11 @@ test('it logs a request as overdue while it is still open past the overdue thres
     privateKey: keyPair.privateKey,
   });
 
-  const client = buildRPCTestClient<ReturnType<typeof buildTestContract>>(service.app, {
+  const client = buildRPCTestClient<typeof ctx.contract>(service.app, {
     headers: { authorization: `Bearer ${token}` },
   });
 
-  await client.sleep({ ms: 30 });
+  await client.sleep({ durationMs: 30 });
 
   expect(warnSpy).toHaveBeenCalledExactlyOnceWith(
     { elapsedMs: 10, method: 'POST', path: '/rpc/sleep' },
@@ -940,15 +935,15 @@ test('it logs a request as overdue while it is still open past the overdue thres
 });
 
 test('it writes no overdue line for a request that finishes inside the threshold', async () => {
-  const keyPair = await getTestServiceKeyPair();
+  const keyPair = await resolveTestServiceKeyPair();
 
   updateEnv('SERVICE_AUTH_JWKS', keyPair.jwksJSON);
 
-  const contract = buildTestContract();
+  const ctx = setupTest();
 
   const service = await createService({
     allowedIssuers: ['app-web'],
-    buildRouter: () => buildTestRouter(contract),
+    createRouter: () => ctx.router,
     envShape: {},
     name: 'test-service',
     overdueRequestMs: 1000,
@@ -961,25 +956,25 @@ test('it writes no overdue line for a request that finishes inside the threshold
     privateKey: keyPair.privateKey,
   });
 
-  const client = buildRPCTestClient<ReturnType<typeof buildTestContract>>(service.app, {
+  const client = buildRPCTestClient<typeof ctx.contract>(service.app, {
     headers: { authorization: `Bearer ${token}` },
   });
 
-  await client.sleep({ ms: 1 });
+  await client.sleep({ durationMs: 1 });
 
   expect(warnSpy).not.toHaveBeenCalled();
 });
 
 test('it keeps a slow 5xx at error severity without the slow flag', async () => {
-  const keyPair = await getTestServiceKeyPair();
+  const keyPair = await resolveTestServiceKeyPair();
 
   updateEnv('SERVICE_AUTH_JWKS', keyPair.jwksJSON);
 
-  const contract = buildTestContract();
+  const ctx = setupTest();
 
   const service = await createService({
     allowedIssuers: ['app-web'],
-    buildRouter: () => buildTestRouter(contract),
+    createRouter: () => ctx.router,
     envShape: {},
     name: 'test-service',
     slowRequestMs: 0,
@@ -992,7 +987,7 @@ test('it keeps a slow 5xx at error severity without the slow flag', async () => 
     privateKey: keyPair.privateKey,
   });
 
-  const client = buildRPCTestClient<ReturnType<typeof buildTestContract>>(service.app, {
+  const client = buildRPCTestClient<typeof ctx.contract>(service.app, {
     headers: { authorization: `Bearer ${token}` },
   });
 
@@ -1010,15 +1005,15 @@ test('it keeps a slow 5xx at error severity without the slow flag', async () => 
 });
 
 test('it keeps a request under its slow-request threshold at its status-derived level with no slow flag', async () => {
-  const keyPair = await getTestServiceKeyPair();
+  const keyPair = await resolveTestServiceKeyPair();
 
   updateEnv('SERVICE_AUTH_JWKS', keyPair.jwksJSON);
 
-  const contract = buildTestContract();
+  const ctx = setupTest();
 
   const service = await createService({
     allowedIssuers: ['app-web'],
-    buildRouter: () => buildTestRouter(contract),
+    createRouter: () => ctx.router,
     envShape: {},
     name: 'test-service',
     slowRequestMs: 1000,
@@ -1031,11 +1026,11 @@ test('it keeps a request under its slow-request threshold at its status-derived 
     privateKey: keyPair.privateKey,
   });
 
-  const client = buildRPCTestClient<ReturnType<typeof buildTestContract>>(service.app, {
+  const client = buildRPCTestClient<typeof ctx.contract>(service.app, {
     headers: { authorization: `Bearer ${token}` },
   });
 
-  await client.sleep({ ms: 5 });
+  await client.sleep({ durationMs: 5 });
 
   expect(infoSpy).toHaveBeenCalledExactlyOnceWith(
     {
@@ -1049,15 +1044,15 @@ test('it keeps a request under its slow-request threshold at its status-derived 
 });
 
 test('it honors a per-path slow-request override over the default threshold', async () => {
-  const keyPair = await getTestServiceKeyPair();
+  const keyPair = await resolveTestServiceKeyPair();
 
   updateEnv('SERVICE_AUTH_JWKS', keyPair.jwksJSON);
 
-  const contract = buildTestContract();
+  const ctx = setupTest();
 
   const service = await createService({
     allowedIssuers: ['app-web'],
-    buildRouter: () => buildTestRouter(contract),
+    createRouter: () => ctx.router,
     envShape: {},
     name: 'test-service',
     slowRequestMs: 10_000,
@@ -1071,11 +1066,11 @@ test('it honors a per-path slow-request override over the default threshold', as
     privateKey: keyPair.privateKey,
   });
 
-  const client = buildRPCTestClient<ReturnType<typeof buildTestContract>>(service.app, {
+  const client = buildRPCTestClient<typeof ctx.contract>(service.app, {
     headers: { authorization: `Bearer ${token}` },
   });
 
-  await client.sleep({ ms: 30 });
+  await client.sleep({ durationMs: 30 });
 
   expect(warnSpy).toHaveBeenCalledExactlyOnceWith(
     {
@@ -1091,15 +1086,15 @@ test('it honors a per-path slow-request override over the default threshold', as
 });
 
 test('it serves a call from a permitted issuer', async () => {
-  const keyPair = await getTestServiceKeyPair();
+  const keyPair = await resolveTestServiceKeyPair();
 
   updateEnv('SERVICE_AUTH_JWKS', keyPair.jwksJSON);
 
-  const contract = buildTestContract();
+  const ctx = setupTest();
 
   const service = await createService({
     allowedIssuers: ['app-web', 'service-activity'],
-    buildRouter: () => buildTestRouter(contract),
+    createRouter: () => ctx.router,
     envShape: {},
     name: 'test-service',
   });
@@ -1110,7 +1105,7 @@ test('it serves a call from a permitted issuer', async () => {
     privateKey: keyPair.privateKey,
   });
 
-  const client = buildRPCTestClient<ReturnType<typeof buildTestContract>>(service.app, {
+  const client = buildRPCTestClient<typeof ctx.contract>(service.app, {
     headers: { authorization: `Bearer ${token}` },
   });
 
@@ -1118,16 +1113,16 @@ test('it serves a call from a permitted issuer', async () => {
 });
 
 test('it rejects a call from an issuer the service does not accept with 403', async () => {
-  const keyPair = await getTestServiceKeyPair();
+  const keyPair = await resolveTestServiceKeyPair();
 
   updateEnv('SERVICE_AUTH_JWKS', keyPair.jwksJSON);
 
-  const contract = buildTestContract();
+  const ctx = setupTest();
   let handlerRan = false;
-  const os = implement(contract).$context<ServiceContext>();
+  const os = implement(ctx.contract).$context<ServiceContext>();
 
   const router = {
-    ...buildTestRouter(contract),
+    ...ctx.router,
     ping: os.ping.handler(() => {
       handlerRan = true;
 
@@ -1137,7 +1132,7 @@ test('it rejects a call from an issuer the service does not accept with 403', as
 
   const service = await createService({
     allowedIssuers: ['app-web', 'service-activity'],
-    buildRouter: () => router,
+    createRouter: () => router,
     envShape: {},
     name: 'test-service',
   });
@@ -1161,16 +1156,16 @@ test('it rejects a call from an issuer the service does not accept with 403', as
 });
 
 test('it gives the handler the verified issuer', async () => {
-  const keyPair = await getTestServiceKeyPair();
+  const keyPair = await resolveTestServiceKeyPair();
 
   updateEnv('SERVICE_AUTH_JWKS', keyPair.jwksJSON);
 
-  const contract = buildTestContract();
+  const ctx = setupTest();
   let capturedIssuer: string | undefined;
-  const os = implement(contract).$context<ServiceContext>();
+  const os = implement(ctx.contract).$context<ServiceContext>();
 
   const router = {
-    ...buildTestRouter(contract),
+    ...ctx.router,
     ping: os.ping.handler((opts) => {
       capturedIssuer = opts.context.issuer;
 
@@ -1180,7 +1175,7 @@ test('it gives the handler the verified issuer', async () => {
 
   const service = await createService({
     allowedIssuers: ['app-web', 'service-activity'],
-    buildRouter: () => router,
+    createRouter: () => router,
     envShape: {},
     name: 'test-service',
   });
@@ -1191,7 +1186,7 @@ test('it gives the handler the verified issuer', async () => {
     privateKey: keyPair.privateKey,
   });
 
-  const client = buildRPCTestClient<ReturnType<typeof buildTestContract>>(service.app, {
+  const client = buildRPCTestClient<typeof ctx.contract>(service.app, {
     headers: { authorization: `Bearer ${token}` },
   });
 

@@ -1,1 +1,1 @@
-export type { UserRouter } from './build-router';
+export type { UserRouter } from './create-user-router';

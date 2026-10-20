@@ -3,7 +3,7 @@ import { buildRollStream } from './build-roll-stream';
 
 test('it reproduces the frozen golden byte sequence for a fixed seed and domain', () => {
   const stream = buildRollStream(
-    Uint8Array.from({ length: 32 }, (_, i) => i),
+    Uint8Array.from({ length: 32 }, (_, index) => index),
     'test/domain',
   );
 
@@ -25,7 +25,7 @@ test('it reproduces the frozen golden byte sequence for a fixed seed and domain'
 
 test('it reproduces the frozen golden dice sequence for a narrow range', () => {
   const stream = buildRollStream(
-    Uint8Array.from({ length: 32 }, (_, i) => i),
+    Uint8Array.from({ length: 32 }, (_, index) => index),
     'test/domain',
   );
 
@@ -45,7 +45,7 @@ test('it reproduces the frozen golden dice sequence for a narrow range', () => {
 
 test('it reproduces the frozen golden sequence for a two-byte span', () => {
   const stream = buildRollStream(
-    Uint8Array.from({ length: 32 }, (_, i) => i),
+    Uint8Array.from({ length: 32 }, (_, index) => index),
     'test/domain',
   );
 
@@ -63,12 +63,12 @@ test('it reproduces the frozen golden sequence for a two-byte span', () => {
 
 test('it yields identical draws for equal seed and domain', () => {
   const first = buildRollStream(
-    Uint8Array.from({ length: 32 }, (_, i) => i),
+    Uint8Array.from({ length: 32 }, (_, index) => index),
     'test/domain',
   );
 
   const second = buildRollStream(
-    Uint8Array.from({ length: 32 }, (_, i) => i),
+    Uint8Array.from({ length: 32 }, (_, index) => index),
     'test/domain',
   );
 
@@ -78,11 +78,11 @@ test('it yields identical draws for equal seed and domain', () => {
 });
 
 test('it keeps drawing from the seed as constructed when the caller mutates it', () => {
-  const seed = Uint8Array.from({ length: 32 }, (_, i) => i);
+  const seed = Uint8Array.from({ length: 32 }, (_, index) => index);
   const stream = buildRollStream(seed, 'test/domain');
 
   const reference = buildRollStream(
-    Uint8Array.from({ length: 32 }, (_, i) => i),
+    Uint8Array.from({ length: 32 }, (_, index) => index),
     'test/domain',
   );
 
@@ -96,12 +96,12 @@ test('it keeps drawing from the seed as constructed when the caller mutates it',
 
 test('it diverges across domains for the same seed', () => {
   const first = buildRollStream(
-    Uint8Array.from({ length: 32 }, (_, i) => i),
+    Uint8Array.from({ length: 32 }, (_, index) => index),
     'test/domain',
   );
 
   const second = buildRollStream(
-    Uint8Array.from({ length: 32 }, (_, i) => i),
+    Uint8Array.from({ length: 32 }, (_, index) => index),
     'other/domain',
   );
 
@@ -112,7 +112,7 @@ test('it diverges across domains for the same seed', () => {
 
 test('it keeps every draw inside the requested range', () => {
   const stream = buildRollStream(
-    Uint8Array.from({ length: 32 }, (_, i) => i),
+    Uint8Array.from({ length: 32 }, (_, index) => index),
     'test/domain',
   );
 
@@ -123,12 +123,12 @@ test('it keeps every draw inside the requested range', () => {
 
 test('it consumes no bytes for a degenerate range', () => {
   const stream = buildRollStream(
-    Uint8Array.from({ length: 32 }, (_, i) => i),
+    Uint8Array.from({ length: 32 }, (_, index) => index),
     'test/domain',
   );
 
   const reference = buildRollStream(
-    Uint8Array.from({ length: 32 }, (_, i) => i),
+    Uint8Array.from({ length: 32 }, (_, index) => index),
     'test/domain',
   );
 
@@ -138,7 +138,7 @@ test('it consumes no bytes for a degenerate range', () => {
 
 test('it reproduces the frozen golden weighted picks for even weights', () => {
   const stream = buildRollStream(
-    Uint8Array.from({ length: 32 }, (_, i) => i),
+    Uint8Array.from({ length: 32 }, (_, index) => index),
     'test/domain',
   );
 
@@ -165,7 +165,7 @@ test('it reproduces the frozen golden weighted picks for even weights', () => {
 
 test('it lands weighted picks proportionally to skewed weights', () => {
   const stream = buildRollStream(
-    Uint8Array.from({ length: 32 }, (_, i) => i),
+    Uint8Array.from({ length: 32 }, (_, index) => index),
     'test/domain',
   );
 
@@ -181,7 +181,7 @@ test('it lands weighted picks proportionally to skewed weights', () => {
 
 test('it rejects an inverted range', () => {
   const stream = buildRollStream(
-    Uint8Array.from({ length: 32 }, (_, i) => i),
+    Uint8Array.from({ length: 32 }, (_, index) => index),
     'test/domain',
   );
 
@@ -190,7 +190,7 @@ test('it rejects an inverted range', () => {
 
 test('it rejects a span above 2^32', () => {
   const stream = buildRollStream(
-    Uint8Array.from({ length: 32 }, (_, i) => i),
+    Uint8Array.from({ length: 32 }, (_, index) => index),
     'test/domain',
   );
 
@@ -202,7 +202,7 @@ test('it rejects a span above 2^32', () => {
 
 test('it rejects non-integer bounds', () => {
   const stream = buildRollStream(
-    Uint8Array.from({ length: 32 }, (_, i) => i),
+    Uint8Array.from({ length: 32 }, (_, index) => index),
     'test/domain',
   );
 
@@ -219,7 +219,7 @@ test('it rejects non-integer bounds', () => {
 
 test('it rejects an empty weighted pick', () => {
   const stream = buildRollStream(
-    Uint8Array.from({ length: 32 }, (_, i) => i),
+    Uint8Array.from({ length: 32 }, (_, index) => index),
     'test/domain',
   );
 
@@ -231,7 +231,7 @@ test('it rejects an empty weighted pick', () => {
 
 test('it rejects zero and fractional weights', () => {
   const stream = buildRollStream(
-    Uint8Array.from({ length: 32 }, (_, i) => i),
+    Uint8Array.from({ length: 32 }, (_, index) => index),
     'test/domain',
   );
 

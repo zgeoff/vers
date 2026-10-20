@@ -37,7 +37,7 @@ helper.
   [`createViewer`](../../../libs/testing/service-test-utils/src/bun/composites/create-viewer.ts) and
   [`createAnonymousViewer`](../../../libs/testing/service-test-utils/src/bun/composites/create-anonymous-viewer.ts),
   all from `@vers/service-test-utils/bun`. Service tokens on the real verification path come from
-  [`getTestServiceKeyPair`](../../../libs/testing/service-test-utils/src/bun/get-test-service-key-pair.ts)
+  [`resolveTestServiceKeyPair`](../../../libs/testing/service-test-utils/src/bun/resolve-test-service-key-pair.ts)
   with
   [`createServiceToken`](../../../libs/testing/service-test-utils/src/bun/create-service-token.ts).
 - **A typed RPC client over a service app** is
@@ -76,9 +76,9 @@ show the factory, the setup, the scaffolding suites, and the access pairs below.
   nest it.
 - **Scaffolding suites.** Every service carries two suites. `create-<service>-service.test.ts`
   drives one write through an injected database and asserts the row landed in the handle, and it
-  boots the service from `env.DATABASE_URL` when no database is injected, disposing each boot.
-  `build-router.test.ts` drives every case from `collectConformanceCases` through
-  `await expect(conformanceCase.run(ctx.app)).toResolve()`.
+  boots the service from `env.DATABASE_URL` when no database is injected, disposing each boot. The
+  router's suite, beside the module that builds or creates the router, drives every case from
+  `collectConformanceCases` through `await expect(conformanceCase.run(ctx.app)).toResolve()`.
 - **Anonymous pairs.** A procedure that resolves the acting user carries a third access test with
   `createAnonymousViewer`. A pure service-to-service procedure carries none.
 

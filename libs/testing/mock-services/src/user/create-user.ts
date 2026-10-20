@@ -3,12 +3,15 @@ import * as db from '../db';
 import { os } from './os';
 
 export const createUser = os.createUser.handler((opts) => {
-  if (db.userCollection.findFirst((q) => q.where({ email: opts.input.email })) !== undefined) {
+  if (
+    db.userCollection.findFirst((query) => query.where({ email: opts.input.email })) !== undefined
+  ) {
     throw opts.errors.CONFLICT({ data: { field: 'email' } });
   }
 
   if (
-    db.userCollection.findFirst((q) => q.where({ username: opts.input.username })) !== undefined
+    db.userCollection.findFirst((query) => query.where({ username: opts.input.username })) !==
+    undefined
   ) {
     throw opts.errors.CONFLICT({ data: { field: 'username' } });
   }

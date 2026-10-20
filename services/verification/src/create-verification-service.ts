@@ -3,7 +3,7 @@ import type { DB } from '@vers/db';
 import { createService } from '@vers/service-runtime';
 import type { Service } from '@vers/service-runtime';
 import type { Kysely } from 'kysely';
-import { buildVerificationRouter } from './build-router';
+import { createVerificationRouter } from './create-verification-router';
 import { envShape } from './env-shape';
 
 interface CreateVerificationServiceConfig {
@@ -15,8 +15,8 @@ export function createVerificationService(
 ): Promise<Service<typeof envShape>> {
   return createService({
     allowedIssuers: ['app-web'],
-    buildRouter: (runtime) =>
-      buildVerificationRouter({
+    createRouter: (runtime) =>
+      createVerificationRouter({
         db: config.db ?? createDB({ databaseURL: runtime.env.DATABASE_URL }),
       }),
     envShape,

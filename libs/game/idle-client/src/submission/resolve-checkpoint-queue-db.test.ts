@@ -20,12 +20,12 @@ import { resolveCheckpointQueueDB } from './resolve-checkpoint-queue-db';
 import type { CheckpointQueueSchema } from './types';
 import { upgradeCheckpointQueueDB } from './upgrade-checkpoint-queue-db';
 
-// a database of its own: the real name/version pair is a module-scoped singleton an earlier test
-// in this shared process may already have opened fresh at the current version, so a real
-// upgrade cannot run on it
-const UPGRADE_TEST_DB_NAME = 'vers-idle-checkpoint-queue-upgrade-test';
-
 test('it creates the node-seeds store on an upgrade from v3 without dropping the existing stores or their rows', async () => {
+  // a database of its own: the real name/version pair is a module-scoped singleton an earlier
+  // test in this shared process may already have opened fresh at the current version, so a real
+  // upgrade cannot run on it
+  const upgradeDBName = 'vers-idle-checkpoint-queue-upgrade-test';
+
   const preference = {
     avatarID: 'avatar-upgrade',
     dirty: false,
@@ -34,13 +34,13 @@ test('it creates the node-seeds store on an upgrade from v3 without dropping the
 
   // a prior run that threw before its own cleanup could leave a v4 database behind, which would
   // block this run's open at v3 with a version error — drop any leftover before opening
-  await deleteDB(UPGRADE_TEST_DB_NAME);
+  await deleteDB(upgradeDBName);
 
   let v3: IDBPDatabase<CheckpointQueueSchema> | undefined;
   let v4: IDBPDatabase<CheckpointQueueSchema> | undefined;
 
   try {
-    v3 = await openDB<CheckpointQueueSchema>(UPGRADE_TEST_DB_NAME, 3, {
+    v3 = await openDB<CheckpointQueueSchema>(upgradeDBName, 3, {
       upgrade(database) {
         database.createObjectStore(CHECKPOINT_QUEUE_STORE_NAME, {
           keyPath: ['activityID', 'version'],
@@ -55,7 +55,7 @@ test('it creates the node-seeds store on an upgrade from v3 without dropping the
 
     v3.close();
 
-    v4 = await openDB<CheckpointQueueSchema>(UPGRADE_TEST_DB_NAME, 4, {
+    v4 = await openDB<CheckpointQueueSchema>(upgradeDBName, 4, {
       upgrade: upgradeCheckpointQueueDB,
     });
 
@@ -73,7 +73,7 @@ test('it creates the node-seeds store on an upgrade from v3 without dropping the
     v3?.close();
     v4?.close();
 
-    await deleteDB(UPGRADE_TEST_DB_NAME);
+    await deleteDB(upgradeDBName);
   }
 });
 

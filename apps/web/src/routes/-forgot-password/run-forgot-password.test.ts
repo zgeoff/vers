@@ -48,12 +48,12 @@ test('it mints a reset token for a matching account and redirects', async () => 
 
   expect(promise).rejects.toMatchObject({ options: { href: '/reset-password-started' } });
 
-  const updated = db.userCollection.findFirst((q) => q.where({ id: user.id }));
+  const updated = db.userCollection.findFirst((query) => query.where({ id: user.id }));
 
   expect(updated?.passwordResetToken).toBeString();
 
-  const resetPasswordEmail = db.sentEmailCollection.findFirst((q) =>
-    q.where({
+  const resetPasswordEmail = db.sentEmailCollection.findFirst((query) =>
+    query.where({
       payload: { to: 'forgot-password-existing@vers.test' },
       template: 'send-reset-password',
     }),
@@ -76,8 +76,8 @@ test('it redirects the same way for an email with no matching account', async ()
   expect(promise).rejects.toMatchObject({ options: { href: '/reset-password-started' } });
 
   expect(
-    db.sentEmailCollection.findFirst((q) =>
-      q.where({
+    db.sentEmailCollection.findFirst((query) =>
+      query.where({
         payload: { to: 'forgot-password-unknown@vers.test' },
         template: 'send-reset-password',
       }),

@@ -3,7 +3,7 @@ import type { DB } from '@vers/db';
 import { createService } from '@vers/service-runtime';
 import type { Service } from '@vers/service-runtime';
 import type { Kysely } from 'kysely';
-import { buildAvatarRouter } from './build-router';
+import { createAvatarRouter } from './create-avatar-router';
 import { envShape } from './env-shape';
 
 interface CreateAvatarServiceConfig {
@@ -15,8 +15,8 @@ export function createAvatarService(
 ): Promise<Service<typeof envShape>> {
   return createService({
     allowedIssuers: ['app-web'],
-    buildRouter: (runtime) =>
-      buildAvatarRouter({ db: config.db ?? createDB({ databaseURL: runtime.env.DATABASE_URL }) }),
+    createRouter: (runtime) =>
+      createAvatarRouter({ db: config.db ?? createDB({ databaseURL: runtime.env.DATABASE_URL }) }),
     envShape,
     name: 'service-avatar',
   });

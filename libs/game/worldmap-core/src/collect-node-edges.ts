@@ -49,17 +49,27 @@ function collectDiscNodes(
   return nodes;
 }
 
+function getDistanceSquared(
+  left: readonly [number, number],
+  right: readonly [number, number],
+): number {
+  const dx = left[0] - right[0];
+  const dy = left[1] - right[1];
+
+  return dx * dx + dy * dy;
+}
+
 function hasWitnessInside(
-  a: WorldMapNode,
-  b: WorldMapNode,
+  left: WorldMapNode,
+  right: WorldMapNode,
   pool: ReadonlyArray<WorldMapNode>,
 ): boolean {
-  const midX = (a.position[0] + b.position[0]) / 2;
-  const midY = (a.position[1] + b.position[1]) / 2;
-  const radiusSquared = getDistanceSquared(a.position, b.position) / 4;
+  const midX = (left.position[0] + right.position[0]) / 2;
+  const midY = (left.position[1] + right.position[1]) / 2;
+  const radiusSquared = getDistanceSquared(left.position, right.position) / 4;
 
   return pool.some((witness) => {
-    if (witness.id === a.id || witness.id === b.id) {
+    if (witness.id === left.id || witness.id === right.id) {
       return false;
     }
 
@@ -67,15 +77,8 @@ function hasWitnessInside(
   });
 }
 
-function buildEdge(a: WorldMapNode, b: WorldMapNode): WorldEdge {
-  const id = a.id < b.id ? `${a.id}|${b.id}` : `${b.id}|${a.id}`;
+function buildEdge(left: WorldMapNode, right: WorldMapNode): WorldEdge {
+  const id = left.id < right.id ? `${left.id}|${right.id}` : `${right.id}|${left.id}`;
 
-  return { endPosition: b.position, id, startPosition: a.position };
-}
-
-function getDistanceSquared(a: readonly [number, number], b: readonly [number, number]): number {
-  const dx = a[0] - b[0];
-  const dy = a[1] - b[1];
-
-  return dx * dx + dy * dy;
+  return { endPosition: right.position, id, startPosition: left.position };
 }

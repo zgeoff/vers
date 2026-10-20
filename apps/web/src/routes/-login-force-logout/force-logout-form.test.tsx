@@ -6,10 +6,6 @@ import { renderWithRouter } from '../../test-utils/render-with-router';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { ForceLogoutForm } from './force-logout-form';
 
-function rejectWithError(): Promise<undefined> {
-  return Promise.reject(new Error('Service Unavailable'));
-}
-
 test('it disables both buttons while confirming, then re-enables them', async () => {
   const user = userEvent.setup();
   const deferred = buildDeferred<undefined>();
@@ -56,7 +52,9 @@ test('it shows a generic failure message when the force-logout server function f
   const user = userEvent.setup();
 
   await withRequestContext({}, async () => {
-    renderWithRouter(<ForceLogoutForm action={rejectWithError} />);
+    renderWithRouter(
+      <ForceLogoutForm action={() => Promise.reject(new Error('Service Unavailable'))} />,
+    );
 
     const confirmButton = await screen.findByRole('button', { name: 'Confirm' });
 

@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { withRequestContext } from '../../test-utils/with-request-context';
-import { getAuthSession } from './get-auth-session';
+import { readAuthSession } from './read-auth-session';
 import { runLogout } from './run-logout';
 
 test('it clears the auth session cookie before redirecting home by default', async () => {
@@ -14,7 +14,7 @@ test('it clears the auth session cookie before redirecting home by default', asy
 
       expect(promise).rejects.toMatchObject({ options: { href: '/' } });
 
-      return getAuthSession();
+      return readAuthSession();
     },
   );
 

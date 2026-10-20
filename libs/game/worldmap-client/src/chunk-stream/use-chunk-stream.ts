@@ -35,6 +35,7 @@ export function useChunkStream<TEntry>(
     dispose: options.dispose,
   });
 
+  // oxlint-disable-next-line react/refs -- the cache fills outside render, and forceUpdate re-renders when it does
   const cache = cacheRef.current;
   const userSeed = options.userSeed;
 
@@ -67,8 +68,10 @@ export function useChunkStream<TEntry>(
   }, [cache, userSeed, deferredViewport]);
 
   const entries =
+    // oxlint-disable-next-line react/refs -- the cache fills outside render, and forceUpdate re-renders when it does
     userSeed !== null && deferredViewport !== null && cache.isSyncedTo(userSeed)
-      ? collectCachedEntries(cache, deferredViewport)
+      ? // oxlint-disable-next-line react/refs -- the cache fills outside render, and forceUpdate re-renders when it does
+        collectCachedEntries(cache, deferredViewport)
       : [];
 
   useEffect(() => {

@@ -6,14 +6,6 @@ import { renderWithRouter } from '../../test-utils/render-with-router';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { SignupForm } from './signup-form';
 
-function rejectWithResponse(): Promise<Response> {
-  return Promise.resolve(new Response(null, { status: 400 }));
-}
-
-function rejectWithError(): Promise<undefined> {
-  return Promise.reject(new Error('Service Unavailable'));
-}
-
 test('it shows the error for the email field', async () => {
   await withRequestContext({}, async () => {
     renderWithRouter(
@@ -33,7 +25,12 @@ test('it shows a generic failure message when the server rejects the submission'
   const user = userEvent.setup();
 
   await withRequestContext({}, async () => {
-    renderWithRouter(<SignupForm action={rejectWithResponse} honeypotValidFrom="1700000000000" />);
+    renderWithRouter(
+      <SignupForm
+        action={() => Promise.resolve(new Response(null, { status: 400 }))}
+        honeypotValidFrom="1700000000000"
+      />,
+    );
 
     const emailInput = await screen.findByLabelText('Email');
 
@@ -50,7 +47,12 @@ test('it shows a generic failure message when the signup server function faults'
   const user = userEvent.setup();
 
   await withRequestContext({}, async () => {
-    renderWithRouter(<SignupForm action={rejectWithError} honeypotValidFrom="1700000000000" />);
+    renderWithRouter(
+      <SignupForm
+        action={() => Promise.reject(new Error('Service Unavailable'))}
+        honeypotValidFrom="1700000000000"
+      />,
+    );
 
     const emailInput = await screen.findByLabelText('Email');
 

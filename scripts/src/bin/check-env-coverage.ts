@@ -9,13 +9,13 @@ import { parseEnvKeys } from '../env/parse-env-keys';
 import type { EnvKeySource } from '../env/types';
 
 interface ComposeStack {
-  readonly dir: string;
+  readonly directory: string;
   readonly file: string;
 }
 
 const COMPOSE_STACKS: ReadonlyArray<ComposeStack> = [
-  { dir: '.', file: 'docker-compose.yml' },
-  { dir: 'apps/web-e2e', file: 'apps/web-e2e/docker-compose.stack.yml' },
+  { directory: '.', file: 'docker-compose.yml' },
+  { directory: 'apps/web-e2e', file: 'apps/web-e2e/docker-compose.stack.yml' },
 ];
 
 const composeDocs = new Map<string, unknown>();
@@ -51,7 +51,7 @@ for (const leaf of await readdir('services')) {
     await readEnvFileSource(join('services', leaf, '.env.development')),
   ];
 
-  const exampleSource = await findEnvFileSource(join('services', leaf, '.env.example'));
+  const exampleSource = await tryReadEnvFileSource(join('services', leaf, '.env.example'));
 
   if (exampleSource !== null) {
     sources.push(exampleSource);
@@ -93,7 +93,7 @@ async function readEnvFileSource(path: string): Promise<EnvKeySource> {
   return { available: new Set(parseEnvKeys(source)), label: path };
 }
 
-async function findEnvFileSource(path: string): Promise<EnvKeySource | null> {
+async function tryReadEnvFileSource(path: string): Promise<EnvKeySource | null> {
   try {
     return await readEnvFileSource(path);
   } catch {
@@ -115,7 +115,7 @@ async function readComposeSource(
   const available = new Set([...compose.keys, ...bakedKeys]);
 
   for (const ref of compose.envFileRefs) {
-    const source = await readFile(join(stack.dir, ref), 'utf8');
+    const source = await readFile(join(stack.directory, ref), 'utf8');
 
     for (const key of parseEnvKeys(source)) {
       available.add(key);

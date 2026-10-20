@@ -10,7 +10,7 @@ export async function runReconnectRecovery(
   signalAvatarID?: string,
   claim = false,
 ): Promise<void> {
-  const pendingAvatarID = await findPendingStartAvatarID();
+  const pendingAvatarID = await readPendingStartAvatarID();
 
   const avatarID = signalAvatarID ?? pendingAvatarID ?? context.getResyncAvatarID() ?? undefined;
 
@@ -37,7 +37,7 @@ export async function runReconnectRecovery(
   }
 }
 
-async function findPendingStartAvatarID(): Promise<string | undefined> {
+async function readPendingStartAvatarID(): Promise<string | undefined> {
   const rows = await readAllActivityStarts();
 
   return rows[0]?.avatarID;

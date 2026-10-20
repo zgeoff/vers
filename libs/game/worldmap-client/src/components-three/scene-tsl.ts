@@ -14,7 +14,7 @@ export interface TSLMathNode {
 }
 
 export interface TSLTextureNode {
-  readonly r: TSLMathNode;
+  readonly x: TSLMathNode;
   value: DataTexture;
 }
 

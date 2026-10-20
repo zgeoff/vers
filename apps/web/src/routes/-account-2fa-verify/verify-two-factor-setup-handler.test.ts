@@ -54,7 +54,7 @@ test('it flips the verification to 2fa and redirects to settings for a correct c
   expect(promise).rejects.toMatchObject({ options: { to: '/settings' } });
 
   expect(
-    db.verificationCollection.findFirst((q) => q.where({ target: signedIn.userID })),
+    db.verificationCollection.findFirst((query) => query.where({ target: signedIn.userID })),
   ).toMatchObject({ type: '2fa' });
 });
 

@@ -8,8 +8,8 @@ export const getRevealedNodes = os.getRevealedNodes.handler((opts) => {
     throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
   }
 
-  const avatar = db.avatarCollection.findFirst((q) =>
-    q.where({ id: opts.input.avatarID, userID: actingUserID }),
+  const avatar = db.avatarCollection.findFirst((query) =>
+    query.where({ id: opts.input.avatarID, userID: actingUserID }),
   );
 
   if (avatar === undefined) {

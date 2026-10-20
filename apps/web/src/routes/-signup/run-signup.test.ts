@@ -50,14 +50,17 @@ test('it redirects to verify-otp without creating a verification for an email al
     options: { href: '/verify-otp?target=signup-existing%40vers.test&type=onboarding' },
   });
 
-  const verification = db.verificationCollection.findFirst((q) =>
-    q.where({ target: 'signup-existing@vers.test', type: 'onboarding' }),
+  const verification = db.verificationCollection.findFirst((query) =>
+    query.where({ target: 'signup-existing@vers.test', type: 'onboarding' }),
   );
 
   expect(verification).toBeUndefined();
 
-  const existingAccountEmail = db.sentEmailCollection.findFirst((q) =>
-    q.where({ payload: { to: 'signup-existing@vers.test' }, template: 'send-existing-account' }),
+  const existingAccountEmail = db.sentEmailCollection.findFirst((query) =>
+    query.where({
+      payload: { to: 'signup-existing@vers.test' },
+      template: 'send-existing-account',
+    }),
   );
 
   expect(existingAccountEmail?.payload).toStrictEqual({
@@ -65,8 +68,8 @@ test('it redirects to verify-otp without creating a verification for an email al
     to: 'signup-existing@vers.test',
   });
 
-  const welcomeEmail = db.sentEmailCollection.findFirst((q) =>
-    q.where({ payload: { to: 'signup-existing@vers.test' }, template: 'send-welcome' }),
+  const welcomeEmail = db.sentEmailCollection.findFirst((query) =>
+    query.where({ payload: { to: 'signup-existing@vers.test' }, template: 'send-welcome' }),
   );
 
   expect(welcomeEmail).toBeUndefined();
@@ -84,15 +87,15 @@ test('it creates an onboarding verification and redirects to verify-otp', async 
     options: { href: '/verify-otp?target=signup-new%40vers.test&type=onboarding' },
   });
 
-  const verification = db.verificationCollection.findFirst((q) =>
-    q.where({ target: 'signup-new@vers.test', type: 'onboarding' }),
+  const verification = db.verificationCollection.findFirst((query) =>
+    query.where({ target: 'signup-new@vers.test', type: 'onboarding' }),
   );
 
   invariant(verification, 'expected a persisted verification row');
   invariant(verification.expiresAt, 'expected an emailed verification to carry an expiry');
 
-  const welcomeEmail = db.sentEmailCollection.findFirst((q) =>
-    q.where({ payload: { to: 'signup-new@vers.test' }, template: 'send-welcome' }),
+  const welcomeEmail = db.sentEmailCollection.findFirst((query) =>
+    query.where({ payload: { to: 'signup-new@vers.test' }, template: 'send-welcome' }),
   );
 
   expect(welcomeEmail?.payload).toStrictEqual({

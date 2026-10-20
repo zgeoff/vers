@@ -8,13 +8,7 @@ import type { CanonicalCheckpoint } from './parse-canonical-case-output';
 import { parseCanonicalCaseOutput } from './parse-canonical-case-output';
 import { runCorpusCase } from './run-corpus-case';
 
-const TIE_CASE_IDS = [
-  'event-tie-failed-short',
-  'event-tie-failed-long',
-  'event-tie-progress-cutoff',
-];
-
-test.each(TIE_CASE_IDS)(
+test.each(['event-tie-failed-short', 'event-tie-failed-long', 'event-tie-progress-cutoff'])(
   'it builds the %s case with the avatar weapon on the same attack interval as the fast-attack archetype',
   (id) => {
     const [archetype] = CORPUS_CONTENT['fast-attack'].archetypes;
@@ -37,21 +31,20 @@ test.each(TIE_CASE_IDS)(
   },
 );
 
-const THRESHOLD_CASE_IDS = ['threshold-one-below', 'threshold-exact'];
+test.each(['threshold-one-below', 'threshold-exact'])(
+  'it records a level-up checkpoint in the %s case',
+  async (id) => {
+    const canonicalString = await runCorpusCase(id);
 
-test.each(THRESHOLD_CASE_IDS)('it records a level-up checkpoint in the %s case', async (id) => {
-  const canonicalString = await runCorpusCase(id);
+    const canonical = parseCanonicalCaseOutput(canonicalString);
 
-  const canonical = parseCanonicalCaseOutput(canonicalString);
+    expect(canonical.checkpoints).toSatisfyAny(
+      (checkpoint: CanonicalCheckpoint) => checkpoint[6] !== null,
+    );
+  },
+);
 
-  expect(canonical.checkpoints).toSatisfyAny(
-    (checkpoint: CanonicalCheckpoint) => checkpoint[6] !== null,
-  );
-});
-
-const REPEATED_ACTIVITY_CASE_IDS = ['repeated-retry-long-a', 'repeated-retry-long-b'];
-
-test.each(REPEATED_ACTIVITY_CASE_IDS)(
+test.each(['repeated-retry-long-a', 'repeated-retry-long-b'])(
   'it plays through more than one activity attempt in the %s case',
   async (id) => {
     const canonicalString = await runCorpusCase(id);
@@ -76,17 +69,18 @@ test('it records a completed checkpoint in the clean-completion case', async () 
   );
 });
 
-const FAILED_TERMINAL_CASE_IDS = ['aborted-failure', 'same-tick-multi-enemy-avatar-death'];
+test.each(['aborted-failure', 'same-tick-multi-enemy-avatar-death'])(
+  'it records a failed checkpoint in the %s case',
+  async (id) => {
+    const canonicalString = await runCorpusCase(id);
 
-test.each(FAILED_TERMINAL_CASE_IDS)('it records a failed checkpoint in the %s case', async (id) => {
-  const canonicalString = await runCorpusCase(id);
+    const canonical = parseCanonicalCaseOutput(canonicalString);
 
-  const canonical = parseCanonicalCaseOutput(canonicalString);
-
-  expect(canonical.checkpoints).toSatisfyAny(
-    (checkpoint: CanonicalCheckpoint) => checkpoint[0] === 'failed',
-  );
-});
+    expect(canonical.checkpoints).toSatisfyAny(
+      (checkpoint: CanonicalCheckpoint) => checkpoint[0] === 'failed',
+    );
+  },
+);
 
 test('it starts more than one attempt in the retrying-multi-attempt case', async () => {
   const canonicalString = await runCorpusCase('retrying-multi-attempt');

@@ -25,29 +25,32 @@ import type {
 import { WORKER_TO_CLIENT_CHANNEL } from './constants';
 import { useSimulationTransport } from './use-simulation-transport';
 
-class StubSharedWorker extends EventTarget {
-  channel = new MessageChannel();
-
-  port = this.channel.port1;
-
-  onerror = null;
-
-  constructor() {
-    super();
-
-    constructedWorkers.push(this);
-  }
-}
-
-const constructedWorkers: Array<StubSharedWorker> = [];
-
 // a browser with a SharedWorker also has Web Locks, which the transport pick now requires; the
 // test runtime has neither, so both are stubbed together
-function registerSharedWorkerStub() {
+function setupTest() {
+  const constructedWorkers: Array<EventTarget> = [];
   const originalSharedWorker = globalThis.SharedWorker;
   const locksDescriptor = Object.getOwnPropertyDescriptor(navigator, 'locks');
 
-  Reflect.set(globalThis, 'SharedWorker', StubSharedWorker);
+  // the transport constructs the worker with `new`, which only a constructor answers, so a proxy
+  // over one builds each stub worker in its construct trap
+  const stubSharedWorker = new Proxy(EventTarget, {
+    construct: () => {
+      const channel = new MessageChannel();
+
+      const worker = Object.assign(new EventTarget(), {
+        channel,
+        onerror: null,
+        port: channel.port1,
+      });
+
+      constructedWorkers.push(worker);
+
+      return worker;
+    },
+  });
+
+  Reflect.set(globalThis, 'SharedWorker', stubSharedWorker);
 
   Object.defineProperty(navigator, 'locks', {
     configurable: true,
@@ -62,44 +65,43 @@ function registerSharedWorkerStub() {
     } else {
       Object.defineProperty(navigator, 'locks', locksDescriptor);
     }
-
-    constructedWorkers.length = 0;
-  });
-}
-
-function emitWorkerMessage(message: unknown) {
-  const channel = new BroadcastChannel(WORKER_TO_CLIENT_CHANNEL);
-
-  onTestFinished(() => {
-    channel.close();
   });
 
-  channel.postMessage(message);
+  return {
+    constructedWorkers,
+    emitWorkerMessage: (message: unknown) => {
+      const channel = new BroadcastChannel(WORKER_TO_CLIENT_CHANNEL);
+
+      onTestFinished(() => {
+        channel.close();
+      });
+
+      channel.postMessage(message);
+    },
+    TransportConsumer: () => {
+      useSimulationTransport();
+
+      return null;
+    },
+  };
 }
 
 test('it creates a client over the SharedWorker connection', () => {
-  registerSharedWorkerStub();
-
+  const ctx = setupTest();
   const hook = renderHook(() => useSimulationTransport());
 
   hook.rerender();
 
   expect(hook.result.current).not.toBeNull();
-  expect(constructedWorkers.at(-1)).toBeInstanceOf(StubSharedWorker);
+  expect(ctx.constructedWorkers).toHaveLength(1);
 
   // unmounted inside the test body: the preload's store reset fires while a mounted hook still
   // subscribes, and its effect would resurrect a client into the freshly reset store
   hook.unmount();
 });
 
-function TransportConsumer() {
-  useSimulationTransport();
-
-  return null;
-}
-
 test('it constructs one client for sibling consumers mounting in the same commit', () => {
-  registerSharedWorkerStub();
+  const ctx = setupTest();
 
   // sibling effects all run before any store write re-renders them, so only an imperative store
   // check keeps the second and third consumer from constructing their own client
@@ -107,19 +109,19 @@ test('it constructs one client for sibling consumers mounting in the same commit
     createElement(
       'div',
       null,
-      createElement(TransportConsumer),
-      createElement(TransportConsumer),
-      createElement(TransportConsumer),
+      createElement(ctx.TransportConsumer),
+      createElement(ctx.TransportConsumer),
+      createElement(ctx.TransportConsumer),
     ),
   );
 
-  expect(constructedWorkers).toHaveLength(1);
+  expect(ctx.constructedWorkers).toHaveLength(1);
 
   rendered.unmount();
 });
 
 test('it applies a broadcast once even with several consumers mounted', async () => {
-  registerSharedWorkerStub();
+  const ctx = setupTest();
 
   useIdleStore.setState({ checkpointStreamError: null });
 
@@ -127,13 +129,13 @@ test('it applies a broadcast once even with several consumers mounted', async ()
     createElement(
       'div',
       null,
-      createElement(TransportConsumer),
-      createElement(TransportConsumer),
-      createElement(TransportConsumer),
+      createElement(ctx.TransportConsumer),
+      createElement(ctx.TransportConsumer),
+      createElement(ctx.TransportConsumer),
     ),
   );
 
-  emitWorkerMessage({
+  ctx.emitWorkerMessage({
     state: {
       activity: createMockActivitySnapshot({ id: 'activity_1' }),
       failureAction: ActivityFailureAction.Retry,
@@ -145,7 +147,7 @@ test('it applies a broadcast once even with several consumers mounted', async ()
     expect(useIdleStore.getState().activity?.id).toBe('activity_1');
   });
 
-  emitWorkerMessage({
+  ctx.emitWorkerMessage({
     activityID: 'activity_1',
     rewardSlotCount: 2,
     type: WorkerMessageType.RewardSlotsRecorded,
@@ -190,8 +192,7 @@ test('it creates no client when neither SharedWorker nor Web Locks is supported'
 });
 
 test('it updates simulation state from a broadcast', async () => {
-  registerSharedWorkerStub();
-
+  const ctx = setupTest();
   const hook = renderHook(() => useSimulationTransport());
 
   hook.rerender();
@@ -203,7 +204,7 @@ test('it updates simulation state from a broadcast', async () => {
     type: WorkerMessageType.SimulationUpdate,
   };
 
-  emitWorkerMessage(message);
+  ctx.emitWorkerMessage(message);
 
   await waitFor(() => {
     expect(useIdleStore.getState().combat).toStrictEqual({ elapsed: 1000 });
@@ -215,7 +216,7 @@ test('it updates simulation state from a broadcast', async () => {
 });
 
 test('it resets the handshake and advances the generation on a writer-ready broadcast', async () => {
-  registerSharedWorkerStub();
+  const ctx = setupTest();
 
   useIdleStore.setState({ initialized: true });
 
@@ -227,7 +228,7 @@ test('it resets the handshake and advances the generation on a writer-ready broa
     type: WorkerMessageType.WriterReady,
   };
 
-  emitWorkerMessage(message);
+  ctx.emitWorkerMessage(message);
 
   await waitFor(() => {
     expect(useIdleStore.getState().writerGeneration).toBe(1);
@@ -239,15 +240,14 @@ test('it resets the handshake and advances the generation on a writer-ready broa
 });
 
 test('it flags writer contention on a writer-pending broadcast and clears it once the writer is ready', async () => {
-  registerSharedWorkerStub();
-
+  const ctx = setupTest();
   const hook = renderHook(() => useSimulationTransport());
 
   hook.rerender();
 
   const pending: WriterPendingMessage = { type: WorkerMessageType.WriterPending };
 
-  emitWorkerMessage(pending);
+  ctx.emitWorkerMessage(pending);
 
   await waitFor(() => {
     expect(useIdleStore.getState().writerContention).toBeTrue();
@@ -255,7 +255,7 @@ test('it flags writer contention on a writer-pending broadcast and clears it onc
 
   const ready: WriterReadyMessage = { type: WorkerMessageType.WriterReady };
 
-  emitWorkerMessage(ready);
+  ctx.emitWorkerMessage(ready);
 
   await waitFor(() => {
     expect(useIdleStore.getState().writerContention).toBeFalse();
@@ -265,8 +265,7 @@ test('it flags writer contention on a writer-pending broadcast and clears it onc
 });
 
 test('it records a journal failure from a broadcast', async () => {
-  registerSharedWorkerStub();
-
+  const ctx = setupTest();
   const hook = renderHook(() => useSimulationTransport());
 
   hook.rerender();
@@ -278,7 +277,7 @@ test('it records a journal failure from a broadcast', async () => {
     type: WorkerMessageType.JournalFailure,
   };
 
-  emitWorkerMessage(message);
+  ctx.emitWorkerMessage(message);
 
   await waitFor(() => {
     expect(useIdleStore.getState().journalFailure).toStrictEqual({
@@ -292,8 +291,7 @@ test('it records a journal failure from a broadcast', async () => {
 });
 
 test('it folds saved and received cursors from separate broadcasts into one save status', async () => {
-  registerSharedWorkerStub();
-
+  const ctx = setupTest();
   const hook = renderHook(() => useSimulationTransport());
 
   hook.rerender();
@@ -312,8 +310,8 @@ test('it folds saved and received cursors from separate broadcasts into one save
     type: WorkerMessageType.SaveStatus,
   };
 
-  emitWorkerMessage(saved);
-  emitWorkerMessage(received);
+  ctx.emitWorkerMessage(saved);
+  ctx.emitWorkerMessage(received);
 
   await waitFor(() => {
     expect(useIdleStore.getState().saveStatus).toStrictEqual({
@@ -327,8 +325,7 @@ test('it folds saved and received cursors from separate broadcasts into one save
 });
 
 test('it reports a checkpoint stream error from a broadcast', async () => {
-  registerSharedWorkerStub();
-
+  const ctx = setupTest();
   const hook = renderHook(() => useSimulationTransport());
 
   hook.rerender();
@@ -338,7 +335,7 @@ test('it reports a checkpoint stream error from a broadcast', async () => {
     type: WorkerMessageType.CheckpointStreamInvalid,
   };
 
-  emitWorkerMessage(message);
+  ctx.emitWorkerMessage(message);
 
   await waitFor(() => {
     expect(useIdleStore.getState().checkpointStreamError).toStrictEqual({
@@ -350,8 +347,7 @@ test('it reports a checkpoint stream error from a broadcast', async () => {
 });
 
 test('it records the run outcome from a broadcast', async () => {
-  registerSharedWorkerStub();
-
+  const ctx = setupTest();
   const hook = renderHook(() => useSimulationTransport());
 
   hook.rerender();
@@ -361,7 +357,7 @@ test('it records the run outcome from a broadcast', async () => {
     type: WorkerMessageType.ActivityEnded,
   };
 
-  emitWorkerMessage(message);
+  ctx.emitWorkerMessage(message);
 
   await waitFor(() => {
     expect(useIdleStore.getState().runOutcome).toStrictEqual(message.outcome);
@@ -373,8 +369,7 @@ test('it records the run outcome from a broadcast', async () => {
 });
 
 test('it records the ingested activity start from a broadcast', async () => {
-  registerSharedWorkerStub();
-
+  const ctx = setupTest();
   const hook = renderHook(() => useSimulationTransport());
 
   hook.rerender();
@@ -384,7 +379,7 @@ test('it records the ingested activity start from a broadcast', async () => {
     type: WorkerMessageType.ActivityStartIngested,
   };
 
-  emitWorkerMessage(message);
+  ctx.emitWorkerMessage(message);
 
   await waitFor(() => {
     expect(useIdleStore.getState().lastIngestedActivityID).toBe('activity_ingested_1');
@@ -394,8 +389,7 @@ test('it records the ingested activity start from a broadcast', async () => {
 });
 
 test('it maps a resync status broadcast onto the store', async () => {
-  registerSharedWorkerStub();
-
+  const ctx = setupTest();
   const hook = renderHook(() => useSimulationTransport());
 
   hook.rerender();
@@ -405,7 +399,7 @@ test('it maps a resync status broadcast onto the store', async () => {
     type: WorkerMessageType.ResyncStatus,
   };
 
-  emitWorkerMessage(message);
+  ctx.emitWorkerMessage(message);
 
   await waitFor(() => {
     expect(useIdleStore.getState().resyncStatus).toStrictEqual({
@@ -419,7 +413,7 @@ test('it maps a resync status broadcast onto the store', async () => {
 });
 
 test('it accumulates the reward-slot ledger from broadcasts', async () => {
-  registerSharedWorkerStub();
+  const ctx = setupTest();
 
   useIdleStore.setState({ checkpointStreamError: null });
 
@@ -427,7 +421,7 @@ test('it accumulates the reward-slot ledger from broadcasts', async () => {
 
   hook.rerender();
 
-  emitWorkerMessage({
+  ctx.emitWorkerMessage({
     state: {
       activity: createMockActivitySnapshot({ id: 'activity_1' }),
       failureAction: ActivityFailureAction.Retry,
@@ -446,7 +440,7 @@ test('it accumulates the reward-slot ledger from broadcasts', async () => {
     version: 1,
   };
 
-  emitWorkerMessage(firstMessage);
+  ctx.emitWorkerMessage(firstMessage);
 
   await waitFor(() => {
     expect(useIdleStore.getState().rewardSlotLedger).toStrictEqual([{ count: 2, version: 1 }]);
@@ -459,7 +453,7 @@ test('it accumulates the reward-slot ledger from broadcasts', async () => {
     version: 2,
   };
 
-  emitWorkerMessage(secondMessage);
+  ctx.emitWorkerMessage(secondMessage);
 
   await waitFor(() => {
     expect(useIdleStore.getState().rewardSlotLedger).toStrictEqual([
@@ -472,7 +466,7 @@ test('it accumulates the reward-slot ledger from broadcasts', async () => {
 });
 
 test('it resets the reward-slot ledger once a new activity reports its own message', async () => {
-  registerSharedWorkerStub();
+  const ctx = setupTest();
 
   useIdleStore.setState({ checkpointStreamError: null });
 
@@ -480,7 +474,7 @@ test('it resets the reward-slot ledger once a new activity reports its own messa
 
   hook.rerender();
 
-  emitWorkerMessage({
+  ctx.emitWorkerMessage({
     state: {
       activity: createMockActivitySnapshot({ id: 'activity_1' }),
       failureAction: ActivityFailureAction.Retry,
@@ -492,7 +486,7 @@ test('it resets the reward-slot ledger once a new activity reports its own messa
     expect(useIdleStore.getState().activity?.id).toBe('activity_1');
   });
 
-  emitWorkerMessage({
+  ctx.emitWorkerMessage({
     activityID: 'activity_1',
     rewardSlotCount: 2,
     type: WorkerMessageType.RewardSlotsRecorded,
@@ -503,7 +497,7 @@ test('it resets the reward-slot ledger once a new activity reports its own messa
     expect(useIdleStore.getState().rewardSlotLedger).toStrictEqual([{ count: 2, version: 1 }]);
   });
 
-  emitWorkerMessage({
+  ctx.emitWorkerMessage({
     state: {
       activity: createMockActivitySnapshot({ id: 'activity_2' }),
       failureAction: ActivityFailureAction.Retry,
@@ -515,7 +509,7 @@ test('it resets the reward-slot ledger once a new activity reports its own messa
     expect(useIdleStore.getState().activity?.id).toBe('activity_2');
   });
 
-  emitWorkerMessage({
+  ctx.emitWorkerMessage({
     activityID: 'activity_2',
     rewardSlotCount: 5,
     type: WorkerMessageType.RewardSlotsRecorded,
@@ -530,8 +524,7 @@ test('it resets the reward-slot ledger once a new activity reports its own messa
 });
 
 test('it maps a writer displaced broadcast onto the store', async () => {
-  registerSharedWorkerStub();
-
+  const ctx = setupTest();
   const hook = renderHook(() => useSimulationTransport());
 
   hook.rerender();
@@ -541,7 +534,7 @@ test('it maps a writer displaced broadcast onto the store', async () => {
     type: WorkerMessageType.WriterDisplaced,
   };
 
-  emitWorkerMessage(message);
+  ctx.emitWorkerMessage(message);
 
   await waitFor(() => {
     expect(useIdleStore.getState().writerDisplacedActivityID).toBe('activity_1');

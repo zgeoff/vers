@@ -119,7 +119,7 @@ test('it delivers the targeted server stop and releases the intent', async () =>
 
   await handleStopActivityMessage(context, { activityID: row.id, avatarID: viewer.avatar.id });
 
-  const stopped = db.activityCollection.findFirst((q) => q.where({ id: row.id }));
+  const stopped = db.activityCollection.findFirst((query) => query.where({ id: row.id }));
 
   invariant(stopped !== undefined, 'expected the targeted row to survive');
 
@@ -170,7 +170,7 @@ test('it halts nothing but still delivers when no simulation is installed', asyn
 
   expect(beforeStop.aborted).toBeTrue();
 
-  const stopped = db.activityCollection.findFirst((q) => q.where({ id: row.id }));
+  const stopped = db.activityCollection.findFirst((query) => query.where({ id: row.id }));
 
   invariant(stopped !== undefined, 'expected the targeted row to survive');
 

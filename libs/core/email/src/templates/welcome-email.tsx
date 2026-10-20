@@ -1,4 +1,4 @@
-import * as E from '@react-email/components';
+import * as ReactEmail from '@react-email/components';
 
 interface Props {
   verificationCode: string;
@@ -7,16 +7,16 @@ interface Props {
 
 export function WelcomeEmail(props: Readonly<Props>) {
   return (
-    <E.Container>
-      <E.Heading as="h1">
-        <E.Text>Welcome to vers</E.Text>
-      </E.Heading>
-      <E.Text>
+    <ReactEmail.Container>
+      <ReactEmail.Heading as="h1">
+        <ReactEmail.Text>Welcome to vers</ReactEmail.Text>
+      </ReactEmail.Heading>
+      <ReactEmail.Text>
         Please verify your vers account to get started. Just click on the link to get started:
-      </E.Text>
-      <E.Link href={props.verificationURL}>Verify your account</E.Link>
-      <E.Text>Or enter the following verification code:</E.Text>
+      </ReactEmail.Text>
+      <ReactEmail.Link href={props.verificationURL}>Verify your account</ReactEmail.Link>
+      <ReactEmail.Text>Or enter the following verification code:</ReactEmail.Text>
       <strong>{props.verificationCode}</strong>
-    </E.Container>
+    </ReactEmail.Container>
   );
 }

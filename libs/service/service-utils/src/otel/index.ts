@@ -1,5 +1,5 @@
 export { buildLogRecord } from './build-log-record';
-export { buildTelemetryResource } from './build-telemetry-resource';
+export { readTelemetryResource } from './read-telemetry-resource';
 export type { OTLPLogStream } from './create-otlp-log-stream';
 export { createOTLPLogStream } from './create-otlp-log-stream';
 export type { MetricsExport } from './start-metrics-export';

@@ -2,7 +2,7 @@ import { useFrame } from '@react-three/fiber';
 import type { Viewport } from '@vers/worldmap-core';
 import { setViewport } from '../state/set-viewport';
 import { useWorldmapStore } from '../state/use-worldmap-store';
-import { buildViewportFromCamera } from '../utils/build-viewport-from-camera';
+import { projectViewportFromCamera } from '../utils/project-viewport-from-camera';
 
 export function ViewportTracker() {
   useFrame(() => {
@@ -12,7 +12,7 @@ export function ViewportTracker() {
       return;
     }
 
-    const nextViewport = buildViewportFromCamera(camera);
+    const nextViewport = projectViewportFromCamera(camera);
 
     if (!nextViewport || isSameViewport(useWorldmapStore.getState().viewport, nextViewport)) {
       return;

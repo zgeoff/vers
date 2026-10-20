@@ -11,7 +11,7 @@ import {
   createServiceToken,
   createTestDB,
   createViewer,
-  getTestServiceKeyPair,
+  resolveTestServiceKeyPair,
 } from '@vers/service-test-utils/bun';
 import { createSimVersionRow } from '@vers/sim-registry/test-utils';
 import { buildRPCTestClient, waitFor } from '@vers/test-utils';
@@ -368,7 +368,7 @@ test('it rejects a stop from a session another writer displaced with SESSION_EVI
 
   await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
 
-  const keyPair = await getTestServiceKeyPair();
+  const keyPair = await resolveTestServiceKeyPair();
 
   const tokenA = await createServiceToken({
     actingSessionID: 'session-a',
@@ -416,7 +416,7 @@ test('it still succeeds idempotently for a displaced session once the row left a
 
   await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
 
-  const keyPair = await getTestServiceKeyPair();
+  const keyPair = await resolveTestServiceKeyPair();
 
   const tokenA = await createServiceToken({
     actingSessionID: 'session-a',

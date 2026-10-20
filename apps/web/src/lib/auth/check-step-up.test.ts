@@ -34,7 +34,7 @@ test('it requires a fresh pending transaction for a 2FA-enabled caller with no t
   expect(transactionID).toBeString();
 
   expect(
-    db.pendingTransactionCollection.findFirst((q) => q.where({ id: transactionID })),
+    db.pendingTransactionCollection.findFirst((query) => query.where({ id: transactionID })),
   ).toMatchObject({ action: 'ChangeEmail', target: signedIn.userID });
 });
 

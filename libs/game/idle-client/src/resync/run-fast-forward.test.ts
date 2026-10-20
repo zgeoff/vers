@@ -25,17 +25,6 @@ interface TrackedAdvanceCall {
   readonly expectedHead: number;
 }
 
-function buildWaveTemplate() {
-  return {
-    waves: [
-      Array.from({ length: 6 }, () => createMockEnemyData()),
-      Array.from({ length: 6 }, () => createMockEnemyData()),
-      Array.from({ length: 3 }, () => createMockEnemyData()),
-      Array.from({ length: 4 }, () => createMockEnemyData()),
-    ],
-  };
-}
-
 function setupTest() {
   const link = new RPCLink({ url: `${resolveServiceURL('activity')}/rpc` });
 
@@ -65,7 +54,18 @@ function setupTest() {
 
   server.use(...handlers);
 
-  return { calls, client };
+  return {
+    buildWaveTemplate: () => ({
+      waves: [
+        Array.from({ length: 6 }, () => createMockEnemyData()),
+        Array.from({ length: 6 }, () => createMockEnemyData()),
+        Array.from({ length: 3 }, () => createMockEnemyData()),
+        Array.from({ length: 4 }, () => createMockEnemyData()),
+      ],
+    }),
+    calls,
+    client,
+  };
 }
 
 test('it discards a partial attempt and submits nothing when the budget is too small', async () => {
@@ -74,10 +74,10 @@ test('it discards a partial attempt and submits nothing when the budget is too s
 
   const report = await runFastForward({
     budgetMs: 3000,
-    buildSimulationInput: (source) =>
+    loadSimulationInput: (source) =>
       Promise.resolve({
         activity: createMockActivityInput({
-          encounter: buildWaveTemplate(),
+          encounter: ctx.buildWaveTemplate(),
           failureAction: ActivityFailureAction.Retry,
           id: source.id,
           seed: source.seed,
@@ -112,7 +112,7 @@ test('it consumes exactly the budget when a reconstructed tail lands on it preci
   // fast-forward's reconstruction must simulate byte-identically for the budget to land exactly.
   const template = {
     activity: createMockActivityInput({
-      encounter: buildWaveTemplate(),
+      encounter: ctx.buildWaveTemplate(),
       failureAction: ActivityFailureAction.Retry,
       id: progress.activity.id,
       seed: progress.activity.seed,
@@ -132,7 +132,7 @@ test('it consumes exactly the budget when a reconstructed tail lands on it preci
 
   const report = await runFastForward({
     budgetMs: tailTimeMs,
-    buildSimulationInput: () => Promise.resolve(structuredClone(template)),
+    loadSimulationInput: () => Promise.resolve(structuredClone(template)),
     client: ctx.client,
     progress,
   });
@@ -155,10 +155,10 @@ test('it stops after the first failed attempt under the abort policy', async () 
 
   const report = await runFastForward({
     budgetMs: 60_000,
-    buildSimulationInput: (source) =>
+    loadSimulationInput: (source) =>
       Promise.resolve({
         activity: createMockActivityInput({
-          encounter: buildWaveTemplate(),
+          encounter: ctx.buildWaveTemplate(),
           failureAction: ActivityFailureAction.Abort,
           id: source.id,
           seed: source.seed,
@@ -189,10 +189,10 @@ test('it plans multiple continuations locally and ships them in one bulk request
 
   const report = await runFastForward({
     budgetMs: 30_000,
-    buildSimulationInput: (source) =>
+    loadSimulationInput: (source) =>
       Promise.resolve({
         activity: createMockActivityInput({
-          encounter: buildWaveTemplate(),
+          encounter: ctx.buildWaveTemplate(),
           failureAction: ActivityFailureAction.Retry,
           id: source.id,
           seed: source.seed,
@@ -225,10 +225,10 @@ test('it resumes a mid-stream activity submitting only the tail past the appende
 
   const report = await runFastForward({
     budgetMs: 60_000,
-    buildSimulationInput: (source) =>
+    loadSimulationInput: (source) =>
       Promise.resolve({
         activity: createMockActivityInput({
-          encounter: buildWaveTemplate(),
+          encounter: ctx.buildWaveTemplate(),
           failureAction: ActivityFailureAction.Abort,
           id: source.id,
           seed: source.seed,
@@ -251,10 +251,10 @@ test('it reports the final row the server minted, for a caller to attach directl
 
   const report = await runFastForward({
     budgetMs: 30_000,
-    buildSimulationInput: (source) =>
+    loadSimulationInput: (source) =>
       Promise.resolve({
         activity: createMockActivityInput({
-          encounter: buildWaveTemplate(),
+          encounter: ctx.buildWaveTemplate(),
           failureAction: ActivityFailureAction.Retry,
           id: source.id,
           seed: source.seed,
@@ -275,10 +275,10 @@ test('it splits a large plan into bounded batches, awaiting each in order', asyn
 
   const report = await runFastForward({
     budgetMs: 60_000,
-    buildSimulationInput: (source) =>
+    loadSimulationInput: (source) =>
       Promise.resolve({
         activity: createMockActivityInput({
-          encounter: buildWaveTemplate(),
+          encounter: ctx.buildWaveTemplate(),
           failureAction: ActivityFailureAction.Retry,
           id: source.id,
           seed: source.seed,
@@ -328,10 +328,17 @@ test('it bails to displaced and reports zero tallies when a batch is rejected', 
 
   const report = await runFastForward({
     budgetMs: 60_000,
-    buildSimulationInput: (source) =>
+    loadSimulationInput: (source) =>
       Promise.resolve({
         activity: createMockActivityInput({
-          encounter: buildWaveTemplate(),
+          encounter: {
+            waves: [
+              Array.from({ length: 6 }, () => createMockEnemyData()),
+              Array.from({ length: 6 }, () => createMockEnemyData()),
+              Array.from({ length: 3 }, () => createMockEnemyData()),
+              Array.from({ length: 4 }, () => createMockEnemyData()),
+            ],
+          },
           failureAction: ActivityFailureAction.Abort,
 
           id: source.id,
@@ -366,10 +373,17 @@ test('it propagates a transport failure rather than reporting it as displaced', 
 
   const run = runFastForward({
     budgetMs: 60_000,
-    buildSimulationInput: (source) =>
+    loadSimulationInput: (source) =>
       Promise.resolve({
         activity: createMockActivityInput({
-          encounter: buildWaveTemplate(),
+          encounter: {
+            waves: [
+              Array.from({ length: 6 }, () => createMockEnemyData()),
+              Array.from({ length: 6 }, () => createMockEnemyData()),
+              Array.from({ length: 3 }, () => createMockEnemyData()),
+              Array.from({ length: 4 }, () => createMockEnemyData()),
+            ],
+          },
           failureAction: ActivityFailureAction.Abort,
 
           id: source.id,
@@ -393,7 +407,7 @@ test('it resolves with no fast-forward at all when the confirmed row already rec
   // fast-forward's own reconstruction must simulate byte-identically.
   const template = {
     activity: createMockActivityInput({
-      encounter: buildWaveTemplate(),
+      encounter: ctx.buildWaveTemplate(),
       failureAction: ActivityFailureAction.Retry,
     }),
     avatar: createMockAvatarData(),
@@ -418,7 +432,7 @@ test('it resolves with no fast-forward at all when the confirmed row already rec
 
   const report = await runFastForward({
     budgetMs: 60_000,
-    buildSimulationInput: () => Promise.resolve(structuredClone(template)),
+    loadSimulationInput: () => Promise.resolve(structuredClone(template)),
     client: ctx.client,
     progress,
   });

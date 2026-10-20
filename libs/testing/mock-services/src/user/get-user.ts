@@ -6,11 +6,11 @@ export const getUser = os.getUser.handler((opts) => {
   const email = opts.input.email;
 
   if (id !== undefined) {
-    return db.userCollection.findFirst((q) => q.where({ id })) ?? null;
+    return db.userCollection.findFirst((query) => query.where({ id })) ?? null;
   }
 
   if (email !== undefined) {
-    return db.userCollection.findFirst((q) => q.where({ email })) ?? null;
+    return db.userCollection.findFirst((query) => query.where({ email })) ?? null;
   }
 
   return null;

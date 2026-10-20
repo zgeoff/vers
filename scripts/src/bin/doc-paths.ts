@@ -25,7 +25,7 @@ for (const pattern of DOC_GLOBS) {
     const markdown = await Bun.file(docPath).text();
 
     for (const reference of collectDocPaths(markdown, docPath)) {
-      if (!(await Bun.file(reference.path).exists()) && !(await isDirectory(reference.path))) {
+      if (!(await Bun.file(reference.path).exists()) && !(await probeDirectory(reference.path))) {
         missing.push(`${docPath}:${reference.line}: ${reference.path}`);
       }
     }
@@ -39,7 +39,7 @@ if (missing.length > 0) {
 
 console.log('doc-paths: clean');
 
-async function isDirectory(candidate: string): Promise<boolean> {
+async function probeDirectory(candidate: string): Promise<boolean> {
   try {
     const info = await stat(candidate);
 

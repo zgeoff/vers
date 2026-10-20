@@ -6,8 +6,8 @@ import rsc from '@vitejs/plugin-rsc';
 import type { Plugin } from 'vite';
 import { defineConfig } from 'vite';
 
-const sentryAuthToken = findNonEmptyEnv('SENTRY_AUTH_TOKEN');
-const sentryDSN = findNonEmptyEnv('VITE_SENTRY_DSN');
+const sentryAuthToken = readNonEmptyEnv('SENTRY_AUTH_TOKEN');
+const sentryDSN = readNonEmptyEnv('VITE_SENTRY_DSN');
 
 export default defineConfig({
   build: {
@@ -92,17 +92,17 @@ export default defineConfig({
   server: { port: 3000 },
 });
 
+function isFontFile(filePath: string): boolean {
+  return /\.woff2?$/u.test(filePath);
+}
+
 // an empty value counts as absent: Docker passes a declared-but-unset build arg through as an empty
 // string, and an argless image build would otherwise enable the sourcemap plugin with blank
 // credentials
-function findNonEmptyEnv(name: string): string | undefined {
+function readNonEmptyEnv(name: string): string | undefined {
   const value = process.env[name];
 
   return value === undefined || value === '' ? undefined : value;
-}
-
-function isFontFile(filePath: string): boolean {
-  return /\.woff2?$/u.test(filePath);
 }
 
 function buildMockBackendPlugin(): Plugin {

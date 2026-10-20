@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import type { SessionContract } from '@vers/contract-session';
 import { createAnonymousViewer, createTestDB, createTestUser } from '@vers/service-test-utils/bun';
-import { buildRPCTestClient, getTestJWTKeyPair } from '@vers/test-utils';
+import { buildRPCTestClient, resolveTestJWTKeyPair } from '@vers/test-utils';
 import * as jose from 'jose';
 import { createSessionService } from '../create-session-service';
 import { createPendingTransactionRow } from '../test-utils/create-pending-transaction-row';
@@ -58,7 +58,7 @@ test("it mints tokens verifiable with the signing key's public half", async () =
   const client = buildRPCTestClient<SessionContract>(ctx.app, { token: viewer.token });
 
   const result = await client.verifySession({ id: session.id });
-  const keyPair = await getTestJWTKeyPair();
+  const keyPair = await resolveTestJWTKeyPair();
   const publicKey = await jose.importSPKI(keyPair.publicKeyPEM, 'RS256');
   const accessVerification = await jose.jwtVerify(result.accessToken, publicKey);
 

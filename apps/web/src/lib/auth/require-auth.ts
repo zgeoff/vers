@@ -1,6 +1,6 @@
 import { getRequestUrl } from '@tanstack/react-start/server';
-import { getAuthSession } from './get-auth-session';
 import { getLoginPathWithRedirect } from './get-login-path-with-redirect';
+import { readAuthSession } from './read-auth-session';
 import { runLogout } from './run-logout';
 
 interface AuthResult {
@@ -10,7 +10,7 @@ interface AuthResult {
 }
 
 export async function requireAuth(): Promise<AuthResult> {
-  const session = await getAuthSession();
+  const session = await readAuthSession();
 
   if (
     session.sessionID === undefined ||

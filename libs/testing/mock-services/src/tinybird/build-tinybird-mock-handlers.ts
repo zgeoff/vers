@@ -1,29 +1,31 @@
-import type { HttpHandler } from 'msw';
+import type { HttpHandler, HttpResponseResolver } from 'msw';
 import { HttpResponse, http } from 'msw';
 import { ProductEventRowSchema, productEventCollection } from '../db/product-event-collection';
 
 export function buildTinybirdMockHandlers(baseUrl: string): Array<HttpHandler> {
-  return [
-    http.post(`${baseUrl}/v0/events`, async (info) => {
-      const url = new URL(info.request.url);
+  return [http.post(`${baseUrl}/v0/events`, makeEventsResolver())];
+}
 
-      const datasource = url.searchParams.get('name') ?? '';
+function makeEventsResolver(): HttpResponseResolver {
+  return async (info) => {
+    const url = new URL(info.request.url);
 
-      const body = await info.request.text();
+    const datasource = url.searchParams.get('name') ?? '';
 
-      const lines = body.split('\n').filter((line) => line.length > 0);
+    const body = await info.request.text();
 
-      for (const line of lines) {
-        const raw: unknown = JSON.parse(line);
-        const row = ProductEventRowSchema.parse(raw);
+    const lines = body.split('\n').filter((line) => line.length > 0);
 
-        await productEventCollection.create({ ...row, datasource });
-      }
+    for (const line of lines) {
+      const raw: unknown = JSON.parse(line);
+      const row = ProductEventRowSchema.parse(raw);
 
-      return HttpResponse.json(
-        { quarantined_rows: 0, successful_rows: lines.length },
-        { status: 202 },
-      );
-    }),
-  ];
+      await productEventCollection.create({ ...row, datasource });
+    }
+
+    return HttpResponse.json(
+      { quarantined_rows: 0, successful_rows: lines.length },
+      { status: 202 },
+    );
+  };
 }

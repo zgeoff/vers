@@ -1,20 +1,15 @@
 import { expect, test } from 'bun:test';
 import { parseScopeSecretRoots } from './parse-scope-secret-roots';
 
-const WORLDMAP_ROOT = '11'.repeat(32);
-
 test('it parses a valid payload into decoded roots', () => {
   const payload = JSON.stringify({
-    worldmap: { current: 1, roots: { 1: WORLDMAP_ROOT } },
+    worldmap: { current: 1, roots: { 1: '11'.repeat(32) } },
   });
 
   const roots = parseScopeSecretRoots(payload);
 
   expect(roots.worldmap.current).toBe(1);
-
-  expect(roots.worldmap.roots.get(1)).toStrictEqual(
-    Uint8Array.from(Buffer.from(WORLDMAP_ROOT, 'hex')),
-  );
+  expect(roots.worldmap.roots.get(1)).toStrictEqual(new Uint8Array(32).fill(0x11));
 });
 
 test('it rejects malformed JSON', () => {
@@ -37,7 +32,7 @@ test('it rejects a root that is not 64-character hex', () => {
 
 test('it rejects a non-integer secret version', () => {
   const payload = JSON.stringify({
-    worldmap: { current: 1, roots: { abc: WORLDMAP_ROOT } },
+    worldmap: { current: 1, roots: { abc: '11'.repeat(32) } },
   });
 
   expect(() => parseScopeSecretRoots(payload)).toThrowWithMessage(
@@ -48,7 +43,7 @@ test('it rejects a non-integer secret version', () => {
 
 test('it rejects a current version absent from roots', () => {
   const payload = JSON.stringify({
-    worldmap: { current: 2, roots: { 1: WORLDMAP_ROOT } },
+    worldmap: { current: 2, roots: { 1: '11'.repeat(32) } },
   });
 
   expect(() => parseScopeSecretRoots(payload)).toThrowWithMessage(Error, /no matching root/u);

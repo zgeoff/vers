@@ -27,5 +27,5 @@ export function collectRevealedCells(
     }
   }
 
-  return [...keys].toSorted((a, b) => a - b);
+  return [...keys].toSorted((left, right) => left - right);
 }

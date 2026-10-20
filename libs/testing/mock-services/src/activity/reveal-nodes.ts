@@ -24,8 +24,8 @@ export const revealNodes = os.revealNodes.handler(async (opts) => {
     throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
   }
 
-  const avatar = db.avatarCollection.findFirst((q) =>
-    q.where({ id: opts.input.avatarID, userID: actingUserID }),
+  const avatar = db.avatarCollection.findFirst((query) =>
+    query.where({ id: opts.input.avatarID, userID: actingUserID }),
   );
 
   if (avatar === undefined) {
@@ -40,7 +40,9 @@ export const revealNodes = os.revealNodes.handler(async (opts) => {
     }
   }
 
-  const selection = db.activeAvatarCollection.findFirst((q) => q.where({ userID: actingUserID }));
+  const selection = db.activeAvatarCollection.findFirst((query) =>
+    query.where({ userID: actingUserID }),
+  );
 
   if (selection === undefined) {
     const liveAvatar = findLiveActivityAvatar(actingUserID);
@@ -53,7 +55,9 @@ export const revealNodes = os.revealNodes.handler(async (opts) => {
 
     await upsertActiveAvatar(actingUserID, opts.input.avatarID);
   } else if (selection.avatarID !== opts.input.avatarID) {
-    const activeAvatar = db.avatarCollection.findFirst((q) => q.where({ id: selection.avatarID }));
+    const activeAvatar = db.avatarCollection.findFirst((query) =>
+      query.where({ id: selection.avatarID }),
+    );
 
     invariant(activeAvatar !== undefined, 'active avatar selection must name an existing avatar');
 

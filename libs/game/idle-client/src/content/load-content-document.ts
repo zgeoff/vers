@@ -1,6 +1,6 @@
 import type { ContentDocument } from '@vers/contract-activity';
 import type { ActivityServiceClient } from '../submission/types';
-import { findCachedContentDocument } from './find-cached-content-document';
+import { readCachedContentDocument } from './read-cached-content-document';
 import { writeContentDocumentCache } from './write-content-document-cache';
 
 export async function loadContentDocument(
@@ -8,7 +8,7 @@ export async function loadContentDocument(
   contentVersion: string,
   signal?: AbortSignal,
 ): Promise<ContentDocument> {
-  const cached = await findCachedContentDocument(contentVersion);
+  const cached = await readCachedContentDocument(contentVersion);
 
   if (cached !== undefined) {
     return cached;

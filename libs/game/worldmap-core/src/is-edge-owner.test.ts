@@ -4,8 +4,6 @@ import { findCellCoord } from './find-cell-coord';
 import { isEdgeOwner } from './is-edge-owner';
 import { toNodeID } from './to-node-id';
 
-const SEED = 2024;
-
 test('it owns an edge for the cell whose node id leads the sorted id', () => {
   const edge = { endPosition: [0, 0] as const, id: '1_2|3_4', startPosition: [0, 0] as const };
 
@@ -16,7 +14,7 @@ test('it owns an edge for the cell whose node id leads the sorted id', () => {
 test('it assigns every edge in a cell box to exactly one of its two endpoints', () => {
   for (let cx = -3; cx <= 3; cx++) {
     for (let cy = -3; cy <= 3; cy++) {
-      for (const edge of collectNodeEdges(SEED, cx, cy)) {
+      for (const edge of collectNodeEdges(2024, cx, cy)) {
         const [aID = '', bID = ''] = edge.id.split('|');
         const aCoord = findCellCoord(aID);
         const bCoord = findCellCoord(bID);
@@ -39,7 +37,7 @@ test('it assigns every edge in a cell box to exactly one of its two endpoints', 
 });
 
 test('it never assigns ownership to a cell that is neither endpoint', () => {
-  const [edge] = collectNodeEdges(SEED, 0, 0);
+  const [edge] = collectNodeEdges(2024, 0, 0);
 
   expect(edge).toBeDefined();
 

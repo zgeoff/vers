@@ -6,9 +6,13 @@ import { createSignedInUser } from './create-signed-in-user';
 test('it creates a user with a verified session and a matching cookie map', async () => {
   const signedIn = await createSignedInUser();
 
-  expect(db.userCollection.findFirst((q) => q.where({ id: signedIn.userID }))).toBeDefined();
+  expect(
+    db.userCollection.findFirst((query) => query.where({ id: signedIn.userID })),
+  ).toBeDefined();
 
-  const session = db.sessionCollection.findFirst((q) => q.where({ id: signedIn.sessionID }));
+  const session = db.sessionCollection.findFirst((query) =>
+    query.where({ id: signedIn.sessionID }),
+  );
 
   expect(session).toMatchObject({ userID: signedIn.userID, verified: true });
 

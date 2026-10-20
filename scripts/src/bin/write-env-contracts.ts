@@ -19,7 +19,7 @@ for (const leaf of await readdir('services')) {
 
   const committed = await loadEnvContract(contractPath);
 
-  if (committed !== null && compareEnvContract(committed, contract)) {
+  if (committed !== null && isSameEnvContract(committed, contract)) {
     continue;
   }
 
@@ -43,6 +43,6 @@ if (failed) {
   console.log('✓ every committed env contract matches its service env shape');
 }
 
-function compareEnvContract(committed: EnvContract, contract: EnvContract): boolean {
+function isSameEnvContract(committed: EnvContract, contract: EnvContract): boolean {
   return JSON.stringify(committed) === JSON.stringify(contract);
 }

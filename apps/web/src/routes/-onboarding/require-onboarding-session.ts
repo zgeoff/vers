@@ -1,6 +1,6 @@
 import { redirect } from '@tanstack/react-router';
 import type { SignupReason } from '../-signup/signup-search-schema';
-import { getVerifySession } from '../../lib/auth/get-verify-session';
+import { readVerifySession } from '../../lib/auth/read-verify-session';
 import { requireAnonymous } from '../../lib/auth/require-anonymous';
 
 export interface OnboardingSession {
@@ -16,7 +16,7 @@ export async function requireOnboardingSession(
 ): Promise<OnboardingSession> {
   await requireAnonymous();
 
-  const verifySession = await getVerifySession();
+  const verifySession = await readVerifySession();
 
   const email = verifySession['onboarding#email'];
 

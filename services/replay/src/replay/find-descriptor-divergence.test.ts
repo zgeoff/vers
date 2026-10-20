@@ -125,7 +125,9 @@ test('it finds no divergence when a v2 stamped poolID matches the recomputed tru
   });
 
   // exactly one of the two pool ids matches the sealed truth for this scope secret and coordinate
-  expect([truthDivergence, otherDivergence].filter((d) => d === undefined)).toHaveLength(1);
+  expect(
+    [truthDivergence, otherDivergence].filter((divergence) => divergence === undefined),
+  ).toHaveLength(1);
 });
 
 test('it finds a divergence when the stamped poolID was sealed under a different userSeed', () => {

@@ -1,10 +1,10 @@
 import { isDefinedError, safe } from '@orpc/client';
 import type { UserData } from '@vers/contract-user';
-import { getAuthSession } from '../auth/get-auth-session';
+import { readAuthSession } from '../auth/read-auth-session';
 import { userClient } from '../rpc/clients/user-client';
 
 export async function readCurrentUser(): Promise<UserData | null> {
-  const session = await getAuthSession();
+  const session = await readAuthSession();
 
   if (
     session.accessToken === undefined ||

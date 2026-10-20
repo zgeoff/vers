@@ -7,10 +7,6 @@ export type AccessTokenVerdict =
   | { readonly kind: 'invalid' }
   | { readonly kind: 'valid'; readonly userID: string };
 
-const REFRESH_SKEW_SECONDS = 30;
-
-type LocalKeySet = ReturnType<typeof jose.createLocalJWKSet>;
-
 // one key set per process, re-read once when a token names a key the set lacks: that is what a
 // rotation looks like from the edge, and a re-read that still lacks the key is a forged token
 let keySet: Promise<LocalKeySet> | undefined;
@@ -30,6 +26,8 @@ export async function verifyAccessToken(token: string): Promise<AccessTokenVerdi
 }
 
 type VerifyAttempt = AccessTokenVerdict | { readonly kind: 'unknown-key' };
+
+const REFRESH_SKEW_SECONDS = 30;
 
 async function tryVerifyAgainstPublishedKeys(token: string): Promise<VerifyAttempt> {
   const keys = await resolveKeySet();
@@ -64,6 +62,8 @@ async function tryVerifyAgainstPublishedKeys(token: string): Promise<VerifyAttem
 
   return { kind: 'valid', userID: payload.sub };
 }
+
+type LocalKeySet = ReturnType<typeof jose.createLocalJWKSet>;
 
 function resolveKeySet(): Promise<LocalKeySet> {
   keySet ??= readPublishedKeySet();

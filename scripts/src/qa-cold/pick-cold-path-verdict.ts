@@ -15,17 +15,17 @@ export function pickColdPathVerdict(requests: ReadonlyArray<FleetRequest>): Cold
 
   const routes = [...counts.entries()]
     .map(([route, count]): RouteCount => ({ count, route }))
-    .toSorted((a, b) => b.count - a.count || compareRoutes(a.route, b.route))
+    .toSorted((left, right) => right.count - left.count || compareRoutes(left.route, right.route))
     .slice(0, TOP_ROUTES);
 
   return { count: requests.length, kind: 'active', routes };
 }
 
 // code-unit order keeps the printed breakdown identical across locales
-function compareRoutes(a: string, b: string): number {
-  if (a < b) {
+function compareRoutes(left: string, right: string): number {
+  if (left < right) {
     return -1;
   }
 
-  return a > b ? 1 : 0;
+  return left > right ? 1 : 0;
 }

@@ -24,6 +24,6 @@ export function encodeMortonKey(coord: readonly [number, number]): number {
   return key;
 }
 
-function toZigzag(n: number): number {
-  return n >= 0 ? n * 2 : -n * 2 - 1;
+function toZigzag(value: number): number {
+  return value >= 0 ? value * 2 : -value * 2 - 1;
 }

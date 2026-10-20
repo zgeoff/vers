@@ -7,6 +7,20 @@ import { PerfProbe } from './perf-probe';
 
 type Renderer = ReturnType<typeof useRenderer>;
 
+interface CaptureRendererProps {
+  readonly onRenderer: (renderer: Renderer) => void;
+}
+
+function setupTest() {
+  return {
+    CaptureRenderer: (props: Readonly<CaptureRendererProps>) => {
+      props.onRenderer(useRenderer());
+
+      return null;
+    },
+  };
+}
+
 test('it samples fps, worst-frame timing, and scatter build stats once the sample window elapses', async () => {
   scatterBuildStats.buildMs = 12;
   scatterBuildStats.glowCount = 40;
@@ -47,11 +61,12 @@ test('it writes nothing to the store before the sample window elapses', async ()
 });
 
 test('it disables the renderer info auto-reset while mounted and restores it on unmount', async () => {
+  const ctx = setupTest();
   const captured: { renderer: Renderer | null } = { renderer: null };
 
   const renderer = await ReactThreeTestRenderer.create(
     <>
-      <CaptureRenderer
+      <ctx.CaptureRenderer
         onRenderer={(value) => {
           captured.renderer = value;
         }}
@@ -70,9 +85,3 @@ test('it disables the renderer info auto-reset while mounted and restores it on 
 
   expect(captured.renderer.info.autoReset).toBe(true);
 });
-
-function CaptureRenderer(props: Readonly<{ onRenderer: (renderer: Renderer) => void }>) {
-  props.onRenderer(useRenderer());
-
-  return null;
-}

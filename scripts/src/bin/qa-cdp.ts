@@ -399,7 +399,7 @@ program
   .command('offline')
   .description('switch network emulation of a page or worker offline or online')
   .argument('<target>', 'target id')
-  .argument('<state>', 'on or off', parseSwitch)
+  .argument('<state>', 'on or off', isSwitchOn)
   .action(async (targetID: string, offline: boolean) => {
     await withTargetClient(getEndpoint(), targetID, async (target) => {
       await target.send('Network.enable');
@@ -563,7 +563,7 @@ function parseCoordinate(value: string): number {
   return coordinate;
 }
 
-function parseSwitch(value: string): boolean {
+function isSwitchOn(value: string): boolean {
   if (value !== 'on' && value !== 'off') {
     throw new InvalidArgumentError('expected on or off');
   }

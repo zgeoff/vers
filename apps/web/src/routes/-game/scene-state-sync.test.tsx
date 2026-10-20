@@ -6,28 +6,13 @@ import {
   createRoute,
   createRouter,
 } from '@tanstack/react-router';
-import { render, screen } from '@testing-library/react';
-import { useSceneState } from '@vers/game-rendering';
+import { render, waitFor } from '@testing-library/react';
+import { getSceneState } from '@vers/game-rendering';
 import { SceneStateSync } from './scene-state-sync';
-
-function SceneStateProbe() {
-  const sceneState = useSceneState();
-
-  return (
-    <p data-testid="scene-state-probe">
-      {sceneState.scene}:{sceneState.presentation}
-    </p>
-  );
-}
 
 test('it forwards the matched route branch staticData into the scene store', async () => {
   const rootRoute = createRootRoute({
-    component: () => (
-      <>
-        <SceneStateSync />
-        <SceneStateProbe />
-      </>
-    ),
+    component: () => <SceneStateSync />,
     staticData: { presentation: 'ambient' },
   });
 
@@ -44,7 +29,9 @@ test('it forwards the matched route branch staticData into the scene store', asy
 
   render(<RouterProvider router={router} />);
 
-  const probe = await screen.findByTestId('scene-state-probe');
+  await waitFor(() => {
+    expect(getSceneState().presentation).toBe('focus');
+  });
 
-  expect(probe).toHaveTextContent('worldmap:focus');
+  expect(getSceneState()).toStrictEqual({ presentation: 'focus', scene: 'worldmap' });
 });

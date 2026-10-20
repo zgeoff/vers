@@ -24,15 +24,17 @@ test("it mints a client whose calls carry the user's bearer token to the service
     })),
   });
 
-  const server = Bun.serve({
-    fetch: async (request) => {
-      const result = await handler.handle(request, {
-        context: { authorization: request.headers.get('authorization') },
-        prefix: '/rpc',
-      });
+  const handleRequest = async (request: Request): Promise<Response> => {
+    const result = await handler.handle(request, {
+      context: { authorization: request.headers.get('authorization') },
+      prefix: '/rpc',
+    });
 
-      return result.matched ? result.response : new Response('not found', { status: 404 });
-    },
+    return result.matched ? result.response : new Response('not found', { status: 404 });
+  };
+
+  const server = Bun.serve({
+    fetch: handleRequest,
     port: 0,
   });
 

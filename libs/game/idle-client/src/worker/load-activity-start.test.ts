@@ -1,0 +1,379 @@
+import { expect, test } from 'bun:test';
+import { buildStartHash } from '@vers/contract-activity';
+import { createMockActivityData } from '@vers/contract-activity/test-utils';
+import { buildLevelFromXP } from '@vers/idle-core';
+import { createMockFailedCheckpoint } from '@vers/idle-core/test-utils';
+import invariant from 'tiny-invariant';
+import { writeLastStartedActivity } from '../submission/write-last-started-activity';
+import { writeNodeSeeds } from '../submission/write-node-seeds';
+import { writeStartStamps } from '../submission/write-start-stamps';
+import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
+import { createMockCompletedCheckpoint } from '../test-utils/factories/create-mock-completed-checkpoint';
+import { createMockNodeSeed } from '../test-utils/factories/create-mock-node-seed';
+import { createMockProgressCheckpoint } from '../test-utils/factories/create-mock-progress-checkpoint';
+import { loadActivityStart } from './load-activity-start';
+
+test('it synthesizes a row whose start hash matches buildStartHash for the same cached inputs', async () => {
+  const seed = createMockNodeSeed({ avatarID: 'avatar_1', nodeID: '3_2' });
+
+  await writeNodeSeeds(seed.avatarID, [seed]);
+  await writeStartStamps({ keyVersion: 4, secretRef: 'worldmap', secretVersion: 2 });
+
+  const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_1' });
+
+  const row = await loadActivityStart(context, {
+    avatarID: seed.avatarID,
+    scopeID: seed.nodeID,
+    scopeType: 'world_map_node',
+    startKey: 'start_key_1',
+  });
+
+  invariant(row !== null, 'expected the cached inputs to synthesize a row');
+
+  const expectedHash = buildStartHash({
+    contentVersion: seed.contentVersion,
+    encounterNode: seed.encounterNode,
+    keyVersion: 4,
+    seed: seed.genesisSeed,
+    simVersion: 'engine_hash_1',
+  });
+
+  expect(row).toStrictEqual({
+    appendedAt: null,
+    appendedHead: 0,
+    avatarID: seed.avatarID,
+    buildSnapshot: { level: 1, xp: 0 },
+    contentVersion: seed.contentVersion,
+    createdAt: expect.toBeValidDate(),
+    encounterNode: seed.encounterNode,
+    id: expect.toStartWith('act_'),
+    keyVersion: 4,
+    lastHash: expectedHash,
+    playedAt: expect.toBeValidDate(),
+    predecessorActivityID: null,
+    scopeID: seed.nodeID,
+    scopeType: 'world_map_node',
+    secretRef: 'worldmap',
+    secretVersion: 2,
+    seed: seed.genesisSeed,
+    simVersion: 'engine_hash_1',
+    startChainIndex: 0,
+    startHash: expectedHash,
+    startKey: 'start_key_1',
+    startedAt: expect.toBeValidDate(),
+    status: 'active',
+    stoppedAt: null,
+    updatedAt: expect.toBeValidDate(),
+    verifiedAt: null,
+    verifiedHead: 0,
+  });
+});
+
+test("it activityStarts the mint at a revisited node's cached anchor rather than its genesis", async () => {
+  const seed = createMockNodeSeed({
+    avatarID: 'avatar_revisited',
+    anchor: { chainIndex: 6, nextSeed: 'seed-advanced' },
+    nodeID: '1_1',
+  });
+
+  await writeNodeSeeds(seed.avatarID, [seed]);
+  await writeStartStamps({ keyVersion: 1, secretRef: 'worldmap', secretVersion: 1 });
+
+  const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_2' });
+
+  const row = await loadActivityStart(context, {
+    avatarID: seed.avatarID,
+    scopeID: seed.nodeID,
+    scopeType: 'world_map_node',
+    startKey: 'start_key_2',
+  });
+
+  invariant(row !== null, 'expected the cached inputs to synthesize a row');
+
+  expect(row.seed).toBe('seed-advanced');
+  expect(row.startChainIndex).toBe(6);
+});
+
+test('it returns null when the scope was never cached for the avatar', async () => {
+  const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_1' });
+
+  const row = await loadActivityStart(context, {
+    avatarID: 'avatar_never_cached',
+    scopeID: '0_0',
+    scopeType: 'world_map_node',
+    startKey: 'start_key_1',
+  });
+
+  expect(row).toBeNull();
+});
+
+test('it returns null when no start stamps are cached', async () => {
+  const seed = createMockNodeSeed({ avatarID: 'avatar_no_stamps', nodeID: '1_0' });
+
+  await writeNodeSeeds(seed.avatarID, [seed]);
+
+  const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_1' });
+
+  const row = await loadActivityStart(context, {
+    avatarID: seed.avatarID,
+    scopeID: seed.nodeID,
+    scopeType: 'world_map_node',
+    startKey: 'start_key_1',
+  });
+
+  expect(row).toBeNull();
+});
+
+test('it returns null when the build carries no bundled engine hash', async () => {
+  const seed = createMockNodeSeed({ avatarID: 'avatar_no_hash', nodeID: '1_0' });
+
+  await writeNodeSeeds(seed.avatarID, [seed]);
+  await writeStartStamps({ keyVersion: 1, secretRef: 'worldmap', secretVersion: 1 });
+
+  const context = createStubWorkerContext();
+
+  const row = await loadActivityStart(context, {
+    avatarID: seed.avatarID,
+    scopeID: seed.nodeID,
+    scopeType: 'world_map_node',
+    startKey: 'start_key_1',
+  });
+
+  expect(row).toBeNull();
+});
+
+test("it folds the build snapshot from the avatar's recorded latest run", async () => {
+  const seed = createMockNodeSeed({ avatarID: 'avatar_with_history', nodeID: '1_0' });
+
+  await writeNodeSeeds(seed.avatarID, [seed]);
+  await writeStartStamps({ keyVersion: 1, secretRef: 'worldmap', secretVersion: 1 });
+
+  const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_1' });
+
+  context.setLatestRun({
+    activityID: 'act_recorded',
+    avatarID: seed.avatarID,
+    baselineXP: 8450,
+    deltaXP: 0,
+    tail: null,
+  });
+
+  const row = await loadActivityStart(context, {
+    avatarID: seed.avatarID,
+    scopeID: seed.nodeID,
+    scopeType: 'world_map_node',
+    startKey: 'start_key_1',
+  });
+
+  invariant(row !== null, 'expected the cached inputs to synthesize a row');
+
+  // the level is recomputed from the carried-forward xp rather than trusted from the record
+  expect(row.buildSnapshot).toStrictEqual({ level: buildLevelFromXP(8450), xp: 8450 });
+});
+
+test("it starts a fresh avatar's build snapshot at zero xp when the recorded run belongs to another avatar", async () => {
+  const seed = createMockNodeSeed({ avatarID: 'avatar_fresh', nodeID: '1_0' });
+
+  await writeNodeSeeds(seed.avatarID, [seed]);
+  await writeStartStamps({ keyVersion: 1, secretRef: 'worldmap', secretVersion: 1 });
+
+  const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_1' });
+
+  context.setLatestRun({
+    activityID: 'act_other_avatar',
+    avatarID: 'a-different-avatar',
+    baselineXP: 8450,
+    deltaXP: 0,
+    tail: null,
+  });
+
+  const row = await loadActivityStart(context, {
+    avatarID: seed.avatarID,
+    scopeID: seed.nodeID,
+    scopeType: 'world_map_node',
+    startKey: 'start_key_1',
+  });
+
+  invariant(row !== null, 'expected the cached inputs to synthesize a row');
+
+  expect(row.buildSnapshot).toStrictEqual({ level: 1, xp: 0 });
+});
+
+test("it stamps the avatar's durably tracked last-started activity as the predecessor", async () => {
+  const seed = createMockNodeSeed({ avatarID: 'avatar_with_predecessor', nodeID: '1_0' });
+
+  await writeNodeSeeds(seed.avatarID, [seed]);
+  await writeStartStamps({ keyVersion: 1, secretRef: 'worldmap', secretVersion: 1 });
+
+  await writeLastStartedActivity({
+    avatarID: seed.avatarID,
+    lastActivityID: 'act_predecessor',
+  });
+
+  const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_1' });
+
+  const row = await loadActivityStart(context, {
+    avatarID: seed.avatarID,
+    scopeID: seed.nodeID,
+    scopeType: 'world_map_node',
+    startKey: 'start_key_1',
+  });
+
+  invariant(row !== null, 'expected the cached inputs to synthesize a row');
+
+  expect(row.predecessorActivityID).toBe('act_predecessor');
+});
+
+test('it stamps a null predecessor when the durable record belongs to a different avatar', async () => {
+  const seed = createMockNodeSeed({ avatarID: 'avatar_switching', nodeID: '1_0' });
+
+  await writeNodeSeeds(seed.avatarID, [seed]);
+  await writeStartStamps({ keyVersion: 1, secretRef: 'worldmap', secretVersion: 1 });
+
+  await writeLastStartedActivity({
+    avatarID: 'a-different-avatar',
+    lastActivityID: 'act_other_avatar',
+  });
+
+  const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_1' });
+
+  const row = await loadActivityStart(context, {
+    avatarID: seed.avatarID,
+    scopeID: seed.nodeID,
+    scopeType: 'world_map_node',
+    startKey: 'start_key_1',
+  });
+
+  invariant(row !== null, 'expected the cached inputs to synthesize a row');
+
+  expect(row.predecessorActivityID).toBeNull();
+});
+
+test("it folds the previous run's recorded terminal total when every checkpoint already left the queue", async () => {
+  const seed = createMockNodeSeed({ avatarID: 'avatar_online_clear', nodeID: '2_3' });
+
+  await writeNodeSeeds(seed.avatarID, [seed]);
+  await writeStartStamps({ keyVersion: 1, secretRef: 'worldmap', secretVersion: 1 });
+
+  const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_1' });
+
+  // the run cleared online: the server confirmed every checkpoint and the queue is empty, so the
+  // worker's own record of the run is the only place its earned xp still lives
+  context.setLatestRun({
+    activityID: 'act_online_previous',
+    avatarID: seed.avatarID,
+    baselineXP: 1000,
+    deltaXP: 150,
+    tail: createMockCompletedCheckpoint({ rewards: { xp: 200 } }),
+  });
+
+  const row = await loadActivityStart(context, {
+    avatarID: seed.avatarID,
+    scopeID: seed.nodeID,
+    scopeType: 'world_map_node',
+    startKey: 'start_key_online',
+  });
+
+  invariant(row !== null, 'expected the cached inputs to synthesize a row');
+
+  // the terminal checkpoint carries the run's whole total, completion bonus included, so the
+  // 200 it names wins over the 150 the progress deltas summed to
+  expect(row.buildSnapshot).toStrictEqual({ level: buildLevelFromXP(1200), xp: 1200 });
+});
+
+test("it folds a still-running previous run's recorded xp deltas when it has no terminal checkpoint yet", async () => {
+  const seed = createMockNodeSeed({ avatarID: 'avatar_switch_mid_run', nodeID: '2_4' });
+
+  await writeNodeSeeds(seed.avatarID, [seed]);
+  await writeStartStamps({ keyVersion: 1, secretRef: 'worldmap', secretVersion: 1 });
+
+  const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_1' });
+
+  context.setLatestRun({
+    activityID: 'act_mid_run_previous',
+    avatarID: seed.avatarID,
+    baselineXP: 1000,
+    deltaXP: 120,
+    tail: createMockProgressCheckpoint({ rewards: { xp: 20 } }),
+  });
+
+  const row = await loadActivityStart(context, {
+    avatarID: seed.avatarID,
+    scopeID: seed.nodeID,
+    scopeType: 'world_map_node',
+    startKey: 'start_key_mid_run',
+  });
+
+  invariant(row !== null, 'expected the cached inputs to synthesize a row');
+
+  expect(row.buildSnapshot).toStrictEqual({ level: buildLevelFromXP(1120), xp: 1120 });
+});
+
+test("it folds a failed previous run's terminal loss into the next snapshot", async () => {
+  const seed = createMockNodeSeed({ avatarID: 'avatar_failed_previous', nodeID: '2_5' });
+
+  await writeNodeSeeds(seed.avatarID, [seed]);
+  await writeStartStamps({ keyVersion: 1, secretRef: 'worldmap', secretVersion: 1 });
+
+  const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_1' });
+
+  // a failed terminal nets the death penalty against what the run earned, so its total can be
+  // negative
+  context.setLatestRun({
+    activityID: 'act_failed_previous',
+    avatarID: seed.avatarID,
+    baselineXP: 1000,
+    deltaXP: 4,
+    tail: createMockFailedCheckpoint({ rewards: { xp: -6 } }),
+  });
+
+  const row = await loadActivityStart(context, {
+    avatarID: seed.avatarID,
+    scopeID: seed.nodeID,
+    scopeType: 'world_map_node',
+    startKey: 'start_key_failed',
+  });
+
+  invariant(row !== null, 'expected the cached inputs to synthesize a row');
+
+  expect(row.buildSnapshot).toStrictEqual({ level: buildLevelFromXP(994), xp: 994 });
+});
+
+test('it keeps folding from the recorded run after a stop cleared the installed activity', async () => {
+  const seed = createMockNodeSeed({ avatarID: 'avatar_stopped_run', nodeID: '2_7' });
+
+  await writeNodeSeeds(seed.avatarID, [seed]);
+  await writeStartStamps({ keyVersion: 1, secretRef: 'worldmap', secretVersion: 1 });
+
+  const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_1' });
+
+  const previous = createMockActivityData({
+    avatarID: seed.avatarID,
+    buildSnapshot: { level: buildLevelFromXP(1000), xp: 1000 },
+    id: 'act_stopped_previous',
+  });
+
+  context.setActivity(previous);
+
+  context.setLatestRun({
+    activityID: previous.id,
+    avatarID: seed.avatarID,
+    baselineXP: 1000,
+    deltaXP: 30,
+    tail: createMockProgressCheckpoint({ rewards: { xp: 10 } }),
+  });
+
+  // a player stop resets the installed activity; the server still counts the stopped run's xp
+  context.setActivity(null);
+
+  const row = await loadActivityStart(context, {
+    avatarID: seed.avatarID,
+    scopeID: seed.nodeID,
+    scopeType: 'world_map_node',
+    startKey: 'start_key_stopped',
+  });
+
+  invariant(row !== null, 'expected the cached inputs to synthesize a row');
+
+  expect(row.buildSnapshot).toStrictEqual({ level: buildLevelFromXP(1030), xp: 1030 });
+});

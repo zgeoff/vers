@@ -65,6 +65,10 @@ export function makeRequestLogger(
   };
 }
 
+function toDurationMs(elapsedMs: number): number {
+  return Math.round(elapsedMs * 10) / 10;
+}
+
 const ASSET_PATH_PATTERN = /\.[a-z0-9]+$/iu;
 
 function pickRequestLogLevel(status: number, pathname: string): keyof RequestLoggerSink {
@@ -77,8 +81,4 @@ function pickRequestLogLevel(status: number, pathname: string): keyof RequestLog
   }
 
   return ASSET_PATH_PATTERN.test(pathname) ? 'debug' : 'info';
-}
-
-function toDurationMs(elapsedMs: number): number {
-  return Math.round(elapsedMs * 10) / 10;
 }

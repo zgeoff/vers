@@ -1,6 +1,6 @@
 import { useEventListener } from '@react-hookz/web';
 import { Text } from '@vers/design-system';
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { useHoveredNode } from '../state/use-hovered-node';
 import * as styles from './node-tooltip.styles';
@@ -17,10 +17,10 @@ export function NodeTooltip(props: Readonly<NodeTooltipProps>) {
   const node = useHoveredNode();
   const document = useDocument();
 
-  useEventListener(document, 'mousemove', (e: MouseEvent) => {
+  useEventListener(document, 'mousemove', (event: MouseEvent) => {
     if (element.current) {
-      const x = e.clientX + TOOLTIP_OFFSET;
-      const y = e.clientY + TOOLTIP_OFFSET;
+      const x = event.clientX + TOOLTIP_OFFSET;
+      const y = event.clientY + TOOLTIP_OFFSET;
 
       element.current.style.transform = `translate(${x}px, ${y}px)`;
     }
@@ -50,11 +50,14 @@ export function NodeTooltip(props: Readonly<NodeTooltipProps>) {
 }
 
 function useDocument() {
-  const [myDocument, setMyDocument] = useState<Document | null>(null);
+  return useSyncExternalStore(
+    subscribeToDocument,
+    () => document,
+    () => null,
+  );
+}
 
-  useEffect(() => {
-    setMyDocument(document);
-  }, []);
-
-  return myDocument;
+// the client's document never changes, so there is nothing to listen for
+function subscribeToDocument(): () => void {
+  return () => {};
 }

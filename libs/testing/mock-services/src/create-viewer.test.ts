@@ -9,11 +9,13 @@ test('it seeds a linked user and avatar and mints a token for that user', async 
   expect(viewer.avatar.userID).toBe(viewer.user.id);
   expect(jose.decodeJwt(viewer.token).sub).toBe(viewer.user.id);
 
-  expect(userCollection.findFirst((q) => q.where({ id: viewer.user.id }))).toMatchObject({
+  expect(userCollection.findFirst((query) => query.where({ id: viewer.user.id }))).toMatchObject({
     id: viewer.user.id,
   });
 
-  expect(avatarCollection.findFirst((q) => q.where({ id: viewer.avatar.id }))).toMatchObject({
+  expect(
+    avatarCollection.findFirst((query) => query.where({ id: viewer.avatar.id })),
+  ).toMatchObject({
     userID: viewer.user.id,
   });
 });

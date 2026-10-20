@@ -26,13 +26,13 @@ export function createMockNodeSeed(overrides: CreateMockNodeSeedOverrides = {}):
   };
 }
 
+function buildEncounterNode(): EncounterNode {
+  return { difficulty: faker.number.int({ max: 50, min: 1 }), poolID: `pool_${createId()}` };
+}
+
 function buildNodeID(): string {
   const cx = faker.number.int({ max: 100, min: -100 });
   const cy = faker.number.int({ max: 100, min: -100 });
 
   return `${cx}_${cy}`;
-}
-
-function buildEncounterNode(): EncounterNode {
-  return { difficulty: faker.number.int({ max: 50, min: 1 }), poolID: `pool_${createId()}` };
 }

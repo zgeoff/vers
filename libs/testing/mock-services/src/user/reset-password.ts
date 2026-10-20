@@ -2,7 +2,7 @@ import * as db from '../db';
 import { os } from './os';
 
 export const resetPassword = os.resetPassword.handler(async (opts) => {
-  const user = db.userCollection.findFirst((q) => q.where({ id: opts.input.id }));
+  const user = db.userCollection.findFirst((query) => query.where({ id: opts.input.id }));
 
   if (user === undefined) {
     throw opts.errors.NOT_FOUND({ data: {} });
@@ -31,7 +31,9 @@ export const resetPassword = os.resetPassword.handler(async (opts) => {
     },
   });
 
-  for (const session of db.sessionCollection.findMany((q) => q.where({ userID: user.id }))) {
+  for (const session of db.sessionCollection.findMany((query) =>
+    query.where({ userID: user.id }),
+  )) {
     db.sessionCollection.delete(session);
   }
 

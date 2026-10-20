@@ -29,6 +29,7 @@
     "p-retry": "catalog:",
     "postgres": "catalog:",
     "tiny-invariant": "catalog:",
+    "ts-pattern": "catalog:",
     "yaml": "catalog:",
     "zod": "catalog:"
   },

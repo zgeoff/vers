@@ -1,3 +1,4 @@
+import { match } from 'ts-pattern';
 import { z } from 'zod';
 import { buildTargetSocketURL } from './build-target-socket-url';
 import { createCDPClient } from './create-cdp-client';
@@ -38,8 +39,9 @@ export async function subscribeToWorkerTraffic(
   const urlsByRequest = new Map<string, string>();
 
   const printEvent = async (event: CDPEvent): Promise<void> => {
-    switch (event.method) {
-      case 'Network.requestWillBeSent': {
+    await match(event.method)
+      .returnType<Promise<void> | undefined>()
+      .with('Network.requestWillBeSent', () => {
         const sent = requestSentSchema.parse(event.params);
 
         if (sent.request.url.includes(config.pathFilter)) {
@@ -56,10 +58,8 @@ export async function subscribeToWorkerTraffic(
         } else {
           urlsByRequest.delete(sent.requestId);
         }
-
-        return;
-      }
-      case 'Network.responseReceived': {
+      })
+      .with('Network.responseReceived', () => {
         const received = responseReceivedSchema.parse(event.params);
         const url = urlsByRequest.get(received.requestId);
 
@@ -68,10 +68,8 @@ export async function subscribeToWorkerTraffic(
             formatCaptureEvent({ kind: 'response', status: received.response.status, url }),
           );
         }
-
-        return;
-      }
-      case 'Network.loadingFinished': {
+      })
+      .with('Network.loadingFinished', async () => {
         const finished = loadingFinishedSchema.parse(event.params);
         const url = urlsByRequest.get(finished.requestId);
 
@@ -86,10 +84,8 @@ export async function subscribeToWorkerTraffic(
             formatCaptureEvent({ body: responseBodySchema.parse(raw).body, kind: 'body', url }),
           );
         }
-
-        return;
-      }
-      case 'Network.loadingFailed': {
+      })
+      .with('Network.loadingFailed', () => {
         const failed = loadingFailedSchema.parse(event.params);
         const url = urlsByRequest.get(failed.requestId);
 
@@ -97,17 +93,14 @@ export async function subscribeToWorkerTraffic(
           urlsByRequest.delete(failed.requestId);
           config.print(formatCaptureEvent({ kind: 'failure', reason: failed.errorText, url }));
         }
-
-        return;
-      }
-      default: {
+      })
+      .otherwise(() => {
         const line = formatConsoleEvent(event);
 
         if (line !== null) {
           config.print(line);
         }
-      }
-    }
+      });
   };
 
   client.subscribe((event) => {

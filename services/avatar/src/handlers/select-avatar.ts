@@ -1,4 +1,4 @@
-import { findLiveActivityAvatar, upsertActiveAvatar } from '@vers/active-avatar';
+import { readLiveActivityAvatar, upsertActiveAvatar } from '@vers/active-avatar';
 import type { DB } from '@vers/db';
 import type { Kysely } from 'kysely';
 import { sql } from 'kysely';
@@ -51,7 +51,7 @@ async function runSelectWrites(
     throw opts.errors.NOT_FOUND({ data: {} });
   }
 
-  const liveAvatar = await findLiveActivityAvatar(trx, actingUserID);
+  const liveAvatar = await readLiveActivityAvatar(trx, actingUserID);
 
   if (liveAvatar !== null && liveAvatar.id !== avatar.id) {
     throw opts.errors.CONFLICT({

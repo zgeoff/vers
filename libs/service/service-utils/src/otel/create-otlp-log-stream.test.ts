@@ -13,20 +13,22 @@ interface ReceivedExport {
 test('it ships written lines to the OTLP logs endpoint with the env-configured headers', async () => {
   const received: Array<ReceivedExport> = [];
 
+  const handleRequest = async (request: Request): Promise<Response> => {
+    const body = await request.arrayBuffer();
+
+    received.push({
+      auth: request.headers.get('authorization'),
+      bodyBytes: body.byteLength,
+      contentType: request.headers.get('content-type'),
+      dataset: request.headers.get('x-axiom-dataset'),
+      path: new URL(request.url).pathname,
+    });
+
+    return Response.json({});
+  };
+
   const server = Bun.serve({
-    fetch: async (request) => {
-      const body = await request.arrayBuffer();
-
-      received.push({
-        auth: request.headers.get('authorization'),
-        bodyBytes: body.byteLength,
-        contentType: request.headers.get('content-type'),
-        dataset: request.headers.get('x-axiom-dataset'),
-        path: new URL(request.url).pathname,
-      });
-
-      return Response.json({});
-    },
+    fetch: handleRequest,
     port: 0,
   });
 
@@ -44,6 +46,7 @@ test('it ships written lines to the OTLP logs endpoint with the env-configured h
   const stream = createOTLPLogStream({ serviceName: 'test-service' });
 
   stream.write(
+    // oxlint-disable-next-line zgeoff/no-abbreviated-names -- pino writes the message under `msg`
     `${JSON.stringify({ level: 30, msg: 'shipped line', name: 'test-service', time: Date.now() })}\n`,
   );
 

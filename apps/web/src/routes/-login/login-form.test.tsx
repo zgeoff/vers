@@ -6,10 +6,6 @@ import { renderWithRouter } from '../../test-utils/render-with-router';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { LoginForm } from './login-form';
 
-function rejectWithResponse(): Promise<Response> {
-  return Promise.resolve(new Response(null, { status: 400 }));
-}
-
 test('it shows a form-level error message', async () => {
   await withRequestContext({}, async () => {
     renderWithRouter(
@@ -48,7 +44,12 @@ test('it shows a generic failure message when the server rejects the submission'
   const user = userEvent.setup();
 
   await withRequestContext({}, async () => {
-    renderWithRouter(<LoginForm action={rejectWithResponse} honeypotValidFrom="1700000000000" />);
+    renderWithRouter(
+      <LoginForm
+        action={() => Promise.resolve(new Response(null, { status: 400 }))}
+        honeypotValidFrom="1700000000000"
+      />,
+    );
 
     const emailInput = await screen.findByLabelText('Email');
 

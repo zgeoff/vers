@@ -30,7 +30,6 @@
     "@vers/service-utils": "workspace:*",
     "@vers/sim-registry": "workspace:*",
     "@vers/trace": "workspace:*",
-    "@vers/utils": "workspace:*",
     "@vers/worldmap-content": "workspace:*",
     "@vers/worldmap-core": "workspace:*",
     "jose": "catalog:",
@@ -38,6 +37,7 @@
     "lru-cache": "catalog:",
     "pino": "catalog:",
     "tiny-invariant": "catalog:",
+    "ts-pattern": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {

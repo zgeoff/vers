@@ -59,7 +59,7 @@ export function buildRollStream(seed: Uint8Array, domain: string): RollStream {
     for (;;) {
       let value = 0;
 
-      for (let i = 0; i < width; i += 1) {
+      for (let byteIndex = 0; byteIndex < width; byteIndex += 1) {
         value = value * 256 + readByte();
       }
 

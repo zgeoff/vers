@@ -27,7 +27,7 @@ interface PlannedContinuation {
 interface PlanOfflineContinuationsOptions {
   readonly budgetMs: number;
 
-  readonly buildSimulationInput: (
+  readonly loadSimulationInput: (
     source: Readonly<SimulationInputSource>,
   ) => Promise<{ activity: ActivityInput; avatar: AvatarData }>;
 
@@ -37,6 +37,20 @@ interface PlanOfflineContinuationsOptions {
 export interface PlanOfflineContinuationsResult {
   readonly planned: ReadonlyArray<PlannedContinuation>;
   readonly reason: 'aborted-on-failure' | 'budget-exhausted';
+}
+
+interface OfflineRowCursor {
+  readonly buildSnapshot: { readonly level: number; readonly xp: number };
+  readonly id: string;
+  readonly lastHash: string;
+  readonly seed: string;
+  readonly startChainIndex: number;
+}
+
+interface OfflineOptimisticSource {
+  readonly settledXP: number;
+  readonly tailPayload: unknown;
+  readonly unverifiedDeltaSum: number;
 }
 
 export async function planOfflineContinuations(
@@ -71,7 +85,7 @@ export async function planOfflineContinuations(
       seed: cursor.seed,
     };
 
-    const input = await options.buildSimulationInput(source);
+    const input = await options.loadSimulationInput(source);
 
     // A reconstruction must reach its terminal to reconcile, whatever the budget — its prefix is
     // already accounted server-side, so only the tail is priced against the budget below.
@@ -163,20 +177,6 @@ export async function planOfflineContinuations(
 
     appendedHead = 0;
   }
-}
-
-interface OfflineRowCursor {
-  readonly buildSnapshot: { readonly level: number; readonly xp: number };
-  readonly id: string;
-  readonly lastHash: string;
-  readonly seed: string;
-  readonly startChainIndex: number;
-}
-
-interface OfflineOptimisticSource {
-  readonly settledXP: number;
-  readonly tailPayload: unknown;
-  readonly unverifiedDeltaSum: number;
 }
 
 function buildTailEntries(

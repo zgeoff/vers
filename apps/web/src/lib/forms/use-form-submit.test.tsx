@@ -11,74 +11,75 @@ import { renderWithRouter } from '../../test-utils/render-with-router';
 import type { FormAction } from './types';
 import { useFormSubmit } from './use-form-submit';
 
-const ReferenceSchema = z.object({
-  email: z.email('Enter a valid email'),
-  password: z.string().min(8, 'Password is too short'),
-});
-
-const noopAction = mock((): Promise<undefined> => Promise.resolve(undefined));
-
-function rejectWithResponse(): Promise<Response> {
-  return Promise.resolve(new Response(null, { status: 400 }));
-}
-
-function rejectWithError(): Promise<undefined> {
-  return Promise.reject(new Error('Service Unavailable'));
-}
-
 interface ReferenceFormProps {
   readonly action?: FormAction;
   readonly lastResult?: SubmissionResult;
   readonly onSuccess?: () => void;
 }
 
-function ReferenceForm(props: ReferenceFormProps) {
-  const submission = useFormSubmit(props.action ?? noopAction, props.lastResult, props.onSuccess);
-
-  const [form, fields] = useForm({
-    constraint: getZodConstraint(ReferenceSchema),
-    id: 'reference-form',
-    lastResult: submission.lastResult,
-    onSubmit: submission.onSubmit,
-    onValidate(context) {
-      return parseWithZod(context.formData, { schema: ReferenceSchema });
-    },
+function setupTest() {
+  const ReferenceSchema = z.object({
+    email: z.email('Enter a valid email'),
+    password: z.string().min(8, 'Password is too short'),
   });
 
-  const { key: _emailKey, ...emailProps } = getInputProps(fields.email, { type: 'email' });
+  // oxlint-disable-next-line react/function-component-definition -- zgeoff/setup-test-only keeps the component in setupTest, where a nested function declaration is banned
+  const ReferenceForm = (props: ReferenceFormProps) => {
+    const submission = useFormSubmit(
+      props.action ?? (() => Promise.resolve(undefined)),
+      props.lastResult,
+      props.onSuccess,
+    );
 
-  const { key: _passwordKey, ...passwordProps } = getInputProps(fields.password, {
-    type: 'password',
-  });
+    const [form, fields] = useForm({
+      constraint: getZodConstraint(ReferenceSchema),
+      id: 'reference-form',
+      lastResult: submission.lastResult,
+      onSubmit: submission.onSubmit,
+      onValidate(context) {
+        return parseWithZod(context.formData, { schema: ReferenceSchema });
+      },
+    });
 
-  return (
-    <form {...getFormProps(form)}>
-      <Field
-        errors={fields.email.errors ?? []}
-        inputProps={{ ...emailProps, placeholder: 'Email' }}
-        labelProps={{ children: 'Email', htmlFor: emailProps.id }}
-      />
-      <Field
-        errors={fields.password.errors ?? []}
-        inputProps={{ ...passwordProps, placeholder: 'Password' }}
-        labelProps={{ children: 'Password', htmlFor: passwordProps.id }}
-      />
-      {form.errors !== undefined && <Text role="alert">{form.errors[0]}</Text>}
-      <StatusButton
-        disabled={submission.isPending}
-        status={submission.isPending ? StatusButton.Status.Pending : StatusButton.Status.Idle}
-        type="submit"
-        variant="primary"
-      >
-        Sign in
-      </StatusButton>
-    </form>
-  );
+    const { key: _emailKey, ...emailProps } = getInputProps(fields.email, { type: 'email' });
+
+    const { key: _passwordKey, ...passwordProps } = getInputProps(fields.password, {
+      type: 'password',
+    });
+
+    return (
+      <form {...getFormProps(form)}>
+        <Field
+          errors={fields.email.errors ?? []}
+          inputProps={{ ...emailProps, placeholder: 'Email' }}
+          labelProps={{ children: 'Email', htmlFor: emailProps.id }}
+        />
+        <Field
+          errors={fields.password.errors ?? []}
+          inputProps={{ ...passwordProps, placeholder: 'Password' }}
+          labelProps={{ children: 'Password', htmlFor: passwordProps.id }}
+        />
+        {form.errors !== undefined && <Text role="alert">{form.errors[0]}</Text>}
+        <StatusButton
+          disabled={submission.isPending}
+          status={submission.isPending ? StatusButton.Status.Pending : StatusButton.Status.Idle}
+          type="submit"
+          variant="primary"
+        >
+          Sign in
+        </StatusButton>
+      </form>
+    );
+  };
+
+  return { ReferenceForm };
 }
 
 test('it shows a form-level error message', async () => {
+  const ctx = setupTest();
+
   renderWithRouter(
-    <ReferenceForm
+    <ctx.ReferenceForm
       lastResult={{ error: { '': ['Invalid email or password'] }, status: 'error' }}
     />,
   );
@@ -89,8 +90,12 @@ test('it shows a form-level error message', async () => {
 });
 
 test('it shows an error on the field it belongs to', async () => {
+  const ctx = setupTest();
+
   renderWithRouter(
-    <ReferenceForm lastResult={{ error: { email: ['That email is taken'] }, status: 'error' }} />,
+    <ctx.ReferenceForm
+      lastResult={{ error: { email: ['That email is taken'] }, status: 'error' }}
+    />,
   );
 
   const fieldError = await screen.findByText('That email is taken');
@@ -99,9 +104,12 @@ test('it shows an error on the field it belongs to', async () => {
 });
 
 test('it shows a generic error message when the server rejects the submission', async () => {
+  const ctx = setupTest();
   const user = userEvent.setup();
 
-  renderWithRouter(<ReferenceForm action={rejectWithResponse} />);
+  renderWithRouter(
+    <ctx.ReferenceForm action={() => Promise.resolve(new Response(null, { status: 400 }))} />,
+  );
 
   const emailInput = await screen.findByPlaceholderText('Email');
 
@@ -115,9 +123,12 @@ test('it shows a generic error message when the server rejects the submission', 
 });
 
 test('it shows the generic error message when the action rejects', async () => {
+  const ctx = setupTest();
   const user = userEvent.setup();
 
-  renderWithRouter(<ReferenceForm action={rejectWithError} />);
+  renderWithRouter(
+    <ctx.ReferenceForm action={() => Promise.reject(new Error('Service Unavailable'))} />,
+  );
 
   const emailInput = await screen.findByPlaceholderText('Email');
 
@@ -131,9 +142,12 @@ test('it shows the generic error message when the action rejects', async () => {
 });
 
 test('it re-enables the submit button after the action rejects', async () => {
+  const ctx = setupTest();
   const user = userEvent.setup();
 
-  renderWithRouter(<ReferenceForm action={rejectWithError} />);
+  renderWithRouter(
+    <ctx.ReferenceForm action={() => Promise.reject(new Error('Service Unavailable'))} />,
+  );
 
   const emailInput = await screen.findByPlaceholderText('Email');
 
@@ -146,9 +160,12 @@ test('it re-enables the submit button after the action rejects', async () => {
 });
 
 test('it keeps the typed values when the action rejects', async () => {
+  const ctx = setupTest();
   const user = userEvent.setup();
 
-  renderWithRouter(<ReferenceForm action={rejectWithError} />);
+  renderWithRouter(
+    <ctx.ReferenceForm action={() => Promise.reject(new Error('Service Unavailable'))} />,
+  );
 
   const emailInput = await screen.findByPlaceholderText('Email');
 
@@ -161,10 +178,16 @@ test('it keeps the typed values when the action rejects', async () => {
 });
 
 test('it reports no success when the action rejects', async () => {
+  const ctx = setupTest();
   const user = userEvent.setup();
   const onSuccess = mock(() => {});
 
-  renderWithRouter(<ReferenceForm action={rejectWithError} onSuccess={onSuccess} />);
+  renderWithRouter(
+    <ctx.ReferenceForm
+      action={() => Promise.reject(new Error('Service Unavailable'))}
+      onSuccess={onSuccess}
+    />,
+  );
 
   const emailInput = await screen.findByPlaceholderText('Email');
 
@@ -177,9 +200,10 @@ test('it reports no success when the action rejects', async () => {
 });
 
 test('it shows no error after a redirect resolves the submission', async () => {
+  const ctx = setupTest();
   const user = userEvent.setup();
 
-  renderWithRouter(<ReferenceForm action={noopAction} />);
+  renderWithRouter(<ctx.ReferenceForm action={() => Promise.resolve(undefined)} />);
 
   const emailInput = await screen.findByPlaceholderText('Email');
 
@@ -195,10 +219,13 @@ test('it shows no error after a redirect resolves the submission', async () => {
 });
 
 test('it reports success once a redirect resolves the submission', async () => {
+  const ctx = setupTest();
   const user = userEvent.setup();
   const onSuccess = mock(() => {});
 
-  renderWithRouter(<ReferenceForm action={noopAction} onSuccess={onSuccess} />);
+  renderWithRouter(
+    <ctx.ReferenceForm action={() => Promise.resolve(undefined)} onSuccess={onSuccess} />,
+  );
 
   const emailInput = await screen.findByPlaceholderText('Email');
 
@@ -212,10 +239,16 @@ test('it reports success once a redirect resolves the submission', async () => {
 });
 
 test('it reports no success when the server rejects the submission', async () => {
+  const ctx = setupTest();
   const user = userEvent.setup();
   const onSuccess = mock(() => {});
 
-  renderWithRouter(<ReferenceForm action={rejectWithResponse} onSuccess={onSuccess} />);
+  renderWithRouter(
+    <ctx.ReferenceForm
+      action={() => Promise.resolve(new Response(null, { status: 400 }))}
+      onSuccess={onSuccess}
+    />,
+  );
 
   const emailInput = await screen.findByPlaceholderText('Email');
 
@@ -228,11 +261,12 @@ test('it reports no success when the server rejects the submission', async () =>
 });
 
 test('it disables the submit button while the action is in flight', async () => {
+  const ctx = setupTest();
   const user = userEvent.setup();
   const deferred = buildDeferred<undefined>();
   const gatedAction = mock(() => deferred.promise);
 
-  renderWithRouter(<ReferenceForm action={gatedAction} />);
+  renderWithRouter(<ctx.ReferenceForm action={gatedAction} />);
 
   const emailInput = await screen.findByPlaceholderText('Email');
 

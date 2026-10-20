@@ -8,7 +8,7 @@ import {
 import type { SceneState } from '@vers/game-rendering';
 import { resolveSceneStateForLocation } from './resolve-scene-state-for-location';
 
-function buildTestRouter() {
+function setupTest() {
   const rootRoute = createRootRoute({ staticData: { presentation: 'ambient' } });
 
   const worldmapRoute = createRoute({
@@ -23,18 +23,20 @@ function buildTestRouter() {
     staticData: { presentation: 'ambient' },
   });
 
-  return createRouter({
+  const router = createRouter({
     history: createMemoryHistory({ initialEntries: ['/worldmap'] }),
     routeTree: rootRoute.addChildren([worldmapRoute, stashRoute]),
   });
+
+  return { router };
 }
 
 test('it folds the matched branch staticData for the given location against the previous state', () => {
-  const router = buildTestRouter();
+  const ctx = setupTest();
   const previous: SceneState = { presentation: 'hidden', scene: 'respite' };
 
   const next = resolveSceneStateForLocation(
-    router,
+    ctx.router,
     { pathname: '/worldmap', search: {} },
     previous,
   );
@@ -43,9 +45,14 @@ test('it folds the matched branch staticData for the given location against the 
 });
 
 test('it keeps the previous scene when the target branch declares no scene', () => {
-  const router = buildTestRouter();
+  const ctx = setupTest();
   const previous: SceneState = { presentation: 'focus', scene: 'worldmap' };
-  const next = resolveSceneStateForLocation(router, { pathname: '/stash', search: {} }, previous);
+
+  const next = resolveSceneStateForLocation(
+    ctx.router,
+    { pathname: '/stash', search: {} },
+    previous,
+  );
 
   expect(next).toStrictEqual({ presentation: 'ambient', scene: 'worldmap' });
 });

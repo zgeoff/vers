@@ -2,15 +2,15 @@ import '@zgeoff/bun-test-extended';
 import { afterEach } from 'bun:test';
 import { sentEmails, server } from '@vers/email/mocks';
 import {
-  getTestServiceKeyPair,
   resolveTestDBTarget,
+  resolveTestServiceKeyPair,
   setupBunTestDB,
 } from '@vers/service-test-utils/bun';
 import { registerBunTestCleanup, registerMSWLifecycle } from '@vers/test-utils/bun';
 
 await setupBunTestDB();
 
-const serviceKeyPair = await getTestServiceKeyPair();
+const serviceKeyPair = await resolveTestServiceKeyPair();
 
 process.env['SERVICE_AUTH_JWKS'] = serviceKeyPair.jwksJSON;
 

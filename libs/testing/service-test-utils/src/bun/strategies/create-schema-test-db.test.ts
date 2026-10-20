@@ -1,6 +1,4 @@
 import { expect, onTestFinished, test } from 'bun:test';
-import type { DB } from '@vers/db';
-import type { Kysely } from 'kysely';
 import { sql } from 'kysely';
 import postgres from 'postgres';
 import invariant from 'tiny-invariant';
@@ -12,9 +10,22 @@ test('it commits real writes visible to a second connection onto the same clone'
   await using handle = await createSchemaTestDB();
 
   const created = await createTestUser(handle.db, { email: 'schema-commit@test.com' });
-  const location = await getCloneLocation(handle.db);
 
-  const raw = postgres(location.databaseURL, { connection: { search_path: location.searchPath } });
+  const databaseResult = await sql<{
+    currentDatabase: string;
+  }>`select current_database()`.execute(handle.db);
+
+  const searchPathResult = await sql<{ searchPath: string }>`show search_path`.execute(handle.db);
+
+  const currentDatabase = databaseResult.rows[0]?.currentDatabase;
+  const searchPath = searchPathResult.rows[0]?.searchPath;
+
+  invariant(currentDatabase !== undefined, 'expected current_database() to return a row');
+  invariant(searchPath !== undefined, 'expected show search_path to return a row');
+
+  const raw = postgres(`${resolveTestDBTarget().baseURI}/${currentDatabase}`, {
+    connection: { search_path: searchPath },
+  });
 
   onTestFinished(() => raw.end());
 
@@ -93,15 +104,26 @@ test('it isolates rows between two concurrently acquired clones', async () => {
 
 test('it drops the clone schema once disposed', async () => {
   const handle = await createSchemaTestDB();
-  const location = await getCloneLocation(handle.db);
+
+  const databaseResult = await sql<{
+    currentDatabase: string;
+  }>`select current_database()`.execute(handle.db);
+
+  const searchPathResult = await sql<{ searchPath: string }>`show search_path`.execute(handle.db);
+
+  const currentDatabase = databaseResult.rows[0]?.currentDatabase;
+  const searchPath = searchPathResult.rows[0]?.searchPath;
+
+  invariant(currentDatabase !== undefined, 'expected current_database() to return a row');
+  invariant(searchPath !== undefined, 'expected show search_path to return a row');
 
   await handle[Symbol.asyncDispose]();
 
-  const raw = postgres(location.databaseURL);
+  const raw = postgres(`${resolveTestDBTarget().baseURI}/${currentDatabase}`);
 
   onTestFinished(() => raw.end());
 
-  const rows = await raw`select 1 from pg_namespace where nspname = ${location.searchPath}`;
+  const rows = await raw`select 1 from pg_namespace where nspname = ${searchPath}`;
 
   expect(rows).toHaveLength(0);
 });
@@ -116,26 +138,3 @@ test('it rejects a write that violates a cloned foreign key', async () => {
       .execute(),
   ).rejects.toMatchObject({ code: '23503' });
 });
-
-interface CloneLocation {
-  readonly databaseURL: string;
-  readonly searchPath: string;
-}
-
-async function getCloneLocation(db: Kysely<DB>): Promise<CloneLocation> {
-  const target = resolveTestDBTarget();
-
-  const dbNameResult = await sql<{ currentDatabase: string }>`select current_database()`.execute(
-    db,
-  );
-
-  const searchPathResult = await sql<{ searchPath: string }>`show search_path`.execute(db);
-
-  const currentDatabase = dbNameResult.rows[0]?.currentDatabase;
-  const searchPath = searchPathResult.rows[0]?.searchPath;
-
-  invariant(currentDatabase !== undefined, 'expected current_database() to return a row');
-  invariant(searchPath !== undefined, 'expected show search_path to return a row');
-
-  return { databaseURL: `${target.baseURI}/${currentDatabase}`, searchPath };
-}

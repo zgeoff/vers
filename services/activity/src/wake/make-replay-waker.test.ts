@@ -38,7 +38,7 @@ test('it coalesces a synchronous burst into one delivery', async () => {
 });
 
 test('it keeps a single delivery in flight while one is still pending', async () => {
-  const gate = makeDeferred<void>();
+  const gate = Promise.withResolvers<void>();
   const sendWake = mock(() => gate.promise);
 
   const waker = makeReplayWaker({
@@ -110,13 +110,3 @@ test('it aborts a hung attempt and records the poke-failure counter after exhaus
   expect(sendWake).toHaveBeenCalledTimes(3);
   expect(pokeFailures).toBe(1);
 });
-
-function makeDeferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
-  let settle!: (value: T) => void;
-
-  const promise = new Promise<T>((resolve) => {
-    settle = resolve;
-  });
-
-  return { promise, resolve: settle };
-}

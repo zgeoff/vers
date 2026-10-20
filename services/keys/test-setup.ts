@@ -1,8 +1,8 @@
 import '@zgeoff/bun-test-extended';
-import { getTestServiceKeyPair } from '@vers/service-test-utils/bun';
+import { resolveTestServiceKeyPair } from '@vers/service-test-utils/bun';
 import { registerBunTestCleanup } from '@vers/test-utils/bun';
 
-const serviceKeyPair = await getTestServiceKeyPair();
+const serviceKeyPair = await resolveTestServiceKeyPair();
 
 process.env['SERVICE_AUTH_JWKS'] = serviceKeyPair.jwksJSON;
 

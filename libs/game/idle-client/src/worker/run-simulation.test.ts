@@ -28,7 +28,6 @@ import { createStubWorkerContext } from '../test-utils/create-stub-worker-contex
 import { createMockNodeSeed } from '../test-utils/factories/create-mock-node-seed';
 import { WorkerMessageType } from '../types';
 import { runSimulation } from './run-simulation';
-import type { WorkerContext } from './types';
 import type { WorkerMessage } from './worker-to-client-message-schema';
 
 interface SetupTestConfig {
@@ -39,17 +38,6 @@ async function setupTest(config: Readonly<SetupTestConfig>) {
   const client = await createAuthedServiceClient<ActivityServiceClient>('activity', config.userID);
 
   return { client };
-}
-
-async function runSimulationSteps(
-  context: WorkerContext,
-  simulation: ReturnType<typeof createSimulation>,
-  timestep: number,
-  steps: number,
-) {
-  for (let step = 0; step < steps; step += 1) {
-    await runSimulation(context, simulation, timestep);
-  }
 }
 
 test('it continues into a fresh locally minted row if it fails and the failure action is retry', async () => {
@@ -97,7 +85,9 @@ test('it continues into a fresh locally minted row if it fails and the failure a
   simulation.startActivity(avatarData, activity);
   simulation.addEventListener('started', startedSpy);
 
-  await runSimulationSteps(context, simulation, 100, 50);
+  for (let step = 0; step < 50; step += 1) {
+    await runSimulation(context, simulation, 100);
+  }
 
   const minted = context.getActivity();
 
@@ -123,7 +113,9 @@ test('it does not continue if it fails and the failure action is abort', async (
   simulation.addEventListener('started', startedSpy);
   simulation.addEventListener('stopped', stoppedSpy);
 
-  await runSimulationSteps(context, simulation, 100, 50);
+  for (let step = 0; step < 50; step += 1) {
+    await runSimulation(context, simulation, 100);
+  }
 
   expect(startedSpy).not.toHaveBeenCalled();
   expect(stoppedSpy).toHaveBeenCalled();
@@ -184,7 +176,9 @@ test.each([[ActivityFailureAction.Abort], [ActivityFailureAction.Retry]])(
 
     simulation.addEventListener('started', startedSpy);
 
-    await runSimulationSteps(context, simulation, 100, 700);
+    for (let step = 0; step < 700; step += 1) {
+      await runSimulation(context, simulation, 100);
+    }
 
     const minted = context.getActivity();
 
@@ -217,11 +211,13 @@ test('it skips the continuation when a fresher activity replaced this row mid-su
   context.setSimulation(simulation);
   simulation.startActivity(avatarData, activity);
 
-  await runSimulationSteps(context, simulation, 100, 50);
+  for (let step = 0; step < 50; step += 1) {
+    await runSimulation(context, simulation, 100);
+  }
 
   // no continuation start reached the service: nothing was minted for the avatar
-  const minted = db.activityCollection.findFirst((q) =>
-    q.where({ avatarID: viewer.avatar.id, status: 'active' }),
+  const minted = db.activityCollection.findFirst((query) =>
+    query.where({ avatarID: viewer.avatar.id, status: 'active' }),
   );
 
   expect(minted).toBeUndefined();
@@ -241,7 +237,9 @@ test('it halts at the boundary instead of continuing once the offline budget is 
   simulation.addEventListener('started', startedSpy);
   simulation.addEventListener('stopped', stoppedSpy);
 
-  await runSimulationSteps(context, simulation, 100, 50);
+  for (let step = 0; step < 50; step += 1) {
+    await runSimulation(context, simulation, 100);
+  }
 
   expect(startedSpy).not.toHaveBeenCalled();
   expect(stoppedSpy).not.toHaveBeenCalled();
@@ -263,7 +261,9 @@ test('it stops an aborted failure even when the budget is spent', async () => {
   simulation.startActivity(avatar, activity);
   simulation.addEventListener('stopped', stoppedSpy);
 
-  await runSimulationSteps(context, simulation, 100, 50);
+  for (let step = 0; step < 50; step += 1) {
+    await runSimulation(context, simulation, 100);
+  }
 
   expect(stoppedSpy).toHaveBeenCalled();
   expect(simulation.activity).toBeNull();
@@ -305,7 +305,9 @@ test('it broadcasts a reward-slot ledger message for each submitted checkpoint t
 
   simulation.startActivity(avatar, activity);
 
-  await runSimulationSteps(context, simulation, 100, 700);
+  for (let step = 0; step < 700; step += 1) {
+    await runSimulation(context, simulation, 100);
+  }
 
   const rewardMessages = context
     .getBroadcasts()
@@ -344,7 +346,9 @@ test('it never broadcasts a ledger message for a checkpoint the submitter droppe
 
   simulation.startActivity(avatar, activity);
 
-  await runSimulationSteps(context, simulation, 100, 700);
+  for (let step = 0; step < 700; step += 1) {
+    await runSimulation(context, simulation, 100);
+  }
 
   const rewardMessages = context
     .getBroadcasts()
@@ -371,7 +375,9 @@ test('it broadcasts a cleared outcome when an activity completes', async () => {
 
   simulation.startActivity(avatar, activity);
 
-  await runSimulationSteps(context, simulation, 100, 700);
+  for (let step = 0; step < 700; step += 1) {
+    await runSimulation(context, simulation, 100);
+  }
 
   const endedMessages = context
     .getBroadcasts()
@@ -400,10 +406,16 @@ test('it broadcasts a failed outcome and then an activity-less snapshot when an 
 
   simulation.startActivity(avatar, activity);
 
-  await runSimulationSteps(context, simulation, 100, 50);
+  for (let step = 0; step < 50; step += 1) {
+    await runSimulation(context, simulation, 100);
+  }
 
   const broadcasts = context.getBroadcasts();
-  const endedIndex = broadcasts.findIndex((m) => m.type === WorkerMessageType.ActivityEnded);
+
+  const endedIndex = broadcasts.findIndex(
+    (message) => message.type === WorkerMessageType.ActivityEnded,
+  );
+
   const ended = broadcasts[endedIndex];
   const afterEnded = broadcasts[endedIndex + 1];
 
@@ -422,7 +434,9 @@ test('it broadcasts a failed outcome and then an activity-less snapshot when an 
     type: WorkerMessageType.SimulationUpdate,
   });
 
-  expect(broadcasts.filter((m) => m.type === WorkerMessageType.ActivityEnded)).toHaveLength(1);
+  expect(
+    broadcasts.filter((message) => message.type === WorkerMessageType.ActivityEnded),
+  ).toHaveLength(1);
 });
 
 test('it names the node the ended run played beside the outcome when its row is installed', async () => {
@@ -444,7 +458,9 @@ test('it names the node the ended run played beside the outcome when its row is 
   context.setSimulation(simulation);
   simulation.startActivity(avatar, activity);
 
-  await runSimulationSteps(context, simulation, 100, 50);
+  for (let step = 0; step < 50; step += 1) {
+    await runSimulation(context, simulation, 100);
+  }
 
   expect(context.getBroadcasts()).toPartiallyContain({
     outcome: {
@@ -507,7 +523,9 @@ test('it keeps the failed terminal checkpoint on record after the run stops', as
   context.setActivity(createMockActivityData({ id: activity.id }));
   simulation.startActivity(avatar, activity);
 
-  await runSimulationSteps(context, simulation, 100, 50);
+  for (let step = 0; step < 50; step += 1) {
+    await runSimulation(context, simulation, 100);
+  }
 
   // the stop cleared the live activity, but the next mint still needs the run's total
   expect(simulation.activity).toBeNull();
@@ -571,7 +589,9 @@ test("it mints the successor's build snapshot from the cleared run's terminal to
   context.setSimulation(simulation);
   simulation.startActivity(createMockAvatarData(), activity);
 
-  await runSimulationSteps(context, simulation, 100, 700);
+  for (let step = 0; step < 700; step += 1) {
+    await runSimulation(context, simulation, 100);
+  }
 
   const submitted = submit.mock.calls.map(([, checkpoint]) => checkpoint);
 

@@ -2,9 +2,9 @@ import { expect, test } from 'bun:test';
 import { bytesToHex } from '@noble/hashes/utils.js';
 import { deriveScopeSecret } from './derive-scope-secret';
 
-const root = new Uint8Array(32).fill(0x0b);
-
 test('it derives a frozen golden secret from fixed inputs', () => {
+  const root = new Uint8Array(32).fill(0x0b);
+
   const secret = deriveScopeSecret({
     root,
     secretRef: 'worldmap',
@@ -18,6 +18,8 @@ test('it derives a frozen golden secret from fixed inputs', () => {
 });
 
 test('it derives bit-identical secrets for identical input', () => {
+  const root = new Uint8Array(32).fill(0x0b);
+
   const input = {
     root,
     secretRef: 'worldmap',
@@ -29,6 +31,8 @@ test('it derives bit-identical secrets for identical input', () => {
 });
 
 test('it derives a different secret for a different secret ref', () => {
+  const root = new Uint8Array(32).fill(0x0b);
+
   const worldmapSecret = deriveScopeSecret({
     root,
     secretRef: 'worldmap',
@@ -47,6 +51,8 @@ test('it derives a different secret for a different secret ref', () => {
 });
 
 test('it derives a different secret for a different avatar ID', () => {
+  const root = new Uint8Array(32).fill(0x0b);
+
   const secret1 = deriveScopeSecret({
     root,
     secretRef: 'worldmap',
@@ -65,6 +71,8 @@ test('it derives a different secret for a different avatar ID', () => {
 });
 
 test('it derives a different secret for a different secret version', () => {
+  const root = new Uint8Array(32).fill(0x0b);
+
   const secretV1 = deriveScopeSecret({
     root,
     secretRef: 'worldmap',
@@ -83,6 +91,8 @@ test('it derives a different secret for a different secret version', () => {
 });
 
 test('it derives a 32-byte secret', () => {
+  const root = new Uint8Array(32).fill(0x0b);
+
   const secret = deriveScopeSecret({
     root,
     secretRef: 'worldmap',

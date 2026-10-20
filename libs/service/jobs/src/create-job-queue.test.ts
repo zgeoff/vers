@@ -566,7 +566,7 @@ test('it reports created for a sent job before any drain touches it', async () =
 
   const jobID = await queue.send('email', { to: 'a@example.com' });
 
-  expect(queue.getJobState('email', jobID)).resolves.toBe('created');
+  expect(queue.readJobState('email', jobID)).resolves.toBe('created');
 });
 
 test('it reports completed for a job a drain finished', async () => {
@@ -587,7 +587,7 @@ test('it reports completed for a job a drain finished', async () => {
 
   await queue.drain();
 
-  expect(queue.getJobState('email', jobID)).resolves.toBe('completed');
+  expect(queue.readJobState('email', jobID)).resolves.toBe('completed');
 });
 
 test('it reports retry for a job sitting out its retry delay', async () => {
@@ -610,7 +610,7 @@ test('it reports retry for a job sitting out its retry delay', async () => {
 
   await queue.drain();
 
-  expect(queue.getJobState('email', jobID)).resolves.toBe('retry');
+  expect(queue.readJobState('email', jobID)).resolves.toBe('retry');
 });
 
 test('it reports undefined for a job id no queue holds', async () => {
@@ -628,6 +628,6 @@ test('it reports undefined for a job id no queue holds', async () => {
   onTestFinished(() => queue.stop());
 
   expect(
-    queue.getJobState('email', '00000000-0000-0000-0000-000000000000'),
+    queue.readJobState('email', '00000000-0000-0000-0000-000000000000'),
   ).resolves.toBeUndefined();
 });

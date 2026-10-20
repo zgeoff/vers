@@ -6,20 +6,6 @@ import { runFlyctl } from '../utils/run-flyctl';
 import { applyIPPostureActions } from './apply-ip-posture-actions';
 import type { SimVersionAction } from './types';
 
-const PROVIDER_MACHINE_FLAGS = [
-  '--port',
-  '80:3000/tcp:http',
-  '--autostart',
-  '--autostop=suspend',
-  '--vm-memory',
-  '256',
-  '--detach',
-];
-
-// the image's `CMD` starts the full-service `server` binary, which a provider machine's narrowed
-// env cannot boot; this positional replaces it with the provider-mode binary
-const PROVIDER_MACHINE_COMMAND = 'provider';
-
 export async function applySimVersionActions(
   actions: ReadonlyArray<SimVersionAction>,
 ): Promise<void> {
@@ -60,12 +46,19 @@ async function applySimVersionAction(action: SimVersionAction): Promise<void> {
   await upsertRegistryRow(action.input);
 }
 
-function requireProviderJWKS(): string {
-  return requireEnvVar(
-    'SERVICE_AUTH_JWKS',
-    'a sim-version provider machine must verify inbound s2s calls',
-  );
-}
+const PROVIDER_MACHINE_FLAGS = [
+  '--port',
+  '80:3000/tcp:http',
+  '--autostart',
+  '--autostop=suspend',
+  '--vm-memory',
+  '256',
+  '--detach',
+];
+
+// the image's `CMD` starts the full-service `server` binary, which a provider machine's narrowed
+// env cannot boot; this positional replaces it with the provider-mode binary
+const PROVIDER_MACHINE_COMMAND = 'provider';
 
 async function runProviderMachine(
   app: string,
@@ -86,6 +79,13 @@ async function runProviderMachine(
     '--env',
     `SERVICE_AUTH_JWKS=${jwks}`,
   ]);
+}
+
+function requireProviderJWKS(): string {
+  return requireEnvVar(
+    'SERVICE_AUTH_JWKS',
+    'a sim-version provider machine must verify inbound s2s calls',
+  );
 }
 
 async function upsertRegistryRow(input: Readonly<UpsertSimVersionInput>): Promise<void> {

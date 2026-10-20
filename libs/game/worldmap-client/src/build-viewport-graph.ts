@@ -1,7 +1,12 @@
 import { CHUNK_SIZE, buildChunk, collectNodeEdges } from '@vers/worldmap-core';
 import type { Viewport, WorldEdge, WorldMapNode } from '@vers/worldmap-core';
 import type { WorldGraph } from './types';
-import { LRUMap } from './utils/lru-map';
+import { createLRUMap } from './utils/create-lru-map';
+
+interface WorldChunk {
+  readonly edges: ReadonlyArray<WorldEdge>;
+  readonly nodes: ReadonlyArray<WorldMapNode>;
+}
 
 export function buildViewportGraph(userSeed: number, viewport: Viewport): WorldGraph {
   const nodes: Record<string, WorldMapNode> = {};
@@ -47,18 +52,12 @@ export function buildViewportGraph(userSeed: number, viewport: Viewport): WorldG
   return { edges, nodes };
 }
 
-interface WorldChunk {
-  readonly edges: ReadonlyArray<WorldEdge>;
-  readonly nodes: ReadonlyArray<WorldMapNode>;
-}
-
 const CHUNK_CACHE_CAPACITY = 256;
-
-const chunkCache = new LRUMap<string, WorldChunk>(CHUNK_CACHE_CAPACITY);
+const chunkCache = createLRUMap<string, WorldChunk>(CHUNK_CACHE_CAPACITY);
 
 function getChunk(userSeed: number, chunkX: number, chunkY: number): WorldChunk {
   const key = `${userSeed}:${chunkX}:${chunkY}`;
-  const cached = chunkCache.get(key);
+  const cached = chunkCache.findValue(key);
 
   if (cached) {
     return cached;

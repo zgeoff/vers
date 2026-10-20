@@ -38,7 +38,7 @@ test('it abandons the pending transaction once attempts run out', async () => {
   expect(outcome.value).toStrictEqual({ attemptsRemaining: 0, status: 'invalid-code' });
 
   expect(
-    db.pendingTransactionCollection.findFirst((q) => q.where({ id: transactionID })),
+    db.pendingTransactionCollection.findFirst((query) => query.where({ id: transactionID })),
   ).toBeUndefined();
 });
 
@@ -73,7 +73,7 @@ test('it consumes the pending transaction and mints a redeemable token for a cor
   expect(claims).toMatchObject({ action: 'ChangePassword', sessionID: 'session-1', target });
 
   expect(
-    db.pendingTransactionCollection.findFirst((q) => q.where({ id: transactionID })),
+    db.pendingTransactionCollection.findFirst((query) => query.where({ id: transactionID })),
   ).toBeUndefined();
 });
 

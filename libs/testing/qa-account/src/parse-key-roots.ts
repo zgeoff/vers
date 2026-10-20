@@ -17,11 +17,6 @@ const RootEntrySchema = z.object({
 const ScopeSecretRootsSchema = z.object({ worldmap: RootEntrySchema });
 const RollKeyRootsSchema = z.object({ trade: RootEntrySchema });
 
-interface RootEntry {
-  readonly current: number;
-  readonly roots: Readonly<Record<string, string>>;
-}
-
 export interface ParseKeyRootsInput {
   readonly rollKeyRoots: string;
   readonly scopeSecretRoots: string;
@@ -67,6 +62,11 @@ function parseJSON(name: string, raw: string): unknown {
   } catch {
     throw new Error(`invalid ${name}: malformed JSON`);
   }
+}
+
+interface RootEntry {
+  readonly current: number;
+  readonly roots: Readonly<Record<string, string>>;
 }
 
 function pickRoot(name: string, entry: string, parsed: RootEntry, version: number): Uint8Array {

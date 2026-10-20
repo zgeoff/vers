@@ -7,6 +7,7 @@ test('it builds a deferred tracker tag riding the same-origin proxy paths', () =
       'data-host-url': '/site',
       'data-website-id': 'site-id-123',
       defer: true,
+      // oxlint-disable-next-line zgeoff/no-abbreviated-names -- the HTML script attribute is `src`
       src: '/site.js',
     },
   ]);
