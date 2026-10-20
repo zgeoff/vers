@@ -33,7 +33,7 @@ services:
       timeout: 3s
       retries: 15
   resend-stub:
-    image: oven/bun:1.4.2-slim
+    image: oven/bun:1.4.3-slim
     # the whole workspace rides in so the stub resolves its deps from the host's installed
     # node_modules — the image itself installs nothing
     volumes:
@@ -50,7 +50,7 @@ services:
   # app-web's image bakes the analytics tracker tag in; with no upstream behind the proxy, every
   # tracker load answers 404 and a page logs it as a console error
   umami-stub:
-    image: oven/bun:1.4.2-slim
+    image: oven/bun:1.4.3-slim
     volumes:
       - ../..:/repo:ro
     working_dir: /repo
