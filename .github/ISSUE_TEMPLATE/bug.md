@@ -1,21 +1,35 @@
 ---
-name: Bug
-about: Something behaves wrong
+name: Bug report
+about: Something does not work the way it should
 labels: bug
 ---
 
-## Observed
+<!--
+Search the open issues first, in case someone has reported the same
+problem. Replace each comment like this one with your answer.
+-->
 
-<!-- what actually happens — quote error text exact -->
+## What happened
 
-## Expected
+<!-- What you saw. Paste any error text exactly as it appeared. -->
 
-<!-- what should happen instead -->
+## What you expected
 
-## Repro
+<!-- What you thought would happen instead. -->
 
-<!-- numbered steps, or the failing command/test; note environment when it matters -->
+## Steps to reproduce
 
-## Notes
+<!-- Numbered steps or the exact command, from a fresh setup. -->
 
-<!-- suspected area, related issues -->
+1.
+
+## Your setup
+
+<!--
+The version or commit you ran, your operating system, and anything else
+about your setup that could matter.
+-->
+
+## Anything else
+
+<!-- Logs, screenshots, or what you have tried. Delete this section when nothing fits. -->

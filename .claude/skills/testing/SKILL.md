@@ -20,7 +20,9 @@ at a boundary the test cannot cross. When existing tests break these rules, you 
 work on the code they cover.
 
 Never write a test only to satisfy a lint or layout rule. Change the rule's config instead, with a
-one-line reason. Never cut a test that checks behaviour.
+one-line reason. A repo that adopts a shared lint rule, such as `zgeoff/import-zones`, never tests
+that the rule or its zones fire: the rule is tested once, in its own package. Never cut a test that
+checks behaviour.
 
 ## Key rules
 
@@ -28,13 +30,14 @@ Each line links the section that explains it.
 
 - [Regimes](#regimes): the furthest edge a package's code reaches picks its regime and the reference
   to open.
-- [Principles](#principles): visible beats concise, every test stands alone, and a stand-in sits
-  only at an edge the test cannot cross.
+- [Principles](#principles): visible beats concise, every test stands alone, each changed behaviour
+  has a test that fails without the change, and a stand-in sits only at an edge the test cannot
+  cross.
 - [Structure and naming](#structure-and-naming): flat `test()` calls titled "it …", one act per
   test, and no `describe`.
 - [Loops](#loops): replace a loop of assertions with `test.each` or one collection matcher.
-- [`setupTest`](#setuptest): one local `setupTest()` holds wiring only, and each test creates the
-  records it asserts on.
+- [`setupTest`](#setuptest): one local `setupTest()` holds wiring only, and each test creates all of
+  its data.
 - [Cleanup](#cleanup): register `onTestFinished` right after each acquisition, with no hooks and no
   `try`/`finally`.
 - [Test data](#test-data): literals stay inline, shared domain types get tested factories, and
@@ -68,7 +71,8 @@ Open a reference when the task touches its area.
 - [Claude Code mod checks](./references/claude-code-mods.md): a mod's hooks, which
   `claude plugin test` runs.
 - [System tests](./references/system-tests.md): end-to-end and evaluation suites, property tests,
-  native timers, real transports, and paths the host fixes.
+  native timers, real transports, stateful stand-ins for a program the repo drives, and paths the
+  host fixes.
 - [Factories and composites](./references/factories.md): writing or changing a factory or a
   composite.
 - [Cleanup](./references/cleanup.md): helpers that register cleanup, ordered cleanup, cleanup after
@@ -148,6 +152,10 @@ These decide a case that the rules below leave open.
 - **Behaviour is the contract.** A test pins what the unit does for its callers. A refactor that
   keeps that behaviour, such as a renamed private helper or a reworked loop, leaves every test
   green.
+- **A test fails without its change.** Each behaviour a change adds or changes gets a test that runs
+  the changed path from the unit's entry and fails when the change is reverted. A test that calls
+  only a helper the change left alone, checks only its own stand-in, or compares values it defined
+  itself passes either way.
 - **Real first, stand-ins at the edge.** Each stand-in marks a spot where the test and production
   can disagree. Use one only for what the test cannot reach, and make it faithful: real status
   codes, real payload shapes, and the production types.
@@ -183,6 +191,9 @@ These decide a case that the rules below leave open.
   end-to-end suites that run the whole program, and `evals/` holds the
   [evaluation suites](./references/system-tests.md#evaluation-suites). The repo has no other
   `test/`, `tests/`, or `__tests__` directory.
+- A test that drives a real browser goes in `<module>.browser.test.ts` beside its module, which the
+  repo runs in a serial lane, as [Browser suites](./references/system-tests.md#browser-suites)
+  describes.
 
 ```ts
 test.each([
@@ -242,13 +253,11 @@ never appear in a test file.
   recorders, and the unit built through its factory. It takes no argument, or a typed config object
   that selects which dependencies to wire and carries no value that a test's outcome depends on. It
   returns named properties and has no `if`.
-- `setupTest()` creates no record and calls no operation of the code under test; building the unit
-  through its factory is not an operation. A record is a row, a file, or a store entry that the unit
-  reads, or the starting value of the clock or another wired dependency when a test's outcome
-  depends on it. A temp directory, a schema, and a handle are wiring. Each test creates every record
-  it asserts on, or whose values its outcome depends on, in its own body with those values written
-  there, even when every test in the file needs the same record. A factory with explicit arguments
-  may create it, such as `createStep({ leaseMs: 30_000 })`.
+- `setupTest()` wires dependencies and creates no data. Data is any row, file, store entry, or
+  starting value that the code under test reads. Each test creates all of its data in its arrange
+  phase, even when every test in the file needs the same data. A wired clock starts at a fixed
+  default; a test that reads the time sets the clock in its arrange phase. A temp directory, a
+  schema, and a handle are wiring.
 - A shared helper whose arguments carry the scenario, such as `startTestSite(pages)`, is called in
   the test body with those arguments written there. `setupTest()` wraps only a helper that takes no
   scenario.
@@ -259,17 +268,61 @@ never appear in a test file.
   attaches to or saving the note that it archives, stays in the arrange phase of the test body, with
   no assertion, because a separate test covers that act. A recovery test is the exception: it
   asserts each fault it injected, as [Assertions](#assertions) describes.
-- A test file declares one function, `setupTest()`, and nothing else. A helper the tests want goes
-  one of three ways: inline it where it is used, swap it for a registered matcher, or move it to the
-  shared test utils with tests of its own. A file with nothing to wire has no `setupTest()`. One
-  exception: a collection-time skip gate may keep its awaited probe, and named gates derived from
-  it, at module level. Only `skipIf` reads them, each repeated condition is named once, and a
-  comment gives the reason: Bun 1.4.2's `skipIf` takes a boolean and has no in-body skip.
+- A test file declares one function, `setupTest()`, and nothing else, and `zgeoff/setup-test-only`
+  fails any other module-level declaration. A helper the tests want goes one of three ways: inline
+  it where it is used, swap it for a registered matcher, or move it to the shared test utils with
+  tests of its own. A file with nothing to wire has no `setupTest()`. One exception: a
+  collection-time skip gate may keep its awaited probe, and named gates derived from it, at module
+  level. Only `skipIf` reads them, each repeated condition is named once, and a comment gives the
+  reason: Bun 1.4.2's `skipIf` takes a boolean and has no in-body skip.
 - `setupTest()` may return a closure that only calls production helpers on the runtime it built,
   such as `createImpDir(name)`. A closure with a branch, a loop, or state of its own is a helper,
   and it moves to the shared test utils.
 - Each test file keeps its own `setupTest()`. A shared one gathers a flag for every suite that uses
   it.
+
+In this made-up example, `setupTest()` returns only the wiring, and the test inserts the user in its
+arrange phase:
+
+```ts
+async function setupTest() {
+  const db = await createTestDatabase();
+  const client = createNotesClient({ db });
+
+  return { db, client };
+}
+
+test('it lists the notes of a user with none as empty', async () => {
+  const ctx = await setupTest();
+  const user = await ctx.db
+    .insertInto('users')
+    .values({ name: 'ada' })
+    .returningAll()
+    .executeTakeFirstOrThrow();
+
+  expect(await ctx.client.listNotes({ userID: user.id })).toStrictEqual([]);
+});
+```
+
+In the made-up counter-example, `setupTest()` inserts the user row and returns it, so it creates
+data:
+
+```ts
+async function setupTest() {
+  const db = await createTestDatabase();
+  const client = createNotesClient({ db });
+  const user = await db
+    .insertInto('users')
+    .values({ name: 'ada' })
+    .returningAll()
+    .executeTakeFirstOrThrow();
+
+  return { db, client, user };
+}
+```
+
+Repeated arrange lines stay inline, or move to a tested shared util that the test calls with its
+arguments, such as `createTestUser(ctx, { name: 'ada' })`.
 
 Register cleanup with `onTestFinished` immediately after each successful resource acquisition, so a
 later setup step or assertion that throws still releases the resource. `setupTest()` returns named
@@ -519,16 +572,17 @@ A stand-in passed through the unit's own parameters replaces a boundary, and the
 [Test data](#test-data) decide where it lives. Replacing a method of a real object that the unit
 builds or imports is a spy, which [Infrastructure failures](#infrastructure-failures) bans.
 
-| Boundary                                       | The test uses                                                                         |
-| ---------------------------------------------- | ------------------------------------------------------------------------------------- |
-| Pure computation                               | Return values, with no stand-in                                                       |
-| A CLI                                          | The real binary, spawned end to end                                                   |
-| The filesystem                                 | A real `mkdtemp` tree per test                                                        |
-| A database                                     | The real engine, isolated per test, as [database](./references/database.md) describes |
-| A remote HTTP or RPC service                   | MSW handlers, as [HTTP mocking](./references/http.md) describes                       |
-| A service with a cheap container               | The real service in a container                                                       |
-| An SDK with a command layer                    | A stand-in at the command layer                                                       |
-| A queue or pub/sub without a faithful emulator | A wrapper with queryable state, as [HTTP mocking](./references/http.md) describes     |
+| Boundary                                        | The test uses                                                                                     |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| Pure computation                                | Return values, with no stand-in                                                                   |
+| A CLI                                           | The real binary, spawned end to end                                                               |
+| The filesystem                                  | A real `mkdtemp` tree per test                                                                    |
+| A database                                      | The real engine, isolated per test, as [database](./references/database.md) describes             |
+| A remote HTTP or RPC service                    | MSW handlers, as [HTTP mocking](./references/http.md) describes                                   |
+| A service with a cheap container                | The real service in a container                                                                   |
+| An SDK with a command layer                     | A stand-in at the command layer                                                                   |
+| A queue or pub/sub without a faithful emulator  | A wrapper with queryable state, as [HTTP mocking](./references/http.md) describes                 |
+| A program the repo drives over its own protocol | A stateful stand-in, as [System tests](./references/system-tests.md#stateful-stand-ins) describes |
 
 A module that is hard to test without a stand-in takes its I/O from its caller: test the pure core
 with values, and test the I/O edge against the real boundary.

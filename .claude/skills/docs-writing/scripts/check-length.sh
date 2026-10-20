@@ -2,8 +2,8 @@
 # Checks each README against its line limit and each docs/ file against its cap, then runs
 # check-prose.sh over the same files and every skill's Markdown. A README over its limit fails the
 # run; a README over its target and a docs/ file over its cap print a warning and never fail it.
-# When the repo has the skill-writing skill, it then runs that skill's check-skill.sh, and when it
-# has the code-style skill's check-project-verbs.sh, it runs that too; it fails when either fails.
+# When the repo has the skill-writing skill, it then runs that skill's check-skill.sh, and it fails
+# when that fails.
 # Usage (from the repo root): check-length.sh [--package <readme>]...
 # A README is a package README when it sits beside a package.json that is not private, or when
 # --package names it. Any other README is the plain repo README at the root, or a sub-package
@@ -70,7 +70,7 @@ prose_paths=()
 # docs/README.md is the docs index, so the docs cap governs it, not a README limit.
 while IFS= read -r readme; do
   prose_paths+=("$readme")
-  read -r target limit name <<<"$(pick_readme_kind "$readme")"
+  read -r target limit name <<< "$(pick_readme_kind "$readme")"
   lines=$(count_lines "$readme")
 
   if [ "$lines" -gt "$limit" ]; then
@@ -98,7 +98,7 @@ while IFS= read -r doc; do
   if [ "$lines" -gt "$cap" ]; then
     echo "$doc: $lines lines, over the docs cap of $cap (warning: cut points, then split at a code boundary)"
   fi
-done <<<"$docs"
+done <<< "$docs"
 
 skills=$(list_files ':(glob).claude/skills/**/*.md' ':(glob)sync/skills/**/*.md')
 
@@ -117,15 +117,6 @@ for check_skill in .claude/skills/skill-writing/scripts/check-skill.sh \
   if [ -f "$check_skill" ]; then
     echo
     bash "$check_skill" || fail=1
-    break
-  fi
-done
-
-for check_verbs in .claude/skills/code-style/scripts/check-project-verbs.sh \
-  sync/skills/code-style/scripts/check-project-verbs.sh; do
-  if [ -f "$check_verbs" ]; then
-    echo
-    bash "$check_verbs" || fail=1
     break
   fi
 done

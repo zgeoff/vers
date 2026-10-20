@@ -2,9 +2,10 @@
 name: code-style
 description:
   Code style for zgeoff TypeScript repos — module layout and file naming, acronyms, state
-  lifecycles, branching on a union with ts-pattern, and the closed function-verb taxonomy that the
-  function-verb lint rule enforces. Load before writing, reviewing, or renaming any TypeScript, with
-  the repo's project-code-style skill beside it.
+  lifecycles, branching on a union with ts-pattern, type claims, structure, errors and logs,
+  comments, one-off codemods, and the role table of function verbs whose promises the function-verb
+  and verb-contract lint rules check. Load before writing, reviewing, or renaming any TypeScript,
+  with the repo's project-code-style skill beside it.
 ---
 
 # Code style
@@ -20,25 +21,30 @@ Each line links the section that explains it.
   helpers after it.
 - [Acronyms](#acronyms): acronyms stay uppercase in identifiers, `ID` included, unless one starts a
   name.
+- [Naming values](#naming-values): a variable, parameter or property is named for what it holds, in
+  full words, with no single letters or abbreviations outside a short kept list.
 - [State lifecycles](#state-lifecycles): persisted state moves through one declared transition
   table, and an in-process actor is an xstate machine.
 - [Branching on a union](#branching-on-a-union): branch with `match(...).exhaustive()` from
   `ts-pattern`, never `switch`.
-- [Function naming](#function-naming): every function name starts with a verb from the closed list,
-  and the banned verbs never appear.
+- [Type claims](#type-claims): no type assertion and no `any` value reaching a typed place; narrow
+  or parse instead.
+- [Structure](#structure): typed contracts between processes, decisions split from I/O, no
+  forwarding layer or unused option, and I/O through given dependencies.
+- [Errors and logs](#errors-and-logs): return an expected outcome, guard only what can be wrong,
+  assert what only a bug reaches, and log nothing per call on a hot path.
+- [Comments](#comments): a `//` comment holds only the reason the obvious alternative is wrong, when
+  the cause lives outside the file.
+- [Mechanical changes](#mechanical-changes): a one-off codemod goes in the PR description, never
+  into the repo.
+- [Function naming](#function-naming): a function that does a job in the role table starts with that
+  job's verb and keeps its promise, and the banned verbs never appear.
 
 ## Loading the skill
 
 This skill is the shared base that repo-sync delivers from zgeoff/tools; edit it there, never in a
 downstream repo. When the repo has a `project-code-style` skill, load it too. It holds the repo's
-own verbs, exempt names, and rules, and it never relaxes a rule here.
-
-A `project-code-style` skill lists each of the repo's verbs as a bullet or a table row that starts
-with the backticked verb under `## Project verbs`, and each exempt name the same way under
-`## Exempt names`, so an agent sees every verb it may use when the skill loads.
-`check-project-verbs.sh`, beside this skill, fails when those lists differ from the `verbs` and
-`exemptNames` options of `zgeoff/function-verb` in [`.oxlintrc.json`](../../../.oxlintrc.json), and
-docs-writing's `check-length.sh` runs it.
+own rules, and it only adds to this skill: a stricter rule, never an exception.
 
 ## Files and modules
 
@@ -47,20 +53,42 @@ docs-writing's `check-length.sh` runs it.
   types, and side-effect-only modules, which are named for what they do (`augment-bun-test.ts`).
 - Module order: imports, the primary export, then private helpers in composition order (depth-first)
   — never helpers first. Supporting declarations (consts, interfaces, type aliases) sit directly
-  above their first use, never below it and never leading the file; types for the primary export's
-  signature may sit just above it.
+  above their first use, never below it and never leading the file. The exception: declarations the
+  primary export uses may sit just above it. `zgeoff/module-order` reports each break, and its fix
+  moves each declaration it can move safely.
 - Build objects with a factory function, never a class. The factory takes the verb its result needs:
   `build<X>` for a value, `create<X>` for a resource, and `make<X>` for a function. The one
   exception is a custom error, `class <X>Error extends Error`, since `instanceof` checks and stack
-  traces need it.
+  traces need it. `zgeoff/no-class` fails any other class.
 
 ## Acronyms
 
-Acronyms stay uppercase in identifiers (`runCLI`, `parseCLIArgs`, `ASTNode`, `pkgURL`,
+Acronyms stay uppercase in identifiers (`runCLI`, `parseCLIArgs`, `ASTNode`, `packageURL`,
 `isPackageJSON`) — except when one starts a camelCase name, where it lowercases whole (`cliPath`,
 `astNode`). ID counts as an acronym: `userID`, `sessionID` — never `userId` — and `idToken` when it
 starts a name. File names are unaffected: kebab-case lowercases everything (`parse-cli-args.ts`
 exports `parseCLIArgs`).
+
+## Naming values
+
+Name a variable, parameter or property for what it holds, in full words: `manager`, never `mgr`, and
+`session`, never `s`. A full word tells the reader what the value is without a trip to where it was
+made. Single letters and abbreviations are banned.
+
+A few short names are kept:
+
+- `x` and `y`, for coordinates.
+- `z` for zod, `$` for Bun's shell, and `_` for a placeholder that is never read.
+- `ctx` and `id`.
+- `db`, `args`, `params`, `repo` and `info`, which read as words.
+
+A unit keeps its short form as a suffix, as in `timeoutMs`, but `ms` alone never names a value.
+Acronyms follow [Acronyms](#acronyms). A type parameter, such as `T`, is not a value, and this rule
+leaves it alone.
+
+Lint catches the mechanical cases. `id-length` fails a one-letter name other than the kept ones, and
+`zgeoff/no-abbreviated-names` fails each abbreviation its options list, with the full word in its
+message. An abbreviation outside that list, such as `cfg`, breaks this rule all the same.
 
 ## State lifecycles
 
@@ -89,122 +117,147 @@ later cannot fall through to a default. `zgeoff/no-switch` reports every `switch
 author can tell a union from an open value. End the match with `.otherwise()` only when the value is
 open, such as a string from outside the program.
 
+## Type claims
+
+A type the checker cannot confirm is a claim, and the checker trusts it everywhere the value goes.
+
+- Replace a type assertion with a type guard, a type annotation, `satisfies`, or a parse with a
+  schema. Lint bans every assertion except `as const`. An assertion that survives carries a disable
+  comment with its approval and reason, as the `@zgeoff/oxlint-config` README shows, and review
+  reports each new one, so the maintainer sees every cast the repo gains.
+- Never let an `any` value reach a typed parameter, return or variable. Type it `unknown` and narrow
+  it, or parse it with a schema. `JSON.parse` and some library calls return `any`, and lint cannot
+  see the claim, because `any` turns the type check off.
+
+## Structure
+
+Each of these rules keeps the next change small.
+
+- An interface between processes or packages goes through the repo's typed contract, such as a typed
+  RPC layer, a shared schema or the CLI library's argument parser. A hand-matched route, a
+  hand-parsed body or hand-read arguments drift from the other side with no type error.
+- A function that both branches heavily and does I/O splits in two: a pure step that decides what to
+  do, and a thin step that does it. A test then covers each branch with values.
+- A layer adds behaviour. A wrapper that only forwards its arguments goes, and its callers call the
+  wrapped function.
+- Every option, parameter and extension point has a caller. Add one when its first caller needs it,
+  because one that nothing passes is code that no test runs.
+- A unit reaches I/O through the dependencies its caller passes in, never by importing a client or
+  calling a global, so a test passes a stand-in at the boundary.
+
+## Errors and logs
+
+- Return an expected outcome, such as a miss or a refused input, as a result. Throw only for a
+  failure the caller cannot plan for.
+- Guard only a value that can be wrong. A check on a value whose origin already guarantees it is
+  dead code, and it tells the reader the guarantee does not hold.
+- Input from outside the process, such as a request body, a file or an environment variable, gets a
+  handled error, never an assertion, because bad outside input is expected.
+- A condition that only a bug can reach gets an assertion, never a normal branch, so the bug fails
+  where it starts instead of running on.
+- Log a failure, a state change or a slow path. A log on a hot path or a success path repeats on
+  every call and buries the lines an operator needs.
+
+## Comments
+
+A fact a reader needs has a home that stays true: the code, a type, a named constant, a test whose
+name states the rule, the commit body, or the subsystem's architecture doc for an invariant that
+callers obey. A comment holds only the residue none of those can hold.
+
+- Write a `//` comment for one thing: the reason the obvious alternative is wrong, when the cause
+  lives outside the file. A library defect, a harness quirk, a runtime or platform behaviour, a
+  parser or compiler rule, a measured number, a production incident. Place it at the line or
+  declaration it explains, three lines at most.
+- Never write what the code shows: what a function does, its parameters, its outcomes, an invariant
+  a test already states, which step does what. An agent derives those from the code, its tests, and
+  its references; a comment that caches them goes stale.
+- A caller-facing contract is a test whose name states it. An invariant that code in another package
+  obeys is stated in the subsystem doc as well. The reason for a design decision lives in the commit
+  body, never in the doc. A reason a reader needs at the line follows the `//` rule.
+- Comments describe the code as it is now — no history ("previously", "now uses"), no project state
+  (issue numbers, phase labels, "not wired yet"); those live in the commit message.
+- Comments don't name other declarations, because a rename strands the reference. State the fact
+  instead: "a retry after the deadline is dropped", not "(see scheduleRetry)". A declaration's own
+  parameters and signature types are fine to name.
+
+## Mechanical changes
+
+A codemod or other one-off script that made a mechanical change never enters the repo. Put it in the
+PR description, in a collapsed `<details>` block with the command that ran it, so a reviewer can
+rerun it and the tree keeps no script that nothing runs again. The formatter and the lint fixes that
+the repo runs on every commit are not one-off scripts, and this rule leaves them alone.
+
 ## Function naming
 
-Every function name starts with a prefix from the closed list below. The prefix is a contract — a
-reader should know the function's shape without opening it. A verb that any repo could use extends
-this list and the lint rule's list in zgeoff/tools in one PR, and a test there fails when the two
-differ. A verb that only one repo needs goes in that repo's
-[`.oxlintrc.json`](../../../.oxlintrc.json), under the `verbs` option of `zgeoff/function-verb`, and
-in its `project-code-style` skill.
+A function that does a job in the role table starts with that job's verb, and the verb makes a
+promise the reader relies on without opening the function. Any other function starts with any verb
+that fits what it does. `zgeoff/function-verb` fails a banned verb, and `zgeoff/verb-contract` fails
+each broken promise that a machine can see. The `@zgeoff/oxlint-config` README lists what
+verb-contract counts as I/O.
 
-**Predicates** — return boolean, no side effects:
+| Role                                                  | Verb                         | Promise                                     |
+| ----------------------------------------------------- | ---------------------------- | ------------------------------------------- |
+| yes/no answer                                         | `is`, `has`, `can`, `should` | returns a boolean; no I/O                   |
+| yes/no answer that needs I/O                          | `probe`                      | returns a boolean; may do I/O               |
+| value from arguments, test data factories included    | `build`                      | no I/O                                      |
+| text or raw input → structure                         | `parse`                      | no I/O                                      |
+| value → text or markup                                | `format`, `render`           | no I/O                                      |
+| choice among known alternatives                       | `pick`                       | no I/O                                      |
+| lookup that can miss                                  | `find`                       | no I/O; can return null or undefined        |
+| lookup that cannot miss                               | `get`                        | no I/O; never returns null or undefined     |
+| many values gathered from a traversal                 | `collect`                    | no I/O                                      |
+| cheap change of representation                        | `to`                         | no I/O                                      |
+| content in from outside the process                   | `read`                       | may do I/O                                  |
+| content out to outside the process                    | `write`                      | may do I/O                                  |
+| subprocess or task                                    | `run`                        | may do I/O                                  |
+| resource brought into existence                       | `create`                     | may do I/O                                  |
+| resource taken away                                   | `remove`                     | may do I/O                                  |
+| function that returns a function                      | `make`                       | returns a function                          |
+| higher-order wrapper                                  | `with`                       | runs a callback inside a context            |
+| React hook                                            | `use`                        | follows the rules of hooks                  |
+| event-callback prop or parameter                      | `on`                         | follows the framework's callback convention |
+| function passed to an `on` prop, or a lifecycle event | `handle`                     | follows the framework's callback convention |
+| test wiring                                           | `setupTest`                  | the testing skill's per-test fixture        |
 
-| Prefix   | Contract                | Example          |
-| -------- | ----------------------- | ---------------- |
-| `is`     | type or state test      | `isVarDecl`      |
-| `has`    | containment, possession | `hasBlankLine`   |
-| `can`    | capability              | `canResize`      |
-| `should` | policy decision         | `shouldSkipFile` |
-| `needs`  | requirement             | `needsBlankLine` |
+`make`, `with`, `use`, `on` and `to` always take a suffix, as in `toPosixPath`.
 
-**Pure producers** — result comes from arguments alone, no side effects:
+### The I/O rule
 
-| Prefix                        | Contract                                                                  | Example             |
-| ----------------------------- | ------------------------------------------------------------------------- | ------------------- |
-| `build<Result>[From<Source>]` | default constructor for values; drop `From<Source>` when no single source | `buildEditsFromAST` |
-| `define<X>`                   | identity; its only job is compile-time constraint of its literal argument | `defineErrors`      |
-| `parse`                       | unstructured input → structure, invalid input reported                    | `parseSource`       |
-| `encode`                      | structure → its defined compact or wire form, reversed by `decode`        | `encodeState`       |
-| `decode`                      | `encode`'s output → the original structure, malformed input reported      | `decodeState`       |
-| `derive`                      | one-way cryptographic derivation from secret material                     | `deriveAvatarKey`   |
-| `plan`                        | compute an action without performing it                                   | `planGapEdit`       |
-| `pick`                        | select among known alternatives                                           | `pickMode`          |
-| `find`                        | search that can miss — null/undefined on miss                             | `findPrevious`      |
-| `get`                         | cheap access that cannot miss (throwing on a broken invariant is fine)    | `getNodeEnd`        |
-| `collect`                     | gather from a traversal or scan                                           | `collectChildNodes` |
-| `count`                       | how many                                                                  | `countNewlines`     |
-| `split`                       | one value → parts                                                         | `splitLines`        |
-| `merge`                       | parts → one value                                                         | `mergeWindows`      |
-| `sort`                        | reorder                                                                   | `sortEdits`         |
-| `format`                      | value → human-readable string                                             | `formatRange`       |
-| `render`                      | structure → output text or markup                                         | `renderHunk`        |
-| `normalize`                   | variant forms → the canonical form                                        | `normalizePath`     |
-| `sanitize`                    | untrusted input → a safe form, unsafe parts stripped or escaped           | `sanitizeTitle`     |
-| `resolve`                     | follow indirection to a concrete value                                    | `resolveBinPath`    |
-| `expand`                      | compact form → full form                                                  | `expandInputs`      |
-| `compress`                    | value → its reversible compact encoding                                   | `compressGraph`     |
-| `decompress`                  | reverse a `compress` encoding (non-encoded shorthand is `expand`)         | `decompressGraph`   |
-| `to<Result>`                  | cheap representation change                                               | `toPosixPath`       |
-| `transform`                   | a package's own source→source operation                                   | `transform`         |
+A function that does I/O starts with a verb that may do I/O, and never with a verb whose promise is
+no I/O. A pure function stays pure all the way down: a `build` function that calls a `read` helper
+does I/O. verb-contract skips a callee from a package, so a pure function that calls a package's
+I/O, or a local helper whose name hides its I/O, passes lint and still breaks the rule.
 
-**Effectful** — touches the world (filesystem, streams, processes, registries):
+A function that returns a boolean and does no I/O starts with `is`, `has`, `can` or `should`. Two
+exceptions:
 
-| Prefix         | Contract                                                                                                                                | Example            |
-| -------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ------------------ |
-| `apply`        | perform previously planned changes                                                                                                      | `applyEdits`       |
-| `create`       | bring a resource into existence (file, directory, process)                                                                              | `createWorkDir`    |
-| `mint`         | issue a new unique token, ID or credential                                                                                              | `mintSessionToken` |
-| `open`         | acquire a handle that stays live until closed (file, socket, connection)                                                                | `openDatabase`     |
-| `dispose`      | free an object's resources so it can no longer be used                                                                                  | `disposeTerminal`  |
-| `claim`        | atomically take exclusive ownership of a work item or resource; ownership ends at commit or an explicit release                         | `claimNextChain`   |
-| `release`      | give back a hold taken earlier (a lock, a lease, a claim)                                                                               | `releaseLock`      |
-| `revoke`       | withdraw a grant (token, permission, credential) so it stops working                                                                    | `revokeToken`      |
-| `read`         | pull raw content from filesystem or network into memory                                                                                 | `readSource`       |
-| `load`         | read **and** parse into a ready structure                                                                                               | `loadConfig`       |
-| `write`        | persist to the filesystem                                                                                                               | `writeOutput`      |
-| `remove`       | delete a resource                                                                                                                       | `removeStaleDist`  |
-| `update`       | mutate existing state or resource in place                                                                                              | `updateIndex`      |
-| `refresh`      | replace cached or stale state with a fresh read                                                                                         | `refreshSessions`  |
-| `upsert`       | single-statement insert-or-update keyed by a natural or composite key, refreshing the conflicting row's columns in place                | `upsertUser`       |
-| `set`          | assign a store's named state slice wholesale — the store-setter idiom; partial mutation is `update`                                     | `setSelectedNode`  |
-| `toggle<Flag>` | invert a boolean state slice                                                                                                            | `toggleDevCamera`  |
-| `reset`        | return state to its initial value                                                                                                       | `resetCombatState` |
-| `restore`      | bring back a saved earlier state                                                                                                        | `restoreSnapshot`  |
-| `print`        | write to stdout/stderr                                                                                                                  | `printHelp`        |
-| `record`       | append an observation to a log, history or metrics store                                                                                | `recordUsage`      |
-| `run`          | execute a subprocess, task, or whole pipeline                                                                                           | `runCLI`           |
-| `spawn`        | launch a child process or task without waiting for it to end (`run` waits)                                                              | `spawnWorker`      |
-| `schedule`     | arrange work to run later or on a timer                                                                                                 | `scheduleRetry`    |
-| `check`        | evaluate and report findings; effects allowed per mode                                                                                  | `checkFile`        |
-| `try<X>`       | X with failures captured as a value instead of a throw                                                                                  | `tryCheckFile`     |
-| `register`     | add to a registry the caller doesn't own                                                                                                | `registerMatcher`  |
-| `subscribe`    | attach a listener to an event source, returning or enabling detachment                                                                  | `subscribeToTicks` |
-| `unsubscribe`  | detach what `subscribe` attached                                                                                                        | `unsubscribe`      |
-| `assert`       | throw when an invariant doesn't hold                                                                                                    | `assertSpan`       |
-| `require`      | throw unless a runtime condition holds — a guard real input can trip (`assert` covers invariants)                                       | `requireAuth`      |
-| `verify`       | test a claim or credential against evidence, rejecting on mismatch                                                                      | `verifySession`    |
-| `emit`         | dispatch an event or notification                                                                                                       | `emitProgress`     |
-| `send`         | transmit a payload to a remote receiver (fire-and-forget or RPC — no resource semantics; REST mutations are `create`/`update`/`remove`) | `sendWebhook`      |
-| `wait`         | block until an event or condition resolves; may return the awaited value                                                                | `waitForMessage`   |
-| `setup`        | prepare the environment or fixture the following code assumes; `teardown` reverses it                                                   | `setupTest`        |
-| `teardown`     | release what `setup` prepared                                                                                                           | `teardownTest`     |
-| `start`        | put a long-running resource into service (server, worker, poll loop); `stop` reverses it                                                | `startQueues`      |
-| `stop`         | take a long-running resource out of service, releasing what `start` acquired                                                            | `stopWorker`       |
-| `restart`      | stop then start a long-running resource again                                                                                           | `restartDaemon`    |
-| `advance`      | move a cursor, clock or state machine forward                                                                                           | `advanceTurn`      |
-| `drain`        | consume a pending backlog until empty                                                                                                   | `drainJobs`        |
+- A function with an effectful verb, such as `removeFile` or `tryLock`, may return a success flag.
+- A framework prefix wins: a React hook that returns a boolean keeps `use`, and a callback keeps
+  `on` or `handle`.
 
-**Wrappers and factories** — the result is behaviour, not data:
+### Data or resource
 
-| Prefix    | Contract                                  | Example           |
-| --------- | ----------------------------------------- | ----------------- |
-| `with<X>` | HOF that runs a callback inside a context | `withJestContext` |
-| `make<X>` | factory whose result is itself a function | `makeExcluder`    |
+A test data factory is `build<X>`, never `create<X>` or `make<X>`. `create` is for a resource, such
+as a file, a stub binary or a server.
 
-**Framework conventions** — where the ecosystem's prefix is required, it wins:
+### Free verbs
 
-| Prefix                   | Contract                                                                                                                | Example          |
-| ------------------------ | ----------------------------------------------------------------------------------------------------------------------- | ---------------- |
-| `use<X>`                 | React hook — the prefix drives rules-of-hooks linting; helpers inside a hook follow the normal taxonomy                 | `useDebounce`    |
-| `on<Event>`              | event-callback prop or parameter                                                                                        | `onRowClick`     |
-| `handle<Event>`          | local implementation passed to an `on<Event>` prop — the idiomatic React pair; the `handle` ban applies everywhere else | `handleRowClick` |
-| `handle<LifecycleEvent>` | implementation of an engine lifecycle callback, keyed by the engine's lifecycle-event enum                              | `handleTick`     |
+A function whose job has no row in the table may start with a verb outside it. That verb is free: it
+makes no promise. A job with a row keeps its row's verb, so a pure yes/no answer starts with `is`,
+`has`, `can` or `should` even when a free verb such as `matches` reads well. `resolve` is free
+because it names both a pure lookup and one that searches the filesystem, so a reader opens a
+`resolve` function to learn which.
 
-**Banned** — each is a vaguer or synonymous form of a listed verb; use that one instead: `handle`
-(except the `handle<Event>` framework conventions), `process`, `manage`, `do`, `perform` (say what
-it does), `execute` (→ `run`), `compute` (→ `build`), `fetch` (→ `read`), `save`/`store` (→
-`write`), `delete` (→ `remove`), `search`/`lookup` (→ `find`/`get`).
+### Banned verbs
 
-Algorithm-native vocabulary (`walk`, `backtrack`, `slideDiagonal`) is allowed inside the module
-implementing that algorithm — forcing list verbs onto textbook terms hides the algorithm.
+Banned verbs never start a function name. The vague ones say nothing about what the function does,
+so name what it does instead: `process`, `manage`, `do`, `perform`, and `handle` outside its
+callback use. The others are near-synonyms of a table verb, and lint names the replacement:
+`execute` (→ `run`), `compute` (→ `build`), `fetch` (→ `read`), `save` and `store` (→ `write`),
+`delete` (→ `remove`), and `search` and `lookup` (→ `find`).
+
+### Changing the table
+
+A change to the role table, to the banned verbs, or to the effectful verbs that verb-contract counts
+as I/O is a change to zgeoff/tools, where the skill and both rules change in one PR, and it needs
+the maintainer's approval. A new free verb needs no change and no approval.
