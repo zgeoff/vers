@@ -1,33 +1,36 @@
 ---
-name: Feature
-about: New capability — player-facing or system
-labels: feature
+name: Feature request
+about: Suggest a new capability or a change to an existing one
+labels: enhancement
 ---
 
-<!-- Lead paragraph: what ships and why, ≤2 sentences. -->
-
-## Player story
-
 <!--
-Required when the outcome is player-perceivable (every area/game issue). Second person, present
-tense: what you concretely see or feel once this ships — and what you don't experience (no dupes,
-no lost progress, no spinner spam); absences are part of the story. No implementation nouns: no
-table, field, component, or service names. Close with a one-sentence distillation of the whole
-story. Delete this section only when nothing a player can perceive changes.
+Search the open issues first, in case someone has asked for the same
+thing. Replace each comment like this one with your answer.
 -->
 
-## Scope
-
-- <!-- the behaviors this delivers, one line each -->
-
-## Approach (unverified)
+## The problem
 
 <!--
-The mechanism you expect to carry the Scope above, and what you have not checked about it. Scope is
-the contract; this is a guess the implementer verifies before building on it. Write `none` when you
-have no candidate mechanism.
+What you are trying to do, and what gets in your way. Describe the
+problem before any solution.
 -->
 
-## Notes
+## What would help
 
-<!-- dependencies (#issue links), design-doc links, interactions with other work, non-goals -->
+<!--
+What you would see once this exists, written as "you run X and see Y",
+one line per behavior. Include what you would no longer run into, such
+as an error or a manual step.
+-->
+
+## How it could work
+
+<!--
+A way you think this could work, and what you have not checked about it.
+Delete this section when you have no idea yet.
+-->
+
+## What you do instead
+
+<!-- The workaround you use now, if any. Delete this section when there is none. -->
