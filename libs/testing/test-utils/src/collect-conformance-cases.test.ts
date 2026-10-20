@@ -56,18 +56,18 @@ test('it passes every collected case against a conforming app', async () => {
     ping: ctx.os.ping.handler(() => ({ pong: true })),
   });
 
-  const app: ConformanceCaseApp = {
-    handle: async (request) => {
-      const result = await handler.handle(request, {
-        context: {
-          actingUserID: request.headers.get('x-acting-user-id'),
-        },
-        prefix: '/rpc',
-      });
+  const handleRequest = async (request: Request): Promise<Response> => {
+    const result = await handler.handle(request, {
+      context: {
+        actingUserID: request.headers.get('x-acting-user-id'),
+      },
+      prefix: '/rpc',
+    });
 
-      return result.matched ? result.response : new Response('not found', { status: 404 });
-    },
+    return result.matched ? result.response : new Response('not found', { status: 404 });
   };
+
+  const app: ConformanceCaseApp = { handle: handleRequest };
 
   const cases = collectConformanceCases(ctx.contract, {
     anonymousHeaders: {},
@@ -87,18 +87,18 @@ test('it fails the anonymous-UNAUTHORIZED case against a nonconforming app', asy
     ping: ctx.os.ping.handler(() => ({ pong: true })),
   });
 
-  const app: ConformanceCaseApp = {
-    handle: async (request) => {
-      const result = await handler.handle(request, {
-        context: {
-          actingUserID: request.headers.get('x-acting-user-id'),
-        },
-        prefix: '/rpc',
-      });
+  const handleRequest = async (request: Request): Promise<Response> => {
+    const result = await handler.handle(request, {
+      context: {
+        actingUserID: request.headers.get('x-acting-user-id'),
+      },
+      prefix: '/rpc',
+    });
 
-      return result.matched ? result.response : new Response('not found', { status: 404 });
-    },
+    return result.matched ? result.response : new Response('not found', { status: 404 });
   };
+
+  const app: ConformanceCaseApp = { handle: handleRequest };
 
   const cases = collectConformanceCases(ctx.contract, {
     anonymousHeaders: {},

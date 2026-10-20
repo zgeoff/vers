@@ -71,6 +71,8 @@ The verb rule skips these names, which also sit in the `exemptNames` option of
 `zgeoff/function-verb` in [`.oxlintrc.json`](../../../.oxlintrc.json). An oRPC handler keeps the
 name of its contract procedure, because the contract key is the public API's vocabulary and a rename
 would misname it. A method that implements a library's interface keeps the name the library calls.
+An option that only takes a function, such as the `fetch` option of `Bun.serve`, needs no exemption:
+pass it a named function that follows the verb rule, such as `handleRequest`.
 
 - `up`, a migration export Kysely requires
 - `down`, a migration export Kysely requires
@@ -84,9 +86,6 @@ would misname it. A method that implements a library's interface keeps the name 
 - `trackActivityProgress`, an oRPC handler
 - `wake`, an oRPC handler
 - `executeQuery`, the query method of a Kysely database connection
-- `fetch`, the request handler that `Bun.serve` and srvx call, and the transport option of an oRPC
-  link
-- `handle`, the request handler of an Elysia app
 
 ## Comments
 

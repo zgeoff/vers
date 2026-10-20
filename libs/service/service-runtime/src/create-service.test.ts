@@ -471,18 +471,15 @@ test('it reports the OTel span trace id as x-trace-id when no traceparent came i
 
   const responses: Array<Response> = [];
 
-  const client = buildRPCTestClient<typeof ctx.contract>(
-    {
-      handle: async (request) => {
-        const response = await service.app.handle(request);
+  const handleRequest = async (request: Request): Promise<Response> => {
+    const response = await service.app.handle(request);
 
-        responses.push(response);
+    responses.push(response);
 
-        return response;
-      },
-    },
-    { token },
-  );
+    return response;
+  };
+
+  const client = buildRPCTestClient<typeof ctx.contract>({ handle: handleRequest }, { token });
 
   const result = await client.getSpanTraceID();
 

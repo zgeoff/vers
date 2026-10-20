@@ -576,16 +576,18 @@ test('it attaches a traceparent to a remote dispatch', async () => {
 test('it reports providerUnavailable when the provider never responds', async () => {
   await using ctx = await setupTest();
 
+  // Never resolves on its own; settles only once the client's own abort reaches the server, so
+  // `stop(true)` in teardown doesn't hang waiting on a handler stuck forever.
   const providerServer = Bun.serve({
-    // Never resolves on its own; settles only once the client's own abort reaches the server, so
-    // `stop(true)` in teardown doesn't hang waiting on a handler stuck forever.
-    fetch: (request) =>
-      new Promise<Response>((resolve) => {
-        request.signal.addEventListener('abort', () => {
-          resolve(new Response(null, { status: 499 }));
-        });
-      }),
     port: 0,
+    routes: {
+      '/*': (request) =>
+        new Promise<Response>((resolve) => {
+          request.signal.addEventListener('abort', () => {
+            resolve(new Response(null, { status: 499 }));
+          });
+        }),
+    },
   });
 
   onTestFinished(async () => {
@@ -636,8 +638,10 @@ test('it reports providerUnavailable when the provider answers with a proxy-styl
   await using ctx = await setupTest();
 
   const providerServer = Bun.serve({
-    fetch: () => new Response('<html><body>502 Bad Gateway</body></html>', { status: 503 }),
     port: 0,
+    routes: {
+      '/*': new Response('<html><body>502 Bad Gateway</body></html>', { status: 503 }),
+    },
   });
 
   onTestFinished(async () => {

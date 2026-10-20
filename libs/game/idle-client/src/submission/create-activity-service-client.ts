@@ -23,20 +23,22 @@ export function createActivityServiceClient(): ActivityServiceClient {
     }
   };
 
+  const sendRequest = async (input: Request, init?: RequestInit): Promise<Response> => {
+    const response = await fetch(input, init);
+
+    if (response.headers.has(SESSION_SUPERSEDED_HEADER)) {
+      discard ??= runDiscard();
+
+      await discard;
+    }
+
+    return response;
+  };
+
   const link = new RPCLink<ActivityCallContext>({
     clientInterceptors: [makeRetryInterceptor({ isRetryable: makeIsRetryable(activityContract) })],
 
-    fetch: async (input, init) => {
-      const response = await fetch(input, init);
-
-      if (response.headers.has(SESSION_SUPERSEDED_HEADER)) {
-        discard ??= runDiscard();
-
-        await discard;
-      }
-
-      return response;
-    },
+    fetch: sendRequest,
 
     // a call made with no options at all reaches this callback with an undefined context
     headers: (options) =>

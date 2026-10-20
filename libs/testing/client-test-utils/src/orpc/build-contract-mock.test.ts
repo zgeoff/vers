@@ -209,14 +209,16 @@ test('it surfaces a raw Response returned by a mock handler verbatim to the clie
 
   let transportResponse: Response | undefined;
 
+  const sendRequest = async (request: Request): Promise<Response> => {
+    const response = await fetch(request);
+
+    transportResponse = response.clone();
+
+    return response;
+  };
+
   const link = new RPCLink<Record<string, never>>({
-    fetch: async (request: Request) => {
-      const response = await fetch(request);
-
-      transportResponse = response.clone();
-
-      return response;
-    },
+    fetch: sendRequest,
     url: 'http://raw.test/rpc',
   });
 
