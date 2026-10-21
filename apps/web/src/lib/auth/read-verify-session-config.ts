@@ -2,12 +2,15 @@ import type { SessionOptions } from 'iron-session';
 import { handleUnsealError } from './handle-unseal-error';
 import { readSessionSecret } from './read-session-secret';
 
-export const VERIFY_SESSION_TTL_SECONDS = 60 * 10;
+const VERIFY_SESSION_TTL_SECONDS = 60 * 10;
 
 export function readVerifySessionConfig(): SessionOptions {
   const domain = process.env['COOKIE_DOMAIN'];
 
   return {
+    // the cookie holds the caller's unbounded redirect target, which can seal past the browser's
+    // 4096-byte cookie limit
+    chunk: true,
     cookieName: 'en_verification',
     cookieOptions: {
       ...(domain !== undefined && { domain }),

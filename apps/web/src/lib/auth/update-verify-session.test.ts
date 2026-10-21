@@ -3,6 +3,7 @@ import { unsealData } from 'iron-session';
 import invariant from 'tiny-invariant';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { readSessionSecret } from './read-session-secret';
+import { readVerifySession } from './read-verify-session';
 import { updateVerifySession } from './update-verify-session';
 
 test('it merges the update into the verification data already in the cookie', async () => {
@@ -15,6 +16,23 @@ test('it merges the update into the verification data already in the cookie', as
     'loginLogout#email': 'pilot@example.test',
     'onboarding#email': 'cadet@example.test',
   });
+});
+
+test('it splits a redirect too long for one cookie across several cookies', async () => {
+  const redirect = `/respite?filter=${'x'.repeat(3000)}`;
+
+  const outcome = await withRequestContext({}, async () => {
+    await updateVerifySession({ 'loginLogout#redirect': redirect });
+
+    return readVerifySession();
+  });
+
+  expect(outcome.value).toStrictEqual({ 'loginLogout#redirect': redirect });
+
+  expect([...outcome.setCookies.keys()]).toIncludeAllMembers([
+    'en_verification.0',
+    'en_verification.1',
+  ]);
 });
 
 test('it drops a key that the update sets to undefined', async () => {
