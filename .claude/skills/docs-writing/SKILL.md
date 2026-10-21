@@ -413,8 +413,9 @@ These patterns mark text as generated. Cut or rewrite them:
 
 ### Banned words
 
-`check-prose.sh` greps for the words every zgeoff repo bans, and a repo's AGENTS.md may ban more.
-Fix any violation you see.
+`check-prose.sh` greps for the words every zgeoff repo bans, and a repo's AGENTS.md may ban more. In
+Markdown it skips code spans and code blocks, so an identifier in code may hold a banned word. Fix
+any violation you see.
 
 ## Shaping the doc
 
