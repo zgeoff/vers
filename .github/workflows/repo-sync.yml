@@ -18,7 +18,7 @@ jobs:
   sync:
     permissions:
       contents: read
-    uses: zgeoff/tools/.github/workflows/repo-sync.yml@sync-v21
+    uses: zgeoff/tools/.github/workflows/repo-sync.yml@sync-v22
     with:
       skip: agents, pr-template, editorconfig
       include:
