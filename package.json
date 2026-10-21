@@ -111,7 +111,7 @@
       "execa": "9.6.1",
       "expect-type": "1.4.0",
       "fake-indexeddb": "6.2.5",
-      "fast-equals": "6.1.1",
+      "fast-equals": "6.2.0",
       "h3": "2.0.2",
       "happy-dom": "20.14.6",
       "html-to-text": "9.0.5",
