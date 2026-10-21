@@ -20,7 +20,7 @@
   "rules": {
     // `executeQuery` implements Kysely's database connection, which calls it
     // by that name
-    "zgeoff/function-verb": ["error", { "exemptNames": ["executeQuery"] }],
+    "zgeoff/function-verb": ["error", { "exemptNames": ["deleteCookie", "executeQuery"] }],
 
     // the shared config's version minus ignorePattern — baseline(#236)
     // disable directives sit on their own line above the flagged site, and

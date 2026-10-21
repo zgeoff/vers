@@ -55,7 +55,7 @@
     "@vers/utils": "workspace:*",
     "@vers/worldmap-client": "workspace:*",
     "@vers/worldmap-core": "workspace:*",
-    "h3": "catalog:",
+    "iron-session": "catalog:",
     "jose": "catalog:",
     "msw": "catalog:",
     "pino": "catalog:",

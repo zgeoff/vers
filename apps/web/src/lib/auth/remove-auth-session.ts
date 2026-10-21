@@ -1,9 +1,15 @@
-import { clearSession } from '@tanstack/react-start/server';
+import { getIronSession } from 'iron-session';
+import { createSessionCookieJar } from './create-session-cookie-jar';
 import {
-  AUTH_SESSION_READ_MAX_AGE_SECONDS,
+  AUTH_SESSION_DEFAULT_TTL_SECONDS,
   readAuthSessionConfig,
 } from './read-auth-session-config';
 
 export async function removeAuthSession(): Promise<void> {
-  await clearSession(readAuthSessionConfig(AUTH_SESSION_READ_MAX_AGE_SECONDS));
+  const session = await getIronSession(
+    createSessionCookieJar(),
+    readAuthSessionConfig(AUTH_SESSION_DEFAULT_TTL_SECONDS),
+  );
+
+  session.destroy();
 }

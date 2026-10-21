@@ -1,27 +1,15 @@
-import { H3Event, getChunkedCookie, unsealSession } from 'h3';
-import type { SessionConfig } from 'h3';
-
-export type SessionUnsealConfig = Readonly<Pick<SessionConfig, 'maxAge' | 'name' | 'password'>>;
+import { getIronSession, webCookies } from 'iron-session';
+import type { SessionOptions } from 'iron-session';
+import { parseAuthSessionData } from '../lib/auth/parse-auth-session-data';
 
 export async function readSessionID(
   request: Request,
-  config: SessionUnsealConfig,
+  config: Readonly<SessionOptions>,
 ): Promise<string | null> {
-  const event = new H3Event(request);
+  // the jar only reads here: no session is saved, so nothing lands on the throwaway headers
+  const session = await getIronSession(webCookies(request, new Headers()), config);
 
-  const sealed = getChunkedCookie(event, config.name ?? 'h3');
+  const sessionID = parseAuthSessionData(session).sessionID;
 
-  if (sealed === undefined) {
-    return null;
-  }
-
-  try {
-    const session = await unsealSession(event, config, sealed);
-
-    const sessionID: unknown = session.data?.['sessionID'];
-
-    return typeof sessionID === 'string' && sessionID !== '' ? sessionID : null;
-  } catch {
-    return null;
-  }
+  return sessionID === undefined || sessionID === '' ? null : sessionID;
 }

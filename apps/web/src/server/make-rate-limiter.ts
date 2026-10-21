@@ -1,11 +1,11 @@
+import type { SessionOptions } from 'iron-session';
 import {
-  AUTH_SESSION_READ_MAX_AGE_SECONDS,
+  AUTH_SESSION_DEFAULT_TTL_SECONDS,
   readAuthSessionConfig,
 } from '../lib/auth/read-auth-session-config';
 import { getClientIPAddress } from './get-client-ip-address';
 import type { Middleware } from './middleware';
 import { readSessionID } from './read-session-id';
-import type { SessionUnsealConfig } from './read-session-id';
 
 type RateLimitTier = 'default' | 'rpc' | 'strict' | 'strong';
 
@@ -30,7 +30,7 @@ interface MakeRateLimiterOptions {
 
 export function makeRateLimiter(options: MakeRateLimiterOptions): Middleware {
   const clock = options.clock ?? { now: Date.now };
-  const sessionConfig = readAuthSessionConfig(AUTH_SESSION_READ_MAX_AGE_SECONDS);
+  const sessionConfig = readAuthSessionConfig(AUTH_SESSION_DEFAULT_TTL_SECONDS);
 
   const windows = new Map<string, RateLimitWindow>();
 
@@ -99,7 +99,7 @@ function pickRateLimitTier(request: Request): RateLimitTier {
 
 async function resolveRPCRateLimitKey(
   request: Request,
-  sessionConfig: SessionUnsealConfig,
+  sessionConfig: Readonly<SessionOptions>,
 ): Promise<string> {
   const sessionID = await readSessionID(request, sessionConfig);
 

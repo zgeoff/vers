@@ -48,11 +48,15 @@ rotation never invalidates a live session. A service token can outlive its sessi
 lifetime, so the edge re-confirms the session still exists on every request while the access token
 is fresh, and an evicted device is signed out on its next request.
 
-The session cookie is httpOnly, same-site lax, secure in production, and sealed by an app secret.
-Reading it never throws, and an absent token is how the edge observes "signed out". A partial
-session, one missing any of the session id, access token, or refresh token, reads the same way. The
-edge runs the logout path before it redirects to login. A service's `UNAUTHORIZED` on a page load's
-server call takes the same logout path and redirect.
+The session cookie is httpOnly, same-site lax, secure in production, and sealed by an app secret
+with iron-session. Each write seals the cookie for the time left until the session's stored expiry,
+so a later write never extends it, and a write after that expiry clears the cookie instead. Reading
+it never throws, and an absent token is how the edge observes "signed out". The edge logs a warning
+for a cookie that fails to unseal for any reason other than its expiry, because that is the only
+sign of a tampered cookie or a changed secret. A partial session, one missing any of the session id,
+access token, or refresh token, reads the same way. The edge runs the logout path before it
+redirects to login. A service's `UNAUTHORIZED` on a page load's server call takes the same logout
+path and redirect.
 
 ## Step-up authorization
 

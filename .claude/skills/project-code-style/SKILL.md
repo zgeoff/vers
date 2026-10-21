@@ -38,6 +38,8 @@ the `exemptNames` option of `zgeoff/function-verb` in [`.oxlintrc.json`](../../.
 An option that only takes a function, such as the `fetch` option of `Bun.serve`, needs no exemption:
 pass it a named function that follows the verb rule, such as `handleRequest`.
 
+- `deleteCookie`, the TanStack Start cookie helper that the web app's request-context mock stands in
+  for
 - `executeQuery`, the query method of a Kysely database connection
 
 ## Lint directives
