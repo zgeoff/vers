@@ -171,6 +171,7 @@
     "lint": "turbo run codegen typegen && oxlint --type-aware --type-check --report-unused-disable-directives-severity error",
     "lint:fix": "turbo run codegen typegen && oxlint --type-aware --type-check --report-unused-disable-directives-severity error --fix",
     "test": "turbo run test",
+    "test:check-slow": "bun scripts/src/bin/check-slow-tests.ts",
     "typecheck": "turbo run typecheck",
     "e2e": "turbo run e2e",
     "format": "oxfmt . && format-codemod --quiet .",

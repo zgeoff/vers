@@ -4,6 +4,7 @@ dist
 tmp
 /out-tsc
 .test-results
+test-report.junit.xml
 .stack-test-results
 .corpus
 
