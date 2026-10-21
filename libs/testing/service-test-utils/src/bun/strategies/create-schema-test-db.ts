@@ -1,6 +1,7 @@
 import { createId } from '@paralleldrive/cuid2';
 import { createDB } from '@vers/db';
 import postgres from 'postgres';
+import { z } from 'zod';
 import { createDatabaseFromTemplate } from '../create-database-from-template';
 import type { TestDBHandle } from '../test-db-handle';
 
@@ -57,11 +58,11 @@ async function createHost(): Promise<Host> {
 }
 
 async function createCloneTables(sql: postgres.Sql, cloneSchema: string): Promise<void> {
-  const tables = await sql<Array<{ tablename: string }>>`
+  const tableRows = await sql`
     SELECT tablename FROM pg_tables WHERE schemaname = 'public'
   `;
 
-  for (const table of tables) {
+  for (const table of z.array(z.object({ tablename: z.string() })).parse(tableRows)) {
     await sql`
       CREATE TABLE ${sql(cloneSchema)}.${sql(table.tablename)}
       (LIKE public.${sql(table.tablename)} INCLUDING ALL)
@@ -69,17 +70,17 @@ async function createCloneTables(sql: postgres.Sql, cloneSchema: string): Promis
   }
 }
 
-interface ForeignKeyRow {
-  readonly columns: ReadonlyArray<string>;
-  readonly conname: string;
-  readonly condeferrable: boolean;
-  readonly condeferred: boolean;
-  readonly confdeltype: string;
-  readonly confupdtype: string;
-  readonly refColumns: ReadonlyArray<string>;
-  readonly refTableName: string;
-  readonly tableName: string;
-}
+const ForeignKeyRowSchema = z.object({
+  columns: z.array(z.string()),
+  conname: z.string(),
+  condeferrable: z.boolean(),
+  condeferred: z.boolean(),
+  confdeltype: z.string(),
+  confupdtype: z.string(),
+  refColumns: z.array(z.string()),
+  refTableName: z.string(),
+  tableName: z.string(),
+});
 
 const FOREIGN_KEY_ACTIONS: ReadonlyMap<string, string> = new Map([
   ['a', 'NO ACTION'],
@@ -91,7 +92,7 @@ const FOREIGN_KEY_ACTIONS: ReadonlyMap<string, string> = new Map([
 
 // `LIKE ... INCLUDING ALL` never copies foreign keys, so they are rebuilt from `pg_constraint`
 async function createCloneForeignKeys(sql: postgres.Sql, cloneSchema: string): Promise<void> {
-  const foreignKeys = await sql<Array<ForeignKeyRow>>`
+  const foreignKeyRows = await sql`
     SELECT
       con.conname,
       con.conrelid::regclass::text AS "tableName",
@@ -112,7 +113,7 @@ async function createCloneForeignKeys(sql: postgres.Sql, cloneSchema: string): P
       con.confupdtype, con.confdeltype, con.condeferrable, con.condeferred
   `;
 
-  for (const fk of foreignKeys) {
+  for (const fk of z.array(ForeignKeyRowSchema).parse(foreignKeyRows)) {
     const deferrable = fk.condeferrable
       ? `DEFERRABLE${fk.condeferred ? ' INITIALLY DEFERRED' : ''}`
       : '';
@@ -129,15 +130,12 @@ async function createCloneForeignKeys(sql: postgres.Sql, cloneSchema: string): P
   }
 }
 
-interface TriggerRow {
-  readonly def: string;
-  readonly tableName: string;
-}
+const TriggerRowSchema = z.object({ def: z.string(), tableName: z.string() });
 
 // only the `ON <table>` target is repointed: the trigger function resolves against `public` at
 // creation time and is stateless, so every clone shares it
 async function createCloneTriggers(sql: postgres.Sql, cloneSchema: string): Promise<void> {
-  const triggers = await sql<Array<TriggerRow>>`
+  const triggerRows = await sql`
     SELECT c.relname AS "tableName", pg_get_triggerdef(t.oid) AS def
     FROM pg_trigger t
     JOIN pg_class c ON c.oid = t.tgrelid
@@ -145,7 +143,7 @@ async function createCloneTriggers(sql: postgres.Sql, cloneSchema: string): Prom
     WHERE n.nspname = 'public' AND NOT t.tgisinternal
   `;
 
-  for (const trigger of triggers) {
+  for (const trigger of z.array(TriggerRowSchema).parse(triggerRows)) {
     const rewritten = trigger.def.replace(
       new RegExp(` ON (public\\.)?"?${trigger.tableName}"? `, 'u'),
       ` ON "${cloneSchema}"."${trigger.tableName}" `,

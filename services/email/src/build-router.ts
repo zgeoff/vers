@@ -4,14 +4,13 @@ import type { EmailJobOutput } from '@vers/contract-email';
 import type { JobQueue } from '@vers/jobs';
 import type { ServiceContext } from '@vers/service-runtime';
 import { reportUnexpectedError } from '@vers/service-runtime';
-import type * as z from 'zod';
-import type { EmailJobDefs } from './create-email-job-queue';
+import type { EmailJobPayloads } from './create-email-job-queue';
 import { runRetryDrains } from './run-retry-drains';
 
 interface BuildEmailRouterDeps {
   readonly logger: ServiceContext['logger'];
   readonly now?: () => number;
-  readonly queue: JobQueue<EmailJobDefs>;
+  readonly queue: JobQueue<EmailJobPayloads>;
   readonly wait?: (delayMs: number) => Promise<void>;
 }
 
@@ -38,11 +37,11 @@ export function buildEmailRouter(deps: BuildEmailRouterDeps) {
 
 export type EmailRouter = ReturnType<typeof buildEmailRouter>;
 
-interface SendHandlerOpts<TName extends keyof EmailJobDefs> {
-  readonly input: Readonly<z.infer<EmailJobDefs[TName]['schema']>>;
+interface SendHandlerOpts<TName extends keyof EmailJobPayloads> {
+  readonly input: Readonly<EmailJobPayloads[TName]>;
 }
 
-function makeSendHandler<TName extends keyof EmailJobDefs>(
+function makeSendHandler<TName extends keyof EmailJobPayloads>(
   deps: BuildEmailRouterDeps,
   name: TName,
 ) {

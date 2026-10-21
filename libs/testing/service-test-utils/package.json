@@ -21,14 +21,14 @@
     "jose": "catalog:",
     "kysely": "catalog:",
     "postgres": "catalog:",
-    "testcontainers": "catalog:"
+    "testcontainers": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@types/bun": "catalog:",
     "@types/node": "catalog:",
     "@vers/test-utils": "workspace:*",
     "@zgeoff/bun-test-extended": "catalog:",
-    "tiny-invariant": "catalog:",
     "typescript": "catalog:"
   }
 }

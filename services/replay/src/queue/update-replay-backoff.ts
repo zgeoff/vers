@@ -23,7 +23,7 @@ export async function updateReplayBackoff(
   const row = await db
     .updateTable('activities')
     .set((eb) => ({
-      replayBackoffUntil: sql<Date>`now() + LEAST(${REPLAY_BACKOFF_BASE_MS} * POWER(2, replay_backoffs), ${REPLAY_BACKOFF_CAP_MS}) * interval '1 millisecond'`,
+      replayBackoffUntil: sql`now() + LEAST(${REPLAY_BACKOFF_BASE_MS} * POWER(2, replay_backoffs), ${REPLAY_BACKOFF_CAP_MS}) * interval '1 millisecond'`,
       replayBackoffs: eb('replayBackoffs', '+', 1),
     }))
     .where('id', '=', input.activityID)

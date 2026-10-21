@@ -7,8 +7,6 @@ export function upsertSimVersion(
   db: Kysely<DB>,
   input: Readonly<UpsertSimVersionInput>,
 ): Promise<SimVersionRow> {
-  const retainedUntil = sql<Date>`now() + ${input.retentionDays} * interval '1 day'`;
-
   return db
     .insertInto('simVersions')
     .values({
@@ -17,17 +15,17 @@ export function upsertSimVersion(
       imageRef: input.imageRef,
       maxContentVersion: input.maxContentVersion,
       providerUrl: input.providerURL,
-      retainedUntil,
+      retainedUntil: sql`now() + ${input.retentionDays} * interval '1 day'`,
       status: 'active',
     })
     .onConflict((oc) =>
       oc.column('engineHash').doUpdateSet({
         bunVersion: input.bunVersion,
-        deployedAt: sql<Date>`now()`,
+        deployedAt: sql`now()`,
         imageRef: input.imageRef,
         maxContentVersion: input.maxContentVersion,
         providerUrl: input.providerURL,
-        retainedUntil,
+        retainedUntil: sql`now() + ${input.retentionDays} * interval '1 day'`,
         status: 'active',
       }),
     )

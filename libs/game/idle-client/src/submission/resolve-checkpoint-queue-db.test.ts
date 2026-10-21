@@ -2,7 +2,7 @@ import { expect, onTestFinished, test } from 'bun:test';
 import { createMockActivityData } from '@vers/contract-activity/test-utils';
 import { ActivityFailureAction } from '@vers/idle-core';
 import type { IDBPDatabase } from 'idb';
-import { deleteDB, openDB } from 'idb';
+import { deleteDB, openDB, unwrap } from 'idb';
 import { createMockCheckpointBatchEntry } from '../test-utils/factories/create-mock-checkpoint-batch-entry';
 import {
   CHECKPOINT_QUEUE_DB_NAME,
@@ -82,14 +82,18 @@ test('a node-seeds cache row failing its schema reads as a miss and is deleted',
   // against the real queue database, independent of any version upgrade running at all.
   const cacheDB = await resolveCheckpointQueueDB();
 
-  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- a deliberately malformed row (missing `anchor`) exercising the self-healing parse failure path
-  await cacheDB.put(NODE_SEEDS_STORE_NAME, {
+  const transaction = cacheDB.transaction(NODE_SEEDS_STORE_NAME, 'readwrite');
+
+  // a row missing `anchor`, which the store's typed put refuses
+  unwrap(transaction.store).put({
     avatarID: 'avatar-self-heal',
     contentVersion: '1',
     encounterNode: { difficulty: 1 },
     genesisSeed: 'seed-self-heal',
     nodeID: '1_0',
-  } as never);
+  });
+
+  await transaction.done;
 
   const readAfterMalformedPut = await readNodeSeed('avatar-self-heal', '1_0');
 

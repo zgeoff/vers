@@ -2,6 +2,7 @@ import { Canvas } from '@react-three/fiber';
 import type { ReactNode } from 'react';
 import { WebGPURenderer } from 'three/webgpu';
 import type { WebGPURendererParameters } from 'three/webgpu';
+import invariant from 'tiny-invariant';
 import { GameLoopDriver } from './game-loop-driver';
 import { registerRendererDiagnostics } from './register-renderer-diagnostics';
 import { toFrameloop } from './to-frameloop';
@@ -22,10 +23,24 @@ export function GameCanvas(props: Readonly<GameCanvasProps>): ReactNode {
     <Canvas
       frameloop={frameloop}
       gl={async (defaultProps) => {
-        const parameters = { ...defaultProps, forceWebGL };
+        const canvas = defaultProps.canvas;
 
-        // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- R3F's default gl props declare their own minimal OffscreenCanvas shim, which structurally conflicts with three's DOM-lib-typed WebGPURendererParameters; both describe the same real canvas at runtime
-        const renderer = new WebGPURenderer(parameters as WebGPURendererParameters);
+        // R3F types its canvas with its own OffscreenCanvas shim, which three's DOM-typed
+        // parameters reject; the DOM Canvas always mounts an HTMLCanvasElement
+        invariant(canvas instanceof HTMLCanvasElement, 'GameCanvas needs an HTMLCanvasElement');
+
+        // R3F's defaults are canvas, alpha, antialias and powerPreference, typed as WebGL's
+        // parameters, whose 'default' power preference WebGPU lacks
+        const parameters: WebGPURendererParameters = {
+          alpha: defaultProps.alpha,
+          antialias: defaultProps.antialias,
+          canvas,
+          forceWebGL,
+          powerPreference:
+            defaultProps.powerPreference === 'default' ? undefined : defaultProps.powerPreference,
+        };
+
+        const renderer = new WebGPURenderer(parameters);
 
         await renderer.init();
 

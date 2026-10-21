@@ -114,9 +114,9 @@ test('it colors a non-selectable node instance dimmed and a selectable one at re
   const ctx = await setupTest([nodeA, nodeB]);
 
   const mesh = ctx.renderer.scene.children[0]!;
+  const instance = mesh.instance;
 
-  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- ReactThreeTestInstance's untyped `.instance` getter returns the generic Object3D; this scene's sole child is the component's own instancedMesh by construction
-  const instance = mesh.instance as InstancedMesh;
+  invariant(ctx.isInstancedMesh(instance), 'the scene holds the nodes instanced mesh');
 
   const colorA = new Color();
   const colorB = new Color();

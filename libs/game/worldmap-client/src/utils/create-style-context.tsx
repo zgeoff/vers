@@ -1,31 +1,34 @@
-import type { RecipeVariantProps } from '@vers/styled-system/css';
 import { cx } from '@vers/styled-system/css';
 import type { SlotRecipeRuntimeFn } from '@vers/styled-system/types/recipe';
 import * as React from 'react';
 
-type StyleRecipe = SlotRecipeRuntimeFn<string, Record<string, unknown>>;
+type StyledComponent<T extends React.ElementType, TProps> = React.ForwardRefExoticComponent<
+  React.PropsWithoutRef<React.ComponentPropsWithoutRef<T> & TProps> &
+    React.RefAttributes<React.ComponentRef<T>>
+>;
 
-type StyleSlotRecipe<R extends StyleRecipe> = ReturnType<R>;
+export function createStyleContext<TSlot extends string, TVariants extends object>(
+  recipe: SlotRecipeRuntimeFn<TSlot, TVariants>,
+) {
+  const StyleContext = React.createContext<null | Record<TSlot, string>>(null);
 
-type StyleSlot<R extends StyleRecipe> = keyof ReturnType<R>;
-
-export function createStyleContext<R extends StyleRecipe>(recipe: R) {
-  const StyleContext = React.createContext<null | StyleSlotRecipe<R>>(null);
-
-  const withProvider = <T extends React.ElementType>(Component: T, slot?: StyleSlot<R>) => {
+  const withProvider = <T extends React.ElementType>(
+    Component: T,
+    slot?: TSlot,
+  ): StyledComponent<T, TVariants> => {
     const ComponentWithStyles = React.forwardRef<
       React.ComponentRef<T>,
-      React.ComponentPropsWithoutRef<T> & RecipeVariantProps<R>
+      React.ComponentPropsWithoutRef<T> & TVariants
       // oxlint-disable-next-line react/function-component-definition -- prefer-arrow-callback refuses the function expression this rule asks for
     >((props, ref) => {
       const [variantProps, restProps] = recipe.splitVariantProps(props);
-      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- calling a value of the generic type R returns its call signature's declared type, not ReturnType<R>; TS can't unify the two for a type parameter
-      const slotStyles = recipe(variantProps) as StyleSlotRecipe<R>;
+      const slotStyles = recipe(variantProps);
+      const slotClassName = slot === undefined ? undefined : slotStyles[slot];
 
       const className =
         'className' in restProps && typeof restProps['className'] === 'string'
-          ? cx(slotStyles[slot ?? ''], restProps['className'])
-          : slotStyles[slot ?? ''];
+          ? cx(slotClassName, restProps['className'])
+          : slotClassName;
 
       return (
         <StyleContext.Provider value={slotStyles}>
@@ -43,22 +46,21 @@ export function createStyleContext<R extends StyleRecipe>(recipe: R) {
     return ComponentWithStyles;
   };
 
-  const withContext = <T extends React.ElementType>(Component: T, slot?: StyleSlot<R>): T => {
-    if (slot === undefined) {
-      return Component;
-    }
-
-    const StyledComponent = React.forwardRef<
+  const withContext = <T extends React.ElementType>(
+    Component: T,
+    slot: TSlot,
+  ): StyledComponent<T, object> => {
+    const ComponentWithContext = React.forwardRef<
       React.ComponentRef<T>,
       React.ComponentPropsWithoutRef<T>
       // oxlint-disable-next-line react/function-component-definition -- prefer-arrow-callback refuses the function expression this rule asks for
     >((props, ref) => {
-      const slotStyles = React.useContext(StyleContext);
+      const slotClassName = React.useContext(StyleContext)?.[slot];
 
       const className =
         'className' in props && typeof props['className'] === 'string'
-          ? cx(slotStyles?.[slot ?? ''], props['className'])
-          : slotStyles?.[slot ?? ''];
+          ? cx(slotClassName, props['className'])
+          : slotClassName;
 
       return React.createElement(Component, {
         ...props,
@@ -67,10 +69,9 @@ export function createStyleContext<R extends StyleRecipe>(recipe: R) {
       });
     });
 
-    StyledComponent.displayName = `Styled${getComponentName(Component)}`;
+    ComponentWithContext.displayName = `Styled${getComponentName(Component)}`;
 
-    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- forwardRef's return type is a fixed ForwardRefExoticComponent that can't be expressed in terms of the caller's generic component type
-    return StyledComponent as unknown as T;
+    return ComponentWithContext;
   };
 
   return { withContext, withProvider };

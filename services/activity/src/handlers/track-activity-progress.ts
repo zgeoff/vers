@@ -7,6 +7,7 @@ import { sql } from 'kysely';
 import type { Kysely } from 'kysely';
 import invariant from 'tiny-invariant';
 import { match } from 'ts-pattern';
+import { z } from 'zod';
 import { findCheckpointBatchInvalidReason } from '../find-checkpoint-batch-invalid-reason';
 import { recordRefusal } from '../metrics/record-refusal';
 import { recordTerminalTransition } from '../metrics/record-terminal-transition';
@@ -84,7 +85,7 @@ export async function trackActivityProgress(
 
     // Cast to the meter columns' timestamp type so the driver parses both sides of the elapsed
     // subtraction identically regardless of session timezone.
-    .select(sql<Date>`now()::timestamp`.as('meterReadAt'))
+    .select(sql`now()::timestamp`.as('meterReadAt'))
     .where('activities.id', '=', opts.input.activityID)
     .where('avatars.userId', '=', actingUserID)
     .executeTakeFirst();
@@ -131,7 +132,7 @@ export async function trackActivityProgress(
 
   const accruedMs =
     Number(head.simBudgetMs) +
-    (head.meterReadAt.getTime() - head.simMeteredAt.getTime()) * creditRate;
+    (z.date().parse(head.meterReadAt).getTime() - head.simMeteredAt.getTime()) * creditRate;
 
   const availableMs = Math.min(deps.simTimeCapMs, accruedMs);
 
@@ -272,7 +273,7 @@ export async function trackActivityProgress(
           simMeteredAt: sql`now()`,
         })
         .where('id', '=', head.avatarId)
-        .where(sql<boolean>`${refill} >= ${debit}`)
+        .where((eb) => eb(refill, '>=', debit))
         .executeTakeFirst();
 
       invariant(consumed.numUpdatedRows > 0n, 'meter debit must apply once the append is won');

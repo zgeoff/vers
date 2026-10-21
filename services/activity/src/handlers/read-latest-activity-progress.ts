@@ -8,6 +8,7 @@ import type { DB } from '@vers/db';
 import { buildLevelFromXP } from '@vers/idle-core';
 import { sql } from 'kysely';
 import type { Kysely } from 'kysely';
+import { z } from 'zod';
 import { loadOptimisticBuild } from '../load-optimistic-build';
 import type { EmptyErrorPayload, MissingSessionPayload } from '../types';
 import { toActivityData } from './to-activity-data';
@@ -52,7 +53,7 @@ export async function readLatestActivityProgress(
 
     // Cast to the row's timestamp column type so the driver parses the clock and the activity's
     // timestamps identically regardless of session timezone — clients subtract the two.
-    .select(sql<Date>`now()::timestamp`.as('serverTime'))
+    .select(sql`now()::timestamp`.as('serverTime'))
     .where('activities.avatarId', '=', opts.input.avatarID)
     .where('avatars.userId', '=', opts.context.actingUserID)
     .orderBy('activities.startedAt', 'desc')
@@ -83,7 +84,7 @@ export async function readLatestActivityProgress(
     failureAction: row.failureAction,
     isWriter: row.writerSessionId === null || row.writerSessionId === opts.context.actingSessionID,
     optimisticBuild: { level: buildLevelFromXP(optimistic.totalXP), xp: optimistic.totalXP },
-    serverTime: row.serverTime,
+    serverTime: z.date().parse(row.serverTime),
     verifiedHead: row.verifiedHead,
   };
 }

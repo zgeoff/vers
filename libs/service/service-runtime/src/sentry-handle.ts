@@ -1,5 +1,11 @@
-import type * as Sentry from '@sentry/bun';
+interface ErrorReportScope {
+  readonly setTag: (key: string, value: string) => unknown;
+}
 
-type SentryModule = typeof Sentry;
+interface ErrorReporter {
+  readonly captureException: (error: unknown) => unknown;
+  readonly flush: (timeoutMs: number) => Promise<boolean>;
+  readonly withScope: (callback: (scope: ErrorReportScope) => void) => unknown;
+}
 
-export const sentryHandle: { current: SentryModule | undefined } = { current: undefined };
+export const sentryHandle: { current: ErrorReporter | undefined } = { current: undefined };

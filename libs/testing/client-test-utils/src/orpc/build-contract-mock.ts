@@ -6,10 +6,11 @@ import type {
   InferSchemaOutput,
 } from '@orpc/contract';
 import type { AnyRouter, ORPCErrorConstructorMap } from '@orpc/server';
-import { implement } from '@orpc/server';
+import { implement, isProcedure } from '@orpc/server';
 import { RPCHandler } from '@orpc/server/fetch';
 import type { HttpHandler, HttpResponseResolver } from 'msw';
 import { http } from 'msw';
+import invariant from 'tiny-invariant';
 import { RPC_PREFIX } from './rpc-prefix';
 import { toRPCHTTPPath } from './to-rpc-http-path';
 
@@ -84,7 +85,7 @@ export function buildContractMock<
 >(
   options: Readonly<MockServiceOptions<TContract, TContext>>,
 ): MockServiceProxy<TContract, TContext> {
-  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- type-erased runtime Proxy walking a generic contract; no typed path-accessor exists
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- approved GEO-1460: TypeScript cannot prove a runtime Proxy matches a recursive mapped type
   return buildProxyNode(options, []) as MockServiceProxy<TContract, TContext>;
 }
 
@@ -107,7 +108,9 @@ function buildProxyNode<
   return new Proxy(target, {
     get(currentTarget, prop, receiver): unknown {
       if (typeof prop !== 'string' || prop === 'handler') {
-        return Reflect.get(currentTarget, prop, receiver) as unknown;
+        const value: unknown = Reflect.get(currentTarget, prop, receiver);
+
+        return value;
       }
 
       return buildProxyNode(options, [...path, prop]);
@@ -156,17 +159,6 @@ function makeProcedureResolver(
   };
 }
 
-interface ProcedureImplementerHandlerArgs {
-  readonly context: Record<string, unknown>;
-  readonly errors: unknown;
-  readonly input: unknown;
-  readonly path: ReadonlyArray<string>;
-}
-
-interface ProcedureImplementer {
-  handler: (fn: (opts: ProcedureImplementerHandlerArgs) => Promise<unknown>) => AnyRouter;
-}
-
 function buildMockProcedure(
   contract: AnyContractRouter,
   path: ReadonlyArray<string>,
@@ -174,39 +166,48 @@ function buildMockProcedure(
   mock: unknown,
   onRawResponse: (response: Response) => void,
 ): AnyRouter {
+  let parent: unknown;
   let node: unknown = implement(contract);
 
-  for (const segment of path) {
-    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- type-erased runtime Proxy walking a generic contract; no typed path-accessor exists
-    node = (node as Record<string, unknown>)[segment];
+  for (const segment of [...path, 'handler']) {
+    // an oRPC implementer node is a callable proxy, so a function is walkable as well as an object
+    invariant(
+      (typeof node === 'object' && node !== null) || typeof node === 'function',
+      `buildContractMock: no contract node at ${path.join('.')}`,
+    );
+
+    parent = node;
+    node = Reflect.get(node, segment);
   }
 
-  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- type-erased runtime Proxy walking a generic contract; no typed path-accessor exists
-  const implementer = node as ProcedureImplementer;
+  invariant(typeof node === 'function', `buildContractMock: ${path.join('.')} is no procedure`);
 
-  return implementer.handler(makeMockProcedureHandler(request, mock, onRawResponse));
+  const procedure: unknown = Reflect.apply(node, parent, [
+    makeMockProcedureHandler(request, mock, onRawResponse),
+  ]);
+
+  invariant(isProcedure(procedure), `buildContractMock: ${path.join('.')} built no procedure`);
+
+  return procedure;
 }
 
-interface LooseMockFnArgs {
+interface ProcedureImplementerHandlerArgs {
   readonly context: Record<string, unknown>;
   readonly errors: unknown;
   readonly input: unknown;
   readonly path: ReadonlyArray<string>;
-  readonly request: Request;
 }
-
-type LooseMockFn = (args: LooseMockFnArgs) => unknown;
 
 function makeMockProcedureHandler(
   request: Request,
   mock: unknown,
   onRawResponse: (response: Response) => void,
 ): (handlerOptions: ProcedureImplementerHandlerArgs) => Promise<unknown> {
-  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- type-erased runtime Proxy walking a generic contract; no typed path-accessor exists
-  const mockFn = typeof mock === 'function' ? (mock as LooseMockFn) : undefined;
-
   return async (handlerOptions) => {
-    const output = mockFn ? await mockFn({ ...handlerOptions, request }) : mock;
+    const output: unknown =
+      typeof mock === 'function'
+        ? await Reflect.apply(mock, undefined, [{ ...handlerOptions, request }])
+        : mock;
 
     if (output instanceof Response) {
       onRawResponse(output);

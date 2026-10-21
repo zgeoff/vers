@@ -21,7 +21,8 @@
     "kysely": "catalog:",
     "kysely-postgres-js": "catalog:",
     "postgres": "catalog:",
-    "tiny-invariant": "catalog:"
+    "tiny-invariant": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@opentelemetry/sdk-trace-node": "catalog:",

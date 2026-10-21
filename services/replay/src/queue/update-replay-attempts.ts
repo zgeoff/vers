@@ -1,4 +1,4 @@
-import type { ActivityStatus, DB } from '@vers/db';
+import type { DB } from '@vers/db';
 import { sql } from 'kysely';
 import type { Kysely } from 'kysely';
 
@@ -24,7 +24,7 @@ export async function updateReplayAttempts(
     .updateTable('activities')
     .set((eb) => ({
       replayAttempts: eb('replayAttempts', '+', 1),
-      status: sql<ActivityStatus>`CASE WHEN replay_attempts + 1 >= ${maxAttempts} THEN 'quarantined' ELSE status END`,
+      status: sql`CASE WHEN replay_attempts + 1 >= ${maxAttempts} THEN 'quarantined' ELSE status END`,
     }))
     .where('id', '=', input.activityID)
     .returning(['replayAttempts', 'status'])

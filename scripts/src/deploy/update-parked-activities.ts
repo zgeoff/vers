@@ -1,4 +1,4 @@
-import type { Activities, ActivityStatus, DB } from '@vers/db';
+import type { Activities, DB } from '@vers/db';
 import type { Kysely, Selectable } from 'kysely';
 import { sql } from 'kysely';
 
@@ -9,7 +9,7 @@ export function updateParkedActivities(
     .updateTable('activities')
     .set({
       parkedFrom: null,
-      status: sql<ActivityStatus>`coalesce(parked_from, 'active'::activity_status)`,
+      status: sql`coalesce(parked_from, 'active'::activity_status)`,
     })
     .where('status', '=', 'parked')
     .where('simVersion', 'in', (eb) =>

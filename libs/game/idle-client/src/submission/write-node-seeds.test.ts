@@ -1,11 +1,11 @@
 import { expect, test } from 'bun:test';
+import { unwrap } from 'idb';
 import invariant from 'tiny-invariant';
 import { createMockNodeSeed } from '../test-utils/factories/create-mock-node-seed';
 import { NODE_SEEDS_STORE_NAME } from './constants';
 import { readCachedNodeIDs } from './read-cached-node-ids';
 import { readNodeSeed } from './read-node-seed';
 import { resolveCheckpointQueueDB } from './resolve-checkpoint-queue-db';
-import type { NodeSeed } from './types';
 import { writeNodeSeeds } from './write-node-seeds';
 
 test("it persists a batch of one avatar's start inputs retrievable by node id", async () => {
@@ -88,15 +88,18 @@ test('it adopts a reveal anchor over a pre-v6 cached row that predates the ancho
 
   const db = await resolveCheckpointQueueDB();
 
-  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- simulates a pre-v6 row that predates the `anchor` field, which the current `NodeSeed` type can no longer express
-  await db.put(NODE_SEEDS_STORE_NAME, {
+  const transaction = db.transaction(NODE_SEEDS_STORE_NAME, 'readwrite');
+
+  // a pre-v6 row that predates the `anchor` field, which the current row type cannot express
+  unwrap(transaction.store).put({
     avatarID,
     contentVersion: seed.contentVersion,
     encounterNode: seed.encounterNode,
     genesisSeed: seed.genesisSeed,
     nodeID: seed.nodeID,
-  } as unknown as NodeSeed);
+  });
 
+  await transaction.done;
   await writeNodeSeeds(avatarID, [seed]);
 
   const cachedSeed = await readNodeSeed(avatarID, seed.nodeID);

@@ -16,6 +16,7 @@
     "@react-three/fiber": "catalog:",
     "react": "catalog:",
     "three": "catalog:",
+    "tiny-invariant": "catalog:",
     "zustand": "catalog:"
   },
   "devDependencies": {

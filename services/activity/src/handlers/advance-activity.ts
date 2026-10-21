@@ -18,6 +18,7 @@ import { sql } from 'kysely';
 import type { Kysely, Selectable } from 'kysely';
 import invariant from 'tiny-invariant';
 import { match } from 'ts-pattern';
+import { z } from 'zod';
 import { findCheckpointBatchInvalidReason } from '../find-checkpoint-batch-invalid-reason';
 import { isUniqueViolation } from '../is-unique-violation';
 import { loadOptimisticBuild } from '../load-optimistic-build';
@@ -459,7 +460,7 @@ async function runContinuation(
 
     // Cast to the meter columns' timestamp type so the driver parses both sides of the elapsed
     // subtraction identically regardless of session timezone.
-    .select(sql<Date>`now()::timestamp`.as('meterReadAt'))
+    .select(sql`now()::timestamp`.as('meterReadAt'))
     .where('activities.id', '=', input.targetActivityID)
     .executeTakeFirst();
 
@@ -537,7 +538,7 @@ async function runContinuation(
 
   const accruedMs =
     Number(target.simBudgetMs) +
-    (target.meterReadAt.getTime() - target.simMeteredAt.getTime()) * creditRate;
+    (z.date().parse(target.meterReadAt).getTime() - target.simMeteredAt.getTime()) * creditRate;
 
   const availableMs = Math.min(deps.simTimeCapMs, accruedMs);
 
@@ -668,7 +669,7 @@ async function runContinuation(
         .updateTable('avatars')
         .set({ simBudgetMs: sql`${refill} - ${debit}`, simMeteredAt: sql`now()` })
         .where('id', '=', pinned.avatarId)
-        .where(sql<boolean>`${refill} >= ${debit}`)
+        .where((eb) => eb(refill, '>=', debit))
         .executeTakeFirst();
 
       invariant(consumed.numUpdatedRows > 0n, 'meter debit must apply once the append is won');

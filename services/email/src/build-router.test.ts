@@ -15,7 +15,7 @@ import { buildRPCTestClient, waitFor } from '@vers/test-utils';
 import { createTraceContext } from '@vers/trace';
 import { HttpResponse, http } from 'msw';
 import { buildEmailRouter } from './build-router';
-import type { EmailJobDefs } from './create-email-job-queue';
+import type { EmailJobPayloads } from './create-email-job-queue';
 import { createEmailService } from './create-email-service';
 
 async function setupTest() {
@@ -252,7 +252,7 @@ test('it reports a fire-and-forget drain failure carrying the active trace id', 
 
   const logger = createLogger({ level: 'fatal', name: 'test-email-router' });
 
-  const stubQueue: JobQueue<EmailJobDefs> = {
+  const stubQueue: JobQueue<EmailJobPayloads> = {
     drain: () => Promise.reject(new Error('drain failed')),
     readJobState: () => Promise.resolve(undefined),
     send: () => Promise.resolve('job-1'),
@@ -298,7 +298,7 @@ test('it re-drains a deadline job every few seconds until its job reaches a term
   let elapsedMs = 0;
   const logger = createLogger({ level: 'fatal', name: 'test-email-router' });
 
-  const stubQueue: JobQueue<EmailJobDefs> = {
+  const stubQueue: JobQueue<EmailJobPayloads> = {
     drain: () => {
       drainCalls += 1;
 
@@ -359,7 +359,7 @@ test('it re-drains a deadline job that another request drain failed, though its 
   let elapsedMs = 0;
   const logger = createLogger({ level: 'fatal', name: 'test-email-router' });
 
-  const stubQueue: JobQueue<EmailJobDefs> = {
+  const stubQueue: JobQueue<EmailJobPayloads> = {
     drain: () => {
       drainCalls += 1;
 

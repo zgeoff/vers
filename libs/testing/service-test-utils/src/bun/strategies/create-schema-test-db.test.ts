@@ -1,7 +1,7 @@
 import { expect, onTestFinished, test } from 'bun:test';
 import { sql } from 'kysely';
 import postgres from 'postgres';
-import invariant from 'tiny-invariant';
+import { z } from 'zod';
 import { createTestUser } from '../create-test-user';
 import { resolveTestDBTarget } from '../resolve-test-db-target';
 import { createSchemaTestDB } from './create-schema-test-db';
@@ -10,18 +10,16 @@ test('it commits real writes visible to a second connection onto the same clone'
   await using handle = await createSchemaTestDB();
 
   const created = await createTestUser(handle.db, { email: 'schema-commit@test.com' });
+  const databaseResult = await sql`select current_database()`.execute(handle.db);
+  const searchPathResult = await sql`show search_path`.execute(handle.db);
 
-  const databaseResult = await sql<{
-    currentDatabase: string;
-  }>`select current_database()`.execute(handle.db);
+  const [{ currentDatabase }] = z
+    .tuple([z.object({ currentDatabase: z.string() })])
+    .parse(databaseResult.rows);
 
-  const searchPathResult = await sql<{ searchPath: string }>`show search_path`.execute(handle.db);
-
-  const currentDatabase = databaseResult.rows[0]?.currentDatabase;
-  const searchPath = searchPathResult.rows[0]?.searchPath;
-
-  invariant(currentDatabase !== undefined, 'expected current_database() to return a row');
-  invariant(searchPath !== undefined, 'expected show search_path to return a row');
+  const [{ searchPath }] = z
+    .tuple([z.object({ searchPath: z.string() })])
+    .parse(searchPathResult.rows);
 
   const raw = postgres(`${resolveTestDBTarget().baseURI}/${currentDatabase}`, {
     connection: { search_path: searchPath },
@@ -104,18 +102,16 @@ test('it isolates rows between two concurrently acquired clones', async () => {
 
 test('it drops the clone schema once disposed', async () => {
   const handle = await createSchemaTestDB();
+  const databaseResult = await sql`select current_database()`.execute(handle.db);
+  const searchPathResult = await sql`show search_path`.execute(handle.db);
 
-  const databaseResult = await sql<{
-    currentDatabase: string;
-  }>`select current_database()`.execute(handle.db);
+  const [{ currentDatabase }] = z
+    .tuple([z.object({ currentDatabase: z.string() })])
+    .parse(databaseResult.rows);
 
-  const searchPathResult = await sql<{ searchPath: string }>`show search_path`.execute(handle.db);
-
-  const currentDatabase = databaseResult.rows[0]?.currentDatabase;
-  const searchPath = searchPathResult.rows[0]?.searchPath;
-
-  invariant(currentDatabase !== undefined, 'expected current_database() to return a row');
-  invariant(searchPath !== undefined, 'expected show search_path to return a row');
+  const [{ searchPath }] = z
+    .tuple([z.object({ searchPath: z.string() })])
+    .parse(searchPathResult.rows);
 
   await handle[Symbol.asyncDispose]();
 

@@ -11,4 +11,4 @@ export type {
 } from './create-job-queue';
 
 export { defineJobs } from './define-jobs';
-export type { JobDef, JobDefs } from './types';
+export type { JobDef, JobDefMap, JobDefs, JobPayloads, JobPayloadsOf } from './types';
