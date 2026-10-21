@@ -232,6 +232,44 @@ test('it logs at error and rethrows when the handler throws', async () => {
   });
 });
 
+test('it logs at info and rethrows when the client dropped the request', async () => {
+  const lines: Array<{ fields: Record<string, unknown>; level: string; message: string }> = [];
+
+  const requestLogger = makeRequestLogger({
+    debug: (fields, message) => {
+      lines.push({ fields, level: 'debug', message });
+    },
+    error: (fields, message) => {
+      lines.push({ fields, level: 'error', message });
+    },
+    info: (fields, message) => {
+      lines.push({ fields, level: 'info', message });
+    },
+    warn: (fields, message) => {
+      lines.push({ fields, level: 'warn', message });
+    },
+  });
+
+  const thrown = new Error('aborted');
+
+  const pending = requestLogger(
+    new Request('https://example.test/nexus', { signal: AbortSignal.abort(thrown) }),
+    () => Promise.reject(thrown),
+  );
+
+  expect(pending).rejects.toBe(thrown);
+
+  await expect(pending).toReject();
+
+  expect(lines).toStrictEqual([
+    {
+      fields: { durationMs: expect.toBeNumber(), method: 'GET', path: '/nexus' },
+      level: 'info',
+      message: 'request aborted',
+    },
+  ]);
+});
+
 test('it logs a request as overdue while it is still open past the overdue threshold', async () => {
   const lines: Array<{ fields: Record<string, unknown>; level: string; message: string }> = [];
 
