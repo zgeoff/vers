@@ -6,7 +6,7 @@ export interface AuthSessionData {
   readonly userID?: string;
 }
 
-type VerifySessionKey =
+export type VerifySessionKey =
   | 'login2FA#sessionID'
   | 'login2FA#target'
   | 'loginLogout#email'

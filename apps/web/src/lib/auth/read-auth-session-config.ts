@@ -1,15 +1,15 @@
-import type { getSession } from '@tanstack/react-start/server';
+import type { SessionOptions } from 'iron-session';
+import { handleUnsealError } from './handle-unseal-error';
 import { readSessionSecret } from './read-session-secret';
 
-export type SessionConfig = Parameters<typeof getSession>[0];
+export const AUTH_SESSION_DEFAULT_TTL_SECONDS = 60 * 60 * 24 * 30;
 
-export const AUTH_SESSION_READ_MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
-
-export function readAuthSessionConfig(maxAge: number): SessionConfig {
+export function readAuthSessionConfig(ttl: number): SessionOptions {
   const domain = process.env['COOKIE_DOMAIN'];
 
   return {
-    cookie: {
+    cookieName: 'en_session',
+    cookieOptions: {
       ...(domain !== undefined && { domain }),
       httpOnly: true,
       path: '/',
@@ -19,8 +19,8 @@ export function readAuthSessionConfig(maxAge: number): SessionConfig {
       // a secure context, so a local production build still sends them
       secure: process.env.NODE_ENV === 'production',
     },
-    maxAge,
-    name: 'en_session',
+    onUnsealError: handleUnsealError,
     password: readSessionSecret(),
+    ttl,
   };
 }

@@ -9,6 +9,7 @@ import { makeRequestLogger } from './server/make-request-logger';
 import { makeSecureHeaders } from './server/make-secure-headers';
 import { makeUmamiProxy } from './server/make-umami-proxy';
 import { withMiddleware } from './server/middleware';
+import { recoverFailedRequest } from './server/recover-failed-request';
 import { redirectToHTTPS } from './server/redirect-to-https';
 import { rejectNonHTMLAccept } from './server/reject-non-html-accept';
 import { removeTrailingSlash } from './server/remove-trailing-slash';
@@ -43,7 +44,10 @@ const SENTRY_ORIGIN =
 const serverEntry = {
   fetch: withMiddleware(
     [
-      // outermost so the request logger's lines already run inside the trace scope
+      // outermost so a rejection from any later step still becomes a response
+      recoverFailedRequest,
+
+      // ahead of the request logger so its lines already run inside the trace scope
       withRequestTrace,
       makeRequestLogger(logger),
       removeTrailingSlash,

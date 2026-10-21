@@ -35,6 +35,6 @@ behind the same address, and the checkpoint writer
 ([game simulation](../game/game-simulation.md#checkpoint-streams)) spends a steady, small share of
 it.
 
-The limiter unseals the cookie itself with the library the framework seals it with (`h3`), pinned to
-the same version. It runs in the fetch middleware chain ahead of the framework handler, where no
-framework request context exists. The cookie's shape and lifetime are owned by [auth](./auth.md).
+The limiter unseals the cookie itself with iron-session, the library the edge seals it with. It runs
+in the fetch middleware chain ahead of the framework handler, where no framework request context
+exists. The cookie's shape and lifetime are owned by [auth](./auth.md).

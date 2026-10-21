@@ -36,6 +36,15 @@ export function makeRequestLogger(
     try {
       response = await next();
     } catch (error) {
+      if (request.signal.aborted) {
+        logger.info(
+          { durationMs: toDurationMs(performance.now() - start), method: request.method, path },
+          'request aborted',
+        );
+
+        throw error;
+      }
+
       logger.error(
         {
           durationMs: toDurationMs(performance.now() - start),

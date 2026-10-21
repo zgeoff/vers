@@ -1,9 +1,12 @@
-import { getSession, updateSession } from '@tanstack/react-start/server';
+import { getIronSession } from 'iron-session';
+import { createSessionCookieJar } from './create-session-cookie-jar';
+import { parseAuthSessionData } from './parse-auth-session-data';
 import {
-  AUTH_SESSION_READ_MAX_AGE_SECONDS,
+  AUTH_SESSION_DEFAULT_TTL_SECONDS,
   readAuthSessionConfig,
 } from './read-auth-session-config';
 import type { AuthSessionData } from './types';
+import { writeSessionData } from './write-session-data';
 
 interface UpdateAuthSessionOptions {
   readonly expiresAt?: Date;
@@ -13,23 +16,36 @@ export async function updateAuthSession(
   update: Partial<AuthSessionData>,
   opts?: UpdateAuthSessionOptions,
 ): Promise<AuthSessionData> {
-  const current = await getSession<AuthSessionData>(
-    readAuthSessionConfig(AUTH_SESSION_READ_MAX_AGE_SECONDS),
+  const session = await getIronSession<AuthSessionData>(
+    createSessionCookieJar(),
+    readAuthSessionConfig(AUTH_SESSION_DEFAULT_TTL_SECONDS),
   );
 
-  const expires = opts?.expiresAt?.toISOString() ?? current.data.expires;
+  const current = parseAuthSessionData(session);
+  const expires = opts?.expiresAt?.toISOString() ?? current.expires;
 
-  // measured from the session's creation, never a fresh window from now: an unrelated field
-  // update later in the session's life must not extend how long the cookie stays valid
-  const maxAge =
-    expires === undefined
-      ? AUTH_SESSION_READ_MAX_AGE_SECONDS
-      : Math.max(0, Math.round((new Date(expires).getTime() - current.createdAt) / 1000));
-
-  const session = await updateSession<AuthSessionData>(readAuthSessionConfig(maxAge), {
+  const data: AuthSessionData = {
+    ...current,
     ...update,
     ...(expires !== undefined && { expires }),
-  });
+  };
 
-  return session.data;
+  // measured to the stored expiry, never a fresh window from now: an unrelated field update later
+  // in the session's life must not extend how long the cookie stays valid
+  const ttl =
+    expires === undefined
+      ? AUTH_SESSION_DEFAULT_TTL_SECONDS
+      : Math.floor((new Date(expires).getTime() - Date.now()) / 1000);
+
+  // iron-session reads a ttl of 0 as a seal that never expires, so an expired session is
+  // destroyed rather than saved
+  if (ttl <= 0) {
+    session.destroy();
+
+    return {};
+  }
+
+  await writeSessionData(session, data, readAuthSessionConfig(ttl));
+
+  return data;
 }
