@@ -28,6 +28,7 @@ test('it splits a redirect too long for one cookie across several cookies', asyn
   });
 
   expect(outcome.value).toStrictEqual({ 'loginLogout#redirect': redirect });
+  expect(outcome.cookies).toStrictEqual({ en_verification: { 'loginLogout#redirect': redirect } });
 
   expect([...outcome.setCookies.keys()]).toIncludeAllMembers([
     'en_verification.0',

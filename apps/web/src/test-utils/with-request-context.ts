@@ -85,11 +85,40 @@ async function readCookieSnapshot(
 
   const cookies: Record<string, Record<string, unknown> | undefined> = {};
 
-  for (const [name, seal] of sealed) {
+  for (const [name, seal] of collectJoinedSeals(sealed)) {
     const data = await unsealData<unknown>(seal, { password: readSessionSecret() });
 
     cookies[name] = cookieDataSchema.parse(data);
   }
 
   return cookies;
+}
+
+// iron-session splits a seal too large for one cookie into `<name>.0`, `<name>.1` and so on, and
+// reads them back joined in index order
+const CHUNK_NAME_PATTERN = /^(?<name>.+)\.(?<index>\d+)$/u;
+
+function collectJoinedSeals(sealed: ReadonlyMap<string, string>): Map<string, string> {
+  const joined = new Map<string, string>();
+  const chunks = new Map<string, Array<{ readonly index: number; readonly value: string }>>();
+
+  for (const [cookieName, value] of sealed) {
+    const groups = CHUNK_NAME_PATTERN.exec(cookieName)?.groups;
+
+    if (groups?.['name'] === undefined || groups['index'] === undefined) {
+      joined.set(cookieName, value);
+    } else {
+      const parts = chunks.get(groups['name']) ?? [];
+
+      parts.push({ index: Number(groups['index']), value });
+      chunks.set(groups['name'], parts);
+    }
+  }
+
+  for (const [name, parts] of chunks) {
+    parts.sort((left, right) => left.index - right.index);
+    joined.set(name, parts.map((part) => part.value).join(''));
+  }
+
+  return joined;
 }

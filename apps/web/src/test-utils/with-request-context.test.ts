@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { deleteCookie, getCookie, setCookie } from '@tanstack/react-start/server';
-import { unsealData } from 'iron-session';
+import { sealData, unsealData } from 'iron-session';
 import { readSessionSecret } from '../lib/auth/read-session-secret';
 import { withRequestContext } from './with-request-context';
 
@@ -30,6 +30,17 @@ test('it leaves a cookie that the run deleted out of the reported cookies', asyn
   );
 
   expect(outcome.cookies).toStrictEqual({});
+});
+
+test('it reports a cookie that the run set in chunks as its joined, unsealed data', async () => {
+  const sealed = await sealData({ sessionID: 's-1' }, { password: readSessionSecret() });
+
+  const outcome = await withRequestContext({}, () => {
+    setCookie('en_session.1', sealed.slice(40));
+    setCookie('en_session.0', sealed.slice(0, 40));
+  });
+
+  expect(outcome.cookies).toStrictEqual({ en_session: { sessionID: 's-1' } });
 });
 
 test('it records the options of each cookie that the run set', async () => {
