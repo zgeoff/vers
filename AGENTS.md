@@ -91,6 +91,9 @@ Repo scripts:
   `--filter=@vers/<name>` for one project.
 - Every JS and TS package runs on `bun test`; never add vitest. Start
   `bun run pg:test-container:start` before a postgres-backed suite.
+- CI fails a run when any test takes longer than 5 s, whatever timeout the test sets. On CI each
+  package's `bun test` writes a JUnit report, and `bun run test:check-slow` reads every report and
+  lists the slowest tests.
 - `bun test` reads `bunfig.toml` from the working directory and never merges it up. A root-invoked
   `bun test <file>` still resolves the jest-extended matchers from the root preload.
 - `bun run lint` runs codegen and typegen first, then the type-aware oxlint pass over the whole

@@ -111,10 +111,17 @@ jobs:
       - name: Lint
         run: bun run lint
 
+      # 4 turbo tasks on the 4-vCPU runner: on a full cache miss this measured 73 s against 71 s
+      # at turbo's default 10. Each package keeps a plain bun test, because --parallel=1 isolates
+      # every file and measured 157-190 s
       - name: Unit Tests
         run: |
           bun run pg:test-container:start
-          bun run test
+          bun run test --concurrency=4 -- --reporter=junit --reporter-outfile=test-report.junit.xml
+
+      # a test over 5 s fails the run, whatever timeout the test sets
+      - name: Slow Tests
+        run: bun run test:check-slow
 
       - name: Build
         run: node_modules/.bin/turbo run build --affected
