@@ -89,9 +89,60 @@ report 'Process residue (date stamps, investigation framing, memory citations, Â
 # Judgment-only bans (bites, floor, anchor) are not grepped. CAS stays case-sensitive so "CAs"
 # passes.
 # AGENTS.md and the agents/ partials hold the banned-words registry itself, and "code fence" is the
-# legal markdown sense of the word.
+# legal markdown sense of the word. In Markdown, code blocks and code spans are exempt, since an
+# identifier in code may hold a banned word: awk blanks the spans and puts the rest before the line,
+# split by a unit separator, and grep matches the pattern only before that separator.
+banned_words='\bsurfaces?\b|load-bearing|\bseams?\b|\bceilings?\b|(?<!code )\bfenc(e|es|ed|ing)\b|(?-i:\bCAS\b)|significantly|near-instant'
 report 'Banned words:' \
-  "$(grep_docs -nPi '\bsurfaces?\b|load-bearing|\bseams?\b|\bceilings?\b|(?<!code )\bfenc(e|es|ed|ing)\b|(?-i:\bCAS\b)|significantly|near-instant' -- "$@" ':(exclude)AGENTS.md' ':(exclude)agents')"
+  "$(
+    grep_docs -nPi "$banned_words" -- "$@" ':(exclude)*.md' ':(exclude)AGENTS.md' ':(exclude)agents'
+    list_markdown "$@" ':(exclude)AGENTS.md' ':(exclude)agents' | xargs -0 -r awk "$fence_awk"'
+    # Replaces each code span with a space. As in CommonMark, a span closes at the next backtick run
+    # as long as the one that opens it, and a run that nothing closes stays as text.
+    function strip_spans(s, out, start, n, rest, r, off, closed) {
+      out = ""
+      while (match(s, /`+/)) {
+        start = RSTART
+        n = RLENGTH
+        out = out substr(s, 1, start - 1)
+        rest = substr(s, start + n)
+        r = rest
+        off = 0
+        closed = 0
+        while (match(r, /`+/)) {
+          if (RLENGTH == n) {
+            closed = 1
+            off += RSTART
+            break
+          }
+          off += RSTART + RLENGTH - 1
+          r = substr(r, RSTART + RLENGTH)
+        }
+        if (closed) {
+          out = out " "
+          s = substr(rest, off + n)
+        } else {
+          out = out substr(s, start, n)
+          s = rest
+        }
+      }
+      return out s
+    }
+    {
+      m = fence_marker($0)
+      if (m != "") {
+        rest = fence_rest($0, m)
+        if (open == "") open = m
+        else if (closes(m, rest)) open = ""
+        next
+      }
+      if (open != "") next
+      text = $0
+      gsub(/\037/, "", text)
+      text = strip_spans(text)
+      print text "\037" file_name()":"FNR":"$0
+    }' | grep -aPi "^[^\\x1f]*(?:$banned_words)" | cut -d $'\037' -f 2-
+  )"
 
 report 'Filler with no term-of-art use:' \
   "$(grep_docs -nPi 'organically|earns its complexity|cheap insurance|lays (the )?foundation|the right level' -- "$@")"
