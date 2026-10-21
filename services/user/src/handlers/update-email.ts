@@ -107,6 +107,6 @@ function isEmailViolation(error: unknown): boolean {
     'code' in error &&
     error.code === '23505' &&
     'constraint_name' in error &&
-    (error as { constraint_name: unknown }).constraint_name === 'users_email_unique'
+    error.constraint_name === 'users_email_unique'
   );
 }

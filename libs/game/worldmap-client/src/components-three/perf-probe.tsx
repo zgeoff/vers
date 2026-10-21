@@ -6,12 +6,6 @@ import { setPerfStats } from '../state/set-perf-stats';
 
 const SAMPLE_INTERVAL_MS = 500;
 
-interface RenderInfo {
-  readonly calls?: number;
-  readonly drawCalls?: number;
-  readonly triangles?: number;
-}
-
 interface RollingFrameWindow {
   count: number;
   elapsedMs: number;
@@ -36,10 +30,11 @@ export function PerfProbe() {
   }, [renderer]);
 
   useFrame((_state, delta) => {
-    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- WebGPURenderer's type claims info.render always carries drawCalls, but the classic WebGLRenderer some test harnesses construct by default carries calls in its place; RenderInfo reflects both
-    const render = renderer.info.render as unknown as RenderInfo;
-    const drawCalls = render.drawCalls ?? render.calls ?? 0;
-    const triangleCount = render.triangles ?? 0;
+    const render = renderer.info.render;
+
+    // WebGPU's info counts draws in drawCalls and render passes in calls; WebGL's counts draws in calls
+    const drawCalls = 'drawCalls' in render ? render.drawCalls : render.calls;
+    const triangleCount = render.triangles;
 
     // Zeroes the counts this probe just read, so the next read covers only the frame after this
     // one — see the ownership note on the mount effect above.

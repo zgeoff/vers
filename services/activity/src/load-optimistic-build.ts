@@ -4,6 +4,7 @@ import { foldOptimisticBuild } from '@vers/idle-core';
 import { sql } from 'kysely';
 import type { Kysely } from 'kysely';
 import invariant from 'tiny-invariant';
+import { z } from 'zod';
 
 export async function loadOptimisticBuild(
   trx: Kysely<DB>,
@@ -29,7 +30,7 @@ export async function loadOptimisticBuild(
         eb
           .selectFrom('activityCheckpoints as unverified')
           .select(
-            sql<string>`coalesce(sum((unverified.payload -> 'rewards' ->> 'xp')::integer), 0)`.as(
+            sql`coalesce(sum((unverified.payload -> 'rewards' ->> 'xp')::integer), 0)`.as(
               'deltaSum',
             ),
           )
@@ -62,7 +63,7 @@ export async function loadOptimisticBuild(
     .map((row) => ({
       settledXP: row.settledXp ?? 0,
       tailPayload: row.payload,
-      unverifiedDeltaSum: Number(row.deltaSum ?? 0),
+      unverifiedDeltaSum: Number(z.string().nullable().parse(row.deltaSum) ?? 0),
     }));
 
   return foldOptimisticBuild(settled.xp, sources);

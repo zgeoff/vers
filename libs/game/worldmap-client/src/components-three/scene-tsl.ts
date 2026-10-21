@@ -34,5 +34,5 @@ const sceneTSLValues = {
   toNode: (node: unknown) => node,
 };
 
-// oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the values are untouched runtime TSL builders; only the static view narrows
+// oxlint-disable-next-line typescript/consistent-type-assertions -- approved GEO-1460: three's TSL types drive tsgo out of memory
 export const sceneTSL = sceneTSLValues as unknown as SceneTSL;

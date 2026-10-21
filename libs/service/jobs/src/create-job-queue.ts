@@ -2,8 +2,7 @@ import { withRootSpan } from '@vers/service-utils';
 import { PgBoss, fromKysely } from 'pg-boss';
 import type { KyselyTransactionLike } from 'pg-boss';
 import invariant from 'tiny-invariant';
-import type * as z from 'zod';
-import type { JobDef, JobDefs } from './types';
+import type { JobDef, JobDefMap, JobDefs, JobPayloads } from './types';
 
 export interface SendJobOptions {
   readonly trx?: KyselyTransactionLike;
@@ -16,17 +15,17 @@ export interface DrainResult {
 
 export type JobState = 'created' | 'retry' | 'active' | 'completed' | 'failed' | 'cancelled';
 
-export interface JobQueue<TDefs extends JobDefs> {
+export interface JobQueue<TPayloads extends JobPayloads> {
   readonly start: () => Promise<void>;
   readonly stop: () => Promise<void>;
-  readonly send: <TName extends keyof TDefs & string>(
+  readonly send: <TName extends keyof TPayloads & string>(
     name: TName,
-    payload: Readonly<z.infer<TDefs[TName]['schema']>>,
+    payload: Readonly<TPayloads[TName]>,
     opts?: Readonly<SendJobOptions>,
   ) => Promise<string>;
-  readonly drain: (name?: Extract<keyof TDefs, string>) => Promise<DrainResult>;
+  readonly drain: (name?: Extract<keyof TPayloads, string>) => Promise<DrainResult>;
   readonly readJobState: (
-    name: Extract<keyof TDefs, string>,
+    name: Extract<keyof TPayloads, string>,
     jobID: string,
   ) => Promise<JobState | undefined>;
 }
@@ -43,38 +42,37 @@ export interface JobFailureContext {
 
 type OnJobFailed = (error: unknown, context: Readonly<JobFailureContext>) => void;
 
-export interface CreateJobQueueConfig<TDefs extends JobDefs> {
+type JobHandler<TPayload extends object> = (
+  payload: Readonly<TPayload>,
+  context: Readonly<JobContext>,
+) => Promise<void>;
+
+type JobHandlerMap<TPayloads extends JobPayloads> = {
+  readonly [TName in keyof TPayloads]: JobHandler<TPayloads[TName]>;
+};
+
+export interface CreateJobQueueConfig<TPayloads extends JobPayloads> {
   readonly connectionString: string;
-  readonly handlers: {
-    readonly [TName in keyof TDefs & string]: (
-      payload: Readonly<z.infer<TDefs[TName]['schema']>>,
-      context: Readonly<JobContext>,
-    ) => Promise<void>;
-  };
+  readonly handlers: JobHandlerMap<TPayloads>;
 
   readonly onError?: (error: Error) => void;
 
   readonly onJobFailed?: OnJobFailed;
 }
 
-type JobHandlers = Readonly<
-  Record<string, (payload: object, context: Readonly<JobContext>) => Promise<void>>
->;
-
 // the config parameter is a NoInfer site: the job set infers from the definitions alone, so a
 // handler that omits its payload parameter cannot widen every job's payload type to object
-export function createJobQueue<TDefs extends JobDefs>(
-  defs: Readonly<TDefs>,
-  config: Readonly<CreateJobQueueConfig<NoInfer<TDefs>>>,
-): JobQueue<TDefs> {
+export function createJobQueue<TPayloads extends JobPayloads>(
+  defs: JobDefMap<TPayloads>,
+  config: Readonly<CreateJobQueueConfig<NoInfer<TPayloads>>>,
+): JobQueue<TPayloads> {
   const boss = new PgBoss(config.connectionString);
 
   boss.on('error', (error) => {
     (config.onError ?? printJobQueueError)(error);
   });
 
-  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- erases each job's payload type; the fetch/handle/complete loop re-correlates a handler with its schema by their shared runtime key
-  const handlers = config.handlers as JobHandlers;
+  const handlers = config.handlers;
   const onJobFailed = config.onJobFailed ?? printJobError;
 
   return {
@@ -163,25 +161,27 @@ async function sendJob(
   return jobID;
 }
 
-async function drainJobs(
+async function drainJobs<TPayloads extends JobPayloads>(
   boss: PgBoss,
-  defs: JobDefs,
-  handlers: JobHandlers,
+  defs: JobDefMap<TPayloads>,
+  handlers: JobHandlerMap<TPayloads>,
   onJobFailed: OnJobFailed,
-  name: string | undefined,
+  name: Extract<keyof TPayloads, string> | undefined,
 ): Promise<DrainResult> {
-  const names = name === undefined ? Object.keys(defs) : [name];
+  const names: Array<Extract<keyof TPayloads, string>> = [];
+
+  for (const queueName in defs) {
+    if (name === undefined || queueName === name) {
+      names.push(queueName);
+    }
+  }
+
   let completed = 0;
   let failed = 0;
 
   for (const queueName of names) {
-    const def: JobDef | undefined = defs[queueName];
-
-    invariant(def, `job "${queueName}" is not defined`);
-
+    const def = defs[queueName];
     const handler = handlers[queueName];
-
-    invariant(handler, `job "${queueName}" has no handler`);
 
     for (;;) {
       const jobs = await boss.fetch<unknown>(queueName, { batchSize: 10, includeMetadata: true });
@@ -214,11 +214,11 @@ interface FetchedJob {
   readonly retryLimit: number;
 }
 
-function runJob(
+function runJob<TPayload extends object>(
   boss: PgBoss,
   queueName: string,
-  def: Readonly<JobDef>,
-  handler: JobHandlers[string],
+  def: Readonly<JobDef<TPayload>>,
+  handler: JobHandler<TPayload>,
   onJobFailed: OnJobFailed,
   job: Readonly<FetchedJob>,
 ): Promise<JobOutcome> {

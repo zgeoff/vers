@@ -5,7 +5,9 @@ export async function readOpItem(itemTitle: string, vault: string): Promise<unkn
   try {
     const result = await $`op item get ${itemTitle} --vault ${vault} --format json`.quiet();
 
-    return JSON.parse(result.stdout.toString()) as unknown;
+    const item: unknown = JSON.parse(result.stdout.toString());
+
+    return item;
   } catch (error) {
     throw new Error(
       `op item get "${itemTitle}" --vault ${vault} failed — is op installed and signed in? (${toMessage(error)})`,

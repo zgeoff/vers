@@ -5,7 +5,7 @@ import type { Service } from '@vers/service-runtime';
 import invariant from 'tiny-invariant';
 import { buildEmailRouter } from './build-router';
 import { createEmailJobQueue } from './create-email-job-queue';
-import type { EmailJobDefs } from './create-email-job-queue';
+import type { EmailJobPayloads } from './create-email-job-queue';
 import { envShape } from './env-shape';
 
 interface CreateEmailServiceConfig {
@@ -13,14 +13,14 @@ interface CreateEmailServiceConfig {
 }
 
 export interface EmailService {
-  readonly queue: JobQueue<EmailJobDefs>;
+  readonly queue: JobQueue<EmailJobPayloads>;
   readonly service: Service<typeof envShape>;
 }
 
 export async function createEmailService(
   config: CreateEmailServiceConfig = {},
 ): Promise<EmailService> {
-  let queue: JobQueue<EmailJobDefs> | undefined;
+  let queue: JobQueue<EmailJobPayloads> | undefined;
 
   const service = await createService({
     allowedIssuers: ['app-web'],

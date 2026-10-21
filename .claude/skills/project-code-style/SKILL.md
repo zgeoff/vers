@@ -42,9 +42,13 @@ pass it a named function that follows the verb rule, such as `handleRequest`.
 
 ## Lint directives
 
-Every type-aware rule is on in [`.oxlintrc.json`](../../../.oxlintrc.json), except
-`typescript/prefer-readonly-parameter-types`, which the shared config turns off. The documented
-app-web override for `only-throw-error` is permanent.
+Every type-aware rule is on in [`.oxlintrc.json`](../../../.oxlintrc.json), except two that the
+shared config turns off: `typescript/prefer-readonly-parameter-types`, and
+`typescript/no-unsafe-type-assertion`, whose every report the ban on all type assertions includes.
+The documented app-web override for `only-throw-error` is permanent.
+
+- A type assertion is never baselined. It survives only with the approval comment that the
+  `@zgeoff/oxlint-config` README shows.
 
 - Baseline a pre-existing violation inline with
   `// oxlint-disable-next-line <rule> -- baseline(#236)`, never by turning the rule off in config.

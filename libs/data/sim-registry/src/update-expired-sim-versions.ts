@@ -15,7 +15,7 @@ export function updateExpiredSimVersions(db: Kysely<DB>): Promise<Array<SimVersi
       // (no row: park the activity).
       .set({ status: 'pruned' })
       .where('status', '=', 'active')
-      .where('retainedUntil', '<', sql<Date>`now()`)
+      .where((eb) => eb(sql`now()`, '>', eb.ref('retainedUntil')))
 
       // Excludes the current version regardless of its own retainedUntil, so a lone active row is
       // always protected. The active guard on both sides also keeps a repeat run from re-returning

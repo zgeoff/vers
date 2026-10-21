@@ -2,6 +2,7 @@ import type { DB } from '@vers/db';
 import { buildUnsettledXP } from '@vers/idle-core';
 import { sql } from 'kysely';
 import type { Kysely } from 'kysely';
+import { z } from 'zod';
 import type { MissingSessionPayload } from '../types';
 
 interface ReadAvatarProgressionDeps {
@@ -66,7 +67,7 @@ export async function readAvatarProgression(
         eb
           .selectFrom('activityCheckpoints as unverified')
           .select(
-            sql<string>`coalesce(sum((unverified.payload -> 'rewards' ->> 'xp')::integer), 0)`.as(
+            sql`coalesce(sum((unverified.payload -> 'rewards' ->> 'xp')::integer), 0)`.as(
               'deltaSum',
             ),
           )
@@ -110,7 +111,7 @@ export async function readAvatarProgression(
 }
 
 interface PendingCandidateRow {
-  readonly deltaSum: null | string;
+  readonly deltaSum: unknown;
   readonly id: null | string;
   readonly payload: unknown;
   readonly settledXp: null | number;
@@ -124,7 +125,7 @@ function findPendingEntry(row: Readonly<PendingCandidateRow>): Array<PendingXPEn
   const xpDelta = buildUnsettledXP({
     settledXP: row.settledXp ?? 0,
     tailPayload: row.payload,
-    unverifiedDeltaSum: Number(row.deltaSum ?? 0),
+    unverifiedDeltaSum: Number(z.string().nullable().parse(row.deltaSum) ?? 0),
   });
 
   if (xpDelta === 0) {

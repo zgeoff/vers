@@ -35,7 +35,7 @@ export async function claimNextSeedChain(
           .where((eb2) =>
             eb2.or([
               eb2('activities.replayBackoffUntil', 'is', null),
-              eb2('activities.replayBackoffUntil', '<=', sql<Date>`now()`),
+              eb2(sql`now()`, '>=', eb2.ref('activities.replayBackoffUntil')),
             ]),
           )
           .where((eb2) => {

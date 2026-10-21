@@ -3,22 +3,24 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { CHUNK_SIZE } from '@vers/worldmap-core';
 import { DataTexture } from 'three';
 import type { Mesh, Object3D } from 'three';
+import { MeshBasicNodeMaterial } from 'three/webgpu';
 import invariant from 'tiny-invariant';
 import { scatterBuildStats } from '../scatter-build-stats';
 import { setViewport } from '../state/set-viewport';
 import { setWorldRegion } from '../state/set-world-region';
 import { BiomeGround } from './biome-ground';
 
-interface ColorTextureNode {
-  readonly value?: unknown;
-}
-
 function setupTest() {
   return {
     getGroundTexture: (mesh: Mesh): DataTexture => {
-      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the material's real type is three's heavily generic node-material type; only this narrow, mutable-by-design slot is read
-      const colorNode = (mesh.material as { colorNode?: ColorTextureNode }).colorNode;
-      const value = colorNode?.value;
+      invariant(
+        mesh.material instanceof MeshBasicNodeMaterial,
+        'the ground plane carries a node material',
+      );
+
+      invariant(mesh.material.colorNode, 'the ground plane material carries a color node');
+
+      const value: unknown = Reflect.get(mesh.material.colorNode, 'value');
 
       invariant(
         value instanceof DataTexture,

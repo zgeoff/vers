@@ -1,8 +1,10 @@
+import { z } from 'zod';
 import type { Json } from './types';
 
-// zod object types carry an unknown-typed index signature that TypeScript cannot prove assignable
-// to the recursive Json shape, so this is the one sanctioned assertion for a jsonb write
+// postgres.js writes jsonb through JSON.stringify, which drops undefined members and turns a Date
+// into a string; z.json() rejects both, so the value takes the same round trip first
 export function toJSON(value: Readonly<Record<string, unknown>>): Json {
-  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the sole sanctioned jsonb-write conversion; see the comment above
-  return value as Json;
+  const text = JSON.stringify(value);
+
+  return z.json().parse(JSON.parse(text));
 }

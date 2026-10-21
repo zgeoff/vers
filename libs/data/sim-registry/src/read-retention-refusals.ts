@@ -19,7 +19,7 @@ export async function readRetentionRefusals(
         .as('unverifiedActivities'),
     ])
     .where('status', '=', 'active')
-    .where('retainedUntil', '<', sql<Date>`now()`)
+    .where((eb) => eb(sql`now()`, '>', eb.ref('retainedUntil')))
     .where('engineHash', 'is distinct from', buildCurrentEngineHashQuery(db))
     .where('engineHash', 'in', buildPinnedEngineHashesQuery(db))
     .orderBy('engineHash')

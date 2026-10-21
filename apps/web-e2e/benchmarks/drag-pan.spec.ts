@@ -8,9 +8,10 @@ const DRAG_LEG_COUNT = 12;
 const DRAG_STEPS_PER_LEG = 20;
 const DROPPED_FRAME_THRESHOLD_MS = 32;
 
-interface DragPanWindow {
-  __dragPanFrameGaps: Array<number>;
-  __dragPanFrameLoopID: number;
+// the sampler parks its state on the page's own globalThis between evaluate calls
+declare global {
+  var __dragPanFrameGaps: Array<number> | undefined;
+  var __dragPanFrameLoopID: number | undefined;
 }
 
 // run with `--headed`: headless Chromium's software WebGPU path measures compositor throughput
@@ -59,8 +60,6 @@ test('it drag-pans across the explore map and reports peak frame gap and dropped
   await page.mouse.up();
 
   await page.evaluate(() => {
-    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the sampler's state lives on the page's own globalThis with no declared type; DragPanWindow names the two fields this benchmark parks there
-    const dragPanWindow = globalThis as unknown as DragPanWindow;
     const gaps: Array<number> = [];
     let last = performance.now();
 
@@ -70,11 +69,11 @@ test('it drag-pans across the explore map and reports peak frame gap and dropped
       gaps.push(now - last);
 
       last = now;
-      dragPanWindow.__dragPanFrameLoopID = requestAnimationFrame(advanceFrame);
+      globalThis.__dragPanFrameLoopID = requestAnimationFrame(advanceFrame);
     };
 
-    dragPanWindow.__dragPanFrameGaps = gaps;
-    dragPanWindow.__dragPanFrameLoopID = requestAnimationFrame(advanceFrame);
+    globalThis.__dragPanFrameGaps = gaps;
+    globalThis.__dragPanFrameLoopID = requestAnimationFrame(advanceFrame);
   });
 
   // every measured leg drags the same direction, so the camera travels across fresh world; the
@@ -87,12 +86,16 @@ test('it drag-pans across the explore map and reports peak frame gap and dropped
   }
 
   const frameGaps = await page.evaluate(() => {
-    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see the setup evaluate above
-    const dragPanWindow = globalThis as unknown as DragPanWindow;
+    const loopID = globalThis.__dragPanFrameLoopID;
+    const gaps = globalThis.__dragPanFrameGaps;
 
-    cancelAnimationFrame(dragPanWindow.__dragPanFrameLoopID);
+    if (loopID === undefined || gaps === undefined) {
+      throw new Error('the frame-gap sampler never started');
+    }
 
-    return dragPanWindow.__dragPanFrameGaps;
+    cancelAnimationFrame(loopID);
+
+    return gaps;
   });
 
   // the first sample is the gap from the sampler's own setup, not a rendered frame

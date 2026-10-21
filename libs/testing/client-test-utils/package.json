@@ -15,6 +15,7 @@
     "@orpc/contract": "catalog:",
     "@orpc/server": "catalog:",
     "msw": "catalog:",
+    "tiny-invariant": "catalog:",
     "zustand": "catalog:"
   },
   "devDependencies": {

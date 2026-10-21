@@ -1,5 +1,6 @@
 import { expect, onTestFinished, setSystemTime, test } from 'bun:test';
 import { sql } from 'kysely';
+import { z } from 'zod';
 import { createTestDB } from './create-test-db';
 import { createTestUser } from './create-test-user';
 
@@ -23,19 +24,21 @@ test('it defaults to transaction isolation: writes roll back once disposed', asy
 test('it opts into database isolation on request', async () => {
   await using testDB = await createTestDB({ isolation: 'database' });
 
-  const result = await sql<{ currentDatabase: string }>`select current_database()`.execute(
-    testDB.db,
-  );
+  const result = await sql`select current_database()`.execute(testDB.db);
 
-  expect(result.rows[0]?.currentDatabase).toStartWith('test_');
+  const [row] = z.tuple([z.object({ currentDatabase: z.string() })]).parse(result.rows);
+
+  expect(row.currentDatabase).toStartWith('test_');
 });
 
 test('it opts into schema isolation on request', async () => {
   await using testDB = await createTestDB({ isolation: 'schema' });
 
-  const result = await sql<{ searchPath: string }>`show search_path`.execute(testDB.db);
+  const result = await sql`show search_path`.execute(testDB.db);
 
-  expect(result.rows[0]?.searchPath).toStartWith('tu_');
+  const [row] = z.tuple([z.object({ searchPath: z.string() })]).parse(result.rows);
+
+  expect(row.searchPath).toStartWith('tu_');
 });
 
 test('it keeps an open handle usable after another handle is created on an advanced system clock', async () => {

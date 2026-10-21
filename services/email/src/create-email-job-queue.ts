@@ -15,7 +15,7 @@ import {
   renderResetPasswordEmail,
   renderWelcomeEmail,
 } from '@vers/email';
-import type { JobFailureContext, JobQueue } from '@vers/jobs';
+import type { JobFailureContext, JobPayloadsOf, JobQueue } from '@vers/jobs';
 import { createJobQueue, defineJobs } from '@vers/jobs';
 import type { ServiceContext } from '@vers/service-runtime';
 import { isPastDeadline } from './is-past-deadline';
@@ -52,7 +52,7 @@ export const EMAIL_JOB_DEFS = defineJobs({
   'send-welcome': { ...DEADLINE_RETRY_POLICY, schema: SendWelcomeInputSchema },
 });
 
-export type EmailJobDefs = typeof EMAIL_JOB_DEFS;
+export type EmailJobPayloads = JobPayloadsOf<typeof EMAIL_JOB_DEFS>;
 
 export interface CreateEmailJobQueueConfig {
   readonly connectionString: string;
@@ -66,7 +66,7 @@ export interface CreateEmailJobQueueConfig {
 
 export function createEmailJobQueue(
   config: Readonly<CreateEmailJobQueueConfig>,
-): JobQueue<EmailJobDefs> {
+): JobQueue<EmailJobPayloads> {
   const emailClient = config.emailClient;
   const logger = config.logger;
 

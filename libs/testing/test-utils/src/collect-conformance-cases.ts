@@ -71,7 +71,7 @@ function collectContractProcedures(contract: AnyContractRouter): Array<ContractP
   traverseContractProcedures({ path: [], router: contract }, (node) => {
     entries.push({
       dotPath: node.path.join('.'),
-      procedure: node.contract as AnyContractProcedure,
+      procedure: node.contract,
     });
   });
 
@@ -99,7 +99,7 @@ function buildMalformedInputCase(
   return {
     run: async (app) => {
       const client = buildConformanceClient(app, rpcPrefix, anonymousHeaders);
-      const call = getClientProcedure(client, entry.dotPath);
+      const call = makeProcedureCall(client, entry.dotPath);
 
       const error = await runRejectingCall(() => call(probe));
 
@@ -143,19 +143,31 @@ function buildConformanceClient(
   });
 }
 
-function getClientProcedure(
+function makeProcedureCall(
   client: ContractRouterClient<AnyContractRouter>,
   dotPath: string,
 ): (input: unknown) => Promise<unknown> {
   let current: unknown = client;
 
   for (const segment of dotPath.split('.')) {
-    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- walking a dot-path through an untyped client proxy; no compile-time proof the segment resolves to an object
-    current = (current as Record<string, unknown>)[segment];
+    // an oRPC client node is a callable proxy, so a function is walkable as well as an object
+    assert.ok(
+      (typeof current === 'object' && current !== null) || typeof current === 'function',
+      `expected ${dotPath} to walk through client nodes, but "${segment}" has no parent node`,
+    );
+
+    current = Reflect.get(current, segment);
   }
 
-  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the final segment of a walked dot-path is a callable procedure by construction of the dotPath, not something the type checker can prove
-  return current as (input: unknown) => Promise<unknown>;
+  assert.ok(typeof current === 'function', `expected ${dotPath} to resolve to a procedure`);
+
+  const procedure = current;
+
+  return async (input) => {
+    const output: unknown = await Reflect.apply(procedure, undefined, [input]);
+
+    return output;
+  };
 }
 
 async function runRejectingCall(call: () => Promise<unknown>): Promise<ORPCError<string, unknown>> {
@@ -185,13 +197,16 @@ function buildAnonymousRejectionCase(
   return {
     run: async (app) => {
       const client = buildConformanceClient(app, rpcPrefix, options.anonymousHeaders);
-      const call = getClientProcedure(client, entry.dotPath);
+      const call = makeProcedureCall(client, entry.dotPath);
 
       const error = await runRejectingCall(() => call(sample));
 
       assert.equal(error.code, 'UNAUTHORIZED');
-      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- ORPCError#data is unknown; the UNAUTHORIZED shape is a runtime contract this conformance case verifies, not something declared in its type
-      assert.equal((error.data as { reason: string }).reason, 'missing-session');
+
+      const data = error.data;
+
+      assert.ok(typeof data === 'object' && data !== null && 'reason' in data);
+      assert.equal(data.reason, 'missing-session');
     },
     title: `it rejects an anonymous call to ${entry.dotPath} with UNAUTHORIZED`,
   };

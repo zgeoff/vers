@@ -9,6 +9,7 @@ import { waitFor } from '@vers/test-utils';
 import { createInMemoryMetrics } from '@vers/test-utils/bun';
 import { sql } from 'kysely';
 import invariant from 'tiny-invariant';
+import { z } from 'zod';
 import { buildPostgresOptions, createDB } from './create-db';
 import { createTestDB } from './test-support/create-test-db';
 import { resolveTestDBTarget } from './test-support/resolve-test-db-target';
@@ -106,8 +107,7 @@ test('it marks the span failed for a query that errors', async () => {
   await expect(
     handle.db
       .selectFrom('users')
-      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- deliberately invalid column name, exercised for its error path
-      .select('not_a_real_column' as 'id')
+      .select(sql`not_a_real_column`.as('id'))
       .execute(),
   ).toReject();
 
@@ -249,7 +249,7 @@ test('it serves the next query from a fresh connection after the wall clock jump
     resumeDetection: { intervalMs: 10, now: () => clock, thresholdMs: 1000 },
   });
 
-  const before = await sql<{ pid: number }>`select pg_backend_pid() as pid`.execute(handle.db);
+  const before = await sql`select pg_backend_pid() as pid`.execute(handle.db);
 
   clock += 600_000;
 
@@ -259,12 +259,10 @@ test('it serves the next query from a fresh connection after the wall clock jump
     expect(resets).toBe(1);
   });
 
-  const after = await sql<{ pid: number }>`select pg_backend_pid() as pid`.execute(handle.db);
+  const after = await sql`select pg_backend_pid() as pid`.execute(handle.db);
 
-  const [beforeRow] = before.rows;
-  const [afterRow] = after.rows;
-
-  invariant(beforeRow && afterRow, 'expected one row per query');
+  const [beforeRow] = z.tuple([z.object({ pid: z.number() })]).parse(before.rows);
+  const [afterRow] = z.tuple([z.object({ pid: z.number() })]).parse(after.rows);
 
   expect(afterRow.pid).not.toBe(beforeRow.pid);
 });
@@ -281,12 +279,14 @@ test('it rejects a query still in flight on the old pool when a resume is detect
   const sleeping = sql`select pg_sleep(20)`.execute(handle.db);
 
   await waitFor(async () => {
-    const active = await sql<{ count: number }>`
+    const active = await sql`
       select count(*)::int as count from pg_stat_activity
       where state = 'active' and query like '%pg_sleep(20)%' and pid <> pg_backend_pid()
     `.execute(handle.db);
 
-    expect(active.rows[0]?.count).toBe(1);
+    const [activeRow] = z.tuple([z.object({ count: z.number() })]).parse(active.rows);
+
+    expect(activeRow.count).toBe(1);
   });
 
   clock += 600_000;
@@ -308,16 +308,14 @@ test('it serves the first query after a wall-clock jump from a fresh connection 
     resumeDetection: { intervalMs: 60_000, now: () => clock, thresholdMs: 1000 },
   });
 
-  const before = await sql<{ pid: number }>`select pg_backend_pid() as pid`.execute(handle.db);
+  const before = await sql`select pg_backend_pid() as pid`.execute(handle.db);
 
   clock += 61_000;
 
-  const after = await sql<{ pid: number }>`select pg_backend_pid() as pid`.execute(handle.db);
+  const after = await sql`select pg_backend_pid() as pid`.execute(handle.db);
 
-  const [beforeRow] = before.rows;
-  const [afterRow] = after.rows;
-
-  invariant(beforeRow && afterRow, 'expected one row per query');
+  const [beforeRow] = z.tuple([z.object({ pid: z.number() })]).parse(before.rows);
+  const [afterRow] = z.tuple([z.object({ pid: z.number() })]).parse(after.rows);
 
   expect(afterRow.pid).not.toBe(beforeRow.pid);
   expect(inMemoryMetrics.readCounterValue('vers.db.pool_resets')).resolves.toBe(1);
@@ -332,7 +330,7 @@ test('it rejects a query whose reply never arrives within the deadline and serve
 
   await using handle = await createTestDB({ baseURI: proxy.baseURI, queryDeadlineMs: 200 });
 
-  const before = await sql<{ pid: number }>`select pg_backend_pid() as pid`.execute(handle.db);
+  const before = await sql`select pg_backend_pid() as pid`.execute(handle.db);
 
   proxy.stopForwarding();
 
@@ -344,12 +342,10 @@ test('it rejects a query whose reply never arrives within the deadline and serve
   expect(performance.now() - startedAt).toBeLessThan(1000);
   expect(stalled).rejects.toMatchObject({ code: 'CONNECTION_DESTROYED' });
 
-  const after = await sql<{ pid: number }>`select pg_backend_pid() as pid`.execute(handle.db);
+  const after = await sql`select pg_backend_pid() as pid`.execute(handle.db);
 
-  const [beforeRow] = before.rows;
-  const [afterRow] = after.rows;
-
-  invariant(beforeRow && afterRow, 'expected one row per query');
+  const [beforeRow] = z.tuple([z.object({ pid: z.number() })]).parse(before.rows);
+  const [afterRow] = z.tuple([z.object({ pid: z.number() })]).parse(after.rows);
 
   expect(afterRow.pid).not.toBe(beforeRow.pid);
 
@@ -400,7 +396,7 @@ test('it leaves the pool alone across a wall-clock jump when resume detection is
 
   await using handle = await createTestDB({ resumeDetection: false });
 
-  const before = await sql<{ pid: number }>`select pg_backend_pid() as pid`.execute(handle.db);
+  const before = await sql`select pg_backend_pid() as pid`.execute(handle.db);
 
   onTestFinished(() => {
     setSystemTime();
@@ -408,12 +404,10 @@ test('it leaves the pool alone across a wall-clock jump when resume detection is
 
   setSystemTime(new Date(Date.now() + 11 * 60_000));
 
-  const after = await sql<{ pid: number }>`select pg_backend_pid() as pid`.execute(handle.db);
+  const after = await sql`select pg_backend_pid() as pid`.execute(handle.db);
 
-  const [beforeRow] = before.rows;
-  const [afterRow] = after.rows;
-
-  invariant(beforeRow && afterRow, 'expected one row per query');
+  const [beforeRow] = z.tuple([z.object({ pid: z.number() })]).parse(before.rows);
+  const [afterRow] = z.tuple([z.object({ pid: z.number() })]).parse(after.rows);
 
   expect(afterRow.pid).toBe(beforeRow.pid);
 

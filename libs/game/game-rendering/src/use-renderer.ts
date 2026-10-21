@@ -1,10 +1,9 @@
 import { useThree } from '@react-three/fiber';
+import type { WebGLRenderer } from 'three';
 import type { WebGPURenderer } from 'three/webgpu';
 
-export function useRenderer(): WebGPURenderer {
-  return useThree(
-    (state) =>
-      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- R3F's state.gl type is pinned to WebGLRenderer, but the persistent canvas always constructs a WebGPURenderer
-      state.gl as unknown as WebGPURenderer,
-  );
+// the persistent canvas constructs a WebGPURenderer, but R3F types state.gl as the WebGLRenderer
+// that test harnesses construct by default, so a caller handles both
+export function useRenderer(): WebGLRenderer | WebGPURenderer {
+  return useThree((state) => state.gl);
 }

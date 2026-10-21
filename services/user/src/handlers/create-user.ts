@@ -58,7 +58,7 @@ function findViolatedField(error: unknown): 'email' | 'username' | undefined {
     return undefined;
   }
 
-  const constraintName = (error as { constraint_name: unknown }).constraint_name;
+  const constraintName = error.constraint_name;
 
   if (constraintName === 'users_email_unique') {
     return 'email';

@@ -34,7 +34,7 @@ export async function readVerifiedAnchorPredecessor(
     .where('activities.status', 'in', ['stopped', 'capped'])
     .where((eb) => eb('activities.verifiedHead', '=', eb.ref('activities.appendedHead')))
     .where('activities.appendedHead', '>', 0)
-    .where(sql<boolean>`activity_checkpoints.payload ->> 'type' != 'started'`)
+    .where((eb) => eb(sql`activity_checkpoints.payload ->> 'type'`, '!=', 'started'))
     .executeTakeFirst();
 
   if (predecessor === undefined) {
