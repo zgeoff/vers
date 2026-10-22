@@ -99,7 +99,7 @@
       "@zgeoff/format-codemod": "0.3.1",
       "@zgeoff/mcp-remote": "0.1.38",
       "@zgeoff/oxlint-config": "0.6.1",
-      "@zgeoff/skill-gate": "0.2.3",
+      "@zgeoff/skill-gate": "0.2.4",
       "@zgeoff/umami-mcp": "0.1.0",
       "autoprefixer": "10.6.1",
       "babel-plugin-react-compiler": "1.0.0",
