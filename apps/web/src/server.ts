@@ -1,7 +1,7 @@
 import { fileURLToPath } from 'node:url';
 import { createStartHandler, defaultStreamHandler } from '@tanstack/react-start/server';
 import { startMetricsExport, startTraceExport } from '@vers/service-utils/otel';
-import { serveStatic } from 'srvx/static';
+import { staticMiddleware } from 'srvx/static';
 import { env } from './server/env';
 import { logger } from './server/logger';
 import { makeRateLimiter } from './server/make-rate-limiter';
@@ -72,7 +72,7 @@ export default serverEntry;
 const CLIENT_ASSETS_DIRECTORY = fileURLToPath(new URL('../client', import.meta.url));
 
 // oxlint-disable-next-line zgeoff/no-abbreviated-names -- srvx names the option `dir`
-const clientAssets = serveStatic({ dir: CLIENT_ASSETS_DIRECTORY });
+const clientAssets = staticMiddleware({ dir: CLIENT_ASSETS_DIRECTORY });
 
 function serveClientAssets(request: Request, next: () => Promise<Response>): Promise<Response> {
   // srvx's `clientAssets` permits a synchronous `Response`; wrapping normalizes its return to
