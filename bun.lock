@@ -1333,7 +1333,7 @@
     "@commitlint/cli": "21.2.3",
     "@conform-to/react": "1.21.2",
     "@conform-to/zod": "1.21.2",
-    "@dotenvx/dotenvx": "2.35.0",
+    "@dotenvx/dotenvx": "2.36.0",
     "@elysiajs/opentelemetry": "1.4.11",
     "@epic-web/totp": "4.0.1",
     "@faker-js/faker": "10.6.0",
@@ -1647,7 +1647,7 @@
 
     "@dimforge/rapier3d-compat": ["@dimforge/rapier3d-compat@0.12.0", "", {}, "sha512-uekIGetywIgopfD97oDL5PfeezkFpNhwlzlaEYNOA0N6ghdsOvh/HYjSMek5Q2O1PYvRSDFcqFVJl4r4ZBwOow=="],
 
-    "@dotenvx/dotenvx": ["@dotenvx/dotenvx@2.35.0", "", { "dependencies": { "@dotenvx/primitives": "^3.3.0", "@dotenvx/providers": "^0.3.5", "@dotenvx/tooling": "^1.0.5", "undici": "^6.28.1", "write-file-atomic": "^5.0.1", "yocto-spinner": "^1.2.1" }, "bin": { "dx": "src/cli/dotenvx.js", "dotenvx": "src/cli/dotenvx.js" } }, "sha512-ft8JhR2leFYT8Y5PBcAHmKySq7z+AgRhjrk/rhPu2hMC/pWfiHzKYfbjiRni4nXdPtDZEwW9yR73v3e0+HYJgg=="],
+    "@dotenvx/dotenvx": ["@dotenvx/dotenvx@2.36.0", "", { "dependencies": { "@dotenvx/primitives": "^3.3.0", "@dotenvx/providers": "^0.3.5", "@dotenvx/tooling": "^1.0.5", "undici": "^6.28.1", "write-file-atomic": "^5.0.1", "yocto-spinner": "^1.2.1" }, "bin": { "dx": "src/cli/dotenvx.js", "dotenvx": "src/cli/dotenvx.js" } }, "sha512-jjB1LuQABcfTwXZvFK4OCFViWODsR8bCMpK3c3nHqaibB/f2/k/4LqA2TXdjLWSwi3FNFzq9J6oX3BGQ0kAU+A=="],
 
     "@dotenvx/primitives": ["@dotenvx/primitives@3.3.0", "", {}, "sha512-M5GnIMsooWrk3BLgrAs53tqXxd7Rj0Ukc+JnjedLxlvxPkYsBFF/kKrfkpskrrvT/wwma5UdXq+wKHWBcjDe9g=="],
 
