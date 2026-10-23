@@ -1413,7 +1413,7 @@
     "@zgeoff/format-codemod": "0.3.1",
     "@zgeoff/mcp-remote": "0.1.38",
     "@zgeoff/oxlint-config": "0.6.1",
-    "@zgeoff/skill-gate": "0.2.4",
+    "@zgeoff/skill-gate": "0.2.6",
     "@zgeoff/umami-mcp": "0.1.0",
     "autoprefixer": "10.6.1",
     "babel-plugin-react-compiler": "1.0.0",
@@ -3003,7 +3003,7 @@
 
     "@zgeoff/oxlint-config": ["@zgeoff/oxlint-config@0.6.1", "", { "dependencies": { "@stylistic/eslint-plugin": "5.10.0" }, "peerDependencies": { "oxlint": ">=1.78.0" } }, "sha512-MPMbLnNEFfuwJ+SGDFWI2Lp+qapss8k40vSn+yQk41SiV2SB38kLErcAPwAN/R4FQj4kp1Mp08alQ3ImCOFURw=="],
 
-    "@zgeoff/skill-gate": ["@zgeoff/skill-gate@0.2.4", "", {}, "sha512-uxY6ijM+VIIf4rtdLnxWMIuA2apHPE0ttiqRrkV05VAxEHQ60Fu/vfdGMOUbQVaQ7oQt40oG3m8WfnSs3FOiew=="],
+    "@zgeoff/skill-gate": ["@zgeoff/skill-gate@0.2.6", "", {}, "sha512-9ccggI/DFRZaSO1LBM4kOB1vk1AoutU65x79tBk7j15f+bNxCNxyMG+JPIVtpVHDx7EPlJiMrCX5NuMJBG+6SQ=="],
 
     "@zgeoff/umami-mcp": ["@zgeoff/umami-mcp@0.1.0", "", { "dependencies": { "@modelcontextprotocol/sdk": "1.29.0", "zod": "3.25.76" }, "bin": { "umami-mcp": "dist/index.js" } }, "sha512-+GhMmBw3SFA4EGKU6HiXj0+MoFsEFNga9vpd0KLLbrn4nDDbBbmgb0bzFe7iG68i1z2oEfvzJt5wUZStoLWZ2g=="],
 
@@ -4914,8 +4914,6 @@
     "@ladle/react/vite": ["vite@6.4.4", "", { "dependencies": { "esbuild": "^0.25.0", "fdir": "^6.4.4", "picomatch": "^4.0.2", "postcss": "^8.5.3", "rollup": "^4.34.9", "tinyglobby": "^0.2.13" }, "optionalDependencies": { "fsevents": "~2.3.3" }, "peerDependencies": { "@types/node": "^18.0.0 || ^20.0.0 || >=22.0.0", "jiti": ">=1.21.0", "less": "*", "lightningcss": "^1.21.0", "sass": "*", "sass-embedded": "*", "stylus": "*", "sugarss": "*", "terser": "^5.16.0", "tsx": "^4.8.1", "yaml": "^2.4.2" }, "optionalPeers": ["@types/node", "jiti", "less", "lightningcss", "sass", "sass-embedded", "stylus", "sugarss", "terser", "tsx", "yaml"], "bin": { "vite": "bin/vite.js" } }, "sha512-xGjU/SyjeNyb0E4KxXBvYz/1C+3JXuujvf2hXNOtnlcE+58o5ajd9N2/n2VhkiJvpCP2qQasnUpx5PXNeI+p1Q=="],
 
     "@modelcontextprotocol/sdk/express": ["express@5.2.1", "", { "dependencies": { "accepts": "^2.0.0", "body-parser": "^2.2.1", "content-disposition": "^1.0.0", "content-type": "^1.0.5", "cookie": "^0.7.1", "cookie-signature": "^1.2.1", "debug": "^4.4.0", "depd": "^2.0.0", "encodeurl": "^2.0.0", "escape-html": "^1.0.3", "etag": "^1.8.1", "finalhandler": "^2.1.0", "fresh": "^2.0.0", "http-errors": "^2.0.0", "merge-descriptors": "^2.0.0", "mime-types": "^3.0.0", "on-finished": "^2.4.1", "once": "^1.4.0", "parseurl": "^1.3.3", "proxy-addr": "^2.0.7", "qs": "^6.14.0", "range-parser": "^1.2.1", "router": "^2.2.0", "send": "^1.1.0", "serve-static": "^2.2.0", "statuses": "^2.0.1", "type-is": "^2.0.1", "vary": "^1.1.2" } }, "sha512-hIS4idWWai69NezIdRt2xFVofaF4j+6INOpJlVOLDO8zXGpUVEVzIYk12UUi2JzjEzWL3IOAxcTubgz9Po0yXw=="],
-
-    "@modelcontextprotocol/sdk/zod": ["zod@4.6.5", "", {}, "sha512-v5l/aFXZQeai4awLbOpSoHecE9UiMrnfx75tEXLjNonXVARxQ5mOeipTjROUchszUNCqnE+hqAMujRsRHsut2Q=="],
 
     "@mswjs/interceptors/@open-draft/deferred-promise": ["@open-draft/deferred-promise@2.2.0", "", {}, "sha512-CecwLWx3rhxVQF6V4bAgPS5t+So2sTbPgAzafKkVizyi7tlwpcFpdFqq+wqF2OwNBmqFuu6tOyouTuxgpMfzmA=="],
 

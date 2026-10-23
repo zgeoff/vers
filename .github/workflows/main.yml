@@ -99,8 +99,27 @@ jobs:
       - name: Slow Tests
         run: bun run test:check-slow
 
+      # the runner's Ubuntu mirror serves the browsers' system packages at a few hundred kB/s on
+      # some runs, long enough to reach the job timeout, so apt keeps its downloads in a cache
+      - name: Read browser package cache key
+        id: browser-packages
+        run:
+          echo "key=e2e-apt-$ImageOS-$(node -p "require('@playwright/test/package.json').version")"
+          >> "$GITHUB_OUTPUT"
+
+      - name: Setup browser package cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/apt-archives
+          key: ${{ steps.browser-packages.outputs.key }}-all
+
       - name: Install E2E browsers
-        run: bun run playwright install --with-deps --only-shell chromium firefox webkit
+        run: |
+          mkdir -p ~/apt-archives/partial
+          printf 'Dir::Cache::Archives "%s";\nAPT::Keep-Downloaded-Packages "true";\nAcquire::Retries "3";\n' ~/apt-archives \
+            | sudo tee /etc/apt/apt.conf.d/90-browser-packages
+          bun run playwright install --with-deps --only-shell chromium firefox webkit
+          sudo chown -R "$USER" ~/apt-archives
 
       - name: E2E Tests
         id: e2e
@@ -336,8 +355,27 @@ jobs:
       - name: Boot the stack
         run: docker compose -f apps/web-e2e/docker-compose.stack.yml up -d --quiet-pull --wait
 
+      # the runner's Ubuntu mirror serves the browsers' system packages at a few hundred kB/s on
+      # some runs, so apt keeps its downloads in a cache
+      - name: Read browser package cache key
+        id: browser-packages
+        run:
+          echo "key=e2e-apt-$ImageOS-$(node -p "require('@playwright/test/package.json').version")"
+          >> "$GITHUB_OUTPUT"
+
+      - name: Setup browser package cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/apt-archives
+          key: ${{ steps.browser-packages.outputs.key }}-chromium
+
       - name: Install E2E browsers
-        run: bun run playwright install --with-deps --only-shell chromium
+        run: |
+          mkdir -p ~/apt-archives/partial
+          printf 'Dir::Cache::Archives "%s";\nAPT::Keep-Downloaded-Packages "true";\nAcquire::Retries "3";\n' ~/apt-archives \
+            | sudo tee /etc/apt/apt.conf.d/90-browser-packages
+          bun run playwright install --with-deps --only-shell chromium
+          sudo chown -R "$USER" ~/apt-archives
 
       - name: Full-stack journeys
         id: journeys
