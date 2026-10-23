@@ -300,32 +300,24 @@ test('it simulates nothing more once the journal cannot be read', async () => {
 test('it closes the connection on disconnect so no further call it makes is answered', async () => {
   using runtime = createWorkerRuntime();
 
-  const ctx = setupTest();
-  const client = ctx.createConnectedTestClient(runtime);
+  const testClient = createTestClient();
 
-  await client.disconnect({});
+  runtime.handleConnect(new MessageEvent('connect', { ports: [testClient.port] }));
 
-  // the close itself is deferred a macrotask past the disconnect call's own answer, so this
-  // outlasts that race before proving the connection is dead
-  await new Promise((resolve) => {
-    setTimeout(resolve, 50);
-  });
+  await testClient.client.disconnect({});
 
-  const answered = (async () => {
-    await client.initialize({});
+  await testClient.closed;
 
-    return 'answered' as const;
-  })();
+  const initialize = testClient.client.initialize({});
 
-  const timedOut = new Promise<'timed-out'>((resolve) => {
-    setTimeout(() => {
-      resolve('timed-out');
-    }, 100);
-  });
-
-  const raced = await Promise.race([answered, timedOut]);
-
-  expect(raced).toBe('timed-out');
+  await expect(
+    waitFor(
+      () => {
+        expect(Bun.peek.status(initialize)).toBe('fulfilled');
+      },
+      { timeoutMs: 100 },
+    ),
+  ).toReject();
 });
 
 test('it resumes into a fresh row once a reconnect drains a held terminal append behind an offline continuation', async () => {

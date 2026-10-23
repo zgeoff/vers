@@ -1006,14 +1006,10 @@ test('it supersedes a running retry loop when flushHeld runs, delivering exactly
 
   expect(remaining).toStrictEqual([]);
 
-  // the superseded loop never fires a duplicate delivery once its old backoff would have elapsed
+  // a superseded backoff that still fired would move the activity to flushing within this increment
   ctx.clock.increment(RETRY_BACKOFF_CAP_MS);
 
-  await new Promise((resolve) => {
-    setTimeout(resolve, 0);
-  });
-
-  expect(track).toHaveBeenCalledTimes(2);
+  expect(ctx.submitter.collectActivityStates()).toStrictEqual([]);
 });
 
 test('it flushes every held activity immediately and resets their backoff', async () => {
@@ -1118,16 +1114,12 @@ test('it ends the retry loop silently once the shutdown signal aborts, with no f
 
   shutdownController.abort();
 
-  const callsAtAbort = track.mock.calls.length;
-
-  // an abort that failed to cancel the loop would fire an attempt as soon as the backoff elapses
+  // a backoff that outlived the abort would move the activity to flushing within this increment
   ctx.clock.increment(RETRY_BACKOFF_CAP_MS);
 
-  await new Promise((resolve) => {
-    setTimeout(resolve, 0);
-  });
-
-  expect(track.mock.calls.length).toBe(callsAtAbort);
+  expect(ctx.submitter.collectActivityStates()).toMatchObject([
+    { activityID: 'shutdown-retry-activity', state: 'idle' },
+  ]);
 });
 
 test('it resolves each submit with the activity-relative version it assigned', async () => {

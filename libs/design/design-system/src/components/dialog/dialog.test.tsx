@@ -1,5 +1,5 @@
 import { expect, mock, test } from 'bun:test';
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Dialog } from './dialog';
 
@@ -100,19 +100,18 @@ test('it does not report a close request on backdrop interaction when non-dismis
     </Dialog>,
   );
 
-  // the outside-interaction tracker registers its document listener a beat after mount — the
-  // dispatch below must land after that beat to exercise it at all
-  await act(
-    () =>
-      new Promise<void>((resolve) => {
-        setTimeout(resolve, 50);
-      }),
-  );
+  const outsidePointerDown = mock(() => {});
 
-  act(() => {
+  screen.getByRole('dialog').addEventListener('pointerdown.outside', outsidePointerDown);
+
+  // Ark's outside-interaction tracker registers its document listener on a timer after mount, so
+  // the interaction repeats until the tracker reports one as outside
+  await waitFor(() => {
     fireEvent.pointerDown(document.body);
     fireEvent.pointerUp(document.body);
     fireEvent.click(document.body);
+
+    expect(outsidePointerDown).toHaveBeenCalled();
   });
 
   expect(onOpenChange).not.toHaveBeenCalled();

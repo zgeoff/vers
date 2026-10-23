@@ -25,11 +25,8 @@ test('it rejects at once for a signal that has already aborted', async () => {
   await expect(pending).toReject();
 });
 
-test('it stays pending while the signal is live', async () => {
+test('it stays pending while the signal is live', () => {
   const pending = makeHungAttempt()(new AbortController().signal);
 
-  // a 20ms race is the bounded proof that nothing settles the promise on its own
-  const winner = await Promise.race([pending, Bun.sleep(20).then(() => 'still pending')]);
-
-  expect(winner).toBe('still pending');
+  expect(Bun.peek.status(pending)).toBe('pending');
 });
