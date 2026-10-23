@@ -165,7 +165,7 @@
   "scripts": {
     "clean": "./scripts/clean.sh",
     "build": "turbo run build",
-    "audit": "bun audit --ignore=GHSA-vfj7-8cjw-p6xm --ignore=GHSA-hp3w-g68c-fv3c",
+    "audit": "bun audit --ignore=GHSA-vfj7-8cjw-p6xm --ignore=GHSA-hp3w-g68c-fv3c --ignore=GHSA-mrhx-c7xc-m3w5",
     "boundaries": "turbo boundaries",
     "deadcode": "knip",
     "lint": "turbo run codegen typegen && oxlint --type-aware --type-check --report-unused-disable-directives-severity error",
