@@ -42,9 +42,6 @@ test('it emits the same checkpoint sequence in one advance as split across sever
   expect(split.rngState).toBe(oneShot.rngState);
 });
 
-// This probes every checkpoint boundary by re-running the full 80s simulation from scratch for
-// each one; the encounter's four waves make each run heavy enough to clear the default 5s test
-// budget on slower CI hardware even though it always terminates deterministically.
 test('it does not lose a checkpoint whose tick lands exactly on the duration boundary', async () => {
   const avatar = createMockAvatarData();
 
@@ -67,20 +64,28 @@ test('it does not lose a checkpoint whose tick lands exactly on the duration bou
 
   const oneShotResult = await oneShot.advanceToDuration(80_000);
 
-  for (let count = 1; count < oneShotResult.checkpoints.length; count++) {
-    const probe = createSimulationDriver(activity, avatar);
+  const boundaryCounts = Array.from(
+    { length: oneShotResult.checkpoints.length - 1 },
+    (_, index) => index + 1,
+  );
 
-    await probe.advanceToDuration(80_000, undefined, count);
+  const reassembled = await Promise.all(
+    boundaryCounts.map(async (count) => {
+      const probe = createSimulationDriver(activity, avatar);
 
-    const boundary = probe.elapsed;
-    const split = createSimulationDriver(activity, avatar);
+      await probe.advanceToDuration(80_000, undefined, count);
 
-    const first = await split.advanceToDuration(boundary);
-    const second = await split.advanceToDuration(80_000);
+      const split = createSimulationDriver(activity, avatar);
 
-    expect([...first.checkpoints, ...second.checkpoints]).toStrictEqual(oneShotResult.checkpoints);
-  }
-}, 20_000);
+      const first = await split.advanceToDuration(probe.elapsed);
+      const second = await split.advanceToDuration(80_000);
+
+      return [...first.checkpoints, ...second.checkpoints];
+    }),
+  );
+
+  expect(reassembled).toStrictEqual(boundaryCounts.map(() => oneShotResult.checkpoints));
+});
 
 test('it advances an idle batch with no boundary-crossing checkpoints', async () => {
   const avatar = createMockAvatarData();

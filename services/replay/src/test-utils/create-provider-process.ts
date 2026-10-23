@@ -5,7 +5,9 @@ import { findListeningPort } from './find-listening-port';
 
 const SERVE_PROVIDER_PATH = path.resolve(import.meta.dirname, '..', 'serve-provider.ts');
 const REPLAY_DIR = path.resolve(import.meta.dirname, '..', '..');
-const BOOT_DEADLINE_MS = 20_000;
+
+// below the 5 s test limit, so a hung boot fails with the child's output instead of a bare timeout
+const BOOT_DEADLINE_MS = 4000;
 
 interface ProviderProcess {
   readonly url: string;
