@@ -1,4 +1,5 @@
 import { expect, onTestFinished, spyOn, test } from 'bun:test';
+import { setImmediate } from 'node:timers/promises';
 import { trace } from '@opentelemetry/api';
 import { implement } from '@orpc/server';
 import { authedRoute, publicRoute } from '@vers/contract-base';
@@ -22,23 +23,25 @@ function setupTest() {
       .route({ method: 'GET', path: '/things' })
       .input(z.object({ id: z.string() }))
       .output(z.object({ id: z.string() })),
+    hold: publicRoute
+      .input(z.object({ label: z.string() }))
+      .output(z.object({ released: z.boolean() })),
     ping: publicRoute.output(z.object({ pong: z.boolean() })),
-    sleep: publicRoute
-      .input(z.object({ durationMs: z.number() }))
-      .output(z.object({ slept: z.boolean() })),
     throwPlainError: publicRoute.output(z.object({})),
   };
 
   const os = implement(contract).$context<ServiceContext>();
+  const holdGate = Promise.withResolvers<void>();
 
   const router = {
     getActiveSpanStability: os.getActiveSpanStability.handler(async () => {
-      // exercises the async-context fidelity the Bun spike verified: a Bun.sleep and a
+      // exercises the async-context fidelity the Bun spike verified: a macrotask yield and a
       // Promise.all both cross a real await boundary, and the request's span stays the active
       // one (a defined span, not a fresh or absent one) on both sides
       const before = trace.getActiveSpan();
 
-      await Bun.sleep(0);
+      await setImmediate();
+
       await Promise.all([Promise.resolve(), Promise.resolve()]);
 
       const after = trace.getActiveSpan();
@@ -55,18 +58,18 @@ function setupTest() {
 
       return { id: opts.input.id };
     }),
-    ping: os.ping.handler(() => ({ pong: true })),
-    sleep: os.sleep.handler(async (opts) => {
-      await Bun.sleep(opts.input.durationMs);
+    hold: os.hold.handler(async () => {
+      await holdGate.promise;
 
-      return { slept: true };
+      return { released: true };
     }),
+    ping: os.ping.handler(() => ({ pong: true })),
     throwPlainError: os.throwPlainError.handler(() => {
       throw new Error('a secret internal detail');
     }),
   };
 
-  return { contract, router };
+  return { contract, releaseHold: holdGate.resolve, router };
 }
 
 test('it throws at boot when SERVICE_AUTH_JWKS is missing', () => {
@@ -781,8 +784,8 @@ test('it logs an undeclared 4xx at warn with its code and status and no data', a
   });
 
   const response = await service.app.handle(
-    new Request('http://test.local/rpc/sleep', {
-      body: JSON.stringify({ json: { durationMs: 'not-a-number' } }),
+    new Request('http://test.local/rpc/hold', {
+      body: JSON.stringify({ json: { label: 42 } }),
       headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
       method: 'POST',
     }),
@@ -867,7 +870,7 @@ test('it logs a request past its slow-request threshold at warn with slow and th
     createRouter: () => ctx.router,
     envShape: {},
     name: 'test-service',
-    slowRequestMs: 10,
+    slowRequestMs: 0,
   });
 
   const warnSpy = spyOn(service.logger, 'warn');
@@ -881,16 +884,16 @@ test('it logs a request past its slow-request threshold at warn with slow and th
     headers: { authorization: `Bearer ${token}` },
   });
 
-  await client.sleep({ durationMs: 30 });
+  await client.ping();
 
   expect(warnSpy).toHaveBeenCalledExactlyOnceWith(
     {
       durationMs: expect.toBeNumber(),
       method: 'POST',
-      path: '/rpc/sleep',
+      path: '/rpc/ping',
       slow: true,
       status: 200,
-      thresholdMs: 10,
+      thresholdMs: 0,
     },
     'request completed',
   );
@@ -922,12 +925,18 @@ test('it logs a request as overdue while it is still open past the overdue thres
     headers: { authorization: `Bearer ${token}` },
   });
 
-  await client.sleep({ durationMs: 30 });
+  const held = client.hold({ label: 'overdue' });
 
-  expect(warnSpy).toHaveBeenCalledExactlyOnceWith(
-    { elapsedMs: 10, method: 'POST', path: '/rpc/sleep' },
-    'request overdue',
-  );
+  await waitFor(() => {
+    expect(warnSpy).toHaveBeenCalledExactlyOnceWith(
+      { elapsedMs: 10, method: 'POST', path: '/rpc/hold' },
+      'request overdue',
+    );
+  });
+
+  ctx.releaseHold();
+
+  await held;
 });
 
 test('it writes no overdue line for a request that finishes inside the threshold', async () => {
@@ -956,7 +965,7 @@ test('it writes no overdue line for a request that finishes inside the threshold
     headers: { authorization: `Bearer ${token}` },
   });
 
-  await client.sleep({ durationMs: 1 });
+  await client.ping();
 
   expect(warnSpy).not.toHaveBeenCalled();
 });
@@ -1026,13 +1035,13 @@ test('it keeps a request under its slow-request threshold at its status-derived 
     headers: { authorization: `Bearer ${token}` },
   });
 
-  await client.sleep({ durationMs: 5 });
+  await client.ping();
 
   expect(infoSpy).toHaveBeenCalledExactlyOnceWith(
     {
       durationMs: expect.toBeNumber(),
       method: 'POST',
-      path: '/rpc/sleep',
+      path: '/rpc/ping',
       status: 200,
     },
     'request completed',
@@ -1052,7 +1061,7 @@ test('it honors a per-path slow-request override over the default threshold', as
     envShape: {},
     name: 'test-service',
     slowRequestMs: 10_000,
-    slowRequestOverridesMs: { '/rpc/sleep': 10 },
+    slowRequestOverridesMs: { '/rpc/ping': 0 },
   });
 
   const warnSpy = spyOn(service.logger, 'warn');
@@ -1066,16 +1075,16 @@ test('it honors a per-path slow-request override over the default threshold', as
     headers: { authorization: `Bearer ${token}` },
   });
 
-  await client.sleep({ durationMs: 30 });
+  await client.ping();
 
   expect(warnSpy).toHaveBeenCalledExactlyOnceWith(
     {
       durationMs: expect.toBeNumber(),
       method: 'POST',
-      path: '/rpc/sleep',
+      path: '/rpc/ping',
       slow: true,
       status: 200,
-      thresholdMs: 10,
+      thresholdMs: 0,
     },
     'request completed',
   );

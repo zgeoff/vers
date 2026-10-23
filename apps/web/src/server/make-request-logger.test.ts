@@ -1,4 +1,5 @@
 import { expect, test } from 'bun:test';
+import { waitFor } from '@vers/test-utils';
 import invariant from 'tiny-invariant';
 import { makeRequestLogger } from './make-request-logger';
 
@@ -291,15 +292,20 @@ test('it logs a request as overdue while it is still open past the overdue thres
     { overdueRequestMs: 10 },
   );
 
-  await requestLogger(
+  const response = Promise.withResolvers<Response>();
+
+  const completed = requestLogger(
     new Request('https://example.test/nexus'),
-    () =>
-      new Promise((resolve) => {
-        setTimeout(() => {
-          resolve(new Response('ok'));
-        }, 30);
-      }),
+    () => response.promise,
   );
+
+  await waitFor(() => {
+    expect(lines.map((line) => line.message)).toStrictEqual(['request overdue']);
+  });
+
+  response.resolve(new Response('ok'));
+
+  await completed;
 
   expect(lines.map((line) => line.message)).toStrictEqual(['request overdue', 'request completed']);
   expect(lines[0]?.fields).toStrictEqual({ elapsedMs: 10, method: 'GET', path: '/nexus' });

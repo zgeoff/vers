@@ -1,4 +1,5 @@
-import { expect, test } from 'bun:test';
+import { expect, mock, test } from 'bun:test';
+import invariant from 'tiny-invariant';
 import { createFakeWebLocks } from '../test-utils/create-fake-web-locks';
 import { startWriterElection } from './start-writer-election';
 
@@ -60,23 +61,17 @@ test('it promotes the next waiter when the holder is released', () => {
   expect(elected).toStrictEqual(['first', 'second']);
 });
 
-test('it never releases the lock on its own', async () => {
-  const fake = createFakeWebLocks();
-  let secondElected = false;
+test('it never releases the lock on its own', () => {
+  const request = mock(
+    (_name: string, _options: Readonly<{ mode: 'exclusive' }>, _onGranted: () => Promise<void>) =>
+      new Promise<void>(() => {}),
+  );
 
-  startWriterElection({ locks: fake.locks, onElected: () => {} });
+  startWriterElection({ locks: { request }, onElected: () => {} });
 
-  startWriterElection({
-    locks: fake.locks,
-    onElected: () => {
-      secondElected = true;
-    },
-  });
+  const onGranted = request.mock.calls[0]?.[2];
 
-  // give any wrongly-settled holder promise a chance to release the lock and promote
-  await new Promise((resolve) => {
-    setTimeout(resolve, 20);
-  });
+  invariant(onGranted);
 
-  expect(secondElected).toBeFalse();
+  expect(Bun.peek.status(onGranted())).toBe('pending');
 });

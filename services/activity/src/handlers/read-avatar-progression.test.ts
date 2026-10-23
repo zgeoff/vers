@@ -16,6 +16,7 @@ import { buildRPCTestClient, waitFor } from '@vers/test-utils';
 import { createActivityService } from '../create-activity-service';
 import { server } from '../mocks/server';
 import { createMockCheckpointBatch } from '../test-utils/factories/create-mock-checkpoint-batch';
+import { readAvatarProgression } from './read-avatar-progression';
 
 // the handlers these tests drive open their own interactive transaction, which the default
 // transaction-isolation handle can't nest — this suite runs against a real, committed schema clone
@@ -436,16 +437,16 @@ test('it attempts no wake delivery when pending is empty', async () => {
 
   await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
 
-  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
-  const wakeHandler = mock(() => ({ drained: 0 }));
+  const sendReplayWake = mock(() => {});
 
-  server.use(mockReplayService.wake.handler(wakeHandler));
+  await readAvatarProgression(
+    { db: ctx.db, sendReplayWake },
+    {
+      context: { actingUserID: viewer.user.id },
+      errors: { UNAUTHORIZED: () => new Error('unauthorized') },
+      input: { avatarID: avatar.id },
+    },
+  );
 
-  await client.getAvatarProgression({ avatarID: avatar.id });
-
-  // no coalesce window to wait out below: the assertion is that nothing was ever sent, so there is
-  // nothing in flight to await — a fixed pause is the only way to prove an absence
-  await Bun.sleep(300);
-
-  expect(wakeHandler).not.toHaveBeenCalled();
+  expect(sendReplayWake).not.toHaveBeenCalled();
 });

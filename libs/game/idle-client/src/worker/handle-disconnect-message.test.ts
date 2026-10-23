@@ -1,4 +1,5 @@
 import { expect, mock, test } from 'bun:test';
+import { waitFor } from '@vers/test-utils';
 import { handleDisconnectMessage } from './handle-disconnect-message';
 
 test('it closes the calling connection once the current turn finishes', async () => {
@@ -8,9 +9,7 @@ test('it closes the calling connection once the current turn finishes', async ()
 
   expect(close).not.toHaveBeenCalled();
 
-  await new Promise((resolve) => {
-    setTimeout(resolve, 0);
+  await waitFor(() => {
+    expect(close).toHaveBeenCalledOnce();
   });
-
-  expect(close).toHaveBeenCalledOnce();
 });

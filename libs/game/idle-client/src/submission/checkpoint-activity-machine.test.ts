@@ -284,20 +284,12 @@ test('it never cancels an in-flight attempt when flushHeld arrives mid-flight', 
 test('it exits retrying with no re-entry once the shutdown signal aborts', async () => {
   const shutdownController = new AbortController();
 
-  const track = mock<() => void>();
-
   const ctx = setupTest({
     activityID: 'shutdown-abort-activity',
     signal: shutdownController.signal,
   });
 
-  server.use(
-    mockActivityService.trackActivityProgress.handler(() => {
-      track();
-
-      return HttpResponse.error();
-    }),
-  );
+  server.use(mockActivityService.trackActivityProgress.handler(() => HttpResponse.error()));
 
   await writeQueuedCheckpoint(
     'shutdown-abort-activity',
@@ -316,16 +308,10 @@ test('it exits retrying with no re-entry once the shutdown signal aborts', async
     expect(ctx.actor.getSnapshot().matches('idle')).toBeTrue();
   });
 
-  const callsAtAbort = track.mock.calls.length;
-
-  // an abort that failed to cancel the backoff would fire an attempt as soon as it elapses
+  // a backoff that outlived the abort would move the actor to flushing within this increment
   ctx.clock.increment(RETRY_BACKOFF_CAP_MS);
 
-  await new Promise((resolve) => {
-    setTimeout(resolve, 0);
-  });
-
-  expect(track.mock.calls.length).toBe(callsAtAbort);
+  expect(ctx.actor.getSnapshot().value).toBe('idle');
 });
 
 test('it reaches invalid on CHECKPOINT_INVALID and never flushes again', async () => {

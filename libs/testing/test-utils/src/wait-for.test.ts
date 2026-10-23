@@ -1,4 +1,5 @@
 import { expect, test } from 'bun:test';
+import { setImmediate } from 'node:timers/promises';
 import { waitFor } from './wait-for';
 
 test('it resolves with the value once the attempt stops throwing', async () => {
@@ -49,7 +50,7 @@ test('it supports an async attempt', async () => {
 
   const value = await waitFor(
     async () => {
-      await Bun.sleep(1);
+      await setImmediate();
 
       calls += 1;
 

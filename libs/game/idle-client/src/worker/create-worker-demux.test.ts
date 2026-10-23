@@ -49,7 +49,16 @@ test('it keeps two tabs isolated under interleaved concurrent calls', async () =
 test('it evicts an idle tab and re-upgrades a re-appearing tab id', async () => {
   using runtime = createWorkerRuntime();
 
-  const upgrade = mock(runtime.upgrade);
+  const closes: Array<string> = [];
+
+  const upgrade = mock((...args: Parameters<typeof runtime.upgrade>) => {
+    onMessagePortClose(args[0], () => {
+      closes.push('close');
+    });
+
+    runtime.upgrade(...args);
+  });
+
   const demux = createWorkerDemux({ evictAfterMs: 20, upgrade });
 
   onTestFinished(() => {
@@ -62,9 +71,8 @@ test('it evicts an idle tab and re-upgrades a re-appearing tab id', async () => 
 
   expect(upgrade).toHaveBeenCalledTimes(1);
 
-  // outlast the eviction window's real-time sweep interval
-  await new Promise((resolve) => {
-    setTimeout(resolve, 60);
+  await waitFor(() => {
+    expect(closes).toStrictEqual(['close']);
   });
 
   const second = createWorkerClient(createBroadcastPort({ tabID: 'tab-x' }));

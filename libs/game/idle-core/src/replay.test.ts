@@ -1815,52 +1815,51 @@ test('it replays a multi-clear stream to an identical checkpoint stream', async 
   `);
 });
 
-test('it produces one identical checkpoint stream across the attempt and driver paths', async () => {
-  const content: EncounterContent = {
-    contentVersion: '1',
-    archetypes: [
-      {
-        id: 'placeholder-brawler',
-        name: 'World Map Enemy',
-        baseLevel: 1,
-        baseLife: 30,
-        baseXP: 10,
-        attackMin: 1,
-        attackMax: 3,
-        attackSpeed: 0.5,
+test.each([17, 90_210, 8_675_309, 424_242_424, 3_047_525_658, 555_000_111])(
+  'it produces one identical checkpoint stream across the attempt and driver paths for seed %d',
+  async (seed) => {
+    const content: EncounterContent = {
+      contentVersion: '1',
+      archetypes: [
+        {
+          id: 'placeholder-brawler',
+          name: 'World Map Enemy',
+          baseLevel: 1,
+          baseLife: 30,
+          baseXP: 10,
+          attackMin: 1,
+          attackMax: 3,
+          attackSpeed: 0.5,
+        },
+        {
+          id: 'placeholder-skirmisher',
+          name: 'World Map Skirmisher',
+          baseLevel: 1,
+          baseLife: 20,
+          baseXP: 8,
+          attackMin: 1,
+          attackMax: 4,
+          attackSpeed: 0.7,
+        },
+      ],
+      pools: [
+        {
+          id: 'default',
+          entries: [
+            { archetypeID: 'placeholder-brawler', weight: 1 },
+            { archetypeID: 'placeholder-skirmisher', weight: 1 },
+          ],
+        },
+      ],
+      tuning: {
+        waveCountMin: 3,
+        waveCountMax: 6,
+        waveSizeMin: 3,
+        waveSizeMax: 6,
+        difficultyScalingFactor: 1,
       },
-      {
-        id: 'placeholder-skirmisher',
-        name: 'World Map Skirmisher',
-        baseLevel: 1,
-        baseLife: 20,
-        baseXP: 8,
-        attackMin: 1,
-        attackMax: 4,
-        attackSpeed: 0.7,
-      },
-    ],
-    pools: [
-      {
-        id: 'default',
-        entries: [
-          { archetypeID: 'placeholder-brawler', weight: 1 },
-          { archetypeID: 'placeholder-skirmisher', weight: 1 },
-        ],
-      },
-    ],
-    tuning: {
-      waveCountMin: 3,
-      waveCountMax: 6,
-      waveSizeMin: 3,
-      waveSizeMax: 6,
-      difficultyScalingFactor: 1,
-    },
-  };
+    };
 
-  const EQUIVALENCE_SEEDS = [17, 90_210, 8_675_309, 424_242_424, 3_047_525_658, 555_000_111];
-
-  for (const seed of EQUIVALENCE_SEEDS) {
     const source = {
       avatarID: 'avatar-equivalence',
       buildSnapshot: { level: 5, xp: 0 },
@@ -1884,5 +1883,5 @@ test('it produces one identical checkpoint stream across the attempt and driver 
     const advanced = await driver.advanceToDuration(120_000, undefined, attempt.checkpoints.length);
 
     expect(advanced.checkpoints).toStrictEqual(attempt.checkpoints);
-  }
-}, 20_000);
+  },
+);
