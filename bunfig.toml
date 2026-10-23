@@ -19,6 +19,7 @@ minimumReleaseAge = 604800
 # qs 6.16.0 (published 2026-08-29, patches GHSA-x5fp-wj9c-mxmx + GHSA-4mjr-xmp4-gh2g) ages past the gate ~2026-09-05 — remove then (#982)
 # http-cache-semantics 4.3.0 (published 2026-10-04, patches GHSA-ch52-4w7c-c8xp) ages past the gate ~2026-10-11 — remove then (#1191)
 # source-map-js 1.2.2 (published 2026-09-30, patches GHSA-68fv-2mgg-jv7q) ages past the gate ~2026-10-07 — remove then (#1191)
+# body-parser 1.20.9 and 2.4.0 (published 2026-10-22, patch GHSA-27r3-jxmh-p828) age past the gate ~2026-10-29 — remove then
 minimumReleaseAgeExcludes = [
   "@zgeoff/bugsink-mcp",
   "@zgeoff/bun-test-extended",
@@ -34,6 +35,7 @@ minimumReleaseAgeExcludes = [
   "qs",
   "http-cache-semantics",
   "source-map-js",
+  "body-parser",
 ]
 
 [test]
