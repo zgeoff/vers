@@ -13,10 +13,10 @@ on:
   schedule:
     # weekly: console drift arrives with no commit, so no push can catch it
     - cron: '17 19 * * 1'
+  workflow_dispatch:
 
 permissions:
   contents: read
-  pull-requests: write
 
 # every trigger previews the same prod stack — one at a time
 concurrency:
@@ -30,6 +30,7 @@ jobs:
       github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name ==
       github.repository
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -46,41 +47,41 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Load stack credentials
-        uses: 1password/load-secrets-action@eb2efd0703da22a93c467f2d1ffbb6826c11e19c # v4.1.1
+      - uses: 1password/install-cli-action@1a3160d5e9de1ae0803eaa08a88746f5ae3daa50 # v4.1.0
         with:
-          export-env: true
           version: 2.34.1
+
+      - uses: pulumi/actions@8e5e406f4007fca908480587cb9893c07090f58d # v7.0.0
+        with:
+          pulumi-version: 3.268.0
+
+      # one op process resolves every reference in .env.example with one sign-in; an action that
+      # spawns op per reference signs in once per secret, and 1Password throttled those bursts
+      - name: Preview
+        working-directory: infra
+        # bash, unlike the default shell, sets pipefail, so the tee keeps the preview's exit code
+        shell: bash
         env:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
-          CLOUDFLARE_API_TOKEN: op://vers-ci/vers-infra/cloudflare-api-token
-          CLOUDFLARE_ACCOUNT_ID: op://vers-ci/vers-infra/cloudflare-account-id
-          AWS_ACCESS_KEY_ID: op://vers-ci/vers-infra/aws-access-key-id
-          AWS_SECRET_ACCESS_KEY: op://vers-ci/vers-infra/aws-secret-access-key
-          AWS_REGION: op://vers-ci/vers-infra/aws-region
-          R2_STATE_BUCKET: op://vers-ci/vers-infra/r2-state-bucket
-          PULUMI_CONFIG_PASSPHRASE: op://vers-ci/vers-infra/pulumi-passphrase
-          AXIOM_TOKEN: op://vers-ci/axiom/iac-token
-          GITHUB_TOKEN: op://vers-ci/vers-infra/github-token
-          NEON_API_KEY: op://vers-ci/neon/api-key
-          DISCORD_ALARMS_WEBHOOK: op://vers-ci/discord-alarms-webhook/credential
-          DOTENV_APP_WEB_DEV: op://vers-ci/DOTENV_APP_WEB_DEV/notesPlain
-          DOTENV_APP_WEB_E2E: op://vers-ci/DOTENV_APP_WEB_E2E/notesPlain
-          DATABASE_URL: op://vers-ci/github-actions/database-url
-          DISCORD_WEBHOOK_URL: op://vers-ci/discord-ci-webhook/credential
-          FLY_API_TOKEN: op://vers-ci/github-actions/fly-api-token
-          SENTRY_AUTH_TOKEN: op://vers-ci/github-actions/sentry-auth-token
+        run: >-
+          op run --env-file=.env.example -- sh -c
+          'PULUMI_BACKEND_URL="s3://$R2_STATE_BUCKET?endpoint=$CLOUDFLARE_ACCOUNT_ID.r2.cloudflarestorage.com&region=auto&s3ForcePathStyle=true"
+          pulumi preview --stack prod --refresh --diff --expect-no-changes --non-interactive --color
+          never' 2>&1 | tee "$RUNNER_TEMP/preview.txt"
 
-      - name: Preview
-        uses: pulumi/actions@8e5e406f4007fca908480587cb9893c07090f58d # v7.0.0
-        with:
-          command: preview
-          stack-name: prod
-          work-dir: infra
-          cloud-url:
-            s3://${{ env.R2_STATE_BUCKET }}?endpoint=${{ env.CLOUDFLARE_ACCOUNT_ID
-            }}.r2.cloudflarestorage.com&region=auto&s3ForcePathStyle=true
-          expect-no-changes: true
-          refresh: true
-          comment-on-pr: ${{ github.event_name == 'pull_request' }}
-          pulumi-version: 3.268.0
+      - name: Summarize preview
+        if: always()
+        run: |
+          {
+            echo '## Pulumi preview (prod)'
+            echo '```text'
+            cat "$RUNNER_TEMP/preview.txt" 2>/dev/null || echo 'the preview step wrote no output'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Report token rate limit
+        if: always()
+        continue-on-error: true
+        run: op service-account ratelimit
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
