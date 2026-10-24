@@ -1,5 +1,6 @@
 import { afterAll } from 'bun:test';
 import {
+  CLONED_DATABASE_REMOVAL_TIMEOUT_MS,
   buildTestTemplateDBName,
   createTestTemplate,
   isTestContainerReachable,
@@ -12,7 +13,7 @@ import { getContainerConnectionURI } from '../get-container-connection-uri';
 const TEST_CONTAINER_PORT = 32_999;
 
 export async function setupBunTestDB(): Promise<void> {
-  afterAll(removeClonedDatabases);
+  afterAll(removeClonedDatabases, CLONED_DATABASE_REMOVAL_TIMEOUT_MS);
 
   if (process.env['TEST_DB_URI'] !== undefined) {
     return;

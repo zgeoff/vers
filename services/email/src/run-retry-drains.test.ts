@@ -14,6 +14,7 @@ test("it stops draining once the job's state is completed", async () => {
     },
     readState: () => Promise.resolve('completed'),
     now: () => 0,
+    signal: new AbortController().signal,
     usefulUntil: new Date(1_000_000),
     wait: (delayMs) => {
       recordedDelays.push(delayMs);
@@ -38,6 +39,7 @@ test("it stops draining once the job's state is failed", async () => {
     },
     readState: () => Promise.resolve('failed'),
     now: () => 0,
+    signal: new AbortController().signal,
     usefulUntil: new Date(1_000_000),
     wait: (delayMs) => {
       recordedDelays.push(delayMs);
@@ -63,6 +65,7 @@ test('it stops draining once the effective deadline passes with the job still in
     },
     readState: () => Promise.resolve('retry'),
     now: () => elapsedMs,
+    signal: new AbortController().signal,
     usefulUntil: new Date(14_000),
     wait: (delayMs) => {
       recordedDelays.push(delayMs);
@@ -90,6 +93,7 @@ test("it keeps draining while the job's state stays retry", async () => {
     },
     readState: () => Promise.resolve(states.shift() ?? 'completed'),
     now: () => 0,
+    signal: new AbortController().signal,
     usefulUntil: new Date(1_000_000),
     wait: (delayMs) => {
       recordedDelays.push(delayMs);
@@ -100,6 +104,62 @@ test("it keeps draining while the job's state stays retry", async () => {
 
   expect(recordedDelays).toStrictEqual([5000, 5000, 5000]);
   expect(drainCalls).toBe(2);
+});
+
+test('it stops before reading the job state once the signal aborts during a wait', async () => {
+  const controller = new AbortController();
+
+  let readStateCalls = 0;
+  let drainCalls = 0;
+
+  await runRetryDrains({
+    drain: () => {
+      drainCalls += 1;
+
+      return Promise.resolve({ completed: 0, failed: 1 });
+    },
+    readState: () => {
+      readStateCalls += 1;
+
+      return Promise.resolve('retry');
+    },
+    now: () => 0,
+    signal: controller.signal,
+    usefulUntil: new Date(1_000_000),
+    wait: () => {
+      controller.abort();
+
+      return Promise.resolve();
+    },
+  });
+
+  expect(readStateCalls).toBe(0);
+  expect(drainCalls).toBe(0);
+});
+
+test('it skips the drain once the signal aborts while the job state is read', async () => {
+  const controller = new AbortController();
+
+  let drainCalls = 0;
+
+  await runRetryDrains({
+    drain: () => {
+      drainCalls += 1;
+
+      return Promise.resolve({ completed: 0, failed: 1 });
+    },
+    readState: () => {
+      controller.abort();
+
+      return Promise.resolve('retry');
+    },
+    now: () => 0,
+    signal: controller.signal,
+    usefulUntil: new Date(1_000_000),
+    wait: () => Promise.resolve(),
+  });
+
+  expect(drainCalls).toBe(0);
 });
 
 test('it caps a far-future usefulUntil at the eight-minute maximum duration', async () => {
@@ -115,6 +175,7 @@ test('it caps a far-future usefulUntil at the eight-minute maximum duration', as
     },
     readState: () => Promise.resolve('retry'),
     now: () => elapsedMs,
+    signal: new AbortController().signal,
     usefulUntil: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
     wait: (delayMs) => {
       recordedDelays.push(delayMs);

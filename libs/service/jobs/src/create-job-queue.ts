@@ -2,6 +2,7 @@ import { withRootSpan } from '@vers/service-utils';
 import { PgBoss, fromKysely } from 'pg-boss';
 import type { KyselyTransactionLike } from 'pg-boss';
 import invariant from 'tiny-invariant';
+import { JOB_QUEUE_STOP_TIMEOUT_MS } from './job-queue-stop-timeout-ms';
 import type { JobDef, JobDefMap, JobDefs, JobPayloads } from './types';
 
 export interface SendJobOptions {
@@ -77,7 +78,7 @@ export function createJobQueue<TPayloads extends JobPayloads>(
 
   return {
     start: () => startQueues(boss, defs),
-    stop: () => boss.stop(),
+    stop: () => boss.stop({ timeout: JOB_QUEUE_STOP_TIMEOUT_MS }),
     send: (name, payload, opts) => sendJob(boss, defs, name, payload, opts),
     drain: (name) => drainJobs(boss, defs, handlers, onJobFailed, name),
     readJobState: (name, jobID) => readJobState(boss, name, jobID),

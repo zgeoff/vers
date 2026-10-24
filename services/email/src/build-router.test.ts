@@ -15,6 +15,7 @@ import { buildRPCTestClient, waitFor } from '@vers/test-utils';
 import { createTraceContext } from '@vers/trace';
 import { HttpResponse, http } from 'msw';
 import { buildEmailRouter } from './build-router';
+import { createBackgroundDrains } from './create-background-drains';
 import type { EmailJobPayloads } from './create-email-job-queue';
 import { createEmailService } from './create-email-service';
 
@@ -233,6 +234,41 @@ test('it keeps a job left failed by a downstream error for a later sweep', async
   expect(backoffDrain).toStrictEqual({ completed: 0, failed: 0 });
 });
 
+test('it delivers a send whose queue stops at once, with no failure report', async () => {
+  const recorded: Array<Readonly<ErrorEvent>> = [];
+  const previousHandle = setSentryHandleForTesting(undefined);
+
+  onTestFinished(() => {
+    setSentryHandleForTesting(previousHandle);
+  });
+
+  await startErrorReporting('https://testpublickey@o0.ingest.sentry.io/1', {
+    beforeSend: (event) => {
+      recorded.push(event);
+
+      return null;
+    },
+    disableDefaultIntegrations: true,
+  });
+
+  await using ctx = await setupTest();
+
+  const result = await ctx.client.sendWelcome({
+    to: 'stopping@example.com',
+    usefulUntil: new Date(Date.now() + 60_000),
+    verificationCode: '123456',
+    verificationURL: 'https://versidle.com/verify',
+  });
+
+  await ctx.queue.stop();
+
+  expect(sentEmails.get('stopping@example.com')).toMatchObject({
+    idempotencyKey: result.jobID,
+  });
+
+  expect(recorded).toBeEmpty();
+});
+
 test('it reports a fire-and-forget drain failure carrying the active trace id', async () => {
   const recorded: Array<Readonly<ErrorEvent>> = [];
   const previousHandle = setSentryHandleForTesting(undefined);
@@ -260,7 +296,7 @@ test('it reports a fire-and-forget drain failure carrying the active trace id', 
     stop: () => Promise.resolve(),
   };
 
-  const router = buildEmailRouter({ logger, queue: stubQueue });
+  const router = buildEmailRouter({ drains: createBackgroundDrains(), logger, queue: stubQueue });
   const trace = createTraceContext();
 
   await withTraceContext(trace, () =>
@@ -311,6 +347,7 @@ test('it re-drains a deadline job every few seconds until its job reaches a term
   };
 
   const router = buildEmailRouter({
+    drains: createBackgroundDrains(),
     logger,
     now: () => elapsedMs,
     queue: stubQueue,
@@ -372,6 +409,7 @@ test('it re-drains a deadline job that another request drain failed, though its 
   };
 
   const router = buildEmailRouter({
+    drains: createBackgroundDrains(),
     logger,
     now: () => elapsedMs,
     queue: stubQueue,
