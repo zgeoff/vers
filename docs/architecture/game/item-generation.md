@@ -49,6 +49,8 @@ the settlement mint rolls an old activity's rewards in the draw order that activ
 build runs the mint. Tables whose content version has no entry fail the roll rather than fall back
 to another draw order.
 
-Each content version records a digest of the item-gen and world-map content sources, tests and mocks
-excluded. CI recomputes the digest and fails when it differs from the one recorded for the bundled
-content version, so a change to either package lands only with a new content version.
+Each content version records a digest of the sources of `@vers/item-gen`, `@vers/roll-crypto` and
+`@vers/worldmap-content`, tests and mocks excluded. The roll stream and its weighted pick live in
+`@vers/roll-crypto`, so they decide draws as much as the interpreter does. CI recomputes the digest
+and fails when it differs from the one recorded for the bundled content version, so a change to any
+of the three packages lands only with a new content version.

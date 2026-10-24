@@ -12,13 +12,15 @@ async function setupTest() {
   return { repoRoot };
 }
 
-test('it reads the sources of both content packages, keyed by their repo path', async () => {
+test('it reads the sources of every content package, keyed by their repo path', async () => {
   const ctx = await setupTest();
 
   await mkdir(join(ctx.repoRoot, 'libs/game/item-gen/src/draw'), { recursive: true });
+  await mkdir(join(ctx.repoRoot, 'libs/game/roll-crypto/src'), { recursive: true });
   await mkdir(join(ctx.repoRoot, 'libs/game/worldmap-content/src'), { recursive: true });
   await writeFile(join(ctx.repoRoot, 'libs/game/item-gen/src/index.ts'), 'export {};\n');
   await writeFile(join(ctx.repoRoot, 'libs/game/item-gen/src/draw/roll.ts'), 'drawRarity();\n');
+  await writeFile(join(ctx.repoRoot, 'libs/game/roll-crypto/src/stream.ts'), 'pickWeighted();\n');
   await writeFile(join(ctx.repoRoot, 'libs/game/worldmap-content/src/derive.ts'), 'derive();\n');
 
   const sources = await readContentSources(ctx.repoRoot);
@@ -26,6 +28,7 @@ test('it reads the sources of both content packages, keyed by their repo path', 
   expect(sources).toIncludeSameMembers([
     { path: 'libs/game/item-gen/src/index.ts', text: 'export {};\n' },
     { path: 'libs/game/item-gen/src/draw/roll.ts', text: 'drawRarity();\n' },
+    { path: 'libs/game/roll-crypto/src/stream.ts', text: 'pickWeighted();\n' },
     { path: 'libs/game/worldmap-content/src/derive.ts', text: 'derive();\n' },
   ]);
 });
@@ -34,10 +37,12 @@ test('it skips test files, mocks and test utilities', async () => {
   const ctx = await setupTest();
 
   await mkdir(join(ctx.repoRoot, 'libs/game/item-gen/src/test-utils'), { recursive: true });
+  await mkdir(join(ctx.repoRoot, 'libs/game/roll-crypto/src'), { recursive: true });
   await mkdir(join(ctx.repoRoot, 'libs/game/worldmap-content/src/mocks'), { recursive: true });
   await writeFile(join(ctx.repoRoot, 'libs/game/item-gen/src/roll.ts'), 'drawRarity();\n');
   await writeFile(join(ctx.repoRoot, 'libs/game/item-gen/src/roll.test.ts'), 'test();\n');
   await writeFile(join(ctx.repoRoot, 'libs/game/item-gen/src/test-utils/build.ts'), 'build();\n');
+  await writeFile(join(ctx.repoRoot, 'libs/game/roll-crypto/src/stream.test.ts'), 'test();\n');
 
   await writeFile(
     join(ctx.repoRoot, 'libs/game/worldmap-content/src/mocks/server.ts'),
@@ -51,14 +56,15 @@ test('it skips test files, mocks and test utilities', async () => {
   ]);
 });
 
-test('it reads no source outside the two content packages', async () => {
+test('it reads no source outside the content packages', async () => {
   const ctx = await setupTest();
 
   await mkdir(join(ctx.repoRoot, 'libs/game/item-gen/src'), { recursive: true });
-  await mkdir(join(ctx.repoRoot, 'libs/game/worldmap-content/src'), { recursive: true });
   await mkdir(join(ctx.repoRoot, 'libs/game/roll-crypto/src'), { recursive: true });
+  await mkdir(join(ctx.repoRoot, 'libs/game/worldmap-content/src'), { recursive: true });
+  await mkdir(join(ctx.repoRoot, 'libs/game/game-utils/src'), { recursive: true });
   await writeFile(join(ctx.repoRoot, 'libs/game/item-gen/src/roll.ts'), 'drawRarity();\n');
-  await writeFile(join(ctx.repoRoot, 'libs/game/roll-crypto/src/stream.ts'), 'stream();\n');
+  await writeFile(join(ctx.repoRoot, 'libs/game/game-utils/src/seed.ts'), 'seed();\n');
 
   const sources = await readContentSources(ctx.repoRoot);
 
@@ -67,10 +73,11 @@ test('it reads no source outside the two content packages', async () => {
   ]);
 });
 
-test('it fails when a content package is missing, rather than digesting the other alone', async () => {
+test('it fails when a content package is missing, rather than digesting the others alone', async () => {
   const ctx = await setupTest();
 
   await mkdir(join(ctx.repoRoot, 'libs/game/item-gen/src'), { recursive: true });
+  await mkdir(join(ctx.repoRoot, 'libs/game/worldmap-content/src'), { recursive: true });
   await writeFile(join(ctx.repoRoot, 'libs/game/item-gen/src/roll.ts'), 'drawRarity();\n');
 
   expect(readContentSources(ctx.repoRoot)).rejects.toMatchObject({ code: 'ENOENT' });

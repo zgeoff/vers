@@ -2,7 +2,12 @@ import path from 'node:path';
 import { Glob } from 'bun';
 import type { ContentSource } from './types';
 
-const CONTENT_SOURCE_DIRS = ['libs/game/item-gen/src', 'libs/game/worldmap-content/src'];
+const CONTENT_SOURCE_DIRS = [
+  'libs/game/item-gen/src',
+  'libs/game/roll-crypto/src',
+  'libs/game/worldmap-content/src',
+];
+
 const TEST_ONLY_PATH = /\.test\.ts$|(?:^|\/)(?:mocks|test-utils)\//u;
 
 export async function readContentSources(repoRoot: string): Promise<ReadonlyArray<ContentSource>> {

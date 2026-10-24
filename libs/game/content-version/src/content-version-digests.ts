@@ -1,3 +1,3 @@
 export const CONTENT_VERSION_DIGESTS: Readonly<Record<string, string>> = {
-  '2': '2faa4d1a9bcebe8922a808eaed7f206cc5e813953047af1c80ea82696095d3eb',
+  '2': '19639ae46851224cd59451bbf1ba0171ab1901c01df398a8f59885bccdc0a674',
 };
