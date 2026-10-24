@@ -58,3 +58,40 @@ test('it reports the fault to the error backend tagged with the active trace id'
     value: 'Service Unavailable',
   });
 });
+
+test("it keeps a trace's tag off a later fault reported outside any trace", async () => {
+  const recorded: Array<Readonly<ErrorEvent>> = [];
+
+  // skipping Sentry's own OTel setup leaves the state production boots into, where the trace
+  // exporter's context manager registered first
+  Sentry.init({
+    beforeSend: (event) => {
+      recorded.push(event);
+
+      return null;
+    },
+    defaultIntegrations: false,
+    dsn: 'https://testpublickey@o0.ingest.sentry.io/1',
+    skipOpenTelemetrySetup: true,
+  });
+
+  onTestFinished(async () => {
+    await Sentry.close();
+  });
+
+  withTraceContext(createTraceContext(), () => {
+    reportFunctionFault(new Error('Bad Gateway'), { error: () => {} });
+  });
+
+  reportFunctionFault(new Error('Gateway Timeout'), { error: () => {} });
+
+  await waitFor(() => {
+    expect(recorded).toHaveLength(2);
+  });
+
+  const later = recorded.find((event) => event.exception?.values?.[0]?.value === 'Gateway Timeout');
+
+  invariant(later, 'the fault outside the trace was recorded');
+
+  expect(later.tags?.['traceID']).toBeUndefined();
+});
