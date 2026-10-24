@@ -1,12 +1,12 @@
 export { buildAdvisoryLockKey } from './build-advisory-lock-key';
 export { buildTestTemplateDBName } from './build-test-template-db-name';
-export { CLONED_DATABASE_REMOVAL_TIMEOUT_MS } from './cloned-database-removal-timeout-ms';
+export { buildClonedDBName } from './build-cloned-db-name';
 export { createClonedDatabase } from './create-cloned-database';
 export { createTestTemplate } from './create-test-template';
 export { isTestContainerReachable } from './is-test-container-reachable';
 export { isTestTemplateDBName } from './is-test-template-db-name';
 export { normalizeDBPart } from './normalize-db-part';
 export { readCurrentBranch } from './read-current-branch';
-export { removeClonedDatabases } from './remove-cloned-databases';
+export { removeOrphanedClones } from './remove-orphaned-clones';
 export { removeTestDatabase } from './remove-test-database';
 export { resolveTestDBTarget } from './resolve-test-db-target';

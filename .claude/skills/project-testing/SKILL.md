@@ -147,6 +147,10 @@ The preload's resets after each test are the contract, so apps/web and idle-clie
 around every file. A preload therefore starts per-file state, such as the MSW server's `listen`, in
 a `beforeAll`, never in its body.
 
+The same timing rules out a teardown in a preload's `afterAll`. A worker keeps its cloned test
+databases across all its files, and each clone's name carries the owning process id. Each worker's
+preload drops, at start, the clones whose process has ended.
+
 Measured on Bun 1.4.3 on a 4-worker dev host, with peak memory summed across the worker processes:
 
 | Package     | Mode                        | Tests | Wall   | Peak memory |

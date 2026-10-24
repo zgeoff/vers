@@ -1,6 +1,6 @@
-import { createId } from '@paralleldrive/cuid2';
 import { createDB } from '../create-db';
 import type { CreateDBConfig } from '../create-db';
+import { buildClonedDBName } from './build-cloned-db-name';
 import { createClonedDatabase } from './create-cloned-database';
 import { removeTestDatabase } from './remove-test-database';
 import { resolveTestDBTarget } from './resolve-test-db-target';
@@ -11,7 +11,7 @@ interface CreateTestDBConfig extends Pick<CreateDBConfig, 'queryDeadlineMs' | 'r
 
 export async function createTestDB(config: CreateTestDBConfig = {}) {
   const target = resolveTestDBTarget();
-  const dbName = `test_${createId()}`;
+  const dbName = buildClonedDBName();
 
   await createClonedDatabase({ baseURI: target.baseURI, dbName, templateDB: target.templateDB });
 
