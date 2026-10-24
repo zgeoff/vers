@@ -68,10 +68,9 @@ truth. It trusts none of the payload:
 - It refuses a start whose sim version is unknown or expired
   ([sim-version registry](./replay-verification.md#sim-version-registry)).
 - It derives the encounter node and its hashed stamps from its own content document.
-- It re-authors the build snapshot, the avatar's equipment, passives, and level pinned as a
-  simulation input, from the avatar's progression
-  ([building against unsettled XP](#building-against-unsettled-xp)), and rejects a start whose
-  predicted snapshot differs.
+- It re-authors the build snapshot, the avatar's level and XP pinned as a simulation input, from the
+  avatar's progression ([building against unsettled XP](#building-against-unsettled-xp)), and
+  rejects a start whose predicted snapshot differs.
 - It recomputes the start hash from the server-derived encounter and stamps and requires the
   submitted hash to equal it. The match proves the client simulated against the content and
   encounter the server derives.
@@ -100,17 +99,19 @@ returns beside the avatar's latest activity.
 
 ## What replay pins
 
-The `Started` checkpoint, the activity's first checkpoint row, pins every input a replay needs: the
-sim and content versions, the key version ([game entropy](./game-entropy.md#version-pinning)), and
-the chain index the activity started from ([seed chain](./seed-chain.md#positions-on-the-chain)).
-The activity's id is a client-assigned label with no cryptographic role, which is what lets the
-client compute a whole fast-forward run with no per-row round trip.
+The admission handler pins every input a replay needs as columns of the activity's head row: the sim
+and content versions, the key version ([game entropy](./game-entropy.md#version-pinning)), the build
+snapshot, the encounter node, and the chain index the activity started from
+([seed chain](./seed-chain.md#positions-on-the-chain)). The `Started` checkpoint, the activity's
+first checkpoint, carries the start seed and no version. The activity's id is a client-assigned
+label with no cryptographic role, which is what lets the client compute a whole fast-forward run
+with no per-row round trip.
 
-A node's encounter parameters freeze onto the `Started` checkpoint at the content version the start
-pins, and every continuation in the same request inherits them. They fold into the start hash, so a
-later content change cannot alter an activity in flight. The server also gates build mutations while
-an activity is active: the client renders a level-up optimistically, and the server applies it
-between activities.
+A node's encounter parameters freeze onto the head row at the content version the start pins, and
+every continuation in the same request inherits them. They fold into the start hash, so a later
+content change cannot alter an activity in flight. The server also gates build mutations while an
+activity is active: the client renders a level-up optimistically, and the server applies it between
+activities.
 
 ## Checkpoint streams
 

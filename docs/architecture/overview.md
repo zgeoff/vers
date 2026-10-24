@@ -28,11 +28,12 @@ session on the account, and an evicted device is signed out on its next request
 
 ## Topology
 
-Each domain service is its own Fly deployment, reachable only on the private mesh, and scales to
-zero when idle ([deployment](./platform/deployment.md)). The replay service runs off the request
-path: it carries no player traffic, and the activity service wakes it with a service call each time
-an append leaves unverified work. Older engine builds stay replayable through per-version replay
-provider apps that the deploy CLI provisions
+Each domain service is its own Fly deployment, reachable only on the private mesh. An idle service
+scales to zero. Two exceptions: the session and activity services each keep one machine warm
+([deployment](./platform/deployment.md#topology)). The replay service runs off the request path: it
+carries no player traffic, and the activity service wakes it with a service call each time an append
+leaves unverified work. Older engine builds stay replayable through per-version replay provider apps
+that the deploy CLI provisions
 ([sim-version registry](./game/replay-verification.md#sim-version-registry)).
 
 ## Data

@@ -1,6 +1,6 @@
 # Replay verification
 
-A queue-fed verifier replays each submitted segment under the sim version its `Started` checkpoint
+A queue-fed verifier replays each submitted segment under the sim version its activity's head row
 pins, compares the result against the stream, and settles what it proved. A sim-version registry
 keeps each engine build replayable for a retention window after a newer build ships.
 [Game simulation](./game-simulation.md) owns the client side: the deterministic core, the inputs a
@@ -13,9 +13,9 @@ rejection moves.
 
 The verifier holds each stream at the checkpoint it last verified for the life of the process, and a
 later batch replays forward from that checkpoint. A stream the verifier does not hold replays from
-its `Started` checkpoint under the sim version stamped there. One exception: the verifier drops the
-least recently used stream once its cache is full, and drops a stream whose iteration fails, so the
-next batch for that stream replays from `Started`. The verifier dispatches the replay to the
+its `Started` checkpoint under the sim version the head row pins. One exception: the verifier drops
+the least recently used stream once its cache is full, and drops a stream whose iteration fails, so
+the next batch for that stream replays from `Started`. The verifier dispatches the replay to the
 provider app for that sim version, so an old segment replays under the code and content that
 produced it. A checkpoint never verifies before the one before it, because each checkpoint's
 position on the seed chain depends on the one before. A drain of the queue starts on:

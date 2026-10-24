@@ -49,12 +49,13 @@ revealed outputs carry no predictive power over unrevealed coordinates.
 
 ### Key custody
 
-Under trade custody, the avatar key never leaves the server, and mint at settlement derives every
-reward under the trade key. Connected play settles a kill's rewards as its checkpoint batches
-verify. A return from offline settles every activity of the offline stretch at once. No connectivity
-state changes what a committed reward is worth. An avatar's economy mode fixes its key custody at
-creation, permanently. The [economy modes note](../../game-design/economy-modes.md#the-mode-choice)
-owns the design of device custody and why its earnings never reach the market.
+Every avatar rolls under trade custody: the avatar key never leaves the server, and mint at
+settlement derives every reward under the trade key. Connected play settles a kill's rewards as its
+checkpoint batches verify. A return from offline settles every activity of the offline stretch at
+once. No connectivity state changes what a committed reward is worth. Mint derives under the trade
+population whatever economy mode the avatar records, so no caller derives a self-found key. The
+[economy modes note](../../game-design/economy-modes.md#the-mode-choice) owns the design of the
+self-found mode, its device custody, and why its earnings never reach the market.
 
 ### Key derivation
 
@@ -64,24 +65,27 @@ owns the design of device custody and why its earnings never reach the market.
 - A key is a pure function of its root secret, the avatar id, and the key version, re-derivable
   bit-for-bit and never re-randomized.
 - Root material lives only on the standalone keys service, the one process that touches it, because
-  a leaked trade root makes every future trade drop computable. A rotation adds a new root version
-  and advances the current pointer, and an older version stays so a pinned key version keeps
-  deriving. Canonical root copies and the rotation log live in 1Password. The keys service writes
-  one audit log line per derivation.
+  a leaked trade root makes every future trade drop computable. The keys service holds every root
+  version of each population and derives under the version its caller passes, so a pinned key
+  version keeps deriving after a new root version lands. The keys service checks its current-version
+  pointer at boot, and no caller reads it: the activity service stamps a key version fixed in its
+  own code, so a new root version reaches no activity until that code changes. Canonical root copies
+  and the rotation log live in 1Password. The keys service writes one audit log line per derivation.
 
 ## Version pinning
 
-The activity's `Started` checkpoint stamps the key version beside the versions a replay pins
-([what replay pins](./game-simulation.md#what-replay-pins)). Content resolves under the stamped
-versions, never the live deploy. Reveal, replay, and mint therefore agree across deploys and root
-rotations.
+The activity's head row pins the key version beside the versions a replay pins
+([what replay pins](./game-simulation.md#what-replay-pins)). Content resolves under the pinned
+versions, never the live deploy. Reveal, replay, and mint therefore agree across deploys and across
+a change of the stamped key version.
 
 ## Provenance
 
 Every checkpoint's hashed field set carries an `entropySource` tag naming which source rolled its
-outcomes. The tag names the custody the roll ran under, server or device. Replay validates the tag
-against the avatar's server-recorded mode, and a mismatch is divergence. Settlement stamps an
-outcome's provenance from server records and the tag, never from a client claim.
+outcomes. The tag names the custody the roll ran under, server or device. Replay recomputes each
+checkpoint hash with the server-custody tag, so a checkpoint tagged with device custody diverges
+whatever the avatar's mode. Settlement stamps an outcome's provenance from server records and the
+tag, never from a client claim.
 
 Tradeability keys on one security property: entropy unpredictable at the moment the outcome was
 committed, and provably tied to the party that minted it. Server-custody rolls and sealed salt have

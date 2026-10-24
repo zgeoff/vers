@@ -4,7 +4,8 @@ import * as pulumi from '@pulumi/pulumi';
 const repository = 'vers';
 
 // the resource owns the repo's labels wholesale: deleting an entry here detaches the label from
-// every issue carrying it, and protect guards whole-set deletion only, not per-entry edits
+// every issue carrying it. retainOnDelete keeps the labels on GitHub when the resource goes, and
+// the resource goes once a deploy has applied that option
 const labels = new github.IssueLabels(
   'vers',
   {
@@ -68,7 +69,7 @@ const labels = new github.IssueLabels(
       { name: 'ux', color: '0E8A16', description: 'polish' },
     ],
   },
-  { protect: true },
+  { protect: false, retainOnDelete: true },
 );
 
 const mainProtectionRuleset = new github.RepositoryRuleset('main-protection', {
