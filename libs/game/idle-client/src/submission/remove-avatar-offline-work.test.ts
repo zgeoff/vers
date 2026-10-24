@@ -121,14 +121,25 @@ test('it never touches the start stamps, which name no avatar', async () => {
   expect(stamps).toStrictEqual({ keyVersion: 1, secretRef: 'ref', secretVersion: 1 });
 });
 
-test('it never touches the cached node seeds, which are re-fetchable inputs rather than undelivered work', async () => {
-  const seed = createMockNodeSeed({ nodeID: '3_4' });
+test('it discards the cached node seeds of the named avatars, whose anchors the discarded work advanced', async () => {
+  await writeNodeSeeds('avatar-owned', [
+    createMockNodeSeed({ anchor: { chainIndex: 14, nextSeed: 'seed-local' }, nodeID: '3_4' }),
+  ]);
 
-  await writeNodeSeeds('avatar-owned', [seed]);
-  await writeActivityStart(createMockActivityData({ avatarID: 'avatar-owned' }));
   await removeAvatarOfflineWork(['avatar-owned']);
 
   const cached = await readNodeSeed('avatar-owned', '3_4');
+
+  expect(cached).toBeUndefined();
+});
+
+test("it keeps another avatar's cached node seeds", async () => {
+  const seed = createMockNodeSeed({ nodeID: '3_4' });
+
+  await writeNodeSeeds('avatar-foreign', [seed]);
+  await removeAvatarOfflineWork(['avatar-owned']);
+
+  const cached = await readNodeSeed('avatar-foreign', '3_4');
 
   expect(cached).toStrictEqual({
     anchor: seed.anchor,

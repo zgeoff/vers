@@ -7,7 +7,7 @@ const project = new neon.Project(
     orgId: 'org-long-snow-12176298',
     regionId: 'aws-ap-southeast-2',
     pgVersion: 17,
-    historyRetentionSeconds: 21_600,
+    historyRetentionSeconds: 604_800,
     defaultEndpointSettings: {
       autoscalingLimitMinCu: 0.25,
       autoscalingLimitMaxCu: 8,

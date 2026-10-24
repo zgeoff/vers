@@ -54,19 +54,14 @@ test('it discards the last-started activity a later start would stamp as its pre
   expect(lastStarted).toBeUndefined();
 });
 
-test('it never touches the cached node seeds, which are re-fetchable inputs rather than undelivered work', async () => {
-  const seed = createMockNodeSeed({ nodeID: '3_4' });
+test('it discards the cached node seeds, whose anchors the discarded work advanced', async () => {
+  await writeNodeSeeds('avatar-1', [
+    createMockNodeSeed({ anchor: { chainIndex: 14, nextSeed: 'seed-local' }, nodeID: '3_4' }),
+  ]);
 
-  await writeNodeSeeds('avatar-1', [seed]);
-  await writeActivityStart(createMockActivityData());
   await removeOfflineWork();
 
   const cached = await readNodeSeed('avatar-1', '3_4');
 
-  expect(cached).toStrictEqual({
-    anchor: seed.anchor,
-    contentVersion: seed.contentVersion,
-    encounterNode: seed.encounterNode,
-    genesisSeed: seed.genesisSeed,
-  });
+  expect(cached).toBeUndefined();
 });

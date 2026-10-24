@@ -16,6 +16,30 @@ drift. [Provisioning](../../runbooks/provisioning.md) creates each database, and
 pipeline applies migrations ([deployment](./deployment.md#pipeline)). Each role's in-database grants
 are SQL, because the Neon API models role existence, not privileges.
 
+## Recovery window
+
+The Neon project keeps seven days of point-in-time history, and the vers-infra program declares that
+window. Inside it, a restore returns `main` to any instant of the past week. Each pre-migration
+backup branch reaches further back, but only to the instant before its migration. A restore moves
+every table back together, so the sessions, chains, activities, items and sim-version registry it
+leaves agree with each other as of the restore point.
+
+An incident restore keeps two targets:
+
+- At most fifteen minutes of data loss. Neon restores to any instant in the window, so the loss is
+  the gap the operator leaves between the restore point and the first bad write. Inside that gap a
+  player loses what the server took: settled XP, minted items, first clears, chains revealed, and
+  accounts created. The restore also signs every device out, which discards the work still waiting
+  in each device's outbox.
+- At most one hour from the decision to restore until players are back in the game. Neon finishes
+  the restore itself in seconds. The hour goes to the steps around it: stopping the deploy pipeline,
+  revoking every session, checking the restored state, and registering the running sim version
+  again.
+
+The [database restore](../../runbooks/database-restore.md) runbook holds those steps, what a device
+does when the server's history moves backward, and the drill that rehearses a restore on a
+disposable branch.
+
 ## Activity checkpoint store
 
 The activity service creates the activity checkpoint tables' rows: a head row per activity, an
