@@ -32,9 +32,10 @@ export async function runFlyctl(
     stdout: output,
   });
 
-  const parentExitSignal: NodeJS.Signals = interrupt === undefined ? 'SIGTERM' : 'SIGINT';
+  const parentExit =
+    interrupt === undefined ? {} : { graceMs: interrupt.graceMs, killSignal: 'SIGINT' as const };
 
-  bindToParent(flyctl, parentExitSignal);
+  bindToParent(flyctl, parentExit);
 
   const forceKill =
     interrupt === undefined
