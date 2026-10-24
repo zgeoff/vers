@@ -116,14 +116,15 @@ export default defineDeployManifest({
       minStartedMachines: 1,
 
       // The anonymous RPC probe must round-trip the contract's typed UNAUTHORIZED through
-      // app-web → flycast → service-user, which no /health check can see.
+      // app-web → flycast → service-avatar, which no /health check can see. The browser proxy
+      // forwards only the services browser code calls, so the probe targets one of them.
       probes: [
         { expectStatus: 200, kind: 'http', url: 'https://vers-app-web.fly.dev/health' },
         {
           body: { json: {} },
           expect: (body) => rpcUnauthorizedReply.safeParse(body).success,
           kind: 'json-post',
-          url: 'https://vers-app-web.fly.dev/api/rpc/user/getCurrentUser',
+          url: 'https://vers-app-web.fly.dev/api/rpc/avatar/getAvatars',
         },
 
         // the landing page measured 0.83 on a cold fleet; 0.6 leaves room for run-to-run variance
