@@ -3,6 +3,75 @@ import * as pulumi from '@pulumi/pulumi';
 
 const repository = 'vers';
 
+// the resource owns the repo's labels wholesale: deleting an entry here detaches the label from
+// every issue carrying it. retainOnDelete keeps the labels on GitHub when the resource goes, and
+// the resource goes once a deploy has applied that option
+const labels = new github.IssueLabels(
+  'vers',
+  {
+    repository,
+    labels: [
+      { name: 'area/auth', color: '1D76DB', description: 'area: authentication & authorization' },
+      { name: 'area/game', color: '33AA3F', description: 'area: simulation, aether, game systems' },
+      {
+        name: 'area/platform',
+        color: 'C5DEF5',
+        description: 'area: deploy, db hosting, monorepo, CI',
+      },
+      { name: 'area/services', color: 'B392F0', description: 'area: backend services & contracts' },
+      { name: 'area/web', color: '5DADE2', description: 'area: web app shell & UI' },
+      { name: 'bug', color: 'd73a4a', description: 'bzzzz' },
+      { name: 'build', color: 'C2E0C6' },
+      { name: 'chore', color: 'FEF2C0', description: 'maintenance / housekeeping' },
+      {
+        name: 'decided',
+        color: '0E8A16',
+        description: 'owner-approved backlog work; Ready once unblocked, no increment needed',
+      },
+      { name: 'dep-audit', color: 'B60205', description: 'bun audit found advisories' },
+      { name: 'dep-outdated', color: 'FBCA04', description: 'weekly outdated-dependency report' },
+
+      // the shared Renovate preset tags every update pull request with it
+      { name: 'dependencies', color: 'ededed' },
+      { name: 'do-not-merge', color: '000000', description: 'reference PR — never merge' },
+      { name: 'documentation', color: 'C2E0C6', description: 'docs' },
+      { name: 'duplicate', color: 'cfd3d7', description: 'already exists' },
+      { name: 'easy win', color: '7057ff', description: 'small task, high value' },
+      { name: 'epic', color: '5319E7', description: 'capturing related work' },
+      { name: 'feature', color: '0052CC', description: 'new feature' },
+      {
+        name: 'game-design',
+        color: '8b5cf6',
+        description: 'game-design lane: discovery → design note → iteration resources',
+      },
+      {
+        name: 'needs-refinement',
+        color: 'E4E669',
+        description: 'scope/decision gap — not ready to pick up until refined',
+      },
+      { name: 'rebuild', color: 'E99695', description: 'greenfield rebuild workstream (#143)' },
+      { name: 'refactor', color: 'BFDADC' },
+      { name: 'research', color: 'd876e3', description: 'engage llm' },
+      { name: 'security', color: 'cf222e', description: 'security-sensitive work' },
+      { name: 'spike', color: '8250DF', description: 'time-boxed prototype to de-risk a decision' },
+      { name: 'tech-debt', color: 'D4C5F9', description: 'accumulated shortcut to revisit' },
+      {
+        name: 'upkeep',
+        color: '0E8A16',
+        description:
+          'event- or date-triggered maintenance; body carries a trigger line the weekly sweep evaluates',
+      },
+      {
+        name: 'upkeep-ready',
+        color: 'D93F0B',
+        description: 'upkeep trigger has fired; cleanup is actionable now',
+      },
+      { name: 'ux', color: '0E8A16', description: 'polish' },
+    ],
+  },
+  { protect: false, retainOnDelete: true },
+);
+
 const mainProtectionRuleset = new github.RepositoryRuleset('main-protection', {
   name: 'main protection',
   repository,
@@ -107,6 +176,7 @@ function requireEnv(name: string): pulumi.Output<string> {
   return pulumi.secret(value);
 }
 
+export const labelCount = labels.labels.apply((entries) => entries?.length ?? 0);
 export const mainProtectionRulesetName = mainProtectionRuleset.name;
 export const productionEnvironmentName = productionEnvironment.environment;
 export const umamiWebsiteIDVariableName = umamiWebsiteIDVariable.variableName;

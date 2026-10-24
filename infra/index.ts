@@ -22,6 +22,7 @@ export {
   dotenvAppWebDevSecretName,
   dotenvAppWebE2ESecretName,
   flyAPITokenSecretName,
+  labelCount,
   mainProtectionRulesetName,
   productionEnvironmentName,
   sentryAuthTokenSecretName,
