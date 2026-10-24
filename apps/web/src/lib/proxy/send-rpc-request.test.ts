@@ -33,6 +33,25 @@ test('it rewrites the proxied path from /api/rpc/<service> to /rpc on the servic
   );
 });
 
+test('it refuses a browser call to the session service without forwarding it', async () => {
+  const resolver = mock<HttpResponseResolver>(() => HttpResponse.json({ token: 'issued' }));
+
+  server.use(http.post('http://localhost:3002/rpc/stepUp/consumePendingTransaction', resolver));
+
+  const outcome = await withRequestContext({}, () =>
+    sendRPCRequest(
+      new Request('http://app.test/api/rpc/session/stepUp/consumePendingTransaction', {
+        body: JSON.stringify({ json: { id: 'self-made-transaction' } }),
+        method: 'POST',
+      }),
+      'session',
+    ),
+  );
+
+  expect(outcome.value.status).toBe(404);
+  expect(resolver).not.toHaveBeenCalled();
+});
+
 test('it forwards the method and body for a caller with no cookie session, minting an anonymous token', async () => {
   const resolver = mock<HttpResponseResolver>(() => HttpResponse.json({}));
 

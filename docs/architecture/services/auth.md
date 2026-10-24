@@ -96,6 +96,10 @@ redeems once, and only for the pending transaction's mutation and session. A red
 not match leaves the grant in place. Postgres cascade-deletes a grant with its session, so a logout
 revokes it, and the session service sweeps expired grants each time it issues one.
 
+Only the edge's server code issues a grant, after it checks the code. The browser proxy
+([service contracts](./service-contracts.md#the-client-side)) refuses every call to the session
+service, so a browser cannot consume a pending transaction it created itself.
+
 ## TOTP verification
 
 The verification service issues and checks TOTP codes, one verification row per target and type. An
