@@ -312,7 +312,7 @@ test('it settles no xp and drops the rejected activity from the pending anchor w
   // a non-zero baseline proves rejection preserves legitimately settled progression rather than
   // passing because there was nothing to lose
   const fixture = await createHonestActivityFixture(ctx.db, {
-    settledXP: 500,
+    avatarSettledXP: 500,
     duration: 80_000,
     seed: buildStateFromSeed(3_047_525_658),
   });

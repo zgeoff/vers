@@ -61,8 +61,8 @@ interface CreateHonestActivityFixtureInput {
   readonly chainRow?: Readonly<Selectable<ActivityChains>>;
   readonly secretRef?: SecretRef;
   readonly secretVersion?: number;
+  readonly avatarSettledXP?: number;
   readonly seed?: string;
-  readonly settledXP?: number;
   readonly startChainIndex?: number;
 }
 
@@ -108,10 +108,10 @@ export async function createHonestActivityFixture(
   const secretRef = input.secretRef ?? 'worldmap';
   const secretVersion = input.secretVersion ?? 1;
 
-  if (input.settledXP !== undefined) {
+  if (input.avatarSettledXP !== undefined) {
     await db
       .updateTable('avatars')
-      .set({ level: buildLevelFromXP(input.settledXP), xp: input.settledXP })
+      .set({ level: buildLevelFromXP(input.avatarSettledXP), xp: input.avatarSettledXP })
       .where('id', '=', chain.avatarId)
       .execute();
   }

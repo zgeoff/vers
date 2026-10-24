@@ -238,10 +238,13 @@ test("it pins an explicit build without touching the shared avatar's settled tot
   expect(settled).toStrictEqual({ level: buildLevelFromXP(30), xp: 30 });
 });
 
-test("it sets the avatar's settled total from an explicit settledXP and pins the build to it", async () => {
+test("it sets the avatar's settled total from an explicit avatarSettledXP and pins the build to it", async () => {
   await using ctx = await createTestDB({ isolation: 'schema' });
 
-  const fixture = await createHonestActivityFixture(ctx.db, { duration: 80_000, settledXP: 250 });
+  const fixture = await createHonestActivityFixture(ctx.db, {
+    avatarSettledXP: 250,
+    duration: 80_000,
+  });
 
   expect(fixture.activity.buildSnapshot).toStrictEqual({ level: buildLevelFromXP(250), xp: 250 });
 

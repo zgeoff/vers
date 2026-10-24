@@ -125,7 +125,7 @@ test('it settles the terminal checkpoint reward into the avatar xp and level on 
 
   // a non-zero baseline distinguishes the delta add from an absolute overwrite
   const fixture = await createHonestActivityFixture(ctx.db, {
-    settledXP: 500,
+    avatarSettledXP: 500,
     duration: 80_000,
     seed: buildStateFromSeed(3_047_525_658),
   });
@@ -399,7 +399,8 @@ test('it settles no additional xp when a stale duplicate target misses the alrea
 test('it keeps an applied zero-xp activity when a stale redelivery arrives after the settled total rose', async () => {
   await using ctx = await setupTest();
 
-  // a brute no build here can damage kills the avatar before any reward, so the run settles 0 xp
+  // the default build cannot damage this brute, so it kills the avatar before any reward and the
+  // run settles 0 xp
   const document = createMockContentDocument({
     contentVersion: '868002',
     encounter: {
@@ -930,7 +931,7 @@ test('it grants a first_clear keyed by the node when a verified segment complete
   // a high build level outlives the default weak content regardless of seed, so this run
   // deterministically reaches a completed terminal rather than a failed one
   const fixture = await createHonestActivityFixture(ctx.db, {
-    settledXP: buildXPThreshold(50),
+    avatarSettledXP: buildXPThreshold(50),
     duration: 80_000,
     seed: buildStateFromSeed(3_047_525_658),
   });
@@ -1143,7 +1144,7 @@ test('it lands no grant when a completed terminal verifies on a non-map-node sco
   // a high build level outlives the default weak content regardless of seed, so this run
   // deterministically reaches a completed terminal rather than a failed one
   const fixture = await createHonestActivityFixture(ctx.db, {
-    settledXP: buildXPThreshold(50),
+    avatarSettledXP: buildXPThreshold(50),
     chain: { scopeType: 'encounter' },
     duration: 80_000,
     seed: buildStateFromSeed(3_047_525_658),
@@ -1199,7 +1200,7 @@ test('it grants a first_clear exactly once across a re-verification of an alread
   // a high build level outlives the default weak content regardless of seed, so this run
   // deterministically reaches a completed terminal rather than a failed one
   const fixture = await createHonestActivityFixture(ctx.db, {
-    settledXP: buildXPThreshold(50),
+    avatarSettledXP: buildXPThreshold(50),
     duration: 80_000,
     seed: buildStateFromSeed(3_047_525_658),
   });
@@ -1269,7 +1270,7 @@ test('it rejects a settled activity whose node no earlier settled clear made rea
 
   // a completed terminal at '1_0' with no grant making the origin — and thus '1_0' — reachable
   const fixture = await createHonestActivityFixture(ctx.db, {
-    settledXP: buildXPThreshold(50),
+    avatarSettledXP: buildXPThreshold(50),
     completedNodeIDs: [],
     duration: 80_000,
     seed: buildStateFromSeed(3_047_525_658),
@@ -1318,7 +1319,7 @@ test('it verifies a world-map-node run whose scope is connected to a verified fi
   // the default fixture already seeds a first-clear grant for a node adjacent to its own scope —
   // this asserts that setup directly before proving replay accepts a run built on top of it
   const fixture = await createHonestActivityFixture(ctx.db, {
-    settledXP: buildXPThreshold(50),
+    avatarSettledXP: buildXPThreshold(50),
     duration: 80_000,
     seed: buildStateFromSeed(3_047_525_658),
   });
@@ -1374,7 +1375,7 @@ test('it rejects a world-map-node run whose scope is not connected to any comple
   const inMemoryMetrics = createInMemoryMetrics();
 
   const fixture = await createHonestActivityFixture(ctx.db, {
-    settledXP: buildXPThreshold(50),
+    avatarSettledXP: buildXPThreshold(50),
     chain: { scopeId: '40_40' },
     completedNodeIDs: [],
     duration: 80_000,
@@ -1583,7 +1584,7 @@ test('it never rejects a world-map-node run at the origin for reachability, even
   const originID = toNodeID(ORIGIN_CELL[0], ORIGIN_CELL[1]);
 
   const fixture = await createHonestActivityFixture(ctx.db, {
-    settledXP: buildXPThreshold(50),
+    avatarSettledXP: buildXPThreshold(50),
     chain: { scopeId: originID },
     completedNodeIDs: [],
     duration: 80_000,
@@ -1623,7 +1624,7 @@ test('it never rejects a non-world_map_node scope for reachability', async () =>
   await using ctx = await setupTest();
 
   const fixture = await createHonestActivityFixture(ctx.db, {
-    settledXP: buildXPThreshold(50),
+    avatarSettledXP: buildXPThreshold(50),
     chain: { scopeType: 'encounter' },
     completedNodeIDs: [],
     duration: 80_000,
