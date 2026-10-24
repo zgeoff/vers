@@ -24,13 +24,14 @@ export async function readChangesSince(baseSHA: string): Promise<ChangeSet | nul
   }
 
   const [diff, isExcluded] = await Promise.all([
-    $`git diff --name-only ${baseSHA} HEAD`.text(),
+    $`git diff --name-only ${`${baseSHA}..HEAD`}`.text(),
     readContextExcluder(),
   ]);
 
   const changedPaths = diff.split('\n').filter((path) => path !== '' && !isExcluded(path));
+  const dryRunArgs = ['run', 'build', '--affected', '--dry=json'];
 
-  const dryRun = await $`${TURBO_BIN} run build --affected --dry=json`
+  const dryRun = await $`${TURBO_BIN} ${dryRunArgs}`
     .env({ ...process.env, TURBO_SCM_BASE: baseSHA })
     .text();
 
