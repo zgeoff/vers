@@ -161,14 +161,14 @@ test('it fails the history check when a recorded migration has no file, with no 
   expect(neonBranchCollection.findMany()).toHaveLength(1);
 });
 
-test('it reports a failed migration with the backup branch to restore from', async () => {
+test('it names the failed migration of a run that rolled back as one transaction', async () => {
   const ctx = await setupTest();
 
   const conflicting = postgres(ctx.databaseURL, { max: 1 });
 
   onTestFinished(() => conflicting.end());
 
-  await conflicting.unsafe('CREATE TABLE users (id text PRIMARY KEY)');
+  await conflicting.unsafe('CREATE TABLE sessions (id text PRIMARY KEY)');
   await neonBranchCollection.create({ name: 'main', projectID: 'quiet-river-1234' });
 
   const run = await runMigrationsWithBackup({
@@ -184,10 +184,14 @@ test('it reports a failed migration with the backup branch to restore from', asy
     onBackupCreated: () => {},
   });
 
+  const pending = await readPendingMigrations({ databaseURL: ctx.databaseURL });
+
   expect(run).toStrictEqual({
-    appliedMigrationNames: [],
     backupBranch: { id: expect.toStartWith('br-'), name: 'pre-migrate-4f1c9a2be07d-run-1-1' },
-    error: expect.objectContaining({ message: 'relation "users" already exists' }),
+    error: expect.objectContaining({ message: 'relation "sessions" already exists' }),
+    failedMigrationName: '1783000000002_sessions',
     kind: 'migration-failed',
   });
+
+  expect(pending).toStrictEqual(ctx.migrationNames);
 });

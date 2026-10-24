@@ -73,8 +73,9 @@ async function runProductionMigrations(): Promise<number> {
       return 0;
     })
     .with({ kind: 'migration-failed' }, (failed) => {
+      // kysely runs a Postgres batch in one transaction, so a failure rolls back the whole run
       console.error(
-        `❌ migration failed after applying [${failed.appliedMigrationNames.join(', ')}]; restore from Neon branch ${failed.backupBranch.name}`,
+        `❌ migration ${failed.failedMigrationName ?? '(unknown)'} failed; the run rolled back, so no migration from it persisted and the database needs no restore from Neon branch ${failed.backupBranch.name}`,
       );
 
       console.error(failed.error);

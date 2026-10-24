@@ -14,6 +14,6 @@ export type MigrationRun =
   | {
       readonly kind: 'migration-failed';
       readonly backupBranch: NeonBranch;
-      readonly appliedMigrationNames: ReadonlyArray<string>;
+      readonly failedMigrationName: string | undefined;
       readonly error: unknown;
     };

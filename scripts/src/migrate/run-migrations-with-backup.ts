@@ -26,20 +26,22 @@ export async function runMigrationsWithBackup(
 
   const resultSet = await applyMigrations({ databaseURL: config.databaseURL });
 
-  const appliedMigrationNames = (resultSet.results ?? [])
-    .filter((result) => result.status === 'Success')
-    .map((result) => result.migrationName);
+  const results = resultSet.results ?? [];
 
   if (resultSet.error !== undefined) {
     return {
-      appliedMigrationNames,
       backupBranch,
       error: resultSet.error,
+      failedMigrationName: results.find((result) => result.status === 'Error')?.migrationName,
       kind: 'migration-failed',
     };
   }
 
-  return { appliedMigrationNames, backupBranch, kind: 'migrated' };
+  return {
+    appliedMigrationNames: results.map((result) => result.migrationName),
+    backupBranch,
+    kind: 'migrated',
+  };
 }
 
 async function checkMigrationHistory(databaseURL: string): Promise<MigrationRun> {
