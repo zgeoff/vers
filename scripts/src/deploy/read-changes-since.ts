@@ -1,4 +1,5 @@
-import { execa } from 'execa';
+import { fileURLToPath } from 'node:url';
+import { $ } from 'bun';
 import { z } from 'zod';
 import { makeContextExcluder } from './make-context-excluder';
 import { parseDockerignore } from './parse-dockerignore';
@@ -8,6 +9,8 @@ import type { ChangeSet } from './types';
 const turboDryRunSchema = z.object({
   packages: z.array(z.string()),
 });
+
+const TURBO_BIN = fileURLToPath(new URL('../../../node_modules/.bin/turbo', import.meta.url));
 
 export async function readChangesSince(baseSHA: string): Promise<ChangeSet | null> {
   const relation = await readCommitRelation(baseSHA);
@@ -21,18 +24,18 @@ export async function readChangesSince(baseSHA: string): Promise<ChangeSet | nul
   }
 
   const [diff, isExcluded] = await Promise.all([
-    execa('git', ['diff', '--name-only', baseSHA, 'HEAD']),
+    $`git diff --name-only ${`${baseSHA}..HEAD`}`.text(),
     readContextExcluder(),
   ]);
 
-  const changedPaths = diff.stdout.split('\n').filter((path) => path !== '' && !isExcluded(path));
+  const changedPaths = diff.split('\n').filter((path) => path !== '' && !isExcluded(path));
+  const dryRunArgs = ['run', 'build', '--affected', '--dry=json'];
 
-  const dryRun = await execa('turbo', ['run', 'build', '--affected', '--dry=json'], {
-    env: { TURBO_SCM_BASE: baseSHA },
-    preferLocal: true,
-  });
+  const dryRun = await $`${TURBO_BIN} ${dryRunArgs}`
+    .env({ ...process.env, TURBO_SCM_BASE: baseSHA })
+    .text();
 
-  const affectedPkgs = turboDryRunSchema.parse(JSON.parse(dryRun.stdout)).packages;
+  const affectedPkgs = turboDryRunSchema.parse(JSON.parse(dryRun)).packages;
 
   return { affectedPkgs, changedPaths };
 }

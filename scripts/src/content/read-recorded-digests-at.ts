@@ -1,4 +1,4 @@
-import { execa } from 'execa';
+import { $ } from 'bun';
 import * as z from 'zod';
 
 const DIGESTS_PATH = 'libs/game/content-version/src/content-version-digests.json';
@@ -8,20 +8,20 @@ export async function readRecordedDigestsAt(
   ref: string,
   repoRoot: string,
 ): Promise<Readonly<Record<string, string>>> {
-  await execa('git', ['rev-parse', '--verify', '--quiet', `${ref}^{commit}`], { cwd: repoRoot });
+  await $`git rev-parse --verify --quiet ${`${ref}^{commit}`}`.cwd(repoRoot).quiet();
 
-  const recorded = await execa('git', ['cat-file', '-e', `${ref}:${DIGESTS_PATH}`], {
-    cwd: repoRoot,
-    reject: false,
-  });
+  const recorded = await $`git cat-file -e ${`${ref}:${DIGESTS_PATH}`}`
+    .cwd(repoRoot)
+    .nothrow()
+    .quiet();
 
   if (recorded.exitCode !== 0) {
     return {};
   }
 
-  const shown = await execa('git', ['show', `${ref}:${DIGESTS_PATH}`], { cwd: repoRoot });
+  const shown = await $`git show ${`${ref}:${DIGESTS_PATH}`}`.cwd(repoRoot).text();
 
-  const parsed: unknown = JSON.parse(shown.stdout);
+  const parsed: unknown = JSON.parse(shown);
 
   return RecordedDigestsSchema.parse(parsed);
 }

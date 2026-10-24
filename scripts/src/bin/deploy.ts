@@ -3,8 +3,8 @@ import { createDB } from '@vers/db';
 import type { DB } from '@vers/db';
 import { readLatestRelease, recordRelease } from '@vers/release-registry';
 import type { ReleaseRow } from '@vers/release-registry';
+import { $ } from 'bun';
 import { Command } from 'commander';
-import { execa } from 'execa';
 import type { Kysely } from 'kysely';
 import { applyBuild } from '../deploy/apply-build';
 import { applyDeploy } from '../deploy/apply-deploy';
@@ -498,9 +498,9 @@ function requireTarget(manifest: DeployManifest, app: string): DeployTarget {
 }
 
 async function readHeadSHA(): Promise<string> {
-  const result = await execa('git', ['rev-parse', 'HEAD']);
+  const sha = await $`git rev-parse HEAD`.text();
 
-  return result.stdout.trim();
+  return sha.trim();
 }
 
 await program.parseAsync();

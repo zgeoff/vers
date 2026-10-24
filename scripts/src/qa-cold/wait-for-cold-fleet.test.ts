@@ -1,9 +1,10 @@
 import { expect, test } from 'bun:test';
-import { createStubFlyctl } from '../test-utils/create-stub-flyctl';
+import { createStubCommand } from '../test-utils/create-stub-command';
 import { waitForColdFleet } from './wait-for-cold-fleet';
 
 test('it resolves once every machine of every app reports cold', async () => {
-  await createStubFlyctl(
+  await createStubCommand(
+    'flyctl',
     `echo '[{"id":"m1","name":"m1","state":"suspended"},{"id":"m2","name":"m2","state":"stopped"}]'`,
   );
 
@@ -11,7 +12,7 @@ test('it resolves once every machine of every app reports cold', async () => {
 });
 
 test('it rejects with the warm machines when the fleet is still warm at the deadline', async () => {
-  await createStubFlyctl(`echo '[{"id":"m1","name":"m1","state":"started"}]'`);
+  await createStubCommand('flyctl', `echo '[{"id":"m1","name":"m1","state":"started"}]'`);
 
   expect(waitForColdFleet(['vers-service-keys'], 200)).rejects.toThrowWithMessage(
     Error,
@@ -20,7 +21,7 @@ test('it rejects with the warm machines when the fleet is still warm at the dead
 });
 
 test('it ends a state read that is still pending at the deadline', async () => {
-  await createStubFlyctl('exec sleep 30');
+  await createStubCommand('flyctl', 'exec sleep 30');
 
   expect(waitForColdFleet(['vers-service-keys'], 200)).rejects.toThrowWithMessage(
     Error,

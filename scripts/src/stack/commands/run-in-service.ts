@@ -1,7 +1,6 @@
-import { execa } from '../../utils/execa';
-import { DOCKER_COMPOSE_FILE } from '../consts';
 import type { ServiceID } from '../types';
+import { runDockerCompose } from '../utils/run-docker-compose';
 
 export async function runInService(service: ServiceID, command: Array<string>): Promise<void> {
-  await execa`docker-compose -f ${DOCKER_COMPOSE_FILE} exec ${service} ${command}`;
+  await runDockerCompose(['exec', service, ...command]);
 }

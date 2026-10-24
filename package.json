@@ -108,7 +108,6 @@
       "chrome-launcher": "1.2.2",
       "commander": "15.0.0",
       "elysia": "1.4.30",
-      "execa": "9.6.1",
       "expect-type": "1.4.0",
       "fake-indexeddb": "6.2.5",
       "fast-equals": "6.2.0",

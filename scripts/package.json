@@ -22,7 +22,6 @@
     "@zgeoff/dbhub": "catalog:",
     "chrome-launcher": "catalog:",
     "commander": "catalog:",
-    "execa": "catalog:",
     "kysely": "catalog:",
     "lighthouse": "catalog:",
     "ora": "catalog:",

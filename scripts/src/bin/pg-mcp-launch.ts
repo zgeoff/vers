@@ -2,16 +2,17 @@ import { writeFileSync } from 'node:fs';
 import { hostname, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { execa } from 'execa';
+import { $ } from 'bun';
 import { buildDevDBName } from '../postgres/build-dev-db-name';
 import { buildDevDSN } from '../postgres/build-dev-dsn';
 import { readVaultDSN } from '../postgres/read-vault-dsn';
 import { renderDBHubTOML } from '../postgres/render-dbhub-toml';
+import { bindToParent } from '../utils/bind-to-parent';
 
 async function runPostgresMCP() {
-  const branchResult = await execa('git', ['rev-parse', '--abbrev-ref', 'HEAD']);
+  const branchOutput = await $`git rev-parse --abbrev-ref HEAD`.text();
 
-  const branch = branchResult.stdout.trim();
+  const branch = branchOutput.trim();
   const dbName = buildDevDBName(hostname(), branch);
 
   const [prodDSN, devBranchDSN] = await Promise.all([
@@ -33,12 +34,15 @@ async function runPostgresMCP() {
 
   const dbhubBin = fileURLToPath(new URL('../../node_modules/.bin/dbhub', import.meta.url));
 
-  const result = await execa(dbhubBin, ['--transport', 'stdio', '--config', configPath], {
-    reject: false,
-    stdio: 'inherit',
+  const dbhub = Bun.spawn([dbhubBin, '--transport', 'stdio', '--config', configPath], {
+    stdio: ['inherit', 'inherit', 'inherit'],
   });
 
-  process.exit(result.exitCode ?? 1);
+  bindToParent(dbhub);
+
+  const exitCode = await dbhub.exited;
+
+  process.exit(exitCode);
 }
 
 try {
