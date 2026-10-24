@@ -13,8 +13,6 @@
   </p>
 </div>
 
----
-
 ## Quick start
 
 ```sh

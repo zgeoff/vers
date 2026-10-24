@@ -10,8 +10,6 @@
   </p>
 </div>
 
----
-
 ## Architecture
 
 How the platform is built — system design, data flows, and operational wiring.
