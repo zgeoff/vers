@@ -1,17 +1,18 @@
 import postgres from 'postgres';
 import { z } from 'zod';
-import { CLONED_DB_PREFIX } from './cloned-db-prefix';
+import { readCloneOwnerPrefix } from './read-clone-owner-prefix';
 import { removeTestDatabase } from './remove-test-database';
 
 const DatabaseRowSchema = z.object({ datname: z.string() });
 
 export async function removeOrphanedClones(baseURI: string): Promise<ReadonlyArray<string>> {
+  const ownerPrefix = readCloneOwnerPrefix();
   const admin = postgres(`${baseURI}/postgres`, { max: 1 });
   let clones: ReadonlyArray<string>;
 
   try {
     const rows = await admin`
-      SELECT datname FROM pg_database WHERE starts_with(datname, ${CLONED_DB_PREFIX})
+      SELECT datname FROM pg_database WHERE starts_with(datname, ${ownerPrefix})
     `;
 
     clones = z
@@ -22,7 +23,7 @@ export async function removeOrphanedClones(baseURI: string): Promise<ReadonlyArr
     await admin.end();
   }
 
-  const orphans = clones.filter((dbName) => !isOwnerAlive(dbName));
+  const orphans = clones.filter((dbName) => !isOwnerAlive(dbName.slice(ownerPrefix.length)));
 
   for (const dbName of orphans) {
     await removeTestDatabase(`${baseURI}/${dbName}`);
@@ -31,8 +32,8 @@ export async function removeOrphanedClones(baseURI: string): Promise<ReadonlyArr
   return orphans;
 }
 
-function isOwnerAlive(dbName: string): boolean {
-  const [pid] = dbName.slice(CLONED_DB_PREFIX.length).split('_', 1);
+function isOwnerAlive(ownedName: string): boolean {
+  const [pid] = ownedName.split('_', 1);
 
   try {
     process.kill(Number(pid), 0);
