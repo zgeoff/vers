@@ -4,10 +4,10 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { updateEnv } from '@vers/test-utils/bun';
 
-export async function createStubDocker(script: string): Promise<string> {
-  const directory = await mkdtemp(join(tmpdir(), 'stub-docker-'));
+export async function createStubCommand(name: string, script: string): Promise<string> {
+  const directory = await mkdtemp(join(tmpdir(), `stub-${name}-`));
 
-  const binPath = join(directory, 'docker');
+  const binPath = join(directory, name);
 
   await writeFile(binPath, `#!/bin/sh\n${script}\n`, { mode: 0o755 });
 
