@@ -59,12 +59,25 @@ jobs:
       # spawns op per reference signs in once per secret, and 1Password throttled those bursts
       - name: Preview
         working-directory: infra
+        # bash, unlike the default shell, sets pipefail, so the tee keeps the preview's exit code
+        shell: bash
         env:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
         run: >-
           op run --env-file=.env.example -- sh -c
           'PULUMI_BACKEND_URL="s3://$R2_STATE_BUCKET?endpoint=$CLOUDFLARE_ACCOUNT_ID.r2.cloudflarestorage.com&region=auto&s3ForcePathStyle=true"
-          pulumi preview --stack prod --refresh --diff --expect-no-changes --non-interactive'
+          pulumi preview --stack prod --refresh --diff --expect-no-changes --non-interactive --color
+          never' 2>&1 | tee "$RUNNER_TEMP/preview.txt"
+
+      - name: Summarize preview
+        if: always()
+        run: |
+          {
+            echo '## Pulumi preview (prod)'
+            echo '```text'
+            cat "$RUNNER_TEMP/preview.txt" 2>/dev/null || echo 'the preview step wrote no output'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Report token rate limit
         if: always()
