@@ -141,29 +141,19 @@ isolation, in a random order. A file that depends on the order of the files befo
 a new package's script takes the same flag. A failed run prints its `--seed=<n>`; pass that seed
 back to reproduce the order.
 
-The preload's resets after each test are the contract, so apps/web and idle-client also pass at
+The preload's resets after each test are the contract, so a suite must also pass at
 `bun test --parallel=4 --no-isolate`, where each worker shares one process across its files. Under
 `--parallel`, Bun runs a preload's body once per worker but fires its `beforeAll` and `afterAll`
 around every file. A preload therefore starts per-file state, such as the MSW server's `listen`, in
 a `beforeAll`, never in its body.
 
 The same timing rules out a teardown in a preload's `afterAll`. A worker keeps its cloned test
-databases across all its files, and each clone's name carries the owning process id. Each worker's
-preload drops, at start, the clones whose process has ended.
+databases across all its files, and each clone's name carries an owner tag, from the host name and
+the pid namespace, and the owning process id. Each worker's preload drops, at start, the clones with
+its own tag whose process has ended.
 
-Measured on Bun 1.4.3 on a 4-worker dev host, with peak memory summed across the worker processes:
-
-| Package     | Mode                        | Tests | Wall   | Peak memory |
-| ----------- | --------------------------- | ----- | ------ | ----------- |
-| apps/web    | plain `bun test`            | 675   | 14.2 s | 673 MiB     |
-| apps/web    | `--parallel=4` (isolated)   | 675   | 35.6 s | 2,141 MiB   |
-| apps/web    | `--parallel=4 --no-isolate` | 675   | 6.3 s  | 1,509 MiB   |
-| idle-client | plain `bun test`            | 661   | 8.7 s  | 324 MiB     |
-| idle-client | `--parallel=4` (isolated)   | 661   | 13.1 s | 1,330 MiB   |
-| idle-client | `--parallel=4 --no-isolate` | 661   | 2.8 s  | 854 MiB     |
-
-Turbo runs 4 packages at once in CI, so each package stays on plain `bun test`, the cheapest mode in
-memory.
+Turbo runs several packages at once in CI, so each package stays on plain `bun test`, the cheapest
+mode in memory.
 
 ## Golden values
 
