@@ -67,7 +67,7 @@ export interface RolledItem extends RolledAffixes {
   readonly contentVersion: string;
 }
 
-export type ItemInterpreter = (
+type ItemInterpreter = (
   tables: Readonly<LootTables>,
   context: Readonly<SlotContext>,
   stream: RollStream,
