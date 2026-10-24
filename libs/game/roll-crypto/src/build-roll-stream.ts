@@ -86,12 +86,12 @@ export function buildRollStream(seed: Uint8Array, domain: string): RollStream {
     invariant(total <= 2 ** 32, 'total weight must not exceed 2^32');
 
     const roll = rollRange(0, total - 1);
-    let runningWeight = 0;
+    let cumulative = 0;
 
     const picked = entries.find((entry) => {
-      runningWeight += entry.weight;
+      cumulative += entry.weight;
 
-      return roll < runningWeight;
+      return roll < cumulative;
     });
 
     invariant(picked, 'weighted walk must land within the total');
