@@ -1,3 +1,5 @@
+import type { RollStream } from '@vers/roll-crypto';
+
 export interface RewardCoordinate {
   readonly avatarID: string;
   readonly scopeType: string;
@@ -64,6 +66,14 @@ export interface RolledItem extends RolledAffixes {
   readonly rarityID: string;
   readonly contentVersion: string;
 }
+
+type ItemInterpreter = (
+  tables: Readonly<LootTables>,
+  context: Readonly<SlotContext>,
+  stream: RollStream,
+) => RolledItem;
+
+export type ItemInterpreters = Readonly<Record<string, ItemInterpreter>>;
 
 export interface ItemState {
   readonly baseID: string;

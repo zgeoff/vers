@@ -10,7 +10,7 @@ import {
   isTerminalCheckpointType,
 } from '@vers/idle-core';
 import { runSimulation } from '@vers/idle-core/replay';
-import { buildPositionStream, rollItemFromStream } from '@vers/item-gen';
+import { ITEM_INTERPRETERS, buildPositionStream, rollItemFromStream } from '@vers/item-gen';
 import { deriveWorldmapContent } from '@vers/worldmap-content';
 import { ORIGIN_CELL, getDifficulty, toNodeID } from '@vers/worldmap-core';
 import type { Insertable } from 'kysely';
@@ -280,6 +280,7 @@ function rollItems(
       });
 
       const item = rollItemFromStream(
+        ITEM_INTERPRETERS,
         input.document.loot,
         { nodeTier: slot.context.nodeTier },
         stream,

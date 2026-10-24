@@ -1,6 +1,7 @@
 import type { ContentDocument } from '@vers/contract-activity';
 import type { DB } from '@vers/db';
 import type { SimulationDriver } from '@vers/idle-core';
+import type { ItemInterpreters } from '@vers/item-gen';
 import type { CryptoKey } from 'jose';
 import type { Kysely, Transaction } from 'kysely';
 import type pino from 'pino';
@@ -36,6 +37,8 @@ export interface ReplayWorkerDeps {
   readonly cache: ReplayCache;
 
   readonly db: Kysely<DB>;
+
+  readonly itemInterpreters?: ItemInterpreters;
 
   readonly iterationDeadlineMs?: number;
 

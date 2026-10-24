@@ -96,6 +96,12 @@ jobs:
       - name: Check Doc Paths
         run: bun run docs:check-paths
 
+      # a change to item-gen, roll-crypto or worldmap-content fails here unless it ships as a new
+      # content version, because a retained activity mints through the interpreter its version pins;
+      # the base ref's recorded digests stay as they were
+      - name: Check Content Digest
+        run: bun run content:check-digest --base main
+
       - name: Generate Types
         run: bun run codegen:types
 

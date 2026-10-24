@@ -1,10 +1,11 @@
 import { buildPositionStream, rollItemFromStream } from '@vers/item-gen';
-import type { LootTables } from '@vers/item-gen';
+import type { ItemInterpreters, LootTables } from '@vers/item-gen';
 import type { RewardFact } from '../replay/types';
 import type { MintedItem } from '../types';
 
 interface RollRewardItemsInput {
   readonly avatarID: string;
+  readonly interpreters: ItemInterpreters;
   readonly keyVersion: number;
   readonly rewardFacts: ReadonlyArray<RewardFact>;
   readonly scopeID: string;
@@ -26,7 +27,12 @@ export function rollRewardItems(
       scopeType: input.scopeType,
     });
 
-    const item = rollItemFromStream(input.tables, { nodeTier: fact.nodeTier }, stream);
+    const item = rollItemFromStream(
+      input.interpreters,
+      input.tables,
+      { nodeTier: fact.nodeTier },
+      stream,
+    );
 
     return {
       affixes: item.affixes,

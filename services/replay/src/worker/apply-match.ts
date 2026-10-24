@@ -1,6 +1,7 @@
 import { isDefinedError } from '@orpc/client';
 import type { ContentDocument } from '@vers/contract-activity';
 import type { SimulationDriver } from '@vers/idle-core';
+import { ITEM_INTERPRETERS } from '@vers/item-gen';
 import invariant from 'tiny-invariant';
 import { applyVerifiedSegment } from '../apply/apply-verified-segment';
 import { recordSettledXP } from '../metrics/record-settled-xp';
@@ -179,6 +180,7 @@ async function tryRollRewardItems(
 
   return rollRewardItems(rollKey, {
     avatarID: segment.activity.avatarID,
+    interpreters: options.deps.itemInterpreters ?? ITEM_INTERPRETERS,
     keyVersion: segment.activity.keyVersion,
     rewardFacts: options.rewardFacts,
     scopeID: segment.activity.scopeID,

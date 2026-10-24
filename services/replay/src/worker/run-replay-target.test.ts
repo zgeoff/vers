@@ -1,10 +1,14 @@
 import { expect, test } from 'bun:test';
+import { sha256 } from '@noble/hashes/sha2.js';
+import { utf8ToBytes } from '@noble/hashes/utils.js';
 import { createContentVersion, makeContentDocumentLoader } from '@vers/content-registry';
 import { createMockContentDocument } from '@vers/contract-activity/test-utils';
 import { buildStateFromSeed } from '@vers/game-utils';
 import { ActivityCheckpointType, buildLevelFromXP, buildXPThreshold } from '@vers/idle-core';
+import { ITEM_INTERPRETERS, buildPositionStream, rollItemFromStream } from '@vers/item-gen';
 import { resolveServiceURL } from '@vers/mock-services';
 import { mockKeysService } from '@vers/mock-services/keys';
+import { deriveAvatarKey } from '@vers/roll-crypto';
 import { createTestDB, resolveTestServiceKeyPair } from '@vers/service-test-utils/bun';
 import { createInMemoryMetrics } from '@vers/test-utils/bun';
 import { ORIGIN_CELL, toNodeID } from '@vers/worldmap-core';
@@ -723,11 +727,16 @@ test("it verifies an honest row sealed under the avatar's own seed, not a shared
     seed: buildStateFromSeed(3_047_525_658),
   });
 
+  const sealedInterpreter = ITEM_INTERPRETERS['2'];
+
+  invariant(sealedInterpreter, 'content version 2 has an item interpreter');
+
   const cache = createReplayCache();
 
   const deps = {
     cache,
     db: ctx.db,
+    itemInterpreters: { '849851': sealedInterpreter },
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
     logger: pino({ enabled: false }),
@@ -1658,4 +1667,103 @@ test('it never rejects a non-world_map_node scope for reachability', async () =>
   );
 
   expect(outcome.kind).toBe('matched');
+});
+
+test('it mints an old activity through its pinned content version interpreter after a later version changes the draw order', async () => {
+  await using ctx = await setupTest();
+
+  const document = createMockContentDocument({ contentVersion: '2' });
+
+  const fixture = await createHonestActivityFixture(ctx.db, {
+    document,
+    duration: 80_000,
+    seed: buildStateFromSeed(3_047_525_658),
+  });
+
+  const rollKey = deriveAvatarKey({
+    avatarID: fixture.activity.avatarId,
+    keyVersion: fixture.activity.keyVersion,
+    population: 'trade',
+    root: sha256(utf8ToBytes(`vers-mock-root|trade|${fixture.activity.keyVersion}`)),
+  });
+
+  const expectedItems = fixture.engineCheckpoints.flatMap((checkpoint, index) =>
+    (checkpoint.rewardSlots ?? []).map((slot) => {
+      const chainIndex = fixture.activity.startChainIndex + index + 1;
+
+      const stream = buildPositionStream(rollKey, {
+        avatarID: fixture.activity.avatarId,
+        chainIndex,
+        kind: 'reward',
+        ordinal: slot.ordinal,
+        scopeID: fixture.activity.scopeId,
+        scopeType: fixture.activity.scopeType,
+      });
+
+      const item = rollItemFromStream(
+        ITEM_INTERPRETERS,
+        document.loot,
+        { nodeTier: slot.context.nodeTier },
+        stream,
+      );
+
+      return {
+        affixes: item.affixes,
+        baseId: item.baseID,
+        chainIndex,
+        contentVersion: '2',
+        ordinal: slot.ordinal,
+        rarityId: item.rarityID,
+      };
+    }),
+  );
+
+  invariant(expectedItems.length > 0, 'the fixture run earns at least one reward slot');
+
+  const cache = createReplayCache();
+
+  // the build after the deploy: the old versions keep their interpreter, and version 3 ships a
+  // changed draw order
+  const deps = {
+    cache,
+    db: ctx.db,
+    itemInterpreters: {
+      ...ITEM_INTERPRETERS,
+      '3': () => ({
+        affixes: [],
+        baseID: 'reordered-base',
+        contentVersion: '3',
+        rarityID: 'reordered-rarity',
+      }),
+    },
+    keysServiceURL: resolveServiceURL('keys'),
+    loadContentDocument: makeContentDocumentLoader(ctx.db),
+    logger: pino({ enabled: false }),
+    privateKey: ctx.privateKey,
+    simVersion: 'test-engine-hash',
+  };
+
+  const outcome = await ctx.db.transaction().execute((trx) =>
+    runReplayTarget(
+      { trx, deps, cache },
+      {
+        activityID: fixture.activity.id,
+        appendedHead: fixture.activity.appendedHead,
+        replayAttempts: 0,
+        startChainIndex: fixture.activity.startChainIndex,
+        status: fixture.activity.status,
+        verifiedHead: 0,
+      },
+    ),
+  );
+
+  expect(outcome.kind).toBe('matched');
+
+  const minted = await ctx.db
+    .selectFrom('avatarItems')
+    .select(['affixes', 'baseId', 'chainIndex', 'contentVersion', 'ordinal', 'rarityId'])
+    .where('avatarId', '=', fixture.activity.avatarId)
+    .execute();
+
+  expect(minted).toIncludeSameMembers(expectedItems);
 });
