@@ -1,13 +1,9 @@
 import { findArchivedActivityID } from './find-archived-activity-id';
+import type { ExpiredArchive } from './types';
 
 interface ListedObject {
   readonly key: string;
   readonly lastModified?: string;
-}
-
-interface ExpiredArchive {
-  readonly activityID: string;
-  readonly key: string;
 }
 
 export function collectExpiredArchives(

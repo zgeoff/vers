@@ -7,7 +7,11 @@ import { parseArchiveConfig } from '../checkpoint-archive/parse-archive-config';
 import { restoreActivityCheckpoints } from '../checkpoint-archive/restore-activity-checkpoints';
 import { runCheckpointSweep } from '../checkpoint-archive/run-checkpoint-sweep';
 import type { CheckpointArchiveDeps } from '../checkpoint-archive/types';
+import { withArchiveLock } from '../checkpoint-archive/with-archive-lock';
 import { requireEnvVar } from '../utils/require-env-var';
+
+const BUSY_MESSAGE =
+  '✗ checkpoint archive — another sweep or restore holds the archive lock; nothing read, written or deleted';
 
 interface SweepCommandOptions {
   readonly apply: boolean;
@@ -36,13 +40,24 @@ program
       return;
     }
 
-    const summary = await runCheckpointSweep(deps, {
-      apply: options.apply,
-      limit: CHECKPOINT_RETENTION.sweepLimit,
-      now: new Date(),
-    });
+    const swept = await withArchiveLock(deps.db, (connection) =>
+      runCheckpointSweep(
+        { bucket: deps.bucket, db: connection },
+        { apply: options.apply, limit: CHECKPOINT_RETENTION.sweepLimit, now: new Date() },
+      ),
+    );
 
     await deps.db.destroy();
+
+    if (swept.kind === 'busy') {
+      console.error(BUSY_MESSAGE);
+
+      process.exitCode = 1;
+
+      return;
+    }
+
+    const summary = swept.result;
 
     const report = options.apply
       ? `checkpoint sweep: archived ${summary.archived} of ${summary.candidates} activity(ies), deleted ${summary.deletedRows} row(s), skipped ${summary.changed} that changed, purged ${summary.purged} archive(s)`
@@ -64,11 +79,21 @@ program
       return;
     }
 
-    const outcome = await restoreActivityCheckpoints(deps, options.activity);
+    const restore = await withArchiveLock(deps.db, (connection) =>
+      restoreActivityCheckpoints({ bucket: deps.bucket, db: connection }, options.activity),
+    );
 
     await deps.db.destroy();
 
-    match(outcome)
+    if (restore.kind === 'busy') {
+      console.error(BUSY_MESSAGE);
+
+      process.exitCode = 1;
+
+      return;
+    }
+
+    match(restore.result)
       .with({ kind: 'restored' }, (restored) => {
         console.log(`restored ${restored.restoredRows} row(s) of activity ${options.activity}`);
       })

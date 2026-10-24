@@ -52,8 +52,11 @@ over several days. A rejected activity never leaves the hot tier, so rejected st
 part of the table that grows without a bound, at the rate the verifier rejects activities.
 
 The sweep purges an object ninety days after it wrote it, and only when the activity's head row
-carries the archive stamp. It never deletes a head row, an item or a grant. The verifier never reads
-object storage. An operator restores one activity's rows for an investigation
+carries an archive stamp at least as old. It reads the stamp and the object's write time again just
+before each delete, so an archive that a restore and a later sweep wrote again stays. One sweep or
+restore runs at a time: each holds a database advisory lock for its whole run, and a run that finds
+the lock taken stops before any read. The sweep never deletes a head row, an item or a grant. The
+verifier never reads object storage. An operator restores one activity's rows for an investigation
 ([checkpoint archive](../../runbooks/checkpoint-archive.md)), and the restore clears the stamp, so
 the next sweep archives the activity again.
 

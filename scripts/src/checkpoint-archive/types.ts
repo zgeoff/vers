@@ -21,3 +21,8 @@ export interface CheckpointArchiveDeps {
 }
 
 export type CheckpointRow = Selectable<ActivityCheckpoints>;
+
+export interface ExpiredArchive {
+  readonly activityID: string;
+  readonly key: string;
+}

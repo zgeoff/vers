@@ -13,8 +13,33 @@ function setupTest(options: Parameters<typeof startStubS3>[0] = {}) {
     secretAccessKey: 'stub-secret-key',
   });
 
-  return { client };
+  return { client, stub };
 }
+
+test('it lists an object with the write time a test set on it', async () => {
+  const ctx = setupTest();
+
+  await ctx.client.write('checkpoints/avatar_a/act_a.jsonl.gz', 'one');
+
+  ctx.stub.setLastModified(
+    'checkpoints/avatar_a/act_a.jsonl.gz',
+    new Date('2026-01-01T00:00:00.000Z'),
+  );
+
+  const listed = await ctx.client.list({ prefix: 'checkpoints/' });
+
+  expect(listed.contents?.map((object) => object.lastModified)).toStrictEqual([
+    '2026-01-01T00:00:00.000Z',
+  ]);
+});
+
+test('it rejects a write time for an object it does not hold', () => {
+  const ctx = setupTest();
+
+  expect(() => {
+    ctx.stub.setLastModified('checkpoints/avatar_a/act_missing.jsonl.gz', new Date());
+  }).toThrowWithMessage(Error, /holds no object/u);
+});
 
 test('it returns the bytes an upload wrote', async () => {
   const ctx = setupTest();

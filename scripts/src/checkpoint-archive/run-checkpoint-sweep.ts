@@ -1,7 +1,8 @@
 import { archiveActivityCheckpoints } from './archive-activity-checkpoints';
 import { CHECKPOINT_RETENTION } from './checkpoint-retention';
 import { readArchiveCandidates } from './read-archive-candidates';
-import { readExpiredArchiveKeys } from './read-expired-archive-keys';
+import { readExpiredArchives } from './read-expired-archives';
+import { removeExpiredArchives } from './remove-expired-archives';
 import type { CheckpointArchiveDeps } from './types';
 
 interface RunCheckpointSweepInput {
@@ -28,10 +29,9 @@ export async function runCheckpointSweep(
     verifiedBefore: new Date(input.now.getTime() - CHECKPOINT_RETENTION.hotWindowMs),
   });
 
-  const expiredKeys = await readExpiredArchiveKeys(
-    deps,
-    new Date(input.now.getTime() - CHECKPOINT_RETENTION.archiveRetentionMs),
-  );
+  const writtenBefore = new Date(input.now.getTime() - CHECKPOINT_RETENTION.archiveRetentionMs);
+
+  const expired = await readExpiredArchives(deps, writtenBefore);
 
   if (!input.apply) {
     return {
@@ -39,7 +39,7 @@ export async function runCheckpointSweep(
       candidates: candidates.length,
       changed: 0,
       deletedRows: 0,
-      expiredArchives: expiredKeys.length,
+      expiredArchives: expired.length,
       purged: 0,
     };
   }
@@ -52,9 +52,7 @@ export async function runCheckpointSweep(
     outcomes.push(outcome);
   }
 
-  for (const key of expiredKeys) {
-    await deps.bucket.delete(key);
-  }
+  const purged = await removeExpiredArchives(deps, expired, writtenBefore);
 
   const archived = outcomes.filter((outcome) => outcome.kind === 'archived');
 
@@ -63,7 +61,7 @@ export async function runCheckpointSweep(
     candidates: candidates.length,
     changed: outcomes.length - archived.length,
     deletedRows: archived.reduce((total, outcome) => total + outcome.deletedRows, 0),
-    expiredArchives: expiredKeys.length,
-    purged: expiredKeys.length,
+    expiredArchives: expired.length,
+    purged,
   };
 }

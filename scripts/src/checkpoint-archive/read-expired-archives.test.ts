@@ -7,7 +7,7 @@ import {
 } from '@vers/service-test-utils/bun';
 import { S3Client } from 'bun';
 import { startStubS3 } from '../test-utils/start-stub-s3';
-import { readExpiredArchiveKeys } from './read-expired-archive-keys';
+import { readExpiredArchives } from './read-expired-archives';
 
 async function setupTest() {
   const testDB = await createTestDB();
@@ -51,11 +51,11 @@ test('it reads the expired archives of stamped activities across every listing p
   await ctx.bucket.write('checkpoints/avatar_pages/act_page_b.jsonl.gz', 'rows');
   await ctx.bucket.write('checkpoints/avatar_pages/act_page_c.jsonl.gz', 'rows');
 
-  const keys = await readExpiredArchiveKeys(ctx, new Date(Date.now() + 60_000));
+  const archives = await readExpiredArchives(ctx, new Date(Date.now() + 60_000));
 
-  expect(keys).toStrictEqual([
-    'checkpoints/avatar_pages/act_page_a.jsonl.gz',
-    'checkpoints/avatar_pages/act_page_b.jsonl.gz',
+  expect(archives).toStrictEqual([
+    { activityID: 'act_page_a', key: 'checkpoints/avatar_pages/act_page_a.jsonl.gz' },
+    { activityID: 'act_page_b', key: 'checkpoints/avatar_pages/act_page_b.jsonl.gz' },
   ]);
 });
 
@@ -64,7 +64,7 @@ test('it reads no archive of an activity whose head row is gone', async () => {
 
   await ctx.bucket.write('checkpoints/avatar_gone/act_gone.jsonl.gz', 'rows');
 
-  const keys = await readExpiredArchiveKeys(ctx, new Date(Date.now() + 60_000));
+  const archives = await readExpiredArchives(ctx, new Date(Date.now() + 60_000));
 
-  expect(keys).toStrictEqual([]);
+  expect(archives).toStrictEqual([]);
 });

@@ -9,6 +9,7 @@ interface StubS3Options {
 interface StubS3 {
   readonly bucket: string;
   readonly endpoint: string;
+  readonly setLastModified: (key: string, lastModified: Date) => void;
 }
 
 interface StoredObject {
@@ -80,7 +81,17 @@ export function startStubS3(options: Readonly<StubS3Options> = {}): StubS3 {
     await server.stop(true);
   });
 
-  return { bucket: BUCKET, endpoint: server.url.origin };
+  const setLastModified = (key: string, lastModified: Date): void => {
+    const stored = objects.get(key);
+
+    if (stored === undefined) {
+      throw new Error(`the stub bucket holds no object at ${key}`);
+    }
+
+    objects.set(key, { body: stored.body, lastModified });
+  };
+
+  return { bucket: BUCKET, endpoint: server.url.origin, setLastModified };
 }
 
 function buildErrorResponse(status: number, code: string): Response {

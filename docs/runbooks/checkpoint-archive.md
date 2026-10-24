@@ -56,4 +56,6 @@ investigation before that run, or run the restore again.
 
    Expect `restored <row_count> row(s) of activity <activity_id>`. The output
    `✗ no archive at checkpoints/<avatar_id>/<activity_id>.jsonl.gz` means the sweep never archived
-   the activity or has purged its archive.
+   the activity or has purged its archive. The output that starts with
+   `✗ checkpoint archive — another sweep or restore holds the archive lock` means a sweep is
+   running: wait for its workflow run to end, then run the restore again.
