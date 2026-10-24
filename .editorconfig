@@ -11,3 +11,8 @@ trim_trailing_whitespace = true
 [*.md]
 max_line_length = off
 trim_trailing_whitespace = false
+
+# shfmt reads these when it runs without flags
+[*.sh]
+switch_case_indent = true
+space_redirects = true
