@@ -66,6 +66,6 @@ function buildPlaceholderWeapon() {
     maxDamage: 20,
     minDamage: 10,
     name: 'Placeholder Blade',
-    speed: 0.8,
+    speedPerMille: 800,
   };
 }

@@ -1,5 +1,6 @@
 import { expect, test } from 'bun:test';
 import { ContentDocumentSchema } from '@vers/contract-activity';
+import { toAttacksPerSecond, toSpeedPerMille } from '@vers/game-utils';
 import invariant from 'tiny-invariant';
 import { contentDocumentV1 } from './content-document-v1';
 
@@ -19,6 +20,22 @@ test('it keeps v1 archetype ids unique', () => {
   const archetypeIDs = contentDocumentV1.encounter.archetypes.map((archetype) => archetype.id);
 
   expect(archetypeIDs).toStrictEqual([...new Set(archetypeIDs)]);
+});
+
+test('it converts every v1 archetype attack speed to an exact per-mille integer', () => {
+  const speeds = contentDocumentV1.encounter.archetypes.map((archetype) =>
+    toSpeedPerMille(archetype.attackSpeed),
+  );
+
+  expect(speeds).toStrictEqual([500, 700]);
+});
+
+test('it converts every v1 archetype attack speed back to its authored decimal', () => {
+  const authored = contentDocumentV1.encounter.archetypes.map((archetype) => archetype.attackSpeed);
+
+  expect(authored.map((speed) => toAttacksPerSecond(toSpeedPerMille(speed)))).toStrictEqual(
+    authored,
+  );
 });
 
 test('it keeps the v1 wave-count and wave-size tuning ranges ordered', () => {

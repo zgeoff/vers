@@ -65,7 +65,7 @@ test('it reproduces the frozen golden encounter for a fixed seed', () => {
       "primaryAttack": {
         "maxDamage": 4,
         "minDamage": 1,
-        "speed": 0.7,
+        "speedPerMille": 700,
       },
       "xp": 8,
     }

@@ -19,7 +19,7 @@ test('it returns true when elapsed time is equal or greater than the next attack
         name: 'Test Weapon',
 
         // 1000ms interval
-        speed: 1,
+        speedPerMille: 1000,
       },
     },
   });
@@ -50,7 +50,7 @@ test('it returns false when elapsed time is less than the next attack time', () 
         name: 'Test Weapon',
 
         // 1000ms interval
-        speed: 1,
+        speedPerMille: 1000,
       },
     },
   });
@@ -77,7 +77,7 @@ test('it uses the last attacked time to calculate the next attack time', () => {
         name: 'Test Weapon',
 
         // 1000ms interval
-        speed: 1,
+        speedPerMille: 1000,
       },
     },
   });
@@ -109,7 +109,7 @@ test('it returns false when the avatar is dead', () => {
       minDamage: 5,
 
       // 1000ms interval
-      speed: 1,
+      speedPerMille: 1000,
     },
   });
 

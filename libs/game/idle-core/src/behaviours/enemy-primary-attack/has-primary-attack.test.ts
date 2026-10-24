@@ -9,7 +9,7 @@ test('it returns true when enemy has a primary attack', () => {
     primaryAttack: {
       maxDamage: 10,
       minDamage: 5,
-      speed: 1,
+      speedPerMille: 1000,
     },
   });
 

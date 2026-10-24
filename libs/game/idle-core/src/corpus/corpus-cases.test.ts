@@ -1,4 +1,5 @@
 import { expect, test } from 'bun:test';
+import type { EncounterEnemy } from '@vers/game-utils';
 import invariant from 'tiny-invariant';
 import { buildSimulationInput } from '../core/build-simulation-input';
 import { EquipmentSlot } from '../types';
@@ -11,10 +12,6 @@ import { runCorpusCase } from './run-corpus-case';
 test.each(['event-tie-failed-short', 'event-tie-failed-long', 'event-tie-progress-cutoff'])(
   'it builds the %s case with the avatar weapon on the same attack interval as the fast-attack archetype',
   (id) => {
-    const [archetype] = CORPUS_CONTENT['fast-attack'].archetypes;
-
-    invariant(archetype, 'the fast-attack content must define an archetype');
-
     const tieCase = CORPUS_CASES.find((candidate) => candidate.id === id);
 
     invariant(tieCase, `unknown corpus case id: ${id}`);
@@ -27,7 +24,9 @@ test.each(['event-tie-failed-short', 'event-tie-failed-long', 'event-tie-progres
 
     invariant(weapon, 'the tie case avatar must have a main-hand weapon');
 
-    expect(Math.round(1000 / archetype.attackSpeed)).toBe(Math.round(1000 / weapon.speed));
+    expect(built.activity.encounter.waves.flat()).toSatisfyAll(
+      (enemy: EncounterEnemy) => enemy.primaryAttack.speedPerMille === weapon.speedPerMille,
+    );
   },
 );
 

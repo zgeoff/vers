@@ -4,21 +4,33 @@ import { buildLevelFromXP } from './build-level-from-xp';
 import { buildXPThreshold } from './build-xp-threshold';
 
 test('it never returns a negative loss', () => {
-  for (let xp = 0; xp <= 10_000; xp += 173) {
-    expect(buildFailureXPLoss(xp)).toBeGreaterThanOrEqual(0);
-  }
+  const runningXPs = Array.from({ length: 58 }, (_, index) => index * 173);
+
+  expect(runningXPs.map((xp) => buildFailureXPLoss(xp))).toSatisfyAll((loss: number) => loss >= 0);
 });
 
 test('it never drops xp below the current level threshold', () => {
-  for (let xp = 0; xp <= 10_000; xp += 173) {
-    const floor = buildXPThreshold(buildLevelFromXP(xp));
+  const runningXPs = Array.from({ length: 58 }, (_, index) => index * 173);
 
-    expect(xp - buildFailureXPLoss(xp)).toBeGreaterThanOrEqual(floor);
-  }
+  expect(runningXPs).toSatisfyAll(
+    (xp: number) => xp - buildFailureXPLoss(xp) >= buildXPThreshold(buildLevelFromXP(xp)),
+  );
 });
 
 test('it returns zero loss exactly at a level threshold', () => {
   const floor = buildXPThreshold(5);
 
   expect(buildFailureXPLoss(floor)).toBe(0);
+});
+
+test.each([
+  [4, 0],
+  [5, 1],
+  [14, 1],
+  [15, 2],
+  [25, 3],
+])('it loses a tenth of %d xp into the level, rounded half up, as %d', (progress, expected) => {
+  const floor = buildXPThreshold(5);
+
+  expect(buildFailureXPLoss(floor + progress)).toBe(expected);
 });

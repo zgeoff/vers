@@ -6,7 +6,7 @@ export interface RNG {
 export interface EncounterEnemyAttack {
   readonly maxDamage: number;
   readonly minDamage: number;
-  readonly speed: number;
+  readonly speedPerMille: number;
 }
 
 export interface EncounterEnemy {

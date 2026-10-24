@@ -18,7 +18,7 @@ test('it schedules attacks on the tick event', () => {
       minDamage: 10,
 
       // 1000ms interval
-      speed: 1,
+      speedPerMille: 1000,
     },
   });
 
@@ -57,7 +57,7 @@ test('it schedules multiple attacks for high APS weapons', () => {
       minDamage: 10,
 
       // 500ms interval
-      speed: 2,
+      speedPerMille: 2000,
     },
   });
 

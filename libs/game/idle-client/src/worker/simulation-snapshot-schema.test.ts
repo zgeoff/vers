@@ -6,7 +6,7 @@ test('it accepts a snapshot with no run installed yet', () => {
   const snapshot = { failureAction: ActivityFailureAction.Abort };
   const result = simulationSnapshotSchema.safeParse(snapshot);
 
-  expect(result).toMatchObject({ data: snapshot, success: true });
+  expect(result.data).toStrictEqual(snapshot);
 });
 
 test('it accepts a full snapshot with an installed run', () => {
@@ -22,7 +22,7 @@ test('it accepts a full snapshot with an installed run', () => {
             life: 40,
             maxLife: 50,
             name: 'Goblin',
-            primaryAttack: { maxDamage: 6, minDamage: 2, speed: 1.2 },
+            primaryAttack: { maxDamage: 6, minDamage: 2, speedPerMille: 1200 },
             status: EntityStatus.Alive,
           },
         ],
@@ -43,7 +43,7 @@ test('it accepts a full snapshot with an installed run', () => {
       isAlive: true,
       level: 5,
       life: 80,
-      mainHandAttack: { maxDamage: 20, minDamage: 10, speed: 1 },
+      mainHandAttack: { maxDamage: 20, minDamage: 10, speedPerMille: 1000 },
       maxLife: 100,
       name: 'Hero',
       status: EntityStatus.Alive,
@@ -54,17 +54,37 @@ test('it accepts a full snapshot with an installed run', () => {
 
   const result = simulationSnapshotSchema.safeParse(snapshot);
 
-  expect(result).toMatchObject({ data: snapshot, success: true });
+  expect(result.data).toStrictEqual(snapshot);
 });
 
 test('it rejects a snapshot missing the failure action', () => {
   const result = simulationSnapshotSchema.safeParse({});
 
   expect(result.success).toBeFalse();
+  expect(result.error?.issues).toPartiallyContain({ path: ['failureAction'] });
+});
 
-  expect(result.error?.issues).toPartiallyContain(
-    expect.objectContaining({ path: ['failureAction'] }),
-  );
+test('it rejects a snapshot whose avatar attack speed is not a whole per-mille value', () => {
+  const result = simulationSnapshotSchema.safeParse({
+    avatar: {
+      behaviours: {},
+      id: 'avatar_1',
+      isAlive: true,
+      level: 5,
+      life: 80,
+      mainHandAttack: { maxDamage: 20, minDamage: 10, speedPerMille: 0.8 },
+      maxLife: 100,
+      name: 'Hero',
+      status: EntityStatus.Alive,
+    },
+    failureAction: ActivityFailureAction.Retry,
+  });
+
+  expect(result.success).toBeFalse();
+
+  expect(result.error?.issues).toPartiallyContain({
+    path: ['avatar', 'mainHandAttack', 'speedPerMille'],
+  });
 });
 
 test('it rejects a snapshot whose nested enemy status is not a declared value', () => {
@@ -80,7 +100,7 @@ test('it rejects a snapshot whose nested enemy status is not a declared value', 
             life: 40,
             maxLife: 50,
             name: 'Goblin',
-            primaryAttack: { maxDamage: 6, minDamage: 2, speed: 1.2 },
+            primaryAttack: { maxDamage: 6, minDamage: 2, speedPerMille: 1200 },
             status: 'stunned',
           },
         ],
@@ -100,9 +120,7 @@ test('it rejects a snapshot whose nested enemy status is not a declared value', 
 
   expect(result.success).toBeFalse();
 
-  expect(result.error?.issues).toPartiallyContain(
-    expect.objectContaining({
-      path: ['activity', 'currentWave', 'enemies', 0, 'status'],
-    }),
-  );
+  expect(result.error?.issues).toPartiallyContain({
+    path: ['activity', 'currentWave', 'enemies', 0, 'status'],
+  });
 });

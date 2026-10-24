@@ -13,7 +13,7 @@ test('it calculates the damage for an avatar attack', () => {
         maxDamage: 10,
         minDamage: 10,
         name: 'Test Weapon',
-        speed: 1,
+        speedPerMille: 1000,
       },
     },
   });

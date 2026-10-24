@@ -15,7 +15,7 @@ test('it applies damage to the first living enemy', () => {
     maxDamage: 10,
     minDamage: 10,
     name: 'Test Weapon',
-    speed: 1,
+    speedPerMille: 1000,
   };
 
   const avatarData = createMockAvatarData({

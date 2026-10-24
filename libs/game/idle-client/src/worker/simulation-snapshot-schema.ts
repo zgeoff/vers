@@ -5,7 +5,7 @@ const attackDataSchema = z
   .object({
     maxDamage: z.number(),
     minDamage: z.number(),
-    speed: z.number(),
+    speedPerMille: z.int(),
   })
   .readonly();
 

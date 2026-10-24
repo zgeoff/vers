@@ -9,7 +9,7 @@ test('it calculates the primary attack interval', () => {
     primaryAttack: {
       maxDamage: 10,
       minDamage: 5,
-      speed: 0.55,
+      speedPerMille: 550,
     },
   });
 

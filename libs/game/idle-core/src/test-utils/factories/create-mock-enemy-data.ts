@@ -10,7 +10,7 @@ export function createMockEnemyData(overrides: Partial<EnemyData> = {}): EnemyDa
     primaryAttack: {
       maxDamage: 3,
       minDamage: 1,
-      speed: 0.5,
+      speedPerMille: 500,
       ...overrides.primaryAttack,
     },
   };

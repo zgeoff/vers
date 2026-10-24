@@ -40,7 +40,7 @@ export function createAvatar(data: AvatarData, ctx: SimulationContext): Avatar {
       ? {
           maxDamage: mainHandWeapon.maxDamage,
           minDamage: mainHandWeapon.minDamage,
-          speed: mainHandWeapon.speed,
+          speedPerMille: mainHandWeapon.speedPerMille,
         }
       : null;
 

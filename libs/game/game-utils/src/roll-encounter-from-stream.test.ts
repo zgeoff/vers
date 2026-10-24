@@ -60,7 +60,7 @@ test('it reproduces the frozen golden encounter for a fixed seed', () => {
             "primaryAttack": {
               "maxDamage": 3,
               "minDamage": 1,
-              "speed": 0.5,
+              "speedPerMille": 500,
             },
             "xp": 10,
           },
@@ -71,7 +71,7 @@ test('it reproduces the frozen golden encounter for a fixed seed', () => {
             "primaryAttack": {
               "maxDamage": 4,
               "minDamage": 1,
-              "speed": 0.7,
+              "speedPerMille": 700,
             },
             "xp": 8,
           },
@@ -82,7 +82,7 @@ test('it reproduces the frozen golden encounter for a fixed seed', () => {
             "primaryAttack": {
               "maxDamage": 3,
               "minDamage": 1,
-              "speed": 0.5,
+              "speedPerMille": 500,
             },
             "xp": 10,
           },
@@ -95,7 +95,7 @@ test('it reproduces the frozen golden encounter for a fixed seed', () => {
             "primaryAttack": {
               "maxDamage": 4,
               "minDamage": 1,
-              "speed": 0.7,
+              "speedPerMille": 700,
             },
             "xp": 8,
           },
@@ -106,7 +106,7 @@ test('it reproduces the frozen golden encounter for a fixed seed', () => {
             "primaryAttack": {
               "maxDamage": 4,
               "minDamage": 1,
-              "speed": 0.7,
+              "speedPerMille": 700,
             },
             "xp": 8,
           },
@@ -117,7 +117,7 @@ test('it reproduces the frozen golden encounter for a fixed seed', () => {
             "primaryAttack": {
               "maxDamage": 3,
               "minDamage": 1,
-              "speed": 0.5,
+              "speedPerMille": 500,
             },
             "xp": 10,
           },
@@ -130,7 +130,7 @@ test('it reproduces the frozen golden encounter for a fixed seed', () => {
             "primaryAttack": {
               "maxDamage": 3,
               "minDamage": 1,
-              "speed": 0.5,
+              "speedPerMille": 500,
             },
             "xp": 10,
           },
@@ -141,7 +141,7 @@ test('it reproduces the frozen golden encounter for a fixed seed', () => {
             "primaryAttack": {
               "maxDamage": 3,
               "minDamage": 1,
-              "speed": 0.5,
+              "speedPerMille": 500,
             },
             "xp": 10,
           },
@@ -152,7 +152,7 @@ test('it reproduces the frozen golden encounter for a fixed seed', () => {
             "primaryAttack": {
               "maxDamage": 3,
               "minDamage": 1,
-              "speed": 0.5,
+              "speedPerMille": 500,
             },
             "xp": 10,
           },
@@ -163,7 +163,7 @@ test('it reproduces the frozen golden encounter for a fixed seed', () => {
             "primaryAttack": {
               "maxDamage": 4,
               "minDamage": 1,
-              "speed": 0.7,
+              "speedPerMille": 700,
             },
             "xp": 8,
           },
@@ -297,7 +297,7 @@ test('it scales enemy life, xp, and attack damage by the node difficulty', () =>
     level: 1,
     life: 60,
     name: 'World Map Enemy',
-    primaryAttack: { maxDamage: 6, minDamage: 2, speed: 0.5 },
+    primaryAttack: { maxDamage: 6, minDamage: 2, speedPerMille: 500 },
     xp: 20,
   });
 
@@ -305,7 +305,7 @@ test('it scales enemy life, xp, and attack damage by the node difficulty', () =>
     level: 1,
     life: 30,
     name: 'World Map Enemy',
-    primaryAttack: { maxDamage: 3, minDamage: 1, speed: 0.5 },
+    primaryAttack: { maxDamage: 3, minDamage: 1, speedPerMille: 500 },
     xp: 10,
   });
 });

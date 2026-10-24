@@ -1,5 +1,6 @@
 import type { ReplaySegmentInput } from '@vers/contract-replay';
-import type { ActivityInput, AvatarData } from '@vers/idle-core';
+import { toAttacksPerSecond } from '@vers/game-utils';
+import type { ActivityInput, AvatarData, EquipmentWeapon } from '@vers/idle-core';
 import { ActivityFailureAction, ActivityType, EquipmentSlot } from '@vers/idle-core';
 
 const WIRE_FAILURE_ACTIONS: Record<
@@ -34,7 +35,14 @@ export function toWireReplaySegmentInput(
       difficulty: activity.difficulty,
       encounter: {
         waves: activity.encounter.waves.map((wave) =>
-          wave.map((enemy) => ({ ...enemy, primaryAttack: { ...enemy.primaryAttack } })),
+          wave.map((enemy) => ({
+            ...enemy,
+            primaryAttack: {
+              maxDamage: enemy.primaryAttack.maxDamage,
+              minDamage: enemy.primaryAttack.minDamage,
+              speed: toAttacksPerSecond(enemy.primaryAttack.speedPerMille),
+            },
+          })),
         ),
       },
       failureAction: WIRE_FAILURE_ACTIONS[activity.failureAction],
@@ -48,7 +56,7 @@ export function toWireReplaySegmentInput(
       level: avatar.level,
       life: avatar.life,
       name: avatar.name,
-      paperdoll: { mainHand: avatar.paperdoll[EquipmentSlot.MainHand] },
+      paperdoll: { mainHand: toWireWeapon(avatar.paperdoll[EquipmentSlot.MainHand]) },
       xp: avatar.xp,
     },
     duration: options.duration,
@@ -58,5 +66,21 @@ export function toWireReplaySegmentInput(
       expectedCheckpointCount: options.expectedCheckpointCount,
     }),
     ...(options.stopAtState !== undefined && { stopAtState: options.stopAtState }),
+  };
+}
+
+function toWireWeapon(
+  weapon: EquipmentWeapon | null,
+): ReplaySegmentInput['avatar']['paperdoll']['mainHand'] {
+  if (weapon === null) {
+    return null;
+  }
+
+  return {
+    id: weapon.id,
+    maxDamage: weapon.maxDamage,
+    minDamage: weapon.minDamage,
+    name: weapon.name,
+    speed: toAttacksPerSecond(weapon.speedPerMille),
   };
 }

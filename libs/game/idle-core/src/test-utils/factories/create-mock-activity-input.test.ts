@@ -19,7 +19,7 @@ test('it creates activity data with expected properties', () => {
             primaryAttack: {
               maxDamage: 3,
               minDamage: 1,
-              speed: 0.5,
+              speedPerMille: 500,
             },
             xp: 10,
           },

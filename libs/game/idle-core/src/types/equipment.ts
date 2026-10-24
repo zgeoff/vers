@@ -6,7 +6,7 @@ interface IEquipment {
 export interface EquipmentWeapon extends IEquipment {
   maxDamage: number;
   minDamage: number;
-  speed: number;
+  speedPerMille: number;
 }
 
 export enum EquipmentSlot {
