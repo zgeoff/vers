@@ -48,19 +48,7 @@ The restore drops every migration applied after the backup: the ones in the run 
 the ones that later runs applied. The migrate job applies each migration file the database lacks, so
 the repo has to drop the migrations that must not come back before the next run.
 
-1. List the migrations that the restore drops, through the `execute_sql_prod` MCP tool. Use the
-   first migration that the backup notice names as `<first_migration>`:
-
-   ```sql
-   SELECT name FROM kysely_migration WHERE name >= '<first_migration>' ORDER BY name;
-   ```
-
-   Expect the first row to be `<first_migration>`.
-
-2. Open a PR that reverts each listed migration that must not come back, and the code that depends
-   on it. Leave it unmerged. Each listed migration that the PR keeps applies again on the next run,
-   after a fresh backup.
-3. Disable the main workflow, so that no push starts a run that migrates or deploys during the
+1. Disable the main workflow, so that no push starts a run that migrates or deploys during the
    restore:
 
    ```bash
@@ -70,7 +58,7 @@ the repo has to drop the migrations that must not come back before the next run.
    Expect `gh workflow list --all -R zgeoff/vers` to show the `Main` workflow as
    `disabled_manually`.
 
-4. Wait until every run of the main workflow that already started has finished:
+2. Wait until every run of the main workflow that already started has finished:
 
    ```bash
    for status in requested queued pending waiting action_required in_progress; do
@@ -82,6 +70,20 @@ the repo has to drop the migrations that must not come back before the next run.
    Repeat the loop until it prints nothing. Each query filters by status, so a run that started long
    ago still shows. A run that is still queued or in progress can apply a dropped migration again
    after the restore.
+
+3. List the migrations that the restore drops, through the `execute_sql_prod` MCP tool. Use the
+   first migration that the backup notice names as `<first_migration>`:
+
+   ```sql
+   SELECT name FROM kysely_migration WHERE name >= '<first_migration>' ORDER BY name;
+   ```
+
+   Expect the first row to be `<first_migration>`. No run is left to apply a migration, so the list
+   stays complete until the restore.
+
+4. Open a PR that reverts each listed migration that must not come back, and the code that depends
+   on it. Leave it unmerged. Each listed migration that the PR keeps applies again on the next run,
+   after a fresh backup.
 
    > **CAUTION:** The restore overwrites every database on `main` with its state at the backup: the
    > shared `vers` database, the error tracker's database and the analytics dashboard's database.
