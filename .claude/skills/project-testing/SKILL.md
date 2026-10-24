@@ -24,6 +24,8 @@ it never relaxes one from the shared skill.
   with the fixed ladder, only as far as the test needs.
 - [The web app](#the-web-app): mount through the router and request-context helpers, and cover a
   form's result mapping with a hand-built `lastResult`.
+- [Test mode](#test-mode): each package runs `bun test --randomize`, and a preload starts per-file
+  state in a `beforeAll`.
 
 ## Utilities
 
@@ -131,6 +133,27 @@ acts on.
   asserts on store state. A DOM component in
   [`components-ui/`](../../../libs/game/worldmap-client/src/components-ui/) goes through React
   Testing Library and `userEvent`.
+
+## Test mode
+
+Every package's `test` script runs `bun test --randomize`: one process, every file in it, no
+isolation, in a random order. A file that depends on the order of the files before it fails CI, and
+a new package's script takes the same flag. A failed run prints its `--seed=<n>`; pass that seed
+back to reproduce the order.
+
+The preload's resets after each test are the contract, so a suite must also pass at
+`bun test --parallel=4 --no-isolate`, where each worker shares one process across its files. Under
+`--parallel`, Bun runs a preload's body once per worker but fires its `beforeAll` and `afterAll`
+around every file. A preload therefore starts per-file state, such as the MSW server's `listen`, in
+a `beforeAll`, never in its body.
+
+The same timing rules out a teardown in a preload's `afterAll`. A worker keeps its cloned test
+databases across all its files, and each clone's name carries an owner tag, from the host name and
+the pid namespace, and the owning process id. Each worker's preload drops, at start, the clones with
+its own tag whose process has ended.
+
+Turbo runs several packages at once in CI, so each package stays on plain `bun test`, the cheapest
+mode in memory.
 
 ## Golden values
 

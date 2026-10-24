@@ -1,24 +1,27 @@
-import { afterAll } from 'bun:test';
 import {
-  CLONED_DATABASE_REMOVAL_TIMEOUT_MS,
   buildTestTemplateDBName,
   createTestTemplate,
   isTestContainerReachable,
   readCurrentBranch,
-  removeClonedDatabases,
+  removeOrphanedClones,
 } from '@vers/db/test-support';
 import { createPostgresContainer } from '../create-postgres-container';
 import { getContainerConnectionURI } from '../get-container-connection-uri';
+import { resolveTestDBTarget } from './resolve-test-db-target';
+
+export async function setupBunTestDB(): Promise<void> {
+  if (process.env['TEST_DB_URI'] === undefined) {
+    await prepareTestTemplate();
+  }
+
+  // a worker keeps its clones across its files: under `--parallel` an `afterAll` runs after every
+  // file and would drop a clone a module still holds, so the clones of ended runs are dropped here
+  await removeOrphanedClones(resolveTestDBTarget().baseURI);
+}
 
 const TEST_CONTAINER_PORT = 32_999;
 
-export async function setupBunTestDB(): Promise<void> {
-  afterAll(removeClonedDatabases, CLONED_DATABASE_REMOVAL_TIMEOUT_MS);
-
-  if (process.env['TEST_DB_URI'] !== undefined) {
-    return;
-  }
-
+async function prepareTestTemplate(): Promise<void> {
   const containerReachable = await isTestContainerReachable();
 
   let baseURI: string;

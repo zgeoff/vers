@@ -17,6 +17,8 @@ test('it clones a database from an already-migrated template', async () => {
 
   await createClonedDatabase({ baseURI, templateDB, dbName });
 
+  onTestFinished(() => removeTestDatabase(`${baseURI}/${dbName}`));
+
   const admin = postgres(`${baseURI}/postgres`);
 
   const rows = await admin`SELECT 1 FROM pg_database WHERE datname = ${dbName}`;

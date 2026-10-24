@@ -1,10 +1,13 @@
 import { expect, test } from 'bun:test';
 import { isProxiedService } from './is-proxied-service';
 
-test('it keeps the session service off the browser proxy', () => {
-  expect(isProxiedService('session')).toBeFalse();
+test.each(['activity', 'avatar'] as const)('it proxies the %s service', (service) => {
+  expect(isProxiedService(service)).toBeTrue();
 });
 
-test('it proxies a service the browser calls', () => {
-  expect(isProxiedService('activity')).toBeTrue();
-});
+test.each(['email', 'keys', 'replay', 'session', 'user', 'verification'] as const)(
+  'it keeps the %s service off the browser proxy',
+  (service) => {
+    expect(isProxiedService(service)).toBeFalse();
+  },
+);

@@ -1,17 +1,15 @@
 import '@zgeoff/bun-test-extended';
-import { afterAll } from 'bun:test';
 import { PostgreSqlContainer } from '@testcontainers/postgresql';
 import type { StartedPostgreSqlContainer } from '@testcontainers/postgresql';
 import { registerBunTestCleanup } from '@vers/test-utils/bun';
 import { buildTestTemplateDBName } from './src/test-support/build-test-template-db-name';
-import { CLONED_DATABASE_REMOVAL_TIMEOUT_MS } from './src/test-support/cloned-database-removal-timeout-ms';
 import { createTestTemplate } from './src/test-support/create-test-template';
 import { isTestContainerReachable } from './src/test-support/is-test-container-reachable';
 import { readCurrentBranch } from './src/test-support/read-current-branch';
-import { removeClonedDatabases } from './src/test-support/remove-cloned-databases';
+import { removeOrphanedClones } from './src/test-support/remove-orphaned-clones';
+import { resolveTestDBTarget } from './src/test-support/resolve-test-db-target';
 
 registerBunTestCleanup();
-afterAll(removeClonedDatabases, CLONED_DATABASE_REMOVAL_TIMEOUT_MS);
 
 const TEST_CONTAINER_PORT = 32_999;
 const TEST_TEMPLATE_DB = 'test_template';
@@ -31,6 +29,10 @@ if (process.env['TEST_DB_URI'] === undefined) {
   process.env['TEST_DB_URI'] = baseURI;
   process.env['TEST_TEMPLATE_DB'] = templateDB;
 }
+
+// a worker keeps its clones across its files: under `--parallel` an `afterAll` runs after every
+// file and would drop a clone a module still holds, so the clones of ended runs are dropped here
+await removeOrphanedClones(resolveTestDBTarget().baseURI);
 
 async function startPostgresContainer(): Promise<string> {
   const container: StartedPostgreSqlContainer = await new PostgreSqlContainer(

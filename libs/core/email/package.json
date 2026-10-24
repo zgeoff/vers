@@ -9,7 +9,7 @@
   },
   "scripts": {
     "preview": "bun run scripts/preview.ts",
-    "test": "bun test",
+    "test": "bun test --randomize",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

@@ -8,7 +8,7 @@
     "./test-utils": "./src/test-utils/index.ts"
   },
   "scripts": {
-    "test": "bun test",
+    "test": "bun test --randomize",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

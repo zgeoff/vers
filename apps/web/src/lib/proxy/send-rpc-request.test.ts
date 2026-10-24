@@ -17,54 +17,70 @@ import { sendRPCRequest } from './send-rpc-request';
 test('it rewrites the proxied path from /api/rpc/<service> to /rpc on the service origin', async () => {
   const resolver = mock<HttpResponseResolver>(() => HttpResponse.json({}));
 
-  server.use(http.post('http://localhost:3003/rpc/getCurrentUser', resolver));
+  server.use(http.post('http://localhost:3005/rpc/getAvatars', resolver));
 
   await withRequestContext({}, () =>
     sendRPCRequest(
-      new Request('http://app.test/api/rpc/user/getCurrentUser?foo=bar', { method: 'POST' }),
-      'user',
+      new Request('http://app.test/api/rpc/avatar/getAvatars?foo=bar', { method: 'POST' }),
+      'avatar',
     ),
   );
 
   expect(resolver).toHaveBeenCalledOnce();
 
   expect(resolver.mock.calls[0]?.[0].request.url).toBe(
-    'http://localhost:3003/rpc/getCurrentUser?foo=bar',
+    'http://localhost:3005/rpc/getAvatars?foo=bar',
   );
 });
 
-test('it refuses a browser call to the session service without forwarding it', async () => {
-  const resolver = mock<HttpResponseResolver>(() => HttpResponse.json({ token: 'issued' }));
+test.each([
+  ['email', 'http://app.test/api/rpc/email/sendEmail', 'http://localhost:3007/rpc/sendEmail'],
+  ['keys', 'http://app.test/api/rpc/keys/getKey', 'http://localhost:3008/rpc/getKey'],
+  ['replay', 'http://app.test/api/rpc/replay/getReplay', 'http://localhost:3009/rpc/getReplay'],
+  [
+    'session',
+    'http://app.test/api/rpc/session/createSession',
+    'http://localhost:3002/rpc/createSession',
+  ],
+  [
+    'user',
+    'http://app.test/api/rpc/user/changePassword',
+    'http://localhost:3003/rpc/changePassword',
+  ],
+  [
+    'verification',
+    'http://app.test/api/rpc/verification/deleteVerification',
+    'http://localhost:3004/rpc/deleteVerification',
+  ],
+] as const)(
+  'it answers a browser call to the %s service with a 404 without forwarding it',
+  async (service, proxiedURL, upstreamURL) => {
+    const resolver = mock<HttpResponseResolver>(() => HttpResponse.json({}));
 
-  server.use(http.post('http://localhost:3002/rpc/stepUp/consumePendingTransaction', resolver));
+    server.use(http.post(upstreamURL, resolver));
 
-  const outcome = await withRequestContext({}, () =>
-    sendRPCRequest(
-      new Request('http://app.test/api/rpc/session/stepUp/consumePendingTransaction', {
-        body: JSON.stringify({ json: { id: 'self-made-transaction' } }),
-        method: 'POST',
-      }),
-      'session',
-    ),
-  );
+    const outcome = await withRequestContext({}, () =>
+      sendRPCRequest(new Request(proxiedURL, { body: '{}', method: 'POST' }), service),
+    );
 
-  expect(outcome.value.status).toBe(404);
-  expect(resolver).not.toHaveBeenCalled();
-});
+    expect(outcome.value.status).toBe(404);
+    expect(resolver).not.toHaveBeenCalled();
+  },
+);
 
 test('it forwards the method and body for a caller with no cookie session, minting an anonymous token', async () => {
   const resolver = mock<HttpResponseResolver>(() => HttpResponse.json({}));
 
-  server.use(http.post('http://localhost:3003/rpc/updateEmail', resolver));
+  server.use(http.post('http://localhost:3005/rpc/updateAvatar', resolver));
 
   await withRequestContext({}, () =>
     sendRPCRequest(
-      new Request('http://app.test/api/rpc/user/updateEmail', {
-        body: JSON.stringify({ email: 'new@vers.test' }),
+      new Request('http://app.test/api/rpc/avatar/updateAvatar', {
+        body: JSON.stringify({ name: 'renamed-avatar' }),
         headers: { authorization: 'Bearer forwarded-from-the-browser' },
         method: 'POST',
       }),
-      'user',
+      'avatar',
     ),
   );
 
@@ -78,18 +94,21 @@ test('it forwards the method and body for a caller with no cookie session, minti
   const payload = jose.decodeJwt(authorization.replace('Bearer ', ''));
 
   expect(request?.method).toBe('POST');
-  expect(payload).toMatchObject({ aud: 'service-user', iss: 'app-web' });
+  expect(payload).toMatchObject({ aud: 'service-avatar', iss: 'app-web' });
   expect(payload.sub).toBeUndefined();
-  expect(body).toBe(JSON.stringify({ email: 'new@vers.test' }));
+  expect(body).toBe(JSON.stringify({ name: 'renamed-avatar' }));
 });
 
 test('it forwards a bodyless GET request without a body', async () => {
   const resolver = mock<HttpResponseResolver>(() => HttpResponse.json({}));
 
-  server.use(http.get('http://localhost:3003/rpc/getUser', resolver));
+  server.use(http.get('http://localhost:3005/rpc/getAvatar', resolver));
 
   const outcome = await withRequestContext({}, () =>
-    sendRPCRequest(new Request('http://app.test/api/rpc/user/getUser', { method: 'GET' }), 'user'),
+    sendRPCRequest(
+      new Request('http://app.test/api/rpc/avatar/getAvatar', { method: 'GET' }),
+      'avatar',
+    ),
   );
 
   expect(resolver).toHaveBeenCalledOnce();
@@ -134,13 +153,16 @@ test("it mints an s2s token carrying the caller's cookie userID as its subject, 
 
 test('it returns a response whose headers the server can still modify', async () => {
   server.use(
-    http.get('http://localhost:3003/rpc/getUser', () =>
+    http.get('http://localhost:3005/rpc/getAvatar', () =>
       HttpResponse.json({}, { headers: { 'x-upstream': 'kept' } }),
     ),
   );
 
   const outcome = await withRequestContext({}, () =>
-    sendRPCRequest(new Request('http://app.test/api/rpc/user/getUser', { method: 'GET' }), 'user'),
+    sendRPCRequest(
+      new Request('http://app.test/api/rpc/avatar/getAvatar', { method: 'GET' }),
+      'avatar',
+    ),
   );
 
   expect(outcome.value.headers.get('x-upstream')).toBe('kept');
@@ -153,18 +175,18 @@ test('it returns a response whose headers the server can still modify', async ()
 test("it re-injects the traceparent from the proxy's own trace scope instead of forwarding the browser's raw header", async () => {
   const resolver = mock<HttpResponseResolver>(() => HttpResponse.json({}));
 
-  server.use(http.get('http://localhost:3003/rpc/getUser', resolver));
+  server.use(http.get('http://localhost:3005/rpc/getAvatar', resolver));
 
   await withTraceContext(
     { spanID: '00f067aa0ba902b7', traceID: '4bf92f3577b34da6a3ce929d0e0e4736' },
     () =>
       withRequestContext({}, () =>
         sendRPCRequest(
-          new Request('http://app.test/api/rpc/user/getUser', {
+          new Request('http://app.test/api/rpc/avatar/getAvatar', {
             headers: { traceparent: '00-11111111111111111111111111111111-2222222222222222-01' },
             method: 'GET',
           }),
-          'user',
+          'avatar',
         ),
       ),
   );
@@ -177,8 +199,8 @@ test("it re-injects the traceparent from the proxy's own trace scope instead of 
 test('it answers an aborted request whose body is unreadable with a client-closed status', async () => {
   const controller = new AbortController();
 
-  const request = new Request('http://app.test/api/rpc/user/updateEmail', {
-    body: JSON.stringify({ email: 'new@vers.test' }),
+  const request = new Request('http://app.test/api/rpc/avatar/updateAvatar', {
+    body: JSON.stringify({ name: 'renamed-avatar' }),
     method: 'POST',
     signal: controller.signal,
   });
@@ -187,20 +209,20 @@ test('it answers an aborted request whose body is unreadable with a client-close
 
   controller.abort();
 
-  const outcome = await withRequestContext({}, () => sendRPCRequest(request, 'user'));
+  const outcome = await withRequestContext({}, () => sendRPCRequest(request, 'avatar'));
 
   expect(outcome.value.status).toBe(499);
 });
 
 test('it rethrows a body read failure for a caller that is still connected', async () => {
-  const request = new Request('http://app.test/api/rpc/user/updateEmail', {
-    body: JSON.stringify({ email: 'new@vers.test' }),
+  const request = new Request('http://app.test/api/rpc/avatar/updateAvatar', {
+    body: JSON.stringify({ name: 'renamed-avatar' }),
     method: 'POST',
   });
 
   await request.blob();
 
-  const promise = withRequestContext({}, () => sendRPCRequest(request, 'user'));
+  const promise = withRequestContext({}, () => sendRPCRequest(request, 'avatar'));
 
   expect(promise).rejects.toBeInstanceOf(TypeError);
 });
@@ -220,12 +242,12 @@ test('it resends a hung GET-declared procedure at escalating bounds and forwards
     return HttpResponse.json({});
   });
 
-  server.use(http.get('http://localhost:3003/rpc/getUser', resolver));
+  server.use(http.get('http://localhost:3005/rpc/getAvatar', resolver));
 
   const outcome = await withRequestContext({}, async () => {
     const pending = sendRPCRequest(
-      new Request('http://app.test/api/rpc/user/getUser', { method: 'GET' }),
-      'user',
+      new Request('http://app.test/api/rpc/avatar/getAvatar', { method: 'GET' }),
+      'avatar',
       { clock },
     );
 
@@ -257,12 +279,12 @@ test('it answers a hung mutation with a 503 after one attempt spanning the whole
     return HttpResponse.json({});
   });
 
-  server.use(http.post('http://localhost:3003/rpc/updateEmail', resolver));
+  server.use(http.post('http://localhost:3005/rpc/updateAvatar', resolver));
 
   const outcome = await withRequestContext({}, async () => {
     const pending = sendRPCRequest(
-      new Request('http://app.test/api/rpc/user/updateEmail', { body: '{}', method: 'POST' }),
-      'user',
+      new Request('http://app.test/api/rpc/avatar/updateAvatar', { body: '{}', method: 'POST' }),
+      'avatar',
       { clock },
     );
 
@@ -282,10 +304,13 @@ test('it answers a hung mutation with a 503 after one attempt spanning the whole
 test('it answers an immediate upstream transport failure with a 503 recorded under the transport reason', async () => {
   const inMemoryMetrics = createInMemoryMetrics();
 
-  server.use(http.get('http://localhost:3003/rpc/getUser', () => HttpResponse.error()));
+  server.use(http.get('http://localhost:3005/rpc/getAvatar', () => HttpResponse.error()));
 
   const outcome = await withRequestContext({}, () =>
-    sendRPCRequest(new Request('http://app.test/api/rpc/user/getUser', { method: 'GET' }), 'user'),
+    sendRPCRequest(
+      new Request('http://app.test/api/rpc/avatar/getAvatar', { method: 'GET' }),
+      'avatar',
+    ),
   );
 
   expect(outcome.value.status).toBe(503);
@@ -300,7 +325,7 @@ test('it answers an immediate upstream transport failure with a 503 recorded und
 test('it answers a superseded session itself, marking the response so the caller discards its offline work', async () => {
   const resolver = mock<HttpResponseResolver>(() => HttpResponse.json({}));
 
-  server.use(http.post('http://localhost:3003/rpc/getCurrentUser', resolver));
+  server.use(http.post('http://localhost:3005/rpc/getAvatars', resolver));
 
   const userID = createId();
 
@@ -319,8 +344,8 @@ test('it answers a superseded session itself, marking the response so the caller
     },
     () =>
       sendRPCRequest(
-        new Request('http://app.test/api/rpc/user/getCurrentUser', { method: 'POST' }),
-        'user',
+        new Request('http://app.test/api/rpc/avatar/getAvatars', { method: 'POST' }),
+        'avatar',
       ),
   );
 
@@ -332,7 +357,7 @@ test('it answers a superseded session itself, marking the response so the caller
 test('it forwards a call whose session reached its own expiry, leaving the offline work alone', async () => {
   const resolver = mock<HttpResponseResolver>(() => HttpResponse.json({}));
 
-  server.use(http.post('http://localhost:3003/rpc/getCurrentUser', resolver));
+  server.use(http.post('http://localhost:3005/rpc/getAvatars', resolver));
 
   const session = await db.sessionCollection.create({
     expiresAt: new Date(Date.now() - 1000),
@@ -354,8 +379,8 @@ test('it forwards a call whose session reached its own expiry, leaving the offli
     },
     () =>
       sendRPCRequest(
-        new Request('http://app.test/api/rpc/user/getCurrentUser', { method: 'POST' }),
-        'user',
+        new Request('http://app.test/api/rpc/avatar/getAvatars', { method: 'POST' }),
+        'avatar',
       ),
   );
 
@@ -366,7 +391,7 @@ test('it forwards a call whose session reached its own expiry, leaving the offli
 test('it sets no session-superseded header when the refresh resolves inside the window', async () => {
   const resolver = mock<HttpResponseResolver>(() => HttpResponse.json({}));
 
-  server.use(http.post('http://localhost:3003/rpc/getCurrentUser', resolver));
+  server.use(http.post('http://localhost:3005/rpc/getAvatars', resolver));
 
   const session = await db.sessionCollection.create({
     previousRefreshToken: 'refresh-1',
@@ -389,8 +414,8 @@ test('it sets no session-superseded header when the refresh resolves inside the 
     },
     () =>
       sendRPCRequest(
-        new Request('http://app.test/api/rpc/user/getCurrentUser', { method: 'POST' }),
-        'user',
+        new Request('http://app.test/api/rpc/avatar/getAvatars', { method: 'POST' }),
+        'avatar',
       ),
   );
 

@@ -10,7 +10,7 @@
     "./otel": "./src/otel/index.ts"
   },
   "scripts": {
-    "test": "bun test",
+    "test": "bun test --randomize",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

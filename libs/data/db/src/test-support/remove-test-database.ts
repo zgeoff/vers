@@ -1,5 +1,4 @@
 import postgres from 'postgres';
-import { clonedDatabaseURLs } from './cloned-database-urls';
 import { requireSafeDBIdentifier } from './require-safe-db-identifier';
 
 export async function removeTestDatabase(databaseURL: string): Promise<void> {
@@ -20,6 +19,4 @@ export async function removeTestDatabase(databaseURL: string): Promise<void> {
   } finally {
     await admin.end();
   }
-
-  clonedDatabaseURLs.delete(databaseURL);
 }
