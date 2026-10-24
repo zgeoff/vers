@@ -7,6 +7,7 @@ import { runBoundedAttempts } from '../rpc/run-bounded-attempts';
 import { serviceDispatcher } from '../rpc/service-dispatcher';
 import { SERVICE_URLS } from '../rpc/service-urls';
 import type { AttemptClock, ServiceFetchInit } from '../rpc/types';
+import { isProxiedService } from './is-proxied-service';
 import { isRetryableProxyCall } from './is-retryable-proxy-call';
 
 export interface SendRPCRequestOptions {
@@ -18,6 +19,10 @@ export async function sendRPCRequest(
   service: ServiceName,
   options: Readonly<SendRPCRequestOptions> = {},
 ): Promise<Response> {
+  if (!isProxiedService(service)) {
+    return new Response(null, { status: 404 });
+  }
+
   const incoming = new URL(request.url);
 
   const prefix = `/api/rpc/${service}`;
