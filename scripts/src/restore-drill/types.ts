@@ -1,4 +1,4 @@
-export type RestoreDrillArea =
+type RestoreDrillArea =
   | 'chain-anchors'
   | 'item-identities'
   | 'retained-sim-versions'
