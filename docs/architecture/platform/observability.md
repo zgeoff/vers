@@ -26,11 +26,16 @@ pino-to-OTLP stream, and metrics through a process-global meter provider behind 
 The web app carries no Elysia plugin and boots its own exporters for all three signals. A process
 with the endpoint unset emits nothing, and every instrument stays the OpenTelemetry API's no-op.
 
-The runtime boots OpenTelemetry before the Sentry SDK, and the order matters. The OpenTelemetry API
-keeps only the first global tracer, context manager, and propagator registration per process, and
-Sentry's own bootstrap registers unconditionally. Going second, Sentry's registration no-ops and W3C
-propagation and OTLP export stay in effect; reversed, Sentry's propagator would shadow `traceparent`
-and no service span would reach the exporter.
+Each process starts the Sentry SDK before OpenTelemetry, and the order matters. The OpenTelemetry
+API keeps only the first tracer provider, context manager, and propagator that a process registers.
+Sentry starts with its own OpenTelemetry setup skipped, so it registers no tracer provider and no
+propagator, and the W3C propagator and the OTLP exporter that start next take effect. Sentry then
+registers its own context manager, which forks a Sentry scope with each OpenTelemetry context. A
+tag, a user, or the request data set during one request therefore stays on that request's events.
+
+Under the default context manager, every request shares one Sentry scope. Sentry's start fails when
+another context manager is already registered, so a process that starts in the wrong order stops at
+boot.
 
 Each exporter configures itself from the standard `OTEL_EXPORTER_OTLP_*` variables, whose per-signal
 headers carry the ingest token and dataset routing. Stopping telemetry flushes pending exports and

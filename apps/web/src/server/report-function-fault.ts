@@ -10,8 +10,6 @@ export function reportFunctionFault(error: unknown, logger: FaultLoggerSink): vo
 
   const trace = findTraceContext();
 
-  // tagged per event, never through a forked scope: with the trace exporter's context manager
-  // registered before Sentry's, the SDK's withScope does not fork, so a scope tag outlives the call
   if (trace === undefined) {
     Sentry.captureException(error);
   } else {

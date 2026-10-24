@@ -16,12 +16,14 @@
     "@opentelemetry/exporter-trace-otlp-proto": "catalog:",
     "@orpc/server": "catalog:",
     "@sentry/bun": "catalog:",
+    "@sentry/node": "catalog:",
     "@sinclair/typebox": "catalog:",
     "@vers/service-auth": "workspace:*",
     "@vers/service-utils": "workspace:*",
     "@vers/trace": "workspace:*",
     "elysia": "catalog:",
     "pino": "catalog:",
+    "tiny-invariant": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
@@ -32,7 +34,6 @@
     "@vers/test-utils": "workspace:*",
     "@zgeoff/bun-test-extended": "catalog:",
     "expect-type": "catalog:",
-    "tiny-invariant": "catalog:",
     "typescript": "catalog:"
   }
 }

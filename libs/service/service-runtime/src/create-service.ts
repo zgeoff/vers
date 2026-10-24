@@ -53,6 +53,10 @@ export async function createService<TEnvShape extends z.ZodRawShape = Record<str
 ): Promise<Service<TEnvShape>> {
   const env = readServiceEnv(config.envShape);
 
+  // ahead of the OTel plugin: the OpenTelemetry API keeps the first global context manager, and
+  // only Sentry's gives each request its own scope; the plugin's own registration then no-ops
+  await startErrorReporting(env.SENTRY_DSN);
+
   const otlpLogStream =
     env.OTEL_EXPORTER_OTLP_ENDPOINT === undefined ? undefined : await createLogShipper(config.name);
 
@@ -92,11 +96,6 @@ export async function createService<TEnvShape extends z.ZodRawShape = Record<str
       }),
     );
   }
-
-  // registered after the OTel plugin: the OpenTelemetry API keeps only the first global tracer
-  // provider, context manager, and propagator per process, so going second makes the Sentry SDK's
-  // own OTel bootstrap a no-op; reversed, its sentry-trace-only propagator would shadow traceparent
-  await startErrorReporting(env.SENTRY_DSN);
 
   const router = await config.createRouter({ env, logger });
 
