@@ -53,6 +53,7 @@ test('it anchors a genesis segment on the activity startHash and seed', async ()
     simVersion: fixture.activity.simVersion,
     startChainIndex: fixture.activity.startChainIndex,
     status: fixture.activity.status,
+    verifiedHead: fixture.activity.verifiedHead,
   });
 });
 

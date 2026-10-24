@@ -125,7 +125,7 @@ test('it settles the terminal checkpoint reward into the avatar xp and level on 
 
   // a non-zero baseline distinguishes the delta add from an absolute overwrite
   const fixture = await createHonestActivityFixture(ctx.db, {
-    buildSnapshot: { level: buildLevelFromXP(500), xp: 500 },
+    settledXP: 500,
     duration: 80_000,
     seed: buildStateFromSeed(3_047_525_658),
   });
@@ -394,6 +394,104 @@ test('it settles no additional xp when a stale duplicate target misses the alrea
     .executeTakeFirstOrThrow();
 
   expect(afterSecond.xp).toBe(afterFirst.xp);
+});
+
+test('it keeps an applied zero-xp activity when a stale redelivery arrives after the settled total rose', async () => {
+  await using ctx = await setupTest();
+
+  // a brute no build here can damage kills the avatar before any reward, so the run settles 0 xp
+  const document = createMockContentDocument({
+    contentVersion: '868002',
+    encounter: {
+      contentVersion: '868002',
+      archetypes: [
+        {
+          id: 'unkillable-brute',
+          name: 'Unkillable Brute',
+          baseLevel: 1,
+          baseLife: 1_000_000,
+          baseXP: 10,
+          attackMin: 500,
+          attackMax: 500,
+          attackSpeed: 5,
+        },
+      ],
+      pools: [{ id: 'default', entries: [{ archetypeID: 'unkillable-brute', weight: 1 }] }],
+      tuning: {
+        waveCountMin: 3,
+        waveCountMax: 6,
+        waveSizeMin: 3,
+        waveSizeMax: 6,
+        difficultyScalingFactor: 1,
+      },
+    },
+  });
+
+  const fixture = await createHonestActivityFixture(ctx.db, {
+    document,
+    duration: 80_000,
+    seed: buildStateFromSeed(3_047_525_658),
+  });
+
+  const inMemoryMetrics = createInMemoryMetrics();
+  const cache = createReplayCache();
+
+  const deps = {
+    cache,
+    db: ctx.db,
+    keysServiceURL: resolveServiceURL('keys'),
+    loadContentDocument: makeContentDocumentLoader(ctx.db),
+    logger: pino({ enabled: false }),
+    privateKey: ctx.privateKey,
+    simVersion: 'test-engine-hash',
+  };
+
+  const staleTarget = {
+    activityID: fixture.activity.id,
+    appendedHead: fixture.activity.appendedHead,
+    replayAttempts: 0,
+    startChainIndex: fixture.activity.startChainIndex,
+    status: fixture.activity.status,
+    verifiedHead: 0,
+  };
+
+  await ctx.db.transaction().execute((trx) => runReplayTarget({ trx, deps, cache }, staleTarget));
+
+  const applied = await ctx.db
+    .selectFrom('activities')
+    .select(['settledXp', 'verifiedHead'])
+    .where('id', '=', fixture.activity.id)
+    .executeTakeFirstOrThrow();
+
+  invariant(
+    applied.settledXp === 0 && applied.verifiedHead === fixture.activity.appendedHead,
+    'the first pass applies the whole run and settles no xp',
+  );
+
+  // a later activity's settlement raises the avatar's total past this run's pinned build
+  await ctx.db
+    .updateTable('avatars')
+    .set({ level: buildLevelFromXP(40), xp: 40 })
+    .where('id', '=', fixture.activity.avatarId)
+    .execute();
+
+  const outcome = await ctx.db
+    .transaction()
+    .execute((trx) => runReplayTarget({ trx, deps, cache }, staleTarget));
+
+  expect(outcome.kind).toBe('matched');
+
+  const activity = await ctx.db
+    .selectFrom('activities')
+    .select('status')
+    .where('id', '=', fixture.activity.id)
+    .executeTakeFirstOrThrow();
+
+  expect(activity.status).toBe(fixture.activity.status);
+
+  const rejections = await inMemoryMetrics.readCounterDataPoints('vers.verification.rejections');
+
+  expect(rejections).toBeEmpty();
 });
 
 test("it rejects an activity whose pinned build does not match the avatar's settled xp total", async () => {
@@ -832,7 +930,7 @@ test('it grants a first_clear keyed by the node when a verified segment complete
   // a high build level outlives the default weak content regardless of seed, so this run
   // deterministically reaches a completed terminal rather than a failed one
   const fixture = await createHonestActivityFixture(ctx.db, {
-    buildSnapshot: { level: 50, xp: buildXPThreshold(50) },
+    settledXP: buildXPThreshold(50),
     duration: 80_000,
     seed: buildStateFromSeed(3_047_525_658),
   });
@@ -1045,7 +1143,7 @@ test('it lands no grant when a completed terminal verifies on a non-map-node sco
   // a high build level outlives the default weak content regardless of seed, so this run
   // deterministically reaches a completed terminal rather than a failed one
   const fixture = await createHonestActivityFixture(ctx.db, {
-    buildSnapshot: { level: 50, xp: buildXPThreshold(50) },
+    settledXP: buildXPThreshold(50),
     chain: { scopeType: 'encounter' },
     duration: 80_000,
     seed: buildStateFromSeed(3_047_525_658),
@@ -1101,7 +1199,7 @@ test('it grants a first_clear exactly once across a re-verification of an alread
   // a high build level outlives the default weak content regardless of seed, so this run
   // deterministically reaches a completed terminal rather than a failed one
   const fixture = await createHonestActivityFixture(ctx.db, {
-    buildSnapshot: { level: 50, xp: buildXPThreshold(50) },
+    settledXP: buildXPThreshold(50),
     duration: 80_000,
     seed: buildStateFromSeed(3_047_525_658),
   });
@@ -1171,7 +1269,7 @@ test('it rejects a settled activity whose node no earlier settled clear made rea
 
   // a completed terminal at '1_0' with no grant making the origin — and thus '1_0' — reachable
   const fixture = await createHonestActivityFixture(ctx.db, {
-    buildSnapshot: { level: 50, xp: buildXPThreshold(50) },
+    settledXP: buildXPThreshold(50),
     completedNodeIDs: [],
     duration: 80_000,
     seed: buildStateFromSeed(3_047_525_658),
@@ -1220,7 +1318,7 @@ test('it verifies a world-map-node run whose scope is connected to a verified fi
   // the default fixture already seeds a first-clear grant for a node adjacent to its own scope —
   // this asserts that setup directly before proving replay accepts a run built on top of it
   const fixture = await createHonestActivityFixture(ctx.db, {
-    buildSnapshot: { level: 50, xp: buildXPThreshold(50) },
+    settledXP: buildXPThreshold(50),
     duration: 80_000,
     seed: buildStateFromSeed(3_047_525_658),
   });
@@ -1276,7 +1374,7 @@ test('it rejects a world-map-node run whose scope is not connected to any comple
   const inMemoryMetrics = createInMemoryMetrics();
 
   const fixture = await createHonestActivityFixture(ctx.db, {
-    buildSnapshot: { level: 50, xp: buildXPThreshold(50) },
+    settledXP: buildXPThreshold(50),
     chain: { scopeId: '40_40' },
     completedNodeIDs: [],
     duration: 80_000,
@@ -1348,10 +1446,6 @@ test('it cascades a build mismatch through a chain of successors, once the run t
     duration: 80_000,
     seed: buildStateFromSeed(2_222_222_222),
   });
-
-  // the fixtures each synced the avatar's settled xp to their own claim in turn; restore it to what
-  // it actually is once the borrowed run never settled anything
-  await ctx.db.updateTable('avatars').set({ xp: 0 }).where('id', '=', rejected.avatarId).execute();
 
   const cache = createReplayCache();
 
@@ -1489,7 +1583,7 @@ test('it never rejects a world-map-node run at the origin for reachability, even
   const originID = toNodeID(ORIGIN_CELL[0], ORIGIN_CELL[1]);
 
   const fixture = await createHonestActivityFixture(ctx.db, {
-    buildSnapshot: { level: 50, xp: buildXPThreshold(50) },
+    settledXP: buildXPThreshold(50),
     chain: { scopeId: originID },
     completedNodeIDs: [],
     duration: 80_000,
@@ -1529,7 +1623,7 @@ test('it never rejects a non-world_map_node scope for reachability', async () =>
   await using ctx = await setupTest();
 
   const fixture = await createHonestActivityFixture(ctx.db, {
-    buildSnapshot: { level: 50, xp: buildXPThreshold(50) },
+    settledXP: buildXPThreshold(50),
     chain: { scopeType: 'encounter' },
     completedNodeIDs: [],
     duration: 80_000,

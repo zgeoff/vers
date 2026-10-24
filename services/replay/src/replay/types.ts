@@ -32,6 +32,7 @@ export interface ReplaySegment {
     readonly simVersion: string;
     readonly startChainIndex: number;
     readonly status: ActivityStatus;
+    readonly verifiedHead: number;
   };
   readonly chain: {
     readonly genesisSeed: string;

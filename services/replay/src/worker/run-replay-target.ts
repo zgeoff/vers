@@ -60,10 +60,10 @@ export async function runReplayTarget(
     return rejectSegment(context, segment, seedDivergence, 'seed-validation-failed');
   }
 
-  // Only a segment's first pass needs the descriptor, build, and reachability checks — a later
-  // pass over the same activity has already verified them once, and a stamped row never changes
-  // afterward.
-  if (segment.verifiedHead === 0) {
+  // gated on the row's own cursor, not the target's: a stale redelivery can still carry a
+  // `verifiedHead` of 0 after an apply, when a later activity may have raised the avatar's settled
+  // total past this activity's pinned build
+  if (segment.activity.verifiedHead === 0) {
     const avatarState = await trx
       .selectFrom('avatars')
       .select(['seed', 'xp'])
@@ -72,21 +72,16 @@ export async function runReplayTarget(
 
     invariant(avatarState !== undefined, 'a stamped activity always has an owning avatar');
 
-    // gated on `settledXP` reading zero, not on `verifiedHead`: a stale duplicate redelivery can
-    // still carry a `verifiedHead` of 0, but its `settledXP` already reflects the earlier apply, so
-    // the check runs at most once
-    if (segment.activity.settledXP === 0) {
-      const expectedBuild = {
-        level: buildLevelFromXP(avatarState.xp),
-        xp: avatarState.xp,
-      };
+    const expectedBuild = {
+      level: buildLevelFromXP(avatarState.xp),
+      xp: avatarState.xp,
+    };
 
-      if (
-        expectedBuild.level !== segment.activity.buildSnapshot.level ||
-        expectedBuild.xp !== segment.activity.buildSnapshot.xp
-      ) {
-        return rejectBuildMismatch(context, segment);
-      }
+    if (
+      expectedBuild.level !== segment.activity.buildSnapshot.level ||
+      expectedBuild.xp !== segment.activity.buildSnapshot.xp
+    ) {
+      return rejectBuildMismatch(context, segment);
     }
 
     const scopeSecret = await tryReadScopeSecret(deps, segment, deadline);
