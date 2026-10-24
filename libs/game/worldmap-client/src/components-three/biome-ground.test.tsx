@@ -50,7 +50,15 @@ test('it renders a chunk mesh once its tile finishes its progressive build', asy
     scatterBuildStats.buildMs = 0;
   });
 
-  setWorldRegion('avatar-a', 42, { edges: {}, nodes: {} }, null, new Set(), []);
+  setWorldRegion({
+    regionKey: 'avatar-a',
+    userSeed: 42,
+    worldGraph: { edges: {}, nodes: {} },
+    selectedNode: null,
+    selectableNodeIDs: new Set(),
+    revealSources: [],
+  });
+
   setViewport({ maxCX: CHUNK_SIZE - 1, maxCY: CHUNK_SIZE - 1, minCX: 0, minCY: 0 });
 
   const renderer = await ReactThreeTestRenderer.create(<BiomeGround />);
@@ -81,7 +89,15 @@ test('it drops a chunk mesh once a pan carries it out of view and streams in the
     scatterBuildStats.buildMs = 0;
   });
 
-  setWorldRegion('avatar-a', 42, { edges: {}, nodes: {} }, null, new Set(), []);
+  setWorldRegion({
+    regionKey: 'avatar-a',
+    userSeed: 42,
+    worldGraph: { edges: {}, nodes: {} },
+    selectedNode: null,
+    selectableNodeIDs: new Set(),
+    revealSources: [],
+  });
+
   setViewport({ maxCX: CHUNK_SIZE - 1, maxCY: CHUNK_SIZE - 1, minCX: 0, minCY: 0 });
 
   const renderer = await ReactThreeTestRenderer.create(<BiomeGround />);

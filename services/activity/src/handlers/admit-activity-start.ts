@@ -45,20 +45,22 @@ interface AdmitActivityStartErrors {
   readonly SIM_VERSION_UNKNOWN: (payload: SimVersionProblemPayload) => Error;
 }
 
+interface AdmitActivityStartInput {
+  readonly actingUserID: string;
+  readonly activityID: string;
+  readonly actingSessionID: null | string;
+  readonly activityStart: Readonly<OfflineActivityStartSubmission>;
+}
+
 export async function admitActivityStart(
   deps: Readonly<AdmitActivityStartDeps>,
   trx: Kysely<DB>,
-  actingUserID: string,
-  input: Readonly<{
-    activityID: string;
-    actingSessionID: null | string;
-    activityStart: Readonly<OfflineActivityStartSubmission>;
-  }>,
+  input: AdmitActivityStartInput,
   errors: AdmitActivityStartErrors,
 ): Promise<Selectable<Activities>> {
   const activityStart = input.activityStart;
 
-  await requireActiveAvatar(trx, actingUserID, activityStart.avatarID, errors);
+  await requireActiveAvatar(trx, input.actingUserID, activityStart.avatarID, errors);
 
   const quarantined = await trx
     .selectFrom('activities')

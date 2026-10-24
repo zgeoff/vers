@@ -79,8 +79,8 @@ export function createJobQueue<TPayloads extends JobPayloads>(
   return {
     start: () => startQueues(boss, defs),
     stop: () => boss.stop({ timeout: JOB_QUEUE_STOP_TIMEOUT_MS }),
-    send: (name, payload, opts) => sendJob(boss, defs, name, payload, opts),
-    drain: (name) => drainJobs(boss, defs, handlers, onJobFailed, name),
+    send: (name, payload, opts) => sendJob({ boss, defs, name, payload, opts }),
+    drain: (name) => drainJobs({ boss, defs, handlers, onJobFailed, name }),
     readJobState: (name, jobID) => readJobState(boss, name, jobID),
   };
 }
@@ -141,38 +141,46 @@ function buildQueuePolicy(def: Readonly<JobDef>): {
   };
 }
 
-async function sendJob(
-  boss: PgBoss,
-  defs: JobDefs,
-  name: string,
-  payload: object,
-  opts: Readonly<SendJobOptions> | undefined,
-): Promise<string> {
-  const def = defs[name];
+interface SendJobInput {
+  readonly boss: PgBoss;
+  readonly defs: JobDefs;
+  readonly name: string;
+  readonly payload: object;
+  readonly opts: Readonly<SendJobOptions> | undefined;
+}
 
-  invariant(def, `job "${name}" is not defined`);
+async function sendJob(input: SendJobInput): Promise<string> {
+  const def = input.defs[input.name];
 
-  const data: object = def.schema.parse(payload);
-  const sendOptions = opts?.trx === undefined ? undefined : { db: fromKysely(opts.trx) };
+  invariant(def, `job "${input.name}" is not defined`);
 
-  const jobID = await boss.send(name, data, sendOptions);
+  const data: object = def.schema.parse(input.payload);
 
-  invariant(jobID !== null, `pg-boss accepted the send but returned no job id for "${name}"`);
+  const sendOptions =
+    input.opts?.trx === undefined ? undefined : { db: fromKysely(input.opts.trx) };
+
+  const jobID = await input.boss.send(input.name, data, sendOptions);
+
+  invariant(jobID !== null, `pg-boss accepted the send but returned no job id for "${input.name}"`);
 
   return jobID;
 }
 
+interface DrainJobsOptions<TPayloads extends JobPayloads> {
+  readonly boss: PgBoss;
+  readonly defs: JobDefMap<TPayloads>;
+  readonly handlers: JobHandlerMap<TPayloads>;
+  readonly onJobFailed: OnJobFailed;
+  readonly name: Extract<keyof TPayloads, string> | undefined;
+}
+
 async function drainJobs<TPayloads extends JobPayloads>(
-  boss: PgBoss,
-  defs: JobDefMap<TPayloads>,
-  handlers: JobHandlerMap<TPayloads>,
-  onJobFailed: OnJobFailed,
-  name: Extract<keyof TPayloads, string> | undefined,
+  options: DrainJobsOptions<TPayloads>,
 ): Promise<DrainResult> {
   const names: Array<Extract<keyof TPayloads, string>> = [];
 
-  for (const queueName in defs) {
-    if (name === undefined || queueName === name) {
+  for (const queueName in options.defs) {
+    if (options.name === undefined || queueName === options.name) {
       names.push(queueName);
     }
   }
@@ -181,18 +189,28 @@ async function drainJobs<TPayloads extends JobPayloads>(
   let failed = 0;
 
   for (const queueName of names) {
-    const def = defs[queueName];
-    const handler = handlers[queueName];
+    const def = options.defs[queueName];
+    const handler = options.handlers[queueName];
 
     for (;;) {
-      const jobs = await boss.fetch<unknown>(queueName, { batchSize: 10, includeMetadata: true });
+      const jobs = await options.boss.fetch<unknown>(queueName, {
+        batchSize: 10,
+        includeMetadata: true,
+      });
 
       if (jobs.length === 0) {
         break;
       }
 
       for (const job of jobs) {
-        const outcome = await runJob(boss, queueName, def, handler, onJobFailed, job);
+        const outcome = await runJob({
+          boss: options.boss,
+          queueName,
+          def,
+          handler,
+          onJobFailed: options.onJobFailed,
+          job,
+        });
 
         if (outcome === 'completed') {
           completed += 1;
@@ -215,20 +233,26 @@ interface FetchedJob {
   readonly retryLimit: number;
 }
 
-function runJob<TPayload extends object>(
-  boss: PgBoss,
-  queueName: string,
-  def: Readonly<JobDef<TPayload>>,
-  handler: JobHandler<TPayload>,
-  onJobFailed: OnJobFailed,
-  job: Readonly<FetchedJob>,
-): Promise<JobOutcome> {
+interface RunJobOptions<TPayload extends object> {
+  readonly boss: PgBoss;
+  readonly queueName: string;
+  readonly def: Readonly<JobDef<TPayload>>;
+  readonly handler: JobHandler<TPayload>;
+  readonly onJobFailed: OnJobFailed;
+  readonly job: Readonly<FetchedJob>;
+}
+
+function runJob<TPayload extends object>(options: RunJobOptions<TPayload>): Promise<JobOutcome> {
+  const boss = options.boss;
+  const queueName = options.queueName;
+  const job = options.job;
+
   return withRootSpan(`job.${queueName}`, async () => {
-    const parsed = def.schema.safeParse(job.data);
+    const parsed = options.def.schema.safeParse(job.data);
 
     if (!parsed.success) {
       // reported before the fail round-trip so a rejecting `fail` can never mask the cause
-      onJobFailed(
+      options.onJobFailed(
         new Error(`job "${queueName}" payload failed schema validation`, { cause: parsed.error }),
         {
           jobID: job.id,
@@ -243,14 +267,13 @@ function runJob<TPayload extends object>(
     }
 
     try {
-      await handler(parsed.data, { jobID: job.id });
-
+      await options.handler(parsed.data, { jobID: job.id });
       await boss.complete(queueName, job.id);
 
       return 'completed';
     } catch (error) {
       // reported before the fail round-trip so a rejecting `fail` can never mask the cause
-      onJobFailed(error, {
+      options.onJobFailed(error, {
         jobID: job.id,
         name: queueName,
         retriesExhausted: isRetriesExhausted(job),

@@ -14,7 +14,14 @@ test('it returns the current world graph state', () => {
     nodes: { node1: createMockWorldMapNode({ id: 'node1', position: [0, 0] }) },
   };
 
-  setWorldRegion('region-a', 42, graph, null, new Set(), []);
+  setWorldRegion({
+    regionKey: 'region-a',
+    userSeed: 42,
+    worldGraph: graph,
+    selectedNode: null,
+    selectableNodeIDs: new Set(),
+    revealSources: [],
+  });
 
   const hook = renderHook(() => useWorldGraph());
 

@@ -9,7 +9,15 @@ test('it selects the graph node matching the route param when it is selectable',
   const node1 = createMockWorldMapNode({ id: 'node1' });
   const graph: WorldGraph = { edges: {}, nodes: { node1 } };
 
-  setWorldRegion('region-a', 42, graph, null, new Set(['node1']), []);
+  setWorldRegion({
+    regionKey: 'region-a',
+    userSeed: 42,
+    worldGraph: graph,
+    selectedNode: null,
+    selectableNodeIDs: new Set(['node1']),
+    revealSources: [],
+  });
+
   render(<ExploreNodeFocus nodeID="node1" />);
 
   const hook = renderHook(() => useSelectedNode());
@@ -21,7 +29,15 @@ test('it leaves selection untouched for a graph node outside the selectable set'
   const node1 = createMockWorldMapNode({ id: 'node1' });
   const graph: WorldGraph = { edges: {}, nodes: { node1 } };
 
-  setWorldRegion('region-c', 42, graph, null, new Set(), []);
+  setWorldRegion({
+    regionKey: 'region-c',
+    userSeed: 42,
+    worldGraph: graph,
+    selectedNode: null,
+    selectableNodeIDs: new Set(),
+    revealSources: [],
+  });
+
   render(<ExploreNodeFocus nodeID="node1" />);
 
   const hook = renderHook(() => useSelectedNode());
@@ -33,7 +49,14 @@ test('it renders nothing and leaves selection untouched for an unknown node id',
   const node1 = createMockWorldMapNode({ id: 'node1' });
   const graph: WorldGraph = { edges: {}, nodes: { node1 } };
 
-  setWorldRegion('region-b', 42, graph, null, new Set(['missing-node']), []);
+  setWorldRegion({
+    regionKey: 'region-b',
+    userSeed: 42,
+    worldGraph: graph,
+    selectedNode: null,
+    selectableNodeIDs: new Set(['missing-node']),
+    revealSources: [],
+  });
 
   const rendered = render(<ExploreNodeFocus nodeID="missing-node" />);
 

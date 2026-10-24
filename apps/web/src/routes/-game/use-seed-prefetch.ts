@@ -48,21 +48,33 @@ export function useSeedPrefetch(revealedNodeIDs: ReadonlySet<string>): void {
 
     if (delta.length > 0) {
       runIgnoringRejection(
-        runSeedReveal(client, avatarID, delta, session.nodeIDs, controllerRef.current.signal),
+        runSeedReveal({
+          client,
+          avatarID,
+          delta,
+          sessionNodeIDs: session.nodeIDs,
+          signal: controllerRef.current.signal,
+        }),
       );
     }
   }, [avatarID, client, revealedNodeIDs]);
 }
 
-async function runSeedReveal(
-  client: WorkerClient,
-  avatarID: string,
-  delta: ReadonlyArray<string>,
-  sessionNodeIDs: Set<string>,
-  signal: AbortSignal,
-): Promise<void> {
+interface RunSeedRevealOptions {
+  readonly client: WorkerClient;
+  readonly avatarID: string;
+  readonly delta: ReadonlyArray<string>;
+  readonly sessionNodeIDs: Set<string>;
+  readonly signal: AbortSignal;
+}
+
+async function runSeedReveal(options: RunSeedRevealOptions): Promise<void> {
+  const avatarID = options.avatarID;
+  const delta = options.delta;
+  const signal = options.signal;
+
   for (const nodeID of delta) {
-    sessionNodeIDs.add(nodeID);
+    options.sessionNodeIDs.add(nodeID);
   }
 
   for (let start = 0; start < delta.length; start += MAX_REVEAL_BATCH_NODES) {
@@ -80,10 +92,14 @@ async function runSeedReveal(
         secretVersion: revealed.secretVersion,
       };
 
-      await sendIdleCacheNodeSeeds(client, { avatarID, seeds: revealed.nodes, stamps }, signal);
+      await sendIdleCacheNodeSeeds(
+        options.client,
+        { avatarID, seeds: revealed.nodes, stamps },
+        signal,
+      );
     } catch {
       for (const nodeID of delta.slice(start)) {
-        sessionNodeIDs.delete(nodeID);
+        options.sessionNodeIDs.delete(nodeID);
       }
 
       return;

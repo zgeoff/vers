@@ -315,13 +315,13 @@ export const workerLifecycleMachine = setup({
         actions: assign((args) => ({
           pending: [
             ...args.context.pending,
-            buildResyncRequest(
-              args.context,
-              args.event.avatarID,
-              args.event.claim,
-              args.event.deferred,
-              [],
-            ),
+            buildResyncRequest({
+              context: args.context,
+              avatarID: args.event.avatarID,
+              claim: args.event.claim,
+              deferred: args.event.deferred,
+              carryOverDeferreds: [],
+            }),
           ],
           resyncTicket: { pendingClaimAvatarID: null },
         })),
@@ -329,13 +329,13 @@ export const workerLifecycleMachine = setup({
       },
       {
         actions: assign((args) => ({
-          currentRequest: buildResyncRequest(
-            args.context,
-            args.event.avatarID,
-            args.event.claim,
-            args.event.deferred,
-            [],
-          ),
+          currentRequest: buildResyncRequest({
+            context: args.context,
+            avatarID: args.event.avatarID,
+            claim: args.event.claim,
+            deferred: args.event.deferred,
+            carryOverDeferreds: [],
+          }),
           resyncTicket: { pendingClaimAvatarID: null },
         })),
         target: '.resyncing',
@@ -743,20 +743,22 @@ function scheduleReconnectRecovery(context: WorkerLifecycleContext): void {
   })();
 }
 
-function buildResyncRequest(
-  context: WorkerLifecycleContext,
-  avatarID: string,
-  claim: boolean,
-  deferred: Deferred<void>,
-  carryOverDeferreds: ReadonlyArray<Deferred<void>>,
-): PendingFlowRequestOf<'resync'> {
+interface BuildResyncRequestOptions {
+  readonly context: WorkerLifecycleContext;
+  readonly avatarID: string;
+  readonly claim: boolean;
+  readonly deferred: Deferred<void>;
+  readonly carryOverDeferreds: ReadonlyArray<Deferred<void>>;
+}
+
+function buildResyncRequest(options: BuildResyncRequestOptions): PendingFlowRequestOf<'resync'> {
   return {
-    avatarID,
-    carryOverDeferreds,
-    claim,
-    deferred,
+    avatarID: options.avatarID,
+    carryOverDeferreds: options.carryOverDeferreds,
+    claim: options.claim,
+    deferred: options.deferred,
     kind: 'resync',
-    signals: buildFlowSignals(context),
+    signals: buildFlowSignals(options.context),
   };
 }
 
@@ -827,13 +829,13 @@ function buildPrerequisiteResync(
   invariant(request?.kind === 'start', 'a prerequisite resync is built for a start at the head');
 
   return {
-    currentRequest: buildResyncRequest(
+    currentRequest: buildResyncRequest({
       context,
-      request.input.avatarID,
-      false,
-      buildDeferred<void>(),
-      [],
-    ),
+      avatarID: request.input.avatarID,
+      claim: false,
+      deferred: buildDeferred<void>(),
+      carryOverDeferreds: [],
+    }),
     pending: [{ ...request, awaitedResync: true }, ...context.pending],
     resyncTicket: context.resyncTicket ?? { pendingClaimAvatarID: null },
   };
@@ -917,9 +919,12 @@ function foldHeldResyncClaim(context: WorkerLifecycleContext): ReadonlyArray<Pen
 
   return [
     ...context.pending,
-    buildResyncRequest(context, heldClaim.avatarID, true, buildDeferred<void>(), [
-      ...heldClaim.current.carryOverDeferreds,
-      heldClaim.current.deferred,
-    ]),
+    buildResyncRequest({
+      context,
+      avatarID: heldClaim.avatarID,
+      claim: true,
+      deferred: buildDeferred<void>(),
+      carryOverDeferreds: [...heldClaim.current.carryOverDeferreds, heldClaim.current.deferred],
+    }),
   ];
 }
