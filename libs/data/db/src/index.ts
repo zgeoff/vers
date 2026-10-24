@@ -1,5 +1,7 @@
 export { createDB } from './create-db';
-export { applyMigrations, migrationsFolder } from './apply-migrations';
+export { applyMigrations } from './apply-migrations';
+export { migrationsFolder } from './build-migrator';
+export { readPendingMigrations } from './read-pending-migrations';
 export { toJSON } from './to-json';
 
 export type {

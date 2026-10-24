@@ -146,7 +146,8 @@ jobs:
     # migrations are a deploy action, not a check: they run exactly once per
     # green push — several services share the one database, so they never run
     # per-service — and, like rollouts, are never cancelled mid-run; a newer
-    # push queues behind them. Idempotent: kysely-ctl no-ops when up to date.
+    # push queues behind them. Idempotent: an up-to-date database gets no backup
+    # and no migration.
     if: ${{ needs.checks.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -166,10 +167,14 @@ jobs:
       - name: Install Dependencies
         run: bun install --frozen-lockfile
 
-      - name: Run Database Migrations
+      # one process backs up then migrates: a backup that fails, or an unset Neon key
+      # or project, exits before any migration runs
+      - name: Back Up And Migrate The Database
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-        run: bun run --cwd libs/data/db db:migrate
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
+        run: bun run db:migrate:production
 
   manifest:
     name: Read deploy manifest

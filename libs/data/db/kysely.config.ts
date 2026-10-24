@@ -2,7 +2,7 @@ import { CamelCasePlugin } from 'kysely';
 import { defineConfig } from 'kysely-ctl';
 import { PostgresJSDialect } from 'kysely-postgres-js';
 import postgres from 'postgres';
-import { migrationsFolder } from './src/apply-migrations';
+import { migrationsFolder } from './src/build-migrator';
 
 const databaseURL = process.env['DATABASE_URL'];
 

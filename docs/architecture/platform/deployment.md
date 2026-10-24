@@ -85,9 +85,11 @@ phase lost to an earlier failure ships on the next push.
 ### Pipeline
 
 Neon migrations apply once, in their own never-cancelled `migrate` job, because several services
-share one database. Database migrations are never rolled back: a release must tolerate every
-migration applied after it shipped (expand and contract), which is what makes redeploying a previous
-image safe.
+share one database. Before the job applies a pending migration, it creates a Neon branch off `main`
+as the backup point and logs the branch's name. A backup that fails stops the job before any
+migration runs, and a [database restore](../../runbooks/database-restore.md) starts from that
+branch. Database migrations are never rolled back: a release must tolerate every migration applied
+after it shipped (expand and contract), which is what makes redeploying a previous image safe.
 
 The build and deploy matrices derive from the manifest, so adding an app to the manifest is the
 whole change. An app's failed build leaves its ref unavailable to the full-stack gate, whose
