@@ -6,4 +6,5 @@ test('it prefixes a service name with service-', () => {
   expect(buildServiceAudience('session')).toBe('service-session');
   expect(buildServiceAudience('user')).toBe('service-user');
   expect(buildServiceAudience('verification')).toBe('service-verification');
+  expect(buildServiceAudience('replay-provider')).toBe('service-replay-provider');
 });
