@@ -1334,7 +1334,7 @@
     "@commitlint/cli": "21.2.3",
     "@conform-to/react": "1.21.2",
     "@conform-to/zod": "1.21.2",
-    "@dotenvx/dotenvx": "2.36.0",
+    "@dotenvx/dotenvx": "2.38.0",
     "@elysiajs/opentelemetry": "1.4.11",
     "@epic-web/totp": "4.0.1",
     "@faker-js/faker": "10.6.0",
@@ -1642,11 +1642,11 @@
 
     "@dimforge/rapier3d-compat": ["@dimforge/rapier3d-compat@0.12.0", "", {}, "sha512-uekIGetywIgopfD97oDL5PfeezkFpNhwlzlaEYNOA0N6ghdsOvh/HYjSMek5Q2O1PYvRSDFcqFVJl4r4ZBwOow=="],
 
-    "@dotenvx/dotenvx": ["@dotenvx/dotenvx@2.36.0", "", { "dependencies": { "@dotenvx/primitives": "^3.3.0", "@dotenvx/providers": "^0.3.5", "@dotenvx/tooling": "^1.0.5", "undici": "^6.28.1", "write-file-atomic": "^5.0.1", "yocto-spinner": "^1.2.1" }, "bin": { "dx": "src/cli/dotenvx.js", "dotenvx": "src/cli/dotenvx.js" } }, "sha512-jjB1LuQABcfTwXZvFK4OCFViWODsR8bCMpK3c3nHqaibB/f2/k/4LqA2TXdjLWSwi3FNFzq9J6oX3BGQ0kAU+A=="],
+    "@dotenvx/dotenvx": ["@dotenvx/dotenvx@2.38.0", "", { "dependencies": { "@dotenvx/primitives": "^3.3.1", "@dotenvx/providers": "^0.3.8", "@dotenvx/tooling": "^1.0.5", "undici": "^6.28.1", "write-file-atomic": "^5.0.1", "yocto-spinner": "^1.2.1" }, "bin": { "dx": "src/cli/dotenvx.js", "dotenvx": "src/cli/dotenvx.js" } }, "sha512-HVkCYAQ+v/h/buDNWfQnA6QkidC34QZFFGcf9A5BMidAgiNKcIGWAA0eyhXNF4Ak8971ytJLDQY/u6xSLmsR2w=="],
 
-    "@dotenvx/primitives": ["@dotenvx/primitives@3.3.0", "", {}, "sha512-M5GnIMsooWrk3BLgrAs53tqXxd7Rj0Ukc+JnjedLxlvxPkYsBFF/kKrfkpskrrvT/wwma5UdXq+wKHWBcjDe9g=="],
+    "@dotenvx/primitives": ["@dotenvx/primitives@3.3.1", "", {}, "sha512-ykX29rVnHwwV6m3AMmvR+niFSwhOG2TYttJjURz3n/3iHtpWC8gEptojYY+eHgBAV4fkaGRM1Rf0wgQ6/DeUYQ=="],
 
-    "@dotenvx/providers": ["@dotenvx/providers@0.3.5", "", { "dependencies": { "@dotenvx/primitives": "^3.3.0", "@dotenvx/tooling": "^1.0.4" } }, "sha512-tqePICOaMSZCpUXpTcooW8H+UMce1MTmMqI+nbeh1Xdh6Zgdl4ymkw+CZBQoCX8fcfTheCoi4PtUABUaqESp2A=="],
+    "@dotenvx/providers": ["@dotenvx/providers@0.3.8", "", { "dependencies": { "@dotenvx/primitives": "^3.3.1", "@dotenvx/tooling": "^1.0.4" } }, "sha512-e1+O9dnFQRBDvc25DVduFTZDA4WLpGrC0IgD+/ot4Cnk0xCX/ikvGCMvoGnslCr+wF509uYLEE3J5T1Tead2ww=="],
 
     "@dotenvx/tooling": ["@dotenvx/tooling@1.0.5", "", {}, "sha512-XMAwZpxIajWaP31zLl2GQS3grIQsRY4B4VMss8fDv70XbGF/9aXSMHc3v9iJNZZVX/i0Loz1MAn6oM8dycbN4A=="],
 
