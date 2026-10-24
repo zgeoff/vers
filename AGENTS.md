@@ -60,6 +60,12 @@ Dependencies:
   for an external dependency and `"workspace:*"` for an internal one.
 - Pin exact versions, with no `^` or `~` ranges. `bun add` saves exact versions, so the rule covers
   hand-written edits.
+- A root override, an age-gate exclude in `bunfig.toml`, or an audit ignore stays only while it
+  changes the install. `bun run deps:check` runs in the PR checks and the weekly dependency-health
+  job. It fails on an exclude past the removal date in its comment, an override that every range in
+  `bun.lock` admits, and an audit ignore whose advisory is gone or has a fix in range. One
+  exception: an override that pins the catalog version keeps every copy on that version, so the
+  check keeps it.
 - TypeScript is version 7, with no `baseUrl` and no path aliases, so write each import relative to
   the importing file.
 
