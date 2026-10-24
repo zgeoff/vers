@@ -293,6 +293,35 @@ test('it leaves allowed Math members alone however they are reached', async () =
   expect(result.exitCode).toBe(0);
 });
 
+test('it leaves a type query of a qualified name alone', async () => {
+  const source = [
+    'type Floor = typeof Math.floor;',
+    'type Exp = typeof Math.exp;',
+    'type GlobalMath = typeof globalThis.Math;',
+    'type WindowLog = typeof window.Math.log;',
+    '',
+  ].join('\n');
+
+  const result = await setupTest(source);
+
+  expect(result.exitCode).toBe(0);
+});
+
+test('it flags a banned Math member called at runtime beside a type query of it', async () => {
+  const source = [
+    'type Exp = typeof Math.exp;',
+    'const a = Math.exp(2);',
+    'type Log = typeof globalThis.Math.log;',
+    'const b = globalThis.Math.log(2);',
+    '',
+  ].join('\n');
+
+  const result = await setupTest(source);
+
+  expect(result.exitCode).toBe(1);
+  expect(result.stdout.match(/no-unportable-math/gu)).toHaveLength(2);
+});
+
 test('it flags a banned Math member when a type named Math is declared', async () => {
   const source = [
     'interface Math { extra: number }',
