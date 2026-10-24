@@ -8,13 +8,13 @@ export function reportUnexpectedError(error: unknown): void {
     return;
   }
 
-  const trace = findTraceContext();
+  sentry.withScope((scope) => {
+    const trace = findTraceContext();
 
-  // tagged per event, never through a forked scope: with the OTel plugin's context manager
-  // registered before Sentry's, the SDK's withScope does not fork, so a scope tag outlives the call
-  if (trace === undefined) {
+    if (trace !== undefined) {
+      scope.setTag('traceID', trace.traceID);
+    }
+
     sentry.captureException(error);
-  } else {
-    sentry.captureException(error, { tags: { traceID: trace.traceID } });
-  }
+  });
 }

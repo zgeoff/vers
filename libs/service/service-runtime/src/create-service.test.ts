@@ -569,6 +569,9 @@ test('it reports an unexpected handler error to the error backend exactly once',
       reported.push(error);
     },
     flush: () => Promise.resolve(true),
+    withScope: (reportInScope) => {
+      reportInScope({ setTag: () => {} });
+    },
   });
 
   const service = await createService({
