@@ -1,0 +1,60 @@
+import { applyMigrations, readPendingMigrations } from '@vers/db';
+import { createNeonBackupBranch } from './create-neon-backup-branch';
+import type { MigrationRun, NeonBranch } from './types';
+
+interface RunMigrationsWithBackupConfig {
+  readonly databaseURL: string;
+  readonly backup: Parameters<typeof createNeonBackupBranch>[0];
+  readonly onBackupCreated: (
+    branch: NeonBranch,
+    pendingMigrationNames: ReadonlyArray<string>,
+  ) => void;
+}
+
+export async function runMigrationsWithBackup(
+  config: RunMigrationsWithBackupConfig,
+): Promise<MigrationRun> {
+  const pendingMigrationNames = await readPendingMigrations({ databaseURL: config.databaseURL });
+
+  if (pendingMigrationNames.length === 0) {
+    return checkMigrationHistory(config.databaseURL);
+  }
+
+  const backupBranch = await createNeonBackupBranch(config.backup);
+
+  config.onBackupCreated(backupBranch, pendingMigrationNames);
+
+  const resultSet = await applyMigrations({ databaseURL: config.databaseURL });
+
+  const results = resultSet.results ?? [];
+
+  if (resultSet.error !== undefined) {
+    const stillPending = await readPendingMigrations({ databaseURL: config.databaseURL });
+
+    return {
+      backupBranch,
+      error: resultSet.error,
+      failedMigrationName: results.find((result) => result.status === 'Error')?.migrationName,
+      kind: 'migration-failed',
+      persistedMigrationNames: pendingMigrationNames.filter((name) => !stillPending.includes(name)),
+    };
+  }
+
+  return {
+    appliedMigrationNames: results.map((result) => result.migrationName),
+    backupBranch,
+    kind: 'migrated',
+  };
+}
+
+async function checkMigrationHistory(databaseURL: string): Promise<MigrationRun> {
+  // the pending list holds only the migration files on disk, so a recorded migration whose file is
+  // gone shows nothing pending; applying to the latest finds that gap and applies nothing
+  const resultSet = await applyMigrations({ databaseURL });
+
+  if (resultSet.error !== undefined) {
+    return { error: resultSet.error, kind: 'history-check-failed' };
+  }
+
+  return { kind: 'up-to-date' };
+}

@@ -180,6 +180,7 @@
     "codegen:types": "turbo run typegen",
     "content:check-digest": "bun scripts/src/bin/check-content-digest.ts",
     "content:publish": "bun scripts/src/bin/content-publish.ts",
+    "db:migrate:production": "bun scripts/src/bin/db-migrate-production.ts",
     "deploy": "bun scripts/src/bin/deploy.ts",
     "env:contract": "bun scripts/src/bin/write-env-contracts.ts",
     "env:contract:check": "bun scripts/src/bin/write-env-contracts.ts --check",
