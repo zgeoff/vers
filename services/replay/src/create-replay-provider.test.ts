@@ -9,8 +9,8 @@ test('it boots from env.SIM_ENGINE_HASH', async () => {
   expect(service.env.SIM_ENGINE_HASH).toBe('test-engine-hash');
 });
 
-test('it verifies tokens against a name override instead of its default audience', async () => {
-  const service = await createReplayProvider({ name: 'service-replay' });
+test('it rejects a token minted for the replay service with 401', async () => {
+  const service = await createReplayProvider();
 
   const viewer = await createAnonymousViewer({
     audience: 'service-replay',
@@ -27,7 +27,7 @@ test('it verifies tokens against a name override instead of its default audience
     }),
   );
 
-  expect(response.status).toBe(200);
+  expect(response.status).toBe(401);
 });
 
 test('it accepts a call from service-replay', async () => {

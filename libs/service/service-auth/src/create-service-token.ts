@@ -2,12 +2,12 @@ import type { CryptoKey } from 'jose';
 import * as jose from 'jose';
 import { buildServiceAudience } from './build-service-audience';
 import { TOKEN_ALGORITHM } from './token-claims';
-import type { ServiceName, TokenIssuer } from './types';
+import type { AudienceName, TokenIssuer } from './types';
 
 export interface CreateServiceTokenOptions {
   readonly actingSessionID?: string;
   readonly actingUserID?: string;
-  readonly audience: ServiceName;
+  readonly audience: AudienceName;
   readonly expiresIn?: string;
   readonly issuer: TokenIssuer;
   readonly privateKey: CryptoKey;

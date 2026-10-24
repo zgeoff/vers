@@ -73,7 +73,7 @@ async function sendProviderReplaySegment(
   job: ReplaySegmentInput,
 ): Promise<ReplaySegmentOutput> {
   const token = await createServiceToken({
-    audience: 'replay',
+    audience: 'replay-provider',
     issuer: 'service-replay',
     privateKey: deps.privateKey,
   });
