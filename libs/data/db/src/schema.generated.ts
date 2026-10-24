@@ -39,6 +39,7 @@ export interface Activities {
   appendedAt: Timestamp | null;
   appendedHead: Generated<number>;
   appendedTimeMs: Generated<Int8>;
+  archivedAt: Timestamp | null;
   avatarId: string;
   buildSnapshot: import('./types').Json;
   contentVersion: string;
