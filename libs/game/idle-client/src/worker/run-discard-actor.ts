@@ -2,6 +2,7 @@ import { match } from 'ts-pattern';
 import { fromPromise } from 'xstate';
 import { removeAvatarOfflineWork } from '../submission/remove-avatar-offline-work';
 import { removeOfflineWork } from '../submission/remove-offline-work';
+import { handleSimulationUpdate } from './handle-simulation-update';
 import { resetSimulation } from './reset-simulation';
 import type { PendingFlowRequestOf, WorkerContext } from './types';
 import { updateWriterDisplacedStatus } from './update-writer-displaced-status';
@@ -26,6 +27,7 @@ export const runDiscardActor = fromPromise<
       // halted before the outbox clears, so the run queues no checkpoint behind the discard
       if (displaced !== null) {
         resetSimulation(context);
+        handleSimulationUpdate(context);
         updateWriterDisplacedStatus(context, displaced.id);
       }
 

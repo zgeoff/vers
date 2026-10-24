@@ -35,6 +35,7 @@ import { createWorkerRuntime } from './create-worker-runtime';
 import type { WorkerRuntime } from './create-worker-runtime';
 import { sentryHandle } from './sentry-handle';
 import { startErrorReporting } from './start-error-reporting';
+import { workerToClientMessageSchema } from './worker-to-client-message-schema';
 
 function setupTest() {
   return {
@@ -717,6 +718,55 @@ test('it halts the live run and broadcasts WriterDisplaced when a call meets the
   expect(result.writerDisplacedActivityID).toBe(activity.id);
   expect(result.state.activity).toBeUndefined();
   expect(snapshot.outbox).toStrictEqual({ activityStarts: [], checkpoints: [] });
+});
+
+test('it broadcasts a simulation with no live run to the open tabs when a takeover halts the run', async () => {
+  const viewer = await createViewer();
+
+  server.use(createStubActivityProxy(viewer.user.id));
+
+  // a zero-gap active row, so the first report's resync attaches it live without any simulated
+  // time elapsing
+  const activity = await db.activityCollection.create({
+    avatarID: viewer.avatar.id,
+    encounterNode: { difficulty: 1 },
+    seed: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaa6072',
+    startedAt: new Date(),
+  });
+
+  const ctx = setupTest();
+  const broadcasts = ctx.collectBroadcasts();
+
+  using runtime = createWorkerRuntime();
+
+  const testClient = ctx.createConnectedTestClient(runtime);
+
+  await testClient.initialize({});
+  await testClient.reportOnline({ avatarID: viewer.avatar.id, claim: false });
+
+  server.use(
+    http.all(`${self.location.origin}/api/rpc/activity/*`, () => buildSessionSupersededResponse()),
+  );
+
+  await writeQueuedCheckpoint(activity.id, createMockCheckpointBatchEntry({ version: 1 }));
+
+  await testClient.reportOnline({ avatarID: viewer.avatar.id, claim: false });
+
+  await waitFor(() => {
+    expect(broadcasts.received).toPartiallyContain({
+      activityID: activity.id,
+      type: WorkerMessageType.WriterDisplaced,
+    });
+  });
+
+  const simulationUpdates = broadcasts.received
+    .map((message) => workerToClientMessageSchema.parse(message))
+    .filter((message) => message.type === WorkerMessageType.SimulationUpdate);
+
+  expect(simulationUpdates.at(-1)).toStrictEqual({
+    state: expect.any(Object),
+    type: WorkerMessageType.SimulationUpdate,
+  });
 });
 
 test('it answers a debug snapshot that records a connectivity loss the platform reports', async () => {
