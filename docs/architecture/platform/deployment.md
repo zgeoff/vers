@@ -14,8 +14,8 @@ the web app's same-origin proxy ([analytics](../analytics.md)). All persistent s
 Neon database ([database](./database.md)): no app runs its own Postgres, and the keys service holds
 no database connection at all, only its root secrets.
 
-Every app scales to zero. Fly suspends an idle machine with its memory snapshot and wakes it on its
-first request, so a suspended process resumes with the sockets it held
+An idle app scales to zero. Fly suspends an idle machine with its memory snapshot and wakes it on
+its first request, so a suspended process resumes with the sockets it held
 ([connection pool](./database.md#connection-pool)). Three deviations:
 
 - The web app, the session service, and the activity service each keep one machine warm, because
@@ -219,9 +219,16 @@ because bun re-resolves the smaller workspace's hoisting and fails a frozen inst
 the image instead, and the install stages read those.
 
 Every domain service compiles to a Bun executable and runs it on `alpine` as `nobody`, with no
-`node_modules` and no source. One exception: the email service's image also carries the sweep binary
-its scheduled machine runs ([queues](./queues.md)). The web app bundles an SSR server instead: a
-full install with dev dependencies for the build, then a production-only install with the hoisted
-linker, so the SSR bundle resolves every runtime import from one flat `node_modules`. Its server
-entry carries no top-level `await`, because a dynamically imported chunk can import the entry back
-and Node exits on the unsettled cycle.
+`node_modules` and no source. Two images carry more than the server binary:
+
+- The email service's image carries the sweep binary its scheduled machine runs
+  ([queues](./queues.md)).
+- The replay service's image carries the drain binary its scheduled machine runs, and the provider
+  binary that each per-version replay provider app runs
+  ([sim-version registry](../game/replay-verification.md#sim-version-registry)).
+
+The web app bundles an SSR server instead of a Bun executable: a full install with dev dependencies
+for the build, then a production-only install with the hoisted linker, so the SSR bundle resolves
+every runtime import from one flat `node_modules`. Its server entry carries no top-level `await`,
+because a dynamically imported chunk can import the entry back and Node exits on the unsettled
+cycle.

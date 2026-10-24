@@ -85,3 +85,6 @@ __pycache__/
 
 # tinybird CLI local auth state
 .tinyb
+
+# yarn
+.yarn/

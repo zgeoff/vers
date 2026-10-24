@@ -8,13 +8,13 @@ on:
 
 permissions:
   contents: read
-  issues: write
 
 env:
-  # keep ANSI escapes out of the issue bodies
+  # keep ANSI escapes out of the step summaries
   NO_COLOR: 1
 
 jobs:
+  # a red run starts the audit-fix workflow, which opens the fix pull request
   audit:
     runs-on: ubuntu-latest
     steps:
@@ -28,56 +28,7 @@ jobs:
 
       # audit reads bun.lock and the advisory registry directly - no install needed
       - name: Audit
-        id: audit
-        run: |
-          set +e
-          bun run audit > audit.txt
-          echo "exit=$?" >> "$GITHUB_OUTPUT"
-          cat audit.txt
-
-      - name: Escalate To Issue
-        if: steps.audit.outputs.exit != '0'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          {
-            echo "Scheduled \`bun audit\` found advisories. [Run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})"
-            echo
-            echo '```'
-            cat audit.txt
-            echo '```'
-          } > body.md
-          existing=$(gh issue list --label dep-audit --state open --json number --jq '.[0].number')
-          if [ -n "$existing" ]; then
-            gh issue comment "$existing" --body-file body.md
-          else
-            gh issue create --title "bun audit: advisories in locked dependencies" --label dep-audit --body-file body.md
-          fi
-
-      - name: Fail On Advisories
-        if: steps.audit.outputs.exit != '0'
-        run: exit 1
-
-  # comments on upkeep issues whose trigger condition now holds and flags audit
-  # ignores that stopped matching a live advisory; red only on new findings
-  upkeep:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
-        with:
-          bun-version-file: .bun-version
-
-      - name: Install Dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Sweep
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: bun scripts/src/bin/upkeep-sweep.ts
+        run: bun run audit
 
   outdated:
     runs-on: ubuntu-latest
@@ -95,26 +46,10 @@ jobs:
         run: |
           bun outdated > outdated.txt
           cat outdated.txt
-
-      # one open dep-outdated issue holds the latest report; closed when nothing is outdated
-      - name: Refresh Report Issue
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          existing=$(gh issue list --label dep-outdated --state open --json number --jq '.[0].number')
-          if [ -s outdated.txt ]; then
-            {
-              echo "Weekly \`bun outdated\` report. [Run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})"
-              echo
-              echo '```'
-              cat outdated.txt
-              echo '```'
-            } > body.md
-            if [ -n "$existing" ]; then
-              gh issue edit "$existing" --body-file body.md
-            else
-              gh issue create --title "outdated dependencies: weekly report" --label dep-outdated --body-file body.md
-            fi
-          elif [ -n "$existing" ]; then
-            gh issue close "$existing" --comment "Nothing outdated this week."
-          fi
+          {
+            echo '## bun outdated'
+            echo
+            echo '```'
+            cat outdated.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

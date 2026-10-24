@@ -18,8 +18,11 @@ are SQL, because the Neon API models role existence, not privileges.
 
 ## Activity checkpoint store
 
-The activity service owns the activity checkpoint tables: a head row per activity and an append-only
-checkpoint table. The cursors those rows carry and the rules that advance them belong to
+The activity service creates the activity checkpoint tables' rows: a head row per activity, an
+append-only checkpoint table, and a chain row per scope. The replay service updates the head rows
+and chain rows: it advances the verified cursors, records replay attempts and backoff, and parks or
+rejects an activity. Only the activity service appends checkpoints. The cursors those rows carry and
+the rules that advance them belong to
 [checkpoint streams](../game/game-simulation.md#checkpoint-streams). The storage facts this doc
 owns: the head row timestamps each cursor's last advance, a partial unique index permits one
 `active` row per avatar at a time, and the checkpoint table carries no inbound foreign keys.

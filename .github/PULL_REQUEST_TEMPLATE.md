@@ -1,8 +1,11 @@
 ## Description
 
+Fixes GEO-
+
 <!--
-If this PR resolves an issue, start with a `Closes #n` line so the
-issue auto-closes on merge. Omit if there's no issue.
+Name the Linear issue on the first line: `Fixes GEO-<n>` when merging
+completes it, `Contributes to GEO-<n>` when work remains, `Related to
+GEO-<n>` for context only. Delete the line if there's no issue.
 -->
 
 <!--

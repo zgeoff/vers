@@ -20,7 +20,7 @@ jobs:
       contents: read
     uses: zgeoff/tools/.github/workflows/repo-sync.yml@sync-v26
     with:
-      skip: agents, pr-template, editorconfig
+      skip: issue-templates, pr-template, editorconfig
       include:
         skill-testing, hook-skill-gate, skill-docs-writing, skill-code-style, skill-skill-writing,
         workflow-audit-fix, skill-ci-design

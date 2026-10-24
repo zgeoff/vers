@@ -7,6 +7,17 @@ inheritance: true
 reviews:
   path_filters:
     - '!libs/data/db/src/schema.generated.ts'
+    # repo-sync overwrites these from zgeoff/tools
+    - '!.claude/hooks/skill-gate/skill-gate.ts'
+    - '!.claude/skills/ci-design/SKILL.md'
+    - '!.claude/skills/code-style/SKILL.md'
+    - '!.claude/skills/docs-writing/**'
+    - '!.claude/skills/pr-evidence/SKILL.md'
+    - '!.claude/skills/skill-writing/**'
+    - '!.claude/skills/testing/**'
+    - '!.github/workflows/audit-fix.yml'
+    - '!scripts/run-memory-capped.sh'
+    - '!socket.yml'
   path_instructions:
     - path: '**/*.ts'
       instructions: |
