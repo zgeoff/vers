@@ -1,0 +1,44 @@
+diff --git a/dist/cjs/Asset.cjs b/dist/cjs/Asset.cjs
+index 4e5f0e97c9da27d1c3b25913ccfaef98c9d2cb13..15d142668ac54ad274eb04c4a688cad42cdfa190 100644
+--- a/dist/cjs/Asset.cjs
++++ b/dist/cjs/Asset.cjs
+@@ -73,6 +73,8 @@ function Script({ attrs, children, preventScriptHoist }) {
+ 	const innerHTML = react.useMemo(() => children === void 0 ? void 0 : { __html: children }, [children]);
+ 	const dataScript = typeof attrs?.type === "string" && attrs.type !== "" && attrs.type !== "text/javascript" && attrs.type !== "module";
+ 	if (process.env.NODE_ENV !== "production" && attrs?.src && typeof children === "string" && children.trim().length) console.warn("[TanStack Router] <Script> received both `src` and `children`. The `children` content will be ignored. Remove `children` or remove `src`.");
++	// HeadContent rebuilds every tag object on a navigation, so a dependency on the attrs object reruns the effect, and its cleanup removes and re-appends the script.
++	const attrsKey = JSON.stringify(attrs);
+ 	react.useEffect(() => {
+ 		if (dataScript) return;
+ 		if (attrs?.src) {
+@@ -101,7 +103,7 @@ function Script({ attrs, children, preventScriptHoist }) {
+ 			return () => script.remove();
+ 		}
+ 	}, [
+-		attrs,
++		attrsKey,
+ 		children,
+ 		dataScript
+ 	]);
+diff --git a/dist/esm/Asset.js b/dist/esm/Asset.js
+index bb376da79ee2812c03d437bf62f048f4173e64b7..dc1b644524c47cd122549d080946b964b3c954c7 100644
+--- a/dist/esm/Asset.js
++++ b/dist/esm/Asset.js
+@@ -71,6 +71,8 @@ function Script({ attrs, children, preventScriptHoist }) {
+ 	const innerHTML = React$1.useMemo(() => children === void 0 ? void 0 : { __html: children }, [children]);
+ 	const dataScript = typeof attrs?.type === "string" && attrs.type !== "" && attrs.type !== "text/javascript" && attrs.type !== "module";
+ 	if (process.env.NODE_ENV !== "production" && attrs?.src && typeof children === "string" && children.trim().length) console.warn("[TanStack Router] <Script> received both `src` and `children`. The `children` content will be ignored. Remove `children` or remove `src`.");
++	// HeadContent rebuilds every tag object on a navigation, so a dependency on the attrs object reruns the effect, and its cleanup removes and re-appends the script.
++	const attrsKey = JSON.stringify(attrs);
+ 	React$1.useEffect(() => {
+ 		if (dataScript) return;
+ 		if (attrs?.src) {
+@@ -99,7 +101,7 @@ function Script({ attrs, children, preventScriptHoist }) {
+ 			return () => script.remove();
+ 		}
+ 	}, [
+-		attrs,
++		attrsKey,
+ 		children,
+ 		dataScript
+ 	]);

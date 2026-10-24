@@ -1,8 +1,12 @@
 const port = Number(process.env['UMAMI_STUB_PORT'] ?? 3021);
 
+// the real tracker, not a no-op: it has no guard against a second run, so a spec that counts its
+// pageviews sees each extra run
+const trackerScript = Bun.file(new URL('../vendor/umami-script.js', import.meta.url));
+
 // A stand-in for the umami deployment that app-web's analytics proxy forwards to: the stack image
 // bakes the tracker tag in, so a page that loads it needs `/script.js` to answer real JavaScript.
-// The tracker script is a no-op, and `POST /api/send` accepts and drops a beacon.
+// `POST /api/send` accepts and drops a beacon.
 function handleRequest(request: Request): Response {
   const url = new URL(request.url);
 
@@ -11,7 +15,7 @@ function handleRequest(request: Request): Response {
   }
 
   if (url.pathname === '/script.js' && request.method === 'GET') {
-    return new Response('', { headers: { 'content-type': 'application/javascript' } });
+    return new Response(trackerScript, { headers: { 'content-type': 'application/javascript' } });
   }
 
   if (url.pathname === '/api/send' && request.method === 'POST') {
