@@ -1,5 +1,6 @@
 import postgres from 'postgres';
 import { buildAdvisoryLockKey } from './build-advisory-lock-key';
+import { clonedDatabaseURLs } from './cloned-database-urls';
 import { requireSafeDBIdentifier } from './require-safe-db-identifier';
 
 interface CreateClonedDatabaseConfig {
@@ -29,6 +30,8 @@ export async function createClonedDatabase(
       await session`SELECT pg_advisory_lock_shared(${lockKey}::bigint)`;
 
       await session.unsafe(`CREATE DATABASE ${config.dbName} TEMPLATE ${config.templateDB}`);
+
+      clonedDatabaseURLs.add(`${config.baseURI}/${config.dbName}`);
     } finally {
       try {
         // a session advisory lock dies with its session, so a failed unlock

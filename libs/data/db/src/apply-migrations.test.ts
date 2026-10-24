@@ -4,6 +4,7 @@ import postgres from 'postgres';
 import { applyMigrations } from './apply-migrations';
 import { contentDocumentV2 } from './content-seed/content-document-v2';
 import { createDB } from './create-db';
+import { removeTestDatabase } from './test-support/remove-test-database';
 import { resolveTestDBTarget } from './test-support/resolve-test-db-target';
 
 async function setupTest() {
@@ -14,7 +15,11 @@ async function setupTest() {
   await setupClient.unsafe(`CREATE DATABASE ${dbName}`);
   await setupClient.end();
 
-  return { databaseURL: `${baseURI}/${dbName}` };
+  const databaseURL = `${baseURI}/${dbName}`;
+
+  onTestFinished(() => removeTestDatabase(databaseURL));
+
+  return { databaseURL };
 }
 
 test('it applies pending migrations once and is a no-op the second time', async () => {

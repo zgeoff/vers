@@ -6,4 +6,6 @@ export { isTestContainerReachable } from './is-test-container-reachable';
 export { isTestTemplateDBName } from './is-test-template-db-name';
 export { normalizeDBPart } from './normalize-db-part';
 export { readCurrentBranch } from './read-current-branch';
+export { removeClonedDatabases } from './remove-cloned-databases';
+export { removeTestDatabase } from './remove-test-database';
 export { resolveTestDBTarget } from './resolve-test-db-target';

@@ -1,8 +1,10 @@
+import { afterAll } from 'bun:test';
 import {
   buildTestTemplateDBName,
   createTestTemplate,
   isTestContainerReachable,
   readCurrentBranch,
+  removeClonedDatabases,
 } from '@vers/db/test-support';
 import { createPostgresContainer } from '../create-postgres-container';
 import { getContainerConnectionURI } from '../get-container-connection-uri';
@@ -10,6 +12,8 @@ import { getContainerConnectionURI } from '../get-container-connection-uri';
 const TEST_CONTAINER_PORT = 32_999;
 
 export async function setupBunTestDB(): Promise<void> {
+  afterAll(removeClonedDatabases);
+
   if (process.env['TEST_DB_URI'] !== undefined) {
     return;
   }

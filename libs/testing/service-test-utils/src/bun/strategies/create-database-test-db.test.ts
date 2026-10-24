@@ -1,7 +1,9 @@
-import { expect, test } from 'bun:test';
+import { expect, onTestFinished, test } from 'bun:test';
 import { sql } from 'kysely';
+import postgres from 'postgres';
 import { z } from 'zod';
 import { createTestUser } from '../create-test-user';
+import { resolveTestDBTarget } from '../resolve-test-db-target';
 import { createDatabaseTestDB } from './create-database-test-db';
 
 test('it clones a fresh database on every acquisition', async () => {
@@ -17,6 +19,25 @@ test('it clones a fresh database on every acquisition', async () => {
   const [secondRow] = z.tuple([z.object({ currentDatabase: z.string() })]).parse(secondResult.rows);
 
   expect(secondRow.currentDatabase).not.toBe(firstRow.currentDatabase);
+});
+
+test('it drops the cloned database once disposed', async () => {
+  const handle = await createDatabaseTestDB();
+  const result = await sql`select current_database()`.execute(handle.db);
+
+  const [{ currentDatabase }] = z
+    .tuple([z.object({ currentDatabase: z.string() })])
+    .parse(result.rows);
+
+  await handle[Symbol.asyncDispose]();
+
+  const admin = postgres(`${resolveTestDBTarget().baseURI}/postgres`);
+
+  onTestFinished(() => admin.end());
+
+  const rows = await admin`SELECT 1 FROM pg_database WHERE datname = ${currentDatabase}`;
+
+  expect(rows).toBeEmpty();
 });
 
 test('it round-trips a real, committed write through the handle', async () => {

@@ -1,4 +1,5 @@
 import '@zgeoff/bun-test-extended';
+import { afterAll } from 'bun:test';
 import { PostgreSqlContainer } from '@testcontainers/postgresql';
 import type { StartedPostgreSqlContainer } from '@testcontainers/postgresql';
 import { registerBunTestCleanup } from '@vers/test-utils/bun';
@@ -6,15 +7,14 @@ import { buildTestTemplateDBName } from './src/test-support/build-test-template-
 import { createTestTemplate } from './src/test-support/create-test-template';
 import { isTestContainerReachable } from './src/test-support/is-test-container-reachable';
 import { readCurrentBranch } from './src/test-support/read-current-branch';
+import { removeClonedDatabases } from './src/test-support/remove-cloned-databases';
 
 registerBunTestCleanup();
+afterAll(removeClonedDatabases);
 
 const TEST_CONTAINER_PORT = 32_999;
 const TEST_TEMPLATE_DB = 'test_template';
 
-// a bun-test file's preload runs once per file's process, so cross-file
-// handoff of the container's connection details needs an env var rather
-// than an in-memory value (`resolveTestDBTarget` reads it back per file)
 if (process.env['TEST_DB_URI'] === undefined) {
   const containerReachable = await isTestContainerReachable();
 
