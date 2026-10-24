@@ -73,12 +73,15 @@ the repo has to drop the migrations that must not come back before the next run.
 4. Wait until every run of the main workflow that already started has finished:
 
    ```bash
-   gh run list -R zgeoff/vers --workflow main.yml --limit 20 --json databaseId,status \
-     --jq '.[] | select(.status != "completed")'
+   for status in requested queued pending waiting action_required in_progress; do
+     gh run list -R zgeoff/vers --workflow main.yml --status "$status" --limit 1000 \
+       --json databaseId,status --jq '.[]'
+   done
    ```
 
-   Repeat the command until it prints nothing. A run that is still queued or in progress can apply a
-   dropped migration again after the restore.
+   Repeat the loop until it prints nothing. Each query filters by status, so a run that started long
+   ago still shows. A run that is still queued or in progress can apply a dropped migration again
+   after the restore.
 
    > **CAUTION:** The restore overwrites every database on `main` with its state at the backup: the
    > shared `vers` database, the error tracker's database and the analytics dashboard's database.
