@@ -17,7 +17,7 @@ export async function runMigrationsWithBackup(
   const pendingMigrationNames = await readPendingMigrations({ databaseURL: config.databaseURL });
 
   if (pendingMigrationNames.length === 0) {
-    return { kind: 'up-to-date' };
+    return checkMigrationHistory(config.databaseURL);
   }
 
   const backupBranch = await createNeonBackupBranch(config.backup);
@@ -40,4 +40,16 @@ export async function runMigrationsWithBackup(
   }
 
   return { appliedMigrationNames, backupBranch, kind: 'migrated' };
+}
+
+async function checkMigrationHistory(databaseURL: string): Promise<MigrationRun> {
+  // the pending list holds only the migration files on disk, so a recorded migration whose file is
+  // gone shows nothing pending; applying to the latest finds that gap and applies nothing
+  const resultSet = await applyMigrations({ databaseURL });
+
+  if (resultSet.error !== undefined) {
+    return { error: resultSet.error, kind: 'history-check-failed' };
+  }
+
+  return { kind: 'up-to-date' };
 }

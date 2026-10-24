@@ -58,6 +58,15 @@ async function runProductionMigrations(): Promise<number> {
 
       return 0;
     })
+    .with({ kind: 'history-check-failed' }, (failed) => {
+      console.error(
+        '❌ the migration history does not match the migration files; no migration applied',
+      );
+
+      console.error(failed.error);
+
+      return 1;
+    })
     .with({ kind: 'migrated' }, (migrated) => {
       console.log(`✅ applied ${migrated.appliedMigrationNames.join(', ')}`);
 

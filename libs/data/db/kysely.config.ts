@@ -1,7 +1,6 @@
 import { CamelCasePlugin } from 'kysely';
 import { defineConfig } from 'kysely-ctl';
-import { PostgresJSDialect } from 'kysely-postgres-js';
-import postgres from 'postgres';
+import { buildMigrationDialect } from './src/build-migration-dialect';
 import { migrationsFolder } from './src/build-migrator';
 
 const databaseURL = process.env['DATABASE_URL'];
@@ -11,9 +10,7 @@ if (databaseURL === undefined) {
 }
 
 export default defineConfig({
-  dialect: new PostgresJSDialect({
-    postgres: postgres(databaseURL, { max: 1, onnotice: () => {} }),
-  }),
+  dialect: buildMigrationDialect(databaseURL),
   migrations: {
     migrationFolder: migrationsFolder,
   },

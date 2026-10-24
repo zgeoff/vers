@@ -5,6 +5,7 @@ export interface NeonBranch {
 
 export type MigrationRun =
   | { readonly kind: 'up-to-date' }
+  | { readonly kind: 'history-check-failed'; readonly error: unknown }
   | {
       readonly kind: 'migrated';
       readonly backupBranch: NeonBranch;

@@ -122,6 +122,45 @@ test('it takes no backup when no migration is pending', async () => {
   expect(neonBranchCollection.findMany()).toHaveLength(1);
 });
 
+test('it fails the history check when a recorded migration has no file, with no backup', async () => {
+  const ctx = await setupTest();
+
+  await neonBranchCollection.create({ name: 'main', projectID: 'quiet-river-1234' });
+
+  await applyMigrations({ databaseURL: ctx.databaseURL });
+
+  const history = postgres(ctx.databaseURL, { max: 1 });
+
+  onTestFinished(() => history.end());
+
+  await history.unsafe(
+    "INSERT INTO kysely_migration (name, timestamp) VALUES ('1799000000000_removed_file', now()::text)",
+  );
+
+  const run = await runMigrationsWithBackup({
+    backup: {
+      apiKey: 'neon-test-key',
+      expiresAt: new Date('2026-11-07T09:30:15Z'),
+      name: 'pre-migrate-4f1c9a2be07d-run-1-1',
+      operationPollIntervalMs: 1,
+      operationTimeoutMs: 1000,
+      projectID: 'quiet-river-1234',
+    },
+    databaseURL: ctx.databaseURL,
+    onBackupCreated: () => {},
+  });
+
+  expect(run).toStrictEqual({
+    error: expect.objectContaining({
+      message:
+        'corrupted migrations: previously executed migration 1799000000000_removed_file is missing',
+    }),
+    kind: 'history-check-failed',
+  });
+
+  expect(neonBranchCollection.findMany()).toHaveLength(1);
+});
+
 test('it reports a failed migration with the backup branch to restore from', async () => {
   const ctx = await setupTest();
 
