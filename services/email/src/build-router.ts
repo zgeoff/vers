@@ -4,10 +4,12 @@ import type { EmailJobOutput } from '@vers/contract-email';
 import type { JobQueue } from '@vers/jobs';
 import type { ServiceContext } from '@vers/service-runtime';
 import { reportUnexpectedError } from '@vers/service-runtime';
+import type { BackgroundDrains } from './create-background-drains';
 import type { EmailJobPayloads } from './create-email-job-queue';
 import { runRetryDrains } from './run-retry-drains';
 
 interface BuildEmailRouterDeps {
+  readonly drains: BackgroundDrains;
   readonly logger: ServiceContext['logger'];
   readonly now?: () => number;
   readonly queue: JobQueue<EmailJobPayloads>;
@@ -48,9 +50,13 @@ function makeSendHandler<TName extends keyof EmailJobPayloads>(
   return async (opts: SendHandlerOpts<TName>): Promise<EmailJobOutput> => {
     const jobID = await deps.queue.send(name, opts.input);
 
+    if (deps.drains.signal.aborted) {
+      return { jobID };
+    }
+
     void (async () => {
       try {
-        await deps.queue.drain(name);
+        await deps.drains.track(deps.queue.drain(name));
       } catch (error) {
         deps.logger.error({ err: error, jobID, queue: name }, 'email job drain failed');
 
@@ -71,16 +77,21 @@ function makeDeadlineSendHandler<TName extends DeadlineJobName>(
   return async (opts: SendHandlerOpts<TName>): Promise<EmailJobOutput> => {
     const jobID = await deps.queue.send(name, opts.input);
 
+    if (deps.drains.signal.aborted) {
+      return { jobID };
+    }
+
     void (async () => {
       try {
-        await deps.queue.drain(name);
+        await deps.drains.track(deps.queue.drain(name));
 
         // Watch this job whatever this drain reported: a concurrent request's drain can claim
         // and fail it while this one fails none.
         await runRetryDrains({
-          drain: () => deps.queue.drain(name),
-          readState: () => deps.queue.readJobState(name, jobID),
+          drain: () => deps.drains.track(deps.queue.drain(name)),
+          readState: () => deps.drains.track(deps.queue.readJobState(name, jobID)),
           now: deps.now ?? Date.now,
+          signal: deps.drains.signal,
           usefulUntil: opts.input.usefulUntil,
           wait: deps.wait ?? Bun.sleep,
         });

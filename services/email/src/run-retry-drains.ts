@@ -7,6 +7,7 @@ export interface RunRetryDrainsOpts {
   readonly drain: () => Promise<DrainResult>;
   readonly readState: () => Promise<JobState | undefined>;
   readonly now: () => number;
+  readonly signal: AbortSignal;
   readonly usefulUntil: Date;
   readonly wait: (delayMs: number) => Promise<void>;
 }
@@ -20,13 +21,14 @@ export async function runRetryDrains(opts: Readonly<RunRetryDrainsOpts>): Promis
   for (;;) {
     await opts.wait(RETRY_POLL_INTERVAL_MS);
 
-    if (opts.now() >= effectiveDeadline) {
+    if (opts.signal.aborted || opts.now() >= effectiveDeadline) {
       return;
     }
 
     const state = await opts.readState();
 
     if (
+      opts.signal.aborted ||
       state === undefined ||
       state === 'completed' ||
       state === 'failed' ||

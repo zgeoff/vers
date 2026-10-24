@@ -38,7 +38,9 @@ would hold both awake around the clock, so delivery rides three one-shot drains 
 - Nudge: an enqueue procedure fires a drain fire-and-forget after the insert. The machine handling
   the request is already awake, so delivery lands at once. A deadline-bearing job's enqueue keeps
   re-draining its queue until that job reaches a terminal state or its deadline passes, and stops
-  after a bounded time even when the deadline lies far ahead.
+  after a bounded time even when the deadline lies far ahead. A stop of the email service's queue
+  starts no further nudge and waits for the nudges in flight, up to the queue's own stop timeout, so
+  pg-boss never closes under a drain that is still completing a job.
 - Boot drain: the serve entrypoint drains on start, catching jobs enqueued while the process was
   down.
 - Scheduled sweep: a Fly scheduled machine runs the service's sweep entrypoint, which starts the
