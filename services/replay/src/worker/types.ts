@@ -2,7 +2,7 @@ import type { ContentDocument } from '@vers/contract-activity';
 import type { DB } from '@vers/db';
 import type { SimulationDriver } from '@vers/idle-core';
 import type { CryptoKey } from 'jose';
-import type { Kysely } from 'kysely';
+import type { Kysely, Transaction } from 'kysely';
 import type pino from 'pino';
 import type { BackoffReason } from '../metrics/record-backoff';
 import type { ReplayCache } from '../replay/create-replay-cache';
@@ -48,4 +48,10 @@ export interface ReplayWorkerDeps {
   readonly privateKey: CryptoKey;
 
   readonly simVersion: string;
+}
+
+export interface ReplayTargetContext {
+  readonly trx: Transaction<DB>;
+  readonly deps: Readonly<ReplayWorkerDeps>;
+  readonly cache: ReplayCache;
 }

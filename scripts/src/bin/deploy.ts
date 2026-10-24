@@ -1,14 +1,8 @@
-import { readCurrentContentVersion } from '@vers/content-registry';
 import { BUNDLED_CONTENT_VERSION } from '@vers/content-version';
 import { createDB } from '@vers/db';
 import type { DB } from '@vers/db';
 import { readLatestRelease, recordRelease } from '@vers/release-registry';
 import type { ReleaseRow } from '@vers/release-registry';
-import {
-  readCurrentSimVersion,
-  readRetentionRefusals,
-  updateExpiredSimVersions,
-} from '@vers/sim-registry';
 import { Command } from 'commander';
 import { execa } from 'execa';
 import type { Kysely } from 'kysely';
@@ -16,39 +10,30 @@ import { applyBuild } from '../deploy/apply-build';
 import { applyDeploy } from '../deploy/apply-deploy';
 import { applyIPPostureActions } from '../deploy/apply-ip-posture-actions';
 import { applyMachineSweepActions } from '../deploy/apply-machine-sweep-actions';
-import { applyRetentionActions } from '../deploy/apply-retention-actions';
 import { applyScheduledMachineActions } from '../deploy/apply-scheduled-machine-actions';
 import { applySimVersionActions } from '../deploy/apply-sim-version-actions';
 import { buildImageRef } from '../deploy/build-image-ref';
 import { buildProviderAppName } from '../deploy/build-provider-app-name';
-import { checkParkedApp } from '../deploy/check-parked-app';
-import { checkSharedSecrets } from '../deploy/check-shared-secrets';
-import { checkTarget } from '../deploy/check-target';
-import { findContentCoverageGap } from '../deploy/find-content-coverage-gap';
 import { findStaleReason } from '../deploy/find-stale-reason';
 import { formatMachineTable } from '../deploy/format-machine-table';
 import { loadDeployManifest } from '../deploy/load-deploy-manifest';
 import { PINNED_BUN_VERSION, loadEngineHash } from '../deploy/load-engine-hash';
 import { planIPPosture } from '../deploy/plan-ip-posture';
 import { planMachineSweep } from '../deploy/plan-machine-sweep';
-import { planRetentionActions } from '../deploy/plan-retention-actions';
 import { planScheduledMachineActions } from '../deploy/plan-scheduled-machine-actions';
 import { planSimVersionActions } from '../deploy/plan-sim-version-actions';
 import { readAppState } from '../deploy/read-app-state';
 import { readChangesSince } from '../deploy/read-changes-since';
 import { readFleetImage } from '../deploy/read-fleet-image';
-import { readFleetRelations } from '../deploy/read-fleet-relations';
-import { readFlyEnvKeys } from '../deploy/read-fly-env-keys';
-import { readFlySecrets } from '../deploy/read-fly-secrets';
 import { readIPList } from '../deploy/read-ip-list';
 import { readProviderAppState } from '../deploy/read-provider-app-state';
 import { readSimVersionRow } from '../deploy/read-sim-version-row';
+import { runPreflight } from '../deploy/run-preflight';
 import { runProbes } from '../deploy/run-probes';
-import type { DeployManifest, DeployTarget, SharedSecretHolder } from '../deploy/types';
-import { updateParkedActivities } from '../deploy/update-parked-activities';
+import { runSweepReplay } from '../deploy/run-sweep-replay';
+import { runVerify } from '../deploy/run-verify';
+import type { DeployManifest, DeployTarget } from '../deploy/types';
 import { waitForDeployedSHA } from '../deploy/wait-for-deployed-sha';
-import { findEnvGaps } from '../env/find-env-gaps';
-import { loadEnvContract } from '../env/load-env-contract';
 import { requireEnvVar } from '../utils/require-env-var';
 
 interface DeployCommandOptions {
@@ -491,202 +476,6 @@ function loadEngineHashOnce(): Promise<string> {
   engineHashPromise ??= loadEngineHash();
 
   return engineHashPromise;
-}
-
-async function runVerify(): Promise<void> {
-  const manifest = await loadDeployManifest();
-
-  let failed = false;
-
-  for (const target of manifest.apps) {
-    const state = await readAppState(target.app);
-
-    const changes = state.deployedSHA === null ? null : await readChangesSince(state.deployedSHA);
-
-    const relations = await readFleetRelations(state);
-    const ips = await readIPList(target.app);
-
-    const ipPlan = planIPPosture({ app: target.app, exposure: target.exposure, ips });
-
-    const findings = [
-      ...checkTarget(target, state, changes, relations),
-      ...(await runProbes(target.probes ?? [])),
-      ...(await checkParkedApp(target.app, state)),
-      ...ipPlan.violations,
-    ];
-
-    if (findings.length === 0) {
-      console.log(`✓ ${target.app} — online and current at ${state.deployedSHA ?? 'unknown'}`);
-      continue;
-    }
-
-    failed = true;
-
-    for (const finding of findings) {
-      console.error(`✗ ${target.app} — ${finding}`);
-    }
-  }
-
-  const holders = await readSharedSecretHolders(manifest);
-
-  const sharedSecretFindings = checkSharedSecrets(holders);
-
-  if (holders.length > 0 && sharedSecretFindings.length === 0) {
-    console.log('✓ fleet — every shared secret holds one value');
-  }
-
-  for (const finding of sharedSecretFindings) {
-    failed = true;
-
-    console.error(`✗ fleet — ${finding}`);
-  }
-
-  if (failed) {
-    process.exitCode = 1;
-  }
-}
-
-function readSharedSecretHolders(
-  manifest: DeployManifest,
-): Promise<ReadonlyArray<SharedSecretHolder>> {
-  const declaring = manifest.apps.filter((target) => (target.sharedSecrets ?? []).length > 0);
-
-  return Promise.all(
-    declaring.map(async (target) => ({
-      app: target.app,
-      secrets: await readFlySecrets(target.app),
-      sharedSecrets: target.sharedSecrets ?? [],
-    })),
-  );
-}
-
-async function runPreflight(): Promise<void> {
-  const manifest = await loadDeployManifest();
-
-  let failed = false;
-
-  for (const target of manifest.apps) {
-    const contract = await loadEnvContract(`${target.configDir}/env-contract.generated.json`);
-
-    if (contract === null) {
-      if (target.configDir.startsWith('services/')) {
-        console.error(
-          `✗ ${target.app} — ${target.configDir}/env-contract.generated.json is unreadable`,
-        );
-
-        failed = true;
-      }
-
-      continue;
-    }
-
-    const [envKeys, secrets] = await Promise.all([
-      readFlyEnvKeys(target.configDir),
-      readFlySecrets(target.app),
-    ]);
-
-    const available = new Set([
-      ...envKeys,
-      ...secrets.map((secret) => secret.name),
-      ...(target.buildArgsFromEnv ?? []),
-    ]);
-
-    const gaps = findEnvGaps(contract.required, [{ available, label: target.app }]);
-
-    if (gaps.length === 0) {
-      console.log(`✓ ${target.app} — required env covered`);
-      continue;
-    }
-
-    failed = true;
-
-    for (const gap of gaps) {
-      console.error(
-        `✗ ${target.app} — missing from fly.toml [env], secrets, and baked build args: ${gap.missing.join(', ')}`,
-      );
-    }
-  }
-
-  if (failed) {
-    console.error(
-      'cover the missing keys with `flyctl secrets set`, a fly.toml [env] entry, or a baked build arg (buildArgsFromEnv) before deploying',
-    );
-
-    process.exitCode = 1;
-  }
-
-  await runContentCoveragePreflight();
-}
-
-// a content publish that outruns the engine strands every start at SIM_VERSION_EXPIRED; the
-// preflight checks the ordering the activity admission assumes
-async function runContentCoveragePreflight(): Promise<void> {
-  const databaseURL = requireEnvVar(
-    'DATABASE_URL',
-    'the content coverage preflight reads the sim-version and content registries',
-  );
-
-  const db = createDB({ databaseURL });
-
-  try {
-    const [engine, currentContentVersion] = await Promise.all([
-      readCurrentSimVersion(db),
-      readCurrentContentVersion(db),
-    ]);
-
-    const gap = findContentCoverageGap({
-      contentVersion: currentContentVersion,
-      maxContentVersion: engine?.maxContentVersion,
-    });
-
-    if (gap === null) {
-      console.log('✓ content coverage — the active engine covers the current content version');
-
-      return;
-    }
-
-    console.error(`✗ content coverage — ${gap}`);
-
-    process.exitCode = 1;
-  } finally {
-    await db.destroy();
-  }
-}
-
-async function runSweepReplay(): Promise<void> {
-  const databaseURL = requireEnvVar(
-    'DATABASE_URL',
-    'the replay retention sweep reads and writes the shared database',
-  );
-
-  const db = createDB({ databaseURL });
-
-  const tombstoned = await updateExpiredSimVersions(db);
-
-  const actions = planRetentionActions(tombstoned);
-
-  await applyRetentionActions(actions);
-
-  const unparked = await updateParkedActivities(db);
-  const refusals = await readRetentionRefusals(db);
-
-  await db.destroy();
-
-  console.log(
-    `sweep-replay: tombstoned ${tombstoned.length} sim version(s), destroyed ${actions.length} provider app(s), unparked ${unparked.length} activity(ies)`,
-  );
-
-  // an expired version still pinned by unverified work stays a replay target: the refusal fails the
-  // run so the scheduled workflow alarms, and the sweep retries daily until the work settles
-  for (const refusal of refusals) {
-    console.error(
-      `✗ sweep-replay — sim version ${refusal.engineHash} is past retention but ${refusal.unverifiedActivities} activity(ies) still pin unverified work to it; not pruned`,
-    );
-  }
-
-  if (refusals.length > 0) {
-    process.exitCode = 1;
-  }
 }
 
 function requireTarget(manifest: DeployManifest, app: string): DeployTarget {

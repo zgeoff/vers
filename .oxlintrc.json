@@ -157,18 +157,6 @@
       }
     },
     {
-      // files over 500 non-blank lines, until GEO-1202 splits them
-      "files": [
-        "**/libs/game/idle-client/src/worker/worker-lifecycle-machine.ts",
-        "**/scripts/src/bin/deploy.ts",
-        "**/services/activity/src/handlers/advance-activity.ts",
-        "**/services/replay/src/worker/run-replay-target.ts"
-      ],
-      "rules": {
-        "max-lines": "off"
-      }
-    },
-    {
       "files": ["**/*.test.ts", "**/*.test.tsx"],
       // ergonomics for every co-located suite, whichever runner it targets: one
       // suite per module with inline test data means file length scales with
