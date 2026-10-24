@@ -262,7 +262,7 @@ avatar, so a run at any speed up to 20 stays inside the budget
 machine of every app in `deploy.config.ts`, stopping instead where the app's `fly.toml` parks idle
 machines with `stop`, then prints each app's machine states. Before it touches a machine it reads
 the `vers-traces` dataset in Axiom for the last 10 minutes and refuses, with the request count and
-the busiest routes, when any request other than a `/health` check or the anonymous `getCurrentUser`
+the busiest routes, when any request other than a `/health` check or the anonymous `getAvatars`
 probe reached the fleet, so a fleet that is serving a player is never sent cold. The script refuses
 `--force`: the manifest names only production apps, and no other fleet exists to accept it.
 

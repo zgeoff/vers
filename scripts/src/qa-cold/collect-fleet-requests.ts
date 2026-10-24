@@ -44,7 +44,7 @@ function isHealthCheck(span: RequestSpan): boolean {
   return span.path === HEALTH_PATH || span.name.endsWith(` ${HEALTH_PATH}`);
 }
 
-const PROBE_ROUTE = 'POST /api/rpc/user/getCurrentUser';
+const PROBE_ROUTE = 'POST /api/rpc/avatar/getAvatars';
 const PROBE_STATUS = 401;
 
 function isVerifyProbe(span: RequestSpan): boolean {

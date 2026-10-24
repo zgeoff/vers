@@ -31,23 +31,23 @@ test('it drops a trace made only of health checks', () => {
   expect(requests).toBeEmpty();
 });
 
-test('it drops the anonymous current-user probe that answers 401', () => {
+test('it drops the anonymous avatar-roster probe that answers 401', () => {
   const requests = collectFleetRequests([
     createMockRequestSpan({
-      name: 'POST /api/rpc/user/getCurrentUser',
+      name: 'POST /api/rpc/avatar/getAvatars',
       path: null,
       statusCode: 401,
       traceID: 't1',
     }),
     createMockRequestSpan({
       name: 'HTTP POST',
-      path: '/api/rpc/user/getCurrentUser',
+      path: '/api/rpc/avatar/getAvatars',
       statusCode: null,
       traceID: 't1',
     }),
     createMockRequestSpan({
       name: 'POST /rpc*',
-      path: '/rpc/getUser',
+      path: '/rpc/getAvatars',
       statusCode: 401,
       traceID: 't1',
     }),
@@ -56,17 +56,17 @@ test('it drops the anonymous current-user probe that answers 401', () => {
   expect(requests).toBeEmpty();
 });
 
-test('it keeps a signed-in current-user call', () => {
+test('it keeps a signed-in avatar-roster call', () => {
   const requests = collectFleetRequests([
     createMockRequestSpan({
-      name: 'POST /api/rpc/user/getCurrentUser',
+      name: 'POST /api/rpc/avatar/getAvatars',
       path: null,
       statusCode: 200,
       traceID: 't1',
     }),
   ]);
 
-  expect(requests).toStrictEqual([{ route: 'POST /api/rpc/user/getCurrentUser', traceID: 't1' }]);
+  expect(requests).toStrictEqual([{ route: 'POST /api/rpc/avatar/getAvatars', traceID: 't1' }]);
 });
 
 test('it labels a trace with no routed span by service and path', () => {
