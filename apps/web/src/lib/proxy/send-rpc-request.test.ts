@@ -352,6 +352,12 @@ test('it answers a superseded session itself, marking the response so the caller
   expect(outcome.value.status).toBe(401);
   expect(outcome.value.headers.get('x-session-superseded')).toBe('1');
   expect(resolver).not.toHaveBeenCalled();
+
+  const body: unknown = await outcome.value.json();
+
+  expect(body).toMatchObject({
+    json: { code: 'UNAUTHORIZED', data: { reason: 'missing-session' }, defined: true },
+  });
 });
 
 test('it forwards a call whose session reached its own expiry, leaving the offline work alone', async () => {

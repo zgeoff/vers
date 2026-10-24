@@ -9,8 +9,9 @@ import { createMockActivityInput, createMockAvatarData } from '@vers/idle-core/t
 import { createAuthedServiceClient, createViewer } from '@vers/mock-services';
 import { mockActivityService } from '@vers/mock-services/activity';
 import * as db from '@vers/mock-services/db';
+import { buildSessionSupersededResponse } from '@vers/service-utils/orpc';
 import { waitFor } from '@vers/test-utils';
-import { HttpResponse, http } from 'msw';
+import { http } from 'msw';
 import invariant from 'tiny-invariant';
 import { createActor, fromPromise } from 'xstate';
 import { writeContentDocumentCache } from '../content/write-content-document-cache';
@@ -1911,10 +1912,7 @@ test('it discards the outbox on a takeover from another device and mints from th
 
   // another device took the account over: app-web refuses every call with the superseded marker
   server.use(
-    http.all(
-      `${self.location.origin}/api/rpc/activity/*`,
-      () => new Response(null, { headers: { 'x-session-superseded': '1' }, status: 401 }),
-    ),
+    http.all(`${self.location.origin}/api/rpc/activity/*`, () => buildSessionSupersededResponse()),
   );
 
   await handleReportOnlineMessage(context, { avatarID: viewer.avatar.id, claim: false });
@@ -2022,10 +2020,7 @@ test('it delivers no start that a continuation held at its write mints, once a t
 
   // another device took the account over: app-web refuses every call with the superseded marker
   server.use(
-    http.all(
-      `${self.location.origin}/api/rpc/activity/*`,
-      () => new Response(null, { headers: { 'x-session-superseded': '1' }, status: 401 }),
-    ),
+    http.all(`${self.location.origin}/api/rpc/activity/*`, () => buildSessionSupersededResponse()),
   );
 
   await expect(context.getClient().getCurrentActivity({ avatarID: viewer.avatar.id })).toReject();
@@ -2089,7 +2084,7 @@ test('it queues one takeover discard behind the flow in flight however many call
 test('it discards again when a later takeover marks the worker after an earlier discard ran', async () => {
   server.use(
     http.post(`${self.location.origin}/api/rpc/activity/stopActivity`, () =>
-      HttpResponse.json(null, { headers: { 'x-session-superseded': '1' }, status: 401 }),
+      buildSessionSupersededResponse(),
     ),
   );
 

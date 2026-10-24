@@ -4,7 +4,12 @@ import type { MockContext } from '@vers/mock-services';
 import { createDemoSeed, resolveServiceURL, resolveSessionContext } from '@vers/mock-services';
 import { activityRouter } from '@vers/mock-services/activity';
 import { avatarRouter } from '@vers/mock-services/avatar';
-import { verificationCollection } from '@vers/mock-services/db';
+import {
+  activeAvatarCollection,
+  activityCollection,
+  userCollection,
+  verificationCollection,
+} from '@vers/mock-services/db';
 import { emailRouter } from '@vers/mock-services/email';
 import { keysRouter } from '@vers/mock-services/keys';
 import { replayRouter } from '@vers/mock-services/replay';
@@ -53,6 +58,10 @@ for (const service of SERVICES) {
       return serveVerificationCode(request);
     }
 
+    if (service === 'activity' && pathname === '/test/live-run' && request.method === 'POST') {
+      return serveLiveRun(request);
+    }
+
     const handled = await rpcHandler.handle(request, {
       context: resolveSessionContext(request),
       prefix: '/rpc',
@@ -90,4 +99,32 @@ function serveVerificationCode(request: Request): Response {
   return verification === undefined
     ? new Response(null, { status: 404 })
     : Response.json({ code: verification.code });
+}
+
+async function serveLiveRun(request: Request): Promise<Response> {
+  const email = new URL(request.url).searchParams.get('email');
+
+  if (email === null) {
+    return new Response(null, { status: 400 });
+  }
+
+  const user = userCollection.findFirst((query) => query.where({ email }));
+
+  const activeAvatar =
+    user === undefined
+      ? undefined
+      : activeAvatarCollection.findFirst((query) => query.where({ userID: user.id }));
+
+  if (activeAvatar === undefined) {
+    return new Response(null, { status: 404 });
+  }
+
+  const activity = await activityCollection.create({
+    appendedHead: 1,
+    avatarID: activeAvatar.avatarID,
+    scopeID: '0_0',
+    startedAt: new Date(),
+  });
+
+  return Response.json({ activityID: activity.id });
 }

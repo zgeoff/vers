@@ -1,5 +1,6 @@
 import type { ServiceName } from '@vers/service-auth';
 import { findSpanTraceContext, findTraceContext } from '@vers/service-utils';
+import { buildSessionSupersededResponse } from '@vers/service-utils/orpc';
 import { buildTraceparent, createTraceContext } from '@vers/trace';
 import { createEdgeServiceToken } from '../rpc/create-edge-service-token';
 import { loadSessionActor } from '../rpc/load-session-actor';
@@ -63,7 +64,7 @@ export async function sendRPCRequest(
   // deletion from an expiry, and the header tells the caller to discard its offline work. A plain
   // expiry gets the service's own 401 with no header, so the caller keeps that work.
   if (outcome.kind === 'superseded') {
-    return new Response(null, { headers: { 'x-session-superseded': '1' }, status: 401 });
+    return buildSessionSupersededResponse();
   }
 
   const actor = outcome.kind === 'actor' ? outcome : null;

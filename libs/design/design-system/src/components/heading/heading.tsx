@@ -1,9 +1,7 @@
 import { cva, cx } from '@vers/styled-system/css';
 import * as React from 'react';
 
-interface Props {
-  children: React.ReactNode;
-  className?: string;
+interface Props extends React.ComponentPropsWithoutRef<'h1'> {
   level: 1 | 2 | 3 | 4 | 5 | 6;
 }
 
@@ -26,11 +24,8 @@ const heading = cva({
 });
 
 export function Heading(props: Readonly<Props>) {
-  const Element = `h${props.level}` as const;
+  const { className, level, ...restProps } = props;
+  const Element = `h${level}` as const;
 
-  return (
-    <Element className={cx(heading({ level: props.level }), props.className)}>
-      {props.children}
-    </Element>
-  );
+  return <Element {...restProps} className={cx(heading({ level }), className)} />;
 }
