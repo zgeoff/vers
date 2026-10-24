@@ -94,6 +94,7 @@ type FlushSettledEvent =
 
 type CheckpointActivityEvent =
   | FlushSettledEvent
+  | { readonly type: 'DISCARDED' }
   | { readonly type: 'FLUSH_DUE' }
   | { readonly type: 'FLUSH_HELD' }
   | { readonly type: 'FLUSH_NOW' }
@@ -166,6 +167,10 @@ export const checkpointActivityMachine = setup({
   }),
   id: 'checkpointActivity',
   initial: 'idle',
+
+  // leaving through the final state, never a stop, settles a caller still waiting on a flush
+  on: { DISCARDED: { target: '.evicted' } },
+
   states: {
     evicted: {
       entry: emitSettlementToParent,

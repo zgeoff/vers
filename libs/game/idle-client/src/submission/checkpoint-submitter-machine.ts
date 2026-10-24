@@ -1,5 +1,5 @@
 import type { ActorRefFromLogic } from 'xstate';
-import { assign, enqueueActions, setup, stopChild } from 'xstate';
+import { assign, setup, stopChild } from 'xstate';
 import { buildMachineTypes } from './build-machine-types';
 import type {
   CheckpointActivityInput,
@@ -17,8 +17,7 @@ interface CheckpointSubmitterContext {
 type CheckpointSubmitterEvent =
   | CheckpointActivitySettledEvent
   | ({ readonly type: 'REGISTER' } & CheckpointActivityInput)
-  | { readonly activityID: string; readonly type: 'REMOVE_EVICTION' }
-  | { readonly activityIDs: ReadonlyArray<string>; readonly type: 'REMOVE_CHILDREN' };
+  | { readonly activityID: string; readonly type: 'REMOVE_EVICTION' };
 
 export const checkpointSubmitterMachine = setup({
   actors: { checkpointActivityMachine },
@@ -71,17 +70,6 @@ export const checkpointSubmitterMachine = setup({
               buildEvictionsWithout(args.context.evictedActivityIDs, args.event.activityID),
           }),
         },
-        REMOVE_CHILDREN: {
-          actions: enqueueActions((args) => {
-            for (const activityID of args.event.activityIDs) {
-              args.enqueue.stopChild(activityID);
-            }
-
-            args.enqueue.assign({
-              children: buildChildrenWithout(args.context.children, args.event.activityIDs),
-            });
-          }),
-        },
         REMOVE_EVICTION: {
           actions: assign({
             evictedActivityIDs: (args) =>
@@ -104,19 +92,6 @@ function buildEvictionsWithout(
   const next = new Set(evictedActivityIDs);
 
   next.delete(activityID);
-
-  return next;
-}
-
-function buildChildrenWithout(
-  children: ReadonlyMap<string, CheckpointActivityChildRef>,
-  activityIDs: ReadonlyArray<string>,
-): ReadonlyMap<string, CheckpointActivityChildRef> {
-  const next = new Map(children);
-
-  for (const activityID of activityIDs) {
-    next.delete(activityID);
-  }
 
   return next;
 }

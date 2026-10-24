@@ -408,11 +408,10 @@ export function createCheckpointSubmitter(
     });
 
     for (const activityID of activityIDs) {
+      findChild(activityID)?.send({ type: 'DISCARDED' });
       writeCursors.delete(activityID);
       registrations.delete(activityID);
     }
-
-    parentActor.send({ activityIDs, type: 'REMOVE_CHILDREN' });
   };
 
   return {
