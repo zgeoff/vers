@@ -4,6 +4,7 @@ export type WorkerFaultSite =
   | 'checkpoint-flush'
   | 'checkpoint-stream'
   | 'continuation'
+  | 'discard'
   | 'eviction'
   | 'journal-open'
   | 'journal-write'

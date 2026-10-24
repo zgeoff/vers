@@ -6,8 +6,10 @@ import { ActivityFailureAction, createSimulation } from '@vers/idle-core';
 import { resolveServiceURL } from '@vers/mock-services';
 import type { ActorRefFromLogic } from 'xstate';
 import { createActor } from 'xstate';
+import { createActivityServiceClient } from '../submission/create-activity-service-client';
 import type { CheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import type { ActivityServiceClient } from '../submission/types';
+import { writeActivityStart } from '../submission/write-activity-start';
 import type { RewardSlotLedgerEntry } from '../types';
 import { createDebugRecorder } from '../worker/create-debug-recorder';
 import type { LatestRun, WorkerContext } from '../worker/types';
@@ -16,6 +18,10 @@ import type { WorkerMessage } from '../worker/worker-to-client-message-schema';
 import { createStubSubmitter } from './create-stub-submitter';
 
 interface CreateStubWorkerContextOptions {
+  // the app's proxy client, whose superseded-session marker queues the takeover discard, in place
+  // of the direct client the stub otherwise builds
+  readonly activityProxy?: boolean;
+
   readonly broadcast?: (message: WorkerMessage) => void;
 
   readonly bundledEngineHash?: string;
@@ -27,6 +33,8 @@ interface CreateStubWorkerContextOptions {
   readonly shutdownController?: AbortController;
 
   readonly submitter?: Readonly<CheckpointSubmitter>;
+
+  readonly writeActivityStart?: (row: Readonly<ActivityData>) => Promise<void>;
 }
 
 export interface StubWorkerContext extends WorkerContext {
@@ -37,10 +45,6 @@ export interface StubWorkerContext extends WorkerContext {
 export function createStubWorkerContext(
   options: Readonly<CreateStubWorkerContextOptions> = {},
 ): StubWorkerContext {
-  const client: ActivityServiceClient =
-    options.client ??
-    createORPCClient(new RPCLink({ url: `${resolveServiceURL('activity')}/rpc` }));
-
   const submitter: CheckpointSubmitter = options.submitter ?? createStubSubmitter();
   let simulation: Simulation = createSimulation();
   let simulationSpeed = 1;
@@ -63,6 +67,7 @@ export function createStubWorkerContext(
   // referenced by `context.getLifecycle` below via closure before it exists, safe only because
   // nothing calls it until after the `const lifecycleActor` assignment following `context` runs
   const getLifecycle = (): ActorRefFromLogic<typeof workerLifecycleMachine> => lifecycleActor;
+  const client = options.client ?? createStubClient(options.activityProxy === true, getLifecycle);
 
   const context: StubWorkerContext = {
     advanceStopScope: () => {
@@ -156,6 +161,7 @@ export function createStubWorkerContext(
     updateConnectivity: (online) => {
       connectivityOnline = online;
     },
+    writeActivityStart: options.writeActivityStart ?? writeActivityStart,
   };
 
   const lifecycleActor = createActor(workerLifecycleMachine, {
@@ -167,4 +173,19 @@ export function createStubWorkerContext(
   }).start();
 
   return context;
+}
+
+function createStubClient(
+  activityProxy: boolean,
+  getLifecycle: () => ActorRefFromLogic<typeof workerLifecycleMachine>,
+): ActivityServiceClient {
+  if (!activityProxy) {
+    return createORPCClient(new RPCLink({ url: `${resolveServiceURL('activity')}/rpc` }));
+  }
+
+  return createActivityServiceClient({
+    onSessionSuperseded: () => {
+      getLifecycle().send({ trigger: { kind: 'takeover' }, type: 'DISCARD' });
+    },
+  });
 }

@@ -2,34 +2,24 @@ import { createORPCClient } from '@orpc/client';
 import { RPCLink } from '@orpc/client/fetch';
 import { activityContract } from '@vers/contract-activity';
 import { makeIsRetryable, makeRetryInterceptor } from '@vers/service-utils/orpc';
-import { removeOfflineWork } from './remove-offline-work';
 import type { ActivityCallContext, ActivityServiceClient } from './types';
 
 const SESSION_SUPERSEDED_HEADER = 'x-session-superseded';
 
-export function createActivityServiceClient(): ActivityServiceClient {
-  // the discard in flight, shared by every call that observes the marker at once, and reset once it
-  // settles: a takeover marks every concurrent call, and one clear answers all of them, while a
-  // later takeover on this same worker must clear again rather than await a settled promise
-  let discard: null | Promise<void> = null;
+interface CreateActivityServiceClientHooks {
+  readonly onSessionSuperseded: () => void;
+}
 
-  const runDiscard = async (): Promise<void> => {
-    try {
-      await removeOfflineWork();
-    } catch {
-      // a failed clear leaves the work in place; the next marked refusal discards again
-    } finally {
-      discard = null;
-    }
-  };
-
+export function createActivityServiceClient(
+  hooks: Readonly<CreateActivityServiceClientHooks>,
+): ActivityServiceClient {
   const sendRequest = async (input: Request, init?: RequestInit): Promise<Response> => {
     const response = await fetch(input, init);
 
+    // reported, never awaited: the discard queues behind the flow in flight, and that flow may be
+    // the one awaiting this very response
     if (response.headers.has(SESSION_SUPERSEDED_HEADER)) {
-      discard ??= runDiscard();
-
-      await discard;
+      hooks.onSessionSuperseded();
     }
 
     return response;

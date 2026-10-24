@@ -10,12 +10,11 @@ import { createAuthedServiceClient, createViewer } from '@vers/mock-services';
 import { mockActivityService } from '@vers/mock-services/activity';
 import * as db from '@vers/mock-services/db';
 import { waitFor } from '@vers/test-utils';
-import { http } from 'msw';
+import { HttpResponse, http } from 'msw';
 import invariant from 'tiny-invariant';
 import { createActor, fromPromise } from 'xstate';
 import { writeContentDocumentCache } from '../content/write-content-document-cache';
 import { server } from '../mocks/node';
-import { createActivityServiceClient } from '../submission/create-activity-service-client';
 import { createCheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import { readAllActivityStarts } from '../submission/read-all-activity-starts';
 import { readQueuedCheckpoints } from '../submission/read-queued-checkpoints';
@@ -25,6 +24,7 @@ import { writeLastStartedActivity } from '../submission/write-last-started-activ
 import { writeNodeSeeds } from '../submission/write-node-seeds';
 import { writeQueuedCheckpoint } from '../submission/write-queued-checkpoint';
 import { writeStartStamps } from '../submission/write-start-stamps';
+import { buildStubHeldWriter } from '../test-utils/build-stub-held-writer';
 import { createStubActivityProxy } from '../test-utils/create-stub-activity-proxy';
 import { createStubSubmitter } from '../test-utils/create-stub-submitter';
 import type { StubWorkerContext } from '../test-utils/create-stub-worker-context';
@@ -1862,12 +1862,11 @@ test('it clears the run and mints behind it when the worker is evicted while a r
 test('it discards the outbox on a takeover from another device and mints from the server after the next sign-in', async () => {
   const viewer = await createViewer({ avatar: { xp: 400 } });
 
-  // the worker's own service client, so the proxy's superseded-session marker reaches its discard
   server.use(createStubActivityProxy(viewer.user.id));
 
   const context = createStubWorkerContext({
+    activityProxy: true,
     bundledEngineHash: 'engine_hash_matrix',
-    client: createActivityServiceClient(),
     submitter: createStubSubmitter(),
   });
 
@@ -1920,6 +1919,11 @@ test('it discards the outbox on a takeover from another device and mints from th
 
   await handleReportOnlineMessage(context, { avatarID: viewer.avatar.id, claim: false });
 
+  // the discard queues behind the resync that met the marker, and runs once that resync settles
+  await waitFor(() => {
+    expect(context.getLifecycle().getSnapshot().context.currentRequest).toBeNull();
+  });
+
   const outboxAfterTakeover = await readAllActivityStarts();
 
   // the player signs back in here: the session answers again, and the map reveal restocks the
@@ -1949,6 +1953,167 @@ test('it discards the outbox on a takeover from another device and mints from th
       type: WorkerMessageType.ResyncStatus,
     },
   ]);
+});
+
+test('it delivers no start that a continuation held at its write mints, once a takeover discarded the outbox and the player signs back in', async () => {
+  const viewer = await createViewer({ avatar: { xp: 400 } });
+
+  server.use(createStubActivityProxy(viewer.user.id));
+
+  const held = buildStubHeldWriter(writeActivityStart);
+
+  const context = createStubWorkerContext({
+    activityProxy: true,
+    bundledEngineHash: 'engine_hash_takeover',
+    submitter: createStubSubmitter(),
+    writeActivityStart: held.write,
+  });
+
+  const ctx = setupTest();
+
+  await ctx.setupStartableNode(viewer.avatar.id);
+
+  const delivered = await db.activityCollection.create({
+    appendedHead: 1,
+    avatarID: viewer.avatar.id,
+    buildSnapshot: { level: buildLevelFromXP(400), xp: 400 },
+    scopeID: '0_0',
+    status: 'stopped',
+    verifiedHead: 0,
+  });
+
+  await db.checkpointCollection.create({
+    activityID: delivered.id,
+    payload: {
+      chainIndex: 1,
+      entropySource: 'server-key',
+      nextSeed: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaa6072',
+      rewards: { xp: 9 },
+      seed: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaa6072',
+      time: 1000,
+      type: 'failed',
+    },
+    version: 1,
+  });
+
+  await handleReportOnlineMessage(context, { avatarID: viewer.avatar.id, claim: true });
+
+  // the run that just reached its terminal checkpoint, so the worker enters the continuation flow
+  const terminal = createMockActivityData({
+    avatarID: viewer.avatar.id,
+    id: delivered.id,
+    scopeID: '0_0',
+  });
+
+  const simulation = createSimulation();
+
+  simulation.startActivity(createMockAvatarData(), createMockActivityInput({ id: terminal.id }));
+  context.setSimulation(simulation);
+  context.setActivity(terminal);
+
+  context.getLifecycle().send({
+    activity: terminal,
+    deferred: buildDeferred<void>(),
+    simulation,
+    type: 'CONTINUATION',
+  });
+
+  await held.reached;
+
+  // another device took the account over: app-web refuses every call with the superseded marker
+  server.use(
+    http.all(
+      `${self.location.origin}/api/rpc/activity/*`,
+      () => new Response(null, { headers: { 'x-session-superseded': '1' }, status: 401 }),
+    ),
+  );
+
+  await expect(context.getClient().getCurrentActivity({ avatarID: viewer.avatar.id })).toReject();
+
+  held.release();
+
+  await waitFor(() => {
+    expect(context.getLifecycle().getSnapshot().context.currentRequest).toBeNull();
+  });
+
+  // the player signs back in here, and the session answers again
+  server.resetHandlers();
+  server.use(createStubActivityProxy(viewer.user.id));
+
+  await handleReportOnlineMessage(context, { avatarID: viewer.avatar.id, claim: true });
+
+  const serverRows = db.activityCollection.findMany((query) =>
+    query.where({ avatarID: viewer.avatar.id }),
+  );
+
+  expect(serverRows.map((row) => row.id)).toStrictEqual([delivered.id]);
+});
+
+test('it queues one takeover discard behind the flow in flight however many calls meet the marker', async () => {
+  const held = buildStubHeldWriter(writeActivityStart);
+
+  const context = createStubWorkerContext({
+    bundledEngineHash: 'engine_hash_coalesce',
+    submitter: createStubSubmitter(),
+    writeActivityStart: held.write,
+  });
+
+  const ctx = setupTest();
+
+  await ctx.setupStartableNode('avatar_coalesce');
+
+  const terminal = createMockActivityData({ avatarID: 'avatar_coalesce', scopeID: '0_0' });
+  const simulation = createSimulation();
+
+  simulation.startActivity(createMockAvatarData(), createMockActivityInput({ id: terminal.id }));
+  context.setSimulation(simulation);
+  context.setActivity(terminal);
+
+  context.getLifecycle().send({
+    activity: terminal,
+    deferred: buildDeferred<void>(),
+    simulation,
+    type: 'CONTINUATION',
+  });
+
+  await held.reached;
+
+  context.getLifecycle().send({ trigger: { kind: 'takeover' }, type: 'DISCARD' });
+  context.getLifecycle().send({ trigger: { kind: 'takeover' }, type: 'DISCARD' });
+
+  expect(context.getLifecycle().getSnapshot().context.pending).toStrictEqual([
+    { kind: 'discard', trigger: { kind: 'takeover' } },
+  ]);
+});
+
+test('it discards again when a later takeover marks the worker after an earlier discard ran', async () => {
+  server.use(
+    http.post(`${self.location.origin}/api/rpc/activity/stopActivity`, () =>
+      HttpResponse.json(null, { headers: { 'x-session-superseded': '1' }, status: 401 }),
+    ),
+  );
+
+  const context = createStubWorkerContext({ activityProxy: true });
+
+  await writeActivityStart(createMockActivityData());
+
+  await expect(context.getClient().stopActivity({ avatarID: 'avatar-1' })).toReject();
+
+  await waitFor(async () => {
+    const remaining = await readAllActivityStarts();
+
+    expect(remaining).toStrictEqual([]);
+  });
+
+  await writeActivityStart(createMockActivityData());
+
+  await expect(context.getClient().stopActivity({ avatarID: 'avatar-2' })).toReject();
+
+  await waitFor(async () => {
+    const remaining = await readAllActivityStarts();
+
+    expect(remaining).toStrictEqual([]);
+  });
 });
 
 test('it delivers a start minted offline on a reconnect after offline and mints behind it', async () => {

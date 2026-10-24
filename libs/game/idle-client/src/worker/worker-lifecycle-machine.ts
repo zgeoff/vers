@@ -3,10 +3,10 @@ import { assign, enqueueActions, setup } from 'xstate';
 import { buildMachineTypes } from '../submission/build-machine-types';
 import { checkpointSubmitterMachine } from '../submission/checkpoint-submitter-machine';
 import { WorkerMessageType } from '../types';
+import { applyDiscardSettlement } from './apply-discard-settlement';
 import { applyEscapedRequest } from './apply-escaped-request';
 import { applyResyncSettlement } from './apply-resync-settlement';
 import { applyStopHalt } from './apply-stop-halt';
-import { applyTeardownSettlement } from './apply-teardown-settlement';
 import { buildFlowSignals } from './build-flow-signals';
 import { buildFreshStopScope } from './build-fresh-stop-scope';
 import { buildPendingPop } from './build-pending-pop';
@@ -14,7 +14,12 @@ import { buildPrerequisiteResync } from './build-prerequisite-resync';
 import { buildResyncRequest } from './build-resync-request';
 import { buildResyncSettlePop } from './build-resync-settle-pop';
 import { buildStartRequest } from './build-start-request';
+import { hasLiveActivity } from './has-live-activity';
+import { hasQueuedTakeoverDiscard } from './has-queued-takeover-discard';
+import { isFlowActive } from './is-flow-active';
+import { isIdleOrRunning } from './is-idle-or-running';
 import { runContinuationActor } from './run-continuation-actor';
+import { runDiscardActor } from './run-discard-actor';
 import { runEvictionActor } from './run-eviction-actor';
 import { runResyncActor } from './run-resync-actor';
 import { runStartActor } from './run-start-actor';
@@ -50,6 +55,7 @@ export const workerLifecycleMachine = setup({
   actors: {
     checkpointSubmitterMachine,
     runContinuationActor,
+    runDiscardActor,
     runEvictionActor,
     runResyncActor,
     runStartActor,
@@ -81,12 +87,6 @@ export const workerLifecycleMachine = setup({
       submitterRef: args.spawn('checkpointSubmitterMachine'),
       writerDisplacedActivityID: null,
     };
-  },
-
-  // the actor can stop while requests are queued or running — settling every outstanding deferred
-  // here keeps entry points awaiting them from hanging past teardown
-  exit: (args) => {
-    applyTeardownSettlement(args.context);
   },
   id: 'workerLifecycle',
   initial: 'idle',
@@ -124,6 +124,24 @@ export const workerLifecycleMachine = setup({
           },
         })),
         target: '.continuing',
+      },
+    ],
+    DISCARD: [
+      { guard: (args) => hasQueuedTakeoverDiscard(args.context, args.event.trigger) },
+      {
+        actions: assign((args) => ({
+          pending: [
+            ...args.context.pending,
+            { kind: 'discard' as const, trigger: args.event.trigger },
+          ],
+        })),
+        guard: isFlowActive,
+      },
+      {
+        actions: assign((args) => ({
+          currentRequest: { kind: 'discard' as const, trigger: args.event.trigger },
+        })),
+        target: '.discarding',
       },
     ],
     OFFLINE: {
@@ -354,9 +372,45 @@ export const workerLifecycleMachine = setup({
           guard: (args) => args.context.currentRequest?.kind === 'eviction',
           target: 'evicting',
         },
+        {
+          guard: (args) => args.context.currentRequest?.kind === 'discard',
+          target: 'discarding',
+        },
         { guard: hasLiveActivity, target: 'running' },
         { target: 'idle' },
       ],
+    },
+    discarding: {
+      entry: assign({ phase: 'discarding' as const }),
+      invoke: {
+        input: (args) => {
+          const request = args.context.currentRequest;
+
+          invariant(request?.kind === 'discard', 'expected a queued discard request');
+
+          return { context: args.context.runtime, request };
+        },
+        onDone: {
+          actions: [
+            (args) => {
+              applyDiscardSettlement(args.context, { kind: 'done' });
+            },
+            assign((args) => buildPendingPop(args.context)),
+          ],
+          target: '#workerLifecycle.dispatching',
+        },
+        onError: {
+          actions: [
+            (args) => {
+              applyDiscardSettlement(args.context, { error: args.event.error, kind: 'failed' });
+            },
+            assign((args) => buildPendingPop(args.context)),
+          ],
+          target: '#workerLifecycle.dispatching',
+        },
+        // oxlint-disable-next-line zgeoff/no-abbreviated-names -- xstate names an invoke's actor `src`
+        src: 'runDiscardActor',
+      },
     },
     evicting: {
       entry: assign({ phase: 'evicting' as const }),
@@ -472,23 +526,4 @@ export const workerLifecycleMachine = setup({
 
 function applyStopScopeAbort(context: WorkerLifecycleContext): void {
   context.stopController.abort();
-}
-
-type ContextArg = Readonly<{ context: WorkerLifecycleContext }>;
-
-function isFlowActive(args: ContextArg): boolean {
-  return (
-    args.context.phase === 'starting' ||
-    args.context.phase === 'resyncing' ||
-    args.context.phase === 'continuing' ||
-    args.context.phase === 'evicting'
-  );
-}
-
-function isIdleOrRunning(args: ContextArg): boolean {
-  return args.context.phase === 'idle' || args.context.phase === 'running';
-}
-
-function hasLiveActivity(args: ContextArg): boolean {
-  return args.context.runtime.getActivity() !== null;
 }
