@@ -53,4 +53,5 @@ Each content version records a digest of the sources of `@vers/item-gen`, `@vers
 `@vers/worldmap-content`, tests and mocks excluded. The roll stream and its weighted pick live in
 `@vers/roll-crypto`, so they decide draws as much as the interpreter does. CI recomputes the digest
 and fails when it differs from the one recorded for the bundled content version, so a change to any
-of the three packages lands only with a new content version.
+of the three packages lands only with a new content version. A recorded digest never changes: CI
+also fails when a branch rewrites or removes a digest that its base revision records.
