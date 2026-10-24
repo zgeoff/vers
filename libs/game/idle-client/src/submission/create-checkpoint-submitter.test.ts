@@ -1146,6 +1146,40 @@ test('it resolves each submit with the activity-relative version it assigned', a
   expect(secondVersion).toBe(2);
 });
 
+test('it removes only the registrations of the avatars it is given', async () => {
+  const ctx = setupTest({ scheduleFlush: () => {} });
+
+  await ctx.submitter.registerActivity({
+    activityID: 'removed-activity',
+    appendedHead: 0,
+    avatarID: 'avatar_removed',
+    lastHash: 'start_hash',
+    startChainIndex: 0,
+  });
+
+  await ctx.submitter.registerActivity({
+    activityID: 'kept-activity',
+    appendedHead: 0,
+    avatarID: 'avatar_kept',
+    lastHash: 'start_hash',
+    startChainIndex: 0,
+  });
+
+  await ctx.submitter.submit('kept-activity', createMockStartedCheckpoint());
+
+  ctx.submitter.removeRegistrations(['avatar_removed']);
+
+  const removedVersion = await ctx.submitter.submit(
+    'removed-activity',
+    createMockStartedCheckpoint(),
+  );
+
+  const keptVersion = await ctx.submitter.submit('kept-activity', createMockProgressCheckpoint());
+
+  expect(removedVersion).toBeUndefined();
+  expect(keptVersion).toBe(2);
+});
+
 test('it resolves with undefined for a checkpoint dropped by an unattached activity', async () => {
   const ctx = setupTest();
 

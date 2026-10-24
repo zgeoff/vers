@@ -16,6 +16,8 @@ export const runDiscardActor = fromPromise<
     .with({ kind: 'sign-out' }, async (signOut) => {
       await removeAvatarOfflineWork(signOut.avatarIDs);
 
+      context.getSubmitter().removeRegistrations(signOut.avatarIDs);
+
       resetSimulation(context);
     })
     .with({ kind: 'takeover' }, async () => {
@@ -28,6 +30,8 @@ export const runDiscardActor = fromPromise<
       }
 
       await removeOfflineWork();
+
+      context.getSubmitter().removeRegistrations();
     })
     .exhaustive();
 });

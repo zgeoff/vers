@@ -97,6 +97,7 @@ test('it returns the injected submitter', () => {
     collectActivityStates: mock(() => []),
     isEvicted: mock(() => false),
     removeEviction: mock(() => {}),
+    removeRegistrations: mock(() => {}),
   };
 
   const context = createStubWorkerContext({ submitter });

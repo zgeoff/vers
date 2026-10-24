@@ -42,6 +42,8 @@ export interface CheckpointSubmitter {
   isEvicted: (activityID: string) => boolean;
 
   removeEviction: (activityID: string) => void;
+
+  removeRegistrations: (avatarIDs?: ReadonlyArray<string>) => void;
 }
 
 interface CreateCheckpointSubmitterOptions {
@@ -393,6 +395,26 @@ export function createCheckpointSubmitter(
     parentActor.send({ activityID, type: 'REMOVE_EVICTION' });
   };
 
+  // a discard clears the queue a registration's cursor was built from, so the next registration
+  // of the activity seeds its cursor from the server head again
+  const removeRegistrations = (avatarIDs?: ReadonlyArray<string>): void => {
+    const activityIDs = [...registrations.keys()].filter((activityID) => {
+      const ownerAvatarID = writeCursors.get(activityID)?.avatarID;
+
+      return (
+        avatarIDs === undefined ||
+        (ownerAvatarID !== undefined && avatarIDs.includes(ownerAvatarID))
+      );
+    });
+
+    for (const activityID of activityIDs) {
+      writeCursors.delete(activityID);
+      registrations.delete(activityID);
+    }
+
+    parentActor.send({ activityIDs, type: 'REMOVE_CHILDREN' });
+  };
+
   return {
     collectActivityStates,
     flushHeld,
@@ -400,6 +422,7 @@ export function createCheckpointSubmitter(
     isEvicted,
     registerActivity,
     removeEviction,
+    removeRegistrations,
     submit,
   };
 }

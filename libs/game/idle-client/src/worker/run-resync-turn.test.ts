@@ -195,6 +195,7 @@ test('it keeps the queued rows of an activity that went live while the resync wa
       collectActivityStates: () => [],
       isEvicted: () => false,
       removeEviction: () => {},
+      removeRegistrations: () => {},
     },
   });
 
@@ -733,6 +734,7 @@ test('it reports a fault to the error backend and broadcasts an unreconstructed 
       collectActivityStates: () => [],
       isEvicted: () => false,
       removeEviction: () => {},
+      removeRegistrations: () => {},
     },
   });
 
@@ -1044,6 +1046,7 @@ test('it holds a claiming request behind an in-flight resync and claims once it 
       collectActivityStates: () => [],
       isEvicted: () => false,
       removeEviction: () => {},
+      removeRegistrations: () => {},
     },
   });
 
