@@ -2,28 +2,35 @@ import type { RevealSource, WorldMapNode } from '@vers/worldmap-core';
 import type { WorldGraph } from '../types';
 import { useWorldmapStore } from './use-worldmap-store';
 
-export function setWorldRegion(
-  regionKey: string,
-  userSeed: number,
-  graph: WorldGraph,
-  selectedNode: WorldMapNode | null,
-  selectableNodeIDs: ReadonlySet<string>,
-  revealSources: ReadonlyArray<RevealSource>,
-) {
-  if (useWorldmapStore.getState().regionKey === regionKey) {
-    useWorldmapStore.setState({ revealSources, selectableNodeIDs, userSeed, worldGraph: graph });
+interface SetWorldRegionOptions {
+  readonly regionKey: string;
+  readonly userSeed: number;
+  readonly worldGraph: WorldGraph;
+  readonly selectedNode: WorldMapNode | null;
+  readonly selectableNodeIDs: ReadonlySet<string>;
+  readonly revealSources: ReadonlyArray<RevealSource>;
+}
+
+export function setWorldRegion(options: SetWorldRegionOptions) {
+  if (useWorldmapStore.getState().regionKey === options.regionKey) {
+    useWorldmapStore.setState({
+      revealSources: options.revealSources,
+      selectableNodeIDs: options.selectableNodeIDs,
+      userSeed: options.userSeed,
+      worldGraph: options.worldGraph,
+    });
 
     return;
   }
 
   useWorldmapStore.setState({
-    regionKey,
-    revealSources,
-    selectableNodeIDs,
-    selectedNode,
+    regionKey: options.regionKey,
+    revealSources: options.revealSources,
+    selectableNodeIDs: options.selectableNodeIDs,
+    selectedNode: options.selectedNode,
     selectedObject3D: null,
-    userSeed,
+    userSeed: options.userSeed,
     viewport: null,
-    worldGraph: graph,
+    worldGraph: options.worldGraph,
   });
 }

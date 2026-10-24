@@ -10,15 +10,19 @@ import type {
 } from '../../types';
 import { ActivityCheckpointType } from '../../types';
 
+interface CreateProgressCheckpointOptions {
+  readonly activity: Activity;
+  readonly avatar: Avatar;
+  readonly ctx: SimulationContext;
+  readonly rewards: ActivityRewards;
+  readonly rewardSlotContexts: ReadonlyArray<RewardSlotContext>;
+}
+
 export function createProgressCheckpoint(
-  activity: Activity,
-  avatar: Avatar,
-  ctx: SimulationContext,
-  rewards: ActivityRewards,
-  rewardSlotContexts: ReadonlyArray<RewardSlotContext>,
+  options: CreateProgressCheckpointOptions,
 ): ActivityProgressCheckpoint {
-  const totalXPAfter = avatar.xp + activity.rewards.xp;
-  const totalXPBefore = totalXPAfter - rewards.xp;
+  const totalXPAfter = options.avatar.xp + options.activity.rewards.xp;
+  const totalXPBefore = totalXPAfter - options.rewards.xp;
   const previousLevel = buildLevelFromXP(totalXPBefore);
   const currentLevel = buildLevelFromXP(totalXPAfter);
 
@@ -26,10 +30,10 @@ export function createProgressCheckpoint(
     currentLevel > previousLevel ? { from: previousLevel, to: currentLevel } : undefined;
 
   return {
-    nextSeed: ctx.rng.getState(),
-    rewards,
-    rewardSlots: rewardSlotContexts.map((context, ordinal) => ({ context, ordinal })),
-    time: activity.elapsed,
+    nextSeed: options.ctx.rng.getState(),
+    rewards: options.rewards,
+    rewardSlots: options.rewardSlotContexts.map((context, ordinal) => ({ context, ordinal })),
+    time: options.activity.elapsed,
     type: ActivityCheckpointType.Progress,
     ...(levelUp && { levelUp }),
   };

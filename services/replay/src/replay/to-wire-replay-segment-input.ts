@@ -14,14 +14,21 @@ const WIRE_ACTIVITY_TYPES: Record<ActivityType, ReplaySegmentInput['activity']['
   [ActivityType.WorldMapEncounter]: 'world_map_encounter',
 };
 
+interface ToWireReplaySegmentInputOptions {
+  readonly activity: ActivityInput;
+  readonly avatar: AvatarData;
+  readonly duration: number;
+  readonly simVersion: string;
+  readonly stopAtState?: string;
+  readonly expectedCheckpointCount?: number;
+}
+
 export function toWireReplaySegmentInput(
-  activity: ActivityInput,
-  avatar: AvatarData,
-  duration: number,
-  simVersion: string,
-  stopAtState?: string,
-  expectedCheckpointCount?: number,
+  options: ToWireReplaySegmentInputOptions,
 ): ReplaySegmentInput {
+  const activity = options.activity;
+  const avatar = options.avatar;
+
   return {
     activity: {
       difficulty: activity.difficulty,
@@ -44,10 +51,12 @@ export function toWireReplaySegmentInput(
       paperdoll: { mainHand: avatar.paperdoll[EquipmentSlot.MainHand] },
       xp: avatar.xp,
     },
-    duration,
+    duration: options.duration,
     protocol: 1,
-    simVersion,
-    ...(expectedCheckpointCount !== undefined && { expectedCheckpointCount }),
-    ...(stopAtState !== undefined && { stopAtState }),
+    simVersion: options.simVersion,
+    ...(options.expectedCheckpointCount !== undefined && {
+      expectedCheckpointCount: options.expectedCheckpointCount,
+    }),
+    ...(options.stopAtState !== undefined && { stopAtState: options.stopAtState }),
   };
 }

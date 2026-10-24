@@ -138,8 +138,14 @@ function makeProcedureResolver(
 
     let rawResponse: Response | undefined;
 
-    const leaf = buildMockProcedure(options.contract, path, info.request, mock, (output) => {
-      rawResponse = output;
+    const leaf = buildMockProcedure({
+      contract: options.contract,
+      path,
+      request: info.request,
+      mock,
+      onRawResponse: (output) => {
+        rawResponse = output;
+      },
     });
 
     const router = buildNestedRouter(path, leaf);
@@ -159,15 +165,18 @@ function makeProcedureResolver(
   };
 }
 
-function buildMockProcedure(
-  contract: AnyContractRouter,
-  path: ReadonlyArray<string>,
-  request: Request,
-  mock: unknown,
-  onRawResponse: (response: Response) => void,
-): AnyRouter {
+interface BuildMockProcedureOptions {
+  readonly contract: AnyContractRouter;
+  readonly path: ReadonlyArray<string>;
+  readonly request: Request;
+  readonly mock: unknown;
+  readonly onRawResponse: (response: Response) => void;
+}
+
+function buildMockProcedure(options: BuildMockProcedureOptions): AnyRouter {
+  const path = options.path;
   let parent: unknown;
-  let node: unknown = implement(contract);
+  let node: unknown = implement(options.contract);
 
   for (const segment of [...path, 'handler']) {
     // an oRPC implementer node is a callable proxy, so a function is walkable as well as an object
@@ -183,7 +192,7 @@ function buildMockProcedure(
   invariant(typeof node === 'function', `buildContractMock: ${path.join('.')} is no procedure`);
 
   const procedure: unknown = Reflect.apply(node, parent, [
-    makeMockProcedureHandler(request, mock, onRawResponse),
+    makeMockProcedureHandler(options.request, options.mock, options.onRawResponse),
   ]);
 
   invariant(isProcedure(procedure), `buildContractMock: ${path.join('.')} built no procedure`);

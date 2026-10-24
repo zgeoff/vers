@@ -4,7 +4,14 @@ import { setWorldRegion } from './set-world-region';
 import { useUserSeed } from './use-user-seed';
 
 test('it returns the current region seed', () => {
-  setWorldRegion('avatar-1', 123, { edges: {}, nodes: {} }, null, new Set(), []);
+  setWorldRegion({
+    regionKey: 'avatar-1',
+    userSeed: 123,
+    worldGraph: { edges: {}, nodes: {} },
+    selectedNode: null,
+    selectableNodeIDs: new Set(),
+    revealSources: [],
+  });
 
   const hook = renderHook(() => useUserSeed());
 

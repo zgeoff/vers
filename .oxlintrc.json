@@ -157,33 +157,6 @@
       }
     },
     {
-      // functions with more than 4 parameters, until GEO-1203 reshapes them
-      "files": [
-        "**/apps/web/src/routes/-game/use-seed-prefetch.ts",
-        "**/libs/game/idle-client/src/worker/build-resync-request.ts",
-        "**/libs/game/idle-client/src/worker/run-resync-flow.ts",
-        "**/libs/game/idle-core/src/core/utils/create-progress-checkpoint.ts",
-        "**/libs/game/worldmap-client/src/state/set-world-region.ts",
-        "**/libs/game/worldmap-core/src/get-biome.ts",
-        "**/libs/service/jobs/src/create-job-queue.ts",
-        "**/libs/service/service-runtime/src/create-service.ts",
-        "**/libs/testing/client-test-utils/src/orpc/build-contract-mock.ts",
-        "**/services/activity/src/handlers/admit-activity-start.ts",
-        "**/services/replay/src/replay/to-wire-replay-segment-input.ts",
-        "**/services/replay/src/worker/apply-match.ts",
-        "**/services/replay/src/worker/park-replay-target.ts",
-        "**/services/replay/src/worker/reject-segment.ts",
-        "**/services/replay/src/worker/run-replay-iteration.ts",
-        "**/services/replay/src/worker/run-replay-target-cross-version.ts",
-        "**/services/replay/src/worker/run-replay-target-in-process.ts",
-        "**/services/replay/src/worker/run-replay-target.ts",
-        "**/services/replay/src/worker/schedule-replay-retry.ts"
-      ],
-      "rules": {
-        "max-params": "off"
-      }
-    },
-    {
       "files": ["**/*.test.ts", "**/*.test.tsx"],
       // ergonomics for every co-located suite, whichever runner it targets: one
       // suite per module with inline test data means file length scales with

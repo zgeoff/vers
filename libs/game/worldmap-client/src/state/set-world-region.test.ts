@@ -18,7 +18,14 @@ test('it replaces the region key, world graph, selectable set, and selected node
     nodes: { node1: node },
   };
 
-  setWorldRegion('avatar-a', 42, graph, node, new Set(['node1']), [{ coord: [0, 0], radius: 2 }]);
+  setWorldRegion({
+    regionKey: 'avatar-a',
+    userSeed: 42,
+    worldGraph: graph,
+    selectedNode: node,
+    selectableNodeIDs: new Set(['node1']),
+    revealSources: [{ coord: [0, 0], radius: 2 }],
+  });
 
   const hook = renderHook(() => useWorldmapStore((state) => state.worldGraph));
 
@@ -32,7 +39,14 @@ test('it replaces the region key, world graph, selectable set, and selected node
 });
 
 test('it clears the selection when the region has no node to select', () => {
-  setWorldRegion('avatar-a', 42, { edges: {}, nodes: {} }, null, new Set(), []);
+  setWorldRegion({
+    regionKey: 'avatar-a',
+    userSeed: 42,
+    worldGraph: { edges: {}, nodes: {} },
+    selectedNode: null,
+    selectableNodeIDs: new Set(),
+    revealSources: [],
+  });
 
   expect(useWorldmapStore.getState().selectedNode).toBeNull();
   expect(useWorldmapStore.getState().selectedObject3D).toBeNull();
@@ -46,7 +60,14 @@ test("it refreshes the world graph and selectable set without resetting the play
     nodes: { node1: node },
   };
 
-  setWorldRegion('avatar-a', 42, graph, null, new Set(['node1']), []);
+  setWorldRegion({
+    regionKey: 'avatar-a',
+    userSeed: 42,
+    worldGraph: graph,
+    selectedNode: null,
+    selectableNodeIDs: new Set(['node1']),
+    revealSources: [],
+  });
 
   const viewport = { maxCX: 8, maxCY: 8, minCX: -8, minCY: -8 };
 
@@ -55,7 +76,14 @@ test("it refreshes the world graph and selectable set without resetting the play
 
   const nextGraph: WorldGraph = { edges: {}, nodes: {} };
 
-  setWorldRegion('avatar-a', 42, nextGraph, null, new Set(), [{ coord: [1, 1], radius: 2 }]);
+  setWorldRegion({
+    regionKey: 'avatar-a',
+    userSeed: 42,
+    worldGraph: nextGraph,
+    selectedNode: null,
+    selectableNodeIDs: new Set(),
+    revealSources: [{ coord: [1, 1], radius: 2 }],
+  });
 
   expect(useWorldmapStore.getState().worldGraph).toStrictEqual(nextGraph);
   expect(useWorldmapStore.getState().selectableNodeIDs).toStrictEqual(new Set());
@@ -72,10 +100,26 @@ test('it resets the selection and viewport for a new key even when the graph is 
     nodes: { node1: node },
   };
 
-  setWorldRegion('avatar-a', 42, graph, null, new Set(), []);
+  setWorldRegion({
+    regionKey: 'avatar-a',
+    userSeed: 42,
+    worldGraph: graph,
+    selectedNode: null,
+    selectableNodeIDs: new Set(),
+    revealSources: [],
+  });
+
   setSelectedNode(node);
   setViewport({ maxCX: 8, maxCY: 8, minCX: -8, minCY: -8 });
-  setWorldRegion('avatar-b', 43, graph, null, new Set(), []);
+
+  setWorldRegion({
+    regionKey: 'avatar-b',
+    userSeed: 43,
+    worldGraph: graph,
+    selectedNode: null,
+    selectableNodeIDs: new Set(),
+    revealSources: [],
+  });
 
   expect(useWorldmapStore.getState().regionKey).toBe('avatar-b');
   expect(useWorldmapStore.getState().userSeed).toBe(43);

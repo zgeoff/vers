@@ -13,13 +13,13 @@ export function buildPrerequisiteResync(
   invariant(request?.kind === 'start', 'a prerequisite resync is built for a start at the head');
 
   return {
-    currentRequest: buildResyncRequest(
+    currentRequest: buildResyncRequest({
       context,
-      request.input.avatarID,
-      false,
-      buildDeferred<void>(),
-      [],
-    ),
+      avatarID: request.input.avatarID,
+      claim: false,
+      deferred: buildDeferred<void>(),
+      carryOverDeferreds: [],
+    }),
     pending: [{ ...request, awaitedResync: true }, ...context.pending],
     resyncTicket: context.resyncTicket ?? { pendingClaimAvatarID: null },
   };

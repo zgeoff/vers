@@ -1,18 +1,13 @@
-import type { DB } from '@vers/db';
-import type { Transaction } from 'kysely';
 import { recordRejection } from '../metrics/record-rejection';
-import type { ReplayCache } from '../replay/create-replay-cache';
 import type { ReplaySegment } from '../replay/types';
 import { rejectActivity } from './reject-activity';
-import type { ReplayIterationOutcome, ReplayWorkerDeps } from './types';
+import type { ReplayIterationOutcome, ReplayTargetContext } from './types';
 
 export async function rejectUnreachableNode(
-  trx: Transaction<DB>,
-  deps: Readonly<ReplayWorkerDeps>,
-  cache: ReplayCache,
+  context: ReplayTargetContext,
   segment: Readonly<ReplaySegment>,
 ): Promise<ReplayIterationOutcome> {
-  deps.logger.error(
+  context.deps.logger.error(
     {
       activityID: segment.activity.id,
       appendedHead: segment.activity.appendedHead,
@@ -24,14 +19,14 @@ export async function rejectUnreachableNode(
 
   recordRejection('node-unreachable');
 
-  await rejectActivity(trx, {
+  await rejectActivity(context.trx, {
     activityID: segment.activity.id,
     avatarID: segment.activity.avatarID,
     scopeID: segment.activity.scopeID,
     scopeType: segment.activity.scopeType,
   });
 
-  cache.remove(segment.activity.id);
+  context.cache.remove(segment.activity.id);
 
   return { kind: 'rejected' };
 }

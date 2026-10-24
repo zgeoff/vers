@@ -1,15 +1,12 @@
 import type { ContentDocument } from '@vers/contract-activity';
-import type { DB } from '@vers/db';
 import type { EncounterContent } from '@vers/game-utils';
 import type { SimulationDriver } from '@vers/idle-core';
 import { buildSimulationInput } from '@vers/idle-core';
 import { createSimulationDriver } from '@vers/idle-core/replay';
-import type { Transaction } from 'kysely';
 import { recordCacheLookup } from '../metrics/record-cache-lookup';
 import type { CacheLookupOutcome } from '../metrics/record-cache-lookup';
 import { buildSegmentDuration } from '../replay/build-segment-duration';
 import { compareReplaySegment } from '../replay/compare-replay-segment';
-import type { ReplayCache } from '../replay/create-replay-cache';
 import type { ReplaySegment } from '../replay/types';
 import { applyMatch } from './apply-match';
 import { buildCompareContext } from './build-compare-context';
@@ -17,16 +14,15 @@ import { countFailedAttempt } from './count-failed-attempt';
 import { getStopAtState } from './get-stop-at-state';
 import { parkReplayTarget } from './park-replay-target';
 import { rejectSegment } from './reject-segment';
-import type { ReplayIterationOutcome, ReplayWorkerDeps } from './types';
+import type { ReplayIterationOutcome, ReplayTargetContext } from './types';
 
 export async function runReplayTargetInProcess(
-  trx: Transaction<DB>,
-  deps: Readonly<ReplayWorkerDeps>,
-  cache: ReplayCache,
+  context: ReplayTargetContext,
   segment: Readonly<ReplaySegment>,
   document: Readonly<ContentDocument>,
   deadline: AbortSignal,
 ): Promise<ReplayIterationOutcome> {
+  const cache = context.cache;
   const unverified = segment.unverifiedCheckpoints;
   const rawCached = cache.get(segment.activity.id);
   const cacheIsCurrent = rawCached !== undefined && isCacheCurrent(rawCached, segment);
@@ -66,7 +62,7 @@ export async function runReplayTargetInProcess(
     : compareReplaySegment(unverified, replayed, compareContext);
 
   if (verdict?.kind === 'match') {
-    return applyMatch(trx, deps, cache, segment, replayed, driver, verdict, document, deadline);
+    return applyMatch(context, segment, { deadline, document, driver, replayed, verdict });
   }
 
   const confirmDriver = buildFreshDriver(document.encounter, segment);
@@ -80,7 +76,7 @@ export async function runReplayTargetInProcess(
   deadline.throwIfAborted();
 
   if (confirmAdvance.haltedOnDurationCap) {
-    return parkReplayTarget(trx, deps, cache, segment, 'durationCapExceeded');
+    return parkReplayTarget(context, segment, 'durationCapExceeded');
   }
 
   const confirmReplayed = confirmAdvance.checkpoints.slice(segment.verifiedHead);
@@ -89,10 +85,10 @@ export async function runReplayTargetInProcess(
   if (confirmVerdict.kind === 'match') {
     cache.remove(segment.activity.id);
 
-    return countFailedAttempt(trx, deps, segment);
+    return countFailedAttempt(context.trx, context.deps, segment);
   }
 
-  return rejectSegment(trx, deps, cache, segment, confirmVerdict, 'confirmed-on-fresh-replay');
+  return rejectSegment(context, segment, confirmVerdict, 'confirmed-on-fresh-replay');
 }
 
 function isCacheCurrent(

@@ -72,8 +72,7 @@ export async function resolveActivityStartRow(
           secretVersion: deps.secretVersion,
         },
         trx,
-        actingUserID,
-        { activityID: opts.input.activityID, actingSessionID, activityStart },
+        { actingUserID, activityID: opts.input.activityID, actingSessionID, activityStart },
         opts.errors,
       ),
     );

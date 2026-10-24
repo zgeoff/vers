@@ -34,7 +34,12 @@ test('it converts the engine activity and avatar to the wire shape', () => {
     xp: 120,
   };
 
-  const job = toWireReplaySegmentInput(activity, avatar, 80_000, 'engine-hash-1');
+  const job = toWireReplaySegmentInput({
+    activity,
+    avatar,
+    duration: 80_000,
+    simVersion: 'engine-hash-1',
+  });
 
   expect(job).toStrictEqual({
     activity: {
@@ -80,7 +85,12 @@ test('it converts an Abort failure action to its wire literal', () => {
     xp: 0,
   };
 
-  const job = toWireReplaySegmentInput(activity, avatar, 1000, 'engine-hash-1');
+  const job = toWireReplaySegmentInput({
+    activity,
+    avatar,
+    duration: 1000,
+    simVersion: 'engine-hash-1',
+  });
 
   expect(job.activity.failureAction).toBe('abort');
 });
@@ -105,7 +115,14 @@ test('it carries the expected checkpoint count and stopAtState when given', () =
     xp: 0,
   };
 
-  const job = toWireReplaySegmentInput(activity, avatar, 1000, 'engine-hash-1', 'bb'.repeat(16), 4);
+  const job = toWireReplaySegmentInput({
+    activity,
+    avatar,
+    duration: 1000,
+    simVersion: 'engine-hash-1',
+    stopAtState: 'bb'.repeat(16),
+    expectedCheckpointCount: 4,
+  });
 
   expect(job.stopAtState).toBe('bb'.repeat(16));
   expect(job.expectedCheckpointCount).toBe(4);

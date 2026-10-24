@@ -1,15 +1,12 @@
 import { isDefinedError } from '@orpc/client';
 import type { ContentDocument } from '@vers/contract-activity';
-import type { DB } from '@vers/db';
 import type { SimulationDriver } from '@vers/idle-core';
-import type { Transaction } from 'kysely';
 import invariant from 'tiny-invariant';
 import { applyVerifiedSegment } from '../apply/apply-verified-segment';
 import { recordSettledXP } from '../metrics/record-settled-xp';
 import { recordVerificationLag } from '../metrics/record-verification-lag';
 import { readAvatarRollKey } from '../mint/read-avatar-roll-key';
 import { rollRewardItems } from '../mint/roll-reward-items';
-import type { ReplayCache } from '../replay/create-replay-cache';
 import { isForwardExited } from '../replay/is-forward-exited';
 import type {
   CompareVerdict,
@@ -19,23 +16,32 @@ import type {
 } from '../replay/types';
 import type { MintedItem } from '../types';
 import { scheduleReplayRetry } from './schedule-replay-retry';
-import type { PendingCacheEffect, ReplayIterationOutcome, ReplayWorkerDeps } from './types';
+import type {
+  PendingCacheEffect,
+  ReplayIterationOutcome,
+  ReplayTargetContext,
+  ReplayWorkerDeps,
+} from './types';
+
+interface ReplayMatch {
+  readonly deadline: AbortSignal;
+  readonly document: Readonly<ContentDocument>;
+  readonly driver: SimulationDriver | undefined;
+  readonly replayed: ReadonlyArray<ReplayedCheckpoint>;
+  readonly verdict: Extract<CompareVerdict, { kind: 'match' }>;
+}
 
 export async function applyMatch(
-  trx: Transaction<DB>,
-  deps: Readonly<ReplayWorkerDeps>,
-  cache: ReplayCache,
+  context: ReplayTargetContext,
   segment: Readonly<ReplaySegment>,
-  replayed: ReadonlyArray<ReplayedCheckpoint>,
-  driver: SimulationDriver | undefined,
-  verdict: Extract<CompareVerdict, { kind: 'match' }>,
-  document: Readonly<ContentDocument>,
-  deadline: AbortSignal,
+  match: ReplayMatch,
 ): Promise<ReplayIterationOutcome> {
-  deadline.throwIfAborted();
+  const verdict = match.verdict;
+
+  match.deadline.throwIfAborted();
 
   const settlement = buildSettlement(segment.activity.settledXP, verdict);
-  const lastReplayed = replayed.at(-1);
+  const lastReplayed = match.replayed.at(-1);
   const lastStored = segment.unverifiedCheckpoints.at(-1);
 
   invariant(
@@ -54,13 +60,19 @@ export async function applyMatch(
       ? segment.activity.scopeID
       : undefined;
 
-  const items = await tryRollRewardItems(deps, segment, verdict.rewardFacts, document, deadline);
+  const items = await tryRollRewardItems({
+    deadline: match.deadline,
+    deps: context.deps,
+    document: match.document,
+    rewardFacts: verdict.rewardFacts,
+    segment,
+  });
 
   if (items === undefined) {
-    return scheduleReplayRetry(trx, deps, cache, segment, 'keys-unavailable');
+    return scheduleReplayRetry(context, segment, 'keys-unavailable');
   }
 
-  const result = await applyVerifiedSegment(trx, {
+  const result = await applyVerifiedSegment(context.trx, {
     activityID: segment.activity.id,
     avatarID: segment.activity.avatarID,
     expectedVerifiedHead: segment.verifiedHead,
@@ -93,6 +105,8 @@ export async function applyMatch(
     }
   }
 
+  const driver = match.driver;
+
   const effect: PendingCacheEffect =
     result.applied && !forwardExited && driver !== undefined
       ? {
@@ -123,15 +137,22 @@ function buildSettlement(
   };
 }
 
+interface TryRollRewardItemsOptions {
+  readonly deadline: AbortSignal;
+  readonly deps: Readonly<ReplayWorkerDeps>;
+  readonly document: Readonly<ContentDocument>;
+  readonly rewardFacts: ReadonlyArray<RewardFact>;
+  readonly segment: Readonly<ReplaySegment>;
+}
+
 // only the key read can be unavailable: a fault inside the roll itself is a bug and propagates
 async function tryRollRewardItems(
-  deps: Readonly<ReplayWorkerDeps>,
-  segment: Readonly<ReplaySegment>,
-  rewardFacts: ReadonlyArray<RewardFact>,
-  document: Readonly<ContentDocument>,
-  deadline: AbortSignal,
+  options: TryRollRewardItemsOptions,
 ): Promise<ReadonlyArray<MintedItem> | undefined> {
-  if (rewardFacts.length === 0) {
+  const deadline = options.deadline;
+  const segment = options.segment;
+
+  if (options.rewardFacts.length === 0) {
     return [];
   }
 
@@ -139,7 +160,11 @@ async function tryRollRewardItems(
 
   try {
     rollKey = await readAvatarRollKey(
-      { keysServiceURL: deps.keysServiceURL, privateKey: deps.privateKey, signal: deadline },
+      {
+        keysServiceURL: options.deps.keysServiceURL,
+        privateKey: options.deps.privateKey,
+        signal: deadline,
+      },
       { avatarID: segment.activity.avatarID, keyVersion: segment.activity.keyVersion },
     );
   } catch (error) {
@@ -155,9 +180,9 @@ async function tryRollRewardItems(
   return rollRewardItems(rollKey, {
     avatarID: segment.activity.avatarID,
     keyVersion: segment.activity.keyVersion,
-    rewardFacts,
+    rewardFacts: options.rewardFacts,
     scopeID: segment.activity.scopeID,
     scopeType: segment.activity.scopeType,
-    tables: document.loot,
+    tables: options.document.loot,
   });
 }

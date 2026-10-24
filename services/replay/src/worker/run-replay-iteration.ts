@@ -35,12 +35,17 @@ export async function runReplayIteration(
 
       claimedTarget = target;
 
-      return runReplayTarget(trx, deps, cache, target, deadline);
+      return runReplayTarget({ trx, deps, cache }, target, deadline);
     });
 
     return applyPendingCacheEffect(cache, outcome);
   } catch (error) {
-    return resolveIterationFailure(deps, cache, claimedTarget, error, deadline, deadlineMs);
+    return resolveIterationFailure(deps, cache, {
+      deadline,
+      deadlineMs,
+      error,
+      target: claimedTarget,
+    });
   }
 }
 
@@ -65,28 +70,35 @@ function applyPendingCacheEffect(
 
 // the transaction has already rolled back by the time this runs, so the backoff lands on its own
 // connection and survives whatever the iteration left half-done
+interface IterationFailure {
+  readonly deadline: AbortSignal;
+  readonly deadlineMs: number;
+  readonly error: unknown;
+  readonly target: ReplayTarget | undefined;
+}
+
 async function resolveIterationFailure(
   deps: Readonly<ReplayWorkerDeps>,
   cache: ReplayCache,
-  target: ReplayTarget | undefined,
-  error: unknown,
-  deadline: AbortSignal,
-  deadlineMs: number,
+  failure: IterationFailure,
 ): Promise<ReplayIterationOutcome> {
+  const target = failure.target;
+  const error = failure.error;
+
   if (target === undefined) {
     throw error;
   }
 
   cache.remove(target.activityID);
 
-  if (deadline.aborted) {
+  if (failure.deadline.aborted) {
     const backoff = await updateReplayBackoff(deps.db, {
       activityID: target.activityID,
       verifiedHead: target.verifiedHead,
     });
 
     deps.logger.warn(
-      { activityID: target.activityID, deadlineMs, ...backoff },
+      { activityID: target.activityID, deadlineMs: failure.deadlineMs, ...backoff },
       'replay iteration deadline fired; backing the activity off',
     );
 

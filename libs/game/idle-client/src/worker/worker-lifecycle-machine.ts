@@ -161,13 +161,13 @@ export const workerLifecycleMachine = setup({
         actions: assign((args) => ({
           pending: [
             ...args.context.pending,
-            buildResyncRequest(
-              args.context,
-              args.event.avatarID,
-              args.event.claim,
-              args.event.deferred,
-              [],
-            ),
+            buildResyncRequest({
+              context: args.context,
+              avatarID: args.event.avatarID,
+              claim: args.event.claim,
+              deferred: args.event.deferred,
+              carryOverDeferreds: [],
+            }),
           ],
           resyncTicket: { pendingClaimAvatarID: null },
         })),
@@ -175,13 +175,13 @@ export const workerLifecycleMachine = setup({
       },
       {
         actions: assign((args) => ({
-          currentRequest: buildResyncRequest(
-            args.context,
-            args.event.avatarID,
-            args.event.claim,
-            args.event.deferred,
-            [],
-          ),
+          currentRequest: buildResyncRequest({
+            context: args.context,
+            avatarID: args.event.avatarID,
+            claim: args.event.claim,
+            deferred: args.event.deferred,
+            carryOverDeferreds: [],
+          }),
           resyncTicket: { pendingClaimAvatarID: null },
         })),
         target: '.resyncing',

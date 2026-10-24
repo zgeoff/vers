@@ -64,14 +64,17 @@ test('it defers the cache mutation until the caller applies it, never touching t
   };
 
   const outcome = await ctx.db.transaction().execute((trx) =>
-    runReplayTarget(trx, deps, cache, {
-      activityID: fixture.activity.id,
-      appendedHead: firstBatchCount,
-      replayAttempts: 0,
-      startChainIndex: fixture.activity.startChainIndex,
-      status: fixture.activity.status,
-      verifiedHead: 0,
-    }),
+    runReplayTarget(
+      { trx, deps, cache },
+      {
+        activityID: fixture.activity.id,
+        appendedHead: firstBatchCount,
+        replayAttempts: 0,
+        startChainIndex: fixture.activity.startChainIndex,
+        status: fixture.activity.status,
+        verifiedHead: 0,
+      },
+    ),
   );
 
   expect(outcome.kind).toBe('matched');
@@ -101,14 +104,17 @@ test('it reports idle rather than throwing when the claimed activity row is gone
   };
 
   const outcome = await ctx.db.transaction().execute((trx) =>
-    runReplayTarget(trx, deps, cache, {
-      activityID: 'act_gone',
-      appendedHead: 3,
-      replayAttempts: 0,
-      startChainIndex: 0,
-      status: 'active',
-      verifiedHead: 0,
-    }),
+    runReplayTarget(
+      { trx, deps, cache },
+      {
+        activityID: 'act_gone',
+        appendedHead: 3,
+        replayAttempts: 0,
+        startChainIndex: 0,
+        status: 'active',
+        verifiedHead: 0,
+      },
+    ),
   );
 
   expect(outcome).toStrictEqual({ kind: 'idle' });
@@ -143,14 +149,17 @@ test('it settles the terminal checkpoint reward into the avatar xp and level on 
   };
 
   const outcome = await ctx.db.transaction().execute((trx) =>
-    runReplayTarget(trx, deps, cache, {
-      activityID: fixture.activity.id,
-      appendedHead: fixture.activity.appendedHead,
-      replayAttempts: 0,
-      startChainIndex: fixture.activity.startChainIndex,
-      status: fixture.activity.status,
-      verifiedHead: 0,
-    }),
+    runReplayTarget(
+      { trx, deps, cache },
+      {
+        activityID: fixture.activity.id,
+        appendedHead: fixture.activity.appendedHead,
+        replayAttempts: 0,
+        startChainIndex: fixture.activity.startChainIndex,
+        status: fixture.activity.status,
+        verifiedHead: 0,
+      },
+    ),
   );
 
   expect(outcome.kind).toBe('matched');
@@ -195,14 +204,17 @@ test('it settles a run verified in two segments to the terminal total, counting 
   };
 
   const midRun = await ctx.db.transaction().execute((trx) =>
-    runReplayTarget(trx, deps, cache, {
-      activityID: fixture.activity.id,
-      appendedHead: midRunCount,
-      replayAttempts: 0,
-      startChainIndex: fixture.activity.startChainIndex,
-      status: fixture.activity.status,
-      verifiedHead: 0,
-    }),
+    runReplayTarget(
+      { trx, deps, cache },
+      {
+        activityID: fixture.activity.id,
+        appendedHead: midRunCount,
+        replayAttempts: 0,
+        startChainIndex: fixture.activity.startChainIndex,
+        status: fixture.activity.status,
+        verifiedHead: 0,
+      },
+    ),
   );
 
   expect(midRun.kind).toBe('matched');
@@ -216,14 +228,17 @@ test('it settles a run verified in two segments to the terminal total, counting 
   expect(settledMidRun.settledXp).toBeGreaterThan(0);
 
   const terminalSegment = await ctx.db.transaction().execute((trx) =>
-    runReplayTarget(trx, deps, cache, {
-      activityID: fixture.activity.id,
-      appendedHead: fixture.activity.appendedHead,
-      replayAttempts: 0,
-      startChainIndex: fixture.activity.startChainIndex,
-      status: fixture.activity.status,
-      verifiedHead: midRunCount,
-    }),
+    runReplayTarget(
+      { trx, deps, cache },
+      {
+        activityID: fixture.activity.id,
+        appendedHead: fixture.activity.appendedHead,
+        replayAttempts: 0,
+        startChainIndex: fixture.activity.startChainIndex,
+        status: fixture.activity.status,
+        verifiedHead: midRunCount,
+      },
+    ),
   );
 
   expect(terminalSegment.kind).toBe('matched');
@@ -284,14 +299,17 @@ test('it settles a matched mid-run segment onto the avatar before the run ends',
   };
 
   const outcome = await ctx.db.transaction().execute((trx) =>
-    runReplayTarget(trx, deps, cache, {
-      activityID: fixture.activity.id,
-      appendedHead: midRunCount,
-      replayAttempts: 0,
-      startChainIndex: fixture.activity.startChainIndex,
-      status: fixture.activity.status,
-      verifiedHead: 0,
-    }),
+    runReplayTarget(
+      { trx, deps, cache },
+      {
+        activityID: fixture.activity.id,
+        appendedHead: midRunCount,
+        replayAttempts: 0,
+        startChainIndex: fixture.activity.startChainIndex,
+        status: fixture.activity.status,
+        verifiedHead: 0,
+      },
+    ),
   );
 
   expect(outcome.kind).toBe('matched');
@@ -351,7 +369,7 @@ test('it settles no additional xp when a stale duplicate target misses the alrea
 
   const first = await ctx.db
     .transaction()
-    .execute((trx) => runReplayTarget(trx, deps, cache, staleTarget));
+    .execute((trx) => runReplayTarget({ trx, deps, cache }, staleTarget));
 
   expect(first.kind).toBe('matched');
 
@@ -365,7 +383,7 @@ test('it settles no additional xp when a stale duplicate target misses the alrea
   // apply already advanced
   const second = await ctx.db
     .transaction()
-    .execute((trx) => runReplayTarget(trx, deps, cache, staleTarget));
+    .execute((trx) => runReplayTarget({ trx, deps, cache }, staleTarget));
 
   expect(second.kind).toBe('matched');
 
@@ -413,14 +431,17 @@ test("it rejects an activity whose pinned build does not match the avatar's sett
   };
 
   const outcome = await ctx.db.transaction().execute((trx) =>
-    runReplayTarget(trx, deps, cache, {
-      activityID: fixture.activity.id,
-      appendedHead: fixture.activity.appendedHead,
-      replayAttempts: 0,
-      startChainIndex: fixture.activity.startChainIndex,
-      status: fixture.activity.status,
-      verifiedHead: 0,
-    }),
+    runReplayTarget(
+      { trx, deps, cache },
+      {
+        activityID: fixture.activity.id,
+        appendedHead: fixture.activity.appendedHead,
+        replayAttempts: 0,
+        startChainIndex: fixture.activity.startChainIndex,
+        status: fixture.activity.status,
+        verifiedHead: 0,
+      },
+    ),
   );
 
   expect(outcome).toStrictEqual({ kind: 'rejected' });
@@ -487,14 +508,17 @@ test('it makes no keys dispatch when the target has already verified part of the
   };
 
   const outcome = await ctx.db.transaction().execute((trx) =>
-    runReplayTarget(trx, deps, cache, {
-      activityID: fixture.activity.id,
-      appendedHead: totalCheckpoints,
-      replayAttempts: 0,
-      startChainIndex: fixture.activity.startChainIndex,
-      status: fixture.activity.status,
-      verifiedHead: firstBatchCount,
-    }),
+    runReplayTarget(
+      { trx, deps, cache },
+      {
+        activityID: fixture.activity.id,
+        appendedHead: totalCheckpoints,
+        replayAttempts: 0,
+        startChainIndex: fixture.activity.startChainIndex,
+        status: fixture.activity.status,
+        verifiedHead: firstBatchCount,
+      },
+    ),
   );
 
   expect(outcome.kind).toBe('matched');
@@ -529,14 +553,17 @@ test('it verifies an honest sealed content-version-2 row, matching its stamped p
   };
 
   const outcome = await ctx.db.transaction().execute((trx) =>
-    runReplayTarget(trx, deps, cache, {
-      activityID: fixture.activity.id,
-      appendedHead: fixture.activity.appendedHead,
-      replayAttempts: 0,
-      startChainIndex: fixture.activity.startChainIndex,
-      status: fixture.activity.status,
-      verifiedHead: 0,
-    }),
+    runReplayTarget(
+      { trx, deps, cache },
+      {
+        activityID: fixture.activity.id,
+        appendedHead: fixture.activity.appendedHead,
+        replayAttempts: 0,
+        startChainIndex: fixture.activity.startChainIndex,
+        status: fixture.activity.status,
+        verifiedHead: 0,
+      },
+    ),
   );
 
   expect(outcome.kind).toBe('matched');
@@ -610,14 +637,17 @@ test("it verifies an honest row sealed under the avatar's own seed, not a shared
   };
 
   const outcome = await ctx.db.transaction().execute((trx) =>
-    runReplayTarget(trx, deps, cache, {
-      activityID: fixture.activity.id,
-      appendedHead: fixture.activity.appendedHead,
-      replayAttempts: 0,
-      startChainIndex: fixture.activity.startChainIndex,
-      status: fixture.activity.status,
-      verifiedHead: 0,
-    }),
+    runReplayTarget(
+      { trx, deps, cache },
+      {
+        activityID: fixture.activity.id,
+        appendedHead: fixture.activity.appendedHead,
+        replayAttempts: 0,
+        startChainIndex: fixture.activity.startChainIndex,
+        status: fixture.activity.status,
+        verifiedHead: 0,
+      },
+    ),
   );
 
   expect(outcome.kind).toBe('matched');
@@ -706,14 +736,17 @@ test("it rejects a tampered stamped poolID with reason 'descriptor-mismatch'", a
   };
 
   const outcome = await ctx.db.transaction().execute((trx) =>
-    runReplayTarget(trx, deps, cache, {
-      activityID: fixture.activity.id,
-      appendedHead: fixture.activity.appendedHead,
-      replayAttempts: 0,
-      startChainIndex: fixture.activity.startChainIndex,
-      status: fixture.activity.status,
-      verifiedHead: 0,
-    }),
+    runReplayTarget(
+      { trx, deps, cache },
+      {
+        activityID: fixture.activity.id,
+        appendedHead: fixture.activity.appendedHead,
+        replayAttempts: 0,
+        startChainIndex: fixture.activity.startChainIndex,
+        status: fixture.activity.status,
+        verifiedHead: 0,
+      },
+    ),
   );
 
   expect(outcome).toStrictEqual({ kind: 'rejected' });
@@ -769,14 +802,17 @@ test("it rejects a tampered stamped encounter node on a continuation row, not ju
   };
 
   const outcome = await ctx.db.transaction().execute((trx) =>
-    runReplayTarget(trx, deps, cache, {
-      activityID: continuation.activity.id,
-      appendedHead: continuation.activity.appendedHead,
-      replayAttempts: 0,
-      startChainIndex: continuation.activity.startChainIndex,
-      status: continuation.activity.status,
-      verifiedHead: 0,
-    }),
+    runReplayTarget(
+      { trx, deps, cache },
+      {
+        activityID: continuation.activity.id,
+        appendedHead: continuation.activity.appendedHead,
+        replayAttempts: 0,
+        startChainIndex: continuation.activity.startChainIndex,
+        status: continuation.activity.status,
+        verifiedHead: 0,
+      },
+    ),
   );
 
   expect(outcome).toStrictEqual({ kind: 'rejected' });
@@ -821,14 +857,17 @@ test('it grants a first_clear keyed by the node when a verified segment complete
   };
 
   const outcome = await ctx.db.transaction().execute((trx) =>
-    runReplayTarget(trx, deps, cache, {
-      activityID: fixture.activity.id,
-      appendedHead: fixture.activity.appendedHead,
-      replayAttempts: 0,
-      startChainIndex: fixture.activity.startChainIndex,
-      status: fixture.activity.status,
-      verifiedHead: 0,
-    }),
+    runReplayTarget(
+      { trx, deps, cache },
+      {
+        activityID: fixture.activity.id,
+        appendedHead: fixture.activity.appendedHead,
+        replayAttempts: 0,
+        startChainIndex: fixture.activity.startChainIndex,
+        status: fixture.activity.status,
+        verifiedHead: 0,
+      },
+    ),
   );
 
   expect(outcome.kind).toBe('matched');
@@ -907,14 +946,17 @@ test('it lands no grant when a verified segment ends on a failed terminal', asyn
   };
 
   const outcome = await ctx.db.transaction().execute((trx) =>
-    runReplayTarget(trx, deps, cache, {
-      activityID: fixture.activity.id,
-      appendedHead: fixture.activity.appendedHead,
-      replayAttempts: 0,
-      startChainIndex: fixture.activity.startChainIndex,
-      status: fixture.activity.status,
-      verifiedHead: 0,
-    }),
+    runReplayTarget(
+      { trx, deps, cache },
+      {
+        activityID: fixture.activity.id,
+        appendedHead: fixture.activity.appendedHead,
+        replayAttempts: 0,
+        startChainIndex: fixture.activity.startChainIndex,
+        status: fixture.activity.status,
+        verifiedHead: 0,
+      },
+    ),
   );
 
   expect(outcome.kind).toBe('matched');
@@ -970,14 +1012,17 @@ test('it lands no grant when a stop forward-exits the chain without a completed 
   };
 
   const outcome = await ctx.db.transaction().execute((trx) =>
-    runReplayTarget(trx, deps, cache, {
-      activityID: fixture.activity.id,
-      appendedHead: midRunCount,
-      replayAttempts: 0,
-      startChainIndex: fixture.activity.startChainIndex,
-      status: fixture.activity.status,
-      verifiedHead: 0,
-    }),
+    runReplayTarget(
+      { trx, deps, cache },
+      {
+        activityID: fixture.activity.id,
+        appendedHead: midRunCount,
+        replayAttempts: 0,
+        startChainIndex: fixture.activity.startChainIndex,
+        status: fixture.activity.status,
+        verifiedHead: 0,
+      },
+    ),
   );
 
   expect(outcome.kind).toBe('matched');
@@ -1026,14 +1071,17 @@ test('it lands no grant when a completed terminal verifies on a non-map-node sco
   };
 
   const outcome = await ctx.db.transaction().execute((trx) =>
-    runReplayTarget(trx, deps, cache, {
-      activityID: fixture.activity.id,
-      appendedHead: fixture.activity.appendedHead,
-      replayAttempts: 0,
-      startChainIndex: fixture.activity.startChainIndex,
-      status: fixture.activity.status,
-      verifiedHead: 0,
-    }),
+    runReplayTarget(
+      { trx, deps, cache },
+      {
+        activityID: fixture.activity.id,
+        appendedHead: fixture.activity.appendedHead,
+        replayAttempts: 0,
+        startChainIndex: fixture.activity.startChainIndex,
+        status: fixture.activity.status,
+        verifiedHead: 0,
+      },
+    ),
   );
 
   expect(outcome.kind).toBe('matched');
@@ -1087,7 +1135,7 @@ test('it grants a first_clear exactly once across a re-verification of an alread
 
   const first = await ctx.db
     .transaction()
-    .execute((trx) => runReplayTarget(trx, deps, cache, staleTarget));
+    .execute((trx) => runReplayTarget({ trx, deps, cache }, staleTarget));
 
   expect(first.kind).toBe('matched');
 
@@ -1095,7 +1143,7 @@ test('it grants a first_clear exactly once across a re-verification of an alread
   // apply already advanced
   const second = await ctx.db
     .transaction()
-    .execute((trx) => runReplayTarget(trx, deps, cache, staleTarget));
+    .execute((trx) => runReplayTarget({ trx, deps, cache }, staleTarget));
 
   expect(second.kind).toBe('matched');
 
@@ -1142,14 +1190,17 @@ test('it rejects a settled activity whose node no earlier settled clear made rea
   };
 
   const outcome = await ctx.db.transaction().execute((trx) =>
-    runReplayTarget(trx, deps, cache, {
-      activityID: fixture.activity.id,
-      appendedHead: fixture.activity.appendedHead,
-      replayAttempts: 0,
-      startChainIndex: fixture.activity.startChainIndex,
-      status: fixture.activity.status,
-      verifiedHead: 0,
-    }),
+    runReplayTarget(
+      { trx, deps, cache },
+      {
+        activityID: fixture.activity.id,
+        appendedHead: fixture.activity.appendedHead,
+        replayAttempts: 0,
+        startChainIndex: fixture.activity.startChainIndex,
+        status: fixture.activity.status,
+        verifiedHead: 0,
+      },
+    ),
   );
 
   expect(outcome).toStrictEqual({ kind: 'rejected' });
@@ -1195,14 +1246,17 @@ test('it verifies a world-map-node run whose scope is connected to a verified fi
   };
 
   const outcome = await ctx.db.transaction().execute((trx) =>
-    runReplayTarget(trx, deps, cache, {
-      activityID: fixture.activity.id,
-      appendedHead: fixture.activity.appendedHead,
-      replayAttempts: 0,
-      startChainIndex: fixture.activity.startChainIndex,
-      status: fixture.activity.status,
-      verifiedHead: 0,
-    }),
+    runReplayTarget(
+      { trx, deps, cache },
+      {
+        activityID: fixture.activity.id,
+        appendedHead: fixture.activity.appendedHead,
+        replayAttempts: 0,
+        startChainIndex: fixture.activity.startChainIndex,
+        status: fixture.activity.status,
+        verifiedHead: 0,
+      },
+    ),
   );
 
   expect(outcome.kind).toBe('matched');
@@ -1242,14 +1296,17 @@ test('it rejects a world-map-node run whose scope is not connected to any comple
   };
 
   const outcome = await ctx.db.transaction().execute((trx) =>
-    runReplayTarget(trx, deps, cache, {
-      activityID: fixture.activity.id,
-      appendedHead: fixture.activity.appendedHead,
-      replayAttempts: 0,
-      startChainIndex: fixture.activity.startChainIndex,
-      status: fixture.activity.status,
-      verifiedHead: 0,
-    }),
+    runReplayTarget(
+      { trx, deps, cache },
+      {
+        activityID: fixture.activity.id,
+        appendedHead: fixture.activity.appendedHead,
+        replayAttempts: 0,
+        startChainIndex: fixture.activity.startChainIndex,
+        status: fixture.activity.status,
+        verifiedHead: 0,
+      },
+    ),
   );
 
   expect(outcome).toStrictEqual({ kind: 'rejected' });
@@ -1309,27 +1366,33 @@ test('it cascades a build mismatch through a chain of successors, once the run t
   };
 
   const outcomeA = await ctx.db.transaction().execute((trx) =>
-    runReplayTarget(trx, deps, cache, {
-      activityID: successorA.activity.id,
-      appendedHead: successorA.activity.appendedHead,
-      replayAttempts: 0,
-      startChainIndex: successorA.activity.startChainIndex,
-      status: successorA.activity.status,
-      verifiedHead: 0,
-    }),
+    runReplayTarget(
+      { trx, deps, cache },
+      {
+        activityID: successorA.activity.id,
+        appendedHead: successorA.activity.appendedHead,
+        replayAttempts: 0,
+        startChainIndex: successorA.activity.startChainIndex,
+        status: successorA.activity.status,
+        verifiedHead: 0,
+      },
+    ),
   );
 
   expect(outcomeA).toStrictEqual({ kind: 'rejected' });
 
   const outcomeB = await ctx.db.transaction().execute((trx) =>
-    runReplayTarget(trx, deps, cache, {
-      activityID: successorB.activity.id,
-      appendedHead: successorB.activity.appendedHead,
-      replayAttempts: 0,
-      startChainIndex: successorB.activity.startChainIndex,
-      status: successorB.activity.status,
-      verifiedHead: 0,
-    }),
+    runReplayTarget(
+      { trx, deps, cache },
+      {
+        activityID: successorB.activity.id,
+        appendedHead: successorB.activity.appendedHead,
+        replayAttempts: 0,
+        startChainIndex: successorB.activity.startChainIndex,
+        status: successorB.activity.status,
+        verifiedHead: 0,
+      },
+    ),
   );
 
   expect(outcomeB).toStrictEqual({ kind: 'rejected' });
@@ -1370,14 +1433,17 @@ test('it settles an unrelated successor once its zero-xp predecessor rejects', a
   };
 
   const predecessorOutcome = await ctx.db.transaction().execute((trx) =>
-    runReplayTarget(trx, deps, cache, {
-      activityID: predecessor.activity.id,
-      appendedHead: predecessor.activity.appendedHead,
-      replayAttempts: 0,
-      startChainIndex: predecessor.activity.startChainIndex,
-      status: predecessor.activity.status,
-      verifiedHead: 0,
-    }),
+    runReplayTarget(
+      { trx, deps, cache },
+      {
+        activityID: predecessor.activity.id,
+        appendedHead: predecessor.activity.appendedHead,
+        replayAttempts: 0,
+        startChainIndex: predecessor.activity.startChainIndex,
+        status: predecessor.activity.status,
+        verifiedHead: 0,
+      },
+    ),
   );
 
   expect(predecessorOutcome).toStrictEqual({ kind: 'rejected' });
@@ -1401,14 +1467,17 @@ test('it settles an unrelated successor once its zero-xp predecessor rejects', a
   });
 
   const outcome = await ctx.db.transaction().execute((trx) =>
-    runReplayTarget(trx, deps, cache, {
-      activityID: successor.activity.id,
-      appendedHead: successor.activity.appendedHead,
-      replayAttempts: 0,
-      startChainIndex: successor.activity.startChainIndex,
-      status: successor.activity.status,
-      verifiedHead: 0,
-    }),
+    runReplayTarget(
+      { trx, deps, cache },
+      {
+        activityID: successor.activity.id,
+        appendedHead: successor.activity.appendedHead,
+        replayAttempts: 0,
+        startChainIndex: successor.activity.startChainIndex,
+        status: successor.activity.status,
+        verifiedHead: 0,
+      },
+    ),
   );
 
   expect(outcome.kind).toBe('matched');
@@ -1440,14 +1509,17 @@ test('it never rejects a world-map-node run at the origin for reachability, even
   };
 
   const outcome = await ctx.db.transaction().execute((trx) =>
-    runReplayTarget(trx, deps, cache, {
-      activityID: fixture.activity.id,
-      appendedHead: fixture.activity.appendedHead,
-      replayAttempts: 0,
-      startChainIndex: fixture.activity.startChainIndex,
-      status: fixture.activity.status,
-      verifiedHead: 0,
-    }),
+    runReplayTarget(
+      { trx, deps, cache },
+      {
+        activityID: fixture.activity.id,
+        appendedHead: fixture.activity.appendedHead,
+        replayAttempts: 0,
+        startChainIndex: fixture.activity.startChainIndex,
+        status: fixture.activity.status,
+        verifiedHead: 0,
+      },
+    ),
   );
 
   expect(outcome.kind).toBe('matched');
@@ -1477,14 +1549,17 @@ test('it never rejects a non-world_map_node scope for reachability', async () =>
   };
 
   const outcome = await ctx.db.transaction().execute((trx) =>
-    runReplayTarget(trx, deps, cache, {
-      activityID: fixture.activity.id,
-      appendedHead: fixture.activity.appendedHead,
-      replayAttempts: 0,
-      startChainIndex: fixture.activity.startChainIndex,
-      status: fixture.activity.status,
-      verifiedHead: 0,
-    }),
+    runReplayTarget(
+      { trx, deps, cache },
+      {
+        activityID: fixture.activity.id,
+        appendedHead: fixture.activity.appendedHead,
+        replayAttempts: 0,
+        startChainIndex: fixture.activity.startChainIndex,
+        status: fixture.activity.status,
+        verifiedHead: 0,
+      },
+    ),
   );
 
   expect(outcome.kind).toBe('matched');

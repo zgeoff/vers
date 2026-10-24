@@ -1,22 +1,17 @@
-import type { DB } from '@vers/db';
-import type { Transaction } from 'kysely';
 import { parkActivity } from '../dispatch/park-activity';
 import { recordRejection } from '../metrics/record-rejection';
 import type { RejectionReason } from '../metrics/record-rejection';
-import type { ReplayCache } from '../replay/create-replay-cache';
 import type { ReplaySegment } from '../replay/types';
-import type { ParkReason, ReplayIterationOutcome, ReplayWorkerDeps } from './types';
+import type { ParkReason, ReplayIterationOutcome, ReplayTargetContext } from './types';
 
 export async function parkReplayTarget(
-  trx: Transaction<DB>,
-  deps: Readonly<ReplayWorkerDeps>,
-  cache: ReplayCache,
+  context: ReplayTargetContext,
   segment: Readonly<ReplaySegment>,
   reason: ParkReason,
 ): Promise<ReplayIterationOutcome> {
   const message = pickParkMessage(reason);
 
-  deps.logger.warn(
+  context.deps.logger.warn(
     {
       activityID: segment.activity.id,
       appendedHead: segment.activity.appendedHead,
@@ -31,9 +26,9 @@ export async function parkReplayTarget(
 
   recordRejection(pickParkRejectionReason(reason));
 
-  await parkActivity(trx, segment.activity.id);
+  await parkActivity(context.trx, segment.activity.id);
 
-  cache.remove(segment.activity.id);
+  context.cache.remove(segment.activity.id);
 
   return { kind: 'parked', reason };
 }

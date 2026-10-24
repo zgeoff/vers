@@ -62,7 +62,13 @@ export function* runActivity(
       ? buildWaveClearRewardSlots(wave, activity.difficulty)
       : [];
 
-    const checkpoint = createProgressCheckpoint(activity, avatar, ctx, rewards, rewardSlotContexts);
+    const checkpoint = createProgressCheckpoint({
+      activity,
+      avatar,
+      ctx,
+      rewards,
+      rewardSlotContexts,
+    });
 
     if (checkpoint.levelUp) {
       activity.setLevelUp(checkpoint.levelUp);

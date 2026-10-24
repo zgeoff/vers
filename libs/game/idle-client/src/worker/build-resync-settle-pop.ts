@@ -25,9 +25,12 @@ function foldHeldResyncClaim(context: WorkerLifecycleContext): ReadonlyArray<Pen
 
   return [
     ...context.pending,
-    buildResyncRequest(context, heldClaim.avatarID, true, buildDeferred<void>(), [
-      ...heldClaim.current.carryOverDeferreds,
-      heldClaim.current.deferred,
-    ]),
+    buildResyncRequest({
+      context,
+      avatarID: heldClaim.avatarID,
+      claim: true,
+      deferred: buildDeferred<void>(),
+      carryOverDeferreds: [...heldClaim.current.carryOverDeferreds, heldClaim.current.deferred],
+    }),
   ];
 }

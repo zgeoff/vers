@@ -1,12 +1,9 @@
 import { isDefinedError } from '@orpc/client';
 import { SecretRefSchema } from '@vers/contract-keys';
-import type { DB } from '@vers/db';
 import { buildLevelFromXP } from '@vers/idle-core';
 import { readScopeSecret } from '@vers/worldmap-content';
 import { ORIGIN_CELL, isNodeSelectable, toNodeID } from '@vers/worldmap-core';
-import type { Transaction } from 'kysely';
 import invariant from 'tiny-invariant';
-import type { ReplayCache } from '../replay/create-replay-cache';
 import { findDescriptorDivergence } from '../replay/find-descriptor-divergence';
 import { findSeedDivergence } from '../replay/find-seed-divergence';
 import { loadReplaySegment } from '../replay/load-replay-segment';
@@ -18,18 +15,19 @@ import { rejectUnreachableNode } from './reject-unreachable-node';
 import { runReplayTargetCrossVersion } from './run-replay-target-cross-version';
 import { runReplayTargetInProcess } from './run-replay-target-in-process';
 import { scheduleReplayRetry } from './schedule-replay-retry';
-import type { ReplayIterationOutcome, ReplayWorkerDeps } from './types';
+import type { ReplayIterationOutcome, ReplayTargetContext, ReplayWorkerDeps } from './types';
 import { updateVerifiedAnchorFromPredecessor } from './update-verified-anchor-from-predecessor';
 
 const NEVER_ABORTED = new AbortController().signal;
 
 export async function runReplayTarget(
-  trx: Transaction<DB>,
-  deps: Readonly<ReplayWorkerDeps>,
-  cache: ReplayCache,
+  context: ReplayTargetContext,
   target: Readonly<ReplayTarget>,
   deadline: AbortSignal = NEVER_ABORTED,
 ): Promise<ReplayIterationOutcome> {
+  const trx = context.trx;
+  const deps = context.deps;
+
   const loaded = await loadReplaySegment(trx, target);
 
   if (loaded === undefined) {
@@ -59,7 +57,7 @@ export async function runReplayTarget(
   const seedDivergence = findSeedDivergence(segment);
 
   if (seedDivergence !== undefined) {
-    return rejectSegment(trx, deps, cache, segment, seedDivergence, 'seed-validation-failed');
+    return rejectSegment(context, segment, seedDivergence, 'seed-validation-failed');
   }
 
   // Only a segment's first pass needs the descriptor, build, and reachability checks — a later
@@ -87,14 +85,14 @@ export async function runReplayTarget(
         expectedBuild.level !== segment.activity.buildSnapshot.level ||
         expectedBuild.xp !== segment.activity.buildSnapshot.xp
       ) {
-        return rejectBuildMismatch(trx, deps, cache, segment);
+        return rejectBuildMismatch(context, segment);
       }
     }
 
     const scopeSecret = await tryReadScopeSecret(deps, segment, deadline);
 
     if (scopeSecret === undefined) {
-      return scheduleReplayRetry(trx, deps, cache, segment, 'keys-unavailable');
+      return scheduleReplayRetry(context, segment, 'keys-unavailable');
     }
 
     const descriptorDivergence = findDescriptorDivergence({
@@ -106,14 +104,7 @@ export async function runReplayTarget(
     });
 
     if (descriptorDivergence !== undefined) {
-      return rejectSegment(
-        trx,
-        deps,
-        cache,
-        segment,
-        descriptorDivergence,
-        'descriptor-validation-failed',
-      );
+      return rejectSegment(context, segment, descriptorDivergence, 'descriptor-validation-failed');
     }
 
     // Reachability is validated once at a run's first verified pass, against the target its
@@ -132,16 +123,16 @@ export async function runReplayTarget(
       const completedNodeIDs = new Set(grants.map((grant) => grant.key));
 
       if (!isNodeSelectable(avatarState.seed, completedNodeIDs, segment.activity.scopeID)) {
-        return rejectUnreachableNode(trx, deps, cache, segment);
+        return rejectUnreachableNode(context, segment);
       }
     }
   }
 
   if (segment.activity.simVersion === deps.simVersion) {
-    return runReplayTargetInProcess(trx, deps, cache, segment, document, deadline);
+    return runReplayTargetInProcess(context, segment, document, deadline);
   }
 
-  return runReplayTargetCrossVersion(trx, deps, cache, segment, document, deadline);
+  return runReplayTargetCrossVersion(context, segment, document, deadline);
 }
 
 // a keys outage is operational, so it backs the activity off rather than counting against it; a
