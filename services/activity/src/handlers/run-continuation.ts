@@ -24,8 +24,8 @@ export async function runContinuation(
   pinned: Readonly<PinnedActivityContext>,
   input: Readonly<RunContinuationInput>,
 ): Promise<MintedContinuation> {
-  // The target read and its structural validation run outside any transaction, matching
-  // trackActivityProgress's own shape, so a rejection found here needs no rollback.
+  // The target read and its structural validation run outside any transaction, as the live
+  // checkpoint append does, so a rejection found here needs no rollback.
   const target = await deps.db
     .selectFrom('activities')
     .innerJoin('avatars', 'avatars.id', 'activities.avatarId')
