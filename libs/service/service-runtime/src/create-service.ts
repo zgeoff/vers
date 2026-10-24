@@ -232,10 +232,12 @@ function registerORPCHandler(
         }, deps.overdueRequestMs);
 
         try {
-          return await serveORPCRequest(context.request, handler, deps, trace, {
-            method,
-            path,
-            prefix,
+          return await serveORPCRequest({
+            request: context.request,
+            handler,
+            deps,
+            trace,
+            route: { method, path, prefix },
           });
         } finally {
           clearTimeout(overdue);
@@ -252,18 +254,23 @@ interface RequestRoute {
   readonly prefix: `/${string}`;
 }
 
-async function serveORPCRequest(
-  request: Request,
-  handler: FetchHandler<ServiceContext>,
-  deps: RegisterORPCHandlerDeps,
-  trace: Readonly<TraceContext>,
-  route: Readonly<RequestRoute>,
-): Promise<Response> {
-  const method = route.method;
-  const path = route.path;
+interface ServeORPCRequestOptions {
+  readonly request: Request;
+  readonly handler: FetchHandler<ServiceContext>;
+  readonly deps: RegisterORPCHandlerDeps;
+  readonly trace: Readonly<TraceContext>;
+  readonly route: Readonly<RequestRoute>;
+}
+
+async function serveORPCRequest(options: ServeORPCRequestOptions): Promise<Response> {
+  const handler = options.handler;
+  const deps = options.deps;
+  const trace = options.trace;
+  const method = options.route.method;
+  const path = options.route.path;
   const start = performance.now();
 
-  const resolution = await verifyServiceToken(request, {
+  const resolution = await verifyServiceToken(options.request, {
     audience: deps.serviceName,
     keySet: deps.keySet,
   });
@@ -311,7 +318,7 @@ async function serveORPCRequest(
   let handled: Awaited<ReturnType<typeof handler.handle>>;
 
   try {
-    handled = await handler.handle(request, {
+    handled = await handler.handle(options.request, {
       context: {
         actingSessionID: resolution.actingSessionID,
         actingUserID: resolution.actingUserID,
@@ -319,7 +326,7 @@ async function serveORPCRequest(
         logger: deps.logger,
         traceID: trace.traceID,
       },
-      prefix: route.prefix,
+      prefix: options.route.prefix,
     });
   } catch (error) {
     deps.logger.error(

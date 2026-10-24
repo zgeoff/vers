@@ -148,14 +148,14 @@ export function useAvatarRegionGraph(): ReadonlySet<string> {
     const sources = buildRevealSources(completedNodeIDs);
     const selectableSource = buildSelectableSource(completedNodeIDs, optimisticClearedNodeIDs);
 
-    setWorldRegion(
-      avatarID,
-      seed,
+    setWorldRegion({
+      regionKey: avatarID,
+      userSeed: seed,
       worldGraph,
-      originNode,
-      collectSelectableNodeIDs(seed, selectableSource),
-      sources,
-    );
+      selectedNode: originNode,
+      selectableNodeIDs: collectSelectableNodeIDs(seed, selectableSource),
+      revealSources: sources,
+    });
 
     setPublishedRevealed({ avatarID, nodeIDs: collectRevealedNodeIDs(sources, regionViewport) });
   }, [avatarID, seed, viewport, completedNodeIDs, optimisticClearedNodeIDs]);

@@ -326,18 +326,18 @@ async function applyFastForward(
     // gap reads idle server-side, instead of sitting active for the next resync to revive.
     await submitStopIntent(context, report.activity);
   } else if (report.activity.status === 'active') {
-    reconstructed = await applyHeadAttach(
+    reconstructed = await applyHeadAttach({
       context,
-      report.activity,
-      {
+      activity: report.activity,
+      submission: {
         activityID: report.activity.id,
         appendedHead: report.appendedHead,
         lastHash: report.activity.lastHash,
         startChainIndex: report.activity.startChainIndex,
       },
       signals,
-      { skipTerminalHead: true },
-    );
+      skipTerminalHead: true,
+    });
   }
 
   // a diverged head attach resolves the announced fast-forward through the outer flow's failure
@@ -362,17 +362,20 @@ function applyActiveElsewhere(context: WorkerContext, activityID: string): void 
   updateWriterDisplacedStatus(context, activityID);
 }
 
-interface HeadAttachOptions {
+interface ApplyHeadAttachOptions {
+  readonly context: WorkerContext;
+  readonly activity: Readonly<ActivityData>;
+  readonly submission: Readonly<ActivitySubmissionContext>;
+  readonly signals: Readonly<FlowSignals>;
   readonly skipTerminalHead: boolean;
 }
 
-async function applyHeadAttach(
-  context: WorkerContext,
-  activity: Readonly<ActivityData>,
-  submission: Readonly<ActivitySubmissionContext>,
-  signals: Readonly<FlowSignals>,
-  options: HeadAttachOptions,
-): Promise<boolean> {
+async function applyHeadAttach(options: ApplyHeadAttachOptions): Promise<boolean> {
+  const context = options.context;
+  const activity = options.activity;
+  const submission = options.submission;
+  const signals = options.signals;
+
   const document = await loadContentDocument(
     context.getClient(),
     activity.contentVersion,
@@ -496,7 +499,11 @@ function applyAttachLive(
     'an attach-live plan always carries the progress it was decided from',
   );
 
-  return applyHeadAttach(context, progress.activity, plan.context, signals, {
+  return applyHeadAttach({
+    context,
+    activity: progress.activity,
+    submission: plan.context,
+    signals,
     skipTerminalHead: false,
   });
 }

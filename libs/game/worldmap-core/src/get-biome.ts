@@ -27,51 +27,51 @@ export function getBiome(userSeed: number, cx: number, cy: number): BiomeSample 
 
   // Reads both nearest and second-nearest feature points: blendT and neighbourBaseID need the
   // second-nearest for the border blend.
-  const base = buildNearestFeaturePoints(
+  const base = buildNearestFeaturePoints({
     userSeed,
-    warpedX,
-    warpedY,
-    BIOME_PATCH_SIZE,
-    HASH_CHANNEL.worleyFeatureX,
-    HASH_CHANNEL.worleyFeatureY,
-  );
+    x: warpedX,
+    y: warpedY,
+    patchSize: BIOME_PATCH_SIZE,
+    featureXChannel: HASH_CHANNEL.worleyFeatureX,
+    featureYChannel: HASH_CHANNEL.worleyFeatureY,
+  });
 
   // The modifier layer has no border blend, so only its nearest feature point is read.
-  const modifier = buildNearestFeaturePoints(
+  const modifier = buildNearestFeaturePoints({
     userSeed,
-    warpedX,
-    warpedY,
-    MODIFIER_PATCH_SIZE,
-    HASH_CHANNEL.modifierFeatureX,
-    HASH_CHANNEL.modifierFeatureY,
-  );
+    x: warpedX,
+    y: warpedY,
+    patchSize: MODIFIER_PATCH_SIZE,
+    featureXChannel: HASH_CHANNEL.modifierFeatureX,
+    featureYChannel: HASH_CHANNEL.modifierFeatureY,
+  });
 
-  const baseID = pickRosterID(
+  const baseID = pickRosterID({
     userSeed,
-    base.nearestCellX,
-    base.nearestCellY,
-    BIOME_PATCH_SIZE,
-    HASH_CHANNEL.biomeDraw,
-    BIOME_ROSTER,
-  );
+    cellX: base.nearestCellX,
+    cellY: base.nearestCellY,
+    patchSize: BIOME_PATCH_SIZE,
+    drawChannel: HASH_CHANNEL.biomeDraw,
+    roster: BIOME_ROSTER,
+  });
 
-  const neighbourBaseID = pickRosterID(
+  const neighbourBaseID = pickRosterID({
     userSeed,
-    base.secondCellX,
-    base.secondCellY,
-    BIOME_PATCH_SIZE,
-    HASH_CHANNEL.biomeDraw,
-    BIOME_ROSTER,
-  );
+    cellX: base.secondCellX,
+    cellY: base.secondCellY,
+    patchSize: BIOME_PATCH_SIZE,
+    drawChannel: HASH_CHANNEL.biomeDraw,
+    roster: BIOME_ROSTER,
+  });
 
-  const modifierID = pickRosterID(
+  const modifierID = pickRosterID({
     userSeed,
-    modifier.nearestCellX,
-    modifier.nearestCellY,
-    MODIFIER_PATCH_SIZE,
-    HASH_CHANNEL.modifierDraw,
-    MODIFIER_ROSTER,
-  );
+    cellX: modifier.nearestCellX,
+    cellY: modifier.nearestCellY,
+    patchSize: MODIFIER_PATCH_SIZE,
+    drawChannel: HASH_CHANNEL.modifierDraw,
+    roster: MODIFIER_ROSTER,
+  });
 
   return {
     baseID,
@@ -90,14 +90,22 @@ interface NearestFeaturePoints {
   readonly secondDistance: number;
 }
 
+interface BuildNearestFeaturePointsOptions {
+  readonly userSeed: number;
+  readonly x: number;
+  readonly y: number;
+  readonly patchSize: number;
+  readonly featureXChannel: number;
+  readonly featureYChannel: number;
+}
+
 function buildNearestFeaturePoints(
-  userSeed: number,
-  x: number,
-  y: number,
-  patchSize: number,
-  featureXChannel: number,
-  featureYChannel: number,
+  options: BuildNearestFeaturePointsOptions,
 ): NearestFeaturePoints {
+  const userSeed = options.userSeed;
+  const x = options.x;
+  const y = options.y;
+  const patchSize = options.patchSize;
   const baseCellX = Math.floor(x / patchSize);
   const baseCellY = Math.floor(y / patchSize);
   let nearestDistance = Number.POSITIVE_INFINITY;
@@ -114,8 +122,8 @@ function buildNearestFeaturePoints(
     for (let dx = -2; dx <= 2; dx++) {
       const cellX = baseCellX + dx;
       const cellY = baseCellY + dy;
-      const jitterX = buildCoordHashUnit(userSeed, cellX, cellY, featureXChannel);
-      const jitterY = buildCoordHashUnit(userSeed, cellX, cellY, featureYChannel);
+      const jitterX = buildCoordHashUnit(userSeed, cellX, cellY, options.featureXChannel);
+      const jitterY = buildCoordHashUnit(userSeed, cellX, cellY, options.featureYChannel);
       const featureX = (cellX + jitterX) * patchSize;
       const featureY = (cellY + jitterY) * patchSize;
       const distance = Math.hypot(x - featureX, y - featureY);
@@ -145,24 +153,34 @@ function buildNearestFeaturePoints(
   };
 }
 
-function pickRosterID(
-  userSeed: number,
-  cellX: number,
-  cellY: number,
-  patchSize: number,
-  drawChannel: number,
-  roster: ReadonlyArray<BiomeRosterEntry>,
-): number {
+interface PickRosterIDOptions {
+  readonly userSeed: number;
+  readonly cellX: number;
+  readonly cellY: number;
+  readonly patchSize: number;
+  readonly drawChannel: number;
+  readonly roster: ReadonlyArray<BiomeRosterEntry>;
+}
+
+function pickRosterID(options: PickRosterIDOptions): number {
+  const roster = options.roster;
+
   invariant(roster.length > 0, 'a biome roster must carry at least one alternative');
 
-  const anchor = toAxialPosition((cellX + 0.5) * patchSize, (cellY + 0.5) * patchSize);
+  const anchor = toAxialPosition(
+    (options.cellX + 0.5) * options.patchSize,
+    (options.cellY + 0.5) * options.patchSize,
+  );
+
   const distance = getHexDistance(anchor, ORIGIN_CELL);
   const weights = roster.map((entry) => getWeightAtDistance(entry.weights, distance));
   const total = weights.reduce((sum, weight) => sum + weight, 0);
 
   invariant(total > 0, 'a biome roster must carry positive weight at every distance');
 
-  const draw = buildCoordHashUnit(userSeed, cellX, cellY, drawChannel) * total;
+  const draw =
+    buildCoordHashUnit(options.userSeed, options.cellX, options.cellY, options.drawChannel) * total;
+
   let cumulative = 0;
 
   for (const [index, entry] of roster.entries()) {
