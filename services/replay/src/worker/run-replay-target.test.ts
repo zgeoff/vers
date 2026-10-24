@@ -681,9 +681,9 @@ test("it verifies an honest row sealed under the avatar's own seed, not a shared
   const avatar = await createAvatarRow(ctx.db, { id: 'avatar_seed_divergent_pool', seed: 700 });
 
   const document = createMockContentDocument({
-    contentVersion: '1',
+    contentVersion: '849851',
     encounter: {
-      contentVersion: '1',
+      contentVersion: '849851',
       archetypes: [
         {
           id: 'placeholder-brawler',
@@ -727,11 +727,16 @@ test("it verifies an honest row sealed under the avatar's own seed, not a shared
     seed: buildStateFromSeed(3_047_525_658),
   });
 
+  const sealedInterpreter = ITEM_INTERPRETERS['2'];
+
+  invariant(sealedInterpreter, 'content version 2 has an item interpreter');
+
   const cache = createReplayCache();
 
   const deps = {
     cache,
     db: ctx.db,
+    itemInterpreters: { '849851': sealedInterpreter },
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
     logger: pino({ enabled: false }),
