@@ -1,6 +1,5 @@
 import { expect, test } from 'bun:test';
 import * as db from '@vers/mock-services/db';
-import { createStepUpTransactionToken } from '../../lib/auth/create-step-up-transaction-token';
 import { buildFormData } from '../../test-utils/build-form-data';
 import { createSignedInUser } from '../../test-utils/create-signed-in-user';
 import { withRequestContext } from '../../test-utils/with-request-context';
@@ -118,7 +117,7 @@ test('it changes the password and redirects to settings once a valid step-up tok
   await db.verificationCollection.create({ target: signedIn.userID, type: '2fa' });
 
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
-    const minted = await createStepUpTransactionToken({
+    const grant = await db.stepUpGrantCollection.create({
       action: 'ChangePassword',
       sessionID: signedIn.sessionID,
       target: signedIn.userID,
@@ -129,7 +128,7 @@ test('it changes the password and redirects to settings once a valid step-up tok
         confirmPassword: 'new-password123',
         currentPassword: 'original-password',
         password: 'new-password123',
-        stepUpToken: minted.token,
+        stepUpToken: grant.token,
       }),
     );
 

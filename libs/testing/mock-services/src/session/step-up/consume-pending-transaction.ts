@@ -1,31 +1,44 @@
+import { createId } from '@paralleldrive/cuid2';
 import * as db from '../../db';
 import { os } from '../os';
 import { findLivePendingTransaction } from './find-live-pending-transaction';
 
-export const consumePendingTransaction = os.stepUp.consumePendingTransaction.handler((opts) => {
-  const row = findLivePendingTransaction(opts.input.id);
+const STEP_UP_GRANT_TTL_MS = 5 * 60 * 1000;
 
-  if (row === undefined) {
-    throw opts.errors.NOT_FOUND({ data: {} });
-  }
+export const consumePendingTransaction = os.stepUp.consumePendingTransaction.handler(
+  async (opts) => {
+    const row = findLivePendingTransaction(opts.input.id);
 
-  if (row.action !== opts.input.action) {
-    throw opts.errors.TRANSACTION_MISMATCH({ data: { field: 'action' } });
-  }
+    if (row === undefined) {
+      throw opts.errors.NOT_FOUND({ data: {} });
+    }
 
-  if (row.ipAddress !== opts.input.ipAddress) {
-    throw opts.errors.TRANSACTION_MISMATCH({ data: { field: 'ipAddress' } });
-  }
+    if (row.action !== opts.input.action) {
+      throw opts.errors.TRANSACTION_MISMATCH({ data: { field: 'action' } });
+    }
 
-  if (row.sessionID !== opts.input.sessionID) {
-    throw opts.errors.TRANSACTION_MISMATCH({ data: { field: 'sessionID' } });
-  }
+    if (row.ipAddress !== opts.input.ipAddress) {
+      throw opts.errors.TRANSACTION_MISMATCH({ data: { field: 'ipAddress' } });
+    }
 
-  if (row.target !== opts.input.target) {
-    throw opts.errors.TRANSACTION_MISMATCH({ data: { field: 'target' } });
-  }
+    if (row.sessionID !== opts.input.sessionID) {
+      throw opts.errors.TRANSACTION_MISMATCH({ data: { field: 'sessionID' } });
+    }
 
-  db.pendingTransactionCollection.delete(row);
+    if (row.target !== opts.input.target) {
+      throw opts.errors.TRANSACTION_MISMATCH({ data: { field: 'target' } });
+    }
 
-  return row;
-});
+    db.pendingTransactionCollection.delete(row);
+
+    const grant = await db.stepUpGrantCollection.create({
+      action: row.action,
+      expiresAt: new Date(Date.now() + STEP_UP_GRANT_TTL_MS),
+      sessionID: row.sessionID,
+      target: row.target,
+      token: createId(),
+    });
+
+    return { token: grant.token };
+  },
+);

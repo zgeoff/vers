@@ -142,6 +142,55 @@ test('it removes the whole account with its two-factor row when asked for all', 
   ).resolves.toBeUndefined();
 });
 
+test('it removes a step-up grant with no session that targets the account when asked for all', async () => {
+  await using ctx = await setupTest();
+
+  const seeded = await applyQASeed(ctx.db, {
+    entropy: { genesisSeed: '0123456789abcdef0123456789abcdef', userSeed: 7 },
+    keyRoots: undefined,
+    level: 2,
+    now: new Date(),
+    password: 'known-password',
+    runs: 0,
+    twoFactor: true,
+    user: {
+      avatarName: 'qagrant',
+      email: 'qa-grant@qa.versidle.com',
+      name: 'qa-grant',
+      username: 'qa_grant',
+    },
+  });
+
+  await ctx.db
+    .insertInto('stepUpGrants')
+    .values({
+      action: 'TwoFactorAuthDisable',
+      expiresAt: new Date(Date.now() + 60_000),
+      sessionId: null,
+      target: seeded.user.id,
+      tokenHash: 'qa-grant-hash',
+    })
+    .execute();
+
+  await applyQAReset(ctx.db, {
+    all: true,
+    user: {
+      avatarName: 'qagrant',
+      email: 'qa-grant@qa.versidle.com',
+      name: 'qa-grant',
+      username: 'qa_grant',
+    },
+  });
+
+  expect(
+    ctx.db
+      .selectFrom('stepUpGrants')
+      .select('tokenHash')
+      .where('target', '=', seeded.user.id)
+      .execute(),
+  ).resolves.toBeEmpty();
+});
+
 test('it reports a missing account instead of touching anything', async () => {
   await using ctx = await setupTest();
 

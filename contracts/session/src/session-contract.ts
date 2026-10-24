@@ -68,11 +68,27 @@ export const sessionContract = {
     ),
 
   stepUp: {
+    consumeGrant: publicRoute
+      .route({
+        method: 'POST',
+        path: '/sessions/step-up/grants/consume',
+        summary: 'Redeem a step-up grant once for the action, target, and session it names',
+      })
+      .input(
+        z.object({
+          action: SecureActionSchema,
+          sessionID: z.string().nullable(),
+          target: z.string(),
+          token: z.string(),
+        }),
+      )
+      .output(z.object({ consumed: z.boolean() })),
+
     consumePendingTransaction: publicRoute
       .route({
         method: 'POST',
         path: '/sessions/step-up/pending-transactions/{id}/consume',
-        summary: 'Atomically consume a pending step-up transaction',
+        summary: 'Atomically consume a pending step-up transaction and issue its grant',
       })
       .input(
         z.object({
@@ -83,7 +99,7 @@ export const sessionContract = {
           target: z.string(),
         }),
       )
-      .output(PendingTransactionDataSchema)
+      .output(z.object({ token: z.string() }))
       .errors(
         defineErrors({
           NOT_FOUND: { data: z.object({}), message: 'Pending transaction not found' },
@@ -94,15 +110,6 @@ export const sessionContract = {
           },
         }),
       ),
-
-    consumeTransactionToken: publicRoute
-      .route({
-        method: 'POST',
-        path: '/sessions/step-up/transaction-tokens/consume',
-        summary: 'Mark a step-up transaction token as used',
-      })
-      .input(z.object({ expiresAt: z.coerce.date(), jti: z.string() }))
-      .output(z.object({ consumed: z.boolean() })),
 
     createPendingTransaction: publicRoute
       .route({

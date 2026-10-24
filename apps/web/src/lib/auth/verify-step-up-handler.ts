@@ -5,7 +5,6 @@ import * as z from 'zod';
 import { logger } from '../../server/logger';
 import { sessionClient } from '../rpc/clients/session-client';
 import { verificationClient } from '../rpc/clients/verification-client';
-import { createStepUpTransactionToken } from './create-step-up-transaction-token';
 import { readAuthSession } from './read-auth-session';
 
 export const VerifyStepUpInputSchema = z.object({
@@ -42,7 +41,7 @@ export async function verifyStepUpHandler(input: VerifyStepUpInput): Promise<Ver
 
   const sessionID = authSession.sessionID ?? null;
 
-  await sessionClient.stepUp.consumePendingTransaction({
+  const grant = await sessionClient.stepUp.consumePendingTransaction({
     action: input.action,
     id: input.transactionID,
     ipAddress: getRequestIP() ?? '0.0.0.0',
@@ -50,11 +49,5 @@ export async function verifyStepUpHandler(input: VerifyStepUpInput): Promise<Ver
     target: input.target,
   });
 
-  const minted = await createStepUpTransactionToken({
-    action: input.action,
-    sessionID,
-    target: input.target,
-  });
-
-  return { status: 'verified', token: minted.token };
+  return { status: 'verified', token: grant.token };
 }

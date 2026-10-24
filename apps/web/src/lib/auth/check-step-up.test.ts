@@ -4,7 +4,6 @@ import * as db from '@vers/mock-services/db';
 import { createSignedInUser } from '../../test-utils/create-signed-in-user';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { checkStepUp } from './check-step-up';
-import { createStepUpTransactionToken } from './create-step-up-transaction-token';
 
 test('it reports not-needed for a caller with no 2FA enabled', async () => {
   const signedIn = await createSignedInUser();
@@ -38,99 +37,113 @@ test('it requires a fresh pending transaction for a 2FA-enabled caller with no t
   ).toMatchObject({ action: 'ChangeEmail', target: signedIn.userID });
 });
 
-test('it verifies a valid transaction token minted for the same action, target, and session', async () => {
+test('it verifies a grant issued for the same action, target, and session', async () => {
   const signedIn = await createSignedInUser();
 
   await db.verificationCollection.create({ target: signedIn.userID, type: '2fa' });
 
-  const outcome = await withRequestContext({ cookies: signedIn.cookies }, async () => {
-    const minted = await createStepUpTransactionToken({
-      action: 'ChangePassword',
-      sessionID: signedIn.sessionID,
-      target: signedIn.userID,
-    });
-
-    return checkStepUp({
-      action: 'ChangePassword',
-      target: signedIn.userID,
-      token: minted.token,
-    });
+  const grant = await db.stepUpGrantCollection.create({
+    action: 'ChangePassword',
+    sessionID: signedIn.sessionID,
+    target: signedIn.userID,
   });
+
+  const outcome = await withRequestContext({ cookies: signedIn.cookies }, () =>
+    checkStepUp({ action: 'ChangePassword', target: signedIn.userID, token: grant.token }),
+  );
 
   expect(outcome.value).toStrictEqual({ status: 'verified' });
 });
 
-test('it requires a new pending transaction for a token minted for a different action', async () => {
+test('it requires a new pending transaction for a grant issued for a different action', async () => {
   const signedIn = await createSignedInUser();
 
   await db.verificationCollection.create({ target: signedIn.userID, type: '2fa' });
 
-  const outcome = await withRequestContext({ cookies: signedIn.cookies }, async () => {
-    const minted = await createStepUpTransactionToken({
-      action: 'ChangePassword',
-      sessionID: signedIn.sessionID,
-      target: signedIn.userID,
-    });
-
-    return checkStepUp({
-      action: 'ChangeEmail',
-      target: signedIn.userID,
-      token: minted.token,
-    });
+  const grant = await db.stepUpGrantCollection.create({
+    action: 'ChangePassword',
+    sessionID: signedIn.sessionID,
+    target: signedIn.userID,
   });
+
+  const outcome = await withRequestContext({ cookies: signedIn.cookies }, () =>
+    checkStepUp({ action: 'ChangeEmail', target: signedIn.userID, token: grant.token }),
+  );
 
   expect(outcome.value.status).toBe('required');
 });
 
-test('it requires a new pending transaction for a token minted under a different session', async () => {
+test('it requires a new pending transaction for a grant issued for a different target', async () => {
   const signedIn = await createSignedInUser();
 
   await db.verificationCollection.create({ target: signedIn.userID, type: '2fa' });
 
-  const outcome = await withRequestContext({ cookies: signedIn.cookies }, async () => {
-    const minted = await createStepUpTransactionToken({
-      action: 'ChangeEmail',
-      sessionID: createId(),
-      target: signedIn.userID,
-    });
-
-    return checkStepUp({
-      action: 'ChangeEmail',
-      target: signedIn.userID,
-      token: minted.token,
-    });
+  const grant = await db.stepUpGrantCollection.create({
+    action: 'ChangeEmail',
+    sessionID: signedIn.sessionID,
+    target: createId(),
   });
+
+  const outcome = await withRequestContext({ cookies: signedIn.cookies }, () =>
+    checkStepUp({ action: 'ChangeEmail', target: signedIn.userID, token: grant.token }),
+  );
 
   expect(outcome.value.status).toBe('required');
 });
 
-test('it requires a new pending transaction when the same token is replayed', async () => {
+test('it requires a new pending transaction for a grant issued under a different session', async () => {
   const signedIn = await createSignedInUser();
 
   await db.verificationCollection.create({ target: signedIn.userID, type: '2fa' });
 
-  const outcome = await withRequestContext({ cookies: signedIn.cookies }, async () => {
-    const minted = await createStepUpTransactionToken({
-      action: 'ChangeEmail',
-      sessionID: signedIn.sessionID,
-      target: signedIn.userID,
-    });
-
-    const first = await checkStepUp({
-      action: 'ChangeEmail',
-      target: signedIn.userID,
-      token: minted.token,
-    });
-
-    const second = await checkStepUp({
-      action: 'ChangeEmail',
-      target: signedIn.userID,
-      token: minted.token,
-    });
-
-    return { first, second };
+  const grant = await db.stepUpGrantCollection.create({
+    action: 'ChangeEmail',
+    sessionID: createId(),
+    target: signedIn.userID,
   });
 
-  expect(outcome.value.first).toStrictEqual({ status: 'verified' });
-  expect(outcome.value.second.status).toBe('required');
+  const outcome = await withRequestContext({ cookies: signedIn.cookies }, () =>
+    checkStepUp({ action: 'ChangeEmail', target: signedIn.userID, token: grant.token }),
+  );
+
+  expect(outcome.value.status).toBe('required');
+});
+
+test('it requires a new pending transaction for an expired grant', async () => {
+  const signedIn = await createSignedInUser();
+
+  await db.verificationCollection.create({ target: signedIn.userID, type: '2fa' });
+
+  const grant = await db.stepUpGrantCollection.create({
+    action: 'ChangeEmail',
+    expiresAt: new Date(Date.now() - 1000),
+    sessionID: signedIn.sessionID,
+    target: signedIn.userID,
+  });
+
+  const outcome = await withRequestContext({ cookies: signedIn.cookies }, () =>
+    checkStepUp({ action: 'ChangeEmail', target: signedIn.userID, token: grant.token }),
+  );
+
+  expect(outcome.value.status).toBe('required');
+});
+
+test('it requires a new pending transaction when the same grant is replayed', async () => {
+  const signedIn = await createSignedInUser();
+
+  await db.verificationCollection.create({ target: signedIn.userID, type: '2fa' });
+
+  const grant = await db.stepUpGrantCollection.create({
+    action: 'ChangeEmail',
+    sessionID: signedIn.sessionID,
+    target: signedIn.userID,
+  });
+
+  const outcome = await withRequestContext({ cookies: signedIn.cookies }, async () => {
+    await checkStepUp({ action: 'ChangeEmail', target: signedIn.userID, token: grant.token });
+
+    return checkStepUp({ action: 'ChangeEmail', target: signedIn.userID, token: grant.token });
+  });
+
+  expect(outcome.value.status).toBe('required');
 });

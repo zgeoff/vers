@@ -1,6 +1,5 @@
 import { expect, test } from 'bun:test';
 import * as db from '@vers/mock-services/db';
-import { createStepUpTransactionToken } from '../../lib/auth/create-step-up-transaction-token';
 import { buildFormData } from '../../test-utils/build-form-data';
 import { createSignedInUser } from '../../test-utils/create-signed-in-user';
 import { withRequestContext } from '../../test-utils/with-request-context';
@@ -37,13 +36,13 @@ test('it removes the 2FA verification and redirects to settings once a valid tok
   await db.verificationCollection.create({ target: signedIn.userID, type: '2fa' });
 
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
-    const minted = await createStepUpTransactionToken({
+    const grant = await db.stepUpGrantCollection.create({
       action: 'TwoFactorAuthDisable',
       sessionID: signedIn.sessionID,
       target: signedIn.userID,
     });
 
-    const promise = runDisableTwoFactorAuth(buildFormData({ stepUpToken: minted.token }));
+    const promise = runDisableTwoFactorAuth(buildFormData({ stepUpToken: grant.token }));
 
     // the db read after this callback must observe the rejected call's verification-removal
     // step settled
