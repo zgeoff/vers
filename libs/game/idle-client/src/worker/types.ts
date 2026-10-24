@@ -1,10 +1,13 @@
 import type { ActivityData } from '@vers/contract-activity';
 import type { ActivityCheckpoint, ActivityFailureAction, Simulation } from '@vers/idle-core';
 import type { ActorRefFromLogic } from 'xstate';
+import type { checkpointSubmitterMachine } from '../submission/checkpoint-submitter-machine';
 import type { CheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import type { ActivityServiceClient } from '../submission/types';
 import type { RewardSlotLedgerEntry, RewardSlotLedgerSnapshot } from '../types';
+import type { Deferred } from './build-deferred';
 import type { DebugRecorder } from './create-debug-recorder';
+import type { StartStatus } from './worker-contract';
 import type { workerLifecycleMachine } from './worker-lifecycle-machine';
 import type { WorkerMessage } from './worker-to-client-message-schema';
 
@@ -106,3 +109,105 @@ export interface WorkerContext {
 
   readonly updateConnectivity: (online: boolean) => void;
 }
+
+export type PendingFlowRequest =
+  | {
+      readonly kind: 'start';
+      readonly awaitedResync: boolean;
+      readonly input: Readonly<StartActivityInput>;
+      readonly token: string;
+      readonly deferred: Deferred<StartStatus>;
+    }
+  | {
+      readonly kind: 'resync';
+      readonly avatarID: string;
+      readonly claim: boolean;
+      readonly signals: Readonly<FlowSignals>;
+      readonly deferred: Deferred<void>;
+      readonly carryOverDeferreds: ReadonlyArray<Deferred<void>>;
+    }
+  | {
+      readonly kind: 'continuation';
+      readonly simulation: Simulation;
+      readonly activity: Readonly<ActivityData>;
+      readonly deferred: Deferred<void>;
+    }
+  | { readonly kind: 'eviction'; readonly activityID: string };
+
+export type PendingFlowRequestOf<K extends PendingFlowRequest['kind']> = Extract<
+  PendingFlowRequest,
+  { readonly kind: K }
+>;
+
+type WorkerLifecyclePhase =
+  | 'continuing'
+  | 'evicting'
+  | 'idle'
+  | 'resyncing'
+  | 'running'
+  | 'starting'
+  | 'stopping';
+
+interface ResyncTicket {
+  readonly pendingClaimAvatarID: string | null;
+}
+
+export interface WorkerLifecycleContext {
+  readonly cancelSignal: AbortSignal;
+  readonly currentRequest: PendingFlowRequest | null;
+  readonly failureActionSeeded: Promise<void>;
+  readonly pending: ReadonlyArray<PendingFlowRequest>;
+  readonly phase: WorkerLifecyclePhase;
+  readonly resyncTicket: ResyncTicket | null;
+  readonly runtime: WorkerContext;
+  readonly shutdownSignal: AbortSignal;
+  readonly startToken: string | null;
+  readonly stopController: AbortController;
+
+  // written inline rather than behind a local alias: the readonly-parameters lint exempts the
+  // xstate ref by its own name, and an alias would hide it from that match
+  readonly submitterRef: ActorRefFromLogic<typeof checkpointSubmitterMachine>;
+  readonly writerDisplacedActivityID: string | null;
+}
+
+export interface WorkerLifecycleInput {
+  readonly failureActionSeeded: Promise<void>;
+  readonly runtime: WorkerContext;
+  readonly shutdownSignal: AbortSignal;
+}
+
+export type WorkerLifecycleEvent =
+  | { readonly type: 'ADVANCE_STOP_SCOPE' }
+  | {
+      readonly type: 'CONTINUATION';
+      readonly simulation: Simulation;
+      readonly activity: Readonly<ActivityData>;
+      readonly deferred: Deferred<void>;
+    }
+  | { readonly type: 'OFFLINE' }
+  | { readonly type: 'ONLINE' }
+  | {
+      readonly type: 'RESYNC';
+      readonly avatarID: string;
+      readonly claim: boolean;
+      readonly deferred: Deferred<void>;
+    }
+  | { readonly type: 'SET_START_TOKEN'; readonly token: string }
+  | { readonly type: 'SET_WRITER_DISPLACED'; readonly activityID: string | null }
+  | {
+      readonly type: 'START';
+      readonly input: Readonly<StartActivityInput>;
+      readonly deferred: Deferred<StartStatus>;
+    }
+  | {
+      readonly type: 'STOP_ACTIVITY';
+      readonly input: Readonly<StopActivityInput>;
+      readonly deferred: Deferred<void>;
+    }
+  | { readonly type: 'STOP_DELIVERY_DONE' }
+  | { readonly type: 'SUBMITTER_ACKED' }
+  | { readonly type: 'SUBMITTER_CAPPED' }
+  | { readonly type: 'SUBMITTER_EVICTED'; readonly activityID: string }
+  | { readonly type: 'SUBMITTER_HELD' }
+  | { readonly type: 'SUBMITTER_JOURNAL_FAILED' }
+  | { readonly type: 'SUBMITTER_SERVER_CONTACT' };
