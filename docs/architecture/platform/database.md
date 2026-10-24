@@ -29,8 +29,9 @@ owns: the head row timestamps each cursor's last advance, a partial unique index
 
 ## Checkpoint retention
 
-A daily retention sweep keeps the checkpoint table bounded by moving each settled activity's stream
-to object storage and later purging it. Each tier serves its own readers:
+A daily retention sweep moves each settled activity's stream to object storage and later purges it,
+so the checkpoint table grows by one row per settled activity rather than by every checkpoint. Each
+tier serves its own readers:
 
 - **Hot, in Postgres:** every checkpoint row of an activity inside the hot window. Replay,
   settlement, the latest-progress read and the unsettled-XP fold read these rows.
@@ -48,8 +49,11 @@ head row as archived and delete the activity's rows below its tail. The tail che
 because the latest-progress read anchors a resuming client on it and the verifier takes the next
 activity's seed from it. A stamped head row drops out of the sweep's candidates, so a rerun skips
 the activity. The sweep takes the oldest candidates first and caps each run, so a backlog drains
-over several days. A rejected activity never leaves the hot tier, so rejected streams are the one
-part of the table that grows without a bound, at the rate the verifier rejects activities.
+over several days.
+
+The checkpoint table keeps growing in two ways. The tail row of every settled activity stays for
+good, beside its head row. A rejected activity never leaves the hot tier, so its whole stream stays,
+and that part grows at the rate the verifier rejects activities.
 
 The sweep purges an object ninety days after it wrote it, and only when the activity's head row
 carries an archive stamp at least as old. It reads the stamp and the object's write time again just

@@ -4,7 +4,25 @@ The checkpoint retention workflow runs the archive sweep once a day against the 
 The sweep archives the checkpoint rows of each activity verified more than 24 hours ago to an R2
 bucket, and purges an archive 90 days after the sweep wrote it.
 [Database](../architecture/platform/database.md#checkpoint-retention) owns the tiers and the rules
-that move rows between them. This runbook turns the sweep on and restores one activity's rows.
+that move rows between them. This runbook sizes the table before the first deploy, turns the sweep
+on, and restores one activity's rows.
+
+## Before the first deploy
+
+The migration that adds the archive stamp builds a partial index on `activities` without
+`CONCURRENTLY`, inside the migration transaction. Reads go on while the index builds, but checkpoint
+appends and verifier updates wait for one full scan of the table.
+
+1. Read the size of `activities` through the `execute_sql_prod` MCP tool:
+
+   ```sql
+   SELECT count(*), pg_size_pretty(pg_total_relation_size('activities')) FROM activities;
+   ```
+
+   Expect one row with the row count and the table size.
+
+2. Post the count and the size on the PR that adds the migration, so the deploy owner picks the
+   merge time from them.
 
 ## Enable the sweep
 
