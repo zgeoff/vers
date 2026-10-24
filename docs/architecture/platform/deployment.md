@@ -143,9 +143,12 @@ the manifest's performance budget. An app with no Dockerfile cuts over to the im
 An app whose `fly.toml` sets the blue-green strategy, which is every app the repo builds, rolls out
 that way: Fly boots a parallel fleet, gates it on `/health`, cuts traffic over, then retires the old
 machines. A broken boot fails the gate before cutover, and the old machines serve every request
-until it passes. The two pinned upstream apps set no strategy and roll over in place. Deploy jobs
-queue rather than cancel. A rollout can fail on a transient host-capacity refusal; Fly rolls back
-cleanly, so re-run the failed job.
+until it passes. The deploy CLI bounds flyctl's wait for each machine below half the deploy job's
+timeout. A green machine that never turns healthy then fails the rollout, and flyctl destroys the
+green machines itself before the job timeout can stop it mid-rollout. The same bound leaves time for
+a second rollout when a release that fails its probes rolls back. The two pinned upstream apps set
+no strategy and roll over in place. Deploy jobs queue rather than cancel. A rollout can fail on a
+transient host-capacity refusal; Fly rolls back cleanly, so re-run the failed job.
 
 ### Release record and rollback
 
