@@ -1,5 +1,5 @@
 import { hostname } from 'node:os';
-import { execa } from 'execa';
+import { $ } from 'bun';
 import { createDevDB as createDevDBClone } from '../postgres/create-dev-db';
 import { readVaultDSN } from '../postgres/read-vault-dsn';
 
@@ -10,11 +10,11 @@ async function createDevDB() {
     throw new Error('usage: pg-dev-ensure.ts <dbName>');
   }
 
-  const branchResult = await execa('git', ['rev-parse', '--abbrev-ref', 'HEAD']);
+  const branch = await $`git rev-parse --abbrev-ref HEAD`.text();
   const maintenanceDSN = await readVaultDSN('neon-mcp-dev');
 
   await createDevDBClone({
-    branch: branchResult.stdout.trim(),
+    branch: branch.trim(),
     dbName,
     machine: hostname(),
     maintenanceDSN,

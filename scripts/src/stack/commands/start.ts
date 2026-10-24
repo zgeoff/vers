@@ -1,6 +1,5 @@
-import { execa } from '../../utils/execa';
-import { DOCKER_COMPOSE_FILE } from '../consts';
 import type { ServiceID } from '../types';
+import { runDockerCompose } from '../utils/run-docker-compose';
 
 export interface StartOptions {
   build?: boolean;
@@ -25,5 +24,5 @@ export async function start(service?: ServiceID, options?: StartOptions): Promis
     args.push(service);
   }
 
-  await execa`docker-compose -f ${DOCKER_COMPOSE_FILE} up --detach ${args}`;
+  await runDockerCompose(['up', '--detach', ...args]);
 }

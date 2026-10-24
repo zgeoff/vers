@@ -61,4 +61,4 @@ program
     await runInService(service, command);
   });
 
-program.parse();
+await program.parseAsync();

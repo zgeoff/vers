@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { updateEnv } from '@vers/test-utils/bun';
-import { execa } from 'execa';
+import { $ } from 'bun';
 import { readCommitRelation } from './read-commit-relation';
 
 async function setupTest() {
@@ -21,21 +21,13 @@ async function setupTest() {
   });
 
   const runGit = async (args: ReadonlyArray<string>): Promise<string> => {
-    const result = await execa(
-      'git',
-      [
-        '-c',
-        'user.name=test',
-        '-c',
-        'user.email=test@vers.test',
-        '-c',
-        'commit.gpgsign=false',
-        ...args,
-      ],
-      { cwd, env: { GIT_CONFIG_GLOBAL: '/dev/null', GIT_CONFIG_NOSYSTEM: '1' } },
-    );
+    const stdout =
+      await $`git -c user.name=test -c user.email=test@vers.test -c commit.gpgsign=false ${args}`
+        .cwd(cwd)
+        .env({ ...process.env, GIT_CONFIG_GLOBAL: '/dev/null', GIT_CONFIG_NOSYSTEM: '1' })
+        .text();
 
-    return result.stdout.trim();
+    return stdout.trim();
   };
 
   await runGit(['init', '-q', '-b', 'main']);

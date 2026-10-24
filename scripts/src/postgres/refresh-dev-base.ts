@@ -1,6 +1,5 @@
 import { join } from 'node:path';
 import { applyMigrations } from '@vers/db';
-import { execa } from 'execa';
 import postgres from 'postgres';
 import { buildDevDSN } from './build-dev-dsn';
 
@@ -27,11 +26,17 @@ export async function refreshDevBase(maintenanceDSN: string, repoRoot: string): 
 
   // Shells out to @vers/db's kysely-ctl script because seeds are a kysely-ctl feature with no
   // library entrypoint.
-  await execa('bun', ['run', 'db:seed'], {
+  const seed = Bun.spawn(['bun', 'run', 'db:seed'], {
     cwd: join(repoRoot, 'libs/data/db'),
-    env: { DATABASE_URL: devBaseDSN },
-    stdio: 'inherit',
+    env: { ...process.env, DATABASE_URL: devBaseDSN },
+    stdio: ['inherit', 'inherit', 'inherit'],
   });
+
+  const seedExitCode = await seed.exited;
+
+  if (seedExitCode !== 0) {
+    throw new Error(`dev_base seed failed with exit code ${seedExitCode}`);
+  }
 
   const lock = postgres(maintenanceDSN, { max: 1 });
 

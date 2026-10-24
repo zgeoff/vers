@@ -1,9 +1,9 @@
-import { execa } from 'execa';
+import { $ } from 'bun';
 
 export async function readLocalBranches(repoRoot: string): Promise<Array<string>> {
-  const result = await execa('git', ['for-each-ref', 'refs/heads', '--format=%(refname:short)'], {
-    cwd: repoRoot,
-  });
+  const branches = await $`git for-each-ref refs/heads --format=%(refname:short)`
+    .cwd(repoRoot)
+    .text();
 
-  return result.stdout.split('\n').filter((line) => line.length > 0);
+  return branches.split('\n').filter((line) => line.length > 0);
 }

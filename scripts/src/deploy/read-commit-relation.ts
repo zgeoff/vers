@@ -1,4 +1,4 @@
-import { execa } from 'execa';
+import { $ } from 'bun';
 import type { CommitRelation } from './types';
 
 interface ReadCommitRelationOptions {
@@ -11,10 +11,7 @@ export async function readCommitRelation(
 ): Promise<CommitRelation> {
   const cwd = options?.cwd ?? process.cwd();
 
-  const baseExists = await execa('git', ['cat-file', '-e', `${baseSHA}^{commit}`], {
-    cwd,
-    reject: false,
-  });
+  const baseExists = await $`git cat-file -e ${`${baseSHA}^{commit}`}`.cwd(cwd).nothrow().quiet();
 
   if (baseExists.exitCode !== 0) {
     return 'missing';
@@ -41,10 +38,7 @@ export async function readCommitRelation(
 }
 
 async function probeAncestor(older: string, newer: string, cwd: string): Promise<boolean> {
-  const result = await execa('git', ['merge-base', '--is-ancestor', older, newer], {
-    cwd,
-    reject: false,
-  });
+  const result = await $`git merge-base --is-ancestor ${older} ${newer}`.cwd(cwd).nothrow().quiet();
 
   return result.exitCode === 0;
 }

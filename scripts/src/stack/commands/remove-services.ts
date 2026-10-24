@@ -1,6 +1,5 @@
-import { execa } from '../../utils/execa';
-import { DOCKER_COMPOSE_FILE } from '../consts';
 import type { ServiceID } from '../types';
+import { runDockerCompose } from '../utils/run-docker-compose';
 
 export async function removeServices(service?: ServiceID): Promise<void> {
   const args = ['--stop', '--force', '--volumes'];
@@ -10,5 +9,5 @@ export async function removeServices(service?: ServiceID): Promise<void> {
     args.push(service);
   }
 
-  await execa`docker-compose -f ${DOCKER_COMPOSE_FILE} rm ${args}`;
+  await runDockerCompose(['rm', ...args]);
 }
