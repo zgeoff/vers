@@ -1,8 +1,5 @@
+import { DEPLOY_BOUNDS } from './deploy-bounds';
 import type { DeployTarget } from './types';
-
-// flyctl must give up on a green machine that never turns healthy and roll it back itself: the
-// deploy job's timeout kills flyctl mid-rollout instead, which strands the green machines.
-const WAIT_TIMEOUT = '3m';
 
 export function buildDeployArgs(
   target: DeployTarget,
@@ -16,7 +13,7 @@ export function buildDeployArgs(
     '--env',
     `GIT_SHA=${sha}`,
     '--wait-timeout',
-    WAIT_TIMEOUT,
+    `${DEPLOY_BOUNDS.waitTimeoutMinutes}m`,
   ];
 
   if (image !== null) {
