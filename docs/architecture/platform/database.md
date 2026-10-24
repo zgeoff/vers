@@ -27,6 +27,35 @@ the rules that advance them belong to
 owns: the head row timestamps each cursor's last advance, a partial unique index permits one
 `active` row per avatar at a time, and the checkpoint table carries no inbound foreign keys.
 
+## Checkpoint retention
+
+A daily retention sweep keeps the checkpoint table bounded by moving each settled activity's stream
+to object storage and later purging it. Each tier serves its own readers:
+
+- **Hot, in Postgres:** every checkpoint row of an activity inside the hot window. Replay,
+  settlement, the latest-progress read and the unsettled-XP fold read these rows.
+- **Cold, in Cloudflare R2:** one gzipped JSON-lines object per archived activity, until the archive
+  retention ends. Only an operator investigation reads it, through a restore.
+- **Kept forever, in Postgres:** the head row, the activity's tail checkpoint, and the avatar's
+  items and grants. They hold the activity summary, the seed the next activity starts from, and the
+  anti-cheat record.
+
+An activity stays hot while it is active, held, or rejected, while its verified head trails its
+appended head, and for a day after the verifier last advanced its verified head. Past that hot
+window, the sweep writes every row of the activity to one object in R2, reads the object back, and
+compares the bytes it read with the bytes it wrote. Only on a match does one statement stamp the
+head row as archived and delete the activity's rows below its tail. The tail checkpoint stays,
+because the latest-progress read anchors a resuming client on it and the verifier takes the next
+activity's seed from it. A stamped head row drops out of the sweep's candidates, so a rerun skips
+the activity. The sweep takes the oldest candidates first and caps each run, so a backlog drains
+over several days.
+
+The sweep purges an object ninety days after it wrote it, and only when the activity's head row
+carries the archive stamp. It never deletes a head row, an item or a grant. The verifier never reads
+object storage. An operator restores one activity's rows for an investigation
+([checkpoint archive](../../runbooks/checkpoint-archive.md)), and the restore clears the stamp, so
+the next sweep archives the activity again.
+
 ## Connection strings
 
 Each Neon endpoint has a direct host and a pooled host (PgBouncer in transaction mode). Every

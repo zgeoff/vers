@@ -118,7 +118,9 @@ activities.
 Each activity is one append-only stream: one checkpoint row per step, keyed by the activity id and
 the row's position in the stream. A single head row carries the stream's two cursors, its last
 checkpoint hash, and the activity status. The appended head tracks how far the client has written;
-the verified head tracks how far the verifier has trusted.
+the verified head tracks how far the verifier has trusted. After the verifier settles the last
+checkpoint of an ended activity, its stream moves to object storage and only its last checkpoint
+stays beside the head row ([checkpoint retention](../platform/database.md#checkpoint-retention)).
 
 - Each checkpoint links the last. A checkpoint hashes a frozen set of fields that never gains,
   loses, or repurposes a member, and the set includes the previous checkpoint's hash. The chain

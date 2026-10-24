@@ -1,0 +1,69 @@
+name: Checkpoint retention sweep
+
+on:
+  schedule:
+    - cron: '37 7 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: checkpoint-retention
+  cancel-in-progress: false
+
+jobs:
+  sweep:
+    name: Archive and purge checkpoint rows
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version
+
+      - name: Cache Bun install
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-
+
+      - name: Install Dependencies
+        run: bun install --frozen-lockfile
+
+      # the sweep reports what it would archive and purge until the CHECKPOINT_ARCHIVE_APPLY
+      # variable is 'true', and it stops before any read while an archive secret is unset
+      - name: Sweep
+        env:
+          APPLY: ${{ vars.CHECKPOINT_ARCHIVE_APPLY == 'true' && '--apply' || '' }}
+          CHECKPOINT_ARCHIVE_ACCESS_KEY_ID: ${{ secrets.CHECKPOINT_ARCHIVE_ACCESS_KEY_ID }}
+          CHECKPOINT_ARCHIVE_BUCKET: ${{ secrets.CHECKPOINT_ARCHIVE_BUCKET }}
+          CHECKPOINT_ARCHIVE_ENDPOINT: ${{ secrets.CHECKPOINT_ARCHIVE_ENDPOINT }}
+          CHECKPOINT_ARCHIVE_SECRET_ACCESS_KEY: ${{ secrets.CHECKPOINT_ARCHIVE_SECRET_ACCESS_KEY }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: bun run checkpoints:archive sweep ${APPLY}
+
+      # nobody watches a scheduled run's Actions tab, so a failed sweep alarms the channel
+      - name: Send Discord alert
+        if: ${{ failure() }}
+        env:
+          WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          RUN_URL:
+            ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ -z "${WEBHOOK_URL}" ]; then
+            echo "DISCORD_WEBHOOK_URL not configured; skipping alert"
+            exit 0
+          fi
+          payload="$(jq -n \
+            --arg title "[CI] critical — checkpoint retention sweep run failed" \
+            --arg url "${RUN_URL}" \
+            --arg desc "the run failed: an archive that read back other bytes, an object storage or database fault, or a step before it; open the run" \
+            '{embeds: [{title: $title, url: $url, description: $desc, color: 15026253}]}')"
+          curl -fsS -H 'content-type: application/json' -d "${payload}" "${WEBHOOK_URL}"
