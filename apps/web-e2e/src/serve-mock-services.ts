@@ -119,8 +119,8 @@ async function serveLiveRun(request: Request): Promise<Response> {
     return new Response(null, { status: 404 });
   }
 
+  // a run with no checkpoint yet, so the stream the device appends rebuilds from its start inputs
   const activity = await activityCollection.create({
-    appendedHead: 1,
     avatarID: activeAvatar.avatarID,
     scopeID: '0_0',
     startedAt: new Date(),

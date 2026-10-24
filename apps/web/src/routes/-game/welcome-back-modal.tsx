@@ -1,5 +1,5 @@
 import { Button, Dialog, Text } from '@vers/design-system';
-import { setResyncStatus, useResyncStatus } from '@vers/idle-client';
+import { setResyncStatus, useResyncStatus, useWriterDisplacedActivityID } from '@vers/idle-client';
 import type { ResyncStatus } from '@vers/idle-client';
 import { AvatarSwitchedNotice } from '../../components/avatar-switched-notice';
 import { GameUpdatedNotice } from '../../components/game-updated-notice';
@@ -10,14 +10,15 @@ import { useIdleWorkerHandle } from '../../lib/idle/use-idle-worker-handle';
 
 export function WelcomeBackModal() {
   const resyncStatus = useResyncStatus();
+  const displacedActivityID = useWriterDisplacedActivityID();
 
   if (resyncStatus === null) {
     return null;
   }
 
-  // a catch-up ended by another device taking the run resolves in the playing-elsewhere notice —
-  // a second dialog saying the same thing helps nobody
-  if (resyncStatus.kind === 'active-elsewhere') {
+  // a catch-up ended by another device taking the run, or one that runs while the playing-elsewhere
+  // notice is up, resolves in that notice — a second dialog saying the same thing helps nobody
+  if (resyncStatus.kind === 'active-elsewhere' || displacedActivityID !== null) {
     return null;
   }
 

@@ -35,11 +35,17 @@ test('it starts a fresh context on the live run after a takeover, the browser ce
 
   const fresh = await waitForLiveRun(freshPage, activityID);
 
-  // the displaced worker meets the takeover on its next scheduled checkpoint flush, which runs
-  // every 10 s
-  await expect(page.getByRole('dialog', { name: 'Playing on another device' })).toBeVisible({
-    timeout: 15_000,
-  });
+  // a reconnect flushes the queued checkpoints at once instead of on the flush interval, and
+  // Chromium fires no online event inside a SharedWorker, so the tab relays this one to the worker;
+  // a flush of an empty outbox calls no server, so the reconnect repeats until one meets the takeover
+  await expect(async () => {
+    await page.context().setOffline(true);
+    await page.context().setOffline(false);
+
+    await expect(page.getByRole('dialog', { name: 'Playing on another device' })).toBeVisible({
+      timeout: 1000,
+    });
+  }).toPass();
 
   await expect
     .poll(async () => {
