@@ -13,7 +13,7 @@ test('it calculates the weapons attack interval', () => {
         maxDamage: 10,
         minDamage: 5,
         name: 'Slow Weapon',
-        speed: 0.55,
+        speedPerMille: 550,
       },
     },
   });

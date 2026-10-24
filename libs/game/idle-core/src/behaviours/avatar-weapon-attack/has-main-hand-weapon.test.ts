@@ -13,7 +13,7 @@ test('it returns true when avatar has a main hand weapon', () => {
         maxDamage: 10,
         minDamage: 5,
         name: 'Test Weapon',
-        speed: 1,
+        speedPerMille: 1000,
       },
     },
   });

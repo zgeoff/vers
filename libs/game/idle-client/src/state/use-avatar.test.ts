@@ -17,7 +17,7 @@ test('it provides the avatar state', () => {
     mainHandAttack: {
       maxDamage: 10,
       minDamage: 5,
-      speed: 1,
+      speedPerMille: 1000,
     },
     status: EntityStatus.Alive,
   });
@@ -39,7 +39,7 @@ test('it provides the avatar state', () => {
     mainHandAttack: {
       maxDamage: 10,
       minDamage: 5,
-      speed: 1,
+      speedPerMille: 1000,
     },
     maxLife: 100,
     name: 'Test Avatar',

@@ -40,8 +40,9 @@ Purity rests on four invariants:
   avatar's own events sort ahead of enemy events, and events that still tie sort by the sequence
   number the executor stamped when it scheduled them.
 - Every stat and every simulation time that arithmetic derives is an integer or a fixed-point
-  per-mille value. One exception: an avatar's and an enemy's attack speed, and the fraction of XP a
-  failed attempt loses, are configured as a decimal literal rather than a fixed-point value.
+  per-mille value. A content document and the replay wire express attack speed in attacks per
+  second. The encounter roll and the replay provider each round that decimal to a per-mille integer
+  as the value enters the simulation.
 
 Arithmetic on those quantities uses addition, subtraction, multiplication, division, square root,
 floor, round, minimum, maximum, and raising to a power whose exponent is written as an integer

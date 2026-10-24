@@ -16,7 +16,7 @@ export function createMockEnemySnapshot(
     primaryAttack: {
       maxDamage: 3,
       minDamage: 1,
-      speed: 0.5,
+      speedPerMille: 500,
     },
     status: EntityStatus.Alive,
     ...overrides,

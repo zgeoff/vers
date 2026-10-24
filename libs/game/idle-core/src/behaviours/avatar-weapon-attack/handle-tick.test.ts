@@ -20,7 +20,7 @@ test('it schedules attacks on the tick event', () => {
         name: 'Test Weapon',
 
         // 1000ms interval
-        speed: 1,
+        speedPerMille: 1000,
       },
     },
   });
@@ -63,7 +63,7 @@ test('it schedules multiple attacks for high APS weapons', () => {
         name: 'Test Weapon',
 
         // 500ms interval
-        speed: 2,
+        speedPerMille: 2000,
       },
     },
   });

@@ -11,7 +11,7 @@ test('it creates enemy data with expected properties', () => {
     primaryAttack: {
       maxDamage: 3,
       minDamage: 1,
-      speed: 0.5,
+      speedPerMille: 500,
     },
     xp: 10,
   });
@@ -25,7 +25,7 @@ test('it creates enemy data with custom properties', () => {
     primaryAttack: {
       maxDamage: 10,
       minDamage: 5,
-      speed: 1,
+      speedPerMille: 1000,
     },
     xp: 25,
   });
@@ -37,7 +37,7 @@ test('it creates enemy data with custom properties', () => {
     primaryAttack: {
       maxDamage: 10,
       minDamage: 5,
-      speed: 1,
+      speedPerMille: 1000,
     },
     xp: 25,
   });

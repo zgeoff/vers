@@ -217,7 +217,7 @@ test('it returns the expected avatar state for a client app', () => {
     mainHandAttack: {
       maxDamage: expect.toBeNumber(),
       minDamage: expect.toBeNumber(),
-      speed: expect.toBeNumber(),
+      speedPerMille: expect.toBeNumber(),
     },
     maxLife: avatar.life,
     name: data.name,

@@ -13,7 +13,7 @@ test('it creates a behaviour with the correct values', () => {
         maxDamage: 10,
         minDamage: 10,
         name: 'Test Weapon',
-        speed: 1,
+        speedPerMille: 1000,
       },
     },
   });

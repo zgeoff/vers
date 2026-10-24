@@ -1,4 +1,5 @@
 import { ResourceBar, Sigil } from '@vers/design-system';
+import { toAttacksPerSecond } from '@vers/game-utils';
 import type { EnemySnapshot } from '@vers/idle-core';
 import { css, cx } from '@vers/styled-system/css';
 import { SwingBar } from './swing-bar';
@@ -89,7 +90,7 @@ export function EnemyUnitPlate(props: Readonly<EnemyUnitPlateProps>) {
         valueLabel={`${props.enemy.life} / ${props.enemy.maxLife}`}
       />
       <SwingBar
-        attackSpeed={props.enemy.primaryAttack.speed}
+        attackSpeed={toAttacksPerSecond(props.enemy.primaryAttack.speedPerMille)}
         isAlive={props.enemy.isAlive}
         label="ATTACK"
         lastAttackTime={lastAttackTime}

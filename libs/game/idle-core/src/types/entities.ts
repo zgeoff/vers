@@ -146,7 +146,7 @@ export enum EntityType {
 export interface AttackData {
   readonly maxDamage: number;
   readonly minDamage: number;
-  readonly speed: number;
+  readonly speedPerMille: number;
 }
 
 export interface WaveSnapshot {

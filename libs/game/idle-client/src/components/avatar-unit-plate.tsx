@@ -1,4 +1,5 @@
 import { ResourceBar, Sigil, StatusPill } from '@vers/design-system';
+import { toAttacksPerSecond } from '@vers/game-utils';
 import type { AvatarSnapshot } from '@vers/idle-core';
 import { css } from '@vers/styled-system/css';
 import { SwingBar } from './swing-bar';
@@ -117,7 +118,7 @@ export function AvatarUnitPlate(props: Readonly<AvatarUnitPlateProps>) {
       />
 
       <SwingBar
-        attackSpeed={props.avatar.mainHandAttack?.speed ?? 0}
+        attackSpeed={toAttacksPerSecond(props.avatar.mainHandAttack?.speedPerMille ?? 0)}
         isAlive={props.avatar.isAlive}
         label="STRIKE"
         lastAttackTime={lastAttackTime}

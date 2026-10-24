@@ -9,7 +9,7 @@ test('it calculates the next attack time', () => {
     primaryAttack: {
       maxDamage: 10,
       minDamage: 5,
-      speed: 1,
+      speedPerMille: 1000,
     },
   });
 

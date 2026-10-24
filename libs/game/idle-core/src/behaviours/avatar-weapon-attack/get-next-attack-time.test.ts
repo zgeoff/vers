@@ -15,7 +15,7 @@ test('it calculates the next attack time', () => {
         name: 'Test Weapon',
 
         // 1 attack per second = 1000ms interval
-        speed: 1,
+        speedPerMille: 1000,
       },
     },
   });

@@ -15,12 +15,12 @@ function setupTest() {
     runScheduleOrder: (firstToAct: 'lethal' | 'weak'): string => {
       const enemyDataLethal = createMockEnemyData({
         life: 100,
-        primaryAttack: { maxDamage: 150, minDamage: 150, speed: 1 },
+        primaryAttack: { maxDamage: 150, minDamage: 150, speedPerMille: 1000 },
       });
 
       const enemyDataWeak = createMockEnemyData({
         life: 100,
-        primaryAttack: { maxDamage: 10, minDamage: 1, speed: 1 },
+        primaryAttack: { maxDamage: 10, minDamage: 1, speedPerMille: 1000 },
       });
 
       const avatarData = createMockAvatarData({ life: 100 });
@@ -71,7 +71,7 @@ test('it processes events', () => {
     maxDamage: 100,
     minDamage: 100,
     name: 'Test Weapon',
-    speed: 1,
+    speedPerMille: 1000,
   };
 
   const avatarData = createMockAvatarData({
@@ -86,7 +86,7 @@ test('it processes events', () => {
     primaryAttack: {
       maxDamage: 40,
       minDamage: 40,
-      speed: 1,
+      speedPerMille: 1000,
     },
   });
 
@@ -115,11 +115,11 @@ test('it processes a tick with a single scheduled event', () => {
     primaryAttack: {
       maxDamage: 40,
       minDamage: 40,
-      speed: 1,
+      speedPerMille: 1000,
     },
   });
 
-  // default avatar weapon speed (0.8, 1.25s interval) keeps the avatar from attacking within this
+  // default avatar weapon speed (800 per mille, 1.25s interval) keeps the avatar from attacking within this
   // 1s tick, so only the enemy's attack is scheduled
   const avatarData = createMockAvatarData({ life: 200 });
   const activityData = createMockActivityInput({ encounter: { waves: [[enemyData]] } });

@@ -1,5 +1,6 @@
 import type { RollStream } from '@vers/roll-crypto';
 import invariant from 'tiny-invariant';
+import { toSpeedPerMille } from './to-speed-per-mille';
 import type {
   EncounterArchetype,
   EncounterContent,
@@ -55,7 +56,7 @@ function buildEnemy(archetype: Readonly<EncounterArchetype>, multiplier: number)
     primaryAttack: {
       maxDamage: Math.round(archetype.attackMax * multiplier),
       minDamage: Math.round(archetype.attackMin * multiplier),
-      speed: archetype.attackSpeed,
+      speedPerMille: toSpeedPerMille(archetype.attackSpeed),
     },
     xp: Math.round(archetype.baseXP * multiplier),
   };

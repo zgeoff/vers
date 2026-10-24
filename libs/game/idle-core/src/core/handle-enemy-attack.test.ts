@@ -15,7 +15,7 @@ test('it applies damage from the enemy to the avatar', () => {
     primaryAttack: {
       maxDamage: 10,
       minDamage: 10,
-      speed: 1,
+      speedPerMille: 1000,
     },
   });
 
@@ -47,7 +47,7 @@ test('it does nothing if the enemy is dead', () => {
     primaryAttack: {
       maxDamage: 10,
       minDamage: 10,
-      speed: 1,
+      speedPerMille: 1000,
     },
   });
 
@@ -85,7 +85,7 @@ test('it correctly resolves the correct event source', () => {
     primaryAttack: {
       maxDamage: 10,
       minDamage: 10,
-      speed: 1,
+      speedPerMille: 1000,
     },
   });
 

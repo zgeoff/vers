@@ -16,9 +16,7 @@ export function createMockAvatarData(overrides: Partial<AvatarData> = {}): Avata
         maxDamage: 20,
         minDamage: 10,
         name: 'Bloodthirst Blade, Bastard Sword',
-
-        // weapon has a speed of 0.8 attacks per second === 1.25s interval
-        speed: 0.8,
+        speedPerMille: 800,
       },
       ...overrides.paperdoll,
     },

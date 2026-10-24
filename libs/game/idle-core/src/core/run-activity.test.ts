@@ -72,7 +72,7 @@ test('it clears a wave from a difficulty-0 source node without crashing on the r
         maxDamage: 9999,
         minDamage: 9999,
         name: 'Test Weapon',
-        speed: 6,
+        speedPerMille: 6000,
       },
     },
   };
@@ -111,7 +111,7 @@ test('it generates wave killed checkpoints', () => {
     maxDamage: 9999,
     minDamage: 9999,
     name: 'Test Weapon',
-    speed: 6,
+    speedPerMille: 6000,
   };
 
   const avatarData = createMockAvatarData({
@@ -176,7 +176,7 @@ test('it accrues rewards across multiple cleared waves', () => {
     maxDamage: 9999,
     minDamage: 9999,
     name: 'Test Weapon',
-    speed: 6,
+    speedPerMille: 6000,
   };
 
   const avatarData = createMockAvatarData({
@@ -223,7 +223,7 @@ test('it generates a failed checkpoint when the avatar dies', () => {
     primaryAttack: {
       maxDamage: 9999,
       minDamage: 9999,
-      speed: 1,
+      speedPerMille: 1000,
     },
   });
 
@@ -256,7 +256,7 @@ test('it returns a completed checkpoint that folds in the completion bonus', () 
     maxDamage: 9999,
     minDamage: 9999,
     name: 'Test Weapon',
-    speed: 6,
+    speedPerMille: 6000,
   };
 
   const avatarData = createMockAvatarData({
@@ -303,7 +303,7 @@ test('it carries a levelUp when a completion bonus crosses a level threshold', (
     maxDamage: 9999,
     minDamage: 9999,
     name: 'Test Weapon',
-    speed: 6,
+    speedPerMille: 6000,
   };
 
   const avatarData = createMockAvatarData({
@@ -344,7 +344,7 @@ test('it records a levelUp checkpoint when a group clear crosses a level thresho
     maxDamage: 9999,
     minDamage: 9999,
     name: 'Test Weapon',
-    speed: 6,
+    speedPerMille: 6000,
   };
 
   const avatarData = createMockAvatarData({
@@ -384,7 +384,7 @@ test('it keeps xp and a level-up earned on the same tick the avatar dies', () =>
     maxDamage: 9999,
     minDamage: 9999,
     name: 'Test Weapon',
-    speed: 1,
+    speedPerMille: 1000,
   };
 
   const avatarData = createMockAvatarData({
@@ -400,7 +400,7 @@ test('it keeps xp and a level-up earned on the same tick the avatar dies', () =>
     primaryAttack: {
       maxDamage: 9999,
       minDamage: 9999,
-      speed: 2,
+      speedPerMille: 2000,
     },
     xp: 250,
   });
@@ -449,7 +449,7 @@ test('it keeps xp from kills in a wave the avatar dies partway through', () => {
     maxDamage: 9999,
     minDamage: 9999,
     name: 'Test Weapon',
-    speed: 1,
+    speedPerMille: 1000,
   };
 
   const avatarData = createMockAvatarData({
@@ -467,7 +467,7 @@ test('it keeps xp from kills in a wave the avatar dies partway through', () => {
     primaryAttack: {
       maxDamage: 2,
       minDamage: 2,
-      speed: 0.5,
+      speedPerMille: 500,
     },
     xp: 10,
   });

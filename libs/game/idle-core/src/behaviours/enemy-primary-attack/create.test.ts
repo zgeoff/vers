@@ -10,7 +10,7 @@ test('it creates a behaviour with the correct values', () => {
     primaryAttack: {
       maxDamage: 10,
       minDamage: 10,
-      speed: 1,
+      speedPerMille: 1000,
     },
   });
 
@@ -68,7 +68,7 @@ test('it handles the reset event', () => {
     primaryAttack: {
       maxDamage: 10,
       minDamage: 10,
-      speed: 1,
+      speedPerMille: 1000,
     },
   });
 

@@ -145,7 +145,7 @@ test('it returns the expected enemy state for a client app', () => {
     primaryAttack: {
       maxDamage: expect.toBeNumber(),
       minDamage: expect.toBeNumber(),
-      speed: expect.toBeNumber(),
+      speedPerMille: expect.toBeNumber(),
     },
     status: EntityStatus.Alive,
   });

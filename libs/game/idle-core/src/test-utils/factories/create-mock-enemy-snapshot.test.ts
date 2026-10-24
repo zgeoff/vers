@@ -16,7 +16,7 @@ test('it creates an enemy snapshot with expected properties', () => {
     primaryAttack: {
       maxDamage: 3,
       minDamage: 1,
-      speed: 0.5,
+      speedPerMille: 500,
     },
     status: EntityStatus.Alive,
   });
@@ -34,7 +34,7 @@ test('it creates an enemy snapshot with custom properties', () => {
     primaryAttack: {
       maxDamage: 10,
       minDamage: 5,
-      speed: 1,
+      speedPerMille: 1000,
     },
     status: EntityStatus.Dead,
   });
@@ -50,7 +50,7 @@ test('it creates an enemy snapshot with custom properties', () => {
     primaryAttack: {
       maxDamage: 10,
       minDamage: 5,
-      speed: 1,
+      speedPerMille: 1000,
     },
     status: EntityStatus.Dead,
   });
