@@ -11,7 +11,7 @@
   },
   "scripts": {
     "bench": "bun src/replay.bench.ts",
-    "test": "bun test",
+    "test": "bun test --randomize",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
