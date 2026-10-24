@@ -17,16 +17,21 @@ async function runRestoreDrill(): Promise<number> {
   }
 
   const db = createDB({ databaseURL: parsed.data.RESTORE_DRILL_DATABASE_URL });
-  const startedAt = performance.now();
 
-  const checks = await readRestoreDrillChecks(db).finally(() => db.destroy());
+  try {
+    const startedAt = performance.now();
 
-  const elapsedMs = Math.round(performance.now() - startedAt);
+    const checks = await readRestoreDrillChecks(db);
 
-  console.log(formatRestoreDrillReport(checks));
-  console.log(`checks ran in ${elapsedMs} ms`);
+    const elapsedMs = Math.round(performance.now() - startedAt);
 
-  return checks.some((check) => check.violations.length > 0) ? 1 : 0;
+    console.log(formatRestoreDrillReport(checks));
+    console.log(`checks ran in ${elapsedMs} ms`);
+
+    return checks.some((check) => check.violations.length > 0) ? 1 : 0;
+  } finally {
+    await db.destroy();
+  }
 }
 
 try {

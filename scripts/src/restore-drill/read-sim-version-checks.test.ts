@@ -73,8 +73,16 @@ test('it reports unverified work on an unregistered, pruned, or expired sim vers
   });
 
   const expiredEngine = await createSimVersionRow(ctx.db, {
+    deployedAt: new Date('2026-10-01T09:00:00Z'),
     engineHash: 'engine-expired',
     retainedUntil: new Date(Date.now() - 60_000),
+    status: 'active',
+  });
+
+  await createSimVersionRow(ctx.db, {
+    deployedAt: new Date('2026-10-20T09:00:00Z'),
+    engineHash: 'engine-current',
+    retainedUntil: new Date(Date.now() + 86_400_000),
     status: 'active',
   });
 
@@ -114,6 +122,35 @@ test('it reports unverified work on an unregistered, pruned, or expired sim vers
       'activity act_on_pruned on sim version engine-pruned',
       'activity act_on_unknown on sim version engine-unregistered',
     ],
+  });
+});
+
+test('it accepts unverified work on the current sim version past its retention deadline', async () => {
+  await using ctx = await setupTest();
+
+  const user = await createTestUser(ctx.db);
+  const avatar = await createAvatarRow(ctx.db, { userId: user.user.id });
+
+  const currentEngine = await createSimVersionRow(ctx.db, {
+    deployedAt: new Date('2026-10-20T09:00:00Z'),
+    engineHash: 'engine-current',
+    retainedUntil: new Date(Date.now() - 60_000),
+    status: 'active',
+  });
+
+  await createActivityRow(ctx.db, {
+    appendedHead: 2,
+    avatarId: avatar.id,
+    contentVersion: '1',
+    simVersion: currentEngine.engineHash,
+  });
+
+  const checks = await readSimVersionChecks(ctx.db);
+
+  expect(checks[0]).toStrictEqual({
+    area: 'retained-sim-versions',
+    name: 'unverified work pins a retained sim version',
+    violations: [],
   });
 });
 

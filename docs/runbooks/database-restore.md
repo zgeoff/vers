@@ -106,11 +106,14 @@ the repo has to drop the migrations that must not come back before the next run.
    > restore. The fleet keeps running the release that needs the migration, so the features that use
    > it fail until the revert deploys.
 
-5. Restore `main` from the head of the backup branch, and keep the pre-restore state under a new
+5. Follow [Prepare a restore branch](#prepare-a-restore-branch) with `<backup_branch_name>` as the
+   parent and `restore-<run_id>` as the branch name.
+
+6. Restore `main` from the head of the restore branch, and keep the pre-restore state under a new
    name:
 
    ```bash
-   neonctl branches restore main <backup_branch_name> \
+   neonctl branches restore main restore-<run_id> \
      --project-id patient-dust-07220142 \
      --preserve-under-name main-before-restore-<run_id>
    ```
@@ -118,7 +121,7 @@ the repo has to drop the migrations that must not come back before the next run.
    Expect the command to exit with status 0. `main` keeps its ID and its connection strings. Neon
    moves the `dev` branch under `main-before-restore-<run_id>`, because `main` has `dev` as a child.
 
-6. Check the migration history through the `execute_sql_prod` MCP tool:
+7. Check the migration history through the `execute_sql_prod` MCP tool:
 
    ```sql
    SELECT name FROM kysely_migration ORDER BY name DESC LIMIT 3;
@@ -126,10 +129,10 @@ the repo has to drop the migrations that must not come back before the next run.
 
    Expect the newest row to be the migration before `<first_migration>`.
 
-7. Follow [Bring players back](#bring-players-back) with the backup's creation time as the restore
-   point.
+8. Send the [player notice](#tell-players-what-survived) with the backup's creation time as the
+   restore point.
 
-8. Enable the main workflow again, then merge the revert PR:
+9. Enable the main workflow again, then merge the revert PR:
 
    ```bash
    gh workflow enable main.yml -R zgeoff/vers
@@ -143,8 +146,15 @@ the repo has to drop the migrations that must not come back before the next run.
    The deploy job also registers the running sim version again, because the restore dropped every
    registry row written after the backup.
 
-9. Keep `main-before-restore-<run_id>` while `dev` is its child, because Neon deletes no branch that
-   has children. It holds the writes the restore discarded, so read any lost rows back from it.
+10. Delete the restore branch, and keep `main-before-restore-<run_id>` while `dev` is its child,
+    because Neon deletes no branch that has children:
+
+    ```bash
+    neonctl branches delete restore-<run_id> --project-id patient-dust-07220142
+    ```
+
+    Expect the command to exit with status 0. `main-before-restore-<run_id>` holds the writes the
+    restore discarded, so read any lost rows back from it.
 
 ## Restore main to a point in time
 
@@ -159,10 +169,14 @@ the repo has to drop the migrations that must not come back before the next run.
    > database. Every write to them after the restore point is lost, and Neon interrupts every open
    > connection during the restore.
 
-3. Restore `main` to the restore point, and keep the pre-restore state under a new name:
+3. Follow [Prepare a restore branch](#prepare-a-restore-branch) with `<restore_point>` as the parent
+   and `restore-<yyyymmdd>` as the branch name.
+
+4. Restore `main` from the head of the restore branch, and keep the pre-restore state under a new
+   name:
 
    ```bash
-   neonctl branches restore main ^self@<restore_point> \
+   neonctl branches restore main restore-<yyyymmdd> \
      --project-id patient-dust-07220142 \
      --preserve-under-name main-before-restore-<yyyymmdd>
    ```
@@ -170,9 +184,9 @@ the repo has to drop the migrations that must not come back before the next run.
    Expect the command to exit with status 0. `main` keeps its ID and its connection strings, and
    Neon moves the `dev` branch under `main-before-restore-<yyyymmdd>`.
 
-4. Follow [Bring players back](#bring-players-back).
+5. Send the [player notice](#tell-players-what-survived).
 
-5. Enable the main workflow, then re-run its latest run on `main`:
+6. Enable the main workflow, then re-run its latest run on `main`:
 
    ```bash
    gh workflow enable main.yml -R zgeoff/vers
@@ -186,51 +200,71 @@ the repo has to drop the migrations that must not come back before the next run.
    restore point. Until it does, the activity service refuses every start with
    `SIM_VERSION_UNKNOWN`.
 
-6. Keep `main-before-restore-<yyyymmdd>` while `dev` is its child. It holds the writes the restore
-   discarded.
-
-## Bring players back
-
-Run these steps against `main` straight after the restore, before players reach the restored state.
-They apply only after an incident restore, never in normal operation.
-
-1. Read the owner connection string of `main`:
+7. Delete the restore branch, and keep `main-before-restore-<yyyymmdd>` while `dev` is its child:
 
    ```bash
-   neonctl connection-string main --project-id patient-dust-07220142 --database-name vers
+   neonctl branches delete restore-<yyyymmdd> --project-id patient-dust-07220142
+   ```
+
+   Expect the command to exit with status 0. `main-before-restore-<yyyymmdd>` holds the writes the
+   restore discarded.
+
+## Prepare a restore branch
+
+A restore branch holds the state that `main` takes on. Its sessions are revoked and its drill checks
+pass before `main` moves to that state in one restore, so `main` never serves a session that the
+restore brought back. These steps apply only to an incident restore or its drill, never in normal
+operation.
+
+1. Create the branch from `<parent>`, which is a restore point such as `2026-10-21T06:45:00Z` or the
+   name of a backup branch, set to expire within a day:
+
+   ```bash
+   neonctl branches create --project-id patient-dust-07220142 \
+     --name <restore_branch> --parent <parent> --expires-at <expiry>
+   ```
+
+   Expect a table row with the branch and its endpoint.
+
+2. Read the branch's connection string:
+
+   ```bash
+   neonctl connection-string <restore_branch> --project-id patient-dust-07220142 --database-name vers
    ```
 
    Expect one `postgresql://` URL.
 
-2. Revoke every session, every step-up grant and every pending step-up transaction:
+3. Revoke every session, every step-up grant and every pending step-up transaction on the branch:
 
    ```bash
-   psql '<owner_connection_string>' -v ON_ERROR_STOP=1 -c 'BEGIN; DELETE FROM step_up_grants; DELETE FROM pending_transactions; DELETE FROM sessions; COMMIT;'
+   psql '<branch_connection_string>' -v ON_ERROR_STOP=1 -c 'BEGIN; DELETE FROM step_up_grants; DELETE FROM pending_transactions; DELETE FROM sessions; COMMIT;'
    ```
 
-   Expect `BEGIN`, three `DELETE <count>` lines, and `COMMIT`. The restore brought back every
-   session that was signed out or evicted after the restore point, so a sign-out a player made would
-   stand undone. A device whose session survived would also keep its record of the last activity it
+   Expect `BEGIN`, three `DELETE <count>` lines, and `COMMIT`. The branch holds every session that
+   was signed out or evicted after its parent's point, so a sign-out a player made would stand
+   undone. A device whose session survived would also keep its record of the last activity it
    started, and the server lost that activity, so the verifier would never claim the device's later
    activities. With every session gone, each device runs the discard that
    [How a device reconciles](#how-a-device-reconciles) describes.
 
-3. Check the restored state with the drill checks:
+4. Check the branch with the drill checks:
 
    ```bash
-   RESTORE_DRILL_DATABASE_URL='<owner_connection_string>' bun run db:restore-drill
+   RESTORE_DRILL_DATABASE_URL='<branch_connection_string>' bun run db:restore-drill
    ```
 
    Expect the last report line to read `PASS: <count> of <count> checks hold`. The checks read in
    one read-only transaction. Each `FAIL` line holds a broken check, and the lines under it hold the
-   rows that break it.
+   rows that break it. Restore `main` from no branch that fails a check.
 
-4. Tell players what survived, in the incident notice:
+## Tell players what survived
 
-   ```text
-   We restored the game to <restore_point> UTC. Progress made after that time is gone: XP, items,
-   cleared and revealed nodes, and accounts created since. Sign in again to carry on from there.
-   ```
+Post this notice wherever the incident is announced, with the restore point filled in:
+
+```text
+We restored the game to <restore_point> UTC. Progress made after that time is gone: XP, items,
+cleared and revealed nodes, and accounts created since. Sign in again to carry on from there.
+```
 
 ## How a device reconciles
 
@@ -255,38 +289,18 @@ position, so a position the restored chain draws again mints at most one item.
 
 ## Rehearse a point-in-time restore
 
-The drill restores a disposable branch rather than `main`, so it changes nothing that players use.
+The drill runs every step of a point-in-time restore up to the restore of `main`, on a disposable
+branch, so it changes nothing that players use.
 
 1. Pick a restore point inside the last seven days, and note the time you start.
 
-2. Create a branch of `main` at the restore point, set to expire within a day:
+2. Follow [Prepare a restore branch](#prepare-a-restore-branch) with `<restore_point>` as the parent
+   and `restore-drill-<yyyymmdd>` as the branch name.
 
-   ```bash
-   neonctl branches create --project-id patient-dust-07220142 \
-     --name restore-drill-<yyyymmdd> --parent <restore_point> --expires-at <expiry>
-   ```
+3. Record the drill report and the time from step 1 to the end of step 2, which measures the branch
+   restore and the checks against the recovery-time target.
 
-   Expect a table row with the branch and its endpoint.
-
-3. Read the branch's connection string:
-
-   ```bash
-   neonctl connection-string restore-drill-<yyyymmdd> --project-id patient-dust-07220142 --database-name vers
-   ```
-
-   Expect one `postgresql://` URL.
-
-4. Run the drill checks against the branch:
-
-   ```bash
-   RESTORE_DRILL_DATABASE_URL='<branch_connection_string>' bun run db:restore-drill
-   ```
-
-   Expect the last report line to read `PASS: <count> of <count> checks hold`. Record the report and
-   the time from step 1 to here, which measures the restore and the checks against the recovery-time
-   target.
-
-5. Delete the branch:
+4. Delete the branch:
 
    ```bash
    neonctl branches delete restore-drill-<yyyymmdd> --project-id patient-dust-07220142
