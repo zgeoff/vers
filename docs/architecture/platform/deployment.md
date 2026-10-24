@@ -195,8 +195,10 @@ image. The dashboard's is in its `fly.toml`.
 A scheduled workflow runs a Pulumi preview over the `infra/` program's production stack and fails on
 any diff. The workflow also runs on pull requests and pushes touching `infra/`, but console drift
 arrives with no commit, so only the schedule catches it. The job authenticates through a 1Password
-service account scoped to read the `vers-ci` vault. It only ever previews; reconciling a reported
-drift is a human decision, applied with `pulumi up` from a checkout.
+service account scoped to read the `vers-ci` vault. One `op run` resolves every reference in the
+program's example env file, so a run signs in to 1Password once, not once per secret. It only ever
+previews; reconciling a reported drift is a human decision, applied with `pulumi up` from a
+checkout.
 
 ## Container builds
 
