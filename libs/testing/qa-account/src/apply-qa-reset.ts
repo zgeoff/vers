@@ -52,7 +52,7 @@ export async function applyQAReset(
 
     if (input.all) {
       // the users row cascades to avatars, chains, items, grants, and sessions; verifications and
-      // step-up transactions key on the user id or email without a foreign key, so they go by hand
+      // step-up rows key on the user id or email without a foreign key, so they go by hand
       await trx.deleteFrom('verifications').where('target', 'in', [user.id, user.email]).execute();
 
       await trx
@@ -60,6 +60,7 @@ export async function applyQAReset(
         .where('target', 'in', [user.id, user.email])
         .execute();
 
+      await trx.deleteFrom('stepUpGrants').where('target', 'in', [user.id, user.email]).execute();
       await trx.deleteFrom('users').where('id', '=', user.id).execute();
 
       return { activities, avatars: avatarIDs.length, removedAccount: true };

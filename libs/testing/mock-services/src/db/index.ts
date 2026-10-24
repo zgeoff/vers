@@ -9,6 +9,6 @@ export { pendingTransactionCollection } from './pending-transaction-collection';
 export { productEventCollection } from './product-event-collection';
 export { sentEmailCollection } from './sent-email-collection';
 export { sessionCollection } from './session-collection';
-export { usedTransactionTokenCollection } from './used-transaction-token-collection';
+export { stepUpGrantCollection } from './step-up-grant-collection';
 export { userCollection, UserRowSchema } from './user-collection';
 export { verificationCollection } from './verification-collection';

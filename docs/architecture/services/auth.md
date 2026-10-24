@@ -2,11 +2,11 @@
 
 The web edge and the domain services split authentication and step-up authorization by role. The
 edge runs the credential and code flows, holds the session cookie, and signs the service-to-service
-token for its own outbound calls. Durable state lives in the services: sessions and step-up
-transactions in the session service, password credentials and reset tokens in the user service, TOTP
-verifications in the verification service. Services never see cookies. The edge validates the
-session and passes each service a short-lived token naming the acting user, so a service trusts the
-token's claims and nothing else ([service contracts](./service-contracts.md)).
+token for its own outbound calls. Durable state lives in the services: sessions, step-up
+transactions and step-up grants in the session service, password credentials and reset tokens in the
+user service, TOTP verifications in the verification service. Services never see cookies. The edge
+validates the session and passes each service a short-lived token naming the acting user, so a
+service trusts the token's claims and nothing else ([service contracts](./service-contracts.md)).
 
 ## Session lifecycle
 
@@ -64,12 +64,12 @@ path and redirect.
 flowchart TD
   M["sensitive mutation<br>email change, password change, disabling 2FA"] --> A{"live 2FA verification<br>for the target?"}
   A -->|no| R[the mutation runs]
-  A -->|yes| T{"valid, unused transaction token<br>on the resubmission?"}
+  A -->|yes| T{"valid, unused step-up grant<br>on the resubmission?"}
   T -->|yes| R
   T -->|no| P[the edge asks the session service for a pending transaction]
   P --> Q[challenge for a code]
   Q --> C{"code valid?"}
-  C -->|yes| K["consume the pending transaction,<br>mint a transaction token"] -->|resubmission| M
+  C -->|yes| K["consume the pending transaction,<br>issue a step-up grant"] -->|resubmission| M
   C -->|no| F[count a failed attempt against the transaction]
   F -->|under the limit| Q
   F -->|at the limit| X[abandoned]
@@ -85,12 +85,20 @@ cascade-deletes it with the session. The session service ignores an expired row 
 sweeps expired rows on the next create, and consuming a row rejects a request whose action, IP,
 session, or target does not match it.
 
-The transaction token is a short-lived JWT minted and verified only inside the edge process, against
-a per-process in-memory keypair, because it round-trips through the browser between the code check
-and the mutation. It is proof a code check passed, redeemable once by the mutation it names. The
-session service records each consumed token id and rejects a repeat, and the check matches the
-token's session before consuming it, so a token minted under one session cannot redeem under
-another.
+A step-up grant is the proof that a code check passed, and it round-trips through the browser
+between the code check and the mutation. Consuming a pending transaction issues the grant: the
+session service stores a row with the transaction's action, target, and owning session under the
+hash of a random opaque token, and returns the token once. The edge holds no step-up state, so any
+edge process, including one started after a deploy or a restart, redeems a grant that another
+process issued. Redeeming deletes the row in one statement that matches the token's hash, the
+action, the target, and the caller's session, and that skips an expired row. A grant therefore
+redeems once, and only for the pending transaction's mutation and session. A redemption that does
+not match leaves the grant in place. Postgres cascade-deletes a grant with its session, so a logout
+revokes it, and the session service sweeps expired grants each time it issues one.
+
+Only the edge's server code issues a grant, after it checks the code. The browser proxy
+([service contracts](./service-contracts.md#the-client-side)) refuses every call to the session
+service, so a browser cannot consume a pending transaction it created itself.
 
 ## TOTP verification
 

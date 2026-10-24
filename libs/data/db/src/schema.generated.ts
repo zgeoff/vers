@@ -195,6 +195,15 @@ export interface SimVersions {
   status: Generated<string>;
 }
 
+export interface StepUpGrants {
+  action: string;
+  createdAt: Generated<Timestamp>;
+  expiresAt: Timestamp;
+  sessionId: string | null;
+  target: string;
+  tokenHash: string;
+}
+
 export interface Users {
   createdAt: Generated<Timestamp>;
   email: string;
@@ -238,6 +247,7 @@ export interface DB {
   releases: Releases;
   sessions: Sessions;
   simVersions: SimVersions;
+  stepUpGrants: StepUpGrants;
   users: Users;
   verifications: Verifications;
 }

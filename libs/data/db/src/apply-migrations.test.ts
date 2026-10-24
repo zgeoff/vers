@@ -61,6 +61,48 @@ test('it creates the pending_transactions table with defaults applied', async ()
   await db.destroy();
 });
 
+test('it deletes a step-up grant with the session that owns it', async () => {
+  const ctx = await setupTest();
+
+  await applyMigrations({ databaseURL: ctx.databaseURL });
+
+  const db = createDB({ databaseURL: ctx.databaseURL });
+
+  onTestFinished(() => db.destroy());
+
+  await db
+    .insertInto('users')
+    .values({ email: 'grant@example.com', id: 'usr_grant', name: 'Grant', username: 'grant' })
+    .execute();
+
+  await db
+    .insertInto('sessions')
+    .values({
+      expiresAt: new Date(Date.now() + 60_000),
+      id: 'ses_grant',
+      ipAddress: '127.0.0.1',
+      userId: 'usr_grant',
+    })
+    .execute();
+
+  await db
+    .insertInto('stepUpGrants')
+    .values({
+      action: 'ChangePassword',
+      expiresAt: new Date(Date.now() + 60_000),
+      sessionId: 'ses_grant',
+      target: 'usr_grant',
+      tokenHash: 'hash_grant',
+    })
+    .execute();
+
+  await db.deleteFrom('sessions').where('id', '=', 'ses_grant').execute();
+
+  const grants = await db.selectFrom('stepUpGrants').selectAll().execute();
+
+  expect(grants).toBeEmpty();
+});
+
 test('it creates the activity_chains table with both chain indexes starting at zero', async () => {
   const ctx = await setupTest();
 

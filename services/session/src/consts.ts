@@ -7,3 +7,4 @@ export const SESSION_DURATION_SHORT = 24 * HOUR_MS;
 export const SESSION_DURATION_LONG = 7 * DAY_MS;
 export const MAX_TRANSACTION_ATTEMPTS = 5;
 export const PENDING_TRANSACTION_TTL = 5 * MINUTE_MS;
+export const STEP_UP_GRANT_TTL = 5 * MINUTE_MS;

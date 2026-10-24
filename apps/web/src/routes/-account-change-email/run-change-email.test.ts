@@ -1,7 +1,6 @@
 import { expect, test } from 'bun:test';
 import * as db from '@vers/mock-services/db';
 import invariant from 'tiny-invariant';
-import { createStepUpTransactionToken } from '../../lib/auth/create-step-up-transaction-token';
 import { buildFormData } from '../../test-utils/build-form-data';
 import { createSignedInUser } from '../../test-utils/create-signed-in-user';
 import { withRequestContext } from '../../test-utils/with-request-context';
@@ -74,14 +73,14 @@ test('it applies the change once a valid step-up token is attached', async () =>
   await db.verificationCollection.create({ target: signedIn.userID, type: '2fa' });
 
   await withRequestContext({ cookies: signedIn.cookies }, async () => {
-    const minted = await createStepUpTransactionToken({
+    const grant = await db.stepUpGrantCollection.create({
       action: 'ChangeEmail',
       sessionID: signedIn.sessionID,
       target: signedIn.userID,
     });
 
     const promise = runChangeEmail(
-      buildFormData({ email: 'token-new@vers.test', stepUpToken: minted.token }),
+      buildFormData({ email: 'token-new@vers.test', stepUpToken: grant.token }),
     );
 
     expect(promise).rejects.toMatchObject({

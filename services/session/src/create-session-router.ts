@@ -5,8 +5,8 @@ import type { DB } from '@vers/db';
 import type { ServiceContext } from '@vers/service-runtime';
 import type { CryptoKey } from 'jose';
 import type { Kysely } from 'kysely';
+import { consumeGrant } from './handlers/consume-grant';
 import { consumePendingTransaction } from './handlers/consume-pending-transaction';
-import { consumeTransactionToken } from './handlers/consume-transaction-token';
 import { createPendingTransaction } from './handlers/create-pending-transaction';
 import { createSession } from './handlers/create-session';
 import { readPendingTransaction } from './handlers/read-pending-transaction';
@@ -42,11 +42,9 @@ export function createSessionRouter(deps: Readonly<CreateSessionRouterDeps>) {
       ),
     ),
     stepUp: {
+      consumeGrant: os.stepUp.consumeGrant.handler((opts) => consumeGrant(deps.db, opts)),
       consumePendingTransaction: os.stepUp.consumePendingTransaction.handler((opts) =>
         consumePendingTransaction(deps.db, opts),
-      ),
-      consumeTransactionToken: os.stepUp.consumeTransactionToken.handler((opts) =>
-        consumeTransactionToken(deps.db, opts),
       ),
       createPendingTransaction: os.stepUp.createPendingTransaction.handler((opts) =>
         createPendingTransaction(deps.db, opts),

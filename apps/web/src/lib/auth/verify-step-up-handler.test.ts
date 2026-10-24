@@ -2,7 +2,6 @@ import { expect, test } from 'bun:test';
 import { createId } from '@paralleldrive/cuid2';
 import * as db from '@vers/mock-services/db';
 import { withRequestContext } from '../../test-utils/with-request-context';
-import { verifyStepUpTransactionToken } from './create-step-up-transaction-token';
 import { verifyStepUpHandler } from './verify-step-up-handler';
 
 test('it records a failed attempt and reports the remaining count for an incorrect code', async () => {
@@ -42,7 +41,7 @@ test('it abandons the pending transaction once attempts run out', async () => {
   ).toBeUndefined();
 });
 
-test('it consumes the pending transaction and mints a redeemable token for a correct code', async () => {
+test('it consumes the pending transaction and returns a grant for its action, target, and session', async () => {
   const target = createId();
   const transactionID = createId();
 
@@ -68,9 +67,13 @@ test('it consumes the pending transaction and mints a redeemable token for a cor
     throw new Error('expected a verified result');
   }
 
-  const claims = await verifyStepUpTransactionToken(outcome.value.token);
+  const token = outcome.value.token;
 
-  expect(claims).toMatchObject({ action: 'ChangePassword', sessionID: 'session-1', target });
+  expect(db.stepUpGrantCollection.findFirst((query) => query.where({ token }))).toMatchObject({
+    action: 'ChangePassword',
+    sessionID: 'session-1',
+    target,
+  });
 
   expect(
     db.pendingTransactionCollection.findFirst((query) => query.where({ id: transactionID })),
