@@ -5,7 +5,7 @@ import { MAX_CATCH_UP_BATCH_CHECKPOINTS } from '@vers/contract-activity';
 import { resolveServiceURL } from '@vers/mock-services';
 import { mockActivityService } from '@vers/mock-services/activity';
 import { waitFor } from '@vers/test-utils';
-import { HttpResponse, http } from 'msw';
+import { HttpResponse, delay, http } from 'msw';
 import invariant from 'tiny-invariant';
 import { SimulatedClock } from 'xstate';
 import { server } from '../mocks/node';
@@ -1144,6 +1144,73 @@ test('it resolves each submit with the activity-relative version it assigned', a
 
   expect(firstVersion).toBe(1);
   expect(secondVersion).toBe(2);
+});
+
+test('it removes only the registrations of the avatars it is given', async () => {
+  const ctx = setupTest({ scheduleFlush: () => {} });
+
+  await ctx.submitter.registerActivity({
+    activityID: 'removed-activity',
+    appendedHead: 0,
+    avatarID: 'avatar_removed',
+    lastHash: 'start_hash',
+    startChainIndex: 0,
+  });
+
+  await ctx.submitter.registerActivity({
+    activityID: 'kept-activity',
+    appendedHead: 0,
+    avatarID: 'avatar_kept',
+    lastHash: 'start_hash',
+    startChainIndex: 0,
+  });
+
+  await ctx.submitter.submit('kept-activity', createMockStartedCheckpoint());
+
+  ctx.submitter.removeRegistrations(['avatar_removed']);
+
+  const removedVersion = await ctx.submitter.submit(
+    'removed-activity',
+    createMockStartedCheckpoint(),
+  );
+
+  const keptVersion = await ctx.submitter.submit('kept-activity', createMockProgressCheckpoint());
+
+  expect(removedVersion).toBeUndefined();
+  expect(keptVersion).toBe(2);
+});
+
+test('it settles a terminal submit still flushing when its registration is removed', async () => {
+  const ctx = setupTest();
+
+  server.use(
+    http.post(`${resolveServiceURL('activity')}/rpc/trackActivityProgress`, async () => {
+      await delay('infinite');
+    }),
+  );
+
+  await ctx.submitter.registerActivity({
+    activityID: 'discarded-activity',
+    appendedHead: 0,
+    avatarID: 'avatar_discarded',
+    lastHash: 'start_hash',
+    startChainIndex: 0,
+  });
+
+  const submitted = ctx.submitter.submit('discarded-activity', createMockCompletedCheckpoint());
+
+  await waitFor(() => {
+    expect(ctx.submitter.collectActivityStates()).toPartiallyContain({
+      activityID: 'discarded-activity',
+      state: 'flushing',
+    });
+  });
+
+  ctx.submitter.removeRegistrations();
+
+  const version = await submitted;
+
+  expect(version).toBe(1);
 });
 
 test('it resolves with undefined for a checkpoint dropped by an unattached activity', async () => {

@@ -76,7 +76,8 @@ and reports the failure to the tabs.
 
 An account holds one verified session, so verifying a session on a new device evicts every other
 session the account owns ([auth](../services/auth.md#session-lifecycle)). The evicted device's next
-server call fails, so the work that session never delivered never reaches the server.
+server call fails, so the work that session never delivered never reaches the server, and the device
+stops simulating the run it held.
 
 ### When a session ends
 
@@ -90,8 +91,10 @@ does with it.
 | It ran past its expiry       | left in place   | kept                                |
 
 A takeover discards the outbox without asking, because delivering it later would write progress the
-player made elsewhere, and the device taking the account over warns the player first. On a sign-out,
-the sign-out control decides.
+player made elsewhere, and the device taking the account over warns the player first. The displaced
+device halts its live run before the discard, so the run queues no checkpoint behind it, and the
+tabs show the run as playing on another device, the halted state a writer displaced from its
+activity shows. On a sign-out, the sign-out control decides.
 
 ### Signing out
 

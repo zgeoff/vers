@@ -2,8 +2,9 @@ import { expect, mock, test } from 'bun:test';
 import type { ActivityData } from '@vers/contract-activity';
 import { createMockActivityData } from '@vers/contract-activity/test-utils';
 import { createSimulation } from '@vers/idle-core';
+import { buildSessionSupersededResponse } from '@vers/service-utils/orpc';
 import { waitFor } from '@vers/test-utils';
-import { HttpResponse, http } from 'msw';
+import { http } from 'msw';
 import { server } from '../mocks/node';
 import type { CheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import { readAllActivityStarts } from '../submission/read-all-activity-starts';
@@ -33,7 +34,7 @@ test('it writes a start row to the outbox by default', async () => {
 test('it discards the outbox when its proxy client meets the superseded marker', async () => {
   server.use(
     http.post(`${self.location.origin}/api/rpc/activity/getCurrentActivity`, () =>
-      HttpResponse.json(null, { headers: { 'x-session-superseded': '1' }, status: 401 }),
+      buildSessionSupersededResponse(),
     ),
   );
 
@@ -96,6 +97,7 @@ test('it returns the injected submitter', () => {
     collectActivityStates: mock(() => []),
     isEvicted: mock(() => false),
     removeEviction: mock(() => {}),
+    removeRegistrations: mock(() => {}),
   };
 
   const context = createStubWorkerContext({ submitter });

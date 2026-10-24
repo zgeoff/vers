@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { setResyncStatus } from '@vers/idle-client';
+import { setResyncStatus, setWriterDisplacedActivityID } from '@vers/idle-client';
 import { ActivityFailureAction } from '@vers/idle-core';
 import { createStubWorkerClient } from '../../test-utils/create-stub-worker-client';
 import { setIdleWorkerHandle } from '../../test-utils/set-idle-worker-handle';
@@ -115,6 +115,14 @@ test('it dismisses by clearing the resync status', async () => {
   render(<WelcomeBackModal />);
 
   await user.click(screen.getByRole('button', { name: 'Close' }));
+
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+});
+
+test('it renders nothing while the notice for a run taken over by another device is up', () => {
+  setWriterDisplacedActivityID('activity_1');
+  setResyncStatus({ avatarID: 'avatar_1', kind: 'session-expired' });
+  render(<WelcomeBackModal />);
 
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 });

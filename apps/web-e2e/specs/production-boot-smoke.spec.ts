@@ -13,6 +13,20 @@ test('it serves the production build health check and anonymous home page', asyn
   expect(root.headers()['content-type']).toContain('text/html');
 });
 
+test('it serves no mock live-run seeding route from the production app server', async ({
+  request,
+}) => {
+  const direct = await request.post('/test/live-run?email=e2e-device-reload%40qa.versidle.com');
+
+  expect(direct.status()).toBe(404);
+
+  const proxied = await request.post(
+    '/api/rpc/activity/test/live-run?email=e2e-device-reload%40qa.versidle.com',
+  );
+
+  expect(proxied.status()).toBe(404);
+});
+
 test('it serves the favicon and the robots policy as static files', async ({ request }) => {
   const icon = await request.get('/favicon.ico');
 

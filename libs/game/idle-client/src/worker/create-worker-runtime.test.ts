@@ -8,6 +8,7 @@ import { ActivityFailureAction } from '@vers/idle-core';
 import { createAuthedServiceClient, createViewer, resolveServiceURL } from '@vers/mock-services';
 import { mockActivityService } from '@vers/mock-services/activity';
 import * as db from '@vers/mock-services/db';
+import { buildSessionSupersededResponse } from '@vers/service-utils/orpc';
 import { waitFor } from '@vers/test-utils';
 import { http } from 'msw';
 import invariant from 'tiny-invariant';
@@ -22,6 +23,7 @@ import { writePendingStopIntent } from '../submission/write-pending-stop-intent'
 import { writeQueuedCheckpoint } from '../submission/write-queued-checkpoint';
 import { writeStartStamps } from '../submission/write-start-stamps';
 import { createFastClock } from '../test-utils/create-fast-clock';
+import { createStubActivityProxy } from '../test-utils/create-stub-activity-proxy';
 import { createTestClient } from '../test-utils/create-test-client';
 import { createMockCheckpointBatchEntry } from '../test-utils/factories/create-mock-checkpoint-batch-entry';
 import { createMockLatestActivityProgress } from '../test-utils/factories/create-mock-latest-activity-progress';
@@ -33,6 +35,7 @@ import { createWorkerRuntime } from './create-worker-runtime';
 import type { WorkerRuntime } from './create-worker-runtime';
 import { sentryHandle } from './sentry-handle';
 import { startErrorReporting } from './start-error-reporting';
+import { workerToClientMessageSchema } from './worker-to-client-message-schema';
 
 function setupTest() {
   return {
@@ -623,6 +626,147 @@ test('it resets the displaced simulation and broadcasts WriterDisplaced on a ses
   // the displaced run's simulation is cleared, not just announced — the fresh snapshot carries no
   // activity
   expect(result.state.activity).toBeUndefined();
+});
+
+test('it stays online when a flush meets the refusal for a session another device took over', async () => {
+  const viewer = await createViewer();
+
+  server.use(createStubActivityProxy(viewer.user.id));
+
+  // a zero-gap active row, so the first report's resync attaches it live without any simulated
+  // time elapsing
+  const activity = await db.activityCollection.create({
+    avatarID: viewer.avatar.id,
+    encounterNode: { difficulty: 1 },
+    seed: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaa6072',
+    startedAt: new Date(),
+  });
+
+  using runtime = createWorkerRuntime();
+
+  const ctx = setupTest();
+  const testClient = ctx.createConnectedTestClient(runtime);
+
+  await testClient.initialize({});
+  await testClient.reportOnline({ avatarID: viewer.avatar.id, claim: false });
+
+  server.use(
+    http.all(`${self.location.origin}/api/rpc/activity/*`, () => buildSessionSupersededResponse()),
+  );
+
+  await writeQueuedCheckpoint(activity.id, createMockCheckpointBatchEntry({ version: 1 }));
+
+  await testClient.reportOnline({ avatarID: viewer.avatar.id, claim: false });
+
+  await waitFor(async () => {
+    const snapshot = await testClient.readDebugSnapshot({});
+
+    expect(snapshot.events).toPartiallyContain({
+      detail: `${activity.id} held-defined-error`,
+      type: 'flush',
+    });
+  });
+
+  const snapshot = await testClient.readDebugSnapshot({});
+
+  expect(snapshot.connectivityOnline).toBeTrue();
+  expect(snapshot.events).not.toPartiallyContain({ detail: 'offline', type: 'connectivity' });
+});
+
+test('it halts the live run and broadcasts WriterDisplaced when a call meets the refusal for a session another device took over', async () => {
+  const viewer = await createViewer();
+
+  server.use(createStubActivityProxy(viewer.user.id));
+
+  // a zero-gap active row, so the first report's resync attaches it live without any simulated
+  // time elapsing
+  const activity = await db.activityCollection.create({
+    avatarID: viewer.avatar.id,
+    encounterNode: { difficulty: 1 },
+    seed: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaa6072',
+    startedAt: new Date(),
+  });
+
+  const ctx = setupTest();
+  const broadcasts = ctx.collectBroadcasts();
+
+  using runtime = createWorkerRuntime();
+
+  const testClient = ctx.createConnectedTestClient(runtime);
+
+  await testClient.initialize({});
+  await testClient.reportOnline({ avatarID: viewer.avatar.id, claim: false });
+
+  server.use(
+    http.all(`${self.location.origin}/api/rpc/activity/*`, () => buildSessionSupersededResponse()),
+  );
+
+  await writeQueuedCheckpoint(activity.id, createMockCheckpointBatchEntry({ version: 1 }));
+
+  await testClient.reportOnline({ avatarID: viewer.avatar.id, claim: false });
+
+  await waitFor(() => {
+    expect(broadcasts.received).toPartiallyContain({
+      activityID: activity.id,
+      type: WorkerMessageType.WriterDisplaced,
+    });
+  });
+
+  const result = await testClient.initialize({});
+  const snapshot = await testClient.readDebugSnapshot({});
+
+  expect(result.writerDisplacedActivityID).toBe(activity.id);
+  expect(result.state.activity).toBeUndefined();
+  expect(snapshot.outbox).toStrictEqual({ activityStarts: [], checkpoints: [] });
+});
+
+test('it broadcasts a simulation with no live run to the open tabs when a takeover halts the run', async () => {
+  const viewer = await createViewer();
+
+  server.use(createStubActivityProxy(viewer.user.id));
+
+  // a zero-gap active row, so the first report's resync attaches it live without any simulated
+  // time elapsing
+  const activity = await db.activityCollection.create({
+    avatarID: viewer.avatar.id,
+    encounterNode: { difficulty: 1 },
+    seed: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaa6072',
+    startedAt: new Date(),
+  });
+
+  const ctx = setupTest();
+  const broadcasts = ctx.collectBroadcasts();
+
+  using runtime = createWorkerRuntime();
+
+  const testClient = ctx.createConnectedTestClient(runtime);
+
+  await testClient.initialize({});
+  await testClient.reportOnline({ avatarID: viewer.avatar.id, claim: false });
+
+  server.use(
+    http.all(`${self.location.origin}/api/rpc/activity/*`, () => buildSessionSupersededResponse()),
+  );
+
+  await writeQueuedCheckpoint(activity.id, createMockCheckpointBatchEntry({ version: 1 }));
+
+  await testClient.reportOnline({ avatarID: viewer.avatar.id, claim: false });
+
+  await waitFor(() => {
+    expect(broadcasts.received).toPartiallyContain({
+      activityID: activity.id,
+      type: WorkerMessageType.WriterDisplaced,
+    });
+  });
+
+  const simulationUpdates = broadcasts.received
+    .map((message) => workerToClientMessageSchema.parse(message))
+    .filter((message) => message.type === WorkerMessageType.SimulationUpdate);
+
+  expect(simulationUpdates.at(-1)).toStrictEqual({
+    state: expect.any(Object),
+    type: WorkerMessageType.SimulationUpdate,
+  });
 });
 
 test('it answers a debug snapshot that records a connectivity loss the platform reports', async () => {

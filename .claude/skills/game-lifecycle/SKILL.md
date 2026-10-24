@@ -102,11 +102,13 @@ stateDiagram-v2
   running --> continuing: terminal checkpoint
   running --> stopping: player stops
   running --> evicting: another session took the writer
+  running --> discarding: another device took the account over
   resyncing --> continuing: offline traversal or idle gap to deliver
   resyncing --> idle: nothing to catch up
   continuing --> running: next activity installed
   stopping --> idle: stop request delivered
   evicting --> idle: displaced run cleared
+  discarding --> idle: run halted and outbox discarded
 ```
 
 The server keeps one status per activity row. Proof moves on a separate cursor whatever the status,

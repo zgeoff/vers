@@ -1,4 +1,5 @@
 import { expect, mock, test } from 'bun:test';
+import { buildSessionSupersededResponse } from '@vers/service-utils/orpc';
 import { HttpResponse, http } from 'msw';
 import { server } from '../mocks/node';
 import { createActivityServiceClient } from './create-activity-service-client';
@@ -6,7 +7,7 @@ import { createActivityServiceClient } from './create-activity-service-client';
 test('it reports a superseded session when the proxy marks the refusal', async () => {
   server.use(
     http.post(`${self.location.origin}/api/rpc/activity/stopActivity`, () =>
-      HttpResponse.json(null, { headers: { 'x-session-superseded': '1' }, status: 401 }),
+      buildSessionSupersededResponse(),
     ),
   );
 

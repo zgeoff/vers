@@ -15,6 +15,16 @@ test('it renders the title and content while open', () => {
   expect(screen.getByText('You were away')).toBeInTheDocument();
 });
 
+test('it names the dialog by its title', () => {
+  render(
+    <Dialog open title="Welcome back">
+      <p>You were away</p>
+    </Dialog>,
+  );
+
+  expect(screen.getByRole('dialog', { name: 'Welcome back' })).toBeInTheDocument();
+});
+
 test('it renders nothing while closed', () => {
   render(
     <Dialog open={false} title="Welcome back">

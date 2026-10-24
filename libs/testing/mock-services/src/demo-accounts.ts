@@ -63,4 +63,28 @@ export const DEMO_ACCOUNTS: ReadonlyArray<DemoAccount> = [
     password: 'password123',
     username: 'e2e-analytics',
   },
+
+  // the device-state specs read the writer worker through the QA debug hook, which app-web
+  // installs only for an address under the QA domain
+  {
+    avatarName: 'Reload Test Avatar',
+    email: 'e2e-device-reload@qa.versidle.com',
+    name: 'Device Reload Demo Account',
+    password: 'password123',
+    username: 'e2e-device-reload',
+  },
+  {
+    avatarName: 'Second Tab Test Avatar',
+    email: 'e2e-device-tab@qa.versidle.com',
+    name: 'Device Second Tab Demo Account',
+    password: 'password123',
+    username: 'e2e-device-tab',
+  },
+  {
+    avatarName: 'Takeover Test Avatar',
+    email: 'e2e-device-takeover@qa.versidle.com',
+    name: 'Device Takeover Demo Account',
+    password: 'password123',
+    username: 'e2e-device-takeover',
+  },
 ];

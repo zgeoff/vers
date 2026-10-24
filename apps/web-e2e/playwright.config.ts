@@ -1,6 +1,6 @@
 import { defineConfig, devices } from '@playwright/test';
 import { loadE2EEnvironment } from './src/load-e2e-environment';
-import type { E2EOptions } from './src/test';
+import type { E2EOptions, MockActivityOptions } from './src/test';
 
 const CROSS_ENGINE_CORPUS_SPEC = /cross-engine-corpus\.spec\.ts/u;
 
@@ -12,7 +12,7 @@ const environment = loadE2EEnvironment({
   },
 });
 
-export default defineConfig<E2EOptions>({
+export default defineConfig<E2EOptions & MockActivityOptions>({
   expect: {
     timeout: 10 * 1000,
   },
@@ -45,6 +45,9 @@ export default defineConfig<E2EOptions>({
   use: {
     baseURL: environment.baseURL,
     codeSource: 'mock',
+
+    // serve-mock-services.ts binds the activity listener to this origin
+    mockActivityURL: process.env['ACTIVITY_SERVICE_URL'] ?? 'http://localhost:3006',
 
     // serve-mock-services.ts binds the verification listener to this origin
     mockVerificationURL: process.env['VERIFICATION_SERVICE_URL'] ?? 'http://localhost:3004',
