@@ -1,6 +1,5 @@
 import { expect, onTestFinished, test } from 'bun:test';
 import { opentelemetry } from '@elysiajs/opentelemetry';
-import { context, trace as otelTrace, propagation } from '@opentelemetry/api';
 import type { ErrorEvent } from '@sentry/bun';
 import { withTraceContext } from '@vers/service-utils';
 import { waitFor } from '@vers/test-utils';
@@ -76,27 +75,13 @@ test('it reports an error with no traceID tag when called outside a trace contex
   expect(recorded[0]?.tags?.['traceID']).toBeUndefined();
 });
 
-test("it keeps a trace's tag off a later report when the OTel plugin registered its context manager first", async () => {
+test("it keeps a trace's tag off a later report when the OTel plugin starts after error reporting", async () => {
   const previousHandle = sentryHandle.current;
   const recorded: Array<Readonly<ErrorEvent>> = [];
 
   onTestFinished(() => {
     setSentryHandleForTesting(previousHandle);
   });
-
-  onTestFinished(() => {
-    context.disable();
-    propagation.disable();
-    otelTrace.disable();
-  });
-
-  // the boot order createService uses: the OTel plugin's global context manager first, then
-  // Sentry's; the OTel API keeps only the first registration, so an earlier one is cleared here
-  context.disable();
-  propagation.disable();
-  otelTrace.disable();
-
-  new Elysia().use(opentelemetry({ serviceName: 'report-probe' }));
 
   await startErrorReporting('https://testpublickey@o0.ingest.sentry.io/1', {
     beforeSend: (event) => {
@@ -106,6 +91,8 @@ test("it keeps a trace's tag off a later report when the OTel plugin registered 
     },
     disableDefaultIntegrations: true,
   });
+
+  new Elysia().use(opentelemetry({ serviceName: 'report-probe' }));
 
   withTraceContext(createTraceContext(), () => {
     reportUnexpectedError(new Error('inside a trace scope'));

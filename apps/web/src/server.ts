@@ -13,23 +13,19 @@ import { recoverFailedRequest } from './server/recover-failed-request';
 import { redirectToHTTPS } from './server/redirect-to-https';
 import { rejectNonHTMLAccept } from './server/reject-non-html-accept';
 import { removeTrailingSlash } from './server/remove-trailing-slash';
+import { startSentryNode } from './server/start-sentry-node';
 import { withRequestTrace } from './server/with-request-trace';
 
-// a static import, never a top-level `await import()`: rolldown can fold the otel chunk's shared
-// code into this entry, the chunk then imports this module back, and Node exits 13 on the unsettled
-// cycle. Registration also has to land before the Sentry init below, which keeps only the first.
+// static imports, never a top-level `await import()`: rolldown can fold a chunk into this entry that
+// imports it back, and Node exits 13 on the unsettled cycle. Sentry starts first so the API keeps
+// its context manager, the one that gives each request its own scope.
+if (env.isProduction && env.SENTRY_DSN !== undefined) {
+  startSentryNode(env.SENTRY_DSN);
+}
+
 if (env.OTEL_EXPORTER_OTLP_ENDPOINT !== undefined) {
   startTraceExport({ serviceName: 'app-web' });
   startMetricsExport({ serviceName: 'app-web' });
-}
-
-if (env.isProduction && env.SENTRY_DSN !== undefined) {
-  // oxlint-disable-next-line unicorn/prefer-top-level-await -- sentry init is deliberately fire-and-forget so it never delays server startup
-  void (async () => {
-    const sentryModule = await import('./server/start-sentry-node');
-
-    sentryModule.startSentryNode();
-  })();
 }
 
 // playwright and local dev exercise auth routes far faster than a real user ever would; only

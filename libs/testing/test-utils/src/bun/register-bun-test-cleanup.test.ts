@@ -1,4 +1,6 @@
 import { expect, test } from 'bun:test';
+import { trace } from '@opentelemetry/api';
+import { NodeTracerProvider } from '@opentelemetry/sdk-trace-node';
 import { updateEnv } from './update-env';
 
 // This package's own preload calls `registerBunTestCleanup` once for the whole process, so its
@@ -13,3 +15,10 @@ test('it overrides an env var for this test only', () => {
 test('it restores the previous test override via the registered global afterEach', () => {
   expect(process.env['REGISTER_BUN_TEST_CLEANUP_PROBE']).toBeUndefined();
 });
+
+test.each(['first', 'second'])(
+  'it lets the %s of two tests register its own global OpenTelemetry tracer provider',
+  () => {
+    expect(trace.setGlobalTracerProvider(new NodeTracerProvider())).toBeTrue();
+  },
+);

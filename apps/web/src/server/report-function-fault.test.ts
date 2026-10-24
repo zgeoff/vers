@@ -62,8 +62,8 @@ test('it reports the fault to the error backend tagged with the active trace id'
 test("it keeps a trace's tag off a later fault reported outside any trace", async () => {
   const recorded: Array<Readonly<ErrorEvent>> = [];
 
-  // skipping Sentry's own OTel setup leaves the state production boots into, where the trace
-  // exporter's context manager registered first
+  // with Sentry's own OTel setup skipped and no context manager registered, the SDK never forks a
+  // scope, so a tag set on one would outlive its call
   Sentry.init({
     beforeSend: (event) => {
       recorded.push(event);
