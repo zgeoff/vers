@@ -14,6 +14,7 @@ import { applyScheduledMachineActions } from '../deploy/apply-scheduled-machine-
 import { applySimVersionActions } from '../deploy/apply-sim-version-actions';
 import { buildImageRef } from '../deploy/build-image-ref';
 import { buildProviderAppName } from '../deploy/build-provider-app-name';
+import { DEPLOY_BOUNDS } from '../deploy/deploy-bounds';
 import { findStaleReason } from '../deploy/find-stale-reason';
 import { formatMachineTable } from '../deploy/format-machine-table';
 import { loadDeployManifest } from '../deploy/load-deploy-manifest';
@@ -35,6 +36,7 @@ import { runVerify } from '../deploy/run-verify';
 import type { DeployManifest, DeployTarget } from '../deploy/types';
 import { waitForDeployedSHA } from '../deploy/wait-for-deployed-sha';
 import { requireEnvVar } from '../utils/require-env-var';
+import { withDeadline } from '../utils/with-deadline';
 
 interface DeployCommandOptions {
   readonly app: string;
@@ -280,6 +282,8 @@ async function withReleaseDB(run: (db: Kysely<DB>) => Promise<void>): Promise<vo
   }
 }
 
+const MS_PER_MINUTE = 60_000;
+
 async function runRollout(
   db: Kysely<DB>,
   target: DeployTarget,
@@ -317,7 +321,10 @@ async function runRollout(
   const findings = await runProbes(target.probes ?? []);
 
   if (findings.length === 0) {
-    await recordRolloutRelease(db, target, sha, image);
+    await withDeadline(() => recordRolloutRelease(db, target, sha, image), {
+      afterMs: DEPLOY_BOUNDS.releaseRecordMinutes * MS_PER_MINUTE,
+      label: `${target.app} release record`,
+    });
 
     return;
   }
@@ -497,3 +504,7 @@ async function readHeadSHA(): Promise<string> {
 }
 
 await program.parseAsync();
+
+// a library's leftover child process or socket keeps Bun alive after the command ends, and on CI
+// that holds the deploy job open until its timeout cancels it
+process.exit();

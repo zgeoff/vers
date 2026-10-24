@@ -155,11 +155,13 @@ so re-run the failed job.
 ### Release record and rollback
 
 A rollout whose probes pass is recorded in the release registry: app, commit, image ref, and the
-digest the fleet resolved it to. The newest row per app is that app's rollback target. A rollout
-whose probes fail rolls back: the CLI redeploys the app's newest recorded release, restamping that
-release's own commit so the fleet reads stale against HEAD and the next push ships the fix. The leg
-still fails, because rollback restores service and never greens the run. An app with no recorded
-release yet is left serving the broken release, reported in the leg's log.
+digest the fleet resolved it to. The release record runs under its own deadline, and the deploy CLI
+exits as soon as its command ends, so neither a stalled write nor a browser the probes left running
+holds the deploy job until its timeout. The newest row per app is that app's rollback target. A
+rollout whose probes fail rolls back: the CLI redeploys the app's newest recorded release,
+restamping that release's own commit so the fleet reads stale against HEAD and the next push ships
+the fix. The leg still fails, because rollback restores service and never greens the run. An app
+with no recorded release yet is left serving the broken release, reported in the leg's log.
 
 ### Fleet verification
 
