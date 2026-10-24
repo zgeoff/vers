@@ -24,8 +24,8 @@ it never relaxes one from the shared skill.
   with the fixed ladder, only as far as the test needs.
 - [The web app](#the-web-app): mount through the router and request-context helpers, and cover a
   form's result mapping with a hand-built `lastResult`.
-- [Test mode](#test-mode): each package runs plain `bun test`, and a preload starts per-file state
-  in a `beforeAll`.
+- [Test mode](#test-mode): each package runs `bun test --randomize`, and a preload starts per-file
+  state in a `beforeAll`.
 
 ## Utilities
 
@@ -136,9 +136,10 @@ acts on.
 
 ## Test mode
 
-Each package's `test` script runs plain `bun test`: one process, every file in it, no isolation.
-apps/web and idle-client add `--randomize`, so a file that depends on the order of the files before
-it fails CI. A failed run prints its `--seed=<n>`; pass that seed back to reproduce the order.
+Every package's `test` script runs `bun test --randomize`: one process, every file in it, no
+isolation, in a random order. A file that depends on the order of the files before it fails CI, and
+a new package's script takes the same flag. A failed run prints its `--seed=<n>`; pass that seed
+back to reproduce the order.
 
 The preload's resets after each test are the contract, so apps/web and idle-client also pass at
 `bun test --parallel=4 --no-isolate`, where each worker shares one process across its files. Under

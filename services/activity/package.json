@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "bun --watch src/serve.ts",
-    "test": "bun test",
+    "test": "bun test --randomize",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
