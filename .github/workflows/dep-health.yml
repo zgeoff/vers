@@ -17,6 +17,7 @@ jobs:
   # a red run starts the audit-fix workflow, which opens the fix pull request
   audit:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -26,12 +27,19 @@ jobs:
         with:
           bun-version-file: .bun-version
 
-      # audit reads bun.lock and the advisory registry directly - no install needed
+      - name: Install Dependencies
+        run: bun install --frozen-lockfile --ignore-scripts
+
       - name: Audit
         run: bun run audit
 
+      # a run with no pull request still fails once an exclude's removal date passes
+      - name: Dependency gates
+        run: bun run deps:check
+
   outdated:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
