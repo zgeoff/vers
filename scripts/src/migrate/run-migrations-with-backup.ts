@@ -29,11 +29,14 @@ export async function runMigrationsWithBackup(
   const results = resultSet.results ?? [];
 
   if (resultSet.error !== undefined) {
+    const stillPending = await readPendingMigrations({ databaseURL: config.databaseURL });
+
     return {
       backupBranch,
       error: resultSet.error,
       failedMigrationName: results.find((result) => result.status === 'Error')?.migrationName,
       kind: 'migration-failed',
+      persistedMigrationNames: pendingMigrationNames.filter((name) => !stillPending.includes(name)),
     };
   }
 

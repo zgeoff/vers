@@ -2,24 +2,28 @@
 
 Before the migrate job in the main workflow applies a migration, it creates a Neon branch off `main`
 that holds every database on `main` as it stood just before. This runbook restores `main` from that
-backup branch, for a migration that succeeded and damaged data or the schema. The backup branch has
-no compute and expires 14 days after the run that created it. A run that finds no pending migration
-creates no backup branch. [Deployment](../architecture/platform/deployment.md#pipeline) owns the
-migrate job, and [database](../architecture/platform/database.md) owns the Neon topology.
+backup branch, for a migration that stayed applied and damaged data or the schema. The backup branch
+has no compute and expires 14 days after the run that created it. A run that finds no pending
+migration creates no backup branch. [Deployment](../architecture/platform/deployment.md#pipeline)
+owns the migrate job, and [database](../architecture/platform/database.md) owns the Neon topology.
 
 You need `neonctl` authenticated through `neonctl auth` to the vers project,
 `patient-dust-07220142`, and the right to merge to `main`.
 
 ## When to restore
 
-A run whose migration fails needs no restore. Kysely applies the pending migrations of a run in one
+A failed run usually needs no restore. Kysely applies the pending migrations of a run in one
 Postgres transaction, so a failure rolls back every migration of that run, including the ones that
-ran before the failing one. The step logs the name of the failed migration and the rollback of the
-run. Fix the migration and push again, and the next run takes a fresh backup.
+ran before the failing one. After a failure, the step reads the pending migrations again and logs
+the outcome it finds:
 
-Restore only when a migration that succeeded damaged data or the schema, and a new migration cannot
-repair it. A restore discards every write after the backup, so a migration that fixes forward loses
-less.
+- `none persisted and no restore is needed`: fix the migration and push again. The next run takes a
+  fresh backup.
+- `<migration_names> persisted`: those migrations stayed applied. Judge them by the rule below.
+
+Restore only when a migration that stayed applied damaged data or the schema, and a new migration
+cannot repair it. A restore discards every write after the backup, so a migration that fixes forward
+loses less.
 
 ## Find the backup branch
 

@@ -161,7 +161,7 @@ test('it fails the history check when a recorded migration has no file, with no 
   expect(neonBranchCollection.findMany()).toHaveLength(1);
 });
 
-test('it names the failed migration of a run that rolled back as one transaction', async () => {
+test('it reports no persisted migration when a failed run rolled back as one transaction', async () => {
   const ctx = await setupTest();
 
   const conflicting = postgres(ctx.databaseURL, { max: 1 });
@@ -191,6 +191,7 @@ test('it names the failed migration of a run that rolled back as one transaction
     error: expect.objectContaining({ message: 'relation "sessions" already exists' }),
     failedMigrationName: '1783000000002_sessions',
     kind: 'migration-failed',
+    persistedMigrationNames: [],
   });
 
   expect(pending).toStrictEqual(ctx.migrationNames);

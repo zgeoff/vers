@@ -1,6 +1,7 @@
 import { match } from 'ts-pattern';
 import { z } from 'zod';
 import { buildBackupBranchName } from '../migrate/build-backup-branch-name';
+import { formatMigrationFailure } from '../migrate/format-migration-failure';
 import { runMigrationsWithBackup } from '../migrate/run-migrations-with-backup';
 
 const BACKUP_RETENTION_MS = 14 * 24 * 60 * 60 * 1000;
@@ -73,11 +74,7 @@ async function runProductionMigrations(): Promise<number> {
       return 0;
     })
     .with({ kind: 'migration-failed' }, (failed) => {
-      // kysely runs a Postgres batch in one transaction, so a failure rolls back the whole run
-      console.error(
-        `❌ migration ${failed.failedMigrationName ?? '(unknown)'} failed; the run rolled back, so no migration from it persisted and the database needs no restore from Neon branch ${failed.backupBranch.name}`,
-      );
-
+      console.error(formatMigrationFailure(failed));
       console.error(failed.error);
 
       return 1;
