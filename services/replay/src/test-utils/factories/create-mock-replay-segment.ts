@@ -33,6 +33,7 @@ export function createMockReplaySegment(
     simVersion: 'test-engine-hash',
     startChainIndex: 0,
     status: 'active',
+    verifiedHead: 0,
     ...overrides.activity,
   };
 

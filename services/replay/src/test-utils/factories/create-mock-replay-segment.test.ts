@@ -23,6 +23,7 @@ test('it builds a default genesis segment', () => {
       simVersion: 'test-engine-hash',
       startChainIndex: 0,
       status: 'active',
+      verifiedHead: 0,
     },
     chain: {
       genesisSeed: segment.activity.seed,

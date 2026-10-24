@@ -61,6 +61,7 @@ interface CreateHonestActivityFixtureInput {
   readonly chainRow?: Readonly<Selectable<ActivityChains>>;
   readonly secretRef?: SecretRef;
   readonly secretVersion?: number;
+  readonly avatarSettledXP?: number;
   readonly seed?: string;
   readonly startChainIndex?: number;
 }
@@ -70,7 +71,6 @@ export async function createHonestActivityFixture(
   input: Readonly<CreateHonestActivityFixtureInput> = {},
 ): Promise<HonestActivityFixture> {
   const seed = input.seed ?? buildStateFromSeed(faker.number.int());
-  const buildSnapshot = input.buildSnapshot ?? { level: 1, xp: 0 };
   const activityID = input.activity?.id ?? `act_${createId()}`;
   let chain = input.chainRow;
 
@@ -108,20 +108,24 @@ export async function createHonestActivityFixture(
   const secretRef = input.secretRef ?? 'worldmap';
   const secretVersion = input.secretVersion ?? 1;
 
-  // An honest run's pinned build always equals the avatar's settled xp at start — replay's build
-  // re-derivation check compares against exactly this, so a fixture whose caller boosted the build
-  // for combat power must carry a matching settled total or that check would reject it.
-  await db
-    .updateTable('avatars')
-    .set({ level: buildLevelFromXP(buildSnapshot.xp), xp: buildSnapshot.xp })
-    .where('id', '=', chain.avatarId)
-    .execute();
+  if (input.avatarSettledXP !== undefined) {
+    await db
+      .updateTable('avatars')
+      .set({ level: buildLevelFromXP(input.avatarSettledXP), xp: input.avatarSettledXP })
+      .where('id', '=', chain.avatarId)
+      .execute();
+  }
 
   const avatarRow = await db
     .selectFrom('avatars')
-    .select('seed')
+    .select(['seed', 'xp'])
     .where('id', '=', chain.avatarId)
     .executeTakeFirstOrThrow();
+
+  const buildSnapshot = input.buildSnapshot ?? {
+    level: buildLevelFromXP(avatarRow.xp),
+    xp: avatarRow.xp,
+  };
 
   const completedNodeIDs =
     input.completedNodeIDs ??

@@ -74,7 +74,11 @@ export async function advanceActivity(
       // The mint's insert lost to another row already minted at this client id — resolved here,
       // outside any transaction, since the one that just rolled back cannot run another
       // statement once a constraint violation has poisoned it.
-      const recovered = await resolveMintIDCollision(deps.db, pinned, continuation);
+      const recovered = await resolveMintIDCollision(deps.db, {
+        continuation,
+        pinned,
+        targetActivityID: stepActivityID,
+      });
 
       if (recovered.kind === 'refused') {
         const outcome: BailOutcome = {

@@ -33,6 +33,7 @@ export async function loadReplaySegment(
       'startChainIndex',
       'startHash',
       'status',
+      'verifiedHead',
     ])
     .where('id', '=', target.activityID)
     .executeTakeFirst();
@@ -98,6 +99,7 @@ export async function loadReplaySegment(
       simVersion: activity.simVersion,
       startChainIndex: activity.startChainIndex,
       status: activity.status,
+      verifiedHead: activity.verifiedHead,
     },
     chain,
     prevHash: predecessor === undefined ? activity.startHash : predecessor.hash,

@@ -548,6 +548,88 @@ test('it conflicts a mint whose client id collides with an unrelated row for the
   expect(row).toStrictEqual({ appendedHead: 0, status: 'active' });
 });
 
+test('it conflicts a mint whose client id collides with a continuation of a different predecessor', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id, xp: 0 });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
+  });
+
+  const otherPredecessor = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
+    status: 'stopped',
+  });
+
+  const reusedID = `act_${createId()}`;
+
+  // matches the request on owner, scope and `startKey`, but continues another activity
+  await ctx.db
+    .insertInto('activities')
+    .values(
+      createMockActivity({
+        avatarId: avatar.id,
+        id: reusedID,
+        predecessorActivityId: otherPredecessor.id,
+        scopeId: '0_0',
+        scopeType: 'world_map_node',
+        startKey: `continue_${started.id}`,
+        status: 'stopped',
+      }),
+    )
+    .execute();
+
+  const tail = createMockCheckpointBatch({
+    finalPayloadOverrides: { rewards: { xp: 10 }, type: 'completed' },
+    startChainIndex: started.startChainIndex,
+    startPrevHash: started.startHash,
+    startVersion: 1,
+  });
+
+  const request = client.advanceActivity({
+    activityID: started.id,
+    continuations: [
+      {
+        buildSnapshot: { level: buildLevelFromXP(10), xp: 10 },
+        checkpoints: tail,
+        id: reusedID,
+        startKey: `continue_${started.id}`,
+      },
+    ],
+    expectedHead: 0,
+  });
+
+  // `.rejects` chains type as synchronous and are ordinarily left unawaited, but the trailing
+  // query below must observe the rejected call's transaction fully settled
+  await request.catch(() => {});
+
+  expect(request).rejects.toMatchObject({
+    code: 'CONFLICT',
+    data: {
+      activityID: started.id,
+      appendedHead: 0,
+      avatarID: avatar.id,
+      reason: 'activity-id-taken',
+    },
+  });
+
+  const decoy = await ctx.db
+    .selectFrom('activities')
+    .select(['predecessorActivityId', 'status'])
+    .where('id', '=', reusedID)
+    .executeTakeFirstOrThrow();
+
+  expect(decoy).toStrictEqual({ predecessorActivityId: otherPredecessor.id, status: 'stopped' });
+});
+
 test('it caps a continuation whose tail exceeds the accrued offline budget', async () => {
   await using ctx = await setupTest({ simTimeCapMs: 60_000 });
 

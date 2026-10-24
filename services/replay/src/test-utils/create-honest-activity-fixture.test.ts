@@ -1,6 +1,7 @@
 import { expect, test } from 'bun:test';
 import { buildCheckpointHash } from '@vers/contract-activity';
 import { createMockContentDocument } from '@vers/contract-activity/test-utils';
+import { buildLevelFromXP } from '@vers/idle-core';
 import { buildMockScopeSecret } from '@vers/mock-services/keys';
 import { createTestDB } from '@vers/service-test-utils/bun';
 import { deriveWorldmapContent } from '@vers/worldmap-content';
@@ -185,6 +186,75 @@ test("it seals the stamped encounterNode under the chain's avatar seed, not a sh
     difficulty: 1,
     poolID: sealedUnderAvatarSeed.poolID,
   });
+});
+
+test("it pins the shared avatar's settled total by default and leaves that total untouched", async () => {
+  await using ctx = await createTestDB({ isolation: 'schema' });
+
+  const avatar = await createAvatarRow(ctx.db, { level: buildLevelFromXP(70), xp: 70 });
+
+  await createHonestActivityFixture(ctx.db, {
+    activity: { status: 'stopped' },
+    avatarID: avatar.id,
+    duration: 80_000,
+  });
+
+  const second = await createHonestActivityFixture(ctx.db, {
+    avatarID: avatar.id,
+    chain: { scopeId: '2_0' },
+    duration: 80_000,
+  });
+
+  expect(second.activity.buildSnapshot).toStrictEqual({ level: buildLevelFromXP(70), xp: 70 });
+
+  const settled = await ctx.db
+    .selectFrom('avatars')
+    .select(['level', 'xp'])
+    .where('id', '=', avatar.id)
+    .executeTakeFirstOrThrow();
+
+  expect(settled).toStrictEqual({ level: buildLevelFromXP(70), xp: 70 });
+});
+
+test("it pins an explicit build without touching the shared avatar's settled total", async () => {
+  await using ctx = await createTestDB({ isolation: 'schema' });
+
+  const avatar = await createAvatarRow(ctx.db, { level: buildLevelFromXP(30), xp: 30 });
+
+  const fixture = await createHonestActivityFixture(ctx.db, {
+    avatarID: avatar.id,
+    buildSnapshot: { level: buildLevelFromXP(90), xp: 90 },
+    duration: 80_000,
+  });
+
+  expect(fixture.activity.buildSnapshot).toStrictEqual({ level: buildLevelFromXP(90), xp: 90 });
+
+  const settled = await ctx.db
+    .selectFrom('avatars')
+    .select(['level', 'xp'])
+    .where('id', '=', avatar.id)
+    .executeTakeFirstOrThrow();
+
+  expect(settled).toStrictEqual({ level: buildLevelFromXP(30), xp: 30 });
+});
+
+test("it sets the avatar's settled total from an explicit avatarSettledXP and pins the build to it", async () => {
+  await using ctx = await createTestDB({ isolation: 'schema' });
+
+  const fixture = await createHonestActivityFixture(ctx.db, {
+    avatarSettledXP: 250,
+    duration: 80_000,
+  });
+
+  expect(fixture.activity.buildSnapshot).toStrictEqual({ level: buildLevelFromXP(250), xp: 250 });
+
+  const settled = await ctx.db
+    .selectFrom('avatars')
+    .select(['level', 'xp'])
+    .where('id', '=', fixture.activity.avatarId)
+    .executeTakeFirstOrThrow();
+
+  expect(settled).toStrictEqual({ level: buildLevelFromXP(250), xp: 250 });
 });
 
 test('it publishes the document it ran the engine against, keyed by the stamped content version', async () => {

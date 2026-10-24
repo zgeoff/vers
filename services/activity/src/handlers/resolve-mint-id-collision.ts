@@ -3,11 +3,19 @@ import type { DB } from '@vers/db';
 import type { Kysely } from 'kysely';
 import type { MintCollisionResolution, MintedContinuation, PinnedActivityContext } from './types';
 
+interface MintIDCollision {
+  readonly continuation: Readonly<CatchUpContinuation>;
+  readonly pinned: Readonly<PinnedActivityContext>;
+  readonly targetActivityID: string;
+}
+
 export async function resolveMintIDCollision(
   db: Kysely<DB>,
-  pinned: Readonly<PinnedActivityContext>,
-  continuation: Readonly<CatchUpContinuation>,
+  collision: Readonly<MintIDCollision>,
 ): Promise<MintCollisionResolution<MintedContinuation>> {
+  const continuation = collision.continuation;
+  const pinned = collision.pinned;
+
   const existing = await db
     .selectFrom('activities')
     .selectAll()
@@ -21,6 +29,7 @@ export async function resolveMintIDCollision(
   if (
     existing.avatarId !== pinned.avatarId ||
     existing.startKey !== continuation.startKey ||
+    existing.predecessorActivityId !== collision.targetActivityID ||
     existing.scopeType !== pinned.scopeType ||
     existing.scopeId !== pinned.scopeId
   ) {
