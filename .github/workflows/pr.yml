@@ -66,10 +66,11 @@ jobs:
         continue-on-error: true
         run: bash .claude/skills/docs-writing/scripts/check-length.sh
 
-      # the audit script ignores only advisories with no fixed release reachable from
-      # our dependency graph; each --ignore drops when its parent ships a fixed line
       - name: Audit
         run: bun run audit
+
+      - name: Dependency gates
+        run: bun run deps:check
 
       - name: Track main branch
         run: git branch --track main origin/main
