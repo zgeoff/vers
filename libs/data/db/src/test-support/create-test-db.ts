@@ -2,6 +2,7 @@ import { createId } from '@paralleldrive/cuid2';
 import { createDB } from '../create-db';
 import type { CreateDBConfig } from '../create-db';
 import { createClonedDatabase } from './create-cloned-database';
+import { removeTestDatabase } from './remove-test-database';
 import { resolveTestDBTarget } from './resolve-test-db-target';
 
 interface CreateTestDBConfig extends Pick<CreateDBConfig, 'queryDeadlineMs' | 'resumeDetection'> {
@@ -19,6 +20,10 @@ export async function createTestDB(config: CreateTestDBConfig = {}) {
 
   return {
     db,
-    [Symbol.asyncDispose]: () => db.destroy(),
+    [Symbol.asyncDispose]: async () => {
+      await db.destroy();
+
+      await removeTestDatabase(`${target.baseURI}/${dbName}`);
+    },
   };
 }

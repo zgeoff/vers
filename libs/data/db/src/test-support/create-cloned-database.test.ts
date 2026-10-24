@@ -1,8 +1,9 @@
-import { expect, test } from 'bun:test';
+import { expect, onTestFinished, test } from 'bun:test';
 import { createId } from '@paralleldrive/cuid2';
 import postgres from 'postgres';
 import { createClonedDatabase } from './create-cloned-database';
 import { createTestTemplate } from './create-test-template';
+import { removeTestDatabase } from './remove-test-database';
 import { resolveTestDBTarget } from './resolve-test-db-target';
 
 test('it clones a database from an already-migrated template', async () => {
@@ -11,6 +12,9 @@ test('it clones a database from an already-migrated template', async () => {
   const dbName = `test_clone_${createId()}`;
 
   await createTestTemplate({ baseURI, templateDB });
+
+  onTestFinished(() => removeTestDatabase(`${baseURI}/${templateDB}`));
+
   await createClonedDatabase({ baseURI, templateDB, dbName });
 
   const admin = postgres(`${baseURI}/postgres`);
