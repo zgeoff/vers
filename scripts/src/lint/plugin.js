@@ -106,7 +106,7 @@ function isLocalValue(variable) {
 function checkMathReference(context, node) {
   const parent = node.parent;
 
-  if (parent.type === 'TSTypeQuery') {
+  if (isTypeQueryOperand(node)) {
     return;
   }
 
@@ -127,6 +127,16 @@ function checkMathReference(context, node) {
   for (const property of pattern.properties) {
     checkDestructuredProperty(context, property);
   }
+}
+
+function isTypeQueryOperand(node) {
+  let operand = node;
+
+  while (operand.parent.type === 'TSQualifiedName' && operand.parent.left === operand) {
+    operand = operand.parent;
+  }
+
+  return operand.parent.type === 'TSTypeQuery';
 }
 
 function checkMathMember(context, node) {
@@ -252,7 +262,7 @@ function getPropertyKeyName(property) {
 function checkGlobalObjectReference(context, node) {
   const parent = node.parent;
 
-  if (parent.type === 'TSTypeQuery') {
+  if (isTypeQueryOperand(node)) {
     return;
   }
 
