@@ -24,6 +24,8 @@ it never relaxes one from the shared skill.
   with the fixed ladder, only as far as the test needs.
 - [The web app](#the-web-app): mount through the router and request-context helpers, and cover a
   form's result mapping with a hand-built `lastResult`.
+- [Test mode](#test-mode): each package runs plain `bun test`, and a preload starts per-file state
+  in a `beforeAll`.
 
 ## Utilities
 
@@ -131,6 +133,32 @@ acts on.
   asserts on store state. A DOM component in
   [`components-ui/`](../../../libs/game/worldmap-client/src/components-ui/) goes through React
   Testing Library and `userEvent`.
+
+## Test mode
+
+Each package's `test` script runs plain `bun test`: one process, every file in it, no isolation.
+apps/web and idle-client add `--randomize`, so a file that depends on the order of the files before
+it fails CI. A failed run prints its `--seed=<n>`; pass that seed back to reproduce the order.
+
+The preload's resets after each test are the contract, so apps/web and idle-client also pass at
+`bun test --parallel=4 --no-isolate`, where each worker shares one process across its files. Under
+`--parallel`, Bun runs a preload's body once per worker but fires its `beforeAll` and `afterAll`
+around every file. A preload therefore starts per-file state, such as the MSW server's `listen`, in
+a `beforeAll`, never in its body.
+
+Measured on Bun 1.4.3 on a 4-worker dev host, with peak memory summed across the worker processes:
+
+| Package     | Mode                        | Tests | Wall   | Peak memory |
+| ----------- | --------------------------- | ----- | ------ | ----------- |
+| apps/web    | plain `bun test`            | 675   | 14.2 s | 673 MiB     |
+| apps/web    | `--parallel=4` (isolated)   | 675   | 35.6 s | 2,141 MiB   |
+| apps/web    | `--parallel=4 --no-isolate` | 675   | 6.3 s  | 1,509 MiB   |
+| idle-client | plain `bun test`            | 661   | 8.7 s  | 324 MiB     |
+| idle-client | `--parallel=4` (isolated)   | 661   | 13.1 s | 1,330 MiB   |
+| idle-client | `--parallel=4 --no-isolate` | 661   | 2.8 s  | 854 MiB     |
+
+Turbo runs 4 packages at once in CI, so each package stays on plain `bun test`, the cheapest mode in
+memory.
 
 ## Golden values
 
