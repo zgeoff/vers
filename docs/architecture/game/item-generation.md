@@ -42,3 +42,13 @@ is a new content version. Every shipped content version stays loadable, so mint 
 under the content version the activity pins ([version pinning](./game-entropy.md#version-pinning)).
 The reward reveal read path resolves nothing itself; it returns the item the settlement mint
 persisted.
+
+The interpreter keeps one item roll per shipped content version, and each roll dispatches on the
+content version its tables carry. A changed draw order ships as a new entry beside the old ones, so
+the settlement mint rolls an old activity's rewards in the draw order that activity pinned, whatever
+build runs the mint. Tables whose content version has no entry fail the roll rather than fall back
+to another draw order.
+
+Each content version records a digest of the item-gen and world-map content sources, tests and mocks
+excluded. CI recomputes the digest and fails when it differs from the one recorded for the bundled
+content version, so a change to either package lands only with a new content version.

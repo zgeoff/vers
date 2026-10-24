@@ -94,4 +94,5 @@ AGENTS.md's monorepo layout owns the workspace globs and the naming rule that de
 list. Members whose behavior differs from their set: `libs/game/worldmap-content` and
 `libs/testing/qa-account` are `server-only`, the second because it imports the first;
 `libs/design/styled-system` is generated output; and `libs/game/content-version` is shared by the
-deploy CLI and the sim-version registry, so a content version bump is one edit.
+deploy CLI, the sim-version registry and the content digest check, so a content version bump and its
+recorded digest land in one package.

@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { sha256 } from '@noble/hashes/sha2.js';
 import { utf8ToBytes } from '@noble/hashes/utils.js';
 import { createMockContentDocument } from '@vers/contract-activity/test-utils';
-import { buildPositionStream, rollItemFromStream } from '@vers/item-gen';
+import { ITEM_INTERPRETERS, buildPositionStream, rollItemFromStream } from '@vers/item-gen';
 import { deriveAvatarKey } from '@vers/roll-crypto';
 import { rollRewardItems } from './roll-reward-items';
 
@@ -16,18 +16,19 @@ test('it rolls no items for an empty fact list', () => {
 
   const items = rollRewardItems(rollKey, {
     avatarID: 'avatar_1',
+    interpreters: ITEM_INTERPRETERS,
     keyVersion: 1,
     rewardFacts: [],
     scopeID: 'node_1',
     scopeType: 'world_map_node',
-    tables: createMockContentDocument().loot,
+    tables: createMockContentDocument({ contentVersion: '2' }).loot,
   });
 
   expect(items).toStrictEqual([]);
 });
 
 test('it mints content identical to rolling the same coordinate directly', () => {
-  const loot = createMockContentDocument().loot;
+  const loot = createMockContentDocument({ contentVersion: '2' }).loot;
 
   const rollKey = deriveAvatarKey({
     avatarID: 'avatar_1',
@@ -38,6 +39,7 @@ test('it mints content identical to rolling the same coordinate directly', () =>
 
   const items = rollRewardItems(rollKey, {
     avatarID: 'avatar_1',
+    interpreters: ITEM_INTERPRETERS,
     keyVersion: 1,
     rewardFacts: [{ chainIndex: 5, nodeTier: 2, ordinal: 0 }],
     scopeID: 'node_1',
@@ -54,7 +56,7 @@ test('it mints content identical to rolling the same coordinate directly', () =>
     scopeType: 'world_map_node',
   });
 
-  const expectedItem = rollItemFromStream(loot, { nodeTier: 2 }, stream);
+  const expectedItem = rollItemFromStream(ITEM_INTERPRETERS, loot, { nodeTier: 2 }, stream);
 
   expect(items).toStrictEqual([
     {
@@ -81,6 +83,7 @@ test('it rolls one item per reward fact, each at its own coordinate', () => {
 
   const items = rollRewardItems(rollKey, {
     avatarID: 'avatar_1',
+    interpreters: ITEM_INTERPRETERS,
     keyVersion: 1,
     rewardFacts: [
       { chainIndex: 5, nodeTier: 1, ordinal: 0 },
@@ -88,7 +91,7 @@ test('it rolls one item per reward fact, each at its own coordinate', () => {
     ],
     scopeID: 'node_1',
     scopeType: 'world_map_node',
-    tables: createMockContentDocument().loot,
+    tables: createMockContentDocument({ contentVersion: '2' }).loot,
   });
 
   expect(items).toHaveLength(2);

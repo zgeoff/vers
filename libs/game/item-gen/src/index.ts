@@ -1,5 +1,6 @@
 export { buildPositionStream } from './build-position-stream';
 export { buildSaltStream } from './build-salt-stream';
+export { ITEM_INTERPRETERS } from './item-interpreters';
 export { rollAffixesFromStream } from './roll-affixes-from-stream';
 export { rollItemFromStream } from './roll-item-from-stream';
 
@@ -9,6 +10,7 @@ export type {
   AffixTables,
   BaseDef,
   CraftPosition,
+  ItemInterpreters,
   ItemState,
   LootTables,
   RarityDef,
