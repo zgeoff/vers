@@ -11,12 +11,20 @@ export async function archiveActivityCheckpoints(
   candidate: Readonly<ArchiveCandidate>,
   now: Date,
 ): Promise<ArchiveOutcome> {
+  // one statement reads the rows and the stamp together, so a sweep that overlaps another reads
+  // either every row or none, and never overwrites a whole archive with the tail alone
   const rows = await deps.db
     .selectFrom('activityCheckpoints')
-    .selectAll()
-    .where('activityId', '=', candidate.activityID)
-    .orderBy('version')
+    .innerJoin('activities', 'activities.id', 'activityCheckpoints.activityId')
+    .selectAll('activityCheckpoints')
+    .where('activityCheckpoints.activityId', '=', candidate.activityID)
+    .where('activities.archivedAt', 'is', null)
+    .orderBy('activityCheckpoints.version')
     .execute();
+
+  if (rows.length === 0) {
+    return { kind: 'changed' };
+  }
 
   const key = buildCheckpointArchiveKey(candidate.avatarID, candidate.activityID);
   const archive = buildCheckpointArchive(rows);

@@ -48,7 +48,8 @@ head row as archived and delete the activity's rows below its tail. The tail che
 because the latest-progress read anchors a resuming client on it and the verifier takes the next
 activity's seed from it. A stamped head row drops out of the sweep's candidates, so a rerun skips
 the activity. The sweep takes the oldest candidates first and caps each run, so a backlog drains
-over several days.
+over several days. A rejected activity never leaves the hot tier, so rejected streams are the one
+part of the table that grows without a bound, at the rate the verifier rejects activities.
 
 The sweep purges an object ninety days after it wrote it, and only when the activity's head row
 carries the archive stamp. It never deletes a head row, an item or a grant. The verifier never reads

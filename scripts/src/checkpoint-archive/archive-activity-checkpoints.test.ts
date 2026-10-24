@@ -219,6 +219,76 @@ test('it keeps every row and leaves the head unstamped when the read-back differ
   expect(head).toStrictEqual({ archivedAt: null });
 });
 
+test('it leaves the archive whole when a stale candidate runs after the archive landed', async () => {
+  const ctx = await setupTest();
+  const user = await createTestUser(ctx.db, { password: null });
+  const avatar = await createAvatarRow(ctx.db, { id: 'avatar_stale', userId: user.user.id });
+
+  await createActivityRow(ctx.db, {
+    appendedHead: 2,
+    avatarId: avatar.id,
+    id: 'act_stale',
+    status: 'stopped',
+    verifiedAt: new Date('2026-01-01T00:00:00.000Z'),
+    verifiedHead: 2,
+  });
+
+  await ctx.db
+    .insertInto('activityCheckpoints')
+    .values([
+      { activityId: 'act_stale', hash: 'hash_1', payload: {}, prevHash: 'hash_0', version: 1 },
+      { activityId: 'act_stale', hash: 'hash_2', payload: {}, prevHash: 'hash_1', version: 2 },
+    ])
+    .execute();
+
+  await archiveActivityCheckpoints(
+    ctx,
+    { activityID: 'act_stale', appendedHead: 2, avatarID: avatar.id },
+    new Date('2026-01-03T00:00:00.000Z'),
+  );
+
+  const outcome = await archiveActivityCheckpoints(
+    ctx,
+    { activityID: 'act_stale', appendedHead: 2, avatarID: avatar.id },
+    new Date('2026-01-03T00:00:01.000Z'),
+  );
+
+  const archive = await ctx.bucket.file('checkpoints/avatar_stale/act_stale.jsonl.gz').bytes();
+
+  expect(outcome).toStrictEqual({ kind: 'changed' });
+  expect(parseCheckpointArchive(archive).map((row) => row.version)).toStrictEqual([1, 2]);
+});
+
+test('it keys the archive of an activity id that holds a slash', async () => {
+  const ctx = await setupTest();
+  const user = await createTestUser(ctx.db, { password: null });
+  const avatar = await createAvatarRow(ctx.db, { id: 'avatar_slash', userId: user.user.id });
+
+  await createActivityRow(ctx.db, {
+    appendedHead: 1,
+    avatarId: avatar.id,
+    id: 'run/1',
+    status: 'stopped',
+    verifiedAt: new Date('2026-01-01T00:00:00.000Z'),
+    verifiedHead: 1,
+  });
+
+  await ctx.db
+    .insertInto('activityCheckpoints')
+    .values({ activityId: 'run/1', hash: 'hash_1', payload: {}, prevHash: 'hash_0', version: 1 })
+    .execute();
+
+  await archiveActivityCheckpoints(
+    ctx,
+    { activityID: 'run/1', appendedHead: 1, avatarID: avatar.id },
+    new Date('2026-01-03T00:00:00.000Z'),
+  );
+
+  const exists = await ctx.bucket.exists('checkpoints/avatar_slash/run%2F1.jsonl.gz');
+
+  expect(exists).toBeTrue();
+});
+
 test('it deletes nothing when the head moved after it was selected', async () => {
   const ctx = await setupTest();
   const user = await createTestUser(ctx.db, { password: null });
