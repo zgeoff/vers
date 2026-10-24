@@ -1,5 +1,4 @@
 import type { ActivityData } from '@vers/contract-activity';
-import { writeActivityStart } from '../submission/write-activity-start';
 import { writeLastStartedActivity } from '../submission/write-last-started-activity';
 import { handleSetActivityMessage } from './handle-set-activity-message';
 import { loadActivityStart } from './load-activity-start';
@@ -70,7 +69,7 @@ export async function runStartFlow(
 
   // written before install: a crash here still leaves a recoverable activity start for a later
   // reconcile
-  await writeActivityStart(row);
+  await context.writeActivityStart(row);
 
   // durable so the row's own predecessor reference stays recoverable across a worker reload; a
   // later start for this avatar reads it back as its own predecessor

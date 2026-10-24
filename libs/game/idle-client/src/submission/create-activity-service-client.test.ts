@@ -1,67 +1,34 @@
-import { expect, test } from 'bun:test';
-import { createMockActivityData } from '@vers/contract-activity/test-utils';
+import { expect, mock, test } from 'bun:test';
 import { HttpResponse, http } from 'msw';
 import { server } from '../mocks/node';
 import { createActivityServiceClient } from './create-activity-service-client';
-import { readAllActivityStarts } from './read-all-activity-starts';
-import { writeActivityStart } from './write-activity-start';
 
-test('it discards the undelivered offline work when the proxy reports the session superseded', async () => {
+test('it reports a superseded session when the proxy marks the refusal', async () => {
   server.use(
     http.post(`${self.location.origin}/api/rpc/activity/stopActivity`, () =>
       HttpResponse.json(null, { headers: { 'x-session-superseded': '1' }, status: 401 }),
     ),
   );
 
-  await writeActivityStart(createMockActivityData());
-
-  const client = createActivityServiceClient();
+  const onSessionSuperseded = mock(() => {});
+  const client = createActivityServiceClient({ onSessionSuperseded });
 
   await expect(client.stopActivity({ avatarID: 'avatar-1' })).toReject();
 
-  const remaining = await readAllActivityStarts();
-
-  expect(remaining).toStrictEqual([]);
+  expect(onSessionSuperseded).toHaveBeenCalledOnce();
 });
 
-test('it keeps the undelivered offline work when a refusal carries no superseded marker', async () => {
+test('it reports nothing when a refusal carries no superseded marker', async () => {
   server.use(
     http.post(`${self.location.origin}/api/rpc/activity/stopActivity`, () =>
       HttpResponse.json(null, { status: 401 }),
     ),
   );
 
-  const start = createMockActivityData();
-
-  await writeActivityStart(start);
-
-  const client = createActivityServiceClient();
+  const onSessionSuperseded = mock(() => {});
+  const client = createActivityServiceClient({ onSessionSuperseded });
 
   await expect(client.stopActivity({ avatarID: 'avatar-1' })).toReject();
 
-  const remaining = await readAllActivityStarts();
-
-  expect(remaining).toStrictEqual([start]);
-});
-
-test('it discards again when a later takeover marks the same worker a second time', async () => {
-  server.use(
-    http.post(`${self.location.origin}/api/rpc/activity/stopActivity`, () =>
-      HttpResponse.json(null, { headers: { 'x-session-superseded': '1' }, status: 401 }),
-    ),
-  );
-
-  const client = createActivityServiceClient();
-
-  await writeActivityStart(createMockActivityData());
-
-  await expect(client.stopActivity({ avatarID: 'avatar-1' })).toReject();
-
-  await writeActivityStart(createMockActivityData());
-
-  await expect(client.stopActivity({ avatarID: 'avatar-2' })).toReject();
-
-  const remaining = await readAllActivityStarts();
-
-  expect(remaining).toStrictEqual([]);
+  expect(onSessionSuperseded).not.toHaveBeenCalled();
 });

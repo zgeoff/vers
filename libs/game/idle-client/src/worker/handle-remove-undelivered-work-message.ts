@@ -1,5 +1,4 @@
-import { removeAvatarOfflineWork } from '../submission/remove-avatar-offline-work';
-import { resetSimulation } from './reset-simulation';
+import { buildDeferred } from './build-deferred';
 import type { WorkerContext } from './types';
 import type { UndeliveredWorkInput } from './worker-contract';
 
@@ -7,7 +6,12 @@ export async function handleRemoveUndeliveredWorkMessage(
   context: WorkerContext,
   input: Readonly<UndeliveredWorkInput>,
 ): Promise<void> {
-  await removeAvatarOfflineWork(input.avatarIDs);
+  const deferred = buildDeferred<void>();
 
-  resetSimulation(context);
+  context.getLifecycle().send({
+    trigger: { avatarIDs: input.avatarIDs, deferred, kind: 'sign-out' },
+    type: 'DISCARD',
+  });
+
+  await deferred.promise;
 }

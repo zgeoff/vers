@@ -12,6 +12,7 @@ import { createCheckpointSubmitter } from '../submission/create-checkpoint-submi
 import { JournalWriteError } from '../submission/journal-write-error';
 import { readFailureActionCache } from '../submission/read-failure-action-cache';
 import type { ActivityServiceClient, CheckpointJournal } from '../submission/types';
+import { writeActivityStart } from '../submission/write-activity-start';
 import { WORKER_TO_CLIENT_CHANNEL } from '../transport/constants';
 import { WorkerMessageType } from '../types';
 import type { RewardSlotLedgerEntry } from '../types';
@@ -53,7 +54,6 @@ interface CreateWorkerRuntimeOptions {
 export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): WorkerRuntime {
   const timestep = options.timestep ?? SIMULATION_TIMESTEP_MS;
   const now = options.now ?? (() => performance.now());
-  const client = options.client ?? createActivityServiceClient();
 
   const broadcastChannel = new BroadcastChannel(WORKER_TO_CLIENT_CHANNEL);
 
@@ -134,6 +134,14 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
   // safe only because nothing calls either accessor until after both are assigned further down
   const getLifecycle = (): ActorRefFromLogic<typeof workerLifecycleMachine> => lifecycleActor;
   const getSubmitter = (): ReturnType<typeof createCheckpointSubmitter> => submitter;
+
+  const client =
+    options.client ??
+    createActivityServiceClient({
+      onSessionSuperseded: () => {
+        getLifecycle().send({ trigger: { kind: 'takeover' }, type: 'DISCARD' });
+      },
+    });
 
   const context: WorkerContext = {
     advanceStopScope: () => {
@@ -219,6 +227,7 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
       tickingStopped = true;
     },
     updateConnectivity,
+    writeActivityStart,
   };
 
   const lifecycleActor = createActor(workerLifecycleMachine, {

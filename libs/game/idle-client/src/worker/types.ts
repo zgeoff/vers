@@ -108,7 +108,17 @@ export interface WorkerContext {
   readonly stopTicking: () => void;
 
   readonly updateConnectivity: (online: boolean) => void;
+
+  readonly writeActivityStart: (row: Readonly<ActivityData>) => Promise<void>;
 }
+
+export type DiscardTrigger =
+  | {
+      readonly kind: 'sign-out';
+      readonly avatarIDs: ReadonlyArray<string>;
+      readonly deferred: Deferred<void>;
+    }
+  | { readonly kind: 'takeover' };
 
 export type PendingFlowRequest =
   | {
@@ -132,7 +142,12 @@ export type PendingFlowRequest =
       readonly activity: Readonly<ActivityData>;
       readonly deferred: Deferred<void>;
     }
+  | { readonly kind: 'discard'; readonly trigger: DiscardTrigger }
   | { readonly kind: 'eviction'; readonly activityID: string };
+
+export type DiscardOutcome =
+  | { readonly kind: 'done' }
+  | { readonly kind: 'failed'; readonly error: unknown };
 
 export type PendingFlowRequestOf<K extends PendingFlowRequest['kind']> = Extract<
   PendingFlowRequest,
@@ -141,6 +156,7 @@ export type PendingFlowRequestOf<K extends PendingFlowRequest['kind']> = Extract
 
 type WorkerLifecyclePhase =
   | 'continuing'
+  | 'discarding'
   | 'evicting'
   | 'idle'
   | 'resyncing'
@@ -184,6 +200,7 @@ export type WorkerLifecycleEvent =
       readonly activity: Readonly<ActivityData>;
       readonly deferred: Deferred<void>;
     }
+  | { readonly type: 'DISCARD'; readonly trigger: DiscardTrigger }
   | { readonly type: 'OFFLINE' }
   | { readonly type: 'ONLINE' }
   | {

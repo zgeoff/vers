@@ -11,7 +11,7 @@ export function applyEscapedRequest(
 
   const request = context.currentRequest;
 
-  if (request === null || request.kind === 'eviction') {
+  if (request === null || request.kind === 'eviction' || request.kind === 'discard') {
     return;
   }
 

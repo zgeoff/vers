@@ -1,8 +1,54 @@
 import { expect, mock, test } from 'bun:test';
+import type { ActivityData } from '@vers/contract-activity';
+import { createMockActivityData } from '@vers/contract-activity/test-utils';
 import { createSimulation } from '@vers/idle-core';
+import { waitFor } from '@vers/test-utils';
+import { HttpResponse, http } from 'msw';
+import { server } from '../mocks/node';
 import type { CheckpointSubmitter } from '../submission/create-checkpoint-submitter';
+import { readAllActivityStarts } from '../submission/read-all-activity-starts';
+import { writeActivityStart } from '../submission/write-activity-start';
 import { WorkerMessageType } from '../types';
 import { createStubWorkerContext } from './create-stub-worker-context';
+
+test('it writes a start row through the injected writer', async () => {
+  const writeActivityStartStub = mock(async (_row: Readonly<ActivityData>) => {});
+  const context = createStubWorkerContext({ writeActivityStart: writeActivityStartStub });
+  const row = createMockActivityData();
+
+  await context.writeActivityStart(row);
+
+  expect(writeActivityStartStub).toHaveBeenCalledExactlyOnceWith(row);
+});
+
+test('it writes a start row to the outbox by default', async () => {
+  const context = createStubWorkerContext();
+  const row = createMockActivityData();
+
+  await context.writeActivityStart(row);
+
+  expect(readAllActivityStarts()).resolves.toStrictEqual([row]);
+});
+
+test('it discards the outbox when its proxy client meets the superseded marker', async () => {
+  server.use(
+    http.post(`${self.location.origin}/api/rpc/activity/getCurrentActivity`, () =>
+      HttpResponse.json(null, { headers: { 'x-session-superseded': '1' }, status: 401 }),
+    ),
+  );
+
+  await writeActivityStart(createMockActivityData());
+
+  const context = createStubWorkerContext({ activityProxy: true });
+
+  await expect(context.getClient().getCurrentActivity({ avatarID: 'avatar-1' })).toReject();
+
+  await waitFor(async () => {
+    const remaining = await readAllActivityStarts();
+
+    expect(remaining).toStrictEqual([]);
+  });
+});
 
 test('it creates a context with no broadcasts and an empty simulation by default', () => {
   const context = createStubWorkerContext();

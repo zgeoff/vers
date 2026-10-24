@@ -149,11 +149,12 @@ display.
 
 One writer worker per browser profile owns every activity transition; the tabs express intent and
 read the worker's outcome, so no tab drives the activity service itself. The worker is an explicit
-state machine that runs one flow at a time, so no two flows install over each other. A resync reads
-the server's confirmed state and decides what to fast-forward. A start waits on the worker's first
-resync of its avatar since the worker booted, and the worker refuses the start while that resync
-fails or its rebuilt stream diverges from the server's; the next resync that completes lifts the
-refusal.
+state machine that runs one flow at a time, so no two flows install over each other. The outbox
+discard on a sign-out confirm or a takeover is a flow as well, so it waits for the flow in flight,
+and no activity start that flow writes survives the discard. A resync reads the server's confirmed
+state and decides what to fast-forward. A start waits on the worker's first resync of its avatar
+since the worker booted, and the worker refuses the start while that resync fails or its rebuilt
+stream diverges from the server's; the next resync that completes lifts the refusal.
 
 Stopping does not queue behind the active flow: it halts the local simulation at once and needs no
 network. The worker then flushes the activity's earned checkpoints and sends an idempotent stop
