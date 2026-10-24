@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/oxfmt/configuration_schema.json",
-  "ignorePatterns": ["bun.lock", "apps/web/public/mockServiceWorker.js"],
+  "ignorePatterns": ["bun.lock", "apps/web/public/mockServiceWorker.js", "apps/web-e2e/vendor/**"],
   "proseWrap": "always",
   "semi": true,
   "trailingComma": "all",

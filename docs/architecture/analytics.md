@@ -25,6 +25,11 @@ ad-blocker lists that match Umami's default script name and third-party analytic
 The `umami` MCP server (`.mcp.json`, `@zgeoff/umami-mcp` launched with the dashboard credentials
 from the `vers` vault's `umami` item) lets agent sessions query the dashboard's stats.
 
+The tracker runs once per page load. It has no guard against a second run: each run sends a pageview
+and hooks the History API again, so a re-appended tracker tag counts every later route change once
+more. TanStack Router re-appends a head script on a client navigation that changes the head tags,
+and a bun patch under `patches/` keeps the tag in place instead.
+
 Route changes auto-track as pageviews through the tracker's History API hooks. A play session parked
 on one route for hours reads as a single pageview. Gameplay engagement is a product-analytics
 question, and pageview counts are not bent toward answering it.

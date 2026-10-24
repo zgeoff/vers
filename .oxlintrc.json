@@ -270,6 +270,7 @@
     "**/*.json",
     "**/*timestamp*.mjs",
     "**/mockServiceWorker.js",
+    "apps/web-e2e/vendor/**",
     "**/.react-router/**",
     "**/infra/sdks/**",
     "**/apps/web/src/styled-system/**",
