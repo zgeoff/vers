@@ -7,6 +7,7 @@ import { buildDevDBName } from '../postgres/build-dev-db-name';
 import { buildDevDSN } from '../postgres/build-dev-dsn';
 import { readVaultDSN } from '../postgres/read-vault-dsn';
 import { renderDBHubTOML } from '../postgres/render-dbhub-toml';
+import { bindToParent } from '../utils/bind-to-parent';
 
 async function runPostgresMCP() {
   const branchOutput = await $`git rev-parse --abbrev-ref HEAD`.text();
@@ -36,6 +37,8 @@ async function runPostgresMCP() {
   const dbhub = Bun.spawn([dbhubBin, '--transport', 'stdio', '--config', configPath], {
     stdio: ['inherit', 'inherit', 'inherit'],
   });
+
+  bindToParent(dbhub);
 
   const exitCode = await dbhub.exited;
 

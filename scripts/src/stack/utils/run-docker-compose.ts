@@ -1,3 +1,4 @@
+import { bindToParent } from '../../utils/bind-to-parent';
 import { DOCKER_COMPOSE_FILE } from '../consts';
 
 export async function runDockerCompose(args: ReadonlyArray<string>): Promise<void> {
@@ -6,6 +7,8 @@ export async function runDockerCompose(args: ReadonlyArray<string>): Promise<voi
     env: process.env,
     stdio: ['inherit', 'inherit', 'inherit'],
   });
+
+  bindToParent(compose);
 
   const exitCode = await compose.exited;
 

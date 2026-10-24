@@ -1,6 +1,7 @@
 import { join } from 'node:path';
 import { applyMigrations } from '@vers/db';
 import postgres from 'postgres';
+import { bindToParent } from '../utils/bind-to-parent';
 import { buildDevDSN } from './build-dev-dsn';
 
 export async function refreshDevBase(maintenanceDSN: string, repoRoot: string): Promise<void> {
@@ -31,6 +32,8 @@ export async function refreshDevBase(maintenanceDSN: string, repoRoot: string): 
     env: { ...process.env, DATABASE_URL: devBaseDSN },
     stdio: ['inherit', 'inherit', 'inherit'],
   });
+
+  bindToParent(seed);
 
   const seedExitCode = await seed.exited;
 

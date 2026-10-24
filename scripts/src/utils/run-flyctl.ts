@@ -1,3 +1,5 @@
+import { bindToParent } from './bind-to-parent';
+
 interface FlyctlInterrupt {
   readonly afterMs: number;
   readonly graceMs: number;
@@ -29,6 +31,10 @@ export async function runFlyctl(
     stderr: output,
     stdout: output,
   });
+
+  const parentExitSignal: NodeJS.Signals = interrupt === undefined ? 'SIGTERM' : 'SIGINT';
+
+  bindToParent(flyctl, parentExitSignal);
 
   const forceKill =
     interrupt === undefined
