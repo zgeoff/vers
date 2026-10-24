@@ -1,10 +1,12 @@
 import { createORPCClient } from '@orpc/client';
 import { RPCLink } from '@orpc/client/fetch';
 import { activityContract } from '@vers/contract-activity';
-import { makeIsRetryable, makeRetryInterceptor } from '@vers/service-utils/orpc';
+import {
+  SESSION_SUPERSEDED_HEADER,
+  makeIsRetryable,
+  makeRetryInterceptor,
+} from '@vers/service-utils/orpc';
 import type { ActivityCallContext, ActivityServiceClient } from './types';
-
-const SESSION_SUPERSEDED_HEADER = 'x-session-superseded';
 
 interface CreateActivityServiceClientHooks {
   readonly onSessionSuperseded: () => void;

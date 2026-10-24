@@ -9,8 +9,9 @@ import { createMockActivityInput, createMockAvatarData } from '@vers/idle-core/t
 import { createAuthedServiceClient, createViewer } from '@vers/mock-services';
 import { mockActivityService } from '@vers/mock-services/activity';
 import * as db from '@vers/mock-services/db';
+import { buildSessionSupersededResponse } from '@vers/service-utils/orpc';
 import { waitFor } from '@vers/test-utils';
-import { HttpResponse, http } from 'msw';
+import { http } from 'msw';
 import invariant from 'tiny-invariant';
 import { createActor, fromPromise } from 'xstate';
 import { writeContentDocumentCache } from '../content/write-content-document-cache';
@@ -35,6 +36,7 @@ import { createMockProgressCheckpoint } from '../test-utils/factories/create-moc
 import { WorkerMessageType } from '../types';
 import { buildDeferred } from './build-deferred';
 import { handleInitializeMessage } from './handle-initialize-message';
+import { handleRemoveUndeliveredWorkMessage } from './handle-remove-undelivered-work-message';
 import { handleReportOnlineMessage } from './handle-report-online-message';
 import { handleStartActivityMessage } from './handle-start-activity-message';
 import { handleStopActivityMessage } from './handle-stop-activity-message';
@@ -160,6 +162,7 @@ test('it reports resyncing while a resync flow is in flight', async () => {
       collectActivityStates: () => [],
       isEvicted: () => false,
       removeEviction: () => {},
+      removeRegistrations: () => {},
     },
   });
 
@@ -258,6 +261,7 @@ test('it queues a start arriving during a resync and runs it after', async () =>
       collectActivityStates: () => [],
       isEvicted: () => false,
       removeEviction: () => {},
+      removeRegistrations: () => {},
     },
   });
 
@@ -417,6 +421,7 @@ test("it starts without another resync when the resync it queued behind recorded
       collectActivityStates: () => [],
       isEvicted: () => false,
       removeEviction: () => {},
+      removeRegistrations: () => {},
     },
   });
 
@@ -491,6 +496,7 @@ test("it resyncs the start's avatar once an earlier resync for another avatar ha
       collectActivityStates: () => [],
       isEvicted: () => false,
       removeEviction: () => {},
+      removeRegistrations: () => {},
     },
   });
 
@@ -551,6 +557,7 @@ test('it builds the prerequisite resync at the head of the queue, so a stop scop
       collectActivityStates: () => [],
       isEvicted: () => false,
       removeEviction: () => {},
+      removeRegistrations: () => {},
     },
   });
 
@@ -894,6 +901,7 @@ test('it drops a non-claiming resync while one is running', async () => {
       collectActivityStates: () => [],
       isEvicted: () => false,
       removeEviction: () => {},
+      removeRegistrations: () => {},
     },
   });
 
@@ -946,6 +954,7 @@ test('it holds a claiming resync and runs it after the in-flight one settles', a
       collectActivityStates: () => [],
       isEvicted: () => false,
       removeEviction: () => {},
+      removeRegistrations: () => {},
     },
   });
 
@@ -999,6 +1008,7 @@ test('it keeps only the latest claiming avatar when two arrive', async () => {
       collectActivityStates: () => [],
       isEvicted: () => false,
       removeEviction: () => {},
+      removeRegistrations: () => {},
     },
   });
 
@@ -1059,6 +1069,7 @@ test('it settles the first caller only after the held follow-up runs', async () 
       collectActivityStates: () => [],
       isEvicted: () => false,
       removeEviction: () => {},
+      removeRegistrations: () => {},
     },
   });
 
@@ -1115,6 +1126,7 @@ test('it captures a requeued claim signals at requeue rather than at its arrival
       collectActivityStates: () => [],
       isEvicted: () => false,
       removeEviction: () => {},
+      removeRegistrations: () => {},
     },
   });
 
@@ -1179,6 +1191,7 @@ test('it accepts a later resync after a resync flow faults', async () => {
       collectActivityStates: () => [],
       isEvicted: () => false,
       removeEviction: () => {},
+      removeRegistrations: () => {},
     },
   });
 
@@ -1325,6 +1338,7 @@ test('it runs a start queued during an in-flight resync before a held claim requ
       collectActivityStates: () => [],
       isEvicted: () => false,
       removeEviction: () => {},
+      removeRegistrations: () => {},
     },
   });
 
@@ -1404,6 +1418,7 @@ test('it drops a non-claiming resync arriving while a requeued claim is running'
       collectActivityStates: () => [],
       isEvicted: () => false,
       removeEviction: () => {},
+      removeRegistrations: () => {},
     },
   });
 
@@ -1473,6 +1488,7 @@ test('it holds a claiming resync arriving while a requeued claim is running', as
       collectActivityStates: () => [],
       isEvicted: () => false,
       removeEviction: () => {},
+      removeRegistrations: () => {},
     },
   });
 
@@ -1780,6 +1796,109 @@ test("it attaches a second tab's start to the writer's live run without a mint",
   expect(context.getBroadcasts()).toStrictEqual([]);
 });
 
+test('it numbers the next checkpoint from the server head once a takeover discarded the queue and the run reattaches', async () => {
+  const viewer = await createViewer({ avatar: { xp: 400 } });
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
+
+  const submitter = createCheckpointSubmitter({
+    client,
+    onInvalid: () => {},
+    scheduleFlush: () => {},
+  });
+
+  const context = createStubWorkerContext({
+    bundledEngineHash: 'engine_hash_matrix',
+    client,
+    submitter,
+  });
+
+  const ctx = setupTest();
+
+  await ctx.setupStartableNode(viewer.avatar.id);
+
+  const live = await db.activityCollection.create({
+    appendedHead: 1,
+    avatarID: viewer.avatar.id,
+    buildSnapshot: { level: buildLevelFromXP(400), xp: 400 },
+    scopeID: '0_0',
+    seed: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaa6072',
+    startedAt: new Date(),
+  });
+
+  await handleReportOnlineMessage(context, { avatarID: viewer.avatar.id, claim: true });
+
+  // a checkpoint the takeover discards before it ever reaches the server
+  await submitter.submit(
+    live.id,
+    createMockProgressCheckpoint({ nextSeed: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbb6072' }),
+  );
+
+  context.getLifecycle().send({ trigger: { kind: 'takeover' }, type: 'DISCARD' });
+
+  await waitFor(() => {
+    expect(context.getLifecycle().getSnapshot().context.currentRequest).toBeNull();
+  });
+
+  await handleReportOnlineMessage(context, { avatarID: viewer.avatar.id, claim: true });
+
+  const version = await submitter.submit(
+    live.id,
+    createMockProgressCheckpoint({ nextSeed: 'cccccccccccccccccccccccccccc6072' }),
+  );
+
+  expect(context.getActivity()?.id).toBe(live.id);
+  expect(version).toBe(2);
+});
+
+test('it numbers the next checkpoint from the server head once a sign-out discarded the queue and the run reattaches', async () => {
+  const viewer = await createViewer({ avatar: { xp: 400 } });
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
+
+  const submitter = createCheckpointSubmitter({
+    client,
+    onInvalid: () => {},
+    scheduleFlush: () => {},
+  });
+
+  const context = createStubWorkerContext({
+    bundledEngineHash: 'engine_hash_matrix',
+    client,
+    submitter,
+  });
+
+  const ctx = setupTest();
+
+  await ctx.setupStartableNode(viewer.avatar.id);
+
+  const live = await db.activityCollection.create({
+    appendedHead: 1,
+    avatarID: viewer.avatar.id,
+    buildSnapshot: { level: buildLevelFromXP(400), xp: 400 },
+    scopeID: '0_0',
+    seed: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaa6072',
+    startedAt: new Date(),
+  });
+
+  await handleReportOnlineMessage(context, { avatarID: viewer.avatar.id, claim: true });
+
+  // a checkpoint the sign-out discards before it ever reaches the server
+  await submitter.submit(
+    live.id,
+    createMockProgressCheckpoint({ nextSeed: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbb6072' }),
+  );
+
+  await handleRemoveUndeliveredWorkMessage(context, { avatarIDs: [viewer.avatar.id] });
+  await handleReportOnlineMessage(context, { avatarID: viewer.avatar.id, claim: true });
+
+  const version = await submitter.submit(
+    live.id,
+    createMockProgressCheckpoint({ nextSeed: 'cccccccccccccccccccccccccccc6072' }),
+  );
+
+  expect(context.getActivity()?.id).toBe(live.id);
+  expect(version).toBe(2);
+});
+
 test('it clears the run and mints behind it when the worker is evicted while a run is live', async () => {
   const viewer = await createViewer({ avatar: { xp: 400 } });
   const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
@@ -1911,10 +2030,7 @@ test('it discards the outbox on a takeover from another device and mints from th
 
   // another device took the account over: app-web refuses every call with the superseded marker
   server.use(
-    http.all(
-      `${self.location.origin}/api/rpc/activity/*`,
-      () => new Response(null, { headers: { 'x-session-superseded': '1' }, status: 401 }),
-    ),
+    http.all(`${self.location.origin}/api/rpc/activity/*`, () => buildSessionSupersededResponse()),
   );
 
   await handleReportOnlineMessage(context, { avatarID: viewer.avatar.id, claim: false });
@@ -2022,10 +2138,7 @@ test('it delivers no start that a continuation held at its write mints, once a t
 
   // another device took the account over: app-web refuses every call with the superseded marker
   server.use(
-    http.all(
-      `${self.location.origin}/api/rpc/activity/*`,
-      () => new Response(null, { headers: { 'x-session-superseded': '1' }, status: 401 }),
-    ),
+    http.all(`${self.location.origin}/api/rpc/activity/*`, () => buildSessionSupersededResponse()),
   );
 
   await expect(context.getClient().getCurrentActivity({ avatarID: viewer.avatar.id })).toReject();
@@ -2089,7 +2202,7 @@ test('it queues one takeover discard behind the flow in flight however many call
 test('it discards again when a later takeover marks the worker after an earlier discard ran', async () => {
   server.use(
     http.post(`${self.location.origin}/api/rpc/activity/stopActivity`, () =>
-      HttpResponse.json(null, { headers: { 'x-session-superseded': '1' }, status: 401 }),
+      buildSessionSupersededResponse(),
     ),
   );
 

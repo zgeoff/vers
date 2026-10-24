@@ -10,5 +10,6 @@ export function createStubSubmitter(): CheckpointSubmitter {
     submit: mock(() => Promise.resolve<number | undefined>(undefined)),
     isEvicted: mock(() => false),
     removeEviction: mock(() => {}),
+    removeRegistrations: mock(() => {}),
   };
 }

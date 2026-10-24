@@ -10,7 +10,10 @@ export default defineConfig<E2EOptions>({
   fullyParallel: true,
   outputDir: '.stack-test-results',
   testDir: './specs',
-  testIgnore: /cross-engine-corpus\.spec\.ts/u,
+
+  // the device-state specs seed their live run through the mock activity service, which the real
+  // stack does not run
+  testIgnore: /(?:cross-engine-corpus|device-[a-z-]+)\.spec\.ts/u,
   projects: [
     {
       name: 'chromium',

@@ -286,6 +286,7 @@ test('it broadcasts a reward-slot ledger message for each submitted checkpoint t
     collectActivityStates: () => [],
     isEvicted: () => false,
     removeEviction: () => {},
+    removeRegistrations: () => {},
   };
 
   const context = createStubWorkerContext({ submitter });
