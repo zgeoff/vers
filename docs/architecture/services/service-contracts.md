@@ -114,6 +114,11 @@ attempt the server link makes is bounded, and a GET or HEAD procedure is resent 
 same-origin `/api/rpc/$service` proxy, so the session cookie rides along, since services are not
 reachable outside the private mesh ([overview](../overview.md)).
 
+The proxy mints its token for whichever browser calls it, and a service trusts that token for every
+procedure it exposes. The proxy therefore forwards only the services that browser code calls, and
+answers a call to any other service with a 404. Credential, session, and verification procedures
+stay reachable only from the edge's server functions, which run their own checks first.
+
 ## Errors and the trust boundary
 
 Authentication fails in two classes, kept deliberately separate, and only one is a contract error.
