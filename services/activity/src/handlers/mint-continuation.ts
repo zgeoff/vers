@@ -1,10 +1,10 @@
 import type { BuildSnapshot } from '@vers/contract-activity';
-import { buildStartHash } from '@vers/contract-activity';
 import type { DB } from '@vers/db';
 import { buildLevelFromXP } from '@vers/idle-core';
 import type { Kysely } from 'kysely';
 import { loadOptimisticBuild } from '../load-optimistic-build';
 import { ContinuationBailError } from './continuation-bail-error';
+import { mintActivityRoot } from './mint-activity-root';
 import type { MintedContinuation, PinnedActivityContext, RunContinuationInput } from './types';
 
 export async function mintContinuation(
@@ -37,8 +37,6 @@ export async function mintContinuation(
     .where('scopeId', '=', pinned.scopeId)
     .executeTakeFirstOrThrow();
 
-  const seed = chain.appendedNextSeed;
-
   const optimistic = await loadOptimisticBuild(trx, pinned.avatarId);
 
   const buildSnapshot: BuildSnapshot = {
@@ -61,38 +59,25 @@ export async function mintContinuation(
     });
   }
 
-  const startHash = buildStartHash({
+  const row = await mintActivityRoot(trx, {
+    activityID: continuation.id,
+    avatarID: pinned.avatarId,
+    buildSnapshot,
     contentVersion: pinned.contentVersion,
     encounterNode: pinned.encounterNode,
     keyVersion: pinned.keyVersion,
-    seed,
+    playedAt: null,
+    predecessorActivityID: input.targetActivityID,
+    scopeID: pinned.scopeId,
+    scopeType: pinned.scopeType,
+    secretRef: pinned.secretRef,
+    secretVersion: pinned.secretVersion,
+    seed: chain.appendedNextSeed,
     simVersion: pinned.simVersion,
+    startChainIndex: chain.appendedChainIndex,
+    startKey: continuation.startKey,
+    writerSessionID: input.actingSessionID,
   });
-
-  const row = await trx
-    .insertInto('activities')
-    .values({
-      avatarId: pinned.avatarId,
-      buildSnapshot,
-      contentVersion: pinned.contentVersion,
-      encounterNode: pinned.encounterNode,
-      id: continuation.id,
-      keyVersion: pinned.keyVersion,
-      lastHash: startHash,
-      predecessorActivityId: input.targetActivityID,
-      scopeId: pinned.scopeId,
-      scopeType: pinned.scopeType,
-      secretRef: pinned.secretRef,
-      secretVersion: pinned.secretVersion,
-      seed,
-      simVersion: pinned.simVersion,
-      startChainIndex: chain.appendedChainIndex,
-      startHash,
-      startKey: continuation.startKey,
-      writerSessionId: input.actingSessionID,
-    })
-    .returningAll()
-    .executeTakeFirstOrThrow();
 
   return { mintOutcome: 'minted', row };
 }

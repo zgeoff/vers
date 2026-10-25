@@ -1023,6 +1023,164 @@ test('it admits a client-minted activityStart under a valid client head, derivin
   });
 });
 
+test('it builds the same root row on admission as the continuation mint builds from the same inputs', async () => {
+  await using ctx = await setupTest();
+
+  const current = await createSimVersionRow(ctx.db);
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id, xp: 0 });
+  const chain = await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
+  const activityID = `act_${createId()}`;
+
+  const derived = ctx.deriveActivityStart({
+    avatarID: avatar.id,
+    avatarSeed: avatar.seed,
+    contentVersion: '2',
+    document: createMockContentDocument({ contentVersion: '2' }),
+    scopeID: '0_0',
+    seed: chain.appendedNextSeed,
+    simVersion: current.engineHash,
+  });
+
+  const activityStart = createMockOfflineActivityStartSubmission({
+    avatarID: avatar.id,
+    buildSnapshot: { level: buildLevelFromXP(0), xp: 0 },
+    contentVersion: '2',
+    scopeID: '0_0',
+    scopeType: 'world_map_node',
+    seed: chain.appendedNextSeed,
+    simVersion: current.engineHash,
+    startChainIndex: 0,
+    startHash: derived.startHash,
+  });
+
+  const continuation = createMockCatchUpContinuation({
+    buildSnapshot: { level: buildLevelFromXP(40), xp: 40 },
+    checkpoints: createMockCheckpointBatch({
+      finalPayloadOverrides: { rewards: { xp: 40 }, type: 'completed' },
+      startChainIndex: 0,
+      startPrevHash: derived.startHash,
+      startVersion: 1,
+    }),
+    startKey: `continue_${activityID}`,
+  });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  await client.advanceActivity({
+    activityID,
+    continuations: [continuation],
+    expectedHead: 0,
+    activityStart,
+  });
+
+  const minted = await ctx.db
+    .deleteFrom('activities')
+    .where('id', '=', continuation.id)
+    .returningAll()
+    .executeTakeFirstOrThrow();
+
+  await client.advanceActivity({
+    activityID: continuation.id,
+    continuations: [],
+    expectedHead: 0,
+    activityStart: {
+      avatarID: avatar.id,
+      buildSnapshot: continuation.buildSnapshot,
+      contentVersion: '2',
+      playedAt: null,
+      predecessorActivityID: activityID,
+      scopeID: '0_0',
+      scopeType: 'world_map_node',
+      seed: minted.seed,
+      simVersion: current.engineHash,
+      startChainIndex: minted.startChainIndex,
+      startHash: minted.startHash,
+      startKey: continuation.startKey,
+    },
+  });
+
+  const admitted = await ctx.db
+    .selectFrom('activities')
+    .selectAll()
+    .where('id', '=', continuation.id)
+    .executeTakeFirstOrThrow();
+
+  expect(admitted).toStrictEqual({
+    ...minted,
+    createdAt: expect.toBeValidDate(),
+    startedAt: expect.toBeValidDate(),
+    updatedAt: expect.toBeValidDate(),
+  });
+});
+
+test("it keeps the client's played time on an admitted start and stamps none on a minted continuation", async () => {
+  await using ctx = await setupTest();
+
+  const current = await createSimVersionRow(ctx.db);
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id, xp: 0 });
+  const chain = await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
+  const activityID = `act_${createId()}`;
+
+  const derived = ctx.deriveActivityStart({
+    avatarID: avatar.id,
+    avatarSeed: avatar.seed,
+    contentVersion: '2',
+    document: createMockContentDocument({ contentVersion: '2' }),
+    scopeID: '0_0',
+    seed: chain.appendedNextSeed,
+    simVersion: current.engineHash,
+  });
+
+  const activityStart = createMockOfflineActivityStartSubmission({
+    avatarID: avatar.id,
+    buildSnapshot: { level: buildLevelFromXP(0), xp: 0 },
+    contentVersion: '2',
+    playedAt: new Date('2026-03-14T09:30:00.000Z'),
+    scopeID: '0_0',
+    scopeType: 'world_map_node',
+    seed: chain.appendedNextSeed,
+    simVersion: current.engineHash,
+    startChainIndex: 0,
+    startHash: derived.startHash,
+  });
+
+  const continuation = createMockCatchUpContinuation({
+    buildSnapshot: { level: buildLevelFromXP(40), xp: 40 },
+    checkpoints: createMockCheckpointBatch({
+      finalPayloadOverrides: { rewards: { xp: 40 }, type: 'completed' },
+      startChainIndex: 0,
+      startPrevHash: derived.startHash,
+      startVersion: 1,
+    }),
+    startKey: `continue_${activityID}`,
+  });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  await client.advanceActivity({
+    activityID,
+    continuations: [continuation],
+    expectedHead: 0,
+    activityStart,
+  });
+
+  const rows = await ctx.db
+    .selectFrom('activities')
+    .select(['id', 'playedAt'])
+    .where('avatarId', '=', avatar.id)
+    .orderBy('startedAt', 'asc')
+    .execute();
+
+  expect(rows).toStrictEqual([
+    { id: activityID, playedAt: new Date('2026-03-14T09:30:00.000Z') },
+    { id: continuation.id, playedAt: null },
+  ]);
+});
+
 test('it mints an activity start naming a predecessor not yet on the server, stamping the reference as-is', async () => {
   await using ctx = await setupTest();
 
