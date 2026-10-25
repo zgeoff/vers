@@ -1,3 +1,4 @@
+import { canPurgeArchive } from './can-purge-archive';
 import type { CheckpointArchiveDeps, ExpiredArchive } from './types';
 
 export async function removeExpiredArchives(
@@ -11,14 +12,13 @@ export async function removeExpiredArchives(
     // the listing can be stale by now: a restore and a later sweep may have written the object again
     const head = await deps.db
       .selectFrom('activities')
-      .select('id')
+      .select('archivedAt')
       .where('id', '=', archive.activityID)
-      .where('archivedAt', '<', writtenBefore)
       .executeTakeFirst();
 
     const object = await deps.bucket.stat(archive.key);
 
-    if (head !== undefined && object.lastModified < writtenBefore) {
+    if (canPurgeArchive(head, writtenBefore) && object.lastModified < writtenBefore) {
       await deps.bucket.delete(archive.key);
 
       removed += 1;

@@ -55,14 +55,15 @@ The checkpoint table keeps growing in two ways. The tail row of every settled ac
 good, beside its head row. A rejected activity never leaves the hot tier, so its whole stream stays,
 and that part grows at the rate the verifier rejects activities.
 
-The sweep purges an object ninety days after it wrote it, and only when the activity's head row
-carries an archive stamp at least as old. It reads the stamp and the object's write time again just
-before each delete, so an archive that a restore and a later sweep wrote again stays. One sweep or
-restore runs at a time: each holds a database advisory lock for its whole run, and a run that finds
-the lock taken stops before any read. The sweep never deletes a head row, an item or a grant. The
-verifier never reads object storage. An operator restores one activity's rows for an investigation
-([checkpoint archive](../../runbooks/checkpoint-archive.md)), and the restore clears the stamp, so
-the next sweep archives the activity again.
+The sweep purges an object ninety days after it wrote it, when the activity's head row carries an
+archive stamp at least as old. An avatar's deletion removes its head rows, so the sweep also purges
+an object of that age whose head row is gone. It reads the head row and the object's write time
+again just before each delete, so an archive that a restore and a later sweep wrote again stays. One
+sweep or restore runs at a time: each holds a database advisory lock for its whole run, and a run
+that finds the lock taken stops before any read. The sweep never deletes a head row, an item or a
+grant. The verifier never reads object storage. An operator restores one activity's rows for an
+investigation ([checkpoint archive](../../runbooks/checkpoint-archive.md)), and the restore clears
+the stamp, so the next sweep archives the activity again.
 
 ## Connection strings
 

@@ -2,7 +2,8 @@
 
 The checkpoint retention workflow runs the archive sweep once a day against the production database.
 The sweep archives the checkpoint rows of each activity verified more than 24 hours ago to the
-`vers-checkpoint-archive` R2 bucket, and purges an archive 90 days after the sweep wrote it.
+`vers-checkpoint-archive` R2 bucket, and purges an archive 90 days after the sweep wrote it. The
+same purge removes a 90-day-old archive whose activity row is gone, such as one of a deleted avatar.
 [Database](../architecture/platform/database.md#checkpoint-retention) owns the tiers and the rules
 that move rows between them. This runbook sizes the table before the first deploy, turns the sweep
 on, and restores one activity's rows.
