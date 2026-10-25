@@ -84,6 +84,33 @@ test('it declares an explicit status on every start-related advanceActivity erro
   expect(errorMap.SIM_VERSION_UNKNOWN?.status).toBe(409);
 });
 
+test('it accepts a stale-chain-head CONFLICT on advanceActivity that carries the server anchor', () => {
+  const data = {
+    activityID: 'act_stale',
+    anchor: { chainIndex: 4, nextSeed: 'seed_server_anchor' },
+    appendedHead: 0,
+    avatarID: 'avatar_stale',
+    reason: 'stale-chain-head' as const,
+  };
+
+  const conflict = activityContract.advanceActivity['~orpc'].errorMap.CONFLICT;
+
+  expect(conflict?.data?.parse(data)).toStrictEqual(data);
+});
+
+test('it accepts a stale-chain-head CONFLICT on advanceActivity with no anchor, as an older server sends it', () => {
+  const data = {
+    activityID: 'act_stale',
+    appendedHead: 0,
+    avatarID: 'avatar_stale',
+    reason: 'stale-chain-head' as const,
+  };
+
+  const conflict = activityContract.advanceActivity['~orpc'].errorMap.CONFLICT;
+
+  expect(conflict?.data?.parse(data)).toStrictEqual(data);
+});
+
 test('it accepts an advanceActivity request carrying an activity-start submission', () => {
   const input = {
     activityID: 'act_start',
@@ -432,9 +459,7 @@ test('revealNodes rejects an output whose node is missing its genesis seed', () 
 
   const result = activityContract.revealNodes['~orpc'].outputSchema?.safeParse(output);
 
-  expect(result?.error?.issues).toPartiallyContain(
-    expect.objectContaining({ path: ['nodes', 0, 'genesisSeed'] }),
-  );
+  expect(result?.error?.issues).toPartiallyContain({ path: ['nodes', 0, 'genesisSeed'] });
 });
 
 test('it generates a valid OpenAPI document from the activity contract', async () => {

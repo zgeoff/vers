@@ -5,12 +5,19 @@ import { createMockActivityInput, createMockAvatarData } from '@vers/idle-core/t
 import { createAuthedServiceClient, createViewer } from '@vers/mock-services';
 import { mockActivityService } from '@vers/mock-services/activity';
 import * as db from '@vers/mock-services/db';
+import invariant from 'tiny-invariant';
 import { server } from '../mocks/node';
+import { readActivityStart } from '../submission/read-activity-start';
 import type { ActivityServiceClient } from '../submission/types';
 import { writeActivityStart } from '../submission/write-activity-start';
+import { writeLastStartedActivity } from '../submission/write-last-started-activity';
+import { writeNodeSeeds } from '../submission/write-node-seeds';
+import { writeStartStamps } from '../submission/write-start-stamps';
 import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
+import { createMockNodeSeed } from '../test-utils/factories/create-mock-node-seed';
 import { WorkerMessageType } from '../types';
 import { ingestAndBroadcastActivityStart } from './ingest-and-broadcast-activity-start';
+import { loadActivityStart } from './load-activity-start';
 import { RunOutcomeKind } from './run-outcome-schema';
 
 test('it announces an ingested activity start to connected tabs', async () => {
@@ -136,5 +143,76 @@ test('it halts a live run whose own start the server refused for good and tells 
       xp: 0,
     },
     type: WorkerMessageType.ActivityEnded,
+  });
+});
+
+test("it mints the next start at a node on the server's anchor after one refusal, once a rejection rewound the chain behind the device's cache", async () => {
+  const viewer = await createViewer();
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
+
+  const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_1', client });
+
+  const rejected = await db.activityCollection.create({
+    avatarID: viewer.avatar.id,
+    status: 'rejected',
+  });
+
+  const seed = createMockNodeSeed({
+    avatarID: viewer.avatar.id,
+    anchor: { chainIndex: 9, nextSeed: 'seed_local_9' },
+    nodeID: '2_3',
+  });
+
+  const refused = createMockActivityData({
+    avatarID: viewer.avatar.id,
+    id: 'act_broadcast_rewound',
+    predecessorActivityID: rejected.id,
+    scopeID: seed.nodeID,
+    scopeType: 'world_map_node',
+    seed: 'seed_local_9',
+    startChainIndex: 9,
+    startKey: 'start_key_rewound',
+  });
+
+  server.use(
+    mockActivityService.advanceActivity.handler((opts) => {
+      throw opts.errors.CONFLICT({
+        data: {
+          activityID: refused.id,
+          anchor: { chainIndex: 4, nextSeed: 'seed_server_4' },
+          appendedHead: 0,
+          avatarID: refused.avatarID,
+          reason: 'stale-chain-head',
+        },
+      });
+    }),
+  );
+
+  await writeNodeSeeds(seed.avatarID, [seed]);
+  await writeStartStamps({ keyVersion: 1, secretRef: 'worldmap', secretVersion: 1 });
+  await writeActivityStart(refused);
+  await writeLastStartedActivity({ avatarID: refused.avatarID, lastActivityID: refused.id });
+
+  const outcome = await ingestAndBroadcastActivityStart(context, refused.id);
+
+  expect(outcome).toBe('rejected');
+
+  const stored = await readActivityStart(refused.id);
+
+  expect(stored).toBeUndefined();
+
+  const next = await loadActivityStart(context, {
+    avatarID: seed.avatarID,
+    scopeID: seed.nodeID,
+    scopeType: 'world_map_node',
+    startKey: 'start_key_after_rewind',
+  });
+
+  invariant(next !== null, 'expected the cached node to mint the next start');
+
+  expect(next).toMatchObject({
+    predecessorActivityID: rejected.id,
+    seed: 'seed_server_4',
+    startChainIndex: 4,
   });
 });

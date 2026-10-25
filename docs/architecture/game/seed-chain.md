@@ -70,12 +70,22 @@ anchor exactly. A start's index must equal the chain's appended index, and its s
 chain's appended seed. The server refuses a start computed against a position the chain has since
 moved past, rather than layering it onto a position that no longer exists.
 
-The device keeps a start whose refusal a later server state can clear, such as a stale anchor, and
-drops a start the server would refuse under any order, such as a chain that was never revealed. It
-tells the two apart by the refusal's error code and the reason the refusal carries
-([error handling](../services/error-handling.md)). One exception: for a build-snapshot mismatch the
-device asks the server for the avatar's latest activity and keeps the start only while an
-undelivered predecessor explains the mismatch. A kept start resends on the worker's backoff
+The device keeps a start whose refusal a later server state can clear, and drops a start the server
+would refuse under any order, such as a chain that was never revealed. It tells the two apart by the
+refusal's error code and the reason the refusal carries
+([error handling](../services/error-handling.md)). Two refusals need more than the code and the
+reason:
+
+- A build-snapshot mismatch. The device asks the server for the avatar's latest activity and keeps
+  the start only while an undelivered predecessor explains the mismatch.
+- A stale anchor. The refusal carries the chain's appended anchor. The device keeps the start only
+  while its own undelivered work could still move that anchor onto the start's position: an earlier
+  start on the same chain, a queued checkpoint, or a stop it has not delivered. With none left, the
+  device resends the start once, because an earlier delivery can land between the refusal and that
+  check. A second stale-anchor refusal drops the start and resets the node's cached anchor to the
+  anchor it carries ([cached anchors](./offline-reconcile.md#when-a-session-ends)).
+
+A kept start resends on the worker's backoff
 ([worker lifecycle](./offline-reconcile.md#worker-lifecycle)), and a dropped start takes its queued
 checkpoints with it.
 

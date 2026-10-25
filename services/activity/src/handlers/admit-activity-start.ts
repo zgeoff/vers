@@ -113,7 +113,7 @@ export async function admitActivityStart(
   );
 
   // the activity start must sit on the chain's live appended head exactly; any other index or seed
-  // means the client built on a stale head that a concurrent append has already moved past
+  // means the client built on a stale head that an append moved past or a rejection rewound behind
   if (
     activityStart.startChainIndex !== chain.appendedChainIndex ||
     activityStart.seed !== chain.appendedNextSeed
@@ -123,6 +123,7 @@ export async function admitActivityStart(
     throw errors.CONFLICT({
       data: {
         activityID: input.activityID,
+        anchor: { chainIndex: chain.appendedChainIndex, nextSeed: chain.appendedNextSeed },
         appendedHead: 0,
         avatarID: activityStart.avatarID,
         reason: 'stale-chain-head',

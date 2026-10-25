@@ -2,10 +2,14 @@ import { isDefinedError, safe } from '@orpc/client';
 import type { ActivityData, AdvanceCheckpointInvalidReason } from '@vers/contract-activity';
 import { buildOfflineActivityStartSubmission } from '@vers/contract-activity';
 import type { LatestActivityProgress } from '../resync/types';
+import { isStaleChainHeadFinal } from './is-stale-chain-head-final';
 import { pickRefusedSnapshotDisposition } from './pick-refused-snapshot-disposition';
 import { readActivityStart } from './read-activity-start';
+import { readAllActivityStarts } from './read-all-activity-starts';
+import { readAllQueuedCheckpoints } from './read-all-queued-checkpoints';
+import { readPendingStopIntent } from './read-pending-stop-intent';
 import { removeActivityStart } from './remove-activity-start';
-import type { ActivityServiceClient } from './types';
+import type { ActivityServiceClient, NodeSeedAnchor } from './types';
 
 export type IngestActivityStartOutcome =
   | 'absent'
@@ -19,6 +23,7 @@ export type IngestActivityStartNotice =
   | { readonly kind: 'sim-version-expired' };
 
 interface RefusedSnapshot {
+  readonly anchor?: NodeSeedAnchor;
   readonly latest: LatestActivityProgress | null;
   readonly row: ActivityData;
 }
@@ -126,6 +131,14 @@ export async function ingestActivityStart(
     return { notice: { kind: 'sim-version-expired' }, outcome: 'rejected', refusal };
   }
 
+  if (
+    error.code === 'CONFLICT' &&
+    error.data.reason === 'stale-chain-head' &&
+    error.data.anchor !== undefined
+  ) {
+    return resolveStaleChainHead(client, row, error.data.anchor, refusal);
+  }
+
   if (REJECTED_CODES.has(error.code)) {
     await removeActivityStart(activityID);
 
@@ -159,28 +172,92 @@ async function resolveRefusedSnapshot(
     return { outcome: 'deferred', refusal };
   }
 
-  const [error, progress] = await safe(
-    client.getLatestActivityProgress({ avatarID: row.avatarID }),
-  );
-
-  if (error !== null && !(isDefinedError(error) && error.code === 'NOT_FOUND')) {
-    return { outcome: 'deferred', refusal };
-  }
-
-  const latest = error === null ? progress : null;
+  const progress = await readLatestProgress(client, row.avatarID);
 
   if (
-    pickRefusedSnapshotDisposition({ latest, predecessorID: row.predecessorActivityID }) ===
-    'deferred'
+    progress === undefined ||
+    pickRefusedSnapshotDisposition({
+      latest: progress.latest,
+      predecessorID: row.predecessorActivityID,
+    }) === 'deferred'
   ) {
     return { outcome: 'deferred', refusal };
   }
 
   // the caller removes the row once its drop has cleared everything chained on it; removing it
   // here would leave a drop that fails part way with no root for the next reconnect to retry from
-  return { outcome: 'rejected', refusal, refusedSnapshot: { latest, row } };
+  return { outcome: 'rejected', refusal, refusedSnapshot: { latest: progress.latest, row } };
 }
 
 async function probePredecessorPending(predecessorID: null | string): Promise<boolean> {
   return predecessorID !== null && (await readActivityStart(predecessorID)) !== undefined;
+}
+
+async function readLatestProgress(
+  client: IngestClient,
+  avatarID: string,
+): Promise<{ readonly latest: LatestActivityProgress | null } | undefined> {
+  const [error, progress] = await safe(client.getLatestActivityProgress({ avatarID }));
+
+  if (error === null) {
+    return { latest: progress };
+  }
+
+  return isDefinedError(error) && error.code === 'NOT_FOUND' ? { latest: null } : undefined;
+}
+
+async function resolveStaleChainHead(
+  client: IngestClient,
+  row: Readonly<ActivityData>,
+  anchor: Readonly<NodeSeedAnchor>,
+  refusal: StartRefusal,
+): Promise<IngestActivityStartResult> {
+  const [starts, checkpoints, stopIntent] = await Promise.all([
+    readAllActivityStarts(),
+    readAllQueuedCheckpoints(),
+    readPendingStopIntent(),
+  ]);
+
+  if (!isStaleChainHeadFinal({ anchor, checkpoints, row, starts, stopIntent })) {
+    return { outcome: 'deferred', refusal };
+  }
+
+  // the refused anchor predates the outbox read above, and an earlier activity's delivery can land
+  // between the two; the outbox keeps work until the server acknowledges it, so an answer to a
+  // resend sent after an empty read reflects every earlier delivery
+  const [error] = await safe(
+    client.advanceActivity({
+      activityID: row.id,
+      activityStart: buildOfflineActivityStartSubmission(row),
+      continuations: [],
+      expectedHead: 0,
+    }),
+  );
+
+  if (error === null) {
+    await removeActivityStart(row.id);
+
+    return { outcome: 'ingested' };
+  }
+
+  if (
+    !isDefinedError(error) ||
+    error.code !== 'CONFLICT' ||
+    error.data.reason !== 'stale-chain-head' ||
+    error.data.anchor === undefined
+  ) {
+    return { outcome: 'deferred', refusal };
+  }
+
+  const progress = await readLatestProgress(client, row.avatarID);
+
+  if (progress === undefined) {
+    return { outcome: 'deferred', refusal };
+  }
+
+  return {
+    outcome: 'rejected',
+    refusal,
+    refusedSnapshot: { anchor: error.data.anchor, latest: progress.latest, row },
+  };
 }
