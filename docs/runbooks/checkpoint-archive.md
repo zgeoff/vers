@@ -33,25 +33,14 @@ sweep logs what it would archive and purge, and writes and deletes nothing, unti
 `CHECKPOINT_ARCHIVE_APPLY` repository variable is `true`. The repository owner reads a report-only
 run and approves the first writing run. Nobody sets the variable before that approval.
 
-The release agent does the first three steps. The archive has its own bucket and token, and never
-reuses the Bugsink R2 key.
+The archive has its own bucket and token, and never reuses the Bugsink R2 key. The bucket is
+`vers-checkpoint-archive`. Its R2 API token is scoped to that bucket only, with object read and
+write, and the `r2-checkpoint-archive` item in the `vers` 1Password vault holds it. The four
+`CHECKPOINT_ARCHIVE_*` secrets in the `production` environment of zgeoff/vers carry the endpoint
+(`https://<cloudflare_account_id>.r2.cloudflarestorage.com`), the bucket name and the token's key
+pair.
 
-1. Create the R2 bucket `vers-checkpoint-archive`.
-2. Mint an R2 API token scoped to `vers-checkpoint-archive` only, with object read and write, and
-   store it in the `vers` 1Password vault.
-3. Set the four secrets in the `production` environment of zgeoff/vers:
-
-   ```bash
-   gh secret set CHECKPOINT_ARCHIVE_ENDPOINT --env production -R zgeoff/vers
-   gh secret set CHECKPOINT_ARCHIVE_BUCKET --env production -R zgeoff/vers
-   gh secret set CHECKPOINT_ARCHIVE_ACCESS_KEY_ID --env production -R zgeoff/vers
-   gh secret set CHECKPOINT_ARCHIVE_SECRET_ACCESS_KEY --env production -R zgeoff/vers
-   ```
-
-   The endpoint is `https://<cloudflare_account_id>.r2.cloudflarestorage.com`, and the bucket is
-   `vers-checkpoint-archive`.
-
-4. Run the workflow once in report mode:
+1. Run the workflow once in report mode:
 
    ```bash
    gh workflow run checkpoint-retention.yml -R zgeoff/vers
@@ -59,8 +48,8 @@ reuses the Bugsink R2 key.
 
    Expect the `Sweep` step to log a line that starts with `checkpoint sweep (report only):`.
 
-5. Send the report line to the repository owner, and wait for their approval.
-6. After the approval, turn on the writes and deletes:
+2. Send the report line to the repository owner, and wait for their approval.
+3. After the approval, turn on the writes and deletes:
 
    ```bash
    gh variable set CHECKPOINT_ARCHIVE_APPLY --body true -R zgeoff/vers
