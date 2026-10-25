@@ -1,13 +1,11 @@
 import type { DB } from '@vers/db';
-import { readCurrentSimVersion } from '@vers/sim-registry';
 import type { Kysely } from 'kysely';
 import type { RestoreDrillCheck } from './types';
 
 export async function readSimVersionChecks(
   db: Kysely<DB>,
+  runningEngineHash: string,
 ): Promise<ReadonlyArray<RestoreDrillCheck>> {
-  const current = await readCurrentSimVersion(db);
-
   const [unverifiedWorkWithoutEngine, activitiesWithoutContent] = await Promise.all([
     db
       .selectFrom('activities')
@@ -18,17 +16,14 @@ export async function readSimVersionChecks(
       // a parked activity already waits on an operator for its engine
       .where('activities.status', 'not in', ['parked', 'rejected'])
       .where((eb) => {
-        // the replay service runs the current version in-process, so its deadline never applies
-        const expired = eb.and([
-          eb('engine.retainedUntil', '<=', new Date()),
-          eb('engine.engineHash', '!=', current?.engineHash ?? ''),
-        ]);
-
-        return eb.or([
+        // the replay service runs its own engine in-process, before it reads the registry
+        const unreplayable = eb.or([
           eb('engine.engineHash', 'is', null),
           eb('engine.status', '!=', 'active'),
-          expired,
+          eb('engine.retainedUntil', '<=', new Date()),
         ]);
+
+        return eb.and([eb('activities.simVersion', '!=', runningEngineHash), unreplayable]);
       })
       .orderBy('activities.id')
       .execute(),

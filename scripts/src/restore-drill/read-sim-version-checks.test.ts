@@ -44,7 +44,7 @@ test('it finds no violation when unverified work pins a retained sim version and
     verifiedHead: 3,
   });
 
-  const checks = await readSimVersionChecks(ctx.db);
+  const checks = await readSimVersionChecks(ctx.db, 'engine-running');
 
   expect(checks).toStrictEqual([
     {
@@ -73,16 +73,8 @@ test('it reports unverified work on an unregistered, pruned, or expired sim vers
   });
 
   const expiredEngine = await createSimVersionRow(ctx.db, {
-    deployedAt: new Date('2026-10-01T09:00:00Z'),
     engineHash: 'engine-expired',
     retainedUntil: new Date(Date.now() - 60_000),
-    status: 'active',
-  });
-
-  await createSimVersionRow(ctx.db, {
-    deployedAt: new Date('2026-10-20T09:00:00Z'),
-    engineHash: 'engine-current',
-    retainedUntil: new Date(Date.now() + 86_400_000),
     status: 'active',
   });
 
@@ -112,7 +104,7 @@ test('it reports unverified work on an unregistered, pruned, or expired sim vers
     simVersion: 'engine-unregistered',
   });
 
-  const checks = await readSimVersionChecks(ctx.db);
+  const checks = await readSimVersionChecks(ctx.db, 'engine-running');
 
   expect(checks[0]).toStrictEqual({
     area: 'retained-sim-versions',
@@ -125,15 +117,14 @@ test('it reports unverified work on an unregistered, pruned, or expired sim vers
   });
 });
 
-test('it accepts unverified work on the current sim version past its retention deadline', async () => {
+test('it accepts unverified work on the running engine whatever its registry row holds', async () => {
   await using ctx = await setupTest();
 
   const user = await createTestUser(ctx.db);
   const avatar = await createAvatarRow(ctx.db, { userId: user.user.id });
 
-  const currentEngine = await createSimVersionRow(ctx.db, {
-    deployedAt: new Date('2026-10-20T09:00:00Z'),
-    engineHash: 'engine-current',
+  const runningEngine = await createSimVersionRow(ctx.db, {
+    engineHash: 'engine-running',
     retainedUntil: new Date(Date.now() - 60_000),
     status: 'active',
   });
@@ -142,15 +133,45 @@ test('it accepts unverified work on the current sim version past its retention d
     appendedHead: 2,
     avatarId: avatar.id,
     contentVersion: '1',
-    simVersion: currentEngine.engineHash,
+    simVersion: runningEngine.engineHash,
   });
 
-  const checks = await readSimVersionChecks(ctx.db);
+  const checks = await readSimVersionChecks(ctx.db, 'engine-running');
 
   expect(checks[0]).toStrictEqual({
     area: 'retained-sim-versions',
     name: 'unverified work pins a retained sim version',
     violations: [],
+  });
+});
+
+test('it reports work on the newest registered engine once it expires and the fleet runs another', async () => {
+  await using ctx = await setupTest();
+
+  const user = await createTestUser(ctx.db);
+  const avatar = await createAvatarRow(ctx.db, { userId: user.user.id });
+
+  const newestEngine = await createSimVersionRow(ctx.db, {
+    deployedAt: new Date('2026-10-20T09:00:00Z'),
+    engineHash: 'engine-newest-registered',
+    retainedUntil: new Date(Date.now() - 60_000),
+    status: 'active',
+  });
+
+  await createActivityRow(ctx.db, {
+    appendedHead: 2,
+    avatarId: avatar.id,
+    contentVersion: '1',
+    id: 'act_on_newest',
+    simVersion: newestEngine.engineHash,
+  });
+
+  const checks = await readSimVersionChecks(ctx.db, 'engine-running');
+
+  expect(checks[0]).toStrictEqual({
+    area: 'retained-sim-versions',
+    name: 'unverified work pins a retained sim version',
+    violations: ['activity act_on_newest on sim version engine-newest-registered'],
   });
 });
 
@@ -169,7 +190,7 @@ test('it leaves out a parked activity, which already waits on an operator for it
     status: 'parked',
   });
 
-  const checks = await readSimVersionChecks(ctx.db);
+  const checks = await readSimVersionChecks(ctx.db, 'engine-running');
 
   expect(checks[0]).toStrictEqual({
     area: 'retained-sim-versions',
@@ -190,7 +211,7 @@ test('it reports an activity whose content version is unpublished', async () => 
     id: 'act_unpublished',
   });
 
-  const checks = await readSimVersionChecks(ctx.db);
+  const checks = await readSimVersionChecks(ctx.db, 'engine-running');
 
   expect(checks[1]).toStrictEqual({
     area: 'retained-sim-versions',

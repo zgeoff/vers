@@ -3,14 +3,17 @@ import { z } from 'zod';
 import { formatRestoreDrillReport } from '../restore-drill/format-restore-drill-report';
 import { readRestoreDrillChecks } from '../restore-drill/read-restore-drill-checks';
 
-const envSchema = z.object({ RESTORE_DRILL_DATABASE_URL: z.string().min(1) });
+const envSchema = z.object({
+  RESTORE_DRILL_DATABASE_URL: z.string().min(1),
+  RESTORE_DRILL_ENGINE_HASH: z.string().min(1),
+});
 
 async function runRestoreDrill(): Promise<number> {
   const parsed = envSchema.safeParse(process.env);
 
   if (!parsed.success) {
     console.error(
-      '❌ RESTORE_DRILL_DATABASE_URL must hold the connection string of the restored branch',
+      '❌ RESTORE_DRILL_DATABASE_URL must hold the connection string of the restored branch, and RESTORE_DRILL_ENGINE_HASH the engine hash the replay service runs',
     );
 
     return 1;
@@ -21,7 +24,7 @@ async function runRestoreDrill(): Promise<number> {
   try {
     const startedAt = performance.now();
 
-    const checks = await readRestoreDrillChecks(db);
+    const checks = await readRestoreDrillChecks(db, parsed.data.RESTORE_DRILL_ENGINE_HASH);
 
     const elapsedMs = Math.round(performance.now() - startedAt);
 

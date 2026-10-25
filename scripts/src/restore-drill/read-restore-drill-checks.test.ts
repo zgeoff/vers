@@ -17,7 +17,7 @@ async function setupTest() {
 test('it runs every area’s checks against an empty database and finds no violation', async () => {
   await using ctx = await setupTest();
 
-  const checks = await readRestoreDrillChecks(ctx.db);
+  const checks = await readRestoreDrillChecks(ctx.db, 'engine-running');
 
   expect(checks.map((check) => `${check.area}: ${check.name}`)).toStrictEqual([
     'sessions: one verified session per user',
@@ -51,7 +51,7 @@ test('it reports a violation that the restored state holds', async () => {
     status: 'stopped',
   });
 
-  const checks = await readRestoreDrillChecks(ctx.db);
+  const checks = await readRestoreDrillChecks(ctx.db, 'engine-running');
 
   expect(checks.filter((check) => check.violations.length > 0)).toStrictEqual([
     {

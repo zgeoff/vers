@@ -270,15 +270,19 @@ operation.
    device's later activities. With every session gone, each device runs the discard that
    [How a device reconciles](#how-a-device-reconciles) describes.
 
-4. Check the branch with the drill checks:
+4. Check the branch with the drill checks, from a checkout of `main` at the commit the fleet runs,
+   which `bun run deploy verify` reports as current:
 
    ```bash
-   RESTORE_DRILL_DATABASE_URL='<branch_connection_string>' bun run db:restore-drill
+   RESTORE_DRILL_ENGINE_HASH="$(bun run --silent deploy engine-hash)" \
+     RESTORE_DRILL_DATABASE_URL='<branch_connection_string>' bun run db:restore-drill
    ```
 
-   Expect the last report line to read `PASS: <count> of <count> checks hold`. The checks read in
-   one read-only transaction. Each `FAIL` line holds a broken check, and the lines under it hold the
-   rows that break it. Restore `main` from no branch that fails a check.
+   The engine hash names the engine the replay service runs in-process, which replays its own work
+   whatever the registry holds. Expect the last report line to read
+   `PASS: <count> of <count> checks hold`. The checks read in one read-only transaction. Each `FAIL`
+   line holds a broken check, and the lines under it hold the rows that break it. Restore `main`
+   from no branch that fails a check.
 
 ## Tell players what survived
 
