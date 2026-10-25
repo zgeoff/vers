@@ -146,6 +146,7 @@
         "@vers/mock-services": "workspace:*",
         "@vers/scripts": "workspace:*",
         "@vers/service-auth": "workspace:*",
+        "@vers/web": "workspace:*",
         "tiny-invariant": "catalog:",
         "typescript": "catalog:",
         "zod": "catalog:",

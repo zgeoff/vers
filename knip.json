@@ -46,7 +46,8 @@
         "src/serve-umami-stub.ts",
         "src/write-corpus-artifacts.ts",
         "specs/*.spec.ts"
-      ]
+      ],
+      "ignoreDependencies": ["@vers/web"]
     },
     "libs/testing/qa-account": {
       "entry": ["src/bin/*.ts"]
