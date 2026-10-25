@@ -27,7 +27,7 @@ jobs:
     if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'failure'
     permissions:
       contents: read
-    uses: zgeoff/tools/.github/workflows/audit-fix.yml@sync-v26
+    uses: zgeoff/tools/.github/workflows/audit-fix.yml@sync-v27
     secrets:
       REPO_SYNC_APP_CLIENT_ID: ${{ secrets.REPO_SYNC_APP_CLIENT_ID }}
       REPO_SYNC_APP_PRIVATE_KEY: ${{ secrets.REPO_SYNC_APP_PRIVATE_KEY }}
