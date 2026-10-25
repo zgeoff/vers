@@ -96,6 +96,10 @@ device halts its live run before the discard, so the run queues no checkpoint be
 tabs show the run as playing on another device, the halted state a writer displaced from its
 activity shows. On a sign-out, the sign-out control decides.
 
+A discard drops the cached node seeds of the avatars it covers, because local play moved their chain
+anchors past what the server holds and a node reveal never moves a cached anchor backward. The next
+node reveal caches the server's anchors.
+
 ### Signing out
 
 Before it ends the session, the sign-out control asks the worker what the outbox holds. With an

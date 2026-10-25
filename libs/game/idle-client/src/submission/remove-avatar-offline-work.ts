@@ -1,9 +1,10 @@
-import { buildActivityKeyRange } from './build-activity-key-range';
+import { buildKeyPrefixRange } from './build-key-prefix-range';
 import { collectOwnedActivityIDs } from './collect-owned-activity-ids';
 import {
   CHECKPOINT_QUEUE_STORE_NAME,
   FAILURE_ACTION_PREFERENCE_KEY,
   LAST_STARTED_ACTIVITY_KEY,
+  NODE_SEEDS_STORE_NAME,
   PENDING_ACTIVITY_STARTS_STORE_NAME,
   PENDING_STOP_INTENT_KEY,
   PREFERENCES_STORE_NAME,
@@ -14,13 +15,19 @@ export async function removeAvatarOfflineWork(avatarIDs: ReadonlyArray<string>):
   const db = await resolveCheckpointQueueDB();
 
   const transaction = db.transaction(
-    [CHECKPOINT_QUEUE_STORE_NAME, PENDING_ACTIVITY_STARTS_STORE_NAME, PREFERENCES_STORE_NAME],
+    [
+      CHECKPOINT_QUEUE_STORE_NAME,
+      NODE_SEEDS_STORE_NAME,
+      PENDING_ACTIVITY_STARTS_STORE_NAME,
+      PREFERENCES_STORE_NAME,
+    ],
     'readwrite',
   );
 
   const checkpointStore = transaction.objectStore(CHECKPOINT_QUEUE_STORE_NAME);
   const startStore = transaction.objectStore(PENDING_ACTIVITY_STARTS_STORE_NAME);
   const preferenceStore = transaction.objectStore(PREFERENCES_STORE_NAME);
+  const nodeSeedStore = transaction.objectStore(NODE_SEEDS_STORE_NAME);
 
   const [starts, checkpoints] = await Promise.all([startStore.getAll(), checkpointStore.getAll()]);
 
@@ -38,10 +45,11 @@ export async function removeAvatarOfflineWork(avatarIDs: ReadonlyArray<string>):
 
   await Promise.all([
     ...owned.map((activityID) => startStore.delete(activityID)),
-    ...owned.map((activityID) => checkpointStore.delete(buildActivityKeyRange(activityID))),
+    ...owned.map((activityID) => checkpointStore.delete(buildKeyPrefixRange(activityID))),
     ...avatarIDs.map((avatarID) =>
       preferenceStore.delete(`${LAST_STARTED_ACTIVITY_KEY}:${avatarID}`),
     ),
+    ...avatarIDs.map((avatarID) => nodeSeedStore.delete(buildKeyPrefixRange(avatarID))),
     removeAvatarPreference(FAILURE_ACTION_PREFERENCE_KEY),
     removeAvatarPreference(PENDING_STOP_INTENT_KEY),
     transaction.done,

@@ -1,4 +1,4 @@
-import { buildActivityKeyRange } from './build-activity-key-range';
+import { buildKeyPrefixRange } from './build-key-prefix-range';
 import { CHECKPOINT_QUEUE_STORE_NAME } from './constants';
 import { resolveCheckpointQueueDB } from './resolve-checkpoint-queue-db';
 
@@ -19,7 +19,7 @@ export async function sweepStaleCheckpoints(
 
   await Promise.all(
     [...staleActivityIDs].map((activityID) =>
-      db.delete(CHECKPOINT_QUEUE_STORE_NAME, buildActivityKeyRange(activityID)),
+      db.delete(CHECKPOINT_QUEUE_STORE_NAME, buildKeyPrefixRange(activityID)),
     ),
   );
 
