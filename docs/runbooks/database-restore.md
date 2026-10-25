@@ -244,8 +244,19 @@ operation.
      --database-name vers --role-name neondb_owner
    ```
 
-   Expect one `postgresql://` URL. Without `--role-name`, the command fails with
-   `Multiple roles found for the branch`.
+   Expect one `postgresql://` URL that ends in `?sslmode=require&channel_binding=require`. Without
+   `--role-name`, the command fails with `Multiple roles found for the branch`.
+
+   The drill connects through postgres.js, which does not understand `channel_binding`. Derive its
+   URL with `sslmode=verify-full` and without `channel_binding`, as
+   [connection strings](../architecture/platform/database.md#connection-strings) requires:
+
+   ```bash
+   printf '%s' '<branch_connection_string>' \
+     | sed -E 's/sslmode=[a-z-]+/sslmode=verify-full/; s/&channel_binding=[^&]*//'
+   ```
+
+   Expect the same URL ending in `?sslmode=verify-full`. It is `<drill_connection_string>`.
 
 3. Revoke every session, every step-up grant and every pending step-up transaction on the branch:
 
@@ -286,7 +297,7 @@ operation.
 
    ```bash
    RESTORE_DRILL_ENGINE_HASH="$(bun run --silent deploy engine-hash)" \
-     RESTORE_DRILL_DATABASE_URL='<branch_connection_string>' bun run db:restore-drill
+     RESTORE_DRILL_DATABASE_URL='<drill_connection_string>' bun run db:restore-drill
    ```
 
    The engine hash names the engine the replay service runs in-process, which replays its own work
