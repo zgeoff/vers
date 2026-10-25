@@ -140,7 +140,9 @@ play. Each activity names its predecessor: the avatar's immediately-prior activi
 chain, null only for the avatar's first. The client stamps it at start from a durable per-avatar
 record of the last-started activity, which survives a worker reload. An out-of-order or
 reload-orphaned delivery only delays a successor until its named predecessor lands; it never points
-the server at the wrong activity. Declaring a false order buys nothing, because the checks read only
+the server at the wrong activity. A predecessor that the verifier never proved any of, such as one
+that appended nothing, says nothing about the activities before it, so the verifier looks past it to
+the activity it names in turn. Declaring a false order buys nothing, because the checks read only
 settled state.
 
 ## Held activities

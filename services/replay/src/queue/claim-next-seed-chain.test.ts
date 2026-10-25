@@ -331,3 +331,124 @@ test('it claims an activity whose backoff has elapsed', async () => {
 
   expect(claimed?.activityID).toBe(activity.id);
 });
+
+test('it claims an earlier unsettled activity before a later one queued behind an activity that appended nothing', async () => {
+  await using ctx = await setupTest();
+
+  const laterChain = await createChainRow(ctx.db, { scopeId: '0_0' });
+
+  await createChainRow(ctx.db, {
+    appendedChainIndex: 12,
+    avatarId: laterChain.avatarId,
+    scopeId: '1_0',
+    verifiedChainIndex: 9,
+  });
+
+  const earlier = await createActivityRow(ctx.db, {
+    appendedHead: 3,
+    avatarId: laterChain.avatarId,
+    scopeId: '1_0',
+    startChainIndex: 9,
+    status: 'stopped',
+  });
+
+  const empty = await createActivityRow(ctx.db, {
+    avatarId: laterChain.avatarId,
+    predecessorActivityId: earlier.id,
+    scopeId: '0_0',
+    status: 'stopped',
+  });
+
+  await createActivityRow(ctx.db, {
+    appendedHead: 3,
+    avatarId: laterChain.avatarId,
+    predecessorActivityId: empty.id,
+    scopeId: '0_0',
+    startChainIndex: 0,
+    status: 'stopped',
+  });
+
+  const claimed = await ctx.db.transaction().execute((trx) => claimNextSeedChain(trx));
+
+  expect(claimed?.activityID).toBe(earlier.id);
+});
+
+test('it waits on a predecessor that has not arrived', async () => {
+  await using ctx = await setupTest();
+
+  const chain = await createChainRow(ctx.db);
+
+  await createActivityRow(ctx.db, {
+    appendedHead: 3,
+    avatarId: chain.avatarId,
+    predecessorActivityId: 'act_undelivered',
+    scopeId: chain.scopeId,
+  });
+
+  const claimed = await ctx.db.transaction().execute((trx) => claimNextSeedChain(trx));
+
+  expect(claimed).toBeUndefined();
+});
+
+test("it waits on a predecessor that names another avatar's settled activity", async () => {
+  await using ctx = await setupTest();
+
+  const foreignChain = await createChainRow(ctx.db);
+
+  const foreign = await createActivityRow(ctx.db, {
+    appendedHead: 3,
+    avatarId: foreignChain.avatarId,
+    scopeId: foreignChain.scopeId,
+    status: 'stopped',
+    verifiedHead: 3,
+  });
+
+  const chain = await createChainRow(ctx.db);
+
+  await createActivityRow(ctx.db, {
+    appendedHead: 3,
+    avatarId: chain.avatarId,
+    predecessorActivityId: foreign.id,
+    scopeId: chain.scopeId,
+  });
+
+  const claimed = await ctx.db.transaction().execute((trx) => claimNextSeedChain(trx));
+
+  expect(claimed).toBeUndefined();
+});
+
+test('it ends the walk back through earlier activities on a cycle of declared predecessors', async () => {
+  await using ctx = await setupTest();
+
+  const chain = await createChainRow(ctx.db);
+
+  const first = await createActivityRow(ctx.db, {
+    avatarId: chain.avatarId,
+    scopeId: chain.scopeId,
+    status: 'stopped',
+  });
+
+  const second = await createActivityRow(ctx.db, {
+    avatarId: chain.avatarId,
+    predecessorActivityId: first.id,
+    scopeId: chain.scopeId,
+    status: 'stopped',
+  });
+
+  await ctx.db
+    .updateTable('activities')
+    .set({ predecessorActivityId: second.id })
+    .where('id', '=', first.id)
+    .execute();
+
+  const successor = await createActivityRow(ctx.db, {
+    appendedHead: 3,
+    avatarId: chain.avatarId,
+    predecessorActivityId: second.id,
+    scopeId: chain.scopeId,
+  });
+
+  const claimed = await ctx.db.transaction().execute((trx) => claimNextSeedChain(trx));
+
+  expect(claimed?.activityID).toBe(successor.id);
+});

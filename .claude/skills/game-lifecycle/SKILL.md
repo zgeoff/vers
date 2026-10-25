@@ -44,8 +44,8 @@ looks like a contradiction of the docs, and the docs are right.
   [`trackActivityProgress`](../../../services/activity/src/handlers/track-activity-progress.ts) owns
   the checkpoint append, the offline budget, and the terminal transition.
 - **One avatar's activities settle in play order.** The client declares the order through
-  `predecessorActivityId`. The verifier claims an activity only once its predecessor has settled or
-  the verifier has rejected it;
+  `predecessorActivityId`. The verifier claims an activity only once every earlier activity has
+  settled or been rejected;
   [`claimNextSeedChain`](../../../services/replay/src/queue/claim-next-seed-chain.ts) owns that
   claim order. A held predecessor blocks its successors, and a rejected one fails them.
 - **The server pays only what it has proved.** The client renders optimistic state. The server pays

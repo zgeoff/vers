@@ -49,6 +49,7 @@ interface HonestActivityFixture {
 
 interface CreateHonestActivityFixtureInput {
   readonly activity?: Readonly<Partial<Insertable<Activities>>>;
+  readonly appendedHead?: number;
   readonly avatarID?: string;
   readonly buildSnapshot?: { readonly level: number; readonly xp: number };
   readonly chain?: Readonly<Partial<Insertable<ActivityChains>>>;
@@ -174,17 +175,20 @@ export async function createHonestActivityFixture(
     startHash,
   });
 
+  const appendedCount = Math.min(input.appendedHead ?? checkpoints.length, checkpoints.length);
+  const appended = checkpoints.slice(0, appendedCount);
+
   const activity = await createActivityRow(db, {
     ...input.activity,
-    appendedHead: checkpoints.length,
-    appendedTimeMs: Math.floor(engineCheckpoints.at(-1)?.time ?? 0),
+    appendedHead: appended.length,
+    appendedTimeMs: Math.floor(appended.at(-1)?.payload.time ?? 0),
     avatarId: chain.avatarId,
     buildSnapshot,
     contentVersion,
     encounterNode,
     id: activityID,
     keyVersion,
-    lastHash: checkpoints.at(-1)?.hash ?? startHash,
+    lastHash: appended.at(-1)?.hash ?? startHash,
     scopeId: chain.scopeId,
     scopeType: chain.scopeType,
     secretRef,
@@ -195,11 +199,11 @@ export async function createHonestActivityFixture(
     startHash,
   });
 
-  if (checkpoints.length > 0) {
+  if (appended.length > 0) {
     await db
       .insertInto('activityCheckpoints')
       .values(
-        checkpoints.map((checkpoint) => ({
+        appended.map((checkpoint) => ({
           activityId: activityID,
           hash: checkpoint.hash,
           payload: toJSON(checkpoint.payload),

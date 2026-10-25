@@ -1,4 +1,5 @@
 import { expect, test } from 'bun:test';
+import { toJSON } from '@vers/db';
 import { createTestDB } from '@vers/service-test-utils/bun';
 import { createActivityRow } from '../test-utils/create-activity-row';
 import { createChainRow } from '../test-utils/create-chain-row';
@@ -286,4 +287,119 @@ test('it leaves an active successor untouched when it is rooted at or before the
     .executeTakeFirstOrThrow();
 
   expect(updatedUnrelated.status).toBe('active');
+});
+
+test('it moves the verified anchor past the checkpoints a partly proved activity settled before it rewinds', async () => {
+  await using ctx = await setupTest();
+
+  const chain = await createChainRow(ctx.db, {
+    appendedChainIndex: 6,
+    appendedNextSeed: 'bb'.repeat(16),
+    verifiedChainIndex: 3,
+    verifiedNextSeed: 'aa'.repeat(16),
+  });
+
+  const activity = await createActivityRow(ctx.db, {
+    appendedHead: 3,
+    avatarId: chain.avatarId,
+    scopeId: chain.scopeId,
+    scopeType: chain.scopeType,
+    startChainIndex: 3,
+    status: 'active',
+    verifiedHead: 2,
+  });
+
+  await ctx.db
+    .insertInto('activityCheckpoints')
+    .values({
+      activityId: activity.id,
+      hash: 'hash-2',
+      payload: toJSON({
+        chainIndex: 5,
+        entropySource: 'server-key',
+        nextSeed: 'cc'.repeat(16),
+        seed: 'dd'.repeat(16),
+        time: 2000,
+        type: 'progress',
+      }),
+      prevHash: 'hash-1',
+      version: 2,
+    })
+    .execute();
+
+  await rejectActivity(ctx.db, {
+    activityID: activity.id,
+    avatarID: chain.avatarId,
+    scopeID: chain.scopeId,
+    scopeType: chain.scopeType,
+  });
+
+  const updatedChain = await ctx.db
+    .selectFrom('activityChains')
+    .select(['appendedChainIndex', 'appendedNextSeed', 'verifiedChainIndex', 'verifiedNextSeed'])
+    .where('avatarId', '=', chain.avatarId)
+    .where('scopeId', '=', chain.scopeId)
+    .executeTakeFirstOrThrow();
+
+  expect(updatedChain).toStrictEqual({
+    appendedChainIndex: 5,
+    appendedNextSeed: 'cc'.repeat(16),
+    verifiedChainIndex: 5,
+    verifiedNextSeed: 'cc'.repeat(16),
+  });
+});
+
+test('it leaves the verified anchor where it is for an activity proved only to its started checkpoint', async () => {
+  await using ctx = await setupTest();
+
+  const chain = await createChainRow(ctx.db, {
+    appendedChainIndex: 6,
+    appendedNextSeed: 'bb'.repeat(16),
+    verifiedChainIndex: 3,
+    verifiedNextSeed: 'aa'.repeat(16),
+  });
+
+  const activity = await createActivityRow(ctx.db, {
+    appendedHead: 2,
+    avatarId: chain.avatarId,
+    scopeId: chain.scopeId,
+    scopeType: chain.scopeType,
+    startChainIndex: 3,
+    status: 'active',
+    verifiedHead: 1,
+  });
+
+  await ctx.db
+    .insertInto('activityCheckpoints')
+    .values({
+      activityId: activity.id,
+      hash: 'hash-1',
+      payload: toJSON({
+        chainIndex: 4,
+        entropySource: 'server-key',
+        nextSeed: 'aa'.repeat(16),
+        seed: 'aa'.repeat(16),
+        time: 0,
+        type: 'started',
+      }),
+      prevHash: 'start-hash',
+      version: 1,
+    })
+    .execute();
+
+  await rejectActivity(ctx.db, {
+    activityID: activity.id,
+    avatarID: chain.avatarId,
+    scopeID: chain.scopeId,
+    scopeType: chain.scopeType,
+  });
+
+  const updatedChain = await ctx.db
+    .selectFrom('activityChains')
+    .select(['appendedChainIndex', 'verifiedChainIndex'])
+    .where('avatarId', '=', chain.avatarId)
+    .where('scopeId', '=', chain.scopeId)
+    .executeTakeFirstOrThrow();
+
+  expect(updatedChain).toStrictEqual({ appendedChainIndex: 3, verifiedChainIndex: 3 });
 });
