@@ -245,6 +245,12 @@ operation.
      --name <restore_branch> --parent <parent> --expires-at <expiry>
    ```
 
+   `<expiry>` is an RFC 3339 time in UTC, such as `2026-10-22T06:45:00Z`. To set it a day from now:
+
+   ```bash
+   date -u -d '+1 day' +%Y-%m-%dT%H:%M:%SZ
+   ```
+
    Expect a table row with the branch and its endpoint.
 
 2. Read the branch's connection string as the owner role, which the revoke step needs to write:
