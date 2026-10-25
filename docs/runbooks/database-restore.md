@@ -386,13 +386,14 @@ position, so a position the restored chain draws again mints at most one item.
 The drill runs every step of a point-in-time restore up to the restore of `main`, on a disposable
 branch, so it changes nothing that players use.
 
-1. Pick a restore point inside the last seven days, and note the time you start.
+1. Pick a restore point inside the last seven days.
 
 2. Follow [Prepare a restore branch](#prepare-a-restore-branch) with `<restore_point>` as the parent
    and `restore-drill-<yyyymmdd>` as the branch name.
 
-3. Record the drill report and the time from step 1 to the end of step 2, which measures the branch
-   restore and the checks against the recovery-time target.
+3. Record the drill report and the time from the branch create to the end of the drill checks. That
+   span covers the branch restore and the checks, and you compare it against the recovery-time
+   target.
 
 4. Delete the branch:
 
