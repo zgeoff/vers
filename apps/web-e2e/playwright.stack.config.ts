@@ -20,6 +20,10 @@ export default defineConfig<E2EOptions>({
       use: { ...devices['Desktop Chrome'] },
     },
   ],
+
+  // CI's default dot reporter prints no per-test durations; list prints each test's time, which
+  // the timeout below is set from
+  reporter: 'list',
   retries: process.env['CI'] === undefined ? 0 : 1,
   timeout: 60 * 1000,
   use: {
