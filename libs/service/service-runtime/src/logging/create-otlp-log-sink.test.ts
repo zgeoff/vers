@@ -1,5 +1,4 @@
 import { expect, onTestFinished, test } from 'bun:test';
-import { resetSync } from '@logtape/logtape';
 import { updateEnv } from '@vers/test-utils/bun';
 import { configureLogging } from './configure-logging';
 import { createOTLPLogSink } from './create-otlp-log-sink';
@@ -54,10 +53,6 @@ test('it ships a log entry to the OTLP logs endpoint with its level, category an
     format: 'json',
     level: 'info',
     sinks: [otlpLogSink.sink],
-  });
-
-  onTestFinished(() => {
-    resetSync();
   });
 
   logger.warn('quota exceeded', { tenantTier: 'gold-tier' });

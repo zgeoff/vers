@@ -1,6 +1,5 @@
-import { onTestFinished } from 'bun:test';
 import type { LogLevel, LogRecord } from '@logtape/logtape';
-import { configureSync, resetSync } from '@logtape/logtape';
+import { configureSync } from '@logtape/logtape';
 
 interface CreateInMemoryLogsOptions {
   readonly lowestLevel: LogLevel;
@@ -24,10 +23,6 @@ export function createInMemoryLogs(options: CreateInMemoryLogsOptions): InMemory
         records.push(record);
       },
     },
-  });
-
-  onTestFinished(() => {
-    resetSync();
   });
 
   return { records };

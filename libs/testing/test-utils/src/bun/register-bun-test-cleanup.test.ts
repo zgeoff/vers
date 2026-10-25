@@ -1,4 +1,5 @@
 import { expect, test } from 'bun:test';
+import { configureSync, getConfig } from '@logtape/logtape';
 import { trace } from '@opentelemetry/api';
 import { NodeTracerProvider } from '@opentelemetry/sdk-trace-node';
 import { updateEnv } from './update-env';
@@ -14,6 +15,16 @@ test('it overrides an env var for this test only', () => {
 
 test('it restores the previous test override via the registered global afterEach', () => {
   expect(process.env['REGISTER_BUN_TEST_CLEANUP_PROBE']).toBeUndefined();
+});
+
+test('it configures LogTape for this test only', () => {
+  configureSync({ loggers: [], sinks: {} });
+
+  expect(getConfig()).not.toBeNull();
+});
+
+test('it resets the previous test LogTape configuration via the registered global afterEach', () => {
+  expect(getConfig()).toBeNull();
 });
 
 test.each(['first', 'second'])(

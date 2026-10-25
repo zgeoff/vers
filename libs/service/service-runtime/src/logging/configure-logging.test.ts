@@ -1,6 +1,5 @@
-import { expect, onTestFinished, test } from 'bun:test';
+import { expect, test } from 'bun:test';
 import type { LogRecord } from '@logtape/logtape';
-import { resetSync } from '@logtape/logtape';
 import { withTraceContext } from '@vers/service-utils';
 import { createTraceContext } from '@vers/trace';
 import { configureLogging } from './configure-logging';
@@ -17,10 +16,6 @@ test('it hands each sink the entry with its level, category and fields', () => {
         records.push(record);
       },
     ],
-  });
-
-  onTestFinished(() => {
-    resetSync();
   });
 
   logger.warn('request refused', { code: 'NOT_FOUND', status: 404 });
@@ -49,10 +44,6 @@ test('it stamps the active trace id onto each entry', () => {
     ],
   });
 
-  onTestFinished(() => {
-    resetSync();
-  });
-
   const trace = createTraceContext();
 
   withTraceContext(trace, () => {
@@ -74,10 +65,6 @@ test('it keeps entries below the configured level out of the sinks', () => {
         records.push(record);
       },
     ],
-  });
-
-  onTestFinished(() => {
-    resetSync();
   });
 
   logger.info('quiet');

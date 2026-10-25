@@ -1,6 +1,5 @@
 import { expect, onTestFinished, test } from 'bun:test';
 import type { LogRecord } from '@logtape/logtape';
-import { resetSync } from '@logtape/logtape';
 import * as Sentry from '@sentry/node';
 import type { ErrorEvent } from '@sentry/node';
 import { configureLogging } from '@vers/service-runtime/logging';
@@ -128,10 +127,6 @@ test('it puts the inbound trace id on the log lines, the error event, and the ex
         records.push(record);
       },
     ],
-  });
-
-  ctx.stack.defer(() => {
-    resetSync();
   });
 
   const handleRequest = withMiddleware([withRequestTrace, makeRequestLogger(logger)], () => {
