@@ -27,6 +27,10 @@ export default defineConfig<E2EOptions>({
       },
     },
   ],
+
+  // CI's default dot reporter prints no per-test durations; list prints each test's time, which
+  // the timeout below is set from
+  reporter: 'list',
   retries: 0,
   timeout: 120 * 1000,
   use: {

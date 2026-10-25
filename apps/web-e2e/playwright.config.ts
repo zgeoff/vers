@@ -37,6 +37,10 @@ export default defineConfig<E2EOptions & MockActivityOptions>({
     },
   ],
 
+  // CI's default dot reporter prints no per-test durations; list prints each test's time, which
+  // the timeout below is set from
+  reporter: 'list',
+
   // retries are unsound here: the mock db persists across attempts, so a
   // retry of any mutating spec replays against already-mutated state (a
   // changed password, a live session) and fails differently
