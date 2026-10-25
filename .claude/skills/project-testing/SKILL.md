@@ -24,6 +24,8 @@ it never relaxes one from the shared skill.
   with the fixed ladder, only as far as the test needs.
 - [The web app](#the-web-app): mount through the router and request-context helpers, and cover a
   form's result mapping with a hand-built `lastResult`.
+- [Lanes](#lanes): every `bun test` file runs in the unit lane, and the Playwright suites run
+  outside `bun test`.
 - [Test mode](#test-mode): each package runs `bun test --randomize`, and a preload starts per-file
   state in a `beforeAll`.
 
@@ -133,6 +135,21 @@ acts on.
   asserts on store state. A DOM component in
   [`components-ui/`](../../../libs/game/worldmap-client/src/components-ui/) goes through React
   Testing Library and `userEvent`.
+
+## Lanes
+
+vers has no project lane. Every `bun test` file runs in the unit lane at the shared skill's 5 s
+limit, Postgres included: the test container with a template per branch is a per-run fixture. No
+file takes a lane suffix, so the root [`.oxlintrc.json`](../../../.oxlintrc.json) sets no `lanes`
+option. A new lane needs a real system that the shared skill's lane rules allow, and the pull
+request that adds it declares the lane there and lists it here with its real system and its limit.
+
+The suites in [`apps/web-e2e`](../../../apps/web-e2e/) drive the built web app in a real browser.
+They run under Playwright through that package's `e2e` scripts, not `bun test`. The package name
+ends in `-e2e`, so `zgeoff/max-test-timeout` puts its files in the e2e lane and checks a timeout
+passed to a `test` call against that lane's 15 s limit. The rule does not read a Playwright config,
+and each config, such as [`playwright.config.ts`](../../../apps/web-e2e/playwright.config.ts), sets
+its own per-test timeout.
 
 ## Test mode
 

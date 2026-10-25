@@ -9,7 +9,12 @@ test('it kills a Chrome whose launch never opens a debug port', async () => {
   const chromePath = await createStubChrome('echo $$ > "$(dirname "$0")/pid"\nexec sleep 30');
 
   const launch = withChrome(
-    { chromePath, connectionPollInterval: 20, maxConnectionRetries: 2 },
+    {
+      chromePath,
+      connectionPollInterval: 20,
+      maxConnectionRetries: 2,
+      userDataDir: dirname(chromePath),
+    },
     (port) => Promise.resolve(port),
   );
 
@@ -33,7 +38,7 @@ test('it kills Chrome and exits with 130 when the process gets SIGINT', async ()
     'bun',
     '-e',
     `import { withChrome } from ${JSON.stringify(join(import.meta.dir, 'with-chrome.ts'))};
-      await withChrome({ chromePath: ${JSON.stringify(chromePath)}, maxConnectionRetries: 1000 }, (port) => Promise.resolve(port));`,
+      await withChrome({ chromePath: ${JSON.stringify(chromePath)}, maxConnectionRetries: 1000, userDataDir: ${JSON.stringify(dirname(chromePath))} }, (port) => Promise.resolve(port));`,
   ]);
 
   const pidText = await waitFor(() => readFile(pidPath, 'utf8'), { timeoutMs: 3000 });
