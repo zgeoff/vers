@@ -319,13 +319,18 @@ operation.
 
    Expect one line per app, such as `✓ vers-service-replay — online and current at <sha>`. The
    `vers-service-replay` line holds the commit `<fleet_sha>`. A `✗` line holds a finding instead of
-   the commit, so for a `✗` on `vers-service-replay` read the commit its machines stamp:
+   the commit, so for a `✗` on `vers-service-replay` read the commit its service machines stamp. The
+   filter skips the scheduled drainer and every process group other than `app`, as the deploy CLI
+   does:
 
    ```bash
-   flyctl machines list --app vers-service-replay --json | jq -r '.[].config.env.GIT_SHA' | sort -u
+   flyctl machines list --app vers-service-replay --json \
+     | jq -r '.[] | select(.config.schedule == null and (.config.metadata.fly_process_group // "app") == "app") | .config.env.GIT_SHA' \
+     | sort -u
    ```
 
-   Expect one commit, which is `<fleet_sha>`.
+   Expect one commit, which is `<fleet_sha>`. Two commits mean a rollout stopped part way, so finish
+   the replay service's deploy before you go on.
 
 5. Check out `<fleet_sha>`, then run the drill checks against the branch:
 
