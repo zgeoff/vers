@@ -15,7 +15,7 @@ state, and rehearses the restore on a disposable branch. Two sources hold the pa
 recovery window, and the data-loss and recovery-time targets.
 
 You need `neonctl` authenticated through `neonctl auth` to the vers project,
-`patient-dust-07220142`, `psql`, and the right to merge to `main`.
+`patient-dust-07220142`, `psql` or Docker, and the right to merge to `main`.
 
 ## When to restore
 
@@ -226,18 +226,29 @@ operation.
 
    Expect a table row with the branch and its endpoint.
 
-2. Read the branch's connection string:
+2. Read the branch's connection string as the owner role, which the revoke step needs to write:
 
    ```bash
-   neonctl connection-string <restore_branch> --project-id patient-dust-07220142 --database-name vers
+   neonctl connection-string <restore_branch> --project-id patient-dust-07220142 \
+     --database-name vers --role-name neondb_owner
    ```
 
-   Expect one `postgresql://` URL.
+   Expect one `postgresql://` URL. Without `--role-name`, the command fails with
+   `Multiple roles found for the branch`.
 
 3. Revoke every session, every step-up grant and every pending step-up transaction on the branch:
 
    ```bash
    psql '<branch_connection_string>' -v ON_ERROR_STOP=1 -c 'BEGIN; DELETE FROM step_up_grants; DELETE FROM pending_transactions; DELETE FROM sessions; COMMIT;'
+   ```
+
+   Without a local `psql`, run the same statements through the Postgres image, with the URL in the
+   environment and the SQL on stdin:
+
+   ```bash
+   echo 'BEGIN; DELETE FROM step_up_grants; DELETE FROM pending_transactions; DELETE FROM sessions; COMMIT;' \
+     | BRANCH_URL='<branch_connection_string>' docker run --rm -i -e BRANCH_URL postgres:18.6 \
+       sh -c 'psql "$BRANCH_URL" -v ON_ERROR_STOP=1'
    ```
 
    Expect `BEGIN`, three `DELETE <count>` lines, and `COMMIT`. The branch holds every session that
