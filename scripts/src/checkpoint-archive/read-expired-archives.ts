@@ -1,4 +1,5 @@
 import type { S3ListObjectsOptions } from 'bun';
+import { canPurgeArchive } from './can-purge-archive';
 import { collectExpiredArchives } from './collect-expired-archives';
 import type { CheckpointArchiveDeps, ExpiredArchive } from './types';
 
@@ -14,9 +15,9 @@ export async function readExpiredArchives(
 
     const expired = collectExpiredArchives(page.contents ?? [], writtenBefore);
 
-    const stamped = await readStampedArchives(deps, expired, writtenBefore);
+    const purgeable = await readPurgeableArchives(deps, expired, writtenBefore);
 
-    archives.push(...stamped);
+    archives.push(...purgeable);
 
     listOptions =
       page.isTruncated === true && page.nextContinuationToken !== undefined
@@ -27,7 +28,7 @@ export async function readExpiredArchives(
   return archives;
 }
 
-async function readStampedArchives(
+async function readPurgeableArchives(
   deps: CheckpointArchiveDeps,
   expired: ReadonlyArray<ExpiredArchive>,
   writtenBefore: Date,
@@ -36,18 +37,19 @@ async function readStampedArchives(
     return [];
   }
 
-  const stamped = await deps.db
+  const heads = await deps.db
     .selectFrom('activities')
-    .select('id')
+    .select(['id', 'archivedAt'])
     .where(
       'id',
       'in',
       expired.map((archive) => archive.activityID),
     )
-    .where('archivedAt', '<', writtenBefore)
     .execute();
 
-  const stampedIDs = new Set(stamped.map((row) => row.id));
+  const headsByID = new Map(heads.map((head) => [head.id, head]));
 
-  return expired.filter((archive) => stampedIDs.has(archive.activityID));
+  return expired.filter((archive) =>
+    canPurgeArchive(headsByID.get(archive.activityID), writtenBefore),
+  );
 }

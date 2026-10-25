@@ -61,6 +61,50 @@ test('it removes an archive whose stamp and write time are both before the cutof
   expect(exists).toBeFalse();
 });
 
+test('it removes an archive written before the cutoff whose activity row is gone', async () => {
+  const ctx = await setupTest();
+
+  await ctx.bucket.write('checkpoints/avatar_deleted/act_orphan.jsonl.gz', 'rows');
+
+  ctx.stub.setLastModified(
+    'checkpoints/avatar_deleted/act_orphan.jsonl.gz',
+    new Date('2026-01-01T00:00:00.000Z'),
+  );
+
+  const removed = await removeExpiredArchives(
+    ctx,
+    [{ activityID: 'act_orphan', key: 'checkpoints/avatar_deleted/act_orphan.jsonl.gz' }],
+    new Date('2026-04-01T00:00:00.000Z'),
+  );
+
+  const exists = await ctx.bucket.exists('checkpoints/avatar_deleted/act_orphan.jsonl.gz');
+
+  expect(removed).toBe(1);
+  expect(exists).toBeFalse();
+});
+
+test('it keeps an archive written after the cutoff whose activity row is gone', async () => {
+  const ctx = await setupTest();
+
+  await ctx.bucket.write('checkpoints/avatar_deleted/act_young_orphan.jsonl.gz', 'rows');
+
+  const removed = await removeExpiredArchives(
+    ctx,
+    [
+      {
+        activityID: 'act_young_orphan',
+        key: 'checkpoints/avatar_deleted/act_young_orphan.jsonl.gz',
+      },
+    ],
+    new Date(Date.now() - 60_000),
+  );
+
+  const exists = await ctx.bucket.exists('checkpoints/avatar_deleted/act_young_orphan.jsonl.gz');
+
+  expect(removed).toBe(0);
+  expect(exists).toBeTrue();
+});
+
 test('it keeps an archive written again after a stale listing', async () => {
   const ctx = await setupTest();
   const user = await createTestUser(ctx.db, { password: null });

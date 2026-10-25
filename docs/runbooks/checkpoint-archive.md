@@ -1,49 +1,28 @@
 # Checkpoint archive
 
 The checkpoint retention workflow runs the archive sweep once a day against the production database.
-The sweep archives the checkpoint rows of each activity verified more than 24 hours ago to an R2
-bucket, and purges an archive 90 days after the sweep wrote it.
+The sweep archives the checkpoint rows of each activity verified more than 24 hours ago to the
+`vers-checkpoint-archive` R2 bucket, and purges an archive 90 days after the sweep wrote it. The
+same purge removes a 90-day-old archive whose activity row is gone, such as one of a deleted avatar.
 [Database](../architecture/platform/database.md#checkpoint-retention) owns the tiers and the rules
-that move rows between them. This runbook sizes the table before the first deploy, turns the sweep
-on, and restores one activity's rows.
-
-## Before the first deploy
-
-The migration that adds the archive stamp builds a partial index on `activities` without
-`CONCURRENTLY`, inside the migration transaction. Reads go on while the index builds, but checkpoint
-appends and verifier updates wait for one full scan of the table.
-
-1. Read the size of `activities` through the `execute_sql_prod` MCP tool:
-
-   ```sql
-   SELECT count(*), pg_size_pretty(pg_total_relation_size('activities')) FROM activities;
-   ```
-
-   Expect one row with the row count and the table size.
-
-2. Post the count and the size on the PR that adds the migration, so the deploy owner picks the
-   merge time from them.
+that move rows between them. This runbook turns the sweep on and restores one activity's rows.
 
 ## Enable the sweep
 
 The workflow stops before any read while one of the four `CHECKPOINT_ARCHIVE_*` secrets is unset,
-and logs a warning with each missing key. With every secret set, the sweep logs what it would
-archive and purge, and writes and deletes nothing, until the `CHECKPOINT_ARCHIVE_APPLY` repository
-variable is `true`.
+and logs a warning with each missing key. Report-only is the default: with every secret set, the
+sweep logs what it would archive and purge, and writes and deletes nothing, until the
+`CHECKPOINT_ARCHIVE_APPLY` repository variable is `true`. The repository owner reads a report-only
+run and approves the first writing run. Nobody sets the variable before that approval.
 
-1. Create the R2 bucket and an R2 API token scoped to read and write that bucket only.
-2. Set the four secrets in the `production` environment of zgeoff/vers:
+The archive has its own bucket and token, and never reuses the Bugsink R2 key. The bucket is
+`vers-checkpoint-archive`. Its R2 API token is scoped to that bucket only, with object read and
+write, and the `r2-checkpoint-archive` item in the `vers` 1Password vault holds it. The four
+`CHECKPOINT_ARCHIVE_*` secrets in the `production` environment of zgeoff/vers carry the endpoint
+(`https://<cloudflare_account_id>.r2.cloudflarestorage.com`), the bucket name and the token's key
+pair.
 
-   ```bash
-   gh secret set CHECKPOINT_ARCHIVE_ENDPOINT --env production -R zgeoff/vers
-   gh secret set CHECKPOINT_ARCHIVE_BUCKET --env production -R zgeoff/vers
-   gh secret set CHECKPOINT_ARCHIVE_ACCESS_KEY_ID --env production -R zgeoff/vers
-   gh secret set CHECKPOINT_ARCHIVE_SECRET_ACCESS_KEY --env production -R zgeoff/vers
-   ```
-
-   The endpoint is `https://<cloudflare_account_id>.r2.cloudflarestorage.com`.
-
-3. Run the workflow once in report mode:
+1. Run the workflow once in report mode:
 
    ```bash
    gh workflow run checkpoint-retention.yml -R zgeoff/vers
@@ -51,7 +30,8 @@ variable is `true`.
 
    Expect the `Sweep` step to log a line that starts with `checkpoint sweep (report only):`.
 
-4. Turn on the writes and deletes:
+2. Send the report line to the repository owner, and wait for their approval.
+3. After the approval, turn on the writes and deletes:
 
    ```bash
    gh variable set CHECKPOINT_ARCHIVE_APPLY --body true -R zgeoff/vers

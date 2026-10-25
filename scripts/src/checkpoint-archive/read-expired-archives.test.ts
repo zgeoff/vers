@@ -59,10 +59,26 @@ test('it reads the expired archives of stamped activities across every listing p
   ]);
 });
 
-test('it reads no archive of an activity whose head row is gone', async () => {
+test('it reads the expired archive of an activity whose head row is gone', async () => {
   const ctx = await setupTest();
 
   await ctx.bucket.write('checkpoints/avatar_gone/act_gone.jsonl.gz', 'rows');
+
+  const archives = await readExpiredArchives(ctx, new Date(Date.now() + 60_000));
+
+  expect(archives).toStrictEqual([
+    { activityID: 'act_gone', key: 'checkpoints/avatar_gone/act_gone.jsonl.gz' },
+  ]);
+});
+
+test('it reads no archive of an activity whose head row has no stamp', async () => {
+  const ctx = await setupTest();
+  const user = await createTestUser(ctx.db, { password: null });
+  const avatar = await createAvatarRow(ctx.db, { id: 'avatar_live', userId: user.user.id });
+
+  await createActivityRow(ctx.db, { avatarId: avatar.id, id: 'act_live', status: 'stopped' });
+
+  await ctx.bucket.write('checkpoints/avatar_live/act_live.jsonl.gz', 'rows');
 
   const archives = await readExpiredArchives(ctx, new Date(Date.now() + 60_000));
 

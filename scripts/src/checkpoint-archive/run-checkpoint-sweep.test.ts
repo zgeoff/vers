@@ -255,6 +255,39 @@ test('it purges an archive older than 90 days whose head row carries the stamp',
   expect(exists).toBeFalse();
 });
 
+test('it purges an archive older than 90 days whose activity row is gone', async () => {
+  const ctx = await setupTest();
+
+  await ctx.bucket.write('checkpoints/avatar_deleted/act_orphan.jsonl.gz', 'archived rows');
+
+  const summary = await runCheckpointSweep(ctx, {
+    apply: true,
+    limit: 10,
+    now: new Date(Date.now() + 7_862_400_000),
+  });
+
+  const exists = await ctx.bucket.exists('checkpoints/avatar_deleted/act_orphan.jsonl.gz');
+
+  expect(summary.purged).toBe(1);
+  expect(exists).toBeFalse();
+});
+
+test('it keeps an archive younger than 90 days whose activity row is gone', async () => {
+  const ctx = await setupTest();
+
+  await ctx.bucket.write('checkpoints/avatar_deleted/act_young_orphan.jsonl.gz', 'archived rows');
+
+  await runCheckpointSweep(ctx, {
+    apply: true,
+    limit: 10,
+    now: new Date(Date.now() + 7_689_600_000),
+  });
+
+  const exists = await ctx.bucket.exists('checkpoints/avatar_deleted/act_young_orphan.jsonl.gz');
+
+  expect(exists).toBeTrue();
+});
+
 test('it keeps an archive younger than 90 days', async () => {
   const ctx = await setupTest();
   const user = await createTestUser(ctx.db, { password: null });
