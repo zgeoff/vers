@@ -24,8 +24,8 @@ it never relaxes one from the shared skill.
   with the fixed ladder, only as far as the test needs.
 - [The web app](#the-web-app): mount through the router and request-context helpers, and cover a
   form's result mapping with a hand-built `lastResult`.
-- [Lanes](#lanes): every `bun test` file runs in the unit lane, and the Playwright suites run
-  outside `bun test`.
+- [Lanes](#lanes): every `bun test` file runs in the unit lane, the Playwright suites run outside
+  `bun test`, and each Playwright config sets its test timeout from measured CI durations.
 - [Test mode](#test-mode): each package runs `bun test --randomize`, and a preload starts per-file
   state in a `beforeAll`.
 
@@ -146,10 +146,17 @@ request that adds it declares the lane there and lists it here with its real sys
 
 The suites in [`apps/web-e2e`](../../../apps/web-e2e/) drive the built web app in a real browser.
 They run under Playwright through that package's `e2e` scripts, not `bun test`. The package name
-ends in `-e2e`, so `zgeoff/max-test-timeout` puts its files in the e2e lane and checks a timeout
-passed to a `test` call against that lane's 15 s limit. The rule does not read a Playwright config,
-and each config, such as [`playwright.config.ts`](../../../apps/web-e2e/playwright.config.ts), sets
-its own per-test timeout.
+ends in `-e2e`, so `zgeoff/max-test-timeout` puts its files in the e2e lane, whose limit is 15 s.
+The rule checks only the runners imported from `bun:test`, so it sees no Playwright `test` call, no
+`test.setTimeout`, and no Playwright config.
+
+Each Playwright config, such as
+[`playwright.config.ts`](../../../apps/web-e2e/playwright.config.ts), sets its test timeout from
+measurement: about twice the slowest test over the last 5 green CI runs, rounded up to a whole
+second. The config's `list` reporter prints every test's duration in the CI log. When one test runs
+far slower than the rest, fix a fixed wait or a missing condition wait in it. If the time is real,
+give that test its own `test.setTimeout` with its measured time in a comment. The config's timeout
+never rises to cover one slow test.
 
 ## Test mode
 

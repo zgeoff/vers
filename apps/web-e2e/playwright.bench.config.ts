@@ -32,6 +32,8 @@ export default defineConfig<E2EOptions>({
   // the timeout below is set from
   reporter: 'list',
   retries: 0,
+
+  // no CI job runs the benchmarks, so this timeout has no measured durations behind it yet
   timeout: 120 * 1000,
   use: {
     baseURL: environment.baseURL,
