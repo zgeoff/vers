@@ -276,3 +276,42 @@ jobs:
           name: playwright-results
           include-hidden-files: true
           path: apps/web-e2e/.test-results
+
+  # main builds the images only at deploy, on Fly's remote builder, so a change to an install
+  # stage's inputs builds every server image here before it merges
+  changes:
+    permissions:
+      contents: read
+    uses: zgeoff/tools/.github/workflows/paths-changed.yml@sync-v27
+    with:
+      paths: |
+        apps/web/Dockerfile
+        services/*/Dockerfile
+        .dockerignore
+        package.json
+        **/package.json
+        bun.lock
+        bunfig.toml
+        patches/**
+        .github/workflows/pr.yml
+
+  images:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.changed != 'false' }}
+    runs-on: ubuntu-latest
+    # a hung build must fail the run, not burn runner hours
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Build server images
+        run: |
+          set -euo pipefail
+          for dockerfile in apps/web/Dockerfile services/*/Dockerfile; do
+            echo "::group::$dockerfile"
+            docker build --file "$dockerfile" .
+            echo "::endgroup::"
+          done

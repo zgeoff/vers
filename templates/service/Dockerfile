@@ -1,30 +1,51 @@
-# Reference template for a service built on @vers/service-runtime. It cannot be built as-is —
-# there is no real service using this scaffold yet — but shows the shape a copying service should
-# follow. Unlike the repo-root Dockerfile (node runtime, bun only for installs), services built on
-# this runtime run on bun itself; update FROM to match .bun-version when it drifts.
-FROM oven/bun:1 AS base
+# Reference Dockerfile for a new domain service. A copying service replaces each `<service>` with
+# its folder name under services/, and the image then follows the shape every services/*/Dockerfile
+# shares: prune, install from the pruned lockfile, compile one Bun executable, and run it on alpine.
+ARG BUN_VERSION=1.4.3
+
+FROM oven/bun:${BUN_VERSION}-slim AS base
 
 WORKDIR /app
 
-# Copy workspace manifests first so dependency install is cached independently of source changes.
-# A copying service lists every workspace manifest its own package.json depends on here — at
-# minimum the root manifest, its own project, and contracts/<service> + libs/service/service-runtime.
-COPY package.json bun.lock .bun-version ./
-COPY contracts/base/package.json contracts/base/package.json
-COPY libs/service/service-runtime/package.json libs/service/service-runtime/package.json
-# COPY contracts/<service>/package.json contracts/<service>/package.json
-# COPY services/<service>/package.json services/<service>/package.json
+# --- prune the workspace down to what @vers/service-<service> needs ---
+FROM base AS pruner
 
-RUN bun install --frozen-lockfile --production
+COPY . .
 
-# Copy the source for every project listed above.
-COPY contracts/base contracts/base
-COPY libs/service/service-runtime libs/service/service-runtime
-# COPY contracts/<service> contracts/<service>
-# COPY services/<service> services/<service>
+# a standalone turbo binary at the catalog version, so the pruned lockfile comes from the turbo
+# that the workspace pins and Renovate bumps — no workspace install needed to run prune
+RUN --mount=type=cache,target=/root/.bun/install/cache \
+  bun add --global "turbo@$(bun -p "require('./package.json').workspaces.catalog.turbo")" && \
+  turbo prune @vers/service-<service> --docker
 
-USER bun
+# --- compile the service to a single self-contained executable ---
+# the full dependency set is needed here: `bun build --compile` inlines every JS
+# import (workspace source + external deps) into the binary. The services have no
+# native addons, so the result is standalone — no node_modules or source at runtime.
+FROM base AS builder
+
+COPY --from=pruner /app/out/json/ .
+
+RUN --mount=type=cache,target=/root/.bun/install/cache bun install --frozen-lockfile --filter=@vers/service-<service>
+
+COPY --from=pruner /app/out/full/ .
+
+WORKDIR /app/services/<service>
+
+# musl target matches the alpine runtime below
+RUN bun build src/serve.ts --compile --target=bun-linux-x64-musl --outfile /tmp/server
+
+# --- runtime: just the binary on alpine (busybox shell kept for `fly ssh console`) ---
+FROM alpine:3.24
+
+# bun's musl binary links against libgcc and libstdc++
+RUN apk add --no-cache libgcc libstdc++
+
+COPY --from=builder /tmp/server /usr/local/bin/server
+
+ENV NODE_ENV="production"
+
+USER nobody
 EXPOSE 3000
 
-# A copying service replaces this with its own entrypoint (its createService caller).
-CMD ["bun", "run", "src/serve.ts"]
+CMD ["server"]
