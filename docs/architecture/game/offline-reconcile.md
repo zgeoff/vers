@@ -97,6 +97,8 @@ A discard drops the cached node seeds of the avatars it covers, because local pl
 anchors past what the server holds and a node reveal never moves a cached anchor backward. The next
 node reveal caches the server's anchors.
 
+Known gap: GEO-1861.
+
 ### Signing out
 
 Before it ends the session, the sign-out control asks the worker what the outbox holds. With an
