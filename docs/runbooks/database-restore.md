@@ -169,10 +169,21 @@ the repo has to drop the migrations that must not come back before the next run.
    > database. Every write to them after the restore point is lost, and Neon interrupts every open
    > connection during the restore.
 
-3. Follow [Prepare a restore branch](#prepare-a-restore-branch) with `<restore_point>` as the parent
+3. List the migrations applied after the restore point, through the `execute_sql_prod` MCP tool:
+
+   ```sql
+   SELECT name FROM kysely_migration WHERE timestamp > '<restore_point>' ORDER BY name;
+   ```
+
+   Expect no rows when no migration ran since the restore point. The restore drops each listed
+   migration, and the main workflow applies it again when step 7 re-runs it. For each listed
+   migration that must not come back, open a revert PR as step 4 of [Restore main](#restore-main)
+   describes, and merge it in place of the re-run.
+
+4. Follow [Prepare a restore branch](#prepare-a-restore-branch) with `<restore_point>` as the parent
    and `restore-<yyyymmdd>` as the branch name.
 
-4. Restore `main` from the head of the restore branch, and keep the pre-restore state under a new
+5. Restore `main` from the head of the restore branch, and keep the pre-restore state under a new
    name:
 
    ```bash
@@ -184,9 +195,9 @@ the repo has to drop the migrations that must not come back before the next run.
    Expect the command to exit with status 0. `main` keeps its ID and its connection strings, and
    Neon moves the `dev` branch under `main-before-restore-<yyyymmdd>`.
 
-5. Send the [player notice](#tell-players-what-survived).
+6. Send the [player notice](#tell-players-what-survived).
 
-6. Enable the main workflow, then re-run its latest run on `main`:
+7. Enable the main workflow, then re-run its latest run on `main`:
 
    ```bash
    gh workflow enable main.yml -R zgeoff/vers
@@ -200,7 +211,7 @@ the repo has to drop the migrations that must not come back before the next run.
    restore point. Until it does, the activity service refuses every start with
    `SIM_VERSION_UNKNOWN`.
 
-7. Delete the restore branch, and keep `main-before-restore-<yyyymmdd>` while `dev` is its child:
+8. Delete the restore branch, and keep `main-before-restore-<yyyymmdd>` while `dev` is its child:
 
    ```bash
    neonctl branches delete restore-<yyyymmdd> --project-id patient-dust-07220142
@@ -283,6 +294,13 @@ operation.
    `PASS: <count> of <count> checks hold`. The checks read in one read-only transaction. Each `FAIL`
    line holds a broken check, and the lines under it hold the rows that break it. Restore `main`
    from no branch that fails a check.
+
+   A branch from before a migration lacks the tables and columns that migration adds. When the drill
+   reads one of them, it stops with `❌ the restore drill could not read the restored branch` and
+   the Postgres error, such as `relation "content_versions" does not exist`, and checks nothing. Run
+   the drill again from a checkout of the revert PR, which reverts the code that reads the dropped
+   migrations, the drill included. Keep the engine hash from the fleet's commit, and restore `main`
+   only once that run passes.
 
 ## Tell players what survived
 
