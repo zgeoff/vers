@@ -24,13 +24,17 @@ backup branch reaches further back, but only to the instant before its migration
 every table back together, so the sessions, chains, activities, items and sim-version registry it
 leaves agree with each other as of the restore point.
 
+A restore discards every write from the restore point until the moment `main` takes on the restored
+state. That interval has two parts: the margin the operator leaves before the first bad write, and
+the incident itself, from the first bad write until the restore. Across the whole interval a player
+loses what the server took: settled XP, minted items, first clears, chains revealed, and accounts
+created. The restore also signs every device out, which discards the work still waiting in each
+device's outbox.
+
 An incident restore keeps two targets:
 
-- At most fifteen minutes of data loss. Neon restores to any instant in the window, so the loss is
-  the gap the operator leaves between the restore point and the first bad write. Inside that gap a
-  player loses what the server took: settled XP, minted items, first clears, chains revealed, and
-  accounts created. The restore also signs every device out, which discards the work still waiting
-  in each device's outbox.
+- At most fifteen minutes of margin. Neon restores to any instant in the window, so the operator
+  sets the restore point no more than fifteen minutes before the first bad write.
 - At most one hour from the decision to restore until players are back in the game. Neon finishes
   the restore itself in seconds. The hour goes to the steps around it: stopping the deploy pipeline,
   revoking every session, checking the restored state, and registering the running sim version
