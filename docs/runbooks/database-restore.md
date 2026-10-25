@@ -205,11 +205,13 @@ the repo has to drop the migrations that must not come back before the next run.
    gh run rerun <run_id> -R zgeoff/vers
    ```
 
-   Expect the migrate step to log `no pending migrations; no backup taken`, and the replay service's
-   deploy leg to log `vers-service-replay is current at <sha> — skipping`. That leg registers the
-   running sim version again, because the restore dropped every registry row written after the
-   restore point. Until it does, the activity service refuses every start with
-   `SIM_VERSION_UNKNOWN`.
+   When step 3 listed no migration, or the revert PR drops every listed one, expect the migrate step
+   to log `no pending migrations; no backup taken`. When some listed migrations stay, expect a new
+   `Database backup` notice that names them, then `✅ applied <migration_names>`. In both cases
+   expect the replay service's deploy leg to log
+   `vers-service-replay is current at <sha> — skipping`. That leg registers the running sim version
+   again, because the restore dropped every registry row written after the restore point. Until it
+   does, the activity service refuses every start with `SIM_VERSION_UNKNOWN`.
 
 8. Delete the restore branch, and keep `main-before-restore-<yyyymmdd>` while `dev` is its child:
 
