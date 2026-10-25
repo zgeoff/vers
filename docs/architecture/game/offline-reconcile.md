@@ -100,6 +100,12 @@ A discard drops the cached node seeds of the avatars it covers, because local pl
 anchors past what the server holds and a node reveal never moves a cached anchor backward. The next
 node reveal caches the server's anchors.
 
+A replay rejection or a database restore moves a chain's appended anchor back behind the device's
+cached anchor with no discard to reset the cache. The device's next start at that node is refused as
+stale, and the refusal carries the server's anchor. Once the device drops that start, it caches the
+server's anchor for the node, so the start after it draws from the server's position
+([handing an activity start to the server](./seed-chain.md#handing-an-activity-start-to-the-server)).
+
 ### Signing out
 
 Before it ends the session, the sign-out control asks the worker what the outbox holds. With an

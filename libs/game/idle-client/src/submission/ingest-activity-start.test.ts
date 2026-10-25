@@ -7,10 +7,12 @@ import { mockActivityService } from '@vers/mock-services/activity';
 import * as db from '@vers/mock-services/db';
 import { HttpResponse } from 'msw';
 import { server } from '../mocks/node';
+import { createMockCheckpointBatchEntry } from '../test-utils/factories/create-mock-checkpoint-batch-entry';
 import { ingestActivityStart } from './ingest-activity-start';
 import { readActivityStart } from './read-activity-start';
 import type { ActivityServiceClient } from './types';
 import { writeActivityStart } from './write-activity-start';
+import { writeQueuedCheckpoint } from './write-queued-checkpoint';
 
 function setupTest() {
   const link = new RPCLink({ url: `${resolveServiceURL('activity')}/rpc` });
@@ -154,6 +156,173 @@ test('it defers an order-sensitive CONFLICT, keeping the activityStart for a lat
   const stored = await readActivityStart(row.id);
 
   expect(stored).toBeDefined();
+});
+
+test("it rejects a stale-chain-head start whose server anchor a rejection rewound behind it, carrying the server's anchor and latest row and keeping the row for the drop", async () => {
+  const viewer = await createViewer();
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
+
+  const rejected = await db.activityCollection.create({
+    avatarID: viewer.avatar.id,
+    status: 'rejected',
+  });
+
+  const row = createMockActivityData({
+    avatarID: viewer.avatar.id,
+    id: 'act_ingest_rewound',
+    predecessorActivityID: rejected.id,
+    seed: 'seed_local_9',
+    startChainIndex: 9,
+    startKey: 'start_key_rewound',
+  });
+
+  server.use(
+    mockActivityService.advanceActivity.handler((opts) => {
+      throw opts.errors.CONFLICT({
+        data: {
+          activityID: row.id,
+          anchor: { chainIndex: 4, nextSeed: 'seed_server_4' },
+          appendedHead: 0,
+          avatarID: row.avatarID,
+          reason: 'stale-chain-head',
+        },
+      });
+    }),
+  );
+
+  await writeActivityStart(row);
+
+  const outcome = await ingestActivityStart(client, row.id);
+
+  expect(outcome).toMatchObject({
+    outcome: 'rejected',
+    refusal: { code: 'CONFLICT', reason: 'stale-chain-head' },
+    refusedSnapshot: {
+      anchor: { chainIndex: 4, nextSeed: 'seed_server_4' },
+      latest: { activity: { id: rejected.id, status: 'rejected' } },
+      row,
+    },
+  });
+
+  const stored = await readActivityStart(row.id);
+
+  expect(stored).toStrictEqual(row);
+});
+
+test("it defers a stale-chain-head start while an admitted activity's checkpoints wait to move the server's anchor", async () => {
+  const ctx = setupTest();
+
+  const row = createMockActivityData({
+    id: 'act_ingest_behind_outbox',
+    startChainIndex: 9,
+    startKey: 'start_key_behind_outbox',
+  });
+
+  server.use(
+    mockActivityService.advanceActivity.handler((opts) => {
+      throw opts.errors.CONFLICT({
+        data: {
+          activityID: row.id,
+          anchor: { chainIndex: 4, nextSeed: 'seed_server_4' },
+          appendedHead: 0,
+          avatarID: row.avatarID,
+          reason: 'stale-chain-head',
+        },
+      });
+    }),
+  );
+
+  await writeActivityStart(row);
+
+  await writeQueuedCheckpoint(
+    'act_ingest_admitted',
+    createMockCheckpointBatchEntry({ version: 1 }),
+  );
+
+  const outcome = await ingestActivityStart(ctx.client, row.id);
+
+  expect(outcome).toStrictEqual({
+    outcome: 'deferred',
+    refusal: { code: 'CONFLICT', reason: 'stale-chain-head' },
+  });
+
+  const stored = await readActivityStart(row.id);
+
+  expect(stored).toStrictEqual(row);
+});
+
+test('it defers a stale-chain-head refusal that carries no anchor, as an older server sends it', async () => {
+  const ctx = setupTest();
+
+  const row = createMockActivityData({
+    id: 'act_ingest_no_anchor',
+    startChainIndex: 9,
+    startKey: 'start_key_no_anchor',
+  });
+
+  server.use(
+    mockActivityService.advanceActivity.handler((opts) => {
+      throw opts.errors.CONFLICT({
+        data: {
+          activityID: row.id,
+          appendedHead: 0,
+          avatarID: row.avatarID,
+          reason: 'stale-chain-head',
+        },
+      });
+    }),
+  );
+
+  await writeActivityStart(row);
+
+  const outcome = await ingestActivityStart(ctx.client, row.id);
+
+  expect(outcome).toStrictEqual({
+    outcome: 'deferred',
+    refusal: { code: 'CONFLICT', reason: 'stale-chain-head' },
+  });
+
+  const stored = await readActivityStart(row.id);
+
+  expect(stored).toStrictEqual(row);
+});
+
+test('it keeps a final stale-chain-head start for the backoff when the progress read fails in transport', async () => {
+  const ctx = setupTest();
+
+  const row = createMockActivityData({
+    id: 'act_ingest_rewound_progress_down',
+    startChainIndex: 9,
+    startKey: 'start_key_rewound_progress_down',
+  });
+
+  server.use(
+    mockActivityService.advanceActivity.handler((opts) => {
+      throw opts.errors.CONFLICT({
+        data: {
+          activityID: row.id,
+          anchor: { chainIndex: 4, nextSeed: 'seed_server_4' },
+          appendedHead: 0,
+          avatarID: row.avatarID,
+          reason: 'stale-chain-head',
+        },
+      });
+    }),
+    mockActivityService.getLatestActivityProgress.handler(() => HttpResponse.error()),
+  );
+
+  await writeActivityStart(row);
+
+  const outcome = await ingestActivityStart(ctx.client, row.id);
+
+  expect(outcome).toStrictEqual({
+    outcome: 'deferred',
+    refusal: { code: 'CONFLICT', reason: 'stale-chain-head' },
+  });
+
+  const stored = await readActivityStart(row.id);
+
+  expect(stored).toStrictEqual(row);
 });
 
 test('it rejects and removes the activityStart on a permanent start-hash-mismatch', async () => {

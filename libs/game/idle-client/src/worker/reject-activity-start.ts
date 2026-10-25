@@ -5,7 +5,9 @@ import { readLastStartedActivity } from '../submission/read-last-started-activit
 import { removeActivityStart } from '../submission/remove-activity-start';
 import { removeLastStartedActivity } from '../submission/remove-last-started-activity';
 import { removeQueuedCheckpoints } from '../submission/remove-queued-checkpoints';
+import type { NodeSeedAnchor } from '../submission/types';
 import { writeLastStartedActivity } from '../submission/write-last-started-activity';
+import { writeServerNodeAnchor } from '../submission/write-server-node-anchor';
 import { WorkerMessageType } from '../types';
 import { handleSimulationUpdate } from './handle-simulation-update';
 import { resetSimulation } from './reset-simulation';
@@ -13,6 +15,7 @@ import { RunOutcomeKind } from './run-outcome-schema';
 import type { WorkerContext } from './types';
 
 interface RejectActivityStartInput {
+  readonly anchor?: NodeSeedAnchor;
   readonly latest: LatestActivityProgress | null;
   readonly row: ActivityData;
 }
@@ -55,6 +58,12 @@ export async function rejectActivityStart(
   }
 
   await resetLatestRunRecords(context, row.avatarID, dropped, input.latest);
+
+  // written once the held run has halted: a tick of the refused run still advances the cached
+  // anchor past the server's, so a reset before the halt is overwritten
+  if (input.anchor !== undefined) {
+    await writeServerNodeAnchor(row.avatarID, row.scopeID, input.anchor);
+  }
 
   // the root row goes last, after its own queue: a drop that fails before this point leaves it in
   // the store, and the next reconnect re-ingests it, is refused again, and repeats the whole drop

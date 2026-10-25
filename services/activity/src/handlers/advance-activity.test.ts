@@ -1187,7 +1187,14 @@ test("it conflicts an activity start whose startChainIndex/seed is behind the ch
     }),
   ).rejects.toMatchObject({
     code: 'CONFLICT',
-    data: { activityID, appendedHead: 0 },
+    data: {
+      activityID,
+      anchor: { chainIndex: 5, nextSeed: 'a'.repeat(32) },
+      appendedHead: 0,
+      avatarID: avatar.id,
+      reason: 'stale-chain-head',
+    },
+    status: 409,
   });
 });
 

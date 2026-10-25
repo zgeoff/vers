@@ -33,8 +33,11 @@ const CheckpointInvalidDataSchema = z.object({
   reason: CheckpointInvalidReasonSchema,
 });
 
+const ChainAnchorSchema = z.object({ chainIndex: z.int().min(0), nextSeed: z.string() });
+
 const ConflictDataSchema = z.object({
   activityID: z.string(),
+  anchor: ChainAnchorSchema.optional(),
   appendedHead: z.int(),
   avatarID: z.string(),
   reason: ConflictReasonSchema,
@@ -84,10 +87,9 @@ const ViewportSchema = z.object({
 });
 
 const RevealedNodeSchema = z.object({ id: z.string(), poolID: z.string().optional() });
-const NodeGenesisAnchorSchema = z.object({ chainIndex: z.int().min(0), nextSeed: z.string() });
 
 const NodeGenesisSchema = z.object({
-  anchor: NodeGenesisAnchorSchema,
+  anchor: ChainAnchorSchema,
   contentVersion: z.string(),
   encounterNode: EncounterNodeSchema,
   genesisSeed: z.string(),

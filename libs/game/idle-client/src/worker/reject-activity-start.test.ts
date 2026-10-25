@@ -4,13 +4,16 @@ import { ActivityFailureAction, createSimulation } from '@vers/idle-core';
 import { createMockActivityInput, createMockAvatarData } from '@vers/idle-core/test-utils';
 import { readAllActivityStarts } from '../submission/read-all-activity-starts';
 import { readLastStartedActivity } from '../submission/read-last-started-activity';
+import { readNodeSeed } from '../submission/read-node-seed';
 import { readQueuedCheckpoints } from '../submission/read-queued-checkpoints';
 import { writeActivityStart } from '../submission/write-activity-start';
 import { writeLastStartedActivity } from '../submission/write-last-started-activity';
+import { writeNodeSeeds } from '../submission/write-node-seeds';
 import { writeQueuedCheckpoint } from '../submission/write-queued-checkpoint';
 import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
 import { createMockCheckpointBatchEntry } from '../test-utils/factories/create-mock-checkpoint-batch-entry';
 import { createMockLatestActivityProgress } from '../test-utils/factories/create-mock-latest-activity-progress';
+import { createMockNodeSeed } from '../test-utils/factories/create-mock-node-seed';
 import { WorkerMessageType } from '../types';
 import { rejectActivityStart } from './reject-activity-start';
 import { RunOutcomeKind } from './run-outcome-schema';
@@ -52,6 +55,36 @@ test('it drops the refused start and every pending start chained on it, with the
   expect(remaining).toStrictEqual([unrelated]);
   expect(refusedQueue).toStrictEqual([]);
   expect(grandchildQueue).toStrictEqual([]);
+});
+
+test("it moves the refused start's cached node anchor back to the server's anchor the refusal carried", async () => {
+  const context = createStubWorkerContext();
+
+  const seed = createMockNodeSeed({
+    avatarID: 'avatar_rewound',
+    anchor: { chainIndex: 9, nextSeed: 'seed_local_9' },
+    nodeID: '2_3',
+  });
+
+  const refused = createMockActivityData({
+    avatarID: seed.avatarID,
+    id: 'act_rewound_root',
+    scopeID: seed.nodeID,
+    startChainIndex: 9,
+  });
+
+  await writeNodeSeeds(seed.avatarID, [seed]);
+  await writeActivityStart(refused);
+
+  await rejectActivityStart(context, {
+    anchor: { chainIndex: 4, nextSeed: 'seed_server_4' },
+    latest: null,
+    row: refused,
+  });
+
+  const cached = await readNodeSeed(seed.avatarID, seed.nodeID);
+
+  expect(cached?.anchor).toStrictEqual({ chainIndex: 4, nextSeed: 'seed_server_4' });
 });
 
 test('it halts the live run built on the refused start and broadcasts the refused outcome for it', async () => {

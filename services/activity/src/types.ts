@@ -24,6 +24,7 @@ export interface SimVersionProblemPayload {
 export interface ConflictPayload {
   readonly data: {
     readonly activityID: string;
+    readonly anchor?: { readonly chainIndex: number; readonly nextSeed: string };
     readonly appendedHead: number;
     readonly avatarID: string;
     readonly reason: ConflictReason;
