@@ -1,8 +1,8 @@
 # Checkpoint archive
 
 The checkpoint retention workflow runs the archive sweep once a day against the production database.
-The sweep archives the checkpoint rows of each activity verified more than 24 hours ago to an R2
-bucket, and purges an archive 90 days after the sweep wrote it.
+The sweep archives the checkpoint rows of each activity verified more than 24 hours ago to the
+`vers-checkpoint-archive` R2 bucket, and purges an archive 90 days after the sweep wrote it.
 [Database](../architecture/platform/database.md#checkpoint-retention) owns the tiers and the rules
 that move rows between them. This runbook sizes the table before the first deploy, turns the sweep
 on, and restores one activity's rows.
@@ -27,12 +27,18 @@ appends and verifier updates wait for one full scan of the table.
 ## Enable the sweep
 
 The workflow stops before any read while one of the four `CHECKPOINT_ARCHIVE_*` secrets is unset,
-and logs a warning with each missing key. With every secret set, the sweep logs what it would
-archive and purge, and writes and deletes nothing, until the `CHECKPOINT_ARCHIVE_APPLY` repository
-variable is `true`.
+and logs a warning with each missing key. Report-only is the default: with every secret set, the
+sweep logs what it would archive and purge, and writes and deletes nothing, until the
+`CHECKPOINT_ARCHIVE_APPLY` repository variable is `true`. The repository owner reads a report-only
+run and approves the first writing run. Nobody sets the variable before that approval.
 
-1. Create the R2 bucket and an R2 API token scoped to read and write that bucket only.
-2. Set the four secrets in the `production` environment of zgeoff/vers:
+The release agent does the first three steps. The archive has its own bucket and token, and never
+reuses the Bugsink R2 key.
+
+1. Create the R2 bucket `vers-checkpoint-archive`.
+2. Mint an R2 API token scoped to `vers-checkpoint-archive` only, with object read and write, and
+   store it in the `vers` 1Password vault.
+3. Set the four secrets in the `production` environment of zgeoff/vers:
 
    ```bash
    gh secret set CHECKPOINT_ARCHIVE_ENDPOINT --env production -R zgeoff/vers
@@ -41,9 +47,10 @@ variable is `true`.
    gh secret set CHECKPOINT_ARCHIVE_SECRET_ACCESS_KEY --env production -R zgeoff/vers
    ```
 
-   The endpoint is `https://<cloudflare_account_id>.r2.cloudflarestorage.com`.
+   The endpoint is `https://<cloudflare_account_id>.r2.cloudflarestorage.com`, and the bucket is
+   `vers-checkpoint-archive`.
 
-3. Run the workflow once in report mode:
+4. Run the workflow once in report mode:
 
    ```bash
    gh workflow run checkpoint-retention.yml -R zgeoff/vers
@@ -51,7 +58,8 @@ variable is `true`.
 
    Expect the `Sweep` step to log a line that starts with `checkpoint sweep (report only):`.
 
-4. Turn on the writes and deletes:
+5. Send the report line to the repository owner, and wait for their approval.
+6. After the approval, turn on the writes and deletes:
 
    ```bash
    gh variable set CHECKPOINT_ARCHIVE_APPLY --body true -R zgeoff/vers
