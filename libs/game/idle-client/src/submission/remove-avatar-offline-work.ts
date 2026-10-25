@@ -1,5 +1,4 @@
-import { buildActivityKeyRange } from './build-activity-key-range';
-import { buildAvatarKeyRange } from './build-avatar-key-range';
+import { buildKeyPrefixRange } from './build-key-prefix-range';
 import { collectOwnedActivityIDs } from './collect-owned-activity-ids';
 import {
   CHECKPOINT_QUEUE_STORE_NAME,
@@ -46,11 +45,11 @@ export async function removeAvatarOfflineWork(avatarIDs: ReadonlyArray<string>):
 
   await Promise.all([
     ...owned.map((activityID) => startStore.delete(activityID)),
-    ...owned.map((activityID) => checkpointStore.delete(buildActivityKeyRange(activityID))),
+    ...owned.map((activityID) => checkpointStore.delete(buildKeyPrefixRange(activityID))),
     ...avatarIDs.map((avatarID) =>
       preferenceStore.delete(`${LAST_STARTED_ACTIVITY_KEY}:${avatarID}`),
     ),
-    ...avatarIDs.map((avatarID) => nodeSeedStore.delete(buildAvatarKeyRange(avatarID))),
+    ...avatarIDs.map((avatarID) => nodeSeedStore.delete(buildKeyPrefixRange(avatarID))),
     removeAvatarPreference(FAILURE_ACTION_PREFERENCE_KEY),
     removeAvatarPreference(PENDING_STOP_INTENT_KEY),
     transaction.done,
