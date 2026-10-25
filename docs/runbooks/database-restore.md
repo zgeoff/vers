@@ -14,8 +14,16 @@ state, and rehearses the restore on a disposable branch. Two sources hold the pa
 [database](../architecture/platform/database.md#recovery-window) owns the Neon topology, the
 recovery window, and the data-loss and recovery-time targets.
 
-You need `neonctl` authenticated through `neonctl auth` to the vers project,
-`patient-dust-07220142`, `psql` or Docker, and the right to merge to `main`.
+You need:
+
+- `neonctl` authenticated through `neonctl auth` to the vers project, `patient-dust-07220142`
+- `gh` authenticated to `zgeoff/vers`, with the right to merge to `main`
+- a full clone of the repo with its dependencies installed through `bun install`, for the drill and
+  the deploy CLI
+- `flyctl` authenticated to the vers Fly organization, for `bun run deploy verify`
+- the `postgres` MCP server, whose `execute_sql_prod` tool reads production
+  ([agent access](../architecture/platform/database.md#agent-access-mcp))
+- `psql` or Docker, for the revoke step
 
 ## When to restore
 
