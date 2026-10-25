@@ -222,6 +222,33 @@ async function resolveStaleChainHead(
     return { outcome: 'deferred', refusal };
   }
 
+  // the refused anchor predates the outbox read above, and an earlier activity's delivery can land
+  // between the two; the outbox keeps work until the server acknowledges it, so an answer to a
+  // resend sent after an empty read reflects every earlier delivery
+  const [error] = await safe(
+    client.advanceActivity({
+      activityID: row.id,
+      activityStart: buildOfflineActivityStartSubmission(row),
+      continuations: [],
+      expectedHead: 0,
+    }),
+  );
+
+  if (error === null) {
+    await removeActivityStart(row.id);
+
+    return { outcome: 'ingested' };
+  }
+
+  if (
+    !isDefinedError(error) ||
+    error.code !== 'CONFLICT' ||
+    error.data.reason !== 'stale-chain-head' ||
+    error.data.anchor === undefined
+  ) {
+    return { outcome: 'deferred', refusal };
+  }
+
   const progress = await readLatestProgress(client, row.avatarID);
 
   if (progress === undefined) {
@@ -231,6 +258,6 @@ async function resolveStaleChainHead(
   return {
     outcome: 'rejected',
     refusal,
-    refusedSnapshot: { anchor, latest: progress.latest, row },
+    refusedSnapshot: { anchor: error.data.anchor, latest: progress.latest, row },
   };
 }

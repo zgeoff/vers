@@ -1,10 +1,12 @@
 import { expect, mock, test } from 'bun:test';
-import { createORPCClient } from '@orpc/client';
+import { ORPCError, createORPCClient } from '@orpc/client';
 import { RPCLink } from '@orpc/client/fetch';
+import type { ActivityData } from '@vers/contract-activity';
 import { createMockActivityData } from '@vers/contract-activity/test-utils';
 import { createAuthedServiceClient, createViewer, resolveServiceURL } from '@vers/mock-services';
 import { mockActivityService } from '@vers/mock-services/activity';
 import * as db from '@vers/mock-services/db';
+import { makeAnswerQueue } from '@vers/test-utils';
 import { HttpResponse } from 'msw';
 import { server } from '../mocks/node';
 import { createMockCheckpointBatchEntry } from '../test-utils/factories/create-mock-checkpoint-batch-entry';
@@ -158,7 +160,7 @@ test('it defers an order-sensitive CONFLICT, keeping the activityStart for a lat
   expect(stored).toBeDefined();
 });
 
-test("it rejects a stale-chain-head start whose server anchor a rejection rewound behind it, carrying the server's anchor and latest row and keeping the row for the drop", async () => {
+test("it rejects a stale-chain-head start whose server anchor a rejection rewound behind it, carrying the resend's anchor and the server's latest row and keeping the row for the drop", async () => {
   const viewer = await createViewer();
   const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
 
@@ -176,12 +178,17 @@ test("it rejects a stale-chain-head start whose server anchor a rejection rewoun
     startKey: 'start_key_rewound',
   });
 
+  const nextAnchor = makeAnswerQueue([
+    { chainIndex: 3, nextSeed: 'seed_server_3' },
+    { chainIndex: 4, nextSeed: 'seed_server_4' },
+  ]);
+
   server.use(
     mockActivityService.advanceActivity.handler((opts) => {
       throw opts.errors.CONFLICT({
         data: {
           activityID: row.id,
-          anchor: { chainIndex: 4, nextSeed: 'seed_server_4' },
+          anchor: nextAnchor(),
           appendedHead: 0,
           avatarID: row.avatarID,
           reason: 'stale-chain-head',
@@ -207,6 +214,45 @@ test("it rejects a stale-chain-head start whose server anchor a rejection rewoun
   const stored = await readActivityStart(row.id);
 
   expect(stored).toStrictEqual(row);
+});
+
+test("it ingests a stale-chain-head start on the resend once an earlier delivery moved the server's anchor onto it", async () => {
+  const ctx = setupTest();
+
+  const row = createMockActivityData({
+    id: 'act_ingest_caught_up',
+    startChainIndex: 9,
+    startKey: 'start_key_caught_up',
+  });
+
+  const answer = makeAnswerQueue<() => { activity: ActivityData; appendedHead: number }>([
+    () => {
+      throw new ORPCError('CONFLICT', {
+        data: {
+          activityID: row.id,
+          anchor: { chainIndex: 4, nextSeed: 'seed_server_4' },
+          appendedHead: 0,
+          avatarID: row.avatarID,
+          reason: 'stale-chain-head',
+        },
+        defined: true,
+        status: 409,
+      });
+    },
+    () => ({ activity: row, appendedHead: 0 }),
+  ]);
+
+  server.use(mockActivityService.advanceActivity.handler(() => answer()()));
+
+  await writeActivityStart(row);
+
+  const outcome = await ingestActivityStart(ctx.client, row.id);
+
+  expect(outcome).toStrictEqual({ outcome: 'ingested' });
+
+  const stored = await readActivityStart(row.id);
+
+  expect(stored).toBeUndefined();
 });
 
 test("it defers a stale-chain-head start while an admitted activity's checkpoints wait to move the server's anchor", async () => {

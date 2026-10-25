@@ -80,9 +80,10 @@ reason:
   the start only while an undelivered predecessor explains the mismatch.
 - A stale anchor. The refusal carries the chain's appended anchor. The device keeps the start only
   while its own undelivered work could still move that anchor onto the start's position: an earlier
-  start on the same chain, a queued checkpoint, or a stop it has not delivered. A start it drops
-  resets the node's cached anchor to the server's
-  ([cached anchors](./offline-reconcile.md#when-a-session-ends)).
+  start on the same chain, a queued checkpoint, or a stop it has not delivered. With none left, the
+  device resends the start once, because an earlier delivery can land between the refusal and that
+  check. A second stale-anchor refusal drops the start and resets the node's cached anchor to the
+  anchor it carries ([cached anchors](./offline-reconcile.md#when-a-session-ends)).
 
 A kept start resends on the worker's backoff
 ([worker lifecycle](./offline-reconcile.md#worker-lifecycle)), and a dropped start takes its queued
