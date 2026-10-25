@@ -7,22 +7,13 @@ WORKDIR /app
 # --- prune the workspace down to what @vers/service-replay needs ---
 FROM base AS pruner
 
-# a standalone turbo binary — no workspace install needed to run prune
-RUN --mount=type=cache,target=/root/.bun/install/cache bun add --global turbo@2.10.0
-
 COPY . .
 
-RUN turbo prune @vers/service-replay --docker
-
-# turbo prune's subset bun.lock keeps the root's hoisting choices, which bun
-# re-resolves differently for the smaller workspace set — --frozen-lockfile
-# then fails (vercel/turborepo#11007). Install stages instead use the
-# committed root lockfile with every workspace manifest present, filtered to
-# this service's graph; prune output feeds only the source (out/full) stage.
-RUN mkdir /manifests && \
-  find . -name package.json -not -path './out/*' -exec cp --parents {} /manifests/ \; && \
-  cp bun.lock bunfig.toml /manifests/ && \
-  cp -r patches /manifests/patches
+# a standalone turbo binary at the catalog version, so the pruned lockfile comes from the turbo
+# that the workspace pins and Renovate bumps — no workspace install needed to run prune
+RUN --mount=type=cache,target=/root/.bun/install/cache \
+  bun add --global "turbo@$(bun -p "require('./package.json').workspaces.catalog.turbo")" && \
+  turbo prune @vers/service-replay --docker
 
 # --- compile the service to a single self-contained executable ---
 # the full dependency set is needed here: `bun build --compile` inlines every JS
@@ -35,7 +26,7 @@ FROM base AS builder
 # binary answers with it regardless of the runtime environment.
 ARG SIM_ENGINE_HASH
 
-COPY --from=pruner /manifests/ .
+COPY --from=pruner /app/out/json/ .
 
 RUN --mount=type=cache,target=/root/.bun/install/cache bun install --frozen-lockfile --filter=@vers/service-replay
 
