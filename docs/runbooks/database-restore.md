@@ -302,16 +302,38 @@ operation.
    device's later activities. With every session gone, each device runs the discard that
    [How a device reconciles](#how-a-device-reconciles) describes.
 
-4. Check the branch with the drill checks, from a checkout of `main` at the commit the fleet runs,
-   which `bun run deploy verify` reports as current:
+4. Find the commit the replay service runs, from an up-to-date checkout of `main`. The fleet check
+   reads each app's machines through `flyctl` and diffs their commit against your checkout, so it
+   needs `flyctl` authenticated and the full git history:
+
+   ```bash
+   git switch main && git pull --ff-only
+   bun run deploy verify
+   ```
+
+   Expect one line per app, such as `✓ vers-service-replay — online and current at <sha>`. The
+   `vers-service-replay` line holds the commit `<fleet_sha>`. A `✗` line holds a finding instead of
+   the commit, so for a `✗` on `vers-service-replay` read the commit its machines stamp:
+
+   ```bash
+   flyctl machines list --app vers-service-replay --json | jq -r '.[].config.env.GIT_SHA' | sort -u
+   ```
+
+   Expect one commit, which is `<fleet_sha>`.
+
+5. Check out `<fleet_sha>`, then run the drill checks against the branch:
+
+   ```bash
+   git switch --detach <fleet_sha> && bun install
+   ```
 
    ```bash
    RESTORE_DRILL_ENGINE_HASH="$(bun run --silent deploy engine-hash)" \
      RESTORE_DRILL_DATABASE_URL='<drill_connection_string>' bun run db:restore-drill
    ```
 
-   The engine hash names the engine the replay service runs in-process, which replays its own work
-   whatever the registry holds. Expect the last report line to read
+   The engine hash identifies the engine the replay service runs in-process, which replays its own
+   work whatever the registry holds. Expect the last report line to read
    `PASS: <count> of <count> checks hold`. The checks read in one read-only transaction. Each `FAIL`
    line holds a broken check, and the lines under it hold the rows that break it. Restore `main`
    from no branch that fails a check.
