@@ -14,8 +14,16 @@ state, and rehearses the restore on a disposable branch. Two sources hold the pa
 [database](../architecture/platform/database.md#recovery-window) owns the Neon topology, the
 recovery window, and the data-loss and recovery-time targets.
 
-You need `neonctl` authenticated through `neonctl auth` to the vers project,
-`patient-dust-07220142`, `psql` or Docker, and the right to merge to `main`.
+You need:
+
+- `neonctl` authenticated through `neonctl auth` to the vers project, `patient-dust-07220142`
+- `gh` authenticated to `zgeoff/vers`, with the right to merge to `main`
+- a full clone of the repo with its dependencies installed through `bun install`, for the drill and
+  the deploy CLI
+- `flyctl` authenticated to the vers Fly organization, for `bun run deploy verify`
+- the `postgres` MCP server, whose `execute_sql_prod` tool reads production
+  ([agent access](../architecture/platform/database.md#agent-access-mcp))
+- `psql` or Docker, for the revoke step
 
 ## When to restore
 
@@ -237,6 +245,12 @@ operation.
      --name <restore_branch> --parent <parent> --expires-at <expiry>
    ```
 
+   `<expiry>` is an RFC 3339 time in UTC, such as `2026-10-22T06:45:00Z`. To set it a day from now:
+
+   ```bash
+   date -u -d '+1 day' +%Y-%m-%dT%H:%M:%SZ
+   ```
+
    Expect a table row with the branch and its endpoint.
 
 2. Read the branch's connection string as the owner role, which the revoke step needs to write:
@@ -294,16 +308,43 @@ operation.
    device's later activities. With every session gone, each device runs the discard that
    [How a device reconciles](#how-a-device-reconciles) describes.
 
-4. Check the branch with the drill checks, from a checkout of `main` at the commit the fleet runs,
-   which `bun run deploy verify` reports as current:
+4. Find the commit the replay service runs, from an up-to-date checkout of `main`. The fleet check
+   reads each app's machines through `flyctl` and diffs their commit against your checkout, so it
+   needs `flyctl` authenticated and the full git history:
+
+   ```bash
+   git switch main && git pull --ff-only
+   bun run deploy verify
+   ```
+
+   Expect one line per app, such as `✓ vers-service-replay — online and current at <sha>`. The
+   `vers-service-replay` line holds the commit `<fleet_sha>`. A `✗` line holds a finding instead of
+   the commit, so for a `✗` on `vers-service-replay` read the commit its service machines stamp. The
+   filter skips the scheduled drainer and every process group other than `app`, as the deploy CLI
+   does:
+
+   ```bash
+   flyctl machines list --app vers-service-replay --json \
+     | jq -r '.[] | select(.config.schedule == null and (.config.metadata.fly_process_group // "app") == "app") | .config.env.GIT_SHA' \
+     | sort -u
+   ```
+
+   Expect one commit, which is `<fleet_sha>`. Two commits mean a rollout stopped part way, so finish
+   the replay service's deploy before you go on.
+
+5. Check out `<fleet_sha>`, then run the drill checks against the branch:
+
+   ```bash
+   git switch --detach <fleet_sha> && bun install
+   ```
 
    ```bash
    RESTORE_DRILL_ENGINE_HASH="$(bun run --silent deploy engine-hash)" \
      RESTORE_DRILL_DATABASE_URL='<drill_connection_string>' bun run db:restore-drill
    ```
 
-   The engine hash names the engine the replay service runs in-process, which replays its own work
-   whatever the registry holds. Expect the last report line to read
+   The engine hash identifies the engine the replay service runs in-process, which replays its own
+   work whatever the registry holds. Expect the last report line to read
    `PASS: <count> of <count> checks hold`. The checks read in one read-only transaction. Each `FAIL`
    line holds a broken check, and the lines under it hold the rows that break it. Restore `main`
    from no branch that fails a check.
@@ -350,13 +391,14 @@ position, so a position the restored chain draws again mints at most one item.
 The drill runs every step of a point-in-time restore up to the restore of `main`, on a disposable
 branch, so it changes nothing that players use.
 
-1. Pick a restore point inside the last seven days, and note the time you start.
+1. Pick a restore point inside the last seven days.
 
 2. Follow [Prepare a restore branch](#prepare-a-restore-branch) with `<restore_point>` as the parent
    and `restore-drill-<yyyymmdd>` as the branch name.
 
-3. Record the drill report and the time from step 1 to the end of step 2, which measures the branch
-   restore and the checks against the recovery-time target.
+3. Record the drill report and the time from the branch create to the end of the drill checks. That
+   span covers the branch restore and the checks, and you compare it against the recovery-time
+   target.
 
 4. Delete the branch:
 
