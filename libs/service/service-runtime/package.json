@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./logging": "./src/logging/index.ts"
   },
   "scripts": {
     "test": "bun test --randomize",
@@ -12,8 +13,12 @@
   },
   "dependencies": {
     "@elysiajs/opentelemetry": "catalog:",
+    "@logtape/logtape": "catalog:",
+    "@logtape/otel": "catalog:",
     "@opentelemetry/api": "catalog:",
+    "@opentelemetry/exporter-logs-otlp-proto": "catalog:",
     "@opentelemetry/exporter-trace-otlp-proto": "catalog:",
+    "@opentelemetry/sdk-logs": "catalog:",
     "@orpc/server": "catalog:",
     "@sentry/bun": "catalog:",
     "@sentry/node": "catalog:",
@@ -22,7 +27,6 @@
     "@vers/service-utils": "workspace:*",
     "@vers/trace": "workspace:*",
     "elysia": "catalog:",
-    "pino": "catalog:",
     "tiny-invariant": "catalog:",
     "zod": "catalog:"
   },

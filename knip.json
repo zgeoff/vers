@@ -36,8 +36,7 @@
         "src/router.tsx",
         "src/mocks/browser.ts",
         "src/lib/scene/types.ts"
-      ],
-      "ignoreDependencies": ["pino", "pino-pretty"]
+      ]
     },
     "apps/web-e2e": {
       "entry": [
@@ -68,9 +67,6 @@
     },
     "services/replay": {
       "entry": ["src/serve.ts", "src/serve-provider.ts", "src/drain.ts"]
-    },
-    "libs/service/service-utils": {
-      "ignoreDependencies": ["pino-pretty"]
     },
     "libs/design/design-system": {
       "ignoreDependencies": ["happy-dom"]

@@ -36,7 +36,7 @@ export async function runAvatarCreate(formData: FormData): Promise<AvatarCreateR
     // only the declared errors are normal flow; any other failure — transport, or a defined
     // error the conflict message would misreport — is logged
     if (!isDefinedError(error) || error.code !== 'CONFLICT') {
-      logger.error({ err: error }, 'avatar creation failed');
+      logger.error('avatar creation failed', { error });
     }
 
     return {

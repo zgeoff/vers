@@ -11,18 +11,15 @@ export async function parkReplayTarget(
 ): Promise<ReplayIterationOutcome> {
   const message = pickParkMessage(reason);
 
-  context.deps.logger.warn(
-    {
-      activityID: segment.activity.id,
-      appendedHead: segment.activity.appendedHead,
-      appendedTimeMs: segment.activity.appendedTimeMs,
-      checkpointCount: segment.activity.appendedHead,
-      reason,
-      simVersion: segment.activity.simVersion,
-      verifiedHead: segment.verifiedHead,
-    },
-    message,
-  );
+  context.deps.logger.warn(message, {
+    activityID: segment.activity.id,
+    appendedHead: segment.activity.appendedHead,
+    appendedTimeMs: segment.activity.appendedTimeMs,
+    checkpointCount: segment.activity.appendedHead,
+    reason,
+    simVersion: segment.activity.simVersion,
+    verifiedHead: segment.verifiedHead,
+  });
 
   recordRejection(pickParkRejectionReason(reason));
 

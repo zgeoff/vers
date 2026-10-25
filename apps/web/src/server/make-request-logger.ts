@@ -1,10 +1,10 @@
 import type { Middleware } from './middleware';
 
 interface RequestLoggerSink {
-  readonly debug: (fields: Readonly<Record<string, unknown>>, message: string) => void;
-  readonly error: (fields: Readonly<Record<string, unknown>>, message: string) => void;
-  readonly info: (fields: Readonly<Record<string, unknown>>, message: string) => void;
-  readonly warn: (fields: Readonly<Record<string, unknown>>, message: string) => void;
+  readonly debug: (message: string, properties: Readonly<Record<string, unknown>>) => void;
+  readonly error: (message: string, properties: Readonly<Record<string, unknown>>) => void;
+  readonly info: (message: string, properties: Readonly<Record<string, unknown>>) => void;
+  readonly warn: (message: string, properties: Readonly<Record<string, unknown>>) => void;
 }
 
 interface RequestLoggerOptions {
@@ -28,7 +28,7 @@ export function makeRequestLogger(
     // written while the request is still open: a span exports only once it ends, so a request
     // that never finishes leaves this line as its only trace
     const overdue = setTimeout(() => {
-      logger.warn({ elapsedMs: overdueRequestMs, method: request.method, path }, 'request overdue');
+      logger.warn('request overdue', { elapsedMs: overdueRequestMs, method: request.method, path });
     }, overdueRequestMs);
 
     let response: Response;
@@ -37,38 +37,33 @@ export function makeRequestLogger(
       response = await next();
     } catch (error) {
       if (request.signal.aborted) {
-        logger.info(
-          { durationMs: toDurationMs(performance.now() - start), method: request.method, path },
-          'request aborted',
-        );
+        logger.info('request aborted', {
+          durationMs: toDurationMs(performance.now() - start),
+          method: request.method,
+          path,
+        });
 
         throw error;
       }
 
-      logger.error(
-        {
-          durationMs: toDurationMs(performance.now() - start),
-          err: error,
-          method: request.method,
-          path,
-        },
-        'request failed',
-      );
+      logger.error('request failed', {
+        durationMs: toDurationMs(performance.now() - start),
+        error,
+        method: request.method,
+        path,
+      });
 
       throw error;
     } finally {
       clearTimeout(overdue);
     }
 
-    logger[pickRequestLogLevel(response.status, path)](
-      {
-        durationMs: toDurationMs(performance.now() - start),
-        method: request.method,
-        path,
-        status: response.status,
-      },
-      'request completed',
-    );
+    logger[pickRequestLogLevel(response.status, path)]('request completed', {
+      durationMs: toDurationMs(performance.now() - start),
+      method: request.method,
+      path,
+      status: response.status,
+    });
 
     return response;
   };

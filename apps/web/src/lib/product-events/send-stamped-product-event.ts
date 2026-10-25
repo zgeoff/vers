@@ -16,6 +16,6 @@ export async function sendStampedProductEvent(event: StampedProductEvent): Promi
   const delivered = await sender(event);
 
   if (!delivered) {
-    logger.warn({ eventName: event.name }, 'product event delivery failed');
+    logger.warn('product event delivery failed', { eventName: event.name });
   }
 }

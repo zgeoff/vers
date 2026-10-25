@@ -27,7 +27,7 @@ export async function verifyStepUpHandler(input: VerifyStepUpInput): Promise<Ver
 
   if (codeError) {
     if (!isDefinedError(codeError)) {
-      logger.error({ err: codeError }, 'step-up code check failed');
+      logger.error('step-up code check failed', { error: codeError });
     }
 
     const failedAttempt = await sessionClient.stepUp.recordFailedAttempt({

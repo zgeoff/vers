@@ -7,16 +7,16 @@ test('it logs one structured line at info when a page request completes', async 
   const lines: Array<{ fields: Record<string, unknown>; level: string; message: string }> = [];
 
   const requestLogger = makeRequestLogger({
-    debug: (fields, message) => {
+    debug: (message, fields) => {
       lines.push({ fields, level: 'debug', message });
     },
-    error: (fields, message) => {
+    error: (message, fields) => {
       lines.push({ fields, level: 'error', message });
     },
-    info: (fields, message) => {
+    info: (message, fields) => {
       lines.push({ fields, level: 'info', message });
     },
-    warn: (fields, message) => {
+    warn: (message, fields) => {
       lines.push({ fields, level: 'warn', message });
     },
   });
@@ -46,16 +46,16 @@ test('it excludes the query string from the logged path', async () => {
   const lines: Array<{ fields: Record<string, unknown>; level: string; message: string }> = [];
 
   const requestLogger = makeRequestLogger({
-    debug: (fields, message) => {
+    debug: (message, fields) => {
       lines.push({ fields, level: 'debug', message });
     },
-    error: (fields, message) => {
+    error: (message, fields) => {
       lines.push({ fields, level: 'error', message });
     },
-    info: (fields, message) => {
+    info: (message, fields) => {
       lines.push({ fields, level: 'info', message });
     },
-    warn: (fields, message) => {
+    warn: (message, fields) => {
       lines.push({ fields, level: 'warn', message });
     },
   });
@@ -75,16 +75,16 @@ test('it logs a client error response at warn', async () => {
   const lines: Array<{ fields: Record<string, unknown>; level: string; message: string }> = [];
 
   const requestLogger = makeRequestLogger({
-    debug: (fields, message) => {
+    debug: (message, fields) => {
       lines.push({ fields, level: 'debug', message });
     },
-    error: (fields, message) => {
+    error: (message, fields) => {
       lines.push({ fields, level: 'error', message });
     },
-    info: (fields, message) => {
+    info: (message, fields) => {
       lines.push({ fields, level: 'info', message });
     },
-    warn: (fields, message) => {
+    warn: (message, fields) => {
       lines.push({ fields, level: 'warn', message });
     },
   });
@@ -105,16 +105,16 @@ test('it logs a server error response at error', async () => {
   const lines: Array<{ fields: Record<string, unknown>; level: string; message: string }> = [];
 
   const requestLogger = makeRequestLogger({
-    debug: (fields, message) => {
+    debug: (message, fields) => {
       lines.push({ fields, level: 'debug', message });
     },
-    error: (fields, message) => {
+    error: (message, fields) => {
       lines.push({ fields, level: 'error', message });
     },
-    info: (fields, message) => {
+    info: (message, fields) => {
       lines.push({ fields, level: 'info', message });
     },
-    warn: (fields, message) => {
+    warn: (message, fields) => {
       lines.push({ fields, level: 'warn', message });
     },
   });
@@ -135,16 +135,16 @@ test('it logs a served static asset at debug', async () => {
   const lines: Array<{ fields: Record<string, unknown>; level: string; message: string }> = [];
 
   const requestLogger = makeRequestLogger({
-    debug: (fields, message) => {
+    debug: (message, fields) => {
       lines.push({ fields, level: 'debug', message });
     },
-    error: (fields, message) => {
+    error: (message, fields) => {
       lines.push({ fields, level: 'error', message });
     },
-    info: (fields, message) => {
+    info: (message, fields) => {
       lines.push({ fields, level: 'info', message });
     },
-    warn: (fields, message) => {
+    warn: (message, fields) => {
       lines.push({ fields, level: 'warn', message });
     },
   });
@@ -164,16 +164,16 @@ test('it logs a missing asset at warn rather than debug', async () => {
   const lines: Array<{ fields: Record<string, unknown>; level: string; message: string }> = [];
 
   const requestLogger = makeRequestLogger({
-    debug: (fields, message) => {
+    debug: (message, fields) => {
       lines.push({ fields, level: 'debug', message });
     },
-    error: (fields, message) => {
+    error: (message, fields) => {
       lines.push({ fields, level: 'error', message });
     },
-    info: (fields, message) => {
+    info: (message, fields) => {
       lines.push({ fields, level: 'info', message });
     },
-    warn: (fields, message) => {
+    warn: (message, fields) => {
       lines.push({ fields, level: 'warn', message });
     },
   });
@@ -193,16 +193,16 @@ test('it logs at error and rethrows when the handler throws', async () => {
   const lines: Array<{ fields: Record<string, unknown>; level: string; message: string }> = [];
 
   const requestLogger = makeRequestLogger({
-    debug: (fields, message) => {
+    debug: (message, fields) => {
       lines.push({ fields, level: 'debug', message });
     },
-    error: (fields, message) => {
+    error: (message, fields) => {
       lines.push({ fields, level: 'error', message });
     },
-    info: (fields, message) => {
+    info: (message, fields) => {
       lines.push({ fields, level: 'info', message });
     },
-    warn: (fields, message) => {
+    warn: (message, fields) => {
       lines.push({ fields, level: 'warn', message });
     },
   });
@@ -224,7 +224,7 @@ test('it logs at error and rethrows when the handler throws', async () => {
   expect(lines[0]).toStrictEqual({
     fields: {
       durationMs: expect.toBeNumber(),
-      err: thrown,
+      error: thrown,
       method: 'GET',
       path: '/nexus',
     },
@@ -237,16 +237,16 @@ test('it logs at info and rethrows when the client dropped the request', async (
   const lines: Array<{ fields: Record<string, unknown>; level: string; message: string }> = [];
 
   const requestLogger = makeRequestLogger({
-    debug: (fields, message) => {
+    debug: (message, fields) => {
       lines.push({ fields, level: 'debug', message });
     },
-    error: (fields, message) => {
+    error: (message, fields) => {
       lines.push({ fields, level: 'error', message });
     },
-    info: (fields, message) => {
+    info: (message, fields) => {
       lines.push({ fields, level: 'info', message });
     },
-    warn: (fields, message) => {
+    warn: (message, fields) => {
       lines.push({ fields, level: 'warn', message });
     },
   });
@@ -276,16 +276,16 @@ test('it logs a request as overdue while it is still open past the overdue thres
 
   const requestLogger = makeRequestLogger(
     {
-      debug: (fields, message) => {
+      debug: (message, fields) => {
         lines.push({ fields, level: 'debug', message });
       },
-      error: (fields, message) => {
+      error: (message, fields) => {
         lines.push({ fields, level: 'error', message });
       },
-      info: (fields, message) => {
+      info: (message, fields) => {
         lines.push({ fields, level: 'info', message });
       },
-      warn: (fields, message) => {
+      warn: (message, fields) => {
         lines.push({ fields, level: 'warn', message });
       },
     },

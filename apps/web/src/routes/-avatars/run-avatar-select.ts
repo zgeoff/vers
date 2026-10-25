@@ -15,7 +15,7 @@ export async function runAvatarSelect(avatarID: string): Promise<AvatarSelectRes
       return { owningAvatarName: error.data.owningAvatarName, status: 'activity-locked' };
     }
 
-    logger.error({ err: error }, 'avatar selection failed');
+    logger.error('avatar selection failed', { error });
 
     return { status: 'failed' };
   }

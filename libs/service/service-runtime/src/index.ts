@@ -1,5 +1,4 @@
 export { baseEnvSchema } from './base-env-schema';
-export { createLogger } from './create-logger';
 export { buildEnvContract } from './build-env-contract';
 export type { EnvContract } from './build-env-contract';
 export { createService } from './create-service';

@@ -1,4 +1,5 @@
 import { expect, test } from 'bun:test';
+import { getLogger } from '@logtape/logtape';
 import { sha256 } from '@noble/hashes/sha2.js';
 import { utf8ToBytes } from '@noble/hashes/utils.js';
 import { createContentVersion, makeContentDocumentLoader } from '@vers/content-registry';
@@ -12,7 +13,6 @@ import { deriveAvatarKey } from '@vers/roll-crypto';
 import { createTestDB, resolveTestServiceKeyPair } from '@vers/service-test-utils/bun';
 import { createInMemoryMetrics } from '@vers/test-utils/bun';
 import { ORIGIN_CELL, toNodeID } from '@vers/worldmap-core';
-import pino from 'pino';
 import invariant from 'tiny-invariant';
 import { server } from '../mocks/server';
 import { createReplayCache } from '../replay/create-replay-cache';
@@ -62,7 +62,7 @@ test('it defers the cache mutation until the caller applies it, never touching t
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
-    logger: pino({ enabled: false }),
+    logger: getLogger(['test-replay']),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };
@@ -102,7 +102,7 @@ test('it reports idle rather than throwing when the claimed activity row is gone
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
-    logger: pino({ enabled: false }),
+    logger: getLogger(['test-replay']),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };
@@ -147,7 +147,7 @@ test('it settles the terminal checkpoint reward into the avatar xp and level on 
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
-    logger: pino({ enabled: false }),
+    logger: getLogger(['test-replay']),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };
@@ -202,7 +202,7 @@ test('it settles a run verified in two segments to the terminal total, counting 
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
-    logger: pino({ enabled: false }),
+    logger: getLogger(['test-replay']),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };
@@ -297,7 +297,7 @@ test('it settles a matched mid-run segment onto the avatar before the run ends',
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
-    logger: pino({ enabled: false }),
+    logger: getLogger(['test-replay']),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };
@@ -357,7 +357,7 @@ test('it settles no additional xp when a stale duplicate target misses the alrea
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
-    logger: pino({ enabled: false }),
+    logger: getLogger(['test-replay']),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };
@@ -446,7 +446,7 @@ test('it keeps an applied zero-xp activity when a stale redelivery arrives after
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
-    logger: pino({ enabled: false }),
+    logger: getLogger(['test-replay']),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };
@@ -528,7 +528,7 @@ test("it rejects an activity whose pinned build does not match the avatar's sett
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
-    logger: pino({ enabled: false }),
+    logger: getLogger(['test-replay']),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };
@@ -605,7 +605,7 @@ test('it makes no keys dispatch when the target has already verified part of the
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
-    logger: pino({ enabled: false }),
+    logger: getLogger(['test-replay']),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };
@@ -650,7 +650,7 @@ test('it verifies an honest sealed content-version-2 row, matching its stamped p
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
-    logger: pino({ enabled: false }),
+    logger: getLogger(['test-replay']),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };
@@ -739,7 +739,7 @@ test("it verifies an honest row sealed under the avatar's own seed, not a shared
     itemInterpreters: { '849851': sealedInterpreter },
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
-    logger: pino({ enabled: false }),
+    logger: getLogger(['test-replay']),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };
@@ -838,7 +838,7 @@ test("it rejects a tampered stamped poolID with reason 'descriptor-mismatch'", a
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
-    logger: pino({ enabled: false }),
+    logger: getLogger(['test-replay']),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };
@@ -904,7 +904,7 @@ test("it rejects a tampered stamped encounter node on a continuation row, not ju
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
-    logger: pino({ enabled: false }),
+    logger: getLogger(['test-replay']),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };
@@ -959,7 +959,7 @@ test('it grants a first_clear keyed by the node when a verified segment complete
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
-    logger: pino({ enabled: false }),
+    logger: getLogger(['test-replay']),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };
@@ -1048,7 +1048,7 @@ test('it lands no grant when a verified segment ends on a failed terminal', asyn
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
-    logger: pino({ enabled: false }),
+    logger: getLogger(['test-replay']),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };
@@ -1114,7 +1114,7 @@ test('it lands no grant when a stop forward-exits the chain without a completed 
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
-    logger: pino({ enabled: false }),
+    logger: getLogger(['test-replay']),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };
@@ -1173,7 +1173,7 @@ test('it lands no grant when a completed terminal verifies on a non-map-node sco
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
-    logger: pino({ enabled: false }),
+    logger: getLogger(['test-replay']),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };
@@ -1227,7 +1227,7 @@ test('it grants a first_clear exactly once across a re-verification of an alread
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
-    logger: pino({ enabled: false }),
+    logger: getLogger(['test-replay']),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };
@@ -1292,7 +1292,7 @@ test('it rejects a settled activity whose node no earlier settled clear made rea
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
-    logger: pino({ enabled: false }),
+    logger: getLogger(['test-replay']),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };
@@ -1348,7 +1348,7 @@ test('it verifies a world-map-node run whose scope is connected to a verified fi
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
-    logger: pino({ enabled: false }),
+    logger: getLogger(['test-replay']),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };
@@ -1398,7 +1398,7 @@ test('it rejects a world-map-node run whose scope is not connected to any comple
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
-    logger: pino({ enabled: false }),
+    logger: getLogger(['test-replay']),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };
@@ -1464,7 +1464,7 @@ test('it cascades a build mismatch through a chain of successors, once the run t
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
-    logger: pino({ enabled: false }),
+    logger: getLogger(['test-replay']),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };
@@ -1531,7 +1531,7 @@ test('it settles an unrelated successor once its zero-xp predecessor rejects', a
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
-    logger: pino({ enabled: false }),
+    logger: getLogger(['test-replay']),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };
@@ -1607,7 +1607,7 @@ test('it never rejects a world-map-node run at the origin for reachability, even
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
-    logger: pino({ enabled: false }),
+    logger: getLogger(['test-replay']),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };
@@ -1647,7 +1647,7 @@ test('it never rejects a non-world_map_node scope for reachability', async () =>
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
-    logger: pino({ enabled: false }),
+    logger: getLogger(['test-replay']),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };
@@ -1738,7 +1738,7 @@ test('it mints an old activity through its pinned content version interpreter af
     },
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
-    logger: pino({ enabled: false }),
+    logger: getLogger(['test-replay']),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };

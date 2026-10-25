@@ -1,24 +1,28 @@
 import { expect, onTestFinished, test } from 'bun:test';
+import { resetSync } from '@logtape/logtape';
 import { updateEnv } from '@vers/test-utils/bun';
-import { createOTLPLogStream } from './create-otlp-log-stream';
+import { configureLogging } from './configure-logging';
+import { createOTLPLogSink } from './create-otlp-log-sink';
 
 interface ReceivedExport {
   readonly auth: string | null;
-  readonly bodyBytes: number;
+  readonly body: string;
   readonly contentType: string | null;
   readonly dataset: string | null;
   readonly path: string;
 }
 
-test('it ships written lines to the OTLP logs endpoint with the env-configured headers', async () => {
+test('it ships a log entry to the OTLP logs endpoint with its level, category and fields', async () => {
   const received: Array<ReceivedExport> = [];
 
   const handleRequest = async (request: Request): Promise<Response> => {
-    const body = await request.arrayBuffer();
+    const bytes = await request.arrayBuffer();
 
     received.push({
       auth: request.headers.get('authorization'),
-      bodyBytes: body.byteLength,
+
+      // protobuf writes each string field as its raw UTF-8 bytes, so a decoded body shows them
+      body: new TextDecoder().decode(bytes),
       contentType: request.headers.get('content-type'),
       dataset: request.headers.get('x-axiom-dataset'),
       path: new URL(request.url).pathname,
@@ -32,6 +36,10 @@ test('it ships written lines to the OTLP logs endpoint with the env-configured h
     port: 0,
   });
 
+  onTestFinished(async () => {
+    await server.stop();
+  });
+
   updateEnv('OTEL_EXPORTER_OTLP_ENDPOINT', `http://127.0.0.1:${server.port}`);
 
   updateEnv(
@@ -39,18 +47,22 @@ test('it ships written lines to the OTLP logs endpoint with the env-configured h
     'Authorization=Bearer test-token,X-Axiom-Dataset=vers-logs',
   );
 
-  onTestFinished(async () => {
-    await server.stop();
+  const otlpLogSink = createOTLPLogSink({ serviceName: 'test-service' });
+
+  const logger = configureLogging({
+    category: 'test-billing',
+    format: 'json',
+    level: 'info',
+    sinks: [otlpLogSink.sink],
   });
 
-  const stream = createOTLPLogStream({ serviceName: 'test-service' });
+  onTestFinished(() => {
+    resetSync();
+  });
 
-  stream.write(
-    // oxlint-disable-next-line zgeoff/no-abbreviated-names -- pino writes the message under `msg`
-    `${JSON.stringify({ level: 30, msg: 'shipped line', name: 'test-service', time: Date.now() })}\n`,
-  );
+  logger.warn('quota exceeded', { tenantTier: 'gold-tier' });
 
-  await stream.flush();
+  await otlpLogSink.flush();
 
   expect(received).toHaveLength(1);
 
@@ -61,13 +73,12 @@ test('it ships written lines to the OTLP logs endpoint with the env-configured h
     path: '/v1/logs',
   });
 
-  expect(received[0]?.bodyBytes).toBeGreaterThan(0);
-});
-
-test('it survives a line that is not JSON without throwing', () => {
-  const stream = createOTLPLogStream({ serviceName: 'test-service' });
-
-  expect(() => {
-    stream.write('plain text, not a pino line\n');
-  }).not.toThrow();
+  expect(received[0]?.body).toIncludeMultiple([
+    'quota exceeded',
+    'warning',
+    'category',
+    'test-billing',
+    'tenantTier',
+    'gold-tier',
+  ]);
 });

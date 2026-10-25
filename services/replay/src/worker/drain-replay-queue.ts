@@ -36,7 +36,7 @@ async function runDrain(deps: Readonly<ReplayWorkerDeps>): Promise<number> {
     // `reportUnexpectedError` still runs while the root span it tags the report with is active
     const outcome = await withRootSpan('replay.iteration', () =>
       runReplayIteration(deps, deps.cache).catch((error: unknown) => {
-        deps.logger.error({ err: error }, 'replay drain iteration threw unexpectedly');
+        deps.logger.error('replay drain iteration threw unexpectedly', { error });
 
         reportUnexpectedError(error);
         recordIterationFailure('errored');

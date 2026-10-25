@@ -13,12 +13,12 @@ test('it logs the fault at error level', () => {
   const error = new Error('Service Unavailable');
 
   reportFunctionFault(error, {
-    error: (fields, message) => {
+    error: (message, fields) => {
       lines.push({ fields, message });
     },
   });
 
-  expect(lines).toStrictEqual([{ fields: { err: error }, message: 'server function failed' }]);
+  expect(lines).toStrictEqual([{ fields: { error }, message: 'server function failed' }]);
 });
 
 test('it reports the fault to the error backend tagged with the active trace id', async () => {

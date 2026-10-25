@@ -5,14 +5,15 @@ import { RPCHandler } from '@orpc/server/fetch';
 import type { ServiceKeySet, TokenIssuer } from '@vers/service-auth';
 import { parseServiceJWKS, verifyServiceToken } from '@vers/service-auth';
 import { findSpanTraceContext, withTraceContext } from '@vers/service-utils';
-import type { MetricsExport, OTLPLogStream } from '@vers/service-utils/otel';
+import type { MetricsExport } from '@vers/service-utils/otel';
 import type { TraceContext } from '@vers/trace';
 import { createTraceContext, parseTraceparent } from '@vers/trace';
 import { Elysia } from 'elysia';
-import type pino from 'pino';
 import * as z from 'zod';
 import { baseEnvSchema } from './base-env-schema';
-import { createLogger } from './create-logger';
+import type { Logger } from './logging';
+import { configureLogging } from './logging/configure-logging';
+import type { OTLPLogSink } from './logging/create-otlp-log-sink';
 import { recordCallerRejection } from './metrics/record-caller-rejection';
 import { reportUnexpectedError } from './report-unexpected-error';
 import { shouldTraceRequest } from './should-trace-request';
@@ -24,7 +25,7 @@ type ServiceEnv<TEnvShape extends z.ZodRawShape> = z.infer<typeof baseEnvSchema>
 
 interface ServiceRuntime<TEnvShape extends z.ZodRawShape> {
   readonly env: Readonly<ServiceEnv<TEnvShape>>;
-  readonly logger: pino.Logger;
+  readonly logger: Logger;
 }
 
 export interface ServiceConfig<TEnvShape extends z.ZodRawShape> {
@@ -41,7 +42,7 @@ export interface Service<TEnvShape extends z.ZodRawShape> {
   app: Elysia;
   env: ServiceEnv<TEnvShape>;
   listen: (port?: number) => void;
-  logger: pino.Logger;
+  logger: Logger;
   stopTelemetry: () => Promise<void>;
 }
 
@@ -57,7 +58,7 @@ export async function createService<TEnvShape extends z.ZodRawShape = Record<str
   // only Sentry's gives each request its own scope; the plugin's own registration then no-ops
   await startErrorReporting(env.SENTRY_DSN);
 
-  const otlpLogStream =
+  const otlpLogSink =
     env.OTEL_EXPORTER_OTLP_ENDPOINT === undefined ? undefined : await createLogShipper(config.name);
 
   const metricsExport =
@@ -65,10 +66,11 @@ export async function createService<TEnvShape extends z.ZodRawShape = Record<str
       ? undefined
       : await startMetricsShipper(config.name);
 
-  const logger = createLogger({
+  const logger = configureLogging({
+    category: config.name,
+    format: 'json',
     level: env.LOG_LEVEL,
-    name: config.name,
-    ...(otlpLogStream !== undefined && { stream: otlpLogStream }),
+    ...(otlpLogSink !== undefined && { sinks: [otlpLogSink.sink] }),
   });
 
   const keySet = parseServiceJWKS(env.SERVICE_AUTH_JWKS);
@@ -114,19 +116,16 @@ export async function createService<TEnvShape extends z.ZodRawShape = Record<str
         // the wire layer: logged so Axiom can group a refusal by its cause, never reported. Only a
         // declared error's data is logged, since only a contract keeps that shape free of secrets.
         if (thrown instanceof ORPCError && (thrown.defined || thrown.status < 500)) {
-          logger.warn(
-            {
-              code: thrown.code,
-              status: thrown.status,
-              ...(thrown.defined && { data: thrown.data }),
-            },
-            'request refused',
-          );
+          logger.warn('request refused', {
+            code: thrown.code,
+            status: thrown.status,
+            ...(thrown.defined && { data: thrown.data }),
+          });
 
           return;
         }
 
-        logger.error({ err: thrown }, 'unexpected service error');
+        logger.error('unexpected service error', { error: thrown });
 
         reportUnexpectedError(thrown);
       }),
@@ -154,7 +153,7 @@ export async function createService<TEnvShape extends z.ZodRawShape = Record<str
     },
     logger,
     stopTelemetry: async () => {
-      await Promise.all([metricsExport?.stop(), otlpLogStream?.flush()]);
+      await Promise.all([metricsExport?.stop(), otlpLogSink?.flush()]);
     },
   };
 }
@@ -177,10 +176,10 @@ function readServiceEnv<TEnvShape extends z.ZodRawShape>(
   return { ...base.data, ...extra.data };
 }
 
-async function createLogShipper(serviceName: string): Promise<OTLPLogStream> {
-  const otelModule = await import('@vers/service-utils/otel');
+async function createLogShipper(serviceName: string): Promise<OTLPLogSink> {
+  const logSinkModule = await import('./logging/create-otlp-log-sink');
 
-  return otelModule.createOTLPLogStream({ serviceName });
+  return logSinkModule.createOTLPLogSink({ serviceName });
 }
 
 async function startMetricsShipper(serviceName: string): Promise<MetricsExport> {
@@ -199,7 +198,7 @@ function createTrace(request: Request): TraceContext {
 interface RegisterORPCHandlerDeps {
   readonly allowedIssuers: ReadonlyArray<TokenIssuer>;
   readonly keySet: ServiceKeySet;
-  readonly logger: pino.Logger;
+  readonly logger: Logger;
   readonly overdueRequestMs: number;
   readonly serviceName: string;
   readonly slowRequestMs: number;
@@ -227,7 +226,7 @@ function registerORPCHandler(
         // written while the request is still open: a span exports only once it ends, so a request
         // that never finishes leaves this line as its only trace
         const overdue = setTimeout(() => {
-          deps.logger.warn({ elapsedMs: deps.overdueRequestMs, method, path }, 'request overdue');
+          deps.logger.warn('request overdue', { elapsedMs: deps.overdueRequestMs, method, path });
         }, deps.overdueRequestMs);
 
         try {
@@ -279,16 +278,13 @@ async function serveORPCRequest(options: ServeORPCRequestOptions): Promise<Respo
 
     response.headers.set('x-trace-id', trace.traceID);
 
-    deps.logger.warn(
-      {
-        durationMs: toDurationMs(performance.now() - start),
-        failure: resolution.failure,
-        method,
-        path,
-        status: 401,
-      },
-      'service token rejected',
-    );
+    deps.logger.warn('service token rejected', {
+      durationMs: toDurationMs(performance.now() - start),
+      failure: resolution.failure,
+      method,
+      path,
+      status: 401,
+    });
 
     return response;
   }
@@ -300,16 +296,13 @@ async function serveORPCRequest(options: ServeORPCRequestOptions): Promise<Respo
 
     response.headers.set('x-trace-id', trace.traceID);
 
-    deps.logger.warn(
-      {
-        durationMs: toDurationMs(performance.now() - start),
-        issuer: resolution.issuer,
-        method,
-        path,
-        status: 403,
-      },
-      'service caller rejected',
-    );
+    deps.logger.warn('service caller rejected', {
+      durationMs: toDurationMs(performance.now() - start),
+      issuer: resolution.issuer,
+      method,
+      path,
+      status: 403,
+    });
 
     return response;
   }
@@ -328,10 +321,12 @@ async function serveORPCRequest(options: ServeORPCRequestOptions): Promise<Respo
       prefix: options.route.prefix,
     });
   } catch (error) {
-    deps.logger.error(
-      { durationMs: toDurationMs(performance.now() - start), err: error, method, path },
-      'request failed',
-    );
+    deps.logger.error('request failed', {
+      durationMs: toDurationMs(performance.now() - start),
+      error,
+      method,
+      path,
+    });
 
     throw error;
   }
@@ -347,16 +342,13 @@ async function serveORPCRequest(options: ServeORPCRequestOptions): Promise<Respo
   const thresholdMs = deps.slowRequestOverridesMs?.[path] ?? deps.slowRequestMs;
   const isSlow = elapsedMs > thresholdMs && finalResponse.status < 500;
 
-  deps.logger[isSlow ? 'warn' : pickRequestLogLevel(finalResponse.status)](
-    {
-      durationMs,
-      method,
-      path,
-      status: finalResponse.status,
-      ...(isSlow && { slow: true, thresholdMs }),
-    },
-    'request completed',
-  );
+  deps.logger[isSlow ? 'warn' : pickRequestLogLevel(finalResponse.status)]('request completed', {
+    durationMs,
+    method,
+    path,
+    status: finalResponse.status,
+    ...(isSlow && { slow: true, thresholdMs }),
+  });
 
   return finalResponse;
 }

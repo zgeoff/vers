@@ -30,7 +30,7 @@ export async function verifyTwoFactorSetupHandler(
 
   if (error) {
     if (!isDefinedError(error)) {
-      logger.error({ err: error }, 'two-factor setup verification failed');
+      logger.error('two-factor setup verification failed', { error });
     }
 
     return { formError: 'Invalid or expired code', status: 'invalid-fields' };
