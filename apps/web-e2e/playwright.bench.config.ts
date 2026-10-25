@@ -27,13 +27,7 @@ export default defineConfig<E2EOptions>({
       },
     },
   ],
-
-  // CI's default dot reporter prints no per-test durations; list prints each test's time, which
-  // the timeout below is set from
-  reporter: 'list',
   retries: 0,
-
-  // no CI job runs the benchmarks, so this timeout has no measured durations behind it yet
   timeout: 120 * 1000,
   use: {
     baseURL: environment.baseURL,
