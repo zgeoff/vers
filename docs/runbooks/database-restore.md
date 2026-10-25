@@ -239,23 +239,35 @@ operation.
 3. Revoke every session, every step-up grant and every pending step-up transaction on the branch:
 
    ```bash
-   psql '<branch_connection_string>' -v ON_ERROR_STOP=1 -c 'BEGIN; DELETE FROM step_up_grants; DELETE FROM pending_transactions; DELETE FROM sessions; COMMIT;'
+   psql '<branch_connection_string>' -v ON_ERROR_STOP=1 <<'SQL'
+   BEGIN;
+   DELETE FROM pending_transactions;
+   DO $$ BEGIN IF to_regclass('public.step_up_grants') IS NOT NULL THEN DELETE FROM step_up_grants; END IF; END $$;
+   DELETE FROM sessions;
+   COMMIT;
+   SQL
    ```
 
    Without a local `psql`, run the same statements through the Postgres image, with the URL in the
    environment and the SQL on stdin:
 
    ```bash
-   echo 'BEGIN; DELETE FROM step_up_grants; DELETE FROM pending_transactions; DELETE FROM sessions; COMMIT;' \
-     | BRANCH_URL='<branch_connection_string>' docker run --rm -i -e BRANCH_URL postgres:18.6 \
-       sh -c 'psql "$BRANCH_URL" -v ON_ERROR_STOP=1'
+   BRANCH_URL='<branch_connection_string>' docker run --rm -i -e BRANCH_URL postgres:18.6 \
+     sh -c 'psql "$BRANCH_URL" -v ON_ERROR_STOP=1' <<'SQL'
+   BEGIN;
+   DELETE FROM pending_transactions;
+   DO $$ BEGIN IF to_regclass('public.step_up_grants') IS NOT NULL THEN DELETE FROM step_up_grants; END IF; END $$;
+   DELETE FROM sessions;
+   COMMIT;
+   SQL
    ```
 
-   Expect `BEGIN`, three `DELETE <count>` lines, and `COMMIT`. The branch holds every session that
-   was signed out or evicted after its parent's point, so a sign-out a player made would stand
-   undone. A device whose session survived would also keep its record of the last activity it
-   started, and the server lost that activity, so the verifier would never claim the device's later
-   activities. With every session gone, each device runs the discard that
+   Expect `BEGIN`, `DELETE <count>`, `DO`, `DELETE <count>`, and `COMMIT`. The grant table exists
+   only from its migration on, so a branch from an older backup skips its delete. The branch holds
+   every session that was signed out or evicted after its parent's point, so a sign-out a player
+   made would stand undone. A device whose session survived would also keep its record of the last
+   activity it started, and the server lost that activity, so the verifier would never claim the
+   device's later activities. With every session gone, each device runs the discard that
    [How a device reconciles](#how-a-device-reconciles) describes.
 
 4. Check the branch with the drill checks:
