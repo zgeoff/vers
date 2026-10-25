@@ -110,6 +110,7 @@
       "elysia": "1.4.30",
       "expect-type": "1.4.0",
       "fake-indexeddb": "6.2.5",
+      "fast-check": "4.10.2",
       "fast-equals": "6.2.0",
       "happy-dom": "21.0.4",
       "html-to-text": "9.0.5",

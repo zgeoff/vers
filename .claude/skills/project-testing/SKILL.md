@@ -67,6 +67,13 @@ helper.
   [`registerZustandReset`](../../../libs/testing/client-test-utils/src/register-zustand-reset.ts)`()`
   from `@vers/client-test-utils`, in the preload.
 
+- **Settlement sequences** run through
+  [`runSettlementSequence`](../../../services/replay/src/test-utils/settlement-model/run-settlement-sequence.ts),
+  which drives a list of lifecycle commands through the real activity handlers and the real verifier
+  and checks each step against a reference model and the settlement invariants. Its suite generates
+  the lists with fast-check, and a shrunk counterexample becomes a named regression when you paste
+  its case into a test.
+
 [`services/avatar`](../../../services/avatar/) is the reference real-database service: its suites
 show the factory, the setup, the scaffolding suites, and the access pairs below.
 

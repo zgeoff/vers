@@ -1222,9 +1222,11 @@
         "@types/node": "catalog:",
         "@vers/mock-services": "workspace:*",
         "@vers/roll-crypto": "workspace:*",
+        "@vers/service-activity": "workspace:*",
         "@vers/service-test-utils": "workspace:*",
         "@vers/test-utils": "workspace:*",
         "@zgeoff/bun-test-extended": "catalog:",
+        "fast-check": "catalog:",
         "msw": "catalog:",
         "typescript": "catalog:",
       },
@@ -1423,6 +1425,7 @@
     "elysia": "1.4.30",
     "expect-type": "1.4.0",
     "fake-indexeddb": "6.2.5",
+    "fast-check": "4.10.2",
     "fast-equals": "6.2.0",
     "happy-dom": "21.0.4",
     "html-to-text": "9.0.5",
@@ -3462,6 +3465,8 @@
     "extend": ["extend@3.0.2", "", {}, "sha512-fjquC59cD7CyW6urNXK0FBufkZcoiGG80wTuPujX590cB5Ttln20E2UB4S/WARVqhXffZl2LNgS+gQdPIIim/g=="],
 
     "fake-indexeddb": ["fake-indexeddb@6.2.5", "", {}, "sha512-CGnyrvbhPlWYMngksqrSSUT1BAVP49dZocrHuK0SvtR0D5TMs5wP0o3j7jexDJW01KSadjBp1M/71o/KR3nD1w=="],
+
+    "fast-check": ["fast-check@4.10.2", "", { "dependencies": { "pure-rand": "^8.0.0" } }, "sha512-iK2f+YrcmoeGqk6fA0ea2bptcu/itMIm4NfEozq6N25+aG6h7s5HZbB/k1aV7b5w5sFLMCbbtRUsTVR+BgC3xw=="],
 
     "fast-copy": ["fast-copy@4.1.0", "", {}, "sha512-f5oNUvGAmBPLP85im9czQ7fVWh3RfcIIIzyXrcXKmCiWoDn+CRmfsoQN3jmE5J+UEquj4Ugc1woTaxD0oa37Gg=="],
 

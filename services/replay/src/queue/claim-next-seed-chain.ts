@@ -1,5 +1,5 @@
 import type { DB } from '@vers/db';
-import type { Transaction } from 'kysely';
+import type { RawBuilder, Transaction } from 'kysely';
 import { sql } from 'kysely';
 import type { ClaimedActivity } from '../types';
 
@@ -12,15 +12,6 @@ export async function claimNextSeedChain(
       (eb) =>
         eb
           .selectFrom('activities')
-
-          // Scoped to the same avatar: a predecessor naming another avatar's activity finds no row
-          // here, so it reads as absent and the claim waits rather than coupling this avatar's
-          // order to a foreign one.
-          .leftJoin('activities as predecessor', (join) =>
-            join
-              .onRef('predecessor.id', '=', 'activities.predecessorActivityId')
-              .onRef('predecessor.avatarId', '=', 'activities.avatarId'),
-          )
           .select([
             'activities.id',
             'activities.scopeId',
@@ -38,20 +29,7 @@ export async function claimNextSeedChain(
               eb2(sql`now()`, '>=', eb2.ref('activities.replayBackoffUntil')),
             ]),
           )
-          .where((eb2) => {
-            // settled: verified to its head and not held — a parked or quarantined predecessor,
-            // even one with no appends past its cursor, still blocks everything after it
-            const settledAndUnheld = eb2.and([
-              eb2('predecessor.verifiedHead', '>=', eb2.ref('predecessor.appendedHead')),
-              eb2('predecessor.status', 'not in', ['parked', 'quarantined']),
-            ]);
-
-            return eb2.or([
-              eb2('activities.predecessorActivityId', 'is', null),
-              eb2('predecessor.status', '=', 'rejected'),
-              settledAndUnheld,
-            ]);
-          })
+          .where((eb2) => eb2.not(eb2.exists(buildUnsettledAncestorQuery())))
           .orderBy('activities.startChainIndex')
           .limit(1)
           .as('next_activity'),
@@ -89,4 +67,28 @@ export async function claimNextSeedChain(
     scopeID: row.scopeId,
     scopeType: row.scopeType,
   };
+}
+
+// The walk stops at an ancestor the verifier proved part of, since that one was claimed only once
+// everything before it settled; UNION rather than UNION ALL ends it on a cycle of declared
+// predecessors, which nothing on the request path refuses.
+function buildUnsettledAncestorQuery(): RawBuilder<unknown> {
+  const isSettled = sql`(ancestor.status = 'rejected' or (ancestor.verified_head >= ancestor.appended_head and ancestor.status not in ('parked', 'quarantined')))`;
+
+  return sql`(
+    with recursive walk(ancestor_id) as (
+      select activities.predecessor_activity_id
+      union
+      select ancestor.predecessor_activity_id
+      from walk
+      join activities as ancestor
+        on ancestor.id = walk.ancestor_id and ancestor.avatar_id = activities.avatar_id
+      where ancestor.verified_head = 0 and ${isSettled}
+    )
+    select 1
+    from walk
+    left join activities as ancestor
+      on ancestor.id = walk.ancestor_id and ancestor.avatar_id = activities.avatar_id
+    where walk.ancestor_id is not null and (ancestor.id is null or not ${isSettled})
+  )`;
 }

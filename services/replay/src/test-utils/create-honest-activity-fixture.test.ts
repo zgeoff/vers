@@ -51,6 +51,53 @@ test('it persists a stream whose stored hashes byte-match a fresh recompute', as
   expect(storedRows).toHaveLength(fixture.checkpoints.length);
 });
 
+test('it appends only the requested prefix of the stream and returns the whole stream', async () => {
+  await using ctx = await createTestDB({ isolation: 'schema' });
+
+  const fixture = await createHonestActivityFixture(ctx.db, { appendedHead: 2, duration: 20_000 });
+
+  const [, second] = fixture.checkpoints;
+
+  invariant(second, 'a 20 s run always records more than two checkpoints');
+
+  expect(fixture.checkpoints.length).toBeGreaterThan(2);
+
+  expect(fixture.activity).toMatchObject({
+    appendedHead: 2,
+    appendedTimeMs: String(second.payload.time),
+    lastHash: second.hash,
+  });
+
+  const storedRows = await ctx.db
+    .selectFrom('activityCheckpoints')
+    .select('version')
+    .where('activityId', '=', fixture.activity.id)
+    .orderBy('version')
+    .execute();
+
+  expect(storedRows).toStrictEqual([{ version: 1 }, { version: 2 }]);
+});
+
+test('it starts an activity with nothing appended at its start hash', async () => {
+  await using ctx = await createTestDB({ isolation: 'schema' });
+
+  const fixture = await createHonestActivityFixture(ctx.db, { appendedHead: 0, duration: 20_000 });
+
+  expect(fixture.activity).toMatchObject({
+    appendedHead: 0,
+    appendedTimeMs: '0',
+    lastHash: fixture.activity.startHash,
+  });
+
+  const storedRows = await ctx.db
+    .selectFrom('activityCheckpoints')
+    .select('version')
+    .where('activityId', '=', fixture.activity.id)
+    .execute();
+
+  expect(storedRows).toStrictEqual([]);
+});
+
 test('it activityStarts a successor on an already-persisted chain instead of creating a new one', async () => {
   await using ctx = await createTestDB({ isolation: 'schema' });
 

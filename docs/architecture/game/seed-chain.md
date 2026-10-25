@@ -87,12 +87,12 @@ holds the index the activity started from, so a duplicate transition writes noth
 that appended nothing, or whose only checkpoint is the `Started` one, moves nothing, because the
 `Started` checkpoint draws nothing from the seed.
 
-The verified anchor moves only when a proved activity ends. A segment part way through an activity
-settles what it proved and advances that activity's own verified head, but leaves the chain's anchor
-where it stands. The anchor moves on the segment that both ends a forward-exited activity and
-reaches its last appended checkpoint. When the verifier claims an activity whose start index sits
-ahead of the anchor, it catches the anchor up from the forward-exited predecessor before it
-adjudicates.
+The verified anchor moves only when a proved activity ends, or when a rejection ends one that was
+partly proved. A segment part way through an activity settles what it proved and advances that
+activity's own verified head, but leaves the chain's anchor where it stands. The anchor moves on the
+segment that both ends a forward-exited activity and reaches its last appended checkpoint. When the
+verifier claims an activity whose start index sits ahead of the anchor, it catches the anchor up
+from the forward-exited predecessor before it adjudicates.
 
 Settlement trusts a position only at or below the verified anchor
 ([applying verified progress](./replay-verification.md#applying-verified-progress)).
@@ -110,6 +110,8 @@ The verifier rejects a stream whose divergence it can reproduce, in one transact
 
 - It marks the diverging activity rejected, whether it was still active or had already
   forward-exited.
+- It moves the verified anchor up to the last checkpoint the diverging activity had proved, so a
+  position that already settled stays spent and the next activity on the chain draws past it.
 - It rewinds the appended anchor onto the verified anchor in one guarded update.
 - It rejects every activity on the chain that started past the verified anchor, active and
   already-exited alike.
