@@ -178,6 +178,7 @@
     "format:check": "oxfmt --check . && format-codemod --check --quiet .",
     "codegen:styles": "turbo run codegen",
     "codegen:types": "turbo run typegen",
+    "checkpoints:archive": "bun scripts/src/bin/checkpoint-archive.ts",
     "content:check-digest": "bun scripts/src/bin/check-content-digest.ts",
     "content:publish": "bun scripts/src/bin/content-publish.ts",
     "db:migrate:production": "bun scripts/src/bin/db-migrate-production.ts",
