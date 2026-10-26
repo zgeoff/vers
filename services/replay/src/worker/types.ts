@@ -21,7 +21,7 @@ export type PendingCacheEffect =
 
 export type ParkReason = 'durationCapExceeded' | 'expired' | 'unknownVersion';
 
-export interface ParkedActivity {
+interface ParkedActivity {
   readonly activityID: string;
   readonly appendedHead: number;
   readonly appendedTimeMs: number;
