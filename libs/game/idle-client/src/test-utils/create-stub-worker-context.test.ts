@@ -8,27 +8,36 @@ import { http } from 'msw';
 import { server } from '../mocks/node';
 import type { CheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import { readAllActivityStarts } from '../submission/read-all-activity-starts';
+import { readLastStartedActivity } from '../submission/read-last-started-activity';
 import { writeActivityStart } from '../submission/write-activity-start';
 import { WorkerMessageType } from '../types';
 import { createStubWorkerContext } from './create-stub-worker-context';
 
 test('it writes a start row through the injected writer', async () => {
-  const writeActivityStartStub = mock(async (_row: Readonly<ActivityData>) => {});
-  const context = createStubWorkerContext({ writeActivityStart: writeActivityStartStub });
+  const writeMintedActivityStartStub = mock(async (_row: Readonly<ActivityData>) => {});
+
+  const context = createStubWorkerContext({
+    writeMintedActivityStart: writeMintedActivityStartStub,
+  });
+
   const row = createMockActivityData();
 
-  await context.writeActivityStart(row);
+  await context.writeMintedActivityStart(row);
 
-  expect(writeActivityStartStub).toHaveBeenCalledExactlyOnceWith(row);
+  expect(writeMintedActivityStartStub).toHaveBeenCalledExactlyOnceWith(row);
 });
 
-test('it writes a start row to the outbox by default', async () => {
+test('it writes a start row and its last-started record to the outbox by default', async () => {
   const context = createStubWorkerContext();
   const row = createMockActivityData();
 
-  await context.writeActivityStart(row);
+  await context.writeMintedActivityStart(row);
 
-  expect(readAllActivityStarts()).resolves.toStrictEqual([row]);
+  const starts = await readAllActivityStarts();
+  const lastStarted = await readLastStartedActivity(row.avatarID);
+
+  expect(starts).toStrictEqual([row]);
+  expect(lastStarted).toStrictEqual({ avatarID: row.avatarID, lastActivityID: row.id });
 });
 
 test('it discards the outbox when its proxy client meets the superseded marker', async () => {
