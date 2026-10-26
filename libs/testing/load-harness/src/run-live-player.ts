@@ -3,6 +3,7 @@ import { createId } from '@paralleldrive/cuid2';
 import type { BuildSnapshot } from '@vers/contract-activity';
 import type { EncounterContent } from '@vers/game-utils';
 import invariant from 'tiny-invariant';
+import { makePlayElapsed } from './make-play-elapsed';
 import { pickDueEntries } from './pick-due-entries';
 import { runActivityAttempt } from './run-activity-attempt';
 import type { ActivityRun, DeliveredRun, PlayerChain, PlayerClient, PlayerProfile } from './types';
@@ -32,7 +33,7 @@ interface OutboxRun {
 export async function runLivePlayer(
   options: Readonly<RunLivePlayerOptions>,
 ): Promise<Array<DeliveredRun>> {
-  const playStartedAt = performance.now();
+  const playElapsed = makePlayElapsed({ now: () => performance.now(), signal: options.signal });
 
   const first = await mintRun(options, undefined, 0);
 
@@ -41,7 +42,7 @@ export async function runLivePlayer(
   while (!options.signal.aborted) {
     await Bun.sleep(options.flushIntervalMs);
 
-    const elapsedMs = performance.now() - playStartedAt;
+    const elapsedMs = playElapsed();
 
     await mintReachedRuns(options, outbox, elapsedMs);
 
@@ -52,7 +53,7 @@ export async function runLivePlayer(
     }
   }
 
-  const stoppedMs = performance.now() - playStartedAt;
+  const stoppedMs = playElapsed();
 
   await mintReachedRuns(options, outbox, stoppedMs);
   await flushOutbox(options, outbox, stoppedMs);
