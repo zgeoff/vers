@@ -141,6 +141,10 @@ stays beside the head row ([checkpoint retention](../platform/database.md#checkp
   ([auth](../services/auth.md#session-lifecycle)). An append from any other session fails, so a
   displaced writer's in-flight submissions die rather than interleave. A terminal status rejects any
   later append.
+- Every status change goes through one transition table in `@vers/db`. Each writer passes the
+  statuses it moves a row from and the status it moves the row to, and the shared transition writer
+  refuses a pair the table lacks. Parking a row records the status it left. Once the row's sim
+  version is active again, the replay retention sweep returns the row to that status.
 
 ## The offline budget
 

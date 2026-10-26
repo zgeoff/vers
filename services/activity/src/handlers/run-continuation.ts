@@ -1,5 +1,5 @@
 import type { DB } from '@vers/db';
-import { toJSON } from '@vers/db';
+import { toJSON, transitionActivityStatus } from '@vers/db';
 import { isTerminalCheckpointType } from '@vers/idle-core';
 import { sql } from 'kysely';
 import type { Kysely } from 'kysely';
@@ -137,12 +137,12 @@ export async function runContinuation(
         .forUpdate()
         .execute();
 
-      const capped = await trx
-        .updateTable('activities')
-        .set({ status: 'capped', stoppedAt: sql`now()` })
-        .where('id', '=', input.targetActivityID)
+      const capped = await transitionActivityStatus(trx, input.targetActivityID, {
+        from: ['active'],
+        to: 'capped',
+      })
+        .set({ stoppedAt: sql`now()` })
         .where('appendedHead', '=', input.targetExpectedHead)
-        .where('status', '=', 'active')
         .where((eb) =>
           eb.or([
             eb('writerSessionId', 'is', null),
@@ -192,20 +192,19 @@ export async function runContinuation(
       .forUpdate()
       .execute();
 
-    const updated = await trx
-      .updateTable('activities')
+    const updated = await transitionActivityStatus(trx, input.targetActivityID, {
+      from: ['active'],
+      to: 'stopped',
+    })
       .set({
         appendedAt: sql`now()`,
         appendedHead: lastCheckpoint.version,
         appendedTimeMs: Math.floor(newTimeMs),
         lastHash: lastCheckpoint.hash,
-        status: 'stopped',
         stoppedAt: sql`now()`,
         ...(input.actingSessionID !== null && { writerSessionId: input.actingSessionID }),
       })
-      .where('id', '=', input.targetActivityID)
       .where('appendedHead', '=', input.targetExpectedHead)
-      .where('status', '=', 'active')
       .where((eb) =>
         eb.or([
           eb('writerSessionId', 'is', null),

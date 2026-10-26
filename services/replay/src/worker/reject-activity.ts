@@ -1,5 +1,6 @@
 import { CheckpointPayloadSchema } from '@vers/contract-activity';
 import type { DB } from '@vers/db';
+import { transitionActivityStatus } from '@vers/db';
 import { sql } from 'kysely';
 import type { Kysely } from 'kysely';
 import invariant from 'tiny-invariant';
@@ -27,15 +28,17 @@ export function rejectActivity(
   return db.transaction().execute((trx) => applyRejectionWrites(trx, input));
 }
 
+const REJECTABLE_STATUSES = ['active', 'stopped', 'capped'] as const;
+
 async function applyRejectionWrites(
   trx: Kysely<DB>,
   input: Readonly<RejectActivityInput>,
 ): Promise<RejectActivityResult> {
-  const target = await trx
-    .updateTable('activities')
-    .set({ status: 'rejected', stoppedAt: sql`now()` })
-    .where('id', '=', input.activityID)
-    .where('status', 'in', ['active', 'stopped', 'capped'])
+  const target = await transitionActivityStatus(trx, input.activityID, {
+    from: REJECTABLE_STATUSES,
+    to: 'rejected',
+  })
+    .set({ stoppedAt: sql`now()` })
     .returning('verifiedHead')
     .executeTakeFirst();
 
@@ -58,13 +61,17 @@ async function applyRejectionWrites(
     .where('scopeId', '=', input.scopeID)
     .execute();
 
-  await trx
-    .updateTable('activities')
-    .set({ status: 'rejected', stoppedAt: sql`now()` })
-    .where('avatarId', '=', input.avatarID)
-    .where('scopeType', '=', input.scopeType)
-    .where('scopeId', '=', input.scopeID)
-    .where('status', 'in', ['active', 'stopped', 'capped'])
+  await transitionActivityStatus(
+    trx,
+    (eb) =>
+      eb.and([
+        eb('avatarId', '=', input.avatarID),
+        eb('scopeType', '=', input.scopeType),
+        eb('scopeId', '=', input.scopeID),
+      ]),
+    { from: REJECTABLE_STATUSES, to: 'rejected' },
+  )
+    .set({ stoppedAt: sql`now()` })
     .where('startChainIndex', '>', (eb) =>
       eb
         .selectFrom('activityChains')
