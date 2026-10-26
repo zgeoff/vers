@@ -3,7 +3,6 @@ import type {
   ContentDocument,
   OfflineActivityStartSubmission,
 } from '@vers/contract-activity';
-import { buildStartHash } from '@vers/contract-activity';
 import type { SecretRef } from '@vers/contract-keys';
 import type { Activities, DB } from '@vers/db';
 import { buildLevelFromXP } from '@vers/idle-core';
@@ -24,6 +23,7 @@ import type {
   EmptyErrorPayload,
   SimVersionProblemPayload,
 } from '../types';
+import { mintActivityRoot } from './mint-activity-root';
 
 interface AdmitActivityStartDeps {
   readonly keysServiceURL: string;
@@ -186,56 +186,44 @@ export async function admitActivityStart(
     }),
   };
 
-  const startHash = buildStartHash({
-    contentVersion: activityStart.contentVersion,
-    encounterNode,
-    keyVersion: deps.keyVersion,
-    seed: activityStart.seed,
-    simVersion,
-  });
-
-  // equality proves the client folded its hash over the same content and encounter the server just
-  // derived; a mismatch means it simulated against something else and cannot be anchored
-  if (startHash !== activityStart.startHash) {
-    recordRefusal('CHECKPOINT_INVALID', 'start-hash-mismatch');
-
-    throw errors.CHECKPOINT_INVALID({
-      data: {
-        activityID: input.activityID,
-        appendedHead: 0,
-        avatarID: activityStart.avatarID,
-        reason: 'start-hash-mismatch',
-      },
-    });
-  }
-
   // no dedup here; a concurrent admission's unique violation is resolved by the caller once this
   // transaction has rolled back
-  const row = await trx
-    .insertInto('activities')
-    .values({
-      avatarId: activityStart.avatarID,
+  return mintActivityRoot(
+    trx,
+    {
+      activityID: input.activityID,
+      avatarID: activityStart.avatarID,
       buildSnapshot,
       contentVersion: activityStart.contentVersion,
       encounterNode,
-      id: input.activityID,
       keyVersion: deps.keyVersion,
-      lastHash: startHash,
       playedAt: activityStart.playedAt,
-      predecessorActivityId: activityStart.predecessorActivityID,
-      scopeId: activityStart.scopeID,
+      predecessorActivityID: activityStart.predecessorActivityID,
+      scopeID: activityStart.scopeID,
       scopeType: activityStart.scopeType,
       secretRef: deps.secretRef,
       secretVersion: deps.secretVersion,
       seed: activityStart.seed,
       simVersion,
       startChainIndex: activityStart.startChainIndex,
-      startHash,
       startKey: activityStart.startKey,
-      writerSessionId: input.actingSessionID,
-    })
-    .returningAll()
-    .executeTakeFirstOrThrow();
+      writerSessionID: input.actingSessionID,
+    },
+    (startHash) => {
+      // equality proves the client folded its hash over the same content and encounter the server
+      // just derived; a mismatch means it simulated against something else and cannot be anchored
+      if (startHash !== activityStart.startHash) {
+        recordRefusal('CHECKPOINT_INVALID', 'start-hash-mismatch');
 
-  return row;
+        throw errors.CHECKPOINT_INVALID({
+          data: {
+            activityID: input.activityID,
+            appendedHead: 0,
+            avatarID: activityStart.avatarID,
+            reason: 'start-hash-mismatch',
+          },
+        });
+      }
+    },
+  );
 }
