@@ -119,9 +119,11 @@ player delivers the whole gap at once.
   counts a call that got no response as `no response` with its socket error, such as `ECONNREFUSED`.
   The client resends a call once when its connection resets before any response, as Chromium does
   for a reused keep-alive socket, so a reset counts only when the resend fails too. **Refusals**
-  counts only the error codes the server answered. A player keeps an undelivered start or batch and
-  resends it at its next flush, as the client's outbox does, so a failed call during an outage is a
-  delay, not lost work. A service that cannot reach a dependency answers 5xx, an infrastructure
-  fault in the [error-handling taxonomy](../architecture/services/error-handling.md).
+  counts the error codes the server answered a live player with. The offline return counts each
+  refused catch-up as `REFUSED`, a label of the harness rather than the server's code. A player
+  keeps an undelivered start or batch and resends it at its next flush, as the client's outbox does,
+  so a failed call during an outage is a delay, not lost work. A service that cannot reach a
+  dependency answers 5xx, an infrastructure fault in the
+  [error-handling taxonomy](../architecture/services/error-handling.md).
 - **End state** counts unproved checkpoints, held activities, and XP that differs from what the
   players' own streams earned. Any of them is a lost reward or a stuck avatar, never noise.
