@@ -4,10 +4,10 @@ import type { CollectedOPReferences, OPReference } from './types';
 const SCHEME = 'op://';
 
 // a reference is a literal vault, item and field of letters, digits, `_`, `.` and `-`, with an
-// optional query, ended by a space, a quote, a backtick, `)` or the end of the text; any other
-// `op://` fails, because no rule here reads the shell or YAML around it
+// optional query; the shell joins any text glued past it, even past a closing quote, so its word
+// ends at whitespace, `)` or the end of the text, directly or after one closing quote or backtick
 const OP_REFERENCE_PATTERN =
-  /op:\/\/(?<vault>[\w.-]+)\/(?<item>[\w.-]+)\/(?<field>[\w.-]+)(?:\?[\w=-]+)?(?=[\s'"`)]|$)/uy;
+  /op:\/\/(?<vault>[\w.-]+)\/(?<item>[\w.-]+)\/(?<field>[\w.-]+)(?:\?[\w=-]+)?(?=[\s)]|$|['"`](?:[\s)]|$))/uy;
 
 // the scheme followed by a space, a quote, a backtick or the end of the text names it in prose
 const SCHEME_IN_PROSE_PATTERN = /^[\s'"`]|^$/u;
