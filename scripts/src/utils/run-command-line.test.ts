@@ -163,6 +163,27 @@ test('it refuses a missing positional argument when the command line holds --', 
   );
 });
 
+test('it reads the arguments after an empty word before the command name', async () => {
+  const ctx = setupTest();
+  const received: Array<unknown> = [];
+
+  const evaluate = define({
+    args: { target: { type: 'positional' }, script: { type: 'positional' } },
+    name: 'eval',
+    run: (command) => {
+      received.push({ ...command.values });
+    },
+  });
+
+  const ran = await runCommandLine(['', 'eval', 'T1', '1+2'], define({ name: 'tool' }), {
+    output: ctx.output,
+    subCommands: { eval: evaluate },
+  });
+
+  expect(ran).toBeTrue();
+  expect(received).toStrictEqual([{ script: '1+2', target: 'T1' }]);
+});
+
 test('it refuses a surplus word after --', async () => {
   const ctx = setupTest();
   const run = mock(() => {});

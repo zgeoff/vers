@@ -91,13 +91,15 @@ function withOperandArgs(command: SubCommandable, hasSeparator: boolean): SubCom
     ...command,
     args: hasSeparator ? toOptionalPositionals(args) : args,
     run: (ctx: Readonly<CommandContext>) => {
+      const operandStart = getOperandStart(ctx.positionals, ctx.commandPath);
+
       const resolved = resolveArgs(
         args,
         ctx.tokens.filter((token) => token.kind !== 'option-terminator'),
-        { shortGrouping: true, skipPositional: ctx.commandPath.length - 1 },
+        { shortGrouping: true, skipPositional: operandStart - 1 },
       );
 
-      const surplus = resolved.positionals.slice(ctx.commandPath.length + positionals.length);
+      const surplus = resolved.positionals.slice(operandStart + positionals.length);
 
       const reasons = [
         ...(resolved.error?.errors ?? []),
@@ -128,6 +130,14 @@ function toOptionalPositionals(args: Args): Args {
       schema.type === 'positional' ? { ...schema, required: false } : schema,
     ]),
   );
+}
+
+// gunshi skips an empty word while it routes to a command, but the word stays a positional.
+function getOperandStart(
+  positionals: ReadonlyArray<string>,
+  commandPath: ReadonlyArray<string>,
+): number {
+  return commandPath.reduce((start, name) => positionals.indexOf(name, start) + 1, 0);
 }
 
 function toMessage(reason: unknown): string {
