@@ -1,11 +1,13 @@
-import { expect, mock, test } from 'bun:test';
-import { createInMemoryMetrics } from '@vers/test-utils/bun';
+import { expect, mock, onTestFinished, test } from 'bun:test';
+import { getLogger, resetSync } from '@logtape/logtape';
+import { createInMemoryLogs, createInMemoryMetrics } from '@vers/test-utils/bun';
 import { makeReplayWaker } from './make-replay-waker';
 import type { WakeAttempt } from './make-replay-waker';
 
 test('it never throws into the caller', () => {
   const waker = makeReplayWaker({
     coalesceWindowMs: 0,
+    logger: getLogger(['test-activity']),
     maxDeliveryAttempts: 3,
     perAttemptTimeoutMs: 5,
     retryBackoffMs: 0,
@@ -22,6 +24,7 @@ test('it coalesces a synchronous burst into one delivery', async () => {
 
   const waker = makeReplayWaker({
     coalesceWindowMs: 1000,
+    logger: getLogger(['test-activity']),
     maxDeliveryAttempts: 3,
     perAttemptTimeoutMs: 5,
     retryBackoffMs: 0,
@@ -44,6 +47,7 @@ test('it keeps a single delivery in flight while one is still pending', async ()
   const waker = makeReplayWaker({
     // coalesceWindowMs 0 disables the time window, so only the in-flight guard can coalesce here
     coalesceWindowMs: 0,
+    logger: getLogger(['test-activity']),
     maxDeliveryAttempts: 3,
     perAttemptTimeoutMs: 5,
     retryBackoffMs: 0,
@@ -65,6 +69,7 @@ test('it retries a failed delivery then records the poke-failure counter', async
 
   const waker = makeReplayWaker({
     coalesceWindowMs: 0,
+    logger: getLogger(['test-activity']),
     maxDeliveryAttempts: 3,
     perAttemptTimeoutMs: 5,
     retryBackoffMs: 0,
@@ -95,6 +100,7 @@ test('it aborts a hung attempt and records the poke-failure counter after exhaus
 
   const waker = makeReplayWaker({
     coalesceWindowMs: 0,
+    logger: getLogger(['test-activity']),
     maxDeliveryAttempts: 3,
     perAttemptTimeoutMs: 5,
     retryBackoffMs: 0,
@@ -109,4 +115,56 @@ test('it aborts a hung attempt and records the poke-failure counter after exhaus
 
   expect(sendWake).toHaveBeenCalledTimes(3);
   expect(pokeFailures).toBe(1);
+});
+
+test('it writes the poke-failed line once every retry fails', async () => {
+  const logs = createInMemoryLogs({ lowestLevel: 'warning' });
+
+  onTestFinished(() => {
+    resetSync();
+  });
+
+  const waker = makeReplayWaker({
+    coalesceWindowMs: 0,
+    logger: getLogger(['test-activity']),
+    maxDeliveryAttempts: 3,
+    perAttemptTimeoutMs: 5,
+    retryBackoffMs: 0,
+    sendWake: mock(() => Promise.reject(new Error('simulated wake delivery failure'))),
+  });
+
+  waker.sendReplayWake();
+
+  await waker.waitUntilSettled();
+
+  expect(logs.records).toHaveLength(1);
+
+  expect(logs.records[0]).toMatchObject({
+    level: 'warning',
+    properties: { attempts: 3 },
+    rawMessage: 'replay wake poke failed after every retry',
+  });
+});
+
+test('it writes no poke-failed line when the delivery succeeds', async () => {
+  const logs = createInMemoryLogs({ lowestLevel: 'warning' });
+
+  onTestFinished(() => {
+    resetSync();
+  });
+
+  const waker = makeReplayWaker({
+    coalesceWindowMs: 0,
+    logger: getLogger(['test-activity']),
+    maxDeliveryAttempts: 3,
+    perAttemptTimeoutMs: 5,
+    retryBackoffMs: 0,
+    sendWake: mock(() => Promise.resolve()),
+  });
+
+  waker.sendReplayWake();
+
+  await waker.waitUntilSettled();
+
+  expect(logs.records).toBeEmpty();
 });

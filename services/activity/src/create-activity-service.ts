@@ -29,16 +29,16 @@ interface CreateActivityServiceConfig {
 export function createActivityService(
   config: CreateActivityServiceConfig = {},
 ): Promise<Service<typeof envShape>> {
-  const wakeOptions =
-    config.wakeCoalesceWindowMs === undefined
-      ? undefined
-      : { coalesceWindowMs: config.wakeCoalesceWindowMs };
-
-  const sendReplayWake = makeSendReplayWake(wakeOptions);
-
   return createService({
     allowedIssuers: ['app-web'],
     createRouter: async (runtime) => {
+      const sendReplayWake = makeSendReplayWake({
+        logger: runtime.logger,
+        ...(config.wakeCoalesceWindowMs !== undefined && {
+          coalesceWindowMs: config.wakeCoalesceWindowMs,
+        }),
+      });
+
       const privateKey = await parseServicePrivateKey(runtime.env.SERVICE_AUTH_PRIVATE_KEY);
 
       const db = config.db ?? createDB({ databaseURL: runtime.env.DATABASE_URL });

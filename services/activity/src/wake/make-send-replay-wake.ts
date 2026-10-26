@@ -3,6 +3,7 @@ import { RPCLink } from '@orpc/client/fetch';
 import type { ContractRouterClient } from '@orpc/contract';
 import type { replayContract } from '@vers/contract-replay';
 import { createServiceToken, parseServicePrivateKey } from '@vers/service-auth';
+import type { Logger } from '@vers/service-runtime/logging';
 import { makeTracingInterceptor } from '@vers/service-utils/orpc';
 import invariant from 'tiny-invariant';
 import { makeReplayWaker } from './make-replay-waker';
@@ -14,9 +15,10 @@ const PER_ATTEMPT_TIMEOUT_MS = 2000;
 
 interface MakeSendReplayWakeOptions {
   readonly coalesceWindowMs?: number;
+  readonly logger: Logger;
 }
 
-export function makeSendReplayWake(options: MakeSendReplayWakeOptions = {}): () => void {
+export function makeSendReplayWake(options: MakeSendReplayWakeOptions): () => void {
   // The lazily built client for this instance: undefined until the first delivery builds it, a
   // build failure clears it back to undefined so the next delivery retries the build fresh, and a
   // wake-call failure leaves an already-resolved client cached.
@@ -41,6 +43,7 @@ export function makeSendReplayWake(options: MakeSendReplayWakeOptions = {}): () 
 
   return makeReplayWaker({
     coalesceWindowMs: options.coalesceWindowMs ?? WAKE_COALESCE_WINDOW_MS,
+    logger: options.logger,
     maxDeliveryAttempts: MAX_DELIVERY_ATTEMPTS,
     perAttemptTimeoutMs: PER_ATTEMPT_TIMEOUT_MS,
     retryBackoffMs: RETRY_BACKOFF_MS,

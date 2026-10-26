@@ -63,7 +63,7 @@ export async function advanceActivity(
       });
     } catch (error: unknown) {
       if (error instanceof ContinuationBailError) {
-        recordBailout(error.outcome);
+        recordBailout(opts.context.logger, error.outcome);
         throw buildBailError(opts.errors, error.outcome);
       }
 
@@ -89,7 +89,7 @@ export async function advanceActivity(
           reason: recovered.reason,
         };
 
-        recordBailout(outcome);
+        recordBailout(opts.context.logger, outcome);
         throw buildBailError(opts.errors, outcome);
       }
 
