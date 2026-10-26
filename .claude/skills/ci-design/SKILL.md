@@ -60,13 +60,19 @@ minute each, so it runs one job. `bun-checks.yml` picks the profile from
 the `private` input as the fallback for an event whose payload has no repository. A hand-written
 workflow follows the same layout by hand.
 
-| Profile | Jobs                                        | Required checks | Test budget covers        |
-| ------- | ------------------------------------------- | --------------- | ------------------------- |
-| Public  | `gitleaks`, `static`, `test`, `test-<lane>` | each of these   | the slowest test job      |
-| Private | `checks`                                    | `checks`        | the sum of the test steps |
+| Profile | Jobs                                                  | Required check | Test budget covers        |
+| ------- | ----------------------------------------------------- | -------------- | ------------------------- |
+| Public  | `gitleaks`, `static`, `test`, `test-<lane>`, `checks` | `checks`       | the slowest test job      |
+| Private | `checks`                                              | `checks`       | the sum of the test steps |
 
 A public repo runs one `test-<lane>` job for each lane it has. A private repo's `checks` job runs
 the secret scan, the static checks, the tests and each lane as named steps.
+
+A ruleset requires `checks` in both profiles. A public repo's `checks` job needs every other job and
+runs even after one fails or the run is cancelled. It fails when a job it needs failed or was
+cancelled, and it passes a job skipped by design, such as the lane job of a repo without lanes. The
+gate has to run every time, because GitHub counts a skipped required check as a pass: a ruleset that
+requires a job which skips in its profile blocks nothing.
 
 In a public repo:
 
@@ -88,8 +94,8 @@ In a private repo:
   base, as the [path gate](#path-gates) does, and the lane's step `if:` reads its output, so a lane
   that a pull request cannot affect skips without a second job.
 
-Both profiles gate side work on paths, cancel a superseded pull-request run, build once, cache the
-install and set a timeout on every job.
+Both profiles gate side work on paths, cancel a superseded pull-request run, build once and set a
+timeout on every job.
 
 ## Timeouts
 
@@ -210,10 +216,10 @@ in one job and passes on through the registry, or through buildx with the GitHub
 (`cache-from: type=gha` and `cache-to: type=gha,mode=max`), so a later job pulls the layers instead
 of rebuilding them. A file passes on with `actions/upload-artifact` and `actions/download-artifact`.
 
-Cache each dependency install, keyed on the lockfile. A Bun job caches `~/.bun/install/cache` with
-`actions/cache`, keyed on `hashFiles('bun.lock')`, and restores the newest older cache when the
-lockfile changes. Each job pays for its own runner, checkout and install, which
-[Two profiles](#two-profiles) weighs against wall time.
+A Bun job runs `bun install --frozen-lockfile` with no `actions/cache` step for
+`~/.bun/install/cache`. On a GitHub-hosted runner, a restore of that cache takes longer than the
+install it replaces, and a job that misses the cache spends more time to save one. Each job pays for
+its own runner, checkout and install, which [Two profiles](#two-profiles) weighs against wall time.
 
 ## Checkout depth
 
