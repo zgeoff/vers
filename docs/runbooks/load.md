@@ -77,10 +77,14 @@ GB, so run nothing else heavy beside it.
    `run.log` and one JSON recording per scenario with every sample the report summarises.
 
 A run removes each stack when its scenario ends, whether the scenario passed or failed. If a run is
-killed part way, remove the stack it left:
+killed part way, remove the containers, volumes and network it left by their Compose project label.
+A `docker compose down` cannot do this alone, because the load Compose file needs the image and CPU
+values that only the harness supplies.
 
 ```bash
-docker compose --project-directory libs/testing/load-harness -p vers-load down -v --remove-orphans
+docker ps -aq --filter label=com.docker.compose.project=vers-load | xargs -r docker rm -f
+docker volume ls -q --filter label=com.docker.compose.project=vers-load | xargs -r docker volume rm
+docker network ls -q --filter label=com.docker.compose.project=vers-load | xargs -r docker network rm
 ```
 
 ## Reading the report
