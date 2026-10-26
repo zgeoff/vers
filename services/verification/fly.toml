@@ -6,6 +6,9 @@ primary_region = 'syd'
 
 [build]
 
+[build.args]
+SERVICE = 'verification'
+
 [http_service]
 internal_port = 3000
 force_https = false

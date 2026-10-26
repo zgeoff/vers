@@ -14,10 +14,10 @@ interface CreateSessionServiceConfig {
 
 export function createSessionService(
   config: CreateSessionServiceConfig = {},
-): Promise<Service<typeof envShape>> {
+): Promise<Service<typeof envShape, { readonly db: Kysely<DB> }>> {
   return createService({
     allowedIssuers: ['app-web'],
-    createRouter: async (runtime) => {
+    createRouter: async (runtime, resources) => {
       // imported once at boot, not per request: every handler reuses this same resolved key
       const signingKey = await jose.importPKCS8(runtime.env.JWT_SIGNING_PRIVKEY, 'RS256', {
         extractable: true,
@@ -32,7 +32,7 @@ export function createSessionService(
 
       return createSessionRouter({
         apiIdentifier: runtime.env.API_IDENTIFIER,
-        db: config.db ?? createDB({ databaseURL: runtime.env.DATABASE_URL }),
+        db: resources.db,
         keyID: published.activeKeyID,
         signingKey,
         signingKeySet: published.keySet,
@@ -40,5 +40,10 @@ export function createSessionService(
     },
     envShape,
     name: 'service-session',
+    resources: (runtime, scope) => ({
+      db:
+        config.db ??
+        scope.adopt(createDB({ databaseURL: runtime.env.DATABASE_URL }), (db) => db.destroy()),
+    }),
   });
 }

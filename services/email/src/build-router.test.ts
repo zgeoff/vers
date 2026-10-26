@@ -19,19 +19,17 @@ import { createEmailService } from './create-email-service';
 async function setupTest() {
   const queueConnectionString = await createDatabaseFromTemplate();
   const emailService = await createEmailService({ queueConnectionString });
-
-  await emailService.queue.start();
-
   const viewer = await createAnonymousViewer({ audience: 'service-email' });
 
-  const client = buildRPCTestClient<EmailContract>(emailService.service.app, {
+  const client = buildRPCTestClient<EmailContract>(emailService.app, {
     token: viewer.token,
   });
 
   return {
     client,
-    queue: emailService.queue,
-    [Symbol.asyncDispose]: () => emailService.queue.stop(),
+    queue: emailService.resources.queue,
+    stop: emailService.stop,
+    [Symbol.asyncDispose]: emailService.stop,
   };
 }
 
@@ -257,7 +255,7 @@ test('it delivers a send whose queue stops at once, with no failure report', asy
     verificationURL: 'https://versidle.com/verify',
   });
 
-  await ctx.queue.stop();
+  await ctx.stop();
 
   expect(sentEmails.get('stopping@example.com')).toMatchObject({
     idempotencyKey: result.jobID,

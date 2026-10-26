@@ -1,8 +1,8 @@
-import { expect, onTestFinished, test } from 'bun:test';
+import { expect, mock, onTestFinished, test } from 'bun:test';
 import type { SessionContract } from '@vers/contract-session';
 import { toJSONWebKeySet } from '@vers/contract-session';
 import { createAnonymousViewer, createTestDB, createTestUser } from '@vers/service-test-utils/bun';
-import { buildRPCTestClient, resolveTestJWTKeyPair } from '@vers/test-utils';
+import { buildRPCTestClient, resolveTestJWTKeyPair, waitFor } from '@vers/test-utils';
 import * as jose from 'jose';
 import invariant from 'tiny-invariant';
 import { createSessionService } from './create-session-service';
@@ -35,7 +35,26 @@ test('it wires an injected db into the router instead of building one from env',
 test('it boots from env.DATABASE_URL when no db is injected', async () => {
   const service = await createSessionService();
 
+  onTestFinished(() => service.stop());
+
   expect(service.env.DATABASE_URL).toStartWith('postgres://');
+});
+
+test('it stops serving, destroys the db it built and exits 0 on SIGTERM', async () => {
+  const exit = mock((_code: number) => {});
+
+  const service = await createSessionService();
+
+  onTestFinished(() => service.stop());
+
+  service.serve({ exit, port: 0 });
+  process.emit('SIGTERM');
+
+  await waitFor(() => {
+    expect(exit).toHaveBeenCalledExactlyOnceWith(0);
+  });
+
+  expect(service.resources.db.selectFrom('sessions').select('id').execute()).rejects.toThrow();
 });
 
 test('it publishes the signing key as one RS256 signature key whose id is its thumbprint', async () => {

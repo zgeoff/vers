@@ -3,9 +3,9 @@ import { JOB_QUEUE_STOP_TIMEOUT_MS } from '@vers/jobs';
 import type { JobQueue } from '@vers/jobs';
 import { createService, reportUnexpectedError } from '@vers/service-runtime';
 import type { Service } from '@vers/service-runtime';
-import invariant from 'tiny-invariant';
 import { buildEmailRouter } from './build-router';
 import { createBackgroundDrains } from './create-background-drains';
+import type { BackgroundDrains } from './create-background-drains';
 import { createEmailJobQueue } from './create-email-job-queue';
 import type { EmailJobPayloads } from './create-email-job-queue';
 import { envShape } from './env-shape';
@@ -14,21 +14,29 @@ interface CreateEmailServiceConfig {
   readonly queueConnectionString?: string;
 }
 
-export interface EmailService {
+interface EmailResources {
+  readonly drains: BackgroundDrains;
   readonly queue: JobQueue<EmailJobPayloads>;
-  readonly service: Service<typeof envShape>;
 }
 
-export async function createEmailService(
-  config: CreateEmailServiceConfig = {},
-): Promise<EmailService> {
-  const drains = createBackgroundDrains();
-  let queue: JobQueue<EmailJobPayloads> | undefined;
+export type EmailService = Service<typeof envShape, EmailResources>;
 
-  const service = await createService({
+export function createEmailService(config: CreateEmailServiceConfig = {}): Promise<EmailService> {
+  return createService({
     allowedIssuers: ['app-web'],
-    createRouter: (runtime) => {
-      queue = createEmailJobQueue({
+    createRouter: (runtime, resources) =>
+      buildEmailRouter({
+        drains: resources.drains,
+        logger: runtime.logger,
+        queue: resources.queue,
+      }),
+    envShape,
+    name: 'service-email',
+    onBoot: (resources) => resources.queue.drain(),
+    resources: async (runtime, scope) => {
+      const drains = createBackgroundDrains();
+
+      const queue = createEmailJobQueue({
         connectionString: config.queueConnectionString ?? runtime.env.DATABASE_URL,
         emailClient: createEmailClient({
           apiKey: runtime.env.RESEND_API_KEY,
@@ -49,24 +57,16 @@ export async function createEmailService(
         },
       });
 
-      return buildEmailRouter({ drains, logger: runtime.logger, queue });
-    },
-    envShape,
-    name: 'service-email',
-  });
-
-  invariant(queue, 'createRouter did not run before createService resolved');
-
-  const jobQueue = queue;
-
-  return {
-    queue: {
-      ...jobQueue,
-      stop: async () => {
+      scope.adopt(queue, async (started) => {
         await drains.stop(JOB_QUEUE_STOP_TIMEOUT_MS);
-        await jobQueue.stop();
-      },
+        await started.stop();
+      });
+
+      await queue.start();
+
+      runtime.logger.info('email job queue started');
+
+      return { drains, queue };
     },
-    service,
-  };
+  });
 }

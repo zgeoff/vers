@@ -12,14 +12,16 @@ interface CreateVerificationServiceConfig {
 
 export function createVerificationService(
   config: CreateVerificationServiceConfig = {},
-): Promise<Service<typeof envShape>> {
+): Promise<Service<typeof envShape, { readonly db: Kysely<DB> }>> {
   return createService({
     allowedIssuers: ['app-web'],
-    createRouter: (runtime) =>
-      createVerificationRouter({
-        db: config.db ?? createDB({ databaseURL: runtime.env.DATABASE_URL }),
-      }),
+    createRouter: (_runtime, resources) => createVerificationRouter({ db: resources.db }),
     envShape,
     name: 'service-verification',
+    resources: (runtime, scope) => ({
+      db:
+        config.db ??
+        scope.adopt(createDB({ databaseURL: runtime.env.DATABASE_URL }), (db) => db.destroy()),
+    }),
   });
 }

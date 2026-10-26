@@ -1,9 +1,10 @@
-import { expect, test } from 'bun:test';
+import { expect, mock, onTestFinished, test } from 'bun:test';
 import { createContentVersion } from '@vers/content-registry';
 import { createMockContentDocument } from '@vers/contract-activity/test-utils';
 import { toJSON } from '@vers/db';
 import { buildStateFromSeed } from '@vers/game-utils';
 import { createAnonymousViewer, createTestDB } from '@vers/service-test-utils/bun';
+import { waitFor } from '@vers/test-utils';
 import { updateEnv } from '@vers/test-utils/bun';
 import invariant from 'tiny-invariant';
 import { createReplayService } from './create-replay-service';
@@ -12,13 +13,17 @@ import { createHonestActivityFixture } from './test-utils/create-honest-activity
 test('it boots from env.SIM_ENGINE_HASH', async () => {
   const service = await createReplayService();
 
+  onTestFinished(() => service.stop());
+
   expect(service.env.SIM_ENGINE_HASH).toBe('test-engine-hash');
 });
 
 test('it resolves the private key from env.SERVICE_AUTH_PRIVATE_KEY before returning', async () => {
   const service = await createReplayService();
 
-  expect(service.privateKey.type).toBe('private');
+  onTestFinished(() => service.stop());
+
+  expect(service.resources.privateKey.type).toBe('private');
 });
 
 test('it exposes the injected db for the worker to share with the router', async () => {
@@ -26,7 +31,24 @@ test('it exposes the injected db for the worker to share with the router', async
 
   const service = await createReplayService({ db: ctx.db });
 
-  expect(service.db).toBe(ctx.db);
+  expect(service.resources.db).toBe(ctx.db);
+});
+
+test('it stops serving, destroys the db it built and exits 0 on SIGTERM', async () => {
+  const exit = mock((_code: number) => {});
+
+  const service = await createReplayService();
+
+  onTestFinished(() => service.stop());
+
+  service.serve({ exit, port: 0 });
+  process.emit('SIGTERM');
+
+  await waitFor(() => {
+    expect(exit).toHaveBeenCalledExactlyOnceWith(0);
+  });
+
+  expect(service.resources.db.selectFrom('activities').select('id').execute()).rejects.toThrow();
 });
 
 test('it fails to boot on a malformed private key, before any listen', async () => {
@@ -40,7 +62,7 @@ test('it never destroys an injected db when stopped', async () => {
 
   const service = await createReplayService({ db: ctx.db });
 
-  await service.stopDB();
+  await service.stop();
 
   // The injected handle is still usable — a destroyed pool would reject any further query.
   await expect(ctx.db.selectFrom('activities').select('id').limit(1).execute()).toResolve();
@@ -63,7 +85,7 @@ test('it drains a claimable chain through the same deps the wake procedure close
   expect(drained).toBe(1);
 });
 
-test('it drains a claimable chain after stopCache clears a driver the previous drain held', async () => {
+test('it drains a claimable chain after the cache clears a driver the previous drain held', async () => {
   await using ctx = await createTestDB({ isolation: 'schema' });
 
   await createContentVersion(ctx.db, createMockContentDocument({ contentVersion: '2' }));
@@ -103,7 +125,7 @@ test('it drains a claimable chain after stopCache clears a driver the previous d
 
   expect(firstDrained).toBe(1);
 
-  service.stopCache();
+  service.resources.cache.stopAll();
 
   const remaining = fixture.checkpoints.slice(firstBatchCount);
 

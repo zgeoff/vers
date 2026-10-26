@@ -9,7 +9,11 @@ import { renderEnvContract } from '../env/render-env-contract';
 const check = process.argv.includes('--check');
 let failed = false;
 
-for (const leaf of await readdir('services')) {
+const serviceEntries = await readdir('services', { withFileTypes: true });
+
+for (const leaf of serviceEntries
+  .filter((entry) => entry.isDirectory())
+  .map((entry) => entry.name)) {
   const serviceDir = join('services', leaf);
   const contractPath = join(serviceDir, 'env-contract.generated.json');
 
