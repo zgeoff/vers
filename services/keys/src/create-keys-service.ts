@@ -5,7 +5,7 @@ import { envShape } from './env-shape';
 import { parseRollKeyRoots } from './parse-roll-key-roots';
 import { parseScopeSecretRoots } from './parse-scope-secret-roots';
 
-export function createKeysService(): Promise<Service<typeof envShape>> {
+export function createKeysService(): Promise<Service<typeof envShape, Record<string, never>>> {
   return createService({
     allowedIssuers: ['service-activity', 'service-replay'],
     createRouter: (runtime) =>
@@ -15,5 +15,6 @@ export function createKeysService(): Promise<Service<typeof envShape>> {
       }),
     envShape,
     name: 'service-keys',
+    resources: () => ({}),
   });
 }

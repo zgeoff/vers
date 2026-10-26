@@ -1,10 +1,10 @@
-import { expect, test } from 'bun:test';
+import { expect, mock, onTestFinished, test } from 'bun:test';
 import { createContentVersion, readContentDocument } from '@vers/content-registry';
 import type { ActivityContract } from '@vers/contract-activity';
 import { createMockContentDocument } from '@vers/contract-activity/test-utils';
 import { createAvatarRow, createTestDB, createViewer } from '@vers/service-test-utils/bun';
 import { createSimVersionRow } from '@vers/sim-registry/test-utils';
-import { buildRPCTestClient } from '@vers/test-utils';
+import { buildRPCTestClient, waitFor } from '@vers/test-utils';
 import invariant from 'tiny-invariant';
 import { createActivityService } from './create-activity-service';
 
@@ -30,7 +30,26 @@ test('it wires an injected db into the router instead of building one from env',
 test('it boots from env.DATABASE_URL when no db is injected', async () => {
   const service = await createActivityService();
 
+  onTestFinished(() => service.stop());
+
   expect(service.env.DATABASE_URL).toStartWith('postgres://');
+});
+
+test('it stops serving, destroys the db it built and exits 0 on SIGTERM', async () => {
+  const exit = mock((_code: number) => {});
+
+  const service = await createActivityService();
+
+  onTestFinished(() => service.stop());
+
+  service.serve({ exit, port: 0 });
+  process.emit('SIGTERM');
+
+  await waitFor(() => {
+    expect(exit).toHaveBeenCalledExactlyOnceWith(0);
+  });
+
+  expect(service.resources.db.selectFrom('activities').select('id').execute()).rejects.toThrow();
 });
 
 test('it defaults the content and key versions when none are injected', async () => {

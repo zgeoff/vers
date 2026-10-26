@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import path from 'node:path';
 
-// matches `ARG BUN_VERSION` in every service Dockerfile: a hash built under another Bun version
+// matches `ARG BUN_VERSION` in the service Dockerfile: a hash built under another Bun version
 // is not comparable across environments
 export const PINNED_BUN_VERSION = '1.4.3';
 

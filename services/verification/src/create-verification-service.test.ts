@@ -1,7 +1,7 @@
-import { expect, test } from 'bun:test';
+import { expect, mock, onTestFinished, test } from 'bun:test';
 import type { VerificationContract } from '@vers/contract-verification';
 import { createAnonymousViewer, createTestDB } from '@vers/service-test-utils/bun';
-import { buildRPCTestClient } from '@vers/test-utils';
+import { buildRPCTestClient, waitFor } from '@vers/test-utils';
 import { createVerificationService } from './create-verification-service';
 
 test('it wires an injected db into the router instead of building one from env', async () => {
@@ -22,7 +22,26 @@ test('it wires an injected db into the router instead of building one from env',
 test('it boots from env.DATABASE_URL when no db is injected', async () => {
   const service = await createVerificationService();
 
+  onTestFinished(() => service.stop());
+
   expect(service.env.DATABASE_URL).toStartWith('postgres://');
+});
+
+test('it stops serving, destroys the db it built and exits 0 on SIGTERM', async () => {
+  const exit = mock((_code: number) => {});
+
+  const service = await createVerificationService();
+
+  onTestFinished(() => service.stop());
+
+  service.serve({ exit, port: 0 });
+  process.emit('SIGTERM');
+
+  await waitFor(() => {
+    expect(exit).toHaveBeenCalledExactlyOnceWith(0);
+  });
+
+  expect(service.resources.db.selectFrom('verifications').select('id').execute()).rejects.toThrow();
 });
 
 test('it accepts a call from app-web', async () => {

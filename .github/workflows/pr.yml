@@ -94,6 +94,11 @@ jobs:
           bun run env:contract:check
           bun run env:coverage
 
+      # every op:// reference that .mcp.json, the workflows and infra/ read is listed by name in
+      # secrets-manifest.json, and every listed one is still read
+      - name: Check Secrets Manifest
+        run: bun run secrets:check
+
       - name: Check Doc Paths
         run: bun run docs:check-paths
 
@@ -286,7 +291,8 @@ jobs:
     with:
       paths: |
         apps/web/Dockerfile
-        services/*/Dockerfile
+        services/Dockerfile
+        services/*/fly.toml
         .dockerignore
         package.json
         **/package.json
@@ -310,8 +316,12 @@ jobs:
       - name: Build server images
         run: |
           set -euo pipefail
-          for dockerfile in apps/web/Dockerfile services/*/Dockerfile; do
-            echo "::group::$dockerfile"
-            docker build --file "$dockerfile" .
+          echo "::group::apps/web"
+          docker build --file apps/web/Dockerfile .
+          echo "::endgroup::"
+          for config in services/*/fly.toml; do
+            service="$(basename "$(dirname "$config")")"
+            echo "::group::services/$service"
+            docker build --file services/Dockerfile --build-arg "SERVICE=$service" .
             echo "::endgroup::"
           done

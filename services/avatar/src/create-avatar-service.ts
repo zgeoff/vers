@@ -12,12 +12,16 @@ interface CreateAvatarServiceConfig {
 
 export function createAvatarService(
   config: CreateAvatarServiceConfig = {},
-): Promise<Service<typeof envShape>> {
+): Promise<Service<typeof envShape, { readonly db: Kysely<DB> }>> {
   return createService({
     allowedIssuers: ['app-web'],
-    createRouter: (runtime) =>
-      createAvatarRouter({ db: config.db ?? createDB({ databaseURL: runtime.env.DATABASE_URL }) }),
+    createRouter: (_runtime, resources) => createAvatarRouter({ db: resources.db }),
     envShape,
     name: 'service-avatar',
+    resources: (runtime, scope) => ({
+      db:
+        config.db ??
+        scope.adopt(createDB({ databaseURL: runtime.env.DATABASE_URL }), (db) => db.destroy()),
+    }),
   });
 }

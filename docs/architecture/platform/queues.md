@@ -41,8 +41,8 @@ would hold both awake around the clock, so delivery rides three one-shot drains 
   after a bounded time even when the deadline lies far ahead. A stop of the email service's queue
   starts no further nudge and waits for the nudges in flight, up to the queue's own stop timeout, so
   pg-boss never closes under a drain that is still completing a job.
-- Boot drain: the serve entrypoint drains on start, catching jobs enqueued while the process was
-  down.
+- Boot drain: the email service's boot work drains the queue once the service serves, catching jobs
+  enqueued while the process was down.
 - Scheduled sweep: a Fly scheduled machine runs the service's sweep entrypoint, which starts the
   queue, drains to completion, and exits. It catches retries whose delay elapsed while no machine
   was awake, and anything a crash orphaned. The deploy CLI declares and reconciles the machine

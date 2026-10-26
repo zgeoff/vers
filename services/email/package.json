@@ -20,7 +20,6 @@
     "@vers/service-runtime": "workspace:*",
     "@vers/service-utils": "workspace:*",
     "@vers/trace": "workspace:*",
-    "tiny-invariant": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {

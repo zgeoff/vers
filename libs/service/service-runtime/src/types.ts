@@ -10,3 +10,11 @@ export interface ServiceContext {
 
   traceID: string;
 }
+
+export interface ResourceScope {
+  readonly adopt: <T>(value: T, dispose: (value: T) => Promise<void> | void) => T;
+}
+
+export interface DisposableResourceScope extends ResourceScope {
+  readonly dispose: () => Promise<void>;
+}

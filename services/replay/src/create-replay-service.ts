@@ -4,9 +4,7 @@ import type { DB } from '@vers/db';
 import { parseServicePrivateKey } from '@vers/service-auth';
 import { createService } from '@vers/service-runtime';
 import type { Service } from '@vers/service-runtime';
-import type { CryptoKey } from 'jose';
 import type { Kysely } from 'kysely';
-import invariant from 'tiny-invariant';
 import { buildReplayRouter } from './build-router';
 import { envShape } from './env-shape';
 import type { WakeSource } from './metrics/record-wake';
@@ -23,72 +21,50 @@ interface CreateReplayServiceConfig {
   readonly db?: Kysely<DB>;
 }
 
-export interface ReplayService extends Service<typeof envShape> {
-  readonly db: Kysely<DB>;
-
+export interface ReplayService extends Service<typeof envShape, ReplayWorkerDeps> {
   readonly drain: (source: WakeSource) => Promise<number>;
-
-  readonly privateKey: CryptoKey;
-
-  readonly stopCache: () => void;
-
-  readonly stopDB: () => Promise<void>;
 }
 
 export async function createReplayService(
   config: CreateReplayServiceConfig = {},
 ): Promise<ReplayService> {
-  let resolvedDeps: ReplayWorkerDeps | undefined;
-  let ownsDB = false;
-
-  const service = await createService({
+  const service = await createService<typeof envShape, ReplayWorkerDeps>({
     allowedIssuers: ['service-activity'],
-    createRouter: async (runtime) => {
-      ownsDB = config.db === undefined;
-
+    createRouter: (_runtime, resources) => buildReplayRouter(resources),
+    envShape,
+    name: 'service-replay',
+    onBoot: (resources) => drainReplayQueue(resources, 'boot'),
+    resources: async (runtime, scope) => {
       const db =
         config.db ??
-        createDB({
-          databaseURL: runtime.env.DATABASE_URL,
-          idleInTransactionSessionTimeoutMs: REPLAY_IDLE_IN_TRANSACTION_TIMEOUT_MS,
-        });
+        scope.adopt(
+          createDB({
+            databaseURL: runtime.env.DATABASE_URL,
+            idleInTransactionSessionTimeoutMs: REPLAY_IDLE_IN_TRANSACTION_TIMEOUT_MS,
+          }),
+          (pool) => pool.destroy(),
+        );
 
-      const privateKey = await parseServicePrivateKey(runtime.env.SERVICE_AUTH_PRIVATE_KEY);
-
-      resolvedDeps = {
-        cache: createReplayCache(undefined, (error) => {
+      const cache = scope.adopt(
+        createReplayCache(undefined, (error) => {
           runtime.logger.error('replay cache driver stop failed', { error });
         }),
+        (created) => {
+          created.stopAll();
+        },
+      );
+
+      return {
+        cache,
         db,
         keysServiceURL: runtime.env.KEYS_SERVICE_URL,
         loadContentDocument: makeContentDocumentLoader(db),
         logger: runtime.logger,
-        privateKey,
+        privateKey: await parseServicePrivateKey(runtime.env.SERVICE_AUTH_PRIVATE_KEY),
         simVersion: runtime.env.SIM_ENGINE_HASH,
       };
-
-      return buildReplayRouter(resolvedDeps);
     },
-    envShape,
-    name: 'service-replay',
   });
 
-  invariant(resolvedDeps !== undefined, 'createRouter always resolves deps before returning');
-
-  const deps = resolvedDeps;
-
-  return {
-    ...service,
-    db: deps.db,
-    drain: (source) => drainReplayQueue(deps, source),
-    privateKey: deps.privateKey,
-    stopCache: () => {
-      deps.cache.stopAll();
-    },
-    stopDB: async () => {
-      if (ownsDB) {
-        await deps.db.destroy();
-      }
-    },
-  };
+  return { ...service, drain: (source) => drainReplayQueue(service.resources, source) };
 }

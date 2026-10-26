@@ -40,7 +40,11 @@ for (const target of manifest.apps) {
 
 let failed = false;
 
-for (const leaf of await readdir('services')) {
+const serviceEntries = await readdir('services', { withFileTypes: true });
+
+for (const leaf of serviceEntries
+  .filter((entry) => entry.isDirectory())
+  .map((entry) => entry.name)) {
   const contract = await loadEnvContract(join('services', leaf, 'env-contract.generated.json'));
 
   if (contract === null) {
