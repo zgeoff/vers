@@ -54,6 +54,56 @@ test.each([
   });
 });
 
+test.each([
+  [
+    'an MCP command that assigns a substituted single-quoted reference',
+    '.mcp.json',
+    String.raw`{"command":"sh","args":["-c","TRACKER_TOKEN=\"$(op read 'op://ops/tracker/mcp-token')\" exec ./tracker-mcp"]}`,
+    [{ field: 'mcp-token', item: 'tracker', vault: 'ops' }],
+  ],
+  [
+    'an MCP command with a substitution inside a quoted URL',
+    '.mcp.json',
+    String.raw`{"args":["-c","exec ./bridge \"https://bridge.example?token=$(op read 'op://ops/metrics/read-token')&host=https://api.example\""]}`,
+    [{ field: 'read-token', item: 'metrics', vault: 'ops' }],
+  ],
+  [
+    'an MCP command that assigns two substituted references',
+    '.mcp.json',
+    String.raw`{"args":["-c","PANEL_USER=\"$(op read 'op://ops/panel/username')\" PANEL_PASS=\"$(op read 'op://ops/panel/password')\" exec ./panel"]}`,
+    [
+      { field: 'username', item: 'panel', vault: 'ops' },
+      { field: 'password', item: 'panel', vault: 'ops' },
+    ],
+  ],
+  [
+    'an env file assignment',
+    'infra/.env.example',
+    'API_TOKEN=op://ops/infra/api-token\n',
+    [{ field: 'api-token', item: 'infra', vault: 'ops' }],
+  ],
+  [
+    'an env file comment that names the scheme',
+    'infra/.env.example',
+    '# every value is an op:// reference resolved by `op run --env-file=.env`\n',
+    [],
+  ],
+  [
+    'a workflow comment that names the scheme',
+    '.github/workflows/ci.yml',
+    'jobs:\n  check:\n    # every op:// reference the workflows read is listed\n    runs-on: ubuntu-latest\n',
+    [],
+  ],
+  [
+    'README prose that names the scheme in code spans',
+    'infra/README.md',
+    '- `.env` — `op://` references resolved by `op run`; `.env.example` is the full set.\n',
+    [],
+  ],
+])('it reads the repo form of %s', (_form, path, text, references) => {
+  expect(collectFileOPReferences(path, text)).toStrictEqual({ references, unparsed: [] });
+});
+
 test('it reads nothing from a YAML comment', () => {
   expect(
     collectFileOPReferences(
