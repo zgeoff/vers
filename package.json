@@ -30,6 +30,7 @@
       "@ladle/react": "5.1.1",
       "@logtape/logtape": "2.4.2",
       "@logtape/otel": "2.4.2",
+      "@logtape/pretty": "2.4.2",
       "@msw/data": "1.1.8",
       "@noble/hashes": "2.4.0",
       "@openfeature/core": "1.12.0",
@@ -245,6 +246,7 @@
   "overrides": {
     "@azure/msal-node": "7.1.0",
     "@modelcontextprotocol/sdk": "1.32.1",
+    "@opentelemetry/core": "2.12.0",
     "@opentelemetry/sdk-node": "0.223.0",
     "@pulumi/pulumi": "3.270.0",
     "@types/react": "19.2.17",
