@@ -4,20 +4,53 @@ description:
   Testing rules for zgeoff repos — the three package regimes, flat behavioural tests, a setupTest
   with onTestFinished cleanup, inline data and tested factories, strict assertions and inline
   snapshots, controlled time, condition waits, real filesystems and transports, and the narrow cases
-  for module mocks. References cover real databases, HTTP mocking with MSW, observability, and
-  Claude Code mod checks, and, in a repo that uses them, React and TanStack clients and native Go
-  and NixOS conventions. Load when designing, writing, or reviewing tests.
+  for module mocks, plus the fix for each kind of slow test and the lanes with their per-test
+  timeout limits. References cover real databases, HTTP mocking with MSW, observability, and Claude
+  Code mod checks, and, in a repo that uses them, React and TanStack clients and native Go and NixOS
+  conventions. Load when designing, writing, or reviewing tests.
 ---
 
 # Testing
 
-`bun test` loads every test file into one process, so state that one file leaves behind is state the
-next file sees. The repo's [`bunfig.toml`](../../../bunfig.toml) preload owns that process: it
-registers the matchers, the mock server lifecycle, and every reset that returns shared state to a
-clean baseline after each test. Per-test resources register cleanup with `onTestFinished` where they
-are acquired. A test exercises real behaviour through real code, and it reaches for a stand-in only
-at a boundary the test cannot cross. When existing tests break these rules, you align them while you
-work on the code they cover.
+Plain `bun test` runs every test file in one process with one global object. `--parallel=N` spreads
+the files over N worker processes, and it isolates each file unless the run passes `--no-isolate`.
+Isolation gives each file a fresh global object and module registry, so it evaluates the preload and
+every import again for each file, and `--isolate` alone does the same in one process. Isolation also
+closes the servers, sockets, and subprocesses that a file leaves open, while every file still shares
+the filesystem. `--parallel=1` is not plain `bun test`, because it isolates each file. Isolation can
+make a suite several times slower, or cost it nothing, so a repo measures both modes before it
+chooses one.
+
+The repo's [`bunfig.toml`](../../../bunfig.toml) preload registers the matchers, the mock server
+lifecycle, and every reset that returns shared state to a clean baseline after each test. Those
+resets keep each file independent in either mode. Isolation hides a leak between files and never
+fixes one. Each repo states its mode in its test script and in its project-testing skill, and the
+pull request that sets the mode holds the measurements. Per-test resources register cleanup with
+`onTestFinished` where they are acquired. A test exercises real behaviour through real code, and it
+reaches for a stand-in only at a boundary the test cannot cross. When existing tests break these
+rules, you align them while you work on the code they cover.
+
+The preload starts each shared resource, such as the MSW server, in `beforeAll` and stops it in
+`afterAll`, never at import, so the start and the stop pair up in every mode. Plain `bun test` runs
+the preload's `beforeAll` and `afterAll` once per run, and so does `--parallel=1 --no-isolate`. An
+isolated run imports the preload and runs both hooks once per file. With `--parallel=N --no-isolate`
+and two or more workers, each worker imports the preload once but runs both hooks once per file. A
+server started at import and closed in `afterAll` is then gone after each worker's first file. A
+test process has one MSW server, and each package adds its handlers to it, as
+[HTTP mocking](./references/http.md#the-server-and-its-lifecycle) describes.
+
+A resource that each worker builds once and keeps across its files, such as a database cloned from
+the per-run template, is named after the worker's process. The util opens it when it exists and
+creates it when it does not, so every file in the process finds the same one in either mode, and a
+module variable only caches the handle. No `afterAll` drops it in any mode, because that hook can
+run after every file. [Database testing](./references/database.md#postgres-isolation) describes the
+clone and the sweep that removes it.
+
+The CI unit run passes `--randomize`, so Bun runs the files, and the tests in each file, in a random
+order and prints the `--seed=<seed>` it used. A leak that a fixed order hides then fails CI. A
+failure under `--randomize` is a leak between tests or files. Reproduce it by passing the printed
+`--seed=<seed>`, which runs the same order again, and fix the leak at its cause, never by pinning
+the order.
 
 Never write a test only to satisfy a lint or layout rule. Change the rule's config instead, with a
 one-line reason. A repo that adopts a shared lint rule, such as `zgeoff/import-zones`, never tests
@@ -28,6 +61,8 @@ checks behaviour.
 
 Each line links the section that explains it.
 
+- [Slow tests](#slow-tests): a test finishes in under 5 s; fix the cause the table names, never the
+  timeout, and a lane holds only a test whose real system is the contract.
 - [Regimes](#regimes): the furthest edge a package's code reaches picks its regime and the reference
   to open.
 - [Principles](#principles): visible beats concise, every test stands alone, each changed behaviour
@@ -57,8 +92,8 @@ Each line links the section that explains it.
 - [Boundaries](#boundaries): a stand-in replaces a boundary, never the code inside it, and a failure
   branch runs on a real failure.
 - [Module mocks](#module-mocks): `mock.module` lives only in a preload, for two narrow cases.
-- [Matchers](#matchers): prefer a jest-extended matcher, and give a partial-match matcher a plain
-  object.
+- [Matchers](#matchers): when a jest-extended matcher checks the property, use it in place of a
+  hand-written check, and give a partial-match matcher a plain object.
 
 ## References
 
@@ -75,6 +110,8 @@ Open a reference when the task touches its area.
   host fixes.
 - [Factories and composites](./references/factories.md): writing or changing a factory or a
   composite.
+- [Shell scripts](./references/shell.md): a shell script's test, run through Bun's `$` shell, and
+  its ShellCheck check.
 - [Cleanup](./references/cleanup.md): helpers that register cleanup, ordered cleanup, cleanup after
   the resets, and a test that fails only in the full run.
 
@@ -107,8 +144,9 @@ A repo that runs the skill gate refuses an edit to a test file until the session
 loaded the skills the path needs. A subagent loads them itself, because the main session's loads do
 not count for it. A compaction clears every load, so load the skills again after one. Change a gated
 file with Edit, Write or MultiEdit, never with a Bash redirect, `tee`, `sed -i`, or a script. The
-gate warns on the common Bash forms of those writes but lets them run, so a Bash write still breaks
-the rule.
+gate checks git status after each Bash command, and when the command changed a gated file before the
+session loaded its skills, it blocks and asks for the skills and a review of the change. The block
+comes after the change, so a Bash write still breaks the rule.
 
 ## Languages and runners
 
@@ -148,7 +186,7 @@ These decide a case that the rules below leave open.
 - **Visible beats concise.** A reader understands a test from its body alone. Repeated literals cost
   a few lines; setup the reader cannot see costs a wrong conclusion.
 - **Every test stands alone.** A test passes when run by itself, in any order, and beside every
-  other test in the process.
+  other test in the run.
 - **Behaviour is the contract.** A test pins what the unit does for its callers. A refactor that
   keeps that behaviour, such as a renamed private helper or a reworked loop, leaves every test
   green.
@@ -163,6 +201,122 @@ These decide a case that the rules below leave open.
   with its own tests, because a broken helper fails silently in every suite that uses it.
 - **The assertion is the test.** A test checks exactly what its assertions check. One loose
   assertion lets a broken unit pass.
+
+## Slow tests
+
+A test finishes in under 5 s on CI. A slow test costs every later run its full time, and a raised
+timeout or a sleep hides that cost without removing it. `zgeoff/max-test-timeout` refuses a timeout
+above the limit of the file's lane, and `zgeoff/no-test-sleep` refuses a fixed sleep. When a test is
+slow, find its cause in this table and make the change it names. Never raise the timeout first.
+
+| The test                                                                                    | The cause                           | The fix                                                                                                                                                                                                                                                                           |
+| ------------------------------------------------------------------------------------------- | ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| starts the app, a server or a CLI to call it                                                | a real process start                | Call the code in the test process: its handler, an in-memory RPC link, or an injected transport. Start a real process only in `e2e/`, from the bundle built once per run, for the jobs [Where a test lives](#where-a-test-lives) names.                                           |
+| waits for a deadline, an idle limit or a retry delay                                        | a real timer or deadline            | Make the deadline an option of the code that owns it, pass a short one, and wait on the event that the deadline causes. A runtime or kernel timer gets the shortest faithful value, as [Native timers](./references/system-tests.md#native-timers-and-scenario-delays) describes. |
+| sleeps to let something settle                                                              | no signal to wait on                | Wait on a condition with the repo's `waitFor` helper. When the code offers nothing to wait on, add an event, a log marker or a state flag.                                                                                                                                        |
+| proves that something does not happen                                                       | it waits out a timeout              | Wait for a later event that shows the thing did not happen.                                                                                                                                                                                                                       |
+| migrates a database or builds a bundle                                                      | a shared fixture build              | Use a per-run template: built once per run under a file lock, keyed by a hash of its inputs, and copied per test. A per-process memo is wrong with several workers: each worker builds it again, and the builds race on one output folder.                                        |
+| drives a program the repo starts, such as a guest, a worker or a VM manager                 | a real process start                | Use the program's stateful stand-in from the repo's project-testing skill. When none exists, write one, as [Stateful stand-ins](./references/system-tests.md#stateful-stand-ins) describes.                                                                                       |
+| needs the real system, and the real system is the contract                                  | a VM, the kernel, a browser, an API | Put it in a [lane](#lanes). Its directory or file suffix names the lane.                                                                                                                                                                                                          |
+| runs a linter or checker binary over text the code builds, such as a generated shell script | a real process start                | It is not a test. Export the text and check it in a static check script that runs in the CI static job and before a push.                                                                                                                                                         |
+
+### Where a test lives
+
+- `<package>/src/<file>.test.ts` holds the unit suite of one source file.
+- `integration/` holds one flow across several packages, in one process, with per-run fixtures and
+  stand-ins. It is a place, not a lane: it runs in the unit run under every unit rule, with the 5 s
+  limit and no raised timeout.
+- `e2e/` holds the tests that drive the built product from outside, through its bundle or binary,
+  its CLI, HTTP, or a socket. It holds two kinds of test: the process itself (start-up, signals,
+  exit codes, crash recovery), and one happy-path journey per main user flow. A flow's variants,
+  such as its edge cases, error branches, and denials, run in process. A test that imports a package
+  belongs in `integration/`.
+- `evals/` holds the [evaluation suites](./references/system-tests.md#evaluation-suites), which
+  replay a committed corpus or report through the production path. Like `integration/`, it is a
+  place, not a lane: it runs in the unit run on every pull request, under every unit rule. Its
+  helpers live in a package outside `evals/`, with their own unit tests.
+- An app root may hold its own `integration/`, `evals/` and `e2e/`. A lane's harness lives outside
+  the lane directory, in a package with its own unit tests.
+- A static check of config or of generated text is a script, not a test.
+
+To place a test, ask where its failure points. A failure that points at the wiring belongs in
+`e2e/`, and one that points at the logic belongs in the unit run.
+
+### Per-run fixtures and lanes
+
+A real system that starts fast and isolates per test is a per-run fixture in the unit run, not a
+lane. An in-memory store, a database template copied per test, and a stand-in daemon that starts in
+milliseconds are per-run fixtures. A lane exists only for a real system that the unit run cannot
+host, such as a VM, the kernel or root, a browser, a container image, the Agent SDK subprocess, or a
+live API, or for a test of the process itself.
+
+### Lanes
+
+A lane runs the tests that need one real system. Each lane has its own `test:<lane>` script, its own
+CI step, and a per-test limit, which the script's `--timeout` sets and `zgeoff/max-test-timeout`
+checks in each lane file. The unit run leaves the lane files out by pattern.
+
+| Lane      | Where                                  | Limit | The real system                                                              |
+| --------- | -------------------------------------- | ----- | ---------------------------------------------------------------------------- |
+| unit      | every other test file                  | 5 s   | none: code in process, per-run fixtures, and stand-ins                       |
+| e2e       | `e2e/` at the repo root or an app root | 15 s  | the built product, driven from outside                                       |
+| browser   | `<name>.browser.test.ts`               | 10 s  | a real browser                                                               |
+| docker    | `<name>.docker.test.ts`                | 15 s  | a container engine                                                           |
+| host      | `<name>.host.test.ts`                  | 15 s  | the host kernel, root, or the network stack                                  |
+| agent-sdk | `<name>.agent-sdk.test.ts`             | 5 s   | the Claude Agent SDK subprocess against a scripted model, never the live API |
+| model-api | `<name>.model-api.test.ts`             | 120 s | a live model API                                                             |
+
+- The `model-api` lane runs nightly, on dispatch, and on a pull request that bumps the Agent SDK
+  when the pull request carries the opt-in label, never on every pull request. A test that calls a
+  live model takes the suffix wherever it lives, in `evals/` too.
+- A test that calls a live API other than a model gets its own project lane, with a suffix that
+  names that API.
+- A suffix names one real system, never a speed. A repo prefers a specific suffix to the generic
+  `.host`, such as a made-up `.kvm` for a test that boots a VM.
+- A repo adds a project lane only for a real system that this section allows. Its project-testing
+  skill lists the lane with its real system and its limit, and its root oxlint config declares the
+  lane and its limit in the `lanes` option of `zgeoff/max-test-timeout` and of
+  `zgeoff/test-beside-module`. The pull request that adds the lane holds its measured test times.
+- A test that is slow only because of a runtime timer stays in the unit run, with the disable
+  comment that [A test over its limit](#a-test-over-its-limit) describes.
+- A lane holds no test that is only slow. Before a test moves to a lane, check that no other row of
+  the cause table fits it.
+
+A Rust crate runs the same lanes through cargo-nextest, as
+[Rust lanes](./references/system-tests.md#rust-lanes) describes.
+
+### A test over its limit
+
+A test whose cause the [Slow tests](#slow-tests) table can fix gets that fix in the pull request
+that meets it, never a ticket. A test that still cannot finish within its lane's limit carries a
+disable comment that gives the measured time and one of two reasons:
+
+- the ticket that tracks the fix, when the fix cannot land in this pull request, such as a fix in
+  another repo;
+- `floor:` and the measured evidence that the time cannot move, such as
+  `48 s on CI; floor: two VM boots plus a restic restore`.
+
+The ticket form, in this made-up example:
+
+```ts
+test(
+  'it restores a volume from its oldest snapshot',
+  async () => {
+    // …
+  },
+  // oxlint-disable-next-line zgeoff/max-test-timeout -- 48 s on CI, OPS-212
+  { timeout: 60_000 },
+);
+```
+
+The rule reports the timeout value, so the comment sits on the line before the options object. The
+options object follows the callback, because Bun's types accept no other order. The formatter puts
+each argument on its own line, so the comment stays next to the object.
+
+The limit never rises to cover one test. `zgeoff/test-timeout-exception-ticket` fails a disable of
+`zgeoff/max-test-timeout` whose reason after `--` holds neither a ticket nor `floor:` with text, in
+any of its forms. The test timeout check fails an oxlint config that turns either rule off or down
+to a warning, unless a comment on that setting holds a ticket or a `floor:`.
 
 ## Structure and naming
 
@@ -187,10 +341,9 @@ These decide a case that the rules below leave open.
   `test()` for each case.
 - Tests sit beside the module they test (`parse-entry.ts` and `parse-entry.test.ts`), and a test of
   a program's entry module, such as `cli.ts`, sits beside that module too, so `src/` stays a mirror
-  with one test file per module. Two root directories are the exceptions: `e2e/` holds the
-  end-to-end suites that run the whole program, and `evals/` holds the
-  [evaluation suites](./references/system-tests.md#evaluation-suites). The repo has no other
-  `test/`, `tests/`, or `__tests__` directory.
+  with one test file per module. Three directories are the exceptions: `integration/`, `evals/` and
+  `e2e/` at the repo root or an app root, which [Where a test lives](#where-a-test-lives) describes.
+  The repo has no other `test/`, `tests/`, or `__tests__` directory.
 - A test that drives a real browser goes in `<module>.browser.test.ts` beside its module, which the
   repo runs in a serial lane, as [Browser suites](./references/system-tests.md#browser-suites)
   describes.
@@ -207,10 +360,10 @@ test.each([
 
 ### End-to-end suites
 
-An end-to-end suite splits by user journey, one file per journey, and a journey test may chain
-dependent act-and-assert phases. Its harness, resets, and command checks follow
-[System tests](./references/system-tests.md#end-to-end-suites), and so does an evaluation suite in
-`evals/`.
+An end-to-end suite holds tests of the process itself and one journey per main user flow, as
+[Where a test lives](#where-a-test-lives) describes. It splits by user journey, one file per
+journey, and a journey test may chain dependent act-and-assert phases. Its harness, resets, and
+command checks follow [System tests](./references/system-tests.md#end-to-end-suites).
 
 ### Loops
 
@@ -231,9 +384,10 @@ Two loops that check a set the module owns stay legal:
   `await expect(conformanceCase.run(app)).toResolve()`.
 
 Neither loop may compute its expectation with the same transformation it checks. A loop that only
-arranges, such as inserting 51 rows to cross a page limit, holds no assertion and stays legal.
-Prefer `await Promise.all(Array.from({ length: 51 }, …))` when the order of the rows does not
-matter.
+arranges, such as inserting 51 rows to cross a page limit, holds no assertion and stays legal. When
+the order of the rows does not matter, insert them with
+`await Promise.all(Array.from({ length: 51 }, …))`. When it does, insert them one at a time in the
+loop.
 
 ### Property tests
 
@@ -274,7 +428,7 @@ never appear in a test file.
   tests of its own. A file with nothing to wire has no `setupTest()`. One exception: a
   collection-time skip gate may keep its awaited probe, and named gates derived from it, at module
   level. Only `skipIf` reads them, each repeated condition is named once, and a comment gives the
-  reason: Bun 1.4.2's `skipIf` takes a boolean and has no in-body skip.
+  reason: Bun's `skipIf` takes a boolean and has no in-body skip.
 - `setupTest()` may return a closure that only calls production helpers on the runtime it built,
   such as `createImpDir(name)`. A closure with a branch, a loop, or state of its own is a helper,
   and it moves to the shared test utils.
@@ -373,21 +527,21 @@ unique key to avoid another test's rows: isolation comes from resets, not from l
 
 ### A test that fails only in the full run
 
-A test that passes alone and fails beside others has found a cleanup gap. Bisect the test files to
-find the state it leaves behind and add that state's reset to the preload, as
-[Cleanup](./references/cleanup.md#a-test-that-fails-only-in-the-full-run) describes. Reordering the
-tests or choosing unique keys hides the gap.
+A test that passes alone and fails beside others has found a cleanup gap.
+[Cleanup](./references/cleanup.md#a-test-that-fails-only-in-the-full-run) holds the steps that find
+the gap and close it.
 
 ## Test data
 
 - Plain inputs stay inline at the call site: arguments, options bags, config values. Write the
   literal again in the next test. A module-level fixture, a baseline object shared between tests, or
   a constant that only names a literal (`const EMPTY = ''`) never appears in a test file.
-- A domain type that crosses a module boundary gets a factory, `build-mock-<type>.ts` exporting
-  `buildMock<Type>`, in the shared test utils as soon as a test needs one, and a domain concept
-  built from several records gets a composite. Both follow
-  [Factories and composites](./references/factories.md). A type private to the module under test
-  stays an inline literal.
+- A domain type that crosses a module boundary gets a tested factory in the shared test utils as
+  soon as a test needs one, and a domain concept built from several records gets a composite. A type
+  that another package owns, such as an SDK result, crosses a boundary on its first use. A type
+  private to the module under test stays an inline literal.
+  [Factories and composites](./references/factories.md) holds how to name and write a factory or a
+  composite.
 - A stand-in's data stays inline in the test: a fixed answer, a recorder (`mock()`), including one
   that parses the input it records, a no-op (`() => {}`), an answer table read by one key, or a list
   of scripted answers that the test passes to the tested answer-queue util. Any other code in a
@@ -576,6 +730,7 @@ builds or imports is a spy, which [Infrastructure failures](#infrastructure-fail
 | ----------------------------------------------- | ------------------------------------------------------------------------------------------------- |
 | Pure computation                                | Return values, with no stand-in                                                                   |
 | A CLI                                           | The real binary, spawned end to end                                                               |
+| A shell script                                  | The real script, run through Bun's `$`, as [shell scripts](./references/shell.md) describes       |
 | The filesystem                                  | A real `mkdtemp` tree per test                                                                    |
 | A database                                      | The real engine, isolated per test, as [database](./references/database.md) describes             |
 | A remote HTTP or RPC service                    | MSW handlers, as [HTTP mocking](./references/http.md) describes                                   |
@@ -589,10 +744,8 @@ with values, and test the I/O edge against the real boundary.
 
 ### Real applications and transport
 
-A CLI, SDK, or server-side client of a service in the same repo tests against the real application
-wiring, and a tested real network stand-in replaces interception where interception cannot reach the
-contract. [System tests](./references/system-tests.md#real-applications-and-transport) holds both
-rules.
+A client of a service that the same repo holds, and a network edge that request interception cannot
+reach, each follow [System tests](./references/system-tests.md#real-applications-and-transport).
 
 <!-- repo-sync needs ./references/frontend.md -->
 
@@ -631,9 +784,9 @@ injected boundary.
 
 ### Module mocks
 
-`mock.module` never appears in a test file. In one process, a module mock in one file applies to
-every file that loads after it. Two kinds of module mock are legal, and each lives in a preload
-module named `register-<module>-mock.ts`:
+`mock.module` never appears in a test file. A run without `--isolate` keeps one module registry per
+process, so a module mock in one file applies to every file that loads after it. Two kinds of module
+mock are legal, and each lives in a preload module named `register-<module>-mock.ts`:
 
 - **A stand-in for what the test runtime cannot host**, such as a WebGL scene, a `SharedWorker`, or
   a framework's ambient server context. It reads from a stub store, and one exported setter is the
@@ -648,7 +801,9 @@ shows a defect in the import graph: fix the import graph instead.
 
 The `@zgeoff/bun-test-extended` preload registers the jest-extended matchers, and a package's
 `augment-bun-test.ts` import gives `tsc` their types. Typecheck fails on a matcher name that does
-not exist. Prefer a matcher to a hand-written check:
+not exist. When a matcher in this table checks the property a test asserts, use it in place of a
+hand-written check such as `expect(items.every(isOpen)).toBe(true)`, because the matcher reports the
+received value on failure and the hand-written check reports only `false`:
 
 | Value             | Matchers                                                                                                          |
 | ----------------- | ----------------------------------------------------------------------------------------------------------------- |

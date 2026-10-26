@@ -17,8 +17,14 @@ follow [Real applications and transport](../SKILL.md#real-applications-and-trans
 
 ## The server and its lifecycle
 
-- Each package has one MSW server, `setupServer(...handlers)`, exported from `mocks/node.ts`. The
-  preload starts it, resets its handlers after each test, and closes it at the end of the run.
+- A test process has one MSW server, `setupServer(...handlers)`, exported from `mocks/node.ts`. Each
+  package whose tests run in the process adds its handler list to that call, so `resetHandlers()`
+  keeps every package's default handlers. A package never starts a second server: two servers in one
+  process patch the same request APIs, so one server's handlers answer requests meant for the
+  other's.
+- The preload calls `server.listen()` in `beforeAll`, `server.resetHandlers()` after each test, and
+  `server.close()` in `afterAll`, never `listen()` at import. The
+  [testing skill](../SKILL.md#testing) says why the pair holds in every run mode.
 - The server starts with `onUnhandledRequest: 'error'`. A request that no handler matches fails the
   test and names its URL.
 - A suite that sends real requests to a server it started on the loopback interface passes a
@@ -26,17 +32,19 @@ follow [Real applications and transport](../SKILL.md#real-applications-and-trans
   carries a comment that names the loopback traffic.
 
 ```ts
-server.listen({
-  // the sync suites call test servers on ephemeral loopback ports
-  onUnhandledRequest: (request, print) => {
-    const { hostname } = new URL(request.url);
+beforeAll(() => {
+  server.listen({
+    // the sync suites call test servers on ephemeral loopback ports
+    onUnhandledRequest: (request, print) => {
+      const { hostname } = new URL(request.url);
 
-    if (['127.0.0.1', '[::1]', 'localhost'].includes(hostname)) {
-      return;
-    }
+      if (['127.0.0.1', '[::1]', 'localhost'].includes(hostname)) {
+        return;
+      }
 
-    print.error();
-  },
+      print.error();
+    },
+  });
 });
 ```
 
@@ -105,8 +113,8 @@ behaviour from every consumer.
 
 When several packages in one repo call the same service, its collections, builders, and handlers
 live in one shared workspace package. That package has no test-runner dependency, so a dev server or
-a story can load it as well. Each consuming package builds its MSW server out of the shared handler
-list and runs the lifecycle in its own preload.
+a story can load it as well. Each consuming package adds the shared handler list to its process's
+one MSW server, and never builds a server of its own.
 
 - The store's `reset()` clears dependent collections before the collections they reference. A
   comment above the calls says the order is deliberate.

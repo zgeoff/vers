@@ -33,14 +33,14 @@ async function setupTest() {
 
   onTestFinished(() => stack.disposeAsync());
 
-  const dir = await mkdtemp(join(tmpdir(), 'notes-'));
+  const dir = await mkdtemp(join(tmpdir(), 'ledger-'));
 
   stack.defer(() => rm(dir, { recursive: true, force: true }));
 
-  const db = new Database(join(dir, 'notes.db'));
+  const db = new Database(join(dir, 'ledger.db'));
 
   stack.defer(() => db.close());
-  applyNotesMigrations(db);
+  applyLedgerMigrations(db);
 
   return { dir, db, stack };
 }
@@ -61,16 +61,16 @@ use this hook run sequentially within each file: do not enable `test.concurrent`
 `concurrentTestGlob` for them. Separate worker processes and CI jobs can still run in parallel.
 
 ```ts
-test('it reads a note written by another connection', async () => {
-  const ctx = await setupTest();
+test('it reads an entry written by another connection', async () => {
+  const ctx = await setupTest(); // the ledger on its disposable stack
 
-  const writer = new Database(join(ctx.dir, 'notes.db'));
+  const writer = new Database(join(ctx.dir, 'ledger.db'));
 
   ctx.stack.defer(() => writer.close());
 
-  writer.run(`INSERT INTO notes (title) VALUES ('from writer')`);
+  writer.run(`INSERT INTO entries (memo) VALUES ('from writer')`);
 
-  expect(listNoteTitles(ctx.db)).toStrictEqual(['from writer']);
+  expect(listEntryMemos(ctx.db)).toStrictEqual(['from writer']);
 });
 ```
 

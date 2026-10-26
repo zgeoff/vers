@@ -22,7 +22,11 @@ not a reimplementation. Each test gets a database that no other test can see, an
 Each test acquires a handle from the repo's test-database util, holds it in `setupTest()`, and
 injects the handle's connection into the code under test. Code that opens its own connection escapes
 the isolation, so thread the handle's connection through instead. The schema is built once per run,
-from the migrations or from a schema dump, and the util names which.
+from the migrations or from a schema dump, and the util names which. Each worker's clone of the
+template database that holds that schema is named after its process, such as `<template>_<pid>`: the
+util opens the clone when it exists and clones the template when it does not, so an isolated file
+reuses its worker's clone. The sweep at the start of each run drops every clone whose process is
+gone.
 
 The handle offers three isolation levels:
 

@@ -30,8 +30,8 @@ badges `<p>` holds one badge link per line, and the links `<p>` holds at most 3 
 The one-line description sits below the div, as plain Markdown. A repo with no badge or no link
 drops that `<p>`.
 
-A package README (one for a published package, classified as the table below states) has six
-sections, in this order:
+A package README (the root README of a repo that publishes a package, or a README under `packages/`)
+has six sections, in this order:
 
 1. Hero: the header above.
 2. Pitch: 1 to 2 short paragraphs and the demo, when one exists. The pitch names the 2 or 3 actions
@@ -43,17 +43,21 @@ sections, in this order:
 6. Documentation: one line linking `docs/`.
 
 A plain repo README (a repo that publishes no package) opens with the header, then has one
-paragraph, Quick start, Checks, Layout, and Documentation. A sub-package or folder README documents
-its own folder.
+paragraph, Quick start, Checks, Layout, and Documentation. A folder README documents its own folder.
 
-[`check-length.sh`](../scripts/check-length.sh) classifies each README outside `docs/` and
-`.claude/`, and fails the run above its limit:
+[`check-length.sh`](../scripts/check-length.sh) takes each README's limit from its path alone, so
+the pre-push hook, CI and a repo's own script give the same result. It checks each README outside
+`docs/` and `.claude/`, and each spike README under `docs/design/**/spikes/*/`, and fails the run
+above its limit:
 
-| README      | Classified by                                                | Target | Limit |
-| ----------- | ------------------------------------------------------------ | ------ | ----- |
-| Package     | a package.json beside it that is not private, or `--package` | 120    | 130   |
-| Plain repo  | the root README of a repo that isn't a package               | 50     | 60    |
-| Sub-package | any other README outside `docs/`                             | 60     | 70    |
+| README     | Path                                      | Target | Limit |
+| ---------- | ----------------------------------------- | ------ | ----- |
+| Front page | the root `README.md`                      | 80     | 100   |
+| Package    | `packages/*/README.md`                    | 80     | 100   |
+| Folder     | any other README, a spike README included | 60     | 70    |
+
+A published package outside `packages/` takes the folder limit. The `--package` flag is deprecated:
+the script prints a notice and ignores it.
 
 A README never holds flags, exit codes, config keys, per-agent or per-platform install variants,
 edge cases inside table rows, key or state tables, dated "checked" stamps, or person names. A

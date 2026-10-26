@@ -28,9 +28,10 @@ links `docs/reference/` once.
   sentences to fit, never move the overflow into a README or code comments, and never split where
   the concept has no boundary. `check-length.sh` warns on a doc over its cap.
 - **A design lives in `docs/design/<work>/`** while its code is unbuilt, with any spikes as runnable
-  packages in `docs/design/<work>/spikes/<name>/`. A plan for work about to be built is no design:
-  it lives in its issue or PR. When the work lands, the built part moves into `docs/architecture/`
-  and the design folder is deleted.
+  packages in `docs/design/<work>/spikes/<name>/` or wherever the repo's project skill keeps them.
+  Each spike takes the structure in [Spikes](#spikes). A plan for work about to be built is no
+  design: it lives in its issue or PR. When the work lands, the built part moves into
+  `docs/architecture/` and the design folder is deleted.
 - **A decision record is permanent, and a changed decision is edited in place.** A record states the
   choice, the alternatives it rejected and why, never how the system works now; the architecture doc
   owns that. When a decision changes, its record keeps its number and states the decision as it now
@@ -41,3 +42,33 @@ links `docs/reference/` once.
   contributor setup; `docs/runbooks/releasing.md` holds only the steps the release tooling doesn't
   do, and is deleted when none remain. A folder README that documents its own folder stays beside
   it.
+
+## Spikes
+
+A spike is an experiment that answers one question for a design. The repo's `project-docs-writing`
+skill names the folder its spikes live in, such as `research/<name>/` or
+`docs/design/<work>/spikes/<name>/`. Every spike has the same shape:
+
+```text
+<spike>/
+  README.md     the landing page, held to the folder README limit
+  results.md    the full report: versions, setup, every table, the reasons, the full untested list
+  <run>.md      only for a separate run, such as a run on a deployment host
+  code, runs/, results/ …
+```
+
+The README holds these sections, in this order:
+
+1. An H1 `Spike: <title>` and 2 to 3 sentences: what the spike measures, and for which decision.
+2. `## Question`: the question in one paragraph.
+3. `## Answer`: the verdict and the headline numbers in 5 bullets or fewer, then the recommendation
+   in one line.
+4. `## Run it`: one code block, and a link to the `## Setup` section of `results.md` for the flags
+   and versions.
+5. `## Results`: one line that links `results.md` and any sibling run file.
+6. `## Untested`: 1 to 2 lines, with a link to the `## Untested` section of `results.md`.
+
+A spike that only reads sources, with no code, leaves out `Run it`. No other file in a spike is
+named `README.md`, because `check-length.sh` holds every README to a README limit. `results.md` and
+the spike's other files have no line cap, even under `docs/design/`, and `check-prose.sh` and
+`check-links.sh` read `results.md` wherever the spike sits.

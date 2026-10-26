@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 # Checks every relative link and anchor in Markdown files; exits non-zero on a broken one.
 # Usage (from the repo root): check-links.sh [<path>...]
-# With no path, it reads every README.md outside .claude/, every Markdown file under docs/, and
-# every skill's Markdown under .claude/skills/ and sync/skills/. A link with a scheme
-# (https:, mailto:) is never followed. An anchor is checked only on a Markdown target, against
+# With no path, it reads every README.md outside .claude/, every spike's results.md, every Markdown
+# file under docs/, and every skill's Markdown under .claude/skills/ and sync/skills/. A link with a
+# scheme (https:, mailto:) is never followed. An anchor is checked only on a Markdown target, against
 # GitHub's heading anchors and the page's explicit id and name attributes.
 set -uo pipefail
 
 if [ "$#" -eq 0 ]; then
-  set -- ':(glob)**/README.md' ':(glob)docs/**/*.md' ':(glob).claude/skills/**/*.md' \
-    ':(glob)sync/skills/**/*.md' ':(exclude,glob).claude/**/README.md'
+  set -- ':(glob)**/README.md' ':(glob)**/results.md' ':(glob)docs/**/*.md' \
+    ':(glob).claude/skills/**/*.md' ':(glob)sync/skills/**/*.md' ':(exclude,glob).claude/**/README.md'
 fi
 
 # The skill's own files, the repo's project skill beside them, and the skill-writing skill link to
