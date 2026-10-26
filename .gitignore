@@ -11,6 +11,9 @@ test-report.junit.xml
 # git worktrees
 .worktrees
 
+# local scratch files
+.scratch/
+
 # dependencies
 node_modules
 
