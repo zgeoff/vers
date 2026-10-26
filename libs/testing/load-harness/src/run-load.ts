@@ -4,6 +4,7 @@ import { $ } from 'bun';
 import { match } from 'ts-pattern';
 import { buildLoadImageRefs } from './build-load-image-refs';
 import { buildScenarioSummary } from './build-scenario-summary';
+import { collectContainerFailures } from './collect-container-failures';
 import { LOAD_POSTGRES_CPUS, createLoadStack } from './create-load-stack';
 import { renderLoadReport } from './render-load-report';
 import { runLiveScenario } from './run-live-scenario';
@@ -31,8 +32,13 @@ export interface RunLoadOptions {
 // a shared Fly CPU's sustained quota is a sixteenth of a core, and its burst runs a whole core
 const SHARED_CPU_BASELINE = 1 / 16;
 
+interface LoadRunResult {
+  readonly containerFailures: ReadonlyArray<string>;
+  readonly reportPath: string;
+}
+
 // each scenario gets a fresh stack, so one scenario's backlog or tables never weigh on the next
-export async function runLoad(options: Readonly<RunLoadOptions>): Promise<string> {
+export async function runLoad(options: Readonly<RunLoadOptions>): Promise<LoadRunResult> {
   const head = await $`git rev-parse --short HEAD`.quiet().text();
 
   const commit = head.trim();
@@ -95,7 +101,7 @@ export async function runLoad(options: Readonly<RunLoadOptions>): Promise<string
     ),
   );
 
-  return reportPath;
+  return { containerFailures: collectContainerFailures(summaries), reportPath };
 }
 
 type ScenarioRun = (stack: Readonly<LoadStack>) => Promise<ScenarioRecording>;

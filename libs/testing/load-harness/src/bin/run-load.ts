@@ -28,7 +28,7 @@ const entry = define({
       appendFileSync(logPath, `${stamped}\n`);
     };
 
-    const reportPath = await runLoad({
+    const result = await runLoad({
       cpuProfile: options['cpu-profile'],
       log,
       offlineHours: options['offline-hours'],
@@ -45,7 +45,15 @@ const entry = define({
       steadyPlayers: parseCountListOption(options['steady-players']),
     });
 
-    log(`report: ${reportPath}`);
+    log(`report: ${result.reportPath}`);
+
+    for (const failure of result.containerFailures) {
+      log(`failed: ${failure}`);
+    }
+
+    if (result.containerFailures.length > 0) {
+      process.exitCode = 1;
+    }
   },
 });
 

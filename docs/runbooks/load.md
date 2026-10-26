@@ -48,7 +48,9 @@ stack is up, so run nothing else heavy beside it.
    bun run --cwd libs/testing/load-harness load
    ```
 
-   Expect a log line per scenario stage, ending with `report: <path>`.
+   Expect a log line per scenario stage, ending with `report: <path>`. The command exits 1, after it
+   writes the report, when any container exited during a scenario, and logs one `failed:` line per
+   exit.
 
 2. Run one scenario, or other volumes, with the options that `--help` lists:
 
@@ -59,7 +61,16 @@ stack is up, so run nothing else heavy beside it.
 
    `--skip-build` reuses the images an earlier run built for the same commit.
 
-3. Read the report at the printed path, under `.load-results/<timestamp>/`. The folder also holds
+3. Before you merge a change to app-web's proxy or to a service's request path, run the 400-player
+   step. It is the regression check for a memory leak that only Node's fetch has, which `bun test`
+   cannot reproduce: without the fix, app-web dies at its heap limit inside the step, and the
+   command exits 1.
+
+   ```bash
+   bun run --cwd libs/testing/load-harness load --scenario steady --steady-players 400
+   ```
+
+4. Read the report at the printed path, under `.load-results/<timestamp>/`. The folder also holds
    `run.log` and one JSON recording per scenario with every sample the report summarises.
 
 A run removes each stack when its scenario ends, whether the scenario passed or failed. If a run is
