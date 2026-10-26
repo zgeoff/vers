@@ -5,6 +5,7 @@ import { redirect } from '@tanstack/react-router';
 import { checkHoneypot } from '../../lib/auth/check-honeypot';
 import { readVerifySession } from '../../lib/auth/read-verify-session';
 import { SpamError } from '../../lib/auth/spam-error';
+import { VERIFY_SESSION_KEYS } from '../../lib/auth/verify-session-keys';
 import { verificationClient } from '../../lib/rpc/clients/verification-client';
 import { logger } from '../../server/logger';
 import { runVerification } from './run-verification';
@@ -37,7 +38,7 @@ export async function verifyOTPHandler(formData: FormData): Promise<Response | S
   if (submission.value.type === '2fa') {
     const verifySession = await readVerifySession();
 
-    const boundTarget = verifySession['login2FA#target'];
+    const boundTarget = verifySession[VERIFY_SESSION_KEYS.login2FA.target];
 
     if (boundTarget === undefined) {
       throw redirect({ href: '/login' });

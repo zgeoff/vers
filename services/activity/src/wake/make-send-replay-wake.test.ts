@@ -1,4 +1,5 @@
 import { expect, mock, test } from 'bun:test';
+import { getLogger } from '@logtape/logtape';
 import { mockReplayService } from '@vers/mock-services/replay';
 import { waitFor } from '@vers/test-utils';
 import { createInMemoryMetrics, updateEnv } from '@vers/test-utils/bun';
@@ -8,7 +9,12 @@ import { makeSendReplayWake } from './make-send-replay-wake';
 
 test('it retries a failed client build on the next call', async () => {
   const inMemoryMetrics = createInMemoryMetrics();
-  const sendReplayWake = makeSendReplayWake({ coalesceWindowMs: 0 });
+
+  const sendReplayWake = makeSendReplayWake({
+    coalesceWindowMs: 0,
+    logger: getLogger(['test-activity']),
+  });
+
   const validPrivateKey = process.env['SERVICE_AUTH_PRIVATE_KEY'];
 
   invariant(validPrivateKey !== undefined, 'the test env always sets SERVICE_AUTH_PRIVATE_KEY');
@@ -46,7 +52,10 @@ test('it retries a failed client build on the next call', async () => {
 });
 
 test('it keeps the cached client after a wake-call failure, without rebuilding it', async () => {
-  const sendReplayWake = makeSendReplayWake({ coalesceWindowMs: 0 });
+  const sendReplayWake = makeSendReplayWake({
+    coalesceWindowMs: 0,
+    logger: getLogger(['test-activity']),
+  });
 
   // warms up a known-good cached client before the failure injection below, so the assertion
   // isolates a wake-call failure from an unbuilt cache
@@ -90,8 +99,15 @@ test('it gives each instance its own coalesce state', async () => {
 
   server.use(mockReplayService.wake.handler(wakeHandler));
 
-  const pokeFirst = makeSendReplayWake({ coalesceWindowMs: 0 });
-  const pokeSecond = makeSendReplayWake({ coalesceWindowMs: 0 });
+  const pokeFirst = makeSendReplayWake({
+    coalesceWindowMs: 0,
+    logger: getLogger(['test-activity']),
+  });
+
+  const pokeSecond = makeSendReplayWake({
+    coalesceWindowMs: 0,
+    logger: getLogger(['test-activity']),
+  });
 
   pokeFirst();
   pokeSecond();

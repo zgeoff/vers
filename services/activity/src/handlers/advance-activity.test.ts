@@ -1,4 +1,5 @@
-import { expect, test } from 'bun:test';
+import { expect, onTestFinished, test } from 'bun:test';
+import { resetSync } from '@logtape/logtape';
 import { createId } from '@paralleldrive/cuid2';
 import { createContentVersion } from '@vers/content-registry';
 import type {
@@ -25,6 +26,7 @@ import {
 } from '@vers/service-test-utils/bun';
 import { createSimVersionRow } from '@vers/sim-registry/test-utils';
 import { buildRPCTestClient } from '@vers/test-utils';
+import { createInMemoryLogs } from '@vers/test-utils/bun';
 import { deriveWorldmapContent } from '@vers/worldmap-content';
 import { collectNodeEdges, findCellCoord, getDifficulty } from '@vers/worldmap-core';
 import invariant from 'tiny-invariant';
@@ -326,6 +328,56 @@ test('it rejects a continuation whose predicted buildSnapshot mismatches the ser
     .executeTakeFirstOrThrow();
 
   expect(row).toStrictEqual({ appendedHead: 0, status: 'active' });
+});
+
+test('it writes the refusal line for a continuation it bails as CHECKPOINT_INVALID', async () => {
+  await using ctx = await setupTest();
+
+  const logs = createInMemoryLogs({ lowestLevel: 'warning' });
+
+  onTestFinished(() => {
+    resetSync();
+  });
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id, xp: 0 });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
+  });
+
+  const tail = createMockCheckpointBatch({
+    finalPayloadOverrides: { rewards: { xp: 40 }, type: 'completed' },
+    startChainIndex: started.startChainIndex,
+    startPrevHash: started.startHash,
+    startVersion: 1,
+  });
+
+  expect(
+    client.advanceActivity({
+      activityID: started.id,
+      continuations: [
+        {
+          buildSnapshot: { level: buildLevelFromXP(999), xp: 999 },
+          checkpoints: tail,
+          id: `act_${createId()}`,
+          startKey: `continue_${started.id}`,
+        },
+      ],
+      expectedHead: 0,
+    }),
+  ).rejects.toMatchObject({ code: 'CHECKPOINT_INVALID' });
+
+  expect(logs.records).toPartiallyContain({
+    level: 'warning',
+    properties: { code: 'CHECKPOINT_INVALID', reason: 'build-snapshot-mismatch' },
+    rawMessage: 'activity write refused: CHECKPOINT_INVALID build-snapshot-mismatch',
+  });
 });
 
 test('it converges a resubmit of an already-minted continuation onto the same row', async () => {
@@ -1353,6 +1405,57 @@ test("it conflicts an activity start whose startChainIndex/seed is behind the ch
       reason: 'stale-chain-head',
     },
     status: 409,
+  });
+});
+
+test('it writes the refusal line for an activity start it refuses on a stale chain head', async () => {
+  await using ctx = await setupTest();
+
+  const logs = createInMemoryLogs({ lowestLevel: 'warning' });
+
+  onTestFinished(() => {
+    resetSync();
+  });
+
+  const current = await createSimVersionRow(ctx.db);
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id, xp: 0 });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
+  await ctx.db
+    .updateTable('activityChains')
+    .set({ appendedChainIndex: 5, appendedNextSeed: 'a'.repeat(32) })
+    .where('avatarId', '=', avatar.id)
+    .where('scopeType', '=', 'world_map_node')
+    .where('scopeId', '=', '0_0')
+    .execute();
+
+  const activityStart = createMockOfflineActivityStartSubmission({
+    avatarID: avatar.id,
+    buildSnapshot: { level: buildLevelFromXP(0), xp: 0 },
+    contentVersion: '2',
+    scopeID: '0_0',
+    scopeType: 'world_map_node',
+    simVersion: current.engineHash,
+    startChainIndex: 0,
+  });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  expect(
+    client.advanceActivity({
+      activityID: `act_${createId()}`,
+      continuations: [createMockCatchUpContinuation()],
+      expectedHead: 0,
+      activityStart,
+    }),
+  ).rejects.toMatchObject({ code: 'CONFLICT' });
+
+  expect(logs.records).toPartiallyContain({
+    level: 'warning',
+    properties: { code: 'CONFLICT', reason: 'stale-chain-head' },
+    rawMessage: 'activity write refused: CONFLICT stale-chain-head',
   });
 });
 

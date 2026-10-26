@@ -1,6 +1,6 @@
 import type { CheckpointBatchEntry } from '@vers/contract-activity';
 import type { DB } from '@vers/db';
-import { toJSON } from '@vers/db';
+import { toJSON, transitionActivityStatus } from '@vers/db';
 import { isTerminalCheckpointType } from '@vers/idle-core';
 import type { ServiceContext } from '@vers/service-runtime';
 import { sql } from 'kysely';
@@ -22,6 +22,7 @@ import type {
   TerminalStatusPayload,
 } from '../types';
 import { updateAppendedAnchorFromTail } from './update-appended-anchor-from-tail';
+import { writeRefusalLine } from './write-refusal-line';
 
 interface TrackActivityProgressDeps {
   readonly db: Kysely<DB>;
@@ -107,6 +108,7 @@ export async function trackActivityProgress(
 
   if (reason !== undefined) {
     recordRefusal('CHECKPOINT_INVALID', reason);
+    writeRefusalLine(opts.context.logger, 'CHECKPOINT_INVALID', reason);
 
     throw opts.errors.CHECKPOINT_INVALID({
       data: { activityID: opts.input.activityID, avatarID: head.avatarId, reason },
@@ -151,12 +153,12 @@ export async function trackActivityProgress(
         .forUpdate()
         .execute();
 
-      const capped = await trx
-        .updateTable('activities')
-        .set({ status: 'capped', stoppedAt: sql`now()` })
-        .where('id', '=', opts.input.activityID)
+      const capped = await transitionActivityStatus(trx, opts.input.activityID, {
+        from: ['active'],
+        to: 'capped',
+      })
+        .set({ stoppedAt: sql`now()` })
         .where('appendedHead', '=', opts.input.expectedHead)
-        .where('status', '=', 'active')
         .where((eb) =>
           eb.or([eb('writerSessionId', 'is', null), eb('writerSessionId', '=', actingSessionID)]),
         )
@@ -205,22 +207,25 @@ export async function trackActivityProgress(
         .execute();
     }
 
-    const updated = await trx
-      .updateTable('activities')
+    const append = isTerminalBatch
+      ? transitionActivityStatus(trx, opts.input.activityID, {
+          from: ['active'],
+          to: 'stopped',
+        }).set({ stoppedAt: sql`now()` })
+      : trx
+          .updateTable('activities')
+          .where('id', '=', opts.input.activityID)
+          .where('status', '=', 'active');
+
+    const updated = await append
       .set({
         appendedAt: sql`now()`,
         appendedHead: newHead,
         appendedTimeMs: Math.floor(newTimeMs),
         lastHash: newLastHash,
         ...(actingSessionID !== null && { writerSessionId: actingSessionID }),
-        ...(isTerminalBatch && {
-          status: 'stopped' as const,
-          stoppedAt: sql`now()`,
-        }),
       })
-      .where('id', '=', opts.input.activityID)
       .where('appendedHead', '=', opts.input.expectedHead)
-      .where('status', '=', 'active')
       .where((eb) =>
         eb.or([eb('writerSessionId', 'is', null), eb('writerSessionId', '=', actingSessionID)]),
       )
@@ -330,6 +335,7 @@ async function checkAppendRace(
     .with({ kind: 'conflict' }, (conflict) => {
       invariant(current !== undefined, 'a conflict outcome resolves only against a read row');
       recordRefusal('CONFLICT', 'stale-head');
+      writeRefusalLine(opts.context.logger, 'CONFLICT', 'stale-head');
 
       throw opts.errors.CONFLICT({
         data: {

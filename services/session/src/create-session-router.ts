@@ -37,7 +37,12 @@ export function createSessionRouter(deps: Readonly<CreateSessionRouterDeps>) {
     refreshTokens: os.refreshTokens.handler((opts) =>
       refreshTokens(
         deps.db,
-        { apiIdentifier: deps.apiIdentifier, keyID: deps.keyID, signingKey: deps.signingKey },
+        {
+          apiIdentifier: deps.apiIdentifier,
+          keyID: deps.keyID,
+          now: () => new Date(),
+          signingKey: deps.signingKey,
+        },
         opts,
       ),
     ),

@@ -1,6 +1,5 @@
-import { Command, InvalidArgumentError } from 'commander';
+import { define } from 'gunshi';
 import { z } from 'zod';
-import { buildEndpointOption } from '../qa/build-endpoint-option';
 import { buildKeyEvents } from '../qa/build-key-events';
 import { buildTargetSocketURL } from '../qa/build-target-socket-url';
 import { createCDPClient } from '../qa/create-cdp-client';
@@ -8,57 +7,47 @@ import { formatConsoleEvent } from '../qa/format-console-event';
 import { formatProfileSummary } from '../qa/format-profile-summary';
 import { formatTargetTable } from '../qa/format-target-table';
 import { PAGE_HELPERS_SOURCE } from '../qa/page-helpers-source';
+import { QA_CDP_ARGS } from '../qa/qa-cdp-args';
 import { readDevToolsTargets } from '../qa/read-devtools-targets';
+import { resolveEndpoint } from '../qa/resolve-endpoint';
 import type { CDPClient } from '../qa/types';
 import { withBrowserClient } from '../qa/with-browser-client';
 import { withTargetClient } from '../qa/with-target-client';
+import { runCommandLine } from '../utils/run-command-line';
 
 const LOAD_TIMEOUT_MS = 30_000;
 const SETTLE_AFTER_LOAD_MS = 500;
 const KEYSTROKE_GAP_MS = 30;
 const PAUSE_TIMEOUT_MS = 12_000;
-const DEFAULT_CONSOLE_SECONDS = 10;
-const DEFAULT_PROFILE_SECONDS = 4;
-const DEFAULT_MONITOR_SECONDS = 10;
 const OFFLINE_CONDITIONS = { downloadThroughput: -1, latency: 0, uploadThroughput: -1 };
 
-const program = new Command()
-  .name('qa-cdp')
-  .description('drive one page or worker target of a debug Chrome over the DevTools Protocol')
-  .addOption(buildEndpointOption());
-
-function getEndpoint(): string {
-  return program.opts<{ endpoint: string }>().endpoint;
-}
-
-program
-  .command('targets')
-  .description('list the targets the browser exposes')
-  .action(async () => {
-    const targets = await readDevToolsTargets(getEndpoint());
+const targetsCommand = define({
+  name: 'targets',
+  description: 'list the targets the browser exposes',
+  args: QA_CDP_ARGS.targets,
+  run: async (ctx) => {
+    const targets = await readDevToolsTargets(readEndpoint(ctx.values.endpoint));
 
     console.log(formatTargetTable(targets));
-  });
+  },
+});
 
 const createdTargetSchema = z.object({ targetId: z.string() });
 const createdContextSchema = z.object({ browserContextId: z.string() });
 
-interface NewCommandOptions {
-  readonly context?: string;
-}
+const newCommand = define({
+  name: 'new',
+  description: 'open a tab in a fresh browser context, or in the context given',
+  args: QA_CDP_ARGS.new,
+  run: async (ctx) => {
+    const url = ctx.values.url;
 
-program
-  .command('new')
-  .description('open a tab in a fresh browser context, or in the context given')
-  .argument('[url]', 'url to open', 'about:blank')
-  .option('--context <id>', 'open the tab in this browser context instead of a fresh one')
-  .action(async (url: string, options: NewCommandOptions) => {
-    await withBrowserClient(getEndpoint(), async (browser) => {
-      const browserContextId = await resolveBrowserContext(browser, options.context);
+    await withBrowserClient(readEndpoint(ctx.values.endpoint), async (browser) => {
+      const browserContextId = await resolveBrowserContext(browser, ctx.values.context);
 
       const rawCreated = await browser.send('Target.createTarget', {
         browserContextId,
-        newWindow: options.context === undefined,
+        newWindow: ctx.values.context === undefined,
         url,
       });
 
@@ -66,7 +55,8 @@ program
 
       console.log(JSON.stringify({ browserContextId, targetId: created.targetId }));
     });
-  });
+  },
+});
 
 const targetInfoSchema = z.object({
   browserContextId: z.string().optional(),
@@ -75,69 +65,71 @@ const targetInfoSchema = z.object({
 
 const targetInfosSchema = z.object({ targetInfos: z.array(targetInfoSchema) });
 
-program
-  .command('ctx')
-  .description("print a target's browser context id")
-  .argument('<target>', 'target id')
-  .action(async (targetID: string) => {
-    await withBrowserClient(getEndpoint(), async (browser) => {
+const ctxCommand = define({
+  name: 'ctx',
+  description: "print a target's browser context id",
+  args: QA_CDP_ARGS.ctx,
+  run: async (ctx) => {
+    const targetID = ctx.values.target;
+
+    await withBrowserClient(readEndpoint(ctx.values.endpoint), async (browser) => {
       const raw = await browser.send('Target.getTargets');
 
       const infos = targetInfosSchema.parse(raw).targetInfos;
 
       console.log(infos.find((info) => info.targetId === targetID)?.browserContextId ?? '');
     });
-  });
+  },
+});
 
-program
-  .command('close')
-  .description('close a target')
-  .argument('<target>', 'target id')
-  .action(async (targetID: string) => {
-    await withBrowserClient(getEndpoint(), async (browser) => {
+const closeCommand = define({
+  name: 'close',
+  description: 'close a target',
+  args: QA_CDP_ARGS.close,
+  run: async (ctx) => {
+    const targetID = ctx.values.target;
+
+    await withBrowserClient(readEndpoint(ctx.values.endpoint), async (browser) => {
       await browser.send('Target.closeTarget', { targetId: targetID });
 
       console.log(`closed ${targetID}`);
     });
-  });
+  },
+});
 
 const browserProcessSchema = z.object({ cpuTime: z.number(), id: z.number(), type: z.string() });
 const processInfoSchema = z.object({ processInfo: z.array(browserProcessSchema) });
 
-program
-  .command('procs')
-  .description('list the browser processes with their cpu time')
-  .action(async () => {
-    await withBrowserClient(getEndpoint(), async (browser) => {
+const procsCommand = define({
+  name: 'procs',
+  description: 'list the browser processes with their cpu time',
+  args: QA_CDP_ARGS.procs,
+  run: async (ctx) => {
+    await withBrowserClient(readEndpoint(ctx.values.endpoint), async (browser) => {
       const raw = await browser.send('SystemInfo.getProcessInfo');
 
       for (const info of processInfoSchema.parse(raw).processInfo) {
         console.log(`${info.type}\tpid=${info.id}\tcpu=${info.cpuTime.toFixed(1)}s`);
       }
     });
-  });
+  },
+});
 
 const heapUsageSchema = z.object({ totalSize: z.number(), usedSize: z.number() });
 
-interface MonitorCommandOptions {
-  readonly every: number;
-  readonly url?: string;
-}
-
-program
-  .command('monitor')
-  .description('poll the heap of every matching target and the cpu time of the renderer processes')
-  .option('--every <seconds>', 'seconds between polls', parseSeconds, DEFAULT_MONITOR_SECONDS)
-  .option('--url <substring>', 'poll only targets whose url contains this')
-  .action(async (options: MonitorCommandOptions) => {
-    const endpoint = getEndpoint();
+const monitorCommand = define({
+  name: 'monitor',
+  description: 'poll the heap of every matching target and the cpu time of the renderer processes',
+  args: QA_CDP_ARGS.monitor,
+  run: async (ctx) => {
+    const endpoint = readEndpoint(ctx.values.endpoint);
 
     for (;;) {
       try {
         const targets = await readDevToolsTargets(endpoint);
 
         const matching = targets.filter(
-          (target) => options.url === undefined || target.url.includes(options.url),
+          (target) => ctx.values.url === undefined || target.url.includes(ctx.values.url),
         );
 
         const heaps = await Promise.all(
@@ -158,19 +150,22 @@ program
         console.log(`${new Date().toISOString()} error ${toMessage(error)}`);
       }
 
-      await Bun.sleep(options.every * 1000);
+      await Bun.sleep(ctx.values.every * 1000);
     }
-  });
+  },
+});
 
 const locationSchema = z.object({ result: z.object({ value: z.string() }) });
 
-program
-  .command('nav')
-  .description('navigate a page and wait for its load event')
-  .argument('<target>', 'page target id')
-  .argument('<url>', 'url to open')
-  .action(async (targetID: string, url: string) => {
-    await withTargetClient(getEndpoint(), targetID, async (page) => {
+const navCommand = define({
+  name: 'nav',
+  description: 'navigate a page and wait for its load event',
+  args: QA_CDP_ARGS.nav,
+  run: async (ctx) => {
+    const targetID = ctx.values.target;
+    const url = ctx.values.url;
+
+    await withTargetClient(readEndpoint(ctx.values.endpoint), targetID, async (page) => {
       await page.send('Page.enable');
 
       const loaded = page.waitFor('Page.loadEventFired', LOAD_TIMEOUT_MS);
@@ -188,14 +183,17 @@ program
 
       console.log(locationSchema.parse(raw).result.value);
     });
-  });
+  },
+});
 
-program
-  .command('reload')
-  .description('reload a page and wait for its load event')
-  .argument('<target>', 'page target id')
-  .action(async (targetID: string) => {
-    await withTargetClient(getEndpoint(), targetID, async (page) => {
+const reloadCommand = define({
+  name: 'reload',
+  description: 'reload a page and wait for its load event',
+  args: QA_CDP_ARGS.reload,
+  run: async (ctx) => {
+    const targetID = ctx.values.target;
+
+    await withTargetClient(readEndpoint(ctx.values.endpoint), targetID, async (page) => {
       await page.send('Page.enable');
 
       const loaded = page.waitFor('Page.loadEventFired', LOAD_TIMEOUT_MS);
@@ -208,20 +206,23 @@ program
 
       console.log('reloaded');
     });
-  });
+  },
+});
 
 const evaluationSchema = z.object({
   exceptionDetails: z.unknown().optional(),
   result: z.object({ description: z.string().optional(), value: z.unknown().optional() }),
 });
 
-program
-  .command('eval')
-  .description('evaluate script in a page or worker, await it, and print the result as JSON')
-  .argument('<target>', 'target id')
-  .argument('<script>', 'script to evaluate; a page also has the window.__qa helpers')
-  .action(async (targetID: string, script: string) => {
-    await withTargetClient(getEndpoint(), targetID, async (target) => {
+const evalCommand = define({
+  name: 'eval',
+  description: 'evaluate script in a page or worker, await it, and print the result as JSON',
+  args: QA_CDP_ARGS.eval,
+  run: async (ctx) => {
+    const targetID = ctx.values.target;
+    const script = ctx.values.script;
+
+    await withTargetClient(readEndpoint(ctx.values.endpoint), targetID, async (target) => {
       await target.send('Runtime.evaluate', { expression: PAGE_HELPERS_SOURCE });
 
       const raw = await target.send('Runtime.evaluate', {
@@ -237,14 +238,17 @@ program
 
       console.log(JSON.stringify(printed, null, 1));
     });
-  });
+  },
+});
 
-program
-  .command('text')
-  .description("print a page's visible text")
-  .argument('<target>', 'page target id')
-  .action(async (targetID: string) => {
-    await withTargetClient(getEndpoint(), targetID, async (page) => {
+const textCommand = define({
+  name: 'text',
+  description: "print a page's visible text",
+  args: QA_CDP_ARGS.text,
+  run: async (ctx) => {
+    const targetID = ctx.values.target;
+
+    await withTargetClient(readEndpoint(ctx.values.endpoint), targetID, async (page) => {
       const raw = await page.send('Runtime.evaluate', {
         expression: 'document.body.innerText',
         returnByValue: true,
@@ -252,33 +256,39 @@ program
 
       console.log(evaluationSchema.parse(raw).result.value);
     });
-  });
+  },
+});
 
 const screenshotSchema = z.object({ data: z.string() });
 
-program
-  .command('shot')
-  .description('write a png screenshot of a page')
-  .argument('<target>', 'page target id')
-  .argument('<file>', 'png path to write')
-  .action(async (targetID: string, file: string) => {
-    await withTargetClient(getEndpoint(), targetID, async (page) => {
+const shotCommand = define({
+  name: 'shot',
+  description: 'write a png screenshot of a page',
+  args: QA_CDP_ARGS.shot,
+  run: async (ctx) => {
+    const targetID = ctx.values.target;
+    const file = ctx.values.file;
+
+    await withTargetClient(readEndpoint(ctx.values.endpoint), targetID, async (page) => {
       const raw = await page.send('Page.captureScreenshot', { format: 'png' });
 
       await Bun.write(file, Buffer.from(screenshotSchema.parse(raw).data, 'base64'));
 
       console.log(`wrote ${file}`);
     });
-  });
+  },
+});
 
-program
-  .command('type')
-  .description('focus an element and type text one keystroke at a time')
-  .argument('<target>', 'page target id')
-  .argument('<selector>', 'css selector of the element to focus')
-  .argument('<text>', 'text to type')
-  .action(async (targetID: string, selector: string, text: string) => {
-    await withTargetClient(getEndpoint(), targetID, async (page) => {
+const typeCommand = define({
+  name: 'type',
+  description: 'focus an element and type text one keystroke at a time',
+  args: QA_CDP_ARGS.type,
+  run: async (ctx) => {
+    const targetID = ctx.values.target;
+    const selector = ctx.values.selector;
+    const text = ctx.values.text;
+
+    await withTargetClient(readEndpoint(ctx.values.endpoint), targetID, async (page) => {
       await runFocusScript(page, selector);
 
       for (const character of text) {
@@ -294,47 +304,56 @@ program
 
       console.log('typed');
     });
-  });
+  },
+});
 
-program
-  .command('insert')
-  .description('focus an element and insert text as one input event')
-  .argument('<target>', 'page target id')
-  .argument('<selector>', 'css selector of the element to focus')
-  .argument('<text>', 'text to insert')
-  .action(async (targetID: string, selector: string, text: string) => {
-    await withTargetClient(getEndpoint(), targetID, async (page) => {
+const insertCommand = define({
+  name: 'insert',
+  description: 'focus an element and insert text as one input event',
+  args: QA_CDP_ARGS.insert,
+  run: async (ctx) => {
+    const targetID = ctx.values.target;
+    const selector = ctx.values.selector;
+    const text = ctx.values.text;
+
+    await withTargetClient(readEndpoint(ctx.values.endpoint), targetID, async (page) => {
       await runFocusScript(page, selector);
 
       await page.send('Input.insertText', { text });
 
       console.log('inserted');
     });
-  });
+  },
+});
 
-program
-  .command('key')
-  .description('press one key, such as Enter, Tab, or Escape')
-  .argument('<target>', 'page target id')
-  .argument('<key>', 'key name')
-  .action(async (targetID: string, key: string) => {
-    await withTargetClient(getEndpoint(), targetID, async (page) => {
+const keyCommand = define({
+  name: 'key',
+  description: 'press one key, such as Enter, Tab, or Escape',
+  args: QA_CDP_ARGS.key,
+  run: async (ctx) => {
+    const targetID = ctx.values.target;
+    const key = ctx.values.key;
+
+    await withTargetClient(readEndpoint(ctx.values.endpoint), targetID, async (page) => {
       for (const event of buildKeyEvents(key)) {
         await page.send('Input.dispatchKeyEvent', { ...event });
       }
 
       console.log(`key ${key}`);
     });
-  });
+  },
+});
 
-program
-  .command('click')
-  .description('click at viewport coordinates')
-  .argument('<target>', 'page target id')
-  .argument('<x>', 'x in css pixels', parseCoordinate)
-  .argument('<y>', 'y in css pixels', parseCoordinate)
-  .action(async (targetID: string, x: number, y: number) => {
-    await withTargetClient(getEndpoint(), targetID, async (page) => {
+const clickCommand = define({
+  name: 'click',
+  description: 'click at viewport coordinates',
+  args: QA_CDP_ARGS.click,
+  run: async (ctx) => {
+    const targetID = ctx.values.target;
+    const x = ctx.values.x;
+    const y = ctx.values.y;
+
+    await withTargetClient(readEndpoint(ctx.values.endpoint), targetID, async (page) => {
       await page.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x, y });
 
       await page.send('Input.dispatchMouseEvent', {
@@ -355,21 +374,17 @@ program
 
       console.log(`clicked ${x} ${y}`);
     });
-  });
+  },
+});
 
-interface ConsoleCommandOptions {
-  readonly reload: boolean;
-  readonly seconds: number;
-}
+const consoleCommand = define({
+  name: 'console',
+  description: 'collect console output, exceptions, and browser log entries for a while',
+  args: QA_CDP_ARGS.console,
+  run: async (ctx) => {
+    const targetID = ctx.values.target;
 
-program
-  .command('console')
-  .description('collect console output, exceptions, and browser log entries for a while')
-  .argument('<target>', 'target id')
-  .option('--seconds <n>', 'seconds to collect', parseSeconds, DEFAULT_CONSOLE_SECONDS)
-  .option('--reload', 'reload the page once collection starts', false)
-  .action(async (targetID: string, options: ConsoleCommandOptions) => {
-    await withTargetClient(getEndpoint(), targetID, async (target) => {
+    await withTargetClient(readEndpoint(ctx.values.endpoint), targetID, async (target) => {
       const lines: Array<string> = [];
 
       target.subscribe((event) => {
@@ -383,31 +398,35 @@ program
       await target.send('Runtime.enable');
       await target.send('Log.enable');
 
-      if (options.reload) {
+      if (ctx.values.reload) {
         await target.send('Page.reload');
       }
 
-      await Bun.sleep(options.seconds * 1000);
+      await Bun.sleep(ctx.values.seconds * 1000);
 
       const output = lines.length === 0 ? '(no console output)' : lines.join('\n');
 
       console.log(output);
     });
-  });
+  },
+});
 
-program
-  .command('offline')
-  .description('switch network emulation of a page or worker offline or online')
-  .argument('<target>', 'target id')
-  .argument('<state>', 'on or off', isSwitchOn)
-  .action(async (targetID: string, offline: boolean) => {
-    await withTargetClient(getEndpoint(), targetID, async (target) => {
+const offlineCommand = define({
+  name: 'offline',
+  description: 'switch network emulation of a page or worker offline or online',
+  args: QA_CDP_ARGS.offline,
+  run: async (ctx) => {
+    const targetID = ctx.values.target;
+    const offline = ctx.values.state === 'on';
+
+    await withTargetClient(readEndpoint(ctx.values.endpoint), targetID, async (target) => {
       await target.send('Network.enable');
       await target.send('Network.emulateNetworkConditions', { ...OFFLINE_CONDITIONS, offline });
 
       console.log(`offline ${offline ? 'on' : 'off'}`);
     });
-  });
+  },
+});
 
 const callFrameLocationSchema = z.object({
   columnNumber: z.number().optional(),
@@ -422,12 +441,14 @@ const pausedFrameSchema = z.object({
 
 const pausedSchema = z.object({ callFrames: z.array(pausedFrameSchema), reason: z.string() });
 
-program
-  .command('pause')
-  .description("interrupt a target's script, print its stack, and resume it")
-  .argument('<target>', 'target id')
-  .action(async (targetID: string) => {
-    await withTargetClient(getEndpoint(), targetID, async (target) => {
+const pauseCommand = define({
+  name: 'pause',
+  description: "interrupt a target's script, print its stack, and resume it",
+  args: QA_CDP_ARGS.pause,
+  run: async (ctx) => {
+    const targetID = ctx.values.target;
+
+    await withTargetClient(readEndpoint(ctx.values.endpoint), targetID, async (target) => {
       const paused = target.waitFor('Debugger.paused', PAUSE_TIMEOUT_MS);
 
       await target.send('Debugger.enable');
@@ -451,7 +472,8 @@ program
 
       await target.send('Debugger.resume');
     });
-  });
+  },
+});
 
 const profileCallFrameSchema = z.object({
   columnNumber: z.number(),
@@ -471,32 +493,66 @@ const profileBodySchema = z.object({
 
 const profileSchema = z.object({ profile: profileBodySchema });
 
-interface ProfileCommandOptions {
-  readonly seconds: number;
-}
+const profileCommand = define({
+  name: 'profile',
+  description: 'sample the cpu of a target and print the functions with the most self time',
+  args: QA_CDP_ARGS.profile,
+  run: async (ctx) => {
+    const targetID = ctx.values.target;
 
-program
-  .command('profile')
-  .description('sample the cpu of a target and print the functions with the most self time')
-  .argument('<target>', 'target id')
-  .option('--seconds <n>', 'seconds to sample', parseSeconds, DEFAULT_PROFILE_SECONDS)
-  .action(async (targetID: string, options: ProfileCommandOptions) => {
-    await withTargetClient(getEndpoint(), targetID, async (target) => {
+    await withTargetClient(readEndpoint(ctx.values.endpoint), targetID, async (target) => {
       await target.send('Profiler.enable');
       await target.send('Profiler.start');
-      await Bun.sleep(options.seconds * 1000);
+      await Bun.sleep(ctx.values.seconds * 1000);
 
       const raw = await target.send('Profiler.stop');
 
-      console.log(formatProfileSummary(profileSchema.parse(raw).profile, options.seconds));
+      console.log(formatProfileSummary(profileSchema.parse(raw).profile, ctx.values.seconds));
     });
-  });
+  },
+});
+
+const entry = define({
+  name: 'qa-cdp',
+  description: 'drive one page or worker target of a debug Chrome over the DevTools Protocol',
+});
 
 try {
-  await program.parseAsync();
+  const ran = await runCommandLine(process.argv.slice(2), entry, {
+    output: console,
+    subCommands: {
+      targets: targetsCommand,
+      new: newCommand,
+      ctx: ctxCommand,
+      close: closeCommand,
+      procs: procsCommand,
+      monitor: monitorCommand,
+      nav: navCommand,
+      reload: reloadCommand,
+      eval: evalCommand,
+      text: textCommand,
+      shot: shotCommand,
+      type: typeCommand,
+      insert: insertCommand,
+      key: keyCommand,
+      click: clickCommand,
+      console: consoleCommand,
+      offline: offlineCommand,
+      pause: pauseCommand,
+      profile: profileCommand,
+    },
+  });
+
+  if (!ran) {
+    process.exitCode = 1;
+  }
 } catch (error) {
   console.error(`qa-cdp: ${toMessage(error)}`);
   process.exit(1);
+}
+
+function readEndpoint(flag: string | undefined): string {
+  return resolveEndpoint(flag, process.env['QA_CDP_ENDPOINT']);
 }
 
 async function resolveBrowserContext(
@@ -541,34 +597,6 @@ async function runFocusScript(page: CDPClient, selector: string): Promise<void> 
 
 function formatMegabytes(bytes: number): string {
   return (bytes / 1_048_576).toFixed(1);
-}
-
-function parseSeconds(value: string): number {
-  const seconds = Number(value);
-
-  if (!Number.isFinite(seconds) || seconds < 0) {
-    throw new InvalidArgumentError('expected a non-negative number of seconds');
-  }
-
-  return seconds;
-}
-
-function parseCoordinate(value: string): number {
-  const coordinate = Number(value);
-
-  if (!Number.isFinite(coordinate)) {
-    throw new InvalidArgumentError('expected a number');
-  }
-
-  return coordinate;
-}
-
-function isSwitchOn(value: string): boolean {
-  if (value !== 'on' && value !== 'off') {
-    throw new InvalidArgumentError('expected on or off');
-  }
-
-  return value === 'on';
 }
 
 function toMessage(error: unknown): string {

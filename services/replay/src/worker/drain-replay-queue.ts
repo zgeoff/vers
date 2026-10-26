@@ -1,5 +1,5 @@
 import { reportUnexpectedError } from '@vers/service-runtime';
-import { withRootSpan } from '@vers/service-utils';
+import { runDrainLoop, withRootSpan } from '@vers/service-utils';
 import { recordBacklogClaimed } from '../metrics/record-backlog-claimed';
 import { recordDrainDuration } from '../metrics/record-drain-duration';
 import { recordIterationFailure } from '../metrics/record-iteration-failure';
@@ -29,9 +29,8 @@ export async function drainReplayQueue(
 
 async function runDrain(deps: Readonly<ReplayWorkerDeps>): Promise<number> {
   const startedAt = performance.now();
-  let drained = 0;
 
-  for (;;) {
+  const claimed = await runDrainLoop(async () => {
     // the failure conversion is chained inside the span callback, not around it, so
     // `reportUnexpectedError` still runs while the root span it tags the report with is active
     const outcome = await withRootSpan('replay.iteration', () =>
@@ -45,15 +44,11 @@ async function runDrain(deps: Readonly<ReplayWorkerDeps>): Promise<number> {
       }),
     );
 
-    if (outcome.kind === 'idle' || outcome.kind === 'claimFailed') {
-      break;
-    }
-
-    drained += 1;
-  }
+    return outcome.kind === 'idle' || outcome.kind === 'claimFailed' ? null : outcome;
+  });
 
   recordDrainDuration((performance.now() - startedAt) / 1000);
-  recordBacklogClaimed(drained);
+  recordBacklogClaimed(claimed.length);
 
-  return drained;
+  return claimed.length;
 }

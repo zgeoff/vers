@@ -1,4 +1,4 @@
-import { withRootSpan } from '@vers/service-utils';
+import { runDrainLoop, withRootSpan } from '@vers/service-utils';
 import { PgBoss, fromKysely } from 'pg-boss';
 import type { KyselyTransactionLike } from 'pg-boss';
 import invariant from 'tiny-invariant';
@@ -174,6 +174,8 @@ interface DrainJobsOptions<TPayloads extends JobPayloads> {
   readonly name: Extract<keyof TPayloads, string> | undefined;
 }
 
+type JobOutcome = 'completed' | 'failed';
+
 async function drainJobs<TPayloads extends JobPayloads>(
   options: DrainJobsOptions<TPayloads>,
 ): Promise<DrainResult> {
@@ -192,15 +194,17 @@ async function drainJobs<TPayloads extends JobPayloads>(
     const def = options.defs[queueName];
     const handler = options.handlers[queueName];
 
-    for (;;) {
+    const batches = await runDrainLoop(async () => {
       const jobs = await options.boss.fetch<unknown>(queueName, {
         batchSize: 10,
         includeMetadata: true,
       });
 
       if (jobs.length === 0) {
-        break;
+        return null;
       }
+
+      const outcomes: Array<JobOutcome> = [];
 
       for (const job of jobs) {
         const outcome = await runJob({
@@ -212,19 +216,23 @@ async function drainJobs<TPayloads extends JobPayloads>(
           job,
         });
 
-        if (outcome === 'completed') {
-          completed += 1;
-        } else {
-          failed += 1;
-        }
+        outcomes.push(outcome);
+      }
+
+      return outcomes;
+    });
+
+    for (const outcome of batches.flat()) {
+      if (outcome === 'completed') {
+        completed += 1;
+      } else {
+        failed += 1;
       }
     }
   }
 
   return { completed, failed };
 }
-
-type JobOutcome = 'completed' | 'failed';
 
 interface FetchedJob {
   readonly data: unknown;

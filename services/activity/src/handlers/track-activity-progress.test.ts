@@ -1,4 +1,5 @@
-import { expect, test } from 'bun:test';
+import { expect, onTestFinished, test } from 'bun:test';
+import { resetSync } from '@logtape/logtape';
 import { createContentVersion } from '@vers/content-registry';
 import type { ActivityContract } from '@vers/contract-activity';
 import { createMockContentDocument } from '@vers/contract-activity/test-utils';
@@ -15,6 +16,7 @@ import {
 } from '@vers/service-test-utils/bun';
 import { createSimVersionRow } from '@vers/sim-registry/test-utils';
 import { buildRPCTestClient } from '@vers/test-utils';
+import { createInMemoryLogs } from '@vers/test-utils/bun';
 import { createActivityService } from '../create-activity-service';
 import { createMockCheckpointBatch } from '../test-utils/factories/create-mock-checkpoint-batch';
 
@@ -208,6 +210,89 @@ test('it rejects a non-contiguous batch with CHECKPOINT_INVALID', async () => {
   ).rejects.toMatchObject({
     code: 'CHECKPOINT_INVALID',
     data: { activityID: started.id, avatarID: avatar.id, reason: 'non-contiguous-versions' },
+  });
+});
+
+test('it writes the refusal line for a batch it refuses as CHECKPOINT_INVALID', async () => {
+  await using ctx = await setupTest();
+
+  const logs = createInMemoryLogs({ lowestLevel: 'warning' });
+
+  onTestFinished(() => {
+    resetSync();
+  });
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
+  });
+
+  const batch = createMockCheckpointBatch({ startPrevHash: started.startHash, startVersion: 2 });
+
+  expect(
+    client.trackActivityProgress({ activityID: started.id, checkpoints: batch, expectedHead: 0 }),
+  ).rejects.toMatchObject({ code: 'CHECKPOINT_INVALID' });
+
+  expect(logs.records).toPartiallyContain({
+    level: 'warning',
+    properties: { code: 'CHECKPOINT_INVALID', reason: 'non-contiguous-versions' },
+    rawMessage: 'activity write refused: CHECKPOINT_INVALID non-contiguous-versions',
+  });
+});
+
+test('it writes the refusal line for a stale expectedHead it refuses as CONFLICT', async () => {
+  await using ctx = await setupTest();
+
+  const logs = createInMemoryLogs({ lowestLevel: 'warning' });
+
+  onTestFinished(() => {
+    resetSync();
+  });
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
+  });
+
+  const batch = createMockCheckpointBatch({ startPrevHash: started.startHash, startVersion: 1 });
+
+  await client.trackActivityProgress({
+    activityID: started.id,
+    checkpoints: batch,
+    expectedHead: 0,
+  });
+
+  const staleBatch = createMockCheckpointBatch({
+    startPrevHash: started.startHash,
+    startVersion: 1,
+  });
+
+  expect(
+    client.trackActivityProgress({
+      activityID: started.id,
+      checkpoints: staleBatch,
+      expectedHead: 0,
+    }),
+  ).rejects.toMatchObject({ code: 'CONFLICT' });
+
+  expect(logs.records).toPartiallyContain({
+    level: 'warning',
+    properties: { code: 'CONFLICT', reason: 'stale-head' },
+    rawMessage: 'activity write refused: CONFLICT stale-head',
   });
 });
 

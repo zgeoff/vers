@@ -8,6 +8,7 @@ import { checkHoneypot } from '../../lib/auth/check-honeypot';
 import { runSessionSignIn } from '../../lib/auth/run-session-sign-in';
 import { SpamError } from '../../lib/auth/spam-error';
 import { updateVerifySession } from '../../lib/auth/update-verify-session';
+import { VERIFY_SESSION_KEYS } from '../../lib/auth/verify-session-keys';
 import { sessionClient } from '../../lib/rpc/clients/session-client';
 import { userClient } from '../../lib/rpc/clients/user-client';
 import { logger } from '../../server/logger';
@@ -75,7 +76,7 @@ export async function runOnboarding(formData: FormData): Promise<Response | Subm
     userID: user.id,
   });
 
-  await updateVerifySession({ 'onboarding#email': undefined });
+  await updateVerifySession({ [VERIFY_SESSION_KEYS.onboarding.email]: undefined });
 
   return runSessionSignIn({ email: user.email, session });
 }

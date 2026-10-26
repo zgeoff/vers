@@ -7,6 +7,7 @@ import { requireAnonymous } from '../../lib/auth/require-anonymous';
 import { runSessionSignIn } from '../../lib/auth/run-session-sign-in';
 import { SpamError } from '../../lib/auth/spam-error';
 import { updateVerifySession } from '../../lib/auth/update-verify-session';
+import { VERIFY_SESSION_KEYS } from '../../lib/auth/verify-session-keys';
 import { sessionClient } from '../../lib/rpc/clients/session-client';
 import { userClient } from '../../lib/rpc/clients/user-client';
 import { verificationClient } from '../../lib/rpc/clients/verification-client';
@@ -59,8 +60,8 @@ export async function runLogin(formData: FormData): Promise<Response | Submissio
 
   if (twoFactorVerification !== null) {
     await updateVerifySession({
-      'login2FA#sessionID': session.id,
-      'login2FA#target': user.id,
+      [VERIFY_SESSION_KEYS.login2FA.sessionID]: session.id,
+      [VERIFY_SESSION_KEYS.login2FA.target]: user.id,
     });
 
     const searchParams = new URLSearchParams({ target: user.id, type: '2fa' });

@@ -3,6 +3,7 @@ import { sessionClient } from '../rpc/clients/session-client';
 import { toSafeRedirectPath } from './to-safe-redirect-path';
 import { updateAuthSession } from './update-auth-session';
 import { updateVerifySession } from './update-verify-session';
+import { VERIFY_SESSION_KEYS } from './verify-session-keys';
 
 interface RunSessionSignInOptions {
   readonly email: string;
@@ -17,10 +18,10 @@ export async function runSessionSignIn(opts: Readonly<RunSessionSignInOptions>):
 
   if (otherSessions.some((other) => other.id !== opts.session.id)) {
     await updateVerifySession({
-      'loginLogout#email': opts.email,
-      'loginLogout#redirect': opts.redirectTo,
-      'loginLogout#sessionID': opts.session.id,
-      'loginLogout#userID': actingUserID,
+      [VERIFY_SESSION_KEYS.loginLogout.email]: opts.email,
+      [VERIFY_SESSION_KEYS.loginLogout.redirect]: opts.redirectTo,
+      [VERIFY_SESSION_KEYS.loginLogout.sessionID]: opts.session.id,
+      [VERIFY_SESSION_KEYS.loginLogout.userID]: actingUserID,
     });
 
     throw redirect({ href: '/login/force-logout' });

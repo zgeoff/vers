@@ -150,15 +150,58 @@ const replayPokeFailedMonitor = new axiom.Monitor(
     name: 'vers replay poke failed',
     type: 'Threshold',
     description:
-      'A wake poke to service-replay exhausted its retries without delivering. The optimistic client hides verifier failure, so this counter is the explicit signal that the replay queue may go undrained despite an activity appending unverified work.',
+      'service-activity wrote its poke-failed line: a wake poke to service-replay exhausted its retries without delivering. The optimistic client hides verifier failure, so this line is the explicit signal that the replay queue may go undrained despite an activity appending unverified work.',
 
-    // The metric is an OTLP cumulative counter (the exporter sets no delta temporality), so `map
-    // increase` reduces each window's aligned maximum to the number of new failures inside it —
-    // the threshold fires when that climbs by at least one.
-    mplQuery:
-      '`vers-metrics`:`vers.activity.replay_poke_failed` | align to 5m using max | group using max | map increase',
+    // A process started by a deploy or by autoscaling starts the poke-failed counter at its first
+    // failure, so an `increase` over it has no earlier point to subtract from and can miss a lone
+    // failure. The service writes one log line per failed poke.
+    aplQuery:
+      "['vers-logs'] | where body == 'replay wake poke failed after every retry' | summarize count() by bin(_time, 5m)",
     intervalMinutes: 5,
-    rangeMinutes: 15,
+    rangeMinutes: 10,
+    operator: 'AboveOrEqual',
+    threshold: 1,
+    triggerFromNRuns: 1,
+    notifierIds: [alarmsNotifier.id],
+  },
+  { provider: axiomProvider },
+);
+
+const replayParkedMonitor = new axiom.Monitor(
+  'vers-replay-parked',
+  {
+    name: 'vers replay parked',
+    type: 'Threshold',
+    description:
+      "service-replay wrote a park line, grouped by the line, which names the reason: an unrecognized sim version, a retention-expired sim version, or a replay that tripped its duration cap. A parked activity halts its avatar's settlement order until an operator releases it.",
+
+    // The hold counters start at 1 in a fresh process, which scales to zero between drains, so an
+    // `increase` over them has no earlier point to subtract from and can miss a lone hold. The
+    // service writes one log line per hold, after the hold commits.
+    aplQuery:
+      "['vers-logs'] | where body contains 'parking activity' | summarize count() by body, bin(_time, 5m)",
+    intervalMinutes: 5,
+    rangeMinutes: 10,
+    operator: 'AboveOrEqual',
+    threshold: 1,
+    triggerFromNRuns: 1,
+    notifyByGroup: true,
+    notifierIds: [alarmsNotifier.id],
+  },
+  { provider: axiomProvider },
+);
+
+const replayQuarantinedMonitor = new axiom.Monitor(
+  'vers-replay-quarantined',
+  {
+    name: 'vers replay quarantined',
+    type: 'Threshold',
+    description:
+      "service-replay wrote its quarantine line: an activity's divergence failed to reproduce on every allowed attempt. A quarantined activity halts its avatar's settlement order and blocks new starts in its chain scope until an operator releases it.",
+    aplQuery:
+      "['vers-logs'] | where body == 'replay attempts exhausted; activity quarantined' | summarize count() by bin(_time, 5m)",
+    intervalMinutes: 5,
+    rangeMinutes: 10,
     operator: 'AboveOrEqual',
     threshold: 1,
     triggerFromNRuns: 1,
@@ -173,12 +216,13 @@ const activityRefusalsMonitor = new axiom.Monitor(
     name: 'vers activity refusals',
     type: 'Threshold',
     description:
-      'service-activity refused at least 5 starts or appends inside one 10-minute bin, grouped by reason. One transient stale-head conflict stays under the threshold; a device stuck retrying a refused chain crosses it within minutes.',
+      'service-activity wrote at least 5 refusal lines for one code and reason inside one 10-minute bin, grouped by the line, which names both. One transient stale-head conflict stays under the threshold; a device stuck retrying a refused chain crosses it within minutes.',
 
-    // Each aligned bin scores as its own increase, so the range spans two bin edges: the last
-    // complete 10-minute bin is scored as a whole, not only the partial bin the run lands in.
-    mplQuery:
-      '`vers-metrics`:`vers.activity.refusal` | align to 10m using max | group by reason using max | map increase',
+    // A process started by a deploy or by autoscaling starts the refusal counter at its first
+    // refusal, so an `increase` over it undercounts a burst in a new process. The range spans two
+    // bin edges, so the last complete 10-minute bin is scored as a whole.
+    aplQuery:
+      "['vers-logs'] | where body startswith 'activity write refused: ' | summarize count() by body, bin(_time, 10m)",
     intervalMinutes: 5,
     rangeMinutes: 20,
     operator: 'AboveOrEqual',
@@ -266,6 +310,8 @@ export const serverErrorsMonitorName = serverErrorsMonitor.name;
 export const slowRequestsMonitorName = slowRequestsMonitor.name;
 export const overdueRequestsMonitorName = overdueRequestsMonitor.name;
 export const replayPokeFailedMonitorName = replayPokeFailedMonitor.name;
+export const replayParkedMonitorName = replayParkedMonitor.name;
+export const replayQuarantinedMonitorName = replayQuarantinedMonitor.name;
 export const activityRefusalsMonitorName = activityRefusalsMonitor.name;
 export const baselineDashboardUID = baselineDashboard.uid;
 

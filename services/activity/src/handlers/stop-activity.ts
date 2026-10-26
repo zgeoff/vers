@@ -1,5 +1,6 @@
 import type { ActivityData } from '@vers/contract-activity';
 import type { DB } from '@vers/db';
+import { transitionActivityStatus } from '@vers/db';
 import { sql } from 'kysely';
 import type { Kysely } from 'kysely';
 import type { EmptyErrorPayload, MissingSessionPayload } from '../types';
@@ -77,11 +78,11 @@ export async function stopActivity(
       .forUpdate()
       .execute();
 
-    const stopped = await trx
-      .updateTable('activities')
-      .set({ status: 'stopped', stoppedAt: sql`now()` })
-      .where('id', '=', found.id)
-      .where('status', '=', 'active')
+    const stopped = await transitionActivityStatus(trx, found.id, {
+      from: ['active'],
+      to: 'stopped',
+    })
+      .set({ stoppedAt: sql`now()` })
       .where((eb) =>
         eb.or([eb('writerSessionId', 'is', null), eb('writerSessionId', '=', actingSessionID)]),
       )

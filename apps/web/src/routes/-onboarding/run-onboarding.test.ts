@@ -4,6 +4,7 @@ import { userContract } from '@vers/contract-user';
 import * as db from '@vers/mock-services/db';
 import invariant from 'tiny-invariant';
 import { HONEYPOT_FIELD_NAME } from '../../lib/auth/honeypot-field-names';
+import { VERIFY_SESSION_KEYS } from '../../lib/auth/verify-session-keys';
 import { SERVICE_URLS } from '../../lib/rpc/service-urls';
 import { server } from '../../mocks/node';
 import { buildFormData } from '../../test-utils/build-form-data';
@@ -40,7 +41,11 @@ test('it rejects a submission with a filled-in honeypot field', async () => {
   formData.set(HONEYPOT_FIELD_NAME, 'filled in by a bot');
 
   const outcome = await withRequestContext(
-    { cookies: { en_verification: { 'onboarding#email': 'onboard-honeypot@vers.test' } } },
+    {
+      cookies: {
+        en_verification: { [VERIFY_SESSION_KEYS.onboarding.email]: 'onboard-honeypot@vers.test' },
+      },
+    },
     () => runOnboarding(formData),
   );
 
@@ -51,7 +56,11 @@ test('it rejects a submission with a filled-in honeypot field', async () => {
 
 test('it reports field errors for a mismatched password confirmation', async () => {
   const outcome = await withRequestContext(
-    { cookies: { en_verification: { 'onboarding#email': 'onboard-mismatch@vers.test' } } },
+    {
+      cookies: {
+        en_verification: { [VERIFY_SESSION_KEYS.onboarding.email]: 'onboard-mismatch@vers.test' },
+      },
+    },
     () =>
       runOnboarding(
         buildFormData({
@@ -73,7 +82,13 @@ test('it reports a field error for a username already in use', async () => {
   await db.userCollection.create({ username: 'john_smith13' });
 
   const outcome = await withRequestContext(
-    { cookies: { en_verification: { 'onboarding#email': 'onboard-username-taken@vers.test' } } },
+    {
+      cookies: {
+        en_verification: {
+          [VERIFY_SESSION_KEYS.onboarding.email]: 'onboard-username-taken@vers.test',
+        },
+      },
+    },
     () =>
       runOnboarding(
         buildFormData({
@@ -107,7 +122,11 @@ test('it reports a generic form-level error when account creation fails', async 
   );
 
   const outcome = await withRequestContext(
-    { cookies: { en_verification: { 'onboarding#email': 'onboard-failure@vers.test' } } },
+    {
+      cookies: {
+        en_verification: { [VERIFY_SESSION_KEYS.onboarding.email]: 'onboard-failure@vers.test' },
+      },
+    },
     () =>
       runOnboarding(
         buildFormData({
@@ -127,7 +146,11 @@ test('it reports a generic form-level error when account creation fails', async 
 
 test('it creates the account, signs the caller in, and clears the onboarding session', async () => {
   const outcome = await withRequestContext(
-    { cookies: { en_verification: { 'onboarding#email': 'onboard-success@vers.test' } } },
+    {
+      cookies: {
+        en_verification: { [VERIFY_SESSION_KEYS.onboarding.email]: 'onboard-success@vers.test' },
+      },
+    },
     async () => {
       const promise = runOnboarding(
         buildFormData({
@@ -160,7 +183,11 @@ test('it signs in an already-created account when the retry carries its password
   await db.userCollection.create({ email: 'onboard-retry@vers.test', password: 'password123' });
 
   const outcome = await withRequestContext(
-    { cookies: { en_verification: { 'onboarding#email': 'onboard-retry@vers.test' } } },
+    {
+      cookies: {
+        en_verification: { [VERIFY_SESSION_KEYS.onboarding.email]: 'onboard-retry@vers.test' },
+      },
+    },
     async () => {
       const promise = runOnboarding(
         buildFormData({
@@ -196,7 +223,13 @@ test('it tells the player the account exists when the retry carries a different 
   });
 
   const outcome = await withRequestContext(
-    { cookies: { en_verification: { 'onboarding#email': 'onboard-retry-mismatch@vers.test' } } },
+    {
+      cookies: {
+        en_verification: {
+          [VERIFY_SESSION_KEYS.onboarding.email]: 'onboard-retry-mismatch@vers.test',
+        },
+      },
+    },
     () =>
       runOnboarding(
         buildFormData({
@@ -218,6 +251,6 @@ test('it tells the player the account exists when the retry carries a different 
   });
 
   expect(outcome.cookies['en_verification']).toStrictEqual({
-    'onboarding#email': 'onboard-retry-mismatch@vers.test',
+    [VERIFY_SESSION_KEYS.onboarding.email]: 'onboard-retry-mismatch@vers.test',
   });
 });

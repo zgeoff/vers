@@ -21,10 +21,11 @@
     "@vers/idle-core": "workspace:*",
     "@vers/item-gen": "workspace:*",
     "@vers/roll-crypto": "workspace:*",
+    "@vers/scripts": "workspace:*",
     "@vers/sim-registry": "workspace:*",
     "@vers/worldmap-content": "workspace:*",
     "@vers/worldmap-core": "workspace:*",
-    "commander": "catalog:",
+    "gunshi": "catalog:",
     "kysely": "catalog:",
     "tiny-invariant": "catalog:",
     "zod": "catalog:"

@@ -3,6 +3,7 @@ export { applyMigrations } from './apply-migrations';
 export { migrationsFolder } from './build-migrator';
 export { readPendingMigrations } from './read-pending-migrations';
 export { toJSON } from './to-json';
+export { transitionActivityStatus } from './transition-activity-status';
 
 export type {
   ActiveAvatars,

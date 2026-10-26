@@ -1,3 +1,4 @@
+import type { Logger } from '@vers/service-runtime/logging';
 import { recordReplayPokeFailed } from '../metrics/record-replay-poke-failed';
 
 export interface WakeAttempt {
@@ -6,6 +7,7 @@ export interface WakeAttempt {
 
 interface ReplayWakerOptions {
   readonly coalesceWindowMs: number;
+  readonly logger: Logger;
   readonly maxDeliveryAttempts: number;
   readonly perAttemptTimeoutMs: number;
   readonly retryBackoffMs: number;
@@ -32,6 +34,12 @@ export function makeReplayWaker(options: ReplayWakerOptions): ReplayWaker {
       } catch {
         if (attempt === options.maxDeliveryAttempts) {
           recordReplayPokeFailed();
+
+          // the infra program's poke-failed alarm matches this line, so a reworded message lets a
+          // lost wake go unalarmed
+          options.logger.warn('replay wake poke failed after every retry', {
+            attempts: options.maxDeliveryAttempts,
+          });
 
           return;
         }

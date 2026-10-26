@@ -182,6 +182,11 @@ A service's env contract is the `envShape` it passes to `createService`, merged 
 - Each service commits its key lists as `env-contract.generated.json`. Regenerate it with
   `bun run env:contract`, because CI fails on a stale one, and on a required key missing from the
   service's dev env files, the compose stacks, or the app's Fly env and secrets.
+- `secrets-manifest.json` lists by name each 1Password vault, item and field that `.mcp.json`, the
+  workflows and `infra/` read, and never a value. `bun run secrets:check` runs in CI and fails on an
+  `op://` reference the manifest lacks, and on a listed field that nothing reads. It also fails on
+  any `op://` that is not exactly `op://<vault>/<item>/<field>`, each segment of letters, digits,
+  `_`, `.` and `-`, so a name with a space and a field under a section both fail.
 
 ## Deploys
 

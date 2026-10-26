@@ -1,29 +1,24 @@
-import { Command } from 'commander';
-import { buildEndpointOption } from '../qa/build-endpoint-option';
+import { define } from 'gunshi';
+import { QA_CAPTURE_ARGS } from '../qa/qa-capture-args';
+import { resolveEndpoint } from '../qa/resolve-endpoint';
 import { startWorkerCapture } from '../qa/start-worker-capture';
+import { runCommandLine } from '../utils/run-command-line';
 
-const DEFAULT_PATH_FILTER = '/api/rpc/';
+const entry = define({
+  name: 'qa-capture',
+  description: "log every shared worker's RPC requests and responses from a debug Chrome",
+  args: QA_CAPTURE_ARGS,
+  run: (ctx) => {
+    const endpoint = resolveEndpoint(ctx.values.endpoint, process.env['QA_CDP_ENDPOINT']);
+    const workerURL = ctx.values['worker-url'];
 
-interface CaptureOptions {
-  readonly endpoint: string;
-  readonly path: string;
-  readonly workerUrl?: string;
-}
-
-const program = new Command()
-  .name('qa-capture')
-  .description("log every shared worker's RPC requests and responses from a debug Chrome")
-  .addOption(buildEndpointOption())
-  .option('--path <substring>', 'log only requests whose url contains this', DEFAULT_PATH_FILTER)
-  .option('--worker-url <substring>', 'attach only to shared workers whose url contains this')
-  .action((options: CaptureOptions) => {
-    printLine(`capture start endpoint=${options.endpoint} path=${options.path}`);
+    printLine(`capture start endpoint=${endpoint} path=${ctx.values.path}`);
 
     const stop = startWorkerCapture({
-      endpoint: options.endpoint,
-      pathFilter: options.path,
+      endpoint,
+      pathFilter: ctx.values.path,
       print: printLine,
-      ...(options.workerUrl !== undefined && { workerURL: options.workerUrl }),
+      ...(workerURL !== undefined && { workerURL }),
     });
 
     process.once('SIGINT', () => {
@@ -31,10 +26,15 @@ const program = new Command()
 
       process.exit(0);
     });
-  });
+  },
+});
 
 try {
-  await program.parseAsync();
+  const ran = await runCommandLine(process.argv.slice(2), entry, { output: console });
+
+  if (!ran) {
+    process.exitCode = 1;
+  }
 } catch (error) {
   console.error(`qa-capture: ${error instanceof Error ? error.message : String(error)}`);
   process.exit(1);
