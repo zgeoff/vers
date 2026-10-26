@@ -50,6 +50,27 @@ test('it collects a reference with a query as its field alone', () => {
   });
 });
 
+test.each([
+  ['a semicolon', 'op read op://ops/login/code?attribute=otp; op read op://ops/service/token'],
+  ['an and-list', 'op read op://ops/login/code?attribute=otp && op read op://ops/service/token'],
+  ['a pipe', 'op read op://ops/login/code?attribute=otp | op read op://ops/service/token'],
+  ['a space', 'op inject op://ops/login/code?attribute=otp op://ops/service/token'],
+])('it collects each of two references separated by %s', (_separator, text) => {
+  expect(collectOPReferences(text)).toStrictEqual({
+    references: [
+      { field: 'code', item: 'login', vault: 'ops' },
+      { field: 'token', item: 'service', vault: 'ops' },
+    ],
+    unparsed: [],
+  });
+});
+
+test('it ends a reference before a trailing comment', () => {
+  expect(collectOPReferences('API_KEY=op://ops/billing/api-key # rotated monthly\n')).toStrictEqual(
+    { references: [{ field: 'api-key', item: 'billing', vault: 'ops' }], unparsed: [] },
+  );
+});
+
 test('it reports a reference that interpolates a segment as unparsed', () => {
   expect(collectOPReferences(`op read "op://ops/$ITEM/dsn"`)).toStrictEqual({
     references: [],

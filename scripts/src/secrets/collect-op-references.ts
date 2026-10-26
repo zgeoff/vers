@@ -1,9 +1,10 @@
 import invariant from 'tiny-invariant';
 import type { CollectedOPReferences, OPReference } from './types';
 
-// a reference ends at a quote, a backtick, a closing parenthesis or the end of its line; names
-// may hold spaces, and a field may sit under a section (`op://vault/item/section/field`)
-const OP_REFERENCE_PATTERN = /op:\/\/(?<path>[^\s'"`)][^'"`)\n]*)/gu;
+// an env file holds names with spaces unquoted, so a reference ends at a quote, a shell operator,
+// a parenthesis, a ` #` comment, the next reference or the end of its line, never at a space
+const OP_REFERENCE_PATTERN =
+  /op:\/\/(?<path>[^\s'"`()&;<>|](?:(?!\s+#|op:\/\/)[^\n'"`()&;<>|])*)/gu;
 
 export function collectOPReferences(text: string): CollectedOPReferences {
   const references: Array<OPReference> = [];
