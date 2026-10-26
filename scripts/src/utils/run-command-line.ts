@@ -100,9 +100,10 @@ function withOperandArgs(command: SubCommandable, hasSeparator: boolean): SubCom
       );
 
       const surplus = resolved.positionals.slice(operandStart + positionals.length);
+      const parseReasons: ReadonlyArray<unknown> = resolved.error?.errors ?? [];
 
       const reasons = [
-        ...(resolved.error?.errors ?? []),
+        ...parseReasons,
         ...(surplus.length > 0
           ? [new ArgsValidationError(`unexpected arguments: ${surplus.join(' ')}`)]
           : []),
