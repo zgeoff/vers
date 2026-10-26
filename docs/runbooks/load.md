@@ -87,5 +87,10 @@ wall hour while a returning player delivers the whole gap at once.
   whole CPU, the burst rate, so a container that runs above the baseline share here outruns its
   sustained share on Fly. `--cpu-profile baseline` caps each service container at the baseline quota
   instead, and measures what the fleet sustains after its burst balance is spent.
+- **Failed calls** counts every call that failed after the client's retries, by status. A player
+  keeps an undelivered start or batch and resends it at its next flush, as the client's outbox does,
+  so a failed call during an outage is a delay, not lost work. A service that cannot reach a
+  dependency answers 5xx, an infrastructure fault in the
+  [error-handling taxonomy](../architecture/services/error-handling.md).
 - **End state** counts unproved checkpoints, held activities, and XP that differs from what the
   players' own streams earned. Any of them is a lost reward or a stuck avatar, never noise.
