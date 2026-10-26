@@ -1,8 +1,8 @@
 import { expect, onTestFinished, test } from 'bun:test';
+import { getLogger } from '@logtape/logtape';
 import type { EmailContract } from '@vers/contract-email';
 import { createEmailClient } from '@vers/email';
 import { sentEmails } from '@vers/email/mocks';
-import { createLogger } from '@vers/service-runtime';
 import { createAnonymousViewer, createDatabaseFromTemplate } from '@vers/service-test-utils/bun';
 import { buildRPCTestClient } from '@vers/test-utils';
 import { createEmailJobQueue } from './create-email-job-queue';
@@ -43,7 +43,7 @@ test('it delivers a job enqueued while the process was down, once booted and its
   const writerQueue = createEmailJobQueue({
     connectionString: queueConnectionString,
     emailClient: createEmailClient({ apiKey: 'test-api-key', from: 'test@example.com' }),
-    logger: createLogger({ level: 'fatal', name: 'test-email-service' }),
+    logger: getLogger(['test-email-service']),
   });
 
   await writerQueue.start();

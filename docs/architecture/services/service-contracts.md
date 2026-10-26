@@ -143,7 +143,7 @@ interface ServiceContext {
   actingSessionID: null | string;
   actingUserID: null | string; // null = verified anonymous call
   issuer: TokenIssuer;
-  logger: pino.Logger;
+  logger: Logger; // a LogTape logger
   traceID: string;
 }
 ```

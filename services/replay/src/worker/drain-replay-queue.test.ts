@@ -1,4 +1,5 @@
 import { expect, onTestFinished, test } from 'bun:test';
+import { getLogger } from '@logtape/logtape';
 import type { ErrorEvent } from '@sentry/bun';
 import { createContentVersion, makeContentDocumentLoader } from '@vers/content-registry';
 import { createMockContentDocument } from '@vers/contract-activity/test-utils';
@@ -8,7 +9,6 @@ import { resolveServiceURL } from '@vers/mock-services';
 import { setSentryHandleForTesting, startErrorReporting } from '@vers/service-runtime';
 import { createTestDB, resolveTestServiceKeyPair } from '@vers/service-test-utils/bun';
 import { waitFor } from '@vers/test-utils';
-import pino from 'pino';
 import invariant from 'tiny-invariant';
 import { createReplayCache } from '../replay/create-replay-cache';
 import { createHonestActivityFixture } from '../test-utils/create-honest-activity-fixture';
@@ -30,7 +30,7 @@ async function setupTest() {
       db: db.db,
       keysServiceURL: resolveServiceURL('keys'),
       loadContentDocument: makeContentDocumentLoader(db.db),
-      logger: pino({ enabled: false }),
+      logger: getLogger(['test-replay']),
       privateKey: keyPair.privateKey,
       simVersion: 'test-engine-hash',
     },
@@ -375,7 +375,7 @@ test('it stops draining and reports a claim failure carrying a trace id, without
       db: unreachableDB,
       keysServiceURL: resolveServiceURL('keys'),
       loadContentDocument: makeContentDocumentLoader(unreachableDB),
-      logger: pino({ enabled: false }),
+      logger: getLogger(['test-replay']),
       privateKey: keyPair.privateKey,
       simVersion: 'test-engine-hash',
     },

@@ -15,12 +15,9 @@
   },
   "dependencies": {
     "@opentelemetry/api": "catalog:",
-    "@opentelemetry/api-logs": "catalog:",
-    "@opentelemetry/exporter-logs-otlp-proto": "catalog:",
     "@opentelemetry/exporter-metrics-otlp-proto": "catalog:",
     "@opentelemetry/exporter-trace-otlp-proto": "catalog:",
     "@opentelemetry/resources": "catalog:",
-    "@opentelemetry/sdk-logs": "catalog:",
     "@opentelemetry/sdk-metrics": "catalog:",
     "@opentelemetry/sdk-trace-node": "catalog:",
     "@orpc/client": "catalog:",
@@ -29,8 +26,6 @@
     "@orpc/standard-server": "catalog:",
     "@vers/trace": "workspace:*",
     "jose": "catalog:",
-    "pino": "catalog:",
-    "pino-pretty": "catalog:",
     "postgres": "catalog:",
     "tiny-invariant": "catalog:",
     "zod": "catalog:"

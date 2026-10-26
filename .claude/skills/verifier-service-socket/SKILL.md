@@ -31,7 +31,7 @@ verification covers what that in-process client never executes:
   `SERVICE_AUTH_JWKS`, `PORT`) and `GET /health`
 - wire-format contracts: the serialized error envelope, `x-trace-id` response headers, `traceparent`
   continuity
-- per-request side effects of the central `onError` interceptor (Sentry reporting, pino output)
+- per-request side effects of the central `onError` interceptor (Sentry reporting, log output)
 - connection-phase database behaviour
 
 For procedure and business-logic changes, the test suite is the verification — skip this pass.

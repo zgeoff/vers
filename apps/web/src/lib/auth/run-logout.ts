@@ -20,7 +20,7 @@ export async function runLogout(options: LogoutOptions = {}): Promise<never> {
     await sessionClient
       .deleteSession({ id: sessionID }, { context: { actingUserID } })
       .catch((error: unknown) => {
-        logger.warn({ err: error }, 'session delete during logout failed');
+        logger.warn('session delete during logout failed', { error });
       });
   }
 

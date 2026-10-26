@@ -8,13 +8,13 @@ export async function rejectBuildMismatch(
   segment: Readonly<ReplaySegment>,
 ): Promise<ReplayIterationOutcome> {
   context.deps.logger.error(
+    'pinned build does not match the settled xp total; rejecting activity',
     {
       activityID: segment.activity.id,
       appendedHead: segment.activity.appendedHead,
       buildSnapshotXP: segment.activity.buildSnapshot.xp,
       verifiedHead: segment.verifiedHead,
     },
-    'pinned build does not match the settled xp total; rejecting activity',
   );
 
   recordRejection('build-mismatch');

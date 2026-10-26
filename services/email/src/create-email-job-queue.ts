@@ -173,7 +173,7 @@ function checkPastDeadline(
 
   recordExpiredSend(queue);
 
-  logger.warn({ queue, usefulUntil }, 'email skipped past its deadline');
+  logger.warn('email skipped past its deadline', { queue, usefulUntil });
 
   return true;
 }

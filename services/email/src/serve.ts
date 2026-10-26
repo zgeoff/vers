@@ -14,7 +14,7 @@ void withRootSpan('email.boot-drain', async () => {
   try {
     await emailService.queue.drain();
   } catch (error) {
-    emailService.service.logger.error({ err: error }, 'boot drain failed');
+    emailService.service.logger.error('boot drain failed', { error });
 
     reportUnexpectedError(error);
   }

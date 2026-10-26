@@ -58,7 +58,7 @@ function makeSendHandler<TName extends keyof EmailJobPayloads>(
       try {
         await deps.drains.track(deps.queue.drain(name));
       } catch (error) {
-        deps.logger.error({ err: error, jobID, queue: name }, 'email job drain failed');
+        deps.logger.error('email job drain failed', { error, jobID, queue: name });
 
         reportUnexpectedError(error);
       }
@@ -96,7 +96,7 @@ function makeDeadlineSendHandler<TName extends DeadlineJobName>(
           wait: deps.wait ?? Bun.sleep,
         });
       } catch (error) {
-        deps.logger.error({ err: error, jobID, queue: name }, 'email job drain failed');
+        deps.logger.error('email job drain failed', { error, jobID, queue: name });
 
         reportUnexpectedError(error);
       }

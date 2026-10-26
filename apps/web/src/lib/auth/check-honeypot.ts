@@ -6,7 +6,7 @@ export function checkHoneypot(formData: FormData): void {
   const honeypotValue = formData.get(HONEYPOT_FIELD_NAME);
 
   if (typeof honeypotValue === 'string' && honeypotValue !== '') {
-    logger.warn({ reason: 'honeypot-field' }, 'form submission flagged as spam');
+    logger.warn('form submission flagged as spam', { reason: 'honeypot-field' });
     throw new SpamError('Form not submitted properly');
   }
 
@@ -18,12 +18,12 @@ export function checkHoneypot(formData: FormData): void {
   const validFromMs = typeof validFrom === 'string' ? Number(validFrom) : Number.NaN;
 
   if (!Number.isFinite(validFromMs) || validFromMs <= 0) {
-    logger.warn({ reason: 'missing-valid-from' }, 'form submission flagged as spam');
+    logger.warn('form submission flagged as spam', { reason: 'missing-valid-from' });
     throw new SpamError('Form not submitted properly');
   }
 
   if (Date.now() < validFromMs) {
-    logger.warn({ reason: 'timing' }, 'form submission flagged as spam');
+    logger.warn('form submission flagged as spam', { reason: 'timing' });
     throw new SpamError('Form not submitted properly');
   }
 }

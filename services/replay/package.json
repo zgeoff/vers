@@ -12,6 +12,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@logtape/logtape": "catalog:",
     "@noble/hashes": "catalog:",
     "@opentelemetry/api": "catalog:",
     "@orpc/client": "catalog:",
@@ -35,7 +36,6 @@
     "jose": "catalog:",
     "kysely": "catalog:",
     "lru-cache": "catalog:",
-    "pino": "catalog:",
     "tiny-invariant": "catalog:",
     "ts-pattern": "catalog:",
     "zod": "catalog:"

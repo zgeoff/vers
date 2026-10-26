@@ -11,7 +11,7 @@ dataset per signal. Error reporting is a separate path through the Sentry SDK to
 flowchart LR
   subgraph service["a domain service (service runtime)"]
     T1[Elysia OpenTelemetry plugin] -->|traces| O
-    L1[pino-to-OTLP stream] -->|logs| O
+    L1[LogTape OpenTelemetry sink] -->|logs| O
     M1["process-global meter provider<br>behind a periodic exporter"] -->|metrics| O
   end
   subgraph web["the web app"]
@@ -21,10 +21,13 @@ flowchart LR
 ```
 
 The service runtime wires every signal through `createService` when the OTLP endpoint variable is
-set, one transport per signal: traces through the Elysia OpenTelemetry plugin, logs through a
-pino-to-OTLP stream, and metrics through a process-global meter provider behind a periodic exporter.
-The web app carries no Elysia plugin and boots its own exporters for all three signals. A process
-with the endpoint unset emits nothing, and every instrument stays the OpenTelemetry API's no-op.
+set, one transport per signal: traces through the Elysia OpenTelemetry plugin, logs through
+LogTape's OpenTelemetry sink, and metrics through a process-global meter provider behind a periodic
+exporter. The web app carries no Elysia plugin and boots its own exporters for traces and metrics.
+Both configure logging through the service runtime's one LogTape setup, which writes each entry to
+stdout and, with the endpoint set, hands it to a batching log exporter that shares the trace and
+metric resource. A process with the endpoint unset emits nothing, and every instrument stays the
+OpenTelemetry API's no-op.
 
 Each process starts the Sentry SDK before OpenTelemetry, and the order matters. The OpenTelemetry
 API keeps only the first tracer provider, context manager, and propagator that a process registers.
@@ -74,7 +77,7 @@ attributes follow.
 
 ## Log lines
 
-Every pino logger stamps the active request's trace id onto each entry, and HTTP responses report
+The LogTape setup stamps the active request's trace id onto each entry, and HTTP responses report
 the same id in `x-trace-id`, so one trace id names a request's log lines across the web app and the
 services it called. The line-level conventions:
 

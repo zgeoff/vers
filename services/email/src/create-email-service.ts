@@ -36,12 +36,12 @@ export async function createEmailService(
         }),
         logger: runtime.logger,
         onError: (error) => {
-          runtime.logger.error({ err: error }, 'email job queue error');
+          runtime.logger.error('email job queue error', { error });
 
           reportUnexpectedError(error);
         },
         onJobFailed: (error, context) => {
-          runtime.logger.error({ err: error, ...context }, 'email job failed');
+          runtime.logger.error('email job failed', { error, ...context });
 
           if (context.retriesExhausted) {
             reportUnexpectedError(error);

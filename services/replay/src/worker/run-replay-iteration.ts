@@ -97,10 +97,11 @@ async function resolveIterationFailure(
       verifiedHead: target.verifiedHead,
     });
 
-    deps.logger.warn(
-      { activityID: target.activityID, deadlineMs: failure.deadlineMs, ...backoff },
-      'replay iteration deadline fired; backing the activity off',
-    );
+    deps.logger.warn('replay iteration deadline fired; backing the activity off', {
+      activityID: target.activityID,
+      deadlineMs: failure.deadlineMs,
+      ...backoff,
+    });
 
     recordBackoff('deadline');
 
@@ -112,10 +113,11 @@ async function resolveIterationFailure(
     verifiedHead: target.verifiedHead,
   });
 
-  deps.logger.error(
-    { activityID: target.activityID, err: error, ...backoff },
-    'replay iteration failed; backing the activity off',
-  );
+  deps.logger.error('replay iteration failed; backing the activity off', {
+    activityID: target.activityID,
+    error,
+    ...backoff,
+  });
 
   reportUnexpectedError(error);
   recordIterationFailure('errored');
