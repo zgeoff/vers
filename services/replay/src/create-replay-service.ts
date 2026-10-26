@@ -57,7 +57,7 @@ export async function createReplayService(
 
       resolvedDeps = {
         cache: createReplayCache(undefined, (error) => {
-          runtime.logger.error({ err: error }, 'replay cache driver stop failed');
+          runtime.logger.error('replay cache driver stop failed', { error });
         }),
         db,
         keysServiceURL: runtime.env.KEYS_SERVICE_URL,

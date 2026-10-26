@@ -2,9 +2,9 @@ import type { ContentDocument } from '@vers/contract-activity';
 import type { DB } from '@vers/db';
 import type { SimulationDriver } from '@vers/idle-core';
 import type { ItemInterpreters } from '@vers/item-gen';
+import type { Logger } from '@vers/service-runtime/logging';
 import type { CryptoKey } from 'jose';
 import type { Kysely, Transaction } from 'kysely';
-import type pino from 'pino';
 import type { BackoffReason } from '../metrics/record-backoff';
 import type { ReplayCache } from '../replay/create-replay-cache';
 
@@ -46,7 +46,7 @@ export interface ReplayWorkerDeps {
 
   readonly loadContentDocument: (contentVersion: string) => Promise<ContentDocument | undefined>;
 
-  readonly logger: pino.Logger;
+  readonly logger: Logger;
 
   readonly privateKey: CryptoKey;
 

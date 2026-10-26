@@ -128,7 +128,7 @@ the taxonomy, the status rules, trace context and the reporting split.
   registry. Name such a code `NOUN_PROBLEM`.
 - A client narrows on `code` through `isDefinedError` or `safe` and acts on `data` fields, never on
   `message` strings.
-- The Sentry SDK is the only path to the error backend, and pino is a log sink only. Never wire a
+- The Sentry SDK is the only path to the error backend, and LogTape is a log sink only. Never wire a
   log transport to the error backend. Never call `captureException` in code that the central hooks
   already cover: the service interceptor, the query caches and the root error boundary.
 - In app-web, form validation returns `submission.reply()`, navigation and access control throw

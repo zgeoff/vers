@@ -51,7 +51,7 @@ export async function runOnboarding(formData: FormData): Promise<Response | Subm
   }
 
   if (error !== null && !isDefinedError(error)) {
-    logger.error({ err: error }, 'onboarding account creation failed');
+    logger.error('onboarding account creation failed', { error });
 
     return submission.reply({ formErrors: ['Something went wrong. Please try again.'] });
   }

@@ -62,19 +62,6 @@ export default defineConfig({
         },
       },
     },
-
-    // tanstack start names its server environment `ssr` (kept for compatibility with vite plugins
-    // predating the environment API), not `server`.
-    ssr: {
-      build: {
-        rolldownOptions: {
-          // pino's transport mechanism spawns a real worker_thread from a file on disk; bundling
-          // strips that file out from under it (breaking on `__dirname`), so pino and the
-          // transports it loads by module name at runtime stay external.
-          external: ['pino', 'pino-pretty', 'thread-stream'],
-        },
-      },
-    },
   },
 
   // the dev server's dependency scan never reaches the `new SharedWorker(new URL(...))` target, so

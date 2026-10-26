@@ -36,14 +36,11 @@ export function deriveAvatarKey(roots: RollKeyRoots, opts: DeriveAvatarKeyOpts):
     root,
   });
 
-  opts.context.logger.info(
-    {
-      avatarID: opts.input.avatarID,
-      keyVersion: opts.input.keyVersion,
-      population: opts.input.population,
-    },
-    'avatar key derived',
-  );
+  opts.context.logger.info('avatar key derived', {
+    avatarID: opts.input.avatarID,
+    keyVersion: opts.input.keyVersion,
+    population: opts.input.population,
+  });
 
   return { key: bytesToHex(key) };
 }

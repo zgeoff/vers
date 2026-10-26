@@ -1,6 +1,5 @@
-import { expect, spyOn, test } from 'bun:test';
-import { updateEnv } from '@vers/test-utils/bun';
-import { logger } from '../../server/logger';
+import { expect, test } from 'bun:test';
+import { createInMemoryLogs, updateEnv } from '@vers/test-utils/bun';
 import { checkHoneypot } from './check-honeypot';
 import { HONEYPOT_FIELD_NAME, HONEYPOT_VALID_FROM_FIELD_NAME } from './honeypot-field-names';
 
@@ -25,7 +24,7 @@ test('it flags a submission with a filled-in honeypot field', () => {
 });
 
 test('it logs a spam flag with its reason', () => {
-  const warnSpy = spyOn(logger, 'warn');
+  const logs = createInMemoryLogs({ lowestLevel: 'warning' });
 
   const formData = new FormData();
 
@@ -35,10 +34,13 @@ test('it logs a spam flag with its reason', () => {
     checkHoneypot(formData);
   }).toThrow();
 
-  expect(warnSpy).toHaveBeenCalledExactlyOnceWith(
-    { reason: 'honeypot-field' },
-    'form submission flagged as spam',
-  );
+  expect(logs.records).toMatchObject([
+    {
+      level: 'warning',
+      properties: { reason: 'honeypot-field' },
+      rawMessage: 'form submission flagged as spam',
+    },
+  ]);
 });
 
 test('it flags a submission whose valid-from field is an empty string outside test mode', () => {
@@ -54,7 +56,7 @@ test('it flags a submission whose valid-from field is an empty string outside te
 });
 
 test('it logs a timing spam flag with its reason outside test mode', () => {
-  const warnSpy = spyOn(logger, 'warn');
+  const logs = createInMemoryLogs({ lowestLevel: 'warning' });
 
   const formData = new FormData();
 
@@ -66,14 +68,17 @@ test('it logs a timing spam flag with its reason outside test mode', () => {
     checkHoneypot(formData);
   }).toThrow();
 
-  expect(warnSpy).toHaveBeenCalledExactlyOnceWith(
-    { reason: 'timing' },
-    'form submission flagged as spam',
-  );
+  expect(logs.records).toMatchObject([
+    {
+      level: 'warning',
+      properties: { reason: 'timing' },
+      rawMessage: 'form submission flagged as spam',
+    },
+  ]);
 });
 
 test('it distinguishes an absent valid-from field from a too-early submission', () => {
-  const warnSpy = spyOn(logger, 'warn');
+  const logs = createInMemoryLogs({ lowestLevel: 'warning' });
 
   updateEnv('NODE_ENV', 'production');
 
@@ -81,10 +86,13 @@ test('it distinguishes an absent valid-from field from a too-early submission', 
     checkHoneypot(new FormData());
   }).toThrow();
 
-  expect(warnSpy).toHaveBeenCalledExactlyOnceWith(
-    { reason: 'missing-valid-from' },
-    'form submission flagged as spam',
-  );
+  expect(logs.records).toMatchObject([
+    {
+      level: 'warning',
+      properties: { reason: 'missing-valid-from' },
+      rawMessage: 'form submission flagged as spam',
+    },
+  ]);
 });
 
 test('it passes a submission whose valid-from timestamp has already elapsed outside test mode', () => {

@@ -219,8 +219,10 @@ jobs:
         with:
           persist-credentials: false
 
-      # pinned: 0.4.80's bluegreen health polling ignores configured check grace
-      # periods and aborts the whole rollout on a single transient machine read
+      # Renovate bumps this exact version. flyctl's bluegreen health poll retries a
+      # failed machine read on a 408, 429, 5xx or network error, but a 404 "machine
+      # not found" for a just-created green machine aborts the rollout:
+      # https://github.com/superfly/flyctl/blob/v0.4.116/internal/flapsutil/retry.go#L30-L52
       - name: Setup flyctl
         uses: superfly/flyctl-actions/setup-flyctl@ed8efb33836e8b2096c7fd3ba1c8afe303ebbff1 # 1.6
         with:
@@ -318,8 +320,10 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      # pinned: 0.4.80's bluegreen health polling ignores configured check grace
-      # periods and aborts the whole rollout on a single transient machine read
+      # Renovate bumps this exact version. flyctl's bluegreen health poll retries a
+      # failed machine read on a 408, 429, 5xx or network error, but a 404 "machine
+      # not found" for a just-created green machine aborts the rollout:
+      # https://github.com/superfly/flyctl/blob/v0.4.116/internal/flapsutil/retry.go#L30-L52
       - name: Setup flyctl
         uses: superfly/flyctl-actions/setup-flyctl@ed8efb33836e8b2096c7fd3ba1c8afe303ebbff1 # 1.6
         with:

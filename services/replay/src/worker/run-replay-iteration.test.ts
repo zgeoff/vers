@@ -1,4 +1,5 @@
 import { expect, onTestFinished, test } from 'bun:test';
+import { getLogger } from '@logtape/logtape';
 import type { ErrorEvent } from '@sentry/bun';
 import { createContentVersion, makeContentDocumentLoader } from '@vers/content-registry';
 import { buildCheckpointHash } from '@vers/contract-activity';
@@ -15,7 +16,6 @@ import { withTraceContext } from '@vers/service-utils';
 import { createSimVersionRow } from '@vers/sim-registry/test-utils';
 import { waitFor } from '@vers/test-utils';
 import { createTraceContext } from '@vers/trace';
-import pino from 'pino';
 import invariant from 'tiny-invariant';
 import { server } from '../mocks/server';
 import { createReplayCache } from '../replay/create-replay-cache';
@@ -56,7 +56,7 @@ test('it replays an honest full stream, matches, and advances the verified head 
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
-    logger: pino({ enabled: false }),
+    logger: getLogger(['test-replay']),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };
@@ -94,7 +94,7 @@ test('it mints one reward per slot earned by the verified stream', async () => {
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
-    logger: pino({ enabled: false }),
+    logger: getLogger(['test-replay']),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };
@@ -163,7 +163,7 @@ test('it verifies a later batch from held state, not a fresh from-Started replay
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
-    logger: pino({ enabled: false }),
+    logger: getLogger(['test-replay']),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };
@@ -268,7 +268,7 @@ test('it rejects a checkpoint with a forged continuation seed, rewinds the chain
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
-    logger: pino({ enabled: false }),
+    logger: getLogger(['test-replay']),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };
@@ -349,7 +349,7 @@ test('it settles no xp and drops the rejected activity from the pending anchor w
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
-    logger: pino({ enabled: false }),
+    logger: getLogger(['test-replay']),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };
@@ -419,7 +419,7 @@ test('it rejects a checkpoint with a forged chain position', async () => {
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
-    logger: pino({ enabled: false }),
+    logger: getLogger(['test-replay']),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };
@@ -469,7 +469,7 @@ test('it rejects a checkpoint claiming the wrong entropy source', async () => {
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
-    logger: pino({ enabled: false }),
+    logger: getLogger(['test-replay']),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };
@@ -506,7 +506,7 @@ test('it rejects a checkpoint with a forged reward total', async () => {
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
-    logger: pino({ enabled: false }),
+    logger: getLogger(['test-replay']),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };
@@ -537,7 +537,7 @@ test('it rejects a wrong continuation seed', async () => {
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
-    logger: pino({ enabled: false }),
+    logger: getLogger(['test-replay']),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };
@@ -576,7 +576,7 @@ test('it parks an activity stamped with an unknown sim version', async () => {
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
-    logger: pino({ enabled: false }),
+    logger: getLogger(['test-replay']),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };
@@ -615,7 +615,7 @@ test('it parks a stopped activity, leaving its chain claimable again', async () 
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
-    logger: pino({ enabled: false }),
+    logger: getLogger(['test-replay']),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };
@@ -660,7 +660,7 @@ test('it parks an activity stamped with a retention-expired sim version', async 
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
-    logger: pino({ enabled: false }),
+    logger: getLogger(['test-replay']),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };
@@ -694,7 +694,7 @@ test('it parks rather than rejects when the duration cap trips before the expect
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
-    logger: pino({ enabled: false }),
+    logger: getLogger(['test-replay']),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };
@@ -740,7 +740,7 @@ test('it backs off an activity without counting an attempt or parking it when th
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
-    logger: pino({ enabled: false }),
+    logger: getLogger(['test-replay']),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };
@@ -786,7 +786,7 @@ test('it backs off an activity when the keys service is unreachable on its first
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
-    logger: pino({ enabled: false }),
+    logger: getLogger(['test-replay']),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };
@@ -854,7 +854,7 @@ test('it backs off an activity and settles nothing when the keys service fails d
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
-    logger: pino({ enabled: false }),
+    logger: getLogger(['test-replay']),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };
@@ -898,7 +898,7 @@ test('it backs off an activity when the iteration deadline fires while a depende
     iterationDeadlineMs: 200,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
-    logger: pino({ enabled: false }),
+    logger: getLogger(['test-replay']),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };
@@ -963,7 +963,7 @@ test('it evicts and rebuilds from Started when the cached driver no longer match
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
-    logger: pino({ enabled: false }),
+    logger: getLogger(['test-replay']),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };
@@ -1011,7 +1011,7 @@ test('it backs off an unexpected replay error without counting an attempt', asyn
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
-    logger: pino({ enabled: false }),
+    logger: getLogger(['test-replay']),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };
@@ -1059,7 +1059,7 @@ test('it reports an iteration failure exactly once when a target was claimed', a
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
-    logger: pino({ enabled: false }),
+    logger: getLogger(['test-replay']),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };
@@ -1145,7 +1145,7 @@ test('it does not reject a divergence that fails to reproduce on the fresh confi
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
-    logger: pino({ enabled: false }),
+    logger: getLogger(['test-replay']),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };
@@ -1192,7 +1192,7 @@ test("it advances the chain verified anchor from a user-stopped activity's tail,
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
-    logger: pino({ enabled: false }),
+    logger: getLogger(['test-replay']),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };
@@ -1262,7 +1262,7 @@ test("it advances the chain verified anchor from a capped activity's tail, and a
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
-    logger: pino({ enabled: false }),
+    logger: getLogger(['test-replay']),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };
@@ -1336,7 +1336,7 @@ test('it reconciles the anchor once a successor claims a forward-exited predeces
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
-    logger: pino({ enabled: false }),
+    logger: getLogger(['test-replay']),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };
@@ -1424,7 +1424,7 @@ test('it leaves the anchor untouched for a stopped activity whose only checkpoin
     db: ctx.db,
     keysServiceURL: resolveServiceURL('keys'),
     loadContentDocument: makeContentDocumentLoader(ctx.db),
-    logger: pino({ enabled: false }),
+    logger: getLogger(['test-replay']),
     privateKey: ctx.privateKey,
     simVersion: 'test-engine-hash',
   };

@@ -75,7 +75,7 @@ The service runtime owns the whole failure path outside handler bodies:
 ## Reporting
 
 Error reports and logs travel two separate paths. The Sentry SDK, backed by the self-hosted Bugsink,
-is the only path to the error backend, and pino is a log-only sink. Keeping them apart stops one
+is the only path to the error backend, and LogTape is a log-only sink. Keeping them apart stops one
 error from shipping twice: never wire a log transport to the error backend, and never capture an
 exception in code the central hooks already cover.
 

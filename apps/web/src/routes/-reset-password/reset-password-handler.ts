@@ -49,7 +49,7 @@ export async function resetPasswordHandler(
 
   if (error) {
     if (!isDefinedError(error)) {
-      logger.error({ err: error }, 'password reset failed');
+      logger.error('password reset failed', { error });
     }
 
     return submission.reply({ formErrors: [INVALID_LINK_ERROR] });

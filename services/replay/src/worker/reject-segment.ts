@@ -15,17 +15,14 @@ export async function rejectSegment(
   divergence: Extract<CompareVerdict, { kind: 'divergence' }>,
   cause: RejectionCause,
 ): Promise<ReplayIterationOutcome> {
-  context.deps.logger.error(
-    {
-      activityID: segment.activity.id,
-      appendedHead: segment.activity.appendedHead,
-      reason: divergence.reason,
-      simVersion: segment.activity.simVersion,
-      verifiedHead: segment.verifiedHead,
-      version: divergence.version,
-    },
-    pickRejectMessage(cause),
-  );
+  context.deps.logger.error(pickRejectMessage(cause), {
+    activityID: segment.activity.id,
+    appendedHead: segment.activity.appendedHead,
+    reason: divergence.reason,
+    simVersion: segment.activity.simVersion,
+    verifiedHead: segment.verifiedHead,
+    version: divergence.version,
+  });
 
   const rejectionReason: RejectionReason =
     cause === 'descriptor-validation-failed' ? 'descriptor-mismatch' : 'integrity-mismatch';

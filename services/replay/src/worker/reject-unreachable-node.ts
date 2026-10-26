@@ -7,15 +7,12 @@ export async function rejectUnreachableNode(
   context: ReplayTargetContext,
   segment: Readonly<ReplaySegment>,
 ): Promise<ReplayIterationOutcome> {
-  context.deps.logger.error(
-    {
-      activityID: segment.activity.id,
-      appendedHead: segment.activity.appendedHead,
-      scopeID: segment.activity.scopeID,
-      verifiedHead: segment.verifiedHead,
-    },
-    'replay node reachability check failed; rejecting activity',
-  );
+  context.deps.logger.error('replay node reachability check failed; rejecting activity', {
+    activityID: segment.activity.id,
+    appendedHead: segment.activity.appendedHead,
+    scopeID: segment.activity.scopeID,
+    verifiedHead: segment.verifiedHead,
+  });
 
   recordRejection('node-unreachable');
 

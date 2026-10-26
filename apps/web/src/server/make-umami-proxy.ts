@@ -72,7 +72,7 @@ async function sendUpstream(target: URL, init?: RelayInit): Promise<Response> {
   try {
     response = await Promise.race([fetch(target, init), deadline]);
   } catch (error) {
-    logger.warn({ err: error }, 'analytics upstream request failed');
+    logger.warn('analytics upstream request failed', { error });
 
     return new Response(null, { status: 502 });
   } finally {

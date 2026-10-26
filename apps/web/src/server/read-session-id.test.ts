@@ -1,10 +1,10 @@
-import { expect, spyOn, test } from 'bun:test';
+import { expect, test } from 'bun:test';
+import { createInMemoryLogs } from '@vers/test-utils/bun';
 import {
   AUTH_SESSION_DEFAULT_TTL_SECONDS,
   readAuthSessionConfig,
 } from '../lib/auth/read-auth-session-config';
 import { sealSessionCookie } from '../test-utils/seal-session-cookie';
-import { logger } from './logger';
 import { readSessionID } from './read-session-id';
 
 test('it reads the session id out of a sealed session cookie', async () => {
@@ -38,7 +38,7 @@ test('it misses when the session cookie is not sealed with the session secret', 
 });
 
 test('it warns that a forged session cookie was rejected as invalid', async () => {
-  const warnSpy = spyOn(logger, 'warn');
+  const logs = createInMemoryLogs({ lowestLevel: 'warning' });
 
   const request = new Request('https://example.test/api/rpc/user/getCurrentUser', {
     headers: { cookie: 'en_session=forged-value' },
@@ -46,10 +46,13 @@ test('it warns that a forged session cookie was rejected as invalid', async () =
 
   await readSessionID(request, readAuthSessionConfig(AUTH_SESSION_DEFAULT_TTL_SECONDS));
 
-  expect(warnSpy).toHaveBeenCalledExactlyOnceWith(
-    { err: expect.any(Error), reason: 'invalid' },
-    'session cookie rejected',
-  );
+  expect(logs.records).toMatchObject([
+    {
+      level: 'warning',
+      properties: { error: expect.any(Error), reason: 'invalid' },
+      rawMessage: 'session cookie rejected',
+    },
+  ]);
 });
 
 test('it misses when a sealed cookie carries no signed-in session', async () => {
