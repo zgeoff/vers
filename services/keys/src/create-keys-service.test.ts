@@ -1,9 +1,10 @@
-import { expect, test } from 'bun:test';
+import { expect, mock, onTestFinished, test } from 'bun:test';
 import { hexToBytes } from '@noble/hashes/utils.js';
 import type { KeysContract } from '@vers/contract-keys';
 import { deriveAvatarKey, deriveScopeSecret } from '@vers/roll-crypto';
 import { createAnonymousViewer } from '@vers/service-test-utils/bun';
-import { buildRPCTestClient } from '@vers/test-utils';
+import { buildRPCTestClient, waitFor } from '@vers/test-utils';
+import invariant from 'tiny-invariant';
 import { createKeysService } from './create-keys-service';
 
 async function setupTest() {
@@ -11,6 +12,28 @@ async function setupTest() {
 
   return { app: service.app };
 }
+
+test('it stops serving and exits 0 on SIGTERM', async () => {
+  const exit = mock((_code: number) => {});
+
+  const service = await createKeysService();
+
+  onTestFinished(() => service.stop());
+
+  service.serve({ exit, port: 0 });
+
+  const port = service.app.server?.port;
+
+  invariant(port !== undefined, 'a served service listens on a port');
+
+  process.emit('SIGTERM');
+
+  await waitFor(() => {
+    expect(exit).toHaveBeenCalledExactlyOnceWith(0);
+  });
+
+  expect(fetch(`http://127.0.0.1:${port}/health`)).rejects.toThrow();
+});
 
 test('it derives the same key twice for identical input', async () => {
   const ctx = await setupTest();

@@ -1,4 +1,4 @@
-import { expect, onTestFinished, test } from 'bun:test';
+import { expect, mock, onTestFinished, test } from 'bun:test';
 import { setImmediate } from 'node:timers/promises';
 import { trace } from '@opentelemetry/api';
 import { implement } from '@orpc/server';
@@ -79,6 +79,7 @@ test('it throws at boot when SERVICE_AUTH_JWKS is missing', () => {
 
   expect(
     createService({
+      resources: () => ({}),
       allowedIssuers: ['app-web'],
       createRouter: () => ctx.router,
       envShape: {},
@@ -97,6 +98,7 @@ test('it applies default PORT and LOG_LEVEL when unset', async () => {
   const ctx = setupTest();
 
   const service = await createService({
+    resources: () => ({}),
     allowedIssuers: ['app-web'],
     createRouter: () => ctx.router,
     envShape: {},
@@ -116,6 +118,7 @@ test('it parses a service-specific envShape variable onto env', async () => {
   const ctx = setupTest();
 
   const service = await createService({
+    resources: () => ({}),
     allowedIssuers: ['app-web'],
     createRouter: () => ctx.router,
     envShape: { CUSTOM_GREETING: z.string() },
@@ -138,6 +141,7 @@ test('it resolves when OTEL_EXPORTER_OTLP_ENDPOINT is set, wiring the OTel plugi
 
   await expect(
     createService({
+      resources: () => ({}),
       allowedIssuers: ['app-web'],
       createRouter: () => ctx.router,
       envShape: {},
@@ -174,6 +178,7 @@ test('it ships a service log entry to the OTLP logs endpoint with its level, cat
   const ctx = setupTest();
 
   const service = await createService({
+    resources: () => ({}),
     allowedIssuers: ['app-web'],
     createRouter: () => ctx.router,
     envShape: {},
@@ -182,7 +187,7 @@ test('it ships a service log entry to the OTLP logs endpoint with its level, cat
 
   service.logger.warn('ledger drift detected', { driftSource: 'nightly-recount' });
 
-  await service.stopTelemetry();
+  await service.stop();
 
   expect(logExports).toHaveLength(1);
 
@@ -205,6 +210,7 @@ test('it keeps the active OTel span bound to the request across awaits under the
   const ctx = setupTest();
 
   const service = await createService({
+    resources: () => ({}),
     allowedIssuers: ['app-web'],
     createRouter: () => ctx.router,
     envShape: {},
@@ -233,6 +239,7 @@ test('it serves a router built by an async createRouter', async () => {
   const ctx = setupTest();
 
   const service = await createService({
+    resources: () => ({}),
     allowedIssuers: ['app-web'],
     createRouter: () => Promise.resolve(ctx.router),
     envShape: {},
@@ -262,6 +269,7 @@ test('it rejects an /rpc call with no Authorization header with a plain 401', as
   const ctx = setupTest();
 
   const service = await createService({
+    resources: () => ({}),
     allowedIssuers: ['app-web'],
     createRouter: () => ctx.router,
     envShape: {},
@@ -291,6 +299,7 @@ test('it rejects an /rpc call with a garbage token with a plain 401', async () =
   const ctx = setupTest();
 
   const service = await createService({
+    resources: () => ({}),
     allowedIssuers: ['app-web'],
     createRouter: () => ctx.router,
     envShape: {},
@@ -319,6 +328,7 @@ test('it rejects an /rpc call with an expired token with a plain 401', async () 
   const ctx = setupTest();
 
   const service = await createService({
+    resources: () => ({}),
     allowedIssuers: ['app-web'],
     createRouter: () => ctx.router,
     envShape: {},
@@ -353,6 +363,7 @@ test('it rejects an /rpc call with a wrong-audience token with a plain 401', asy
   const ctx = setupTest();
 
   const service = await createService({
+    resources: () => ({}),
     allowedIssuers: ['app-web'],
     createRouter: () => ctx.router,
     envShape: {},
@@ -386,6 +397,7 @@ test('it returns data from an authed procedure given a valid token naming an act
   const ctx = setupTest();
 
   const service = await createService({
+    resources: () => ({}),
     allowedIssuers: ['app-web'],
     createRouter: () => ctx.router,
     envShape: {},
@@ -415,6 +427,7 @@ test('it throws a contract-shaped UNAUTHORIZED for an authed procedure given a v
   const ctx = setupTest();
 
   const service = await createService({
+    resources: () => ({}),
     allowedIssuers: ['app-web'],
     createRouter: () => ctx.router,
     envShape: {},
@@ -444,6 +457,7 @@ test('it serves /health without any token', async () => {
   const ctx = setupTest();
 
   const service = await createService({
+    resources: () => ({}),
     allowedIssuers: ['app-web'],
     createRouter: () => ctx.router,
     envShape: {},
@@ -468,6 +482,7 @@ test('it mints a fresh trace id when no traceparent is supplied', async () => {
   const ctx = setupTest();
 
   const service = await createService({
+    resources: () => ({}),
     allowedIssuers: ['app-web'],
     createRouter: () => ctx.router,
     envShape: {},
@@ -487,6 +502,7 @@ test('it continues the trace named by an inbound traceparent header', async () =
   const ctx = setupTest();
 
   const service = await createService({
+    resources: () => ({}),
     allowedIssuers: ['app-web'],
     createRouter: () => ctx.router,
     envShape: {},
@@ -511,6 +527,7 @@ test('it reports the OTel span trace id as x-trace-id when no traceparent came i
   const ctx = setupTest();
 
   const service = await createService({
+    resources: () => ({}),
     allowedIssuers: ['app-web'],
     createRouter: () => ctx.router,
     envShape: {},
@@ -553,6 +570,7 @@ test('it mints a fresh trace id for a malformed traceparent header', async () =>
   const ctx = setupTest();
 
   const service = await createService({
+    resources: () => ({}),
     allowedIssuers: ['app-web'],
     createRouter: () => ctx.router,
     envShape: {},
@@ -576,6 +594,7 @@ test('it masks an unexpected handler error as a bare INTERNAL_SERVER_ERROR', asy
   const ctx = setupTest();
 
   const service = await createService({
+    resources: () => ({}),
     allowedIssuers: ['app-web'],
     createRouter: () => ctx.router,
     envShape: {},
@@ -622,6 +641,7 @@ test('it reports an unexpected handler error to the error backend exactly once',
   });
 
   const service = await createService({
+    resources: () => ({}),
     allowedIssuers: ['app-web'],
     createRouter: () => ctx.router,
     envShape: {},
@@ -654,6 +674,7 @@ test('it does not serve the dropped /api and /spec.json paths', async () => {
   const ctx = setupTest();
 
   const service = await createService({
+    resources: () => ({}),
     allowedIssuers: ['app-web'],
     createRouter: () => ctx.router,
     envShape: {},
@@ -678,6 +699,7 @@ test('it passes every conformance case collected from its own contract', async (
   const ctx = setupTest();
 
   const service = await createService({
+    resources: () => ({}),
     allowedIssuers: ['app-web'],
     createRouter: () => ctx.router,
     envShape: {},
@@ -707,6 +729,7 @@ test('it logs one structured request line when an /rpc call completes', async ()
   const ctx = setupTest();
 
   const service = await createService({
+    resources: () => ({}),
     allowedIssuers: ['app-web'],
     createRouter: () => ctx.router,
     envShape: {},
@@ -749,6 +772,7 @@ test('it logs the rejection reason when the trust boundary rejects a request', a
   const ctx = setupTest();
 
   const service = await createService({
+    resources: () => ({}),
     allowedIssuers: ['app-web'],
     createRouter: () => ctx.router,
     envShape: {},
@@ -787,6 +811,7 @@ test('it logs a refused /rpc call at warn with the code, the status, and the dat
   const ctx = setupTest();
 
   const service = await createService({
+    resources: () => ({}),
     allowedIssuers: ['app-web'],
     createRouter: () => ctx.router,
     envShape: {},
@@ -825,6 +850,7 @@ test('it logs an undeclared 4xx at warn with its code and status and no data', a
   const ctx = setupTest();
 
   const service = await createService({
+    resources: () => ({}),
     allowedIssuers: ['app-web'],
     createRouter: () => ctx.router,
     envShape: {},
@@ -863,6 +889,7 @@ test('it logs a failed /rpc call at error severity', async () => {
   const ctx = setupTest();
 
   const service = await createService({
+    resources: () => ({}),
     allowedIssuers: ['app-web'],
     createRouter: () => ctx.router,
     envShape: {},
@@ -906,6 +933,7 @@ test('it serves /health without logging a request line', async () => {
   const ctx = setupTest();
 
   const service = await createService({
+    resources: () => ({}),
     allowedIssuers: ['app-web'],
     createRouter: () => ctx.router,
     envShape: {},
@@ -927,6 +955,7 @@ test('it logs a request past its slow-request threshold at warn with slow and th
   const ctx = setupTest();
 
   const service = await createService({
+    resources: () => ({}),
     allowedIssuers: ['app-web'],
     createRouter: () => ctx.router,
     envShape: {},
@@ -971,6 +1000,7 @@ test('it logs a request as overdue while it is still open past the overdue thres
   const ctx = setupTest();
 
   const service = await createService({
+    resources: () => ({}),
     allowedIssuers: ['app-web'],
     createRouter: () => ctx.router,
     envShape: {},
@@ -1014,6 +1044,7 @@ test('it writes no overdue line for a request that finishes inside the threshold
   const ctx = setupTest();
 
   const service = await createService({
+    resources: () => ({}),
     allowedIssuers: ['app-web'],
     createRouter: () => ctx.router,
     envShape: {},
@@ -1045,6 +1076,7 @@ test('it keeps a slow 5xx at error severity without the slow flag', async () => 
   const ctx = setupTest();
 
   const service = await createService({
+    resources: () => ({}),
     allowedIssuers: ['app-web'],
     createRouter: () => ctx.router,
     envShape: {},
@@ -1085,6 +1117,7 @@ test('it keeps a request under its slow-request threshold at its status-derived 
   const ctx = setupTest();
 
   const service = await createService({
+    resources: () => ({}),
     allowedIssuers: ['app-web'],
     createRouter: () => ctx.router,
     envShape: {},
@@ -1127,6 +1160,7 @@ test('it honors a per-path slow-request override over the default threshold', as
   const ctx = setupTest();
 
   const service = await createService({
+    resources: () => ({}),
     allowedIssuers: ['app-web'],
     createRouter: () => ctx.router,
     envShape: {},
@@ -1172,6 +1206,7 @@ test('it serves a call from a permitted issuer', async () => {
   const ctx = setupTest();
 
   const service = await createService({
+    resources: () => ({}),
     allowedIssuers: ['app-web', 'service-activity'],
     createRouter: () => ctx.router,
     envShape: {},
@@ -1210,6 +1245,7 @@ test('it rejects a call from an issuer the service does not accept with 403', as
   };
 
   const service = await createService({
+    resources: () => ({}),
     allowedIssuers: ['app-web', 'service-activity'],
     createRouter: () => router,
     envShape: {},
@@ -1253,6 +1289,7 @@ test('it gives the handler the verified issuer', async () => {
   };
 
   const service = await createService({
+    resources: () => ({}),
     allowedIssuers: ['app-web', 'service-activity'],
     createRouter: () => router,
     envShape: {},
@@ -1272,4 +1309,270 @@ test('it gives the handler the verified issuer', async () => {
   await client.ping();
 
   expect(capturedIssuer).toBe('service-activity');
+});
+
+test('it hands the acquired resources to the router and exposes them on the service', async () => {
+  const keyPair = await resolveTestServiceKeyPair();
+
+  updateEnv('SERVICE_AUTH_JWKS', keyPair.jwksJSON);
+
+  const ctx = setupTest();
+  const pool = { name: 'ledger-pool' };
+  const createRouter = mock((..._args: Array<unknown>) => ctx.router);
+
+  const service = await createService({
+    allowedIssuers: ['app-web'],
+    createRouter,
+    envShape: {},
+    name: 'test-ledger',
+    resources: (_runtime, scope) => ({ pool: scope.adopt(pool, () => {}) }),
+  });
+
+  expect(createRouter).toHaveBeenCalledExactlyOnceWith(expect.anything(), { pool });
+  expect(service.resources).toStrictEqual({ pool });
+});
+
+test('it disposes its resources in reverse order of acquisition when it stops', async () => {
+  const keyPair = await resolveTestServiceKeyPair();
+
+  updateEnv('SERVICE_AUTH_JWKS', keyPair.jwksJSON);
+
+  const ctx = setupTest();
+  const stopped: Array<string> = [];
+
+  const service = await createService({
+    allowedIssuers: ['app-web'],
+    createRouter: () => ctx.router,
+    envShape: {},
+    name: 'test-ledger',
+    resources: (_runtime, scope) => ({
+      pool: scope.adopt('pool', (name) => {
+        stopped.push(name);
+      }),
+      queue: scope.adopt('queue', (name) => {
+        stopped.push(name);
+      }),
+    }),
+  });
+
+  await service.stop();
+
+  expect(stopped).toStrictEqual(['queue', 'pool']);
+});
+
+test('it disposes the resources it acquired when the router fails to build', async () => {
+  const keyPair = await resolveTestServiceKeyPair();
+
+  updateEnv('SERVICE_AUTH_JWKS', keyPair.jwksJSON);
+
+  const stopped: Array<string> = [];
+
+  const booting = createService({
+    allowedIssuers: ['app-web'],
+    createRouter: () => {
+      throw new Error('ledger schema is missing');
+    },
+    envShape: {},
+    name: 'test-ledger',
+    resources: (_runtime, scope) => ({
+      pool: scope.adopt('pool', (name) => {
+        stopped.push(name);
+      }),
+    }),
+  });
+
+  const failure = await booting.then(
+    () => null,
+    (error: unknown) => error,
+  );
+
+  expect(failure).toStrictEqual(new Error('ledger schema is missing'));
+  expect(stopped).toStrictEqual(['pool']);
+});
+
+test('it stops serving, disposes its resources and exits 0 on SIGTERM', async () => {
+  const keyPair = await resolveTestServiceKeyPair();
+
+  updateEnv('SERVICE_AUTH_JWKS', keyPair.jwksJSON);
+
+  const ctx = setupTest();
+  const stopped: Array<string> = [];
+  const exit = mock((_code: number) => {});
+
+  const service = await createService({
+    allowedIssuers: ['app-web'],
+    createRouter: () => ctx.router,
+    envShape: {},
+    name: 'test-ledger',
+    resources: (_runtime, scope) => ({
+      pool: scope.adopt('pool', (name) => {
+        stopped.push(name);
+      }),
+    }),
+  });
+
+  onTestFinished(() => service.stop());
+
+  service.serve({ exit, port: 0 });
+
+  const port = service.app.server?.port;
+
+  invariant(port !== undefined, 'a served service listens on a port');
+
+  process.emit('SIGTERM');
+
+  await waitFor(() => {
+    expect(exit).toHaveBeenCalledExactlyOnceWith(0);
+  });
+
+  expect(stopped).toStrictEqual(['pool']);
+  expect(fetch(`http://127.0.0.1:${port}/health`)).rejects.toThrow();
+});
+
+test('it reports a resource that fails to stop on SIGTERM and exits 1', async () => {
+  const keyPair = await resolveTestServiceKeyPair();
+
+  updateEnv('SERVICE_AUTH_JWKS', keyPair.jwksJSON);
+  updateEnv('SENTRY_DSN', undefined);
+
+  const ctx = setupTest();
+  const previousHandle = sentryHandle.current;
+  const reported: Array<unknown> = [];
+  const exit = mock((_code: number) => {});
+
+  onTestFinished(() => {
+    setSentryHandleForTesting(previousHandle);
+  });
+
+  setSentryHandleForTesting({
+    captureException: (error) => {
+      reported.push(error);
+    },
+    flush: () => Promise.resolve(true),
+  });
+
+  const service = await createService({
+    allowedIssuers: ['app-web'],
+    createRouter: () => ctx.router,
+    envShape: {},
+    name: 'test-ledger',
+    resources: (_runtime, scope) => ({
+      queue: scope.adopt('queue', () => Promise.reject(new Error('queue stop timed out'))),
+    }),
+  });
+
+  service.serve({ exit, port: 0 });
+  process.emit('SIGTERM');
+
+  await waitFor(() => {
+    expect(exit).toHaveBeenCalledExactlyOnceWith(1);
+  });
+
+  expect(reported).toHaveLength(1);
+});
+
+test('it runs the boot work against its resources once it serves', async () => {
+  const keyPair = await resolveTestServiceKeyPair();
+
+  updateEnv('SERVICE_AUTH_JWKS', keyPair.jwksJSON);
+
+  const ctx = setupTest();
+  const onBoot = mock((..._args: Array<unknown>) => Promise.resolve());
+
+  const service = await createService({
+    allowedIssuers: ['app-web'],
+    createRouter: () => ctx.router,
+    envShape: {},
+    name: 'test-ledger',
+    onBoot,
+    resources: () => ({ queue: 'ledger-queue' }),
+  });
+
+  onTestFinished(() => service.stop());
+
+  service.serve({ exit: () => {}, port: 0 });
+
+  await waitFor(() => {
+    expect(onBoot).toHaveBeenCalledExactlyOnceWith({ queue: 'ledger-queue' });
+  });
+});
+
+test('it finishes the boot work before it disposes the resources the work reads', async () => {
+  const keyPair = await resolveTestServiceKeyPair();
+
+  updateEnv('SERVICE_AUTH_JWKS', keyPair.jwksJSON);
+
+  const ctx = setupTest();
+  const events: Array<string> = [];
+  const bootGate = Promise.withResolvers<void>();
+
+  const service = await createService({
+    allowedIssuers: ['app-web'],
+    createRouter: () => ctx.router,
+    envShape: {},
+    name: 'test-ledger',
+    onBoot: async () => {
+      await bootGate.promise;
+
+      events.push('boot work finished');
+    },
+    resources: (_runtime, scope) => ({
+      pool: scope.adopt('pool', () => {
+        events.push('pool disposed');
+      }),
+    }),
+  });
+
+  service.serve({ exit: () => {}, port: 0 });
+
+  const stopped = service.stop();
+
+  bootGate.resolve();
+
+  await stopped;
+
+  expect(events).toStrictEqual(['boot work finished', 'pool disposed']);
+});
+
+test('it reports failed boot work and keeps serving', async () => {
+  const keyPair = await resolveTestServiceKeyPair();
+
+  updateEnv('SERVICE_AUTH_JWKS', keyPair.jwksJSON);
+  updateEnv('SENTRY_DSN', undefined);
+
+  const ctx = setupTest();
+  const previousHandle = sentryHandle.current;
+  const reported: Array<unknown> = [];
+
+  onTestFinished(() => {
+    setSentryHandleForTesting(previousHandle);
+  });
+
+  setSentryHandleForTesting({
+    captureException: (error) => {
+      reported.push(error);
+    },
+    flush: () => Promise.resolve(true),
+  });
+
+  const service = await createService({
+    allowedIssuers: ['app-web'],
+    createRouter: () => ctx.router,
+    envShape: {},
+    name: 'test-ledger',
+    onBoot: () => Promise.reject(new Error('boot drain failed')),
+    resources: () => ({}),
+  });
+
+  onTestFinished(() => service.stop());
+
+  service.serve({ exit: () => {}, port: 0 });
+
+  await waitFor(() => {
+    expect(reported).toStrictEqual([new Error('boot drain failed')]);
+  });
+
+  const health = await fetch(`http://127.0.0.1:${service.app.server?.port}/health`);
+
+  expect(health.status).toBe(200);
 });

@@ -18,7 +18,7 @@ export default defineDeployManifest({
     {
       app: 'vers-service-activity',
       configDir: 'services/activity',
-      dockerfile: 'services/activity/Dockerfile',
+      dockerfile: 'services/Dockerfile',
       exposure: 'flycast',
       minStartedMachines: 1,
       sharedSecrets: ['DATABASE_URL'],
@@ -27,7 +27,7 @@ export default defineDeployManifest({
     {
       app: 'vers-service-avatar',
       configDir: 'services/avatar',
-      dockerfile: 'services/avatar/Dockerfile',
+      dockerfile: 'services/Dockerfile',
       exposure: 'flycast',
       sharedSecrets: ['DATABASE_URL'],
       trigger: { kind: 'turbo-affected', pkg: '@vers/service-avatar' },
@@ -35,7 +35,7 @@ export default defineDeployManifest({
     {
       app: 'vers-service-email',
       configDir: 'services/email',
-      dockerfile: 'services/email/Dockerfile',
+      dockerfile: 'services/Dockerfile',
       exposure: 'flycast',
       scheduledMachines: [
         {
@@ -51,14 +51,14 @@ export default defineDeployManifest({
     {
       app: 'vers-service-keys',
       configDir: 'services/keys',
-      dockerfile: 'services/keys/Dockerfile',
+      dockerfile: 'services/Dockerfile',
       exposure: 'flycast',
       trigger: { kind: 'turbo-affected', pkg: '@vers/service-keys' },
     },
     {
       app: 'vers-service-session',
       configDir: 'services/session',
-      dockerfile: 'services/session/Dockerfile',
+      dockerfile: 'services/Dockerfile',
       exposure: 'flycast',
       minStartedMachines: 1,
       sharedSecrets: ['DATABASE_URL'],
@@ -67,7 +67,7 @@ export default defineDeployManifest({
     {
       app: 'vers-service-user',
       configDir: 'services/user',
-      dockerfile: 'services/user/Dockerfile',
+      dockerfile: 'services/Dockerfile',
       exposure: 'flycast',
       sharedSecrets: ['DATABASE_URL'],
       trigger: { kind: 'turbo-affected', pkg: '@vers/service-user' },
@@ -75,7 +75,7 @@ export default defineDeployManifest({
     {
       app: 'vers-service-verification',
       configDir: 'services/verification',
-      dockerfile: 'services/verification/Dockerfile',
+      dockerfile: 'services/Dockerfile',
       exposure: 'flycast',
       sharedSecrets: ['DATABASE_URL'],
       trigger: { kind: 'turbo-affected', pkg: '@vers/service-verification' },
@@ -84,7 +84,7 @@ export default defineDeployManifest({
       app: 'vers-service-replay',
       buildArgsFromEnv: ['SIM_ENGINE_HASH', 'BUN_VERSION'],
       configDir: 'services/replay',
-      dockerfile: 'services/replay/Dockerfile',
+      dockerfile: 'services/Dockerfile',
       exposure: 'flycast',
       scheduledMachines: [
         {

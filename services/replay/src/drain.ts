@@ -24,21 +24,11 @@ const service = await createReplayService().catch((error: unknown) => {
 await withTraceContext(createTraceContext(), runScheduledDrain);
 
 // a teardown fault is reported too, and the flush runs whatever the teardown did
-try {
-  service.stopCache();
-
-  await service.stopTelemetry();
-} catch (error) {
-  service.logger.error('telemetry stop failed after the scheduled drain', { error });
+await service.stop().catch((error: unknown) => {
+  service.logger.error('teardown failed after the scheduled drain', { error });
 
   reportUnexpectedError(error);
-} finally {
-  await service.stopDB().catch((error: unknown) => {
-    service.logger.error('database stop failed after the scheduled drain', { error });
-
-    reportUnexpectedError(error);
-  });
-}
+});
 
 const flushed = await flushErrorReports();
 

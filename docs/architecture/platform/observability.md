@@ -42,8 +42,8 @@ boot.
 
 Each exporter configures itself from the standard `OTEL_EXPORTER_OTLP_*` variables, whose per-signal
 headers carry the ingest token and dataset routing. Stopping telemetry flushes pending exports and
-shuts the metric reader down. An entrypoint that shuts down gracefully on SIGTERM stops telemetry
-before it closes its database pool, since a final gauge collection may still query.
+shuts the metric reader down. The service runtime stops telemetry last, after it closes the database
+pool and the other service resources, since a final gauge collection may still query.
 
 ## Traces
 

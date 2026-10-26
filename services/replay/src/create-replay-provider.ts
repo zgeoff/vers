@@ -4,7 +4,7 @@ import type { Service } from '@vers/service-runtime';
 import { buildProviderRouter } from './build-provider-router';
 import { providerEnvShape } from './provider-env-shape';
 
-export type ReplayProvider = Service<typeof providerEnvShape>;
+export type ReplayProvider = Service<typeof providerEnvShape, Record<string, never>>;
 
 export function createReplayProvider(): Promise<ReplayProvider> {
   return createService({
@@ -12,5 +12,6 @@ export function createReplayProvider(): Promise<ReplayProvider> {
     createRouter: (runtime) => buildProviderRouter({ simVersion: runtime.env.SIM_ENGINE_HASH }),
     envShape: providerEnvShape,
     name: buildServiceAudience('replay-provider'),
+    resources: () => ({}),
   });
 }

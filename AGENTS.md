@@ -43,7 +43,6 @@ libs/<domain>/     shared libraries, grouped by domain for browsing only: core, 
 infra/             the vers-infra Pulumi program (GitHub labels and settings, Neon, Axiom) and the
                    Tinybird datasources
 scripts/           @vers/scripts: the operational CLIs behind bun run deploy, stack and pg:*
-templates/service/ the scaffold for a new service
 patches/           bun patches for third-party packages
 docs/
   architecture/    what is built, by area: game, platform, services

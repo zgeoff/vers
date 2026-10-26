@@ -28,7 +28,7 @@ interface CreateActivityServiceConfig {
 
 export function createActivityService(
   config: CreateActivityServiceConfig = {},
-): Promise<Service<typeof envShape>> {
+): Promise<Service<typeof envShape, { readonly db: Kysely<DB> }>> {
   const wakeOptions =
     config.wakeCoalesceWindowMs === undefined
       ? undefined
@@ -38,16 +38,14 @@ export function createActivityService(
 
   return createService({
     allowedIssuers: ['app-web'],
-    createRouter: async (runtime) => {
+    createRouter: async (runtime, resources) => {
       const privateKey = await parseServicePrivateKey(runtime.env.SERVICE_AUTH_PRIVATE_KEY);
 
-      const db = config.db ?? createDB({ databaseURL: runtime.env.DATABASE_URL });
-
       return createActivityRouter({
-        db,
+        db: resources.db,
         keyVersion: config.keyVersion ?? KEY_VERSION,
         keysServiceURL: runtime.env.KEYS_SERVICE_URL,
-        loadContentDocument: makeContentDocumentLoader(db),
+        loadContentDocument: makeContentDocumentLoader(resources.db),
         privateKey,
         secretRef: config.secretRef ?? SCOPE_SECRET_REF,
         secretVersion: config.secretVersion ?? SCOPE_SECRET_VERSION,
@@ -57,5 +55,10 @@ export function createActivityService(
     },
     envShape,
     name: 'service-activity',
+    resources: (runtime, scope) => ({
+      db:
+        config.db ??
+        scope.adopt(createDB({ databaseURL: runtime.env.DATABASE_URL }), (db) => db.destroy()),
+    }),
   });
 }

@@ -20,7 +20,9 @@ services:
   service-activity:
     build:
       context: .
-      dockerfile: services/activity/Dockerfile
+      dockerfile: services/Dockerfile
+      args:
+        SERVICE: activity
     env_file:
       - services/activity/.env.development
     environment:
@@ -37,7 +39,9 @@ services:
   service-avatar:
     build:
       context: .
-      dockerfile: services/avatar/Dockerfile
+      dockerfile: services/Dockerfile
+      args:
+        SERVICE: avatar
     env_file:
       - services/avatar/.env.development
     environment:
@@ -50,7 +54,9 @@ services:
   service-email:
     build:
       context: .
-      dockerfile: services/email/Dockerfile
+      dockerfile: services/Dockerfile
+      args:
+        SERVICE: email
     env_file:
       - services/email/.env.development
     environment:
@@ -63,7 +69,9 @@ services:
   service-keys:
     build:
       context: .
-      dockerfile: services/keys/Dockerfile
+      dockerfile: services/Dockerfile
+      args:
+        SERVICE: keys
     env_file:
       - services/keys/.env.development
     ports:
@@ -76,8 +84,9 @@ services:
   service-replay:
     build:
       context: .
-      dockerfile: services/replay/Dockerfile
+      dockerfile: services/Dockerfile
       args:
+        SERVICE: replay
         # the sim version baked into the compiled binary; harnesses that replay real segments
         # override this with the hash `loadEngineHash` computes for the same commit
         SIM_ENGINE_HASH: ${SIM_ENGINE_HASH:-development}
@@ -96,7 +105,9 @@ services:
   service-session:
     build:
       context: .
-      dockerfile: services/session/Dockerfile
+      dockerfile: services/Dockerfile
+      args:
+        SERVICE: session
     env_file:
       - services/session/.env.development
     environment:
@@ -109,7 +120,9 @@ services:
   service-user:
     build:
       context: .
-      dockerfile: services/user/Dockerfile
+      dockerfile: services/Dockerfile
+      args:
+        SERVICE: user
     env_file:
       - services/user/.env.development
     environment:
@@ -122,7 +135,9 @@ services:
   service-verification:
     build:
       context: .
-      dockerfile: services/verification/Dockerfile
+      dockerfile: services/Dockerfile
+      args:
+        SERVICE: verification
     env_file:
       - services/verification/.env.development
     environment:

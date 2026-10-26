@@ -12,14 +12,16 @@ interface CreateUserServiceConfig {
 
 export function createUserService(
   config: CreateUserServiceConfig = {},
-): Promise<Service<typeof envShape>> {
+): Promise<Service<typeof envShape, { readonly db: Kysely<DB> }>> {
   return createService({
     allowedIssuers: ['app-web'],
-    createRouter: (runtime) =>
-      createUserRouter({
-        db: config.db ?? createDB({ databaseURL: runtime.env.DATABASE_URL }),
-      }),
+    createRouter: (_runtime, resources) => createUserRouter({ db: resources.db }),
     envShape,
     name: 'service-user',
+    resources: (runtime, scope) => ({
+      db:
+        config.db ??
+        scope.adopt(createDB({ databaseURL: runtime.env.DATABASE_URL }), (db) => db.destroy()),
+    }),
   });
 }

@@ -98,6 +98,13 @@ env validation, service-to-service (s2s) token verification ahead of the handler
 trace-context propagation, and optional Sentry and OpenTelemetry wiring. A new service is a contract
 package, handlers, and one `createService` call.
 
+The same call owns the service's lifecycle. The service acquires its resources, such as a database
+pool or a job queue, in one step, and the runtime disposes them in reverse order when the service
+stops. Serving starts the listener, runs the service's boot work without delaying the listener, and
+handles SIGTERM. On SIGTERM the runtime stops taking requests, waits for the requests and the boot
+work in flight, disposes the resources, flushes error reports, and exits 0, or 1 when a resource
+fails to stop.
+
 ## The client side
 
 Clients are typed by a single annotation against the contract:
