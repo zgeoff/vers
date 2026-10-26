@@ -1,5 +1,5 @@
-import { parseCountOption } from './parse-count-option';
+import { parseIntegerOption } from '@vers/scripts';
 
 export function parseCountListOption(value: string): Array<number> {
-  return value.split(',').map((entry) => parseCountOption(entry.trim()));
+  return value.split(',').map((entry) => parseIntegerOption(entry.trim(), 1));
 }

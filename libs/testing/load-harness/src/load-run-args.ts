@@ -1,5 +1,5 @@
+import { parseIntegerOption } from '@vers/scripts';
 import type { Args } from 'gunshi';
-import { parseCountOption } from './parse-count-option';
 
 export const LOAD_RUN_ARGS = {
   scenario: {
@@ -18,28 +18,28 @@ export const LOAD_RUN_ARGS = {
     default: 3,
     description: 'minutes of play at each steady step',
     metavar: 'n',
-    parse: parseCountOption,
+    parse: (value: string) => parseIntegerOption(value, 1),
     type: 'custom',
   },
   'offline-players': {
     default: 50,
     description: 'players who return from the same gap at the same moment',
     metavar: 'n',
-    parse: parseCountOption,
+    parse: (value: string) => parseIntegerOption(value, 1),
     type: 'custom',
   },
   'offline-hours': {
     default: 8,
     description: 'hours each returning player was away, up to the offline cap',
     metavar: 'n',
-    parse: parseCountOption,
+    parse: (value: string) => parseIntegerOption(value, 1),
     type: 'custom',
   },
   'recovery-players': {
     default: 50,
     description: 'connected players through the dependency outage',
     metavar: 'n',
-    parse: parseCountOption,
+    parse: (value: string) => parseIntegerOption(value, 1),
     type: 'custom',
   },
   'outage-service': {
@@ -52,21 +52,21 @@ export const LOAD_RUN_ARGS = {
     default: 2,
     description: 'minutes the dependency stays down',
     metavar: 'n',
-    parse: parseCountOption,
+    parse: (value: string) => parseIntegerOption(value, 1),
     type: 'custom',
   },
   'retained-every': {
     default: 4,
     description: 'every nth player stamps the retained sim version',
     metavar: 'n',
-    parse: parseCountOption,
+    parse: (value: string) => parseIntegerOption(value, 1),
     type: 'custom',
   },
   'settlement-target-seconds': {
     default: 30,
     description: 'the settlement age p95 a steady step must meet to count as supported',
     metavar: 'n',
-    parse: parseCountOption,
+    parse: (value: string) => parseIntegerOption(value, 1),
     type: 'custom',
   },
   'cpu-profile': {
