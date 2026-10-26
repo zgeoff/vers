@@ -22,10 +22,44 @@ test('it collects a quoted reference inside a shell command', () => {
   });
 });
 
-test('it collects a double-quoted reference inside a shell command', () => {
-  expect(collectOPReferences('op read "op://ops/billing/api-key"')).toStrictEqual({
-    references: [{ field: 'api-key', item: 'billing', vault: 'ops' }],
+test.each([
+  ['single quotes', String.raw`op read 'op://ops/billing/token(prod)'`, 'token(prod)'],
+  ['double quotes', String.raw`op read "op://ops/billing/token(prod)"`, 'token(prod)'],
+  ['ANSI-C quotes', String.raw`op read $'op://ops/billing/token(prod)'`, 'token(prod)'],
+  ['escaped double quotes', String.raw`op read \"op://ops/billing/token(prod)\"`, 'token(prod)'],
+  [
+    'ANSI-C quotes with an escaped quote',
+    String.raw`op read $'op://ops/billing/o\'neil'`,
+    "o'neil",
+  ],
+  [
+    'double quotes with an escaped quote',
+    String.raw`op read "op://ops/billing/the \"prod\" key"`,
+    'the "prod" key',
+  ],
+])('it collects the whole field inside %s', (_form, text, field) => {
+  expect(collectOPReferences(text)).toStrictEqual({
+    references: [{ field, item: 'billing', vault: 'ops' }],
     unparsed: [],
+  });
+});
+
+test.each([
+  ['single quotes', String.raw`op read 'op://ops/billing/token'-v2`],
+  ['double quotes', String.raw`op read "op://ops/billing/token"-v2`],
+  ['ANSI-C quotes', String.raw`op read $'op://ops/billing/token'-v2`],
+  ['escaped double quotes', String.raw`op read \"op://ops/billing/token\"-v2`],
+])('it reports a reference in %s with text glued past the closing quote', (_form, text) => {
+  expect(collectOPReferences(text)).toStrictEqual({
+    references: [],
+    unparsed: [text.slice('op read '.length)],
+  });
+});
+
+test('it reports an ANSI-C reference that holds an escape sequence as unparsed', () => {
+  expect(collectOPReferences(String.raw`op read $'op://ops/billing/token\n'`)).toStrictEqual({
+    references: [],
+    unparsed: [String.raw`$'op://ops/billing/token\n'`],
   });
 });
 
@@ -74,7 +108,7 @@ test('it ends a reference before a trailing comment', () => {
 test('it reports a reference that interpolates a segment as unparsed', () => {
   expect(collectOPReferences(`op read "op://ops/$ITEM/dsn"`)).toStrictEqual({
     references: [],
-    unparsed: ['op://ops/$ITEM/dsn'],
+    unparsed: ['"op://ops/$ITEM/dsn"'],
   });
 });
 
