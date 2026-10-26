@@ -202,6 +202,7 @@
     "qa:inbox": "bun scripts/src/bin/qa-inbox.ts",
     "qa:reset": "bun libs/testing/qa-account/src/bin/qa-reset.ts",
     "qa:seed": "bun libs/testing/qa-account/src/bin/qa-seed.ts",
+    "secrets:check": "bun scripts/src/bin/check-secrets-manifest.ts",
     "ladle:dev": "cd libs/design/design-system && ./node_modules/.bin/ladle dev",
     "stack": "bun scripts/src/bin/stack.ts",
     "---PROJECT-SPECIFIC": "",

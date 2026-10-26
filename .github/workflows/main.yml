@@ -72,6 +72,11 @@ jobs:
           bun run env:contract:check
           bun run env:coverage
 
+      # every op:// reference that .mcp.json, the workflows and infra/ read is listed by name in
+      # secrets-manifest.json, and every listed one is still read
+      - name: Check Secrets Manifest
+        run: bun run secrets:check
+
       # a change to item-gen, roll-crypto or worldmap-content fails here unless it ships as a new
       # content version, because a retained activity mints through the interpreter its version pins;
       # the base ref's recorded digests stay as they were
