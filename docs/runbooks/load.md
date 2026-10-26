@@ -22,9 +22,11 @@ takes the production path: app-web resolves the session and forwards the call to
 service with the client's retry policy. Each player's avatar starts at a level from a fixed corpus,
 and its own scope secret seals the origin's encounter, so the attempts mix failed and completed
 fights of different lengths. A player index always gets the same level and map seed, so a rerun
-replays the same workload. A connected player simulates on its own clock, as the writer worker does,
-and holds what it cannot deliver in an ordered outbox, so an outage grows the backlog it returns
-with instead of pausing play.
+repeats the level mix. It does not repeat the fights: each fresh stack creates new avatars, and
+revealing the origin draws a new genesis seed, so the encounters and their combat streams differ
+from run to run. A connected player simulates on its own clock, as the writer worker does, and holds
+what it cannot deliver in an ordered outbox, so an outage grows the backlog it returns with instead
+of pausing play.
 
 | Scenario         | Players                                                       | Measured window                                           |
 | ---------------- | ------------------------------------------------------------- | --------------------------------------------------------- |
