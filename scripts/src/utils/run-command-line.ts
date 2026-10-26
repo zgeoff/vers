@@ -24,7 +24,8 @@ export async function runCommandLine(
   options: CommandLineOptions,
 ): Promise<boolean> {
   const name = entry.name ?? '';
-  const hasSeparator = argv.includes('--');
+  const gunshiArgv = toGunshiArgv(argv, entry, options.subCommands ?? {});
+  const hasSeparator = gunshiArgv.includes('--');
   let isMissingCommand = false;
 
   const runnable: SubCommandable = entry.run
@@ -49,7 +50,7 @@ export async function runCommandLine(
   );
 
   try {
-    const usage = await cli([...argv], runnable, {
+    const usage = await cli(gunshiArgv, runnable, {
       name,
       renderHeader: null,
       strict: true,
@@ -73,6 +74,89 @@ export async function runCommandLine(
   }
 
   return !isMissingCommand;
+}
+
+const NEGATIVE_NUMBER = /^-\d*\.?\d+(?:e[+-]?\d+)?$/iu;
+
+// gunshi reads every word that starts with `-` as a flag, where commander took a negative number as
+// an argument and the word after a value flag as its value, so the flag joins its value and the
+// arguments from the first negative number on move after `--`.
+function toGunshiArgv(
+  argv: ReadonlyArray<string>,
+  entry: SubCommandable,
+  subCommands: Readonly<Record<string, SubCommandable>>,
+): Array<string> {
+  const separator = argv.indexOf('--');
+  const head = separator === -1 ? argv : argv.slice(0, separator);
+  const tail = separator === -1 ? [] : argv.slice(separator + 1);
+  const commands = [entry, ...Object.values(subCommands)];
+
+  const routingArgs: Args = Object.fromEntries(
+    commands.flatMap((command) => Object.entries(toArgs(command))),
+  );
+
+  const commandName = findCommandName(head, routingArgs, subCommands);
+  const command = commandName === undefined ? entry : subCommands[commandName];
+  const commandArgs = toArgs(command);
+  const kept: Array<string> = [];
+  const moved: Array<string> = [];
+  let isCommandSeen = commandName === undefined;
+
+  for (let index = 0; index < head.length; index++) {
+    const word = head[index] ?? '';
+    const next = head[index + 1];
+    const flagArgs = isCommandSeen ? commandArgs : routingArgs;
+
+    if (isValueFlag(word, flagArgs) && next !== undefined) {
+      kept.push(`${word}=${next}`);
+
+      index++;
+    } else if (!isCommandSeen && word === commandName) {
+      isCommandSeen = true;
+
+      kept.push(word);
+    } else if (isFlagWord(word)) {
+      kept.push(word);
+    } else if (moved.length > 0 || NEGATIVE_NUMBER.test(word)) {
+      moved.push(word);
+    } else {
+      kept.push(word);
+    }
+  }
+
+  return moved.length === 0 && separator === -1 ? kept : [...kept, '--', ...moved, ...tail];
+}
+
+function toArgs(command: SubCommandable | undefined): Args {
+  return command?.args ?? {};
+}
+
+function findCommandName(
+  head: ReadonlyArray<string>,
+  routingArgs: Args,
+  subCommands: Readonly<Record<string, SubCommandable>>,
+): string | undefined {
+  for (let index = 0; index < head.length; index++) {
+    const word = head[index] ?? '';
+
+    if (isValueFlag(word, routingArgs)) {
+      index++;
+    } else if (word !== '' && !isFlagWord(word)) {
+      return Object.hasOwn(subCommands, word) ? word : undefined;
+    }
+  }
+
+  return undefined;
+}
+
+function isValueFlag(word: string, args: Args): boolean {
+  const schema = word.startsWith('--') && !word.includes('=') ? args[word.slice(2)] : undefined;
+
+  return schema !== undefined && schema.type !== 'boolean' && schema.type !== 'positional';
+}
+
+function isFlagWord(word: string): boolean {
+  return word.length > 1 && word.startsWith('-') && !NEGATIVE_NUMBER.test(word);
 }
 
 // gunshi fills no positional argument from the words after `--`, reports one they would fill as

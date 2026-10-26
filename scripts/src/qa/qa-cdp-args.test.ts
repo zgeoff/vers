@@ -62,6 +62,44 @@ test.each<[string, Args, Array<string>, Record<string, unknown>]>([
   expect(received).toStrictEqual([expected]);
 });
 
+test.each<[string, Args, Array<string>, Record<string, unknown>]>([
+  ['click', QA_CDP_ARGS.click, ['T1', '-5', '10'], { target: 'T1', x: -5, y: 10 }],
+  ['click', QA_CDP_ARGS.click, ['T1', '12', '-0.5'], { target: 'T1', x: 12, y: -0.5 }],
+  [
+    'click',
+    QA_CDP_ARGS.click,
+    ['T1', '-5', '-10', '--endpoint', '127.0.0.1:9333'],
+    { endpoint: '127.0.0.1:9333', target: 'T1', x: -5, y: -10 },
+  ],
+  ['eval', QA_CDP_ARGS.eval, ['T1', '-1'], { script: '-1', target: 'T1' }],
+  [
+    'monitor',
+    QA_CDP_ARGS.monitor,
+    ['--url', '-preview.example.test'],
+    { every: 10, url: '-preview.example.test' },
+  ],
+  ['new', QA_CDP_ARGS.new, ['--context', '-CTX1'], { context: '-CTX1', url: 'about:blank' }],
+])('it reads a value of %s that starts with -', async (name, args, argv, expected) => {
+  const received: Array<unknown> = [];
+  const output = { error: mock((_text: string) => {}), log: mock((_text: string) => {}) };
+
+  const command = define({
+    args,
+    name,
+    run: (ctx) => {
+      received.push({ ...ctx.values });
+    },
+  });
+
+  const ran = await runCommandLine([name, ...argv], define({ name: 'qa-cdp' }), {
+    output,
+    subCommands: { [name]: command },
+  });
+
+  expect(ran).toBeTrue();
+  expect(received).toStrictEqual([expected]);
+});
+
 test('it leaves the endpoint unset when no flag names one', () => {
   const resolved = resolveArgs(QA_CDP_ARGS.targets, parseArgs([]));
 

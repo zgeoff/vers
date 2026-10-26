@@ -1,6 +1,42 @@
-import { expect, test } from 'bun:test';
-import { parseArgs, resolveArgs } from 'gunshi';
+import { expect, mock, test } from 'bun:test';
+import { runCommandLine } from '@vers/scripts';
+import { define, parseArgs, resolveArgs } from 'gunshi';
 import { QA_SEED_ARGS } from './qa-seed-args';
+
+test('it reads a password that starts with -', async () => {
+  const received: Array<unknown> = [];
+  const output = { error: mock((_text: string) => {}), log: mock((_text: string) => {}) };
+
+  const entry = define({
+    args: QA_SEED_ARGS,
+    name: 'qa-seed',
+    run: (ctx) => {
+      received.push(ctx.values.password);
+    },
+  });
+
+  const ran = await runCommandLine(
+    ['--user', 'tester', '--level', '1', '--password', '-correct-horse'],
+    entry,
+    { output },
+  );
+
+  expect(ran).toBeTrue();
+  expect(received).toStrictEqual(['-correct-horse']);
+});
+
+test('it reports a negative level through the level parser', async () => {
+  const output = { error: mock((_text: string) => {}), log: mock((_text: string) => {}) };
+  const entry = define({ args: QA_SEED_ARGS, name: 'qa-seed', run: () => {} });
+
+  const ran = await runCommandLine(['--user', 'tester', '--level', '-2'], entry, { output });
+
+  expect(ran).toBeFalse();
+
+  expect(output.error).toHaveBeenCalledExactlyOnceWith(
+    'qa-seed: expected an integer of at least 1, got "-2"',
+  );
+});
 
 test('it seeds no runs, no two-factor and a generated password by default', () => {
   const resolved = resolveArgs(QA_SEED_ARGS, parseArgs(['--user', 'tester', '--level', '5']));
