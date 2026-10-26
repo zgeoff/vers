@@ -57,6 +57,19 @@ test.each<[string, Args, Array<string>, Record<string, unknown>]>([
     { every: 10, url: '-preview.example.test' },
   ],
   ['new', QA_CDP_ARGS.new, ['--context', '-CTX1'], { context: '-CTX1', url: 'about:blank' }],
+  ['monitor', QA_CDP_ARGS.monitor, ['--url', '--'], { every: 10, url: '--' }],
+  [
+    'nav',
+    QA_CDP_ARGS.nav,
+    ['--endpoint', '127.0.0.1:9333', '--', 'T1', '-x'],
+    { endpoint: '127.0.0.1:9333', target: 'T1', url: '-x' },
+  ],
+  [
+    'insert',
+    QA_CDP_ARGS.insert,
+    ['T1', '--', '#name', '--'],
+    { selector: '#name', target: 'T1', text: '--' },
+  ],
 ])('it reads the arguments of %s in command line %#', async (name, args, argv, expected) => {
   const received: Array<unknown> = [];
   const output = { error: mock((_text: string) => {}), log: mock((_text: string) => {}) };

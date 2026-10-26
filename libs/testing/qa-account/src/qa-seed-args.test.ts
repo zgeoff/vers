@@ -3,7 +3,7 @@ import { runCommandLine } from '@vers/scripts';
 import { define, parseArgs, resolveArgs } from 'gunshi';
 import { QA_SEED_ARGS } from './qa-seed-args';
 
-test('it reads a password that starts with -', async () => {
+test.each(['-correct-horse', '--'])('it reads the password %s', async (password) => {
   const received: Array<unknown> = [];
   const output = { error: mock((_text: string) => {}), log: mock((_text: string) => {}) };
 
@@ -16,13 +16,13 @@ test('it reads a password that starts with -', async () => {
   });
 
   const ran = await runCommandLine(
-    ['--user', 'tester', '--level', '1', '--password', '-correct-horse'],
+    ['--user', 'tester', '--level', '1', '--password', password],
     entry,
     { output },
   );
 
   expect(ran).toBeTrue();
-  expect(received).toStrictEqual(['-correct-horse']);
+  expect(received).toStrictEqual([password]);
 });
 
 test('it reports a negative level through the level parser', async () => {

@@ -78,77 +78,68 @@ export async function runCommandLine(
 
 const NEGATIVE_NUMBER = /^-\d*\.?\d+(?:e[+-]?\d+)?$/iu;
 
-// gunshi reads every word that starts with `-` as a flag, where commander took a negative number as
-// an argument and the word after a value flag as its value, so the flag joins its value and the
-// arguments from the first negative number on move after `--`.
+// gunshi reads every word that starts with `-` as a flag, where commander took a negative number
+// as an argument and the word after a value flag, `--` included, as its value, so each value flag
+// joins its value and the arguments from the first one gunshi would misread on move after `--`.
 function toGunshiArgv(
   argv: ReadonlyArray<string>,
   entry: SubCommandable,
   subCommands: Readonly<Record<string, SubCommandable>>,
 ): Array<string> {
-  const separator = argv.indexOf('--');
-  const head = separator === -1 ? argv : argv.slice(0, separator);
-  const tail = separator === -1 ? [] : argv.slice(separator + 1);
-  const commands = [entry, ...Object.values(subCommands)];
-
-  const routingArgs: Args = Object.fromEntries(
-    commands
-      .flatMap((command) => Object.entries(toArgs(command)))
-      .filter(([_key, schema]) => schema.type !== 'positional'),
-  );
-
-  const headOperand = findFirstOperand(head, routingArgs);
-  const tailCommand = headOperand === undefined ? pickCommandName(tail[0], subCommands) : undefined;
-  const routedHead = tailCommand === undefined ? head : [...head, tailCommand];
-  const routedTail = tailCommand === undefined ? tail : tail.slice(1);
-  const commandName = pickCommandName(headOperand, subCommands) ?? tailCommand;
-  const command = commandName === undefined ? entry : subCommands[commandName];
-  const commandArgs = toArgs(command);
+  const isTree = Object.keys(subCommands).length > 0;
   const kept: Array<string> = [];
   const moved: Array<string> = [];
-  let isCommandSeen = commandName === undefined;
+  let flagArgs = isTree ? collectRoutingArgs(entry, subCommands) : toArgs(entry);
+  let isCommandFound = !isTree;
+  let isAfterSeparator = false;
+  let pendingFlag: string | undefined;
 
-  for (let index = 0; index < routedHead.length; index++) {
-    const word = routedHead[index] ?? '';
-    const next = routedHead[index + 1];
-    const flagArgs = isCommandSeen ? commandArgs : routingArgs;
+  for (const word of argv) {
+    if (pendingFlag !== undefined) {
+      kept.push(`${pendingFlag}=${word}`);
 
-    if (isValueFlag(word, flagArgs) && next !== undefined) {
-      kept.push(`${word}=${next}`);
+      pendingFlag = undefined;
+    } else if (!isAfterSeparator && word === '--') {
+      isAfterSeparator = true;
+    } else if (!isAfterSeparator && isValueFlag(word, flagArgs)) {
+      pendingFlag = word;
+    } else if (!isAfterSeparator && isFlagWord(word)) {
+      kept.push(word);
+    } else if (!isCommandFound && word !== '') {
+      const commandName = pickCommandName(word, subCommands);
+      const command = commandName === undefined ? entry : subCommands[commandName];
 
-      index++;
-    } else if (!isCommandSeen && word === commandName) {
-      isCommandSeen = true;
+      isCommandFound = true;
+      flagArgs = toArgs(command);
 
       kept.push(word);
-    } else if (isFlagWord(word)) {
-      kept.push(word);
-    } else if (moved.length > 0 || NEGATIVE_NUMBER.test(word)) {
+    } else if (isAfterSeparator || moved.length > 0 || NEGATIVE_NUMBER.test(word)) {
       moved.push(word);
     } else {
       kept.push(word);
     }
   }
 
-  return moved.length === 0 && separator === -1 ? kept : [...kept, '--', ...moved, ...routedTail];
+  if (pendingFlag !== undefined) {
+    kept.push(pendingFlag);
+  }
+
+  return isAfterSeparator || moved.length > 0 ? [...kept, '--', ...moved] : kept;
+}
+
+function collectRoutingArgs(
+  entry: SubCommandable,
+  subCommands: Readonly<Record<string, SubCommandable>>,
+): Args {
+  return Object.fromEntries(
+    [entry, ...Object.values(subCommands)]
+      .flatMap((command) => Object.entries(toArgs(command)))
+      .filter(([_key, schema]) => schema.type !== 'positional'),
+  );
 }
 
 function toArgs(command: SubCommandable | undefined): Args {
   return command?.args ?? {};
-}
-
-function findFirstOperand(head: ReadonlyArray<string>, routingArgs: Args): string | undefined {
-  for (let index = 0; index < head.length; index++) {
-    const word = head[index] ?? '';
-
-    if (isValueFlag(word, routingArgs)) {
-      index++;
-    } else if (word !== '' && !isFlagWord(word)) {
-      return word;
-    }
-  }
-
-  return undefined;
 }
 
 function isValueFlag(word: string, args: Args): boolean {
