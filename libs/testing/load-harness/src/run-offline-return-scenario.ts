@@ -9,6 +9,7 @@ import {
 import { ActivityFailureAction, buildSimulationInput } from '@vers/idle-core';
 import { sql } from 'kysely';
 import invariant from 'tiny-invariant';
+import { buildPlannedReturnXP } from './build-planned-return-xp';
 import { buildPlayerProfiles } from './build-player-profiles';
 import { createConnectedPlayers } from './create-connected-players';
 import { createLoadSampler } from './create-load-sampler';
@@ -113,7 +114,16 @@ export async function runOfflineReturnScenario(
   const settleMs = await waitForSettlement(stack.db, options.settleTimeoutMs);
   const recording = await sampler.stop();
   const postgresLog = await stack.readLogs('postgres', windowStartedAt);
-  const reconciliation = await readReconciliation(stack.db, accounts, new Map());
+
+  const expectedXP = new Map<string, number>();
+
+  for (const plan of planned) {
+    for (const [activityID, xp] of plan.expectedXP) {
+      expectedXP.set(activityID, xp);
+    }
+  }
+
+  const reconciliation = await readReconciliation(stack.db, accounts, expectedXP);
 
   return {
     calls: callLog.calls,
@@ -154,6 +164,7 @@ async function writeClosedActivity(player: ConnectedPlayer): Promise<void> {
 
 interface PlannedReturn {
   readonly batches: ReturnType<typeof splitContinuationsIntoBatches>;
+  readonly expectedXP: ReadonlyMap<string, number>;
   readonly player: ConnectedPlayer;
   readonly progress: Awaited<ReturnType<ConnectedPlayer['client']['getLatestActivityProgress']>>;
 }
@@ -179,10 +190,13 @@ async function planReturn(player: ConnectedPlayer, offlineMs: number): Promise<P
     'a gap longer than one attempt plans at least one continuation',
   );
 
+  const continuations = plan.planned.map((entry) => entry.continuation);
+
   return {
-    batches: splitContinuationsIntoBatches(
-      plan.planned.map((entry) => entry.continuation),
-      MAX_CATCH_UP_BATCH_CHECKPOINTS,
+    batches: splitContinuationsIntoBatches(continuations, MAX_CATCH_UP_BATCH_CHECKPOINTS),
+    expectedXP: buildPlannedReturnXP(
+      { activityID: progress.activity.id, xp: progress.activity.buildSnapshot.xp },
+      continuations,
     ),
     player,
     progress,
