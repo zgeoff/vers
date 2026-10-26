@@ -1,14 +1,11 @@
 import { expect, onTestFinished, test } from 'bun:test';
+import { getLogger } from '@logtape/logtape';
 import { call } from '@orpc/server';
 import type { ErrorEvent } from '@sentry/bun';
 import type { EmailContract } from '@vers/contract-email';
 import { RESEND_ENDPOINT_URL, sentEmails, server } from '@vers/email/mocks';
 import type { JobQueue, JobState } from '@vers/jobs';
-import {
-  createLogger,
-  setSentryHandleForTesting,
-  startErrorReporting,
-} from '@vers/service-runtime';
+import { setSentryHandleForTesting, startErrorReporting } from '@vers/service-runtime';
 import { createAnonymousViewer, createDatabaseFromTemplate } from '@vers/service-test-utils/bun';
 import { withTraceContext } from '@vers/service-utils';
 import { buildRPCTestClient, waitFor } from '@vers/test-utils';
@@ -286,7 +283,7 @@ test('it reports a fire-and-forget drain failure carrying the active trace id', 
     disableDefaultIntegrations: true,
   });
 
-  const logger = createLogger({ level: 'fatal', name: 'test-email-router' });
+  const logger = getLogger(['test-email-router']);
 
   const stubQueue: JobQueue<EmailJobPayloads> = {
     drain: () => Promise.reject(new Error('drain failed')),
@@ -332,7 +329,7 @@ test('it re-drains a deadline job every few seconds until its job reaches a term
   const recordedDelays: Array<number> = [];
   let drainCalls = 0;
   let elapsedMs = 0;
-  const logger = createLogger({ level: 'fatal', name: 'test-email-router' });
+  const logger = getLogger(['test-email-router']);
 
   const stubQueue: JobQueue<EmailJobPayloads> = {
     drain: () => {
@@ -394,7 +391,7 @@ test('it re-drains a deadline job that another request drain failed, though its 
   const jobStates: Array<JobState> = ['retry', 'completed'];
   let drainCalls = 0;
   let elapsedMs = 0;
-  const logger = createLogger({ level: 'fatal', name: 'test-email-router' });
+  const logger = getLogger(['test-email-router']);
 
   const stubQueue: JobQueue<EmailJobPayloads> = {
     drain: () => {

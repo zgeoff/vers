@@ -29,12 +29,12 @@ try {
 
   await service.stopTelemetry();
 } catch (error) {
-  service.logger.error({ err: error }, 'telemetry stop failed after the scheduled drain');
+  service.logger.error('telemetry stop failed after the scheduled drain', { error });
 
   reportUnexpectedError(error);
 } finally {
   await service.stopDB().catch((error: unknown) => {
-    service.logger.error({ err: error }, 'database stop failed after the scheduled drain');
+    service.logger.error('database stop failed after the scheduled drain', { error });
 
     reportUnexpectedError(error);
   });
@@ -53,9 +53,9 @@ async function runScheduledDrain(): Promise<void> {
   try {
     const drained = await service.drain('schedule');
 
-    service.logger.info({ drained }, 'drained the replay queue on schedule');
+    service.logger.info('drained the replay queue on schedule', { drained });
   } catch (error) {
-    service.logger.error({ err: error }, 'scheduled replay drain failed');
+    service.logger.error('scheduled replay drain failed', { error });
 
     reportUnexpectedError(error);
 

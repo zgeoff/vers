@@ -1,10 +1,10 @@
-import { expect, spyOn, test } from 'bun:test';
+import { expect, test } from 'bun:test';
 import { buildContractMock } from '@vers/client-test-utils/orpc';
 import { verificationContract } from '@vers/contract-verification';
 import * as db from '@vers/mock-services/db';
+import { createInMemoryLogs } from '@vers/test-utils/bun';
 import { SERVICE_URLS } from '../../lib/rpc/service-urls';
 import { server } from '../../mocks/node';
-import { logger } from '../../server/logger';
 import { buildFormData } from '../../test-utils/build-form-data';
 import { createSignedInUser } from '../../test-utils/create-signed-in-user';
 import { withRequestContext } from '../../test-utils/with-request-context';
@@ -61,7 +61,7 @@ test('it flips the verification to 2fa and redirects to settings for a correct c
 test('it logs an unexpected code-check failure while reporting the generic form error', async () => {
   const signedIn = await createSignedInUser();
 
-  const errorSpy = spyOn(logger, 'error');
+  const logs = createInMemoryLogs({ lowestLevel: 'error' });
 
   const mockVerification = buildContractMock({
     baseUrl: SERVICE_URLS.verification,
@@ -84,8 +84,11 @@ test('it logs an unexpected code-check failure while reporting the generic form 
     status: 'invalid-fields',
   });
 
-  expect(errorSpy).toHaveBeenCalledExactlyOnceWith(
-    { err: expect.toSatisfy((value) => value instanceof Error) },
-    'two-factor setup verification failed',
-  );
+  expect(logs.records).toMatchObject([
+    {
+      level: 'error',
+      properties: { error: expect.any(Error) },
+      rawMessage: 'two-factor setup verification failed',
+    },
+  ]);
 });

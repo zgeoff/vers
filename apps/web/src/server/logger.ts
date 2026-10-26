@@ -1,11 +1,11 @@
-import { createLogger } from '@vers/service-utils';
-import { createOTLPLogStream } from '@vers/service-utils/otel';
+import { configureLogging, createOTLPLogSink } from '@vers/service-runtime/logging';
 import { env } from './env';
 
-export const logger = createLogger({
+export const logger = configureLogging({
+  category: 'app-web',
+  format: env.isProduction ? 'json' : 'pretty',
   level: env.LOGGING,
-  pretty: !env.isProduction,
   ...(env.OTEL_EXPORTER_OTLP_ENDPOINT !== undefined && {
-    stream: createOTLPLogStream({ serviceName: 'app-web' }),
+    sinks: [createOTLPLogSink({ serviceName: 'app-web' }).sink],
   }),
 });

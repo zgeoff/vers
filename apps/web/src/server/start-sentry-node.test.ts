@@ -1,7 +1,8 @@
 import { expect, onTestFinished, test } from 'bun:test';
+import type { LogRecord } from '@logtape/logtape';
 import * as Sentry from '@sentry/node';
 import type { ErrorEvent } from '@sentry/node';
-import { createLogger } from '@vers/service-utils';
+import { configureLogging } from '@vers/service-runtime/logging';
 import { startTraceExport } from '@vers/service-utils/otel';
 import { waitFor } from '@vers/test-utils';
 import { updateEnv } from '@vers/test-utils/bun';
@@ -98,7 +99,7 @@ test("it keeps one request's tag and user off a concurrent request's error event
 test('it puts the inbound trace id on the log lines, the error event, and the exported span when the trace exporter starts after it', async () => {
   const ctx = setupTest();
   const recorded: Array<Readonly<ErrorEvent>> = [];
-  const lines: Array<string> = [];
+  const records: Array<LogRecord> = [];
 
   startSentryNode('https://testpublickey@o0.ingest.sentry.io/1', {
     beforeSend: (event) => {
@@ -117,13 +118,15 @@ test('it puts the inbound trace id on the log lines, the error event, and the ex
 
   ctx.stack.defer(() => traceExport.stop());
 
-  const logger = createLogger({
+  const logger = configureLogging({
+    category: 'app-web-test',
+    format: 'json',
     level: 'info',
-    stream: {
-      write: (line: string) => {
-        lines.push(line);
+    sinks: [
+      (record) => {
+        records.push(record);
       },
-    },
+    ],
   });
 
   const handleRequest = withMiddleware([withRequestTrace, makeRequestLogger(logger)], () => {
@@ -148,10 +151,10 @@ test('it puts the inbound trace id on the log lines, the error event, and the ex
   });
 
   expect(response.headers.get('x-trace-id')).toBe('4bf92f3577b34da6a3ce929d0e0e4736');
-  expect(lines).toHaveLength(2);
+  expect(records).toHaveLength(2);
 
-  expect(lines).toSatisfyAll((line: string) =>
-    line.includes('"traceID":"4bf92f3577b34da6a3ce929d0e0e4736"'),
+  expect(records).toSatisfyAll(
+    (record: LogRecord) => record.properties['traceID'] === '4bf92f3577b34da6a3ce929d0e0e4736',
   );
 
   expect(recorded[0]?.tags?.['traceID']).toBe('4bf92f3577b34da6a3ce929d0e0e4736');

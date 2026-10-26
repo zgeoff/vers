@@ -56,7 +56,7 @@ export async function verifyOTPHandler(formData: FormData): Promise<Response | S
 
   if (verifyError) {
     if (!isDefinedError(verifyError)) {
-      logger.error({ err: verifyError }, 'otp verification failed');
+      logger.error('otp verification failed', { error: verifyError });
     }
 
     return submission.reply({ formErrors: ['Invalid or expired code'] });

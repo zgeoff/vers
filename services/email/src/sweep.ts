@@ -1,10 +1,10 @@
 import { createEmailClient } from '@vers/email';
 import {
-  createLogger,
   flushErrorReports,
   reportUnexpectedError,
   startErrorReporting,
 } from '@vers/service-runtime';
+import { configureLogging } from '@vers/service-runtime/logging';
 import { withRootSpan } from '@vers/service-utils';
 import * as z from 'zod';
 import { createEmailJobQueue } from './create-email-job-queue';
@@ -17,7 +17,12 @@ const SWEEP_ENV_SCHEMA = z.object({
 });
 
 const env = SWEEP_ENV_SCHEMA.parse(process.env);
-const logger = createLogger({ level: env.LOG_LEVEL, name: 'service-email-sweep' });
+
+const logger = configureLogging({
+  category: 'service-email-sweep',
+  format: 'json',
+  level: env.LOG_LEVEL,
+});
 
 // this process never calls createService, so error reporting needs its own start
 await startErrorReporting(env.SENTRY_DSN);
@@ -30,12 +35,12 @@ await withRootSpan('email.sweep', async () => {
       emailClient: createEmailClient({ apiKey: env.RESEND_API_KEY, from: env.EMAIL_FROM }),
       logger,
       onError: (error) => {
-        logger.error({ err: error }, 'email job queue error');
+        logger.error('email job queue error', { error });
 
         reportUnexpectedError(error);
       },
       onJobFailed: (error, context) => {
-        logger.error({ err: error, ...context }, 'email job failed');
+        logger.error('email job failed', { error, ...context });
 
         if (context.retriesExhausted) {
           reportUnexpectedError(error);
@@ -47,7 +52,7 @@ await withRootSpan('email.sweep', async () => {
 
     const result = await queue.drain();
 
-    logger.info(result, 'swept the email queue');
+    logger.info('swept the email queue', { ...result });
 
     await queue.stop();
 
@@ -61,7 +66,7 @@ await withRootSpan('email.sweep', async () => {
 
     process.exit(0);
   } catch (error) {
-    logger.error({ err: error }, 'email sweep failed');
+    logger.error('email sweep failed', { error });
 
     reportUnexpectedError(error);
 

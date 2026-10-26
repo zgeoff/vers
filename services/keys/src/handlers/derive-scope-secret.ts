@@ -39,14 +39,11 @@ export function deriveScopeSecret(
     root,
   });
 
-  opts.context.logger.info(
-    {
-      avatarID: opts.input.avatarID,
-      secretRef: opts.input.secretRef,
-      secretVersion: opts.input.secretVersion,
-    },
-    'scope secret derived',
-  );
+  opts.context.logger.info('scope secret derived', {
+    avatarID: opts.input.avatarID,
+    secretRef: opts.input.secretRef,
+    secretVersion: opts.input.secretVersion,
+  });
 
   return { secret: bytesToHex(secret) };
 }

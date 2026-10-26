@@ -27,7 +27,7 @@ async function handleSIGTERM(): Promise<void> {
     try {
       await stopGracefully();
     } catch (error) {
-      service.logger.error({ err: error }, 'graceful shutdown failed');
+      service.logger.error('graceful shutdown failed', { error });
 
       reportUnexpectedError(error);
 

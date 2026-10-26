@@ -4,7 +4,7 @@ export const baseEnvSchema = z.object({
   LOG_LEVEL: z
     .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace'])
     .default('info')
-    .describe('Minimum pino log level the service emits'),
+    .describe('Minimum log level the service emits'),
   OTEL_EXPORTER_OTLP_ENDPOINT: z
     .url()
     .optional()

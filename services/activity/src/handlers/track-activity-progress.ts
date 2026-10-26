@@ -343,10 +343,9 @@ async function checkAppendRace(
     .with({ kind: 'resubmit-settled' }, (resubmitted) => resubmitted)
     .exhaustive();
 
-  opts.context.logger.info(
-    { activityID: opts.input.activityID },
-    'settled batch re-acknowledged after a dropped ack',
-  );
+  opts.context.logger.info('settled batch re-acknowledged after a dropped ack', {
+    activityID: opts.input.activityID,
+  });
 
   return { appendedHead: settled.appendedHead };
 }

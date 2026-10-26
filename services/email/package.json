@@ -24,6 +24,7 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@logtape/logtape": "catalog:",
     "@opentelemetry/sdk-metrics": "catalog:",
     "@orpc/contract": "catalog:",
     "@sentry/bun": "catalog:",

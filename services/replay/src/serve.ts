@@ -31,7 +31,7 @@ async function runBootDrain(): Promise<void> {
     try {
       await service.drain('boot');
     } catch (error) {
-      service.logger.error({ err: error }, 'boot drain failed');
+      service.logger.error('boot drain failed', { error });
 
       reportUnexpectedError(error);
     }
@@ -44,7 +44,7 @@ async function handleSIGTERM(): Promise<void> {
     try {
       await stopGracefully();
     } catch (error) {
-      service.logger.error({ err: error }, 'graceful shutdown failed');
+      service.logger.error('graceful shutdown failed', { error });
 
       reportUnexpectedError(error);
 

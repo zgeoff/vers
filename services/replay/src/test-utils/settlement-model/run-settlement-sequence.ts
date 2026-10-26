@@ -1,4 +1,5 @@
 import { isDeepStrictEqual } from 'node:util';
+import { getLogger } from '@logtape/logtape';
 import { safe } from '@orpc/client';
 import { makeContentDocumentLoader } from '@vers/content-registry';
 import type { ActivityContract } from '@vers/contract-activity';
@@ -10,7 +11,6 @@ import { createServiceToken, createTestUser } from '@vers/service-test-utils/bun
 import { buildRPCTestClient } from '@vers/test-utils';
 import type { CryptoKey } from 'jose';
 import type { Kysely } from 'kysely';
-import pino from 'pino';
 import invariant from 'tiny-invariant';
 import { match } from 'ts-pattern';
 import { createReplayCache } from '../../replay/create-replay-cache';
@@ -103,7 +103,7 @@ export async function runSettlementSequence(
         db,
         keysServiceURL: resolveServiceURL('keys'),
         loadContentDocument: makeContentDocumentLoader(db),
-        logger: pino({ enabled: false }),
+        logger: getLogger(['test-replay']),
         privateKey: wiring.privateKey,
         simVersion: 'test-engine-hash',
       },

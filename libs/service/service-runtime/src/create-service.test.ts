@@ -1,4 +1,4 @@
-import { expect, onTestFinished, spyOn, test } from 'bun:test';
+import { expect, onTestFinished, test } from 'bun:test';
 import { setImmediate } from 'node:timers/promises';
 import { trace } from '@opentelemetry/api';
 import { implement } from '@orpc/server';
@@ -6,7 +6,7 @@ import { authedRoute, publicRoute } from '@vers/contract-base';
 import { createServiceToken, resolveTestServiceKeyPair } from '@vers/service-test-utils/bun';
 import { findSpanTraceContext } from '@vers/service-utils';
 import { buildRPCTestClient, collectConformanceCases, waitFor } from '@vers/test-utils';
-import { updateEnv } from '@vers/test-utils/bun';
+import { createInMemoryLogs, updateEnv } from '@vers/test-utils/bun';
 import { expectTypeOf } from 'expect-type';
 import invariant from 'tiny-invariant';
 import * as z from 'zod';
@@ -144,6 +144,56 @@ test('it resolves when OTEL_EXPORTER_OTLP_ENDPOINT is set, wiring the OTel plugi
       name: 'test-service',
     }),
   ).toResolve();
+});
+
+test('it ships a service log entry to the OTLP logs endpoint with its level, category and fields', async () => {
+  const keyPair = await resolveTestServiceKeyPair();
+
+  const logExports: Array<string> = [];
+
+  const handleExport = async (request: Request): Promise<Response> => {
+    if (new URL(request.url).pathname === '/v1/logs') {
+      const bytes = await request.arrayBuffer();
+
+      // protobuf writes each string field as its raw UTF-8 bytes, so a decoded body shows them
+      logExports.push(new TextDecoder().decode(bytes));
+    }
+
+    return Response.json({});
+  };
+
+  const collector = Bun.serve({ fetch: handleExport, port: 0 });
+
+  onTestFinished(async () => {
+    await collector.stop();
+  });
+
+  updateEnv('OTEL_EXPORTER_OTLP_ENDPOINT', `http://127.0.0.1:${collector.port}`);
+  updateEnv('SERVICE_AUTH_JWKS', keyPair.jwksJSON);
+
+  const ctx = setupTest();
+
+  const service = await createService({
+    allowedIssuers: ['app-web'],
+    createRouter: () => ctx.router,
+    envShape: {},
+    name: 'test-ledger',
+  });
+
+  service.logger.warn('ledger drift detected', { driftSource: 'nightly-recount' });
+
+  await service.stopTelemetry();
+
+  expect(logExports).toHaveLength(1);
+
+  expect(logExports[0]).toIncludeMultiple([
+    'ledger drift detected',
+    'warning',
+    'category',
+    'test-ledger',
+    'driftSource',
+    'nightly-recount',
+  ]);
 });
 
 test('it keeps the active OTel span bound to the request across awaits under the Elysia plugin', async () => {
@@ -663,7 +713,7 @@ test('it logs one structured request line when an /rpc call completes', async ()
     name: 'test-service',
   });
 
-  const infoSpy = spyOn(service.logger, 'info');
+  const logs = createInMemoryLogs({ lowestLevel: 'info' });
 
   const token = await createServiceToken({
     audience: 'test-service',
@@ -676,15 +726,19 @@ test('it logs one structured request line when an /rpc call completes', async ()
 
   await client.ping();
 
-  expect(infoSpy).toHaveBeenCalledExactlyOnceWith(
+  expect(logs.records).toMatchObject([
     {
-      durationMs: expect.toBeNumber(),
-      method: 'POST',
-      path: '/rpc/ping',
-      status: 200,
+      category: ['test-service'],
+      level: 'info',
+      properties: {
+        durationMs: expect.toBeNumber(),
+        method: 'POST',
+        path: '/rpc/ping',
+        status: 200,
+      },
+      rawMessage: 'request completed',
     },
-    'request completed',
-  );
+  ]);
 });
 
 test('it logs the rejection reason when the trust boundary rejects a request', async () => {
@@ -701,7 +755,7 @@ test('it logs the rejection reason when the trust boundary rejects a request', a
     name: 'test-service',
   });
 
-  const warnSpy = spyOn(service.logger, 'warn');
+  const logs = createInMemoryLogs({ lowestLevel: 'warning' });
 
   await service.app.handle(
     new Request('http://test.local/rpc/ping', {
@@ -710,16 +764,19 @@ test('it logs the rejection reason when the trust boundary rejects a request', a
     }),
   );
 
-  expect(warnSpy).toHaveBeenCalledExactlyOnceWith(
+  expect(logs.records).toMatchObject([
     {
-      durationMs: expect.toBeNumber(),
-      failure: 'invalid-service-token',
-      method: 'POST',
-      path: '/rpc/ping',
-      status: 401,
+      level: 'warning',
+      properties: {
+        durationMs: expect.toBeNumber(),
+        failure: 'invalid-service-token',
+        method: 'POST',
+        path: '/rpc/ping',
+        status: 401,
+      },
+      rawMessage: 'service token rejected',
     },
-    'service token rejected',
-  );
+  ]);
 });
 
 test('it logs a refused /rpc call at warn with the code, the status, and the data the contract declares', async () => {
@@ -736,7 +793,7 @@ test('it logs a refused /rpc call at warn with the code, the status, and the dat
     name: 'test-service',
   });
 
-  const warnSpy = spyOn(service.logger, 'warn');
+  const logs = createInMemoryLogs({ lowestLevel: 'warning' });
 
   const anonymousToken = await createServiceToken({
     audience: 'test-service',
@@ -753,10 +810,11 @@ test('it logs a refused /rpc call at warn with the code, the status, and the dat
 
   await expect(pending).toReject();
 
-  expect(warnSpy).toHaveBeenCalledWith(
-    { code: 'UNAUTHORIZED', data: { reason: 'missing-session' }, status: 401 },
-    'request refused',
-  );
+  expect(logs.records).toPartiallyContain({
+    level: 'warning',
+    properties: { code: 'UNAUTHORIZED', data: { reason: 'missing-session' }, status: 401 },
+    rawMessage: 'request refused',
+  });
 });
 
 test('it logs an undeclared 4xx at warn with its code and status and no data', async () => {
@@ -773,7 +831,7 @@ test('it logs an undeclared 4xx at warn with its code and status and no data', a
     name: 'test-service',
   });
 
-  const warnSpy = spyOn(service.logger, 'warn');
+  const logs = createInMemoryLogs({ lowestLevel: 'warning' });
 
   const token = await createServiceToken({
     audience: 'test-service',
@@ -789,7 +847,12 @@ test('it logs an undeclared 4xx at warn with its code and status and no data', a
   );
 
   expect(response.status).toBe(400);
-  expect(warnSpy).toHaveBeenCalledWith({ code: 'BAD_REQUEST', status: 400 }, 'request refused');
+
+  expect(logs.records).toPartiallyContain({
+    level: 'warning',
+    properties: { code: 'BAD_REQUEST', status: 400 },
+    rawMessage: 'request refused',
+  });
 });
 
 test('it logs a failed /rpc call at error severity', async () => {
@@ -806,7 +869,7 @@ test('it logs a failed /rpc call at error severity', async () => {
     name: 'test-service',
   });
 
-  const errorSpy = spyOn(service.logger, 'error');
+  const logs = createInMemoryLogs({ lowestLevel: 'error' });
 
   const token = await createServiceToken({
     audience: 'test-service',
@@ -823,15 +886,16 @@ test('it logs a failed /rpc call at error severity', async () => {
 
   await expect(pending).toReject();
 
-  expect(errorSpy).toHaveBeenCalledWith(
-    {
+  expect(logs.records).toPartiallyContain({
+    level: 'error',
+    properties: {
       durationMs: expect.toBeNumber(),
       method: 'POST',
       path: '/rpc/throwPlainError',
       status: 500,
     },
-    'request completed',
-  );
+    rawMessage: 'request completed',
+  });
 });
 
 test('it serves /health without logging a request line', async () => {
@@ -848,11 +912,11 @@ test('it serves /health without logging a request line', async () => {
     name: 'test-service',
   });
 
-  const infoSpy = spyOn(service.logger, 'info');
+  const logs = createInMemoryLogs({ lowestLevel: 'trace' });
 
   await service.app.handle(new Request('http://test.local/health'));
 
-  expect(infoSpy).not.toHaveBeenCalled();
+  expect(logs.records).toBeEmpty();
 });
 
 test('it logs a request past its slow-request threshold at warn with slow and thresholdMs', async () => {
@@ -870,7 +934,7 @@ test('it logs a request past its slow-request threshold at warn with slow and th
     slowRequestMs: 0,
   });
 
-  const warnSpy = spyOn(service.logger, 'warn');
+  const logs = createInMemoryLogs({ lowestLevel: 'warning' });
 
   const token = await createServiceToken({
     audience: 'test-service',
@@ -883,17 +947,20 @@ test('it logs a request past its slow-request threshold at warn with slow and th
 
   await client.ping();
 
-  expect(warnSpy).toHaveBeenCalledExactlyOnceWith(
+  expect(logs.records).toMatchObject([
     {
-      durationMs: expect.toBeNumber(),
-      method: 'POST',
-      path: '/rpc/ping',
-      slow: true,
-      status: 200,
-      thresholdMs: 0,
+      level: 'warning',
+      properties: {
+        durationMs: expect.toBeNumber(),
+        method: 'POST',
+        path: '/rpc/ping',
+        slow: true,
+        status: 200,
+        thresholdMs: 0,
+      },
+      rawMessage: 'request completed',
     },
-    'request completed',
-  );
+  ]);
 });
 
 test('it logs a request as overdue while it is still open past the overdue threshold', async () => {
@@ -911,7 +978,7 @@ test('it logs a request as overdue while it is still open past the overdue thres
     overdueRequestMs: 10,
   });
 
-  const warnSpy = spyOn(service.logger, 'warn');
+  const logs = createInMemoryLogs({ lowestLevel: 'warning' });
 
   const token = await createServiceToken({
     audience: 'test-service',
@@ -925,10 +992,13 @@ test('it logs a request as overdue while it is still open past the overdue thres
   const held = client.hold({ label: 'overdue' });
 
   await waitFor(() => {
-    expect(warnSpy).toHaveBeenCalledExactlyOnceWith(
-      { elapsedMs: 10, method: 'POST', path: '/rpc/hold' },
-      'request overdue',
-    );
+    expect(logs.records).toMatchObject([
+      {
+        level: 'warning',
+        properties: { elapsedMs: 10, method: 'POST', path: '/rpc/hold' },
+        rawMessage: 'request overdue',
+      },
+    ]);
   });
 
   ctx.releaseHold();
@@ -951,7 +1021,7 @@ test('it writes no overdue line for a request that finishes inside the threshold
     overdueRequestMs: 1000,
   });
 
-  const warnSpy = spyOn(service.logger, 'warn');
+  const logs = createInMemoryLogs({ lowestLevel: 'warning' });
 
   const token = await createServiceToken({
     audience: 'test-service',
@@ -964,7 +1034,7 @@ test('it writes no overdue line for a request that finishes inside the threshold
 
   await client.ping();
 
-  expect(warnSpy).not.toHaveBeenCalled();
+  expect(logs.records).toBeEmpty();
 });
 
 test('it keeps a slow 5xx at error severity without the slow flag', async () => {
@@ -982,7 +1052,7 @@ test('it keeps a slow 5xx at error severity without the slow flag', async () => 
     slowRequestMs: 0,
   });
 
-  const errorSpy = spyOn(service.logger, 'error');
+  const logs = createInMemoryLogs({ lowestLevel: 'error' });
 
   const token = await createServiceToken({
     audience: 'test-service',
@@ -995,15 +1065,16 @@ test('it keeps a slow 5xx at error severity without the slow flag', async () => 
 
   await expect(client.throwPlainError({})).toReject();
 
-  expect(errorSpy).toHaveBeenCalledWith(
-    {
+  expect(logs.records).toPartiallyContain({
+    level: 'error',
+    properties: {
       durationMs: expect.toBeNumber(),
       method: 'POST',
       path: '/rpc/throwPlainError',
       status: 500,
     },
-    'request completed',
-  );
+    rawMessage: 'request completed',
+  });
 });
 
 test('it keeps a request under its slow-request threshold at its status-derived level with no slow flag', async () => {
@@ -1021,7 +1092,7 @@ test('it keeps a request under its slow-request threshold at its status-derived 
     slowRequestMs: 1000,
   });
 
-  const infoSpy = spyOn(service.logger, 'info');
+  const logs = createInMemoryLogs({ lowestLevel: 'info' });
 
   const token = await createServiceToken({
     audience: 'test-service',
@@ -1034,15 +1105,18 @@ test('it keeps a request under its slow-request threshold at its status-derived 
 
   await client.ping();
 
-  expect(infoSpy).toHaveBeenCalledExactlyOnceWith(
+  expect(logs.records).toMatchObject([
     {
-      durationMs: expect.toBeNumber(),
-      method: 'POST',
-      path: '/rpc/ping',
-      status: 200,
+      level: 'info',
+      properties: {
+        durationMs: expect.toBeNumber(),
+        method: 'POST',
+        path: '/rpc/ping',
+        status: 200,
+      },
+      rawMessage: 'request completed',
     },
-    'request completed',
-  );
+  ]);
 });
 
 test('it honors a per-path slow-request override over the default threshold', async () => {
@@ -1061,7 +1135,7 @@ test('it honors a per-path slow-request override over the default threshold', as
     slowRequestOverridesMs: { '/rpc/ping': 0 },
   });
 
-  const warnSpy = spyOn(service.logger, 'warn');
+  const logs = createInMemoryLogs({ lowestLevel: 'warning' });
 
   const token = await createServiceToken({
     audience: 'test-service',
@@ -1074,17 +1148,20 @@ test('it honors a per-path slow-request override over the default threshold', as
 
   await client.ping();
 
-  expect(warnSpy).toHaveBeenCalledExactlyOnceWith(
+  expect(logs.records).toMatchObject([
     {
-      durationMs: expect.toBeNumber(),
-      method: 'POST',
-      path: '/rpc/ping',
-      slow: true,
-      status: 200,
-      thresholdMs: 0,
+      level: 'warning',
+      properties: {
+        durationMs: expect.toBeNumber(),
+        method: 'POST',
+        path: '/rpc/ping',
+        slow: true,
+        status: 200,
+        thresholdMs: 0,
+      },
+      rawMessage: 'request completed',
     },
-    'request completed',
-  );
+  ]);
 });
 
 test('it serves a call from a permitted issuer', async () => {

@@ -1,7 +1,4 @@
-export { buildLogRecord } from './build-log-record';
 export { readTelemetryResource } from './read-telemetry-resource';
-export type { OTLPLogStream } from './create-otlp-log-stream';
-export { createOTLPLogStream } from './create-otlp-log-stream';
 export type { MetricsExport } from './start-metrics-export';
 export { startMetricsExport } from './start-metrics-export';
 export type { TraceExport } from './start-trace-export';

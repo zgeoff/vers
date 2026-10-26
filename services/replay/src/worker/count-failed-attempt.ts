@@ -15,10 +15,9 @@ export async function countFailedAttempt(
   });
 
   if (result?.quarantined === true) {
-    deps.logger.error(
-      { activityID: segment.activity.id },
-      'replay attempts exhausted; activity quarantined',
-    );
+    deps.logger.error('replay attempts exhausted; activity quarantined', {
+      activityID: segment.activity.id,
+    });
 
     recordIterationFailure('quarantined');
 

@@ -14,17 +14,14 @@ export async function scheduleReplayRetry(
     verifiedHead: segment.verifiedHead,
   });
 
-  context.deps.logger.warn(
-    {
-      activityID: segment.activity.id,
-      appendedHead: segment.activity.appendedHead,
-      reason,
-      simVersion: segment.activity.simVersion,
-      verifiedHead: segment.verifiedHead,
-      ...backoff,
-    },
-    'replay dependency unavailable; backing the activity off',
-  );
+  context.deps.logger.warn('replay dependency unavailable; backing the activity off', {
+    activityID: segment.activity.id,
+    appendedHead: segment.activity.appendedHead,
+    reason,
+    simVersion: segment.activity.simVersion,
+    verifiedHead: segment.verifiedHead,
+    ...backoff,
+  });
 
   recordBackoff(reason);
 

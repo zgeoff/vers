@@ -6,5 +6,5 @@ export function handleUnsealError(reason: UnsealErrorReason, error: unknown): vo
     return;
   }
 
-  logger.warn({ err: error, reason }, 'session cookie rejected');
+  logger.warn('session cookie rejected', { error, reason });
 }
