@@ -90,8 +90,8 @@ Open a reference when the doc is of its kind.
 
 - [Architecture docs](./references/architecture-docs.md): a doc under `docs/architecture/`, which
   gives the reader a working model of one subsystem.
-- [The docs/ tree](./references/docs-tree.md): where each kind of doc lives, the line caps, and what
-  stays out of `docs/`.
+- [The docs/ tree](./references/docs-tree.md): where each kind of doc lives, the line caps, what
+  stays out of `docs/`, and the shape of a spike.
 - [READMEs](./references/readmes.md): the sections and line limits of a package, repo, or folder
   README.
 
@@ -526,14 +526,15 @@ passes with this guide as its only reference.
    bash .claude/skills/docs-writing/scripts/check-links.sh
    ```
 
-   `check-length.sh` prints each README against its limit and each docs/ file over its cap, then
-   runs `check-prose.sh` over the READMEs, the Markdown under `docs/`, and each skill's Markdown. It
-   fails on a README over its limit or on a prose violation. Pass `--package <readme>` for a package
-   README whose package.json is private. `check-links.sh` checks every relative link and anchor in
-   the READMEs, `docs/`, and the skills, and fails on a broken one. It skips the docs-writing,
-   project-docs-writing, and skill-writing skills, whose examples link to placeholder targets. Pass
-   paths to check other Markdown. Both skip a file git marks `linguist-vendored`. To check other
-   prose, such as AGENTS.md, run `check-prose.sh <path>...` on it.
+   `check-length.sh` prints each README against the limit its path sets and each docs/ file over its
+   cap, then runs `check-prose.sh` over the READMEs, each spike's `results.md`, the Markdown under
+   `docs/`, and each skill's Markdown. It fails on a README over its limit or on a prose violation,
+   and its last line counts the READMEs and those over their limit. `check-links.sh` checks every
+   relative link and anchor in the READMEs, the `results.md` files, `docs/`, and the skills, and
+   fails on a broken one. It skips the docs-writing, project-docs-writing, and skill-writing skills,
+   whose examples link to placeholder targets. Pass paths to check other Markdown. Both skip a file
+   git marks `linguist-vendored`. To check other prose, such as AGENTS.md, run
+   `check-prose.sh <path>...` on it.
 
    `check-prose.sh` fails on traces of the work session, the banned words a grep can catch, values
    with units under `docs/architecture/`, formatting faults, untagged code blocks, and a paragraph
