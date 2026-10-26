@@ -21,7 +21,7 @@
     "@vers/sim-registry": "workspace:*",
     "@zgeoff/dbhub": "catalog:",
     "chrome-launcher": "catalog:",
-    "commander": "catalog:",
+    "gunshi": "catalog:",
     "kysely": "catalog:",
     "lighthouse": "catalog:",
     "ora": "catalog:",

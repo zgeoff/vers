@@ -4,7 +4,7 @@ import type { DB } from '@vers/db';
 import { readLatestRelease, recordRelease } from '@vers/release-registry';
 import type { ReleaseRow } from '@vers/release-registry';
 import { $ } from 'bun';
-import { Command } from 'commander';
+import { define } from 'gunshi';
 import type { Kysely } from 'kysely';
 import { applyBuild } from '../deploy/apply-build';
 import { applyDeploy } from '../deploy/apply-deploy';
@@ -14,6 +14,7 @@ import { applyScheduledMachineActions } from '../deploy/apply-scheduled-machine-
 import { applySimVersionActions } from '../deploy/apply-sim-version-actions';
 import { buildImageRef } from '../deploy/build-image-ref';
 import { buildProviderAppName } from '../deploy/build-provider-app-name';
+import { DEPLOY_APP_ARGS } from '../deploy/deploy-args';
 import { DEPLOY_BOUNDS } from '../deploy/deploy-bounds';
 import { findStaleReason } from '../deploy/find-stale-reason';
 import { formatMachineTable } from '../deploy/format-machine-table';
@@ -36,89 +37,89 @@ import { runVerify } from '../deploy/run-verify';
 import type { DeployManifest, DeployTarget } from '../deploy/types';
 import { waitForDeployedSHA } from '../deploy/wait-for-deployed-sha';
 import { requireEnvVar } from '../utils/require-env-var';
+import { runCommandLine } from '../utils/run-command-line';
 import { withDeadline } from '../utils/with-deadline';
 
-interface DeployCommandOptions {
-  readonly app: string;
-}
+const deployCommand = define({
+  name: 'deploy',
+  description: 'deploy an app when its fleet is stale relative to HEAD',
+  args: DEPLOY_APP_ARGS,
+  run: async (ctx) => {
+    await runDeploy(ctx.values.app);
+  },
+});
 
-const program = new Command()
-  .name('deploy')
-  .description('Deploy and verify the Fly fleet against the repo-root deploy manifest');
+const buildCommand = define({
+  name: 'build',
+  description: 'build and push an app image when its fleet is stale relative to HEAD',
+  args: DEPLOY_APP_ARGS,
+  run: async (ctx) => {
+    await runBuild(ctx.values.app);
+  },
+});
 
-program
-  .command('deploy')
-  .description('deploy an app when its fleet is stale relative to HEAD')
-  .requiredOption('--app <name>', 'fly app name from the manifest')
-  .action(async (options: DeployCommandOptions) => {
-    await runDeploy(options.app);
-  });
+const cutoverCommand = define({
+  name: 'cutover',
+  description: 'cut a stale app over to the image its build phase pushed for HEAD',
+  args: DEPLOY_APP_ARGS,
+  run: async (ctx) => {
+    await runCutover(ctx.values.app);
+  },
+});
 
-program
-  .command('build')
-  .description('build and push an app image when its fleet is stale relative to HEAD')
-  .requiredOption('--app <name>', 'fly app name from the manifest')
-  .action(async (options: DeployCommandOptions) => {
-    await runBuild(options.app);
-  });
-
-program
-  .command('cutover')
-  .description('cut a stale app over to the image its build phase pushed for HEAD')
-  .requiredOption('--app <name>', 'fly app name from the manifest')
-  .action(async (options: DeployCommandOptions) => {
-    await runCutover(options.app);
-  });
-
-program
-  .command('images')
-  .description("print each buildable app's deployable image ref for HEAD as JSON")
-  .action(async () => {
+const imagesCommand = define({
+  name: 'images',
+  description: "print each buildable app's deployable image ref for HEAD as JSON",
+  run: async () => {
     await runImages();
-  });
+  },
+});
 
-program
-  .command('verify')
-  .description('assert every app is online and current; any finding fails the run')
-  .action(async () => {
+const verifyCommand = define({
+  name: 'verify',
+  description: 'assert every app is online and current; any finding fails the run',
+  run: async () => {
     await runVerify();
-  });
+  },
+});
 
-program
-  .command('preflight')
-  .description(
+const preflightCommand = define({
+  name: 'preflight',
+  description:
     "assert every app's required env keys are covered by its fly env, secrets, or baked build args, and that the active engine covers the current content",
-  )
-  .action(async () => {
+  run: async () => {
     await runPreflight();
-  });
+  },
+});
 
-program
-  .command('list')
-  .description('print the manifest app names as JSON')
-  .action(async () => {
+const listCommand = define({
+  name: 'list',
+  description: 'print the manifest app names as JSON',
+  run: async () => {
     const manifest = await loadDeployManifest();
 
     console.log(JSON.stringify(manifest.apps.map((target) => target.app)));
-  });
+  },
+});
 
-program
-  .command('engine-hash')
-  .description('print the canonical sim engine bundle hash')
-  .action(async () => {
+const engineHashCommand = define({
+  name: 'engine-hash',
+  description: 'print the canonical sim engine bundle hash',
+  run: async () => {
     const hash = await loadEngineHash();
 
     console.log(hash);
-  });
+  },
+});
 
-program
-  .command('sweep-replay')
-  .description(
+const sweepReplayCommand = define({
+  name: 'sweep-replay',
+  description:
     'tombstone expired sim versions, destroy their provider apps, and unpark newly-registered activities',
-  )
-  .action(async () => {
+  run: async () => {
     await runSweepReplay();
-  });
+  },
+});
 
 async function runDeploy(app: string): Promise<void> {
   const staleness = await checkTargetStaleness(app);
@@ -503,7 +504,29 @@ async function readHeadSHA(): Promise<string> {
   return sha.trim();
 }
 
-await program.parseAsync();
+const entry = define({
+  name: 'deploy',
+  description: 'Deploy and verify the Fly fleet against the repo-root deploy manifest',
+});
+
+const ran = await runCommandLine(process.argv.slice(2), entry, {
+  output: console,
+  subCommands: {
+    build: buildCommand,
+    cutover: cutoverCommand,
+    deploy: deployCommand,
+    'engine-hash': engineHashCommand,
+    images: imagesCommand,
+    list: listCommand,
+    preflight: preflightCommand,
+    'sweep-replay': sweepReplayCommand,
+    verify: verifyCommand,
+  },
+});
+
+if (!ran) {
+  process.exitCode = 1;
+}
 
 // a library's leftover child process or socket keeps Bun alive after the command ends, and on CI
 // that holds the deploy job open until its timeout cancels it
