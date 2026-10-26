@@ -39,11 +39,14 @@ export async function sendRPCRequest(
     .filter((segment) => segment !== '');
 
   const hasBody = request.method !== 'GET' && request.method !== 'HEAD';
-  let body: Blob | undefined;
+  let body: ArrayBuffer | undefined;
 
   if (hasBody) {
     try {
-      body = await request.blob();
+      // Node 24's fetch streams a Blob body through a native reader that it never releases, and
+      // the reader keeps the request's async context alive: a load run lost about 30 KB of heap
+      // per proxied call until app-web died at its heap limit. A byte body sends without a reader.
+      body = await request.arrayBuffer();
     } catch (error) {
       // a caller that aborted mid-flight leaves its body stream unreadable — nothing is waiting
       // for this response, so answer with 499 (client closed request) instead of letting the
