@@ -1,22 +1,51 @@
 import invariant from 'tiny-invariant';
-import type { OPReference } from './types';
+import type { CollectedOPReferences, OPReference } from './types';
 
-// a segment stops at a quote, whitespace or a shell or template delimiter, so a reference that
-// interpolates its item (`op://vers/${item}/dsn`) never matches as a literal one
-const OP_REFERENCE_PATTERN =
-  /op:\/\/(?<vault>[\w.-]+)\/(?<item>[\w.-]+)\/(?<field>[\w.-]+)(?=[\s'"`)]|$)/gmu;
+// a reference ends at a quote, a backtick, a closing parenthesis or the end of its line; names
+// may hold spaces, and a field may sit under a section (`op://vault/item/section/field`)
+const OP_REFERENCE_PATTERN = /op:\/\/(?<path>[^\s'"`)][^'"`)\n]*)/gu;
 
-export function collectOPReferences(text: string): Array<OPReference> {
-  return Array.from(text.matchAll(OP_REFERENCE_PATTERN), (found) => {
-    const segments = found.groups;
+export function collectOPReferences(text: string): CollectedOPReferences {
+  const references: Array<OPReference> = [];
+  const unparsed: Array<string> = [];
 
-    invariant(
-      segments?.['vault'] !== undefined &&
-        segments['item'] !== undefined &&
-        segments['field'] !== undefined,
-      'the pattern captures three named segments',
-    );
+  for (const found of text.matchAll(OP_REFERENCE_PATTERN)) {
+    const path = found.groups?.['path'];
 
-    return { field: segments['field'], item: segments['item'], vault: segments['vault'] };
-  });
+    invariant(path !== undefined, 'the pattern captures a named path');
+
+    const reference = parseReferencePath(path);
+
+    if (reference === null) {
+      unparsed.push(found[0]);
+    } else {
+      references.push(reference);
+    }
+  }
+
+  return { references, unparsed };
+}
+
+function parseReferencePath(path: string): OPReference | null {
+  const [location = ''] = path.trimEnd().split('?');
+
+  if (location.includes('$') || location.includes('{')) {
+    return null;
+  }
+
+  const [vault, item, ...fieldSegments] = location.split('/');
+
+  if (
+    vault === undefined ||
+    vault === '' ||
+    item === undefined ||
+    item === '' ||
+    fieldSegments.length === 0 ||
+    fieldSegments.length > 2 ||
+    fieldSegments.includes('')
+  ) {
+    return null;
+  }
+
+  return { field: fieldSegments.join('/'), item, vault };
 }

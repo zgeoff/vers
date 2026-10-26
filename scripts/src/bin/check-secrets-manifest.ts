@@ -24,11 +24,20 @@ if (!parsedManifest.success) {
 const trackedList = await $`git ls-files -z -- ${READER_PATHS}`.text();
 
 const sources: Array<OPReferenceSource> = [];
+let failed = false;
 
 for (const path of trackedList.split('\0').filter((entry) => entry !== '')) {
   const text = await readFile(path, 'utf8');
 
-  sources.push({ path, references: collectOPReferences(text) });
+  const collected = collectOPReferences(text);
+
+  for (const reference of collected.unparsed) {
+    console.error(`✗ ${path} holds ${reference}, which is not a literal op://vault/item/field`);
+
+    failed = true;
+  }
+
+  sources.push({ path, references: collected.references });
 }
 
 const gaps = collectManifestGaps(parsedManifest.data, sources);
@@ -43,7 +52,7 @@ for (const reference of gaps.unread) {
   console.error(`✗ ${MANIFEST_PATH} lists ${formatOPReference(reference)}, which nothing reads`);
 }
 
-if (gaps.unlisted.length > 0 || gaps.unread.length > 0) {
+if (failed || gaps.unlisted.length > 0 || gaps.unread.length > 0) {
   console.error(`list in ${MANIFEST_PATH} each 1Password reference that ${READERS} read`);
 
   process.exitCode = 1;

@@ -4,6 +4,11 @@ export interface OPReference {
   readonly vault: string;
 }
 
+export interface CollectedOPReferences {
+  readonly references: ReadonlyArray<OPReference>;
+  readonly unparsed: ReadonlyArray<string>;
+}
+
 export interface OPReferenceSource {
   readonly path: string;
   readonly references: ReadonlyArray<OPReference>;
