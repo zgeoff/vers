@@ -5,6 +5,7 @@ export { createTokenVerifier } from './utils/create-token-verifier';
 export { findTokenFromHeader } from './utils/find-token-from-header';
 export { isPGError } from './utils/is-pg-error';
 export { isUniqueConstraintError } from './utils/is-unique-constraint-error';
+export { runDrainLoop } from './utils/run-drain-loop';
 export { findSpanTraceContext } from './trace/find-span-trace-context';
 export { findTraceContext } from './trace/find-trace-context';
 export { withRootSpan } from './trace/with-root-span';

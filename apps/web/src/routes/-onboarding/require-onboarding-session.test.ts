@@ -1,10 +1,13 @@
 import { expect, test } from 'bun:test';
+import { VERIFY_SESSION_KEYS } from '../../lib/auth/verify-session-keys';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { requireOnboardingSession } from './require-onboarding-session';
 
 test('it returns the pending onboarding email', async () => {
   const outcome = await withRequestContext(
-    { cookies: { en_verification: { 'onboarding#email': 'pending@vers.test' } } },
+    {
+      cookies: { en_verification: { [VERIFY_SESSION_KEYS.onboarding.email]: 'pending@vers.test' } },
+    },
     () => requireOnboardingSession(),
   );
 
@@ -32,7 +35,7 @@ test('it redirects home for a signed-in caller before reading the onboarding ses
     {
       cookies: {
         en_session: { sessionID: 'session-1' },
-        en_verification: { 'onboarding#email': 'pending@vers.test' },
+        en_verification: { [VERIFY_SESSION_KEYS.onboarding.email]: 'pending@vers.test' },
       },
     },
     () => requireOnboardingSession(),

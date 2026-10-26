@@ -1,6 +1,7 @@
 import { expect, mock, test } from 'bun:test';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { VERIFY_SESSION_KEYS } from '../../lib/auth/verify-session-keys';
 import { buildDeferred } from '../../test-utils/build-deferred';
 import { renderWithRouter } from '../../test-utils/render-with-router';
 import { withRequestContext } from '../../test-utils/with-request-context';
@@ -8,7 +9,11 @@ import { OnboardingForm } from './onboarding-form';
 
 test('it renders every field the account-creation form collects', async () => {
   await withRequestContext(
-    { cookies: { en_verification: { 'onboarding#email': 'onboarding-form@vers.test' } } },
+    {
+      cookies: {
+        en_verification: { [VERIFY_SESSION_KEYS.onboarding.email]: 'onboarding-form@vers.test' },
+      },
+    },
     async () => {
       renderWithRouter(<OnboardingForm honeypotValidFrom="1700000000000" />);
 
@@ -26,7 +31,11 @@ test('it renders every field the account-creation form collects', async () => {
 
 test('it shows the error for the username field', async () => {
   await withRequestContext(
-    { cookies: { en_verification: { 'onboarding#email': 'onboarding-form@vers.test' } } },
+    {
+      cookies: {
+        en_verification: { [VERIFY_SESSION_KEYS.onboarding.email]: 'onboarding-form@vers.test' },
+      },
+    },
     async () => {
       renderWithRouter(
         <OnboardingForm
@@ -47,7 +56,11 @@ test('it shows the error for the username field', async () => {
 
 test('it shows the error for the confirm-password field', async () => {
   await withRequestContext(
-    { cookies: { en_verification: { 'onboarding#email': 'onboarding-form@vers.test' } } },
+    {
+      cookies: {
+        en_verification: { [VERIFY_SESSION_KEYS.onboarding.email]: 'onboarding-form@vers.test' },
+      },
+    },
     async () => {
       renderWithRouter(
         <OnboardingForm
@@ -67,7 +80,13 @@ test('it shows a generic failure message when the server rejects the submission'
   const user = userEvent.setup();
 
   await withRequestContext(
-    { cookies: { en_verification: { 'onboarding#email': 'onboarding-form-honeypot@vers.test' } } },
+    {
+      cookies: {
+        en_verification: {
+          [VERIFY_SESSION_KEYS.onboarding.email]: 'onboarding-form-honeypot@vers.test',
+        },
+      },
+    },
     async () => {
       renderWithRouter(
         <OnboardingForm
@@ -98,7 +117,13 @@ test('it disables the submit button while the account-creation request is pendin
   const gatedAction = mock(() => deferred.promise);
 
   await withRequestContext(
-    { cookies: { en_verification: { 'onboarding#email': 'onboarding-form-pending@vers.test' } } },
+    {
+      cookies: {
+        en_verification: {
+          [VERIFY_SESSION_KEYS.onboarding.email]: 'onboarding-form-pending@vers.test',
+        },
+      },
+    },
     async () => {
       renderWithRouter(<OnboardingForm action={gatedAction} honeypotValidFrom="1700000000000" />);
 

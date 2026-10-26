@@ -1,14 +1,15 @@
 import { z } from 'zod';
 import type { VerifySessionData, VerifySessionKey } from './types';
+import { VERIFY_SESSION_KEYS } from './verify-session-keys';
 
 const verifySessionDataSchema = z.object({
-  'login2FA#sessionID': z.string().optional(),
-  'login2FA#target': z.string().optional(),
-  'loginLogout#email': z.string().optional(),
-  'loginLogout#redirect': z.string().optional(),
-  'loginLogout#sessionID': z.string().optional(),
-  'loginLogout#userID': z.string().optional(),
-  'onboarding#email': z.string().optional(),
+  [VERIFY_SESSION_KEYS.login2FA.sessionID]: z.string().optional(),
+  [VERIFY_SESSION_KEYS.login2FA.target]: z.string().optional(),
+  [VERIFY_SESSION_KEYS.loginLogout.email]: z.string().optional(),
+  [VERIFY_SESSION_KEYS.loginLogout.redirect]: z.string().optional(),
+  [VERIFY_SESSION_KEYS.loginLogout.sessionID]: z.string().optional(),
+  [VERIFY_SESSION_KEYS.loginLogout.userID]: z.string().optional(),
+  [VERIFY_SESSION_KEYS.onboarding.email]: z.string().optional(),
 } satisfies Record<VerifySessionKey, z.ZodType>);
 
 export function parseVerifySessionData(value: unknown): VerifySessionData {

@@ -1,6 +1,7 @@
 import { expect, test } from 'bun:test';
 import { createId } from '@paralleldrive/cuid2';
 import * as db from '@vers/mock-services/db';
+import { VERIFY_SESSION_KEYS } from '../../lib/auth/verify-session-keys';
 import { buildFormData } from '../../test-utils/build-form-data';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { runForceLogout } from './run-force-logout';
@@ -10,8 +11,8 @@ test('it clears the pending session and redirects home on cancel', async () => {
     {
       cookies: {
         en_verification: {
-          'loginLogout#email': 'x@vers.test',
-          'loginLogout#sessionID': 'session-1',
+          [VERIFY_SESSION_KEYS.loginLogout.email]: 'x@vers.test',
+          [VERIFY_SESSION_KEYS.loginLogout.sessionID]: 'session-1',
         },
       },
     },
@@ -48,9 +49,9 @@ test('it signs out every other live session and completes sign-in on confirm', a
     {
       cookies: {
         en_verification: {
-          'loginLogout#email': 'force-logout-confirm@vers.test',
-          'loginLogout#sessionID': pendingSessionID,
-          'loginLogout#userID': userID,
+          [VERIFY_SESSION_KEYS.loginLogout.email]: 'force-logout-confirm@vers.test',
+          [VERIFY_SESSION_KEYS.loginLogout.sessionID]: pendingSessionID,
+          [VERIFY_SESSION_KEYS.loginLogout.userID]: userID,
         },
       },
     },
@@ -86,10 +87,10 @@ test('it honors a stashed redirect target on confirm', async () => {
     {
       cookies: {
         en_verification: {
-          'loginLogout#email': 'force-logout-redirect@vers.test',
-          'loginLogout#redirect': '/nexus',
-          'loginLogout#sessionID': pendingSessionID,
-          'loginLogout#userID': userID,
+          [VERIFY_SESSION_KEYS.loginLogout.email]: 'force-logout-redirect@vers.test',
+          [VERIFY_SESSION_KEYS.loginLogout.redirect]: '/nexus',
+          [VERIFY_SESSION_KEYS.loginLogout.sessionID]: pendingSessionID,
+          [VERIFY_SESSION_KEYS.loginLogout.userID]: userID,
         },
       },
     },
