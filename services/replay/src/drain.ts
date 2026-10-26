@@ -28,6 +28,8 @@ await service.stop().catch((error: unknown) => {
   service.logger.error('teardown failed after the scheduled drain', { error });
 
   reportUnexpectedError(error);
+
+  process.exitCode = 1;
 });
 
 const flushed = await flushErrorReports();
