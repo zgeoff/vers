@@ -167,6 +167,46 @@ const replayPokeFailedMonitor = new axiom.Monitor(
   { provider: axiomProvider },
 );
 
+const replayParkedMonitor = new axiom.Monitor(
+  'vers-replay-parked',
+  {
+    name: 'vers replay parked',
+    type: 'Threshold',
+    description:
+      "service-replay parked an activity, grouped by reason: version-park for an unknown or retention-expired sim version, elapsed-time for a replay that tripped its duration cap. A parked activity halts its avatar's settlement order until an operator releases it.",
+    mplQuery:
+      '`vers-metrics`:`vers.verification.rejections` | where reason == "version-park" or reason == "elapsed-time" | align to 5m using max | group by reason using max | map increase',
+    intervalMinutes: 5,
+    rangeMinutes: 15,
+    operator: 'AboveOrEqual',
+    threshold: 1,
+    triggerFromNRuns: 1,
+    notifyByGroup: true,
+    notifierIds: [alarmsNotifier.id],
+  },
+  { provider: axiomProvider },
+);
+
+const replayQuarantinedMonitor = new axiom.Monitor(
+  'vers-replay-quarantined',
+  {
+    name: 'vers replay quarantined',
+    type: 'Threshold',
+    description:
+      "service-replay quarantined an activity, grouped by outcome: its divergence failed to reproduce on every allowed attempt. A quarantined activity halts its avatar's settlement order and blocks new starts in its chain scope until an operator releases it.",
+    mplQuery:
+      '`vers-metrics`:`vers.replay.iteration_failures` | where outcome == "quarantined" | align to 5m using max | group by outcome using max | map increase',
+    intervalMinutes: 5,
+    rangeMinutes: 15,
+    operator: 'AboveOrEqual',
+    threshold: 1,
+    triggerFromNRuns: 1,
+    notifyByGroup: true,
+    notifierIds: [alarmsNotifier.id],
+  },
+  { provider: axiomProvider },
+);
+
 const activityRefusalsMonitor = new axiom.Monitor(
   'vers-activity-refusals',
   {
@@ -266,6 +306,8 @@ export const serverErrorsMonitorName = serverErrorsMonitor.name;
 export const slowRequestsMonitorName = slowRequestsMonitor.name;
 export const overdueRequestsMonitorName = overdueRequestsMonitor.name;
 export const replayPokeFailedMonitorName = replayPokeFailedMonitor.name;
+export const replayParkedMonitorName = replayParkedMonitor.name;
+export const replayQuarantinedMonitorName = replayQuarantinedMonitor.name;
 export const activityRefusalsMonitorName = activityRefusalsMonitor.name;
 export const baselineDashboardUID = baselineDashboard.uid;
 
