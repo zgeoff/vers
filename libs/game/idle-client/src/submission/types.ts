@@ -10,6 +10,7 @@ import type {
 import type { ActivityFailureAction } from '@vers/idle-core';
 import type { DBSchema } from 'idb';
 import type { readQueuedCheckpoints } from './read-queued-checkpoints';
+import type { writeNodeAnchor } from './write-node-anchor';
 import type { writeQueuedCheckpoint } from './write-queued-checkpoint';
 
 export interface QueuedCheckpoint extends CheckpointBatchEntry {
@@ -35,6 +36,12 @@ export interface LastStartedActivityPreference {
 export interface NodeSeedAnchor {
   readonly chainIndex: number;
   readonly nextSeed: string;
+}
+
+export interface NodeAnchorAdvance {
+  readonly anchor: NodeSeedAnchor;
+  readonly avatarID: string;
+  readonly nodeID: string;
 }
 
 export interface RevealedNodeSeed {
@@ -118,9 +125,10 @@ export interface ActivitySubmissionContext {
   readonly startChainIndex: number;
 }
 
-// the two journal calls the outbox depends on, injectable so a test can make the browser's storage
+// the journal calls the outbox depends on, injectable so a test can make the browser's storage
 // refuse a write or a read, which fake-indexeddb never does on its own
 export interface CheckpointJournal {
   readonly readQueuedCheckpoints: typeof readQueuedCheckpoints;
+  readonly writeNodeAnchor: typeof writeNodeAnchor;
   readonly writeQueuedCheckpoint: typeof writeQueuedCheckpoint;
 }

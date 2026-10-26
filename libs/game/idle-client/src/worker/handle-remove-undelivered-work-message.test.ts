@@ -12,6 +12,7 @@ import { server } from '../mocks/node';
 import { readAllActivityStarts } from '../submission/read-all-activity-starts';
 import { readAllQueuedCheckpoints } from '../submission/read-all-queued-checkpoints';
 import { writeActivityStart } from '../submission/write-activity-start';
+import { writeMintedActivityStart } from '../submission/write-minted-activity-start';
 import { writeNodeSeeds } from '../submission/write-node-seeds';
 import { writeQueuedCheckpoint } from '../submission/write-queued-checkpoint';
 import { writeStartStamps } from '../submission/write-start-stamps';
@@ -69,13 +70,13 @@ test('it delivers no start that a continuation held at its write mints, once the
 
   server.use(createStubActivityProxy(viewer.user.id));
 
-  const held = buildStubHeldWriter(writeActivityStart);
+  const held = buildStubHeldWriter(writeMintedActivityStart);
 
   const context = createStubWorkerContext({
     activityProxy: true,
     bundledEngineHash: 'engine_hash_sign_out',
     submitter: createStubSubmitter(),
-    writeActivityStart: held.write,
+    writeMintedActivityStart: held.write,
   });
 
   const seed = createMockNodeSeed({
