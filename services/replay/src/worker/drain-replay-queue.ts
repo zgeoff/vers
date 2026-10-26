@@ -5,26 +5,21 @@ import { recordDrainDuration } from '../metrics/record-drain-duration';
 import { recordIterationFailure } from '../metrics/record-iteration-failure';
 import { recordWake } from '../metrics/record-wake';
 import type { WakeSource } from '../metrics/record-wake';
+import { makeCoalescedDrain } from './make-coalesced-drain';
 import { runReplayIteration } from './run-replay-iteration';
 import type { ReplayWorkerDeps } from './types';
 
-let drainInFlight: Promise<number> | undefined;
+const requestDrain = makeCoalescedDrain(runDrain);
 
 // the loop holds the caller's `/wake` request open until the queue is empty: Fly's proxy treats the
 // open connection as activity and keeps the machine up until there is nothing left to verify
-export async function drainReplayQueue(
+export function drainReplayQueue(
   deps: Readonly<ReplayWorkerDeps>,
   source: WakeSource,
 ): Promise<number> {
   recordWake(source);
 
-  drainInFlight ??= runDrain(deps);
-
-  try {
-    return await drainInFlight;
-  } finally {
-    drainInFlight = undefined;
-  }
+  return requestDrain(deps);
 }
 
 async function runDrain(deps: Readonly<ReplayWorkerDeps>): Promise<number> {

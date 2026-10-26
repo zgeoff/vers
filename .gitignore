@@ -14,6 +14,9 @@ test-report.junit.xml
 # local scratch files
 .scratch/
 
+# load run reports
+.load-results/
+
 # dependencies
 node_modules
 

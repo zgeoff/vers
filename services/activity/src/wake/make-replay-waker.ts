@@ -13,6 +13,8 @@ interface ReplayWakerOptions {
   readonly retryBackoffMs: number;
 
   readonly sendWake: (options: WakeAttempt) => Promise<unknown>;
+
+  readonly signal?: AbortSignal;
 }
 
 interface ReplayWaker {
@@ -22,16 +24,24 @@ interface ReplayWaker {
 }
 
 export function makeReplayWaker(options: ReplayWakerOptions): ReplayWaker {
+  const lifetime = options.signal ?? new AbortController().signal;
   let cooldownUntil = 0;
   let deliveryInFlight: Promise<void> | undefined;
+  let wakeRequested = false;
 
   const sendWakeWithRetry = async (): Promise<void> => {
     for (let attempt = 1; attempt <= options.maxDeliveryAttempts; attempt += 1) {
       try {
-        await options.sendWake({ signal: AbortSignal.timeout(options.perAttemptTimeoutMs) });
+        await options.sendWake({
+          signal: AbortSignal.any([AbortSignal.timeout(options.perAttemptTimeoutMs), lifetime]),
+        });
 
         return;
       } catch {
+        if (lifetime.aborted) {
+          return;
+        }
+
         if (attempt === options.maxDeliveryAttempts) {
           recordReplayPokeFailed();
 
@@ -44,33 +54,39 @@ export function makeReplayWaker(options: ReplayWakerOptions): ReplayWaker {
           return;
         }
 
-        await wait(options.retryBackoffMs * attempt);
+        await wait(options.retryBackoffMs * attempt, lifetime);
       }
     }
   };
 
+  // the verifier can finish its drain between an append's commit and the wake that append asks
+  // for, so a wake coalesced into an earlier delivery is sent again once the window closes
   const runDelivery = async (): Promise<void> => {
     try {
-      await sendWakeWithRetry();
+      while (wakeRequested) {
+        await wait(Math.max(0, cooldownUntil - Date.now()), lifetime);
+
+        if (lifetime.aborted) {
+          return;
+        }
+
+        wakeRequested = false;
+        cooldownUntil = Date.now() + options.coalesceWindowMs;
+
+        await sendWakeWithRetry();
+      }
     } finally {
       deliveryInFlight = undefined;
     }
   };
 
   const sendReplayWake = (): void => {
-    const now = Date.now();
-
-    if (now < cooldownUntil) {
+    if (lifetime.aborted) {
       return;
     }
 
-    cooldownUntil = now + options.coalesceWindowMs;
-
-    if (deliveryInFlight !== undefined) {
-      return;
-    }
-
-    deliveryInFlight = runDelivery();
+    wakeRequested = true;
+    deliveryInFlight ??= runDelivery();
   };
 
   const waitUntilSettled = (): Promise<void> => deliveryInFlight ?? Promise.resolve();
@@ -78,8 +94,24 @@ export function makeReplayWaker(options: ReplayWakerOptions): ReplayWaker {
   return { sendReplayWake, waitUntilSettled };
 }
 
-function wait(delayMs: number): Promise<void> {
+function wait(delayMs: number, signal: AbortSignal): Promise<void> {
   return new Promise((resolve) => {
-    setTimeout(resolve, delayMs);
+    if (signal.aborted) {
+      resolve();
+
+      return;
+    }
+
+    const settle = (): void => {
+      clearTimeout(timer);
+
+      signal.removeEventListener('abort', settle);
+
+      resolve();
+    };
+
+    const timer = setTimeout(settle, delayMs);
+
+    signal.addEventListener('abort', settle, { once: true });
   });
 }

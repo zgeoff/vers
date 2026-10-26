@@ -1,5 +1,5 @@
+import { parseIntegerOption } from '@vers/scripts';
 import type { Args } from 'gunshi';
-import { parseIntegerOption } from './parse-integer-option';
 
 export const QA_SEED_ARGS = {
   user: {

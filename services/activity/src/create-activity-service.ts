@@ -24,6 +24,7 @@ interface CreateActivityServiceConfig {
   readonly simTimeCapMs?: number;
 
   readonly wakeCoalesceWindowMs?: number;
+  readonly wakeSignal?: AbortSignal;
 }
 
 export function createActivityService(
@@ -37,6 +38,7 @@ export function createActivityService(
         ...(config.wakeCoalesceWindowMs !== undefined && {
           coalesceWindowMs: config.wakeCoalesceWindowMs,
         }),
+        ...(config.wakeSignal !== undefined && { signal: config.wakeSignal }),
       });
 
       const privateKey = await parseServicePrivateKey(runtime.env.SERVICE_AUTH_PRIVATE_KEY);

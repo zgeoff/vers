@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./headless": "./src/headless/index.ts",
     "./test-utils": "./src/test-utils/index.ts"
   },
   "scripts": {

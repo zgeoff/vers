@@ -1,0 +1,206 @@
+import { safe } from '@orpc/client';
+import { createId } from '@paralleldrive/cuid2';
+import { MAX_CATCH_UP_BATCH_CHECKPOINTS } from '@vers/contract-activity';
+import {
+  drainOfflineBatches,
+  planOfflineContinuations,
+  splitContinuationsIntoBatches,
+} from '@vers/idle-client/headless';
+import { ActivityFailureAction, buildSimulationInput } from '@vers/idle-core';
+import { sql } from 'kysely';
+import invariant from 'tiny-invariant';
+import { buildPlannedReturnXP } from './build-planned-return-xp';
+import { buildPlayerProfiles } from './build-player-profiles';
+import { createConnectedPlayers } from './create-connected-players';
+import { createLoadSampler } from './create-load-sampler';
+import { parseLockWaits } from './parse-lock-waits';
+import { readReconciliation } from './read-reconciliation';
+import { runActivityAttempt } from './run-activity-attempt';
+import type {
+  CallLog,
+  ConnectedPlayer,
+  LoadStack,
+  ScenarioEvent,
+  ScenarioRecording,
+} from './types';
+import { waitForSettlement } from './wait-for-settlement';
+import { writePlayerAccounts } from './write-player-accounts';
+
+interface RunOfflineReturnScenarioOptions {
+  readonly name: string;
+  readonly offlineMs: number;
+  readonly players: number;
+  readonly retainedEvery: number;
+  readonly sampleIntervalMs: number;
+  readonly settleTimeoutMs: number;
+}
+
+// a margin past the gap, so the budget each avatar banked covers the whole planned return
+const BUDGET_MARGIN_MS = 5 * 60 * 1000;
+
+// every player closed the game on a fresh activity and reopens it after the same gap at the same
+// moment, so the window holds the fast-forward deliveries and the settlement of all of them
+export async function runOfflineReturnScenario(
+  stack: Readonly<LoadStack>,
+  options: Readonly<RunOfflineReturnScenarioOptions>,
+): Promise<ScenarioRecording> {
+  const profiles = buildPlayerProfiles({
+    count: options.players,
+    firstIndex: 0,
+    retainedEvery: options.retainedEvery,
+    versions: stack.versions,
+  });
+
+  const accounts = await writePlayerAccounts(stack.db, profiles, options.name);
+
+  const callLog: CallLog = { calls: [], refusals: [] };
+
+  const connected = await createConnectedPlayers(stack, accounts, callLog);
+
+  for (const player of connected) {
+    await writeClosedActivity(player);
+  }
+
+  await stack.db
+    .updateTable('avatars')
+    .set({
+      simMeteredAt: sql`now() - ${options.offlineMs + BUDGET_MARGIN_MS} * interval '1 millisecond'`,
+    })
+    .execute();
+
+  const planned = await Promise.all(
+    connected.map((player) => planReturn(player, options.offlineMs)),
+  );
+
+  const events: Array<ScenarioEvent> = [];
+
+  callLog.calls.length = 0;
+
+  const windowStartedAt = new Date();
+
+  const sampler = await createLoadSampler({
+    containerPrefix: stack.containerPrefix,
+    db: stack.db,
+    intervalMs: options.sampleIntervalMs,
+    readContainerStats: stack.readContainerStats,
+  });
+
+  const startedAt = performance.now();
+
+  events.push({ elapsedMs: 0, label: `${options.players} players return together` });
+
+  await Promise.all(
+    planned.map(async (plan) => {
+      const [error, drained] = await safe(
+        drainOfflineBatches({
+          activity: plan.progress.activity,
+          appendedHead: plan.progress.appendedHead,
+          batches: plan.batches,
+          client: plan.player.client,
+        }),
+      );
+
+      // the drain throws only what the transport lost after the client's retries, which the call
+      // log holds as a failed call; a refusal returns undelivered
+      if (error === null && !drained.delivered) {
+        callLog.refusals.push({ code: 'REFUSED', procedure: 'advanceActivity' });
+      }
+    }),
+  );
+
+  const deliveredAt = performance.now();
+  const playMs = deliveredAt - startedAt;
+
+  events.push({ elapsedMs: playMs, label: 'every return delivered' });
+
+  const settleMs = await waitForSettlement(stack.db, options.settleTimeoutMs, deliveredAt);
+  const recording = await sampler.stop();
+  const postgresLog = await stack.readLogs('postgres', windowStartedAt);
+
+  const expectedXP = new Map<string, number>();
+
+  for (const plan of planned) {
+    for (const [activityID, xp] of plan.expectedXP) {
+      expectedXP.set(activityID, xp);
+    }
+  }
+
+  const reconciliation = await readReconciliation(stack.db, accounts, expectedXP);
+
+  return {
+    calls: callLog.calls,
+    events,
+    cpuLimits: await stack.readCPULimits(),
+    exits: await stack.readExits(windowStartedAt),
+    lockWaits: parseLockWaits(postgresLog),
+    name: options.name,
+    players: options.players,
+    playMs,
+    reconciliation,
+    recording,
+    refusals: callLog.refusals,
+    settleMs,
+  };
+}
+
+// the activity the player left running when the game closed: admitted, with nothing appended
+async function writeClosedActivity(player: ConnectedPlayer): Promise<void> {
+  const run = await runActivityAttempt({
+    activityID: `act_${createId()}`,
+    avatarID: player.account.avatarID,
+    buildSnapshot: player.buildSnapshot,
+    chain: player.chain,
+    content: player.content,
+    playedAt: new Date(),
+    predecessorActivityID: null,
+    simVersion: player.account.profile.simVersion,
+  });
+
+  await player.client.advanceActivity({
+    activityID: run.id,
+    activityStart: run.start,
+    continuations: [],
+    expectedHead: 0,
+  });
+}
+
+interface PlannedReturn {
+  readonly batches: ReturnType<typeof splitContinuationsIntoBatches>;
+  readonly expectedXP: ReadonlyMap<string, number>;
+  readonly player: ConnectedPlayer;
+  readonly progress: Awaited<ReturnType<ConnectedPlayer['client']['getLatestActivityProgress']>>;
+}
+
+async function planReturn(player: ConnectedPlayer, offlineMs: number): Promise<PlannedReturn> {
+  const progress = await player.client.getLatestActivityProgress({
+    avatarID: player.account.avatarID,
+  });
+
+  const plan = await planOfflineContinuations({
+    budgetMs: offlineMs,
+    loadSimulationInput: (source) =>
+      Promise.resolve(
+        buildSimulationInput(player.content, source, {
+          failureAction: ActivityFailureAction.Retry,
+        }),
+      ),
+    progress,
+  });
+
+  invariant(
+    plan.planned.length > 0,
+    'a gap longer than one attempt plans at least one continuation',
+  );
+
+  const continuations = plan.planned.map((entry) => entry.continuation);
+
+  return {
+    batches: splitContinuationsIntoBatches(continuations, MAX_CATCH_UP_BATCH_CHECKPOINTS),
+    expectedXP: buildPlannedReturnXP(
+      { activityID: progress.activity.id, xp: progress.activity.buildSnapshot.xp },
+      continuations,
+    ),
+    player,
+    progress,
+  };
+}
