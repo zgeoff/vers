@@ -54,14 +54,24 @@ export async function createLoadSampler(
 
   const controller = new AbortController();
 
-  const pipelineLoop = runEvery(options.intervalMs, controller.signal, samplePipeline);
-  const containerLoop = runEvery(options.intervalMs, controller.signal, sampleContainers);
+  // settling both loops from the start keeps a failed sample from rejecting unhandled while the
+  // scenario plays; the stop rethrows it, inside the run's stack cleanup
+  const loops = Promise.allSettled([
+    runEvery(options.intervalMs, controller.signal, samplePipeline),
+    runEvery(options.intervalMs, controller.signal, sampleContainers),
+  ]);
 
   return {
     stop: async () => {
       controller.abort();
 
-      await Promise.all([pipelineLoop, containerLoop]);
+      const settled = await loops;
+
+      const failed = settled.find((loop) => loop.status === 'rejected');
+
+      if (failed !== undefined) {
+        throw failed.reason;
+      }
 
       await samplePipeline();
 

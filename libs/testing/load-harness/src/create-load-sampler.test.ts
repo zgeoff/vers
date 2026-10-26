@@ -1,10 +1,11 @@
-import { expect, onTestFinished, test } from 'bun:test';
+import { expect, mock, onTestFinished, test } from 'bun:test';
 import {
   createActivityRow,
   createAvatarRow,
   createTestDB,
   createTestUser,
 } from '@vers/service-test-utils/bun';
+import { makeAnswerQueue, waitFor } from '@vers/test-utils';
 import { sql } from 'kysely';
 import { createLoadSampler } from './create-load-sampler';
 
@@ -52,6 +53,30 @@ test('it ages a proof that lands after its last tick', async () => {
   const recording = await sampler.stop();
 
   expect(recording.settlementAges).toHaveLength(2);
+});
+
+test('it rethrows a failed sample from its stop', async () => {
+  const ctx = await setupTest();
+
+  const nextContainerStats = makeAnswerQueue<() => Promise<string>>([
+    () => Promise.resolve(''),
+    () => Promise.reject(new Error('docker stats failed')),
+  ]);
+
+  const readContainerStats = mock(() => nextContainerStats()());
+
+  const sampler = await createLoadSampler({
+    containerPrefix: 'vers-load-',
+    db: ctx.db,
+    intervalMs: 5,
+    readContainerStats,
+  });
+
+  await waitFor(() => {
+    expect(readContainerStats).toHaveBeenCalledTimes(2);
+  });
+
+  expect(sampler.stop()).rejects.toThrow('docker stats failed');
 });
 
 test('it records the containers that match its prefix', async () => {
