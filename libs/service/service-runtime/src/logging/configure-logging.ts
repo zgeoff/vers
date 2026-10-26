@@ -1,11 +1,7 @@
 import type { LogLevel, Logger, Sink, TextFormatter } from '@logtape/logtape';
-import {
-  ansiColorFormatter,
-  configureSync,
-  getJsonLinesFormatter,
-  getLogger,
-} from '@logtape/logtape';
+import { configureSync, getLogger } from '@logtape/logtape';
 import { findTraceContext } from '@vers/service-utils';
+import { pickLogFormatter } from './pick-log-formatter';
 
 type ServiceLogLevel = 'debug' | 'error' | 'fatal' | 'info' | 'trace' | 'warn';
 
@@ -17,16 +13,10 @@ interface ConfigureLoggingOptions {
 }
 
 export function configureLogging(options: ConfigureLoggingOptions): Logger {
-  const formatter =
-    options.format === 'pretty'
-      ? ansiColorFormatter
-      : getJsonLinesFormatter({ properties: 'flatten' });
-
   const sinks = Object.fromEntries(
-    [makeStdoutSink(formatter), ...(options.sinks ?? [])].map((sink, index) => [
-      `sink-${index}`,
-      makeTraceStampedSink(sink),
-    ]),
+    [makeStdoutSink(pickLogFormatter(options.format)), ...(options.sinks ?? [])].map(
+      (sink, index) => [`sink-${index}`, makeTraceStampedSink(sink)],
+    ),
   );
 
   configureSync({

@@ -15,6 +15,7 @@
     "@elysiajs/opentelemetry": "catalog:",
     "@logtape/logtape": "catalog:",
     "@logtape/otel": "catalog:",
+    "@logtape/pretty": "catalog:",
     "@opentelemetry/api": "catalog:",
     "@opentelemetry/exporter-logs-otlp-proto": "catalog:",
     "@opentelemetry/exporter-trace-otlp-proto": "catalog:",
