@@ -88,7 +88,7 @@ export async function createLoadStack(
     sessionSecret: SESSION_SECRET,
     sessionServiceURL: 'http://127.0.0.1:3401',
     startService: async (service) => {
-      await runCompose(env, ['up', '-d', '--wait', service]);
+      await runCompose(env, ['up', '-d', '--wait', '--no-deps', service]);
     },
     stopService: async (service) => {
       await runCompose(env, ['stop', service]);

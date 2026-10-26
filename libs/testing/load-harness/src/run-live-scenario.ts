@@ -1,10 +1,18 @@
 import { buildPlayerProfiles } from './build-player-profiles';
+import { collectScenarioExits } from './collect-scenario-exits';
 import { createConnectedPlayers } from './create-connected-players';
 import { createLoadSampler } from './create-load-sampler';
 import { parseLockWaits } from './parse-lock-waits';
 import { readReconciliation } from './read-reconciliation';
 import { runLivePlayer } from './run-live-player';
-import type { CallLog, LoadStack, OutageWindow, ScenarioEvent, ScenarioRecording } from './types';
+import type {
+  CallLog,
+  ContainerExit,
+  LoadStack,
+  OutageWindow,
+  ScenarioEvent,
+  ScenarioRecording,
+} from './types';
 import { waitForSettlement } from './wait-for-settlement';
 import { writePlayerAccounts } from './write-player-accounts';
 
@@ -79,8 +87,12 @@ export async function runLiveScenario(
     ),
   );
 
-  const outage =
-    options.outage === undefined ? undefined : await runOutage(stack, options.outage, startedAt);
+  const outageRun =
+    options.outage === undefined
+      ? undefined
+      : await runOutage(stack, options.outage, { startedAt, windowStartedAt });
+
+  const outage = outageRun?.window;
 
   if (outage !== undefined) {
     events.push(
@@ -107,6 +119,7 @@ export async function runLiveScenario(
   const settleMs = await waitForSettlement(stack.db, options.settleTimeoutMs, stoppedAt);
   const recording = await sampler.stop();
   const postgresLog = await stack.readLogs('postgres', windowStartedAt);
+  const finalExits = await stack.readExits(windowStartedAt);
 
   const expectedXP = new Map(
     delivered.filter((run) => run.terminal).map((run) => [run.activityID, run.xpTotal]),
@@ -116,7 +129,11 @@ export async function runLiveScenario(
     calls: callLog.calls,
     events,
     cpuLimits: await stack.readCPULimits(),
-    exits: await stack.readExits(windowStartedAt),
+    exits: collectScenarioExits(
+      finalExits,
+      outageRun?.exitsBeforeRestart ?? [],
+      outageRun?.requestedStop,
+    ),
     lockWaits: parseLockWaits(postgresLog),
     name: options.name,
     outage,
@@ -129,18 +146,46 @@ export async function runLiveScenario(
   };
 }
 
+interface OutageClock {
+  readonly startedAt: number;
+  readonly windowStartedAt: Date;
+}
+
+interface OutageRun {
+  readonly exitsBeforeRestart: Array<ContainerExit>;
+  readonly requestedStop: { readonly container: string; readonly elapsedMs: number };
+  readonly window: OutageWindow;
+}
+
+// reads the exits before the restart, because the restart would hide a container that crashed
+// during the outage from the scenario's final inspection
 async function runOutage(
   stack: Readonly<LoadStack>,
   outage: Outage,
-  startedAt: number,
-): Promise<OutageWindow> {
+  clock: OutageClock,
+): Promise<OutageRun> {
   await Bun.sleep(outage.startMs);
 
-  const stoppedAt = performance.now() - startedAt;
+  const stoppedAt = performance.now() - clock.startedAt;
+  const stopElapsedMs = Date.now() - clock.windowStartedAt.getTime();
 
   await stack.stopService(outage.service);
   await Bun.sleep(outage.durationMs);
+
+  const exitsBeforeRestart = await stack.readExits(clock.windowStartedAt);
+
   await stack.startService(outage.service);
 
-  return { endedMs: performance.now() - startedAt, service: outage.service, startedMs: stoppedAt };
+  return {
+    exitsBeforeRestart,
+    requestedStop: {
+      container: `${stack.containerPrefix}${outage.service}-1`,
+      elapsedMs: stopElapsedMs,
+    },
+    window: {
+      endedMs: performance.now() - clock.startedAt,
+      service: outage.service,
+      startedMs: stoppedAt,
+    },
+  };
 }
