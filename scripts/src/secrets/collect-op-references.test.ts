@@ -162,6 +162,18 @@ test.each([
   expect(collectOPReferences(text)).toStrictEqual({ references: [], unparsed: [scanned] });
 });
 
+test.each([
+  ['an unclosed double quote', `sh -c "op read op://ops/billing/token`],
+  ['an unclosed single quote', `sh -c 'op read op://ops/billing/token`],
+  ['an unclosed ANSI-C quote', `sh -c $'op read op://ops/billing/token`],
+  ['an unclosed quote around a quoted reference', `sh -c "op read 'op://ops/billing/token'`],
+])('it reports a reference inside a nested command with %s as unparsed', (_form, text) => {
+  expect(collectOPReferences(text)).toStrictEqual({
+    references: [],
+    unparsed: ['op://ops/billing/token'],
+  });
+});
+
 test('it reports a reference with no field as unparsed', () => {
   expect(collectOPReferences('API_KEY=op://ops/billing\n')).toStrictEqual({
     references: [],

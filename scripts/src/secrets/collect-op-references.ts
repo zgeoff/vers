@@ -38,7 +38,9 @@ function collectReferenceWords(text: string, depth: number): Array<ShellWord> {
     .filter((word) => word.value.includes(SCHEME))
     .flatMap((word) =>
       depth < MAX_NESTING && isNestedCommandLine(word.value)
-        ? collectReferenceWords(word.value, depth + 1)
+        ? collectReferenceWords(word.value, depth + 1).map((inner) =>
+            word.isComplete ? inner : { isComplete: false, value: inner.value },
+          )
         : [word],
     );
 }
