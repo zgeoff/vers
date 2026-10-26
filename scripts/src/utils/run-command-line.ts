@@ -97,16 +97,20 @@ function toGunshiArgv(
       .filter(([_key, schema]) => schema.type !== 'positional'),
   );
 
-  const commandName = findCommandName(head, routingArgs, subCommands);
+  const headOperand = findFirstOperand(head, routingArgs);
+  const tailCommand = headOperand === undefined ? pickCommandName(tail[0], subCommands) : undefined;
+  const routedHead = tailCommand === undefined ? head : [...head, tailCommand];
+  const routedTail = tailCommand === undefined ? tail : tail.slice(1);
+  const commandName = pickCommandName(headOperand, subCommands) ?? tailCommand;
   const command = commandName === undefined ? entry : subCommands[commandName];
   const commandArgs = toArgs(command);
   const kept: Array<string> = [];
   const moved: Array<string> = [];
   let isCommandSeen = commandName === undefined;
 
-  for (let index = 0; index < head.length; index++) {
-    const word = head[index] ?? '';
-    const next = head[index + 1];
+  for (let index = 0; index < routedHead.length; index++) {
+    const word = routedHead[index] ?? '';
+    const next = routedHead[index + 1];
     const flagArgs = isCommandSeen ? commandArgs : routingArgs;
 
     if (isValueFlag(word, flagArgs) && next !== undefined) {
@@ -126,25 +130,21 @@ function toGunshiArgv(
     }
   }
 
-  return moved.length === 0 && separator === -1 ? kept : [...kept, '--', ...moved, ...tail];
+  return moved.length === 0 && separator === -1 ? kept : [...kept, '--', ...moved, ...routedTail];
 }
 
 function toArgs(command: SubCommandable | undefined): Args {
   return command?.args ?? {};
 }
 
-function findCommandName(
-  head: ReadonlyArray<string>,
-  routingArgs: Args,
-  subCommands: Readonly<Record<string, SubCommandable>>,
-): string | undefined {
+function findFirstOperand(head: ReadonlyArray<string>, routingArgs: Args): string | undefined {
   for (let index = 0; index < head.length; index++) {
     const word = head[index] ?? '';
 
     if (isValueFlag(word, routingArgs)) {
       index++;
     } else if (word !== '' && !isFlagWord(word)) {
-      return Object.hasOwn(subCommands, word) ? word : undefined;
+      return word;
     }
   }
 
@@ -159,6 +159,13 @@ function isValueFlag(word: string, args: Args): boolean {
 
 function isFlagWord(word: string): boolean {
   return word.length > 1 && word.startsWith('-') && !NEGATIVE_NUMBER.test(word);
+}
+
+function pickCommandName(
+  word: string | undefined,
+  subCommands: Readonly<Record<string, SubCommandable>>,
+): string | undefined {
+  return word !== undefined && Object.hasOwn(subCommands, word) ? word : undefined;
 }
 
 // gunshi fills no positional argument from the words after `--`, reports one they would fill as
@@ -177,7 +184,8 @@ function withOperandArgs(command: SubCommandable, hasSeparator: boolean): SubCom
     ...command,
     args: hasSeparator ? toOptionalPositionals(args) : args,
     run: (ctx: Readonly<CommandContext>) => {
-      const operandStart = getOperandStart(ctx.positionals, ctx.commandPath);
+      const words = [...ctx.positionals, ...ctx.rest];
+      const operandStart = getOperandStart(words, ctx.commandPath);
 
       const resolved = resolveArgs(
         args,

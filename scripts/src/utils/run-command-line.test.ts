@@ -285,6 +285,27 @@ test('it still refuses a word that starts with - and is no number as an unknown 
   expect(run).not.toHaveBeenCalled();
 });
 
+test('it reads the arguments of a command named after --', async () => {
+  const ctx = setupTest();
+  const received: Array<unknown> = [];
+
+  const text = define({
+    args: { target: { type: 'positional' } },
+    name: 'text',
+    run: (command) => {
+      received.push({ ...command.values });
+    },
+  });
+
+  const ran = await runCommandLine(['--', 'text', 'T1'], define({ name: 'tool' }), {
+    output: ctx.output,
+    subCommands: { text },
+  });
+
+  expect(ran).toBeTrue();
+  expect(received).toStrictEqual([{ target: 'T1' }]);
+});
+
 test('it refuses a surplus word after --', async () => {
   const ctx = setupTest();
   const run = mock(() => {});
