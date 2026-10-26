@@ -22,6 +22,13 @@ test('it collects a quoted reference inside a shell command', () => {
   });
 });
 
+test('it collects a double-quoted reference inside a shell command', () => {
+  expect(collectOPReferences('op read "op://ops/billing/api-key"')).toStrictEqual({
+    references: [{ field: 'api-key', item: 'billing', vault: 'ops' }],
+    unparsed: [],
+  });
+});
+
 test('it collects an item name that holds spaces', () => {
   expect(collectOPReferences('API_KEY=op://ops/Billing Portal/api-key\n')).toStrictEqual({
     references: [{ field: 'api-key', item: 'Billing Portal', vault: 'ops' }],
