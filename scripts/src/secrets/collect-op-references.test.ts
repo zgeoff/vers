@@ -78,6 +78,44 @@ test.each([
   });
 });
 
+test.each([
+  [
+    'an apostrophe in double quotes',
+    `op read "op://ops/Billing's Portal/token"`,
+    "Billing's Portal",
+  ],
+  [
+    'a double quote in single quotes',
+    `op read 'op://ops/the "prod" item/token'`,
+    'the "prod" item',
+  ],
+  [
+    'an escaped apostrophe in ANSI-C quotes',
+    String.raw`op read $'op://ops/Billing\'s Portal/token'`,
+    "Billing's Portal",
+  ],
+  [
+    'an escaped double quote in double quotes',
+    String.raw`op read "op://ops/the \"prod\" item/token"`,
+    'the "prod" item',
+  ],
+  [
+    'an escaped apostrophe in a bare word',
+    String.raw`op read op://ops/Billing\'s/token`,
+    "Billing's",
+  ],
+  [
+    'an apostrophe in a nested shell',
+    String.raw`sh -c "op read \"op://ops/Billing's Portal/token\""`,
+    "Billing's Portal",
+  ],
+])('it keeps %s inside the item name', (_form, text, item) => {
+  expect(collectOPReferences(text)).toStrictEqual({
+    references: [{ field: 'token', item, vault: 'ops' }],
+    unparsed: [],
+  });
+});
+
 test('it collects a quoted item name that holds spaces', () => {
   expect(collectOPReferences('API_KEY="op://ops/Billing Portal/api-key"\n')).toStrictEqual({
     references: [{ field: 'api-key', item: 'Billing Portal', vault: 'ops' }],

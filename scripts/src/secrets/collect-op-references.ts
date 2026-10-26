@@ -28,18 +28,23 @@ export function collectOPReferences(text: string): CollectedOPReferences {
   return { references, unparsed };
 }
 
-// a word that keeps a quote after the shell strips its own is a command line for a nested shell,
-// such as the string `sh -c` runs, so it is read once more as one
+// a word whose text before the scheme holds a space is a command line for a nested shell, such as
+// the string `sh -c` runs, so it is read once more as one; any other word is a literal value, and a
+// quote inside it is part of the name
 const MAX_NESTING = 2;
 
 function collectReferenceWords(text: string, depth: number): Array<ShellWord> {
   return collectShellWords(text)
     .filter((word) => word.value.includes(SCHEME))
     .flatMap((word) =>
-      depth < MAX_NESTING && /['"]/u.test(word.value)
+      depth < MAX_NESTING && isNestedCommandLine(word.value)
         ? collectReferenceWords(word.value, depth + 1)
         : [word],
     );
+}
+
+function isNestedCommandLine(value: string): boolean {
+  return /\s/u.test(value.slice(0, value.indexOf(SCHEME)));
 }
 
 function parseReferencePath(path: string): OPReference | null {
