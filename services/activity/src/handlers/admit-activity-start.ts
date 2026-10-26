@@ -6,6 +6,7 @@ import type {
 import type { SecretRef } from '@vers/contract-keys';
 import type { Activities, DB } from '@vers/db';
 import { buildLevelFromXP } from '@vers/idle-core';
+import type { Logger } from '@vers/service-runtime/logging';
 import { readCurrentSimVersion } from '@vers/sim-registry';
 import { deriveWorldmapContent, readScopeSecret } from '@vers/worldmap-content';
 import type { CryptoKey } from 'jose';
@@ -24,11 +25,13 @@ import type {
   SimVersionProblemPayload,
 } from '../types';
 import { mintActivityRoot } from './mint-activity-root';
+import { writeRefusalLine } from './write-refusal-line';
 
 interface AdmitActivityStartDeps {
   readonly keysServiceURL: string;
   readonly keyVersion: number;
   readonly loadContentDocument: (contentVersion: string) => Promise<ContentDocument | undefined>;
+  readonly logger: Logger;
   readonly privateKey: CryptoKey;
   readonly secretRef: SecretRef;
   readonly secretVersion: number;
@@ -119,6 +122,7 @@ export async function admitActivityStart(
     activityStart.seed !== chain.appendedNextSeed
   ) {
     recordRefusal('CONFLICT', 'stale-chain-head');
+    writeRefusalLine(deps.logger, 'CONFLICT', 'stale-chain-head');
 
     throw errors.CONFLICT({
       data: {
@@ -143,6 +147,7 @@ export async function admitActivityStart(
     buildSnapshot.xp !== activityStart.buildSnapshot.xp
   ) {
     recordRefusal('CHECKPOINT_INVALID', 'build-snapshot-mismatch');
+    writeRefusalLine(deps.logger, 'CHECKPOINT_INVALID', 'build-snapshot-mismatch');
 
     throw errors.CHECKPOINT_INVALID({
       data: {
@@ -214,6 +219,7 @@ export async function admitActivityStart(
       // just derived; a mismatch means it simulated against something else and cannot be anchored
       if (startHash !== activityStart.startHash) {
         recordRefusal('CHECKPOINT_INVALID', 'start-hash-mismatch');
+        writeRefusalLine(deps.logger, 'CHECKPOINT_INVALID', 'start-hash-mismatch');
 
         throw errors.CHECKPOINT_INVALID({
           data: {

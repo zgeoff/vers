@@ -8,6 +8,7 @@ import type { ReplayCache } from '../replay/create-replay-cache';
 import type { ReplayTarget } from '../types';
 import { runReplayTarget } from './run-replay-target';
 import type { ReplayIterationOutcome, ReplayWorkerDeps } from './types';
+import { writeHoldLine } from './write-hold-line';
 
 const DEFAULT_ITERATION_DEADLINE_MS = 90_000;
 
@@ -37,6 +38,8 @@ export async function runReplayIteration(
 
       return runReplayTarget({ trx, deps, cache }, target, deadline);
     });
+
+    writeHoldLine(deps.logger, outcome);
 
     return applyPendingCacheEffect(cache, outcome);
   } catch (error) {

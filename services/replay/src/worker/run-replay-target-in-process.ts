@@ -85,7 +85,7 @@ export async function runReplayTargetInProcess(
   if (confirmVerdict.kind === 'match') {
     cache.remove(segment.activity.id);
 
-    return countFailedAttempt(context.trx, context.deps, segment);
+    return countFailedAttempt(context.trx, segment);
   }
 
   return rejectSegment(context, segment, confirmVerdict, 'confirmed-on-fresh-replay');

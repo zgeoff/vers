@@ -38,6 +38,7 @@
   },
   "devDependencies": {
     "@faker-js/faker": "catalog:",
+    "@logtape/logtape": "catalog:",
     "@types/bun": "catalog:",
     "@types/node": "catalog:",
     "@vers/mock-services": "workspace:*",

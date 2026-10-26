@@ -83,7 +83,7 @@ export async function runReplayTargetCrossVersion(
   const confirmVerdict = compareReplaySegment(unverified, confirmReplayed, compareContext);
 
   if (confirmVerdict.kind === 'match') {
-    return countFailedAttempt(context.trx, context.deps, segment);
+    return countFailedAttempt(context.trx, segment);
   }
 
   return rejectSegment(context, segment, confirmVerdict, 'confirmed-on-fresh-replay');

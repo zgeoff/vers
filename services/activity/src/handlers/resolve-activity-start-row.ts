@@ -67,6 +67,7 @@ export async function resolveActivityStartRow(
           keyVersion: deps.keyVersion,
           keysServiceURL: deps.keysServiceURL,
           loadContentDocument: deps.loadContentDocument,
+          logger: opts.context.logger,
           privateKey: deps.privateKey,
           secretRef: deps.secretRef,
           secretVersion: deps.secretVersion,
@@ -99,7 +100,7 @@ export async function resolveActivityStartRow(
         reason: recovered.reason,
       };
 
-      recordBailout(outcome);
+      recordBailout(opts.context.logger, outcome);
       throw buildBailError(opts.errors, outcome);
     }
 

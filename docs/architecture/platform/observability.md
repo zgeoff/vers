@@ -132,11 +132,18 @@ counter that emits only on failure reads quiet when healthy. The monitors:
   excluded because probe latency tracks machine wake.
 - Overdue requests: the overdue log line, which covers a request that never finishes and so never
   exports a span.
-- Replay poke failed: the activity service's wake poke to the replay service exhausted its retries,
-  so the queue may go undrained while unverified work sits in it.
-- Activity refusals: starts and appends the activity service refused, grouped by reason, each reason
-  alerting on its own. The threshold sits above one transient stale-head conflict and below a device
-  stuck retrying a refused chain.
+- Replay poke failed: the activity service's poke-failed line, which it writes when a wake poke to
+  the replay service exhausts its retries, so the queue may go undrained while unverified work sits
+  in it.
+- Replay parked: the replay service's park line, grouped by the line, which names the park reason,
+  so each reason alerts on its own. A parked activity halts its avatar's settlement order until an
+  operator releases it.
+- Replay quarantined: the replay service's quarantine line. A quarantined activity halts its
+  avatar's settlement order and blocks new starts in its chain scope until an operator releases it.
+- Activity refusals: the activity service's refusal line, which it writes for each start or append
+  it refuses, grouped by the line, which names the code and the reason, so each reason alerts on its
+  own. The threshold sits above one transient stale-head conflict and below a device stuck retrying
+  a refused chain.
 
 Axiom monitors, the CI pipeline, and Bugsink all post to one Discord channel. CI posts a structured
 embed; Axiom and Bugsink post their tools' stock formats.

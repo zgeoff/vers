@@ -22,6 +22,7 @@ import type {
   TerminalStatusPayload,
 } from '../types';
 import { updateAppendedAnchorFromTail } from './update-appended-anchor-from-tail';
+import { writeRefusalLine } from './write-refusal-line';
 
 interface TrackActivityProgressDeps {
   readonly db: Kysely<DB>;
@@ -107,6 +108,7 @@ export async function trackActivityProgress(
 
   if (reason !== undefined) {
     recordRefusal('CHECKPOINT_INVALID', reason);
+    writeRefusalLine(opts.context.logger, 'CHECKPOINT_INVALID', reason);
 
     throw opts.errors.CHECKPOINT_INVALID({
       data: { activityID: opts.input.activityID, avatarID: head.avatarId, reason },
@@ -333,6 +335,7 @@ async function checkAppendRace(
     .with({ kind: 'conflict' }, (conflict) => {
       invariant(current !== undefined, 'a conflict outcome resolves only against a read row');
       recordRefusal('CONFLICT', 'stale-head');
+      writeRefusalLine(opts.context.logger, 'CONFLICT', 'stale-head');
 
       throw opts.errors.CONFLICT({
         data: {

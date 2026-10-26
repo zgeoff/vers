@@ -8,6 +8,7 @@ import type {
 } from '@vers/contract-activity';
 import type { SecretRef } from '@vers/contract-keys';
 import type { Activities, ActivityStatus, DB } from '@vers/db';
+import type { Logger } from '@vers/service-runtime/logging';
 import type { CryptoKey } from 'jose';
 import type { Kysely, Selectable } from 'kysely';
 import type {
@@ -38,6 +39,7 @@ export interface AdvanceActivityOpts {
   readonly context: {
     readonly actingSessionID: null | string;
     readonly actingUserID: null | string;
+    readonly logger: Logger;
   };
   readonly errors: {
     readonly ACTIVITY_CAPPED: (payload: AdvanceBailPayload) => Error;
