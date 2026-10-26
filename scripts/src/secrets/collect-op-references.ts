@@ -1,39 +1,25 @@
-import invariant from 'tiny-invariant';
-import type { CollectedOPReferences, OPReference } from './types';
+import { collectShellWords } from './collect-shell-words';
+import type { CollectedOPReferences, OPReference, ShellWord } from './types';
 
-// a quoted reference runs to its closing quote; a bare one ends at a shell operator, a ` #`
-// comment or the next reference, never at a space, because an env file holds names with spaces
-// unquoted
-const OP_REFERENCE_PATTERN = new RegExp(
-  [
-    String.raw`\\"op://(?<escaped>[^"\\\n]*)\\"`,
-    String.raw`\$'op://(?<ansi>(?:\\.|[^'\\\n])*)'`,
-    String.raw`'op://(?<single>[^'\n]*)'`,
-    String.raw`"op://(?<double>(?:\\.|[^"\\\n])*)"`,
-    String.raw`op://(?<bare>[^\s'"\x60()&;<>|\\](?:(?!\s+#|op://)[^\n'"\x60()&;<>|\\])*)`,
-  ].join('|'),
-  'gu',
-);
-
-// the shell joins text glued to a closing quote into the same word, so the name runs on past it
-const GLUED_TEXT_PATTERN = /^[^\s'"`()&;<>|,\]}]+/u;
+const SCHEME = 'op://';
 
 export function collectOPReferences(text: string): CollectedOPReferences {
   const references: Array<OPReference> = [];
   const unparsed: Array<string> = [];
 
-  for (const found of text.matchAll(OP_REFERENCE_PATTERN)) {
-    const isBare = found.groups?.['bare'] !== undefined;
+  for (const word of collectReferenceWords(text, 0)) {
+    const scanned = word.value.slice(word.value.indexOf(SCHEME));
+    const path = scanned.slice(SCHEME.length);
 
-    const glued = isBare
-      ? ''
-      : (GLUED_TEXT_PATTERN.exec(text.slice(found.index + found[0].length))?.[0] ?? '');
+    // the scheme alone is prose that names it, never a reference
+    if (path === '') {
+      continue;
+    }
 
-    const path = glued === '' ? findReferencePath(found.groups) : null;
-    const reference = path === null ? null : parseReferencePath(path);
+    const reference = word.isComplete ? parseReferencePath(path) : null;
 
     if (reference === null) {
-      unparsed.push(`${found[0]}${glued}`);
+      unparsed.push(scanned);
     } else {
       references.push(reference);
     }
@@ -42,30 +28,18 @@ export function collectOPReferences(text: string): CollectedOPReferences {
   return { references, unparsed };
 }
 
-function findReferencePath(groups: Readonly<Record<string, string | undefined>> | undefined) {
-  const escaped = groups?.['escaped'] ?? groups?.['single'];
+// a word that keeps a quote after the shell strips its own is a command line for a nested shell,
+// such as the string `sh -c` runs, so it is read once more as one
+const MAX_NESTING = 2;
 
-  if (escaped !== undefined) {
-    return escaped;
-  }
-
-  const ansi = groups?.['ansi'];
-
-  if (ansi !== undefined) {
-    return /\\[^'"\\]/u.test(ansi) ? null : ansi.replaceAll(/\\(?<kept>.)/gu, '$<kept>');
-  }
-
-  const double = groups?.['double'];
-
-  if (double !== undefined) {
-    return double.replaceAll(/\\(?<kept>[\\"$`])/gu, '$<kept>');
-  }
-
-  const bare = groups?.['bare'];
-
-  invariant(bare !== undefined, 'the pattern captures one named path per alternative');
-
-  return bare.trimEnd();
+function collectReferenceWords(text: string, depth: number): Array<ShellWord> {
+  return collectShellWords(text)
+    .filter((word) => word.value.includes(SCHEME))
+    .flatMap((word) =>
+      depth < MAX_NESTING && /['"]/u.test(word.value)
+        ? collectReferenceWords(word.value, depth + 1)
+        : [word],
+    );
 }
 
 function parseReferencePath(path: string): OPReference | null {

@@ -4,6 +4,11 @@ export interface OPReference {
   readonly vault: string;
 }
 
+export interface ShellWord {
+  readonly isComplete: boolean;
+  readonly value: string;
+}
+
 export interface CollectedOPReferences {
   readonly references: ReadonlyArray<OPReference>;
   readonly unparsed: ReadonlyArray<string>;
