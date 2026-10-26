@@ -908,6 +908,41 @@
         "zod": "catalog:",
       },
     },
+    "libs/testing/load-harness": {
+      "name": "@vers/load-harness",
+      "version": "0.0.0",
+      "dependencies": {
+        "@orpc/client": "catalog:",
+        "@orpc/contract": "catalog:",
+        "@paralleldrive/cuid2": "catalog:",
+        "@vers/contract-activity": "workspace:*",
+        "@vers/contract-session": "workspace:*",
+        "@vers/db": "workspace:*",
+        "@vers/game-utils": "workspace:*",
+        "@vers/idle-client": "workspace:*",
+        "@vers/idle-core": "workspace:*",
+        "@vers/scripts": "workspace:*",
+        "@vers/service-auth": "workspace:*",
+        "@vers/service-utils": "workspace:*",
+        "@vers/sim-registry": "workspace:*",
+        "@vers/worldmap-core": "workspace:*",
+        "gunshi": "catalog:",
+        "iron-session": "catalog:",
+        "jose": "catalog:",
+        "kysely": "catalog:",
+        "tiny-invariant": "catalog:",
+        "ts-pattern": "catalog:",
+        "zod": "catalog:",
+      },
+      "devDependencies": {
+        "@types/bun": "catalog:",
+        "@types/node": "catalog:",
+        "@vers/service-test-utils": "workspace:*",
+        "@vers/test-utils": "workspace:*",
+        "@zgeoff/bun-test-extended": "catalog:",
+        "typescript": "catalog:",
+      },
+    },
     "libs/testing/mock-services": {
       "name": "@vers/mock-services",
       "version": "0.0.0",
@@ -2786,6 +2821,8 @@
     "@vers/item-gen": ["@vers/item-gen@workspace:libs/game/item-gen"],
 
     "@vers/jobs": ["@vers/jobs@workspace:libs/service/jobs"],
+
+    "@vers/load-harness": ["@vers/load-harness@workspace:libs/testing/load-harness"],
 
     "@vers/mock-services": ["@vers/mock-services@workspace:libs/testing/mock-services"],
 

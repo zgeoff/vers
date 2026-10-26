@@ -1,4 +1,6 @@
 export { defineDeployManifest } from './deploy/define-deploy-manifest';
+export { loadDeployManifest } from './deploy/load-deploy-manifest';
+export { loadEngineHash } from './deploy/load-engine-hash';
 export { findVerification } from './qa-inbox/find-verification';
 export { runCommandLine } from './utils/run-command-line';
 

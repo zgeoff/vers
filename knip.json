@@ -51,6 +51,9 @@
     "libs/testing/qa-account": {
       "entry": ["src/bin/*.ts"]
     },
+    "libs/testing/load-harness": {
+      "entry": ["src/bin/*.ts"]
+    },
     "libs/data/db": {
       "entry": ["kysely.config.ts", "migrations/*.ts", "seeds/*.ts"]
     },

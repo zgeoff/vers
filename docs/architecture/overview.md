@@ -88,12 +88,16 @@ react-three-fiber ([game rendering](./game/game-rendering.md)).
 - **Manual QA** — a QA pass drives production at `https://versidle.com` with an account under
   `qa.versidle.com`, a debug Chrome, and the `bun run qa:*` scripts that seed accounts, read
   verification email, log worker traffic, and send the fleet cold ([manual QA](../runbooks/qa.md)).
+- **Load runs** — a local compose stack of the pipeline's production images takes typed player
+  clients through steady play, synchronized offline returns, and a dependency outage, and reports
+  settlement age and resource use per scenario ([load runs](../runbooks/load.md)).
 
 ## Projects
 
 AGENTS.md's monorepo layout owns the workspace globs and the naming rule that derive the project
-list. Members whose behavior differs from their set: `libs/game/worldmap-content` and
-`libs/testing/qa-account` are `server-only`, the second because it imports the first;
+list. Members whose behavior differs from their set: `libs/game/worldmap-content`,
+`libs/testing/qa-account` and `libs/testing/load-harness` are `server-only`, the second because it
+imports the first and the third because it signs service tokens and writes the database directly;
 `libs/design/styled-system` is generated output; and `libs/game/content-version` is shared by the
 deploy CLI, the sim-version registry and the content digest check, so a content version bump and its
 recorded digest land in one package.

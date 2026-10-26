@@ -1,0 +1,120 @@
+# The isolated load stack: the production images of every service on the activity and replay
+# pipeline, app-web in front of them, a second replay provider that answers a retained sim version,
+# and postgres. Each container carries the memory of its Fly machine and the CPU share the harness
+# picks: a whole CPU for a shared machine's burst, or its sustained baseline quota. Image refs
+# arrive as LOAD_IMAGE_* env vars from the harness. Host ports: app-web 3400, session 3401,
+# postgres 5733, off the dev and e2e stacks' ranges.
+
+x-service-base: &service-base
+  env_file:
+    - ../../../apps/web-e2e/stack.env
+  healthcheck:
+    test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1:3000/health']
+    interval: 2s
+    timeout: 3s
+    retries: 30
+  cpus: ${LOAD_SERVICE_CPUS}
+  mem_limit: 256m
+
+x-db-env: &db-env
+  DATABASE_URL: postgresql://admin:password@postgres:5432/vers
+
+services:
+  postgres:
+    image: postgres:16.2-alpine3.19
+    # a lock wait past the deadlock timeout logs a "still waiting" line, which the harness counts
+    command:
+      - postgres
+      - -c
+      - log_lock_waits=on
+      - -c
+      - deadlock_timeout=100ms
+      - -c
+      - max_connections=200
+    environment:
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=vers
+    ports:
+      - '5733:5432'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U admin -d vers']
+      interval: 2s
+      timeout: 3s
+      retries: 15
+    cpus: ${LOAD_POSTGRES_CPUS}
+    mem_limit: 8g
+  service-activity:
+    <<: *service-base
+    image: ${LOAD_IMAGE_VERS_SERVICE_ACTIVITY}
+    environment:
+      <<: *db-env
+      KEYS_SERVICE_URL: http://service-keys:3000
+      REPLAY_SERVICE_URL: http://service-replay:3000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      service-keys:
+        condition: service_healthy
+  service-keys:
+    <<: *service-base
+    image: ${LOAD_IMAGE_VERS_SERVICE_KEYS}
+    environment:
+      ROLL_KEY_ROOTS: '{"trade":{"current":1,"roots":{"1":"1111111111111111111111111111111111111111111111111111111111111111"}},"self-found":{"current":1,"roots":{"1":"2222222222222222222222222222222222222222222222222222222222222222"}}}'
+      SCOPE_SECRET_ROOTS: '{"worldmap":{"current":1,"roots":{"1":"4444444444444444444444444444444444444444444444444444444444444444"}}}'
+  service-replay:
+    <<: *service-base
+    image: ${LOAD_IMAGE_VERS_SERVICE_REPLAY}
+    environment:
+      <<: *db-env
+      KEYS_SERVICE_URL: http://service-keys:3000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      service-keys:
+        condition: service_healthy
+  # the provider binary of a replay image built under the retained sim version's hash; its
+  # registry row points the verifier here, as a retained provider app's row does on Fly
+  service-replay-retained:
+    <<: *service-base
+    image: ${LOAD_IMAGE_VERS_SERVICE_REPLAY_RETAINED}
+    command: ['provider']
+  service-session:
+    <<: *service-base
+    image: ${LOAD_IMAGE_VERS_SERVICE_SESSION}
+    environment:
+      <<: *db-env
+      API_IDENTIFIER: http://localhost:3000/
+    # the harness creates each player's session here, as app-web's sign-in does
+    ports:
+      - '3401:3000'
+    depends_on:
+      postgres:
+        condition: service_healthy
+  app-web:
+    <<: *service-base
+    image: ${LOAD_IMAGE_VERS_APP_WEB}
+    mem_limit: 512m
+    environment:
+      FEATURE_GAME_RENDERER: 'false'
+      ACTIVITY_SERVICE_URL: http://service-activity:3000
+      AVATAR_SERVICE_URL: http://service-avatar.invalid:3000
+      EMAIL_SERVICE_URL: http://service-email.invalid:3000
+      KEYS_SERVICE_URL: http://service-keys:3000
+      REPLAY_SERVICE_URL: http://service-replay:3000
+      SESSION_SERVICE_URL: http://service-session:3000
+      USER_SERVICE_URL: http://service-user.invalid:3000
+      VERIFICATION_SERVICE_URL: http://service-verification.invalid:3000
+      SESSION_SECRET: ${LOAD_SESSION_SECRET}
+      UMAMI_URL: http://umami.invalid:3021
+    ports:
+      - '3400:3000'
+    depends_on:
+      service-activity:
+        condition: service_healthy
+      service-keys:
+        condition: service_healthy
+      service-replay:
+        condition: service_healthy
+      service-session:
+        condition: service_healthy
