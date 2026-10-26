@@ -3,7 +3,7 @@ import type { ActivityData } from '@vers/contract-activity';
 import { buildStartHash } from '@vers/contract-activity';
 import type { OptimisticBuildSource } from '@vers/idle-core';
 import { buildLevelFromXP, foldOptimisticBuild } from '@vers/idle-core';
-import { readLastStartedActivity } from '../submission/read-last-started-activity';
+import { readNextPredecessorID } from '../submission/read-next-predecessor-id';
 import { readNodeSeed } from '../submission/read-node-seed';
 import { readStartStamps } from '../submission/read-start-stamps';
 import type { LatestRun, WorkerContext } from './types';
@@ -42,7 +42,7 @@ export async function loadActivityStart(
 
   const buildSnapshot = buildOptimisticBuildSnapshot(context, input.avatarID);
 
-  const trackedPredecessorID = await readPredecessorActivityID(input.avatarID);
+  const trackedPredecessorID = await readNextPredecessorID(input.avatarID);
 
   const predecessorActivityID = input.predecessorActivityID ?? trackedPredecessorID;
 
@@ -105,10 +105,4 @@ function buildPreviousRunSources(previousRun: Readonly<LatestRun>): Array<Optimi
   }
 
   return [{ settledXP: 0, tailPayload: previousRun.tail, unverifiedDeltaSum: previousRun.deltaXP }];
-}
-
-async function readPredecessorActivityID(avatarID: string): Promise<null | string> {
-  const record = await readLastStartedActivity(avatarID);
-
-  return record?.lastActivityID ?? null;
 }

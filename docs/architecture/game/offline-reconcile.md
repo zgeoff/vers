@@ -67,12 +67,14 @@ activity and any idle gap on top of it fast-forwards. A different device or brow
 different store. It knows only the last position the server confirmed, so it fast-forwards idle
 attempts at that node instead, and the device delivers none of the nodes the player walked offline.
 The loss is mechanical: while the original device is offline or closed, nothing can reach its
-outbox. The device asks the browser to persist its storage when a run starts, which stops the
-browser from evicting the outbox under storage pressure but never stops the player from clearing
-site data, so the outbox is safe only once the server has received it. A checkpoint the outbox
-refuses to store is not in the outbox, and an outbox the worker cannot read back holds no dependable
-record of the run. On either failure the worker stops the run at the last checkpoint the outbox kept
-and reports the failure to the tabs.
+outbox. The device commits each activity start together with the avatar's record of its last-started
+activity, and each checkpoint together with the cached anchor of its node, so a browser that closes
+mid-write keeps both or neither. The device asks the browser to persist its storage when a run
+starts, which stops the browser from evicting the outbox under storage pressure but never stops the
+player from clearing site data, so the outbox is safe only once the server has received it. A
+checkpoint the outbox refuses to store is not in the outbox, and an outbox the worker cannot read
+back holds no dependable record of the run. On either failure the worker stops the run at the last
+checkpoint the outbox kept and reports the failure to the tabs.
 
 An account holds one verified session, so verifying a session on a new device evicts every other
 session the account owns ([auth](../services/auth.md#session-lifecycle)). The evicted device's next
@@ -144,12 +146,14 @@ The server cannot recover the play order from its own clocks, because the activi
 stretch arrive together at reconnect. The client declares the order, since it alone witnessed the
 play. Each activity names its predecessor: the avatar's immediately-prior activity across every
 chain, null only for the avatar's first. The client stamps it at start from a durable per-avatar
-record of the last-started activity, which survives a worker reload. An out-of-order or
-reload-orphaned delivery only delays a successor until its named predecessor lands; it never points
-the server at the wrong activity. A predecessor that the verifier never proved any of, such as one
-that appended nothing, says nothing about the activities before it, so the verifier looks past it to
-the activity it names in turn. Declaring a false order buys nothing, because the checks read only
-settled state.
+record of the last-started activity, which survives a worker reload. When the outbox holds a pending
+activity start that names the recorded activity as its predecessor, the next start names that
+pending start instead, so an outbox whose record missed a start still keeps one order. An
+out-of-order or reload-orphaned delivery only delays a successor until its named predecessor lands;
+it never points the server at the wrong activity. A predecessor that the verifier never proved any
+of, such as one that appended nothing, says nothing about the activities before it, so the verifier
+looks past it to the activity it names in turn. Declaring a false order buys nothing, because the
+checks read only settled state.
 
 ## Held activities
 

@@ -4,7 +4,7 @@ import { RPCLink } from '@orpc/client/fetch';
 import { MAX_CATCH_UP_BATCH_CHECKPOINTS } from '@vers/contract-activity';
 import { resolveServiceURL } from '@vers/mock-services';
 import { mockActivityService } from '@vers/mock-services/activity';
-import { waitFor } from '@vers/test-utils';
+import { makeAnswerQueue, waitFor } from '@vers/test-utils';
 import { HttpResponse, delay, http } from 'msw';
 import invariant from 'tiny-invariant';
 import { SimulatedClock } from 'xstate';
@@ -20,17 +20,15 @@ import type { IngestActivityStartOutcome } from './ingest-activity-start';
 import { JournalWriteError } from './journal-write-error';
 import { readNodeSeed } from './read-node-seed';
 import { readQueuedCheckpoints } from './read-queued-checkpoints';
-import type { ActivityServiceClient } from './types';
+import type { ActivityServiceClient, CheckpointJournal } from './types';
+import { writeNodeAnchor } from './write-node-anchor';
 import { writeNodeSeeds } from './write-node-seeds';
 import { writeQueuedCheckpoint } from './write-queued-checkpoint';
 
 function setupTest(
   config: Readonly<{
     ingestActivityStart?: (activityID: string) => Promise<IngestActivityStartOutcome>;
-    journal?: {
-      readonly readQueuedCheckpoints: typeof readQueuedCheckpoints;
-      readonly writeQueuedCheckpoint: typeof writeQueuedCheckpoint;
-    };
+    journal?: CheckpointJournal;
     onAcked?: (activityID: string, appendedHead: number) => void;
     onJournalUnreadable?: (activityID: string, receivedVersion: number, error: unknown) => void;
     onSaved?: (activityID: string, version: number) => void;
@@ -162,6 +160,7 @@ test('it still invalidates the stream when the unreadable-journal observer throw
   const ctx = setupTest({
     journal: {
       readQueuedCheckpoints: () => Promise.reject(new DOMException('gone', 'InvalidStateError')),
+      writeNodeAnchor,
       writeQueuedCheckpoint,
     },
     onJournalUnreadable: () => {
@@ -183,6 +182,7 @@ test('it classifies a refused journal write, reports it, and keeps the cursor wh
   const ctx = setupTest({
     journal: {
       readQueuedCheckpoints,
+      writeNodeAnchor,
       writeQueuedCheckpoint: () => Promise.reject(new DOMException('quota', 'QuotaExceededError')),
     },
   });
@@ -215,6 +215,7 @@ test('it reports an unreadable journal at registration beside the stream invalid
   const ctx = setupTest({
     journal: {
       readQueuedCheckpoints: () => Promise.reject(new DOMException('gone', 'InvalidStateError')),
+      writeNodeAnchor,
       writeQueuedCheckpoint,
     },
   });
@@ -1966,6 +1967,102 @@ test('it never persists a node anchor when the registration carries no scope', a
   const cached = await readNodeSeed(seed.avatarID, seed.nodeID);
 
   expect(cached?.anchor).toStrictEqual({ chainIndex: 2, nextSeed: 'seed-untouched' });
+});
+
+test("it raises the node's cached anchor to the last queued checkpoint on registration, and keeps the undelivered queue", async () => {
+  const ctx = setupTest();
+
+  server.use(mockActivityService.trackActivityProgress.handler(() => HttpResponse.error()));
+
+  const seed = createMockNodeSeed({
+    avatarID: 'avatar-anchor-behind',
+    anchor: { chainIndex: 5, nextSeed: 'seed-start' },
+    nodeID: '4_1',
+  });
+
+  const first = createMockCheckpointBatchEntry({ payload: { nextSeed: 'seed-first' }, version: 1 });
+
+  const second = createMockCheckpointBatchEntry({
+    payload: { nextSeed: 'seed-second' },
+    version: 2,
+  });
+
+  await writeNodeSeeds(seed.avatarID, [seed]);
+  await writeQueuedCheckpoint('anchor-behind-activity', first);
+  await writeQueuedCheckpoint('anchor-behind-activity', second);
+
+  await ctx.submitter.registerActivity({
+    activityID: 'anchor-behind-activity',
+    appendedHead: 0,
+    avatarID: seed.avatarID,
+    lastHash: 'start_hash',
+    scopeID: seed.nodeID,
+    startChainIndex: 5,
+  });
+
+  const cached = await readNodeSeed(seed.avatarID, seed.nodeID);
+  const queued = await readQueuedCheckpoints('anchor-behind-activity');
+
+  expect(cached?.anchor).toStrictEqual({ chainIndex: 7, nextSeed: 'seed-second' });
+
+  expect(queued).toStrictEqual([
+    { ...first, activityID: 'anchor-behind-activity' },
+    { ...second, activityID: 'anchor-behind-activity' },
+  ]);
+});
+
+test("it rejects a registration whose anchor repair fails, and repairs the anchor on the activity's next registration", async () => {
+  const nextAnchorWrite = makeAnswerQueue<typeof writeNodeAnchor>([
+    () => Promise.reject(new DOMException('quota', 'QuotaExceededError')),
+    writeNodeAnchor,
+  ]);
+
+  const ctx = setupTest({
+    journal: {
+      readQueuedCheckpoints,
+      writeNodeAnchor: (avatarID, nodeID, anchor) => nextAnchorWrite()(avatarID, nodeID, anchor),
+      writeQueuedCheckpoint,
+    },
+  });
+
+  server.use(mockActivityService.trackActivityProgress.handler(() => HttpResponse.error()));
+
+  const seed = createMockNodeSeed({
+    avatarID: 'avatar-repair-refused',
+    anchor: { chainIndex: 2, nextSeed: 'seed-start' },
+    nodeID: '4_2',
+  });
+
+  const registration = {
+    activityID: 'repair-refused-activity',
+    appendedHead: 0,
+    avatarID: seed.avatarID,
+    lastHash: 'start_hash',
+    scopeID: seed.nodeID,
+    startChainIndex: 2,
+  };
+
+  await writeNodeSeeds(seed.avatarID, [seed]);
+
+  await writeQueuedCheckpoint(
+    'repair-refused-activity',
+    createMockCheckpointBatchEntry({ payload: { nextSeed: 'seed-queued' }, version: 1 }),
+  );
+
+  const refused = await ctx.submitter.registerActivity(registration).then(
+    () => null,
+    (error: unknown) => error,
+  );
+
+  const afterRefusal = await readNodeSeed(seed.avatarID, seed.nodeID);
+
+  await ctx.submitter.registerActivity(registration);
+
+  const repaired = await readNodeSeed(seed.avatarID, seed.nodeID);
+
+  expect(refused).toMatchObject({ name: 'QuotaExceededError' });
+  expect(afterRefusal?.anchor).toStrictEqual({ chainIndex: 2, nextSeed: 'seed-start' });
+  expect(repaired?.anchor).toStrictEqual({ chainIndex: 3, nextSeed: 'seed-queued' });
 });
 
 test('it keeps the device online when a pending activity start defers, retrying on the backoff instead of at once', async () => {

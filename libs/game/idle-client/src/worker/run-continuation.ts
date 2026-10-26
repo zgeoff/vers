@@ -2,9 +2,7 @@ import type { ActivityData } from '@vers/contract-activity';
 import type { Simulation } from '@vers/idle-core';
 import { buildSimulationInput } from '@vers/idle-core';
 import { loadContentDocument } from '../content/load-content-document';
-import { removeActivityStart } from '../submission/remove-activity-start';
-import { removeLastStartedActivity } from '../submission/remove-last-started-activity';
-import { writeLastStartedActivity } from '../submission/write-last-started-activity';
+import { removeMintedActivityStart } from '../submission/remove-minted-activity-start';
 import { loadActivityStart } from './load-activity-start';
 import { resetSimulation } from './reset-simulation';
 import type { FlowSignals, WorkerContext } from './types';
@@ -38,14 +36,10 @@ export async function runContinuation(
 
   // written before install: a crash here still leaves a recoverable activity start for a later
   // reconcile
-  await context.writeActivityStart(row);
-
-  // durable so the row's own predecessor reference stays recoverable across a worker reload; a
-  // later start for this avatar reads it back as its own predecessor
-  await writeLastStartedActivity({ avatarID: row.avatarID, lastActivityID: row.id });
+  await context.writeMintedActivityStart(row);
 
   if (signals.stop.aborted) {
-    await removeMintedRow(row);
+    await removeMintedActivityStart(row);
 
     return;
   }
@@ -66,7 +60,7 @@ export async function runContinuation(
       throw error;
     }
 
-    await removeMintedRow(row);
+    await removeMintedActivityStart(row);
   }
 }
 
@@ -76,21 +70,6 @@ function stopAndReset(context: WorkerContext, simulation: Simulation): void {
   if (context.getSimulation() === simulation) {
     resetSimulation(context);
   }
-}
-
-async function removeMintedRow(row: Readonly<ActivityData>): Promise<void> {
-  await removeActivityStart(row.id);
-
-  if (row.predecessorActivityID === null) {
-    await removeLastStartedActivity(row.avatarID);
-
-    return;
-  }
-
-  await writeLastStartedActivity({
-    avatarID: row.avatarID,
-    lastActivityID: row.predecessorActivityID,
-  });
 }
 
 async function startContinuationFrom(
@@ -108,7 +87,7 @@ async function startContinuationFrom(
   // a cached document resolves without consulting the signal, so a stop that landed during the
   // load is re-checked here: installing would revive the run the player just ended
   if (signals.stop.aborted) {
-    await removeMintedRow(row);
+    await removeMintedActivityStart(row);
 
     return;
   }

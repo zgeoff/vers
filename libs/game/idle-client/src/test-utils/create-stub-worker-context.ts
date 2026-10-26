@@ -9,7 +9,7 @@ import { createActor } from 'xstate';
 import { createActivityServiceClient } from '../submission/create-activity-service-client';
 import type { CheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import type { ActivityServiceClient } from '../submission/types';
-import { writeActivityStart } from '../submission/write-activity-start';
+import { writeMintedActivityStart } from '../submission/write-minted-activity-start';
 import type { RewardSlotLedgerEntry } from '../types';
 import { createDebugRecorder } from '../worker/create-debug-recorder';
 import type { LatestRun, WorkerContext } from '../worker/types';
@@ -34,7 +34,7 @@ interface CreateStubWorkerContextOptions {
 
   readonly submitter?: Readonly<CheckpointSubmitter>;
 
-  readonly writeActivityStart?: (row: Readonly<ActivityData>) => Promise<void>;
+  readonly writeMintedActivityStart?: (row: Readonly<ActivityData>) => Promise<void>;
 }
 
 export interface StubWorkerContext extends WorkerContext {
@@ -161,7 +161,7 @@ export function createStubWorkerContext(
     updateConnectivity: (online) => {
       connectivityOnline = online;
     },
-    writeActivityStart: options.writeActivityStart ?? writeActivityStart,
+    writeMintedActivityStart: options.writeMintedActivityStart ?? writeMintedActivityStart,
   };
 
   const lifecycleActor = createActor(workerLifecycleMachine, {
