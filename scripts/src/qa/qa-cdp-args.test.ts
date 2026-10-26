@@ -41,28 +41,6 @@ test.each<[string, Args, Array<string>, Record<string, unknown>]>([
   ['offline', QA_CDP_ARGS.offline, ['T1', '--', 'off'], { state: 'off', target: 'T1' }],
   ['pause', QA_CDP_ARGS.pause, ['--', '-T1'], { target: '-T1' }],
   ['profile', QA_CDP_ARGS.profile, ['--', '-T1'], { seconds: 4, target: '-T1' }],
-])('it fills the arguments of %s from the words after --', async (name, args, argv, expected) => {
-  const received: Array<unknown> = [];
-  const output = { error: mock((_text: string) => {}), log: mock((_text: string) => {}) };
-
-  const command = define({
-    args,
-    name,
-    run: (ctx) => {
-      received.push({ ...ctx.values });
-    },
-  });
-
-  const ran = await runCommandLine([name, ...argv], define({ name: 'qa-cdp' }), {
-    output,
-    subCommands: { [name]: command },
-  });
-
-  expect(ran).toBeTrue();
-  expect(received).toStrictEqual([expected]);
-});
-
-test.each<[string, Args, Array<string>, Record<string, unknown>]>([
   ['click', QA_CDP_ARGS.click, ['T1', '-5', '10'], { target: 'T1', x: -5, y: 10 }],
   ['click', QA_CDP_ARGS.click, ['T1', '12', '-0.5'], { target: 'T1', x: 12, y: -0.5 }],
   [
@@ -79,7 +57,7 @@ test.each<[string, Args, Array<string>, Record<string, unknown>]>([
     { every: 10, url: '-preview.example.test' },
   ],
   ['new', QA_CDP_ARGS.new, ['--context', '-CTX1'], { context: '-CTX1', url: 'about:blank' }],
-])('it reads a value of %s that starts with -', async (name, args, argv, expected) => {
+])('it reads the arguments of %s in command line %#', async (name, args, argv, expected) => {
   const received: Array<unknown> = [];
   const output = { error: mock((_text: string) => {}), log: mock((_text: string) => {}) };
 
