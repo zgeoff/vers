@@ -1,5 +1,4 @@
 import type { DB } from '@vers/db';
-import { $ } from 'bun';
 import type { Kysely } from 'kysely';
 import { sql } from 'kysely';
 import * as z from 'zod';
@@ -11,6 +10,7 @@ interface CreateLoadSamplerOptions {
   readonly containerPrefix: string;
   readonly db: Kysely<DB>;
   readonly intervalMs: number;
+  readonly readContainerStats: () => Promise<string>;
 }
 
 interface LoadSampler {
@@ -18,15 +18,16 @@ interface LoadSampler {
 }
 
 // samples the shared database and the containers from outside the stack, so no instrument the
-// services lack is needed
-export function createLoadSampler(options: Readonly<CreateLoadSamplerOptions>): LoadSampler {
+// services lack is needed; the first sample is the baseline that later proofs are aged against, and
+// the stop takes a last one, so a proof that lands after the last tick still gets its age
+export async function createLoadSampler(
+  options: Readonly<CreateLoadSamplerOptions>,
+): Promise<LoadSampler> {
   const startedAt = performance.now();
   const recording: SamplerRecording = { containers: [], pipeline: [], settlementAges: [] };
   const readVerifiedAges = makeReadVerifiedAges(options.db);
 
-  const controller = new AbortController();
-
-  const pipelineLoop = runEvery(options.intervalMs, controller.signal, async () => {
+  const samplePipeline = async (): Promise<void> => {
     const elapsedMs = performance.now() - startedAt;
 
     const sample = await readPipelineSample(options.db, elapsedMs);
@@ -37,17 +38,24 @@ export function createLoadSampler(options: Readonly<CreateLoadSamplerOptions>): 
     for (const ageMs of ages) {
       recording.settlementAges.push({ ageMs, elapsedMs });
     }
-  });
+  };
 
-  const containerLoop = runEvery(options.intervalMs, controller.signal, async () => {
+  const sampleContainers = async (): Promise<void> => {
     const elapsedMs = performance.now() - startedAt;
 
-    const output = await $`docker stats --no-stream --format ${'{{json .}}'}`.quiet().text();
+    const output = await options.readContainerStats();
 
     const samples = collectContainerSamples(output, options.containerPrefix, elapsedMs);
 
     recording.containers.push(...samples);
-  });
+  };
+
+  await Promise.all([samplePipeline(), sampleContainers()]);
+
+  const controller = new AbortController();
+
+  const pipelineLoop = runEvery(options.intervalMs, controller.signal, samplePipeline);
+  const containerLoop = runEvery(options.intervalMs, controller.signal, sampleContainers);
 
   return {
     stop: async () => {
@@ -55,23 +63,11 @@ export function createLoadSampler(options: Readonly<CreateLoadSamplerOptions>): 
 
       await Promise.all([pipelineLoop, containerLoop]);
 
+      await samplePipeline();
+
       return recording;
     },
   };
-}
-
-async function runEvery(
-  intervalMs: number,
-  signal: AbortSignal,
-  tick: () => Promise<void>,
-): Promise<void> {
-  while (!signal.aborted) {
-    const tickStartedAt = performance.now();
-
-    await tick();
-
-    await Bun.sleep(Math.max(0, intervalMs - (performance.now() - tickStartedAt)));
-  }
 }
 
 const ActivityTotalsSchema = z.object({
@@ -120,5 +116,41 @@ function collectContainerSamples(
     const sample = parseContainerStats(line, elapsedMs);
 
     return sample !== undefined && sample.container.startsWith(prefix) ? [sample] : [];
+  });
+}
+
+async function runEvery(
+  intervalMs: number,
+  signal: AbortSignal,
+  tick: () => Promise<void>,
+): Promise<void> {
+  let tickStartedAt = performance.now();
+
+  while (!signal.aborted) {
+    await wait(Math.max(0, intervalMs - (performance.now() - tickStartedAt)), signal);
+
+    if (signal.aborted) {
+      return;
+    }
+
+    tickStartedAt = performance.now();
+
+    await tick();
+  }
+}
+
+function wait(delayMs: number, signal: AbortSignal): Promise<void> {
+  return new Promise((resolve) => {
+    const settle = (): void => {
+      clearTimeout(timer);
+
+      signal.removeEventListener('abort', settle);
+
+      resolve();
+    };
+
+    const timer = setTimeout(settle, delayMs);
+
+    signal.addEventListener('abort', settle, { once: true });
   });
 }

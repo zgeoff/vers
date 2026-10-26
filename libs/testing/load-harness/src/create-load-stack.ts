@@ -67,6 +67,7 @@ export async function createLoadStack(
     containerPrefix: `${PROJECT_NAME}-`,
     db,
     privateKey: await parseServicePrivateKey(privateKeyPEM),
+    readContainerStats: () => $`docker stats --no-stream --format ${'{{json .}}'}`.quiet().text(),
     readCPULimits: async () => {
       const inspection = await readContainerInspection(env);
 

@@ -17,6 +17,7 @@ export interface LoadStack {
   readonly containerPrefix: string;
   readonly db: Kysely<DB>;
   readonly privateKey: CryptoKey;
+  readonly readContainerStats: () => Promise<string>;
   readonly readCPULimits: () => Promise<Record<string, number>>;
   readonly readExits: (startedAt: Date) => Promise<Array<ContainerExit>>;
   readonly readLogs: (service: string, since: Date) => Promise<string>;

@@ -50,10 +50,11 @@ export async function runLiveScenario(
 
   const windowStartedAt = new Date();
 
-  const sampler = createLoadSampler({
+  const sampler = await createLoadSampler({
     containerPrefix: stack.containerPrefix,
     db: stack.db,
     intervalMs: options.sampleIntervalMs,
+    readContainerStats: stack.readContainerStats,
   });
 
   const startedAt = performance.now();
