@@ -12,7 +12,8 @@ interface BuildPlayerProfilesInput {
   readonly versions: LoadEngineVersions;
 }
 
-// deterministic per player index, so a rerun replays the same workload
+// deterministic per player index, so a rerun repeats each player's level and sim version; the
+// fights differ, because each stack creates new avatars and draws new genesis seeds
 export function buildPlayerProfiles(
   input: Readonly<BuildPlayerProfilesInput>,
 ): Array<PlayerProfile> {
