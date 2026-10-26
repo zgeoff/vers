@@ -1,5 +1,5 @@
 import type { DB } from '@vers/db';
-import { sql } from 'kysely';
+import { transitionActivityStatus } from '@vers/db';
 import type { Kysely } from 'kysely';
 
 export const MAX_REPLAY_ATTEMPTS = 5;
@@ -22,17 +22,25 @@ export async function updateReplayAttempts(
 
   const row = await db
     .updateTable('activities')
-    .set((eb) => ({
-      replayAttempts: eb('replayAttempts', '+', 1),
-      status: sql`CASE WHEN replay_attempts + 1 >= ${maxAttempts} THEN 'quarantined' ELSE status END`,
-    }))
+    .set((eb) => ({ replayAttempts: eb('replayAttempts', '+', 1) }))
     .where('id', '=', input.activityID)
-    .returning(['replayAttempts', 'status'])
+    .returning('replayAttempts')
     .executeTakeFirst();
 
   if (row === undefined) {
     return undefined;
   }
 
-  return { attempts: row.replayAttempts, quarantined: row.status === 'quarantined' };
+  if (row.replayAttempts < maxAttempts) {
+    return { attempts: row.replayAttempts, quarantined: false };
+  }
+
+  const quarantined = await transitionActivityStatus(db, input.activityID, {
+    from: ['active', 'stopped', 'capped'],
+    to: 'quarantined',
+  })
+    .returning('id')
+    .executeTakeFirst();
+
+  return { attempts: row.replayAttempts, quarantined: quarantined !== undefined };
 }
