@@ -91,7 +91,11 @@ interface CreateCheckpointSubmitterOptions {
   readonly signal?: AbortSignal;
 }
 
-const REAL_JOURNAL: CheckpointJournal = { readQueuedCheckpoints, writeQueuedCheckpoint };
+const REAL_JOURNAL: CheckpointJournal = {
+  readQueuedCheckpoints,
+  writeNodeAnchor,
+  writeQueuedCheckpoint,
+};
 
 interface WriteCursor {
   readonly avatarID: string | undefined;
@@ -212,7 +216,7 @@ export function createCheckpointSubmitter(
       const advance = buildNodeAnchorAdvance(cursor, lastRow.version, lastRow.payload.nextSeed);
 
       if (advance !== undefined) {
-        await writeNodeAnchor(advance.avatarID, advance.nodeID, advance.anchor);
+        await journal.writeNodeAnchor(advance.avatarID, advance.nodeID, advance.anchor);
       }
     }
 
@@ -289,7 +293,16 @@ export function createCheckpointSubmitter(
 
     registrations.set(context.activityID, seeding);
 
-    await seeding;
+    try {
+      await seeding;
+    } catch (error) {
+      if (registrations.get(context.activityID) === seeding) {
+        registrations.delete(context.activityID);
+      }
+
+      throw error;
+    }
+
     await flushNow(context.activityID);
   };
 
