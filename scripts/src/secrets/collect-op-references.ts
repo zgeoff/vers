@@ -1,69 +1,47 @@
-import { collectShellWords } from './collect-shell-words';
-import { parseOPReferencePath } from './parse-op-reference-path';
-import type { CollectedOPReferences, OPReference, ShellWord } from './types';
+import invariant from 'tiny-invariant';
+import type { CollectedOPReferences, OPReference } from './types';
 
 const SCHEME = 'op://';
 
-// GitHub substitutes an expression before any shell runs, so its value is unknown to the scan
-const GITHUB_EXPRESSION_PATTERN = /\$\{\{[\s\S]*?\}\}/gu;
+// a reference is a literal vault, item and field of letters, digits, `_`, `.` and `-`, with an
+// optional query, ended by a space, a quote, a backtick, `)` or the end of the text; any other
+// `op://` fails, because no rule here reads the shell or YAML around it
+const OP_REFERENCE_PATTERN =
+  /op:\/\/(?<vault>[\w.-]+)\/(?<item>[\w.-]+)\/(?<field>[\w.-]+)(?:\?[\w=-]+)?(?=[\s'"`)]|$)/uy;
 
-// a reference stands alone in its word or behind an assignment or flag name, as in `TOKEN=` or
-// `--token=`; any other text before it, such as an expansion or prose, changes what is read
-const REFERENCE_PREFIX_PATTERN = /^(?:-{0,2}[A-Za-z_][\w-]*=)?$/u;
+// the scheme followed by a space, a quote, a backtick or the end of the text names it in prose
+const SCHEME_IN_PROSE_PATTERN = /^[\s'"`]|^$/u;
 
 export function collectOPReferences(text: string): CollectedOPReferences {
   const references: Array<OPReference> = [];
   const unparsed: Array<string> = [];
 
-  for (const expression of text.match(GITHUB_EXPRESSION_PATTERN) ?? []) {
-    if (expression.includes(SCHEME)) {
-      unparsed.push(expression);
-    }
-  }
-
-  for (const word of collectReferenceWords(text.replaceAll(GITHUB_EXPRESSION_PATTERN, '$'), 0)) {
-    const start = word.value.indexOf(SCHEME);
-    const path = word.value.slice(start + SCHEME.length);
-
-    // the scheme alone is prose that names it, never a reference
-    if (path === '') {
+  for (let start = text.indexOf(SCHEME); start !== -1; start = text.indexOf(SCHEME, start + 1)) {
+    if (
+      SCHEME_IN_PROSE_PATTERN.test(text.slice(start + SCHEME.length, start + SCHEME.length + 1))
+    ) {
       continue;
     }
 
-    const isInContext = REFERENCE_PREFIX_PATTERN.test(word.value.slice(0, start));
-    const reference = word.isComplete && isInContext ? parseOPReferencePath(path) : null;
+    OP_REFERENCE_PATTERN.lastIndex = start;
 
-    if (reference === null) {
-      const reported = isInContext ? word.value.slice(start) : word.value;
+    const found = OP_REFERENCE_PATTERN.exec(text);
 
-      unparsed.push(reported);
+    if (found === null) {
+      unparsed.push(text.slice(start).split(/\s/u)[0] ?? SCHEME);
     } else {
-      references.push(reference);
+      const field = found.groups?.['field'];
+      const item = found.groups?.['item'];
+      const vault = found.groups?.['vault'];
+
+      invariant(
+        field !== undefined && item !== undefined && vault !== undefined,
+        'the pattern captures a vault, an item and a field',
+      );
+
+      references.push({ field, item, vault });
     }
   }
 
   return { references, unparsed };
-}
-
-// the word after `-c` is the command line a nested shell runs, as in `sh -c "op read …"`, so it is
-// read once more as one; any other word is a literal value, and a quote inside it is part of the
-// name
-const MAX_NESTING = 2;
-
-function collectReferenceWords(text: string, depth: number): Array<ShellWord> {
-  const words = collectShellWords(text);
-
-  return words.flatMap((word, index) => {
-    if (!word.value.includes(SCHEME)) {
-      return [];
-    }
-
-    if (depth >= MAX_NESTING || words[index - 1]?.value !== '-c') {
-      return [word];
-    }
-
-    return collectReferenceWords(word.value, depth + 1).map((inner) =>
-      word.isComplete ? inner : { isComplete: false, value: inner.value },
-    );
-  });
 }

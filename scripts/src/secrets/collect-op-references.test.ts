@@ -1,239 +1,64 @@
 import { expect, test } from 'bun:test';
 import { collectOPReferences } from './collect-op-references';
 
-test('it collects each reference in an env file', () => {
-  expect(
-    collectOPReferences('API_KEY=op://ops/billing/api-key\nREGION=op://ops/billing/region\n'),
-  ).toStrictEqual({
-    references: [
-      { field: 'api-key', item: 'billing', vault: 'ops' },
-      { field: 'region', item: 'billing', vault: 'ops' },
-    ],
-    unparsed: [],
-  });
-});
-
-test('it collects a reference inside a command substitution', () => {
-  expect(
-    collectOPReferences(`TOKEN="$(op read 'op://ops/tracker/mcp-token')" exec ./tracker-mcp`),
-  ).toStrictEqual({
-    references: [{ field: 'mcp-token', item: 'tracker', vault: 'ops' }],
-    unparsed: [],
-  });
-});
-
 test.each([
-  ['single quotes', String.raw`op read 'op://ops/billing/token(prod)'`],
-  ['double quotes', String.raw`op read "op://ops/billing/token(prod)"`],
-  ['ANSI-C quotes', String.raw`op read $'op://ops/billing/token(prod)'`],
-  [
-    'escaped quotes in a nested shell',
-    String.raw`sh -c "op read \"op://ops/billing/token(prod)\""`,
-  ],
-])('it collects the whole field inside %s', (_form, text) => {
-  expect(collectOPReferences(text)).toStrictEqual({
-    references: [{ field: 'token(prod)', item: 'billing', vault: 'ops' }],
-    unparsed: [],
-  });
-});
-
-test.each([
-  ['a bare suffix on single quotes', String.raw`op read 'op://ops/billing/token'-v2`],
-  ['a bare suffix on double quotes', String.raw`op read "op://ops/billing/token"-v2`],
-  ['a bare suffix on ANSI-C quotes', String.raw`op read $'op://ops/billing/token'-v2`],
-  ['a double-quoted suffix on single quotes', String.raw`op read 'op://ops/billing/token'"-v2"`],
-  ['a single-quoted suffix on double quotes', String.raw`op read "op://ops/billing/token"'-v2'`],
-  ['an escaped suffix on a bare reference', String.raw`op read op://ops/billing/token\-v2`],
-])('it reads %s as one field', (_form, text) => {
-  expect(collectOPReferences(text)).toStrictEqual({
-    references: [{ field: 'token-v2', item: 'billing', vault: 'ops' }],
-    unparsed: [],
-  });
-});
-
-test.each([
-  ['2>/dev/null', 'op read op://ops/billing/token 2>/dev/null'],
-  ['2>&1', 'op read op://ops/billing/token 2>&1'],
-  ['>&2', 'op read op://ops/billing/token >&2'],
-  ['a redirection glued to the reference', 'op read op://ops/billing/token>/dev/null'],
-])('it keeps the %s redirection out of the reference', (_redirection, text) => {
+  ['an env file assignment', 'API_TOKEN=op://ops/billing/token\n'],
+  ['a single-quoted shell argument', `TOKEN="$(op read 'op://ops/billing/token')" exec ./run`],
+  ['a double-quoted shell argument', 'op read "op://ops/billing/token"'],
+  ['a reference with a query', 'CODE=op://ops/billing/token?attribute=otp\n'],
+  ['a markdown code span', 'read `op://ops/billing/token` at boot'],
+  ['the end of the text', 'op read op://ops/billing/token'],
+])('it collects a literal reference in %s', (_form, text) => {
   expect(collectOPReferences(text)).toStrictEqual({
     references: [{ field: 'token', item: 'billing', vault: 'ops' }],
     unparsed: [],
   });
 });
 
-test.each([
-  ['a semicolon', 'op read op://ops/login/code?attribute=otp; op read op://ops/service/token'],
-  ['an and-list', 'op read op://ops/login/code?attribute=otp && op read op://ops/service/token'],
-  ['a pipe', 'op read op://ops/login/code?attribute=otp | op read op://ops/service/token'],
-  ['a space', 'op inject op://ops/login/code?attribute=otp op://ops/service/token'],
-])('it collects each of two references separated by %s', (_separator, text) => {
-  expect(collectOPReferences(text)).toStrictEqual({
+test('it collects each reference on a line in order', () => {
+  expect(
+    collectOPReferences(
+      `USER="$(op read 'op://ops/panel/username')" PASS="$(op read 'op://ops/panel/password')"`,
+    ),
+  ).toStrictEqual({
     references: [
-      { field: 'code', item: 'login', vault: 'ops' },
-      { field: 'token', item: 'service', vault: 'ops' },
+      { field: 'username', item: 'panel', vault: 'ops' },
+      { field: 'password', item: 'panel', vault: 'ops' },
     ],
     unparsed: [],
   });
 });
 
 test.each([
+  ['a space in a name', 'API_TOKEN=op://ops/Billing Portal/token\n', 'op://ops/Billing'],
+  ['a quote in a name', `op read "op://ops/Billing's/token"`, `op://ops/Billing's/token"`],
+  ['a variable', 'op read "op://ops/$ITEM/token"', 'op://ops/$ITEM/token"'],
+  ['a GitHub expression', `op read "op://\${{ vars.VAULT }}/billing/token"`, 'op://${{'],
+  ['a brace', 'op read op://ops/{item}/token', 'op://ops/{item}/token'],
   [
-    'an apostrophe in double quotes',
-    `op read "op://ops/Billing's Portal/token"`,
-    "Billing's Portal",
+    'a section under the item',
+    'op read op://ops/billing/keys/token',
+    'op://ops/billing/keys/token',
+  ],
+  ['no field', 'API_TOKEN=op://ops/billing\n', 'op://ops/billing'],
+  [
+    'an escaped quote after it',
+    String.raw`op read \"op://ops/billing/token\"`,
+    String.raw`op://ops/billing/token\"`,
   ],
   [
-    'a double quote in single quotes',
-    `op read 'op://ops/the "prod" item/token'`,
-    'the "prod" item',
+    'a suffix past its field',
+    'op read op://ops/billing/token$SUFFIX',
+    'op://ops/billing/token$SUFFIX',
   ],
-  [
-    'an escaped apostrophe in ANSI-C quotes',
-    String.raw`op read $'op://ops/Billing\'s Portal/token'`,
-    "Billing's Portal",
-  ],
-  [
-    'an escaped double quote in double quotes',
-    String.raw`op read "op://ops/the \"prod\" item/token"`,
-    'the "prod" item',
-  ],
-  [
-    'an escaped apostrophe in a bare word',
-    String.raw`op read op://ops/Billing\'s/token`,
-    "Billing's",
-  ],
-  [
-    'an apostrophe in a nested shell',
-    String.raw`sh -c "op read \"op://ops/Billing's Portal/token\""`,
-    "Billing's Portal",
-  ],
-])('it keeps %s inside the item name', (_form, text, item) => {
-  expect(collectOPReferences(text)).toStrictEqual({
-    references: [{ field: 'token', item, vault: 'ops' }],
-    unparsed: [],
-  });
-});
-
-test('it collects a quoted item name that holds spaces', () => {
-  expect(collectOPReferences('API_KEY="op://ops/Billing Portal/api-key"\n')).toStrictEqual({
-    references: [{ field: 'api-key', item: 'Billing Portal', vault: 'ops' }],
-    unparsed: [],
-  });
-});
-
-test('it reports an unquoted item name that holds spaces as unparsed', () => {
-  expect(collectOPReferences('API_KEY=op://ops/Billing Portal/api-key\n')).toStrictEqual({
-    references: [],
-    unparsed: ['op://ops/Billing'],
-  });
-});
-
-test('it collects a field under a section as the section and field', () => {
-  expect(collectOPReferences(`op read 'op://ops/billing/credentials/api-key'`)).toStrictEqual({
-    references: [{ field: 'credentials/api-key', item: 'billing', vault: 'ops' }],
-    unparsed: [],
-  });
-});
-
-test('it collects a reference with a query as its field alone', () => {
-  expect(collectOPReferences('CODE=op://ops/billing/one-time?attribute=otp\n')).toStrictEqual({
-    references: [{ field: 'one-time', item: 'billing', vault: 'ops' }],
-    unparsed: [],
-  });
-});
-
-test('it ends a reference before a trailing comment', () => {
-  expect(collectOPReferences('API_KEY=op://ops/billing/api-key # rotated monthly\n')).toStrictEqual(
-    { references: [{ field: 'api-key', item: 'billing', vault: 'ops' }], unparsed: [] },
-  );
+])('it reports an op:// occurrence with %s as unparsed', (_form, text, occurrence) => {
+  expect(collectOPReferences(text)).toStrictEqual({ references: [], unparsed: [occurrence] });
 });
 
 test.each([
-  ['a variable', `op read "op://ops/$ITEM/dsn"`, 'op://ops/$ITEM/dsn'],
-  [
-    'an ANSI-C escape sequence',
-    String.raw`op read $'op://ops/billing/token\n'`,
-    'op://ops/billing/token$',
-  ],
-  ['an unclosed quote', `op read 'op://ops/billing/token`, 'op://ops/billing/token'],
-])('it reports a reference that holds %s as unparsed', (_form, text, scanned) => {
-  expect(collectOPReferences(text)).toStrictEqual({ references: [], unparsed: [scanned] });
-});
-
-test.each([
-  ['an unclosed double quote', `sh -c "op read op://ops/billing/token`],
-  ['an unclosed single quote', `sh -c 'op read op://ops/billing/token`],
-  ['an unclosed ANSI-C quote', `sh -c $'op read op://ops/billing/token`],
-  ['an unclosed quote around a quoted reference', `sh -c "op read 'op://ops/billing/token'`],
-])('it reports a reference inside a nested command with %s as unparsed', (_form, text) => {
-  expect(collectOPReferences(text)).toStrictEqual({
-    references: [],
-    unparsed: ['op://ops/billing/token'],
-  });
-});
-
-test.each([
-  [
-    'a GitHub expression that holds the reference',
-    `op read \${{ 'op://ops/billing/token' }}`,
-    `\${{ 'op://ops/billing/token' }}`,
-  ],
-  [
-    'a GitHub expression inside the reference',
-    `op read "op://\${{ vars.VAULT }}/billing/token"`,
-    'op://$/billing/token',
-  ],
-  [
-    'a parameter expansion default',
-    `op read "\${SECRET_REF:-op://ops/billing/token}"`,
-    `\${SECRET_REF:-op://ops/billing/token}`,
-  ],
-  [
-    'a parameter expansion before the reference',
-    `op read "\${PREFIX}op://ops/billing/token"`,
-    `\${PREFIX}op://ops/billing/token`,
-  ],
-  [
-    'a command substitution before the reference',
-    'op read "$(cat prefix)op://ops/billing/token"',
-    '$op://ops/billing/token',
-  ],
-  [
-    'prose before the reference in a quoted string',
-    'echo "token is op://ops/billing/token"',
-    'token is op://ops/billing/token',
-  ],
-])('it reports a reference inside %s as unparsed, with its context', (_form, text, scanned) => {
-  expect(collectOPReferences(text)).toStrictEqual({ references: [], unparsed: [scanned] });
-});
-
-test.each([
-  [
-    'a GitHub expression in another word',
-    `op read op://ops/billing/token --account \${{ vars.ACCOUNT }}`,
-  ],
-  ['a command substitution that reads it', `TOKEN="$(op read 'op://ops/billing/token')"`],
-  ['an assignment of a quoted string', 'TOKEN="op://ops/billing/token"'],
-  ['a flag with a quoted string', '--token="op://ops/billing/token"'],
-  ['a nested shell command string', `sh -c "op read 'op://ops/billing/token'"`],
-])('it collects a reference beside %s', (_form, text) => {
-  expect(collectOPReferences(text)).toStrictEqual({
-    references: [{ field: 'token', item: 'billing', vault: 'ops' }],
-    unparsed: [],
-  });
-});
-
-test('it reports a reference with no field as unparsed', () => {
-  expect(collectOPReferences('API_KEY=op://ops/billing\n')).toStrictEqual({
-    references: [],
-    unparsed: ['op://ops/billing'],
-  });
-});
-
-test('it skips the scheme named in prose', () => {
-  expect(
-    collectOPReferences('- every value is an op:// reference, and `op://` names the scheme\n'),
-  ).toStrictEqual({ references: [], unparsed: [] });
+  ['a space', '# every value is an op:// reference\n'],
+  ['a backtick', '- `.env` holds `op://` references\n'],
+  ['the end of the text', 'the scheme is op://'],
+])('it skips the scheme followed by %s, which names it in prose', (_form, text) => {
+  expect(collectOPReferences(text)).toStrictEqual({ references: [], unparsed: [] });
 });

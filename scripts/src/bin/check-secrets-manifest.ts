@@ -1,8 +1,8 @@
 import { readFile } from 'node:fs/promises';
 import { $ } from 'bun';
 import { z } from 'zod';
-import { collectFileOPReferences } from '../secrets/collect-file-op-references';
 import { collectManifestGaps } from '../secrets/collect-manifest-gaps';
+import { collectOPReferences } from '../secrets/collect-op-references';
 import { formatOPReference } from '../secrets/format-op-reference';
 import { parseSecretsManifest } from '../secrets/parse-secrets-manifest';
 import type { OPReferenceSource } from '../secrets/types';
@@ -29,7 +29,7 @@ let failed = false;
 for (const path of trackedList.split('\0').filter((entry) => entry !== '')) {
   const text = await readFile(path, 'utf8');
 
-  const collected = collectFileOPReferences(path, text);
+  const collected = collectOPReferences(text);
 
   for (const reference of collected.unparsed) {
     console.error(`✗ ${path} holds ${reference}, which is not a literal op://vault/item/field`);
