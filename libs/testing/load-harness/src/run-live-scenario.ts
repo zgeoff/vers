@@ -93,14 +93,18 @@ export async function runLiveScenario(
 
   controller.abort();
 
-  const playerRuns = await playing;
-
-  const delivered = playerRuns.flat();
-  const playMs = performance.now() - startedAt;
+  const stoppedAt = performance.now();
+  const playMs = stoppedAt - startedAt;
 
   events.push({ elapsedMs: playMs, label: 'play stopped' });
 
-  const settleMs = await waitForSettlement(stack.db, options.settleTimeoutMs);
+  const playerRuns = await playing;
+
+  const delivered = playerRuns.flat();
+
+  events.push({ elapsedMs: performance.now() - startedAt, label: 'final flush delivered' });
+
+  const settleMs = await waitForSettlement(stack.db, options.settleTimeoutMs, stoppedAt);
   const recording = await sampler.stop();
   const postgresLog = await stack.readLogs('postgres', windowStartedAt);
 

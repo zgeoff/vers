@@ -6,11 +6,12 @@ import * as z from 'zod';
 const POLL_INTERVAL_MS = 1000;
 const BacklogSchema = z.object({ unverified: z.coerce.number() });
 
-// the time from the end of play until the verifier has proved every appended checkpoint, or
-// undefined when the backlog outlives the timeout
+// the time from the end of play, a `performance.now()` reading, until the verifier has proved every
+// appended checkpoint, or undefined when the backlog outlives the timeout
 export async function waitForSettlement(
   db: Kysely<DB>,
   timeoutMs: number,
+  stoppedAt: number,
 ): Promise<number | undefined> {
   const startedAt = performance.now();
 
@@ -22,7 +23,7 @@ export async function waitForSettlement(
     `.execute(db);
 
     if (BacklogSchema.parse(result.rows[0]).unverified === 0) {
-      return performance.now() - startedAt;
+      return performance.now() - stoppedAt;
     }
 
     await Bun.sleep(Math.min(POLL_INTERVAL_MS, timeoutMs - (performance.now() - startedAt)));

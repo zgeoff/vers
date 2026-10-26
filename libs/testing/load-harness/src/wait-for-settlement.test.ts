@@ -22,9 +22,21 @@ test('it reads a pipeline with every checkpoint proved as settled', async () => 
 
   await createActivityRow(ctx.db, { appendedHead: 4, avatarId: avatar.id, verifiedHead: 4 });
 
-  const settledMs = await waitForSettlement(ctx.db, 1000);
+  const settledMs = await waitForSettlement(ctx.db, 1000, performance.now());
 
   expect(settledMs).toBeWithin(0, 1000);
+});
+
+test('it counts the time from the end of play, before the wait began', async () => {
+  const ctx = await setupTest();
+  const user = await createTestUser(ctx.db);
+  const avatar = await createAvatarRow(ctx.db, { userId: user.user.id });
+
+  await createActivityRow(ctx.db, { appendedHead: 4, avatarId: avatar.id, verifiedHead: 4 });
+
+  const settledMs = await waitForSettlement(ctx.db, 1000, performance.now() - 120_000);
+
+  expect(settledMs).toBeWithin(120_000, 121_000);
 });
 
 test('it ignores the backlog of a held activity', async () => {
@@ -39,7 +51,7 @@ test('it ignores the backlog of a held activity', async () => {
     verifiedHead: 1,
   });
 
-  const settledMs = await waitForSettlement(ctx.db, 1000);
+  const settledMs = await waitForSettlement(ctx.db, 1000, performance.now());
 
   expect(settledMs).toBeWithin(0, 1000);
 });
@@ -51,7 +63,7 @@ test('it gives up when the backlog outlives the timeout', async () => {
 
   await createActivityRow(ctx.db, { appendedHead: 4, avatarId: avatar.id, verifiedHead: 1 });
 
-  const settledMs = await waitForSettlement(ctx.db, 50);
+  const settledMs = await waitForSettlement(ctx.db, 50, performance.now());
 
   expect(settledMs).toBeUndefined();
 });

@@ -108,11 +108,12 @@ export async function runOfflineReturnScenario(
     }),
   );
 
-  const playMs = performance.now() - startedAt;
+  const deliveredAt = performance.now();
+  const playMs = deliveredAt - startedAt;
 
   events.push({ elapsedMs: playMs, label: 'every return delivered' });
 
-  const settleMs = await waitForSettlement(stack.db, options.settleTimeoutMs);
+  const settleMs = await waitForSettlement(stack.db, options.settleTimeoutMs, deliveredAt);
   const recording = await sampler.stop();
   const postgresLog = await stack.readLogs('postgres', windowStartedAt);
 
