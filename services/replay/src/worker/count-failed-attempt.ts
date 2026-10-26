@@ -15,6 +15,8 @@ export async function countFailedAttempt(
   });
 
   if (result?.quarantined === true) {
+    // the infra program's replay-quarantined alarm matches this exact line, so a reworded message
+    // quarantines the activity without alarming anyone
     deps.logger.error('replay attempts exhausted; activity quarantined', {
       activityID: segment.activity.id,
     });

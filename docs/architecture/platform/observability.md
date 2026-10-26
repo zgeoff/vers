@@ -134,12 +134,11 @@ counter that emits only on failure reads quiet when healthy. The monitors:
   exports a span.
 - Replay poke failed: the activity service's wake poke to the replay service exhausted its retries,
   so the queue may go undrained while unverified work sits in it.
-- Replay parked: the replay service parked an activity, grouped by the park reason, each reason
-  alerting on its own. A parked activity halts its avatar's settlement order until an operator
-  releases it.
-- Replay quarantined: the replay service quarantined an activity, grouped by the quarantine outcome.
-  A quarantined activity halts its avatar's settlement order and blocks new starts in its chain
-  scope until an operator releases it.
+- Replay parked: the replay service's park line, grouped by the line, which names the park reason,
+  so each reason alerts on its own. A parked activity halts its avatar's settlement order until an
+  operator releases it.
+- Replay quarantined: the replay service's quarantine line. A quarantined activity halts its
+  avatar's settlement order and blocks new starts in its chain scope until an operator releases it.
 - Activity refusals: starts and appends the activity service refused, grouped by reason, each reason
   alerting on its own. The threshold sits above one transient stale-head conflict and below a device
   stuck retrying a refused chain.

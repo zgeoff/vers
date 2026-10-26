@@ -173,11 +173,15 @@ const replayParkedMonitor = new axiom.Monitor(
     name: 'vers replay parked',
     type: 'Threshold',
     description:
-      "service-replay parked an activity, grouped by reason: version-park for an unknown or retention-expired sim version, elapsed-time for a replay that tripped its duration cap. A parked activity halts its avatar's settlement order until an operator releases it.",
-    mplQuery:
-      '`vers-metrics`:`vers.verification.rejections` | where reason == "version-park" or reason == "elapsed-time" | align to 5m using max | group by reason using max | map increase',
+      "service-replay wrote a park line, grouped by the line, which names the reason: an unrecognized sim version, a retention-expired sim version, or a replay that tripped its duration cap. A parked activity halts its avatar's settlement order until an operator releases it.",
+
+    // The hold counters start at 1 in a fresh process, which scales to zero between drains, so an
+    // `increase` over them has no earlier point to subtract from and can miss a lone hold. The log
+    // line is written once per hold, at the site that changes the status.
+    aplQuery:
+      "['vers-logs'] | where body contains 'parking activity' | summarize count() by body, bin(_time, 5m)",
     intervalMinutes: 5,
-    rangeMinutes: 15,
+    rangeMinutes: 10,
     operator: 'AboveOrEqual',
     threshold: 1,
     triggerFromNRuns: 1,
@@ -193,15 +197,14 @@ const replayQuarantinedMonitor = new axiom.Monitor(
     name: 'vers replay quarantined',
     type: 'Threshold',
     description:
-      "service-replay quarantined an activity, grouped by outcome: its divergence failed to reproduce on every allowed attempt. A quarantined activity halts its avatar's settlement order and blocks new starts in its chain scope until an operator releases it.",
-    mplQuery:
-      '`vers-metrics`:`vers.replay.iteration_failures` | where outcome == "quarantined" | align to 5m using max | group by outcome using max | map increase',
+      "service-replay wrote its quarantine line: an activity's divergence failed to reproduce on every allowed attempt. A quarantined activity halts its avatar's settlement order and blocks new starts in its chain scope until an operator releases it.",
+    aplQuery:
+      "['vers-logs'] | where body == 'replay attempts exhausted; activity quarantined' | summarize count() by bin(_time, 5m)",
     intervalMinutes: 5,
-    rangeMinutes: 15,
+    rangeMinutes: 10,
     operator: 'AboveOrEqual',
     threshold: 1,
     triggerFromNRuns: 1,
-    notifyByGroup: true,
     notifierIds: [alarmsNotifier.id],
   },
   { provider: axiomProvider },

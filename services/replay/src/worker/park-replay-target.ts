@@ -30,6 +30,8 @@ export async function parkReplayTarget(
   return { kind: 'parked', reason };
 }
 
+// The infra program's replay-parked alarm matches 'parking activity' in each line, so a message that
+// drops the phrase parks the activity without alarming anyone.
 function pickParkMessage(reason: ParkReason): string {
   if (reason === 'expired') {
     return 'sim version retention expired; parking activity for operator resolution';
