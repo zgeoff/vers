@@ -119,6 +119,29 @@ test('it reports a YAML value that is a reference with no field as unparsed', ()
   ).toStrictEqual({ references: [], unparsed: ['op://ops/billing'] });
 });
 
+test.each([
+  [
+    'a workflow env value built by a GitHub expression',
+    `env:\n  TOKEN: op://\${{ vars.VAULT }}/billing/token\n`,
+    `op://\${{ vars.VAULT }}/billing/token`,
+  ],
+  [
+    'a workflow env value that is a GitHub expression holding a reference',
+    `env:\n  TOKEN: \${{ format('op://{0}/billing/token', vars.VAULT) }}\n`,
+    `\${{ format('op://{0}/billing/token', vars.VAULT) }}`,
+  ],
+  [
+    'a workflow run step with a GitHub expression inside the reference',
+    `steps:\n  - run: op read "op://\${{ vars.VAULT }}/billing/token"\n`,
+    'op://$/billing/token',
+  ],
+])('it reports %s as unparsed', (_form, text, scanned) => {
+  expect(collectFileOPReferences('.github/workflows/ci.yml', text)).toStrictEqual({
+    references: [],
+    unparsed: [scanned],
+  });
+});
+
 test('it rejects a workflow that is not valid YAML', () => {
   expect(() =>
     collectFileOPReferences('.github/workflows/ci.yml', 'env: [unclosed\n'),

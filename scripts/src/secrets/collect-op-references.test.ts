@@ -174,6 +174,57 @@ test.each([
   });
 });
 
+test.each([
+  [
+    'a GitHub expression that holds the reference',
+    `op read \${{ 'op://ops/billing/token' }}`,
+    `\${{ 'op://ops/billing/token' }}`,
+  ],
+  [
+    'a GitHub expression inside the reference',
+    `op read "op://\${{ vars.VAULT }}/billing/token"`,
+    'op://$/billing/token',
+  ],
+  [
+    'a parameter expansion default',
+    `op read "\${SECRET_REF:-op://ops/billing/token}"`,
+    `\${SECRET_REF:-op://ops/billing/token}`,
+  ],
+  [
+    'a parameter expansion before the reference',
+    `op read "\${PREFIX}op://ops/billing/token"`,
+    `\${PREFIX}op://ops/billing/token`,
+  ],
+  [
+    'a command substitution before the reference',
+    'op read "$(cat prefix)op://ops/billing/token"',
+    '$op://ops/billing/token',
+  ],
+  [
+    'prose before the reference in a quoted string',
+    'echo "token is op://ops/billing/token"',
+    'token is op://ops/billing/token',
+  ],
+])('it reports a reference inside %s as unparsed, with its context', (_form, text, scanned) => {
+  expect(collectOPReferences(text)).toStrictEqual({ references: [], unparsed: [scanned] });
+});
+
+test.each([
+  [
+    'a GitHub expression in another word',
+    `op read op://ops/billing/token --account \${{ vars.ACCOUNT }}`,
+  ],
+  ['a command substitution that reads it', `TOKEN="$(op read 'op://ops/billing/token')"`],
+  ['an assignment of a quoted string', 'TOKEN="op://ops/billing/token"'],
+  ['a flag with a quoted string', '--token="op://ops/billing/token"'],
+  ['a nested shell command string', `sh -c "op read 'op://ops/billing/token'"`],
+])('it collects a reference beside %s', (_form, text) => {
+  expect(collectOPReferences(text)).toStrictEqual({
+    references: [{ field: 'token', item: 'billing', vault: 'ops' }],
+    unparsed: [],
+  });
+});
+
 test('it reports a reference with no field as unparsed', () => {
   expect(collectOPReferences('API_KEY=op://ops/billing\n')).toStrictEqual({
     references: [],
