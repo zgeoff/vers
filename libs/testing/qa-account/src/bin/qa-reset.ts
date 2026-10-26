@@ -1,23 +1,18 @@
 import { createDB } from '@vers/db';
-import { Command } from 'commander';
+import { runCommandLine } from '@vers/scripts';
+import { define } from 'gunshi';
 import { applyQAReset } from '../apply-qa-reset';
 import { env } from '../env';
 import { parseDatabaseTarget } from '../parse-database-target';
 import { parseQAUser } from '../parse-qa-user';
+import { QA_RESET_ARGS } from '../qa-reset-args';
 
-interface ResetCommandOptions {
-  readonly all: boolean;
-  readonly user: string;
-  readonly yes: boolean;
-}
-
-const program = new Command()
-  .name('qa-reset')
-  .description("delete a QA account's activity history and avatar progress, or the whole account")
-  .requiredOption('--user <name>', 'account name; the address is <name>@qa.versidle.com')
-  .option('--all', 'delete the account itself instead of resetting its progress', false)
-  .option('--yes', 'act on a database host that is not a loopback address', false)
-  .action(async (options: ResetCommandOptions) => {
+const entry = define({
+  name: 'qa-reset',
+  description: "delete a QA account's activity history and avatar progress, or the whole account",
+  args: QA_RESET_ARGS,
+  run: async (ctx) => {
+    const options = ctx.values;
     const user = parseQAUser(options.user);
     const target = parseDatabaseTarget(env.DATABASE_URL);
 
@@ -40,10 +35,15 @@ const program = new Command()
     } finally {
       await db.destroy();
     }
-  });
+  },
+});
 
 try {
-  await program.parseAsync();
+  const ran = await runCommandLine(process.argv.slice(2), entry, { output: console });
+
+  if (!ran) {
+    process.exitCode = 1;
+  }
 } catch (error) {
   console.error(`qa-reset: ${error instanceof Error ? error.message : String(error)}`);
   process.exit(1);

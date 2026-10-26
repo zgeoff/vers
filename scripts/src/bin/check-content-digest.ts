@@ -1,28 +1,28 @@
 import path from 'node:path';
 import { BUNDLED_CONTENT_VERSION, CONTENT_VERSION_DIGESTS } from '@vers/content-version';
-import { Command } from 'commander';
+import { define } from 'gunshi';
 import { match } from 'ts-pattern';
 import { buildContentDigest } from '../content/build-content-digest';
+import { CHECK_CONTENT_DIGEST_ARGS } from '../content/check-content-digest-args';
 import { collectContentDigestFindings } from '../content/collect-content-digest-findings';
 import { readContentSources } from '../content/read-content-sources';
 import { readRecordedDigestsAt } from '../content/read-recorded-digests-at';
 import type { ContentDigestFinding } from '../content/types';
+import { runCommandLine } from '../utils/run-command-line';
 
 // Fails when the item-gen, roll-crypto or worldmap-content sources differ from the digest recorded
 // for the bundled content version, or when a digest recorded at the base ref changed, so a change
 // to any of those packages ships as a new content version. Exits 1 on a finding.
 
-interface CheckOptions {
-  readonly base?: string;
-}
-
 const repoRoot = path.resolve(import.meta.dirname, '../../..');
 
-const program = new Command()
-  .name('check-content-digest')
-  .description('fail when the content packages changed without a new content version')
-  .option('--base <ref>', 'reject a change to any digest recorded at this git ref')
-  .action(async (options: CheckOptions) => {
+const entry = define({
+  name: 'check-content-digest',
+  description: 'fail when the content packages changed without a new content version',
+  args: CHECK_CONTENT_DIGEST_ARGS,
+  run: async (ctx) => {
+    const options = ctx.values;
+
     const sources = await readContentSources(repoRoot);
 
     const digest = buildContentDigest(sources);
@@ -53,9 +53,14 @@ const program = new Command()
     }
 
     console.log(`content-digest: content version ${BUNDLED_CONTENT_VERSION} matches ${digest}`);
-  });
+  },
+});
 
-await program.parseAsync();
+const ran = await runCommandLine(process.argv.slice(2), entry, { output: console });
+
+if (!ran) {
+  process.exitCode = 1;
+}
 
 function formatFinding(finding: ContentDigestFinding): string {
   return match(finding)

@@ -1,47 +1,27 @@
 import { randomBytes, randomInt } from 'node:crypto';
 import { createGenesisSeed } from '@vers/contract-activity';
 import { createDB } from '@vers/db';
-import { Command } from 'commander';
+import { runCommandLine } from '@vers/scripts';
+import { define } from 'gunshi';
 import { QA_KEY_VERSION, QA_SCOPE_SECRET_VERSION, applyQASeed } from '../apply-qa-seed';
 import { buildPasswordFromBytes } from '../build-password-from-bytes';
 import { env } from '../env';
 import { parseDatabaseTarget } from '../parse-database-target';
-import { parseIntegerOption } from '../parse-integer-option';
 import { parseKeyRoots } from '../parse-key-roots';
 import { parseQAUser } from '../parse-qa-user';
+import { QA_SEED_ARGS } from '../qa-seed-args';
 import { requireEnvVar } from '../require-env-var';
 import type { KeyRoots } from '../types';
 
 const PASSWORD_ENTROPY_BYTES = 20;
 
-interface SeedCommandOptions {
-  readonly level: number;
-  readonly password?: string;
-  readonly runs: number;
-  readonly twoFactor: boolean;
-  readonly user: string;
-  readonly yes: boolean;
-}
-
-const program = new Command()
-  .name('qa-seed')
-  .description(
+const entry = define({
+  name: 'qa-seed',
+  description:
     'create a verified QA account with an avatar at a level, optionally with verified runs',
-  )
-  .requiredOption('--user <name>', 'account name; the address is <name>@qa.versidle.com')
-  .requiredOption('--level <n>', 'avatar level, at least 1', (value: string) =>
-    parseIntegerOption(value, 1),
-  )
-  .option(
-    '--runs <n>',
-    'completed, verified runs to seed on the origin node',
-    (value: string) => parseIntegerOption(value, 0),
-    0,
-  )
-  .option('--two-factor', 'enable two-factor sign-in and print its secret', false)
-  .option('--password <password>', 'password to set; generated and printed when absent')
-  .option('--yes', 'act on a database host that is not a loopback address', false)
-  .action(async (options: SeedCommandOptions) => {
+  args: QA_SEED_ARGS,
+  run: async (ctx) => {
+    const options = ctx.values;
     const user = parseQAUser(options.user);
     const target = parseDatabaseTarget(env.DATABASE_URL);
 
@@ -66,7 +46,7 @@ const program = new Command()
         now: new Date(),
         password,
         runs: options.runs,
-        twoFactor: options.twoFactor,
+        twoFactor: options['two-factor'],
         user,
       });
 
@@ -91,10 +71,15 @@ const program = new Command()
     } finally {
       await db.destroy();
     }
-  });
+  },
+});
 
 try {
-  await program.parseAsync();
+  const ran = await runCommandLine(process.argv.slice(2), entry, { output: console });
+
+  if (!ran) {
+    process.exitCode = 1;
+  }
 } catch (error) {
   console.error(`qa-seed: ${error instanceof Error ? error.message : String(error)}`);
   process.exit(1);

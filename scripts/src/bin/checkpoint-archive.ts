@@ -1,7 +1,8 @@
 import { createDB } from '@vers/db';
 import { S3Client } from 'bun';
-import { Command } from 'commander';
+import { define } from 'gunshi';
 import { match } from 'ts-pattern';
+import { CHECKPOINT_ARCHIVE_ARGS } from '../checkpoint-archive/checkpoint-archive-args';
 import { CHECKPOINT_RETENTION } from '../checkpoint-archive/checkpoint-retention';
 import { parseArchiveConfig } from '../checkpoint-archive/parse-archive-config';
 import { restoreActivityCheckpoints } from '../checkpoint-archive/restore-activity-checkpoints';
@@ -9,31 +10,18 @@ import { runCheckpointSweep } from '../checkpoint-archive/run-checkpoint-sweep';
 import type { CheckpointArchiveDeps } from '../checkpoint-archive/types';
 import { withArchiveLock } from '../checkpoint-archive/with-archive-lock';
 import { requireEnvVar } from '../utils/require-env-var';
+import { runCommandLine } from '../utils/run-command-line';
 
 const BUSY_MESSAGE =
   '✗ checkpoint archive — another sweep or restore holds the archive lock; nothing read, written or deleted';
 
-interface SweepCommandOptions {
-  readonly apply: boolean;
-}
-
-interface RestoreCommandOptions {
-  readonly activity: string;
-}
-
-const program = new Command()
-  .name('checkpoint-archive')
-  .description(
-    'Archive verified checkpoint rows to object storage, purge old archives, restore one',
-  );
-
-program
-  .command('sweep')
-  .description(
+const sweepCommand = define({
+  name: 'sweep',
+  description:
     'report the activities past the hot window and the archives past retention; --apply archives and purges them',
-  )
-  .option('--apply', 'archive the rows and purge the expired archives', false)
-  .action(async (options: SweepCommandOptions) => {
+  args: CHECKPOINT_ARCHIVE_ARGS.sweep,
+  run: async (ctx) => {
+    const options = ctx.values;
     const deps = createArchiveDeps();
 
     if (deps === undefined) {
@@ -64,13 +52,15 @@ program
       : `checkpoint sweep (report only): ${summary.candidates} activity(ies) would archive, ${summary.expiredArchives} archive(s) would purge; pass --apply to write and delete`;
 
     console.log(report);
-  });
+  },
+});
 
-program
-  .command('restore')
-  .description("reinsert one archived activity's checkpoint rows from its archive")
-  .requiredOption('--activity <id>', 'the activity id')
-  .action(async (options: RestoreCommandOptions) => {
+const restoreCommand = define({
+  name: 'restore',
+  description: "reinsert one archived activity's checkpoint rows from its archive",
+  args: CHECKPOINT_ARCHIVE_ARGS.restore,
+  run: async (ctx) => {
+    const options = ctx.values;
     const deps = createArchiveDeps();
 
     if (deps === undefined) {
@@ -110,9 +100,23 @@ program
         process.exitCode = 1;
       })
       .exhaustive();
-  });
+  },
+});
 
-await program.parseAsync();
+const entry = define({
+  name: 'checkpoint-archive',
+  description:
+    'Archive verified checkpoint rows to object storage, purge old archives, restore one',
+});
+
+const ran = await runCommandLine(process.argv.slice(2), entry, {
+  output: console,
+  subCommands: { restore: restoreCommand, sweep: sweepCommand },
+});
+
+if (!ran) {
+  process.exitCode = 1;
+}
 
 function createArchiveDeps(): CheckpointArchiveDeps | undefined {
   const archive = parseArchiveConfig(process.env);
