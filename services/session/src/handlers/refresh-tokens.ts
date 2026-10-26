@@ -23,23 +23,26 @@ interface RefreshedTokens {
   readonly refreshToken: string;
 }
 
+interface RefreshTokensDeps extends SessionSigningDeps {
+  readonly now: () => Date;
+}
+
 interface RefreshCall {
   readonly db: Kysely<DB>;
-  readonly deps: SessionSigningDeps;
+  readonly deps: RefreshTokensDeps;
   readonly opts: RefreshTokensOpts;
 }
 
 export async function refreshTokens(
   db: Kysely<DB>,
-  deps: SessionSigningDeps,
+  deps: RefreshTokensDeps,
   opts: RefreshTokensOpts,
 ): Promise<RefreshedTokens> {
   const call: RefreshCall = { db, deps, opts };
 
   const row = await readSessionRow(call);
 
-  const now = new Date();
-
+  const now = deps.now();
   const decision = classifyRefresh(row, opts.input.refreshToken, now);
 
   if (decision.kind !== 'rotate') {
@@ -54,7 +57,7 @@ export async function refreshTokens(
 
   const raceRow = await readSessionRow(call);
 
-  const raceNow = new Date();
+  const raceNow = deps.now();
 
   return applyRefreshDecision(
     call,
@@ -129,7 +132,6 @@ async function rotateRefreshToken(
   now: Date,
 ): Promise<null | RefreshedTokens> {
   const accessTokenExpiresAt = new Date(now.getTime() + ACCESS_TOKEN_DURATION);
-  const rotationGraceUntil = new Date(now.getTime() + ROTATION_GRACE_DURATION);
 
   const [refreshToken, accessToken] = await Promise.all([
     createJWT({
@@ -147,6 +149,8 @@ async function rotateRefreshToken(
       userID: rotate.userID,
     }),
   ]);
+
+  const rotationGraceUntil = new Date(call.deps.now().getTime() + ROTATION_GRACE_DURATION);
 
   const updateResult = await call.db
     .updateTable('sessions')
