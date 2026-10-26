@@ -18,7 +18,10 @@ test('it restores the previous test override via the registered global afterEach
 });
 
 test('it configures LogTape for this test only', () => {
-  configureSync({ loggers: [], sinks: {} });
+  configureSync({
+    loggers: [{ category: ['logtape', 'meta'], lowestLevel: 'warning' }],
+    sinks: {},
+  });
 
   expect(getConfig()).not.toBeNull();
 });
