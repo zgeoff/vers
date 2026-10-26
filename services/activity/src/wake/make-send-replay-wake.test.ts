@@ -94,7 +94,7 @@ test('it keeps the cached client after a wake-call failure, without rebuilding i
 
 test('it aborts its in-flight wake when its signal aborts', async () => {
   const wakeHandler = mock(
-    (_options: Readonly<Pick<RequestInit, 'signal'>>) => new Promise<{ drained: number }>(() => {}),
+    (_options: Readonly<Record<'request', Request>>) => new Promise<{ drained: number }>(() => {}),
   );
 
   server.use(mockReplayService.wake.handler(wakeHandler));
@@ -116,7 +116,7 @@ test('it aborts its in-flight wake when its signal aborts', async () => {
     { timeoutMs: 2000 },
   );
 
-  const requestSignal = wakeHandler.mock.calls[0]?.[0].signal;
+  const requestSignal = wakeHandler.mock.calls[0]?.[0].request.signal;
 
   invariant(requestSignal, 'the RPC handler receives the request signal');
 
