@@ -25,7 +25,7 @@ const logsDataset = new axiom.Dataset(
   'vers-logs',
   {
     name: 'vers-logs',
-    description: 'LogTape logs from vers services and app-web (OTLP)',
+    description: 'pino logs from vers services and app-web (OTLP)',
     kind: 'axiom:events:v1',
     useRetentionPeriod: false,
     retentionDays: 0,
