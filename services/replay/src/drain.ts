@@ -1,8 +1,6 @@
-import { flushErrorReports, reportUnexpectedError } from '@vers/service-runtime';
-import { withTraceContext } from '@vers/service-utils';
-import { createTraceContext } from '@vers/trace';
 import { createReplayService } from './create-replay-service';
 import { readBakedEngineHash } from './read-baked-engine-hash';
+import { runScheduledDrain } from './run-scheduled-drain';
 
 // Env validation reads the process env object dynamically, which a compile-time define never
 // rewrites — the baked hash must be seeded back into the environment before the service boots.
@@ -21,36 +19,6 @@ const service = await createReplayService().catch((error: unknown) => {
   return process.exit(1);
 });
 
-await withTraceContext(createTraceContext(), runScheduledDrain);
+const exitCode = await runScheduledDrain(service);
 
-// a teardown fault is reported too, and the flush runs whatever the teardown did
-await service.stop().catch((error: unknown) => {
-  service.logger.error('teardown failed after the scheduled drain', { error });
-
-  reportUnexpectedError(error);
-
-  process.exitCode = 1;
-});
-
-const flushed = await flushErrorReports();
-
-if (!flushed) {
-  service.logger.warn('error reports were still queued when the flush timed out');
-}
-
-process.exit(process.exitCode ?? 0);
-
-// the try/catch lives inside the trace scope so a drain failure report still carries its trace id
-async function runScheduledDrain(): Promise<void> {
-  try {
-    const drained = await service.drain('schedule');
-
-    service.logger.info('drained the replay queue on schedule', { drained });
-  } catch (error) {
-    service.logger.error('scheduled replay drain failed', { error });
-
-    reportUnexpectedError(error);
-
-    process.exitCode = 1;
-  }
-}
+process.exit(exitCode);
