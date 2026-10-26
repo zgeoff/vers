@@ -3,7 +3,7 @@
 # and postgres. Each container carries the memory of its Fly machine and the CPU share the harness
 # picks: a whole CPU for a shared machine's burst, or its sustained baseline quota. Image refs
 # arrive as LOAD_IMAGE_* env vars from the harness. Host ports: app-web 3400, session 3401,
-# postgres 5733, off the dev and e2e stacks' ranges.
+# postgres 5733, off the dev and e2e stacks' ranges, each bound to loopback.
 
 x-service-base: &service-base
   env_file:
@@ -36,7 +36,7 @@ services:
       - POSTGRES_PASSWORD=password
       - POSTGRES_DB=vers
     ports:
-      - '5733:5432'
+      - '127.0.0.1:5733:5432'
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U admin -d vers']
       interval: 2s
@@ -87,7 +87,7 @@ services:
       API_IDENTIFIER: http://localhost:3000/
     # the harness creates each player's session here, as app-web's sign-in does
     ports:
-      - '3401:3000'
+      - '127.0.0.1:3401:3000'
     depends_on:
       postgres:
         condition: service_healthy
@@ -108,7 +108,7 @@ services:
       SESSION_SECRET: ${LOAD_SESSION_SECRET}
       UMAMI_URL: http://umami.invalid:3021
     ports:
-      - '3400:3000'
+      - '127.0.0.1:3400:3000'
     depends_on:
       service-activity:
         condition: service_healthy

@@ -11,7 +11,7 @@ import { writeLoadRegistry } from './write-load-registry';
 
 const STACK_ENV_FILE = path.resolve(import.meta.dirname, '../../../../apps/web-e2e/stack.env');
 const PROJECT_NAME = 'vers-load';
-const DATABASE_URL = 'postgresql://admin:password@localhost:5733/vers';
+const DATABASE_URL = 'postgresql://admin:password@127.0.0.1:5733/vers';
 const SESSION_SECRET = 'load-session-secret-32-characters';
 
 // two of the compute units the Neon endpoint autoscales between
@@ -63,7 +63,7 @@ export async function createLoadStack(
   invariant(privateKeyPEM !== undefined, 'the stack env carries the shared service key');
 
   return {
-    appURL: 'http://localhost:3400',
+    appURL: 'http://127.0.0.1:3400',
     containerPrefix: `${PROJECT_NAME}-`,
     db,
     privateKey: await parseServicePrivateKey(privateKeyPEM),
@@ -86,7 +86,7 @@ export async function createLoadStack(
       await runCompose(env, ['down', '-v', '--remove-orphans']);
     },
     sessionSecret: SESSION_SECRET,
-    sessionServiceURL: 'http://localhost:3401',
+    sessionServiceURL: 'http://127.0.0.1:3401',
     startService: async (service) => {
       await runCompose(env, ['up', '-d', '--wait', service]);
     },
