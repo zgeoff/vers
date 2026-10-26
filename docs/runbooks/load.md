@@ -22,7 +22,9 @@ takes the production path: app-web resolves the session and forwards the call to
 service with the client's retry policy. Each player's avatar starts at a level from a fixed corpus,
 and its own scope secret seals the origin's encounter, so the attempts mix failed and completed
 fights of different lengths. A player index always gets the same level and map seed, so a rerun
-replays the same workload.
+replays the same workload. A connected player simulates on its own clock, as the writer worker does,
+and holds what it cannot deliver in an ordered outbox, so an outage grows the backlog it returns
+with instead of pausing play.
 
 | Scenario         | Players                                                       | Measured window                                           |
 | ---------------- | ------------------------------------------------------------- | --------------------------------------------------------- |
@@ -64,22 +66,23 @@ A run removes each stack when its scenario ends, whether the scenario passed or 
 killed part way, remove the stack it left:
 
 ```bash
-docker compose -p vers-load -f libs/testing/load-harness/docker-compose.load.yml down -v
+docker compose --project-directory libs/testing/load-harness -p vers-load down -v --remove-orphans
 ```
 
 ## Reading the report
 
 The capacity table rates each steady step against the settlement target, which
 `--settlement-target-seconds` sets. A step meets the target when the settlement age p95 is within
-it, no call failed, no activity is held or rejected, and every appended checkpoint was proved once
-play stopped. The supported capacity is the largest step that met the target, and the busiest
-container of that step is the next limiting resource. The report counts connected players apart from
-the simulated hours they delivered, because one connected player delivers one simulated hour per
-wall hour while a returning player delivers the whole gap at once.
+it, no call failed, no activity is held or rejected, every appended checkpoint was proved once play
+stopped, and every run and avatar settled at the XP its own stream earned. The supported capacity is
+the largest step that met the target, and the busiest container of that step is the next limiting
+resource. The report counts connected players apart from the simulated hours they delivered, because
+one connected player delivers one simulated hour per wall hour while a returning player delivers the
+whole gap at once.
 
-- **Settlement age** is the time from a checkpoint's append to the segment apply that proved it. The
-  database clock stamps both, so the sample interval sets no resolution. Two applies on one activity
-  between samples read as the later one.
+- **Settlement age** is the time from a checkpoint's append to the first sample that sees it proved,
+  so an age errs high by up to one sample interval. A segment apply stamps the start of its
+  transaction, before its replay work and its commit, so the sample's own time is the closer bound.
 - **Lock waits** come from postgres, which logs every lock wait that outlasts its deadlock timeout,
   and from the samples' count of backends waiting on a lock.
 - **Resource use** comes from `docker stats`. Fly's shared CPUs throttle to a baseline quota once

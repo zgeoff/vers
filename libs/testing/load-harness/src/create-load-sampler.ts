@@ -3,6 +3,7 @@ import { $ } from 'bun';
 import type { Kysely } from 'kysely';
 import { sql } from 'kysely';
 import * as z from 'zod';
+import { makeReadVerifiedAges } from './make-read-verified-ages';
 import { parseContainerStats } from './parse-container-stats';
 import type { ContainerSample, PipelineSample, SamplerRecording } from './types';
 
@@ -16,17 +17,12 @@ interface LoadSampler {
   readonly stop: () => Promise<SamplerRecording>;
 }
 
-interface VerificationCursor {
-  readonly heads: Map<string, number>;
-  since: Date;
-}
-
 // samples the shared database and the containers from outside the stack, so no instrument the
-// services lack is needed; the database clock stamps both an append and its verification
+// services lack is needed
 export function createLoadSampler(options: Readonly<CreateLoadSamplerOptions>): LoadSampler {
   const startedAt = performance.now();
   const recording: SamplerRecording = { containers: [], pipeline: [], settlementAges: [] };
-  const cursor: VerificationCursor = { heads: new Map(), since: new Date() };
+  const readVerifiedAges = makeReadVerifiedAges(options.db);
 
   const controller = new AbortController();
 
@@ -34,7 +30,7 @@ export function createLoadSampler(options: Readonly<CreateLoadSamplerOptions>): 
     const elapsedMs = performance.now() - startedAt;
 
     const sample = await readPipelineSample(options.db, elapsedMs);
-    const ages = await readNewlyVerifiedAges(options.db, cursor);
+    const ages = await readVerifiedAges();
 
     recording.pipeline.push(sample);
 
@@ -113,58 +109,6 @@ async function readPipelineSample(db: Kysely<DB>, elapsedMs: number): Promise<Pi
     ...ConnectionTotalsSchema.parse(connections.rows[0]),
     elapsedMs,
   };
-}
-
-const SampledAtSchema = z.object({ now: z.date() });
-const AgeRowSchema = z.object({ ageMs: z.coerce.number() });
-
-// a segment apply stamps the activity's verification time, so a checkpoint's age runs from its own
-// append to the apply that proved it; two applies between samples read as the later one
-async function readNewlyVerifiedAges(
-  db: Kysely<DB>,
-  cursor: VerificationCursor,
-): Promise<Array<number>> {
-  const now = await sql`select now() as now`.execute(db);
-
-  const sampledAt = SampledAtSchema.parse(now.rows[0]).now;
-
-  const moved = await db
-    .selectFrom('activities')
-    .select(['id', 'verifiedHead'])
-    .where('verifiedAt', '>=', cursor.since)
-    .execute();
-
-  const ranges = moved.filter((row) => row.verifiedHead > (cursor.heads.get(row.id) ?? 0));
-
-  cursor.since = sampledAt;
-
-  if (ranges.length === 0) {
-    return [];
-  }
-
-  const activityIDs = ranges.map((row) => row.id);
-  const afterVersions = ranges.map((row) => cursor.heads.get(row.id) ?? 0);
-  const toVersions = ranges.map((row) => row.verifiedHead);
-
-  const result = await sql`
-    select extract(epoch from a.verified_at - c.appended_at) * 1000 as "ageMs"
-    from unnest(${activityIDs}::text[], ${afterVersions}::int[], ${toVersions}::int[])
-      as range(id, after_version, to_version)
-    join activities a on a.id = range.id
-    join activity_checkpoints c
-      on c.activity_id = range.id
-      and c.version > range.after_version
-      and c.version <= range.to_version
-  `.execute(db);
-
-  for (const row of ranges) {
-    cursor.heads.set(row.id, row.verifiedHead);
-  }
-
-  return z
-    .array(AgeRowSchema)
-    .parse(result.rows)
-    .map((row) => row.ageMs);
 }
 
 function collectContainerSamples(

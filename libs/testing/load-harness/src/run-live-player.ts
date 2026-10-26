@@ -2,6 +2,7 @@ import { isDefinedError, safe } from '@orpc/client';
 import { createId } from '@paralleldrive/cuid2';
 import type { BuildSnapshot } from '@vers/contract-activity';
 import type { EncounterContent } from '@vers/game-utils';
+import invariant from 'tiny-invariant';
 import { pickDueEntries } from './pick-due-entries';
 import { runActivityAttempt } from './run-activity-attempt';
 import type { ActivityRun, DeliveredRun, PlayerChain, PlayerClient, PlayerProfile } from './types';
@@ -18,137 +19,199 @@ interface RunLivePlayerOptions {
   readonly signal: AbortSignal;
 }
 
-// a player with the game open: the writer worker's live loop, flushing what the simulation has
-// reached on the client's flush interval and minting a continuation at each terminal checkpoint
+interface OutboxRun {
+  admitted: boolean;
+  readonly offsetMs: number;
+  readonly run: ActivityRun;
+  sent: number;
+}
+
+// a player with the game open: the writer worker simulates on its own clock and mints each
+// continuation at the terminal checkpoint before it, while the outbox delivers what the
+// simulation has reached, in order, on the client's flush interval and whatever the server answers
 export async function runLivePlayer(
   options: Readonly<RunLivePlayerOptions>,
 ): Promise<Array<DeliveredRun>> {
-  const delivered: Array<DeliveredRun> = [];
+  const playStartedAt = performance.now();
 
-  let cursor = await startRun(options, options.chain, options.buildSnapshot, null);
+  const first = await mintRun(options, undefined, 0);
 
-  while (cursor !== undefined && !options.signal.aborted) {
+  const outbox: Array<OutboxRun> = [first];
+
+  while (!options.signal.aborted) {
     await Bun.sleep(options.flushIntervalMs);
 
-    const flushed = await flushDue(options, cursor, performance.now() - cursor.startedAt);
+    const elapsedMs = performance.now() - playStartedAt;
 
-    if (!flushed) {
-      return delivered;
-    }
+    await mintReachedRuns(options, outbox, elapsedMs);
 
-    if (cursor.sent === cursor.run.entries.length) {
-      delivered.push({ activityID: cursor.run.id, terminal: true, xpTotal: cursor.run.xpTotal });
+    const outcome = await flushOutbox(options, outbox, elapsedMs);
 
-      cursor = await startRun(
-        options,
-        { ...options.chain, anchor: cursor.run.nextAnchor },
-        cursor.run.nextBuildSnapshot,
-        cursor.run.id,
-      );
+    if (outcome === 'refused') {
+      return collectDelivered(outbox);
     }
   }
 
-  if (cursor !== undefined) {
-    await stopRun(options, cursor);
+  const stoppedMs = performance.now() - playStartedAt;
 
-    delivered.push({ activityID: cursor.run.id, terminal: false, xpTotal: 0 });
-  }
+  await flushOutbox(options, outbox, stoppedMs);
+  await stopOpenRun(options, outbox);
 
-  return delivered;
+  return collectDelivered(outbox);
 }
 
-interface LiveCursor {
-  readonly run: ActivityRun;
-  sent: number;
-  readonly startedAt: number;
-}
-
-async function startRun(
+async function mintRun(
   options: Readonly<RunLivePlayerOptions>,
-  chain: PlayerChain,
-  buildSnapshot: BuildSnapshot,
-  predecessorActivityID: null | string,
-): Promise<LiveCursor | undefined> {
+  previous: Readonly<OutboxRun> | undefined,
+  offsetMs: number,
+): Promise<OutboxRun> {
   const run = await runActivityAttempt({
     activityID: `act_${createId()}`,
     avatarID: options.avatarID,
-    buildSnapshot,
-    chain,
+    buildSnapshot: previous?.run.nextBuildSnapshot ?? options.buildSnapshot,
+    chain:
+      previous === undefined
+        ? options.chain
+        : { ...options.chain, anchor: previous.run.nextAnchor },
     content: options.content,
     playedAt: new Date(),
-    predecessorActivityID,
+    predecessorActivityID: previous?.run.id ?? null,
     simVersion: options.profile.simVersion,
   });
 
+  return { admitted: false, offsetMs, run, sent: 0 };
+}
+
+// an attempt ends at its last checkpoint's time, and the worker starts the next one there
+async function mintReachedRuns(
+  options: Readonly<RunLivePlayerOptions>,
+  outbox: Array<OutboxRun>,
+  elapsedMs: number,
+): Promise<void> {
   for (;;) {
+    const last = outbox.at(-1);
+
+    invariant(last !== undefined, 'the outbox always holds the first run');
+
+    const endMs = last.offsetMs + getAttemptDurationMs(last.run);
+
+    if (endMs > elapsedMs) {
+      return;
+    }
+
+    const next = await mintRun(options, last, endMs);
+
+    outbox.push(next);
+  }
+}
+
+function getAttemptDurationMs(run: Readonly<ActivityRun>): number {
+  const durationMs = run.entries.at(-1)?.payload.time;
+
+  invariant(durationMs !== undefined && durationMs > 0, 'a terminal attempt takes simulated time');
+
+  return durationMs;
+}
+
+type FlushOutcome = 'held' | 'refused' | 'sent';
+
+// a call that fails after the client's retries leaves the outbox as it was for the next flush, as
+// the worker's does; a refusal is a verdict, and the player stops
+async function flushOutbox(
+  options: Readonly<RunLivePlayerOptions>,
+  outbox: ReadonlyArray<OutboxRun>,
+  elapsedMs: number,
+): Promise<FlushOutcome> {
+  for (const entry of outbox) {
+    const outcome = await flushRun(options, entry, elapsedMs - entry.offsetMs);
+
+    if (outcome !== 'sent' || entry.sent < entry.run.entries.length) {
+      return outcome;
+    }
+  }
+
+  return 'sent';
+}
+
+async function flushRun(
+  options: Readonly<RunLivePlayerOptions>,
+  entry: OutboxRun,
+  attemptElapsedMs: number,
+): Promise<FlushOutcome> {
+  if (!entry.admitted) {
     const [error] = await safe(
       options.client.advanceActivity({
-        activityID: run.id,
-        activityStart: run.start,
+        activityID: entry.run.id,
+        activityStart: entry.run.start,
         continuations: [],
         expectedHead: 0,
       }),
     );
 
-    if (error === null) {
-      return { run, sent: 0, startedAt: performance.now() };
+    if (error !== null) {
+      return isDefinedError(error) ? refuse(options, 'advanceActivity', error.code) : 'held';
     }
 
-    if (isDefinedError(error)) {
-      options.onRefused('advanceActivity', error.code);
+    entry.admitted = true;
+  }
 
-      return undefined;
+  for (;;) {
+    const due = pickDueEntries(entry.run.entries, entry.sent, attemptElapsedMs);
+
+    if (due.length === 0) {
+      return 'sent';
     }
 
-    if (options.signal.aborted) {
-      return undefined;
+    const [error] = await safe(
+      options.client.trackActivityProgress({
+        activityID: entry.run.id,
+        checkpoints: due,
+        expectedHead: entry.sent,
+      }),
+    );
+
+    if (error !== null) {
+      return isDefinedError(error) ? refuse(options, 'trackActivityProgress', error.code) : 'held';
     }
 
-    await Bun.sleep(options.flushIntervalMs);
+    entry.sent += due.length;
   }
 }
 
-async function flushDue(
+function refuse(
   options: Readonly<RunLivePlayerOptions>,
-  cursor: LiveCursor,
-  elapsedMs: number,
-): Promise<boolean> {
-  const due = pickDueEntries(cursor.run.entries, cursor.sent, elapsedMs);
+  procedure: string,
+  code: string,
+): FlushOutcome {
+  options.onRefused(procedure, code);
 
-  if (due.length === 0) {
-    return true;
-  }
-
-  const [error] = await safe(
-    options.client.trackActivityProgress({
-      activityID: cursor.run.id,
-      checkpoints: due,
-      expectedHead: cursor.sent,
-    }),
-  );
-
-  if (error === null) {
-    cursor.sent += due.length;
-
-    return true;
-  }
-
-  if (isDefinedError(error)) {
-    options.onRefused('trackActivityProgress', error.code);
-
-    return false;
-  }
-
-  // an undefined error already spent the client's retries; the outbox keeps the batch for the
-  // next flush, as the worker's does
-  return true;
+  return 'refused';
 }
 
-async function stopRun(options: Readonly<RunLivePlayerOptions>, cursor: LiveCursor): Promise<void> {
-  await flushDue(options, cursor, performance.now() - cursor.startedAt);
+function collectDelivered(outbox: ReadonlyArray<OutboxRun>): Array<DeliveredRun> {
+  return outbox
+    .filter((entry) => entry.admitted)
+    .map((entry) => {
+      const terminal = entry.sent === entry.run.entries.length;
+
+      return { activityID: entry.run.id, terminal, xpTotal: terminal ? entry.run.xpTotal : 0 };
+    });
+}
+
+// a run the server admitted but whose terminal checkpoint it never received is the one the player
+// stops when it closes the game
+async function stopOpenRun(
+  options: Readonly<RunLivePlayerOptions>,
+  outbox: ReadonlyArray<OutboxRun>,
+): Promise<void> {
+  const open = outbox.find((entry) => entry.admitted && entry.sent < entry.run.entries.length);
+
+  if (open === undefined) {
+    return;
+  }
 
   const [error] = await safe(
-    options.client.stopActivity({ activityID: cursor.run.id, avatarID: options.avatarID }),
+    options.client.stopActivity({ activityID: open.run.id, avatarID: options.avatarID }),
   );
 
   if (error !== null) {

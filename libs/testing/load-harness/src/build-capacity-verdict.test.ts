@@ -65,6 +65,17 @@ test('it supports no step that left checkpoints unproved', () => {
   expect(buildCapacityVerdict(steps, 30_000).supportedPlayers).toBeUndefined();
 });
 
+test.each([
+  ['a run', { runXPMismatches: 1 }],
+  ['an avatar', { avatarXPMismatches: 1 }],
+])('it supports no step that paid %s other XP than its stream earned', (_label, reconciliation) => {
+  const steps = [buildMockScenarioRecording({ players: 25, reconciliation })].map((recording) =>
+    buildScenarioSummary(recording),
+  );
+
+  expect(buildCapacityVerdict(steps, 30_000).supportedPlayers).toBeUndefined();
+});
+
 test('it rates simulated hours against the wall time of play', () => {
   const steps = [
     buildMockScenarioRecording({ playMs: 1_800_000, reconciliation: { simulatedMs: 36_000_000 } }),

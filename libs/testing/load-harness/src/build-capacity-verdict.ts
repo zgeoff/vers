@@ -38,7 +38,9 @@ export function buildCapacityVerdict(
           failedCalls === 0 &&
           Object.keys(summary.delivery.refusals).length === 0 &&
           summary.reconciliation.held === 0 &&
-          summary.reconciliation.unverified === 0,
+          summary.reconciliation.unverified === 0 &&
+          summary.reconciliation.runXPMismatches === 0 &&
+          summary.reconciliation.avatarXPMismatches === 0,
         players: summary.players,
         settlementP95Ms: summary.settlementAgeMs.p95,
         simulatedHoursPerHour:
