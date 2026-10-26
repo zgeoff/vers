@@ -3,7 +3,7 @@ import type { LoadEngineVersions, PlayerProfile } from './types';
 
 // the build corpus: levels from a fresh avatar to one that clears the origin in a few waves, so
 // the stream mixes failed and completed attempts of different lengths
-export const LEVEL_CORPUS: ReadonlyArray<number> = [1, 2, 3, 5, 8, 12];
+const LEVEL_CORPUS: ReadonlyArray<number> = [1, 2, 3, 5, 8, 12];
 
 interface BuildPlayerProfilesInput {
   readonly count: number;

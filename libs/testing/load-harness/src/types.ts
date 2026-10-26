@@ -53,7 +53,7 @@ export interface CallRecord {
   readonly status: number;
 }
 
-export interface ChainAnchor {
+interface ChainAnchor {
   readonly chainIndex: number;
   readonly nextSeed: string;
 }
@@ -112,7 +112,7 @@ export interface PipelineSample {
   readonly verified: number;
 }
 
-export interface SettlementAge {
+interface SettlementAge {
   readonly ageMs: number;
   readonly elapsedMs: number;
 }
@@ -129,7 +129,7 @@ export interface LockWaits {
   readonly waits: number;
 }
 
-export interface Refusal {
+interface Refusal {
   readonly code: string;
   readonly procedure: string;
 }
