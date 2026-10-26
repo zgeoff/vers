@@ -2,6 +2,7 @@ import { expect, test } from 'bun:test';
 import * as db from '@vers/mock-services/db';
 import invariant from 'tiny-invariant';
 import { HONEYPOT_FIELD_NAME } from '../../lib/auth/honeypot-field-names';
+import { VERIFY_SESSION_KEYS } from '../../lib/auth/verify-session-keys';
 import { buildFormData } from '../../test-utils/build-form-data';
 import { createSignedInUser } from '../../test-utils/create-signed-in-user';
 import { withRequestContext } from '../../test-utils/with-request-context';
@@ -74,7 +75,7 @@ test('it records the verified email and redirects to onboarding', async () => {
   });
 
   expect(outcome.cookies['en_verification']).toStrictEqual({
-    'onboarding#email': 'verify-otp-onboarding@vers.test',
+    [VERIFY_SESSION_KEYS.onboarding.email]: 'verify-otp-onboarding@vers.test',
   });
 });
 
@@ -108,7 +109,10 @@ test('it completes a pending 2FA login and clears the redirect target', async ()
   const outcome = await withRequestContext(
     {
       cookies: {
-        en_verification: { 'login2FA#sessionID': pendingSession.id, 'login2FA#target': user.id },
+        en_verification: {
+          [VERIFY_SESSION_KEYS.login2FA.sessionID]: pendingSession.id,
+          [VERIFY_SESSION_KEYS.login2FA.target]: user.id,
+        },
       },
     },
     async () => {
@@ -144,8 +148,8 @@ test('it rejects a 2FA login carrying a target other than the pending session ow
     {
       cookies: {
         en_verification: {
-          'login2FA#sessionID': victimSession.id,
-          'login2FA#target': victim.id,
+          [VERIFY_SESSION_KEYS.login2FA.sessionID]: victimSession.id,
+          [VERIFY_SESSION_KEYS.login2FA.target]: victim.id,
         },
       },
     },

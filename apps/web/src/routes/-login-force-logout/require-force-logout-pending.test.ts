@@ -1,4 +1,5 @@
 import { expect, test } from 'bun:test';
+import { VERIFY_SESSION_KEYS } from '../../lib/auth/verify-session-keys';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { requireForceLogoutPending } from './require-force-logout-pending';
 
@@ -7,8 +8,8 @@ test('it resolves when a pending force-logout is present', async () => {
     {
       cookies: {
         en_verification: {
-          'loginLogout#email': 'x@vers.test',
-          'loginLogout#sessionID': 'session-1',
+          [VERIFY_SESSION_KEYS.loginLogout.email]: 'x@vers.test',
+          [VERIFY_SESSION_KEYS.loginLogout.sessionID]: 'session-1',
         },
       },
     },

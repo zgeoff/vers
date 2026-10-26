@@ -1,3 +1,5 @@
+import type { VERIFY_SESSION_KEYS } from './verify-session-keys';
+
 export interface AuthSessionData {
   readonly accessToken?: string;
   readonly expires?: string;
@@ -6,13 +8,10 @@ export interface AuthSessionData {
   readonly userID?: string;
 }
 
-export type VerifySessionKey =
-  | 'login2FA#sessionID'
-  | 'login2FA#target'
-  | 'loginLogout#email'
-  | 'loginLogout#redirect'
-  | 'loginLogout#sessionID'
-  | 'loginLogout#userID'
-  | 'onboarding#email';
+type VerifySessionKeyMap = typeof VERIFY_SESSION_KEYS;
+
+export type VerifySessionKey = {
+  [Flow in keyof VerifySessionKeyMap]: VerifySessionKeyMap[Flow][keyof VerifySessionKeyMap[Flow]];
+}[keyof VerifySessionKeyMap];
 
 export type VerifySessionData = Partial<Record<VerifySessionKey, string | undefined>>;

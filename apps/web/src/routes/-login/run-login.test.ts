@@ -2,6 +2,7 @@ import { expect, test } from 'bun:test';
 import * as db from '@vers/mock-services/db';
 import invariant from 'tiny-invariant';
 import { HONEYPOT_FIELD_NAME } from '../../lib/auth/honeypot-field-names';
+import { VERIFY_SESSION_KEYS } from '../../lib/auth/verify-session-keys';
 import { buildFormData } from '../../test-utils/build-form-data';
 import { withRequestContext } from '../../test-utils/with-request-context';
 import { runLogin } from './run-login';
@@ -87,8 +88,12 @@ test('it redirects to verify-otp and stores the pending session for a 2FA-enable
     });
   });
 
-  expect(outcome.cookies['en_verification']).toContainKey('login2FA#sessionID');
-  expect(outcome.cookies['en_verification']).toContainEntry(['login2FA#target', user.id]);
+  expect(outcome.cookies['en_verification']).toContainKey(VERIFY_SESSION_KEYS.login2FA.sessionID);
+
+  expect(outcome.cookies['en_verification']).toContainEntry([
+    VERIFY_SESSION_KEYS.login2FA.target,
+    user.id,
+  ]);
 });
 
 test('it redirects to force-logout and stores the pending session when another session is live', async () => {
@@ -111,9 +116,9 @@ test('it redirects to force-logout and stores the pending session when another s
   });
 
   expect(outcome.cookies['en_verification']).toStrictEqual({
-    'loginLogout#email': 'force-logout@vers.test',
-    'loginLogout#sessionID': expect.toBeString(),
-    'loginLogout#userID': user.id,
+    [VERIFY_SESSION_KEYS.loginLogout.email]: 'force-logout@vers.test',
+    [VERIFY_SESSION_KEYS.loginLogout.sessionID]: expect.toBeString(),
+    [VERIFY_SESSION_KEYS.loginLogout.userID]: user.id,
   });
 });
 
@@ -140,7 +145,10 @@ test('it stashes the redirect target alongside the pending force-logout session'
     expect(promise).rejects.toMatchObject({ options: { href: '/login/force-logout' } });
   });
 
-  expect(outcome.cookies['en_verification']).toContainEntry(['loginLogout#redirect', '/nexus']);
+  expect(outcome.cookies['en_verification']).toContainEntry([
+    VERIFY_SESSION_KEYS.loginLogout.redirect,
+    '/nexus',
+  ]);
 });
 
 test('it signs a first-time caller in directly and clears their redirect target', async () => {
