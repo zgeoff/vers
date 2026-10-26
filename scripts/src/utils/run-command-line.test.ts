@@ -84,6 +84,121 @@ test('it reports the message a flag parser throws', async () => {
   expect(ctx.output.error).toHaveBeenCalledExactlyOnceWith('tool: expected a limit, got "many"');
 });
 
+test('it refuses a positional word that no argument takes before the command runs', async () => {
+  const ctx = setupTest();
+  const run = mock(() => {});
+  const stop = define({ args: { service: { type: 'positional' } }, name: 'stop', run });
+
+  const ran = await runCommandLine(['stop', 'api', 'worker'], define({ name: 'tool' }), {
+    output: ctx.output,
+    subCommands: { stop },
+  });
+
+  expect(ran).toBeFalse();
+  expect(run).not.toHaveBeenCalled();
+  expect(ctx.output.error).toHaveBeenCalledExactlyOnceWith('tool: unexpected arguments: worker');
+});
+
+test('it fills the positional arguments from the words after --', async () => {
+  const ctx = setupTest();
+  const received: Array<unknown> = [];
+
+  const insert = define({
+    args: { target: { type: 'positional' }, text: { type: 'positional' } },
+    name: 'insert',
+    run: (command) => {
+      received.push([command.values, command.rest]);
+    },
+  });
+
+  const ran = await runCommandLine(['insert', 'T1', '--', '--hello'], define({ name: 'tool' }), {
+    output: ctx.output,
+    subCommands: { insert },
+  });
+
+  expect(ran).toBeTrue();
+  expect(received).toStrictEqual([[{ target: 'T1', text: '--hello' }, []]]);
+});
+
+test('it parses a positional word after -- with the argument parser', async () => {
+  const ctx = setupTest();
+  const received: Array<unknown> = [];
+
+  const move = define({
+    args: { x: { parse: Number, type: 'positional' } },
+    name: 'move',
+    run: (command) => {
+      received.push(command.values.x);
+    },
+  });
+
+  await runCommandLine(['move', '--', '-5'], define({ name: 'tool' }), {
+    output: ctx.output,
+    subCommands: { move },
+  });
+
+  expect(received).toStrictEqual([-5]);
+});
+
+test('it refuses a missing positional argument when the command line holds --', async () => {
+  const ctx = setupTest();
+  const run = mock(() => {});
+
+  const insert = define({
+    args: { target: { type: 'positional' }, text: { type: 'positional' } },
+    name: 'insert',
+    run,
+  });
+
+  const ran = await runCommandLine(['insert', '--', 'T1'], define({ name: 'tool' }), {
+    output: ctx.output,
+    subCommands: { insert },
+  });
+
+  expect(ran).toBeFalse();
+  expect(run).not.toHaveBeenCalled();
+
+  expect(ctx.output.error).toHaveBeenCalledExactlyOnceWith(
+    "tool: Positional argument 'text' is required",
+  );
+});
+
+test('it refuses a surplus word after --', async () => {
+  const ctx = setupTest();
+  const run = mock(() => {});
+  const stop = define({ args: { service: { type: 'positional' } }, name: 'stop', run });
+
+  const ran = await runCommandLine(['stop', 'api', '--', 'worker'], define({ name: 'tool' }), {
+    output: ctx.output,
+    subCommands: { stop },
+  });
+
+  expect(ran).toBeFalse();
+  expect(run).not.toHaveBeenCalled();
+  expect(ctx.output.error).toHaveBeenCalledExactlyOnceWith('tool: unexpected arguments: worker');
+});
+
+test('it passes the words after -- to a command with a multiple positional argument', async () => {
+  const ctx = setupTest();
+  const received: Array<unknown> = [];
+
+  const exec = define({
+    args: { command: { multiple: true, type: 'positional' } },
+    name: 'exec',
+    run: (command) => {
+      received.push([command.values.command, command.rest]);
+    },
+  });
+
+  const ran = await runCommandLine(['exec', 'ls', '--', '-la'], define({ name: 'tool' }), {
+    output: ctx.output,
+    subCommands: { exec },
+  });
+
+  expect(ran).toBeTrue();
+  expect(received).toStrictEqual([[['ls'], ['-la']]]);
+});
+
 test('it refuses a command name the tree lacks', async () => {
   const ctx = setupTest();
 

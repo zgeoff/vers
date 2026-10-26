@@ -1,7 +1,66 @@
-import { expect, test } from 'bun:test';
-import { parseArgs, resolveArgs } from 'gunshi';
+import { expect, mock, test } from 'bun:test';
+import { define, parseArgs, resolveArgs } from 'gunshi';
 import type { Args } from 'gunshi';
+import { runCommandLine } from '../utils/run-command-line';
 import { QA_CDP_ARGS } from './qa-cdp-args';
+
+test.each<[string, Args, Array<string>, Record<string, unknown>]>([
+  ['new', QA_CDP_ARGS.new, ['--', 'https://example.test/'], { url: 'https://example.test/' }],
+  ['ctx', QA_CDP_ARGS.ctx, ['--', '-T1'], { target: '-T1' }],
+  ['close', QA_CDP_ARGS.close, ['--', '-T1'], { target: '-T1' }],
+  [
+    'nav',
+    QA_CDP_ARGS.nav,
+    ['T1', '--', '-https://example.test/'],
+    { target: 'T1', url: '-https://example.test/' },
+  ],
+  ['reload', QA_CDP_ARGS.reload, ['--', '-T1'], { target: '-T1' }],
+  ['eval', QA_CDP_ARGS.eval, ['T1', '--', '-1 + 2'], { script: '-1 + 2', target: 'T1' }],
+  ['text', QA_CDP_ARGS.text, ['--', '-T1'], { target: '-T1' }],
+  ['shot', QA_CDP_ARGS.shot, ['T1', '--', '-out.png'], { file: '-out.png', target: 'T1' }],
+  [
+    'type',
+    QA_CDP_ARGS.type,
+    ['T1', '#name', '--', '--hello'],
+    { selector: '#name', target: 'T1', text: '--hello' },
+  ],
+  [
+    'insert',
+    QA_CDP_ARGS.insert,
+    ['T1', '--', '#name', '-x'],
+    { selector: '#name', target: 'T1', text: '-x' },
+  ],
+  ['key', QA_CDP_ARGS.key, ['T1', '--', '-'], { key: '-', target: 'T1' }],
+  ['click', QA_CDP_ARGS.click, ['T1', '--', '-5', '10'], { target: 'T1', x: -5, y: 10 }],
+  [
+    'console',
+    QA_CDP_ARGS.console,
+    ['--seconds', '3', '--', '-T1'],
+    { reload: false, seconds: 3, target: '-T1' },
+  ],
+  ['offline', QA_CDP_ARGS.offline, ['T1', '--', 'off'], { state: 'off', target: 'T1' }],
+  ['pause', QA_CDP_ARGS.pause, ['--', '-T1'], { target: '-T1' }],
+  ['profile', QA_CDP_ARGS.profile, ['--', '-T1'], { seconds: 4, target: '-T1' }],
+])('it fills the arguments of %s from the words after --', async (name, args, argv, expected) => {
+  const received: Array<unknown> = [];
+  const output = { error: mock((_text: string) => {}), log: mock((_text: string) => {}) };
+
+  const command = define({
+    args,
+    name,
+    run: (ctx) => {
+      received.push({ ...ctx.values });
+    },
+  });
+
+  const ran = await runCommandLine([name, ...argv], define({ name: 'qa-cdp' }), {
+    output,
+    subCommands: { [name]: command },
+  });
+
+  expect(ran).toBeTrue();
+  expect(received).toStrictEqual([expected]);
+});
 
 test('it leaves the endpoint unset when no flag names one', () => {
   const resolved = resolveArgs(QA_CDP_ARGS.targets, parseArgs([]));
