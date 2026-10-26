@@ -54,6 +54,7 @@ export async function runLivePlayer(
 
   const stoppedMs = performance.now() - playStartedAt;
 
+  await mintReachedRuns(options, outbox, stoppedMs);
   await flushOutbox(options, outbox, stoppedMs);
   await stopOpenRun(options, outbox);
 
