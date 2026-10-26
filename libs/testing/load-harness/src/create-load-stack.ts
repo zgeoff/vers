@@ -4,6 +4,7 @@ import { applyMigrations, createDB } from '@vers/db';
 import { parseServicePrivateKey } from '@vers/service-auth';
 import { $ } from 'bun';
 import invariant from 'tiny-invariant';
+import { parseContainerExits } from './parse-container-exits';
 import type { LoadEngineVersions, LoadStack } from './types';
 import { writeLoadRegistry } from './write-load-registry';
 
@@ -65,6 +66,15 @@ export async function createLoadStack(
     containerPrefix: `${PROJECT_NAME}-`,
     db,
     privateKey: await parseServicePrivateKey(privateKeyPEM),
+    readExits: async (startedAt) => {
+      const ids = await runCompose(env, ['ps', '--all', '--quiet']);
+
+      const output = await $`docker inspect ${ids.split('\n').filter((id) => id !== '')}`
+        .quiet()
+        .text();
+
+      return parseContainerExits(output, startedAt);
+    },
     readLogs: (service, since) =>
       runCompose(env, ['logs', '--no-color', '--since', since.toISOString(), service]),
     remove: async () => {

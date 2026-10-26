@@ -98,9 +98,9 @@ export async function runOfflineReturnScenario(
         }),
       );
 
-      if (error !== null) {
-        callLog.refusals.push({ code: 'UNDELIVERED', procedure: 'advanceActivity' });
-      } else if (!drained.delivered) {
+      // the drain throws only what the transport lost after the client's retries, which the call
+      // log holds as a failed call; a refusal returns undelivered
+      if (error === null && !drained.delivered) {
         callLog.refusals.push({ code: 'REFUSED', procedure: 'advanceActivity' });
       }
     }),
@@ -118,6 +118,7 @@ export async function runOfflineReturnScenario(
   return {
     calls: callLog.calls,
     events,
+    exits: await stack.readExits(windowStartedAt),
     lockWaits: parseLockWaits(postgresLog),
     name: options.name,
     players: options.players,

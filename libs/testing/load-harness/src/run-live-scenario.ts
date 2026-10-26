@@ -110,6 +110,7 @@ export async function runLiveScenario(
   return {
     calls: callLog.calls,
     events,
+    exits: await stack.readExits(windowStartedAt),
     lockWaits: parseLockWaits(postgresLog),
     name: options.name,
     outage,

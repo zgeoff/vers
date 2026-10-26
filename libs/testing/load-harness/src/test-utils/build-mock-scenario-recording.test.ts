@@ -5,6 +5,7 @@ test('it builds a default scenario recording', () => {
   expect(buildMockScenarioRecording()).toStrictEqual({
     calls: [],
     events: [],
+    exits: [],
     lockWaits: { acquiredAfterMs: [], byLock: {}, waits: 0 },
     name: 'steady-10',
     players: 10,

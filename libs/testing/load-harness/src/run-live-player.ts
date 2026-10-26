@@ -215,9 +215,8 @@ async function stopOpenRun(
     options.client.stopActivity({ activityID: open.run.id, avatarID: options.avatarID }),
   );
 
-  if (error !== null) {
-    const code = isDefinedError(error) ? error.code : 'UNDELIVERED';
-
-    options.onRefused('stopActivity', code);
+  // a stop the transport lost is a failed call in the call log, not a refusal
+  if (error !== null && isDefinedError(error)) {
+    options.onRefused('stopActivity', error.code);
   }
 }

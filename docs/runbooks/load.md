@@ -73,12 +73,13 @@ docker compose --project-directory libs/testing/load-harness -p vers-load down -
 
 The capacity table rates each steady step against the settlement target, which
 `--settlement-target-seconds` sets. A step meets the target when the settlement age p95 is within
-it, no call failed, no activity is held or rejected, every appended checkpoint was proved once play
-stopped, and every run and avatar settled at the XP its own stream earned. The supported capacity is
-the largest step that met the target, and the busiest container of that step is the next limiting
-resource. The report counts connected players apart from the simulated hours they delivered, because
-one connected player delivers one simulated hour per wall hour while a returning player delivers the
-whole gap at once.
+it, no call failed, every container stayed up, no activity is held or rejected, every appended
+checkpoint was proved once play stopped, and every run and avatar settled at the XP its own stream
+earned. The supported capacity is the largest step that met the target. The next limiting resource
+comes from the first step that missed it: a container that exited during that step, or else its
+busiest container. The report counts connected players apart from the simulated hours they
+delivered, because one connected player delivers one simulated hour per wall hour while a returning
+player delivers the whole gap at once.
 
 - **Settlement age** is the time from a checkpoint's append to the first sample that sees it proved,
   so an age errs high by up to one sample interval. A segment apply stamps the start of its
@@ -90,10 +91,15 @@ whole gap at once.
   whole CPU, the burst rate, so a container that runs above the baseline share here outruns its
   sustained share on Fly. `--cpu-profile baseline` caps each service container at the baseline quota
   instead, and measures what the fleet sustains after its burst balance is spent.
-- **Failed calls** counts every call that failed after the client's retries, by status. A player
-  keeps an undelivered start or batch and resends it at its next flush, as the client's outbox does,
-  so a failed call during an outage is a delay, not lost work. A service that cannot reach a
-  dependency answers 5xx, an infrastructure fault in the
-  [error-handling taxonomy](../architecture/services/error-handling.md).
+- **Container exits** appear in a scenario's event list: each container that stopped during the
+  scenario, with its exit code and whether the kernel killed it for memory. The stack sets no
+  restart policy, so every later call to an exited container fails. Its last log lines, from
+  `docker compose logs`, give the cause, such as a V8 heap limit.
+- **Failed calls** counts every call that failed after the client's retries, by HTTP status, and
+  counts a call that got no response, such as a refused or reset connection, as `no response`.
+  **Refusals** counts only the error codes the server answered. A player keeps an undelivered start
+  or batch and resends it at its next flush, as the client's outbox does, so a failed call during an
+  outage is a delay, not lost work. A service that cannot reach a dependency answers 5xx, an
+  infrastructure fault in the [error-handling taxonomy](../architecture/services/error-handling.md).
 - **End state** counts unproved checkpoints, held activities, and XP that differs from what the
   players' own streams earned. Any of them is a lost reward or a stuck avatar, never noise.

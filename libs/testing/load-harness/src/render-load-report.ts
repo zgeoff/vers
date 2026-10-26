@@ -1,5 +1,5 @@
 import { buildCapacityVerdict } from './build-capacity-verdict';
-import type { LoadReportContext, ScenarioSummary } from './types';
+import type { ContainerExit, LoadReportContext, ScenarioSummary } from './types';
 
 export function renderLoadReport(
   context: Readonly<LoadReportContext>,
@@ -45,7 +45,8 @@ function renderCapacity(
     '',
     verdict.supportedPlayers === undefined
       ? 'Supported: no measured step met the target.'
-      : `Supported: ${verdict.supportedPlayers} connected players. Next limiting resource: ${verdict.limitingContainer ?? 'none measured'}.`,
+      : `Supported: ${verdict.supportedPlayers} connected players.`,
+    `Next limiting resource: ${verdict.limitingContainer ?? 'none measured'}${verdict.limitingExit === undefined ? '' : `, which ${formatExit(verdict.limitingExit)}`}.`,
     '',
   ];
 }
@@ -56,6 +57,10 @@ function formatSeconds(durationMs: number): string {
 
 function formatPercent(percent: number): string {
   return `${percent.toFixed(0)}%`;
+}
+
+function formatExit(exit: Readonly<ContainerExit>): string {
+  return `exited with code ${exit.exitCode}${exit.oomKilled ? ' after the kernel killed it for memory' : ''}`;
 }
 
 const MIB = 1024 ** 2;
@@ -69,7 +74,15 @@ function renderScenario(summary: Readonly<ScenarioSummary>): Array<string> {
   return [
     `## ${summary.name}: ${summary.players} players`,
     '',
-    ...summary.events.map((event) => `- ${formatSeconds(event.elapsedMs)}: ${event.label}`),
+    ...[
+      ...summary.events,
+      ...summary.exits.map((exit) => ({
+        elapsedMs: exit.elapsedMs,
+        label: `${exit.container} ${formatExit(exit)}`,
+      })),
+    ]
+      .toSorted((left, right) => left.elapsedMs - right.elapsedMs)
+      .map((event) => `- ${formatSeconds(event.elapsedMs)}: ${event.label}`),
     `- settled ${summary.settleMs === undefined ? 'not within the timeout' : `${formatSeconds(summary.settleMs)} after play stopped`}`,
     ...(summary.recoveryMs === undefined
       ? []

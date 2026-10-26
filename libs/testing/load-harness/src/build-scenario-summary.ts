@@ -20,7 +20,7 @@ export function buildScenarioSummary(recording: Readonly<ScenarioRecording>): Sc
   return {
     delivery: {
       calls: recording.calls.length,
-      failedByStatus: countBy(failedCalls.map((call) => String(call.status))),
+      failedByStatus: countBy(failedCalls.map((call) => formatCallStatus(call.status))),
       peakBackedOff: buildMaximum(pipeline.map((sample) => sample.backedOff)),
       procedures: collectProcedureSummaries(recording.calls),
       refusals: countBy(
@@ -28,6 +28,7 @@ export function buildScenarioSummary(recording: Readonly<ScenarioRecording>): Sc
       ),
     },
     events: recording.events,
+    exits: recording.exits,
     name: recording.name,
     players: recording.players,
     playMs: recording.playMs,
@@ -68,6 +69,12 @@ function countBy(keys: ReadonlyArray<string>): Record<string, number> {
   }
 
   return counts;
+}
+
+// the player client records a call whose fetch threw, such as a refused or reset connection, as
+// status 0
+function formatCallStatus(status: number): string {
+  return status === 0 ? 'no response' : `HTTP ${status}`;
 }
 
 function collectProcedureSummaries(calls: ReadonlyArray<CallRecord>): Array<ProcedureSummary> {

@@ -17,6 +17,7 @@ export interface LoadStack {
   readonly containerPrefix: string;
   readonly db: Kysely<DB>;
   readonly privateKey: CryptoKey;
+  readonly readExits: (startedAt: Date) => Promise<Array<ContainerExit>>;
   readonly readLogs: (service: string, since: Date) => Promise<string>;
   readonly remove: () => Promise<void>;
   readonly sessionSecret: string;
@@ -102,6 +103,13 @@ export interface ContainerSample {
   readonly memoryBytes: number;
 }
 
+export interface ContainerExit {
+  readonly container: string;
+  readonly elapsedMs: number;
+  readonly exitCode: number;
+  readonly oomKilled: boolean;
+}
+
 export interface PipelineSample {
   readonly appended: number;
   readonly backedOff: number;
@@ -158,6 +166,7 @@ export interface ScenarioEvent {
 export interface ScenarioRecording {
   readonly calls: ReadonlyArray<CallRecord>;
   readonly events: ReadonlyArray<ScenarioEvent>;
+  readonly exits: ReadonlyArray<ContainerExit>;
   readonly lockWaits: LockWaits;
   readonly name: string;
   readonly outage?: OutageWindow | undefined;
@@ -199,6 +208,7 @@ export interface ScenarioSummary {
     readonly refusals: Readonly<Record<string, number>>;
   };
   readonly events: ReadonlyArray<ScenarioEvent>;
+  readonly exits: ReadonlyArray<ContainerExit>;
   readonly name: string;
   readonly players: number;
   readonly playMs: number;

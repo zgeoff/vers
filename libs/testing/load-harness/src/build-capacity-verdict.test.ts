@@ -57,6 +57,33 @@ test('it supports no step that failed a delivery, whatever its settlement age', 
   expect(buildCapacityVerdict(steps, 30_000).supportedPlayers).toBeUndefined();
 });
 
+test('it names the container that exited in the first step that missed the target', () => {
+  const steps = [
+    buildMockScenarioRecording({
+      players: 25,
+      recording: { settlementAges: [{ ageMs: 1000, elapsedMs: 0 }] },
+    }),
+    buildMockScenarioRecording({
+      exits: [
+        { container: 'vers-load-app-web-1', elapsedMs: 90_000, exitCode: 139, oomKilled: false },
+      ],
+      players: 50,
+      recording: {
+        containers: [
+          { container: 'vers-load-postgres-1', cpuPercent: 90, elapsedMs: 0, memoryBytes: 1 },
+        ],
+        settlementAges: [{ ageMs: 1000, elapsedMs: 0 }],
+      },
+    }),
+  ].map((recording) => buildScenarioSummary(recording));
+
+  const verdict = buildCapacityVerdict(steps, 30_000);
+
+  expect(verdict.supportedPlayers).toBe(25);
+  expect(verdict.limitingContainer).toBe('vers-load-app-web-1');
+  expect(verdict.limitingExit?.exitCode).toBe(139);
+});
+
 test('it supports no step that left checkpoints unproved', () => {
   const steps = [
     buildMockScenarioRecording({ players: 25, reconciliation: { unverified: 12 } }),

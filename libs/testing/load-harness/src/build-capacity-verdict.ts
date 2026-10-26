@@ -1,7 +1,8 @@
-import type { ResourceSummary, ScenarioSummary } from './types';
+import type { ContainerExit, ResourceSummary, ScenarioSummary } from './types';
 
 interface CapacityStep {
   readonly busiest: ResourceSummary | undefined;
+  readonly exits: ReadonlyArray<ContainerExit>;
   readonly failedCalls: number;
   readonly meetsTarget: boolean;
   readonly players: number;
@@ -11,14 +12,16 @@ interface CapacityStep {
 
 interface CapacityVerdict {
   readonly limitingContainer: string | undefined;
+  readonly limitingExit: ContainerExit | undefined;
   readonly steps: ReadonlyArray<CapacityStep>;
   readonly supportedPlayers: number | undefined;
 }
 
 const MS_PER_HOUR = 3_600_000;
 
-// a step meets the target only when the pipeline kept up and lost nothing; the busiest container
-// of the largest step that met it is the resource the next step runs out of first
+// a step meets the target only when the pipeline kept up, lost nothing and kept every container
+// up; the limit is what broke in the first step that missed it: a container that exited, or else
+// its busiest container
 export function buildCapacityVerdict(
   steady: ReadonlyArray<ScenarioSummary>,
   settlementTargetMs: number,
@@ -32,10 +35,12 @@ export function buildCapacityVerdict(
 
       return {
         busiest: summary.resources[0],
+        exits: summary.exits,
         failedCalls,
         meetsTarget:
           summary.settlementAgeMs.p95 <= settlementTargetMs &&
           failedCalls === 0 &&
+          summary.exits.length === 0 &&
           Object.keys(summary.delivery.refusals).length === 0 &&
           summary.reconciliation.held === 0 &&
           summary.reconciliation.unverified === 0 &&
@@ -50,9 +55,12 @@ export function buildCapacityVerdict(
     .toSorted((left, right) => left.players - right.players);
 
   const supported = steps.findLast((step) => step.meetsTarget);
+  const limited = steps.find((step) => !step.meetsTarget) ?? steps.at(-1);
+  const limitingExit = limited?.exits[0];
 
   return {
-    limitingContainer: supported?.busiest?.container,
+    limitingContainer: limitingExit?.container ?? limited?.busiest?.container,
+    limitingExit,
     steps,
     supportedPlayers: supported?.players,
   };

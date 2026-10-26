@@ -47,12 +47,22 @@ test('it counts failed calls by status and summarises each procedure', () => {
 
   const summary = buildScenarioSummary(recording);
 
-  expect(summary.delivery.failedByStatus).toStrictEqual({ '503': 1 });
+  expect(summary.delivery.failedByStatus).toStrictEqual({ 'HTTP 503': 1 });
 
   expect(summary.delivery.procedures).toStrictEqual([
     { calls: 1, failures: 0, p50Ms: 20, p95Ms: 20, procedure: 'advanceActivity' },
     { calls: 2, failures: 1, p50Ms: 10, p95Ms: 30, procedure: 'trackActivityProgress' },
   ]);
+});
+
+test('it counts a call whose fetch threw as no response', () => {
+  const recording = buildMockScenarioRecording({
+    calls: [{ durationMs: 0, procedure: 'stopActivity', status: 0 }],
+  });
+
+  expect(buildScenarioSummary(recording).delivery.failedByStatus).toStrictEqual({
+    'no response': 1,
+  });
 });
 
 test('it orders containers by mean CPU and keeps each one peak memory', () => {
