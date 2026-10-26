@@ -33,13 +33,13 @@ export function collectManifestGaps(
 }
 
 function isListed(manifest: SecretsManifest, reference: OPReference): boolean {
-  return manifest.vaults[reference.vault]?.[reference.item]?.includes(reference.field) ?? false;
+  return (
+    manifest.vaults.get(reference.vault)?.get(reference.item)?.includes(reference.field) ?? false
+  );
 }
 
 function collectListedReferences(manifest: SecretsManifest): Array<OPReference> {
-  return Object.entries(manifest.vaults).flatMap(([vault, items]) =>
-    Object.entries(items).flatMap(([item, fields]) =>
-      fields.map((field) => ({ field, item, vault })),
-    ),
+  return [...manifest.vaults].flatMap(([vault, items]) =>
+    [...items].flatMap(([item, fields]) => fields.map((field) => ({ field, item, vault }))),
   );
 }

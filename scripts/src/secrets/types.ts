@@ -15,7 +15,7 @@ export interface OPReferenceSource {
 }
 
 export interface SecretsManifest {
-  readonly vaults: Readonly<Record<string, Readonly<Record<string, ReadonlyArray<string>>>>>;
+  readonly vaults: ReadonlyMap<string, ReadonlyMap<string, ReadonlyArray<string>>>;
 }
 
 export interface UnlistedOPReference {

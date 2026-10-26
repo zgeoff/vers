@@ -22,6 +22,13 @@ test.each([
   });
 });
 
+test('it collects a reference whose names match Object.prototype members', () => {
+  expect(collectOPReferences('API_TOKEN=op://__proto__/constructor/toString\n')).toStrictEqual({
+    references: [{ field: 'toString', item: 'constructor', vault: '__proto__' }],
+    unparsed: [],
+  });
+});
+
 test('it collects each reference on a line in order', () => {
   expect(
     collectOPReferences(
