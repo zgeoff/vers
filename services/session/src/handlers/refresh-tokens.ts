@@ -1,8 +1,8 @@
 import { ROTATION_GRACE_DURATION } from '@vers/contract-session';
 import type { DB } from '@vers/db';
 import type { Kysely } from 'kysely';
-import invariant from 'tiny-invariant';
 import { match } from 'ts-pattern';
+import { classifyLostRotation } from '../classify-lost-rotation';
 import { classifyRefresh } from '../classify-refresh';
 import { ACCESS_TOKEN_DURATION } from '../consts';
 import { createJWT } from '../create-jwt';
@@ -26,7 +26,6 @@ interface RefreshedTokens {
 interface RefreshCall {
   readonly db: Kysely<DB>;
   readonly deps: SessionSigningDeps;
-  readonly now: Date;
   readonly opts: RefreshTokensOpts;
 }
 
@@ -35,43 +34,47 @@ export async function refreshTokens(
   deps: SessionSigningDeps,
   opts: RefreshTokensOpts,
 ): Promise<RefreshedTokens> {
-  const call: RefreshCall = { db, deps, now: new Date(), opts };
+  const call: RefreshCall = { db, deps, opts };
 
-  const decision = await readRefreshDecision(call);
+  const row = await readSessionRow(call);
+
+  const now = new Date();
+
+  const decision = classifyRefresh(row, opts.input.refreshToken, now);
 
   if (decision.kind !== 'rotate') {
-    return applyRefreshDecision(call, decision);
+    return applyRefreshDecision(call, decision, now);
   }
 
-  const rotated = await rotateRefreshToken(call, decision);
+  const rotated = await rotateRefreshToken(call, decision, now);
 
   if (rotated !== null) {
     return rotated;
   }
 
-  const raceDecision = await readRefreshDecision(call);
+  const raceRow = await readSessionRow(call);
 
-  invariant(
-    raceDecision.kind !== 'rotate',
-    'a lost rotation leaves the presented token no longer current',
+  const raceNow = new Date();
+
+  return applyRefreshDecision(
+    call,
+    classifyLostRotation(raceRow, opts.input.refreshToken, raceNow),
+    raceNow,
   );
-
-  return applyRefreshDecision(call, raceDecision);
 }
 
-async function readRefreshDecision(call: RefreshCall): Promise<RefreshDecision> {
-  const row = await call.db
+function readSessionRow(call: RefreshCall) {
+  return call.db
     .selectFrom('sessions')
     .selectAll()
     .where('id', '=', call.opts.input.id)
     .executeTakeFirst();
-
-  return classifyRefresh(row, call.opts.input.refreshToken, call.now);
 }
 
 function applyRefreshDecision(
   call: RefreshCall,
   decision: Exclude<RefreshDecision, { kind: 'rotate' }>,
+  now: Date,
 ): Promise<RefreshedTokens> {
   return match(decision)
     .with({ kind: 'missing' }, { kind: 'mismatch' }, () => {
@@ -88,13 +91,13 @@ function applyRefreshDecision(
       throw call.opts.errors.REFRESH_TOKEN_REUSED({ data: {} });
     })
     .with({ kind: 'grace' }, async (grace) => {
-      const tokens = await signAccessToken(call, grace);
+      const tokens = await signAccessToken(call, grace, now);
 
       recordRotationGraceReply();
 
       return tokens;
     })
-    .with({ kind: 'renew' }, (renew) => signAccessToken(call, renew))
+    .with({ kind: 'renew' }, (renew) => signAccessToken(call, renew, now))
     .exhaustive();
 }
 
@@ -107,10 +110,11 @@ type KeptRefreshToken = Extract<RefreshDecision, { kind: 'grace' | 'renew' }>;
 async function signAccessToken(
   call: RefreshCall,
   kept: KeptRefreshToken,
+  now: Date,
 ): Promise<RefreshedTokens> {
   const accessToken = await createJWT({
     apiIdentifier: call.deps.apiIdentifier,
-    expiresAt: new Date(call.now.getTime() + ACCESS_TOKEN_DURATION),
+    expiresAt: new Date(now.getTime() + ACCESS_TOKEN_DURATION),
     keyID: call.deps.keyID,
     signingKey: call.deps.signingKey,
     userID: kept.userID,
@@ -122,9 +126,10 @@ async function signAccessToken(
 async function rotateRefreshToken(
   call: RefreshCall,
   rotate: Extract<RefreshDecision, { kind: 'rotate' }>,
+  now: Date,
 ): Promise<null | RefreshedTokens> {
-  const accessTokenExpiresAt = new Date(call.now.getTime() + ACCESS_TOKEN_DURATION);
-  const rotationGraceUntil = new Date(call.now.getTime() + ROTATION_GRACE_DURATION);
+  const accessTokenExpiresAt = new Date(now.getTime() + ACCESS_TOKEN_DURATION);
+  const rotationGraceUntil = new Date(now.getTime() + ROTATION_GRACE_DURATION);
 
   const [refreshToken, accessToken] = await Promise.all([
     createJWT({

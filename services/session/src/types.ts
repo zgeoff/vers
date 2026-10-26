@@ -39,3 +39,8 @@ export type RefreshDecision =
       readonly refreshToken: string;
       readonly userID: string;
     };
+
+export type LostRotationDecision = Extract<
+  RefreshDecision,
+  { kind: 'expired' | 'grace' | 'reuse' }
+>;
