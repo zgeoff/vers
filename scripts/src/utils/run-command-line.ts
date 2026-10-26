@@ -92,7 +92,9 @@ function toGunshiArgv(
   const commands = [entry, ...Object.values(subCommands)];
 
   const routingArgs: Args = Object.fromEntries(
-    commands.flatMap((command) => Object.entries(toArgs(command))),
+    commands
+      .flatMap((command) => Object.entries(toArgs(command)))
+      .filter(([_key, schema]) => schema.type !== 'positional'),
   );
 
   const commandName = findCommandName(head, routingArgs, subCommands);

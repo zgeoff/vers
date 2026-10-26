@@ -248,6 +248,29 @@ test('it reads a flag value that starts with - before the command name', async (
   expect(received).toStrictEqual(['-draft']);
 });
 
+test('it reads a flag value before the command name when another command has a positional of the same name', async () => {
+  const ctx = setupTest();
+  const received: Array<unknown> = [];
+
+  const monitor = define({
+    args: { url: { type: 'string' } },
+    name: 'monitor',
+    run: (command) => {
+      received.push(command.values.url);
+    },
+  });
+
+  const nav = define({ args: { url: { type: 'positional' } }, name: 'nav', run: () => {} });
+
+  const ran = await runCommandLine(['--url', '-preview', 'monitor'], define({ name: 'tool' }), {
+    output: ctx.output,
+    subCommands: { monitor, nav },
+  });
+
+  expect(ran).toBeTrue();
+  expect(received).toStrictEqual(['-preview']);
+});
+
 test('it still refuses a word that starts with - and is no number as an unknown flag', async () => {
   const ctx = setupTest();
   const run = mock(() => {});
