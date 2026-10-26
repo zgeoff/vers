@@ -94,6 +94,11 @@ jobs:
           bun run env:contract:check
           bun run env:coverage
 
+      # every op:// reference that .mcp.json, the workflows and infra/ read is listed by name in
+      # secrets-manifest.json, and every listed one is still read
+      - name: Check Secrets Manifest
+        run: bun run secrets:check
+
       - name: Check Doc Paths
         run: bun run docs:check-paths
 
