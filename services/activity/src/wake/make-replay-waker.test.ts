@@ -1,5 +1,6 @@
 import { expect, mock, onTestFinished, test } from 'bun:test';
 import { getLogger, resetSync } from '@logtape/logtape';
+import { waitFor } from '@vers/test-utils';
 import { createInMemoryLogs, createInMemoryMetrics } from '@vers/test-utils/bun';
 import { makeReplayWaker } from './make-replay-waker';
 import type { WakeAttempt } from './make-replay-waker';
@@ -61,6 +62,56 @@ test('it keeps a single delivery in flight while one is still pending', async ()
   await waker.waitUntilSettled();
 
   expect(sendWake).toHaveBeenCalledTimes(1);
+});
+
+test('it delivers once more for a wake that arrives while a delivery is in flight', async () => {
+  const gate = Promise.withResolvers<void>();
+  const sendWake = mock(() => gate.promise);
+
+  const waker = makeReplayWaker({
+    coalesceWindowMs: 0,
+    logger: getLogger(['test-activity']),
+    maxDeliveryAttempts: 3,
+    perAttemptTimeoutMs: 5,
+    retryBackoffMs: 0,
+    sendWake,
+  });
+
+  waker.sendReplayWake();
+
+  await waitFor(() => {
+    expect(sendWake).toHaveBeenCalledOnce();
+  });
+
+  waker.sendReplayWake();
+  gate.resolve();
+
+  await waker.waitUntilSettled();
+
+  expect(sendWake).toHaveBeenCalledTimes(2);
+});
+
+test('it delivers a wake that arrives inside the coalesce window once the window closes', async () => {
+  const sendWake = mock(() => Promise.resolve());
+
+  const waker = makeReplayWaker({
+    coalesceWindowMs: 50,
+    logger: getLogger(['test-activity']),
+    maxDeliveryAttempts: 3,
+    perAttemptTimeoutMs: 5,
+    retryBackoffMs: 0,
+    sendWake,
+  });
+
+  waker.sendReplayWake();
+
+  await waker.waitUntilSettled();
+
+  waker.sendReplayWake();
+
+  await waker.waitUntilSettled();
+
+  expect(sendWake).toHaveBeenCalledTimes(2);
 });
 
 test('it retries a failed delivery then records the poke-failure counter', async () => {

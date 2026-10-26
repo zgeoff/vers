@@ -24,6 +24,7 @@ interface ReplayWaker {
 export function makeReplayWaker(options: ReplayWakerOptions): ReplayWaker {
   let cooldownUntil = 0;
   let deliveryInFlight: Promise<void> | undefined;
+  let wakeRequested = false;
 
   const sendWakeWithRetry = async (): Promise<void> => {
     for (let attempt = 1; attempt <= options.maxDeliveryAttempts; attempt += 1) {
@@ -49,28 +50,26 @@ export function makeReplayWaker(options: ReplayWakerOptions): ReplayWaker {
     }
   };
 
+  // the verifier can finish its drain between an append's commit and the wake that append asks
+  // for, so a wake coalesced into an earlier delivery is sent again once the window closes
   const runDelivery = async (): Promise<void> => {
     try {
-      await sendWakeWithRetry();
+      while (wakeRequested) {
+        await wait(Math.max(0, cooldownUntil - Date.now()));
+
+        wakeRequested = false;
+        cooldownUntil = Date.now() + options.coalesceWindowMs;
+
+        await sendWakeWithRetry();
+      }
     } finally {
       deliveryInFlight = undefined;
     }
   };
 
   const sendReplayWake = (): void => {
-    const now = Date.now();
-
-    if (now < cooldownUntil) {
-      return;
-    }
-
-    cooldownUntil = now + options.coalesceWindowMs;
-
-    if (deliveryInFlight !== undefined) {
-      return;
-    }
-
-    deliveryInFlight = runDelivery();
+    wakeRequested = true;
+    deliveryInFlight ??= runDelivery();
   };
 
   const waitUntilSettled = (): Promise<void> => deliveryInFlight ?? Promise.resolve();
