@@ -92,6 +92,49 @@ test('it keeps the cached client after a wake-call failure, without rebuilding i
   );
 });
 
+test('it aborts its in-flight wake when its signal aborts', async () => {
+  const wakeHandler = mock(
+    (_options: Readonly<Pick<RequestInit, 'signal'>>) => new Promise<{ drained: number }>(() => {}),
+  );
+
+  server.use(mockReplayService.wake.handler(wakeHandler));
+
+  const lifetime = new AbortController();
+
+  const sendReplayWake = makeSendReplayWake({
+    coalesceWindowMs: 0,
+    logger: getLogger(['test-activity']),
+    signal: lifetime.signal,
+  });
+
+  sendReplayWake();
+
+  await waitFor(
+    () => {
+      expect(wakeHandler).toHaveBeenCalledOnce();
+    },
+    { timeoutMs: 2000 },
+  );
+
+  const requestSignal = wakeHandler.mock.calls[0]?.[0].signal;
+
+  invariant(requestSignal, 'the RPC handler receives the request signal');
+
+  const abortedBeforeStop = requestSignal.aborted;
+
+  lifetime.abort();
+
+  // under the per-attempt timeout, so only the stop can abort the request this soon
+  await waitFor(
+    () => {
+      expect(requestSignal.aborted).toBeTrue();
+    },
+    { timeoutMs: 1000 },
+  );
+
+  expect(abortedBeforeStop).toBeFalse();
+});
+
 test('it gives each instance its own coalesce state', async () => {
   // each poke fires while the other instance's delivery is still building its client; a shared
   // in-flight guard would let the first swallow the second, delivering one wake instead of two

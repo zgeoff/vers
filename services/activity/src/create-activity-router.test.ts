@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { expect, onTestFinished, test } from 'bun:test';
 import { activityContract } from '@vers/contract-activity';
 import { createAnonymousViewer, createTestDB } from '@vers/service-test-utils/bun';
 import { collectConformanceCases } from '@vers/test-utils';
@@ -6,7 +6,14 @@ import { createActivityService } from './create-activity-service';
 
 async function setupTest() {
   const db = await createTestDB();
-  const service = await createActivityService({ db: db.db });
+
+  const wakeLifetime = new AbortController();
+
+  onTestFinished(() => {
+    wakeLifetime.abort();
+  });
+
+  const service = await createActivityService({ db: db.db, wakeSignal: wakeLifetime.signal });
 
   return { app: service.app, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
 }

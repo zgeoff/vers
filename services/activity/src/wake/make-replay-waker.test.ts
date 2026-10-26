@@ -114,6 +114,112 @@ test('it delivers a wake that arrives inside the coalesce window once the window
   expect(sendWake).toHaveBeenCalledTimes(2);
 });
 
+test('it sends nothing when its signal aborted before the first wake, unlike a live waker', async () => {
+  const lifetime = new AbortController();
+
+  const sendWakeStopped = mock(() => Promise.resolve());
+  const sendWakeLive = mock(() => Promise.resolve());
+
+  lifetime.abort();
+
+  const stoppedWaker = makeReplayWaker({
+    coalesceWindowMs: 0,
+    logger: getLogger(['test-activity']),
+    maxDeliveryAttempts: 3,
+    perAttemptTimeoutMs: 5,
+    retryBackoffMs: 0,
+    sendWake: sendWakeStopped,
+    signal: lifetime.signal,
+  });
+
+  const liveWaker = makeReplayWaker({
+    coalesceWindowMs: 0,
+    logger: getLogger(['test-activity']),
+    maxDeliveryAttempts: 3,
+    perAttemptTimeoutMs: 5,
+    retryBackoffMs: 0,
+    sendWake: sendWakeLive,
+    signal: new AbortController().signal,
+  });
+
+  stoppedWaker.sendReplayWake();
+  liveWaker.sendReplayWake();
+
+  await Promise.all([stoppedWaker.waitUntilSettled(), liveWaker.waitUntilSettled()]);
+
+  expect(sendWakeStopped).not.toHaveBeenCalled();
+  expect(sendWakeLive).toHaveBeenCalledOnce();
+});
+
+test('it sends no trailing wake after its signal aborts', async () => {
+  const lifetime = new AbortController();
+
+  const sendWake = mock(() => Promise.resolve());
+
+  const waker = makeReplayWaker({
+    coalesceWindowMs: 60_000,
+    logger: getLogger(['test-activity']),
+    maxDeliveryAttempts: 3,
+    perAttemptTimeoutMs: 5,
+    retryBackoffMs: 0,
+    sendWake,
+    signal: lifetime.signal,
+  });
+
+  waker.sendReplayWake();
+
+  await waitFor(() => {
+    expect(sendWake).toHaveBeenCalledOnce();
+  });
+
+  waker.sendReplayWake();
+  lifetime.abort();
+  waker.sendReplayWake();
+
+  await waker.waitUntilSettled();
+
+  expect(sendWake).toHaveBeenCalledOnce();
+});
+
+test('it records no poke failure for a delivery that its signal aborted', async () => {
+  const inMemoryMetrics = createInMemoryMetrics();
+
+  const lifetime = new AbortController();
+
+  const sendWake = mock(
+    (attempt: WakeAttempt) =>
+      new Promise((_resolve, reject) => {
+        attempt.signal.addEventListener('abort', () => {
+          reject(new Error('aborted'));
+        });
+      }),
+  );
+
+  const waker = makeReplayWaker({
+    coalesceWindowMs: 0,
+    logger: getLogger(['test-activity']),
+    maxDeliveryAttempts: 3,
+    perAttemptTimeoutMs: 60_000,
+    retryBackoffMs: 0,
+    sendWake,
+    signal: lifetime.signal,
+  });
+
+  waker.sendReplayWake();
+
+  await waitFor(() => {
+    expect(sendWake).toHaveBeenCalledOnce();
+  });
+
+  lifetime.abort();
+
+  await waker.waitUntilSettled();
+
+  const pokeFailures = await inMemoryMetrics.readCounterValue('vers.activity.replay_poke_failed');
+
+  expect(pokeFailures).toBeUndefined();
+});
+
 test('it retries a failed delivery then records the poke-failure counter', async () => {
   const inMemoryMetrics = createInMemoryMetrics();
   const sendWake = mock(() => Promise.reject(new Error('simulated wake delivery failure')));

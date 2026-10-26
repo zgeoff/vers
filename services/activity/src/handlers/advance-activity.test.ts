@@ -63,9 +63,16 @@ async function setupTest(config: { readonly simTimeCapMs?: number } = {}) {
   await createSimVersionRow(db.db);
   await createContentVersion(db.db, createMockContentDocument({ contentVersion: '2' }));
 
+  const wakeLifetime = new AbortController();
+
+  onTestFinished(() => {
+    wakeLifetime.abort();
+  });
+
   const service = await createActivityService({
     db: db.db,
     ...(config.simTimeCapMs !== undefined && { simTimeCapMs: config.simTimeCapMs }),
+    wakeSignal: wakeLifetime.signal,
   });
 
   return {

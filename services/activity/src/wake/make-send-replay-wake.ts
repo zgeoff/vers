@@ -16,6 +16,7 @@ const PER_ATTEMPT_TIMEOUT_MS = 2000;
 interface MakeSendReplayWakeOptions {
   readonly coalesceWindowMs?: number;
   readonly logger: Logger;
+  readonly signal?: AbortSignal;
 }
 
 export function makeSendReplayWake(options: MakeSendReplayWakeOptions): () => void {
@@ -48,6 +49,7 @@ export function makeSendReplayWake(options: MakeSendReplayWakeOptions): () => vo
     perAttemptTimeoutMs: PER_ATTEMPT_TIMEOUT_MS,
     retryBackoffMs: RETRY_BACKOFF_MS,
     sendWake: (attempt) => sendWakeRequest(attempt.signal),
+    ...(options.signal !== undefined && { signal: options.signal }),
   }).sendReplayWake;
 }
 

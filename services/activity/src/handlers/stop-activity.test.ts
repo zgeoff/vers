@@ -1,4 +1,4 @@
-import { expect, mock, test } from 'bun:test';
+import { expect, mock, onTestFinished, test } from 'bun:test';
 import { createContentVersion } from '@vers/content-registry';
 import type { ActivityContract } from '@vers/contract-activity';
 import { createMockContentDocument } from '@vers/contract-activity/test-utils';
@@ -28,7 +28,17 @@ async function setupTest() {
   await createSimVersionRow(db.db);
   await createContentVersion(db.db, createMockContentDocument({ contentVersion: '2' }));
 
-  const service = await createActivityService({ db: db.db, wakeCoalesceWindowMs: 0 });
+  const wakeLifetime = new AbortController();
+
+  onTestFinished(() => {
+    wakeLifetime.abort();
+  });
+
+  const service = await createActivityService({
+    db: db.db,
+    wakeCoalesceWindowMs: 0,
+    wakeSignal: wakeLifetime.signal,
+  });
 
   return { app: service.app, db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
 }
