@@ -14,7 +14,7 @@ interface JsonObject {
 
 type JsonPrimitive = boolean | number | string | null;
 
-export type ActivityStatusSource<To extends ActivityStatus> = {
+type ActivityStatusSource<To extends ActivityStatus> = {
   [From in ActivityStatus]: To extends (typeof ACTIVITY_STATUS_TRANSITIONS)[From][number]
     ? From
     : never;
