@@ -39,8 +39,9 @@ scenario measures that path.
 ## Running it
 
 You need Docker with Compose, the repo's pinned Bun, and free host ports 3400, 3401, and 5733. A run
-with the default volumes takes about 50 minutes and holds about 9 CPUs and 10 GB of memory while a
-stack is up, so run nothing else heavy beside it.
+with the default volumes took 40 minutes on a 16-thread machine, image builds included. Its stack
+caps its containers at 8 CPUs and about 10 GB of memory, and their measured peak stayed under 1.5
+GB, so run nothing else heavy beside it.
 
 1. Run every scenario from the repo root:
 
@@ -107,10 +108,12 @@ player delivers the whole gap at once.
   restart policy, so every later call to an exited container fails. Its last log lines, from
   `docker compose logs`, give the cause, such as a V8 heap limit.
 - **Failed calls** counts every call that failed after the client's retries, by HTTP status, and
-  counts a call that got no response, such as a refused or reset connection, as `no response`.
-  **Refusals** counts only the error codes the server answered. A player keeps an undelivered start
-  or batch and resends it at its next flush, as the client's outbox does, so a failed call during an
-  outage is a delay, not lost work. A service that cannot reach a dependency answers 5xx, an
-  infrastructure fault in the [error-handling taxonomy](../architecture/services/error-handling.md).
+  counts a call that got no response as `no response` with its socket error, such as `ECONNREFUSED`.
+  The client resends a call once when its connection resets before any response, as Chromium does
+  for a reused keep-alive socket, so a reset counts only when the resend fails too. **Refusals**
+  counts only the error codes the server answered. A player keeps an undelivered start or batch and
+  resends it at its next flush, as the client's outbox does, so a failed call during an outage is a
+  delay, not lost work. A service that cannot reach a dependency answers 5xx, an infrastructure
+  fault in the [error-handling taxonomy](../architecture/services/error-handling.md).
 - **End state** counts unproved checkpoints, held activities, and XP that differs from what the
   players' own streams earned. Any of them is a lost reward or a stuck avatar, never noise.

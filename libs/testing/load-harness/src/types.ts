@@ -50,6 +50,7 @@ export interface CookieJar {
 
 export interface CallRecord {
   readonly durationMs: number;
+  readonly failure?: string;
   readonly procedure: string;
   readonly status: number;
 }

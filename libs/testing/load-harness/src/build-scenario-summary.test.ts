@@ -55,13 +55,18 @@ test('it counts failed calls by status and summarises each procedure', () => {
   ]);
 });
 
-test('it counts a call whose fetch threw as no response', () => {
+test('it counts a call whose fetch threw as no response, by its socket error', () => {
   const recording = buildMockScenarioRecording({
-    calls: [{ durationMs: 0, procedure: 'stopActivity', status: 0 }],
+    calls: [
+      { durationMs: 0, failure: 'ECONNRESET', procedure: 'stopActivity', status: 0 },
+      { durationMs: 0, failure: 'ECONNRESET', procedure: 'trackActivityProgress', status: 0 },
+      { durationMs: 0, failure: 'ECONNREFUSED', procedure: 'stopActivity', status: 0 },
+    ],
   });
 
   expect(buildScenarioSummary(recording).delivery.failedByStatus).toStrictEqual({
-    'no response': 1,
+    'no response (ECONNREFUSED)': 1,
+    'no response (ECONNRESET)': 2,
   });
 });
 

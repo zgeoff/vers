@@ -23,7 +23,7 @@ export function createPlayerClient(options: Readonly<CreatePlayerClientOptions>)
     const startedAt = performance.now();
 
     try {
-      const response = await fetch(request);
+      const response = await sendResendingReset(request);
 
       updateJar(options.jar, response.headers.getSetCookie());
 
@@ -35,7 +35,13 @@ export function createPlayerClient(options: Readonly<CreatePlayerClientOptions>)
 
       return response;
     } catch (error) {
-      options.onCall({ durationMs: performance.now() - startedAt, procedure, status: 0 });
+      options.onCall({
+        durationMs: performance.now() - startedAt,
+        failure: readFetchFailure(error),
+        procedure,
+        status: 0,
+      });
+
       throw error;
     }
   };
@@ -49,6 +55,29 @@ export function createPlayerClient(options: Readonly<CreatePlayerClientOptions>)
       url: `${options.appURL}/api/rpc/activity`,
     }),
   );
+}
+
+// Chromium resends a request that a reused keep-alive socket reset before any response, so a
+// player never sees the race between the client reusing a socket and the server closing it idle
+async function sendResendingReset(request: Request): Promise<Response> {
+  try {
+    return await fetch(request.clone());
+  } catch (error) {
+    if (readFetchFailure(error) !== 'ECONNRESET') {
+      throw error;
+    }
+
+    return fetch(request);
+  }
+}
+
+// Bun's fetch puts the socket error's code, such as ECONNRESET, on the error it throws
+function readFetchFailure(error: unknown): string {
+  if (error instanceof Error && 'code' in error && typeof error.code === 'string') {
+    return error.code;
+  }
+
+  return error instanceof Error ? error.name : 'unknown';
 }
 
 // app-web rewrites the cookie when it refreshes an expired access token

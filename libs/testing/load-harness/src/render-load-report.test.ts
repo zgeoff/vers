@@ -31,7 +31,9 @@ test('it renders the capacity table and one section per scenario', () => {
       },
     }),
     buildMockScenarioRecording({
-      calls: [{ durationMs: 0, procedure: 'trackActivityProgress', status: 0 }],
+      calls: [
+        { durationMs: 0, failure: 'ECONNREFUSED', procedure: 'trackActivityProgress', status: 0 },
+      ],
       events: [{ elapsedMs: 60_000, label: 'play stopped' }],
       exits: [
         { container: 'vers-load-app-web-1', elapsedMs: 45_000, exitCode: 137, oomKilled: true },
@@ -121,7 +123,7 @@ test('it renders the capacity table and one section per scenario', () => {
     | Settlement age | p50 0.0 s, p95 0.0 s, p99 0.0 s, max 0.0 s over 0 checkpoints |
     | Lock waits past 100 ms | 0 (p95 0 ms, max 0 ms; none) |
     | Peak lock waiters, longest transaction | 0, 0 ms |
-    | Failed calls | 1 calls, no response 1 |
+    | Failed calls | 1 calls, no response (ECONNREFUSED) 1 |
     | Refusals | none |
     | Activities backed off, peak | 0 |
     | End state | 0 checkpoints unproved, 0 activities held, 0 run and 0 avatar XP mismatches |
