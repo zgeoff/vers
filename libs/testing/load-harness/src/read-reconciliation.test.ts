@@ -119,6 +119,37 @@ test('it counts each delivered run that settled at other XP than its stream earn
   expect(reconciliation.runXPMismatches).toBe(1);
 });
 
+test('it counts a planned run that never reached the database as a mismatch', async () => {
+  const ctx = await setupTest();
+
+  const accounts = await writePlayerAccounts(
+    ctx.db,
+    [{ failureAction: ActivityFailureAction.Retry, index: 0, level: 1, simVersion: 'engine-a' }],
+    'run5',
+  );
+
+  const [account] = accounts;
+
+  invariant(account !== undefined);
+
+  const delivered = await createActivityRow(ctx.db, {
+    avatarId: account.avatarID,
+    settledXp: 30,
+    status: 'stopped',
+  });
+
+  const reconciliation = await readReconciliation(
+    ctx.db,
+    accounts,
+    new Map([
+      [delivered.id, 30],
+      ['act_never_delivered', 25],
+    ]),
+  );
+
+  expect(reconciliation.runXPMismatches).toBe(1);
+});
+
 test('it counts the terminal checkpoints by how each attempt ended', async () => {
   const ctx = await setupTest();
 

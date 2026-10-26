@@ -22,7 +22,7 @@ const AvatarRowSchema = z.object({
 });
 
 // the end state a run must leave: every appended checkpoint proved, no activity held or rejected,
-// each delivered run settled at the XP its own stream earned, and each avatar's XP equal to its
+// each planned run delivered and settled at the XP its own stream earned, and each avatar's XP equal to its
 // seeded XP plus what its activities settled
 export async function readReconciliation(
   db: Kysely<DB>,
@@ -66,6 +66,8 @@ export async function readReconciliation(
     accounts.map((account) => [account.avatarID, buildXPThreshold(account.profile.level)]),
   );
 
+  const settledXPByRun = new Map(settledRuns.map((run) => [run.id, run.settledXp]));
+
   const avatarRows = z.array(AvatarRowSchema).parse(avatars.rows);
   const outcomeRows = z.array(OutcomeRowSchema).parse(outcomes.rows);
 
@@ -75,6 +77,6 @@ export async function readReconciliation(
       (avatar) => avatar.xp !== (seededXP.get(avatar.id) ?? 0) + avatar.settled,
     ).length,
     outcomes: Object.fromEntries(outcomeRows.map((row) => [row.outcome, row.count])),
-    runXPMismatches: settledRuns.filter((run) => run.settledXp !== expectedXP.get(run.id)).length,
+    runXPMismatches: [...expectedXP].filter(([id, xp]) => settledXPByRun.get(id) !== xp).length,
   };
 }
