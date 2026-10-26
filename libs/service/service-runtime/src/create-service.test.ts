@@ -1390,44 +1390,47 @@ test('it disposes the resources it acquired when the router fails to build', asy
   expect(stopped).toStrictEqual(['pool']);
 });
 
-test('it stops serving, disposes its resources and exits 0 on SIGTERM', async () => {
-  const keyPair = await resolveTestServiceKeyPair();
+test.each(['SIGINT', 'SIGTERM'] as const)(
+  'it stops serving, disposes its resources and exits 0 on %s',
+  async (signal) => {
+    const keyPair = await resolveTestServiceKeyPair();
 
-  updateEnv('SERVICE_AUTH_JWKS', keyPair.jwksJSON);
+    updateEnv('SERVICE_AUTH_JWKS', keyPair.jwksJSON);
 
-  const ctx = setupTest();
-  const stopped: Array<string> = [];
-  const exit = mock((_code: number) => {});
+    const ctx = setupTest();
+    const stopped: Array<string> = [];
+    const exit = mock((_code: number) => {});
 
-  const service = await createService({
-    allowedIssuers: ['app-web'],
-    createRouter: () => ctx.router,
-    envShape: {},
-    name: 'test-ledger',
-    resources: (_runtime, scope) => ({
-      pool: scope.adopt('pool', (name) => {
-        stopped.push(name);
+    const service = await createService({
+      allowedIssuers: ['app-web'],
+      createRouter: () => ctx.router,
+      envShape: {},
+      name: 'test-ledger',
+      resources: (_runtime, scope) => ({
+        pool: scope.adopt('pool', (name) => {
+          stopped.push(name);
+        }),
       }),
-    }),
-  });
+    });
 
-  onTestFinished(() => service.stop());
+    onTestFinished(() => service.stop());
 
-  service.serve({ exit, port: 0 });
+    service.serve({ exit, port: 0 });
 
-  const port = service.app.server?.port;
+    const port = service.app.server?.port;
 
-  invariant(port !== undefined, 'a served service listens on a port');
+    invariant(port !== undefined, 'a served service listens on a port');
 
-  process.emit('SIGTERM');
+    process.emit(signal);
 
-  await waitFor(() => {
-    expect(exit).toHaveBeenCalledExactlyOnceWith(0);
-  });
+    await waitFor(() => {
+      expect(exit).toHaveBeenCalledExactlyOnceWith(0);
+    });
 
-  expect(stopped).toStrictEqual(['pool']);
-  expect(fetch(`http://127.0.0.1:${port}/health`)).rejects.toThrow();
-});
+    expect(stopped).toStrictEqual(['pool']);
+    expect(fetch(`http://127.0.0.1:${port}/health`)).rejects.toThrow();
+  },
+);
 
 test('it reports a resource that fails to stop on SIGTERM and exits 1', async () => {
   const keyPair = await resolveTestServiceKeyPair();

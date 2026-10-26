@@ -65,6 +65,10 @@ export interface Service<TEnvShape extends z.ZodRawShape, TResources> {
 const DEFAULT_SLOW_REQUEST_MS = 2000;
 const DEFAULT_OVERDUE_REQUEST_MS = 30_000;
 
+// Fly stops a machine with SIGINT unless its config sets another kill signal; compose and a
+// container runtime send SIGTERM
+const SHUTDOWN_SIGNALS = ['SIGINT', 'SIGTERM'] as const;
+
 export async function createService<
   TEnvShape extends z.ZodRawShape = Record<string, never>,
   TResources = Record<string, never>,
@@ -169,12 +173,12 @@ export async function createService<
   let bootWork: Promise<void> = Promise.resolve();
   let exit: (code: number) => void = exitProcess;
 
-  const handleSIGTERM = (): void => {
+  const handleShutdownSignal = (): void => {
     void runShutdown({ exit, logger, stop });
   };
 
   const stop = (): Promise<void> => {
-    stopping ??= stopService({ app, bootWork, handleSIGTERM, scope });
+    stopping ??= stopService({ app, bootWork, handleShutdownSignal, scope });
 
     return stopping;
   };
@@ -189,7 +193,10 @@ export async function createService<
 
       app.listen(options.port ?? env.PORT);
       logger.info(`${config.name} listening on port ${app.server?.port ?? env.PORT}`);
-      process.once('SIGTERM', handleSIGTERM);
+
+      for (const signal of SHUTDOWN_SIGNALS) {
+        process.once(signal, handleShutdownSignal);
+      }
 
       if (config.onBoot !== undefined) {
         bootWork = runBootWork(config.onBoot, acquired.resources, logger);
@@ -473,12 +480,14 @@ function runShutdown(input: RunShutdownInput): Promise<void> {
 interface StopServiceInput {
   readonly app: Elysia;
   readonly bootWork: Promise<void>;
-  readonly handleSIGTERM: () => void;
+  readonly handleShutdownSignal: () => void;
   readonly scope: DisposableResourceScope;
 }
 
 async function stopService(input: StopServiceInput): Promise<void> {
-  process.off('SIGTERM', input.handleSIGTERM);
+  for (const signal of SHUTDOWN_SIGNALS) {
+    process.off(signal, input.handleShutdownSignal);
+  }
 
   try {
     if (input.app.server !== null) {
