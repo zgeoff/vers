@@ -1,9 +1,8 @@
 import { readFile } from 'node:fs/promises';
 import { $ } from 'bun';
 import { z } from 'zod';
-import { collectJSONStrings } from '../secrets/collect-json-strings';
+import { collectFileOPReferences } from '../secrets/collect-file-op-references';
 import { collectManifestGaps } from '../secrets/collect-manifest-gaps';
-import { collectOPReferences } from '../secrets/collect-op-references';
 import { formatOPReference } from '../secrets/format-op-reference';
 import { parseSecretsManifest } from '../secrets/parse-secrets-manifest';
 import type { OPReferenceSource } from '../secrets/types';
@@ -30,13 +29,7 @@ let failed = false;
 for (const path of trackedList.split('\0').filter((entry) => entry !== '')) {
   const text = await readFile(path, 'utf8');
 
-  // a JSON string escapes its quotes, and a raw scan would read the backslash into the field name;
-  // a tsconfig holds comments, which only the JSONC parser accepts
-  const scanned = path.endsWith('.json')
-    ? collectJSONStrings(Bun.JSONC.parse(text)).join('\n')
-    : text;
-
-  const collected = collectOPReferences(scanned);
+  const collected = collectFileOPReferences(path, text);
 
   for (const reference of collected.unparsed) {
     console.error(`✗ ${path} holds ${reference}, which is not a literal op://vault/item/field`);

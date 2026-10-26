@@ -1,4 +1,5 @@
 import { collectShellWords } from './collect-shell-words';
+import { parseOPReferencePath } from './parse-op-reference-path';
 import type { CollectedOPReferences, OPReference, ShellWord } from './types';
 
 const SCHEME = 'op://';
@@ -16,7 +17,7 @@ export function collectOPReferences(text: string): CollectedOPReferences {
       continue;
     }
 
-    const reference = word.isComplete ? parseReferencePath(path) : null;
+    const reference = word.isComplete ? parseOPReferencePath(path) : null;
 
     if (reference === null) {
       unparsed.push(scanned);
@@ -47,28 +48,4 @@ function collectReferenceWords(text: string, depth: number): Array<ShellWord> {
 
 function isNestedCommandLine(value: string): boolean {
   return /\s/u.test(value.slice(0, value.indexOf(SCHEME)));
-}
-
-function parseReferencePath(path: string): OPReference | null {
-  const [location = ''] = path.split('?');
-
-  if (location.includes('$') || location.includes('{')) {
-    return null;
-  }
-
-  const [vault, item, ...fieldSegments] = location.split('/');
-
-  if (
-    vault === undefined ||
-    vault === '' ||
-    item === undefined ||
-    item === '' ||
-    fieldSegments.length === 0 ||
-    fieldSegments.length > 2 ||
-    fieldSegments.includes('')
-  ) {
-    return null;
-  }
-
-  return { field: fieldSegments.join('/'), item, vault };
 }
