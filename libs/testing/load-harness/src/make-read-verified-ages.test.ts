@@ -5,6 +5,7 @@ import {
   createTestDB,
   createTestUser,
 } from '@vers/service-test-utils/bun';
+import { sql } from 'kysely';
 import { makeReadVerifiedAges } from './make-read-verified-ages';
 
 async function setupTest() {
@@ -23,11 +24,16 @@ test('it reads one age for each checkpoint proved since the last read', async ()
 
   await ctx.db
     .insertInto('activityCheckpoints')
-    .values([
-      { activityId: activity.id, hash: 'h1', payload: {}, prevHash: 'h0', version: 1 },
-      { activityId: activity.id, hash: 'h2', payload: {}, prevHash: 'h1', version: 2 },
-      { activityId: activity.id, hash: 'h3', payload: {}, prevHash: 'h2', version: 3 },
-    ])
+    .values(
+      [1, 2, 3].map((version) => ({
+        activityId: activity.id,
+        appendedAt: sql`now() at time zone 'UTC'`,
+        hash: `h${version}`,
+        payload: {},
+        prevHash: `h${version - 1}`,
+        version,
+      })),
+    )
     .execute();
 
   const readVerifiedAges = makeReadVerifiedAges(ctx.db);
@@ -43,7 +49,7 @@ test('it reads one age for each checkpoint proved since the last read', async ()
   const ages = await readVerifiedAges();
 
   expect(ages).toHaveLength(2);
-  expect(ages).toSatisfyAll((ageMs: number) => ageMs >= 0);
+  expect(ages).toSatisfyAll((ageMs: number) => ageMs >= 0 && ageMs < 5000);
 });
 
 test('it reads no age for a checkpoint proved before its first read', async () => {
