@@ -176,8 +176,8 @@ const replayParkedMonitor = new axiom.Monitor(
       "service-replay wrote a park line, grouped by the line, which names the reason: an unrecognized sim version, a retention-expired sim version, or a replay that tripped its duration cap. A parked activity halts its avatar's settlement order until an operator releases it.",
 
     // The hold counters start at 1 in a fresh process, which scales to zero between drains, so an
-    // `increase` over them has no earlier point to subtract from and can miss a lone hold. The log
-    // line is written once per hold, at the site that changes the status.
+    // `increase` over them has no earlier point to subtract from and can miss a lone hold. The
+    // service writes one log line per hold, after the hold commits.
     aplQuery:
       "['vers-logs'] | where body contains 'parking activity' | summarize count() by body, bin(_time, 5m)",
     intervalMinutes: 5,

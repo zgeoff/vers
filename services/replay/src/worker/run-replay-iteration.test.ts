@@ -1,5 +1,5 @@
 import { expect, onTestFinished, test } from 'bun:test';
-import { getLogger } from '@logtape/logtape';
+import { getLogger, resetSync } from '@logtape/logtape';
 import type { ErrorEvent } from '@sentry/bun';
 import { createContentVersion, makeContentDocumentLoader } from '@vers/content-registry';
 import { buildCheckpointHash } from '@vers/contract-activity';
@@ -15,7 +15,9 @@ import { createTestDB, resolveTestServiceKeyPair } from '@vers/service-test-util
 import { withTraceContext } from '@vers/service-utils';
 import { createSimVersionRow } from '@vers/sim-registry/test-utils';
 import { waitFor } from '@vers/test-utils';
+import { createInMemoryLogs } from '@vers/test-utils/bun';
 import { createTraceContext } from '@vers/trace';
+import { sql } from 'kysely';
 import invariant from 'tiny-invariant';
 import { server } from '../mocks/server';
 import { createReplayCache } from '../replay/create-replay-cache';
@@ -583,7 +585,17 @@ test('it parks an activity stamped with an unknown sim version', async () => {
 
   const outcome = await runReplayIteration(deps, cache);
 
-  expect(outcome).toStrictEqual({ kind: 'parked', reason: 'unknownVersion' });
+  expect(outcome).toStrictEqual({
+    kind: 'parked',
+    parked: {
+      activityID: fixture.activity.id,
+      appendedHead: fixture.activity.appendedHead,
+      appendedTimeMs: Number(fixture.activity.appendedTimeMs),
+      simVersion: 'never-registered-hash',
+      verifiedHead: 0,
+    },
+    reason: 'unknownVersion',
+  });
 
   const updated = await ctx.db
     .selectFrom('activities')
@@ -622,7 +634,17 @@ test('it parks a stopped activity, leaving its chain claimable again', async () 
 
   const outcome = await runReplayIteration(deps, cache);
 
-  expect(outcome).toStrictEqual({ kind: 'parked', reason: 'unknownVersion' });
+  expect(outcome).toStrictEqual({
+    kind: 'parked',
+    parked: {
+      activityID: fixture.activity.id,
+      appendedHead: fixture.activity.appendedHead,
+      appendedTimeMs: Number(fixture.activity.appendedTimeMs),
+      simVersion: 'never-registered-hash',
+      verifiedHead: 0,
+    },
+    reason: 'unknownVersion',
+  });
 
   const updated = await ctx.db
     .selectFrom('activities')
@@ -667,7 +689,17 @@ test('it parks an activity stamped with a retention-expired sim version', async 
 
   const outcome = await runReplayIteration(deps, cache);
 
-  expect(outcome).toStrictEqual({ kind: 'parked', reason: 'expired' });
+  expect(outcome).toStrictEqual({
+    kind: 'parked',
+    parked: {
+      activityID: fixture.activity.id,
+      appendedHead: fixture.activity.appendedHead,
+      appendedTimeMs: Number(fixture.activity.appendedTimeMs),
+      simVersion: 'pruned-hash',
+      verifiedHead: 0,
+    },
+    reason: 'expired',
+  });
 });
 
 test('it parks rather than rejects when the duration cap trips before the expected checkpoint count', async () => {
@@ -701,7 +733,17 @@ test('it parks rather than rejects when the duration cap trips before the expect
 
   const outcome = await runReplayIteration(deps, cache);
 
-  expect(outcome).toStrictEqual({ kind: 'parked', reason: 'durationCapExceeded' });
+  expect(outcome).toStrictEqual({
+    kind: 'parked',
+    parked: {
+      activityID: fixture.activity.id,
+      appendedHead: fixture.activity.appendedHead,
+      appendedTimeMs: 100,
+      simVersion: fixture.activity.simVersion,
+      verifiedHead: 0,
+    },
+    reason: 'durationCapExceeded',
+  });
 
   const updated = await ctx.db
     .selectFrom('activities')
@@ -710,6 +752,278 @@ test('it parks rather than rejects when the duration cap trips before the expect
     .executeTakeFirstOrThrow();
 
   expect(updated.status).toBe('parked');
+});
+
+test('it writes the park line once the park commits', async () => {
+  await using ctx = await setupTest();
+
+  const fixture = await createHonestActivityFixture(ctx.db, {
+    duration: 80_000,
+    seed: buildStateFromSeed(3_047_525_658),
+  });
+
+  await ctx.db
+    .updateTable('activities')
+    .set({ simVersion: 'never-registered-hash' })
+    .where('id', '=', fixture.activity.id)
+    .execute();
+
+  const logs = createInMemoryLogs({ lowestLevel: 'warning' });
+
+  onTestFinished(() => {
+    resetSync();
+  });
+
+  const cache = createReplayCache();
+
+  const deps = {
+    cache,
+    db: ctx.db,
+    keysServiceURL: resolveServiceURL('keys'),
+    loadContentDocument: makeContentDocumentLoader(ctx.db),
+    logger: getLogger(['test-replay']),
+    privateKey: ctx.privateKey,
+    simVersion: 'test-engine-hash',
+  };
+
+  await runReplayIteration(deps, cache);
+
+  expect(logs.records).toHaveLength(1);
+
+  expect(logs.records[0]).toMatchObject({
+    level: 'warning',
+    properties: {
+      activityID: fixture.activity.id,
+      checkpointCount: fixture.activity.appendedHead,
+      reason: 'unknownVersion',
+      simVersion: 'never-registered-hash',
+    },
+    rawMessage: 'sim version unrecognized; parking activity',
+  });
+});
+
+test('it writes no park line when the park rolls back', async () => {
+  await using ctx = await setupTest();
+
+  const fixture = await createHonestActivityFixture(ctx.db, {
+    duration: 80_000,
+    seed: buildStateFromSeed(3_047_525_658),
+  });
+
+  await ctx.db
+    .updateTable('activities')
+    .set({ simVersion: 'never-registered-hash' })
+    .where('id', '=', fixture.activity.id)
+    .execute();
+
+  await sql`
+    create function refuse_park() returns trigger language plpgsql as $$
+    begin
+      raise exception 'park refused';
+    end
+    $$
+  `.execute(ctx.db);
+
+  await sql`
+    create constraint trigger refuse_park after update on activities
+    deferrable initially deferred
+    for each row when (new.status = 'parked') execute function refuse_park()
+  `.execute(ctx.db);
+
+  const logs = createInMemoryLogs({ lowestLevel: 'warning' });
+
+  onTestFinished(() => {
+    resetSync();
+  });
+
+  const cache = createReplayCache();
+
+  const deps = {
+    cache,
+    db: ctx.db,
+    keysServiceURL: resolveServiceURL('keys'),
+    loadContentDocument: makeContentDocumentLoader(ctx.db),
+    logger: getLogger(['test-replay']),
+    privateKey: ctx.privateKey,
+    simVersion: 'test-engine-hash',
+  };
+
+  const outcome = await runReplayIteration(deps, cache);
+
+  expect(outcome).toStrictEqual({ kind: 'backedOff', reason: 'errored' });
+
+  expect(logs.records.map((record) => record.rawMessage)).toStrictEqual([
+    'replay iteration failed; backing the activity off',
+  ]);
+
+  const updated = await ctx.db
+    .selectFrom('activities')
+    .select('status')
+    .where('id', '=', fixture.activity.id)
+    .executeTakeFirstOrThrow();
+
+  expect(updated.status).toBe('active');
+});
+
+test('it writes the quarantine line once the quarantine commits', async () => {
+  await using ctx = await setupTest();
+
+  const fixture = await createHonestActivityFixture(ctx.db, {
+    duration: 80_000,
+    seed: buildStateFromSeed(3_047_525_658),
+  });
+
+  const firstBatchCount = Math.floor(fixture.checkpoints.length / 2);
+
+  await ctx.db
+    .updateTable('activities')
+    .set({ replayAttempts: 4, verifiedHead: firstBatchCount })
+    .where('id', '=', fixture.activity.id)
+    .execute();
+
+  const cache = createReplayCache();
+
+  const corruptInput = buildSimulationInput(
+    createMockContentDocument({ contentVersion: '2' }).encounter,
+    {
+      avatarID: fixture.activity.avatarId,
+      buildSnapshot: { level: 1, xp: 0 },
+      contentVersion: fixture.activity.contentVersion,
+      encounterNode: { difficulty: 1 },
+      id: fixture.activity.id,
+      seed: 'ff'.repeat(16),
+    },
+  );
+
+  const corruptDriver = createSimulationDriver(corruptInput.activity, corruptInput.avatar);
+  const resumePoint = fixture.checkpoints[firstBatchCount - 1];
+
+  invariant(resumePoint, 'the fixture always stores a checkpoint at the cached head');
+
+  await corruptDriver.advanceToDuration(resumePoint.payload.time);
+
+  cache.set(fixture.activity.id, {
+    driver: corruptDriver,
+    emittedCount: firstBatchCount,
+    lastHash: resumePoint.hash,
+  });
+
+  const logs = createInMemoryLogs({ lowestLevel: 'error' });
+
+  onTestFinished(() => {
+    resetSync();
+  });
+
+  const deps = {
+    cache,
+    db: ctx.db,
+    keysServiceURL: resolveServiceURL('keys'),
+    loadContentDocument: makeContentDocumentLoader(ctx.db),
+    logger: getLogger(['test-replay']),
+    privateKey: ctx.privateKey,
+    simVersion: 'test-engine-hash',
+  };
+
+  const outcome = await runReplayIteration(deps, cache);
+
+  expect(outcome).toStrictEqual({ activityID: fixture.activity.id, kind: 'quarantined' });
+  expect(logs.records).toHaveLength(1);
+
+  expect(logs.records[0]).toMatchObject({
+    level: 'error',
+    properties: { activityID: fixture.activity.id },
+    rawMessage: 'replay attempts exhausted; activity quarantined',
+  });
+});
+
+test('it writes no quarantine line when the quarantine rolls back', async () => {
+  await using ctx = await setupTest();
+
+  const fixture = await createHonestActivityFixture(ctx.db, {
+    duration: 80_000,
+    seed: buildStateFromSeed(3_047_525_658),
+  });
+
+  const firstBatchCount = Math.floor(fixture.checkpoints.length / 2);
+
+  await ctx.db
+    .updateTable('activities')
+    .set({ replayAttempts: 4, verifiedHead: firstBatchCount })
+    .where('id', '=', fixture.activity.id)
+    .execute();
+
+  await sql`
+    create function refuse_quarantine() returns trigger language plpgsql as $$
+    begin
+      raise exception 'quarantine refused';
+    end
+    $$
+  `.execute(ctx.db);
+
+  await sql`
+    create constraint trigger refuse_quarantine after update on activities
+    deferrable initially deferred
+    for each row when (new.status = 'quarantined') execute function refuse_quarantine()
+  `.execute(ctx.db);
+
+  const cache = createReplayCache();
+
+  const corruptInput = buildSimulationInput(
+    createMockContentDocument({ contentVersion: '2' }).encounter,
+    {
+      avatarID: fixture.activity.avatarId,
+      buildSnapshot: { level: 1, xp: 0 },
+      contentVersion: fixture.activity.contentVersion,
+      encounterNode: { difficulty: 1 },
+      id: fixture.activity.id,
+      seed: 'ff'.repeat(16),
+    },
+  );
+
+  const corruptDriver = createSimulationDriver(corruptInput.activity, corruptInput.avatar);
+  const resumePoint = fixture.checkpoints[firstBatchCount - 1];
+
+  invariant(resumePoint, 'the fixture always stores a checkpoint at the cached head');
+
+  await corruptDriver.advanceToDuration(resumePoint.payload.time);
+
+  cache.set(fixture.activity.id, {
+    driver: corruptDriver,
+    emittedCount: firstBatchCount,
+    lastHash: resumePoint.hash,
+  });
+
+  const logs = createInMemoryLogs({ lowestLevel: 'error' });
+
+  onTestFinished(() => {
+    resetSync();
+  });
+
+  const deps = {
+    cache,
+    db: ctx.db,
+    keysServiceURL: resolveServiceURL('keys'),
+    loadContentDocument: makeContentDocumentLoader(ctx.db),
+    logger: getLogger(['test-replay']),
+    privateKey: ctx.privateKey,
+    simVersion: 'test-engine-hash',
+  };
+
+  const outcome = await runReplayIteration(deps, cache);
+
+  expect(outcome).toStrictEqual({ kind: 'backedOff', reason: 'errored' });
+
+  expect(logs.records.map((record) => record.rawMessage)).toStrictEqual([
+    'replay iteration failed; backing the activity off',
+  ]);
+
+  const updated = await ctx.db
+    .selectFrom('activities')
+    .select(['replayAttempts', 'status'])
+    .where('id', '=', fixture.activity.id)
+    .executeTakeFirstOrThrow();
+
+  expect(updated).toStrictEqual({ replayAttempts: 4, status: 'active' });
 });
 
 test('it backs off an activity without counting an attempt or parking it when the provider is unavailable', async () => {

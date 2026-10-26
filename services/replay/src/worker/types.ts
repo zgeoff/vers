@@ -21,6 +21,14 @@ export type PendingCacheEffect =
 
 export type ParkReason = 'durationCapExceeded' | 'expired' | 'unknownVersion';
 
+export interface ParkedActivity {
+  readonly activityID: string;
+  readonly appendedHead: number;
+  readonly appendedTimeMs: number;
+  readonly simVersion: string;
+  readonly verifiedHead: number;
+}
+
 export type ReplayIterationOutcome =
   | { readonly kind: 'backedOff'; readonly reason: BackoffReason }
   | { readonly kind: 'idle' }
@@ -28,8 +36,8 @@ export type ReplayIterationOutcome =
       readonly kind: 'matched';
       readonly pendingCache?: { readonly activityID: string; readonly effect: PendingCacheEffect };
     }
-  | { readonly kind: 'parked'; readonly reason: ParkReason }
-  | { readonly kind: 'quarantined' }
+  | { readonly kind: 'parked'; readonly parked: ParkedActivity; readonly reason: ParkReason }
+  | { readonly activityID: string; readonly kind: 'quarantined' }
   | { readonly kind: 'rejected' }
   | { readonly kind: 'unconfirmedDivergence' };
 
