@@ -37,7 +37,7 @@ afterEach(() => {
 
 ```ts
 test('it records a span for each note it saves', async () => {
-  const ctx = await setupTest();
+  const ctx = await setupTest(); // a notes store on a temp database
 
   await saveNote(ctx.db, { title: 'groceries' });
 
