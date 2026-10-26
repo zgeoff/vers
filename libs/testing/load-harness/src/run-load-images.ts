@@ -4,12 +4,14 @@ import { $ } from 'bun';
 import invariant from 'tiny-invariant';
 import { buildLoadImageRefs } from './build-load-image-refs';
 import { LOAD_STACK_APPS } from './load-stack-apps';
+import { parseFlyBuildArgs } from './parse-fly-build-args';
 import type { LoadEngineVersions } from './types';
 
 const REPO_ROOT = path.resolve(import.meta.dirname, '../../../..');
 
-// builds each pipeline app from the Dockerfile its deploy manifest entry names, so the stack runs
-// the binaries a deploy would push; the retained provider is the replay image under another hash
+// builds each pipeline app from the Dockerfile its deploy manifest entry names, with the build args
+// its fly config sets, so the stack runs the binaries a deploy would push; the retained provider is
+// the replay image under another hash
 export async function runLoadImages(
   versions: Readonly<LoadEngineVersions>,
   tag: string,
@@ -31,8 +33,17 @@ export async function runLoadImages(
 
     const engineHash = app.retained ? versions.retained : versions.current;
 
+    const flyTOML = await Bun.file(path.join(REPO_ROOT, target.configDir, 'fly.toml')).text();
+
+    const flyBuildArgs = parseFlyBuildArgs(flyTOML);
+
+    const buildArgs = Object.entries(flyBuildArgs).flatMap(([name, value]) => [
+      '--build-arg',
+      `${name}=${value}`,
+    ]);
+
     const result =
-      await $`docker build -q -f ${target.dockerfile} --build-arg SIM_ENGINE_HASH=${engineHash} --build-arg VITE_SIM_ENGINE_HASH=${engineHash} -t ${ref} .`
+      await $`docker build -q -f ${target.dockerfile} ${buildArgs} --build-arg SIM_ENGINE_HASH=${engineHash} --build-arg VITE_SIM_ENGINE_HASH=${engineHash} -t ${ref} .`
         .cwd(REPO_ROOT)
         .quiet()
         .nothrow();
