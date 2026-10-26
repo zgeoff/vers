@@ -1390,6 +1390,38 @@ test('it disposes the resources it acquired when the router fails to build', asy
   expect(stopped).toStrictEqual(['pool']);
 });
 
+test('it keeps the boot failure beside the disposal failure when both fail', async () => {
+  const keyPair = await resolveTestServiceKeyPair();
+
+  updateEnv('SERVICE_AUTH_JWKS', keyPair.jwksJSON);
+
+  const booting = createService({
+    allowedIssuers: ['app-web'],
+    createRouter: () => {
+      throw new Error('ledger schema is missing');
+    },
+    envShape: {},
+    name: 'test-ledger',
+    resources: (_runtime, scope) => ({
+      pool: scope.adopt('pool', () => Promise.reject(new Error('pool close timed out'))),
+    }),
+  });
+
+  const failure = await booting.then(
+    () => null,
+    (error: unknown) => error,
+  );
+
+  expect(failure).toBeInstanceOf(AggregateError);
+
+  expect(failure).toMatchObject({
+    errors: [
+      new Error('ledger schema is missing'),
+      { errors: [new Error('pool close timed out')] },
+    ],
+  });
+});
+
 test.each(['SIGINT', 'SIGTERM'] as const)(
   'it stops serving, disposes its resources and exits 0 on %s',
   async (signal) => {

@@ -259,10 +259,26 @@ async function acquireResources<TEnvShape extends z.ZodRawShape, TResources>(
 
     return { resources, router };
   } catch (error) {
-    await scope.dispose();
-
-    throw error;
+    return disposeAfterFailure(
+      scope,
+      error,
+      'service boot failed, and its resources failed to stop',
+    );
   }
+}
+
+async function disposeAfterFailure(
+  scope: DisposableResourceScope,
+  failure: unknown,
+  message: string,
+): Promise<never> {
+  try {
+    await scope.dispose();
+  } catch (error) {
+    throw new AggregateError([failure, error], message, { cause: error });
+  }
+
+  throw failure;
 }
 
 function createTrace(request: Request): TraceContext {
@@ -495,9 +511,15 @@ async function stopService(input: StopServiceInput): Promise<void> {
     }
 
     await input.bootWork;
-  } finally {
-    await input.scope.dispose();
+  } catch (error) {
+    return disposeAfterFailure(
+      input.scope,
+      error,
+      'service stop failed, and its resources failed to stop',
+    );
   }
+
+  await input.scope.dispose();
 }
 
 // boot work never delays the listen, and its failure is reported inside its own root span
