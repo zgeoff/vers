@@ -22,6 +22,7 @@ import { readQueuedCheckpoints } from '../submission/read-queued-checkpoints';
 import type { ActivityServiceClient, ActivitySubmissionContext } from '../submission/types';
 import { writeActivityStart } from '../submission/write-activity-start';
 import { writeLastStartedActivity } from '../submission/write-last-started-activity';
+import { writeMintedActivityStart } from '../submission/write-minted-activity-start';
 import { writeNodeSeeds } from '../submission/write-node-seeds';
 import { writeQueuedCheckpoint } from '../submission/write-queued-checkpoint';
 import { writeStartStamps } from '../submission/write-start-stamps';
@@ -2076,13 +2077,13 @@ test('it delivers no start that a continuation held at its write mints, once a t
 
   server.use(createStubActivityProxy(viewer.user.id));
 
-  const held = buildStubHeldWriter(writeActivityStart);
+  const held = buildStubHeldWriter(writeMintedActivityStart);
 
   const context = createStubWorkerContext({
     activityProxy: true,
     bundledEngineHash: 'engine_hash_takeover',
     submitter: createStubSubmitter(),
-    writeActivityStart: held.write,
+    writeMintedActivityStart: held.write,
   });
 
   const ctx = setupTest();
@@ -2163,12 +2164,12 @@ test('it delivers no start that a continuation held at its write mints, once a t
 });
 
 test('it queues one takeover discard behind the flow in flight however many calls meet the marker', async () => {
-  const held = buildStubHeldWriter(writeActivityStart);
+  const held = buildStubHeldWriter(writeMintedActivityStart);
 
   const context = createStubWorkerContext({
     bundledEngineHash: 'engine_hash_coalesce',
     submitter: createStubSubmitter(),
-    writeActivityStart: held.write,
+    writeMintedActivityStart: held.write,
   });
 
   const ctx = setupTest();

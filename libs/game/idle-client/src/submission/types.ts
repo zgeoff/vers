@@ -37,6 +37,12 @@ export interface NodeSeedAnchor {
   readonly nextSeed: string;
 }
 
+export interface NodeAnchorAdvance {
+  readonly anchor: NodeSeedAnchor;
+  readonly avatarID: string;
+  readonly nodeID: string;
+}
+
 export interface RevealedNodeSeed {
   readonly contentVersion: string;
   readonly encounterNode: EncounterNode;

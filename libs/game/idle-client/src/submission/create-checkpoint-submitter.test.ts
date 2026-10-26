@@ -1968,6 +1968,48 @@ test('it never persists a node anchor when the registration carries no scope', a
   expect(cached?.anchor).toStrictEqual({ chainIndex: 2, nextSeed: 'seed-untouched' });
 });
 
+test("it raises the node's cached anchor to the last queued checkpoint on registration, and keeps the undelivered queue", async () => {
+  const ctx = setupTest();
+
+  server.use(mockActivityService.trackActivityProgress.handler(() => HttpResponse.error()));
+
+  const seed = createMockNodeSeed({
+    avatarID: 'avatar-anchor-behind',
+    anchor: { chainIndex: 5, nextSeed: 'seed-start' },
+    nodeID: '4_1',
+  });
+
+  const first = createMockCheckpointBatchEntry({ payload: { nextSeed: 'seed-first' }, version: 1 });
+
+  const second = createMockCheckpointBatchEntry({
+    payload: { nextSeed: 'seed-second' },
+    version: 2,
+  });
+
+  await writeNodeSeeds(seed.avatarID, [seed]);
+  await writeQueuedCheckpoint('anchor-behind-activity', first);
+  await writeQueuedCheckpoint('anchor-behind-activity', second);
+
+  await ctx.submitter.registerActivity({
+    activityID: 'anchor-behind-activity',
+    appendedHead: 0,
+    avatarID: seed.avatarID,
+    lastHash: 'start_hash',
+    scopeID: seed.nodeID,
+    startChainIndex: 5,
+  });
+
+  const cached = await readNodeSeed(seed.avatarID, seed.nodeID);
+  const queued = await readQueuedCheckpoints('anchor-behind-activity');
+
+  expect(cached?.anchor).toStrictEqual({ chainIndex: 7, nextSeed: 'seed-second' });
+
+  expect(queued).toStrictEqual([
+    { ...first, activityID: 'anchor-behind-activity' },
+    { ...second, activityID: 'anchor-behind-activity' },
+  ]);
+});
+
 test('it keeps the device online when a pending activity start defers, retrying on the backoff instead of at once', async () => {
   const track = mock<() => void>();
 
