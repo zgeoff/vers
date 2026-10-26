@@ -74,7 +74,7 @@ test('it renders the capacity table and one section per scenario', () => {
 
     Target: settlement age p95 at or under 30.0 s with no failed delivery, no held activity, and a backlog that drains after play stops.
 
-    | Connected players | Simulated hours per wall hour | Settlement p95 | Failed calls | Busiest container | Its mean CPU | Meets target |
+    | Connected players | Simulated hours per wall hour | Settlement p95 | Failed calls | Busiest container | Its mean CPU, of its limit | Meets target |
     | --- | --- | --- | --- | --- | --- | --- |
     | 10 | 10 | 4.2 s | 0 | vers-load-service-replay-1 | 42% | yes |
     | 20 | 0 | 0.0 s | 1 | none | 0% | no |
@@ -105,9 +105,9 @@ test('it renders the capacity table and one section per scenario', () => {
     | advanceActivity | 1 | 0 | 40 ms | 40 ms |
     | trackActivityProgress | 1 | 0 | 12 ms | 12 ms |
 
-    | Container | CPU mean | CPU p95 | Memory peak |
-    | --- | --- | --- | --- |
-    | vers-load-service-replay-1 | 42% | 42% | 80 MiB |
+    | Container | CPU limit | CPU mean | Mean, of its limit | CPU p95 | Memory peak |
+    | --- | --- | --- | --- | --- | --- |
+    | vers-load-service-replay-1 | none | 42% | 42% | 42% | 80 MiB |
 
     ## steady-20: 20 players
 
@@ -132,8 +132,8 @@ test('it renders the capacity table and one section per scenario', () => {
     | --- | --- | --- | --- | --- |
     | trackActivityProgress | 1 | 1 | 0 ms | 0 ms |
 
-    | Container | CPU mean | CPU p95 | Memory peak |
-    | --- | --- | --- | --- |
+    | Container | CPU limit | CPU mean | Mean, of its limit | CPU p95 | Memory peak |
+    | --- | --- | --- | --- | --- | --- |
 
     ## recovery: 10 players
 
@@ -157,8 +157,8 @@ test('it renders the capacity table and one section per scenario', () => {
     | Procedure | Calls | Failed | p50 | p95 |
     | --- | --- | --- | --- | --- |
 
-    | Container | CPU mean | CPU p95 | Memory peak |
-    | --- | --- | --- | --- |
+    | Container | CPU limit | CPU mean | Mean, of its limit | CPU p95 | Memory peak |
+    | --- | --- | --- | --- | --- | --- |
     "
   `);
 });

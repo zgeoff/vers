@@ -17,6 +17,7 @@ export interface LoadStack {
   readonly containerPrefix: string;
   readonly db: Kysely<DB>;
   readonly privateKey: CryptoKey;
+  readonly readCPULimits: () => Promise<Record<string, number>>;
   readonly readExits: (startedAt: Date) => Promise<Array<ContainerExit>>;
   readonly readLogs: (service: string, since: Date) => Promise<string>;
   readonly remove: () => Promise<void>;
@@ -166,6 +167,7 @@ export interface ScenarioEvent {
 
 export interface ScenarioRecording {
   readonly calls: ReadonlyArray<CallRecord>;
+  readonly cpuLimits: Readonly<Record<string, number>>;
   readonly events: ReadonlyArray<ScenarioEvent>;
   readonly exits: ReadonlyArray<ContainerExit>;
   readonly lockWaits: LockWaits;
@@ -195,7 +197,9 @@ export interface ProcedureSummary {
 
 export interface ResourceSummary {
   readonly container: string;
+  readonly cpuLimitCores: number | undefined;
   readonly cpuMeanPercent: number;
+  readonly cpuMeanShareOfLimit: number;
   readonly cpuP95Percent: number;
   readonly memoryPeakBytes: number;
 }

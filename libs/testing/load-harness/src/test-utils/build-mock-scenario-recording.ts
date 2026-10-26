@@ -13,6 +13,7 @@ export function buildMockScenarioRecording(
 ): ScenarioRecording {
   return {
     calls: [],
+    cpuLimits: {},
     events: [],
     exits: [],
     lockWaits: { acquiredAfterMs: [], byLock: {}, waits: 0 },

@@ -98,9 +98,11 @@ player delivers the whole gap at once.
   transaction, before its replay work and its commit, so the sample's own time is the closer bound.
 - **Lock waits** come from postgres, which logs every lock wait that outlasts its deadlock timeout,
   and from the samples' count of backends waiting on a lock.
-- **Resource use** comes from `docker stats`. Fly's shared CPUs throttle to a baseline quota once
-  their burst balance runs out. The default `--cpu-profile burst` gives each service container a
-  whole CPU, the burst rate, so a container that runs above the baseline share here outruns its
+- **Resource use** comes from `docker stats`, which reads one whole core as 100%. The report rates
+  each container's mean CPU against its own CPU limit, so the busiest container is the one closest
+  to its limit, not the one that uses the most cores. Fly's shared CPUs throttle to a baseline quota
+  once their burst balance runs out. The default `--cpu-profile burst` gives each service container
+  a whole CPU, the burst rate, so a container that runs above the baseline share here outruns its
   sustained share on Fly. `--cpu-profile baseline` caps each service container at the baseline quota
   instead, and measures what the fleet sustains after its burst balance is spent.
 - **Container exits** appear in a scenario's event list: each container that stopped during the

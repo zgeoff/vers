@@ -37,11 +37,11 @@ function renderCapacity(
     '',
     `Target: settlement age p95 at or under ${formatSeconds(settlementTargetMs)} with no failed delivery, no held activity, and a backlog that drains after play stops.`,
     '',
-    '| Connected players | Simulated hours per wall hour | Settlement p95 | Failed calls | Busiest container | Its mean CPU | Meets target |',
+    '| Connected players | Simulated hours per wall hour | Settlement p95 | Failed calls | Busiest container | Its mean CPU, of its limit | Meets target |',
     '| --- | --- | --- | --- | --- | --- | --- |',
     ...verdict.steps.map(
       (step) =>
-        `| ${step.players} | ${step.simulatedHoursPerHour.toFixed(0)} | ${formatSeconds(step.settlementP95Ms)} | ${step.failedCalls} | ${step.busiest?.container ?? 'none'} | ${formatPercent(step.busiest?.cpuMeanPercent ?? 0)} | ${step.meetsTarget ? 'yes' : 'no'} |`,
+        `| ${step.players} | ${step.simulatedHoursPerHour.toFixed(0)} | ${formatSeconds(step.settlementP95Ms)} | ${step.failedCalls} | ${step.busiest?.container ?? 'none'} | ${formatPercent((step.busiest?.cpuMeanShareOfLimit ?? 0) * 100)} | ${step.meetsTarget ? 'yes' : 'no'} |`,
     ),
     '',
     verdict.supportedPlayers === undefined
@@ -107,11 +107,11 @@ function renderScenario(summary: Readonly<ScenarioSummary>): Array<string> {
         `| ${procedure.procedure} | ${procedure.calls} | ${procedure.failures} | ${procedure.p50Ms.toFixed(0)} ms | ${procedure.p95Ms.toFixed(0)} ms |`,
     ),
     '',
-    '| Container | CPU mean | CPU p95 | Memory peak |',
-    '| --- | --- | --- | --- |',
+    '| Container | CPU limit | CPU mean | Mean, of its limit | CPU p95 | Memory peak |',
+    '| --- | --- | --- | --- | --- | --- |',
     ...summary.resources.map(
       (resource) =>
-        `| ${resource.container} | ${formatPercent(resource.cpuMeanPercent)} | ${formatPercent(resource.cpuP95Percent)} | ${(resource.memoryPeakBytes / MIB).toFixed(0)} MiB |`,
+        `| ${resource.container} | ${resource.cpuLimitCores === undefined ? 'none' : `${resource.cpuLimitCores} cores`} | ${formatPercent(resource.cpuMeanPercent)} | ${formatPercent(resource.cpuMeanShareOfLimit * 100)} | ${formatPercent(resource.cpuP95Percent)} | ${(resource.memoryPeakBytes / MIB).toFixed(0)} MiB |`,
     ),
     '',
   ];

@@ -118,6 +118,7 @@ export async function runOfflineReturnScenario(
   return {
     calls: callLog.calls,
     events,
+    cpuLimits: await stack.readCPULimits(),
     exits: await stack.readExits(windowStartedAt),
     lockWaits: parseLockWaits(postgresLog),
     name: options.name,

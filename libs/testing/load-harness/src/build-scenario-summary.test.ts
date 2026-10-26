@@ -70,8 +70,9 @@ test('it counts a call whose fetch threw as no response, by its socket error', (
   });
 });
 
-test('it orders containers by mean CPU and keeps each one peak memory', () => {
+test('it orders containers by mean CPU against their own limit and keeps each one peak memory', () => {
   const recording = buildMockScenarioRecording({
+    cpuLimits: { 'vers-load-app-web-1': 0.25, 'vers-load-service-replay-1': 2 },
     recording: {
       containers: [
         { container: 'vers-load-app-web-1', cpuPercent: 10, elapsedMs: 0, memoryBytes: 100 },
@@ -83,18 +84,34 @@ test('it orders containers by mean CPU and keeps each one peak memory', () => {
 
   expect(buildScenarioSummary(recording).resources).toStrictEqual([
     {
-      container: 'vers-load-service-replay-1',
-      cpuMeanPercent: 80,
-      cpuP95Percent: 80,
-      memoryPeakBytes: 50,
-    },
-    {
       container: 'vers-load-app-web-1',
+      cpuLimitCores: 0.25,
       cpuMeanPercent: 20,
+      cpuMeanShareOfLimit: 0.8,
       cpuP95Percent: 30,
       memoryPeakBytes: 300,
     },
+    {
+      container: 'vers-load-service-replay-1',
+      cpuLimitCores: 2,
+      cpuMeanPercent: 80,
+      cpuMeanShareOfLimit: 0.4,
+      cpuP95Percent: 80,
+      memoryPeakBytes: 50,
+    },
   ]);
+});
+
+test('it rates a container with no CPU limit against one core', () => {
+  const recording = buildMockScenarioRecording({
+    recording: {
+      containers: [
+        { container: 'vers-load-app-web-1', cpuPercent: 50, elapsedMs: 0, memoryBytes: 100 },
+      ],
+    },
+  });
+
+  expect(buildScenarioSummary(recording).resources[0]?.cpuMeanShareOfLimit).toBe(0.5);
 });
 
 test('it measures recovery from the outage end to the first sample back at the pre-outage backlog', () => {

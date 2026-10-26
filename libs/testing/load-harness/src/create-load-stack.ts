@@ -4,6 +4,7 @@ import { applyMigrations, createDB } from '@vers/db';
 import { parseServicePrivateKey } from '@vers/service-auth';
 import { $ } from 'bun';
 import invariant from 'tiny-invariant';
+import { parseContainerCPULimits } from './parse-container-cpu-limits';
 import { parseContainerExits } from './parse-container-exits';
 import type { LoadEngineVersions, LoadStack } from './types';
 import { writeLoadRegistry } from './write-load-registry';
@@ -66,14 +67,15 @@ export async function createLoadStack(
     containerPrefix: `${PROJECT_NAME}-`,
     db,
     privateKey: await parseServicePrivateKey(privateKeyPEM),
+    readCPULimits: async () => {
+      const inspection = await readContainerInspection(env);
+
+      return parseContainerCPULimits(inspection);
+    },
     readExits: async (startedAt) => {
-      const ids = await runCompose(env, ['ps', '--all', '--quiet']);
+      const inspection = await readContainerInspection(env);
 
-      const output = await $`docker inspect ${ids.split('\n').filter((id) => id !== '')}`
-        .quiet()
-        .text();
-
-      return parseContainerExits(output, startedAt);
+      return parseContainerExits(inspection, startedAt);
     },
     readLogs: (service, since) =>
       runCompose(env, ['logs', '--no-color', '--since', since.toISOString(), service]),
@@ -107,4 +109,10 @@ async function runCompose(env: ComposeEnv, args: ReadonlyArray<string>): Promise
   }
 
   return result.stdout.toString();
+}
+
+async function readContainerInspection(env: ComposeEnv): Promise<string> {
+  const ids = await runCompose(env, ['ps', '--all', '--quiet']);
+
+  return $`docker inspect ${ids.split('\n').filter((id) => id !== '')}`.quiet().text();
 }

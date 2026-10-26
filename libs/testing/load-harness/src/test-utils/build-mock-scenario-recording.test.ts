@@ -4,6 +4,7 @@ import { buildMockScenarioRecording } from './build-mock-scenario-recording';
 test('it builds a default scenario recording', () => {
   expect(buildMockScenarioRecording()).toStrictEqual({
     calls: [],
+    cpuLimits: {},
     events: [],
     exits: [],
     lockWaits: { acquiredAfterMs: [], byLock: {}, waits: 0 },

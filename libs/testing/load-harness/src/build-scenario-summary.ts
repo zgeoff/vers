@@ -34,7 +34,7 @@ export function buildScenarioSummary(recording: Readonly<ScenarioRecording>): Sc
     playMs: recording.playMs,
     reconciliation: recording.reconciliation,
     recoveryMs: buildRecoveryMs(recording),
-    resources: collectResourceSummaries(recording.recording.containers),
+    resources: collectResourceSummaries(recording.recording.containers, recording.cpuLimits),
     settleMs: recording.settleMs,
     settlementAgeMs: {
       count: ages.length,
@@ -123,20 +123,35 @@ function toBacklog(sample: Readonly<PipelineSample>): number {
   return sample.appended - sample.verified;
 }
 
-function collectResourceSummaries(samples: ReadonlyArray<ContainerSample>): Array<ResourceSummary> {
+// docker stats reads 100% as one whole core, so a container capped at a sixteenth of a core is
+// saturated at about 6%; ranking by the share of each container's own limit finds the one that ran
+// out first, and a container with no limit counts against one core
+function collectResourceSummaries(
+  samples: ReadonlyArray<ContainerSample>,
+  cpuLimits: Readonly<Record<string, number>>,
+): Array<ResourceSummary> {
   const byContainer = Map.groupBy(samples, (sample) => sample.container);
 
   return [...byContainer]
-    .map(([container, records]) => ({
-      container,
-      cpuMeanPercent: records.reduce((sum, record) => sum + record.cpuPercent, 0) / records.length,
-      cpuP95Percent: buildPercentile(
-        records.map((record) => record.cpuPercent),
-        0.95,
-      ),
-      memoryPeakBytes: buildMaximum(records.map((record) => record.memoryBytes)),
-    }))
-    .toSorted((left, right) => right.cpuMeanPercent - left.cpuMeanPercent);
+    .map(([container, records]) => {
+      const cpuMeanPercent =
+        records.reduce((sum, record) => sum + record.cpuPercent, 0) / records.length;
+
+      const cpuLimitCores = cpuLimits[container];
+
+      return {
+        container,
+        cpuLimitCores,
+        cpuMeanPercent,
+        cpuMeanShareOfLimit: cpuMeanPercent / 100 / (cpuLimitCores ?? 1),
+        cpuP95Percent: buildPercentile(
+          records.map((record) => record.cpuPercent),
+          0.95,
+        ),
+        memoryPeakBytes: buildMaximum(records.map((record) => record.memoryBytes)),
+      };
+    })
+    .toSorted((left, right) => right.cpuMeanShareOfLimit - left.cpuMeanShareOfLimit);
 }
 
 const RATE_WINDOW_MS = 60_000;
