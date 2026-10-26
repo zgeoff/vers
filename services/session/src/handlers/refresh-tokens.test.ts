@@ -1,12 +1,15 @@
 import { expect, test } from 'bun:test';
 import type { SessionContract } from '@vers/contract-session';
+import { ROTATION_GRACE_DURATION } from '@vers/contract-session';
 import { createAnonymousViewer, createTestDB, createTestUser } from '@vers/service-test-utils/bun';
-import { buildRPCTestClient } from '@vers/test-utils';
+import { buildRPCTestClient, makeAnswerQueue } from '@vers/test-utils';
 import { createInMemoryMetrics } from '@vers/test-utils/bun';
+import * as jose from 'jose';
 import invariant from 'tiny-invariant';
 import { SESSION_DURATION_SHORT } from '../consts';
 import { createSessionService } from '../create-session-service';
 import { createSessionRow } from '../test-utils/create-session-row';
+import { refreshTokens } from './refresh-tokens';
 
 // the concurrent-rotation tests drive two connections against one committed session row,
 // which the default transaction handle cannot host
@@ -353,4 +356,49 @@ test('it answers a concurrent rotation race with the winning token and records o
   const replies = await inMemoryMetrics.readCounterValue('vers.session.rotation_grace_replies');
 
   expect(replies).toBe(1);
+});
+
+test('it starts the grace window once the rotated tokens are signed', async () => {
+  await using ctx = await setupTest();
+
+  const created = await createTestUser(ctx.db);
+
+  const readAt = new Date();
+  const signedAt = new Date(readAt.getTime() + 5000);
+
+  const session = await createSessionRow(ctx.db, {
+    createdAt: new Date(readAt.getTime() - SESSION_DURATION_SHORT - 1000),
+    refreshToken: 'old-token',
+    userId: created.user.id,
+  });
+
+  const keyPair = await jose.generateKeyPair('RS256');
+
+  await refreshTokens(
+    ctx.db,
+    {
+      apiIdentifier: 'vers-test',
+      keyID: 'key-thumbprint',
+      now: makeAnswerQueue([readAt, signedAt]),
+      signingKey: keyPair.privateKey,
+    },
+    {
+      errors: {
+        NOT_FOUND: () => new Error('not found'),
+        REFRESH_TOKEN_REUSED: () => new Error('refresh token reused'),
+        SESSION_EXPIRED: () => new Error('session expired'),
+      },
+      input: { id: session.id, refreshToken: 'old-token' },
+    },
+  );
+
+  const row = await ctx.db
+    .selectFrom('sessions')
+    .select('rotationGraceUntil')
+    .where('id', '=', session.id)
+    .executeTakeFirstOrThrow();
+
+  expect(row.rotationGraceUntil).toStrictEqual(
+    new Date(signedAt.getTime() + ROTATION_GRACE_DURATION),
+  );
 });

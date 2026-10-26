@@ -1,10 +1,13 @@
 import { ROTATION_GRACE_DURATION } from '@vers/contract-session';
-import type { DB, Sessions } from '@vers/db';
-import type { Kysely, Selectable } from 'kysely';
-import { ACCESS_TOKEN_DURATION, SESSION_DURATION_SHORT } from '../consts';
+import type { DB } from '@vers/db';
+import type { Kysely } from 'kysely';
+import { match } from 'ts-pattern';
+import { classifyLostRotation } from '../classify-lost-rotation';
+import { classifyRefresh } from '../classify-refresh';
+import { ACCESS_TOKEN_DURATION } from '../consts';
 import { createJWT } from '../create-jwt';
 import { recordRotationGraceReply } from '../metrics/record-rotation-grace-reply';
-import type { EmptyErrorPayload, SessionSigningDeps } from '../types';
+import type { EmptyErrorPayload, RefreshDecision, SessionSigningDeps } from '../types';
 
 interface RefreshTokensOpts {
   readonly errors: {
@@ -15,139 +18,150 @@ interface RefreshTokensOpts {
   readonly input: { readonly id: string; readonly refreshToken: string };
 }
 
+interface RefreshedTokens {
+  readonly accessToken: string;
+  readonly refreshToken: string;
+}
+
+interface RefreshTokensDeps extends SessionSigningDeps {
+  readonly now: () => Date;
+}
+
+interface RefreshCall {
+  readonly db: Kysely<DB>;
+  readonly deps: RefreshTokensDeps;
+  readonly opts: RefreshTokensOpts;
+}
+
 export async function refreshTokens(
   db: Kysely<DB>,
-  deps: SessionSigningDeps,
+  deps: RefreshTokensDeps,
   opts: RefreshTokensOpts,
-): Promise<{ accessToken: string; refreshToken: string }> {
-  const row = await db
+): Promise<RefreshedTokens> {
+  const call: RefreshCall = { db, deps, opts };
+
+  const row = await readSessionRow(call);
+
+  const now = deps.now();
+  const decision = classifyRefresh(row, opts.input.refreshToken, now);
+
+  if (decision.kind !== 'rotate') {
+    return applyRefreshDecision(call, decision, now);
+  }
+
+  const rotated = await rotateRefreshToken(call, decision, now);
+
+  if (rotated !== null) {
+    return rotated;
+  }
+
+  const raceRow = await readSessionRow(call);
+
+  const raceNow = deps.now();
+
+  return applyRefreshDecision(
+    call,
+    classifyLostRotation(raceRow, opts.input.refreshToken, raceNow),
+    raceNow,
+  );
+}
+
+function readSessionRow(call: RefreshCall) {
+  return call.db
     .selectFrom('sessions')
     .selectAll()
-    .where('id', '=', opts.input.id)
+    .where('id', '=', call.opts.input.id)
     .executeTakeFirst();
+}
 
-  if (row === undefined) {
-    throw opts.errors.NOT_FOUND({ data: {} });
-  }
+function applyRefreshDecision(
+  call: RefreshCall,
+  decision: Exclude<RefreshDecision, { kind: 'rotate' }>,
+  now: Date,
+): Promise<RefreshedTokens> {
+  return match(decision)
+    .with({ kind: 'missing' }, { kind: 'mismatch' }, () => {
+      throw call.opts.errors.NOT_FOUND({ data: {} });
+    })
+    .with({ kind: 'expired' }, async () => {
+      await removeSessionRow(call);
 
-  if (row.expiresAt < new Date()) {
-    await db.deleteFrom('sessions').where('id', '=', row.id).execute();
+      throw call.opts.errors.SESSION_EXPIRED({ data: {} });
+    })
+    .with({ kind: 'reuse' }, async () => {
+      await removeSessionRow(call);
 
-    throw opts.errors.SESSION_EXPIRED({ data: {} });
-  }
+      throw call.opts.errors.REFRESH_TOKEN_REUSED({ data: {} });
+    })
+    .with({ kind: 'grace' }, async (grace) => {
+      const tokens = await signAccessToken(call, grace, now);
 
-  if (row.previousRefreshToken !== null && opts.input.refreshToken === row.previousRefreshToken) {
-    const graceReply = await mintGraceReply(deps, row);
-
-    if (graceReply !== null) {
       recordRotationGraceReply();
 
-      return graceReply;
-    }
+      return tokens;
+    })
+    .with({ kind: 'renew' }, (renew) => signAccessToken(call, renew, now))
+    .exhaustive();
+}
 
-    await db.deleteFrom('sessions').where('id', '=', row.id).execute();
+async function removeSessionRow(call: RefreshCall): Promise<void> {
+  await call.db.deleteFrom('sessions').where('id', '=', call.opts.input.id).execute();
+}
 
-    throw opts.errors.REFRESH_TOKEN_REUSED({ data: {} });
-  }
+type KeptRefreshToken = Extract<RefreshDecision, { kind: 'grace' | 'renew' }>;
 
-  if (row.refreshToken === null || opts.input.refreshToken !== row.refreshToken) {
-    throw opts.errors.NOT_FOUND({ data: {} });
-  }
+async function signAccessToken(
+  call: RefreshCall,
+  kept: KeptRefreshToken,
+  now: Date,
+): Promise<RefreshedTokens> {
+  const accessToken = await createJWT({
+    apiIdentifier: call.deps.apiIdentifier,
+    expiresAt: new Date(now.getTime() + ACCESS_TOKEN_DURATION),
+    keyID: call.deps.keyID,
+    signingKey: call.deps.signingKey,
+    userID: kept.userID,
+  });
 
-  const sessionAge = Date.now() - row.createdAt.getTime();
+  return { accessToken, refreshToken: kept.refreshToken };
+}
 
-  const accessTokenExpiresAt = new Date(Date.now() + ACCESS_TOKEN_DURATION);
+async function rotateRefreshToken(
+  call: RefreshCall,
+  rotate: Extract<RefreshDecision, { kind: 'rotate' }>,
+  now: Date,
+): Promise<null | RefreshedTokens> {
+  const accessTokenExpiresAt = new Date(now.getTime() + ACCESS_TOKEN_DURATION);
 
-  if (sessionAge < SESSION_DURATION_SHORT) {
-    const accessToken = await createJWT({
-      apiIdentifier: deps.apiIdentifier,
-      expiresAt: accessTokenExpiresAt,
-      keyID: deps.keyID,
-      signingKey: deps.signingKey,
-      userID: row.userId,
-    });
-
-    return { accessToken, refreshToken: row.refreshToken };
-  }
-
-  const rotatedTokens = await Promise.all([
+  const [refreshToken, accessToken] = await Promise.all([
     createJWT({
-      apiIdentifier: deps.apiIdentifier,
-      expiresAt: row.expiresAt,
-      keyID: deps.keyID,
-      signingKey: deps.signingKey,
-      userID: row.userId,
+      apiIdentifier: call.deps.apiIdentifier,
+      expiresAt: rotate.expiresAt,
+      keyID: call.deps.keyID,
+      signingKey: call.deps.signingKey,
+      userID: rotate.userID,
     }),
     createJWT({
-      apiIdentifier: deps.apiIdentifier,
+      apiIdentifier: call.deps.apiIdentifier,
       expiresAt: accessTokenExpiresAt,
-      keyID: deps.keyID,
-      signingKey: deps.signingKey,
-      userID: row.userId,
+      keyID: call.deps.keyID,
+      signingKey: call.deps.signingKey,
+      userID: rotate.userID,
     }),
   ]);
 
-  const updateResult = await db
+  const rotationGraceUntil = new Date(call.deps.now().getTime() + ROTATION_GRACE_DURATION);
+
+  const updateResult = await call.db
     .updateTable('sessions')
-    .set({
-      previousRefreshToken: row.refreshToken,
-      refreshToken: rotatedTokens[0],
-      rotationGraceUntil: new Date(Date.now() + ROTATION_GRACE_DURATION),
-    })
-    .where('id', '=', row.id)
-    .where('refreshToken', '=', row.refreshToken)
+    .set({ previousRefreshToken: rotate.refreshToken, refreshToken, rotationGraceUntil })
+    .where('id', '=', call.opts.input.id)
+    .where('refreshToken', '=', rotate.refreshToken)
     .executeTakeFirst();
 
   if (updateResult.numUpdatedRows === 0n) {
-    const current = await db
-      .selectFrom('sessions')
-      .selectAll()
-      .where('id', '=', row.id)
-      .executeTakeFirst();
-
-    if (current !== undefined && current.expiresAt < new Date()) {
-      await db.deleteFrom('sessions').where('id', '=', row.id).execute();
-
-      throw opts.errors.SESSION_EXPIRED({ data: {} });
-    }
-
-    if (current !== undefined && current.previousRefreshToken === opts.input.refreshToken) {
-      const graceReply = await mintGraceReply(deps, current);
-
-      if (graceReply !== null) {
-        recordRotationGraceReply();
-
-        return graceReply;
-      }
-    }
-
-    await db.deleteFrom('sessions').where('id', '=', row.id).execute();
-
-    throw opts.errors.REFRESH_TOKEN_REUSED({ data: {} });
-  }
-
-  return { accessToken: rotatedTokens[1], refreshToken: rotatedTokens[0] };
-}
-
-async function mintGraceReply(
-  deps: SessionSigningDeps,
-  row: Selectable<Sessions>,
-): Promise<null | { accessToken: string; refreshToken: string }> {
-  if (row.rotationGraceUntil === null || row.rotationGraceUntil <= new Date()) {
     return null;
   }
 
-  if (row.refreshToken === null) {
-    return null;
-  }
-
-  const accessToken = await createJWT({
-    apiIdentifier: deps.apiIdentifier,
-    expiresAt: new Date(Date.now() + ACCESS_TOKEN_DURATION),
-    keyID: deps.keyID,
-    signingKey: deps.signingKey,
-    userID: row.userId,
-  });
-
-  return { accessToken, refreshToken: row.refreshToken };
+  return { accessToken, refreshToken };
 }
