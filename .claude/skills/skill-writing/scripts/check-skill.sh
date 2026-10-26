@@ -5,7 +5,8 @@
 # sync/skills/. A skill whose SKILL.md git marks linguist-vendored is skipped, so a repo marks its
 # third-party skills in .gitattributes.
 # Fails on: a missing name or description, a name that differs from the folder or breaks the name
-# format, a description over 1,024 characters, and a link with a line anchor outside code.
+# format, a description over 1,024 characters, a plain description that holds a colon YAML reads as a
+# key, and a link with a line anchor outside code.
 # Warns on: a SKILL.md over 500 lines, a reference that SKILL.md does not list under ## References,
 # a reference over 100 lines with no contents list near its top, a reference that links to another
 # reference, and a code-formatted span outside a table that names an existing repo file.
@@ -144,7 +145,7 @@ sub list_references {
 # Reads the frontmatter block: a name, and a description that may fold over indented lines.
 sub check_frontmatter {
   my ($dir, $skill, @lines) = @_;
-  my ($name, $description, $in_description, $closed, $raw_description, $folded);
+  my ($name, $description, $in_description, $closed, $raw_description, $folded, $style, $colon);
 
   if (@lines && $lines[0] eq "---") {
     for my $line (@lines[1 .. $#lines]) {
@@ -154,10 +155,14 @@ sub check_frontmatter {
         $in_description = 0;
       } elsif ($line =~ /^description:\s*(.*?)\s*$/) {
         $raw_description = $1;
-        $description = $1 =~ /^[>|][+-]?$/ ? "" : unquote($1);
+        $style = pick_scalar_style($raw_description);
+        $description = ($style // "") eq "block" ? "" : unquote($raw_description);
+        $colon = 1 if ($style // "") eq "plain" && has_key_colon($description);
         $in_description = 1;
       } elsif ($in_description && $line =~ /^\s+(\S.*?)\s*$/) {
         $description .= ($description eq "" ? "" : " ") . $1;
+        $style //= $1 =~ /\A["\x27]/ ? "quoted" : "plain";
+        $colon = 1 if $style eq "plain" && has_key_colon($1);
         $folded = 1;
       } elsif ($line =~ /^[A-Za-z_-]+:/) {
         $in_description = 0;
@@ -188,6 +193,27 @@ sub check_frontmatter {
   } elsif (length $description > 1024) {
     fail($skill, "description is " . length($description) . " characters, over the limit of 1024");
   }
+
+  fail($skill, "description holds a colon and a space, which YAML reads as a key in a plain scalar; reword it, or quote it or write it as a block scalar (>-)")
+    if $colon;
+}
+
+# Returns block, quoted or plain for the text after a key, or undef when the text is empty or only a
+# comment, since the scalar then starts on the next line. A block header may hold an indentation
+# digit and a chomping sign in either order, then a comment.
+sub pick_scalar_style {
+  my ($text) = @_;
+  return undef if $text eq "" || $text =~ /\A#/;
+  return "block" if $text =~ /\A[|>](?:[1-9][+-]?|[+-][1-9]?)?(?:\s+#.*)?\z/;
+  return "quoted" if $text =~ /\A["\x27]/;
+  return "plain";
+}
+
+# A colon followed by a space or the line end starts a mapping inside a plain YAML scalar, so a
+# loader rejects the frontmatter. A space and a hash end the scalar and start a comment.
+sub has_key_colon {
+  my ($text) = @_;
+  return ($text =~ s/\s+#.*\z//r) =~ /:(?:\s|\z)/;
 }
 
 # Returns the value of a scalar: the text inside its quotes, or plain text without a trailing comment.

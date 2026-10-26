@@ -259,10 +259,11 @@ bash .claude/skills/docs-writing/scripts/check-links.sh
 
 `check-length.sh` runs docs-writing's prose check over each skill's Markdown, then runs
 `check-skill.sh`. `check-links.sh` checks every relative link in each skill. `check-skill.sh` fails
-on a frontmatter field outside its limit and on a line anchor. It warns about a SKILL.md over 500
-lines, a reference that SKILL.md doesn't list under `## References`, a missing contents list, a
-reference that links to another reference, and a code-formatted path that should be a link. To check
-one skill, pass its folder:
+on a frontmatter field outside its limit, on an unquoted description that holds a colon and a space,
+which YAML reads as a key, and on a line anchor. It warns about a SKILL.md over 500 lines, a
+reference that SKILL.md doesn't list under `## References`, a missing contents list, a reference
+that links to another reference, and a code-formatted path that should be a link. To check one
+skill, pass its folder:
 
 ```bash
 bash .claude/skills/skill-writing/scripts/check-skill.sh .claude/skills/<skill>
