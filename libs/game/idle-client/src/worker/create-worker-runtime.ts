@@ -12,7 +12,7 @@ import { createCheckpointSubmitter } from '../submission/create-checkpoint-submi
 import { JournalWriteError } from '../submission/journal-write-error';
 import { readFailureActionCache } from '../submission/read-failure-action-cache';
 import type { ActivityServiceClient, CheckpointJournal } from '../submission/types';
-import { writeActivityStart } from '../submission/write-activity-start';
+import { writeMintedActivityStart } from '../submission/write-minted-activity-start';
 import { WORKER_TO_CLIENT_CHANNEL } from '../transport/constants';
 import { WorkerMessageType } from '../types';
 import type { RewardSlotLedgerEntry } from '../types';
@@ -227,7 +227,7 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
       tickingStopped = true;
     },
     updateConnectivity,
-    writeActivityStart,
+    writeMintedActivityStart,
   };
 
   const lifecycleActor = createActor(workerLifecycleMachine, {

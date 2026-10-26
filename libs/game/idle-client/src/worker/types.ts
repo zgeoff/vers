@@ -109,7 +109,7 @@ export interface WorkerContext {
 
   readonly updateConnectivity: (online: boolean) => void;
 
-  readonly writeActivityStart: (row: Readonly<ActivityData>) => Promise<void>;
+  readonly writeMintedActivityStart: (row: Readonly<ActivityData>) => Promise<void>;
 }
 
 export type DiscardTrigger =

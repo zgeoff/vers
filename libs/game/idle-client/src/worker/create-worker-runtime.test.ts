@@ -18,6 +18,7 @@ import { readAllActivityStarts } from '../submission/read-all-activity-starts';
 import { readPendingStopIntent } from '../submission/read-pending-stop-intent';
 import type { ActivityServiceClient } from '../submission/types';
 import { writeFailureActionCache } from '../submission/write-failure-action-cache';
+import { writeNodeAnchor } from '../submission/write-node-anchor';
 import { writeNodeSeeds } from '../submission/write-node-seeds';
 import { writePendingStopIntent } from '../submission/write-pending-stop-intent';
 import { writeQueuedCheckpoint } from '../submission/write-queued-checkpoint';
@@ -210,6 +211,7 @@ test('it reports an unreadable journal once and still tells the tabs the stream 
     client,
     journal: {
       readQueuedCheckpoints: () => Promise.reject(new DOMException('gone', 'InvalidStateError')),
+      writeNodeAnchor,
       writeQueuedCheckpoint,
     },
   });
@@ -262,6 +264,7 @@ test('it simulates nothing more once the journal cannot be read', async () => {
     client,
     journal: {
       readQueuedCheckpoints: () => Promise.reject(new DOMException('gone', 'InvalidStateError')),
+      writeNodeAnchor,
       writeQueuedCheckpoint,
     },
   });

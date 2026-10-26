@@ -20,6 +20,7 @@ import type {
   ActivityServiceClient,
   ActivitySubmissionContext,
   CheckpointJournal,
+  NodeAnchorAdvance,
   SubmitterActivityState,
 } from './types';
 import { writeNodeAnchor } from './write-node-anchor';
@@ -90,7 +91,11 @@ interface CreateCheckpointSubmitterOptions {
   readonly signal?: AbortSignal;
 }
 
-const REAL_JOURNAL: CheckpointJournal = { readQueuedCheckpoints, writeQueuedCheckpoint };
+const REAL_JOURNAL: CheckpointJournal = {
+  readQueuedCheckpoints,
+  writeNodeAnchor,
+  writeQueuedCheckpoint,
+};
 
 interface WriteCursor {
   readonly avatarID: string | undefined;
@@ -205,6 +210,14 @@ export function createCheckpointSubmitter(
       latestQueuedVersion = lastRow.version;
 
       emitSaved(context.activityID, lastRow.version);
+
+      // an outbox can hold a checkpoint past its node's cached anchor, and a start minted from that
+      // anchor reuses the checkpoint's positions, which the server refuses as stale
+      const advance = buildNodeAnchorAdvance(cursor, lastRow.version, lastRow.payload.nextSeed);
+
+      if (advance !== undefined) {
+        await journal.writeNodeAnchor(advance.avatarID, advance.nodeID, advance.anchor);
+      }
     }
 
     writeCursors.set(context.activityID, cursor);
@@ -280,7 +293,16 @@ export function createCheckpointSubmitter(
 
     registrations.set(context.activityID, seeding);
 
-    await seeding;
+    try {
+      await seeding;
+    } catch (error) {
+      if (registrations.get(context.activityID) === seeding) {
+        registrations.delete(context.activityID);
+      }
+
+      throw error;
+    }
+
     await flushNow(context.activityID);
   };
 
@@ -318,7 +340,11 @@ export function createCheckpointSubmitter(
     // a checkpoint the journal refused is not in the outbox, so the cursor stays where it was and
     // the failure propagates to the tick loop, which stops rather than simulate past an unsaved step
     try {
-      await journal.writeQueuedCheckpoint(activityID, entry);
+      await journal.writeQueuedCheckpoint(
+        activityID,
+        entry,
+        buildNodeAnchorAdvance(cursor, entry.version, entry.payload.nextSeed),
+      );
     } catch (error) {
       const failure = new JournalWriteError(
         activityID,
@@ -341,13 +367,6 @@ export function createCheckpointSubmitter(
     cursor.nextVersion += 1;
 
     emitSaved(activityID, entry.version);
-
-    if (cursor.avatarID !== undefined && cursor.scopeID !== undefined) {
-      await writeNodeAnchor(cursor.avatarID, cursor.scopeID, {
-        chainIndex: cursor.startChainIndex + cursor.nextVersion - 1,
-        nextSeed: cursor.previousNextSeed,
-      });
-    }
 
     const isTerminal = TERMINAL_CHECKPOINT_TYPES.has(checkpoint.type);
 
@@ -423,5 +442,21 @@ export function createCheckpointSubmitter(
     removeEviction,
     removeRegistrations,
     submit,
+  };
+}
+
+function buildNodeAnchorAdvance(
+  cursor: Readonly<WriteCursor>,
+  version: number,
+  nextSeed: string,
+): NodeAnchorAdvance | undefined {
+  if (cursor.avatarID === undefined || cursor.scopeID === undefined) {
+    return undefined;
+  }
+
+  return {
+    anchor: { chainIndex: cursor.startChainIndex + version, nextSeed },
+    avatarID: cursor.avatarID,
+    nodeID: cursor.scopeID,
   };
 }

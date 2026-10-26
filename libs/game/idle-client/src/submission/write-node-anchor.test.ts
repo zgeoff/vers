@@ -75,6 +75,30 @@ test('it discards an out-of-order lower-index write rather than regressing the c
   expect(cached?.anchor).toStrictEqual({ chainIndex: 7, nextSeed: 'seed-at-seven' });
 });
 
+test('it rejects, and keeps the cached anchor, when the storage refuses the write', async () => {
+  const avatarID = 'avatar-write-node-anchor-refused';
+
+  const seed = createMockNodeSeed({
+    avatarID,
+    anchor: { chainIndex: 2, nextSeed: 'seed-at-two' },
+  });
+
+  // a function is a value the structured clone refuses
+  const unclonable = { chainIndex: 4, nextSeed: 'seed-at-four', onReached: () => {} };
+
+  await writeNodeSeeds(avatarID, [seed]);
+
+  const failure = await writeNodeAnchor(avatarID, seed.nodeID, unclonable).then(
+    () => null,
+    (error: unknown) => error,
+  );
+
+  const cached = await readNodeSeed(avatarID, seed.nodeID);
+
+  expect(failure).toMatchObject({ name: 'DataCloneError' });
+  expect(cached?.anchor).toStrictEqual({ chainIndex: 2, nextSeed: 'seed-at-two' });
+});
+
 test('it is a no-op when the node was never cached for the avatar', async () => {
   await writeNodeAnchor('avatar-write-node-anchor-uncached', '9_9', {
     chainIndex: 1,

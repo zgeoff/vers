@@ -4,6 +4,8 @@ import { createMockActivityData } from '@vers/contract-activity/test-utils';
 import { buildLevelFromXP } from '@vers/idle-core';
 import { createMockFailedCheckpoint } from '@vers/idle-core/test-utils';
 import invariant from 'tiny-invariant';
+import { readAllActivityStarts } from '../submission/read-all-activity-starts';
+import { writeActivityStart } from '../submission/write-activity-start';
 import { writeLastStartedActivity } from '../submission/write-last-started-activity';
 import { writeNodeSeeds } from '../submission/write-node-seeds';
 import { writeStartStamps } from '../submission/write-start-stamps';
@@ -222,6 +224,37 @@ test("it stamps the avatar's durably tracked last-started activity as the predec
   invariant(row !== null, 'expected the cached inputs to synthesize a row');
 
   expect(row.predecessorActivityID).toBe('act_predecessor');
+});
+
+test('it stamps a pending start that the last-started record never reached as the predecessor, and keeps that start', async () => {
+  const seed = createMockNodeSeed({ avatarID: 'avatar_orphaned_start', nodeID: '1_0' });
+
+  const orphan = createMockActivityData({
+    avatarID: seed.avatarID,
+    id: 'act_orphan',
+    predecessorActivityID: 'act_recorded',
+  });
+
+  await writeNodeSeeds(seed.avatarID, [seed]);
+  await writeStartStamps({ keyVersion: 1, secretRef: 'worldmap', secretVersion: 1 });
+  await writeLastStartedActivity({ avatarID: seed.avatarID, lastActivityID: 'act_recorded' });
+  await writeActivityStart(orphan);
+
+  const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_1' });
+
+  const row = await loadActivityStart(context, {
+    avatarID: seed.avatarID,
+    scopeID: seed.nodeID,
+    scopeType: 'world_map_node',
+    startKey: 'start_key_1',
+  });
+
+  const starts = await readAllActivityStarts();
+
+  invariant(row !== null, 'expected the cached inputs to synthesize a row');
+
+  expect(row.predecessorActivityID).toBe('act_orphan');
+  expect(starts).toStrictEqual([orphan]);
 });
 
 test('it stamps a null predecessor when the durable record belongs to a different avatar', async () => {
