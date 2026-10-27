@@ -18,10 +18,7 @@ minimumReleaseAge = 604800
 # the audit-fix workflow removes an entry whose line ends "(audit-fix)".
 # body-parser 1.20.9 (published 2026-10-22, patches GHSA-27r3-jxmh-p828) ages past the gate ~2026-10-29 — remove then (audit-fix)
 # body-parser 2.4.0 (published 2026-10-22, patches GHSA-27r3-jxmh-p828) ages past the gate ~2026-10-29 — remove then (audit-fix)
-# happy-dom 21.0.4 (published 2026-10-20, patches GHSA-834v-8h66-3h79) ages past the gate ~2026-10-27 — remove then (audit-fix)
-# @happy-dom/global-registrator 21.0.4 (published 2026-10-20, patches GHSA-834v-8h66-3h79) ages past the gate ~2026-10-27 — remove then (audit-fix)
 minimumReleaseAgeExcludes = [
-  "@happy-dom/global-registrator",
   "@zgeoff/bugsink-mcp",
   "@zgeoff/bun-test-extended",
   "@zgeoff/dbhub",
@@ -32,7 +29,6 @@ minimumReleaseAgeExcludes = [
   "@zgeoff/std",
   "@zgeoff/umami-mcp",
   "body-parser",
-  "happy-dom",
 ]
 
 [test]
