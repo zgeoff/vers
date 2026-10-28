@@ -5,7 +5,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-// Runs the synced skill gate hook against this repo's own .claude/skill-gate.json and skills.
+// Runs the synced skill gate hook as .claude/settings.json registers it, with auto-install off,
+// against this repo's own .claude/skill-gate.json and skills.
 async function setupTest() {
   const directory = await mkdtemp(join(tmpdir(), 'skill-gate-'));
 
@@ -22,7 +23,7 @@ test('it denies a source edit until both code-style skills are loaded', async ()
 
   await writeFile(join(ctx.directory, 'transcript.jsonl'), '');
 
-  const result = spawnSync('bun', [ctx.hookPath], {
+  const result = spawnSync('bun', ['--no-install', ctx.hookPath], {
     encoding: 'utf8',
     env: { PATH: process.env['PATH'], CLAUDE_PROJECT_DIR: ctx.repoDir },
     input: JSON.stringify({
@@ -56,7 +57,7 @@ test('it allows a source edit once both code-style skills are loaded', async () 
     ].join('\n'),
   );
 
-  const result = spawnSync('bun', [ctx.hookPath], {
+  const result = spawnSync('bun', ['--no-install', ctx.hookPath], {
     encoding: 'utf8',
     env: { PATH: process.env['PATH'], CLAUDE_PROJECT_DIR: ctx.repoDir },
     input: JSON.stringify({
@@ -75,7 +76,7 @@ test('it denies a test file edit until both code-style skills, testing and proje
 
   await writeFile(join(ctx.directory, 'transcript.jsonl'), '');
 
-  const result = spawnSync('bun', [ctx.hookPath], {
+  const result = spawnSync('bun', ['--no-install', ctx.hookPath], {
     encoding: 'utf8',
     env: { PATH: process.env['PATH'], CLAUDE_PROJECT_DIR: ctx.repoDir },
     input: JSON.stringify({
@@ -111,7 +112,7 @@ test('it denies a test file edit with only the testing skill loaded', async () =
     ].join('\n'),
   );
 
-  const result = spawnSync('bun', [ctx.hookPath], {
+  const result = spawnSync('bun', ['--no-install', ctx.hookPath], {
     encoding: 'utf8',
     env: { PATH: process.env['PATH'], CLAUDE_PROJECT_DIR: ctx.repoDir },
     input: JSON.stringify({
@@ -151,7 +152,7 @@ test('it allows a test file edit once both testing skills and both code-style sk
     ].join('\n'),
   );
 
-  const result = spawnSync('bun', [ctx.hookPath], {
+  const result = spawnSync('bun', ['--no-install', ctx.hookPath], {
     encoding: 'utf8',
     env: { PATH: process.env['PATH'], CLAUDE_PROJECT_DIR: ctx.repoDir },
     input: JSON.stringify({
@@ -178,7 +179,7 @@ test('it gates a lifecycle package on the game-lifecycle skill as well', async (
     ].join('\n'),
   );
 
-  const result = spawnSync('bun', [ctx.hookPath], {
+  const result = spawnSync('bun', ['--no-install', ctx.hookPath], {
     encoding: 'utf8',
     env: { PATH: process.env['PATH'], CLAUDE_PROJECT_DIR: ctx.repoDir },
     input: JSON.stringify({
@@ -204,7 +205,7 @@ test('it gates markdown on the docs-writing and project-docs-writing skills', as
 
   await writeFile(join(ctx.directory, 'transcript.jsonl'), '');
 
-  const result = spawnSync('bun', [ctx.hookPath], {
+  const result = spawnSync('bun', ['--no-install', ctx.hookPath], {
     encoding: 'utf8',
     env: { PATH: process.env['PATH'], CLAUDE_PROJECT_DIR: ctx.repoDir },
     input: JSON.stringify({
@@ -230,7 +231,7 @@ test('it allows generated output', async () => {
 
   await writeFile(join(ctx.directory, 'transcript.jsonl'), '');
 
-  const result = spawnSync('bun', [ctx.hookPath], {
+  const result = spawnSync('bun', ['--no-install', ctx.hookPath], {
     encoding: 'utf8',
     env: { PATH: process.env['PATH'], CLAUDE_PROJECT_DIR: ctx.repoDir },
     input: JSON.stringify({
@@ -249,7 +250,7 @@ test('it allows a file kind no gate names without warning of an unknown skill', 
 
   await writeFile(join(ctx.directory, 'transcript.jsonl'), '');
 
-  const result = spawnSync('bun', [ctx.hookPath], {
+  const result = spawnSync('bun', ['--no-install', ctx.hookPath], {
     encoding: 'utf8',
     env: { PATH: process.env['PATH'], CLAUDE_PROJECT_DIR: ctx.repoDir },
     input: JSON.stringify({
@@ -268,7 +269,7 @@ test('it gates authored source in the styled-system package', async () => {
 
   await writeFile(join(ctx.directory, 'transcript.jsonl'), '');
 
-  const result = spawnSync('bun', [ctx.hookPath], {
+  const result = spawnSync('bun', ['--no-install', ctx.hookPath], {
     encoding: 'utf8',
     env: { PATH: process.env['PATH'], CLAUDE_PROJECT_DIR: ctx.repoDir },
     input: JSON.stringify({
