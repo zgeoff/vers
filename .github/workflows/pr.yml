@@ -271,6 +271,10 @@ jobs:
 
       - name: E2E Tests
         id: e2e
+        env:
+          # the worker mints an activity start only under a bundled engine hash, and the mock
+          # services the specs run against accept any hash
+          VITE_SIM_ENGINE_HASH: e2e-mock-engine
         run: node_modules/.bin/turbo run e2e --affected
 
       - name: Upload Videos Of Failed E2E

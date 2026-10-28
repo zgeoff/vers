@@ -2,9 +2,12 @@ import { Outlet, createFileRoute, useMatches } from '@tanstack/react-router';
 import { createServerFn } from '@tanstack/react-start';
 import { resolveFlags } from '@vers/flags';
 import { requireAuth } from '../lib/auth/require-auth';
+import { readWithLastKnown } from '../lib/offline/read-with-last-known';
 import { readQADebugHookAccess } from '../lib/qa/read-qa-debug-hook-access';
 import { AmbientSheet } from './-game/ambient-sheet';
+import { GameAssetPreload } from './-game/game-asset-preload';
 import { GameCanvasMount } from './-game/game-canvas-mount';
+import { GameErrorScreen } from './-game/game-error-screen';
 import { GameSimulationMount } from './-game/game-simulation-mount';
 import { JournalFailureNotice } from './-game/journal-failure-notice';
 import { NavRail } from './-game/nav-rail';
@@ -17,7 +20,12 @@ import { SceneStateSync } from './-game/scene-state-sync';
 import { WelcomeBackModal } from './-game/welcome-back-modal';
 import { WriterContentionNotice } from './-game/writer-contention-notice';
 
-const requireAuthFn = createServerFn({ method: 'GET' }).handler(() => requireAuth());
+const requireAuthFn = createServerFn({ method: 'GET' }).handler(async () => {
+  await requireAuth();
+
+  return null;
+});
+
 const resolveFlagsFn = createServerFn({ method: 'GET' }).handler(() => resolveFlags());
 
 const readQADebugHookAccessFn = createServerFn({ method: 'GET' }).handler(() =>
@@ -25,12 +33,20 @@ const readQADebugHookAccessFn = createServerFn({ method: 'GET' }).handler(() =>
 );
 
 export const Route = createFileRoute('/_game')({
-  beforeLoad: async () => ({ flags: await resolveFlagsFn() }),
+  beforeLoad: async (opts) => ({
+    flags: await readWithLastKnown(opts.context.queryClient, 'flags', () => resolveFlagsFn()),
+  }),
   component: GameLayout,
-  loader: async () => {
-    const [auth, qaDebugHook] = await Promise.all([requireAuthFn(), readQADebugHookAccessFn()]);
+  errorComponent: GameErrorScreen,
+  loader: async (opts) => {
+    const queryClient = opts.context.queryClient;
 
-    return { ...auth, qaDebugHook };
+    const [, qaDebugHook] = await Promise.all([
+      readWithLastKnown(queryClient, 'auth', () => requireAuthFn()),
+      readWithLastKnown(queryClient, 'qa-debug-hook', () => readQADebugHookAccessFn()),
+    ]);
+
+    return { qaDebugHook };
   },
 });
 
@@ -58,6 +74,7 @@ function GameLayout() {
       <JournalFailureNotice />
       <SaveStatusLine />
       <NavRail />
+      <GameAssetPreload />
       {presentation === 'ambient' ? (
         <AmbientSheet>
           <Outlet />

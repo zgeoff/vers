@@ -1,4 +1,5 @@
 import { createCsrfMiddleware, createMiddleware, createStart } from '@tanstack/react-start';
+import { readServerFnResponse } from './lib/offline/read-server-fn-response';
 import { logger } from './server/logger';
 import { reportFunctionFault } from './server/report-function-fault';
 import { shouldReportFunctionFault } from './server/should-report-function-fault';
@@ -27,4 +28,5 @@ const reportFaults = createMiddleware({ type: 'function' }).server(async (ctx) =
 export const startInstance = createStart(() => ({
   functionMiddleware: [reportFaults],
   requestMiddleware: [rejectCrossSiteRequests],
+  serverFns: { fetch: readServerFnResponse },
 }));

@@ -87,4 +87,11 @@ export const DEMO_ACCOUNTS: ReadonlyArray<DemoAccount> = [
     password: 'password123',
     username: 'e2e-device-takeover',
   },
+  {
+    avatarName: 'Offline Play Test Avatar',
+    email: 'e2e-offline-play@qa.versidle.com',
+    name: 'Offline Play Demo Account',
+    password: 'password123',
+    username: 'e2e-offline-play',
+  },
 ];

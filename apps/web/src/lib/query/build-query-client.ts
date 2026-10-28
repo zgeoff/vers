@@ -1,6 +1,9 @@
 import { ORPCError } from '@orpc/client';
 import * as Sentry from '@sentry/react';
 import { MutationCache, QueryCache, QueryClient } from '@tanstack/react-query';
+import { isNotFound, isRedirect } from '@tanstack/react-router';
+import { LAST_KNOWN_QUERY_KEY_PREFIX } from '../offline/last-known-query-key-prefix';
+import { NetworkFailureError } from '../offline/network-failure-error';
 
 export function buildQueryClient(): QueryClient {
   const queryClient = new QueryClient({
@@ -9,6 +12,14 @@ export function buildQueryClient(): QueryClient {
     },
     mutationCache: new MutationCache({ onError: reportUnexpectedError }),
     queryCache: new QueryCache({ onError: reportUnexpectedError }),
+  });
+
+  // Query's defaults would hold an offline navigation for seconds of retries, pause it until the
+  // browser reports online, and collect the fallback value after five idle minutes
+  queryClient.setQueryDefaults([LAST_KNOWN_QUERY_KEY_PREFIX], {
+    gcTime: Number.POSITIVE_INFINITY,
+    networkMode: 'always',
+    retry: false,
   });
 
   return queryClient;
@@ -23,7 +34,12 @@ function shouldRetryError(failureCount: number, error: Error): boolean {
 }
 
 function reportUnexpectedError(error: Error): void {
-  if (error instanceof ORPCError) {
+  if (
+    error instanceof ORPCError ||
+    error instanceof NetworkFailureError ||
+    isRedirect(error) ||
+    isNotFound(error)
+  ) {
     return;
   }
 

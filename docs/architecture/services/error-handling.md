@@ -89,7 +89,8 @@ itself before its run. Each layer reports through its own hook:
 - Web app server functions: the global function middleware reports every throw a server function
   lets escape other than a redirect, a not-found, or a `Response`, then rethrows it.
 - Web app client: the query and mutation cache error hooks report failures that are not service
-  errors, because the service already reported its own.
+  errors, because the service already reported its own. A redirect, a not-found, and a network
+  failure are outcomes, and the hooks leave them unreported.
 - Web app render: the root route's error component reports render and loader errors nothing below
   caught.
 - Idle worker: a capture call at each swallow point, tagged with the site that caught it, plus the
@@ -126,7 +127,9 @@ own beneath it. A request over its rate limit is answered with a 429 before it r
 Two owners retry outbound traffic between the browser and the services. The query client owns retry
 for every call the browser makes through it: 4xx and defined service errors never retry, since
 retrying cannot change the outcome, and network failures and 5xx retry a fixed number of times. A
-per-query override needs a behavioural reason the default policy cannot express.
+per-query override needs a behavioural reason the default policy cannot express. One exception: a
+game route gate never retries, because it falls back to its last-known value on a network failure
+([offline navigation](#offline-navigation)).
 
 Every call the web app's server makes to a service runs one bounded-attempt policy: a server
 function's direct client call, the RPC proxy forwarding a browser call, and the session lookups both
@@ -139,3 +142,21 @@ delivers that response to the caller. A last attempt that fails in transport or 
 raises `SERVICE_UNAVAILABLE`, which the proxy answers as a 503, and the browser's query client
 retries that 503 in turn. The whole budget stays under the slow-request alarm
 ([observability](../platform/observability.md#alarms)).
+
+### Offline navigation
+
+A player whose game is loaded keeps moving between game screens with the network down, because each
+route gate in the game falls back to the last value it read. The gates are the game layout's flag
+read, its sign-in check and its QA-hook check, and each screen's active-avatar check. Each gate
+reads through the query cache, and the server-side render seeds the cache, so the first navigation
+after a page load has a value to fall back to. The browser's server-function fetch turns a request
+that got no response into a network failure, and only a network failure takes the fallback. A
+redirect or any other error from a gate propagates, so a signed-out player still lands on sign-in
+once the network returns.
+
+A gate with no last-known value fails with the network failure. The game route's error component
+then shows an offline notice whose retry reloads the routes, and it shows the root error screen for
+any other error. The game layout also loads every game route's code chunk and each declared font
+face when it mounts, because the browser otherwise fetches each one on first use and that fetch
+fails offline. The play itself continues in the worker, as
+[offline reconcile](../game/offline-reconcile.md) describes.

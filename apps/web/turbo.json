@@ -1,4 +1,10 @@
 {
   "extends": ["//"],
-  "tags": ["app"]
+  "tags": ["app"],
+  "tasks": {
+    "build": {
+      // vite inlines every VITE_ variable into the client bundle, so each one is a build input
+      "env": ["VITE_*"]
+    }
+  }
 }
