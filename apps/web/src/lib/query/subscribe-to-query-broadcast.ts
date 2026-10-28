@@ -1,5 +1,6 @@
 import * as Sentry from '@sentry/react';
 import type { QueryClient, QueryKey, QueryState } from '@tanstack/react-query';
+import { LAST_KNOWN_QUERY_KEY_PREFIX } from '../offline/last-known-query-key-prefix';
 import { RSC_QUERY_KEY_PREFIX } from './rsc-query-key-prefix';
 
 export const QUERY_BROADCAST_CHANNEL_NAME = 'vers-query';
@@ -89,7 +90,11 @@ function buildQueryBroadcast(
   change: QueryCacheChange,
   query: BroadcastableQuery,
 ): null | QueryBroadcast {
-  if (query.queryKey[0] === RSC_QUERY_KEY_PREFIX) {
+  // a server component cannot be structured-cloned, and a last-known value can hold one
+  if (
+    query.queryKey[0] === RSC_QUERY_KEY_PREFIX ||
+    query.queryKey[0] === LAST_KNOWN_QUERY_KEY_PREFIX
+  ) {
     return null;
   }
 

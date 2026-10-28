@@ -30,17 +30,9 @@ bundle. `resolveFlags()` evaluates every registered flag and returns a plain
 `Record<FlagKey, boolean>`. A client that needs flag state receives that resolved payload rather
 than the evaluation machinery itself.
 
-The `/_game` layout route in `app-web` resolves flags once, in its `beforeLoad`, through a server
-function wrapping `resolveFlags()`:
-
-```ts
-const resolveFlagsFn = createServerFn({ method: 'GET' }).handler(() => resolveFlags());
-
-export const Route = createFileRoute('/_game')({
-  beforeLoad: async () => ({ flags: await resolveFlagsFn() }),
-  // ...
-});
-```
+The `/_game` layout route in `app-web` resolves flags on each navigation, in its `beforeLoad`,
+through a server function wrapping `resolveFlags()`. With the network down, the route keeps the
+flags it resolved last ([offline navigation](./error-handling.md#offline-navigation)).
 
 Every route and component nested under `/_game` reads the resolved booleans from router context:
 `useRouteContext({ from: '/_game' })` in a component, `context.flags` in a descendant route's own

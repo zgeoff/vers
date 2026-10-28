@@ -21,7 +21,6 @@ test('it serves the home page and renders the signed-out actions', async ({ page
 });
 
 test('it renders the signed-in home page for a seeded account', async ({ page }) => {
-  await page.setExtraHTTPHeaders({ 'x-forwarded-for': '127.0.0.1' });
   await page.goto('/login');
 
   // hydration gate: the login form's submit handler attaches only once React commits; an earlier

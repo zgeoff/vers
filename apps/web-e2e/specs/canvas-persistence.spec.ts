@@ -2,7 +2,6 @@ import { expect, test } from '../src/test';
 import { waitForHoneypotWindow } from '../src/wait-for-honeypot-window';
 
 test('it keeps the same canvas element across client-side game navigation', async ({ page }) => {
-  await page.setExtraHTTPHeaders({ 'x-forwarded-for': '127.0.0.1' });
   await page.goto('/login');
 
   // hydration gate: the login form's submit handler attaches only once React commits; an earlier

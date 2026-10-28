@@ -4,12 +4,19 @@ import type { E2EOptions, MockActivityOptions } from './src/test';
 
 const CROSS_ENGINE_CORPUS_SPEC = /cross-engine-corpus\.spec\.ts/u;
 
+// only the live world map reveals nodes and caches their start inputs, so a spec that starts an
+// activity at a node runs against an artifact with the renderer on, built with
+// VITE_SIM_ENGINE_HASH set, as CI's e2e step sets it
+const RENDERER_SPEC = /offline-navigation\.spec\.ts/u;
+const RENDERER_BASE_URL = process.env['RENDERER_BASE_URL'] ?? 'http://localhost:3100';
+
 const environment = loadE2EEnvironment({
   appWebEnv: {
     // the live WebGPU/R3F canvas blocks the main thread long enough under CI's software-GL to
     // drop nav clicks; the placeholder canvas keeps every canvas-lifecycle assertion valid
     FEATURE_GAME_RENDERER: 'false',
   },
+  defaultAppWebBaseURL: RENDERER_BASE_URL,
 });
 
 export default defineConfig<E2EOptions & MockActivityOptions>({
@@ -23,7 +30,19 @@ export default defineConfig<E2EOptions & MockActivityOptions>({
   projects: [
     {
       name: 'chromium',
+      testIgnore: RENDERER_SPEC,
       use: { ...devices['Desktop Chrome'] },
+    },
+    {
+      // the live canvas's software GL starves whatever spec runs beside it, so this project waits
+      // for the placeholder specs to finish
+      dependencies: ['chromium'],
+      name: 'chromium-renderer',
+      testMatch: RENDERER_SPEC,
+      use: {
+        ...devices['Desktop Chrome'],
+        baseURL: RENDERER_BASE_URL,
+      },
     },
     {
       name: 'firefox',

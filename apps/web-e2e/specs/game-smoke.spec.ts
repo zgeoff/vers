@@ -4,7 +4,6 @@ import { waitForHoneypotWindow } from '../src/wait-for-honeypot-window';
 test('it renders respite, avatar, and explore for a signed-in caller without console errors', async ({
   page,
 }) => {
-  await page.setExtraHTTPHeaders({ 'x-forwarded-for': '127.0.0.1' });
   await page.goto('/login');
 
   // hydration gate: the login form's submit handler attaches only once React commits; an earlier

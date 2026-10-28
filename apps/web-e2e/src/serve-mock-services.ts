@@ -62,6 +62,10 @@ for (const service of SERVICES) {
       return serveLiveRun(request);
     }
 
+    if (service === 'activity' && pathname === '/test/activity' && request.method === 'GET') {
+      return serveActivityStatus(request);
+    }
+
     const handled = await rpcHandler.handle(request, {
       context: resolveSessionContext(request),
       prefix: '/rpc',
@@ -127,4 +131,18 @@ async function serveLiveRun(request: Request): Promise<Response> {
   });
 
   return Response.json({ activityID: activity.id });
+}
+
+function serveActivityStatus(request: Request): Response {
+  const activityID = new URL(request.url).searchParams.get('id');
+
+  if (activityID === null) {
+    return new Response(null, { status: 400 });
+  }
+
+  const activity = activityCollection.findFirst((query) => query.where({ id: activityID }));
+
+  return activity === undefined
+    ? new Response(null, { status: 404 })
+    : Response.json({ status: activity.status });
 }

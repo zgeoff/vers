@@ -91,7 +91,6 @@ interface SignUpJourney extends E2EOptions {
 }
 
 async function runSignUpIntoGame(page: Page, journey: Readonly<SignUpJourney>): Promise<void> {
-  await page.setExtraHTTPHeaders({ 'x-forwarded-for': '127.0.0.1' });
   await page.goto('/signup');
 
   // hydration gate: the form's submit handler attaches only once React commits; an earlier click

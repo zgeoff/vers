@@ -1,6 +1,6 @@
 import { Outlet, createFileRoute, notFound } from '@tanstack/react-router';
 import { MarketPanel } from '../-market/market-panel';
-import { requireActiveAvatar } from '../../lib/avatar/require-active-avatar';
+import { requireActiveAvatarOrLastKnown } from '../../lib/avatar/require-active-avatar-or-last-known';
 
 export const Route = createFileRoute('/_game/market')({
   beforeLoad: (opts) => {
@@ -10,7 +10,7 @@ export const Route = createFileRoute('/_game/market')({
   },
   component: MarketPage,
   head: () => ({ meta: [{ title: 'vers | Market' }] }),
-  loader: () => requireActiveAvatar(),
+  loader: (opts) => requireActiveAvatarOrLastKnown(opts.context.queryClient),
   staticData: { presentation: 'ambient' },
 });
 

@@ -210,7 +210,9 @@
         "**/apps/web/src/lib/activity/**/*.ts",
         "**/apps/web/src/lib/auth/**/*.ts",
         "**/apps/web/src/lib/avatar/**/*.ts",
-        "**/apps/web/src/lib/avatar/**/*.tsx"
+        "**/apps/web/src/lib/avatar/**/*.tsx",
+        "**/apps/web/src/lib/offline/**/*.ts",
+        "**/apps/web/src/lib/query/**/*.ts"
       ],
       "rules": {
         "typescript/only-throw-error": "off"

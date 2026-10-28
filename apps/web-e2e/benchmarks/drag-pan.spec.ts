@@ -19,7 +19,6 @@ declare global {
 test('it drag-pans across the explore map and reports peak frame gap and dropped frames', async ({
   page,
 }) => {
-  await page.setExtraHTTPHeaders({ 'x-forwarded-for': '127.0.0.1' });
   await page.goto('/login');
   await page.locator('html[data-hydrated]').waitFor();
   await page.getByLabel('Email').fill('e2e-drag-pan@vers.test');

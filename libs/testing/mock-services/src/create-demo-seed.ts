@@ -1,10 +1,16 @@
 import { createId } from '@paralleldrive/cuid2';
 import { activeAvatarCollection } from './db/active-avatar-collection';
 import { avatarCollection } from './db/avatar-collection';
+import {
+  MOCK_CURRENT_CONTENT_VERSION,
+  contentDocumentCollection,
+} from './db/content-document-collection';
 import { userCollection } from './db/user-collection';
 import { DEMO_ACCOUNTS } from './demo-accounts';
 
 export async function createDemoSeed(): Promise<void> {
+  await contentDocumentCollection.create({ contentVersion: MOCK_CURRENT_CONTENT_VERSION });
+
   for (const account of DEMO_ACCOUNTS) {
     const userID = createId();
 

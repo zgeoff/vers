@@ -4,7 +4,6 @@ import { waitForHoneypotWindow } from '../src/wait-for-honeypot-window';
 test('it mounts a second canvas for the avatar satellite and drops it on navigation away', async ({
   page,
 }) => {
-  await page.setExtraHTTPHeaders({ 'x-forwarded-for': '127.0.0.1' });
   await page.goto('/login');
 
   // hydration gate: the login form's submit handler attaches only once React commits; an earlier

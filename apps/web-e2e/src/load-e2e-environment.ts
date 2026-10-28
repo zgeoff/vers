@@ -19,6 +19,10 @@ interface E2EEnvironment {
 
 interface LoadE2EEnvironmentOptions {
   readonly appWebEnv?: Readonly<Record<string, string>>;
+
+  // a second artifact on this origin keeps the app's default env, for the specs that need what
+  // `appWebEnv` turns off
+  readonly defaultAppWebBaseURL?: string;
 }
 
 export function loadE2EEnvironment(options: Readonly<LoadE2EEnvironmentOptions>): E2EEnvironment {
@@ -62,36 +66,47 @@ export function loadE2EEnvironment(options: Readonly<LoadE2EEnvironmentOptions>)
         // the same override-then-default resolution the spawned listeners apply per service
         url: `${process.env['USER_SERVICE_URL'] ?? 'http://localhost:3003'}/health`,
       },
-      {
-        // the deployable artifact exactly as built, never rebuilt here: the e2e turbo task depends
-        // on the app's build task. Never reuse an already-listening server: whatever answers on
-        // this port is not the artifact, and reusing it voids the production-build guarantee.
-        command: 'node ./server.mjs',
-        cwd: appWebRoot,
-        env: {
-          // canvas-persistence.spec.ts clicks through to the Market nav link
-          FEATURE_MARKET: 'true',
-
-          LOGGING: 'warn',
-          NODE_ENV: 'production',
-
-          // production sets this, and the server only registers OpenTelemetry when it is set, so
-          // the boot the specs exercise takes the same path as Fly's. Nothing listens on the port:
-          // the exporters drop what they cannot deliver and never block boot.
-          OTEL_EXPORTER_OTLP_ENDPOINT: 'http://127.0.0.1:1',
-          PORT: new URL(baseURL).port,
-
-          // Start's session sealing rejects any password under 32 characters
-          SESSION_SECRET: 'e2e-session-secret-32-characters',
-
-          ...options.appWebEnv,
-        },
-        reuseExistingServer: false,
-        stderr: 'pipe',
-        stdout: 'pipe',
-        timeout: 240 * 1000,
-        url: `${baseURL}/health`,
-      },
+      buildAppWebServer(appWebRoot, baseURL, options.appWebEnv ?? {}),
+      ...(options.defaultAppWebBaseURL === undefined
+        ? []
+        : [buildAppWebServer(appWebRoot, options.defaultAppWebBaseURL, {})]),
     ],
+  };
+}
+
+function buildAppWebServer(
+  appWebRoot: string,
+  baseURL: string,
+  appWebEnv: Readonly<Record<string, string>>,
+): WebServerEntry {
+  return {
+    // the deployable artifact exactly as built, never rebuilt here: the e2e turbo task depends
+    // on the app's build task. Never reuse an already-listening server: whatever answers on
+    // this port is not the artifact, and reusing it voids the production-build guarantee.
+    command: 'node ./server.mjs',
+    cwd: appWebRoot,
+    env: {
+      // canvas-persistence.spec.ts clicks through to the Market nav link
+      FEATURE_MARKET: 'true',
+
+      LOGGING: 'warn',
+      NODE_ENV: 'production',
+
+      // production sets this, and the server only registers OpenTelemetry when it is set, so
+      // the boot the specs exercise takes the same path as Fly's. Nothing listens on the port:
+      // the exporters drop what they cannot deliver and never block boot.
+      OTEL_EXPORTER_OTLP_ENDPOINT: 'http://127.0.0.1:1',
+      PORT: new URL(baseURL).port,
+
+      // Start's session sealing rejects any password under 32 characters
+      SESSION_SECRET: 'e2e-session-secret-32-characters',
+
+      ...appWebEnv,
+    },
+    reuseExistingServer: false,
+    stderr: 'pipe',
+    stdout: 'pipe',
+    timeout: 240 * 1000,
+    url: `${baseURL}/health`,
   };
 }
