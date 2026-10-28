@@ -34,6 +34,9 @@ export default defineConfig<E2EOptions & MockActivityOptions>({
       use: { ...devices['Desktop Chrome'] },
     },
     {
+      // the live canvas's software GL starves whatever spec runs beside it, so this project waits
+      // for the placeholder specs to finish
+      dependencies: ['chromium'],
       name: 'chromium-renderer',
       testMatch: RENDERER_SPEC,
       use: {

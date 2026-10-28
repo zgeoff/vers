@@ -1,4 +1,4 @@
-import { useRouter } from '@tanstack/react-router';
+import { Route, useRouter } from '@tanstack/react-router';
 import { useEffect } from 'react';
 import { runIgnoringRejection } from '../../lib/idle/run-ignoring-rejection';
 
@@ -9,8 +9,14 @@ export function GameAssetPreload() {
   const router = useRouter();
 
   useEffect(() => {
-    for (const route of Object.values(router.routesById)) {
-      if (route.id.startsWith('/_game/')) {
+    // TanStack Router's types resolve the route map's entries and a route's id to any, so both are
+    // narrowed from unknown
+    const routes: ReadonlyArray<unknown> = Object.values(router.routesById);
+
+    for (const route of routes) {
+      const routeID: unknown = route instanceof Route ? route.id : undefined;
+
+      if (route instanceof Route && typeof routeID === 'string' && routeID.startsWith('/_game/')) {
         runIgnoringRejection(Promise.resolve(router.loadRouteChunk(route)));
       }
     }

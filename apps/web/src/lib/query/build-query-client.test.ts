@@ -94,7 +94,9 @@ test.each([
 
   await Promise.allSettled([
     queryClient.query({
-      queryFn: () => Promise.reject(thrown),
+      queryFn: () => {
+        throw thrown;
+      },
       queryKey: ['outcome'],
       retry: false,
     }),

@@ -8,8 +8,8 @@ declare global {
   var __TSR_ROUTER__: ClientRouter | undefined;
 }
 
-// TanStack Router publishes the client router on the window, and a navigation through it takes the
-// same in-app path a link click takes, with no document load
+// a headless canvas gives no stable point to click a world-map node at; TanStack Router publishes
+// the client router on the window, and a navigation through it takes a node click's in-app path
 export async function navigateClientRoute(page: Page, href: string): Promise<void> {
   await page.evaluate(async (target) => {
     const router = globalThis.__TSR_ROUTER__;

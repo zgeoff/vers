@@ -36,6 +36,9 @@ export const Route = createFileRoute('/_game')({
   beforeLoad: async (opts) => ({
     flags: await readWithLastKnown(opts.context.queryClient, 'flags', () => resolveFlagsFn()),
   }),
+  // the error screen ships in the layout's chunk, which a rendered game has loaded, so an offline
+  // failure renders it with no fetch; preloading a separate chunk remounts the mounted layout
+  codeSplitGroupings: [['component', 'errorComponent']],
   component: GameLayout,
   errorComponent: GameErrorScreen,
   loader: async (opts) => {

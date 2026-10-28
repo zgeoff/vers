@@ -33,7 +33,6 @@ test('it elects one writer without SharedWorker and promotes a survivor when the
     Reflect.deleteProperty(globalThis, 'SharedWorker');
   });
 
-  await page.setExtraHTTPHeaders({ 'x-forwarded-for': '127.0.0.1' });
   await page.goto('/login');
 
   // hydration gate: the login form's submit handler attaches only once React commits; an earlier

@@ -4,7 +4,6 @@ import { waitForHoneypotWindow } from '../src/wait-for-honeypot-window';
 test('it creates a second avatar, switches back, and keeps the choice across a reload', async ({
   page,
 }) => {
-  await page.setExtraHTTPHeaders({ 'x-forwarded-for': '127.0.0.1' });
   await page.goto('/login');
 
   // hydration gate: the login form's submit handler attaches only once React commits; an earlier
