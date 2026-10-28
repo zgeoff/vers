@@ -3,6 +3,7 @@ import { $ } from 'bun';
 import { z } from 'zod';
 import { makeContextExcluder } from './make-context-excluder';
 import { parseDockerignore } from './parse-dockerignore';
+import { readChangedPathsSince } from './read-changed-paths-since';
 import { readCommitRelation } from './read-commit-relation';
 import type { ChangeSet } from './types';
 
@@ -23,12 +24,12 @@ export async function readChangesSince(baseSHA: string): Promise<ChangeSet | nul
     return { affectedPkgs: [], changedPaths: [] };
   }
 
-  const [diff, isExcluded] = await Promise.all([
-    $`git diff --name-only ${`${baseSHA}..HEAD`}`.text(),
+  const [allChangedPaths, isExcluded] = await Promise.all([
+    readChangedPathsSince(baseSHA),
     readContextExcluder(),
   ]);
 
-  const changedPaths = diff.split('\n').filter((path) => path !== '' && !isExcluded(path));
+  const changedPaths = allChangedPaths.filter((path) => !isExcluded(path));
   const dryRunArgs = ['run', 'build', '--affected', '--dry=json'];
 
   const dryRun = await $`${TURBO_BIN} ${dryRunArgs}`
