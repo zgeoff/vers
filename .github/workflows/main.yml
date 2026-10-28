@@ -27,10 +27,28 @@ jobs:
       # CI never commits, but skip hook install/execution regardless
       LEFTHOOK: 0
     steps:
+      # The affected-packages run and the content digest read the pushed commit's history back to
+      # github.event.before. A positive fetch-depth fetches only the pushed commit and its history,
+      # where 0 fetches every branch and tag; 2147483647 is git's infinite depth, so the clone is
+      # not shallow.
+      # blob:none fetches a file's contents only when git first reads them. A fetch that stalls
+      # fails the step at its timeout, and the retry fetches again with time left in the job.
       - name: Checkout
+        id: checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        timeout-minutes: 2
+        continue-on-error: true
         with:
-          fetch-depth: 0
+          fetch-depth: 2147483647
+          filter: blob:none
+
+      - name: Retry checkout
+        if: ${{ steps.checkout.outcome != 'success' }}
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        timeout-minutes: 2
+        with:
+          fetch-depth: 2147483647
+          filter: blob:none
 
       - name: Setup Dotenv
         env:
@@ -278,13 +296,27 @@ jobs:
       matrix:
         app: ${{ fromJSON(needs.manifest.outputs.apps) }}
     steps:
+      # staleness runs turbo/git against each app's deployed SHA, which can be many pushes old, so
+      # the CLI needs the pushed commit's full history: see the checks job's Checkout for the depth,
+      # the filter and the retry
       - name: Checkout
+        id: checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        timeout-minutes: 2
+        continue-on-error: true
         with:
-          # staleness runs turbo/git against each app's deployed SHA, which can
-          # be many pushes old — the CLI needs full history
-          fetch-depth: 0
+          fetch-depth: 2147483647
+          filter: blob:none
           # no later step needs authenticated git access
+          persist-credentials: false
+
+      - name: Retry checkout
+        if: ${{ steps.checkout.outcome != 'success' }}
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        timeout-minutes: 2
+        with:
+          fetch-depth: 2147483647
+          filter: blob:none
           persist-credentials: false
 
       # The image builds and pushes on Fly's remote builder (inside Fly's
@@ -321,12 +353,26 @@ jobs:
     # image pulls plus stack boot plus journeys is ~6 minutes at worst
     timeout-minutes: 20
     steps:
+      # ref resolution runs turbo/git against each app's deployed SHA, which can be many pushes
+      # old, so the CLI needs the pushed commit's full history: see the checks job's Checkout for
+      # the depth, the filter and the retry
       - name: Checkout
+        id: checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        timeout-minutes: 2
+        continue-on-error: true
         with:
-          # ref resolution runs turbo/git against each app's deployed SHA,
-          # which can be many pushes old — the CLI needs full history
-          fetch-depth: 0
+          fetch-depth: 2147483647
+          filter: blob:none
+          persist-credentials: false
+
+      - name: Retry checkout
+        if: ${{ steps.checkout.outcome != 'success' }}
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        timeout-minutes: 2
+        with:
+          fetch-depth: 2147483647
+          filter: blob:none
           persist-credentials: false
 
       # Renovate bumps this exact version. flyctl's bluegreen health poll retries a
@@ -447,12 +493,25 @@ jobs:
       matrix:
         app: ${{ fromJSON(needs.manifest.outputs.apps) }}
     steps:
+      # staleness runs turbo/git against each app's deployed SHA, which can be many pushes old, so
+      # the CLI needs the pushed commit's full history: see the checks job's Checkout for the depth,
+      # the filter and the retry
       - name: Checkout
+        id: checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        timeout-minutes: 2
+        continue-on-error: true
         with:
-          # staleness runs turbo/git against each app's deployed SHA, which can
-          # be many pushes old — the CLI needs full history
-          fetch-depth: 0
+          fetch-depth: 2147483647
+          filter: blob:none
+
+      - name: Retry checkout
+        if: ${{ steps.checkout.outcome != 'success' }}
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        timeout-minutes: 2
+        with:
+          fetch-depth: 2147483647
+          filter: blob:none
 
       # The fleet cuts over to the ref the build phase pushed for this commit.
       # Each app's strategy (per fly.toml) gates cutover on the /health check,
@@ -488,10 +547,24 @@ jobs:
       group: ${{ github.workflow }}-verify-fleet
       cancel-in-progress: false
     steps:
+      # verify runs turbo/git against each app's deployed SHA, as the deploy job does: see the
+      # checks job's Checkout for the depth, the filter and the retry
       - name: Checkout
+        id: checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        timeout-minutes: 2
+        continue-on-error: true
         with:
-          fetch-depth: 0
+          fetch-depth: 2147483647
+          filter: blob:none
+
+      - name: Retry checkout
+        if: ${{ steps.checkout.outcome != 'success' }}
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        timeout-minutes: 2
+        with:
+          fetch-depth: 2147483647
+          filter: blob:none
 
       - name: Verify fleet
         uses: ./.github/actions/fly-deploy
