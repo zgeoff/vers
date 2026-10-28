@@ -92,6 +92,25 @@ export const preset = definePreset({
             strong: { value: 'rgba(94, 234, 212, 0.18)' },
             subtle: { value: 'rgba(94, 234, 212, 0.07)' },
           },
+
+          // three.js materials take these as raw hex from a map generated at codegen, so each must
+          // resolve to #rrggbb within this preset; preset-panda's palette is oklch, which three.js
+          // cannot parse
+          scene: {
+            avatarPlaceholder: { value: '{colors.accent.selfDeep}' },
+            biome1: { value: '#4b5a4e' },
+            biome2: { value: '#5a5440' },
+            biome3: { value: '#3f4a57' },
+            biome4: { value: '#54474f' },
+            fogShroud: { value: '#282d38' },
+            ground: { value: '#3d424d' },
+            modifierOverlay: { value: '#c9a86a' },
+            nodeBase: { value: '#cbd5e1' },
+            nodeDimmed: { value: '#475569' },
+            nodeSelected: { value: '{colors.accent.barrier}' },
+            respiteBlock: { value: '{colors.ink.400}' },
+            worldmapEdge: { value: '#64748b' },
+          },
           text: {
             danger: { value: '#fb7185' },
             emphasis: { value: '#cfe9e3' },

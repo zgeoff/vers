@@ -21,4 +21,4 @@ export type { StatusKind } from './components/status-pill/status-pill';
 export { Tabs } from './components/tabs/tabs';
 export { Text } from './components/text/text';
 export type { PolymorphicComponentProps } from './types';
-export { sceneColors } from './scene-colors';
+export { sceneColors } from './scene-colors.generated';

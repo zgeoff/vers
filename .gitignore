@@ -82,6 +82,7 @@ todo.md
 ## Panda — generated output only; libs/design/styled-system is a real package
 apps/web/src/styled-system/
 libs/design/design-system/src/styled-system/
+libs/design/design-system/src/scene-colors.generated.ts
 libs/design/styled-system/styled-system/
 styled-system-studio
 # python (apps/bugsink adapter)

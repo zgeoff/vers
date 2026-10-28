@@ -275,6 +275,7 @@
     "**/infra/sdks/**",
     "**/apps/web/src/styled-system/**",
     "**/libs/design/design-system/src/styled-system/**",
+    "**/libs/design/design-system/src/scene-colors.generated.ts",
     "**/libs/design/styled-system/styled-system/**",
     "**/.ladle/**",
     // kysely-codegen output: generated, so lint has nothing to teach it
