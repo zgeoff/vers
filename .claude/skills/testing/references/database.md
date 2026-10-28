@@ -21,34 +21,43 @@ not a reimplementation. Each test gets a database that no other test can see, an
 
 Each test acquires a handle from the repo's test-database util, holds it in `setupTest()`, and
 injects the handle's connection into the code under test. Code that opens its own connection escapes
-the isolation, so thread the handle's connection through instead. The schema is built once per run,
-from the migrations or from a schema dump, and the util names which. Each worker's clone of the
-template database that holds that schema is named after its process, such as `<template>_<pid>`: the
-util opens the clone when it exists and clones the template when it does not, so an isolated file
-reuses its worker's clone. The sweep at the start of each run drops every clone whose process is
-gone.
+the isolation, so thread the handle's connection through instead. The util builds the schema once
+per run into a template database, from the migrations or from a schema dump, as a
+[per-run template](../SKILL.md#per-run-templates), and the util names which source it uses.
 
-The handle offers three isolation levels:
+Each worker clones the template once with `CREATE DATABASE … TEMPLATE`. The clone is named after its
+process, such as `<template>_<pid>`: the util opens the clone when it exists and clones the template
+when it does not, so an isolated file reuses its worker's clone. The sweep at the start of each run
+drops every clone whose process is gone.
 
-| Level         | Mechanism                                                 | Use it when                                                                                                      |
-| ------------- | --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `transaction` | One transaction per test, rolled back in `onTestFinished` | The default for every suite                                                                                      |
-| `schema`      | A committed copy of the schema per test                   | The code commits during the operation, or carries on after a constraint violation it caught                      |
-| `database`    | A committed copy of the database per test                 | The code uses database-wide state: advisory locks, `LISTEN`/`NOTIFY`, DDL and migration runs, partitioned tables |
+The handle offers two isolation levels:
 
-**Why the opt-outs exist:** a rolled-back transaction cannot nest a second interactive transaction,
+| Level         | Mechanism                                                                  | Use it when                                                                                                                                                                           |
+| ------------- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `transaction` | One transaction per test on the worker's clone, rolled back after the test | The default for every suite                                                                                                                                                           |
+| `clone`       | The test's own clone of the template, dropped when the test finishes       | The code commits, manages its own transactions, carries on after a constraint violation it caught, or uses database-wide state such as advisory locks, `LISTEN`/`NOTIFY`, or DDL runs |
+
+**Why the opt-out exists:** a rolled-back transaction cannot nest a second interactive transaction,
 and one failed statement aborts the whole shared transaction, so every later query in the test
 fails. A suite that opts out of `transaction` carries a comment that names the code that requires
 it, such as `// claimJob commits the claim before it runs the job`.
 
 ## SQLite isolation
 
-A fresh SQLite database per test costs little, so SQLite needs no isolation levels. `setupTest()`
-opens the database and registers its cleanup with `onTestFinished`.
+Each test opens a copy of a migrated template file, because a fresh database pays for every
+migration in every test. The util migrates the template once per run, as a
+[per-run template](../SKILL.md#per-run-templates), and closes it or checkpoints its write-ahead log
+before any test copies it: a copy taken while migrations still sit in the log runs them again.
+`setupTest()` opens the copy and registers its cleanup with `onTestFinished`.
 
-- Open a file inside the test's `mkdtemp` tree when the code opens its own connection by path, or
+- Copy the file into the test's `mkdtemp` tree when the code opens its own connection by path, or
   when the test depends on file behaviour such as a read-only connection or write-ahead logging.
-- Open `:memory:` when the code receives an injected handle.
+- Load the template's bytes into an in-memory database with `Database.deserialize` from `bun:sqlite`
+  when the code receives an injected handle.
+
+The test-database util opens SQLite with `synchronous = off`, because a test never needs its writes
+to survive a power loss and a sync on each commit costs time. A test of what survives a crash keeps
+production's setting and asks for it by name.
 
 ## Booting a service
 
