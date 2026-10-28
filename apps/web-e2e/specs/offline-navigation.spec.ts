@@ -10,8 +10,8 @@ test('it moves between game screens and starts an activity offline, then deliver
   mockActivityURL,
   page,
 }) => {
-  // about 45 s on a local run: under software GL each click waits seconds on the live renderer
-  test.setTimeout(90 * 1000);
+  // about 95 s on a local run: under software GL each click waits seconds on the live renderer
+  test.setTimeout(120 * 1000);
 
   invariant(mockActivityURL !== undefined, 'the mock activity service reports admitted starts');
 
@@ -41,6 +41,10 @@ test('it moves between game screens and starts an activity offline, then deliver
       return snapshot === null ? null : [snapshot.liveRun, snapshot.outbox.activityStarts];
     })
     .toStrictEqual([null, []]);
+
+  await page.getByRole('link', { exact: true, name: 'Avatar' }).click();
+
+  await expect(page.getByRole('heading', { name: 'Offline Play Test Avatar' })).toBeVisible();
 
   await page.getByRole('link', { exact: true, name: 'Respite' }).click();
 
@@ -82,6 +86,10 @@ test('it moves between game screens and starts an activity offline, then deliver
   invariant(offline?.liveRun, 'the worker started the run with the network down');
 
   const activityID = offline.liveRun.activityID;
+
+  await page.getByRole('link', { exact: true, name: 'Avatar' }).click();
+
+  await expect(page.getByRole('heading', { name: 'Offline Play Test Avatar' })).toBeVisible();
 
   await page.getByRole('link', { exact: true, name: 'Respite' }).click();
 

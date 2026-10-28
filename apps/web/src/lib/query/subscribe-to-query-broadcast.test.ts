@@ -1,6 +1,7 @@
 import { expect, onTestFinished, test } from 'bun:test';
 import { QueryClient, QueryObserver } from '@tanstack/react-query';
 import { waitFor } from '@testing-library/react';
+import { LAST_KNOWN_QUERY_KEY_PREFIX } from '../offline/last-known-query-key-prefix';
 import { RSC_QUERY_KEY_PREFIX } from './rsc-query-key-prefix';
 import {
   QUERY_BROADCAST_CHANNEL_NAME,
@@ -48,6 +49,23 @@ test('it leaves an RSC-keyed query out of the broadcast', async () => {
 
   expect(
     ctx.peer.getQueryData<{ source: string }>([RSC_QUERY_KEY_PREFIX, 'node-codex', 1]),
+  ).toBeUndefined();
+});
+
+test('it leaves a last-known query out of the broadcast', async () => {
+  const ctx = setupTest();
+
+  ctx.sender.setQueryData([LAST_KNOWN_QUERY_KEY_PREFIX, 'avatar-content'], { source: 'panel' });
+  ctx.sender.setQueryData(['avatar', 'progression'], { level: 4 });
+
+  await waitFor(() => {
+    expect(ctx.peer.getQueryData<{ level: number }>(['avatar', 'progression'])).toStrictEqual({
+      level: 4,
+    });
+  });
+
+  expect(
+    ctx.peer.getQueryData<{ source: string }>([LAST_KNOWN_QUERY_KEY_PREFIX, 'avatar-content']),
   ).toBeUndefined();
 });
 

@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { AvatarPanel } from '../-avatar/avatar-panel';
 import { getAvatarContent } from '../../lib/avatar/get-avatar-content';
 import { requireActiveAvatarOrLastKnown } from '../../lib/avatar/require-active-avatar-or-last-known';
+import { readWithLastKnown } from '../../lib/offline/read-with-last-known';
 
 export const Route = createFileRoute('/_game/avatar')({
   component: AvatarPage,
@@ -9,7 +10,9 @@ export const Route = createFileRoute('/_game/avatar')({
   loader: async (opts) => {
     await requireActiveAvatarOrLastKnown(opts.context.queryClient);
 
-    const avatarContent = await getAvatarContent();
+    const avatarContent = await readWithLastKnown(opts.context.queryClient, 'avatar-content', () =>
+      getAvatarContent(),
+    );
 
     return { Content: avatarContent.Renderable };
   },

@@ -124,3 +124,19 @@ test('it rethrows a server fault even when a value is known', async () => {
     ),
   ).rejects.toThrowWithMessage(Error, 'session lookup failed');
 });
+
+test('it answers each read with the value the read returned, never an equal earlier one', async () => {
+  const ctx = setupTest();
+
+  await readWithLastKnown(ctx.queryClient, 'avatar-content', () =>
+    Promise.resolve({ Renderable: 'avatar-panel' }),
+  );
+
+  const fresh = { Renderable: 'avatar-panel' };
+
+  const avatarContent = await readWithLastKnown(ctx.queryClient, 'avatar-content', () =>
+    Promise.resolve(fresh),
+  );
+
+  expect(avatarContent).toBe(fresh);
+});

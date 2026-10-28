@@ -147,12 +147,13 @@ retries that 503 in turn. The whole budget stays under the slow-request alarm
 
 A player whose game is loaded keeps moving between game screens with the network down, because each
 route gate in the game falls back to the last value it read. The gates are the game layout's flag
-read, its sign-in check and its QA-hook check, and each screen's active-avatar check. Each gate
-reads through the query cache, and the server-side render seeds the cache, so the first navigation
-after a page load has a value to fall back to. The browser's server-function fetch turns a request
-that got no response into a network failure, and only a network failure takes the fallback. A
-redirect or any other error from a gate propagates, so a signed-out player still lands on sign-in
-once the network returns.
+read, its sign-in check and its QA-hook check, and each screen's active-avatar check. A screen whose
+loader reads server content, such as the avatar panel, the account settings and the avatar roster,
+falls back the same way. Each gate and each content read goes through the query cache, and the
+server-side render seeds the cache, so the first navigation after a page load has a value to fall
+back to. The browser's server-function fetch turns a request that got no response into a network
+failure, and only a network failure takes the fallback. A redirect or any other error from a gate
+propagates, so a signed-out player still lands on sign-in once the network returns.
 
 A gate with no last-known value fails with the network failure. The game route's error component
 then shows an offline notice whose retry reloads the routes, and it shows the root error screen for
