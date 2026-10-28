@@ -1,7 +1,7 @@
 {
   "GHSA-gcqx-w48m-w2h4": {
     "package": "deepmerge",
-    "reason": "The fix is deepmerge 4.1.2, but html-to-text@9.0.5 accepts only ^4.3.1.",
+    "reason": "No patched deepmerge release exists (vulnerable >= 4.2.0, <= 4.3.1); html-to-text@9.0.5 reaches it through @vers/email. Low severity; mergeObject() prototype poisoning.",
     "expires": "2026-11-27"
   }
 }
