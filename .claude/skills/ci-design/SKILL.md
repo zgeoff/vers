@@ -30,6 +30,9 @@ Each line links the section that explains it.
   data the weekly audit reads.
 - [Reusable workflows](#reusable-workflows): share setup as a reusable workflow in zgeoff/tools,
   never as a composite action.
+- [Step scripts](#step-scripts): a `run:` holds one plain command, anything more goes in a
+  TypeScript script under `scripts/<area>/`, and the workflow lint checks the rules a parser can
+  see.
 - [Path gates](#path-gates): a pull-request job runs only when its input paths change, through a
   `changes` job, and every push to main runs it in full.
 - [Cancelling runs](#cancelling-runs): checks cancel when a newer commit arrives; release, deploy
@@ -131,6 +134,63 @@ A shared reusable workflow lives in zgeoff/tools, and a repo calls it as
 `zgeoff/tools/.github/workflows/<name>.yml@<sync tag>`. A repo-local reusable workflow sits in the
 repo's own `.github/workflows/` and is called by its path. Before writing setup steps by hand, check
 whether a tools reusable workflow covers them, and call it.
+
+## Step scripts
+
+A `run:` holds one plain command on one line, such as `run: bun run --silent ci:tag-release`. The
+command holds no `if`, `for`, `while` or `case`, no `&&`, `||`, `;` or pipe, and no `${{ }}`: a
+value from an expression reaches the command through `env:`. Logic in a `run:` block runs only in a
+real run, and a step that runs only on release, on deploy or on failure never runs before it merges.
+Logic in a script runs in the script's tests on every pull request, as the testing skill's
+[workflows reference](../testing/references/workflows.md) describes.
+
+- **A script is TypeScript run by Bun, in `scripts/<area>/`.** It runs each outside command through
+  Bun's `$` shell, and the step calls it through a package script. An existing `.sh` step script
+  stays.
+- **Never put a script under `.github/`.** `bun test` skips the hidden folder, so a script and its
+  test there never run in the repo's test suite.
+- **A reusable workflow in zgeoff/tools downloads its script at the commit that defines the job.**
+  The caller's checkout lacks the script, so the step reads `job.workflow_repository` and
+  `job.workflow_sha` from the job context and downloads the file from that commit. A caller at a
+  sync tag then runs that tag's script.
+
+### The workflow lint
+
+The workflow lint checks the `run:` rule and the rules in this skill that a parser can check
+exactly. The `Lint workflows` step of `bun-checks.yml` runs it after the actionlint step over the
+repo's workflows and the workflow callers that zgeoff/tools delivers. The pre-push baseline runs it
+over the workflow files a branch changes. It reports each fault as a warning and passes, so a repo
+that Renovate moves to a new sync tag keeps a green run while it clears the warnings.
+
+| Rule                                    | The lint warns on                                                                                                     |
+| --------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| [One command per `run:`](#step-scripts) | a `run:` that breaks the rule, where a quoted `;`, `\|` or `&&` is part of a word                                     |
+| [Timeouts](#timeouts)                   | a job without `timeout-minutes`, other than a job that calls a reusable workflow, where GitHub refuses the key        |
+| [Cancelling runs](#cancelling-runs)     | a checks workflow without `cancel-in-progress: true`, or with a group that holds a per-run value such as `github.sha` |
+| [Cancelling runs](#cancelling-runs)     | a release or deploy job without its own group and `cancel-in-progress: false`, or under a workflow-level `true`       |
+| [No rebase churn](#no-rebase-churn)     | a `workflow_run` trigger without a `branches:` filter                                                                 |
+| [Two profiles](#two-profiles)           | a heavy check in a workflow that runs on `pull_request` or `pull_request_target`, unless the run is in a public repo  |
+| [Build once](#build-once)               | an `actions/cache` step in a job that sets up Bun with `oven-sh/setup-bun`                                            |
+
+The lint reads three terms by these definitions:
+
+- **A checks workflow** runs on `pull_request` or `push`. When it holds a release or deploy job,
+  each of its other jobs sets its own group with `cancel-in-progress: true`; otherwise the
+  workflow-level group, or a group on every job, sets it.
+- **A release or deploy job** has `release`, `deploy` or `migrate` in its id or its name, in any
+  case.
+- **A heavy check** is a job whose `runs-on` holds any runner label but a GitHub-hosted Ubuntu
+  label: a macOS, Windows or self-hosted label, or a runner group. A job whose step runs a KVM setup
+  command is heavy too, because it runs on an Ubuntu label. The fleet has no shared KVM setup step,
+  so the lint lists each repo's own command, and a new one needs a change to the lint in
+  zgeoff/tools. The lint reads a step's commands through a fixed set of shell and Bun forms, and a
+  step outside them, such as one that runs a command substitution, counts as no KVM setup. A
+  `runs-on` that holds an expression is never heavy, because GitHub resolves it only when the job
+  runs.
+
+The heavy-check rule binds a private repo alone. In CI the lint reads the run's profile and skips
+the rule in a public repo. The pre-push baseline cannot see the profile, so the hook warns in every
+repo.
 
 ## Path gates
 
