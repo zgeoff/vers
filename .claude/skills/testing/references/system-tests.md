@@ -216,7 +216,7 @@ slow-timeout = { period = "15s", terminate-after = 1 }
 - The default profile is the unit run. Its `slow-timeout` ends a test at the 5 s limit, and its
   `default-filter` leaves out every lane prefix.
 - Each lane has one profile, which inherits from `default`. It sets its own `default-filter` to the
-  lane prefix, and an override sets the lane's limit. The lane's CI step runs
+  lane prefix, and an override sets the lane's limit. The lane's command is
   `cargo nextest run --profile <lane>`.
 - A test over its limit gets its own override, with a comment that gives the measured time and the
   ticket or the floor. It goes before the lane's override, because nextest applies the first

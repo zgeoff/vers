@@ -2,12 +2,14 @@
 
 These rules cover cleanup past the common case in the [testing skill](../SKILL.md#cleanup): helpers
 that register cleanup for their callers, resources that must close in order, cleanup that runs after
-the preload's resets, and finding the gap when a test fails only in the full run.
+the preload's resets, finding the gap when a test fails only in the full run, and what a killed run
+leaves behind.
 
 - [Helpers that register cleanup](#helpers-that-register-cleanup)
 - [Ordered cleanup](#ordered-cleanup)
 - [Cleanup after the resets](#cleanup-after-the-resets)
 - [A test that fails only in the full run](#a-test-that-fails-only-in-the-full-run)
+- [Leftovers of a killed run](#leftovers-of-a-killed-run)
 
 ## Helpers that register cleanup
 
@@ -86,3 +88,19 @@ A test that passes alone and fails beside others has found a cleanup gap. Find i
 4. Add that state's reset to the preload.
 
 Reordering the tests or choosing unique keys hides the gap and leaves it for the next test to find.
+
+## Leftovers of a killed run
+
+A run that a timeout, an out-of-memory kill, or an interrupt stops runs no `onTestFinished`, so the
+processes, temp folders, test homes, and database clones it acquired stay behind. On a host where
+`/tmp` or the database's data sits on tmpfs, each leftover holds RAM.
+
+- A test that starts a process starts it as the leader of its own process group, with
+  `detached: true` in `Bun.spawn`, and stops the whole group with `process.kill(-pid, signal)`. A
+  grandchild, such as a server that the process forks, then stops with it.
+- The repo's test script or preload sweeps at the start of each run. The sweep removes what earlier
+  runs left and no live process owns: per-run folders, stale test homes, clones whose process is
+  gone, and templates of old hashes. It never removes the
+  [current template](../SKILL.md#per-run-templates) or a resource of a run that is still going, and
+  a test names what it never touches, as the testing skill's [Assertions](../SKILL.md#assertions)
+  section describes.
