@@ -1,0 +1,7 @@
+{
+  "GHSA-gcqx-w48m-w2h4": {
+    "package": "deepmerge",
+    "reason": "No patched deepmerge release exists (vulnerable >= 4.2.0, <= 4.3.1); html-to-text@9.0.5 reaches it through @vers/email. Low severity; mergeObject() prototype poisoning.",
+    "expires": "2026-11-27"
+  }
+}
