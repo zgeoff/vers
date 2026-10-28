@@ -16,10 +16,27 @@ jobs:
       contents: read
       pull-requests: write
     steps:
+      # The scan reads the pull request's commits, which the merge commit's history holds. A
+      # positive fetch-depth fetches only the merge commit and its history, where 0 fetches every
+      # branch and tag; 2147483647 is git's infinite depth, so the clone is not shallow. blob:none
+      # fetches a file's contents only when git first reads them. A fetch that stalls fails the step
+      # at its timeout, and the retry fetches again with time left in the job.
       - name: Checkout
+        id: checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        timeout-minutes: 2
+        continue-on-error: true
         with:
-          fetch-depth: 0
+          fetch-depth: 2147483647
+          filter: blob:none
+
+      - name: Retry checkout
+        if: ${{ steps.checkout.outcome != 'success' }}
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        timeout-minutes: 2
+        with:
+          fetch-depth: 2147483647
+          filter: blob:none
 
       - name: Gitleaks
         uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
@@ -35,14 +52,29 @@ jobs:
     # run, not burn runner hours
     timeout-minutes: 10
     env:
-      TURBO_SCM_BASE: main
+      # the merge commit's first parent is the base branch's tip it merges into
+      TURBO_SCM_BASE: HEAD^1
       # CI never commits, but skip hook install/execution regardless
       LEFTHOOK: 0
     steps:
+      # the affected-packages runs and the content digest diff the merge commit against its base
+      # parent, HEAD^1: see the gitleaks job's Checkout for the depth, the filter and the retry
       - name: Checkout
+        id: checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        timeout-minutes: 2
+        continue-on-error: true
         with:
-          fetch-depth: 0
+          fetch-depth: 2147483647
+          filter: blob:none
+
+      - name: Retry checkout
+        if: ${{ steps.checkout.outcome != 'success' }}
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        timeout-minutes: 2
+        with:
+          fetch-depth: 2147483647
+          filter: blob:none
 
       - name: Setup Node
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
@@ -71,9 +103,6 @@ jobs:
 
       - name: Dependency gates
         run: bun run deps:check
-
-      - name: Track main branch
-        run: git branch --track main origin/main
 
       - name: Setup Turbo cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -106,7 +135,7 @@ jobs:
       # content version, because a retained activity mints through the interpreter its version pins;
       # the base ref's recorded digests stay as they were
       - name: Check Content Digest
-        run: bun run content:check-digest --base main
+        run: bun run content:check-digest --base HEAD^1
 
       - name: Generate Types
         run: bun run codegen:types
@@ -155,10 +184,9 @@ jobs:
       contents: read
       pull-requests: write
     steps:
+      # the size action fetches and checks out the base branch itself, so the job reads no history
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0
 
       - name: Setup Node
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
@@ -203,14 +231,29 @@ jobs:
     # burn runner hours
     timeout-minutes: 10
     env:
-      TURBO_SCM_BASE: main
+      # the merge commit's first parent is the base branch's tip it merges into
+      TURBO_SCM_BASE: HEAD^1
       # CI never commits, but skip hook install/execution regardless
       LEFTHOOK: 0
     steps:
+      # the affected-packages run diffs the merge commit against its base parent, HEAD^1: see the
+      # gitleaks job's Checkout for the depth, the filter and the retry
       - name: Checkout
+        id: checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        timeout-minutes: 2
+        continue-on-error: true
         with:
-          fetch-depth: 0
+          fetch-depth: 2147483647
+          filter: blob:none
+
+      - name: Retry checkout
+        if: ${{ steps.checkout.outcome != 'success' }}
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        timeout-minutes: 2
+        with:
+          fetch-depth: 2147483647
+          filter: blob:none
 
       - name: Setup Dotenv
         env:
@@ -232,9 +275,6 @@ jobs:
 
       - name: Install Dependencies
         run: bun install --frozen-lockfile
-
-      - name: Track main branch
-        run: git branch --track main origin/main
 
       # scoped key so this job's saved cache never collides with the checks job's;
       # the prefix restore matches either job's most recent save
