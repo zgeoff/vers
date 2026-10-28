@@ -1,4 +1,9 @@
 {
   "extends": ["//"],
-  "tags": ["lib"]
+  "tags": ["lib"],
+  "tasks": {
+    "codegen": {
+      "outputs": ["src/styled-system/**", "src/scene-colors.generated.ts"]
+    }
+  }
 }

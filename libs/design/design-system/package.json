@@ -7,7 +7,7 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "codegen": "panda cssgen",
+    "codegen": "panda cssgen && bun src/bin/write-scene-colors.ts",
     "dev": "ladle serve",
     "test": "bun test --randomize",
     "typecheck": "tsc -p tsconfig.json --noEmit"
