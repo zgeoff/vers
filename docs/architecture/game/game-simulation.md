@@ -95,7 +95,9 @@ of proof, because an item mints only for a proved segment.
 The client predicts the snapshot as the previous activity's start snapshot plus that activity's own
 XP, and the server folds the same rule from its own rows. A worker with no record of the previous
 activity, on a fresh device or after the server closed it, mints from the snapshot the server
-returns beside the avatar's latest activity.
+returns beside the avatar's latest activity. When the server holds no activity for the avatar, as
+after an account reset, a refused start clears any record of a previous activity that the outbox
+does not hold, so the next start folds from no previous activity.
 
 ## What replay pins
 
