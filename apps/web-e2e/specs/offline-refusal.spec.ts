@@ -28,6 +28,21 @@ test('it saves a run started with the network down at a node whose last run the 
 
   await revealed;
 
+  // a start folds its build from the avatar's last run, so the player plays and ends one run
+  // online first, as a returning player has
+  await navigateClientRoute(page, '/explore/node/0_0');
+
+  await page.getByRole('link', { name: 'Click to start' }).click();
+  await page.getByRole('button', { name: 'END RUN' }).click();
+
+  await expect
+    .poll(async () => {
+      const snapshot = await readWorkerSnapshot(page);
+
+      return snapshot === null ? null : [snapshot.liveRun, snapshot.outbox.activityStarts];
+    })
+    .toStrictEqual([null, []]);
+
   await page.context().setOffline(true);
 
   const firstOutage = await createSharedWorkerOutage(browser);
