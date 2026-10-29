@@ -19,6 +19,7 @@ import { writeStartStamps } from '../submission/write-start-stamps';
 import { createStubSubmitter } from '../test-utils/create-stub-submitter';
 import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
 import { createMockNodeSeed } from '../test-utils/factories/create-mock-node-seed';
+import { createMockProgressCheckpoint } from '../test-utils/factories/create-mock-progress-checkpoint';
 import { WorkerMessageType } from '../types';
 import { handleStartActivityMessage } from './handle-start-activity-message';
 import { sentryHandle } from './sentry-handle';
@@ -148,6 +149,73 @@ test('it stops the live run and starts the new one when the request names a diff
   expect(submitter.flushNow).toHaveBeenCalledExactlyOnceWith(previous.id);
   expect(context.getActivity()?.id).toBe(result.activity.id);
   expect(context.getSimulation().activity?.id).toBe(result.activity.id);
+});
+
+test('it mints the new run on a build that holds everything the stopped run earned before it halted', async () => {
+  const submitter = createStubSubmitter();
+  const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_3', submitter });
+
+  context.registerReconstruction('avatar_switch_build');
+
+  const simulation = createSimulation();
+
+  const previous = createMockActivityData({
+    avatarID: 'avatar_switch_build',
+    id: 'act_previous_build',
+    scopeID: '5_0',
+    scopeType: 'world_map_node',
+  });
+
+  simulation.startActivity(createMockAvatarData(), createMockActivityInput({ id: previous.id }));
+  context.setSimulation(simulation);
+  context.setActivity(previous);
+
+  context.setLatestRun({
+    activityID: previous.id,
+    avatarID: 'avatar_switch_build',
+    baselineXP: 100,
+    deltaXP: 10,
+    tail: createMockProgressCheckpoint({ rewards: { xp: 10 } }),
+  });
+
+  // the stopped run's last tick lands between the mint's reads and the halt
+  submitter.flushNow = mock(() => {
+    context.setLatestRun({
+      activityID: previous.id,
+      avatarID: 'avatar_switch_build',
+      baselineXP: 100,
+      deltaXP: 40,
+      tail: createMockProgressCheckpoint({ rewards: { xp: 30 } }),
+    });
+
+    return Promise.resolve();
+  });
+
+  const seed = createMockNodeSeed({
+    avatarID: 'avatar_switch_build',
+    encounterNode: { difficulty: 1 },
+    nodeID: '0_0',
+  });
+
+  await writeNodeSeeds(seed.avatarID, [seed]);
+  await writeStartStamps({ keyVersion: 1, secretRef: 'worldmap', secretVersion: 1 });
+
+  await writeContentDocumentCache(
+    createMockContentDocument({ contentVersion: seed.contentVersion }),
+  );
+
+  const result = await handleStartActivityMessage(context, {
+    avatarID: 'avatar_switch_build',
+    scopeID: '0_0',
+    scopeType: 'world_map_node',
+  });
+
+  invariant(result.kind === 'started', 'expected a started status');
+
+  const persisted = await readActivityStart(result.activity.id);
+
+  expect(result.activity.buildSnapshot.xp).toBe(140);
+  expect(persisted?.buildSnapshot.xp).toBe(140);
 });
 
 test('it leaves the live run intact when a different-scope switch cannot mint the new scope', async () => {

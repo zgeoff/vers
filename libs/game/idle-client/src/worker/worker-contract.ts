@@ -23,6 +23,7 @@ const rewardSlotLedgerSnapshotSchema = z
 const initializeOutputSchema = z
   .object({
     liveRun: liveRunSchema.exactOptional(),
+    resyncSettledAvatarIDs: z.array(z.string()).readonly(),
     rewardSlotLedger: rewardSlotLedgerSnapshotSchema,
     simulationSpeed: z.int().min(1),
     state: simulationSnapshotSchema,

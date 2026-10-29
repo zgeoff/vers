@@ -4,6 +4,8 @@ import { findLiveActivityAvatar } from '../avatar/find-live-activity-avatar';
 import { upsertActiveAvatar } from '../avatar/upsert-active-avatar';
 import * as db from '../db';
 import { os } from './os';
+import { readAppendedAnchor } from './read-appended-anchor';
+import { readOptimisticBuild } from './read-optimistic-build';
 
 export const advanceActivity = os.advanceActivity.handler(async (opts) => {
   const actingUserID = opts.context.actingUserID;
@@ -131,8 +133,29 @@ interface EmptyErrorPayload {
   readonly data: Record<string, never>;
 }
 
+interface AdmitActivityStartBuildMismatchPayload {
+  readonly data: {
+    readonly activityID: string;
+    readonly appendedHead: number;
+    readonly avatarID: string;
+    readonly reason: 'build-snapshot-mismatch';
+  };
+}
+
+interface AdmitActivityStartStaleChainHeadPayload {
+  readonly data: {
+    readonly activityID: string;
+    readonly anchor: { readonly chainIndex: number; readonly nextSeed: string };
+    readonly appendedHead: number;
+    readonly avatarID: string;
+    readonly reason: 'stale-chain-head';
+  };
+}
+
 interface AdmitActivityStartErrors {
   readonly AVATAR_NOT_ACTIVE: (payload: AdmitActivityStartAvatarNotActivePayload) => Error;
+  readonly CHECKPOINT_INVALID: (payload: AdmitActivityStartBuildMismatchPayload) => Error;
+  readonly CONFLICT: (payload: AdmitActivityStartStaleChainHeadPayload) => Error;
   readonly NOT_FOUND: (payload: EmptyErrorPayload) => Error;
 }
 
@@ -177,6 +200,45 @@ async function admitActivityStartRow(
 
     throw opts.errors.AVATAR_NOT_ACTIVE({
       data: { activeAvatarID: activeAvatar.id, activeAvatarName: activeAvatar.name },
+    });
+  }
+
+  // the same two checks, in the same order, as the real service's admission: a start must sit on
+  // the node's appended anchor exactly, and carry the avatar's optimistic build
+  const appended = readAppendedAnchor({
+    avatarID: activityStart.avatarID,
+    scopeID: activityStart.scopeID,
+    scopeType: activityStart.scopeType,
+  });
+
+  if (
+    activityStart.startChainIndex !== appended.anchor.chainIndex ||
+    activityStart.seed !== appended.anchor.nextSeed
+  ) {
+    throw opts.errors.CONFLICT({
+      data: {
+        activityID,
+        anchor: appended.anchor,
+        appendedHead: 0,
+        avatarID: activityStart.avatarID,
+        reason: 'stale-chain-head',
+      },
+    });
+  }
+
+  const build = readOptimisticBuild({ avatarID: avatar.id, settledXP: avatar.xp });
+
+  if (
+    build.level !== activityStart.buildSnapshot.level ||
+    build.xp !== activityStart.buildSnapshot.xp
+  ) {
+    throw opts.errors.CHECKPOINT_INVALID({
+      data: {
+        activityID,
+        appendedHead: 0,
+        avatarID: activityStart.avatarID,
+        reason: 'build-snapshot-mismatch',
+      },
     });
   }
 

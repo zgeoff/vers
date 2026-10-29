@@ -79,6 +79,8 @@ export interface WorkerContext {
 
   readonly getWriterDisplacedActivityID: () => null | string;
 
+  readonly collectResyncSettledAvatarIDs: () => ReadonlyArray<string>;
+
   readonly hasReconstructed: (avatarID: string) => boolean;
 
   readonly isFailureActionDirty: () => boolean;
@@ -88,6 +90,8 @@ export interface WorkerContext {
   readonly recordRewardSlots: (activityID: string, entry: RewardSlotLedgerEntry) => void;
 
   readonly registerReconstruction: (avatarID: string) => void;
+
+  readonly registerResyncSettled: (avatarID: string) => void;
 
   readonly resetRewardSlotLedger: () => void;
   readonly setActivity: (activity: ActivityData | null) => void;

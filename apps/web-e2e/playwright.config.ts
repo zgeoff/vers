@@ -7,7 +7,7 @@ const CROSS_ENGINE_CORPUS_SPEC = /cross-engine-corpus\.spec\.ts/u;
 // only the live world map reveals nodes and caches their start inputs, so a spec that starts an
 // activity at a node runs against an artifact with the renderer on, built with
 // VITE_SIM_ENGINE_HASH set, as CI's e2e step sets it
-const RENDERER_SPEC = /offline-(?:engagement|navigation)\.spec\.ts/u;
+const RENDERER_SPEC = /offline-(?:engagement|navigation|reload|opening|stop|build)\.spec\.ts/u;
 const RENDERER_BASE_URL = process.env['RENDERER_BASE_URL'] ?? 'http://localhost:3100';
 
 const environment = loadE2EEnvironment({

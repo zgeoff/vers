@@ -3,13 +3,17 @@ import { createMockActivityData } from '@vers/contract-activity/test-utils';
 import { createMockEncounterContent } from '@vers/game-utils/test-utils';
 import {
   ActivityCheckpointType,
+  ActivityFailureAction,
   buildLevelFromXP,
   buildSimulationInput,
   runAttempt,
 } from '@vers/idle-core';
 import { createAuthedServiceClient, createViewer } from '@vers/mock-services';
+import { mockActivityService } from '@vers/mock-services/activity';
 import * as db from '@vers/mock-services/db';
+import { HttpResponse } from 'msw';
 import invariant from 'tiny-invariant';
+import { server } from '../mocks/node';
 import { readLastStartedActivity } from '../submission/read-last-started-activity';
 import type { ActivityServiceClient } from '../submission/types';
 import { writeActivityStart } from '../submission/write-activity-start';
@@ -45,6 +49,58 @@ test('it resets a held run belonging to another avatar before installing', async
 
   expect(context.getActivity()).toBeNull();
   expect(context.getSimulation()).not.toBe(before);
+});
+
+test('it reports the avatar settled once its resync completes', async () => {
+  const viewer = await createViewer();
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
+
+  const context = createStubWorkerContext({ client });
+
+  const signals: FlowSignals = {
+    cancel: context.getCancelSignal(),
+    stop: context.getStopSignal(),
+  };
+
+  await runResyncFlow(context, viewer.avatar.id, false, signals);
+
+  expect(context.collectResyncSettledAvatarIDs()).toStrictEqual([viewer.avatar.id]);
+
+  expect(context.getBroadcasts().at(-1)).toStrictEqual({
+    avatarID: viewer.avatar.id,
+    state: { failureAction: ActivityFailureAction.Abort },
+    type: WorkerMessageType.ResyncSettled,
+  });
+});
+
+test('it reports the avatar settled after a resync the network failed', async () => {
+  server.use(mockActivityService.getLatestActivityProgress.handler(() => HttpResponse.error()));
+
+  const viewer = await createViewer();
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
+
+  const context = createStubWorkerContext({ client });
+
+  const signals: FlowSignals = {
+    cancel: context.getCancelSignal(),
+    stop: context.getStopSignal(),
+  };
+
+  await runResyncFlow(context, viewer.avatar.id, false, signals);
+
+  expect(context.collectResyncSettledAvatarIDs()).toStrictEqual([viewer.avatar.id]);
+
+  expect(context.getBroadcasts().slice(-2)).toStrictEqual([
+    {
+      status: { avatarID: viewer.avatar.id, kind: 'unreconstructed' },
+      type: WorkerMessageType.ResyncStatus,
+    },
+    {
+      avatarID: viewer.avatar.id,
+      state: { failureAction: ActivityFailureAction.Abort },
+      type: WorkerMessageType.ResyncSettled,
+    },
+  ]);
 });
 
 test('it returns the simulation to real time when the resync is for a different avatar', async () => {
@@ -119,7 +175,7 @@ test('it leaves the avatar idle with no live attach after an offline gap aborts 
 
   await runResyncFlow(context, viewer.avatar.id, false, signals);
 
-  expect(context.getBroadcasts().at(-1)).toStrictEqual({
+  expect(context.getBroadcasts().at(-2)).toStrictEqual({
     status: { attempts: 1, kind: 'done', levelUps: 0 },
     type: WorkerMessageType.ResyncStatus,
   });
@@ -172,7 +228,14 @@ test('it attaches nothing on a second resync after an offline gap aborted on a f
   // a connectivity-proof resync that finds no active row plans nothing to attach and broadcasts
   // no further progression — the mint the aborted gap left behind must never resurface a
   // post-death attempt on this or any later reconnect
-  expect(context.getBroadcasts()).toHaveLength(broadcastsAfterFirstResync);
+  expect(context.getBroadcasts().slice(broadcastsAfterFirstResync)).toStrictEqual([
+    {
+      avatarID: viewer.avatar.id,
+      state: { failureAction: ActivityFailureAction.Abort },
+      type: WorkerMessageType.ResyncSettled,
+    },
+  ]);
+
   expect(context.getActivity()).toBeNull();
   expect(context.getSimulation().activity).toBeNull();
   expect(submitter.registerActivity).not.toHaveBeenCalled();

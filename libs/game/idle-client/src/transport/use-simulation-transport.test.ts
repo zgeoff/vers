@@ -14,6 +14,7 @@ import type {
   ActivityStartIngestedMessage,
   CheckpointStreamInvalidMessage,
   JournalFailureMessage,
+  ResyncSettledMessage,
   ResyncStatusMessage,
   RewardSlotsRecordedMessage,
   SaveStatusMessage,
@@ -211,6 +212,48 @@ test('it updates simulation state from a broadcast', async () => {
   });
 
   expect(useIdleStore.getState().failureAction).toBe(ActivityFailureAction.Retry);
+
+  hook.unmount();
+});
+
+test('it records the run a settled resync installed before it marks the resync settled', async () => {
+  const ctx = setupTest();
+  const hook = renderHook(() => useSimulationTransport());
+
+  hook.rerender();
+
+  invariant(hook.result.current, 'client not created');
+
+  const activity = createMockActivitySnapshot({ id: 'act_settled_install' });
+  const activityIDsWhenSettled: Array<string | undefined> = [];
+
+  const unsubscribe = useIdleStore.subscribe((state) => {
+    if (state.resyncSettledAvatarIDs.includes('avatar_settled')) {
+      activityIDsWhenSettled.push(state.activity?.id);
+    }
+  });
+
+  onTestFinished(unsubscribe);
+
+  const message: ResyncSettledMessage = {
+    avatarID: 'avatar_settled',
+    liveRun: {
+      avatarID: 'avatar_settled',
+      id: 'act_settled_install',
+      scopeID: '0_0',
+      scopeType: 'world_map_node',
+    },
+    state: { activity, failureAction: ActivityFailureAction.Abort },
+    type: WorkerMessageType.ResyncSettled,
+  };
+
+  ctx.emitWorkerMessage(message);
+
+  await waitFor(() => {
+    expect(useIdleStore.getState().resyncSettledAvatarIDs).toStrictEqual(['avatar_settled']);
+  });
+
+  expect(activityIDsWhenSettled.at(0)).toBe('act_settled_install');
 
   hook.unmount();
 });

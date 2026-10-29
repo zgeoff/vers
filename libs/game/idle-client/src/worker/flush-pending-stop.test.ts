@@ -5,11 +5,15 @@ import * as db from '@vers/mock-services/db';
 import { HttpResponse } from 'msw';
 import invariant from 'tiny-invariant';
 import { server } from '../mocks/node';
+import { createCheckpointSubmitter } from '../submission/create-checkpoint-submitter';
 import { readPendingStopIntent } from '../submission/read-pending-stop-intent';
+import { readQueuedCheckpoints } from '../submission/read-queued-checkpoints';
 import type { ActivityServiceClient } from '../submission/types';
 import { writePendingStopIntent } from '../submission/write-pending-stop-intent';
+import { writeQueuedCheckpoint } from '../submission/write-queued-checkpoint';
 import { createStubSubmitter } from '../test-utils/create-stub-submitter';
 import { createStubWorkerContext } from '../test-utils/create-stub-worker-context';
+import { createMockCheckpointBatchEntry } from '../test-utils/factories/create-mock-checkpoint-batch-entry';
 import { flushPendingStop } from './flush-pending-stop';
 
 test('it reports none when no stop is held', async () => {
@@ -51,6 +55,79 @@ test('it flushes the queue, stops the row, and releases the intent', async () =>
   const intent = await readPendingStopIntent();
 
   expect(intent).toBeUndefined();
+});
+
+test('it delivers the queue a worker before a reload left for the stopped row before it stops the row', async () => {
+  const viewer = await createViewer();
+
+  const activity = await db.activityCollection.create({
+    appendedHead: 0,
+    avatarID: viewer.avatar.id,
+    status: 'active',
+  });
+
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
+
+  const submitter = createCheckpointSubmitter({ client, onInvalid: () => {} });
+  const context = createStubWorkerContext({ client, submitter });
+
+  await writeQueuedCheckpoint(
+    activity.id,
+    createMockCheckpointBatchEntry({ hash: 'hash_1', prevHash: activity.lastHash, version: 1 }),
+  );
+
+  await writeQueuedCheckpoint(
+    activity.id,
+    createMockCheckpointBatchEntry({ hash: 'hash_2', prevHash: 'hash_1', version: 2 }),
+  );
+
+  await writePendingStopIntent({ activityID: activity.id, avatarID: viewer.avatar.id });
+
+  const outcome = await flushPendingStop(context);
+
+  const row = db.activityCollection.findFirst((query) => query.where({ id: activity.id }));
+
+  const remaining = await readQueuedCheckpoints(activity.id);
+
+  invariant(row !== undefined, 'expected the stopped row to survive');
+
+  expect(outcome).toBe('delivered');
+  expect(row.appendedHead).toBe(2);
+  expect(row.status).toBe('stopped');
+  expect(remaining).toStrictEqual([]);
+});
+
+test('it keeps the row open, the intent, and the queue when the queue a reload left cannot be delivered', async () => {
+  server.use(mockActivityService.trackActivityProgress.handler(() => HttpResponse.error()));
+
+  const viewer = await createViewer();
+
+  const activity = await db.activityCollection.create({
+    appendedHead: 0,
+    avatarID: viewer.avatar.id,
+    status: 'active',
+  });
+
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
+
+  const submitter = createCheckpointSubmitter({ client, onInvalid: () => {} });
+  const context = createStubWorkerContext({ client, submitter });
+  const queued = createMockCheckpointBatchEntry({ prevHash: activity.lastHash, version: 1 });
+
+  await writeQueuedCheckpoint(activity.id, queued);
+  await writePendingStopIntent({ activityID: activity.id, avatarID: viewer.avatar.id });
+
+  const outcome = await flushPendingStop(context);
+
+  const row = db.activityCollection.findFirst((query) => query.where({ id: activity.id }));
+
+  const intent = await readPendingStopIntent();
+  const remaining = await readQueuedCheckpoints(activity.id);
+
+  expect(outcome).toBe('undelivered');
+  expect(row?.status).toBe('active');
+  expect(intent).toStrictEqual({ activityID: activity.id, avatarID: viewer.avatar.id });
+  expect(remaining).toStrictEqual([{ ...queued, activityID: activity.id }]);
 });
 
 test('it treats a missing row as delivered and releases the intent', async () => {

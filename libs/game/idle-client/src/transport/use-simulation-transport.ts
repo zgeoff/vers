@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { match } from 'ts-pattern';
+import { addResyncSettledAvatarID } from '../state/add-resync-settled-avatar-id';
 import { advanceWriterGeneration } from '../state/advance-writer-generation';
 import { setCheckpointStreamError } from '../state/set-checkpoint-stream-error';
 import { setFailureAction } from '../state/set-failure-action';
@@ -113,6 +114,12 @@ function handleWorkerMessage(message: WorkerMessage) {
         halted: received.halted,
         remainingMs: received.remainingMs,
       });
+    })
+    .with({ type: WorkerMessageType.ResyncSettled }, (received) => {
+      // the run the resync installed lands before the settled mark, so no render sees a settled
+      // resync without it
+      setSimulationSnapshot(received.state, received.liveRun);
+      addResyncSettledAvatarID(received.avatarID);
     })
     .with({ type: WorkerMessageType.ResyncStatus }, (received) => {
       setResyncStatus(received.status);

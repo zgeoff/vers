@@ -7,7 +7,7 @@ import {
 import { ActivityFailureAction, buildLevelFromXP, createSimulation } from '@vers/idle-core';
 import { createMockActivityInput, createMockAvatarData } from '@vers/idle-core/test-utils';
 import { createAuthedServiceClient, createViewer } from '@vers/mock-services';
-import { mockActivityService } from '@vers/mock-services/activity';
+import { mockActivityService, readAppendedAnchor } from '@vers/mock-services/activity';
 import * as db from '@vers/mock-services/db';
 import { buildSessionSupersededResponse } from '@vers/service-utils/orpc';
 import { waitFor } from '@vers/test-utils';
@@ -60,9 +60,17 @@ function setupTest() {
       },
     }),
     setupStartableNode: async (avatarID: string): Promise<void> => {
+      // the node's genesis as the activity service derives it, so a start minted here is admitted
+      const appended = readAppendedAnchor({
+        avatarID,
+        scopeID: '0_0',
+        scopeType: 'world_map_node',
+      });
+
       const seed = createMockNodeSeed({
         avatarID,
         encounterNode: { difficulty: 1 },
+        genesisSeed: appended.genesisSeed,
         nodeID: '0_0',
       });
 
@@ -874,7 +882,7 @@ test('it drops a non-claiming resync while one is queued', async () => {
   releaseBlocking?.();
 
   await Promise.all([blocking, first]);
-  await connection.waitForMessages(1);
+  await connection.waitForMessages(2);
 
   // only the accepted call's own status ever broadcasts — the dropped call never reached the
   // progress fetch that would have broadcast one under its own avatar
@@ -882,6 +890,11 @@ test('it drops a non-claiming resync while one is queued', async () => {
     {
       status: { avatarID: 'avatar_a', kind: 'session-expired' },
       type: WorkerMessageType.ResyncStatus,
+    },
+    {
+      avatarID: 'avatar_a',
+      state: { failureAction: ActivityFailureAction.Abort },
+      type: WorkerMessageType.ResyncSettled,
     },
   ]);
 });
@@ -920,12 +933,17 @@ test('it drops a non-claiming resync while one is running', async () => {
 
   await running;
 
-  await connection.waitForMessages(1);
+  await connection.waitForMessages(2);
 
   expect(connection.received).toStrictEqual([
     {
       status: { avatarID: 'avatar_a', kind: 'session-expired' },
       type: WorkerMessageType.ResyncStatus,
+    },
+    {
+      avatarID: 'avatar_a',
+      state: { failureAction: ActivityFailureAction.Abort },
+      type: WorkerMessageType.ResyncSettled,
     },
   ]);
 });
@@ -979,7 +997,7 @@ test('it holds a claiming resync and runs it after the in-flight one settles', a
 
   await first;
 
-  await connection.waitForMessages(2);
+  await connection.waitForMessages(4);
 
   expect(connection.received).toStrictEqual([
     {
@@ -987,8 +1005,18 @@ test('it holds a claiming resync and runs it after the in-flight one settles', a
       type: WorkerMessageType.ResyncStatus,
     },
     {
+      avatarID: 'avatar_a',
+      state: { failureAction: ActivityFailureAction.Abort },
+      type: WorkerMessageType.ResyncSettled,
+    },
+    {
       status: { avatarID: 'avatar_b', kind: 'session-expired' },
       type: WorkerMessageType.ResyncStatus,
+    },
+    {
+      avatarID: 'avatar_b',
+      state: { failureAction: ActivityFailureAction.Abort },
+      type: WorkerMessageType.ResyncSettled,
     },
   ]);
 });
@@ -1029,7 +1057,7 @@ test('it keeps only the latest claiming avatar when two arrive', async () => {
 
   await first;
 
-  await connection.waitForMessages(2);
+  await connection.waitForMessages(4);
 
   // avatar_b's held claim was superseded by avatar_c's before either ran — only the first call
   // and the latest claim ever reach a resync status
@@ -1039,8 +1067,18 @@ test('it keeps only the latest claiming avatar when two arrive', async () => {
       type: WorkerMessageType.ResyncStatus,
     },
     {
+      avatarID: 'avatar_a',
+      state: { failureAction: ActivityFailureAction.Abort },
+      type: WorkerMessageType.ResyncSettled,
+    },
+    {
       status: { avatarID: 'avatar_c', kind: 'session-expired' },
       type: WorkerMessageType.ResyncStatus,
+    },
+    {
+      avatarID: 'avatar_c',
+      state: { failureAction: ActivityFailureAction.Abort },
+      type: WorkerMessageType.ResyncSettled,
     },
   ]);
 });
@@ -1086,8 +1124,9 @@ test('it settles the first caller only after the held follow-up runs', async () 
 
   await runResyncTurn(context, 'avatar_b', true);
 
-  // both runs broadcast their status before their flow settles, so the count observed the moment
-  // the first caller resolves proves the held follow-up had already run by then
+  // both runs broadcast their status and their settled notice before their flow settles, so the
+  // count observed the moment the first caller resolves proves the held follow-up had already run
+  // by then
   const receivedCountAtFirstSettle = (async () => {
     await first;
 
@@ -1099,7 +1138,7 @@ test('it settles the first caller only after the held follow-up runs', async () 
 
   const observedCount = await receivedCountAtFirstSettle;
 
-  expect(observedCount).toBe(2);
+  expect(observedCount).toBe(4);
 });
 
 test('it captures a requeued claim signals at requeue rather than at its arrival', async () => {
@@ -1202,7 +1241,7 @@ test('it accepts a later resync after a resync flow faults', async () => {
   await runResyncTurn(context, 'avatar_a', false);
   await runResyncTurn(context, 'avatar_b', false);
 
-  await connection.waitForMessages(2);
+  await connection.waitForMessages(4);
 
   expect(connection.received).toStrictEqual([
     {
@@ -1210,8 +1249,18 @@ test('it accepts a later resync after a resync flow faults', async () => {
       type: WorkerMessageType.ResyncStatus,
     },
     {
+      avatarID: 'avatar_a',
+      state: { failureAction: ActivityFailureAction.Abort },
+      type: WorkerMessageType.ResyncSettled,
+    },
+    {
       status: { avatarID: 'avatar_b', kind: 'session-expired' },
       type: WorkerMessageType.ResyncStatus,
+    },
+    {
+      avatarID: 'avatar_b',
+      state: { failureAction: ActivityFailureAction.Abort },
+      type: WorkerMessageType.ResyncSettled,
     },
   ]);
 });
@@ -1448,7 +1497,7 @@ test('it drops a non-claiming resync arriving while a requeued claim is running'
 
   await first;
 
-  await connection.waitForMessages(2);
+  await connection.waitForMessages(4);
 
   // avatar_c never reaches a resync status — dropped rather than queued behind avatar_b's
   // requeued run
@@ -1458,8 +1507,18 @@ test('it drops a non-claiming resync arriving while a requeued claim is running'
       type: WorkerMessageType.ResyncStatus,
     },
     {
+      avatarID: 'avatar_a',
+      state: { failureAction: ActivityFailureAction.Abort },
+      type: WorkerMessageType.ResyncSettled,
+    },
+    {
       status: { avatarID: 'avatar_b', kind: 'session-expired' },
       type: WorkerMessageType.ResyncStatus,
+    },
+    {
+      avatarID: 'avatar_b',
+      state: { failureAction: ActivityFailureAction.Abort },
+      type: WorkerMessageType.ResyncSettled,
     },
   ]);
 });
@@ -1523,7 +1582,7 @@ test('it holds a claiming resync arriving while a requeued claim is running', as
 
   await first;
 
-  await connection.waitForMessages(3);
+  await connection.waitForMessages(6);
 
   expect(connection.received).toStrictEqual([
     {
@@ -1531,12 +1590,27 @@ test('it holds a claiming resync arriving while a requeued claim is running', as
       type: WorkerMessageType.ResyncStatus,
     },
     {
+      avatarID: 'avatar_a',
+      state: { failureAction: ActivityFailureAction.Abort },
+      type: WorkerMessageType.ResyncSettled,
+    },
+    {
       status: { avatarID: 'avatar_b', kind: 'session-expired' },
       type: WorkerMessageType.ResyncStatus,
     },
     {
+      avatarID: 'avatar_b',
+      state: { failureAction: ActivityFailureAction.Abort },
+      type: WorkerMessageType.ResyncSettled,
+    },
+    {
       status: { avatarID: 'avatar_d', kind: 'session-expired' },
       type: WorkerMessageType.ResyncStatus,
+    },
+    {
+      avatarID: 'avatar_d',
+      state: { failureAction: ActivityFailureAction.Abort },
+      type: WorkerMessageType.ResyncSettled,
     },
   ]);
 });
@@ -1591,7 +1665,14 @@ test("it mints on a fresh device from the server's latest run and its unsettled 
 
   expect(status.activity.buildSnapshot).toStrictEqual({ level: buildLevelFromXP(409), xp: 409 });
   expect(status.activity.predecessorActivityID).toBe(delivered.id);
-  expect(context.getBroadcasts()).toStrictEqual([]);
+
+  expect(context.getBroadcasts()).toStrictEqual([
+    {
+      avatarID: viewer.avatar.id,
+      state: { failureAction: ActivityFailureAction.Abort },
+      type: WorkerMessageType.ResyncSettled,
+    },
+  ]);
 });
 
 test('it resyncs before a start that beats the boot report on a reload with a delivered run', async () => {
@@ -1660,7 +1741,14 @@ test('it resyncs before a start that beats the boot report on a reload with a de
   expect(status.activity.predecessorActivityID).toBe(delivered.id);
   expect(seen.indexOf('resyncing')).toBeGreaterThanOrEqual(0);
   expect(seen.indexOf('starting')).toBeGreaterThan(seen.indexOf('resyncing'));
-  expect(context.getBroadcasts()).toStrictEqual([]);
+
+  expect(context.getBroadcasts()).toStrictEqual([
+    {
+      avatarID: viewer.avatar.id,
+      state: { failureAction: ActivityFailureAction.Abort },
+      type: WorkerMessageType.ResyncSettled,
+    },
+  ]);
 
   await waitFor(() => {
     expect(context.getLifecycle().getSnapshot().value).toBe('running');
@@ -1697,6 +1785,7 @@ test('it delivers the start on a reload with an undelivered start and reattaches
     appendedHead: 1,
     avatarID: viewer.avatar.id,
     buildSnapshot: { level: buildLevelFromXP(400), xp: 400 },
+    scopeID: '0_0',
     status: 'stopped',
     verifiedHead: 0,
   });
@@ -1723,6 +1812,7 @@ test('it delivers the start on a reload with an undelivered start and reattaches
     predecessorActivityID: delivered.id,
     scopeID: '0_0',
     seed: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaa6072',
+    startChainIndex: 1,
     startKey: 'start_key_matrix_undelivered',
   });
 
@@ -1749,6 +1839,17 @@ test('it delivers the start on a reload with an undelivered start and reattaches
 
   expect(context.getBroadcasts()).toStrictEqual([
     { activityID: undelivered.id, type: WorkerMessageType.ActivityStartIngested },
+    {
+      avatarID: viewer.avatar.id,
+      liveRun: {
+        avatarID: viewer.avatar.id,
+        id: undelivered.id,
+        scopeID: '0_0',
+        scopeType: undelivered.scopeType,
+      },
+      state: expect.any(Object),
+      type: WorkerMessageType.ResyncSettled,
+    },
   ]);
 });
 
@@ -1794,7 +1895,20 @@ test("it attaches a second tab's start to the writer's live run without a mint",
 
   expect(status).toStrictEqual({ activityID: live.id, kind: 'attached' });
   expect(readAllActivityStarts()).resolves.toStrictEqual([]);
-  expect(context.getBroadcasts()).toStrictEqual([]);
+
+  expect(context.getBroadcasts()).toStrictEqual([
+    {
+      avatarID: viewer.avatar.id,
+      liveRun: {
+        avatarID: viewer.avatar.id,
+        id: live.id,
+        scopeID: '0_0',
+        scopeType: 'world_map_node',
+      },
+      state: context.getSimulation().getSnapshot(),
+      type: WorkerMessageType.ResyncSettled,
+    },
+  ]);
 });
 
 test('it numbers the next checkpoint from the server head once a takeover discarded the queue and the run reattaches', async () => {
@@ -1975,6 +2089,17 @@ test('it clears the run and mints behind it when the worker is evicted while a r
   expect(status.activity.predecessorActivityID).toBe(live.id);
 
   expect(context.getBroadcasts()).toStrictEqual([
+    {
+      avatarID: viewer.avatar.id,
+      liveRun: {
+        avatarID: viewer.avatar.id,
+        id: live.id,
+        scopeID: '0_0',
+        scopeType: live.scopeType,
+      },
+      state: expect.any(Object),
+      type: WorkerMessageType.ResyncSettled,
+    },
     { activityID: live.id, type: WorkerMessageType.WriterDisplaced },
   ]);
 });
@@ -2066,8 +2191,23 @@ test('it discards the outbox on a takeover from another device and mints from th
 
   expect(context.getBroadcasts()).toStrictEqual([
     {
+      avatarID: viewer.avatar.id,
+      state: { failureAction: ActivityFailureAction.Abort },
+      type: WorkerMessageType.ResyncSettled,
+    },
+    {
       status: { avatarID: viewer.avatar.id, kind: 'session-expired' },
       type: WorkerMessageType.ResyncStatus,
+    },
+    {
+      avatarID: viewer.avatar.id,
+      state: { failureAction: ActivityFailureAction.Abort },
+      type: WorkerMessageType.ResyncSettled,
+    },
+    {
+      avatarID: viewer.avatar.id,
+      state: { failureAction: ActivityFailureAction.Abort },
+      type: WorkerMessageType.ResyncSettled,
     },
   ]);
 });
@@ -2307,6 +2447,11 @@ test('it delivers a start minted offline on a reconnect after offline and mints 
   expect(remaining.map((row) => row.id)).toStrictEqual([status.activity.id]);
 
   expect(context.getBroadcasts()).toStrictEqual([
+    {
+      avatarID: viewer.avatar.id,
+      state: { failureAction: ActivityFailureAction.Abort },
+      type: WorkerMessageType.ResyncSettled,
+    },
     { activityID: offline.activity.id, type: WorkerMessageType.ActivityStartIngested },
   ]);
 });
@@ -2412,6 +2557,11 @@ test("it drops a start refused because its predecessor is no longer active and m
         xp: 0,
       },
       type: WorkerMessageType.ActivityEnded,
+    },
+    {
+      avatarID: viewer.avatar.id,
+      state: { failureAction: ActivityFailureAction.Abort },
+      type: WorkerMessageType.ResyncSettled,
     },
   ]);
 });

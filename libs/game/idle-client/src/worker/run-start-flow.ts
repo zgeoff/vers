@@ -1,4 +1,5 @@
 import type { ActivityData } from '@vers/contract-activity';
+import { buildOptimisticBuildSnapshot } from './build-optimistic-build-snapshot';
 import { handleSetActivityMessage } from './handle-set-activity-message';
 import { loadActivityStart } from './load-activity-start';
 import { submitStopIntent } from './submit-stop-intent';
@@ -44,11 +45,13 @@ export async function runStartFlow(
   // the mint is attempted before the live run is stopped: a mint that fails (a missing cache)
   // leaves the current run intact rather than stranding the worker with no live run and a stale
   // stopped one
-  const row = await loadActivityStart(context, { ...input, startKey: token });
+  const minted = await loadActivityStart(context, { ...input, startKey: token });
 
-  if (row === null) {
+  if (minted === null) {
     return { kind: 'failed' };
   }
+
+  let row = minted;
 
   if (running !== null) {
     // `simulation.startActivity` auto-stops a live generator, but only once this flow reaches it;
@@ -64,6 +67,10 @@ export async function runStartFlow(
     if (isSuperseded(context, token)) {
       return { kind: 'failed' };
     }
+
+    // the stopped run kept playing through the mint's reads, and the server folds every
+    // checkpoint it appended into the next build, so the build is read again once it has halted
+    row = { ...minted, buildSnapshot: buildOptimisticBuildSnapshot(context, minted.avatarID) };
   }
 
   // written before install: a crash here still leaves a recoverable activity start for a later

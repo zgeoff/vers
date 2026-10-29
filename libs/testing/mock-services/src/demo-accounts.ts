@@ -1,5 +1,6 @@
 export interface DemoAccount {
   readonly avatarName: null | string;
+  readonly completedNodeIDs?: ReadonlyArray<string>;
   readonly email: string;
   readonly name: string;
   readonly password: string;
@@ -107,5 +108,43 @@ export const DEMO_ACCOUNTS: ReadonlyArray<DemoAccount> = [
     name: 'Worker Online Demo Account',
     password: 'password123',
     username: 'e2e-worker-online',
+  },
+  {
+    avatarName: 'Offline Reload Test Avatar',
+    email: 'e2e-offline-reload@qa.versidle.com',
+    name: 'Offline Reload Demo Account',
+    password: 'password123',
+    username: 'e2e-offline-reload',
+  },
+  {
+    avatarName: 'Offline Switch Test Avatar',
+    email: 'e2e-offline-switch@qa.versidle.com',
+    name: 'Offline Switch Demo Account',
+    password: 'password123',
+    username: 'e2e-offline-switch',
+  },
+  {
+    avatarName: 'Offline Opening Test Avatar',
+    email: 'e2e-offline-opening@qa.versidle.com',
+    name: 'Offline Opening Demo Account',
+    password: 'password123',
+    username: 'e2e-offline-opening',
+  },
+  {
+    avatarName: 'Offline Stop Test Avatar',
+    email: 'e2e-offline-stop@qa.versidle.com',
+    name: 'Offline Stop Demo Account',
+    password: 'password123',
+    username: 'e2e-offline-stop',
+  },
+  {
+    avatarName: 'Offline Build Test Avatar',
+
+    // a cleared node beside the origin, so the player can switch nodes while a run plays
+    completedNodeIDs: ['1_0'],
+    email: 'e2e-offline-build@qa.versidle.com',
+    name: 'Offline Build Demo Account',
+    password: 'password123',
+    username: 'e2e-offline-build',
   },
 ];

@@ -213,7 +213,7 @@ export function createCheckpointSubmitter(
 
       // an outbox can hold a checkpoint past its node's cached anchor, and a start minted from that
       // anchor reuses the checkpoint's positions, which the server refuses as stale
-      const advance = buildNodeAnchorAdvance(cursor, lastRow.version, lastRow.payload.nextSeed);
+      const advance = buildNodeAnchorAdvance(cursor, lastRow.version, lastRow.payload);
 
       if (advance !== undefined) {
         await journal.writeNodeAnchor(advance.avatarID, advance.nodeID, advance.anchor);
@@ -343,7 +343,7 @@ export function createCheckpointSubmitter(
       await journal.writeQueuedCheckpoint(
         activityID,
         entry,
-        buildNodeAnchorAdvance(cursor, entry.version, entry.payload.nextSeed),
+        buildNodeAnchorAdvance(cursor, entry.version, entry.payload),
       );
     } catch (error) {
       const failure = new JournalWriteError(
@@ -445,17 +445,27 @@ export function createCheckpointSubmitter(
   };
 }
 
+// the server's appended anchor never moves on a started checkpoint, which draws nothing from the
+// seed, so a cache that moved would mint the next start one position past the server's anchor
+const ANCHOR_HOLDING_CHECKPOINT_TYPES: ReadonlySet<string> = new Set([
+  ActivityCheckpointType.Started,
+]);
+
 function buildNodeAnchorAdvance(
   cursor: Readonly<WriteCursor>,
   version: number,
-  nextSeed: string,
+  payload: Readonly<{ nextSeed: string; type: string }>,
 ): NodeAnchorAdvance | undefined {
-  if (cursor.avatarID === undefined || cursor.scopeID === undefined) {
+  if (
+    cursor.avatarID === undefined ||
+    cursor.scopeID === undefined ||
+    ANCHOR_HOLDING_CHECKPOINT_TYPES.has(payload.type)
+  ) {
     return undefined;
   }
 
   return {
-    anchor: { chainIndex: cursor.startChainIndex + version, nextSeed },
+    anchor: { chainIndex: cursor.startChainIndex + version, nextSeed: payload.nextSeed },
     avatarID: cursor.avatarID,
     nodeID: cursor.scopeID,
   };

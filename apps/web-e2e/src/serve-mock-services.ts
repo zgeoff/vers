@@ -62,6 +62,14 @@ for (const service of SERVICES) {
       return serveLiveRun(request);
     }
 
+    if (service === 'activity' && pathname === '/test/activities') {
+      return Response.json(
+        activityCollection
+          .all()
+          .map((row) => ({ appendedHead: row.appendedHead, id: row.id, status: row.status })),
+      );
+    }
+
     if (service === 'activity' && pathname === '/test/activity' && request.method === 'GET') {
       return serveActivityStatus(request);
     }
@@ -144,5 +152,5 @@ function serveActivityStatus(request: Request): Response {
 
   return activity === undefined
     ? new Response(null, { status: 404 })
-    : Response.json({ status: activity.status });
+    : Response.json({ appendedHead: activity.appendedHead, status: activity.status });
 }

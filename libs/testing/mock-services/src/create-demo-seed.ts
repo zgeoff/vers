@@ -27,6 +27,7 @@ export async function createDemoSeed(): Promise<void> {
 
     if (account.avatarName !== null) {
       const avatar = await avatarCollection.create({
+        completedNodeIDs: [...(account.completedNodeIDs ?? [])],
         createdAt: new Date(),
         id: createId(),
         name: account.avatarName,

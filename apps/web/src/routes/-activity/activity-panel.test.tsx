@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { setRunOutcome, setSimulationSnapshot } from '@vers/idle-client';
+import { setResyncSettledAvatarIDs, setRunOutcome, setSimulationSnapshot } from '@vers/idle-client';
 import { createMockRunOutcome } from '@vers/idle-client/test-utils';
 import { ActivityCheckpointType, ActivityFailureAction } from '@vers/idle-core';
 import { createMockActivitySnapshot, createMockAvatarSnapshot } from '@vers/idle-core/test-utils';
@@ -180,8 +180,9 @@ test('it hands END RUN the run the worker holds before the server holds its row'
 
 test('it returns to the map when neither the worker nor the server holds a run', async () => {
   const signedIn = await createSignedInUser();
+  const avatar = await createActiveAvatar({ userID: signedIn.userID });
 
-  await createActiveAvatar({ userID: signedIn.userID });
+  setResyncSettledAvatarIDs([avatar.id]);
 
   setIdleWorkerHandle({
     activity: undefined,
@@ -200,6 +201,38 @@ test('it returns to the map when neither the worker nor the server holds a run',
 
     expect(worldMap).toBeInTheDocument();
     expect(rendered.router.state.location.pathname).toBe('/explore');
+  });
+});
+
+test("it stays on the page until the worker's resync of the avatar settles, as the outbox may still hold its run", async () => {
+  const signedIn = await createSignedInUser();
+
+  await createActiveAvatar({ userID: signedIn.userID });
+
+  setResyncSettledAvatarIDs(['avatar_other']);
+
+  setIdleWorkerHandle({
+    activity: undefined,
+    client: createStubWorkerClient(),
+    failureAction: ActivityFailureAction.Abort,
+    initialized: true,
+    writerAbortSignal: new AbortController().signal,
+  });
+
+  await withRequestContext({ cookies: signedIn.cookies }, async () => {
+    const rendered = renderWithRouter(<ActivityPanel />, {
+      routes: { '/explore': <div data-testid="world-map" /> },
+    });
+
+    const heading = await rendered.findByRole('heading', { name: 'Engagement' });
+
+    expect(heading).toBeVisible();
+
+    // the server's null row is back within one query round trip; no redirect over a generous
+    // window stands in for the resync gating it
+    await expect(rendered.findByTestId('world-map', undefined, { timeout: 300 })).toReject();
+
+    expect(rendered.router.state.location.pathname).toBe('/');
   });
 });
 

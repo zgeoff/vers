@@ -63,6 +63,7 @@ export function createStubWorkerContext(
   let tickingStopped = false;
 
   const reconstructedAvatarIDs = new Set<string>();
+  const resyncSettledAvatarIDs = new Set<string>();
 
   // referenced by `context.getLifecycle` below via closure before it exists, safe only because
   // nothing calls it until after the `const lifecycleActor` assignment following `context` runs
@@ -77,6 +78,7 @@ export function createStubWorkerContext(
       broadcasts.push(message);
       options.broadcast?.(message);
     },
+    collectResyncSettledAvatarIDs: () => [...resyncSettledAvatarIDs],
     getActivity: () => activity,
     getBroadcasts: () => broadcasts,
     getBundledEngineHash: () => options.bundledEngineHash,
@@ -116,6 +118,9 @@ export function createStubWorkerContext(
     },
     registerReconstruction: (avatarID) => {
       reconstructedAvatarIDs.add(avatarID);
+    },
+    registerResyncSettled: (avatarID) => {
+      resyncSettledAvatarIDs.add(avatarID);
     },
     resetRewardSlotLedger: () => {
       rewardSlotLedgerActivityID = null;

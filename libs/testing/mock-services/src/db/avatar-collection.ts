@@ -6,6 +6,9 @@ import { AvatarDataSchema, AvatarModeSchema } from '@vers/contract-avatar';
 import * as z from 'zod';
 
 export const AvatarRowSchema = AvatarDataSchema.extend({
+  // the nodes the avatar has cleared, which the real service derives from its settled runs and
+  // this stand-in takes from its seed
+  completedNodeIDs: z.array(z.string()).default([]),
   createdAt: z.date().default(() => new Date()),
   failureAction: ActivityFailureActionSchema.default('abort'),
   id: z.string().default(() => createId()),
