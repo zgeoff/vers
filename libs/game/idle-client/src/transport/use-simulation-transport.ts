@@ -116,6 +116,9 @@ function handleWorkerMessage(message: WorkerMessage) {
       });
     })
     .with({ type: WorkerMessageType.ResyncSettled }, (received) => {
+      // the run the resync installed lands before the settled mark, so no render sees a settled
+      // resync without it
+      setSimulationSnapshot(received.state, received.liveRun);
       addResyncSettledAvatarID(received.avatarID);
     })
     .with({ type: WorkerMessageType.ResyncStatus }, (received) => {

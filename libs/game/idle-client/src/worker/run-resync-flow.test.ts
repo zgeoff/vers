@@ -3,6 +3,7 @@ import { createMockActivityData } from '@vers/contract-activity/test-utils';
 import { createMockEncounterContent } from '@vers/game-utils/test-utils';
 import {
   ActivityCheckpointType,
+  ActivityFailureAction,
   buildLevelFromXP,
   buildSimulationInput,
   runAttempt,
@@ -67,6 +68,7 @@ test('it reports the avatar settled once its resync completes', async () => {
 
   expect(context.getBroadcasts().at(-1)).toStrictEqual({
     avatarID: viewer.avatar.id,
+    state: { failureAction: ActivityFailureAction.Abort },
     type: WorkerMessageType.ResyncSettled,
   });
 });
@@ -93,7 +95,11 @@ test('it reports the avatar settled after a resync the network failed', async ()
       status: { avatarID: viewer.avatar.id, kind: 'unreconstructed' },
       type: WorkerMessageType.ResyncStatus,
     },
-    { avatarID: viewer.avatar.id, type: WorkerMessageType.ResyncSettled },
+    {
+      avatarID: viewer.avatar.id,
+      state: { failureAction: ActivityFailureAction.Abort },
+      type: WorkerMessageType.ResyncSettled,
+    },
   ]);
 });
 
@@ -223,7 +229,11 @@ test('it attaches nothing on a second resync after an offline gap aborted on a f
   // no further progression — the mint the aborted gap left behind must never resurface a
   // post-death attempt on this or any later reconnect
   expect(context.getBroadcasts().slice(broadcastsAfterFirstResync)).toStrictEqual([
-    { avatarID: viewer.avatar.id, type: WorkerMessageType.ResyncSettled },
+    {
+      avatarID: viewer.avatar.id,
+      state: { failureAction: ActivityFailureAction.Abort },
+      type: WorkerMessageType.ResyncSettled,
+    },
   ]);
 
   expect(context.getActivity()).toBeNull();

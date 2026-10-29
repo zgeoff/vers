@@ -94,7 +94,11 @@ test('it broadcasts only the settled notice for an avatar with no activity histo
   await ctx.connection.waitForMessages(2);
 
   expect(ctx.connection.received).toStrictEqual([
-    { avatarID: viewer.avatar.id, type: WorkerMessageType.ResyncSettled },
+    {
+      avatarID: viewer.avatar.id,
+      state: { failureAction: ActivityFailureAction.Abort },
+      type: WorkerMessageType.ResyncSettled,
+    },
     { type: WorkerMessageType.WriterReady },
   ]);
 
@@ -118,7 +122,11 @@ test('it broadcasts capped and installs no simulation for a capped activity', as
 
   expect(ctx.connection.received).toStrictEqual([
     { status: { kind: 'capped' }, type: WorkerMessageType.ResyncStatus },
-    { avatarID: viewer.avatar.id, type: WorkerMessageType.ResyncSettled },
+    {
+      avatarID: viewer.avatar.id,
+      state: { failureAction: ActivityFailureAction.Abort },
+      type: WorkerMessageType.ResyncSettled,
+    },
   ]);
 
   expect(ctx.context.getSimulation().activity).toBeNull();
@@ -336,7 +344,17 @@ test('it reconstructs and installs a live simulation mid-stream, registering fro
   await ctx.connection.waitForMessages(2);
 
   expect(ctx.connection.received).toStrictEqual([
-    { avatarID: viewer.avatar.id, type: WorkerMessageType.ResyncSettled },
+    {
+      avatarID: viewer.avatar.id,
+      liveRun: {
+        avatarID: viewer.avatar.id,
+        id: activity.id,
+        scopeID: activity.scopeID,
+        scopeType: activity.scopeType,
+      },
+      state: ctx.context.getSimulation().getSnapshot(),
+      type: WorkerMessageType.ResyncSettled,
+    },
     { type: WorkerMessageType.WriterReady },
   ]);
 
@@ -410,7 +428,11 @@ test('it reports a divergence fault, broadcasts the dead stream, and skips regis
       status: { avatarID: viewer.avatar.id, kind: 'unreconstructed' },
       type: WorkerMessageType.ResyncStatus,
     },
-    { avatarID: viewer.avatar.id, type: WorkerMessageType.ResyncSettled },
+    {
+      avatarID: viewer.avatar.id,
+      state: { failureAction: ActivityFailureAction.Abort },
+      type: WorkerMessageType.ResyncSettled,
+    },
   ]);
 
   expect(recorded).toHaveLength(1);
@@ -436,6 +458,14 @@ test('it fast-forwards a short gap, broadcasts progress and final tallies, and i
 
   await ctx.connection.waitForMessages(4);
 
+  // the completed attempt's terminal batch closed the seeded row, so the backend holds exactly
+  // one fresh active continuation for the avatar
+  const minted = db.activityCollection.findFirst((query) =>
+    query.where({ avatarID: viewer.avatar.id, status: 'active' }),
+  );
+
+  invariant(minted !== undefined, 'expected the fast-forward to mint an active continuation');
+
   expect(ctx.connection.received).toStrictEqual([
     {
       status: { attempts: 0, kind: 'fast-forwarding', levelUps: 0 },
@@ -446,16 +476,18 @@ test('it fast-forwards a short gap, broadcasts progress and final tallies, and i
       type: WorkerMessageType.ResyncStatus,
     },
     { status: { attempts: 1, kind: 'done', levelUps: 1 }, type: WorkerMessageType.ResyncStatus },
-    { avatarID: viewer.avatar.id, type: WorkerMessageType.ResyncSettled },
+    {
+      avatarID: viewer.avatar.id,
+      liveRun: {
+        avatarID: viewer.avatar.id,
+        id: minted.id,
+        scopeID: minted.scopeID,
+        scopeType: minted.scopeType,
+      },
+      state: ctx.context.getSimulation().getSnapshot(),
+      type: WorkerMessageType.ResyncSettled,
+    },
   ]);
-
-  // the completed attempt's terminal batch closed the seeded row, so the backend holds exactly
-  // one fresh active continuation for the avatar
-  const minted = db.activityCollection.findFirst((query) =>
-    query.where({ avatarID: viewer.avatar.id, status: 'active' }),
-  );
-
-  invariant(minted !== undefined, 'expected the fast-forward to mint an active continuation');
 
   expect(minted.id).not.toBe(activity.id);
 
@@ -507,7 +539,17 @@ test('it reconstructs a fast-forward report left mid-stream and registers from i
       type: WorkerMessageType.ResyncStatus,
     },
     { status: { attempts: 0, kind: 'done', levelUps: 0 }, type: WorkerMessageType.ResyncStatus },
-    { avatarID: viewer.avatar.id, type: WorkerMessageType.ResyncSettled },
+    {
+      avatarID: viewer.avatar.id,
+      liveRun: {
+        avatarID: viewer.avatar.id,
+        id: activity.id,
+        scopeID: activity.scopeID,
+        scopeType: activity.scopeType,
+      },
+      state: ctx.context.getSimulation().getSnapshot(),
+      type: WorkerMessageType.ResyncSettled,
+    },
   ]);
 
   const simulation = ctx.context.getSimulation();
@@ -558,7 +600,17 @@ test('it attaches a fresh login live without broadcasting any catch-up status', 
   await ctx.connection.waitForMessages(2);
 
   expect(ctx.connection.received).toStrictEqual([
-    { avatarID: viewer.avatar.id, type: WorkerMessageType.ResyncSettled },
+    {
+      avatarID: viewer.avatar.id,
+      liveRun: {
+        avatarID: viewer.avatar.id,
+        id: activity.id,
+        scopeID: activity.scopeID,
+        scopeType: activity.scopeType,
+      },
+      state: ctx.context.getSimulation().getSnapshot(),
+      type: WorkerMessageType.ResyncSettled,
+    },
     { type: WorkerMessageType.WriterReady },
   ]);
 
@@ -571,7 +623,7 @@ test('it adopts a server-persisted retry preference during resync, caching and b
   const viewer = await createViewer({ avatar: { failureAction: 'retry' } });
   const ctx = await setupTest({ userID: viewer.user.id });
 
-  await db.activityCollection.create({
+  const activity = await db.activityCollection.create({
     appendedHead: 0,
     avatarID: viewer.avatar.id,
     startedAt: new Date(),
@@ -583,7 +635,17 @@ test('it adopts a server-persisted retry preference during resync, caching and b
 
   expect(ctx.connection.received).toStrictEqual([
     { failureAction: ActivityFailureAction.Retry, type: WorkerMessageType.FailureActionStatus },
-    { avatarID: viewer.avatar.id, type: WorkerMessageType.ResyncSettled },
+    {
+      avatarID: viewer.avatar.id,
+      liveRun: {
+        avatarID: viewer.avatar.id,
+        id: activity.id,
+        scopeID: activity.scopeID,
+        scopeType: activity.scopeType,
+      },
+      state: ctx.context.getSimulation().getSnapshot(),
+      type: WorkerMessageType.ResyncSettled,
+    },
   ]);
 
   expect(ctx.context.getFailureAction()).toBe(ActivityFailureAction.Retry);
@@ -772,7 +834,11 @@ test('it reports a fault to the error backend and broadcasts an unreconstructed 
       status: { avatarID: 'avatar-with-held-tail', kind: 'unreconstructed' },
       type: WorkerMessageType.ResyncStatus,
     },
-    { avatarID: 'avatar-with-held-tail', type: WorkerMessageType.ResyncSettled },
+    {
+      avatarID: 'avatar-with-held-tail',
+      state: { failureAction: ActivityFailureAction.Abort },
+      type: WorkerMessageType.ResyncSettled,
+    },
     { type: WorkerMessageType.WriterReady },
   ]);
 
@@ -795,13 +861,21 @@ test('it reports a fault to the error backend and broadcasts an unreconstructed 
       status: { avatarID: 'avatar-with-held-tail', kind: 'unreconstructed' },
       type: WorkerMessageType.ResyncStatus,
     },
-    { avatarID: 'avatar-with-held-tail', type: WorkerMessageType.ResyncSettled },
+    {
+      avatarID: 'avatar-with-held-tail',
+      state: { failureAction: ActivityFailureAction.Abort },
+      type: WorkerMessageType.ResyncSettled,
+    },
     { type: WorkerMessageType.WriterReady },
     {
       status: { avatarID: 'avatar-with-held-tail', kind: 'unreconstructed' },
       type: WorkerMessageType.ResyncStatus,
     },
-    { avatarID: 'avatar-with-held-tail', type: WorkerMessageType.ResyncSettled },
+    {
+      avatarID: 'avatar-with-held-tail',
+      state: { failureAction: ActivityFailureAction.Abort },
+      type: WorkerMessageType.ResyncSettled,
+    },
   ]);
 });
 
@@ -840,7 +914,11 @@ test('it broadcasts session-expired without a fault report when the session is n
       status: { avatarID: viewer.avatar.id, kind: 'session-expired' },
       type: WorkerMessageType.ResyncStatus,
     },
-    { avatarID: viewer.avatar.id, type: WorkerMessageType.ResyncSettled },
+    {
+      avatarID: viewer.avatar.id,
+      state: { failureAction: ActivityFailureAction.Abort },
+      type: WorkerMessageType.ResyncSettled,
+    },
   ]);
 
   expect(recorded).toStrictEqual([]);
@@ -856,12 +934,20 @@ test('it broadcasts session-expired without a fault report when the session is n
       status: { avatarID: viewer.avatar.id, kind: 'session-expired' },
       type: WorkerMessageType.ResyncStatus,
     },
-    { avatarID: viewer.avatar.id, type: WorkerMessageType.ResyncSettled },
+    {
+      avatarID: viewer.avatar.id,
+      state: { failureAction: ActivityFailureAction.Abort },
+      type: WorkerMessageType.ResyncSettled,
+    },
     {
       status: { avatarID: viewer.avatar.id, kind: 'session-expired' },
       type: WorkerMessageType.ResyncStatus,
     },
-    { avatarID: viewer.avatar.id, type: WorkerMessageType.ResyncSettled },
+    {
+      avatarID: viewer.avatar.id,
+      state: { failureAction: ActivityFailureAction.Abort },
+      type: WorkerMessageType.ResyncSettled,
+    },
   ]);
 });
 
@@ -883,7 +969,11 @@ test('it fails the resync as unreconstructed while a raised stop is undelivered 
       status: { avatarID: viewer.avatar.id, kind: 'unreconstructed' },
       type: WorkerMessageType.ResyncStatus,
     },
-    { avatarID: viewer.avatar.id, type: WorkerMessageType.ResyncSettled },
+    {
+      avatarID: viewer.avatar.id,
+      state: { failureAction: ActivityFailureAction.Abort },
+      type: WorkerMessageType.ResyncSettled,
+    },
   ]);
 
   expect(ctx.context.getSimulation().activity).toBeNull();
@@ -1036,7 +1126,11 @@ test('it broadcasts the displacement and clears a live sim the writer was taken 
 
   expect(ctx.connection.received).toStrictEqual([
     { activityID: activity.id, type: WorkerMessageType.WriterDisplaced },
-    { avatarID: viewer.avatar.id, type: WorkerMessageType.ResyncSettled },
+    {
+      avatarID: viewer.avatar.id,
+      state: { failureAction: ActivityFailureAction.Abort },
+      type: WorkerMessageType.ResyncSettled,
+    },
   ]);
 
   expect(ctx.context.getActivity()).toBeNull();
@@ -1119,9 +1213,23 @@ test('it holds a claiming request behind an in-flight resync and claims once it 
   });
 
   expect(context.getBroadcasts()).toStrictEqual([
-    { avatarID: viewer.avatar.id, type: WorkerMessageType.ResyncSettled },
+    {
+      avatarID: viewer.avatar.id,
+      state: { failureAction: ActivityFailureAction.Abort },
+      type: WorkerMessageType.ResyncSettled,
+    },
     { activityID: null, type: WorkerMessageType.WriterDisplaced },
-    { avatarID: viewer.avatar.id, type: WorkerMessageType.ResyncSettled },
+    {
+      avatarID: viewer.avatar.id,
+      liveRun: {
+        avatarID: viewer.avatar.id,
+        id: activity.id,
+        scopeID: activity.scopeID,
+        scopeType: activity.scopeType,
+      },
+      state: context.getSimulation().getSnapshot(),
+      type: WorkerMessageType.ResyncSettled,
+    },
   ]);
 });
 
@@ -1167,7 +1275,11 @@ test('it settles a mid-fast-forward displacement as active-elsewhere with the no
       status: { activityID: activity.id, kind: 'active-elsewhere' },
       type: WorkerMessageType.ResyncStatus,
     },
-    { avatarID: viewer.avatar.id, type: WorkerMessageType.ResyncSettled },
+    {
+      avatarID: viewer.avatar.id,
+      state: { failureAction: ActivityFailureAction.Abort },
+      type: WorkerMessageType.ResyncSettled,
+    },
   ]);
 
   expect(ctx.context.getSimulation().activity).toBeNull();
@@ -1194,7 +1306,11 @@ test('it clears a moot displacement once the fetched run is no longer active', a
 
   expect(ctx.connection.received).toStrictEqual([
     { activityID: null, type: WorkerMessageType.WriterDisplaced },
-    { avatarID: viewer.avatar.id, type: WorkerMessageType.ResyncSettled },
+    {
+      avatarID: viewer.avatar.id,
+      state: { failureAction: ActivityFailureAction.Abort },
+      type: WorkerMessageType.ResyncSettled,
+    },
   ]);
 
   expect(ctx.context.getWriterDisplacedActivityID()).toBeNull();

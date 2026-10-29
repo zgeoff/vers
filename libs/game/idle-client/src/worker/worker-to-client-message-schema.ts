@@ -56,6 +56,8 @@ const resyncStatusSchema = z.discriminatedUnion('kind', [
 const resyncSettledMessageSchema = z
   .object({
     avatarID: z.string(),
+    liveRun: liveRunSchema.exactOptional(),
+    state: simulationSnapshotSchema,
     type: z.literal(WorkerMessageType.ResyncSettled),
   })
   .readonly();
@@ -178,6 +180,8 @@ export type RewardSlotsRecordedMessage = z.infer<typeof rewardSlotsRecordedMessa
 export type SimulationSpeedStatusMessage = z.infer<typeof simulationSpeedStatusMessageSchema>;
 
 export type SimulationUpdateMessage = z.infer<typeof simulationUpdateMessageSchema>;
+
+export type ResyncSettledMessage = z.infer<typeof resyncSettledMessageSchema>;
 
 export type WriterDisplacedMessage = z.infer<typeof writerDisplacedMessageSchema>;
 

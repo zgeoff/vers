@@ -1,5 +1,6 @@
 import { expect, test } from 'bun:test';
 import { createMockActivityData } from '@vers/contract-activity/test-utils';
+import { ActivityFailureAction } from '@vers/idle-core';
 import { createAuthedServiceClient, createViewer } from '@vers/mock-services';
 import * as db from '@vers/mock-services/db';
 import invariant from 'tiny-invariant';
@@ -64,7 +65,11 @@ test('it resyncs the reported avatar when no intent is held', async () => {
 
   expect(ctx.context.getBroadcasts()).toStrictEqual([
     { status: { kind: 'capped' }, type: WorkerMessageType.ResyncStatus },
-    { avatarID: viewer.avatar.id, type: WorkerMessageType.ResyncSettled },
+    {
+      avatarID: viewer.avatar.id,
+      state: { failureAction: ActivityFailureAction.Abort },
+      type: WorkerMessageType.ResyncSettled,
+    },
   ]);
 
   expect(ctx.context.getResyncAvatarID()).toBe(viewer.avatar.id);
@@ -86,7 +91,11 @@ test('it falls back to the avatar of the last resync without a report', async ()
 
   expect(ctx.context.getBroadcasts()).toStrictEqual([
     { status: { kind: 'capped' }, type: WorkerMessageType.ResyncStatus },
-    { avatarID: viewer.avatar.id, type: WorkerMessageType.ResyncSettled },
+    {
+      avatarID: viewer.avatar.id,
+      state: { failureAction: ActivityFailureAction.Abort },
+      type: WorkerMessageType.ResyncSettled,
+    },
   ]);
 });
 

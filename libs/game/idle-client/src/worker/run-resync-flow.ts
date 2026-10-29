@@ -23,6 +23,7 @@ import type { ActivitySubmissionContext } from '../submission/types';
 import { writeFailureActionCache } from '../submission/write-failure-action-cache';
 import { writeLastStartedActivity } from '../submission/write-last-started-activity';
 import { WorkerMessageType } from '../types';
+import { findLiveRun } from './find-live-run';
 import { flushPendingStop } from './flush-pending-stop';
 import { isAbortError } from './is-abort-error';
 import { registerSimulationListeners } from './register-simulation-listeners';
@@ -90,9 +91,18 @@ export async function runResyncFlow(
   }
 
   // a tab reads the worker's live run as the avatar's run only once a resync has settled, since
-  // until then a run the outbox still holds has not been installed
+  // until then a run the outbox still holds has not been installed; the notice carries the
+  // simulation, because a run's own updates start only on its first tick
+  const liveRun = findLiveRun(context);
+
   context.registerResyncSettled(avatarID);
-  context.broadcast({ avatarID, type: WorkerMessageType.ResyncSettled });
+
+  context.broadcast({
+    avatarID,
+    ...(liveRun !== undefined && { liveRun }),
+    state: context.getSimulation().getSnapshot(),
+    type: WorkerMessageType.ResyncSettled,
+  });
 }
 
 function emitResyncStatus(context: WorkerContext, status: Readonly<ResyncStatus>): void {
