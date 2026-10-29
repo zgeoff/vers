@@ -128,6 +128,84 @@ jobs:
       - name: Slow Tests
         run: bun run test:check-slow
 
+  # e2e runs beside checks, as in the PR checks, so lint and the unit tests take none of the
+  # suite's time limit
+  e2e:
+    # the renderer specs run one at a time and take most of the suite's time, so their two shards
+    # and the other projects each get a runner; --no-deps drops the wait on the placeholder
+    # project, which runs on its own runner
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - leg: placeholder
+            projects: --project=chromium --project=firefox --project=webkit
+          - leg: renderer-1
+            projects: --project=chromium-renderer --no-deps --shard=1/2
+          - leg: renderer-2
+            projects: --project=chromium-renderer --no-deps --shard=2/2
+    name: e2e (${{ matrix.leg }})
+    runs-on: ubuntu-latest
+    # a hung step (a wedged webServer, a stuck browser) must fail the run, not burn runner hours
+    timeout-minutes: 10
+    concurrency:
+      group: ${{ github.workflow }}-e2e-${{ matrix.leg }}-${{ github.ref }}
+      cancel-in-progress: true
+    env:
+      TURBO_SCM_BASE: ${{ github.event.before }}
+      # CI never commits, but skip hook install/execution regardless
+      LEFTHOOK: 0
+    steps:
+      # see the checks job's Checkout for the depth, the filter and the retry
+      - name: Checkout
+        id: checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        timeout-minutes: 2
+        continue-on-error: true
+        with:
+          fetch-depth: 2147483647
+          filter: blob:none
+
+      - name: Retry checkout
+        if: ${{ steps.checkout.outcome != 'success' }}
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        timeout-minutes: 2
+        with:
+          fetch-depth: 2147483647
+          filter: blob:none
+
+      - name: Setup Dotenv
+        env:
+          DOTENV_APP_WEB_DEV: ${{ secrets.DOTENV_APP_WEB_DEV }}
+          DOTENV_APP_WEB_E2E: ${{ secrets.DOTENV_APP_WEB_E2E }}
+        run: |
+          printf '%s\n' "$DOTENV_APP_WEB_DEV" > apps/web/.env.development.local
+          printf '%s\n' "$DOTENV_APP_WEB_E2E" > apps/web-e2e/.env
+
+      - name: Setup Node
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: 24.22.0
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version
+
+      - name: Install Dependencies
+        run: bun install --frozen-lockfile
+
+      # scoped key so this job's saved cache never collides with the checks job's; the prefix
+      # restore matches either job's most recent save
+      - name: Setup Turbo cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .turbo
+          key: turbo-e2e-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            turbo-e2e-${{ runner.os }}-
+            turbo-${{ runner.os }}-
+
       # the runner's Ubuntu mirror serves the browsers' system packages at a few hundred kB/s on
       # some runs, long enough to reach the job timeout, so apt keeps its downloads in a cache
       - name: Read browser package cache key
@@ -156,26 +234,29 @@ jobs:
           # the worker mints an activity start only under a bundled engine hash, and the mock
           # services the specs run against accept any hash
           VITE_SIM_ENGINE_HASH: e2e-mock-engine
-        run: node_modules/.bin/turbo run e2e --affected
+          E2E_PROJECTS: ${{ matrix.projects }}
+        # on CI turbo groups each task's log and prints it when the task ends, so a suite cut off at
+        # the job limit printed nothing; streamed, the log shows each test as it finishes
+        run: node_modules/.bin/turbo run e2e --affected --log-order=stream -- $E2E_PROJECTS
 
       - name: Upload Videos Of Failed E2E
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         # gate on the e2e step so an earlier failure doesn't upload an empty artifact
         if: ${{ failure() && steps.e2e.outcome == 'failure' }}
         with:
-          name: playwright-results
+          name: playwright-results-${{ matrix.leg }}
           include-hidden-files: true
           path: apps/web-e2e/.test-results
 
   migrate:
     name: Migrate database
-    needs: checks
+    needs: [checks, e2e]
     # migrations are a deploy action, not a check: they run exactly once per
     # green push — several services share the one database, so they never run
     # per-service — and, like rollouts, are never cancelled mid-run; a newer
     # push queues behind them. Idempotent: an up-to-date database gets no backup
     # and no migration.
-    if: ${{ needs.checks.result == 'success' }}
+    if: ${{ needs.checks.result == 'success' && needs.e2e.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment: production
@@ -205,11 +286,11 @@ jobs:
 
   manifest:
     name: Read deploy manifest
-    needs: checks
+    needs: [checks, e2e]
     # the deploy matrix derives from deploy.config.ts, so adding an app to the
     # manifest is the whole change — a hand-maintained matrix drifts, and a
     # manifest app with no deploy leg is a guaranteed verify-fleet failure
-    if: ${{ needs.checks.result == 'success' }}
+    if: ${{ needs.checks.result == 'success' && needs.e2e.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
@@ -232,11 +313,11 @@ jobs:
 
   preflight:
     name: Check deploy env
-    needs: checks
+    needs: [checks, e2e]
     # a required env key uncovered by an app's fly.toml [env], set secrets, or
     # baked build args fails the run before any image builds — boot-time
     # validation would otherwise report the gap as a crash loop after cutover
-    if: ${{ needs.checks.result == 'success' }}
+    if: ${{ needs.checks.result == 'success' && needs.e2e.result == 'success' }}
     runs-on: ubuntu-latest
     environment: production
     timeout-minutes: 5
@@ -271,15 +352,15 @@ jobs:
 
   build:
     name: Build
-    needs: [checks, manifest, preflight]
+    needs: [checks, e2e, manifest, preflight]
     # build images for every stale app as soon as checks are green — the phase
     # has no fleet side effects, so it runs beside migrate rather than after
     # it. Each leg self-gates inside the deploy CLI: it compares HEAD against
     # the GIT_SHA stamped on the app's machines, so a build skipped by an
     # earlier failure or cancellation stays "stale" and ships on the next push.
     if:
-      ${{ needs.checks.result == 'success' && needs.manifest.result == 'success' &&
-      needs.preflight.result == 'success' }}
+      ${{ needs.checks.result == 'success' && needs.e2e.result == 'success' && needs.manifest.result
+      == 'success' && needs.preflight.result == 'success' }}
     runs-on: ubuntu-latest
     environment: production
     # worst observed leg (app-web remote build) is ~4 minutes; headroom for
@@ -340,14 +421,15 @@ jobs:
 
   stack-e2e:
     name: Full-stack E2E
-    needs: [checks, manifest, build]
+    needs: [checks, e2e, manifest, build]
     # the pre-cutover gate: journeys run against the exact images the cutover
     # is about to promote — every app's ref resolves to this commit's build
     # when stale or the newest recorded release otherwise, so the suite always
     # exercises the fleet main is about to become. A failed build leg fails
     # this job on the missing image instead of skipping it.
     if:
-      ${{ !cancelled() && needs.checks.result == 'success' && needs.manifest.result == 'success' }}
+      ${{ !cancelled() && needs.checks.result == 'success' && needs.e2e.result == 'success' &&
+      needs.manifest.result == 'success' }}
     runs-on: ubuntu-latest
     environment: production
     # image pulls plus stack boot plus journeys is ~6 minutes at worst
@@ -466,7 +548,7 @@ jobs:
 
   deploy:
     name: Deploy
-    needs: [checks, migrate, manifest, preflight, build, stack-e2e]
+    needs: [checks, e2e, migrate, manifest, preflight, build, stack-e2e]
     # cut over after the shared schema is current and the full-stack suite
     # has passed against the images being promoted. The build job is an
     # ordering edge only — its matrix result never gates this job directly —
@@ -475,9 +557,9 @@ jobs:
     # can't even boot, ships for no app. Legs self-gate on staleness exactly
     # as the build phase does.
     if:
-      ${{ !cancelled() && needs.checks.result == 'success' && needs.migrate.result == 'success' &&
-      needs.manifest.result == 'success' && needs.preflight.result == 'success' &&
-      needs.stack-e2e.result == 'success' }}
+      ${{ !cancelled() && needs.checks.result == 'success' && needs.e2e.result == 'success' &&
+      needs.migrate.result == 'success' && needs.manifest.result == 'success' &&
+      needs.preflight.result == 'success' && needs.stack-e2e.result == 'success' }}
     runs-on: ubuntu-latest
     environment: production
     # bluegreen cutover plus probes is ~3 minutes at worst; headroom without
@@ -533,12 +615,12 @@ jobs:
 
   verify-fleet:
     name: Verify fleet
-    needs: [checks, deploy]
+    needs: [checks, e2e, deploy]
     # the deploy gate: every app in the manifest must be online and current, on
     # every green main push — even when every deploy leg skipped. This is what
     # catches a silently-missing deploy (an app at zero machines, or a fleet
     # still running code from before a cancelled rollout) and fails the run.
-    if: ${{ !cancelled() && needs.checks.result == 'success' }}
+    if: ${{ !cancelled() && needs.checks.result == 'success' && needs.e2e.result == 'success' }}
     runs-on: ubuntu-latest
     environment: production
     # six fleet reads plus probe retries fit in ~3 minutes at worst
@@ -574,7 +656,7 @@ jobs:
 
   alert:
     name: Alert on failure
-    needs: [checks, migrate, manifest, build, stack-e2e, deploy, verify-fleet]
+    needs: [checks, e2e, migrate, manifest, build, stack-e2e, deploy, verify-fleet]
     # a red main pipeline pages the team channel: agent-driven pushes mean
     # nobody is necessarily watching the Actions tab, and a failed deploy or
     # fleet verification left unnoticed is exactly how version skew lingers
@@ -589,10 +671,10 @@ jobs:
           RUN_URL:
             ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           FAILED: >-
-            checks=${{ needs.checks.result }}, migrate=${{ needs.migrate.result }}, manifest=${{
-            needs.manifest.result }}, build=${{ needs.build.result }}, stack-e2e=${{
-            needs.stack-e2e.result }}, deploy=${{ needs.deploy.result }}, verify-fleet=${{
-            needs.verify-fleet.result }}
+            checks=${{ needs.checks.result }}, e2e=${{ needs.e2e.result }}, migrate=${{
+            needs.migrate.result }}, manifest=${{ needs.manifest.result }}, build=${{
+            needs.build.result }}, stack-e2e=${{ needs.stack-e2e.result }}, deploy=${{
+            needs.deploy.result }}, verify-fleet=${{ needs.verify-fleet.result }}
           COMMIT_MSG: ${{ github.event.head_commit.message }}
         run: |
           if [ -z "${WEBHOOK_URL}" ]; then
