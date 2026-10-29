@@ -87,6 +87,37 @@ test("it moves the refused start's cached node anchor back to the server's ancho
   expect(cached?.anchor).toStrictEqual({ chainIndex: 4, nextSeed: 'seed_server_4' });
 });
 
+test('it records the refused start, the live run it ends, every dropped start and the anchor it carried', async () => {
+  const context = createStubWorkerContext();
+  const simulation = createSimulation();
+  const refused = createMockActivityData({ avatarID: 'avatar_recorded', id: 'act_recorded_root' });
+
+  const live = createMockActivityData({
+    avatarID: 'avatar_recorded',
+    id: 'act_recorded_next',
+    predecessorActivityID: refused.id,
+  });
+
+  await writeActivityStart(refused);
+  await writeActivityStart(live);
+
+  simulation.startActivity(createMockAvatarData(), createMockActivityInput({ id: live.id }));
+  context.setSimulation(simulation);
+  context.setActivity(live);
+
+  await rejectActivityStart(context, {
+    anchor: { chainIndex: 2, nextSeed: 'seed_server_2' },
+    latest: null,
+    row: refused,
+  });
+
+  expect(context.getDebugRecorder().getEvents()).toPartiallyContain({
+    detail:
+      'act_recorded_root held=act_recorded_next dropped=act_recorded_root,act_recorded_next anchor=2',
+    type: 'refusal',
+  });
+});
+
 test('it halts the live run built on the refused start and broadcasts the refused outcome for it', async () => {
   const context = createStubWorkerContext();
   const simulation = createSimulation();

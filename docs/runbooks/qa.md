@@ -232,7 +232,13 @@ await window.__versQA.snapshot();
 with each pending start's attempts and last refusal, the latest-run record the next mint folds from,
 the writer's identity, the current simulation speed, and the last 200 worker events kept in a ring
 buffer inside the worker: lifecycle phases, start and flush outcomes, refusals, speed changes, and
-connectivity changes. The snapshot changes no runtime state and no durable store.
+connectivity changes. A start event holds the chain index and XP the start was minted with, and a
+refusal event holds the refused start, the live run it ended, and every start it dropped. An `rpc`
+event records each request from the worker to the activity service that failed in transport or came
+back with an error status, so it shows whether the worker reached the server. The snapshot's `tab`
+record holds the page's own online flag, which can disagree with the worker: a DevTools network
+toggle takes the page offline and leaves the shared worker online. The snapshot changes no runtime
+state and no durable store.
 [Game simulation](../architecture/game/game-simulation.md#checkpoint-streams) owns the writer
 worker, and [offline reconcile](../architecture/game/offline-reconcile.md#worker-lifecycle) owns the
 lifecycle the events trace.

@@ -2,7 +2,11 @@ import { QA_SIM_SPEED_MAX } from '@vers/contract-activity';
 import type { WorkerClient, WorkerDebugSnapshot } from '@vers/idle-client';
 
 interface QADebugSnapshot extends WorkerDebugSnapshot {
-  readonly tab: { readonly tabID: string; readonly writerGeneration: number };
+  readonly tab: {
+    readonly online: boolean;
+    readonly tabID: string;
+    readonly writerGeneration: number;
+  };
 }
 
 interface QADebugHook {
@@ -46,7 +50,14 @@ export function registerQADebugHook(options: Readonly<RegisterQADebugHookOptions
 
       return Object.freeze({
         ...worker,
-        tab: Object.freeze({ tabID: options.tabID, writerGeneration: options.writerGeneration }),
+
+        // the page's own view of the network: a DevTools network toggle covers the page and never
+        // its shared worker, so the two can disagree
+        tab: Object.freeze({
+          online: navigator.onLine,
+          tabID: options.tabID,
+          writerGeneration: options.writerGeneration,
+        }),
       });
     },
   };

@@ -9,6 +9,7 @@ import {
 import type { ActivityCallContext, ActivityServiceClient } from './types';
 
 interface CreateActivityServiceClientHooks {
+  readonly onExchangeFailed: (detail: string) => void;
   readonly onSessionSuperseded: () => void;
 }
 
@@ -16,7 +17,22 @@ export function createActivityServiceClient(
   hooks: Readonly<CreateActivityServiceClientHooks>,
 ): ActivityServiceClient {
   const sendRequest = async (input: Request, init?: RequestInit): Promise<Response> => {
-    const response = await fetch(input, init);
+    const procedure = new URL(input.url).pathname.split('/').at(-1) ?? '';
+    let response: Response;
+
+    try {
+      response = await fetch(input, init);
+    } catch (error) {
+      hooks.onExchangeFailed(
+        `${procedure} unanswered ${error instanceof Error ? error.name : 'unknown'}`,
+      );
+
+      throw error;
+    }
+
+    if (!response.ok) {
+      hooks.onExchangeFailed(`${procedure} answered ${response.status}`);
+    }
 
     // reported, never awaited: the discard queues behind the flow in flight, and that flow may be
     // the one awaiting this very response

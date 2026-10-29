@@ -79,6 +79,18 @@ export async function rejectActivityStart(
 
   const ended = heldDropped ? held : row;
 
+  context
+    .getDebugRecorder()
+    .recordEvent(
+      'refusal',
+      [
+        row.id,
+        `held=${heldDropped ? held.id : 'none'}`,
+        `dropped=${[...dropped].join(',')}`,
+        `anchor=${input.anchor === undefined ? 'none' : input.anchor.chainIndex}`,
+      ].join(' '),
+    );
+
   context.broadcast({
     outcome: {
       activityID: ended.id,

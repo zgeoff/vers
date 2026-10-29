@@ -1,4 +1,5 @@
 import { implement } from '@orpc/server';
+import { formatStartDetail } from './format-start-detail';
 import { handleCacheNodeSeedsMessage } from './handle-cache-node-seeds-message';
 import { handleDisconnectMessage } from './handle-disconnect-message';
 import { handleInitializeMessage } from './handle-initialize-message';
@@ -83,7 +84,9 @@ export function createWorkerRouter(context: WorkerContext, ready: Readonly<Promi
 
       const status = await handleStartActivityMessage(context, opts.input);
 
-      context.getDebugRecorder().recordEvent('start', `${opts.input.scopeID} ${status.kind}`);
+      context
+        .getDebugRecorder()
+        .recordEvent('start', formatStartDetail(opts.input.scopeID, status));
 
       return status;
     }),
