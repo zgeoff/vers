@@ -1,5 +1,6 @@
 export { createDB } from './create-db';
 export { applyMigrations } from './apply-migrations';
+export { buildReplayReadyCondition } from './build-replay-ready-condition';
 export { migrationsFolder } from './build-migrator';
 export { readPendingMigrations } from './read-pending-migrations';
 export { toJSON } from './to-json';

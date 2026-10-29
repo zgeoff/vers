@@ -103,6 +103,47 @@ test('it flags the chain for replay when a batch appends checkpoints', async () 
   expect(chain.replayPending).toBe(true);
 });
 
+test('it leaves the replay flag clear when the activity waits behind an unverified predecessor', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_1' });
+
+  const predecessor = await createActivityRow(ctx.db, {
+    appendedHead: 3,
+    avatarId: avatar.id,
+    scopeId: '0_1',
+    status: 'stopped',
+  });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    predecessorActivityId: predecessor.id,
+    scopeId: '0_0',
+  });
+
+  await client.trackActivityProgress({
+    activityID: started.id,
+    checkpoints: createMockCheckpointBatch({ startPrevHash: started.startHash, startVersion: 1 }),
+    expectedHead: 0,
+  });
+
+  const chain = await ctx.db
+    .selectFrom('activityChains')
+    .select('replayPending')
+    .where('avatarId', '=', avatar.id)
+    .where('scopeId', '=', '0_0')
+    .executeTakeFirstOrThrow();
+
+  expect(chain.replayPending).toBe(false);
+});
+
 test('it leaves the replay flag clear on an empty batch', async () => {
   await using ctx = await setupTest();
 

@@ -1,4 +1,5 @@
 import type { DB } from '@vers/db';
+import { buildReplayReadyCondition } from '@vers/db';
 import type { Kysely } from 'kysely';
 
 export async function updateAvatarChainsReplayPending(
@@ -18,10 +19,7 @@ export async function updateAvatarChainsReplayPending(
               .whereRef('activities.avatarId', '=', 'activityChains.avatarId')
               .whereRef('activities.scopeType', '=', 'activityChains.scopeType')
               .whereRef('activities.scopeId', '=', 'activityChains.scopeId')
-              .where((eb2) =>
-                eb2('activities.appendedHead', '>', eb2.ref('activities.verifiedHead')),
-              )
-              .where('activities.status', '!=', 'rejected'),
+              .where(buildReplayReadyCondition),
           ),
         )
         .then(true)

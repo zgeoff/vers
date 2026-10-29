@@ -3,8 +3,8 @@ import { recordBackoff } from '../metrics/record-backoff';
 import { recordIterationFailure } from '../metrics/record-iteration-failure';
 import { claimNextSeedChain } from '../queue/claim-next-seed-chain';
 import { readReplayTarget } from '../queue/read-replay-target';
-import { updateChainReplayPending } from '../queue/update-chain-replay-pending';
 import { updateReplayBackoff } from '../queue/update-replay-backoff';
+import { updateReplayPendingChains } from '../queue/update-replay-pending-chains';
 import type { ReplayCache } from '../replay/create-replay-cache';
 import type { ReplayTarget } from '../types';
 import { runReplayTarget } from './run-replay-target';
@@ -38,7 +38,7 @@ export async function runReplayIteration(
           ? ({ kind: 'idle' } as const)
           : await runReplayTarget({ trx, deps, cache }, target, deadline);
 
-      await updateChainReplayPending(trx, claimed);
+      await updateReplayPendingChains(trx, claimed.avatarID);
 
       return replayed;
     });
