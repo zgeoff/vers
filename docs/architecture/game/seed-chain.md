@@ -107,12 +107,26 @@ from the forward-exited predecessor before it adjudicates.
 Settlement trusts a position only at or below the verified anchor
 ([applying verified progress](./replay-verification.md#applying-verified-progress)).
 
-The chain also carries a replay priority. The verifier picks between avatars by the priority on
-their chains, highest first and older chain on a tie, and it never reorders one avatar's own chains
-against each other.
+The chain also carries a replay priority and a replay flag. The flag is set while the chain holds an
+activity the verifier could take next: one that is not rejected, holds checkpoints the verifier has
+not proved, and follows only settled activities. An avatar's later activities wait behind that one,
+so their chains stay unflagged, and a claim reads only flagged chains, in priority order. The
+verifier picks between avatars by the priority of the chain that holds each avatar's next activity,
+highest first and older chain on a tie, and it never reorders one avatar's own chains against each
+other.
 
-Whoever moves an anchor, the request path or the verifier, takes the chain row before the activity
-row, so the two writers never deadlock.
+Three writers keep the flag. An append that writes a checkpoint sets it when its activity follows
+only settled activities. The verifier recomputes the flags on all of an avatar's chains before it
+commits a claim, which moves the flag to the next activity's chain once the earlier one settles.
+Each drain opens with a repair pass over every chain, which flags a chain that a writer missed and
+clears a flag that no activity justifies. An append that races a settlement, or one from a service
+older than the flag, can leave a chain unflagged, and the wake that append sends starts the drain
+that repairs it.
+
+Every writer that takes both rows takes the chain row before the activity row, so no two writers
+deadlock. A request that moves an anchor takes the chain row exclusively. Any other append takes a
+shared lock that the verifier's claim admits, so an append never waits for a replay to finish. The
+verifier and the repair pass skip a chain row another transaction holds rather than wait on it.
 
 ## Pulling the appended anchor back
 

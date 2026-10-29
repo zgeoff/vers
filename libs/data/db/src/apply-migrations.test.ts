@@ -2,10 +2,13 @@ import { expect, onTestFinished, test } from 'bun:test';
 import { createId } from '@paralleldrive/cuid2';
 import postgres from 'postgres';
 import { applyMigrations } from './apply-migrations';
+import { buildMigrationDB } from './build-migration-db';
+import { buildMigrator } from './build-migrator';
 import { contentDocumentV2 } from './content-seed/content-document-v2';
 import { createDB } from './create-db';
 import { removeTestDatabase } from './test-support/remove-test-database';
 import { resolveTestDBTarget } from './test-support/resolve-test-db-target';
+import { toJSON } from './to-json';
 
 async function setupTest() {
   const baseURI = resolveTestDBTarget().baseURI;
@@ -150,6 +153,89 @@ test('it creates the activity_chains table with both chain indexes starting at z
   expect(selected.appendedNextSeed).toBe('22222222222222222222222222222222');
   expect(selected.verifiedNextSeed).toBe('33333333333333333333333333333333');
   expect(selected.createdAt).toBeInstanceOf(Date);
+});
+
+test('it flags for replay only the chains that hold unverified appends when it adds the replay flag', async () => {
+  const ctx = await setupTest();
+
+  const migrationDB = buildMigrationDB({ databaseURL: ctx.databaseURL });
+
+  onTestFinished(() => migrationDB.destroy());
+
+  await buildMigrator(migrationDB).migrateTo('1787000000000_activities_replay_claim_order');
+
+  const db = createDB({ databaseURL: ctx.databaseURL });
+
+  onTestFinished(() => db.destroy());
+
+  await db
+    .insertInto('users')
+    .values({ email: 'flags@example.com', id: 'usr_flags', name: 'Flags', username: 'flags' })
+    .execute();
+
+  await db
+    .insertInto('avatars')
+    .values({ id: 'avt_flags', name: 'Flags', userId: 'usr_flags' })
+    .execute();
+
+  await db
+    .insertInto('activityChains')
+    .values(
+      ['node_unverified', 'node_verified', 'node_rejected'].map((scopeId) => ({
+        appendedNextSeed: '22222222222222222222222222222222',
+        avatarId: 'avt_flags',
+        genesisSeed: '11111111111111111111111111111111',
+        scopeId,
+        scopeType: 'world_map_node',
+        verifiedNextSeed: '22222222222222222222222222222222',
+      })),
+    )
+    .execute();
+
+  await db
+    .insertInto('activities')
+    .values(
+      (
+        [
+          ['act_unverified', 'node_unverified', 1, 'stopped'],
+          ['act_verified', 'node_verified', 3, 'stopped'],
+          ['act_rejected', 'node_rejected', 1, 'rejected'],
+        ] as const
+      ).map(([id, scopeId, verifiedHead, status]) => ({
+        appendedHead: 3,
+        avatarId: 'avt_flags',
+        buildSnapshot: toJSON({ level: 1, xp: 0 }),
+        contentVersion: '2',
+        encounterNode: toJSON({ difficulty: 1 }),
+        id,
+        lastHash: 'hash_last',
+        scopeId,
+        scopeType: 'world_map_node',
+        secretRef: 'worldmap',
+        secretVersion: 1,
+        seed: '22222222222222222222222222222222',
+        simVersion: 'sim_flags',
+        startHash: 'hash_start',
+        status,
+        verifiedHead,
+      })),
+    )
+    .execute();
+
+  await applyMigrations({ databaseURL: ctx.databaseURL });
+
+  const flags = await db
+    .selectFrom('activityChains')
+    .select(['replayPending', 'scopeId'])
+    .where('avatarId', '=', 'avt_flags')
+    .orderBy('scopeId')
+    .execute();
+
+  expect(flags).toStrictEqual([
+    { replayPending: false, scopeId: 'node_rejected' },
+    { replayPending: true, scopeId: 'node_unverified' },
+    { replayPending: false, scopeId: 'node_verified' },
+  ]);
 });
 
 test('it adds the consumed-transaction-token table and audit columns', async () => {

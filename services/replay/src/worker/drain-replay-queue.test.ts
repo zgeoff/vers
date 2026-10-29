@@ -75,6 +75,33 @@ test('it drains a seeded backlog to empty and returns the count', async () => {
   expect(drainReplayQueue(ctx.deps, 'poke')).resolves.toBe(0);
 });
 
+test('it settles an append that a writer older than the replay flag left unflagged', async () => {
+  await using ctx = await setupTest();
+
+  const fixture = await createHonestActivityFixture(ctx.db, {
+    duration: 80_000,
+    seed: buildStateFromSeed(3_047_525_658),
+  });
+
+  await ctx.db
+    .updateTable('activityChains')
+    .set({ replayPending: false })
+    .where('avatarId', '=', fixture.activity.avatarId)
+    .execute();
+
+  const drained = await drainReplayQueue(ctx.deps, 'poke');
+
+  expect(drained).toBe(1);
+
+  const settled = await ctx.db
+    .selectFrom('activities')
+    .select(['appendedHead', 'verifiedHead'])
+    .where('id', '=', fixture.activity.id)
+    .executeTakeFirstOrThrow();
+
+  expect(settled.verifiedHead).toBe(settled.appendedHead);
+});
+
 test('it settles a stream split across two drains to its terminal total and chain anchor', async () => {
   await using ctx = await setupTest();
 
@@ -344,7 +371,7 @@ test('it reuses the same held driver object across two warm drains', async () =>
   expect(cachedAfterSecond.emittedCount).toBe(secondBatchCount);
 });
 
-test('it stops draining and reports a claim failure carrying a trace id, without hanging', async () => {
+test('it stops draining and reports a database failure carrying a trace id, without hanging', async () => {
   const unreachableDB = createDB({ databaseURL: 'postgresql://bad:bad@127.0.0.1:1/nope' });
 
   const keyPair = await resolveTestServiceKeyPair();

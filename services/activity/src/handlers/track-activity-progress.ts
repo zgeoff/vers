@@ -21,6 +21,7 @@ import type {
   MissingSessionPayload,
   TerminalStatusPayload,
 } from '../types';
+import { markChainReplayPending } from './mark-chain-replay-pending';
 import { updateAppendedAnchorFromTail } from './update-appended-anchor-from-tail';
 import { writeRefusalLine } from './write-refusal-line';
 
@@ -194,18 +195,17 @@ export async function trackActivityProgress(
   }
 
   const appendOutcome = await db.transaction().execute(async (trx) => {
-    // Only a terminal batch advances the chain anchor; a batch that never touches the chain row
-    // takes part in no lock ordering. When both rows are taken, the chain row comes first.
-    if (isTerminalBatch) {
-      await trx
-        .selectFrom('activityChains')
-        .select('appendedChainIndex')
-        .where('avatarId', '=', head.avatarId)
-        .where('scopeType', '=', head.scopeType)
-        .where('scopeId', '=', head.scopeId)
-        .forUpdate()
-        .execute();
-    }
+    // Chain row before activity row. Only a terminal batch moves the anchor and takes the row FOR
+    // UPDATE; any other batch takes FOR KEY SHARE, which the verifier's claim lock admits, so an
+    // append never waits out a replay and still orders against every request-path writer.
+    const chainLock = trx
+      .selectFrom('activityChains')
+      .select('appendedChainIndex')
+      .where('avatarId', '=', head.avatarId)
+      .where('scopeType', '=', head.scopeType)
+      .where('scopeId', '=', head.scopeId);
+
+    await (isTerminalBatch ? chainLock.forUpdate() : chainLock.forKeyShare()).execute();
 
     const append = isTerminalBatch
       ? transitionActivityStatus(trx, opts.input.activityID, {
@@ -251,6 +251,8 @@ export async function trackActivityProgress(
           })),
         )
         .execute();
+
+      await markChainReplayPending(trx, head);
     }
 
     if (isTerminalBatch) {

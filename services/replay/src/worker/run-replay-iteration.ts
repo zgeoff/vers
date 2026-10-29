@@ -4,6 +4,7 @@ import { recordIterationFailure } from '../metrics/record-iteration-failure';
 import { claimNextSeedChain } from '../queue/claim-next-seed-chain';
 import { readReplayTarget } from '../queue/read-replay-target';
 import { updateReplayBackoff } from '../queue/update-replay-backoff';
+import { updateReplayPendingChains } from '../queue/update-replay-pending-chains';
 import type { ReplayCache } from '../replay/create-replay-cache';
 import type { ReplayTarget } from '../types';
 import { runReplayTarget } from './run-replay-target';
@@ -30,13 +31,16 @@ export async function runReplayIteration(
 
       const target = await readReplayTarget(trx, claimed.activityID);
 
-      if (target === undefined) {
-        return { kind: 'idle' } as const;
-      }
-
       claimedTarget = target;
 
-      return runReplayTarget({ trx, deps, cache }, target, deadline);
+      const replayed =
+        target === undefined
+          ? ({ kind: 'idle' } as const)
+          : await runReplayTarget({ trx, deps, cache }, target, deadline);
+
+      await updateReplayPendingChains(trx, claimed.avatarID);
+
+      return replayed;
     });
 
     writeHoldLine(deps.logger, outcome);

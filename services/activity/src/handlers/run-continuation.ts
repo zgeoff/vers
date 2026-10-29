@@ -10,6 +10,7 @@ import { recordTerminalTransition } from '../metrics/record-terminal-transition'
 import { pickCheckpointBatchRaceOutcome } from '../pick-checkpoint-batch-race-outcome';
 import { pickSimTimeCreditRate } from '../pick-sim-time-credit-rate';
 import { ContinuationBailError } from './continuation-bail-error';
+import { markChainReplayPending } from './mark-chain-replay-pending';
 import { mintContinuation } from './mint-continuation';
 import type {
   AdvanceActivityDeps,
@@ -230,6 +231,8 @@ export async function runContinuation(
         })),
       )
       .execute();
+
+    await markChainReplayPending(trx, pinned);
 
     await updateAppendedAnchorFromTail(trx, {
       activityId: input.targetActivityID,

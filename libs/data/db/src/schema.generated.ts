@@ -80,6 +80,7 @@ export interface ActivityChains {
   createdAt: Generated<Timestamp>;
   genesisSeed: string;
   priority: Generated<number>;
+  replayPending: Generated<boolean>;
   scopeId: string;
   scopeType: string;
   verifiedChainIndex: Generated<number>;

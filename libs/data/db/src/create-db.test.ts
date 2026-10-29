@@ -145,6 +145,37 @@ test('it stays inert without a registered tracer provider', async () => {
   await expect(handle.db.selectFrom('users').selectAll().execute()).toResolve();
 });
 
+test('it ends the pool after two connection attempts that the server refused', async () => {
+  const db = createDB({
+    databaseURL: 'postgresql://refused:refused@127.0.0.1:1/refused',
+    queryDeadlineMs: 200,
+    resumeDetection: false,
+  });
+
+  const first = await db
+    .selectFrom('users')
+    .selectAll()
+    .execute()
+    .then(
+      () => null,
+      (error: unknown) => error,
+    );
+
+  const second = await db
+    .selectFrom('users')
+    .selectAll()
+    .execute()
+    .then(
+      () => null,
+      (error: unknown) => error,
+    );
+
+  expect(first).toMatchObject({ code: 'ECONNREFUSED' });
+  expect(second).toMatchObject({ code: 'ECONNREFUSED' });
+
+  await expect(db.destroy()).toResolve();
+});
+
 test('it bounds connection acquisition with a 10s connect_timeout', () => {
   const options = buildPostgresOptions({ databaseURL: 'postgres://user:pass@localhost:5432/db' });
 
