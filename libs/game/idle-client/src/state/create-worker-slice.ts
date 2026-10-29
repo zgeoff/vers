@@ -8,6 +8,8 @@ export interface WorkerSlice {
 
   initialized: boolean;
 
+  resyncSettledAvatarIDs: ReadonlyArray<string>;
+
   writerGeneration: number;
 
   writerAbortController: AbortController;
@@ -18,6 +20,7 @@ export function createWorkerSlice(): WorkerSlice {
     client: null,
     engagedRun: null,
     initialized: false,
+    resyncSettledAvatarIDs: [],
     writerAbortController: new AbortController(),
     writerGeneration: 0,
   };

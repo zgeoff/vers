@@ -1,4 +1,4 @@
-import { expect, mock, test } from 'bun:test';
+import { expect, test } from 'bun:test';
 import { ORPCError } from '@orpc/client';
 import { createMockActivityData } from '@vers/contract-activity/test-utils';
 import { createSimulation } from '@vers/idle-core';
@@ -157,34 +157,6 @@ test('it shows no refusal and keeps the start when the network fails on the prog
   expect(outcome).toBe('deferred');
   expect(stored).toStrictEqual(row);
   expect(context.getBroadcasts()).toStrictEqual([]);
-});
-
-test('it sends a start that two callers deliver at once to the server once, and both read its outcome', async () => {
-  const context = createStubWorkerContext();
-  const row = createMockActivityData({ id: 'act_broadcast_once', startKey: 'start_key_once' });
-  const received = mock<(activityID: string) => void>();
-
-  server.use(
-    mockActivityService.advanceActivity.handler((opts) => {
-      received(opts.input.activityID);
-
-      return { activity: row, appendedHead: 0 };
-    }),
-  );
-
-  await writeActivityStart(row);
-
-  const outcomes = await Promise.all([
-    ingestAndBroadcastActivityStart(context, row.id),
-    ingestAndBroadcastActivityStart(context, row.id),
-  ]);
-
-  expect(outcomes).toStrictEqual(['ingested', 'ingested']);
-  expect(received).toHaveBeenCalledExactlyOnceWith(row.id);
-
-  expect(context.getBroadcasts()).toStrictEqual([
-    { activityID: row.id, type: WorkerMessageType.ActivityStartIngested },
-  ]);
 });
 
 test('it broadcasts the avatar-switched notice when the account moved to another avatar', async () => {

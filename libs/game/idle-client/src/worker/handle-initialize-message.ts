@@ -7,6 +7,7 @@ export function handleInitializeMessage(context: WorkerContext): InitializeOutpu
 
   return {
     ...(liveRun !== undefined && { liveRun }),
+    resyncSettledAvatarIDs: context.collectResyncSettledAvatarIDs(),
     rewardSlotLedger: context.getRewardSlotLedger(),
     simulationSpeed: context.getSimulationSpeed(),
     state: context.getSimulation().getSnapshot(),

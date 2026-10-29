@@ -25,6 +25,7 @@ interface StubSetSimulationSpeedInput {
 }
 
 const DEFAULT_INITIALIZE_RESULT = {
+  resyncSettledAvatarIDs: [],
   rewardSlotLedger: { activityID: null, entries: [] },
   simulationSpeed: 1,
   state: { failureAction: ActivityFailureAction.Abort },

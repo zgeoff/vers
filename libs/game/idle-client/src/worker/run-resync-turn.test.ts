@@ -80,19 +80,24 @@ async function setupTest(config: Readonly<SetupTestConfig>) {
   return { client, connection, context, flush: () => capturedFlush?.() ?? Promise.resolve() };
 }
 
-test('it broadcasts nothing for an avatar with no activity history', async () => {
+test('it broadcasts only the settled notice for an avatar with no activity history', async () => {
   const viewer = await createViewer();
   const ctx = await setupTest({ userID: viewer.user.id });
 
   await runResyncTurn(ctx.context, viewer.avatar.id, false);
 
   // posted on the worker's own port after the handler settles, this arrives after anything the
-  // handler broadcast on the same channel — an empty prefix proves the resync stayed silent
+  // handler broadcast on the same channel — a prefix of only the settled notice proves the resync
+  // broadcast no catch-up status
   ctx.connection.port.postMessage({ type: WorkerMessageType.WriterReady });
 
-  await ctx.connection.waitForMessages(1);
+  await ctx.connection.waitForMessages(2);
 
-  expect(ctx.connection.received).toStrictEqual([{ type: WorkerMessageType.WriterReady }]);
+  expect(ctx.connection.received).toStrictEqual([
+    { avatarID: viewer.avatar.id, type: WorkerMessageType.ResyncSettled },
+    { type: WorkerMessageType.WriterReady },
+  ]);
+
   expect(ctx.context.getSimulation().activity).toBeNull();
 });
 
@@ -109,10 +114,11 @@ test('it broadcasts capped and installs no simulation for a capped activity', as
 
   await runResyncTurn(ctx.context, viewer.avatar.id, false);
 
-  await ctx.connection.waitForMessages(1);
+  await ctx.connection.waitForMessages(2);
 
   expect(ctx.connection.received).toStrictEqual([
     { status: { kind: 'capped' }, type: WorkerMessageType.ResyncStatus },
+    { avatarID: viewer.avatar.id, type: WorkerMessageType.ResyncSettled },
   ]);
 
   expect(ctx.context.getSimulation().activity).toBeNull();
@@ -323,12 +329,16 @@ test('it reconstructs and installs a live simulation mid-stream, registering fro
   await runResyncTurn(ctx.context, viewer.avatar.id, false);
 
   // posted on the worker's own port after the handler settles, this arrives after anything the
-  // handler broadcast on the same channel — an empty prefix proves the resync stayed silent
+  // handler broadcast on the same channel — a prefix of only the settled notice proves the resync
+  // broadcast no catch-up status
   ctx.connection.port.postMessage({ type: WorkerMessageType.WriterReady });
 
-  await ctx.connection.waitForMessages(1);
+  await ctx.connection.waitForMessages(2);
 
-  expect(ctx.connection.received).toStrictEqual([{ type: WorkerMessageType.WriterReady }]);
+  expect(ctx.connection.received).toStrictEqual([
+    { avatarID: viewer.avatar.id, type: WorkerMessageType.ResyncSettled },
+    { type: WorkerMessageType.WriterReady },
+  ]);
 
   const simulation = ctx.context.getSimulation();
 
@@ -392,7 +402,7 @@ test('it reports a divergence fault, broadcasts the dead stream, and skips regis
 
   await runResyncTurn(ctx.context, viewer.avatar.id, false);
 
-  await ctx.connection.waitForMessages(2);
+  await ctx.connection.waitForMessages(3);
 
   expect(ctx.connection.received).toStrictEqual([
     { activityID: activity.id, type: WorkerMessageType.CheckpointStreamInvalid },
@@ -400,6 +410,7 @@ test('it reports a divergence fault, broadcasts the dead stream, and skips regis
       status: { avatarID: viewer.avatar.id, kind: 'unreconstructed' },
       type: WorkerMessageType.ResyncStatus,
     },
+    { avatarID: viewer.avatar.id, type: WorkerMessageType.ResyncSettled },
   ]);
 
   expect(recorded).toHaveLength(1);
@@ -423,7 +434,7 @@ test('it fast-forwards a short gap, broadcasts progress and final tallies, and i
 
   await runResyncTurn(ctx.context, viewer.avatar.id, false);
 
-  await ctx.connection.waitForMessages(3);
+  await ctx.connection.waitForMessages(4);
 
   expect(ctx.connection.received).toStrictEqual([
     {
@@ -435,6 +446,7 @@ test('it fast-forwards a short gap, broadcasts progress and final tallies, and i
       type: WorkerMessageType.ResyncStatus,
     },
     { status: { attempts: 1, kind: 'done', levelUps: 1 }, type: WorkerMessageType.ResyncStatus },
+    { avatarID: viewer.avatar.id, type: WorkerMessageType.ResyncSettled },
   ]);
 
   // the completed attempt's terminal batch closed the seeded row, so the backend holds exactly
@@ -487,7 +499,7 @@ test('it reconstructs a fast-forward report left mid-stream and registers from i
 
   await runResyncTurn(ctx.context, viewer.avatar.id, false);
 
-  await ctx.connection.waitForMessages(2);
+  await ctx.connection.waitForMessages(3);
 
   expect(ctx.connection.received).toStrictEqual([
     {
@@ -495,6 +507,7 @@ test('it reconstructs a fast-forward report left mid-stream and registers from i
       type: WorkerMessageType.ResyncStatus,
     },
     { status: { attempts: 0, kind: 'done', levelUps: 0 }, type: WorkerMessageType.ResyncStatus },
+    { avatarID: viewer.avatar.id, type: WorkerMessageType.ResyncSettled },
   ]);
 
   const simulation = ctx.context.getSimulation();
@@ -538,12 +551,16 @@ test('it attaches a fresh login live without broadcasting any catch-up status', 
   await runResyncTurn(ctx.context, viewer.avatar.id, false);
 
   // posted on the worker's own port after the handler settles, this arrives after anything the
-  // handler broadcast on the same channel — an empty prefix proves the resync stayed silent
+  // handler broadcast on the same channel — a prefix of only the settled notice proves the resync
+  // broadcast no catch-up status
   ctx.connection.port.postMessage({ type: WorkerMessageType.WriterReady });
 
-  await ctx.connection.waitForMessages(1);
+  await ctx.connection.waitForMessages(2);
 
-  expect(ctx.connection.received).toStrictEqual([{ type: WorkerMessageType.WriterReady }]);
+  expect(ctx.connection.received).toStrictEqual([
+    { avatarID: viewer.avatar.id, type: WorkerMessageType.ResyncSettled },
+    { type: WorkerMessageType.WriterReady },
+  ]);
 
   const simulation = ctx.context.getSimulation();
 
@@ -562,10 +579,11 @@ test('it adopts a server-persisted retry preference during resync, caching and b
 
   await runResyncTurn(ctx.context, viewer.avatar.id, false);
 
-  await ctx.connection.waitForMessages(1);
+  await ctx.connection.waitForMessages(2);
 
   expect(ctx.connection.received).toStrictEqual([
     { failureAction: ActivityFailureAction.Retry, type: WorkerMessageType.FailureActionStatus },
+    { avatarID: viewer.avatar.id, type: WorkerMessageType.ResyncSettled },
   ]);
 
   expect(ctx.context.getFailureAction()).toBe(ActivityFailureAction.Retry);
@@ -741,12 +759,12 @@ test('it reports a fault to the error backend and broadcasts an unreconstructed 
   await runResyncTurn(context, 'avatar-with-held-tail', false);
 
   // posted on the worker's own port after the handler settles, this arrives after anything the
-  // handler broadcast on the same channel — a single failed status ahead of it proves nothing
-  // else rode along
+  // handler broadcast on the same channel — a single failed status and the settled notice ahead of
+  // it prove nothing else rode along
   context.broadcast({ type: WorkerMessageType.WriterReady });
 
   await waitFor(() => {
-    expect(context.getBroadcasts().length).toBeGreaterThanOrEqual(2);
+    expect(context.getBroadcasts().length).toBeGreaterThanOrEqual(3);
   });
 
   expect(context.getBroadcasts()).toStrictEqual([
@@ -754,6 +772,7 @@ test('it reports a fault to the error backend and broadcasts an unreconstructed 
       status: { avatarID: 'avatar-with-held-tail', kind: 'unreconstructed' },
       type: WorkerMessageType.ResyncStatus,
     },
+    { avatarID: 'avatar-with-held-tail', type: WorkerMessageType.ResyncSettled },
     { type: WorkerMessageType.WriterReady },
   ]);
 
@@ -768,7 +787,7 @@ test('it reports a fault to the error backend and broadcasts an unreconstructed 
   await runResyncTurn(context, 'avatar-with-held-tail', false);
 
   await waitFor(() => {
-    expect(context.getBroadcasts().length).toBeGreaterThanOrEqual(3);
+    expect(context.getBroadcasts().length).toBeGreaterThanOrEqual(5);
   });
 
   expect(context.getBroadcasts()).toStrictEqual([
@@ -776,11 +795,13 @@ test('it reports a fault to the error backend and broadcasts an unreconstructed 
       status: { avatarID: 'avatar-with-held-tail', kind: 'unreconstructed' },
       type: WorkerMessageType.ResyncStatus,
     },
+    { avatarID: 'avatar-with-held-tail', type: WorkerMessageType.ResyncSettled },
     { type: WorkerMessageType.WriterReady },
     {
       status: { avatarID: 'avatar-with-held-tail', kind: 'unreconstructed' },
       type: WorkerMessageType.ResyncStatus,
     },
+    { avatarID: 'avatar-with-held-tail', type: WorkerMessageType.ResyncSettled },
   ]);
 });
 
@@ -812,13 +833,14 @@ test('it broadcasts session-expired without a fault report when the session is n
 
   await runResyncTurn(ctx.context, viewer.avatar.id, false);
 
-  await ctx.connection.waitForMessages(1);
+  await ctx.connection.waitForMessages(2);
 
   expect(ctx.connection.received).toStrictEqual([
     {
       status: { avatarID: viewer.avatar.id, kind: 'session-expired' },
       type: WorkerMessageType.ResyncStatus,
     },
+    { avatarID: viewer.avatar.id, type: WorkerMessageType.ResyncSettled },
   ]);
 
   expect(recorded).toStrictEqual([]);
@@ -827,17 +849,19 @@ test('it broadcasts session-expired without a fault report when the session is n
   // same avatar actually runs rather than being dropped, broadcasting its own session-expired
   await runResyncTurn(ctx.context, viewer.avatar.id, false);
 
-  await ctx.connection.waitForMessages(2);
+  await ctx.connection.waitForMessages(4);
 
   expect(ctx.connection.received).toStrictEqual([
     {
       status: { avatarID: viewer.avatar.id, kind: 'session-expired' },
       type: WorkerMessageType.ResyncStatus,
     },
+    { avatarID: viewer.avatar.id, type: WorkerMessageType.ResyncSettled },
     {
       status: { avatarID: viewer.avatar.id, kind: 'session-expired' },
       type: WorkerMessageType.ResyncStatus,
     },
+    { avatarID: viewer.avatar.id, type: WorkerMessageType.ResyncSettled },
   ]);
 });
 
@@ -852,13 +876,14 @@ test('it fails the resync as unreconstructed while a raised stop is undelivered 
   await writePendingStopIntent({ activityID: 'activity_stopped', avatarID: viewer.avatar.id });
   await runResyncTurn(ctx.context, viewer.avatar.id, false);
 
-  await ctx.connection.waitForMessages(1);
+  await ctx.connection.waitForMessages(2);
 
   expect(ctx.connection.received).toStrictEqual([
     {
       status: { avatarID: viewer.avatar.id, kind: 'unreconstructed' },
       type: WorkerMessageType.ResyncStatus,
     },
+    { avatarID: viewer.avatar.id, type: WorkerMessageType.ResyncSettled },
   ]);
 
   expect(ctx.context.getSimulation().activity).toBeNull();
@@ -1007,10 +1032,11 @@ test('it broadcasts the displacement and clears a live sim the writer was taken 
 
   await runResyncTurn(ctx.context, viewer.avatar.id, false);
 
-  await ctx.connection.waitForMessages(1);
+  await ctx.connection.waitForMessages(2);
 
   expect(ctx.connection.received).toStrictEqual([
     { activityID: activity.id, type: WorkerMessageType.WriterDisplaced },
+    { avatarID: viewer.avatar.id, type: WorkerMessageType.ResyncSettled },
   ]);
 
   expect(ctx.context.getActivity()).toBeNull();
@@ -1089,11 +1115,13 @@ test('it holds a claiming request behind an in-flight resync and claims once it 
 
   // the claiming install resolved the recorded displacement and told every tab
   await waitFor(() => {
-    expect(context.getBroadcasts().length).toBeGreaterThanOrEqual(1);
+    expect(context.getBroadcasts().length).toBeGreaterThanOrEqual(3);
   });
 
   expect(context.getBroadcasts()).toStrictEqual([
+    { avatarID: viewer.avatar.id, type: WorkerMessageType.ResyncSettled },
     { activityID: null, type: WorkerMessageType.WriterDisplaced },
+    { avatarID: viewer.avatar.id, type: WorkerMessageType.ResyncSettled },
   ]);
 });
 
@@ -1120,7 +1148,7 @@ test('it settles a mid-fast-forward displacement as active-elsewhere with the no
 
   await runResyncTurn(ctx.context, viewer.avatar.id, false);
 
-  await ctx.connection.waitForMessages(4);
+  await ctx.connection.waitForMessages(5);
 
   expect(ctx.connection.received).toStrictEqual([
     {
@@ -1139,6 +1167,7 @@ test('it settles a mid-fast-forward displacement as active-elsewhere with the no
       status: { activityID: activity.id, kind: 'active-elsewhere' },
       type: WorkerMessageType.ResyncStatus,
     },
+    { avatarID: viewer.avatar.id, type: WorkerMessageType.ResyncSettled },
   ]);
 
   expect(ctx.context.getSimulation().activity).toBeNull();
@@ -1161,10 +1190,11 @@ test('it clears a moot displacement once the fetched run is no longer active', a
 
   await runResyncTurn(ctx.context, viewer.avatar.id, true);
 
-  await ctx.connection.waitForMessages(1);
+  await ctx.connection.waitForMessages(2);
 
   expect(ctx.connection.received).toStrictEqual([
     { activityID: null, type: WorkerMessageType.WriterDisplaced },
+    { avatarID: viewer.avatar.id, type: WorkerMessageType.ResyncSettled },
   ]);
 
   expect(ctx.context.getWriterDisplacedActivityID()).toBeNull();

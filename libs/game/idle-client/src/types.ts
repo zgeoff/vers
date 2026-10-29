@@ -18,6 +18,7 @@ export enum WorkerMessageType {
   FailureActionStatus = 'failure_action_status',
   JournalFailure = 'journal_failure',
   OfflineCapStatus = 'offline_cap_status',
+  ResyncSettled = 'resync_settled',
   ResyncStatus = 'resync_status',
   RewardSlotsRecorded = 'reward_slots_recorded',
   SimulationSpeedStatus = 'simulation_speed_status',

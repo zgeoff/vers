@@ -1,5 +1,6 @@
 import type { WorkerClient } from '@vers/idle-client';
 import {
+  setResyncSettledAvatarIDs,
   setRewardSlotLedger,
   setSimulationInitialized,
   setSimulationSnapshot,
@@ -18,6 +19,7 @@ export async function sendIdleInitialize(client: WorkerClient, signal: AbortSign
 
   setSimulationInitialized(true);
   setSimulationSnapshot(result.state, result.liveRun);
+  setResyncSettledAvatarIDs(result.resyncSettledAvatarIDs);
   setRewardSlotLedger(result.rewardSlotLedger);
   setSimulationSpeed(result.simulationSpeed);
   setWriterDisplacedActivityID(result.writerDisplacedActivityID);

@@ -1,12 +1,11 @@
 import { createId } from '@paralleldrive/cuid2';
 import type { ActivityData } from '@vers/contract-activity';
 import { buildStartHash } from '@vers/contract-activity';
-import type { OptimisticBuildSource } from '@vers/idle-core';
-import { buildLevelFromXP, foldOptimisticBuild } from '@vers/idle-core';
 import { readNextPredecessorID } from '../submission/read-next-predecessor-id';
 import { readNodeSeed } from '../submission/read-node-seed';
 import { readStartStamps } from '../submission/read-start-stamps';
-import type { LatestRun, WorkerContext } from './types';
+import { buildOptimisticBuildSnapshot } from './build-optimistic-build-snapshot';
+import type { WorkerContext } from './types';
 
 interface LoadActivityStartInput {
   readonly avatarID: string;
@@ -85,24 +84,4 @@ export async function loadActivityStart(
     verifiedAt: null,
     verifiedHead: 0,
   };
-}
-
-function buildOptimisticBuildSnapshot(
-  context: WorkerContext,
-  avatarID: string,
-): { level: number; xp: number } {
-  const latestRun = context.getLatestRun();
-  const previousRun = latestRun !== null && latestRun.avatarID === avatarID ? latestRun : null;
-  const sources = previousRun === null ? [] : buildPreviousRunSources(previousRun);
-  const optimistic = foldOptimisticBuild(previousRun?.baselineXP ?? 0, sources);
-
-  return { level: buildLevelFromXP(optimistic.totalXP), xp: optimistic.totalXP };
-}
-
-function buildPreviousRunSources(previousRun: Readonly<LatestRun>): Array<OptimisticBuildSource> {
-  if (previousRun.tail === null) {
-    return [];
-  }
-
-  return [{ settledXP: 0, tailPayload: previousRun.tail, unverifiedDeltaSum: previousRun.deltaXP }];
 }

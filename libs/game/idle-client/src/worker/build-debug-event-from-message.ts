@@ -31,6 +31,10 @@ export function buildDebugEventFromMessage(message: WorkerMessage): DebugEventIn
     return { detail: `${status} remainingMs=${message.remainingMs}`, type: 'run' };
   }
 
+  if (message.type === WorkerMessageType.ResyncSettled) {
+    return { detail: `${message.avatarID} settled`, type: 'resync' };
+  }
+
   if (message.type === WorkerMessageType.ResyncStatus) {
     return { detail: message.status.kind, type: 'resync' };
   }

@@ -63,18 +63,18 @@ export async function runResyncFlow(
 
     // An undelivered stop gates the whole resync: until the server row reads closed, the progress
     // fetch would find it active and plan a catch-up for a run the player already ended.
-    if ((await flushPendingStop(context)) === 'undelivered') {
+    const stopFlush = await flushPendingStop(context);
+
+    if (stopFlush === 'undelivered') {
       emitResyncStatus(context, buildResyncFailure(context, avatarID));
-
-      return;
-    }
-
-    const reconstructed = await runResyncPass(context, avatarID, claim, signals);
-
-    if (reconstructed) {
-      context.registerReconstruction(avatarID);
     } else {
-      emitResyncStatus(context, buildResyncFailure(context, avatarID));
+      const reconstructed = await runResyncPass(context, avatarID, claim, signals);
+
+      if (reconstructed) {
+        context.registerReconstruction(avatarID);
+      } else {
+        emitResyncStatus(context, buildResyncFailure(context, avatarID));
+      }
     }
   } catch (error) {
     if (isAbortError(error, signals.cancel)) {
@@ -88,6 +88,11 @@ export async function runResyncFlow(
       emitResyncStatus(context, buildResyncFailure(context, avatarID));
     }
   }
+
+  // a tab reads the worker's live run as the avatar's run only once a resync has settled, since
+  // until then a run the outbox still holds has not been installed
+  context.registerResyncSettled(avatarID);
+  context.broadcast({ avatarID, type: WorkerMessageType.ResyncSettled });
 }
 
 function emitResyncStatus(context: WorkerContext, status: Readonly<ResyncStatus>): void {

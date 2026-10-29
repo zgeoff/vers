@@ -53,6 +53,13 @@ const resyncStatusSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('sim-version-expired') }).readonly(),
 ]);
 
+const resyncSettledMessageSchema = z
+  .object({
+    avatarID: z.string(),
+    type: z.literal(WorkerMessageType.ResyncSettled),
+  })
+  .readonly();
+
 const resyncStatusMessageSchema = z
   .object({
     status: resyncStatusSchema,
@@ -135,6 +142,7 @@ export const workerToClientMessageSchema = z.discriminatedUnion('type', [
   failureActionStatusMessageSchema,
   journalFailureMessageSchema,
   offlineCapStatusMessageSchema,
+  resyncSettledMessageSchema,
   resyncStatusMessageSchema,
   rewardSlotsRecordedMessageSchema,
   simulationSpeedStatusMessageSchema,

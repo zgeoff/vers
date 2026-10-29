@@ -10,6 +10,7 @@ test('it answers with the current simulation snapshot', () => {
   const result = handleInitializeMessage(context);
 
   expect(result).toStrictEqual({
+    resyncSettledAvatarIDs: [],
     rewardSlotLedger: { activityID: null, entries: [] },
     simulationSpeed: 1,
     state: context.getSimulation().getSnapshot(),
@@ -26,6 +27,7 @@ test('it answers with the retained reward-slot ledger for a mid-run call', () =>
   const result = handleInitializeMessage(context);
 
   expect(result).toStrictEqual({
+    resyncSettledAvatarIDs: [],
     rewardSlotLedger: { activityID: 'activity_1', entries: [{ count: 2, version: 1 }] },
     simulationSpeed: 1,
     state: context.getSimulation().getSnapshot(),
@@ -53,6 +55,17 @@ test('it carries a held displacement in the answer', () => {
   const result = handleInitializeMessage(context);
 
   expect(result.writerDisplacedActivityID).toBe('activity_9');
+});
+
+test('it lists an avatar whose resync settled in the answer', () => {
+  const context = createStubWorkerContext();
+
+  context.setSimulation(createSimulation());
+  context.registerResyncSettled('avatar_x');
+
+  const result = handleInitializeMessage(context);
+
+  expect(result.resyncSettledAvatarIDs).toStrictEqual(['avatar_x']);
 });
 
 test('it names the live run in the answer while a row is ticking', () => {

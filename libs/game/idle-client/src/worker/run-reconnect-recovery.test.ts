@@ -64,6 +64,7 @@ test('it resyncs the reported avatar when no intent is held', async () => {
 
   expect(ctx.context.getBroadcasts()).toStrictEqual([
     { status: { kind: 'capped' }, type: WorkerMessageType.ResyncStatus },
+    { avatarID: viewer.avatar.id, type: WorkerMessageType.ResyncSettled },
   ]);
 
   expect(ctx.context.getResyncAvatarID()).toBe(viewer.avatar.id);
@@ -85,6 +86,7 @@ test('it falls back to the avatar of the last resync without a report', async ()
 
   expect(ctx.context.getBroadcasts()).toStrictEqual([
     { status: { kind: 'capped' }, type: WorkerMessageType.ResyncStatus },
+    { avatarID: viewer.avatar.id, type: WorkerMessageType.ResyncSettled },
   ]);
 });
 

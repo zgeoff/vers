@@ -109,6 +109,7 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
 
   // per boot, never durable: a reload starts empty again, which is the state the guard exists for
   const reconstructedAvatarIDs = new Set<string>();
+  const resyncSettledAvatarIDs = new Set<string>();
 
   const broadcast = (message: WorkerMessage) => {
     const event = buildDebugEventFromMessage(message);
@@ -148,6 +149,7 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
       getLifecycle().send({ type: 'ADVANCE_STOP_SCOPE' });
     },
     broadcast,
+    collectResyncSettledAvatarIDs: () => [...resyncSettledAvatarIDs],
     getActivity: () => activity,
     getBundledEngineHash: () => options.bundledEngineHash ?? BUNDLED_ENGINE_HASH,
     getCancelSignal: () => getLifecycle().getSnapshot().context.cancelSignal,
@@ -185,6 +187,9 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
     },
     registerReconstruction: (avatarID) => {
       reconstructedAvatarIDs.add(avatarID);
+    },
+    registerResyncSettled: (avatarID) => {
+      resyncSettledAvatarIDs.add(avatarID);
     },
     resetRewardSlotLedger: () => {
       rewardSlotLedgerActivityID = null;

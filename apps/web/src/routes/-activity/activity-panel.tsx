@@ -2,7 +2,7 @@ import { safe } from '@orpc/client';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { Spinner } from '@vers/design-system';
-import { EngagementView, useRunOutcome } from '@vers/idle-client';
+import { EngagementView, useHasSettledResync, useRunOutcome } from '@vers/idle-client';
 import { css } from '@vers/styled-system/css';
 import { useEffect, useState } from 'react';
 import { ScreenLayout } from '../../components/screen-layout';
@@ -39,6 +39,7 @@ export function ActivityPanel() {
   const liveActivity = idleWorkerHandle.activity;
   const rewardsQuery = useActivityRewards(activity?.id);
   const lastRunOutcome = useRunOutcome();
+  const hasSettledResync = useHasSettledResync(avatarID);
   const [isRetryPending, setIsRetryPending] = useState(false);
 
   // the store outlives an avatar switch and a sign-in, so an outcome that names another avatar's
@@ -46,11 +47,12 @@ export function ActivityPanel() {
   const runOutcome =
     lastRunOutcome !== null && lastRunOutcome.avatarID === avatarID ? lastRunOutcome : null;
 
-  // the worker is the source of the live run: a client-authored start reaches the server only on
-  // the first checkpoint flush, so the server row stands in only for a cold load the worker has
-  // not attached yet; the map is the destination only when neither holds a run and none just ended
+  // a client-authored start reaches the server only on its first flush, and a run waiting in the
+  // outbox installs only on the worker's resync, so the map is the destination once that resync
+  // has settled and neither the worker nor the server holds a run, nor did one just end
   const hasNoRun =
     idleWorkerHandle.initialized &&
+    hasSettledResync &&
     liveActivity === undefined &&
     activity === null &&
     runOutcome === null;

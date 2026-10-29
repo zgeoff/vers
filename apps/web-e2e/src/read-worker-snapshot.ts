@@ -21,7 +21,7 @@ const QueuedCheckpointsSchema = z.object({
 const WorkerSnapshotSchema = z.object({
   connectivityOnline: z.boolean(),
   events: z.array(DebugEventSchema),
-  liveRun: ActivityReferenceSchema.nullable(),
+  liveRun: ActivityReferenceSchema.extend({ scopeID: z.string() }).nullable(),
   outbox: z.object({
     activityStarts: z.array(ActivityReferenceSchema),
     checkpoints: z.array(QueuedCheckpointsSchema),

@@ -6,6 +6,7 @@ test('it builds the empty worker state', () => {
 
   expect(slice.client).toBeNull();
   expect(slice.initialized).toBeFalse();
+  expect(slice.resyncSettledAvatarIDs).toStrictEqual([]);
   expect(slice.writerGeneration).toBe(0);
   expect(slice.writerAbortController).toBeInstanceOf(AbortController);
   expect(slice.writerAbortController.signal.aborted).toBeFalse();
