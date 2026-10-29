@@ -117,9 +117,10 @@ avatar's own chains against each other.
 
 Every writer that takes both rows takes the chain row before the activity row, so no two writers
 deadlock. A request that moves an anchor takes the chain row exclusively. Any other append takes a
-shared lock that the verifier's claim admits, so an append never waits for a replay to finish.
-Before it recomputes the flag, the verifier waits for any append in flight on the chain, so the flag
-never misses one.
+shared lock that the verifier's claim admits, so an append never waits for a replay to finish. When
+the verifier recomputes the flag, it keeps the flag set while an append in flight holds the chain's
+active activity. Otherwise it locks that activity until it commits, so a later append sets the flag
+after the commit.
 
 ## Pulling the appended anchor back
 

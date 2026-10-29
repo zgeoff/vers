@@ -117,7 +117,7 @@ test('it clears the flag when only a rejected activity has appends past its veri
   expect(stored.replayPending).toBe(false);
 });
 
-test('it waits for an append in flight on the chain and keeps the flag it would have set', async () => {
+test('it flags the chain without waiting on an append that waits on the avatar the verifier holds', async () => {
   await using ctx = await setupTest();
 
   const chain = await createChainRow(ctx.db);
@@ -130,8 +130,30 @@ test('it waits for an append in flight on the chain and keeps the flag it would 
     verifiedHead: 2,
   });
 
-  const appended = Promise.withResolvers<undefined>();
-  const release = Promise.withResolvers<undefined>();
+  const avatarHeld = Promise.withResolvers<undefined>();
+  const appendBlocked = Promise.withResolvers<undefined>();
+
+  const settlement = ctx.db.transaction().execute(async (verifier) => {
+    await verifier
+      .updateTable('avatars')
+      .set((eb) => ({ xp: eb('xp', '+', 0) }))
+      .where('id', '=', chain.avatarId)
+      .execute();
+
+    avatarHeld.resolve(undefined);
+
+    await appendBlocked.promise;
+
+    await updateChainReplayPending(verifier, {
+      activityID: activity.id,
+      avatarID: chain.avatarId,
+      priority: 0,
+      scopeID: chain.scopeId,
+      scopeType: chain.scopeType,
+    });
+  });
+
+  await avatarHeld.promise;
 
   const append = ctx.db.transaction().execute(async (trx) => {
     await trx
@@ -140,22 +162,12 @@ test('it waits for an append in flight on the chain and keeps the flag it would 
       .where('id', '=', activity.id)
       .execute();
 
-    appended.resolve(undefined);
-
-    await release.promise;
+    await trx
+      .updateTable('avatars')
+      .set((eb) => ({ xp: eb('xp', '+', 0) }))
+      .where('id', '=', chain.avatarId)
+      .execute();
   });
-
-  await appended.promise;
-
-  const update = ctx.db.transaction().execute((trx) =>
-    updateChainReplayPending(trx, {
-      activityID: activity.id,
-      avatarID: chain.avatarId,
-      priority: 0,
-      scopeID: chain.scopeId,
-      scopeType: chain.scopeType,
-    }),
-  );
 
   await waitFor(async () => {
     const waiting = await sql`
@@ -167,10 +179,10 @@ test('it waits for an append in flight on the chain and keeps the flag it would 
     expect(waiting.rows).toStrictEqual([{ count: 1 }]);
   });
 
-  release.resolve(undefined);
+  appendBlocked.resolve(undefined);
 
+  await settlement;
   await append;
-  await update;
 
   const stored = await ctx.db
     .selectFrom('activityChains')
