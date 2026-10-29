@@ -536,6 +536,97 @@ test('it rejects a build-snapshot-mismatch once the named predecessor has stoppe
   expect(stored).toStrictEqual(row);
 });
 
+test('it ingests a build-snapshot-mismatch start whose own row the server already holds as its latest, as another delivery admitted it', async () => {
+  const viewer = await createViewer();
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
+
+  const predecessor = await db.activityCollection.create({
+    avatarID: viewer.avatar.id,
+    status: 'stopped',
+  });
+
+  const row = createMockActivityData({
+    avatarID: viewer.avatar.id,
+    id: 'act_ingest_admitted_elsewhere',
+    predecessorActivityID: predecessor.id,
+    startKey: 'start_key_admitted_elsewhere',
+  });
+
+  await db.activityCollection.create({
+    avatarID: viewer.avatar.id,
+    id: row.id,
+    startedAt: new Date(Date.now() + 1000),
+    status: 'active',
+  });
+
+  server.use(
+    mockActivityService.advanceActivity.handler((opts) => {
+      throw opts.errors.CHECKPOINT_INVALID({
+        data: {
+          activityID: row.id,
+          appendedHead: 0,
+          avatarID: row.avatarID,
+          reason: 'build-snapshot-mismatch',
+        },
+      });
+    }),
+  );
+
+  await writeActivityStart(row);
+
+  const outcome = await ingestActivityStart(client, row.id);
+
+  expect(outcome).toStrictEqual({ outcome: 'ingested' });
+
+  const stored = await readActivityStart(row.id);
+
+  expect(stored).toBeUndefined();
+});
+
+test('it ingests a final stale-chain-head start whose own row the server already holds as its latest, as another delivery admitted it', async () => {
+  const viewer = await createViewer();
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
+
+  const row = createMockActivityData({
+    avatarID: viewer.avatar.id,
+    id: 'act_ingest_stale_admitted_elsewhere',
+    predecessorActivityID: null,
+    seed: 'seed_local_2',
+    startChainIndex: 2,
+    startKey: 'start_key_stale_admitted_elsewhere',
+  });
+
+  await db.activityCollection.create({
+    avatarID: viewer.avatar.id,
+    id: row.id,
+    status: 'active',
+  });
+
+  server.use(
+    mockActivityService.advanceActivity.handler((opts) => {
+      throw opts.errors.CONFLICT({
+        data: {
+          activityID: row.id,
+          anchor: { chainIndex: 3, nextSeed: 'seed_server_3' },
+          appendedHead: 0,
+          avatarID: row.avatarID,
+          reason: 'stale-chain-head',
+        },
+      });
+    }),
+  );
+
+  await writeActivityStart(row);
+
+  const outcome = await ingestActivityStart(client, row.id);
+
+  expect(outcome).toStrictEqual({ outcome: 'ingested' });
+
+  const stored = await readActivityStart(row.id);
+
+  expect(stored).toBeUndefined();
+});
+
 test('it rejects a build-snapshot-mismatch when the server’s active row is not the named predecessor, keeping the row for the drop', async () => {
   const viewer = await createViewer();
   const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);

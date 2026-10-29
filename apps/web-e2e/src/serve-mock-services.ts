@@ -144,5 +144,5 @@ function serveActivityStatus(request: Request): Response {
 
   return activity === undefined
     ? new Response(null, { status: 404 })
-    : Response.json({ status: activity.status });
+    : Response.json({ appendedHead: activity.appendedHead, status: activity.status });
 }

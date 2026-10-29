@@ -7,7 +7,7 @@ import {
 import { ActivityFailureAction, buildLevelFromXP, createSimulation } from '@vers/idle-core';
 import { createMockActivityInput, createMockAvatarData } from '@vers/idle-core/test-utils';
 import { createAuthedServiceClient, createViewer } from '@vers/mock-services';
-import { mockActivityService } from '@vers/mock-services/activity';
+import { mockActivityService, readAppendedAnchor } from '@vers/mock-services/activity';
 import * as db from '@vers/mock-services/db';
 import { buildSessionSupersededResponse } from '@vers/service-utils/orpc';
 import { waitFor } from '@vers/test-utils';
@@ -60,9 +60,17 @@ function setupTest() {
       },
     }),
     setupStartableNode: async (avatarID: string): Promise<void> => {
+      // the node's genesis as the activity service derives it, so a start minted here is admitted
+      const appended = readAppendedAnchor({
+        avatarID,
+        scopeID: '0_0',
+        scopeType: 'world_map_node',
+      });
+
       const seed = createMockNodeSeed({
         avatarID,
         encounterNode: { difficulty: 1 },
+        genesisSeed: appended.genesisSeed,
         nodeID: '0_0',
       });
 
@@ -1697,6 +1705,7 @@ test('it delivers the start on a reload with an undelivered start and reattaches
     appendedHead: 1,
     avatarID: viewer.avatar.id,
     buildSnapshot: { level: buildLevelFromXP(400), xp: 400 },
+    scopeID: '0_0',
     status: 'stopped',
     verifiedHead: 0,
   });
@@ -1723,6 +1732,7 @@ test('it delivers the start on a reload with an undelivered start and reattaches
     predecessorActivityID: delivered.id,
     scopeID: '0_0',
     seed: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaa6072',
+    startChainIndex: 1,
     startKey: 'start_key_matrix_undelivered',
   });
 

@@ -1,10 +1,12 @@
-import { expect, test } from 'bun:test';
+import { expect, mock, test } from 'bun:test';
+import { ORPCError } from '@orpc/client';
 import { createMockActivityData } from '@vers/contract-activity/test-utils';
 import { createSimulation } from '@vers/idle-core';
 import { createMockActivityInput, createMockAvatarData } from '@vers/idle-core/test-utils';
 import { createAuthedServiceClient, createViewer } from '@vers/mock-services';
 import { mockActivityService } from '@vers/mock-services/activity';
 import * as db from '@vers/mock-services/db';
+import { makeAnswerQueue } from '@vers/test-utils';
 import { HttpResponse } from 'msw';
 import invariant from 'tiny-invariant';
 import { server } from '../mocks/node';
@@ -39,6 +41,150 @@ test('it announces an ingested activity start to connected tabs', async () => {
     activityID: row.id,
     type: WorkerMessageType.ActivityStartIngested,
   });
+});
+
+test('it shows no refusal and keeps the start when the network fails on its delivery', async () => {
+  const context = createStubWorkerContext();
+  const row = createMockActivityData({ id: 'act_network_delivery', startKey: 'start_key_nd' });
+
+  server.use(mockActivityService.advanceActivity.handler(() => HttpResponse.error()));
+
+  await writeActivityStart(row);
+
+  const outcome = await ingestAndBroadcastActivityStart(context, row.id);
+  const stored = await readActivityStart(row.id);
+
+  expect(outcome).toBe('undelivered');
+  expect(stored).toStrictEqual(row);
+  expect(context.getBroadcasts()).toStrictEqual([]);
+});
+
+test('it shows no refusal and keeps the start when the network fails on the progress read after a build-snapshot-mismatch', async () => {
+  const context = createStubWorkerContext();
+  const row = createMockActivityData({ id: 'act_network_build', startKey: 'start_key_nb' });
+
+  server.use(
+    mockActivityService.advanceActivity.handler((opts) => {
+      throw opts.errors.CHECKPOINT_INVALID({
+        data: {
+          activityID: row.id,
+          appendedHead: 0,
+          avatarID: row.avatarID,
+          reason: 'build-snapshot-mismatch',
+        },
+      });
+    }),
+    mockActivityService.getLatestActivityProgress.handler(() => HttpResponse.error()),
+  );
+
+  await writeActivityStart(row);
+
+  const outcome = await ingestAndBroadcastActivityStart(context, row.id);
+  const stored = await readActivityStart(row.id);
+
+  expect(outcome).toBe('deferred');
+  expect(stored).toStrictEqual(row);
+  expect(context.getBroadcasts()).toStrictEqual([]);
+});
+
+test('it shows no refusal and keeps the start when the network fails on the resend after a stale-chain-head', async () => {
+  const context = createStubWorkerContext();
+
+  const row = createMockActivityData({
+    id: 'act_network_resend',
+    startChainIndex: 9,
+    startKey: 'start_key_nr',
+  });
+
+  const answer = makeAnswerQueue<() => Response>([
+    () => {
+      throw new ORPCError('CONFLICT', {
+        data: {
+          activityID: row.id,
+          anchor: { chainIndex: 4, nextSeed: 'seed_server_4' },
+          appendedHead: 0,
+          avatarID: row.avatarID,
+          reason: 'stale-chain-head',
+        },
+        defined: true,
+        status: 409,
+      });
+    },
+    () => HttpResponse.error(),
+  ]);
+
+  server.use(mockActivityService.advanceActivity.handler(() => answer()()));
+
+  await writeActivityStart(row);
+
+  const outcome = await ingestAndBroadcastActivityStart(context, row.id);
+  const stored = await readActivityStart(row.id);
+
+  expect(outcome).toBe('deferred');
+  expect(stored).toStrictEqual(row);
+  expect(context.getBroadcasts()).toStrictEqual([]);
+});
+
+test('it shows no refusal and keeps the start when the network fails on the progress read after a second stale-chain-head', async () => {
+  const context = createStubWorkerContext();
+
+  const row = createMockActivityData({
+    id: 'act_network_stale_progress',
+    startChainIndex: 9,
+    startKey: 'start_key_nsp',
+  });
+
+  server.use(
+    mockActivityService.advanceActivity.handler((opts) => {
+      throw opts.errors.CONFLICT({
+        data: {
+          activityID: row.id,
+          anchor: { chainIndex: 4, nextSeed: 'seed_server_4' },
+          appendedHead: 0,
+          avatarID: row.avatarID,
+          reason: 'stale-chain-head',
+        },
+      });
+    }),
+    mockActivityService.getLatestActivityProgress.handler(() => HttpResponse.error()),
+  );
+
+  await writeActivityStart(row);
+
+  const outcome = await ingestAndBroadcastActivityStart(context, row.id);
+  const stored = await readActivityStart(row.id);
+
+  expect(outcome).toBe('deferred');
+  expect(stored).toStrictEqual(row);
+  expect(context.getBroadcasts()).toStrictEqual([]);
+});
+
+test('it sends a start that two callers deliver at once to the server once, and both read its outcome', async () => {
+  const context = createStubWorkerContext();
+  const row = createMockActivityData({ id: 'act_broadcast_once', startKey: 'start_key_once' });
+  const received = mock<(activityID: string) => void>();
+
+  server.use(
+    mockActivityService.advanceActivity.handler((opts) => {
+      received(opts.input.activityID);
+
+      return { activity: row, appendedHead: 0 };
+    }),
+  );
+
+  await writeActivityStart(row);
+
+  const outcomes = await Promise.all([
+    ingestAndBroadcastActivityStart(context, row.id),
+    ingestAndBroadcastActivityStart(context, row.id),
+  ]);
+
+  expect(outcomes).toStrictEqual(['ingested', 'ingested']);
+  expect(received).toHaveBeenCalledExactlyOnceWith(row.id);
+
+  expect(context.getBroadcasts()).toStrictEqual([
+    { activityID: row.id, type: WorkerMessageType.ActivityStartIngested },
+  ]);
 });
 
 test('it broadcasts the avatar-switched notice when the account moved to another avatar', async () => {

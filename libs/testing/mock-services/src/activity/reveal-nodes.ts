@@ -1,5 +1,3 @@
-import { sha256 } from '@noble/hashes/sha2.js';
-import { bytesToHex, utf8ToBytes } from '@noble/hashes/utils.js';
 import {
   buildRevealSources,
   canEncodeMortonKey,
@@ -11,6 +9,7 @@ import { findLiveActivityAvatar } from '../avatar/find-live-activity-avatar';
 import { upsertActiveAvatar } from '../avatar/upsert-active-avatar';
 import * as db from '../db';
 import { os } from './os';
+import { readAppendedAnchor } from './read-appended-anchor';
 import { resolveEncounterNode } from './resolve-encounter-node';
 
 const MOCK_KEY_VERSION = 1;
@@ -71,19 +70,21 @@ export const revealNodes = os.revealNodes.handler(async (opts) => {
   const nodes = opts.input.nodeIDs
     .filter((nodeID) => isNodeRevealed(sources, nodeID))
     .map((nodeID) => {
-      // Hashed from the avatar and node id, so the same pair always derives the same seed.
-      const hash = sha256(utf8ToBytes(`vers-mock-genesis|${opts.input.avatarID}|${nodeID}`));
       const encounterNode = resolveEncounterNode('world_map_node', nodeID);
 
       invariant(encounterNode !== undefined, 'nodeID already validated against a world-map cell');
 
-      const genesisSeed = bytesToHex(hash.slice(0, 16));
+      const appended = readAppendedAnchor({
+        avatarID: opts.input.avatarID,
+        scopeID: nodeID,
+        scopeType: 'world_map_node',
+      });
 
       return {
         contentVersion: db.MOCK_CURRENT_CONTENT_VERSION,
         encounterNode,
-        genesisSeed,
-        anchor: { chainIndex: 0, nextSeed: genesisSeed },
+        genesisSeed: appended.genesisSeed,
+        anchor: appended.anchor,
         nodeID,
       };
     });

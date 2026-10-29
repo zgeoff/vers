@@ -1900,7 +1900,7 @@ test('it reports server contact only after the answered flush settles the local 
   expect(rowsAtContact).toStrictEqual([]);
 });
 
-test("it persists the registered node's cached anchor as the write cursor advances", async () => {
+test("it persists the registered node's cached anchor as the write cursor advances past the start", async () => {
   const ctx = setupTest();
 
   server.use(mockActivityService.trackActivityProgress.handler(() => ({ appendedHead: 2 })));
@@ -1924,21 +1924,82 @@ test("it persists the registered node's cached anchor as the write cursor advanc
 
   await ctx.submitter.submit(
     'anchor-persist-activity',
-    createMockStartedCheckpoint({ nextSeed: 'seed-after-first' }),
+    createMockStartedCheckpoint({ nextSeed: 'seed-start', seed: 'seed-start' }),
   );
-
-  const afterFirst = await readNodeSeed(seed.avatarID, seed.nodeID);
-
-  expect(afterFirst?.anchor).toStrictEqual({ chainIndex: 6, nextSeed: 'seed-after-first' });
 
   await ctx.submitter.submit(
     'anchor-persist-activity',
     createMockCompletedCheckpoint({ nextSeed: 'seed-after-second' }),
   );
 
-  const afterSecond = await readNodeSeed(seed.avatarID, seed.nodeID);
+  const cached = await readNodeSeed(seed.avatarID, seed.nodeID);
 
-  expect(afterSecond?.anchor).toStrictEqual({ chainIndex: 7, nextSeed: 'seed-after-second' });
+  expect(cached?.anchor).toStrictEqual({ chainIndex: 7, nextSeed: 'seed-after-second' });
+});
+
+test("it leaves the node's cached anchor at the start on a started checkpoint, as the server's anchor stays", async () => {
+  const ctx = setupTest();
+
+  server.use(mockActivityService.trackActivityProgress.handler(() => HttpResponse.error()));
+
+  const seed = createMockNodeSeed({
+    avatarID: 'avatar-anchor-started',
+    anchor: { chainIndex: 5, nextSeed: 'seed-start' },
+    nodeID: '3_2',
+  });
+
+  await writeNodeSeeds(seed.avatarID, [seed]);
+
+  await ctx.submitter.registerActivity({
+    activityID: 'anchor-started-activity',
+    appendedHead: 0,
+    avatarID: seed.avatarID,
+    lastHash: 'start_hash',
+    scopeID: seed.nodeID,
+    startChainIndex: 5,
+  });
+
+  await ctx.submitter.submit(
+    'anchor-started-activity',
+    createMockStartedCheckpoint({ nextSeed: 'seed-start', seed: 'seed-start' }),
+  );
+
+  const cached = await readNodeSeed(seed.avatarID, seed.nodeID);
+
+  expect(cached?.anchor).toStrictEqual({ chainIndex: 5, nextSeed: 'seed-start' });
+});
+
+test("it leaves the node's cached anchor at the start on registration when the queue holds only the started checkpoint", async () => {
+  const ctx = setupTest();
+
+  server.use(mockActivityService.trackActivityProgress.handler(() => HttpResponse.error()));
+
+  const seed = createMockNodeSeed({
+    avatarID: 'avatar-anchor-started-queued',
+    anchor: { chainIndex: 5, nextSeed: 'seed-start' },
+    nodeID: '4_2',
+  });
+
+  const started = createMockCheckpointBatchEntry({
+    payload: { chainIndex: 6, nextSeed: 'seed-start', seed: 'seed-start', type: 'started' },
+    version: 1,
+  });
+
+  await writeNodeSeeds(seed.avatarID, [seed]);
+  await writeQueuedCheckpoint('anchor-started-queued-activity', started);
+
+  await ctx.submitter.registerActivity({
+    activityID: 'anchor-started-queued-activity',
+    appendedHead: 0,
+    avatarID: seed.avatarID,
+    lastHash: 'start_hash',
+    scopeID: seed.nodeID,
+    startChainIndex: 5,
+  });
+
+  const cached = await readNodeSeed(seed.avatarID, seed.nodeID);
+
+  expect(cached?.anchor).toStrictEqual({ chainIndex: 5, nextSeed: 'seed-start' });
 });
 
 test('it never persists a node anchor when the registration carries no scope', async () => {
