@@ -9,6 +9,7 @@ import { updateEnv } from '@vers/test-utils/bun';
 import invariant from 'tiny-invariant';
 import { createReplayService } from './create-replay-service';
 import { createHonestActivityFixture } from './test-utils/create-honest-activity-fixture';
+import { updateAvatarChainsReplayPending } from './test-utils/update-avatar-chains-replay-pending';
 
 test('it boots from env.SIM_ENGINE_HASH', async () => {
   const service = await createReplayService();
@@ -147,6 +148,8 @@ test('it drains a claimable chain after the cache clears a driver the previous d
     .set({ appendedHead: totalCheckpoints, lastHash: fixture.activity.lastHash })
     .where('id', '=', fixture.activity.id)
     .execute();
+
+  await updateAvatarChainsReplayPending(ctx.db, fixture.activity.avatarId);
 
   const secondDrained = await service.drain('boot');
 

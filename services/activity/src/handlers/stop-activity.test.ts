@@ -218,7 +218,7 @@ test('it leaves the anchor unchanged when only the Started checkpoint was append
     .where('scopeId', '=', '0_0')
     .executeTakeFirstOrThrow();
 
-  expect(chainAfter).toStrictEqual(chainBefore);
+  expect(chainAfter).toStrictEqual({ ...chainBefore, replayPending: true });
 });
 
 test('it rejects a duplicate stop with NOT_FOUND and advances the anchor exactly once', async () => {

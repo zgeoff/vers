@@ -25,6 +25,7 @@ import { createActivityRow } from '../test-utils/create-activity-row';
 import { createAvatarRow } from '../test-utils/create-avatar-row';
 import { createHonestActivityFixture } from '../test-utils/create-honest-activity-fixture';
 import { createRemoteReplayProvider } from '../test-utils/create-remote-replay-provider';
+import { updateAvatarChainsReplayPending } from '../test-utils/update-avatar-chains-replay-pending';
 import { runReplayIteration } from './run-replay-iteration';
 
 // the worker's own `db.transaction()` per iteration commits mid-test across several calls, which
@@ -201,6 +202,8 @@ test('it verifies a later batch from held state, not a fresh from-Started replay
     })
     .where('id', '=', fixture.activity.id)
     .execute();
+
+  await updateAvatarChainsReplayPending(ctx.db, fixture.activity.avatarId);
 
   const secondOutcome = await runReplayIteration(deps, cache);
 

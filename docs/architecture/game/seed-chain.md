@@ -107,12 +107,19 @@ from the forward-exited predecessor before it adjudicates.
 Settlement trusts a position only at or below the verified anchor
 ([applying verified progress](./replay-verification.md#applying-verified-progress)).
 
-The chain also carries a replay priority. The verifier picks between avatars by the priority on
-their chains, highest first and older chain on a tie, and it never reorders one avatar's own chains
-against each other.
+The chain also carries a replay priority and a replay flag. The flag is set while an activity on the
+chain that is not rejected holds appended checkpoints the verifier has not proved. Each append that
+writes a checkpoint sets the flag, and the verifier recomputes it before it commits a claim, so a
+claim reads only flagged chains, in priority order, and its cost does not grow with the number of
+avatars that have work waiting. The verifier picks between avatars by the priority of the chain that
+holds each avatar's next activity, highest first and older chain on a tie, and it never reorders one
+avatar's own chains against each other.
 
-Whoever moves an anchor, the request path or the verifier, takes the chain row before the activity
-row, so the two writers never deadlock.
+Every writer that takes both rows takes the chain row before the activity row, so no two writers
+deadlock. A request that moves an anchor takes the chain row exclusively. Any other append takes a
+shared lock that the verifier's claim admits, so an append never waits for a replay to finish.
+Before it recomputes the flag, the verifier waits for any append in flight on the chain, so the flag
+never misses one.
 
 ## Pulling the appended anchor back
 

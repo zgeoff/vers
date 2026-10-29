@@ -1,10 +1,11 @@
 import { expect, test } from 'bun:test';
 import { createTestDB } from '@vers/service-test-utils/bun';
+import { sql } from 'kysely';
 import { createActivityRow } from '../test-utils/create-activity-row';
 import { createChainRow } from '../test-utils/create-chain-row';
 import { claimNextSeedChain } from './claim-next-seed-chain';
 
-// the claim is a `FOR UPDATE SKIP LOCKED` row lock held across concurrent transactions, which
+// the claim is a `FOR NO KEY UPDATE SKIP LOCKED` row lock held across concurrent transactions, which
 // needs committed rows and independent connections, so this suite runs against a committed clone
 async function setupTest() {
   const db = await createTestDB({ isolation: 'schema' });
@@ -32,6 +33,18 @@ test('it claims an avatar with appends past the verified cursor', async () => {
     scopeID: chain.scopeId,
     scopeType: chain.scopeType,
   });
+});
+
+test('it turns plan compilation off for the rest of the claiming transaction', async () => {
+  await using ctx = await setupTest();
+
+  const setting = await ctx.db.transaction().execute(async (trx) => {
+    await claimNextSeedChain(trx);
+
+    return sql`select current_setting('jit') as jit`.execute(trx);
+  });
+
+  expect(setting.rows).toStrictEqual([{ jit: 'off' }]);
 });
 
 test('it reports an empty queue as undefined', async () => {
@@ -451,4 +464,94 @@ test('it ends the walk back through earlier activities on a cycle of declared pr
   const claimed = await ctx.db.transaction().execute((trx) => claimNextSeedChain(trx));
 
   expect(claimed?.activityID).toBe(successor.id);
+});
+
+test('it skips a chain whose replay flag is clear', async () => {
+  await using ctx = await setupTest();
+
+  const chain = await createChainRow(ctx.db);
+
+  await createActivityRow(ctx.db, {
+    appendedHead: 3,
+    avatarId: chain.avatarId,
+    scopeId: chain.scopeId,
+  });
+
+  await ctx.db
+    .updateTable('activityChains')
+    .set({ replayPending: false })
+    .where('avatarId', '=', chain.avatarId)
+    .execute();
+
+  const claimed = await ctx.db.transaction().execute((trx) => claimNextSeedChain(trx));
+
+  expect(claimed).toBeUndefined();
+});
+
+test("it ranks an avatar by the chain of its next activity, not by a later chain's priority", async () => {
+  await using ctx = await setupTest();
+
+  const routine = await createChainRow(ctx.db, { priority: 0, scopeId: '0_0' });
+
+  const earlier = await createActivityRow(ctx.db, {
+    appendedHead: 2,
+    avatarId: routine.avatarId,
+    scopeId: '0_0',
+    startChainIndex: 0,
+    status: 'stopped',
+  });
+
+  await createChainRow(ctx.db, { avatarId: routine.avatarId, priority: 10, scopeId: '0_1' });
+
+  await createActivityRow(ctx.db, {
+    appendedHead: 2,
+    avatarId: routine.avatarId,
+    predecessorActivityId: earlier.id,
+    scopeId: '0_1',
+    startChainIndex: 0,
+  });
+
+  const bumped = await createChainRow(ctx.db, { priority: 5 });
+
+  const bumpedActivity = await createActivityRow(ctx.db, {
+    appendedHead: 2,
+    avatarId: bumped.avatarId,
+    scopeId: bumped.scopeId,
+  });
+
+  const claimed = await ctx.db.transaction().execute((trx) => claimNextSeedChain(trx));
+
+  expect(claimed).toStrictEqual({
+    activityID: bumpedActivity.id,
+    avatarID: bumped.avatarId,
+    priority: 5,
+    scopeID: bumped.scopeId,
+    scopeType: bumped.scopeType,
+  });
+});
+
+test('it leaves a claimed chain open to the key-share lock an append takes', async () => {
+  await using ctx = await setupTest();
+
+  const chain = await createChainRow(ctx.db);
+
+  await createActivityRow(ctx.db, {
+    appendedHead: 3,
+    avatarId: chain.avatarId,
+    scopeId: chain.scopeId,
+  });
+
+  const shared = await ctx.db.transaction().execute(async (holder) => {
+    await claimNextSeedChain(holder);
+
+    return ctx.db
+      .selectFrom('activityChains')
+      .select('avatarId')
+      .where('avatarId', '=', chain.avatarId)
+      .forKeyShare()
+      .noWait()
+      .execute();
+  });
+
+  expect(shared).toStrictEqual([{ avatarId: chain.avatarId }]);
 });

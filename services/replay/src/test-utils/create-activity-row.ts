@@ -2,6 +2,7 @@ import type { Activities, DB } from '@vers/db';
 import type { Insertable, Kysely, Selectable } from 'kysely';
 import { createAvatarRow } from './create-avatar-row';
 import { createMockActivityRow } from './factories/create-mock-activity-row';
+import { updateAvatarChainsReplayPending } from './update-avatar-chains-replay-pending';
 
 export async function createActivityRow(
   db: Kysely<DB>,
@@ -15,9 +16,13 @@ export async function createActivityRow(
     avatarId = avatar.id;
   }
 
-  return db
+  const row = await db
     .insertInto('activities')
     .values(createMockActivityRow({ ...overrides, avatarId }))
     .returningAll()
     .executeTakeFirstOrThrow();
+
+  await updateAvatarChainsReplayPending(db, avatarId);
+
+  return row;
 }

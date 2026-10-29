@@ -12,6 +12,7 @@ import { waitFor } from '@vers/test-utils';
 import invariant from 'tiny-invariant';
 import { createReplayCache } from '../replay/create-replay-cache';
 import { createHonestActivityFixture } from '../test-utils/create-honest-activity-fixture';
+import { updateAvatarChainsReplayPending } from '../test-utils/update-avatar-chains-replay-pending';
 import { drainReplayQueue } from './drain-replay-queue';
 
 async function setupTest() {
@@ -132,6 +133,8 @@ test('it settles a stream split across two drains to its terminal total and chai
     .where('id', '=', fixture.activity.id)
     .execute();
 
+  await updateAvatarChainsReplayPending(ctx.db, fixture.activity.avatarId);
+
   const secondDrained = await drainReplayQueue(ctx.deps, 'poke');
 
   expect(secondDrained).toBe(1);
@@ -222,6 +225,8 @@ test('it verifies a second drain from a fresh cache, reaching the same terminal 
     .set({ appendedHead: totalCheckpoints, lastHash: fixture.activity.lastHash })
     .where('id', '=', fixture.activity.id)
     .execute();
+
+  await updateAvatarChainsReplayPending(ctx.db, fixture.activity.avatarId);
 
   const coldDeps = { ...ctx.deps, cache: createReplayCache() };
 
@@ -330,6 +335,8 @@ test('it reuses the same held driver object across two warm drains', async () =>
     })
     .where('id', '=', fixture.activity.id)
     .execute();
+
+  await updateAvatarChainsReplayPending(ctx.db, fixture.activity.avatarId);
 
   const secondDrained = await drainReplayQueue(ctx.deps, 'poke');
 

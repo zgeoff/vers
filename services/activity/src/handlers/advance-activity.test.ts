@@ -223,6 +223,50 @@ test('it mint-and-appends a two-continuation chain, returning the final freshly 
   ]);
 });
 
+test('it flags the chain for replay when a continuation closes the activity it extends', async () => {
+  await using ctx = await setupTest();
+
+  const viewer = await createViewer({ audience: 'service-activity', db: ctx.db });
+  const avatar = await createAvatarRow(ctx.db, { userId: viewer.user.id, xp: 0 });
+
+  await createActivityChainRow(ctx.db, { avatarId: avatar.id, scopeId: '0_0' });
+
+  const client = buildRPCTestClient<ActivityContract>(ctx.app, { token: viewer.token });
+
+  const started = await createActivityRow(ctx.db, {
+    avatarId: avatar.id,
+    scopeId: '0_0',
+  });
+
+  const tail = createMockCheckpointBatch({
+    finalPayloadOverrides: { rewards: { xp: 40 }, type: 'completed' },
+    startChainIndex: started.startChainIndex,
+    startPrevHash: started.startHash,
+    startVersion: 1,
+  });
+
+  await client.advanceActivity({
+    activityID: started.id,
+    continuations: [
+      {
+        buildSnapshot: { level: buildLevelFromXP(40), xp: 40 },
+        checkpoints: tail,
+        id: `act_${createId()}`,
+        startKey: `continue_${started.id}`,
+      },
+    ],
+    expectedHead: 0,
+  });
+
+  const chain = await ctx.db
+    .selectFrom('activityChains')
+    .select('replayPending')
+    .where('avatarId', '=', avatar.id)
+    .executeTakeFirstOrThrow();
+
+  expect(chain.replayPending).toBe(true);
+});
+
 test('it carries the closing row secretRef/secretVersion forward onto a minted continuation', async () => {
   await using ctx = await setupTest();
 
