@@ -331,7 +331,7 @@ jobs:
   changes:
     permissions:
       contents: read
-    uses: zgeoff/tools/.github/workflows/paths-changed.yml@sync-v30
+    uses: zgeoff/tools/.github/workflows/paths-changed.yml@sync-v31
     with:
       paths: |
         apps/web/Dockerfile
