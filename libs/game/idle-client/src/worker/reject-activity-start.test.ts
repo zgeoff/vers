@@ -87,6 +87,116 @@ test("it moves the refused start's cached node anchor back to the server's ancho
   expect(cached?.anchor).toStrictEqual({ chainIndex: 4, nextSeed: 'seed_server_4' });
 });
 
+test("it moves a node anchor that the refused run advanced back to that run's own start anchor when the refusal carries none", async () => {
+  const context = createStubWorkerContext();
+
+  const seed = createMockNodeSeed({
+    avatarID: 'avatar_mismatch',
+    anchor: { chainIndex: 6, nextSeed: 'seed_start_6' },
+    nodeID: '1_2',
+  });
+
+  const refused = createMockActivityData({
+    avatarID: seed.avatarID,
+    id: 'act_mismatch_root',
+    scopeID: seed.nodeID,
+    seed: 'seed_start_6',
+    startChainIndex: 6,
+  });
+
+  await writeNodeSeeds(seed.avatarID, [seed]);
+  await writeActivityStart(refused);
+
+  await writeQueuedCheckpoint(refused.id, createMockCheckpointBatchEntry({ version: 2 }), {
+    anchor: { chainIndex: 8, nextSeed: 'seed_local_8' },
+    avatarID: seed.avatarID,
+    nodeID: seed.nodeID,
+  });
+
+  await rejectActivityStart(context, { latest: null, row: refused });
+
+  const cached = await readNodeSeed(seed.avatarID, seed.nodeID);
+
+  expect(cached?.anchor).toStrictEqual({ chainIndex: 6, nextSeed: 'seed_start_6' });
+});
+
+test('it moves the node anchor of a dropped successor on another node back to its start anchor', async () => {
+  const context = createStubWorkerContext();
+
+  const seed = createMockNodeSeed({
+    avatarID: 'avatar_cascade',
+    anchor: { chainIndex: 3, nextSeed: 'seed_start_3' },
+    nodeID: '4_1',
+  });
+
+  const refused = createMockActivityData({
+    avatarID: seed.avatarID,
+    id: 'act_cascade_root',
+    scopeID: '0_0',
+  });
+
+  const successor = createMockActivityData({
+    avatarID: seed.avatarID,
+    id: 'act_cascade_next',
+    predecessorActivityID: refused.id,
+    scopeID: seed.nodeID,
+    seed: 'seed_start_3',
+    startChainIndex: 3,
+  });
+
+  await writeNodeSeeds(seed.avatarID, [seed]);
+  await writeActivityStart(refused);
+  await writeActivityStart(successor);
+
+  await writeQueuedCheckpoint(successor.id, createMockCheckpointBatchEntry({ version: 2 }), {
+    anchor: { chainIndex: 5, nextSeed: 'seed_local_5' },
+    avatarID: seed.avatarID,
+    nodeID: seed.nodeID,
+  });
+
+  await rejectActivityStart(context, { latest: null, row: refused });
+
+  const cached = await readNodeSeed(seed.avatarID, seed.nodeID);
+
+  expect(cached?.anchor).toStrictEqual({ chainIndex: 3, nextSeed: 'seed_start_3' });
+});
+
+test('it moves a node anchor back to the earliest of the dropped starts on that node', async () => {
+  const context = createStubWorkerContext();
+
+  const seed = createMockNodeSeed({
+    avatarID: 'avatar_replayed',
+    anchor: { chainIndex: 9, nextSeed: 'seed_local_9' },
+    nodeID: '3_3',
+  });
+
+  const refused = createMockActivityData({
+    avatarID: seed.avatarID,
+    id: 'act_replayed_root',
+    scopeID: seed.nodeID,
+    seed: 'seed_start_2',
+    startChainIndex: 2,
+  });
+
+  const continuation = createMockActivityData({
+    avatarID: seed.avatarID,
+    id: 'act_replayed_next',
+    predecessorActivityID: refused.id,
+    scopeID: seed.nodeID,
+    seed: 'seed_start_5',
+    startChainIndex: 5,
+  });
+
+  await writeNodeSeeds(seed.avatarID, [seed]);
+  await writeActivityStart(refused);
+  await writeActivityStart(continuation);
+  await rejectActivityStart(context, { latest: null, row: refused });
+
+  const cached = await readNodeSeed(seed.avatarID, seed.nodeID);
+
+  expect(cached?.anchor).toStrictEqual({ chainIndex: 2, nextSeed: 'seed_start_2' });
+});
+
 test('it records the refused start, the live run it ends, every dropped start and the anchor it carried', async () => {
   const context = createStubWorkerContext();
   const simulation = createSimulation();
@@ -118,7 +228,7 @@ test('it records the refused start, the live run it ends, every dropped start an
   });
 });
 
-test('it halts the live run built on the refused start and broadcasts the refused outcome for it', async () => {
+test('it halts the live run built on the refused start and broadcasts its refused outcome before the update that clears it', async () => {
   const context = createStubWorkerContext();
   const simulation = createSimulation();
   const refused = createMockActivityData({ avatarID: 'avatar_live', id: 'act_live_root' });
@@ -144,10 +254,6 @@ test('it halts the live run built on the refused start and broadcasts the refuse
 
   expect(context.getBroadcasts()).toStrictEqual([
     {
-      state: { failureAction: ActivityFailureAction.Abort },
-      type: WorkerMessageType.SimulationUpdate,
-    },
-    {
       outcome: {
         activityID: live.id,
         avatarID: live.avatarID,
@@ -156,6 +262,10 @@ test('it halts the live run built on the refused start and broadcasts the refuse
         xp: 0,
       },
       type: WorkerMessageType.ActivityEnded,
+    },
+    {
+      state: { failureAction: ActivityFailureAction.Abort },
+      type: WorkerMessageType.SimulationUpdate,
     },
   ]);
 });

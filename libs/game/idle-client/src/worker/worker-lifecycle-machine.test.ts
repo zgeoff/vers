@@ -2545,10 +2545,6 @@ test("it drops a start refused because its predecessor is no longer active and m
 
   expect(context.getBroadcasts()).toStrictEqual([
     {
-      state: { failureAction: ActivityFailureAction.Abort },
-      type: WorkerMessageType.SimulationUpdate,
-    },
-    {
       outcome: {
         activityID: refused.id,
         avatarID: viewer.avatar.id,
@@ -2557,6 +2553,10 @@ test("it drops a start refused because its predecessor is no longer active and m
         xp: 0,
       },
       type: WorkerMessageType.ActivityEnded,
+    },
+    {
+      state: { failureAction: ActivityFailureAction.Abort },
+      type: WorkerMessageType.SimulationUpdate,
     },
     {
       avatarID: viewer.avatar.id,
