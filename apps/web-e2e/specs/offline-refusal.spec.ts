@@ -6,6 +6,83 @@ import { readWorkerSnapshot } from '../src/read-worker-snapshot';
 import { signIn } from '../src/sign-in';
 import { expect, test } from '../src/test';
 
+test('it keeps the refusal on screen when the server refuses a run started with the network down', async ({
+  browser,
+  mockActivityURL,
+  page,
+}) => {
+  // under software GL each click waits seconds on the live renderer
+  test.setTimeout(90 * 1000);
+
+  invariant(mockActivityURL !== undefined, 'the mock activity service refuses starts');
+
+  const email = 'e2e-refusal-shown@qa.versidle.com';
+  const revealed = page.waitForResponse(/\/revealNodes/u);
+
+  await signIn(page, email);
+
+  await expect(page).toHaveURL(/\/respite$/u);
+  await expect.poll(() => readWorkerSnapshot(page)).not.toBeNull();
+
+  await page.getByRole('link', { exact: true, name: 'Explore' }).click();
+
+  await revealed;
+
+  // a start folds its build from the avatar's last run, so the player plays and ends one run
+  // online first, as a returning player has
+  await navigateClientRoute(page, '/explore/node/0_0');
+
+  await page.getByRole('link', { name: 'Click to start' }).click();
+  await page.getByRole('button', { name: 'END RUN' }).click();
+
+  await expect
+    .poll(async () => {
+      const snapshot = await readWorkerSnapshot(page);
+
+      return snapshot === null ? null : [snapshot.liveRun, snapshot.outbox.activityStarts];
+    })
+    .toStrictEqual([null, []]);
+
+  await page.context().setOffline(true);
+
+  const outage = await createSharedWorkerOutage(browser);
+
+  await navigateClientRoute(page, '/explore/node/0_0');
+
+  await page.getByRole('link', { name: 'Click to start' }).click();
+
+  await expect(page.getByRole('button', { name: 'END RUN' })).toBeVisible();
+
+  // the server settles XP the device never saw, so it refuses the run's start for real
+  const settled = await fetch(
+    `${mockActivityURL}/test/avatar-xp?${new URLSearchParams({ email, xp: '40' })}`,
+    { method: 'POST' },
+  );
+
+  expect(settled.status).toBe(204);
+
+  await outage.end();
+  await page.context().setOffline(false);
+
+  const refusal = page.getByRole('heading', { name: 'Run could not be saved' });
+
+  await expect(refusal).toBeVisible({ timeout: 20 * 1000 });
+
+  // the worker resyncs once the drop is done, and the refusal stays until the player leaves it
+  await expect
+    .poll(async () => {
+      const snapshot = await readWorkerSnapshot(page);
+
+      return snapshot === null ? null : [snapshot.phase, snapshot.liveRun];
+    })
+    .toStrictEqual(['idle', null]);
+
+  await expect(page).toHaveURL(/\/activity$/u);
+  await expect(refusal).toBeVisible();
+
+  expect(outage.workerCount).toBe(1);
+});
+
 test('it saves a run started with the network down at a node whose last run the server refused', async ({
   browser,
   mockActivityURL,
@@ -69,6 +146,8 @@ test('it saves a run started with the network down at a node whose last run the 
     )
     .toBeGreaterThanOrEqual(2);
 
+  // the server settles XP the device never saw, so it refuses that run's start for real; the
+  // resync after the refusal reads the new XP, and the next start folds it
   const settled = await fetch(
     `${mockActivityURL}/test/avatar-xp?${new URLSearchParams({ email, xp: '40' })}`,
     { method: 'POST' },
@@ -79,25 +158,24 @@ test('it saves a run started with the network down at a node whose last run the 
   await firstOutage.end();
   await page.context().setOffline(false);
 
-  // the server holds XP the run's start never folded, so it refuses that start for real
-  await expect(page.getByRole('heading', { name: 'Run could not be saved' })).toBeVisible({
-    timeout: 20 * 1000,
-  });
+  await expect
+    .poll(
+      async () => {
+        const snapshot = await readWorkerSnapshot(page);
 
-  const restored = await fetch(
-    `${mockActivityURL}/test/avatar-xp?${new URLSearchParams({ email, xp: '0' })}`,
-    { method: 'POST' },
-  );
-
-  expect(restored.status).toBe(204);
+        return snapshot?.events.some((event) => event.type === 'refusal');
+      },
+      { timeout: 20 * 1000 },
+    )
+    .toBe(true);
 
   await expect
     .poll(async () => {
       const snapshot = await readWorkerSnapshot(page);
 
-      return snapshot === null ? null : [snapshot.liveRun, snapshot.outbox.activityStarts];
+      return snapshot === null ? null : [snapshot.phase, snapshot.liveRun];
     })
-    .toStrictEqual([null, []]);
+    .toStrictEqual(['idle', null]);
 
   await page.context().setOffline(true);
 
@@ -127,19 +205,33 @@ test('it saves a run started with the network down at a node whose last run the 
     )
     .toBe('transport-failure');
 
+  // the refusal can leave the screen as fast as it lands, so the page marks every render of it
+  await page.evaluate(() => {
+    const observer = new MutationObserver(() => {
+      if (document.body.textContent.includes('Run could not be saved')) {
+        document.body.dataset['shownRefusal'] = 'true';
+      }
+    });
+
+    observer.observe(document.body, { characterData: true, childList: true, subtree: true });
+  });
+
   await secondOutage.end();
   await page.context().setOffline(false);
 
-  const refusal = page.getByRole('heading', { name: 'Run could not be saved' });
-
   // the delivery after reconnect ends in one of two answers: the service admits the start, or it
-  // refuses it and the device shows the refusal
+  // refuses it and the worker ends the run
   await expect
     .poll(
       async () => {
         const response = await fetch(`${mockActivityURL}/test/activity?id=${activityID}`);
+        const snapshot = await readWorkerSnapshot(page);
 
-        return response.status === 200 || (await refusal.count()) > 0;
+        const refused = snapshot?.events.some(
+          (event) => event.type === 'run' && event.detail.startsWith(`${activityID} refused`),
+        );
+
+        return response.status === 200 || refused === true;
       },
       { timeout: 20 * 1000 },
     )
@@ -150,7 +242,9 @@ test('it saves a run started with the network down at a node whose last run the 
 
   await writeFile(testInfo.outputPath('worker-snapshot.json'), JSON.stringify(delivered, null, 2));
 
-  await expect(refusal).toHaveCount(0);
+  const shownRefusal = await page.locator('body').getAttribute('data-shown-refusal');
+
+  expect(shownRefusal, 'the page showed "Run could not be saved"').toBeNull();
 
   const admitted = await fetch(`${mockActivityURL}/test/activity?id=${activityID}`);
 
