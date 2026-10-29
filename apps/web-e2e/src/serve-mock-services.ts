@@ -7,6 +7,7 @@ import { avatarRouter } from '@vers/mock-services/avatar';
 import {
   activeAvatarCollection,
   activityCollection,
+  avatarCollection,
   userCollection,
   verificationCollection,
 } from '@vers/mock-services/db';
@@ -60,6 +61,10 @@ for (const service of SERVICES) {
 
     if (service === 'activity' && pathname === '/test/live-run' && request.method === 'POST') {
       return serveLiveRun(request);
+    }
+
+    if (service === 'activity' && pathname === '/test/avatar-xp' && request.method === 'POST') {
+      return serveAvatarXP(request);
     }
 
     if (service === 'activity' && pathname === '/test/activities') {
@@ -139,6 +144,43 @@ async function serveLiveRun(request: Request): Promise<Response> {
   });
 
   return Response.json({ activityID: activity.id });
+}
+
+// a settled XP the device has not folded makes the service refuse the device's next start as a
+// build mismatch, as the real service does after a settlement the device never saw
+async function serveAvatarXP(request: Request): Promise<Response> {
+  const searchParams = new URL(request.url).searchParams;
+
+  const email = searchParams.get('email');
+  const xp = Number(searchParams.get('xp'));
+
+  if (email === null || !Number.isInteger(xp) || xp < 0) {
+    return new Response(null, { status: 400 });
+  }
+
+  const user = userCollection.findFirst((query) => query.where({ email }));
+
+  const activeAvatar =
+    user === undefined
+      ? undefined
+      : activeAvatarCollection.findFirst((query) => query.where({ userID: user.id }));
+
+  const avatar =
+    activeAvatar === undefined
+      ? undefined
+      : avatarCollection.findFirst((query) => query.where({ id: activeAvatar.avatarID }));
+
+  if (avatar === undefined) {
+    return new Response(null, { status: 404 });
+  }
+
+  await avatarCollection.update(avatar, {
+    data(record) {
+      record.xp = xp;
+    },
+  });
+
+  return new Response(null, { status: 204 });
 }
 
 function serveActivityStatus(request: Request): Response {

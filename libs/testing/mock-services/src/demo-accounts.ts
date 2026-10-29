@@ -147,4 +147,11 @@ export const DEMO_ACCOUNTS: ReadonlyArray<DemoAccount> = [
     password: 'password123',
     username: 'e2e-offline-build',
   },
+  {
+    avatarName: 'Offline Refusal Test Avatar',
+    email: 'e2e-offline-refusal@qa.versidle.com',
+    name: 'Offline Refusal Demo Account',
+    password: 'password123',
+    username: 'e2e-offline-refusal',
+  },
 ];
