@@ -189,6 +189,7 @@ function createStubClient(
   }
 
   return createActivityServiceClient({
+    onExchangeFailed: () => {},
     onSessionSuperseded: () => {
       getLifecycle().send({ trigger: { kind: 'takeover' }, type: 'DISCARD' });
     },
