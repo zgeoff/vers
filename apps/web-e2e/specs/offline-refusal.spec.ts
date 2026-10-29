@@ -1,3 +1,4 @@
+import { writeFile } from 'node:fs/promises';
 import invariant from 'tiny-invariant';
 import { createSharedWorkerOutage } from '../src/create-shared-worker-outage';
 import { navigateClientRoute } from '../src/navigate-client-route';
@@ -9,7 +10,7 @@ test('it saves a run started with the network down at a node whose last run the 
   browser,
   mockActivityURL,
   page,
-}) => {
+}, testInfo) => {
   // under software GL each click waits seconds on the live renderer, and two offline runs each wait
   // for a delivery attempt
   test.setTimeout(150 * 1000);
@@ -90,9 +91,13 @@ test('it saves a run started with the network down at a node whose last run the 
 
   expect(restored.status).toBe(204);
 
-  await page.getByRole('button', { name: 'Back to map' }).click();
+  await expect
+    .poll(async () => {
+      const snapshot = await readWorkerSnapshot(page);
 
-  await expect(page).toHaveURL(/\/explore/u);
+      return snapshot === null ? null : [snapshot.liveRun, snapshot.outbox.activityStarts];
+    })
+    .toStrictEqual([null, []]);
 
   await page.context().setOffline(true);
 
@@ -139,6 +144,11 @@ test('it saves a run started with the network down at a node whose last run the 
       { timeout: 20 * 1000 },
     )
     .toBe(true);
+
+  // the worker's events name each start's chain index and each refusal, which a failure here needs
+  const delivered = await page.evaluate(() => globalThis.__versQA?.snapshot());
+
+  await writeFile(testInfo.outputPath('worker-snapshot.json'), JSON.stringify(delivered, null, 2));
 
   await expect(refusal).toHaveCount(0);
 
