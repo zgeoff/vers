@@ -14,8 +14,12 @@ export async function writeNodeSeeds(
     ...seeds.map(async (seed) => {
       const existing = await tx.store.get([avatarID, seed.nodeID]);
 
+      // a server that deleted and re-revealed the chain gave it a new random genesis seed, so an
+      // anchor cached under the old one names positions the server no longer holds
       const anchor =
-        existing?.anchor !== undefined && existing.anchor.chainIndex > seed.anchor.chainIndex
+        existing?.anchor !== undefined &&
+        existing.genesisSeed === seed.genesisSeed &&
+        existing.anchor.chainIndex > seed.anchor.chainIndex
           ? existing.anchor
           : seed.anchor;
 

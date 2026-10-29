@@ -70,6 +70,34 @@ test("it keeps the cached anchor when a reveal's anchor is behind this device's 
   expect(cachedSeed?.anchor).toStrictEqual({ chainIndex: 4, nextSeed: 'seed-advanced' });
 });
 
+test("it adopts a reveal's anchor behind the cached one when the server re-created the chain under a new genesis seed", async () => {
+  const avatarID = 'avatar-write-anchor-recreated';
+
+  const seed = createMockNodeSeed({
+    anchor: { chainIndex: 4, nextSeed: 'seed-advanced' },
+    genesisSeed: 'seed-genesis-old',
+  });
+
+  await writeNodeSeeds(avatarID, [seed]);
+
+  await writeNodeSeeds(avatarID, [
+    {
+      ...seed,
+      anchor: { chainIndex: 0, nextSeed: 'seed-genesis-new' },
+      genesisSeed: 'seed-genesis-new',
+    },
+  ]);
+
+  const cachedSeed = await readNodeSeed(avatarID, seed.nodeID);
+
+  expect(cachedSeed).toStrictEqual({
+    anchor: { chainIndex: 0, nextSeed: 'seed-genesis-new' },
+    contentVersion: seed.contentVersion,
+    encounterNode: seed.encounterNode,
+    genesisSeed: 'seed-genesis-new',
+  });
+});
+
 test("it adopts a reveal's anchor when it is at least as advanced as the cached one", async () => {
   const avatarID = 'avatar-write-anchor-advance';
   const seed = createMockNodeSeed({ anchor: { chainIndex: 1, nextSeed: 'seed-one' } });

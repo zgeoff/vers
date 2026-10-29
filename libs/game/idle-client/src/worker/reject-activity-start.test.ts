@@ -215,6 +215,56 @@ test('it clears both records when the server holds no activity for the avatar', 
   expect(lastStarted).toBeUndefined();
 });
 
+test('it clears both records when they name a run the server no longer holds, as after an account reset', async () => {
+  const context = createStubWorkerContext();
+  const refused = createMockActivityData({ avatarID: 'avatar_wiped', id: 'act_wiped_root' });
+
+  context.setLatestRun({
+    activityID: 'act_wiped_before_reset',
+    avatarID: 'avatar_wiped',
+    baselineXP: 0,
+    deltaXP: 40,
+    tail: null,
+  });
+
+  await writeLastStartedActivity({
+    avatarID: 'avatar_wiped',
+    lastActivityID: 'act_wiped_before_reset',
+  });
+
+  await rejectActivityStart(context, { latest: null, row: refused });
+
+  const lastStarted = await readLastStartedActivity('avatar_wiped');
+
+  expect(context.getLatestRun()).toBeNull();
+  expect(lastStarted).toBeUndefined();
+});
+
+test('it keeps both records when the server holds no activity and they name a start still waiting in the outbox', async () => {
+  const context = createStubWorkerContext();
+  const refused = createMockActivityData({ avatarID: 'avatar_waiting', id: 'act_waiting_root' });
+  const waiting = createMockActivityData({ avatarID: 'avatar_waiting', id: 'act_waiting_kept' });
+
+  const held = {
+    activityID: waiting.id,
+    avatarID: 'avatar_waiting',
+    baselineXP: 0,
+    deltaXP: 15,
+    tail: null,
+  };
+
+  context.setLatestRun(held);
+
+  await writeActivityStart(waiting);
+  await writeLastStartedActivity({ avatarID: 'avatar_waiting', lastActivityID: waiting.id });
+  await rejectActivityStart(context, { latest: null, row: refused });
+
+  const lastStarted = await readLastStartedActivity('avatar_waiting');
+
+  expect(context.getLatestRun()).toStrictEqual(held);
+  expect(lastStarted).toStrictEqual({ avatarID: 'avatar_waiting', lastActivityID: waiting.id });
+});
+
 test('it keeps both records when they name a run that survives the drop', async () => {
   const context = createStubWorkerContext();
   const refused = createMockActivityData({ avatarID: 'avatar_keep', id: 'act_keep_root' });

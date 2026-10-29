@@ -30,11 +30,13 @@ export async function rejectActivityStart(
   // same wrong snapshot; aborting it before the snapshot below keeps the drop complete
   context.advanceStopScope();
 
-  const pending = await readAllActivityStarts();
+  const starts = await readAllActivityStarts();
 
-  const dropped = collectChainedStartIDs(
-    pending.filter((candidate) => candidate.avatarID === row.avatarID),
-    row.id,
+  const pending = starts.filter((candidate) => candidate.avatarID === row.avatarID);
+  const dropped = collectChainedStartIDs(pending, row.id);
+
+  const waitingIDs = new Set(
+    pending.map((candidate) => candidate.id).filter((activityID) => !dropped.has(activityID)),
   );
 
   for (const activityID of dropped) {
@@ -57,7 +59,12 @@ export async function rejectActivityStart(
     handleSimulationUpdate(context);
   }
 
-  await resetLatestRunRecords(context, row.avatarID, dropped, input.latest);
+  await resetLatestRunRecords(context, {
+    avatarID: row.avatarID,
+    dropped,
+    latest: input.latest,
+    waitingIDs,
+  });
 
   // written once the held run has halted: a tick of the refused run still advances the cached
   // anchor past the server's, so a reset before the halt is overwritten
@@ -111,18 +118,30 @@ function collectChainedStartIDs(
   return collected;
 }
 
+interface ResetLatestRunRecordsInput {
+  readonly avatarID: string;
+  readonly dropped: ReadonlySet<string>;
+  readonly latest: LatestActivityProgress | null;
+  readonly waitingIDs: ReadonlySet<string>;
+}
+
 async function resetLatestRunRecords(
   context: WorkerContext,
-  avatarID: string,
-  dropped: ReadonlySet<string>,
-  latest: LatestActivityProgress | null,
+  input: Readonly<ResetLatestRunRecordsInput>,
 ): Promise<void> {
+  const avatarID = input.avatarID;
+  const latest = input.latest;
   const held = context.getLatestRun();
 
   const lastStarted = await readLastStartedActivity(avatarID);
 
+  // a server holding no activity for the avatar, as after an account reset, has no row behind a
+  // record that names anything but a start still waiting in this device's outbox
+  const isStale = (activityID: string) =>
+    input.dropped.has(activityID) || (latest === null && !input.waitingIDs.has(activityID));
+
   // a record naming a run that survives the drop still folds and orders the next mint correctly
-  if (held === null || dropped.has(held.activityID)) {
+  if (held === null || (held.avatarID === avatarID && isStale(held.activityID))) {
     const replacement =
       latest === null
         ? null
@@ -137,7 +156,7 @@ async function resetLatestRunRecords(
     context.setLatestRun(replacement);
   }
 
-  if (lastStarted !== undefined && !dropped.has(lastStarted.lastActivityID)) {
+  if (lastStarted !== undefined && !isStale(lastStarted.lastActivityID)) {
     return;
   }
 

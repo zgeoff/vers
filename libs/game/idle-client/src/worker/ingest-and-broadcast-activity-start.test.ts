@@ -5,6 +5,7 @@ import { createMockActivityInput, createMockAvatarData } from '@vers/idle-core/t
 import { createAuthedServiceClient, createViewer } from '@vers/mock-services';
 import { mockActivityService } from '@vers/mock-services/activity';
 import * as db from '@vers/mock-services/db';
+import { HttpResponse } from 'msw';
 import invariant from 'tiny-invariant';
 import { server } from '../mocks/node';
 import { readActivityStart } from '../submission/read-activity-start';
@@ -144,6 +145,37 @@ test('it halts a live run whose own start the server refused for good and tells 
     },
     type: WorkerMessageType.ActivityEnded,
   });
+});
+
+test('it keeps a live run and its start, and tells the player nothing, when the start fails in transport', async () => {
+  const viewer = await createViewer();
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
+
+  const context = createStubWorkerContext({ client });
+  const simulation = createSimulation();
+
+  const live = createMockActivityData({
+    avatarID: viewer.avatar.id,
+    id: 'act_broadcast_transport_live',
+    startKey: 'start_key_transport_live',
+  });
+
+  server.use(mockActivityService.advanceActivity.handler(() => HttpResponse.error()));
+
+  await writeActivityStart(live);
+
+  simulation.startActivity(createMockAvatarData(), createMockActivityInput({ id: live.id }));
+  context.setSimulation(simulation);
+  context.setActivity(live);
+
+  const outcome = await ingestAndBroadcastActivityStart(context, live.id);
+  const kept = await readActivityStart(live.id);
+
+  expect(outcome).toBe('undelivered');
+  expect(simulation.activity?.id).toBe(live.id);
+  expect(context.getActivity()).toStrictEqual(live);
+  expect(kept).toStrictEqual(live);
+  expect(context.getBroadcasts()).toStrictEqual([]);
 });
 
 test("it mints the next start at a node on the server's anchor after one refusal, once a rejection rewound the chain behind the device's cache", async () => {

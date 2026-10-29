@@ -99,8 +99,12 @@ tabs show the run as playing on another device, the halted state a writer displa
 activity shows. On a sign-out, the sign-out control decides.
 
 A discard drops the cached node seeds of the avatars it covers, because local play moved their chain
-anchors past what the server holds and a node reveal never moves a cached anchor backward. The next
-node reveal caches the server's anchors.
+anchors past what the server holds and a node reveal never moves a cached anchor backward on the
+same chain. The next node reveal caches the server's anchors.
+
+An account reset deletes the avatar's chains on the server, and the next node reveal re-creates each
+chain from a new genesis seed. A node reveal whose genesis seed differs from the cached one replaces
+the cached anchor, because the cached positions belong to a chain the server no longer holds.
 
 A replay rejection or a database restore moves a chain's appended anchor back behind the device's
 cached anchor with no discard to reset the cache. The device's next start at that node is refused as

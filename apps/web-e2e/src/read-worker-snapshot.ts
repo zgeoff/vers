@@ -11,6 +11,12 @@ declare global {
 
 const DebugEventSchema = z.object({ detail: z.string(), type: z.string() });
 const ActivityReferenceSchema = z.object({ activityID: z.string() });
+const FlushRecordSchema = z.object({ type: z.string() });
+
+const QueuedCheckpointsSchema = z.object({
+  activityID: z.string(),
+  lastFlush: FlushRecordSchema.nullable(),
+});
 
 const WorkerSnapshotSchema = z.object({
   connectivityOnline: z.boolean(),
@@ -18,7 +24,7 @@ const WorkerSnapshotSchema = z.object({
   liveRun: ActivityReferenceSchema.nullable(),
   outbox: z.object({
     activityStarts: z.array(ActivityReferenceSchema),
-    checkpoints: z.array(ActivityReferenceSchema),
+    checkpoints: z.array(QueuedCheckpointsSchema),
   }),
   phase: z.string(),
   tab: z.object({ tabID: z.string() }),
