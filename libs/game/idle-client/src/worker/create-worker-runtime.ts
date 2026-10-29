@@ -139,6 +139,9 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
   const client =
     options.client ??
     createActivityServiceClient({
+      onExchangeFailed: (detail) => {
+        debug.recordEvent('rpc', detail);
+      },
       onSessionSuperseded: () => {
         getLifecycle().send({ trigger: { kind: 'takeover' }, type: 'DISCARD' });
       },

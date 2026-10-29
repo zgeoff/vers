@@ -15,6 +15,7 @@ const FlushRecordSchema = z.object({ type: z.string() });
 
 const QueuedCheckpointsSchema = z.object({
   activityID: z.string(),
+  highestVersion: z.int(),
   lastFlush: FlushRecordSchema.nullable(),
 });
 

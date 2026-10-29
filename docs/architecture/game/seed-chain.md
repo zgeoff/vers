@@ -87,7 +87,9 @@ reason:
 
 A kept start resends on the worker's backoff
 ([worker lifecycle](./offline-reconcile.md#worker-lifecycle)), and a dropped start takes its queued
-checkpoints with it.
+checkpoints with it. The server appended nothing for a dropped start, so the device moves its node's
+cached anchor back to the anchor the start was minted from, and never forward. When the drop covers
+several starts on one node, the earliest start's anchor wins.
 
 ## The anchors
 

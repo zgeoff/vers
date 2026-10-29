@@ -11,7 +11,10 @@ test('it answers the proxy path as the given user', async () => {
 
   server.use(createStubActivityProxy(viewer.user.id));
 
-  const client = createActivityServiceClient({ onSessionSuperseded: () => {} });
+  const client = createActivityServiceClient({
+    onExchangeFailed: () => {},
+    onSessionSuperseded: () => {},
+  });
 
   expect(client.getCurrentActivity({ avatarID: viewer.avatar.id })).resolves.toMatchObject({
     id: activity.id,
@@ -26,7 +29,10 @@ test("it hides another user's avatar from the given user", async () => {
 
   server.use(createStubActivityProxy(viewer.user.id));
 
-  const client = createActivityServiceClient({ onSessionSuperseded: () => {} });
+  const client = createActivityServiceClient({
+    onExchangeFailed: () => {},
+    onSessionSuperseded: () => {},
+  });
 
   expect(client.getCurrentActivity({ avatarID: other.avatar.id })).resolves.toBeNull();
 });

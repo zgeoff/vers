@@ -18,7 +18,12 @@ test('it installs a snapshot function that merges the tab identity onto the work
   const snapshot = await globalThis.__versQA?.snapshot();
 
   expect(client.readDebugSnapshot).toHaveBeenCalledExactlyOnceWith({});
-  expect(snapshot).toMatchObject({ phase: 'idle', tab: { tabID: 'tab_1', writerGeneration: 2 } });
+
+  expect(snapshot).toMatchObject({
+    phase: 'idle',
+    tab: { online: navigator.onLine, tabID: 'tab_1', writerGeneration: 2 },
+  });
+
   expect(snapshot).toBeFrozen();
 });
 

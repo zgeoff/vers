@@ -315,10 +315,6 @@ test('it drops a start whose snapshot the server refused for good, halts the liv
 
   expect(context.getBroadcasts()).toStrictEqual([
     {
-      state: { failureAction: ActivityFailureAction.Abort },
-      type: WorkerMessageType.SimulationUpdate,
-    },
-    {
       outcome: {
         activityID: live.id,
         avatarID: viewer.avatar.id,
@@ -327,6 +323,10 @@ test('it drops a start whose snapshot the server refused for good, halts the liv
         xp: 0,
       },
       type: WorkerMessageType.ActivityEnded,
+    },
+    {
+      state: { failureAction: ActivityFailureAction.Abort },
+      type: WorkerMessageType.SimulationUpdate,
     },
   ]);
 });

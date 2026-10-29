@@ -87,7 +87,148 @@ test("it moves the refused start's cached node anchor back to the server's ancho
   expect(cached?.anchor).toStrictEqual({ chainIndex: 4, nextSeed: 'seed_server_4' });
 });
 
-test('it halts the live run built on the refused start and broadcasts the refused outcome for it', async () => {
+test("it moves a node anchor that the refused run advanced back to that run's own start anchor when the refusal carries none", async () => {
+  const context = createStubWorkerContext();
+
+  const seed = createMockNodeSeed({
+    avatarID: 'avatar_mismatch',
+    anchor: { chainIndex: 6, nextSeed: 'seed_start_6' },
+    nodeID: '1_2',
+  });
+
+  const refused = createMockActivityData({
+    avatarID: seed.avatarID,
+    id: 'act_mismatch_root',
+    scopeID: seed.nodeID,
+    seed: 'seed_start_6',
+    startChainIndex: 6,
+  });
+
+  await writeNodeSeeds(seed.avatarID, [seed]);
+  await writeActivityStart(refused);
+
+  await writeQueuedCheckpoint(refused.id, createMockCheckpointBatchEntry({ version: 2 }), {
+    anchor: { chainIndex: 8, nextSeed: 'seed_local_8' },
+    avatarID: seed.avatarID,
+    nodeID: seed.nodeID,
+  });
+
+  await rejectActivityStart(context, { latest: null, row: refused });
+
+  const cached = await readNodeSeed(seed.avatarID, seed.nodeID);
+
+  expect(cached?.anchor).toStrictEqual({ chainIndex: 6, nextSeed: 'seed_start_6' });
+});
+
+test('it moves the node anchor of a dropped successor on another node back to its start anchor', async () => {
+  const context = createStubWorkerContext();
+
+  const seed = createMockNodeSeed({
+    avatarID: 'avatar_cascade',
+    anchor: { chainIndex: 3, nextSeed: 'seed_start_3' },
+    nodeID: '4_1',
+  });
+
+  const refused = createMockActivityData({
+    avatarID: seed.avatarID,
+    id: 'act_cascade_root',
+    scopeID: '0_0',
+  });
+
+  const successor = createMockActivityData({
+    avatarID: seed.avatarID,
+    id: 'act_cascade_next',
+    predecessorActivityID: refused.id,
+    scopeID: seed.nodeID,
+    seed: 'seed_start_3',
+    startChainIndex: 3,
+  });
+
+  await writeNodeSeeds(seed.avatarID, [seed]);
+  await writeActivityStart(refused);
+  await writeActivityStart(successor);
+
+  await writeQueuedCheckpoint(successor.id, createMockCheckpointBatchEntry({ version: 2 }), {
+    anchor: { chainIndex: 5, nextSeed: 'seed_local_5' },
+    avatarID: seed.avatarID,
+    nodeID: seed.nodeID,
+  });
+
+  await rejectActivityStart(context, { latest: null, row: refused });
+
+  const cached = await readNodeSeed(seed.avatarID, seed.nodeID);
+
+  expect(cached?.anchor).toStrictEqual({ chainIndex: 3, nextSeed: 'seed_start_3' });
+});
+
+test('it moves a node anchor back to the earliest of the dropped starts on that node', async () => {
+  const context = createStubWorkerContext();
+
+  const seed = createMockNodeSeed({
+    avatarID: 'avatar_replayed',
+    anchor: { chainIndex: 9, nextSeed: 'seed_local_9' },
+    nodeID: '3_3',
+  });
+
+  const refused = createMockActivityData({
+    avatarID: seed.avatarID,
+    id: 'act_replayed_root',
+    scopeID: seed.nodeID,
+    seed: 'seed_start_2',
+    startChainIndex: 2,
+  });
+
+  const continuation = createMockActivityData({
+    avatarID: seed.avatarID,
+    id: 'act_replayed_next',
+    predecessorActivityID: refused.id,
+    scopeID: seed.nodeID,
+    seed: 'seed_start_5',
+    startChainIndex: 5,
+  });
+
+  await writeNodeSeeds(seed.avatarID, [seed]);
+  await writeActivityStart(refused);
+  await writeActivityStart(continuation);
+  await rejectActivityStart(context, { latest: null, row: refused });
+
+  const cached = await readNodeSeed(seed.avatarID, seed.nodeID);
+
+  expect(cached?.anchor).toStrictEqual({ chainIndex: 2, nextSeed: 'seed_start_2' });
+});
+
+test('it records the refused start, the live run it ends, every dropped start and the anchor it carried', async () => {
+  const context = createStubWorkerContext();
+  const simulation = createSimulation();
+  const refused = createMockActivityData({ avatarID: 'avatar_recorded', id: 'act_recorded_root' });
+
+  const live = createMockActivityData({
+    avatarID: 'avatar_recorded',
+    id: 'act_recorded_next',
+    predecessorActivityID: refused.id,
+  });
+
+  await writeActivityStart(refused);
+  await writeActivityStart(live);
+
+  simulation.startActivity(createMockAvatarData(), createMockActivityInput({ id: live.id }));
+  context.setSimulation(simulation);
+  context.setActivity(live);
+
+  await rejectActivityStart(context, {
+    anchor: { chainIndex: 2, nextSeed: 'seed_server_2' },
+    latest: null,
+    row: refused,
+  });
+
+  expect(context.getDebugRecorder().getEvents()).toPartiallyContain({
+    detail:
+      'act_recorded_root held=act_recorded_next dropped=act_recorded_root,act_recorded_next anchor=2',
+    type: 'refusal',
+  });
+});
+
+test('it halts the live run built on the refused start and broadcasts its refused outcome before the update that clears it', async () => {
   const context = createStubWorkerContext();
   const simulation = createSimulation();
   const refused = createMockActivityData({ avatarID: 'avatar_live', id: 'act_live_root' });
@@ -113,10 +254,6 @@ test('it halts the live run built on the refused start and broadcasts the refuse
 
   expect(context.getBroadcasts()).toStrictEqual([
     {
-      state: { failureAction: ActivityFailureAction.Abort },
-      type: WorkerMessageType.SimulationUpdate,
-    },
-    {
       outcome: {
         activityID: live.id,
         avatarID: live.avatarID,
@@ -125,6 +262,10 @@ test('it halts the live run built on the refused start and broadcasts the refuse
         xp: 0,
       },
       type: WorkerMessageType.ActivityEnded,
+    },
+    {
+      state: { failureAction: ActivityFailureAction.Abort },
+      type: WorkerMessageType.SimulationUpdate,
     },
   ]);
 });
@@ -323,6 +464,58 @@ test('it aborts an in-flight flow before it can chain a fresh start on the refus
   expect(context.getCancelSignal().aborted).toBeFalse();
 });
 
+test("it moves a dropped successor's node anchor back on the retry of a drop that stopped part way", async () => {
+  const stopping = createStubWorkerContext({
+    broadcast: () => {
+      throw new Error('worker stopped');
+    },
+  });
+
+  const seed = createMockNodeSeed({
+    avatarID: 'avatar_resumed',
+    anchor: { chainIndex: 4, nextSeed: 'seed_start_4' },
+    nodeID: '5_2',
+  });
+
+  const refused = createMockActivityData({
+    avatarID: seed.avatarID,
+    id: 'act_resumed_root',
+    scopeID: '0_0',
+  });
+
+  const live = createMockActivityData({
+    avatarID: seed.avatarID,
+    id: 'act_resumed_live',
+    predecessorActivityID: refused.id,
+    scopeID: seed.nodeID,
+    seed: 'seed_start_4',
+    startChainIndex: 4,
+  });
+
+  const simulation = createSimulation();
+
+  await writeNodeSeeds(seed.avatarID, [seed]);
+  await writeActivityStart(refused);
+  await writeActivityStart(live);
+
+  await writeQueuedCheckpoint(live.id, createMockCheckpointBatchEntry({ version: 2 }), {
+    anchor: { chainIndex: 6, nextSeed: 'seed_local_6' },
+    avatarID: seed.avatarID,
+    nodeID: seed.nodeID,
+  });
+
+  simulation.startActivity(createMockAvatarData(), createMockActivityInput({ id: live.id }));
+  stopping.setSimulation(simulation);
+  stopping.setActivity(live);
+
+  await rejectActivityStart(stopping, { latest: null, row: refused }).catch(() => {});
+  await rejectActivityStart(createStubWorkerContext(), { latest: null, row: refused });
+
+  const cached = await readNodeSeed(seed.avatarID, seed.nodeID);
+
+  expect(cached?.anchor).toStrictEqual({ chainIndex: 4, nextSeed: 'seed_start_4' });
+});
+
 test('it keeps the refused root when the drop fails part way, so the next reconnect retries it', async () => {
   const context = createStubWorkerContext({
     broadcast: () => {
@@ -356,6 +549,6 @@ test('it keeps the refused root when the drop fails part way, so the next reconn
   const remaining = await readAllActivityStarts();
   const refusedQueue = await readQueuedCheckpoints(refused.id);
 
-  expect(remaining).toStrictEqual([refused]);
+  expect(remaining).toIncludeSameMembers([refused, live]);
   expect(refusedQueue).toHaveLength(1);
 });
