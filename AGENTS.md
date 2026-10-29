@@ -20,7 +20,14 @@ rules. Read the doc for the area in full before substantial work there:
 - Activities, the seed chain, verification, replay or reconcile:
   `docs/architecture/game/game-simulation.md`, `docs/architecture/game/replay-verification.md`,
   `docs/architecture/game/seed-chain.md`, `docs/architecture/game/offline-reconcile.md` and
-  `docs/architecture/game/glossary.md`.
+  `docs/architecture/game/glossary.md`. These docs govern offline play, sync, the outbox and
+  reconciliation, so an issue or fix there cites them at each stage:
+  - The issue or brief cites each governing doc section as `path:line`.
+  - The plan states the documented behaviour that the fix keeps.
+  - An e2e checks that behaviour with the network cut for the page and its SharedWorker. DevTools
+    Offline and Playwright's `setOffline(true)` leave the SharedWorker online, so the spec pairs
+    `setOffline(true)` with `createSharedWorkerOutage` from `apps/web-e2e/src/`.
+  - The PR body lists the same docs, and the review checks the diff against them.
 - World-map generation, reveal or fog of war: `docs/architecture/game/worldmap.md`.
 - Item and reward rolls, or content entropy: `docs/architecture/game/item-generation.md` and
   `docs/architecture/game/game-entropy.md`.
