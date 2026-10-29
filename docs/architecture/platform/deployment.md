@@ -67,8 +67,11 @@ domain service that opens a connection carries.
 ```mermaid
 flowchart LR
   C[checks] --> M[migrate]
+  E[e2e] --> M
   C --> P[env preflight]
+  E --> P
   C --> X[read deploy manifest]
+  E --> X
   P --> B["build<br>one leg per stale app"]
   X --> B
   B --> G["full-stack gate<br>every image in one compose stack"]
@@ -79,8 +82,9 @@ flowchart LR
   D -.->|"even when every leg skipped"| V[deploy verify]
 ```
 
-A push to `main` runs the main workflow. Each build and deploy leg self-gates on staleness, so a
-phase lost to an earlier failure ships on the next push.
+A push to `main` runs the main workflow. The `checks` and `e2e` jobs run side by side, and every
+later job waits for both to pass. Each build and deploy leg self-gates on staleness, so a phase lost
+to an earlier failure ships on the next push.
 
 ### Pipeline
 

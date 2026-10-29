@@ -225,7 +225,34 @@ jobs:
           script:
             bash -c "if grep -q size:delta package.json; then bun run size:delta; else echo []; fi"
 
+  # turbo's affected-packages run counts no package changed by a workflow edit, so a change to the
+  # workflows that run the suite runs every spec
+  e2e-workflow-changes:
+    permissions:
+      contents: read
+    uses: zgeoff/tools/.github/workflows/paths-changed.yml@sync-v31
+    with:
+      paths: |
+        .github/workflows/main.yml
+        .github/workflows/pr.yml
+
   e2e:
+    needs: e2e-workflow-changes
+    if: ${{ !cancelled() }}
+    # the renderer specs run one at a time and take most of the suite's time, so their two shards
+    # and the other projects each get a runner; --no-deps drops the wait on the placeholder
+    # project, which runs on its own runner
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - leg: placeholder
+            projects: --project=chromium --project=firefox --project=webkit
+          - leg: renderer-1
+            projects: --project=chromium-renderer --no-deps --shard=1/2
+          - leg: renderer-2
+            projects: --project=chromium-renderer --no-deps --shard=2/2
+    name: e2e (${{ matrix.leg }})
     runs-on: ubuntu-latest
     # a hung step (a wedged webServer, a stuck browser) must fail the run, not
     # burn runner hours
@@ -233,6 +260,8 @@ jobs:
     env:
       # the merge commit's first parent is the base branch's tip it merges into
       TURBO_SCM_BASE: HEAD^1
+      # a failed gate leaves the output empty, and the suite then runs in full
+      E2E_SCOPE: ${{ needs.e2e-workflow-changes.outputs.changed == 'false' && '--affected' || '' }}
       # CI never commits, but skip hook install/execution regardless
       LEFTHOOK: 0
     steps:
@@ -315,14 +344,17 @@ jobs:
           # the worker mints an activity start only under a bundled engine hash, and the mock
           # services the specs run against accept any hash
           VITE_SIM_ENGINE_HASH: e2e-mock-engine
-        run: node_modules/.bin/turbo run e2e --affected
+          E2E_PROJECTS: ${{ matrix.projects }}
+        # on CI turbo groups each task's log and prints it when the task ends, so a suite cut off at
+        # the job limit printed nothing; streamed, the log shows each test as it finishes
+        run: node_modules/.bin/turbo run e2e $E2E_SCOPE --log-order=stream -- $E2E_PROJECTS
 
       - name: Upload Videos Of Failed E2E
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         # gate on the e2e step so an earlier failure doesn't upload an empty artifact
         if: ${{ failure() && steps.e2e.outcome == 'failure' }}
         with:
-          name: playwright-results
+          name: playwright-results-${{ matrix.leg }}
           include-hidden-files: true
           path: apps/web-e2e/.test-results
 
