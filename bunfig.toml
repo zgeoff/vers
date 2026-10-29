@@ -16,8 +16,6 @@ minimumReleaseAge = 604800
 # the gate, and needs one comment line per name in the form the audit-fix
 # workflow writes. bun run deps:check fails once the date in it passes, and
 # the audit-fix workflow removes an entry whose line ends "(audit-fix)".
-# body-parser 1.20.9 (published 2026-10-22, patches GHSA-27r3-jxmh-p828) ages past the gate ~2026-10-29 — remove then (audit-fix)
-# body-parser 2.4.0 (published 2026-10-22, patches GHSA-27r3-jxmh-p828) ages past the gate ~2026-10-29 — remove then (audit-fix)
 minimumReleaseAgeExcludes = [
   "@zgeoff/bugsink-mcp",
   "@zgeoff/bun-test-extended",
@@ -28,7 +26,6 @@ minimumReleaseAgeExcludes = [
   "@zgeoff/skill-gate",
   "@zgeoff/std",
   "@zgeoff/umami-mcp",
-  "body-parser",
 ]
 
 [test]
