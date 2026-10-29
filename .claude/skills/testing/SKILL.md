@@ -376,8 +376,9 @@ to a warning, unless a comment on that setting holds a ticket or a `floor:`.
   `e2e/` at the repo root or an app root, which [Where a test lives](#where-a-test-lives) describes.
   The repo has no other `test/`, `tests/`, or `__tests__` directory.
 - A test that drives a real browser goes in `<module>.browser.test.ts` beside its module, which the
-  repo runs in a serial lane, as [Browser suites](./references/system-tests.md#browser-suites)
-  describes. A browser beside every worker, or a build per worker, holds memory the workers need.
+  repo runs in its own lane at `--parallel=1`, as
+  [Browser suites](./references/system-tests.md#browser-suites) describes. A browser beside every
+  worker, or a build per worker, holds memory the workers need.
 
 ```ts
 test.each([

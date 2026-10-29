@@ -118,23 +118,43 @@ behavior keeps MSW where it applies.
 
 ## Browser suites
 
-A test that drives a real browser, such as Chrome through `Bun.WebView` or Playwright, lives in a
-browser suite named `<module>.browser.test.ts` beside the module it tests. The repo's test script
-runs browser suites in their own serial lane after the unit run, so the browser starts on an idle
-CPU. A cold browser start on a CPU that the unit run's workers saturate can outlast the test
-timeout, and a raised timeout only hides that cost.
+A browser suite is a test file named `<module>.browser.test.ts` beside the module it tests. Every
+browser suite uses one setup: it drives Chrome through `Bun.WebView`, the repo's shared browser
+preload starts that Chrome, and a `runInPage` helper runs its page code. Playwright never runs under
+`bun test`. It drives an `e2e/` lane that needs Firefox, WebKit on Linux, or a live system, because
+`Bun.WebView` has no Firefox and runs WebKit only on macOS.
 
-- A browser test keeps within the browser lane's 10 s limit, which [Lanes](../SKILL.md#lanes)
-  states.
-- When it runs longer, find the cause in the [Slow tests](../SKILL.md#slow-tests) table and fix
-  that. The usual causes are a dev server or a build per test, which becomes a per-run fixture; a
-  fixed wait, which becomes a wait for the element or the event; and a test that drives a whole user
-  flow, which becomes a test of one component or page.
-- A user journey through the browser belongs in `e2e/` because it is a journey of the built product,
-  not because of its time, and it keeps within that lane's limit too.
-- A test that cannot fit carries the disable comment that
-  [A test over its limit](../SKILL.md#a-test-over-its-limit) describes, with its measured time and
-  its ticket or its floor.
+The repo's browser lane runs the suites at `bun test --parallel=1` after the unit run, so each file
+gets its own process and Chrome starts on an idle CPU. A cold Chrome start on a CPU that the unit
+run's workers saturate can outlast the test timeout, and a raised timeout only hides that cost.
+[Setting up a browser lane](https://github.com/zgeoff/tools/blob/main/docs/guides/browser-lane.md)
+describes the lane's command, its preload, and its memory cap.
+
+### Page code
+
+Page code longer than one line goes through the repo's `runInPage(view, fn, arg, schema)` helper,
+never through a string passed to `view.evaluate`. The test writes the page code as a real function,
+so the type checker and the linter check it. The helper sends the function's source with a JSON
+argument and parses the result with the zod schema, with no cast. The parse also fails a result that
+JSON cannot carry, such as a `Blob`, which arrives as `{}`. The function sees only its argument and
+the page's globals, so a test variable used in its body passes the type check and throws a
+`ReferenceError` in the page. A one-line `view.evaluate` call stays as it is.
+
+### Time and helpers
+
+- Every browser suite keeps the lane's default timeout, the 10 s limit that
+  [Lanes](../SKILL.md#lanes) states. No browser test takes the disable comment that
+  [A test over its limit](../SKILL.md#a-test-over-its-limit) describes.
+- When a browser test runs longer, find the cause in the [Slow tests](../SKILL.md#slow-tests) table
+  and fix that. The usual causes are a dev server or a build per test, which moves to the lane's
+  command; a fixed wait, which becomes a wait for the element or the event; and a test that drives a
+  whole user flow, which becomes a test of one component or page.
+- A journey through the client's routes stays a browser suite, so that it keeps the one setup. A
+  journey of the built product, through its bundle or binary, belongs in `e2e/`, as
+  [Where a test lives](../SKILL.md#where-a-test-lives) describes.
+- Every browser helper keeps its own test file, with no exception: the preload, `runInPage` in
+  `run-in-page.browser.test.ts`, and each helper that opens a view. The preload's test also checks
+  its check of the build.
 - Every other test stays out of a browser suite, so the unit run keeps its speed.
 
 ## Stateful stand-ins
