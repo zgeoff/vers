@@ -40,13 +40,6 @@ export async function rejectActivityStart(
     pending.map((candidate) => candidate.id).filter((activityID) => !dropped.has(activityID)),
   );
 
-  for (const activityID of dropped) {
-    if (activityID !== row.id) {
-      await removeQueuedCheckpoints(activityID);
-      await removeActivityStart(activityID);
-    }
-  }
-
   const held = context.getActivity();
   const heldDropped = held !== null && dropped.has(held.id);
   const ended = heldDropped ? held : row;
@@ -79,6 +72,15 @@ export async function rejectActivityStart(
 
   if (input.anchor !== undefined) {
     await writeServerNodeAnchor(row.avatarID, row.scopeID, input.anchor);
+  }
+
+  // removed only once their anchors are rewound: a drop that stops before this point still finds
+  // every dropped start, and its anchor, on the retry
+  for (const activityID of dropped) {
+    if (activityID !== row.id) {
+      await removeQueuedCheckpoints(activityID);
+      await removeActivityStart(activityID);
+    }
   }
 
   // the root row goes last, after its own queue: a drop that fails before this point leaves it in

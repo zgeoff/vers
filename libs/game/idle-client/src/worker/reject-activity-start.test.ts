@@ -464,6 +464,58 @@ test('it aborts an in-flight flow before it can chain a fresh start on the refus
   expect(context.getCancelSignal().aborted).toBeFalse();
 });
 
+test("it moves a dropped successor's node anchor back on the retry of a drop that stopped part way", async () => {
+  const stopping = createStubWorkerContext({
+    broadcast: () => {
+      throw new Error('worker stopped');
+    },
+  });
+
+  const seed = createMockNodeSeed({
+    avatarID: 'avatar_resumed',
+    anchor: { chainIndex: 4, nextSeed: 'seed_start_4' },
+    nodeID: '5_2',
+  });
+
+  const refused = createMockActivityData({
+    avatarID: seed.avatarID,
+    id: 'act_resumed_root',
+    scopeID: '0_0',
+  });
+
+  const live = createMockActivityData({
+    avatarID: seed.avatarID,
+    id: 'act_resumed_live',
+    predecessorActivityID: refused.id,
+    scopeID: seed.nodeID,
+    seed: 'seed_start_4',
+    startChainIndex: 4,
+  });
+
+  const simulation = createSimulation();
+
+  await writeNodeSeeds(seed.avatarID, [seed]);
+  await writeActivityStart(refused);
+  await writeActivityStart(live);
+
+  await writeQueuedCheckpoint(live.id, createMockCheckpointBatchEntry({ version: 2 }), {
+    anchor: { chainIndex: 6, nextSeed: 'seed_local_6' },
+    avatarID: seed.avatarID,
+    nodeID: seed.nodeID,
+  });
+
+  simulation.startActivity(createMockAvatarData(), createMockActivityInput({ id: live.id }));
+  stopping.setSimulation(simulation);
+  stopping.setActivity(live);
+
+  await rejectActivityStart(stopping, { latest: null, row: refused }).catch(() => {});
+  await rejectActivityStart(createStubWorkerContext(), { latest: null, row: refused });
+
+  const cached = await readNodeSeed(seed.avatarID, seed.nodeID);
+
+  expect(cached?.anchor).toStrictEqual({ chainIndex: 4, nextSeed: 'seed_start_4' });
+});
+
 test('it keeps the refused root when the drop fails part way, so the next reconnect retries it', async () => {
   const context = createStubWorkerContext({
     broadcast: () => {
@@ -497,6 +549,6 @@ test('it keeps the refused root when the drop fails part way, so the next reconn
   const remaining = await readAllActivityStarts();
   const refusedQueue = await readQueuedCheckpoints(refused.id);
 
-  expect(remaining).toStrictEqual([refused]);
+  expect(remaining).toIncludeSameMembers([refused, live]);
   expect(refusedQueue).toHaveLength(1);
 });
