@@ -191,12 +191,14 @@ function createResettableDriver(config: CreateDBConfig): Driver {
     beginTransaction: (connection, settings) =>
       resolveDriver(connection).beginTransaction(connection, settings),
     commitTransaction: (connection) => resolveDriver(connection).commitTransaction(connection),
-    destroy: async (options) => {
+    destroy: async () => {
       detector?.stop();
 
       await current.ready;
 
-      await current.driver.destroy(options);
+      // postgres.js 3.4.9 never settles a graceful end once two connection attempts have failed,
+      // so the end waits the query deadline for in-flight queries and then destroys the sockets
+      await current.sql.end({ timeout: queryDeadlineMs / 1000 });
     },
     init: async () => {
       await current.ready;
