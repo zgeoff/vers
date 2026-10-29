@@ -10,8 +10,9 @@ test('it keeps a run started offline on the Engagement panel through a failed de
   mockActivityURL,
   page,
 }) => {
-  // about 95 s on a local run: under software GL each click waits seconds on the live renderer
-  test.setTimeout(120 * 1000);
+  // about 35 s on CI, past the config's timeout: under software GL each click waits seconds on the
+  // live renderer
+  test.setTimeout(70 * 1000);
 
   invariant(mockActivityURL !== undefined, 'the mock activity service reports admitted starts');
 
@@ -104,8 +105,9 @@ test('it delivers a run started on the Engagement panel while only the page is o
   mockActivityURL,
   page,
 }) => {
-  // about 80 s on a local run: under software GL each click waits seconds on the live renderer
-  test.setTimeout(120 * 1000);
+  // about 32 s on CI, past the config's timeout: under software GL each click waits seconds on the
+  // live renderer
+  test.setTimeout(70 * 1000);
 
   invariant(mockActivityURL !== undefined, 'the mock activity service reports admitted starts');
 
