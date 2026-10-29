@@ -823,7 +823,7 @@ test('it records the resync a fresh worker runs ahead of its first start in the 
     scopeType: 'world_map_node',
   });
 
-  expect(status.kind).toBe('started');
+  invariant(status.kind === 'started');
 
   const snapshot = await testClient.readDebugSnapshot({});
 
@@ -832,7 +832,11 @@ test('it records the resync a fresh worker runs ahead of its first start in the 
     .map((event) => event.detail);
 
   expect(phases).toStrictEqual(['resyncing', 'starting', 'running']);
-  expect(snapshot.events).toPartiallyContain({ detail: '1_0 started', type: 'start' });
+
+  expect(snapshot.events).toPartiallyContain({
+    detail: `1_0 started ${status.activity.id} index=0 xp=0 predecessor=none`,
+    type: 'start',
+  });
 });
 
 test('it runs twenty fixed steps per real-time step at speed 20 and writes the checkpoint stream a real-time run writes', async () => {
