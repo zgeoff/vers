@@ -1,7 +1,6 @@
 import { expect, onTestFinished, test } from 'bun:test';
 import { createMockActivityData } from '@vers/contract-activity/test-utils';
 import { ActivityFailureAction } from '@vers/idle-core';
-import type { IDBPDatabase } from 'idb';
 import { deleteDB, openDB, unwrap } from 'idb';
 import { createMockCheckpointBatchEntry } from '../test-utils/factories/create-mock-checkpoint-batch-entry';
 import {
@@ -32,52 +31,53 @@ test('it creates the node-seeds store on an upgrade from v3 without dropping the
     failureAction: ActivityFailureAction.Abort,
   } as const;
 
-  // a prior run that threw before its own cleanup could leave a v4 database behind, which would
-  // block this run's open at v3 with a version error — drop any leftover before opening
+  // a run that stopped before its cleanup could leave a v4 database behind, which would block this
+  // run's open at v3 with a version error — drop any leftover before opening
   await deleteDB(upgradeDBName);
 
-  let v3: IDBPDatabase<CheckpointQueueSchema> | undefined;
-  let v4: IDBPDatabase<CheckpointQueueSchema> | undefined;
+  const v3 = await openDB<CheckpointQueueSchema>(upgradeDBName, 3, {
+    upgrade(database) {
+      database.createObjectStore(CHECKPOINT_QUEUE_STORE_NAME, {
+        keyPath: ['activityID', 'version'],
+      });
 
-  try {
-    v3 = await openDB<CheckpointQueueSchema>(upgradeDBName, 3, {
-      upgrade(database) {
-        database.createObjectStore(CHECKPOINT_QUEUE_STORE_NAME, {
-          keyPath: ['activityID', 'version'],
-        });
+      database.createObjectStore(PREFERENCES_STORE_NAME);
+      database.createObjectStore(CONTENT_DOCUMENT_STORE_NAME, { keyPath: 'contentVersion' });
+    },
+  });
 
-        database.createObjectStore(PREFERENCES_STORE_NAME);
-        database.createObjectStore(CONTENT_DOCUMENT_STORE_NAME, { keyPath: 'contentVersion' });
-      },
-    });
-
-    await v3.put(PREFERENCES_STORE_NAME, preference, FAILURE_ACTION_PREFERENCE_KEY);
-
+  onTestFinished(() => {
     v3.close();
+  });
 
-    v4 = await openDB<CheckpointQueueSchema>(upgradeDBName, 4, {
-      upgrade: upgradeCheckpointQueueDB,
-    });
+  await v3.put(PREFERENCES_STORE_NAME, preference, FAILURE_ACTION_PREFERENCE_KEY);
 
-    const existingPreference = await v4.get(PREFERENCES_STORE_NAME, FAILURE_ACTION_PREFERENCE_KEY);
+  v3.close();
 
-    expect([...v4.objectStoreNames]).toIncludeAllMembers([
-      CHECKPOINT_QUEUE_STORE_NAME,
-      PREFERENCES_STORE_NAME,
-      CONTENT_DOCUMENT_STORE_NAME,
-      NODE_SEEDS_STORE_NAME,
-    ]);
+  const v4 = await openDB<CheckpointQueueSchema>(upgradeDBName, 4, {
+    upgrade: upgradeCheckpointQueueDB,
+  });
 
-    expect(existingPreference).toStrictEqual(preference);
-  } finally {
-    v3?.close();
-    v4?.close();
+  // a delete waits on every open connection, so the connection closes first
+  onTestFinished(async () => {
+    v4.close();
 
     await deleteDB(upgradeDBName);
-  }
+  });
+
+  const existingPreference = await v4.get(PREFERENCES_STORE_NAME, FAILURE_ACTION_PREFERENCE_KEY);
+
+  expect([...v4.objectStoreNames]).toIncludeAllMembers([
+    CHECKPOINT_QUEUE_STORE_NAME,
+    PREFERENCES_STORE_NAME,
+    CONTENT_DOCUMENT_STORE_NAME,
+    NODE_SEEDS_STORE_NAME,
+  ]);
+
+  expect(existingPreference).toStrictEqual(preference);
 });
 
-test('a node-seeds cache row failing its schema reads as a miss and is deleted', async () => {
+test('it reads a node-seeds cache row that fails its schema as a miss and deletes the row', async () => {
   // node-seeds is a cache: a row that no longer matches its contract schema self-heals on read
   // against the real queue database, independent of any version upgrade running at all.
   const cacheDB = await resolveCheckpointQueueDB();
@@ -104,7 +104,7 @@ test('a node-seeds cache row failing its schema reads as a miss and is deleted',
   expect(stillStored).toBeUndefined();
 });
 
-test('adding the pending-activity-starts outbox store on an upgrade preserves the pending-checkpoints rows', async () => {
+test('it keeps the pending-checkpoints rows when an upgrade adds the pending-activity-starts outbox store', async () => {
   // pending-checkpoints and pending-activity-starts are the outbox: adding the outbox store a
   // database predates must preserve the queued checkpoints already there, since a miss would
   // silently discard un-synced local progress.
@@ -115,51 +115,51 @@ test('adding the pending-activity-starts outbox store on an upgrade preserves th
     activityID: 'activity-outbox-upgrade',
   };
 
-  // a prior run that threw before its own cleanup could leave a database behind, which would
-  // block this run's open at the older version with a version error — drop any leftover first
+  // a run that stopped before its cleanup could leave a database behind, which would block this
+  // run's open at the older version with a version error — drop any leftover first
   await deleteDB(upgradeTestDBName);
 
-  let vOld: IDBPDatabase<CheckpointQueueSchema> | undefined;
-  let vNew: IDBPDatabase<CheckpointQueueSchema> | undefined;
+  // an older database predating pending-activity-starts: every cache and outbox store except it
+  const vOld = await openDB<CheckpointQueueSchema>(upgradeTestDBName, 5, {
+    upgrade(database) {
+      database.createObjectStore(CHECKPOINT_QUEUE_STORE_NAME, {
+        keyPath: ['activityID', 'version'],
+      });
 
-  try {
-    // an older database predating pending-activity-starts: every cache and outbox store except it
-    vOld = await openDB<CheckpointQueueSchema>(upgradeTestDBName, 5, {
-      upgrade(database) {
-        database.createObjectStore(CHECKPOINT_QUEUE_STORE_NAME, {
-          keyPath: ['activityID', 'version'],
-        });
+      database.createObjectStore(PREFERENCES_STORE_NAME);
+      database.createObjectStore(CONTENT_DOCUMENT_STORE_NAME, { keyPath: 'contentVersion' });
+      database.createObjectStore(NODE_SEEDS_STORE_NAME, { keyPath: ['avatarID', 'nodeID'] });
+    },
+  });
 
-        database.createObjectStore(PREFERENCES_STORE_NAME);
-        database.createObjectStore(CONTENT_DOCUMENT_STORE_NAME, { keyPath: 'contentVersion' });
-        database.createObjectStore(NODE_SEEDS_STORE_NAME, { keyPath: ['avatarID', 'nodeID'] });
-      },
-    });
-
-    await vOld.put(CHECKPOINT_QUEUE_STORE_NAME, queuedCheckpoint);
-
+  onTestFinished(() => {
     vOld.close();
+  });
 
-    vNew = await openDB<CheckpointQueueSchema>(upgradeTestDBName, CHECKPOINT_QUEUE_DB_VERSION, {
-      upgrade: upgradeCheckpointQueueDB,
-    });
+  await vOld.put(CHECKPOINT_QUEUE_STORE_NAME, queuedCheckpoint);
 
-    const existingCheckpoint = await vNew.get(CHECKPOINT_QUEUE_STORE_NAME, [
-      queuedCheckpoint.activityID,
-      queuedCheckpoint.version,
-    ]);
+  vOld.close();
 
-    expect([...vNew.objectStoreNames]).toContain(PENDING_ACTIVITY_STARTS_STORE_NAME);
-    expect(existingCheckpoint).toStrictEqual(queuedCheckpoint);
-  } finally {
-    vOld?.close();
-    vNew?.close();
+  const vNew = await openDB<CheckpointQueueSchema>(upgradeTestDBName, CHECKPOINT_QUEUE_DB_VERSION, {
+    upgrade: upgradeCheckpointQueueDB,
+  });
+
+  onTestFinished(async () => {
+    vNew.close();
 
     await deleteDB(upgradeTestDBName);
-  }
+  });
+
+  const existingCheckpoint = await vNew.get(CHECKPOINT_QUEUE_STORE_NAME, [
+    queuedCheckpoint.activityID,
+    queuedCheckpoint.version,
+  ]);
+
+  expect([...vNew.objectStoreNames]).toContain(PENDING_ACTIVITY_STARTS_STORE_NAME);
+  expect(existingCheckpoint).toStrictEqual(queuedCheckpoint);
 });
 
-test('upgrading a database holding the legacy outbox store drops both outbox stores', async () => {
+test('it drops both outbox stores on an upgrade of a database that holds the legacy outbox store', async () => {
   // the legacy store and pending-checkpoints are one outbox, and a queued checkpoint whose
   // activity start is gone can only be refused on delivery, so the upgrade discards the pair
   // rather than leaving the checkpoints behind
@@ -172,48 +172,47 @@ test('upgrading a database holding the legacy outbox store drops both outbox sto
 
   await deleteDB(legacyTestDBName);
 
-  let vOld: IDBPDatabase<CheckpointQueueSchema> | undefined;
-  let vNew: IDBPDatabase<CheckpointQueueSchema> | undefined;
+  const vOld = await openDB<CheckpointQueueSchema>(legacyTestDBName, 6, {
+    upgrade(database) {
+      database.createObjectStore(CHECKPOINT_QUEUE_STORE_NAME, {
+        keyPath: ['activityID', 'version'],
+      });
 
-  try {
-    vOld = await openDB<CheckpointQueueSchema>(legacyTestDBName, 6, {
-      upgrade(database) {
-        database.createObjectStore(CHECKPOINT_QUEUE_STORE_NAME, {
-          keyPath: ['activityID', 'version'],
-        });
+      database.createObjectStore(PREFERENCES_STORE_NAME);
+      database.createObjectStore(CONTENT_DOCUMENT_STORE_NAME, { keyPath: 'contentVersion' });
+      database.createObjectStore(NODE_SEEDS_STORE_NAME, { keyPath: ['avatarID', 'nodeID'] });
+      database.createObjectStore(LEGACY_PENDING_ACTIVITY_STARTS_STORE_NAME, { keyPath: 'id' });
+    },
+  });
 
-        database.createObjectStore(PREFERENCES_STORE_NAME);
-        database.createObjectStore(CONTENT_DOCUMENT_STORE_NAME, { keyPath: 'contentVersion' });
-        database.createObjectStore(NODE_SEEDS_STORE_NAME, { keyPath: ['avatarID', 'nodeID'] });
-        database.createObjectStore(LEGACY_PENDING_ACTIVITY_STARTS_STORE_NAME, { keyPath: 'id' });
-      },
-    });
-
-    await vOld.put(CHECKPOINT_QUEUE_STORE_NAME, queuedCheckpoint);
-    await vOld.put(LEGACY_PENDING_ACTIVITY_STARTS_STORE_NAME, createMockActivityData());
-
+  onTestFinished(() => {
     vOld.close();
+  });
 
-    vNew = await openDB<CheckpointQueueSchema>(legacyTestDBName, CHECKPOINT_QUEUE_DB_VERSION, {
-      upgrade: upgradeCheckpointQueueDB,
-    });
+  await vOld.put(CHECKPOINT_QUEUE_STORE_NAME, queuedCheckpoint);
+  await vOld.put(LEGACY_PENDING_ACTIVITY_STARTS_STORE_NAME, createMockActivityData());
 
-    const storeNames = [...vNew.objectStoreNames];
+  vOld.close();
 
-    expect(storeNames).not.toContain(LEGACY_PENDING_ACTIVITY_STARTS_STORE_NAME);
-    expect(storeNames).toContain(PENDING_ACTIVITY_STARTS_STORE_NAME);
+  const vNew = await openDB<CheckpointQueueSchema>(legacyTestDBName, CHECKPOINT_QUEUE_DB_VERSION, {
+    upgrade: upgradeCheckpointQueueDB,
+  });
 
-    const activityStartCount = await vNew.count(PENDING_ACTIVITY_STARTS_STORE_NAME);
-    const queuedCheckpointCount = await vNew.count(CHECKPOINT_QUEUE_STORE_NAME);
-
-    expect(activityStartCount).toBe(0);
-    expect(queuedCheckpointCount).toBe(0);
-  } finally {
-    vOld?.close();
-    vNew?.close();
+  onTestFinished(async () => {
+    vNew.close();
 
     await deleteDB(legacyTestDBName);
-  }
+  });
+
+  const storeNames = [...vNew.objectStoreNames];
+
+  const activityStartCount = await vNew.count(PENDING_ACTIVITY_STARTS_STORE_NAME);
+  const queuedCheckpointCount = await vNew.count(CHECKPOINT_QUEUE_STORE_NAME);
+
+  expect(storeNames).not.toContain(LEGACY_PENDING_ACTIVITY_STARTS_STORE_NAME);
+  expect(storeNames).toContain(PENDING_ACTIVITY_STARTS_STORE_NAME);
+  expect(activityStartCount).toBe(0);
+  expect(queuedCheckpointCount).toBe(0);
 });
 
 test("it closes its connection for another context's upgrade and opens afresh afterwards", async () => {

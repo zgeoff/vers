@@ -1,6 +1,9 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "extends": ["./node_modules/@zgeoff/oxlint-config/oxlintrc.json"],
+  "extends": [
+    "./node_modules/@zgeoff/oxlint-config/oxlintrc.json",
+    "./node_modules/@zgeoff/oxlint-config/react.json"
+  ],
   "plugins": ["typescript", "unicorn", "oxc", "import", "promise", "react", "jsx-a11y"],
   "jsPlugins": [
     "./scripts/src/lint/plugin.js",
@@ -104,8 +107,6 @@
     // not blanket categories) never enabled, and that fight real patterns in
     // this codebase rather than catch bugs
     //
-    // React 19's automatic JSX runtime doesn't require React in scope
-    "react/react-in-jsx-scope": "off",
     // style/vendor modules are imported wholesale on purpose
     // (vanilla-extract `*.styles` modules, `jest-extended` matchers)
     "import/no-namespace": "off",
@@ -113,18 +114,12 @@
     // (`create-simulation.ts`'s `_rng`, `_avatar`, ...) — not accidental
     // globals
     "no-underscore-dangle": "off",
-    // whole-prop forwarding (`<svg {...props} className={props.className}>`)
-    // is the idiomatic pattern here, more so with `no-destructured-params`
-    // in force
-    "react/jsx-props-no-spreading": "off",
     // low-level worker/message-port wrapping needs a bare `new Promise`
     // executor with an early-return
     "no-promise-executor-return": "off",
     // false-positives on fluent builder call chains (oRPC's
     // `os.getThing.handler(...)`)
     "new-cap": "off",
-    // deeply nested JSX is normal for form/layout composition
-    "react/jsx-max-depth": "off",
     // TODO/FIXME comments are tracked deliberately, not banned
     "no-warning-comments": "off",
     // every postMessage in this repo is MessagePort/SharedWorker, where the

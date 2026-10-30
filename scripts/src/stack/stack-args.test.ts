@@ -38,7 +38,7 @@ test.each([
   ['stop', STACK_ARGS.stop],
   ['rm', STACK_ARGS.rm],
   ['logs', STACK_ARGS.logs],
-])('#%s acts on every service when it names none', (_command, args) => {
+])('it makes %s act on every service when the command names none', (_command, args) => {
   const resolved = resolveArgs(args, parseArgs([]));
 
   expect(resolved.error).toBeUndefined();
@@ -49,7 +49,7 @@ test.each([
   ['stop', STACK_ARGS.stop],
   ['rm', STACK_ARGS.rm],
   ['logs', STACK_ARGS.logs],
-])('#%s reads the service it names', (_command, args) => {
+])('it makes %s read the service that the command names', (_command, args) => {
   const resolved = resolveArgs(args, parseArgs(['service-activity']));
 
   expect({ ...resolved.values }).toStrictEqual({ service: ServiceID.ServiceActivity });
