@@ -186,4 +186,8 @@ worker holds back its next resync, so a fast-forward never revives an activity t
 
 A server refusal is an answer, so it never marks the device offline. The worker resends a start the
 server deferred on a backoff and at once on a reconnect, and the reconnect drain skips a start whose
-predecessor is still deferred.
+predecessor is still deferred. A start that follows a run the server still holds as active is
+deferred: its chain position and its folded XP count on that run's checkpoints, which the server has
+not appended yet. So the worker resends a start as soon as the server acknowledges its predecessor's
+terminal checkpoint, and a chain of runs played offline delivers one run after another, with no
+backoff wait between them.

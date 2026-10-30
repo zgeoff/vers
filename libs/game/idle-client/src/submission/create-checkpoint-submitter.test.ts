@@ -49,6 +49,7 @@ function setupTest(
 
   const client: ActivityServiceClient = createORPCClient(link);
   const onAcked = mock<(activityID: string, appendedHead: number) => void>();
+  const onActivityEnded = mock<(activityID: string) => void>();
   const onCapped = mock<(activityID: string, appendedHead: number) => void>();
   const onEvicted = mock<(activityID: string) => void>();
   const onFlushStalled = mock<(activityID: string, reason: string, traceID: string) => void>();
@@ -67,6 +68,7 @@ function setupTest(
     client,
     clock,
     onAcked,
+    onActivityEnded,
     onCapped,
     onEvicted,
     onFlushStalled,
@@ -84,6 +86,7 @@ function setupTest(
     client,
     clock,
     onAcked,
+    onActivityEnded,
     onCapped,
     onEvicted,
     onFlushStalled,
@@ -267,6 +270,64 @@ test('it flushes immediately on a terminal checkpoint and confirms the queue on 
   const remaining = await readQueuedCheckpoints('success-activity');
 
   expect(remaining).toStrictEqual([]);
+});
+
+test('it reports the activity ended once the server acknowledges its terminal checkpoint', async () => {
+  const ctx = setupTest();
+
+  server.use(mockActivityService.trackActivityProgress.handler(() => ({ appendedHead: 2 })));
+
+  await ctx.submitter.registerActivity({
+    activityID: 'ended-activity',
+    appendedHead: 0,
+    lastHash: 'start_hash',
+    startChainIndex: 0,
+  });
+
+  await ctx.submitter.submit('ended-activity', createMockStartedCheckpoint());
+  await ctx.submitter.submit('ended-activity', createMockCompletedCheckpoint());
+
+  expect(ctx.onActivityEnded).toHaveBeenCalledExactlyOnceWith('ended-activity');
+});
+
+test('it reports no end when the acknowledged head stops short of the terminal checkpoint', async () => {
+  const ctx = setupTest();
+
+  server.use(mockActivityService.trackActivityProgress.handler(() => ({ appendedHead: 1 })));
+
+  await ctx.submitter.registerActivity({
+    activityID: 'short-ack-activity',
+    appendedHead: 0,
+    lastHash: 'start_hash',
+    startChainIndex: 0,
+  });
+
+  await ctx.submitter.submit('short-ack-activity', createMockStartedCheckpoint());
+  await ctx.submitter.submit('short-ack-activity', createMockCompletedCheckpoint());
+
+  expect(ctx.onAcked).toHaveBeenCalledWith('short-ack-activity', 1);
+  expect(ctx.onActivityEnded).not.toHaveBeenCalled();
+});
+
+test('it reports the activity ended when the server already holds it as terminal', async () => {
+  const ctx = setupTest();
+
+  server.use(
+    mockActivityService.trackActivityProgress.handler((opts) => {
+      throw opts.errors.ACTIVITY_TERMINAL({ data: { appendedHead: 3, status: 'stopped' } });
+    }),
+  );
+
+  await ctx.submitter.registerActivity({
+    activityID: 'already-terminal-activity',
+    appendedHead: 0,
+    lastHash: 'start_hash',
+    startChainIndex: 0,
+  });
+
+  await ctx.submitter.submit('already-terminal-activity', createMockCompletedCheckpoint());
+
+  expect(ctx.onActivityEnded).toHaveBeenCalledExactlyOnceWith('already-terminal-activity');
 });
 
 test('it trims the queue to the CONFLICT appendedHead and resends the tail', async () => {

@@ -20,6 +20,7 @@ import { buildDebugEventFromMessage } from './build-debug-event-from-message';
 import { BUNDLED_ENGINE_HASH } from './bundled-engine-hash';
 import { createDebugRecorder } from './create-debug-recorder';
 import { createWorkerRouter } from './create-worker-router';
+import { deliverSuccessorStarts } from './deliver-successor-starts';
 import { ingestAndBroadcastActivityStart } from './ingest-and-broadcast-activity-start';
 import { registerSimulationListeners } from './register-simulation-listeners';
 import { reportWorkerFault } from './report-worker-fault';
@@ -272,6 +273,18 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
         savedVersion: null,
         type: WorkerMessageType.SaveStatus,
       });
+    },
+
+    // run beside the flush that reported the end, never awaited by it: the successor's flush
+    // waits on its own activity's queue, never on this one
+    onActivityEnded: (activityID) => {
+      void (async () => {
+        try {
+          await deliverSuccessorStarts(context, activityID);
+        } catch (error) {
+          reportWorkerFault('checkpoint-flush', error);
+        }
+      })();
     },
     onCapped: () => {
       getLifecycle().send({ type: 'SUBMITTER_CAPPED' });

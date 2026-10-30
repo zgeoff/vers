@@ -45,6 +45,7 @@ function setupTest(
       ingestActivityStart: config.ingestActivityStart,
       latestQueuedVersion: config.latestQueuedVersion,
       onAcked,
+      onActivityEnded: undefined,
       onCapped: undefined,
       onEvicted: undefined,
       onFlushSettled: config.onFlushSettled,

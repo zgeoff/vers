@@ -30,6 +30,7 @@ interface CheckpointActivityContext {
     | undefined;
   readonly latestQueuedVersion: number | undefined;
   readonly onAcked: ((activityID: string, appendedHead: number) => void) | undefined;
+  readonly onActivityEnded: ((activityID: string) => void) | undefined;
   readonly onCapped: ((activityID: string, appendedHead: number) => void) | undefined;
   readonly onEvicted: ((activityID: string) => void) | undefined;
   readonly onFlushSettled:
@@ -55,6 +56,7 @@ export interface CheckpointActivityInput {
     | undefined;
   readonly latestQueuedVersion: number | undefined;
   readonly onAcked: ((activityID: string, appendedHead: number) => void) | undefined;
+  readonly onActivityEnded: ((activityID: string) => void) | undefined;
   readonly onCapped: ((activityID: string, appendedHead: number) => void) | undefined;
   readonly onEvicted: ((activityID: string) => void) | undefined;
   readonly onFlushSettled?:
@@ -152,6 +154,7 @@ export const checkpointActivityMachine = setup({
     ingestActivityStart: args.input.ingestActivityStart,
     latestQueuedVersion: args.input.latestQueuedVersion,
     onAcked: args.input.onAcked,
+    onActivityEnded: args.input.onActivityEnded,
     onCapped: args.input.onCapped,
     onEvicted: args.input.onEvicted,
     onFlushSettled: args.input.onFlushSettled,
@@ -184,6 +187,7 @@ export const checkpointActivityMachine = setup({
           expectedHead: args.context.expectedHead,
           ingestActivityStart: args.context.ingestActivityStart,
           onAcked: args.context.onAcked,
+          onActivityEnded: args.context.onActivityEnded,
           onCapped: args.context.onCapped,
           onEvicted: args.context.onEvicted,
           onInvalid: args.context.onInvalid,

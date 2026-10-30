@@ -6,7 +6,8 @@ import type { IngestActivityStartOutcome } from './ingest-activity-start';
 import { readQueuedCheckpoints } from './read-queued-checkpoints';
 import { removeConfirmedCheckpoints } from './remove-confirmed-checkpoints';
 import { removeQueuedCheckpoints } from './remove-queued-checkpoints';
-import type { ActivityServiceClient } from './types';
+import { TERMINAL_CHECKPOINT_TYPES } from './terminal-checkpoint-types';
+import type { ActivityServiceClient, QueuedCheckpoint } from './types';
 
 export type FlushOutcome =
   | { readonly appendedHead: number; readonly type: 'capped' }
@@ -35,6 +36,7 @@ interface FlushAttemptInput {
     | undefined;
 
   readonly onAcked: ((activityID: string, appendedHead: number) => void) | undefined;
+  readonly onActivityEnded: ((activityID: string) => void) | undefined;
   readonly onCapped: ((activityID: string, appendedHead: number) => void) | undefined;
   readonly onEvicted: ((activityID: string) => void) | undefined;
   readonly onInvalid: (activityID: string, reason: string, traceID?: string) => void;
@@ -84,6 +86,10 @@ export const runCheckpointFlushAttempt = fromPromise<FlushOutcome, FlushAttemptI
           settledHead = result.appendedHead;
           input.onAcked?.(input.activityID, result.appendedHead);
 
+          if (hasAckedTerminal(rows, result.appendedHead)) {
+            input.onActivityEnded?.(input.activityID);
+          }
+
           return { appendedHead: result.appendedHead, tailQueued, type: 'success' };
         }
 
@@ -106,6 +112,8 @@ export const runCheckpointFlushAttempt = fromPromise<FlushOutcome, FlushAttemptI
 
         if (error.code === 'ACTIVITY_TERMINAL') {
           await removeQueuedCheckpoints(input.activityID);
+
+          input.onActivityEnded?.(input.activityID);
 
           if (error.data.status === 'capped') {
             input.onCapped?.(input.activityID, error.data.appendedHead);
@@ -173,3 +181,9 @@ export const runCheckpointFlushAttempt = fromPromise<FlushOutcome, FlushAttemptI
     }
   },
 );
+
+function hasAckedTerminal(rows: ReadonlyArray<QueuedCheckpoint>, appendedHead: number): boolean {
+  return rows.some(
+    (row) => TERMINAL_CHECKPOINT_TYPES.has(row.payload.type) && row.version <= appendedHead,
+  );
+}
