@@ -168,4 +168,18 @@ export const DEMO_ACCOUNTS: ReadonlyArray<DemoAccount> = [
     password: 'password123',
     username: 'e2e-refusal-page',
   },
+  {
+    avatarName: 'Run End Cut Test Avatar',
+    email: 'e2e-run-end-cut@qa.versidle.com',
+    name: 'Run End Cut Demo Account',
+    password: 'password123',
+    username: 'e2e-run-end-cut',
+  },
+  {
+    avatarName: 'Run End Midcut Test Avatar',
+    email: 'e2e-run-end-midcut@qa.versidle.com',
+    name: 'Run End Midcut Demo Account',
+    password: 'password123',
+    username: 'e2e-run-end-midcut',
+  },
 ];
