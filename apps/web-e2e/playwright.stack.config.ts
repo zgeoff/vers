@@ -13,7 +13,7 @@ export default defineConfig<E2EOptions>({
 
   // the device-state specs seed their live run, and the offline specs read an admitted start,
   // through the mock activity service, which the real stack does not run
-  testIgnore: /(?:cross-engine-corpus|device-[a-z-]+|offline-[a-z]+)\.spec\.ts/u,
+  testIgnore: /(?:cross-engine-corpus|device-[a-z-]+|offline-[a-z-]+)\.spec\.ts/u,
   projects: [
     {
       name: 'chromium',
