@@ -3,10 +3,5 @@
     "package": "deepmerge",
     "reason": "No patched deepmerge release exists (vulnerable >= 4.2.0, <= 4.3.1); html-to-text@9.0.5 reaches it through @vers/email. Low severity; mergeObject() prototype poisoning.",
     "expires": "2026-11-27"
-  },
-  "GHSA-qr28-fpjm-wq7f": {
-    "package": "decode-uri-component",
-    "reason": "The fix is decode-uri-component 0.5.1, but query-string@9.4.1 accepts only 0.5.0.",
-    "expires": "2026-11-29"
   }
 }
