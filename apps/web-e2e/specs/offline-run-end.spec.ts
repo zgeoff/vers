@@ -117,14 +117,13 @@ for (const journey of JOURNEYS) {
       .filter((event) => event.type === 'run' && / (?:completed|failed) /u.test(event.detail))
       .map((event) => event.detail.split(' ')[0]);
 
-    try {
-      await expect
-        .poll(() => readStoppedActivityIDs(mockActivityURL), { timeout: 30 * 1000 })
-        .toStrictEqual(expect.arrayContaining(endedDuringCut));
-    } finally {
-      await writeSnapshot(page, testInfo, 'reconnect-snapshot.json');
-    }
+    // soft, so the snapshot that explains a failure is still written
+    await expect
+      .configure({ soft: true })
+      .poll(() => readStoppedActivityIDs(mockActivityURL), { timeout: 30 * 1000 })
+      .toStrictEqual(expect.arrayContaining(endedDuringCut));
 
+    await writeSnapshot(page, testInfo, 'reconnect-snapshot.json');
     await expectNoRefusalShown(page);
   });
 }
@@ -147,6 +146,15 @@ test('it delivers every run that chained on during the cut soon after the networ
   await expect(page.getByRole('button', { name: 'END RUN' })).toBeVisible();
 
   const activityID = await readLiveActivityID(page);
+
+  // a fallen avatar ends the chain unless the next run starts on its own
+  await navigateClientRoute(page, '/explore/current');
+
+  const autoRetry = page.getByLabel('Auto-retry on failure');
+
+  await autoRetry.check();
+
+  await expect(autoRetry).toBeChecked();
 
   // the run's start reaches the server before the cut, so every later run chains onto an activity
   // the server holds as still active
@@ -186,15 +194,14 @@ test('it delivers every run that chained on during the cut soon after the networ
 
   await cut.end();
 
-  try {
-    // a run admitted after its predecessor ends waits on no retry timer: the predecessor's last
-    // checkpoint landing is what lets the server admit it
-    await expect
-      .poll(() => readStoppedActivityIDs(mockActivityURL), { timeout: 20 * 1000 })
-      .toStrictEqual(expect.arrayContaining(endedDuringCut));
-  } finally {
-    await writeSnapshot(page, testInfo, 'reconnect-snapshot.json');
-  }
+  // a run admitted after its predecessor ends waits on no retry timer: the predecessor's last
+  // checkpoint landing is what lets the server admit it. Soft, so the snapshot is still written
+  await expect
+    .configure({ soft: true })
+    .poll(() => readStoppedActivityIDs(mockActivityURL), { timeout: 20 * 1000 })
+    .toStrictEqual(expect.arrayContaining(endedDuringCut));
+
+  await writeSnapshot(page, testInfo, 'reconnect-snapshot.json');
 });
 
 async function openWarmedMap(page: Page, email: string): Promise<void> {
