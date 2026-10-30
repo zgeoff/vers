@@ -1477,7 +1477,7 @@
     "knip": "6.24.0",
     "kysely": "0.29.7",
     "kysely-codegen": "0.20.0",
-    "kysely-ctl": "0.21.0",
+    "kysely-ctl": "0.22.0",
     "kysely-postgres-js": "3.0.0",
     "lefthook": "2.1.9",
     "lighthouse": "13.5.0",
@@ -3262,7 +3262,7 @@
 
     "compress-commons": ["compress-commons@6.0.2", "", { "dependencies": { "crc-32": "^1.2.0", "crc32-stream": "^6.0.0", "is-stream": "^2.0.1", "normalize-path": "^3.0.0", "readable-stream": "^4.0.0" } }, "sha512-6FqVXeETqWPoGcfzrXb37E50NP0LXT8kAMu5ooZayhWWdgEY4lBEEcbQNXtkuKQsGduxiIcI4gOTsxTmuq/bSg=="],
 
-    "confbox": ["confbox@0.2.4", "", {}, "sha512-ysOGlgTFbN2/Y6Cg3Iye8YKulHw+R2fNXHrgSmXISQdMnomY6eNDprVdW9R5xBguEqI954+S6709UyiO7B+6OQ=="],
+    "confbox": ["confbox@0.3.1", "", {}, "sha512-cKUSoKa8YxFZZSmraVi7onONx3amu77ngK3kGpsYHDH7drPwCRkQE1RYMPlLRrMtnciRj274XNRxcHxnKmDSnA=="],
 
     "configstore": ["configstore@7.1.0", "", { "dependencies": { "atomically": "^2.0.3", "dot-prop": "^9.0.0", "graceful-fs": "^4.2.11", "xdg-basedir": "^5.1.0" } }, "sha512-N4oog6YJWbR9kGyXvS7jEykLDXIE2C0ILYqNBZBp9iwiJpoCBWYsuAdW6PPFn6w06jjnC+3JstVvWHO4cZqvRg=="],
 
@@ -3832,7 +3832,7 @@
 
     "kysely-codegen": ["kysely-codegen@0.20.0", "", { "dependencies": { "chalk": "4.1.2", "cosmiconfig": "^9.0.0", "diff": "^8.0.3", "dotenv": "^17.2.4", "dotenv-expand": "^12.0.3", "micromatch": "^4.0.8", "minimist": "^1.2.8", "pluralize": "^8.0.0", "zod": "^4.3.6" }, "peerDependencies": { "@libsql/kysely-libsql": ">=0.3.0 <0.5.0", "@tediousjs/connection-string": "^1.0.0", "better-sqlite3": ">=7.6.2 <13.0.0", "kysely": ">=0.27.0 <1.0.0", "kysely-bun-sqlite": ">=0.3.2 <1.0.0", "kysely-bun-worker": ">=1.2.0 <2.0.0", "mysql2": ">=2.3.3 <4.0.0", "pg": ">=8.8.0 <9.0.0", "tarn": ">=3.0.0 <4.0.0", "tedious": ">=18.0.0 <20.0.0" }, "optionalPeers": ["@libsql/kysely-libsql", "@tediousjs/connection-string", "better-sqlite3", "kysely-bun-sqlite", "kysely-bun-worker", "mysql2", "pg", "tarn", "tedious"], "bin": { "kysely-codegen": "dist/cli/bin.js" } }, "sha512-LSi2KBG7uDmNCZ+XurLSA9LH7XFyyoQ6xb5DLJSInPTSYLVApjOP2KwO8mSaREWTtoX+C2AG2GTlYR0DLjTbcA=="],
 
-    "kysely-ctl": ["kysely-ctl@0.21.0", "", { "dependencies": { "c12": "^3.3.3", "citty": "^0.2.2", "confbox": "^0.2.4", "consola": "^3.4.2", "jiti": "^2.7.0", "nypm": "^0.6.6", "ofetch": "^1.5.1", "pathe": "^2.0.3", "pkg-types": "^2.3.1", "std-env": "^4.1.0" }, "peerDependencies": { "kysely": ">=0.18.1 <0.30.0", "kysely-neon": "^2", "kysely-postgres-js": "^2 || ^3", "kysely-prisma-postgres": "^0.1" }, "optionalPeers": ["kysely-neon", "kysely-postgres-js", "kysely-prisma-postgres"], "bin": { "kysely": "dist/bin.mjs" } }, "sha512-tovLEh+5eHgBt1P9L42Y3lgEI7cXK0nAPIBFg+dmTXUlmb2Ats3X3D0TwUtCV63XzVEdRV5dONa8DBhRiEf8fg=="],
+    "kysely-ctl": ["kysely-ctl@0.22.0", "", { "dependencies": { "c12": "^3.3.4", "citty": "^0.2.2", "confbox": "^0.3.1", "consola": "^3.4.2", "jiti": "^2.7.0", "nypm": "^0.6.10", "ofetch": "^1.5.1", "pathe": "^2.0.3", "pkg-types": "^2.3.3", "std-env": "^4.3.0" }, "peerDependencies": { "kysely": ">=0.18.1 <0.30.0", "kysely-neon": "^2 || ^3", "kysely-postgres-js": "^2 || ^3 || ^4 || ^5", "kysely-prisma-postgres": "^0.1" }, "optionalPeers": ["kysely-neon", "kysely-postgres-js", "kysely-prisma-postgres"], "bin": { "kysely": "./dist/bin.mjs" } }, "sha512-KqmjbJvFv58PLPaYizPmTnJqgpnclR4k39Vw3mCXZz2kcbxygZgtM4hBtmlbzt03yqvVJlhJ3shLKCPUsmxNuw=="],
 
     "kysely-postgres-js": ["kysely-postgres-js@3.0.0", "", { "peerDependencies": { "kysely": ">= 0.24.0 < 1", "postgres": "^3.4.0" }, "optionalPeers": ["postgres"] }, "sha512-o2t/xNSYJQDW6rVGGFPXKmZ0BEz2dGn66c2B+cO/k9ZNcU2qPWPycQPQ+B+P2MBXbKYq0xV9BZmFIvkUrmFWAQ=="],
 
@@ -4184,7 +4184,7 @@
 
     "nth-check": ["nth-check@2.1.1", "", { "dependencies": { "boolbase": "^1.0.0" } }, "sha512-lqjrjmaOoAnWfMmBPL+XNnynZh2+swxiX3WUE0s4yEHI6m+AwrK2UZOimIRl3X/4QctVqS8AiZjFqyOGrMXb/w=="],
 
-    "nypm": ["nypm@0.6.8", "", { "dependencies": { "citty": "^0.2.2", "pathe": "^2.0.3", "tinyexec": "^1.2.4" }, "bin": { "nypm": "./dist/cli.mjs" } }, "sha512-Q9K4Diu6l5u6xJQogeFSs/zKtyMSgFKFtRQV+tHP4kL7KPm2grpBU0dFIwFaXwNxN0MtfKWc43VpCugAa+LPsw=="],
+    "nypm": ["nypm@0.6.11", "", { "dependencies": { "citty": "^0.2.2", "pathe": "^2.0.3", "tinyexec": "^1.3.1" }, "bin": { "nypm": "./dist/cli.mjs" } }, "sha512-wrVBTLWDu7nTUKGWplQebWOXWnhaIwyKQhBxobH/CGxJHoVw27r9vG5ba7kdZnxG+f4rC6dZd6m2oHmpkOcO7g=="],
 
     "object-assign": ["object-assign@4.1.1", "", {}, "sha512-rJgTQnkUnH1sFw8yT6VSU3zD3sWmu6sZhIseY8VX+GRu3P6F7Fu+JNDoXfklElbLJSnc3FUQHVe4cU5hj+BcUg=="],
 
@@ -4296,7 +4296,7 @@
 
     "pkce-challenge": ["pkce-challenge@5.0.1", "", {}, "sha512-wQ0b/W4Fr01qtpHlqSqspcj3EhBvimsdh0KlHhH8HRZnMsEa0ea2fTULOXOS9ccQr3om+GcGRk4e+isrZWV8qQ=="],
 
-    "pkg-types": ["pkg-types@2.3.1", "", { "dependencies": { "confbox": "^0.2.4", "exsolve": "^1.0.8", "pathe": "^2.0.3" } }, "sha512-y+ichcgc2LrADuhLNAx8DFjVfgz91pRxfZdI3UDhxHvcVEZsenLO+7XaU5vOp0u/7V/wZ+plyuQxtrDlZJ+yeg=="],
+    "pkg-types": ["pkg-types@2.4.0", "", { "dependencies": { "confbox": "^0.3.1", "exsolve": "^1.1.3", "pathe": "^2.0.3" } }, "sha512-07Fys7iVx0X6TcviMOgogM1Lk33ZyqOezMnU79S+kffWqwolG/5W9V8EgQSeYCIfFTYVgssRbnH630Oa2+soBA=="],
 
     "playwright": ["playwright@1.64.1", "", { "dependencies": { "playwright-core": "1.64.1" }, "bin": { "playwright": "cli.js" } }, "sha512-HCrVhHr5QQuwYoswEUGTb7gGp522yflbv/ST8nF4sFWGuLjQCt17Q/EubpGGSNKYn1tsTCPZxqHhHCfVURu7UA=="],
 
@@ -4590,7 +4590,7 @@
 
     "statuses": ["statuses@2.0.2", "", {}, "sha512-DvEy55V3DB7uknRo+4iOGT5fP1slR8wQohVdknigZPMpMstaKJQWhwiYBACJE3Ul2pTnATihhBYnRhZQHGBiRw=="],
 
-    "std-env": ["std-env@4.2.0", "", {}, "sha512-oCUKSupKTHX53EyjDtuZQ64pjLJ6yYCtpmEw0goYxtjG9KpbRe8KAsl2tBUGU9DyMcJ0RwJ8GqJAFzMXcXW1Rw=="],
+    "std-env": ["std-env@4.3.0", "", {}, "sha512-OtU/EgQ1kIm5KwqQpBC6ZEMXrZRui11w8zgfTWp8cdO9B8OaPsbA8bTHO2P+HNo1VlUTGMVBwPhydu6poeXiag=="],
 
     "stdin-discarder": ["stdin-discarder@0.3.2", "", {}, "sha512-eCPu1qRxPVkl5605OTWF8Wz40b4Mf45NY5LQmVPQ599knfs5QhASUm9GbJ5BDMDOXgrnh0wyEdvzmL//YMlw0A=="],
 
@@ -5090,6 +5090,10 @@
 
     "c12/chokidar": ["chokidar@5.0.0", "", { "dependencies": { "readdirp": "^5.0.0" } }, "sha512-TQMmc3w+5AxjpL8iIiwebF73dRDF4fBIieAqGn9RGCWaEVwQ6Fb2cGe31Yns0RRIzii5goJ1Y7xbMwo1TxMplw=="],
 
+    "c12/confbox": ["confbox@0.2.4", "", {}, "sha512-ysOGlgTFbN2/Y6Cg3Iye8YKulHw+R2fNXHrgSmXISQdMnomY6eNDprVdW9R5xBguEqI954+S6709UyiO7B+6OQ=="],
+
+    "c12/pkg-types": ["pkg-types@2.3.1", "", { "dependencies": { "confbox": "^0.2.4", "exsolve": "^1.0.8", "pathe": "^2.0.3" } }, "sha512-y+ichcgc2LrADuhLNAx8DFjVfgz91pRxfZdI3UDhxHvcVEZsenLO+7XaU5vOp0u/7V/wZ+plyuQxtrDlZJ+yeg=="],
+
     "cache-content-type/mime-types": ["mime-types@2.1.35", "", { "dependencies": { "mime-db": "1.52.0" } }, "sha512-ZDY+bPm5zTTF+YpCrAU9nK0UgICYPT0QtT1NZWFv4s++TNkcgVaT0g6+4R2uI4MjQjzysHB1zxuWL50hzaeXiw=="],
 
     "chrome-launcher/escape-string-regexp": ["escape-string-regexp@4.0.0", "", {}, "sha512-TtpcNJ3XAzx3Gq8sWRzJaVajRs0uVxA2YAkdb1jm2YkPz4G6egUFAyA3n5vtEIZefPk5Wa4UXbKuS5fKkJWdgA=="],
@@ -5192,6 +5196,8 @@
 
     "normalize-package-data/hosted-git-info": ["hosted-git-info@7.0.2", "", { "dependencies": { "lru-cache": "^10.0.1" } }, "sha512-puUZAUKT5m8Zzvs72XWy3HtvVbTWljRE66cP60bxJzAqf2DgICo7lYTY2IHUmLnNpjYvw5bvmoHvPc0QO2a62w=="],
 
+    "nypm/tinyexec": ["tinyexec@1.3.1", "", {}, "sha512-GCvB3aoys96IuDFBMcTB46JOR6mdMtAToqwiW8JlWhsoh1mhHi/xn9ss/Dg7N555GiJyEt2qzoG/NHCwM6h1EA=="],
+
     "ora/chalk": ["chalk@5.6.2", "", {}, "sha512-7NzBL0rN6fMUW+f7A6Io4h40qQlG+xGmtMxfbnH/K7TAtt8JQWVQK+6g0UXKMeVJoyV5EkkNsErQ8pVD3bLHbA=="],
 
     "parse-conflict-json/json-parse-even-better-errors": ["json-parse-even-better-errors@5.0.0", "", {}, "sha512-ZF1nxZ28VhQouRWhUcVlUIN3qwSgPuswK05s/HIaoetAoE/9tngVmCHjSxmSQPav1nd+lPtTL0YZ/2AFdR/iYQ=="],
@@ -5199,6 +5205,8 @@
     "parse-entities/@types/unist": ["@types/unist@2.0.11", "", {}, "sha512-CmBKiL6NNo/OqgmMn95Fk9Whlp2mtvIv+KNpQKN2F4SjvrEesubTRWGYSg+BnWZOnlCaSTU1sMpsBOzgbYhnsA=="],
 
     "parse5/entities": ["entities@6.0.1", "", {}, "sha512-aN97NXWF6AWBTahfVOIrB/NShkzi5H7F9r1s9mD3cDj4Ko5f2qhhVoYMibXF7GlLveb/D2ioWay8lxI97Ven3g=="],
+
+    "pkg-types/exsolve": ["exsolve@1.1.3", "", {}, "sha512-kuzL9zherLQoqDeQaS55AiiIg1kb4KYXaSusTtgZTPlvKP2gGCI82LNmBNh5RjDVUXIcmgx+/Mx7vPwRzBbhJA=="],
 
     "pretty-format/ansi-styles": ["ansi-styles@5.2.0", "", {}, "sha512-Cxwpt2SfTzTtXcfOlzGEee8O+c+MmUgGrNiBcXnuWxuFJHe6a5Hz7qwhwe5OgaSYI0IJvkLqWX1ASG+cJOkEiA=="],
 
