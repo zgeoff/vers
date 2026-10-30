@@ -2,6 +2,7 @@ export interface DemoAccount {
   readonly avatarName: null | string;
   readonly completedNodeIDs?: ReadonlyArray<string>;
   readonly email: string;
+  readonly isQA?: boolean;
   readonly name: string;
   readonly password: string;
   readonly username: string;
@@ -171,6 +172,9 @@ export const DEMO_ACCOUNTS: ReadonlyArray<DemoAccount> = [
   {
     avatarName: 'Run End Cut Test Avatar',
     email: 'e2e-run-end-cut@qa.versidle.com',
+
+    // the run plays to its end under the QA speed-up, which only a QA-flagged avatar takes
+    isQA: true,
     name: 'Run End Cut Demo Account',
     password: 'password123',
     username: 'e2e-run-end-cut',
@@ -178,6 +182,9 @@ export const DEMO_ACCOUNTS: ReadonlyArray<DemoAccount> = [
   {
     avatarName: 'Run End Midcut Test Avatar',
     email: 'e2e-run-end-midcut@qa.versidle.com',
+
+    // the run plays to its end under the QA speed-up, which only a QA-flagged avatar takes
+    isQA: true,
     name: 'Run End Midcut Demo Account',
     password: 'password123',
     username: 'e2e-run-end-midcut',

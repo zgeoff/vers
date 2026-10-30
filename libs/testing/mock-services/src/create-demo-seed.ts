@@ -30,6 +30,7 @@ export async function createDemoSeed(): Promise<void> {
         completedNodeIDs: [...(account.completedNodeIDs ?? [])],
         createdAt: new Date(),
         id: createId(),
+        isQA: account.isQA ?? false,
         name: account.avatarName,
         updatedAt: new Date(),
         userID,
