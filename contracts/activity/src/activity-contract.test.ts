@@ -31,7 +31,7 @@ test('it accepts a start-hash mismatch as an advanceActivity checkpoint-invalid 
 test('it rejects a reason outside the advanceActivity checkpoint-invalid set', () => {
   const result = AdvanceCheckpointInvalidReasonSchema.safeParse('start-hash-mismatched');
 
-  expect(result.error?.issues).toPartiallyContain(expect.objectContaining({ path: [] }));
+  expect(result.error?.issues).toPartiallyContain({ path: [] });
 });
 
 test('it carries every batch reason into the advanceActivity checkpoint-invalid set', () => {
@@ -228,7 +228,7 @@ test('it rejects an advanceActivity request whose checkpoints exceed the cap acr
   const result = activityContract.advanceActivity['~orpc'].inputSchema?.safeParse(input);
 
   expect(result?.success).toBe(false);
-  expect(result?.error?.issues).toPartiallyContain(expect.objectContaining({ path: [] }));
+  expect(result?.error?.issues).toPartiallyContain({ path: [] });
 });
 
 test('it accepts an advanceActivity request at the aggregate checkpoint cap', () => {
@@ -288,10 +288,7 @@ test('it rejects a trackActivityProgress batch past the checkpoint cap on the ch
   const result = activityContract.trackActivityProgress['~orpc'].inputSchema?.safeParse(input);
 
   expect(result?.success).toBe(false);
-
-  expect(result?.error?.issues).toPartiallyContain(
-    expect.objectContaining({ path: ['checkpoints'] }),
-  );
+  expect(result?.error?.issues).toPartiallyContain({ path: ['checkpoints'] });
 });
 
 test('it accepts a trackActivityProgress batch at the checkpoint cap', () => {
@@ -328,7 +325,7 @@ test('it declares NOT_FOUND on getRevealedNodes', () => {
   ]);
 });
 
-test('getRevealedNodes accepts a viewport exactly at the cell cap', () => {
+test('#getRevealedNodes accepts a viewport exactly at the cell cap', () => {
   const input = {
     avatarID: 'avatar_1',
     viewport: { maxCX: REVEAL_VIEWPORT_CELL_CAP - 1, maxCY: 0, minCX: 0, minCY: 0 },
@@ -339,7 +336,7 @@ test('getRevealedNodes accepts a viewport exactly at the cell cap', () => {
   );
 });
 
-test('getRevealedNodes rejects a viewport whose area exceeds the cell cap', () => {
+test('#getRevealedNodes rejects a viewport whose area exceeds the cell cap', () => {
   const input = {
     avatarID: 'avatar_1',
     viewport: { maxCX: REVEAL_VIEWPORT_CELL_CAP, maxCY: 0, minCX: 0, minCY: 0 },
@@ -352,7 +349,7 @@ test('getRevealedNodes rejects a viewport whose area exceeds the cell cap', () =
   ]);
 });
 
-test('getRevealedNodes rejects an inverted viewport', () => {
+test('#getRevealedNodes rejects an inverted viewport', () => {
   const input = {
     avatarID: 'avatar_1',
     viewport: { maxCX: 0, maxCY: 0, minCX: 5, minCY: 0 },
@@ -365,7 +362,7 @@ test('getRevealedNodes rejects an inverted viewport', () => {
   ]);
 });
 
-test('getRevealedNodes rejects a viewport axis past the packable coordinate range', () => {
+test('#getRevealedNodes rejects a viewport axis past the packable coordinate range', () => {
   const input = {
     avatarID: 'avatar_1',
     viewport: { maxCX: WORLD_COORD_MAX + 1, maxCY: 0, minCX: WORLD_COORD_MAX, minCY: 0 },
@@ -373,12 +370,10 @@ test('getRevealedNodes rejects a viewport axis past the packable coordinate rang
 
   const result = activityContract.getRevealedNodes['~orpc'].inputSchema?.safeParse(input);
 
-  expect(result?.error?.issues).toPartiallyContain(
-    expect.objectContaining({ path: ['viewport', 'maxCX'] }),
-  );
+  expect(result?.error?.issues).toPartiallyContain({ path: ['viewport', 'maxCX'] });
 });
 
-test('getRevealedNodes rejects a viewport axis below the packable coordinate range', () => {
+test('#getRevealedNodes rejects a viewport axis below the packable coordinate range', () => {
   const input = {
     avatarID: 'avatar_1',
     viewport: { maxCX: 0, maxCY: 0, minCX: 0, minCY: WORLD_COORD_MIN - 1 },
@@ -386,12 +381,10 @@ test('getRevealedNodes rejects a viewport axis below the packable coordinate ran
 
   const result = activityContract.getRevealedNodes['~orpc'].inputSchema?.safeParse(input);
 
-  expect(result?.error?.issues).toPartiallyContain(
-    expect.objectContaining({ path: ['viewport', 'minCY'] }),
-  );
+  expect(result?.error?.issues).toPartiallyContain({ path: ['viewport', 'minCY'] });
 });
 
-test('getRevealedNodes accepts a viewport at the edge of the packable coordinate range', () => {
+test('#getRevealedNodes accepts a viewport at the edge of the packable coordinate range', () => {
   const input = {
     avatarID: 'avatar_1',
     viewport: {
@@ -424,7 +417,7 @@ test('it declares a bespoke NODE_UNKNOWN with an explicit status on revealNodes'
   expect(errorMap.NODE_UNKNOWN?.status).toBe(404);
 });
 
-test('revealNodes round-trips a valid stamps-and-nodes output through its output schema', () => {
+test('#revealNodes round-trips a valid stamps-and-nodes output through its output schema', () => {
   const output = {
     keyVersion: 1,
     nodes: [
@@ -443,7 +436,7 @@ test('revealNodes round-trips a valid stamps-and-nodes output through its output
   expect(activityContract.revealNodes['~orpc'].outputSchema?.parse(output)).toStrictEqual(output);
 });
 
-test('revealNodes rejects an output whose node is missing its genesis seed', () => {
+test('#revealNodes rejects an output whose node is missing its genesis seed', () => {
   const output = {
     keyVersion: 1,
     nodes: [
