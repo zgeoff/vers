@@ -2,6 +2,7 @@ import type { Page } from '@playwright/test';
 import * as z from 'zod';
 
 interface QADebugHook {
+  readonly setSpeed: (speed: number) => Promise<number>;
   readonly snapshot: () => Promise<unknown>;
 }
 
@@ -9,7 +10,7 @@ declare global {
   var __versQA: QADebugHook | undefined;
 }
 
-const DebugEventSchema = z.object({ detail: z.string(), type: z.string() });
+const DebugEventSchema = z.object({ at: z.number(), detail: z.string(), type: z.string() });
 const ActivityReferenceSchema = z.object({ activityID: z.string() });
 const FlushRecordSchema = z.object({ type: z.string() });
 

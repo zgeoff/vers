@@ -8,7 +8,7 @@ const CROSS_ENGINE_CORPUS_SPEC = /cross-engine-corpus\.spec\.ts/u;
 // activity at a node runs against an artifact with the renderer on, built with
 // VITE_SIM_ENGINE_HASH set, as CI's e2e step sets it
 const RENDERER_SPEC =
-  /offline-(?:engagement|navigation|reload|opening|stop|build|refusal)\.spec\.ts/u;
+  /offline-(?:engagement|navigation|reload|opening|stop|build|refusal|run-end)\.spec\.ts/u;
 
 const RENDERER_BASE_URL = process.env['RENDERER_BASE_URL'] ?? 'http://localhost:3100';
 

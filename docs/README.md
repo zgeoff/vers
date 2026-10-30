@@ -69,6 +69,8 @@ Procedures an operator or an agent runs by hand.
 
 - [Provisioning](./runbooks/provisioning.md) — stand the Fly fleet, the Neon project, and agent
   database access up from nothing, and tear them down
+- [Infra](./runbooks/infra.md) — the vers-infra Pulumi program's resource sets, credentials, setup,
+  and deploy
 - [Dev database](./runbooks/dev-database.md) — local migrations, Neon branches for experiments, and
   the per-worktree clones MCP sessions use
 - [Manual QA](./runbooks/qa.md) — QA accounts, the inbox, the browser tools, the debug hook, and the

@@ -218,10 +218,10 @@ an unset variable sets an empty secret, which `flyctl` accepts.
 
 9. Stand up the telemetry backend. The Axiom account is created in its UI, along with one
    console-minted credential that bootstraps the rest: the `iac-token` field on the `vers-ci`
-   vault's `axiom` item, the Pulumi provider's API token, with the scopes listed in
-   `infra/README.md`. Every other Axiom resource is provisioned by the `infra/` Pulumi program
-   (`bun run up` in `infra/`); the resource registry and drift stance live in
-   [observability](../architecture/platform/observability.md). Token secret values sit on the
+   vault's `axiom` item, the Pulumi provider's API token, with the scopes listed in the
+   [infra runbook](./infra.md#prerequisites). Every other Axiom resource is provisioned by the
+   `infra/` Pulumi program (`bun run up` in `infra/`); the resource registry and drift stance live
+   in [observability](../architecture/platform/observability.md). Token secret values sit on the
    `axiom` item in the `vers` 1Password vault (`ingest-token`, `mcp-token`). A scope change in the
    program regenerates a token's value, and the vault field plus the fleet's staged OTel secrets
    must be updated within the 48-hour rotation grace window. Destructive administration outside the

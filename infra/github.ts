@@ -20,6 +20,9 @@ const labels = new github.IssueLabels(
       },
       { name: 'area/services', color: 'B392F0', description: 'area: backend services & contracts' },
       { name: 'area/web', color: '5DADE2', description: 'area: web app shell & UI' },
+
+      // the shared audit-fix workflow tags each pull request that records an audit ignore with it
+      { name: 'audit-ignore', color: 'B60205' },
       { name: 'bug', color: 'd73a4a', description: 'bzzzz' },
       { name: 'build', color: 'C2E0C6' },
       { name: 'chore', color: 'FEF2C0', description: 'maintenance / housekeeping' },

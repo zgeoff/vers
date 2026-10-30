@@ -2,6 +2,7 @@ export interface DemoAccount {
   readonly avatarName: null | string;
   readonly completedNodeIDs?: ReadonlyArray<string>;
   readonly email: string;
+  readonly isQA?: boolean;
   readonly name: string;
   readonly password: string;
   readonly username: string;
@@ -167,5 +168,55 @@ export const DEMO_ACCOUNTS: ReadonlyArray<DemoAccount> = [
     name: 'Refusal Page Demo Account',
     password: 'password123',
     username: 'e2e-refusal-page',
+  },
+  {
+    avatarName: 'Run End Shared Cut Test Avatar',
+    email: 'e2e-run-end-shared-cut@qa.versidle.com',
+
+    // the run plays to its end under the QA speed-up, which only a QA-flagged avatar takes
+    isQA: true,
+    name: 'Run End Shared Cut Demo Account',
+    password: 'password123',
+    username: 'e2e-run-end-shared-cut',
+  },
+  {
+    avatarName: 'Run End Shared Midcut Test Avatar',
+    email: 'e2e-run-end-shared-midcut@qa.versidle.com',
+
+    // the run plays to its end under the QA speed-up, which only a QA-flagged avatar takes
+    isQA: true,
+    name: 'Run End Shared Midcut Demo Account',
+    password: 'password123',
+    username: 'e2e-run-end-shared-midcut',
+  },
+  {
+    avatarName: 'Run End Locks Cut Test Avatar',
+    email: 'e2e-run-end-locks-cut@qa.versidle.com',
+
+    // the run plays to its end under the QA speed-up, which only a QA-flagged avatar takes
+    isQA: true,
+    name: 'Run End Locks Cut Demo Account',
+    password: 'password123',
+    username: 'e2e-run-end-locks-cut',
+  },
+  {
+    avatarName: 'Run End Locks Midcut Test Avatar',
+    email: 'e2e-run-end-locks-midcut@qa.versidle.com',
+
+    // the run plays to its end under the QA speed-up, which only a QA-flagged avatar takes
+    isQA: true,
+    name: 'Run End Locks Midcut Demo Account',
+    password: 'password123',
+    username: 'e2e-run-end-locks-midcut',
+  },
+  {
+    avatarName: 'Run End Chain Test Avatar',
+    email: 'e2e-run-end-chain@qa.versidle.com',
+
+    // the runs play out under the QA speed-up, which only a QA-flagged avatar takes
+    isQA: true,
+    name: 'Run End Chain Demo Account',
+    password: 'password123',
+    username: 'e2e-run-end-chain',
   },
 ];

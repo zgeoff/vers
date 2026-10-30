@@ -14,7 +14,6 @@ import { http } from 'msw';
 import invariant from 'tiny-invariant';
 import { writeContentDocumentCache } from '../content/write-content-document-cache';
 import { server } from '../mocks/node';
-import { readAllActivityStarts } from '../submission/read-all-activity-starts';
 import { readPendingStopIntent } from '../submission/read-pending-stop-intent';
 import type { ActivityServiceClient } from '../submission/types';
 import { writeFailureActionCache } from '../submission/write-failure-action-cache';
@@ -326,7 +325,7 @@ test('it closes the connection on disconnect so no further call it makes is answ
   ).toReject();
 });
 
-test('it resumes into a fresh row once a reconnect drains a held terminal append behind an offline continuation', async () => {
+test('it delivers the offline continuation once a reconnect drains the held terminal append before it', async () => {
   const viewer = await createViewer();
   const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
 
@@ -407,14 +406,16 @@ test('it resumes into a fresh row once a reconnect drains a held terminal append
 
   globalThis.dispatchEvent(new Event('online'));
 
-  await waitFor(async () => {
-    const pending = await readAllActivityStarts();
+  // the held terminal append lands on the reconnect, and its landing delivers the continuation the
+  // device minted behind it
+  await waitFor(() => {
+    const continued = db.activityCollection.findFirst((query) =>
+      query.where({ startKey: `continue_${activity.id}` }),
+    );
 
-    const minted = pending.find((row) => row.predecessorActivityID === activity.id);
+    invariant(continued !== undefined, 'expected the reconnect to deliver the continuation');
 
-    invariant(minted !== undefined, 'expected the reconnect to mint a fresh row');
-
-    expect(minted.id).not.toBe(activity.id);
+    expect(continued.id).not.toBe(activity.id);
   });
 });
 

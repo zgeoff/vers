@@ -63,6 +63,12 @@ test('it starts a fresh context on the live run after a takeover, the browser ce
   expect(fresh.outbox.activityStarts).toStrictEqual([]);
   expect(afterTakeover.liveRun).toBeNull();
   expect(afterTakeover.connectivityOnline).toBe(true);
-  expect(afterTakeover.events).toContainEqual({ detail: 'discarding', type: 'lifecycle' });
-  expect(afterTakeover.events).not.toContainEqual({ detail: 'offline', type: 'connectivity' });
+
+  expect(afterTakeover.events).toContainEqual(
+    expect.objectContaining({ detail: 'discarding', type: 'lifecycle' }),
+  );
+
+  expect(afterTakeover.events).not.toContainEqual(
+    expect.objectContaining({ detail: 'offline', type: 'connectivity' }),
+  );
 });

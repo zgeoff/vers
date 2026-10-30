@@ -16,6 +16,7 @@ import type { IngestActivityStartOutcome } from './ingest-activity-start';
 import { JournalWriteError } from './journal-write-error';
 import { readQueuedCheckpoints } from './read-queued-checkpoints';
 import type { FlushOutcome } from './run-checkpoint-flush-attempt';
+import { TERMINAL_CHECKPOINT_TYPES } from './terminal-checkpoint-types';
 import type {
   ActivityServiceClient,
   ActivitySubmissionContext,
@@ -57,6 +58,7 @@ interface CreateCheckpointSubmitterOptions {
   readonly journal?: CheckpointJournal;
 
   readonly onAcked?: (activityID: string, appendedHead: number) => void;
+  readonly onActivityEnded?: (activityID: string) => void;
 
   readonly onCapped?: (activityID: string, appendedHead: number) => void;
 
@@ -105,11 +107,6 @@ interface WriteCursor {
   readonly scopeID: string | undefined;
   readonly startChainIndex: number;
 }
-
-const TERMINAL_CHECKPOINT_TYPES: ReadonlySet<string> = new Set([
-  ActivityCheckpointType.Completed,
-  ActivityCheckpointType.Failed,
-]);
 
 export function createCheckpointSubmitter(
   options: Readonly<CreateCheckpointSubmitterOptions>,
@@ -229,6 +226,7 @@ export function createCheckpointSubmitter(
       ingestActivityStart: options.ingestActivityStart,
       latestQueuedVersion,
       onAcked: options.onAcked,
+      onActivityEnded: options.onActivityEnded,
       onCapped: options.onCapped,
       onEvicted: options.onEvicted,
       onFlushSettled: options.onFlushSettled,
