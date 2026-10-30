@@ -1,5 +1,6 @@
 import { readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
+import { parseArgs } from 'node:util';
 
 // Claude Code runs the call when a PreToolUse hook exits with any status but 2, so a static import
 // that fails would let a gated edit through. This file therefore imports only Node builtins.
@@ -16,23 +17,35 @@ type Harness = 'claude-code' | 'codex';
 
 // The hook command picks the harness: `--harness codex` for Codex, and none for Claude Code.
 function parseHarness(args: readonly string[]): Harness {
-  const flag = args.indexOf('--harness');
+  const value = parseHarnessOption(args);
 
-  if (flag === -1) {
-    return 'claude-code';
+  if (value instanceof Error) {
+    console.error(`The skill gate cannot read its arguments: ${value.message}`);
+
+    return process.exit(1);
   }
 
-  const value = args[flag + 1];
+  if (value === undefined) {
+    return 'claude-code';
+  }
 
   if (value === 'codex' || value === 'claude-code') {
     return value;
   }
 
-  console.error(
-    `The skill gate does not know the harness ${String(value)}. Use codex or claude-code.`,
-  );
+  console.error(`The skill gate does not know the harness ${value}. Use codex or claude-code.`);
 
   return process.exit(1);
+}
+
+// parseArgs throws on an option it does not declare and on --harness with no value.
+function parseHarnessOption(args: readonly string[]): string | Error | undefined {
+  try {
+    return parseArgs({ args: [...args], options: { harness: { type: 'string' } }, strict: true })
+      .values.harness;
+  } catch (error) {
+    return error instanceof Error ? error : new Error(String(error));
+  }
 }
 
 // Bun rejects a failed import with a ResolveMessage, which is not an Error.
