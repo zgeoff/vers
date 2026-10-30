@@ -137,7 +137,31 @@ async function openWarmedMap(page: Page, email: string): Promise<void> {
   await signIn(page, email);
 
   await expect(page).toHaveURL(/\/respite$/u);
-  await expect.poll(() => readWorkerSnapshot(page)).not.toBeNull();
+
+  await expect
+    .poll(
+      () =>
+        page.evaluate(async () => {
+          const hook = globalThis.__versQA;
+
+          if (hook === undefined) {
+            return 'no hook';
+          }
+
+          const answered = await Promise.race([
+            hook.snapshot().then(() => 'answered'),
+            new Promise<string>((resolve) => {
+              setTimeout(() => {
+                resolve('no answer');
+              }, 2000);
+            }),
+          ]);
+
+          return answered;
+        }),
+      { timeout: 30 * 1000 },
+    )
+    .toBe('answered');
 
   await page.getByRole('link', { exact: true, name: 'Explore' }).click();
 
