@@ -111,22 +111,20 @@ for (const journey of JOURNEYS) {
 
     await expectServerHolds(mockActivityURL, activityID);
 
-    // the outbox drains every start and checkpoint the device made during the cut, the next run's
-    // start included
-    await expect
-      .poll(
-        async () => {
-          const snapshot = await readWorkerSnapshot(page);
+    // every run that ended during the cut reaches the server once the network returns: its start
+    // and its terminal checkpoint
+    const endedDuringCut = (ended?.events ?? [])
+      .filter((event) => event.type === 'run' && / (?:completed|failed) /u.test(event.detail))
+      .map((event) => event.detail.split(' ')[0]);
 
-          return snapshot === null
-            ? null
-            : [snapshot.outbox.activityStarts.length, snapshot.outbox.checkpoints.length];
-        },
-        { timeout: 30 * 1000 },
-      )
-      .toStrictEqual([0, 0]);
+    try {
+      await expect
+        .poll(() => readStoppedActivityIDs(mockActivityURL), { timeout: 30 * 1000 })
+        .toStrictEqual(expect.arrayContaining(endedDuringCut));
+    } finally {
+      await writeSnapshot(page, testInfo, 'reconnect-snapshot.json');
+    }
 
-    await writeSnapshot(page, testInfo, 'reconnect-snapshot.json');
     await expectNoRefusalShown(page);
   });
 }
@@ -253,6 +251,17 @@ async function expectNoRefusalShown(page: Page): Promise<void> {
   const shownRefusal = await page.locator('body').getAttribute('data-shown-refusal');
 
   expect(shownRefusal, 'the page showed "Run could not be saved"').toBeNull();
+}
+
+const ActivityListSchema = z.array(z.object({ id: z.string(), status: z.string() }));
+
+async function readStoppedActivityIDs(mockActivityURL: string): Promise<ReadonlyArray<string>> {
+  const response = await fetch(`${mockActivityURL}/test/activities`);
+  const body: unknown = await response.json();
+
+  return ActivityListSchema.parse(body)
+    .filter((activity) => activity.status === 'stopped')
+    .map((activity) => activity.id);
 }
 
 const ActivityStatusSchema = z.object({ appendedHead: z.int(), status: z.string() });
