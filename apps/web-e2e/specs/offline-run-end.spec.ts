@@ -8,94 +8,128 @@ import { readWorkerSnapshot } from '../src/read-worker-snapshot';
 import { signIn } from '../src/sign-in';
 import { expect, test } from '../src/test';
 
-test('it keeps a run that ends with the network cut for the page and its workers', async ({
-  browser,
-  mockActivityURL,
-  page,
-}, testInfo) => {
-  // under software GL each click waits seconds on the live renderer, and the run plays to its end
-  test.setTimeout(180 * 1000);
+interface RunEndJourney {
+  readonly cutAt: 'before-start' | 'mid-run';
+  readonly email: string;
+  readonly title: string;
+  readonly transport: 'shared-worker' | 'web-locks';
+}
 
-  invariant(mockActivityURL !== undefined, 'the mock activity service holds the delivered run');
+const JOURNEYS: ReadonlyArray<RunEndJourney> = [
+  {
+    cutAt: 'before-start',
+    email: 'e2e-run-end-shared-cut@qa.versidle.com',
+    title: 'it keeps a run that ends with the network cut for the page and its shared worker',
+    transport: 'shared-worker',
+  },
+  {
+    cutAt: 'mid-run',
+    email: 'e2e-run-end-shared-midcut@qa.versidle.com',
+    title: 'it keeps a run started online that ends after the network is cut',
+    transport: 'shared-worker',
+  },
+  {
+    cutAt: 'before-start',
+    email: 'e2e-run-end-locks-cut@qa.versidle.com',
+    title: 'it keeps a run that ends with the network cut where no SharedWorker exists',
+    transport: 'web-locks',
+  },
+  {
+    cutAt: 'mid-run',
+    email: 'e2e-run-end-locks-midcut@qa.versidle.com',
+    title: 'it keeps a run started online that ends after the cut where no SharedWorker exists',
+    transport: 'web-locks',
+  },
+];
 
-  await openWarmedMap(page, 'e2e-run-end-cut@qa.versidle.com');
+for (const journey of JOURNEYS) {
+  test(journey.title, async ({ browser, mockActivityURL, page }, testInfo) => {
+    // under software GL each click waits seconds on the live renderer, and the run plays to its end
+    test.setTimeout(180 * 1000);
 
-  const cut = await createNetworkCut(browser, page.context());
+    invariant(mockActivityURL !== undefined, 'the mock activity service holds the delivered run');
 
-  await markOutcomeRenders(page);
-  await navigateClientRoute(page, '/explore/node/0_0');
+    // Android Chrome has no SharedWorker, so the tabs elect a dedicated worker through Web Locks
+    if (journey.transport === 'web-locks') {
+      await page.context().addInitScript(() => {
+        Reflect.deleteProperty(globalThis, 'SharedWorker');
+      });
+    }
 
-  await page.getByRole('link', { name: 'Click to start' }).click();
+    await openWarmedMap(page, journey.email);
+    await markOutcomeRenders(page);
 
-  await expect(page.getByRole('button', { name: 'END RUN' })).toBeVisible();
+    let cut =
+      journey.cutAt === 'before-start' ? await createNetworkCut(browser, page.context()) : null;
 
-  const activityID = await readLiveActivityID(page);
+    await navigateClientRoute(page, '/explore/node/0_0');
 
-  await page.evaluate(() => globalThis.__versQA?.setSpeed(20));
+    await page.getByRole('link', { name: 'Click to start' }).click();
 
-  await expectRunEndUnderCut(page, activityID);
+    await expect(page.getByRole('button', { name: 'END RUN' })).toBeVisible();
 
-  const workerFetches = await cut.readWorkerFetches();
+    const activityID = await readLiveActivityID(page);
 
-  await writeSnapshot(page, testInfo, 'run-end-snapshot.json');
+    if (journey.cutAt === 'mid-run') {
+      await expect
+        .poll(async () => {
+          const response = await fetch(`${mockActivityURL}/test/activity?id=${activityID}`);
 
-  expect(workerFetches).toStrictEqual(['failed TypeError']);
+          return response.status;
+        })
+        .toBe(200);
+    }
 
-  await expectNoRefusalShown(page);
+    cut ??= await createNetworkCut(browser, page.context());
 
-  await cut.end();
+    const cutAt = Date.now();
 
-  await expectServerHolds(mockActivityURL, activityID);
-  await expectNoRefusalShown(page);
-});
+    await page.evaluate(() => globalThis.__versQA?.setSpeed(20));
 
-test('it keeps a run started online that ends after the network is cut', async ({
-  browser,
-  mockActivityURL,
-  page,
-}, testInfo) => {
-  // under software GL each click waits seconds on the live renderer, and the run plays to its end
-  test.setTimeout(180 * 1000);
+    await expectRunEndUnderCut(page, activityID);
 
-  invariant(mockActivityURL !== undefined, 'the mock activity service holds the delivered run');
+    const workerFetches = await cut.readWorkerFetches();
+    const ended = await readWorkerSnapshot(page);
 
-  await openWarmedMap(page, 'e2e-run-end-midcut@qa.versidle.com');
-  await markOutcomeRenders(page);
-  await navigateClientRoute(page, '/explore/node/0_0');
+    await writeSnapshot(page, testInfo, 'run-end-snapshot.json');
 
-  await page.getByRole('link', { name: 'Click to start' }).click();
+    const expectedWorkerFetches = journey.transport === 'shared-worker' ? ['failed TypeError'] : [];
 
-  await expect(page.getByRole('button', { name: 'END RUN' })).toBeVisible();
+    expect(workerFetches).toStrictEqual(expectedWorkerFetches);
 
-  const activityID = await readLiveActivityID(page);
+    // every request the worker sent during the cut failed in transport, and none was answered
+    const exchanges = (ended?.events ?? [])
+      .filter((event) => event.type === 'rpc' && event.at >= cutAt)
+      .map((event) => event.detail.split(' ')[1]);
 
-  await expect
-    .poll(async () => {
-      const response = await fetch(`${mockActivityURL}/test/activity?id=${activityID}`);
+    expect(exchanges).toContain('unanswered');
+    expect(exchanges).not.toContain('answered');
 
-      return response.status;
-    })
-    .toBe(200);
+    await expectNoRefusalShown(page);
 
-  const cut = await createNetworkCut(browser, page.context());
+    await cut.end();
 
-  await page.evaluate(() => globalThis.__versQA?.setSpeed(20));
+    await expectServerHolds(mockActivityURL, activityID);
 
-  await expectRunEndUnderCut(page, activityID);
+    // the outbox drains every start and checkpoint the device made during the cut, the next run's
+    // start included
+    await expect
+      .poll(
+        async () => {
+          const snapshot = await readWorkerSnapshot(page);
 
-  const workerFetches = await cut.readWorkerFetches();
+          return snapshot === null
+            ? null
+            : [snapshot.outbox.activityStarts.length, snapshot.outbox.checkpoints.length];
+        },
+        { timeout: 30 * 1000 },
+      )
+      .toStrictEqual([0, 0]);
 
-  await writeSnapshot(page, testInfo, 'run-end-snapshot.json');
-
-  expect(workerFetches).toStrictEqual(['failed TypeError']);
-
-  await expectNoRefusalShown(page);
-
-  await cut.end();
-
-  await expectServerHolds(mockActivityURL, activityID);
-  await expectNoRefusalShown(page);
-});
+    await writeSnapshot(page, testInfo, 'reconnect-snapshot.json');
+    await expectNoRefusalShown(page);
+  });
+}
 
 async function openWarmedMap(page: Page, email: string): Promise<void> {
   const revealed = page.waitForResponse(/\/revealNodes/u);

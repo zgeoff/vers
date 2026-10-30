@@ -170,23 +170,43 @@ export const DEMO_ACCOUNTS: ReadonlyArray<DemoAccount> = [
     username: 'e2e-refusal-page',
   },
   {
-    avatarName: 'Run End Cut Test Avatar',
-    email: 'e2e-run-end-cut@qa.versidle.com',
+    avatarName: 'Run End Shared Cut Test Avatar',
+    email: 'e2e-run-end-shared-cut@qa.versidle.com',
 
     // the run plays to its end under the QA speed-up, which only a QA-flagged avatar takes
     isQA: true,
-    name: 'Run End Cut Demo Account',
+    name: 'Run End Shared Cut Demo Account',
     password: 'password123',
-    username: 'e2e-run-end-cut',
+    username: 'e2e-run-end-shared-cut',
   },
   {
-    avatarName: 'Run End Midcut Test Avatar',
-    email: 'e2e-run-end-midcut@qa.versidle.com',
+    avatarName: 'Run End Shared Midcut Test Avatar',
+    email: 'e2e-run-end-shared-midcut@qa.versidle.com',
 
     // the run plays to its end under the QA speed-up, which only a QA-flagged avatar takes
     isQA: true,
-    name: 'Run End Midcut Demo Account',
+    name: 'Run End Shared Midcut Demo Account',
     password: 'password123',
-    username: 'e2e-run-end-midcut',
+    username: 'e2e-run-end-shared-midcut',
+  },
+  {
+    avatarName: 'Run End Locks Cut Test Avatar',
+    email: 'e2e-run-end-locks-cut@qa.versidle.com',
+
+    // the run plays to its end under the QA speed-up, which only a QA-flagged avatar takes
+    isQA: true,
+    name: 'Run End Locks Cut Demo Account',
+    password: 'password123',
+    username: 'e2e-run-end-locks-cut',
+  },
+  {
+    avatarName: 'Run End Locks Midcut Test Avatar',
+    email: 'e2e-run-end-locks-midcut@qa.versidle.com',
+
+    // the run plays to its end under the QA speed-up, which only a QA-flagged avatar takes
+    isQA: true,
+    name: 'Run End Locks Midcut Demo Account',
+    password: 'password123',
+    username: 'e2e-run-end-locks-midcut',
   },
 ];
