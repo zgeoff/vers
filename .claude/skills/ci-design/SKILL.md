@@ -176,18 +176,22 @@ that Renovate moves to a new sync tag keeps a green run while it clears the warn
 | --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
 | [One command per `run:`](#step-scripts) | a `run:` that breaks the rule, where a quoted `;`, `\|` or `&&` is part of a word                                                   |
 | [Timeouts](#timeouts)                   | a job without `timeout-minutes`, other than a job that calls a reusable workflow, where GitHub refuses the key                      |
-| [Cancelling runs](#cancelling-runs)     | a checks workflow without `cancel-in-progress: true`, or with a group that holds a per-run value such as `github.sha`               |
+| [Cancelling runs](#cancelling-runs)     | a checks workflow without `cancel-in-progress: true`, other than a gate on main that groups by `github.sha`                         |
+| [Cancelling runs](#cancelling-runs)     | a checks workflow whose group holds a per-run value, such as `github.sha`, other than a gate on main's group that never cancels     |
 | [Cancelling runs](#cancelling-runs)     | a release or deploy job without its own group and `cancel-in-progress: false`, or under a workflow-level `true`                     |
 | [No rebase churn](#no-rebase-churn)     | a `workflow_run` trigger without a `branches:` filter                                                                               |
 | [Two profiles](#two-profiles)           | a heavy check in a workflow that runs on `pull_request` or `pull_request_target`, unless the run is in a public repo                |
-| [Build once](#build-once)               | an `actions/cache` step in a job that sets up Bun with `oven-sh/setup-bun`                                                          |
+| [Build once](#build-once)               | an `actions/cache` step that caches `~/.bun/install/cache` or `node_modules` in a job that sets up Bun with `oven-sh/setup-bun`     |
 | [Checkout depth](#checkout-depth)       | an `actions/checkout` step with `fetch-depth: 0` and no `filter`, which is `blob:none`, or `''` for a job that reads many old files |
 
-The lint reads three terms by these definitions:
+The lint reads four terms by these definitions:
 
 - **A checks workflow** runs on `pull_request` or `push`. When it holds a release or deploy job,
   each of its other jobs sets its own group with `cancel-in-progress: true`; otherwise the
   workflow-level group, or a group on every job, sets it.
+- **A gate on main** is a checks workflow whose `push` trigger lists only `main` in `branches:`, and
+  which has no `pull_request` or `pull_request_target` trigger. A group that holds `github.sha` and
+  sets `cancel-in-progress: false`, or leaves it out, covers it in place of a cancelling group.
 - **A release or deploy job** has `release`, `deploy` or `migrate` in its id or its name, in any
   case.
 - **A heavy check** is a job whose `runs-on` holds any runner label but a GitHub-hosted Ubuntu
@@ -313,6 +317,18 @@ concurrency:
   cancel-in-progress: true
 ```
 
+A gate on main must pass once for each commit on main, so it never cancels. It groups its runs by
+commit, and a newer commit starts its own run beside the older one:
+
+```yaml
+on:
+  push:
+    branches: [main]
+concurrency:
+  group: gate-${{ github.sha }}
+  cancel-in-progress: false
+```
+
 A release, deploy or migrate job never cancels, because a cut-off deploy can leave a target half
 changed. Give each such job its own job-level `concurrency` group with `cancel-in-progress: false`,
 so the checks group can cancel the run's checks without reaching the deploy. A workflow-level
@@ -336,9 +352,12 @@ in one job and passes on through the registry, or through buildx with the GitHub
 of rebuilding them. A file passes on with `actions/upload-artifact` and `actions/download-artifact`.
 
 A Bun job runs `bun install --frozen-lockfile` with no `actions/cache` step for
-`~/.bun/install/cache`. On a GitHub-hosted runner, a restore of that cache takes longer than the
-install it replaces, and a job that misses the cache spends more time to save one. Each job pays for
-its own runner, checkout and install, which [Two profiles](#two-profiles) weighs against wall time.
+`~/.bun/install/cache` or `node_modules`. On a GitHub-hosted runner, a restore of that cache takes
+longer than the install it replaces, and a job that misses the cache spends more time to save one.
+The rule leaves a cache of any other path alone, such as a Nix store, which `bun install` does not
+replace. The lint skips a path line that holds a `${{ }}` expression, because GitHub resolves it
+only when the job runs. Each job pays for its own runner, checkout and install, which
+[Two profiles](#two-profiles) weighs against wall time.
 
 ## Checkout depth
 
