@@ -188,6 +188,8 @@ A server refusal is an answer, so it never marks the device offline. The worker 
 server deferred on a backoff and at once on a reconnect, and the reconnect drain skips a start whose
 predecessor is still deferred. A start that follows a run the server still holds as active is
 deferred: its chain position and its folded XP count on that run's checkpoints, which the server has
-not appended yet. So the worker resends a start as soon as the server acknowledges its predecessor's
-terminal checkpoint, and a chain of runs played offline delivers one run after another, with no
-backoff wait between them.
+not appended yet. So the worker resends a start whose checkpoints it is sending as soon as the
+server acknowledges its predecessor's terminal checkpoint, and a chain of runs played offline
+delivers one run after another, with no backoff wait between them. A start the worker is not
+sending, such as one left from before a reload, waits for the next reconnect drain, because a
+delivery outside the worker's flows could write rows back after a sign-out discards the outbox.

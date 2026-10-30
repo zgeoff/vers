@@ -49,39 +49,36 @@ test('it flushes the registered successor of the ended activity at once', async 
   expect(submitter.registerActivity).not.toHaveBeenCalled();
 });
 
-test('it ingests and registers an unregistered successor of the ended activity', async () => {
+test('it leaves an unregistered successor in the outbox for the next recovery', async () => {
   const submitter = createStubSubmitter();
   const context = createStubWorkerContext({ submitter });
+  const advance = mock<(input: unknown) => void>();
 
   const successor = createMockActivityData({
     avatarID: 'avatar_chain',
     id: 'act_successor_unregistered',
     predecessorActivityID: 'act_ended',
-    scopeID: '1_0',
     startKey: 'continue_act_ended',
   });
 
   await writeActivityStart(successor);
 
   server.use(
-    mockActivityService.advanceActivity.handler(() => ({ activity: successor, appendedHead: 0 })),
+    mockActivityService.advanceActivity.handler((opts) => {
+      advance(opts.input);
+
+      return { activity: successor, appendedHead: 0 };
+    }),
   );
 
   await deliverSuccessorStarts(context, 'act_ended');
 
   const remaining = await readAllActivityStarts();
 
-  expect(remaining).toStrictEqual([]);
-
-  expect(submitter.registerActivity).toHaveBeenCalledExactlyOnceWith({
-    activityID: successor.id,
-    appendedHead: 0,
-    avatarID: successor.avatarID,
-    lastHash: successor.startHash,
-    previousNextSeed: successor.seed,
-    scopeID: successor.scopeID,
-    startChainIndex: successor.startChainIndex,
-  });
+  expect(remaining).toStrictEqual([successor]);
+  expect(advance).not.toHaveBeenCalled();
+  expect(submitter.flushNow).not.toHaveBeenCalled();
+  expect(submitter.registerActivity).not.toHaveBeenCalled();
 });
 
 test('it sends nothing when no start in the outbox follows the ended activity', async () => {
