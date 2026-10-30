@@ -152,7 +152,8 @@ test('it delivers every run that chained on during the cut soon after the networ
 
   const autoRetry = page.getByLabel('Auto-retry on failure');
 
-  await autoRetry.check();
+  // the styled checkbox keeps its input out of the viewport, so the player taps its label
+  await page.getByText('Auto-retry on failure', { exact: true }).click();
 
   await expect(autoRetry).toBeChecked();
 
