@@ -2,6 +2,7 @@ import type { Page } from '@playwright/test';
 import * as z from 'zod';
 
 interface QADebugHook {
+  readonly setSpeed: (speed: number) => Promise<number>;
   readonly snapshot: () => Promise<unknown>;
 }
 
