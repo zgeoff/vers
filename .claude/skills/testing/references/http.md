@@ -17,34 +17,44 @@ follow [Real applications and transport](../SKILL.md#real-applications-and-trans
 
 ## The server and its lifecycle
 
-- A test process has one MSW server, `setupServer(...handlers)`, exported from `mocks/node.ts`. Each
-  package whose tests run in the process adds its handler list to that call, so `resetHandlers()`
-  keeps every package's default handlers. A package never starts a second server: two servers in one
-  process patch the same request APIs, so one server's handlers answer requests meant for the
-  other's.
-- The preload calls `server.listen()` in `beforeAll`, `server.resetHandlers()` after each test, and
-  `server.close()` in `afterAll`, never `listen()` at import. The
+- A test process has one MSW server, `defineNetwork(...)` from `msw/experimental`, exported as
+  `server` from `mocks/node.ts`. Its source is an `InterceptorSource` over the `FetchInterceptor`
+  from `@mswjs/interceptors/fetch/web`. MSW 3's `setupServer` intercepts at Node's sockets, which
+  Bun's native `fetch` never opens, so its handlers miss every request
+  ([mswjs/msw#2811](https://github.com/mswjs/msw/issues/2811)).
+- Each package whose tests run in the process adds its handler list to the `handlers` option, so
+  `resetHandlers()` keeps every package's default handlers. A package never starts a second server:
+  two servers in one process patch the same `fetch`, so one server's handlers answer requests meant
+  for the other's.
+- The preload calls `server.enable()` in `beforeAll`, `server.resetHandlers()` after each test, and
+  `server.disable()` in `afterAll`, never `enable()` at import. The
   [testing skill](../SKILL.md#testing) says why the pair holds in every run mode.
-- The server starts with `onUnhandledRequest: 'error'`. A request that no handler matches fails the
-  test and names its URL.
+- The server starts with `onUnhandledFrame: 'error'`. A request that no handler matches rejects, and
+  MSW prints its URL.
 - A suite that sends real requests to a server it started on the loopback interface passes a
-  callback: loopback hosts go through, and every other unmatched request still errors. The preload
-  carries a comment that names the loopback traffic.
+  callback instead: loopback hosts go through, and every other unmatched request fails. In MSW 3,
+  `defaults.error()` only prints the message, so the callback throws after it, and MSW answers the
+  request with a 500 response that holds the error. The callback carries a comment that names the
+  loopback traffic.
 
 ```ts
-beforeAll(() => {
-  server.listen({
-    // the sync suites call test servers on ephemeral loopback ports
-    onUnhandledRequest: (request, print) => {
-      const { hostname } = new URL(request.url);
+const loopbackHosts = ['127.0.0.1', '[::1]', 'localhost'];
 
-      if (['127.0.0.1', '[::1]', 'localhost'].includes(hostname)) {
-        return;
-      }
+export const server = defineNetwork({
+  sources: [new InterceptorSource({ interceptors: [new FetchInterceptor()] })],
+  handlers: [...billingHandlers, ...searchHandlers],
+  // the sync suites call test servers on ephemeral loopback ports
+  onUnhandledFrame: ({ frame, defaults }) => {
+    const url = frame instanceof HttpNetworkFrame ? new URL(frame.data.request.url) : null;
 
-      print.error();
-    },
-  });
+    if (url !== null && loopbackHosts.includes(url.hostname)) {
+      return;
+    }
+
+    defaults.error();
+
+    throw new Error('the test sent a request that no handler matches');
+  },
 });
 ```
 

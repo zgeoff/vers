@@ -5,9 +5,10 @@ description:
   with onTestFinished cleanup, inline data and tested factories, strict assertions and inline
   snapshots, controlled time, condition waits, real filesystems and transports, and the narrow cases
   for module mocks, plus the fix for each kind of slow test, per-run templates, and the lanes with
-  their per-test timeout limits. References cover real databases, HTTP mocking with MSW,
-  observability, and Claude Code mod checks, and, in a repo that uses them, React and TanStack
-  clients and native Go and NixOS conventions. Load when designing, writing, or reviewing tests.
+  their per-test timeout limits, and stored state read through the module that writes it. References
+  cover real databases, HTTP mocking with MSW, observability, and Claude Code mod checks, and, in a
+  repo that uses them, React and TanStack clients and native Go and NixOS conventions. Load when
+  designing, writing, or reviewing tests.
 ---
 
 # Testing
@@ -80,6 +81,9 @@ Each line links the section that explains it.
   `try`/`finally`.
 - [Test data](#test-data): literals stay inline, shared domain types get tested factories, and
   stand-ins hold no logic.
+- [Stored state](#stored-state): a test checks database rows and stored files through the module
+  that writes them, seeds them by default with inserts and factories, and has three named
+  exceptions.
 - [Schemas and parsers](#schemas-and-parsers): feed inline payloads, and assert the issue path or
   the parsed data.
 - [Assertions](#assertions): `toStrictEqual` on the full contract, each result asserted on its own,
@@ -359,6 +363,8 @@ to a warning, unless a comment on that setting holds a ticket or a `floor:`.
 - When one file tests several units, such as the procedures of one router, a `#<unit>` prefix takes
   the place of "it": `#archiveNote rejects a note that is already archived`. A file that tests one
   unit uses no prefix.
+- In a `bun:test` file, `zgeoff/test-shape` refuses `describe`, `it`, the four hooks, `toEqual`, and
+  a title that starts with neither "it " nor a `#<unit> ` prefix.
 - A test body arranges, acts, then asserts. The formatter owns spacing, including gaps between
   phases; keep its layout when it joins statements from different phases. Phase comments such as
   `// act` never appear. An ordinary test acts once: it has one act phase, which may hold several
@@ -599,6 +605,72 @@ the gap and close it.
   executable. Extract a dedicated stand-in when the script models arguments, output, or failures.
 - A chain of `mockReturnValueOnce` or `mockResolvedValueOnce` calls never appears: a call past the
   last answer returns the default without failing, where the answer-queue util throws.
+
+## Stored state
+
+Check stored state through its owner. Stored state means database rows and files on disk. The owner
+is the module whose code writes them.
+
+- The owner's own tests read its rows and files directly.
+- Every other test reads them only through the owner's code: a read function for rows, a path helper
+  for files. It never writes its own query and never builds a stored path by hand.
+- If the unit under test already returns the fact, check its result. Use the owner's code only when
+  the result does not hold the fact.
+- If the owner has no read function for the fact, add one to the owner, with its own test.
+- A query that only sets up a failure, such as a trigger that makes a write fail, is setup, not a
+  check. It stays.
+
+`src/notes/store/` writes the `notes` table and the attachment files, so it owns both. A handler
+test outside the store checks the result of an archive.
+
+```ts
+// before: the test writes its own query and builds the path by hand
+const row = await ctx.db
+  .selectFrom('notes')
+  .select('archived_at')
+  .where('id', '=', note.id)
+  .executeTakeFirstOrThrow();
+
+expect(row.archived_at).toBeValidDate();
+expect(existsSync(join(ctx.dataDir, 'archive', note.id, 'list.txt'))).toBe(true);
+
+// after: the test reads through the store's read function and path helper
+const archived = await readNote(ctx.db, note.id);
+
+expect(archived?.archivedAt).toBeValidDate();
+expect(existsSync(buildArchivePath(ctx.dataDir, note.id, 'list.txt'))).toBe(true);
+```
+
+The store's own test, `src/notes/store/read-note.test.ts`, still inserts and queries `notes`
+directly, because the table is what it checks.
+
+### Seeding stored state
+
+A test seeds stored state with direct inserts and [factories](./references/factories.md) by default.
+A seeding helper is a [composite](./references/factories.md#composites): it lives in the repo's
+shared test utils with its own tests, takes a name the system already uses, and writes the whole
+effect behind that name, such as the row and the files of one image.
+
+A store with no service layer seeds through its own write functions, never through raw SQL. A direct
+write that no write function can make stays, with the `//` comment that names the case, as
+[Persisted test data](./references/database.md#persisted-test-data) asks.
+
+A repo's `project-testing` skill lists the concepts that seed only through a composite, and an agent
+follows that list. The repo's maintainer designs the first seeding pattern in each repo before
+anyone builds one. An agent can then add composites that follow that pattern.
+
+### Exceptions to checking through the owner
+
+Three kinds of test outside the owner read and write stored state directly, and no others:
+
+- A migration test reads and writes tables directly.
+- The own test of a composite or a seeding helper checks the rows and files that it writes.
+- A test of code whose product is SQL or storage, such as a database dialect or a database tool,
+  uses tables as its test input.
+
+Tests under `integration/` and `e2e/` get no exception. A case off this list changes this shared
+skill, never a project skill. A project skill tightens the rule in two ways only: the seeding list,
+and a named owner for a table that several modules write. It never adds an exception.
 
 ## Schemas and parsers
 
