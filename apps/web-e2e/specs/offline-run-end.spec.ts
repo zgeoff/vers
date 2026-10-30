@@ -129,6 +129,74 @@ for (const journey of JOURNEYS) {
   });
 }
 
+test('it delivers every run that chained on during the cut soon after the network returns', async ({
+  browser,
+  mockActivityURL,
+  page,
+}, testInfo) => {
+  // under software GL each click waits seconds on the live renderer, and several runs play out
+  test.setTimeout(180 * 1000);
+
+  invariant(mockActivityURL !== undefined, 'the mock activity service holds the delivered runs');
+
+  await openWarmedMap(page, 'e2e-run-end-chain@qa.versidle.com');
+  await navigateClientRoute(page, '/explore/node/0_0');
+
+  await page.getByRole('link', { name: 'Click to start' }).click();
+
+  await expect(page.getByRole('button', { name: 'END RUN' })).toBeVisible();
+
+  const activityID = await readLiveActivityID(page);
+
+  // the run's start reaches the server before the cut, so every later run chains onto an activity
+  // the server holds as still active
+  await expect
+    .poll(async () => {
+      const response = await fetch(`${mockActivityURL}/test/activity?id=${activityID}`);
+
+      return response.status;
+    })
+    .toBe(200);
+
+  const cut = await createNetworkCut(browser, page.context());
+
+  await page.evaluate(() => globalThis.__versQA?.setSpeed(20));
+
+  await expect
+    .poll(
+      async () => {
+        const snapshot = await readWorkerSnapshot(page);
+
+        return snapshot?.outbox.activityStarts.length ?? 0;
+      },
+      { intervals: [500], timeout: 120 * 1000 },
+    )
+    .toBeGreaterThanOrEqual(4);
+
+  // real time again, so no new run ends while the outbox drains
+  await page.evaluate(() => globalThis.__versQA?.setSpeed(1));
+
+  const queued = await readWorkerSnapshot(page);
+
+  invariant(queued !== null, 'the worker answers its snapshot during the cut');
+
+  const startedDuringCut = queued.outbox.activityStarts.map((start) => start.activityID);
+  const liveActivityID = queued.liveRun?.activityID;
+  const endedDuringCut = [activityID, ...startedDuringCut].filter((id) => id !== liveActivityID);
+
+  await cut.end();
+
+  try {
+    // a run admitted after its predecessor ends waits on no retry timer: the predecessor's last
+    // checkpoint landing is what lets the server admit it
+    await expect
+      .poll(() => readStoppedActivityIDs(mockActivityURL), { timeout: 20 * 1000 })
+      .toStrictEqual(expect.arrayContaining(endedDuringCut));
+  } finally {
+    await writeSnapshot(page, testInfo, 'reconnect-snapshot.json');
+  }
+});
+
 async function openWarmedMap(page: Page, email: string): Promise<void> {
   const revealed = page.waitForResponse(/\/revealNodes/u);
 

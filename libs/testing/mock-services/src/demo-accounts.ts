@@ -209,4 +209,14 @@ export const DEMO_ACCOUNTS: ReadonlyArray<DemoAccount> = [
     password: 'password123',
     username: 'e2e-run-end-locks-midcut',
   },
+  {
+    avatarName: 'Run End Chain Test Avatar',
+    email: 'e2e-run-end-chain@qa.versidle.com',
+
+    // the runs play out under the QA speed-up, which only a QA-flagged avatar takes
+    isQA: true,
+    name: 'Run End Chain Demo Account',
+    password: 'password123',
+    username: 'e2e-run-end-chain',
+  },
 ];
