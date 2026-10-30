@@ -2,8 +2,9 @@
 # Checks each README against its line limit and each docs/ file against its cap, then runs
 # check-prose.sh over the same files and every skill's Markdown. A README over its limit fails the
 # run; a README over its target and a docs/ file over its cap print a warning and never fail it.
-# When the repo has the skill-writing skill, it then runs that skill's check-skill.sh, and it fails
-# when that fails. Its last line counts the READMEs and those over their limit.
+# When check-vision.sh sits beside it, it then runs that script, which checks docs/vision.md. When the
+# repo has the skill-writing skill, it then runs that skill's check-skill.sh. It fails when either
+# fails. Its last line counts the READMEs and those over their limit.
 # Usage (from the repo root): check-length.sh
 # A README's limit comes from its path alone: the root README and each packages/*/README.md take the
 # front page and package limits, and every other README takes the folder limit. A spike README under
@@ -120,6 +121,12 @@ echo
 
 if [ "${#prose_paths[@]}" -gt 0 ]; then
   bash "$script_dir/check-prose.sh" "${prose_paths[@]}" || fail=1
+fi
+
+# repo-sync delivers check-vision.sh only to a repo that takes the docs-vision-check entry.
+if [ -f "$script_dir/check-vision.sh" ]; then
+  echo
+  bash "$script_dir/check-vision.sh" || fail=1
 fi
 
 for check_skill in .claude/skills/skill-writing/scripts/check-skill.sh \

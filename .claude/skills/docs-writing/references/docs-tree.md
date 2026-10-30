@@ -6,6 +6,7 @@ line budget: the total follows from the doc list.
 | Folder               | Holds                                                                     |
 | -------------------- | ------------------------------------------------------------------------- |
 | `docs/README.md`     | the index                                                                 |
+| `docs/vision.md`     | what the project is for, as [The vision doc](#the-vision-doc) shapes it   |
 | `docs/architecture/` | how the built system works, one doc per concept, with an overview         |
 | `docs/guides/`       | the steps a user does, one doc per user task                              |
 | `docs/runbooks/`     | operator and contributor procedures, development and releasing included   |
@@ -42,6 +43,26 @@ links `docs/reference/` once.
   contributor setup; `docs/runbooks/releasing.md` holds only the steps the release tooling doesn't
   do, and is deleted when none remain. A folder README that documents its own folder stays beside
   it.
+
+## The vision doc
+
+`docs/vision.md` holds what the project is for. The README and the architecture docs cover what the
+code does and how it works, and neither holds the project's purpose. A design for a change in the
+repo starts from the vision doc, so the doc states each choice in a form that a design can quote. It
+holds these sections, in this order:
+
+1. An H1 with the project's name and one sentence on what the project is for.
+2. `## Goals`: what the project sets out to do, as bullets.
+3. `## Non-goals`: what the project leaves out on purpose, each with the reason in the same bullet.
+4. `## Who it serves`: the people or systems that use the project, and what each one needs from it.
+5. `## Trade-offs`: each trade-off the project makes, as what it gives up and what it gets for it.
+6. `## Current stage`: how far the project is from its goals, in 1 to 3 sentences.
+
+The doc fits one page: 60 lines at most. Write each goal as an outcome, never as a mechanism, which
+the architecture docs own. When the project changes direction, rewrite the section the change made
+false, as every other doc does. A repo that takes the `docs-vision-check` entry of repo-sync gets
+`check-vision.sh`, and `check-length.sh` runs it, so the repo's doc checks fail when its vision doc
+is missing or over 60 lines.
 
 ## Spikes
 

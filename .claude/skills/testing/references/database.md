@@ -81,18 +81,23 @@ database computes some of its fields, and asserts that overrides apply.
 
 ## Reading results back
 
-With Kysely, read back a row that must exist with `executeTakeFirstOrThrow()`, narrowing the
-selection to the one column under test when only that column matters. Assert absence with
+A test outside the store reads a row back through the store's read function, as
+[Stored state](../SKILL.md#stored-state) states. The store's own test queries its table directly.
+With Kysely, it reads a row that must exist with `executeTakeFirstOrThrow()`, narrowing the
+selection to the one column under test when only that column matters. It asserts absence with
 `executeTakeFirst()` and `toBeUndefined()`.
 
 ```ts
+// archive-note.test.ts, in the store that writes the notes table
+await archiveNote(ctx.db, note.id);
+
 const row = await ctx.db
   .selectFrom('notes')
-  .select('archivedAt')
+  .select('archived_at')
   .where('id', '=', note.id)
   .executeTakeFirstOrThrow();
 
-expect(row.archivedAt).toBeValidDate();
+expect(row.archived_at).toBeValidDate();
 ```
 
 When a later query in the same test must see a rejected call's transaction settle, settle the call
