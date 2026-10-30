@@ -56,7 +56,7 @@
       "@pandacss/preset-panda": "2.2.0",
       "@paralleldrive/cuid2": "3.3.0",
       "@playwright/test": "1.64.1",
-      "@pulumi/cloudflare": "6.22.1",
+      "@pulumi/cloudflare": "6.23.1",
       "@pulumi/github": "6.15.0",
       "@pulumi/pulumi": "3.272.0",
       "@react-email/components": "1.0.12",
