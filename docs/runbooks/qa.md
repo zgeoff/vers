@@ -248,10 +248,11 @@ the tab receives a refused outcome, the page writes a capture with the time, the
 the outcome to local storage at once, then adds the worker snapshot to that capture. A worker that
 fails, or that gives no answer within the hook's wait of a few seconds, adds its error in place of
 the snapshot. Storage keeps the last 10 captures. The next `snapshot()` call returns them in
-`refusalCaptures` and removes them from storage. It reads the saved captures before it asks the
-worker, so a hung worker still lets the call return them, with `workerError` in place of the worker
-state. A capture that storage refuses, such as on a full quota, goes to the error backend and
-appears in `captureFailures` on the next snapshot.
+`refusalCaptures` and removes them from storage, except a capture that still waits for the worker:
+that capture stays until its worker snapshot joins it, and the next call returns it again. It reads
+the saved captures before it asks the worker, so a hung worker still lets the call return them, with
+`workerError` in place of the worker state. A capture that storage refuses, such as on a full quota,
+goes to the error backend and appears in `captureFailures` on the next snapshot.
 
 [Game simulation](../architecture/game/game-simulation.md#checkpoint-streams) owns the writer
 worker, and [offline reconcile](../architecture/game/offline-reconcile.md#worker-lifecycle) owns the
