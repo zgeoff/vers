@@ -1,21 +1,19 @@
 import * as Sentry from '@sentry/react';
-import * as z from 'zod';
 import { QA_RECORD_KEYS } from './qa-record-keys';
 import { readQARecords } from './read-qa-records';
+import { readRefusalCaptures } from './read-refusal-captures';
 import type { QARecordStorage, QARecordStore } from './types';
 import { updateQARecords } from './update-qa-records';
 
 const MAX_RECEIVED_OUTCOMES = 50;
 
-// a refusal can repeat while the network stays down, so storage keeps the latest 10 captures, and
+// a refusal can repeat while the network stays down, so storage keeps the newest 10 captures, and
 // a phone's storage quota never fills with them
 const MAX_REFUSAL_CAPTURES = 10;
 
-const StoredCaptureSchema = z.looseObject({
-  captureID: z.string(),
-  pendingUntil: z.number(),
-  status: z.enum(['complete', 'pending']),
-});
+// a phone throttles a hidden tab's timers to about once a minute, so a live tab can finish a
+// capture long after its worker wait; only a capture this old belongs to a page that closed
+const PENDING_CAPTURE_LIFETIME_MS = 10 * 60 * 1000;
 
 export function createQARecordStore(storage: Readonly<QARecordStorage>): QARecordStore {
   const failures: Array<string> = [];
@@ -38,12 +36,6 @@ export function createQARecordStore(storage: Readonly<QARecordStorage>): QARecor
     }
   };
 
-  const updateCaptures = (update: (captures: ReadonlyArray<unknown>) => ReadonlyArray<unknown>) => {
-    withGuard(() => {
-      updateQARecords({ key: QA_RECORD_KEYS.refusalCaptures, storage: storage.captures(), update });
-    }, undefined);
-  };
-
   // each capture's own worker wait is bounded, so waiting on every capture in flight is too
   const inFlight = new Set<Promise<void>>();
 
@@ -54,10 +46,27 @@ export function createQARecordStore(storage: Readonly<QARecordStorage>): QARecor
   };
 
   return {
+    // each capture lives under its own key, so a tab that writes one capture never touches
+    // another tab's capture
     addCapture: (capture) => {
-      updateCaptures((captures) =>
-        [...captures, { ...capture, status: 'pending' }].slice(-MAX_REFUSAL_CAPTURES),
-      );
+      withGuard(() => {
+        const captureStorage = storage.captures();
+
+        captureStorage.setItem(
+          `${QA_RECORD_KEYS.refusalCapturePrefix}${capture.captureID}`,
+          JSON.stringify({
+            ...capture,
+            pendingUntil: capture.capturedAt + PENDING_CAPTURE_LIFETIME_MS,
+            status: 'pending',
+          }),
+        );
+
+        const stored = readRefusalCaptures(captureStorage);
+
+        for (const evicted of stored.slice(0, -MAX_REFUSAL_CAPTURES)) {
+          captureStorage.removeItem(evicted.key);
+        }
+      }, undefined);
     },
     addReceivedOutcome: (record) => {
       withGuard(() => {
@@ -69,15 +78,20 @@ export function createQARecordStore(storage: Readonly<QARecordStorage>): QARecor
       }, undefined);
     },
     completeCapture: (captureID, workerPart) => {
-      updateCaptures((captures) =>
-        captures.map((stored) => {
-          const parsed = StoredCaptureSchema.safeParse(stored);
+      withGuard(() => {
+        const captureStorage = storage.captures();
+        const key = `${QA_RECORD_KEYS.refusalCapturePrefix}${captureID}`;
 
-          return parsed.success && parsed.data.captureID === captureID
-            ? { ...parsed.data, ...workerPart, status: 'complete' }
-            : stored;
-        }),
-      );
+        // a capture past the limit was evicted on purpose, so its answer has nothing to join
+        const stored = readRefusalCaptures(captureStorage).find((entry) => entry.key === key);
+
+        if (stored !== undefined) {
+          captureStorage.setItem(
+            key,
+            JSON.stringify({ ...stored.capture, ...workerPart, status: 'complete' }),
+          );
+        }
+      }, undefined);
     },
     readFailures: () => Object.freeze([...failures]),
     readReceivedOutcomes: () =>
@@ -86,32 +100,21 @@ export function createQARecordStore(storage: Readonly<QARecordStorage>): QARecor
     settleCaptures: async () => {
       await Promise.allSettled(inFlight);
     },
-    takeCaptures: (now) => {
-      const captures = withGuard(
-        () => readQARecords(storage.captures(), QA_RECORD_KEYS.refusalCaptures),
-        [],
-      );
-
-      // a capture whose worker answer can still land stays for the answer to join, whichever
-      // registration of the hook asked; past its deadline, its page closed before the answer
-      const stillPending = captures.filter((stored) => {
-        const parsed = StoredCaptureSchema.safeParse(stored);
-
-        return parsed.success && parsed.data.status === 'pending' && parsed.data.pendingUntil > now;
-      });
-
+    takeCaptures: (now) =>
       withGuard(() => {
         const captureStorage = storage.captures();
+        const stored = readRefusalCaptures(captureStorage);
 
-        if (stillPending.length === 0) {
-          captureStorage.removeItem(QA_RECORD_KEYS.refusalCaptures);
-        } else {
-          captureStorage.setItem(QA_RECORD_KEYS.refusalCaptures, JSON.stringify(stillPending));
+        // a pending capture stays for its owner's worker answer, whichever tab or registration
+        // asks, until its lifetime shows its page closed
+        for (const entry of stored) {
+          if (entry.capture.status === 'complete' || entry.capture.pendingUntil <= now) {
+            captureStorage.removeItem(entry.key);
+          }
         }
-      }, undefined);
 
-      return captures;
-    },
+        return stored.map((entry) => entry.capture);
+      }, []),
     trackCapture: (capture) => {
       inFlight.add(capture);
       void removeWhenSettled(capture);

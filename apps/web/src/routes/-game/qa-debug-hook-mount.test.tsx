@@ -4,6 +4,7 @@ import type { WorkerDebugSnapshot } from '@vers/idle-client';
 import { ActivityFailureAction } from '@vers/idle-core';
 import invariant from 'tiny-invariant';
 import { QA_RECORD_KEYS } from '../../lib/qa/qa-record-keys';
+import { readRefusalCaptures } from '../../lib/qa/read-refusal-captures';
 import { createActiveAvatar } from '../../test-utils/create-active-avatar';
 import { createSignedInUser } from '../../test-utils/create-signed-in-user';
 import { createStubWorkerClient } from '../../test-utils/create-stub-worker-client';
@@ -45,7 +46,10 @@ test('it keeps a refusal capture through a remount and completes it when the fir
   onTestFinished(() => {
     sender.close();
     sessionStorage.removeItem(QA_RECORD_KEYS.receivedOutcomes);
-    localStorage.removeItem(QA_RECORD_KEYS.refusalCaptures);
+
+    for (const entry of readRefusalCaptures(localStorage)) {
+      localStorage.removeItem(entry.key);
+    }
   });
 
   const captureRead = Promise.withResolvers<WorkerDebugSnapshot>();
@@ -71,7 +75,9 @@ test('it keeps a refusal capture through a remount and completes it when the fir
   });
 
   await waitFor(() => {
-    expect(localStorage.getItem(QA_RECORD_KEYS.refusalCaptures)).toInclude('"pending"');
+    expect(readRefusalCaptures(localStorage).map((entry) => entry.capture.status)).toStrictEqual([
+      'pending',
+    ]);
   });
 
   first.unmount();

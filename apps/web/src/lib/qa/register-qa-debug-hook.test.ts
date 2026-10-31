@@ -5,6 +5,7 @@ import invariant from 'tiny-invariant';
 import { createStubWorkerClient } from '../../test-utils/create-stub-worker-client';
 import { createQARecordStore } from './create-qa-record-store';
 import { QA_RECORD_KEYS } from './qa-record-keys';
+import { readRefusalCaptures } from './read-refusal-captures';
 import { registerQADebugHook } from './register-qa-debug-hook';
 
 function setupTest() {
@@ -13,7 +14,10 @@ function setupTest() {
   onTestFinished(() => {
     sender.close();
     sessionStorage.removeItem(QA_RECORD_KEYS.receivedOutcomes);
-    localStorage.removeItem(QA_RECORD_KEYS.refusalCaptures);
+
+    for (const entry of readRefusalCaptures(localStorage)) {
+      localStorage.removeItem(entry.key);
+    }
   });
 
   const records = createQARecordStore({
@@ -201,7 +205,9 @@ test('it keeps a refusal captured at the moment it arrives until the next snapsh
   });
 
   await waitFor(() => {
-    expect(localStorage.getItem(QA_RECORD_KEYS.refusalCaptures)).toInclude('"complete"');
+    expect(readRefusalCaptures(localStorage).map((entry) => entry.capture.status)).toStrictEqual([
+      'complete',
+    ]);
   });
 
   invariant(globalThis.__versQA, 'the hook is installed');
@@ -256,14 +262,16 @@ test('it returns a capture with its worker snapshot from a snapshot call made be
   });
 
   await waitFor(() => {
-    expect(localStorage.getItem(QA_RECORD_KEYS.refusalCaptures)).toInclude('"pending"');
+    expect(readRefusalCaptures(localStorage).map((entry) => entry.capture.status)).toStrictEqual([
+      'pending',
+    ]);
   });
 
   invariant(globalThis.__versQA, 'the hook is installed');
 
   const hook = globalThis.__versQA;
   const pendingSnapshot = hook.snapshot();
-  const storedBeforeReply = localStorage.getItem(QA_RECORD_KEYS.refusalCaptures);
+  const storedBeforeReply = readRefusalCaptures(localStorage).map((entry) => entry.capture.status);
 
   captureRead.resolve({
     capturedAt: 7,
@@ -279,7 +287,7 @@ test('it returns a capture with its worker snapshot from a snapshot call made be
 
   const snapshot = await pendingSnapshot;
 
-  expect(storedBeforeReply).toInclude('"pending"');
+  expect(storedBeforeReply).toStrictEqual(['pending']);
 
   expect(snapshot.refusalCaptures).toStrictEqual([
     expect.objectContaining({
@@ -289,7 +297,7 @@ test('it returns a capture with its worker snapshot from a snapshot call made be
     }),
   ]);
 
-  expect(localStorage.getItem(QA_RECORD_KEYS.refusalCaptures)).toBeNull();
+  expect(readRefusalCaptures(localStorage)).toStrictEqual([]);
 });
 
 test('it keeps a pending capture for its worker answer across a re-registration of the hook', async () => {
@@ -314,7 +322,9 @@ test('it keeps a pending capture for its worker answer across a re-registration 
   });
 
   await waitFor(() => {
-    expect(localStorage.getItem(QA_RECORD_KEYS.refusalCaptures)).toInclude('"pending"');
+    expect(readRefusalCaptures(localStorage).map((entry) => entry.capture.status)).toStrictEqual([
+      'pending',
+    ]);
   });
 
   first();
@@ -368,10 +378,12 @@ test('it records the worker error in a refusal capture when the worker snapshot 
   });
 
   await waitFor(() => {
-    expect(localStorage.getItem(QA_RECORD_KEYS.refusalCaptures)).toInclude('"complete"');
+    expect(readRefusalCaptures(localStorage).map((entry) => entry.capture.status)).toStrictEqual([
+      'complete',
+    ]);
   });
 
-  const stored: unknown = JSON.parse(localStorage.getItem(QA_RECORD_KEYS.refusalCaptures) ?? '');
+  const stored = readRefusalCaptures(localStorage).map((entry) => entry.capture);
 
   expect(stored).toStrictEqual([
     expect.objectContaining({ workerError: 'Error: the worker port is closed' }),
@@ -401,10 +413,12 @@ test('it keeps the tab half of a refusal capture and records the timeout when th
   });
 
   await waitFor(() => {
-    expect(localStorage.getItem(QA_RECORD_KEYS.refusalCaptures)).toInclude('"complete"');
+    expect(readRefusalCaptures(localStorage).map((entry) => entry.capture.status)).toStrictEqual([
+      'complete',
+    ]);
   });
 
-  const stored: unknown = JSON.parse(localStorage.getItem(QA_RECORD_KEYS.refusalCaptures) ?? '');
+  const stored = readRefusalCaptures(localStorage).map((entry) => entry.capture);
 
   expect(stored).toStrictEqual([
     expect.objectContaining({
@@ -421,7 +435,6 @@ test('it returns the saved captures from a snapshot whose worker never answers',
   ctx.records.addCapture({
     captureID: 'capture_1',
     capturedAt: 0,
-    pendingUntil: 0,
     tab: {},
     trigger: {},
   });
@@ -448,7 +461,7 @@ test('it returns the saved captures from a snapshot whose worker never answers',
   });
 });
 
-test('it reports each capture write that a full storage quota refuses on the next snapshot', async () => {
+test('it reports a capture write that a full storage quota refuses on the next snapshot', async () => {
   const ctx = setupTest();
 
   const records = createQARecordStore({
@@ -491,9 +504,40 @@ test('it reports each capture write that a full storage quota refuses on the nex
 
     expect(snapshot.captureFailures).toStrictEqual([
       'QuotaExceededError: the storage quota is full',
-      'QuotaExceededError: the storage quota is full',
     ]);
   });
+});
+
+test('it lists a failure of the tab record read in the snapshot that met it', async () => {
+  const records = createQARecordStore({
+    captures: () => localStorage,
+    outcomes: () => ({
+      clear: () => {},
+      getItem: () => {
+        throw new DOMException('the storage is blocked', 'SecurityError');
+      },
+      key: () => null,
+      length: 0,
+      removeItem: () => {},
+      setItem: () => {},
+    }),
+  });
+
+  const unregister = registerQADebugHook({
+    client: createStubWorkerClient(),
+    isQAAvatar: true,
+    records,
+    tabID: 'tab_1',
+    workerTimeoutMs: 1000,
+    writerGeneration: 0,
+  });
+
+  onTestFinished(unregister);
+  invariant(globalThis.__versQA, 'the hook is installed');
+
+  const snapshot = await globalThis.__versQA.snapshot();
+
+  expect(snapshot.captureFailures).toStrictEqual(['SecurityError: the storage is blocked']);
 });
 
 test('it saves a refusal capture and reports the read when the outcome storage throws on a read', async () => {
@@ -531,10 +575,12 @@ test('it saves a refusal capture and reports the read when the outcome storage t
   });
 
   await waitFor(() => {
-    expect(localStorage.getItem(QA_RECORD_KEYS.refusalCaptures)).toInclude('"complete"');
+    expect(readRefusalCaptures(localStorage).map((entry) => entry.capture.status)).toStrictEqual([
+      'complete',
+    ]);
   });
 
-  const stored: unknown = JSON.parse(localStorage.getItem(QA_RECORD_KEYS.refusalCaptures) ?? '');
+  const stored = readRefusalCaptures(localStorage).map((entry) => entry.capture);
 
   expect(stored).toStrictEqual([
     expect.objectContaining({
@@ -613,7 +659,9 @@ test('it captures a refused run and no completed one', async () => {
   });
 
   await waitFor(() => {
-    expect(localStorage.getItem(QA_RECORD_KEYS.refusalCaptures)).toInclude('"complete"');
+    expect(readRefusalCaptures(localStorage).map((entry) => entry.capture.status)).toStrictEqual([
+      'complete',
+    ]);
   });
 
   invariant(globalThis.__versQA, 'the hook is installed');

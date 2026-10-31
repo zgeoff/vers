@@ -75,6 +75,8 @@ Procedures an operator or an agent runs by hand.
   the per-worktree clones MCP sessions use
 - [Manual QA](./runbooks/qa.md) — QA accounts, the inbox, the browser tools, the debug hook, and the
   cold-path script for a manual pass against production
+- [Refusal captures](./runbooks/qa-refusal-captures.md) — what the debug hook saves when a refused
+  run reaches a tab offline, and how a later snapshot returns it
 
 ## Game design
 

@@ -4,12 +4,22 @@ export type WorkerPart =
   | { readonly worker: WorkerDebugSnapshot }
   | { readonly workerError: string };
 
-interface PendingRefusalCapture {
+interface NewRefusalCapture {
   readonly captureID: string;
   readonly capturedAt: number;
-  readonly pendingUntil: number;
   readonly tab: unknown;
   readonly trigger: unknown;
+}
+
+export interface StoredRefusalCapture {
+  readonly capture: {
+    readonly [field: string]: unknown;
+    readonly captureID: string;
+    readonly capturedAt: number;
+    readonly pendingUntil: number;
+    readonly status: 'complete' | 'pending';
+  };
+  readonly key: string;
 }
 
 export interface QARecordStorage {
@@ -18,7 +28,7 @@ export interface QARecordStorage {
 }
 
 export interface QARecordStore {
-  readonly addCapture: (capture: Readonly<PendingRefusalCapture>) => void;
+  readonly addCapture: (capture: Readonly<NewRefusalCapture>) => void;
   readonly addReceivedOutcome: (record: unknown) => void;
   readonly completeCapture: (captureID: string, workerPart: Readonly<WorkerPart>) => void;
   readonly readFailures: () => ReadonlyArray<string>;

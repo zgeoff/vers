@@ -84,15 +84,7 @@ export function registerQADebugHook(options: Readonly<RegisterQADebugHookOptions
       const captureID = crypto.randomUUID();
       const capturedAt = Date.now();
 
-      records.addCapture({
-        captureID,
-        capturedAt,
-
-        // twice the worker wait, so a snapshot call never drops a capture whose answer is landing
-        pendingUntil: capturedAt + 2 * options.workerTimeoutMs,
-        tab: readTabRecord(),
-        trigger,
-      });
+      records.addCapture({ captureID, capturedAt, tab: readTabRecord(), trigger });
 
       const workerPart = await readWorkerPart();
 
@@ -139,13 +131,15 @@ export function registerQADebugHook(options: Readonly<RegisterQADebugHookOptions
 
       const workerPart = await readWorkerPart();
 
+      // the page's own view of the network: a DevTools network toggle covers the page and never
+      // its shared worker, so the two can disagree
+      const tab = readTabRecord();
+
       const snapshotRecords: QADebugSnapshotRecords = {
+        // read after the tab record, so a failure in that read is in this answer
         captureFailures: records.readFailures(),
         refusalCaptures: Object.freeze(refusalCaptures),
-
-        // the page's own view of the network: a DevTools network toggle covers the page and never
-        // its shared worker, so the two can disagree
-        tab: readTabRecord(),
+        tab,
       };
 
       const merged =
