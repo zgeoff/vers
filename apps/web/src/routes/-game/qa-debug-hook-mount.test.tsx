@@ -92,27 +92,73 @@ test('it keeps a refusal capture through a remount and completes it when the fir
 
   invariant(globalThis.__versQA, 'the hook is installed');
 
-  const hook = globalThis.__versQA;
-
-  const early = await hook.snapshot();
+  const pendingSnapshot = globalThis.__versQA.snapshot();
 
   captureRead.reject(new Error('the worker answered late'));
 
-  await waitFor(() => {
-    expect(localStorage.getItem(QA_RECORD_KEYS.refusalCaptures)).toInclude('"complete"');
-  });
+  const snapshot = await pendingSnapshot;
 
-  const late = await hook.snapshot();
-
-  expect(early.refusalCaptures).toStrictEqual([expect.objectContaining({ status: 'pending' })]);
-
-  expect(late.refusalCaptures).toStrictEqual([
+  expect(snapshot.refusalCaptures).toStrictEqual([
     expect.objectContaining({
       status: 'complete',
       trigger: expect.objectContaining({ workerID: 'worker_1' }),
       workerError: 'Error: the worker answered late',
     }),
   ]);
+});
+
+test('it installs the hook and reports the failure when a browser policy blocks storage', async () => {
+  const localStorageProperty = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+
+  invariant(localStorageProperty, 'the test window has local storage');
+
+  Object.defineProperty(globalThis, 'localStorage', {
+    configurable: true,
+    get: () => {
+      throw new DOMException('the origin may not use storage', 'SecurityError');
+    },
+  });
+
+  onTestFinished(() => {
+    Object.defineProperty(globalThis, 'localStorage', localStorageProperty);
+  });
+
+  const sender = new BroadcastChannel('vers-idle-worker-to-client');
+
+  onTestFinished(() => {
+    sender.close();
+    sessionStorage.removeItem(QA_RECORD_KEYS.receivedOutcomes);
+  });
+
+  setIdleWorkerHandle({
+    activity: undefined,
+    client: createStubWorkerClient(),
+    failureAction: ActivityFailureAction.Abort,
+    initialized: true,
+    writerAbortSignal: new AbortController().signal,
+  });
+
+  renderWithRouter(<QADebugHookMount qaAccount />);
+
+  await waitFor(() => {
+    expect(globalThis.__versQA).toBeDefined();
+  });
+
+  sender.postMessage({
+    outcome: { activityID: 'act_refused', avatarID: 'avatar_1', kind: 'refused', xp: 0 },
+    type: 'activity_ended',
+    workerID: 'worker_1',
+  });
+
+  invariant(globalThis.__versQA, 'the hook is installed');
+
+  const hook = globalThis.__versQA;
+
+  await waitFor(async () => {
+    const snapshot = await hook.snapshot();
+
+    expect(snapshot.captureFailures).toContain('SecurityError: the origin may not use storage');
+  });
 });
 
 test('it installs nothing for an account outside the QA domain', async () => {

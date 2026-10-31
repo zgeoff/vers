@@ -8,7 +8,10 @@ function setupTest() {
     localStorage.removeItem(QA_RECORD_KEYS.refusalCaptures);
   });
 
-  const records = createQARecordStore({ captures: localStorage, outcomes: sessionStorage });
+  const records = createQARecordStore({
+    captures: () => localStorage,
+    outcomes: () => sessionStorage,
+  });
 
   return { records };
 }
@@ -121,7 +124,7 @@ test('it keeps the latest 50 received outcomes', () => {
 
 test('it records a storage write that fails and carries on', () => {
   const records = createQARecordStore({
-    captures: {
+    captures: () => ({
       clear: () => {},
       getItem: () => '[]',
       key: () => null,
@@ -130,8 +133,8 @@ test('it records a storage write that fails and carries on', () => {
       setItem: () => {
         throw new DOMException('the storage quota is full', 'QuotaExceededError');
       },
-    },
-    outcomes: sessionStorage,
+    }),
+    outcomes: () => sessionStorage,
   });
 
   records.addCapture({
@@ -147,8 +150,8 @@ test('it records a storage write that fails and carries on', () => {
 
 test('it records a storage read that fails and reads no records', () => {
   const records = createQARecordStore({
-    captures: localStorage,
-    outcomes: {
+    captures: () => localStorage,
+    outcomes: () => ({
       clear: () => {},
       getItem: () => {
         throw new DOMException('the storage is blocked', 'SecurityError');
@@ -157,11 +160,43 @@ test('it records a storage read that fails and reads no records', () => {
       length: 0,
       removeItem: () => {},
       setItem: () => {},
-    },
+    }),
   });
 
   const outcomes = records.readReceivedOutcomes();
 
   expect(outcomes).toStrictEqual([]);
   expect(records.readFailures()).toStrictEqual(['SecurityError: the storage is blocked']);
+});
+
+test('it records a storage property that a browser policy blocks and carries on', () => {
+  const records = createQARecordStore({
+    captures: () => {
+      throw new DOMException('the origin may not use storage', 'SecurityError');
+    },
+    outcomes: () => {
+      throw new DOMException('the origin may not use storage', 'SecurityError');
+    },
+  });
+
+  records.addCapture({
+    captureID: 'capture_1',
+    capturedAt: 1000,
+    pendingUntil: 3000,
+    tab: {},
+    trigger: {},
+  });
+
+  const captures = records.takeCaptures(1500);
+  const outcomes = records.readReceivedOutcomes();
+
+  expect(captures).toStrictEqual([]);
+  expect(outcomes).toStrictEqual([]);
+
+  expect(records.readFailures()).toStrictEqual([
+    'SecurityError: the origin may not use storage',
+    'SecurityError: the origin may not use storage',
+    'SecurityError: the origin may not use storage',
+    'SecurityError: the origin may not use storage',
+  ]);
 });

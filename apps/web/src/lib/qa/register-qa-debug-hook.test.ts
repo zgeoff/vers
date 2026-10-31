@@ -16,7 +16,10 @@ function setupTest() {
     localStorage.removeItem(QA_RECORD_KEYS.refusalCaptures);
   });
 
-  const records = createQARecordStore({ captures: localStorage, outcomes: sessionStorage });
+  const records = createQARecordStore({
+    captures: () => localStorage,
+    outcomes: () => sessionStorage,
+  });
 
   return { records, sender };
 }
@@ -231,7 +234,7 @@ test('it keeps a refusal captured at the moment it arrives until the next snapsh
   ]);
 });
 
-test('it keeps a capture that a snapshot reads before the worker answers until the answer joins it', async () => {
+test('it returns a capture with its worker snapshot from a snapshot call made before the worker answers', async () => {
   const ctx = setupTest();
   const captureRead = Promise.withResolvers<WorkerDebugSnapshot>();
 
@@ -259,28 +262,34 @@ test('it keeps a capture that a snapshot reads before the worker answers until t
   invariant(globalThis.__versQA, 'the hook is installed');
 
   const hook = globalThis.__versQA;
-  const earlySnapshot = hook.snapshot();
+  const pendingSnapshot = hook.snapshot();
+  const storedBeforeReply = localStorage.getItem(QA_RECORD_KEYS.refusalCaptures);
 
-  captureRead.reject(new Error('the worker answered late'));
-
-  const early = await earlySnapshot;
-
-  await waitFor(() => {
-    expect(localStorage.getItem(QA_RECORD_KEYS.refusalCaptures)).toInclude('"complete"');
+  captureRead.resolve({
+    capturedAt: 7,
+    connectivityOnline: false,
+    events: [],
+    latestRun: null,
+    liveRun: null,
+    outbox: { activityStarts: [], checkpoints: [] },
+    phase: 'idle',
+    simulationSpeed: 1,
+    writer: { bootedAt: 0, workerID: 'worker_answered' },
   });
 
-  const late = await hook.snapshot();
+  const snapshot = await pendingSnapshot;
 
-  expect(early.refusalCaptures).toStrictEqual([
-    expect.objectContaining({ status: 'pending', trigger: expect.any(Object) }),
-  ]);
+  expect(storedBeforeReply).toInclude('"pending"');
 
-  expect(late.refusalCaptures).toStrictEqual([
+  expect(snapshot.refusalCaptures).toStrictEqual([
     expect.objectContaining({
       status: 'complete',
-      workerError: 'Error: the worker answered late',
+      trigger: expect.objectContaining({ workerID: 'worker_1' }),
+      worker: expect.objectContaining({ writer: { bootedAt: 0, workerID: 'worker_answered' } }),
     }),
   ]);
+
+  expect(localStorage.getItem(QA_RECORD_KEYS.refusalCaptures)).toBeNull();
 });
 
 test('it keeps a pending capture for its worker answer across a re-registration of the hook', async () => {
@@ -322,21 +331,13 @@ test('it keeps a pending capture for its worker answer across a re-registration 
   onTestFinished(second);
   invariant(globalThis.__versQA, 'the hook is installed');
 
-  const hook = globalThis.__versQA;
-
-  const early = await hook.snapshot();
+  const pendingSnapshot = globalThis.__versQA.snapshot();
 
   captureRead.reject(new Error('the worker answered late'));
 
-  await waitFor(() => {
-    expect(localStorage.getItem(QA_RECORD_KEYS.refusalCaptures)).toInclude('"complete"');
-  });
+  const snapshot = await pendingSnapshot;
 
-  const late = await hook.snapshot();
-
-  expect(early.refusalCaptures).toStrictEqual([expect.objectContaining({ status: 'pending' })]);
-
-  expect(late.refusalCaptures).toStrictEqual([
+  expect(snapshot.refusalCaptures).toStrictEqual([
     expect.objectContaining({
       status: 'complete',
       workerError: 'Error: the worker answered late',
@@ -451,7 +452,7 @@ test('it reports each capture write that a full storage quota refuses on the nex
   const ctx = setupTest();
 
   const records = createQARecordStore({
-    captures: {
+    captures: () => ({
       clear: () => {},
       getItem: () => '[]',
       key: () => null,
@@ -460,8 +461,8 @@ test('it reports each capture write that a full storage quota refuses on the nex
       setItem: () => {
         throw new DOMException('the storage quota is full', 'QuotaExceededError');
       },
-    },
-    outcomes: sessionStorage,
+    }),
+    outcomes: () => sessionStorage,
   });
 
   const unregister = registerQADebugHook({
@@ -499,8 +500,8 @@ test('it saves a refusal capture and reports the read when the outcome storage t
   const ctx = setupTest();
 
   const records = createQARecordStore({
-    captures: localStorage,
-    outcomes: {
+    captures: () => localStorage,
+    outcomes: () => ({
       clear: () => {},
       getItem: () => {
         throw new DOMException('the storage is blocked', 'SecurityError');
@@ -509,7 +510,7 @@ test('it saves a refusal capture and reports the read when the outcome storage t
       length: 0,
       removeItem: () => {},
       setItem: () => {},
-    },
+    }),
   });
 
   const unregister = registerQADebugHook({

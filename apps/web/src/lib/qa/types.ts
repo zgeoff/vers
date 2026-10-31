@@ -13,8 +13,8 @@ interface PendingRefusalCapture {
 }
 
 export interface QARecordStorage {
-  readonly captures: Storage;
-  readonly outcomes: Storage;
+  readonly captures: () => Storage;
+  readonly outcomes: () => Storage;
 }
 
 export interface QARecordStore {
@@ -24,5 +24,7 @@ export interface QARecordStore {
   readonly readFailures: () => ReadonlyArray<string>;
   readonly readReceivedOutcomes: () => ReadonlyArray<unknown>;
   readonly recordFailure: (error: unknown) => void;
+  readonly settleCaptures: () => Promise<void>;
   readonly takeCaptures: (now: number) => ReadonlyArray<unknown>;
+  readonly trackCapture: (capture: Promise<void>) => void;
 }

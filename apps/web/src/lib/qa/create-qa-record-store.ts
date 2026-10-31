@@ -40,8 +40,17 @@ export function createQARecordStore(storage: Readonly<QARecordStorage>): QARecor
 
   const updateCaptures = (update: (captures: ReadonlyArray<unknown>) => ReadonlyArray<unknown>) => {
     withGuard(() => {
-      updateQARecords({ key: QA_RECORD_KEYS.refusalCaptures, storage: storage.captures, update });
+      updateQARecords({ key: QA_RECORD_KEYS.refusalCaptures, storage: storage.captures(), update });
     }, undefined);
+  };
+
+  // each capture's own worker wait is bounded, so waiting on every capture in flight is too
+  const inFlight = new Set<Promise<void>>();
+
+  const removeWhenSettled = async (capture: Promise<void>): Promise<void> => {
+    await Promise.allSettled([capture]);
+
+    inFlight.delete(capture);
   };
 
   return {
@@ -54,7 +63,7 @@ export function createQARecordStore(storage: Readonly<QARecordStorage>): QARecor
       withGuard(() => {
         updateQARecords({
           key: QA_RECORD_KEYS.receivedOutcomes,
-          storage: storage.outcomes,
+          storage: storage.outcomes(),
           update: (outcomes) => [...outcomes, record].slice(-MAX_RECEIVED_OUTCOMES),
         });
       }, undefined);
@@ -72,11 +81,14 @@ export function createQARecordStore(storage: Readonly<QARecordStorage>): QARecor
     },
     readFailures: () => Object.freeze([...failures]),
     readReceivedOutcomes: () =>
-      withGuard(() => readQARecords(storage.outcomes, QA_RECORD_KEYS.receivedOutcomes), []),
+      withGuard(() => readQARecords(storage.outcomes(), QA_RECORD_KEYS.receivedOutcomes), []),
     recordFailure,
+    settleCaptures: async () => {
+      await Promise.allSettled(inFlight);
+    },
     takeCaptures: (now) => {
       const captures = withGuard(
-        () => readQARecords(storage.captures, QA_RECORD_KEYS.refusalCaptures),
+        () => readQARecords(storage.captures(), QA_RECORD_KEYS.refusalCaptures),
         [],
       );
 
@@ -89,14 +101,20 @@ export function createQARecordStore(storage: Readonly<QARecordStorage>): QARecor
       });
 
       withGuard(() => {
+        const captureStorage = storage.captures();
+
         if (stillPending.length === 0) {
-          storage.captures.removeItem(QA_RECORD_KEYS.refusalCaptures);
+          captureStorage.removeItem(QA_RECORD_KEYS.refusalCaptures);
         } else {
-          storage.captures.setItem(QA_RECORD_KEYS.refusalCaptures, JSON.stringify(stillPending));
+          captureStorage.setItem(QA_RECORD_KEYS.refusalCaptures, JSON.stringify(stillPending));
         }
       }, undefined);
 
       return captures;
+    },
+    trackCapture: (capture) => {
+      inFlight.add(capture);
+      void removeWhenSettled(capture);
     },
   };
 }

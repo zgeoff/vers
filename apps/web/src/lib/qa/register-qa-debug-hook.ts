@@ -110,7 +110,7 @@ export function registerQADebugHook(options: Readonly<RegisterQADebugHookOptions
     records.addReceivedOutcome(record);
 
     if (received.outcome.kind === RunOutcomeKind.Refused) {
-      void captureRefusal(record);
+      records.trackCapture(captureRefusal(record));
     }
   });
 
@@ -132,6 +132,9 @@ export function registerQADebugHook(options: Readonly<RegisterQADebugHookOptions
       return status.speed;
     },
     snapshot: async () => {
+      // a capture still asking its worker finishes first, so the call returns it complete
+      await records.settleCaptures();
+
       const refusalCaptures = records.takeCaptures(Date.now());
 
       const workerPart = await readWorkerPart();

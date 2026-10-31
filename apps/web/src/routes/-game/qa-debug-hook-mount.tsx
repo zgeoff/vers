@@ -62,7 +62,12 @@ export function QADebugHookMount(props: Readonly<QADebugHookMountProps>) {
 let qaRecordStore: QARecordStore | undefined;
 
 function resolveQARecordStore(): QARecordStore {
-  qaRecordStore ??= createQARecordStore({ captures: localStorage, outcomes: sessionStorage });
+  // a browser policy can block storage, and then the property getter itself throws, so the store
+  // reads each property inside its guard
+  qaRecordStore ??= createQARecordStore({
+    captures: () => localStorage,
+    outcomes: () => sessionStorage,
+  });
 
   return qaRecordStore;
 }

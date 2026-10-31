@@ -247,14 +247,15 @@ A device in airplane mode has no console to reach, so the page captures a refuse
 the tab receives a refused outcome, the page writes a capture with the time, the `tab` record and
 the outcome to local storage at once, marked `pending`, then adds the worker snapshot and marks it
 `complete`. A worker that fails, or that gives no answer within the hook's wait of a few seconds,
-adds its error in place of the snapshot. Storage keeps the last 10 captures. The next `snapshot()`
-call returns them in `refusalCaptures` and removes the complete ones from storage. A pending capture
-stays until its worker answer joins it, even when the hook registers again in between, and the next
-call returns it again. A pending capture whose page closed before the answer leaves storage once its
-wait has long passed. The call reads the saved captures before it asks the worker, so a hung worker
-still lets the call return them, with `workerError` in place of the worker state. A storage read or
-write that fails, such as on a full quota or a blocked origin, goes to the error backend and appears
-in `captureFailures` on the next snapshot, and the capture goes on with what it could read.
+adds its error in place of the snapshot. Storage keeps the last 10 captures. A `snapshot()` call
+first waits for the page's captures that are still asking their worker, so it returns each of them
+complete, even when the hook registered again in between. It then returns the saved captures in
+`refusalCaptures` and removes the complete ones from storage. A capture whose page closed before its
+worker answered stays `pending` in storage, and leaves once its wait has long passed. The call reads
+the saved captures before it asks the worker for the current state, so a hung worker still lets the
+call return them, with `workerError` in place of the worker state. A storage access, read or write
+that fails, such as on a full quota or a blocked origin, goes to the error backend and appears in
+`captureFailures` on the next snapshot, and the capture goes on with what it could read.
 
 [Game simulation](../architecture/game/game-simulation.md#checkpoint-streams) owns the writer
 worker, and [offline reconcile](../architecture/game/offline-reconcile.md#worker-lifecycle) owns the
