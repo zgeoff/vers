@@ -16,8 +16,8 @@ This skill holds the patterns that keep a pipeline from running a job whose resu
 Most of the CI time a pipeline loses outside its tests goes to jobs that run too often, such as a
 rerun after a rebase nobody needed, and less goes to slow setup. A job runs when its inputs change,
 builds each result once, and cancels only the runs whose result a newer commit replaces. The shared
-reusable workflows live in zgeoff/tools, and a repo calls them at a sync tag, which Renovate moves
-when a new tag is cut.
+reusable workflows live in zgeoff/tools, and a repo calls them at a commit on its `main`, which the
+repo-sync pull request moves.
 
 ## Key rules
 
@@ -138,9 +138,9 @@ one red line, and a reader opens the action's source to find which command faile
 workflow shows each of its jobs and steps in the run, with its own timings.
 
 A shared reusable workflow lives in zgeoff/tools, and a repo calls it as
-`zgeoff/tools/.github/workflows/<name>.yml@<sync tag>`. A repo-local reusable workflow sits in the
-repo's own `.github/workflows/` and is called by its path. Before writing setup steps by hand, check
-whether a tools reusable workflow covers them, and call it.
+`zgeoff/tools/.github/workflows/<name>.yml@<commit> # main`. A repo-local reusable workflow sits in
+the repo's own `.github/workflows/` and is called by its path. Before writing setup steps by hand,
+check whether a tools reusable workflow covers them, and call it.
 
 ## Step scripts
 
@@ -161,8 +161,8 @@ Logic in a script runs in the script's tests on every pull request, as the testi
   `job.workflow_repository` and `job.workflow_sha` and downloads
   [`download-step-scripts.ts`](https://github.com/zgeoff/tools/blob/main/scripts/ci/download-step-scripts.ts)
   with `curl`. That script downloads the workflow's scripts and every file they import into
-  `$RUNNER_TEMP/tools`, and refuses one that imports a package. A caller at a sync tag then runs
-  that tag's scripts.
+  `$RUNNER_TEMP/tools`, and refuses one that imports a package. A caller pinned to a commit then
+  runs that commit's scripts.
 
 ### The workflow lint
 
@@ -170,7 +170,7 @@ The workflow lint checks the `run:` rule and the rules in this skill that a pars
 exactly. The `Lint workflows` step of `bun-checks.yml` runs it after the actionlint step over the
 repo's workflows and the workflow callers that zgeoff/tools delivers. The pre-push baseline runs it
 over the workflow files a branch changes. It reports each fault as a warning and passes, so a repo
-that Renovate moves to a new sync tag keeps a green run while it clears the warnings.
+that a sync pull request moves to a new commit keeps a green run while it clears the warnings.
 
 | Rule                                    | The lint warns on                                                                                                                   |
 | --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
@@ -263,7 +263,7 @@ merge blocks. A job skipped by its own `if:` reports success instead. The path g
 `changes` job outputs whether the pull request touches the job's inputs, and each later job reads
 the answer.
 
-Call `zgeoff/tools/.github/workflows/paths-changed.yml@<sync tag>` as the `changes` job:
+Call `zgeoff/tools/.github/workflows/paths-changed.yml@<commit> # main` as the `changes` job:
 
 | Input or output | What it holds                                                                               |
 | --------------- | ------------------------------------------------------------------------------------------- |
@@ -282,7 +282,7 @@ jobs:
   changes:
     permissions:
       contents: read
-    uses: zgeoff/tools/.github/workflows/paths-changed.yml@<sync tag>
+    uses: zgeoff/tools/.github/workflows/paths-changed.yml@<commit> # main
     with:
       paths: |
         services/api/**
