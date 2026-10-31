@@ -130,14 +130,14 @@ run_and_report() {
   # bash prints the whole source of a job that a signal kills on its own
   # stderr, which only a background job's wait can silence. The <&0 keeps
   # stdin, which bash points at /dev/null for a background job. A wait that
-  # a signal cuts short runs again until the kernel reaps the command.
-  while :; do
-    status=0
-    wait "$command_pid" 2> /dev/null || status=$?
-    if ! kill -0 "$command_pid" 2> /dev/null; then
-      break
-    fi
+  # a signal cuts short returns 128 plus the signal, and bash can reap the
+  # command while the trap runs, so the loop waits until the command is gone
+  # and a last wait reads the exit status that bash keeps for it.
+  while kill -0 "$command_pid" 2> /dev/null; do
+    wait "$command_pid" 2> /dev/null || true
   done
+  status=0
+  wait "$command_pid" 2> /dev/null || status=$?
   trap - TERM INT HUP
 
   kill "$sampler"
