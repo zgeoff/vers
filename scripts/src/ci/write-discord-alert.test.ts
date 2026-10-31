@@ -107,5 +107,5 @@ test('it rejects a step that sets no alert title', () => {
       RUN_URL: 'https://github.com/acme/kiln/actions/runs/42',
       ALERT_DESCRIPTION: 'the sweep failed; open the run',
     }),
-  ).rejects.toMatchObject({ issues: [{ path: ['ALERT_TITLE'] }] });
+  ).rejects.toThrowWithMessage(Error, /ALERT_TITLE must be set/u);
 });

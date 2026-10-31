@@ -691,9 +691,8 @@ jobs:
         with:
           bun-version-file: .bun-version
 
-      - name: Install Dependencies
-        run: bun install --frozen-lockfile
-
+      # the alert script imports no package, so the job skips the install and still reports a
+      # failed install
       - name: Send Discord alert
         env:
           WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
