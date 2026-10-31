@@ -27,13 +27,6 @@ jobs:
         with:
           bun-version-file: .bun-version
 
-      - name: Cache Bun install
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.bun/install/cache
-          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
-          restore-keys: bun-${{ runner.os }}-
-
       - name: Install Dependencies
         run: bun install --frozen-lockfile
 
@@ -56,14 +49,8 @@ jobs:
           WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           RUN_URL:
             ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        run: |
-          if [ -z "${WEBHOOK_URL}" ]; then
-            echo "DISCORD_WEBHOOK_URL not configured; skipping alert"
-            exit 0
-          fi
-          payload="$(jq -n \
-            --arg title "[CI] critical — checkpoint retention sweep run failed" \
-            --arg url "${RUN_URL}" \
-            --arg desc "the run failed: an archive that read back other bytes, an object storage or database fault, or a step before it; open the run" \
-            '{embeds: [{title: $title, url: $url, description: $desc, color: 15026253}]}')"
-          curl -fsS -H 'content-type: application/json' -d "${payload}" "${WEBHOOK_URL}"
+          ALERT_TITLE: '[CI] critical — checkpoint retention sweep run failed'
+          ALERT_DESCRIPTION:
+            'the run failed: an archive that read back other bytes, an object storage or database
+            fault, or a step before it; open the run'
+        run: bun run ci:discord-alert

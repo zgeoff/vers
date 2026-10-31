@@ -17,6 +17,7 @@ import { buildProviderAppName } from '../deploy/build-provider-app-name';
 import { DEPLOY_APP_ARGS } from '../deploy/deploy-args';
 import { DEPLOY_BOUNDS } from '../deploy/deploy-bounds';
 import { findStaleReason } from '../deploy/find-stale-reason';
+import { formatImageEnv } from '../deploy/format-image-env';
 import { formatMachineTable } from '../deploy/format-machine-table';
 import { loadDeployManifest } from '../deploy/load-deploy-manifest';
 import { PINNED_BUN_VERSION, loadEngineHash } from '../deploy/load-engine-hash';
@@ -70,8 +71,16 @@ const cutoverCommand = define({
 const imagesCommand = define({
   name: 'images',
   description: "print each buildable app's deployable image ref for HEAD as JSON",
-  run: async () => {
-    await runImages();
+  args: {
+    env: {
+      description: 'print one IMAGE_<APP>=<ref> line per app, for GITHUB_ENV, in place of JSON',
+      type: 'boolean',
+    },
+  },
+  run: async (ctx) => {
+    const format = ctx.values.env === true ? 'env' : 'json';
+
+    await runImages(format);
   },
 });
 
@@ -194,7 +203,7 @@ async function runCutover(app: string): Promise<void> {
   });
 }
 
-async function runImages(): Promise<void> {
+async function runImages(format: 'json' | 'env'): Promise<void> {
   const manifest = await loadDeployManifest();
   const sha = await readHeadSHA();
 
@@ -235,7 +244,11 @@ async function runImages(): Promise<void> {
     }
   });
 
-  console.log(JSON.stringify(refs));
+  if (format === 'env') {
+    process.stdout.write(formatImageEnv(refs));
+  } else {
+    console.log(JSON.stringify(refs));
+  }
 }
 
 interface TargetStaleness {

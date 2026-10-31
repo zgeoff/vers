@@ -49,15 +49,8 @@ jobs:
         with:
           bun-version-file: .bun-version
 
-      # every external version lives in the root catalog, so the root report covers the workspace
+      - name: Install Dependencies
+        run: bun install --frozen-lockfile --ignore-scripts
+
       - name: Outdated Report
-        run: |
-          bun outdated > outdated.txt
-          cat outdated.txt
-          {
-            echo '## bun outdated'
-            echo
-            echo '```'
-            cat outdated.txt
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
+        run: bun run ci:outdated-report

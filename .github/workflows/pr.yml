@@ -7,6 +7,10 @@ permissions:
   actions: read
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   gitleaks:
     runs-on: ubuntu-latest
@@ -119,9 +123,10 @@ jobs:
       # required key missing from a service's dev env files or either
       # compose stack
       - name: Check Env Contracts
-        run: |
-          bun run env:contract:check
-          bun run env:coverage
+        run: bun run env:contract:check
+
+      - name: Check Env Coverage
+        run: bun run env:coverage
 
       # every op:// reference that .mcp.json, the workflows and infra/ read is listed by name in
       # secrets-manifest.json, and every listed one is still read
@@ -155,9 +160,11 @@ jobs:
       # 4 turbo tasks on the 4-vCPU runner: on a full cache miss this measured 73 s against 71 s
       # at turbo's default 10. Each package keeps a plain bun test, because --parallel=1 isolates
       # every file and measured 157-190 s
+      - name: Start Test Database
+        run: bun run pg:test-container:start
+
       - name: Unit Tests
-        run: |
-          bun run pg:test-container:start
+        run:
           bun run test --concurrency=4 -- --reporter=junit --reporter-outfile=test-report.junit.xml
 
       # a test over 5 s fails the run, whatever timeout the test sets
@@ -169,10 +176,11 @@ jobs:
 
       # the web build is forced rather than --affected so the budget reads real chunk sizes on
       # every pull request; turbo restores it from cache when nothing changed
+      - name: Build web
+        run: node_modules/.bin/turbo run build --filter=@vers/web
+
       - name: Bundle size
-        run: |
-          node_modules/.bin/turbo run build --filter=@vers/web
-          bun run --cwd apps/web size
+        run: bun run --cwd apps/web size
 
   size:
     runs-on: ubuntu-latest
@@ -287,10 +295,12 @@ jobs:
       - name: Setup Dotenv
         env:
           DOTENV_APP_WEB_DEV: ${{ secrets.DOTENV_APP_WEB_DEV }}
+        run: printf '%s\n' "$DOTENV_APP_WEB_DEV" > apps/web/.env.development.local
+
+      - name: Setup E2E Dotenv
+        env:
           DOTENV_APP_WEB_E2E: ${{ secrets.DOTENV_APP_WEB_E2E }}
-        run: |
-          printf '%s\n' "$DOTENV_APP_WEB_DEV" > apps/web/.env.development.local
-          printf '%s\n' "$DOTENV_APP_WEB_E2E" > apps/web-e2e/.env
+        run: printf '%s\n' "$DOTENV_APP_WEB_E2E" > apps/web-e2e/.env
 
       - name: Setup Node
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
@@ -331,12 +341,7 @@ jobs:
           key: ${{ steps.browser-packages.outputs.key }}-all
 
       - name: Install E2E browsers
-        run: |
-          mkdir -p ~/apt-archives/partial
-          printf 'Dir::Cache::Archives "%s";\nAPT::Keep-Downloaded-Packages "true";\nAcquire::Retries "3";\n' ~/apt-archives \
-            | sudo tee /etc/apt/apt.conf.d/90-browser-packages
-          bun run playwright install --with-deps --only-shell chromium firefox webkit
-          sudo chown -R "$USER" ~/apt-archives
+        run: bun run ci:install-e2e-browsers chromium firefox webkit
 
       - name: E2E Tests
         id: e2e
@@ -375,6 +380,8 @@ jobs:
         bun.lock
         bunfig.toml
         patches/**
+        scripts/src/ci/run-server-image-builds.ts
+        scripts/src/bin/build-server-images.ts
         .github/workflows/pr.yml
 
   images:
@@ -389,15 +396,13 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version
+
+      - name: Install Dependencies
+        run: bun install --frozen-lockfile
+
       - name: Build server images
-        run: |
-          set -euo pipefail
-          echo "::group::apps/web"
-          docker build --file apps/web/Dockerfile .
-          echo "::endgroup::"
-          for config in services/*/fly.toml; do
-            service="$(basename "$(dirname "$config")")"
-            echo "::group::services/$service"
-            docker build --file services/Dockerfile --build-arg "SERVICE=$service" .
-            echo "::endgroup::"
-          done
+        run: bun run ci:build-server-images

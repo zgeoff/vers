@@ -155,8 +155,10 @@ running at a later deadline gets SIGINT, its ctrl-c, which aborts a rollout that
 and destroys its green machines. A grace after that, it gets SIGKILL. Both bounds end before the
 deploy job's timeout, which would otherwise kill flyctl mid-rollout and leave the green machines
 started. The two pinned upstream apps set no strategy and roll over in place. Deploy jobs queue
-rather than cancel. A rollout can fail on a transient host-capacity refusal; Fly rolls back cleanly,
-so re-run the failed job.
+rather than cancel. When a newer run starts its build, full-stack gate or fleet verification while
+an older run's same job is still running, the older job is cancelled, because the newer run ships
+the same apps. The failure alert skips a run with a cancelled job. A rollout can fail on a transient
+host-capacity refusal; Fly rolls back cleanly, so re-run the failed job.
 
 ### Release record and rollback
 
