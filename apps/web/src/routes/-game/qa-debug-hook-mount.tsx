@@ -17,10 +17,6 @@ const TAB_ID = crypto.randomUUID();
 // wait leaves room for a busy worker and still ends for one that hangs
 const WORKER_TIMEOUT_MS = 10_000;
 
-// one record store per page load, built on the first registration: the hook re-registers on each
-// writer or avatar change, and a capture or a storage failure must outlive that
-let qaRecordStore: QARecordStore | undefined;
-
 interface QADebugHookMountProps {
   readonly qaAccount: boolean;
 }
@@ -60,6 +56,10 @@ export function QADebugHookMount(props: Readonly<QADebugHookMountProps>) {
 
   return null;
 }
+
+// one store per page load, outside the component: the hook re-registers on each writer or avatar
+// change, and a pending capture and the storage failures must outlive that
+let qaRecordStore: QARecordStore | undefined;
 
 function resolveQARecordStore(): QARecordStore {
   qaRecordStore ??= createQARecordStore({ captures: localStorage, outcomes: sessionStorage });
