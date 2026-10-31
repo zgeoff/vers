@@ -309,9 +309,12 @@ lane file. The unit run and the pre-push hook leave the lane files out by patter
 - A suffix names one real system, never a speed. A repo prefers a specific suffix to the generic
   `.host`, such as a made-up `.kvm` for a test that boots a VM.
 - A repo adds a project lane only for a real system that this section allows. Its project-testing
-  skill lists the lane with its real system and its limit, and its root oxlint config declares the
-  lane and its limit in the `lanes` option of `zgeoff/max-test-timeout` and of
-  `zgeoff/test-beside-module`. The pull request that adds the lane holds its measured test times.
+  skill lists the lane with its real system and its limit. A repo that uses
+  [`@zgeoff/rig`](https://github.com/zgeoff/tools/blob/main/docs/architecture/rig.md#one-source-for-the-limits)
+  declares the lane and its limit in its rig config, which the lint rules read. A repo that does not
+  declares them in the `lanes` option of `zgeoff/max-test-timeout` and of
+  `zgeoff/test-beside-module` in its root oxlint config. The pull request that adds the lane holds
+  its measured test times.
 - A test that is slow only because of a runtime timer stays in the unit run, with the disable
   comment that [A test over its limit](#a-test-over-its-limit) describes.
 - A lane holds no test that is only slow. Before a test moves to a lane, check that no other row of

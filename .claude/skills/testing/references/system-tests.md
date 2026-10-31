@@ -128,7 +128,7 @@ The repo's browser lane runs the suites at `bun test --parallel=1` after the uni
 gets its own process and Chrome starts on an idle CPU. A cold Chrome start on a CPU that the unit
 run's workers saturate can outlast the test timeout, and a raised timeout only hides that cost.
 [Setting up a browser lane](https://github.com/zgeoff/tools/blob/main/docs/guides/browser-lane.md)
-describes the lane's command, its preload, and its memory cap.
+describes how a repo adopts rig's browser lane, its build script, and its memory cap.
 
 ### Page code
 
