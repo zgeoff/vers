@@ -119,7 +119,8 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
       debug.recordEvent(event.type, event.detail);
     }
 
-    // every worker on the origin shares the channel, so an outcome names the worker that sent it
+    // every worker on the origin shares the channel, so an outcome names the worker that sent it;
+    // the stamp rides outside the message schema, which strips it, so the protocol stamp holds
     const sent =
       message.type === WorkerMessageType.ActivityEnded
         ? { ...message, workerID: debug.workerID }
