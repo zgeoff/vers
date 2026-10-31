@@ -14,8 +14,23 @@ pre-commit:
       glob: '*.{js,mjs,cjs,jsx,ts,mts,cts,tsx,json,jsonc,md,css,yml,yaml,html}'
       run: node_modules/.bin/oxfmt --no-error-on-unmatched-pattern {staged_files}
       stage_fixed: true
+    # the exclude mirrors .formatignore: the tool exits 2 when every file
+    # it is given is ignored, so ignored files must not reach it
     - name: format-codemod
       glob: '*.{ts,tsx}'
+      exclude:
+        - 'apps/design-reference/public/**'
+        - 'infra/sdks/**'
+        - 'apps/web/src/styled-system/**'
+        - 'libs/design/design-system/src/styled-system/**'
+        - 'libs/design/styled-system/styled-system/**'
+        - '**/.react-router/**'
+        - '**/routeTree.gen.ts'
+        - '**/dist/**'
+        - '**/build/**'
+        - '**/coverage/**'
+        - '.worktrees/**'
+        - '.claude/**'
       run: node_modules/.bin/format-codemod --quiet {staged_files}
       stage_fixed: true
     - name: codegen:styles
