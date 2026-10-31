@@ -9,6 +9,8 @@ description:
   cover real databases, HTTP mocking with MSW, observability, and Claude Code mod checks, and, in a
   repo that uses them, React and TanStack clients and native Go and NixOS conventions. Load when
   designing, writing, or reviewing tests.
+metadata:
+  kind: rule-set
 ---
 
 # Testing
@@ -92,8 +94,8 @@ Each line links the section that explains it.
   `try`/`catch`.
 - [Authorisation pairs](#authorisation-pairs): an access rule lands with an allowed test and a
   refused test.
-- [Narrowing and branching](#narrowing-and-branching): a test never branches, and it narrows before
-  a matcher that passes on `undefined`.
+- [Narrowing and branching](./references/assertions.md#narrowing-and-branching): a test never
+  branches, and it narrows before a matcher that passes on `undefined`.
 - [Time and waiting](#time-and-waiting): control time by argument, then injected clock, then fake
   timers, and wait on a condition, never a sleep.
 - [Boundaries](#boundaries): a stand-in replaces a boundary, never the code inside it, and a failure
@@ -123,6 +125,14 @@ Open a reference when the task touches its area.
   and the repo fact test, the one test that reads a workflow.
 - [Cleanup](./references/cleanup.md): helpers that register cleanup, ordered cleanup, cleanup after
   the resets, and a test that fails only in the full run.
+- [Slow tests](./references/slow-tests.md): a test over 5 s, a per-run template, or a lane.
+- [Loops](./references/loops.md): a loop of assertions.
+- [Test data](./references/test-data.md): a test's data and its factories.
+- [Stored state](./references/stored-state.md): database rows and stored files.
+- [Schemas and parsers](./references/schemas-and-parsers.md): a schema's or a parser's test.
+- [Assertions](./references/assertions.md): choosing a matcher and narrowing a result.
+- [Time and waiting](./references/time-and-waiting.md): time, timers, and condition waits.
+- [Matchers](./references/matchers.md): the repo's custom matchers.
 
 <!-- repo-sync needs ./references/frontend.md -->
 
@@ -213,29 +223,8 @@ These decide a case that the rules below leave open.
 
 ## Slow tests
 
-A test finishes in under 5 s on CI. A slow test costs every later run its full time, and a raised
-timeout or a sleep hides that cost without removing it. `zgeoff/max-test-timeout` refuses a timeout
-above the limit of the file's lane, and `zgeoff/no-test-sleep` refuses a fixed sleep. When a test is
-slow, find its cause in this table and make the change it names. Never raise the timeout first.
-
-| The test                                                                                    | The cause                           | The fix                                                                                                                                                                                                                                                                           |
-| ------------------------------------------------------------------------------------------- | ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| starts the app, a server or a CLI to call it                                                | a real process start                | Call the code in the test process: its handler, an in-memory RPC link, or an injected transport. Start a real process only in `e2e/`, from the bundle built once per run, for the jobs [Where a test lives](#where-a-test-lives) names.                                           |
-| waits for a deadline, an idle limit or a retry delay                                        | a real timer or deadline            | Make the deadline an option of the code that owns it, pass a short one, and wait on the event that the deadline causes. A runtime or kernel timer gets the shortest faithful value, as [Native timers](./references/system-tests.md#native-timers-and-scenario-delays) describes. |
-| sleeps to let something settle                                                              | no signal to wait on                | Wait on a condition with the repo's `waitFor` helper. When the code offers nothing to wait on, add an event, a log marker or a state flag.                                                                                                                                        |
-| proves that something does not happen                                                       | it waits out a timeout              | Wait for a later event that shows the thing did not happen.                                                                                                                                                                                                                       |
-| migrates a database or builds a bundle                                                      | a shared fixture build              | Use a [per-run template](#per-run-templates), built once per run and copied per test.                                                                                                                                                                                             |
-| drives a program the repo starts, such as a guest, a worker or a VM manager                 | a real process start                | Use the program's stateful stand-in from the repo's project-testing skill. When none exists, write one, as [Stateful stand-ins](./references/system-tests.md#stateful-stand-ins) describes.                                                                                       |
-| needs the real system, and the real system is the contract                                  | a VM, the kernel, a browser, an API | Put it in a [lane](#lanes). Its directory or file suffix names the lane.                                                                                                                                                                                                          |
-| runs a linter or checker binary over text the code builds, such as a generated shell script | a real process start                | It is not a test. Export the text and check it in a static check script that runs in the CI static job and before a push.                                                                                                                                                         |
-
-The limits are CI rules, because a host that swaps or shares its cores runs the same test slower. A
-test script and the repo's Bun config never raise a lane's default timeout above its limit, and one
-test that cannot fit carries the disable comment that
-[A test over its limit](#a-test-over-its-limit) describes. The pre-push hook runs only the unit
-tests beside the files a branch changes, and every lane runs only in CI, as the
-[pre-push baseline](https://github.com/zgeoff/tools/blob/main/docs/architecture/pre-push-baseline.md#the-related-tests)
-describes.
+The fix for each kind of slow test, per-run templates and the lanes with their timeout limits are in
+[Slow tests](./references/slow-tests.md).
 
 ### Where a test lives
 
@@ -258,103 +247,6 @@ describes.
 
 To place a test, ask where its failure points. A failure that points at the wiring belongs in
 `e2e/`, and one that points at the logic belongs in the unit run.
-
-### Per-run fixtures and lanes
-
-A real system that starts fast and isolates per test is a per-run fixture in the unit run, not a
-lane. An in-memory store, a database template copied per test, and a stand-in daemon that starts in
-milliseconds are per-run fixtures. A lane exists only for a real system that the unit run cannot
-host, such as a VM, the kernel or root, a browser, a container image, the Agent SDK subprocess, or a
-live API, or for a test of the process itself.
-
-### Per-run templates
-
-A fixture that costs more to build than a test costs to run, such as a migrated database or a built
-bundle, is a per-run template. The first worker to need it builds it under a file lock, and each
-test copies it or reads it. A per-process memo is wrong: an isolated file evaluates it again, and
-the workers race on one output folder.
-
-- The template's name holds a hash of its inputs, such as the migration files, so a changed input
-  builds a new template and an unchanged one reuses the last.
-- It lives in a git-ignored cache folder inside the repo, never in `/tmp`, because `/tmp` is tmpfs
-  on many hosts and holds every file in RAM.
-- The sweep at the start of each run removes the per-run folders and clones that older runs left and
-  the templates of old hashes. It never removes the template for the current hash, which a
-  concurrent run may be copying.
-
-[Database testing](./references/database.md) describes the template for each engine.
-
-### Lanes
-
-A lane runs the tests that need one real system. Each lane has its own `test:<lane>` script and a
-per-test limit, which the script's `--timeout` sets and `zgeoff/max-test-timeout` checks in each
-lane file. The unit run and the pre-push hook leave the lane files out by pattern. The
-[ci-design](../ci-design/SKILL.md) skill decides where CI runs each lane.
-
-| Lane      | Where                                  | Limit | The real system                                                              |
-| --------- | -------------------------------------- | ----- | ---------------------------------------------------------------------------- |
-| unit      | every other test file                  | 5 s   | none: code in process, per-run fixtures, and stand-ins                       |
-| e2e       | `e2e/` at the repo root or an app root | 15 s  | the built product, driven from outside                                       |
-| browser   | `<name>.browser.test.ts`               | 10 s  | a real browser                                                               |
-| docker    | `<name>.docker.test.ts`                | 15 s  | a container engine                                                           |
-| host      | `<name>.host.test.ts`                  | 15 s  | the host kernel, root, or the network stack                                  |
-| agent-sdk | `<name>.agent-sdk.test.ts`             | 5 s   | the Claude Agent SDK subprocess against a scripted model, never the live API |
-| model-api | `<name>.model-api.test.ts`             | 120 s | a live model API                                                             |
-
-- The `model-api` lane runs nightly, on dispatch, and on a pull request that bumps the Agent SDK
-  when the pull request carries the opt-in label, never on every pull request. A test that calls a
-  live model takes the suffix wherever it lives, in `evals/` too.
-- A test that calls a live API other than a model gets its own project lane, with a suffix that
-  names that API.
-- A suffix names one real system, never a speed. A repo prefers a specific suffix to the generic
-  `.host`, such as a made-up `.kvm` for a test that boots a VM.
-- A repo adds a project lane only for a real system that this section allows. Its project-testing
-  skill lists the lane with its real system and its limit. A repo that uses
-  [`@zgeoff/rig`](https://github.com/zgeoff/tools/blob/main/docs/architecture/rig.md#one-source-for-the-limits)
-  declares the lane and its limit in its rig config, which the lint rules read. A repo that does not
-  declares them in the `lanes` option of `zgeoff/max-test-timeout` and of
-  `zgeoff/test-beside-module` in its root oxlint config. The pull request that adds the lane holds
-  its measured test times.
-- A test that is slow only because of a runtime timer stays in the unit run, with the disable
-  comment that [A test over its limit](#a-test-over-its-limit) describes.
-- A lane holds no test that is only slow. Before a test moves to a lane, check that no other row of
-  the cause table fits it.
-
-A Rust crate runs the same lanes through cargo-nextest, as
-[Rust lanes](./references/system-tests.md#rust-lanes) describes.
-
-### A test over its limit
-
-A test whose cause the [Slow tests](#slow-tests) table can fix gets that fix in the pull request
-that meets it, never a ticket. A test that still cannot finish within its lane's limit carries a
-disable comment that gives the measured time and one of two reasons:
-
-- the ticket that tracks the fix, when the fix cannot land in this pull request, such as a fix in
-  another repo;
-- `floor:` and the measured evidence that the time cannot move, such as
-  `48 s on CI; floor: two VM boots plus a restic restore`.
-
-The ticket form, in this made-up example:
-
-```ts
-test(
-  'it restores a volume from its oldest snapshot',
-  async () => {
-    // …
-  },
-  // oxlint-disable-next-line zgeoff/max-test-timeout -- 48 s on CI, OPS-212
-  { timeout: 60_000 },
-);
-```
-
-The rule reports the timeout value, so the comment sits on the line before the options object. The
-options object follows the callback, because Bun's types accept no other order. The formatter puts
-each argument on its own line, so the comment stays next to the object.
-
-The limit never rises to cover one test. `zgeoff/test-timeout-exception-ticket` fails a disable of
-`zgeoff/max-test-timeout` whose reason after `--` holds neither a ticket nor `floor:` with text, in
-any of its forms. The test timeout check fails an oxlint config that turns either rule off or down
-to a warning, unless a comment on that setting holds a ticket or a `floor:`.
 
 ## Structure and naming
 
@@ -408,27 +300,7 @@ command checks follow [System tests](./references/system-tests.md#end-to-end-sui
 
 ### Loops
 
-A loop that runs an assertion once per input hides which input failed, and its first failure stops
-the rest. Replace it with `test.each`, or write each case as its own test. A loop of `expect` calls
-over the items of one result becomes one collection matcher, which reports the whole collection on
-failure:
-
-```ts
-expect(listOpenNotes(store)).toSatisfyAll((note: Note) => note.archivedAt === null);
-```
-
-Two loops that check a set the module owns stay legal:
-
-- A completeness loop that walks a module's own registry, such as checking that every exported
-  renderer has a preview.
-- A conformance loop that drives each generated case through
-  `await expect(conformanceCase.run(app)).toResolve()`.
-
-Neither loop may compute its expectation with the same transformation it checks. A loop that only
-arranges, such as inserting 51 rows to cross a page limit, holds no assertion and stays legal. When
-the order of the rows does not matter, insert them with
-`await Promise.all(Array.from({ length: 51 }, …))`. When it does, insert them one at a time in the
-loop.
+How to replace a loop of assertions is in [Loops](./references/loops.md).
 
 ### Property tests
 
@@ -580,161 +452,22 @@ the gap and close it.
 
 ## Test data
 
-- Plain inputs stay inline at the call site: arguments, options bags, config values. Write the
-  literal again in the next test. A module-level fixture, a baseline object shared between tests, or
-  a constant that only names a literal (`const EMPTY = ''`) never appears in a test file.
-- A domain type that crosses a module boundary gets a tested factory in the shared test utils as
-  soon as a test needs one, and a domain concept built from several records gets a composite. A type
-  that another package owns, such as an SDK result, crosses a boundary on its first use. A type
-  private to the module under test stays an inline literal.
-  [Factories and composites](./references/factories.md) holds how to name and write a factory or a
-  composite.
-- A stand-in's data stays inline in the test: a fixed answer, a recorder (`mock()`), including one
-  that parses the input it records, a no-op (`() => {}`), an answer table read by one key, or a list
-  of scripted answers that the test passes to the tested answer-queue util. Any other code in a
-  stand-in is logic, such as consuming answers in order, counting calls, keeping state, branching,
-  waiting, or deriving a value from an argument. It moves to a tested util in the shared test utils,
-  and so does a gate, delay, or counter wrapped around a tested stand-in. The test passes its
-  answers to that util inline.
-- A stand-in util lives in the shared test utils under a name for what it impersonates. Its prefix
-  follows the repo's function-naming table. A stand-in that starts something long-running, such as a
-  stub server, is `start-stub-<thing>.ts`. A stand-in that creates a resource, such as a stub
-  repository on disk, is `create-stub-<thing>.ts`. Every other stand-in is `build-stub-<thing>.ts`.
-  It has its own tests, which pin the assumptions it makes about the real thing. An executable
-  stand-in script uses `run-stub-<thing>.ts`; an imported helper that starts it keeps
-  `start-stub-<thing>.ts`.
-- Never add a test whose only purpose is to check that the mocking library records calls. A no-op
-  executable placeholder stays inline through the shared file helper when the test needs only an
-  executable. Extract a dedicated stand-in when the script models arguments, output, or failures.
-- A chain of `mockReturnValueOnce` or `mockResolvedValueOnce` calls never appears: a call past the
-  last answer returns the default without failing, where the answer-queue util throws.
+Where test data lives, and when it gets a tested factory, is in
+[Test data](./references/test-data.md).
 
 ## Stored state
 
-Check stored state through its owner. Stored state means database rows and files on disk. The owner
-is the module whose code writes them.
-
-- The owner's own tests read its rows and files directly.
-- Every other test reads them only through the owner's code: a read function for rows, a path helper
-  for files. It never writes its own query and never builds a stored path by hand.
-- If the unit under test already returns the fact, check its result. Use the owner's code only when
-  the result does not hold the fact.
-- If the owner has no read function for the fact, add one to the owner, with its own test.
-- A query that only sets up a failure, such as a trigger that makes a write fail, is setup, not a
-  check. It stays.
-
-`src/notes/store/` writes the `notes` table and the attachment files, so it owns both. A handler
-test outside the store checks the result of an archive.
-
-```ts
-// before: the test writes its own query and builds the path by hand
-const row = await ctx.db
-  .selectFrom('notes')
-  .select('archived_at')
-  .where('id', '=', note.id)
-  .executeTakeFirstOrThrow();
-
-expect(row.archived_at).toBeValidDate();
-expect(existsSync(join(ctx.dataDir, 'archive', note.id, 'list.txt'))).toBe(true);
-
-// after: the test reads through the store's read function and path helper
-const archived = await readNote(ctx.db, note.id);
-
-expect(archived?.archivedAt).toBeValidDate();
-expect(existsSync(buildArchivePath(ctx.dataDir, note.id, 'list.txt'))).toBe(true);
-```
-
-The store's own test, `src/notes/store/read-note.test.ts`, still inserts and queries `notes`
-directly, because the table is what it checks.
-
-### Seeding stored state
-
-A test seeds stored state with direct inserts and [factories](./references/factories.md) by default.
-A seeding helper is a [composite](./references/factories.md#composites): it lives in the repo's
-shared test utils with its own tests, takes a name the system already uses, and writes the whole
-effect behind that name, such as the row and the files of one image.
-
-A store with no service layer seeds through its own write functions, never through raw SQL. A direct
-write that no write function can make stays, with the `//` comment that names the case, as
-[Persisted test data](./references/database.md#persisted-test-data) asks.
-
-A repo's `project-testing` skill lists the concepts that seed only through a composite, and an agent
-follows that list. The repo's maintainer designs the first seeding pattern in each repo before
-anyone builds one. An agent can then add composites that follow that pattern.
-
-### Exceptions to checking through the owner
-
-Three kinds of test outside the owner read and write stored state directly, and no others:
-
-- A migration test reads and writes tables directly.
-- The own test of a composite or a seeding helper checks the rows and files that it writes.
-- A test of code whose product is SQL or storage, such as a database dialect or a database tool,
-  uses tables as its test input.
-
-Tests under `integration/` and `e2e/` get no exception. A case off this list changes this shared
-skill, never a project skill. A project skill tightens the rule in two ways only: the seeding list,
-and a named owner for a table that several modules write. It never adds an exception.
+How a test seeds and checks database rows and stored files is in
+[Stored state](./references/stored-state.md).
 
 ## Schemas and parsers
 
-- Feed a parser or a validator inline literal payloads: ones it accepts and ones it rejects. A
-  factory produces values built to pass the schema, so its output cannot show the schema rejecting
-  anything.
-- A rejection payload repeats the complete valid literal and alters a single field, so the reader
-  sees which field causes the rejection.
-- A rejection test asserts the path of the reported issue, in one shape, because a payload can be
-  invalid for many reasons and `success: false` passes for all of them:
-
-  ```ts
-  expect(result.error?.issues).toPartiallyContain({ path: ['title'] });
-  ```
-
-  Pass the expected partial object directly, never wrapped in `expect.objectContaining`, which
-  `toPartiallyContain` does not check (see [Matchers](#matchers)). Never read `issues[0]`, which
-  ties the test to issue order.
-
-- An acceptance test asserts `result.data`. For a schema that passes values through, assert
-  `toStrictEqual(payload)`. For one that transforms, assert the transformed value. A bare
-  `success: true` passes for a schema that strips or coerces a field wrongly.
+How to test a schema or a parser is in [Schemas and parsers](./references/schemas-and-parsers.md).
 
 ## Assertions
 
-- Use `toStrictEqual` when the test determines every field of the expected value: the full shape is
-  the contract. When the value carries fields that the test does not determine, such as faker
-  defaults, timestamps, or generated ids, use asymmetric matchers inside `toStrictEqual`, or
-  `toMatchObject`. Choosing a partial match because the full literal is long is a defect. `toEqual`
-  never appears.
-- Assert each result on its own. Never assemble unrelated results or observations into an object
-  only to put them under one `toStrictEqual`. A normalized projection of one result, such as a
-  command's exit code, stdout, and stderr, stays together. A later request's status is a separate
-  assertion. Independently meaningful scalar checks use separate `toBe` calls.
-- Derive an expected value from the contract, independently of the unit's own calculation. For a
-  filesystem path, use a known package or fixture root plus the explicit expected location, rather
-  than repeating the unit's relative path expression. Keep a behaviour check where it proves the
-  derived value works.
-- A recovery test injects one or more faults and then acts to recover. The recovery is its one act,
-  and each faulted call is arrangement. During arrangement, capture the earlier state and each
-  faulted call's rejection as values, the rejection with
-  `.then(() => null, (error: unknown) => error)`. Assert every captured value at the end beside the
-  final state, with a separate assertion for each.
-- After a mutation, one `toBe` on the field that changed is enough.
-- Snapshots are inline only. `toMatchInlineSnapshot` pins a golden value: deterministic machine
-  output that no person derives by reading the code, such as a generated SQL string or a rendered
-  report. A value a person wrote by hand, such as a spec test vector, keeps an explicit matcher,
-  because a snapshot of it would bless whatever the code produced. File snapshots and component
-  snapshots never appear, and `zgeoff/no-file-snapshot` reports a file snapshot.
-- A deterministic pipeline's suite opens with two tests. A frozen-golden test feeds one hand-written
-  literal input and pins the full output inline. A determinism test asserts that the same input
-  gives equal outputs: `expect(run(input)).toStrictEqual(run(input))`. The golden input is never a
-  factory call, because regenerating snapshots must never change the input.
-- When the repo commits a file that it generates, such as an OpenAPI document, the frozen-golden
-  test compares the regenerated output with that committed file instead of an inline snapshot. That
-  file is a product of the repo, not a file snapshot.
-- A stand-in's derived values, such as a fake hash or a fake signature, are not contract. Assert
-  their properties: their shape, that the same input gives the same output, and that different
-  inputs give different outputs.
-- A sweep that deletes resources has a test that names what it never touches, such as
-  `it never removes another owner's files`.
+Which matcher fits each result, and how to assert it, is in
+[Assertions](./references/assertions.md).
 
 ### Errors
 
@@ -773,61 +506,10 @@ The refused case names the other caller in its title, such as
 `it rejects a note owned by another user`. A read path that hides a record instead of refusing
 asserts the hidden result, such as `toBeNull()`.
 
-### Narrowing and branching
-
-An ordinary test body never branches. Each path through the unit gets its own test. Generated
-operation dispatch follows [Property tests](#property-tests).
-
-Narrow a value that may be missing with `invariant(value)` or an explicit `throw` on the line before
-the assertion. Optional chaining inside `expect` is safe when the matcher fails on `undefined`,
-because a missing value then fails loudly:
-
-```ts
-expect(result.data?.title).toBe('groceries');
-```
-
-Four matchers pass on `undefined`: a `.not` matcher, `toBeUndefined`, `toBeFalsy`, and `toBeNil`.
-With those, `?.` or `??` turns a missing value into a pass, so narrow first:
-
-```ts
-invariant(result.data);
-expect(result.data.error).toBeUndefined();
-```
-
-When you are unsure which kind a matcher is, narrow.
-
-An assertion inside an ordinary callback passes when the callback never runs. Copy the value out of
-the callback into a variable, then assert on it once the call returns. Property-runner assertions
-follow [Property tests](#property-tests).
-
 ## Time and waiting
 
-Control time in the most explicit form the code allows:
-
-1. **A time argument.** Code that advances through time takes the duration or the timestamp as a
-   parameter: `scheduler.advance(30_000)`.
-2. **An injected clock.** Code with its own loop or timers takes a `now` function or a clock object,
-   and the test steps it.
-3. **Fake timers.** Code the repo does not own, such as a third-party library, gets
-   `setSystemTime()` and fake timers. The test restores them in `onTestFinished`.
-
-A Claude Code mod reads the wall clock and never the host's clock, for the reason in
-[Claude Code mod checks](./references/claude-code-mods.md#time).
-
-A value that depends on the wall clock is built relative to `Date.now()`
-(`expiresAt: new Date(Date.now() - 1000)`) and asserted with range matchers such as `toBeAfter` and
-`toBeWithin`, never with an exact timestamp.
-
-A test waits on a condition with a polling `waitFor`, never with a sleep. A sleep makes the suite
-slower by its full length on every run, and it still fails on a slow machine. When the code offers
-nothing observable to wait on, the code lacks a signal: add one, such as an event, a log marker, or
-a state flag, and wait on that.
-
-### Native timers and scenario delays
-
-A native runtime or kernel timer, a timer a third-party library owns, a deadline the repo's code
-runs in a spawned process, and a deliberate workload or fault delay each follow
-[System tests](./references/system-tests.md#native-timers-and-scenario-delays).
+How a test controls time and waits on a condition is in
+[Time and waiting](./references/time-and-waiting.md).
 
 ## Boundaries
 
@@ -912,31 +594,4 @@ shows a defect in the import graph: fix the import graph instead.
 
 ## Matchers
 
-The `@zgeoff/bun-test-extended` preload registers the jest-extended matchers, and a package's
-`augment-bun-test.ts` import gives `tsc` their types. Typecheck fails on a matcher name that does
-not exist. When a matcher in this table checks the property a test asserts, use it in place of a
-hand-written check such as `expect(items.every(isOpen)).toBe(true)`, because the matcher reports the
-received value on failure and the hand-written check reports only `false`:
-
-| Value             | Matchers                                                                                                          |
-| ----------------- | ----------------------------------------------------------------------------------------------------------------- |
-| Array             | `toIncludeAllMembers`, `toIncludeSameMembers`, `toIncludeAllPartialMembers`, `toPartiallyContain`, `toSatisfyAll` |
-| Object            | `toContainEntry`, `toContainEntries`, `toContainAllKeys`, `toBeFrozen`                                            |
-| String            | `toStartWith`, `toEndWith`, `toInclude`, `toEqualCaseInsensitive`, `toEqualIgnoringWhitespace`                    |
-| Any value         | `toBeNil`, `toBeOneOf`, `toSatisfy`, `toBeWithin`, `toBeEmpty`                                                    |
-| Date              | `toBeAfter`, `toBeBefore`, `toBeBetween`, `toBeValidDate`                                                         |
-| Mock              | `toHaveBeenCalledOnce`, `toHaveBeenCalledExactlyOnceWith`, `toHaveBeenCalledBefore`, `toHaveBeenCalledAfter`      |
-| Error and promise | `toThrowWithMessage`, `toResolve`, `toReject`                                                                     |
-
-Each matcher also works asymmetrically inside `toStrictEqual` and `toMatchObject`, as in
-`status: expect.toBeOneOf(['open', 'held'])`. Upstream leaves `expect.pass` and `expect.fail`
-unimplemented, so the types leave them out.
-
-`toPartiallyContain` and `toIncludeAllPartialMembers` take plain objects, such as
-`toPartiallyContain({ path: ['title'] })`, and never a bare asymmetric matcher as an element. They
-compare the expected element's own fields with each received element, and a Bun matcher such as
-`expect.toStartWith('zzz')` or `expect.objectContaining({ id: 2 })` has no own fields, so any
-non-empty array passes. A matcher inside a field is checked, as in
-`toPartiallyContain({ name: expect.toStartWith('a') })`. To find an element by a matcher, use
-`toContainEqual`, which applies the matcher to each element:
-`expect(names).toContainEqual(expect.toStartWith('a'))`.
+The repo's matchers, and when to add one, are in [Matchers](./references/matchers.md).

@@ -57,7 +57,8 @@ completion signals.
 Use real temporary files, isolated databases, `httptest` servers, sockets, and processes where the
 behavior depends on them. Stand-ins take typed request and response shapes from the real contract
 and use isolated native stores for rich state. MSW and `@msw/data` are Bun/frontend mechanisms, not
-Go requirements. Follow the shared [native-timer](../SKILL.md#native-timers-and-scenario-delays) and
+Go requirements. Follow the shared
+[native-timer](./system-tests.md#native-timers-and-scenario-delays) and
 [resource ownership](../SKILL.md#program-fixed-paths-and-global-resources) rules.
 
 ## Reports

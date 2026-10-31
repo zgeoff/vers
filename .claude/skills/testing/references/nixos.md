@@ -26,7 +26,8 @@ a tested baseline reset or a fresh environment. Reuse expensive infrastructure u
 
 Use driver condition waits such as `wait_for_unit` and `wait_until_succeeds`, with bounded failure.
 A delay that guesses when a service settles is not readiness. Kernel and real-process behavior stays
-real; follow the shared [timer and pacing rules](../SKILL.md#native-timers-and-scenario-delays).
+real; follow the shared
+[timer and pacing rules](./system-tests.md#native-timers-and-scenario-delays).
 
 Check each meaningful observation separately. Compare intended values and command results, not only
 whether a command ran or any error occurred. `machine.fail` proves a nonzero exit; a case that names
