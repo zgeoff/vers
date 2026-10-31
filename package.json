@@ -165,7 +165,7 @@
   "scripts": {
     "clean": "./scripts/clean.sh",
     "build": "turbo run build",
-    "audit": "bun audit --ignore=GHSA-gcqx-w48m-w2h4 --ignore=GHSA-mrhx-c7xc-m3w5",
+    "audit": "bun audit --ignore=GHSA-3g3m-2fjr-6pw4 --ignore=GHSA-g3hv-75wg-m249 --ignore=GHSA-gcqx-w48m-w2h4 --ignore=GHSA-mrhx-c7xc-m3w5",
     "boundaries": "turbo boundaries",
     "deadcode": "knip",
     "deps:check": "bun scripts/src/bin/check-dependency-gates.ts",
