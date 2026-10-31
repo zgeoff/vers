@@ -6,7 +6,5 @@ import { runServerImageBuilds } from '../ci/run-server-image-builds';
 
 await runServerImageBuilds({
   rootPath: path.resolve(import.meta.dirname, '../../..'),
-  writeLine: (line) => {
-    console.log(line);
-  },
+  writeLine: console.log,
 });
