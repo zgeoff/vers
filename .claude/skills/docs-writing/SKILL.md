@@ -66,7 +66,7 @@ Each line links the section that explains it.
     once, where the reader would assume Y.
   - [Cut the tells of machine-drafted prose](#cut-the-tells-of-machine-drafted-prose): no recap
     transitions, feature-list voice, slogans, or set-up questions.
-  - [Banned words](#banned-words): `check-prose.sh` fails on them.
+  - [Banned words](#banned-words): `chex prose` fails on them.
 - [Shaping the doc](#shaping-the-doc)
   - [Summary first](#summary-first): open with three to six plain sentences on what the system does.
   - [Lists for parallel items, prose for cause and effect](#lists-for-parallel-items-prose-for-cause-and-effect):
@@ -140,9 +140,8 @@ covers which).
 Paragraphs that defend a decision are the most common source of padding: lists of edge cases that
 only happen if someone tampers with the system, "in case someone…", restatements of what is out of
 scope. If a paragraph runs past about eight lines, reread it and ask whether it's defending a
-decision nobody attacked. `check-prose.sh` checks paragraph length in each file the branch changes:
-it warns on a long paragraph and fails on a far longer one, at the limits set at the top of the
-script.
+decision nobody attacked. `chex prose` checks paragraph length in each file the branch changes: it
+warns on a long paragraph and fails on a far longer one, at the limits set at the top of the script.
 
 ### A bug fix rarely needs a doc change
 
@@ -199,8 +198,7 @@ A number belongs in a doc only when the code doesn't decide it: a period fixed b
 that a design defines, a count that is the point ("three classes"), or a measurement with its
 source, like a bundle size or an observed latency. An architecture doc states even those as the rule
 they serve ("the keepalive period the protocol fixes"), and the guide or runbook that needs the
-number states it. `check-prose.sh` fails on a value with a unit under `docs/architecture/` outside
-code.
+number states it. `chex prose` fails on a value with a unit under `docs/architecture/` outside code.
 
 **Names.** Don't refer to something by its function name, option name, column, env var, or file
 path. A rename breaks the reference silently. Name the role instead: "the admission handler", "the
@@ -413,7 +411,7 @@ These patterns mark text as generated. Cut or rewrite them:
 
 ### Banned words
 
-`check-prose.sh` greps for the words every zgeoff repo bans, and a repo's AGENTS.md may ban more. In
+`chex prose` greps for the words every zgeoff repo bans, and a repo's AGENTS.md may ban more. In
 Markdown it skips code spans and code blocks, so an identifier in code may hold a banned word. Fix
 any violation you see.
 
@@ -519,28 +517,27 @@ passes with this guide as its only reference.
    the doc lets you predict what the system does.
 2. How it says it. Reread each surviving paragraph against "Writing the sentences", "Choosing
    words", "Shaping the doc", and "Formatting and links", in that order.
-3. The scripted checks. Run from the repo root; CI runs the same two commands:
+3. The scripted checks. Run from the repo root; the repo's `check:docs` script names the checks it
+   takes, and CI runs the same ones:
 
    ```bash
-   bash .claude/skills/docs-writing/scripts/check-length.sh
-   bash .claude/skills/docs-writing/scripts/check-links.sh
+   bun x @zgeoff/chex prose length links
    ```
 
-   `check-length.sh` prints each README against the limit its path sets and each docs/ file over its
-   cap, then runs `check-prose.sh` over the READMEs, each spike's `results.md`, the Markdown under
-   `docs/`, and each skill's Markdown. It fails on a README over its limit or on a prose violation,
-   and its last line counts the READMEs and those over their limit. In a repo that takes the
-   `docs-vision-check` entry of repo-sync, it also fails on a missing or over-long `docs/vision.md`.
-   `check-links.sh` checks every relative link and anchor in the READMEs, the `results.md` files,
-   `docs/`, and the skills, and fails on a broken one. It skips the docs-writing,
-   project-docs-writing, and skill-writing skills, whose examples link to placeholder targets. Pass
-   paths to check other Markdown. Both skip a file git marks `linguist-vendored`. To check other
-   prose, such as AGENTS.md, run `check-prose.sh <path>...` on it.
+   `chex prose` reads the READMEs, each spike's `results.md`, the Markdown under `docs/`, and each
+   skill's Markdown. `chex length` prints each README against the limit its path sets and each docs/
+   file over its cap, fails on a README over its limit, and its last line counts the READMEs and
+   those over their limit. `chex vision` fails on a missing or over-long `docs/vision.md`, in a repo
+   whose `check:docs` names it. `chex links` checks every relative link and anchor in the READMEs,
+   the `results.md` files, `docs/`, and the skills, and fails on a broken one. It skips the
+   docs-writing, project-docs-writing, and skill-writing skills, whose examples link to placeholder
+   targets. Pass paths to check other Markdown. Both skip a file git marks `linguist-vendored`. To
+   check other prose, such as AGENTS.md, run `bun x @zgeoff/chex prose <path>...` on it.
 
-   `check-prose.sh` fails on traces of the work session, the banned words a grep can catch, values
-   with units under `docs/architecture/`, formatting faults, untagged code blocks, and a paragraph
-   over its word limit in a file the branch changes. It then prints candidates (filler words that
-   have term-of-art uses, speech verbs on data, delta words, headings written as claims), which need
+   `chex prose` fails on traces of the work session, the banned words a grep can catch, values with
+   units under `docs/architecture/`, formatting faults, untagged code blocks, and a paragraph over
+   its word limit in a file the branch changes. It then prints candidates (filler words that have
+   term-of-art uses, speech verbs on data, delta words, headings written as claims), which need
    judgment and never fail the run. It skips this skill's own directory, because the examples here
    contain those patterns on purpose. If you're reviewing this skill, run the greps by hand and
    judge the hits.
