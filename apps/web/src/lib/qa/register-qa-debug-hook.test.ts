@@ -1,7 +1,21 @@
 import { expect, onTestFinished, test } from 'bun:test';
+import { waitFor } from '@vers/test-utils';
 import invariant from 'tiny-invariant';
 import { createStubWorkerClient } from '../../test-utils/create-stub-worker-client';
+import { QA_RECORD_KEYS } from './qa-record-keys';
 import { registerQADebugHook } from './register-qa-debug-hook';
+
+function setupTest() {
+  const sender = new BroadcastChannel('vers-idle-worker-to-client');
+
+  onTestFinished(() => {
+    sender.close();
+    sessionStorage.removeItem(QA_RECORD_KEYS.receivedOutcomes);
+    localStorage.removeItem(QA_RECORD_KEYS.refusalCaptures);
+  });
+
+  return { sender };
+}
 
 test('it installs a snapshot function that merges the tab identity onto the worker answer', async () => {
   const client = createStubWorkerClient();
@@ -130,4 +144,231 @@ test('it rejects a speed outside 1 to 20 before asking the worker', () => {
   expect(globalThis.__versQA.setSpeed(21)).rejects.toThrowWithMessage(RangeError, /1 to 20/u);
   expect(globalThis.__versQA.setSpeed(1.5)).rejects.toThrowWithMessage(RangeError, /integer/u);
   expect(client.setSimulationSpeed).not.toHaveBeenCalled();
+});
+
+test('it keeps a refusal captured at the moment it arrives until the next snapshot reads it', async () => {
+  const ctx = setupTest();
+  const client = createStubWorkerClient();
+
+  const unregister = registerQADebugHook({
+    client,
+    isQAAvatar: true,
+    tabID: 'tab_1',
+    writerGeneration: 3,
+  });
+
+  onTestFinished(unregister);
+
+  ctx.sender.postMessage({
+    outcome: { activityID: 'act_refused', avatarID: 'avatar_1', kind: 'refused', xp: 0 },
+    type: 'activity_ended',
+    workerID: 'worker_other',
+  });
+
+  await waitFor(() => {
+    expect(localStorage.getItem(QA_RECORD_KEYS.refusalCaptures)).not.toBeNull();
+  });
+
+  invariant(globalThis.__versQA, 'the hook is installed');
+
+  const snapshot = await globalThis.__versQA.snapshot();
+
+  const trigger = {
+    outcome: { activityID: 'act_refused', avatarID: 'avatar_1', kind: 'refused', xp: 0 },
+    receivedAt: expect.any(Number),
+    workerID: 'worker_other',
+  };
+
+  expect(snapshot.refusalCaptures).toStrictEqual([
+    {
+      capturedAt: expect.any(Number),
+      tab: {
+        hasSharedWorker: typeof SharedWorker !== 'undefined',
+        online: navigator.onLine,
+        receivedOutcomes: [trigger],
+        tabID: 'tab_1',
+        userAgent: navigator.userAgent,
+        writerGeneration: 3,
+      },
+      trigger,
+      worker: expect.objectContaining({ writer: { bootedAt: 0, workerID: 'worker_stub' } }),
+    },
+  ]);
+});
+
+test('it hands a refusal capture to one snapshot only', async () => {
+  const ctx = setupTest();
+
+  const unregister = registerQADebugHook({
+    client: createStubWorkerClient(),
+    isQAAvatar: true,
+    tabID: 'tab_1',
+    writerGeneration: 0,
+  });
+
+  onTestFinished(unregister);
+
+  ctx.sender.postMessage({
+    outcome: { activityID: 'act_refused', avatarID: 'avatar_1', kind: 'refused', xp: 0 },
+    type: 'activity_ended',
+    workerID: 'worker_1',
+  });
+
+  await waitFor(() => {
+    expect(localStorage.getItem(QA_RECORD_KEYS.refusalCaptures)).not.toBeNull();
+  });
+
+  invariant(globalThis.__versQA, 'the hook is installed');
+
+  await globalThis.__versQA.snapshot();
+
+  const second = await globalThis.__versQA.snapshot();
+
+  expect(second.refusalCaptures).toStrictEqual([]);
+});
+
+test('it records the worker error in a refusal capture when the worker snapshot fails', async () => {
+  const ctx = setupTest();
+
+  const unregister = registerQADebugHook({
+    client: createStubWorkerClient({
+      readDebugSnapshot: () => Promise.reject(new Error('the worker port is closed')),
+    }),
+    isQAAvatar: true,
+    tabID: 'tab_1',
+    writerGeneration: 0,
+  });
+
+  onTestFinished(unregister);
+
+  ctx.sender.postMessage({
+    outcome: { activityID: 'act_refused', avatarID: 'avatar_1', kind: 'refused', xp: 0 },
+    type: 'activity_ended',
+    workerID: 'worker_1',
+  });
+
+  await waitFor(() => {
+    expect(localStorage.getItem(QA_RECORD_KEYS.refusalCaptures)).not.toBeNull();
+  });
+
+  const stored: unknown = JSON.parse(localStorage.getItem(QA_RECORD_KEYS.refusalCaptures) ?? '');
+
+  expect(stored).toStrictEqual([
+    expect.objectContaining({ workerError: 'Error: the worker port is closed' }),
+  ]);
+});
+
+test('it lists each outcome the tab received, with the sending worker', async () => {
+  const ctx = setupTest();
+
+  const unregister = registerQADebugHook({
+    client: createStubWorkerClient(),
+    isQAAvatar: true,
+    tabID: 'tab_1',
+    writerGeneration: 0,
+  });
+
+  onTestFinished(unregister);
+
+  ctx.sender.postMessage({
+    outcome: { activityID: 'act_done', avatarID: 'avatar_1', kind: 'completed', xp: 12 },
+    type: 'activity_ended',
+    workerID: 'worker_1',
+  });
+
+  invariant(globalThis.__versQA, 'the hook is installed');
+
+  const hook = globalThis.__versQA;
+
+  await waitFor(async () => {
+    const snapshot = await hook.snapshot();
+
+    expect(snapshot.tab.receivedOutcomes).toStrictEqual([
+      {
+        outcome: { activityID: 'act_done', avatarID: 'avatar_1', kind: 'completed', xp: 12 },
+        receivedAt: expect.any(Number),
+        workerID: 'worker_1',
+      },
+    ]);
+  });
+});
+
+test('it captures a refused run and no completed one', async () => {
+  const ctx = setupTest();
+
+  const unregister = registerQADebugHook({
+    client: createStubWorkerClient(),
+    isQAAvatar: true,
+    tabID: 'tab_1',
+    writerGeneration: 0,
+  });
+
+  onTestFinished(unregister);
+
+  ctx.sender.postMessage({
+    outcome: { activityID: 'act_done', avatarID: 'avatar_1', kind: 'completed', xp: 12 },
+    type: 'activity_ended',
+    workerID: 'worker_1',
+  });
+
+  ctx.sender.postMessage({
+    outcome: { activityID: 'act_refused', avatarID: 'avatar_1', kind: 'refused', xp: 0 },
+    type: 'activity_ended',
+    workerID: 'worker_1',
+  });
+
+  await waitFor(() => {
+    expect(localStorage.getItem(QA_RECORD_KEYS.refusalCaptures)).not.toBeNull();
+  });
+
+  invariant(globalThis.__versQA, 'the hook is installed');
+
+  const snapshot = await globalThis.__versQA.snapshot();
+
+  expect(snapshot.refusalCaptures).toStrictEqual([
+    expect.objectContaining({
+      trigger: expect.objectContaining({
+        outcome: { activityID: 'act_refused', avatarID: 'avatar_1', kind: 'refused', xp: 0 },
+      }),
+    }),
+  ]);
+});
+
+test('it keeps the tab record of received outcomes across a re-registration', async () => {
+  const ctx = setupTest();
+
+  const first = registerQADebugHook({
+    client: createStubWorkerClient(),
+    isQAAvatar: true,
+    tabID: 'tab_1',
+    writerGeneration: 0,
+  });
+
+  onTestFinished(first);
+
+  ctx.sender.postMessage({
+    outcome: { activityID: 'act_done', avatarID: 'avatar_1', kind: 'completed', xp: 12 },
+    type: 'activity_ended',
+    workerID: 'worker_1',
+  });
+
+  await waitFor(() => {
+    expect(sessionStorage.getItem(QA_RECORD_KEYS.receivedOutcomes)).not.toBeNull();
+  });
+
+  first();
+
+  const second = registerQADebugHook({
+    client: createStubWorkerClient(),
+    isQAAvatar: true,
+    tabID: 'tab_1',
+    writerGeneration: 1,
+  });
+
+  onTestFinished(second);
+  invariant(globalThis.__versQA, 'the hook is installed');
+
+  const snapshot = await globalThis.__versQA.snapshot();
+
+  expect(snapshot.tab.receivedOutcomes).toPartiallyContain({ workerID: 'worker_1' });
 });

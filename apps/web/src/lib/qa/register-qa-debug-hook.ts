@@ -1,12 +1,26 @@
 import { QA_SIM_SPEED_MAX } from '@vers/contract-activity';
-import type { WorkerClient, WorkerDebugSnapshot } from '@vers/idle-client';
+import type { ReceivedRunOutcome, WorkerClient, WorkerDebugSnapshot } from '@vers/idle-client';
+import { RunOutcomeKind, subscribeToRunOutcomes } from '@vers/idle-client';
+import { QA_RECORD_KEYS } from './qa-record-keys';
+import { readQARecords } from './read-qa-records';
+import { writeQARecord } from './write-qa-record';
+
+interface ReceivedOutcomeRecord extends ReceivedRunOutcome {
+  readonly receivedAt: number;
+}
+
+interface TabRecord {
+  readonly hasSharedWorker: boolean;
+  readonly online: boolean;
+  readonly receivedOutcomes: ReadonlyArray<unknown>;
+  readonly tabID: string;
+  readonly userAgent: string;
+  readonly writerGeneration: number;
+}
 
 interface QADebugSnapshot extends WorkerDebugSnapshot {
-  readonly tab: {
-    readonly online: boolean;
-    readonly tabID: string;
-    readonly writerGeneration: number;
-  };
+  readonly refusalCaptures: ReadonlyArray<unknown>;
+  readonly tab: TabRecord;
 }
 
 interface QADebugHook {
@@ -25,7 +39,53 @@ interface RegisterQADebugHookOptions {
   readonly writerGeneration: number;
 }
 
+const MAX_RECEIVED_OUTCOMES = 20;
+
 export function registerQADebugHook(options: Readonly<RegisterQADebugHookOptions>): () => void {
+  const readTabRecord = (): TabRecord =>
+    Object.freeze({
+      hasSharedWorker: typeof SharedWorker !== 'undefined',
+      online: navigator.onLine,
+      receivedOutcomes: Object.freeze(
+        readQARecords(sessionStorage, QA_RECORD_KEYS.receivedOutcomes),
+      ),
+      tabID: options.tabID,
+      userAgent: navigator.userAgent,
+      writerGeneration: options.writerGeneration,
+    });
+
+  // a device in airplane mode has no console to reach, so the hook snapshots a refusal itself the
+  // moment it arrives, and keeps the capture in storage until the next snapshot call reads it
+  const captureRefusal = async (trigger: Readonly<ReceivedOutcomeRecord>): Promise<void> => {
+    const capturedAt = Date.now();
+    const tab = readTabRecord();
+
+    try {
+      const worker = await options.client.readDebugSnapshot({});
+
+      writeRefusalCapture({ capturedAt, tab, trigger, worker });
+    } catch (error) {
+      writeRefusalCapture({ capturedAt, tab, trigger, workerError: String(error) });
+    }
+  };
+
+  const unsubscribe = subscribeToRunOutcomes((received) => {
+    const record = { ...received, receivedAt: Date.now() };
+
+    // the tab's session storage outlives the hook's re-registrations and a reload, so the record
+    // lists every outcome that reached the tab, whichever worker sent it
+    writeQARecord({
+      key: QA_RECORD_KEYS.receivedOutcomes,
+      maxRecords: MAX_RECEIVED_OUTCOMES,
+      record,
+      storage: sessionStorage,
+    });
+
+    if (received.outcome.kind === RunOutcomeKind.Refused) {
+      void captureRefusal(record);
+    }
+  });
+
   const hook: QADebugHook = {
     setSpeed: async (speed) => {
       if (!Number.isInteger(speed) || speed < 1 || speed > QA_SIM_SPEED_MAX) {
@@ -48,16 +108,17 @@ export function registerQADebugHook(options: Readonly<RegisterQADebugHookOptions
       // merged object is what makes the whole snapshot read-only
       const worker = await options.client.readDebugSnapshot({});
 
+      const refusalCaptures = readQARecords(localStorage, QA_RECORD_KEYS.refusalCaptures);
+
+      localStorage.removeItem(QA_RECORD_KEYS.refusalCaptures);
+
       return Object.freeze({
         ...worker,
+        refusalCaptures: Object.freeze(refusalCaptures),
 
         // the page's own view of the network: a DevTools network toggle covers the page and never
         // its shared worker, so the two can disagree
-        tab: Object.freeze({
-          online: navigator.onLine,
-          tabID: options.tabID,
-          writerGeneration: options.writerGeneration,
-        }),
+        tab: readTabRecord(),
       });
     },
   };
@@ -65,8 +126,23 @@ export function registerQADebugHook(options: Readonly<RegisterQADebugHookOptions
   globalThis.__versQA = hook;
 
   return () => {
+    unsubscribe();
+
     if (globalThis.__versQA === hook) {
       Reflect.deleteProperty(globalThis, '__versQA');
     }
   };
+}
+
+// a refusal can repeat while the network stays down, so storage keeps only the latest few, and a
+// phone's storage quota never fills with them
+const MAX_REFUSAL_CAPTURES = 3;
+
+function writeRefusalCapture(capture: unknown): void {
+  writeQARecord({
+    key: QA_RECORD_KEYS.refusalCaptures,
+    maxRecords: MAX_REFUSAL_CAPTURES,
+    record: capture,
+    storage: localStorage,
+  });
 }

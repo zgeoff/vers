@@ -119,7 +119,13 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
       debug.recordEvent(event.type, event.detail);
     }
 
-    broadcastChannel.postMessage(message);
+    // every worker on the origin shares the channel, so an outcome names the worker that sent it
+    const sent =
+      message.type === WorkerMessageType.ActivityEnded
+        ? { ...message, workerID: debug.workerID }
+        : message;
+
+    broadcastChannel.postMessage(sent);
   };
 
   const updateConnectivity = (online: boolean) => {

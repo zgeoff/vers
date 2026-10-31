@@ -9,6 +9,9 @@ const activityEndedMessageSchema = z
   .object({
     outcome: runOutcomeSchema,
     type: z.literal(WorkerMessageType.ActivityEnded),
+
+    // a worker from a build that predates the stamp sends none
+    workerID: z.string().exactOptional(),
   })
   .readonly();
 
