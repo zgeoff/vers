@@ -6,6 +6,8 @@ description:
   comments, one-off codemods, and the role table of function verbs whose promises the function-verb
   and verb-contract lint rules check. Load before writing, reviewing, or renaming any TypeScript,
   with the repo's project-code-style skill beside it.
+metadata:
+  kind: rule-set
 ---
 
 # Code style
