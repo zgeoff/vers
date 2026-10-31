@@ -9,6 +9,7 @@ import type {
 import { ActivityFailureAction } from '@vers/idle-core';
 
 interface StubWorkerClientOptions {
+  readonly readDebugSnapshot?: WorkerClient['readDebugSnapshot'];
   readonly readUndeliveredWork?: WorkerClient['readUndeliveredWork'];
   readonly removeUndeliveredWork?: WorkerClient['removeUndeliveredWork'];
   readonly startActivity?: WorkerClient['startActivity'];
@@ -55,7 +56,9 @@ export function createStubWorkerClient(
     cacheNodeSeeds: mock(() => Promise.resolve({ ok: true as const })),
     disconnect: mock(() => Promise.resolve({ ok: true as const })),
     initialize: mock(() => Promise.resolve(DEFAULT_INITIALIZE_RESULT)),
-    readDebugSnapshot: mock(() => Promise.resolve(DEFAULT_DEBUG_SNAPSHOT)),
+    readDebugSnapshot: mock(
+      options.readDebugSnapshot ?? (() => Promise.resolve(DEFAULT_DEBUG_SNAPSHOT)),
+    ),
     readUndeliveredWork: mock(
       options.readUndeliveredWork ?? (() => Promise.resolve(DEFAULT_UNDELIVERED_WORK)),
     ),

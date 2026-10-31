@@ -70,6 +70,8 @@ export type {
   StartStampsPreference,
 } from './submission/types';
 
+export type { ReceivedRunOutcome } from './transport/subscribe-to-run-outcomes';
+export { subscribeToRunOutcomes } from './transport/subscribe-to-run-outcomes';
 export type { WorkerClient } from './transport/types';
 export * from './types';
 export { OFFLINE_CAP_WARNING_MS } from './worker/offline-cap-warning-ms';

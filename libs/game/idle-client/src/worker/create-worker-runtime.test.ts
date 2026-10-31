@@ -325,6 +325,54 @@ test('it closes the connection on disconnect so no further call it makes is answ
   ).toReject();
 });
 
+test("it names the sending worker on a run's outcome", async () => {
+  const viewer = await createViewer();
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
+
+  // this seed's placeholder encounter completes in exactly 60s of simulated time, and a zero-gap
+  // active row makes the resync attach it live
+  await db.activityCollection.create({
+    avatarID: viewer.avatar.id,
+    encounterNode: { difficulty: 1 },
+    scopeID: '0_0',
+    seed: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaa6072',
+    startedAt: new Date(),
+  });
+
+  const clock = createFastClock();
+
+  using runtime = createWorkerRuntime({ client, now: clock.now });
+
+  const ctx = setupTest();
+  const broadcasts = ctx.collectBroadcasts();
+  const testClient = ctx.createConnectedTestClient(runtime);
+
+  await testClient.initialize({});
+  await testClient.reportOnline({ avatarID: viewer.avatar.id, claim: false });
+
+  await waitFor(
+    () => {
+      clock.jump(65_000);
+
+      expect(broadcasts.received).toContainEqual(
+        expect.objectContaining({ type: WorkerMessageType.ActivityEnded }),
+      );
+    },
+
+    // the tick loop paces itself on real timers between the many timesteps a jump spans
+    { timeoutMs: 5000 },
+  );
+
+  const snapshot = await testClient.readDebugSnapshot({});
+
+  expect(broadcasts.received).toContainEqual(
+    expect.objectContaining({
+      type: WorkerMessageType.ActivityEnded,
+      workerID: snapshot.writer.workerID,
+    }),
+  );
+});
+
 test('it delivers the offline continuation once a reconnect drains the held terminal append before it', async () => {
   const viewer = await createViewer();
   const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
