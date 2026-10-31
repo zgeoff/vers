@@ -566,7 +566,7 @@ A resource that a test leaves behind costs memory as well as isolation: `/tmp` a
 on tmpfs sit in RAM until something removes them. A run that a kill stops runs no cleanup at all,
 and [Leftovers of a killed run](./references/cleanup.md#leftovers-of-a-killed-run) covers what it
 leaves. Each run keeps within the
-[memory budgets](https://github.com/zgeoff/tools/blob/main/sync/pre-push/README.md#memory-budgets).
+[memory budgets](https://github.com/zgeoff/tools/blob/main/docs/guides/memory-budgets.md).
 
 A test overrides an environment variable through the repo's env util, and the preload restores every
 override after each test. A test never assigns `process.env` directly. A test never relies on a
