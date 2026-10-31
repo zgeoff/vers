@@ -8,6 +8,8 @@ description:
   when a dependency exception is allowed. Load it before adding, changing, or reviewing a workflow,
   a job, a trigger, a Renovate setting that starts CI runs, or a release-age exclude, an override or
   an audit ignore.
+metadata:
+  kind: rule-set
 ---
 
 # CI design

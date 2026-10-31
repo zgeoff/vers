@@ -4,6 +4,8 @@ description:
   How to write prose that gets committed to the repo — docs/, READMEs, AGENTS.md, skills, and code
   comments — plus the README and docs/ contracts and the scripts that check them. Load it before
   writing, editing, or reviewing any of them.
+metadata:
+  kind: rule-set
 ---
 
 # Writing docs
@@ -94,6 +96,9 @@ Open a reference when the doc is of its kind.
   stays out of `docs/`, and the shapes of the vision doc and a spike.
 - [READMEs](./references/readmes.md): the sections and line limits of a package, repo, or folder
   README.
+- [Don't copy what the code owns](./references/copying-what-the-code-owns.md): a doc that would
+  repeat a schema, a config, a constant, or a list the code holds.
+- [Reviewing a doc](./references/reviewing-a-doc.md): a review of a doc, and its report.
 
 ## Loading the skill
 
@@ -172,53 +177,8 @@ mechanism once. What each value means belongs in the doc for the feature that ow
 
 ### Don't copy what the code owns
 
-Anything the code defines, describe rather than copy. A copy goes stale the next time someone
-changes the code, and nothing tells you. This covers four things.
-
-**Lists.** If the repo already defines a list, such as the packages under a directory, the apps in a
-manifest, or the env keys a service reads, describe how the list is defined instead of writing it
-out.
-
-- Bad: "The domain services — `service-cart`, `service-catalog`, `service-checkout`,
-  `service-invoice`, `service-refund`, and `service-shipping` — are private."
-- Good: "The domain services (every `services/*` app) are private."
-
-Name an individual member only when it behaves differently from the rest. If a list is partly from
-the code and partly external, describe the rule for the code-defined members and list the external
-ones by name. Two kinds of list are fine to write out: commands the reader will run, and a table
-where the list is the key column and the other columns hold facts that aren't in the code.
-
-**Numbers.** Don't put a config value in a doc: a timeout, a threshold, a retry limit, a schedule, a
-cap, a byte length. State the rule the number serves instead.
-
-- Bad: "`idle_timeout` (240 s) closes a pooled connection before Neon's 300 s suspend closes it."
-- Good: "An idle pooled connection closes before Neon's suspend closes it from the server side."
-
-A number belongs in a doc only when the code doesn't decide it: a period fixed by a protocol, a cap
-that a design defines, a count that is the point ("three classes"), or a measurement with its
-source, like a bundle size or an observed latency. An architecture doc states even those as the rule
-they serve ("the keepalive period the protocol fixes"), and the guide or runbook that needs the
-number states it. `chex prose` fails on a value with a unit under `docs/architecture/` outside code.
-
-**Names.** Don't refer to something by its function name, option name, column, env var, or file
-path. A rename breaks the reference silently. Name the role instead: "the admission handler", "the
-database factory".
-
-- Bad: "`resendOnTimeout` (`src/client/retry/`) retries a GET up to three times."
-- Good: "The retry policy resends a GET when an attempt times out."
-
-A library, product, protocol, or algorithm the system is built from keeps its real name: pg-boss,
-Neon, SQLite's WAL mode, Ed25519. Replacing one is an architecture change, so a refactor never
-breaks the name. A workspace package's name may appear once, in passing, where the reader needs to
-find the code.
-
-Three kinds of identifier are fine too: an error code or wire field a client switches on, a domain
-term the doc defines that also happens to be an identifier (the `Pending` order state, `cartToken`),
-and a command, key, or path the reader types. The name of an outside resource that the reader types
-into another tool, such as a database branch or an MCP source, counts as a key the reader types.
-
-**Code.** A code block holds a command the reader runs or a short made-up example. Code that exists
-in the repo gets a link, not a copy. The typechecker checks the source file, not your copy of it.
+What to write in place of a copy of the code is in
+[Don't copy what the code owns](./references/copying-what-the-code-owns.md).
 
 ## Writing the sentences
 
@@ -506,54 +466,5 @@ if the break felt necessary, give the section under it a heading.
 
 ## Reviewing a doc
 
-Before you commit, review each file you touched in four passes. A review subagent runs the same four
-passes with this guide as its only reference.
-
-1. What it says. List the points each section makes and judge each one against "Deciding what to
-   include". Check every fact against the doc that owns it, and each doc against
-   [The docs/ tree](./references/docs-tree.md) and [READMEs](./references/readmes.md). For an
-   architecture doc, also run the model test: read only its first sentences and its diagrams, and
-   check that they give a correct rough model; then pick a case the doc never names and check that
-   the doc lets you predict what the system does.
-2. How it says it. Reread each surviving paragraph against "Writing the sentences", "Choosing
-   words", "Shaping the doc", and "Formatting and links", in that order.
-3. The scripted checks. Run from the repo root; the repo's `check:docs` script names the checks it
-   takes, and CI runs the same ones:
-
-   ```bash
-   bun x @zgeoff/chex prose length links
-   ```
-
-   `chex prose` reads the READMEs, each spike's `results.md`, the Markdown under `docs/`, and each
-   skill's Markdown. `chex length` prints each README against the limit its path sets and each docs/
-   file over its cap, fails on a README over its limit, and its last line counts the READMEs and
-   those over their limit. `chex vision` fails on a missing or over-long `docs/vision.md`, in a repo
-   whose `check:docs` names it. `chex links` checks every relative link and anchor in the READMEs,
-   the `results.md` files, `docs/`, and the skills, and fails on a broken one. It skips the
-   docs-writing, project-docs-writing, and skill-writing skills, whose examples link to placeholder
-   targets. Pass paths to check other Markdown. Both skip a file git marks `linguist-vendored`. To
-   check other prose, such as AGENTS.md, run `bun x @zgeoff/chex prose <path>...` on it.
-
-   `chex prose` fails on traces of the work session, the banned words a grep can catch, values with
-   units under `docs/architecture/`, formatting faults, untagged code blocks, and a paragraph over
-   its word limit in a file the branch changes. It then prints candidates (filler words that have
-   term-of-art uses, speech verbs on data, delta words, headings written as claims), which need
-   judgment and never fail the run. It skips this skill's own directory, because the examples here
-   contain those patterns on purpose. If you're reviewing this skill, run the greps by hand and
-   judge the hits.
-
-4. The links. Walk each changed section's links and confirm the link text still matches the heading
-   it points to.
-
-### What a review report looks like
-
-A report is a list of findings followed by a verdict. Each finding is one line:
-
-```text
-path:line — rule — "the quoted text" — the proposed fix
-```
-
-The rule is the heading of the section the finding falls under. The proposed fix is a rewritten
-sentence or "delete". Group findings by pass. End with `clean` if there are no findings, or `fail`
-and the count. A reviewer proposes and never edits. The writer then fixes each finding by rewriting
-from the facts, not by pasting the reviewer's sentence in.
+The passes of a doc review, and the report it hands back, are in
+[Reviewing a doc](./references/reviewing-a-doc.md).

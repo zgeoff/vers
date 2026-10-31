@@ -5,6 +5,8 @@ description:
   instead of copying it, how to keep them true, and the script that checks them. Load it before
   writing, editing, or reviewing a SKILL.md or a skill's references, and before answering a review
   finding on one.
+metadata:
+  kind: rule-set
 ---
 
 # Writing skills

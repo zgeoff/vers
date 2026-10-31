@@ -101,6 +101,6 @@ processes, temp folders, test homes, and database clones it acquired stay behind
 - The repo's test script or preload sweeps at the start of each run. The sweep removes what earlier
   runs left and no live process owns: per-run folders, stale test homes, clones whose process is
   gone, and templates of old hashes. It never removes the
-  [current template](../SKILL.md#per-run-templates) or a resource of a run that is still going, and
-  a test names what it never touches, as the testing skill's [Assertions](../SKILL.md#assertions)
-  section describes.
+  [current template](./slow-tests.md#per-run-templates) or a resource of a run that is still going,
+  and a test names what it never touches, as the testing skill's
+  [Assertions](../SKILL.md#assertions) section describes.
