@@ -1,6 +1,6 @@
 import { expect, onTestFinished, test } from 'bun:test';
 import type { WorkerDebugSnapshot } from '@vers/idle-client';
-import { waitFor } from '@vers/test-utils';
+import { makeAnswerQueue, waitFor } from '@vers/test-utils';
 import invariant from 'tiny-invariant';
 import { createStubWorkerClient } from '../../test-utils/create-stub-worker-client';
 import { createQARecordStore } from './create-qa-record-store';
@@ -298,6 +298,84 @@ test('it returns a capture with its worker snapshot from a snapshot call made be
   ]);
 
   expect(readRefusalCaptures(localStorage)).toStrictEqual([]);
+});
+
+test('it returns a capture that a refusal adds while a snapshot call waits, with its worker answer', async () => {
+  const ctx = setupTest();
+  const firstRead = Promise.withResolvers<WorkerDebugSnapshot>();
+  const secondRead = Promise.withResolvers<WorkerDebugSnapshot>();
+  const snapshotRead = Promise.withResolvers<WorkerDebugSnapshot>();
+
+  const unregister = registerQADebugHook({
+    client: createStubWorkerClient({
+      readDebugSnapshot: makeAnswerQueue([
+        firstRead.promise,
+        secondRead.promise,
+        snapshotRead.promise,
+      ]),
+    }),
+    isQAAvatar: true,
+    records: ctx.records,
+    tabID: 'tab_1',
+    workerTimeoutMs: 1000,
+    writerGeneration: 0,
+  });
+
+  onTestFinished(unregister);
+
+  ctx.sender.postMessage({
+    outcome: { activityID: 'act_first', avatarID: 'avatar_1', kind: 'refused', xp: 0 },
+    type: 'activity_ended',
+    workerID: 'worker_1',
+  });
+
+  await waitFor(() => {
+    expect(readRefusalCaptures(localStorage).map((entry) => entry.capture.status)).toStrictEqual([
+      'pending',
+    ]);
+  });
+
+  invariant(globalThis.__versQA, 'the hook is installed');
+
+  const pendingSnapshot = globalThis.__versQA.snapshot();
+
+  ctx.sender.postMessage({
+    outcome: { activityID: 'act_second', avatarID: 'avatar_1', kind: 'refused', xp: 0 },
+    type: 'activity_ended',
+    workerID: 'worker_1',
+  });
+
+  await waitFor(() => {
+    expect(readRefusalCaptures(localStorage).map((entry) => entry.capture.status)).toStrictEqual([
+      'pending',
+      'pending',
+    ]);
+  });
+
+  firstRead.reject(new Error('the first worker read answered'));
+
+  await waitFor(() => {
+    expect(readRefusalCaptures(localStorage).map((entry) => entry.capture.status)).toStrictEqual([
+      'complete',
+      'pending',
+    ]);
+  });
+
+  secondRead.reject(new Error('the second worker read answered'));
+  snapshotRead.reject(new Error('the worker is busy'));
+
+  const snapshot = await pendingSnapshot;
+
+  expect(snapshot.refusalCaptures).toStrictEqual([
+    expect.objectContaining({
+      status: 'complete',
+      workerError: 'Error: the first worker read answered',
+    }),
+    expect.objectContaining({
+      status: 'complete',
+      workerError: 'Error: the second worker read answered',
+    }),
+  ]);
 });
 
 test('it keeps a pending capture for its worker answer across a re-registration of the hook', async () => {

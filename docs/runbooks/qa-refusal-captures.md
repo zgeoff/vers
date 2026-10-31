@@ -12,15 +12,18 @@ When the tab receives a refused outcome, the page writes a capture with the time
 and the outcome to local storage at once, marked `pending`. It then adds the worker snapshot and
 marks the capture `complete`. A worker that fails, or that gives no answer within the hook's wait of
 a few seconds, adds its error in place of the snapshot. Each capture has a local storage key of its
-own, so a tab that writes one capture never touches another tab's capture.
+own, so a tab that writes one capture touches no other capture, with one exception: a new capture
+past the limit evicts the oldest one, whichever tab owns it.
 
 ## How a snapshot reads captures
 
-A `snapshot()` call first waits for the captures this page is still taking, so it returns each of
-them complete, even when the hook registered again in between. It then returns every saved capture
-in `refusalCaptures`, oldest first, and removes the complete ones from storage. The call reads the
-saved captures before it asks the worker for the current state, so a hung worker still lets the call
-return them, with `workerError` in place of the worker state.
+A `snapshot()` call first waits for the captures this page is still taking, including one that a
+refusal starts during the wait, so it returns each of them complete, even when the hook registered
+again in between. The wait ends after twice the hook's worker wait, so a stream of refusals cannot
+hold the call open. It then returns every saved capture in `refusalCaptures`, oldest first, and
+removes the complete ones from storage. The call reads the saved captures before it asks the worker
+for the current state, so a hung worker still lets the call return them, with `workerError` in place
+of the worker state.
 
 A storage access, read or write that fails, such as on a full quota or a blocked origin, goes to the
 error backend and appears in `captureFailures` on the next snapshot. The capture goes on with what

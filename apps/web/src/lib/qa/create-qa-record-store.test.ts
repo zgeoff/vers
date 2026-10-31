@@ -95,6 +95,14 @@ test('it keeps both captures complete when two tabs interleave on different capt
   ]);
 });
 
+test('it stops waiting for a capture that never settles once its deadline passes', async () => {
+  const ctx = setupTest();
+
+  ctx.records.trackCapture(Promise.withResolvers<undefined>().promise);
+
+  await expect(ctx.records.settleCaptures(20)).toResolve();
+});
+
 test('it hands a complete capture to one take only', () => {
   const ctx = setupTest();
 

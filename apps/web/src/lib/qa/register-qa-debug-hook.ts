@@ -124,8 +124,9 @@ export function registerQADebugHook(options: Readonly<RegisterQADebugHookOptions
       return status.speed;
     },
     snapshot: async () => {
-      // a capture still asking its worker finishes first, so the call returns it complete
-      await records.settleCaptures();
+      // a capture still asking its worker finishes first, so the call returns it complete; twice the
+      // worker wait covers one capture that starts just as the last one ends
+      await records.settleCaptures(2 * options.workerTimeoutMs);
 
       const refusalCaptures = records.takeCaptures(Date.now());
 

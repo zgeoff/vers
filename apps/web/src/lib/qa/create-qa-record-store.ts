@@ -46,8 +46,8 @@ export function createQARecordStore(storage: Readonly<QARecordStorage>): QARecor
   };
 
   return {
-    // each capture lives under its own key, so a tab that writes one capture never touches
-    // another tab's capture
+    // each capture lives under its own key, so a tab's write touches no other capture, except that
+    // a capture past the limit evicts the oldest one, whichever tab owns it
     addCapture: (capture) => {
       withGuard(() => {
         const captureStorage = storage.captures();
@@ -97,8 +97,23 @@ export function createQARecordStore(storage: Readonly<QARecordStorage>): QARecor
     readReceivedOutcomes: () =>
       withGuard(() => readQARecords(storage.outcomes(), QA_RECORD_KEYS.receivedOutcomes), []),
     recordFailure,
-    settleCaptures: async () => {
-      await Promise.allSettled(inFlight);
+
+    // a refusal can arrive during the wait and add a capture, so the wait reads the set again after
+    // each round, and one deadline ends it so a stream of refusals cannot hold a snapshot open
+    settleCaptures: async (timeoutMs) => {
+      const deadline = { expired: false, ...Promise.withResolvers<void>() };
+
+      const timer = setTimeout(() => {
+        deadline.expired = true;
+
+        deadline.resolve();
+      }, timeoutMs);
+
+      while (inFlight.size > 0 && !deadline.expired) {
+        await Promise.race([Promise.allSettled(inFlight), deadline.promise]);
+      }
+
+      clearTimeout(timer);
     },
     takeCaptures: (now) =>
       withGuard(() => {

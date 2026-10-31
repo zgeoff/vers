@@ -34,7 +34,7 @@ export interface QARecordStore {
   readonly readFailures: () => ReadonlyArray<string>;
   readonly readReceivedOutcomes: () => ReadonlyArray<unknown>;
   readonly recordFailure: (error: unknown) => void;
-  readonly settleCaptures: () => Promise<void>;
+  readonly settleCaptures: (timeoutMs: number) => Promise<void>;
   readonly takeCaptures: (now: number) => ReadonlyArray<unknown>;
   readonly trackCapture: (capture: Promise<void>) => void;
 }
