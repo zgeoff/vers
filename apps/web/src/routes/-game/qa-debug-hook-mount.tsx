@@ -11,6 +11,9 @@ import { registerQADebugHook } from '../../lib/qa/register-qa-debug-hook';
 // visits, and the hook must keep naming the same tab across them
 const TAB_ID = crypto.randomUUID();
 
+// a live worker answers a snapshot within milliseconds, so a few seconds marks one that hangs
+const WORKER_TIMEOUT_MS = 3000;
+
 interface QADebugHookMountProps {
   readonly qaAccount: boolean;
 }
@@ -33,7 +36,14 @@ export function QADebugHookMount(props: Readonly<QADebugHookMountProps>) {
 
     const unregister =
       client !== undefined && enabled
-        ? registerQADebugHook({ client, isQAAvatar, tabID: TAB_ID, writerGeneration })
+        ? registerQADebugHook({
+            client,
+            isQAAvatar,
+            storage: { captures: localStorage, outcomes: sessionStorage },
+            tabID: TAB_ID,
+            workerTimeoutMs: WORKER_TIMEOUT_MS,
+            writerGeneration,
+          })
         : null;
 
     return () => {

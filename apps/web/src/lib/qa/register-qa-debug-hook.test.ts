@@ -23,7 +23,9 @@ test('it installs a snapshot function that merges the tab identity onto the work
   const unregister = registerQADebugHook({
     client,
     isQAAvatar: true,
+    storage: { captures: localStorage, outcomes: sessionStorage },
     tabID: 'tab_1',
+    workerTimeoutMs: 1000,
     writerGeneration: 2,
   });
 
@@ -45,7 +47,9 @@ test('it freezes the tab record on the snapshot', async () => {
   const unregister = registerQADebugHook({
     client: createStubWorkerClient(),
     isQAAvatar: true,
+    storage: { captures: localStorage, outcomes: sessionStorage },
     tabID: 'tab_1',
+    workerTimeoutMs: 1000,
     writerGeneration: 2,
   });
 
@@ -62,7 +66,9 @@ test('it removes the global on unregister', () => {
   const unregister = registerQADebugHook({
     client: createStubWorkerClient(),
     isQAAvatar: true,
+    storage: { captures: localStorage, outcomes: sessionStorage },
     tabID: 'tab_1',
+    workerTimeoutMs: 1000,
     writerGeneration: 0,
   });
 
@@ -75,14 +81,18 @@ test('it leaves a newer registration in place when an older one unregisters', ()
   const first = registerQADebugHook({
     client: createStubWorkerClient(),
     isQAAvatar: true,
+    storage: { captures: localStorage, outcomes: sessionStorage },
     tabID: 'tab_1',
+    workerTimeoutMs: 1000,
     writerGeneration: 0,
   });
 
   const second = registerQADebugHook({
     client: createStubWorkerClient(),
     isQAAvatar: true,
+    storage: { captures: localStorage, outcomes: sessionStorage },
     tabID: 'tab_1',
+    workerTimeoutMs: 1000,
     writerGeneration: 1,
   });
 
@@ -98,7 +108,9 @@ test('it forwards a speed to the worker with the QA flag of the active avatar an
   const unregister = registerQADebugHook({
     client,
     isQAAvatar: true,
+    storage: { captures: localStorage, outcomes: sessionStorage },
     tabID: 'tab_1',
+    workerTimeoutMs: 1000,
     writerGeneration: 0,
   });
 
@@ -118,7 +130,9 @@ test('it throws when the worker refuses the speed for an avatar that is not flag
   const unregister = registerQADebugHook({
     client: createStubWorkerClient(),
     isQAAvatar: false,
+    storage: { captures: localStorage, outcomes: sessionStorage },
     tabID: 'tab_1',
+    workerTimeoutMs: 1000,
     writerGeneration: 0,
   });
 
@@ -134,7 +148,9 @@ test('it rejects a speed outside 1 to 20 before asking the worker', () => {
   const unregister = registerQADebugHook({
     client,
     isQAAvatar: true,
+    storage: { captures: localStorage, outcomes: sessionStorage },
     tabID: 'tab_1',
+    workerTimeoutMs: 1000,
     writerGeneration: 0,
   });
 
@@ -148,12 +164,13 @@ test('it rejects a speed outside 1 to 20 before asking the worker', () => {
 
 test('it keeps a refusal captured at the moment it arrives until the next snapshot reads it', async () => {
   const ctx = setupTest();
-  const client = createStubWorkerClient();
 
   const unregister = registerQADebugHook({
-    client,
+    client: createStubWorkerClient(),
     isQAAvatar: true,
+    storage: { captures: localStorage, outcomes: sessionStorage },
     tabID: 'tab_1',
+    workerTimeoutMs: 1000,
     writerGeneration: 3,
   });
 
@@ -166,7 +183,7 @@ test('it keeps a refusal captured at the moment it arrives until the next snapsh
   });
 
   await waitFor(() => {
-    expect(localStorage.getItem(QA_RECORD_KEYS.refusalCaptures)).toInclude('"part":"worker"');
+    expect(localStorage.getItem(QA_RECORD_KEYS.refusalCaptures)).toInclude('"worker":');
   });
 
   invariant(globalThis.__versQA, 'the hook is installed');
@@ -181,8 +198,8 @@ test('it keeps a refusal captured at the moment it arrives until the next snapsh
 
   expect(snapshot.refusalCaptures).toStrictEqual([
     {
+      captureID: expect.any(String),
       capturedAt: expect.any(Number),
-      part: 'tab',
       tab: {
         hasSharedWorker: typeof SharedWorker !== 'undefined',
         online: navigator.onLine,
@@ -192,10 +209,6 @@ test('it keeps a refusal captured at the moment it arrives until the next snapsh
         writerGeneration: 3,
       },
       trigger,
-    },
-    {
-      capturedAt: expect.any(Number),
-      part: 'worker',
       worker: expect.objectContaining({ writer: { bootedAt: 0, workerID: 'worker_stub' } }),
     },
   ]);
@@ -207,7 +220,9 @@ test('it hands a refusal capture to one snapshot only', async () => {
   const unregister = registerQADebugHook({
     client: createStubWorkerClient(),
     isQAAvatar: true,
+    storage: { captures: localStorage, outcomes: sessionStorage },
     tabID: 'tab_1',
+    workerTimeoutMs: 1000,
     writerGeneration: 0,
   });
 
@@ -220,7 +235,7 @@ test('it hands a refusal capture to one snapshot only', async () => {
   });
 
   await waitFor(() => {
-    expect(localStorage.getItem(QA_RECORD_KEYS.refusalCaptures)).toInclude('"part":"worker"');
+    expect(localStorage.getItem(QA_RECORD_KEYS.refusalCaptures)).toInclude('"worker":');
   });
 
   invariant(globalThis.__versQA, 'the hook is installed');
@@ -240,7 +255,9 @@ test('it records the worker error in a refusal capture when the worker snapshot 
       readDebugSnapshot: () => Promise.reject(new Error('the worker port is closed')),
     }),
     isQAAvatar: true,
+    storage: { captures: localStorage, outcomes: sessionStorage },
     tabID: 'tab_1',
+    workerTimeoutMs: 1000,
     writerGeneration: 0,
   });
 
@@ -253,22 +270,17 @@ test('it records the worker error in a refusal capture when the worker snapshot 
   });
 
   await waitFor(() => {
-    expect(localStorage.getItem(QA_RECORD_KEYS.refusalCaptures)).toInclude('"part":"worker"');
+    expect(localStorage.getItem(QA_RECORD_KEYS.refusalCaptures)).toInclude('"workerError":');
   });
 
   const stored: unknown = JSON.parse(localStorage.getItem(QA_RECORD_KEYS.refusalCaptures) ?? '');
 
   expect(stored).toStrictEqual([
-    expect.objectContaining({ part: 'tab' }),
-    {
-      capturedAt: expect.any(Number),
-      part: 'worker',
-      workerError: 'Error: the worker port is closed',
-    },
+    expect.objectContaining({ workerError: 'Error: the worker port is closed' }),
   ]);
 });
 
-test('it keeps the tab half of a refusal capture while the worker never answers', async () => {
+test('it keeps the tab half of a refusal capture and records the timeout when the worker never answers', async () => {
   const ctx = setupTest();
 
   const unregister = registerQADebugHook({
@@ -276,7 +288,9 @@ test('it keeps the tab half of a refusal capture while the worker never answers'
       readDebugSnapshot: () => Promise.withResolvers<never>().promise,
     }),
     isQAAvatar: true,
+    storage: { captures: localStorage, outcomes: sessionStorage },
     tabID: 'tab_1',
+    workerTimeoutMs: 20,
     writerGeneration: 0,
   });
 
@@ -289,19 +303,133 @@ test('it keeps the tab half of a refusal capture while the worker never answers'
   });
 
   await waitFor(() => {
-    expect(localStorage.getItem(QA_RECORD_KEYS.refusalCaptures)).not.toBeNull();
+    expect(localStorage.getItem(QA_RECORD_KEYS.refusalCaptures)).toInclude('"workerError":');
   });
 
   const stored: unknown = JSON.parse(localStorage.getItem(QA_RECORD_KEYS.refusalCaptures) ?? '');
 
   expect(stored).toStrictEqual([
-    {
-      capturedAt: expect.any(Number),
-      part: 'tab',
+    expect.objectContaining({
       tab: expect.objectContaining({ tabID: 'tab_1' }),
       trigger: expect.objectContaining({ workerID: 'worker_1' }),
-    },
+      workerError: 'Error: the worker sent no snapshot within 20 ms',
+    }),
   ]);
+});
+
+test('it returns the saved captures from a snapshot whose worker never answers', async () => {
+  localStorage.setItem(QA_RECORD_KEYS.refusalCaptures, '[{"captureID":"capture_1"}]');
+
+  onTestFinished(() => {
+    localStorage.removeItem(QA_RECORD_KEYS.refusalCaptures);
+  });
+
+  const unregister = registerQADebugHook({
+    client: createStubWorkerClient({
+      readDebugSnapshot: () => Promise.withResolvers<never>().promise,
+    }),
+    isQAAvatar: true,
+    storage: { captures: localStorage, outcomes: sessionStorage },
+    tabID: 'tab_1',
+    workerTimeoutMs: 20,
+    writerGeneration: 0,
+  });
+
+  onTestFinished(unregister);
+  invariant(globalThis.__versQA, 'the hook is installed');
+
+  const snapshot = await globalThis.__versQA.snapshot();
+
+  expect(snapshot).toMatchObject({
+    refusalCaptures: [{ captureID: 'capture_1' }],
+    workerError: 'Error: the worker sent no snapshot within 20 ms',
+  });
+});
+
+test('it reports a capture that a full storage quota refuses on the next snapshot', async () => {
+  const ctx = setupTest();
+
+  const unregister = registerQADebugHook({
+    client: createStubWorkerClient(),
+    isQAAvatar: true,
+    storage: {
+      captures: {
+        clear: () => {},
+        getItem: () => '[]',
+        key: () => null,
+        length: 0,
+        removeItem: () => {},
+        setItem: () => {
+          throw new DOMException('the storage quota is full', 'QuotaExceededError');
+        },
+      },
+      outcomes: sessionStorage,
+    },
+    tabID: 'tab_1',
+    workerTimeoutMs: 1000,
+    writerGeneration: 0,
+  });
+
+  onTestFinished(unregister);
+
+  ctx.sender.postMessage({
+    outcome: { activityID: 'act_refused', avatarID: 'avatar_1', kind: 'refused', xp: 0 },
+    type: 'activity_ended',
+    workerID: 'worker_1',
+  });
+
+  invariant(globalThis.__versQA, 'the hook is installed');
+
+  const hook = globalThis.__versQA;
+
+  await waitFor(async () => {
+    const snapshot = await hook.snapshot();
+
+    expect(snapshot.captureFailures).toStrictEqual([
+      'QuotaExceededError: the storage quota is full',
+      'QuotaExceededError: the storage quota is full',
+    ]);
+  });
+});
+
+test('it keeps no more than the latest 10 captures', async () => {
+  const ctx = setupTest();
+
+  const unregister = registerQADebugHook({
+    client: createStubWorkerClient(),
+    isQAAvatar: true,
+    storage: { captures: localStorage, outcomes: sessionStorage },
+    tabID: 'tab_1',
+    workerTimeoutMs: 1000,
+    writerGeneration: 0,
+  });
+
+  onTestFinished(unregister);
+
+  for (let index = 1; index <= 11; index += 1) {
+    ctx.sender.postMessage({
+      outcome: { activityID: `act_${index}`, avatarID: 'avatar_1', kind: 'refused', xp: 0 },
+      type: 'activity_ended',
+      workerID: 'worker_1',
+    });
+  }
+
+  await waitFor(() => {
+    const stored: unknown = JSON.parse(
+      localStorage.getItem(QA_RECORD_KEYS.refusalCaptures) ?? '[]',
+    );
+
+    expect(stored).toStrictEqual(
+      Array.from({ length: 10 }, (_, index) =>
+        expect.objectContaining({
+          trigger: expect.objectContaining({
+            outcome: expect.objectContaining({ activityID: `act_${index + 2}` }),
+          }),
+          worker: expect.any(Object),
+        }),
+      ),
+    );
+  });
 });
 
 test('it lists each outcome the tab received, with the sending worker', async () => {
@@ -310,7 +438,9 @@ test('it lists each outcome the tab received, with the sending worker', async ()
   const unregister = registerQADebugHook({
     client: createStubWorkerClient(),
     isQAAvatar: true,
+    storage: { captures: localStorage, outcomes: sessionStorage },
     tabID: 'tab_1',
+    workerTimeoutMs: 1000,
     writerGeneration: 0,
   });
 
@@ -345,7 +475,9 @@ test('it captures a refused run and no completed one', async () => {
   const unregister = registerQADebugHook({
     client: createStubWorkerClient(),
     isQAAvatar: true,
+    storage: { captures: localStorage, outcomes: sessionStorage },
     tabID: 'tab_1',
+    workerTimeoutMs: 1000,
     writerGeneration: 0,
   });
 
@@ -364,7 +496,7 @@ test('it captures a refused run and no completed one', async () => {
   });
 
   await waitFor(() => {
-    expect(localStorage.getItem(QA_RECORD_KEYS.refusalCaptures)).toInclude('"part":"worker"');
+    expect(localStorage.getItem(QA_RECORD_KEYS.refusalCaptures)).toInclude('"worker":');
   });
 
   invariant(globalThis.__versQA, 'the hook is installed');
@@ -377,7 +509,6 @@ test('it captures a refused run and no completed one', async () => {
         outcome: { activityID: 'act_refused', avatarID: 'avatar_1', kind: 'refused', xp: 0 },
       }),
     }),
-    expect.objectContaining({ part: 'worker' }),
   ]);
 });
 
@@ -387,7 +518,9 @@ test('it keeps the tab record of received outcomes across a re-registration', as
   const first = registerQADebugHook({
     client: createStubWorkerClient(),
     isQAAvatar: true,
+    storage: { captures: localStorage, outcomes: sessionStorage },
     tabID: 'tab_1',
+    workerTimeoutMs: 1000,
     writerGeneration: 0,
   });
 
@@ -408,7 +541,9 @@ test('it keeps the tab record of received outcomes across a re-registration', as
   const second = registerQADebugHook({
     client: createStubWorkerClient(),
     isQAAvatar: true,
+    storage: { captures: localStorage, outcomes: sessionStorage },
     tabID: 'tab_1',
+    workerTimeoutMs: 1000,
     writerGeneration: 1,
   });
 
