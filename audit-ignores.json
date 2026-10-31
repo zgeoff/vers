@@ -1,4 +1,14 @@
 {
+  "GHSA-3g3m-2fjr-6pw4": {
+    "package": "glob",
+    "reason": "The fix is glob 14.0.2, but archiver-utils@5.0.2 accepts only ^10.0.0.",
+    "expires": "2026-11-30"
+  },
+  "GHSA-g3hv-75wg-m249": {
+    "package": "minimatch",
+    "reason": "The fix is minimatch 11.0.1, but @eslint/config-array@0.23.5 accepts only ^10.2.4; @npmcli/arborist@9.9.0 accepts only ^10.0.3; @npmcli/map-workspaces@5.0.3 accepts only ^10.0.3; @tufjs/models@4.1.0 accepts only ^10.1.1; eslint@10.8.0 accepts only ^10.2.5; glob@13.0.6 accepts only ^10.2.2; ignore-walk@8.0.0 accepts only ^10.0.3.",
+    "expires": "2026-11-30"
+  },
   "GHSA-gcqx-w48m-w2h4": {
     "package": "deepmerge",
     "reason": "No patched deepmerge release exists (vulnerable >= 4.2.0, <= 4.3.1); html-to-text@9.0.5 reaches it through @vers/email. Low severity; mergeObject() prototype poisoning.",
