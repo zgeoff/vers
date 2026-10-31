@@ -1069,6 +1069,7 @@
       "name": "@vers/scripts",
       "version": "0.0.0",
       "dependencies": {
+        "@actions/expressions": "catalog:",
         "@dotenvx/dotenvx": "catalog:",
         "@vers/content-registry": "workspace:*",
         "@vers/content-version": "workspace:*",
@@ -1369,6 +1370,7 @@
     "tinypool": "2.2.0",
   },
   "catalog": {
+    "@actions/expressions": "0.3.61",
     "@ark-ui/react": "5.39.3",
     "@babel/core": "8.0.7",
     "@commitlint/cli": "21.2.4",
@@ -1516,6 +1518,8 @@
     "zustand": "5.0.15",
   },
   "packages": {
+    "@actions/expressions": ["@actions/expressions@0.3.61", "", {}, "sha512-Ig+tXELvTjlqxQAWBQnLNn2dPpNraLMdSnT+vDzDPmJtbNUhIAH/Z9kVT8pZ8UtJi9vUGs8hwHE8JFJmbOnLEA=="],
+
     "@adobe/css-tools": ["@adobe/css-tools@4.5.0", "", {}, "sha512-6OzddxPio9UiWTCemp4N8cYLV2ZN1ncRnV1cVGtve7dhPOtRkleRyx32GQCYSwDYgaHU3USMm84tNsvKzRCa1Q=="],
 
     "@apm-js-collab/code-transformer": ["@apm-js-collab/code-transformer@0.18.1", "", { "dependencies": { "@types/estree": "^1.0.8", "astring": "^1.9.0", "esquery": "^1.7.0", "meriyah": "^6.1.4", "semifies": "^1.0.0", "source-map": "^0.6.0" }, "bin": { "code-transformer": "cli.js" } }, "sha512-u1Hb6bHjWtkSpiprwVP6YaHC1DTN4RAU3zYkUDUe7WMnJwdyU1pwTL9dFKiSJB9IiLue/EQovmyx6xhU7FFtAQ=="],

@@ -98,6 +98,11 @@ jobs:
       - name: Check Secrets Manifest
         run: bun run secrets:check
 
+      # a job cancelled by its own concurrency group leaves cancelled() false, so a later job gated
+      # on !cancelled() runs after it unless its if: refuses the cancelled need
+      - name: Check Cancelled Needs
+        run: bun run workflows:check-cancelled-needs
+
       # a change to item-gen, roll-crypto or worldmap-content fails here unless it ships as a new
       # content version, because a retained activity mints through the interpreter its version pins;
       # the base ref's recorded digests stay as they were
@@ -438,10 +443,12 @@ jobs:
     # is about to promote — every app's ref resolves to this commit's build
     # when stale or the newest recorded release otherwise, so the suite always
     # exercises the fleet main is about to become. A failed build leg fails
-    # this job on the missing image instead of skipping it.
+    # this job on the missing image instead of skipping it. A build leg that a
+    # newer run's build cancels leaves cancelled() false, so the job skips on a
+    # cancelled need itself, and the newer run tests the fleet.
     if:
-      ${{ !cancelled() && needs.checks.result == 'success' && needs.e2e.result == 'success' &&
-      needs.manifest.result == 'success' }}
+      ${{ !cancelled() && !contains(needs.*.result, 'cancelled') && needs.checks.result == 'success'
+      && needs.e2e.result == 'success' && needs.manifest.result == 'success' }}
     runs-on: ubuntu-latest
     environment: production
     # image pulls plus stack boot plus journeys is ~6 minutes at worst
@@ -625,12 +632,16 @@ jobs:
 
   verify-fleet:
     name: Verify fleet
-    needs: [checks, e2e, deploy]
+    needs: [checks, e2e, build, stack-e2e, deploy]
     # the deploy gate: every app in the manifest must be online and current, on
     # every green main push — even when every deploy leg skipped. This is what
     # catches a silently-missing deploy (an app at zero machines, or a fleet
     # still running code from before a cancelled rollout) and fails the run.
-    if: ${{ !cancelled() && needs.checks.result == 'success' && needs.e2e.result == 'success' }}
+    # A newer run that cancels this run's build or full-stack gate deploys and
+    # verifies the fleet itself, and that cancel leaves cancelled() false.
+    if:
+      ${{ !cancelled() && !contains(needs.*.result, 'cancelled') && needs.checks.result == 'success'
+      && needs.e2e.result == 'success' }}
     runs-on: ubuntu-latest
     environment: production
     # six fleet reads plus probe retries fit in ~3 minutes at worst

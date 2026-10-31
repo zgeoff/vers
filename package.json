@@ -14,6 +14,7 @@
       "scripts"
     ],
     "catalog": {
+      "@actions/expressions": "0.3.61",
       "@ark-ui/react": "5.39.3",
       "@babel/core": "8.0.7",
       "@commitlint/cli": "21.2.4",
@@ -212,6 +213,7 @@
     "secrets:check": "bun scripts/src/bin/check-secrets-manifest.ts",
     "ladle:dev": "cd libs/design/design-system && ./node_modules/.bin/ladle dev",
     "stack": "bun scripts/src/bin/stack.ts",
+    "workflows:check-cancelled-needs": "bun scripts/src/bin/check-cancelled-need-gates.ts",
     "---PROJECT-SPECIFIC": "",
     "dev:app-web": "turbo run dev --filter=@vers/web",
     "dev:service-avatar": "bun scripts/src/bin/stack.ts stop service-avatar && dotenvx run -f services/avatar/.env.development -- turbo run dev --filter=@vers/service-avatar",
