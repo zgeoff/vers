@@ -64,6 +64,10 @@ const CaptureIDSchema = z.looseObject({ captureID: z.string() });
 export function registerQADebugHook(options: Readonly<RegisterQADebugHookOptions>): () => void {
   const captureFailures: Array<string> = [];
 
+  // the IDs of this page's captures that still wait for the worker, so a snapshot call between a
+  // refusal and the worker's answer leaves those captures in storage for the answer to join
+  const pendingCaptureIDs = new Set<string>();
+
   // a full storage quota loses the record it was writing, so the failure stays in memory for the
   // next snapshot call and goes to the error backend, which queues it while the device is offline
   const writeGuarded = (write: () => void): void => {
@@ -113,6 +117,8 @@ export function registerQADebugHook(options: Readonly<RegisterQADebugHookOptions
     const captureID = crypto.randomUUID();
     const capture = { captureID, capturedAt: Date.now(), tab: readTabRecord(), trigger };
 
+    pendingCaptureIDs.add(captureID);
+
     writeGuarded(() => {
       updateQARecords({
         key: QA_RECORD_KEYS.refusalCaptures,
@@ -137,6 +143,8 @@ export function registerQADebugHook(options: Readonly<RegisterQADebugHookOptions
           }),
       });
     });
+
+    pendingCaptureIDs.delete(captureID);
   };
 
   const unsubscribe = subscribeToRunOutcomes((received) => {
@@ -180,7 +188,19 @@ export function registerQADebugHook(options: Readonly<RegisterQADebugHookOptions
         QA_RECORD_KEYS.refusalCaptures,
       );
 
-      options.storage.captures.removeItem(QA_RECORD_KEYS.refusalCaptures);
+      const pending = refusalCaptures.filter((stored) => {
+        const parsed = CaptureIDSchema.safeParse(stored);
+
+        return parsed.success && pendingCaptureIDs.has(parsed.data.captureID);
+      });
+
+      if (pending.length === 0) {
+        options.storage.captures.removeItem(QA_RECORD_KEYS.refusalCaptures);
+      } else {
+        writeGuarded(() => {
+          options.storage.captures.setItem(QA_RECORD_KEYS.refusalCaptures, JSON.stringify(pending));
+        });
+      }
 
       const workerPart = await readWorkerPart();
 

@@ -247,6 +247,60 @@ test('it hands a refusal capture to one snapshot only', async () => {
   expect(second.refusalCaptures).toStrictEqual([]);
 });
 
+test('it keeps a capture that a snapshot reads before the worker answers until the answer joins it', async () => {
+  const ctx = setupTest();
+
+  const unregister = registerQADebugHook({
+    client: createStubWorkerClient({
+      readDebugSnapshot: () => Promise.withResolvers<never>().promise,
+    }),
+    isQAAvatar: true,
+    storage: { captures: localStorage, outcomes: sessionStorage },
+    tabID: 'tab_1',
+    workerTimeoutMs: 200,
+    writerGeneration: 0,
+  });
+
+  onTestFinished(unregister);
+
+  ctx.sender.postMessage({
+    outcome: { activityID: 'act_refused', avatarID: 'avatar_1', kind: 'refused', xp: 0 },
+    type: 'activity_ended',
+    workerID: 'worker_1',
+  });
+
+  await waitFor(() => {
+    expect(localStorage.getItem(QA_RECORD_KEYS.refusalCaptures)).toInclude('act_refused');
+  });
+
+  invariant(globalThis.__versQA, 'the hook is installed');
+
+  const hook = globalThis.__versQA;
+
+  // the capture's own worker wait started first, so it ends while this snapshot call still waits
+  const early = await hook.snapshot();
+  const late = await hook.snapshot();
+
+  expect(early.refusalCaptures).toStrictEqual([
+    {
+      captureID: expect.any(String),
+      capturedAt: expect.any(Number),
+      tab: expect.objectContaining({ tabID: 'tab_1' }),
+      trigger: expect.objectContaining({ workerID: 'worker_1' }),
+    },
+  ]);
+
+  expect(late.refusalCaptures).toStrictEqual([
+    {
+      captureID: expect.any(String),
+      capturedAt: expect.any(Number),
+      tab: expect.objectContaining({ tabID: 'tab_1' }),
+      trigger: expect.objectContaining({ workerID: 'worker_1' }),
+      workerError: 'Error: the worker sent no snapshot within 200 ms',
+    },
+  ]);
+});
+
 test('it records the worker error in a refusal capture when the worker snapshot fails', async () => {
   const ctx = setupTest();
 
