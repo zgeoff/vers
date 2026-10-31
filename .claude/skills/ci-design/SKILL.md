@@ -163,6 +163,10 @@ Logic in a script runs in the script's tests on every pull request, as the testi
   with `curl`. That script downloads the workflow's scripts and every file they import into
   `$RUNNER_TEMP/tools`, and refuses one that imports a package. A caller pinned to a commit then
   runs that commit's scripts.
+- **A change to a reusable workflow or its step scripts moves every caller's pin.** When a
+  zgeoff/tools commit changes one, the sync opens a pull request in each caller that moves its pins
+  to that commit, even if no synced file changed. Each caller runs the sync engine at its current
+  pin. A fix to the engine reaches a caller only after that caller's pull request merges.
 
 ### The workflow lint
 
