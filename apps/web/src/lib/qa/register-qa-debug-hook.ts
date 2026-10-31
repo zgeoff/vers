@@ -1,11 +1,7 @@
-import * as Sentry from '@sentry/react';
 import { QA_SIM_SPEED_MAX } from '@vers/contract-activity';
 import type { ReceivedRunOutcome, WorkerClient, WorkerDebugSnapshot } from '@vers/idle-client';
 import { RunOutcomeKind, subscribeToRunOutcomes } from '@vers/idle-client';
-import * as z from 'zod';
-import { QA_RECORD_KEYS } from './qa-record-keys';
-import { readQARecords } from './read-qa-records';
-import { updateQARecords } from './update-qa-records';
+import type { QARecordStore, WorkerPart } from './types';
 
 interface ReceivedOutcomeRecord extends ReceivedRunOutcome {
   readonly receivedAt: number;
@@ -19,8 +15,6 @@ interface TabRecord {
   readonly userAgent: string;
   readonly writerGeneration: number;
 }
-
-type WorkerPart = { readonly worker: WorkerDebugSnapshot } | { readonly workerError: string };
 
 interface QADebugSnapshotRecords {
   readonly captureFailures: ReadonlyArray<string>;
@@ -40,52 +34,23 @@ declare global {
   var __versQA: QADebugHook | undefined;
 }
 
-interface QARecordStorage {
-  readonly captures: Storage;
-  readonly outcomes: Storage;
-}
-
 interface RegisterQADebugHookOptions {
   readonly client: WorkerClient;
   readonly isQAAvatar: boolean;
-  readonly storage: Readonly<QARecordStorage>;
+  readonly records: QARecordStore;
   readonly tabID: string;
   readonly workerTimeoutMs: number;
   readonly writerGeneration: number;
 }
 
-const MAX_RECEIVED_OUTCOMES = 50;
-
-// a refusal can repeat while the network stays down, so storage keeps the latest 10 captures, and
-// a phone's storage quota never fills with them
-const MAX_REFUSAL_CAPTURES = 10;
-const CaptureIDSchema = z.looseObject({ captureID: z.string() });
-
 export function registerQADebugHook(options: Readonly<RegisterQADebugHookOptions>): () => void {
-  const captureFailures: Array<string> = [];
-
-  // the IDs of this page's captures that still wait for the worker, so a snapshot call between a
-  // refusal and the worker's answer leaves those captures in storage for the answer to join
-  const pendingCaptureIDs = new Set<string>();
-
-  // a full storage quota loses the record it was writing, so the failure stays in memory for the
-  // next snapshot call and goes to the error backend, which queues it while the device is offline
-  const writeGuarded = (write: () => void): void => {
-    try {
-      write();
-    } catch (error) {
-      captureFailures.push(String(error));
-      Sentry.captureException(error);
-    }
-  };
+  const records = options.records;
 
   const readTabRecord = (): TabRecord =>
     Object.freeze({
       hasSharedWorker: typeof SharedWorker !== 'undefined',
       online: navigator.onLine,
-      receivedOutcomes: Object.freeze(
-        readQARecords(options.storage.outcomes, QA_RECORD_KEYS.receivedOutcomes),
-      ),
+      receivedOutcomes: Object.freeze(records.readReceivedOutcomes()),
       tabID: options.tabID,
       userAgent: navigator.userAgent,
       writerGeneration: options.writerGeneration,
@@ -111,40 +76,30 @@ export function registerQADebugHook(options: Readonly<RegisterQADebugHookOptions
   };
 
   // a device in airplane mode has no console to reach, so the hook snapshots a refusal itself the
-  // moment it arrives, writes the tab half before it asks the worker, and keeps the capture in
-  // storage until the next snapshot call reads it
+  // moment it arrives, saves the tab half before it asks the worker, and keeps the capture in
+  // storage until a snapshot call reads it complete
   const captureRefusal = async (trigger: Readonly<ReceivedOutcomeRecord>): Promise<void> => {
-    const captureID = crypto.randomUUID();
-    const capture = { captureID, capturedAt: Date.now(), tab: readTabRecord(), trigger };
+    // the store guards every storage call, so this catch only meets a fault outside storage
+    try {
+      const captureID = crypto.randomUUID();
+      const capturedAt = Date.now();
 
-    pendingCaptureIDs.add(captureID);
+      records.addCapture({
+        captureID,
+        capturedAt,
 
-    writeGuarded(() => {
-      updateQARecords({
-        key: QA_RECORD_KEYS.refusalCaptures,
-        storage: options.storage.captures,
-        update: (captures) => [...captures, capture].slice(-MAX_REFUSAL_CAPTURES),
+        // twice the worker wait, so a snapshot call never drops a capture whose answer is landing
+        pendingUntil: capturedAt + 2 * options.workerTimeoutMs,
+        tab: readTabRecord(),
+        trigger,
       });
-    });
 
-    const workerPart = await readWorkerPart();
+      const workerPart = await readWorkerPart();
 
-    writeGuarded(() => {
-      updateQARecords({
-        key: QA_RECORD_KEYS.refusalCaptures,
-        storage: options.storage.captures,
-        update: (captures) =>
-          captures.map((stored) => {
-            const parsed = CaptureIDSchema.safeParse(stored);
-
-            return parsed.success && parsed.data.captureID === captureID
-              ? { ...parsed.data, ...workerPart }
-              : stored;
-          }),
-      });
-    });
-
-    pendingCaptureIDs.delete(captureID);
+      records.completeCapture(captureID, workerPart);
+    } catch (error) {
+      records.recordFailure(error);
+    }
   };
 
   const unsubscribe = subscribeToRunOutcomes((received) => {
@@ -152,13 +107,7 @@ export function registerQADebugHook(options: Readonly<RegisterQADebugHookOptions
 
     // the tab's session storage outlives the hook's re-registrations and a reload, so the record
     // lists every outcome that reached the tab, whichever worker sent it
-    writeGuarded(() => {
-      updateQARecords({
-        key: QA_RECORD_KEYS.receivedOutcomes,
-        storage: options.storage.outcomes,
-        update: (outcomes) => [...outcomes, record].slice(-MAX_RECEIVED_OUTCOMES),
-      });
-    });
+    records.addReceivedOutcome(record);
 
     if (received.outcome.kind === RunOutcomeKind.Refused) {
       void captureRefusal(record);
@@ -183,29 +132,12 @@ export function registerQADebugHook(options: Readonly<RegisterQADebugHookOptions
       return status.speed;
     },
     snapshot: async () => {
-      const refusalCaptures = readQARecords(
-        options.storage.captures,
-        QA_RECORD_KEYS.refusalCaptures,
-      );
-
-      const pending = refusalCaptures.filter((stored) => {
-        const parsed = CaptureIDSchema.safeParse(stored);
-
-        return parsed.success && pendingCaptureIDs.has(parsed.data.captureID);
-      });
-
-      if (pending.length === 0) {
-        options.storage.captures.removeItem(QA_RECORD_KEYS.refusalCaptures);
-      } else {
-        writeGuarded(() => {
-          options.storage.captures.setItem(QA_RECORD_KEYS.refusalCaptures, JSON.stringify(pending));
-        });
-      }
+      const refusalCaptures = records.takeCaptures(Date.now());
 
       const workerPart = await readWorkerPart();
 
-      const records: QADebugSnapshotRecords = {
-        captureFailures: Object.freeze([...captureFailures]),
+      const snapshotRecords: QADebugSnapshotRecords = {
+        captureFailures: records.readFailures(),
         refusalCaptures: Object.freeze(refusalCaptures),
 
         // the page's own view of the network: a DevTools network toggle covers the page and never
@@ -215,8 +147,8 @@ export function registerQADebugHook(options: Readonly<RegisterQADebugHookOptions
 
       const merged =
         'worker' in workerPart
-          ? { ...workerPart.worker, ...records }
-          : { ...records, workerError: workerPart.workerError };
+          ? { ...workerPart.worker, ...snapshotRecords }
+          : { ...snapshotRecords, workerError: workerPart.workerError };
 
       // the worker's answer is already a structured clone from the message port, so freezing the
       // merged object is what makes the whole snapshot read-only
