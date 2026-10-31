@@ -160,9 +160,10 @@ Logic in a script runs in the script's tests on every pull request, as the testi
   The caller's checkout lacks the script, so a step builds the commit's raw URL from
   `job.workflow_repository` and `job.workflow_sha` and downloads
   [`download-step-scripts.ts`](https://github.com/zgeoff/tools/blob/main/scripts/ci/download-step-scripts.ts)
-  with `curl`. That script downloads the workflow's scripts and every file they import into
-  `$RUNNER_TEMP/tools`, and refuses one that imports a package. A caller pinned to a commit then
-  runs that commit's scripts.
+  with `curl`. That script downloads the workflow's scripts into `$RUNNER_TEMP/tools`: each
+  TypeScript script as the bundle that zgeoff/tools commits under `step-bundles/`, with every file
+  and package it imports inlined, and refuses a bundle that imports a package. A caller pinned to a
+  commit then runs that commit's scripts.
 - **A change to a reusable workflow or its step scripts moves every caller's pin.** When a
   zgeoff/tools commit changes one, the sync opens a pull request in each caller that moves its pins
   to that commit, even if no synced file changed. Each caller runs the sync engine at its current
