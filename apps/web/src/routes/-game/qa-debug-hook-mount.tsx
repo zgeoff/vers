@@ -11,8 +11,9 @@ import { registerQADebugHook } from '../../lib/qa/register-qa-debug-hook';
 // visits, and the hook must keep naming the same tab across them
 const TAB_ID = crypto.randomUUID();
 
-// a live worker answers a snapshot within milliseconds, so a few seconds marks one that hangs
-const WORKER_TIMEOUT_MS = 3000;
+// a worker in the middle of an offline start took more than 3 s to answer a snapshot in CI, so the
+// wait leaves room for a busy worker and still ends for one that hangs
+const WORKER_TIMEOUT_MS = 10_000;
 
 interface QADebugHookMountProps {
   readonly qaAccount: boolean;

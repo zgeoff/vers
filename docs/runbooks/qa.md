@@ -246,12 +246,12 @@ the worker.
 A device in airplane mode has no console to reach, so the page captures a refused run itself. When
 the tab receives a refused outcome, the page writes a capture with the time, the `tab` record and
 the outcome to local storage at once, then adds the worker snapshot to that capture. A worker that
-fails or gives no answer within a few seconds adds its error in place of the snapshot. Storage keeps
-the last 10 captures. The next `snapshot()` call returns them in `refusalCaptures` and removes them
-from storage. It reads the saved captures before it asks the worker, so a hung worker still lets the
-call return them, with `workerError` in place of the worker state. A capture that storage refuses,
-such as on a full quota, goes to the error backend and appears in `captureFailures` on the next
-snapshot.
+fails, or that gives no answer within the hook's wait of a few seconds, adds its error in place of
+the snapshot. Storage keeps the last 10 captures. The next `snapshot()` call returns them in
+`refusalCaptures` and removes them from storage. It reads the saved captures before it asks the
+worker, so a hung worker still lets the call return them, with `workerError` in place of the worker
+state. A capture that storage refuses, such as on a full quota, goes to the error backend and
+appears in `captureFailures` on the next snapshot.
 
 [Game simulation](../architecture/game/game-simulation.md#checkpoint-streams) owns the writer
 worker, and [offline reconcile](../architecture/game/offline-reconcile.md#worker-lifecycle) owns the

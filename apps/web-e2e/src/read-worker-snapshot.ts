@@ -35,8 +35,11 @@ const WorkerSnapshotSchema = z.object({
 
 export type WorkerSnapshot = z.infer<typeof WorkerSnapshotSchema>;
 
+const UnansweredSnapshotSchema = z.object({ workerError: z.string() });
+
 // app-web installs the hook only on a game page of a QA-domain account, and only once the page has
-// a worker client, so a page that is still mounting answers null
+// a worker client, so a page that is still mounting answers null, and so does a worker too busy to
+// answer within the hook's wait
 export async function readWorkerSnapshot(page: Page): Promise<WorkerSnapshot | null> {
   const snapshot = await page.evaluate(async () => {
     const answered = await globalThis.__versQA?.snapshot();
@@ -44,5 +47,9 @@ export async function readWorkerSnapshot(page: Page): Promise<WorkerSnapshot | n
     return answered ?? null;
   });
 
-  return snapshot === null ? null : WorkerSnapshotSchema.parse(snapshot);
+  if (snapshot === null || UnansweredSnapshotSchema.safeParse(snapshot).success) {
+    return null;
+  }
+
+  return WorkerSnapshotSchema.parse(snapshot);
 }
