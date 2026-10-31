@@ -21,6 +21,27 @@ test('it accepts a well-formed activity-ended message', () => {
   });
 });
 
+test('it accepts an activity-ended message that names its sending worker, and drops the name', () => {
+  const outcome = {
+    activityID: 'activity_1',
+    avatarID: 'avatar_1',
+    kind: ActivityCheckpointType.Failed,
+    scope: { scopeID: '0_0', scopeType: 'world_map_node' },
+    xp: 118,
+  } as const;
+
+  expect(
+    workerToClientMessageSchema.safeParse({
+      outcome,
+      type: WorkerMessageType.ActivityEnded,
+      workerID: 'worker_1',
+    }),
+  ).toStrictEqual({
+    data: { outcome, type: WorkerMessageType.ActivityEnded },
+    success: true,
+  });
+});
+
 test('it accepts a well-formed checkpoint-stream-invalid message', () => {
   const message = {
     activityID: 'activity_1',
