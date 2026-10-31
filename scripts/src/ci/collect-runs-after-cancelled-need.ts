@@ -43,34 +43,86 @@ function collectRunsAfter(
   order: Array<string>,
   cancelledJob: string,
 ): Array<RunAfterCancelledNeed> {
-  const results = new Map<string, string>([[cancelledJob, 'cancelled']]);
+  const reached = collectReachedJobs(jobs, order, cancelledJob);
 
-  const runs: Array<RunAfterCancelledNeed> = [];
+  const readNeeds = new Set([...reached].flatMap((name) => jobs.get(name)?.needs ?? []));
+  const ranJobs = new Set<string>();
+
+  walkResults({
+    jobs,
+    order: order.filter(
+      (name) => name !== cancelledJob && (reached.has(name) || readNeeds.has(name)),
+    ),
+    reached,
+    results: new Map([[cancelledJob, 'cancelled']]),
+    ranJobs,
+  });
+
+  return order.filter((name) => ranJobs.has(name)).map((job) => ({ job, cancelledJob }));
+}
+
+function collectReachedJobs(
+  jobs: Map<string, WorkflowJob>,
+  order: Array<string>,
+  cancelledJob: string,
+): Set<string> {
+  const reached = new Set<string>();
 
   for (const name of order) {
     const job = jobs.get(name);
 
     invariant(job, `the job order holds ${name}, which the workflow lacks`);
 
-    if (job.needs.some((need) => results.has(need))) {
-      const ran = isConditionMet(job, results);
-      const result = ran ? 'success' : 'skipped';
-
-      results.set(name, result);
-
-      if (ran) {
-        runs.push({ job: name, cancelledJob });
-      }
+    if (job.needs.some((need) => need === cancelledJob || reached.has(need))) {
+      reached.add(name);
     }
   }
 
-  return runs;
+  return reached;
+}
+
+interface ResultWalk {
+  jobs: Map<string, WorkflowJob>;
+  order: Array<string>;
+  reached: Set<string>;
+  results: Map<string, string>;
+  ranJobs: Set<string>;
+}
+
+function walkResults(walk: ResultWalk) {
+  const [name, ...rest] = walk.order;
+
+  if (name === undefined) {
+    return;
+  }
+
+  const job = walk.jobs.get(name);
+
+  invariant(job, `the job order holds ${name}, which the workflow lacks`);
+
+  const ran = walk.reached.has(name) && isConditionMet(job, walk.results);
+
+  if (ran) {
+    walk.ranJobs.add(name);
+  }
+
+  for (const result of pickResults(walk.reached.has(name), ran)) {
+    walkResults({ ...walk, order: rest, results: new Map(walk.results).set(name, result) });
+  }
 }
 
 const STATUS_CALL = /\b(?:always|cancelled|failure|success)\s*\(/iu;
 
 function isConditionMet(job: WorkflowJob, results: Map<string, string>): boolean {
-  const needResults = new Map(job.needs.map((need) => [need, results.get(need) ?? 'success']));
+  const needResults = new Map(
+    job.needs.map((need) => {
+      const result = results.get(need);
+
+      invariant(result !== undefined, `${need} has no result before ${job.condition} reads it`);
+
+      return [need, result];
+    }),
+  );
 
   const statusFunctions = buildStatusFunctions([...needResults.values()]);
 
@@ -114,4 +166,15 @@ function buildStatusFunctions(needResults: Array<string>): Map<string, FunctionD
       { name, minArgs: 0, maxArgs: 0, call: () => new data.BooleanData(status) },
     ]),
   );
+}
+
+const UNREACHED_RESULTS = ['success', 'failure', 'skipped'];
+const RAN_RESULTS = ['success', 'failure'];
+
+function pickResults(isReached: boolean, ran: boolean): Array<string> {
+  if (!isReached) {
+    return UNREACHED_RESULTS;
+  }
+
+  return ran ? RAN_RESULTS : ['skipped'];
 }

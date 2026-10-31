@@ -75,7 +75,7 @@ test('it reports a job that runs after a cancelled job it reaches through a skip
   ]);
 });
 
-test('it counts a job that runs after the cancel as passed for the jobs after it', () => {
+test('it reports a job that runs after the cancel when a job that ran before it failed', () => {
   const jobs = new Map([
     ['bake', { needs: [], condition: 'success()', cancelsInProgress: true }],
     ['taste', { needs: ['bake'], condition: '!cancelled()', cancelsInProgress: false }],
@@ -83,7 +83,7 @@ test('it counts a job that runs after the cancel as passed for the jobs after it
       'serve',
       {
         needs: ['taste'],
-        condition: "!cancelled() && needs.taste.result == 'success'",
+        condition: "!cancelled() && needs.taste.result == 'failure'",
         cancelsInProgress: false,
       },
     ],
@@ -93,4 +93,52 @@ test('it counts a job that runs after the cancel as passed for the jobs after it
     { job: 'taste', cancelledJob: 'bake' },
     { job: 'serve', cancelledJob: 'bake' },
   ]);
+});
+
+test('it reports a job that runs after a cancelled need when another of its needs failed', () => {
+  const jobs = new Map([
+    ['wash', { needs: [], condition: 'success()', cancelsInProgress: false }],
+    ['bake', { needs: [], condition: 'success()', cancelsInProgress: true }],
+    [
+      'alarm',
+      {
+        needs: ['wash', 'bake'],
+        condition: "!cancelled() && needs.wash.result == 'failure'",
+        cancelsInProgress: false,
+      },
+    ],
+  ]);
+
+  expect(collectRunsAfterCancelledNeed(jobs)).toStrictEqual([
+    { job: 'alarm', cancelledJob: 'bake' },
+  ]);
+});
+
+test('it reports a job gated on failure() after a cancelled need when another need failed', () => {
+  const jobs = new Map([
+    ['wash', { needs: [], condition: 'success()', cancelsInProgress: false }],
+    ['bake', { needs: [], condition: 'success()', cancelsInProgress: true }],
+    ['alarm', { needs: ['wash', 'bake'], condition: 'failure()', cancelsInProgress: false }],
+  ]);
+
+  expect(collectRunsAfterCancelledNeed(jobs)).toStrictEqual([
+    { job: 'alarm', cancelledJob: 'bake' },
+  ]);
+});
+
+test('it passes a failure handler that refuses a cancelled need', () => {
+  const jobs = new Map([
+    ['wash', { needs: [], condition: 'success()', cancelsInProgress: false }],
+    ['bake', { needs: [], condition: 'success()', cancelsInProgress: true }],
+    [
+      'alarm',
+      {
+        needs: ['wash', 'bake'],
+        condition: "failure() && !contains(needs.*.result, 'cancelled')",
+        cancelsInProgress: false,
+      },
+    ],
+  ]);
+
+  expect(collectRunsAfterCancelledNeed(jobs)).toStrictEqual([]);
 });
