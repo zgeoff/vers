@@ -17,6 +17,7 @@ minimumReleaseAge = 604800
 # workflow writes. bun run deps:check fails once the date in it passes, and
 # the audit-fix workflow removes an entry whose line ends "(audit-fix)".
 minimumReleaseAgeExcludes = [
+  "@zgeoff/agent-hooks",
   "@zgeoff/bugsink-mcp",
   "@zgeoff/bun-test-extended",
   "@zgeoff/dbhub",

@@ -33,14 +33,10 @@ test('it denies a source edit until both code-style skills are loaded', async ()
     }),
   });
 
-  expect(result.status).toBe(0);
-
-  expect(JSON.parse(result.stdout)).toStrictEqual({
-    hookSpecificOutput: {
-      hookEventName: 'PreToolUse',
-      permissionDecision: 'deny',
-      permissionDecisionReason: `Load the \`code-style\` and \`project-code-style\` skills with the Skill tool before editing ${join(ctx.repoDir, 'libs/core/utils/src/index.ts')}, then retry the edit. Change a gated path only with Edit, Write or MultiEdit, never through Bash. .claude/skill-gate.json lists the skills each path needs.`,
-    },
+  expect({ status: result.status, stdout: result.stdout, stderr: result.stderr }).toStrictEqual({
+    status: 2,
+    stdout: '',
+    stderr: `Load the \`code-style\` and \`project-code-style\` skills with the Skill tool before editing ${join(ctx.repoDir, 'libs/core/utils/src/index.ts')}, then retry the edit. Change a gated path only with Edit, Write or MultiEdit, never through Bash. .claude/skill-gate.json lists the skills each path needs.\n`,
   });
 });
 
@@ -86,14 +82,10 @@ test('it denies a test file edit until both code-style skills, testing and proje
     }),
   });
 
-  expect(result.status).toBe(0);
-
-  expect(JSON.parse(result.stdout)).toStrictEqual({
-    hookSpecificOutput: {
-      hookEventName: 'PreToolUse',
-      permissionDecision: 'deny',
-      permissionDecisionReason: `Load the \`code-style\`, \`project-code-style\`, \`testing\` and \`project-testing\` skills with the Skill tool before editing ${join(ctx.repoDir, 'libs/core/utils/src/a.test.ts')}, then retry the edit. Change a gated path only with Edit, Write or MultiEdit, never through Bash. .claude/skill-gate.json lists the skills each path needs.`,
-    },
+  expect({ status: result.status, stdout: result.stdout, stderr: result.stderr }).toStrictEqual({
+    status: 2,
+    stdout: '',
+    stderr: `Load the \`code-style\`, \`project-code-style\`, \`testing\` and \`project-testing\` skills with the Skill tool before editing ${join(ctx.repoDir, 'libs/core/utils/src/a.test.ts')}, then retry the edit. Change a gated path only with Edit, Write or MultiEdit, never through Bash. .claude/skill-gate.json lists the skills each path needs.\n`,
   });
 });
 
@@ -124,14 +116,10 @@ test('it denies a test file edit with only the testing skill loaded', async () =
     }),
   });
 
-  expect(result.status).toBe(0);
-
-  expect(JSON.parse(result.stdout)).toStrictEqual({
-    hookSpecificOutput: {
-      hookEventName: 'PreToolUse',
-      permissionDecision: 'deny',
-      permissionDecisionReason: `Load the \`project-testing\` skill with the Skill tool before editing ${join(ctx.repoDir, 'apps/web/src/routes/-game/qa-debug-hook-mount.test.tsx')}, then retry the edit. Change a gated path only with Edit, Write or MultiEdit, never through Bash. .claude/skill-gate.json lists the skills each path needs.`,
-    },
+  expect({ status: result.status, stdout: result.stdout, stderr: result.stderr }).toStrictEqual({
+    status: 2,
+    stdout: '',
+    stderr: `Load the \`project-testing\` skill with the Skill tool before editing ${join(ctx.repoDir, 'apps/web/src/routes/-game/qa-debug-hook-mount.test.tsx')}, then retry the edit. Change a gated path only with Edit, Write or MultiEdit, never through Bash. .claude/skill-gate.json lists the skills each path needs.\n`,
   });
 });
 
@@ -189,14 +177,10 @@ test('it gates a lifecycle package on the game-lifecycle skill as well', async (
     }),
   });
 
-  expect(result.status).toBe(0);
-
-  expect(JSON.parse(result.stdout)).toStrictEqual({
-    hookSpecificOutput: {
-      hookEventName: 'PreToolUse',
-      permissionDecision: 'deny',
-      permissionDecisionReason: `Load the \`game-lifecycle\` skill with the Skill tool before editing ${join(ctx.repoDir, 'services/activity/src/handlers/a.ts')}, then retry the edit. Change a gated path only with Edit, Write or MultiEdit, never through Bash. .claude/skill-gate.json lists the skills each path needs.`,
-    },
+  expect({ status: result.status, stdout: result.stdout, stderr: result.stderr }).toStrictEqual({
+    status: 2,
+    stdout: '',
+    stderr: `Load the \`game-lifecycle\` skill with the Skill tool before editing ${join(ctx.repoDir, 'services/activity/src/handlers/a.ts')}, then retry the edit. Change a gated path only with Edit, Write or MultiEdit, never through Bash. .claude/skill-gate.json lists the skills each path needs.\n`,
   });
 });
 
@@ -215,14 +199,10 @@ test('it gates markdown on the docs-writing and project-docs-writing skills', as
     }),
   });
 
-  expect(result.status).toBe(0);
-
-  expect(JSON.parse(result.stdout)).toStrictEqual({
-    hookSpecificOutput: {
-      hookEventName: 'PreToolUse',
-      permissionDecision: 'deny',
-      permissionDecisionReason: `Load the \`docs-writing\` and \`project-docs-writing\` skills with the Skill tool before editing ${join(ctx.repoDir, 'docs/architecture/overview.md')}, then retry the edit. Change a gated path only with Edit, Write or MultiEdit, never through Bash. .claude/skill-gate.json lists the skills each path needs.`,
-    },
+  expect({ status: result.status, stdout: result.stdout, stderr: result.stderr }).toStrictEqual({
+    status: 2,
+    stdout: '',
+    stderr: `Load the \`docs-writing\` and \`project-docs-writing\` skills with the Skill tool before editing ${join(ctx.repoDir, 'docs/architecture/overview.md')}, then retry the edit. Change a gated path only with Edit, Write or MultiEdit, never through Bash. .claude/skill-gate.json lists the skills each path needs.\n`,
   });
 });
 
@@ -279,13 +259,9 @@ test('it gates authored source in the styled-system package', async () => {
     }),
   });
 
-  expect(result.status).toBe(0);
-
-  expect(JSON.parse(result.stdout)).toStrictEqual({
-    hookSpecificOutput: {
-      hookEventName: 'PreToolUse',
-      permissionDecision: 'deny',
-      permissionDecisionReason: `Load the \`code-style\` and \`project-code-style\` skills with the Skill tool before editing ${join(ctx.repoDir, 'libs/design/styled-system/panda.config.ts')}, then retry the edit. Change a gated path only with Edit, Write or MultiEdit, never through Bash. .claude/skill-gate.json lists the skills each path needs.`,
-    },
+  expect({ status: result.status, stdout: result.stdout, stderr: result.stderr }).toStrictEqual({
+    status: 2,
+    stdout: '',
+    stderr: `Load the \`code-style\` and \`project-code-style\` skills with the Skill tool before editing ${join(ctx.repoDir, 'libs/design/styled-system/panda.config.ts')}, then retry the edit. Change a gated path only with Edit, Write or MultiEdit, never through Bash. .claude/skill-gate.json lists the skills each path needs.\n`,
   });
 });
