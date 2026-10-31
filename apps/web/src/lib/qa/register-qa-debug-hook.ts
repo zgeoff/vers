@@ -39,7 +39,7 @@ interface RegisterQADebugHookOptions {
   readonly writerGeneration: number;
 }
 
-const MAX_RECEIVED_OUTCOMES = 20;
+const MAX_RECEIVED_OUTCOMES = 50;
 
 export function registerQADebugHook(options: Readonly<RegisterQADebugHookOptions>): () => void {
   const readTabRecord = (): TabRecord =>
@@ -58,14 +58,17 @@ export function registerQADebugHook(options: Readonly<RegisterQADebugHookOptions
   // moment it arrives, and keeps the capture in storage until the next snapshot call reads it
   const captureRefusal = async (trigger: Readonly<ReceivedOutcomeRecord>): Promise<void> => {
     const capturedAt = Date.now();
-    const tab = readTabRecord();
+
+    // a worker that never answers would lose the whole capture, so the tab half lands first and the
+    // worker half follows under the same capture time
+    writeRefusalCapture({ capturedAt, part: 'tab', tab: readTabRecord(), trigger });
 
     try {
       const worker = await options.client.readDebugSnapshot({});
 
-      writeRefusalCapture({ capturedAt, tab, trigger, worker });
+      writeRefusalCapture({ capturedAt, part: 'worker', worker });
     } catch (error) {
-      writeRefusalCapture({ capturedAt, tab, trigger, workerError: String(error) });
+      writeRefusalCapture({ capturedAt, part: 'worker', workerError: String(error) });
     }
   };
 
@@ -134,14 +137,14 @@ export function registerQADebugHook(options: Readonly<RegisterQADebugHookOptions
   };
 }
 
-// a refusal can repeat while the network stays down, so storage keeps only the latest few, and a
-// phone's storage quota never fills with them
-const MAX_REFUSAL_CAPTURES = 3;
+// a refusal can repeat while the network stays down, so storage keeps the parts of the latest 10
+// captures, and a phone's storage quota never fills with them
+const MAX_REFUSAL_CAPTURE_PARTS = 20;
 
 function writeRefusalCapture(capture: unknown): void {
   writeQARecord({
     key: QA_RECORD_KEYS.refusalCaptures,
-    maxRecords: MAX_REFUSAL_CAPTURES,
+    maxRecords: MAX_REFUSAL_CAPTURE_PARTS,
     record: capture,
     storage: localStorage,
   });

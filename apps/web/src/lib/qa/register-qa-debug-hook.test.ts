@@ -166,7 +166,7 @@ test('it keeps a refusal captured at the moment it arrives until the next snapsh
   });
 
   await waitFor(() => {
-    expect(localStorage.getItem(QA_RECORD_KEYS.refusalCaptures)).not.toBeNull();
+    expect(localStorage.getItem(QA_RECORD_KEYS.refusalCaptures)).toInclude('"part":"worker"');
   });
 
   invariant(globalThis.__versQA, 'the hook is installed');
@@ -182,6 +182,7 @@ test('it keeps a refusal captured at the moment it arrives until the next snapsh
   expect(snapshot.refusalCaptures).toStrictEqual([
     {
       capturedAt: expect.any(Number),
+      part: 'tab',
       tab: {
         hasSharedWorker: typeof SharedWorker !== 'undefined',
         online: navigator.onLine,
@@ -191,6 +192,10 @@ test('it keeps a refusal captured at the moment it arrives until the next snapsh
         writerGeneration: 3,
       },
       trigger,
+    },
+    {
+      capturedAt: expect.any(Number),
+      part: 'worker',
       worker: expect.objectContaining({ writer: { bootedAt: 0, workerID: 'worker_stub' } }),
     },
   ]);
@@ -215,7 +220,7 @@ test('it hands a refusal capture to one snapshot only', async () => {
   });
 
   await waitFor(() => {
-    expect(localStorage.getItem(QA_RECORD_KEYS.refusalCaptures)).not.toBeNull();
+    expect(localStorage.getItem(QA_RECORD_KEYS.refusalCaptures)).toInclude('"part":"worker"');
   });
 
   invariant(globalThis.__versQA, 'the hook is installed');
@@ -248,13 +253,54 @@ test('it records the worker error in a refusal capture when the worker snapshot 
   });
 
   await waitFor(() => {
+    expect(localStorage.getItem(QA_RECORD_KEYS.refusalCaptures)).toInclude('"part":"worker"');
+  });
+
+  const stored: unknown = JSON.parse(localStorage.getItem(QA_RECORD_KEYS.refusalCaptures) ?? '');
+
+  expect(stored).toStrictEqual([
+    expect.objectContaining({ part: 'tab' }),
+    {
+      capturedAt: expect.any(Number),
+      part: 'worker',
+      workerError: 'Error: the worker port is closed',
+    },
+  ]);
+});
+
+test('it keeps the tab half of a refusal capture while the worker never answers', async () => {
+  const ctx = setupTest();
+
+  const unregister = registerQADebugHook({
+    client: createStubWorkerClient({
+      readDebugSnapshot: () => Promise.withResolvers<never>().promise,
+    }),
+    isQAAvatar: true,
+    tabID: 'tab_1',
+    writerGeneration: 0,
+  });
+
+  onTestFinished(unregister);
+
+  ctx.sender.postMessage({
+    outcome: { activityID: 'act_refused', avatarID: 'avatar_1', kind: 'refused', xp: 0 },
+    type: 'activity_ended',
+    workerID: 'worker_1',
+  });
+
+  await waitFor(() => {
     expect(localStorage.getItem(QA_RECORD_KEYS.refusalCaptures)).not.toBeNull();
   });
 
   const stored: unknown = JSON.parse(localStorage.getItem(QA_RECORD_KEYS.refusalCaptures) ?? '');
 
   expect(stored).toStrictEqual([
-    expect.objectContaining({ workerError: 'Error: the worker port is closed' }),
+    {
+      capturedAt: expect.any(Number),
+      part: 'tab',
+      tab: expect.objectContaining({ tabID: 'tab_1' }),
+      trigger: expect.objectContaining({ workerID: 'worker_1' }),
+    },
   ]);
 });
 
@@ -318,7 +364,7 @@ test('it captures a refused run and no completed one', async () => {
   });
 
   await waitFor(() => {
-    expect(localStorage.getItem(QA_RECORD_KEYS.refusalCaptures)).not.toBeNull();
+    expect(localStorage.getItem(QA_RECORD_KEYS.refusalCaptures)).toInclude('"part":"worker"');
   });
 
   invariant(globalThis.__versQA, 'the hook is installed');
@@ -331,6 +377,7 @@ test('it captures a refused run and no completed one', async () => {
         outcome: { activityID: 'act_refused', avatarID: 'avatar_1', kind: 'refused', xp: 0 },
       }),
     }),
+    expect.objectContaining({ part: 'worker' }),
   ]);
 });
 

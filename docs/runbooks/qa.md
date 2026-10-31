@@ -238,17 +238,17 @@ event records each request from the worker to the activity service that failed i
 back with an error status, so it shows whether the worker reached the server. The snapshot's `tab`
 record holds the page's own online flag, which can disagree with the worker: a DevTools network
 toggle takes the page offline and leaves the shared worker online. The `tab` record also holds the
-browser's user agent, whether the browser has `SharedWorker`, and the last 20 run outcomes the tab
+browser's user agent, whether the browser has `SharedWorker`, and the last 50 run outcomes the tab
 received, each with the ID of the worker that sent it and the time it arrived. The tab keeps that
 list in its session storage, so the list survives a reload. The snapshot changes no runtime state in
 the worker.
 
 A device in airplane mode has no console to reach, so the page captures a refused run itself. When
-the tab receives a refused outcome, the page reads the worker snapshot and the `tab` record at that
-moment and writes them, with the time, to local storage. The next `snapshot()` call returns those
-captures in `refusalCaptures` beside the current state, and removes them from storage. A capture
-whose worker read failed holds the error in place of the worker snapshot. Storage keeps the last 3
-captures.
+the tab receives a refused outcome, the page writes the `tab` record and the outcome to local
+storage at once, then writes the worker snapshot as a second part with the same capture time. A
+worker that never answers leaves only the first part, and a failed worker read writes the error as
+the second part. The next `snapshot()` call returns the parts in `refusalCaptures` beside the
+current state, and removes them from storage. Storage keeps the parts of the last 10 captures.
 
 [Game simulation](../architecture/game/game-simulation.md#checkpoint-streams) owns the writer
 worker, and [offline reconcile](../architecture/game/offline-reconcile.md#worker-lifecycle) owns the
