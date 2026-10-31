@@ -103,6 +103,19 @@ test('it stops waiting for a capture that never settles once its deadline passes
   await expect(ctx.records.settleCaptures(20)).toResolve();
 });
 
+test('it returns a capture still in flight at the wait deadline as pending', async () => {
+  const ctx = setupTest();
+
+  ctx.records.addCapture({ captureID: 'capture_1', capturedAt: 1000, tab: {}, trigger: {} });
+  ctx.records.trackCapture(Promise.withResolvers<undefined>().promise);
+
+  await ctx.records.settleCaptures(20);
+
+  expect(ctx.records.takeCaptures(2000)).toStrictEqual([
+    expect.objectContaining({ captureID: 'capture_1', status: 'pending' }),
+  ]);
+});
+
 test('it hands a complete capture to one take only', () => {
   const ctx = setupTest();
 
