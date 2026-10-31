@@ -18,6 +18,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
+      # the alert step runs the repo's alert script, so Bun is ready before the sweep can fail
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version
+
       - name: Sweep
         uses: ./.github/actions/fly-deploy
         env:
@@ -34,14 +40,8 @@ jobs:
           WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           RUN_URL:
             ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        run: |
-          if [ -z "${WEBHOOK_URL}" ]; then
-            echo "DISCORD_WEBHOOK_URL not configured; skipping alert"
-            exit 0
-          fi
-          payload="$(jq -n \
-            --arg title "[CI] critical — replay retention sweep run failed" \
-            --arg url "${RUN_URL}" \
-            --arg desc "the run failed: a refused prune (unverified work pinned to an expired version), a sweep fault, or a step before it; open the run" \
-            '{embeds: [{title: $title, url: $url, description: $desc, color: 15026253}]}')"
-          curl -fsS -H 'content-type: application/json' -d "${payload}" "${WEBHOOK_URL}"
+          ALERT_TITLE: '[CI] critical — replay retention sweep run failed'
+          ALERT_DESCRIPTION:
+            'the run failed: a refused prune (unverified work pinned to an expired version), a sweep
+            fault, or a step before it; open the run'
+        run: bun run ci:discord-alert

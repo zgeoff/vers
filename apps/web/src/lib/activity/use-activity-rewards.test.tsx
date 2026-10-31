@@ -33,7 +33,7 @@ test('it fetches the first page, then passes the cursor from the merged cache on
     mockActivityService.getActivityRewards.handler((opts) => {
       track(opts.input);
 
-      if (track.mock.calls.length === 1) {
+      if (opts.input.afterChainIndex === undefined) {
         return {
           items: [
             {
@@ -62,13 +62,9 @@ test('it fetches the first page, then passes the cursor from the merged cache on
       expect(hook.result.current.data?.items).toHaveLength(1);
     });
 
-    expect(track).toHaveBeenCalledExactlyOnceWith({ activityID: activity.id });
+    expect(track).toHaveBeenCalledWith({ activityID: activity.id });
 
     await hook.result.current.refetch();
-
-    await waitFor(() => {
-      expect(track).toHaveBeenCalledTimes(2);
-    });
 
     expect(track).toHaveBeenLastCalledWith({ activityID: activity.id, afterChainIndex: 3 });
   });

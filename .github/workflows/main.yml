@@ -53,10 +53,12 @@ jobs:
       - name: Setup Dotenv
         env:
           DOTENV_APP_WEB_DEV: ${{ secrets.DOTENV_APP_WEB_DEV }}
+        run: printf '%s\n' "$DOTENV_APP_WEB_DEV" > apps/web/.env.development.local
+
+      - name: Setup E2E Dotenv
+        env:
           DOTENV_APP_WEB_E2E: ${{ secrets.DOTENV_APP_WEB_E2E }}
-        run: |
-          printf '%s\n' "$DOTENV_APP_WEB_DEV" > apps/web/.env.development.local
-          printf '%s\n' "$DOTENV_APP_WEB_E2E" > apps/web-e2e/.env
+        run: printf '%s\n' "$DOTENV_APP_WEB_E2E" > apps/web-e2e/.env
 
       - name: Setup Node
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
@@ -86,9 +88,10 @@ jobs:
       # required key missing from a service's dev env files or either
       # compose stack
       - name: Check Env Contracts
-        run: |
-          bun run env:contract:check
-          bun run env:coverage
+        run: bun run env:contract:check
+
+      - name: Check Env Coverage
+        run: bun run env:coverage
 
       # every op:// reference that .mcp.json, the workflows and infra/ read is listed by name in
       # secrets-manifest.json, and every listed one is still read
@@ -99,7 +102,9 @@ jobs:
       # content version, because a retained activity mints through the interpreter its version pins;
       # the base ref's recorded digests stay as they were
       - name: Check Content Digest
-        run: bun run content:check-digest --base ${{ github.event.before }}
+        env:
+          CONTENT_BASE: ${{ github.event.before }}
+        run: bun run content:check-digest --base "$CONTENT_BASE"
 
       - name: Generate Types
         run: bun run codegen:types
@@ -119,9 +124,11 @@ jobs:
       # 4 turbo tasks on the 4-vCPU runner: on a full cache miss this measured 73 s against 71 s
       # at turbo's default 10. Each package keeps a plain bun test, because --parallel=1 isolates
       # every file and measured 157-190 s
+      - name: Start Test Database
+        run: bun run pg:test-container:start
+
       - name: Unit Tests
-        run: |
-          bun run pg:test-container:start
+        run:
           bun run test --concurrency=4 -- --reporter=junit --reporter-outfile=test-report.junit.xml
 
       # a test over 5 s fails the run, whatever timeout the test sets
@@ -177,10 +184,12 @@ jobs:
       - name: Setup Dotenv
         env:
           DOTENV_APP_WEB_DEV: ${{ secrets.DOTENV_APP_WEB_DEV }}
+        run: printf '%s\n' "$DOTENV_APP_WEB_DEV" > apps/web/.env.development.local
+
+      - name: Setup E2E Dotenv
+        env:
           DOTENV_APP_WEB_E2E: ${{ secrets.DOTENV_APP_WEB_E2E }}
-        run: |
-          printf '%s\n' "$DOTENV_APP_WEB_DEV" > apps/web/.env.development.local
-          printf '%s\n' "$DOTENV_APP_WEB_E2E" > apps/web-e2e/.env
+        run: printf '%s\n' "$DOTENV_APP_WEB_E2E" > apps/web-e2e/.env
 
       - name: Setup Node
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
@@ -221,12 +230,7 @@ jobs:
           key: ${{ steps.browser-packages.outputs.key }}-all
 
       - name: Install E2E browsers
-        run: |
-          mkdir -p ~/apt-archives/partial
-          printf 'Dir::Cache::Archives "%s";\nAPT::Keep-Downloaded-Packages "true";\nAcquire::Retries "3";\n' ~/apt-archives \
-            | sudo tee /etc/apt/apt.conf.d/90-browser-packages
-          bun run playwright install --with-deps --only-shell chromium firefox webkit
-          sudo chown -R "$USER" ~/apt-archives
+        run: bun run ci:install-e2e-browsers chromium firefox webkit
 
       - name: E2E Tests
         id: e2e
@@ -293,6 +297,10 @@ jobs:
     if: ${{ needs.checks.result == 'success' && needs.e2e.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    # the workflow lint reads "deploy" in the job name as a deploy job, which never cancels
+    concurrency:
+      group: ${{ github.workflow }}-manifest
+      cancel-in-progress: false
     outputs:
       apps: ${{ steps.list.outputs.apps }}
     steps:
@@ -321,6 +329,10 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     timeout-minutes: 5
+    # the workflow lint reads "deploy" in the job name as a deploy job, which never cancels
+    concurrency:
+      group: ${{ github.workflow }}-preflight
+      cancel-in-progress: false
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -366,11 +378,11 @@ jobs:
     # worst observed leg (app-web remote build) is ~4 minutes; headroom for
     # builder variance without holding the queue
     timeout-minutes: 15
-    # one build per app at a time — a newer run's build overwrites the same
-    # commit-derived tag only after the earlier one finishes with it
+    # a build changes nothing on the fleet, so a newer run's build of the same app cancels this one
+    # and the newer run ships the app
     concurrency:
       group: ${{ github.workflow }}-build-${{ matrix.app }}
-      cancel-in-progress: false
+      cancel-in-progress: true
     strategy:
       # each app is independent — one build failing must not abandon the others
       fail-fast: false
@@ -434,6 +446,9 @@ jobs:
     environment: production
     # image pulls plus stack boot plus journeys is ~6 minutes at worst
     timeout-minutes: 20
+    concurrency:
+      group: ${{ github.workflow }}-stack-e2e
+      cancel-in-progress: true
     steps:
       # ref resolution runs turbo/git against each app's deployed SHA, which can be many pushes
       # old, so the CLI needs the pushed commit's full history: see the checks job's Checkout for
@@ -478,10 +493,7 @@ jobs:
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-        run: |
-          bun scripts/src/bin/deploy.ts images | jq -r \
-            'to_entries[] | "IMAGE_\(.key | ascii_upcase | gsub("-";"_"))=\(.value)"' \
-            >> "$GITHUB_ENV"
+        run: bun run deploy images --env >> "$GITHUB_ENV"
 
       - name: Authenticate Docker to the Fly registry
         env:
@@ -490,12 +502,15 @@ jobs:
 
       # postgres first, migrated before any service boots — a service must
       # never observe the unmigrated schema, even transiently
-      - name: Boot and migrate the stack database
+      - name: Boot the stack database
+        run:
+          docker compose -f apps/web-e2e/docker-compose.stack.yml up -d --quiet-pull --wait postgres
+          resend-stub
+
+      - name: Migrate the stack database
         env:
           DATABASE_URL: postgresql://admin:password@localhost:5533/vers
-        run: |
-          docker compose -f apps/web-e2e/docker-compose.stack.yml up -d --quiet-pull --wait postgres resend-stub
-          bun run --cwd libs/data/db db:migrate
+        run: bun run --cwd libs/data/db db:migrate
 
       # the demo accounts every seeded-login spec signs in as, written straight to the migrated
       # schema before any service reads it
@@ -522,12 +537,7 @@ jobs:
           key: ${{ steps.browser-packages.outputs.key }}-chromium
 
       - name: Install E2E browsers
-        run: |
-          mkdir -p ~/apt-archives/partial
-          printf 'Dir::Cache::Archives "%s";\nAPT::Keep-Downloaded-Packages "true";\nAcquire::Retries "3";\n' ~/apt-archives \
-            | sudo tee /etc/apt/apt.conf.d/90-browser-packages
-          bun run playwright install --with-deps --only-shell chromium
-          sudo chown -R "$USER" ~/apt-archives
+        run: bun run ci:install-e2e-browsers chromium
 
       - name: Full-stack journeys
         id: journeys
@@ -627,7 +637,7 @@ jobs:
     timeout-minutes: 10
     concurrency:
       group: ${{ github.workflow }}-verify-fleet
-      cancel-in-progress: false
+      cancel-in-progress: true
     steps:
       # verify runs turbo/git against each app's deployed SHA, as the deploy job does: see the
       # checks job's Checkout for the depth, the filter and the retry
@@ -659,35 +669,40 @@ jobs:
     needs: [checks, e2e, migrate, manifest, build, stack-e2e, deploy, verify-fleet]
     # a red main pipeline pages the team channel: agent-driven pushes mean
     # nobody is necessarily watching the Actions tab, and a failed deploy or
-    # fleet verification left unnoticed is exactly how version skew lingers
-    if: ${{ !cancelled() && contains(join(needs.*.result, ','), 'failure') }}
+    # fleet verification left unnoticed is exactly how version skew lingers. A newer run cancels
+    # this run's build, stack-e2e or verify-fleet job, and that newer run reports for both commits
+    if:
+      ${{ !cancelled() && contains(join(needs.*.result, ','), 'failure') &&
+      !contains(join(needs.*.result, ','), 'cancelled') }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     environment: production
+    concurrency:
+      group: ${{ github.workflow }}-alert
+      cancel-in-progress: true
     steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version
+
+      # the alert script imports no package, so the job skips the install and still reports a
+      # failed install
       - name: Send Discord alert
         env:
           WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           RUN_URL:
             ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          FAILED: >-
+          ALERT_TITLE: '[CI] critical — main pipeline failed'
+          ALERT_DESCRIPTION: ${{ github.event.head_commit.message }}
+          ALERT_FAILED_JOBS: >-
             checks=${{ needs.checks.result }}, e2e=${{ needs.e2e.result }}, migrate=${{
             needs.migrate.result }}, manifest=${{ needs.manifest.result }}, build=${{
             needs.build.result }}, stack-e2e=${{ needs.stack-e2e.result }}, deploy=${{
             needs.deploy.result }}, verify-fleet=${{ needs.verify-fleet.result }}
-          COMMIT_MSG: ${{ github.event.head_commit.message }}
-        run: |
-          if [ -z "${WEBHOOK_URL}" ]; then
-            echo "DISCORD_WEBHOOK_URL not configured; skipping alert"
-            exit 0
-          fi
-          subject="$(printf '%s' "${COMMIT_MSG}" | head -n 1)"
-          # Canonical alarms embed: [source] severity — what fired, one link to
-          # the run, and the critical hue shared with the Axiom notifiers.
-          payload="$(jq -n \
-            --arg title "[CI] critical — main pipeline failed" \
-            --arg url "${RUN_URL}" \
-            --arg desc "${subject}" \
-            --arg failed "${FAILED}" \
-            '{embeds: [{title: $title, url: $url, description: $desc, color: 15026253, fields: [{name: "Failed jobs", value: $failed}]}]}')"
-          curl -fsS -H 'content-type: application/json' -d "${payload}" "${WEBHOOK_URL}"
+        run: bun run ci:discord-alert
