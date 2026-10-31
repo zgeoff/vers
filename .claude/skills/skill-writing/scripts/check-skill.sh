@@ -1,20 +1,36 @@
 #!/usr/bin/env bash
 # Checks the structure of each skill; exits non-zero when a skill breaks a rule that fails the run.
 # Usage (from the repo root): check-skill.sh [<skill-dir>...]
-# With no argument it checks every directory holding a SKILL.md under .claude/skills/ and
-# sync/skills/. A skill whose SKILL.md git marks linguist-vendored is skipped, so a repo marks its
-# third-party skills in .gitattributes.
+# With no argument it checks every directory holding a SKILL.md under .agents/skills/ and
+# .claude/skills/, where a consumer repo installs skills, under skills/, where zgeoff/skills keeps
+# them, and under sync/skills/, where zgeoff/tools keeps the shared skill bases. A skill whose
+# SKILL.md git marks linguist-vendored is skipped, so a repo marks its third-party skills in
+# .gitattributes.
 # Fails on: a missing name or description, a name that differs from the folder or breaks the name
 # format, a description over 1,024 characters, a plain description that holds a colon YAML reads as a
-# key, and a link with a line anchor outside code.
-# Warns on: a SKILL.md over 500 lines, a reference that SKILL.md does not list under ## References,
-# a reference over 100 lines with no contents list near its top, a reference that links to another
+# key, a link with a line anchor outside code, and a SKILL.md body over 1,700 words, or over 5,000
+# for a rule set (metadata.kind: rule-set in the frontmatter).
+# Warns on: a SKILL.md body over 1,500 words, or over 4,000 for a rule set, a SKILL.md over 500
+# lines, a reference that SKILL.md does not list under ## References, a reference over 100 lines
+# with two or more headings and no contents list near its top, a reference that links to another
 # reference, and a code-formatted span outside a table that names an existing repo file.
 set -uo pipefail
 
+if ! git rev-parse --is-inside-work-tree > /dev/null 2>&1; then
+  echo "check-skill: run it inside a git work tree, because it lists the files with git" >&2
+  exit 2
+fi
+
 # Lists tracked and untracked files, so a new skill is checked before it is staged.
+# A caller runs it in a command substitution and exits on its failure, because git's failure
+# otherwise reaches the check as an empty list.
 list_files() {
-  git -c core.quotePath=false ls-files --cached --others --exclude-standard -- "$@" | sort -u
+  local listing
+  if ! listing=$(git -c core.quotePath=false ls-files --cached --others --exclude-standard -- "$@"); then
+    echo "check-skill: git ls-files failed, so no skill was checked" >&2
+    exit 2
+  fi
+  sort -u <<< "$listing"
 }
 
 is_vendored() {
@@ -35,9 +51,11 @@ if [ "$#" -gt 0 ]; then
     dirs+=("$dir")
   done
 else
+  skill_files=$(list_files ':(glob).agents/skills/**/SKILL.md' ':(glob).claude/skills/**/SKILL.md' \
+    ':(glob)skills/**/SKILL.md' ':(glob)sync/skills/**/SKILL.md') || exit 2
   while IFS= read -r file; do
-    [ -f "$file" ] && dirs+=("$(dirname "$file")")
-  done < <(list_files ':(glob).claude/skills/**/SKILL.md' ':(glob)sync/skills/**/SKILL.md')
+    [ -n "$file" ] && [ -f "$file" ] && dirs+=("$(dirname "$file")")
+  done <<< "$skill_files"
 fi
 
 checked=()
@@ -100,6 +118,7 @@ sub check_skill {
 
   warn_about($skill, scalar(@lines) . " lines, over 500; check that each section is one most tasks need")
     if @lines > 500;
+  check_words($skill, @lines);
   check_frontmatter($dir, $skill, @lines);
 
   open my $list, "-|", "git", "-c", "core.quotePath=false", "ls-files", "--cached", "--others",
@@ -122,6 +141,73 @@ sub check_skill {
     warn_about($file, "SKILL.md does not list it under ## References; add a line naming the task that needs it")
       unless $listed{$file};
   }
+}
+
+# Counts the words of the body after the frontmatter, code blocks included: past the warning limit
+# an agent starts to skim, and past the error limit the skill fails the run. A rule set, such as a
+# code style, holds the rules an agent needs on every task of its kind, so it gets higher limits.
+sub check_words {
+  my ($skill, @lines) = @_;
+  my ($warn, $limit) = (1500, 1700);
+  my ($start, $in_metadata, $indent) = (0, 0, undef);
+  if (@lines && $lines[0] eq "---") {
+    for my $i (1 .. $#lines) {
+      my $line = $lines[$i];
+      if ($line eq "---") { $start = $i + 1; last }
+      if ($line =~ /^metadata:(?:\s+#.*)?\s*$/) { ($in_metadata, $indent) = (1, undef); next }
+      if ($line =~ /^metadata:\s*\{(.*)\}\s*(?:#.*)?$/) {
+        for my $entry (split_flow_entries($1)) {
+          ($warn, $limit) = (4000, 5000) if $entry =~ /^\s*kind:\s*(.*?)\s*$/ && unquote($1) eq "rule-set";
+        }
+        $in_metadata = 0;
+        next;
+      }
+      # A comment-only line, at any indent, is neither a key nor the end of the mapping.
+      next if $line =~ /^\s*#/;
+      $in_metadata = 0 if $line =~ /^\S/;
+      next unless $in_metadata && $line =~ /^(\s+)(\S.*?)\s*$/;
+      # Only a key of metadata itself counts, never a deeper line, such as the text of a block value.
+      $indent //= length $1;
+      next unless length($1) == $indent && $2 =~ /^kind:\s*(.*)$/;
+      ($warn, $limit) = (4000, 5000) if unquote($1) eq "rule-set";
+    }
+  }
+  my $words = 0;
+  for my $line (@lines[$start .. $#lines]) {
+    $words += () = $line =~ /\S+/g;
+  }
+  if ($words > $limit) {
+    fail($skill, "body is $words words, over the limit of $limit; cut it, or move what only some tasks need into a reference");
+  } elsif ($words > $warn) {
+    warn_about($skill, "body is $words words, over $warn; cut it, or move what only some tasks need into a reference");
+  }
+}
+
+# Splits the inside of a YAML flow mapping at each comma that sits outside a quoted value and a
+# nested flow collection, so a comma inside a value never starts an entry.
+sub split_flow_entries {
+  my ($text) = @_;
+  my (@entries, $quote);
+  my ($entry, $depth) = ("", 0);
+  for (my $i = 0; $i < length $text; $i++) {
+    my $char = substr($text, $i, 1);
+    if (defined $quote) {
+      if ($quote eq "\"" && $char eq "\\") { $entry .= substr($text, $i, 2); $i++; next }
+      undef $quote if $char eq $quote;
+    } elsif ($char eq "\"" || $char eq "\x27") {
+      $quote = $char;
+    } elsif ($char eq "{" || $char eq "[") {
+      $depth++;
+    } elsif ($char eq "}" || $char eq "]") {
+      $depth--;
+    } elsif ($char eq "," && $depth == 0) {
+      push @entries, $entry;
+      $entry = "";
+      next;
+    }
+    $entry .= $char;
+  }
+  return (@entries, $entry);
 }
 
 # Returns the files that the links under the ## References heading of SKILL.md point at.
@@ -231,6 +317,7 @@ sub check_markdown {
   my $open = "";
   my $line_number = 0;
   my $contents_links = 0;
+  my $headings = 0;
   my $reference = !$is_skill;
   my $in_comment = 0;
 
@@ -244,6 +331,7 @@ sub check_markdown {
       next;
     }
     next if $open ne "";
+    $headings++ if $line =~ /^#{2,6}\s/;
 
     # An HTML comment never renders, so its text holds no link and no path.
     # A comment marker inside inline code renders as text, so the spans hide their markers first.
@@ -285,13 +373,13 @@ sub check_markdown {
 
     for my $span (@bare) {
       $span =~ s/^\s+|\s+$//g;
-      next if $span !~ m{\A[\w.@/-]+\z} || $span !~ m{[./]};
+      next if $span !~ m{\A[\w.@/-]+\z} || $span !~ m{/};
       warn_about("$file:$line_number", "`$span` names a file in the repo; link it instead")
         if -f to_bytes($span);
     }
   }
 
-  if ($reference && @lines > 100 && $contents_links < 2) {
+  if ($reference && @lines > 100 && $headings >= 2 && $contents_links < 2) {
     warn_about($file, scalar(@lines) . " lines with no contents list near the top; open with links to its headings");
   }
 }

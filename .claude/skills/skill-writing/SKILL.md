@@ -41,7 +41,7 @@ Each line links the section that explains it.
   line.
 - [Keeping a skill true](#keeping-a-skill-true): rules, not incidents, and a script where a check
   can replace prose.
-- [Checking a skill](#checking-a-skill): `check-length.sh`, `check-links.sh`, and `check-skill.sh`.
+- [Checking a skill](#checking-a-skill): `chex prose`, `chex links`, and `chex skill`.
 
 ## What a skill holds
 
@@ -139,9 +139,9 @@ A copy of the code takes four shapes, and each has a replacement.
 ### A pointer to a name
 
 A pointer is allowed when the agent needs a name. Write the name as a Markdown link to its file, in
-a sentence that holds a fact the code doesn't: a trap, a reason, or a choice. `check-links.sh`
-checks a link, so a rename fails CI. A path in code formatting gets only a warning from
-`check-skill.sh`, and nothing fails when it goes stale.
+a sentence that holds a fact the code doesn't: a trap, a reason, or a choice. `chex links` checks a
+link, so a rename fails CI. A path in code formatting gets only a warning from `chex skill`, and
+nothing fails when it goes stale.
 
 - Bad: "Call `createWidget` (`src/widgets/create-widget.ts`) to build one; it ignores `theme` when
   `size` is `compact`."
@@ -253,20 +253,18 @@ Write for a model that follows instructions closely:
 Run these from the repo root:
 
 ```bash
-bash .claude/skills/docs-writing/scripts/check-length.sh
-bash .claude/skills/docs-writing/scripts/check-links.sh
+bun x @zgeoff/chex prose links skill
 ```
 
-`check-length.sh` runs docs-writing's prose check over each skill's Markdown, then runs
-`check-skill.sh`. `check-links.sh` checks every relative link in each skill. `check-skill.sh` fails
-on a frontmatter field outside its limit, on an unquoted description that holds a colon and a space,
-which YAML reads as a key, and on a line anchor. It warns about a SKILL.md over 500 lines, a
-reference that SKILL.md doesn't list under `## References`, a missing contents list, a reference
-that links to another reference, and a code-formatted path that should be a link. To check one
-skill, pass its folder:
+`chex prose` runs docs-writing's prose check over each skill's Markdown. `chex links` checks every
+relative link in each skill. `chex skill` fails on a frontmatter field outside its limit, on an
+unquoted description that holds a colon and a space, which YAML reads as a key, and on a line
+anchor. It warns about a SKILL.md over 500 lines, a reference that SKILL.md doesn't list under
+`## References`, a missing contents list, a reference that links to another reference, and a
+code-formatted path that should be a link. To check one skill, pass its folder:
 
 ```bash
-bash .claude/skills/skill-writing/scripts/check-skill.sh .claude/skills/<skill>
+bun x @zgeoff/chex skill .claude/skills/<skill>
 ```
 
 A repo marks a third-party skill `linguist-vendored` in [`.gitattributes`](../../../.gitattributes),
