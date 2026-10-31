@@ -133,6 +133,11 @@ jobs:
       - name: Check Secrets Manifest
         run: bun run secrets:check
 
+      # a job cancelled by its own concurrency group leaves cancelled() false, so a later job gated
+      # on !cancelled() runs after it unless its if: refuses the cancelled need
+      - name: Check Cancelled Needs
+        run: bun run workflows:check-cancelled-needs
+
       - name: Check Doc Paths
         run: bun run docs:check-paths
 

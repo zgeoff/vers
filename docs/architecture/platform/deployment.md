@@ -157,8 +157,10 @@ deploy job's timeout, which would otherwise kill flyctl mid-rollout and leave th
 started. The two pinned upstream apps set no strategy and roll over in place. Deploy jobs queue
 rather than cancel. When a newer run starts its build, full-stack gate or fleet verification while
 an older run's same job is still running, the older job is cancelled, because the newer run ships
-the same apps. The failure alert skips a run with a cancelled job. A rollout can fail on a transient
-host-capacity refusal; Fly rolls back cleanly, so re-run the failed job.
+the same apps. The rest of the older run then skips: the full-stack gate after a cancelled build,
+fleet verification after a cancelled build or full-stack gate, and the failure alert after any
+cancelled job. A rollout can fail on a transient host-capacity refusal; Fly rolls back cleanly, so
+re-run the failed job.
 
 ### Release record and rollback
 
@@ -173,11 +175,11 @@ with no recorded release yet is left serving the broken release, reported in the
 
 ### Fleet verification
 
-`verify-fleet` runs on every green push, even when every deploy leg skipped, and asserts every
-manifest app is online and current, catching an app at zero machines or a fleet behind HEAD. A
-rolled-back app reads stale there by design. It also checks each private entry's addresses
-([networking](#networking)), each declared scheduled machine against the app's image, and each
-shared secret's digests across its declaring apps.
+`verify-fleet` runs on every green push that no newer run replaced, even when every deploy leg
+skipped, and asserts every manifest app is online and current, catching an app at zero machines or a
+fleet behind HEAD. A rolled-back app reads stale there by design. It also checks each private
+entry's addresses ([networking](#networking)), each declared scheduled machine against the app's
+image, and each shared secret's digests across its declaring apps.
 
 ### Scheduled machines
 
