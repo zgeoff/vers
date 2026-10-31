@@ -1,27 +1,56 @@
 #!/usr/bin/env bash
 # Greps committed docs for prose violations; exits non-zero when any are found.
 # Violation greps fail the run; candidate greps print for judgment and never fail it.
-# Usage (from the repo root): check-prose.sh <path>...
+# Usage (from the repo root): check-prose.sh [<path>...]
+# With no path, it reads every README.md outside .claude/ and .agents/, every Markdown file under
+# docs/, every spike's results.md, and every skill's Markdown under .agents/skills/ and
+# .claude/skills/, where a consumer repo installs skills, under skills/, where zgeoff/skills keeps
+# them, and under sync/skills/, where zgeoff/tools keeps the shared skill bases.
 # The awk programs are single-quoted on purpose: awk, not the shell, expands their fields.
 # shellcheck disable=SC2016
 set -uo pipefail
 
-if [ "$#" -eq 0 ]; then
-  echo "usage: check-prose.sh <path>..." >&2
+if ! git rev-parse --is-inside-work-tree > /dev/null 2>&1; then
+  echo "check-prose: run it inside a git work tree, because it lists the files with git" >&2
   exit 2
+fi
+
+# A skill folder's README is a skill file, so only the READMEs outside the skill folders are listed
+# one by one.
+if [ "$#" -eq 0 ]; then
+  if ! readme_list=$(git -c core.quotePath=false ls-files --cached --others --exclude-standard -- \
+    ':(glob)**/README.md' ':(exclude,glob).claude/**' ':(exclude,glob).agents/**'); then
+    echo "check-prose: git ls-files failed, so no doc was checked" >&2
+    exit 2
+  fi
+  while IFS= read -r readme; do
+    [ -n "$readme" ] && set -- "$@" "$readme"
+  done < <(sort -u <<< "$readme_list")
+  set -- "$@" ':(glob)docs/**/*.md' ':(glob)**/results.md' ':(glob).agents/skills/**/*.md' \
+    ':(glob).claude/skills/**/*.md' ':(glob)skills/**/*.md' ':(glob)sync/skills/**/*.md'
 fi
 
 # The paragraph limits in words. repo-sync overwrites this file, so a repo cannot loosen them.
 paragraph_warn=150
 paragraph_fail=250
 
-# The skill's own files, the repo's project skill beside them, and the skill-writing skill document
-# the forbidden patterns and contain them as examples. A file git marks linguist-vendored belongs to
-# someone else, so a repo marks its third-party skills in .gitattributes.
-set -- "$@" ':(exclude).claude/skills/docs-writing' ':(exclude).claude/skills/project-docs-writing' \
-  ':(exclude)sync/skills/docs-writing' ':(exclude).claude/skills/skill-writing' \
-  ':(exclude)sync/skills/skill-writing' ':(exclude,attr:linguist-vendored)' \
-  ':(exclude,attr:linguist-vendored=true)'
+# The skill's own files, the repo's project skill beside them, and the skill-writing and deslop
+# skills document the forbidden patterns and contain them as examples. A consumer repo installs skills under
+# .agents/skills/ or .claude/skills/, and zgeoff/skills keeps them under skills/. A file git marks
+# linguist-vendored belongs to someone else, so a repo marks its third-party skills in
+# .gitattributes.
+for root in .agents/skills .claude/skills skills sync/skills; do
+  set -- "$@" ":(exclude)$root/docs-writing" ":(exclude)$root/project-docs-writing" \
+    ":(exclude)$root/skill-writing" ":(exclude)$root/deslop"
+done
+set -- "$@" ':(exclude,attr:linguist-vendored)' ':(exclude,attr:linguist-vendored=true)'
+
+# The greps below read git's file list in pipelines, which drop git's exit status, so a git that
+# cannot list the files fails here once.
+if ! git ls-files --cached --others --exclude-standard -- "$@" > /dev/null; then
+  echo "check-prose: git ls-files failed, so no doc was checked" >&2
+  exit 2
+fi
 
 # Every grep reads untracked files too, so a new doc is checked before it is staged, and skips
 # binary files.
@@ -88,11 +117,12 @@ report 'Process residue (date stamps, investigation framing, memory citations, �
 # The words every zgeoff repo bans; a repo's AGENTS.md lists them with their legal senses.
 # Judgment-only bans (bites, floor, anchor) are not grepped. CAS stays case-sensitive so "CAs"
 # passes.
-# AGENTS.md and the agents/ partials hold the banned-words registry itself, and "code fence" is the
-# legal markdown sense of the word. In Markdown, code blocks and code spans are exempt, since an
-# identifier in code may hold a banned word: awk blanks the spans and puts the rest before the line,
-# split by a unit separator, and grep matches the pattern only before that separator.
-banned_words='\bsurfaces?\b|load-bearing|\bseams?\b|\bceilings?\b|(?<!code )\bfenc(e|es|ed|ing)\b|(?-i:\bCAS\b)|significantly|near-instant'
+# AGENTS.md and the agents/ partials hold the banned-words registry itself, and "code fence" and
+# "fenced code" are the legal markdown sense of the word. In Markdown, code blocks and code spans
+# are exempt, since an identifier in code may hold a banned word: awk blanks the spans and puts the
+# rest before the line, split by a unit separator, and grep matches the pattern only before that
+# separator.
+banned_words='\bsurfaces?\b|load-bearing|\bseams?\b|\bceilings?\b|(?<!code )\bfenc(e|es|ed|ing)\b(?! code)|(?-i:\bCAS\b)|significantly|near-instant'
 report 'Banned words:' \
   "$(
     grep_docs -nPi "$banned_words" -- "$@" ':(exclude)*.md' ':(exclude)AGENTS.md' ':(exclude)agents'
@@ -613,6 +643,12 @@ candidate 'Candidates — delta-framing words; legal only when the baseline sits
 
 candidate 'Candidates — headings written as claims; move the thesis into the first sentence:' \
   "$(grep_docs -nP '^#{2,4} (?!(What|Why|When|How|Before|Where|Which)\b).*\b(is|are|does|has|cannot|never|not)\b' -- "$@")"
+
+candidate 'Candidates — sentence-initial "A x is a" definitions; keep one only where the reader needs the term defined:' \
+  "$(grep_docs -nP '\bAn? \w+ is an? ' -- "$@")"
+
+candidate 'Candidates — contrast frames, counted lists and stock openers; state the move, name the items, open with the job:' \
+  "$(grep_docs -nPi ', not (a|an|the|its|their|from|for|to|in|on|by|only|just)\b|\brather than\b|\bis not the (job|point)\b|\b(two|three|four|five) (ways|traps|mistakes|things|rules)\b|^(This|The) skill (is|helps|lets|explains|finds|builds|shows)\b' -- "$@")"
 
 if [ "$fail" -eq 0 ]; then
   echo 'check-prose: clean (candidates above, if any, need judgment only)'

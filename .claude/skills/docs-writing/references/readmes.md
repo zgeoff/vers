@@ -43,12 +43,29 @@ has six sections, in this order:
 6. Documentation: one line linking `docs/`.
 
 A plain repo README (a repo that publishes no package) opens with the header, then has one
-paragraph, Quick start, Checks, Layout, and Documentation. A folder README documents its own folder.
+paragraph, Quick start, Checks, Layout, and Documentation.
 
-[`check-length.sh`](../scripts/check-length.sh) takes each README's limit from its path alone, so
-the pre-push hook, CI and a repo's own script give the same result. It checks each README outside
-`docs/` and `.claude/`, and each spike README under `docs/design/**/spikes/*/`, and fails the run
-above its limit:
+## The five kinds of README
+
+`check-readmes.sh` accepts five kinds of README, and fails on any other:
+
+1. the root `README.md`;
+2. a README in a folder that holds a `package.json`, `go.mod` or `Cargo.toml`;
+3. `docs/README.md`;
+4. a design README: `docs/design/<work>/README.md`, or the README of a folder inside a design folder
+   whose own README is a design README, outside any `spikes/` folder;
+5. a spike README, whose first H1 starts `Spike: `, or, outside `docs/design/`, the README of a
+   folder whose direct subfolders hold a spike README.
+
+Move the content of any other README into `docs/`, or into a code comment beside the code it
+explains. A README that git marks `linguist-vendored` belongs to someone else, and the check skips
+it.
+
+## README limits
+
+`chex length` takes each README's limit from its path alone, so the pre-push hook, CI and a repo's
+own script give the same result. It checks each README outside `docs/` and `.claude/`, and each
+spike README under `docs/design/**/spikes/*/`, and fails the run above its limit:
 
 | README     | Path                                      | Target | Limit |
 | ---------- | ----------------------------------------- | ------ | ----- |
