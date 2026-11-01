@@ -4,7 +4,7 @@ import { runForgotPassword } from './run-forgot-password';
 export const forgotPassword = createServerFn({ method: 'POST' })
   .validator((formData: unknown) => {
     if (!(formData instanceof FormData)) {
-      throw new Error('forgotPassword expects a FormData submission');
+      throw new TypeError('forgotPassword expects a FormData submission');
     }
 
     return formData;

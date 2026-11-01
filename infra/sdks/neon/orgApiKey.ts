@@ -83,7 +83,7 @@ export class OrgApiKey extends pulumi.CustomResource {
       resourceInputs['name'] = args?.name;
       resourceInputs['orgId'] = args?.orgId;
       resourceInputs['projectId'] = args?.projectId;
-      resourceInputs['key'] = undefined /*out*/;
+      resourceInputs['key'] = undefined; /*out*/
     }
     opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts);
     const secretOpts = { additionalSecretOutputs: ['key'] };

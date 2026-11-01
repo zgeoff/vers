@@ -196,8 +196,8 @@ export class Monitor extends pulumi.CustomResource {
       resourceInputs['triggerAfterNPositiveResults'] = args?.triggerAfterNPositiveResults;
       resourceInputs['triggerFromNRuns'] = args?.triggerFromNRuns;
       resourceInputs['type'] = args?.type;
-      resourceInputs['createdAt'] = undefined /*out*/;
-      resourceInputs['createdBy'] = undefined /*out*/;
+      resourceInputs['createdAt'] = undefined; /*out*/
+      resourceInputs['createdBy'] = undefined; /*out*/
     }
     opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts);
     super(

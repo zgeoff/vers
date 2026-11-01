@@ -177,9 +177,9 @@ On **Vercel** (Fluid compute) also attach the pool with `attachDatabasePool` fro
 `@vercel/functions`, so the function runtime drains idle connections before an instance suspends:
 
 ```typescript
+import { attachDatabasePool } from '@vercel/functions';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
-import { attachDatabasePool } from '@vercel/functions';
 import * as schema from './schema';
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
@@ -190,8 +190,8 @@ const db = drizzle({ client: pool, schema });
 **Netlify and other fully-isolated serverless — Drizzle + Neon serverless driver:**
 
 ```typescript
-import { drizzle } from 'drizzle-orm/neon-http';
 import { neon } from '@neondatabase/serverless';
+import { drizzle } from 'drizzle-orm/neon-http';
 
 const sql = neon(process.env.DATABASE_URL!);
 const db = drizzle({ client: sql });

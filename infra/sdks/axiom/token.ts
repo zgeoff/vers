@@ -105,7 +105,7 @@ export class Token extends pulumi.CustomResource {
       resourceInputs['rotationGracePeriod'] = args?.rotationGracePeriod
         ? pulumi.secret(args.rotationGracePeriod)
         : undefined;
-      resourceInputs['token'] = undefined /*out*/;
+      resourceInputs['token'] = undefined; /*out*/
     }
     opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts);
     const secretOpts = { additionalSecretOutputs: ['rotationGracePeriod', 'token'] };

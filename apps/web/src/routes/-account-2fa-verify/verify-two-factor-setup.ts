@@ -4,7 +4,7 @@ import { verifyTwoFactorSetupHandler } from './verify-two-factor-setup-handler';
 export const verifyTwoFactorSetup = createServerFn({ method: 'POST' })
   .validator((formData: unknown) => {
     if (!(formData instanceof FormData)) {
-      throw new Error('verifyTwoFactorSetup expects a FormData submission');
+      throw new TypeError('verifyTwoFactorSetup expects a FormData submission');
     }
 
     return formData;

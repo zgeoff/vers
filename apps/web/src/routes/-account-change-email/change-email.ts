@@ -4,7 +4,7 @@ import { runChangeEmail } from './run-change-email';
 export const changeEmail = createServerFn({ method: 'POST' })
   .validator((formData: unknown) => {
     if (!(formData instanceof FormData)) {
-      throw new Error('changeEmail expects a FormData submission');
+      throw new TypeError('changeEmail expects a FormData submission');
     }
 
     return formData;

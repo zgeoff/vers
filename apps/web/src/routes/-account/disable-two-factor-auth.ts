@@ -4,7 +4,7 @@ import { runDisableTwoFactorAuth } from './run-disable-two-factor-auth';
 export const disableTwoFactorAuth = createServerFn({ method: 'POST' })
   .validator((formData: unknown) => {
     if (!(formData instanceof FormData)) {
-      throw new Error('disableTwoFactorAuth expects a FormData submission');
+      throw new TypeError('disableTwoFactorAuth expects a FormData submission');
     }
 
     return formData;

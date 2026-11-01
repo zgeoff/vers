@@ -4,7 +4,7 @@ import { runSignup } from './run-signup';
 export const signup = createServerFn({ method: 'POST' })
   .validator((formData: unknown) => {
     if (!(formData instanceof FormData)) {
-      throw new Error('signup expects a FormData submission');
+      throw new TypeError('signup expects a FormData submission');
     }
 
     return formData;

@@ -285,8 +285,8 @@ test('it retries a retryable call answered with a 5xx and delivers the following
 });
 
 test('it delivers the last 5xx answer once the retryable budget is spent', async () => {
-  const sendAttempt = mock(
-    (): Promise<Response> => Promise.resolve(new Response(null, { status: 502 })),
+  const sendAttempt = mock((): Promise<Response> =>
+    Promise.resolve(new Response(null, { status: 502 })),
   );
 
   const outcome = await runBoundedAttempts(
@@ -306,8 +306,8 @@ test('it delivers the last 5xx answer once the retryable budget is spent', async
 });
 
 test('it delivers a 5xx answer to a non-retryable call without a second attempt', async () => {
-  const sendAttempt = mock(
-    (): Promise<Response> => Promise.resolve(new Response(null, { status: 503 })),
+  const sendAttempt = mock((): Promise<Response> =>
+    Promise.resolve(new Response(null, { status: 503 })),
   );
 
   const outcome = await runBoundedAttempts(
@@ -329,9 +329,8 @@ test('it delivers a 5xx answer to a non-retryable call without a second attempt'
 test('it delivers a 4xx answer at once and disarms its bound', async () => {
   const clock = new SimulatedClock();
 
-  const sendAttempt = mock(
-    (_signal: AbortSignal): Promise<Response> =>
-      Promise.resolve(new Response(null, { status: 404 })),
+  const sendAttempt = mock((_signal: AbortSignal): Promise<Response> =>
+    Promise.resolve(new Response(null, { status: 404 })),
   );
 
   const outcome = await runBoundedAttempts(

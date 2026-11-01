@@ -4,7 +4,7 @@ import { runOnboarding } from './run-onboarding';
 export const onboarding = createServerFn({ method: 'POST' })
   .validator((formData: unknown) => {
     if (!(formData instanceof FormData)) {
-      throw new Error('onboarding expects a FormData submission');
+      throw new TypeError('onboarding expects a FormData submission');
     }
 
     return formData;

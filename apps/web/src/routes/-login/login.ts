@@ -4,7 +4,7 @@ import { runLogin } from './run-login';
 export const login = createServerFn({ method: 'POST' })
   .validator((formData: unknown) => {
     if (!(formData instanceof FormData)) {
-      throw new Error('login expects a FormData submission');
+      throw new TypeError('login expects a FormData submission');
     }
 
     return formData;

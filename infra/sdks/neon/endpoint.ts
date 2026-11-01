@@ -139,8 +139,8 @@ export class Endpoint extends pulumi.CustomResource {
       resourceInputs['regionId'] = args?.regionId;
       resourceInputs['suspendTimeoutSeconds'] = args?.suspendTimeoutSeconds;
       resourceInputs['type'] = args?.type;
-      resourceInputs['host'] = undefined /*out*/;
-      resourceInputs['proxyHost'] = undefined /*out*/;
+      resourceInputs['host'] = undefined; /*out*/
+      resourceInputs['proxyHost'] = undefined; /*out*/
     }
     opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts);
     super(

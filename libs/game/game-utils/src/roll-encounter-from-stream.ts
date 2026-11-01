@@ -39,9 +39,8 @@ export function rollEncounterFromStream(
   const waves = Array.from({ length: waveCount }, () => {
     const waveSize = stream.rollRange(content.tuning.waveSizeMin, content.tuning.waveSizeMax);
 
-    return Array.from(
-      { length: waveSize },
-      (): EncounterEnemy => buildEnemy(stream.pickWeighted(weightedArchetypes), multiplier),
+    return Array.from({ length: waveSize }, (): EncounterEnemy =>
+      buildEnemy(stream.pickWeighted(weightedArchetypes), multiplier),
     );
   });
 
