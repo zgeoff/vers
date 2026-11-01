@@ -680,11 +680,12 @@ jobs:
     needs: [checks, e2e, migrate, manifest, build, stack-e2e, deploy, verify-fleet]
     # a red main pipeline pages the team channel: agent-driven pushes mean
     # nobody is necessarily watching the Actions tab, and a failed deploy or
-    # fleet verification left unnoticed is exactly how version skew lingers. A newer run cancels
-    # this run's build, stack-e2e or verify-fleet job, and that newer run reports for both commits
+    # fleet verification left unnoticed is exactly how version skew lingers. GitHub reports a need
+    # that hit its timeout-minutes as cancelled, the same result a newer run's concurrency cancel
+    # gives, so the job runs on either and the alert script drops the run when a newer run exists
     if:
-      ${{ !cancelled() && contains(join(needs.*.result, ','), 'failure') &&
-      !contains(join(needs.*.result, ','), 'cancelled') }}
+      ${{ !cancelled() && (contains(needs.*.result, 'failure') || contains(needs.*.result,
+      'cancelled')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     environment: production
@@ -716,4 +717,6 @@ jobs:
             needs.migrate.result }}, manifest=${{ needs.manifest.result }}, build=${{
             needs.build.result }}, stack-e2e=${{ needs.stack-e2e.result }}, deploy=${{
             needs.deploy.result }}, verify-fleet=${{ needs.verify-fleet.result }}
+          CANCELLED_NEED: ${{ contains(needs.*.result, 'cancelled') }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: bun run ci:discord-alert

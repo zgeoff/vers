@@ -83,7 +83,7 @@ test('it reports a job that runs after the cancel when a job that ran before it 
       'serve',
       {
         needs: ['taste'],
-        condition: "!cancelled() && needs.taste.result == 'failure'",
+        condition: "!cancelled() && needs.taste.result != 'skipped'",
         cancelsInProgress: false,
       },
     ],
@@ -100,30 +100,46 @@ test('it reports a job that runs after a cancelled need when another of its need
     ['wash', { needs: [], condition: 'success()', cancelsInProgress: false }],
     ['bake', { needs: [], condition: 'success()', cancelsInProgress: true }],
     [
-      'alarm',
+      'serve',
       {
         needs: ['wash', 'bake'],
-        condition: "!cancelled() && needs.wash.result == 'failure'",
+        condition: "!cancelled() && needs.wash.result != 'skipped'",
         cancelsInProgress: false,
       },
     ],
   ]);
 
   expect(collectRunsAfterCancelledNeed(jobs)).toStrictEqual([
-    { job: 'alarm', cancelledJob: 'bake' },
+    { job: 'serve', cancelledJob: 'bake' },
   ]);
 });
 
-test('it reports a job gated on failure() after a cancelled need when another need failed', () => {
+test('it passes a failure handler that runs after a cancelled need', () => {
+  const jobs = new Map([
+    ['wash', { needs: [], condition: 'success()', cancelsInProgress: false }],
+    ['bake', { needs: [], condition: 'success()', cancelsInProgress: true }],
+    [
+      'alarm',
+      {
+        needs: ['wash', 'bake'],
+        condition:
+          "!cancelled() && (contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled'))",
+        cancelsInProgress: false,
+      },
+    ],
+  ]);
+
+  expect(collectRunsAfterCancelledNeed(jobs)).toStrictEqual([]);
+});
+
+test('it passes a job gated on failure() after a cancelled need when another need failed', () => {
   const jobs = new Map([
     ['wash', { needs: [], condition: 'success()', cancelsInProgress: false }],
     ['bake', { needs: [], condition: 'success()', cancelsInProgress: true }],
     ['alarm', { needs: ['wash', 'bake'], condition: 'failure()', cancelsInProgress: false }],
   ]);
 
-  expect(collectRunsAfterCancelledNeed(jobs)).toStrictEqual([
-    { job: 'alarm', cancelledJob: 'bake' },
-  ]);
+  expect(collectRunsAfterCancelledNeed(jobs)).toStrictEqual([]);
 });
 
 test('it passes a failure handler that refuses a cancelled need', () => {

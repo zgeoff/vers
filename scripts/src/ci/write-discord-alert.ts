@@ -1,6 +1,8 @@
 import { buildDiscordAlert } from './build-discord-alert';
+import { probeNewerRun } from './probe-newer-run';
+import type { RunLookup } from './types';
 
-type AlertOutcome = 'sent' | 'no-webhook';
+type AlertOutcome = 'sent' | 'no-webhook' | 'superseded';
 
 // The alert imports no package, so it runs after a failed `bun install` and reports that failure.
 export async function writeDiscordAlert(
@@ -10,6 +12,14 @@ export async function writeDiscordAlert(
 
   if (webhookURL === undefined) {
     return 'no-webhook';
+  }
+
+  if (findValue(env, 'CANCELLED_NEED') === 'true') {
+    const isSuperseded = await probeNewerRun(getRunLookup(env));
+
+    if (isSuperseded) {
+      return 'superseded';
+    }
   }
 
   const body = buildDiscordAlert({
@@ -42,6 +52,16 @@ function findValue(
   const value = env[name];
 
   return value === '' ? undefined : value;
+}
+
+// the runner sets GITHUB_API_URL, GITHUB_REPOSITORY and GITHUB_RUN_ID in every step
+function getRunLookup(env: Readonly<Record<string, string | undefined>>): RunLookup {
+  return {
+    apiURL: getValue(env, 'GITHUB_API_URL'),
+    repository: getValue(env, 'GITHUB_REPOSITORY'),
+    runID: getValue(env, 'GITHUB_RUN_ID'),
+    token: getValue(env, 'GITHUB_TOKEN'),
+  };
 }
 
 function getValue(env: Readonly<Record<string, string | undefined>>, name: string): string {

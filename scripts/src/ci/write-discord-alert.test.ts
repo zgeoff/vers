@@ -72,6 +72,91 @@ test('it leaves out the failed-jobs field when the step passes an empty list', a
   });
 });
 
+test('it sends the alert after a timed-out need when no newer run exists', async () => {
+  const received = mock();
+
+  server.use(
+    http.get('https://api.github.test/repos/acme/kiln/actions/runs/9001', () =>
+      HttpResponse.json({ workflow_id: 77, run_number: 310, head_branch: 'main' }),
+    ),
+    http.get('https://api.github.test/repos/acme/kiln/actions/workflows/77/runs', () =>
+      HttpResponse.json({
+        workflow_runs: [{ workflow_id: 77, run_number: 310, head_branch: 'main' }],
+      }),
+    ),
+    http.post('https://discord.test/api/webhooks/7/token', async (info) => {
+      const body: unknown = await info.request.json();
+
+      received(body);
+
+      return new HttpResponse(null, { status: 204 });
+    }),
+  );
+
+  const outcome = await writeDiscordAlert({
+    WEBHOOK_URL: 'https://discord.test/api/webhooks/7/token',
+    RUN_URL: 'https://github.com/acme/kiln/actions/runs/9001',
+    ALERT_TITLE: '[CI] critical — main pipeline failed',
+    ALERT_DESCRIPTION: 'add the glaze picker',
+    ALERT_FAILED_JOBS: 'checks=success, build=cancelled, deploy=skipped',
+    CANCELLED_NEED: 'true',
+    GITHUB_API_URL: 'https://api.github.test',
+    GITHUB_REPOSITORY: 'acme/kiln',
+    GITHUB_RUN_ID: '9001',
+    GITHUB_TOKEN: 'ghs_kiln',
+  });
+
+  expect(outcome).toBe('sent');
+
+  expect(received).toHaveBeenCalledExactlyOnceWith({
+    embeds: [
+      {
+        title: '[CI] critical — main pipeline failed',
+        url: 'https://github.com/acme/kiln/actions/runs/9001',
+        description: 'add the glaze picker',
+        color: 15_026_253,
+        fields: [{ name: 'Failed jobs', value: 'checks=success, build=cancelled, deploy=skipped' }],
+      },
+    ],
+  });
+});
+
+test('it sends nothing after a cancelled need when a newer run exists', async () => {
+  const received = mock();
+
+  server.use(
+    http.get('https://api.github.test/repos/acme/kiln/actions/runs/9001', () =>
+      HttpResponse.json({ workflow_id: 77, run_number: 310, head_branch: 'main' }),
+    ),
+    http.get('https://api.github.test/repos/acme/kiln/actions/workflows/77/runs', () =>
+      HttpResponse.json({
+        workflow_runs: [{ workflow_id: 77, run_number: 311, head_branch: 'main' }],
+      }),
+    ),
+    http.post('https://discord.test/api/webhooks/7/token', () => {
+      received();
+
+      return new HttpResponse(null, { status: 204 });
+    }),
+  );
+
+  const outcome = await writeDiscordAlert({
+    WEBHOOK_URL: 'https://discord.test/api/webhooks/7/token',
+    RUN_URL: 'https://github.com/acme/kiln/actions/runs/9001',
+    ALERT_TITLE: '[CI] critical — main pipeline failed',
+    ALERT_DESCRIPTION: 'add the glaze picker',
+    ALERT_FAILED_JOBS: 'checks=success, build=cancelled, deploy=skipped',
+    CANCELLED_NEED: 'true',
+    GITHUB_API_URL: 'https://api.github.test',
+    GITHUB_REPOSITORY: 'acme/kiln',
+    GITHUB_RUN_ID: '9001',
+    GITHUB_TOKEN: 'ghs_kiln',
+  });
+
+  expect(outcome).toBe('superseded');
+  expect(received).not.toHaveBeenCalled();
+});
+
 test('it sends nothing when the webhook secret is empty', async () => {
   const outcome = await writeDiscordAlert({
     WEBHOOK_URL: '',
