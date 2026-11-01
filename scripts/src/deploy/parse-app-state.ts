@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { isServiceMachine } from './is-service-machine';
+import { SCHEDULED_MACHINE_METADATA_KEY } from './scheduled-machine-metadata-key';
 import type { AppMachine, AppState, ScheduledMachineState } from './types';
 
 const stringRecordSchema = z.record(z.string(), z.string()).readonly();
@@ -48,7 +49,7 @@ export function parseAppState(json: unknown): AppState {
     .filter((machine) => machine.config?.schedule !== undefined)
     .map((machine) => ({
       id: machine.id,
-      name: machine.name,
+      name: machine.config?.metadata?.[SCHEDULED_MACHINE_METADATA_KEY] ?? machine.name,
       image: normalizeImage(machine.config?.image) ?? '',
     }));
 

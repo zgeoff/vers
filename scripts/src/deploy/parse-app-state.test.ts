@@ -155,6 +155,25 @@ test('it separates a scheduled machine from the app process group by its schedul
   });
 });
 
+test('it names a scheduled machine by the declared name in its metadata over its Fly name', () => {
+  const json = [
+    {
+      config: {
+        image: 'registry.fly.io/x:tag2',
+        metadata: { vers_scheduled_machine: 'sweeper' },
+        schedule: 'hourly',
+      },
+      id: 'm3',
+      name: 'sweeper-9c1e4b7',
+      state: 'stopped',
+    },
+  ];
+
+  expect(parseAppState(json).scheduledMachines).toStrictEqual([
+    { id: 'm3', image: 'registry.fly.io/x:tag2', name: 'sweeper' },
+  ]);
+});
+
 test('it reads images with the resolved digest stripped', () => {
   const json = [
     {

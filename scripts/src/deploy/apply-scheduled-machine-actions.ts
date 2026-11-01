@@ -1,23 +1,36 @@
 import pRetry from 'p-retry';
+import { FlyctlError } from '../utils/flyctl-error';
 import { runFlyctl } from '../utils/run-flyctl';
+import { SCHEDULED_MACHINE_METADATA_KEY } from './scheduled-machine-metadata-key';
 import type { ScheduledMachine, ScheduledMachineAction } from './types';
+
+interface UpdateRetry {
+  readonly delayMs: number;
+  readonly retries: number;
+}
+
+// an update can collide with Fly stopping the scheduled machine outside its schedule window, so
+// it retries a few times before the error is raised
+const UPDATE_RETRY: UpdateRetry = { delayMs: 5000, retries: 4 };
 
 export async function applyScheduledMachineActions(
   app: string,
   sha: string,
   actions: ReadonlyArray<ScheduledMachineAction>,
+  updateRetry: UpdateRetry = UPDATE_RETRY,
 ): Promise<void> {
   for (const action of actions) {
     await (action.kind === 'create'
-      ? runCreate(app, sha, action)
-      : runUpdateImage(app, sha, action));
+      ? runCreate(app, sha, action, action.machine.name)
+      : runUpdateImage(app, sha, action, updateRetry));
   }
 }
 
 async function runCreate(
   app: string,
   sha: string,
-  action: Extract<ScheduledMachineAction, { kind: 'create' }>,
+  action: ScheduledMachineAction,
+  flyName: string,
 ): Promise<void> {
   const args = [
     'machine',
@@ -27,7 +40,9 @@ async function runCreate(
     '--schedule',
     action.machine.schedule,
     '--name',
-    action.machine.name,
+    flyName,
+    '--metadata',
+    `${SCHEDULED_MACHINE_METADATA_KEY}=${action.machine.name}`,
     '-a',
     app,
     '--detach',
@@ -51,31 +66,53 @@ function buildEnvArgs(machine: ScheduledMachine): ReadonlyArray<string> {
   ]);
 }
 
-// an update can collide with Fly stopping the scheduled machine outside its schedule window, so
-// it retries a few times before the error is raised
-const UPDATE_RETRIES = 4;
-const UPDATE_RETRY_DELAY_MS = 5000;
+const SHORT_SHA_LENGTH = 7;
 
 async function runUpdateImage(
   app: string,
   sha: string,
   action: Extract<ScheduledMachineAction, { kind: 'update-image' }>,
+  updateRetry: UpdateRetry,
 ): Promise<void> {
-  await pRetry(
-    () =>
-      runFlyctl([
-        'machine',
-        'update',
-        action.machineID,
-        '-a',
-        app,
-        '--image',
-        action.image,
-        '--env',
-        `GIT_SHA=${sha}`,
-        ...buildEnvArgs(action.machine),
-        '--yes',
-      ]),
-    { factor: 1, minTimeout: UPDATE_RETRY_DELAY_MS, retries: UPDATE_RETRIES },
-  );
+  try {
+    await pRetry(
+      () =>
+        runFlyctl([
+          'machine',
+          'update',
+          action.machineID,
+          '-a',
+          app,
+          '--image',
+          action.image,
+          '--env',
+          `GIT_SHA=${sha}`,
+          ...buildEnvArgs(action.machine),
+          '--yes',
+        ]),
+      {
+        factor: 1,
+        minTimeout: updateRetry.delayMs,
+        retries: updateRetry.retries,
+        shouldRetry: (context) => !isHostCapacityError(context.error),
+      },
+    );
+  } catch (error) {
+    if (!isHostCapacityError(error)) {
+      throw error;
+    }
+
+    console.log(
+      `${app}: the host of scheduled machine ${action.machine.name} (${action.machineID}) has no room for the new image — replacing it`,
+    );
+
+    await runCreate(app, sha, action, `${action.machine.name}-${sha.slice(0, SHORT_SHA_LENGTH)}`);
+    await runFlyctl(['machine', 'destroy', '--force', action.machineID, '-a', app]);
+  }
+}
+
+// `fly machine update` keeps a machine on its current host, so a retry cannot clear this error and
+// only a new machine, which Fly places on a host with room, takes the new image
+function isHostCapacityError(error: unknown): boolean {
+  return error instanceof FlyctlError && error.stderr.includes('could not reserve resource');
 }

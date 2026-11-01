@@ -188,9 +188,13 @@ image, and each shared secret's digests across its declaring apps.
 A scheduled machine is unmanaged: `fly deploy` never rolls its image forward. An app entry declares
 each one in the manifest, and the CLI reconciles the declarations right after the app's rollout
 lands, and on its skipped-deploy path alike: it creates a declared machine that does not exist yet
-on the app's just-deployed image and moves one on a stale image onto it. Provisioning a new
-scheduled machine is a manifest edit. A declaration carries its own env map, because a scheduled
-machine reads no `fly.toml` env table.
+on the app's just-deployed image and moves one on a stale image onto it. When the machine's host has
+no room for the new image, the CLI replaces the machine: it creates a new one on the new image, then
+destroys the old one. Fly names are unique per app, so the replacement takes the declared name with
+a short commit suffix, and every scheduled machine the CLI creates carries the declared name in its
+`vers_scheduled_machine` metadata, which the reconcile and `deploy verify` read before the Fly name.
+Provisioning a new scheduled machine is a manifest edit. A declaration carries its own env map,
+because a scheduled machine reads no `fly.toml` env table.
 
 ### Stranded-machine sweep
 
