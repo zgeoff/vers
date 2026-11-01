@@ -7,6 +7,7 @@ import { buildCheckpointBatchEntry } from './build-checkpoint-batch-entry';
 import { buildRetryBackoffMS } from './build-retry-backoff-ms';
 import type { CheckpointActivityChildRef } from './checkpoint-submitter-machine';
 import { checkpointSubmitterMachine } from './checkpoint-submitter-machine';
+import { collectChainBlockedActivityIDs } from './collect-chain-blocked-activity-ids';
 import {
   ENTROPY_SOURCE_SERVER_KEY,
   PROGRESS_FLUSH_INTERVAL_MS,
@@ -14,6 +15,7 @@ import {
 } from './constants';
 import type { IngestActivityStartOutcome } from './ingest-activity-start';
 import { JournalWriteError } from './journal-write-error';
+import { readAllActivityStarts } from './read-all-activity-starts';
 import { readQueuedCheckpoints } from './read-queued-checkpoints';
 import type { FlushOutcome } from './run-checkpoint-flush-attempt';
 import { TERMINAL_CHECKPOINT_TYPES } from './terminal-checkpoint-types';
@@ -377,13 +379,22 @@ export function createCheckpointSubmitter(
     return entry.version;
   };
 
+  // a start behind a predecessor the outbox still holds is refused as a stale chain head until that
+  // predecessor ends, so it waits for the successor flush that end triggers, or for its own backoff
   const flushHeld = async (): Promise<void> => {
-    await Promise.allSettled(
-      [...parentActor.getSnapshot().context.children.values()].map((child) => {
-        child.send({ type: 'FLUSH_HELD' });
+    const starts = await readAllActivityStarts();
 
-        return waitFor(child, (snapshot) => !snapshot.matches('flushing'));
-      }),
+    const children = parentActor.getSnapshot().context.children;
+    const blockedIDs = collectChainBlockedActivityIDs(starts, new Set(children.keys()));
+
+    await Promise.allSettled(
+      [...children.entries()]
+        .filter(([activityID]) => !blockedIDs.has(activityID))
+        .map(([, child]) => {
+          child.send({ type: 'FLUSH_HELD' });
+
+          return waitFor(child, (snapshot) => !snapshot.matches('flushing'));
+        }),
     );
   };
 
