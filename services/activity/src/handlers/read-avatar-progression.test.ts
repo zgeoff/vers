@@ -419,15 +419,25 @@ test('it attempts a wake delivery when a pending entry is present', async () => 
     startVersion: 1,
   });
 
+  const wakeHandler = mock(() => ({ drained: 0 }));
+
+  server.use(mockReplayService.wake.handler(wakeHandler));
+
   await client.trackActivityProgress({
     activityID: started.id,
     checkpoints: batch,
     expectedHead: 0,
   });
 
-  const wakeHandler = mock(() => ({ drained: 0 }));
+  // the terminal checkpoint sends its own wake, whose delivery can land after the append returns
+  await waitFor(
+    () => {
+      expect(wakeHandler).toHaveBeenCalledOnce();
+    },
+    { timeoutMs: 2000 },
+  );
 
-  server.use(mockReplayService.wake.handler(wakeHandler));
+  wakeHandler.mockClear();
 
   await client.getAvatarProgression({ avatarID: avatar.id });
 
