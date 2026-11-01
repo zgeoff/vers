@@ -10,7 +10,7 @@ import { runCheckpointFlushAttempt } from './run-checkpoint-flush-attempt';
 import { subscribeToShutdownAbort } from './subscribe-to-shutdown-abort';
 import type { ActivityServiceClient } from './types';
 
-type HoldCause = 'deferred' | 'transport';
+type HoldCause = 'deferred' | 'throttled' | 'transport';
 
 export interface CheckpointActivitySettledEvent {
   readonly activityID: string;
@@ -92,7 +92,8 @@ type FlushSettledEvent =
   | { readonly sessionEvicted: boolean; readonly type: 'SETTLED_EVICTION' }
   | { readonly type: 'SETTLED_EMPTY' }
   | { readonly type: 'SETTLED_HELD_ERROR' }
-  | { readonly type: 'SETTLED_INVALID' };
+  | { readonly type: 'SETTLED_INVALID' }
+  | { readonly type: 'SETTLED_THROTTLED' };
 
 type CheckpointActivityEvent =
   | FlushSettledEvent
@@ -259,6 +260,10 @@ export const checkpointActivityMachine = setup({
           actions: assign({ consecutiveFlushFailures: 0 }),
           target: 'invalid',
         },
+        SETTLED_THROTTLED: {
+          actions: assign({ consecutiveFlushFailures: 0, holdCause: 'throttled' as const }),
+          target: 'retrying',
+        },
         SETTLED_SUCCESS: [
           {
             actions: assign({ consecutiveFlushFailures: 0 }),
@@ -353,8 +358,8 @@ export const checkpointActivityMachine = setup({
         target: 'flushing',
       },
 
-      // a deferred hold is a server answer, so it is not reported as held: the worker reads held
-      // as a lost connection and would treat the next answer as a reconnect, re-flushing at once
+      // a deferred or throttled hold is a server answer, so it is not reported as held: the worker
+      // reads held as a lost connection and would treat the next answer as a reconnect
       entry: enqueueActions((args) => {
         if (args.context.holdCause === 'transport') {
           args.enqueue.emit({ activityID: args.context.activityID, type: 'held' });
@@ -438,6 +443,10 @@ function buildFlushSettledEvent(outcome: FlushOutcome): FlushSettledEvent {
 
   if (outcome.type === 'session-evicted') {
     return { sessionEvicted: true, type: 'SETTLED_EVICTION' };
+  }
+
+  if (outcome.type === 'throttled') {
+    return { type: 'SETTLED_THROTTLED' };
   }
 
   if (outcome.type === 'success') {

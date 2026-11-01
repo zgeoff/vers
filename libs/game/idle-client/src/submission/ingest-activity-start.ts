@@ -2,6 +2,7 @@ import { isDefinedError, safe } from '@orpc/client';
 import type { ActivityData, AdvanceCheckpointInvalidReason } from '@vers/contract-activity';
 import { buildOfflineActivityStartSubmission } from '@vers/contract-activity';
 import type { LatestActivityProgress } from '../resync/types';
+import { isRateLimitedError } from './is-rate-limited-error';
 import { isStaleChainHeadFinal } from './is-stale-chain-head-final';
 import { pickRefusedSnapshotDisposition } from './pick-refused-snapshot-disposition';
 import { readActivityStart } from './read-activity-start';
@@ -94,6 +95,11 @@ export async function ingestActivityStart(
     await removeActivityStart(activityID);
 
     return { outcome: 'ingested' };
+  }
+
+  // a rate limit answered, so the row keeps on a deferral's backoff with no connectivity change
+  if (isRateLimitedError(error)) {
+    return { outcome: 'deferred' };
   }
 
   // the service never answered, so the row keeps and the caller has a connectivity transition to

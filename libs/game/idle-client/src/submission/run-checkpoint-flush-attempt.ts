@@ -3,6 +3,7 @@ import { MAX_CATCH_UP_BATCH_CHECKPOINTS } from '@vers/contract-activity';
 import { buildTraceparent, createTraceContext } from '@vers/trace';
 import { fromPromise } from 'xstate';
 import type { IngestActivityStartOutcome } from './ingest-activity-start';
+import { isRateLimitedError } from './is-rate-limited-error';
 import { readQueuedCheckpoints } from './read-queued-checkpoints';
 import { removeConfirmedCheckpoints } from './remove-confirmed-checkpoints';
 import { removeQueuedCheckpoints } from './remove-queued-checkpoints';
@@ -24,7 +25,8 @@ export type FlushOutcome =
   | { readonly type: 'held-defined-error' }
   | { readonly type: 'not-found' }
   | { readonly type: 'session-evicted' }
-  | { readonly type: 'terminal' };
+  | { readonly type: 'terminal' }
+  | { readonly type: 'throttled' };
 
 interface FlushAttemptInput {
   readonly activityID: string;
@@ -91,6 +93,13 @@ export const runCheckpointFlushAttempt = fromPromise<FlushOutcome, FlushAttemptI
           }
 
           return { appendedHead: result.appendedHead, tailQueued, type: 'success' };
+        }
+
+        // a rate limit is an answer from the web app, so it holds the queue on the backoff without
+        // reporting the connection lost or found: either report would run a reconnect recovery,
+        // whose flush adds to the traffic the limit refused
+        if (isRateLimitedError(error)) {
+          return { type: 'throttled' };
         }
 
         if (!isDefinedError(error)) {

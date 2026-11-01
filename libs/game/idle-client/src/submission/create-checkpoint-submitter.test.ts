@@ -2,6 +2,7 @@ import { expect, mock, test } from 'bun:test';
 import { createORPCClient } from '@orpc/client';
 import { RPCLink } from '@orpc/client/fetch';
 import { MAX_CATCH_UP_BATCH_CHECKPOINTS } from '@vers/contract-activity';
+import { createMockActivityData } from '@vers/contract-activity/test-utils';
 import { resolveServiceURL } from '@vers/mock-services';
 import { mockActivityService } from '@vers/mock-services/activity';
 import { makeAnswerQueue, waitFor } from '@vers/test-utils';
@@ -21,6 +22,7 @@ import { JournalWriteError } from './journal-write-error';
 import { readNodeSeed } from './read-node-seed';
 import { readQueuedCheckpoints } from './read-queued-checkpoints';
 import type { ActivityServiceClient, CheckpointJournal } from './types';
+import { writeActivityStart } from './write-activity-start';
 import { writeNodeAnchor } from './write-node-anchor';
 import { writeNodeSeeds } from './write-node-seeds';
 import { writeQueuedCheckpoint } from './write-queued-checkpoint';
@@ -1111,6 +1113,66 @@ test('it flushes every held activity immediately and resets their backoff', asyn
   expect(remaining).toStrictEqual([]);
 });
 
+test('it flushes only the head of a held chain, leaving each start whose predecessor the outbox holds', async () => {
+  let isOnline = false;
+  const track = mock<(activityID: string) => void>();
+  const ingestActivityStart = mock(() => Promise.resolve<IngestActivityStartOutcome>('deferred'));
+  const ctx = setupTest({ ingestActivityStart });
+
+  server.use(
+    mockActivityService.trackActivityProgress.handler((opts) => {
+      if (!isOnline) {
+        return HttpResponse.error();
+      }
+
+      track(opts.input.activityID);
+
+      if (opts.input.activityID !== 'act_chain_head') {
+        throw opts.errors.NOT_FOUND({ data: {} });
+      }
+
+      return { appendedHead: 1 };
+    }),
+  );
+
+  await writeActivityStart(
+    createMockActivityData({
+      avatarID: 'avatar_chain',
+      id: 'act_chain_second',
+      predecessorActivityID: 'act_chain_head',
+      startKey: 'continue_act_chain_head',
+    }),
+  );
+
+  await writeActivityStart(
+    createMockActivityData({
+      avatarID: 'avatar_chain',
+      id: 'act_chain_third',
+      predecessorActivityID: 'act_chain_second',
+      startKey: 'continue_act_chain_second',
+    }),
+  );
+
+  for (const activityID of ['act_chain_head', 'act_chain_second', 'act_chain_third']) {
+    await ctx.submitter.registerActivity({
+      activityID,
+      appendedHead: 0,
+      avatarID: 'avatar_chain',
+      lastHash: 'start_hash',
+      startChainIndex: 0,
+    });
+
+    await ctx.submitter.submit(activityID, createMockCompletedCheckpoint());
+  }
+
+  isOnline = true;
+
+  await ctx.submitter.flushHeld();
+
+  expect(track.mock.calls).toStrictEqual([['act_chain_head']]);
+  expect(ingestActivityStart).not.toHaveBeenCalled();
+});
+
 test('it resends a held terminal checkpoint via the retry loop and empties the queue', async () => {
   let shouldFail = true;
   const ctx = setupTest();
@@ -1929,6 +1991,47 @@ test('it reports no server contact on a transport failure', async () => {
   await ctx.submitter.submit('contact-transport-activity', createMockCompletedCheckpoint());
 
   expect(ctx.onServerContact).not.toHaveBeenCalled();
+});
+
+test('it holds the queue on a rate limit without reporting it held or as server contact, and retries it', async () => {
+  let isRateLimited = true;
+  const ctx = setupTest();
+
+  server.use(
+    mockActivityService.trackActivityProgress.handler(() => {
+      if (isRateLimited) {
+        return new HttpResponse('Too Many Requests', { status: 429 });
+      }
+
+      return { appendedHead: 1 };
+    }),
+  );
+
+  await ctx.submitter.registerActivity({
+    activityID: 'rate-limited-activity',
+    appendedHead: 0,
+    lastHash: 'start_hash',
+    startChainIndex: 0,
+  });
+
+  await ctx.submitter.submit('rate-limited-activity', createMockCompletedCheckpoint());
+
+  expect(ctx.onHeld).not.toHaveBeenCalled();
+  expect(ctx.onServerContact).not.toHaveBeenCalled();
+
+  const stillQueued = await readQueuedCheckpoints('rate-limited-activity');
+
+  expect(stillQueued).toHaveLength(1);
+
+  isRateLimited = false;
+
+  ctx.clock.increment(RETRY_BACKOFF_CAP_MS);
+
+  await waitFor(async () => {
+    const remaining = await readQueuedCheckpoints('rate-limited-activity');
+
+    expect(remaining).toStrictEqual([]);
+  });
 });
 
 test('it reports server contact only after the answered flush settles the local queue', async () => {

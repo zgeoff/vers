@@ -68,6 +68,27 @@ test('it reports the activityStart undelivered and keeps it on a transport failu
   expect(stored).toStrictEqual(row);
 });
 
+test('it defers and keeps the activityStart when the web app rate-limits the call', async () => {
+  const ctx = setupTest();
+  const row = createMockActivityData({ id: 'act_ingest_throttled', startKey: 'start_key_rl' });
+
+  server.use(
+    mockActivityService.advanceActivity.handler(
+      () => new HttpResponse('Too Many Requests', { status: 429 }),
+    ),
+  );
+
+  await writeActivityStart(row);
+
+  const outcome = await ingestActivityStart(ctx.client, row.id);
+
+  expect(outcome).toStrictEqual({ outcome: 'deferred' });
+
+  const stored = await readActivityStart(row.id);
+
+  expect(stored).toStrictEqual(row);
+});
+
 test('it defers and keeps the activityStart when the avatar reads temporarily inactive', async () => {
   const ctx = setupTest();
   const row = createMockActivityData({ id: 'act_ingest_inactive', startKey: 'start_key_i' });
