@@ -1,4 +1,5 @@
 import pRetry from 'p-retry';
+import { match } from 'ts-pattern';
 import { FlyctlError } from '../utils/flyctl-error';
 import { runFlyctl } from '../utils/run-flyctl';
 import { SCHEDULED_MACHINE_METADATA_KEY } from './scheduled-machine-metadata-key';
@@ -20,16 +21,18 @@ export async function applyScheduledMachineActions(
   updateRetry: UpdateRetry = UPDATE_RETRY,
 ): Promise<void> {
   for (const action of actions) {
-    await (action.kind === 'create'
-      ? runCreate(app, sha, action, action.machine.name)
-      : runUpdateImage(app, sha, action, updateRetry));
+    await match(action)
+      .with({ kind: 'create' }, (create) => runCreate(app, sha, create, create.machine.name))
+      .with({ kind: 'update-image' }, (update) => runUpdateImage(app, sha, update, updateRetry))
+      .with({ kind: 'destroy' }, (destroy) => runDestroy(app, destroy.machineID))
+      .exhaustive();
   }
 }
 
 async function runCreate(
   app: string,
   sha: string,
-  action: ScheduledMachineAction,
+  action: Exclude<ScheduledMachineAction, { kind: 'destroy' }>,
   flyName: string,
 ): Promise<void> {
   const args = [
@@ -107,7 +110,7 @@ async function runUpdateImage(
     );
 
     await runCreate(app, sha, action, `${action.machine.name}-${sha.slice(0, SHORT_SHA_LENGTH)}`);
-    await runFlyctl(['machine', 'destroy', '--force', action.machineID, '-a', app]);
+    await runDestroy(app, action.machineID);
   }
 }
 
@@ -115,4 +118,8 @@ async function runUpdateImage(
 // only a new machine, which Fly places on a host with room, takes the new image
 function isHostCapacityError(error: unknown): boolean {
   return error instanceof FlyctlError && error.stderr.includes('could not reserve resource');
+}
+
+async function runDestroy(app: string, machineID: string): Promise<void> {
+  await runFlyctl(['machine', 'destroy', '--force', machineID, '-a', app]);
 }

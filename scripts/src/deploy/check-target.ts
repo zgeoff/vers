@@ -137,14 +137,21 @@ function checkScheduledMachines(target: DeployTarget, state: AppState): Readonly
   const findings: Array<string> = [];
 
   for (const declared of target.scheduledMachines ?? []) {
-    const existing = state.scheduledMachines.find((machine) => machine.name === declared.name);
+    const matches = state.scheduledMachines.filter((machine) => machine.name === declared.name);
 
-    if (existing === undefined) {
+    if (matches.length === 0) {
       findings.push(`scheduled machine ${declared.name} missing`);
       continue;
     }
 
-    if (state.serviceImage !== null && existing.image !== state.serviceImage) {
+    if (matches.length > 1) {
+      findings.push(`scheduled machine ${declared.name} has ${matches.length} machines`);
+    }
+
+    if (
+      state.serviceImage !== null &&
+      matches.some((machine) => machine.image !== state.serviceImage)
+    ) {
       findings.push(`scheduled machine ${declared.name} image differs from service machines`);
     }
   }

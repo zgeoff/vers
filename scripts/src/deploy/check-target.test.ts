@@ -216,6 +216,35 @@ test('it flags a declared scheduled machine on a different image than the servic
   ]);
 });
 
+test('it flags a declared scheduled machine left with a stale duplicate by an unfinished replace', () => {
+  const target: DeployTarget = {
+    app: 'vers-service-user',
+    configDir: 'services/user',
+    exposure: 'flycast',
+    scheduledMachines: [
+      { command: ['/usr/local/bin/sweep'], name: 'email-sweeper', schedule: 'hourly' },
+    ],
+    trigger: { kind: 'turbo-affected', pkg: '@vers/service-user' },
+  };
+
+  const state = {
+    deployedSHA: 'abc123',
+    machines: [{ gitSHA: 'abc123', id: 'm1', image: 'registry.fly.io/x:tag1', state: 'started' }],
+    scheduledMachines: [
+      { id: 'm3', image: 'registry.fly.io/x:tag1', name: 'email-sweeper' },
+      { id: 'm2', image: 'registry.fly.io/x:old', name: 'email-sweeper' },
+    ],
+    serviceImage: 'registry.fly.io/x:tag1',
+  };
+
+  const changes = { affectedPkgs: [], changedPaths: [] };
+
+  expect(checkTarget(target, state, changes, {})).toStrictEqual([
+    'scheduled machine email-sweeper has 2 machines',
+    'scheduled machine email-sweeper image differs from service machines',
+  ]);
+});
+
 test('it passes a declared scheduled machine already on the service image', () => {
   const target: DeployTarget = {
     app: 'vers-service-user',

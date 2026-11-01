@@ -81,6 +81,18 @@ test('it keeps the old scheduled machine and fails when its replacement cannot b
   ]);
 });
 
+test('it destroys a scheduled machine the plan retires', async () => {
+  const flyctlPath = await createStubCommand('flyctl', 'echo "$*" >> "$(dirname "$0")/calls"');
+
+  await applyScheduledMachineActions('vers-service-ledger', '4f0c2e9a7b1d3c5e8f6a', [
+    { kind: 'destroy', machineID: '3d8d9e1f2a7b68' },
+  ]);
+
+  const calls = await readFile(join(dirname(flyctlPath), 'calls'), 'utf8');
+
+  expect(calls).toBe('machine destroy --force 3d8d9e1f2a7b68 -a vers-service-ledger\n');
+});
+
 test('it fails an image roll that flyctl rejects for a reason other than host capacity, after its retries', async () => {
   const flyctlPath = await createStubCommand(
     'flyctl',

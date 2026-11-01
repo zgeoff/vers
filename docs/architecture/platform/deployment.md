@@ -193,8 +193,11 @@ no room for the new image, the CLI replaces the machine: it creates a new one on
 destroys the old one. Fly names are unique per app, so the replacement takes the declared name with
 a short commit suffix, and every scheduled machine the CLI creates carries the declared name in its
 `vers_scheduled_machine` metadata, which the reconcile and `deploy verify` read before the Fly name.
-Provisioning a new scheduled machine is a manifest edit. A declaration carries its own env map,
-because a scheduled machine reads no `fly.toml` env table.
+When a declared name matches more than one machine, such as after a replace that stopped before its
+destroy, the reconcile keeps one, preferring a machine on the new image, and destroys the others
+once the kept machine is on the new image. `deploy verify` reports a declared name with more than
+one machine. Provisioning a new scheduled machine is a manifest edit. A declaration carries its own
+env map, because a scheduled machine reads no `fly.toml` env table.
 
 ### Stranded-machine sweep
 
