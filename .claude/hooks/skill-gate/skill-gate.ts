@@ -79,7 +79,7 @@ async function reportLoadFailure(loadError: string): Promise<never> {
   const callName = typeof toolName === 'string' ? `this call to ${toolName}` : 'this call';
 
   console.error(
-    `The skill gate cannot load, so it blocks ${callName}: ${loadError}. To work here, run bun install.`,
+    `The skill gate cannot load, so it blocks ${callName}: ${loadError}. To work here, run exactly \`bun install\` or \`bun install --frozen-lockfile\` as its own Bash command, with no cd, pipe, redirect or other flag.`,
   );
 
   process.exit(2);
