@@ -4,7 +4,7 @@ import { verifyOTPHandler } from './verify-otp-handler';
 export const verifyOTP = createServerFn({ method: 'POST' })
   .validator((formData: unknown) => {
     if (!(formData instanceof FormData)) {
-      throw new Error('verifyOTP expects a FormData submission');
+      throw new TypeError('verifyOTP expects a FormData submission');
     }
 
     return formData;

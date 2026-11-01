@@ -4,7 +4,7 @@ import { resetPasswordHandler } from './reset-password-handler';
 export const resetPassword = createServerFn({ method: 'POST' })
   .validator((formData: unknown) => {
     if (!(formData instanceof FormData)) {
-      throw new Error('resetPassword expects a FormData submission');
+      throw new TypeError('resetPassword expects a FormData submission');
     }
 
     return formData;
