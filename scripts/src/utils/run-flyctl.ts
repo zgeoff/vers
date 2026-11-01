@@ -1,4 +1,6 @@
+import type { Subprocess } from 'bun';
 import { bindToParent } from './bind-to-parent';
+import { FlyctlError } from './flyctl-error';
 
 interface FlyctlInterrupt {
   readonly afterMs: number;
@@ -9,14 +11,19 @@ interface RunFlyctlOptions {
   readonly cancelSignal?: AbortSignal;
   readonly inherit?: boolean;
   readonly interrupt?: FlyctlInterrupt;
+  readonly stallInterrupt?: FlyctlInterrupt;
 }
 
 export async function runFlyctl(
   args: ReadonlyArray<string>,
   options?: RunFlyctlOptions,
 ): Promise<string> {
-  const output = options?.inherit === true ? 'inherit' : 'pipe';
+  const isInherited = options?.inherit === true;
   const interrupt = options?.interrupt;
+  const stallInterrupt = options?.stallInterrupt;
+
+  // the stall watch has to see each chunk, so it pipes the output and forwards it to the parent's
+  const output = isInherited && stallInterrupt === undefined ? 'inherit' : 'pipe';
 
   // SIGINT is flyctl's ctrl-c, which aborts an in-flight bluegreen deploy and destroys its green
   // machines; SIGKILL after the grace leaves them started
@@ -44,19 +51,25 @@ export async function runFlyctl(
           flyctl.kill('SIGKILL');
         }, interrupt.afterMs + interrupt.graceMs);
 
+  const stallWatch =
+    stallInterrupt === undefined ? undefined : createStallWatch(flyctl, stallInterrupt);
+
   const [stdout, stderr] = await Promise.all([
-    readOutput(flyctl.stdout),
-    readOutput(flyctl.stderr),
+    readOutput(flyctl.stdout, { forwardTo: isInherited ? process.stdout : undefined, stallWatch }),
+    readOutput(flyctl.stderr, { forwardTo: isInherited ? process.stderr : undefined, stallWatch }),
     flyctl.exited,
   ]);
 
   clearTimeout(forceKill);
+  stallWatch?.stop();
+  const isStalled = stallWatch?.isStalled() === true;
 
-  if (flyctl.exitCode !== 0) {
+  if (flyctl.exitCode !== 0 || isStalled) {
     throw new FlyctlError({
       args,
       exitCode: flyctl.exitCode,
       signal: flyctl.signalCode,
+      stalledAfterMs: isStalled ? (stallInterrupt?.afterMs ?? null) : null,
       stderr,
       stdout,
     });
@@ -65,37 +78,73 @@ export async function runFlyctl(
   return stdout;
 }
 
-function readOutput(stream: ReadableStream<Uint8Array> | number | undefined): Promise<string> {
-  return stream instanceof ReadableStream ? new Response(stream).text() : Promise.resolve('');
+interface StallWatch {
+  readonly isStalled: () => boolean;
+  readonly reset: () => void;
+  readonly stop: () => void;
 }
 
-interface FlyctlFailure {
-  readonly args: ReadonlyArray<string>;
-  readonly exitCode: number | null;
-  readonly signal: NodeJS.Signals | null;
-  readonly stderr: string;
-  readonly stdout: string;
+function createStallWatch(
+  child: Pick<Subprocess, 'kill'>,
+  stallInterrupt: FlyctlInterrupt,
+): StallWatch {
+  let isStalled = false;
+  let forceKill: ReturnType<typeof setTimeout> | undefined;
+
+  const stallTimer = setTimeout(() => {
+    isStalled = true;
+
+    child.kill('SIGINT');
+
+    forceKill = setTimeout(() => {
+      child.kill('SIGKILL');
+    }, stallInterrupt.graceMs);
+  }, stallInterrupt.afterMs);
+
+  return {
+    isStalled: () => isStalled,
+    reset: () => {
+      if (!isStalled) {
+        stallTimer.refresh();
+      }
+    },
+    stop: () => {
+      clearTimeout(stallTimer);
+      clearTimeout(forceKill);
+    },
+  };
 }
 
-class FlyctlError extends Error {
-  readonly exitCode: number | null;
+interface OutputSink {
+  readonly forwardTo: NodeJS.WriteStream | undefined;
+  readonly stallWatch: StallWatch | undefined;
+}
 
-  readonly signal: NodeJS.Signals | null;
-
-  readonly stderr: string;
-
-  readonly stdout: string;
-
-  constructor(failure: FlyctlFailure) {
-    const ending =
-      failure.signal === null ? `exit code ${failure.exitCode}` : `signal ${failure.signal}`;
-
-    super(`flyctl ${failure.args.join(' ')} failed with ${ending}\n${failure.stderr}`.trimEnd());
-
-    this.name = 'FlyctlError';
-    this.exitCode = failure.exitCode;
-    this.signal = failure.signal;
-    this.stderr = failure.stderr;
-    this.stdout = failure.stdout;
+async function readOutput(
+  stream: ReadableStream<Uint8Array> | number | undefined,
+  sink: OutputSink,
+): Promise<string> {
+  if (!(stream instanceof ReadableStream)) {
+    return '';
   }
+
+  if (sink.stallWatch === undefined) {
+    return new Response(stream).text();
+  }
+
+  const decoder = new TextDecoder();
+
+  let text = '';
+
+  for await (const chunk of stream) {
+    sink.stallWatch.reset();
+
+    if (sink.forwardTo === undefined) {
+      text += decoder.decode(chunk, { stream: true });
+    } else {
+      sink.forwardTo.write(chunk);
+    }
+  }
+
+  return text + decoder.decode();
 }
