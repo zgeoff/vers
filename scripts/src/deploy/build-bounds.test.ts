@@ -4,7 +4,7 @@ import { parse } from 'yaml';
 import { z } from 'zod';
 import { BUILD_BOUNDS } from './build-bounds';
 
-test('it ends every stalled build attempt before the build step times out', async () => {
+test('it fits the stall windows of both build attempts inside the build step timeout', async () => {
   const workflowText = await Bun.file(
     join(import.meta.dir, '../../../.github/workflows/main.yml'),
   ).text();
