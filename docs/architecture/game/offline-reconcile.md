@@ -119,10 +119,11 @@ positions. The next node reveal caches the server's anchors.
 ### Signing out
 
 Before it ends the session, the sign-out control asks the worker what the outbox holds. With an
-empty outbox, the control signs the player out at once. With a non-empty one, it warns the player,
-naming how many activities the outbox holds and how much simulated play the server has not received.
-On confirm, the worker discards the outbox and the control ends the session. On cancel, the session
-and the outbox both stay, and the worker delivers the outbox at the next reconnect.
+empty outbox, the control signs the player out at once. With a non-empty one, the worker reports how
+many activities the outbox holds and how much simulated play the server has not received, and the
+control asks the player to confirm. On confirm, the worker discards the outbox and the control ends
+the session. On cancel, the session and the outbox both stay, and the worker delivers the outbox at
+the next reconnect.
 
 The outbox belongs to the browser profile, so it can hold activity starts for another account's
 avatars. The warning and the discard cover only the signed-in account's avatars. The worker keeps an
