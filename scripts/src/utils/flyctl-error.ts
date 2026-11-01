@@ -1,7 +1,7 @@
 interface FlyctlFailure {
   readonly args: ReadonlyArray<string>;
   readonly exitCode: number | null;
-  readonly signal: NodeJS.Signals | null;
+  readonly signal: NodeJS.Signals | number | null;
   readonly stalledAfterMs: number | null;
   readonly stderr: string;
   readonly stdout: string;
@@ -10,7 +10,7 @@ interface FlyctlFailure {
 export class FlyctlError extends Error {
   readonly exitCode: number | null;
 
-  readonly signal: NodeJS.Signals | null;
+  readonly signal: NodeJS.Signals | number | null;
 
   readonly stalledAfterMs: number | null;
 
