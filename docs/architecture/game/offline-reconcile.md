@@ -86,9 +86,10 @@ stops simulating the activity it held.
 
 The worker commits each activity start together with the avatar's record of its last-started
 activity, and each checkpoint together with the cached anchor of its node, so a browser that closes
-mid-write keeps both or neither. The worker asks the browser to persist its storage when an activity
-starts. That stops the browser from evicting the outbox under storage pressure, but it never stops
-the player from clearing site data, so the outbox is safe only once the server has received it.
+mid-write keeps both or neither. When the player starts an activity, the tab asks the browser to
+persist the origin's storage, because only a window can make that request. That stops the browser
+from evicting the outbox under storage pressure, but it never stops the player from clearing site
+data, so the outbox is safe only once the server has received it.
 
 When the browser fails to write a checkpoint to the outbox, or the worker cannot read the outbox
 back, the outbox holds no dependable record of the activity. On either failure the worker stops the
