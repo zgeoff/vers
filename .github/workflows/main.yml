@@ -429,10 +429,11 @@ jobs:
       #
       # The deploy CLI interrupts and retries a build whose output goes silent, as a push to Fly's
       # registry can stall with no deadline of its own. The step timeout ends a leg the retries
-      # did not, as a failure before the job's timeout cancels it.
+      # did not, as a failure before the job's timeout cancels it: both checkout attempts (2 + 2)
+      # plus this step (10) leave a minute of the job's 15 for runner setup.
       - name: Build ${{ matrix.app }}
         uses: ./.github/actions/fly-deploy
-        timeout-minutes: 13
+        timeout-minutes: 10
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           VITE_SENTRY_DSN: ${{ vars.VITE_SENTRY_DSN }}

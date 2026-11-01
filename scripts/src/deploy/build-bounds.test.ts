@@ -22,7 +22,7 @@ test('it ends every stalled build attempt before the build step times out', asyn
   ).toBeLessThan(buildStep['timeout-minutes'] * 60);
 });
 
-test('it fails a timed-out build step before the build job times out', async () => {
+test('it times out every build job step, checkout retry included, before the build job times out', async () => {
   const workflowText = await Bun.file(
     join(import.meta.dir, '../../../.github/workflows/main.yml'),
   ).text();
@@ -31,9 +31,10 @@ test('it fails a timed-out build step before the build job times out', async () 
   const buildJob = z.object({ 'timeout-minutes': z.number(), steps: z.array(step) });
   const workflow = z.object({ jobs: z.object({ build: buildJob }) }).parse(parse(workflowText));
 
-  const [buildStep] = z
-    .tuple([step])
-    .parse(workflow.jobs.build.steps.filter((candidate) => candidate.name.startsWith('Build ')));
+  const stepMinutes = workflow.jobs.build.steps.reduce(
+    (total, candidate) => total + candidate['timeout-minutes'],
+    0,
+  );
 
-  expect(buildStep['timeout-minutes']).toBeLessThan(workflow.jobs.build['timeout-minutes']);
+  expect(stepMinutes).toBeLessThan(workflow.jobs.build['timeout-minutes']);
 });
