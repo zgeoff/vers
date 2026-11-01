@@ -91,8 +91,8 @@ export class Role extends pulumi.CustomResource {
       resourceInputs['name'] = args?.name;
       resourceInputs['projectId'] = args?.projectId;
       resourceInputs['roleId'] = args?.roleId;
-      resourceInputs['password'] = undefined /*out*/;
-      resourceInputs['protected'] = undefined /*out*/;
+      resourceInputs['password'] = undefined; /*out*/
+      resourceInputs['protected'] = undefined; /*out*/
     }
     opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts);
     const secretOpts = { additionalSecretOutputs: ['password'] };

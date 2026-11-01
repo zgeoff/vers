@@ -221,15 +221,15 @@ export class Project extends pulumi.CustomResource {
       resourceInputs['quota'] = args?.quota;
       resourceInputs['regionId'] = args?.regionId;
       resourceInputs['storePassword'] = args?.storePassword;
-      resourceInputs['connectionUri'] = undefined /*out*/;
-      resourceInputs['connectionUriPooler'] = undefined /*out*/;
-      resourceInputs['databaseHost'] = undefined /*out*/;
-      resourceInputs['databaseHostPooler'] = undefined /*out*/;
-      resourceInputs['databaseName'] = undefined /*out*/;
-      resourceInputs['databasePassword'] = undefined /*out*/;
-      resourceInputs['databaseUser'] = undefined /*out*/;
-      resourceInputs['defaultBranchId'] = undefined /*out*/;
-      resourceInputs['defaultEndpointId'] = undefined /*out*/;
+      resourceInputs['connectionUri'] = undefined; /*out*/
+      resourceInputs['connectionUriPooler'] = undefined; /*out*/
+      resourceInputs['databaseHost'] = undefined; /*out*/
+      resourceInputs['databaseHostPooler'] = undefined; /*out*/
+      resourceInputs['databaseName'] = undefined; /*out*/
+      resourceInputs['databasePassword'] = undefined; /*out*/
+      resourceInputs['databaseUser'] = undefined; /*out*/
+      resourceInputs['defaultBranchId'] = undefined; /*out*/
+      resourceInputs['defaultEndpointId'] = undefined; /*out*/
     }
     opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts);
     const secretOpts = {

@@ -104,7 +104,7 @@ export class Branch extends pulumi.CustomResource {
       resourceInputs['parentTimestamp'] = args?.parentTimestamp;
       resourceInputs['projectId'] = args?.projectId;
       resourceInputs['protected'] = args?.protected;
-      resourceInputs['logicalSize'] = undefined /*out*/;
+      resourceInputs['logicalSize'] = undefined; /*out*/
     }
     opts = pulumi.mergeOptions(utilities.resourceOptsDefaults(), opts);
     super(

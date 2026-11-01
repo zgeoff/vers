@@ -69,9 +69,8 @@ test('it retries a thrown transport error and returns the following success', as
 });
 
 test('it does not retry a 4xx response', async () => {
-  const next = mock(
-    (): Promise<StandardLazyResponse> =>
-      Promise.resolve({ body: () => Promise.resolve(undefined), headers: {}, status: 404 }),
+  const next = mock((): Promise<StandardLazyResponse> =>
+    Promise.resolve({ body: () => Promise.resolve(undefined), headers: {}, status: 404 }),
   );
 
   const interceptor = makeRetryInterceptor({ isRetryable: () => true });
@@ -95,9 +94,8 @@ test('it does not retry a 4xx response', async () => {
 });
 
 test('it does not retry a 5xx response for a non-retryable path', async () => {
-  const next = mock(
-    (): Promise<StandardLazyResponse> =>
-      Promise.resolve({ body: () => Promise.resolve(undefined), headers: {}, status: 503 }),
+  const next = mock((): Promise<StandardLazyResponse> =>
+    Promise.resolve({ body: () => Promise.resolve(undefined), headers: {}, status: 503 }),
   );
 
   const interceptor = makeRetryInterceptor({ isRetryable: () => false });
@@ -121,9 +119,8 @@ test('it does not retry a 5xx response for a non-retryable path', async () => {
 });
 
 test('it exhausts its retry budget and returns the last 5xx response', async () => {
-  const next = mock(
-    (): Promise<StandardLazyResponse> =>
-      Promise.resolve({ body: () => Promise.resolve(undefined), headers: {}, status: 503 }),
+  const next = mock((): Promise<StandardLazyResponse> =>
+    Promise.resolve({ body: () => Promise.resolve(undefined), headers: {}, status: 503 }),
   );
 
   const interceptor = makeRetryInterceptor({
