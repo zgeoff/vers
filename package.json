@@ -264,8 +264,7 @@
     "decode-uri-component": "0.5.1",
     "mariadb": "3.5.4",
     "mysql2": "3.24.6",
-    "qs": "6.16.1",
-    "tinypool": "2.2.0"
+    "qs": "6.16.1"
   },
   "packageManager": "bun@1.4.3",
   "patchedDependencies": {
