@@ -18,11 +18,10 @@ read the architecture doc for the subsystem in full before reasoning from its co
 
 When you write or edit a skill:
 
-1. If this repo lacks the `skill-writing`, `cold-read` or `deslop` skill, install it with
-   `npx skills add zgeoff/skills`. Commit none of the files the install writes.
-2. Do every step in the "Check it" section of
-   [skill-writing in zgeoff/skills](https://github.com/zgeoff/skills/blob/main/skills/skill-writing/SKILL.md#check-it).
-   Follow that copy: this repo's copy may be older.
+1. Load the `skill-writing`, `cold-read` and `deslop` skills from `.claude/skills/`. repo-sync
+   delivers them there at the `zgeoff/skills` commit that `zgeoff/tools` pins, so install none of
+   them yourself.
+2. Do every step in the "Check it" section of `.claude/skills/skill-writing/SKILL.md`.
 3. In the PR description, after the sections of the repo's PR template, add three `##` headings:
    - "Skill checks": the check output.
    - "Cold read": each cold-read finding, and how you answered it.
