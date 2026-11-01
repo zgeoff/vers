@@ -15,7 +15,7 @@ export async function writeDiscordAlert(
   }
 
   if (findValue(env, 'CANCELLED_NEED') === 'true') {
-    const isSuperseded = await probeNewerRun(getRunLookup(env));
+    const isSuperseded = await probeSuperseded(env);
 
     if (isSuperseded) {
       return 'superseded';
@@ -52,6 +52,19 @@ function findValue(
   const value = env[name];
 
   return value === '' ? undefined : value;
+}
+
+// a cancelled need may be a timeout, so only a lookup that finds a newer run drops the alert
+async function probeSuperseded(
+  env: Readonly<Record<string, string | undefined>>,
+): Promise<boolean> {
+  try {
+    return await probeNewerRun(getRunLookup(env));
+  } catch (error) {
+    console.error(`the newer-run lookup failed, so the alert goes out: ${String(error)}`);
+
+    return false;
+  }
 }
 
 // the runner sets GITHUB_API_URL, GITHUB_REPOSITORY and GITHUB_RUN_ID in every step
