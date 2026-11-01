@@ -270,6 +270,6 @@
   "packageManager": "bun@1.4.3",
   "patchedDependencies": {
     "kysely-codegen@0.20.0": "patches/kysely-codegen@0.20.0.patch",
-    "@tanstack/react-router@1.170.45": "patches/@tanstack%2Freact-router@1.170.45.patch"
+    "@tanstack/react-router@1.170.46": "patches/@tanstack%2Freact-router@1.170.46.patch"
   }
 }
