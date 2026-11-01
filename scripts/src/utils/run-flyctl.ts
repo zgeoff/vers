@@ -62,14 +62,14 @@ export async function runFlyctl(
 
   clearTimeout(forceKill);
   stallWatch?.stop();
-  const isStalled = stallWatch?.isStalled() === true;
+  const stalledAfterMs = stallWatch?.findStalledAfterMs() ?? null;
 
-  if (flyctl.exitCode !== 0 || isStalled) {
+  if (flyctl.exitCode !== 0 || stalledAfterMs !== null) {
     throw new FlyctlError({
       args,
       exitCode: flyctl.exitCode,
       signal: flyctl.signalCode,
-      stalledAfterMs: isStalled ? (stallInterrupt?.afterMs ?? null) : null,
+      stalledAfterMs,
       stderr,
       stdout,
     });
@@ -79,7 +79,7 @@ export async function runFlyctl(
 }
 
 interface StallWatch {
-  readonly isStalled: () => boolean;
+  readonly findStalledAfterMs: () => number | null;
   readonly reset: () => void;
   readonly stop: () => void;
 }
@@ -102,7 +102,7 @@ function createStallWatch(
   }, stallInterrupt.afterMs);
 
   return {
-    isStalled: () => isStalled,
+    findStalledAfterMs: () => (isStalled ? stallInterrupt.afterMs : null),
     reset: () => {
       if (!isStalled) {
         stallTimer.refresh();
