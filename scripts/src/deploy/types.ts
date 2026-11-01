@@ -97,7 +97,8 @@ export type ScheduledMachineAction =
       readonly machineID: string;
       readonly image: string;
       readonly machine: ScheduledMachine;
-    };
+    }
+  | { readonly kind: 'destroy'; readonly machineID: string };
 
 export interface ChangeSet {
   readonly affectedPkgs: ReadonlyArray<string>;

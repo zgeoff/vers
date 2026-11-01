@@ -47,6 +47,45 @@ test('it takes no action for a declared machine already on the target image', ()
   expect(actions).toBeEmpty();
 });
 
+test('it destroys the stale machine an unfinished replace left beside its replacement', () => {
+  const sweeper: ScheduledMachine = {
+    command: ['/usr/local/bin/sweep'],
+    name: 'email-sweeper',
+    region: 'syd',
+    schedule: 'hourly',
+  };
+
+  const existing = [
+    { id: 'm1', image: 'registry.fly.io/x:old', name: 'email-sweeper' },
+    { id: 'm2', image: 'registry.fly.io/x:new', name: 'email-sweeper' },
+  ];
+
+  const actions = planScheduledMachineActions([sweeper], 'registry.fly.io/x:new', existing);
+
+  expect(actions).toStrictEqual([{ kind: 'destroy', machineID: 'm1' }]);
+});
+
+test('it rolls the first of two stale machines with one declared name and then destroys the other', () => {
+  const sweeper: ScheduledMachine = {
+    command: ['/usr/local/bin/sweep'],
+    name: 'email-sweeper',
+    region: 'syd',
+    schedule: 'hourly',
+  };
+
+  const existing = [
+    { id: 'm1', image: 'registry.fly.io/x:old', name: 'email-sweeper' },
+    { id: 'm2', image: 'registry.fly.io/x:older', name: 'email-sweeper' },
+  ];
+
+  const actions = planScheduledMachineActions([sweeper], 'registry.fly.io/x:new', existing);
+
+  expect(actions).toStrictEqual([
+    { image: 'registry.fly.io/x:new', kind: 'update-image', machine: sweeper, machineID: 'm1' },
+    { kind: 'destroy', machineID: 'm2' },
+  ]);
+});
+
 test('it plans a mix of create, update, and no-op actions across declarations', () => {
   const sweeper: ScheduledMachine = {
     command: ['/usr/local/bin/sweep'],
