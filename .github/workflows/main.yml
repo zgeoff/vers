@@ -380,8 +380,8 @@ jobs:
       == 'success' && needs.preflight.result == 'success' }}
     runs-on: ubuntu-latest
     environment: production
-    # worst observed leg (app-web remote build) is ~4 minutes; headroom for
-    # builder variance without holding the queue
+    # worst observed leg (app-web remote build) is ~6.5 minutes; headroom for
+    # builder variance and one retried build without holding the queue
     timeout-minutes: 15
     # a build changes nothing on the fleet, so a newer run's build of the same app cancels this one
     # and the newer run ships the app
@@ -426,8 +426,15 @@ jobs:
       # app-web's image build bakes the browser DSN into the client bundle and
       # uploads source maps to the error tracker; both no-op when the token/DSN
       # aren't configured (the CLI forwards build args only when set).
+      #
+      # The deploy CLI interrupts and retries a build whose output goes silent, as a push to Fly's
+      # registry can stall with no deadline of its own. A stall at the end of the slowest healthy
+      # leg (382 s) ends about 580 s in, so a retry that rebuilds in full can outrun this step's
+      # 10 minutes. The step timeout then fails the leg before the job's timeout cancels it: both
+      # checkout attempts (2 + 2) plus this step (10) leave a minute of the job's 15 for setup.
       - name: Build ${{ matrix.app }}
         uses: ./.github/actions/fly-deploy
+        timeout-minutes: 10
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           VITE_SENTRY_DSN: ${{ vars.VITE_SENTRY_DSN }}
