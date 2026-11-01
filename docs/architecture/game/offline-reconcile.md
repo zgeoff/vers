@@ -180,7 +180,8 @@ since the worker booted, and the worker refuses the start while that resync fail
 stream diverges from the server's; the next resync that completes lifts the refusal.
 
 Stopping does not queue behind the active flow: it halts the local simulation at once and needs no
-network. The worker then flushes the activity's earned checkpoints and sends an idempotent stop
+network. The worker then flushes the checkpoints of each run the stopped activity chained on
+offline, oldest first, then the activity's own earned checkpoints, and sends an idempotent stop
 request, retried at every reconnect until the server confirms it. Until that request lands, the
 worker holds back its next resync, so a fast-forward never revives an activity the player stopped.
 

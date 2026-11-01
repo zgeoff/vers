@@ -1,7 +1,6 @@
-import { Evaluator, Lexer, Parser, data } from '@actions/expressions';
-import type { FunctionDefinition } from '@actions/expressions/funcs/info';
-import { truthy } from '@actions/expressions/result';
 import invariant from 'tiny-invariant';
+import { isConditionMet } from './is-condition-met';
+import { isFailureHandler } from './is-failure-handler';
 import type { RunAfterCancelledNeed, WorkflowJob } from './types';
 
 export function collectRunsAfterCancelledNeed(
@@ -9,9 +8,12 @@ export function collectRunsAfterCancelledNeed(
 ): Array<RunAfterCancelledNeed> {
   const order = collectJobOrder(jobs);
 
+  // a failure handler runs after a cancelled need so that a timed-out need reports, and it asks
+  // whether a newer run exists to drop the cancel that run caused
   return [...jobs]
     .filter(([, job]) => job.cancelsInProgress)
-    .flatMap(([cancelledJob]) => collectRunsAfter(jobs, order, cancelledJob));
+    .flatMap(([cancelledJob]) => collectRunsAfter(jobs, order, cancelledJob))
+    .filter((run) => !isFailureHandler(getJob(jobs, run.job)));
 }
 
 function collectJobOrder(jobs: Map<string, WorkflowJob>): Array<string> {
@@ -69,9 +71,7 @@ function collectReachedJobs(
   const reached = new Set<string>();
 
   for (const name of order) {
-    const job = jobs.get(name);
-
-    invariant(job, `the job order holds ${name}, which the workflow lacks`);
+    const job = getJob(jobs, name);
 
     if (job.needs.some((need) => need === cancelledJob || reached.has(need))) {
       reached.add(name);
@@ -79,6 +79,14 @@ function collectReachedJobs(
   }
 
   return reached;
+}
+
+function getJob(jobs: Map<string, WorkflowJob>, name: string): WorkflowJob {
+  const job = jobs.get(name);
+
+  invariant(job, `the job order holds ${name}, which the workflow lacks`);
+
+  return job;
 }
 
 interface ResultWalk {
@@ -96,10 +104,7 @@ function walkResults(walk: ResultWalk) {
     return;
   }
 
-  const job = walk.jobs.get(name);
-
-  invariant(job, `the job order holds ${name}, which the workflow lacks`);
-
+  const job = getJob(walk.jobs, name);
   const ran = walk.reached.has(name) && isConditionMet(job, walk.results);
 
   if (ran) {
@@ -109,63 +114,6 @@ function walkResults(walk: ResultWalk) {
   for (const result of pickResults(walk.reached.has(name), ran)) {
     walkResults({ ...walk, order: rest, results: new Map(walk.results).set(name, result) });
   }
-}
-
-const STATUS_CALL = /\b(?:always|cancelled|failure|success)\s*\(/iu;
-
-function isConditionMet(job: WorkflowJob, results: Map<string, string>): boolean {
-  const needResults = new Map(
-    job.needs.map((need) => {
-      const result = results.get(need);
-
-      invariant(result !== undefined, `${need} has no result before ${job.condition} reads it`);
-
-      return [need, result];
-    }),
-  );
-
-  const statusFunctions = buildStatusFunctions([...needResults.values()]);
-
-  // GitHub adds success() to an `if:` that calls no status function
-  const expression = STATUS_CALL.test(job.condition)
-    ? job.condition
-    : `success() && (${job.condition})`;
-
-  const lexed = new Lexer(expression).lex();
-  const parsed = new Parser(lexed.tokens, ['needs'], [...statusFunctions.values()]).parse();
-
-  const needs = new data.Dictionary(
-    ...[...needResults].map(([need, result]) => ({
-      key: need,
-      value: new data.Dictionary({ key: 'result', value: new data.StringData(result) }),
-    })),
-  );
-
-  return truthy(
-    new Evaluator(
-      parsed,
-      new data.Dictionary({ key: 'needs', value: needs }),
-      statusFunctions,
-    ).evaluate(),
-  );
-}
-
-function buildStatusFunctions(needResults: Array<string>): Map<string, FunctionDefinition> {
-  const statuses: Record<string, boolean> = {
-    always: true,
-
-    // a job that its own concurrency group cancels leaves cancelled() false for the rest of the run
-    cancelled: false,
-    failure: needResults.includes('failure'),
-    success: needResults.every((result) => result === 'success'),
-  };
-
-  return new Map(
-    Object.entries(statuses).map(([name, status]): [string, FunctionDefinition] => [
-      name,
-      { name, minArgs: 0, maxArgs: 0, call: () => new data.BooleanData(status) },
-    ]),
-  );
 }
 
 const UNREACHED_RESULTS = ['success', 'failure', 'skipped'];
