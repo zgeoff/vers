@@ -83,7 +83,7 @@ reason:
   start on the same chain, a queued checkpoint, or a stop it has not delivered. With none left, the
   device resends the start once, because an earlier delivery can land between the refusal and that
   check. A second stale-anchor refusal drops the start and resets the node's cached anchor to the
-  anchor it carries ([cached anchors](./offline-reconcile.md#when-a-session-ends)).
+  anchor it carries ([cached anchors](./offline-reconcile.md#cached-anchors)).
 
 A kept start resends on the worker's backoff
 ([worker lifecycle](./offline-reconcile.md#worker-lifecycle)), and a dropped start takes its queued
