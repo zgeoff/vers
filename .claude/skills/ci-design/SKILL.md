@@ -210,9 +210,10 @@ The lint reads four terms by these definitions:
   `runs-on` that holds an expression is never heavy, because GitHub resolves it only when the job
   runs.
 
-The heavy-check rule binds a private repo alone. In CI the lint reads the run's profile and skips
-the rule in a public repo. The pre-push baseline cannot see the profile, so the hook warns in every
-repo.
+The heavy-check rule applies only to a private repo, so the lint skips it in a public one. In CI,
+the lint reads the profile from `CHECKS_PROFILE`. In a pre-push hook, where CI sets nothing, the
+lint asks `gh repo view` whether the repo is private. When `gh` can't answer, the lint applies the
+rule and prints why.
 
 ## Dependency gates
 
