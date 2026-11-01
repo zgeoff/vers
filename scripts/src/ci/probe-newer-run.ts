@@ -10,7 +10,7 @@ export async function probeNewerRun(lookup: Readonly<RunLookup>): Promise<boolea
   const query = new URLSearchParams({ branch: run.branch, per_page: '1' });
 
   const latestBody = await readGitHubJSON(
-    `${runsURL}/workflows/${run.workflowID}/runs?${query}`,
+    `${runsURL}/workflows/${run.workflowID}/runs?${query.toString()}`,
     lookup.token,
   );
 
