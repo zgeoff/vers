@@ -35,9 +35,10 @@ skill hands nothing back. It tells you what to drop and where to read.
   simulate with no round trip.
   [`advanceActivity`](../../../services/activity/src/handlers/advance-activity.ts) admits the start:
   it derives every input again and refuses a mismatch.
-- **The server creates continuation rows and chain rows, never an activity start.** It creates a
-  continuation row on the offline catch-up path, in `advanceActivity`, and a chain row at node
-  reveal. When `mint` appears in a server handler, it means one of those two rows.
+- **The server inserts rows, and never builds an activity start.**
+  [`mintActivityRoot`](../../../services/activity/src/handlers/mint-activity-root.ts) inserts the
+  row for an admitted start. `advanceActivity` creates continuation rows on the offline catch-up
+  path, and node reveal creates chain rows. `mint` in a server handler names one of these inserts.
 - **The request path never simulates.** A queue-fed verifier in the replay service runs each
   submitted checkpoint again later.
   [`runReplayTarget`](../../../services/replay/src/worker/run-replay-target.ts) replays each one and
@@ -59,14 +60,15 @@ skill hands nothing back. It tells you what to drop and where to read.
   `quarantined` predecessor blocks the activities after it, and a `rejected` one fails them.
 - **The server pays only for what it has proved.** The client shows optimistic state.
   [`applyVerifiedSegment`](../../../services/replay/src/apply/apply-verified-segment.ts) pays for
-  positions at or below the verified anchor.
-  [`rejectActivity`](../../../services/replay/src/worker/reject-activity.ts) moves the appended
-  anchor back, and never reverses a payout already made.
+  each segment the verifier has matched, as it moves the head row's `verified_head`, so a run can
+  pay before it ends. [`rejectActivity`](../../../services/replay/src/worker/reject-activity.ts)
+  moves the appended anchor back, and never reverses a payout already made.
 - **A node never re-rolls.** The seed chain is one forward sequence per avatar and node, so a failed
   attempt spends its positions and the next attempt continues past them.
-- **`parked` and `quarantined` hold an avatar's settlement until an operator acts.** The verifier
-  rejects as cheating only a divergence it can reproduce under the sim version the activity start
-  pins.
+- **`parked` and `quarantined` hold an avatar's settlement.** An operator releases a `quarantined`
+  activity. A `parked` one returns to its earlier status when an operator acts, or when the
+  scheduled replay sweep finds its sim version active again. The verifier rejects as cheating only a
+  divergence it can reproduce under the sim version the activity start pins.
 - **A backed-off activity keeps its status.** When a service the verifier calls fails, such as the
   database, [`updateReplayBackoff`](../../../services/replay/src/queue/update-replay-backoff.ts)
   sets a retry time, and the verifier skips the activity until then.

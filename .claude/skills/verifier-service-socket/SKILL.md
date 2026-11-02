@@ -38,9 +38,9 @@ for a token that expires between calls.
 
 `bun run pg:test-container:start` starts Postgres on `localhost:32999`, with user `test` and
 password `test`. It also creates the migrated template database for the current branch and prints
-its name, `test_template_<branch>`. When `TEST_DB_URI` is set, the script uses that Postgres URI in
-place of `localhost:32999`. Then replace the port and the credentials in each command below with the
-ones in `TEST_DB_URI`.
+its name, `test_template_<branch>`. The script uses `TEST_DB_URI` in place of the default only while
+something listens on `localhost:32999`. Otherwise it starts a new container on a port Docker picks,
+so read the port from `docker ps`, and use it in each command below.
 
 | Step               | Command                                                                                                                                              | Needs                                                                                                                                                                                                                                                                         |
 | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -64,8 +64,9 @@ token. Each service lists the env it reads in its `src/env-shape.ts`. Add any ke
 `DATABASE_URL` to the boot command.
 
 To check trace continuity, send a `traceparent` header and compare its trace ID, the second field,
-with the response's `x-trace-id`. They match when the service continues the trace. An error body has
-the shape `{"json":{"defined":…,"code":…,"status":…,…}}`.
+with the response's `x-trace-id`. They match when the service continues the trace. A procedure's
+error body has the shape `{"json":{"defined":…,"code":…,"status":…,…}}`. A token the service refuses
+gets a plain body, such as `{"error":"issuer-not-permitted"}`.
 
 ## Mistakes to avoid
 
@@ -76,12 +77,14 @@ the shape `{"json":{"defined":…,"code":…,"status":…,…}}`.
   clone.
 - **A token expires after 60 s by default.** `createServiceToken` sets that default. Pass
   `expiresIn: '1h'` for a session of manual calls.
-- **The service answers 401 when a token's issuer and key don't match.** The token's `iss` must be
-  one of `SERVICE_TOKEN_ISSUERS` in
-  [`token-claims.ts`](../../../libs/service/service-auth/src/token-claims.ts), and the key that
-  signs it must be published under that issuer's `kid`. `createServiceKeyPair` publishes its key
-  under every issuer, so a token from `createServiceToken` and the `jwksJSON` from the same key pair
-  always pass. Sign every token with the key pair whose `jwksJSON` the service booted with.
+- **The service answers 401 for a token it can't verify.** Sign every token with the key pair whose
+  `jwksJSON` the service booted with. `createServiceKeyPair` publishes its key under every issuer in
+  `SERVICE_TOKEN_ISSUERS`, in
+  [`token-claims.ts`](../../../libs/service/service-auth/src/token-claims.ts), so any issuer
+  verifies.
+- **The service answers 403 for an issuer it doesn't allow.** Each service lists the issuers it
+  takes in the `allowedIssuers` of its `create-<name>-service.ts`, and `createServiceToken` defaults
+  to `app-web`. Pass `issuer` to match, such as `service-activity` for `services/replay`.
 
 **Reply:** each call with its status, the headers you checked and the body, and whether each check
 passed.

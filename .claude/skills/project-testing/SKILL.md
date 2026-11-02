@@ -13,10 +13,10 @@ metadata:
 
 ## Facts
 
-| Fact       | Where                                                                                                  |
-| ---------- | ------------------------------------------------------------------------------------------------------ |
-| Lanes      | none                                                                                                   |
-| Test utils | the packages under [`libs/testing/`](../../../libs/testing/), then the package's own `src/test-utils/` |
+| Fact       | Where                                                                                                                  |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Lanes      | the e2e lane: [`apps/web-e2e/`](../../../apps/web-e2e/), with each limit in the `timeout` of a `playwright*.config.ts` |
+| Test utils | the packages under [`libs/testing/`](../../../libs/testing/), then the package's own `src/test-utils/`                 |
 
 ## Departures
 
@@ -29,11 +29,9 @@ metadata:
 
 - Make each suite pass at `bun test --parallel=4 --no-isolate` too, so a package can switch modes
   without a rewrite. Run that mode once before you hand off a new suite.
-- Write no cleanup for a per-worker test database cloned from the template. At start, each worker's
-  test preload runs
-  [`removeOrphanedClones`](../../../libs/data/db/src/test-support/remove-orphaned-clones.ts), which
-  drops the clones left by ended processes. A drop in an `afterAll` would break the next file in the
-  same worker.
+- Find the sweep that drops the clones of ended runs in
+  [`removeOrphanedClones`](../../../libs/data/db/src/test-support/remove-orphaned-clones.ts). Each
+  worker's test preload runs it at start.
 
 ## Real-database services
 
