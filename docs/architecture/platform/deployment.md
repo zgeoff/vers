@@ -138,7 +138,8 @@ fleet-wide by design: a combined state that fails its journeys ships for no app.
 
 ### Build and cutover
 
-A stale build leg builds on Fly's remote builder and pushes the image under a tag derived from the
+A stale build leg builds on Fly's remote builder from the app's Dockerfile
+([container builds](./container-builds.md)) and pushes the image under a tag derived from the
 commit, so no image blob crosses from the GitHub runner and no ref travels between jobs. Re-running
 a leg overwrites its own tag. flyctl sets no deadline on a remote build, whose push can stall with
 no output. The deploy CLI rebuilds after a silence no healthy build shows, and the Build step's
@@ -220,38 +221,12 @@ image. The dashboard's is in its `fly.toml`.
 
 A scheduled workflow runs a Pulumi preview over the `infra/` program's production stack and fails on
 any diff. The workflow also runs on pull requests and pushes touching `infra/`, but console drift
-arrives with no commit, so only the schedule catches it. The job authenticates through a 1Password
-service account scoped to read the `vers-ci` vault. One `op run` resolves every reference in the
-program's example env file, so a run signs in to 1Password once, not once per secret. It only ever
-previews; reconciling a reported drift is a human decision, applied with `pulumi up` from a
-checkout.
+arrives with no commit, so only the schedule catches it. The job reads its secrets from the
+`vers-ci` vault, and it only ever previews; reconciling a reported drift is a human decision,
+applied with `pulumi up` from a checkout.
 
-## Container builds
-
-Fly's remote builder builds every server image from the app's Dockerfile. Every domain service
-builds from the one service Dockerfile, and the service's folder name reaches it as the `SERVICE`
-build arg from the app's `fly.toml` and from its compose service. Each Dockerfile opens with a prune
-stage that cuts the workspace to the target's dependency graph with `turbo prune`, and its later
-stages install, build, and assemble a minimal runtime. The install stages run a frozen install from
-the pruned manifests and the pruned lockfile, so the build fails when bun resolves the smaller
-workspace differently from the lockfile that turbo wrote. That round trip depends on the turbo
-release, because older releases kept the root workspace's hoisting choices in the pruned lockfile
-(turborepo#11007). The prune stage therefore runs the turbo version from the workspace catalog. The
-deploy pipeline builds the images only after a merge, so a pull request that changes a Dockerfile, a
-package manifest, the lockfile, or a patch builds every server image in the PR checks.
-
-Every domain service compiles to a Bun executable and runs it on `alpine` as `nobody`, with no
-`node_modules` and no source. The build compiles each entrypoint a service has into its own binary,
-so two images carry more than the server binary:
-
-- The email service's image carries the sweep binary its scheduled machine runs
-  ([queues](./queues.md)).
-- The replay service's image carries the drain binary its scheduled machine runs, and the provider
-  binary that each per-version replay provider app runs
-  ([sim-version registry](../game/replay-verification.md#sim-version-registry)).
-
-The web app bundles an SSR server instead of a Bun executable: a full install with dev dependencies
-for the build, then a production-only install with the hoisted linker, so the SSR bundle resolves
-every runtime import from one flat `node_modules`. Its server entry carries no top-level `await`,
-because a dynamically imported chunk can import the entry back and Node exits on the unsettled
-cycle.
+On a pull request, the workflow's `preview` job is an advisory check, and the ruleset in
+`infra/github.ts` leaves it out of the required checks. A pull request that changes the program
+fails the job by design, because `pulumi up` applies the change only after the merge. Drift made
+outside the code fails it too. Before the merge, the reviewer reads the diff in the job's summary
+and checks that it shows only the pull request's own change.

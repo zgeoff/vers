@@ -192,7 +192,8 @@ A service's env contract is the `envShape` it passes to `createService`, merged 
 
 `bun run deploy` drives every Fly rollout from `deploy.config.ts`, and `deploy verify` checks that
 the fleet is online and current. Read `docs/architecture/platform/deployment.md` before you change a
-rollout, a container build or a secret.
+rollout or a secret, and `docs/architecture/platform/container-builds.md` before you change a
+container build.
 
 - Database migrations run once per green push, in their own `migrate` job that is never cancelled,
   never per service.
