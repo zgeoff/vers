@@ -8,7 +8,8 @@ read the architecture doc for the subsystem in full before reasoning from its co
 | Skill                | Load before                                                                                               |
 | -------------------- | --------------------------------------------------------------------------------------------------------- |
 | `code-style`         | writing, reviewing, or renaming any TypeScript — the shared function-verb taxonomy                        |
-| `project-code-style` | the same, beside `code-style` — vers's own code rules and lint directives                                 |
+| `project-code-style` | the same, beside `code-style` — vers's own code rules, lint baselines, styling and client state           |
+| `ci-design`          | adding or changing a workflow, a job or a step — with `project-ci-design`                                 |
 | `testing`            | designing, writing, or reviewing tests — with `project-testing`                                           |
 | `docs-writing`       | writing or editing any committed prose: `docs/`, READMEs, this file, skills — with `project-docs-writing` |
 | `game-lifecycle`     | any work in the activity, replay, or idle packages — the assumptions to drop and the state machines       |
