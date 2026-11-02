@@ -22,3 +22,7 @@ prerequisites, the one-time setup, and the deploy commands:
 bun run preview   # op run --env-file=.env -- pulumi preview
 bun run up        # op run --env-file=.env -- pulumi up
 ```
+
+On a pull request that changes this program, the infra-drift workflow's `preview` job is an advisory
+check: [infra drift](../docs/architecture/platform/deployment.md#infra-drift) says why, and what to
+read in its result before you merge.
