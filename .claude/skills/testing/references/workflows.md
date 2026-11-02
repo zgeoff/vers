@@ -1,27 +1,47 @@
 # Workflow testing
 
-A GitHub Actions step's logic lives in a script, and the script's tests are the step's tests. The
-ci-design skill's [Step scripts](../../ci-design/SKILL.md#step-scripts) section owns where a script
-lives, what a `run:` may hold, and the workflow lint that checks both. This reference owns how the
-logic and the workflow files get tested.
+Test a GitHub Actions step by running the script that holds its logic. Keep GitHub's behaviour and
+the layout of the YAML out of your tests, because a test of either fails on a change that breaks
+nothing:
+
+- Never pull a step's `run:` text out of the YAML and run it.
+- Never snapshot the ordered list of a workflow's jobs or a job's steps.
+- Never write your own version of the scheduler, the triggers or the `if:` evaluation in a test.
+  That logic is GitHub's, and your version checks only itself.
 
 ## Test the step through its script
 
-Call the script with the values that the step passes through `env:` and its arguments, so the test
-runs the logic on the inputs a real run gives it.
+When a step's `run:` line holds more than one plain command, such as an `if`, a loop, `&&`, `||`,
+`;`, a pipe or a `${{ }}`, move the logic into a TypeScript script. Put the script in a folder of
+`scripts/` named for its job, such as `scripts/release/tag-release.ts`, and the test beside it. The
+Step scripts section of the ci-design skill has the rest of the rules for the script.
 
-## Repo fact tests
+In the test, spawn the script with `Bun.$`, as in `` $`bun ${scriptPath} ${version}` ``, and pass it
+what a real run gives it:
 
-A repo fact test is the only test that reads a workflow file. It checks the workflow against data
-that the repo owns elsewhere, such as a CI matrix against the list of suites that a script defines,
-so the two cannot drift. It parses the file with `Bun.YAML.parse` and checks the values with plain
-assertions. A rule that holds for every repo, such as a job's timeout or a cancel setting, belongs
-in the workflow lint, and a repo never tests a shared lint rule, as [SKILL.md](../SKILL.md) states.
+- the arguments its `run:` line passes;
+- the values the step sets in `env:`;
+- each GitHub variable the script reads, such as `GITHUB_REF_NAME`.
 
-A made-up repo keeps its end-to-end suites in `e2e/suites.ts` and runs one matrix job per suite:
+When the script writes to `$GITHUB_OUTPUT`, set `GITHUB_OUTPUT` to a file in the test's temp
+directory, and read the file back.
+
+A step whose only key is `uses:` runs someone else's action. Write no test for it.
+
+## Tests that read a workflow file
+
+Read a workflow file in a test only to check it against data the repo keeps elsewhere, such as a CI
+matrix against the list of suites that a script defines. A change to one side then fails the test
+until the other side matches. Parse the file with `Bun.YAML.parse`, and assert with `toMatchObject`
+on the path to the value you check, so the test names no other job or key.
+
+A made-up repo lists its end-to-end suites in `scripts/e2e-suites.ts` and runs one matrix job per
+suite:
 
 ```ts
-import { suites } from '../e2e/suites.ts';
+// scripts/e2e-suites.test.ts
+import { expect, test } from 'bun:test';
+import { suites } from './e2e-suites.ts';
 
 test('it runs one e2e matrix job for each suite the e2e runner defines', async () => {
   const text = await Bun.file(new URL('../.github/workflows/ci.yml', import.meta.url)).text();
@@ -33,13 +53,7 @@ test('it runs one e2e matrix job for each suite the e2e runner defines', async (
 });
 ```
 
-## What a workflow test never does
-
-Each of these tests GitHub's behaviour or pins the file's shape, and either fails on a change that
-breaks nothing:
-
-- **Pull a step's `run:` text out of the YAML and run it.** Move the logic into a script and test
-  the script.
-- **Snapshot the layout**, such as the ordered list of a workflow's jobs or a job's steps.
-- **Emulate the scheduler, the triggers or `if:` evaluation.** GitHub owns that behaviour, and a
-  copy of it only agrees with itself.
+Never test a rule that every zgeoff repo follows, such as `timeout-minutes` on each job or
+`cancel-in-progress` on a concurrency group. `bun x @zgeoff/chex workflows` checks those rules in
+every repo. When you find a rule of that kind that the check misses, tell the user; the check lives
+in zgeoff/tools.

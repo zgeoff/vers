@@ -1,33 +1,53 @@
 # Observability testing
 
-Metrics, spans, error reports, and log lines are outputs with callers: dashboards, alerts, and the
-person reading an incident. Tests read them back through in-memory or loopback receivers, and they
-run the real SDK, never a spy on it.
+Test metrics, spans, error reports and log lines like any other output, because dashboards, alerts
+and the person reading an incident rely on them. Run the real SDK, and read what it records back
+through an in-memory reader or a server on the loopback interface. Never spy on the SDK or the
+logger: a spy shows that your code called a function, and misses what the SDK filters, shapes and
+sends.
+
+Watch for globals that outlive a test. The OpenTelemetry API keeps one global meter provider and one
+global tracer provider, and code that gets its meter or tracer at module load stays bound to
+whatever was registered then.
 
 ## Metrics
 
-The OpenTelemetry API hands out a no-op meter while no meter provider is registered, and a meter
-created at module load keeps that no-op meter for the whole run. Instrumented code therefore calls
-`metrics.getMeter(…)` when it records, not at module load.
+In instrumented code, call `metrics.getMeter(…)` each time you record, never at module load. The
+OpenTelemetry API hands out a no-op meter while no meter provider is registered, and a meter created
+at module load keeps it for the whole run.
 
-A counter's suite has two tests:
+Give each counter two tests. In the first, `it records <metric> per <attribute>`:
 
-1. `it records <metric> per <attribute>`: register a meter provider with an in-memory reader through
-   the repo's metrics test util, record the counter two or three times with distinct attributes,
-   then read the points back and assert each point's attributes and value. The util calls
-   `metrics.disable()` and shuts the provider down in `onTestFinished`.
-2. `it stays inert without a registered meter provider`: call the record function with no provider
-   registered and assert that it does not throw.
+1. Register an in-memory meter provider through the repo's helper for it in `test-utils/`.
+2. Record the counter two or three times, with distinct attributes.
+3. Read the points back through the helper, and assert each point's attributes and value.
+
+In the second, `it stays inert without a registered meter provider`, call your function that records
+the counter with no provider registered, and assert that it doesn't throw.
+
+When the repo has no helper, write one in `test-utils/` that a test calls and that does this:
+
+- builds a `MeterProvider` from `@opentelemetry/sdk-metrics`, with a `PeriodicExportingMetricReader`
+  over an `InMemoryMetricExporter`, and sets it with `metrics.setGlobalMeterProvider`;
+- reads points by calling `provider.forceFlush()`, then `exporter.getMetrics()`;
+- in `onTestFinished`, calls `metrics.disable()` to clear the global, then `provider.shutdown()`.
 
 ## Spans
 
-A tracer that code gets at module load binds to the first tracer provider it sees, and a provider
-registered by a later test never reaches it. So the preload registers one tracer provider for the
-whole run, with an `InMemorySpanExporter` behind a `SimpleSpanProcessor`, and clears the exporter
-after each test. A test reads the spans its code finished from that exporter.
+Register one tracer provider for the whole run, in the test preload, with an `InMemorySpanExporter`
+behind a `SimpleSpanProcessor`. Never register a tracer provider in a test:
+
+- `register()` also installs the global context manager and propagator, which stay for every later
+  test.
+- A tracer that code gets at module load stays bound to the first provider, and never sees one that
+  a later test registers.
+
+Clear the exporter after each test. In a test, read the finished spans from the exporter.
 
 ```ts
-// register-tracing.ts, listed in the bunfig.toml preload
+// register-tracing.ts, listed in the test preload
+export const spanExporter = new InMemorySpanExporter();
+
 new NodeTracerProvider({ spanProcessors: [new SimpleSpanProcessor(spanExporter)] }).register();
 
 afterEach(() => {
@@ -45,25 +65,36 @@ test('it records a span for each note it saves', async () => {
 });
 ```
 
-A test never registers its own tracer provider. `register()` also installs the global context
-manager and propagator, so a test that registers one leaves them behind for every later test.
-
 ## Error reports
 
-Assert error reporting against the real Sentry SDK. Initialise it with a well-formed fake DSN,
-`defaultIntegrations: false`, and a `beforeSend` that records the event and returns `null`, so no
-event leaves the process. `waitFor` the recorder before asserting, because the SDK sends
-asynchronously.
+Assert error reporting against the real Sentry SDK, from the package the app uses, such as
+`@sentry/node`. In `setupTest()`, create an array for the events, and call `Sentry.init` with:
+
+- a fake DSN in the right form, such as `https://public@example.com/1`;
+- `defaultIntegrations: false`;
+- a `beforeSend` that pushes each event to the array and returns `null`, so no event leaves the
+  process.
+
+Return the array from `setupTest()`. Call `Sentry.close()` in `onTestFinished`. The SDK hands over
+each event asynchronously, so wait for it with the `waitFor` helper before you assert.
 
 ## Log lines
 
-Give the logger an injected destination stream, `{ write: (line) => lines.push(line) }`. Parse each
-captured line with `JSON.parse` and assert it with `toMatchObject`. Pair each such test with one
-that logs below the configured level and asserts `toBeEmpty()` on the captured lines. Never spy on
-the logger.
+Give the logger an injected destination stream, `{ write: (line) => lines.push(line) }`. When the
+logger takes no destination, make its factory take one. Parse each captured line with `JSON.parse`
+and assert it with `toMatchObject`. Pair each such test with one that logs below the configured
+level and asserts `toBeEmpty()` on the captured lines.
 
 ## Exporters
 
-Test an exporter's success path against a loopback receiver: `Bun.serve({ port: 0 })` records each
-request, the test points the exporter's endpoint at it through the env util, and `onTestFinished`
-stops the server. Assert the request path, the headers, and a non-empty body.
+Test the code that ships telemetry to a collector over OTLP, such as a function that starts trace
+export, against a server on the loopback interface. That code builds and registers its own provider,
+so the test calls it like any other production code.
+
+1. Start `Bun.serve({ port: 0 })` with a `fetch` handler that pushes each request to an array, and
+   stop the server in `onTestFinished`.
+2. Set `OTEL_EXPORTER_OTLP_ENDPOINT` to the server's URL with the env helper, before you start the
+   export.
+3. Run the code under test, then make the export send what it holds: call `forceFlush()` or
+   `shutdown()` on the provider it built, which both flush.
+4. Assert the request path, the headers your config sets, and a body that isn't empty.
