@@ -31,6 +31,7 @@ export interface ChromeState {
 
 export interface ChromePaths {
   readonly directory: string;
+  readonly lockFile: string;
   readonly logFile: string;
   readonly profileDir: string;
   readonly stateFile: string;

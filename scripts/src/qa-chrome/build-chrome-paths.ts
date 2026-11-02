@@ -11,6 +11,7 @@ export function buildChromePaths(xdgStateHome: string | undefined, home: string)
 
   return {
     directory,
+    lockFile: join(directory, 'state.lock'),
     logFile: join(directory, 'chrome.log'),
     profileDir: join(directory, 'profile'),
     stateFile: join(directory, 'state.json'),

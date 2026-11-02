@@ -12,7 +12,9 @@ import { probeLinkUp } from '../qa-chrome/probe-link-up';
 import { readChromeState } from '../qa-chrome/read-chrome-state';
 import { readNamespaceRoutes } from '../qa-chrome/read-namespace-routes';
 import { runInNamespace } from '../qa-chrome/run-in-namespace';
+import { STATE_LOCK_WAIT_MS } from '../qa-chrome/state-lock-wait-ms';
 import type { ChromeNamespace, ChromeState } from '../qa-chrome/types';
+import { withChromeStateLock } from '../qa-chrome/with-chrome-state-lock';
 import { writeChromeState } from '../qa-chrome/write-chrome-state';
 import { runCommandLine } from '../utils/run-command-line';
 
@@ -21,65 +23,13 @@ const paths = buildChromePaths(process.env['XDG_STATE_HOME'], homedir());
 const cutCommand = define({
   name: 'cut',
   description: "take the browser namespace's network interface down",
-  run: async () => {
-    const target = await readNetworkTarget();
-
-    const holderPID = target.namespace.holderPID;
-
-    if (target.namespace.cut !== null) {
-      console.log('the network is already cut; bring it back with bun run qa:net restore');
-
-      return;
-    }
-
-    const routes = await readNamespaceRoutes(holderPID);
-
-    const interfaceName = findDefaultInterface(routes);
-
-    if (interfaceName === undefined) {
-      console.error('qa-net: the namespace has no default route, so there is no network to cut');
-      process.exit(1);
-    }
-
-    const cut = { interfaceName, routes };
-
-    await writeChromeState(paths, { ...target.state, namespace: { ...target.namespace, cut } });
-
-    for (const command of buildCutCommands(cut)) {
-      await runInNamespace(holderPID, command);
-    }
-
-    console.log(`✓ cut: ${interfaceName} is down, with ${formatRouteCount(routes.length)} saved`);
-  },
+  run: () => withChromeStateLock(paths, STATE_LOCK_WAIT_MS, cutNetwork),
 });
 
 const restoreCommand = define({
   name: 'restore',
   description: 'bring the interface and its saved routes back',
-  run: async () => {
-    const target = await readNetworkTarget();
-
-    const cut = target.namespace.cut;
-
-    if (cut === null) {
-      console.log('the network is not cut');
-
-      return;
-    }
-
-    for (const command of buildRestoreCommands(cut)) {
-      await runInNamespace(target.namespace.holderPID, command);
-    }
-
-    await writeChromeState(paths, {
-      ...target.state,
-      namespace: { ...target.namespace, cut: null },
-    });
-
-    console.log(
-      `✓ restored: ${cut.interfaceName} is up with ${formatRouteCount(cut.routes.length)}`,
-    );
-  },
+  run: () => withChromeStateLock(paths, STATE_LOCK_WAIT_MS, restoreNetwork),
 });
 
 const statusCommand = define({
@@ -119,6 +69,37 @@ try {
   process.exit(1);
 }
 
+async function cutNetwork(): Promise<void> {
+  const target = await readNetworkTarget();
+
+  const holderPID = target.namespace.holderPID;
+
+  if (target.namespace.cut !== null) {
+    console.log('the network is already cut; bring it back with bun run qa:net restore');
+
+    return;
+  }
+
+  const routes = await readNamespaceRoutes(holderPID);
+
+  const interfaceName = findDefaultInterface(routes);
+
+  if (interfaceName === undefined) {
+    console.error('qa-net: the namespace has no default route, so there is no network to cut');
+    process.exit(1);
+  }
+
+  const cut = { interfaceName, routes };
+
+  await writeChromeState(paths, { ...target.state, namespace: { ...target.namespace, cut } });
+
+  for (const command of buildCutCommands(cut)) {
+    await runInNamespace(holderPID, command);
+  }
+
+  console.log(`✓ cut: ${interfaceName} is down, with ${formatRouteCount(routes.length)} saved`);
+}
+
 async function readNetworkTarget(): Promise<{
   readonly namespace: ChromeNamespace;
   readonly state: ChromeState;
@@ -133,4 +114,24 @@ async function readNetworkTarget(): Promise<{
   }
 
   return target;
+}
+
+async function restoreNetwork(): Promise<void> {
+  const target = await readNetworkTarget();
+
+  const cut = target.namespace.cut;
+
+  if (cut === null) {
+    console.log('the network is not cut');
+
+    return;
+  }
+
+  for (const command of buildRestoreCommands(cut)) {
+    await runInNamespace(target.namespace.holderPID, command);
+  }
+
+  await writeChromeState(paths, { ...target.state, namespace: { ...target.namespace, cut: null } });
+
+  console.log(`✓ restored: ${cut.interfaceName} is up with ${formatRouteCount(cut.routes.length)}`);
 }
