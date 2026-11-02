@@ -15,8 +15,8 @@ metadata:
 ## Departures
 
 - Keep the function name that a library or an oRPC contract sets, even when it starts with a verb
-  that [Banned verbs](../code-style/SKILL.md#banned-verbs) in code-style bans. A library calls its
-  interface's methods by name, and a contract's procedure names are the public API.
+  that [Function names](../code-style/SKILL.md#function-names) in code-style bans. A library calls
+  its interface's methods by name, and a contract's procedure names are the public API.
 
 ## Names
 
