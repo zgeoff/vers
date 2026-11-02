@@ -1,33 +1,51 @@
 # Cleanup
 
-These rules cover cleanup past the common case in the [testing skill](../SKILL.md#cleanup): helpers
-that register cleanup for their callers, resources that must close in order, cleanup that runs after
-the preload's resets, finding the gap when a test fails only in the full run, and what a killed run
-leaves behind.
+`onTestFinished` hooks run first-in, first-out, after every `afterEach` hook, the test preload's
+resets included. A disposable stack runs its callbacks last-in, first-out. A test that runs past its
+timeout still runs its cleanup. A run that something outside stops, such as a CI job timeout, an
+out-of-memory kill or Ctrl-C, runs none. For the common case, see [Cleanup](../SKILL.md#cleanup) in
+the testing skill.
 
 - [Helpers that register cleanup](#helpers-that-register-cleanup)
 - [Ordered cleanup](#ordered-cleanup)
 - [Cleanup after the resets](#cleanup-after-the-resets)
+- [Concurrent tests](#concurrent-tests)
 - [A test that fails only in the full run](#a-test-that-fails-only-in-the-full-run)
 - [Leftovers of a killed run](#leftovers-of-a-killed-run)
 
 ## Helpers that register cleanup
 
-A shared test util may register `onTestFinished` for its callers. These helpers must run inside a
-test. A test of such a helper proves its cleanup ran by asserting in an `onTestFinished` hook.
-`onTestFinished` hooks run first-in, first-out, so register that check after the helper's call, and
-register the removal of any directory the check reads after the check, not immediately after
-creating it. This is the only place an assertion leaves the test body.
+Call a helper that registers `onTestFinished` from inside a test, or from a `setupTest()` that a
+test calls. At the top level of a test file, Bun throws
+`Cannot call onTestFinished() outside of a test`.
 
-A helper whose cleanup only stops work that a passing test always finishes first, such as killing a
-build that is still running, needs no test that proves that cleanup.
+Give each such helper a test that proves its cleanup ran. Call the helper, then register an
+`onTestFinished` hook of your own that asserts. Your hook runs after the helper's, because it was
+registered later:
+
+```ts
+test('it removes its checkout when the test finishes', async () => {
+  const { dir } = await createTempCheckout();
+
+  onTestFinished(() => {
+    expect(existsSync(dir)).toBe(false);
+  });
+});
+```
+
+When your hook reads a folder that the helper doesn't remove, such as a log folder, register that
+folder's removal after your hook. It then runs after your hook reads the folder.
+
+Never assert outside the test body anywhere else.
+
+Skip the proof when the helper's cleanup only stops work that a passing test always waits for, such
+as a build that the test awaits.
 
 ## Ordered cleanup
 
-When resources have cleanup dependencies, register one callback that closes them in the required
-order. Every cleanup must run even if another cleanup throws. Use a disposable stack when reverse
-acquisition order matches those dependencies, and register its disposal immediately. Do not hold
-that stack with `using` or `await using`, or transfer it with `move()`.
+When one resource must close before another, put both on an `AsyncDisposableStack`. Register the
+stack's disposal right after you create it. The stack closes the resources in the reverse of the
+order you opened them. It runs every callback, even when one throws.
 
 ```ts
 async function setupTest() {
@@ -48,59 +66,71 @@ async function setupTest() {
 }
 ```
 
-If the scenario needs an explicit shutdown before the next action, call it in the test body. Keep
-fallback cleanup registered and make it safe after shutdown. Fixture callers need no `using` or
-`await using` declaration.
-
-A listener that a test opens only to read a free port needs no fallback cleanup when the statement
-after the port read stops it.
+- When you need another order, register one `stack.defer` callback that closes the resources in that
+  order.
+- Never hold the stack, or a resource on it, with `using` or `await using`. Either one disposes it
+  when `setupTest()` returns, before the test uses it.
+- Never call `move()` on the stack. It moves the callbacks to a new stack, and the registered
+  disposal then closes nothing.
+- When the test must shut a resource down before its next step, call the shutdown in the test body.
+  Keep the stack's callback. Make the close safe to call twice, such as with a `closed` flag.
+- Start each process that a test starts as the leader of its own process group, with
+  `detached: true` in `Bun.spawn`. In cleanup, stop the whole group with
+  `process.kill(-pid, 'SIGTERM')`, so a child it forks, such as a server, stops with it.
+- When a test opens a listener only to read a free port, and the next statement stops it, register
+  no cleanup for it.
 
 ## Cleanup after the resets
 
-`onTestFinished` runs after all `afterEach` hooks, including the preload's resets. Cleanup uses
-captured paths and handles, rather than environment overrides that those resets remove. Tests that
-use this hook run sequentially within each file: do not enable `test.concurrent`, `--concurrent`, or
-`concurrentTestGlob` for them. Separate worker processes and CI jobs can still run in parallel.
+The test preload's resets remove every environment override before `onTestFinished` runs. So save
+each path when you create it, and use the saved value in cleanup:
 
 ```ts
-test('it reads an entry written by another connection', async () => {
-  const ctx = await setupTest(); // the ledger on its disposable stack
+const home = await mkdtemp(join(tmpdir(), 'notes-home-'));
 
-  const writer = new Database(join(ctx.dir, 'ledger.db'));
-
-  ctx.stack.defer(() => writer.close());
-
-  writer.run(`INSERT INTO entries (memo) VALUES ('from writer')`);
-
-  expect(listEntryMemos(ctx.db)).toStrictEqual(['from writer']);
-});
+onTestFinished(() => rm(home, { recursive: true, force: true }));
 ```
+
+Never read `process.env` in cleanup.
+
+## Concurrent tests
+
+Run a test that calls `onTestFinished` serially. Bun refuses `onTestFinished` in a `test.concurrent`
+test. Never turn on `test.concurrent`, `--concurrent` or `concurrentTestGlob` for such a test.
+Separate workers and CI jobs can still run in parallel.
 
 ## A test that fails only in the full run
 
-A test that passes alone and fails beside others has found a cleanup gap. Find it this way:
+When a test passes alone and fails beside others, another test leaves state behind. Find that test.
+When it fails only under CI's `--randomize`, rerun with the printed `--seed=<seed>` first. Run each
+step with the flags of the repo's test script:
 
-1. Run the failing test alone, and confirm it passes.
-2. Run it with half of the other test files, and keep halving toward the half that still makes it
-   fail.
-3. In the file that remains, find the state it leaves behind: a module cache, a singleton, a store,
-   an unrestored override.
-4. Add that state's reset to the preload.
+1. Run the failing test file alone, and confirm it passes.
+2. Run it with half of the other test files. Keep the half that still makes it fail, and halve it
+   again, until one file is left.
+3. In that file, find the state it never restores, such as a module cache, a singleton, a store or
+   an override.
+4. For module state, add its reset to the test preload. For a stored row or a file, give each test
+   its own copy, as [Database testing](./database.md) describes.
 
-Reordering the tests or choosing unique keys hides the gap and leaves it for the next test to find.
+Never reorder the tests. Never give each test unique IDs to dodge the shared state. Either one hides
+the leak until a later test fails on it.
 
 ## Leftovers of a killed run
 
-A run that a timeout, an out-of-memory kill, or an interrupt stops runs no `onTestFinished`, so the
-processes, temp folders, test homes, and database clones it acquired stay behind. On a host where
-`/tmp` or the database's data sits on tmpfs, each leftover holds RAM.
+A killed run leaves behind the temp folders and database clones it made. On a host where `/tmp` or
+the database's data sits on tmpfs, each leftover holds RAM.
 
-- A test that starts a process starts it as the leader of its own process group, with
-  `detached: true` in `Bun.spawn`, and stops the whole group with `process.kill(-pid, signal)`. A
-  grandchild, such as a server that the process forks, then stops with it.
-- The repo's test script or preload sweeps at the start of each run. The sweep removes what earlier
-  runs left and no live process owns: per-run folders, stale test homes, clones whose process is
-  gone, and templates of old hashes. It never removes the
-  [current template](./slow-tests.md#per-run-templates) or a resource of a run that is still going,
-  and a test names what it never touches, as the testing skill's
-  [Assertions](../SKILL.md#assertions) section describes.
+Name each folder and database clone that a run makes after the PID of the test process that made it.
+Then sweep at the start of each run, in the repo's test script before `bun test` starts, so the
+sweep runs once per run. Remove each leftover whose PID no longer runs. `process.kill(pid, 0)`
+throws when the process is gone. The sweep removes:
+
+- temp folders, such as a test's `HOME`;
+- the database clones that the test-database helper makes, as
+  [Postgres isolation](./database.md#postgres-isolation) describes;
+- templates whose hash no longer matches their inputs, as
+  [Per-run templates](./slow-tests.md#per-run-templates) describes.
+
+Never remove the template for the current hash, or anything a run that is still going uses. Test the
+sweep on what it must keep, such as `it never removes the files of a run that is still going`.
