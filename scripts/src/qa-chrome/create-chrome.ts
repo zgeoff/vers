@@ -4,6 +4,8 @@ import { mkdir, readFile } from 'node:fs/promises';
 import invariant from 'tiny-invariant';
 import { probeDevToolsEndpoint } from './probe-devtools-endpoint';
 import { readProcessStartTime } from './read-process-start-time';
+import { removeProcessGroup } from './remove-process-group';
+import { STOP_GRACE_MS } from './stop-grace-ms';
 import type { ChromePaths, ChromeState } from './types';
 
 interface CreateChromeOptions {
@@ -33,6 +35,10 @@ export async function createChrome(options: CreateChromeOptions): Promise<Chrome
 
   child.unref();
 
+  const groupID = child.pid;
+
+  invariant(groupID !== undefined, 'a program that Bun.which found spawns with a process ID');
+
   let exitCode: number | null = null;
   let hasExited = false;
 
@@ -53,6 +59,9 @@ export async function createChrome(options: CreateChromeOptions): Promise<Chrome
     if (hasExited || Date.now() > deadline) {
       const reason = hasExited ? `exited with code ${String(exitCode)}` : 'did not answer in time';
 
+      // a process the leader started can outlive it, and no state file will point a stop at it
+      await removeProcessGroup(groupID, STOP_GRACE_MS);
+
       const tail = await readLogTail(options.paths.logFile);
 
       throw new Error(`the browser ${reason}; the end of ${options.paths.logFile}:\n${tail}`);
@@ -61,16 +70,14 @@ export async function createChrome(options: CreateChromeOptions): Promise<Chrome
     await Bun.sleep(POLL_INTERVAL_MS);
   }
 
-  invariant(child.pid !== undefined, 'a spawned browser that answers has a process ID');
-
-  const leaderStartTime = await readProcessStartTime(child.pid);
+  const leaderStartTime = await readProcessStartTime(groupID);
 
   invariant(leaderStartTime !== undefined, 'a browser that answers is a live process');
 
-  const holderPID = options.isNetns ? await readHolderPID(child.pid) : null;
+  const holderPID = options.isNetns ? await readHolderPID(groupID) : null;
 
   return {
-    leaderPID: child.pid,
+    leaderPID: groupID,
     leaderStartTime,
     namespace: holderPID === null ? null : { cut: null, holderPID },
     port: options.port,
