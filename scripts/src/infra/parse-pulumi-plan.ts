@@ -10,7 +10,6 @@ const planSchema = z.object({
   changeSummary: z.record(z.string(), z.number()).default({}),
 });
 
-// the JSON that `pulumi preview --json` prints; undefined for any other text
 export function parsePulumiPlan(text: string): PulumiPlan | undefined {
   const json = parseJSON(text);
   const result = planSchema.safeParse(json);

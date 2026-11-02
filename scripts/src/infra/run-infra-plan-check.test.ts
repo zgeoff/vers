@@ -1,5 +1,5 @@
 import { expect, onTestFinished, test } from 'bun:test';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createStubCommand } from '../test-utils/create-stub-command';
@@ -10,13 +10,11 @@ async function setupTest() {
 
   onTestFinished(() => rm(directory, { force: true, recursive: true }));
 
-  const outputPath = join(directory, 'output');
-  const summaryPath = join(directory, 'summary.md');
-
-  await writeFile(outputPath, '');
-  await writeFile(summaryPath, '');
-
-  return { directory, outputPath, summaryPath };
+  return {
+    directory,
+    outputPath: join(directory, 'output'),
+    summaryPath: join(directory, 'summary.md'),
+  };
 }
 
 test('it previews the prod stack as JSON with a refresh', async () => {
@@ -190,11 +188,10 @@ test("it fails with the preview's errors and writes no outcome when the preview 
     summaryPath: ctx.summaryPath,
   });
 
-  const outputs = await readFile(ctx.outputPath, 'utf8');
   const summary = await readFile(ctx.summaryPath, 'utf8');
 
   expect(result.exitCode).toBe(1);
-  expect(outputs).toBe('');
+  expect(Bun.file(ctx.outputPath).exists()).resolves.toBeFalse();
 
   expect(summary).toBe(
     [
@@ -223,12 +220,10 @@ test('it fails and writes no outcome when the preview prints no plan', async () 
     summaryPath: ctx.summaryPath,
   });
 
-  const outputs = await readFile(ctx.outputPath, 'utf8');
-
   expect(result).toStrictEqual({
     exitCode: 1,
     output: '## Apply plan (prod)\n\n```text\nthe preview printed no plan\n```\n',
   });
 
-  expect(outputs).toBe('');
+  expect(Bun.file(ctx.outputPath).exists()).resolves.toBeFalse();
 });
