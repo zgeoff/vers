@@ -79,6 +79,10 @@ The Cloudflare token needs `Zone → DNS → Edit` (versidle.com) and
 
 ## Deploy
 
+A merge to `main` that changes the program applies it through the `infra-deploy` workflow, as
+[infra apply and drift](../architecture/platform/deployment.md#infra-apply-and-drift) describes. Run
+the commands below from a checkout only for the one-time setup and to reconcile drift:
+
 ```sh
 bun run preview   # op run --env-file=.env -- pulumi preview
 bun run up        # op run --env-file=.env -- pulumi up
@@ -86,6 +90,46 @@ bun run up        # op run --env-file=.env -- pulumi up
 
 Rebase the branch onto `main` before running `bun run up`. The stack state is shared, so an
 out-of-date branch can try to revert a resource that a later deploy already changed.
+
+### Answer a held apply
+
+A held run ends green. Discord shows `[infra] prod apply held for a person`, and the run's summary
+lists each reason under `Apply plan (prod)`.
+
+1. Read the plan in full. From a clean checkout of `main`, run this in `infra/`:
+
+   ```sh
+   bun run preview -- --refresh --diff
+   ```
+
+2. When the reason is drift, reconcile it first: put the console change into the program in a pull
+   request, or run `bun run up` from the checkout to revert it.
+3. To apply the plan, dispatch the workflow on `main`. The dispatched run previews main's tip and
+   applies its plan with no guard:
+
+   ```sh
+   gh workflow run infra-deploy.yml --ref main
+   ```
+
+4. To drop the change instead, revert it in a pull request. The revert's run holds too, because the
+   preview before it still finds the held change. Dispatch the workflow after the revert merges. Its
+   plan changes nothing.
+
+### Recover a failed apply
+
+A run whose apply failed posts `[infra] critical — prod apply failed`, and its summary shows the
+output of `pulumi up` under `Apply (prod)`. Fix the cause in a pull request, or dispatch the
+workflow again after a transient failure.
+
+A run that hit its timeout during the apply leaves Pulumi's lock on the state, and the next run
+fails with `the stack is currently locked`. Check that no apply is running, then clear the lock from
+`infra/`:
+
+```sh
+op run --env-file=.env -- pulumi cancel --stack prod --yes
+```
+
+## TLS for the hostnames
 
 Once the records exist, let Fly serve TLS for the hostnames:
 

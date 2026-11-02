@@ -2,7 +2,8 @@ import { $ } from 'bun';
 import { z } from 'zod';
 import { buildPulumiBackendURL } from './build-pulumi-backend-url';
 
-interface PulumiPreviewOptions {
+interface PulumiStackOptions {
+  readonly args: ReadonlyArray<string>;
   readonly cwd: string;
   readonly env: Readonly<Record<string, string | undefined>>;
 }
@@ -12,7 +13,7 @@ const backendEnvSchema = z.object({
   CLOUDFLARE_ACCOUNT_ID: z.string().min(1),
 });
 
-export async function runPulumiPreview(options: Readonly<PulumiPreviewOptions>): Promise<number> {
+export async function runPulumiStack(options: Readonly<PulumiStackOptions>): Promise<number> {
   const backend = backendEnvSchema.parse(options.env);
 
   const backendURL = buildPulumiBackendURL({
@@ -20,11 +21,10 @@ export async function runPulumiPreview(options: Readonly<PulumiPreviewOptions>):
     cloudflareAccountID: backend.CLOUDFLARE_ACCOUNT_ID,
   });
 
-  const result =
-    await $`pulumi preview --stack prod --refresh --diff --expect-no-changes --non-interactive --color never`
-      .cwd(options.cwd)
-      .env({ ...options.env, PULUMI_BACKEND_URL: backendURL })
-      .nothrow();
+  const result = await $`pulumi ${options.args} --stack prod --non-interactive --color never`
+    .cwd(options.cwd)
+    .env({ ...options.env, PULUMI_BACKEND_URL: backendURL })
+    .nothrow();
 
   return result.exitCode;
 }
