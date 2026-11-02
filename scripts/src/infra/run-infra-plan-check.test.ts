@@ -25,9 +25,11 @@ test('it previews the prod stack as JSON with a refresh', async () => {
   await createStubCommand('op', `shift 5\necho "$*" > '${recordPath}'\necho '{"steps": []}'`);
 
   await runInfraPlanCheck({
+    commit: 'a1b2c3d4',
     drift: 'success',
     event: 'push',
     infraPath: ctx.directory,
+    mainTip: 'a1b2c3d4',
     outputPath: ctx.outputPath,
     summaryPath: ctx.summaryPath,
   });
@@ -50,9 +52,11 @@ test('it passes a plan that creates and updates resources, and reports it in the
   await createStubCommand('op', `printf '%s\\n' '${plan}'`);
 
   const result = await runInfraPlanCheck({
+    commit: 'a1b2c3d4',
     drift: 'success',
     event: 'push',
     infraPath: ctx.directory,
+    mainTip: 'a1b2c3d4',
     outputPath: ctx.outputPath,
     summaryPath: ctx.summaryPath,
   });
@@ -96,9 +100,11 @@ test('it holds a plan that replaces a resource', async () => {
   await createStubCommand('op', `printf '%s\\n' '${plan}'`);
 
   const result = await runInfraPlanCheck({
+    commit: 'a1b2c3d4',
     drift: 'success',
     event: 'push',
     infraPath: ctx.directory,
+    mainTip: 'a1b2c3d4',
     outputPath: ctx.outputPath,
     summaryPath: ctx.summaryPath,
   });
@@ -125,9 +131,11 @@ test('it holds a plan that changes nothing when the drift check before it failed
   await createStubCommand('op', `echo '{"steps": [], "changeSummary": {"same": 40}}'`);
 
   const result = await runInfraPlanCheck({
+    commit: 'a1b2c3d4',
     drift: 'failure',
     event: 'push',
     infraPath: ctx.directory,
+    mainTip: 'a1b2c3d4',
     outputPath: ctx.outputPath,
     summaryPath: ctx.summaryPath,
   });
@@ -151,9 +159,11 @@ test('it applies a plan that deletes a resource when a person dispatched the run
   await createStubCommand('op', `printf '%s\\n' '${plan}'`);
 
   const result = await runInfraPlanCheck({
+    commit: 'a1b2c3d4',
     drift: 'skipped',
     event: 'workflow_dispatch',
     infraPath: ctx.directory,
+    mainTip: 'a1b2c3d4',
     outputPath: ctx.outputPath,
     summaryPath: ctx.summaryPath,
   });
@@ -162,6 +172,31 @@ test('it applies a plan that deletes a resource when a person dispatched the run
 
   expect(result.exitCode).toBe(0);
   expect(outputs).toBe('outcome=apply\n');
+});
+
+test("it holds a dispatched run whose commit is no longer main's tip, whatever the plan", async () => {
+  const ctx = await setupTest();
+
+  const plan = JSON.stringify({
+    steps: [{ op: 'delete', urn: 'urn:pulumi:prod::vers-infra::neon:index/role:Role::reader' }],
+  });
+
+  await createStubCommand('op', `printf '%s\\n' '${plan}'`);
+
+  const result = await runInfraPlanCheck({
+    commit: 'a1b2c3d4',
+    drift: 'skipped',
+    event: 'workflow_dispatch',
+    infraPath: ctx.directory,
+    mainTip: 'e5f6a7b8',
+    outputPath: ctx.outputPath,
+    summaryPath: ctx.summaryPath,
+  });
+
+  const outputs = await readFile(ctx.outputPath, 'utf8');
+
+  expect(outputs).toBe('outcome=held\n');
+  expect(result.output).toContain("- this run's commit a1b2c3d4 is not main's tip e5f6a7b8\n");
 });
 
 test("it fails with the preview's errors and writes no outcome when the preview fails", async () => {
@@ -181,9 +216,11 @@ test("it fails with the preview's errors and writes no outcome when the preview 
   );
 
   const result = await runInfraPlanCheck({
+    commit: 'a1b2c3d4',
     drift: 'success',
     event: 'push',
     infraPath: ctx.directory,
+    mainTip: 'a1b2c3d4',
     outputPath: ctx.outputPath,
     summaryPath: ctx.summaryPath,
   });
@@ -213,9 +250,11 @@ test('it fails and writes no outcome when the preview prints no plan', async () 
   await createStubCommand('op', "echo 'Previewing update (prod)'");
 
   const result = await runInfraPlanCheck({
+    commit: 'a1b2c3d4',
     drift: 'success',
     event: 'push',
     infraPath: ctx.directory,
+    mainTip: 'a1b2c3d4',
     outputPath: ctx.outputPath,
     summaryPath: ctx.summaryPath,
   });

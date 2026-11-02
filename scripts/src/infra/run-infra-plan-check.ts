@@ -8,9 +8,11 @@ import { runInfraStack } from './run-infra-stack';
 import type { DriftOutcome, InfraStackResult, PulumiPlan } from './types';
 
 interface InfraPlanCheckOptions {
+  readonly commit: string;
   readonly drift: DriftOutcome;
   readonly event: string;
   readonly infraPath: string;
+  readonly mainTip: string;
   readonly outputPath: string;
   readonly summaryPath: string;
 }
@@ -45,8 +47,18 @@ export async function runInfraPlanCheck(
     return { exitCode: 1, output };
   }
 
-  const holds = [...(options.drift === 'failure' ? [driftHold] : []), ...collectPlanHolds(plan)];
-  const outcome = pickInfraOutcome({ event: options.event, holds });
+  const isMainTip = options.commit === options.mainTip;
+  const isStaleDispatch = options.event === 'workflow_dispatch' && !isMainTip;
+
+  const holds = [
+    ...(isStaleDispatch
+      ? [`this run's commit ${options.commit} is not main's tip ${options.mainTip}`]
+      : []),
+    ...(options.drift === 'failure' ? [driftHold] : []),
+    ...collectPlanHolds(plan),
+  ];
+
+  const outcome = pickInfraOutcome({ event: options.event, holds, isMainTip });
   const output = formatPlanReport({ holds, outcome, steps: plan.steps });
 
   await appendFile(options.outputPath, `outcome=${outcome}\n`);

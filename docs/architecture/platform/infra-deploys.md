@@ -33,9 +33,11 @@ When the guard passes the plan, the job runs `pulumi up --refresh`. A last previ
 A held plan stays unapplied, and its run ends green with a Discord alert. A person applies it by
 dispatching the workflow on `main`. The dispatched run skips the drift check and applies the plan of
 main's tip whatever the guard finds, so it also applies each push that landed after the held one. A
-later push holds too while the commit before it differs from the live stack, such as while the held
-change stays unapplied. A push that reverts the held change holds as well, and the push after the
-revert can pass, because the revert's commit matches the live stack.
+dispatched run whose commit is no longer main's tip when the guard reads the plan holds, such as a
+rerun of an old dispatch, because its plan would revert each change applied since. A later push
+holds too while the commit before it differs from the live stack, such as while the held change
+stays unapplied. A push that reverts the held change holds as well, and the push after the revert
+can pass, because the revert's commit matches the live stack.
 
 ## The preview on a pull request
 

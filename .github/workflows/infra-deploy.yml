@@ -88,6 +88,7 @@ jobs:
       - name: Preview and guard
         id: plan
         env:
+          COMMIT: ${{ github.sha }}
           DRIFT: ${{ steps.drift.outcome }}
           EVENT: ${{ github.event_name }}
           INFRA_PATH: infra
