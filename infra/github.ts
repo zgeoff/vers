@@ -36,7 +36,7 @@ const labels = new github.IssueLabels(
 
       // the shared Renovate preset tags every update pull request with it
       { name: 'dependencies', color: 'ededed' },
-      { name: 'do-not-merge', color: '000000', description: 'reference PR — never merge' },
+      { name: 'do-not-merge', color: '000000', description: 'reference PR: never merge' },
       { name: 'documentation', color: 'C2E0C6', description: 'docs' },
       { name: 'duplicate', color: 'cfd3d7', description: 'already exists' },
       { name: 'easy win', color: '7057ff', description: 'small task, high value' },
