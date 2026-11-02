@@ -17,10 +17,10 @@ metadata:
   describes lands. In [The docs/ tree](../docs-writing/references/docs-tree.md), docs-writing has
   you delete a design once its code is built. vers keeps the note, because it records what the
   player experiences, and an architecture doc never covers that.
-- Write no decision record in `docs/decisions/`, the folder that
-  [The docs/ tree](../docs-writing/references/docs-tree.md) gives decision records. Put the reason
-  for a decision in the description of the PR that makes it, beside the change it explains. vers
-  squash-merges with a blank commit body, so a reason in a branch commit's body is lost.
+- Write no decision record, though [The docs/ tree](../docs-writing/references/docs-tree.md) gives
+  decision records a folder of their own. Put the reason for a decision in the description of the PR
+  that makes it, beside the change it explains. vers squash-merges with a blank commit body, so a
+  reason in a branch commit's body is lost.
 
 ## Game-design notes
 
