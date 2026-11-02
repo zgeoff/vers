@@ -79,76 +79,82 @@ The Cloudflare token needs `Zone → DNS → Edit` (versidle.com) and
 
 ## Deploy
 
-The `infra-deploy` workflow applies each merge to `main` that changes the program.
-[Infra apply and drift](../architecture/platform/deployment.md#infra-apply-and-drift) describes the
-workflow, its guard, and drift, a difference between the live resources and the program on `main`.
-Run every command in this section from `infra/` in a clean checkout of `main`. These two show the
-stack's changes and apply them by hand:
+The `infra-deploy` workflow applies each merge to `main` that changes the program. Each run first
+runs a drift check, a preview of the commit before its push, and its guard holds a plan that deletes
+or replaces a resource or that follows a failed drift check.
+[Infra deploys](../architecture/platform/infra-deploys.md) describes the workflow, the guard and
+drift.
 
-```sh
-bun run preview   # op run --env-file=.env -- pulumi preview
-bun run up        # op run --env-file=.env -- pulumi up
-```
-
-`bun run up` applies everything on `main`, a change the guard held included, so answer a held run
-through the workflow below.
+Apply a held plan through the workflow, never with `bun run up`. The workflow's run waits in the
+`infra-prod` queue, so it never overlaps another apply or preview, and its summary records the plan
+and the apply.
 
 ### Answer a held apply
 
-The guard holds a plan that deletes or replaces a resource, or a plan that follows drift. A held run
-applies nothing and ends green. Discord shows `[infra] prod apply held for a person`, and the run's
-summary lists each reason under `Apply plan (prod)`.
+A held run applies nothing and ends green. Discord shows `[infra] prod apply held for a person`, and
+the run's summary lists each reason under `Apply plan (prod)`.
 
-1. Show each held change in full:
+1. From `infra/` in a clean checkout of `main`, show each change in full:
 
    ```sh
    bun run preview -- --refresh --diff
    ```
 
-   Expect: the resources that the summary's reasons name.
+   Expect: a change on each resource that the reasons name.
 
-2. When a reason is drift, decide on each drifted resource. To keep a console change, add it to the
-   program in a pull request and merge it. Step 3 reverts every console change that the program
-   lacks.
-3. Dispatch the workflow on `main`. The dispatched run skips the guard and applies the plan of
-   main's tip, held changes included:
+2. When you keep a drifted resource's console change, merge a pull request that adds the change to
+   the program. Expect: that merge's run holds too, because its drift check still finds the drift.
+3. Dispatch the workflow on `main`:
 
    ```sh
    gh workflow run infra-deploy.yml --ref main
    ```
 
-   Expect: the run's `Apply plan (prod)` holds
+   The dispatched run applies the plan of main's tip whatever the guard finds. That plan reverts
+   each console change that the program lacks. Expect: the run's `Apply plan (prod)` holds
    `the job applies it because a person dispatched the run`, and `Drift after the apply (prod)` ends
    with every resource unchanged.
 
-To drop a held change instead of applying it, revert it in a pull request, merge it, and then do
-step 3. The revert's own run holds too: its first preview runs on the held commit, whose change
-never reached the stack.
+To drop a held change instead, merge a pull request that reverts it, then do step 3. The revert's
+run holds as well. Its drift check previews the held commit, whose change never reached the stack.
 
 ### Recover a failed apply
 
-A failed run posts `[infra] critical — prod apply failed`, and its summary shows the output of
-`pulumi up` under `Apply (prod)`.
+A failed run posts `[infra] critical — prod apply failed`. Read the error under `Apply (prod)` in
+the run's summary, then act on its cause:
 
-1. Read the error under `Apply (prod)`. When the error is a provider's 5xx answer or a network
-   timeout, dispatch the workflow as step 3 of [Answer a held apply](#answer-a-held-apply) shows.
-   For any other error, fix the program in a pull request.
-2. When a run fails with `the stack is currently locked`, an earlier run hit its 30-minute timeout
-   during the apply and left Pulumi's lock on the state. List the runs in progress:
+| Cause                                        | Action                                                   |
+| -------------------------------------------- | -------------------------------------------------------- |
+| a provider's 5xx answer or a network timeout | dispatch the workflow, as step 3 of the held apply shows |
+| an error in the program                      | merge a fix in a pull request; its run applies the fix   |
+| `the stack is currently locked`              | [clear the stale lock](#clear-a-stale-lock)              |
+
+### Clear a stale lock
+
+An apply that hit the job's 30-minute timeout leaves Pulumi's lock on the state, and every later run
+fails with `the stack is currently locked`.
+
+1. List the runs in progress:
 
    ```sh
    gh run list --workflow infra-deploy.yml --status in_progress
    ```
 
-   Expect: no runs. Wait for any run that the list shows.
+   Expect: no runs. When the list shows a run, wait for it to end.
 
-3. Clear the lock:
+2. From `infra/`, clear the lock:
 
    ```sh
    op run --env-file=.env -- pulumi cancel --stack prod --yes
    ```
 
-4. Dispatch the workflow as step 3 of [Answer a held apply](#answer-a-held-apply) shows.
+   Expect: exit 0.
+
+3. Dispatch the workflow on `main`:
+
+   ```sh
+   gh workflow run infra-deploy.yml --ref main
+   ```
 
 ## TLS for the hostnames
 
