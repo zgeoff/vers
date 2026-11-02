@@ -1,273 +1,184 @@
 ---
 name: skill-writing
 description:
-  How to write a Claude Code skill — what a SKILL.md and its references hold, how they point at code
-  instead of copying it, how to keep them true, and the script that checks them. Load it before
-  writing, editing, or reviewing a SKILL.md or a skill's references, and before answering a review
-  finding on one.
-metadata:
-  kind: rule-set
+  "Writes or reviews an agent skill: what goes in it, the voice it's written in, how it points at
+  code instead of copying it, and how to keep it short and true. Load it before you write, edit, or
+  review a SKILL.md or a skill's references, and before you answer a review finding on one."
 ---
 
 # Writing skills
 
-A skill holds what an agent cannot get from the code: when to load the skill, the commands to run
-and what each needs, the traps that cost time, the reasons behind rules that look arbitrary, and
-where to look next. The code, its tests, `--help`, and the docs own everything else, so a skill
-points at them and never copies them. A copy goes stale the next time the code changes, and nothing
-tells the agent that reads it.
+A skill is a briefing for an agent in the middle of a task. It has the code open and none of your
+context. It does what you write, copies your examples, and fills every gap with a guess.
 
-The prose rules in [docs-writing](../docs-writing/SKILL.md) apply to a skill as they do to any
-committed doc, and this guide doesn't repeat them. Where the two disagree about a skill, this guide
-wins. Anthropic's guidance is in its
-[best-practices page](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices)
-and the [Claude Code skills reference](https://code.claude.com/docs/en/skills).
+So give it what the code can't:
+
+- when to reach for the skill;
+- which commands to run, and what each needs;
+- the mistakes that cost an hour;
+- the reasons behind rules that look arbitrary.
+
+Link the code instead of copying it: a copy goes stale without the agent knowing. Keep the skill
+short, or the agent skims.
+
+When you write or edit one, hand back the skill's path and its proof: the [check](#check-it) output,
+each [cold-read](../cold-read/SKILL.md) finding with how you answered it, and what
+[deslop](../deslop/SKILL.md) changed. Put the proof in the PR description, and link the PR in your
+reply. With no PR, put the proof in your reply. When you review one, hand back each finding with its
+line and the rule it breaks, quoted.
 
 ## Key rules
 
-Each line links the section that explains it.
+- [Write it plainly](#write-it-plainly): "you", short blunt lines, the reason beside the rule, no
+  rhetoric.
+- [Open with the job and the key rules](#open-with-the-job-and-the-key-rules): the same opening in
+  every skill but a rule set.
+- [What goes in](#what-goes-in): the parts each kind of skill needs, a description that says when to
+  load it, and invented examples in a skill that several repos use.
+- [Point at the code, don't copy it](#point-at-the-code-dont-copy-it): link the file and say what
+  the code can't.
+- [Keep it short and true](#keep-it-short-and-true): under the word limit, with rules and no
+  incidents.
+- [Check it](#check-it): the `@zgeoff/chex` checks, deslop and a cold read, with their proof in the
+  PR description.
 
-- [What a skill holds](#what-a-skill-holds): when to load it, the commands, the traps, and where to
-  look; the code owns the rest.
-- [Frontmatter](#frontmatter): `name` matches the folder, and `description` says what the skill does
-  and when to load it.
-- [The top of SKILL.md](#the-top-of-skillmd): open with a linked index of the key rules, then the
-  list of references.
-- [SKILL.md and references](#skillmd-and-references): split by how often a task needs the text, one
-  level deep.
-- [Point at the code, never copy it](#point-at-the-code-never-copy-it): a code name is a Markdown
-  link to its file; no inventories, no narrations, and no stale quotes.
-- [Answering a review of a skill](#answering-a-review-of-a-skill): decline a finding that asks for a
-  copy of the code.
-- [Examples in a shared skill](#examples-in-a-shared-skill): made up, and naming no repo, file, or
-  line.
-- [Keeping a skill true](#keeping-a-skill-true): rules, not incidents, and a script where a check
-  can replace prose.
-- [Checking a skill](#checking-a-skill): `chex prose`, `chex links`, and `chex skill`.
-
-## What a skill holds
-
-Most project skills take the same shape: a sentence on what the skill covers, a table of commands,
-and a list of traps, each with its reason. A made-up example:
-
-```markdown
-# Widget tests
-
-The `testing` skill holds the rules. This skill holds what is particular to the widget service.
-
-## Commands
-
-| Run                | Command                    | Needs                        |
-| ------------------ | -------------------------- | ---------------------------- |
-| One file           | `bun test <path>`          | Bun                          |
-| Renderer snapshots | `bun run test:render`      | Chromium from `bun run deps` |
-| Against real Redis | `REDIS_URL=<url> bun test` | A Redis you can flush        |
-
-## Traps
-
-- **The theme cache outlives a test.** [`loadTheme`](../../../src/theme/load-theme.ts) memoises per
-  process, so a test that changes a theme file calls `resetThemes()` first.
-- **Snapshots differ on macOS.** Font hinting changes the pixels, so update snapshots only from the
-  Linux container.
-```
-
-Each trap is a fact the code doesn't show, plus what to do about it. A trap belongs in the skill
-when an agent with the source open would still lose time to it.
-
-## Frontmatter
-
-`name` matches the skill's folder: lowercase letters, digits, and hyphens, at most 64 characters.
-
-`description` is the only text the model sees when it chooses a skill, among possibly a hundred
-others. Write it in the third person, say what the skill does and when to load it, and include the
-words a task would use. It runs to at most 1,024 characters.
-
-- Bad: "I help you with widgets."
-- Good: "Commands, test layers, and traps for the widget service's tests. Load it beside the testing
-  skill before writing, running, or reviewing a widget test."
-
-## The top of SKILL.md
-
-SKILL.md opens with everything an agent needs to act: one or two paragraphs on what the skill
-covers, then an index of the key rules, then the list of references, then the sections that explain
-each rule. After a compaction, only the start of a loaded skill stays in context, so a rule that
-appears first only at the bottom is the first one lost.
-
-The index is a table of contents with a takeaway: one line per section, a link to the section, and
-the rule in a phrase.
-
-```markdown
-## Key rules
-
-- [Cleanup](#cleanup): register `onTestFinished` right after each acquisition, with no hooks.
-- [Time and waiting](#time-and-waiting): wait on a condition, never a sleep.
-```
-
-Each line restates its rule in one phrase and owns none of its detail, so the section stays the
-rule's owner, and a change to the rule changes both. A skill short enough to read on one screen
-needs no index.
-
-The reference list follows the index. Each entry links one reference and names the task that needs
-it, so an agent opens only the references its task touches:
-
-```markdown
 ## References
 
-- [Database](./references/database.md): a package that owns a schema.
-```
+- [Kinds of skill](./references/skill-kinds.md): writing a new skill, a rule set or a project skill,
+  or adding a command, a mistake to avoid, a step or a reply line to any skill.
 
-## SKILL.md and references
+## Write it plainly
 
-SKILL.md holds what most loads of the skill need. A reference holds what only some tasks need: one
-runner, one kind of doc, one rare case. Decide each section by how often a task needs it, never by
-the line count, because a rule an agent needs on most tasks is easier to miss behind a second read.
-Anthropic recommends a SKILL.md under 500 lines; past that, check that each section is one most
-tasks need.
+The agent copies how you write as well as what you say.
 
-References sit one level deep. SKILL.md links each reference, and a reference never sends the reader
-on to another reference, because an agent reads a nested file partially. A reference may link back
-to a section of SKILL.md. A reference over 100 lines opens with a contents list, a list of links to
-its own headings, so a partial read still shows what the file holds. Name each reference by its
-domain (`database.md`, not `notes.md`).
+- **Say "you", and say what to do.** An agent fed a list of don'ts writes a list of don'ts.
+- **Put the reason next to any rule that needs one.** Then the agent can handle a case you didn't
+  foresee. "MUST" and "CRITICAL" give it no reason to work from, and agents over-apply them.
+- **Make a person or the agent the subject.** "Add a mistake only if…", never "a mistake earns its
+  place". A thing as the actor hides who does the work.
+- **Use the plain name.** Don't coin a label and then define it ("the owner is the module that…").
+  Say the plain thing each time.
+- **Keep short lines short.** "Slow, but right." Don't pad a blunt line with an explanation, a
+  qualifier or tidier grammar. The padding is what reads as machine-written.
+- **Cut the rhetoric.** No "X is not the job. The job is Y", no aphorisms, no drama words
+  ("worthless", "critical"), no point made three ways. Say the instruction and its reason once.
+- **Put a list the agent acts on in bullets.** A list inside a sentence is hard to scan, and it
+  grows one item at a time.
 
-Moving text from SKILL.md into references makes SKILL.md shorter and the skill no shorter. When a
-skill is too long, cut points first, under docs-writing's "Cut anything the reader could get from
-the code", and move only what few tasks need. A reference follows every rule in this guide.
+When a section still reads oddly after two rewrites, change its structure. Rebuild it in a new
+order, and say the plain instruction.
 
-## Point at the code, never copy it
+The prose rules in [docs-writing](../docs-writing/SKILL.md) apply too. Where they disagree about a
+skill, this skill wins.
 
-A copy of the code takes four shapes, and each has a replacement.
+## Open with the job and the key rules
 
-### A pointer to a name
+Every skill but a rule set opens the same way, because the agent decides what to do from the top of
+a skill:
 
-A pointer is allowed when the agent needs a name. Write the name as a Markdown link to its file, in
-a sentence that holds a fact the code doesn't: a trap, a reason, or a choice. `chex links` checks a
-link, so a rename fails CI. A path in code formatting gets only a warning from `chex skill`, and
-nothing fails when it goes stale.
+1. A paragraph or two: the job, what the agent hands back, if anything, and the main mistakes to
+   avoid. Write them for this skill, with no stock opener, and name the mistakes without a count,
+   never "three mistakes". When a skill hands something back, repeat it in a reply line at the end.
+2. `## Key rules`: one line per `##` section, with a link and the rule in a phrase. Leave
+   `## Key rules`, `## References` and each `###` out of the list.
+3. `## References`, when the skill has any: one line per file in `references/`, with the task that
+   needs it.
 
-- Bad: "Call `createWidget` (`src/widgets/create-widget.ts`) to build one; it ignores `theme` when
-  `size` is `compact`."
-- Good: "[`createWidget`](../../../src/widgets/create-widget.ts) ignores `theme` when `size` is
-  `compact`, so test a themed widget at the default size."
+Keep a rule's detail in its section, and change its key rules line when you change the rule.
 
-Code formatting without a link is for a command, key, or path the agent types. Never link to a line
-anchor (`#L42`): the anchor goes stale on the next edit with no error. The link text holds the name
-to find in the file.
+Shape a rule set, such as a code style, as [A rule set](./references/skill-kinds.md#a-rule-set)
+says. It holds rules the agent applies during other work, so it has no job to open with.
 
-In a skill, this rule replaces docs-writing's "Names" rule for code identifiers: a skill may name
-the function, option, or file the agent needs, as a link.
+Open a reference with the facts and the mistakes to avoid, never with when to open it. What to hand
+back stays in SKILL.md, unless the reference is a subagent's brief: then it gives that subagent's
+return format.
 
-### An inventory
+## What goes in
 
-An inventory is one row or bullet per file, function, option, or other member of something the code
-defines. Replace it with the rule that defines the list and the search that lists it.
+For the parts of a skill that covers a repo's tools, teaches a way of working or is a project skill,
+read [Kinds of skill](./references/skill-kinds.md).
 
-- Bad: a table with a row for each stand-in in `test-utils/`, naming the boundary each replaces.
-- Good: "Each stand-in is a `build-stub-*` file in [test-utils](../../../test-utils/), and its name
-  states the boundary it replaces. Search there before writing one."
+Write the `description` in the third person: the agent reads it as a label, not an order. The
+description is all the agent sees when it picks a skill, so say what the skill does and when to load
+it, in the words a task would use. Make the `name` match the name of the skill's folder.
 
-docs-writing allows a table whose key column is a list when its other columns hold facts the code
-doesn't. In a skill, a table keyed by files, functions, or options is an inventory whatever its
-other columns hold: move those facts into the code, as a name, a type, or a test whose name states
-them, so the search returns them. A table keyed by something the agent does or passes, such as the
-commands table above or the arguments of a workflow the skill tells the agent to call, is no
-inventory: the agent needs it on every load, at the call.
+When several repos may use a skill, invent every example, and never use a term only one repo or team
+knows. A reader elsewhere can't open a file the example names, or doesn't know the word.
 
-When agents need to browse a list, generate the reference from the code with a script, and have CI
-fail when the reference drifts. When most loads of the skill need the list itself, such as a table
-of names that a lint rule also holds, keep the list in the skill and add a test that fails when it
-differs from the code.
+## Point at the code, don't copy it
 
-### A narration
+When the skill names a file, a function or a setting, link the file, in a sentence that says what
+the code doesn't: a mistake to avoid, a reason or a choice. When someone renames the file,
+`chex links` fails.
 
-A narration retells what a script or function does, step by step. The agent can open the code, and
-the retelling drifts from it. Keep the fact the agent acts on, and link the code that owns the
-sequence.
+Four kinds of copy:
 
-- Bad: "`deploy.sh` reads the version, builds the image, tags it, pushes it, then calls the rollout
-  endpoint."
-- Good: "Run `deploy.sh <env>`. It pushes before it rolls out, so a failed push leaves the old
-  version serving; rerun it. [`deploy.sh`](../../../scripts/deploy.sh) owns the sequence."
+- **A list of members,** one row per file, function or option. Instead, give the rule that defines
+  the list and the search that finds it: "each stand-in is a `build-stub-*` file in `test-utils/`;
+  search there before you write one". A table of commands is fine: each row says what the command
+  needs to run.
+- **A retelling.** "The script builds, tags, pushes, then rolls out" goes stale with the script.
+  Keep the fact the agent acts on ("a failed push leaves the old version serving") and link the
+  script.
+- **A quote.** A copied error message teaches the old text once the code changes. Quote only when
+  the exact words are the point. Otherwise invent the example.
+- **A line anchor.** `#L42` points at the wrong line after the next edit. `chex skill` fails on one,
+  so link the file and name what to look for in it.
 
-### A quoted example
+When a review asks for one of these copies, decline it and name this section.
 
-A quote of real code text, such as a tool description, an error message, or a log line, is a copy:
-it drifts when the code changes, and the example then teaches the old text. Quote it only when the
-exact words are the point, and check the quote whenever the code it quotes changes. When the words
-are not the point, write a made-up example and mark it as one.
+## Keep it short and true
 
-### Live lists
+Keep SKILL.md under the word limit `chex skill` sets, a rule set included: it warns at 1,500 words
+and fails at 1,700. After a compaction, Claude Code brings back only the first 5,000 tokens of each
+skill the session loaded, and the limit keeps the whole skill inside that. When a skill grows, cut
+first, then move what only some tasks need into a reference. In a rule set, keep every rule the
+common task needs in SKILL.md, and move only the rest.
 
-Claude Code runs a line in SKILL.md written as an exclamation mark and a backticked command when the
-skill loads, and inserts the command's output in its place. Use it only for a small fact that every
-load needs and that changes often. Otherwise use the rule and the search.
+In a file in `references/`, link to a heading in another such file with a Markdown link, such as
+`[Lanes](./slow-tests.md#lanes)`, so `chex links` fails when someone renames the heading. Keep such
+links few: an agent may read only part of a file it reached through another reference. Put a fact
+that most tasks need in SKILL.md.
 
-- A command that fails, or that a permission rule doesn't allow outside auto mode, aborts the whole
-  skill load. Pre-approve it with `allowed-tools` and end it with `|| true`.
-- The command runs in the session's current directory, so address files through
-  `${CLAUDE_PROJECT_DIR}` or `${CLAUDE_SKILL_DIR}`.
-- The setting `disableSkillShellExecution` replaces the line with a placeholder, and an agent other
-  than Claude Code sees the raw line.
-- The output costs context on every load.
+In a reference the main agent opens, use the terms SKILL.md sets up without explaining them again:
+the agent reads SKILL.md first. In a reference that is a subagent's brief, define every term you
+use, because the subagent never sees SKILL.md.
 
-## Answering a review of a skill
+Write the rule. The incident, the issue ID and the date go in the PR.
 
-Review bots and review agents ask for precision: the exact path, every member of a list, each step a
-script takes. In a skill, a finding that asks for a copy of the code is declined under "Point at the
-code, never copy it", and the reply names that rule. A finding that shows a sentence is wrong is
-fixed, by correcting the fact or by replacing the copy with a pointer.
+When a script or a lint can check a rule, delete the prose and say which check runs. In a rule set,
+keep a short bullet for a rule the lint enforces, so the agent writes it right the first time. Put a
+mechanical step in a script in the skill's `scripts/` folder, with a test beside it that the repo's
+test command runs. Tell the agent to run the script, not read it.
 
-## Examples in a shared skill
+When an agent gets something wrong, fix the rule that should have caught it. A near-copy of the rule
+leaves the agent unsure which one to follow. Call each thing by one name: the agent reads a second
+word as a second thing.
 
-A shared skill is one that a sync copies into several repos. Every example in it is made up, and
-names no repo, and no file, line, issue, or identifier from one repo. A reader in another repo can't
-open that file, and the example goes stale when its repo changes. Invent names that keep the
-example's point, as the widget examples in this guide do. An upstream project's issue, such as
-`turborepo#11007`, and a tool's or library's own name are fine, because every repo sees the same
-thing.
+Leave out anything time-bound, like "until the next release": it goes false unnoticed.
 
-## Keeping a skill true
+## Check it
 
-A skill states rules, not incidents. Keep the rule, and move the story, the issue IDs, and the dates
-to the PR or the tracker.
+1. From the repo root, run the checks from
+   [`@zgeoff/chex`](https://github.com/zgeoff/tools/tree/main/packages/chex):
 
-When a script or a lint rule can check a rule, delete the rule's prose and say which check runs.
-Push mechanical steps into a tested script in the skill's `scripts/` folder, and tell the agent to
-run it, not read it: running a script loads only its output, and reading it loads its whole source.
+   ```bash
+   bun x @zgeoff/chex prose links skill
+   ```
 
-Before adding a rule after a failure, find the existing rule that should have covered it and work
-out why the agent missed it. Fix that rule instead of adding a near-duplicate, because two rules
-that say nearly the same thing drift apart. When the code a skill covers changes, reread the skill's
-sentences about it.
+   While you draft, `bun x @zgeoff/chex skill <skill folder>` checks one skill. When a check flags a
+   sentence you like, rewrite it so the check passes, and tell the user or your caller which
+   sentence and which check. The check may be wrong.
 
-Write for a model that follows instructions closely:
+2. Run the `deslop` skill on each section you wrote or changed.
+3. Run the `cold-read` skill on each file of the skill you wrote or changed. Follow it to the end:
+   one cold read, your fixes, then one more cold read on the sections you redrafted.
+4. Run the checks again, and give the proof in the PR description of the skill change. Add these as
+   `##` headings, after the sections of the repo's PR template:
+   - **Skill checks:** the full output of the last check run, in a code block.
+   - **Cold read:** each finding from every cold read, and how you answered it: fixed, declined with
+     the reason, or reported as a gap in the rules.
+   - **Deslop:** each change deslop made, as a `diff` block, or "none".
 
-- Use one term per concept. A second word for the same thing reads as a second thing.
-- Leave out time-sensitive statements such as "until the next release". They become false silently.
-- Use normal phrasing, not "CRITICAL" or "MUST". Current models over-apply emphasis, so give the
-  reason with the rule and let the reason carry the weight.
-- Give one default and an escape hatch, not a menu of equal options.
-- Match the freedom to the fragility. Give exact commands for a fragile step, such as a migration or
-  a release, and leave judgment to the agent for an open step, such as choosing a name.
-
-## Checking a skill
-
-Run these from the repo root:
-
-```bash
-bun x @zgeoff/chex prose links skill
-```
-
-`chex prose` runs docs-writing's prose check over each skill's Markdown. `chex links` checks every
-relative link in each skill. `chex skill` fails on a frontmatter field outside its limit, on an
-unquoted description that holds a colon and a space, which YAML reads as a key, and on a line
-anchor. It warns about a SKILL.md over 500 lines, a reference that SKILL.md doesn't list under
-`## References`, a missing contents list, a reference that links to another reference, and a
-code-formatted path that should be a link. To check one skill, pass its folder:
-
-```bash
-bun x @zgeoff/chex skill .claude/skills/<skill>
-```
-
-A repo marks a third-party skill `linguist-vendored` in [`.gitattributes`](../../../.gitattributes),
-and none of these checks read it.
+**Reply:** for a skill you wrote or edited, its path and its proof; for a review, each finding with
+its line and the quoted rule.

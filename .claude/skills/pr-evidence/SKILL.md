@@ -1,69 +1,109 @@
 ---
 name: pr-evidence
 description:
-  How to put a screenshot, screen recording, or other image into a pull request as evidence. The
-  agent uploads it to the files.geoff.cloud file drop with `cloud up --md`, or with one curl line on
-  an imp, and pastes the Markdown line into the PR body. Load it before adding a screenshot or
-  recording to a PR, an issue, or a review reply, and before committing an image that only shows a
-  change.
+  'Captures a screenshot of a web page and puts it, or a screen recording, into a pull request as
+  evidence, through the files.geoff.cloud file host. Load it before adding an image or recording to
+  a PR, an issue or a review reply, and before committing an image that only shows a change.'
 ---
 
 # PR evidence
 
-A screenshot or a recording that shows a change goes to the file drop at `files.geoff.cloud`, and
-the pull request links it. Never commit an image to a branch or a repo to hold PR evidence: the
-commit keeps the image in the repo's history for good, and a branch made only to hold images stays
-behind after the PR merges. An image the product ships, such as an icon or a figure in a doc, is
-part of the change and is committed as usual.
+Put a screenshot or a recording in a PR as a link to the `files.geoff.cloud` file host, and hand
+back the Markdown line you added. Never commit an image just to show a change: it stays in the
+repo's history forever. Anyone with the link can open the file, so keep every token, secret and
+piece of personal data out of it.
 
-The service's code and docs live in zgeoff/cloud, and its
-[architecture doc](https://github.com/zgeoff/cloud/blob/main/docs/architecture/workloads/files.md)
-owns how it stores, serves and expires a file.
+## Key rules
 
-## Add a screenshot to a PR
+- [Pick the upload path](#pick-the-upload-path): the `cloud` CLI, or `curl` on an imp, a cloud VM
+  that runs agent sessions; otherwise stop before you capture.
+- [Save and capture](#save-and-capture): each file in `.scratch/`, kept out of git, named for what
+  it shows.
+- [Upload it](#upload-it): with a label and a 30-day expiry, and check the reply.
+- [Put it in the PR](#put-it-in-the-pr): the label as the alt text, under the item it proves.
 
-Anyone with the link can read the file, so crop out any token, secret, or personal data before you
-upload it. The URL holds the filename, so name the file for what it shows.
+## Pick the upload path
 
-1. Save the image outside the checkout, or in a git-ignored folder, so it never gets staged.
-2. Upload it with the command for your machine, from [Upload commands](#upload-commands).
-3. Paste the Markdown line into the PR body, under the item it is evidence for. A comment or a
-   review reply takes the same line.
+Pick the path before you capture anything. Take the first row that matches:
 
-## Upload commands
+| Check                                | Path                                                               |
+| ------------------------------------ | ------------------------------------------------------------------ |
+| `command -v cloud` prints a path     | the `cloud` CLI, the file host's client on the user's own machines |
+| `test -n "$OP_CONNECT_HOST"` is true | `curl`, on an imp: a cloud VM that runs agent sessions             |
+| neither                              | none: stop and tell the user                                       |
 
-### With the cloud CLI
+## Save and capture
 
-Use this where the `cloud` CLI exists, which `command -v cloud` shows:
+1. Save each file in `.scratch/` at the root of the checkout. When git doesn't ignore that folder
+   yet, add it to the clone's own exclude file, which changes no tracked file:
 
-```bash
-cloud up login-form.png --md
-```
+   ```bash
+   git check-ignore -q .scratch/ || echo .scratch/ >> "$(git rev-parse --git-path info/exclude)"
+   mkdir -p .scratch
+   ```
 
-Expect one line of the form `![login-form.png](https://files.geoff.cloud/<id>/login-form.png)`.
+2. Name the file for what it shows, in lowercase letters, digits and hyphens, such as
+   `login-form-email-error.png`. The name is part of the URL.
+3. Capture a web page with headless Chromium:
 
-### On an imp
+   ```bash
+   chromium --headless --hide-scrollbars --window-size=1280,800 --screenshot=.scratch/login-form-email-error.png http://localhost:3000/login
+   ```
 
-An imp has no `cloud` CLI. Upload with curl and the agent token, which `op read` gets from the `imp`
-vault through 1Password Connect:
+   For an SVG or a diagram, pass its `file://` URL in place of the page's URL. The PR shows PNG,
+   JPEG, GIF, WebP and AVIF as an image, and MP4 and WebM as a link. Any other format downloads as a
+   file.
 
-```bash
-curl -sS --oauth2-bearer "$(op read op://imp/files-agent-token/credential)" -F file=@login-form.png https://files.geoff.cloud/api/files
-```
+   The imp's VM image installs `chromium`. When `command -v chromium` prints nothing on an imp, stop
+   and tell the user. On the user's machine without it, use another screenshot tool that runs
+   without a person at the screen, or stop and tell the user. For a recording, use any recorder
+   there, and save MP4 or WebM.
 
-Expect a JSON body whose `url` is `https://files.geoff.cloud/<id>/login-form.png`. Write the
-Markdown line yourself: `![<what the image shows>](<url>)`.
+4. Open the image before you upload it. Check that it shows the change, and holds no token, secret
+   or personal data. When you can't view a recording, ask the user to check it before you upload it.
 
-## Expiry
+## Upload it
 
-An upload expires 7 days after it is made unless you pass an expiry, and the link then answers 404,
-so the image breaks in the PR. Pass `--expires 30d` to `cloud up`, or `-F expires=30d` to curl, for
-a PR that can stay open longer than a week. The agent token keeps a file 30 days at most, and the
-service refuses a longer expiry or `never` from it.
+Write a label first: a few words on what the file shows, such as `Login form with the email error`.
+Leave out square brackets, which break the Markdown line. The file host stores the label, and you
+use it as the alt text on both paths.
 
-## File types
+Set `expires` to `30d` on both paths. On an imp, the file host refuses a longer expiry from the
+agent token that `curl` sends. Without `expires`, the file host deletes the file after 7 days, which
+breaks the image in a PR that stays open longer than a week. Never set `never`: the image only needs
+to last through the review.
 
-The service serves a file inline only when its first bytes show a PNG, JPEG, GIF, WebP or AVIF
-image, or an MP4 or WebM video. It serves every other file, SVG and HTML included, as a download, so
-such a file never renders in the PR: export an SVG or a diagram to PNG before you upload it. For a
-video, drop the leading `!` from the line, so the PR shows a link that plays the video.
+- With the `cloud` CLI:
+
+  ```bash
+  cloud up .scratch/login-form-email-error.png --label 'Login form with the email error' --expires 30d --md
+  ```
+
+  Expect the Markdown line, with the label as the alt text. On a failure it prints an error, prints
+  no line, and exits non-zero. `--expires 30d` sets the expiry, so this path needs no expiry check.
+
+- With `curl` on an imp:
+
+  ```bash
+  curl -sS -w '\nHTTP %{http_code}\n' --oauth2-bearer "$(op read op://imp/files-agent-token/credential)" -F file=@.scratch/login-form-email-error.png --form-string 'label=Login form with the email error' -F expires=30d https://files.geoff.cloud/api/files
+  ```
+
+  Expect a JSON body, then `HTTP 201`. The body holds `id`, `url`, `filename`, `contentType`,
+  `size`, `sha256`, `createdAt`, `uploader`, `label`, `link` and `expiresAt`. Check that `expiresAt`
+  falls on the date 30 days from today, then write the line from `label` and `url`:
+  `![<label>](<url>)`. Use `--form-string` for the label: `-F` cuts it at a `;`.
+
+  Any other status means the upload failed, and the body's `message` holds the reason. When the
+  upload fails or `expiresAt` is wrong, stop and tell the user.
+
+## Put it in the PR
+
+Put the line under the bullet or checklist entry in the PR body that the file is evidence for. When
+no entry matches, put it at the end. Read the body with
+`gh pr view <n> --json body -q .body > .scratch/pr-body.md`, add the line, and write it back with
+`gh pr edit <n> --body-file .scratch/pr-body.md`. For an issue, use `gh issue view` and
+`gh issue edit` the same way. For a review reply, put the line in the reply.
+
+For a recording, drop the leading `!`, so the line shows as a link.
+
+**Reply:** the Markdown line you added.

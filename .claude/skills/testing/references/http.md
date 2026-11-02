@@ -1,11 +1,17 @@
 # HTTP mocking
 
-A package that calls a remote service over HTTP or RPC tests against MSW handlers. The handlers
-answer from an in-memory store that holds the remote service's state, so a test shapes that state
-and lets the real client code run: its requests, serialisation, retries, and error handling.
-Per-test handlers exist only for what the store cannot express. The [testing skill](../SKILL.md)
-rules on setup, data, and assertions apply throughout. Real application and native transport cases
-follow [Real applications and transport](../SKILL.md#real-applications-and-transport).
+Test a package that calls a remote service over HTTP or RPC by running its real client against MSW
+handlers. The handlers answer from `@msw/data` collections that hold the service's state, so seed
+that state in the test and let the client code run: its requests, serialisation, retries and error
+handling. Add a per-test handler only for what the collections can't express.
+
+Never use MSW's `setupServer` under Bun. It intercepts at Node's sockets, which Bun's native `fetch`
+never opens, so its handlers miss every request
+([mswjs/msw#2811](https://github.com/mswjs/msw/issues/2811)).
+
+This file covers a client inside the package under test. To test a whole program, such as a CLI or a
+server, against an application in the same repo, or a call MSW can't reach, such as one from a child
+process, see [Real applications and transport](./system-tests.md#real-applications-and-transport).
 
 - [The server and its lifecycle](#the-server-and-its-lifecycle)
 - [Stateful handlers](#stateful-handlers)
@@ -17,25 +23,28 @@ follow [Real applications and transport](../SKILL.md#real-applications-and-trans
 
 ## The server and its lifecycle
 
-- A test process has one MSW server, `defineNetwork(...)` from `msw/experimental`, exported as
-  `server` from `mocks/node.ts`. Its source is an `InterceptorSource` over the `FetchInterceptor`
-  from `@mswjs/interceptors/fetch/web`. MSW 3's `setupServer` intercepts at Node's sockets, which
-  Bun's native `fetch` never opens, so its handlers miss every request
-  ([mswjs/msw#2811](https://github.com/mswjs/msw/issues/2811)).
-- Each package whose tests run in the process adds its handler list to the `handlers` option, so
-  `resetHandlers()` keeps every package's default handlers. A package never starts a second server:
-  two servers in one process patch the same `fetch`, so one server's handlers answer requests meant
-  for the other's.
-- The preload calls `server.enable()` in `beforeAll`, `server.resetHandlers()` after each test, and
-  `server.disable()` in `afterAll`, never `enable()` at import. The
-  [testing skill](../SKILL.md#testing) says why the pair holds in every run mode.
-- The server starts with `onUnhandledFrame: 'error'`. A request that no handler matches rejects, and
-  MSW prints its URL.
-- A suite that sends real requests to a server it started on the loopback interface passes a
-  callback instead: loopback hosts go through, and every other unmatched request fails. In MSW 3,
-  `defaults.error()` only prints the message, so the callback throws after it, and MSW answers the
-  request with a 500 response that holds the error. The callback carries a comment that names the
-  loopback traffic.
+Build one MSW server per test process, and export it as `server` from a `mocks/node.ts` file that
+the test preload imports:
+
+- Import `defineNetwork`, `InterceptorSource` and `HttpNetworkFrame` from `msw/experimental`, and
+  `FetchInterceptor` from `@mswjs/interceptors/fetch/web`.
+- Put the handler list of every package whose tests run in the process in the `handlers` option.
+  `resetHandlers()` then keeps every package's default handlers.
+- Never start a second server. Two servers in one process patch the same `fetch`, so one server's
+  handlers answer requests meant for the other.
+
+In the test preload, call `server.enable()` in `beforeAll`, `server.resetHandlers()` in `afterEach`
+and `server.disable()` in `afterAll`. Never call `enable()` when the module loads. It would patch
+`fetch` in any process that imports the module, a test run or not.
+
+Choose what happens to a request that no handler matches:
+
+- By default, pass `onUnhandledFrame: 'error'`. The request rejects, and MSW prints its URL.
+- When a suite sends real requests to a server it started on the loopback interface, pass a
+  callback. Return for a loopback host, so the request goes through. For any other host, call
+  `defaults.error()` to print the URL, then throw. `defaults.error()` only prints, and the throw
+  makes the request fail with a 500 response. Name the loopback traffic in a comment on the
+  callback.
 
 ```ts
 const loopbackHosts = ['127.0.0.1', '[::1]', 'localhost'];
@@ -60,38 +69,48 @@ export const server = defineNetwork({
 
 ## Stateful handlers
 
-Rich API mocks use `@msw/data` by default. The default handlers implement the remote service's
-behaviour over schema-backed collections: they read and write records, validate input, and return
-the real response shape. A test seeds the collections and calls the client.
+Write the default handlers as a small version of the remote service over `@msw/data` collections:
+read and write records, validate input, and return the real response shape. In a test, seed the
+collections and call the client. Clear every collection in the test preload after each test.
 
-A small lookup, such as an HTTP status per probe URL, or a list of recorded side effects can use a
-`Map` or array that the preload clears. Keep this exception narrow: structured entity records, CRUD
-operations, and relationships use `@msw/data` collections.
+- Return the service's not-found response for a missing record, and its permission error, such as a
+  403 with the service's error body, for a caller without access. Read the caller from the request's
+  token, as [Auth tokens](#auth-tokens) allows. Seed the collections to reach those outcomes, and
+  never add a per-test handler for them.
+- Shape each collection with a zod schema (`new Collection({ schema })`). Give every field a
+  `.default()`, nested fields included, and use `@faker-js/faker` where the value is arbitrary.
+  Leave the default off a discriminator whose value gives a record its meaning. Never restate a
+  default in a `.create()` call.
+- Never use `factory()`. It belongs to `@msw/data` before version 1, which replaced it with
+  `Collection`.
+- Type each handler's response with the type the client reads, such as a type generated from the
+  service's OpenAPI document, or the contract's output type for an oRPC service. A change to the
+  real API then breaks the mock at typecheck.
+- Register a literal route, such as `/notes/archived`, before a parameterised sibling, such as
+  `/notes/:noteID`. MSW matches handlers in registration order, so the sibling would match first.
+  Say in a comment above the handler array that the order is deliberate.
 
-- The default handlers return the not-found response for a missing record and the refusal for a
-  permission failure. Shape the store to reach those outcomes; never add a per-test handler for
-  them.
-- Each collection takes its shape from a zod schema (`new Collection({ schema })`). Every field in
-  the schema has a `.default()`, using faker where the value is arbitrary. The one exception is a
-  discriminator whose value gives a record its meaning. Nested fields count as fields. A `.create()`
-  call never restates a default.
-- `@msw/data`'s `factory()` model dictionary never appears.
-- A handler takes its response type from the production contract, so a change to the real API breaks
-  the mock at typecheck.
+For a small lookup, such as an HTTP status per probe URL, you may use a `Map` that the test preload
+clears. For a side effect with no record behind it, such as a sent email, export an array, such as
+`sentEmails`, from the handler module, and clear it in the test preload. Export the array, the URL
+constant and the resolver function separately, so a test can wrap or replace each one. Put records,
+their writes and their relationships in collections.
+
+Never call `mock()` in a handler module. A dev server that loads the module has no test runner.
 
 ## Per-test handlers
 
-`server.use(...)` in a test adds a handler for one of two reasons:
+Add a handler with `server.use(...)` in a test only for one of these:
 
-- **A deviation** that the store cannot express: an error status, a transport failure, a malformed
-  payload, or a scripted sequence such as a failure followed by a success.
-- **Capturing input.** The handler feeds an inline `mock()`, and the test asserts it with the mock
-  matchers.
+- an outcome the collections can't reach, such as a 503, a transport failure or a malformed payload;
+- a sequence, such as a 503 and then a success: take each answer from the answer-queue helper in
+  `test-utils/`;
+- input you capture: call an inline `mock()` from the handler, and assert it with the mock matchers.
 
-A per-test handler holds data, as the stand-in rule in the [testing skill](../SKILL.md#test-data)
-defines it: a fixed response, a response read from an answer table by one request parameter, an
-input it captures, parsed or not, or the next answer from the tested answer-queue util. Any other
-response that depends on the request belongs in the default handlers.
+Keep logic out of a per-test handler. Return a fixed response, or one looked up by one request
+parameter. Put any other response that depends on the request in the default handlers, and never
+re-implement the service's success path in a test. A handler that captures input may still return
+the fixed success response the client needs:
 
 ```ts
 const received = mock<(input: unknown) => void>();
@@ -109,57 +128,46 @@ await shareNote(client, { noteID: 'note_1', email: 'sam@example.test' });
 expect(received).toHaveBeenCalledExactlyOnceWith({ email: 'sam@example.test' });
 ```
 
-A per-test handler never re-implements the service's happy path: that path belongs to the default
-handlers.
-
-A side-effect endpoint with no collection behind it, such as an email send, that several tests
-inspect exports a store from its handler module, such as `sentEmails`, and the preload clears it.
-The store, the URL constant, and the resolver function are separate exports, so a test can wrap or
-replace each one. A handler module never contains a `mock()` call: other consumers of the module,
-such as a dev server, have no test runner, and a reset between tests would strip the mock's
-behaviour from every consumer.
-
 ## A mock API shared across packages
 
-When several packages in one repo call the same service, its collections, builders, and handlers
-live in one shared workspace package. That package has no test-runner dependency, so a dev server or
-a story can load it as well. Each consuming package adds the shared handler list to its process's
-one MSW server, and never builds a server of its own.
+When several packages in one repo call the same service, put its collections and its handlers in one
+workspace package. Give that package no test-runner dependency, so a dev server or a story can load
+it too. Add its handler list to the one server of each test process that uses it.
 
-- The store's `reset()` clears dependent collections before the collections they reference. A
-  comment above the calls says the order is deliberate.
-- MSW matches handlers in registration order. Register a literal route, such as `/notes/archived`,
-  before a parameterised sibling, such as `/notes/:noteID`, which would otherwise match it. A
-  comment above the handler array says the order is deliberate.
+Export a `reset()` function from the package that clears every collection, and call it from the test
+preload after each test. Clear a collection whose records reference another collection before the
+one it references, and say in a comment that the order is deliberate.
 
 ## RPC contracts
 
-A contract module's suite has up to three parts:
+For an oRPC contract module, write these tests:
 
-1. Each procedure's error map holds the codes it declares, asserted with `toContainAllKeys`.
-2. Each custom error code has an explicit assertion of its HTTP status.
-3. A closing test generates the OpenAPI document from the contract, which proves the contract and
-   its schema converters produce one.
-
-Part 3 applies only when the repo commits, serves, or publishes an OpenAPI document built from the
-contract. When the repo commits the document, the closing test compares the regenerated document
-with the committed file, as the [testing skill's assertions](../SKILL.md#assertions) describe.
-Otherwise it asserts that generation resolves.
+1. For each procedure, list in the test the error codes you expect, and assert with
+   `toContainAllKeys` that the procedure's error map holds them.
+2. Assert the HTTP status of each custom error code.
+3. When the repo commits, serves or publishes an OpenAPI document built from the contract, add a
+   test that builds it with `OpenAPIGenerator` from `@orpc/openapi`, with the same
+   `schemaConverters` the repo uses. When the repo commits the document, compare the result with the
+   committed file, as in the [testing skill's assertions](../SKILL.md#assertions). Otherwise, assert
+   that generation resolves.
 
 ## Queues and other stateful services
 
-A queue, a pub/sub topic, or a job service without a faithful emulator sits behind a thin wrapper
-that the code receives by injection. The test version of that wrapper holds queryable state: the
-test enqueues through the real code, then inspects, drains, or advances what the wrapper holds. A
-stub that only records a call shows that the call happened, not what was enqueued or what the
-receiver does with it. Mock the client below the orchestration, so the code that decides what to
-enqueue and when runs for real. The preload clears the wrapper's state.
+Put a queue, a pub/sub topic or a job service behind a thin wrapper of your own, and inject the
+wrapper into the code. When the service has an emulator that behaves like the real one, run the
+emulator instead.
+
+In a test, build the real wrapper, and pass it an in-memory stand-in for the vendor's client. The
+code that decides what to enqueue, and when, then runs for real. Give the stand-in state a test can
+read: enqueue through the real code, then inspect, drain or advance what the stand-in holds. A stub
+that only records a call can't show what was enqueued or what the receiver does with it. Clear the
+stand-in's state in the test preload.
 
 ## Auth tokens
 
-- A test that covers token verification signs its tokens with a test key pair, and the real verifier
-  checks the signature and the claims.
-- A mock that needs only the caller's identity, such as a mock backend that scopes records to a
-  user, may read the token's claims without verifying the signature.
-- The code under test never skips verification. A flag that turns verification off for tests is a
-  production code path that only tests use.
+- To test token verification, sign the tokens with a test key pair, and give the real verifier the
+  test public key through its normal configuration. Let it check the signature and the claims.
+- When a mock needs only the caller's identity, such as a mock backend that scopes records to a
+  user, you may read the token's claims without checking the signature.
+- Never add a flag that turns verification off for tests. It is a production code path that only
+  tests use.

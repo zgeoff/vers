@@ -1,75 +1,121 @@
 # Go testing
 
-Go tests use the standard `testing` runner. Preserve the shared
-[behavioral principles](../SKILL.md#principles) with native names, subtests, assertions, and
-cleanup. The Bun-specific spelling and mechanisms do not apply.
+Write Go tests with the standard `testing` runner. These sections of the testing skill apply to Go
+tests as they stand: [Principles](../SKILL.md#principles), [Test data](../SKILL.md#test-data),
+[Assertions](../SKILL.md#assertions), [Errors](../SKILL.md#errors),
+[Access rules](../SKILL.md#access-rules) and [Narrowing](../SKILL.md#narrowing). From
+[Test shape](../SKILL.md#test-shape), keep the titles and the one act per test. This file replaces
+the rest of it for Go. The Bun-only parts don't apply: `setupTest`, the test preload, the
+jest-extended matchers, lanes and the `bun test` flags.
+
+The mistakes to avoid:
+
+- Never pass mutable state from a parent test to its subtests. A subtest that changes it breaks the
+  ones after it.
+- Never give each case a random ID so that cases which share state stop colliding. The shared state
+  stays, and a later test fails on it.
+- Never retry a failed test, such as with gotestsum's `--rerun-fails`, or skip one behind a check of
+  the environment. Both hide a flaky test.
+
+- [Cases and data](#cases-and-data)
+- [Assertions](#assertions)
+- [Cleanup and parallel tests](#cleanup-and-parallel-tests)
+- [Time](#time)
+- [Real boundaries](#real-boundaries)
+- [CI reports](#ci-reports)
 
 ## Cases and data
 
-- Keep tests beside their package in `_test.go` files. Use behavioral `TestXxx` names and named
-  `t.Run` subtests for closed decision tables. Each row creates its own state; a parent test never
-  supplies mutable scenario state to its children.
-- Keep the selected scenario visible in the case. Immutable infrastructure definitions can be
-  shared. An assertion guard such as `if got != want { t.Errorf(...) }` checks an outcome; it does
-  not select a scenario.
-- Keep package-local helpers in `_test.go` files. A helper that models behavior or dependency
-  assumptions needs tests. Utilities shared across packages use a test-support package; no
-  one-function-per-file rule applies.
-- Generated cases retain the independent-contract, case-isolation, and replay rules in
-  [property tests](../SKILL.md#property-tests). Use the native fuzzer or a property library
-  appropriate to the generated inputs; adopting fast-check is not a Go requirement.
+- Put tests beside their package, in `_test.go` files. Name each `Test` function for the behaviour,
+  such as `TestRetryStopsAfterLastAttempt`.
+- Write a fixed table of cases as named `t.Run` subtests, one per row. Name each subtest as a short
+  sentence with its value, such as `"stops after 3 attempts"`. Create each row's state inside the
+  row.
+- Keep the inputs that make a row differ from the others in that row. You may share a definition
+  that no row changes, such as a server config.
+- You may write a guard such as `if got != want { t.Errorf(...) }`. It checks an outcome, so the ban
+  on a branch in a test body doesn't cover it.
+- Keep a helper that one package uses in that package's `_test.go` files. Put a helper that several
+  packages use in a test-support package, such as `internal/testsupport`, and test it.
+- Generate byte and string inputs with Go's native fuzzer, `testing.F`. Generate operation sequences
+  with a property library, such as `pgregory.net/rapid`. Keep each generated case apart, and replay
+  a failure, as [Property tests](./system-tests.md#property-tests) describes.
 
 ## Assertions
 
-Use `gotest.tools/v3/assert` when the project selects that assertion library. `Equal` uses `==`;
-`DeepEqual` uses go-cmp for whole-value comparisons. Keep independent observations in separate
-calls. Equality options reflect the contract, never hide unwanted fields or equate values that the
-contract distinguishes.
+Use `gotest.tools/v3/assert` when the project uses it:
 
-Use `NilError` for a successful operation and `ErrorIs` for a sentinel or wrapped error contract.
-Use `errors.As` when the error type and its fields matter. Match exact text only when the text is
-contract. `Check` reports a failure and permits later independent checks; fatal checks stop the
-current test.
+- Compare a value of a comparable type with `assert.Equal`, which uses `==`. Compare a whole struct
+  with `assert.DeepEqual`, which uses go-cmp.
+- Check each independent result in its own call. `assert.Assert` and `assert.Equal` stop the test.
+  Use `assert.Check` when the checks after it should still run.
+- Use `assert.NilError` for a call that must succeed, and `assert.ErrorIs` for a sentinel or a
+  wrapped error.
 
-Fatal assertions run on the test goroutine. Capture worker outcomes through channels or joined
-tasks, then assert after completion. A callback that might never run is not the only place an
-assertion can live.
+Otherwise, use the `testing` methods with go-cmp. Call `t.Fatalf` where a failure should stop the
+test, and `t.Errorf` where the checks after it should still run. Compare structs with `cmp.Diff`,
+and fail when the diff isn't empty.
 
-## Resources and concurrency
+With either one:
 
-- Register `t.Cleanup` immediately after a successful acquisition. Use `t.TempDir` for temporary
-  trees and `t.Setenv` for scoped environment changes. Cleanup uses captured handles and paths,
-  releases only acquired resources, and joins background goroutines.
-- Mark helpers with `t.Helper` so failures identify the calling case. A shared fixture utility can
-  register cleanup through the case's `testing.T`.
-- Use `t.Parallel` only when cases own their state. Environment changes through `t.Setenv` cannot
-  run in parallel tests or tests with parallel ancestors. Do not use unique entity keys to hide a
-  shared-state gap.
+- Pass a go-cmp option, such as `cmpopts.EquateEmpty()`, only when the contract treats the two
+  values as equal. Never use one to hide a field the test should check.
+- Use `errors.As` when the error's type and fields matter. Match exact text only when the text is
+  part of the contract.
+- Assert on the test goroutine. Collect each worker goroutine's result through a channel or an
+  `errgroup`, and assert after they all finish. Never put the only assertion in a callback that
+  might never run.
 
-## Time and real boundaries
+## Cleanup and parallel tests
 
-Use a time argument or injected clock for policy logic. Evaluate `testing/synctest` for supported
-in-process timer and concurrency tests: it runs those goroutines with an isolated fake clock.
-Fake-clock sleeps advance simulated time; they are not real readiness delays. Real network I/O,
-external processes, and kernel operations need separate real-boundary coverage and observable
-completion signals.
+- Register `t.Cleanup` right after each acquisition. Use `t.TempDir` for a temporary tree and
+  `t.Setenv` for an environment variable.
+- In cleanup, use the handles and paths you saved, and release only what you acquired. Wait for
+  every background goroutine to stop.
+- Call `t.Helper()` in each helper, so a failure points at the calling case.
+- Pass the case's `t` into a shared helper. Call `t.Cleanup` on that `t` inside the helper, so the
+  cleanup runs when the case ends.
+- Call `t.Parallel` only when each case holds its own state. Never call `t.Setenv` in a parallel
+  test or under a parallel parent.
 
-Use real temporary files, isolated databases, `httptest` servers, sockets, and processes where the
-behavior depends on them. Stand-ins take typed request and response shapes from the real contract
-and use isolated native stores for rich state. MSW and `@msw/data` are Bun/frontend mechanisms, not
-Go requirements. Follow the shared
-[native-timer](./system-tests.md#native-timers-and-scenario-delays) and
-[resource ownership](../SKILL.md#program-fixed-paths-and-global-resources) rules.
+## Time
 
-## Reports
+Control time in this order:
 
-A project that selects gotestsum runs it over the existing `go test` flags, including race checks.
-Preserve its JSON results for timing comparisons and print the slowest cases. Retries or automatic
-skips are not a reporting feature to enable during alignment. Pin tools and libraries through the
-project's dependency mechanism.
+1. Pass the time in as an argument when the code decides something from it, such as a retry delay.
+2. When the code reads the time or starts timers inside, run the test in `synctest.Test` from
+   `testing/synctest`. Inside it, a sleep moves a fake clock and waits for nothing.
+3. When `synctest` can't run the code, pass in a clock interface. `synctest` moves its clock only
+   when every goroutine started inside it waits on a channel, a sleep, a `sync.WaitGroup` or a
+   `sync.Cond`. The clock stays put while a goroutine waits on real network or file I/O, on a mutex,
+   or on a goroutine started outside `synctest.Test`.
 
-Native APIs: [Go testing](https://pkg.go.dev/testing),
-[named subtests](https://go.dev/blog/subtests), and
-[testing/synctest](https://pkg.go.dev/testing/synctest). Tool APIs:
+For a timer in another program or a path the host fixes, see
+[Native timers and scenario delays](./system-tests.md#native-timers-and-scenario-delays) and
+[Program-fixed paths and global resources](./system-tests.md#program-fixed-paths-and-global-resources).
+
+## Real boundaries
+
+- Use the real thing when the behaviour depends on it: temporary files, a database per test,
+  `httptest` servers, sockets and processes.
+- Before the test uses one, wait for a signal that it is ready, such as a server's listening
+  address. In cleanup, wait until it has stopped.
+- Test real network I/O, external processes and kernel calls in `Test` functions of their own,
+  outside any table of cases.
+- Give a stand-in the typed request and response shapes of the real contract. Keep its state in a
+  map or a database that only that test uses.
+
+## CI reports
+
+When you set up or change the CI job for Go tests in a project that uses gotestsum:
+
+- Run gotestsum with the project's `go test` flags, `-race` included.
+- Keep its JSON output, from `--jsonfile`, as a CI artifact.
+- Print the slowest cases, with `gotestsum tool slowest`.
+- Pin gotestsum with a `tool` line in `go.mod`, and each library with its `require` line.
+
+For the APIs, see [Go testing](https://pkg.go.dev/testing),
+[named subtests](https://go.dev/blog/subtests),
+[testing/synctest](https://pkg.go.dev/testing/synctest),
 [gotest.tools assertions](https://pkg.go.dev/gotest.tools/v3/assert) and
 [gotestsum](https://github.com/gotestyourself/gotestsum).

@@ -1,82 +1,123 @@
 # READMEs
 
-A README reader wants three things, in order: the pitch, the install, and the capabilities with
-their configuration. Everything else lives in a guide in `docs/`, in `--help`, or in the config
-schema.
+A repo has five kinds of README, and each is an index or a landing page. Keep each one short. Flags,
+edge cases and history belong in the code, `--help` or `docs/`, and a copy in a README goes out of
+date.
 
-Every root README opens with this header, whether the repo publishes a package or not:
+Contents: [the five kinds](#the-five-kinds) · [root README](#root-readme) ·
+[the header](#the-header) · [published package sections](#published-package-sections) ·
+[length](#length) · [what stays out](#what-stays-out) ·
+[who reviews a README](#who-reviews-a-readme)
+
+## The five kinds
+
+1. **Root README:** `README.md` at the repo root, the repo's front page. It is always this kind,
+   even when the root has a manifest.
+2. **Package README:** in any other folder with its own manifest (`package.json`, `go.mod` or
+   `Cargo.toml`), wherever the folder sits. A published package gets the
+   [published package sections](#published-package-sections), because the registry shows its README
+   on the package's page. An unpublished package gets a short README.
+3. **Docs index:** `docs/README.md`, one line and a link for each doc.
+4. **Design README:** `docs/design/<work>/README.md`, one line and a link for each doc and spike in
+   the design. A design folder inside another design folder gets its own design README.
+5. **Spike README:** the landing page of a spike, an experiment that answers one question for a
+   design. `docs-tree.md`, beside this file, lists its sections. When spikes live outside
+   `docs/design/`, the folder that holds them gets a README too, as an index of the spikes.
+
+Any other README is a mistake. Put its content in `docs/`, or in a code comment beside the code it
+explains. `chex readmes` fails on a README that isn't one of these kinds.
+
+## Root README
+
+The root README takes one of three shapes:
+
+- **The repo publishes one package:** the [published package sections](#published-package-sections).
+- **The repo publishes several packages:** the header, one paragraph on what the repo is for, then a
+  `## Packages` list with one line and a link to each published package's README. Then Quick start,
+  Checks, Layout and Documentation, as for a repo that publishes nothing.
+- **The repo publishes nothing:** the header, then:
+  - one paragraph on what the repo is for;
+  - `## Quick start`: the commands that set up the repo;
+  - `## Checks`: the commands CI runs, and one line on what else CI checks;
+  - `## Layout`: one line for each top-level folder, or group of folders, with its role;
+  - `## Documentation`: one line that links `docs/`.
+
+## The header
+
+Open every root README and every published package README with this header. Replace `<name>`,
+`<package>`, `<guide>`, `<Guide title>` and `<One-line description.>`, and keep the HTML tags:
 
 ```text
 <div align="center">
-  <h1>name</h1>
+  <h1><name></h1>
 
   <p>
-    <a href="https://www.npmjs.com/package/@scope/name"><img src="https://img.shields.io/npm/v/@scope/name" alt="npm version"></a>
+    <a href="https://www.npmjs.com/package/<package>"><img src="https://img.shields.io/npm/v/<package>" alt="npm version"></a>
     <a href="./LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT license"></a>
   </p>
 
   <p>
     <a href="./docs/README.md">Documentation</a> •
-    <a href="./docs/guides/first-guide.md">First guide</a> •
-    <a href="./docs/guides/second-guide.md">Second guide</a>
+    <a href="./docs/guides/<guide>.md"><Guide title></a>
   </p>
 </div>
 
-One-line description of the repo.
+<One-line description.>
 ```
 
-The `<h1>` holds the repo name, or the repo's logo as an `<img>` whose alt text is the name. The
-badges `<p>` holds one badge link per line, and the links `<p>` holds at most 3 links joined by `•`.
-The one-line description sits below the div, as plain Markdown. A repo with no badge or no link
-drops that `<p>`.
+- **The `<h1>`:** the repo or package name, or a logo as an `<img>` with the name as its alt text.
+- **The badges:** one per line. A published package gets its registry's version badge, such as
+  npm's, crates.io's or pkg.go.dev's. Every README gets a licence badge that matches `LICENSE`. A
+  root README that publishes several packages or none has no version badge.
+- **The links:** the docs index, then up to two guides a new user needs first, joined by `•`. Leave
+  the `<p>` out when there are no docs.
+- **The description:** one line below the `<div>`, in plain Markdown.
 
-A package README (the root README of a repo that publishes a package, or a README under `packages/`)
-has six sections, in this order:
+Keep every link relative to the README's own folder. In a monorepo, a package README reaches the
+repo's docs and licence through the root, such as `../../docs/README.md`. npm rewrites a relative
+link to point at the repo, using the `repository` field in the package's `package.json`. In a
+monorepo, that field also needs `directory`, set to the package's folder.
 
-1. Hero: the header above.
-2. Pitch: 1 to 2 short paragraphs and the demo, when one exists. The pitch names the 2 or 3 actions
-   that get a first session working.
-3. Install: one command and its prerequisites. Other install paths link to a guide.
-4. Capabilities: one section per capability axis, such as "Supported agents" (one line per agent)
-   and "Features" (a short list, one line and one link per feature).
-5. Configuration: one paragraph and a link.
-6. Documentation: one line linking `docs/`.
+## Published package sections
 
-A plain repo README (a repo that publishes no package) opens with the header, then has one
-paragraph, Quick start, Checks, Layout, and Documentation.
+1. The header.
+2. The pitch: one or two short paragraphs that expand the one-line description. Then a demo, such as
+   a short recording or a screenshot, when one exists.
+3. `## Install`: one command and its prerequisites. Link a guide for any other way to install. Then
+   the first 2 or 3 commands a new user runs.
+4. `## Features`, with one line per feature, and a link to its doc or guide when one exists. A
+   package that supports a list of tools or platforms adds a section for that list, such as
+   `## Supported platforms`.
+5. `## Configuration`: one paragraph, and a link to the config schema, or to the configuration guide
+   when there's no schema. Leave it out when the package has no configuration.
+6. `## Documentation`: one line that links `docs/`, for the reader who reads to the end.
 
-## The five kinds of README
+An unpublished package gets a short README with no header: one paragraph on what the package is for,
+and a link to the architecture doc that covers it, when one exists.
 
-`check-readmes.sh` accepts five kinds of README, and fails on any other:
+## Length
 
-1. the root `README.md`;
-2. a README in a folder that holds a `package.json`, `go.mod` or `Cargo.toml`;
-3. `docs/README.md`;
-4. a design README: `docs/design/<work>/README.md`, or the README of a folder inside a design folder
-   whose own README is a design README, outside any `spikes/` folder;
-5. a spike README, whose first H1 starts `Spike: `, or, outside `docs/design/`, the README of a
-   folder whose direct subfolders hold a spike README.
+`chex length` sets each README's target and limit from its kind, and prints both. Cut a README to
+its target. The limit is where the run fails.
 
-Move the content of any other README into `docs/`, or into a code comment beside the code it
-explains. A README that git marks `linguist-vendored` belongs to someone else, and the check skips
-it.
+## What stays out
 
-## README limits
+Leave these out of every README, because the code, `--help` or `docs/` own them, and a copy goes out
+of date:
 
-`chex length` takes each README's limit from its path alone, so the pre-push hook, CI and a repo's
-own script give the same result. It checks each README outside `docs/` and `.claude/`, and each
-spike README under `docs/design/**/spikes/*/`, and fails the run above its limit:
+- flags, exit codes and config keys;
+- install steps for each tool or platform the package supports;
+- edge cases inside table rows;
+- tables of keys or states;
+- dated "checked" stamps;
+- people's names.
 
-| README     | Path                                      | Target | Limit |
-| ---------- | ----------------------------------------- | ------ | ----- |
-| Front page | the root `README.md`                      | 80     | 100   |
-| Package    | `packages/*/README.md`                    | 80     | 100   |
-| Folder     | any other README, a spike README included | 60     | 70    |
+## Who reviews a README
 
-A published package outside `packages/` takes the folder limit. The `--package` flag is deprecated:
-the script prints a notice and ignores it.
+The user owns what each README says about the project, so the user reviews every README change in
+its PR. Don't stop to ask first. Put each change in the right PR:
 
-A README never holds flags, exit codes, config keys, per-agent or per-platform install variants,
-edge cases inside table rows, key or state tables, dated "checked" stamps, or person names. A
-feature PR rewrites only a README sentence the feature made false. A PR that adds a README sentence
-is a README PR, and the repo owner reviews it.
+- **A new package:** its README ships in the PR that adds the package.
+- **A new feature:** its PR adds the feature's line.
+- **A sentence your change made false:** rewrite it in the same PR.
+- **Any other change to an existing README:** its own PR, a README PR.
