@@ -219,27 +219,36 @@ image. The dashboard's is in its `fly.toml`.
 
 ## Infra apply and drift
 
-Two workflows run Pulumi on the production stack of the `infra/` program. Both read their secrets
-from the `vers-ci` vault. Each runs on a change to the program, and on a change to the root
-`package.json` or `bun.lock`, which pin the program's Pulumi packages.
+Two GitHub Actions workflows run Pulumi on the production stack of the `infra/` program. They read
+its secrets from the `vers-ci` 1Password vault. Drift is a difference between the live resources and
+the program on `main`, such as a setting changed in a provider's console. Each workflow runs on a
+change to the program, and on a change to the root `package.json` or `bun.lock`, which pin the
+program's Pulumi packages.
 
-- `infra-deploy` applies each such push to `main`. It previews the commit before the push with
-  `--expect-no-changes`, then previews the pushed commit as JSON. Its guard holds the plan when the
-  plan does anything but create, update, read or refresh a resource, or when the first preview found
-  a change. The job applies a plan that the guard passes with `pulumi up --refresh`, then previews
-  again to check that the stack matches the commit.
-- `infra-drift` runs on such a pull request, and weekly. A pull request's run previews `main` with
-  `--expect-no-changes`, which fails the job on drift, and previews the pull request's own change,
-  which fails the job only on an error. The job summary shows both. The weekly run previews `main`
-  with `--expect-no-changes`, because console drift arrives with no commit.
+The `deploy` job of `infra-deploy` applies each such push to `main`:
 
-A held run ends green, posts to Discord, and waits for a person, and so does drift from outside a
-commit: the weekly run reports it, and the next push's apply holds. Every later push holds too until
-a person answers, because its first preview finds the held change. The
-[infra runbook](../../runbooks/infra.md#answer-a-held-apply) covers both. The `preview` check is
-advisory, and the ruleset in `infra/github.ts` leaves it out of the required checks.
+1. It previews the tip of `main` before the push with `--expect-no-changes`. A change there is
+   drift, or an earlier push that the job did not apply.
+2. It previews the pushed commit as JSON, and its guard reads that plan. The guard holds the plan
+   when:
+   - a step does anything but create, update, read or refresh a resource;
+   - the first preview found a change.
+3. When the guard passes the plan, the job runs `pulumi up --refresh`, then previews the commit
+   again with `--expect-no-changes`.
 
-The prod jobs of both workflows run one at a time in the `infra-prod` concurrency group, which keeps
-every waiting run. A preview takes no lock on the stack's state, so a preview that runs beside an
-apply reads a half-applied stack. The deploy job never cancels, because a cut-off apply leaves the
-stack half changed and leaves Pulumi's lock in the state.
+A held plan stays unapplied. Its run ends green and posts to Discord, and a person reads the plan
+and dispatches the workflow, which applies the tip of `main` with no guard. Until that dispatch,
+every later push holds too, because its first preview finds the held change. The
+[infra runbook](../../runbooks/infra.md#answer-a-held-apply) covers a held run.
+
+The `preview` job of `infra-drift` runs on such a pull request, and weekly. On a pull request, it
+previews `main` with `--expect-no-changes`, which fails the job on drift. It then previews the pull
+request's own change, which fails the job only on an error, and the job summary shows both previews.
+The weekly run previews `main` with `--expect-no-changes`, because drift from a console arrives with
+no commit. The `preview` job is an advisory check: the ruleset in `infra/github.ts` leaves it out of
+the required checks.
+
+The `deploy` job and the `preview` job share the `infra-prod` concurrency group, so they run one at
+a time, and the group keeps every waiting run. A preview takes no lock on the stack's state, so a
+preview beside an apply would read a half-applied stack. The `deploy` job never cancels, because a
+cut-off apply leaves the stack half changed and leaves Pulumi's lock in the state.
