@@ -66,7 +66,11 @@ const startCommand = define({
         port: options.port,
       });
 
-      await writeChromeState(paths, state);
+      await writeChromeState(paths, state).catch(async (error: unknown) => {
+        await removeProcessGroup(state.leaderPID, STOP_GRACE_MS);
+
+        throw error;
+      });
 
       const place = options.netns ? 'in its own network namespace' : 'on the host network';
 
