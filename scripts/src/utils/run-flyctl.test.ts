@@ -43,9 +43,20 @@ test('it ends flyctl when the process that ran it gets SIGTERM', async () => {
     cli.kill('SIGKILL');
   });
 
-  const pidText = await waitFor(() => readFile(pidPath, 'utf8'), { timeoutMs: 3000 });
+  // a read can land after the stub creates the file and before it writes the pid, and an empty read
+  // parses as 0, which signals the test's own process group
+  const flyctlPID = await waitFor(
+    async () => {
+      const pidText = await readFile(pidPath, 'utf8');
 
-  const flyctlPID = Number(pidText);
+      const pid = Number(pidText);
+
+      expect(pid).toBeGreaterThan(0);
+
+      return pid;
+    },
+    { timeoutMs: 3000 },
+  );
 
   cli.kill('SIGTERM');
 
@@ -70,8 +81,10 @@ test('it sends SIGINT to a flyctl call that outlives its interrupt deadline', as
     "trap 'echo interrupted; exit 130' INT\nwhile true; do sleep 0.05; done",
   );
 
+  // a SIGINT that reaches the stub before its trap is set ends it with the shell's default exit, and
+  // a loaded host can take longer than 100 ms to start the stub
   expect(
-    runFlyctl(['deploy'], { interrupt: { afterMs: 100, graceMs: 2000 } }),
+    runFlyctl(['deploy'], { interrupt: { afterMs: 1000, graceMs: 2000 } }),
   ).rejects.toMatchObject({ exitCode: 130, stdout: 'interrupted\n' });
 });
 
@@ -82,21 +95,24 @@ test('it sends SIGINT to a flyctl call that writes nothing for its stall deadlin
   );
 
   expect(
-    runFlyctl(['deploy'], { stallInterrupt: { afterMs: 200, graceMs: 2000 } }),
+    runFlyctl(['deploy'], { stallInterrupt: { afterMs: 1000, graceMs: 2000 } }),
   ).rejects.toMatchObject({
     exitCode: 130,
     message:
-      'flyctl deploy wrote nothing for 200 ms and was interrupted, ending with exit code 130',
-    stalledAfterMs: 200,
+      'flyctl deploy wrote nothing for 1000 ms and was interrupted, ending with exit code 130',
+    stalledAfterMs: 1000,
     stdout: 'started\ninterrupted\n',
   });
 });
 
 test('it leaves a flyctl call that keeps writing past its stall deadline', async () => {
-  await createStubCommand('flyctl', 'for step in 1 2 3 4 5 6; do echo "#$step"; sleep 0.1; done');
+  await createStubCommand(
+    'flyctl',
+    'for step in 1 2 3 4 5 6 7 8; do echo "#$step"; sleep 0.3; done',
+  );
 
-  expect(runFlyctl(['deploy'], { stallInterrupt: { afterMs: 300, graceMs: 100 } })).resolves.toBe(
-    '#1\n#2\n#3\n#4\n#5\n#6\n',
+  expect(runFlyctl(['deploy'], { stallInterrupt: { afterMs: 1500, graceMs: 100 } })).resolves.toBe(
+    '#1\n#2\n#3\n#4\n#5\n#6\n#7\n#8\n',
   );
 });
 
@@ -104,22 +120,22 @@ test('it fails a stalled flyctl call that exits cleanly on SIGINT', async () => 
   await createStubCommand('flyctl', "trap 'exit 0' INT\nwhile true; do sleep 0.05; done");
 
   expect(
-    runFlyctl(['deploy'], { stallInterrupt: { afterMs: 100, graceMs: 2000 } }),
-  ).rejects.toMatchObject({ exitCode: 0, stalledAfterMs: 100 });
+    runFlyctl(['deploy'], { stallInterrupt: { afterMs: 1000, graceMs: 2000 } }),
+  ).rejects.toMatchObject({ exitCode: 0, stalledAfterMs: 1000 });
 });
 
 test('it kills a stalled flyctl call that ignores SIGINT once the grace runs out', async () => {
   await createStubCommand('flyctl', "trap '' INT\nwhile true; do sleep 0.05; done");
 
   expect(
-    runFlyctl(['deploy'], { stallInterrupt: { afterMs: 100, graceMs: 100 } }),
-  ).rejects.toMatchObject({ signal: 'SIGKILL', stalledAfterMs: 100 });
+    runFlyctl(['deploy'], { stallInterrupt: { afterMs: 1000, graceMs: 100 } }),
+  ).rejects.toMatchObject({ signal: 'SIGKILL', stalledAfterMs: 1000 });
 });
 
 test('it kills a flyctl call that ignores SIGINT once the grace runs out', async () => {
   await createStubCommand('flyctl', "trap '' INT\nwhile true; do sleep 0.05; done");
 
   expect(
-    runFlyctl(['deploy'], { interrupt: { afterMs: 100, graceMs: 100 } }),
+    runFlyctl(['deploy'], { interrupt: { afterMs: 1000, graceMs: 100 } }),
   ).rejects.toMatchObject({ signal: 'SIGKILL' });
 });

@@ -40,9 +40,20 @@ test.each([
       parent.kill('SIGKILL');
     });
 
-    const pidText = await waitFor(() => readFile(pidPath, 'utf8'), { timeoutMs: 3000 });
+    // a read can land after another process creates the file and before it writes the pid, and an
+    // empty read parses as 0, which signals the test's own process group
+    const childPID = await waitFor(
+      async () => {
+        const pidText = await readFile(pidPath, 'utf8');
 
-    const childPID = Number(pidText);
+        const pid = Number(pidText);
+
+        expect(pid).toBeGreaterThan(0);
+
+        return pid;
+      },
+      { timeoutMs: 3000 },
+    );
 
     parent.kill(signal);
 
@@ -59,9 +70,9 @@ test.each([
 test('it waits for the child to exit before the parent exits', async () => {
   const ctx = await setupTest();
 
-  const pidPath = join(ctx.directory, 'pid');
+  const readyPath = join(ctx.directory, 'ready');
   const donePath = join(ctx.directory, 'done');
-  const childScript = `trap 'sleep 0.3; echo done > "${donePath}"; exit 0' TERM\nwhile true; do sleep 0.05; done`;
+  const childScript = `trap 'sleep 0.3; echo done > "${donePath}"; exit 0' TERM\necho ready > "${readyPath}"\nwhile true; do sleep 0.05; done`;
 
   const parent = Bun.spawn([
     'bun',
@@ -69,7 +80,6 @@ test('it waits for the child to exit before the parent exits', async () => {
     `import { bindToParent } from ${JSON.stringify(join(import.meta.dir, 'bind-to-parent.ts'))};
     const child = Bun.spawn(['sh', '-c', ${JSON.stringify(childScript)}]);
     bindToParent(child, { graceMs: 3000 });
-    await Bun.write(${JSON.stringify(pidPath)}, String(child.pid));
     await child.exited;`,
   ]);
 
@@ -77,7 +87,9 @@ test('it waits for the child to exit before the parent exits', async () => {
     parent.kill('SIGKILL');
   });
 
-  await waitFor(() => readFile(pidPath, 'utf8'), { timeoutMs: 3000 });
+  // the child writes the marker only after its trap is set, so the signal never meets the shell's
+  // default exit
+  await waitFor(() => readFile(readyPath, 'utf8'), { timeoutMs: 3000 });
 
   parent.kill('SIGTERM');
 
@@ -90,14 +102,16 @@ test('it kills a child that ignores its signal once the grace runs out', async (
   const ctx = await setupTest();
 
   const pidPath = join(ctx.directory, 'pid');
+  const childScript = `trap '' TERM\necho $$ > "${pidPath}"\nwhile true; do sleep 0.05; done`;
 
+  // the child writes its pid only after its trap is set, so the signal never meets the shell's
+  // default exit
   const parent = Bun.spawn([
     'bun',
     '-e',
     `import { bindToParent } from ${JSON.stringify(join(import.meta.dir, 'bind-to-parent.ts'))};
-    const child = Bun.spawn(['sh', '-c', "trap '' TERM\\nwhile true; do sleep 0.05; done"]);
+    const child = Bun.spawn(['sh', '-c', ${JSON.stringify(childScript)}]);
     bindToParent(child, { graceMs: 200 });
-    await Bun.write(${JSON.stringify(pidPath)}, String(child.pid));
     await child.exited;`,
   ]);
 
@@ -105,9 +119,18 @@ test('it kills a child that ignores its signal once the grace runs out', async (
     parent.kill('SIGKILL');
   });
 
-  const pidText = await waitFor(() => readFile(pidPath, 'utf8'), { timeoutMs: 3000 });
+  const childPID = await waitFor(
+    async () => {
+      const pidText = await readFile(pidPath, 'utf8');
 
-  const childPID = Number(pidText);
+      const pid = Number(pidText);
+
+      expect(pid).toBeGreaterThan(0);
+
+      return pid;
+    },
+    { timeoutMs: 3000 },
+  );
 
   parent.kill('SIGTERM');
 
