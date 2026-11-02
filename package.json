@@ -61,7 +61,7 @@
       "@pulumi/github": "6.15.0",
       "@pulumi/pulumi": "3.272.0",
       "@react-email/components": "1.0.12",
-      "@react-hookz/web": "25.3.0",
+      "@react-hookz/web": "26.1.0",
       "@react-spring/rafz": "10.1.2",
       "@react-three/fiber": "9.8.2",
       "@react-three/test-renderer": "9.1.1",
