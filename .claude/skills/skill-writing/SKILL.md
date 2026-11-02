@@ -172,7 +172,7 @@ Leave out anything time-bound, like "until the next release": it goes false unno
 
 2. Run the `deslop` skill on each section you wrote or changed.
 3. Run the `cold-read` skill on each file of the skill you wrote or changed. Follow it to the end:
-   one cold read, your fixes, then one more cold read on the sections you redrafted.
+   one cold read, your fixes, then one more cold read of each file you changed.
 4. Run the checks again, and give the proof in the PR description of the skill change. Add these as
    `##` headings, after the sections of the repo's PR template:
    - **Skill checks:** the full output of the last check run, in a code block.
