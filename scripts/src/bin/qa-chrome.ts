@@ -9,7 +9,8 @@ import { pickStartPlan } from '../qa-chrome/pick-start-plan';
 import { probeDevToolsEndpoint } from '../qa-chrome/probe-devtools-endpoint';
 import { QA_CHROME_ARGS } from '../qa-chrome/qa-chrome-args';
 import { readChromeState } from '../qa-chrome/read-chrome-state';
-import { removeChrome } from '../qa-chrome/remove-chrome';
+import { removeProcessGroup } from '../qa-chrome/remove-process-group';
+import { STOP_GRACE_MS } from '../qa-chrome/stop-grace-ms';
 import type { ChromeRefusal } from '../qa-chrome/types';
 import { writeChromeState } from '../qa-chrome/write-chrome-state';
 import { runCommandLine } from '../utils/run-command-line';
@@ -84,7 +85,7 @@ const stopCommand = define({
       refuse({ kind: 'no-browser' });
     }
 
-    await removeChrome(running);
+    await removeProcessGroup(running.leaderPID, STOP_GRACE_MS);
     await rm(paths.stateFile, { force: true });
 
     console.log(`✓ stopped the browser, process group ${running.leaderPID}`);
