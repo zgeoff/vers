@@ -25,6 +25,7 @@ function buildRouteCommand(route: SavedRoute): Array<string> {
     ...toPair('via', route.gateway),
     'dev',
     route.dev,
+    ...(route.isOnlink ? ['onlink'] : []),
     ...toPair('proto', route.protocol),
     ...toPair('scope', route.scope),
     ...toPair('src', route.prefsrc),

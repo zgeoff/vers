@@ -14,6 +14,7 @@ test('it reads a state with a cut network', () => {
             dst: 'default',
             family: 'inet' as const,
             gateway: '10.20.0.1',
+            isOnlink: true,
             metric: null,
             prefsrc: null,
             protocol: 'kernel',

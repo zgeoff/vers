@@ -6,6 +6,7 @@ const savedRouteSchema = z.object({
   dst: z.string(),
   family: z.enum(['inet', 'inet6']),
   gateway: z.string().nullable(),
+  isOnlink: z.boolean(),
   metric: z.number().nullable(),
   prefsrc: z.string().nullable(),
   protocol: z.string().nullable(),

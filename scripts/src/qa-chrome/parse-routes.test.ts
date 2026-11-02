@@ -3,7 +3,13 @@ import { parseRoutes } from './parse-routes';
 
 test('it reads the routes that ip -j prints, keeping the fields a replay needs', () => {
   const text = JSON.stringify([
-    { dev: 'eth0', dst: 'default', flags: [], gateway: '10.20.0.1', protocol: 'kernel' },
+    {
+      dev: 'eth0',
+      dst: 'default',
+      flags: ['onlink'],
+      gateway: '10.99.0.1',
+      protocol: 'kernel',
+    },
     {
       dev: 'eth0',
       dst: '10.20.0.0/20',
@@ -12,6 +18,7 @@ test('it reads the routes that ip -j prints, keeping the fields a replay needs',
       protocol: 'kernel',
       scope: 'link',
     },
+    { dev: 'eth0', dst: 'fe80::/64', metric: 256, protocol: 'kernel' },
   ]);
 
   expect(parseRoutes(text, 'inet')).toStrictEqual([
@@ -19,7 +26,8 @@ test('it reads the routes that ip -j prints, keeping the fields a replay needs',
       dev: 'eth0',
       dst: 'default',
       family: 'inet',
-      gateway: '10.20.0.1',
+      gateway: '10.99.0.1',
+      isOnlink: true,
       metric: null,
       prefsrc: null,
       protocol: 'kernel',
@@ -30,10 +38,22 @@ test('it reads the routes that ip -j prints, keeping the fields a replay needs',
       dst: '10.20.0.0/20',
       family: 'inet',
       gateway: null,
+      isOnlink: false,
       metric: null,
       prefsrc: '10.20.3.7',
       protocol: 'kernel',
       scope: 'link',
+    },
+    {
+      dev: 'eth0',
+      dst: 'fe80::/64',
+      family: 'inet',
+      gateway: null,
+      isOnlink: false,
+      metric: 256,
+      prefsrc: null,
+      protocol: 'kernel',
+      scope: null,
     },
   ]);
 });

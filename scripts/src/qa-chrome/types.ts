@@ -5,6 +5,7 @@ export interface SavedRoute {
   readonly dst: string;
   readonly family: RouteFamily;
   readonly gateway: string | null;
+  readonly isOnlink: boolean;
   readonly metric: number | null;
   readonly prefsrc: string | null;
   readonly protocol: string | null;
