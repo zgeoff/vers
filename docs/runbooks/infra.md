@@ -123,11 +123,15 @@ run holds as well. Its drift check previews the held commit, whose change never 
 A failed run posts `[infra] critical — prod apply failed`. Read the error under `Apply (prod)` in
 the run's summary, then act on its cause:
 
-| Cause                                        | Action                                                   |
-| -------------------------------------------- | -------------------------------------------------------- |
-| a provider's 5xx answer or a network timeout | dispatch the workflow, as step 3 of the held apply shows |
-| an error in the program                      | merge a fix in a pull request; its run applies the fix   |
-| `the stack is currently locked`              | [clear the stale lock](#clear-a-stale-lock)              |
+| Cause                                        | Action                                                                       |
+| -------------------------------------------- | ---------------------------------------------------------------------------- |
+| a provider's 5xx answer or a network timeout | dispatch the workflow, as step 3 of the held apply shows                     |
+| an error in the program                      | merge a fix in a pull request, then dispatch the workflow when its run holds |
+| `the stack is currently locked`              | [clear the stale lock](#clear-a-stale-lock)                                  |
+
+A failed apply leaves the stack apart from the commit it tried to apply. The fix's drift check
+previews that commit and finds the difference, so the guard holds the fix until you dispatch the
+workflow.
 
 ### Clear a stale lock
 
