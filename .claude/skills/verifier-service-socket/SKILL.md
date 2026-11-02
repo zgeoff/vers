@@ -39,8 +39,8 @@ for a token that expires between calls.
 `bun run pg:test-container:start` starts Postgres on `localhost:32999`, with user `test` and
 password `test`. It also creates the migrated template database for the current branch and prints
 its name, `test_template_<branch>`. The script uses `TEST_DB_URI` in place of the default only while
-something listens on `localhost:32999`. Otherwise it starts a new container on a port Docker picks,
-so read the port from `docker ps`, and use it in each command below.
+something listens on `localhost:32999`. Otherwise it starts a new container on host port 32999 and
+uses that.
 
 | Step               | Command                                                                                                                                              | Needs                                                                                                                                                                                                                                                                         |
 | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
