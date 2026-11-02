@@ -1,11 +1,11 @@
 ---
 name: ci-design
 description:
-  'How CI runs in a zgeoff repo: job layout, test budgets, timeouts, reusable workflows, step
-  scripts, path filters, cancelling, builds, checkout depth, reruns, first-party packages and dependency exceptions. Load
-  it before you add, change or review a workflow, a job or a trigger, or a release-age exclude,
-  override or audit ignore. For how to write tests, load the testing skill. Load the repo's
-  project-ci-design skill beside it; where they disagree, the project skill wins.'
+  "How CI runs in a zgeoff repo: job layout, test budgets, timeouts, reusable workflows, step
+  scripts, path filters, cancelling, builds, checkout depth, reruns, first-party packages and
+  dependency exceptions. Load it before you add, change or review a workflow, a job or a trigger, or
+  a release-age exclude, override or audit ignore. For how to write tests, load the testing skill.
+  Load the repo's project-ci-design skill beside it; where they disagree, the project skill wins."
 metadata:
   kind: rule-set
 ---
