@@ -215,6 +215,12 @@ The attachment keeps a shared worker alive: a shared worker with no page left ho
 DevTools client is attached, so a worker whose last tab closed during a capture lingers as a zombie
 until the capture stops. Stop the capture (Ctrl-C) before closing the last tab of a context.
 
+## Cut the network
+
+DevTools emulation takes one target offline. `bun run qa:chrome start --netns` runs a Chromium on
+the scripts' default endpoint in its own network namespace, and `bun run qa:net cut` cuts every page
+and worker in it at once. [Cut the network](qa-network-cut.md) holds the procedure.
+
 ## Debug hook
 
 A QA tester reads the writer worker's state and sets a QA avatar's simulation speed from the page
