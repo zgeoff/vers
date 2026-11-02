@@ -64,12 +64,13 @@ jobs:
         with:
           pulumi-version: 3.272.0
 
-      # main's own program, so the drift check sees only what differs from main
+      # main's tip when the job holds the queue, never the event's base: a queued run or a rerun
+      # would preview an older program and report a deploy that landed since as drift
       - name: Check out main
         if: github.event_name == 'pull_request'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.event.pull_request.base.sha }}
+          ref: main
           path: base
           persist-credentials: false
 
