@@ -14,6 +14,8 @@
     {
       "match": "{contracts/activity,contracts/replay,libs/game/idle-client,libs/game/idle-core,services/activity,services/replay}/**",
       "skills": ["game-lifecycle"]
-    }
+    },
+    { "match": "**/skills/*/SKILL.md", "skills": ["skill-writing", "docs-writing", "deslop"] },
+    { "match": "**/skills/*/references/**", "skills": ["skill-writing", "docs-writing", "deslop"] }
   ]
 }
