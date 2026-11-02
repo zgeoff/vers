@@ -17,12 +17,12 @@ metadata:
 - Keep the function name that a library or an oRPC contract sets, even when it starts with a verb
   that [Banned verbs](../code-style/SKILL.md#banned-verbs) in code-style bans. A library calls its
   interface's methods by name, and a contract's procedure names are the public API.
-- Add each such name to the `exemptNames` option of `zgeoff/function-verb` in
-  [`.oxlintrc.json`](../../../.oxlintrc.json), with a comment above it that names the library or the
-  contract.
 
 ## Names
 
+- Add each name that a library or a contract sets to the `exemptNames` option of
+  `zgeoff/function-verb` in [`.oxlintrc.json`](../../../.oxlintrc.json), with a comment above it
+  that names the library or the contract.
 - Give a function that you pass as an option, such as the `fetch` option of `Bun.serve`, a name that
   follows the verb table in code-style, such as `handleRequest`. It needs no exemption.
 
