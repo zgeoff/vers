@@ -220,17 +220,18 @@ image. The dashboard's is in its `fly.toml`.
 ## Infra apply and drift
 
 Two workflows run Pulumi on the production stack of the `infra/` program. Both read their secrets
-from the `vers-ci` vault.
+from the `vers-ci` vault. Each runs on a change to the program, and on a change to the root
+`package.json` or `bun.lock`, which pin the program's Pulumi packages.
 
-- `infra-deploy` applies each push to `main` that changes the program. It previews the commit before
-  the push with `--expect-no-changes`, then previews the pushed commit as JSON. Its guard holds the
-  plan when the plan does anything but create, update, read or refresh a resource, or when the first
-  preview found a change. The job applies a plan that the guard passes with `pulumi up --refresh`,
-  then previews again to check that the stack matches the commit.
-- `infra-drift` runs on a pull request that changes the program, and weekly. A pull request's run
-  previews `main` with `--expect-no-changes`, which fails the job on drift, and previews the pull
-  request's own change, which fails the job only on an error. The job summary shows both. The weekly
-  run previews `main` with `--expect-no-changes`, because console drift arrives with no commit.
+- `infra-deploy` applies each such push to `main`. It previews the commit before the push with
+  `--expect-no-changes`, then previews the pushed commit as JSON. Its guard holds the plan when the
+  plan does anything but create, update, read or refresh a resource, or when the first preview found
+  a change. The job applies a plan that the guard passes with `pulumi up --refresh`, then previews
+  again to check that the stack matches the commit.
+- `infra-drift` runs on such a pull request, and weekly. A pull request's run previews `main` with
+  `--expect-no-changes`, which fails the job on drift, and previews the pull request's own change,
+  which fails the job only on an error. The job summary shows both. The weekly run previews `main`
+  with `--expect-no-changes`, because console drift arrives with no commit.
 
 A held run ends green, posts to Discord, and waits for a person, and so does drift from outside a
 commit: the weekly run reports it, and the next push's apply holds. Every later push holds too until

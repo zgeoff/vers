@@ -6,8 +6,11 @@ name: infra-drift
 # merge.
 on:
   pull_request:
+    # the root manifest's catalog and the lockfile pin the program's Pulumi packages
     paths:
       - 'infra/**'
+      - 'package.json'
+      - 'bun.lock'
       - 'scripts/src/infra/**'
       - 'scripts/src/bin/infra-step.ts'
       - 'scripts/src/bin/pulumi-stack.ts'
