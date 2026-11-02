@@ -8,12 +8,12 @@
 # .gitattributes.
 # Fails on: a missing name or description, a name that differs from the folder or breaks the name
 # format, a description over 1,024 characters, a plain description that holds a colon YAML reads as a
-# key, a link with a line anchor outside code, and a SKILL.md body over 1,700 words, or over 5,000
-# for a rule set (metadata.kind: rule-set in the frontmatter).
-# Warns on: a SKILL.md body over 1,500 words, or over 4,000 for a rule set, a SKILL.md over 500
+# key, a link with a line anchor outside code, and a SKILL.md body over 1,700 words.
+# Warns on: a SKILL.md body over 1,500 words, a SKILL.md over 500
 # lines, a reference that SKILL.md does not list under ## References, a reference over 100 lines
-# with two or more headings and no contents list near its top, a reference that links to another
-# reference, and a code-formatted span outside a table that names an existing repo file.
+# with two or more headings and no contents list near its top, a code-formatted span outside a table that names an existing repo file, and a bullet in
+# a rule set's SKILL.md that opens with an article or "Each" and a noun, a code span and a verb, or a
+# label and a colon.
 set -uo pipefail
 
 if ! git rev-parse --is-inside-work-tree > /dev/null 2>&1; then
@@ -119,6 +119,7 @@ sub check_skill {
   warn_about($skill, scalar(@lines) . " lines, over 500; check that each section is one most tasks need")
     if @lines > 500;
   check_words($skill, @lines);
+  check_bullets($skill, @lines) if is_rule_set(@lines);
   check_frontmatter($dir, $skill, @lines);
 
   open my $list, "-|", "git", "-c", "core.quotePath=false", "ls-files", "--cached", "--others",
@@ -143,33 +144,17 @@ sub check_skill {
   }
 }
 
-# Counts the words of the body after the frontmatter, code blocks included: past the warning limit
-# an agent starts to skim, and past the error limit the skill fails the run. A rule set, such as a
-# code style, holds the rules an agent needs on every task of its kind, so it gets higher limits.
+# Counts the words of the body after the frontmatter, code blocks included. After a compaction,
+# Claude Code brings back only the first 5,000 tokens of each loaded skill, about 1,900 words of a
+# skill, so past the error limit the end of the skill is lost; past the warning limit an agent starts
+# to skim. A rule set gets the same limits, because the agent needs every rule in it.
 sub check_words {
   my ($skill, @lines) = @_;
   my ($warn, $limit) = (1500, 1700);
-  my ($start, $in_metadata, $indent) = (0, 0, undef);
+  my $start = 0;
   if (@lines && $lines[0] eq "---") {
     for my $i (1 .. $#lines) {
-      my $line = $lines[$i];
-      if ($line eq "---") { $start = $i + 1; last }
-      if ($line =~ /^metadata:(?:\s+#.*)?\s*$/) { ($in_metadata, $indent) = (1, undef); next }
-      if ($line =~ /^metadata:\s*\{(.*)\}\s*(?:#.*)?$/) {
-        for my $entry (split_flow_entries($1)) {
-          ($warn, $limit) = (4000, 5000) if $entry =~ /^\s*kind:\s*(.*?)\s*$/ && unquote($1) eq "rule-set";
-        }
-        $in_metadata = 0;
-        next;
-      }
-      # A comment-only line, at any indent, is neither a key nor the end of the mapping.
-      next if $line =~ /^\s*#/;
-      $in_metadata = 0 if $line =~ /^\S/;
-      next unless $in_metadata && $line =~ /^(\s+)(\S.*?)\s*$/;
-      # Only a key of metadata itself counts, never a deeper line, such as the text of a block value.
-      $indent //= length $1;
-      next unless length($1) == $indent && $2 =~ /^kind:\s*(.*)$/;
-      ($warn, $limit) = (4000, 5000) if unquote($1) eq "rule-set";
+      if ($lines[$i] eq "---") { $start = $i + 1; last }
     }
   }
   my $words = 0;
@@ -180,6 +165,73 @@ sub check_words {
     fail($skill, "body is $words words, over the limit of $limit; cut it, or move what only some tasks need into a reference");
   } elsif ($words > $warn) {
     warn_about($skill, "body is $words words, over $warn; cut it, or move what only some tasks need into a reference");
+  }
+}
+
+# Returns true when the frontmatter sets kind: rule-set under metadata, in a block or a flow mapping.
+sub is_rule_set {
+  my (@lines) = @_;
+  return 0 unless @lines && $lines[0] eq "---";
+  my ($in_metadata, $indent) = (0, undef);
+  for my $i (1 .. $#lines) {
+    my $line = $lines[$i];
+    return 0 if $line eq "---";
+    if ($line =~ /^metadata:(?:\s+#.*)?\s*$/) { ($in_metadata, $indent) = (1, undef); next }
+    if ($line =~ /^metadata:\s*\{(.*)\}\s*(?:#.*)?$/) {
+      for my $entry (split_flow_entries($1)) {
+        return 1 if $entry =~ /^\s*kind:\s*(.*?)\s*$/ && unquote($1) eq "rule-set";
+      }
+      $in_metadata = 0;
+      next;
+    }
+    # A comment-only line, at any indent, is neither a key nor the end of the mapping.
+    next if $line =~ /^\s*#/;
+    $in_metadata = 0 if $line =~ /^\S/;
+    next unless $in_metadata && $line =~ /^(\s+)(\S.*?)\s*$/;
+    # Only a key of metadata itself counts, never a deeper line, such as the text of a block value.
+    $indent //= length $1;
+    return 1 if length($1) == $indent && $2 =~ /^kind:\s*(.*)$/ && unquote($1) eq "rule-set";
+  }
+  return 0;
+}
+
+# A rule set is a list of bullets the agent applies while it does other work, so each bullet opens
+# with what the agent does, a ban or a condition. A bullet that opens with a thing as its subject,
+# or with a label and a colon, leaves the agent to work out the action.
+sub check_bullets {
+  my ($skill, @lines) = @_;
+  my ($open, $line_number, $in_frontmatter) = ("", 0, @lines && $lines[0] eq "---");
+  for my $line (@lines) {
+    $line_number++;
+    if ($in_frontmatter) {
+      $in_frontmatter = 0 if $line_number > 1 && $line eq "---";
+      next;
+    }
+    # A fence may open inside a list item, after its marker, but closes only on a line of its own.
+    # The info string of a backtick fence never holds a backtick, so a line such as
+    # "```name``` runs" is an inline code span, not a fence.
+    my $marker_pattern = $open eq "" ? qr/^\s*(?:[-*+]\s+|\d+[.)]\s+)?(`{3,}|~{3,})(.*)$/
+      : qr/^\s*(`{3,}|~{3,})(.*)$/;
+    if ($line =~ $marker_pattern && !($open eq "" && substr($1, 0, 1) eq "`" && $2 =~ /`/)) {
+      my ($marker, $rest) = ($1, $2);
+      if ($open eq "") { $open = $marker }
+      elsif (substr($marker, 0, 1) eq substr($open, 0, 1) && length($marker) >= length($open)
+        && $rest =~ /^\s*$/) { $open = "" }
+      next;
+    }
+    next if $open ne "";
+    next unless $line =~ /^\s*[-*+]\s+(.*)$/;
+    my $text = $1 =~ s/^\*\*//r;
+    my $problem;
+    if ($text =~ /^(A|An|The|Each|Every)\s+[\w`]/) {
+      $problem = "opens with \"$1\" and a noun";
+    } elsif (($text =~ /^`[^`]+`\s+([a-z]+)\b/ ? $1 : "") =~ /^(?!(?:as|this|its)\z)(?:are|have|can|may|must|do|[a-z]+s)\z/) {
+      $problem = "opens with a code span and a verb";
+    } elsif ($text =~ /^([A-Z][\w-]*(?:\s[\w-]+){0,2}):(?:\*\*)?\s/ && $1 !~ /^(?:When|If|In|Never|No)\b/) {
+      $problem = "opens with the label \"$1:\"";
+    }
+    warn_about("$skill:$line_number", "bullet $problem; open it with what the agent does, a ban such as \"Never\", or a condition such as \"When\"")
+      if $problem;
   }
 }
 
@@ -361,7 +413,6 @@ sub check_markdown {
       $target =~ s/^<(.*)>$/$1/;
       fail("$file:$line_number", "link $target has a line anchor; name the target in the link text instead")
         if $target =~ /#L[0-9]+/;
-      check_reference_link($dir, $file, $line_number, $target) if $reference;
     }
 
     # A span inside link text is already a link, so only the spans left after links drop are read.
@@ -382,16 +433,6 @@ sub check_markdown {
   if ($reference && @lines > 100 && $headings >= 2 && $contents_links < 2) {
     warn_about($file, scalar(@lines) . " lines with no contents list near the top; open with links to its headings");
   }
-}
-
-sub check_reference_link {
-  my ($dir, $file, $line_number, $target) = @_;
-  return if $target eq "" || $target =~ m{^(?:[a-z][a-z0-9+.-]*:|//|#)}i;
-  my ($path) = split /[#?]/, $target, 2;
-  my $resolved = resolve_path($file, $path);
-  return unless defined $resolved && $resolved ne $file;
-  return unless $resolved =~ m{^\Q$dir\E/references/.*\.md\z};
-  warn_about("$file:$line_number", "links to another reference ($resolved); link it from SKILL.md instead");
 }
 
 sub resolve_path {
