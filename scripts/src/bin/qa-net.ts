@@ -1,6 +1,7 @@
 import { homedir } from 'node:os';
 import { define } from 'gunshi';
 import { buildChromePaths } from '../qa-chrome/build-chrome-paths';
+import { buildCutCommands } from '../qa-chrome/build-cut-commands';
 import { buildRestoreCommands } from '../qa-chrome/build-restore-commands';
 import { findDefaultInterface } from '../qa-chrome/find-default-interface';
 import { formatChromeRefusal } from '../qa-chrome/format-chrome-refusal';
@@ -40,12 +41,13 @@ const cutCommand = define({
       process.exit(1);
     }
 
-    await writeChromeState(paths, {
-      ...target.state,
-      namespace: { ...target.namespace, cut: { interfaceName, routes } },
-    });
+    const cut = { interfaceName, routes };
 
-    await runInNamespace(holderPID, ['ip', 'link', 'set', 'dev', interfaceName, 'down']);
+    await writeChromeState(paths, { ...target.state, namespace: { ...target.namespace, cut } });
+
+    for (const command of buildCutCommands(cut)) {
+      await runInNamespace(holderPID, command);
+    }
 
     console.log(`✓ cut: ${interfaceName} is down, with ${formatRouteCount(routes.length)} saved`);
   },

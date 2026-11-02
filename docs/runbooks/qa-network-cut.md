@@ -92,7 +92,7 @@ step 1 does.
 | ------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
 | `qa:chrome start [--netns] [--port <port>]` | launches the browser; `--netns` puts it in its own namespace; `--port` sets DevTools' port, 9222 by default |
 | `qa:chrome stop`                            | stops every process of the browser, and its namespace                                                       |
-| `qa:net cut`                                | saves the namespace's IPv4 and IPv6 routes, then takes the default route's interface down                   |
+| `qa:net cut`                                | saves the namespace's routes, then takes the default route's interface down and keeps its IPv6 addresses    |
 | `qa:net restore`                            | brings the interface up and replays every saved route                                                       |
 | `qa:net status`                             | prints the browser, its namespace, and whether the network is up or cut                                     |
 
