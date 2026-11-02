@@ -217,16 +217,28 @@ task graph, so their staleness triggers are path globs, and upgrading either is 
 tracker's tag is in its Dockerfile, which adds object storage for uploaded files over the stock
 image. The dashboard's is in its `fly.toml`.
 
-## Infra drift
+## Infra apply and drift
 
-A scheduled workflow runs a Pulumi preview over the `infra/` program's production stack and fails on
-any diff. The workflow also runs on pull requests and pushes touching `infra/`, but console drift
-arrives with no commit, so only the schedule catches it. The job reads its secrets from the
-`vers-ci` vault, and it only ever previews; reconciling a reported drift is a human decision,
-applied with `pulumi up` from a checkout.
+Two workflows run Pulumi on the production stack of the `infra/` program. Both read their secrets
+from the `vers-ci` vault.
 
-On a pull request, the workflow's `preview` job is an advisory check, and the ruleset in
-`infra/github.ts` leaves it out of the required checks. A pull request that changes the program
-fails the job by design, because `pulumi up` applies the change only after the merge. Drift made
-outside the code fails it too. Before the merge, the reviewer reads the diff in the job's summary
-and checks that it shows only the pull request's own change.
+- `infra-deploy` applies each push to `main` that changes the program. It previews the commit before
+  the push with `--expect-no-changes`, then previews the pushed commit as JSON. Its guard holds the
+  plan when the plan does anything but create, update, read or refresh a resource, or when the first
+  preview found a change. The job applies a plan that the guard passes with `pulumi up --refresh`,
+  then previews again to check that the stack matches the commit.
+- `infra-drift` runs on a pull request that changes the program, and weekly. A pull request's run
+  previews `main` with `--expect-no-changes`, which fails the job on drift, and previews the pull
+  request's own change, which fails the job only on an error. The job summary shows both. The weekly
+  run previews `main` with `--expect-no-changes`, because console drift arrives with no commit.
+
+A held run ends green, posts to Discord, and waits for a person, and so does drift from outside a
+commit: the weekly run reports it, and the next push's apply holds. Every later push holds too until
+a person answers, because its first preview finds the held change. The
+[infra runbook](../../runbooks/infra.md#answer-a-held-apply) covers both. The `preview` check is
+advisory, and the ruleset in `infra/github.ts` leaves it out of the required checks.
+
+The prod jobs of both workflows run one at a time in the `infra-prod` concurrency group, which keeps
+every waiting run. A preview takes no lock on the stack's state, so a preview that runs beside an
+apply reads a half-applied stack. The deploy job never cancels, because a cut-off apply leaves the
+stack half changed and leaves Pulumi's lock in the state.
