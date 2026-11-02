@@ -1,4 +1,21 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["github>zgeoff/tools"]
+  "extends": ["github>zgeoff/tools"],
+  "packageRules": [
+    {
+      "description": "OpenTelemetry's 0.x packages move to a new hundred, such as 0.2xx to 0.3xx, with each stable major, and each SDK package caps its @opentelemetry/api peer below the next api minor. Renovate types those 0.x and api moves as minor, so a separate minor branch would get them without the major they need. One branch for the group keeps them with the major.",
+      "extends": ["monorepo:opentelemetry-js"],
+      "separateMajorMinor": false
+    },
+    {
+      "description": "A 0.x OpenTelemetry update that changes the hundreds digit breaks like a major, so it takes the preset's major settings: no automerge, and the weekly window. Renovate automerges a branch only when every update in it allows automerge.",
+      "extends": ["monorepo:opentelemetry-js"],
+      "matchCurrentValue": "/^0\\./",
+      "matchJsonata": [
+        "$substringBefore($substringAfter(currentVersion, '.'), '.') ~> $length() = 3 and $substring($substringAfter(currentVersion, '.'), 0, 1) != $substring($substringAfter(newVersion, '.'), 0, 1)"
+      ],
+      "automerge": false,
+      "schedule": ["* 0-5 * * 1"]
+    }
+  ]
 }
