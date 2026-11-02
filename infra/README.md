@@ -23,6 +23,7 @@ bun run preview   # op run --env-file=.env -- pulumi preview
 bun run up        # op run --env-file=.env -- pulumi up
 ```
 
-On a pull request that changes this program, the infra-drift workflow's `preview` job is an advisory
-check: [infra drift](../docs/architecture/platform/deployment.md#infra-drift) says why, and what to
-read in its result before you merge.
+A merge to `main` that changes this program applies it from CI, unless a guard holds the plan for a
+person. On a pull request, the infra-drift workflow's `preview` job checks `main` for drift and
+shows the planned change in its summary.
+[Infra deploys](../docs/architecture/platform/infra-deploys.md) covers both workflows.

@@ -38,8 +38,9 @@ How the platform is built — system design, data flows, and operational wiring.
 - [Database](./architecture/platform/database.md) — Neon postgres topology and connection rules
 - [Queues](./architecture/platform/queues.md) — pg-boss behind `@vers/jobs`, the drain delivery
   model, and retry/idempotency rules
-- [Deployment](./architecture/platform/deployment.md) — Fly rollouts, staleness, infra drift, and
-  secrets
+- [Deployment](./architecture/platform/deployment.md) — Fly rollouts, staleness, and secrets
+- [Infra deploys](./architecture/platform/infra-deploys.md) — the Pulumi apply on merge, its guard,
+  and the drift checks
 - [Container builds](./architecture/platform/container-builds.md) — the Dockerfiles, the pruned
   install, and each service's runtime
 - [Observability](./architecture/platform/observability.md) — OpenTelemetry traces, logs, and

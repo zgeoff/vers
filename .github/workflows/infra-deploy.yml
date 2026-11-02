@@ -1,0 +1,157 @@
+name: infra-deploy
+
+# Applies each push to main that changes the infra/ program to the prod stack, unless the guard
+# holds the plan for a person. A held run ends green and posts to Discord; a manual dispatch on main
+# applies the plan of main's tip. docs/runbooks/infra.md covers a held run.
+on:
+  push:
+    branches: [main]
+    # the root manifest's catalog and the lockfile pin the program's Pulumi packages
+    paths:
+      - 'infra/**'
+      - 'package.json'
+      - 'bun.lock'
+      - 'scripts/src/infra/**'
+      - 'scripts/src/bin/infra-plan-check.ts'
+      - 'scripts/src/bin/infra-step.ts'
+      - 'scripts/src/bin/pulumi-stack.ts'
+      - '.github/workflows/infra-deploy.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production
+    # never cancelled, because a cut-off apply leaves the stack half changed and its lock in the
+    # state; queue: max keeps every waiting run, so no push's apply takes the place of another's.
+    # infra-drift's previews share the group, because a preview takes no lock on the state.
+    concurrency:
+      group: infra-prod
+      cancel-in-progress: false
+      queue: max
+    outputs:
+      outcome: ${{ steps.plan.outputs.outcome }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version
+
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: 24.22.0
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - uses: 1password/install-cli-action@1a3160d5e9de1ae0803eaa08a88746f5ae3daa50 # v4.1.0
+        with:
+          version: 2.34.1
+
+      - uses: pulumi/actions@8e5e406f4007fca908480587cb9893c07090f58d # v7.0.0
+        with:
+          pulumi-version: 3.272.0
+
+      # main as it was before this push: any change its preview finds is drift, or an earlier
+      # push whose plan the guard held
+      - name: Check out the commit before this push
+        if: github.event_name == 'push'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.before }}
+          path: before
+          persist-credentials: false
+
+      - name: Install its dependencies
+        if: github.event_name == 'push'
+        working-directory: before
+        run: bun install --frozen-lockfile
+
+      - name: Check drift before this change
+        id: drift
+        if: github.event_name == 'push'
+        continue-on-error: true
+        env:
+          STEP: drift-before
+          INFRA_PATH: before/infra
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+        run: bun run ci:infra-step
+
+      - name: Preview and guard
+        id: plan
+        env:
+          COMMIT: ${{ github.sha }}
+          DRIFT: ${{ steps.drift.outcome }}
+          EVENT: ${{ github.event_name }}
+          INFRA_PATH: infra
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+        run: bun run ci:infra-plan-check
+
+      - name: Apply
+        if: steps.plan.outputs.outcome == 'apply'
+        env:
+          STEP: apply
+          INFRA_PATH: infra
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+        run: bun run ci:infra-step
+
+      - name: Check drift after the apply
+        if: steps.plan.outputs.outcome == 'apply'
+        env:
+          STEP: drift-after
+          INFRA_PATH: infra
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+        run: bun run ci:infra-step
+
+      - name: Report token rate limit
+        if: always()
+        continue-on-error: true
+        run: op service-account ratelimit
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+
+  # posts a held run, a failed one and a cancelled one to Discord
+  alert:
+    needs: [deploy]
+    if:
+      ${{ always() && (needs.deploy.result == 'failure' || needs.deploy.result == 'cancelled' ||
+      needs.deploy.outputs.outcome == 'held') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version
+
+      # the alert script imports no package, so the job skips the install
+      - name: Send Discord alert
+        env:
+          WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          RUN_URL:
+            ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          ALERT_TITLE:
+            ${{ needs.deploy.outputs.outcome == 'held' && '[infra] prod apply held for a person' ||
+            '[infra] critical — prod apply failed' }}
+          ALERT_DESCRIPTION: ${{ github.event.head_commit.message }}
+          # a held run's deploy job succeeded, so its alert lists no failed job
+          ALERT_FAILED_JOBS:
+            ${{ needs.deploy.outputs.outcome != 'held' && format('deploy={0}', needs.deploy.result)
+            || '' }}
+          CANCELLED_NEED: ${{ needs.deploy.result == 'cancelled' }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: bun run ci:discord-alert

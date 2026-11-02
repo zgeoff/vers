@@ -1,34 +1,29 @@
 name: infra-drift
 
+# Previews the prod stack of infra/. A pull request's run checks main for drift, which fails the
+# job, and shows the pull request's planned change, which fails it only on an error. The weekly run
+# checks main for drift, because console drift arrives with no commit. infra-deploy applies each
+# merge.
 on:
   pull_request:
+    # the root manifest's catalog and the lockfile pin the program's Pulumi packages
     paths:
       - 'infra/**'
+      - 'package.json'
+      - 'bun.lock'
       - 'scripts/src/infra/**'
-      - 'scripts/src/bin/infra-preview.ts'
-      - 'scripts/src/bin/infra-preview-summary.ts'
-      - 'scripts/src/bin/pulumi-preview.ts'
-      - '.github/workflows/infra-drift.yml'
-  push:
-    branches: [main]
-    paths:
-      - 'infra/**'
-      - 'scripts/src/infra/**'
-      - 'scripts/src/bin/infra-preview.ts'
-      - 'scripts/src/bin/infra-preview-summary.ts'
-      - 'scripts/src/bin/pulumi-preview.ts'
+      - 'scripts/src/bin/infra-step.ts'
+      - 'scripts/src/bin/pulumi-stack.ts'
       - '.github/workflows/infra-drift.yml'
   schedule:
-    # weekly: console drift arrives with no commit, so no push can catch it
     - cron: '17 19 * * 1'
   workflow_dispatch:
 
 permissions:
   contents: read
 
-# every trigger previews the same prod stack — one at a time
 concurrency:
-  group: infra-drift-prod
+  group: infra-drift-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -38,7 +33,13 @@ jobs:
       github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name ==
       github.repository
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
+    # a preview takes no lock on the stack's state, so one that runs beside infra-deploy's apply
+    # reads a half-applied stack; every job that reads or writes the prod stack waits its turn here
+    concurrency:
+      group: infra-prod
+      cancel-in-progress: false
+      queue: max
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -63,16 +64,44 @@ jobs:
         with:
           pulumi-version: 3.272.0
 
-      # one op process resolves every reference in infra/.env.example with one sign-in; an action
-      # that spawns op per reference signs in once per secret, and 1Password throttled those bursts
-      - name: Preview
-        env:
-          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
-        run: bun run ci:infra-preview
+      # main's tip when the job holds the queue, never the event's base: a queued run or a rerun
+      # would preview an older program and report a deploy that landed since as drift
+      - name: Check out main
+        if: github.event_name == 'pull_request'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          path: base
+          persist-credentials: false
 
-      - name: Summarize preview
-        if: always()
-        run: bun run ci:infra-preview-summary
+      - name: Install main's dependencies
+        if: github.event_name == 'pull_request'
+        working-directory: base
+        run: bun install --frozen-lockfile
+
+      - name: Check main for drift
+        if: github.event_name == 'pull_request'
+        env:
+          STEP: drift-before
+          INFRA_PATH: base/infra
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+        run: bun run ci:infra-step
+
+      - name: Preview the change
+        if: ${{ !cancelled() && github.event_name == 'pull_request' }}
+        env:
+          STEP: change
+          INFRA_PATH: infra
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+        run: bun run ci:infra-step
+
+      - name: Check for drift
+        if: github.event_name != 'pull_request'
+        env:
+          STEP: drift
+          INFRA_PATH: infra
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+        run: bun run ci:infra-step
 
       - name: Report token rate limit
         if: always()

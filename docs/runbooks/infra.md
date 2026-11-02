@@ -79,13 +79,89 @@ The Cloudflare token needs `Zone → DNS → Edit` (versidle.com) and
 
 ## Deploy
 
-```sh
-bun run preview   # op run --env-file=.env -- pulumi preview
-bun run up        # op run --env-file=.env -- pulumi up
-```
+The `infra-deploy` workflow applies each merge to `main` that changes the program. Each run first
+runs a drift check, a preview of the commit before its push, and its guard holds a plan that deletes
+or replaces a resource or that follows a failed drift check.
+[Infra deploys](../architecture/platform/infra-deploys.md) describes the workflow, the guard and
+drift.
 
-Rebase the branch onto `main` before running `bun run up`. The stack state is shared, so an
-out-of-date branch can try to revert a resource that a later deploy already changed.
+Apply a held plan through the workflow, never with `bun run up`. The workflow's run waits in the
+`infra-prod` queue, so it never overlaps another apply or preview, and its summary records the plan
+and the apply.
+
+### Answer a held apply
+
+A held run applies nothing and ends green. Discord shows `[infra] prod apply held for a person`, and
+the run's summary lists each reason under `Apply plan (prod)`.
+
+1. From `infra/` in a clean checkout of `main`, show each change in full:
+
+   ```sh
+   bun run preview -- --refresh --diff
+   ```
+
+   Expect: a change on each resource that the reasons name.
+
+2. When you keep a drifted resource's console change, merge a pull request that adds the change to
+   the program. Expect: that merge's run holds too, because its drift check still finds the drift.
+3. Dispatch the workflow on `main`:
+
+   ```sh
+   gh workflow run infra-deploy.yml --ref main
+   ```
+
+   The dispatched run applies the plan of main's tip whatever the guard finds. That plan reverts
+   each console change that the program lacks. When `main` moves while the run waits, the run holds
+   with `this run's commit <commit> is not main's tip <tip>`; dispatch the workflow again. Expect:
+   the run's `Apply plan (prod)` holds `the job applies it because a person dispatched the run`, and
+   `Drift after the apply (prod)` ends with every resource unchanged.
+
+To drop a held change instead, merge a pull request that reverts it, then do step 3. The revert's
+run holds as well. Its drift check previews the held commit, whose change never reached the stack.
+
+### Recover a failed apply
+
+A failed run posts `[infra] critical — prod apply failed`. Read the error under `Apply (prod)` in
+the run's summary, then act on its cause:
+
+| Cause                                        | Action                                                                       |
+| -------------------------------------------- | ---------------------------------------------------------------------------- |
+| a provider's 5xx answer or a network timeout | dispatch the workflow, as step 3 of the held apply shows                     |
+| an error in the program                      | merge a fix in a pull request, then dispatch the workflow when its run holds |
+| `the stack is currently locked`              | [clear the stale lock](#clear-a-stale-lock)                                  |
+
+A failed apply leaves the stack apart from the commit it tried to apply. The fix's drift check
+previews that commit and finds the difference, so the guard holds the fix until you dispatch the
+workflow.
+
+### Clear a stale lock
+
+An apply that hit the job's 30-minute timeout leaves Pulumi's lock on the state, and every later run
+fails with `the stack is currently locked`.
+
+1. List the runs in progress:
+
+   ```sh
+   gh run list --workflow infra-deploy.yml --status in_progress
+   ```
+
+   Expect: no runs. When the list shows a run, wait for it to end.
+
+2. From `infra/`, clear the lock:
+
+   ```sh
+   op run --env-file=.env -- pulumi cancel --stack prod --yes
+   ```
+
+   Expect: exit 0.
+
+3. Dispatch the workflow on `main`:
+
+   ```sh
+   gh workflow run infra-deploy.yml --ref main
+   ```
+
+## TLS for the hostnames
 
 Once the records exist, let Fly serve TLS for the hostnames:
 

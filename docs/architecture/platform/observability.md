@@ -3,7 +3,7 @@
 The fleet emits three OpenTelemetry signals, traces, logs, and metrics, and Axiom consumes them, one
 dataset per signal. Error reporting is a separate path through the Sentry SDK to Bugsink
 ([error handling](../services/error-handling.md)). Every Axiom resource is managed as code in the
-`infra/` Pulumi program ([infra drift](./deployment.md#infra-drift)).
+`infra/` Pulumi program ([infra deploys](./infra-deploys.md)).
 
 ## Export path
 

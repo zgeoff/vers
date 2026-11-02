@@ -216,17 +216,3 @@ The error tracker and the analytics dashboard ship pinned upstream images. Neith
 task graph, so their staleness triggers are path globs, and upgrading either is a tag bump. The
 tracker's tag is in its Dockerfile, which adds object storage for uploaded files over the stock
 image. The dashboard's is in its `fly.toml`.
-
-## Infra drift
-
-A scheduled workflow runs a Pulumi preview over the `infra/` program's production stack and fails on
-any diff. The workflow also runs on pull requests and pushes touching `infra/`, but console drift
-arrives with no commit, so only the schedule catches it. The job reads its secrets from the
-`vers-ci` vault, and it only ever previews; reconciling a reported drift is a human decision,
-applied with `pulumi up` from a checkout.
-
-On a pull request, the workflow's `preview` job is an advisory check, and the ruleset in
-`infra/github.ts` leaves it out of the required checks. A pull request that changes the program
-fails the job by design, because `pulumi up` applies the change only after the merge. Drift made
-outside the code fails it too. Before the merge, the reviewer reads the diff in the job's summary
-and checks that it shows only the pull request's own change.
