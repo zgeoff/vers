@@ -48,7 +48,8 @@ step 1 does.
    Expect: a line of JSON. Keep its `targetId` for the next steps.
 
 3. Bring the game to the screen under test with `qa:cdp`. A screen behind sign-in needs a
-   [QA account](qa.md#accounts). The browser's profile keeps the sign-in from one start to the next.
+   [QA account](qa.md#accounts). The tab from step 2 is in a fresh browser context, which loses its
+   cookies when the browser stops, so sign in again after each start.
 
 4. Cut the network:
 
