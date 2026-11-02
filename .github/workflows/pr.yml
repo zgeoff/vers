@@ -243,7 +243,7 @@ jobs:
   e2e-workflow-changes:
     permissions:
       contents: read
-    uses: zgeoff/tools/.github/workflows/paths-changed.yml@931e0b748396d6ed4bca8531eacba01cc506dcb0 # main
+    uses: zgeoff/tools/.github/workflows/paths-changed.yml@217acf6af28a53e411672b77ad8a2d0774203f04 # main
     with:
       paths: |
         .github/workflows/main.yml
@@ -373,7 +373,7 @@ jobs:
   changes:
     permissions:
       contents: read
-    uses: zgeoff/tools/.github/workflows/paths-changed.yml@931e0b748396d6ed4bca8531eacba01cc506dcb0 # main
+    uses: zgeoff/tools/.github/workflows/paths-changed.yml@217acf6af28a53e411672b77ad8a2d0774203f04 # main
     with:
       paths: |
         apps/web/Dockerfile
