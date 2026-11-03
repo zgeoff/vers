@@ -153,7 +153,7 @@ each new release fails to install without an exclude. A repo that sets no `minim
 this section.
 
 - Exclude each one the lock file installs, even one that only another package depends on.
-  `chex dependency-gates` names each one that has no exclude.
+  `chex dependency-gates` lists each one that has no exclude.
 - Never write a scope, such as `@zgeoff/*`. Bun accepts a scope entry with no warning, and the entry
   lets no package through.
 - Never put a dated removal comment above a first-party exclude. The audit-fix workflow deletes an
