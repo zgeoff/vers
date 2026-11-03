@@ -121,10 +121,15 @@ the leak until a later test fails on it.
 A killed run leaves behind the temp folders and database clones it made. On a host where `/tmp` or
 the database's data sits on tmpfs, each leftover holds RAM.
 
-Name each folder and database clone that a run makes after the PID of the test process that made it.
+Name each folder and database clone that a run makes after the PID of the test process that made it
+and its PID namespace, such as `pid4182-ns4026531836-`. On Linux, `/proc/self/ns/pid` links to
+`pid:[<namespace>]`. A sandbox with its own PID namespace can share the temp folder, and there the
+same PID belongs to another process.
+
 Then sweep at the start of each run, in the repo's test script before `bun test` starts, so the
-sweep runs once per run. Remove each leftover whose PID no longer runs. `process.kill(pid, 0)`
-throws when the process is gone. The sweep removes:
+sweep runs once per run. Remove each leftover from the sweep's own namespace whose PID no longer
+runs, and never touch a leftover from another namespace. `process.kill(pid, 0)` throws when the
+process is gone. The sweep removes:
 
 - temp folders, such as a test's `HOME`;
 - the database clones that the test-database helper makes, as

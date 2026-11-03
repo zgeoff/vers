@@ -104,7 +104,7 @@ Add a handler with `server.use(...)` in a test only for one of these:
 
 - an outcome the collections can't reach, such as a 503, a transport failure or a malformed payload;
 - a sequence, such as a 503 and then a success: take each answer from the answer-queue helper in
-  `test-utils/`;
+  `src/test-utils/`;
 - input you capture: call an inline `mock()` from the handler, and assert it with the mock matchers.
 
 Keep logic out of a per-test handler. Return a fixed response, or one looked up by one request

@@ -18,14 +18,14 @@ at module load keeps it for the whole run.
 
 Give each counter two tests. In the first, `it records <metric> per <attribute>`:
 
-1. Register an in-memory meter provider through the repo's helper for it in `test-utils/`.
+1. Register an in-memory meter provider through the repo's helper for it in `src/test-utils/`.
 2. Record the counter two or three times, with distinct attributes.
 3. Read the points back through the helper, and assert each point's attributes and value.
 
 In the second, `it stays inert without a registered meter provider`, call your function that records
 the counter with no provider registered, and assert that it doesn't throw.
 
-When the repo has no helper, write one in `test-utils/` that a test calls and that does this:
+When the repo has no helper, write one in `src/test-utils/` that a test calls and that does this:
 
 - builds a `MeterProvider` from `@opentelemetry/sdk-metrics`, with a `PeriodicExportingMetricReader`
   over an `InMemoryMetricExporter`, and sets it with `metrics.setGlobalMeterProvider`;

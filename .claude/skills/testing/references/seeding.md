@@ -1,7 +1,7 @@
 # Seeding
 
 Seed through the module that writes the state: put rows or files in place for a test by calling that
-module's own functions. Keep the seeds in the `test-utils/` folder of the module's package, and
+module's own functions. Keep the seeds in the `src/test-utils/` folder of the module's package, and
 export them so other packages' tests can import them. When every test outside the module seeds
 through it, a schema or layout change breaks only the module and its tests.
 
@@ -28,7 +28,7 @@ they are.
 - Never write rows or files directly because the module doesn't export its write function. Export
   the function from the module. An awkward import or a slow call is no reason either.
 
-Write directly only in these places, and never in `integration/` or `e2e/`:
+Write directly only in these places, and never in `e2e/`:
 
 - inside a seed, for a state that no code in the module makes, as in
   [A state no code in the module makes](#a-state-no-code-in-the-module-makes);
@@ -54,9 +54,9 @@ Write no seed beyond that list, except one for a state that no code in the modul
 
 ## Writing a seed
 
-Put each seed in its own file in the package's `test-utils/`: `seed-note.ts` exports `seedNote`, and
-`seed-archived-note.ts` exports `seedArchivedNote`. Start a function name with `seed` only in
-`test-utils/`.
+Put each seed in its own file in the package's `src/test-utils/`: `seed-note.ts` exports `seedNote`,
+and `seed-archived-note.ts` exports `seedArchivedNote`. Start a function name with `seed` only in
+`src/test-utils/`.
 
 Give a seed two arguments:
 
@@ -108,7 +108,7 @@ in the module. Call that function from both the handler and the seed.
 
 ## Publishing seeds
 
-Export the package's `test-utils/` folder in the `exports` of its `package.json`, such as
+Export the package's `src/test-utils/` folder in the `exports` of its `package.json`, such as
 `"./test-utils/*": "./src/test-utils/*.ts"`. Another package then imports
 `<package>/test-utils/seed-note`.
 
@@ -128,8 +128,8 @@ module stores each kind of record, so two modules never publish the same key.
 ## `buildSeeder` and `setupTest`
 
 When a package's tests seed, give the package one `buildSeeder(deps)` in `build-seeder.ts` in its
-`test-utils/`. Spread into it the `build<Record>Seeder` of each module whose state those tests need.
-Write no test for it, because TypeScript checks it:
+`src/test-utils/`. Spread into it the `build<Record>Seeder` of each module whose state those tests
+need. Write no test for it, because TypeScript checks it:
 
 ```ts
 export const buildSeeder = (deps: TestDeps) => ({
