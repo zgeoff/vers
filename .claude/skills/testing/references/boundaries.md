@@ -21,7 +21,7 @@ real thing wherever the table says so.
 - When the code builds an SDK client or another dependency itself, change it to take the dependency
   from its caller. Then pass the stand-in in.
 - Never spy on a real method to make it fail.
-- Put each stand-in in `test-utils/`, and name the file for what it does:
+- Put each stand-in in `src/test-utils/`, and name the file for what it does:
   - `start-stub-<thing>.ts` starts a process or a server that keeps running;
   - `create-stub-<thing>.ts` creates a resource on disk or in a service;
   - `run-stub-<thing>.ts` is an executable script;
@@ -32,8 +32,8 @@ real thing wherever the table says so.
 ## Containers
 
 When a test needs a container, probe for Docker at module level, and read the value only in
-`skipIf`. Search `test-utils/` for a probe before you write one. Bun reads `skipIf` before the test
-runs, so `setupTest()` can't make the value. Say so in a comment:
+`skipIf`. Search `src/test-utils/` for a probe before you write one. Bun reads `skipIf` before the
+test runs, so `setupTest()` can't make the value. Say so in a comment:
 
 ```ts
 // skipIf reads this before the test runs, so setupTest() can't make it.

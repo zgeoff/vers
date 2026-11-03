@@ -58,30 +58,60 @@ metadata:
 - Test the behaviour, so a refactor that keeps it leaves every test green.
 - Bring each test you touch in line with these rules.
 - Never cut a test that checks behaviour. Never add one that checks nothing.
-- Put a helper that tests share in the package's `test-utils/`, with its own tests, and search there
-  first.
 
 ## The test run
 
 - Reset shared state after each test in the test preload, the file that `bunfig.toml` lists under
   `[test] preload`. When you add module-level state, such as a cache, add its reset there.
-- Override an environment variable through the env helper in `test-utils/`, never by assigning
-  `process.env`.
+- Override an environment variable through a helper in `src/test-utils/` that restores it after the
+  test, never by assigning `process.env`.
 - Start a shared resource, such as the MSW server, in the preload's `beforeAll`, never at import.
-- Run the test script with `--parallel=<N>` and `--no-isolate`, so the files share each worker's
-  process. Never turn Bun's per-file isolation back on.
+- Run the unit tests with `rig unit --no-isolate`, from
+  [`@zgeoff/rig`](https://github.com/zgeoff/tools/tree/main/packages/rig). rig sets `--parallel`
+  from the host's cores and memory, and `--no-isolate` lets the files share each worker's process.
+  Never turn Bun's per-file isolation back on. It slows the suite and hides a leak between files.
 
 ## Where a test lives
 
-- Put a unit test beside its module, one test file per module, entry modules included:
-  `src/parse-entry.test.ts` beside `src/parse-entry.ts`.
-- Put a flow across several packages in `integration/`, a test of the built product in `e2e/`, and a
-  test that needs a real system, such as a browser, in a [lane](./references/slow-tests.md#lanes).
-- No other `test/`, `tests/` or `__tests__` directory. Check a config file, such as `package.json`,
-  with a script in `scripts/`, never with a test: a test needs a module beside it.
+Lay out each package like this made-up one:
+
+```text
+packages/ledger/
+├── package.json                    exports "./test-utils/*"
+├── src/
+│   ├── record-payment.ts
+│   ├── record-payment.test.ts      unit test, beside its module
+│   ├── record-payment.bench.ts     benchmark of one module
+│   ├── render-pdf.browser.test.ts  unit test in the browser lane
+│   └── test-utils/
+│       ├── start-ledger.ts         helper, with its own test
+│       └── start-ledger.test.ts
+├── e2e/
+│   ├── start-ready.test.ts         the built program, run as a process
+│   ├── journey-checkout.test.ts
+│   └── fixtures/                   inputs that aren't code, such as a Dockerfile
+├── evals/
+│   └── categorise/                 one folder per evaluation
+└── bench/
+    └── import-statement.bench.ts   benchmark of the running program
+```
+
+| The test                                                     | Put it                                                                                                                                         |
+| ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| starts a program that `rig.config.ts` declares, as a process | in `e2e/` of the package that builds the program, named with a prefix from [End-to-end suites](./references/system-tests.md#end-to-end-suites) |
+| scores a corpus                                              | in `evals/<name>/` of the package whose code it scores, as [Evaluation suites](./references/system-tests.md#evaluation-suites) shows           |
+| measures a running program                                   | in `bench/` of the package that builds the program, as [Benchmarks](./references/system-tests.md#benchmarks) shows                             |
+| does anything else                                           | beside the module or script it tests                                                                                                           |
+
+Put a shared helper in the package that owns what it starts, builds or fakes.
+
+[`chex test-layout`](https://github.com/zgeoff/tools/tree/main/packages/chex) and rig fail a test
+outside this layout.
 
 ## Test shape
 
+- Check a config file, such as `package.json`, with a check script that CI runs, never with a test
+  file, except as [Workflows](./references/workflows.md) shows.
 - Write top-level `test()` calls, with no `describe`. Hooks in a `describe` couple its tests.
 - Name the behaviour a caller sees in each title, as verb, outcome, condition:
   `it rejects a title longer than 120 characters`. In a file that tests several units, start the
@@ -145,11 +175,15 @@ onTestFinished(() => rm(dir, { recursive: true, force: true }));
 - Keep plain inputs inline: write the literal again in the next test, never a shared fixture or a
   named constant.
 - Give a type that crosses a module boundary, such as an SDK result, a tested `buildMock<Type>`
-  [factory](./references/factories.md) in `test-utils/` on first use. Build only plain data in a
+  [factory](./references/factories.md) in `src/test-utils/` on first use. Build only plain data in a
   factory, and write no rows or files.
-- Give a fake that replaces a boundary data only: a fixed answer, `mock()`, a no-op, a map from
-  input to answer, or the answer-queue helper in `test-utils/`. Move any logic to a tested helper
-  there.
+- Build a stand-in for a boundary from data only. Use one of these:
+  - a fixed answer;
+  - `mock()`;
+  - a no-op;
+  - a map from input to answer;
+  - the answer-queue helper in `src/test-utils/`.
+- Move any logic in a stand-in to a tested helper in `src/test-utils/`.
 - No `mockReturnValueOnce` or `mockResolvedValueOnce` chain: a call past the last answer returns the
   default silently, where the answer-queue helper throws.
 
@@ -192,7 +226,8 @@ tests may write them directly, when no seed makes the state.
   or write `invariant()` from `tiny-invariant`.
 - Never assert in a `try`/`catch`: when nothing throws, nothing is asserted.
 - Write `.rejects` and `.resolves` without `await`, because Bun settles them inside the matcher.
-  Always `await` `toResolve()` and `toReject()`.
+  Always `await` `toResolve()` and `toReject()`: they return a promise, and a test that doesn't
+  await it ends before the check runs.
 
 ## Access rules
 
@@ -203,8 +238,12 @@ tests may write them directly, when no seed makes the state.
 ## Narrowing
 
 - No branch in a test body. Give each path its own test.
-- Before a matcher that passes on `undefined` (any `.not`, `toBeUndefined`, `toBeFalsy`, `toBeNil`),
-  narrow with `invariant(value)`. Before any other matcher, `?.` is safe.
+- When a value may be missing, `value?.field` reads `undefined`, and some matchers pass on
+  `undefined` without checking anything: `toBeUndefined`, `toBeFalsy`, `toBeNil`, and a `.not`
+  matcher such as `.not.toBe('archived')`. Before one of these, narrow the value with
+  `invariant(value)`, then assert on `value.field`.
+- Before any other matcher, write `value?.field`. A missing value fails that matcher.
+- To check that the value itself is absent, assert on the value, with no `invariant`.
 - Copy a value out of a callback and assert after the call returns: an assertion in a callback that
   never runs passes.
 
@@ -220,14 +259,17 @@ Use a [jest-extended matcher](./references/matchers.md) over a hand-written chec
   2. an injected clock: `ctx.clock.advance(30_000)`;
   3. fake timers, for code the repo doesn't own, restored in `onTestFinished`.
 - When you can't pass the time in, assert a range around `Date.now()`, such as `toBeWithin`.
-- Wait on a condition with the `waitFor` helper in `test-utils/`, never a sleep. When the code has
-  nothing to wait on, add a signal, such as an event.
+- Wait on a condition with the repo's `waitFor` helper, never a sleep. When the code has nothing to
+  wait on, add a signal, such as an event.
 
 ## Boundaries
 
-- Test a package at the outermost boundary it talks to: with no I/O, with
-  [HTTP mocked](./references/http.md), or with a [real database](./references/database.md). Never
-  stub `fetch`, an HTTP client or the unit's own services.
+- Pick the setup by what the code under test reaches:
+  - When it does no I/O, pass it plain values.
+  - When it calls a remote service, answer the requests with MSW, as
+    [HTTP mocking](./references/http.md) describes.
+  - When it uses a database, run it against a [real database](./references/database.md).
+- Never stub `fetch`, an HTTP client or the unit's own services.
 - Pass every path in from the test's `mkdtemp` folder. Never steer a module through `process.cwd()`
   or a `HOME` set after startup.
 - Reach a failure branch with a real failure, such as an address where nothing listens or an MSW
@@ -237,4 +279,5 @@ Use a [jest-extended matcher](./references/matchers.md) over a hand-written chec
 ## Speed
 
 - Keep each unit test under 5 s on CI. When one is slower, fix its cause from the
-  [slow-tests table](./references/slow-tests.md). Never raise the timeout or move it to a lane.
+  [slow-tests table](./references/slow-tests.md). Never raise the timeout. Never move a test to a
+  lane only because it is slow.
