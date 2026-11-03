@@ -4,6 +4,7 @@ import { useServerFn } from '@tanstack/react-start';
 import { Dialog, StatusButton, Text } from '@vers/design-system';
 import type { UndeliveredWork, WorkerClient } from '@vers/idle-client';
 import { useState } from 'react';
+import { match } from 'ts-pattern';
 import { sendIdleReadUndeliveredWork } from '../../lib/idle/send-idle-read-undelivered-work';
 import { sendIdleRemoveUndeliveredWork } from '../../lib/idle/send-idle-remove-undelivered-work';
 import { useIdleWorkerHandle } from '../../lib/idle/use-idle-worker-handle';
@@ -25,38 +26,47 @@ export function SignOutForm(props: Readonly<SignOutFormProps>) {
   const action = props.action ?? signOutFn;
   const queryClient = useQueryClient();
   const idleWorkerHandle = useIdleWorkerHandle();
+  const [isPending, setIsPending] = useState(false);
+  const [warning, setWarning] = useState<UndeliveredWarning | null>(null);
+  const [discardFailed, setDiscardFailed] = useState(false);
+  const [signOutFailed, setSignOutFailed] = useState(false);
 
   const runSignOut = async (): Promise<void> => {
-    await action();
+    try {
+      await action();
+    } catch {
+      setSignOutFailed(true);
+
+      return;
+    }
 
     // the logout redirect is a client-side transition, so without this the signed-out user's
     // cached rows would outlive the session and read as a live session on the next screen
     queryClient.clear();
   };
 
-  const [isPending, setIsPending] = useState(false);
-  const [warning, setWarning] = useState<UndeliveredWarning | null>(null);
-  const [discardFailed, setDiscardFailed] = useState(false);
-
   const handleLogoutClick = async (): Promise<void> => {
     const client = idleWorkerHandle.client;
 
     setIsPending(true);
+    setSignOutFailed(false);
 
     try {
-      const held = await tryReadUndeliveredWork(
+      const read = await readUndeliveredWork(
         client,
         queryClient,
         idleWorkerHandle.writerAbortSignal,
       );
 
-      if (held !== null && held.work.activityCount > 0) {
-        setWarning(held);
-
-        return;
-      }
-
-      await runSignOut();
+      await match(read)
+        .with({ kind: 'failed' }, () => {
+          setSignOutFailed(true);
+        })
+        .with({ kind: 'held' }, (held) => {
+          setWarning(held.warning);
+        })
+        .with({ kind: 'none' }, () => runSignOut())
+        .exhaustive();
     } finally {
       setIsPending(false);
     }
@@ -67,6 +77,7 @@ export function SignOutForm(props: Readonly<SignOutFormProps>) {
 
     setIsPending(true);
     setDiscardFailed(false);
+    setSignOutFailed(false);
 
     try {
       if (client !== undefined) {
@@ -94,11 +105,12 @@ export function SignOutForm(props: Readonly<SignOutFormProps>) {
       <StatusButton
         disabled={isPending}
         onClick={() => void handleLogoutClick()}
-        status={isPending ? StatusButton.Status.Pending : StatusButton.Status.Idle}
+        status={pickButtonStatus(isPending, signOutFailed)}
         type="button"
       >
         Log out
       </StatusButton>
+      {signOutFailed && warning === null && <SignOutFailedAlert />}
       {warning !== null && (
         <Dialog
           closeLabel="Cancel"
@@ -106,6 +118,7 @@ export function SignOutForm(props: Readonly<SignOutFormProps>) {
             if (!open) {
               setWarning(null);
               setDiscardFailed(false);
+              setSignOutFailed(false);
             }
           }}
           open
@@ -124,10 +137,11 @@ export function SignOutForm(props: Readonly<SignOutFormProps>) {
               Clearing that progress failed. Check your connection and try again.
             </Text>
           )}
+          {signOutFailed && <SignOutFailedAlert />}
           <StatusButton
             disabled={isPending}
             onClick={() => void handleConfirmClick(warning.avatarIDs)}
-            status={pickConfirmStatus(isPending, discardFailed)}
+            status={pickButtonStatus(isPending, discardFailed || signOutFailed)}
             type="button"
           >
             Log out anyway
@@ -138,36 +152,59 @@ export function SignOutForm(props: Readonly<SignOutFormProps>) {
   );
 }
 
-async function tryReadUndeliveredWork(
+type UndeliveredWorkRead =
+  | { readonly kind: 'failed' }
+  | { readonly kind: 'held'; readonly warning: UndeliveredWarning }
+  | { readonly kind: 'none' };
+
+async function readUndeliveredWork(
   client: undefined | WorkerClient,
   queryClient: QueryClient,
   signal: AbortSignal,
-): Promise<null | UndeliveredWarning> {
+): Promise<UndeliveredWorkRead> {
   if (client === undefined) {
-    return null;
+    return { kind: 'none' };
   }
 
   try {
-    const roster = await queryClient.query(orpc.avatar.getAvatars.queryOptions({ input: {} }));
+    const roster = await queryClient.query({
+      ...orpc.avatar.getAvatars.queryOptions({ input: {} }),
+      // the default network mode holds an offline read until the browser reports online, and the
+      // player waits on this read with a button that retries it, so it fails at once instead
+      networkMode: 'always',
+      retry: false,
+    });
 
     const avatarIDs = roster.avatars.map((avatar) => avatar.id);
 
     const work = await sendIdleReadUndeliveredWork(client, avatarIDs, signal);
 
-    return { avatarIDs, work };
+    if (work.activityCount === 0) {
+      return { kind: 'none' };
+    }
+
+    return { kind: 'held', warning: { avatarIDs, work } };
   } catch {
-    return null;
+    return { kind: 'failed' };
   }
 }
 
-function pickConfirmStatus(isPending: boolean, discardFailed: boolean) {
+function pickButtonStatus(isPending: boolean, failed: boolean) {
   if (isPending) {
     return StatusButton.Status.Pending;
   }
 
-  if (discardFailed) {
+  if (failed) {
     return StatusButton.Status.Error;
   }
 
   return StatusButton.Status.Idle;
+}
+
+function SignOutFailedAlert() {
+  return (
+    <Text role="alert">
+      Log out needs a network connection. Check your connection and try again.
+    </Text>
+  );
 }
