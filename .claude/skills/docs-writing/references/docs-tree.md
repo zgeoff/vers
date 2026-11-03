@@ -55,8 +55,8 @@ these:
 
 Start a design only when the user asks for one. A design has open questions that need spikes before
 anyone can build; a plan for work about to be built has none, and goes in its issue or PR. The
-design lives in `docs/design/<work>/`, where `<work>` names the work in a few words, while its code
-is unbuilt.
+design lives in `docs/design/<work>/`, where `<work>` is the work in a few words, while its code is
+unbuilt.
 
 When the work lands:
 
@@ -95,7 +95,7 @@ the architecture doc owns that. When a decision changes, edit the record in plac
 ## Spikes
 
 A spike is an experiment you run to answer one question a design depends on. It lives in
-`docs/design/<work>/spikes/<name>/`, unless the repo's `project-docs-writing` skill names another
+`docs/design/<work>/spikes/<name>/`, unless the repo's `project-docs-writing` skill sets another
 folder, such as `research/<name>/` at the repo root. A spike outside the design folder stays when
 the design folder is deleted. Every spike has the same layout:
 

@@ -107,7 +107,7 @@ rules apply to it.
 ## House rules
 
 **Say who does what.** Name the actor. Don't make a thing act like a person ("the field says", "the
-reason does the work"). That hides who acts.
+reason does the work", "the error names the fix"). That hides who acts.
 
 **Lead with what the reader does.** Open a paragraph or a bullet with the instruction or the fact
 the reader acts on. A definition first ("A heavy check is a job that…") or a label and a colon
@@ -158,7 +158,7 @@ A short line that sums up a rule is fine when the rule sits next to it in full.
 
 ## Check it
 
-Run these from the repo root. The repo's `check:docs` script names the checks it takes, and CI runs
+Run these from the repo root. The repo's `check:docs` script lists the checks it takes, and CI runs
 the same ones.
 
 ```bash
