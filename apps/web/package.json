@@ -65,6 +65,7 @@
     "srvx": "catalog:",
     "three": "catalog:",
     "tiny-invariant": "catalog:",
+    "ts-pattern": "catalog:",
     "undici": "catalog:",
     "xstate": "catalog:",
     "zod": "catalog:"
