@@ -103,13 +103,13 @@ description is all the agent sees when it picks a skill, so say what the skill d
 it, in the words a task would use. Make the `name` match the name of the skill's folder.
 
 When several repos may use a skill, invent every example, and never use a term only one repo or team
-knows. A reader elsewhere can't open a file the example names, or doesn't know the word.
+knows. A reader elsewhere can't open a file in the example, or doesn't know the word.
 
 ## Point at the code, don't copy it
 
-When the skill names a file, a function or a setting, link the file, in a sentence that says what
-the code doesn't: a mistake to avoid, a reason or a choice. When someone renames the file,
-`chex links` fails.
+When you mention a file, a function or a setting, link the file, in a sentence that says what the
+code doesn't: a mistake to avoid, a reason or a choice. When someone renames the file, `chex links`
+fails.
 
 Four kinds of copy:
 

@@ -13,7 +13,7 @@ rule set and a project skill leave that opening out.
 - [A project skill](#a-project-skill) holds one repo's facts for a rule set from this skills repo,
   and the rules the repo replaces, such as project-testing beside testing.
 
-When a skill has a reply line, make it the last line. It starts with "**Reply:**" and names what the
+When a skill has a reply line, make it the last line. It starts with "**Reply:**" and gives what the
 agent hands back, such as "**Reply:** each risk with its proof".
 
 ## A machinery skill

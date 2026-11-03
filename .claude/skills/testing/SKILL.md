@@ -63,7 +63,7 @@ metadata:
 
 ## The test run
 
-- Reset shared state after each test in the test preload, the file that `bunfig.toml` names under
+- Reset shared state after each test in the test preload, the file that `bunfig.toml` lists under
   `[test] preload`. When you add module-level state, such as a cache, add its reset there.
 - Override an environment variable through the env helper in `test-utils/`, never by assigning
   `process.env`.
