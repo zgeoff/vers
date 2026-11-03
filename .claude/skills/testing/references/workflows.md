@@ -33,7 +33,7 @@ A step whose only key is `uses:` runs someone else's action. Write no test for i
 Read a workflow file in a test only to check it against data the repo keeps elsewhere, such as a CI
 matrix against the list of suites that a script defines. A change to one side then fails the test
 until the other side matches. Parse the file with `Bun.YAML.parse`, and assert with `toMatchObject`
-on the path to the value you check, so the test names no other job or key.
+on the path to the value you check, so the test holds no other job or key.
 
 A made-up repo lists its end-to-end suites in `scripts/e2e-suites.ts` and runs one matrix job per
 suite:

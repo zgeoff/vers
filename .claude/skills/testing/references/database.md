@@ -41,7 +41,7 @@ Pick one isolation level for each test file, and pass it to the helper:
   - uses database-wide state, such as advisory locks, `LISTEN`/`NOTIFY` or DDL statements;
   - opens its own connection, which you point at the clone.
 
-In a file that uses `clone`, add a comment that names the code that needs it, such as
+In a file that uses `clone`, name the code that needs it in a comment, such as
 `// claimJob commits the claim before it runs the job`.
 
 ## SQLite isolation
@@ -134,7 +134,7 @@ Give the tie its own test, with two rows that share the timestamp.
 
 ## Access rules
 
-In an access test, seed each user or role the rule names. In the test body, build the client each
+In an access test, seed each user or role the rule covers. In the test body, build the client each
 one calls through, such as an API client signed in as that user, or a connection as that Postgres
 role. Then write the tests that the [testing skill](../SKILL.md#access-rules) asks for: the allowed
 user succeeds, and the other is refused or sees nothing.

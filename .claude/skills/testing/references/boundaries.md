@@ -1,6 +1,6 @@
 # Boundaries
 
-Find the boundary your code talks to in this table, and give the test what the table names. Use the
+Find the boundary your code talks to in this table, and give the test what the table lists. Use the
 real thing wherever the table says so.
 
 | Boundary                                                            | The test uses                                                  |

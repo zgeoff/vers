@@ -194,9 +194,9 @@ test.each([
 ## A state no code in the module makes
 
 Some states come from no code in the repo, such as a row that an older version wrote before a column
-became required. Write such a row directly, only inside a seed, with a `//` comment that names the
-exact state. Give each such state its own seed, and add it to the module's `build<Record>Seeder`
-beside the others.
+became required. Write such a row directly, only inside a seed, and name the exact state in a `//`
+comment. Give each such state its own seed, and add it to the module's `build<Record>Seeder` beside
+the others.
 
 This seed writes the row itself, so it takes a partial of the table's insert shape, built with that
 shape's factory, in place of the create input:
