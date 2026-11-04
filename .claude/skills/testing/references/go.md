@@ -3,9 +3,9 @@
 Write Go tests with the standard `testing` runner. These sections of the testing skill apply to Go
 tests as they stand: [Principles](../SKILL.md#principles), [Test data](../SKILL.md#test-data),
 [Assertions](../SKILL.md#assertions), [Errors](../SKILL.md#errors),
-[Access rules](../SKILL.md#access-rules) and [Narrowing](../SKILL.md#narrowing). From
+[Access rules](./schemas-and-access.md#access-rules) and [Narrowing](../SKILL.md#narrowing). From
 [Test shape](../SKILL.md#test-shape), keep the titles and the one act per test. This file replaces
-the rest of it for Go. The Bun-only parts don't apply: `setupTest`, the test preload, the
+the rest of Test shape for Go. The Bun-only parts don't apply: `setupTest`, the test preload, the
 jest-extended matchers, lanes and the `bun test` flags.
 
 The mistakes to avoid:

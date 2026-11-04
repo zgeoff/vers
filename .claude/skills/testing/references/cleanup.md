@@ -1,17 +1,24 @@
 # Cleanup
 
-`onTestFinished` hooks run first-in, first-out, after every `afterEach` hook, the test preload's
-resets included. A disposable stack runs its callbacks last-in, first-out. A test that runs past its
-timeout still runs its cleanup. A run that something outside stops, such as a CI job timeout, an
-out-of-memory kill or Ctrl-C, runs none. For the common case, see [Cleanup](../SKILL.md#cleanup) in
-the testing skill.
+`onTestFinished` hooks run first-in, first-out, after every `afterEach` hook, the resets in the
+[test preload](#the-test-preload) included. An `AsyncDisposableStack` runs its callbacks last-in,
+first-out. A test that runs past its timeout still runs its cleanup. A run that something outside
+stops, such as a CI job timeout, an out-of-memory kill or Ctrl-C, runs none. For the common case,
+see [Cleanup](../SKILL.md#cleanup) in the testing skill.
 
+- [The test preload](#the-test-preload)
 - [Helpers that register cleanup](#helpers-that-register-cleanup)
 - [Ordered cleanup](#ordered-cleanup)
 - [Cleanup after the resets](#cleanup-after-the-resets)
 - [Concurrent tests](#concurrent-tests)
 - [A test that fails only in the full run](#a-test-that-fails-only-in-the-full-run)
 - [Leftovers of a killed run](#leftovers-of-a-killed-run)
+
+## The test preload
+
+- Put each reset of shared state in an `afterEach` hook in the test preload, the file that
+  `bunfig.toml` lists under `[test] preload`.
+- Start a shared resource, such as the MSW server, in the preload's `beforeAll`, never at import.
 
 ## Helpers that register cleanup
 
@@ -33,10 +40,10 @@ test('it removes its checkout when the test finishes', async () => {
 });
 ```
 
-When your hook reads a folder that the helper doesn't remove, such as a log folder, register that
-folder's removal after your hook. It then runs after your hook reads the folder.
+Say your proof hook reads a log folder that the helper keeps. Register the log folder's removal on
+the line after your hook. The removal then runs after the hook.
 
-Never assert outside the test body anywhere else.
+This proof hook is the one place to assert outside the test body.
 
 Skip the proof when the helper's cleanup only stops work that a passing test always waits for, such
 as a build that the test awaits.
@@ -82,8 +89,9 @@ async function setupTest() {
 
 ## Cleanup after the resets
 
-The test preload's resets remove every environment override before `onTestFinished` runs. So save
-each path when you create it, and use the saved value in cleanup:
+The test preload's resets undo every environment override, including each one your env helper made,
+before `onTestFinished` runs. So when you point `HOME` at a temp folder, keep the folder's path in a
+variable, and remove the folder through that variable:
 
 ```ts
 const home = await mkdtemp(join(tmpdir(), 'notes-home-'));
@@ -121,15 +129,16 @@ the leak until a later test fails on it.
 A killed run leaves behind the temp folders and database clones it made. On a host where `/tmp` or
 the database's data sits on tmpfs, each leftover holds RAM.
 
-Name each folder and database clone that a run makes after the PID of the test process that made it
-and its PID namespace, such as `pid4182-ns4026531836-`. On Linux, `/proc/self/ns/pid` links to
-`pid:[<namespace>]`. A sandbox with its own PID namespace can share the temp folder, and there the
-same PID belongs to another process.
+Start the name of each folder and database clone that a run makes with a prefix, such as
+`pid4182-ns4026531836-`. Build it from the PID of the test process that made it and that process's
+PID namespace. On Linux, `readlink /proc/self/ns/pid` prints `pid:[<namespace>]`. A sandbox with its
+own PID namespace can share the temp folder, and there the same PID belongs to another process.
 
 Then sweep at the start of each run, in the repo's test script before `bun test` starts, so the
 sweep runs once per run. Remove each leftover from the sweep's own namespace whose PID no longer
-runs, and never touch a leftover from another namespace. `process.kill(pid, 0)` throws when the
-process is gone. The sweep removes:
+runs, and never touch a leftover from another namespace. `process.kill(pid, 0)` throws `ESRCH` when
+the process is gone. Treat any other error, such as `EPERM` for another user's process, as a process
+that still runs. The sweep removes:
 
 - temp folders, such as a test's `HOME`;
 - the database clones that the test-database helper makes, as
