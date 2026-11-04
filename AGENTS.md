@@ -9,7 +9,7 @@ read the architecture doc for the subsystem in full before reasoning from its co
 | -------------------- | --------------------------------------------------------------------------------------------------------- |
 | `code-style`         | writing, reviewing, or renaming any TypeScript — the shared function-verb taxonomy                        |
 | `project-code-style` | the same, beside `code-style` — vers's own code rules, lint baselines, styling and client state           |
-| `ci-design`          | adding or changing a workflow, a job or a step — with `project-ci-design`                                 |
+| `ci-design`          | adding or changing a workflow, a job, a step or a dependency pin — with `project-ci-design`               |
 | `testing`            | designing, writing, or reviewing tests — with `project-testing`                                           |
 | `docs-writing`       | writing or editing any committed prose: `docs/`, READMEs, this file, skills — with `project-docs-writing` |
 | `game-lifecycle`     | any work in the activity, replay, or idle packages — the assumptions to drop and the state machines       |
@@ -74,12 +74,20 @@ Dependencies:
   for an external dependency and `"workspace:*"` for an internal one.
 - Pin exact versions, with no `^` or `~` ranges. `bun add` saves exact versions, so the rule covers
   hand-written edits.
-- A root override, an age-gate exclude in `bunfig.toml`, or an audit ignore stays only while it
-  changes the install. `bun run deps:check` runs in the PR checks and the weekly dependency-health
-  job. It fails on an exclude past the removal date in its comment, an override that every range in
-  `bun.lock` admits, and an audit ignore whose advisory is gone or has a fix in range. One
-  exception: an override that pins the catalog version keeps every copy on that version, so the
-  check keeps it.
+- When you add, change or remove a release-age exclude in `bunfig.toml`, or an override or an audit
+  ignore in the root `package.json`, follow the
+  [Dependency exceptions](.claude/skills/ci-design/SKILL.md#dependency-exceptions) rule in
+  ci-design.
+- Give every first-party package that `bun.lock` installs, such as `@zgeoff/std`, a release-age
+  exclude, by the [First-party packages](.claude/skills/ci-design/SKILL.md#first-party-packages)
+  rule in ci-design.
+- Run `bun run deps:check` where ci-design says `chex dependency-gates`. CI runs `deps:check` in the
+  PR checks and the weekly dependency-health job. Its results differ from `chex dependency-gates` in
+  these cases:
+  - `deps:check` fails on an audit ignore that `bun audit fix` can clear.
+  - `deps:check` passes an override that pins the catalog version, because that override holds every
+    copy on that version.
+  - `deps:check` passes a first-party package with no release-age exclude.
 - TypeScript is version 7, with no `baseUrl` and no path aliases, so write each import relative to
   the importing file.
 
