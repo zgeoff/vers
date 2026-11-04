@@ -1,14 +1,20 @@
+import { homedir } from 'node:os';
 import { define } from 'gunshi';
+import { match } from 'ts-pattern';
 import { z } from 'zod';
 import { buildKeyEvents } from '../qa/build-key-events';
+import { buildOfflineHoldPaths } from '../qa/build-offline-hold-paths';
 import { buildTargetSocketURL } from '../qa/build-target-socket-url';
 import { createCDPClient } from '../qa/create-cdp-client';
+import { createOfflineHold } from '../qa/create-offline-hold';
 import { formatConsoleEvent } from '../qa/format-console-event';
 import { formatProfileSummary } from '../qa/format-profile-summary';
 import { formatTargetTable } from '../qa/format-target-table';
 import { PAGE_HELPERS_SOURCE } from '../qa/page-helpers-source';
 import { QA_CDP_ARGS } from '../qa/qa-cdp-args';
 import { readDevToolsTargets } from '../qa/read-devtools-targets';
+import { readOfflineHold } from '../qa/read-offline-hold';
+import { removeOfflineHold } from '../qa/remove-offline-hold';
 import { resolveEndpoint } from '../qa/resolve-endpoint';
 import type { CDPClient } from '../qa/types';
 import { withBrowserClient } from '../qa/with-browser-client';
@@ -19,7 +25,6 @@ const LOAD_TIMEOUT_MS = 30_000;
 const SETTLE_AFTER_LOAD_MS = 500;
 const KEYSTROKE_GAP_MS = 30;
 const PAUSE_TIMEOUT_MS = 12_000;
-const OFFLINE_CONDITIONS = { downloadThroughput: -1, latency: 0, uploadThroughput: -1 };
 
 const targetsCommand = define({
   name: 'targets',
@@ -413,18 +418,24 @@ const consoleCommand = define({
 
 const offlineCommand = define({
   name: 'offline',
-  description: 'switch network emulation of a page or worker offline or online',
+  description: 'keep a page or worker offline until offline off, or bring it back online',
   args: QA_CDP_ARGS.offline,
   run: async (ctx) => {
     const targetID = ctx.values.target;
-    const offline = ctx.values.state === 'on';
+    const paths = buildOfflineHoldPaths(process.env['XDG_STATE_HOME'], homedir(), targetID);
 
-    await withTargetClient(readEndpoint(ctx.values.endpoint), targetID, async (target) => {
-      await target.send('Network.enable');
-      await target.send('Network.emulateNetworkConditions', { ...OFFLINE_CONDITIONS, offline });
+    await match(ctx.values.state)
+      .with('on', async () => {
+        const held = await readOfflineHold(paths);
 
-      console.log(`offline ${offline ? 'on' : 'off'}`);
-    });
+        if (held === undefined) {
+          await createOfflineHold(readEndpoint(ctx.values.endpoint), targetID, paths);
+        }
+      })
+      .with('off', () => removeOfflineHold(paths))
+      .exhaustive();
+
+    console.log(`offline ${ctx.values.state}`);
   },
 });
 

@@ -80,56 +80,61 @@ test('it refuses a start under a TMPDIR too long for Chromium', async () => {
   });
 });
 
-test('it stops the browser it launched when the state file cannot be written', async () => {
-  const ctx = await setupTest();
+// root writes through a read-only file mode, and no other file setup fails the write but not the
+// read, so the case runs only for another user, as it does on CI
+test.skipIf(process.getuid?.() === 0)(
+  'it stops the browser it launched when the state file cannot be written',
+  async () => {
+    const ctx = await setupTest();
 
-  const listener = Bun.listen({ hostname: '127.0.0.1', port: 0, socket: { data: () => {} } });
-  const port = listener.port;
+    const listener = Bun.listen({ hostname: '127.0.0.1', port: 0, socket: { data: () => {} } });
+    const port = listener.port;
 
-  listener.stop(true);
+    listener.stop(true);
 
-  const pidFile = join(ctx.stateHome, 'browser.pid');
-  const fakeBrowser = `Bun.serve({ hostname: '127.0.0.1', port: ${port}, fetch: () => Response.json({}) })`;
+    const pidFile = join(ctx.stateHome, 'browser.pid');
+    const fakeBrowser = `Bun.serve({ hostname: '127.0.0.1', port: ${port}, fetch: () => Response.json({}) })`;
 
-  const chromium = await createStubCommand(
-    'chromium',
-    `echo $$ > '${pidFile}'\nexec '${process.execPath}' -e "${fakeBrowser}"`,
-  );
+    const chromium = await createStubCommand(
+      'chromium',
+      `echo $$ > '${pidFile}'\nexec '${process.execPath}' -e "${fakeBrowser}"`,
+    );
 
-  const paths = buildChromePaths(ctx.stateHome, '/unused');
+    const paths = buildChromePaths(ctx.stateHome, '/unused');
 
-  await mkdir(paths.directory, { recursive: true });
+    await mkdir(paths.directory, { recursive: true });
 
-  await writeFile(
-    paths.stateFile,
-    JSON.stringify({ leaderPID: process.pid, leaderStartTime: 'stale', namespace: null, port }),
-    { mode: 0o444 },
-  );
+    await writeFile(
+      paths.stateFile,
+      JSON.stringify({ leaderPID: process.pid, leaderStartTime: 'stale', namespace: null, port }),
+      { mode: 0o444 },
+    );
 
-  const child = Bun.spawn([process.execPath, ctx.bin, 'start', '--port', String(port)], {
-    env: { PATH: dirname(chromium), TMPDIR: '/tmp', XDG_STATE_HOME: ctx.stateHome },
-    stderr: 'pipe',
-  });
+    const child = Bun.spawn([process.execPath, ctx.bin, 'start', '--port', String(port)], {
+      env: { PATH: dirname(chromium), TMPDIR: '/tmp', XDG_STATE_HOME: ctx.stateHome },
+      stderr: 'pipe',
+    });
 
-  const exitCode = await child.exited;
+    const exitCode = await child.exited;
 
-  const stderr = await new Response(child.stderr).text();
+    const stderr = await new Response(child.stderr).text();
 
-  const browserPIDText = await readFile(pidFile, 'utf8');
+    const browserPIDText = await readFile(pidFile, 'utf8');
 
-  const browserPID = Number(browserPIDText);
+    const browserPID = Number(browserPIDText);
 
-  onTestFinished(() => removeProcessGroup(browserPID, 0));
+    onTestFinished(() => removeProcessGroup(browserPID, 0));
 
-  const browserStartTime = await readProcessStartTime(browserPID);
+    const browserStartTime = await readProcessStartTime(browserPID);
 
-  expect({ exitCode, stderr }).toStrictEqual({
-    exitCode: 1,
-    stderr: `qa-chrome: EACCES: permission denied, open '${paths.stateFile}'\n`,
-  });
+    expect({ exitCode, stderr }).toStrictEqual({
+      exitCode: 1,
+      stderr: `qa-chrome: EACCES: permission denied, open '${paths.stateFile}'\n`,
+    });
 
-  expect(browserStartTime).toBeUndefined();
-});
+    expect(browserStartTime).toBeUndefined();
+  },
+);
 
 test('it refuses a stop when no browser runs', async () => {
   const ctx = await setupTest();

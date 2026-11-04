@@ -27,6 +27,16 @@ export interface CDPClient {
   readonly waitFor: (method: string, timeoutMS?: number) => Promise<unknown>;
 }
 
+export interface OfflineHold {
+  readonly pid: number;
+  readonly startTime: string;
+}
+
+export interface OfflineHoldPaths {
+  readonly directory: string;
+  readonly stateFile: string;
+}
+
 export type CaptureEvent =
   | { readonly kind: 'attached'; readonly targetID: string }
   | { readonly kind: 'body'; readonly body: string; readonly url: string }
