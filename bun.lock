@@ -1458,7 +1458,7 @@
     "@zgeoff/format-codemod": "0.3.5",
     "@zgeoff/mcp-remote": "0.1.38",
     "@zgeoff/oxlint-config": "0.8.1",
-    "@zgeoff/skill-gate": "0.2.15",
+    "@zgeoff/skill-gate": "0.2.19",
     "@zgeoff/umami-mcp": "0.1.0",
     "autoprefixer": "10.6.2",
     "babel-plugin-react-compiler": "1.0.0",
@@ -3038,7 +3038,7 @@
 
     "@zag-js/utils": ["@zag-js/utils@1.45.0", "", {}, "sha512-LyeGfTEojjhDcajCCGxvjrgFuPoMia1HKefdP6KqvJpC78+1awahBoZpYYZlbab2WPawgCaprcDevBJFlOe6Ag=="],
 
-    "@zgeoff/agent-hooks": ["@zgeoff/agent-hooks@0.1.5", "", { "bin": { "agent-hooks": "dist/cli.js" } }, "sha512-O6BGhYqQvwkxnLzIZWMQHhozRvxq3S407oh8MPlAhUI0Pw0hfB789a1lu/QPfxUg1/dgRtNjgrg364o+c1u9cQ=="],
+    "@zgeoff/agent-hooks": ["@zgeoff/agent-hooks@0.2.3", "", { "bin": { "agent-hooks": "dist/cli.js" } }, "sha512-yg4STSYyLtiFS9rWJUxXJuU6a3+ibUYqlangMsZDno/ZJSAADxV3dt81+kNpc7LAWUrkYQwShZ9uAuaEEMvs2w=="],
 
     "@zgeoff/bugsink-mcp": ["@zgeoff/bugsink-mcp@0.2.0", "", { "dependencies": { "@modelcontextprotocol/sdk": "^1.0.0" }, "peerDependencies": { "zod": "^3.25.0" }, "bin": { "bugsink-mcp": "dist/index.js" } }, "sha512-frOYmUHkNbvI7+9ib1btG3qiqr3Hu4tM30fIjwzXwIbSJCJwLhkG6bLHy5WWlezi95Lf2Fmg6kHQnDGtSIjNaQ=="],
 
@@ -3052,7 +3052,7 @@
 
     "@zgeoff/oxlint-config": ["@zgeoff/oxlint-config@0.8.1", "", { "dependencies": { "@stylistic/eslint-plugin": "5.10.0" }, "peerDependencies": { "oxlint": ">=1.78.0" } }, "sha512-hSQHWbEMuiUFLTJdog0JA6RaiTXg30fUttxAMsZMFiwvkXxbsWufOqH0R3T4ku2w031s/AkhWZ5ZKPqsSce/bQ=="],
 
-    "@zgeoff/skill-gate": ["@zgeoff/skill-gate@0.2.15", "", { "dependencies": { "@zgeoff/agent-hooks": "0.1.5" } }, "sha512-SxoReaR+N2YgplaENePsAdl8GfJPdakdhHrvzlkyycvMF8nIhhwx4bOLOrHANWW+0QgpQCLgDP904PBWJ77P4Q=="],
+    "@zgeoff/skill-gate": ["@zgeoff/skill-gate@0.2.19", "", { "dependencies": { "@zgeoff/agent-hooks": "0.2.3" } }, "sha512-r04itCLxsdvUx7thggMaFx34bRYfULmi3BsJ64EhymR88zs3D34yO6rJUIrVFFvLcomYOIr9Jny+j/xAqattfA=="],
 
     "@zgeoff/umami-mcp": ["@zgeoff/umami-mcp@0.1.0", "", { "dependencies": { "@modelcontextprotocol/sdk": "1.29.0", "zod": "3.25.76" }, "bin": { "umami-mcp": "dist/index.js" } }, "sha512-+GhMmBw3SFA4EGKU6HiXj0+MoFsEFNga9vpd0KLLbrn4nDDbBbmgb0bzFe7iG68i1z2oEfvzJt5wUZStoLWZ2g=="],
 
