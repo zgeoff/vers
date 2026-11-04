@@ -67,11 +67,33 @@ metadata:
 
 - Send data between processes or packages through the repo's typed interface: its RPC layer, a
   shared schema, or its CLI parser. Never match a route, parse a body or read arguments by hand.
-- Split a function that does I/O and branches on what it reads in two: a pure function that decides,
-  and a thin one that acts.
+- Split a function in two when it reads something, branches on what it read, and then writes,
+  removes or runs something:
+  - a pure function that takes the values read and returns what to do. Give it a verb from a no-I/O
+    row of the [verb table](#function-names), such as `collect` or `pick`, so the
+    `zgeoff/verb-contract` rule in `@zgeoff/oxlint-config` keeps I/O out of it;
+  - a thin function that does the reads, calls the pure one, and acts on its result. Give it the I/O
+    verb that fits, such as `run`, `write` or `remove`, and no decision of its own.
+- Write the pure function first, from the values you will read, then the thin one around it. You
+  then test each edge case with one `test.each` row of plain data. In one combined function, each
+  case needs a stand-in for every read and write, so the edges go untested.
+- Reach I/O through dependencies the caller passes in. Create real clients only in the entry point.
 - Never write a wrapper that only passes its arguments on.
 - Never add an option, a parameter or an extension point before a caller passes it.
-- Reach I/O through dependencies the caller passes in. Build real clients only in the entry point.
+
+```ts
+export function collectDueReminders(tasks: readonly Task[], now: number): Task[] {
+  return tasks.filter((task) => task.dueAt < now && task.remindedAt === null);
+}
+
+export async function runReminders(dependencies: ReminderDependencies): Promise<void> {
+  const tasks = await dependencies.db.readOpenTasks();
+
+  for (const task of collectDueReminders(tasks, dependencies.clock.now())) {
+    await dependencies.mail.writeReminder(task.owner, task.id);
+  }
+}
+```
 
 ## Errors and logs
 
