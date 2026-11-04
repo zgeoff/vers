@@ -12,6 +12,8 @@ metadata:
 
 # CI design
 
+## Workflow lint
+
 After you change a workflow, run `bun x @zgeoff/chex workflows` and fix every warning. CI stays
 green on a warning.
 
@@ -19,66 +21,69 @@ green on a warning.
 
 Call [`bun-checks.yml`](https://github.com/zgeoff/tools/blob/main/.github/workflows/bun-checks.yml)
 from zgeoff/tools in the repo's CI workflow, pinned as [Reusable workflows](#reusable-workflows)
-says. Make its `checks` job a required check. GitHub lists it as `<your job> / checks`.
+says. Make its `checks` job a required check. GitHub lists it as `<your job> / checks`. In a public
+repo, it fails when any other job fails.
 
-Add CI work as a package script, so `bun-checks.yml` runs it:
+Add CI work as a package script. `bun-checks.yml` runs `audit`, `deadcode`, `format:check`, `lint`,
+`typecheck` and `test`, then the script of each [lane](../testing/references/slow-tests.md#lanes)
+the repo defines: `test:e2e`, `test:browser`, `test:docker`, `test:host`, `test:agent-sdk` and
+`test:crash`, from `laneNames` in
+[`plan-check-scripts.ts`](https://github.com/zgeoff/tools/blob/main/packages/chex/src/ci-plan/plan-check-scripts.ts).
+In a private repo, it runs every script in `checks`: GitHub bills each job at least a minute. In a
+public repo, each lane script runs in its own `test-<lane>` job, such as `test-e2e`. `test` and each
+other `test:<name>` script run in one `test` job. Every other script runs in one `static` job.
 
-- It runs `audit`, `deadcode`, `format:check`, `lint`, `typecheck` and `test`, then each of
-  `test:e2e`, `test:browser`, `test:docker` and `test:host` that the repo defines.
-- To run another script, set the repo variable `BUN_CHECK_SCRIPTS` to every script to run, separated
-  by spaces. It replaces the list above, so list those scripts too.
-- In a private repo, it runs every script as a step of the one `checks` job, because GitHub bills
-  each job at least a minute. In a public repo, it runs the tests in their own jobs.
+To run a script outside that list, set the repo variable `BUN_CHECK_SCRIPTS` to every script to run,
+separated by spaces, such as `lint test test:e2e build`. It replaces the list, so name each listed
+script you keep. Name only scripts in `package.json`: any other name fails the run.
 
-Look up the repo's test budget in the Facts table of its project-ci-design skill. The budget is the
-median time the CI tests take on a run that restores no `actions/cache` entry: the slowest test job
-in a public repo, and the sum of the test steps in a private one. When the repo has no budget, skip
-each rule below that uses one.
+Look up the repo's test budget in the Facts table of its project-ci-design skill. The budget limits
+the median CI test time over recent runs that restored no `actions/cache` entry. Take each run's
+slowest `test` or `test-<lane>` job in a public repo, and the sum of its test steps in a private
+one. When the repo has no budget, skip each rule below that uses one.
 
 - In a public repo, write a job of your own only when it saves 60 s of wall time over a script in
-  `bun-checks.yml`. Shard tests only when the repo is still over its test budget.
+  `bun-checks.yml`. Shard tests only when the repo is over its test budget.
 - In a private repo, write a job of your own only for a heavy check: one on any runner but a
-  GitHub-hosted `ubuntu-*`, or one that sets up KVM. Run it on `schedule` or `workflow_dispatch`,
-  because GitHub bills its minutes on every push to a pull request. Never make it a required check.
-- When you make a job of your own a required check, make it always run. GitHub counts a skipped
-  required check as a pass.
+  GitHub-hosted `ubuntu-*`, or one that sets up KVM. Run it on `schedule` or `workflow_dispatch`, as
+  GitHub bills its minutes on every push to a pull request. Never make it a required check.
+- When you make a job of your own a required check, give it no `if:` or path filter that can skip
+  it. GitHub counts a skipped required check as a pass.
 
 ## Timeouts
 
 Set `timeout-minutes` on every job that runs steps. GitHub refuses the key on a job that calls a
-reusable workflow, such as the `changes` job under [Path filters](#path-filters), so the called
-workflow sets its own timeouts. Set the timeout of `bun-checks.yml` with the repo variable
-`BUN_CHECK_TIMEOUT_MINUTES`. In the repo's CI workflow, pass that variable to the `timeout-minutes`
-input of `bun-checks.yml`:
+reusable workflow, so the called workflow sets its own. Set the timeout of `bun-checks.yml` with the
+repo variable `BUN_CHECK_TIMEOUT_MINUTES`, and pass it to the workflow's `timeout-minutes` input:
 `timeout-minutes: ${{ fromJSON(vars.BUN_CHECK_TIMEOUT_MINUTES || '20') }}` under `with:`.
 
-Set the timeout to 20 minutes while the repo has no test budget, and until its tests have stayed
-within the budget for a week. Then set the timeout to twice the budget, plus the job's median time
-outside its tests, and at least 5 minutes. Read the median from the job's recent runs in the Actions
-tab. For a job with no tests, use twice its median time.
+Until the repo has a test budget and its tests have stayed within it for a week, set the timeout to
+20 minutes. Then set it to twice the budget plus the job's median time outside its tests. For a job
+with no tests, use twice its median time. Use at least 5 minutes. Read each median from recent runs.
+In a public repo, one timeout covers every job: use the slowest test job's figures.
 
 ## Reusable workflows
 
 Share steps as a reusable workflow. A composite action's failure shows as one red line, with no step
-to point at. Check zgeoff/tools for a shared one before you write setup steps by hand. When you add
-the call, pin it to the latest commit on `main`:
+to point at. Before you write setup steps, check zgeoff/tools for a shared one. When you add the
+call, pin it to the latest commit on `main`:
 
 ```yaml
 uses: zgeoff/tools/.github/workflows/<name>.yml@<commit> # main
 ```
 
-After that, never move the pin by hand. repo-sync in zgeoff/tools opens a pull request in each repo,
-and that pull request moves the pin to the new commit.
+After that, never move the pin by hand.
+[repo-sync](https://github.com/zgeoff/tools/blob/main/docs/architecture/repo-sync.md) in
+zgeoff/tools opens a pull request in each repo that moves the pin to the new commit.
 
 ## Step scripts
 
 Keep each `run:` to one plain command, such as `run: bun run --silent ci:tag-release`, with no `if`,
 loop, `&&`, `||`, `;`, pipe or `${{ }}`. Pass an expression's value through `env:`.
 
-Write the script a step runs in TypeScript, in a folder of `scripts/` named for its job, such as
-`scripts/release/tag-release.ts`. Run it through a package script, so the step stays one plain
-command. Keep it out of `.github/`, because `bun test` skips hidden folders and never runs its
-tests.
+Write the script a step runs in TypeScript, in a folder of `scripts/` named for the job that runs
+it, such as `scripts/release/tag-release.ts` for a `release` job. Run it through a package script.
+Keep it out of `.github/`: `bun test` skips hidden folders.
 
 ## Path filters
 
@@ -103,7 +108,8 @@ jobs:
 
 ## Cancelling runs
 
-- In a checks workflow, cancel the older run when a newer commit arrives:
+- Run the checks of a push to `main` in their own workflow, so no later push cancels them. In the
+  pull-request workflow, cancel the older run when a newer commit arrives:
 
 ```yaml
 concurrency:
@@ -114,9 +120,8 @@ concurrency:
 - Never cancel a release, deploy or migrate job, because a deploy cut off halfway leaves its target
   half changed. Give it a job-level group, such as `deploy-${{ github.ref }}`, with
   `cancel-in-progress: false`. When the checks share that workflow, move their group to job level
-  too. A workflow-level group cancels every job in the run, the deploy included.
+  too. Then GitHub cancels only the checks, never the deploy.
 - In a workflow that runs only on `main`, group by `github.sha`, with `cancel-in-progress: false`.
-  Each commit then gets its own group, and no later push cancels its run.
 
 ## Builds
 
@@ -129,8 +134,7 @@ concurrency:
 
 ## Merging and `workflow_run`
 
-Don't require a branch to be up to date before merge. The push run on `main` already tests the
-merged tree.
+Don't require a branch to be up to date before merge. The push run on `main` tests the merged tree.
 
 A `workflow_run` trigger takes a `branches:` filter, but a fork's `main` matches it. When the job
 holds a secret or write access, check the event and the repo too:
@@ -143,21 +147,20 @@ if: >-
 
 ## First-party packages
 
-Add each package under `@zgeoff/`, `@impz/`, `@wringer/` or `@heynixie/` to the
-`minimumReleaseAgeExcludes` list in `bunfig.toml`, by its full name, such as `@zgeoff/std`. These
-are the scopes in
-[`first-party-scopes.ts`](https://github.com/zgeoff/tools/blob/main/packages/chex/src/dependency-gates/first-party-scopes.ts).
-`minimumReleaseAge` in the same file makes `bun install` refuse each release younger than that age,
-and an excluded package skips that wait. Renovate bumps these packages as soon as they publish, so
-each new release fails to install without an exclude. A repo that sets no `minimumReleaseAge` skips
-this section.
+In a repo that sets no `minimumReleaseAge`, skip this section. `minimumReleaseAge` in `bunfig.toml`
+makes `bun install` refuse each release younger than that age. Renovate bumps first-party packages
+on publish, so without an exclude each new release fails to install. Add each package under a scope
+that
+[`first-party-scopes.ts`](https://github.com/zgeoff/tools/blob/main/packages/chex/src/dependency-gates/first-party-scopes.ts)
+lists to the `minimumReleaseAgeExcludes` list in `bunfig.toml`, by its full name, such as
+`@zgeoff/std`.
 
-- Exclude each one the lock file installs, even one that only another package depends on.
+- Exclude each one the lock file installs, even one only another package depends on.
   `chex dependency-gates` lists each one that has no exclude.
 - Never write a scope, such as `@zgeoff/*`. Bun accepts a scope entry with no warning, and the entry
   lets no package through.
-- Never put a dated removal comment above a first-party exclude. The audit-fix workflow deletes an
-  exclude on the date in that comment.
+- Never put a [dated removal comment](#dependency-exceptions) above a first-party exclude. The
+  audit-fix workflow deletes an exclude on the date in that comment.
 - Add a missing exclude in its own pull request on `main`, because Renovate rebuilds its own branch
   and drops your commit. After it merges, tick the rebase checkbox in each red Renovate pull
   request.
@@ -165,16 +168,16 @@ this section.
 ## Dependency exceptions
 
 For any other package, add an exception only for a named reason, such as a fix the repo needs. If an
-older release works, pin the newest one that is older than `minimumReleaseAge`, and add no
-exception. An exception is one of these:
+older release works, pin the newest one older than `minimumReleaseAge`, and add no exception. Add
+the exception as one of these:
 
-- A release-age exclude: the package's name in `minimumReleaseAgeExcludes`, for one exact version
-  that the catalog or the override pins.
-- An override: an entry in the `overrides` of `package.json`, pinned to one exact version. It needs
-  no comment.
-- An audit ignore: an `--ignore` flag on the `audit` script in `package.json`, for one advisory ID.
-  Give it an entry in the root `audit-ignores.json`, keyed by that advisory ID, with its `package`,
-  its `reason` and an ISO `expires` date, so the audit-fix workflow audits it again.
+- For a release-age exclude, put the package's name in `minimumReleaseAgeExcludes`, and pin it to
+  one exact version in the root `package.json` catalog or an override.
+- For an override, add an entry to the `overrides` of `package.json`, pinned to one exact version,
+  with no comment.
+- For an audit ignore, add an `--ignore` flag for one advisory ID to the `audit` script in
+  `package.json`. Key an entry in the root `audit-ignores.json` by that ID, with its `package`,
+  `reason` and ISO `expires` date, the day the audit-fix workflow audits the advisory again.
 
 Before you add a release-age exclude, check that the release has npm provenance:
 
@@ -182,22 +185,23 @@ Before you add a release-age exclude, check that the release has npm provenance:
 npm view <package>@<version> dist.attestations.provenance
 ```
 
-If it prints nothing, the release has no provenance. Don't exclude it: pin an older release, or wait
-until this one is older than `minimumReleaseAge`.
+If it prints nothing, don't exclude the release: pin an older one, or wait until it passes
+`minimumReleaseAge`.
 
-Above a release-age exclude, add the dated removal comment that the
-[audit-fix workflow](https://github.com/zgeoff/tools/blob/main/.github/workflows/audit-fix.yml)
-writes. Give the date the release passes `minimumReleaseAge`. Keep the comment's wording as it is,
-"ages past the gate" included, because the audit-fix workflow and the check match it exactly:
+When you add a release-age exclude, write a dated removal comment above it, in the form below. Give
+the date the release passes `minimumReleaseAge`. Keep the wording exactly, "ages past the gate"
+included, because the
+[audit-fix workflow](https://github.com/zgeoff/tools/blob/main/.github/workflows/audit-fix.yml) and
+`chex dependency-gates` match it:
 
 ```toml
 # @scope/example 2.4.1 (published 2026-10-30) ages past the gate ~2026-11-06 — remove then
 ```
 
-`chex dependency-gates` runs in `bun-checks.yml`. It fails on each of these:
+`chex dependency-gates` in `bun-checks.yml` fails the run when you break one of these:
 
-- A release-age exclude past its date, or with no removal comment. A first-party exclude passes with
-  no comment.
-- A first-party package with no exclude.
-- An override that changes nothing, because every locked version already meets it.
-- An audit ignore that no locked package needs.
+- Never leave a release-age exclude past its date, or with no removal comment. Leave a first-party
+  exclude without a comment.
+- Never leave a first-party package with no exclude.
+- Never keep an override that every locked version meets. It changes nothing.
+- Never keep an audit ignore that no locked package needs.
