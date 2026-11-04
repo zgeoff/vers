@@ -7,14 +7,15 @@ query-builder edge cases are the defects these tests catch, and a reimplementati
 in-memory SQLite database (`:memory:`) is the real engine.
 
 Give each test a database whose rows no other test sees, and pass its connection into the code under
-test. When the code opens its own connection, it reaches a database the test doesn't isolate. Follow
-the testing skill's rules on [setupTest](../SKILL.md#setuptest), [Cleanup](../SKILL.md#cleanup) and
+test. When the code opens its own connection, point that connection at the test's database, as
+[Postgres isolation](#postgres-isolation) and [SQLite isolation](#sqlite-isolation) say. Follow the
+testing skill's rules on [setupTest](../SKILL.md#setuptest), [Cleanup](../SKILL.md#cleanup) and
 [Test data](../SKILL.md#test-data) here too.
 
 - [Postgres isolation](#postgres-isolation)
 - [SQLite isolation](#sqlite-isolation)
 - [Booting a service](#booting-a-service)
-- [Persisted test data](#persisted-test-data)
+- [Seeding rows](#seeding-rows)
 - [Reading results back](#reading-results-back)
 - [Timestamps and order](#timestamps-and-order)
 - [Access rules](#access-rules)
@@ -23,15 +24,18 @@ the testing skill's rules on [setupTest](../SKILL.md#setuptest), [Cleanup](../SK
 
 ## Postgres isolation
 
-In `setupTest()`, get a handle from the repo's test-database helper in `src/test-utils/`, and pass
-the handle's connection to the code under test. The helper builds the schema once per run as a
-template, as [Per-run templates](./slow-tests.md#per-run-templates) describes. Never drop its
-databases yourself: the sweep at the start of each run removes the ones that earlier runs left.
+In `setupTest()`, get a test database from the repo's test-database helper in `src/test-utils/`, and
+pass its connection to the code under test. The helper builds the schema once per run as a template,
+as [Per-run templates](./slow-tests.md#per-run-templates) describes. Never drop the helper's
+databases yourself. At the start of each run, the sweep in
+[Leftovers of a killed run](./cleanup.md#leftovers-of-a-killed-run) removes the ones that earlier
+runs left.
 
-Pick one isolation level for each test file, and pass it to the helper:
+Pick one isolation mode for each test file, and pass it to the helper. These modes are the helper's,
+not Postgres transaction isolation levels such as `SERIALIZABLE`:
 
-- Use `transaction` by default. Each test runs in one transaction on its worker's copy of the
-  template, and the helper rolls it back after the test.
+- Use `transaction` by default. Each test runs in one transaction on a copy of the template that
+  belongs to its test runner worker process, and the helper rolls it back after the test.
 - Use `clone` when the code does one of these. Each test then gets its own copy of the template,
   which the helper drops after the test:
   - commits;
@@ -46,51 +50,51 @@ In a file that uses `clone`, name the code that needs it in a comment, such as
 
 ## SQLite isolation
 
-Give each test a copy of a migrated template file. A fresh database pays for every migration in
-every test.
+Give each test a copy of a migrated template file, so no test spends its time on migrations.
 
 The test-database helper migrates the template once per run. Before any test copies the template,
-the helper closes it or checkpoints its write-ahead log. A copy of the main file alone misses the
-changes that are still in the log, migrations included. When you write such a helper, do the same.
+the helper closes its connection to the template or checkpoints the template's write-ahead log. When
+you copy the main file alone, the copy misses the changes that are still in the log, migrations
+included. When you write such a helper, do the same.
 
 Choose how the test gets its copy:
 
 - When the code opens its own connection by path, or the test depends on file behaviour, such as a
   read-only connection or write-ahead logging, copy the file into the test's `mkdtemp` tree.
-- When the code takes the database handle as an argument, load the template's bytes into an
-  in-memory database with `Database.deserialize` from `bun:sqlite`.
+- When the code takes the connection as an argument, load the template's bytes into an in-memory
+  database with `Database.deserialize` from `bun:sqlite`.
 
-Open SQLite with `synchronous = off` in the helper. A test never needs its writes to survive a power
-loss, and a sync on each commit costs time. In a test of what survives a crash, use production's
-setting.
+Open SQLite with `synchronous = off` in the helper. Your tests never need their writes to survive a
+power loss, and a sync on each commit costs time. In a test of what survives a crash, use
+production's setting.
 
 ## Booting a service
 
 Give a service one function that builds it, such as `createNotesService({ db })`, and call it from
-the production entrypoint and from every test. In a test, pass in only the I/O the testing skill's
-[Boundaries](../SKILL.md#boundaries) lets you replace, such as the database and the clock. Never
-copy the service's configuration into a test's setup, because a copy drifts from production.
+the production entrypoint and from every test. In a test, pass in only the I/O that you may replace
+under the testing skill's [Boundaries](../SKILL.md#boundaries) rules, such as the database and the
+clock. Never copy the service's configuration into a test's setup. The copy drifts from production.
 
-In `setupTest()`, build the database handle and boot the service through that function. Create no
-data there, as in the [testing skill](../SKILL.md#setuptest). When a service refuses to start until
-its data exists, boot it in the test body, after the test creates that data.
+In `setupTest()`, get the test database and boot the service through that function. Create no data
+there, as in the [testing skill](../SKILL.md#setuptest). When the service refuses to start until its
+data exists, boot it in the test body, after the test creates that data.
 
-## Persisted test data
+## Seeding rows
 
-Outside the module that writes the table, seed rows through that module's seeds, never with your own
-insert, as in [Stored state](../SKILL.md#stored-state). To write a seed, see
-[Seeding](./seeding.md).
+In a test outside the module that creates a table's rows, seed those rows through that module's
+seeds, never with your own insert, as in [Stored state](../SKILL.md#stored-state). In the module's
+own tests, and to write a seed, follow [Seeding](./seeding.md).
 
 ## Reading results back
 
-Outside the module that writes the table, read a row back through that module's read function, as in
-[Stored state](../SKILL.md#stored-state). In the module's own test, query its table directly. With
-Kysely, read a row that must exist with `executeTakeFirstOrThrow()`, and select only the column
-under test when only that column matters. Assert absence with `executeTakeFirst()` and
+In a test outside the module that creates a table's rows, read a row back through that module's read
+function, as in [Stored state](../SKILL.md#stored-state). In the module's own test, query its table
+directly. With Kysely, read a row that must exist with `executeTakeFirstOrThrow()`, and select only
+the column under test when only that column matters. Assert absence with `executeTakeFirst()` and
 `toBeUndefined()`.
 
 ```ts
-// archive-note.test.ts, in the module that writes the notes table
+// archive-note.test.ts, in the module that creates notes
 await archiveNote(ctx.db, note.id, ctx.clock.now());
 
 const row = await ctx.db
@@ -102,9 +106,9 @@ const row = await ctx.db
 expect(row.archived_at).toBeValidDate();
 ```
 
-A rejected call can still be rolling back its transaction when the test moves on. When the test
-reads the database after a call it expects to reject, settle the call with `.catch()` first, then
-assert the rejection with the rules in the testing skill's [Errors](../SKILL.md#errors) and in
+Before you read the database after a call you expect to reject, settle the call with `.catch()`.
+Until the call settles, its transaction can still be rolling back, and your read races the rollback.
+Then assert the rejection with the rules in the testing skill's [Errors](../SKILL.md#errors) and in
 [Matchers](./matchers.md), then read:
 
 ```ts
@@ -114,15 +118,13 @@ await request.catch(() => {});
 
 expect(request).rejects.toMatchObject({ code: 'NOT_FOUND' });
 
-const row = await ctx.db.selectFrom('notes').selectAll().executeTakeFirst();
-
-expect(row).toBeUndefined();
+expect(await ctx.service.listNotes()).toStrictEqual([]);
 ```
 
 To test how code recovers after several calls fail, such as a job that gives up after its third
 failed run, make the calls one after another in one test. Turn each outcome into a value: `null`
-when the call resolves, and the error when it rejects. A rejection left as a rejection stops the
-test at the first failed call. Then read the stored state, and assert the outcomes and the state:
+when the call resolves, and the error when it rejects. When you leave a rejection as it is, the test
+stops at the first failed call. Then read the stored state, and assert the outcomes and the state:
 
 ```ts
 const runJobOnce = () =>
@@ -144,9 +146,9 @@ expect(job.status).toBe('failed');
 
 ## Timestamps and order
 
-Pass explicit, distinct timestamps when a test asserts an order, or a winner, among rows. Timestamps
-that a `buildMock<Type>` factory fills from the JavaScript clock can share a millisecond. Under
-`transaction` isolation, Postgres also pins `now()` to the start of the transaction, so every
+When a test asserts an order, or a winner, among rows, pass explicit, distinct timestamps.
+Timestamps that a `buildMock<Type>` factory fills from the JavaScript clock can share a millisecond.
+Under `transaction` isolation, Postgres also pins `now()` to the start of the transaction, so every
 timestamp the database fills in within one test is the same.
 
 When callers of a production query ordered by a timestamp need a stable result, add a tiebreaker to
@@ -156,15 +158,19 @@ Give the tie its own test, with two rows that share the timestamp.
 ## Access rules
 
 In an access test, seed each user or role the rule covers. In the test body, build the client each
-one calls through, such as an API client signed in as that user, or a connection as that Postgres
-role. Then write the tests in [Access rules](./schemas-and-access.md#access-rules): the allowed user
-succeeds, and each other user or role is refused or sees nothing.
+one calls through, such as an API client signed in as that user, or the test's connection switched
+to that Postgres role. Then write the tests that
+[Access rules](./schemas-and-access.md#access-rules) lists.
+
+To test as a Postgres role under `transaction` isolation, run `SET LOCAL ROLE` on the test's
+connection, with one role per test. Never open a second connection as the role: it can't see the
+rows the test seeded, because the test's transaction never commits them.
 
 ## Configuration stored in the database
 
 When a service reads its configuration from a table, seed the configuration rows through the seeds
-of the module that writes the table, and let the real query pick the row that applies. Never stub
-the configuration read. Which row wins, such as the most specific match, is the behaviour under
+of the module that creates the table's rows, and let the real query pick the row that applies. Never
+stub the configuration read. Which row wins, such as the most specific match, is the behaviour under
 test.
 
 ## SQL built from identifiers

@@ -26,9 +26,16 @@ AWS SDK v3 client. Give that client a stand-in `send`.
   - `mock()`;
   - a no-op;
   - a map from input to answer;
-  - the answer-queue helper in `src/test-utils/`.
+  - an answer queue.
+- For a sequence of answers, call `makeAnswerQueue([first, second])` from
+  [`@zgeoff/testing/helpers`](https://github.com/zgeoff/tools/tree/main/packages/testing), and pass
+  the function it returns as the stand-in. Each call gives the next answer, and a call past the last
+  answer throws.
 - Never chain `mockReturnValueOnce` or `mockResolvedValueOnce`. A call past the last answer in the
-  chain returns the default silently. The answer-queue helper throws instead.
+  chain returns the default silently.
+- When the code polls until a deadline, you can't know how many calls it makes. Use
+  `makeRepeatingAnswerQueue` from the same package. It gives the last answer again once the answers
+  run out.
 - Put each stand-in in `src/test-utils/`, and name the file for what it does:
   - `start-stub-<thing>.ts` starts a process or a server that keeps running;
   - `create-stub-<thing>.ts` creates a resource on disk or in a service;
@@ -56,7 +63,7 @@ returns the error, or a conflicting row. When no real failure reaches the branch
 
 To test how code recovers after several calls fail, turn each call's rejection into a value with
 `.then(() => null, (error: unknown) => error)`. Then assert the list of errors and the final state
-in the same test. A rejection left as a rejection stops the test at the first failed call.
+in the same test. When you leave a rejection as it is, the test stops at the first failed call.
 
 ## Module mocks
 

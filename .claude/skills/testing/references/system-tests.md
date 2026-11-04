@@ -1,8 +1,9 @@
 # System tests
 
 Never sleep to let a service settle. Wait on a condition. Never overwrite, truncate, mount or delete
-a host resource that this run didn't create. Never mark a Rust lane test with `#[ignore]`: no lane
-runs an ignored test, and nothing reports that it stopped running.
+a host resource that this run didn't create. Never put `#[ignore]` on a Rust test that belongs in a
+[lane](./slow-tests.md#lanes). Every lane skips an ignored test, and nothing reports that the test
+stopped running.
 
 These rules add to the [testing skill](../SKILL.md). They cover where each kind of test lives, a
 test that runs a whole program, a browser or a VM, and a test that touches something the whole host
@@ -67,7 +68,8 @@ program from outside. Start each file name with a prefix from [E2e prefixes](#e2
    [Programs in e2e tests](https://github.com/zgeoff/tools/blob/main/docs/guides/e2e-programs.md),
    in the rig docs, explains each key.
 2. In the test, call `resolveProgram(name)` from `@zgeoff/rig/e2e`, where `name` is the program's
-   key under `programs`. It returns `{ command, cwd }`. Never write the command in the test.
+   key under `programs`. It returns a promise of `{ command, cwd }`. Never write the command in the
+   test.
 3. Pass `command` and `cwd` to one helper from
    [`@zgeoff/testing`](https://github.com/zgeoff/tools/tree/main/packages/testing). Call it
    directly, or write a helper in `src/test-utils/` when several files repeat the same options:
@@ -82,8 +84,8 @@ program from outside. Start each file name with a prefix from [E2e prefixes](#e2
      program in a pseudo-terminal.
 4. Run the lane with `bun run test:e2e`. `rig e2e` builds each program once, and `resolveProgram`
    gives the command that runs the built file. When you run one `e2e/` file with `bun test` on your
-   machine, it gives the command that runs the source. In CI, it throws when nothing built the
-   program.
+   machine, `resolveProgram` gives the command that runs the source. In CI, `resolveProgram` throws
+   when nothing built the program.
 
 This test needs no `setupTest`, because `await using` stops the program:
 
@@ -136,10 +138,11 @@ own. Inside an `e2e/` test, you may chain acts, and assert after each one, becau
 the state that the act before it left. Outside `e2e/`, a test still has one act.
 
 - To share a slow host or service, such as a VM or a database container, across the `e2e/` tests,
-  bring it up in the e2e lane's setup hook, the module that the lane's `start` key in
-  `rig.config.ts` names ([rig](https://github.com/zgeoff/tools/tree/main/packages/rig)), and take it
-  down in the lane's teardown hook, its `stop` key. rig runs both hooks once per lane run, outside
-  the test files.
+  bring it up in the e2e lane's setup hook, and take it down in the lane's teardown hook. Each hook
+  is a module that the lane names in `rig.config.ts`: the setup hook under its `start` key, and the
+  teardown hook under its `stop` key
+  ([rig](https://github.com/zgeoff/tools/tree/main/packages/rig)). rig runs both hooks once per lane
+  run, outside the test files.
 - Return the address the tests need, such as a connection string, in the `environment` object that
   the setup hook returns. rig adds each entry to the environment of the lane's test process.
 - Never start a shared host or service in the `[test] preload` of `bunfig.toml`. Every unit run
@@ -154,12 +157,13 @@ the state that the act before it left. Outside `e2e/`, a test still has one act.
 ## Real applications and transport
 
 Test a client that the repo ships, such as a CLI or an SDK, against the real service from the same
-repo. Give each test data that only it uses. Use a stand-in only for a system that the test can't
-run, such as a VM, the kernel or a remote service.
+repo. Give each test its own data, which no other test uses. Use a stand-in only for a system that
+the test can't run, such as a VM, the kernel or a remote service.
 
-In the unit run, call the service in the test's process, as
-[the cause table](./slow-tests.md#causes-and-fixes) says. When the client runs as a child process,
-start the service on a real port, so the child reaches it, and put the test in `e2e/`.
+In the unit run, call the service in the test's process, such as through its request handler or an
+in-memory RPC link, as [the cause table](./slow-tests.md#causes-and-fixes) says. When the client
+runs as a child process, start the service on a real port, so the child reaches it, and put the test
+in `e2e/`.
 
 For a remote HTTP service, use MSW, as in [Boundaries](../SKILL.md#boundaries). Write a stand-in
 server on a real socket only when MSW can't intercept the call, such as:
@@ -257,7 +261,7 @@ the type checker and the linter check it.
   lane's `build:browser` script. Replace a fixed wait with a wait for the element or the event.
   Split a test of a whole user flow into a test per component or page.
 - Test navigation across the web app's routes in a browser suite.
-- Give each browser helper of the repo's own, such as one that opens a view, its own test file.
+- Give each browser helper that the repo writes, such as one that opens a view, its own test file.
 - Keep every test that needs no page out of a browser suite, so it runs in the fast unit run.
 
 ## Native timers and scenario delays
@@ -269,9 +273,9 @@ Find which kind of timer your test waits on, then follow the rules under its hea
 - Set the timer, such as a server's idle timeout, through its real setting, to the shortest value
   that still behaves like the real one. When the runtime reads the setting only at start-up, start a
   child process for this test alone, with the setting.
-- Check that the timer fires. Add a second test that stops whatever keeps the operation inside the
-  timeout, such as a keep-alive ping, and checks that the timeout then ends the operation. A test
-  that only sets a short value never sees the timer fire.
+- Check that the timer fires. A keep-alive, such as a ping, resets the timer, so a test that only
+  sets a short value never sees it fire. Add a second test that stops the keep-alive and checks that
+  the timeout then ends the operation.
 - Test the default value in its own test. Wait out the real default only when the runtime has no
   shorter setting that behaves the same. Wait for the timeout's event with `waitFor`, and keep the
   test in the unit run with the disable comment from
@@ -299,10 +303,10 @@ the time in as an argument or an injected clock, in the order
 ### Delays in a scenario
 
 You may use a real delay to set the rate of an end-to-end workload or the offset of a seeded fault.
-Name the rate or the fault in a comment, and keep the seed. To claim that a fault lands in the
-middle of an operation, assert the order of the operation's start, the fault and the operation's
-end, from events the code emits. Check both the fault and the recovery. Use a fixed wait only when
-the elapsed time is part of the contract.
+Name the rate or the fault in a comment. When a random seed picks the fault's offset, keep that seed
+in the code. To claim that a fault lands in the middle of an operation, assert the order of the
+operation's start, the fault and the operation's end, from events the code emits. Check both the
+fault and the recovery. Use a fixed wait only when the elapsed time is part of the contract.
 
 ## Property tests
 
@@ -347,14 +351,14 @@ these files:
 When the scoring runs offline, make the test replay the corpus through the production path and
 compare the result with `report.json`. When the scoring needs a live model, the test can't replay
 it: make the test build the parts of the report that the code decides, and compare those. A test
-that passes on a stale report checks nothing.
+that only reads `report.json` passes after the code changes and the report goes stale.
 
 - Read the committed corpus or report through one tested loader. Never copy its cases into the test
   as literals.
 - Keep an evaluation's helpers in `src/test-utils/`. Put measurement code that several packages use,
   such as a confidence interval or a report writer, in a package of its own that exports it.
-- Use a stand-in only for what a recording can't reproduce, such as the disk or the code host's API,
-  and inject it into the production path.
+- Use a stand-in only for what a recording can't reproduce, such as the disk or the API of a code
+  host like GitHub, and inject it into the production path.
 - Keep a test that calls a live API out of `evals/`, such as a test that pins how a model SDK
   behaves. Give it the `.model-api` suffix, beside its module, as [Lanes](./slow-tests.md#lanes)
   describes.
@@ -395,9 +399,9 @@ export default defineBench({
 
 ## Golden tests
 
-Use only inline snapshots, never of a component, and only for machine output that no person writes
-by hand, such as generated SQL. Check a hand-written value, such as a spec test vector, with an
-explicit matcher.
+Use a snapshot only for machine output that no person writes by hand, such as generated SQL. Make it
+an inline snapshot, and never snapshot a component. Check a hand-written value, such as a spec test
+vector, with an explicit matcher.
 
 For any pipeline whose output depends only on its input, write a golden test and a determinism test,
 beside the pipeline's module:
@@ -422,7 +426,7 @@ point, name the program or the spec that fixes it in a comment.
 - Give a resource that the whole machine shares a name that sets this run apart, the way `mkdtemp`
   does.
 - Before you overwrite, truncate, mount or delete a resource, check that this run created it, such
-  as from a list the run keeps of what it made. A generated name alone proves nothing.
+  as from a list the run keeps of what it made. Never trust a generated name alone.
 - Register cleanup right after you acquire a resource, and release only what this run acquired. Make
   the cleanup safe to run after a partial failure, an interrupt, or a shutdown that already released
   the resource.
@@ -454,5 +458,5 @@ slow-timeout = { period = "60s", terminate-after = 1 }
   `slow-timeout`. A profile takes every setting it doesn't set from `default`. Run the lane with
   `cargo nextest run --profile <lane>`.
 - Give a test over its limit an override in its profile, with a comment that gives the time it takes
-  on CI and a ticket, or `floor:` and its evidence, as
+  on CI and a ticket, or `floor:` and the evidence that the time can't drop, as
   [A test over its limit](./slow-tests.md#a-test-over-its-limit) says.

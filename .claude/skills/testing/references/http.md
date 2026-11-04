@@ -24,7 +24,7 @@ process, see [Real applications and transport](./system-tests.md#real-applicatio
 ## The server and its lifecycle
 
 Build one MSW server per test process, and export it as `server` from a `mocks/node.ts` file that
-the test preload imports:
+the [test preload](./cleanup.md#the-test-preload) imports:
 
 - Import `defineNetwork`, `InterceptorSource` and `HttpNetworkFrame` from `msw/experimental`, and
   `FetchInterceptor` from `@mswjs/interceptors/fetch/web`.
@@ -39,7 +39,8 @@ and `server.disable()` in `afterAll`. Never call `enable()` when the module load
 
 Choose what happens to a request that no handler matches:
 
-- By default, pass `onUnhandledFrame: 'error'`. The request rejects, and MSW prints its URL.
+- Pass `onUnhandledFrame: 'error'`, unless the next bullet applies. The request rejects, and MSW
+  prints its URL.
 - When a suite sends real requests to a server it started on the loopback interface, pass a
   callback. Return for a loopback host, so the request goes through. For any other host, call
   `defaults.error()` to print the URL, then throw. `defaults.error()` only prints, and the throw
@@ -90,27 +91,37 @@ collections and call the client. Clear every collection in the test preload afte
   `/notes/:noteID`. MSW matches handlers in registration order, so the sibling would match first.
   Say in a comment above the handler array that the order is deliberate.
 
-For a small lookup, such as an HTTP status per probe URL, you may use a `Map` that the test preload
-clears. For a side effect with no record behind it, such as a sent email, export an array, such as
-`sentEmails`, from the handler module, and clear it in the test preload. Export the array, the URL
-constant and the resolver function separately, so a test can wrap or replace each one. Put records,
-their writes and their relationships in collections.
+For a small lookup, such as an HTTP status for each health-check URL, you may use a `Map` that the
+test preload clears. For a side effect with no record behind it, such as a sent email, export an
+array, such as `sentEmails`, from the handler module, and clear it in the test preload.
 
-Never call `mock()` in a handler module. A dev server that loads the module has no test runner.
+Keep records, their writes and their relationships in collections. Use a `Map` or an array only for
+these two cases.
+
+Export each part of a side-effect handler on its own, so a test can wrap or replace it:
+
+- the array;
+- the base URL constant that the handler's route starts with, such as `NOTES_API_URL`;
+- the resolver function that builds the response.
+
+Never call `mock()` in a handler module. A dev server or a story can load the module too, in a
+runtime that can't import `bun:test`.
 
 ## Per-test handlers
 
 Add a handler with `server.use(...)` in a test only for one of these:
 
 - an outcome the collections can't reach, such as a 503, a transport failure or a malformed payload;
-- a sequence, such as a 503 and then a success: take each answer from the answer-queue helper in
-  `src/test-utils/`;
+- a sequence, such as a 503 and then a success: build
+  `const answer = makeAnswerQueue([unavailable, ok])` from `@zgeoff/testing/helpers`, where each
+  answer is an `HttpResponse`, and return `answer()` from the handler. `answer()` throws on a
+  request past the last answer, as [Stand-ins](./boundaries.md#stand-ins) says;
 - input you capture: call an inline `mock()` from the handler, and assert it with the mock matchers.
 
 Keep logic out of a per-test handler. Return a fixed response, or one looked up by one request
 parameter. Put any other response that depends on the request in the default handlers, and never
-re-implement the service's success path in a test. A handler that captures input may still return
-the fixed success response the client needs:
+re-implement the service's success path in a test. When you capture input in a handler, you may
+still return the fixed success response the client needs:
 
 ```ts
 const received = mock<(input: unknown) => void>();
@@ -134,9 +145,10 @@ When several packages in one repo call the same service, put its collections and
 workspace package. Give that package no test-runner dependency, so a dev server or a story can load
 it too. Add its handler list to the one server of each test process that uses it.
 
-Export a `reset()` function from the package that clears every collection, and call it from the test
-preload after each test. Clear a collection whose records reference another collection before the
-one it references, and say in a comment that the order is deliberate.
+In that package, export a `reset()` function that clears every collection, and call it from the test
+preload after each test. In `reset()`, clear a collection whose records reference another collection
+before the one it references, so no record points at a record already cleared. Say in a comment that
+the order is deliberate.
 
 ## RPC contracts
 
@@ -144,7 +156,7 @@ For an oRPC contract module, write these tests:
 
 1. For each procedure, list in the test the error codes you expect, and assert with
    `toContainAllKeys` that the procedure's error map holds them.
-2. Assert the HTTP status of each custom error code.
+2. Assert the HTTP status of each error code that the contract defines.
 3. When the repo commits, serves or publishes an OpenAPI document built from the contract, add a
    test that builds it with `OpenAPIGenerator` from `@orpc/openapi`, with the same
    `schemaConverters` the repo uses. When the repo commits the document, compare the result with the
@@ -154,14 +166,14 @@ For an oRPC contract module, write these tests:
 ## Queues and other stateful services
 
 Put a queue, a pub/sub topic or a job service behind a thin wrapper of your own, and inject the
-wrapper into the code. When the service has an emulator that behaves like the real one, run the
-emulator instead.
+wrapper into the code.
 
-In a test, build the real wrapper, and pass it an in-memory stand-in for the vendor's client. The
-code that decides what to enqueue, and when, then runs for real. Give the stand-in state a test can
-read: enqueue through the real code, then inspect, drain or advance what the stand-in holds. A stub
-that only records a call can't show what was enqueued or what the receiver does with it. Clear the
-stand-in's state in the test preload.
+In a test, build the real wrapper, and pass it an in-memory stand-in for the vendor's client. When
+the service has an emulator that behaves like the real one, point the wrapper at the emulator in
+place of the stand-in. The code that decides what to enqueue, and when, then runs for real. Give the
+stand-in state a test can read: enqueue through the real code, then inspect, drain or advance what
+the stand-in holds. A stub that only records a call can't show what was enqueued or what the
+receiver does with it. Clear the stand-in's state in the test preload.
 
 ## Auth tokens
 
