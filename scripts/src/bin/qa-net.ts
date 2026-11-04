@@ -14,22 +14,22 @@ import { readNamespaceRoutes } from '../qa-chrome/read-namespace-routes';
 import { runInNamespace } from '../qa-chrome/run-in-namespace';
 import { STATE_LOCK_WAIT_MS } from '../qa-chrome/state-lock-wait-ms';
 import type { ChromeNamespace, ChromeState } from '../qa-chrome/types';
-import { withChromeStateLock } from '../qa-chrome/with-chrome-state-lock';
 import { writeChromeState } from '../qa-chrome/write-chrome-state';
 import { runCommandLine } from '../utils/run-command-line';
+import { withFileLock } from '../utils/with-file-lock';
 
 const paths = buildChromePaths(process.env['XDG_STATE_HOME'], homedir());
 
 const cutCommand = define({
   name: 'cut',
   description: "take the browser namespace's network interface down",
-  run: () => withChromeStateLock(paths, STATE_LOCK_WAIT_MS, cutNetwork),
+  run: () => withFileLock(paths.lockFile, STATE_LOCK_WAIT_MS, cutNetwork),
 });
 
 const restoreCommand = define({
   name: 'restore',
   description: 'bring the interface and its saved routes back',
-  run: () => withChromeStateLock(paths, STATE_LOCK_WAIT_MS, restoreNetwork),
+  run: () => withFileLock(paths.lockFile, STATE_LOCK_WAIT_MS, restoreNetwork),
 });
 
 const statusCommand = define({

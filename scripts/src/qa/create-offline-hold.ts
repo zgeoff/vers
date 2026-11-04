@@ -29,26 +29,27 @@ export async function createOfflineHold(
 
   try {
     await waitForHoldReady(child);
+
+    const startTime = await readProcessStartTime(groupID);
+
+    invariant(startTime !== undefined, 'a hold that reported ready is a live process');
+
+    const hold = { pid: groupID, startTime };
+
+    await mkdir(paths.directory, { recursive: true });
+    await writeFile(paths.stateFile, `${JSON.stringify(hold)}\n`);
+
+    return hold;
   } catch (error) {
+    // a hold that no state file records is one that offline off can never stop
     await removeProcessGroup(groupID, STOP_GRACE_MS);
 
     throw error;
+  } finally {
+    child.stdout.destroy();
+    child.stderr.destroy();
+    child.unref();
   }
-
-  child.stdout.destroy();
-  child.stderr.destroy();
-  child.unref();
-
-  const startTime = await readProcessStartTime(groupID);
-
-  invariant(startTime !== undefined, 'a hold that reported ready is a live process');
-
-  const hold = { pid: groupID, startTime };
-
-  await mkdir(paths.directory, { recursive: true });
-  await writeFile(paths.stateFile, `${JSON.stringify(hold)}\n`);
-
-  return hold;
 }
 
 const READY_TIMEOUT_MS = 30_000;

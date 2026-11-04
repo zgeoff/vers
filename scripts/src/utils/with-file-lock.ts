@@ -1,19 +1,19 @@
 import { FFIType, dlopen } from 'bun:ffi';
 import { mkdir, open } from 'node:fs/promises';
-import type { ChromePaths } from './types';
+import { dirname } from 'node:path';
 
-export async function withChromeStateLock<T>(
-  paths: ChromePaths,
+export async function withFileLock<T>(
+  lockFile: string,
   waitMs: number,
   run: () => Promise<T>,
 ): Promise<T> {
-  await mkdir(paths.directory, { recursive: true });
+  await mkdir(dirname(lockFile), { recursive: true });
 
-  const handle = await open(paths.lockFile, 'a');
+  const handle = await open(lockFile, 'a');
 
   // the kernel drops a flock when its descriptor closes, including when the process dies
   try {
-    await waitForLock(handle.fd, paths.lockFile, waitMs);
+    await waitForLock(handle.fd, lockFile, waitMs);
 
     return await run();
   } finally {
@@ -39,9 +39,7 @@ async function waitForLock(descriptor: number, lockFile: string, waitMs: number)
       }
 
       if (Date.now() > deadline) {
-        throw new Error(
-          `another qa:chrome or qa:net command still holds ${lockFile} after ${waitMs} ms`,
-        );
+        throw new Error(`another command still holds ${lockFile} after ${waitMs} ms`);
       }
 
       await Bun.sleep(POLL_INTERVAL_MS);

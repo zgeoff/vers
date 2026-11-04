@@ -20,11 +20,13 @@ import type { CDPClient } from '../qa/types';
 import { withBrowserClient } from '../qa/with-browser-client';
 import { withTargetClient } from '../qa/with-target-client';
 import { runCommandLine } from '../utils/run-command-line';
+import { withFileLock } from '../utils/with-file-lock';
 
 const LOAD_TIMEOUT_MS = 30_000;
 const SETTLE_AFTER_LOAD_MS = 500;
 const KEYSTROKE_GAP_MS = 30;
 const PAUSE_TIMEOUT_MS = 12_000;
+const HOLD_LOCK_WAIT_MS = 60_000;
 
 const targetsCommand = define({
   name: 'targets',
@@ -424,16 +426,18 @@ const offlineCommand = define({
     const targetID = ctx.values.target;
     const paths = buildOfflineHoldPaths(process.env['XDG_STATE_HOME'], homedir(), targetID);
 
-    await match(ctx.values.state)
-      .with('on', async () => {
-        const held = await readOfflineHold(paths);
+    await withFileLock(paths.lockFile, HOLD_LOCK_WAIT_MS, () =>
+      match(ctx.values.state)
+        .with('on', async () => {
+          const held = await readOfflineHold(paths);
 
-        if (held === undefined) {
-          await createOfflineHold(readEndpoint(ctx.values.endpoint), targetID, paths);
-        }
-      })
-      .with('off', () => removeOfflineHold(paths))
-      .exhaustive();
+          if (held === undefined) {
+            await createOfflineHold(readEndpoint(ctx.values.endpoint), targetID, paths);
+          }
+        })
+        .with('off', () => removeOfflineHold(paths))
+        .exhaustive(),
+    );
 
     console.log(`offline ${ctx.values.state}`);
   },

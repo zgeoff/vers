@@ -8,6 +8,7 @@ export function buildOfflineHoldPaths(
   targetID: string,
 ): OfflineHoldPaths {
   const directory = join(buildStateHome(xdgStateHome, home), 'vers', 'qa-cdp', 'offline');
+  const fileStem = join(directory, encodeURIComponent(targetID));
 
-  return { directory, stateFile: join(directory, `${encodeURIComponent(targetID)}.json`) };
+  return { directory, lockFile: `${fileStem}.lock`, stateFile: `${fileStem}.json` };
 }

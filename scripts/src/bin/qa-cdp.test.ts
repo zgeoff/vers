@@ -58,13 +58,16 @@ test('it brings a held target back online on offline off', async () => {
   });
 });
 
-test('it keeps one hold when offline on runs twice, so one offline off ends the cut', async () => {
+test('it keeps one hold when two offline on runs overlap, so one offline off ends the cut', async () => {
   const ctx = await setupTest();
 
   ctx.devtools.openTarget({ id: 'SERVICE1', type: 'service_worker' });
 
-  await ctx.runQACDP(['offline', 'SERVICE1', 'on']);
-  await ctx.runQACDP(['offline', 'SERVICE1', 'on']);
+  await Promise.all([
+    ctx.runQACDP(['offline', 'SERVICE1', 'on']),
+    ctx.runQACDP(['offline', 'SERVICE1', 'on']),
+  ]);
+
   await ctx.runQACDP(['offline', 'SERVICE1', 'off']);
 
   await waitFor(() => {
