@@ -62,7 +62,7 @@ jobs:
 
       - uses: pulumi/actions@8e5e406f4007fca908480587cb9893c07090f58d # v7.0.0
         with:
-          pulumi-version: 3.272.0
+          pulumi-version: 3.273.0
 
       # main's tip when the job holds the queue, never the event's base: a queued run or a rerun
       # would preview an older program and report a deploy that landed since as drift
