@@ -4,10 +4,11 @@ Never sleep to let a service settle. Wait on a condition. Never overwrite, trunc
 a host resource that this run didn't create. Never mark a Rust lane test with `#[ignore]`: no lane
 runs an ignored test, and nothing reports that it stopped running.
 
-These rules add to the [testing skill](../SKILL.md). They cover a test that runs a whole program, a
-browser or a VM, and a test that touches something the whole host shares, such as a kernel timer or
-a fixed path.
+These rules add to the [testing skill](../SKILL.md). They cover where each kind of test lives, a
+test that runs a whole program, a browser or a VM, and a test that touches something the whole host
+shares, such as a kernel timer or a fixed path.
 
+- [Package layout](#package-layout)
 - [End-to-end suites](#end-to-end-suites)
 - [Real applications and transport](#real-applications-and-transport)
 - [Stateful stand-ins](#stateful-stand-ins)
@@ -19,6 +20,40 @@ a fixed path.
 - [Golden tests](#golden-tests)
 - [Program-fixed paths and global resources](#program-fixed-paths-and-global-resources)
 - [Rust lanes](#rust-lanes)
+
+## Package layout
+
+Lay out each package like this made-up one:
+
+```text
+packages/ledger/
+├── package.json                    exports "./test-utils/*"
+├── src/
+│   ├── record-payment.ts
+│   ├── record-payment.test.ts      unit test, beside its module
+│   ├── record-payment.bench.ts     benchmark of one module
+│   ├── render-pdf.browser.test.ts  unit test in the browser lane
+│   └── test-utils/
+│       ├── start-ledger.ts         helper, with its own test
+│       └── start-ledger.test.ts
+├── e2e/
+│   ├── start-ready.test.ts         the built program, run as a process
+│   ├── journey-checkout.test.ts
+│   └── fixtures/                   inputs that aren't code, such as a Dockerfile
+├── evals/
+│   └── categorise/                 one folder per evaluation
+└── bench/
+    └── import-statement.bench.ts   benchmark of the running program
+```
+
+Export `./test-utils/*` from `package.json`, so other packages' tests import the helpers.
+
+| The test                                                                                                                       | Put it                                                                                                             |
+| ------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
+| starts a program that `rig.config.ts` declares for [rig](https://github.com/zgeoff/tools/tree/main/packages/rig), as a process | in `e2e/` of the package that builds the program, named with a prefix from [End-to-end suites](#end-to-end-suites) |
+| scores a corpus                                                                                                                | in `evals/<name>/` of the package whose code it scores, as [Evaluation suites](#evaluation-suites) shows           |
+| measures a running program                                                                                                     | in `bench/` of the package that builds the program, as [Benchmarks](#benchmarks) shows                             |
+| does anything else                                                                                                             | beside the module or script it tests                                                                               |
 
 ## End-to-end suites
 
