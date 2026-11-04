@@ -26,7 +26,7 @@
     "msw": "catalog:"
   },
   "devDependencies": {
-    "@opentelemetry/sdk-trace-node": "catalog:",
+    "@opentelemetry/sdk-trace": "catalog:",
     "@types/bun": "catalog:",
     "@types/node": "catalog:",
     "@zgeoff/bun-test-extended": "catalog:",
