@@ -1,5 +1,6 @@
 import { define } from 'gunshi';
 import { ENDPOINT_ARG } from '../qa/endpoint-arg';
+import { readSaveConfirmation } from '../qa/read-save-confirmation';
 import { withTargetClient } from '../qa/with-target-client';
 import { runCommandLine } from '../utils/run-command-line';
 
@@ -37,8 +38,20 @@ const entry = define({
       // stays open until the hold stops
       console.log(`held ${targetID}`);
 
-      await Promise.race([target.closed, stopped.promise]);
+      // a parent that dies before it saves the state file leaves offline off nothing to find, so
+      // the hold ends unless the parent confirms the save before it closes stdin
+      const isSaved = await Promise.race([
+        readSaveConfirmation(process.stdin),
+        target.closed.then(() => false),
+        stopped.promise.then(() => false),
+      ]);
+
+      if (isSaved) {
+        await Promise.race([target.closed, stopped.promise]);
+      }
     });
+
+    process.stdin.destroy();
   },
 });
 

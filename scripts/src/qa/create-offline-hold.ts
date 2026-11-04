@@ -2,11 +2,12 @@ import { spawn } from 'node:child_process';
 import type { ChildProcessByStdio } from 'node:child_process';
 import { mkdir, rename, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { Readable } from 'node:stream';
+import type { Readable, Writable } from 'node:stream';
 import invariant from 'tiny-invariant';
 import { readProcessStartTime } from '../qa-chrome/read-process-start-time';
 import { removeProcessGroup } from '../qa-chrome/remove-process-group';
 import { STOP_GRACE_MS } from '../qa-chrome/stop-grace-ms';
+import { HOLD_SAVED_LINE } from './constants';
 import type { OfflineHold, OfflineHoldPaths } from './types';
 
 const HOLD_ENTRYPOINT = join(import.meta.dir, '..', 'bin', 'qa-cdp-offline-hold.ts');
@@ -20,7 +21,7 @@ export async function createOfflineHold(
   // removal signals as one
   const child = spawn(process.execPath, [HOLD_ENTRYPOINT, '--endpoint', endpoint, targetID], {
     detached: true,
-    stdio: ['ignore', 'pipe', 'pipe'],
+    stdio: ['pipe', 'pipe', 'pipe'],
   });
 
   const groupID = child.pid;
@@ -37,6 +38,7 @@ export async function createOfflineHold(
     const hold = { pid: groupID, startTime };
 
     await writeHoldState(paths, hold);
+    await writeSaveConfirmation(child.stdin);
 
     return hold;
   } catch (error) {
@@ -45,6 +47,7 @@ export async function createOfflineHold(
 
     throw error;
   } finally {
+    child.stdin.destroy();
     child.stdout.destroy();
     child.stderr.destroy();
     child.unref();
@@ -53,7 +56,7 @@ export async function createOfflineHold(
 
 const READY_TIMEOUT_MS = 30_000;
 
-async function waitForHoldReady(child: ChildProcessByStdio<null, Readable, Readable>) {
+async function waitForHoldReady(child: ChildProcessByStdio<Writable, Readable, Readable>) {
   const ready = Promise.withResolvers<void>();
   let stdout = '';
   let stderr = '';
@@ -105,4 +108,13 @@ async function writeHoldState(paths: OfflineHoldPaths, hold: OfflineHold): Promi
 
     throw error;
   }
+}
+
+async function writeSaveConfirmation(stdin: Writable): Promise<void> {
+  const written = Promise.withResolvers<void>();
+
+  stdin.once('error', written.reject);
+  stdin.end(`${HOLD_SAVED_LINE}\n`, written.resolve);
+
+  await written.promise;
 }
