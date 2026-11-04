@@ -21,11 +21,9 @@ So give it what the code can't:
 Link the code instead of copying it: a copy goes stale without the agent knowing. Keep the skill
 short, or the agent skims.
 
-When you write or edit one, hand back the skill's path and its proof: the [check](#check-it) output,
-each [cold-read](../cold-read/SKILL.md) finding with how you answered it, and what
-[deslop](../deslop/SKILL.md) changed. Put the proof in the PR description, and link the PR in your
-reply. With no PR, put the proof in your reply. When you review one, hand back each finding with its
-line and the rule it breaks, quoted.
+When you write or edit one, hand back the skill's path and the proof that step 4 of
+[Check it](#check-it) lists. Link the PR in your reply. With no PR, put the proof in your reply.
+When you review one, hand back each finding with its line and the rule it breaks, quoted.
 
 ## Key rules
 
@@ -33,8 +31,8 @@ line and the rule it breaks, quoted.
   rhetoric.
 - [Open with the job and the key rules](#open-with-the-job-and-the-key-rules): the same opening in
   every skill but a rule set.
-- [What goes in](#what-goes-in): the parts each kind of skill needs, a description that says when to
-  load it, and invented examples in a skill that several repos use.
+- [What goes in](#what-goes-in): the parts of each kind of skill, a description that says when to
+  load it, and invented examples.
 - [Point at the code, don't copy it](#point-at-the-code-dont-copy-it): link the file and say what
   the code can't.
 - [Keep it short and true](#keep-it-short-and-true): under the word limit, with rules and no
@@ -46,6 +44,8 @@ line and the rule it breaks, quoted.
 
 - [Kinds of skill](./references/skill-kinds.md): writing a new skill, a rule set or a project skill,
   or adding a command, a mistake to avoid, a step or a reply line to any skill.
+- [Writing a reference](./references/writing-references.md): writing or editing a file in a skill's
+  `references/`, a subagent's brief included.
 
 ## Write it plainly
 
@@ -56,8 +56,6 @@ The agent copies how you write as well as what you say.
   foresee. "MUST" and "CRITICAL" give it no reason to work from, and agents over-apply them.
 - **Make a person or the agent the subject.** "Add a mistake only if…", never "a mistake earns its
   place". A thing as the actor hides who does the work.
-- **Use the plain name.** Don't coin a label and then define it ("the owner is the module that…").
-  Say the plain thing each time.
 - **Keep short lines short.** "Slow, but right." Don't pad a blunt line with an explanation, a
   qualifier or tidier grammar. The padding is what reads as machine-written.
 - **Cut the rhetoric.** No "X is not the job. The job is Y", no aphorisms, no drama words
@@ -89,10 +87,6 @@ Keep a rule's detail in its section, and change its key rules line when you chan
 Shape a rule set, such as a code style, as [A rule set](./references/skill-kinds.md#a-rule-set)
 says. It holds rules the agent applies during other work, so it has no job to open with.
 
-Open a reference with the facts and the mistakes to avoid, never with when to open it. What to hand
-back stays in SKILL.md, unless the reference is a subagent's brief: then it gives that subagent's
-return format.
-
 ## What goes in
 
 For the parts of a skill that covers a repo's tools, teaches a way of working or is a project skill,
@@ -111,19 +105,17 @@ When you mention a file, a function or a setting, link the file, in a sentence t
 code doesn't: a mistake to avoid, a reason or a choice. When someone renames the file, `chex links`
 fails.
 
-Four kinds of copy:
-
-- **A list of members,** one row per file, function or option. Instead, give the rule that defines
+- **Replace a list of members,** one row per file, function or option, with the rule that defines
   the list and the search that finds it: "each stand-in is a `build-stub-*` file in `test-utils/`;
   search there before you write one". A table of commands is fine: each row says what the command
   needs to run.
-- **A retelling.** "The script builds, tags, pushes, then rolls out" goes stale with the script.
-  Keep the fact the agent acts on ("a failed push leaves the old version serving") and link the
-  script.
-- **A quote.** A copied error message teaches the old text once the code changes. Quote only when
-  the exact words are the point. Otherwise invent the example.
-- **A line anchor.** `#L42` points at the wrong line after the next edit. `chex skill` fails on one,
-  so link the file and name what to look for in it.
+- **Replace a retelling,** such as "the script builds, tags, pushes, then rolls out", with the fact
+  the agent acts on, such as "a failed push leaves the old version serving", and link the script.
+  The retelling goes stale with the script.
+- **Quote only when the exact words are the point.** A copied error message teaches the old text
+  once the code changes. Otherwise invent the example.
+- **Never link a line anchor.** `#L42` points at the wrong line after the next edit. `chex skill`
+  fails on one, so link the file and name what to look for in it.
 
 When a review asks for one of these copies, decline it and name this section.
 
@@ -135,23 +127,13 @@ skill the session loaded, and the limit keeps the whole skill inside that. When 
 first, then move what only some tasks need into a reference. In a rule set, keep every rule the
 common task needs in SKILL.md, and move only the rest.
 
-In a file in `references/`, link to a heading in another such file with a Markdown link, such as
-`[Lanes](./slow-tests.md#lanes)`, so `chex links` fails when someone renames the heading. Keep such
-links few: an agent may read only part of a file it reached through another reference. Put a fact
-that most tasks need in SKILL.md.
-
-In a reference the main agent opens, use the terms SKILL.md sets up without explaining them again:
-the agent reads SKILL.md first. In a reference that is a subagent's brief, define every term you
-use, because the subagent never sees SKILL.md.
-
 Write the rule. The incident, the issue ID and the date go in the PR.
 
 When a script or a lint can check a rule, delete the prose and say which check runs. In a rule set,
-keep a short bullet for a rule the lint enforces, so the agent writes it right the first time. Put a
-mechanical step in a script in the skill's `scripts/` folder, with a test beside it that the repo's
-test command runs. Tell the agent to run the script, not read it.
+keep a short bullet for the rule too, as [A rule set](./references/skill-kinds.md#a-rule-set) says.
+Put a mechanical step in a script, as [Kinds of skill](./references/skill-kinds.md) says.
 
-When an agent gets something wrong, fix the rule that should have caught it. A near-copy of the rule
+When an agent gets something wrong, fix the rule that covers the mistake. A near-copy of the rule
 leaves the agent unsure which one to follow. Call each thing by one name: the agent reads a second
 word as a second thing.
 
@@ -171,14 +153,14 @@ Leave out anything time-bound, like "until the next release": it goes false unno
    sentence and which check. The check may be wrong.
 
 2. Run the `deslop` skill on each section you wrote or changed.
-3. Run the `cold-read` skill on each file of the skill you wrote or changed. Follow it to the end:
-   one cold read, your fixes, then one more cold read of each file you changed.
+3. Run the `cold-read` skill on each file of the skill you wrote or changed. When you fix what it
+   finds, give each changed file one more cold read, and stop.
 4. Run the checks again, and give the proof in the PR description of the skill change. Add these as
    `##` headings, after the sections of the repo's PR template:
    - **Skill checks:** the full output of the last check run, in a code block.
    - **Cold read:** each finding from every cold read, and how you answered it: fixed, declined with
      the reason, or reported as a gap in the rules.
-   - **Deslop:** each change deslop made, as a `diff` block, or "none".
+   - **Deslop:** each change you made with deslop, as a `diff` block, or "none".
 
-**Reply:** for a skill you wrote or edited, its path and its proof; for a review, each finding with
-its line and the quoted rule.
+**Reply:** for a skill you wrote or edited, its path, its proof and the PR link; for a review, each
+finding with its line and the quoted rule.

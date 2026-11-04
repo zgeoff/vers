@@ -10,11 +10,14 @@ rule set and a project skill leave that opening out.
   way it is.
 - [A rule set](#a-rule-set), such as a code style, holds rules the agent applies while it writes
   something else.
-- [A project skill](#a-project-skill) holds one repo's facts for a rule set from this skills repo,
-  and the rules the repo replaces, such as project-testing beside testing.
+- [A project skill](#a-project-skill) holds one repo's facts for a shared rule set, and the rules
+  the repo replaces, such as project-testing beside testing.
 
 When a skill has a reply line, make it the last line. It starts with "**Reply:**" and gives what the
 agent hands back, such as "**Reply:** each risk with its proof".
+
+In a skill of any kind, put a mechanical step in a script in the skill's `scripts/` folder, with a
+test beside it that the repo's test command runs. Tell the agent to run the script, not read it.
 
 ## A machinery skill
 
@@ -41,7 +44,7 @@ something for a reader, such as a report, say who reads it, and end with a reply
 Write:
 
 - the attitude you want the agent to take to the work, such as "treat a comment as stale until the
-  code agrees with it", and the mistakes it keeps the agent from;
+  code agrees with it", and the mistakes that attitude keeps the agent from;
 - who reads the agent's output, and what they do with it;
 - numbered steps, each with the decision the agent makes in it, such as when to stop;
 - a reply line.
@@ -65,15 +68,16 @@ In its SKILL.md:
   and a noun, such as "A factory builds…".
 - Give an example when the agent would otherwise guess the shape, such as a file name or a call.
 - Write a short paragraph and a code block for a rule that needs more than a bullet.
+- Keep a short bullet for a rule a lint enforces, so the agent writes it right the first time.
 
 ## A project skill
 
 Write a project skill in the repo it describes, at `.claude/skills/project-<name>/SKILL.md`, where
 `<name>` is the shared rule set it sits beside, such as `project-testing` beside testing.
 [Repo-sync](https://github.com/zgeoff/tools/blob/main/docs/architecture/repo-sync.md) copies the
-shared skills from this repo into the same `.claude/skills/` folder, and never touches a `project-`
-folder. The agent loads both, and where they disagree, the project skill wins. Read the shared skill
-before you write, so you know which rules the repo replaces and which it follows.
+shared skills from zgeoff/skills into the same `.claude/skills/` folder, and never touches a
+`project-` folder. The agent loads both, and where they disagree, the project skill wins. Read the
+shared skill before you write, so you know which rules the repo replaces and which it follows.
 
 Write it as a rule set: `kind: rule-set` under `metadata`, the `#` title, `## References` when it
 has any, and the bullet rules in [A rule set](#a-rule-set). Then write these sections, in this
@@ -93,10 +97,12 @@ Never repeat a rule the shared skill states. The agent reads both, and two copie
 
 ### Facts rows
 
-Give a row a value only when no file in the repo holds it, such as the test budget. Otherwise say
-where the fact lives: link the file, from `../../../`, the repo root, and name the key or the
-command that shows it. A pointer stays true when the value changes, and `chex links` fails when the
-file moves.
+Say where each fact lives. Link the file that holds it with a path relative to the skill, such as
+`../../../config/ci.json` from `.claude/skills/project-ci-design/SKILL.md`, and name the key or the
+command that shows the fact. Then the row stays true when the value changes, and
+[`chex links`](https://github.com/zgeoff/tools/tree/main/packages/chex) fails when the file moves.
+Give a row a value only when no file in the repo holds the fact, such as the
+[test budget](../../ci-design/SKILL.md#jobs).
 
 The terms come from the shared skills: a test budget from [Jobs](../../ci-design/SKILL.md#jobs) in
 ci-design, and a lane from [Lanes](../../testing/references/slow-tests.md#lanes) in testing.
