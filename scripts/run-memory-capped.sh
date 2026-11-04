@@ -84,10 +84,13 @@ run_and_report() {
   # memory.peak counts the page cache, which the kernel takes back under the
   # cap; the anonymous memory, sampled every 200 ms, is what it cannot. Under
   # the cap a fork can fail, so the sampler runs on builtins alone, with a
-  # timed read of a pipe that never gets data in place of sleep.
+  # timed read of a pipe that never gets data in place of sleep. Under the cap
+  # the open of memory.stat can fail too, with ENOMEM; that sample is lost, and
+  # its error must not reach the command's stderr.
   local sample_fd sampler
   exec {sample_fd}< <(
     set +e
+    exec 2> /dev/null
     peak=0
     trap 'echo "$peak"; exit 0' TERM
     exec {tick_fd}<> <(:)
