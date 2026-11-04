@@ -173,7 +173,7 @@ bun run qa:cdp shot <target_id> ./after-sign-in.png
 | `key <target> <key>`                      | presses one key, such as `Enter`, `Tab`, or `Escape`                                    |
 | `click <target> <x> <y>`                  | clicks at viewport coordinates                                                          |
 | `console <target> [--seconds] [--reload]` | collects console calls, exceptions, and browser log entries for the window              |
-| `offline <target> on\|off`                | switches network emulation of a page or a worker                                        |
+| `offline <target> on\|off`                | takes a page or a worker offline until `offline <target> off`, or brings it back online |
 | `pause <target>`                          | interrupts running script, prints the stack, and resumes                                |
 | `profile <target> [--seconds]`            | samples the CPU and prints the functions with the most self time                        |
 | `procs`                                   | lists the browser processes with their CPU time                                         |
@@ -196,6 +196,11 @@ React-controlled inputs without pasting helpers in:
 
 `pause` prints the stack only when script is running: an idle page fires no pause event, and the
 command reports the timeout instead.
+
+Chrome drops network emulation when the DevTools session that set it detaches, so
+`offline <target> on` returns with a background process left holding that session, for a page,
+shared worker or service worker target. The cut holds until `offline <target> off` or until the
+target closes.
 
 ### Capturing worker traffic
 

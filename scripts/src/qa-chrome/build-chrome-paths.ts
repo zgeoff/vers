@@ -1,13 +1,9 @@
 import { join } from 'node:path';
+import { buildStateHome } from '../utils/build-state-home';
 import type { ChromePaths } from './types';
 
 export function buildChromePaths(xdgStateHome: string | undefined, home: string): ChromePaths {
-  const stateHome =
-    xdgStateHome === undefined || xdgStateHome === ''
-      ? join(home, '.local', 'state')
-      : xdgStateHome;
-
-  const directory = join(stateHome, 'vers', 'qa-chrome');
+  const directory = join(buildStateHome(xdgStateHome, home), 'vers', 'qa-chrome');
 
   return {
     directory,
