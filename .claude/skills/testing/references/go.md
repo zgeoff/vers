@@ -10,8 +10,8 @@ jest-extended matchers, lanes and the `bun test` flags.
 
 The mistakes to avoid:
 
-- Never pass mutable state from a parent test to its subtests. A subtest that changes it breaks the
-  ones after it.
+- Never pass mutable state from a parent test to its subtests. When one subtest changes it, the
+  subtests after it break.
 - Never give each case a random ID so that cases which share state stop colliding. The shared state
   stays, and a later test fails on it.
 - Never retry a failed test, such as with gotestsum's `--rerun-fails`, or skip one behind a check of

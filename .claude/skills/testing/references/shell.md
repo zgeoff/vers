@@ -28,8 +28,8 @@ Call the script through `$` this way:
   script loses `PATH` and can't find `bash`, `git` or any other program.
 - Feed standard input with a redirect from a `Response`: `new Response(text)` for text, or
   `Response.json(value)` for JSON, as in `` $`bash ${scriptPath} < ${new Response(text)}` ``.
-- Run a setup command, such as `git init`, through `$` without `.nothrow()`. A failed setup then
-  throws where it fails, and never shows up later as a wrong result.
+- Run a setup command, such as `git init`, through `$` without `.nothrow()`. Then the test throws at
+  the setup step that fails, and the failure never shows up later as a wrong result.
 
 Read `stdout` and `stderr` with `.toString()` before a string matcher, because both are buffers.
 

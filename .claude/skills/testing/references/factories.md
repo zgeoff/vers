@@ -1,10 +1,10 @@
 # Factories
 
 Write a `buildMock<Type>` factory for each domain type that crosses a module boundary, as the
-testing skill's [Test data](../SKILL.md#test-data) section says. The factory returns the value and
-does nothing else: it writes no database row and no file. A test that needs stored state calls the
-seeds of the module that writes it, as [Stored state](../SKILL.md#stored-state) says, and those
-seeds build their input with these factories.
+testing skill's [Test data](../SKILL.md#test-data) section says. Make the factory return the value
+and do nothing else: write no database row and no file in it. For stored state, call the seeds of
+the module that creates the state, as [Stored state](../SKILL.md#stored-state) says. Inside each
+seed, build the input with these factories.
 
 - [Writing a factory](#writing-a-factory)
 - [A factory's own test](#a-factorys-own-test)
@@ -12,16 +12,18 @@ seeds build their input with these factories.
 Watch for these mistakes:
 
 - Never pass `undefined` as an override to leave a field out. To leave an optional field out, take
-  it off the factory's result: `const { note, ...line } = buildMockOrderLine();`. Lint
-  `no-unused-vars` with `ignoreRestSiblings: true`, as `@zgeoff/oxlint-config` does, so the unused
-  `note` passes. Turn on `exactOptionalPropertyTypes`, as `@zgeoff/tsconfig` does, and an
-  `undefined` override becomes a type error.
-- Faker's values follow the order of its calls, so one new faker call elsewhere changes them. A
-  golden test pins output in an inline snapshot or compares it with a committed file. In a package
-  with a golden test, default every field of the package's own factories to a literal value.
-- Never write a helper that presets overrides, such as `buildMockPaidInvoice`. The reader can't see
-  its defaults. A seed named for a state, such as `archivedNote`, may set the one field its name
-  gives. No other helper presets a field.
+  it off the factory's result: `const { note, ...line } = buildMockOrderLine();`.
+  `@zgeoff/oxlint-config` sets `ignoreRestSiblings: true` on `no-unused-vars`, so the unused `note`
+  passes. `@zgeoff/tsconfig` sets `exactOptionalPropertyTypes`, so an `undefined` override is a type
+  error.
+- In a package with a golden test, default every field of the package's own factories to a literal
+  value. A golden test pins output in an inline snapshot or a committed file. Faker's values follow
+  the order of its calls in the run, so one new faker call in any test file changes them.
+- Never write a factory that presets overrides, such as `buildMockPaidInvoice`. The reader can't see
+  its defaults. Pass the overrides in the test instead: `buildMockInvoice({ status: 'paid' })`.
+- Write a seed for each state instead, such as `seedArchivedNote` in [Seeding](./seeding.md). It
+  reaches the state through the module's own functions, so it never presets a field such as
+  `archivedAt` by hand.
 
 ## Writing a factory
 
@@ -60,8 +62,8 @@ Watch for these mistakes:
   Never require a parent. When a test needs a real parent, seed the parent and pass its ID.
 - When the type is a class, pass the merged fields to its constructor and return the instance, so
   `toStrictEqual` against a real instance passes.
-- Build a nested object with its own factory, and pass it the nested override. An override of a list
-  field replaces the whole default list.
+- Build a nested object with its own factory, and pass it the nested override. For a list field, the
+  spread replaces the whole default list, so never write merge code for a list.
 
   ```ts
   type ShipmentOverrides = Partial<Omit<Shipment, 'address'>> & { address?: Partial<Address> };
@@ -91,10 +93,12 @@ Put the test beside the factory, as `build-mock-<type>.test.ts`, with these 2 te
   the whole shape with `toStrictEqual` and asymmetric matchers.
 - `test('it applies overrides on top of the defaults', …)`.
 
-Add a test for each branch of the factory that those 2 can't reach, and check that it fails when you
-delete the branch:
+Add one more test for each of these parts of the factory:
 
 - a field that the factory works out from another field;
-- a nested object or a list that the factory builds with another factory.
+- a nested override that the factory passes to another factory, such as `address` in
+  `buildMockShipment`.
+
+Delete the part, and check that its test fails.
 
 Never add a test of faker's output, or a second test of the plain merge of overrides.
