@@ -15,7 +15,7 @@ import { STOP_GRACE_MS } from '../qa-chrome/stop-grace-ms';
 import type { ChromeRefusal } from '../qa-chrome/types';
 import { writeChromeState } from '../qa-chrome/write-chrome-state';
 import { runCommandLine } from '../utils/run-command-line';
-import { withFileLock } from '../utils/with-file-lock';
+import { withCommandLock } from '../utils/with-command-lock';
 
 const paths = buildChromePaths(process.env['XDG_STATE_HOME'], homedir());
 
@@ -24,7 +24,7 @@ const startCommand = define({
   description: 'launch a headless Chromium with its own profile and a DevTools port',
   args: QA_CHROME_ARGS.start,
   run: (ctx) =>
-    withFileLock(paths.lockFile, STATE_LOCK_WAIT_MS, async () => {
+    withCommandLock(paths.lockFile, STATE_LOCK_WAIT_MS, async () => {
       const options = ctx.values;
 
       const running = await readChromeState(paths);
@@ -85,7 +85,7 @@ const stopCommand = define({
   name: 'stop',
   description: 'stop the browser that qa:chrome start launched',
   args: QA_CHROME_ARGS.stop,
-  run: () => withFileLock(paths.lockFile, STATE_LOCK_WAIT_MS, stopChrome),
+  run: () => withCommandLock(paths.lockFile, STATE_LOCK_WAIT_MS, stopChrome),
 });
 
 const entry = define({

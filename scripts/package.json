@@ -21,6 +21,7 @@
     "@vers/service-runtime": "workspace:*",
     "@vers/sim-registry": "workspace:*",
     "@zgeoff/dbhub": "catalog:",
+    "@zgeoff/std": "catalog:",
     "chrome-launcher": "catalog:",
     "gunshi": "catalog:",
     "kysely": "catalog:",
