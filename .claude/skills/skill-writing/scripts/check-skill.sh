@@ -8,7 +8,7 @@
 # .gitattributes.
 # Fails on: a missing name or description, a name that differs from the folder or breaks the name
 # format, a description over 1,024 characters, a plain description that holds a colon YAML reads as a
-# key, a link with a line anchor outside code, and a SKILL.md body over 1,700 words.
+# key, frontmatter that Bun.YAML.parse refuses, a link with a line anchor outside code, and a SKILL.md body over 1,700 words.
 # Warns on: a SKILL.md body over 1,500 words, a SKILL.md over 500
 # lines, a reference that SKILL.md does not list under ## References, a reference over 100 lines
 # with two or more headings and no contents list near its top, a code-formatted span outside a table that names an existing repo file, and a bullet in
@@ -284,10 +284,12 @@ sub list_references {
 sub check_frontmatter {
   my ($dir, $skill, @lines) = @_;
   my ($name, $description, $in_description, $closed, $raw_description, $folded, $style, $colon);
+  my @block;
 
   if (@lines && $lines[0] eq "---") {
     for my $line (@lines[1 .. $#lines]) {
       if ($line eq "---") { $closed = 1; last }
+      push @block, $line;
       if ($line =~ /^name:\s*(.*?)\s*$/) {
         $name = unquote($1);
         $in_description = 0;
@@ -334,6 +336,32 @@ sub check_frontmatter {
 
   fail($skill, "description holds a colon and a space, which YAML reads as a key in a plain scalar; reword it, or quote it or write it as a block scalar (>-)")
     if $colon;
+
+  # The colon error already names the cause of the parse error that the colon brings.
+  my $yaml_error = $colon ? undef : read_yaml_error(join("\n", @block) . "\n");
+  fail($skill, "frontmatter is not valid YAML ($yaml_error), so a strict loader refuses the skill; escape each quote inside a quoted value, or write the value as a block scalar (>-)")
+    if defined $yaml_error;
+}
+
+# Returns the error that Bun.YAML.parse throws on the text, or undef when the text parses. The line
+# reads above take a stray quote inside a quoted value as text, where a strict loader refuses it.
+sub read_yaml_error {
+  my ($text) = @_;
+  my $parse = q{try { Bun.YAML.parse(process.argv.at(-1)) } catch (error) { console.log(error.message); process.exit(1) }};
+  my $parser;
+  # The check prints its own message when bun is missing, in place of the warning perl adds.
+  no warnings "exec";
+  unless (open $parser, "-|", "bun", "-e", $parse, to_bytes($text)) {
+    print STDERR "check-skill: cannot run bun to parse the frontmatter: $!\n";
+    exit 2;
+  }
+  my $output = do { local $/; <$parser> } // "";
+  close $parser;
+  return undef if $? == 0;
+  utf8::decode($output);
+  $output =~ s/\s+\z//;
+  $output =~ s/\s*\n\s*/ /g;
+  return $output eq "" ? "bun exited with status " . ($? >> 8) : $output;
 }
 
 # Returns block, quoted or plain for the text after a key, or undef when the text is empty or only a
