@@ -1,5 +1,5 @@
 import { expect, onTestFinished, test } from 'bun:test';
-import { mkdir, mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { waitFor } from '@vers/test-utils';
@@ -14,14 +14,10 @@ async function setupTest() {
   return { devtools: startStubDevTools(), directory };
 }
 
-test('it stops the hold when its state file cannot be written', async () => {
+test('it stops the hold when its state file cannot be saved', async () => {
   const ctx = await setupTest();
 
   const stateFile = join(ctx.directory, 'PAGE1.json');
-
-  ctx.devtools.openTarget({ id: 'PAGE1', type: 'page' });
-
-  await mkdir(stateFile);
 
   const paths = {
     directory: ctx.directory,
@@ -29,11 +25,37 @@ test('it stops the hold when its state file cannot be written', async () => {
     stateFile,
   };
 
+  ctx.devtools.openTarget({ id: 'PAGE1', type: 'page' });
+
+  await symlink(join(ctx.directory, 'missing', 'PAGE1.json'), `${stateFile}.tmp`);
+
   expect(createOfflineHold(ctx.devtools.endpoint, 'PAGE1', paths)).rejects.toThrow(
-    `EISDIR: illegal operation on a directory, open '${stateFile}'`,
+    `ENOENT: no such file or directory, open '${stateFile}.tmp'`,
   );
 
   await waitFor(() => {
     expect(ctx.devtools.getFetchOutcome('PAGE1')).toBe('ok');
   });
+});
+
+test('it keeps the state file it had when a save fails', async () => {
+  const ctx = await setupTest();
+
+  const stateFile = join(ctx.directory, 'PAGE1.json');
+
+  const paths = {
+    directory: ctx.directory,
+    lockFile: join(ctx.directory, 'PAGE1.lock'),
+    stateFile,
+  };
+
+  ctx.devtools.openTarget({ id: 'PAGE1', type: 'page' });
+
+  await writeFile(stateFile, '{"pid":4242,"startTime":"1"}\n');
+  await symlink(join(ctx.directory, 'missing', 'PAGE1.json'), `${stateFile}.tmp`);
+  await createOfflineHold(ctx.devtools.endpoint, 'PAGE1', paths).catch(() => {});
+
+  const text = await readFile(stateFile, 'utf8');
+
+  expect(text).toBe('{"pid":4242,"startTime":"1"}\n');
 });

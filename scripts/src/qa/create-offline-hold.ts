@@ -1,6 +1,6 @@
 import { spawn } from 'node:child_process';
 import type { ChildProcessByStdio } from 'node:child_process';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, rename, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { Readable } from 'node:stream';
 import invariant from 'tiny-invariant';
@@ -36,8 +36,7 @@ export async function createOfflineHold(
 
     const hold = { pid: groupID, startTime };
 
-    await mkdir(paths.directory, { recursive: true });
-    await writeFile(paths.stateFile, `${JSON.stringify(hold)}\n`);
+    await writeHoldState(paths, hold);
 
     return hold;
   } catch (error) {
@@ -89,5 +88,21 @@ async function waitForHoldReady(child: ChildProcessByStdio<null, Readable, Reada
     await ready.promise;
   } finally {
     clearTimeout(timer);
+  }
+}
+
+async function writeHoldState(paths: OfflineHoldPaths, hold: OfflineHold): Promise<void> {
+  const temporaryFile = `${paths.stateFile}.tmp`;
+
+  await mkdir(paths.directory, { recursive: true });
+
+  // a rename replaces the state file whole, so a failed write never leaves a partial one behind
+  try {
+    await writeFile(temporaryFile, `${JSON.stringify(hold)}\n`);
+    await rename(temporaryFile, paths.stateFile);
+  } catch (error) {
+    await rm(temporaryFile, { force: true });
+
+    throw error;
   }
 }
