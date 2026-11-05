@@ -1460,7 +1460,7 @@
     "@zgeoff/mcp-remote": "0.1.38",
     "@zgeoff/oxlint-config": "0.8.1",
     "@zgeoff/skill-gate": "0.2.19",
-    "@zgeoff/std": "0.4.1",
+    "@zgeoff/std": "0.4.2",
     "@zgeoff/umami-mcp": "0.1.0",
     "autoprefixer": "10.6.2",
     "babel-plugin-react-compiler": "1.0.0",
@@ -3056,7 +3056,7 @@
 
     "@zgeoff/skill-gate": ["@zgeoff/skill-gate@0.2.19", "", { "dependencies": { "@zgeoff/agent-hooks": "0.2.3" } }, "sha512-r04itCLxsdvUx7thggMaFx34bRYfULmi3BsJ64EhymR88zs3D34yO6rJUIrVFFvLcomYOIr9Jny+j/xAqattfA=="],
 
-    "@zgeoff/std": ["@zgeoff/std@0.4.1", "", {}, "sha512-Vr0Y8ZeRjaTmJAT0K+llbXpf5EazkGhL0zV8yRoACbbfqJdR+9Cql2MHqnr96uUSgu5vdqbknrRQtcsJYIa7oA=="],
+    "@zgeoff/std": ["@zgeoff/std@0.4.2", "", {}, "sha512-GZnnOkrYHe6p071BWYe7XIq5klqhvVb4j/JWOrrUTSj76uLA/ZnzlqDKIq16LblMcuRF9tjfvKvGK8sLRN8fMg=="],
 
     "@zgeoff/umami-mcp": ["@zgeoff/umami-mcp@0.1.0", "", { "dependencies": { "@modelcontextprotocol/sdk": "1.29.0", "zod": "3.25.76" }, "bin": { "umami-mcp": "dist/index.js" } }, "sha512-+GhMmBw3SFA4EGKU6HiXj0+MoFsEFNga9vpd0KLLbrn4nDDbBbmgb0bzFe7iG68i1z2oEfvzJt5wUZStoLWZ2g=="],
 
