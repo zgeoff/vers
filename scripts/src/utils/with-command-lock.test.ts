@@ -1,7 +1,8 @@
 import { expect, mock, onTestFinished, test } from 'bun:test';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { waitFor } from '@vers/test-utils';
 import { withCommandLock } from './with-command-lock';
 
 async function setupTest() {
@@ -9,7 +10,11 @@ async function setupTest() {
 
   onTestFinished(() => rm(directory, { force: true, recursive: true }));
 
-  return { lockFile: join(directory, 'state', 'state.lock') };
+  return {
+    heldFile: join(directory, 'held'),
+    lockFile: join(directory, 'state', 'state.lock'),
+    lockModule: join(import.meta.dir, 'with-command-lock.ts'),
+  };
 }
 
 test('it runs the command and returns its result, creating the lock directory', async () => {
@@ -19,12 +24,34 @@ test('it runs the command and returns its result, creating the lock directory', 
   expect(result).toBe('ran');
 });
 
-test('it refuses to run while another command holds the lock', async () => {
+test('it refuses to run while another process holds the lock', async () => {
   const ctx = await setupTest();
 
-  const run = mock(() => Promise.resolve('ran'));
-  const nested = withCommandLock(ctx.lockFile, 1000, () => withCommandLock(ctx.lockFile, 50, run));
+  const holder = Bun.spawn([
+    process.execPath,
+    '-e',
+    `const { withCommandLock } = await import(${JSON.stringify(ctx.lockModule)});
+     await withCommandLock(${JSON.stringify(ctx.lockFile)}, 1000, async () => {
+       await Bun.write(${JSON.stringify(ctx.heldFile)}, 'held');
+       await Bun.sleep(30_000);
+     });`,
+  ]);
 
-  expect(nested).rejects.toThrow(`another command still holds ${ctx.lockFile} after 50 ms`);
+  onTestFinished(() => {
+    holder.kill('SIGKILL');
+  });
+
+  await waitFor(async () => {
+    const text = await readFile(ctx.heldFile, 'utf8');
+
+    expect(text).toBe('held');
+  });
+
+  const run = mock(() => Promise.resolve('ran'));
+
+  expect(withCommandLock(ctx.lockFile, 300, run)).rejects.toThrow(
+    `another command still holds ${ctx.lockFile} after 300 ms`,
+  );
+
   expect(run).not.toHaveBeenCalled();
 });
