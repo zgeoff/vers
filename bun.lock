@@ -1459,7 +1459,7 @@
     "@zgeoff/format-codemod": "0.3.5",
     "@zgeoff/mcp-remote": "0.1.38",
     "@zgeoff/oxlint-config": "0.8.1",
-    "@zgeoff/skill-gate": "0.2.19",
+    "@zgeoff/skill-gate": "0.2.20",
     "@zgeoff/std": "0.4.2",
     "@zgeoff/umami-mcp": "0.1.0",
     "autoprefixer": "10.6.2",
@@ -3040,7 +3040,7 @@
 
     "@zag-js/utils": ["@zag-js/utils@1.45.0", "", {}, "sha512-LyeGfTEojjhDcajCCGxvjrgFuPoMia1HKefdP6KqvJpC78+1awahBoZpYYZlbab2WPawgCaprcDevBJFlOe6Ag=="],
 
-    "@zgeoff/agent-hooks": ["@zgeoff/agent-hooks@0.2.3", "", { "bin": { "agent-hooks": "dist/cli.js" } }, "sha512-yg4STSYyLtiFS9rWJUxXJuU6a3+ibUYqlangMsZDno/ZJSAADxV3dt81+kNpc7LAWUrkYQwShZ9uAuaEEMvs2w=="],
+    "@zgeoff/agent-hooks": ["@zgeoff/agent-hooks@0.2.4", "", { "bin": { "agent-hooks": "dist/cli.js" } }, "sha512-viHPG4t97QPtK6wFz1OgSR/lMhFYBhYwpo9aVBBmYB5aHNFx2TkS8b0RF1dTp2kf0P6gy3xTFjf26LDo+rAyUA=="],
 
     "@zgeoff/bugsink-mcp": ["@zgeoff/bugsink-mcp@0.2.0", "", { "dependencies": { "@modelcontextprotocol/sdk": "^1.0.0" }, "peerDependencies": { "zod": "^3.25.0" }, "bin": { "bugsink-mcp": "dist/index.js" } }, "sha512-frOYmUHkNbvI7+9ib1btG3qiqr3Hu4tM30fIjwzXwIbSJCJwLhkG6bLHy5WWlezi95Lf2Fmg6kHQnDGtSIjNaQ=="],
 
@@ -3054,7 +3054,7 @@
 
     "@zgeoff/oxlint-config": ["@zgeoff/oxlint-config@0.8.1", "", { "dependencies": { "@stylistic/eslint-plugin": "5.10.0" }, "peerDependencies": { "oxlint": ">=1.78.0" } }, "sha512-hSQHWbEMuiUFLTJdog0JA6RaiTXg30fUttxAMsZMFiwvkXxbsWufOqH0R3T4ku2w031s/AkhWZ5ZKPqsSce/bQ=="],
 
-    "@zgeoff/skill-gate": ["@zgeoff/skill-gate@0.2.19", "", { "dependencies": { "@zgeoff/agent-hooks": "0.2.3" } }, "sha512-r04itCLxsdvUx7thggMaFx34bRYfULmi3BsJ64EhymR88zs3D34yO6rJUIrVFFvLcomYOIr9Jny+j/xAqattfA=="],
+    "@zgeoff/skill-gate": ["@zgeoff/skill-gate@0.2.20", "", { "dependencies": { "@zgeoff/agent-hooks": "0.2.4" } }, "sha512-wOsHpN1HvwOrC7+gJYwNtf0BYBUfFKSBzMGS3CHLJsWAw4o9wFrGf66RmM0i6DIiw83uAiZWy4Uh4DA+IHAH3g=="],
 
     "@zgeoff/std": ["@zgeoff/std@0.4.2", "", {}, "sha512-GZnnOkrYHe6p071BWYe7XIq5klqhvVb4j/JWOrrUTSj76uLA/ZnzlqDKIq16LblMcuRF9tjfvKvGK8sLRN8fMg=="],
 
