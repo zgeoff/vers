@@ -77,6 +77,10 @@ metadata:
 - Write the pure function first, from the values you will read, then the thin one around it. You
   then test each edge case with one `test.each` row of plain data. In one combined function, each
   case needs a stand-in for every read and write, so the edges go untested.
+- Lock a file across processes only with `withFileLock` from `@zgeoff/std/with-file-lock`, imported
+  directly in the thin function. Read, decide and write in its callback, so the lock spans all
+  three. Write your own lock only for a need it can't meet, such as a lock readers share, and name
+  the need in a comment.
 - Reach I/O through dependencies the caller passes in. Create real clients only in the entry point.
 - Never write a wrapper that only passes its arguments on.
 - Never add an option, a parameter or an extension point before a caller passes it.
