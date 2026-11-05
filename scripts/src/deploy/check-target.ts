@@ -122,7 +122,7 @@ function findUnreportedImageFinding(state: AppState): string | null {
     (machine) => machine.image === null && machine.state === 'started',
   );
 
-  if (unreported.length === 0 || state.machines.length === unreported.length) {
+  if (unreported.length === 0 || state.machines.every((machine) => machine.image === null)) {
     return null;
   }
 

@@ -366,6 +366,29 @@ test('it raises no image finding for a stopped machine flyctl reported no image 
   ]);
 });
 
+test('it raises no image finding when no machine in the fleet reports an image', () => {
+  const target: DeployTarget = {
+    app: 'vers-service-user',
+    configDir: 'services/user',
+    exposure: 'flycast',
+    trigger: { kind: 'turbo-affected', pkg: '@vers/service-user' },
+  };
+
+  const state = {
+    deployedSHA: null,
+    machines: [
+      { gitSHA: null, id: 'm1', image: null, state: 'started' },
+      { gitSHA: null, id: 'm2', image: null, state: 'stopped' },
+    ],
+    scheduledMachines: [],
+    serviceImage: null,
+  };
+
+  expect(checkTarget(target, state, null, {})).toStrictEqual([
+    'stale: no trustworthy deployed SHA recorded on the fleet',
+  ]);
+});
+
 test('it still flags no trustworthy deployed SHA on a single-image fleet', () => {
   const target: DeployTarget = {
     app: 'vers-service-user',
