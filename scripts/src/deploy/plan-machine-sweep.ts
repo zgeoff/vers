@@ -11,28 +11,29 @@ export function planMachineSweep(
   recordedRelease: { readonly gitSHA: string } | null,
 ): MachineSweepPlan {
   const groups = buildImageGroups(machines);
+  const imageless = machines.filter((machine) => machine.image === null);
 
-  if (groups.size <= 1) {
+  if (groups.size === 0 || (groups.size === 1 && imageless.length === 0)) {
     return { kind: 'clean' };
   }
 
-  const unknownImage = findUnknownImageAmbiguity(groups);
+  const startedImageless = findStartedImagelessAmbiguity(imageless);
 
-  if (unknownImage !== null) {
-    return unknownImage;
+  if (startedImageless !== null) {
+    return startedImageless;
   }
 
-  const keep = pickKeepImage(groups, recordedRelease);
+  const keep = groups.size === 1 ? pickOnlyImage(groups) : pickKeepImage(groups, recordedRelease);
 
   if (keep.kind === 'ambiguous') {
     return keep;
   }
 
-  const stranded = [...groups.entries()]
+  const strandedOnImage = [...groups.entries()]
     .filter(([image]) => image !== keep.image)
     .flatMap(([, group]) => group);
 
-  const startedOutsideKeep = stranded.filter((machine) => machine.state === 'started');
+  const startedOutsideKeep = strandedOnImage.filter((machine) => machine.state === 'started');
 
   if (startedOutsideKeep.length > 0) {
     const ids = startedOutsideKeep.map((machine) => machine.id).join(', ');
@@ -45,16 +46,23 @@ export function planMachineSweep(
 
   return {
     kind: 'sweep',
-    machines: stranded.map((machine) => ({ id: machine.id, image: machine.image })),
+    machines: [...strandedOnImage, ...imageless].map((machine) => ({
+      id: machine.id,
+      image: machine.image,
+    })),
   };
 }
 
 function buildImageGroups(
   machines: ReadonlyArray<AppMachine>,
-): ReadonlyMap<string | null, ReadonlyArray<AppMachine>> {
-  const groups = new Map<string | null, Array<AppMachine>>();
+): ReadonlyMap<string, ReadonlyArray<AppMachine>> {
+  const groups = new Map<string, Array<AppMachine>>();
 
   for (const machine of machines) {
+    if (machine.image === null) {
+      continue;
+    }
+
     const group = groups.get(machine.image);
 
     if (group === undefined) {
@@ -73,30 +81,38 @@ interface AmbiguousResult {
   readonly reason: string;
 }
 
-function findUnknownImageAmbiguity(
-  groups: ReadonlyMap<string | null, ReadonlyArray<AppMachine>>,
+function findStartedImagelessAmbiguity(
+  imageless: ReadonlyArray<AppMachine>,
 ): AmbiguousResult | null {
-  const unknown = groups.get(null);
+  const started = imageless.filter((machine) => machine.state === 'started');
 
-  if (unknown === undefined) {
+  if (started.length === 0) {
     return null;
   }
 
-  const ids = unknown.map((machine) => machine.id).join(', ');
+  const ids = started.map((machine) => machine.id).join(', ');
 
   return {
     kind: 'ambiguous',
-    reason: `machine(s) ${ids} report no image — flyctl did not read an image for them, so the fleet's image groups cannot be trusted`,
+    reason: `machine(s) ${ids} are started and report no image — flyctl did not read an image for them, so the fleet's image groups cannot be trusted`,
   };
 }
 
 interface KeepImage {
-  readonly image: string | null;
+  readonly image: string;
   readonly kind: 'keep';
 }
 
+function pickOnlyImage(groups: ReadonlyMap<string, ReadonlyArray<AppMachine>>): KeepImage {
+  const [image] = groups.keys();
+
+  invariant(image !== undefined, 'groups has exactly one image');
+
+  return { image, kind: 'keep' };
+}
+
 function pickKeepImage(
-  groups: ReadonlyMap<string | null, ReadonlyArray<AppMachine>>,
+  groups: ReadonlyMap<string, ReadonlyArray<AppMachine>>,
   recordedRelease: { readonly gitSHA: string } | null,
 ): KeepImage | AmbiguousResult {
   if (recordedRelease !== null) {
