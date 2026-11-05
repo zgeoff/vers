@@ -9,7 +9,7 @@ export const QA_SEED_ARGS = {
     type: 'string',
   },
   level: {
-    description: 'avatar level, at least 1',
+    description: 'avatar level, at least 1; a level above 1 needs --runs',
     metavar: 'n',
     parse: (value: string) => parseIntegerOption(value, 1),
     required: true,

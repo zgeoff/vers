@@ -46,6 +46,14 @@ export async function applyQASeed(
   db: Kysely<DB>,
   input: Readonly<ApplyQASeedInput>,
 ): Promise<QASeedResult> {
+  // with no activity row to resync from, the game client folds its first start from xp 0, and the
+  // activity service refuses any start whose snapshot differs from the avatar's stored xp
+  if (input.level > 1 && input.runs === 0) {
+    throw new Error(
+      `level ${input.level} needs --runs: an avatar above level 1 with no run cannot start one; pass --runs 1 or more, or --level 1`,
+    );
+  }
+
   const existing = await db
     .selectFrom('users')
     .select('id')

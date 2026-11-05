@@ -19,13 +19,13 @@ async function setupTest(): Promise<{ db: Kysely<DB> } & AsyncDisposable> {
   return { db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
 }
 
-test('it creates a verified account whose password checks and whose avatar sits at the requested level', async () => {
+test('it creates a verified account whose password checks and whose avatar starts at level 1 with no runs', async () => {
   await using ctx = await setupTest();
 
   const seeded = await applyQASeed(ctx.db, {
     entropy: { genesisSeed: '0123456789abcdef0123456789abcdef', userSeed: 7 },
     keyRoots: undefined,
-    level: 6,
+    level: 1,
     now: new Date(),
     password: 'known-password',
     runs: 0,
@@ -60,9 +60,9 @@ test('it creates a verified account whose password checks and whose avatar sits 
   expect(avatar).toMatchObject({
     id: seeded.avatar.id,
     isQa: true,
-    level: 6,
+    level: 1,
     name: 'qaaah',
-    xp: 2500,
+    xp: 0,
   });
 
   expect(
@@ -248,6 +248,36 @@ test('it refuses to seed an address that already has an account', async () => {
       },
     }),
   ).rejects.toThrowWithMessage(Error, /already exists/u);
+});
+
+test('it refuses a level above 1 without runs and writes no account', async () => {
+  await using ctx = await setupTest();
+
+  const seeding = applyQASeed(ctx.db, {
+    entropy: { genesisSeed: '0123456789abcdef0123456789abcdef', userSeed: 7 },
+    keyRoots: undefined,
+    level: 6,
+    now: new Date(),
+    password: 'known-password',
+    runs: 0,
+    twoFactor: false,
+    user: {
+      avatarName: 'qalvl',
+      email: 'qa-lvl@qa.versidle.com',
+      name: 'qa-lvl',
+      username: 'qa_lvl',
+    },
+  });
+
+  expect(seeding).rejects.toThrowWithMessage(Error, /level 6 needs --runs/u);
+
+  expect(
+    ctx.db
+      .selectFrom('users')
+      .select('id')
+      .where('email', '=', 'qa-lvl@qa.versidle.com')
+      .executeTakeFirst(),
+  ).resolves.toBeUndefined();
 });
 
 test('it refuses runs when the registry has no active sim version', async () => {
