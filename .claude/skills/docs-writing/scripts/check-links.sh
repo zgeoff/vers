@@ -22,10 +22,11 @@ if [ "$#" -eq 0 ]; then
 fi
 
 # The repo's project-docs-writing skill links to placeholder targets as examples, and so do the
-# docs-writing and skill-writing bases that zgeoff/tools keeps under sync/skills/ and delivers to
+# shared docs-writing and skill-writing skills, which a repo installs under .agents/skills/ or
 # .claude/skills/. A file git marks linguist-vendored belongs to someone else.
 set -- "$@" ':(exclude).agents/skills/project-docs-writing' \
-  ':(exclude).claude/skills/project-docs-writing' ':(exclude).claude/skills/docs-writing' \
+  ':(exclude).claude/skills/project-docs-writing' ':(exclude).agents/skills/docs-writing' \
+  ':(exclude).agents/skills/skill-writing' ':(exclude).claude/skills/docs-writing' \
   ':(exclude).claude/skills/skill-writing' ':(exclude)sync/skills/docs-writing' \
   ':(exclude)sync/skills/skill-writing' ':(exclude,attr:linguist-vendored)' \
   ':(exclude,attr:linguist-vendored=true)'
