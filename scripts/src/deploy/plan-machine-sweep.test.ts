@@ -129,25 +129,72 @@ test('it reports ambiguous when a started machine sits outside the chosen keep g
   });
 });
 
-test('it reports ambiguous when a machine has no reported image alongside a real image group', () => {
+test('it sweeps a stopped machine with no reported image beside a healthy image group', () => {
   const machines = [
-    { checks: [], gitSHA: 'sha1', id: 'm1', image: 'img-a', state: 'started' },
-    { checks: [], gitSHA: null, id: 'm2', image: null, state: 'started' },
+    {
+      checks: [{ name: 'http', status: 'passing' }],
+      gitSHA: 'sha1',
+      id: 'm1',
+      image: 'img-a',
+      state: 'started',
+    },
+    { checks: [], gitSHA: null, id: 'm2', image: null, state: 'stopped' },
   ];
 
-  const plan = planMachineSweep(machines, null);
+  expect(planMachineSweep(machines, { gitSHA: 'sha1' })).toStrictEqual({
+    kind: 'sweep',
+    machines: [{ id: 'm2', image: null }],
+  });
+});
+
+test('it sweeps a stopped machine with no reported image beside a stranded image group', () => {
+  const machines = [
+    {
+      checks: [{ name: 'http', status: 'passing' }],
+      gitSHA: 'shaNEW',
+      id: 'm1',
+      image: 'img-new',
+      state: 'started',
+    },
+    { checks: [], gitSHA: 'shaOLD', id: 'm2', image: 'img-old', state: 'suspended' },
+    { checks: [], gitSHA: null, id: 'm3', image: null, state: 'stopped' },
+  ];
+
+  expect(planMachineSweep(machines, { gitSHA: 'shaNEW' })).toStrictEqual({
+    kind: 'sweep',
+    machines: [
+      { id: 'm2', image: 'img-old' },
+      { id: 'm3', image: null },
+    ],
+  });
+});
+
+test('it reports ambiguous when a started machine has no reported image beside a real image group', () => {
+  const machines = [
+    {
+      checks: [{ name: 'http', status: 'passing' }],
+      gitSHA: 'sha1',
+      id: 'm1',
+      image: 'img-a',
+      state: 'started',
+    },
+    { checks: [], gitSHA: null, id: 'm2', image: null, state: 'started' },
+    { checks: [], gitSHA: null, id: 'm3', image: null, state: 'stopped' },
+  ];
+
+  const plan = planMachineSweep(machines, { gitSHA: 'sha1' });
 
   expect(plan).toStrictEqual({
     kind: 'ambiguous',
     reason:
-      "machine(s) m2 report no image — flyctl did not read an image for them, so the fleet's image groups cannot be trusted",
+      "machine(s) m2 are started and report no image — flyctl did not read an image for them, so the fleet's image groups cannot be trusted",
   });
 });
 
 test('it treats a fleet where every machine has no reported image as clean', () => {
   const machines = [
     { checks: [], gitSHA: null, id: 'm1', image: null, state: 'started' },
-    { checks: [], gitSHA: null, id: 'm2', image: null, state: 'suspended' },
+    { checks: [], gitSHA: null, id: 'm2', image: null, state: 'stopped' },
   ];
 
   expect(planMachineSweep(machines, null)).toStrictEqual({ kind: 'clean' });

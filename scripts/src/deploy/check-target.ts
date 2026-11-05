@@ -118,7 +118,9 @@ function findMixedImageFinding(state: AppState): string | null {
 }
 
 function findUnreportedImageFinding(state: AppState): string | null {
-  const unreported = state.machines.filter((machine) => machine.image === null);
+  const unreported = state.machines.filter(
+    (machine) => machine.image === null && machine.state === 'started',
+  );
 
   if (unreported.length === 0 || state.machines.length === unreported.length) {
     return null;

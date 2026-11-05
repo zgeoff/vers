@@ -318,7 +318,7 @@ test('it flags a mixed-image fleet with the images and their machine counts, not
   ]);
 });
 
-test('it flags a machine flyctl reported no image for beside its single-image peers', () => {
+test('it flags a started machine flyctl reported no image for beside its single-image peers', () => {
   const target: DeployTarget = {
     app: 'vers-service-user',
     configDir: 'services/user',
@@ -330,7 +330,8 @@ test('it flags a machine flyctl reported no image for beside its single-image pe
     deployedSHA: null,
     machines: [
       { gitSHA: 'abc123', id: 'm1', image: 'registry.fly.io/x:tag1', state: 'started' },
-      { gitSHA: null, id: 'm2', image: null, state: 'suspended' },
+      { gitSHA: null, id: 'm2', image: null, state: 'started' },
+      { gitSHA: null, id: 'm3', image: null, state: 'stopped' },
     ],
     scheduledMachines: [],
     serviceImage: null,
@@ -338,6 +339,29 @@ test('it flags a machine flyctl reported no image for beside its single-image pe
 
   expect(checkTarget(target, state, null, {})).toStrictEqual([
     'machine(s) m2 report no image — flyctl did not read an image for them',
+    'stale: no trustworthy deployed SHA recorded on the fleet',
+  ]);
+});
+
+test('it raises no image finding for a stopped machine flyctl reported no image for', () => {
+  const target: DeployTarget = {
+    app: 'vers-service-user',
+    configDir: 'services/user',
+    exposure: 'flycast',
+    trigger: { kind: 'turbo-affected', pkg: '@vers/service-user' },
+  };
+
+  const state = {
+    deployedSHA: null,
+    machines: [
+      { gitSHA: 'abc123', id: 'm1', image: 'registry.fly.io/x:tag1', state: 'started' },
+      { gitSHA: null, id: 'm2', image: null, state: 'stopped' },
+    ],
+    scheduledMachines: [],
+    serviceImage: null,
+  };
+
+  expect(checkTarget(target, state, null, {})).toStrictEqual([
     'stale: no trustworthy deployed SHA recorded on the fleet',
   ]);
 });

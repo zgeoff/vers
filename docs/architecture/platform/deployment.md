@@ -207,8 +207,11 @@ Multiple groups mean a prior rollout left machines stranded on a second image, a
 them. It keeps the group whose machines all carry the app's recorded release commit, or else the
 single image group holding a started machine whose health checks all pass, destroys every machine
 outside it, then proceeds. A started machine outside the kept group is never a destroy target; the
-leg fails instead and prints the fleet's machine table for an operator. `deploy verify` never
-sweeps; it reports a mixed-image fleet as its own finding.
+leg fails instead and prints the fleet's machine table for an operator. A machine that flyctl
+reports no image for joins no group. When the fleet also has an image group, the leg destroys each
+such machine that is not started, and fails on one that is started. `deploy verify` never sweeps; it
+reports a mixed-image fleet, and a started machine with no image beside machines with one, as
+findings of their own.
 
 ### Pinned upstream images
 
