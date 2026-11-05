@@ -16,20 +16,20 @@ import { STATE_LOCK_WAIT_MS } from '../qa-chrome/state-lock-wait-ms';
 import type { ChromeNamespace, ChromeState } from '../qa-chrome/types';
 import { writeChromeState } from '../qa-chrome/write-chrome-state';
 import { runCommandLine } from '../utils/run-command-line';
-import { withFileLock } from '../utils/with-file-lock';
+import { withCommandLock } from '../utils/with-command-lock';
 
 const paths = buildChromePaths(process.env['XDG_STATE_HOME'], homedir());
 
 const cutCommand = define({
   name: 'cut',
   description: "take the browser namespace's network interface down",
-  run: () => withFileLock(paths.lockFile, STATE_LOCK_WAIT_MS, cutNetwork),
+  run: () => withCommandLock(paths.lockFile, STATE_LOCK_WAIT_MS, cutNetwork),
 });
 
 const restoreCommand = define({
   name: 'restore',
   description: 'bring the interface and its saved routes back',
-  run: () => withFileLock(paths.lockFile, STATE_LOCK_WAIT_MS, restoreNetwork),
+  run: () => withCommandLock(paths.lockFile, STATE_LOCK_WAIT_MS, restoreNetwork),
 });
 
 const statusCommand = define({

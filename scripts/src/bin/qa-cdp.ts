@@ -20,7 +20,7 @@ import type { CDPClient } from '../qa/types';
 import { withBrowserClient } from '../qa/with-browser-client';
 import { withTargetClient } from '../qa/with-target-client';
 import { runCommandLine } from '../utils/run-command-line';
-import { withFileLock } from '../utils/with-file-lock';
+import { withCommandLock } from '../utils/with-command-lock';
 
 const LOAD_TIMEOUT_MS = 30_000;
 const SETTLE_AFTER_LOAD_MS = 500;
@@ -426,7 +426,7 @@ const offlineCommand = define({
     const targetID = ctx.values.target;
     const paths = buildOfflineHoldPaths(process.env['XDG_STATE_HOME'], homedir(), targetID);
 
-    await withFileLock(paths.lockFile, HOLD_LOCK_WAIT_MS, () =>
+    await withCommandLock(paths.lockFile, HOLD_LOCK_WAIT_MS, () =>
       match(ctx.values.state)
         .with('on', async () => {
           const held = await readOfflineHold(paths);

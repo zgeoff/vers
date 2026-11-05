@@ -1080,6 +1080,7 @@
         "@vers/service-runtime": "workspace:*",
         "@vers/sim-registry": "workspace:*",
         "@zgeoff/dbhub": "catalog:",
+        "@zgeoff/std": "catalog:",
         "chrome-launcher": "catalog:",
         "gunshi": "catalog:",
         "kysely": "catalog:",
@@ -1459,6 +1460,7 @@
     "@zgeoff/mcp-remote": "0.1.38",
     "@zgeoff/oxlint-config": "0.8.1",
     "@zgeoff/skill-gate": "0.2.19",
+    "@zgeoff/std": "0.4.1",
     "@zgeoff/umami-mcp": "0.1.0",
     "autoprefixer": "10.6.2",
     "babel-plugin-react-compiler": "1.0.0",
@@ -3053,6 +3055,8 @@
     "@zgeoff/oxlint-config": ["@zgeoff/oxlint-config@0.8.1", "", { "dependencies": { "@stylistic/eslint-plugin": "5.10.0" }, "peerDependencies": { "oxlint": ">=1.78.0" } }, "sha512-hSQHWbEMuiUFLTJdog0JA6RaiTXg30fUttxAMsZMFiwvkXxbsWufOqH0R3T4ku2w031s/AkhWZ5ZKPqsSce/bQ=="],
 
     "@zgeoff/skill-gate": ["@zgeoff/skill-gate@0.2.19", "", { "dependencies": { "@zgeoff/agent-hooks": "0.2.3" } }, "sha512-r04itCLxsdvUx7thggMaFx34bRYfULmi3BsJ64EhymR88zs3D34yO6rJUIrVFFvLcomYOIr9Jny+j/xAqattfA=="],
+
+    "@zgeoff/std": ["@zgeoff/std@0.4.1", "", {}, "sha512-Vr0Y8ZeRjaTmJAT0K+llbXpf5EazkGhL0zV8yRoACbbfqJdR+9Cql2MHqnr96uUSgu5vdqbknrRQtcsJYIa7oA=="],
 
     "@zgeoff/umami-mcp": ["@zgeoff/umami-mcp@0.1.0", "", { "dependencies": { "@modelcontextprotocol/sdk": "1.29.0", "zod": "3.25.76" }, "bin": { "umami-mcp": "dist/index.js" } }, "sha512-+GhMmBw3SFA4EGKU6HiXj0+MoFsEFNga9vpd0KLLbrn4nDDbBbmgb0bzFe7iG68i1z2oEfvzJt5wUZStoLWZ2g=="],
 
