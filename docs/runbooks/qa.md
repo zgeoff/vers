@@ -23,21 +23,23 @@ they act, and refuse a host that is not a loopback address unless you pass `--ye
 is the owner's explicit choice: point `DATABASE_URL` at the pre-release database and pass `--yes`.
 
 ```bash
-bun run qa:seed --user qa-007 --level 6
+bun run qa:seed --user qa-007 --level 1
 bun run qa:seed --user qa-007 --level 6 --runs 3 --two-factor --yes
 bun run qa:reset --user qa-007
 bun run qa:reset --user qa-007 --all --yes
 ```
 
 `qa:seed` creates `qa-007@qa.versidle.com` with the password from `--password`, or a generated one,
-and an active avatar whose XP is the minimum for `--level`. The avatar is flagged as a QA avatar,
-which is what lets the [debug hook](#debug-hook) run it above real time; nothing but this command
-writes that flag. The username and avatar name derive from the account name under their contracts
-(`qa_007` and `qaaah` for `qa-007`), and the command prints them with the credentials once;
-`--two-factor` writes an authenticator verification and prints its secret and `otpauth://` URI. With
-`--runs`, it seeds that many origin-node runs, each simulated with the real engine to its terminal
-checkpoint against the registry's current content document and stamped with the current sim version,
-then stored as the activity and replay services would leave them: hashed checkpoints,
+and an active avatar whose XP is the minimum for `--level`. It refuses a `--level` above 1 without
+`--runs`: with no run stored, the game client starts the avatar's first run from XP 0, and the
+activity service refuses a start whose XP differs from the avatar's. The avatar is flagged as a QA
+avatar, which is what lets the [debug hook](#debug-hook) run it above real time; nothing but this
+command writes that flag. The username and avatar name derive from the account name under their
+contracts (`qa_007` and `qaaah` for `qa-007`), and the command prints them with the credentials
+once; `--two-factor` writes an authenticator verification and prints its secret and `otpauth://`
+URI. With `--runs`, it seeds that many origin-node runs, each simulated with the real engine to its
+terminal checkpoint against the registry's current content document and stamped with the current sim
+version, then stored as the activity and replay services would leave them: hashed checkpoints,
 `verified_head` at the appended head, settled XP on the avatar, minted reward items, both chain
 anchors on the last run's tail, and a first-clear grant once a run completes. The command prints
 each run's outcome. Deriving those runs needs the keys service's `SCOPE_SECRET_ROOTS` and

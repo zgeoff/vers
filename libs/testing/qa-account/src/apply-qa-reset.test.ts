@@ -100,7 +100,7 @@ test('it removes the whole account with its two-factor row when asked for all', 
   const seeded = await applyQASeed(ctx.db, {
     entropy: { genesisSeed: '0123456789abcdef0123456789abcdef', userSeed: 7 },
     keyRoots: undefined,
-    level: 2,
+    level: 1,
     now: new Date(),
     password: 'known-password',
     runs: 0,
@@ -148,7 +148,7 @@ test('it removes a step-up grant with no session that targets the account when a
   const seeded = await applyQASeed(ctx.db, {
     entropy: { genesisSeed: '0123456789abcdef0123456789abcdef', userSeed: 7 },
     keyRoots: undefined,
-    level: 2,
+    level: 1,
     now: new Date(),
     password: 'known-password',
     runs: 0,
