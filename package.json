@@ -65,7 +65,7 @@
       "@react-spring/rafz": "10.1.2",
       "@react-three/fiber": "9.8.2",
       "@react-three/test-renderer": "9.1.1",
-      "@rolldown/plugin-babel": "0.2.4",
+      "@rolldown/plugin-babel": "0.3.0",
       "@sentry/browser": "10.78.0",
       "@sentry/bun": "10.78.0",
       "@sentry/node": "10.78.0",
