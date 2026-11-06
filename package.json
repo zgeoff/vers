@@ -15,7 +15,7 @@
     ],
     "catalog": {
       "@actions/expressions": "0.3.61",
-      "@ark-ui/react": "5.39.3",
+      "@ark-ui/react": "5.40.0",
       "@babel/core": "8.0.9",
       "@commitlint/cli": "21.2.4",
       "@conform-to/react": "1.21.2",
