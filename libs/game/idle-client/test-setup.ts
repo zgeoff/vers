@@ -1,7 +1,6 @@
 import 'fake-indexeddb/auto';
 import { afterEach, expect, mock } from 'bun:test';
 import { GlobalRegistrator } from '@happy-dom/global-registrator';
-import * as jestDOMMatchers from '@testing-library/jest-dom/matchers';
 import { registerZustandReset } from '@vers/client-test-utils';
 import { registerMockDBReset } from '@vers/mock-services/bun';
 import { registerMSWLifecycle } from '@vers/test-utils/bun';
@@ -24,6 +23,10 @@ MC4CAQAwBQYDK2VwBCIEIBMom57erggdVdDCIdRWS+NKMykK+I5BUKpuHziAq+0W
 // a real origin, not the default `about:blank`: the worker's activity-service client resolves its
 // proxy URL from `self.location.origin`, which a blank document leaves unusable
 GlobalRegistrator.register({ url: 'https://app.test/' });
+
+// dynamic import: the matchers load `@testing-library/dom`, whose `screen` binds to `document` at
+// import time; `_` drops the `default` that the matchers' `export =` types add to the namespace
+const { default: _, ...jestDOMMatchers } = await import('@testing-library/jest-dom/matchers');
 
 expect.extend(jestDOMMatchers);
 

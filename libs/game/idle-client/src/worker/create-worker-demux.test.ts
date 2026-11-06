@@ -1,13 +1,25 @@
 import { expect, mock, onTestFinished, test } from 'bun:test';
 import { onMessagePortClose } from '@orpc/client/message-port';
 import { ActivityFailureAction } from '@vers/idle-core';
+import { createAuthedServiceClient, createViewer } from '@vers/mock-services';
 import { waitFor } from '@vers/test-utils';
+import type { ActivityServiceClient } from '../submission/types';
 import { buildProtocolStamp } from '../transport/build-protocol-stamp';
 import { RPC_CLIENT_TO_WORKER_CHANNEL } from '../transport/constants';
 import { createBroadcastPort } from '../transport/create-broadcast-port';
 import { createWorkerClient } from '../transport/create-worker-client';
 import { createWorkerDemux } from './create-worker-demux';
 import { createWorkerRuntime } from './create-worker-runtime';
+
+interface SetupTestConfig {
+  readonly userID: string;
+}
+
+async function setupTest(config: Readonly<SetupTestConfig>) {
+  const client = await createAuthedServiceClient<ActivityServiceClient>('activity', config.userID);
+
+  return { client };
+}
 
 test('it upgrades an unseen tab id into its own virtual port and answers its calls', async () => {
   using runtime = createWorkerRuntime();
@@ -26,7 +38,10 @@ test('it upgrades an unseen tab id into its own virtual port and answers its cal
 });
 
 test('it keeps two tabs isolated under interleaved concurrent calls', async () => {
-  using runtime = createWorkerRuntime();
+  const viewer = await createViewer();
+  const ctx = await setupTest({ userID: viewer.user.id });
+
+  using runtime = createWorkerRuntime({ client: ctx.client });
 
   const demux = createWorkerDemux({ upgrade: runtime.upgrade });
 
@@ -38,8 +53,14 @@ test('it keeps two tabs isolated under interleaved concurrent calls', async () =
   const tabB = createWorkerClient(createBroadcastPort());
 
   const [resultA, resultB] = await Promise.all([
-    tabA.setFailureAction({ avatarID: 'avatar_a', failureAction: ActivityFailureAction.Retry }),
-    tabB.setFailureAction({ avatarID: 'avatar_b', failureAction: ActivityFailureAction.Abort }),
+    tabA.setFailureAction({
+      avatarID: viewer.avatar.id,
+      failureAction: ActivityFailureAction.Retry,
+    }),
+    tabB.setFailureAction({
+      avatarID: viewer.avatar.id,
+      failureAction: ActivityFailureAction.Abort,
+    }),
   ]);
 
   expect(resultA).toStrictEqual({ failureAction: ActivityFailureAction.Retry });
