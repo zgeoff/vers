@@ -21,9 +21,10 @@ So give it what the code can't:
 Link the code instead of copying it: a copy goes stale without the agent knowing. Keep the skill
 short, or the agent skims.
 
-When you write or edit one, hand back the skill's path and the proof that step 4 of
-[Check it](#check-it) lists. Link the PR in your reply. With no PR, put the proof in your reply.
-When you review one, hand back each finding with its line and the rule it breaks, quoted.
+When you write or edit one, hand back the skill's path and its proof: the three ticked lines and the
+Declined list that [Check it](#check-it) gives. Put the proof in the `## Checks` section of the PR
+description, and link the PR in your reply. With no PR, put the proof in your reply. When you review
+one, hand back each finding with its line and the rule it breaks, quoted.
 
 ## Key rules
 
@@ -155,12 +156,14 @@ Leave out anything time-bound, like "until the next release": it goes false unno
 2. Run the `deslop` skill on each section you wrote or changed.
 3. Run the `cold-read` skill on each file of the skill you wrote or changed. When you fix what it
    finds, give each changed file one more cold read, and stop.
-4. Run the checks again, and give the proof in the PR description of the skill change. Add these as
-   `##` headings, after the sections of the repo's PR template:
-   - **Skill checks:** the full output of the last check run, in a code block.
-   - **Cold read:** each finding from every cold read, and how you answered it: fixed, declined with
-     the reason, or reported as a gap in the rules.
-   - **Deslop:** each change you made with deslop, as a `diff` block, or "none".
+4. Run the checks again, and give the proof in the `## Checks` section of the PR template:
+   - `- [x] chex prose, links and skill: cleared`, once the last run clears.
+   - `- [x] Cold read: <n> fixed, <n> declined`, counting every cold read.
+   - `- [x] Deslop: <n> edits`.
+
+   Under `Declined:`, give each finding you declined one line: the review that found it, the
+   finding, then why not or the issue it went to. Report a gap in the rules the same way. Paste no
+   command output, fixed finding or diff: CI and the commits hold them.
 
 **Reply:** for a skill you wrote or edited, its path, its proof and the PR link; for a review, each
 finding with its line and the quoted rule.
