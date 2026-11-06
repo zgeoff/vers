@@ -127,7 +127,7 @@
       "kysely-ctl": "0.22.0",
       "kysely-postgres-js": "3.0.0",
       "lefthook": "2.2.2",
-      "lighthouse": "13.5.0",
+      "lighthouse": "13.6.0",
       "lru-cache": "11.5.3",
       "mitata": "1.0.34",
       "msw": "2.15.0",
