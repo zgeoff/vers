@@ -2,7 +2,6 @@ import 'fake-indexeddb/auto';
 import '@zgeoff/bun-test-extended';
 import { afterEach, expect } from 'bun:test';
 import { faker } from '@faker-js/faker';
-import * as jestDOMMatchers from '@testing-library/jest-dom/matchers';
 import { registerMockDBReset } from '@vers/mock-services/bun';
 import {
   registerBunTestCleanup,
@@ -35,6 +34,10 @@ MC4CAQAwBQYDK2VwBCIEIBMom57erggdVdDCIdRWS+NKMykK+I5BUKpuHziAq+0W
 faker.seed(1);
 
 registerHappyDOM();
+
+// dynamic import: the matchers load `@testing-library/dom`, whose `screen` binds to `document` at
+// import time; `_` drops the `default` that the matchers' `export =` types add to the namespace
+const { default: _, ...jestDOMMatchers } = await import('@testing-library/jest-dom/matchers');
 
 expect.extend(jestDOMMatchers);
 

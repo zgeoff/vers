@@ -1,10 +1,13 @@
 import { afterEach, expect, mock } from 'bun:test';
 import { GlobalRegistrator } from '@happy-dom/global-registrator';
-import * as jestDOMMatchers from '@testing-library/jest-dom/matchers';
 import { useSatelliteStore } from './src/use-satellite-store';
 import { useSceneStateStore } from './src/use-scene-state-store';
 
 GlobalRegistrator.register();
+
+// dynamic import: the matchers load `@testing-library/dom`, whose `screen` binds to `document` at
+// import time; `_` drops the `default` that the matchers' `export =` types add to the namespace
+const { default: _, ...jestDOMMatchers } = await import('@testing-library/jest-dom/matchers');
 
 expect.extend(jestDOMMatchers);
 
