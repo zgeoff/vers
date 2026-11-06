@@ -149,7 +149,7 @@
       "size-limit": "13.1.1",
       "srvx": "0.12.8",
       "testcontainers": "12.2.1",
-      "three": "0.186.1",
+      "three": "0.187.0",
       "tiny-invariant": "1.3.3",
       "ts-pattern": "5.9.2",
       "tslib": "2.8.1",
