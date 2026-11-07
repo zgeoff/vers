@@ -21,6 +21,7 @@ minimumReleaseAgeExcludes = [
   "@zgeoff/bugsink-mcp",
   "@zgeoff/bun-test-extended",
   "@zgeoff/dbhub",
+  "@zgeoff/diet",
   "@zgeoff/format-codemod",
   "@zgeoff/mcp-remote",
   "@zgeoff/oxlint-config",
