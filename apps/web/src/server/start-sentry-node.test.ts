@@ -5,7 +5,8 @@ import type { ErrorEvent } from '@sentry/node';
 import { configureLogging } from '@vers/service-runtime/logging';
 import { startTraceExport } from '@vers/service-utils/otel';
 import { waitFor } from '@vers/test-utils';
-import { updateEnv } from '@vers/test-utils/bun';
+import { readOpenTelemetryLinks, updateEnv } from '@vers/test-utils/bun';
+import type { OpenTelemetryLink } from '@vers/test-utils/bun';
 import invariant from 'tiny-invariant';
 import { makeRequestLogger } from './make-request-logger';
 import { withMiddleware } from './middleware';
@@ -160,4 +161,11 @@ test('it puts the inbound trace id on the log lines, the error event, and the ex
   expect(recorded[0]?.tags?.['traceID']).toBe('4bf92f3577b34da6a3ce929d0e0e4736');
   expect(recorded[0]?.contexts?.trace?.trace_id).toBe('4bf92f3577b34da6a3ce929d0e0e4736');
   expect(ctx.exportPaths).toStrictEqual(['/v1/traces']);
+});
+
+// a Sentry package's OpenTelemetry peer can be optional, and Bun's overrides don't reach those
+test('it links each OpenTelemetry package that the SDK declares inside the range it declares', () => {
+  expect(readOpenTelemetryLinks('@sentry/node', import.meta.dir)).toSatisfyAll(
+    (link: OpenTelemetryLink) => Bun.semver.satisfies(link.version, link.range),
+  );
 });

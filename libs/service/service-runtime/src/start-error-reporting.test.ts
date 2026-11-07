@@ -3,6 +3,8 @@ import { opentelemetry } from '@elysiajs/opentelemetry';
 import * as Sentry from '@sentry/bun';
 import type { ErrorEvent } from '@sentry/bun';
 import { waitFor } from '@vers/test-utils';
+import { readOpenTelemetryLinks } from '@vers/test-utils/bun';
+import type { OpenTelemetryLink } from '@vers/test-utils/bun';
 import { Elysia } from 'elysia';
 import invariant from 'tiny-invariant';
 import { reportUnexpectedError } from './report-unexpected-error';
@@ -121,4 +123,11 @@ test("it puts an inbound traceparent's trace id on a report when the OTel plugin
   });
 
   expect(recorded[0]?.contexts?.trace?.trace_id).toBe('4bf92f3577b34da6a3ce929d0e0e4736');
+});
+
+// a Sentry package's OpenTelemetry peer can be optional, and Bun's overrides don't reach those
+test('it links each OpenTelemetry package that the SDK declares inside the range it declares', () => {
+  expect(readOpenTelemetryLinks('@sentry/bun', import.meta.dir)).toSatisfyAll(
+    (link: OpenTelemetryLink) => Bun.semver.satisfies(link.version, link.range),
+  );
 });

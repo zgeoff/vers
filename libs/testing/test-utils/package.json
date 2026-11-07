@@ -26,13 +26,13 @@
     "@orpc/zod": "catalog:",
     "happy-dom": "catalog:",
     "jose": "catalog:",
-    "msw": "catalog:"
+    "msw": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@types/bun": "catalog:",
     "@types/node": "catalog:",
     "@zgeoff/bun-test-extended": "catalog:",
-    "typescript": "catalog:",
-    "zod": "catalog:"
+    "typescript": "catalog:"
   }
 }
