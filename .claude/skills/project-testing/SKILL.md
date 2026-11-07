@@ -48,9 +48,9 @@ whose read functions a test calls.
 
 - Find a read function as a `read-*.ts` file in its folder. When none returns the column you check,
   add one to that folder, with a test.
-- Every status move goes through the
-  [transition writer](../../../libs/data/db/src/transition-activity-status.ts) in `@vers/db`, so its
-  status read function serves every package.
+- Use the status read function from any package. Every status move goes through the
+  [transition writer](../../../libs/data/db/src/transition-activity-status.ts) beside it in
+  `@vers/db`.
 - In `@vers/service-activity`, `src/handlers/` writes every table its tests check, so those tests
   read through the handlers.
 
