@@ -1,5 +1,12 @@
+import { context, propagation, trace } from '@opentelemetry/api';
+import { AsyncLocalStorageContextManager } from '@opentelemetry/context-async-hooks';
+import {
+  CompositePropagator,
+  W3CBaggagePropagator,
+  W3CTraceContextPropagator,
+} from '@opentelemetry/core';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-proto';
-import { BatchSpanProcessor, NodeTracerProvider } from '@opentelemetry/sdk-trace-node';
+import { BatchSpanProcessor, TracerProvider } from '@opentelemetry/sdk-trace';
 import { readTelemetryResource } from './read-telemetry-resource';
 
 interface StartTraceExportOptions {
@@ -11,15 +18,24 @@ export interface TraceExport {
 }
 
 export function startTraceExport(options: StartTraceExportOptions): TraceExport {
-  const provider = new NodeTracerProvider({
+  // the exporter reads its endpoint and headers from OTEL_EXPORTER_OTLP_* at construction, so
+  // callers gate on those being present
+  const provider = new TracerProvider({
     resource: readTelemetryResource({ serviceName: options.serviceName }),
-    spanProcessors: [new BatchSpanProcessor(new OTLPTraceExporter())],
+    spanProcessors: [new BatchSpanProcessor({ exporter: new OTLPTraceExporter() })],
   });
 
-  // register() with no arguments installs the default AsyncLocalStorage context manager and the W3C
-  // trace-context propagator; the exporter read its endpoint and headers from OTEL_EXPORTER_OTLP_*
-  // at construction, so callers gate on those being present
-  provider.register();
+  trace.setGlobalTracerProvider(provider);
+
+  // the API keeps the first context manager registered, so this one is skipped when error
+  // reporting has already installed its own
+  context.setGlobalContextManager(new AsyncLocalStorageContextManager().enable());
+
+  propagation.setGlobalPropagator(
+    new CompositePropagator({
+      propagators: [new W3CTraceContextPropagator(), new W3CBaggagePropagator()],
+    }),
+  );
 
   return { stop: () => provider.shutdown() };
 }

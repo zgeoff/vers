@@ -15,7 +15,10 @@
     "@happy-dom/global-registrator": "catalog:",
     "@logtape/logtape": "catalog:",
     "@opentelemetry/api": "catalog:",
+    "@opentelemetry/context-async-hooks": "catalog:",
+    "@opentelemetry/core": "catalog:",
     "@opentelemetry/sdk-metrics": "catalog:",
+    "@opentelemetry/sdk-trace": "catalog:",
     "@orpc/client": "catalog:",
     "@orpc/contract": "catalog:",
     "@orpc/openapi": "catalog:",
@@ -26,7 +29,6 @@
     "msw": "catalog:"
   },
   "devDependencies": {
-    "@opentelemetry/sdk-trace": "catalog:",
     "@types/bun": "catalog:",
     "@types/node": "catalog:",
     "@zgeoff/bun-test-extended": "catalog:",

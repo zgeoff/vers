@@ -1,27 +1,12 @@
-import { expect, onTestFinished, test } from 'bun:test';
-import { SpanKind, SpanStatusCode, trace } from '@opentelemetry/api';
-import {
-  InMemorySpanExporter,
-  NodeTracerProvider,
-  SimpleSpanProcessor,
-} from '@opentelemetry/sdk-trace-node';
+import { expect, test } from 'bun:test';
+import { SpanKind, SpanStatusCode } from '@opentelemetry/api';
+import { createInMemoryTraces } from '@vers/test-utils/bun';
 import { HttpResponse, http } from 'msw';
 import { createEmailClient } from './create-email-client';
 import { RESEND_ENDPOINT_URL, sentEmails, server } from './mocks/node';
 
 function setupTest() {
-  const exporter = new InMemorySpanExporter();
-  const provider = new NodeTracerProvider({ spanProcessors: [new SimpleSpanProcessor(exporter)] });
-
-  provider.register();
-
-  onTestFinished(async () => {
-    trace.disable();
-
-    await provider.shutdown();
-  });
-
-  return { exporter };
+  return createInMemoryTraces();
 }
 
 test('it sends an email with the default from address', async () => {

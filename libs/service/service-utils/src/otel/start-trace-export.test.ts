@@ -1,5 +1,5 @@
 import { expect, onTestFinished, test } from 'bun:test';
-import { SpanStatusCode, trace } from '@opentelemetry/api';
+import { SpanStatusCode, context, propagation, trace } from '@opentelemetry/api';
 import { updateEnv } from '@vers/test-utils/bun';
 import { startTraceExport } from './start-trace-export';
 
@@ -92,5 +92,38 @@ test('it marks a span active across an await once registered', async () => {
 
     span.setStatus({ code: SpanStatusCode.OK });
     span.end();
+  });
+});
+
+test('it injects a traceparent and the baggage for the active context once registered', () => {
+  const server = Bun.serve({ port: 0, routes: { '/*': Response.json({}) } });
+
+  updateEnv('OTEL_EXPORTER_OTLP_ENDPOINT', `http://127.0.0.1:${server.port}`);
+
+  const traceExport = startTraceExport({ serviceName: 'test-service' });
+
+  onTestFinished(async () => {
+    await traceExport.stop();
+
+    trace.disable();
+
+    await server.stop();
+  });
+
+  const carrier: Record<string, string> = {};
+
+  trace.getTracer('test-service').startActiveSpan('test-span', (span) => {
+    const withBaggage = propagation.setBaggage(
+      context.active(),
+      propagation.createBaggage({ tenant: { value: 'north-shelf' } }),
+    );
+
+    propagation.inject(withBaggage, carrier);
+    span.end();
+  });
+
+  expect(carrier).toStrictEqual({
+    baggage: 'tenant=north-shelf',
+    traceparent: expect.stringMatching(/^00-[\da-f]{32}-[\da-f]{16}-01$/u),
   });
 });
