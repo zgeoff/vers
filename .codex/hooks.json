@@ -1,0 +1,46 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|apply_patch",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun --no-install \"$(git rev-parse --show-toplevel)/.claude/hooks/start.ts\" --harness codex"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun --no-install \"$(git rev-parse --show-toplevel)/.claude/hooks/start.ts\" --harness codex"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun --no-install \"$(git rev-parse --show-toplevel)/.claude/hooks/start.ts\" --harness codex"
+          }
+        ]
+      }
+    ],
+    "PostCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun --no-install \"$(git rev-parse --show-toplevel)/.claude/hooks/start.ts\" --harness codex"
+          }
+        ]
+      }
+    ]
+  }
+}

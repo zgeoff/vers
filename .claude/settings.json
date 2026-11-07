@@ -2,20 +2,20 @@
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Edit|Write|MultiEdit|Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bun --no-install \"$CLAUDE_PROJECT_DIR/.claude/hooks/skill-gate/skill-gate.ts\""
-          }
-        ]
-      },
-      {
         "hooks": [
           {
             "type": "command",
             "command": "bun \"$CLAUDE_PROJECT_DIR/scripts/src/bin/retrieval-policy.ts\"",
             "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write|MultiEdit|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun --no-install \"$CLAUDE_PROJECT_DIR/.claude/hooks/start.ts\""
           }
         ]
       }
@@ -38,6 +38,28 @@
             "type": "command",
             "command": "bun \"$CLAUDE_PROJECT_DIR/scripts/src/bin/retrieval-policy.ts\"",
             "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun --no-install \"$CLAUDE_PROJECT_DIR/.claude/hooks/start.ts\""
+          }
+        ]
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun --no-install \"$CLAUDE_PROJECT_DIR/.claude/hooks/start.ts\""
           }
         ]
       }

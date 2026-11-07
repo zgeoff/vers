@@ -8,7 +8,7 @@ reviews:
   path_filters:
     - '!libs/data/db/src/schema.generated.ts'
     # repo-sync overwrites these from zgeoff/tools
-    - '!.claude/hooks/skill-gate/skill-gate.ts'
+    - '!.claude/hooks/start.ts'
     - '!.claude/skills/ci-design/SKILL.md'
     - '!.claude/skills/code-style/SKILL.md'
     - '!.claude/skills/docs-writing/**'

@@ -13,6 +13,7 @@
         "@types/bun": "catalog:",
         "@types/node": "catalog:",
         "@vers/scripts": "workspace:*",
+        "@zgeoff/agent-hooks": "catalog:",
         "@zgeoff/bugsink-mcp": "catalog:",
         "@zgeoff/bun-test-extended": "catalog:",
         "@zgeoff/chex": "catalog:",
@@ -20,7 +21,6 @@
         "@zgeoff/format-codemod": "catalog:",
         "@zgeoff/mcp-remote": "catalog:",
         "@zgeoff/oxlint-config": "catalog:",
-        "@zgeoff/skill-gate": "catalog:",
         "@zgeoff/umami-mcp": "catalog:",
         "chrome-devtools-mcp": "catalog:",
         "knip": "catalog:",
@@ -1455,6 +1455,7 @@
     "@types/three": "0.186.0",
     "@vitejs/plugin-react": "6.1.2",
     "@vitejs/plugin-rsc": "0.5.38",
+    "@zgeoff/agent-hooks": "0.2.6",
     "@zgeoff/bugsink-mcp": "0.2.0",
     "@zgeoff/bun-test-extended": "0.2.3",
     "@zgeoff/chex": "0.1.8",
@@ -1463,7 +1464,6 @@
     "@zgeoff/format-codemod": "0.3.5",
     "@zgeoff/mcp-remote": "0.1.38",
     "@zgeoff/oxlint-config": "0.8.1",
-    "@zgeoff/skill-gate": "0.2.22",
     "@zgeoff/std": "0.4.2",
     "@zgeoff/umami-mcp": "0.1.1",
     "autoprefixer": "10.6.2",
@@ -3063,8 +3063,6 @@
     "@zgeoff/mcp-remote": ["@zgeoff/mcp-remote@0.1.38", "", { "dependencies": { "express": "^4.21.2", "open": "^10.1.0", "strict-url-sanitise": "^0.0.1", "undici": "^7.12.0" }, "bin": { "mcp-remote": "dist/proxy.js", "mcp-remote-client": "dist/client.js" } }, "sha512-NIF6nd1wJ3/NmaXmI7vm1eE7vbXQDP9cxqhfGpYaEdoEPwzbju1uxyaNvGnHrzBblYFpfk6m2aqqJhT8OLDbxw=="],
 
     "@zgeoff/oxlint-config": ["@zgeoff/oxlint-config@0.8.1", "", { "dependencies": { "@stylistic/eslint-plugin": "5.10.0" }, "peerDependencies": { "oxlint": ">=1.78.0" } }, "sha512-hSQHWbEMuiUFLTJdog0JA6RaiTXg30fUttxAMsZMFiwvkXxbsWufOqH0R3T4ku2w031s/AkhWZ5ZKPqsSce/bQ=="],
-
-    "@zgeoff/skill-gate": ["@zgeoff/skill-gate@0.2.22", "", { "dependencies": { "@zgeoff/agent-hooks": "0.2.6" } }, "sha512-1BTjYDiFaGEvhSbZ/wWIh7KU/CW5NYFSHkEskDtI9lUW6NZXKop3w4Vml21LkdFwe66l7OQKs5m3SxX4egcRgg=="],
 
     "@zgeoff/std": ["@zgeoff/std@0.4.2", "", {}, "sha512-GZnnOkrYHe6p071BWYe7XIq5klqhvVb4j/JWOrrUTSj76uLA/ZnzlqDKIq16LblMcuRF9tjfvKvGK8sLRN8fMg=="],
 

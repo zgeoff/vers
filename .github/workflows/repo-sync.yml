@@ -48,7 +48,7 @@ jobs:
       ref: ${{ github.event.client_payload.sha }}
       skip: issue-templates, pr-template, editorconfig, memory-cap
       include:
-        skill-testing, hook-skill-gate, skill-docs-writing, skill-code-style, skill-skill-writing,
+        skill-testing, hook-start, skill-docs-writing, skill-code-style, skill-skill-writing,
         workflow-audit-fix, skill-ci-design
     secrets:
       REPO_SYNC_APP_CLIENT_ID: ${{ secrets.REPO_SYNC_APP_CLIENT_ID }}
