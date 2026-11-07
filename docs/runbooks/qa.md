@@ -94,9 +94,13 @@ bun run qa:inbox wait --to qa+signup-1@qa.versidle.com --kind any --timeout 60 -
 ```
 
 The command polls Resend until an email arrives for `--to`, matched without regard to case. It takes
-only an email that Resend received no earlier than 2 minutes before the command started, so an email
-from an earlier run never matches. It reads the matching emails newest first and stops at the first
-that carries the requested kind. `--timeout` caps the poll in seconds (default 120); on timeout the
+only an email that Resend received no earlier than 2 minutes before the command started. It reads
+the matching emails newest first and stops at the first that carries the requested kind.
+
+An email from an earlier run within those 2 minutes still matches, and the command can return it at
+once, with a stale code or link. To get only the email of this run, use a new address for each run,
+such as `qa+signup-2@qa.versidle.com`. If you reuse an address, wait 2 minutes after its last email
+before you start the flow. `--timeout` caps the poll in seconds (default 120); on timeout the
 command prints why it stopped and exits 1. `--json` prints
 `{ id, kind, code, url, subject, receivedAt }` on one line for an agent to parse.
 
@@ -239,8 +243,8 @@ it. When the resume fails, the worker stays paused and runs none of its code. To
 worker:
 
 1. Run `offline <target> off`. Expect: the failure of the resume, then `offline off`.
-2. Reload the page. No session is attached to the worker now, so the new worker runs at once.
-   Expect: the page works and is online.
+2. Detach every other DevTools session from the worker, then reload the page. With no session
+   attached, the new worker runs at once. Expect: the page works and is online.
 3. To cut the worker again, run `offline <target> on`.
 
 ### Capturing worker traffic

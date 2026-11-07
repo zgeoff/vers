@@ -37,7 +37,8 @@ These fields come from the page:
   and the last 50 run outcomes that the worker sent to this tab. Each outcome carries the ID of the
   worker that sent it and the time it arrived. The tab keeps the outcomes in session storage, so
   they survive a reload.
-- `refusalCaptures`: each refusal that the page captured since the last call.
+- `refusalCaptures`: every refusal capture in storage, from this tab or another. A call removes only
+  the complete captures, so a `pending` capture comes back in the next call.
 - `captureFailures`: each failure to store a capture.
 
 ### Refused starts
