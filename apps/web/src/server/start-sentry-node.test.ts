@@ -203,7 +203,10 @@ test('it leaves the session cookies off a web error event', async () => {
     expect(recorded).toHaveLength(1);
   });
 
-  expect<unknown>(recorded[0]?.request).toStrictEqual({
+  // the SDK writes the keys it leaves empty as undefined, which the event's request type can't hold
+  const request: unknown = recorded[0]?.request;
+
+  expect(request).toStrictEqual({
     data: undefined,
     headers: { accept: 'text/html' },
     method: 'GET',
