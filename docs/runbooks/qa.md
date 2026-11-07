@@ -1,26 +1,39 @@
 # Manual QA
 
-Manual QA drives production at `https://versidle.com` with a QA account, a real Chrome, and the repo
+Use this runbook to test a player flow on production at `https://versidle.com` by hand, or to look
+into a bug that only shows there. You drive the flow with a QA account, a real Chrome and the repo
 scripts behind `bun run qa:*`. The scripts seed and reset accounts, read verification email, drive
-the browser and log its worker traffic, and send the fleet cold. A hook on the game page shows the
-writer worker's state from the console and sets a QA avatar's simulation speed. `qa:seed`,
-`qa:reset`, and `qa:cold` change production state, so each one prints its target and refuses when
-its guard fails: an address outside `qa.versidle.com`, a database host that is not loopback without
-`--yes`, or a fleet that served a request in the last 10 minutes.
+the browser and log its worker traffic, and suspend the fleet. From the console of a game page, you
+read the state of the [writer worker](../architecture/game/glossary.md) and run a QA avatar faster
+than real time through the [debug hook](#debug-hook).
 
-A QA account is an address under `qa.versidle.com`, a Resend receiving domain: mail to any address
-on it (`qa+signup-1@qa.versidle.com`) lands in Resend's received mail, where the inbox script reads
-it. The production database is pre-release, so QA accounts live on it, at most 50 at a time. QA
-drives the public host `https://versidle.com`, never the app's `fly.dev` hostname; the inbox accepts
-a link only when its origin is `https://versidle.com`.
+Three scripts change production state. Each one prints its target first, and each refuses when its
+guard fails:
+
+- `qa:seed` and `qa:reset` refuse an address outside `qa.versidle.com`, and a database host that is
+  not loopback. To reach a remote database, pass `--yes`.
+- `qa:cold` refuses when a request other than a health check or a deploy probe reached the fleet in
+  the last 10 minutes.
+
+Use an address under `qa.versidle.com` for every QA account. The domain receives mail through
+Resend, so mail to any address on it, such as `qa+signup-1@qa.versidle.com`, lands where the
+[inbox script](#inbox) reads it. Drive the public host `https://versidle.com`, never the app's
+`fly.dev` hostname.
+
+QA accounts live in the production database. Keep 50 or fewer there at a time. The scripts do not
+count them, so count them with the `execute_sql_prod` tool of the `postgres` MCP server before you
+seed one:
+
+```sql
+select count(*) from users where email like '%@qa.versidle.com';
+```
 
 ## Accounts
 
-`bun run qa:seed` and `bun run qa:reset` write a QA account straight into the database that
-`DATABASE_URL` names, so a pass starts from a known state without walking sign-up or grinding
-levels. Both commands accept only an address under `qa.versidle.com`, print the target host before
-they act, and refuse a host that is not a loopback address unless you pass `--yes`. Production use
-is the owner's explicit choice: point `DATABASE_URL` at the pre-release database and pass `--yes`.
+`bun run qa:seed` and `bun run qa:reset` write a QA account straight into the database at
+`DATABASE_URL`, so a pass starts from a known state without walking sign-up or grinding levels. Run
+them against production only when the repo owner asks you to. Then point `DATABASE_URL` at the
+production database and pass `--yes`.
 
 ```bash
 bun run qa:seed --user qa-007 --level 1
@@ -30,25 +43,30 @@ bun run qa:reset --user qa-007 --all --yes
 ```
 
 `qa:seed` creates `qa-007@qa.versidle.com` with the password from `--password`, or a generated one,
-and an active avatar whose XP is the minimum for `--level`. It refuses a `--level` above 1 without
-`--runs`: with no run stored, the game client starts the avatar's first run from XP 0, and the
-activity service refuses a start whose XP differs from the avatar's. The avatar is flagged as a QA
-avatar, which is what lets the [debug hook](#debug-hook) run it above real time; nothing but this
-command writes that flag. The username and avatar name derive from the account name under their
-contracts (`qa_007` and `qaaah` for `qa-007`), and the command prints them with the credentials
-once; `--two-factor` writes an authenticator verification and prints its secret and `otpauth://`
-URI. With `--runs`, it seeds that many origin-node runs, each simulated with the real engine to its
-terminal checkpoint against the registry's current content document and stamped with the current sim
-version, then stored as the activity and replay services would leave them: hashed checkpoints,
-`verified_head` at the appended head, settled XP on the avatar, minted reward items, both chain
-anchors on the last run's tail, and a first-clear grant once a run completes. The command prints
-each run's outcome. Deriving those runs needs the keys service's `SCOPE_SECRET_ROOTS` and
-`ROLL_KEY_ROOTS` in the environment, so the seeded encounter and items equal what the services
-derive for the avatar. `qa:seed` refuses an address that already has an account.
+and an active avatar whose XP is the minimum for `--level`. The command prints the credentials once,
+with the username and avatar name it derives from the account name. The username replaces each
+character other than a letter, digit or `_` with `_`. The avatar name maps each digit to a letter
+(`0` to `a`, `1` to `b`, and on to `9` to `j`) and drops every other character that is not a letter.
+For `qa-007`, the username is `qa_007` and the avatar name is `qaaah`. It refuses an address that
+already has an account.
 
-`qa:reset` deletes the account's activities, chains, items, and grants and returns its avatars to
-level 1, keeping the QA flag; `--all` deletes the account itself, with its sessions and
-verifications. The logic lives in `libs/testing/qa-account/`.
+The avatar carries a QA flag. Only `qa:seed` writes that flag, and only a flagged avatar can run
+above real time through the debug hook.
+
+`qa:seed` refuses a `--level` above 1 without `--runs`. With no run stored, the game client starts
+the avatar's first run from XP 0, and the activity service refuses a start whose XP differs from the
+avatar's. With `--runs <n>`, the command simulates `n` runs at the map's starting node with the real
+engine and stores each as the activity and replay services store a finished, verified run. The
+avatar keeps the XP and the reward items those runs earned, and the command prints each run's
+outcome. To derive the same encounters and items as the services, the command needs the keys
+service's `SCOPE_SECRET_ROOTS` and `ROLL_KEY_ROOTS` in the environment.
+
+`--two-factor` adds an authenticator to the account and prints its secret and `otpauth://` URI.
+
+`qa:reset` deletes the account's activities, [seed chains](../architecture/game/seed-chain.md),
+items, and the grants recorded for its avatars, and returns its avatars to level 1 with the QA flag
+kept. `--all` deletes the account itself, with its sessions and verifications. The logic lives in
+`libs/testing/qa-account/`.
 
 ## Inbox
 
@@ -75,16 +93,21 @@ bun run qa:inbox wait --to qa+signup-1@qa.versidle.com --kind welcome
 bun run qa:inbox wait --to qa+signup-1@qa.versidle.com --kind any --timeout 60 --json
 ```
 
-The poll lists the newest 100 received emails every 3s, keeps those sent to `--to`
-(case-insensitive) and created within the 2 minutes before the command started, and reads each
-candidate's body newest first until one carries the requested kind. `--timeout` caps the poll in
-seconds (default 120); on timeout the command prints why it stopped and exits 1. `--json` prints
+The command polls Resend until an email arrives for `--to`, matched without regard to case. It takes
+only an email that Resend received no earlier than 2 minutes before the command started. It reads
+the matching emails newest first and stops at the first that carries the requested kind.
+
+An email from an earlier run within those 2 minutes still matches, and the command can return it at
+once, with a stale code or link. To get only the email of this run, use a new address for each run,
+such as `qa+signup-2@qa.versidle.com`. If you reuse an address, wait 2 minutes after its last email
+before you start the flow. `--timeout` caps the poll in seconds (default 120); on timeout the
+command prints why it stopped and exits 1. `--json` prints
 `{ id, kind, code, url, subject, receivedAt }` on one line for an agent to parse.
 
-A link counts only when its origin is `https://versidle.com`, so mail from a third party to a QA
-address cannot pass off another site's link as the production one. `--kind` names the template to
-read; `any` (the default) tries each kind in the order of the table and reports the first that
-matches.
+The script takes a link only when its origin is `https://versidle.com`. A stranger can send mail to
+a QA address, and this rule keeps a link to another site out of the output. `--kind` picks the
+template to read; `any` (the default) tries each kind in the order of the table and reports the
+first that matches.
 
 | Kind             | Email                    | `code`                       | `url`                      |
 | ---------------- | ------------------------ | ---------------------------- | -------------------------- |
@@ -109,35 +132,44 @@ bun run qa:inbox show <received_email_id>
 
 The extraction rules live in `scripts/src/qa-inbox/`, and their tests render the templates in
 `@vers/email` with known codes and links, so a template change that moves a code or a link fails the
-suite. The e2e sign-up journey reads the stub's captured sends through the same rules.
+suite. The e2e sign-up journey runs against a stand-in for Resend, and it reads the emails that the
+stand-in captures through the same rules.
 
 ## Browser
 
 Two repo scripts drive a real Chrome over the Chrome DevTools Protocol (CDP): `bun run qa:cdp`
 drives one page or worker target, and `bun run qa:capture` logs every shared worker's RPC traffic.
 Both speak to the browser's DevTools endpoint directly, over HTTP for the target list and over a
-WebSocket per target; no browser library sits in between. The `chrome-devtools` MCP server reaches
-the same browser with a richer tool set; these scripts cover what it cannot: a fresh browser context
-per run, worker targets, offline emulation, a stack pause, a CPU profile, and a traffic log that
-survives the session.
+WebSocket per target, and they use no browser library. The `chrome-devtools` MCP server reaches the
+same browser with a richer tool set. Use these scripts for what the MCP server cannot do:
+
+- open each run in a fresh browser context;
+- drive shared worker and service worker targets;
+- take a page or a worker offline;
+- print the stack of a running script (`qa:cdp pause`);
+- record a CPU profile;
+- log worker traffic to your terminal, where the log stays after the MCP server disconnects.
 
 ### Endpoint
 
 Chrome exposes a DevTools endpoint only when it launches with `--remote-debugging-port` and
-`--remote-allow-origins=*`, and it honors `--remote-debugging-port` only in a fresh instance, so the
-debug browser runs from its own profile directory, separate from the daily one:
+`--remote-allow-origins=*`, and it honors `--remote-debugging-port` only in a fresh instance. Run
+the debug browser from its own profile directory, separate from the daily one. On Windows:
 
 ```powershell
 & "C:\Program Files\Google\Chrome\Application\chrome.exe" --remote-debugging-port=9222 --remote-allow-origins=* --user-data-dir=C:\temp\chrome-vers-debug
 ```
+
+On Linux, `bun run qa:chrome start` launches a headless Chromium with its own profile on port 9222.
+[Cut the network](qa-network-cut.md) covers its `--netns` mode.
 
 The scripts read the endpoint from `--endpoint <host:port>`, then from `QA_CDP_ENDPOINT`, and
 default to `127.0.0.1:9222`. A value from the flag or the environment must be a hostname or IPv4
 address and a port from 1 to 65535; the scripts reject any other value before a command runs. The
 port bridge a NAT-mode WSL distribution needs to reach the Windows loopback is in
 [Chrome DevTools MCP](../../.claude/skills/chrome-devtools-mcp/SKILL.md#add-the-proxy). Behind the
-bridge the endpoint is the WSL default gateway on the bridged port, so a session under NAT sets
-`QA_CDP_ENDPOINT` once:
+bridge, the endpoint is the WSL default gateway on port 9223, the port that the bridge forwards to
+Chrome's 9222. A session under NAT sets `QA_CDP_ENDPOINT` once:
 
 ```bash
 export QA_CDP_ENDPOINT="$(ip route show default | awk '{print $3; exit}'):9223"
@@ -146,8 +178,9 @@ bun run qa:cdp targets
 
 Chrome reports every target's socket URL against its own loopback, so the scripts rewrite the host
 of each socket URL to the endpoint before they connect. A target that already has a DevTools client
-attached reports no socket URL at all; the scripts then connect on the `/devtools/page/<target_id>`
-path Chrome serves for every target type.
+attached reports no socket URL at all. For such a target, the scripts connect on the
+`/devtools/page/<target_id>` path, which Chrome serves for every target type, and Chrome keeps both
+clients attached.
 
 ### Driving a target
 
@@ -181,10 +214,9 @@ bun run qa:cdp shot <target_id> ./after-sign-in.png
 | `procs`                                   | lists the browser processes with their CPU time                                         |
 | `monitor [--every] [--url]`               | polls the heap of matching targets and the renderer and GPU CPU times until interrupted |
 
-A browser context created over CDP is ephemeral: it lives until the browser exits, and its cookies
-and storage go with it. Each `new` without `--context` starts from a signed-out state, which is what
-a sign-up or sign-in flow wants; a flow that continues in the same session passes the printed
-context id back through `--context`.
+Start a sign-up or sign-in flow with `new` and no `--context`: the tab opens signed out, in a
+browser context of its own. To continue a flow in the same session, pass the printed context id back
+through `--context`. The context, with its cookies and storage, lasts until the browser exits.
 
 `eval` installs a `window.__qa` object on a page before it evaluates the script, so a flow drives
 React-controlled inputs without pasting helpers in:
@@ -199,109 +231,62 @@ React-controlled inputs without pasting helpers in:
 `pause` prints the stack only when script is running: an idle page fires no pause event, and the
 command reports the timeout instead.
 
-Chrome drops network emulation when the DevTools session that set it detaches, so
-`offline <target> on` returns with a background process left holding that session, for a page,
-shared worker or service worker target. The cut holds until `offline <target> off` or until the
-target closes.
+`offline <target> on` works on a page, shared worker or service worker target. Chrome drops network
+emulation when the DevTools session that set it detaches, so the command leaves a background process
+that holds the session open. The target stays offline until `offline <target> off` or until the
+target closes. `offline <target> off` ends the background process and brings the target back online.
+
+A reload of a held shared worker keeps the cut. Chrome gives the new worker the old target id, so
+`offline <target> off` still takes the id you passed to `on`. The new worker starts paused, as
+[Capturing worker traffic](#capturing-worker-traffic) explains, and the background process resumes
+it. When the resume fails, the worker stays paused and runs none of its code. To recover a paused
+worker:
+
+1. Run `offline <target> off`. Expect: the failure of the resume, then `offline off`.
+2. Detach every other DevTools session from the worker, then reload the page. With no session
+   attached, the new worker runs at once. Expect: the page works and is online.
+3. To cut the worker again, run `offline <target> on`.
 
 ### Capturing worker traffic
 
 `qa:capture` polls the target list every second, attaches to each shared worker it has not seen, and
 logs that worker's requests whose URL contains `--path` (default `/api/rpc/`) together with the
-worker's console output and exceptions. `--worker-url <substring>` keeps the attachment to workers
-whose script URL contains it. Each line carries a timestamp; a request prints its method, URL, and
-body, a response prints its status and then its body once the browser has it, and a failed request
-prints the browser's error text. The log cuts a body longer than 1500 characters and marks the cut
-with `…`.
+worker's console output and exceptions. With `--worker-url <substring>`, the capture attaches only
+to workers whose script URL contains the substring. Each line starts with a timestamp. For a
+request, the capture logs its method, URL and body. For a response, it logs the status, then the
+body once the browser has it. For a failed request, it logs the browser's error text. The capture
+shortens a long body and marks the cut with `…`.
 
 ```bash
 bun run qa:capture --worker-url versidle.com
 ```
 
-The attachment keeps a shared worker alive: a shared worker with no page left holds on as long as a
-DevTools client is attached, so a worker whose last tab closed during a capture lingers as a zombie
-until the capture stops. Stop the capture (Ctrl-C) before closing the last tab of a context.
+A reload or a closed last tab ends a shared worker, and the next page starts a new one. When any
+DevTools session is attached to the old worker, Chrome starts the new worker paused for the
+debugger. That session can be `qa:capture`, the background process of `qa:cdp offline`, or the
+`chrome-devtools` MCP server. A paused worker runs none of its code, so it sends no request and
+never answers the [debug hook](#debug-hook).
+
+`qa:capture` and `qa:cdp offline` resume each new worker, so the capture log and the debug hook keep
+working across a reload. With any other session attached, the new worker stays paused. Detach that
+session, then reload the page.
 
 ## Cut the network
 
-DevTools emulation takes one target offline. `bun run qa:chrome start --netns` runs a Chromium on
-the scripts' default endpoint in its own network namespace, and `bun run qa:net cut` cuts every page
-and worker in it at once. [Cut the network](qa-network-cut.md) holds the procedure.
+`qa:cdp offline` takes one target offline. To cut every page and worker at once, run the browser
+with `bun run qa:chrome start --netns`, in its own network namespace, then run `bun run qa:net cut`.
+[Cut the network](qa-network-cut.md) holds the procedure.
 
 ## Debug hook
 
-A QA tester reads the writer worker's state and sets a QA avatar's simulation speed from the page
-console through `window.__versQA`, with no DevTools attachment to the worker. app-web installs the
-object on a game page only when the session's email is under `qa.versidle.com`, or when a
-non-production build carries `?qa=1`. The server decides the account gate from the session and hands
-the page a boolean, so the page never reads the email, and every other page carries no object and
-runs no extra code.
-
-```js
-await window.__versQA.snapshot();
-```
-
-`snapshot()` answers one read-only worker message with a copy of the live run, the durable outbox
-with each pending start's attempts and last refusal, the latest-run record the next mint folds from,
-the writer's identity, the current simulation speed, and the last 200 worker events kept in a ring
-buffer inside the worker: lifecycle phases, start and flush outcomes, refusals, speed changes, and
-connectivity changes. A start event holds the chain index and XP the start was minted with, and a
-refusal event holds the refused start, the live run it ended, and every start it dropped. An `rpc`
-event records each request from the worker to the activity service that failed in transport or came
-back with an error status, so it shows whether the worker reached the server. The snapshot's `tab`
-record holds the page's own online flag, which can disagree with the worker: a DevTools network
-toggle takes the page offline and leaves the shared worker online. The `tab` record also holds the
-browser's user agent, whether the browser has `SharedWorker`, and the last 50 run outcomes the tab
-received, each with the ID of the worker that sent it and the time it arrived. The tab keeps that
-list in its session storage, so the list survives a reload. The snapshot changes no runtime state in
-the worker.
-
-A device in airplane mode has no console to reach, so the page captures a refused run itself and the
-next `snapshot()` call returns the capture in `refusalCaptures`, with any storage failure in
-`captureFailures`. [Refusal captures](qa-refusal-captures.md) covers what a capture holds and how
-storage keeps it.
-
-[Game simulation](../architecture/game/game-simulation.md#checkpoint-streams) owns the writer
-worker, and [offline reconcile](../architecture/game/offline-reconcile.md#worker-lifecycle) owns the
-lifecycle the events trace.
-
-```js
-await window.__versQA.setSpeed(20);
-await window.__versQA.setSpeed(1);
-```
-
-`setSpeed(n)` runs the live simulation at `n` fixed steps per step of real time, for an integer `n`
-from 1 to 20, and resolves to the applied speed. The multiplier scales the wall clock the writer
-banks into its accumulator, never the fixed step each run consumes, so a sped-up run walks the same
-step sequence as a real-time run and produces the same checkpoint stream, hashes, rewards, and
-replay result. It applies to live combat only: the checkpoint flush keeps its wall-clock cadence,
-`playedAt` stays the wall clock, and the offline fast-forward is unaffected. The worker refuses a
-speed above 1 unless the active avatar is a QA avatar, and the call rejects with the refusal. While
-the speed is above 1 the game routes show a `QA ×N` badge in the top right corner, so a sped-up run
-is never mistaken for a real one. The speed lives in the writer worker, so it holds across tabs and
-resets to 1 when the worker restarts. The activity service credits a QA avatar's offline budget at
-20 times the wall clock instead of 1, on the same append path and under the same cap as every other
-avatar, so a run at any speed up to 20 stays inside the budget
-([the offline budget](../architecture/game/game-simulation.md#the-offline-budget)).
+Read the writer worker's state and set a QA avatar's simulation speed from the page console through
+`window.__versQA`, with no DevTools session on the worker. app-web installs the object on a game
+page only when the session's email is under `qa.versidle.com`, or when the URL of a non-production
+build's page carries `?qa=1`. The server reads the email from the session and hands the page only a
+yes or no, so the page never sees the email. Every other page has no object and runs no extra code.
+[QA debug hook](qa-debug-hook.md) covers `snapshot()` and `setSpeed()`.
 
 ## Cold path
 
-`bun run qa:cold` sends the fleet cold for manual QA of a cold start: it suspends every service
-machine of every app in `deploy.config.ts`, stopping instead where the app's `fly.toml` parks idle
-machines with `stop`, then prints each app's machine states. Before it touches a machine it reads
-the `vers-traces` dataset in Axiom for the last 10 minutes and refuses, with the request count and
-the busiest routes, when any request other than a `/health` check or the anonymous `getAvatars`
-probe reached the fleet, so a fleet that is serving a player is never sent cold. The script refuses
-`--force`: the manifest names only production apps, and no other fleet exists to accept it.
-
-```bash
-bun run qa:cold --dry-run
-bun run qa:cold --wait
-```
-
-`--dry-run` prints the verdict and the planned actions without acting. `--wait` polls until every
-machine reports suspended or stopped, for at most 3 minutes; the deadline also ends a `flyctl` read
-that is still pending, so a stalled read cannot hold the wait open past it. The script reads
-`AXIOM_TOKEN` and `FLY_API_TOKEN` from the environment, and when either is unset it reads the
-`vers-ci` 1Password vault through the `op` CLI: the `axiom` item's `iac-token` field and the
-`github-actions` item's `fly-api-token` field.
+`bun run qa:cold` suspends the fleet so you can test a cold start by hand.
+[QA cold path](qa-cold-path.md) covers its traffic check, its flags and its credentials.

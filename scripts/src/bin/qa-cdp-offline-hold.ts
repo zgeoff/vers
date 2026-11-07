@@ -1,6 +1,8 @@
+import { appendFile } from 'node:fs/promises';
 import { define } from 'gunshi';
 import { ENDPOINT_ARG } from '../qa/endpoint-arg';
 import { readSaveConfirmation } from '../qa/read-save-confirmation';
+import { subscribeToTargetRestarts } from '../qa/subscribe-to-target-restarts';
 import { withTargetClient } from '../qa/with-target-client';
 import { runCommandLine } from '../utils/run-command-line';
 
@@ -18,6 +20,11 @@ const entry = define({
   description: 'keep a page or worker target offline until this process stops or the target closes',
   args: {
     endpoint: { ...ENDPOINT_ARG, required: true },
+    log: {
+      description: 'file that each resume failure is appended to',
+      required: true,
+      type: 'string',
+    },
     target: { description: 'target id', type: 'positional' },
   },
   run: async (ctx) => {
@@ -31,6 +38,19 @@ const entry = define({
     }
 
     await withTargetClient(ctx.values.endpoint, targetID, async (target) => {
+      // the parent closes this process's stderr once the hold is saved, so a failure goes to the
+      // log that offline off prints
+      subscribeToTargetRestarts(target, (message) => {
+        void (async () => {
+          try {
+            await appendFile(ctx.values.log, `hold ${targetID}: ${message}\n`);
+          } catch {
+            // with stderr closed and the log unwritable, the hold has no channel left, and it
+            // keeps the cut rather than end on a lost message
+          }
+        })();
+      });
+
       await target.send('Network.enable');
       await target.send('Network.emulateNetworkConditions', OFFLINE_CONDITIONS);
 

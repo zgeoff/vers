@@ -35,6 +35,7 @@ export interface OfflineHold {
 export interface OfflineHoldPaths {
   readonly directory: string;
   readonly lockFile: string;
+  readonly logFile: string;
   readonly stateFile: string;
 }
 

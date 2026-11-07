@@ -4,6 +4,7 @@ import { buildTargetSocketURL } from './build-target-socket-url';
 import { createCDPClient } from './create-cdp-client';
 import { formatCaptureEvent } from './format-capture-event';
 import { formatConsoleEvent } from './format-console-event';
+import { subscribeToTargetRestarts } from './subscribe-to-target-restarts';
 import type { CDPClient, CDPEvent, DevToolsTarget } from './types';
 
 interface TrafficConfig {
@@ -111,6 +112,10 @@ export async function subscribeToWorkerTraffic(
         config.print(`capture ${target.id}: ${toMessage(error)}`);
       }
     })();
+  });
+
+  subscribeToTargetRestarts(client, (message) => {
+    config.print(`capture ${target.id}: ${message}`);
   });
 
   try {

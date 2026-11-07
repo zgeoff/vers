@@ -1,8 +1,10 @@
 import { expect, onTestFinished, test } from 'bun:test';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { chmod, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { waitFor } from '@vers/test-utils';
+import { buildOfflineHoldPaths } from '../qa/build-offline-hold-paths';
+import { readOfflineHoldFailures } from '../qa/read-offline-hold-failures';
 import { startStubDevTools } from '../test-utils/start-stub-devtools';
 
 async function setupTest() {
@@ -28,7 +30,12 @@ async function setupTest() {
     return { exitCode, stderr, stdout };
   };
 
-  return { devtools, runQACDP };
+  const buildHoldPaths = (targetID: string) =>
+    buildOfflineHoldPaths(stateHome, stateHome, targetID);
+
+  const readHoldFailures = (targetID: string) => readOfflineHoldFailures(buildHoldPaths(targetID));
+
+  return { buildHoldPaths, devtools, readHoldFailures, runQACDP };
 }
 
 test('it keeps a target offline after offline on returns', async () => {
@@ -57,6 +64,74 @@ test('it brings a held target back online on offline off', async () => {
     expect(ctx.devtools.getFetchOutcome('WORKER1')).toBe('ok');
   });
 });
+
+test("it prints a held worker's failed resume on offline off", async () => {
+  const ctx = await setupTest();
+
+  ctx.devtools.openTarget({
+    id: 'WORKER1',
+    refusedMethods: ['Runtime.runIfWaitingForDebugger'],
+    type: 'shared_worker',
+  });
+
+  await ctx.runQACDP(['offline', 'WORKER1', 'on']);
+
+  ctx.devtools.restartTarget('WORKER1');
+
+  await waitFor(async () => {
+    const failures = await ctx.readHoldFailures('WORKER1');
+
+    expect(failures).not.toBe('');
+  });
+
+  const result = await ctx.runQACDP(['offline', 'WORKER1', 'off']);
+
+  expect(result).toStrictEqual({
+    exitCode: 0,
+    stderr:
+      'hold WORKER1: Runtime.runIfWaitingForDebugger: the target refused Runtime.runIfWaitingForDebugger\n',
+    stdout: 'offline off\n',
+  });
+});
+
+// root reads through a file mode of 0o000, and a directory at the log path also fails the removal
+// that follows the read, so the case runs only for another user, as it does on CI
+test.skipIf(process.getuid?.() === 0)(
+  "it brings a held target back online on offline off when the hold's failure log is unreadable",
+  async () => {
+    const ctx = await setupTest();
+
+    ctx.devtools.openTarget({
+      id: 'WORKER1',
+      refusedMethods: ['Runtime.runIfWaitingForDebugger'],
+      type: 'shared_worker',
+    });
+
+    await ctx.runQACDP(['offline', 'WORKER1', 'on']);
+
+    ctx.devtools.restartTarget('WORKER1');
+
+    await waitFor(async () => {
+      const failures = await ctx.readHoldFailures('WORKER1');
+
+      expect(failures).not.toBe('');
+    });
+
+    await chmod(ctx.buildHoldPaths('WORKER1').logFile, 0o000);
+
+    const result = await ctx.runQACDP(['offline', 'WORKER1', 'off']);
+
+    expect(result).toStrictEqual({
+      exitCode: 0,
+      stderr: expect.stringMatching(/^could not read the hold's failure log: EACCES/u),
+      stdout: 'offline off\n',
+    });
+
+    await waitFor(() => {
+      expect(ctx.devtools.getFetchOutcome('WORKER1')).toBe('ok');
+    });
+  },
+);
 
 test('it keeps one hold when two offline on runs overlap, so one offline off ends the cut', async () => {
   const ctx = await setupTest();

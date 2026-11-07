@@ -73,6 +73,101 @@ test('it drops offline emulation when the session that set it closes', async () 
   });
 });
 
+test('it pauses a target that restarts with a session attached', async () => {
+  const ctx = setupTest();
+
+  ctx.devtools.openTarget({ id: 'WORKER1', type: 'shared_worker' });
+
+  const session = await createCDPClient(`ws://${ctx.devtools.endpoint}/devtools/page/WORKER1`);
+
+  onTestFinished(() => {
+    session.close();
+  });
+
+  await session.send('Network.enable');
+
+  const reloaded = session.waitFor('Inspector.targetReloadedAfterCrash');
+
+  ctx.devtools.restartTarget('WORKER1');
+
+  await reloaded;
+
+  expect(ctx.devtools.isTargetPaused('WORKER1')).toBeTrue();
+});
+
+test('it resumes a paused target when a session runs it', async () => {
+  const ctx = setupTest();
+
+  ctx.devtools.openTarget({ id: 'WORKER1', type: 'shared_worker' });
+
+  const session = await createCDPClient(`ws://${ctx.devtools.endpoint}/devtools/page/WORKER1`);
+
+  onTestFinished(() => {
+    session.close();
+  });
+
+  await session.send('Network.enable');
+
+  const reloaded = session.waitFor('Inspector.targetReloadedAfterCrash');
+
+  ctx.devtools.restartTarget('WORKER1');
+
+  await reloaded;
+
+  await session.send('Runtime.runIfWaitingForDebugger');
+
+  expect(ctx.devtools.isTargetPaused('WORKER1')).toBeFalse();
+});
+
+test('it runs a target that restarts with no session attached', () => {
+  const ctx = setupTest();
+
+  ctx.devtools.openTarget({ id: 'WORKER1', type: 'shared_worker' });
+  ctx.devtools.restartTarget('WORKER1');
+
+  expect(ctx.devtools.isTargetPaused('WORKER1')).toBeFalse();
+});
+
+test('it answers each domain enable that the capture sends', async () => {
+  const ctx = setupTest();
+
+  ctx.devtools.openTarget({ id: 'WORKER1', type: 'shared_worker' });
+
+  const session = await createCDPClient(`ws://${ctx.devtools.endpoint}/devtools/page/WORKER1`);
+
+  onTestFinished(() => {
+    session.close();
+  });
+
+  const answers = await Promise.all([
+    session.send('Network.enable'),
+    session.send('Runtime.enable'),
+    session.send('Log.enable'),
+  ]);
+
+  expect(answers).toStrictEqual([{}, {}, {}]);
+});
+
+test('it refuses a method that the target lists as refused', async () => {
+  const ctx = setupTest();
+
+  ctx.devtools.openTarget({
+    id: 'WORKER1',
+    refusedMethods: ['Runtime.runIfWaitingForDebugger'],
+    type: 'shared_worker',
+  });
+
+  const session = await createCDPClient(`ws://${ctx.devtools.endpoint}/devtools/page/WORKER1`);
+
+  onTestFinished(() => {
+    session.close();
+  });
+
+  expect(session.send('Runtime.runIfWaitingForDebugger')).rejects.toThrow(
+    'Runtime.runIfWaitingForDebugger: the target refused Runtime.runIfWaitingForDebugger',
+  );
+});
+
 test('it refuses a method it does not model', async () => {
   const ctx = setupTest();
 
