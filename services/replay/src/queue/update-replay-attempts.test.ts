@@ -1,4 +1,5 @@
 import { expect, test } from 'bun:test';
+import { readActivityStatus } from '@vers/db';
 import { createTestDB } from '@vers/service-test-utils/bun';
 import { createActivityRow } from '../test-utils/create-activity-row';
 import { updateReplayAttempts } from './update-replay-attempts';
@@ -26,13 +27,9 @@ test('it quarantines the activity at max attempts', async () => {
 
   expect(result).toStrictEqual({ attempts: 3, quarantined: true });
 
-  const row = await ctx.db
-    .selectFrom('activities')
-    .select('status')
-    .where('id', '=', activity.id)
-    .executeTakeFirstOrThrow();
+  const row = await readActivityStatus(ctx.db, activity.id);
 
-  expect(row.status).toBe('quarantined');
+  expect(row).toStrictEqual({ parkedFrom: null, status: 'quarantined' });
 });
 
 test('it reports a missing activity as undefined', async () => {

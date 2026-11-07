@@ -36,23 +36,26 @@ metadata:
 
 ## Stored state
 
-Check the rows below through the read functions in the folder this table names. The activity
-service, the replay service and `@vers/db` all write these tables, so a test calls the read
-functions of the one module this table names.
+Read a stored row through the module that creates it, by the
+[Stored state](../testing/SKILL.md#stored-state) rule in testing. Several vers modules write
+`activities`, `activityChains`, `avatars`, `avatarItems` and `avatarGrants`, so pick the read
+functions for those tables by the package your test is in:
 
-| Rows                                              | Test package           | Folder of read functions                                            |
-| ------------------------------------------------- | ---------------------- | ------------------------------------------------------------------- |
-| `status` and `parkedFrom` of `activities`         | any                    | [`libs/data/db/src/`](../../../libs/data/db/src/)                   |
-| every other `activities` column, `activityChains` | `@vers/service-replay` | [`services/replay/src/queue/`](../../../services/replay/src/queue/) |
-| `avatars`, `avatarItems`, `avatarGrants`          | `@vers/service-replay` | [`services/replay/src/apply/`](../../../services/replay/src/apply/) |
+- In `@vers/service-activity`, read `activities` and `activityChains` directly, `status` included.
+  Its `src/handlers/` creates those rows and picks each status move, so its tests are that module's
+  own tests.
+- In every other package, read the `status` and `parkedFrom` of an `activities` row with
+  [`readActivityStatus`](../../../libs/data/db/src/read-activity-status.ts) from `@vers/db`. Every
+  status move runs through the transition writer beside it, whichever service picks the move.
+- In `@vers/service-replay`, read the other `activities` columns, and `activityChains`, with the
+  `read-*.ts` files in [`src/queue/`](../../../services/replay/src/queue/).
+- In `@vers/service-replay`, read `avatars`, `avatarItems` and `avatarGrants` with the `read-*.ts`
+  files in [`src/apply/`](../../../services/replay/src/apply/).
+- In a package other than these two, read the other columns through the module that creates the
+  rows.
 
-- Find a read function as a `read-*.ts` file in its folder. When none returns the column you check,
-  add one to that folder, with a test.
-- Use the status read function from any package. Every status move goes through the
-  [transition writer](../../../libs/data/db/src/transition-activity-status.ts) beside it in
-  `@vers/db`.
-- In `@vers/service-activity`, `src/handlers/` writes every table its tests check, so those tests
-  read through the handlers.
+When the folder you read through has no read function for the column you check, add one to it, with
+a test.
 
 ## Real-database services
 
@@ -61,8 +64,9 @@ functions of the one module this table names.
 - Name the service test `create-<service>-service.test.ts`. In it, drive one write through an
   injected database, and read the row back from that database through a read function in the
   service's `src/handlers/`. When the write's result already holds the row's fields, check the
-  result instead, as testing's Stored state rule allows. Also create the service with no database
-  injected, so it reads `env.DATABASE_URL`, and dispose of each service you create.
+  result instead, as the [Stored state](../testing/SKILL.md#stored-state) rule in testing allows.
+  Also create the service with no database injected, so it reads `env.DATABASE_URL`, and dispose of
+  each service you create.
 - Check that a stop destroys the database the service built with `spyOn(db, 'destroy')`. A query
   after the stop proves nothing. Kysely opens the pool again for it.
 - Put the router test beside the module that builds the router, such as

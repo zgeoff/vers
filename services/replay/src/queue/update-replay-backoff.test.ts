@@ -1,6 +1,9 @@
 import { expect, test } from 'bun:test';
+import { readActivityStatus } from '@vers/db';
 import { createTestDB } from '@vers/service-test-utils/bun';
+import invariant from 'tiny-invariant';
 import { createActivityRow } from '../test-utils/create-activity-row';
+import { readReplayProgress } from './read-replay-progress';
 import { updateReplayBackoff } from './update-replay-backoff';
 
 async function setupTest() {
@@ -21,13 +24,22 @@ test('it backs a first failure off by 30 seconds and leaves the status alone', a
   expect(result).toStrictEqual({ backoffUntil: expect.toBeValidDate(), backoffs: 1 });
   expect(result?.backoffUntil).toBeBetween(new Date(before + 29_000), new Date(before + 31_000));
 
-  const row = await ctx.db
-    .selectFrom('activities')
-    .select(['replayAttempts', 'status'])
-    .where('id', '=', activity.id)
-    .executeTakeFirstOrThrow();
+  invariant(result, 'the first failure returns its backoff');
 
-  expect(row).toStrictEqual({ replayAttempts: 0, status: 'stopped' });
+  const status = await readActivityStatus(ctx.db, activity.id);
+  const progress = await readReplayProgress(ctx.db, activity.id);
+
+  expect(status).toStrictEqual({ parkedFrom: null, status: 'stopped' });
+
+  expect(progress).toStrictEqual({
+    appendedHead: 1,
+    replayAttempts: 0,
+    replayBackoffs: 1,
+    replayBackoffUntil: result.backoffUntil,
+    settledXP: 0,
+    verifiedAt: null,
+    verifiedHead: 0,
+  });
 });
 
 test('it doubles the wait on each consecutive failure', async () => {
