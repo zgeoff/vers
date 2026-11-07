@@ -19,7 +19,11 @@ test('it wires an injected db into the router instead of building one from env',
     input: { target: 'wired@example.com', type: 'onboarding' },
   });
 
-  expect(verification?.target).toBe('wired@example.com');
+  expect(verification).toStrictEqual({
+    id: expect.any(String),
+    target: 'wired@example.com',
+    type: 'onboarding',
+  });
 });
 
 test('it boots from env.DATABASE_URL when no db is injected', async () => {

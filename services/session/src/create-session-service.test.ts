@@ -33,7 +33,17 @@ test('it wires an injected db into the router instead of building one from env',
     errors: { UNAUTHORIZED: () => new Error('the read names its acting user') },
   });
 
-  expect(sessions).toHaveLength(1);
+  expect(sessions).toStrictEqual([
+    {
+      createdAt: expect.toBeValidDate(),
+      expiresAt: expect.toBeValidDate(),
+      id: expect.any(String),
+      ipAddress: '127.0.0.1',
+      updatedAt: expect.toBeValidDate(),
+      userID: created.user.id,
+      verified: false,
+    },
+  ]);
 });
 
 test('it boots from env.DATABASE_URL when no db is injected', async () => {

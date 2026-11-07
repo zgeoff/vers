@@ -22,7 +22,15 @@ test('it wires an injected db into the router instead of building one from env',
 
   const user = await readUser(db.db, { input: { email: 'wired@example.com' } });
 
-  expect(user?.username).toBe('wired_user');
+  expect(user).toStrictEqual({
+    createdAt: expect.toBeValidDate(),
+    email: 'wired@example.com',
+    id: expect.any(String),
+    name: 'Wired User',
+    seed: expect.any(Number),
+    updatedAt: expect.toBeValidDate(),
+    username: 'wired_user',
+  });
 });
 
 test('it boots from env.DATABASE_URL when no db is injected', async () => {

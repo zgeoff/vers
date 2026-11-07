@@ -228,7 +228,15 @@ test('it settles a run verified in two segments to the terminal total, counting 
 
   const settledMidRun = await readReplayProgress(ctx.db, fixture.activity.id);
 
-  expect(settledMidRun?.settledXP).toBeGreaterThan(0);
+  expect(settledMidRun).toStrictEqual({
+    appendedHead: fixture.activity.appendedHead,
+    replayAttempts: 0,
+    replayBackoffs: 0,
+    replayBackoffUntil: null,
+    settledXP: expect.toBePositive(),
+    verifiedAt: expect.toBeValidDate(),
+    verifiedHead: expect.toBePositive(),
+  });
 
   const terminalSegment = await ctx.db.transaction().execute((trx) =>
     runReplayTarget(
@@ -255,7 +263,15 @@ test('it settles a run verified in two segments to the terminal total, counting 
 
   const settledFinal = await readReplayProgress(ctx.db, fixture.activity.id);
 
-  expect(settledFinal?.settledXP).toBe(terminal.rewards.xp);
+  expect(settledFinal).toStrictEqual({
+    appendedHead: fixture.activity.appendedHead,
+    replayAttempts: 0,
+    replayBackoffs: 0,
+    replayBackoffUntil: null,
+    settledXP: terminal.rewards.xp,
+    verifiedAt: expect.toBeValidDate(),
+    verifiedHead: fixture.activity.appendedHead,
+  });
 });
 
 test('it settles a matched mid-run segment onto the avatar before the run ends', async () => {
@@ -319,7 +335,15 @@ test('it settles a matched mid-run segment onto the avatar before the run ends',
 
   const settled = await readReplayProgress(ctx.db, fixture.activity.id);
 
-  expect(settled?.settledXP).toBe(midRunXP);
+  expect(settled).toStrictEqual({
+    appendedHead: midRunCount,
+    replayAttempts: 0,
+    replayBackoffs: 0,
+    replayBackoffUntil: null,
+    settledXP: midRunXP,
+    verifiedAt: expect.toBeValidDate(),
+    verifiedHead: midRunCount,
+  });
 
   const avatar = await readAvatarProgress(ctx.db, fixture.activity.avatarId);
 
@@ -375,7 +399,7 @@ test('it settles no additional xp when a stale duplicate target misses the alrea
 
   const afterSecond = await readAvatarProgress(ctx.db, fixture.activity.avatarId);
 
-  expect(afterSecond?.xp).toBe(afterFirst.xp);
+  expect(afterSecond).toStrictEqual(afterFirst);
 });
 
 test('it keeps an applied zero-xp activity when a stale redelivery arrives after the settled total rose', async () => {
@@ -462,7 +486,7 @@ test('it keeps an applied zero-xp activity when a stale redelivery arrives after
 
   const activity = await readActivityStatus(ctx.db, fixture.activity.id);
 
-  expect(activity?.status).toBe(fixture.activity.status);
+  expect(activity).toStrictEqual({ parkedFrom: null, status: fixture.activity.status });
 
   const rejections = await inMemoryMetrics.readCounterDataPoints('vers.verification.rejections');
 
@@ -522,12 +546,21 @@ test("it rejects an activity whose pinned build does not match the avatar's sett
   const activity = await readActivityStatus(ctx.db, fixture.activity.id);
   const progress = await readReplayProgress(ctx.db, fixture.activity.id);
 
-  expect(activity?.status).toBe('rejected');
-  expect(progress?.verifiedHead).toBe(0);
+  expect(activity).toStrictEqual({ parkedFrom: null, status: 'rejected' });
+
+  expect(progress).toStrictEqual({
+    appendedHead: fixture.activity.appendedHead,
+    replayAttempts: 0,
+    replayBackoffs: 0,
+    replayBackoffUntil: null,
+    settledXP: 0,
+    verifiedAt: null,
+    verifiedHead: 0,
+  });
 
   const avatar = await readAvatarProgress(ctx.db, fixture.activity.avatarId);
 
-  expect(avatar?.xp).toBe(100);
+  expect(avatar).toStrictEqual({ level: expect.any(Number), xp: 100 });
 
   const rejections = await inMemoryMetrics.readCounterDataPoints('vers.verification.rejections');
 
@@ -825,7 +858,7 @@ test("it rejects a tampered stamped poolID with reason 'descriptor-mismatch'", a
 
   const activity = await readActivityStatus(ctx.db, fixture.activity.id);
 
-  expect(activity?.status).toBe('rejected');
+  expect(activity).toStrictEqual({ parkedFrom: null, status: 'rejected' });
 });
 
 test("it rejects a tampered stamped encounter node on a continuation row, not just a chain's first activity", async () => {
@@ -887,7 +920,7 @@ test("it rejects a tampered stamped encounter node on a continuation row, not ju
 
   const activity = await readActivityStatus(ctx.db, continuation.activity.id);
 
-  expect(activity?.status).toBe('rejected');
+  expect(activity).toStrictEqual({ parkedFrom: null, status: 'rejected' });
 });
 
 test('it grants a first_clear keyed by the node when a verified segment completes a world-map-node run', async () => {
@@ -1303,9 +1336,7 @@ test('it verifies a world-map-node run whose scope is connected to a verified fi
 
   const activity = await readActivityStatus(ctx.db, fixture.activity.id);
 
-  invariant(activity);
-
-  expect(activity.status).not.toBe('rejected');
+  expect(activity).toStrictEqual({ parkedFrom: null, status: fixture.activity.status });
 });
 
 test('it rejects a world-map-node run whose scope is not connected to any completed node', async () => {
@@ -1351,7 +1382,7 @@ test('it rejects a world-map-node run whose scope is not connected to any comple
 
   const activity = await readActivityStatus(ctx.db, fixture.activity.id);
 
-  expect(activity?.status).toBe('rejected');
+  expect(activity).toStrictEqual({ parkedFrom: null, status: 'rejected' });
 
   const rejections = await inMemoryMetrics.readCounterDataPoints('vers.verification.rejections');
 
@@ -1430,8 +1461,8 @@ test('it cascades a build mismatch through a chain of successors, once the run t
   const statusA = await readActivityStatus(ctx.db, successorA.activity.id);
   const statusB = await readActivityStatus(ctx.db, successorB.activity.id);
 
-  expect(statusA?.status).toBe('rejected');
-  expect(statusB?.status).toBe('rejected');
+  expect(statusA).toStrictEqual({ parkedFrom: null, status: 'rejected' });
+  expect(statusB).toStrictEqual({ parkedFrom: null, status: 'rejected' });
 });
 
 test('it settles an unrelated successor once its zero-xp predecessor rejects', async () => {
@@ -1475,7 +1506,7 @@ test('it settles an unrelated successor once its zero-xp predecessor rejects', a
 
   const avatarAfterReject = await readAvatarProgress(ctx.db, predecessor.activity.avatarId);
 
-  expect(avatarAfterReject?.xp).toBe(0);
+  expect(avatarAfterReject).toStrictEqual({ level: buildLevelFromXP(0), xp: 0 });
 
   // the successor is an unrelated, honest run that banked none of the rejected predecessor's xp —
   // it settles cleanly despite chaining off a rejected run

@@ -45,7 +45,7 @@ test('it rejects an active activity and rewinds the chain appended anchor to the
     scopeType: chain.scopeType,
   });
 
-  expect(updatedActivity?.status).toBe('rejected');
+  expect(updatedActivity).toStrictEqual({ parkedFrom: null, status: 'rejected' });
 
   expect(updatedChain).toStrictEqual({
     appendedChainIndex: 3,
@@ -76,7 +76,7 @@ test('it rejects an activity already forward-exited to stopped', async () => {
 
   const updatedActivity = await readActivityStatus(ctx.db, activity.id);
 
-  expect(updatedActivity?.status).toBe('rejected');
+  expect(updatedActivity).toStrictEqual({ parkedFrom: null, status: 'rejected' });
 });
 
 test('it voids an active successor rooted past the verified point', async () => {
@@ -112,7 +112,7 @@ test('it voids an active successor rooted past the verified point', async () => 
 
   const updatedSuccessor = await readActivityStatus(ctx.db, successor.id);
 
-  expect(updatedSuccessor?.status).toBe('rejected');
+  expect(updatedSuccessor).toStrictEqual({ parkedFrom: null, status: 'rejected' });
 });
 
 test('it voids a stopped successor rooted past the verified point', async () => {
@@ -148,7 +148,7 @@ test('it voids a stopped successor rooted past the verified point', async () => 
 
   const updatedSuccessor = await readActivityStatus(ctx.db, successor.id);
 
-  expect(updatedSuccessor?.status).toBe('rejected');
+  expect(updatedSuccessor).toStrictEqual({ parkedFrom: null, status: 'rejected' });
 });
 
 test('it voids a capped successor rooted past the verified point', async () => {
@@ -184,7 +184,7 @@ test('it voids a capped successor rooted past the verified point', async () => {
 
   const updatedSuccessor = await readActivityStatus(ctx.db, successor.id);
 
-  expect(updatedSuccessor?.status).toBe('rejected');
+  expect(updatedSuccessor).toStrictEqual({ parkedFrom: null, status: 'rejected' });
 });
 
 test('it writes nothing for a stale call whose target activity already changed status', async () => {
@@ -222,7 +222,7 @@ test('it writes nothing for a stale call whose target activity already changed s
     scopeType: chain.scopeType,
   });
 
-  expect(updatedActivity?.status).toBe('quarantined');
+  expect(updatedActivity).toStrictEqual({ parkedFrom: null, status: 'quarantined' });
 
   expect(updatedChain).toStrictEqual({
     appendedChainIndex: chain.appendedChainIndex,
@@ -265,7 +265,7 @@ test('it leaves an active successor untouched when it is rooted at or before the
 
   const updatedUnrelated = await readActivityStatus(ctx.db, unrelated.id);
 
-  expect(updatedUnrelated?.status).toBe('active');
+  expect(updatedUnrelated).toStrictEqual({ parkedFrom: null, status: 'active' });
 });
 
 test('it moves the verified anchor past the checkpoints a partly proved activity settled before it rewinds', async () => {

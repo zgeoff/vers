@@ -13,14 +13,14 @@ test('it wires an injected db into the router instead of building one from env',
 
   const client = buildRPCTestClient<AvatarContract>(service.app, { token: viewer.token });
 
-  await client.createAvatar({ name: 'Wired' });
+  const created = await client.createAvatar({ name: 'Wired' });
 
   const roster = await readAvatars(db.db, {
     context: { actingUserID: viewer.user.id },
     errors: { UNAUTHORIZED: () => new Error('the read names its acting user') },
   });
 
-  expect(roster.avatars.map((avatar) => avatar.name)).toStrictEqual(['Wired']);
+  expect(roster).toStrictEqual({ activeAvatarID: created.id, avatars: [created] });
 });
 
 test('it boots from env.DATABASE_URL when no db is injected', async () => {

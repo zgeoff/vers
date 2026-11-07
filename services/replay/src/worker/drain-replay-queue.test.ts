@@ -70,8 +70,26 @@ test('it drains a seeded backlog to empty and returns the count', async () => {
   const firstProgress = await readReplayProgress(ctx.db, first.activity.id);
   const secondProgress = await readReplayProgress(ctx.db, second.activity.id);
 
-  expect(firstProgress?.verifiedHead).toBe(first.activity.appendedHead);
-  expect(secondProgress?.verifiedHead).toBe(second.activity.appendedHead);
+  expect(firstProgress).toStrictEqual({
+    appendedHead: first.activity.appendedHead,
+    replayAttempts: 0,
+    replayBackoffs: 0,
+    replayBackoffUntil: null,
+    settledXP: expect.any(Number),
+    verifiedAt: expect.toBeValidDate(),
+    verifiedHead: first.activity.appendedHead,
+  });
+
+  expect(secondProgress).toStrictEqual({
+    appendedHead: second.activity.appendedHead,
+    replayAttempts: 0,
+    replayBackoffs: 0,
+    replayBackoffUntil: null,
+    settledXP: expect.any(Number),
+    verifiedAt: expect.toBeValidDate(),
+    verifiedHead: second.activity.appendedHead,
+  });
+
   expect(drainReplayQueue(ctx.deps, 'poke')).resolves.toBe(0);
 });
 
@@ -95,7 +113,15 @@ test('it settles an append that a writer older than the replay flag left unflagg
 
   const settled = await readReplayProgress(ctx.db, fixture.activity.id);
 
-  expect(settled?.verifiedHead).toBe(fixture.activity.appendedHead);
+  expect(settled).toStrictEqual({
+    appendedHead: fixture.activity.appendedHead,
+    replayAttempts: 0,
+    replayBackoffs: 0,
+    replayBackoffUntil: null,
+    settledXP: expect.any(Number),
+    verifiedAt: expect.toBeValidDate(),
+    verifiedHead: fixture.activity.appendedHead,
+  });
 });
 
 test('it settles a stream split across two drains to its terminal total and chain anchor', async () => {

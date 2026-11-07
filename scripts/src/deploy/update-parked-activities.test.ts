@@ -136,7 +136,7 @@ test('it leaves a parked activity untouched when no sim version is active for it
 
   const row = await readActivityStatus(ctx.db, activity.id);
 
-  expect(row?.status).toBe('parked');
+  expect(row).toStrictEqual({ parkedFrom: null, status: 'parked' });
 });
 
 test('it never touches an already-active activity, even when its sim version is active', async () => {

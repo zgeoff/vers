@@ -158,7 +158,15 @@ test('it drains a claimable chain after the cache clears a driver the previous d
 
   const updated = await readReplayProgress(ctx.db, fixture.activity.id);
 
-  expect(updated?.verifiedHead).toBe(totalCheckpoints);
+  expect(updated).toStrictEqual({
+    appendedHead: totalCheckpoints,
+    replayAttempts: 0,
+    replayBackoffs: 0,
+    replayBackoffUntil: null,
+    settledXP: expect.any(Number),
+    verifiedAt: expect.toBeValidDate(),
+    verifiedHead: totalCheckpoints,
+  });
 });
 
 test('it accepts a call from service-activity', async () => {
