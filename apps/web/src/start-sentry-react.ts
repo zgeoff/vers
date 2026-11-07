@@ -1,7 +1,13 @@
 import * as Sentry from '@sentry/react';
 import { isViewTransitionAbort } from './lib/is-view-transition-abort';
 
-export function startSentryReact(): void {
+interface StartSentryReactOptions {
+  // test-only: the SDK's default integrations patch the console, fetch and history, and send a
+  // session envelope, which would leak into a shared test run
+  readonly disableDefaultIntegrations?: boolean;
+}
+
+export function startSentryReact(options: Readonly<StartSentryReactOptions> = {}): void {
   const dsn: string | undefined = import.meta.env['VITE_SENTRY_DSN'];
 
   if (dsn === undefined) {
@@ -23,5 +29,6 @@ export function startSentryReact(): void {
     tracesSampleRate: 0,
 
     beforeSend: (event, hint) => (isViewTransitionAbort(hint.originalException) ? null : event),
+    ...(options.disableDefaultIntegrations === true && { defaultIntegrations: false }),
   });
 }

@@ -39,17 +39,30 @@ export function readOpenTelemetryLinks(
 
     const manifest = readManifest(packageDirectory);
 
-    for (const [name, range] of collectDeclaredRanges(manifest)) {
-      const linkedDirectory = resolvePackageDirectory(name, packageDirectory);
+    for (const declared of collectDeclaredRanges(manifest)) {
+      const isInScope = declared.name.startsWith(scope);
+      const isOpenTelemetry = declared.name.startsWith('@opentelemetry/');
+      const linkedDirectory = resolvePackageDirectory(declared.name, packageDirectory);
 
-      if (linkedDirectory !== null && name.startsWith(scope)) {
+      if (linkedDirectory === null && (isInScope || isOpenTelemetry) && !declared.isOptional) {
+        throw new Error(
+          `${manifest.name} declares ${declared.name}, which the install does not link`,
+        );
+      }
+
+      if (linkedDirectory !== null && isInScope) {
         pending.push(linkedDirectory);
       }
 
-      if (linkedDirectory !== null && name.startsWith('@opentelemetry/')) {
+      if (linkedDirectory !== null && isOpenTelemetry) {
         const linked = readManifest(linkedDirectory);
 
-        links.push({ name, owner: manifest.name, range, version: linked.version });
+        links.push({
+          name: declared.name,
+          owner: manifest.name,
+          range: declared.range,
+          version: linked.version,
+        });
       }
     }
   }
@@ -71,11 +84,14 @@ function resolvePackageDirectory(name: string, fromDirectory: string): string | 
   }
 }
 
+const PeerMetaSchema = z.object({ optional: z.boolean().optional() });
+
 const ManifestSchema = z.object({
   dependencies: z.record(z.string(), z.string()).optional(),
   name: z.string(),
   optionalDependencies: z.record(z.string(), z.string()).optional(),
   peerDependencies: z.record(z.string(), z.string()).optional(),
+  peerDependenciesMeta: z.record(z.string(), PeerMetaSchema).optional(),
   version: z.string(),
 });
 
@@ -87,10 +103,30 @@ function readManifest(packageDirectory: string): Manifest {
   return ManifestSchema.parse(JSON.parse(text));
 }
 
-function collectDeclaredRanges(manifest: Manifest): Array<[string, string]> {
+interface DeclaredRange {
+  isOptional: boolean;
+  name: string;
+  range: string;
+}
+
+function collectDeclaredRanges(manifest: Manifest): Array<DeclaredRange> {
+  const peerMeta = manifest.peerDependenciesMeta ?? {};
+
   return [
-    ...Object.entries(manifest.dependencies ?? {}),
-    ...Object.entries(manifest.optionalDependencies ?? {}),
-    ...Object.entries(manifest.peerDependencies ?? {}),
+    ...Object.entries(manifest.dependencies ?? {}).map(([name, range]) => ({
+      isOptional: false,
+      name,
+      range,
+    })),
+    ...Object.entries(manifest.optionalDependencies ?? {}).map(([name, range]) => ({
+      isOptional: true,
+      name,
+      range,
+    })),
+    ...Object.entries(manifest.peerDependencies ?? {}).map(([name, range]) => ({
+      isOptional: peerMeta[name]?.optional === true,
+      name,
+      range,
+    })),
   ];
 }

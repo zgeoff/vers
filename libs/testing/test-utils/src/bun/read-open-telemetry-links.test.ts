@@ -66,6 +66,24 @@ test('it leaves out an optional OpenTelemetry peer that the install does not lin
   expect(readOpenTelemetryLinks('@acme/sdk', ctx.projectDir)).toStrictEqual([]);
 });
 
+test('it throws when the install does not link a required OpenTelemetry peer', async () => {
+  const ctx = await setupTest();
+
+  await Bun.write(
+    join(ctx.projectDir, 'node_modules/@acme/sdk/package.json'),
+    JSON.stringify({
+      name: '@acme/sdk',
+      peerDependencies: { '@opentelemetry/api': '^1.9.0' },
+      version: '1.0.0',
+    }),
+  );
+
+  expect(() => readOpenTelemetryLinks('@acme/sdk', ctx.projectDir)).toThrowWithMessage(
+    Error,
+    /@acme\/sdk declares @opentelemetry\/api, which the install does not link/u,
+  );
+});
+
 test('it leaves out the OpenTelemetry packages of a dependency outside the package scope', async () => {
   const ctx = await setupTest();
 

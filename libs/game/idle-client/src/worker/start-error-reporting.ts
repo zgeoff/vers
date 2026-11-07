@@ -29,9 +29,8 @@ export async function startErrorReporting(
       // which splits its issue group in the error backend
       attachStacktrace: false,
 
-      // an explicit `dataCollection` makes the SDK's spec defaults the base, which collect every
-      // HTTP body type — and a failed checkpoint submission's body carries the session token, so
-      // body capture is switched off wholesale
+      // the SDK collects every HTTP body type by default, and a failed checkpoint submission's body
+      // carries the session token, so body capture is switched off wholesale
       dataCollection: { httpBodies: [], userInfo: true },
 
       // Tracing lives on the OpenTelemetry path; the error backend drops transaction envelopes.
