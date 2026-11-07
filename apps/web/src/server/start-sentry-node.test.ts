@@ -36,7 +36,7 @@ function setupTest() {
   return { exportPaths, stack };
 }
 
-test("it keeps one request's tag and user off a concurrent request's error event when the trace exporter starts after it", async () => {
+test("it keeps one request's tag and user off a concurrent request's error event", async () => {
   const ctx = setupTest();
   const recorded: Array<Readonly<ErrorEvent>> = [];
   const releaseGate = Promise.withResolvers<void>();
@@ -97,7 +97,7 @@ test("it keeps one request's tag and user off a concurrent request's error event
   expect(recorded[0].user).toBeUndefined();
 });
 
-test('it puts the inbound trace id on the log lines, the error event, and the exported span when the trace exporter starts after it', async () => {
+test('it puts the inbound trace id on the log lines, the error event, and the exported span', async () => {
   const ctx = setupTest();
   const recorded: Array<Readonly<ErrorEvent>> = [];
   const records: Array<LogRecord> = [];
@@ -163,9 +163,105 @@ test('it puts the inbound trace id on the log lines, the error event, and the ex
   expect(ctx.exportPaths).toStrictEqual(['/v1/traces']);
 });
 
-// a Sentry package's OpenTelemetry peer can be optional, and Bun's overrides don't reach those
+test('it leaves the session cookies off a web error event', async () => {
+  const ctx = setupTest();
+  const recorded: Array<Readonly<ErrorEvent>> = [];
+
+  startSentryNode('https://testpublickey@o0.ingest.sentry.io/1', {
+    beforeSend: (event) => {
+      recorded.push(event);
+
+      return null;
+    },
+    disableDefaultIntegrations: true,
+  });
+
+  ctx.stack.defer(async () => {
+    await Sentry.close();
+  });
+
+  Sentry.addIntegration(Sentry.requestDataIntegration());
+
+  // Bun's node:http publishes no request-start channel, so this sets the request that the SDK's
+  // http integration puts on a request's isolation scope under Node
+  Sentry.withIsolationScope((scope) => {
+    scope.setSDKProcessingMetadata({
+      normalizedRequest: {
+        headers: {
+          accept: 'text/html',
+          cookie: 'en_session=sealed-session; en_verification=sealed-code',
+        },
+        method: 'GET',
+        url: 'http://localhost/account',
+      },
+    });
+
+    Sentry.captureException(new Error('Bad Gateway'));
+  });
+
+  await waitFor(() => {
+    expect(recorded).toHaveLength(1);
+  });
+
+  expect<unknown>(recorded[0]?.request).toStrictEqual({
+    data: undefined,
+    headers: { accept: 'text/html' },
+    method: 'GET',
+    query_string: undefined,
+    url: 'http://localhost/account',
+  });
+});
+
+// the SDK's Node http integration reads a request body only for the body types this list holds,
+// and Bun's node:http publishes no request-start channel to drive that read
+test('it reads no request body for a web error event', () => {
+  const ctx = setupTest();
+
+  startSentryNode('https://testpublickey@o0.ingest.sentry.io/1', {
+    beforeSend: () => null,
+    disableDefaultIntegrations: true,
+  });
+
+  ctx.stack.defer(async () => {
+    await Sentry.close();
+  });
+
+  expect(Sentry.getClient()?.getDataCollectionOptions().httpBodies).toStrictEqual([]);
+});
+
+test('it gives a captured message no synthetic stack', async () => {
+  const ctx = setupTest();
+  const recorded: Array<Readonly<ErrorEvent>> = [];
+
+  startSentryNode('https://testpublickey@o0.ingest.sentry.io/1', {
+    beforeSend: (event) => {
+      recorded.push(event);
+
+      return null;
+    },
+    disableDefaultIntegrations: true,
+  });
+
+  ctx.stack.defer(async () => {
+    await Sentry.close();
+  });
+
+  Sentry.captureMessage('the session store is unreachable', 'error');
+
+  await waitFor(() => {
+    expect(recorded).toHaveLength(1);
+  });
+
+  invariant(recorded[0], 'the message was recorded');
+
+  expect(recorded[0].exception).toBeUndefined();
+});
+
+// bun install links a package outside a Sentry package's OpenTelemetry range with no warning, and
+// Bun's overrides don't reach an optional peer
 test('it links each OpenTelemetry package that the SDK declares inside the range it declares', () => {
-  expect(readOpenTelemetryLinks('@sentry/node', import.meta.dir)).toSatisfyAll(
-    (link: OpenTelemetryLink) => Bun.semver.satisfies(link.version, link.range),
+  expect(readOpenTelemetryLinks('@sentry/node', import.meta.dir)).toSatisfy(
+    (links: Array<OpenTelemetryLink>) =>
+      links.length > 0 && links.every((link) => Bun.semver.satisfies(link.version, link.range)),
   );
 });

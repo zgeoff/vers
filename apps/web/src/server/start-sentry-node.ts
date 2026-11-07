@@ -16,16 +16,17 @@ export function startSentryNode(dsn: string, options: Readonly<StartSentryNodeOp
     dsn,
     environment: env.NODE_ENV,
 
-    // on, the SDK gives an event from a non-Error value a synthetic stack of the capture site, which
-    // splits its issue group in the error backend
+    // on, the SDK gives a captured message a synthetic stack of the capture site, which splits its
+    // issue group in the error backend
     attachStacktrace: false,
 
     // tracing lives on the OpenTelemetry path: with no `tracesSampleRate` the SDK opens no spans of
     // its own, and the OpenTelemetry integration puts the active span's trace on each event
     integrations: [Sentry.httpIntegration(), Sentry.openTelemetryIntegration()],
 
-    // the user's identity goes on each event, and every other category keeps the SDK's default
-    dataCollection: { userInfo: true },
+    // the SDK collects cookies and every HTTP body type by default, and its name filter misses some
+    // of the session cookies, while a login or sign-up body carries the password
+    dataCollection: { cookies: false, httpBodies: [], userInfo: true },
 
     // the error backend discards client reports, and their 60s flush keeps otherwise idle
     // infrastructure awake
