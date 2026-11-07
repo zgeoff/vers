@@ -29,10 +29,9 @@ metadata:
 
 - Make each suite pass at `bun test --parallel=4 --no-isolate` too, so a package can switch modes
   without a rewrite. Run that mode once before you hand off a new suite.
-- When cloned test databases pile up in the test container, check that each worker's test preload
-  still calls
-  [`removeOrphanedClones`](../../../libs/data/db/src/test-support/remove-orphaned-clones.ts). It
-  drops the clones of test runs that have ended.
+- Find the sweep that drops the clones of ended runs in
+  [`removeOrphanedClones`](../../../libs/data/db/src/test-support/remove-orphaned-clones.ts). Each
+  worker's test preload runs it at start.
 
 ## Stored state
 
@@ -139,7 +138,7 @@ calls in one helper. A helper hides the values the test acts on.
 
 - Run the suites in [`apps/web-e2e/`](../../../apps/web-e2e/) through that package's `e2e` scripts,
   never `bun test`. The lint rule `zgeoff/max-test-timeout` checks only tests that import from
-  `bun:test`, so lint never checks a Playwright timeout.
+  `bun:test`, so no lint checks a Playwright timeout.
 - Set the `timeout` in each `playwright*.config.ts` to twice the slowest test in the last 5 green CI
   runs, rounded up to a whole second. The `list` reporter prints each test's time in the CI log.
 - When one test runs far slower than the rest, remove each fixed wait in it, or wait on a condition.
