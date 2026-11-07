@@ -8,6 +8,16 @@ import { parseArgs } from 'node:util';
 
 type InstallResult = Pick<SpawnSyncReturns<Buffer>, 'error' | 'status' | 'signal'>;
 
+type RetryResult = Pick<SpawnSyncReturns<Buffer>, 'error' | 'status' | 'signal'>;
+
+interface AgentHookOptions {
+  readonly harness: 'claude-code' | 'codex';
+}
+
+interface AgentHooksModule {
+  readonly runAgentHook: (options: AgentHookOptions) => Promise<never>;
+}
+
 export interface InstallDependencies {
   readonly createDirectory: (directoryPath: string) => void;
   readonly readFile: (filePath: string) => string;
@@ -18,18 +28,22 @@ export interface InstallDependencies {
   readonly sleep: (durationMs: number) => Promise<void>;
   readonly now: () => number;
   readonly runInstall: (timeoutMs: number) => InstallResult;
+  readonly runRetry: (args: readonly string[]) => RetryResult;
+  readonly readPayload: () => string;
+  readonly writeError: (message: string) => void;
+  readonly importAgentHooks: () => Promise<AgentHooksModule>;
 }
 
 async function runHook(argv: readonly string[], dependencies: InstallDependencies): Promise<never> {
   const args = parseHookArgs(argv);
 
   if (args.kind === 'error') {
-    console.error(args.message);
+    dependencies.writeError(args.message);
 
     return process.exit(2);
   }
 
-  const agentHooksImport = await import('@zgeoff/agent-hooks').then(
+  const agentHooksImport = await dependencies.importAgentHooks().then(
     (agentHooks) => ({ kind: 'loaded', agentHooks }) as const,
     (error: unknown) => ({ kind: 'failed', error }) as const,
   );
@@ -44,9 +58,11 @@ async function runHook(argv: readonly string[], dependencies: InstallDependencie
     return runRetryAfterInstall(argv, dependencies);
   }
 
-  console.error(`The agent hook could not load @zgeoff/agent-hooks: ${String(step.error)}`);
+  dependencies.writeError(
+    `The agent hook could not load @zgeoff/agent-hooks: ${String(step.error)}`,
+  );
 
-  return exitWithFallbackVerdict();
+  return exitWithFallbackVerdict(dependencies);
 }
 
 const AFTER_INSTALL_OPTION = 'after-install';
@@ -120,25 +136,24 @@ async function runRetryAfterInstall(
   ).catch(String);
 
   if (installFailure !== null) {
-    console.error(`The agent hook could not run bun install: ${installFailure}`);
+    dependencies.writeError(`The agent hook's bun install failed: ${installFailure}`);
   }
 
-  // Bun can keep a failed package lookup for the life of the process, so the retry is a new
-  // process, which reads the hook payload from the same stdin. A `--` in the arguments ends the
-  // options, so the retry flag goes before them.
-  const retry = spawnSync(
-    process.execPath,
-    ['--no-install', import.meta.filename, `--${AFTER_INSTALL_OPTION}`, ...argv],
-    { stdio: 'inherit' },
-  );
+  const outcome = runRetryProcess(import.meta.filename, argv, dependencies);
 
-  if (retry.error !== undefined) {
-    console.error(`The agent hook could not start its retry: ${String(retry.error)}`);
+  if (outcome.kind === 'fallback') {
+    dependencies.writeError(`The agent hook could not start its retry: ${String(outcome.error)}`);
 
-    return exitWithFallbackVerdict();
+    return exitWithFallbackVerdict(dependencies);
   }
 
-  return process.exit(retry.status ?? 2);
+  if (outcome.kind === 'stopped') {
+    dependencies.writeError(`The agent hook's retry stopped on ${outcome.signal}, so it refuses.`);
+
+    return process.exit(2);
+  }
+
+  return process.exit(outcome.status);
 }
 
 const GUARD_SUFFIX = '.guard';
@@ -153,7 +168,7 @@ export async function runInstallOnce(
   const step = await claimInstallLock(lockPath, deadlineMs, dependencies);
 
   if (step === 'stop') {
-    console.error(
+    dependencies.writeError(
       `A stopped agent hook left ${lockPath}${GUARD_SUFFIX} behind, so this one skips the install. Remove that file.`,
     );
 
@@ -165,7 +180,7 @@ export async function runInstallOnce(
   }
 
   if (step === 'wait-for-install') {
-    console.error('Another agent hook runs bun install here, so this one waits for it.');
+    dependencies.writeError('Another agent hook runs bun install here, so this one waits for it.');
 
     return runAfterInstallWait(lockPath, deadlineMs, dependencies);
   }
@@ -208,7 +223,9 @@ export async function claimInstallLock(
     }
 
     if (step === 'wait-for-guard' && attempt === 0) {
-      console.error('Another agent hook claims the install lock here, so this one waits its turn.');
+      dependencies.writeError(
+        'Another agent hook claims the install lock here, so this one waits its turn.',
+      );
     }
 
     if (step !== 'retry-guard' && step !== 'wait-for-guard') {
@@ -414,7 +431,43 @@ export function findInstallFailure(result: InstallResult): string | null {
     return String(result.error);
   }
 
-  return result.status === null ? `bun install stopped on ${String(result.signal)}` : null;
+  if (result.status === null) {
+    return `bun install stopped on ${String(result.signal)}`;
+  }
+
+  return result.status === 0 ? null : `bun install exited with status ${String(result.status)}`;
+}
+
+// Bun can keep a failed package lookup for the life of the process, so the retry is a new
+// process, which reads the hook payload from the same stdin.
+export function runRetryProcess(
+  stubPath: string,
+  argv: readonly string[],
+  dependencies: InstallDependencies,
+): RetryOutcome {
+  return pickRetryOutcome(dependencies.runRetry(buildRetryArgs(stubPath, argv)));
+}
+
+// A `--` in the arguments ends the options, so the retry flag goes before them.
+export function buildRetryArgs(stubPath: string, argv: readonly string[]): readonly string[] {
+  return ['--no-install', stubPath, `--${AFTER_INSTALL_OPTION}`, ...argv];
+}
+
+type RetryOutcome =
+  | { readonly kind: 'exit'; readonly status: number }
+  | { readonly kind: 'stopped'; readonly signal: string }
+  | { readonly kind: 'fallback'; readonly error: Error };
+
+// With no timeout or output limit on the spawn, an error means the retry never started, so it has
+// not read the payload and the fallback can still read it.
+export function pickRetryOutcome(retry: RetryResult): RetryOutcome {
+  if (retry.error !== undefined) {
+    return { kind: 'fallback', error: retry.error };
+  }
+
+  return retry.status === null
+    ? { kind: 'stopped', signal: String(retry.signal) }
+    : { kind: 'exit', status: retry.status };
 }
 
 const REFUSAL =
@@ -422,22 +475,18 @@ const REFUSAL =
 
 // The package reads stdin before it can throw, so a failure after that read finds no payload here
 // and refuses.
-function exitWithFallbackVerdict(): never {
-  if (pickFallbackVerdict(readPayloadText()) === 'allow') {
+function exitWithFallbackVerdict(dependencies: InstallDependencies): never {
+  if (readFallbackVerdict(dependencies) === 'allow') {
     return process.exit(0);
   }
 
-  console.error(REFUSAL);
+  dependencies.writeError(REFUSAL);
 
   return process.exit(2);
 }
 
-function readPayloadText(): string {
-  try {
-    return readFileSync(0, 'utf8');
-  } catch {
-    return '';
-  }
+export function readFallbackVerdict(dependencies: InstallDependencies): 'allow' | 'refuse' {
+  return pickFallbackVerdict(dependencies.readPayload());
 }
 
 // An agent can still run bun install by hand, and read the tree, while the package cannot load.
@@ -516,6 +565,18 @@ export const NODE_INSTALL_DEPENDENCIES: InstallDependencies = {
   },
   sleep: Bun.sleep,
   now: Date.now,
+  runRetry: (args) => spawnSync(process.execPath, args, { stdio: 'inherit' }),
+  readPayload: () => {
+    try {
+      return readFileSync(0, 'utf8');
+    } catch {
+      return '';
+    }
+  },
+  writeError: (message) => {
+    console.error(message);
+  },
+  importAgentHooks: () => import('@zgeoff/agent-hooks'),
   runInstall: (timeoutMs) =>
     spawnSync('bun', ['install', '--frozen-lockfile'], {
       cwd: ROOT,
@@ -527,8 +588,8 @@ export const NODE_INSTALL_DEPENDENCIES: InstallDependencies = {
 // A top-level await holds back every line under it, so the entry point sits last.
 if (import.meta.main) {
   await runHook(process.argv.slice(2), NODE_INSTALL_DEPENDENCIES).catch((error: unknown) => {
-    console.error(`The agent hook failed: ${String(error)}`);
+    NODE_INSTALL_DEPENDENCIES.writeError(`The agent hook failed: ${String(error)}`);
 
-    return exitWithFallbackVerdict();
+    return exitWithFallbackVerdict(NODE_INSTALL_DEPENDENCIES);
   });
 }
