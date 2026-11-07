@@ -25,6 +25,10 @@ export async function startErrorReporting(
     sentry.init({
       dsn,
 
+      // on, the SDK gives an event from a non-Error value a synthetic stack of the capture site,
+      // which splits its issue group in the error backend
+      attachStacktrace: false,
+
       // an explicit `dataCollection` makes the SDK's spec defaults the base, which collect every
       // HTTP body type — and a failed checkpoint submission's body carries the session token, so
       // body capture is switched off wholesale

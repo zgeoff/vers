@@ -12,8 +12,11 @@ export function startSentryReact(): void {
     dsn,
     environment: import.meta.env.MODE,
 
-    // userInfo defaults off; the other categories default on once dataCollection is present,
-    // matching what sendDefaultPii: true collected
+    // on, the SDK gives an event from a non-Error value a synthetic stack of the capture site, which
+    // splits its issue group in the error backend
+    attachStacktrace: false,
+
+    // the user's identity goes on each event, and every other category keeps the SDK's default
     dataCollection: { userInfo: true },
 
     // tracing lives on the OpenTelemetry path; the error backend drops transaction envelopes

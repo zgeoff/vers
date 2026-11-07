@@ -74,7 +74,6 @@
     "@babel/core": "catalog:",
     "@faker-js/faker": "catalog:",
     "@logtape/logtape": "catalog:",
-    "@opentelemetry/core": "catalog:",
     "@pandacss/dev": "catalog:",
     "@rolldown/plugin-babel": "catalog:",
     "@sentry/vite-plugin": "catalog:",

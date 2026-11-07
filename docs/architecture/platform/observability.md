@@ -29,16 +29,12 @@ stdout and, with the endpoint set, hands it to a batching log exporter that shar
 metric resource. A process with the endpoint unset emits nothing, and every instrument stays the
 OpenTelemetry API's no-op.
 
-Each process starts the Sentry SDK before OpenTelemetry, and the order matters. The OpenTelemetry
-API keeps only the first tracer provider, context manager, and propagator that a process registers.
-Sentry starts with its own OpenTelemetry setup skipped, so it registers no tracer provider and no
-propagator, and the W3C propagator and the OTLP exporter that start next take effect. Sentry then
-registers its own context manager, which forks a Sentry scope with each OpenTelemetry context. A
-tag, a user, or the request data set during one request therefore stays on that request's events.
-
-Under the default context manager, every request shares one Sentry scope. Sentry's start fails when
-another context manager is already registered, so a process that starts in the wrong order stops at
-boot.
+The Sentry SDK registers no tracer provider, context manager or propagator, so the OpenTelemetry
+setup that each process starts owns all three. Sentry opens no spans of its own. Its server
+integration, the Bun server integration in a service and the HTTP integration in the web app, opens
+a Sentry isolation scope for each request. A tag, a user, or the request data set during one request
+therefore stays on that request's events. Sentry's OpenTelemetry integration puts the trace ID of
+the active OpenTelemetry span on each event.
 
 Each exporter configures itself from the standard `OTEL_EXPORTER_OTLP_*` variables, whose per-signal
 headers carry the ingest token and dataset routing. Stopping telemetry flushes pending exports and

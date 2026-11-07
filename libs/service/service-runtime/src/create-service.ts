@@ -76,8 +76,6 @@ export async function createService<
   const env = readServiceEnv(config.envShape);
   const scope = createResourceScope();
 
-  // ahead of the OTel plugin: the OpenTelemetry API keeps the first global context manager, and
-  // only Sentry's gives each request its own scope; the plugin's own registration then no-ops
   await startErrorReporting(env.SENTRY_DSN);
 
   const otlpLogSink =

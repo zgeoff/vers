@@ -1,7 +1,5 @@
-import { context } from '@opentelemetry/api';
 import * as Sentry from '@sentry/node';
 import type { NodeOptions } from '@sentry/node';
-import invariant from 'tiny-invariant';
 import { env } from './env';
 
 interface StartSentryNodeOptions {
@@ -17,30 +15,22 @@ export function startSentryNode(dsn: string, options: Readonly<StartSentryNodeOp
   Sentry.init({
     dsn,
     environment: env.NODE_ENV,
-    integrations: [Sentry.httpIntegration()],
 
-    // userInfo defaults off; the other categories default on once dataCollection is present,
-    // matching what sendDefaultPii: true collected
+    // on, the SDK gives an event from a non-Error value a synthetic stack of the capture site, which
+    // splits its issue group in the error backend
+    attachStacktrace: false,
+
+    // tracing lives on the OpenTelemetry path: with no `tracesSampleRate` the SDK opens no spans of
+    // its own, and the OpenTelemetry integration puts the active span's trace on each event
+    integrations: [Sentry.httpIntegration(), Sentry.openTelemetryIntegration()],
+
+    // the user's identity goes on each event, and every other category keeps the SDK's default
     dataCollection: { userInfo: true },
-
-    // tracing lives on the OpenTelemetry path; the error backend drops transaction envelopes
-    tracesSampleRate: 0,
 
     // the error backend discards client reports, and their 60s flush keeps otherwise idle
     // infrastructure awake
     sendClientReports: false,
-
-    // the SDK's own setup would register its tracer provider and a propagator that reads no
-    // `traceparent`, and the OpenTelemetry API keeps the first registration of each
-    skipOpenTelemetrySetup: true,
     ...(options.beforeSend !== undefined && { beforeSend: options.beforeSend }),
     ...(options.disableDefaultIntegrations === true && { defaultIntegrations: false }),
   });
-
-  // the SDK forks a request's scope only through this context manager, and the API keeps the first
-  // one registered, so the trace exporter's default must not have claimed the slot already
-  invariant(
-    context.setGlobalContextManager(new Sentry.SentryContextManager().enable()),
-    'Sentry starts before any other OpenTelemetry context manager registers',
-  );
 }
