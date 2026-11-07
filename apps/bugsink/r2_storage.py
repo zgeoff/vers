@@ -7,10 +7,11 @@ Bugsink resolves this class by dotted path and constructs it as
 ``R2ObjectStorage(name, object_kind=..., **OPTIONS)``; credentials and target
 bucket come from the R2_* environment (Fly secrets) so no secret is baked in.
 The four methods below are Bugsink's ObjectStorage contract: open() is a context
-manager yielding a readable ('rb') or writable ('wb') file object.
+manager yielding a seekable readable ('rb') or a writable ('wb') file object.
 """
 
 import os
+import tempfile
 from contextlib import contextmanager
 from io import BytesIO
 
@@ -57,11 +58,12 @@ class R2ObjectStorage(ObjectStorage):
     @contextmanager
     def open(self, key, mode="rb"):
         if mode == "rb":
-            body = self._client.get_object(Bucket=self.bucket, Key=str(key))["Body"]
-            try:
-                yield body
-            finally:
-                body.close()
+            # Bugsink opens an artifact bundle with ZipFile, which seeks, and the S3 body is a
+            # forward-only stream, so the object lands in a seekable local file first.
+            with tempfile.TemporaryFile() as local_file:
+                self._client.download_fileobj(self.bucket, str(key), local_file)
+                local_file.seek(0)
+                yield local_file
         elif mode == "wb":
             buffer = BytesIO()
             yield buffer
