@@ -20,11 +20,11 @@ test('it registers each engine version against its own replay provider', async (
   const retained = await readSimVersion(ctx.db, 'engine-now-retained');
 
   expect(current).toStrictEqual({
-    bunVersion: expect.any(String),
+    bunVersion: Bun.version,
     createdAt: expect.toBeValidDate(),
     deployedAt: expect.toBeValidDate(),
     engineHash: 'engine-now',
-    imageRef: expect.any(String),
+    imageRef: 'load-stack/current',
     maxContentVersion: expect.any(String),
     providerUrl: 'http://service-replay:3000',
     retainedUntil: expect.toBeValidDate(),
@@ -32,11 +32,11 @@ test('it registers each engine version against its own replay provider', async (
   });
 
   expect(retained).toStrictEqual({
-    bunVersion: expect.any(String),
+    bunVersion: Bun.version,
     createdAt: expect.toBeValidDate(),
     deployedAt: expect.toBeValidDate(),
     engineHash: 'engine-now-retained',
-    imageRef: expect.any(String),
+    imageRef: 'load-stack/retained',
     maxContentVersion: expect.any(String),
     providerUrl: 'http://service-replay-retained:3000',
     retainedUntil: expect.toBeValidDate(),

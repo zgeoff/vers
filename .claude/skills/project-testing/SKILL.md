@@ -37,14 +37,14 @@ metadata:
 ## Stored state
 
 Check the rows below through the read functions in the folder this table names. The activity
-service, the replay service and `@vers/db` all write these tables, so the table picks the one module
-whose read functions a test calls.
+service, the replay service and `@vers/db` all write these tables, so a test calls the read
+functions of the one module this table names.
 
-| Rows                                              | Test package           | Folder of read functions                                                 |
-| ------------------------------------------------- | ---------------------- | ------------------------------------------------------------------------ |
-| `status` and `parkedFrom` of `activities`         | any                    | [`libs/data/db/src/`](../../../libs/data/db/src/read-activity-status.ts) |
-| every other `activities` column, `activityChains` | `@vers/service-replay` | [`services/replay/src/queue/`](../../../services/replay/src/queue/)      |
-| `avatars`, `avatarItems`, `avatarGrants`          | `@vers/service-replay` | [`services/replay/src/apply/`](../../../services/replay/src/apply/)      |
+| Rows                                              | Test package           | Folder of read functions                                            |
+| ------------------------------------------------- | ---------------------- | ------------------------------------------------------------------- |
+| `status` and `parkedFrom` of `activities`         | any                    | [`libs/data/db/src/`](../../../libs/data/db/src/)                   |
+| every other `activities` column, `activityChains` | `@vers/service-replay` | [`services/replay/src/queue/`](../../../services/replay/src/queue/) |
+| `avatars`, `avatarItems`, `avatarGrants`          | `@vers/service-replay` | [`services/replay/src/apply/`](../../../services/replay/src/apply/) |
 
 - Find a read function as a `read-*.ts` file in its folder. When none returns the column you check,
   add one to that folder, with a test.
@@ -60,8 +60,9 @@ whose read functions a test calls.
   service test, its router test and its access tests.
 - Name the service test `create-<service>-service.test.ts`. In it, drive one write through an
   injected database, and read the row back from that database through a read function in the
-  service's `src/handlers/`. Also create the service with no database injected, so it reads
-  `env.DATABASE_URL`, and dispose of each service you create.
+  service's `src/handlers/`. When the write's result already holds the row's fields, check the
+  result instead, as testing's Stored state rule allows. Also create the service with no database
+  injected, so it reads `env.DATABASE_URL`, and dispose of each service you create.
 - Check that a stop destroys the database the service built with `spyOn(db, 'destroy')`. A query
   after the stop proves nothing. Kysely opens the pool again for it.
 - Put the router test beside the module that builds the router, such as

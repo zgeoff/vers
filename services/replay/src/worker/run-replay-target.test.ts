@@ -363,6 +363,8 @@ test('it settles no additional xp when a stale duplicate target misses the alrea
 
   const afterFirst = await readAvatarProgress(ctx.db, fixture.activity.avatarId);
 
+  invariant(afterFirst);
+
   // replays the same stale target, whose `verifiedHead` no longer matches the cursor the first
   // apply already advanced
   const second = await ctx.db
@@ -372,8 +374,6 @@ test('it settles no additional xp when a stale duplicate target misses the alrea
   expect(second.kind).toBe('matched');
 
   const afterSecond = await readAvatarProgress(ctx.db, fixture.activity.avatarId);
-
-  invariant(afterFirst);
 
   expect(afterSecond?.xp).toBe(afterFirst.xp);
 });
@@ -936,8 +936,8 @@ test('it grants a first_clear keyed by the node when a verified segment complete
 
   expect(outcome.kind).toBe('matched');
 
-  // the fixture itself seeds a first-clear grant for a node adjacent to its own scope, so
-  // this query isolates the grant this run's own completion earns
+  // the fixture seeds a first-clear grant for a node adjacent to its own scope, so the filter
+  // keeps only the grant this run's own node could earn
   const avatarGrants = await readAvatarGrants(ctx.db, fixture.activity.avatarId);
 
   const grants = avatarGrants.filter((grant) => grant.key === fixture.activity.scopeId);
@@ -1022,8 +1022,8 @@ test('it lands no grant when a verified segment ends on a failed terminal', asyn
 
   expect(outcome.kind).toBe('matched');
 
-  // the fixture itself seeds a first-clear grant for a node adjacent to its own scope, so
-  // this query isolates whether this run's own completion earned one
+  // the fixture seeds a first-clear grant for a node adjacent to its own scope, so the filter
+  // keeps only the grant this run's own node could earn
   const avatarGrants = await readAvatarGrants(ctx.db, fixture.activity.avatarId);
 
   const grants = avatarGrants.filter((grant) => grant.key === fixture.activity.scopeId);
@@ -1085,8 +1085,8 @@ test('it lands no grant when a stop forward-exits the chain without a completed 
 
   expect(outcome.kind).toBe('matched');
 
-  // the fixture itself seeds a first-clear grant for a node adjacent to its own scope, so
-  // this query isolates whether this run's own completion earned one
+  // the fixture seeds a first-clear grant for a node adjacent to its own scope, so the filter
+  // keeps only the grant this run's own node could earn
   const avatarGrants = await readAvatarGrants(ctx.db, fixture.activity.avatarId);
 
   const grants = avatarGrants.filter((grant) => grant.key === fixture.activity.scopeId);
@@ -1198,8 +1198,8 @@ test('it grants a first_clear exactly once across a re-verification of an alread
 
   expect(second.kind).toBe('matched');
 
-  // the fixture itself seeds a first-clear grant for a node adjacent to its own scope, so this
-  // query isolates the grant this run's own completion earns
+  // the fixture seeds a first-clear grant for a node adjacent to its own scope, so the filter
+  // keeps only the grant this run's own node could earn
   const avatarGrants = await readAvatarGrants(ctx.db, fixture.activity.avatarId);
 
   const grants = avatarGrants.filter((grant) => grant.key === fixture.activity.scopeId);

@@ -22,7 +22,15 @@ test('it wires an injected db into the router instead of building one from env',
 
   const revealed = await client.revealNodes({ avatarID: avatar.id, nodeIDs: ['0_0'] });
 
-  expect(revealed.nodes).toHaveLength(1);
+  expect(revealed.nodes).toStrictEqual([
+    {
+      anchor: { chainIndex: 0, nextSeed: expect.any(String) },
+      contentVersion: '2',
+      encounterNode: expect.any(Object),
+      genesisSeed: expect.any(String),
+      nodeID: '0_0',
+    },
+  ]);
 });
 
 test('it boots from env.DATABASE_URL when no db is injected', async () => {
