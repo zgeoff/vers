@@ -12,4 +12,5 @@ export async function removeOfflineHold(paths: OfflineHoldPaths): Promise<void> 
   }
 
   await rm(paths.stateFile, { force: true });
+  await rm(paths.logFile, { force: true });
 }

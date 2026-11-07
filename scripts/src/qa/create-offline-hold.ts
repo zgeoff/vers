@@ -19,7 +19,12 @@ export async function createOfflineHold(
 ): Promise<OfflineHold> {
   // detached puts the hold in its own process group, which outlives this command and which a
   // removal signals as one
-  const child = spawn(process.execPath, [HOLD_ENTRYPOINT, '--endpoint', endpoint, targetID], {
+  // a log left by an ended hold would print with the next offline off as this hold's failures
+  await rm(paths.logFile, { force: true });
+
+  const args = [HOLD_ENTRYPOINT, '--endpoint', endpoint, '--log', paths.logFile, targetID];
+
+  const child = spawn(process.execPath, args, {
     detached: true,
     stdio: ['pipe', 'pipe', 'pipe'],
   });

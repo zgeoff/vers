@@ -204,7 +204,8 @@ Chrome drops network emulation when the DevTools session that set it detaches, s
 shared worker or service worker target. The cut holds until `offline <target> off` or until the
 target closes. When a reload replaces a shared worker that this background process holds offline,
 the process resumes the new worker, which [starts paused](#capturing-worker-traffic), and the new
-worker stays offline.
+worker stays offline. When that resume fails, the worker stays paused, and `offline <target> off`
+prints the failure.
 
 ### Capturing worker traffic
 

@@ -22,6 +22,7 @@ test('it stops the hold when its state file cannot be saved', async () => {
   const paths = {
     directory: ctx.directory,
     lockFile: join(ctx.directory, 'PAGE1.lock'),
+    logFile: join(ctx.directory, 'PAGE1.log'),
     stateFile,
   };
 
@@ -46,6 +47,7 @@ test('it keeps the state file it had when a save fails', async () => {
   const paths = {
     directory: ctx.directory,
     lockFile: join(ctx.directory, 'PAGE1.lock'),
+    logFile: join(ctx.directory, 'PAGE1.log'),
     stateFile,
   };
 

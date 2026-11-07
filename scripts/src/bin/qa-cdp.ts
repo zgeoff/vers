@@ -14,6 +14,7 @@ import { PAGE_HELPERS_SOURCE } from '../qa/page-helpers-source';
 import { QA_CDP_ARGS } from '../qa/qa-cdp-args';
 import { readDevToolsTargets } from '../qa/read-devtools-targets';
 import { readOfflineHold } from '../qa/read-offline-hold';
+import { readOfflineHoldFailures } from '../qa/read-offline-hold-failures';
 import { removeOfflineHold } from '../qa/remove-offline-hold';
 import { resolveEndpoint } from '../qa/resolve-endpoint';
 import type { CDPClient } from '../qa/types';
@@ -435,7 +436,13 @@ const offlineCommand = define({
             await createOfflineHold(readEndpoint(ctx.values.endpoint), targetID, paths);
           }
         })
-        .with('off', () => removeOfflineHold(paths))
+        .with('off', async () => {
+          const failures = await readOfflineHoldFailures(paths);
+
+          await removeOfflineHold(paths);
+
+          process.stderr.write(failures);
+        })
         .exhaustive(),
     );
 
