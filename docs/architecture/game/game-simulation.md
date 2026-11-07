@@ -157,7 +157,7 @@ head row's accounted time, never a sum of per-checkpoint times. Elapsed wall clo
 credit source, so no path earns simulated time faster than real time. Live play self-funds, because
 each flush banks the wall clock it consumed. An initial grant absorbs tick-boundary and network
 jitter. One exception: a QA avatar's meter refills at a multiple of wall clock
-([manual QA](../../runbooks/qa.md#debug-hook)).
+([QA debug hook](../../runbooks/qa-debug-hook.md#set-the-speed)).
 
 A batch whose delta exceeds the accrued budget is rejected whole, and the activity takes the
 terminal `capped` transition at its current head. The `ACTIVITY_CAPPED` error carries that head as
