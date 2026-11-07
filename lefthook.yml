@@ -92,6 +92,11 @@ push-gate:
       files: git diff --name-only --diff-filter=ACMR origin/main...HEAD
       glob: '*.{js,mjs,cjs,jsx,ts,mts,cts,tsx}'
       run: node_modules/.bin/oxlint --no-error-on-unmatched-pattern {files}
+    # the docs checks that check:docs names, on a branch that changes a doc
+    - name: docs
+      files: git diff --name-only --diff-filter=ACMR origin/main...HEAD
+      glob: '*.md'
+      run: bun run --silent check:docs
     # one project and one checker at a time: tsc's default parallel checkers
     # push the web app's typecheck to about 1.5 GiB, one checker to about 0.8
     - name: typecheck
