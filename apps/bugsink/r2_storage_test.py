@@ -8,6 +8,8 @@ behaviour, which is the part that can break.
 import os
 import sys
 import types
+from io import BytesIO
+from zipfile import ZipFile
 
 import boto3
 import pytest
@@ -46,6 +48,17 @@ def test_write_then_read_roundtrips(storage):
         f.write(b"sourcemap-bytes")
     with storage.open("bundle/app.js.map", "rb") as f:
         assert f.read() == b"sourcemap-bytes"
+
+
+def test_read_opens_a_stored_zip_bundle(storage):
+    bundle = BytesIO()
+    with ZipFile(bundle, "w") as bundle_zip:
+        bundle_zip.writestr("manifest.json", b'{"files": {}}')
+    with storage.open("bundle.zip", "wb") as f:
+        f.write(bundle.getvalue())
+    with storage.open("bundle.zip", "rb") as f:
+        with ZipFile(f) as bundle_zip:
+            assert bundle_zip.read("manifest.json") == b'{"files": {}}'
 
 
 def test_exists_reflects_presence(storage):
