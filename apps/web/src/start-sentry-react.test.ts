@@ -16,13 +16,16 @@ test('it gives an event captured from a non-Error value no synthetic stack', asy
     await Sentry.close();
   });
 
-  Sentry.addEventProcessor((event) => {
-    recorded.push(event);
+  // a processor on this scope alone: a global one outlives the client and drops later tests' events
+  Sentry.withScope((scope) => {
+    scope.addEventProcessor((event) => {
+      recorded.push(event);
 
-    return null;
+      return null;
+    });
+
+    Sentry.captureException('the avatar list is unreachable');
   });
-
-  Sentry.captureException('the avatar list is unreachable');
 
   await waitFor(() => {
     expect(recorded).toHaveLength(1);
