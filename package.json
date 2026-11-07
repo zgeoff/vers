@@ -232,7 +232,7 @@
     "serve:app-web": "dotenvx run -f apps/web/.env.development.local -- node ./apps/web/server.mjs",
     "---UTILITY": "",
     "prepare": "command -v git > /dev/null 2>&1 && lefthook install --force || true",
-    "check:docs": "chex prose length links skill"
+    "check:docs": "chex prose length links readmes skill"
   },
   "devDependencies": {
     "@commitlint/cli": "catalog:",

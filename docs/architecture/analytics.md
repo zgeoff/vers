@@ -60,8 +60,14 @@ flow confirms success. An element-level click can instead carry a `data-umami-ev
 
 Tinybird (managed ClickHouse) holds the behavioural product-event stream and serves it back as SQL
 query endpoints. The repo owns the workspace's resources as datafiles in `infra/tinybird`: the
-`product_events` data source and the query pipes. They deploy from that directory with the Tinybird
-CLI.
+`product_events` data source in `datasources/` and the query pipes in `pipes/`. Deploy them from
+that directory with the Tinybird CLI, signed in with the workspace admin token from the `tinybird`
+item in the `vers` 1Password vault:
+
+```sh
+tb login
+tb --cloud deploy
+```
 
 ### Ingest
 
