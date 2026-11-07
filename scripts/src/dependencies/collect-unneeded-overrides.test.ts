@@ -68,3 +68,52 @@ test('it reports an override of a package that nothing depends on', () => {
     { entry: 'left-pad', problem: 'no package in bun.lock depends on the overridden package' },
   ]);
 });
+
+test('it keeps a scoped override that its parent range excludes', () => {
+  expect(
+    collectUnneededOverrides({
+      overrides: { 'pad-tools@2.0.0>left-pad': '1.3.1' },
+      catalog: {},
+      dependents: [
+        { dependent: 'pad-tools@2.0.0', name: 'left-pad', range: '1.2.0' },
+        { dependent: 'text-kit@4.1.0', name: 'left-pad', range: '^1.3.0' },
+      ],
+    }),
+  ).toStrictEqual([]);
+});
+
+test('it reports a scoped override whose parent range already admits the pin', () => {
+  expect(
+    collectUnneededOverrides({
+      overrides: { 'pad-tools>left-pad': '1.3.1' },
+      catalog: {},
+      dependents: [
+        { dependent: 'pad-tools@2.0.0', name: 'left-pad', range: '^1.3.0' },
+        { dependent: 'text-kit@4.1.0', name: 'left-pad', range: '1.2.0' },
+      ],
+    }),
+  ).toStrictEqual([
+    {
+      entry: 'pad-tools>left-pad',
+      problem: 'every range in bun.lock already admits 1.3.1, so the override changes nothing',
+    },
+  ]);
+});
+
+test('it reports a scoped override whose parent is not in the lockfile', () => {
+  expect(
+    collectUnneededOverrides({
+      overrides: { 'pad-tools@1.0.0>left-pad': '1.3.1' },
+      catalog: {},
+      dependents: [
+        { dependent: 'pad-tools@2.0.0', name: 'left-pad', range: '1.2.0' },
+        { dependent: 'pad-tools-extra@1.0.0', name: 'left-pad', range: '1.2.0' },
+      ],
+    }),
+  ).toStrictEqual([
+    {
+      entry: 'pad-tools@1.0.0>left-pad',
+      problem: 'no package in bun.lock depends on the overridden package',
+    },
+  ]);
+});
