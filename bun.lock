@@ -21,6 +21,7 @@
         "@zgeoff/format-codemod": "catalog:",
         "@zgeoff/mcp-remote": "catalog:",
         "@zgeoff/oxlint-config": "catalog:",
+        "@zgeoff/rig": "catalog:",
         "@zgeoff/umami-mcp": "catalog:",
         "chrome-devtools-mcp": "catalog:",
         "knip": "catalog:",
@@ -1489,12 +1490,13 @@
     "@zgeoff/agent-hooks": "0.2.9",
     "@zgeoff/bugsink-mcp": "0.2.0",
     "@zgeoff/bun-test-extended": "0.2.3",
-    "@zgeoff/chex": "0.1.8",
+    "@zgeoff/chex": "0.2.1",
     "@zgeoff/dbhub": "0.23.4",
     "@zgeoff/diet": "0.2.2",
     "@zgeoff/format-codemod": "0.3.5",
     "@zgeoff/mcp-remote": "0.1.38",
     "@zgeoff/oxlint-config": "0.8.1",
+    "@zgeoff/rig": "0.2.1",
     "@zgeoff/std": "0.4.3",
     "@zgeoff/umami-mcp": "0.1.2",
     "autoprefixer": "10.6.2",
@@ -3075,7 +3077,7 @@
 
     "@zgeoff/bun-test-extended": ["@zgeoff/bun-test-extended@0.2.3", "", { "dependencies": { "jest-extended": "7.0.0", "jest-matcher-utils": "30.5.2" } }, "sha512-4ZNPft3LunVKp+s2esoJXSe64EaEywsu3z6Cg5/s/MJcdygmrQeAyfECioePCo5RuAIcaPfgF3lhYsPKcmVJ4w=="],
 
-    "@zgeoff/chex": ["@zgeoff/chex@0.1.8", "", { "dependencies": { "@zgeoff/std": "0.4.2", "oxc-parser": "0.156.0", "ts-pattern": "5.9.2" }, "bin": { "chex": "src/cli.ts" } }, "sha512-+k2NDAr3P1W2AxKyY92SBqq4gLtPmIzrUgCEjw91KWnIq3fIVqyOnhFf1EAWnyYxbQOKSA/+Qqd7Uovz6Li34Q=="],
+    "@zgeoff/chex": ["@zgeoff/chex@0.2.1", "", { "dependencies": { "@zgeoff/std": "0.4.3", "oxc-parser": "0.156.0", "ts-pattern": "5.9.2" }, "bin": { "chex": "src/cli.ts" } }, "sha512-krKw/6ieuJBK0vPWkYGBszv71vxLrL/voh6mtrCqDAHfpl3hi8j5mLCwrREwsV87HFtXdnvNPDO09Hi24VTnhg=="],
 
     "@zgeoff/dbhub": ["@zgeoff/dbhub@0.23.4", "", { "dependencies": { "@iarna/toml": "2.2.5", "@modelcontextprotocol/sdk": "1.29.0", "dotenv": "16.5.0", "express": "5.2.1", "ssh-config": "5.0.3", "ssh2": "1.16.0", "zod": "3.25.64" }, "optionalDependencies": { "@aws-sdk/rds-signer": "3.1079.0", "@azure/identity": "4.13.1", "mariadb": "3.4.2", "mssql": "11.0.1", "mysql2": "3.14.1", "pg": "8.16.0" }, "bin": { "dbhub": "dist/index.js" } }, "sha512-mA/fQOLJRxmph0XidO9KzPvHJfk+vonVibUT06tKxr9zxQdG3TeloRkqtgpilACLjX2ok23mI6VhZGX5DMoW8w=="],
 
@@ -3086,6 +3088,8 @@
     "@zgeoff/mcp-remote": ["@zgeoff/mcp-remote@0.1.38", "", { "dependencies": { "express": "^4.21.2", "open": "^10.1.0", "strict-url-sanitise": "^0.0.1", "undici": "^7.12.0" }, "bin": { "mcp-remote": "dist/proxy.js", "mcp-remote-client": "dist/client.js" } }, "sha512-NIF6nd1wJ3/NmaXmI7vm1eE7vbXQDP9cxqhfGpYaEdoEPwzbju1uxyaNvGnHrzBblYFpfk6m2aqqJhT8OLDbxw=="],
 
     "@zgeoff/oxlint-config": ["@zgeoff/oxlint-config@0.8.1", "", { "dependencies": { "@stylistic/eslint-plugin": "5.10.0" }, "peerDependencies": { "oxlint": ">=1.78.0" } }, "sha512-hSQHWbEMuiUFLTJdog0JA6RaiTXg30fUttxAMsZMFiwvkXxbsWufOqH0R3T4ku2w031s/AkhWZ5ZKPqsSce/bQ=="],
+
+    "@zgeoff/rig": ["@zgeoff/rig@0.2.1", "", { "dependencies": { "@zgeoff/diet": "0.2.2", "@zgeoff/std": "0.4.3", "gunshi": "1.0.0-rc.1", "ts-pattern": "5.9.2", "zod": "4.6.7" }, "bin": { "rig": "src/cli.ts" } }, "sha512-16CI50JVnvCHOqDUTtqodoP3I/hDZZC1fYQ6fkVaqOtBgI15cNbtmqpaCjI/ExM+aNT9qUYWsM7n1Ors3Wa6ug=="],
 
     "@zgeoff/std": ["@zgeoff/std@0.4.3", "", {}, "sha512-wCaqH8+vrkR+6R/grWUUDraryyFY1NW0Gjbhg85bXX38k9Q+N3aHFu+Yc+EjzZ/Sp9n5aJnCvZqbO5F2mUjWAg=="],
 
@@ -5124,8 +5128,6 @@
     "@vers/infra/@pulumi/neon": ["@pulumi/neon@file:infra/sdks/neon", { "dependencies": { "@pulumi/pulumi": "^3.238.0", "@types/node": "^24.0.0", "typescript": "^4.7.0" }, "hasInstallScript": true }],
 
     "@vitejs/plugin-rsc/srvx": ["srvx@1.0.5", "", { "bin": { "srvx": "./bin/srvx.mjs" } }, "sha512-KvSKRpgPG/oaq3cyT614OQ2bAa7DynuGamivCZeoZzIUULOdbQz6wUtnnVuC4+DCx2Zglzo8v5gBYmWIWYhDxA=="],
-
-    "@zgeoff/chex/@zgeoff/std": ["@zgeoff/std@0.4.2", "", {}, "sha512-GZnnOkrYHe6p071BWYe7XIq5klqhvVb4j/JWOrrUTSj76uLA/ZnzlqDKIq16LblMcuRF9tjfvKvGK8sLRN8fMg=="],
 
     "@zgeoff/dbhub/dotenv": ["dotenv@16.5.0", "", {}, "sha512-m/C+AwOAr9/W1UOIZUo232ejMNnJAJtYQjUbHoNTBNTJSvqzzDh7vnrei3o3r3m9blf6ZoDkvcw0VmozNRFJxg=="],
 

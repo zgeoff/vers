@@ -26,6 +26,7 @@ minimumReleaseAgeExcludes = [
   "@zgeoff/format-codemod",
   "@zgeoff/mcp-remote",
   "@zgeoff/oxlint-config",
+  "@zgeoff/rig",
   "@zgeoff/std",
   "@zgeoff/umami-mcp",
 ]
