@@ -1,5 +1,4 @@
 import { expect, test } from 'bun:test';
-import type { Span } from '@opentelemetry/api';
 import { context, propagation, trace } from '@opentelemetry/api';
 import { createInMemoryTraces } from './create-in-memory-traces';
 
@@ -16,20 +15,19 @@ test('it records each ended span by name', () => {
 test('it keeps a span active across an await', async () => {
   createInMemoryTraces();
 
-  let started: Span | undefined;
-  let active: Span | undefined;
+  const observed = await trace
+    .getTracer('test-memory')
+    .startActiveSpan('queue.drain', async (span) => {
+      await Promise.resolve();
 
-  await trace.getTracer('test-memory').startActiveSpan('queue.drain', async (span) => {
-    started = span;
+      const active = trace.getActiveSpan();
 
-    await Promise.resolve();
+      span.end();
 
-    active = trace.getActiveSpan();
+      return { active, span };
+    });
 
-    span.end();
-  });
-
-  expect(active).toBe(started);
+  expect(observed.active).toBe(observed.span);
 });
 
 test('it injects a traceparent and the baggage for the active context', () => {

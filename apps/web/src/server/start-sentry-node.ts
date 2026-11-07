@@ -1,7 +1,5 @@
-import { context } from '@opentelemetry/api';
 import * as Sentry from '@sentry/node';
 import type { NodeOptions } from '@sentry/node';
-import invariant from 'tiny-invariant';
 import { env } from './env';
 
 interface StartSentryNodeOptions {
@@ -17,30 +15,23 @@ export function startSentryNode(dsn: string, options: Readonly<StartSentryNodeOp
   Sentry.init({
     dsn,
     environment: env.NODE_ENV,
-    integrations: [Sentry.httpIntegration()],
 
-    // userInfo defaults off; the other categories default on once dataCollection is present,
-    // matching what sendDefaultPii: true collected
-    dataCollection: { userInfo: true },
+    // on, the SDK gives a captured message a synthetic stack of the capture site, which splits its
+    // issue group in the error backend
+    attachStacktrace: false,
 
-    // tracing lives on the OpenTelemetry path; the error backend drops transaction envelopes
-    tracesSampleRate: 0,
+    // tracing lives on the OpenTelemetry path: with no `tracesSampleRate` the SDK opens no spans of
+    // its own, and the OpenTelemetry integration puts the active span's trace on each event
+    integrations: [Sentry.httpIntegration(), Sentry.openTelemetryIntegration()],
+
+    // the SDK collects cookies and every HTTP body type by default, and its name filter misses some
+    // of the session cookies, while a login or sign-up body carries the password
+    dataCollection: { cookies: false, httpBodies: [], userInfo: true },
 
     // the error backend discards client reports, and their 60s flush keeps otherwise idle
     // infrastructure awake
     sendClientReports: false,
-
-    // the SDK's own setup would register its tracer provider and a propagator that reads no
-    // `traceparent`, and the OpenTelemetry API keeps the first registration of each
-    skipOpenTelemetrySetup: true,
     ...(options.beforeSend !== undefined && { beforeSend: options.beforeSend }),
     ...(options.disableDefaultIntegrations === true && { defaultIntegrations: false }),
   });
-
-  // the SDK forks a request's scope only through this context manager, and the API keeps the first
-  // one registered, so the trace exporter's default must not have claimed the slot already
-  invariant(
-    context.setGlobalContextManager(new Sentry.SentryContextManager().enable()),
-    'Sentry starts before any other OpenTelemetry context manager registers',
-  );
 }

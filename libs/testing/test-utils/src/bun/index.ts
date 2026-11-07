@@ -1,6 +1,8 @@
 export { createInMemoryLogs } from './create-in-memory-logs';
 export { createInMemoryMetrics } from './create-in-memory-metrics';
 export { createInMemoryTraces } from './create-in-memory-traces';
+export { readOpenTelemetryLinks } from './read-open-telemetry-links';
+export type { OpenTelemetryLink } from './read-open-telemetry-links';
 export { registerBunTestCleanup } from './register-bun-test-cleanup';
 export { registerHappyDOM } from './register-happy-dom';
 export { registerMSWLifecycle } from './register-msw-lifecycle';

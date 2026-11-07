@@ -17,8 +17,7 @@ import { startSentryNode } from './server/start-sentry-node';
 import { withRequestTrace } from './server/with-request-trace';
 
 // static imports, never a top-level `await import()`: rolldown can fold a chunk into this entry that
-// imports it back, and Node exits 13 on the unsettled cycle. Sentry starts first so the API keeps
-// its context manager, the one that gives each request its own scope.
+// imports it back, and Node exits 13 on the unsettled cycle.
 if (env.isProduction && env.SENTRY_DSN !== undefined) {
   startSentryNode(env.SENTRY_DSN);
 }

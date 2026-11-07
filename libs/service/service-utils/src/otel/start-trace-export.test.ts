@@ -13,7 +13,11 @@ interface ReceivedExport {
   };
 }
 
-test('it exports a recorded span to the OTLP traces endpoint with the env-configured headers', async () => {
+function setupTest() {
+  const stack = new AsyncDisposableStack();
+
+  onTestFinished(() => stack.disposeAsync());
+
   const received: Array<ReceivedExport> = [];
 
   const handleRequest = async (request: Request): Promise<Response> => {
@@ -32,10 +36,9 @@ test('it exports a recorded span to the OTLP traces endpoint with the env-config
     return Response.json({});
   };
 
-  const server = Bun.serve({
-    fetch: handleRequest,
-    port: 0,
-  });
+  const server = Bun.serve({ fetch: handleRequest, port: 0 });
+
+  stack.defer(() => server.stop());
 
   updateEnv('OTEL_EXPORTER_OTLP_ENDPOINT', `http://127.0.0.1:${server.port}`);
 
@@ -44,46 +47,36 @@ test('it exports a recorded span to the OTLP traces endpoint with the env-config
     'Authorization=Bearer test-token,X-Axiom-Dataset=vers-traces',
   );
 
-  onTestFinished(async () => {
-    trace.disable();
-
-    await server.stop();
-  });
-
   const traceExport = startTraceExport({ serviceName: 'test-service' });
+
+  // stopping flushes the ended spans and releases the batch processor's periodic timer, which
+  // would otherwise leak past the test
+  stack.defer(() => traceExport.stop());
+
+  return { received, traceExport };
+}
+
+test('it exports a recorded span to the OTLP traces endpoint with the env-configured headers', async () => {
+  const ctx = setupTest();
 
   trace.getTracer('test-service').startSpan('test-span').end();
 
-  await traceExport.stop();
+  await ctx.traceExport.stop();
 
-  expect(received).toHaveLength(1);
+  expect(ctx.received).toHaveLength(1);
 
-  expect(received[0]?.headers).toStrictEqual({
+  expect(ctx.received[0]?.headers).toStrictEqual({
     auth: 'Bearer test-token',
     contentType: 'application/x-protobuf',
     dataset: 'vers-traces',
     path: '/v1/traces',
   });
 
-  expect(received[0]?.bodyBytes).toBeGreaterThan(0);
+  expect(ctx.received[0]?.bodyBytes).toBeGreaterThan(0);
 });
 
 test('it marks a span active across an await once registered', async () => {
-  const server = Bun.serve({ port: 0, routes: { '/*': Response.json({}) } });
-
-  updateEnv('OTEL_EXPORTER_OTLP_ENDPOINT', `http://127.0.0.1:${server.port}`);
-
-  const traceExport = startTraceExport({ serviceName: 'test-service' });
-
-  onTestFinished(async () => {
-    // stopping flushes the ended span and releases the batch processor's periodic timer, which
-    // would otherwise leak past the test
-    await traceExport.stop();
-
-    trace.disable();
-
-    await server.stop();
-  });
+  setupTest();
 
   const observed = await trace
     .getTracer('test-service')
@@ -102,19 +95,7 @@ test('it marks a span active across an await once registered', async () => {
 });
 
 test('it injects a traceparent and the baggage for the active context once registered', () => {
-  const server = Bun.serve({ port: 0, routes: { '/*': Response.json({}) } });
-
-  updateEnv('OTEL_EXPORTER_OTLP_ENDPOINT', `http://127.0.0.1:${server.port}`);
-
-  const traceExport = startTraceExport({ serviceName: 'test-service' });
-
-  onTestFinished(async () => {
-    await traceExport.stop();
-
-    trace.disable();
-
-    await server.stop();
-  });
+  setupTest();
 
   const carrier: Record<string, string> = {};
 

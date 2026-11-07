@@ -1,15 +1,13 @@
 import { expect, onTestFinished, test } from 'bun:test';
 import type { LogRecord } from '@logtape/logtape';
-import { context, trace } from '@opentelemetry/api';
-import type * as OpenTelemetryCore from '@opentelemetry/core';
 import * as Sentry from '@sentry/node';
 import type { ErrorEvent } from '@sentry/node';
 import { configureLogging } from '@vers/service-runtime/logging';
 import { startTraceExport } from '@vers/service-utils/otel';
 import { waitFor } from '@vers/test-utils';
-import { updateEnv } from '@vers/test-utils/bun';
+import { readOpenTelemetryLinks, updateEnv } from '@vers/test-utils/bun';
+import type { OpenTelemetryLink } from '@vers/test-utils/bun';
 import invariant from 'tiny-invariant';
-import { z } from 'zod';
 import { makeRequestLogger } from './make-request-logger';
 import { withMiddleware } from './middleware';
 import { reportFunctionFault } from './report-function-fault';
@@ -38,7 +36,7 @@ function setupTest() {
   return { exportPaths, stack };
 }
 
-test("it keeps one request's tag and user off a concurrent request's error event when the trace exporter starts after it", async () => {
+test("it keeps one request's tag and user off a concurrent request's error event", async () => {
   const ctx = setupTest();
   const recorded: Array<Readonly<ErrorEvent>> = [];
   const releaseGate = Promise.withResolvers<void>();
@@ -99,7 +97,7 @@ test("it keeps one request's tag and user off a concurrent request's error event
   expect(recorded[0].user).toBeUndefined();
 });
 
-test('it puts the inbound trace id on the log lines, the error event, and the exported span when the trace exporter starts after it', async () => {
+test('it puts the inbound trace id on the log lines, the error event, and the exported span', async () => {
   const ctx = setupTest();
   const recorded: Array<Readonly<ErrorEvent>> = [];
   const records: Array<LogRecord> = [];
@@ -165,50 +163,108 @@ test('it puts the inbound trace id on the log lines, the error event, and the ex
   expect(ctx.exportPaths).toStrictEqual(['/v1/traces']);
 });
 
-// the SDK's node-core takes `@opentelemetry/core` as an optional peer that no override reaches, and
-// its server-span hook calls these on every Node request, which a Bun test can't drive
-test('it round-trips the RPC metadata of a server span through the OpenTelemetry core the SDK resolves', async () => {
+test('it leaves the session cookies off a web error event', async () => {
+  const ctx = setupTest();
+  const recorded: Array<Readonly<ErrorEvent>> = [];
+
+  startSentryNode('https://testpublickey@o0.ingest.sentry.io/1', {
+    beforeSend: (event) => {
+      recorded.push(event);
+
+      return null;
+    },
+    disableDefaultIntegrations: true,
+  });
+
+  ctx.stack.defer(async () => {
+    await Sentry.close();
+  });
+
+  Sentry.addIntegration(Sentry.requestDataIntegration());
+
+  // Bun's node:http publishes no request-start channel, so this sets the request that the SDK's
+  // http integration puts on a request's isolation scope under Node
+  Sentry.withIsolationScope((scope) => {
+    scope.setSDKProcessingMetadata({
+      normalizedRequest: {
+        headers: {
+          accept: 'text/html',
+          cookie: 'en_session=sealed-session; en_verification=sealed-code',
+        },
+        method: 'GET',
+        url: 'http://localhost/account',
+      },
+    });
+
+    Sentry.captureException(new Error('Bad Gateway'));
+  });
+
+  await waitFor(() => {
+    expect(recorded).toHaveLength(1);
+  });
+
+  // the SDK writes the keys it leaves empty as undefined, which the event's request type can't hold
+  const request: unknown = recorded[0]?.request;
+
+  expect(request).toStrictEqual({
+    data: undefined,
+    headers: { accept: 'text/html' },
+    method: 'GET',
+    query_string: undefined,
+    url: 'http://localhost/account',
+  });
+});
+
+// the SDK's Node http integration reads a request body only for the body types this list holds,
+// and Bun's node:http publishes no request-start channel to drive that read
+test('it reads no request body for a web error event', () => {
+  const ctx = setupTest();
+
   startSentryNode('https://testpublickey@o0.ingest.sentry.io/1', {
     beforeSend: () => null,
     disableDefaultIntegrations: true,
   });
 
-  onTestFinished(async () => {
+  ctx.stack.defer(async () => {
     await Sentry.close();
   });
 
-  const nodeCorePath = Bun.resolveSync(
-    '@sentry/node-core',
-    Bun.resolveSync('@sentry/node', import.meta.dir),
+  expect(Sentry.getClient()?.getDataCollectionOptions().httpBodies).toStrictEqual([]);
+});
+
+test('it gives a captured message no synthetic stack', async () => {
+  const ctx = setupTest();
+  const recorded: Array<Readonly<ErrorEvent>> = [];
+
+  startSentryNode('https://testpublickey@o0.ingest.sentry.io/1', {
+    beforeSend: (event) => {
+      recorded.push(event);
+
+      return null;
+    },
+    disableDefaultIntegrations: true,
+  });
+
+  ctx.stack.defer(async () => {
+    await Sentry.close();
+  });
+
+  Sentry.captureMessage('the session store is unreachable', 'error');
+
+  await waitFor(() => {
+    expect(recorded).toHaveLength(1);
+  });
+
+  invariant(recorded[0], 'the message was recorded');
+
+  expect(recorded[0].exception).toBeUndefined();
+});
+
+// bun install links a package outside a Sentry package's OpenTelemetry range with no warning, and
+// Bun's overrides don't reach an optional peer
+test('it links each OpenTelemetry package that the SDK declares inside the range it declares', () => {
+  expect(readOpenTelemetryLinks('@sentry/node', import.meta.dir)).toSatisfy(
+    (links: Array<OpenTelemetryLink>) =>
+      links.length > 0 && links.every((link) => Bun.semver.satisfies(link.version, link.range)),
   );
-
-  const loaded: unknown = await import(Bun.resolveSync('@opentelemetry/core', nodeCorePath));
-
-  const sentryCore = z
-    .object({
-      RPCType: z.custom<typeof OpenTelemetryCore.RPCType>((value) => typeof value === 'object'),
-      getRPCMetadata: z.custom<typeof OpenTelemetryCore.getRPCMetadata>(
-        (value) => typeof value === 'function',
-      ),
-      setRPCMetadata: z.custom<typeof OpenTelemetryCore.setRPCMetadata>(
-        (value) => typeof value === 'function',
-      ),
-    })
-    .parse(loaded);
-
-  const metadata = {
-    route: '/play/:id',
-    span: trace.wrapSpanContext({
-      spanId: '00f067aa0ba902b7',
-      traceFlags: 1,
-      traceId: '4bf92f3577b34da6a3ce929d0e0e4736',
-    }),
-    type: sentryCore.RPCType.HTTP,
-  };
-
-  const found = context.with(sentryCore.setRPCMetadata(context.active(), metadata), () =>
-    sentryCore.getRPCMetadata(context.active()),
-  );
-
-  expect(found).toBe(metadata);
 });

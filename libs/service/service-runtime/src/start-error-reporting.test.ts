@@ -3,6 +3,8 @@ import { opentelemetry } from '@elysiajs/opentelemetry';
 import * as Sentry from '@sentry/bun';
 import type { ErrorEvent } from '@sentry/bun';
 import { waitFor } from '@vers/test-utils';
+import { readOpenTelemetryLinks } from '@vers/test-utils/bun';
+import type { OpenTelemetryLink } from '@vers/test-utils/bun';
 import { Elysia } from 'elysia';
 import invariant from 'tiny-invariant';
 import { reportUnexpectedError } from './report-unexpected-error';
@@ -21,8 +23,10 @@ test('it leaves reporting unstarted when dsn is undefined', async () => {
 test('it starts reporting when dsn is defined', async () => {
   const previousHandle = sentryHandle.current;
 
-  onTestFinished(() => {
+  onTestFinished(async () => {
     setSentryHandleForTesting(previousHandle);
+
+    await Sentry.close();
   });
 
   await startErrorReporting('https://testpublickey@o0.ingest.sentry.io/1', {
@@ -33,13 +37,15 @@ test('it starts reporting when dsn is defined', async () => {
   expect(sentryHandle.current).toBeDefined();
 });
 
-test("it keeps one request's tag and user off a concurrent request's report when the OTel plugin starts after it", async () => {
+test("it keeps one request's tag and user off a concurrent request's report", async () => {
   const previousHandle = sentryHandle.current;
   const recorded: Array<Readonly<ErrorEvent>> = [];
   const releaseGate = Promise.withResolvers<void>();
 
-  onTestFinished(() => {
+  onTestFinished(async () => {
     setSentryHandleForTesting(previousHandle);
+
+    await Sentry.close();
   });
 
   await startErrorReporting('https://testpublickey@o0.ingest.sentry.io/1', {
@@ -87,12 +93,14 @@ test("it keeps one request's tag and user off a concurrent request's report when
   expect(recorded[0].user).toBeUndefined();
 });
 
-test("it puts an inbound traceparent's trace id on a report when the OTel plugin starts after it", async () => {
+test("it puts an inbound traceparent's trace id on a report", async () => {
   const previousHandle = sentryHandle.current;
   const recorded: Array<Readonly<ErrorEvent>> = [];
 
-  onTestFinished(() => {
+  onTestFinished(async () => {
     setSentryHandleForTesting(previousHandle);
+
+    await Sentry.close();
   });
 
   await startErrorReporting('https://testpublickey@o0.ingest.sentry.io/1', {
@@ -121,4 +129,43 @@ test("it puts an inbound traceparent's trace id on a report when the OTel plugin
   });
 
   expect(recorded[0]?.contexts?.trace?.trace_id).toBe('4bf92f3577b34da6a3ce929d0e0e4736');
+});
+
+test('it gives a captured message no synthetic stack', async () => {
+  const previousHandle = sentryHandle.current;
+  const recorded: Array<Readonly<ErrorEvent>> = [];
+
+  onTestFinished(async () => {
+    setSentryHandleForTesting(previousHandle);
+
+    await Sentry.close();
+  });
+
+  await startErrorReporting('https://testpublickey@o0.ingest.sentry.io/1', {
+    beforeSend: (event) => {
+      recorded.push(event);
+
+      return null;
+    },
+    disableDefaultIntegrations: true,
+  });
+
+  Sentry.captureMessage('the job queue is unreachable', 'error');
+
+  await waitFor(() => {
+    expect(recorded).toHaveLength(1);
+  });
+
+  invariant(recorded[0], 'the message was recorded');
+
+  expect(recorded[0].exception).toBeUndefined();
+});
+
+// bun install links a package outside a Sentry package's OpenTelemetry range with no warning, and
+// Bun's overrides don't reach an optional peer
+test('it links each OpenTelemetry package that the SDK declares inside the range it declares', () => {
+  expect(readOpenTelemetryLinks('@sentry/bun', import.meta.dir)).toSatisfy(
+    (links: Array<OpenTelemetryLink>) =>
+      links.length > 0 && links.every((link) => Bun.semver.satisfies(link.version, link.range)),
+  );
 });

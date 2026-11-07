@@ -32,7 +32,6 @@ test('it reports the fault to the error backend tagged with the active trace id'
     },
     defaultIntegrations: false,
     dsn: 'https://testpublickey@o0.ingest.sentry.io/1',
-    skipOpenTelemetrySetup: true,
   });
 
   onTestFinished(async () => {
@@ -62,8 +61,7 @@ test('it reports the fault to the error backend tagged with the active trace id'
 test("it keeps a trace's tag off a later fault reported outside any trace", async () => {
   const recorded: Array<Readonly<ErrorEvent>> = [];
 
-  // with Sentry's own OTel setup skipped and no context manager registered, the SDK never forks a
-  // scope, so a tag set on one would outlive its call
+  // no request opens an isolation scope here, so a tag set on the shared scope would outlive its call
   Sentry.init({
     beforeSend: (event) => {
       recorded.push(event);
@@ -72,7 +70,6 @@ test("it keeps a trace's tag off a later fault reported outside any trace", asyn
     },
     defaultIntegrations: false,
     dsn: 'https://testpublickey@o0.ingest.sentry.io/1',
-    skipOpenTelemetrySetup: true,
   });
 
   onTestFinished(async () => {

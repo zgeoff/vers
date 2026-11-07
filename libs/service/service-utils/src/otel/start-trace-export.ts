@@ -26,9 +26,6 @@ export function startTraceExport(options: StartTraceExportOptions): TraceExport 
   });
 
   trace.setGlobalTracerProvider(provider);
-
-  // the API keeps the first context manager registered, so this one is skipped when error
-  // reporting has already installed its own
   context.setGlobalContextManager(new AsyncLocalStorageContextManager().enable());
 
   propagation.setGlobalPropagator(

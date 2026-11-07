@@ -30,6 +30,8 @@ test('it injects a traceparent built from the ambient trace context', async () =
     },
   };
 
+  // with no tracer provider registered, the interceptor opens no client span whose own IDs would
+  // replace the ambient ones in the header
   await withTraceContext(
     { spanID: '00f067aa0ba902b7', traceID: '4bf92f3577b34da6a3ce929d0e0e4736' },
     () => interceptor(options),
