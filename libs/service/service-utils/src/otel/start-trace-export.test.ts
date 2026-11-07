@@ -85,14 +85,20 @@ test('it marks a span active across an await once registered', async () => {
     await server.stop();
   });
 
-  await trace.getTracer('test-service').startActiveSpan('test-span', async (span) => {
-    await Promise.resolve();
+  const observed = await trace
+    .getTracer('test-service')
+    .startActiveSpan('test-span', async (span) => {
+      await Promise.resolve();
 
-    expect(trace.getActiveSpan()).toBe(span);
+      const active = trace.getActiveSpan();
 
-    span.setStatus({ code: SpanStatusCode.OK });
-    span.end();
-  });
+      span.setStatus({ code: SpanStatusCode.OK });
+      span.end();
+
+      return { active, span };
+    });
+
+  expect(observed.active).toBe(observed.span);
 });
 
 test('it injects a traceparent and the baggage for the active context once registered', () => {

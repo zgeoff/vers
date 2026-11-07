@@ -21,7 +21,11 @@ export function collectUnneededOverrides(
     }
 
     const isPinOutsideARange = ranges.some((range) => !Bun.semver.satisfies(pin, range));
-    const isPinTheCatalogVersion = input.catalog[target.name] === pin;
+
+    // a scoped override holds only its parent's copy, so it can't keep every copy on the catalog
+    // version the way a top-level one does
+    const isPinTheCatalogVersion =
+      target.parent === undefined && input.catalog[target.name] === pin;
 
     if (isPinOutsideARange || isPinTheCatalogVersion) {
       return [];
@@ -36,21 +40,36 @@ export function collectUnneededOverrides(
   });
 }
 
-interface OverrideTarget {
+interface PackageSpec {
   readonly name: string;
-  readonly parent: string | undefined;
+  readonly version: string | undefined;
 }
 
-// bun scopes an override to one dependent with `parent>name`, where the parent may carry an
-// exact version, such as `sdk-logs@0.208.0>@opentelemetry/core`
-function parseOverrideKey(entry: string): OverrideTarget {
-  const separatorIndex = entry.lastIndexOf('>');
+interface OverrideTarget {
+  readonly name: string;
+  readonly parent: PackageSpec | undefined;
+}
 
-  if (separatorIndex === -1) {
-    return { name: entry, parent: undefined };
+// bun scopes an override to one dependent with `parent>name`, where the parent may carry a version,
+// such as `@opentelemetry/sdk-logs@0.208.0>@opentelemetry/core`; in a longer chain the package
+// nearest the overridden one is its dependent
+function parseOverrideKey(entry: string): OverrideTarget {
+  const segments = entry.split('>');
+  const name = segments.at(-1) ?? entry;
+  const parent = segments.at(-2);
+
+  return { name, parent: parent === undefined ? undefined : parsePackageSpec(parent) };
+}
+
+function parsePackageSpec(spec: string): PackageSpec {
+  // index 0 is a scope's own `@`, never a version separator
+  const separatorIndex = spec.lastIndexOf('@');
+
+  if (separatorIndex <= 0) {
+    return { name: spec, version: undefined };
   }
 
-  return { name: entry.slice(separatorIndex + 1), parent: entry.slice(0, separatorIndex) };
+  return { name: spec.slice(0, separatorIndex), version: spec.slice(separatorIndex + 1) };
 }
 
 function isOverrideDependent(target: OverrideTarget, dependent: LockfileDependent): boolean {
@@ -62,7 +81,14 @@ function isOverrideDependent(target: OverrideTarget, dependent: LockfileDependen
     return true;
   }
 
+  const locked = parsePackageSpec(dependent.dependent);
+
+  if (locked.name !== target.parent.name) {
+    return false;
+  }
+
   return (
-    dependent.dependent === target.parent || dependent.dependent.startsWith(`${target.parent}@`)
+    target.parent.version === undefined ||
+    (locked.version !== undefined && Bun.semver.satisfies(locked.version, target.parent.version))
   );
 }

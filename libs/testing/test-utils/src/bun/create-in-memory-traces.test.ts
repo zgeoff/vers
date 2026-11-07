@@ -1,4 +1,5 @@
 import { expect, test } from 'bun:test';
+import type { Span } from '@opentelemetry/api';
 import { context, propagation, trace } from '@opentelemetry/api';
 import { createInMemoryTraces } from './create-in-memory-traces';
 
@@ -15,24 +16,39 @@ test('it records each ended span by name', () => {
 test('it keeps a span active across an await', async () => {
   createInMemoryTraces();
 
+  let started: Span | undefined;
+  let active: Span | undefined;
+
   await trace.getTracer('test-memory').startActiveSpan('queue.drain', async (span) => {
+    started = span;
+
     await Promise.resolve();
 
-    expect(trace.getActiveSpan()).toBe(span);
+    active = trace.getActiveSpan();
 
     span.end();
   });
+
+  expect(active).toBe(started);
 });
 
-test('it injects a traceparent header for the active span', () => {
+test('it injects a traceparent and the baggage for the active context', () => {
   createInMemoryTraces();
 
   const carrier: Record<string, string> = {};
 
   trace.getTracer('test-memory').startActiveSpan('outbound.call', (span) => {
-    propagation.inject(context.active(), carrier);
+    const withBaggage = propagation.setBaggage(
+      context.active(),
+      propagation.createBaggage({ region: { value: 'east-dock' } }),
+    );
+
+    propagation.inject(withBaggage, carrier);
     span.end();
   });
 
-  expect(carrier['traceparent']).toMatch(/^00-[\da-f]{32}-[\da-f]{16}-01$/u);
+  expect(carrier).toStrictEqual({
+    baggage: 'region=east-dock',
+    traceparent: expect.stringMatching(/^00-[\da-f]{32}-[\da-f]{16}-01$/u),
+  });
 });

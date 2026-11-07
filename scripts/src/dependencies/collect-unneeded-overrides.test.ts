@@ -117,3 +117,38 @@ test('it reports a scoped override whose parent is not in the lockfile', () => {
     },
   ]);
 });
+
+test('it keeps a scoped override whose parent version range matches the locked parent', () => {
+  expect(
+    collectUnneededOverrides({
+      overrides: { '@pad/tools@^2.0.0>left-pad': '1.3.1' },
+      catalog: {},
+      dependents: [{ dependent: '@pad/tools@2.4.0', name: 'left-pad', range: '1.2.0' }],
+    }),
+  ).toStrictEqual([]);
+});
+
+test('it keeps a chained override that the package nearest the overridden one excludes', () => {
+  expect(
+    collectUnneededOverrides({
+      overrides: { 'text-kit>pad-tools>left-pad': '1.3.1' },
+      catalog: {},
+      dependents: [{ dependent: 'pad-tools@2.0.0', name: 'left-pad', range: '1.2.0' }],
+    }),
+  ).toStrictEqual([]);
+});
+
+test('it reports a scoped override that pins the catalog version and changes nothing', () => {
+  expect(
+    collectUnneededOverrides({
+      overrides: { 'pad-tools>left-pad': '1.3.1' },
+      catalog: { 'left-pad': '1.3.1' },
+      dependents: [{ dependent: 'pad-tools@2.0.0', name: 'left-pad', range: '^1.3.0' }],
+    }),
+  ).toStrictEqual([
+    {
+      entry: 'pad-tools>left-pad',
+      problem: 'every range in bun.lock already admits 1.3.1, so the override changes nothing',
+    },
+  ]);
+});

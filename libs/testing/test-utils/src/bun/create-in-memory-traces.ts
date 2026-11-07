@@ -1,7 +1,11 @@
 import { onTestFinished } from 'bun:test';
 import { context, propagation, trace } from '@opentelemetry/api';
 import { AsyncLocalStorageContextManager } from '@opentelemetry/context-async-hooks';
-import { W3CTraceContextPropagator } from '@opentelemetry/core';
+import {
+  CompositePropagator,
+  W3CBaggagePropagator,
+  W3CTraceContextPropagator,
+} from '@opentelemetry/core';
 import {
   InMemorySpanExporter,
   SimpleSpanProcessor,
@@ -18,7 +22,12 @@ export function createInMemoryTraces(): InMemoryTraces {
 
   trace.setGlobalTracerProvider(provider);
   context.setGlobalContextManager(new AsyncLocalStorageContextManager().enable());
-  propagation.setGlobalPropagator(new W3CTraceContextPropagator());
+
+  propagation.setGlobalPropagator(
+    new CompositePropagator({
+      propagators: [new W3CTraceContextPropagator(), new W3CBaggagePropagator()],
+    }),
+  );
 
   onTestFinished(async () => {
     context.disable();

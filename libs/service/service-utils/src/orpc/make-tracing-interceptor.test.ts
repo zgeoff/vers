@@ -6,6 +6,10 @@ import { createInMemoryTraces } from '@vers/test-utils/bun';
 import { withTraceContext } from '../trace/with-trace-context';
 import { makeTracingInterceptor } from './make-tracing-interceptor';
 
+function setupTest() {
+  return createInMemoryTraces();
+}
+
 test('it injects a traceparent built from the ambient trace context', async () => {
   const interceptor = makeTracingInterceptor();
 
@@ -62,7 +66,7 @@ test('it injects a traceparent built from a fresh trace when no ambient scope ex
 });
 
 test('it names the client span by the procedure path and marks it failed on a 5xx response', async () => {
-  const traces = createInMemoryTraces();
+  const ctx = setupTest();
   const interceptor = makeTracingInterceptor();
 
   const options: StandardLinkClientInterceptorOptions<Record<string, never>> & {
@@ -84,14 +88,14 @@ test('it names the client span by the procedure path and marks it failed on a 5x
 
   await interceptor(options);
 
-  const [span] = traces.exporter.getFinishedSpans();
+  const [span] = ctx.exporter.getFinishedSpans();
 
   expect(span?.name).toBe('session.refreshTokens');
   expect(span?.status.code).toBe(SpanStatusCode.ERROR);
 });
 
 test('it marks the span failed and rethrows when the transport call throws', async () => {
-  const traces = createInMemoryTraces();
+  const ctx = setupTest();
   const interceptor = makeTracingInterceptor();
 
   const options: StandardLinkClientInterceptorOptions<Record<string, never>> & {
@@ -116,7 +120,7 @@ test('it marks the span failed and rethrows when the transport call throws', asy
 
   await expect(pending).toReject();
 
-  const [span] = traces.exporter.getFinishedSpans();
+  const [span] = ctx.exporter.getFinishedSpans();
 
   expect(span?.status.code).toBe(SpanStatusCode.ERROR);
 });
