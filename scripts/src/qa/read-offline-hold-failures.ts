@@ -9,6 +9,8 @@ export async function readOfflineHoldFailures(paths: OfflineHoldPaths): Promise<
       return '';
     }
 
-    throw error;
+    const message = error instanceof Error ? error.message : String(error);
+
+    return `could not read the hold's failure log: ${message}\n`;
   }
 }

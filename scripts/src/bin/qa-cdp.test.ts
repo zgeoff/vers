@@ -1,5 +1,5 @@
 import { expect, onTestFinished, test } from 'bun:test';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { chmod, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { waitFor } from '@vers/test-utils';
@@ -30,10 +30,12 @@ async function setupTest() {
     return { exitCode, stderr, stdout };
   };
 
-  const readHoldFailures = (targetID: string) =>
-    readOfflineHoldFailures(buildOfflineHoldPaths(stateHome, stateHome, targetID));
+  const buildHoldPaths = (targetID: string) =>
+    buildOfflineHoldPaths(stateHome, stateHome, targetID);
 
-  return { devtools, readHoldFailures, runQACDP };
+  const readHoldFailures = (targetID: string) => readOfflineHoldFailures(buildHoldPaths(targetID));
+
+  return { buildHoldPaths, devtools, readHoldFailures, runQACDP };
 }
 
 test('it keeps a target offline after offline on returns', async () => {
@@ -89,6 +91,40 @@ test("it prints a held worker's failed resume on offline off", async () => {
     stderr:
       'hold WORKER1: Runtime.runIfWaitingForDebugger: the target refused Runtime.runIfWaitingForDebugger\n',
     stdout: 'offline off\n',
+  });
+});
+
+test("it brings a held target back online on offline off when the hold's failure log is unreadable", async () => {
+  const ctx = await setupTest();
+
+  ctx.devtools.openTarget({
+    id: 'WORKER1',
+    refusedMethods: ['Runtime.runIfWaitingForDebugger'],
+    type: 'shared_worker',
+  });
+
+  await ctx.runQACDP(['offline', 'WORKER1', 'on']);
+
+  ctx.devtools.restartTarget('WORKER1');
+
+  await waitFor(async () => {
+    const failures = await ctx.readHoldFailures('WORKER1');
+
+    expect(failures).not.toBe('');
+  });
+
+  await chmod(ctx.buildHoldPaths('WORKER1').logFile, 0o000);
+
+  const result = await ctx.runQACDP(['offline', 'WORKER1', 'off']);
+
+  expect(result).toStrictEqual({
+    exitCode: 0,
+    stderr: expect.stringMatching(/^could not read the hold's failure log: EACCES/u),
+    stdout: 'offline off\n',
+  });
+
+  await waitFor(() => {
+    expect(ctx.devtools.getFetchOutcome('WORKER1')).toBe('ok');
   });
 });
 
