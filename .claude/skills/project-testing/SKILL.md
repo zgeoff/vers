@@ -1,10 +1,10 @@
 ---
 name: project-testing
 description:
-  "vers's test facts and its own test topics beside the shared testing skill: the run mode, the
-  real-database service suites, idle-core entities, the web app's router, request-context and form
-  helpers, world-map scenes, and the Playwright timeouts. Load it beside testing before you design,
-  write or review a vers test."
+  "vers's test facts and its own test topics beside the shared testing skill: the run mode, the read
+  functions a test checks stored rows through, the real-database service suites, idle-core entities,
+  the web app's router, request-context and form helpers, world-map scenes, and the Playwright
+  timeouts. Load it beside testing before you design, write or review a vers test."
 metadata:
   kind: rule-set
 ---
@@ -29,17 +29,41 @@ metadata:
 
 - Make each suite pass at `bun test --parallel=4 --no-isolate` too, so a package can switch modes
   without a rewrite. Run that mode once before you hand off a new suite.
-- Find the sweep that drops the clones of ended runs in
-  [`removeOrphanedClones`](../../../libs/data/db/src/test-support/remove-orphaned-clones.ts). Each
-  worker's test preload runs it at start.
+- When cloned test databases pile up in the test container, check that each worker's test preload
+  still calls
+  [`removeOrphanedClones`](../../../libs/data/db/src/test-support/remove-orphaned-clones.ts). It
+  drops the clones of test runs that have ended.
+
+## Stored state
+
+Check the rows below through the read functions in the folder this table names. The activity
+service, the replay service and `@vers/db` all write these tables, so the table picks the one module
+whose read functions a test calls.
+
+| Rows                                              | Test package           | Folder of read functions                                                 |
+| ------------------------------------------------- | ---------------------- | ------------------------------------------------------------------------ |
+| `status` and `parkedFrom` of `activities`         | any                    | [`libs/data/db/src/`](../../../libs/data/db/src/read-activity-status.ts) |
+| every other `activities` column, `activityChains` | `@vers/service-replay` | [`services/replay/src/queue/`](../../../services/replay/src/queue/)      |
+| `avatars`, `avatarItems`, `avatarGrants`          | `@vers/service-replay` | [`services/replay/src/apply/`](../../../services/replay/src/apply/)      |
+
+- Find a read function as a `read-*.ts` file in its folder. When none returns the column you check,
+  add one to that folder, with a test.
+- Every status move goes through the
+  [transition writer](../../../libs/data/db/src/transition-activity-status.ts) in `@vers/db`, so its
+  status read function serves every package.
+- In `@vers/service-activity`, `src/handlers/` writes every table its tests check, so those tests
+  read through the handlers.
 
 ## Real-database services
 
 - Copy the test files of [`services/avatar`](../../../services/avatar/) for a new service: its
   service test, its router test and its access tests.
 - Name the service test `create-<service>-service.test.ts`. In it, drive one write through an
-  injected database and read the row back through the same database. Also create the service with no
-  database injected, so it reads `env.DATABASE_URL`, and dispose of each service you create.
+  injected database, and read the row back from that database through a read function in the
+  service's `src/handlers/`. Also create the service with no database injected, so it reads
+  `env.DATABASE_URL`, and dispose of each service you create.
+- Check that a stop destroys the database the service built with `spyOn(db, 'destroy')`. A query
+  after the stop proves nothing. Kysely opens the pool again for it.
 - Put the router test beside the module that builds the router, such as
   `create-avatar-router.test.ts`. Run every case from
   [`collectConformanceCases`](../../../libs/testing/test-utils/src/collect-conformance-cases.ts)
@@ -110,7 +134,7 @@ calls in one helper. A helper hides the values the test acts on.
 
 - Run the suites in [`apps/web-e2e/`](../../../apps/web-e2e/) through that package's `e2e` scripts,
   never `bun test`. The lint rule `zgeoff/max-test-timeout` checks only tests that import from
-  `bun:test`, so no lint checks a Playwright timeout.
+  `bun:test`, so lint never checks a Playwright timeout.
 - Set the `timeout` in each `playwright*.config.ts` to twice the slowest test in the last 5 green CI
   runs, rounded up to a whole second. The `list` reporter prints each test's time in the CI log.
 - When one test runs far slower than the rest, remove each fixed wait in it, or wait on a condition.
