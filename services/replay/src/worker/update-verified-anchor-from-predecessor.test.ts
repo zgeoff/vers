@@ -2,6 +2,7 @@ import { expect, test } from 'bun:test';
 import { buildStateFromSeed } from '@vers/game-utils';
 import { createTestDB } from '@vers/service-test-utils/bun';
 import invariant from 'tiny-invariant';
+import { readChainAnchors } from '../queue/read-chain-anchors';
 import { createHonestActivityFixture } from '../test-utils/create-honest-activity-fixture';
 import { createMockReplaySegment } from '../test-utils/factories/create-mock-replay-segment';
 import { updateVerifiedAnchorFromPredecessor } from './update-verified-anchor-from-predecessor';
@@ -54,14 +55,15 @@ test('it advances the chain verified anchor from a fully verified, stopped prede
     nextSeed: tail.payload.nextSeed,
   });
 
-  const chain = await ctx.db
-    .selectFrom('activityChains')
-    .select(['verifiedChainIndex', 'verifiedNextSeed'])
-    .where('avatarId', '=', fixture.activity.avatarId)
-    .where('scopeId', '=', fixture.activity.scopeId)
-    .executeTakeFirstOrThrow();
+  const chain = await readChainAnchors(ctx.db, {
+    avatarID: fixture.activity.avatarId,
+    scopeID: fixture.activity.scopeId,
+    scopeType: fixture.activity.scopeType,
+  });
 
   expect(chain).toStrictEqual({
+    appendedChainIndex: fixture.chain.appendedChainIndex,
+    appendedNextSeed: fixture.chain.appendedNextSeed,
     verifiedChainIndex: tail.payload.chainIndex,
     verifiedNextSeed: tail.payload.nextSeed,
   });
@@ -93,14 +95,15 @@ test('it leaves the chain untouched when the target is not ahead of the verified
 
   expect(advance).toBeUndefined();
 
-  const chain = await ctx.db
-    .selectFrom('activityChains')
-    .select(['verifiedChainIndex', 'verifiedNextSeed'])
-    .where('avatarId', '=', fixture.activity.avatarId)
-    .where('scopeId', '=', fixture.activity.scopeId)
-    .executeTakeFirstOrThrow();
+  const chain = await readChainAnchors(ctx.db, {
+    avatarID: fixture.activity.avatarId,
+    scopeID: fixture.activity.scopeId,
+    scopeType: fixture.activity.scopeType,
+  });
 
   expect(chain).toStrictEqual({
+    appendedChainIndex: fixture.chain.appendedChainIndex,
+    appendedNextSeed: fixture.chain.appendedNextSeed,
     verifiedChainIndex: fixture.chain.verifiedChainIndex,
     verifiedNextSeed: fixture.chain.verifiedNextSeed,
   });
@@ -132,14 +135,15 @@ test('it leaves the chain untouched when no predecessor exists at the gap', asyn
 
   expect(advance).toBeUndefined();
 
-  const chain = await ctx.db
-    .selectFrom('activityChains')
-    .select(['verifiedChainIndex', 'verifiedNextSeed'])
-    .where('avatarId', '=', fixture.activity.avatarId)
-    .where('scopeId', '=', fixture.activity.scopeId)
-    .executeTakeFirstOrThrow();
+  const chain = await readChainAnchors(ctx.db, {
+    avatarID: fixture.activity.avatarId,
+    scopeID: fixture.activity.scopeId,
+    scopeType: fixture.activity.scopeType,
+  });
 
   expect(chain).toStrictEqual({
+    appendedChainIndex: fixture.chain.appendedChainIndex,
+    appendedNextSeed: fixture.chain.appendedNextSeed,
     verifiedChainIndex: fixture.chain.verifiedChainIndex,
     verifiedNextSeed: fixture.chain.verifiedNextSeed,
   });

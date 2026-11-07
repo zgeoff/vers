@@ -6,8 +6,10 @@ import { buildStateFromSeed } from '@vers/game-utils';
 import { createAnonymousViewer, createTestDB } from '@vers/service-test-utils/bun';
 import { waitFor } from '@vers/test-utils';
 import { updateEnv } from '@vers/test-utils/bun';
+import { sql } from 'kysely';
 import invariant from 'tiny-invariant';
 import { createReplayService } from './create-replay-service';
+import { readReplayProgress } from './queue/read-replay-progress';
 import { createHonestActivityFixture } from './test-utils/create-honest-activity-fixture';
 
 test('it boots from env.SIM_ENGINE_HASH', async () => {
@@ -48,7 +50,7 @@ test('it stops serving, destroys the db it built and exits 0 on SIGTERM', async 
     expect(exit).toHaveBeenCalledExactlyOnceWith(0);
   });
 
-  expect(service.resources.db.selectFrom('activities').select('id').execute()).rejects.toThrow();
+  expect(sql`select 1`.execute(service.resources.db)).rejects.toThrow();
 });
 
 test('it fails to boot on a malformed private key, before any listen', async () => {
@@ -65,7 +67,7 @@ test('it never destroys an injected db when stopped', async () => {
   await service.stop();
 
   // The injected handle is still usable — a destroyed pool would reject any further query.
-  await expect(ctx.db.selectFrom('activities').select('id').limit(1).execute()).toResolve();
+  await expect(sql`select 1`.execute(ctx.db)).toResolve();
 });
 
 test('it drains a claimable chain through the same deps the wake procedure closes over', async () => {
@@ -152,13 +154,9 @@ test('it drains a claimable chain after the cache clears a driver the previous d
 
   expect(secondDrained).toBe(1);
 
-  const updated = await ctx.db
-    .selectFrom('activities')
-    .select('verifiedHead')
-    .where('id', '=', fixture.activity.id)
-    .executeTakeFirstOrThrow();
+  const updated = await readReplayProgress(ctx.db, fixture.activity.id);
 
-  expect(updated.verifiedHead).toBe(totalCheckpoints);
+  expect(updated?.verifiedHead).toBe(totalCheckpoints);
 });
 
 test('it accepts a call from service-activity', async () => {

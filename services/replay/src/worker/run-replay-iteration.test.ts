@@ -4,7 +4,8 @@ import type { ErrorEvent } from '@sentry/bun';
 import { createContentVersion, makeContentDocumentLoader } from '@vers/content-registry';
 import { buildCheckpointHash } from '@vers/contract-activity';
 import { createMockContentDocument } from '@vers/contract-activity/test-utils';
-import { toJSON } from '@vers/db';
+import type { AvatarItems } from '@vers/db';
+import { readActivityStatus, toJSON } from '@vers/db';
 import { buildStateFromSeed } from '@vers/game-utils';
 import { buildLevelFromXP, buildSimulationInput } from '@vers/idle-core';
 import { createSimulationDriver } from '@vers/idle-core/replay';
@@ -17,9 +18,14 @@ import { createSimVersionRow } from '@vers/sim-registry/test-utils';
 import { waitFor } from '@vers/test-utils';
 import { createInMemoryLogs } from '@vers/test-utils/bun';
 import { createTraceContext } from '@vers/trace';
+import type { Selectable } from 'kysely';
 import { sql } from 'kysely';
 import invariant from 'tiny-invariant';
+import { readAvatarItems } from '../apply/read-avatar-items';
+import { readAvatarProgress } from '../apply/read-avatar-progress';
 import { server } from '../mocks/server';
+import { readChainAnchors } from '../queue/read-chain-anchors';
+import { readReplayProgress } from '../queue/read-replay-progress';
 import { createReplayCache } from '../replay/create-replay-cache';
 import { createActivityRow } from '../test-utils/create-activity-row';
 import { createAvatarRow } from '../test-utils/create-avatar-row';
@@ -68,14 +74,17 @@ test('it replays an honest full stream, matches, and advances the verified head 
 
   expect(outcome).toStrictEqual({ kind: 'matched' });
 
-  const updated = await ctx.db
-    .selectFrom('activities')
-    .select(['replayAttempts', 'verifiedHead'])
-    .where('id', '=', fixture.activity.id)
-    .executeTakeFirstOrThrow();
+  const updated = await readReplayProgress(ctx.db, fixture.activity.id);
 
-  expect(updated.verifiedHead).toBe(fixture.activity.appendedHead);
-  expect(updated.replayAttempts).toBe(0);
+  expect(updated).toStrictEqual({
+    appendedHead: fixture.activity.appendedHead,
+    replayAttempts: 0,
+    replayBackoffs: 0,
+    replayBackoffUntil: null,
+    settledXP: expect.any(Number),
+    verifiedAt: expect.toBeValidDate(),
+    verifiedHead: fixture.activity.appendedHead,
+  });
 
   const idle = await runReplayIteration(deps, cache);
 
@@ -111,20 +120,16 @@ test('it mints one reward per slot earned by the verified stream', async () => {
 
   expect(expectedSlotCount).toBeGreaterThan(0);
 
-  const rows = await ctx.db
-    .selectFrom('avatarItems')
-    .selectAll()
-    .where('avatarId', '=', fixture.activity.avatarId)
-    .execute();
+  const rows = await readAvatarItems(ctx.db, fixture.activity.avatarId);
 
   expect(rows).toHaveLength(expectedSlotCount);
 
   const maxChainIndex = fixture.activity.startChainIndex + fixture.activity.appendedHead;
 
-  for (const row of rows) {
-    expect(row.chainIndex).toBeGreaterThan(fixture.activity.startChainIndex);
-    expect(row.chainIndex).toBeLessThanOrEqual(maxChainIndex);
-  }
+  expect(rows).toSatisfyAll(
+    (row: Selectable<AvatarItems>) =>
+      row.chainIndex > fixture.activity.startChainIndex && row.chainIndex <= maxChainIndex,
+  );
 });
 
 test('it verifies a later batch from held state, not a fresh from-Started replay', async () => {
@@ -214,13 +219,9 @@ test('it verifies a later batch from held state, not a fresh from-Started replay
   expect(cachedAfterSecond?.driver).toBe(cachedAfterFirst?.driver);
   expect(cachedAfterSecond?.emittedCount).toBe(secondBatchCount);
 
-  const updated = await ctx.db
-    .selectFrom('activities')
-    .select('verifiedHead')
-    .where('id', '=', fixture.activity.id)
-    .executeTakeFirstOrThrow();
+  const updated = await readReplayProgress(ctx.db, fixture.activity.id);
 
-  expect(updated.verifiedHead).toBe(secondBatchCount);
+  expect(updated?.verifiedHead).toBe(secondBatchCount);
 });
 
 test('it rejects a checkpoint with a forged continuation seed, rewinds the chain, and voids an active successor', async () => {
@@ -282,33 +283,26 @@ test('it rejects a checkpoint with a forged continuation seed, rewinds the chain
 
   expect(outcome).toStrictEqual({ kind: 'rejected' });
 
-  const updatedActivity = await ctx.db
-    .selectFrom('activities')
-    .select('status')
-    .where('id', '=', fixture.activity.id)
-    .executeTakeFirstOrThrow();
+  const updatedActivity = await readActivityStatus(ctx.db, fixture.activity.id);
 
-  const updatedChain = await ctx.db
-    .selectFrom('activityChains')
-    .select(['appendedChainIndex', 'appendedNextSeed'])
-    .where('avatarId', '=', fixture.activity.avatarId)
-    .where('scopeId', '=', fixture.activity.scopeId)
-    .executeTakeFirstOrThrow();
+  const updatedChain = await readChainAnchors(ctx.db, {
+    avatarID: fixture.activity.avatarId,
+    scopeID: fixture.activity.scopeId,
+    scopeType: fixture.activity.scopeType,
+  });
 
-  const updatedSuccessor = await ctx.db
-    .selectFrom('activities')
-    .select('status')
-    .where('id', '=', successor.id)
-    .executeTakeFirstOrThrow();
+  const updatedSuccessor = await readActivityStatus(ctx.db, successor.id);
 
-  expect(updatedActivity.status).toBe('rejected');
+  expect(updatedActivity?.status).toBe('rejected');
 
   expect(updatedChain).toStrictEqual({
     appendedChainIndex: fixture.chain.verifiedChainIndex,
     appendedNextSeed: fixture.chain.verifiedNextSeed,
+    verifiedChainIndex: fixture.chain.verifiedChainIndex,
+    verifiedNextSeed: fixture.chain.verifiedNextSeed,
   });
 
-  expect(updatedSuccessor.status).toBe('rejected');
+  expect(updatedSuccessor?.status).toBe('rejected');
 });
 
 test('it settles no xp and drops the rejected activity from the pending anchor when a checkpoint is forged', async () => {
@@ -363,25 +357,20 @@ test('it settles no xp and drops the rejected activity from the pending anchor w
 
   expect(outcome).toStrictEqual({ kind: 'rejected' });
 
-  const updatedActivity = await ctx.db
-    .selectFrom('activities')
-    .select(['appendedHead', 'status', 'verifiedHead'])
-    .where('id', '=', fixture.activity.id)
-    .executeTakeFirstOrThrow();
+  const updatedActivity = await readActivityStatus(ctx.db, fixture.activity.id);
+  const updatedProgress = await readReplayProgress(ctx.db, fixture.activity.id);
 
   // rejected excludes the activity from the pending predicate outright, regardless of its
   // unsettled head gap
-  expect(updatedActivity.status).toBe('rejected');
-  expect(updatedActivity.verifiedHead).toBeLessThan(updatedActivity.appendedHead);
+  expect(updatedActivity?.status).toBe('rejected');
 
-  const avatar = await ctx.db
-    .selectFrom('avatars')
-    .select(['level', 'xp'])
-    .where('id', '=', fixture.activity.avatarId)
-    .executeTakeFirstOrThrow();
+  invariant(updatedProgress);
 
-  expect(avatar.xp).toBe(500);
-  expect(avatar.level).toBe(buildLevelFromXP(500));
+  expect(updatedProgress.verifiedHead).toBeLessThan(updatedProgress.appendedHead);
+
+  const avatar = await readAvatarProgress(ctx.db, fixture.activity.avatarId);
+
+  expect(avatar).toStrictEqual({ level: buildLevelFromXP(500), xp: 500 });
 });
 
 test('it rejects a checkpoint with a forged chain position', async () => {
@@ -551,13 +540,9 @@ test('it rejects a wrong continuation seed', async () => {
 
   expect(outcome).toStrictEqual({ kind: 'rejected' });
 
-  const updatedActivity = await ctx.db
-    .selectFrom('activities')
-    .select('status')
-    .where('id', '=', fixture.activity.id)
-    .executeTakeFirstOrThrow();
+  const updatedActivity = await readActivityStatus(ctx.db, fixture.activity.id);
 
-  expect(updatedActivity.status).toBe('rejected');
+  expect(updatedActivity?.status).toBe('rejected');
 });
 
 test('it parks an activity stamped with an unknown sim version', async () => {
@@ -600,13 +585,9 @@ test('it parks an activity stamped with an unknown sim version', async () => {
     reason: 'unknownVersion',
   });
 
-  const updated = await ctx.db
-    .selectFrom('activities')
-    .select('status')
-    .where('id', '=', fixture.activity.id)
-    .executeTakeFirstOrThrow();
+  const updated = await readActivityStatus(ctx.db, fixture.activity.id);
 
-  expect(updated.status).toBe('parked');
+  expect(updated?.status).toBe('parked');
 });
 
 test('it parks a stopped activity, leaving its chain claimable again', async () => {
@@ -649,11 +630,7 @@ test('it parks a stopped activity, leaving its chain claimable again', async () 
     reason: 'unknownVersion',
   });
 
-  const updated = await ctx.db
-    .selectFrom('activities')
-    .select(['parkedFrom', 'status'])
-    .where('id', '=', fixture.activity.id)
-    .executeTakeFirstOrThrow();
+  const updated = await readActivityStatus(ctx.db, fixture.activity.id);
 
   expect(updated).toStrictEqual({ parkedFrom: 'stopped', status: 'parked' });
 
@@ -748,13 +725,9 @@ test('it parks rather than rejects when the duration cap trips before the expect
     reason: 'durationCapExceeded',
   });
 
-  const updated = await ctx.db
-    .selectFrom('activities')
-    .select('status')
-    .where('id', '=', fixture.activity.id)
-    .executeTakeFirstOrThrow();
+  const updated = await readActivityStatus(ctx.db, fixture.activity.id);
 
-  expect(updated.status).toBe('parked');
+  expect(updated?.status).toBe('parked');
 });
 
 test('it writes the park line once the park commits', async () => {
@@ -859,13 +832,9 @@ test('it writes no park line when the park rolls back', async () => {
     'replay iteration failed; backing the activity off',
   ]);
 
-  const updated = await ctx.db
-    .selectFrom('activities')
-    .select('status')
-    .where('id', '=', fixture.activity.id)
-    .executeTakeFirstOrThrow();
+  const updated = await readActivityStatus(ctx.db, fixture.activity.id);
 
-  expect(updated.status).toBe('active');
+  expect(updated?.status).toBe('active');
 });
 
 test('it writes the quarantine line once the quarantine commits', async () => {
@@ -1020,13 +989,11 @@ test('it writes no quarantine line when the quarantine rolls back', async () => 
     'replay iteration failed; backing the activity off',
   ]);
 
-  const updated = await ctx.db
-    .selectFrom('activities')
-    .select(['replayAttempts', 'status'])
-    .where('id', '=', fixture.activity.id)
-    .executeTakeFirstOrThrow();
+  const updated = await readActivityStatus(ctx.db, fixture.activity.id);
+  const progress = await readReplayProgress(ctx.db, fixture.activity.id);
 
-  expect(updated).toStrictEqual({ replayAttempts: 4, status: 'active' });
+  expect(updated?.status).toBe('active');
+  expect(progress?.replayAttempts).toBe(4);
 });
 
 test('it backs off an activity without counting an attempt or parking it when the provider is unavailable', async () => {
@@ -1066,17 +1033,19 @@ test('it backs off an activity without counting an attempt or parking it when th
 
   expect(outcome).toStrictEqual({ kind: 'backedOff', reason: 'provider-unavailable' });
 
-  const updated = await ctx.db
-    .selectFrom('activities')
-    .select(['replayAttempts', 'replayBackoffUntil', 'replayBackoffs', 'status'])
-    .where('id', '=', fixture.activity.id)
-    .executeTakeFirstOrThrow();
+  const updated = await readActivityStatus(ctx.db, fixture.activity.id);
+  const progress = await readReplayProgress(ctx.db, fixture.activity.id);
 
-  expect(updated).toStrictEqual({
+  expect(updated?.status).toBe('active');
+
+  expect(progress).toStrictEqual({
+    appendedHead: fixture.activity.appendedHead,
     replayAttempts: 0,
-    replayBackoffUntil: expect.toBeAfter(new Date()),
     replayBackoffs: 1,
-    status: 'active',
+    replayBackoffUntil: expect.toBeAfter(new Date()),
+    settledXP: 0,
+    verifiedAt: null,
+    verifiedHead: 0,
   });
 
   expect(runReplayIteration(deps, cache)).resolves.toStrictEqual({ kind: 'idle' });
@@ -1112,16 +1081,18 @@ test('it backs off an activity when the keys service is unreachable on its first
 
   expect(outcome).toStrictEqual({ kind: 'backedOff', reason: 'keys-unavailable' });
 
-  const backedOff = await ctx.db
-    .selectFrom('activities')
-    .select(['replayAttempts', 'replayBackoffs', 'status', 'verifiedHead'])
-    .where('id', '=', fixture.activity.id)
-    .executeTakeFirstOrThrow();
+  const backedOffStatus = await readActivityStatus(ctx.db, fixture.activity.id);
+  const backedOff = await readReplayProgress(ctx.db, fixture.activity.id);
+
+  expect(backedOffStatus?.status).toBe('active');
 
   expect(backedOff).toStrictEqual({
+    appendedHead: fixture.activity.appendedHead,
     replayAttempts: 0,
     replayBackoffs: 1,
-    status: 'active',
+    replayBackoffUntil: expect.toBeValidDate(),
+    settledXP: 0,
+    verifiedAt: null,
     verifiedHead: 0,
   });
 
@@ -1137,15 +1108,15 @@ test('it backs off an activity when the keys service is unreachable on its first
 
   expect(recovered).toStrictEqual({ kind: 'matched' });
 
-  const verified = await ctx.db
-    .selectFrom('activities')
-    .select(['replayBackoffUntil', 'replayBackoffs', 'verifiedHead'])
-    .where('id', '=', fixture.activity.id)
-    .executeTakeFirstOrThrow();
+  const verified = await readReplayProgress(ctx.db, fixture.activity.id);
 
   expect(verified).toStrictEqual({
-    replayBackoffUntil: null,
+    appendedHead: fixture.activity.appendedHead,
+    replayAttempts: 0,
     replayBackoffs: 0,
+    replayBackoffUntil: null,
+    settledXP: expect.any(Number),
+    verifiedAt: expect.toBeValidDate(),
     verifiedHead: fixture.activity.appendedHead,
   });
 });
@@ -1180,19 +1151,19 @@ test('it backs off an activity and settles nothing when the keys service fails d
 
   expect(outcome).toStrictEqual({ kind: 'backedOff', reason: 'keys-unavailable' });
 
-  const updated = await ctx.db
-    .selectFrom('activities')
-    .select(['replayBackoffs', 'settledXp', 'verifiedHead'])
-    .where('id', '=', fixture.activity.id)
-    .executeTakeFirstOrThrow();
+  const updated = await readReplayProgress(ctx.db, fixture.activity.id);
 
-  expect(updated).toStrictEqual({ replayBackoffs: 1, settledXp: 0, verifiedHead: 0 });
+  expect(updated).toStrictEqual({
+    appendedHead: fixture.activity.appendedHead,
+    replayAttempts: 0,
+    replayBackoffs: 1,
+    replayBackoffUntil: expect.toBeValidDate(),
+    settledXP: 0,
+    verifiedAt: null,
+    verifiedHead: 0,
+  });
 
-  const items = await ctx.db
-    .selectFrom('avatarItems')
-    .select('chainIndex')
-    .where('avatarId', '=', fixture.activity.avatarId)
-    .execute();
+  const items = await readAvatarItems(ctx.db, fixture.activity.avatarId);
 
   expect(items).toBeEmpty();
 });
@@ -1224,16 +1195,18 @@ test('it backs off an activity when the iteration deadline fires while a depende
 
   expect(outcome).toStrictEqual({ kind: 'backedOff', reason: 'deadline' });
 
-  const updated = await ctx.db
-    .selectFrom('activities')
-    .select(['replayAttempts', 'replayBackoffs', 'status', 'verifiedHead'])
-    .where('id', '=', fixture.activity.id)
-    .executeTakeFirstOrThrow();
+  const updated = await readActivityStatus(ctx.db, fixture.activity.id);
+  const progress = await readReplayProgress(ctx.db, fixture.activity.id);
 
-  expect(updated).toStrictEqual({
+  expect(updated?.status).toBe('active');
+
+  expect(progress).toStrictEqual({
+    appendedHead: fixture.activity.appendedHead,
     replayAttempts: 0,
     replayBackoffs: 1,
-    status: 'active',
+    replayBackoffUntil: expect.toBeValidDate(),
+    settledXP: 0,
+    verifiedAt: null,
     verifiedHead: 0,
   });
 });
@@ -1289,13 +1262,9 @@ test('it evicts and rebuilds from Started when the cached driver no longer match
 
   expect(outcome).toStrictEqual({ kind: 'matched' });
 
-  const updated = await ctx.db
-    .selectFrom('activities')
-    .select('verifiedHead')
-    .where('id', '=', fixture.activity.id)
-    .executeTakeFirstOrThrow();
+  const updated = await readReplayProgress(ctx.db, fixture.activity.id);
 
-  expect(updated.verifiedHead).toBe(totalCheckpoints);
+  expect(updated?.verifiedHead).toBe(totalCheckpoints);
 });
 
 test('it backs off an unexpected replay error without counting an attempt', async () => {
@@ -1337,13 +1306,20 @@ test('it backs off an unexpected replay error without counting an attempt', asyn
 
   expect(outcome).toStrictEqual({ kind: 'backedOff', reason: 'errored' });
 
-  const updated = await ctx.db
-    .selectFrom('activities')
-    .select(['replayAttempts', 'replayBackoffs', 'status'])
-    .where('id', '=', fixture.activity.id)
-    .executeTakeFirstOrThrow();
+  const updated = await readActivityStatus(ctx.db, fixture.activity.id);
+  const progress = await readReplayProgress(ctx.db, fixture.activity.id);
 
-  expect(updated).toStrictEqual({ replayAttempts: 0, replayBackoffs: 1, status: 'active' });
+  expect(updated?.status).toBe('active');
+
+  expect(progress).toStrictEqual({
+    appendedHead: fixture.activity.appendedHead,
+    replayAttempts: 0,
+    replayBackoffs: 1,
+    replayBackoffUntil: expect.toBeValidDate(),
+    settledXP: 0,
+    verifiedAt: null,
+    verifiedHead: 0,
+  });
 });
 
 test('it reports an iteration failure exactly once when a target was claimed', async () => {
@@ -1471,14 +1447,11 @@ test('it does not reject a divergence that fails to reproduce on the fresh confi
 
   expect(outcome).toStrictEqual({ kind: 'unconfirmedDivergence' });
 
-  const updated = await ctx.db
-    .selectFrom('activities')
-    .select(['replayAttempts', 'status'])
-    .where('id', '=', fixture.activity.id)
-    .executeTakeFirstOrThrow();
+  const updated = await readActivityStatus(ctx.db, fixture.activity.id);
+  const progress = await readReplayProgress(ctx.db, fixture.activity.id);
 
-  expect(updated.status).toBe('active');
-  expect(updated.replayAttempts).toBe(1);
+  expect(updated?.status).toBe('active');
+  expect(progress?.replayAttempts).toBe(1);
   expect(cache.get(fixture.activity.id)).toBeUndefined();
 });
 
@@ -1523,14 +1496,17 @@ test("it advances the chain verified anchor from a user-stopped activity's tail,
     verifiedNextSeed: tail.payload.nextSeed,
   };
 
-  const chainAfterPredecessor = await ctx.db
-    .selectFrom('activityChains')
-    .select(['verifiedChainIndex', 'verifiedNextSeed'])
-    .where('avatarId', '=', predecessor.activity.avatarId)
-    .where('scopeId', '=', predecessor.activity.scopeId)
-    .executeTakeFirstOrThrow();
+  const chainAfterPredecessor = await readChainAnchors(ctx.db, {
+    avatarID: predecessor.activity.avatarId,
+    scopeID: predecessor.activity.scopeId,
+    scopeType: predecessor.activity.scopeType,
+  });
 
-  expect(chainAfterPredecessor).toStrictEqual(expectedAnchor);
+  expect(chainAfterPredecessor).toStrictEqual({
+    appendedChainIndex: expect.any(Number),
+    appendedNextSeed: expect.any(String),
+    ...expectedAnchor,
+  });
 
   const successor = await createHonestActivityFixture(ctx.db, {
     duration: 80_000,
@@ -1543,13 +1519,9 @@ test("it advances the chain verified anchor from a user-stopped activity's tail,
 
   expect(successorOutcome).toStrictEqual({ kind: 'matched' });
 
-  const successorRow = await ctx.db
-    .selectFrom('activities')
-    .select('verifiedHead')
-    .where('id', '=', successor.activity.id)
-    .executeTakeFirstOrThrow();
+  const successorRow = await readReplayProgress(ctx.db, successor.activity.id);
 
-  expect(successorRow.verifiedHead).toBe(successor.activity.appendedHead);
+  expect(successorRow?.verifiedHead).toBe(successor.activity.appendedHead);
 });
 
 test("it advances the chain verified anchor from a capped activity's tail, and an honest successor verifies", async () => {
@@ -1593,14 +1565,17 @@ test("it advances the chain verified anchor from a capped activity's tail, and a
     verifiedNextSeed: tail.payload.nextSeed,
   };
 
-  const chainAfterPredecessor = await ctx.db
-    .selectFrom('activityChains')
-    .select(['verifiedChainIndex', 'verifiedNextSeed'])
-    .where('avatarId', '=', predecessor.activity.avatarId)
-    .where('scopeId', '=', predecessor.activity.scopeId)
-    .executeTakeFirstOrThrow();
+  const chainAfterPredecessor = await readChainAnchors(ctx.db, {
+    avatarID: predecessor.activity.avatarId,
+    scopeID: predecessor.activity.scopeId,
+    scopeType: predecessor.activity.scopeType,
+  });
 
-  expect(chainAfterPredecessor).toStrictEqual(expectedAnchor);
+  expect(chainAfterPredecessor).toStrictEqual({
+    appendedChainIndex: expect.any(Number),
+    appendedNextSeed: expect.any(String),
+    ...expectedAnchor,
+  });
 
   const successor = await createHonestActivityFixture(ctx.db, {
     duration: 80_000,
@@ -1613,13 +1588,9 @@ test("it advances the chain verified anchor from a capped activity's tail, and a
 
   expect(successorOutcome).toStrictEqual({ kind: 'matched' });
 
-  const successorRow = await ctx.db
-    .selectFrom('activities')
-    .select('verifiedHead')
-    .where('id', '=', successor.activity.id)
-    .executeTakeFirstOrThrow();
+  const successorRow = await readReplayProgress(ctx.db, successor.activity.id);
 
-  expect(successorRow.verifiedHead).toBe(successor.activity.appendedHead);
+  expect(successorRow?.verifiedHead).toBe(successor.activity.appendedHead);
 });
 
 test('it reconciles the anchor once a successor claims a forward-exited predecessor position for a stream fully verified while still active', async () => {
@@ -1662,14 +1633,15 @@ test('it reconciles the anchor once a successor claims a forward-exited predeces
 
   expect(verifyOutcome).toStrictEqual({ kind: 'matched' });
 
-  const chainWhileActive = await ctx.db
-    .selectFrom('activityChains')
-    .select(['verifiedChainIndex', 'verifiedNextSeed'])
-    .where('avatarId', '=', predecessor.activity.avatarId)
-    .where('scopeId', '=', predecessor.activity.scopeId)
-    .executeTakeFirstOrThrow();
+  const chainWhileActive = await readChainAnchors(ctx.db, {
+    avatarID: predecessor.activity.avatarId,
+    scopeID: predecessor.activity.scopeId,
+    scopeType: predecessor.activity.scopeType,
+  });
 
   expect(chainWhileActive).toStrictEqual({
+    appendedChainIndex: expect.any(Number),
+    appendedNextSeed: expect.any(String),
     verifiedChainIndex: predecessor.chain.verifiedChainIndex,
     verifiedNextSeed: predecessor.chain.verifiedNextSeed,
   });
@@ -1704,22 +1676,21 @@ test('it reconciles the anchor once a successor claims a forward-exited predeces
 
   expect(successorOutcome).toStrictEqual({ kind: 'matched' });
 
-  const chainAfterReconcile = await ctx.db
-    .selectFrom('activityChains')
-    .select(['verifiedChainIndex', 'verifiedNextSeed'])
-    .where('avatarId', '=', predecessor.activity.avatarId)
-    .where('scopeId', '=', predecessor.activity.scopeId)
-    .executeTakeFirstOrThrow();
+  const chainAfterReconcile = await readChainAnchors(ctx.db, {
+    avatarID: predecessor.activity.avatarId,
+    scopeID: predecessor.activity.scopeId,
+    scopeType: predecessor.activity.scopeType,
+  });
 
-  expect(chainAfterReconcile).toStrictEqual(expectedAnchor);
+  expect(chainAfterReconcile).toStrictEqual({
+    appendedChainIndex: expect.any(Number),
+    appendedNextSeed: expect.any(String),
+    ...expectedAnchor,
+  });
 
-  const successorRow = await ctx.db
-    .selectFrom('activities')
-    .select('verifiedHead')
-    .where('id', '=', successor.activity.id)
-    .executeTakeFirstOrThrow();
+  const successorRow = await readReplayProgress(ctx.db, successor.activity.id);
 
-  expect(successorRow.verifiedHead).toBe(successor.activity.appendedHead);
+  expect(successorRow?.verifiedHead).toBe(successor.activity.appendedHead);
 });
 
 test('it leaves the anchor untouched for a stopped activity whose only checkpoint is Started, and an honest successor verifies from it', async () => {
@@ -1750,14 +1721,15 @@ test('it leaves the anchor untouched for a stopped activity whose only checkpoin
 
   expect(predecessorOutcome).toStrictEqual({ kind: 'matched' });
 
-  const chainAfterPredecessor = await ctx.db
-    .selectFrom('activityChains')
-    .select(['verifiedChainIndex', 'verifiedNextSeed'])
-    .where('avatarId', '=', predecessor.activity.avatarId)
-    .where('scopeId', '=', predecessor.activity.scopeId)
-    .executeTakeFirstOrThrow();
+  const chainAfterPredecessor = await readChainAnchors(ctx.db, {
+    avatarID: predecessor.activity.avatarId,
+    scopeID: predecessor.activity.scopeId,
+    scopeType: predecessor.activity.scopeType,
+  });
 
   expect(chainAfterPredecessor).toStrictEqual({
+    appendedChainIndex: expect.any(Number),
+    appendedNextSeed: expect.any(String),
     verifiedChainIndex: predecessor.chain.verifiedChainIndex,
     verifiedNextSeed: predecessor.chain.verifiedNextSeed,
   });
@@ -1773,11 +1745,7 @@ test('it leaves the anchor untouched for a stopped activity whose only checkpoin
 
   expect(successorOutcome).toStrictEqual({ kind: 'matched' });
 
-  const successorRow = await ctx.db
-    .selectFrom('activities')
-    .select('verifiedHead')
-    .where('id', '=', successor.activity.id)
-    .executeTakeFirstOrThrow();
+  const successorRow = await readReplayProgress(ctx.db, successor.activity.id);
 
-  expect(successorRow.verifiedHead).toBe(successor.activity.appendedHead);
+  expect(successorRow?.verifiedHead).toBe(successor.activity.appendedHead);
 });

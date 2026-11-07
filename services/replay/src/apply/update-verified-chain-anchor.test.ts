@@ -1,5 +1,6 @@
 import { expect, test } from 'bun:test';
 import { createTestDB } from '@vers/service-test-utils/bun';
+import { readChainAnchors } from '../queue/read-chain-anchors';
 import { createAvatarRow } from '../test-utils/create-avatar-row';
 import { createChainRow } from '../test-utils/create-chain-row';
 import { updateVerifiedChainAnchor } from './update-verified-chain-anchor';
@@ -29,14 +30,18 @@ test('it advances the chain row verified anchor', async () => {
     scopeType: chain.scopeType,
   });
 
-  const updated = await ctx.db
-    .selectFrom('activityChains')
-    .select(['verifiedChainIndex', 'verifiedNextSeed'])
-    .where('avatarId', '=', avatar.id)
-    .where('scopeId', '=', chain.scopeId)
-    .executeTakeFirstOrThrow();
+  const updated = await readChainAnchors(ctx.db, {
+    avatarID: avatar.id,
+    scopeID: chain.scopeId,
+    scopeType: chain.scopeType,
+  });
 
-  expect(updated).toStrictEqual({ verifiedChainIndex: 5, verifiedNextSeed: 'bb'.repeat(16) });
+  expect(updated).toStrictEqual({
+    appendedChainIndex: chain.appendedChainIndex,
+    appendedNextSeed: chain.appendedNextSeed,
+    verifiedChainIndex: 5,
+    verifiedNextSeed: 'bb'.repeat(16),
+  });
 });
 
 test('it leaves a stale advance untouched', async () => {
@@ -58,12 +63,16 @@ test('it leaves a stale advance untouched', async () => {
     scopeType: chain.scopeType,
   });
 
-  const updated = await ctx.db
-    .selectFrom('activityChains')
-    .select(['verifiedChainIndex', 'verifiedNextSeed'])
-    .where('avatarId', '=', avatar.id)
-    .where('scopeId', '=', chain.scopeId)
-    .executeTakeFirstOrThrow();
+  const updated = await readChainAnchors(ctx.db, {
+    avatarID: avatar.id,
+    scopeID: chain.scopeId,
+    scopeType: chain.scopeType,
+  });
 
-  expect(updated).toStrictEqual({ verifiedChainIndex: 10, verifiedNextSeed: 'aa'.repeat(16) });
+  expect(updated).toStrictEqual({
+    appendedChainIndex: chain.appendedChainIndex,
+    appendedNextSeed: chain.appendedNextSeed,
+    verifiedChainIndex: 10,
+    verifiedNextSeed: 'aa'.repeat(16),
+  });
 });

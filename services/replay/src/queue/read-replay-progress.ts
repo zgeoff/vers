@@ -7,6 +7,7 @@ interface ReplayProgress {
   readonly replayBackoffs: number;
   readonly replayBackoffUntil: Date | null;
   readonly settledXP: number;
+  readonly verifiedAt: Date | null;
   readonly verifiedHead: number;
 }
 
@@ -22,6 +23,7 @@ export async function readReplayProgress(
       'replayBackoffs',
       'replayBackoffUntil',
       'settledXp',
+      'verifiedAt',
       'verifiedHead',
     ])
     .where('id', '=', activityID)
@@ -37,6 +39,7 @@ export async function readReplayProgress(
     replayBackoffs: row.replayBackoffs,
     replayBackoffUntil: row.replayBackoffUntil,
     settledXP: row.settledXp,
+    verifiedAt: row.verifiedAt,
     verifiedHead: row.verifiedHead,
   };
 }

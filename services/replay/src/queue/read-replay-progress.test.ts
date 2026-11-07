@@ -18,6 +18,7 @@ test("it reads an activity's replay cursors, retry counters and settled XP", asy
     replayBackoffs: 3,
     replayBackoffUntil: new Date('2026-03-04T05:06:07.000Z'),
     settledXp: 75,
+    verifiedAt: new Date('2026-03-04T05:01:00.000Z'),
     verifiedHead: 4,
   });
 
@@ -29,6 +30,7 @@ test("it reads an activity's replay cursors, retry counters and settled XP", asy
     replayBackoffs: 3,
     replayBackoffUntil: new Date('2026-03-04T05:06:07.000Z'),
     settledXP: 75,
+    verifiedAt: new Date('2026-03-04T05:01:00.000Z'),
     verifiedHead: 4,
   });
 });
