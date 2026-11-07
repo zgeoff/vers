@@ -43,6 +43,8 @@ functions for those tables by the package your test is in:
 - In `@vers/service-activity`, read `activities` and `activityChains` directly, `status` included.
   Its `src/handlers/` creates those rows and picks each status move, so its tests are that module's
   own tests.
+- In `@vers/service-activity`, read `avatars` directly too. The replay service depends on
+  `@vers/service-activity`, so an import of the replay read functions makes a cycle.
 - In every other package, read the `status` and `parkedFrom` of an `activities` row with
   [`readActivityStatus`](../../../libs/data/db/src/read-activity-status.ts) from `@vers/db`. Every
   status move runs through the transition writer beside it, whichever service picks the move.
@@ -50,8 +52,11 @@ functions for those tables by the package your test is in:
   `read-*.ts` files in [`src/queue/`](../../../services/replay/src/queue/).
 - In `@vers/service-replay`, read `avatars`, `avatarItems` and `avatarGrants` with the `read-*.ts`
   files in [`src/apply/`](../../../services/replay/src/apply/).
-- In a package other than these two, read the other columns through the module that creates the
-  rows.
+- In a `lib`, such as `@vers/scripts`, read the other `activities` columns through a read function
+  in [`libs/data/db/src/`](../../../libs/data/db/src/). Boundaries bar a `lib` from importing a
+  service. Read a column that the lib's own code writes, such as `archivedAt` in `@vers/scripts`,
+  directly in the tests of that code.
+- In any other service, read the other columns through the module that creates the rows.
 
 When the folder you read through has no read function for the column you check, add one to it, with
 a test.

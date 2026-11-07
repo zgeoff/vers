@@ -1,4 +1,5 @@
 import { expect, onTestFinished, test } from 'bun:test';
+import { readActivityStatus } from '@vers/db';
 import {
   createActivityRow,
   createAvatarRow,
@@ -391,12 +392,7 @@ test('it never removes the head row, the avatar items or the avatar grants', asy
   });
 
   const archiveExists = await ctx.bucket.exists('checkpoints/avatar_kept/act_kept.jsonl.gz');
-
-  const heads = await ctx.db
-    .selectFrom('activities')
-    .select('id')
-    .where('id', '=', 'act_kept')
-    .execute();
+  const head = await readActivityStatus(ctx.db, 'act_kept');
 
   const items = await ctx.db
     .selectFrom('avatarItems')
@@ -411,7 +407,7 @@ test('it never removes the head row, the avatar items or the avatar grants', asy
     .execute();
 
   expect(archiveExists).toBeFalse();
-  expect(heads).toStrictEqual([{ id: 'act_kept' }]);
+  expect(head).toStrictEqual({ parkedFrom: null, status: 'stopped' });
   expect(items).toStrictEqual([{ baseId: 'base_sword' }]);
   expect(grants).toStrictEqual([{ key: 'node_kept' }]);
 });
