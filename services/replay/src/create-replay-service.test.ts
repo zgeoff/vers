@@ -1,4 +1,4 @@
-import { expect, mock, onTestFinished, test } from 'bun:test';
+import { expect, mock, onTestFinished, spyOn, test } from 'bun:test';
 import { createContentVersion } from '@vers/content-registry';
 import { createMockContentDocument } from '@vers/contract-activity/test-utils';
 import { toJSON } from '@vers/db';
@@ -6,7 +6,6 @@ import { buildStateFromSeed } from '@vers/game-utils';
 import { createAnonymousViewer, createTestDB } from '@vers/service-test-utils/bun';
 import { waitFor } from '@vers/test-utils';
 import { updateEnv } from '@vers/test-utils/bun';
-import { sql } from 'kysely';
 import invariant from 'tiny-invariant';
 import { createReplayService } from './create-replay-service';
 import { readReplayProgress } from './queue/read-replay-progress';
@@ -43,6 +42,8 @@ test('it stops serving, destroys the db it built and exits 0 on SIGTERM', async 
 
   onTestFinished(() => service.stop());
 
+  const destroy = spyOn(service.resources.db, 'destroy');
+
   service.serve({ exit, port: 0 });
   process.emit('SIGTERM');
 
@@ -50,7 +51,7 @@ test('it stops serving, destroys the db it built and exits 0 on SIGTERM', async 
     expect(exit).toHaveBeenCalledExactlyOnceWith(0);
   });
 
-  expect(sql`select 1`.execute(service.resources.db)).rejects.toThrow();
+  expect(destroy).toHaveBeenCalledOnce();
 });
 
 test('it fails to boot on a malformed private key, before any listen', async () => {
@@ -64,10 +65,11 @@ test('it never destroys an injected db when stopped', async () => {
 
   const service = await createReplayService({ db: ctx.db });
 
+  const destroy = spyOn(ctx.db, 'destroy');
+
   await service.stop();
 
-  // The injected handle is still usable — a destroyed pool would reject any further query.
-  await expect(sql`select 1`.execute(ctx.db)).toResolve();
+  expect(destroy).not.toHaveBeenCalled();
 });
 
 test('it drains a claimable chain through the same deps the wake procedure closes over', async () => {

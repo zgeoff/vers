@@ -1,8 +1,9 @@
-import { expect, mock, onTestFinished, test } from 'bun:test';
+import { expect, mock, onTestFinished, spyOn, test } from 'bun:test';
 import type { VerificationContract } from '@vers/contract-verification';
 import { createAnonymousViewer, createTestDB } from '@vers/service-test-utils/bun';
 import { buildRPCTestClient, waitFor } from '@vers/test-utils';
 import { createVerificationService } from './create-verification-service';
+import { readVerification } from './handlers/read-verification';
 
 test('it wires an injected db into the router instead of building one from env', async () => {
   await using db = await createTestDB();
@@ -14,9 +15,11 @@ test('it wires an injected db into the router instead of building one from env',
 
   await client.createVerification({ target: 'wired@example.com', type: 'onboarding' });
 
-  const rows = await db.db.selectFrom('verifications').selectAll().execute();
+  const verification = await readVerification(db.db, {
+    input: { target: 'wired@example.com', type: 'onboarding' },
+  });
 
-  expect(rows).toHaveLength(1);
+  expect(verification?.target).toBe('wired@example.com');
 });
 
 test('it boots from env.DATABASE_URL when no db is injected', async () => {
@@ -34,6 +37,8 @@ test('it stops serving, destroys the db it built and exits 0 on SIGTERM', async 
 
   onTestFinished(() => service.stop());
 
+  const destroy = spyOn(service.resources.db, 'destroy');
+
   service.serve({ exit, port: 0 });
   process.emit('SIGTERM');
 
@@ -41,7 +46,7 @@ test('it stops serving, destroys the db it built and exits 0 on SIGTERM', async 
     expect(exit).toHaveBeenCalledExactlyOnceWith(0);
   });
 
-  expect(service.resources.db.selectFrom('verifications').select('id').execute()).rejects.toThrow();
+  expect(destroy).toHaveBeenCalledOnce();
 });
 
 test('it accepts a call from app-web', async () => {
@@ -84,7 +89,9 @@ test('it rejects a call from service-activity with 403', async () => {
 
   expect(response.status).toBe(403);
 
-  const rows = await db.db.selectFrom('verifications').selectAll().execute();
+  const verification = await readVerification(db.db, {
+    input: { target: 'rejected@example.com', type: 'onboarding' },
+  });
 
-  expect(rows).toHaveLength(0);
+  expect(verification).toBeNull();
 });

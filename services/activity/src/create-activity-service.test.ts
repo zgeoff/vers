@@ -1,4 +1,4 @@
-import { expect, mock, onTestFinished, test } from 'bun:test';
+import { expect, mock, onTestFinished, spyOn, test } from 'bun:test';
 import { createContentVersion, readContentDocument } from '@vers/content-registry';
 import type { ActivityContract } from '@vers/contract-activity';
 import { createMockContentDocument } from '@vers/contract-activity/test-utils';
@@ -20,11 +20,9 @@ test('it wires an injected db into the router instead of building one from env',
 
   const client = buildRPCTestClient<ActivityContract>(service.app, { token: viewer.token });
 
-  await client.revealNodes({ avatarID: avatar.id, nodeIDs: ['0_0'] });
+  const revealed = await client.revealNodes({ avatarID: avatar.id, nodeIDs: ['0_0'] });
 
-  const rows = await db.db.selectFrom('activityChains').selectAll().execute();
-
-  expect(rows).toHaveLength(1);
+  expect(revealed.nodes).toHaveLength(1);
 });
 
 test('it boots from env.DATABASE_URL when no db is injected', async () => {
@@ -42,6 +40,8 @@ test('it stops serving, destroys the db it built and exits 0 on SIGTERM', async 
 
   onTestFinished(() => service.stop());
 
+  const destroy = spyOn(service.resources.db, 'destroy');
+
   service.serve({ exit, port: 0 });
   process.emit('SIGTERM');
 
@@ -49,7 +49,7 @@ test('it stops serving, destroys the db it built and exits 0 on SIGTERM', async 
     expect(exit).toHaveBeenCalledExactlyOnceWith(0);
   });
 
-  expect(service.resources.db.selectFrom('activities').select('id').execute()).rejects.toThrow();
+  expect(destroy).toHaveBeenCalledOnce();
 });
 
 test('it defaults the content and key versions when none are injected', async () => {

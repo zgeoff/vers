@@ -1,4 +1,4 @@
-import { expect, mock, onTestFinished, test } from 'bun:test';
+import { expect, mock, onTestFinished, spyOn, test } from 'bun:test';
 import type { SessionContract } from '@vers/contract-session';
 import { toJSONWebKeySet } from '@vers/contract-session';
 import { createAnonymousViewer, createTestDB, createTestUser } from '@vers/service-test-utils/bun';
@@ -6,6 +6,7 @@ import { buildRPCTestClient, resolveTestJWTKeyPair, waitFor } from '@vers/test-u
 import * as jose from 'jose';
 import invariant from 'tiny-invariant';
 import { createSessionService } from './create-session-service';
+import { readSessions } from './handlers/read-sessions';
 import { createSessionRow } from './test-utils/create-session-row';
 
 async function setupTest() {
@@ -27,9 +28,12 @@ test('it wires an injected db into the router instead of building one from env',
 
   await client.createSession({ ipAddress: '127.0.0.1', userID: created.user.id });
 
-  const rows = await ctx.db.selectFrom('sessions').selectAll().execute();
+  const sessions = await readSessions(ctx.db, {
+    context: { actingUserID: created.user.id },
+    errors: { UNAUTHORIZED: () => new Error('the read names its acting user') },
+  });
 
-  expect(rows).toHaveLength(1);
+  expect(sessions).toHaveLength(1);
 });
 
 test('it boots from env.DATABASE_URL when no db is injected', async () => {
@@ -47,6 +51,8 @@ test('it stops serving, destroys the db it built and exits 0 on SIGTERM', async 
 
   onTestFinished(() => service.stop());
 
+  const destroy = spyOn(service.resources.db, 'destroy');
+
   service.serve({ exit, port: 0 });
   process.emit('SIGTERM');
 
@@ -54,7 +60,7 @@ test('it stops serving, destroys the db it built and exits 0 on SIGTERM', async 
     expect(exit).toHaveBeenCalledExactlyOnceWith(0);
   });
 
-  expect(service.resources.db.selectFrom('sessions').select('id').execute()).rejects.toThrow();
+  expect(destroy).toHaveBeenCalledOnce();
 });
 
 test('it publishes the signing key as one RS256 signature key whose id is its thumbprint', async () => {

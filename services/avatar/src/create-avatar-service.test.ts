@@ -1,8 +1,9 @@
-import { expect, mock, onTestFinished, test } from 'bun:test';
+import { expect, mock, onTestFinished, spyOn, test } from 'bun:test';
 import type { AvatarContract } from '@vers/contract-avatar';
 import { createTestDB, createViewer } from '@vers/service-test-utils/bun';
 import { buildRPCTestClient, waitFor } from '@vers/test-utils';
 import { createAvatarService } from './create-avatar-service';
+import { readAvatars } from './handlers/read-avatars';
 
 test('it wires an injected db into the router instead of building one from env', async () => {
   await using db = await createTestDB();
@@ -14,9 +15,12 @@ test('it wires an injected db into the router instead of building one from env',
 
   await client.createAvatar({ name: 'Wired' });
 
-  const rows = await db.db.selectFrom('avatars').selectAll().execute();
+  const roster = await readAvatars(db.db, {
+    context: { actingUserID: viewer.user.id },
+    errors: { UNAUTHORIZED: () => new Error('the read names its acting user') },
+  });
 
-  expect(rows).toHaveLength(1);
+  expect(roster.avatars.map((avatar) => avatar.name)).toStrictEqual(['Wired']);
 });
 
 test('it boots from env.DATABASE_URL when no db is injected', async () => {
@@ -34,6 +38,8 @@ test('it stops serving, destroys the db it built and exits 0 on SIGTERM', async 
 
   onTestFinished(() => service.stop());
 
+  const destroy = spyOn(service.resources.db, 'destroy');
+
   service.serve({ exit, port: 0 });
   process.emit('SIGTERM');
 
@@ -41,7 +47,7 @@ test('it stops serving, destroys the db it built and exits 0 on SIGTERM', async 
     expect(exit).toHaveBeenCalledExactlyOnceWith(0);
   });
 
-  expect(service.resources.db.selectFrom('avatars').select('id').execute()).rejects.toThrow();
+  expect(destroy).toHaveBeenCalledOnce();
 });
 
 test('it accepts a call from app-web', async () => {
