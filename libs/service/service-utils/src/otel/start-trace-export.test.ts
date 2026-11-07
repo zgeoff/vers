@@ -118,7 +118,7 @@ test('it injects a traceparent and the baggage for the active context once regis
 
   const carrier: Record<string, string> = {};
 
-  trace.getTracer('test-service').startActiveSpan('test-span', (span) => {
+  const spanContext = trace.getTracer('test-service').startActiveSpan('test-span', (span) => {
     const withBaggage = propagation.setBaggage(
       context.active(),
       propagation.createBaggage({ tenant: { value: 'north-shelf' } }),
@@ -126,10 +126,12 @@ test('it injects a traceparent and the baggage for the active context once regis
 
     propagation.inject(withBaggage, carrier);
     span.end();
+
+    return span.spanContext();
   });
 
   expect(carrier).toStrictEqual({
     baggage: 'tenant=north-shelf',
-    traceparent: expect.stringMatching(/^00-[\da-f]{32}-[\da-f]{16}-01$/u),
+    traceparent: `00-${spanContext.traceId}-${spanContext.spanId}-01`,
   });
 });
