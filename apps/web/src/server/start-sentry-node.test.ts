@@ -1,5 +1,7 @@
 import { expect, onTestFinished, test } from 'bun:test';
 import type { LogRecord } from '@logtape/logtape';
+import { context, trace } from '@opentelemetry/api';
+import type * as OpenTelemetryCore from '@opentelemetry/core';
 import * as Sentry from '@sentry/node';
 import type { ErrorEvent } from '@sentry/node';
 import { configureLogging } from '@vers/service-runtime/logging';
@@ -7,6 +9,7 @@ import { startTraceExport } from '@vers/service-utils/otel';
 import { waitFor } from '@vers/test-utils';
 import { updateEnv } from '@vers/test-utils/bun';
 import invariant from 'tiny-invariant';
+import { z } from 'zod';
 import { makeRequestLogger } from './make-request-logger';
 import { withMiddleware } from './middleware';
 import { reportFunctionFault } from './report-function-fault';
@@ -160,4 +163,52 @@ test('it puts the inbound trace id on the log lines, the error event, and the ex
   expect(recorded[0]?.tags?.['traceID']).toBe('4bf92f3577b34da6a3ce929d0e0e4736');
   expect(recorded[0]?.contexts?.trace?.trace_id).toBe('4bf92f3577b34da6a3ce929d0e0e4736');
   expect(ctx.exportPaths).toStrictEqual(['/v1/traces']);
+});
+
+// the SDK's node-core takes `@opentelemetry/core` as an optional peer that no override reaches, and
+// its server-span hook calls these on every Node request, which a Bun test can't drive
+test('it round-trips the RPC metadata of a server span through the OpenTelemetry core the SDK resolves', async () => {
+  startSentryNode('https://testpublickey@o0.ingest.sentry.io/1', {
+    beforeSend: () => null,
+    disableDefaultIntegrations: true,
+  });
+
+  onTestFinished(async () => {
+    await Sentry.close();
+  });
+
+  const nodeCorePath = Bun.resolveSync(
+    '@sentry/node-core',
+    Bun.resolveSync('@sentry/node', import.meta.dir),
+  );
+
+  const loaded: unknown = await import(Bun.resolveSync('@opentelemetry/core', nodeCorePath));
+
+  const sentryCore = z
+    .object({
+      RPCType: z.custom<typeof OpenTelemetryCore.RPCType>((value) => typeof value === 'object'),
+      getRPCMetadata: z.custom<typeof OpenTelemetryCore.getRPCMetadata>(
+        (value) => typeof value === 'function',
+      ),
+      setRPCMetadata: z.custom<typeof OpenTelemetryCore.setRPCMetadata>(
+        (value) => typeof value === 'function',
+      ),
+    })
+    .parse(loaded);
+
+  const metadata = {
+    route: '/play/:id',
+    span: trace.wrapSpanContext({
+      spanId: '00f067aa0ba902b7',
+      traceFlags: 1,
+      traceId: '4bf92f3577b34da6a3ce929d0e0e4736',
+    }),
+    type: sentryCore.RPCType.HTTP,
+  };
+
+  const found = context.with(sentryCore.setRPCMetadata(context.active(), metadata), () =>
+    sentryCore.getRPCMetadata(context.active()),
+  );
+
+  expect(found).toBe(metadata);
 });
