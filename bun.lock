@@ -1496,7 +1496,7 @@
     "@zgeoff/mcp-remote": "0.1.38",
     "@zgeoff/oxlint-config": "0.8.1",
     "@zgeoff/std": "0.4.3",
-    "@zgeoff/umami-mcp": "0.1.1",
+    "@zgeoff/umami-mcp": "0.1.2",
     "autoprefixer": "10.6.2",
     "babel-plugin-react-compiler": "1.0.0",
     "camera-controls": "3.1.2",
@@ -3089,7 +3089,7 @@
 
     "@zgeoff/std": ["@zgeoff/std@0.4.3", "", {}, "sha512-wCaqH8+vrkR+6R/grWUUDraryyFY1NW0Gjbhg85bXX38k9Q+N3aHFu+Yc+EjzZ/Sp9n5aJnCvZqbO5F2mUjWAg=="],
 
-    "@zgeoff/umami-mcp": ["@zgeoff/umami-mcp@0.1.1", "", { "dependencies": { "@modelcontextprotocol/sdk": "1.29.0", "zod": "4.6.7" }, "bin": { "umami-mcp": "dist/index.js" } }, "sha512-j8/inaa2PdxEdNMtSvaCuM7+i65lHFV7SIKYj/uhSjXEzzM7WhE/vxiVmj0H53K6xjoN3LNAXKHTez1wZquHSA=="],
+    "@zgeoff/umami-mcp": ["@zgeoff/umami-mcp@0.1.2", "", { "dependencies": { "@modelcontextprotocol/sdk": "1.29.0", "zod": "4.6.7" }, "bin": { "umami-mcp": "dist/index.js" } }, "sha512-IrmplU9ovxXn6pIE9pVjTo1RwABFY2KD2ibROCzEChVuzMrqayS9ICJbqByDKg4qlvyzWK/eLq03rl++ss0Evw=="],
 
     "abbrev": ["abbrev@4.0.0", "", {}, "sha512-a1wflyaL0tHtJSmLSOVybYhy22vRih4eduhhrkcjgrWGnRfrZtovJ2FRjxuTtkkj47O/baf0R86QU5OuYpz8fA=="],
 
