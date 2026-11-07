@@ -1,5 +1,6 @@
 import { expect, onTestFinished, test } from 'bun:test';
 import { createTestDB } from '@vers/service-test-utils/bun';
+import { readSimVersion } from '@vers/sim-registry';
 import { writeLoadRegistry } from './write-load-registry';
 
 async function setupTest() {
@@ -15,19 +16,30 @@ test('it registers each engine version against its own replay provider', async (
 
   await writeLoadRegistry(ctx.db, { current: 'engine-now', retained: 'engine-now-retained' });
 
-  const rows = await ctx.db
-    .selectFrom('simVersions')
-    .select(['engineHash', 'providerUrl', 'status'])
-    .where('engineHash', 'in', ['engine-now', 'engine-now-retained'])
-    .orderBy('engineHash')
-    .execute();
+  const current = await readSimVersion(ctx.db, 'engine-now');
+  const retained = await readSimVersion(ctx.db, 'engine-now-retained');
 
-  expect(rows).toStrictEqual([
-    { engineHash: 'engine-now', providerUrl: 'http://service-replay:3000', status: 'active' },
-    {
-      engineHash: 'engine-now-retained',
-      providerUrl: 'http://service-replay-retained:3000',
-      status: 'active',
-    },
-  ]);
+  expect(current).toStrictEqual({
+    bunVersion: expect.any(String),
+    createdAt: expect.toBeValidDate(),
+    deployedAt: expect.toBeValidDate(),
+    engineHash: 'engine-now',
+    imageRef: expect.any(String),
+    maxContentVersion: expect.any(String),
+    providerUrl: 'http://service-replay:3000',
+    retainedUntil: expect.toBeValidDate(),
+    status: 'active',
+  });
+
+  expect(retained).toStrictEqual({
+    bunVersion: expect.any(String),
+    createdAt: expect.toBeValidDate(),
+    deployedAt: expect.toBeValidDate(),
+    engineHash: 'engine-now-retained',
+    imageRef: expect.any(String),
+    maxContentVersion: expect.any(String),
+    providerUrl: 'http://service-replay-retained:3000',
+    retainedUntil: expect.toBeValidDate(),
+    status: 'active',
+  });
 });
