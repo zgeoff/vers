@@ -202,25 +202,29 @@ command reports the timeout instead.
 Chrome drops network emulation when the DevTools session that set it detaches, so
 `offline <target> on` returns with a background process left holding that session, for a page,
 shared worker or service worker target. The cut holds until `offline <target> off` or until the
-target closes.
+target closes. When a reload replaces a shared worker that this background process holds offline,
+the process resumes the new worker, which [starts paused](#capturing-worker-traffic), and the new
+worker stays offline.
 
 ### Capturing worker traffic
 
 `qa:capture` polls the target list every second, attaches to each shared worker it has not seen, and
 logs that worker's requests whose URL contains `--path` (default `/api/rpc/`) together with the
-worker's console output and exceptions. `--worker-url <substring>` keeps the attachment to workers
-whose script URL contains it. Each line carries a timestamp; a request prints its method, URL, and
-body, a response prints its status and then its body once the browser has it, and a failed request
-prints the browser's error text. The log cuts a body longer than 1500 characters and marks the cut
-with `…`.
+worker's console output and exceptions. With `--worker-url <substring>`, the capture attaches only
+to workers whose script URL contains the substring. Each line carries a timestamp; a request prints
+its method, URL, and body, a response prints its status and then its body once the browser has it,
+and a failed request prints the browser's error text. The log cuts a body longer than 1500
+characters and marks the cut with `…`.
 
 ```bash
 bun run qa:capture --worker-url versidle.com
 ```
 
-The attachment keeps a shared worker alive: a shared worker with no page left holds on as long as a
-DevTools client is attached, so a worker whose last tab closed during a capture lingers as a zombie
-until the capture stops. Stop the capture (Ctrl-C) before closing the last tab of a context.
+A reload or a closed last tab ends a shared worker, and the next page starts a new one. When any
+DevTools session is attached to the old worker, Chrome starts the new worker paused for the
+debugger. A paused worker runs none of its code, so it sends no request and never answers the
+[debug hook](#debug-hook). `qa:capture` resumes each new worker, so the capture log and the debug
+hook keep working across a reload.
 
 ## Cut the network
 
@@ -232,10 +236,10 @@ and worker in it at once. [Cut the network](qa-network-cut.md) holds the procedu
 
 A QA tester reads the writer worker's state and sets a QA avatar's simulation speed from the page
 console through `window.__versQA`, with no DevTools attachment to the worker. app-web installs the
-object on a game page only when the session's email is under `qa.versidle.com`, or when a
-non-production build carries `?qa=1`. The server decides the account gate from the session and hands
-the page a boolean, so the page never reads the email, and every other page carries no object and
-runs no extra code.
+object on a game page only when the session's email is under `qa.versidle.com`, or when the URL of a
+non-production build's page carries `?qa=1`. The server decides the account gate from the session
+and hands the page a boolean, so the page never reads the email, and every other page carries no
+object and runs no extra code.
 
 ```js
 await window.__versQA.snapshot();

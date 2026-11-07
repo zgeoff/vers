@@ -1,6 +1,7 @@
 import { define } from 'gunshi';
 import { ENDPOINT_ARG } from '../qa/endpoint-arg';
 import { readSaveConfirmation } from '../qa/read-save-confirmation';
+import { subscribeToTargetRestarts } from '../qa/subscribe-to-target-restarts';
 import { withTargetClient } from '../qa/with-target-client';
 import { runCommandLine } from '../utils/run-command-line';
 
@@ -31,6 +32,10 @@ const entry = define({
     }
 
     await withTargetClient(ctx.values.endpoint, targetID, async (target) => {
+      subscribeToTargetRestarts(target, (message) => {
+        console.error(`hold ${targetID}: ${message}`);
+      });
+
       await target.send('Network.enable');
       await target.send('Network.emulateNetworkConditions', OFFLINE_CONDITIONS);
 
