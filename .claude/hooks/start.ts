@@ -1,3 +1,5 @@
+// oxlint-disable zgeoff/file-named-for-export -- every repo's hook entries run this path
+
 // A harness runs the call when a PreToolUse hook exits with any status but 2, so a static import
 // that fails would let the call through. This file therefore imports only Node builtins.
 import type { SpawnSyncReturns } from 'node:child_process';
