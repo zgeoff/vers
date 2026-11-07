@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-// Runs the synced skill gate hook as .claude/settings.json registers it, with auto-install off,
+// Runs the synced start-up stub as .claude/settings.json registers it, with auto-install off,
 // against this repo's own .claude/skill-gate.json and skills.
 async function setupTest() {
   const directory = await mkdtemp(join(tmpdir(), 'skill-gate-'));
@@ -13,7 +13,7 @@ async function setupTest() {
   onTestFinished(() => rm(directory, { recursive: true, force: true }));
 
   const repoDir = fileURLToPath(new URL('../../../', import.meta.url)).replace(/\/$/u, '');
-  const hookPath = join(repoDir, '.claude/hooks/skill-gate/skill-gate.ts');
+  const hookPath = join(repoDir, '.claude/hooks/start.ts');
 
   return { directory, repoDir, hookPath };
 }

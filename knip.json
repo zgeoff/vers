@@ -13,11 +13,11 @@
       "entry": ["deploy.config.ts"],
       "ignoreDependencies": [
         "@playwright/test",
+        "@zgeoff/agent-hooks",
         "@zgeoff/bugsink-mcp",
         "@zgeoff/bun-test-extended",
         "@zgeoff/diet",
         "@zgeoff/mcp-remote",
-        "@zgeoff/skill-gate",
         "@zgeoff/umami-mcp",
         "chrome-devtools-mcp"
       ]
