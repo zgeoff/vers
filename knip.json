@@ -15,6 +15,7 @@
         "@playwright/test",
         "@zgeoff/bugsink-mcp",
         "@zgeoff/bun-test-extended",
+        "@zgeoff/diet",
         "@zgeoff/mcp-remote",
         "@zgeoff/skill-gate",
         "@zgeoff/umami-mcp",
