@@ -18,6 +18,7 @@
         "@zgeoff/bun-test-extended",
         "@zgeoff/diet",
         "@zgeoff/mcp-remote",
+        "@zgeoff/rig",
         "@zgeoff/umami-mcp",
         "chrome-devtools-mcp"
       ]

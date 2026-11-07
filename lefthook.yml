@@ -74,7 +74,9 @@ commit-msg:
 
 # pre-push reads the ref lines git hands the hook: a push that only deletes
 # refs skips the gate, since lefthook's own push-file detection diffs HEAD
-# against its upstream and would otherwise run the whole gate on a deletion
+# against its upstream and would otherwise run the whole gate on a deletion.
+# The baseline's uncommitted-file and test-timeout checks read the checked-out
+# branch, so they still run on a deletion
 pre-push:
   # the push gate runs these, codegen first and one checker at a time
   exclude_tags:
