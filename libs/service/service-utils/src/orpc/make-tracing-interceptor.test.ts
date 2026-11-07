@@ -1,14 +1,14 @@
-import { expect, onTestFinished, test } from 'bun:test';
-import { SpanStatusCode, trace } from '@opentelemetry/api';
-import {
-  InMemorySpanExporter,
-  NodeTracerProvider,
-  SimpleSpanProcessor,
-} from '@opentelemetry/sdk-trace-node';
+import { expect, test } from 'bun:test';
+import { SpanStatusCode } from '@opentelemetry/api';
 import type { StandardLinkClientInterceptorOptions } from '@orpc/client/standard';
 import type { StandardLazyResponse } from '@orpc/standard-server';
+import { createInMemoryTraces } from '@vers/test-utils/bun';
 import { withTraceContext } from '../trace/with-trace-context';
 import { makeTracingInterceptor } from './make-tracing-interceptor';
+
+function setupTest() {
+  return createInMemoryTraces();
+}
 
 test('it injects a traceparent built from the ambient trace context', async () => {
   const interceptor = makeTracingInterceptor();
@@ -66,17 +66,7 @@ test('it injects a traceparent built from a fresh trace when no ambient scope ex
 });
 
 test('it names the client span by the procedure path and marks it failed on a 5xx response', async () => {
-  const exporter = new InMemorySpanExporter();
-  const provider = new NodeTracerProvider({ spanProcessors: [new SimpleSpanProcessor(exporter)] });
-
-  provider.register();
-
-  onTestFinished(async () => {
-    trace.disable();
-
-    await provider.shutdown();
-  });
-
+  const ctx = setupTest();
   const interceptor = makeTracingInterceptor();
 
   const options: StandardLinkClientInterceptorOptions<Record<string, never>> & {
@@ -98,24 +88,14 @@ test('it names the client span by the procedure path and marks it failed on a 5x
 
   await interceptor(options);
 
-  const [span] = exporter.getFinishedSpans();
+  const [span] = ctx.exporter.getFinishedSpans();
 
   expect(span?.name).toBe('session.refreshTokens');
   expect(span?.status.code).toBe(SpanStatusCode.ERROR);
 });
 
 test('it marks the span failed and rethrows when the transport call throws', async () => {
-  const exporter = new InMemorySpanExporter();
-  const provider = new NodeTracerProvider({ spanProcessors: [new SimpleSpanProcessor(exporter)] });
-
-  provider.register();
-
-  onTestFinished(async () => {
-    trace.disable();
-
-    await provider.shutdown();
-  });
-
+  const ctx = setupTest();
   const interceptor = makeTracingInterceptor();
 
   const options: StandardLinkClientInterceptorOptions<Record<string, never>> & {
@@ -140,7 +120,7 @@ test('it marks the span failed and rethrows when the transport call throws', asy
 
   await expect(pending).toReject();
 
-  const [span] = exporter.getFinishedSpans();
+  const [span] = ctx.exporter.getFinishedSpans();
 
   expect(span?.status.code).toBe(SpanStatusCode.ERROR);
 });

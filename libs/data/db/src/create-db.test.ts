@@ -1,12 +1,7 @@
 import { expect, onTestFinished, setSystemTime, test } from 'bun:test';
 import { SpanKind, SpanStatusCode, trace } from '@opentelemetry/api';
-import {
-  InMemorySpanExporter,
-  NodeTracerProvider,
-  SimpleSpanProcessor,
-} from '@opentelemetry/sdk-trace-node';
 import { waitFor } from '@vers/test-utils';
-import { createInMemoryMetrics } from '@vers/test-utils/bun';
+import { createInMemoryMetrics, createInMemoryTraces } from '@vers/test-utils/bun';
 import { sql } from 'kysely';
 import invariant from 'tiny-invariant';
 import { z } from 'zod';
@@ -16,18 +11,7 @@ import { resolveTestDBTarget } from './test-support/resolve-test-db-target';
 import { startStallingProxy } from './test-support/start-stalling-proxy';
 
 function setupTest() {
-  const exporter = new InMemorySpanExporter();
-  const provider = new NodeTracerProvider({ spanProcessors: [new SimpleSpanProcessor(exporter)] });
-
-  provider.register();
-
-  onTestFinished(async () => {
-    trace.disable();
-
-    await provider.shutdown();
-  });
-
-  return { exporter };
+  return createInMemoryTraces();
 }
 
 test('it round-trips a row through camelCase-mapped columns', async () => {

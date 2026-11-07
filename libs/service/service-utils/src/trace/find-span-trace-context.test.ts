@@ -1,20 +1,12 @@
-import { expect, onTestFinished, test } from 'bun:test';
+import { expect, test } from 'bun:test';
 import { trace } from '@opentelemetry/api';
-import { NodeTracerProvider } from '@opentelemetry/sdk-trace-node';
+import { createInMemoryTraces } from '@vers/test-utils/bun';
 import { findSpanTraceContext } from './find-span-trace-context';
 
 function setupTest() {
-  const provider = new NodeTracerProvider();
+  createInMemoryTraces();
 
-  provider.register();
-
-  onTestFinished(async () => {
-    trace.disable();
-
-    await provider.shutdown();
-  });
-
-  return { tracer: provider.getTracer('test') };
+  return { tracer: trace.getTracer('test') };
 }
 
 test('it is undefined outside any active span', () => {
@@ -24,15 +16,15 @@ test('it is undefined outside any active span', () => {
 test('it derives the trace and span ids from the active span', () => {
   const ctx = setupTest();
 
-  ctx.tracer.startActiveSpan('test-span', (span) => {
-    const spanContext = span.spanContext();
-
-    expect(findSpanTraceContext()).toStrictEqual({
-      spanID: spanContext.spanId,
-      traceID: spanContext.traceId,
-    });
-
+  const observed = ctx.tracer.startActiveSpan('test-span', (span) => {
     span.end();
+
+    return { found: findSpanTraceContext(), spanContext: span.spanContext() };
+  });
+
+  expect(observed.found).toStrictEqual({
+    spanID: observed.spanContext.spanId,
+    traceID: observed.spanContext.traceId,
   });
 });
 

@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { configureSync, getConfig } from '@logtape/logtape';
 import { trace } from '@opentelemetry/api';
-import { NodeTracerProvider } from '@opentelemetry/sdk-trace-node';
+import { TracerProvider } from '@opentelemetry/sdk-trace';
 import { updateEnv } from './update-env';
 
 // This package's own preload calls `registerBunTestCleanup` once for the whole process, so its
@@ -33,6 +33,6 @@ test('it resets the previous test LogTape configuration via the registered globa
 test.each(['first', 'second'])(
   'it lets the %s of two tests register its own global OpenTelemetry tracer provider',
   () => {
-    expect(trace.setGlobalTracerProvider(new NodeTracerProvider())).toBeTrue();
+    expect(trace.setGlobalTracerProvider(new TracerProvider())).toBeTrue();
   },
 );

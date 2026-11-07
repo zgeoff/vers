@@ -1,26 +1,11 @@
-import { expect, onTestFinished, test } from 'bun:test';
-import { SpanStatusCode, trace } from '@opentelemetry/api';
-import {
-  InMemorySpanExporter,
-  NodeTracerProvider,
-  SimpleSpanProcessor,
-} from '@opentelemetry/sdk-trace-node';
+import { expect, test } from 'bun:test';
+import { SpanStatusCode } from '@opentelemetry/api';
 import { findTraceContext } from '@vers/service-utils';
+import { createInMemoryTraces } from '@vers/test-utils/bun';
 import { withRequestTrace } from './with-request-trace';
 
 function setupTest() {
-  const exporter = new InMemorySpanExporter();
-  const provider = new NodeTracerProvider({ spanProcessors: [new SimpleSpanProcessor(exporter)] });
-
-  provider.register();
-
-  onTestFinished(async () => {
-    trace.disable();
-
-    await provider.shutdown();
-  });
-
-  return { exporter };
+  return createInMemoryTraces();
 }
 
 test('it continues the trace named by a valid inbound traceparent', async () => {

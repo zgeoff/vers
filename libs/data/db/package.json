@@ -25,7 +25,6 @@
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@opentelemetry/sdk-trace-node": "catalog:",
     "@paralleldrive/cuid2": "catalog:",
     "@testcontainers/postgresql": "catalog:",
     "@types/bun": "catalog:",

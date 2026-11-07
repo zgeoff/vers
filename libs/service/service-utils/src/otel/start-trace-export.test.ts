@@ -1,5 +1,5 @@
 import { expect, onTestFinished, test } from 'bun:test';
-import { SpanStatusCode, trace } from '@opentelemetry/api';
+import { SpanStatusCode, context, propagation, trace } from '@opentelemetry/api';
 import { updateEnv } from '@vers/test-utils/bun';
 import { startTraceExport } from './start-trace-export';
 
@@ -85,12 +85,53 @@ test('it marks a span active across an await once registered', async () => {
     await server.stop();
   });
 
-  await trace.getTracer('test-service').startActiveSpan('test-span', async (span) => {
-    await Promise.resolve();
+  const observed = await trace
+    .getTracer('test-service')
+    .startActiveSpan('test-span', async (span) => {
+      await Promise.resolve();
 
-    expect(trace.getActiveSpan()).toBe(span);
+      const active = trace.getActiveSpan();
 
-    span.setStatus({ code: SpanStatusCode.OK });
+      span.setStatus({ code: SpanStatusCode.OK });
+      span.end();
+
+      return { active, span };
+    });
+
+  expect(observed.active).toBe(observed.span);
+});
+
+test('it injects a traceparent and the baggage for the active context once registered', () => {
+  const server = Bun.serve({ port: 0, routes: { '/*': Response.json({}) } });
+
+  updateEnv('OTEL_EXPORTER_OTLP_ENDPOINT', `http://127.0.0.1:${server.port}`);
+
+  const traceExport = startTraceExport({ serviceName: 'test-service' });
+
+  onTestFinished(async () => {
+    await traceExport.stop();
+
+    trace.disable();
+
+    await server.stop();
+  });
+
+  const carrier: Record<string, string> = {};
+
+  const spanContext = trace.getTracer('test-service').startActiveSpan('test-span', (span) => {
+    const withBaggage = propagation.setBaggage(
+      context.active(),
+      propagation.createBaggage({ tenant: { value: 'north-shelf' } }),
+    );
+
+    propagation.inject(withBaggage, carrier);
     span.end();
+
+    return span.spanContext();
+  });
+
+  expect(carrier).toStrictEqual({
+    baggage: 'tenant=north-shelf',
+    traceparent: `00-${spanContext.traceId}-${spanContext.spanId}-01`,
   });
 });

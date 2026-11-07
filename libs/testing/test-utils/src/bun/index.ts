@@ -1,5 +1,6 @@
 export { createInMemoryLogs } from './create-in-memory-logs';
 export { createInMemoryMetrics } from './create-in-memory-metrics';
+export { createInMemoryTraces } from './create-in-memory-traces';
 export { registerBunTestCleanup } from './register-bun-test-cleanup';
 export { registerHappyDOM } from './register-happy-dom';
 export { registerMSWLifecycle } from './register-msw-lifecycle';

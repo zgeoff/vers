@@ -75,5 +75,5 @@ test('it adopts a click that landed on the native input before hydration', async
     );
   });
 
-  expect(screen.getByLabelText('Remember me')).not.toBeChecked();
+  expect(container.querySelector('input')?.checked).toBe(false);
 });
