@@ -10,6 +10,8 @@ function setupTest() {
   return createInMemoryTraces();
 }
 
+// this test and the next run with no tracer provider: a registered one opens a client span, whose
+// own IDs then replace the ambient ones in the header
 test('it injects a traceparent built from the ambient trace context', async () => {
   const interceptor = makeTracingInterceptor();
 
