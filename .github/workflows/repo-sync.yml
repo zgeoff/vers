@@ -49,7 +49,7 @@ jobs:
       skip: issue-templates, pr-template, editorconfig, memory-cap
       include:
         skill-testing, hook-start, skill-docs-writing, skill-code-style, skill-skill-writing,
-        workflow-audit-fix, skill-ci-design
+        workflow-audit-fix, skill-ci-design, knip-runner
     secrets:
       REPO_SYNC_APP_CLIENT_ID: ${{ secrets.REPO_SYNC_APP_CLIENT_ID }}
       REPO_SYNC_APP_PRIVATE_KEY: ${{ secrets.REPO_SYNC_APP_PRIVATE_KEY }}
