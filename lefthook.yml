@@ -1,11 +1,28 @@
 # Git hooks. pre-commit fixes and codegens staged files only (fast); pre-push
 # checks what the branch changes, plus the whole-tree gates that fit a small
 # host: format check and typecheck. CI runs every whole-tree check: type-aware
-# lint, dead code, and the full test suite.
+# lint, dead code, and the full test suite. lefthook extends the chex
+# baseline, and leaves out each baseline job that the push gate below runs
+# with vers's own memory limits.
+
+extends:
+  - node_modules/@zgeoff/chex/lefthook.yml
 
 pre-commit:
   piped: true
+  # the push gate typechecks with one checker; the baseline's whole-tree
+  # typecheck here would run the default checkers
+  exclude_tags:
+    - chex-typecheck
   jobs:
+    - name: chex-baseline
+      files: echo package.json
+      run: |
+        if [ ! -f node_modules/@zgeoff/chex/lefthook.yml ]; then
+          echo "chex-baseline: node_modules/@zgeoff/chex/lefthook.yml is missing, so lefthook runs none of the chex baseline's jobs; run bun install, then try again"
+          exit 1
+        fi
+        # {files}
     - name: oxlint --fix
       glob: '*.{js,mjs,cjs,jsx,ts,mts,cts,tsx}'
       run: node_modules/.bin/oxlint --fix --no-error-on-unmatched-pattern {staged_files}
@@ -59,7 +76,25 @@ commit-msg:
 # refs skips the gate, since lefthook's own push-file detection diffs HEAD
 # against its upstream and would otherwise run the whole gate on a deletion
 pre-push:
+  # the push gate runs these, codegen first and one checker at a time
+  exclude_tags:
+    - chex-format:check
+    - chex-lint
+    - chex-docs
+    - chex-typecheck
+    - chex-test
+    # chex 0.2.1 reads a nested override key, parent@version>child, as one
+    # package name, so it flags each nested override in package.json as unused
+    - chex-dependency-gates
   jobs:
+    - name: chex-baseline
+      files: echo package.json
+      run: |
+        if [ ! -f node_modules/@zgeoff/chex/lefthook.yml ]; then
+          echo "chex-baseline: node_modules/@zgeoff/chex/lefthook.yml is missing, so lefthook runs none of the chex baseline's jobs; run bun install, then try again"
+          exit 1
+        fi
+        # {files}
     - name: push-gate
       use_stdin: true
       run: |
