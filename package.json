@@ -103,7 +103,7 @@
       "@zgeoff/bun-test-extended": "0.2.3",
       "@zgeoff/chex": "0.1.8",
       "@zgeoff/dbhub": "0.23.4",
-      "@zgeoff/diet": "0.2.1",
+      "@zgeoff/diet": "0.2.2",
       "@zgeoff/format-codemod": "0.3.5",
       "@zgeoff/mcp-remote": "0.1.38",
       "@zgeoff/oxlint-config": "0.8.1",
