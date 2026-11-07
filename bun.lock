@@ -1495,7 +1495,7 @@
     "@zgeoff/format-codemod": "0.3.5",
     "@zgeoff/mcp-remote": "0.1.38",
     "@zgeoff/oxlint-config": "0.8.1",
-    "@zgeoff/std": "0.4.2",
+    "@zgeoff/std": "0.4.3",
     "@zgeoff/umami-mcp": "0.1.1",
     "autoprefixer": "10.6.2",
     "babel-plugin-react-compiler": "1.0.0",
@@ -3087,7 +3087,7 @@
 
     "@zgeoff/oxlint-config": ["@zgeoff/oxlint-config@0.8.1", "", { "dependencies": { "@stylistic/eslint-plugin": "5.10.0" }, "peerDependencies": { "oxlint": ">=1.78.0" } }, "sha512-hSQHWbEMuiUFLTJdog0JA6RaiTXg30fUttxAMsZMFiwvkXxbsWufOqH0R3T4ku2w031s/AkhWZ5ZKPqsSce/bQ=="],
 
-    "@zgeoff/std": ["@zgeoff/std@0.4.2", "", {}, "sha512-GZnnOkrYHe6p071BWYe7XIq5klqhvVb4j/JWOrrUTSj76uLA/ZnzlqDKIq16LblMcuRF9tjfvKvGK8sLRN8fMg=="],
+    "@zgeoff/std": ["@zgeoff/std@0.4.3", "", {}, "sha512-wCaqH8+vrkR+6R/grWUUDraryyFY1NW0Gjbhg85bXX38k9Q+N3aHFu+Yc+EjzZ/Sp9n5aJnCvZqbO5F2mUjWAg=="],
 
     "@zgeoff/umami-mcp": ["@zgeoff/umami-mcp@0.1.1", "", { "dependencies": { "@modelcontextprotocol/sdk": "1.29.0", "zod": "4.6.7" }, "bin": { "umami-mcp": "dist/index.js" } }, "sha512-j8/inaa2PdxEdNMtSvaCuM7+i65lHFV7SIKYj/uhSjXEzzM7WhE/vxiVmj0H53K6xjoN3LNAXKHTez1wZquHSA=="],
 
@@ -5124,6 +5124,8 @@
     "@vers/infra/@pulumi/neon": ["@pulumi/neon@file:infra/sdks/neon", { "dependencies": { "@pulumi/pulumi": "^3.238.0", "@types/node": "^24.0.0", "typescript": "^4.7.0" }, "hasInstallScript": true }],
 
     "@vitejs/plugin-rsc/srvx": ["srvx@1.0.5", "", { "bin": { "srvx": "./bin/srvx.mjs" } }, "sha512-KvSKRpgPG/oaq3cyT614OQ2bAa7DynuGamivCZeoZzIUULOdbQz6wUtnnVuC4+DCx2Zglzo8v5gBYmWIWYhDxA=="],
+
+    "@zgeoff/chex/@zgeoff/std": ["@zgeoff/std@0.4.2", "", {}, "sha512-GZnnOkrYHe6p071BWYe7XIq5klqhvVb4j/JWOrrUTSj76uLA/ZnzlqDKIq16LblMcuRF9tjfvKvGK8sLRN8fMg=="],
 
     "@zgeoff/dbhub/dotenv": ["dotenv@16.5.0", "", {}, "sha512-m/C+AwOAr9/W1UOIZUo232ejMNnJAJtYQjUbHoNTBNTJSvqzzDh7vnrei3o3r3m9blf6ZoDkvcw0VmozNRFJxg=="],
 

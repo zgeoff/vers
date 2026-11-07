@@ -107,7 +107,7 @@
       "@zgeoff/format-codemod": "0.3.5",
       "@zgeoff/mcp-remote": "0.1.38",
       "@zgeoff/oxlint-config": "0.8.1",
-      "@zgeoff/std": "0.4.2",
+      "@zgeoff/std": "0.4.3",
       "@zgeoff/umami-mcp": "0.1.1",
       "autoprefixer": "10.6.2",
       "babel-plugin-react-compiler": "1.0.0",
