@@ -173,7 +173,7 @@
     "build": "turbo run build",
     "audit": "bun audit --ignore=GHSA-3g3m-2fjr-6pw4 --ignore=GHSA-g3hv-75wg-m249 --ignore=GHSA-gcqx-w48m-w2h4 --ignore=GHSA-mrhx-c7xc-m3w5",
     "boundaries": "turbo boundaries",
-    "deadcode": "knip",
+    "deadcode": "bash scripts/run-knip.sh",
     "deps:check": "bun scripts/src/bin/check-dependency-gates.ts",
     "lint": "turbo run codegen typegen && oxlint --type-aware --type-check --report-unused-disable-directives-severity error",
     "lint:fix": "turbo run codegen typegen && oxlint --type-aware --type-check --report-unused-disable-directives-severity error --fix",
