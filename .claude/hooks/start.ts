@@ -376,11 +376,7 @@ function isReadOnlyCommand(command: string): boolean {
     return false;
   }
 
-  const [program, ...rest] = command.split(' ');
-
-  if (program === undefined) {
-    return false;
-  }
+  const [program = '', ...rest] = command.split(' ');
 
   if (READ_ONLY_PROGRAMS.has(program)) {
     return true;
