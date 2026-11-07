@@ -86,7 +86,8 @@ pre-push:
     - chex-typecheck
     - chex-test
     # chex 0.2.1 reads a nested override key, parent@version>child, as one
-    # package name, so it flags each nested override in package.json as unused
+    # package name, so it flags each nested override in package.json as unused.
+    # A stopgap until GEO-2444 fixes chex: drop this entry then.
     - chex-dependency-gates
   jobs:
     - name: chex-baseline
