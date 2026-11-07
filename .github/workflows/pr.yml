@@ -93,14 +93,9 @@ jobs:
       - name: Install Dependencies
         run: bun install --frozen-lockfile
 
-      - name: Doc links
-        run: bash .claude/skills/docs-writing/scripts/check-links.sh
-
-      # Some READMEs and docs/ pages fail the shared length or prose rules, so this step reports
-      # its findings without failing the run.
-      - name: Doc length and prose
-        continue-on-error: true
-        run: bash .claude/skills/docs-writing/scripts/check-length.sh
+      # The docs checks that check:docs names, from chex
+      - name: Docs
+        run: bun run --silent check:docs
 
       - name: Audit
         run: bun run audit

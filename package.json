@@ -98,6 +98,7 @@
       "@vitejs/plugin-rsc": "0.5.38",
       "@zgeoff/bugsink-mcp": "0.2.0",
       "@zgeoff/bun-test-extended": "0.2.3",
+      "@zgeoff/chex": "0.1.8",
       "@zgeoff/diet": "0.2.1",
       "@zgeoff/dbhub": "0.23.4",
       "@zgeoff/format-codemod": "0.3.5",
@@ -227,7 +228,8 @@
     "e2e:app-web": "turbo run e2e --filter=@vers/web-e2e",
     "serve:app-web": "dotenvx run -f apps/web/.env.development.local -- node ./apps/web/server.mjs",
     "---UTILITY": "",
-    "prepare": "command -v git > /dev/null 2>&1 && lefthook install --force || true"
+    "prepare": "command -v git > /dev/null 2>&1 && lefthook install --force || true",
+    "check:docs": "chex prose length links skill"
   },
   "devDependencies": {
     "@commitlint/cli": "catalog:",
@@ -240,6 +242,7 @@
     "@vers/scripts": "workspace:*",
     "@zgeoff/bugsink-mcp": "catalog:",
     "@zgeoff/bun-test-extended": "catalog:",
+    "@zgeoff/chex": "catalog:",
     "@zgeoff/diet": "catalog:",
     "@zgeoff/format-codemod": "catalog:",
     "@zgeoff/mcp-remote": "catalog:",
