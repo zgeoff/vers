@@ -2026,14 +2026,12 @@ test('it mints the offline successor of a just-cleared node at admission, deferr
 
   // admission appended the clear but recorded no first-clear grant — that waits on replay, so the
   // cleared target a reachability check would read still excludes the origin
-  const grant = await ctx.db
-    .selectFrom('avatarGrants')
-    .select('key')
-    .where('avatarId', '=', avatar.id)
-    .where('kind', '=', 'first_clear')
-    .executeTakeFirst();
+  const revealed = await client.getRevealedNodes({
+    avatarID: avatar.id,
+    viewport: { maxCX: 0, maxCY: 0, minCX: 0, minCY: 0 },
+  });
 
-  expect(grant).toBeUndefined();
+  expect(revealed.completedNodeIDs).toBeEmpty();
 
   // the clear's own continuation auto-opened a fresh attempt at A, occupying the avatar's single
   // active-run slot; the device stops it before B's activity start can mint into the freed slot

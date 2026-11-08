@@ -10,6 +10,8 @@ import { setSentryHandleForTesting, startErrorReporting } from '@vers/service-ru
 import { createTestDB, resolveTestServiceKeyPair } from '@vers/service-test-utils/bun';
 import { waitFor } from '@vers/test-utils';
 import invariant from 'tiny-invariant';
+import { readChainAnchors } from '../queue/read-chain-anchors';
+import { readReplayProgress } from '../queue/read-replay-progress';
 import { createReplayCache } from '../replay/create-replay-cache';
 import { createHonestActivityFixture } from '../test-utils/create-honest-activity-fixture';
 import { drainReplayQueue } from './drain-replay-queue';
@@ -65,13 +67,29 @@ test('it drains a seeded backlog to empty and returns the count', async () => {
 
   expect(drained).toBe(2);
 
-  const rows = await ctx.db
-    .selectFrom('activities')
-    .select(['appendedHead', 'verifiedHead'])
-    .where('id', 'in', [first.activity.id, second.activity.id])
-    .execute();
+  const firstProgress = await readReplayProgress(ctx.db, first.activity.id);
+  const secondProgress = await readReplayProgress(ctx.db, second.activity.id);
 
-  expect(rows.every((row) => row.verifiedHead === row.appendedHead)).toBeTrue();
+  expect(firstProgress).toStrictEqual({
+    appendedHead: first.activity.appendedHead,
+    replayAttempts: 0,
+    replayBackoffs: 0,
+    replayBackoffUntil: null,
+    settledXP: expect.any(Number),
+    verifiedAt: expect.toBeValidDate(),
+    verifiedHead: first.activity.appendedHead,
+  });
+
+  expect(secondProgress).toStrictEqual({
+    appendedHead: second.activity.appendedHead,
+    replayAttempts: 0,
+    replayBackoffs: 0,
+    replayBackoffUntil: null,
+    settledXP: expect.any(Number),
+    verifiedAt: expect.toBeValidDate(),
+    verifiedHead: second.activity.appendedHead,
+  });
+
   expect(drainReplayQueue(ctx.deps, 'poke')).resolves.toBe(0);
 });
 
@@ -93,13 +111,17 @@ test('it settles an append that a writer older than the replay flag left unflagg
 
   expect(drained).toBe(1);
 
-  const settled = await ctx.db
-    .selectFrom('activities')
-    .select(['appendedHead', 'verifiedHead'])
-    .where('id', '=', fixture.activity.id)
-    .executeTakeFirstOrThrow();
+  const settled = await readReplayProgress(ctx.db, fixture.activity.id);
 
-  expect(settled.verifiedHead).toBe(settled.appendedHead);
+  expect(settled).toStrictEqual({
+    appendedHead: fixture.activity.appendedHead,
+    replayAttempts: 0,
+    replayBackoffs: 0,
+    replayBackoffUntil: null,
+    settledXP: expect.any(Number),
+    verifiedAt: expect.toBeValidDate(),
+    verifiedHead: fixture.activity.appendedHead,
+  });
 });
 
 test('it settles a stream split across two drains to its terminal total and chain anchor', async () => {
@@ -167,27 +189,31 @@ test('it settles a stream split across two drains to its terminal total and chai
 
   invariant(terminal !== undefined, 'the fixture always ends on a checkpoint');
 
-  const updated = await ctx.db
-    .selectFrom('activities')
-    .select(['appendedHead', 'settledXp', 'verifiedHead'])
-    .where('id', '=', fixture.activity.id)
-    .executeTakeFirstOrThrow();
+  const updated = await readReplayProgress(ctx.db, fixture.activity.id);
 
-  expect(updated.verifiedHead).toBe(updated.appendedHead);
-  expect(updated.settledXp).toBe(terminal.rewards.xp);
+  expect(updated).toStrictEqual({
+    appendedHead: fixture.activity.appendedHead,
+    replayAttempts: 0,
+    replayBackoffs: 0,
+    replayBackoffUntil: null,
+    settledXP: terminal.rewards.xp,
+    verifiedAt: expect.toBeValidDate(),
+    verifiedHead: fixture.activity.appendedHead,
+  });
 
   const terminalCheckpoint = fixture.checkpoints.at(-1);
 
   invariant(terminalCheckpoint !== undefined, 'the fixture always stores a terminal checkpoint');
 
-  const chain = await ctx.db
-    .selectFrom('activityChains')
-    .select(['verifiedChainIndex', 'verifiedNextSeed'])
-    .where('avatarId', '=', fixture.activity.avatarId)
-    .where('scopeId', '=', fixture.activity.scopeId)
-    .executeTakeFirstOrThrow();
+  const chain = await readChainAnchors(ctx.db, {
+    avatarID: fixture.activity.avatarId,
+    scopeID: fixture.activity.scopeId,
+    scopeType: fixture.activity.scopeType,
+  });
 
   expect(chain).toStrictEqual({
+    appendedChainIndex: expect.any(Number),
+    appendedNextSeed: expect.any(String),
     verifiedChainIndex: terminalCheckpoint.payload.chainIndex,
     verifiedNextSeed: terminalCheckpoint.payload.nextSeed,
   });
@@ -260,27 +286,31 @@ test('it verifies a second drain from a fresh cache, reaching the same terminal 
 
   invariant(terminal !== undefined, 'the fixture always ends on a checkpoint');
 
-  const updated = await ctx.db
-    .selectFrom('activities')
-    .select(['appendedHead', 'settledXp', 'verifiedHead'])
-    .where('id', '=', fixture.activity.id)
-    .executeTakeFirstOrThrow();
+  const updated = await readReplayProgress(ctx.db, fixture.activity.id);
 
-  expect(updated.verifiedHead).toBe(updated.appendedHead);
-  expect(updated.settledXp).toBe(terminal.rewards.xp);
+  expect(updated).toStrictEqual({
+    appendedHead: fixture.activity.appendedHead,
+    replayAttempts: 0,
+    replayBackoffs: 0,
+    replayBackoffUntil: null,
+    settledXP: terminal.rewards.xp,
+    verifiedAt: expect.toBeValidDate(),
+    verifiedHead: fixture.activity.appendedHead,
+  });
 
   const terminalCheckpoint = fixture.checkpoints.at(-1);
 
   invariant(terminalCheckpoint !== undefined, 'the fixture always stores a terminal checkpoint');
 
-  const chain = await ctx.db
-    .selectFrom('activityChains')
-    .select(['verifiedChainIndex', 'verifiedNextSeed'])
-    .where('avatarId', '=', fixture.activity.avatarId)
-    .where('scopeId', '=', fixture.activity.scopeId)
-    .executeTakeFirstOrThrow();
+  const chain = await readChainAnchors(ctx.db, {
+    avatarID: fixture.activity.avatarId,
+    scopeID: fixture.activity.scopeId,
+    scopeType: fixture.activity.scopeType,
+  });
 
   expect(chain).toStrictEqual({
+    appendedChainIndex: expect.any(Number),
+    appendedNextSeed: expect.any(String),
     verifiedChainIndex: terminalCheckpoint.payload.chainIndex,
     verifiedNextSeed: terminalCheckpoint.payload.nextSeed,
   });

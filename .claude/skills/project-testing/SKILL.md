@@ -1,10 +1,10 @@
 ---
 name: project-testing
 description:
-  "vers's test facts and its own test topics beside the shared testing skill: the run mode, the
-  real-database service suites, idle-core entities, the web app's router, request-context and form
-  helpers, world-map scenes, and the Playwright timeouts. Load it beside testing before you design,
-  write or review a vers test."
+  "vers's test facts and its own test topics beside the shared testing skill: the run mode, the read
+  functions a test checks stored rows through, the real-database service suites, idle-core entities,
+  the web app's router, request-context and form helpers, world-map scenes, and the Playwright
+  timeouts. Load it beside testing before you design, write or review a vers test."
 metadata:
   kind: rule-set
 ---
@@ -33,13 +33,46 @@ metadata:
   [`removeOrphanedClones`](../../../libs/data/db/src/test-support/remove-orphaned-clones.ts). Each
   worker's test preload runs it at start.
 
+## Stored state
+
+Read a stored row through the module that creates it, by the
+[Stored state](../testing/SKILL.md#stored-state) rule in testing. Several vers modules write
+`activities`, `activityChains`, `avatars`, `avatarItems` and `avatarGrants`, so pick the read
+functions for those tables by the package your test is in:
+
+- In `@vers/service-activity`, read `activities` and `activityChains` directly, `status` included.
+  Its `src/handlers/` creates those rows and picks each status move, so its tests are that module's
+  own tests.
+- In `@vers/service-activity`, read `avatars` directly too. The replay service depends on
+  `@vers/service-activity`, so an import of the replay read functions makes a cycle.
+- In every other package, read the `status` and `parkedFrom` of an `activities` row with
+  [`readActivityStatus`](../../../libs/data/db/src/read-activity-status.ts) from `@vers/db`. Every
+  status move runs through the transition writer beside it, whichever service picks the move.
+- In `@vers/service-replay`, read the other `activities` columns, and `activityChains`, with the
+  `read-*.ts` files in [`src/queue/`](../../../services/replay/src/queue/).
+- In `@vers/service-replay`, read `avatars`, `avatarItems` and `avatarGrants` with the `read-*.ts`
+  files in [`src/apply/`](../../../services/replay/src/apply/).
+- In a `lib`, such as `@vers/scripts`, read the other `activities` columns through a read function
+  in [`libs/data/db/src/`](../../../libs/data/db/src/). Boundaries bar a `lib` from importing a
+  service. Read a column that the lib's own code writes, such as `archivedAt` in `@vers/scripts`,
+  directly in the tests of that code.
+- In any other service, read the other columns through the module that creates the rows.
+
+When the folder you read through has no read function for the column you check, add one to it, with
+a test.
+
 ## Real-database services
 
 - Copy the test files of [`services/avatar`](../../../services/avatar/) for a new service: its
   service test, its router test and its access tests.
 - Name the service test `create-<service>-service.test.ts`. In it, drive one write through an
-  injected database and read the row back through the same database. Also create the service with no
-  database injected, so it reads `env.DATABASE_URL`, and dispose of each service you create.
+  injected database, and read the row back from that database through a read function in the
+  service's `src/handlers/`. When the write's result already holds the row's fields, check the
+  result instead, as the [Stored state](../testing/SKILL.md#stored-state) rule in testing allows.
+  Also create the service with no database injected, so it reads `env.DATABASE_URL`, and dispose of
+  each service you create.
+- Check that a stop destroys the database the service built with `spyOn(db, 'destroy')`. A query
+  after the stop proves nothing. Kysely opens the pool again for it.
 - Put the router test beside the module that builds the router, such as
   `create-avatar-router.test.ts`. Run every case from
   [`collectConformanceCases`](../../../libs/testing/test-utils/src/collect-conformance-cases.ts)

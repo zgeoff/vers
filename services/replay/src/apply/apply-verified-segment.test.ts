@@ -1,5 +1,7 @@
 import { expect, test } from 'bun:test';
 import { createTestDB } from '@vers/service-test-utils/bun';
+import { readChainAnchors } from '../queue/read-chain-anchors';
+import { readReplayProgress } from '../queue/read-replay-progress';
 import { createActivityRow } from '../test-utils/create-activity-row';
 import { createAvatarRow } from '../test-utils/create-avatar-row';
 import { createChainRow } from '../test-utils/create-chain-row';
@@ -52,15 +54,17 @@ test('it applies a duplicate segment exactly once', async () => {
 
   expect(settled.xp).toBe(150);
 
-  const cursor = await ctx.db
-    .selectFrom('activities')
-    .select(['settledXp', 'verifiedAt', 'verifiedHead'])
-    .where('id', '=', activity.id)
-    .executeTakeFirstOrThrow();
+  const cursor = await readReplayProgress(ctx.db, activity.id);
 
-  expect(cursor.verifiedHead).toBe(5);
-  expect(cursor.settledXp).toBe(50);
-  expect(cursor.verifiedAt).toBeValidDate();
+  expect(cursor).toStrictEqual({
+    appendedHead: activity.appendedHead,
+    replayAttempts: 0,
+    replayBackoffs: 0,
+    replayBackoffUntil: null,
+    settledXP: 50,
+    verifiedAt: expect.toBeValidDate(),
+    verifiedHead: 5,
+  });
 });
 
 test('it grants a one-shot reward exactly once across re-farms', async () => {
@@ -147,14 +151,15 @@ test('it advances the chain anchor forward only', async () => {
 
   expect(stale).toStrictEqual({ applied: true, granted: [] });
 
-  const afterStale = await ctx.db
-    .selectFrom('activityChains')
-    .select(['verifiedChainIndex', 'verifiedNextSeed'])
-    .where('avatarId', '=', avatar.id)
-    .where('scopeId', '=', chain.scopeId)
-    .executeTakeFirstOrThrow();
+  const afterStale = await readChainAnchors(ctx.db, {
+    avatarID: avatar.id,
+    scopeID: chain.scopeId,
+    scopeType: chain.scopeType,
+  });
 
   expect(afterStale).toStrictEqual({
+    appendedChainIndex: chain.appendedChainIndex,
+    appendedNextSeed: chain.appendedNextSeed,
     verifiedChainIndex: 10,
     verifiedNextSeed: 'aa'.repeat(16),
   });
@@ -173,14 +178,15 @@ test('it advances the chain anchor forward only', async () => {
     verifiedHead: 2,
   });
 
-  const afterAdvance = await ctx.db
-    .selectFrom('activityChains')
-    .select(['verifiedChainIndex', 'verifiedNextSeed'])
-    .where('avatarId', '=', avatar.id)
-    .where('scopeId', '=', chain.scopeId)
-    .executeTakeFirstOrThrow();
+  const afterAdvance = await readChainAnchors(ctx.db, {
+    avatarID: avatar.id,
+    scopeID: chain.scopeId,
+    scopeType: chain.scopeType,
+  });
 
   expect(afterAdvance).toStrictEqual({
+    appendedChainIndex: chain.appendedChainIndex,
+    appendedNextSeed: chain.appendedNextSeed,
     verifiedChainIndex: 12,
     verifiedNextSeed: 'cc'.repeat(16),
   });
@@ -231,13 +237,17 @@ test('it resets the attempt counter and clears the backoff on a successful apply
     verifiedHead: 1,
   });
 
-  const row = await ctx.db
-    .selectFrom('activities')
-    .select(['replayAttempts', 'replayBackoffUntil', 'replayBackoffs'])
-    .where('id', '=', activity.id)
-    .executeTakeFirstOrThrow();
+  const row = await readReplayProgress(ctx.db, activity.id);
 
-  expect(row).toStrictEqual({ replayAttempts: 0, replayBackoffUntil: null, replayBackoffs: 0 });
+  expect(row).toStrictEqual({
+    appendedHead: activity.appendedHead,
+    replayAttempts: 0,
+    replayBackoffs: 0,
+    replayBackoffUntil: null,
+    settledXP: expect.any(Number),
+    verifiedAt: expect.toBeValidDate(),
+    verifiedHead: expect.any(Number),
+  });
 });
 
 test('it mints reward items alongside the verified anchor', async () => {

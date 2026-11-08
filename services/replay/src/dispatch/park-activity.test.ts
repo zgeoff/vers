@@ -1,4 +1,5 @@
 import { expect, test } from 'bun:test';
+import { readActivityStatus } from '@vers/db';
 import { createTestDB } from '@vers/service-test-utils/bun';
 import { createActivityRow } from '../test-utils/create-activity-row';
 import { parkActivity } from './park-activity';
@@ -44,11 +45,7 @@ test('it leaves a quarantined activity untouched', async () => {
 
   expect(parked).toBeUndefined();
 
-  const row = await ctx.db
-    .selectFrom('activities')
-    .select(['parkedFrom', 'status'])
-    .where('id', '=', activity.id)
-    .executeTakeFirstOrThrow();
+  const row = await readActivityStatus(ctx.db, activity.id);
 
   expect(row).toStrictEqual({ parkedFrom: null, status: 'quarantined' });
 });
@@ -61,11 +58,7 @@ test('it leaves a rejected activity untouched', async () => {
 
   expect(parked).toBeUndefined();
 
-  const row = await ctx.db
-    .selectFrom('activities')
-    .select(['parkedFrom', 'status'])
-    .where('id', '=', activity.id)
-    .executeTakeFirstOrThrow();
+  const row = await readActivityStatus(ctx.db, activity.id);
 
   expect(row).toStrictEqual({ parkedFrom: null, status: 'rejected' });
 });
@@ -78,11 +71,7 @@ test('it keeps the first parked-from status when the activity is already parked'
 
   expect(parked).toBeUndefined();
 
-  const row = await ctx.db
-    .selectFrom('activities')
-    .select(['parkedFrom', 'status'])
-    .where('id', '=', activity.id)
-    .executeTakeFirstOrThrow();
+  const row = await readActivityStatus(ctx.db, activity.id);
 
   expect(row).toStrictEqual({ parkedFrom: 'stopped', status: 'parked' });
 });

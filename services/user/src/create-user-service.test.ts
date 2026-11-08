@@ -1,8 +1,9 @@
-import { expect, mock, onTestFinished, test } from 'bun:test';
+import { expect, mock, onTestFinished, spyOn, test } from 'bun:test';
 import type { UserContract } from '@vers/contract-user';
 import { createAnonymousViewer, createTestDB } from '@vers/service-test-utils/bun';
 import { buildRPCTestClient, waitFor } from '@vers/test-utils';
 import { createUserService } from './create-user-service';
+import { readUser } from './handlers/read-user';
 
 test('it wires an injected db into the router instead of building one from env', async () => {
   await using db = await createTestDB();
@@ -19,9 +20,17 @@ test('it wires an injected db into the router instead of building one from env',
     username: 'wired_user',
   });
 
-  const rows = await db.db.selectFrom('users').selectAll().execute();
+  const user = await readUser(db.db, { input: { email: 'wired@example.com' } });
 
-  expect(rows).toHaveLength(1);
+  expect(user).toStrictEqual({
+    createdAt: expect.toBeValidDate(),
+    email: 'wired@example.com',
+    id: expect.any(String),
+    name: 'Wired User',
+    seed: expect.any(Number),
+    updatedAt: expect.toBeValidDate(),
+    username: 'wired_user',
+  });
 });
 
 test('it boots from env.DATABASE_URL when no db is injected', async () => {
@@ -39,6 +48,8 @@ test('it stops serving, destroys the db it built and exits 0 on SIGTERM', async 
 
   onTestFinished(() => service.stop());
 
+  const destroy = spyOn(service.resources.db, 'destroy');
+
   service.serve({ exit, port: 0 });
   process.emit('SIGTERM');
 
@@ -46,7 +57,7 @@ test('it stops serving, destroys the db it built and exits 0 on SIGTERM', async 
     expect(exit).toHaveBeenCalledExactlyOnceWith(0);
   });
 
-  expect(service.resources.db.selectFrom('users').select('id').execute()).rejects.toThrow();
+  expect(destroy).toHaveBeenCalledOnce();
 });
 
 test('it accepts a call from app-web', async () => {

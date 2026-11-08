@@ -1,5 +1,6 @@
 import { expect, test } from 'bun:test';
 import type { DB } from '@vers/db';
+import { readActivityStatus } from '@vers/db';
 import { createTestDB, createTestUser } from '@vers/service-test-utils/bun';
 import { createSimVersionRow } from '@vers/sim-registry/test-utils';
 import type { Kysely } from 'kysely';
@@ -48,11 +49,7 @@ test('it reactivates a parked activity whose stamped sim version is now active',
 
   expect(reactivated).toStrictEqual([{ id: activity.id }]);
 
-  const row = await ctx.db
-    .selectFrom('activities')
-    .select(['parkedFrom', 'status'])
-    .where('id', '=', activity.id)
-    .executeTakeFirstOrThrow();
+  const row = await readActivityStatus(ctx.db, activity.id);
 
   expect(row).toStrictEqual({ parkedFrom: null, status: 'active' });
 });
@@ -95,11 +92,7 @@ test('it returns a parked activity to the status it parked from', async () => {
 
   expect(reactivated).toStrictEqual([{ id: activity.id }]);
 
-  const row = await ctx.db
-    .selectFrom('activities')
-    .select(['parkedFrom', 'status'])
-    .where('id', '=', activity.id)
-    .executeTakeFirstOrThrow();
+  const row = await readActivityStatus(ctx.db, activity.id);
 
   expect(row).toStrictEqual({ parkedFrom: null, status: 'stopped' });
 });
@@ -141,13 +134,9 @@ test('it leaves a parked activity untouched when no sim version is active for it
 
   expect(reactivated).toBeEmpty();
 
-  const row = await ctx.db
-    .selectFrom('activities')
-    .select('status')
-    .where('id', '=', activity.id)
-    .executeTakeFirstOrThrow();
+  const row = await readActivityStatus(ctx.db, activity.id);
 
-  expect(row.status).toBe('parked');
+  expect(row).toStrictEqual({ parkedFrom: null, status: 'parked' });
 });
 
 test('it never touches an already-active activity, even when its sim version is active', async () => {

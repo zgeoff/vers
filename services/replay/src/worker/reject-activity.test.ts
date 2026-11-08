@@ -1,6 +1,7 @@
 import { expect, test } from 'bun:test';
-import { toJSON } from '@vers/db';
+import { readActivityStatus, toJSON } from '@vers/db';
 import { createTestDB } from '@vers/service-test-utils/bun';
+import { readChainAnchors } from '../queue/read-chain-anchors';
 import { createActivityRow } from '../test-utils/create-activity-row';
 import { createChainRow } from '../test-utils/create-chain-row';
 import { rejectActivity } from './reject-activity';
@@ -36,21 +37,22 @@ test('it rejects an active activity and rewinds the chain appended anchor to the
     scopeType: chain.scopeType,
   });
 
-  const updatedActivity = await ctx.db
-    .selectFrom('activities')
-    .select('status')
-    .where('id', '=', activity.id)
-    .executeTakeFirstOrThrow();
+  const updatedActivity = await readActivityStatus(ctx.db, activity.id);
 
-  const updatedChain = await ctx.db
-    .selectFrom('activityChains')
-    .select(['appendedChainIndex', 'appendedNextSeed'])
-    .where('avatarId', '=', chain.avatarId)
-    .where('scopeId', '=', chain.scopeId)
-    .executeTakeFirstOrThrow();
+  const updatedChain = await readChainAnchors(ctx.db, {
+    avatarID: chain.avatarId,
+    scopeID: chain.scopeId,
+    scopeType: chain.scopeType,
+  });
 
-  expect(updatedActivity.status).toBe('rejected');
-  expect(updatedChain).toStrictEqual({ appendedChainIndex: 3, appendedNextSeed: 'aa'.repeat(16) });
+  expect(updatedActivity).toStrictEqual({ parkedFrom: null, status: 'rejected' });
+
+  expect(updatedChain).toStrictEqual({
+    appendedChainIndex: 3,
+    appendedNextSeed: 'aa'.repeat(16),
+    verifiedChainIndex: 3,
+    verifiedNextSeed: 'aa'.repeat(16),
+  });
 });
 
 test('it rejects an activity already forward-exited to stopped', async () => {
@@ -72,13 +74,9 @@ test('it rejects an activity already forward-exited to stopped', async () => {
     scopeType: chain.scopeType,
   });
 
-  const updatedActivity = await ctx.db
-    .selectFrom('activities')
-    .select('status')
-    .where('id', '=', activity.id)
-    .executeTakeFirstOrThrow();
+  const updatedActivity = await readActivityStatus(ctx.db, activity.id);
 
-  expect(updatedActivity.status).toBe('rejected');
+  expect(updatedActivity).toStrictEqual({ parkedFrom: null, status: 'rejected' });
 });
 
 test('it voids an active successor rooted past the verified point', async () => {
@@ -112,13 +110,9 @@ test('it voids an active successor rooted past the verified point', async () => 
     scopeType: chain.scopeType,
   });
 
-  const updatedSuccessor = await ctx.db
-    .selectFrom('activities')
-    .select('status')
-    .where('id', '=', successor.id)
-    .executeTakeFirstOrThrow();
+  const updatedSuccessor = await readActivityStatus(ctx.db, successor.id);
 
-  expect(updatedSuccessor.status).toBe('rejected');
+  expect(updatedSuccessor).toStrictEqual({ parkedFrom: null, status: 'rejected' });
 });
 
 test('it voids a stopped successor rooted past the verified point', async () => {
@@ -152,13 +146,9 @@ test('it voids a stopped successor rooted past the verified point', async () => 
     scopeType: chain.scopeType,
   });
 
-  const updatedSuccessor = await ctx.db
-    .selectFrom('activities')
-    .select('status')
-    .where('id', '=', successor.id)
-    .executeTakeFirstOrThrow();
+  const updatedSuccessor = await readActivityStatus(ctx.db, successor.id);
 
-  expect(updatedSuccessor.status).toBe('rejected');
+  expect(updatedSuccessor).toStrictEqual({ parkedFrom: null, status: 'rejected' });
 });
 
 test('it voids a capped successor rooted past the verified point', async () => {
@@ -192,13 +182,9 @@ test('it voids a capped successor rooted past the verified point', async () => {
     scopeType: chain.scopeType,
   });
 
-  const updatedSuccessor = await ctx.db
-    .selectFrom('activities')
-    .select('status')
-    .where('id', '=', successor.id)
-    .executeTakeFirstOrThrow();
+  const updatedSuccessor = await readActivityStatus(ctx.db, successor.id);
 
-  expect(updatedSuccessor.status).toBe('rejected');
+  expect(updatedSuccessor).toStrictEqual({ parkedFrom: null, status: 'rejected' });
 });
 
 test('it writes nothing for a stale call whose target activity already changed status', async () => {
@@ -228,24 +214,21 @@ test('it writes nothing for a stale call whose target activity already changed s
 
   expect(result).toStrictEqual({ applied: false });
 
-  const updatedActivity = await ctx.db
-    .selectFrom('activities')
-    .select('status')
-    .where('id', '=', activity.id)
-    .executeTakeFirstOrThrow();
+  const updatedActivity = await readActivityStatus(ctx.db, activity.id);
 
-  const updatedChain = await ctx.db
-    .selectFrom('activityChains')
-    .select(['appendedChainIndex', 'appendedNextSeed'])
-    .where('avatarId', '=', chain.avatarId)
-    .where('scopeId', '=', chain.scopeId)
-    .executeTakeFirstOrThrow();
+  const updatedChain = await readChainAnchors(ctx.db, {
+    avatarID: chain.avatarId,
+    scopeID: chain.scopeId,
+    scopeType: chain.scopeType,
+  });
 
-  expect(updatedActivity.status).toBe('quarantined');
+  expect(updatedActivity).toStrictEqual({ parkedFrom: null, status: 'quarantined' });
 
   expect(updatedChain).toStrictEqual({
     appendedChainIndex: chain.appendedChainIndex,
     appendedNextSeed: chain.appendedNextSeed,
+    verifiedChainIndex: chain.verifiedChainIndex,
+    verifiedNextSeed: chain.verifiedNextSeed,
   });
 });
 
@@ -280,13 +263,9 @@ test('it leaves an active successor untouched when it is rooted at or before the
     scopeType: chain.scopeType,
   });
 
-  const updatedUnrelated = await ctx.db
-    .selectFrom('activities')
-    .select('status')
-    .where('id', '=', unrelated.id)
-    .executeTakeFirstOrThrow();
+  const updatedUnrelated = await readActivityStatus(ctx.db, unrelated.id);
 
-  expect(updatedUnrelated.status).toBe('active');
+  expect(updatedUnrelated).toStrictEqual({ parkedFrom: null, status: 'active' });
 });
 
 test('it moves the verified anchor past the checkpoints a partly proved activity settled before it rewinds', async () => {
@@ -334,12 +313,11 @@ test('it moves the verified anchor past the checkpoints a partly proved activity
     scopeType: chain.scopeType,
   });
 
-  const updatedChain = await ctx.db
-    .selectFrom('activityChains')
-    .select(['appendedChainIndex', 'appendedNextSeed', 'verifiedChainIndex', 'verifiedNextSeed'])
-    .where('avatarId', '=', chain.avatarId)
-    .where('scopeId', '=', chain.scopeId)
-    .executeTakeFirstOrThrow();
+  const updatedChain = await readChainAnchors(ctx.db, {
+    avatarID: chain.avatarId,
+    scopeID: chain.scopeId,
+    scopeType: chain.scopeType,
+  });
 
   expect(updatedChain).toStrictEqual({
     appendedChainIndex: 5,
@@ -394,12 +372,16 @@ test('it leaves the verified anchor where it is for an activity proved only to i
     scopeType: chain.scopeType,
   });
 
-  const updatedChain = await ctx.db
-    .selectFrom('activityChains')
-    .select(['appendedChainIndex', 'verifiedChainIndex'])
-    .where('avatarId', '=', chain.avatarId)
-    .where('scopeId', '=', chain.scopeId)
-    .executeTakeFirstOrThrow();
+  const updatedChain = await readChainAnchors(ctx.db, {
+    avatarID: chain.avatarId,
+    scopeID: chain.scopeId,
+    scopeType: chain.scopeType,
+  });
 
-  expect(updatedChain).toStrictEqual({ appendedChainIndex: 3, verifiedChainIndex: 3 });
+  expect(updatedChain).toStrictEqual({
+    appendedChainIndex: 3,
+    appendedNextSeed: expect.any(String),
+    verifiedChainIndex: 3,
+    verifiedNextSeed: expect.any(String),
+  });
 });
