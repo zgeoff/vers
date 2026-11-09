@@ -14,7 +14,8 @@ guard fails:
   pass.
 - `qa:seed` refuses an `--origin` that is not a loopback address, and `qa:reset` refuses a
   `DATABASE_URL` host that is not loopback. Pass `--yes` only when the repo owner asks you to act on
-  a remote deployment: it lifts this guard.
+  a remote deployment: it lifts this guard. With `--yes`, `qa:seed` still refuses a remote
+  `--origin` that does not use https, because it sends the QA token only over https.
 - `qa:cold` refuses when a request other than a health check or a deploy probe reached the fleet in
   the last 10 minutes.
 
