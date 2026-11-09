@@ -35,7 +35,11 @@ interface CreateActivityRouterDeps {
 }
 
 export function createActivityRouter(deps: CreateActivityRouterDeps) {
-  const os = implement(activityContract).$context<ServiceContext>();
+  // oRPC validates a contract procedure's input before its middlewares by default, which would
+  // show a caller that a middleware refuses the input schema's issues first
+  const os = implement(activityContract)
+    .$config({ initialInputValidationIndex: Number.POSITIVE_INFINITY })
+    .$context<ServiceContext>();
 
   return {
     advanceActivity: os.advanceActivity.handler((opts) =>
@@ -54,18 +58,26 @@ export function createActivityRouter(deps: CreateActivityRouterDeps) {
         opts,
       ),
     ),
-    createQAAccount: os.createQAAccount.handler((opts) =>
-      createQAAccount(
-        {
-          db: deps.db,
-          keysClient: deps.keysClient,
-          keyVersion: deps.keyVersion,
-          secretRef: deps.secretRef,
-          secretVersion: deps.secretVersion,
-        },
-        opts,
+    createQAAccount: os.createQAAccount
+      .use((middleware) => {
+        if (middleware.context.scope !== 'qa:seed') {
+          throw middleware.errors.FORBIDDEN({ data: {} });
+        }
+
+        return middleware.next();
+      })
+      .handler((opts) =>
+        createQAAccount(
+          {
+            db: deps.db,
+            keysClient: deps.keysClient,
+            keyVersion: deps.keyVersion,
+            secretRef: deps.secretRef,
+            secretVersion: deps.secretVersion,
+          },
+          opts,
+        ),
       ),
-    ),
     getActivityRewards: os.getActivityRewards.handler((opts) => readActivityRewards(deps.db, opts)),
     getAvatarProgression: os.getAvatarProgression.handler((opts) =>
       readAvatarProgression({ db: deps.db, sendReplayWake: deps.sendReplayWake }, opts),

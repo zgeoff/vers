@@ -195,6 +195,14 @@ test('it refuses a service token without the QA seeding scope with FORBIDDEN', a
   ).rejects.toMatchObject({ code: 'FORBIDDEN', status: 403 });
 });
 
+test('it refuses a service token without the QA seeding scope with FORBIDDEN before it validates the input', async () => {
+  await using ctx = await setupTest();
+
+  expect(
+    ctx.unscopedClient.createQAAccount({ level: 6, runs: 0, twoFactor: false, user: 'qa-plover' }),
+  ).rejects.toMatchObject({ code: 'FORBIDDEN', status: 403 });
+});
+
 test('it refuses a level above 1 with no runs with BAD_REQUEST', async () => {
   await using ctx = await setupTest();
 

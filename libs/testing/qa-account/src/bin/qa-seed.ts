@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import { createORPCClient, safe } from '@orpc/client';
 import { RPCLink } from '@orpc/client/fetch';
 import type { ContractRouterClient } from '@orpc/contract';
@@ -6,6 +7,7 @@ import { CreateQAAccountInputSchema } from '@vers/contract-activity';
 import { runCommandLine } from '@vers/scripts';
 import { define } from 'gunshi';
 import * as z from 'zod';
+import { buildPasswordFromBytes } from '../build-password-from-bytes';
 import { findOriginRefusal } from '../find-origin-refusal';
 import { formatQASeedError } from '../format-qa-seed-error';
 import { formatQAUserRefusal } from '../format-qa-user-refusal';
@@ -15,6 +17,8 @@ import { QA_SEED_ARGS } from '../qa-seed-args';
 import { requireEnvVar } from '../require-env-var';
 
 type QASeedClient = ContractRouterClient<Pick<typeof activityContract, 'createQAAccount'>>;
+
+const PASSWORD_ENTROPY_BYTES = 20;
 
 const entry = define({
   name: 'qa-seed',
@@ -39,9 +43,14 @@ const entry = define({
       throw new Error(refusal);
     }
 
+    // generated here so a 503 after the service commits still leaves the operator holding the
+    // account's password
+    const password =
+      options.password ?? buildPasswordFromBytes(randomBytes(PASSWORD_ENTROPY_BYTES));
+
     const input = CreateQAAccountInputSchema.safeParse({
       level: options.level,
-      password: options.password,
+      password,
       runs: options.runs,
       twoFactor: options['two-factor'],
       user: parsed.user.name,
@@ -60,6 +69,8 @@ const entry = define({
       }),
     );
 
+    console.log(`password: ${password}`);
+
     const [error, account] = await safe(client.createQAAccount(input.data));
 
     if (error !== null) {
@@ -67,7 +78,6 @@ const entry = define({
     }
 
     console.log(`email: ${account.user.email}`);
-    console.log(`password: ${account.password}`);
     console.log(`user id: ${account.user.id}`);
 
     console.log(
