@@ -68,6 +68,29 @@ test.each([
   },
 );
 
+test.each(['createQAAccount', '%63reateQAAccount'])(
+  'it answers a browser call to the edge-only activity procedure %s with a 404 without forwarding it',
+  async (procedure) => {
+    const resolver = mock<HttpResponseResolver>(() => HttpResponse.json({}));
+
+    server.use(http.post('http://localhost:3006/rpc/createQAAccount', resolver));
+
+    const outcome = await withRequestContext({}, () =>
+      sendRPCRequest(
+        new Request(`http://app.test/api/rpc/activity/${procedure}`, {
+          body: '{}',
+          headers: { authorization: 'Bearer placeholder-qa-token-placeholder' },
+          method: 'POST',
+        }),
+        'activity',
+      ),
+    );
+
+    expect(outcome.value.status).toBe(404);
+    expect(resolver).not.toHaveBeenCalled();
+  },
+);
+
 test('it forwards the method and body for a caller with no cookie session, minting an anonymous token', async () => {
   const resolver = mock<HttpResponseResolver>(() => HttpResponse.json({}));
 

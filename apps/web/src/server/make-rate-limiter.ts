@@ -77,6 +77,7 @@ const STRICT_ROUTES: ReadonlyArray<string> = [
   '/account',
   '/account/2fa/verify',
   '/account/change-password',
+  '/api/qa/',
 ];
 
 const SAFE_METHODS: ReadonlySet<string> = new Set(['GET', 'HEAD']);

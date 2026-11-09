@@ -37,6 +37,29 @@ test('it rejects a strict-route mutation once the strict budget is exhausted', a
   expect(response.status).toBe(429);
 });
 
+test('it rejects a QA seeding call once the strict budget is exhausted', async () => {
+  const rateLimit = makeRateLimiter({ maxMultiple: 1 });
+  const ip = '203.0.113.9';
+
+  for (let index = 0; index < 10; index += 1) {
+    const request = new Request('https://example.test/api/qa/createQAAccount', {
+      headers: { 'fly-client-ip': ip },
+      method: 'POST',
+    });
+
+    await rateLimit(request, () => Promise.resolve(new Response('ok')));
+  }
+
+  const request = new Request('https://example.test/api/qa/createQAAccount', {
+    headers: { 'fly-client-ip': ip },
+    method: 'POST',
+  });
+
+  const response = await rateLimit(request, () => Promise.resolve(new Response('ok')));
+
+  expect(response.status).toBe(429);
+});
+
 test('it applies the strong (not strict) budget to a GET against a strict route', async () => {
   const rateLimit = makeRateLimiter({ maxMultiple: 1 });
   const ip = '203.0.113.3';
