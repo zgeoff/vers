@@ -469,3 +469,10 @@ test('it generates a valid OpenAPI document from the activity contract', async (
   expect(document.openapi).toBeDefined();
   expect(pathCount).toBeGreaterThan(0);
 });
+
+test('it declares CONFLICT and a bespoke 400 QA_ACCOUNT_NAME_INVALID on createQAAccount', () => {
+  const errorMap = activityContract.createQAAccount['~orpc'].errorMap;
+
+  expect(errorMap).toContainAllKeys(['CONFLICT', 'QA_ACCOUNT_NAME_INVALID']);
+  expect(errorMap.QA_ACCOUNT_NAME_INVALID.status).toBe(400);
+});

@@ -9,7 +9,7 @@ export const QA_SEED_ARGS = {
     type: 'string',
   },
   level: {
-    description: 'avatar level, at least 1; a level above 1 needs --runs',
+    description: 'avatar level, from 1 to 1000; a level above 1 needs --runs',
     metavar: 'n',
     parse: (value: string) => parseIntegerOption(value, 1),
     required: true,
@@ -17,7 +17,7 @@ export const QA_SEED_ARGS = {
   },
   runs: {
     default: 0,
-    description: 'completed, verified runs to seed on the origin node',
+    description: 'completed, verified runs to seed on the origin node, at most 20',
     metavar: 'n',
     parse: (value: string) => parseIntegerOption(value, 0),
     type: 'custom',
@@ -32,9 +32,15 @@ export const QA_SEED_ARGS = {
     metavar: 'password',
     type: 'string',
   },
+  origin: {
+    description: 'origin of the web app whose QA endpoint seeds the account',
+    metavar: 'url',
+    required: true,
+    type: 'string',
+  },
   yes: {
     default: false,
-    description: 'act on a database host that is not a loopback address',
+    description: 'seed through an origin that is not a loopback address',
     type: 'boolean',
   },
 } as const satisfies Args;

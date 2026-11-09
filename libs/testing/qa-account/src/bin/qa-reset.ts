@@ -3,7 +3,7 @@ import { runCommandLine } from '@vers/scripts';
 import { define } from 'gunshi';
 import { applyQAReset } from '../apply-qa-reset';
 import { env } from '../env';
-import { parseDatabaseTarget } from '../parse-database-target';
+import { parseHostTarget } from '../parse-host-target';
 import { parseQAUser } from '../parse-qa-user';
 import { QA_RESET_ARGS } from '../qa-reset-args';
 
@@ -13,8 +13,14 @@ const entry = define({
   args: QA_RESET_ARGS,
   run: async (ctx) => {
     const options = ctx.values;
-    const user = parseQAUser(options.user);
-    const target = parseDatabaseTarget(env.DATABASE_URL);
+    const parsed = parseQAUser(options.user);
+
+    if (parsed.kind === 'refused') {
+      throw new Error(parsed.reason);
+    }
+
+    const user = parsed.user;
+    const target = parseHostTarget('DATABASE_URL', env.DATABASE_URL);
 
     console.log(`target: ${target.host}`);
 

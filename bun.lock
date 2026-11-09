@@ -987,7 +987,8 @@
       "version": "0.0.0",
       "dependencies": {
         "@epic-web/totp": "catalog:",
-        "@noble/hashes": "catalog:",
+        "@orpc/client": "catalog:",
+        "@orpc/contract": "catalog:",
         "@paralleldrive/cuid2": "catalog:",
         "@vers/content-registry": "workspace:*",
         "@vers/contract-activity": "workspace:*",
@@ -998,7 +999,6 @@
         "@vers/game-utils": "workspace:*",
         "@vers/idle-core": "workspace:*",
         "@vers/item-gen": "workspace:*",
-        "@vers/roll-crypto": "workspace:*",
         "@vers/scripts": "workspace:*",
         "@vers/sim-registry": "workspace:*",
         "@vers/worldmap-content": "workspace:*",
@@ -1006,6 +1006,7 @@
         "gunshi": "catalog:",
         "kysely": "catalog:",
         "tiny-invariant": "catalog:",
+        "ts-pattern": "catalog:",
         "zod": "catalog:",
       },
       "devDependencies": {

@@ -1,82 +1,66 @@
 import { generateTOTP, getTOTPAuthUri } from '@epic-web/totp';
 import { createId } from '@paralleldrive/cuid2';
 import { readContentDocument, readCurrentContentVersion } from '@vers/content-registry';
+import type { QAAccount } from '@vers/contract-activity';
 import type { SecretRef } from '@vers/contract-keys';
 import type { DB } from '@vers/db';
 import { toJSON } from '@vers/db';
 import { createSeed } from '@vers/game-utils';
 import { buildLevelFromXP, buildXPThreshold } from '@vers/idle-core';
-import { deriveAvatarKey, deriveScopeSecret } from '@vers/roll-crypto';
 import { readCurrentSimVersion } from '@vers/sim-registry';
 import type { Kysely } from 'kysely';
-import invariant from 'tiny-invariant';
 import { planQARuns } from './plan-qa-runs';
-import type { KeyRoots, QARunsPlan, QAUser, RunOutcome, SeedEntropy } from './types';
+import type { AvatarKeys, QARunsPlan, QAUser, SeedEntropy } from './types';
+
+export interface ApplyQASeedDeps {
+  readonly db: Kysely<DB>;
+  readonly readAvatarKeys: (avatarID: string) => Promise<AvatarKeys>;
+}
 
 export interface ApplyQASeedInput {
   readonly entropy: SeedEntropy;
-  readonly keyRoots: KeyRoots | undefined;
+  readonly keyVersion: number;
   readonly level: number;
   readonly now: Date;
   readonly password: string;
   readonly runs: number;
+  readonly secretRef: SecretRef;
+  readonly secretVersion: number;
   readonly twoFactor: boolean;
   readonly user: QAUser;
 }
 
-export interface QASeedResult {
-  readonly avatar: {
-    readonly id: string;
-    readonly level: number;
-    readonly name: string;
-    readonly xp: number;
-  };
-  readonly runs: ReadonlyArray<{
-    readonly checkpoints: number;
-    readonly id: string;
-    readonly items: number;
-    readonly outcome: RunOutcome;
-    readonly xpDelta: number;
-  }>;
-  readonly twoFactor: { readonly secret: string; readonly uri: string } | null;
-  readonly user: { readonly email: string; readonly id: string; readonly username: string };
-}
+export type QASeedResult = Omit<QAAccount, 'password'>;
+
+export type QASeedOutcome =
+  | { readonly account: QASeedResult; readonly kind: 'created' }
+  | { readonly kind: 'exists' };
 
 export async function applyQASeed(
-  db: Kysely<DB>,
+  deps: Readonly<ApplyQASeedDeps>,
   input: Readonly<ApplyQASeedInput>,
-): Promise<QASeedResult> {
-  // with no activity row to resync from, the game client folds its first start from xp 0, and the
-  // activity service refuses any start whose snapshot differs from the avatar's stored xp
-  if (input.level > 1 && input.runs === 0) {
-    throw new Error(
-      `level ${input.level} needs --runs: an avatar above level 1 with no run cannot start one; pass --runs 1 or more, or --level 1`,
-    );
-  }
-
-  const existing = await db
+): Promise<QASeedOutcome> {
+  const existing = await deps.db
     .selectFrom('users')
     .select('id')
     .where('email', '=', input.user.email)
     .executeTakeFirst();
 
   if (existing !== undefined) {
-    throw new Error(
-      `${input.user.email} already exists; run qa:reset --user ${input.user.name} --all first`,
-    );
+    return { kind: 'exists' };
   }
 
   const userID = createId();
   const avatarID = createId();
   const startXP = buildXPThreshold(input.level);
-  const plan = input.runs > 0 ? await planRuns(db, input, avatarID, startXP) : undefined;
+  const plan = input.runs > 0 ? await planRuns(deps, input, avatarID, startXP) : undefined;
   const finalXP = plan?.finalXP ?? startXP;
 
   const passwordHash = await Bun.password.hash(input.password, 'argon2id');
 
   const twoFactor = input.twoFactor ? await createTwoFactor(userID) : undefined;
 
-  await db.transaction().execute(async (trx) => {
+  await deps.db.transaction().execute(async (trx) => {
     await trx
       .insertInto('users')
       .values({
@@ -114,78 +98,65 @@ export async function applyQASeed(
   });
 
   return {
-    avatar: {
-      id: avatarID,
-      level: buildLevelFromXP(finalXP),
-      name: input.user.avatarName,
-      xp: finalXP,
+    account: {
+      avatar: {
+        id: avatarID,
+        level: buildLevelFromXP(finalXP),
+        name: input.user.avatarName,
+        xp: finalXP,
+      },
+      runs: (plan?.runs ?? []).map((run) => ({
+        checkpoints: run.checkpoints.length,
+        id: run.activity.id,
+        items: run.items.length,
+        outcome: run.outcome,
+        xpDelta: run.xpDelta,
+      })),
+      twoFactor:
+        twoFactor === undefined ? null : { secret: twoFactor.row.secret, uri: twoFactor.uri },
+      user: { email: input.user.email, id: userID, username: input.user.username },
     },
-    runs: (plan?.runs ?? []).map((run) => ({
-      checkpoints: run.checkpoints.length,
-      id: run.activity.id,
-      items: run.items.length,
-      outcome: run.outcome,
-      xpDelta: run.xpDelta,
-    })),
-    twoFactor:
-      twoFactor === undefined ? null : { secret: twoFactor.row.secret, uri: twoFactor.uri },
-    user: { email: input.user.email, id: userID, username: input.user.username },
+    kind: 'created',
   };
 }
 
-// the versions service-activity stamps on every row it admits; the roots must carry them
-export const QA_KEY_VERSION = 1;
-const QA_SCOPE_SECRET_REF: SecretRef = 'worldmap';
-
-export const QA_SCOPE_SECRET_VERSION = 1;
-
 async function planRuns(
-  db: Kysely<DB>,
+  deps: Readonly<ApplyQASeedDeps>,
   input: Readonly<ApplyQASeedInput>,
   avatarID: string,
   startXP: number,
 ): Promise<QARunsPlan> {
-  invariant(input.keyRoots !== undefined, 'seeding runs needs the scope-secret and roll-key roots');
-
-  const simVersion = await readCurrentSimVersion(db);
+  const simVersion = await readCurrentSimVersion(deps.db);
 
   if (simVersion === undefined) {
     throw new Error('the sim_versions registry has no active version to stamp on a run');
   }
 
-  const contentVersion = await readCurrentContentVersion(db);
+  const contentVersion = await readCurrentContentVersion(deps.db);
 
   if (contentVersion === undefined) {
     throw new Error('the content registry has no current version to run against');
   }
 
-  const document = await readContentDocument(db, contentVersion);
+  const document = await readContentDocument(deps.db, contentVersion);
 
   if (document === undefined) {
     throw new Error(`current content version ${contentVersion} is not published`);
   }
+
+  const keys = await deps.readAvatarKeys(avatarID);
 
   return planQARuns({
     activityIDs: Array.from({ length: input.runs }, () => `act_${createId()}`),
     avatarID,
     document,
     genesisSeed: input.entropy.genesisSeed,
-    keyVersion: QA_KEY_VERSION,
+    keyVersion: input.keyVersion,
     now: input.now,
-    rollKey: deriveAvatarKey({
-      avatarID,
-      keyVersion: QA_KEY_VERSION,
-      population: 'trade',
-      root: input.keyRoots.rollKeyRoot,
-    }),
-    scopeSecret: deriveScopeSecret({
-      avatarID,
-      root: input.keyRoots.scopeSecretRoot,
-      secretRef: QA_SCOPE_SECRET_REF,
-      secretVersion: QA_SCOPE_SECRET_VERSION,
-    }),
-    secretRef: QA_SCOPE_SECRET_REF,
-    secretVersion: QA_SCOPE_SECRET_VERSION,
+    rollKey: keys.rollKey,
+    scopeSecret: keys.scopeSecret,
+    secretRef: input.secretRef,
+    secretVersion: input.secretVersion,
     simVersion: simVersion.engineHash,
     startXP,
     userSeed: input.entropy.userSeed,

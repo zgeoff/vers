@@ -14,14 +14,18 @@ export interface SeedEntropy {
   readonly userSeed: number;
 }
 
-export interface DatabaseTarget {
+export interface HostTarget {
   readonly host: string;
   readonly isLoopback: boolean;
 }
 
-export interface KeyRoots {
-  readonly rollKeyRoot: Uint8Array;
-  readonly scopeSecretRoot: Uint8Array;
+export type QAUserParse =
+  | { readonly kind: 'parsed'; readonly user: QAUser }
+  | { readonly kind: 'refused'; readonly reason: string };
+
+export interface AvatarKeys {
+  readonly rollKey: Uint8Array;
+  readonly scopeSecret: Uint8Array;
 }
 
 export interface PlannedCheckpointRow {

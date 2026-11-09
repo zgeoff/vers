@@ -1,45 +1,69 @@
 import { AvatarNameSchema } from '@vers/contract-avatar';
 import { USERNAME_MAX_LENGTH, UsernameSchema } from '@vers/contract-user';
 import * as z from 'zod';
-import type { QAUser } from './types';
+import type { QAUserParse } from './types';
 
 export const QA_DOMAIN = 'qa.versidle.com';
 const NAME_PATTERN = /^[a-z0-9][a-z0-9._+-]{0,63}$/u;
 
-export function parseQAUser(raw: string): QAUser {
+export function parseQAUser(raw: string): QAUserParse {
   const normalized = raw.trim().toLowerCase();
   const at = normalized.indexOf('@');
   const name = at === -1 ? normalized : normalized.slice(0, at);
   const domain = at === -1 ? QA_DOMAIN : normalized.slice(at + 1);
 
   if (domain !== QA_DOMAIN) {
-    throw new Error(`refusing "${raw}": only addresses under ${QA_DOMAIN} are QA accounts`);
+    return {
+      kind: 'refused',
+      reason: `refusing "${raw}": only addresses under ${QA_DOMAIN} are QA accounts`,
+    };
   }
 
   if (!NAME_PATTERN.test(name)) {
-    throw new Error(
-      `invalid QA account name "${name}": use letters, digits, ".", "_", "+" or "-", starting with a letter or digit`,
-    );
+    return {
+      kind: 'refused',
+      reason: `invalid QA account name "${name}": use letters, digits, ".", "_", "+" or "-", starting with a letter or digit`,
+    };
+  }
+
+  const avatarName = parseIdentity('avatar name', AvatarNameSchema, buildAvatarName(name));
+
+  if (avatarName.kind === 'refused') {
+    return avatarName;
+  }
+
+  const username = parseIdentity('username', UsernameSchema, buildUsername(name));
+
+  if (username.kind === 'refused') {
+    return username;
   }
 
   return {
-    avatarName: parseIdentity('avatar name', AvatarNameSchema, buildAvatarName(name)),
-    email: `${name}@${QA_DOMAIN}`,
-    name,
-    username: parseIdentity('username', UsernameSchema, buildUsername(name)),
+    kind: 'parsed',
+    user: {
+      avatarName: avatarName.value,
+      email: `${name}@${QA_DOMAIN}`,
+      name,
+      username: username.value,
+    },
   };
 }
 
-function parseIdentity(label: string, schema: z.ZodType<string>, candidate: string): string {
+type IdentityParse =
+  | { readonly kind: 'parsed'; readonly value: string }
+  | { readonly kind: 'refused'; readonly reason: string };
+
+function parseIdentity(label: string, schema: z.ZodType<string>, candidate: string): IdentityParse {
   const parsed = schema.safeParse(candidate);
 
   if (!parsed.success) {
-    throw new Error(
-      `the QA account name yields no valid ${label} ("${candidate}"): ${z.prettifyError(parsed.error)}`,
-    );
+    return {
+      kind: 'refused',
+      reason: `the QA account name yields no valid ${label} ("${candidate}"): ${z.prettifyError(parsed.error)}`,
+    };
   }
 
-  return parsed.data;
+  return { kind: 'parsed', value: parsed.data };
 }
 
 const AVATAR_NAME_MAX_LENGTH = 16;
