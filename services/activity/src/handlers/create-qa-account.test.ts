@@ -1,15 +1,17 @@
 import { expect, test } from 'bun:test';
+import { ORPCError } from '@orpc/client';
 import { createContentVersion } from '@vers/content-registry';
 import type { ActivityContract } from '@vers/contract-activity';
 import { EncounterNodeSchema } from '@vers/contract-activity';
 import { createMockContentDocument } from '@vers/contract-activity/test-utils';
-import { buildMockScopeSecret } from '@vers/mock-services/keys';
+import { buildMockScopeSecret, mockKeysService } from '@vers/mock-services/keys';
 import { createAnonymousViewer, createTestDB } from '@vers/service-test-utils/bun';
 import { createSimVersionRow } from '@vers/sim-registry/test-utils';
 import { buildRPCTestClient } from '@vers/test-utils';
 import { deriveWorldmapContent } from '@vers/worldmap-content';
 import { ORIGIN_CELL } from '@vers/worldmap-core';
 import { createActivityService } from '../create-activity-service';
+import { server } from '../mocks/server';
 
 // the handler commits its rows in its own interactive transaction, which the default
 // transaction-isolation handle can't nest — this suite runs against a committed schema clone
@@ -161,6 +163,23 @@ test('it refuses an address outside the QA domain with QA_ACCOUNT_NAME_INVALID',
       user: 'player@versidle.com',
     }),
   ).rejects.toMatchObject({ code: 'QA_ACCOUNT_NAME_INVALID' });
+});
+
+test('it answers INTERNAL_SERVER_ERROR when the keys service refuses the activity service', async () => {
+  await using ctx = await setupTest();
+
+  await createSimVersionRow(ctx.db, { status: 'active' });
+  await createContentVersion(ctx.db, createMockContentDocument({ contentVersion: '2' }));
+
+  server.use(
+    mockKeysService.deriveAvatarKey.handler(() => {
+      throw new ORPCError('UNAUTHORIZED');
+    }),
+  );
+
+  expect(
+    ctx.client.createQAAccount({ level: 2, runs: 1, twoFactor: false, user: 'qa-bittern' }),
+  ).rejects.toMatchObject({ code: 'INTERNAL_SERVER_ERROR', status: 500 });
 });
 
 test('it refuses a level above 1 with no runs before it writes an account', async () => {

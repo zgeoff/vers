@@ -1,5 +1,6 @@
 import { expect, test } from 'bun:test';
 import { bytesToHex } from '@noble/hashes/utils.js';
+import { ORPCError } from '@orpc/client';
 import { resolveServiceURL } from '@vers/mock-services';
 import { buildMockScopeSecret, mockKeysService } from '@vers/mock-services/keys';
 import { resolveTestServiceKeyPair } from '@vers/service-test-utils/bun';
@@ -46,6 +47,25 @@ test("it reads the avatar's worldmap scope secret from the keys service", async 
   expect(bytesToHex(keys.scopeSecret)).toBe(
     bytesToHex(buildMockScopeSecret('avatar_heron', 'worldmap', 1)),
   );
+});
+
+test('it fails with a plain error that names the code and status of a keys refusal', async () => {
+  const ctx = await setupTest();
+
+  server.use(
+    mockKeysService.deriveScopeSecret.handler(() => {
+      throw new ORPCError('NOT_FOUND');
+    }),
+  );
+
+  const reading = readAvatarKeys(ctx.keysClient, {
+    avatarID: 'avatar_heron',
+    keyVersion: 1,
+    secretRef: 'worldmap',
+    secretVersion: 9,
+  });
+
+  expect(reading).rejects.toThrowWithMessage(Error, 'the keys service failed: NOT_FOUND 404');
 });
 
 test('it asks the keys service for the roll key of the trade population at the given version', async () => {
