@@ -7,6 +7,7 @@ import type { ServiceContext } from '@vers/service-runtime';
 import type { CryptoKey } from 'jose';
 import type { Kysely } from 'kysely';
 import { advanceActivity } from './handlers/advance-activity';
+import { createQAAccount } from './handlers/create-qa-account';
 import { readActivityRewards } from './handlers/read-activity-rewards';
 import { readAvatarProgression } from './handlers/read-avatar-progression';
 import { readContentDocument } from './handlers/read-content-document';
@@ -18,9 +19,11 @@ import { revealNodes } from './handlers/reveal-nodes';
 import { stopActivity } from './handlers/stop-activity';
 import { trackActivityProgress } from './handlers/track-activity-progress';
 import { updateFailureAction } from './handlers/update-failure-action';
+import type { KeysClient } from './types';
 
 interface CreateActivityRouterDeps {
   readonly db: Kysely<DB>;
+  readonly keysClient: KeysClient;
   readonly keysServiceURL: string;
   readonly keyVersion: number;
   readonly loadContentDocument: (contentVersion: string) => Promise<ContentDocument | undefined>;
@@ -32,7 +35,11 @@ interface CreateActivityRouterDeps {
 }
 
 export function createActivityRouter(deps: CreateActivityRouterDeps) {
-  const os = implement(activityContract).$context<ServiceContext>();
+  // oRPC validates a contract procedure's input before its middlewares by default, which would
+  // show a caller that a middleware refuses the input schema's issues first
+  const os = implement(activityContract)
+    .$config({ initialInputValidationIndex: Number.POSITIVE_INFINITY })
+    .$context<ServiceContext>();
 
   return {
     advanceActivity: os.advanceActivity.handler((opts) =>
@@ -51,6 +58,26 @@ export function createActivityRouter(deps: CreateActivityRouterDeps) {
         opts,
       ),
     ),
+    createQAAccount: os.createQAAccount
+      .use((middleware) => {
+        if (middleware.context.scope !== 'qa:seed') {
+          throw middleware.errors.FORBIDDEN({ data: {} });
+        }
+
+        return middleware.next();
+      })
+      .handler((opts) =>
+        createQAAccount(
+          {
+            db: deps.db,
+            keysClient: deps.keysClient,
+            keyVersion: deps.keyVersion,
+            secretRef: deps.secretRef,
+            secretVersion: deps.secretVersion,
+          },
+          opts,
+        ),
+      ),
     getActivityRewards: os.getActivityRewards.handler((opts) => readActivityRewards(deps.db, opts)),
     getAvatarProgression: os.getAvatarProgression.handler((opts) =>
       readAvatarProgression({ db: deps.db, sendReplayWake: deps.sendReplayWake }, opts),

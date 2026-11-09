@@ -1,4 +1,4 @@
-import type { TokenIssuer } from '@vers/service-auth';
+import type { TokenIssuer, TokenScope } from '@vers/service-auth';
 import { TOKEN_ALGORITHM } from '@vers/service-auth';
 import type { CryptoKey } from 'jose';
 import * as jose from 'jose';
@@ -10,6 +10,7 @@ interface CreateServiceTokenOptions {
   readonly expiresIn?: string;
   readonly issuer?: TokenIssuer;
   readonly privateKey: CryptoKey;
+  readonly scope?: TokenScope;
 }
 
 export function createServiceToken(options: CreateServiceTokenOptions): Promise<string> {
@@ -18,6 +19,7 @@ export function createServiceToken(options: CreateServiceTokenOptions): Promise<
   const claims = {
     ...(options.actingUserID !== undefined && { sub: options.actingUserID }),
     ...(options.actingSessionID !== undefined && { sid: options.actingSessionID }),
+    ...(options.scope !== undefined && { scope: options.scope }),
   };
 
   const jwt = new jose.SignJWT(claims)

@@ -10,6 +10,11 @@ const envSchema = z.object({
     .url()
     .optional()
     .describe('OTLP collector endpoint; unset disables telemetry export'),
+  QA_SEED_TOKEN: z
+    .string()
+    .min(32)
+    .optional()
+    .describe('Bearer token the QA seeding route admits; unset switches QA seeding off'),
   SENTRY_DSN: z
     .url()
     .optional()

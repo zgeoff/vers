@@ -1,4 +1,4 @@
-import type { ServiceName } from '@vers/service-auth';
+import type { ServiceName, TokenScope } from '@vers/service-auth';
 import { createServiceToken, parseServicePrivateKey } from '@vers/service-auth';
 import { env } from '../../server/env';
 
@@ -8,6 +8,7 @@ interface CreateEdgeServiceTokenOptions {
   readonly actingSessionID?: string | null;
   readonly actingUserID: string | null;
   readonly audience: ServiceName;
+  readonly scope?: TokenScope;
 }
 
 export async function createEdgeServiceToken(
@@ -20,5 +21,6 @@ export async function createEdgeServiceToken(
     ...(options.actingUserID !== null && { actingUserID: options.actingUserID }),
     ...(options.actingSessionID !== null &&
       options.actingSessionID !== undefined && { actingSessionID: options.actingSessionID }),
+    ...(options.scope !== undefined && { scope: options.scope }),
   });
 }

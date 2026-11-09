@@ -1,19 +1,27 @@
 import { expect, test } from 'bun:test';
 import { createContentVersion } from '@vers/content-registry';
 import { createMockContentDocument } from '@vers/contract-activity/test-utils';
-import type { DB } from '@vers/db';
 import { createTestDB } from '@vers/service-test-utils/bun';
 import { createSimVersionRow } from '@vers/sim-registry/test-utils';
-import type { Kysely } from 'kysely';
+import invariant from 'tiny-invariant';
 import { applyQAReset } from './apply-qa-reset';
 import { applyQASeed } from './apply-qa-seed';
 
 // applyQASeed and applyQAReset each commit in their own interactive transaction, which the default
 // transaction-isolation handle can't nest — every test here runs against a committed schema clone.
-async function setupTest(): Promise<{ db: Kysely<DB> } & AsyncDisposable> {
+async function setupTest() {
   const db = await createTestDB({ isolation: 'schema' });
 
-  return { db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
+  const deps = {
+    db: db.db,
+    readAvatarKeys: () =>
+      Promise.resolve({
+        rollKey: new Uint8Array(32).fill(3),
+        scopeSecret: new Uint8Array(32).fill(4),
+      }),
+  };
+
+  return { db: db.db, deps, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
 }
 
 test('it clears the activity history and returns the avatar to level 1', async () => {
@@ -22,16 +30,15 @@ test('it clears the activity history and returns the avatar to level 1', async (
   await createSimVersionRow(ctx.db, { status: 'active' });
   await createContentVersion(ctx.db, createMockContentDocument({ contentVersion: '2' }));
 
-  const seeded = await applyQASeed(ctx.db, {
+  const outcome = await applyQASeed(ctx.deps, {
     entropy: { genesisSeed: '0123456789abcdef0123456789abcdef', userSeed: 7 },
-    keyRoots: {
-      rollKeyRoot: new Uint8Array(32).fill(3),
-      scopeSecretRoot: new Uint8Array(32).fill(4),
-    },
+    keyVersion: 1,
     level: 4,
     now: new Date(),
     password: 'known-password',
     runs: 1,
+    secretRef: 'worldmap',
+    secretVersion: 1,
     twoFactor: false,
     user: {
       avatarName: 'qareset',
@@ -40,6 +47,10 @@ test('it clears the activity history and returns the avatar to level 1', async (
       username: 'qa_reset',
     },
   });
+
+  invariant(outcome.kind === 'created', 'a new address always gets an account');
+
+  const seeded = outcome.account;
 
   const reset = await applyQAReset(ctx.db, {
     all: false,
@@ -97,13 +108,15 @@ test('it clears the activity history and returns the avatar to level 1', async (
 test('it removes the whole account with its two-factor row when asked for all', async () => {
   await using ctx = await setupTest();
 
-  const seeded = await applyQASeed(ctx.db, {
+  const outcome = await applyQASeed(ctx.deps, {
     entropy: { genesisSeed: '0123456789abcdef0123456789abcdef', userSeed: 7 },
-    keyRoots: undefined,
+    keyVersion: 1,
     level: 1,
     now: new Date(),
     password: 'known-password',
     runs: 0,
+    secretRef: 'worldmap',
+    secretVersion: 1,
     twoFactor: true,
     user: {
       avatarName: 'qagone',
@@ -112,6 +125,10 @@ test('it removes the whole account with its two-factor row when asked for all', 
       username: 'qa_gone',
     },
   });
+
+  invariant(outcome.kind === 'created', 'a new address always gets an account');
+
+  const seeded = outcome.account;
 
   const reset = await applyQAReset(ctx.db, {
     all: true,
@@ -145,13 +162,15 @@ test('it removes the whole account with its two-factor row when asked for all', 
 test('it removes a step-up grant with no session that targets the account when asked for all', async () => {
   await using ctx = await setupTest();
 
-  const seeded = await applyQASeed(ctx.db, {
+  const outcome = await applyQASeed(ctx.deps, {
     entropy: { genesisSeed: '0123456789abcdef0123456789abcdef', userSeed: 7 },
-    keyRoots: undefined,
+    keyVersion: 1,
     level: 1,
     now: new Date(),
     password: 'known-password',
     runs: 0,
+    secretRef: 'worldmap',
+    secretVersion: 1,
     twoFactor: true,
     user: {
       avatarName: 'qagrant',
@@ -160,6 +179,10 @@ test('it removes a step-up grant with no session that targets the account when a
       username: 'qa_grant',
     },
   });
+
+  invariant(outcome.kind === 'created', 'a new address always gets an account');
+
+  const seeded = outcome.account;
 
   await ctx.db
     .insertInto('stepUpGrants')

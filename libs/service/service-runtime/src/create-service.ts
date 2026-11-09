@@ -407,6 +407,7 @@ async function serveORPCRequest(options: ServeORPCRequestOptions): Promise<Respo
         actingUserID: resolution.actingUserID,
         issuer: resolution.issuer,
         logger: deps.logger,
+        scope: resolution.scope,
         traceID: trace.traceID,
       },
       prefix: options.route.prefix,

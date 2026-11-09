@@ -1,8 +1,8 @@
 import type { ActivityData } from '@vers/contract-activity';
 import { EncounterNodeSchema } from '@vers/contract-activity';
 import type { Activities } from '@vers/db';
+import { isUniqueViolation } from '@vers/service-utils';
 import type { Selectable } from 'kysely';
-import { isUniqueViolation } from '../is-unique-violation';
 import { recordAdvanceContinuation } from '../metrics/record-advance-continuation';
 import { buildBailError } from './build-bail-error';
 import { ContinuationBailError } from './continuation-bail-error';

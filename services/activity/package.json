@@ -12,6 +12,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@noble/hashes": "catalog:",
     "@opentelemetry/api": "catalog:",
     "@orpc/client": "catalog:",
     "@orpc/contract": "catalog:",
@@ -24,6 +25,7 @@
     "@vers/contract-replay": "workspace:*",
     "@vers/db": "workspace:*",
     "@vers/idle-core": "workspace:*",
+    "@vers/qa-account": "workspace:*",
     "@vers/service-auth": "workspace:*",
     "@vers/service-runtime": "workspace:*",
     "@vers/service-utils": "workspace:*",

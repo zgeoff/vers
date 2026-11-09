@@ -21,7 +21,8 @@ async function setupTest() {
 test('it passes every conformance case collected from its contract', async () => {
   await using ctx = await setupTest();
 
-  const viewer = await createAnonymousViewer({ audience: 'service-activity' });
+  // createQAAccount answers FORBIDDEN before it validates input for a token without this scope
+  const viewer = await createAnonymousViewer({ audience: 'service-activity', scope: 'qa:seed' });
 
   const cases = collectConformanceCases(activityContract, {
     anonymousHeaders: { authorization: `Bearer ${viewer.token}` },

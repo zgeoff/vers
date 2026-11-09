@@ -1,191 +1,176 @@
 import { generateTOTP, getTOTPAuthUri } from '@epic-web/totp';
 import { createId } from '@paralleldrive/cuid2';
 import { readContentDocument, readCurrentContentVersion } from '@vers/content-registry';
+import type { QAAccount } from '@vers/contract-activity';
 import type { SecretRef } from '@vers/contract-keys';
 import type { DB } from '@vers/db';
 import { toJSON } from '@vers/db';
 import { createSeed } from '@vers/game-utils';
 import { buildLevelFromXP, buildXPThreshold } from '@vers/idle-core';
-import { deriveAvatarKey, deriveScopeSecret } from '@vers/roll-crypto';
+import { isUniqueViolation } from '@vers/service-utils';
 import { readCurrentSimVersion } from '@vers/sim-registry';
 import type { Kysely } from 'kysely';
-import invariant from 'tiny-invariant';
 import { planQARuns } from './plan-qa-runs';
-import type { KeyRoots, QARunsPlan, QAUser, RunOutcome, SeedEntropy } from './types';
+import type { AvatarKeys, QARunsPlan, QASeedClash, QAUser, SeedEntropy } from './types';
+
+export interface ApplyQASeedDeps {
+  readonly db: Kysely<DB>;
+  readonly readAvatarKeys: (avatarID: string) => Promise<AvatarKeys>;
+}
 
 export interface ApplyQASeedInput {
   readonly entropy: SeedEntropy;
-  readonly keyRoots: KeyRoots | undefined;
+  readonly keyVersion: number;
   readonly level: number;
   readonly now: Date;
   readonly password: string;
   readonly runs: number;
+  readonly secretRef: SecretRef;
+  readonly secretVersion: number;
   readonly twoFactor: boolean;
   readonly user: QAUser;
 }
 
-export interface QASeedResult {
-  readonly avatar: {
-    readonly id: string;
-    readonly level: number;
-    readonly name: string;
-    readonly xp: number;
-  };
-  readonly runs: ReadonlyArray<{
-    readonly checkpoints: number;
-    readonly id: string;
-    readonly items: number;
-    readonly outcome: RunOutcome;
-    readonly xpDelta: number;
-  }>;
-  readonly twoFactor: { readonly secret: string; readonly uri: string } | null;
-  readonly user: { readonly email: string; readonly id: string; readonly username: string };
-}
+export type QASeedResult = Omit<QAAccount, 'password'>;
+
+export type QASeedOutcome =
+  | { readonly account: QASeedResult; readonly kind: 'created' }
+  | { readonly clash: QASeedClash; readonly kind: 'exists' };
 
 export async function applyQASeed(
-  db: Kysely<DB>,
+  deps: Readonly<ApplyQASeedDeps>,
   input: Readonly<ApplyQASeedInput>,
-): Promise<QASeedResult> {
-  // with no activity row to resync from, the game client folds its first start from xp 0, and the
-  // activity service refuses any start whose snapshot differs from the avatar's stored xp
-  if (input.level > 1 && input.runs === 0) {
-    throw new Error(
-      `level ${input.level} needs --runs: an avatar above level 1 with no run cannot start one; pass --runs 1 or more, or --level 1`,
-    );
-  }
+): Promise<QASeedOutcome> {
+  const clash = await readQASeedClash(deps.db, input.user);
 
-  const existing = await db
-    .selectFrom('users')
-    .select('id')
-    .where('email', '=', input.user.email)
-    .executeTakeFirst();
-
-  if (existing !== undefined) {
-    throw new Error(
-      `${input.user.email} already exists; run qa:reset --user ${input.user.name} --all first`,
-    );
+  if (clash !== null) {
+    return { clash, kind: 'exists' };
   }
 
   const userID = createId();
   const avatarID = createId();
   const startXP = buildXPThreshold(input.level);
-  const plan = input.runs > 0 ? await planRuns(db, input, avatarID, startXP) : undefined;
+  const plan = input.runs > 0 ? await planRuns(deps, input, avatarID, startXP) : undefined;
   const finalXP = plan?.finalXP ?? startXP;
 
   const passwordHash = await Bun.password.hash(input.password, 'argon2id');
 
   const twoFactor = input.twoFactor ? await createTwoFactor(userID) : undefined;
 
-  await db.transaction().execute(async (trx) => {
-    await trx
-      .insertInto('users')
-      .values({
-        email: input.user.email,
-        id: userID,
-        name: input.user.name,
-        passwordHash,
-        seed: createSeed(),
-        username: input.user.username,
-      })
-      .execute();
+  try {
+    await writeAccount(deps.db, {
+      avatarID,
+      finalXP,
+      input,
+      passwordHash,
+      plan,
+      twoFactor,
+      userID,
+    });
+  } catch (error) {
+    // a concurrent seed of a clashing name commits between the read above and this write
+    const raced = isUniqueViolation(error) ? await readQASeedClash(deps.db, input.user) : null;
 
-    await trx
-      .insertInto('avatars')
-      .values({
-        id: avatarID,
-        isQa: true,
-        level: buildLevelFromXP(finalXP),
-        name: input.user.avatarName,
-        seed: input.entropy.userSeed,
-        userId: userID,
-        xp: finalXP,
-      })
-      .execute();
-
-    await trx.insertInto('activeAvatars').values({ avatarId: avatarID, userId: userID }).execute();
-
-    if (twoFactor !== undefined) {
-      await trx.insertInto('verifications').values(twoFactor.row).execute();
+    if (raced === null) {
+      throw error;
     }
 
-    if (plan !== undefined) {
-      await writeRuns(trx, plan, avatarID);
-    }
-  });
+    return { clash: raced, kind: 'exists' };
+  }
 
   return {
-    avatar: {
-      id: avatarID,
-      level: buildLevelFromXP(finalXP),
-      name: input.user.avatarName,
-      xp: finalXP,
+    account: {
+      avatar: {
+        id: avatarID,
+        level: buildLevelFromXP(finalXP),
+        name: input.user.avatarName,
+        xp: finalXP,
+      },
+      runs: (plan?.runs ?? []).map((run) => ({
+        checkpoints: run.checkpoints.length,
+        id: run.activity.id,
+        items: run.items.length,
+        outcome: run.outcome,
+        xpDelta: run.xpDelta,
+      })),
+      twoFactor:
+        twoFactor === undefined ? null : { secret: twoFactor.row.secret, uri: twoFactor.uri },
+      user: { email: input.user.email, id: userID, username: input.user.username },
     },
-    runs: (plan?.runs ?? []).map((run) => ({
-      checkpoints: run.checkpoints.length,
-      id: run.activity.id,
-      items: run.items.length,
-      outcome: run.outcome,
-      xpDelta: run.xpDelta,
-    })),
-    twoFactor:
-      twoFactor === undefined ? null : { secret: twoFactor.row.secret, uri: twoFactor.uri },
-    user: { email: input.user.email, id: userID, username: input.user.username },
+    kind: 'created',
   };
 }
 
-// the versions service-activity stamps on every row it admits; the roots must carry them
-export const QA_KEY_VERSION = 1;
-const QA_SCOPE_SECRET_REF: SecretRef = 'worldmap';
+async function readQASeedClash(db: Kysely<DB>, user: QAUser): Promise<QASeedClash | null> {
+  const [email, username, avatarName] = await Promise.all([
+    db.selectFrom('users').select('id').where('email', '=', user.email).executeTakeFirst(),
+    db.selectFrom('users').select('id').where('username', '=', user.username).executeTakeFirst(),
+    db.selectFrom('avatars').select('id').where('name', '=', user.avatarName).executeTakeFirst(),
+  ]);
 
-export const QA_SCOPE_SECRET_VERSION = 1;
+  return pickQASeedClash(user, {
+    avatarName: avatarName !== undefined,
+    email: email !== undefined,
+    username: username !== undefined,
+  });
+}
+
+function pickQASeedClash(
+  user: QAUser,
+  taken: Readonly<Record<QASeedClash['field'], boolean>>,
+): QASeedClash | null {
+  if (taken.email) {
+    return { field: 'email', value: user.email };
+  }
+
+  if (taken.username) {
+    return { field: 'username', value: user.username };
+  }
+
+  if (taken.avatarName) {
+    return { field: 'avatarName', value: user.avatarName };
+  }
+
+  return null;
+}
 
 async function planRuns(
-  db: Kysely<DB>,
+  deps: Readonly<ApplyQASeedDeps>,
   input: Readonly<ApplyQASeedInput>,
   avatarID: string,
   startXP: number,
 ): Promise<QARunsPlan> {
-  invariant(input.keyRoots !== undefined, 'seeding runs needs the scope-secret and roll-key roots');
-
-  const simVersion = await readCurrentSimVersion(db);
+  const simVersion = await readCurrentSimVersion(deps.db);
 
   if (simVersion === undefined) {
     throw new Error('the sim_versions registry has no active version to stamp on a run');
   }
 
-  const contentVersion = await readCurrentContentVersion(db);
+  const contentVersion = await readCurrentContentVersion(deps.db);
 
   if (contentVersion === undefined) {
     throw new Error('the content registry has no current version to run against');
   }
 
-  const document = await readContentDocument(db, contentVersion);
+  const document = await readContentDocument(deps.db, contentVersion);
 
   if (document === undefined) {
     throw new Error(`current content version ${contentVersion} is not published`);
   }
+
+  const keys = await deps.readAvatarKeys(avatarID);
 
   return planQARuns({
     activityIDs: Array.from({ length: input.runs }, () => `act_${createId()}`),
     avatarID,
     document,
     genesisSeed: input.entropy.genesisSeed,
-    keyVersion: QA_KEY_VERSION,
+    keyVersion: input.keyVersion,
     now: input.now,
-    rollKey: deriveAvatarKey({
-      avatarID,
-      keyVersion: QA_KEY_VERSION,
-      population: 'trade',
-      root: input.keyRoots.rollKeyRoot,
-    }),
-    scopeSecret: deriveScopeSecret({
-      avatarID,
-      root: input.keyRoots.scopeSecretRoot,
-      secretRef: QA_SCOPE_SECRET_REF,
-      secretVersion: QA_SCOPE_SECRET_VERSION,
-    }),
-    secretRef: QA_SCOPE_SECRET_REF,
-    secretVersion: QA_SCOPE_SECRET_VERSION,
+    rollKey: keys.rollKey,
+    scopeSecret: keys.scopeSecret,
+    secretRef: input.secretRef,
+    secretVersion: input.secretVersion,
     simVersion: simVersion.engineHash,
     startXP,
     userSeed: input.entropy.userSeed,
@@ -240,6 +225,58 @@ async function createTwoFactor(userID: string): Promise<TwoFactorSetup> {
       secret: row.secret,
     }),
   };
+}
+
+interface WriteAccountInput {
+  readonly avatarID: string;
+  readonly finalXP: number;
+  readonly input: Readonly<ApplyQASeedInput>;
+  readonly passwordHash: string;
+  readonly plan: QARunsPlan | undefined;
+  readonly twoFactor: TwoFactorSetup | undefined;
+  readonly userID: string;
+}
+
+async function writeAccount(db: Kysely<DB>, account: Readonly<WriteAccountInput>): Promise<void> {
+  await db.transaction().execute(async (trx) => {
+    await trx
+      .insertInto('users')
+      .values({
+        email: account.input.user.email,
+        id: account.userID,
+        name: account.input.user.name,
+        passwordHash: account.passwordHash,
+        seed: createSeed(),
+        username: account.input.user.username,
+      })
+      .execute();
+
+    await trx
+      .insertInto('avatars')
+      .values({
+        id: account.avatarID,
+        isQa: true,
+        level: buildLevelFromXP(account.finalXP),
+        name: account.input.user.avatarName,
+        seed: account.input.entropy.userSeed,
+        userId: account.userID,
+        xp: account.finalXP,
+      })
+      .execute();
+
+    await trx
+      .insertInto('activeAvatars')
+      .values({ avatarId: account.avatarID, userId: account.userID })
+      .execute();
+
+    if (account.twoFactor !== undefined) {
+      await trx.insertInto('verifications').values(account.twoFactor.row).execute();
+    }
+
+    if (account.plan !== undefined) {
+      await writeRuns(trx, account.plan, account.avatarID);
+    }
+  });
 }
 
 async function writeRuns(trx: Kysely<DB>, plan: QARunsPlan, avatarID: string): Promise<void> {

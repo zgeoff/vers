@@ -33,6 +33,7 @@ test('it resolves the issuer and acting user from a token minted for the matchin
     actingSessionID: null,
     actingUserID: 'user-1',
     issuer: 'app-web',
+    scope: null,
   });
 });
 
@@ -64,6 +65,7 @@ test('it resolves the acting session from a token minted with an actingSessionID
     actingSessionID: 'session-1',
     actingUserID: 'user-1',
     issuer: 'app-web',
+    scope: null,
   });
 });
 
@@ -95,6 +97,69 @@ test('it resolves a null acting user from a token minted with no actingUserID', 
     actingSessionID: null,
     actingUserID: null,
     issuer: 'service-activity',
+    scope: null,
+  });
+});
+
+test('it resolves the QA seeding scope from a token minted with it', async () => {
+  const keyPair = await jose.generateKeyPair(TOKEN_ALGORITHM, { extractable: true });
+
+  const keySet = parseServiceJWKS(
+    JSON.stringify({ keys: [{ ...(await jose.exportJWK(keyPair.publicKey)), kid: 'app-web' }] }),
+  );
+
+  const token = await createServiceToken({
+    audience: 'activity',
+    issuer: 'app-web',
+    privateKey: keyPair.privateKey,
+    scope: 'qa:seed',
+  });
+
+  const request = new Request('http://test.local', {
+    headers: { authorization: `Bearer ${token}` },
+  });
+
+  const resolution = await verifyServiceToken(request, {
+    audience: buildServiceAudience('activity'),
+    keySet,
+  });
+
+  expect(resolution).toStrictEqual({
+    actingSessionID: null,
+    actingUserID: null,
+    issuer: 'app-web',
+    scope: 'qa:seed',
+  });
+});
+
+test('it resolves a null scope from a token whose scope claim is outside the known set', async () => {
+  const keyPair = await jose.generateKeyPair(TOKEN_ALGORITHM, { extractable: true });
+
+  const keySet = parseServiceJWKS(
+    JSON.stringify({ keys: [{ ...(await jose.exportJWK(keyPair.publicKey)), kid: 'app-web' }] }),
+  );
+
+  const token = await new jose.SignJWT({ scope: 'admin:everything' })
+    .setProtectedHeader({ alg: TOKEN_ALGORITHM, kid: 'app-web' })
+    .setIssuer('app-web')
+    .setAudience(buildServiceAudience('activity'))
+    .setExpirationTime('60s')
+    .sign(keyPair.privateKey);
+
+  const request = new Request('http://test.local', {
+    headers: { authorization: `Bearer ${token}` },
+  });
+
+  const resolution = await verifyServiceToken(request, {
+    audience: buildServiceAudience('activity'),
+    keySet,
+  });
+
+  expect(resolution).toStrictEqual({
+    actingSessionID: null,
+    actingUserID: null,
+    issuer: 'app-web',
+    scope: null,
   });
 });
 
