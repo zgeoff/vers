@@ -137,11 +137,20 @@ service does not accept with a plain 403 ([service contracts](./service-contract
 
 ## QA seeding route
 
-The edge's `/api/qa` route admits a request only when its bearer token equals the web app's
-`QA_SEED_TOKEN`. The edge compares SHA-256 digests of the two tokens in constant time, answers a
-missing or wrong token with 401, and answers every request with 404 while `QA_SEED_TOKEN` is unset.
-An admitted request reaches one procedure, the activity service's `createQAAccount`; the route
-answers any other path with 404. The edge forwards the call under its own anonymous service token,
-so the QA token never leaves the edge. The browser proxy refuses `createQAAccount`
-([service contracts](./service-contracts.md#the-client-side)), so a signed-in player never reaches
-it. The route shares the strict rate-limit tier of the sign-in routes.
+The `qa:seed` script asks the edge's `/api/qa` route for a QA account: a test account whose email
+address ends in `@qa.versidle.com`, with an avatar at a chosen level and, on request, finished game
+runs ([manual QA](../../runbooks/qa.md#accounts)). The script sends a bearer token in place of a
+session cookie. The edge passes an admitted request to the activity service, which writes the
+account, simulates the runs, and gets the avatar's roll key and scope secret from the keys service.
+
+The edge checks each request to `/api/qa` in this order:
+
+1. While the web app's `QA_SEED_TOKEN` variable is unset, the edge answers 404.
+2. When the bearer token differs from `QA_SEED_TOKEN`, the edge answers 401. It compares SHA-256
+   digests of the two tokens in constant time.
+3. When the URL path after `/api/qa/` is anything but `createQAAccount`, the edge answers 404.
+
+The edge forwards an admitted request to the activity service's `createQAAccount` under a service
+token with no subject, so the QA token never leaves the edge. The browser proxy answers a browser
+call to `createQAAccount` with 404 ([service contracts](./service-contracts.md#the-client-side)).
+Each client IP gets 10 requests a minute to `/api/qa`, the same budget as a sign-in form.

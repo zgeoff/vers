@@ -35,7 +35,7 @@ export interface PlannedCheckpointRow {
   readonly version: number;
 }
 
-export type RunOutcome = 'completed' | 'failed';
+type RunOutcome = 'completed' | 'failed';
 
 export interface PlannedRun {
   readonly activity: Insertable<Activities>;

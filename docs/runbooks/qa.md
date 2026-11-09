@@ -10,9 +10,11 @@ than real time through the [debug hook](#debug-hook).
 Three scripts change production state. Each one prints its target first, and each refuses when its
 guard fails:
 
-- `qa:seed` and `qa:reset` refuse an address outside `qa.versidle.com`. `qa:seed` refuses an
-  `--origin` that is not loopback, and `qa:reset` refuses a database host that is not loopback. To
-  reach a remote target, pass `--yes`.
+- `qa:seed` and `qa:reset` refuse an account address outside `qa.versidle.com`, whatever flags you
+  pass.
+- `qa:seed` refuses an `--origin` that is not a loopback address, and `qa:reset` refuses a
+  `DATABASE_URL` host that is not loopback. Pass `--yes` only when the repo owner asks you to act on
+  a remote deployment: it lifts this guard.
 - `qa:cold` refuses when a request other than a health check or a deploy probe reached the fleet in
   the last 10 minutes.
 
@@ -31,10 +33,9 @@ select count(*) from users where email like '%@qa.versidle.com';
 
 ## Accounts
 
-`bun run qa:seed` creates a QA account through the web app at `--origin`, and `bun run qa:reset`
-resets one straight in the database at `DATABASE_URL`, so a pass starts from a known state without
-walking sign-up or grinding levels. Run them against production only when the repo owner asks you
-to, and pass `--yes`.
+`bun run qa:seed` creates a QA account through a web app, and `bun run qa:reset` resets one in the
+database, so a pass starts from a known state without walking sign-up or grinding levels. Run either
+one against production only when the repo owner asks you to.
 
 ```bash
 bun run qa:seed --origin http://localhost:3000 --user qa-007 --level 1
@@ -43,30 +44,38 @@ bun run qa:reset --user qa-007
 bun run qa:reset --user qa-007 --all --yes
 ```
 
-`qa:seed` reads one credential, the QA token in `QA_SEED_TOKEN`, and sends it to the web app's
-`/api/qa` route. The web app admits the call only when the token equals its own `QA_SEED_TOKEN`, and
-answers 404 when its variable is unset, so QA seeding is off on every deployment that has no token.
-The activity service then creates the account, with the keys service deriving the avatar's keys, so
-the caller never holds a key root. [Auth](../architecture/services/auth.md#qa-seeding-route) covers
-how the route checks the token.
+`--user` takes the account name: the part of the address before `@qa.versidle.com`.
+
+`qa:seed` calls the web app at `--origin`, and needs one credential: the QA token. Set
+`QA_SEED_TOKEN` in your environment to the value that the web app holds in its own `QA_SEED_TOKEN`
+secret. The repo owner keeps each deployment's token in the `vers` 1Password vault. For a local web
+app, put a value of 32 or more characters in `apps/web/.env.development.local` and in your
+environment. A web app with no `QA_SEED_TOKEN` answers 404, so QA seeding is off on every deployment
+that holds no token. The command needs none of the keys service's secrets: the web app passes the
+call to the activity service, which creates the account and gets the avatar's keys from the keys
+service. [Auth](../architecture/services/auth.md#qa-seeding-route) covers how the web app checks the
+token.
+
+`qa:reset` writes to the database at `DATABASE_URL`.
 
 `qa:seed` creates `qa-007@qa.versidle.com` with the password from `--password`, or a generated one,
 and an active avatar whose XP is the minimum for `--level`. The command prints the credentials once,
 with the username and avatar name it derives from the account name. The username replaces each
 character other than a letter, digit or `_` with `_`. The avatar name maps each digit to a letter
 (`0` to `a`, `1` to `b`, and on to `9` to `j`) and drops every other character that is not a letter.
-For `qa-007`, the username is `qa_007` and the avatar name is `qaaah`. It refuses an address that
-already has an account.
+For `qa-007`, the username is `qa_007` and the avatar name is `qaaah`. `qa:seed` refuses an address
+that already has an account.
 
 The avatar carries a QA flag. Only `qa:seed` writes that flag, and only a flagged avatar can run
 above real time through the debug hook.
 
-`qa:seed` takes a `--level` from 1 to 1000, and refuses a level above 1 without `--runs`. With no
-run stored, the game client starts the avatar's first run from XP 0, and the activity service
-refuses a start whose XP differs from the avatar's. With `--runs <n>`, at most 20, the activity
-service simulates `n` runs at the map's starting node with the real engine and stores each as the
-activity and replay services store a finished, verified run. The avatar keeps the XP and the reward
-items those runs earned, and the command prints each run's outcome.
+`qa:seed` takes a `--level` from 1 to 1000. Above level 1, pass `--runs` with at least 1. An avatar
+above level 1 with no stored run could never start a run: the game client starts the first run from
+XP 0, and the activity service refuses a start whose XP differs from the avatar's. With
+`--runs <n>`, at most 20, the activity service simulates `n` runs at the map's starting node with
+the real engine. It stores each run the same way the activity and replay services store a finished,
+verified run. The avatar keeps the XP and the reward items those runs earned, and the command prints
+each run's outcome.
 
 `--two-factor` adds an authenticator to the account and prints its secret and `otpauth://` URI.
 
