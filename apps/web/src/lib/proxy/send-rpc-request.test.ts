@@ -122,6 +122,27 @@ test('it forwards the method and body for a caller with no cookie session, minti
   expect(body).toBe(JSON.stringify({ name: 'renamed-avatar' }));
 });
 
+test('it mints an activity call with no scope claim, so the QA seeding scope never reaches a browser call', async () => {
+  const resolver = mock<HttpResponseResolver>(() => HttpResponse.json({}));
+
+  server.use(http.post('http://localhost:3006/rpc/getCurrentActivity', resolver));
+
+  await withRequestContext({}, () =>
+    sendRPCRequest(
+      new Request('http://app.test/api/rpc/activity/getCurrentActivity', { method: 'POST' }),
+      'activity',
+    ),
+  );
+
+  const authorization = resolver.mock.calls[0]?.[0].request.headers.get('authorization') ?? '';
+
+  expect(jose.decodeJwt(authorization.replace('Bearer ', ''))).toStrictEqual({
+    aud: 'service-activity',
+    exp: expect.any(Number),
+    iss: 'app-web',
+  });
+});
+
 test('it forwards a bodyless GET request without a body', async () => {
   const resolver = mock<HttpResponseResolver>(() => HttpResponse.json({}));
 

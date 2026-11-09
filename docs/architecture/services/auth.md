@@ -123,10 +123,11 @@ only through the URL in the reset email, and the reset matches it in constant ti
 Every service call over the private network carries a short-lived JWT signed with an Ed25519
 keypair. The issuer claim and the key id both name the minting service, the subject names the acting
 user and is omitted for a verified-anonymous call, a session claim names the acting session, and the
-audience is the target service's registered audience. Every issuer holds its own private key, held
-by no other app: the web edge for its outbound calls, the replay service for its calls toward the
-keys service and the version-pinned replay providers, and the activity service for the wake call a
-committed append sends toward the replay service.
+audience is the target service's registered audience. A scope claim marks a token the edge mints for
+one route only, and a procedure that requires a scope refuses a token without it. Every issuer holds
+its own private key, held by no other app: the web edge for its outbound calls, the replay service
+for its calls toward the keys service and the version-pinned replay providers, and the activity
+service for the wake call a committed append sends toward the replay service.
 
 The service runtime verifies every inbound token before any handler runs, against a key set
 registering every issuer's public key under its key id. A token's claimed issuer must be a known
@@ -151,7 +152,13 @@ The edge checks each request to `/api/qa` in this order:
 3. When the URL path after `/api/qa/` is anything but `createQAAccount`, the edge answers 404.
 
 The edge forwards an admitted request to the activity service's `createQAAccount` under a service
-token with no subject, so the QA token never leaves the edge. The browser proxy answers a browser
-call to `createQAAccount` with 404 ([service contracts](./service-contracts.md#the-client-side)).
+token with no subject and the scope claim `qa:seed`, so the QA token never leaves the edge. Two
+checks keep a browser out of `createQAAccount`:
+
+- The browser proxy answers a browser call to `createQAAccount` with 404
+  ([service contracts](./service-contracts.md#the-client-side)).
+- The activity service answers `FORBIDDEN` to a token without the `qa:seed` scope. The browser proxy
+  never mints that scope.
+
 Each web app machine gives each client IP 10 requests a minute to any path under `/api/qa`, whatever
 the method, the same budget as a sign-in form submission.

@@ -8,4 +8,4 @@ export { parseServicePrivateKey } from './parse-service-private-key';
 export { verifyServiceToken } from './verify-service-token';
 export type { ServiceTokenResolution } from './verify-service-token';
 export { SERVICE_TOKEN_ISSUERS, TOKEN_ALGORITHM } from './token-claims';
-export type { ServiceAudience, ServiceName, TokenIssuer } from './types';
+export type { ServiceAudience, ServiceName, TokenIssuer, TokenScope } from './types';

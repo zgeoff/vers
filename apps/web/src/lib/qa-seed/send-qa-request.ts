@@ -40,7 +40,11 @@ export async function sendQARequest(
     return new Response(null, { status: REFUSAL_STATUS[refusal] });
   }
 
-  const token = await createEdgeServiceToken({ actingUserID: null, audience: 'activity' });
+  const token = await createEdgeServiceToken({
+    actingUserID: null,
+    audience: 'activity',
+    scope: 'qa:seed',
+  });
 
   return forwardServiceRequest(request, {
     ...(options.clock !== undefined && { clock: options.clock }),

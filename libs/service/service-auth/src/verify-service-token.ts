@@ -1,11 +1,17 @@
 import * as jose from 'jose';
 import { isTokenIssuer } from './is-token-issuer';
+import { isTokenScope } from './is-token-scope';
 import type { ServiceKeySet } from './parse-service-jwks';
 import { TOKEN_ALGORITHM } from './token-claims';
-import type { TokenIssuer } from './types';
+import type { TokenIssuer, TokenScope } from './types';
 
 export type ServiceTokenResolution =
-  | { actingSessionID: null | string; actingUserID: null | string; issuer: TokenIssuer }
+  | {
+      actingSessionID: null | string;
+      actingUserID: null | string;
+      issuer: TokenIssuer;
+      scope: TokenScope | null;
+    }
   | { failure: 'invalid-service-token' };
 
 interface VerifyServiceTokenOptions {
@@ -44,6 +50,7 @@ export async function verifyServiceToken(
         typeof verification.payload['sid'] === 'string' ? verification.payload['sid'] : null,
       actingUserID: typeof verification.payload.sub === 'string' ? verification.payload.sub : null,
       issuer,
+      scope: isTokenScope(verification.payload['scope']) ? verification.payload['scope'] : null,
     };
   } catch {
     return { failure: 'invalid-service-token' };

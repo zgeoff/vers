@@ -59,7 +59,7 @@ test('it answers 404 without forwarding when the QA token holder calls another a
   expect(resolver).not.toHaveBeenCalled();
 });
 
-test("it forwards the QA token holder's createQAAccount call under the edge's anonymous token", async () => {
+test("it forwards the QA token holder's createQAAccount call under an anonymous edge token with the QA seeding scope", async () => {
   const resolver = mock<HttpResponseResolver>(() =>
     HttpResponse.json({ json: { kind: 'created' } }, { status: 200 }),
   );
@@ -87,11 +87,12 @@ test("it forwards the QA token holder's createQAAccount call under the edge's an
     status: 200,
   });
 
-  expect(claims).toStrictEqual(
-    expect.objectContaining({ aud: 'service-activity', iss: 'app-web' }),
-  );
-
-  expect(claims.sub).toBeUndefined();
+  expect(claims).toStrictEqual({
+    aud: 'service-activity',
+    exp: expect.any(Number),
+    iss: 'app-web',
+    scope: 'qa:seed',
+  });
 
   expect(forwardedBody).toBe(
     JSON.stringify({ json: { level: 1, runs: 0, twoFactor: false, user: 'qa-heron' } }),

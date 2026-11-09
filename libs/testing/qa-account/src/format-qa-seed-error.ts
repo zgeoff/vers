@@ -3,7 +3,7 @@ import type { ErrorFromErrorMap } from '@orpc/contract';
 import type { activityContract } from '@vers/contract-activity';
 import { match } from 'ts-pattern';
 import { formatQAUserRefusal } from './format-qa-user-refusal';
-import type { QAUser } from './types';
+import type { QASeedClash, QAUser } from './types';
 
 type CreateQAAccountError = ErrorFromErrorMap<
   (typeof activityContract.createQAAccount)['~orpc']['errorMap']
@@ -20,12 +20,10 @@ export function formatQASeedError(
 ): string {
   if (isDefinedError(error)) {
     return match(error)
-      .with({ code: 'CONFLICT', data: { field: 'email' } }, () => formatEmailConflict(context.user))
-      .with({ code: 'CONFLICT', data: { field: 'username' } }, () =>
-        formatNameConflict('username', context.user.username),
-      )
-      .with({ code: 'CONFLICT', data: { field: 'avatarName' } }, () =>
-        formatNameConflict('avatar name', context.user.avatarName),
+      .with({ code: 'CONFLICT' }, (conflict) => formatConflict(conflict.data.field, context.user))
+      .with(
+        { code: 'FORBIDDEN' },
+        () => `${context.host} forwarded the call without the QA seeding scope`,
       )
       .with({ code: 'QA_ACCOUNT_NAME_INVALID' }, (invalid) =>
         formatQAUserRefusal(context.user.name, invalid.data.reason),
@@ -52,8 +50,15 @@ export function formatQASeedError(
   return error.message;
 }
 
-function formatEmailConflict(user: QAUser): string {
-  return `${user.email} already exists; run qa:reset --user ${user.name} --all first`;
+function formatConflict(field: QASeedClash['field'], user: QAUser): string {
+  return match(field)
+    .with(
+      'email',
+      () => `${user.email} already exists; run qa:reset --user ${user.name} --all first`,
+    )
+    .with('username', () => formatNameConflict('username', user.username))
+    .with('avatarName', () => formatNameConflict('avatar name', user.avatarName))
+    .exhaustive();
 }
 
 function formatNameConflict(label: string, value: string): string {

@@ -4,9 +4,15 @@ import { createGenesisSeed } from '@vers/contract-activity';
 import type { SecretRef } from '@vers/contract-keys';
 import type { DB } from '@vers/db';
 import { applyQASeed, buildPasswordFromBytes, parseQAUser } from '@vers/qa-account';
+import type { TokenScope } from '@vers/service-auth';
 import type { Kysely } from 'kysely';
 import { readAvatarKeys } from '../read-avatar-keys';
-import type { KeysClient, QAAccountConflictPayload, QAAccountNameInvalidPayload } from '../types';
+import type {
+  EmptyErrorPayload,
+  KeysClient,
+  QAAccountConflictPayload,
+  QAAccountNameInvalidPayload,
+} from '../types';
 
 interface CreateQAAccountDeps {
   readonly db: Kysely<DB>;
@@ -16,9 +22,15 @@ interface CreateQAAccountDeps {
   readonly secretVersion: number;
 }
 
+interface CreateQAAccountContext {
+  readonly scope: TokenScope | null;
+}
+
 interface CreateQAAccountOpts {
+  readonly context: CreateQAAccountContext;
   readonly errors: {
     readonly CONFLICT: (payload: QAAccountConflictPayload) => Error;
+    readonly FORBIDDEN: (payload: EmptyErrorPayload) => Error;
     readonly QA_ACCOUNT_NAME_INVALID: (payload: QAAccountNameInvalidPayload) => Error;
   };
   readonly input: CreateQAAccountInput;
@@ -30,6 +42,10 @@ export async function createQAAccount(
   deps: Readonly<CreateQAAccountDeps>,
   opts: CreateQAAccountOpts,
 ): Promise<QAAccount> {
+  if (opts.context.scope !== 'qa:seed') {
+    throw opts.errors.FORBIDDEN({ data: {} });
+  }
+
   const parsed = parseQAUser(opts.input.user);
 
   if (parsed.kind === 'refused') {

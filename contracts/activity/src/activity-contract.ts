@@ -230,6 +230,10 @@ export const activityContract = {
           data: QAAccountConflictDataSchema,
           message: 'Another account holds the email, username or avatar name',
         },
+        FORBIDDEN: {
+          data: z.object({}),
+          message: 'Only a service token with the QA seeding scope may create a QA account',
+        },
         QA_ACCOUNT_NAME_INVALID: {
           data: QAAccountNameInvalidDataSchema,
           message: 'The name yields no valid QA account',

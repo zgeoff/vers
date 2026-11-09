@@ -18,11 +18,15 @@ import { server } from '../mocks/server';
 async function setupTest() {
   const db = await createTestDB({ isolation: 'schema' });
   const service = await createActivityService({ db: db.db });
-  const viewer = await createAnonymousViewer({ audience: 'service-activity' });
+  const qaViewer = await createAnonymousViewer({ audience: 'service-activity', scope: 'qa:seed' });
+  const unscopedViewer = await createAnonymousViewer({ audience: 'service-activity' });
 
   return {
-    client: buildRPCTestClient<ActivityContract>(service.app, { token: viewer.token }),
+    client: buildRPCTestClient<ActivityContract>(service.app, { token: qaViewer.token }),
     db: db.db,
+    unscopedClient: buildRPCTestClient<ActivityContract>(service.app, {
+      token: unscopedViewer.token,
+    }),
     [Symbol.asyncDispose]: db[Symbol.asyncDispose],
   };
 }
@@ -181,6 +185,14 @@ test('it answers INTERNAL_SERVER_ERROR when the keys service refuses the activit
   expect(
     ctx.client.createQAAccount({ level: 2, runs: 1, twoFactor: false, user: 'qa-bittern' }),
   ).rejects.toMatchObject({ code: 'INTERNAL_SERVER_ERROR', status: 500 });
+});
+
+test('it refuses a service token without the QA seeding scope with FORBIDDEN', async () => {
+  await using ctx = await setupTest();
+
+  expect(
+    ctx.unscopedClient.createQAAccount({ level: 1, runs: 0, twoFactor: false, user: 'qa-plover' }),
+  ).rejects.toMatchObject({ code: 'FORBIDDEN', status: 403 });
 });
 
 test('it refuses a level above 1 with no runs with BAD_REQUEST', async () => {

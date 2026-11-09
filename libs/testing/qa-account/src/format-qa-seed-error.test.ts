@@ -39,6 +39,21 @@ test.each([
   expect(formatQASeedError(error, { host: 'localhost:3000', user })).toBe(row.expected);
 });
 
+test('it names the host when the activity service refuses a call without the QA seeding scope', () => {
+  const error = new ORPCError('FORBIDDEN', { data: {}, defined: true, status: 403 });
+
+  const user = {
+    avatarName: 'qaheron',
+    email: 'qa-heron@qa.versidle.com',
+    name: 'qa-heron',
+    username: 'qa_heron',
+  };
+
+  expect(formatQASeedError(error, { host: 'app.example.dev', user })).toBe(
+    'app.example.dev forwarded the call without the QA seeding scope',
+  );
+});
+
 test('it explains an invalid account name from the reason the service gives', () => {
   const error = new ORPCError('QA_ACCOUNT_NAME_INVALID', {
     data: { reason: 'invalid-avatar-name' },

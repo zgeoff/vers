@@ -127,8 +127,9 @@ procedure it exposes. The proxy therefore forwards only the services that browse
 answers a call to any other service with a 404. Credential, session, and verification procedures
 stay reachable only from the edge's server functions, which run their own checks first. The activity
 service's `createQAAccount` stays reachable only from the edge's
-[QA seeding route](./auth.md#qa-seeding-route), and the proxy answers a browser call to it with
-a 404.
+[QA seeding route](./auth.md#qa-seeding-route). The proxy answers a browser call to it with a 404,
+and the activity service refuses any token without the QA seeding scope, which the proxy never
+mints.
 
 ## Errors and the trust boundary
 
