@@ -7,6 +7,7 @@ import type { DB } from '@vers/db';
 import { toJSON } from '@vers/db';
 import { createSeed } from '@vers/game-utils';
 import { buildLevelFromXP, buildXPThreshold } from '@vers/idle-core';
+import { isUniqueViolation } from '@vers/service-utils';
 import { readCurrentSimVersion } from '@vers/sim-registry';
 import type { Kysely } from 'kysely';
 import { planQARuns } from './plan-qa-runs';
@@ -308,15 +309,4 @@ async function writeRuns(trx: Kysely<DB>, plan: QARunsPlan, avatarID: string): P
       .values(plan.clearedNodeIDs.map((key) => ({ avatarId: avatarID, key, kind: 'first_clear' })))
       .execute();
   }
-}
-
-const UNIQUE_VIOLATION_CODE = '23505';
-
-function isUniqueViolation(error: unknown): boolean {
-  return (
-    typeof error === 'object' &&
-    error !== null &&
-    'code' in error &&
-    error.code === UNIQUE_VIOLATION_CODE
-  );
 }

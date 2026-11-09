@@ -1000,6 +1000,7 @@
         "@vers/idle-core": "workspace:*",
         "@vers/item-gen": "workspace:*",
         "@vers/scripts": "workspace:*",
+        "@vers/service-utils": "workspace:*",
         "@vers/sim-registry": "workspace:*",
         "@vers/worldmap-content": "workspace:*",
         "@vers/worldmap-core": "workspace:*",
