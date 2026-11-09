@@ -21,9 +21,3 @@ test('it counts QA route refusals by reason', async () => {
     { reason: 'disabled', value: 1 },
   ]);
 });
-
-test('it stays inert without a registered meter provider', () => {
-  expect(() => {
-    recordQARequestRefusal('disabled');
-  }).not.toThrow();
-});

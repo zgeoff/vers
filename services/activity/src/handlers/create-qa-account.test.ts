@@ -134,7 +134,20 @@ test('it refuses an address that already has an account with CONFLICT', async ()
 
   expect(
     ctx.client.createQAAccount({ level: 1, runs: 0, twoFactor: false, user: 'qa-egret' }),
-  ).rejects.toMatchObject({ code: 'CONFLICT', data: { email: 'qa-egret@qa.versidle.com' } });
+  ).rejects.toMatchObject({
+    code: 'CONFLICT',
+    data: { field: 'email', value: 'qa-egret@qa.versidle.com' },
+  });
+});
+
+test('it refuses a name whose username another account holds with CONFLICT on the username', async () => {
+  await using ctx = await setupTest();
+
+  await ctx.client.createQAAccount({ level: 1, runs: 0, twoFactor: false, user: 'qa-007' });
+
+  expect(
+    ctx.client.createQAAccount({ level: 1, runs: 0, twoFactor: false, user: 'qa.007' }),
+  ).rejects.toMatchObject({ code: 'CONFLICT', data: { field: 'username', value: 'qa_007' } });
 });
 
 test('it refuses an address outside the QA domain with QA_ACCOUNT_NAME_INVALID', async () => {

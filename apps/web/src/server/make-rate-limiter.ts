@@ -77,8 +77,9 @@ const STRICT_ROUTES: ReadonlyArray<string> = [
   '/account',
   '/account/2fa/verify',
   '/account/change-password',
-  '/api/qa/',
 ];
+
+const QA_PATH_PREFIX = '/api/qa';
 
 const SAFE_METHODS: ReadonlySet<string> = new Set(['GET', 'HEAD']);
 
@@ -87,6 +88,10 @@ function pickRateLimitTier(request: Request): RateLimitTier {
 
   if (pathname === RPC_PATH_PREFIX || pathname.startsWith(`${RPC_PATH_PREFIX}/`)) {
     return 'rpc';
+  }
+
+  if (pathname === QA_PATH_PREFIX || pathname.startsWith(`${QA_PATH_PREFIX}/`)) {
+    return 'strict';
   }
 
   const isStrictRoute = STRICT_ROUTES.some((route) => pathname.includes(route));

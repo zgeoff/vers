@@ -40,7 +40,6 @@ export async function sendQARequest(
     return new Response(null, { status: REFUSAL_STATUS[refusal] });
   }
 
-  // the QA token never travels past the edge: the service sees only the edge's own anonymous token
   const token = await createEdgeServiceToken({ actingUserID: null, audience: 'activity' });
 
   return forwardServiceRequest(request, {

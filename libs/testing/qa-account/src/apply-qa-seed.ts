@@ -10,7 +10,7 @@ import { buildLevelFromXP, buildXPThreshold } from '@vers/idle-core';
 import { readCurrentSimVersion } from '@vers/sim-registry';
 import type { Kysely } from 'kysely';
 import { planQARuns } from './plan-qa-runs';
-import type { AvatarKeys, QARunsPlan, QAUser, SeedEntropy } from './types';
+import type { AvatarKeys, QARunsPlan, QASeedClash, QAUser, SeedEntropy } from './types';
 
 export interface ApplyQASeedDeps {
   readonly db: Kysely<DB>;
@@ -34,20 +34,16 @@ export type QASeedResult = Omit<QAAccount, 'password'>;
 
 export type QASeedOutcome =
   | { readonly account: QASeedResult; readonly kind: 'created' }
-  | { readonly kind: 'exists' };
+  | { readonly clash: QASeedClash; readonly kind: 'exists' };
 
 export async function applyQASeed(
   deps: Readonly<ApplyQASeedDeps>,
   input: Readonly<ApplyQASeedInput>,
 ): Promise<QASeedOutcome> {
-  const existing = await deps.db
-    .selectFrom('users')
-    .select('id')
-    .where('email', '=', input.user.email)
-    .executeTakeFirst();
+  const clash = await readQASeedClash(deps.db, input.user);
 
-  if (existing !== undefined) {
-    return { kind: 'exists' };
+  if (clash !== null) {
+    return { clash, kind: 'exists' };
   }
 
   const userID = createId();
@@ -60,42 +56,26 @@ export async function applyQASeed(
 
   const twoFactor = input.twoFactor ? await createTwoFactor(userID) : undefined;
 
-  await deps.db.transaction().execute(async (trx) => {
-    await trx
-      .insertInto('users')
-      .values({
-        email: input.user.email,
-        id: userID,
-        name: input.user.name,
-        passwordHash,
-        seed: createSeed(),
-        username: input.user.username,
-      })
-      .execute();
+  try {
+    await writeAccount(deps.db, {
+      avatarID,
+      finalXP,
+      input,
+      passwordHash,
+      plan,
+      twoFactor,
+      userID,
+    });
+  } catch (error) {
+    // a concurrent seed of a clashing name commits between the read above and this write
+    const raced = isUniqueViolation(error) ? await readQASeedClash(deps.db, input.user) : null;
 
-    await trx
-      .insertInto('avatars')
-      .values({
-        id: avatarID,
-        isQa: true,
-        level: buildLevelFromXP(finalXP),
-        name: input.user.avatarName,
-        seed: input.entropy.userSeed,
-        userId: userID,
-        xp: finalXP,
-      })
-      .execute();
-
-    await trx.insertInto('activeAvatars').values({ avatarId: avatarID, userId: userID }).execute();
-
-    if (twoFactor !== undefined) {
-      await trx.insertInto('verifications').values(twoFactor.row).execute();
+    if (raced === null) {
+      throw error;
     }
 
-    if (plan !== undefined) {
-      await writeRuns(trx, plan, avatarID);
-    }
-  });
+    return { clash: raced, kind: 'exists' };
+  }
 
   return {
     account: {
@@ -118,6 +98,39 @@ export async function applyQASeed(
     },
     kind: 'created',
   };
+}
+
+async function readQASeedClash(db: Kysely<DB>, user: QAUser): Promise<QASeedClash | null> {
+  const [email, username, avatarName] = await Promise.all([
+    db.selectFrom('users').select('id').where('email', '=', user.email).executeTakeFirst(),
+    db.selectFrom('users').select('id').where('username', '=', user.username).executeTakeFirst(),
+    db.selectFrom('avatars').select('id').where('name', '=', user.avatarName).executeTakeFirst(),
+  ]);
+
+  return pickQASeedClash(user, {
+    avatarName: avatarName !== undefined,
+    email: email !== undefined,
+    username: username !== undefined,
+  });
+}
+
+function pickQASeedClash(
+  user: QAUser,
+  taken: Readonly<Record<QASeedClash['field'], boolean>>,
+): QASeedClash | null {
+  if (taken.email) {
+    return { field: 'email', value: user.email };
+  }
+
+  if (taken.username) {
+    return { field: 'username', value: user.username };
+  }
+
+  if (taken.avatarName) {
+    return { field: 'avatarName', value: user.avatarName };
+  }
+
+  return null;
 }
 
 async function planRuns(
@@ -213,6 +226,58 @@ async function createTwoFactor(userID: string): Promise<TwoFactorSetup> {
   };
 }
 
+interface WriteAccountInput {
+  readonly avatarID: string;
+  readonly finalXP: number;
+  readonly input: Readonly<ApplyQASeedInput>;
+  readonly passwordHash: string;
+  readonly plan: QARunsPlan | undefined;
+  readonly twoFactor: TwoFactorSetup | undefined;
+  readonly userID: string;
+}
+
+async function writeAccount(db: Kysely<DB>, account: Readonly<WriteAccountInput>): Promise<void> {
+  await db.transaction().execute(async (trx) => {
+    await trx
+      .insertInto('users')
+      .values({
+        email: account.input.user.email,
+        id: account.userID,
+        name: account.input.user.name,
+        passwordHash: account.passwordHash,
+        seed: createSeed(),
+        username: account.input.user.username,
+      })
+      .execute();
+
+    await trx
+      .insertInto('avatars')
+      .values({
+        id: account.avatarID,
+        isQa: true,
+        level: buildLevelFromXP(account.finalXP),
+        name: account.input.user.avatarName,
+        seed: account.input.entropy.userSeed,
+        userId: account.userID,
+        xp: account.finalXP,
+      })
+      .execute();
+
+    await trx
+      .insertInto('activeAvatars')
+      .values({ avatarId: account.avatarID, userId: account.userID })
+      .execute();
+
+    if (account.twoFactor !== undefined) {
+      await trx.insertInto('verifications').values(account.twoFactor.row).execute();
+    }
+
+    if (account.plan !== undefined) {
+      await writeRuns(trx, account.plan, account.avatarID);
+    }
+  });
+}
+
 async function writeRuns(trx: Kysely<DB>, plan: QARunsPlan, avatarID: string): Promise<void> {
   await trx.insertInto('activityChains').values(plan.chain).execute();
 
@@ -243,4 +308,15 @@ async function writeRuns(trx: Kysely<DB>, plan: QARunsPlan, avatarID: string): P
       .values(plan.clearedNodeIDs.map((key) => ({ avatarId: avatarID, key, kind: 'first_clear' })))
       .execute();
   }
+}
+
+const UNIQUE_VIOLATION_CODE = '23505';
+
+function isUniqueViolation(error: unknown): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    error.code === UNIQUE_VIOLATION_CODE
+  );
 }

@@ -19,9 +19,11 @@ import { revealNodes } from './handlers/reveal-nodes';
 import { stopActivity } from './handlers/stop-activity';
 import { trackActivityProgress } from './handlers/track-activity-progress';
 import { updateFailureAction } from './handlers/update-failure-action';
+import type { KeysClient } from './types';
 
 interface CreateActivityRouterDeps {
   readonly db: Kysely<DB>;
+  readonly keysClient: KeysClient;
   readonly keysServiceURL: string;
   readonly keyVersion: number;
   readonly loadContentDocument: (contentVersion: string) => Promise<ContentDocument | undefined>;
@@ -56,9 +58,8 @@ export function createActivityRouter(deps: CreateActivityRouterDeps) {
       createQAAccount(
         {
           db: deps.db,
+          keysClient: deps.keysClient,
           keyVersion: deps.keyVersion,
-          keysServiceURL: deps.keysServiceURL,
-          privateKey: deps.privateKey,
           secretRef: deps.secretRef,
           secretVersion: deps.secretVersion,
         },

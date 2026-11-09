@@ -315,11 +315,100 @@ test('it reports an address that already has an account and writes nothing more'
     },
   });
 
-  expect(second).toStrictEqual({ kind: 'exists' });
+  expect(second).toStrictEqual({
+    clash: { field: 'email', value: 'qa-dup@qa.versidle.com' },
+    kind: 'exists',
+  });
 
   expect(
     ctx.db.selectFrom('users').select('id').where('email', '=', 'qa-dup@qa.versidle.com').execute(),
   ).resolves.toHaveLength(1);
+});
+
+test.each([
+  {
+    clash: { field: 'username', value: 'qa_007' },
+    second: {
+      avatarName: 'qaaahx',
+      email: 'qa.007@qa.versidle.com',
+      name: 'qa.007',
+      username: 'qa_007',
+    },
+  },
+  {
+    clash: { field: 'avatarName', value: 'qaaah' },
+    second: {
+      avatarName: 'qaaah',
+      email: 'qa007@qa.versidle.com',
+      name: 'qa007',
+      username: 'qa007',
+    },
+  },
+])('it reports a $clash.field another account holds and writes no account', async (row) => {
+  await using ctx = await setupTest();
+
+  await applyQASeed(ctx.deps, {
+    entropy: { genesisSeed: '0123456789abcdef0123456789abcdef', userSeed: 7 },
+    keyVersion: 1,
+    level: 1,
+    now: new Date(),
+    password: 'known-password',
+    runs: 0,
+    secretRef: 'worldmap',
+    secretVersion: 1,
+    twoFactor: false,
+    user: {
+      avatarName: 'qaaah',
+      email: 'qa-007@qa.versidle.com',
+      name: 'qa-007',
+      username: 'qa_007',
+    },
+  });
+
+  const second = await applyQASeed(ctx.deps, {
+    entropy: { genesisSeed: '0123456789abcdef0123456789abcdef', userSeed: 7 },
+    keyVersion: 1,
+    level: 1,
+    now: new Date(),
+    password: 'known-password',
+    runs: 0,
+    secretRef: 'worldmap',
+    secretVersion: 1,
+    twoFactor: false,
+    user: row.second,
+  });
+
+  expect(second).toStrictEqual({ clash: row.clash, kind: 'exists' });
+
+  expect(
+    ctx.db.selectFrom('users').select('id').where('email', '=', row.second.email).execute(),
+  ).resolves.toBeEmpty();
+});
+
+test('it reports a clash for the losing one of two concurrent seeds of one address', async () => {
+  await using ctx = await setupTest();
+
+  const input = {
+    entropy: { genesisSeed: '0123456789abcdef0123456789abcdef', userSeed: 7 },
+    keyVersion: 1,
+    level: 1,
+    now: new Date(),
+    password: 'known-password',
+    runs: 0,
+    secretRef: 'worldmap',
+    secretVersion: 1,
+    twoFactor: false,
+    user: {
+      avatarName: 'qarace',
+      email: 'qa-race@qa.versidle.com',
+      name: 'qa-race',
+      username: 'qa_race',
+    },
+  } as const;
+
+  const outcomes = await Promise.all([applyQASeed(ctx.deps, input), applyQASeed(ctx.deps, input)]);
+
+  expect(outcomes.map((outcome) => outcome.kind)).toIncludeSameMembers(['created', 'exists']);
 });
 
 test('it refuses runs when the registry has no active sim version', async () => {

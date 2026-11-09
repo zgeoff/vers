@@ -18,21 +18,42 @@ export function formatQASeedError(
 ): string {
   if (isDefinedError(error)) {
     return match(error)
-      .with(
-        { code: 'CONFLICT' },
-        (conflict) =>
-          `${conflict.data.email} already exists; run qa:reset --user ${context.user} --all first`,
+      .with({ code: 'CONFLICT', data: { field: 'email' } }, (conflict) =>
+        formatEmailConflict(conflict.data.value, context.user),
+      )
+      .with({ code: 'CONFLICT', data: { field: 'username' } }, (conflict) =>
+        formatNameConflict('username', conflict.data.value),
+      )
+      .with({ code: 'CONFLICT', data: { field: 'avatarName' } }, (conflict) =>
+        formatNameConflict('avatar name', conflict.data.value),
       )
       .with({ code: 'QA_ACCOUNT_NAME_INVALID' }, (invalid) => invalid.data.reason)
       .exhaustive();
   }
 
   if (error instanceof ORPCError) {
-    return match(error.status)
-      .with(401, () => `${context.host} refused QA_SEED_TOKEN`)
-      .with(404, () => `${context.host} has QA seeding switched off`)
-      .otherwise(() => `${context.host} answered ${error.status}: ${error.message}`);
+    return (
+      match(error.status)
+        .with(401, () => `${context.host} refused QA_SEED_TOKEN`)
+        .with(404, () => `${context.host} has QA seeding switched off`)
+
+        // the edge gives up on a slow seed while the activity service can still commit it
+        .with(
+          503,
+          () =>
+            `${context.host} answered 503; the account may still have been created, so rerun once: a CONFLICT on the email means it was`,
+        )
+        .otherwise(() => `${context.host} answered ${error.status}: ${error.message}`)
+    );
   }
 
   return error.message;
+}
+
+function formatEmailConflict(email: string, user: string): string {
+  return `${email} already exists; run qa:reset --user ${user} --all first`;
+}
+
+function formatNameConflict(label: string, value: string): string {
+  return `another account holds the ${label} ${value}; pick another --user`;
 }

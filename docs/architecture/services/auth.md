@@ -153,4 +153,5 @@ The edge checks each request to `/api/qa` in this order:
 The edge forwards an admitted request to the activity service's `createQAAccount` under a service
 token with no subject, so the QA token never leaves the edge. The browser proxy answers a browser
 call to `createQAAccount` with 404 ([service contracts](./service-contracts.md#the-client-side)).
-Each client IP gets 10 requests a minute to `/api/qa`, the same budget as a sign-in form.
+Each web app machine gives each client IP 10 requests a minute to any path under `/api/qa`, whatever
+the method, the same budget as a sign-in form submission.

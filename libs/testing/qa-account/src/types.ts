@@ -17,11 +17,17 @@ export interface SeedEntropy {
 export interface HostTarget {
   readonly host: string;
   readonly isLoopback: boolean;
+  readonly protocol: string;
 }
 
 export type QAUserParse =
   | { readonly kind: 'parsed'; readonly user: QAUser }
   | { readonly kind: 'refused'; readonly reason: string };
+
+export interface QASeedClash {
+  readonly field: 'avatarName' | 'email' | 'username';
+  readonly value: string;
+}
 
 export interface AvatarKeys {
   readonly rollKey: Uint8Array;

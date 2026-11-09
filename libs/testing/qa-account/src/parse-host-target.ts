@@ -14,5 +14,6 @@ export function parseHostTarget(label: string, rawURL: string): HostTarget {
   return {
     host: url.host,
     isLoopback: LOOPBACK_HOSTNAMES.has(hostname) || hostname.endsWith('.localhost'),
+    protocol: url.protocol,
   };
 }

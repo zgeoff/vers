@@ -105,7 +105,12 @@ const RevealStampsSchema = z.object({
 });
 
 const CompletedNodeIDsSchema = z.array(z.string());
-const QAAccountConflictDataSchema = z.object({ email: z.string() });
+
+const QAAccountConflictDataSchema = z.object({
+  field: z.enum(['avatarName', 'email', 'username']),
+  value: z.string(),
+});
+
 const QAAccountNameInvalidDataSchema = z.object({ reason: z.string() });
 
 export const activityContract = {
@@ -221,7 +226,10 @@ export const activityContract = {
     .output(QAAccountSchema)
     .errors(
       defineErrors({
-        CONFLICT: { data: QAAccountConflictDataSchema, message: 'The QA account exists' },
+        CONFLICT: {
+          data: QAAccountConflictDataSchema,
+          message: 'Another account holds the email, username or avatar name',
+        },
         QA_ACCOUNT_NAME_INVALID: {
           data: QAAccountNameInvalidDataSchema,
           message: 'The name yields no valid QA account',

@@ -4,16 +4,14 @@ import { createGenesisSeed } from '@vers/contract-activity';
 import type { SecretRef } from '@vers/contract-keys';
 import type { DB } from '@vers/db';
 import { applyQASeed, buildPasswordFromBytes, parseQAUser } from '@vers/qa-account';
-import type { CryptoKey } from 'jose';
 import type { Kysely } from 'kysely';
 import { readAvatarKeys } from '../read-avatar-keys';
-import type { QAAccountConflictPayload, QAAccountNameInvalidPayload } from '../types';
+import type { KeysClient, QAAccountConflictPayload, QAAccountNameInvalidPayload } from '../types';
 
 interface CreateQAAccountDeps {
   readonly db: Kysely<DB>;
-  readonly keysServiceURL: string;
+  readonly keysClient: KeysClient;
   readonly keyVersion: number;
-  readonly privateKey: CryptoKey;
   readonly secretRef: SecretRef;
   readonly secretVersion: number;
 }
@@ -45,7 +43,7 @@ export async function createQAAccount(
     {
       db: deps.db,
       readAvatarKeys: (avatarID) =>
-        readAvatarKeys(deps, {
+        readAvatarKeys(deps.keysClient, {
           avatarID,
           keyVersion: deps.keyVersion,
           secretRef: deps.secretRef,
@@ -67,7 +65,7 @@ export async function createQAAccount(
   );
 
   if (outcome.kind === 'exists') {
-    throw opts.errors.CONFLICT({ data: { email: parsed.user.email } });
+    throw opts.errors.CONFLICT({ data: outcome.clash });
   }
 
   return { ...outcome.account, password };

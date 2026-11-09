@@ -3,13 +3,19 @@ import { bytesToHex } from '@noble/hashes/utils.js';
 import { resolveServiceURL } from '@vers/mock-services';
 import { buildMockScopeSecret, mockKeysService } from '@vers/mock-services/keys';
 import { resolveTestServiceKeyPair } from '@vers/service-test-utils/bun';
+import { createKeysClient } from './create-keys-client';
 import { server } from './mocks/server';
 import { readAvatarKeys } from './read-avatar-keys';
 
 async function setupTest() {
   const keyPair = await resolveTestServiceKeyPair();
 
-  return { deps: { keysServiceURL: resolveServiceURL('keys'), privateKey: keyPair.privateKey } };
+  return {
+    keysClient: createKeysClient({
+      keysServiceURL: resolveServiceURL('keys'),
+      privateKey: keyPair.privateKey,
+    }),
+  };
 }
 
 test("it reads the avatar's roll key from the keys service", async () => {
@@ -17,7 +23,7 @@ test("it reads the avatar's roll key from the keys service", async () => {
 
   server.use(mockKeysService.deriveAvatarKey.handler(() => ({ key: 'ab'.repeat(32) })));
 
-  const keys = await readAvatarKeys(ctx.deps, {
+  const keys = await readAvatarKeys(ctx.keysClient, {
     avatarID: 'avatar_heron',
     keyVersion: 1,
     secretRef: 'worldmap',
@@ -30,7 +36,7 @@ test("it reads the avatar's roll key from the keys service", async () => {
 test("it reads the avatar's worldmap scope secret from the keys service", async () => {
   const ctx = await setupTest();
 
-  const keys = await readAvatarKeys(ctx.deps, {
+  const keys = await readAvatarKeys(ctx.keysClient, {
     avatarID: 'avatar_heron',
     keyVersion: 1,
     secretRef: 'worldmap',
@@ -55,7 +61,7 @@ test('it asks the keys service for the roll key of the trade population at the g
     }),
   );
 
-  await readAvatarKeys(ctx.deps, {
+  await readAvatarKeys(ctx.keysClient, {
     avatarID: 'avatar_heron',
     keyVersion: 3,
     secretRef: 'worldmap',

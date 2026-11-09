@@ -6,6 +6,7 @@ import { CreateQAAccountInputSchema } from '@vers/contract-activity';
 import { runCommandLine } from '@vers/scripts';
 import { define } from 'gunshi';
 import * as z from 'zod';
+import { findOriginRefusal } from '../find-origin-refusal';
 import { formatQASeedError } from '../format-qa-seed-error';
 import { parseHostTarget } from '../parse-host-target';
 import { parseQAUser } from '../parse-qa-user';
@@ -31,8 +32,10 @@ const entry = define({
 
     console.log(`target: ${target.host}`);
 
-    if (!target.isLoopback && !options.yes) {
-      throw new Error(`${target.host} is not a loopback host; pass --yes to seed through it`);
+    const refusal = findOriginRefusal(target, options.yes);
+
+    if (refusal !== null) {
+      throw new Error(refusal);
     }
 
     const input = CreateQAAccountInputSchema.safeParse({
