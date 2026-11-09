@@ -1,8 +1,8 @@
-import { expect, onTestFinished, test } from 'bun:test';
+import { expect, test } from 'bun:test';
 import { resolveServiceURL } from '@vers/mock-services';
 import { resolveTestServiceKeyPair } from '@vers/service-test-utils/bun';
 import { decodeJwt } from 'jose';
-import type { LifeCycleEventsMap } from 'msw';
+import { http } from 'msw';
 import { createKeysClient } from './create-keys-client';
 import { server } from './mocks/server';
 
@@ -22,15 +22,11 @@ test('it sends each keys call a service token from service-activity for the keys
 
   const authorizations: Array<string | null> = [];
 
-  const recordAuthorization = (...args: LifeCycleEventsMap['request:start']): void => {
-    authorizations.push(args[0].request.headers.get('authorization'));
-  };
-
-  server.events.on('request:start', recordAuthorization);
-
-  onTestFinished(() => {
-    server.events.removeListener('request:start', recordAuthorization);
-  });
+  server.use(
+    http.post(`${resolveServiceURL('keys')}/rpc/*`, (info) => {
+      authorizations.push(info.request.headers.get('authorization'));
+    }),
+  );
 
   await ctx.keysClient.deriveAvatarKey({
     avatarID: 'avatar_plover',
