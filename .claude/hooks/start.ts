@@ -4,7 +4,7 @@
 // that fails would let the call through. This file therefore imports only Node builtins.
 import type { SpawnSyncReturns } from 'node:child_process';
 import { spawnSync } from 'node:child_process';
-import { linkSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, linkSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
 
@@ -552,6 +552,22 @@ function isReadOnlyCommand(command: string): boolean {
   );
 }
 
+// Bun also resolves a bare name through each parent folder's node_modules, so a clone nested in
+// another checkout would run that checkout's copy and never install its own.
+function importOwnAgentHooks(): Promise<AgentHooksModule> {
+  if (!probeOwnAgentHooks(ROOT)) {
+    return Promise.reject(
+      new Error(`Cannot find package '@zgeoff/agent-hooks' in ${path.join(ROOT, 'node_modules')}`),
+    );
+  }
+
+  return import('@zgeoff/agent-hooks');
+}
+
+export function probeOwnAgentHooks(root: string): boolean {
+  return existsSync(path.join(root, 'node_modules/@zgeoff/agent-hooks/package.json'));
+}
+
 export const NODE_INSTALL_DEPENDENCIES: InstallDependencies = {
   createDirectory: (directoryPath) => {
     mkdirSync(directoryPath, { recursive: true });
@@ -578,7 +594,7 @@ export const NODE_INSTALL_DEPENDENCIES: InstallDependencies = {
   writeError: (message) => {
     console.error(message);
   },
-  importAgentHooks: () => import('@zgeoff/agent-hooks'),
+  importAgentHooks: importOwnAgentHooks,
   runInstall: (timeoutMs) =>
     spawnSync('bun', ['install', '--frozen-lockfile'], {
       cwd: ROOT,
