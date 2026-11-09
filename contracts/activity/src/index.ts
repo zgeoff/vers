@@ -42,6 +42,7 @@ export { MAX_REVEAL_BATCH_NODES } from './max-reveal-batch-nodes';
 export type { NodeSeed } from './node-seed-schema';
 export { NodeSeedSchema } from './node-seed-schema';
 export { OFFLINE_PROGRESS_CAP_MS } from './offline-progress-cap-ms';
+export type { QAAccountNameInvalidReason } from './qa-account-name-invalid-reason-schema';
 export type { QAAccount } from './qa-account-schema';
 export { QAAccountSchema } from './qa-account-schema';
 export { QA_SIM_SPEED_MAX } from './qa-sim-speed-max';

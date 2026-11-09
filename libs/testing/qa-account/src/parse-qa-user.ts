@@ -1,6 +1,5 @@
 import { AvatarNameSchema } from '@vers/contract-avatar';
 import { USERNAME_MAX_LENGTH, UsernameSchema } from '@vers/contract-user';
-import * as z from 'zod';
 import type { QAUserParse } from './types';
 
 export const QA_DOMAIN = 'qa.versidle.com';
@@ -13,57 +12,34 @@ export function parseQAUser(raw: string): QAUserParse {
   const domain = at === -1 ? QA_DOMAIN : normalized.slice(at + 1);
 
   if (domain !== QA_DOMAIN) {
-    return {
-      kind: 'refused',
-      reason: `refusing "${raw}": only addresses under ${QA_DOMAIN} are QA accounts`,
-    };
+    return { kind: 'refused', reason: 'outside-qa-domain' };
   }
 
   if (!NAME_PATTERN.test(name)) {
-    return {
-      kind: 'refused',
-      reason: `invalid QA account name "${name}": use letters, digits, ".", "_", "+" or "-", starting with a letter or digit`,
-    };
+    return { kind: 'refused', reason: 'invalid-name' };
   }
 
-  const avatarName = parseIdentity('avatar name', AvatarNameSchema, buildAvatarName(name));
+  const avatarName = AvatarNameSchema.safeParse(buildAvatarName(name));
 
-  if (avatarName.kind === 'refused') {
-    return avatarName;
+  if (!avatarName.success) {
+    return { kind: 'refused', reason: 'invalid-avatar-name' };
   }
 
-  const username = parseIdentity('username', UsernameSchema, buildUsername(name));
+  const username = UsernameSchema.safeParse(buildUsername(name));
 
-  if (username.kind === 'refused') {
-    return username;
+  if (!username.success) {
+    return { kind: 'refused', reason: 'invalid-username' };
   }
 
   return {
     kind: 'parsed',
     user: {
-      avatarName: avatarName.value,
+      avatarName: avatarName.data,
       email: `${name}@${QA_DOMAIN}`,
       name,
-      username: username.value,
+      username: username.data,
     },
   };
-}
-
-type IdentityParse =
-  | { readonly kind: 'parsed'; readonly value: string }
-  | { readonly kind: 'refused'; readonly reason: string };
-
-function parseIdentity(label: string, schema: z.ZodType<string>, candidate: string): IdentityParse {
-  const parsed = schema.safeParse(candidate);
-
-  if (!parsed.success) {
-    return {
-      kind: 'refused',
-      reason: `the QA account name yields no valid ${label} ("${candidate}"): ${z.prettifyError(parsed.error)}`,
-    };
-  }
-
-  return { kind: 'parsed', value: parsed.data };
 }
 
 const AVATAR_NAME_MAX_LENGTH = 16;

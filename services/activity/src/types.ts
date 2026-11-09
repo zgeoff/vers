@@ -4,6 +4,7 @@ import type {
   AdvanceCheckpointInvalidReason,
   CheckpointInvalidReason,
   ConflictReason,
+  QAAccountNameInvalidReason,
 } from '@vers/contract-activity';
 import type { keysContract } from '@vers/contract-keys';
 
@@ -20,12 +21,11 @@ export interface EmptyErrorPayload {
 export interface QAAccountConflictPayload {
   readonly data: {
     readonly field: 'avatarName' | 'email' | 'username';
-    readonly value: string;
   };
 }
 
 export interface QAAccountNameInvalidPayload {
-  readonly data: { readonly reason: string };
+  readonly data: { readonly reason: QAAccountNameInvalidReason };
 }
 
 export interface AvatarNotActivePayload {

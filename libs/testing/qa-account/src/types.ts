@@ -1,4 +1,4 @@
-import type { CheckpointPayload } from '@vers/contract-activity';
+import type { CheckpointPayload, QAAccountNameInvalidReason } from '@vers/contract-activity';
 import type { Activities, ActivityChains, AvatarItems } from '@vers/db';
 import type { Insertable } from 'kysely';
 
@@ -22,7 +22,7 @@ export interface HostTarget {
 
 export type QAUserParse =
   | { readonly kind: 'parsed'; readonly user: QAUser }
-  | { readonly kind: 'refused'; readonly reason: string };
+  | { readonly kind: 'refused'; readonly reason: QAAccountNameInvalidReason };
 
 export interface QASeedClash {
   readonly field: 'avatarName' | 'email' | 'username';

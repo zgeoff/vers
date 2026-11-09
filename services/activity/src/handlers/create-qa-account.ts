@@ -65,7 +65,7 @@ export async function createQAAccount(
   );
 
   if (outcome.kind === 'exists') {
-    throw opts.errors.CONFLICT({ data: outcome.clash });
+    throw opts.errors.CONFLICT({ data: { field: outcome.clash.field } });
   }
 
   return { ...outcome.account, password };

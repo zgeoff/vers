@@ -8,6 +8,7 @@ import { define } from 'gunshi';
 import * as z from 'zod';
 import { findOriginRefusal } from '../find-origin-refusal';
 import { formatQASeedError } from '../format-qa-seed-error';
+import { formatQAUserRefusal } from '../format-qa-user-refusal';
 import { parseHostTarget } from '../parse-host-target';
 import { parseQAUser } from '../parse-qa-user';
 import { QA_SEED_ARGS } from '../qa-seed-args';
@@ -25,7 +26,7 @@ const entry = define({
     const parsed = parseQAUser(options.user);
 
     if (parsed.kind === 'refused') {
-      throw new Error(parsed.reason);
+      throw new Error(formatQAUserRefusal(options.user, parsed.reason));
     }
 
     const target = parseHostTarget('--origin', options.origin);
@@ -62,7 +63,7 @@ const entry = define({
     const [error, account] = await safe(client.createQAAccount(input.data));
 
     if (error !== null) {
-      throw new Error(formatQASeedError(error, { host: target.host, user: parsed.user.name }));
+      throw new Error(formatQASeedError(error, { host: target.host, user: parsed.user }));
     }
 
     console.log(`email: ${account.user.email}`);

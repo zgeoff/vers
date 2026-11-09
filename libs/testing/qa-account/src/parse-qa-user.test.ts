@@ -38,13 +38,10 @@ test('it caps the username and avatar name at their contract lengths', () => {
 });
 
 test.each([
-  { raw: 'player@versidle.com', reason: /only addresses under qa\.versidle\.com/u },
-  { raw: 'qa 007', reason: /invalid QA account name/u },
-  { raw: '@qa.versidle.com', reason: /invalid QA account name/u },
-  { raw: 'q1', reason: /no valid avatar name/u },
-])('it refuses $raw', (row) => {
-  expect(parseQAUser(row.raw)).toStrictEqual({
-    kind: 'refused',
-    reason: expect.stringMatching(row.reason),
-  });
+  { raw: 'player@versidle.com', reason: 'outside-qa-domain' },
+  { raw: 'qa 007', reason: 'invalid-name' },
+  { raw: '@qa.versidle.com', reason: 'invalid-name' },
+  { raw: 'q1', reason: 'invalid-avatar-name' },
+])('it refuses $raw as $reason', (row) => {
+  expect(parseQAUser(row.raw)).toStrictEqual({ kind: 'refused', reason: row.reason });
 });

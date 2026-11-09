@@ -2,6 +2,8 @@ import { ORPCError, isDefinedError } from '@orpc/client';
 import type { ErrorFromErrorMap } from '@orpc/contract';
 import type { activityContract } from '@vers/contract-activity';
 import { match } from 'ts-pattern';
+import { formatQAUserRefusal } from './format-qa-user-refusal';
+import type { QAUser } from './types';
 
 type CreateQAAccountError = ErrorFromErrorMap<
   (typeof activityContract.createQAAccount)['~orpc']['errorMap']
@@ -9,7 +11,7 @@ type CreateQAAccountError = ErrorFromErrorMap<
 
 interface QASeedErrorContext {
   readonly host: string;
-  readonly user: string;
+  readonly user: QAUser;
 }
 
 export function formatQASeedError(
@@ -18,16 +20,16 @@ export function formatQASeedError(
 ): string {
   if (isDefinedError(error)) {
     return match(error)
-      .with({ code: 'CONFLICT', data: { field: 'email' } }, (conflict) =>
-        formatEmailConflict(conflict.data.value, context.user),
+      .with({ code: 'CONFLICT', data: { field: 'email' } }, () => formatEmailConflict(context.user))
+      .with({ code: 'CONFLICT', data: { field: 'username' } }, () =>
+        formatNameConflict('username', context.user.username),
       )
-      .with({ code: 'CONFLICT', data: { field: 'username' } }, (conflict) =>
-        formatNameConflict('username', conflict.data.value),
+      .with({ code: 'CONFLICT', data: { field: 'avatarName' } }, () =>
+        formatNameConflict('avatar name', context.user.avatarName),
       )
-      .with({ code: 'CONFLICT', data: { field: 'avatarName' } }, (conflict) =>
-        formatNameConflict('avatar name', conflict.data.value),
+      .with({ code: 'QA_ACCOUNT_NAME_INVALID' }, (invalid) =>
+        formatQAUserRefusal(context.user.name, invalid.data.reason),
       )
-      .with({ code: 'QA_ACCOUNT_NAME_INVALID' }, (invalid) => invalid.data.reason)
       .exhaustive();
   }
 
@@ -50,8 +52,8 @@ export function formatQASeedError(
   return error.message;
 }
 
-function formatEmailConflict(email: string, user: string): string {
-  return `${email} already exists; run qa:reset --user ${user} --all first`;
+function formatEmailConflict(user: QAUser): string {
+  return `${user.email} already exists; run qa:reset --user ${user.name} --all first`;
 }
 
 function formatNameConflict(label: string, value: string): string {

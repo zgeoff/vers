@@ -3,6 +3,7 @@ import { runCommandLine } from '@vers/scripts';
 import { define } from 'gunshi';
 import { applyQAReset } from '../apply-qa-reset';
 import { env } from '../env';
+import { formatQAUserRefusal } from '../format-qa-user-refusal';
 import { parseHostTarget } from '../parse-host-target';
 import { parseQAUser } from '../parse-qa-user';
 import { QA_RESET_ARGS } from '../qa-reset-args';
@@ -16,7 +17,7 @@ const entry = define({
     const parsed = parseQAUser(options.user);
 
     if (parsed.kind === 'refused') {
-      throw new Error(parsed.reason);
+      throw new Error(formatQAUserRefusal(options.user, parsed.reason));
     }
 
     const user = parsed.user;

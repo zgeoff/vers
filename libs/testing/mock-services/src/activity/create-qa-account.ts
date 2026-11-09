@@ -9,7 +9,7 @@ export const createQAAccount = os.createQAAccount.handler(async (opts) => {
   const email = `${opts.input.user}@qa.versidle.com`;
 
   if (db.userCollection.findFirst((query) => query.where({ email })) !== undefined) {
-    throw opts.errors.CONFLICT({ data: { field: 'email', value: email } });
+    throw opts.errors.CONFLICT({ data: { field: 'email' } });
   }
 
   const password = opts.input.password ?? MOCK_QA_PASSWORD;

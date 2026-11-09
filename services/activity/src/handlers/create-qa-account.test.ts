@@ -136,10 +136,7 @@ test('it refuses an address that already has an account with CONFLICT', async ()
 
   expect(
     ctx.client.createQAAccount({ level: 1, runs: 0, twoFactor: false, user: 'qa-egret' }),
-  ).rejects.toMatchObject({
-    code: 'CONFLICT',
-    data: { field: 'email', value: 'qa-egret@qa.versidle.com' },
-  });
+  ).rejects.toMatchObject({ code: 'CONFLICT', data: { field: 'email' } });
 });
 
 test('it refuses a name whose username another account holds with CONFLICT on the username', async () => {
@@ -149,7 +146,7 @@ test('it refuses a name whose username another account holds with CONFLICT on th
 
   expect(
     ctx.client.createQAAccount({ level: 1, runs: 0, twoFactor: false, user: 'qa.007' }),
-  ).rejects.toMatchObject({ code: 'CONFLICT', data: { field: 'username', value: 'qa_007' } });
+  ).rejects.toMatchObject({ code: 'CONFLICT', data: { field: 'username' } });
 });
 
 test('it refuses an address outside the QA domain with QA_ACCOUNT_NAME_INVALID', async () => {
@@ -162,7 +159,11 @@ test('it refuses an address outside the QA domain with QA_ACCOUNT_NAME_INVALID',
       twoFactor: false,
       user: 'player@versidle.com',
     }),
-  ).rejects.toMatchObject({ code: 'QA_ACCOUNT_NAME_INVALID' });
+  ).rejects.toMatchObject({
+    code: 'QA_ACCOUNT_NAME_INVALID',
+    data: { reason: 'outside-qa-domain' },
+    status: 422,
+  });
 });
 
 test('it answers INTERNAL_SERVER_ERROR when the keys service refuses the activity service', async () => {
@@ -182,7 +183,7 @@ test('it answers INTERNAL_SERVER_ERROR when the keys service refuses the activit
   ).rejects.toMatchObject({ code: 'INTERNAL_SERVER_ERROR', status: 500 });
 });
 
-test('it refuses a level above 1 with no runs before it writes an account', async () => {
+test('it refuses a level above 1 with no runs with BAD_REQUEST', async () => {
   await using ctx = await setupTest();
 
   expect(

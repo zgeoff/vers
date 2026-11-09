@@ -17,6 +17,7 @@ import { EncounterNodeSchema } from './encounter-node-schema';
 import { MAX_CATCH_UP_BATCH_CHECKPOINTS } from './max-catch-up-batch-checkpoints';
 import { MAX_REVEAL_BATCH_NODES } from './max-reveal-batch-nodes';
 import { OfflineActivityStartSubmissionSchema } from './offline-activity-start-submission-schema';
+import { QAAccountNameInvalidReasonSchema } from './qa-account-name-invalid-reason-schema';
 import { QAAccountSchema } from './qa-account-schema';
 import { REVEAL_VIEWPORT_CELL_CAP } from './reveal-viewport-cell-cap';
 import { RewardItemAffixSchema } from './reward-item-affix-schema';
@@ -108,10 +109,9 @@ const CompletedNodeIDsSchema = z.array(z.string());
 
 const QAAccountConflictDataSchema = z.object({
   field: z.enum(['avatarName', 'email', 'username']),
-  value: z.string(),
 });
 
-const QAAccountNameInvalidDataSchema = z.object({ reason: z.string() });
+const QAAccountNameInvalidDataSchema = z.object({ reason: QAAccountNameInvalidReasonSchema });
 
 export const activityContract = {
   advanceActivity: authedRoute
@@ -233,7 +233,7 @@ export const activityContract = {
         QA_ACCOUNT_NAME_INVALID: {
           data: QAAccountNameInvalidDataSchema,
           message: 'The name yields no valid QA account',
-          status: 400,
+          status: 422,
         },
       }),
     ),
