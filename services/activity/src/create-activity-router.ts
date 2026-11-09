@@ -7,6 +7,7 @@ import type { ServiceContext } from '@vers/service-runtime';
 import type { CryptoKey } from 'jose';
 import type { Kysely } from 'kysely';
 import { advanceActivity } from './handlers/advance-activity';
+import { createQAAccount } from './handlers/create-qa-account';
 import { readActivityRewards } from './handlers/read-activity-rewards';
 import { readAvatarProgression } from './handlers/read-avatar-progression';
 import { readContentDocument } from './handlers/read-content-document';
@@ -47,6 +48,19 @@ export function createActivityRouter(deps: CreateActivityRouterDeps) {
           secretVersion: deps.secretVersion,
           sendReplayWake: deps.sendReplayWake,
           simTimeCapMs: deps.simTimeCapMs,
+        },
+        opts,
+      ),
+    ),
+    createQAAccount: os.createQAAccount.handler((opts) =>
+      createQAAccount(
+        {
+          db: deps.db,
+          keyVersion: deps.keyVersion,
+          keysServiceURL: deps.keysServiceURL,
+          privateKey: deps.privateKey,
+          secretRef: deps.secretRef,
+          secretVersion: deps.secretVersion,
         },
         opts,
       ),

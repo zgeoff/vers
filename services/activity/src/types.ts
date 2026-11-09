@@ -13,6 +13,14 @@ export interface EmptyErrorPayload {
   readonly data: Record<string, never>;
 }
 
+export interface QAAccountConflictPayload {
+  readonly data: { readonly email: string };
+}
+
+export interface QAAccountNameInvalidPayload {
+  readonly data: { readonly reason: string };
+}
+
 export interface AvatarNotActivePayload {
   readonly data: { readonly activeAvatarID: string; readonly activeAvatarName: string };
 }
