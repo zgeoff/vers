@@ -125,7 +125,10 @@ reachable outside the private mesh ([overview](../overview.md)).
 The proxy mints its token for whichever browser calls it, and a service trusts that token for every
 procedure it exposes. The proxy therefore forwards only the services that browser code calls, and
 answers a call to any other service with a 404. Credential, session, and verification procedures
-stay reachable only from the edge's server functions, which run their own checks first.
+stay reachable only from the edge's server functions, which run their own checks first. The activity
+service's `createQAAccount` stays reachable only from the edge's
+[QA seeding route](./auth.md#qa-seeding-route), and the proxy answers a browser call to it with
+a 404.
 
 ## Errors and the trust boundary
 

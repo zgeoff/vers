@@ -3,8 +3,10 @@
 The client computes and records all gameplay, and the server decides by replay whether to trust it.
 The client runs every real-time simulation as a pure function of a fixed set of inputs and a seeded
 random stream, and writes each step to an append-only checkpoint stream. The server never simulates
-on the request path. The same inputs re-run to byte-identical results, which lets a verifier check a
-stream it did not compute and lets a returning client rebuild simulation state it no longer holds.
+on a player's request path. One exception: the activity service's QA seeding procedure simulates up
+to 20 runs for a new QA account ([manual QA](../../runbooks/qa.md#accounts)). The same inputs re-run
+to byte-identical results, which lets a verifier check a stream it did not compute and lets a
+returning client rebuild simulation state it no longer holds.
 [Replay verification](./replay-verification.md) owns the verifier and settlement, the
 [seed chain](./seed-chain.md) owns where an activity's randomness comes from, and
 [offline reconcile](./offline-reconcile.md) owns the delivery of offline progress on reconnect. The

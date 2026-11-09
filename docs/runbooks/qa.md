@@ -10,8 +10,9 @@ than real time through the [debug hook](#debug-hook).
 Three scripts change production state. Each one prints its target first, and each refuses when its
 guard fails:
 
-- `qa:seed` and `qa:reset` refuse an address outside `qa.versidle.com`, and a database host that is
-  not loopback. To reach a remote database, pass `--yes`.
+- `qa:seed` and `qa:reset` refuse an address outside `qa.versidle.com`. `qa:seed` refuses an
+  `--origin` that is not loopback, and `qa:reset` refuses a database host that is not loopback. To
+  reach a remote target, pass `--yes`.
 - `qa:cold` refuses when a request other than a health check or a deploy probe reached the fleet in
   the last 10 minutes.
 
@@ -30,17 +31,24 @@ select count(*) from users where email like '%@qa.versidle.com';
 
 ## Accounts
 
-`bun run qa:seed` and `bun run qa:reset` write a QA account straight into the database at
-`DATABASE_URL`, so a pass starts from a known state without walking sign-up or grinding levels. Run
-them against production only when the repo owner asks you to. Then point `DATABASE_URL` at the
-production database and pass `--yes`.
+`bun run qa:seed` creates a QA account through the web app at `--origin`, and `bun run qa:reset`
+resets one straight in the database at `DATABASE_URL`, so a pass starts from a known state without
+walking sign-up or grinding levels. Run them against production only when the repo owner asks you
+to, and pass `--yes`.
 
 ```bash
-bun run qa:seed --user qa-007 --level 1
-bun run qa:seed --user qa-007 --level 6 --runs 3 --two-factor --yes
+bun run qa:seed --origin http://localhost:3000 --user qa-007 --level 1
+bun run qa:seed --origin https://versidle.com --user qa-007 --level 6 --runs 3 --two-factor --yes
 bun run qa:reset --user qa-007
 bun run qa:reset --user qa-007 --all --yes
 ```
+
+`qa:seed` reads one credential, the QA token in `QA_SEED_TOKEN`, and sends it to the web app's
+`/api/qa` route. The web app admits the call only when the token equals its own `QA_SEED_TOKEN`, and
+answers 404 when its variable is unset, so QA seeding is off on every deployment that has no token.
+The activity service then creates the account, with the keys service deriving the avatar's keys, so
+the caller never holds a key root. [Auth](../architecture/services/auth.md#qa-seeding-route) covers
+how the route checks the token.
 
 `qa:seed` creates `qa-007@qa.versidle.com` with the password from `--password`, or a generated one,
 and an active avatar whose XP is the minimum for `--level`. The command prints the credentials once,
@@ -53,20 +61,19 @@ already has an account.
 The avatar carries a QA flag. Only `qa:seed` writes that flag, and only a flagged avatar can run
 above real time through the debug hook.
 
-`qa:seed` refuses a `--level` above 1 without `--runs`. With no run stored, the game client starts
-the avatar's first run from XP 0, and the activity service refuses a start whose XP differs from the
-avatar's. With `--runs <n>`, the command simulates `n` runs at the map's starting node with the real
-engine and stores each as the activity and replay services store a finished, verified run. The
-avatar keeps the XP and the reward items those runs earned, and the command prints each run's
-outcome. To derive the same encounters and items as the services, the command needs the keys
-service's `SCOPE_SECRET_ROOTS` and `ROLL_KEY_ROOTS` in the environment.
+`qa:seed` takes a `--level` from 1 to 1000, and refuses a level above 1 without `--runs`. With no
+run stored, the game client starts the avatar's first run from XP 0, and the activity service
+refuses a start whose XP differs from the avatar's. With `--runs <n>`, at most 20, the activity
+service simulates `n` runs at the map's starting node with the real engine and stores each as the
+activity and replay services store a finished, verified run. The avatar keeps the XP and the reward
+items those runs earned, and the command prints each run's outcome.
 
 `--two-factor` adds an authenticator to the account and prints its secret and `otpauth://` URI.
 
 `qa:reset` deletes the account's activities, [seed chains](../architecture/game/seed-chain.md),
 items, and the grants recorded for its avatars, and returns its avatars to level 1 with the QA flag
-kept. `--all` deletes the account itself, with its sessions and verifications. The logic lives in
-`libs/testing/qa-account/`.
+kept. `--all` deletes the account itself, with its sessions and verifications. The logic of both
+commands lives in `libs/testing/qa-account/`.
 
 ## Inbox
 
