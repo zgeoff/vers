@@ -58,7 +58,7 @@ jobs:
 
       - uses: pulumi/actions@8e5e406f4007fca908480587cb9893c07090f58d # v7.0.0
         with:
-          pulumi-version: 3.273.0
+          pulumi-version: 3.274.0
 
       # main as it was before this push: any change its preview finds is drift, or an earlier
       # push whose plan the guard held
