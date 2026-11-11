@@ -10,8 +10,12 @@ than real time through the [debug hook](#debug-hook).
 Three scripts change production state. Each one prints its target first, and each refuses when its
 guard fails:
 
-- `qa:seed` and `qa:reset` refuse an address outside `qa.versidle.com`, and a database host that is
-  not loopback. To reach a remote database, pass `--yes`.
+- `qa:seed` and `qa:reset` refuse an account address outside `qa.versidle.com`, whatever flags you
+  pass.
+- `qa:seed` refuses an `--origin` that is not a loopback address, and `qa:reset` refuses a
+  `DATABASE_URL` host that is not loopback. Pass `--yes` only when the repo owner asks you to act on
+  a remote deployment: it lifts this guard. With `--yes`, `qa:seed` still refuses a remote
+  `--origin` that does not use https, because it sends the QA token only over https.
 - `qa:cold` refuses when a request other than a health check or a deploy probe reached the fleet in
   the last 10 minutes.
 
@@ -30,43 +34,56 @@ select count(*) from users where email like '%@qa.versidle.com';
 
 ## Accounts
 
-`bun run qa:seed` and `bun run qa:reset` write a QA account straight into the database at
-`DATABASE_URL`, so a pass starts from a known state without walking sign-up or grinding levels. Run
-them against production only when the repo owner asks you to. Then point `DATABASE_URL` at the
-production database and pass `--yes`.
+`bun run qa:seed` creates a QA account through a web app, and `bun run qa:reset` resets one in the
+database, so a pass starts from a known state without walking sign-up or grinding levels. Run either
+one against production only when the repo owner asks you to.
 
 ```bash
-bun run qa:seed --user qa-007 --level 1
-bun run qa:seed --user qa-007 --level 6 --runs 3 --two-factor --yes
+bun run qa:seed --origin http://localhost:3000 --user qa-007 --level 1
+bun run qa:seed --origin https://versidle.com --user qa-007 --level 6 --runs 3 --two-factor --yes
 bun run qa:reset --user qa-007
 bun run qa:reset --user qa-007 --all --yes
 ```
+
+`--user` takes the account name: the part of the address before `@qa.versidle.com`.
+
+`qa:seed` calls the web app at `--origin`, and needs one credential: the QA token. Set
+`QA_SEED_TOKEN` in your environment to the value that the web app holds in its own `QA_SEED_TOKEN`
+secret. The repo owner keeps each deployment's token in the `vers` 1Password vault. For a local web
+app, put a value of 32 or more characters in `apps/web/.env.development.local` and in your
+environment. A web app with no `QA_SEED_TOKEN` answers 404, so QA seeding is off on every deployment
+that holds no token. The command needs none of the keys service's secrets: the web app passes the
+call to the activity service, which creates the account and gets the avatar's keys from the keys
+service. [Auth](../architecture/services/auth.md#qa-seeding-route) covers how the web app checks the
+token.
+
+`qa:reset` writes to the database at `DATABASE_URL`.
 
 `qa:seed` creates `qa-007@qa.versidle.com` with the password from `--password`, or a generated one,
 and an active avatar whose XP is the minimum for `--level`. The command prints the credentials once,
 with the username and avatar name it derives from the account name. The username replaces each
 character other than a letter, digit or `_` with `_`. The avatar name maps each digit to a letter
 (`0` to `a`, `1` to `b`, and on to `9` to `j`) and drops every other character that is not a letter.
-For `qa-007`, the username is `qa_007` and the avatar name is `qaaah`. It refuses an address that
-already has an account.
+For `qa-007`, the username is `qa_007` and the avatar name is `qaaah`. `qa:seed` refuses an address
+that already has an account.
 
 The avatar carries a QA flag. Only `qa:seed` writes that flag, and only a flagged avatar can run
 above real time through the debug hook.
 
-`qa:seed` refuses a `--level` above 1 without `--runs`. With no run stored, the game client starts
-the avatar's first run from XP 0, and the activity service refuses a start whose XP differs from the
-avatar's. With `--runs <n>`, the command simulates `n` runs at the map's starting node with the real
-engine and stores each as the activity and replay services store a finished, verified run. The
-avatar keeps the XP and the reward items those runs earned, and the command prints each run's
-outcome. To derive the same encounters and items as the services, the command needs the keys
-service's `SCOPE_SECRET_ROOTS` and `ROLL_KEY_ROOTS` in the environment.
+`qa:seed` takes a `--level` from 1 to 1000. Above level 1, pass `--runs` with at least 1. An avatar
+above level 1 with no stored run could never start a run: the game client starts the first run from
+XP 0, and the activity service refuses a start whose XP differs from the avatar's. With
+`--runs <n>`, at most 20, the activity service simulates `n` runs at the map's starting node with
+the real engine. It stores each run the same way the activity and replay services store a finished,
+verified run. The avatar keeps the XP and the reward items those runs earned, and the command prints
+each run's outcome.
 
 `--two-factor` adds an authenticator to the account and prints its secret and `otpauth://` URI.
 
 `qa:reset` deletes the account's activities, [seed chains](../architecture/game/seed-chain.md),
 items, and the grants recorded for its avatars, and returns its avatars to level 1 with the QA flag
-kept. `--all` deletes the account itself, with its sessions and verifications. The logic lives in
-`libs/testing/qa-account/`.
+kept. `--all` deletes the account itself, with its sessions and verifications. The logic of both
+commands lives in `libs/testing/qa-account/`.
 
 ## Inbox
 

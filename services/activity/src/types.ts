@@ -1,9 +1,14 @@
+import type { ContractRouterClient } from '@orpc/contract';
 import type {
   ActivityStatus,
   AdvanceCheckpointInvalidReason,
   CheckpointInvalidReason,
   ConflictReason,
+  QAAccountNameInvalidReason,
 } from '@vers/contract-activity';
+import type { keysContract } from '@vers/contract-keys';
+
+export type KeysClient = ContractRouterClient<typeof keysContract>;
 
 export interface MissingSessionPayload {
   readonly data: { readonly reason: 'missing-session' };
@@ -11,6 +16,16 @@ export interface MissingSessionPayload {
 
 export interface EmptyErrorPayload {
   readonly data: Record<string, never>;
+}
+
+export interface QAAccountConflictPayload {
+  readonly data: {
+    readonly field: 'avatarName' | 'email' | 'username';
+  };
+}
+
+export interface QAAccountNameInvalidPayload {
+  readonly data: { readonly reason: QAAccountNameInvalidReason };
 }
 
 export interface AvatarNotActivePayload {

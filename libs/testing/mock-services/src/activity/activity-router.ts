@@ -1,4 +1,5 @@
 import { advanceActivity } from './advance-activity';
+import { createQAAccount } from './create-qa-account';
 import { getActivityRewards } from './get-activity-rewards';
 import { getAvatarProgression } from './get-avatar-progression';
 import { getContentDocument } from './get-content-document';
@@ -13,6 +14,7 @@ import { updateFailureAction } from './update-failure-action';
 
 export const activityRouter = {
   advanceActivity,
+  createQAAccount,
   getActivityRewards,
   getAvatarProgression,
   getContentDocument,

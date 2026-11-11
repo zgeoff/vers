@@ -13,3 +13,5 @@ export type AudienceName = ServiceName | 'replay-provider';
 export type ServiceAudience = `service-${AudienceName}`;
 
 export type TokenIssuer = 'app-web' | 'service-activity' | 'service-replay';
+
+export type TokenScope = 'qa:seed';

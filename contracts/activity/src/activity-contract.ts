@@ -1,4 +1,4 @@
-import { authedRoute, defineErrors } from '@vers/contract-base';
+import { authedRoute, defineErrors, publicRoute } from '@vers/contract-base';
 import { WORLD_COORD_MAX, WORLD_COORD_MIN } from '@vers/worldmap-core';
 import * as z from 'zod';
 import { ActivityDataSchema } from './activity-data-schema';
@@ -12,10 +12,13 @@ import { CheckpointInvalidReasonSchema } from './checkpoint-invalid-reason-schem
 import { CheckpointSchema } from './checkpoint-schema';
 import { ConflictReasonSchema } from './conflict-reason-schema';
 import { ContentDocumentSchema } from './content-document-schema';
+import { CreateQAAccountInputSchema } from './create-qa-account-input-schema';
 import { EncounterNodeSchema } from './encounter-node-schema';
 import { MAX_CATCH_UP_BATCH_CHECKPOINTS } from './max-catch-up-batch-checkpoints';
 import { MAX_REVEAL_BATCH_NODES } from './max-reveal-batch-nodes';
 import { OfflineActivityStartSubmissionSchema } from './offline-activity-start-submission-schema';
+import { QAAccountNameInvalidReasonSchema } from './qa-account-name-invalid-reason-schema';
+import { QAAccountSchema } from './qa-account-schema';
 import { REVEAL_VIEWPORT_CELL_CAP } from './reveal-viewport-cell-cap';
 import { RewardItemAffixSchema } from './reward-item-affix-schema';
 import { ScopeIdentifierSchema } from './scope-identifier-schema';
@@ -103,6 +106,12 @@ const RevealStampsSchema = z.object({
 });
 
 const CompletedNodeIDsSchema = z.array(z.string());
+
+const QAAccountConflictDataSchema = z.object({
+  field: z.enum(['avatarName', 'email', 'username']),
+});
+
+const QAAccountNameInvalidDataSchema = z.object({ reason: QAAccountNameInvalidReasonSchema });
 
 export const activityContract = {
   advanceActivity: authedRoute
@@ -203,6 +212,32 @@ export const activityContract = {
           data: SimVersionProblemDataSchema,
           message: "An activity start admission's stamped sim version is not registered",
           status: 409,
+        },
+      }),
+    ),
+
+  createQAAccount: publicRoute
+    .route({
+      method: 'POST',
+      path: '/qa/accounts',
+      summary: 'Create a QA account at a level, with verified runs simulated on the server',
+    })
+    .input(CreateQAAccountInputSchema)
+    .output(QAAccountSchema)
+    .errors(
+      defineErrors({
+        CONFLICT: {
+          data: QAAccountConflictDataSchema,
+          message: 'Another account holds the email, username or avatar name',
+        },
+        FORBIDDEN: {
+          data: z.object({}),
+          message: 'Only a service token with the QA seeding scope may create a QA account',
+        },
+        QA_ACCOUNT_NAME_INVALID: {
+          data: QAAccountNameInvalidDataSchema,
+          message: 'The name yields no valid QA account',
+          status: 422,
         },
       }),
     ),

@@ -36,17 +36,20 @@ statement, so at most one verified session per user survives. Each token is a JW
 the user and signed with the session service's private key. The edge verifies the access token's
 signature against the session service's published key set, selected by the token's key id, and
 requires the token's subject to match the cookie's user before it trusts any claim; a token no
-published key signed, or whose subject is not the cookie's user, reads as signed out. Access tokens
-are short-lived. A refresh call re-mints the access token, and rotates the refresh token only once
-the session has outlived its short lifetime. A rotation opens a bounded grace window on the session,
-and the session service answers the previous refresh token presented inside that window with the
-current pair, so two refresh calls racing on one session converge on the same pair. A reused refresh
-token presented after the window closes, or an expired session, revokes the session. A signing key
-rotates through an overlap window in which the service signs with the new key and publishes both,
-and a refresh token is matched against the session row rather than verified by signature, so a
-rotation never invalidates a live session. A service token can outlive its session by its own short
-lifetime, so the edge re-confirms the session still exists on every request while the access token
-is fresh, and an evicted device is signed out on its next request.
+published key signed, or whose subject is not the cookie's user, reads as signed out.
+
+Access tokens are short-lived. A refresh call re-mints the access token, and rotates the refresh
+token only once the session has outlived its short lifetime. A rotation opens a bounded grace window
+on the session, and the session service answers the previous refresh token presented inside that
+window with the current pair, so two refresh calls racing on one session converge on the same pair.
+A reused refresh token presented after the window closes, or an expired session, revokes the
+session.
+
+A signing key rotates through an overlap window in which the service signs with the new key and
+publishes both, and a refresh token is matched against the session row rather than verified by
+signature, so a rotation never invalidates a live session. A service token can outlive its session
+by its own short lifetime, so the edge re-confirms the session still exists on every request while
+the access token is fresh, and an evicted device is signed out on its next request.
 
 The session cookie is httpOnly, same-site lax, secure in production, and sealed by an app secret
 with iron-session. Each write seals the cookie for the time left until the session's stored expiry,
@@ -120,10 +123,11 @@ only through the URL in the reset email, and the reset matches it in constant ti
 Every service call over the private network carries a short-lived JWT signed with an Ed25519
 keypair. The issuer claim and the key id both name the minting service, the subject names the acting
 user and is omitted for a verified-anonymous call, a session claim names the acting session, and the
-audience is the target service's registered audience. Every issuer holds its own private key, held
-by no other app: the web edge for its outbound calls, the replay service for its calls toward the
-keys service and the version-pinned replay providers, and the activity service for the wake call a
-committed append sends toward the replay service.
+audience is the target service's registered audience. A scope claim marks a token the edge mints for
+one route only, and a procedure that requires a scope refuses a token without it. Every issuer holds
+its own private key, held by no other app: the web edge for its outbound calls, the replay service
+for its calls toward the keys service and the version-pinned replay providers, and the activity
+service for the wake call a committed append sends toward the replay service.
 
 The service runtime verifies every inbound token before any handler runs, against a key set
 registering every issuer's public key under its key id. A token's claimed issuer must be a known
@@ -131,3 +135,30 @@ issuer and equal its key id, and the signature validates only against that issue
 Each service declares the issuers it accepts, so a leaked minting key reaches only the services that
 name its issuer. The runtime rejects a bad token with a plain 401 and a token from an issuer the
 service does not accept with a plain 403 ([service contracts](./service-contracts.md)).
+
+## QA seeding route
+
+The `qa:seed` script asks the edge's `/api/qa` route for a QA account: a test account whose email
+address ends in `@qa.versidle.com`, with an avatar at a chosen level and, on request, finished game
+runs ([manual QA](../../runbooks/qa.md#accounts)). The script sends a bearer token in place of a
+session cookie. The edge passes an admitted request to the activity service, which writes the
+account, simulates the runs, and gets the avatar's roll key and scope secret from the keys service.
+
+The edge checks each request to `/api/qa` in this order:
+
+1. While the web app's `QA_SEED_TOKEN` variable is unset, the edge answers 404.
+2. When the bearer token differs from `QA_SEED_TOKEN`, the edge answers 401. It compares SHA-256
+   digests of the two tokens in constant time.
+3. When the URL path after `/api/qa/` is anything but `createQAAccount`, the edge answers 404.
+
+The edge forwards an admitted request to the activity service's `createQAAccount` under a service
+token with no subject and the scope claim `qa:seed`, so the QA token never leaves the edge. Two
+checks keep a browser out of `createQAAccount`:
+
+- The browser proxy answers a browser call to `createQAAccount` with 404
+  ([service contracts](./service-contracts.md#the-client-side)).
+- The activity service answers `FORBIDDEN` to a token without the `qa:seed` scope. The browser proxy
+  never mints that scope.
+
+Each web app machine gives each client IP 10 requests a minute to any path under `/api/qa`, whatever
+the method, the same budget as a sign-in form submission.

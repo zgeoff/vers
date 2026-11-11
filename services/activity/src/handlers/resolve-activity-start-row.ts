@@ -1,7 +1,7 @@
 import type { OfflineActivityStartSubmission } from '@vers/contract-activity';
 import type { Activities, DB } from '@vers/db';
+import { isUniqueViolation } from '@vers/service-utils';
 import type { Kysely, Selectable } from 'kysely';
-import { isUniqueViolation } from '../is-unique-violation';
 import { admitActivityStart } from './admit-activity-start';
 import { buildBailError } from './build-bail-error';
 import { recordBailout } from './record-bailout';

@@ -1,12 +1,12 @@
-import type { DatabaseTarget } from './types';
+import type { HostTarget } from './types';
 
 const LOOPBACK_HOSTNAMES: ReadonlySet<string> = new Set(['127.0.0.1', '::1', '[::1]', 'localhost']);
 
-export function parseDatabaseTarget(databaseURL: string): DatabaseTarget {
-  const url = URL.parse(databaseURL);
+export function parseHostTarget(label: string, rawURL: string): HostTarget {
+  const url = URL.parse(rawURL);
 
   if (url === null) {
-    throw new Error('DATABASE_URL is not a valid URL');
+    throw new Error(`${label} is not a valid URL`);
   }
 
   const hostname = url.hostname.toLowerCase();
@@ -14,5 +14,6 @@ export function parseDatabaseTarget(databaseURL: string): DatabaseTarget {
   return {
     host: url.host,
     isLoopback: LOOPBACK_HOSTNAMES.has(hostname) || hostname.endsWith('.localhost'),
+    protocol: url.protocol,
   };
 }

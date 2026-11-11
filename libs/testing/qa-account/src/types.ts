@@ -1,4 +1,4 @@
-import type { CheckpointPayload } from '@vers/contract-activity';
+import type { CheckpointPayload, QAAccountNameInvalidReason } from '@vers/contract-activity';
 import type { Activities, ActivityChains, AvatarItems } from '@vers/db';
 import type { Insertable } from 'kysely';
 
@@ -14,14 +14,24 @@ export interface SeedEntropy {
   readonly userSeed: number;
 }
 
-export interface DatabaseTarget {
+export interface HostTarget {
   readonly host: string;
   readonly isLoopback: boolean;
+  readonly protocol: string;
 }
 
-export interface KeyRoots {
-  readonly rollKeyRoot: Uint8Array;
-  readonly scopeSecretRoot: Uint8Array;
+export type QAUserParse =
+  | { readonly kind: 'parsed'; readonly user: QAUser }
+  | { readonly kind: 'refused'; readonly reason: QAAccountNameInvalidReason };
+
+export interface QASeedClash {
+  readonly field: 'avatarName' | 'email' | 'username';
+  readonly value: string;
+}
+
+export interface AvatarKeys {
+  readonly rollKey: Uint8Array;
+  readonly scopeSecret: Uint8Array;
 }
 
 export interface PlannedCheckpointRow {
@@ -31,7 +41,7 @@ export interface PlannedCheckpointRow {
   readonly version: number;
 }
 
-export type RunOutcome = 'completed' | 'failed';
+type RunOutcome = 'completed' | 'failed';
 
 export interface PlannedRun {
   readonly activity: Insertable<Activities>;

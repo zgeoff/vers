@@ -16,7 +16,16 @@ test.each(['-correct-horse', '--'])('it reads the password %s', async (password)
   });
 
   const ran = await runCommandLine(
-    ['--user', 'tester', '--level', '1', '--password', password],
+    [
+      '--user',
+      'tester',
+      '--origin',
+      'http://localhost:3000',
+      '--level',
+      '1',
+      '--password',
+      password,
+    ],
     entry,
     { output },
   );
@@ -29,7 +38,11 @@ test('it reports a negative level through the level parser', async () => {
   const output = { error: mock((_text: string) => {}), log: mock((_text: string) => {}) };
   const entry = define({ args: QA_SEED_ARGS, name: 'qa-seed', run: () => {} });
 
-  const ran = await runCommandLine(['--user', 'tester', '--level', '-2'], entry, { output });
+  const ran = await runCommandLine(
+    ['--user', 'tester', '--origin', 'http://localhost:3000', '--level', '-2'],
+    entry,
+    { output },
+  );
 
   expect(ran).toBeFalse();
 
@@ -39,12 +52,16 @@ test('it reports a negative level through the level parser', async () => {
 });
 
 test('it seeds no runs, no two-factor and a generated password by default', () => {
-  const resolved = resolveArgs(QA_SEED_ARGS, parseArgs(['--user', 'tester', '--level', '5']));
+  const resolved = resolveArgs(
+    QA_SEED_ARGS,
+    parseArgs(['--user', 'tester', '--origin', 'http://localhost:3000', '--level', '5']),
+  );
 
   expect(resolved.error).toBeUndefined();
 
   expect({ ...resolved.values }).toStrictEqual({
     level: 5,
+    origin: 'http://localhost:3000',
     runs: 0,
     'two-factor': false,
     user: 'tester',
@@ -52,12 +69,14 @@ test('it seeds no runs, no two-factor and a generated password by default', () =
   });
 });
 
-test('it reads the runs, two-factor, password and yes flags', () => {
+test('it reads the origin, runs, two-factor, password and yes flags', () => {
   const resolved = resolveArgs(
     QA_SEED_ARGS,
     parseArgs([
       '--user',
       'tester',
+      '--origin',
+      'https://preview.example.dev',
       '--level',
       '1',
       '--runs',
@@ -71,6 +90,7 @@ test('it reads the runs, two-factor, password and yes flags', () => {
 
   expect({ ...resolved.values }).toStrictEqual({
     level: 1,
+    origin: 'https://preview.example.dev',
     password: 'correct horse',
     runs: 3,
     'two-factor': true,
@@ -80,19 +100,34 @@ test('it reads the runs, two-factor, password and yes flags', () => {
 });
 
 test('it requires the account name', () => {
-  const resolved = resolveArgs(QA_SEED_ARGS, parseArgs(['--level', '5']));
+  const resolved = resolveArgs(
+    QA_SEED_ARGS,
+    parseArgs(['--origin', 'http://localhost:3000', '--level', '5']),
+  );
+
+  expect(resolved.error?.errors).toPartiallyContain({ code: 'err:arg:required-option' });
+});
+
+test('it requires the origin', () => {
+  const resolved = resolveArgs(QA_SEED_ARGS, parseArgs(['--user', 'tester', '--level', '5']));
 
   expect(resolved.error?.errors).toPartiallyContain({ code: 'err:arg:required-option' });
 });
 
 test('it requires the avatar level', () => {
-  const resolved = resolveArgs(QA_SEED_ARGS, parseArgs(['--user', 'tester']));
+  const resolved = resolveArgs(
+    QA_SEED_ARGS,
+    parseArgs(['--user', 'tester', '--origin', 'http://localhost:3000']),
+  );
 
   expect(resolved.error?.errors).toPartiallyContain({ code: 'err:arg:required-option' });
 });
 
 test('it rejects a level below 1', () => {
-  const resolved = resolveArgs(QA_SEED_ARGS, parseArgs(['--user', 'tester', '--level', '0']));
+  const resolved = resolveArgs(
+    QA_SEED_ARGS,
+    parseArgs(['--user', 'tester', '--origin', 'http://localhost:3000', '--level', '0']),
+  );
 
   expect(resolved.error?.errors).toPartiallyContain({
     message: 'expected an integer of at least 1, got "0"',
@@ -102,7 +137,16 @@ test('it rejects a level below 1', () => {
 test('it accepts zero runs', () => {
   const resolved = resolveArgs(
     QA_SEED_ARGS,
-    parseArgs(['--user', 'tester', '--level', '1', '--runs', '0']),
+    parseArgs([
+      '--user',
+      'tester',
+      '--origin',
+      'http://localhost:3000',
+      '--level',
+      '1',
+      '--runs',
+      '0',
+    ]),
   );
 
   expect(resolved.values.runs).toBe(0);
@@ -111,7 +155,16 @@ test('it accepts zero runs', () => {
 test('it rejects a fraction of a run', () => {
   const resolved = resolveArgs(
     QA_SEED_ARGS,
-    parseArgs(['--user', 'tester', '--level', '1', '--runs', '1.5']),
+    parseArgs([
+      '--user',
+      'tester',
+      '--origin',
+      'http://localhost:3000',
+      '--level',
+      '1',
+      '--runs',
+      '1.5',
+    ]),
   );
 
   expect(resolved.error?.errors).toPartiallyContain({

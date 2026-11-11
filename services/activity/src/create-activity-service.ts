@@ -8,6 +8,7 @@ import { createService } from '@vers/service-runtime';
 import type { Service } from '@vers/service-runtime';
 import type { Kysely } from 'kysely';
 import { createActivityRouter } from './create-activity-router';
+import { createKeysClient } from './create-keys-client';
 import { envShape } from './env-shape';
 import { makeSendReplayWake } from './wake/make-send-replay-wake';
 
@@ -45,6 +46,10 @@ export function createActivityService(
 
       return createActivityRouter({
         db: resources.db,
+        keysClient: createKeysClient({
+          keysServiceURL: runtime.env.KEYS_SERVICE_URL,
+          privateKey,
+        }),
         keyVersion: config.keyVersion ?? KEY_VERSION,
         keysServiceURL: runtime.env.KEYS_SERVICE_URL,
         loadContentDocument: makeContentDocumentLoader(resources.db),

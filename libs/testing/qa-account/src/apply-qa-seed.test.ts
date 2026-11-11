@@ -2,33 +2,44 @@ import { expect, test } from 'bun:test';
 import { createContentVersion } from '@vers/content-registry';
 import { CheckpointPayloadSchema } from '@vers/contract-activity';
 import { createMockContentDocument } from '@vers/contract-activity/test-utils';
-import type { Activities, DB } from '@vers/db';
+import type { Activities } from '@vers/db';
 import { buildLevelFromXP } from '@vers/idle-core';
 import { createTestDB } from '@vers/service-test-utils/bun';
 import { createSimVersionRow } from '@vers/sim-registry/test-utils';
-import type { Kysely, Selectable } from 'kysely';
+import type { Selectable } from 'kysely';
 import invariant from 'tiny-invariant';
 import { applyQASeed } from './apply-qa-seed';
 import type { QASeedResult } from './apply-qa-seed';
 
 // applyQASeed commits its rows in its own interactive transaction, which the default
 // transaction-isolation handle can't nest — every test here runs against a committed schema clone.
-async function setupTest(): Promise<{ db: Kysely<DB> } & AsyncDisposable> {
+async function setupTest() {
   const db = await createTestDB({ isolation: 'schema' });
 
-  return { db: db.db, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
+  const deps = {
+    db: db.db,
+    readAvatarKeys: () =>
+      Promise.resolve({
+        rollKey: new Uint8Array(32).fill(3),
+        scopeSecret: new Uint8Array(32).fill(4),
+      }),
+  };
+
+  return { db: db.db, deps, [Symbol.asyncDispose]: db[Symbol.asyncDispose] };
 }
 
 test('it creates a verified account whose password checks and whose avatar starts at level 1 with no runs', async () => {
   await using ctx = await setupTest();
 
-  const seeded = await applyQASeed(ctx.db, {
+  const seeded = await applyQASeed(ctx.deps, {
     entropy: { genesisSeed: '0123456789abcdef0123456789abcdef', userSeed: 7 },
-    keyRoots: undefined,
+    keyVersion: 1,
     level: 1,
     now: new Date(),
     password: 'known-password',
     runs: 0,
+    secretRef: 'worldmap',
+    secretVersion: 1,
     twoFactor: false,
     user: {
       avatarName: 'qaaah',
@@ -37,6 +48,8 @@ test('it creates a verified account whose password checks and whose avatar start
       username: 'qa_007',
     },
   });
+
+  invariant(seeded.kind === 'created', 'a new address always gets an account');
 
   const user = await ctx.db
     .selectFrom('users')
@@ -49,7 +62,7 @@ test('it creates a verified account whose password checks and whose avatar start
   const verified = await Bun.password.verify('known-password', user.passwordHash);
 
   expect(verified).toBe(true);
-  expect(user).toMatchObject({ id: seeded.user.id, username: 'qa_007' });
+  expect(user).toMatchObject({ id: seeded.account.user.id, username: 'qa_007' });
 
   const avatar = await ctx.db
     .selectFrom('avatars')
@@ -58,7 +71,7 @@ test('it creates a verified account whose password checks and whose avatar start
     .executeTakeFirstOrThrow();
 
   expect(avatar).toMatchObject({
-    id: seeded.avatar.id,
+    id: seeded.account.avatar.id,
     isQa: true,
     level: 1,
     name: 'qaaah',
@@ -73,7 +86,7 @@ test('it creates a verified account whose password checks and whose avatar start
       .executeTakeFirst(),
   ).resolves.toStrictEqual({ avatarId: avatar.id });
 
-  expect(seeded).toMatchObject({ runs: [], twoFactor: null });
+  expect(seeded.account).toMatchObject({ runs: [], twoFactor: null });
 
   expect(
     ctx.db
@@ -87,13 +100,15 @@ test('it creates a verified account whose password checks and whose avatar start
 test('it writes a two-factor verification keyed on the user id when asked', async () => {
   await using ctx = await setupTest();
 
-  const seeded = await applyQASeed(ctx.db, {
+  const seeded = await applyQASeed(ctx.deps, {
     entropy: { genesisSeed: '0123456789abcdef0123456789abcdef', userSeed: 7 },
-    keyRoots: undefined,
+    keyVersion: 1,
     level: 1,
     now: new Date(),
     password: 'known-password',
     runs: 0,
+    secretRef: 'worldmap',
+    secretVersion: 1,
     twoFactor: true,
     user: {
       avatarName: 'qacfa',
@@ -103,24 +118,26 @@ test('it writes a two-factor verification keyed on the user id when asked', asyn
     },
   });
 
+  invariant(seeded.kind === 'created', 'a new address always gets an account');
+
   const row = await ctx.db
     .selectFrom('verifications')
     .selectAll()
-    .where('target', '=', seeded.user.id)
+    .where('target', '=', seeded.account.user.id)
     .executeTakeFirstOrThrow();
 
-  invariant(seeded.twoFactor !== null, 'a two-factor seed reports its secret');
+  invariant(seeded.account.twoFactor !== null, 'a two-factor seed reports its secret');
 
   expect(row).toMatchObject({
     charSet: '0123456789',
     digits: 6,
     expiresAt: null,
     period: 30,
-    secret: seeded.twoFactor.secret,
+    secret: seeded.account.twoFactor.secret,
     type: '2fa',
   });
 
-  expect(seeded.twoFactor.uri).toStartWith('otpauth://totp/');
+  expect(seeded.account.twoFactor.uri).toStartWith('otpauth://totp/');
 });
 
 test("it seeds verified origin runs whose chain anchors sit on the last run's tail", async () => {
@@ -129,16 +146,15 @@ test("it seeds verified origin runs whose chain anchors sit on the last run's ta
   await createSimVersionRow(ctx.db, { status: 'active' });
   await createContentVersion(ctx.db, createMockContentDocument({ contentVersion: '2' }));
 
-  const seeded = await applyQASeed(ctx.db, {
+  const seeded = await applyQASeed(ctx.deps, {
     entropy: { genesisSeed: '0123456789abcdef0123456789abcdef', userSeed: 7 },
-    keyRoots: {
-      rollKeyRoot: new Uint8Array(32).fill(3),
-      scopeSecretRoot: new Uint8Array(32).fill(4),
-    },
+    keyVersion: 1,
     level: 6,
     now: new Date(),
     password: 'known-password',
     runs: 2,
+    secretRef: 'worldmap',
+    secretVersion: 1,
     twoFactor: false,
     user: {
       avatarName: 'qaruns',
@@ -148,10 +164,12 @@ test("it seeds verified origin runs whose chain anchors sit on the last run's ta
     },
   });
 
+  invariant(seeded.kind === 'created', 'a new address always gets an account');
+
   const activities = await ctx.db
     .selectFrom('activities')
     .selectAll()
-    .where('avatarId', '=', seeded.avatar.id)
+    .where('avatarId', '=', seeded.account.avatar.id)
     .orderBy('startedAt')
     .execute();
 
@@ -159,7 +177,12 @@ test("it seeds verified origin runs whose chain anchors sit on the last run's ta
 
   expect(activities).toSatisfyAll(
     (row: Readonly<Selectable<Activities>>) =>
-      row.status === 'stopped' && row.verifiedHead === row.appendedHead && row.appendedHead > 1,
+      row.status === 'stopped' &&
+      row.verifiedHead === row.appendedHead &&
+      row.appendedHead > 1 &&
+      row.keyVersion === 1 &&
+      row.secretRef === 'worldmap' &&
+      row.secretVersion === 1,
   );
 
   const [first, second] = activities;
@@ -181,7 +204,7 @@ test("it seeds verified origin runs whose chain anchors sit on the last run's ta
     ctx.db
       .selectFrom('activityChains')
       .select(['appendedChainIndex', 'appendedNextSeed', 'verifiedChainIndex', 'verifiedNextSeed'])
-      .where('avatarId', '=', seeded.avatar.id)
+      .where('avatarId', '=', seeded.account.avatar.id)
       .executeTakeFirst(),
   ).resolves.toStrictEqual({
     appendedChainIndex: payload.chainIndex,
@@ -193,13 +216,13 @@ test("it seeds verified origin runs whose chain anchors sit on the last run's ta
   const avatar = await ctx.db
     .selectFrom('avatars')
     .select(['level', 'xp'])
-    .where('id', '=', seeded.avatar.id)
+    .where('id', '=', seeded.account.avatar.id)
     .executeTakeFirstOrThrow();
 
-  expect(avatar.xp).toBe(2500 + seeded.runs.reduce((sum, run) => sum + run.xpDelta, 0));
+  expect(avatar.xp).toBe(2500 + seeded.account.runs.reduce((sum, run) => sum + run.xpDelta, 0));
   expect(avatar.level).toBe(buildLevelFromXP(avatar.xp));
 
-  expect(seeded.runs).toSatisfyAll(
+  expect(seeded.account.runs).toSatisfyAll(
     (run: QASeedResult['runs'][number]) => run.outcome === 'completed',
   );
 
@@ -207,21 +230,64 @@ test("it seeds verified origin runs whose chain anchors sit on the last run's ta
     ctx.db
       .selectFrom('avatarGrants')
       .select(['key', 'kind'])
-      .where('avatarId', '=', seeded.avatar.id)
+      .where('avatarId', '=', seeded.account.avatar.id)
       .execute(),
   ).resolves.toStrictEqual([{ key: '0_0', kind: 'first_clear' }]);
 });
 
-test('it refuses to seed an address that already has an account', async () => {
+test('it reads the keys of the avatar it seeds runs for', async () => {
   await using ctx = await setupTest();
 
-  await applyQASeed(ctx.db, {
+  await createSimVersionRow(ctx.db, { status: 'active' });
+  await createContentVersion(ctx.db, createMockContentDocument({ contentVersion: '2' }));
+
+  const readAvatarIDs: Array<string> = [];
+
+  const seeded = await applyQASeed(
+    {
+      db: ctx.db,
+      readAvatarKeys: (avatarID) => {
+        readAvatarIDs.push(avatarID);
+
+        return ctx.deps.readAvatarKeys();
+      },
+    },
+    {
+      entropy: { genesisSeed: '0123456789abcdef0123456789abcdef', userSeed: 7 },
+      keyVersion: 1,
+      level: 2,
+      now: new Date(),
+      password: 'known-password',
+      runs: 1,
+      secretRef: 'worldmap',
+      secretVersion: 1,
+      twoFactor: false,
+      user: {
+        avatarName: 'qakeys',
+        email: 'qa-keys@qa.versidle.com',
+        name: 'qa-keys',
+        username: 'qa_keys',
+      },
+    },
+  );
+
+  invariant(seeded.kind === 'created', 'a new address always gets an account');
+
+  expect(readAvatarIDs).toStrictEqual([seeded.account.avatar.id]);
+});
+
+test('it reports an address that already has an account and writes nothing more', async () => {
+  await using ctx = await setupTest();
+
+  await applyQASeed(ctx.deps, {
     entropy: { genesisSeed: '0123456789abcdef0123456789abcdef', userSeed: 7 },
-    keyRoots: undefined,
+    keyVersion: 1,
     level: 1,
     now: new Date(),
     password: 'known-password',
     runs: 0,
+    secretRef: 'worldmap',
+    secretVersion: 1,
     twoFactor: false,
     user: {
       avatarName: 'qadup',
@@ -231,69 +297,133 @@ test('it refuses to seed an address that already has an account', async () => {
     },
   });
 
-  expect(
-    applyQASeed(ctx.db, {
-      entropy: { genesisSeed: '0123456789abcdef0123456789abcdef', userSeed: 7 },
-      keyRoots: undefined,
-      level: 1,
-      now: new Date(),
-      password: 'other-password',
-      runs: 0,
-      twoFactor: false,
-      user: {
-        avatarName: 'qadup',
-        email: 'qa-dup@qa.versidle.com',
-        name: 'qa-dup',
-        username: 'qa_dup',
-      },
-    }),
-  ).rejects.toThrowWithMessage(Error, /already exists/u);
-});
-
-test('it refuses a level above 1 without runs and writes no account', async () => {
-  await using ctx = await setupTest();
-
-  const seeding = applyQASeed(ctx.db, {
+  const second = await applyQASeed(ctx.deps, {
     entropy: { genesisSeed: '0123456789abcdef0123456789abcdef', userSeed: 7 },
-    keyRoots: undefined,
-    level: 6,
+    keyVersion: 1,
+    level: 1,
     now: new Date(),
-    password: 'known-password',
+    password: 'other-password',
     runs: 0,
+    secretRef: 'worldmap',
+    secretVersion: 1,
     twoFactor: false,
     user: {
-      avatarName: 'qalvl',
-      email: 'qa-lvl@qa.versidle.com',
-      name: 'qa-lvl',
-      username: 'qa_lvl',
+      avatarName: 'qadup',
+      email: 'qa-dup@qa.versidle.com',
+      name: 'qa-dup',
+      username: 'qa_dup',
     },
   });
 
-  expect(seeding).rejects.toThrowWithMessage(Error, /level 6 needs --runs/u);
+  expect(second).toStrictEqual({
+    clash: { field: 'email', value: 'qa-dup@qa.versidle.com' },
+    kind: 'exists',
+  });
 
   expect(
-    ctx.db
-      .selectFrom('users')
-      .select('id')
-      .where('email', '=', 'qa-lvl@qa.versidle.com')
-      .executeTakeFirst(),
-  ).resolves.toBeUndefined();
+    ctx.db.selectFrom('users').select('id').where('email', '=', 'qa-dup@qa.versidle.com').execute(),
+  ).resolves.toHaveLength(1);
+});
+
+test.each([
+  {
+    clash: { field: 'username', value: 'qa_007' },
+    second: {
+      avatarName: 'qaaahx',
+      email: 'qa.007@qa.versidle.com',
+      name: 'qa.007',
+      username: 'qa_007',
+    },
+  },
+  {
+    clash: { field: 'avatarName', value: 'qaaah' },
+    second: {
+      avatarName: 'qaaah',
+      email: 'qa007@qa.versidle.com',
+      name: 'qa007',
+      username: 'qa007',
+    },
+  },
+])('it reports a $clash.field another account holds and writes no account', async (row) => {
+  await using ctx = await setupTest();
+
+  await applyQASeed(ctx.deps, {
+    entropy: { genesisSeed: '0123456789abcdef0123456789abcdef', userSeed: 7 },
+    keyVersion: 1,
+    level: 1,
+    now: new Date(),
+    password: 'known-password',
+    runs: 0,
+    secretRef: 'worldmap',
+    secretVersion: 1,
+    twoFactor: false,
+    user: {
+      avatarName: 'qaaah',
+      email: 'qa-007@qa.versidle.com',
+      name: 'qa-007',
+      username: 'qa_007',
+    },
+  });
+
+  const second = await applyQASeed(ctx.deps, {
+    entropy: { genesisSeed: '0123456789abcdef0123456789abcdef', userSeed: 7 },
+    keyVersion: 1,
+    level: 1,
+    now: new Date(),
+    password: 'known-password',
+    runs: 0,
+    secretRef: 'worldmap',
+    secretVersion: 1,
+    twoFactor: false,
+    user: row.second,
+  });
+
+  expect(second).toStrictEqual({ clash: row.clash, kind: 'exists' });
+
+  expect(
+    ctx.db.selectFrom('users').select('id').where('email', '=', row.second.email).execute(),
+  ).resolves.toBeEmpty();
+});
+
+test('it reports a clash for the losing one of two concurrent seeds of one address', async () => {
+  await using ctx = await setupTest();
+
+  const input = {
+    entropy: { genesisSeed: '0123456789abcdef0123456789abcdef', userSeed: 7 },
+    keyVersion: 1,
+    level: 1,
+    now: new Date(),
+    password: 'known-password',
+    runs: 0,
+    secretRef: 'worldmap',
+    secretVersion: 1,
+    twoFactor: false,
+    user: {
+      avatarName: 'qarace',
+      email: 'qa-race@qa.versidle.com',
+      name: 'qa-race',
+      username: 'qa_race',
+    },
+  } as const;
+
+  const outcomes = await Promise.all([applyQASeed(ctx.deps, input), applyQASeed(ctx.deps, input)]);
+
+  expect(outcomes.map((outcome) => outcome.kind)).toIncludeSameMembers(['created', 'exists']);
 });
 
 test('it refuses runs when the registry has no active sim version', async () => {
   await using ctx = await setupTest();
 
   expect(
-    applyQASeed(ctx.db, {
+    applyQASeed(ctx.deps, {
       entropy: { genesisSeed: '0123456789abcdef0123456789abcdef', userSeed: 7 },
-      keyRoots: {
-        rollKeyRoot: new Uint8Array(32).fill(3),
-        scopeSecretRoot: new Uint8Array(32).fill(4),
-      },
+      keyVersion: 1,
       level: 1,
       now: new Date(),
       password: 'known-password',
       runs: 1,
+      secretRef: 'worldmap',
+      secretVersion: 1,
       twoFactor: false,
       user: {
         avatarName: 'qanosim',

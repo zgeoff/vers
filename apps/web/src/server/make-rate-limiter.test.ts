@@ -37,6 +37,33 @@ test('it rejects a strict-route mutation once the strict budget is exhausted', a
   expect(response.status).toBe(429);
 });
 
+test.each([
+  { method: 'POST', path: '/api/qa/createQAAccount' },
+  { method: 'GET', path: '/api/qa/createQAAccount' },
+  { method: 'POST', path: '/api/qa' },
+])('it rejects a $method to $path once the strict budget is exhausted', async (row) => {
+  const rateLimit = makeRateLimiter({ maxMultiple: 1 });
+  const ip = '203.0.113.9';
+
+  for (let index = 0; index < 10; index += 1) {
+    const request = new Request(`https://example.test${row.path}`, {
+      headers: { 'fly-client-ip': ip },
+      method: row.method,
+    });
+
+    await rateLimit(request, () => Promise.resolve(new Response('ok')));
+  }
+
+  const request = new Request(`https://example.test${row.path}`, {
+    headers: { 'fly-client-ip': ip },
+    method: row.method,
+  });
+
+  const response = await rateLimit(request, () => Promise.resolve(new Response('ok')));
+
+  expect(response.status).toBe(429);
+});
+
 test('it applies the strong (not strict) budget to a GET against a strict route', async () => {
   const rateLimit = makeRateLimiter({ maxMultiple: 1 });
   const ip = '203.0.113.3';

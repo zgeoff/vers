@@ -1,4 +1,4 @@
-import type { TokenIssuer } from '@vers/service-auth';
+import type { TokenIssuer, TokenScope } from '@vers/service-auth';
 import type { Logger } from './logging';
 
 export interface ServiceContext {
@@ -7,6 +7,7 @@ export interface ServiceContext {
   actingUserID: null | string;
   issuer: TokenIssuer;
   logger: Logger;
+  scope: TokenScope | null;
 
   traceID: string;
 }
