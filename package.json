@@ -16,7 +16,7 @@
     "catalog": {
       "@actions/expressions": "0.3.61",
       "@ark-ui/react": "5.40.0",
-      "@babel/core": "8.0.10",
+      "@babel/core": "8.1.0",
       "@commitlint/cli": "21.2.4",
       "@conform-to/react": "1.21.3",
       "@conform-to/zod": "1.21.3",
