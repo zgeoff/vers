@@ -13,10 +13,10 @@ metadata:
 
 ## Facts
 
-| Fact       | Where                                                                                                                  |
-| ---------- | ---------------------------------------------------------------------------------------------------------------------- |
-| Lanes      | the e2e lane: [`apps/web-e2e/`](../../../apps/web-e2e/), with each limit in the `timeout` of a `playwright*.config.ts` |
-| Test utils | the packages under [`libs/testing/`](../../../libs/testing/), then the package's own `src/test-utils/`                 |
+| Fact          | Where                                                                                                                         |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Test commands | `bun run e2e` runs [`apps/web-e2e/`](../../../apps/web-e2e/), with each timeout in the `timeout` of a `playwright*.config.ts` |
+| Test utils    | the packages under [`libs/testing/`](../../../libs/testing/), then the package's own `src/test-utils/`                        |
 
 ## Departures
 
