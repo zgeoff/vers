@@ -1491,7 +1491,7 @@
     "@types/three": "0.186.0",
     "@vitejs/plugin-react": "6.2.1",
     "@vitejs/plugin-rsc": "0.5.38",
-    "@zgeoff/agent-hooks": "0.2.11",
+    "@zgeoff/agent-hooks": "0.2.12",
     "@zgeoff/bugsink-mcp": "0.2.0",
     "@zgeoff/bun-test-extended": "0.2.3",
     "@zgeoff/chex": "0.3.2",
@@ -3073,7 +3073,7 @@
 
     "@zag-js/utils": ["@zag-js/utils@1.47.0", "", {}, "sha512-vD4JoPJkFBGA2C5/HcfKrhkxqjFlJrfQj0wSoypvYghP1nJYaa6PNJs0zo3EeI4/NJ0EuJSnUg0zsCo+Dhm4iQ=="],
 
-    "@zgeoff/agent-hooks": ["@zgeoff/agent-hooks@0.2.11", "", { "bin": { "agent-hooks": "dist/cli.js" } }, "sha512-tm3pN/VHCL++ryz7l9ICupy1c/LNTUe3OlOTFMwAb52T7Mb+dse9qqNG8Ms0bbHp8Rz5PB6uyV2ALoYE/41aSQ=="],
+    "@zgeoff/agent-hooks": ["@zgeoff/agent-hooks@0.2.12", "", { "bin": { "agent-hooks": "dist/cli.js" } }, "sha512-bMEmXGtNICFNvR/e9lF9p+N4BwyIPqnG7IZ/m78vz3i5ZUZbgtSVLWgw3k5/d0cE6OXGLBW4sJ3twKd2kYzRSQ=="],
 
     "@zgeoff/bugsink-mcp": ["@zgeoff/bugsink-mcp@0.2.0", "", { "dependencies": { "@modelcontextprotocol/sdk": "^1.0.0" }, "peerDependencies": { "zod": "^3.25.0" }, "bin": { "bugsink-mcp": "dist/index.js" } }, "sha512-frOYmUHkNbvI7+9ib1btG3qiqr3Hu4tM30fIjwzXwIbSJCJwLhkG6bLHy5WWlezi95Lf2Fmg6kHQnDGtSIjNaQ=="],
 
