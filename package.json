@@ -266,7 +266,7 @@
     "zod": "catalog:"
   },
   "overrides": {
-    "@azure/msal-node": "7.1.2",
+    "@azure/msal-node": "7.2.0",
     "@modelcontextprotocol/sdk": "1.32.2",
     "@opentelemetry/exporter-logs-otlp-grpc@0.208.0>@opentelemetry/core": "2.12.0",
     "@opentelemetry/exporter-logs-otlp-http@0.208.0>@opentelemetry/core": "2.12.0",
