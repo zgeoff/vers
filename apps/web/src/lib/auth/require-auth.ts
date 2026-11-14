@@ -1,5 +1,5 @@
-import { getRequestUrl } from '@tanstack/react-start/server';
-import { getLoginPathWithRedirect } from './get-login-path-with-redirect';
+import { getRequestHeader, getRequestUrl } from '@tanstack/react-start/server';
+import { getLoginPathForRequest } from './get-login-path-for-request';
 import { readAuthSession } from './read-auth-session';
 import { runLogout } from './run-logout';
 
@@ -17,7 +17,9 @@ export async function requireAuth(): Promise<AuthResult> {
     session.accessToken === undefined ||
     session.refreshToken === undefined
   ) {
-    await runLogout({ redirectTo: getLoginPathWithRedirect(getRequestUrl()) });
+    await runLogout({
+      redirectTo: getLoginPathForRequest(getRequestUrl(), getRequestHeader('referer')),
+    });
 
     throw new Error('unreachable: logout always throws a redirect');
   }

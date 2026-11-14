@@ -2,7 +2,8 @@ import invariant from 'tiny-invariant';
 import { z } from 'zod';
 import type { DependencyGateFinding } from './types';
 
-const FIRST_PARTY_SCOPE = '@zgeoff/';
+// the scopes of the packages built from the owner's own repos, which Renovate bumps on publish
+const FIRST_PARTY_SCOPES = ['@zgeoff/', '@wringer/'];
 const installSchema = z.object({ minimumReleaseAgeExcludes: z.array(z.string()).default([]) });
 
 const bunfigSchema = z.object({
@@ -17,7 +18,7 @@ export function collectStaleAgeGateExcludes(
   const removalDates = collectRemovalDates(bunfig);
 
   return excludes
-    .filter((name) => !name.startsWith(FIRST_PARTY_SCOPE))
+    .filter((name) => !FIRST_PARTY_SCOPES.some((scope) => name.startsWith(scope)))
     .flatMap((name) => {
       const removalDate = removalDates.get(name);
 

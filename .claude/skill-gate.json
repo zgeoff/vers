@@ -16,6 +16,27 @@
       "skills": ["game-lifecycle"]
     },
     { "match": "**/skills/*/SKILL.md", "skills": ["skill-writing", "docs-writing", "deslop"] },
-    { "match": "**/skills/*/references/**", "skills": ["skill-writing", "docs-writing", "deslop"] }
+    { "match": "**/skills/*/references/**", "skills": ["skill-writing", "docs-writing", "deslop"] },
+    { "match": "apps/web/**", "skills": ["verify"] },
+    { "match": "services/**", "skills": ["verify"] },
+    { "match": "contracts/**", "skills": ["verify"] },
+    { "match": "libs/core/**", "skills": ["verify"] },
+    { "match": "libs/data/**", "skills": ["verify"] },
+    { "match": "libs/design/**", "skills": ["verify"] },
+    { "match": "libs/game/**", "skills": ["verify"] },
+    { "match": "libs/service/**", "skills": ["verify"] },
+    { "match": "patches/**", "skills": ["verify"] },
+    { "match": "apps/web-e2e/src/verify/**", "skills": ["verify"] },
+    { "match": "apps/web-e2e/src/create-network-cut.ts", "skills": ["verify"] },
+    { "match": "apps/web-e2e/src/navigate-client-route.ts", "skills": ["verify"] },
+    { "match": "apps/web-e2e/src/read-worker-snapshot.ts", "skills": ["verify"] },
+    { "match": "apps/web-e2e/src/serve-resend-stub.ts", "skills": ["verify"] },
+    { "match": "apps/web-e2e/src/serve-umami-stub.ts", "skills": ["verify"] },
+    { "match": "apps/web-e2e/src/wait-for-honeypot-window.ts", "skills": ["verify"] },
+    { "match": "apps/web-e2e/stack.env", "skills": ["verify"] },
+    { "match": "apps/web-e2e/vendor/**", "skills": ["verify"] },
+    { "match": "libs/testing/qa-account/**", "skills": ["verify"] },
+    { "match": "scripts/src/index.ts", "skills": ["verify"] },
+    { "match": "scripts/src/qa-inbox/**", "skills": ["verify"] }
   ]
 }

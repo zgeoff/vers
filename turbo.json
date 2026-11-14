@@ -68,6 +68,12 @@
       ],
       "outputs": ["test-report.junit.xml"]
     },
+    // the feature-paths suite reads the repo's skill-gate rules, which sit outside the package
+    "@vers/web-e2e#test": {
+      "dependsOn": ["codegen", "typegen"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/.claude/skill-gate.json"],
+      "outputs": ["test-report.junit.xml"]
+    },
     "e2e": {
       // the build dependency keeps the production-artifact webServer from rebuilding: the e2e
       // run serves whatever this task graph just built (or restored from cache)
