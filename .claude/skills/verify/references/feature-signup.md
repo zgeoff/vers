@@ -16,7 +16,8 @@ Before you start:
 - Keep the `wv-` prefix and the `qa.versidle.com` domain. The game's state hook answers only for
   that domain, and `remove-account` removes only `wv-` accounts.
 - Tick the terms checkbox by clicking its label by `--ref`. The checkbox input is hidden, so a click
-  on `--role checkbox` times out.
+  on `--role checkbox` times out. The snapshot shows the label as
+  `generic [ref=eN]: Agree to terms`, next to the checkbox.
 - When a page shows "Something went wrong", you sent its form within 1.5 s of the page loading.
   Click the submit button again.
 
@@ -27,6 +28,8 @@ bun verify use --feature signup
 bun verify browser goto /signup
 bun verify browser type --role textbox --name Email --value wv-RUN@qa.versidle.com
 bun verify browser click --role button --name Signup
+# expect data.url on /verify-otp
+bun verify browser snapshot
 # waits up to 20 s for the email
 bun verify action read-email --to wv-RUN@qa.versidle.com
 # typing the code into the first box fills all six
