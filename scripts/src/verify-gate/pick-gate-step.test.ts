@@ -7,7 +7,7 @@ test('it gates a pull request on its base branch and body', () => {
       body: 'the report',
       base: { ref: 'main' },
       head: { ref: 'add-quarry-node' },
-      user: { type: 'User' },
+      user: { type: 'User', login: 'quarry-keeper' },
     },
   };
 
@@ -20,7 +20,7 @@ test('it gates a pull request with no body on an empty one', () => {
       body: null,
       base: { ref: 'main' },
       head: { ref: 'add-quarry-node' },
-      user: { type: 'User' },
+      user: { type: 'User', login: 'quarry-keeper' },
     },
   };
 
@@ -33,7 +33,7 @@ test('it skips the release pull request a bot opens', () => {
       body: 'release notes',
       base: { ref: 'main' },
       head: { ref: 'release-please--branches--main' },
-      user: { type: 'Bot' },
+      user: { type: 'Bot', login: 'zgeoff-release-please[bot]' },
     },
   };
 
@@ -43,16 +43,60 @@ test('it skips the release pull request a bot opens', () => {
   });
 });
 
+test('it skips a pull request the renovate bot opens from a renovate branch', () => {
+  const event = {
+    pull_request: {
+      body: 'update zod to v5',
+      base: { ref: 'main' },
+      head: { ref: 'renovate/bump-zod' },
+      user: { type: 'Bot', login: 'zgeoff-renovate[bot]' },
+    },
+  };
+
+  expect(pickGateStep(event)).toStrictEqual({
+    kind: 'skip',
+    reason: 'a renovate pull request carries no verify report',
+  });
+});
+
 test.each([
-  { who: 'a person on the release branch', ref: 'release-please--branches--main', type: 'User' },
-  { who: 'a bot on another branch', ref: 'renovate/bump-zod', type: 'Bot' },
+  {
+    who: 'a person on the release branch',
+    ref: 'release-please--branches--main',
+    type: 'User',
+    login: 'quarry-keeper',
+  },
+  {
+    who: 'another bot on a renovate branch',
+    ref: 'renovate/bump-zod',
+    type: 'Bot',
+    login: 'other-bot[bot]',
+  },
+  {
+    who: 'a person on a renovate branch',
+    ref: 'renovate/bump-zod',
+    type: 'User',
+    login: 'quarry-keeper',
+  },
+  {
+    who: 'a person whose login is the renovate bot login',
+    ref: 'renovate/bump-zod',
+    type: 'User',
+    login: 'zgeoff-renovate[bot]',
+  },
+  {
+    who: 'the renovate bot on another branch',
+    ref: 'bump-zod',
+    type: 'Bot',
+    login: 'zgeoff-renovate[bot]',
+  },
 ])('it gates $who', (row) => {
   const event = {
     pull_request: {
       body: '',
       base: { ref: 'main' },
       head: { ref: row.ref },
-      user: { type: row.type },
+      user: { type: row.type, login: row.login },
     },
   };
 
