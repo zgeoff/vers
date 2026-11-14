@@ -52,21 +52,36 @@ export async function createPostgresContainer(
 const readyPollMs = 500;
 
 async function waitForReady(name: string, options: PostgresContainerOptions): Promise<void> {
-  const deadline = performance.now() + options.readyDeadlineMs;
+  // the deadline also kills a check in flight, so a hung `docker exec` cannot outlast it
+  const deadline = AbortSignal.timeout(options.readyDeadlineMs);
+  const checkSignal = AbortSignal.any([options.signal, deadline]);
 
   while (!options.signal.aborted) {
-    if (performance.now() > deadline) {
+    if (deadline.aborted) {
       throw new Error(`Postgres in ${name} was not ready within ${options.readyDeadlineMs} ms`);
     }
 
     // the image's entrypoint restarts the server once after initdb, so a ready answer over the
     // unix socket can come from the first start; a TCP check answers only from the final one
-    const ready =
-      await $`docker exec ${name} pg_isready --host 127.0.0.1 --username ${localDatabaseUser} --dbname vers`
-        .quiet()
-        .nothrow();
+    const check = Bun.spawn(
+      [
+        'docker',
+        'exec',
+        name,
+        'pg_isready',
+        '--host',
+        '127.0.0.1',
+        '--username',
+        localDatabaseUser,
+        '--dbname',
+        'vers',
+      ],
+      { stdout: 'ignore', stderr: 'ignore', signal: checkSignal },
+    );
 
-    if (ready.exitCode === 0) {
+    const exitCode = await check.exited;
+
+    if (exitCode === 0 && !checkSignal.aborted) {
       return;
     }
 

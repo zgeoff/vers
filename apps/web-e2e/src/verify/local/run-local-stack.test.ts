@@ -70,6 +70,19 @@ async function setupTest() {
 
       return calls.filter((call) => call.name === 'docker').map((call) => call.args[0]);
     },
+
+    // signal 0 checks that a process exists without touching it
+    countLiveChildren: async () => {
+      const pids = await readdir(pidDirectory);
+
+      return pids.filter((pid) => {
+        try {
+          return process.kill(Number(pid), 0);
+        } catch {
+          return false;
+        }
+      }).length;
+    },
   };
 }
 
@@ -144,7 +157,27 @@ test('it exits 1 and removes the container when Postgres is not ready by the dea
   expect({ exitCode, last: docker.at(-1) }).toStrictEqual({ exitCode: 1, last: 'rm' });
 });
 
-test('it removes the container on a stop when children hold their stop past the SIGKILL that follows', async () => {
+test('it exits 1 and removes the container when a readiness check hangs past the deadline', async () => {
+  const ctx = await setupTest();
+
+  const stack = ctx.startStack({
+    answers: {
+      'docker run': { stdout: 'container-id' },
+      'docker port': { stdout: '127.0.0.1:55432' },
+      'docker exec': { exitCode: 0, delayMs: 3000 },
+    },
+    readyDeadlineMs: 500,
+    stopGraceMs: 3000,
+    heldChildren: 0,
+  });
+
+  const exitCode = await stack.exited;
+  const docker = await ctx.readDockerCalls();
+
+  expect({ exitCode, last: docker.at(-1) }).toStrictEqual({ exitCode: 1, last: 'rm' });
+});
+
+test('it removes the container and stops every child before the SIGKILL when children hold their stop', async () => {
   const ctx = await setupTest();
 
   const stack = ctx.startStack({
@@ -172,9 +205,13 @@ test('it removes the container on a stop when children hold their stop past the 
     clearTimeout(forceKill);
   });
 
-  await stack.exited;
-
+  const exitCode = await stack.exited;
   const docker = await ctx.readDockerCalls();
+  const liveChildren = await ctx.countLiveChildren();
 
-  expect(docker).toStrictEqual(['run', 'port', 'exec', 'rm']);
+  expect({ exitCode, docker, liveChildren }).toStrictEqual({
+    exitCode: 0,
+    docker: ['run', 'port', 'exec', 'rm'],
+    liveChildren: 0,
+  });
 });
