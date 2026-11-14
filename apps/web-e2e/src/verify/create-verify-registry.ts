@@ -208,19 +208,21 @@ export function createVerifyRegistry(options: VerifyRegistryOptions): Wringer {
         paths: featurePaths.signup,
       },
       {
-        name: 'device-takeover',
-        summary: 'Sign in on a second device, and see the first one told it was taken over',
-        paths: featurePaths['device-takeover'],
+        name: 'avatar-roster',
+        summary: 'Create and switch avatars, and see the roster and the database agree',
+        paths: featurePaths['avatar-roster'],
       },
       {
         name: 'offline-run',
         summary: 'Start a run offline, and see it sync and verify once the network returns',
         paths: featurePaths['offline-run'],
       },
+
+      // last: the takeover signs the first device out, and each other journey plays on it
       {
-        name: 'avatar-roster',
-        summary: 'Create and switch avatars, and see the roster and the database agree',
-        paths: featurePaths['avatar-roster'],
+        name: 'device-takeover',
+        summary: 'Sign in on a second device, and see the first one told it was taken over',
+        paths: featurePaths['device-takeover'],
       },
     )
     .shared(...sharedPaths)

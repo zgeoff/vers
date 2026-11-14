@@ -54,11 +54,15 @@ async function runParts(cleanup: AsyncDisposableStack, signal: AbortSignal): Pro
   const startedAt = performance.now();
   const ports = readPorts();
 
-  // both settle before a failure throws, so the container registers its removal before the cleanup
-  // runs, even when the build fails first
+  // A failed part stops the other, and both settle before the failure throws. The container then
+  // registers its removal before the cleanup runs, even when the build fails first.
+  const partsController = new AbortController();
+
+  const partsSignal = AbortSignal.any([signal, partsController.signal]);
+
   const [postgres, build] = await Promise.allSettled([
-    createPostgresContainer(cleanup, signal),
-    runWebBuild(signal),
+    abortOnFailure(createPostgresContainer(cleanup, partsSignal), partsController),
+    abortOnFailure(runWebBuild(partsSignal), partsController),
   ]);
 
   if (postgres.status === 'rejected') {
@@ -170,6 +174,15 @@ function readPorts(): StackPorts {
 }
 
 // turbo restores the build from its cache when no input changed, and the engine hash is an input
+async function abortOnFailure<T>(part: Promise<T>, controller: AbortController): Promise<T> {
+  try {
+    return await part;
+  } catch (error) {
+    controller.abort();
+    throw error;
+  }
+}
+
 async function runWebBuild(signal: AbortSignal): Promise<void> {
   const build = Bun.spawn(
     ['bunx', 'turbo', 'run', 'build', '--filter=@vers/web', '--output-logs=errors-only'],

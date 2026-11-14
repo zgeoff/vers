@@ -45,8 +45,17 @@ export async function createPostgresContainer(
 
 const readyPollMs = 500;
 
+// a fresh tmpfs database answers within a few seconds; a minute means it will not start
+const readyDeadlineMs = 60_000;
+
 async function waitForReady(name: string, signal: AbortSignal): Promise<void> {
+  const deadline = performance.now() + readyDeadlineMs;
+
   while (!signal.aborted) {
+    if (performance.now() > deadline) {
+      throw new Error(`Postgres in ${name} was not ready within ${readyDeadlineMs / 1000} s`);
+    }
+
     // the image's entrypoint restarts the server once after initdb, so a ready answer over the
     // unix socket can come from the first start; a TCP check answers only from the final one
     const ready =

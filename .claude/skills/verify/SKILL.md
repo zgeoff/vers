@@ -48,9 +48,9 @@ journey of `bun verify` commands, and the end state that shows it works.
 | Feature         | Summary                                                                  | File                                                                           |
 | --------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------ |
 | signup          | Sign up with an emailed code, and land signed in with a user row         | [references/feature-signup.md](references/feature-signup.md)                   |
-| device-takeover | Sign in on a second device, and see the first one told it was taken over | [references/feature-device-takeover.md](references/feature-device-takeover.md) |
-| offline-run     | Start a run offline, and see it sync and verify once the network returns | [references/feature-offline-run.md](references/feature-offline-run.md)         |
 | avatar-roster   | Create and switch avatars, and see the roster and the database agree     | [references/feature-avatar-roster.md](references/feature-avatar-roster.md)     |
+| offline-run     | Start a run offline, and see it sync and verify once the network returns | [references/feature-offline-run.md](references/feature-offline-run.md)         |
+| device-takeover | Sign in on a second device, and see the first one told it was taken over | [references/feature-device-takeover.md](references/feature-device-takeover.md) |
 
 <!-- /wringer:features -->
 
@@ -126,7 +126,8 @@ command points that command alone.
 | `local` | `bun verify use --target local`, then `bun verify up` | read-write | Builds the web app, then starts Postgres in Docker, the services, the web server and an email stub. |
 
 `up` needs Docker and the Chromium that `bun run verify:install-browser` installs. Each `up` and
-`up --restart` starts an empty database, so run the signup journey first after each one.
+`up --restart` starts an empty database, so run the signup journey first after each one. Run the
+device-takeover journey last: it signs the browser out.
 
 <!-- /repo -->
 
@@ -147,7 +148,8 @@ group, such as `action`: run `bun verify <group> --help` for its commands.
 - `action navigate-route --path <path>` opens a map node. The map is a canvas that `browser click`
   can't reach.
 - `action set-network --network offline|online` cuts or restores the page's and worker's network.
-- `action second-device-*`, and `--device second`, play a second device.
+- `action second-device-sign-in`, `second-device-click` and `second-device-snapshot` drive a second
+  browser of their own. `--device second` points `navigate-route` and `read-game-state` at it.
 - `action remove-account --email <email>` removes a journey account.
 - `db query "<sql>"` reads the database.
 
@@ -166,7 +168,8 @@ actions, doctor checks and features.
 [feature-paths.ts](../../../apps/web-e2e/src/verify/feature-paths.ts) holds each feature's `paths`,
 the shared paths that count as a change to every feature, and the `.ignore` list. When you add a
 glob to `paths` or the shared paths, add it to [skill-gate.json](../../skill-gate.json) with the
-`verify` skill too: its test fails until you do.
+`verify` skill too: [feature-paths.test.ts](../../../apps/web-e2e/src/verify/feature-paths.test.ts)
+fails until you do.
 
 <!-- /repo -->
 
