@@ -14,7 +14,9 @@ it signs the first device out. Put the account name you picked in the signup jou
 - `bun verify action second-device-sign-in` opens a second browser of its own, signs in, and clicks
   Confirm itself. Its `data.tookOver` says whether the sign-in asked to take over.
 - A run ends by itself about 15 s after it starts. Run `second-device-sign-in` as soon as the
-  `db query` after the start prints a row. In the database, a run is a row of `activities`.
+  `db query` after the start prints a row. In the database, a run is a row of `activities`. To poll
+  the query, loop it in the shell and read `data.rowCount`, as in
+  `for i in $(seq 8); do bun verify db query "<the query>" | tail -1 | jq .data.rowCount; sleep 2; done`.
 - When the query prints no row within 15 s, or `read-game-state --device second` shows no `liveRun`,
   the run ended before the sign-in. Start this journey again from `use --feature`, with the same
   account.

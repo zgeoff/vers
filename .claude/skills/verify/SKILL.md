@@ -153,10 +153,6 @@ group, such as `action`: run `bun verify <group> --help` for its commands.
 - `action remove-account --email <email>` removes a journey account.
 - `db query "<sql>"` reads the database.
 
-A form sent within 1.5 s of its page loading shows "Something went wrong". Click submit again.
-
-To tick a checkbox, click its label by `--ref` from a snapshot.
-
 <!-- /repo -->
 
 ## Update a feature file

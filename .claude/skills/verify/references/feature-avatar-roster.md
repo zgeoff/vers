@@ -18,7 +18,8 @@ bun verify browser click --role link --name "Switch avatar (WvRUN)"
 bun verify browser click --role link --name "+ Create avatar"
 bun verify browser type --role textbox --name Name --value WvRUNb
 bun verify browser click --role button --name "Create Avatar"
-# expect data.url on /explore
+# the click returns before the page moves, so the snapshot shows the page; expect /explore
+bun verify browser snapshot
 bun verify browser click --role link --name "Switch avatar (WvRUNb)"
 bun verify browser snapshot
 # a card's button name starts with its avatar's name, such as "WvRUN Level 1 · Trade"
