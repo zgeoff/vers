@@ -54,6 +54,14 @@ async function runParts(cleanup: AsyncDisposableStack, signal: AbortSignal): Pro
   const startedAt = performance.now();
   const ports = readPorts();
 
+  // The cleanup runs last in, first out, so the container, registered after this, is removed
+  // first. The children then stop together, inside the grace wringer gives before its SIGKILL.
+  const children = new Set<Subprocess>();
+
+  cleanup.defer(async () => {
+    await Promise.all([...children].map((child) => stopChild(child)));
+  });
+
   // A failed part stops the other, and both settle before the failure throws. The container then
   // registers its removal before the cleanup runs, even when the build fails first.
   const partsController = new AbortController();
@@ -81,13 +89,13 @@ async function runParts(cleanup: AsyncDisposableStack, signal: AbortSignal): Pro
 
   const stackEnvText = await Bun.file(join(e2eRoot, 'stack.env')).text();
 
-  startChild(cleanup, {
+  startChild(children, {
     name: 'resend-stub',
     command: ['bun', join(e2eRoot, 'src', 'serve-resend-stub.ts')],
     env: { RESEND_STUB_PORT: String(ports.resend) },
   });
 
-  startChild(cleanup, {
+  startChild(children, {
     name: 'umami-stub',
     command: ['bun', join(e2eRoot, 'src', 'serve-umami-stub.ts')],
     env: { UMAMI_STUB_PORT: String(ports.umami) },
@@ -106,14 +114,14 @@ async function runParts(cleanup: AsyncDisposableStack, signal: AbortSignal): Pro
       stackEnvText,
     });
 
-    startChild(cleanup, {
+    startChild(children, {
       name: service,
       command: ['bun', join(serviceRoot, 'src', 'serve.ts')],
       env,
     });
   }
 
-  startChild(cleanup, {
+  startChild(children, {
     name: 'web',
     command: ['node', join(webRoot, 'server.mjs')],
     env: buildWebEnv({ ports, stackEnvText }),
@@ -173,7 +181,21 @@ function readPorts(): StackPorts {
   };
 }
 
-// turbo restores the build from its cache when no input changed, and the engine hash is an input
+// under wringer's 5 s grace, so a child that ignores SIGTERM dies before wringer kills this process
+const stopGraceMs = 3000;
+
+async function stopChild(child: Subprocess): Promise<void> {
+  child.kill('SIGTERM');
+
+  const forceKill = setTimeout(() => {
+    child.kill('SIGKILL');
+  }, stopGraceMs);
+
+  await child.exited;
+
+  clearTimeout(forceKill);
+}
+
 async function abortOnFailure<T>(part: Promise<T>, controller: AbortController): Promise<T> {
   try {
     return await part;
@@ -183,6 +205,7 @@ async function abortOnFailure<T>(part: Promise<T>, controller: AbortController):
   }
 }
 
+// turbo restores the build from its cache when no input changed, and the engine hash is an input
 async function runWebBuild(signal: AbortSignal): Promise<void> {
   const build = Bun.spawn(
     ['bunx', 'turbo', 'run', 'build', '--filter=@vers/web', '--output-logs=errors-only'],
@@ -209,7 +232,7 @@ interface ChildSpec {
   readonly cwd?: string;
 }
 
-function startChild(cleanup: AsyncDisposableStack, spec: ChildSpec): void {
+function startChild(children: Set<Subprocess>, spec: ChildSpec): void {
   const child = Bun.spawn([...spec.command], {
     cwd: spec.cwd ?? repoRoot,
 
@@ -227,7 +250,7 @@ function startChild(cleanup: AsyncDisposableStack, spec: ChildSpec): void {
 
   void copyOutput(spec.name, child.stdout);
   void copyOutput(spec.name, child.stderr);
-  cleanup.defer(() => stopChild(child));
+  children.add(child);
 }
 
 // every child's output goes to this process's stderr, which the run keeps as the app's log
@@ -241,20 +264,6 @@ async function copyOutput(name: string, output: ReadableStream<Uint8Array>): Pro
       }
     }
   }
-}
-
-const stopGraceMs = 5000;
-
-async function stopChild(child: Subprocess): Promise<void> {
-  child.kill('SIGTERM');
-
-  const forceKill = setTimeout(() => {
-    child.kill('SIGKILL');
-  }, stopGraceMs);
-
-  await child.exited;
-
-  clearTimeout(forceKill);
 }
 
 const healthPollMs = 250;

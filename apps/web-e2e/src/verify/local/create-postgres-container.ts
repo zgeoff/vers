@@ -3,7 +3,8 @@ import { $ } from 'bun';
 // the image the dev and e2e stacks run
 const postgresImage = 'postgres:16.2-alpine3.19';
 
-// every container this harness starts carries the label, so a sweep finds one a killed run left
+// every container this harness starts carries the label, so `docker ps --filter label=` finds one
+// that a killed run left
 const stackContainerLabel = 'vers-verify=local';
 
 // throwaway credentials of a database that lives as long as one run. The run's endpoint leaves
