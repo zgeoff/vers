@@ -46,6 +46,9 @@
         "src/serve-resend-stub.ts",
         "src/serve-umami-stub.ts",
         "src/write-corpus-artifacts.ts",
+        "src/verify/verify.ts",
+        "src/verify/local/run-local-stack.ts",
+        "src/test-utils/run-stub-*.ts",
         "specs/*.spec.ts"
       ],
       "ignoreDependencies": ["@vers/web"]

@@ -1,0 +1,35 @@
+# Runs the `verify / gate` check: it fails a pull request that changes a feature's paths with no
+# fresh verdict for that feature in the pull request's body, or that changes a path no feature maps
+# and no ignore glob matches. It also lints the verify skill against the CLI. A workflow of its own,
+# because pr.yml has no `edited` trigger, and a body edit there would rerun every check.
+name: verify
+
+on:
+  pull_request:
+    # `edited`: `bun verify publish` writes the report into the body after the push
+    types: [opened, synchronize, reopened, edited]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  gate:
+    name: verify / gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # the fingerprint reads the merge base
+          filter: blob:none
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version
+      - run: bun install --frozen-lockfile
+      - run: bun run --silent verify:lint
+      - run: bun run --silent ci:verify-gate

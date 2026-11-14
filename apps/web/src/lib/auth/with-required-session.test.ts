@@ -58,6 +58,31 @@ test('it signs the caller out and redirects to login when the service rejects th
   expect(outcome.value).toStrictEqual({});
 });
 
+test('it redirects a server function call that loses its session back to the page that made it', async () => {
+  const ctx = setupTest();
+
+  const signedIn = await createSignedInUser();
+
+  server.use(
+    ctx.mockAvatar.getAvatars.handler((opts) => {
+      throw opts.errors.UNAUTHORIZED({ data: { reason: 'missing-session' } });
+    }),
+  );
+
+  const outcome = await withRequestContext(
+    {
+      cookies: signedIn.cookies,
+      headers: { referer: 'http://localhost/explore/current' },
+      url: 'http://localhost/_serverFn/abc123',
+    },
+    () => withRequiredSession(() => avatarClient.getAvatars({})).catch((error: unknown) => error),
+  );
+
+  expect(outcome.value).toMatchObject({
+    options: { href: '/login?redirect=%2Fexplore%2Fcurrent' },
+  });
+});
+
 test('it rethrows a service fault and keeps the caller signed in', async () => {
   const ctx = setupTest();
 

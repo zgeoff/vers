@@ -8,7 +8,9 @@
     "e2e:bench": "playwright test --config playwright.bench.config.ts",
     "e2e:stack": "playwright test --config playwright.stack.config.ts",
     "stack:seed": "bun src/create-stack-seed.ts",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "test": "bun test --randomize ./src",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "verify:install-browser": "playwright-core install chromium"
   },
   "devDependencies": {
     "@orpc/server": "catalog:",
@@ -22,7 +24,15 @@
     "@vers/mock-services": "workspace:*",
     "@vers/scripts": "workspace:*",
     "@vers/service-auth": "workspace:*",
+    "@vers/sim-registry": "workspace:*",
+    "@vers/test-utils": "workspace:*",
     "@vers/web": "workspace:*",
+    "@wringer/browser": "catalog:",
+    "@wringer/core": "catalog:",
+    "@wringer/db": "catalog:",
+    "@wringer/gunshi": "catalog:",
+    "@wringer/http": "catalog:",
+    "playwright-core": "catalog:",
     "tiny-invariant": "catalog:",
     "typescript": "catalog:",
     "zod": "catalog:"

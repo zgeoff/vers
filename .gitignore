@@ -14,6 +14,9 @@ test-report.junit.xml
 # local scratch files
 .scratch/
 
+# the verify CLI's run state and evidence
+.wringer/
+
 # load run reports
 .load-results/
 

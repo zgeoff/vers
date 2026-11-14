@@ -9,7 +9,7 @@ exact = true
 minimumReleaseAge = 604800
 
 # first-party packages skip the gate for good, and their own dependencies stay
-# behind it. Renovate bumps @zgeoff packages as soon as they publish, so each one
+# behind it. Renovate bumps @zgeoff and @wringer packages as soon as they publish, so each one
 # vers uses needs an entry here, or bun install refuses the bump.
 #
 # every other exclude lives only as long as its pinned version is younger than
@@ -17,6 +17,11 @@ minimumReleaseAge = 604800
 # workflow writes. bun run deps:check fails once the date in it passes, and
 # the audit-fix workflow removes an entry whose line ends "(audit-fix)".
 minimumReleaseAgeExcludes = [
+  "@wringer/browser",
+  "@wringer/core",
+  "@wringer/db",
+  "@wringer/gunshi",
+  "@wringer/http",
   "@zgeoff/agent-hooks",
   "@zgeoff/bugsink-mcp",
   "@zgeoff/chex",
