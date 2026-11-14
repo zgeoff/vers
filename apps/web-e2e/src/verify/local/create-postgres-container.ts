@@ -21,9 +21,14 @@ export interface PostgresContainer {
 
 // A throwaway Postgres on a free loopback port, with its data on tmpfs: removing the container
 // removes every row, and no volume outlives it.
+export interface PostgresContainerOptions {
+  readonly signal: AbortSignal;
+  readonly readyDeadlineMs: number;
+}
+
 export async function createPostgresContainer(
   cleanup: AsyncDisposableStack,
-  signal: AbortSignal,
+  options: PostgresContainerOptions,
 ): Promise<PostgresContainer> {
   const name = `vers-verify-pg-${process.pid}`;
 
@@ -37,7 +42,7 @@ export async function createPostgresContainer(
 
   const port = published.trim().split(':').at(-1);
 
-  await waitForReady(name, signal);
+  await waitForReady(name, options);
 
   const endpoint = `postgresql://127.0.0.1:${port}/vers`;
 
@@ -46,15 +51,12 @@ export async function createPostgresContainer(
 
 const readyPollMs = 500;
 
-// a fresh tmpfs database answers within a few seconds; a minute means it will not start
-const readyDeadlineMs = 60_000;
+async function waitForReady(name: string, options: PostgresContainerOptions): Promise<void> {
+  const deadline = performance.now() + options.readyDeadlineMs;
 
-async function waitForReady(name: string, signal: AbortSignal): Promise<void> {
-  const deadline = performance.now() + readyDeadlineMs;
-
-  while (!signal.aborted) {
+  while (!options.signal.aborted) {
     if (performance.now() > deadline) {
-      throw new Error(`Postgres in ${name} was not ready within ${readyDeadlineMs / 1000} s`);
+      throw new Error(`Postgres in ${name} was not ready within ${options.readyDeadlineMs} ms`);
     }
 
     // the image's entrypoint restarts the server once after initdb, so a ready answer over the

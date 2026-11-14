@@ -15,10 +15,43 @@ const repoRoot = join(import.meta.dir, '..', '..', '..', '..', '..');
 const e2eRoot = join(repoRoot, 'apps', 'web-e2e');
 const webRoot = join(repoRoot, 'apps', 'web');
 
+export interface StackChild {
+  readonly name: string;
+  readonly command: ReadonlyArray<string>;
+  readonly env: Readonly<Record<string, string>>;
+  readonly cwd?: string;
+  readonly healthURL: string;
+}
+
+export interface StackChildContext {
+  readonly ports: StackPorts;
+  readonly databaseURL: string;
+}
+
+// The parts of a start that a test swaps out. Postgres and the web build always run through the
+// `docker` and `bunx` on PATH.
+export interface LocalStackParts {
+  readonly readyDeadlineMs: number;
+  readonly stopGraceMs: number;
+  readonly setupDatabase: (databaseURL: string) => Promise<void>;
+  readonly readChildren: (context: StackChildContext) => Promise<ReadonlyArray<StackChild>>;
+}
+
+export const localStackParts: LocalStackParts = {
+  // a fresh tmpfs database answers within a few seconds; a minute means it will not start
+  readyDeadlineMs: 60_000,
+
+  // under wringer's 5 s grace, so a child that ignores SIGTERM dies before wringer kills this
+  // process
+  stopGraceMs: 3000,
+  setupDatabase: runDatabaseSetup,
+  readChildren: readStackChildren,
+};
+
 // The `local` target's app: Postgres in a throwaway container, this tree's eight services, a
 // Resend stub and an umami stub as child processes, and the web app's production build. It prints
 // one ready line, runs until SIGTERM or SIGINT, then removes everything it started.
-export async function runLocalStack(): Promise<number> {
+export async function runLocalStack(parts: LocalStackParts = localStackParts): Promise<number> {
   const stopController = new AbortController();
 
   for (const signal of ['SIGTERM', 'SIGINT'] as const) {
@@ -32,7 +65,7 @@ export async function runLocalStack(): Promise<number> {
   let exitCode = 0;
 
   try {
-    await runParts(cleanup, stopController.signal);
+    await runParts(cleanup, { parts, signal: stopController.signal });
   } catch (error) {
     process.stderr.write(`verify local: the start failed: ${String(error)}\n`);
 
@@ -50,7 +83,65 @@ export async function runLocalStack(): Promise<number> {
   return exitCode;
 }
 
-async function runParts(cleanup: AsyncDisposableStack, signal: AbortSignal): Promise<void> {
+// the stubs, the eight services and the web server, each with the URL that answers once it serves
+async function readStackChildren(context: StackChildContext): Promise<ReadonlyArray<StackChild>> {
+  const ports = context.ports;
+
+  const stackEnvText = await Bun.file(join(e2eRoot, 'stack.env')).text();
+
+  const services = await Promise.all(
+    stackServiceNames.map(async (service): Promise<StackChild> => {
+      const serviceRoot = join(repoRoot, 'services', service);
+
+      const developmentEnvText = await Bun.file(join(serviceRoot, '.env.development')).text();
+
+      return {
+        name: service,
+        command: ['bun', join(serviceRoot, 'src', 'serve.ts')],
+        env: buildServiceEnv({
+          service,
+          ports,
+          databaseURL: context.databaseURL,
+          developmentEnvText,
+          stackEnvText,
+        }),
+        healthURL: `http://127.0.0.1:${ports.services[service]}/health`,
+      };
+    }),
+  );
+
+  return [
+    {
+      name: 'resend-stub',
+      command: ['bun', join(e2eRoot, 'src', 'serve-resend-stub.ts')],
+      env: { RESEND_STUB_PORT: String(ports.resend) },
+      healthURL: `http://127.0.0.1:${ports.resend}/health`,
+    },
+    {
+      name: 'umami-stub',
+      command: ['bun', join(e2eRoot, 'src', 'serve-umami-stub.ts')],
+      env: { UMAMI_STUB_PORT: String(ports.umami) },
+      healthURL: `http://127.0.0.1:${ports.umami}/health`,
+    },
+    ...services,
+    {
+      name: 'web',
+      command: ['node', join(webRoot, 'server.mjs')],
+      env: buildWebEnv({ ports, stackEnvText }),
+      cwd: webRoot,
+      healthURL: `http://127.0.0.1:${ports.web}/health`,
+    },
+  ];
+}
+
+interface RunPartsOptions {
+  readonly parts: LocalStackParts;
+  readonly signal: AbortSignal;
+}
+
+async function runParts(cleanup: AsyncDisposableStack, options: RunPartsOptions): Promise<void> {
+  const parts = options.parts;
+  const signal = options.signal;
   const startedAt = performance.now();
   const ports = readPorts();
 
@@ -59,7 +150,7 @@ async function runParts(cleanup: AsyncDisposableStack, signal: AbortSignal): Pro
   const children = new Set<Subprocess>();
 
   cleanup.defer(async () => {
-    await Promise.all([...children].map((child) => stopChild(child)));
+    await Promise.all([...children].map((child) => stopChild(child, parts.stopGraceMs)));
   });
 
   // A failed part stops the other, and both settle before the failure throws. The container then
@@ -69,7 +160,13 @@ async function runParts(cleanup: AsyncDisposableStack, signal: AbortSignal): Pro
   const partsSignal = AbortSignal.any([signal, partsController.signal]);
 
   const [postgres, build] = await Promise.allSettled([
-    abortOnFailure(createPostgresContainer(cleanup, partsSignal), partsController),
+    abortOnFailure(
+      createPostgresContainer(cleanup, {
+        signal: partsSignal,
+        readyDeadlineMs: parts.readyDeadlineMs,
+      }),
+      partsController,
+    ),
     abortOnFailure(runWebBuild(partsSignal), partsController),
   ]);
 
@@ -85,57 +182,18 @@ async function runParts(cleanup: AsyncDisposableStack, signal: AbortSignal): Pro
     return;
   }
 
-  await runDatabaseSetup(postgres.value.databaseURL);
+  await parts.setupDatabase(postgres.value.databaseURL);
 
-  const stackEnvText = await Bun.file(join(e2eRoot, 'stack.env')).text();
-
-  startChild(children, {
-    name: 'resend-stub',
-    command: ['bun', join(e2eRoot, 'src', 'serve-resend-stub.ts')],
-    env: { RESEND_STUB_PORT: String(ports.resend) },
+  const stackChildren = await parts.readChildren({
+    ports,
+    databaseURL: postgres.value.databaseURL,
   });
 
-  startChild(children, {
-    name: 'umami-stub',
-    command: ['bun', join(e2eRoot, 'src', 'serve-umami-stub.ts')],
-    env: { UMAMI_STUB_PORT: String(ports.umami) },
-  });
-
-  for (const service of stackServiceNames) {
-    const serviceRoot = join(repoRoot, 'services', service);
-
-    const developmentEnvText = await Bun.file(join(serviceRoot, '.env.development')).text();
-
-    const env = buildServiceEnv({
-      service,
-      ports,
-      databaseURL: postgres.value.databaseURL,
-      developmentEnvText,
-      stackEnvText,
-    });
-
-    startChild(children, {
-      name: service,
-      command: ['bun', join(serviceRoot, 'src', 'serve.ts')],
-      env,
-    });
+  for (const child of stackChildren) {
+    startChild(children, child);
   }
 
-  startChild(children, {
-    name: 'web',
-    command: ['node', join(webRoot, 'server.mjs')],
-    env: buildWebEnv({ ports, stackEnvText }),
-    cwd: webRoot,
-  });
-
-  const healthURLs = [
-    `http://127.0.0.1:${ports.resend}/health`,
-    `http://127.0.0.1:${ports.umami}/health`,
-    ...stackServiceNames.map((service) => `http://127.0.0.1:${ports.services[service]}/health`),
-    `http://127.0.0.1:${ports.web}/health`,
-  ];
-
-  await Promise.all(healthURLs.map((url) => waitForHealthy(url, signal)));
+  await Promise.all(stackChildren.map((child) => waitForHealthy(child.healthURL, signal)));
 
   if (signal.aborted) {
     return;
@@ -181,10 +239,7 @@ function readPorts(): StackPorts {
   };
 }
 
-// under wringer's 5 s grace, so a child that ignores SIGTERM dies before wringer kills this process
-const stopGraceMs = 3000;
-
-async function stopChild(child: Subprocess): Promise<void> {
+async function stopChild(child: Subprocess, stopGraceMs: number): Promise<void> {
   child.kill('SIGTERM');
 
   const forceKill = setTimeout(() => {
@@ -225,14 +280,7 @@ async function runWebBuild(signal: AbortSignal): Promise<void> {
   }
 }
 
-interface ChildSpec {
-  readonly name: string;
-  readonly command: ReadonlyArray<string>;
-  readonly env: Readonly<Record<string, string>>;
-  readonly cwd?: string;
-}
-
-function startChild(children: Set<Subprocess>, spec: ChildSpec): void {
+function startChild(children: Set<Subprocess>, spec: StackChild): void {
   const child = Bun.spawn([...spec.command], {
     cwd: spec.cwd ?? repoRoot,
 

@@ -25,6 +25,7 @@
     "@vers/scripts": "workspace:*",
     "@vers/service-auth": "workspace:*",
     "@vers/sim-registry": "workspace:*",
+    "@vers/test-utils": "workspace:*",
     "@vers/web": "workspace:*",
     "@wringer/browser": "catalog:",
     "@wringer/core": "catalog:",
