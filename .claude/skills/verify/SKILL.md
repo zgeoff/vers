@@ -121,12 +121,12 @@ command points that command alone.
 
 <!-- repo: targets -->
 
-| Target  | Start with                                            | Access     | Notes                                                                                     |
-| ------- | ----------------------------------------------------- | ---------- | ----------------------------------------------------------------------------------------- |
-| `local` | `bun verify use --target local`, then `bun verify up` | read-write | Builds the web app, then starts Postgres in Docker, the services, the web and email stub. |
+| Target  | Start with                                            | Access     | Notes                                                                                               |
+| ------- | ----------------------------------------------------- | ---------- | --------------------------------------------------------------------------------------------------- |
+| `local` | `bun verify use --target local`, then `bun verify up` | read-write | Builds the web app, then starts Postgres in Docker, the services, the web server and an email stub. |
 
-`up` needs Docker and the Chromium that `bun run verify:install-browser` installs. Each `up` starts
-an empty database, so sign up each journey's account in the same run.
+`up` needs Docker and the Chromium that `bun run verify:install-browser` installs. Each `up` and
+`up --restart` starts an empty database, so run the signup journey first after each one.
 
 <!-- /repo -->
 
@@ -142,8 +142,8 @@ group, such as `action`: run `bun verify <group> --help` for its commands.
 <!-- repo: commands -->
 
 - `action read-email --to <email>` gives the code of the last email to that address.
-- `action read-game-state` gives the game worker's state, such as `liveRun` and `outbox`. It answers
-  only for a `qa.versidle.com` account, so name each journey account `wv-<run>@qa.versidle.com`.
+- `action read-game-state` gives the game worker's state, such as `liveRun` and `outbox`, for a
+  `qa.versidle.com` account only. The signup journey says how to name the account.
 - `action navigate-route --path <path>` opens a map node. The map is a canvas that `browser click`
   can't reach.
 - `action set-network --network offline|online` cuts or restores the page's and worker's network.
@@ -163,9 +163,10 @@ To tick a checkbox, click its label by `--ref` from a snapshot.
 
 The [registry](../../../apps/web-e2e/src/verify/create-verify-registry.ts) declares the target,
 actions, doctor checks and features.
-[feature-paths.ts](../../../apps/web-e2e/src/verify/feature-paths.ts) holds the `paths`, shared
-paths and `.ignore` list. Map each new path to this skill in
-[skill-gate.json](../../skill-gate.json).
+[feature-paths.ts](../../../apps/web-e2e/src/verify/feature-paths.ts) holds each feature's `paths`,
+the shared paths that count as a change to every feature, and the `.ignore` list. When you add a
+glob to `paths` or the shared paths, add it to [skill-gate.json](../../skill-gate.json) with the
+`verify` skill too: its test fails until you do.
 
 <!-- /repo -->
 

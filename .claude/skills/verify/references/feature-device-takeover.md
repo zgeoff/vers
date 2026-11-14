@@ -1,13 +1,20 @@
 # device-takeover
 
 A player signs in on a second device while a run plays on the first. The sign-in shows "You are
-logged in elsewhere", and Confirm ends the first device's session. The second device picks the run
-up, and the first device learns of the takeover on its next call to the server: it shows the
-"Playing on another device" dialog, or goes to the login page.
+logged in elsewhere", and Confirm ends the first device's session. The second device picks up the
+run. The next time the first device calls the server, the server refuses the call, and the first
+device shows the "Playing on another device" dialog or goes to the login page.
 
-Sign up an account first, as the signup journey does, with a run name of its own. A run ends on its
-own after about 15 s, so start the second device's sign-in as soon as the `db query` shows the run
-`active`.
+Run this journey after the [signup journey](./feature-signup.md), in the same `up`, with its
+account. Before you start:
+
+- Every command without `--device second` acts on the first device, the browser that `browser`
+  commands drive.
+- `bun verify action second-device-sign-in` opens a new browser context, signs in, and clicks
+  Confirm itself. Its `data.tookOver` says whether the sign-in asked to take over.
+- A run ends by itself about 15 s after it starts. Run `second-device-sign-in` as soon as the
+  `db query` after the start prints a row. In the database, a run is a row of `activities`.
+- When the run ended before the sign-in, start this journey again from `use --feature`.
 
 ## Journey
 
@@ -15,24 +22,24 @@ own after about 15 s, so start the second device's sign-in as soon as the `db qu
 bun verify use --feature device-takeover
 bun verify action navigate-route --path /explore/node/0_0
 bun verify browser click --role link --name "Click to start"
-bun verify db query "select id, status from activities where status = 'active'"
-bun verify action second-device-sign-in --email wv-k7m@qa.versidle.com --password Verify-pass-123
+# run this query every 2 s until it prints a row
+bun verify db query "select a.id from activities a join avatars v on v.id = a.avatar_id join users u on u.id = v.user_id where a.status = 'active' and u.email = 'wv-RUN@qa.versidle.com'"
+bun verify action second-device-sign-in --email wv-RUN@qa.versidle.com --password Verify-pass-123
 bun verify action navigate-route --device second --path /activity
 bun verify action read-game-state --device second
+# a reconnect makes the first device call the server at once
 bun verify action set-network --network offline
 bun verify action set-network --network online
 bun verify browser snapshot
-bun verify db query "select count(*) as sessions from sessions s join users u on u.id = s.user_id where u.email = 'wv-k7m@qa.versidle.com'"
+bun verify db query "select count(*) as sessions from sessions s join users u on u.id = s.user_id where u.email = 'wv-RUN@qa.versidle.com'"
 ```
-
-Run the `db query` for the active run again until it gives a row, for up to 15 s. The `set-network`
-pair makes the first device call the server at once.
 
 ## End state
 
-- `second-device-sign-in` gives `data.tookOver: true`.
-- `read-game-state --device second` shows a `liveRun` with the `id` of the active run.
-- The `snapshot` shows the `Playing on another device` dialog, or a page on `/login` whose
-  `redirect` names a game page such as `/explore`. A `redirect` that starts with `/_serverFn` is a
-  bug.
-- The last `db query` gives `sessions` of 1.
+- `second-device-sign-in` prints `data.tookOver: true`.
+- `read-game-state --device second` shows `data.state.liveRun` whose `activityID` is the `id` that
+  the first `db query` printed.
+- The `snapshot` shows the `Playing on another device` dialog, or `data.url` is on `/login`. On
+  `/login`, the URL's `redirect` parameter names a game page, such as `/explore`. A `redirect` that
+  starts with `/_serverFn` is a bug.
+- The last `db query` prints `sessions` of 1.

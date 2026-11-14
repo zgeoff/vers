@@ -1,13 +1,20 @@
 # offline-run
 
-A player starts a run from a node of the world map, and plays it in the page while a SharedWorker
-runs the simulation. When the network drops, the worker keeps the run and queues what the server has
-not seen in its outbox. When the network returns, the worker sends the outbox, and the replay
-service checks the run and marks it verified.
+A player starts a run from a node of the world map. A SharedWorker in the browser plays the run.
+While the network is down, the worker keeps playing, and holds each run start and checkpoint that
+the server hasn't received in its outbox. When the network comes back, the worker sends its outbox.
+The replay service, which `up` starts with the others, then replays each run and marks it verified
+in the database.
 
-The map is a canvas, so the journey opens a node with `navigate-route`. Sign up an account first, as
-the signup journey does. The journey plays one run online first, so the page has loaded the game's
-code before the cut.
+Run this journey after the [signup journey](./feature-signup.md), in the same `up`, with its
+account. Before you start:
+
+- Open a map node with `bun verify action navigate-route`. The map is a canvas, which
+  `browser click` can't reach.
+- Play the first run online. It loads the game's code into the page, which the offline run needs.
+- `bun verify action set-network --network offline` cuts the network for the page and its worker,
+  and `--network online` brings it back.
+- In the database, a run is a row of `activities`.
 
 ## Journey
 
@@ -23,17 +30,21 @@ bun verify action read-game-state
 bun verify browser click --role button --name "END RUN"
 bun verify db query "select id, status from activities order by created_at"
 bun verify action set-network --network online
+# run read-game-state every few seconds, for up to 30 s, until data.state.outbox is empty
 bun verify action read-game-state
+# run this query again, for up to 30 s, until both rows show verified_at
 bun verify db query "select id, status, appended_head, verified_head, verified_at from activities order by created_at"
 ```
 
 ## End state
 
-- `set-network --network offline` gives `data.workers` of at least 1: the cut reached the worker.
-- The first `read-game-state` shows a `liveRun`, and `outbox.activityStarts` holds that run's
-  `activityID`.
-- The first `db query` lists only the online run: the server has not seen the offline one.
-- A few seconds after `online`, the second `read-game-state` shows an empty `outbox`. Run it again
-  until it does, for up to 30 s.
-- The last `db query` lists both runs, `stopped`, each with `verified_head` equal to `appended_head`
-  and a `verified_at`.
+- `set-network --network offline` prints `data.workers` of 1 or more: the worker lost its network
+  too.
+- The first `read-game-state` shows `data.state.liveRun`, and `data.state.outbox.activityStarts`
+  holds an entry with the same `activityID`.
+- The first `db query` prints one row, the online run, `stopped`. The server has no row for the
+  offline run.
+- The second `read-game-state` shows empty `activityStarts` and `checkpoints` in
+  `data.state.outbox`.
+- The last `db query` prints two rows, both `stopped`, each with `verified_head` equal to
+  `appended_head` and a `verified_at`.

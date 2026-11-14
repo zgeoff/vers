@@ -29,37 +29,51 @@ export async function runLocalStack(): Promise<number> {
 
   const cleanup = new AsyncDisposableStack();
 
+  let exitCode = 0;
+
   try {
     await runParts(cleanup, stopController.signal);
   } catch (error) {
     process.stderr.write(`verify local: the start failed: ${String(error)}\n`);
+
+    exitCode = 1;
   }
 
   try {
     await cleanup.disposeAsync();
-
-    return 0;
   } catch (error) {
     process.stderr.write(`verify local: a part failed to stop: ${String(error)}\n`);
 
-    return 1;
+    exitCode = 1;
   }
+
+  return exitCode;
 }
 
 async function runParts(cleanup: AsyncDisposableStack, signal: AbortSignal): Promise<void> {
   const startedAt = performance.now();
   const ports = readPorts();
 
-  const [postgres] = await Promise.all([
+  // both settle before a failure throws, so the container registers its removal before the cleanup
+  // runs, even when the build fails first
+  const [postgres, build] = await Promise.allSettled([
     createPostgresContainer(cleanup, signal),
     runWebBuild(signal),
   ]);
+
+  if (postgres.status === 'rejected') {
+    throw postgres.reason;
+  }
+
+  if (build.status === 'rejected') {
+    throw build.reason;
+  }
 
   if (signal.aborted) {
     return;
   }
 
-  await runDatabaseSetup(postgres.databaseURL);
+  await runDatabaseSetup(postgres.value.databaseURL);
 
   const stackEnvText = await Bun.file(join(e2eRoot, 'stack.env')).text();
 
@@ -83,7 +97,7 @@ async function runParts(cleanup: AsyncDisposableStack, signal: AbortSignal): Pro
     const env = buildServiceEnv({
       service,
       ports,
-      databaseURL: postgres.databaseURL,
+      databaseURL: postgres.value.databaseURL,
       developmentEnvText,
       stackEnvText,
     });
@@ -126,8 +140,8 @@ async function runParts(cleanup: AsyncDisposableStack, signal: AbortSignal): Pro
     event: 'ready',
     web: `http://127.0.0.1:${ports.web}`,
     resend: `http://127.0.0.1:${ports.resend}`,
-    db: postgres.endpoint,
-    container: postgres.name,
+    db: postgres.value.endpoint,
+    container: postgres.value.name,
     ...Object.fromEntries(serviceEndpoints),
     startMs: String(startMs),
   });
