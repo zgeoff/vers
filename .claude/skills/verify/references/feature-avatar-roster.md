@@ -32,6 +32,7 @@ bun verify db query "select a.name from active_avatars aa join avatars a on a.id
 
 ## End state
 
-- The first `snapshot` lists two avatar cards, and only the `WvRUNb` card says `Active`.
-- The second `snapshot` has a `Switch avatar (WvRUN)` link.
+- The `snapshot` of the roster, the one after `Switch avatar (WvRUNb)`, lists two avatar cards, and
+  only the `WvRUNb` card says `Active`.
+- The last `snapshot` has a `Switch avatar (WvRUN)` link.
 - The `db query` prints one row, `WvRUN`.
