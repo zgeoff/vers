@@ -1,6 +1,9 @@
 // The branch release-please opens its release pull request from.
 const releaseBranch = 'release-please--branches--main';
 
+// The REST login of the Renovate app's bot account, as a pull_request event names it.
+const renovateLogin = 'zgeoff-renovate[bot]';
+
 export type GateStep =
   | { readonly kind: 'skip'; readonly reason: string }
   | { readonly kind: 'gate'; readonly baseRef: string; readonly body: string }
@@ -23,6 +26,16 @@ export function pickGateStep(event: unknown): GateStep {
     return { kind: 'skip', reason: 'a release pull request carries no verify report' };
   }
 
+  // Renovate's bot changes only dependency versions, and nobody runs a journey on its pull
+  // requests. A person's `renovate/` branch still meets the gate.
+  if (
+    pullRequest.headRef.startsWith('renovate/') &&
+    pullRequest.userType === 'Bot' &&
+    pullRequest.userLogin === renovateLogin
+  ) {
+    return { kind: 'skip', reason: 'a renovate pull request carries no verify report' };
+  }
+
   return { kind: 'gate', baseRef: pullRequest.baseRef, body: pullRequest.body };
 }
 
@@ -31,6 +44,7 @@ interface PullRequestEvent {
   readonly baseRef: string;
   readonly headRef: string;
   readonly userType: string;
+  readonly userLogin: string;
 }
 
 function parsePullRequestEvent(event: unknown): PullRequestEvent | null {
@@ -45,17 +59,19 @@ function parsePullRequestEvent(event: unknown): PullRequestEvent | null {
   const headRef = findRef(pullRequest['head']);
   const user = pullRequest['user'];
   const userType = isRecord(user) ? user['type'] : undefined;
+  const userLogin = isRecord(user) ? user['login'] : undefined;
 
   if (
     (typeof body !== 'string' && body !== null) ||
     baseRef === null ||
     headRef === null ||
-    typeof userType !== 'string'
+    typeof userType !== 'string' ||
+    typeof userLogin !== 'string'
   ) {
     return null;
   }
 
-  return { body: body ?? '', baseRef, headRef, userType };
+  return { body: body ?? '', baseRef, headRef, userType, userLogin };
 }
 
 function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
