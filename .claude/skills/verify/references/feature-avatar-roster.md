@@ -8,7 +8,7 @@ that avatar active. The server stores the choice, so a fresh page load still pla
 Run this journey after the [signup journey](./feature-signup.md), in the same `bun verify up`. Put
 the account name you picked there in place of `RUN`. The signup journey made the avatar `WvRUN`, and
 this journey adds `WvRUNb`. To run this journey again, run `bun verify up --restart` and the signup
-journey first: avatar names are unique, so a second `WvRUNb` fails.
+journey first. Avatar names are unique, so a second `WvRUNb` fails.
 
 ## Journey
 

@@ -127,7 +127,7 @@ command points that command alone.
 
 `up` needs Docker and the Chromium that `bun run verify:install-browser` installs. Each `up` and
 `up --restart` starts an empty database, so run the signup journey first after each one. Run the
-device-takeover journey last: it signs the browser out.
+device-takeover journey last. It signs the browser out.
 
 <!-- /repo -->
 
@@ -153,6 +153,8 @@ group, such as `action`: run `bun verify <group> --help` for its commands.
 - `action remove-account --email <email>` removes a journey account.
 - `db query "<sql>"` reads the database.
 
+Read the envelope from stdout alone. `bun` writes its own lines to stderr, after the envelope too.
+
 <!-- /repo -->
 
 ## Update a feature file
@@ -164,7 +166,7 @@ actions, doctor checks and features.
 [feature-paths.ts](../../../apps/web-e2e/src/verify/feature-paths.ts) holds each feature's `paths`,
 the shared paths that count as a change to every feature, and the `.ignore` list. When you add a
 glob to `paths` or the shared paths, add it to [skill-gate.json](../../skill-gate.json) with the
-`verify` skill too: [feature-paths.test.ts](../../../apps/web-e2e/src/verify/feature-paths.test.ts)
+`verify` skill too. [feature-paths.test.ts](../../../apps/web-e2e/src/verify/feature-paths.test.ts)
 fails until you do.
 
 <!-- /repo -->

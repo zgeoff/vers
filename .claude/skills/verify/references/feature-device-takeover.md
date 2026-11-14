@@ -5,8 +5,8 @@ logged in elsewhere", and Confirm ends the first device's session. The second de
 run. The next time the first device calls the server, the server refuses the call, and the first
 device shows the "Playing on another device" dialog or goes to the login page.
 
-Run this journey last, after the [signup journey](./feature-signup.md) in the same `bun verify up`:
-it signs the first device out. Put the account name you picked in the signup journey in place of
+Run this journey last, after the [signup journey](./feature-signup.md) in the same `bun verify up`.
+It signs the first device out. Put the account name you picked in the signup journey in place of
 `RUN`. Before you start:
 
 - The first device is the browser that `browser` commands drive. `navigate-route` and
