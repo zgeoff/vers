@@ -1,4 +1,4 @@
-import type { Browser, BrowserContext, Page } from '@playwright/test';
+import type { Browser, BrowserContext, ConsoleMessage, Page } from '@playwright/test';
 import { chromium } from '@playwright/test';
 import type { ServiceInstance, ServiceMethod } from '@wringer/core';
 import { WringerError } from '@wringer/core';
@@ -91,6 +91,36 @@ export function startGameBridge(options: GameBridgeOptions): Promise<ServiceInst
       });
 
       return { url: page.url(), state: snapshot };
+    },
+    loadPage: async (args) => {
+      const page = await readFirstPage();
+
+      const errors: Array<string> = [];
+
+      const onConsole = (message: ConsoleMessage) => {
+        if (message.type() === 'error') {
+          errors.push(message.text());
+        }
+      };
+
+      const onPageError = (error: Error) => {
+        errors.push(error.message);
+      };
+
+      page.on('console', onConsole);
+      page.on('pageerror', onPageError);
+
+      try {
+        const response = await page.goto(new URL(args.path, options.webURL).href);
+
+        // an error from a script the page loads late lands after `load`
+        await page.waitForLoadState('networkidle');
+
+        return { url: page.url(), status: response?.status() ?? null, errors };
+      } finally {
+        page.off('console', onConsole);
+        page.off('pageerror', onPageError);
+      }
     },
     navigate: async (args) => {
       const page = await readDevicePage(args.device);
@@ -233,6 +263,7 @@ function isAriaRole(role: string): role is AriaRole {
 function toGameServiceMethods(handlers: GameHandlers): Readonly<Record<GameMethod, ServiceMethod>> {
   return {
     readState: bindMethod(gameServiceContract.readState.args, handlers.readState),
+    loadPage: bindMethod(gameServiceContract.loadPage.args, handlers.loadPage),
     navigate: bindMethod(gameServiceContract.navigate.args, handlers.navigate),
     setNetwork: bindMethod(gameServiceContract.setNetwork.args, handlers.setNetwork),
     signInSecond: bindMethod(gameServiceContract.signInSecond.args, handlers.signInSecond),

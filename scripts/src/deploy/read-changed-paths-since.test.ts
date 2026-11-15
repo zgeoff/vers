@@ -102,3 +102,23 @@ test('it lists the changes in a blobless clone that cannot fetch file contents',
     'route.ts',
   ]);
 });
+
+test('it lists the changes up to the head it is given in place of HEAD', async () => {
+  const ctx = await setupTest();
+
+  await Bun.write(path.join(ctx.originDir, 'handler.ts'), 'export const a = 1;\n');
+  await ctx.runGit(['add', '-A']);
+  await ctx.runGit(['commit', '-q', '-m', 'add handler']);
+
+  const baseSHA = await ctx.runGit(['rev-parse', 'HEAD']);
+
+  await Bun.write(path.join(ctx.originDir, 'route.ts'), 'export const b = 2;\n');
+  await ctx.runGit(['add', '-A']);
+  await ctx.runGit(['commit', '-q', '-m', 'add route']);
+  await ctx.runGit(['branch', 'released']);
+  await ctx.runGit(['checkout', '-q', baseSHA]);
+
+  expect(
+    readChangedPathsSince(baseSHA, { cwd: ctx.originDir, head: 'released' }),
+  ).resolves.toStrictEqual(['route.ts']);
+});

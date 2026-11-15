@@ -44,12 +44,13 @@ Read a feature's file before you run its journey.
 
 <!-- wringer:features -->
 
-| Feature         | Summary                                                                  | File                                                                           |
-| --------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------ |
-| signup          | Sign up with an emailed code, and land signed in with a user row         | [references/feature-signup.md](references/feature-signup.md)                   |
-| avatar-roster   | Create and switch avatars, and see the roster and the database agree     | [references/feature-avatar-roster.md](references/feature-avatar-roster.md)     |
-| offline-run     | Start a run offline, and see it sync and verify once the network returns | [references/feature-offline-run.md](references/feature-offline-run.md)         |
-| device-takeover | Sign in on a second device, and see the first one told it was taken over | [references/feature-device-takeover.md](references/feature-device-takeover.md) |
+| Feature         | Summary                                                                                    | File                                                                           |
+| --------------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------ |
+| public-smoke    | Load the home page with no console error, and see /health and an anonymous RPC call answer | [references/feature-public-smoke.md](references/feature-public-smoke.md)       |
+| signup          | Sign up with an emailed code, and land signed in with a user row                           | [references/feature-signup.md](references/feature-signup.md)                   |
+| avatar-roster   | Create and switch avatars, and see the roster and the database agree                       | [references/feature-avatar-roster.md](references/feature-avatar-roster.md)     |
+| offline-run     | Start a run offline, and see it sync and verify once the network returns                   | [references/feature-offline-run.md](references/feature-offline-run.md)         |
+| device-takeover | Sign in on a second device, and see the first one told it was taken over                   | [references/feature-device-takeover.md](references/feature-device-takeover.md) |
 
 <!-- /wringer:features -->
 
@@ -121,13 +122,14 @@ command points that command alone.
 
 <!-- repo: targets -->
 
-| Target  | Start with                                            | Access     | Notes                                                                                               |
-| ------- | ----------------------------------------------------- | ---------- | --------------------------------------------------------------------------------------------------- |
-| `local` | `bun verify use --target local`, then `bun verify up` | read-write | Builds the web app, then starts Postgres in Docker, the services, the web server and an email stub. |
+| Target  | Start with                                               | Access     | Notes                                                                                               |
+| ------- | -------------------------------------------------------- | ---------- | --------------------------------------------------------------------------------------------------- |
+| `local` | `bun verify use --target local`, then `bun verify up`    | read-write | Builds the web app, then starts Postgres in Docker, the services, the web server and an email stub. |
+| `prod`  | `bun verify use --target prod`, then `bun verify attach` | read-only  | The deployed game at versidle.com. Only the public-smoke journey runs here.                         |
 
-`up` needs Docker and the Chromium that `bun run verify:install-browser` installs. Each `up` and
-`up --restart` starts an empty database, so run the signup journey first after each one. Run the
-device-takeover journey last. It signs the browser out.
+`up` and `attach` need the Chromium that `bun run verify:install-browser` installs, and `up` needs
+Docker. Each `up` starts an empty database and a signed-out browser. Run public-smoke first, then
+signup, and device-takeover last, because it signs the browser out.
 
 <!-- /repo -->
 
@@ -143,16 +145,12 @@ only the name of a group, such as `action`: run `bun verify <group> --help` for 
 
 <!-- repo: commands -->
 
-- `action read-email --to <email>` gives the code of the last email to that address.
-- `action read-game-state` gives the game worker's state, such as `liveRun` and `outbox`, for a
-  `qa.versidle.com` account only. The signup journey says how to name the account.
+- `action read-game-state` answers for a `qa.versidle.com` account only. The signup journey says how
+  to name the account.
 - `action navigate-route --path <path>` opens a map node. The map is a canvas that `browser click`
   can't reach.
-- `action set-network --network offline|online` cuts or restores the page's and worker's network.
-- `action second-device-sign-in`, `second-device-click` and `second-device-snapshot` drive a second
-  browser of their own. `--device second` points `navigate-route` and `read-game-state` at it.
-- `action remove-account --email <email>` removes a journey account.
-- `db query "<sql>"` reads the database.
+- `action second-device-*` drive a second browser of their own. `--device second` points
+  `navigate-route` and `read-game-state` at it.
 
 Read the envelope from stdout alone. `bun` writes its own lines to stderr, after the envelope too.
 

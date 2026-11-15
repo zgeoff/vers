@@ -10,6 +10,14 @@ export const gameServiceContract = {
     args: z.strictObject({ device: deviceSchema }),
     result: z.strictObject({ url: z.string(), state: z.unknown() }),
   },
+  loadPage: {
+    args: z.strictObject({ path: z.string().startsWith('/') }),
+    result: z.strictObject({
+      url: z.string(),
+      status: z.number().int().nullable(),
+      errors: z.array(z.string()),
+    }),
+  },
   navigate: {
     args: z.strictObject({ device: deviceSchema, path: z.string().startsWith('/') }),
     result: pageStateSchema,

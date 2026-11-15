@@ -682,9 +682,84 @@ jobs:
           args: verify
           fly-api-token: ${{ secrets.FLY_API_TOKEN }}
 
+  verify-prod:
+    name: Verify prod
+    needs: [verify-fleet]
+    # the verify CLI's read-only doctor against versidle.com: the web app, the browser that loads it,
+    # and the served commit against this run's main, by the rule `deploy verify` applies. It reads
+    # only public pages, so it holds no secret
+    if: ${{ !cancelled() && needs.verify-fleet.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: ${{ github.workflow }}-verify-prod
+      cancel-in-progress: true
+    env:
+      LEFTHOOK: 0
+    steps:
+      # the served-build check runs turbo and git from the served commit to main: see the checks
+      # job's Checkout for the depth, the filter and the retry
+      - name: Checkout
+        id: checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        timeout-minutes: 2
+        continue-on-error: true
+        with:
+          fetch-depth: 2147483647
+          filter: blob:none
+          persist-credentials: false
+
+      - name: Retry checkout
+        if: ${{ steps.checkout.outcome != 'success' }}
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        timeout-minutes: 2
+        with:
+          fetch-depth: 2147483647
+          filter: blob:none
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24.22.2
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: .bun-version
+
+      - name: Install Dependencies
+        run: bun install --frozen-lockfile
+
+      # see the e2e job's browser package cache for why apt keeps its downloads
+      - name: Read browser package cache key
+        id: browser-packages
+        run:
+          echo "key=e2e-apt-$ImageOS-$(node -p "require('@playwright/test/package.json').version")"
+          >> "$GITHUB_OUTPUT"
+
+      - name: Setup browser package cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/apt-archives
+          key: ${{ steps.browser-packages.outputs.key }}-chromium
+
+      - name: Install Chromium
+        run: bun run ci:install-e2e-browsers chromium
+
+      - name: Attach to prod
+        run: bun verify attach --target prod
+
+      - name: Prod doctor
+        run: bun verify doctor --target prod --json
+
+      - name: Detach from prod
+        if: ${{ always() }}
+        run: bun verify detach --target prod
+
   alert:
     name: Alert on failure
-    needs: [checks, e2e, migrate, manifest, build, stack-e2e, deploy, verify-fleet]
+    needs: [checks, e2e, migrate, manifest, build, stack-e2e, deploy, verify-fleet, verify-prod]
     # a red main pipeline pages the team channel: agent-driven pushes mean
     # nobody is necessarily watching the Actions tab, and a failed deploy or
     # fleet verification left unnoticed is exactly how version skew lingers. GitHub reports a need

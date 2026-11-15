@@ -14,6 +14,7 @@ const everyJourney = [
 ] as const;
 
 export const featurePaths = {
+  'public-smoke': [...everyJourney],
   signup: [...everyJourney],
   'device-takeover': [...everyJourney],
   'offline-run': [...everyJourney],
