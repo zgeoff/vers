@@ -5,7 +5,8 @@ test('it serves the production build health check and anonymous home page', asyn
 
   expect(health.status()).toBe(200);
 
-  await expect(health.json()).resolves.toStrictEqual({ ok: true });
+  // the stack's web container has no deploy to stamp GIT_SHA
+  await expect(health.json()).resolves.toStrictEqual({ ok: true, commit: null });
 
   const root = await request.get('/');
 
