@@ -101,13 +101,15 @@ fleet-wide failure holds every cutover.
 
 ### Staleness
 
-The CLI relates the commit stamped on the app's machines to HEAD before it reads any diff. A
-deployed commit that is HEAD or descends from it is current, which happens when a later push's
-deploy lands while this run is still between its legs: `deploy verify` passes the app, and a deploy
-leg skips it rather than roll it back. `deploy verify` also passes a fleet split between HEAD's
-image and a descendant's, as long as every started machine on HEAD's image passes its health checks,
-and a machine on any other image fails the run. A deploy leg reads a split fleet as stale, because
-no single commit is stamped across its machines, and redeploys HEAD.
+Each deploy stamps the commit it ships into the app's machine env as `GIT_SHA`, and the web app's
+`/health` serves it as `commit`, so a reader without Fly access can tell which commit is live. The
+CLI relates the commit stamped on the app's machines to HEAD before it reads any diff. A deployed
+commit that is HEAD or descends from it is current, which happens when a later push's deploy lands
+while this run is still between its legs: `deploy verify` passes the app, and a deploy leg skips it
+rather than roll it back. `deploy verify` also passes a fleet split between HEAD's image and a
+descendant's, as long as every started machine on HEAD's image passes its health checks, and a
+machine on any other image fails the run. A deploy leg reads a split fleet as stale, because no
+single commit is stamped across its machines, and redeploys HEAD.
 
 For an older deployed commit, the change set is the paths git reports changed since it plus the
 packages turbo reports affected from that base. The app's manifest trigger reads that set: a
