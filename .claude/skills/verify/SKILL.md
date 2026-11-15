@@ -5,7 +5,7 @@ description:
   feature works. Load it before you check a change in the running game, run the journey of a
   feature, or put the verdicts in a PR.'
 metadata:
-  wringer-template: 'sha256:5ad8a6ead397'
+  wringer-template: 'sha256:97fabc9a9389'
   wringer-command: bun verify
 ---
 
@@ -40,8 +40,7 @@ The mistakes that cost the most time:
 
 ## References
 
-Read a feature's file before you run its journey: what the feature does, how a user reaches it, the
-journey of `bun verify` commands, and the end state that shows it works.
+Read a feature's file before you run its journey.
 
 <!-- wringer:features -->
 
@@ -57,8 +56,7 @@ journey of `bun verify` commands, and the end state that shows it works.
 ## Check a change
 
 1. Run `bun verify report`. A feature in `data.report.features` shows `changed: true` when a file
-   under its `paths` differs from the default branch, committed or not. Each changed feature needs a
-   verdict.
+   under its `paths` differs from the default branch, committed or not.
 2. Unless your task names another target, start a run on `local`, with the commands in the
    [Targets](#targets) table. Expect from `up` or `attach`: `ok: true`, and the app's endpoints in
    `data.endpoints`.
@@ -84,13 +82,14 @@ journey of `bun verify` commands, and the end state that shows it works.
    After `done`, an edit to a file under a feature's `paths` makes its verdict `stale`; a commit
    alone leaves each verdict as it was. Repeat steps 4 to 6 for each stale feature.
 9. Run `bun verify publish`. Expect: `ok: true`, and `data.action` of `created`, `replaced` or
-   `unchanged`. It writes the report into the description of the branch's open PR.
+   `unchanged`. It writes the report into the description of the branch's open PR. Until you run
+   `publish`, each verdict from `done` stays in `.wringer/`, where the gate never looks.
 10. End the run: `bun verify down` after `up`, or `bun verify detach` after `attach`.
 
 ## Read the envelope
 
-Each command prints one JSON envelope as its last line, or text for a person with `--human`. A
-streaming command, such as `doctor`, prints JSON event lines before it. Read these fields:
+Each command prints one JSON envelope as its last line, or text with `--human`. A streaming command,
+such as `doctor`, prints JSON event lines before it. Read these fields:
 
 - `ok`, then `data` on success, or `error.code`, `error.message` and `error.hint` on failure;
 - `evidence`: the files the command kept, under `.wringer/`;
@@ -116,7 +115,8 @@ attach target, an app that runs apart from `bun verify`, with `bun verify attach
 `bun verify detach` leaves it running. Your edits never reach an attach target's app, so check a
 change on a launch target.
 
-Run `bun verify use --target <target>` to point every later command at a target. `--target` on one
+Run `bun verify use --target <target>` to point every later command at a target. `use` saves the
+choice in this worktree's `.wringer/`, so it holds across shells and sessions. `--target` on one
 command points that command alone.
 
 <!-- repo: targets -->
@@ -133,9 +133,10 @@ device-takeover journey last. It signs the browser out.
 
 ## Commands
 
-Run `bun verify --help` for the list, with each command marked `[read]` or `[write]`. Run
-`bun verify <command> --help` for a command's flags. The top-level list shows only the name of a
-group, such as `action`: run `bun verify <group> --help` for its commands.
+Run `bun verify --help` for the list, with each command marked `[read]` or `[write]`. A read-only
+target refuses each `[write]` command that writes app data. `up` and `down` are `[read]`, but start
+and stop the app. Run `bun verify <command> --help` for a command's flags. The top-level list shows
+only the name of a group, such as `action`: run `bun verify <group> --help` for its commands.
 
 - Write a negative number with `=`, as in `--offset=-5`.
 - Pass an object as JSON text, as in `--filter '{"shelf":"top"}'`.
