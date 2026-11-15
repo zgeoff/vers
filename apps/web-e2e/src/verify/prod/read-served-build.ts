@@ -1,4 +1,5 @@
-import { loadDeployManifest, readChangesSince } from '@vers/scripts';
+import { loadDeployManifest } from '@vers/scripts';
+import { readChangesSince } from '@vers/scripts/read-changes-since';
 import { WringerError } from '@wringer/core';
 import type { HttpClient } from '@wringer/http';
 import { $ } from 'bun';
