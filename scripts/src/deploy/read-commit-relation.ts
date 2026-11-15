@@ -3,6 +3,9 @@ import type { CommitRelation } from './types';
 
 interface ReadCommitRelationOptions {
   readonly cwd?: string;
+
+  // the commit the base relates to; HEAD when unset
+  readonly head?: string;
 }
 
 export async function readCommitRelation(
@@ -10,6 +13,7 @@ export async function readCommitRelation(
   options?: ReadCommitRelationOptions,
 ): Promise<CommitRelation> {
   const cwd = options?.cwd ?? process.cwd();
+  const head = options?.head ?? 'HEAD';
 
   const baseExists = await $`git cat-file -e ${`${baseSHA}^{commit}`}`.cwd(cwd).nothrow().quiet();
 
@@ -18,8 +22,8 @@ export async function readCommitRelation(
   }
 
   const [baseIsAncestor, headIsAncestor] = await Promise.all([
-    probeAncestor(baseSHA, 'HEAD', cwd),
-    probeAncestor('HEAD', baseSHA, cwd),
+    probeAncestor(baseSHA, head, cwd),
+    probeAncestor(head, baseSHA, cwd),
   ]);
 
   if (baseIsAncestor && headIsAncestor) {

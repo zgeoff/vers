@@ -93,3 +93,17 @@ test('it reports a commit the repository does not hold as missing', async () => 
     readCommitRelation('0123456789abcdef0123456789abcdef01234567', { cwd: ctx.cwd }),
   ).resolves.toBe('missing');
 });
+
+test('it relates the base to the head it is given in place of HEAD', async () => {
+  const ctx = await setupTest();
+
+  await ctx.runGit(['commit', '-q', '--allow-empty', '-m', 'a']);
+
+  const baseSHA = await ctx.runGit(['rev-parse', 'HEAD']);
+
+  await ctx.runGit(['commit', '-q', '--allow-empty', '-m', 'b']);
+  await ctx.runGit(['branch', 'released']);
+  await ctx.runGit(['checkout', '-q', baseSHA]);
+
+  expect(readCommitRelation(baseSHA, { cwd: ctx.cwd, head: 'released' })).resolves.toBe('ancestor');
+});

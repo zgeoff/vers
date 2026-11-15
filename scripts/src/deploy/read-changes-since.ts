@@ -13,8 +13,18 @@ const turboDryRunSchema = z.object({
 
 const TURBO_BIN = fileURLToPath(new URL('../../../node_modules/.bin/turbo', import.meta.url));
 
-export async function readChangesSince(baseSHA: string): Promise<ChangeSet | null> {
-  const relation = await readCommitRelation(baseSHA);
+interface ReadChangesSinceOptions {
+  // the commit the changes end at; HEAD when unset
+  readonly head?: string;
+}
+
+export async function readChangesSince(
+  baseSHA: string,
+  options?: ReadChangesSinceOptions,
+): Promise<ChangeSet | null> {
+  const head = options?.head ?? 'HEAD';
+
+  const relation = await readCommitRelation(baseSHA, { head });
 
   if (relation === 'missing') {
     return null;
@@ -25,7 +35,7 @@ export async function readChangesSince(baseSHA: string): Promise<ChangeSet | nul
   }
 
   const [allChangedPaths, isExcluded] = await Promise.all([
-    readChangedPathsSince(baseSHA),
+    readChangedPathsSince(baseSHA, { head }),
     readContextExcluder(),
   ]);
 
@@ -33,7 +43,13 @@ export async function readChangesSince(baseSHA: string): Promise<ChangeSet | nul
   const dryRunArgs = ['run', 'build', '--affected', '--dry=json'];
 
   const dryRun = await $`${TURBO_BIN} ${dryRunArgs}`
-    .env({ ...process.env, TURBO_SCM_BASE: baseSHA })
+    .env({
+      ...process.env,
+      TURBO_SCM_BASE: baseSHA,
+
+      // unset, turbo's head is the working tree, uncommitted changes included
+      ...(options?.head !== undefined && { TURBO_SCM_HEAD: options.head }),
+    })
     .text();
 
   const affectedPkgs = turboDryRunSchema.parse(JSON.parse(dryRun)).packages;

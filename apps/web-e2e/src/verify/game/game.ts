@@ -7,6 +7,7 @@ import { startGameBridge } from './start-game-bridge';
 
 export interface GameClient {
   readonly readState: (args: GameArgs<'readState'>) => Promise<GameResult<'readState'>>;
+  readonly loadPage: (args: GameArgs<'loadPage'>) => Promise<GameResult<'loadPage'>>;
   readonly navigate: (args: GameArgs<'navigate'>) => Promise<GameResult<'navigate'>>;
   readonly setNetwork: (args: GameArgs<'setNetwork'>) => Promise<GameResult<'setNetwork'>>;
   readonly signInSecond: (args: GameArgs<'signInSecond'>) => Promise<GameResult<'signInSecond'>>;
@@ -52,6 +53,7 @@ export const game = defineDriver({
 
     return {
       readState: call('readState', 'read'),
+      loadPage: call('loadPage', 'read'),
       navigate: call('navigate', 'write'),
       setNetwork: call('setNetwork', 'write'),
       signInSecond: call('signInSecond', 'write'),

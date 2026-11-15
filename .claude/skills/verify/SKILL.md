@@ -5,7 +5,7 @@ description:
   feature works. Load it before you check a change in the running game, run the journey of a
   feature, or put the verdicts in a PR.'
 metadata:
-  wringer-template: 'sha256:5ad8a6ead397'
+  wringer-template: 'sha256:97fabc9a9389'
   wringer-command: bun verify
 ---
 
@@ -40,25 +40,24 @@ The mistakes that cost the most time:
 
 ## References
 
-Read a feature's file before you run its journey: what the feature does, how a user reaches it, the
-journey of `bun verify` commands, and the end state that shows it works.
+Read a feature's file before you run its journey.
 
 <!-- wringer:features -->
 
-| Feature         | Summary                                                                  | File                                                                           |
-| --------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------ |
-| signup          | Sign up with an emailed code, and land signed in with a user row         | [references/feature-signup.md](references/feature-signup.md)                   |
-| avatar-roster   | Create and switch avatars, and see the roster and the database agree     | [references/feature-avatar-roster.md](references/feature-avatar-roster.md)     |
-| offline-run     | Start a run offline, and see it sync and verify once the network returns | [references/feature-offline-run.md](references/feature-offline-run.md)         |
-| device-takeover | Sign in on a second device, and see the first one told it was taken over | [references/feature-device-takeover.md](references/feature-device-takeover.md) |
+| Feature         | Summary                                                                                    | File                                                                           |
+| --------------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------ |
+| public-smoke    | Load the home page with no console error, and see /health and an anonymous RPC call answer | [references/feature-public-smoke.md](references/feature-public-smoke.md)       |
+| signup          | Sign up with an emailed code, and land signed in with a user row                           | [references/feature-signup.md](references/feature-signup.md)                   |
+| avatar-roster   | Create and switch avatars, and see the roster and the database agree                       | [references/feature-avatar-roster.md](references/feature-avatar-roster.md)     |
+| offline-run     | Start a run offline, and see it sync and verify once the network returns                   | [references/feature-offline-run.md](references/feature-offline-run.md)         |
+| device-takeover | Sign in on a second device, and see the first one told it was taken over                   | [references/feature-device-takeover.md](references/feature-device-takeover.md) |
 
 <!-- /wringer:features -->
 
 ## Check a change
 
 1. Run `bun verify report`. A feature in `data.report.features` shows `changed: true` when a file
-   under its `paths` differs from the default branch, committed or not. Each changed feature needs a
-   verdict.
+   under its `paths` differs from the default branch, committed or not.
 2. Unless your task names another target, start a run on `local`, with the commands in the
    [Targets](#targets) table. Expect from `up` or `attach`: `ok: true`, and the app's endpoints in
    `data.endpoints`.
@@ -84,13 +83,14 @@ journey of `bun verify` commands, and the end state that shows it works.
    After `done`, an edit to a file under a feature's `paths` makes its verdict `stale`; a commit
    alone leaves each verdict as it was. Repeat steps 4 to 6 for each stale feature.
 9. Run `bun verify publish`. Expect: `ok: true`, and `data.action` of `created`, `replaced` or
-   `unchanged`. It writes the report into the description of the branch's open PR.
+   `unchanged`. It writes the report into the description of the branch's open PR. Until you run
+   `publish`, each verdict from `done` stays in `.wringer/`, where the gate never looks.
 10. End the run: `bun verify down` after `up`, or `bun verify detach` after `attach`.
 
 ## Read the envelope
 
-Each command prints one JSON envelope as its last line, or text for a person with `--human`. A
-streaming command, such as `doctor`, prints JSON event lines before it. Read these fields:
+Each command prints one JSON envelope as its last line, or text with `--human`. A streaming command,
+such as `doctor`, prints JSON event lines before it. Read these fields:
 
 - `ok`, then `data` on success, or `error.code`, `error.message` and `error.hint` on failure;
 - `evidence`: the files the command kept, under `.wringer/`;
@@ -116,42 +116,42 @@ attach target, an app that runs apart from `bun verify`, with `bun verify attach
 `bun verify detach` leaves it running. Your edits never reach an attach target's app, so check a
 change on a launch target.
 
-Run `bun verify use --target <target>` to point every later command at a target. `--target` on one
+Run `bun verify use --target <target>` to point every later command at a target. `use` saves the
+choice in this worktree's `.wringer/`, so it holds across shells and sessions. `--target` on one
 command points that command alone.
 
 <!-- repo: targets -->
 
-| Target  | Start with                                            | Access     | Notes                                                                                               |
-| ------- | ----------------------------------------------------- | ---------- | --------------------------------------------------------------------------------------------------- |
-| `local` | `bun verify use --target local`, then `bun verify up` | read-write | Builds the web app, then starts Postgres in Docker, the services, the web server and an email stub. |
+| Target  | Start with                                               | Access     | Notes                                                                                               |
+| ------- | -------------------------------------------------------- | ---------- | --------------------------------------------------------------------------------------------------- |
+| `local` | `bun verify use --target local`, then `bun verify up`    | read-write | Builds the web app, then starts Postgres in Docker, the services, the web server and an email stub. |
+| `prod`  | `bun verify use --target prod`, then `bun verify attach` | read-only  | The deployed game at versidle.com. Run only public-smoke here.                                      |
 
-`up` needs Docker and the Chromium that `bun run verify:install-browser` installs. Each `up` and
-`up --restart` starts an empty database, so run the signup journey first after each one. Run the
-device-takeover journey last. It signs the browser out.
+`up` needs Docker, and both need the Chromium from `bun run verify:install-browser`. Each `up`
+starts an empty database and a signed-out browser. Run public-smoke and signup first: later journeys
+use signup's account. Run `done` only for a changed feature. Run device-takeover last. It signs the
+browser out.
 
 <!-- /repo -->
 
 ## Commands
 
-Run `bun verify --help` for the list, with each command marked `[read]` or `[write]`. Run
-`bun verify <command> --help` for a command's flags. The top-level list shows only the name of a
-group, such as `action`: run `bun verify <group> --help` for its commands.
+Run `bun verify --help` for the list, with each command marked `[read]` or `[write]`. A read-only
+target refuses each `[write]` command that writes app data. `up` and `down` are `[read]`, but start
+and stop the app. Run `bun verify <command> --help` for a command's flags. The top-level list shows
+only the name of a group, such as `action`: run `bun verify <group> --help` for its commands.
 
 - Write a negative number with `=`, as in `--offset=-5`.
 - Pass an object as JSON text, as in `--filter '{"shelf":"top"}'`.
 
 <!-- repo: commands -->
 
-- `action read-email --to <email>` gives the code of the last email to that address.
-- `action read-game-state` gives the game worker's state, such as `liveRun` and `outbox`, for a
-  `qa.versidle.com` account only. The signup journey says how to name the account.
+- `action read-game-state` prints `data.state` as `null` unless a `qa.versidle.com` account is
+  signed in. The signup journey says how to name the account.
 - `action navigate-route --path <path>` opens a map node. The map is a canvas that `browser click`
   can't reach.
-- `action set-network --network offline|online` cuts or restores the page's and worker's network.
-- `action second-device-sign-in`, `second-device-click` and `second-device-snapshot` drive a second
-  browser of their own. `--device second` points `navigate-route` and `read-game-state` at it.
-- `action remove-account --email <email>` removes a journey account.
-- `db query "<sql>"` reads the database.
+- `action second-device-*` drive a second browser. `--device second` points `navigate-route` and
+  `read-game-state` at it.
 
 Read the envelope from stdout alone. `bun` writes its own lines to stderr, after the envelope too.
 
@@ -161,13 +161,12 @@ Read the envelope from stdout alone. `bun` writes its own lines to stderr, after
 
 <!-- repo: registry -->
 
-The [registry](../../../apps/web-e2e/src/verify/create-verify-registry.ts) declares the target,
-actions, doctor checks and features.
-[feature-paths.ts](../../../apps/web-e2e/src/verify/feature-paths.ts) holds each feature's `paths`,
-the shared paths that count as a change to every feature, and the `.ignore` list. When you add a
-glob to `paths` or the shared paths, add it to [skill-gate.json](../../skill-gate.json) with the
-`verify` skill too. [feature-paths.test.ts](../../../apps/web-e2e/src/verify/feature-paths.test.ts)
-fails until you do.
+The [registry](../../../apps/web-e2e/src/verify/create-verify-registry.ts) declares the targets,
+actions, doctor checks and features. It takes each feature's `paths`, the shared paths and the
+`.ignore` list from [feature-paths.ts](../../../apps/web-e2e/src/verify/feature-paths.ts). When you
+add a glob to `paths` or the shared paths, add it to [skill-gate.json](../../skill-gate.json) with
+the `verify` skill too.
+[feature-paths.test.ts](../../../apps/web-e2e/src/verify/feature-paths.test.ts) fails until you do.
 
 <!-- /repo -->
 
