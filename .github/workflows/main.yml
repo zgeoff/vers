@@ -744,8 +744,13 @@ jobs:
           path: ~/apt-archives
           key: ${{ steps.browser-packages.outputs.key }}-chromium
 
-      - name: Install Chromium
+      # the e2e install brings Chromium's system packages but only its headless shell, and the verify
+      # CLI launches the full Chromium
+      - name: Install Chromium packages
         run: bun run ci:install-e2e-browsers chromium
+
+      - name: Install the verify browser
+        run: bun run verify:install-browser
 
       - name: Attach to prod
         run: bun verify attach --target prod
