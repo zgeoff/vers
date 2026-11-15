@@ -125,14 +125,14 @@ that command alone. A command with neither runs on the registry's first target, 
 
 <!-- repo: targets -->
 
-| Target  | Start with                                               | Access     | Notes                                                                                             |
-| ------- | -------------------------------------------------------- | ---------- | ------------------------------------------------------------------------------------------------- |
-| `local` | `bun verify use --target local`, then `bun verify up`    | read-write | Builds the web app and starts Postgres in Docker, the services, the web server and an email stub. |
-| `prod`  | `bun verify use --target prod`, then `bun verify attach` | read-only  | The deployed game at versidle.com, for public-smoke only.                                         |
+| Target  | Start with                                               | Access     | Notes                                                                                          |
+| ------- | -------------------------------------------------------- | ---------- | ---------------------------------------------------------------------------------------------- |
+| `local` | `bun verify use --target local`, then `bun verify up`    | read-write | Builds the web app and starts Postgres in Docker, the services, the web server and email stub. |
+| `prod`  | `bun verify use --target prod`, then `bun verify attach` | read-only  | The deployed game at versidle.com, for public-smoke only.                                      |
 
-`up` needs Docker, and both need the Chromium from `bun run verify:install-browser`. Each `up`
-starts an empty database and a signed-out browser. Run public-smoke and signup first: later journeys
-use signup's account. Run `done` only for a changed feature. Run device-takeover last: it signs out.
+`up` needs Docker. Both targets need the Chromium from `bun run verify:install-browser`. Each `up`
+starts an empty database and a signed-out browser. Later journeys use signup's account: run signup
+first after each `up` or `up --restart`. Run device-takeover last: it signs out.
 
 <!-- /repo -->
 
@@ -149,7 +149,8 @@ only the name of a group, such as `action`: run `bun verify <group> --help` for 
 <!-- repo: commands -->
 
 - Open a map node with `action navigate-route`: `browser click` can't reach the canvas.
-- `--device second` points `navigate-route` and `read-game-state` at the second browser.
+- `action second-device-sign-in` opens a second browser. `--device second` points `navigate-route`
+  and `read-game-state` at it.
 - Read the envelope from stdout. `bun` writes its own lines to stderr.
 
 <!-- /repo -->
@@ -159,7 +160,7 @@ only the name of a group, such as `action`: run `bun verify <group> --help` for 
 <!-- repo: registry -->
 
 The [registry](../../../apps/web-e2e/src/verify/create-verify-registry.ts) declares the targets,
-actions, doctor checks and features. To change `paths`, read
+actions, checks and features. To change `paths`, read
 [references/registry.md](references/registry.md).
 
 <!-- /repo -->
