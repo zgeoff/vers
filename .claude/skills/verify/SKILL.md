@@ -125,11 +125,12 @@ command points that command alone.
 | Target  | Start with                                               | Access     | Notes                                                                                               |
 | ------- | -------------------------------------------------------- | ---------- | --------------------------------------------------------------------------------------------------- |
 | `local` | `bun verify use --target local`, then `bun verify up`    | read-write | Builds the web app, then starts Postgres in Docker, the services, the web server and an email stub. |
-| `prod`  | `bun verify use --target prod`, then `bun verify attach` | read-only  | The deployed game at versidle.com. Only the public-smoke journey runs here.                         |
+| `prod`  | `bun verify use --target prod`, then `bun verify attach` | read-only  | The deployed game at versidle.com. Run only public-smoke here.                                      |
 
 `up` and `attach` need the Chromium that `bun run verify:install-browser` installs, and `up` needs
-Docker. Each `up` starts an empty database and a signed-out browser. Run public-smoke first, then
-signup, and device-takeover last, because it signs the browser out.
+Docker. Each `up` starts an empty database and a signed-out browser. After it, run public-smoke,
+then signup, changed or not: later journeys use its account. Run device-takeover last. It signs the
+browser out.
 
 <!-- /repo -->
 
@@ -145,12 +146,12 @@ only the name of a group, such as `action`: run `bun verify <group> --help` for 
 
 <!-- repo: commands -->
 
-- `action read-game-state` answers for a `qa.versidle.com` account only. The signup journey says how
-  to name the account.
+- `action read-game-state` prints `data.state` as `null` unless a `qa.versidle.com` account is
+  signed in. The signup journey says how to name the account.
 - `action navigate-route --path <path>` opens a map node. The map is a canvas that `browser click`
   can't reach.
-- `action second-device-*` drive a second browser of their own. `--device second` points
-  `navigate-route` and `read-game-state` at it.
+- `action second-device-*` drive a second browser. `--device second` points `navigate-route` and
+  `read-game-state` at it.
 
 Read the envelope from stdout alone. `bun` writes its own lines to stderr, after the envelope too.
 
@@ -160,13 +161,12 @@ Read the envelope from stdout alone. `bun` writes its own lines to stderr, after
 
 <!-- repo: registry -->
 
-The [registry](../../../apps/web-e2e/src/verify/create-verify-registry.ts) declares the target,
-actions, doctor checks and features.
-[feature-paths.ts](../../../apps/web-e2e/src/verify/feature-paths.ts) holds each feature's `paths`,
-the shared paths that count as a change to every feature, and the `.ignore` list. When you add a
-glob to `paths` or the shared paths, add it to [skill-gate.json](../../skill-gate.json) with the
-`verify` skill too. [feature-paths.test.ts](../../../apps/web-e2e/src/verify/feature-paths.test.ts)
-fails until you do.
+The [registry](../../../apps/web-e2e/src/verify/create-verify-registry.ts) declares the targets,
+actions, doctor checks and features. It takes each feature's `paths`, the shared paths and the
+`.ignore` list from [feature-paths.ts](../../../apps/web-e2e/src/verify/feature-paths.ts). When you
+add a glob to `paths` or the shared paths, add it to [skill-gate.json](../../skill-gate.json) with
+the `verify` skill too.
+[feature-paths.test.ts](../../../apps/web-e2e/src/verify/feature-paths.test.ts) fails until you do.
 
 <!-- /repo -->
 
