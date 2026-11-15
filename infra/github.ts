@@ -94,7 +94,8 @@ const mainProtectionRuleset = new github.RepositoryRuleset('main-protection', {
       requiredApprovingReviewCount: 0,
     },
     requiredStatusChecks: {
-      requiredChecks: [{ context: 'checks' }],
+      // 15368 is the GitHub Actions app, so only a workflow job can report the verify gate
+      requiredChecks: [{ context: 'checks' }, { context: 'verify / gate', integrationId: 15_368 }],
       strictRequiredStatusChecksPolicy: false,
     },
   },
