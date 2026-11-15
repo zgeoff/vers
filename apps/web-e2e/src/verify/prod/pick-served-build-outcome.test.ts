@@ -35,7 +35,8 @@ test('it fails a served commit that main has changed the web app since', () => {
 
   expect(outcome).toStrictEqual({
     kind: 'failed',
-    message: expect.stringContaining('@vers/web is affected'),
+    message:
+      'The web app serves 4f0c2e9a7b1d, which is stale against main beadfee1c0de: @vers/web is affected by commits since the deployed SHA.',
   });
 });
 
@@ -55,7 +56,8 @@ test('it fails a served commit that this clone does not hold', () => {
 
   expect(outcome).toStrictEqual({
     kind: 'failed',
-    message: expect.stringContaining('no trustworthy deployed SHA'),
+    message:
+      'The web app serves 4f0c2e9a7b1d, which is stale against main beadfee1c0de: no trustworthy deployed SHA recorded on the fleet.',
   });
 });
 
