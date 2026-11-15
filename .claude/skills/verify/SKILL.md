@@ -127,9 +127,9 @@ command points that command alone.
 | `local` | `bun verify use --target local`, then `bun verify up`    | read-write | Builds the web app, then starts Postgres in Docker, the services, the web server and an email stub. |
 | `prod`  | `bun verify use --target prod`, then `bun verify attach` | read-only  | The deployed game at versidle.com. Run only public-smoke here.                                      |
 
-`up` and `attach` need the Chromium that `bun run verify:install-browser` installs, and `up` needs
-Docker. Each `up` starts an empty database and a signed-out browser. After it, run public-smoke,
-then signup, changed or not: later journeys use its account. Run device-takeover last. It signs the
+`up` needs Docker, and both need the Chromium from `bun run verify:install-browser`. Each `up`
+starts an empty database and a signed-out browser. Run public-smoke and signup first: later journeys
+use signup's account. Run `done` only for a changed feature. Run device-takeover last. It signs the
 browser out.
 
 <!-- /repo -->
