@@ -46,7 +46,7 @@ jobs:
     uses: zgeoff/tools/.github/workflows/repo-sync.yml@b3b276df206c8019501a5cb562a2186b71123828 # main
     with:
       ref: ${{ github.event.client_payload.sha }}
-      skip: issue-templates, pr-template, editorconfig, memory-cap
+      skip: issue-templates, editorconfig, memory-cap
       include:
         skill-testing, hook-start, skill-docs-writing, skill-code-style, skill-skill-writing,
         workflow-audit-fix, skill-ci-design, knip-runner
