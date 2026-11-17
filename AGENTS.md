@@ -22,11 +22,8 @@ When you write or edit a skill:
 1. Load the `skill-writing`, `cold-read` and `deslop` skills from `.claude/skills/`. repo-sync
    delivers them there at the `zgeoff/skills` commit that `zgeoff/tools` pins, so install none of
    them yourself.
-2. Do every step in the "Check it" section of `.claude/skills/skill-writing/SKILL.md`.
-3. In the PR description, after the sections of the repo's PR template, add three `##` headings:
-   - "Skill checks": the check output.
-   - "Cold read": each cold-read finding, and how you answered it.
-   - "Deslop": each change deslop made, or "none".
+2. Do every step in the "Check it" section of `.claude/skills/skill-writing/SKILL.md`. In its last
+   step, you fill in the `## Checks` section of the PR template.
 
 `docs/architecture/overview.md` is the entry point to the system's docs. A subsystem's doc is the
 authoritative account of its invariants: grep locates code, and it does not teach a subsystem's
