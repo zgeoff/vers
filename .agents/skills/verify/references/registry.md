@@ -19,7 +19,7 @@ The gate fails on a changed file that matches none of the three lists.
 
 1. Edit the glob in the list it belongs to.
 2. For each glob you add to `featurePaths` or `sharedPaths`, add an entry to
-   [skill-gate.json](../../../skill-gate.json), such as
+   [skill-gate.json](../../../../.claude/skill-gate.json), such as
    `{ "match": "apps/<name>/**", "skills": ["verify"] }`. With the entry, an agent must load this
    skill before it edits a matching file. For a glob you rename, rename its entry. For a glob you
    remove, delete its entry.
