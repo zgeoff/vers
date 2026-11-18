@@ -85,6 +85,9 @@ pre-push:
     - chex-docs
     - chex-typecheck
     - chex-test
+    # chex 0.3.11 rejects the existing multiline run in .github/workflows/pr.yml
+    # ("the run spans more than one line"); fixing that is out of scope here
+    - chex-workflows
   jobs:
     - name: chex-baseline
       files: echo package.json
