@@ -1,3 +1,4 @@
+import { afterAll } from 'bun:test';
 import {
   buildTestTemplateDBName,
   createTestTemplate,
@@ -7,6 +8,7 @@ import {
 } from '@vers/db/test-support';
 import { createPostgresContainer } from '../create-postgres-container';
 import { getContainerConnectionURI } from '../get-container-connection-uri';
+import { releaseWorkerClones } from './register-worker-clone';
 import { resolveTestDBTarget } from './resolve-test-db-target';
 
 export async function setupBunTestDB(): Promise<void> {
@@ -17,6 +19,9 @@ export async function setupBunTestDB(): Promise<void> {
   // a worker keeps its clones across its files: under `--parallel` an `afterAll` runs after every
   // file and would drop a clone a module still holds, so the clones of ended runs are dropped here
   await removeOrphanedClones(resolveTestDBTarget().baseURI);
+
+  // drops the worker's shared clones once its files are done, so a run leaves none behind
+  afterAll(releaseWorkerClones);
 }
 
 const TEST_CONTAINER_PORT = 32_999;

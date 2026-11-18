@@ -1,8 +1,10 @@
 import { createId } from '@paralleldrive/cuid2';
 import { createDB } from '@vers/db';
+import { removeTestDatabase } from '@vers/db/test-support';
 import postgres from 'postgres';
 import { z } from 'zod';
-import { createDatabaseFromTemplate } from '../create-database-from-template';
+import { cloneDatabaseFromTemplate } from '../clone-database-from-template';
+import { registerWorkerClone } from '../register-worker-clone';
 import type { TestDBHandle } from '../test-db-handle';
 
 export async function createSchemaTestDB(): Promise<TestDBHandle> {
@@ -52,9 +54,19 @@ function resolveHost(): Promise<Host> {
 }
 
 async function createHost(): Promise<Host> {
-  const databaseURL = await createDatabaseFromTemplate();
+  const databaseURL = await cloneDatabaseFromTemplate();
 
-  return { databaseURL, sql: postgres(databaseURL, { onnotice: () => {} }) };
+  const sql = postgres(databaseURL, { onnotice: () => {} });
+
+  registerWorkerClone(async () => {
+    host = undefined;
+
+    await sql.end();
+
+    await removeTestDatabase(databaseURL);
+  });
+
+  return { databaseURL, sql };
 }
 
 async function createCloneTables(sql: postgres.Sql, cloneSchema: string): Promise<void> {

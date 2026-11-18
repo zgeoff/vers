@@ -1,15 +1,16 @@
-import {
-  buildClonedDBName,
-  createClonedDatabase,
-  readCloneOwnerPrefix,
-} from '@vers/db/test-support';
-import { resolveTestDBTarget } from './resolve-test-db-target';
+import { onTestFinished } from 'bun:test';
+import { removeTestDatabase } from '@vers/db/test-support';
+import { cloneDatabaseFromTemplate } from './clone-database-from-template';
 
+// Call it inside a test. `onTestFinished` hooks run in the order they are registered, so the drop
+// registers a hook from inside a hook: that one runs after every hook the test registers, such as a
+// service stop, and no connection is open when the drop runs.
 export async function createDatabaseFromTemplate(): Promise<string> {
-  const target = resolveTestDBTarget();
-  const dbName = buildClonedDBName(readCloneOwnerPrefix());
+  const databaseURL = await cloneDatabaseFromTemplate();
 
-  await createClonedDatabase({ baseURI: target.baseURI, dbName, templateDB: target.templateDB });
+  onTestFinished(() => {
+    onTestFinished(() => removeTestDatabase(databaseURL));
+  });
 
-  return `${target.baseURI}/${dbName}`;
+  return databaseURL;
 }

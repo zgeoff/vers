@@ -5,6 +5,7 @@ import { sql } from 'kysely';
 import postgres from 'postgres';
 import { z } from 'zod';
 import { createTestUser } from '../create-test-user';
+import { releaseWorkerClones } from '../register-worker-clone';
 import { resolveTestDBTarget } from '../resolve-test-db-target';
 import { createSchemaTestDB } from './create-schema-test-db';
 
@@ -135,4 +136,35 @@ test('it rejects a write that violates a cloned foreign key', async () => {
       .values({ id: 'av_schema_fk_test', name: 'FK Test', seed: 1, userId: 'usr_missing' })
       .execute(),
   ).rejects.toMatchObject({ code: '23503' });
+});
+
+test('it drops the host database on release and builds a usable one for the next acquisition', async () => {
+  const admin = postgres(`${resolveTestDBTarget().baseURI}/postgres`);
+
+  onTestFinished(() => admin.end());
+
+  const first = await createSchemaTestDB();
+  const firstResult = await sql`select current_database()`.execute(first.db);
+
+  const [firstRow] = z.tuple([z.object({ currentDatabase: z.string() })]).parse(firstResult.rows);
+
+  await first[Symbol.asyncDispose]();
+
+  await releaseWorkerClones();
+
+  const dropped =
+    await admin`SELECT 1 FROM pg_database WHERE datname = ${firstRow.currentDatabase}`;
+
+  expect(dropped).toBeEmpty();
+
+  await using second = await createSchemaTestDB();
+
+  const secondResult = await sql`select current_database()`.execute(second.db);
+
+  const [secondRow] = z.tuple([z.object({ currentDatabase: z.string() })]).parse(secondResult.rows);
+
+  const created = await createTestUser(second.db, { email: 'schema-release@test.com' });
+
+  expect(secondRow.currentDatabase).not.toBe(firstRow.currentDatabase);
+  expect(created.user.email).toBe('schema-release@test.com');
 });

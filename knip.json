@@ -56,6 +56,9 @@
     "libs/testing/qa-account": {
       "entry": ["src/bin/*.ts"]
     },
+    "libs/testing/service-test-utils": {
+      "entry": ["src/bun/fixtures/*.fixture.ts"]
+    },
     "libs/testing/load-harness": {
       "entry": ["src/bin/*.ts"]
     },
