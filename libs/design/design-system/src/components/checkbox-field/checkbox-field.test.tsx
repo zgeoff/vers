@@ -73,7 +73,7 @@ test('it adopts a click that landed on the native input before hydration', async
       'data-state',
       'unchecked',
     );
-  });
 
-  expect(container.querySelector('input')?.checked).toBe(false);
+    expect(container.querySelector('input')?.checked).toBe(false);
+  });
 });
