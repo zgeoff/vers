@@ -1504,7 +1504,7 @@
     "@wringer/db": "0.1.4",
     "@wringer/gunshi": "0.3.5",
     "@wringer/http": "0.1.4",
-    "@zgeoff/agent-hooks": "0.2.12",
+    "@zgeoff/agent-hooks": "0.2.13",
     "@zgeoff/bugsink-mcp": "0.2.0",
     "@zgeoff/bun-test-extended": "0.2.3",
     "@zgeoff/chex": "0.3.6",
@@ -3099,7 +3099,7 @@
 
     "@zag-js/utils": ["@zag-js/utils@1.47.0", "", {}, "sha512-vD4JoPJkFBGA2C5/HcfKrhkxqjFlJrfQj0wSoypvYghP1nJYaa6PNJs0zo3EeI4/NJ0EuJSnUg0zsCo+Dhm4iQ=="],
 
-    "@zgeoff/agent-hooks": ["@zgeoff/agent-hooks@0.2.12", "", { "bin": { "agent-hooks": "dist/cli.js" } }, "sha512-bMEmXGtNICFNvR/e9lF9p+N4BwyIPqnG7IZ/m78vz3i5ZUZbgtSVLWgw3k5/d0cE6OXGLBW4sJ3twKd2kYzRSQ=="],
+    "@zgeoff/agent-hooks": ["@zgeoff/agent-hooks@0.2.13", "", { "bin": { "agent-hooks": "dist/cli.js" } }, "sha512-kvzswc5g5uYom0fu14pjWgXEvpNMSBNWkCjWtcnTL+4A2Le9uwhsThAOQOlNDrVB93tjcDC6plhknvhpxTdJBA=="],
 
     "@zgeoff/bugsink-mcp": ["@zgeoff/bugsink-mcp@0.2.0", "", { "dependencies": { "@modelcontextprotocol/sdk": "^1.0.0" }, "peerDependencies": { "zod": "^3.25.0" }, "bin": { "bugsink-mcp": "dist/index.js" } }, "sha512-frOYmUHkNbvI7+9ib1btG3qiqr3Hu4tM30fIjwzXwIbSJCJwLhkG6bLHy5WWlezi95Lf2Fmg6kHQnDGtSIjNaQ=="],
 
