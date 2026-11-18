@@ -4,11 +4,6 @@
     "reason": "The fix is glob 14.0.2, but archiver-utils@5.0.2 accepts only ^10.0.0.",
     "expires": "2026-11-30"
   },
-  "GHSA-fc5q-39xc-vjpf": {
-    "package": "picomatch",
-    "reason": "No published release of picomatch fixes it.",
-    "expires": "2026-12-18"
-  },
   "GHSA-g3hv-75wg-m249": {
     "package": "minimatch",
     "reason": "The fix is minimatch 11.0.1, but @eslint/config-array@0.23.5 accepts only ^10.2.4; @npmcli/arborist@9.9.0 accepts only ^10.0.3; @npmcli/map-workspaces@5.0.3 accepts only ^10.0.3; @tufjs/models@4.1.0 accepts only ^10.1.1; eslint@10.8.0 accepts only ^10.2.5; glob@13.0.6 accepts only ^10.2.2; ignore-walk@8.0.0 accepts only ^10.0.3.",
