@@ -12,13 +12,16 @@ export function buildAffixPool(
 
   const entries = affixes
 
+    // excludes occupied-group affixes when the constraint requests it
     .filter(
       (affix) =>
         !(constraints.excludeOccupiedGroups === true && occupiedGroupIDs.has(affix.groupID)),
     )
 
+    // excludes protected groups
     .filter((affix) => !protectedGroupIDs.has(affix.groupID))
 
+    // reweights: an id absent from the pool is a no-op
     .map((affix) => {
       const factor = Object.hasOwn(reweights, affix.id) ? reweights[affix.id] : undefined;
 
@@ -40,9 +43,10 @@ export function buildAffixPool(
       };
     })
 
+    // factor 0 removes the affix from the pool
     .filter((affix) => affix.weight > 0)
 
-    // a canonical order keeps the pool independent of the input order
+    // sorts by affix id for a canonical, order-independent pool
     .toSorted((left, right) => (left.id < right.id ? -1 : 1));
 
   const forced = (constraints.forceAffixIDs ?? []).toSorted().map((affixID) => {
