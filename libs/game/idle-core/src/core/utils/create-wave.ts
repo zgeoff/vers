@@ -6,8 +6,6 @@ export function createWave(
   enemyData: ReadonlyArray<EnemyData>,
   ctx: SimulationContext,
 ): Wave {
-  // the wave id derives from its position; each enemy id derives from that wave id plus its
-  // position within the wave
   const id = `wave-${index}`;
 
   const enemies = enemyData.map((data, enemyIndex) =>

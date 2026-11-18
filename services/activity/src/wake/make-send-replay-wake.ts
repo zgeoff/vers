@@ -20,9 +20,6 @@ interface MakeSendReplayWakeOptions {
 }
 
 export function makeSendReplayWake(options: MakeSendReplayWakeOptions): () => void {
-  // The lazily built client for this instance: undefined until the first delivery builds it, a
-  // build failure clears it back to undefined so the next delivery retries the build fresh, and a
-  // wake-call failure leaves an already-resolved client cached.
   let clientPromise: Promise<ContractRouterClient<typeof replayContract>> | undefined;
 
   const sendWakeRequest = async (signal: AbortSignal): Promise<unknown> => {

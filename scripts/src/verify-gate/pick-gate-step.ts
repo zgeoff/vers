@@ -8,9 +8,9 @@ export type GateStep =
   | { readonly kind: 'gate'; readonly baseRef: string; readonly body: string }
   | { readonly kind: 'refused'; readonly message: string };
 
-// What the `verify / gate` step does for one pull_request event. A release pull request changes
-// only versions and the changelog, and nobody runs a journey on it, so its body never holds a
-// report. Only a bot opens it, so a person's branch of the same name still meets the gate.
+// A release pull request changes only versions and the changelog, and nobody runs a journey on it,
+// so its body never holds a report. Only a bot opens it, so a person's branch of the same name
+// still meets the gate.
 export function pickGateStep(event: unknown): GateStep {
   const pullRequest = parsePullRequestEvent(event);
 

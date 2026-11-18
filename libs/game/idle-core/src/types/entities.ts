@@ -34,7 +34,6 @@ interface IEntity<State extends object, EntitySnapshot extends object> {
   get life(): number;
   get status(): EntityStatus;
 
-  // core
   // oxlint-disable-next-line typescript/method-signature-style -- subtypes narrow the behaviour param; method syntax keeps the bivariant check that permits it
   registerBehaviour(behaviour: Behaviour): void;
   getSnapshot: () => EntitySnapshot;
@@ -79,7 +78,6 @@ export interface Avatar extends IEntity<AvatarState, AvatarSnapshot> {
 
   get mainHandEquipment(): EquipmentWeapon | null;
 
-  // core
   // oxlint-disable-next-line typescript/method-signature-style -- narrows the behaviour param; method syntax keeps the bivariant check that permits it
   registerBehaviour(behaviour: AvatarBehaviour): void;
 
@@ -117,7 +115,6 @@ export interface Enemy extends IEntity<EnemyState, EnemySnapshot> {
 
   get primaryAttack(): AttackData;
 
-  // core
   // oxlint-disable-next-line typescript/method-signature-style -- narrows the behaviour param; method syntax keeps the bivariant check that permits it
   registerBehaviour(behaviour: EnemyBehaviour): void;
 

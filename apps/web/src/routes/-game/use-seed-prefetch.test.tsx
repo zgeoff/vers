@@ -312,8 +312,6 @@ test('it does not re-request an in-flight id when the frontier grows mid-batch',
 
     hook.rerender();
 
-    // the grown frontier reveals only the new id: the in-flight 0_0 stays marked, so it is never
-    // re-requested while its first reveal is still pending
     await waitFor(() => {
       expect(track).toHaveBeenCalledTimes(2);
     });
@@ -383,7 +381,6 @@ test('it completes an in-flight reveal batch the frontier growth overlaps, cachi
 
     hook.rerender();
 
-    // the frontier growth fires the new id while the first batch is still held in flight
     await waitFor(() => {
       expect(track).toHaveBeenCalledTimes(2);
     });
@@ -391,8 +388,6 @@ test('it completes an in-flight reveal batch the frontier growth overlaps, cachi
     invariant(releaseFirstReveal, 'the first reveal call registered its release gate');
     releaseFirstReveal();
 
-    // the frontier growth did not abort the still-pending first batch: once released it completes
-    // and caches its own seed rather than being cancelled
     await waitFor(() => {
       expect(client.cacheNodeSeeds).toHaveBeenCalledWith(
         {

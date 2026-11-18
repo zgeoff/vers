@@ -10,8 +10,6 @@ import * as z from 'zod';
 import { createAuthedServiceClient } from './create-authed-service-client';
 
 test("it mints a client whose calls carry the user's bearer token to the service's rpc mount", async () => {
-  // an echo contract served on a real localhost port under `/rpc`, its one procedure reporting
-  // back the `authorization` header it received
   const contract = {
     echoAuthorization: oc.output(z.object({ authorization: z.string().nullable() })),
   };

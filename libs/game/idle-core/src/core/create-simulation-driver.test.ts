@@ -172,8 +172,6 @@ test('it emits a zero-consumption checkpoint rather than halting on it before th
 
   const driver = createSimulationDriver(activity, avatar);
 
-  // The Started checkpoint's nextSeed equals the driver's rngState before any tick — a target
-  // set to that same state must not stop the call before it emits the checkpoint.
   const result = await driver.advanceToDuration(200_000, driver.rngState, 1);
 
   expect(result.checkpoints).toHaveLength(1);

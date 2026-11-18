@@ -14,8 +14,8 @@ export async function runReconnectRecovery(
 
   const avatarID = signalAvatarID ?? pendingAvatarID ?? context.getResyncAvatarID() ?? undefined;
 
-  // must precede flushHeld: an orphan's checkpoints would otherwise NOT_FOUND-discard on the
-  // held flush before this ingests the activity start they build onto
+  // drained before the held flush: an orphan's checkpoints would otherwise be discarded as not
+  // found before the activity start they build onto is ingested
   if (avatarID !== undefined) {
     try {
       await drainActivityStarts(context, avatarID);

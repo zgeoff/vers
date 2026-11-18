@@ -458,8 +458,8 @@ test('it stops at the specified rng state if provided', async () => {
   const config = {
     duration: 200_000,
 
-    // when our algo changes, can just pull this state to something valid from our
-    // happy path snapshot test ouput
+    // a state this run reaches, copied from the happy-path snapshot; it changes whenever the
+    // simulation does
     stopAtState: '5468a77edf984ec079995dfd698938b2',
   };
 

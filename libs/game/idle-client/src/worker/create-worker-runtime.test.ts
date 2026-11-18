@@ -137,9 +137,8 @@ test('it broadcasts a simulation update once a started run installs', async () =
   const viewer = await createViewer();
   const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
 
-  // a start is always a local mint, so the node's start inputs must already be cached — as
-  // useSeedPrefetch would have relayed them from a real revealNodes round trip — and the content
-  // document its encounter derived against must be published for the install's own load to find
+  // a start is always a local mint, so the node's start inputs must already be cached and its
+  // content document published for the install to load
   await db.contentDocumentCollection.create({ contentVersion: '2' });
 
   const revealed = await client.revealNodes({ avatarID: viewer.avatar.id, nodeIDs: ['1_0'] });
@@ -404,9 +403,7 @@ test('it delivers the offline continuation once a reconnect drains the held term
   // would fetch
   await writeContentDocumentCache(createMockContentDocument({ contentVersion: '2' }));
 
-  // both this activity's terminal append and its continuation's own startActivity call fail once,
-  // standing in for the device going offline right as the run completes; the flag scripts the
-  // handler sequence and doubles as the only observable that the append actually failed
+  // nothing else observable shows that the terminal append failed
   let appendFailed = false;
 
   server.use(
@@ -454,8 +451,6 @@ test('it delivers the offline continuation once a reconnect drains the held term
 
   globalThis.dispatchEvent(new Event('online'));
 
-  // the held terminal append lands on the reconnect, and its landing delivers the continuation the
-  // device minted behind it
   await waitFor(() => {
     const continued = db.activityCollection.findFirst((query) =>
       query.where({ startKey: `continue_${activity.id}` }),
@@ -566,7 +561,6 @@ test('it cancels an in-flight resync read on stop() without stopping the row bac
     notifyReadStarted = resolve;
   });
 
-  // hangs forever on its own — only stop()'s abort settles the call the runtime is waiting on
   server.use(
     mockActivityService.getLatestActivityProgress.handler(() => {
       notifyReadStarted?.();
@@ -582,17 +576,15 @@ test('it cancels an in-flight resync read on stop() without stopping the row bac
 
   await testClient.initialize({});
 
-  // not awaited — the call's own resync read is what the mock above hangs, and only stop()'s
-  // abort settles it
+  // not awaited: its resync read hangs until the runtime's stop aborts it
   void testClient.reportOnline({ avatarID: viewer.avatar.id, claim: false });
 
   await readStarted;
 
   runtime.stop();
 
-  // a start queued behind the resync's lifecycle turn only runs once that turn settles — its own
-  // entry check sees the now-permanently-aborted cancel signal and answers failed, proving the
-  // cancelled read didn't strand it hanging on the mailbox
+  // a start queued behind the cancelled resync runs only once that turn settles, so an answer
+  // shows the cancelled read released the mailbox
   const status = await testClient.startActivity({
     avatarID: 'stop-cancel-avatar',
     scopeID: '7_0',
@@ -635,17 +627,15 @@ test('it resets the displaced simulation and broadcasts WriterDisplaced on a ses
 
   await testClient.initialize({});
 
-  // the report awaits the recovery it triggers, so the resync's attach has fully settled by the
-  // time it answers — the run is genuinely installed before the takeover happens
+  // the report awaits the recovery it triggers, so the attach has settled when it answers
   await testClient.reportOnline({ avatarID: viewer.avatar.id, claim: false });
 
   const installed = await testClient.initialize({});
 
   expect(installed.state.activity).toMatchObject({ id: activity.id });
 
-  // the takeover modeled consistently: every append is refused and the fetched progress reports
-  // the writer lost, so a resync the recovery runs plans active-elsewhere instead of re-attaching
-  // a row the server would refuse; a queued checkpoint delivers into that refusal below
+  // the fetched progress must also report the writer lost, or a resync would re-attach a row the
+  // server refuses
   server.use(
     mockActivityService.trackActivityProgress.handler((opts) => {
       throw opts.errors.SESSION_EVICTED({ data: {} });
@@ -660,8 +650,6 @@ test('it resets the displaced simulation and broadcasts WriterDisplaced on a ses
 
   await writeQueuedCheckpoint(activity.id, createMockCheckpointBatchEntry({ version: 1 }));
 
-  // the second connectivity report drains the held queue; its flush answers the eviction, and the
-  // displacement settles as its own lifecycle flow
   await testClient.reportOnline({ avatarID: viewer.avatar.id, claim: false });
 
   await waitFor(() => {
@@ -674,9 +662,6 @@ test('it resets the displaced simulation and broadcasts WriterDisplaced on a ses
   const result = await testClient.initialize({});
 
   expect(result.writerDisplacedActivityID).toBe(activity.id);
-
-  // the displaced run's simulation is cleared, not just announced — the fresh snapshot carries no
-  // activity
   expect(result.state.activity).toBeUndefined();
 });
 
@@ -1172,8 +1157,8 @@ test('it writes the same checkpoint stream at real time as a speed-20 run on the
 
   clock.jump(20_000);
 
-  // twenty seconds of wall clock is twenty seconds of simulated time, read one fixed step behind
-  // the frame for the same reason the speed-20 run reads it
+  // the run's clock reads one fixed step behind the frame because the engine yields the Started
+  // checkpoint before it starts it
   await waitFor(
     async () => {
       const current = await testClient.initialize({});

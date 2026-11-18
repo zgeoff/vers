@@ -54,12 +54,12 @@ export async function runStartFlow(
   let row = minted;
 
   if (running !== null) {
-    // `simulation.startActivity` auto-stops a live generator, but only once this flow reaches it;
-    // every await before then is a window the old run would keep advancing in
+    // installing the new run stops the old one too, but only once this flow gets there; every
+    // await before then is a window the old run would keep advancing in
     context.getSimulation().stopActivity();
 
-    // submitStopIntent flushes the row's earned checkpoints before the stop lands, so they reach
-    // the server ahead of the row closing to further appends
+    // the stop flushes the row's earned checkpoints first, so they reach the server before the
+    // row closes to further appends
     await submitStopIntent(context, { avatarID: running.avatarID, id: running.id });
 
     context.resetRewardSlotLedger();

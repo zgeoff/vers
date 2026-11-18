@@ -50,8 +50,6 @@ export async function createProviderProcess(engineHash: string): Promise<Provide
 
   const stderrDrain = drainStderr();
 
-  // consumes stdout to exhaustion, reporting the first bound-port announcement and collecting
-  // every chunk for failure diagnostics
   const drainForPort = async (onPort: (port: number) => void): Promise<void> => {
     const decoder = new TextDecoder();
 

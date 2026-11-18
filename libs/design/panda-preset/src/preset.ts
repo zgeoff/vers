@@ -12,7 +12,7 @@ export const preset = definePreset({
       fontFamily: 'token(fonts.sans)',
     },
 
-    // a viewport-pinned ambient wash behind the fixed game canvas (which sits at z-index -1)
+    // the fixed game canvas sits at z-index -1, so this wash goes one below it
     'body::before': {
       backgroundImage:
         'radial-gradient(60% 60% at 15% 4%, rgba(45, 212, 191, 0.05), transparent 60%), radial-gradient(50% 50% at 92% 96%, rgba(167, 139, 250, 0.06), transparent 60%)',

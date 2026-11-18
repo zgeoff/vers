@@ -129,8 +129,6 @@ export function IsometricCamera() {
     void controls.dollyTo(INITIAL_DISTANCE, false);
     controlsRef.current = controls;
 
-    // a rebuilt controls instance reapplies the current selection's target instead of resting on
-    // its constructor default
     const selectedObject3D = selectedNodeRef.current.object3D;
 
     if (selectedObject3D) {
@@ -143,8 +141,8 @@ export function IsometricCamera() {
 
       controlsRef.current = null;
     };
-    // controlsGeneration re-runs this effect after a non-finite-pose recovery: the restored camera
-    // is finite again, but the discarded controls instance may hold poisoned damping velocities
+    // the rebuild after a non-finite-pose recovery is needed: the restored camera is finite
+    // again, but the old controls may still hold poisoned damping velocities
     // oxlint-disable-next-line react/exhaustive-effect-dependencies -- the dependency forces the rebuild
   }, [camera, domElement, controlsGeneration]);
 

@@ -215,7 +215,6 @@ test('it stops retrying when the caller aborts during the backoff wait', async (
   const controller = new AbortController();
 
   const next = mock((): Promise<StandardLazyResponse> => {
-    // abort while the post-attempt backoff timer is armed, exercising the pending-wait abort path
     setTimeout(() => {
       controller.abort();
     }, 0);

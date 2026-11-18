@@ -180,8 +180,6 @@ test('it resets the runtime to idle when an input the mint needs was never cache
   const submitter = createStubSubmitter();
   const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_1', submitter });
   const simulation = createSimulation();
-
-  // no node seed cached for this avatar, so no local mint is possible
   const terminal = createMockActivityData({ avatarID: 'avatar_uncached' });
 
   context.setSimulation(simulation);
@@ -233,8 +231,7 @@ test('it discards the minted row when a stop cancels the content load', async ()
   context.setActivity(terminal);
   simulation.startActivity(createMockAvatarData(), createMockActivityInput({ id: terminal.id }));
 
-  // the content load is the one await left past the mint; the handler parks there so the stop
-  // lands inside it, exactly as a player stop racing an install does
+  // the content load is the last await after the mint, so a racing stop can only land there
   const reachedLoad = buildDeferred<void>();
   const releaseLoad = buildDeferred<void>();
 
@@ -255,13 +252,11 @@ test('it discards the minted row when a stop cancels the content load', async ()
   context.advanceStopScope();
   releaseLoad.resolve();
 
-  // the stop scope composes into the cancel signal, so the load is cancelled and the flow
-  // compensates rather than propagating the abort
   await flow;
 
   expect(submitter.registerActivity).not.toHaveBeenCalled();
 
-  // the row must not survive: a later drain would deliver the run the player just ended
+  // a surviving row would let a later drain deliver the run the player just ended
   const starts = await readAllActivityStarts();
 
   expect(starts.filter((row) => row.avatarID === avatarID)).toHaveLength(0);

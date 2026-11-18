@@ -109,9 +109,6 @@ function createFogPlaneResources(
 
   updateDensityBytes(density.bytes, field);
 
-  // the density texture's red channel is the smootherstep-eased euclidean distance to the
-  // nearest reveal disc — 0 over revealed ground, 1 a falloff past the frontier; the opacity
-  // node samples it and modulates the result with drifting billow noise
   const textureNode = sceneTSL.texture(buildDensityTexture(density));
 
   const material = new MeshBasicNodeMaterial({
@@ -221,7 +218,6 @@ function updateFogPlane(
   field: RevealDistanceField,
   viewport: Readonly<Viewport>,
 ): void {
-  // the field and viewport already applied — the effect run straight after mount — costs nothing
   if (plane.applied.field === field && plane.applied.viewport === viewport) {
     return;
   }
@@ -229,8 +225,6 @@ function updateFogPlane(
   plane.applied = { field, viewport };
 
   if (field.cols === plane.density.cols && field.rows === plane.density.rows) {
-    // a pan without a zoom keeps the texel dimensions — rewrite the live texture's pixels in
-    // place, no new GPU texture
     updateDensityBytes(plane.density.bytes, field);
 
     plane.textureNode.value.needsUpdate = true;

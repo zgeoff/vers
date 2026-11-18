@@ -36,8 +36,6 @@ export function PerfProbe() {
     const drawCalls = 'drawCalls' in render ? render.drawCalls : render.calls;
     const triangleCount = render.triangles;
 
-    // Zeroes the counts this probe just read, so the next read covers only the frame after this
-    // one — see the ownership note on the mount effect above.
     renderer.info.reset();
 
     const rolling = frameWindow.current;

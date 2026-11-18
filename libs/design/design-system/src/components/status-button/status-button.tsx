@@ -57,8 +57,7 @@ const hideButtonContent = css({
 export function StatusButton(props: Readonly<Props>) {
   const { children, ...restProps } = props;
 
-  // we debounce this state so that we can show our success or error states
-  // for a short period of time before resetting to idle
+  // the success or error state must stay on screen briefly before the button returns to idle
   const [isIdle, setIsIdle] = useDebouncedState(true, 300);
 
   useEffect(() => {
@@ -69,8 +68,7 @@ export function StatusButton(props: Readonly<Props>) {
     StatusButtonStatus.Pending,
   );
 
-  // keep track of our last non-idle status so we can make sure we're always
-  // displaying an icon even when we return to idle
+  // the icon must stay rendered while it slides out after the status returns to idle
   if (restProps.status !== StatusButtonStatus.Idle && restProps.status !== lastNonIdleStatus) {
     setLastNonIdleStatus(restProps.status);
   }

@@ -2,8 +2,8 @@ import { buildStateFromSeed } from '@vers/game-utils';
 import { ActivityFailureAction } from '../types';
 import type { CorpusCase } from './types';
 
-// every seed, difficulty, and starting build below is a frozen literal: the golden digests in
-// run-corpus.test.ts are only a regression guard while these inputs never move
+// every seed, difficulty, and starting build below is a frozen literal: the corpus golden digests
+// are only a regression guard while these inputs never move
 export const CORPUS_CASES: ReadonlyArray<CorpusCase> = Object.freeze([
   {
     id: 'clean-completion',

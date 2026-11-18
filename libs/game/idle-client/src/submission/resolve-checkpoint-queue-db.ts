@@ -42,8 +42,6 @@ function createJournalConnection(): JournalConnection {
       },
       terminated: resetMemo,
 
-      // Shared with the upgrade-driving test, so the open path and that test exercise the same store
-      // layout.
       upgrade: upgradeCheckpointQueueDB,
     },
   );

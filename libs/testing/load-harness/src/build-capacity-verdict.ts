@@ -19,9 +19,6 @@ interface CapacityVerdict {
 
 const MS_PER_HOUR = 3_600_000;
 
-// a step meets the target only when the pipeline kept up, lost nothing and kept every container
-// up; the limit is what broke in the first step that missed it: a container that exited, or else
-// its busiest container
 export function buildCapacityVerdict(
   steady: ReadonlyArray<ScenarioSummary>,
   settlementTargetMs: number,

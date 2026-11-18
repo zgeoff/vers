@@ -8,7 +8,6 @@ import { buildSessionSupersededResponse } from './build-session-superseded-respo
 
 function setupTest() {
   return {
-    // the transport the link sends through: app-web's proxy answering a superseded session
     sendRequest: () => Promise.resolve(buildSessionSupersededResponse()),
   };
 }

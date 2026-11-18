@@ -53,8 +53,8 @@ afterEach(async () => {
 
   mock.restore();
 
-  // fake-indexeddb persists for the whole one-process run; sweep both durable stores so no test
-  // depends on unique activity ids, or a clean preferences cache, for isolation
+  // fake-indexeddb persists for the whole one-process run; sweep every store so no test depends
+  // on unique activity ids, or a clean preferences cache, for isolation
   const queueDB = await resolveCheckpointQueueDB();
 
   await queueDB.clear(CHECKPOINT_QUEUE_STORE_NAME);

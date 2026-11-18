@@ -136,8 +136,6 @@ test('it reports starting while a start flow installs, then running once it land
     scopeType: 'world_map_node',
   });
 
-  // registerActivity is called only once the flow's install has already set the activity and
-  // started the simulation — the state has stayed 'starting' the whole time since acceptance
   await waitFor(() => {
     expect(submitter.registerActivity).toHaveBeenCalled();
   });
@@ -200,7 +198,6 @@ test('it reports continuing while a continuation flow is in flight', async () =>
   await writeNodeSeeds(seed.avatarID, [seed]);
   await writeStartStamps({ keyVersion: 1, secretRef: 'worldmap', secretVersion: 1 });
 
-  // the content load past the local mint never settles, holding the flow in its continuing phase
   server.use(mockActivityService.getContentDocument.handler(() => new Promise(() => {})));
 
   const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_1' });
@@ -648,8 +645,6 @@ test('it runs queued starts strictly one at a time in queue order', async () => 
     scopeType: 'world_map_node',
   });
 
-  // the second start is accepted onto the queue while the first is still installing — its own
-  // registration doesn't run until the first's own flow settles
   expect(context.getLifecycle().getSnapshot().value).toBe('starting');
   expect(order).toStrictEqual(['avatar_queue_order_first']);
   releaseFirst?.();
@@ -708,10 +703,6 @@ test('it serializes flows queued from different kinds on the one actor', async (
   });
 
   const resync = runResyncTurn(context, 'avatar_mixed_kinds_resync', false);
-
-  // a fresh simulation/activity pair the machine's own state never installs — its continuation
-  // is a real queued flow whose own body no-ops on the mismatch, exactly proving the machine
-  // still occupies the 'continuing' state for it in turn
   const deferred = buildDeferred<void>();
 
   context.getLifecycle().send({
@@ -759,8 +750,6 @@ test('it keeps the queue alive past a start that throws', async () => {
 
   submitter.registerActivity = mock(() => Promise.resolve());
 
-  // the same avatar and scope the first call already installed — the fast "already attached"
-  // path, proving the queue accepted and ran this call rather than staying stuck behind the throw
   const second = await handleStartActivityMessage(context, input);
 
   expect(second.kind).toBe('attached');
@@ -884,8 +873,6 @@ test('it drops a non-claiming resync while one is queued', async () => {
   await Promise.all([blocking, first]);
   await connection.waitForMessages(2);
 
-  // only the accepted call's own status ever broadcasts — the dropped call never reached the
-  // progress fetch that would have broadcast one under its own avatar
   expect(connection.received).toStrictEqual([
     {
       status: { avatarID: 'avatar_a', kind: 'session-expired' },
@@ -989,7 +976,6 @@ test('it holds a claiming resync and runs it after the in-flight one settles', a
 
   const held = runResyncTurn(context, 'avatar_b', true);
 
-  // the claiming call resolves immediately — it never waits on its own eventual run
   await held;
 
   gates['avatar_a']!.release();
@@ -1049,7 +1035,6 @@ test('it keeps only the latest claiming avatar when two arrive', async () => {
     expect(context.getLifecycle().getSnapshot().value).toBe('resyncing');
   });
 
-  // both claiming calls resolve immediately, without waiting on either eventual run
   await runResyncTurn(context, 'avatar_b', true);
   await runResyncTurn(context, 'avatar_c', true);
 
@@ -1059,8 +1044,6 @@ test('it keeps only the latest claiming avatar when two arrive', async () => {
 
   await connection.waitForMessages(4);
 
-  // avatar_b's held claim was superseded by avatar_c's before either ran — only the first call
-  // and the latest claim ever reach a resync status
   expect(connection.received).toStrictEqual([
     {
       status: { avatarID: 'avatar_a', kind: 'session-expired' },
@@ -1187,8 +1170,6 @@ test('it captures a requeued claim signals at requeue rather than at its arrival
 
   await runResyncTurn(context, 'avatar_b', true);
 
-  // a stop scope advanced while the claim is held aborts the first run's captured signals; the
-  // requeued run must capture the fresh scope at requeue rather than inherit these
   context.advanceStopScope();
 
   expect(firstRequest.signals.stop.aborted).toBeTrue();
@@ -1218,8 +1199,6 @@ test('it accepts a later resync after a resync flow faults', async () => {
 
   const context = createStubWorkerContext({
     submitter: {
-      // handler scripting: the first resync's flush fails so its flow settles through the fault
-      // path, and the follow-up's succeeds
       flushHeld: () => {
         flushCalls += 1;
 
@@ -1346,8 +1325,6 @@ test('it runs a resync arriving during a non-resync turn after that turn rather 
     subscription.unsubscribe();
   });
 
-  // arrives while the start is still installing — accepted and queued behind it synchronously,
-  // before any flow has a chance to run
   const blocking = handleStartActivityMessage(context, {
     avatarID: 'avatar_blocks_resync',
     scopeID: '0_0',
@@ -1414,16 +1391,12 @@ test('it runs a start queued during an in-flight resync before a held claim requ
     expect(context.getLifecycle().getSnapshot().value).toBe('resyncing');
   });
 
-  // queued behind the in-flight resync above — its own run must land before the held claim
-  // below requeues, preserving the arrival order between the two
   const start = handleStartActivityMessage(context, {
     avatarID: 'avatar_held_claim_order',
     scopeID: '0_0',
     scopeType: 'world_map_node',
   });
 
-  // a claiming resync arrives while the first is still in flight — held one deep rather than
-  // queued, its own caller resolving immediately without waiting on its eventual run
   await runResyncTurn(context, 'avatar_order_claim', true);
 
   releaseFlush?.();
@@ -1486,8 +1459,6 @@ test('it drops a non-claiming resync arriving while a requeued claim is running'
 
   gates['avatar_a']!.release();
 
-  // avatar_a settles and the held claim's requeued run is now the active flow — still inside
-  // the coalescing window this requeue reopens
   await ctx.waitForActiveResync(context, 'avatar_b');
 
   await expect(runResyncTurn(context, 'avatar_c', false)).toResolve();
@@ -1498,8 +1469,6 @@ test('it drops a non-claiming resync arriving while a requeued claim is running'
 
   await connection.waitForMessages(4);
 
-  // avatar_c never reaches a resync status — dropped rather than queued behind avatar_b's
-  // requeued run
   expect(connection.received).toStrictEqual([
     {
       status: { avatarID: 'avatar_a', kind: 'session-expired' },
@@ -1565,12 +1534,8 @@ test('it holds a claiming resync arriving while a requeued claim is running', as
 
   gates['avatar_a']!.release();
 
-  // avatar_a settles and the held claim's requeued run is now the active flow — still inside
-  // the coalescing window this requeue reopens
   await ctx.waitForActiveResync(context, 'avatar_b');
 
-  // a second claiming resync arrives in that same window — held one deep rather than queued as
-  // its own request, its own caller resolving immediately without waiting on its eventual run
   await runResyncTurn(context, 'avatar_d', true);
 
   currentAvatarID = 'avatar_d';
@@ -1721,7 +1686,6 @@ test('it resyncs before a start that beats the boot report on a reload with a de
     subscription.unsubscribe();
   });
 
-  // the tab's start reaches the worker before the mount's boot report does
   const started = handleStartActivityMessage(context, {
     avatarID: viewer.avatar.id,
     scopeID: '0_0',
@@ -1801,7 +1765,6 @@ test('it delivers the start on a reload with an undelivered start and reattaches
     version: 1,
   });
 
-  // a start this device minted on the delivered run and never delivered before the reload
   const undelivered = createMockActivityData({
     avatarID: viewer.avatar.id,
     buildSnapshot: { level: buildLevelFromXP(409), xp: 409 },
@@ -1938,7 +1901,6 @@ test('it numbers the next checkpoint from the server head once a takeover discar
 
   await handleReportOnlineMessage(context, { avatarID: viewer.avatar.id, claim: true });
 
-  // a checkpoint the takeover discards before it ever reaches the server
   await submitter.submit(
     live.id,
     createMockProgressCheckpoint({ nextSeed: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbb6072' }),
@@ -1992,7 +1954,6 @@ test('it numbers the next checkpoint from the server head once a sign-out discar
 
   await handleReportOnlineMessage(context, { avatarID: viewer.avatar.id, claim: true });
 
-  // a checkpoint the sign-out discards before it ever reaches the server
   await submitter.submit(
     live.id,
     createMockProgressCheckpoint({ nextSeed: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbb6072' }),
@@ -2014,8 +1975,7 @@ test('it clears the run and mints behind it when the worker is evicted while a r
   const viewer = await createViewer({ avatar: { xp: 400 } });
   const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
 
-  // the real submitter, so the eviction is the server refusing an append; the lifecycle it reports
-  // to is filled in once the context exists, because each references the other
+  // filled in once the context exists, because the submitter and the context reference each other
   const lifecycle: { current: StubWorkerContext['getLifecycle'] | undefined } = {
     current: undefined,
   };
@@ -2052,7 +2012,6 @@ test('it clears the run and mints behind it when the worker is evicted while a r
 
   await handleReportOnlineMessage(context, { avatarID: viewer.avatar.id, claim: true });
 
-  // another session took the writer: every append from this one is refused from here on
   server.use(
     mockActivityService.trackActivityProgress.handler((opts) => {
       throw opts.errors.SESSION_EVICTED({ data: {} });
@@ -2139,7 +2098,6 @@ test('it discards the outbox on a takeover from another device and mints from th
 
   await handleReportOnlineMessage(context, { avatarID: viewer.avatar.id, claim: true });
 
-  // a start minted offline on the delivered run and never delivered
   const undelivered = createMockActivityData({
     avatarID: viewer.avatar.id,
     id: 'act_matrix_taken_over',
@@ -2150,22 +2108,18 @@ test('it discards the outbox on a takeover from another device and mints from th
   await writeActivityStart(undelivered);
   await writeLastStartedActivity({ avatarID: viewer.avatar.id, lastActivityID: undelivered.id });
 
-  // another device took the account over: app-web refuses every call with the superseded marker
   server.use(
     http.all(`${self.location.origin}/api/rpc/activity/*`, () => buildSessionSupersededResponse()),
   );
 
   await handleReportOnlineMessage(context, { avatarID: viewer.avatar.id, claim: false });
 
-  // the discard queues behind the resync that met the marker, and runs once that resync settles
   await waitFor(() => {
     expect(context.getLifecycle().getSnapshot().context.currentRequest).toBeNull();
   });
 
   const outboxAfterTakeover = await readAllActivityStarts();
 
-  // the player signs back in here: the session answers again, and the map reveal restocks the
-  // node inputs the discard cleared
   server.resetHandlers();
   server.use(createStubActivityProxy(viewer.user.id));
 
@@ -2251,7 +2205,6 @@ test('it delivers no start that a continuation held at its write mints, once a t
 
   await handleReportOnlineMessage(context, { avatarID: viewer.avatar.id, claim: true });
 
-  // the run that just reached its terminal checkpoint, so the worker enters the continuation flow
   const terminal = createMockActivityData({
     avatarID: viewer.avatar.id,
     id: delivered.id,
@@ -2273,7 +2226,6 @@ test('it delivers no start that a continuation held at its write mints, once a t
 
   await held.reached;
 
-  // another device took the account over: app-web refuses every call with the superseded marker
   server.use(
     http.all(`${self.location.origin}/api/rpc/activity/*`, () => buildSessionSupersededResponse()),
   );

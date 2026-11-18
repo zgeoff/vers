@@ -463,7 +463,6 @@ test('it stops the stream and keeps queued rows on CHECKPOINT_INVALID', async ()
 
   expect(remaining).toHaveLength(2);
 
-  // a checkpoint produced after the stream stopped is silently dropped, not queued
   await ctx.submitter.submit('invalid-activity', createMockProgressCheckpoint());
 
   const stillTwo = await readQueuedCheckpoints('invalid-activity');
@@ -659,7 +658,6 @@ test('it stops the stream, discards the queue, and reports the stop index when t
 
   expect(remaining).toStrictEqual([]);
 
-  // a checkpoint produced after the stream stopped is silently dropped, not queued
   await ctx.submitter.submit('capped-activity', createMockProgressCheckpoint());
 
   const stillEmpty = await readQueuedCheckpoints('capped-activity');
@@ -744,7 +742,6 @@ test('it discards the queue and stops the stream on SESSION_EVICTED', async () =
 
   expect(remaining).toStrictEqual([]);
 
-  // a checkpoint produced after the stream stopped is silently dropped, not queued
   await ctx.submitter.submit('evicted-activity', createMockProgressCheckpoint());
 
   const stillEmpty = await readQueuedCheckpoints('evicted-activity');
@@ -775,7 +772,6 @@ test('it reports the eviction and marks the activity evicted until a registratio
   expect(ctx.onEvicted).toHaveBeenCalledExactlyOnceWith('displaced-activity');
   expect(ctx.submitter.isEvicted('displaced-activity')).toBeTrue();
 
-  // taking the writer back re-attaches through a fresh registration, which clears the marker
   await ctx.submitter.registerActivity({
     activityID: 'displaced-activity',
     appendedHead: 3,
@@ -831,7 +827,6 @@ test('it seeds a registration that arrives while another is already loading', as
     startChainIndex: 0,
   });
 
-  // awaiting only the overlapping registration must still leave the cursor fully seeded
   await ctx.submitter.registerActivity({
     activityID: 'shared-seed-activity',
     appendedHead: 0,
@@ -949,8 +944,6 @@ test('it reports an unexpected retry-loop failure and starts a fresh loop on the
   const ackFailure = new TypeError('ack callback exploded');
 
   const ctx = setupTest({
-    // scripts the unexpected failure: the first acknowledged flush throws from inside the retry
-    // attempt's ack callback, which kills the loop rather than taking another backoff step
     onAcked: () => {
       if (ackShouldThrow) {
         throw ackFailure;
@@ -990,8 +983,6 @@ test('it reports an unexpected retry-loop failure and starts a fresh loop on the
     );
   });
 
-  // the dead loop's controller is cleared, so the next held batch starts a fresh loop that
-  // drains once the transport recovers
   ackShouldThrow = false;
   transportShouldFail = true;
   confirmedHead = 2;
@@ -1023,9 +1014,7 @@ test('it keeps a single retry loop per activity across repeated failures', async
     startChainIndex: 0,
   });
 
-  // each terminal submission flushes and fails immediately, but only the first failure may start
-  // a loop — the second reports held again but defers to the running loop instead of starting a
-  // second one; the simulated clock never advances, so no backoff attempt can add a third report
+  // the clock never advances, so no backoff attempt can add a third held report
   await ctx.submitter.submit('single-retry-activity', createMockCompletedCheckpoint());
   await ctx.submitter.submit('single-retry-activity', createMockCompletedCheckpoint());
 
@@ -1374,7 +1363,6 @@ test('it reports a stall once after repeated unanswered flushes and keeps the qu
     expect.stringMatching(/^[0-9a-f]{32}$/u),
   );
 
-  // the streak keeps failing past the threshold without a second report
   await ctx.submitter.submit('stalled-activity', createMockCompletedCheckpoint());
 
   expect(ctx.onFlushStalled).toHaveBeenCalledOnce();
@@ -1407,7 +1395,6 @@ test('it resets the stall streak once a flush is answered', async () => {
     startChainIndex: 0,
   });
 
-  // two unanswered flushes, an answered one, then two more unanswered: no streak reaches three
   for (let attempt = 0; attempt < 5; attempt += 1) {
     await ctx.submitter.submit('recovering-activity', createMockCompletedCheckpoint());
   }
@@ -1485,7 +1472,7 @@ test('it delivers queued non-terminal checkpoints when flushNow is called', asyn
   const track = mock<(input: unknown) => void>();
 
   // the partial ack leaves the second checkpoint queued, so a progress-window callback that
-  // still believed itself scheduled would re-send it — the no-op assertion below depends on it
+  // still believed itself scheduled would re-send it
   server.use(
     mockActivityService.trackActivityProgress.handler((opts) => {
       track(opts.input);
@@ -1514,8 +1501,6 @@ test('it delivers queued non-terminal checkpoints when flushNow is called', asyn
     expectedHead: 0,
   });
 
-  // the superseded progress-window callback is a no-op: firing it re-sends nothing even though
-  // the queue still holds the unconfirmed checkpoint
   invariant(capturedFlush !== undefined, 'expected the progress window to have been scheduled');
 
   await capturedFlush();
@@ -1591,8 +1576,6 @@ test('it evicts the activity after ACTIVITY_CAPPED so a later registration re-se
     }),
   );
 
-  // a re-registration after eviction runs its own seed read and flush rather than resolving the
-  // capped registration, proving the tombstoned state is gone
   await ctx.submitter.registerActivity({
     activityID: 'capped-evict-activity',
     appendedHead: 0,
@@ -1766,8 +1749,6 @@ test('it keeps the tombstoned registration on CHECKPOINT_INVALID so a later regi
 
   expect(track).toHaveBeenCalledOnce();
 
-  // a later registration attempt resolves the original tombstoned registration instead of
-  // re-seeding, so no second seed read or flush ever reaches the server
   await ctx.submitter.registerActivity({
     activityID: 'invalid-tombstone-activity',
     appendedHead: 0,
@@ -1810,9 +1791,8 @@ test('it evicts the activity once a terminal checkpoint drains fully confirmed',
 
   expect(track).toHaveBeenCalledOnce();
 
-  // a later registration seeded from a deliberately different head re-seeds and re-flushes
-  // rather than resolving a stale registration, proving the fully confirmed terminal drain
-  // evicted it — retained state would keep the old cursor and submit version 3 at expectedHead 2
+  // a different head tells a fresh seed from retained state, which would keep the old cursor
+  // and submit version 3 at expectedHead 2
   await ctx.submitter.registerActivity({
     activityID: 'terminal-drain-evict-activity',
     appendedHead: 7,
@@ -1852,7 +1832,6 @@ test('it evicts a hydrated terminal row once its resend drains fully confirmed',
     }),
   );
 
-  // the registration's own flush resends the queued terminal row and fully confirms it
   await ctx.submitter.registerActivity({
     activityID: 'hydrated-terminal-activity',
     appendedHead: 0,
@@ -1866,9 +1845,6 @@ test('it evicts a hydrated terminal row once its resend drains fully confirmed',
 
   expect(drained).toStrictEqual([]);
 
-  // a later registration seeded from a deliberately different head re-seeds and re-flushes
-  // rather than resolving a stale registration, proving the confirmed hydrated terminal row
-  // evicted the activity even though no live submission ever queued it
   await ctx.submitter.registerActivity({
     activityID: 'hydrated-terminal-activity',
     appendedHead: 5,
@@ -1926,8 +1902,6 @@ test('it evicts safely when a concurrent flush call sets flushPending during a t
     expect(track).toHaveBeenCalledOnce();
   });
 
-  // a flush call landing while the terminal drain is in flight marks flushPending, so the finally
-  // block's re-flush after eviction must find the state gone and return without throwing
   const heldFlush = ctx.submitter.flushHeld();
 
   releaseFirstCall?.();
@@ -2188,7 +2162,6 @@ test('it never persists a node anchor when the registration carries no scope', a
 
   await ctx.submitter.submit('no-scope-activity', createMockCompletedCheckpoint());
 
-  // the seeded anchor is left exactly as written: a scope-less registration advances no node anchor
   const cached = await readNodeSeed(seed.avatarID, seed.nodeID);
 
   expect(cached?.anchor).toStrictEqual({ chainIndex: 2, nextSeed: 'seed-untouched' });

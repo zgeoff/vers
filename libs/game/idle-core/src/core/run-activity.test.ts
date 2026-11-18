@@ -85,8 +85,6 @@ test('it clears a wave from a difficulty-0 source node without crashing on the r
 
   generator.next(1000);
 
-  // clearing the activity's only wave computes its reward-slot tier from the floored difficulty —
-  // the crash site an unfloored difficulty-0 activity throws its invariant from
   const waveClearResult = generator.next(1000);
 
   invariant(waveClearResult.value, 'the wave clear must produce a checkpoint');
@@ -411,7 +409,6 @@ test('it keeps xp and a level-up earned on the same tick the avatar dies', () =>
 
   generator.next(1000);
 
-  // the wave's only enemy and the avatar both die within this same combat tick
   const waveClearResult = generator.next(1000);
   const progressCheckpoint = waveClearResult.value;
 
@@ -427,9 +424,6 @@ test('it keeps xp and a level-up earned on the same tick the avatar dies', () =>
   const failedCheckpoint = failedResult.value;
 
   expect(failedCheckpoint.type).toBe(ActivityCheckpointType.Failed);
-
-  // the failure penalty applies on top of the running total, never dropping xp below the
-  // threshold of the level earned this same tick
   expect(failedCheckpoint.rewards.xp).toBeGreaterThan(0);
   expect(failedCheckpoint.rewards.xp).toBeLessThan(250);
   expect(buildLevelFromXP(avatar.xp + failedCheckpoint.rewards.xp)).toBe(2);
@@ -503,8 +497,6 @@ test('it keeps xp from kills in a wave the avatar dies partway through', () => {
 
   expect(activity.currentWave?.remaining).toBe(3);
   expect(failedCheckpoint.type).toBe(ActivityCheckpointType.Failed);
-
-  // both kills survive the death, less only the designed failure penalty
   expect(failedCheckpoint.rewards.xp).toBeGreaterThan(0);
   expect(failedCheckpoint.rewards.xp).toBeLessThanOrEqual(20);
 });

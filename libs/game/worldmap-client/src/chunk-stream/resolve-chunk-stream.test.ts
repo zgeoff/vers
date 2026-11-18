@@ -52,7 +52,6 @@ test('it queues no leading-edge strip when the range is unchanged from the previ
 test('it queues the strip beyond the max-x edge when the range advanced in the positive x direction', () => {
   const cache = createChunkCache<string>({ capacity: 8, dispose: () => {} });
 
-  // chunks 1 and 2 are already cached, so only the prefetch strip should surface
   cache.set('1_0', 'tile-1-0');
   cache.set('2_0', 'tile-2-0');
 
@@ -120,8 +119,6 @@ test('it never re-queues a leading-edge chunk the cache already holds', () => {
 
 test('it stops the prefetch strip at the world chunk boundary rather than queuing an ungeneratable chunk', () => {
   const cache = createChunkCache<string>({ capacity: 8, dispose: () => {} });
-
-  // the last in-bounds chunk on the +X axis, reached by a pan that just advanced east
   const maxChunk = Math.floor(WORLD_COORD_MAX / CHUNK_SIZE);
   const edgeOrigin = maxChunk * CHUNK_SIZE;
 
@@ -138,6 +135,5 @@ test('it stops the prefetch strip at the world chunk boundary rather than queuin
     previousRange,
   );
 
-  // only the entered chunk itself is a miss; the strip one beyond it lies past the world edge
   expect(resolved.misses).toStrictEqual([buildChunkKey(maxChunk, 0)]);
 });

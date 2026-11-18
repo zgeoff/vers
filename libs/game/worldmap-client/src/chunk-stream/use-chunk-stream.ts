@@ -46,9 +46,8 @@ export function useChunkStream<TEntry>(
     [cache],
   );
 
-  // committed write pass: invalidate the cache when the seed changes, then record the range and the
-  // miss queue the builder drains. Deferred to an effect so neither a discarded concurrent render
-  // nor development's double-invoked render body ever runs these writes.
+  // these writes run in an effect so neither a discarded concurrent render nor development's
+  // double-invoked render body ever runs them
   useEffect(() => {
     if (userSeed === null || deferredViewport === null) {
       pendingRef.current = [];
@@ -106,8 +105,7 @@ export function useChunkStream<TEntry>(
 
       options.onBuildTick?.(performance.now() - startedAt, builtChunkCount);
 
-      // schedules the render that surfaces this tick's builds; the effect above re-derives
-      // `pendingRef.current` from that render's own resolve, so an emptied queue here is never
+      // the queue is re-derived from each viewport's own resolve, so emptying it here never goes
       // stale against work a viewport change queued in the meantime
       forceUpdate();
 

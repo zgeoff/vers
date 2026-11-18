@@ -27,9 +27,8 @@ interface OutboxRun {
   sent: number;
 }
 
-// a player with the game open: the writer worker simulates on its own clock and mints each
-// continuation at the terminal checkpoint before it, while the outbox delivers what the
-// simulation has reached, in order, on the client's flush interval and whatever the server answers
+// mirrors the game's writer worker: it simulates on its own clock, while the outbox delivers what
+// the simulation has reached on the client's flush interval, whatever the server answers
 export async function runLivePlayer(
   options: Readonly<RunLivePlayerOptions>,
 ): Promise<Array<DeliveredRun>> {

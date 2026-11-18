@@ -60,7 +60,6 @@ test('it keeps a run started with the network down as started, with its progress
 
   const activityID = started.liveRun.activityID;
 
-  // the run plays offline until its first checkpoint flush fails on the dead network
   await expect
     .poll(
       async () => {
@@ -154,7 +153,6 @@ test('it keeps a run started with the network down after ending a run that playe
     })
     .toBe(200);
 
-  // the first run is still playing when the network drops, and it earns past what the server holds
   await page.context().setOffline(true);
 
   const outage = await createSharedWorkerOutage(browser);

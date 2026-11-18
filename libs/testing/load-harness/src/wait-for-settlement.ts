@@ -6,8 +6,7 @@ import * as z from 'zod';
 const POLL_INTERVAL_MS = 1000;
 const BacklogSchema = z.object({ unverified: z.coerce.number() });
 
-// the time from the end of play, a `performance.now()` reading, until the verifier has proved every
-// appended checkpoint, or undefined when the backlog outlives the timeout
+// the end of play arrives as a `performance.now()` reading, not a wall-clock time
 export async function waitForSettlement(
   db: Kysely<DB>,
   timeoutMs: number,

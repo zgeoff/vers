@@ -21,8 +21,6 @@ test('it eases density monotonically outward from a disc', () => {
     { falloff: 3, resolution: 1 },
   );
 
-  // density along the half-row leading away from the disc never decreases: the tail equals its
-  // own ascending sort
   const tail = Array.from(
     { length: field.values.length },
     (_, index) => field.values[index] ?? 0,

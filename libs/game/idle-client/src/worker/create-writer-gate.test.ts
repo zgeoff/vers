@@ -49,7 +49,6 @@ test('it holds connections while another worker owns the writer lock, and hands 
   const handleConnect = mock<(event: MessageEvent) => void>();
   const createRuntime = mock(() => ({ handleConnect }));
 
-  // another build's worker holds the origin-wide lock for as long as its tabs live
   void ctx.fake.locks.request(WRITER_LOCK_NAME, { mode: 'exclusive' }, () => new Promise(() => {}));
   const gate = createWriterGate({ createRuntime, locks: ctx.fake.locks });
 

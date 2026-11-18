@@ -105,13 +105,9 @@ export async function planOfflineContinuations(
       return { planned, reason: 'budget-exhausted' };
     }
 
-    // Attempt by attempt, this reconstructs the confirmed row's own remaining tail for free — the
-    // already-appended prefix costs nothing against the budget.
     const tail = attempt.checkpoints.slice(appendedHead);
 
     if (tail.length === 0) {
-      // The confirmed row's own attempt already reconstructs through its terminal checkpoint with
-      // nothing left unconfirmed — an empty tail carries no successor to mint.
       return { planned, reason: 'budget-exhausted' };
     }
 

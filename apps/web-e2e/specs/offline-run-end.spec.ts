@@ -97,7 +97,6 @@ for (const journey of JOURNEYS) {
 
     expect(workerFetches).toStrictEqual(expectedWorkerFetches);
 
-    // every request the worker sent during the cut failed in transport, and none was answered
     const exchanges = (ended?.events ?? [])
       .filter((event) => event.type === 'rpc' && event.at >= cutAt)
       .map((event) => event.detail.split(' ')[1]);
@@ -111,8 +110,6 @@ for (const journey of JOURNEYS) {
 
     await expectServerHolds(mockActivityURL, activityID);
 
-    // every run that ended during the cut reaches the server once the network returns: its start
-    // and its terminal checkpoint
     const endedDuringCut = (ended?.events ?? [])
       .filter((event) => event.type === 'run' && / (?:completed|failed) /u.test(event.detail))
       .map((event) => event.detail.split(' ')[0]);

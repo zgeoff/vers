@@ -225,9 +225,6 @@ test('it attaches nothing on a second resync after an offline gap aborted on a f
 
   await runResyncFlow(context, viewer.avatar.id, false, secondSignals);
 
-  // a connectivity-proof resync that finds no active row plans nothing to attach and broadcasts
-  // no further progression — the mint the aborted gap left behind must never resurface a
-  // post-death attempt on this or any later reconnect
   expect(context.getBroadcasts().slice(broadcastsAfterFirstResync)).toStrictEqual([
     {
       avatarID: viewer.avatar.id,
@@ -284,8 +281,6 @@ test("it mints the next start from the server-closed latest run's snapshot and p
     submitter: createStubSubmitter(),
   });
 
-  // the previous device's fast-forward left this row: stopped, with nothing appended past its
-  // own start, at the snapshot the server folded when it minted it
   const closed = await db.activityCollection.create({
     appendedHead: 0,
     avatarID: viewer.avatar.id,
@@ -494,8 +489,6 @@ test('it records a live-attached row as the predecessor on a worker with empty s
 
   await runResyncFlow(context, viewer.avatar.id, false, signals);
 
-  // the attach keeps the record its reconstruction seeded, and a start after a player stop reads
-  // the durable predecessor this device never wrote itself
   expect(context.getActivity()?.id).toBe(activity.id);
   expect(context.getLatestRun()).toMatchObject({ activityID: activity.id, deltaXP: 0 });
 

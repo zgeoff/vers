@@ -337,7 +337,6 @@ test('it never stops a row other than the targeted one', async () => {
     scopeId: '0_0',
   });
 
-  // a late redelivery of the first row's stop leaves the newer run untouched
   const redelivered = await client.stopActivity({ activityID: first.id, avatarID: avatar.id });
 
   expect(redelivered.id).toBe(first.id);

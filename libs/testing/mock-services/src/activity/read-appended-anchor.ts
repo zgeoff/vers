@@ -22,7 +22,6 @@ export interface AppendedAnchor {
 // when it left active play; a `started` tail draws nothing from the seed and moves nothing, as the
 // real service's anchor rule holds
 export function readAppendedAnchor(input: Readonly<ReadAppendedAnchorInput>): AppendedAnchor {
-  // hashed from the avatar and node id, so the same pair always derives the same seed
   const hash = sha256(utf8ToBytes(`vers-mock-genesis|${input.avatarID}|${input.scopeID}`));
   const genesisSeed = bytesToHex(hash.slice(0, 16));
 

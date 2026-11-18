@@ -94,8 +94,6 @@ test('it flushes immediately on a terminal checkpoint, bypassing the progress wi
 
   ctx.actor.send({ isTerminal: true, type: 'QUEUED', version: 1 });
 
-  // a terminal checkpoint that drains fully confirmed evicts rather than resting idle — the
-  // scheduling assertion below is what actually proves the progress window was bypassed
   await waitFor(() => {
     expect(ctx.actor.getSnapshot().matches('evicted')).toBeTrue();
   });

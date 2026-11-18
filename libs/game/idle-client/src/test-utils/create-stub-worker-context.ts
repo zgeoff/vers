@@ -65,8 +65,8 @@ export function createStubWorkerContext(
   const reconstructedAvatarIDs = new Set<string>();
   const resyncSettledAvatarIDs = new Set<string>();
 
-  // referenced by `context.getLifecycle` below via closure before it exists, safe only because
-  // nothing calls it until after the `const lifecycleActor` assignment following `context` runs
+  // the closure reads the lifecycle actor before it is assigned, which is safe only because
+  // nothing calls it until the actor exists
   const getLifecycle = (): ActorRefFromLogic<typeof workerLifecycleMachine> => lifecycleActor;
   const client = options.client ?? createStubClient(options.activityProxy === true, getLifecycle);
 
@@ -139,8 +139,7 @@ export function createStubWorkerContext(
       failureActionPushInFlight = inFlight;
     },
 
-    // the stub's budget is entirely test-controlled through `options.remainingBudgetMs`, so
-    // there is no anchor timestamp here for an ack to move
+    // the test sets the stub's budget directly, so there is no anchor timestamp for an ack to move
     setLastAckAt: () => {},
     setLatestRun: (run) => {
       latestRun = run;

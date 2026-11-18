@@ -45,12 +45,10 @@ export async function createTestTemplate(
       }
     } finally {
       try {
-        // a session advisory lock dies with its session, so a failed unlock
-        // only matters when the session is still alive to hold it — safe to
-        // swallow rather than risk masking the block above's error
         await session`SELECT pg_advisory_unlock(${lockKey}::bigint)`;
       } catch {
-        // see comment above
+        // a session advisory lock dies with its session, so a failed unlock is safe to swallow,
+        // and rethrowing would mask the original error
       }
 
       session.release();

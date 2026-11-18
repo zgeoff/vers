@@ -57,7 +57,6 @@ export function planRetrievalNudge(
 function advanceImplement(state: RetrievalState, kind: RetrievalKind): RetrievalState {
   const base = { ...state, lookupRun: 0 };
 
-  // A ranged read or any other call breaks a consecutive search run but leaves the hunt alone.
   return match(kind)
     .returnType<RetrievalState>()
     .with('search', () => ({

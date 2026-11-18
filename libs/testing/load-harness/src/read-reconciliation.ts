@@ -21,9 +21,6 @@ const AvatarRowSchema = z.object({
   xp: z.coerce.number(),
 });
 
-// the end state a run must leave: every appended checkpoint proved, no activity held or rejected,
-// each planned run delivered and settled at the XP its own stream earned, and each avatar's XP equal to its
-// seeded XP plus what its activities settled
 export async function readReconciliation(
   db: Kysely<DB>,
   accounts: ReadonlyArray<LoadPlayerAccount>,

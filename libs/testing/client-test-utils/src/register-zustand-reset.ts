@@ -8,8 +8,8 @@ import type {
   UseBoundStore,
 } from 'zustand';
 
-// Captured before mock.module swaps the live `zustand` namespace binding; calling
-// actualZustand.create from inside the wrapper below would recurse.
+// Captured before mock.module swaps the live `zustand` binding; reading it from the namespace
+// inside the wrapper would recurse.
 const actualCreate = actualZustand.create;
 
 const storeResetFns = new Set<() => void>();

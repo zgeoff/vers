@@ -169,7 +169,6 @@ test("it folds the build snapshot from the avatar's recorded latest run", async 
 
   invariant(row !== null, 'expected the cached inputs to synthesize a row');
 
-  // the level is recomputed from the carried-forward xp rather than trusted from the record
   expect(row.buildSnapshot).toStrictEqual({ level: buildLevelFromXP(8450), xp: 8450 });
 });
 
@@ -290,8 +289,6 @@ test("it folds the previous run's recorded terminal total when every checkpoint 
 
   const context = createStubWorkerContext({ bundledEngineHash: 'engine_hash_1' });
 
-  // the run cleared online: the server confirmed every checkpoint and the queue is empty, so the
-  // worker's own record of the run is the only place its earned xp still lives
   context.setLatestRun({
     activityID: 'act_online_previous',
     avatarID: seed.avatarID,
@@ -309,8 +306,7 @@ test("it folds the previous run's recorded terminal total when every checkpoint 
 
   invariant(row !== null, 'expected the cached inputs to synthesize a row');
 
-  // the terminal checkpoint carries the run's whole total, completion bonus included, so the
-  // 200 it names wins over the 150 the progress deltas summed to
+  // a terminal checkpoint's total includes the completion bonus, so it beats the summed deltas
   expect(row.buildSnapshot).toStrictEqual({ level: buildLevelFromXP(1200), xp: 1200 });
 });
 
@@ -396,7 +392,6 @@ test('it keeps folding from the recorded run after a stop cleared the installed 
     tail: createMockProgressCheckpoint({ rewards: { xp: 10 } }),
   });
 
-  // a player stop resets the installed activity; the server still counts the stopped run's xp
   context.setActivity(null);
 
   const row = await loadActivityStart(context, {

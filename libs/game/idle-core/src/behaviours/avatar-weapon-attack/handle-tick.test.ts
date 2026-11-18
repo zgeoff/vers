@@ -32,8 +32,7 @@ test('it schedules attacks on the tick event', () => {
   const combatExecutor = createCombatExecutor(activity, avatar, ctx);
   const wave = activity.currentWave;
 
-  // we need to remove the behaviour from the avatar as it's already added
-  // by default and would get ran when we run our combat executor
+  // the avatar carries this behaviour by default, so the executor would also run it
   avatar.removeBehaviour(BehaviourID.AvatarWeaponAttack);
 
   const behaviour = create(avatar);
@@ -78,8 +77,7 @@ test('it schedules multiple attacks for high APS weapons', () => {
   const combatExecutor = createCombatExecutor(activity, avatar, ctx);
   const wave = activity.currentWave;
 
-  // we need to remove the behaviour from the avatar as it's already added
-  // by default and would get ran when we run our combat executor
+  // the avatar carries this behaviour by default, so the executor would also run it
   avatar.removeBehaviour(BehaviourID.AvatarWeaponAttack);
 
   const behaviour = create(avatar);

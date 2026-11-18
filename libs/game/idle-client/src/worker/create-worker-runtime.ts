@@ -59,9 +59,6 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
   const broadcastChannel = new BroadcastChannel(WORKER_TO_CLIENT_CHANNEL);
 
   const debug = createDebugRecorder();
-
-  // the worker always holds a simulation — "no run" is an empty one; listeners attach right
-  // after the context literal below exists
   let simulation: Simulation = createSimulation();
   let activity: ActivityData | null = null;
   let stopped = false;
@@ -139,8 +136,8 @@ export function createWorkerRuntime(options: CreateWorkerRuntimeOptions = {}): W
     connectivityOnline = online;
   };
 
-  // `context`'s accessors below close over these before their own `const` declarations run,
-  // safe only because nothing calls either accessor until after both are assigned further down
+  // these read the lifecycle actor and submitter before their declarations run, safe only because
+  // nothing calls them until both are assigned
   const getLifecycle = (): ActorRefFromLogic<typeof workerLifecycleMachine> => lifecycleActor;
   const getSubmitter = (): ReturnType<typeof createCheckpointSubmitter> => submitter;
 

@@ -7,8 +7,7 @@ const InspectedContainerSchema = z.object({
 
 const NANO_CPUS_PER_CORE = 1e9;
 
-// the output of `docker inspect` over the stack's containers, as the cores each one may use; a
-// container with no CPU limit reads 0 and is left out
+// `docker inspect` reads a container with no CPU limit as 0 NanoCpus
 export function parseContainerCPULimits(output: string): Record<string, number> {
   const containers = z.array(InspectedContainerSchema).parse(JSON.parse(output));
 

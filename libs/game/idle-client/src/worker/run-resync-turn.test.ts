@@ -151,8 +151,6 @@ test('it delivers a queued row for the resync-determined latest activity rather 
 
   await runResyncTurn(ctx.context, viewer.avatar.id, false);
 
-  // the resync's own drain delivered the determined latest activity's queued row over the
-  // network rather than the sweep silently discarding it
   const landed = db.checkpointCollection.findMany((query) =>
     query.where({ activityID: activity.id }),
   );
@@ -224,8 +222,6 @@ test('it keeps the queued rows of an activity that went live while the resync wa
 
   const handled = runResyncTurn(context, viewer.avatar.id, false);
 
-  // a fresher activity goes live while the resync is parked on its held-batch flush, exactly as
-  // a set-activity request landing mid-resync would install it
   const input = buildSimulationInput(
     createMockEncounterContent({ contentVersion: '2' }),
     freshActivity,
@@ -239,8 +235,6 @@ test('it keeps the queued rows of an activity that went live while the resync wa
 
   await handled;
 
-  // the sweep kept the live activity's queued row — its running writer's own pipeline — while
-  // still removing the genuinely stranded activity's row
   const kept = await readQueuedCheckpoints(freshActivity.id);
   const swept = await readQueuedCheckpoints('stray-mid-resync-activity');
 
@@ -294,8 +288,6 @@ test('it flushes a held checkpoint for a previously tracked, no-longer-latest ac
 
   await runResyncTurn(ctx.context, viewer.avatar.id, false);
 
-  // flushHeld ran before the sweep determined a fresher activity is latest, delivering the held
-  // row over the network rather than letting the sweep silently discard it
   expect(track).toHaveBeenCalledTimes(2);
 
   const remaining = await readQueuedCheckpoints(staleActivity.id);
@@ -361,8 +353,6 @@ test('it reconstructs and installs a live simulation mid-stream, registering fro
 
   expect(simulation.activity?.id).toBe(activity.id);
 
-  // submitting the reconstructed sim's next checkpoint proves the registered cursor chains onto
-  // the recovered previousNextSeed, not the activity's own start seed
   let checkpoint: ActivityCheckpoint | null = null;
 
   while (checkpoint === null) {
@@ -457,8 +447,6 @@ test('it fast-forwards a short gap, broadcasts progress and final tallies, and i
 
   await ctx.connection.waitForMessages(4);
 
-  // the completed attempt's terminal batch closed the seeded row, so the backend holds exactly
-  // one fresh active continuation for the avatar
   const minted = db.activityCollection.findFirst((query) =>
     query.where({ avatarID: viewer.avatar.id, status: 'active' }),
   );
@@ -492,8 +480,6 @@ test('it fast-forwards a short gap, broadcasts progress and final tallies, and i
 
   const simulation = ctx.context.getSimulation();
 
-  // the live sim attaches to the fast-forward's final, never-attempted continuation — not the
-  // first activity its one completed attempt already registered
   expect(simulation.activity?.id).toBe(minted.id);
 
   let checkpoint: ActivityCheckpoint | null = null;
@@ -502,8 +488,8 @@ test('it fast-forwards a short gap, broadcasts progress and final tallies, and i
     checkpoint = simulation.run(SIMULATION_TIMESTEP_MS);
   }
 
-  // proves the fresh continuation's registration actually happened: an unregistered activity's
-  // checkpoint is silently dropped by the submitter rather than reaching the server
+  // the submitter silently drops an unregistered activity's checkpoint, so a landed one shows the
+  // registration happened
   await ctx.context.getSubmitter().submit(minted.id, checkpoint);
   await ctx.flush();
 
@@ -553,7 +539,6 @@ test('it reconstructs a fast-forward report left mid-stream and registers from i
 
   const simulation = ctx.context.getSimulation();
 
-  // the live sim attaches to the fast-forward's own head row — no continuation was ever started
   expect(simulation.activity?.id).toBe(activity.id);
 
   let checkpoint: ActivityCheckpoint | null = null;
@@ -565,9 +550,6 @@ test('it reconstructs a fast-forward report left mid-stream and registers from i
   await ctx.context.getSubmitter().submit(activity.id, checkpoint);
   await ctx.flush();
 
-  // the running seed the reconstructed cursor carries forward from the confirmed started
-  // checkpoint — proves the registered cursor chains onto the reconstruction, not a fresh
-  // checkpoint-0 sim
   const landed = db.checkpointCollection.findMany((query) =>
     query.where({ activityID: activity.id }),
   );
@@ -668,8 +650,8 @@ test('it flushes a dirty local failure action to the server during resync, clear
 
   ctx.context.setFailureActionDirty(true);
 
-  // the dirty value lives in the persisted outbox, scoped to this avatar — the record's avatar is
-  // what lets the resync flush it rather than adopt the server's
+  // the record's avatar is what lets the resync flush the dirty value rather than adopt the
+  // server's
   await writeFailureActionCache({
     avatarID: viewer.avatar.id,
     dirty: true,
@@ -713,8 +695,6 @@ test('it keeps the dirty flag when the resync push to the server fails', async (
 
   ctx.context.setFailureActionDirty(true);
 
-  // the dirty value lives in the persisted outbox, scoped to this avatar — a failed push must leave
-  // that record intact for the next resync to retry
   await writeFailureActionCache({
     avatarID: viewer.avatar.id,
     dirty: true,
@@ -759,8 +739,7 @@ test('it stops back an attach-live row when a stop lands during its registration
 
   const client = await createAuthedServiceClient<ActivityServiceClient>('activity', viewer.user.id);
 
-  // the stop lands while the attach's registration is in flight — after the signal capture, in the
-  // last await before the install boundary
+  // the registration is the last await before the install boundary, so the stop must land there
   const contextHolder: { current?: WorkerContext } = {};
 
   const submitter: CheckpointSubmitter = {
@@ -847,8 +826,6 @@ test('it reports a fault to the error backend and broadcasts an unreconstructed 
 
   expect(recorded[0]?.tags).toMatchObject({ site: 'resync' });
 
-  // the drop window closed once the first turn settled: a follow-up non-claiming call for the
-  // same avatar actually runs rather than being dropped, broadcasting its own status
   await runResyncTurn(context, 'avatar-with-held-tail', false);
 
   await waitFor(() => {
@@ -922,8 +899,6 @@ test('it broadcasts session-expired without a fault report when the session is n
 
   expect(recorded).toStrictEqual([]);
 
-  // the drop window closed once the first turn settled: a follow-up non-claiming call for the
-  // same avatar actually runs rather than being dropped, broadcasting its own session-expired
   await runResyncTurn(ctx.context, viewer.avatar.id, false);
 
   await ctx.connection.waitForMessages(4);
@@ -1010,8 +985,6 @@ test('it abandons the install when a stop lands mid-resync', async () => {
   const ctx = await setupTest({ userID: viewer.user.id });
   const row = await db.activityCollection.create({ avatarID: viewer.avatar.id, status: 'active' });
 
-  // the stop lands while the progress fetch is in flight — the deviation answers with the live
-  // row exactly as the stateful mock would, then advances the stop scope as a concurrent stop does
   server.use(
     mockActivityService.getLatestActivityProgress.handler(() => {
       ctx.context.advanceStopScope();
@@ -1059,9 +1032,6 @@ test('it settles silently, broadcasting neither a failed status nor a fault, whe
 
   const track = mock<() => void>();
 
-  // the stop lands while the progress fetch is in flight, aborting the cancel signal the fetch
-  // carries — unlike the deviation above, the handler never answers, so the fetch itself rejects
-  // rather than the flow noticing the stop only after a normal reply
   server.use(
     mockActivityService.getLatestActivityProgress.handler(() => {
       track();
@@ -1079,8 +1049,6 @@ test('it settles silently, broadcasting neither a failed status nor a fault, whe
   expect(recorded).toStrictEqual([]);
   expect(track).toHaveBeenCalledOnce();
 
-  // the drop window closed once the first turn settled: a follow-up non-claiming call for the
-  // same avatar actually reaches the progress fetch again rather than being dropped
   await runResyncTurn(ctx.context, viewer.avatar.id, false);
 
   expect(track).toHaveBeenCalledTimes(2);
@@ -1239,8 +1207,6 @@ test('it settles a mid-fast-forward displacement as active-elsewhere with the no
     startedAt: new Date(Date.now() - 63_000),
   });
 
-  // another session takes the writer while the catch-up simulates, so its bulk request is
-  // rejected whole
   server.use(
     mockActivityService.advanceActivity.handler((opts) => {
       throw opts.errors.SESSION_EVICTED({
@@ -1292,7 +1258,6 @@ test('it clears a moot displacement once the fetched run is no longer active', a
     verifiedHead: 0,
   });
 
-  // the device was displaced from this run, and the other device has since finished it
   ctx.context.setWriterDisplacedActivityID(activity.id);
 
   await runResyncTurn(ctx.context, viewer.avatar.id, true);

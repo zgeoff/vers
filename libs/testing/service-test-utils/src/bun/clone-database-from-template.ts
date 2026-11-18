@@ -5,7 +5,7 @@ import {
 } from '@vers/db/test-support';
 import { resolveTestDBTarget } from './resolve-test-db-target';
 
-// the caller owns the clone and drops it: use `createDatabaseFromTemplate` in a test
+// the caller owns the clone and must drop it
 export async function cloneDatabaseFromTemplate(): Promise<string> {
   const target = resolveTestDBTarget();
   const dbName = buildClonedDBName(readCloneOwnerPrefix());

@@ -1,5 +1,5 @@
-// A SessionStart hook for the `compact` source: tells the session that the skills it loaded before
-// the compaction are gone, so the edit gate will refuse until they are reloaded.
+// a compaction drops the skills the session loaded, and the edit gate refuses until they are
+// reloaded
 
 console.log(
   JSON.stringify({

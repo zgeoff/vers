@@ -457,9 +457,6 @@ test('it ignores a start reply for a node the selection has left behind', async 
     const [staleResolve] = startResolvers;
 
     invariant(staleResolve !== undefined, 'expected the first start call to be captured');
-
-    // the first node's failed reply lands only after the selection moved on — it must not render
-    // as the new node's outcome
     staleResolve({ kind: 'failed' });
 
     await expect(
@@ -561,7 +558,6 @@ test('it navigates once an attached report is ready, without a fresh start call'
       expect(rendered.router.state.location.pathname).toBe('/activity');
     });
 
-    // the attached branch reuses the running row — navigating away never mints a fresh start
     expect(client.startActivity).toHaveBeenCalledTimes(1);
   });
 });
@@ -716,7 +712,6 @@ test('it stays rendered once auto-retry chains a continuation of the expected ru
 
     await rendered.findByLabelText('Auto-retry on failure');
 
-    // the failed run's continuation installs under a fresh id at the same node and avatar
     const continuation = createMockActivityData({
       avatarID: avatar.id,
       predecessorActivityID: started.id,
@@ -858,8 +853,6 @@ test('it does not bounce back to the engagement screen once a remount finds a co
       expect(startActivity.mock.calls.length).toBeGreaterThan(1);
     });
 
-    // the remounted panel reads the continuation as the run the player already engaged: it renders
-    // in place rather than sending them back to the engagement screen
     const checkbox = await rendered.findByLabelText('Auto-retry on failure');
 
     expect(checkbox).toBeChecked();
@@ -873,7 +866,6 @@ test('it navigates once an attached run is live at a node other than the engaged
 
   setSelectedNode(createMockWorldMapNode({ id: '0_0' }));
 
-  // the player engaged a run at a neighbouring node; the run live here was started elsewhere
   setEngagedRun({
     avatarID: avatar.id,
     id: 'activity_1_0',
@@ -1015,8 +1007,6 @@ test('it shows the outcome once the attached run ends with no continuation', asy
 
     await rendered.findByLabelText('Auto-retry on failure');
 
-    // the run ends with auto-retry off: the worker reports the outcome, then the activity-less
-    // snapshot that drops the live run
     setRunOutcome(
       createMockRunOutcome({
         activityID: 'activity_attached',
@@ -1076,7 +1066,6 @@ test('it shows the outcome of the continuation the run chained into', async () =
       scopeType: 'world_map_node',
     });
 
-    // the attached run fails and chains a continuation under a fresh id at the same node
     setIdleWorkerHandle({
       activity: createMockActivitySnapshot({ id: 'activity_continuation' }),
       client,

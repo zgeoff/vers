@@ -9,9 +9,8 @@ import type { LoadEngineVersions } from './types';
 
 const REPO_ROOT = path.resolve(import.meta.dirname, '../../../..');
 
-// builds each pipeline app from the Dockerfile its deploy manifest entry names, with the build args
-// its fly config sets, so the stack runs the binaries a deploy would push; the retained provider is
-// the replay image under another hash
+// built from the deploy manifest's Dockerfiles with the fly configs' build args, so the stack runs
+// the binaries a deploy would push
 export async function runLoadImages(
   versions: Readonly<LoadEngineVersions>,
   tag: string,

@@ -226,9 +226,8 @@ test('it still prefetches the leading-edge chunk under development double-render
     expect(built).toContain('0_0');
   });
 
-  // pan one chunk east: the entered chunk 1_0 streams in, and the prefetch strip one beyond the
-  // leading edge queues chunk 2_0 — a movement the write-in-render version silently missed here,
-  // because StrictMode's second render read the range the first render already advanced
+  // under StrictMode, a range written during render is already advanced when the second render
+  // reads it, so this pan would queue no prefetch strip
   await act(() => {
     hook.rerender({ viewport: { maxCX: 31, maxCY: 15, minCX: 16, minCY: 0 } });
 

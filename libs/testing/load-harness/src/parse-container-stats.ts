@@ -15,8 +15,7 @@ const MEMORY_UNIT_BYTES: ReadonlyMap<string, number> = new Map([
   ['kB', 1000],
 ]);
 
-// one line of `docker stats --format '{{json .}}'`; a container that is starting or stopping
-// prints placeholder dashes, which read as no sample
+// `docker stats` prints placeholder dashes for a container that is starting or stopping
 export function parseContainerStats(line: string, elapsedMs: number): ContainerSample | undefined {
   let value: unknown;
 

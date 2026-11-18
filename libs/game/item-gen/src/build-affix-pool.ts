@@ -19,7 +19,6 @@ export function buildAffixPool(
 
     .filter((affix) => !protectedGroupIDs.has(affix.groupID))
 
-    // reweights: an id absent from the pool is a no-op
     .map((affix) => {
       const factor = Object.hasOwn(reweights, affix.id) ? reweights[affix.id] : undefined;
 
@@ -43,7 +42,7 @@ export function buildAffixPool(
 
     .filter((affix) => affix.weight > 0)
 
-    // sorts by affix id for a canonical, order-independent pool
+    // a canonical order keeps the pool independent of the input order
     .toSorted((left, right) => (left.id < right.id ? -1 : 1));
 
   const forced = (constraints.forceAffixIDs ?? []).toSorted().map((affixID) => {

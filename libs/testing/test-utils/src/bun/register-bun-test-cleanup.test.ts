@@ -4,8 +4,8 @@ import { trace } from '@opentelemetry/api';
 import { TracerProvider } from '@opentelemetry/sdk-trace';
 import { updateEnv } from './update-env';
 
-// This package's own preload calls `registerBunTestCleanup` once for the whole process, so its
-// effect is observed across tests rather than within a single one — order-dependent by design.
+// the package preload registers the cleanup once for the whole process, so these tests see its
+// effect across tests and depend on their order
 
 test('it overrides an env var for this test only', () => {
   updateEnv('REGISTER_BUN_TEST_CLEANUP_PROBE', 'overridden');

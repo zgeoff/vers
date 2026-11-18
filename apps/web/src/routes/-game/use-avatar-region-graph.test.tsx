@@ -526,8 +526,6 @@ test("it keeps a completed node's neighbour selectable while a chunk-crossing pa
     invariant(resolveSecondFetch, 'the chunk-crossing pan started the second fetch');
     resolveSecondFetch();
 
-    // the resolved fetch settles the re-keyed query in place: no further round trip fires and the
-    // neighbour stays selectable
     await waitFor(() => {
       expect(hook.queryClient.isFetching()).toBe(0);
     });

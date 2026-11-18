@@ -1,8 +1,8 @@
 import { ActivityFailureAction } from '@vers/idle-core';
 import type { LoadEngineVersions, PlayerProfile } from './types';
 
-// the build corpus: levels from a fresh avatar to one that clears the origin in a few waves, so
-// the stream mixes failed and completed attempts of different lengths
+// from a fresh avatar to one that clears the origin in a few waves, so the stream mixes failed
+// and completed attempts of different lengths
 const LEVEL_CORPUS: ReadonlyArray<number> = [1, 2, 3, 5, 8, 12];
 
 interface BuildPlayerProfilesInput {
@@ -12,8 +12,7 @@ interface BuildPlayerProfilesInput {
   readonly versions: LoadEngineVersions;
 }
 
-// deterministic per player index, so a rerun repeats each player's level and sim version; the
-// fights differ, because each stack creates new avatars and draws new genesis seeds
+// a rerun still fights differently: each stack creates new avatars and draws new genesis seeds
 export function buildPlayerProfiles(
   input: Readonly<BuildPlayerProfilesInput>,
 ): Array<PlayerProfile> {

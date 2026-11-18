@@ -75,9 +75,6 @@ test('it does nothing if the enemy is dead', () => {
   expect(avatar.life).toBe(100);
 });
 
-// this covers a regression where we weren't correctly filtering our enemies
-// by the event source and were applying damage for dead enemies by using
-// the next living enemy
 test('it correctly resolves the correct event source', () => {
   const enemyData = createMockEnemyData({
     life: 100,
@@ -91,8 +88,7 @@ test('it correctly resolves the correct event source', () => {
   const avatarData = createMockAvatarData({ life: 100 });
 
   const activityData = createMockActivityInput({
-    // it's important we have more than 1 enemy so we can ensure event source
-    // resolution works
+    // with a single enemy, a wrong event-source lookup would still find the right attacker
     encounter: { waves: [[enemyData, enemyData]] },
   });
 

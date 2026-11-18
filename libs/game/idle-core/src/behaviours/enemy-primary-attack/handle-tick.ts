@@ -10,7 +10,7 @@ export function handleTick(
   behaviour: EnemyPrimaryAttackBehaviour,
   executor: CombatExecutor,
 ): void {
-  // loop to allow high APS to function correctly w/ server simulation batching
+  // a batched server tick can make several attacks ready at once at high attack speed
   while (isAttackReady(entity, behaviour.state, executor)) {
     const time = getNextAttackTime(entity, behaviour.state);
     const event = createEnemyAttackEvent(entity, time);
