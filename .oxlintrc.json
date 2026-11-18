@@ -79,10 +79,6 @@
       }
     ],
 
-    // 137 direct table writes in 40 test files predate the rule; moving each
-    // behind its owner's `seed…` function is a change of its own
-    "zgeoff/seed-only": "off",
-
     // the shared config's version minus ignorePattern — baseline(#236)
     // disable directives sit on their own line above the flagged site, and
     // demanding a blank line above them separates them from it

@@ -1,3 +1,5 @@
+// oxlint-disable zgeoff/seed-only -- direct table writes predate the rule; moving them behind the owner's `seed…` function is its own change
+
 import { expect, mock, onTestFinished, spyOn, test } from 'bun:test';
 import { createContentVersion } from '@vers/content-registry';
 import { createMockContentDocument } from '@vers/contract-activity/test-utils';

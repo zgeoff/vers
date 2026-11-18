@@ -1,3 +1,5 @@
+// oxlint-disable zgeoff/seed-only -- direct table writes predate the rule; moving them behind the owner's `seed…` function is its own change
+
 import { faker } from '@faker-js/faker';
 import { createId } from '@paralleldrive/cuid2';
 import { createContentVersion, readContentDocument } from '@vers/content-registry';

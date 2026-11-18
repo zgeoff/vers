@@ -1,3 +1,5 @@
+// oxlint-disable zgeoff/seed-only -- direct table writes predate the rule; moving them behind the owner's `seed…` function is its own change
+
 import type { DB, Verifications } from '@vers/db';
 import type { Insertable, Kysely, Selectable } from 'kysely';
 import { createMockVerification } from './factories/create-mock-verification';

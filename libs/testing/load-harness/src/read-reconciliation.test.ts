@@ -1,3 +1,5 @@
+// oxlint-disable zgeoff/seed-only -- direct table writes predate the rule; moving them behind the owner's `seed…` function is its own change
+
 import { expect, onTestFinished, test } from 'bun:test';
 import { ActivityFailureAction, buildXPThreshold } from '@vers/idle-core';
 import { createActivityRow, createTestDB } from '@vers/service-test-utils/bun';
