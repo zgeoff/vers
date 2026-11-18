@@ -11,6 +11,14 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# shfmt and shellcheck are pinned with their published hashes, so what the
+# checks job lints with does not move with the runner image
+env:
+  SHFMT_VERSION: v3.13.1
+  SHFMT_SHA256: fb096c5d1ac6beabbdbaa2874d025badb03ee07929f0c9ff67563ce8c75398b1
+  SHELLCHECK_VERSION: v0.11.0
+  SHELLCHECK_SHA256: b7af85e41cc99489dcc21d66c6d5f3685138f06d34651e6d34b42ec6d54fe6f6
+
 jobs:
   gitleaks:
     runs-on: ubuntu-latest
@@ -153,6 +161,12 @@ jobs:
 
       - name: Check Formatting
         run: bun run format:check
+
+      - name: Install shfmt and shellcheck
+        run: bash scripts/install-shell-tools.sh
+
+      - name: Shell Lint
+        run: bun run lint:shell
 
       - name: Lint
         run: bun run lint

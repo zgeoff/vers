@@ -188,6 +188,7 @@
     "test:check-slow": "bun scripts/src/bin/check-slow-tests.ts",
     "typecheck": "turbo run typecheck",
     "e2e": "turbo run e2e",
+    "lint:shell": "git ls-files -z '*.sh' ':!.claude/**' ':!.agents/skills/**' | xargs -0 sh -c 'shellcheck \"$@\" && shfmt -d \"$@\"' sh",
     "format": "oxfmt . && format-codemod --quiet .",
     "format:check": "oxfmt --check . && format-codemod --check --quiet .",
     "codegen:styles": "turbo run codegen",
