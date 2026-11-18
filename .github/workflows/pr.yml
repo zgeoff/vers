@@ -366,7 +366,10 @@ jobs:
           E2E_PROJECTS: ${{ matrix.projects }}
         # on CI turbo groups each task's log and prints it when the task ends, so a suite cut off at
         # the job limit printed nothing; streamed, the log shows each test as it finishes
-        run: node_modules/.bin/turbo run e2e $E2E_SCOPE --log-order=stream -- $E2E_PROJECTS
+        run: |
+          # E2E_SCOPE is empty or one flag, and E2E_PROJECTS is a list of project names, so both split
+          # shellcheck disable=SC2086
+          node_modules/.bin/turbo run e2e $E2E_SCOPE --log-order=stream -- $E2E_PROJECTS
 
       - name: Upload Videos Of Failed E2E
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
