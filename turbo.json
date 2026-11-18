@@ -64,7 +64,7 @@
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/.claude/skill-gate.json",
         "$TURBO_ROOT$/.claude/hooks/start.ts",
-        "$TURBO_ROOT$/.claude/skills/*/SKILL.md"
+        "$TURBO_ROOT$/.agents/skills/*/SKILL.md"
       ],
       "outputs": ["test-report.junit.xml"]
     },

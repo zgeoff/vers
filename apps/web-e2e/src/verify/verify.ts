@@ -14,5 +14,5 @@ await runVerify(
     chromiumLauncher: join(import.meta.dir, 'game', 'launch-chromium.sh'),
     devtoolsPort: Number(process.env['VERS_VERIFY_DEVTOOLS_PORT']),
   }),
-  { skill: '.claude/skills/verify' },
+  { skill: '.agents/skills/verify' },
 );

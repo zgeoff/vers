@@ -96,6 +96,7 @@ export const ignoredPaths = [
   '.serena/**',
   '.vscode/**',
   '.claude/**',
+  '.agents/**',
   '.github/**',
   'audit-ignores.json',
   'commitlint.config.js',

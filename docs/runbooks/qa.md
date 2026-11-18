@@ -184,7 +184,7 @@ The scripts read the endpoint from `--endpoint <host:port>`, then from `QA_CDP_E
 default to `127.0.0.1:9222`. A value from the flag or the environment must be a hostname or IPv4
 address and a port from 1 to 65535; the scripts reject any other value before a command runs. The
 port bridge a NAT-mode WSL distribution needs to reach the Windows loopback is in
-[Chrome DevTools MCP](../../.claude/skills/chrome-devtools-mcp/SKILL.md#add-the-proxy). Behind the
+[Chrome DevTools MCP](../../.agents/skills/chrome-devtools-mcp/SKILL.md#add-the-proxy). Behind the
 bridge, the endpoint is the WSL default gateway on port 9223, the port that the bridge forwards to
 Chrome's 9222. A session under NAT sets `QA_CDP_ENDPOINT` once:
 

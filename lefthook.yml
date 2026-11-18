@@ -53,6 +53,7 @@ pre-commit:
         - 'coverage/**'
         - '.worktrees/**'
         - '.claude/**'
+        - '.agents/**'
       run: node_modules/.bin/format-codemod --quiet {staged_files}
       stage_fixed: true
     - name: codegen:styles
