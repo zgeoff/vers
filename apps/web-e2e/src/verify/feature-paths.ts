@@ -111,7 +111,7 @@ export const ignoredPaths = [
 
   // every folder of scripts/ but qa-inbox and the package entry, which read-email imports; a new
   //    folder maps to nothing, so the gate names it
-  'scripts/{bunfig.toml,clean.sh,run-knip.sh,test-setup.ts}',
+  'scripts/{bunfig.toml,clean.sh,install-shell-tools.sh,run-knip.sh,test-setup.ts}',
   'scripts/src/{bin,bugsink,checkpoint-archive,ci,content,dependencies,deploy,docs,env,git-hooks,hooks,infra,lint,migrate,mocks,postgres,qa,qa-chrome,qa-cold,restore-drill,secrets,stack,test-report,test-utils,utils,verify-gate}/**',
   'infra/**',
 
