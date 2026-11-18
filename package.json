@@ -112,7 +112,7 @@
       "@zgeoff/format-codemod": "0.3.5",
       "@zgeoff/mcp-remote": "0.1.38",
       "@zgeoff/oxlint-config": "0.10.8",
-      "@zgeoff/rig": "0.2.1",
+      "@zgeoff/rig": "0.2.4",
       "@zgeoff/std": "0.4.3",
       "@zgeoff/umami-mcp": "0.1.2",
       "autoprefixer": "10.6.2",
@@ -243,7 +243,9 @@
     "serve:app-web": "dotenvx run -f apps/web/.env.development.local -- node ./apps/web/server.mjs",
     "---UTILITY": "",
     "prepare": "command -v git > /dev/null 2>&1 && lefthook install --force || true",
-    "check:docs": "chex prose length links readmes skill"
+    "check:docs": "chex prose length links readmes skill",
+    "test:related": "rig related",
+    "bench": "rig bench"
   },
   "devDependencies": {
     "@commitlint/cli": "catalog:",

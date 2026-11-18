@@ -105,6 +105,7 @@ export const ignoredPaths = [
   'knip.json',
   'lefthook.yml',
   'renovate.json',
+  'rig.config.ts',
   'secrets-manifest.json',
   'socket.yml',
 
